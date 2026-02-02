@@ -55,7 +55,7 @@ class Test_Undo extends \WP_UnitTestCase {
 	 * Test handle_undo with follow activities.
 	 *
 	 * @dataProvider follow_undo_provider
-	 * @covers ::handle_undo
+	 * @covers ::incoming
 	 *
 	 * @param string $actor_url     The actor URL to test with.
 	 * @param string $description   Description of the test case.
@@ -96,7 +96,7 @@ class Test_Undo extends \WP_UnitTestCase {
 		Inbox_Collection::add( $activity_object, self::$user_id );
 
 		// Call the Follow handler directly to add the follower.
-		\Activitypub\Handler\Follow::handle_follow( $follow_activity, self::$user_id );
+		\Activitypub\Handler\Follow::incoming( $follow_activity, self::$user_id );
 
 		// Verify follower was added.
 		$followers = Followers::get_many( self::$user_id );
@@ -117,7 +117,7 @@ class Test_Undo extends \WP_UnitTestCase {
 		);
 
 		// Call the Undo handler directly.
-		Undo::handle_undo( $undo_activity, self::$user_id );
+		Undo::incoming( $undo_activity, self::$user_id );
 
 		// Verify follower was removed.
 		$followers_after = Followers::get_many( self::$user_id );
@@ -153,7 +153,7 @@ class Test_Undo extends \WP_UnitTestCase {
 	 * Test handle_undo with comment-related activities (Like, Create, Announce).
 	 *
 	 * @dataProvider comment_activities_undo_provider
-	 * @covers ::handle_undo
+	 * @covers ::incoming
 	 *
 	 * @param string $actor_url     The actor URL to test with.
 	 * @param string $activity_type The type of activity being undone.
@@ -199,9 +199,8 @@ class Test_Undo extends \WP_UnitTestCase {
 		Inbox_Collection::add( $activity_object, self::$user_id );
 
 		// Call the appropriate handler directly to create the comment.
-		$handler_class  = '\\Activitypub\\Handler\\' . $activity_type;
-		$handler_method = 'handle_' . strtolower( $activity_type );
-		$handler_class::$handler_method( $create_activity, self::$user_id );
+		$handler_class = '\\Activitypub\\Handler\\' . $activity_type;
+		$handler_class::incoming( $create_activity, self::$user_id );
 
 		// Find the comment that was created.
 		$found_comment = Comment::object_id_to_comment( $activity_id );
@@ -221,7 +220,7 @@ class Test_Undo extends \WP_UnitTestCase {
 		);
 
 		// Call the Undo handler directly.
-		Undo::handle_undo( $undo_activity, self::$user_id );
+		Undo::incoming( $undo_activity, self::$user_id );
 
 		// Verify comment was deleted.
 		$comment_after = \get_comment( $comment_id );
@@ -249,7 +248,7 @@ class Test_Undo extends \WP_UnitTestCase {
 	/**
 	 * Test handle_undo action hook is fired.
 	 *
-	 * @covers ::handle_undo
+	 * @covers ::incoming
 	 */
 	public function test_handle_undo_action_hook() {
 		$action_fired  = false;
@@ -298,7 +297,7 @@ class Test_Undo extends \WP_UnitTestCase {
 		$activity_object = Activity::init_from_array( $follow_activity );
 		Inbox_Collection::add( $activity_object, self::$user_id );
 
-		\Activitypub\Handler\Follow::handle_follow( $follow_activity, self::$user_id );
+		\Activitypub\Handler\Follow::incoming( $follow_activity, self::$user_id );
 
 		// Create Undo activity.
 		$activity = array(
@@ -315,7 +314,7 @@ class Test_Undo extends \WP_UnitTestCase {
 		);
 
 		// Call the Undo handler directly.
-		Undo::handle_undo( $activity, self::$user_id );
+		Undo::incoming( $activity, self::$user_id );
 
 		$this->assertTrue( $action_fired );
 		$this->assertEquals( $activity, $activity_data );

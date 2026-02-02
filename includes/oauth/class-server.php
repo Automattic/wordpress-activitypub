@@ -192,6 +192,20 @@ class Server {
 	 * @return bool|\WP_Error True if authorized, error otherwise.
 	 */
 	public static function check_oauth_permission( $request, $scope = null ) {
+		/**
+		 * Filter to override OAuth permission check.
+		 *
+		 * Useful for testing. Return true to bypass OAuth check, false to continue.
+		 *
+		 * @param bool|null        $result  The permission result. Null to continue normal check.
+		 * @param \WP_REST_Request $request The REST request.
+		 * @param string|null      $scope   Required scope.
+		 */
+		$override = \apply_filters( 'activitypub_oauth_check_permission', null, $request, $scope );
+		if ( null !== $override ) {
+			return $override;
+		}
+
 		// Must be authenticated via OAuth.
 		if ( ! self::is_oauth_request() ) {
 			return new \WP_Error(

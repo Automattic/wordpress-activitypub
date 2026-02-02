@@ -42,7 +42,7 @@ class Test_Follow extends \WP_UnitTestCase {
 	 * Test handle_follow method with different scenarios.
 	 *
 	 * @dataProvider handle_follow_provider
-	 * @covers ::handle_follow
+	 * @covers ::incoming
 	 *
 	 * @param mixed  $target_user_id      The user ID being followed (int or 'test_user').
 	 * @param string $actor_url           The actor URL following.
@@ -81,7 +81,7 @@ class Test_Follow extends \WP_UnitTestCase {
 		$followers_before       = Followers::get_many( $target_user_id );
 		$followers_count_before = count( $followers_before );
 
-		Follow::handle_follow( $activity_object, $target_user_id );
+		Follow::incoming( $activity_object, $target_user_id );
 
 		// Check if follower was added.
 		$followers_after       = Followers::get_many( $target_user_id );
@@ -240,7 +240,7 @@ class Test_Follow extends \WP_UnitTestCase {
 	/**
 	 * Test that duplicate follow requests don't trigger notifications.
 	 *
-	 * @covers ::handle_follow
+	 * @covers ::incoming
 	 */
 	public function test_duplicate_follow_no_notification() {
 		$actor_url = 'https://example.com/duplicate-actor';
@@ -278,7 +278,7 @@ class Test_Follow extends \WP_UnitTestCase {
 		\add_action( 'activitypub_handled_follow', $test_callback, 10, 4 );
 
 		// First follow request - should succeed.
-		Follow::handle_follow( $activity_object, self::$user_id );
+		Follow::incoming( $activity_object, self::$user_id );
 
 		// Verify first follow was successful.
 		$this->assertCount( 1, $handled_follow_calls, 'First follow should trigger the action' );
@@ -291,7 +291,7 @@ class Test_Follow extends \WP_UnitTestCase {
 
 		// Second follow request with a different activity ID (simulating a retry).
 		$activity_object['id'] = $actor_url . '/activity/follow-2';
-		Follow::handle_follow( $activity_object, self::$user_id );
+		Follow::incoming( $activity_object, self::$user_id );
 
 		// Verify second follow was not successful (to prevent duplicate notification).
 		$this->assertCount( 2, $handled_follow_calls, 'Second follow should also trigger the action' );
@@ -356,7 +356,7 @@ class Test_Follow extends \WP_UnitTestCase {
 	/**
 	 * Test that deprecated hook still fires for backward compatibility.
 	 *
-	 * @covers ::handle_follow
+	 * @covers ::incoming
 	 */
 	public function test_deprecated_hook_fires() {
 		// Expect the deprecation notice.
@@ -398,7 +398,7 @@ class Test_Follow extends \WP_UnitTestCase {
 			'object' => Actors::get_by_id( self::$user_id )->get_id(),
 		);
 
-		Follow::handle_follow( $activity_object, self::$user_id );
+		Follow::incoming( $activity_object, self::$user_id );
 
 		// Verify deprecated hook fired.
 		$this->assertTrue( $hook_fired, 'Deprecated hook should fire' );
@@ -415,7 +415,7 @@ class Test_Follow extends \WP_UnitTestCase {
 	/**
 	 * Test new hook fires correctly.
 	 *
-	 * @covers ::handle_follow
+	 * @covers ::incoming
 	 */
 	public function test_new_hook_fires() {
 		$hook_fired        = false;
@@ -455,7 +455,7 @@ class Test_Follow extends \WP_UnitTestCase {
 			'object' => Actors::get_by_id( self::$user_id )->get_id(),
 		);
 
-		Follow::handle_follow( $activity_object, self::$user_id );
+		Follow::incoming( $activity_object, self::$user_id );
 
 		// Verify new hook fired.
 		$this->assertTrue( $hook_fired, 'New hook should fire' );

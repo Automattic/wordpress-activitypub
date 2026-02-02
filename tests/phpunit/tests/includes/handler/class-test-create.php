@@ -126,23 +126,23 @@ class Test_Create extends \WP_UnitTestCase {
 	/**
 	 * Test handle create.
 	 *
-	 * @covers ::handle_create
+	 * @covers ::incoming
 	 */
 	public function test_handle_create_non_public_rejected() {
 		$object       = $this->create_test_object();
 		$object['cc'] = array();
-		$converted    = Create::handle_create( $object, $this->user_id );
-		$this->assertNull( $converted );
+		$converted    = Create::incoming( $object, $this->user_id );
+		$this->assertFalse( $converted );
 	}
 
 	/**
 	 * Test handle create.
 	 *
-	 * @covers ::handle_create
+	 * @covers ::incoming
 	 */
 	public function test_handle_create_public_accepted() {
 		$object = $this->create_test_object();
-		Create::handle_create( $object, $this->user_id );
+		Create::incoming( $object, $this->user_id );
 
 		$args = array(
 			'type'    => 'comment',
@@ -160,13 +160,13 @@ class Test_Create extends \WP_UnitTestCase {
 	/**
 	 * Test handle create.
 	 *
-	 * @covers ::handle_create
+	 * @covers ::incoming
 	 */
 	public function test_handle_create_public_accepted_without_type() {
 		$object = $this->create_test_object( 'https://example.com/123456' );
 		unset( $object['type'] );
 
-		Create::handle_create( $object, $this->user_id );
+		Create::incoming( $object, $this->user_id );
 
 		$args = array(
 			'type'    => 'comment',
@@ -183,12 +183,12 @@ class Test_Create extends \WP_UnitTestCase {
 	/**
 	 * Test handle create check duplicate ID.
 	 *
-	 * @covers ::handle_create
+	 * @covers ::incoming
 	 */
 	public function test_handle_create_check_duplicate_id() {
 		$id     = 'https://example.com/id/' . microtime( true );
 		$object = $this->create_test_object( $id );
-		Create::handle_create( $object, $this->user_id );
+		Create::incoming( $object, $this->user_id );
 
 		$args = array(
 			'type'    => 'comment',
@@ -203,7 +203,7 @@ class Test_Create extends \WP_UnitTestCase {
 		$this->assertCount( 1, $result );
 
 		$object['object']['content'] = 'example2';
-		Create::handle_create( $object, $this->user_id );
+		Create::incoming( $object, $this->user_id );
 
 		$args = array(
 			'type'    => 'comment',
@@ -219,12 +219,12 @@ class Test_Create extends \WP_UnitTestCase {
 	/**
 	 * Test handle create check duplicate content.
 	 *
-	 * @covers ::handle_create
+	 * @covers ::incoming
 	 */
 	public function test_handle_create_check_duplicate_content() {
 		$id     = 'https://example.com/id/' . microtime( true );
 		$object = $this->create_test_object( $id );
-		Create::handle_create( $object, $this->user_id );
+		Create::incoming( $object, $this->user_id );
 
 		$args = array(
 			'type'    => 'comment',
@@ -240,7 +240,7 @@ class Test_Create extends \WP_UnitTestCase {
 
 		$id     = 'https://example.com/id/' . microtime( true );
 		$object = $this->create_test_object( $id );
-		Create::handle_create( $object, $this->user_id );
+		Create::incoming( $object, $this->user_id );
 
 		$args = array(
 			'type'    => 'comment',
@@ -256,12 +256,12 @@ class Test_Create extends \WP_UnitTestCase {
 	/**
 	 * Test handle create multiple comments.
 	 *
-	 * @covers ::handle_create
+	 * @covers ::incoming
 	 */
 	public function test_handle_create_check_multiple_comments() {
 		$id     = 'https://example.com/id/4711';
 		$object = $this->create_test_object( $id );
-		Create::handle_create( $object, $this->user_id );
+		Create::incoming( $object, $this->user_id );
 
 		$args = array(
 			'type'    => 'comment',
@@ -278,7 +278,7 @@ class Test_Create extends \WP_UnitTestCase {
 		$id                          = 'https://example.com/id/23';
 		$object                      = $this->create_test_object( $id );
 		$object['object']['content'] = 'example2';
-		Create::handle_create( $object, $this->user_id );
+		Create::incoming( $object, $this->user_id );
 
 		$args = array(
 			'type'    => 'comment',
@@ -298,7 +298,7 @@ class Test_Create extends \WP_UnitTestCase {
 	/**
 	 * Test handling create activity for objects with content sanitization.
 	 *
-	 * @covers ::handle_create
+	 * @covers ::incoming
 	 * @covers ::create_post
 	 */
 	public function test_handle_create_object_with_sanitization() {
@@ -340,7 +340,7 @@ class Test_Create extends \WP_UnitTestCase {
 
 		\update_option( 'activitypub_create_posts', true );
 
-		Create::handle_create( $activity, $this->user_id );
+		Create::incoming( $activity, $this->user_id );
 
 		// Verify the object was created with sanitized content.
 		$created_object = Posts::get_by_guid( 'https://example.com/objects/note_sanitize' );
@@ -360,7 +360,7 @@ class Test_Create extends \WP_UnitTestCase {
 	/**
 	 * Test handling private create activity.
 	 *
-	 * @covers ::handle_create
+	 * @covers ::incoming
 	 */
 	public function test_handle_create_private_activity() {
 		$private_activity = array(
@@ -384,7 +384,7 @@ class Test_Create extends \WP_UnitTestCase {
 			)
 		);
 
-		Create::handle_create( $private_activity, $this->user_id );
+		Create::incoming( $private_activity, $this->user_id );
 
 		// Count objects after.
 		$objects_after = get_posts(
@@ -402,7 +402,7 @@ class Test_Create extends \WP_UnitTestCase {
 	/**
 	 * Test create activity with malformed object data.
 	 *
-	 * @covers ::handle_create
+	 * @covers ::incoming
 	 */
 	public function test_handle_create_malformed_object() {
 		$malformed_activity = array(
@@ -425,7 +425,7 @@ class Test_Create extends \WP_UnitTestCase {
 			)
 		);
 
-		Create::handle_create( $malformed_activity, $this->user_id );
+		Create::incoming( $malformed_activity, $this->user_id );
 
 		// Count objects after.
 		$objects_after = get_posts(
@@ -441,11 +441,11 @@ class Test_Create extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test create_post returns false when activitypub_create_posts option is disabled.
+	 * Test incoming returns false when activitypub_create_posts option is disabled.
 	 *
-	 * @covers ::create_post
+	 * @covers ::incoming
 	 */
-	public function test_create_post_disabled_by_option() {
+	public function test_incoming_post_disabled_by_option() {
 		// Ensure option is not set.
 		\delete_option( 'activitypub_create_posts' );
 
@@ -481,7 +481,7 @@ class Test_Create extends \WP_UnitTestCase {
 			),
 		);
 
-		$result = Create::create_post( $activity, array( $this->user_id ) );
+		$result = Create::incoming( $activity, array( $this->user_id ) );
 
 		$this->assertFalse( $result );
 
@@ -493,11 +493,11 @@ class Test_Create extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test create_post works when activitypub_create_posts option is enabled.
+	 * Test incoming works when activitypub_create_posts option is enabled.
 	 *
-	 * @covers ::create_post
+	 * @covers ::incoming
 	 */
-	public function test_create_post_enabled_by_option() {
+	public function test_incoming_post_enabled_by_option() {
 		// Enable the option.
 		\update_option( 'activitypub_create_posts', '1' );
 
@@ -533,7 +533,7 @@ class Test_Create extends \WP_UnitTestCase {
 			),
 		);
 
-		$result = Create::create_post( $activity, array( $this->user_id ) );
+		$result = Create::incoming( $activity, array( $this->user_id ) );
 
 		$this->assertInstanceOf( 'WP_Post', $result );
 
@@ -566,9 +566,9 @@ class Test_Create extends \WP_UnitTestCase {
 			),
 		);
 
-		$result = Create::handle_create( $object, $this->user_id );
+		$result = Create::incoming( $object, $this->user_id );
 
-		$this->assertNull( $result );
+		$this->assertFalse( $result );
 
 		// Verify no comment was created.
 		$args = array(

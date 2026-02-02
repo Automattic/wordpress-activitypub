@@ -50,7 +50,7 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 		$wp_rest_server = new \WP_REST_Server();
 		$this->server   = $wp_rest_server;
 
-		( new Proxy_Controller() )->register_routes();
+		\do_action( 'rest_api_init' );
 	}
 
 	/**

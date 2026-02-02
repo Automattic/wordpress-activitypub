@@ -110,7 +110,7 @@ class Test_Like extends \WP_UnitTestCase {
 	 * Test handle_like with different scenarios.
 	 *
 	 * @dataProvider handle_like_provider
-	 * @covers ::handle_like
+	 * @covers ::incoming
 	 *
 	 * @param array  $activity_data      The like activity data.
 	 * @param bool   $should_create_comment Whether a comment should be created.
@@ -130,7 +130,7 @@ class Test_Like extends \WP_UnitTestCase {
 		$count_before    = count( $comments_before );
 
 		// Process the like.
-		Like::handle_like( $activity, $this->user_id );
+		Like::incoming( $activity, $this->user_id );
 
 		// Check comment count after.
 		$comments_after = \get_comments(
@@ -191,7 +191,7 @@ class Test_Like extends \WP_UnitTestCase {
 	 * This test verifies that Like activities from Pixelfed and other platforms
 	 * that include trailing slashes in object URLs are processed correctly.
 	 *
-	 * @covers ::handle_like
+	 * @covers ::incoming
 	 * @covers \Activitypub\Collection\Interactions::add_reaction
 	 */
 	public function test_handle_like_with_trailing_slash() {
@@ -214,7 +214,7 @@ class Test_Like extends \WP_UnitTestCase {
 		$count_before    = count( $comments_before );
 
 		// Process the like.
-		Like::handle_like( $activity, $this->user_id );
+		Like::incoming( $activity, $this->user_id );
 
 		// Check that comment was created despite trailing slash.
 		$comments_after = \get_comments(
@@ -232,7 +232,7 @@ class Test_Like extends \WP_UnitTestCase {
 	/**
 	 * Test duplicate like handling.
 	 *
-	 * @covers ::handle_like
+	 * @covers ::incoming
 	 */
 	public function test_handle_like_duplicate() {
 		$activity = array_merge(
@@ -241,7 +241,7 @@ class Test_Like extends \WP_UnitTestCase {
 		);
 
 		// Process the like first time.
-		Like::handle_like( $activity, $this->user_id );
+		Like::incoming( $activity, $this->user_id );
 
 		$comments_after_first = \get_comments(
 			array(
@@ -252,7 +252,7 @@ class Test_Like extends \WP_UnitTestCase {
 		$count_after_first    = count( $comments_after_first );
 
 		// Process the same like again.
-		Like::handle_like( $activity, $this->user_id );
+		Like::incoming( $activity, $this->user_id );
 
 		$comments_after_second = \get_comments(
 			array(
@@ -268,7 +268,7 @@ class Test_Like extends \WP_UnitTestCase {
 	/**
 	 * Test handle_like action hook fires.
 	 *
-	 * @covers ::handle_like
+	 * @covers ::incoming
 	 */
 	public function test_handle_like_action_hook() {
 		$hook_fired    = false;
@@ -287,7 +287,7 @@ class Test_Like extends \WP_UnitTestCase {
 		\add_action( 'activitypub_handled_like', $handled_like_callback, 10, 4 );
 
 		$activity = $this->create_test_object();
-		Like::handle_like( $activity, $this->user_id );
+		Like::incoming( $activity, $this->user_id );
 
 		// Verify hook was fired.
 		$this->assertTrue( $hook_fired, 'Action hook should be fired' );
