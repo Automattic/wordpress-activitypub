@@ -44,9 +44,9 @@ class Http {
 		/**
 		 * Filters the timeout duration for remote POST requests in ActivityPub.
 		 *
-		 * @param int $timeout The timeout value in seconds. Default 30 seconds.
+		 * @param int $timeout The timeout value in seconds. Default 10 seconds.
 		 */
-		$timeout = \apply_filters( 'activitypub_remote_post_timeout', 30 );
+		$timeout = \apply_filters( 'activitypub_remote_post_timeout', 10 );
 
 		$args = array(
 			'timeout'             => $timeout,
@@ -138,9 +138,9 @@ class Http {
 		/**
 		 * Filters the timeout duration for remote GET requests in ActivityPub.
 		 *
-		 * @param int $timeout The timeout value in seconds. Default 15 seconds.
+		 * @param int $timeout The timeout value in seconds. Default 10 seconds.
 		 */
-		$timeout = \apply_filters( 'activitypub_remote_get_timeout', 15 );
+		$timeout = \apply_filters( 'activitypub_remote_get_timeout', 10 );
 
 		$args = array(
 			'timeout'             => $timeout,
