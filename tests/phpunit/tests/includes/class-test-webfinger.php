@@ -357,7 +357,7 @@ class Test_Webfinger extends \WP_UnitTestCase {
 		$result = Webfinger::get_data( $uri );
 
 		$this->assertWPError( $result );
-		$this->assertEquals( 'webfinger_cached_failure', $result->get_error_code() );
+		$this->assertEquals( 'webfinger_url_not_accessible', $result->get_error_code() );
 		$this->assertEquals( 1, $request_count, 'Second call should use cache, not make another HTTP request' );
 
 		\remove_filter( 'pre_http_request', $filter );
@@ -402,7 +402,7 @@ class Test_Webfinger extends \WP_UnitTestCase {
 		$result = Webfinger::get_data( $uri );
 
 		$this->assertWPError( $result );
-		$this->assertEquals( 'webfinger_cached_failure', $result->get_error_code() );
+		$this->assertEquals( 'webfinger_url_not_accessible', $result->get_error_code() );
 		$this->assertEquals( 1, $request_count, 'Second call should use cache, not make another HTTP request' );
 
 		\remove_filter( 'pre_http_request', $filter );
@@ -442,7 +442,7 @@ class Test_Webfinger extends \WP_UnitTestCase {
 		$result = Webfinger::get_data( $uri );
 
 		$this->assertWPError( $result );
-		$this->assertEquals( 'webfinger_cached_failure', $result->get_error_code() );
+		$this->assertEquals( 'webfinger_url_not_accessible', $result->get_error_code() );
 		$this->assertEquals( 1, $request_count, 'Second call should use cache, not make another HTTP request' );
 
 		\remove_filter( 'pre_http_request', $filter );

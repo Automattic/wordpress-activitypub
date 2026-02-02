@@ -206,17 +206,6 @@ class Webfinger {
 
 		$data = \get_transient( $transient_key );
 		if ( $data ) {
-			// Check for cached failure.
-			if ( is_array( $data ) && isset( $data['__webfinger_error__'] ) ) {
-				return new \WP_Error(
-					'webfinger_cached_failure',
-					__( 'The WebFinger Resource is not accessible (cached).', 'activitypub' ),
-					array(
-						'status' => 400,
-						'data'   => $data['__webfinger_error__'],
-					)
-				);
-			}
 			return $data;
 		}
 
@@ -246,9 +235,7 @@ class Webfinger {
 				$cache_duration = 15 * MINUTE_IN_SECONDS;
 			}
 
-			\set_transient( $transient_key, array( '__webfinger_error__' => $webfinger_url ), $cache_duration );
-
-			return new \WP_Error(
+			$error = new \WP_Error(
 				'webfinger_url_not_accessible',
 				__( 'The WebFinger Resource is not accessible.', 'activitypub' ),
 				array(
@@ -256,6 +243,10 @@ class Webfinger {
 					'data'   => $webfinger_url,
 				)
 			);
+
+			\set_transient( $transient_key, $error, $cache_duration );
+
+			return $error;
 		}
 
 		$body = \wp_remote_retrieve_body( $response );
