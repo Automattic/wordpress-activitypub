@@ -292,6 +292,9 @@ class Test_Signature extends \WP_UnitTestCase {
 	 * @covers ::verify_http_signature
 	 */
 	public function test_verify_http_signature_with_digest() {
+		// Ensure Draft Cavage signature is used for this test.
+		\update_option( 'activitypub_rfc9421_signature', '0' );
+
 		// Create a user and get their keypair.
 		$keys = Actors::get_keypair( 1 );
 
@@ -352,6 +355,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		$this->assertTrue( Signature::verify_http_signature( $request ) );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+		\delete_option( 'activitypub_rfc9421_signature' );
 	}
 
 	/**
