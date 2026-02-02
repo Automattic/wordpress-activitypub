@@ -200,15 +200,6 @@ class OAuth_Controller extends \WP_REST_Controller {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function authorize( \WP_REST_Request $request ) {
-		// Check if C2S is enabled.
-		if ( ! OAuth_Server::is_c2s_enabled() ) {
-			return new \WP_Error(
-				'activitypub_c2s_disabled',
-				\__( 'Client-to-Server (C2S) support is not enabled.', 'activitypub' ),
-				array( 'status' => 403 )
-			);
-		}
-
 		$client_id     = $request->get_param( 'client_id' );
 		$redirect_uri  = $request->get_param( 'redirect_uri' );
 		$response_type = $request->get_param( 'response_type' );
@@ -282,15 +273,6 @@ class OAuth_Controller extends \WP_REST_Controller {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function authorize_submit( \WP_REST_Request $request ) {
-		// Check if C2S is enabled.
-		if ( ! OAuth_Server::is_c2s_enabled() ) {
-			return new \WP_Error(
-				'activitypub_c2s_disabled',
-				\__( 'Client-to-Server (C2S) support is not enabled.', 'activitypub' ),
-				array( 'status' => 403 )
-			);
-		}
-
 		$client_id             = $request->get_param( 'client_id' );
 		$redirect_uri          = $request->get_param( 'redirect_uri' );
 		$scope                 = $request->get_param( 'scope' );
@@ -380,15 +362,6 @@ class OAuth_Controller extends \WP_REST_Controller {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function token( \WP_REST_Request $request ) {
-		// Check if C2S is enabled.
-		if ( ! OAuth_Server::is_c2s_enabled() ) {
-			return new \WP_Error(
-				'activitypub_c2s_disabled',
-				\__( 'Client-to-Server (C2S) support is not enabled.', 'activitypub' ),
-				array( 'status' => 403 )
-			);
-		}
-
 		$grant_type = $request->get_param( 'grant_type' );
 		$client_id  = $request->get_param( 'client_id' );
 
@@ -509,15 +482,6 @@ class OAuth_Controller extends \WP_REST_Controller {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function register_client( \WP_REST_Request $request ) {
-		// Check if C2S is enabled.
-		if ( ! OAuth_Server::is_c2s_enabled() ) {
-			return new \WP_Error(
-				'activitypub_c2s_disabled',
-				\__( 'Client-to-Server (C2S) support is not enabled.', 'activitypub' ),
-				array( 'status' => 403 )
-			);
-		}
-
 		// Check if dynamic registration is allowed.
 		if ( ! \apply_filters( 'activitypub_allow_dynamic_client_registration', true ) ) {
 			return new \WP_Error(

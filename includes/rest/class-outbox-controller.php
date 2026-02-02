@@ -335,15 +335,6 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
 	 */
 	public function create_item_permissions_check( $request ) {
-		// Check if C2S is enabled.
-		if ( ! OAuth_Server::is_c2s_enabled() ) {
-			return new \WP_Error(
-				'activitypub_c2s_disabled',
-				\__( 'Client-to-Server (C2S) support is not enabled.', 'activitypub' ),
-				array( 'status' => 403 )
-			);
-		}
-
 		// Must be authenticated via OAuth with 'write' scope.
 		$permission = OAuth_Server::check_oauth_permission( $request, Scope::WRITE );
 		if ( \is_wp_error( $permission ) ) {

@@ -61,11 +61,6 @@ class Server {
 			return $result;
 		}
 
-		// Only process OAuth if C2S is enabled.
-		if ( ! self::is_c2s_enabled() ) {
-			return $result;
-		}
-
 		// Validate the token.
 		$validated = Token::validate( $token );
 
@@ -222,10 +217,12 @@ class Server {
 	/**
 	 * Check if C2S (Client-to-Server) is enabled.
 	 *
-	 * @return bool True if C2S is enabled.
+	 * @deprecated C2S is now always enabled.
+	 *
+	 * @return bool Always returns true.
 	 */
 	public static function is_c2s_enabled() {
-		return (bool) \get_option( 'activitypub_enable_c2s', false );
+		return true;
 	}
 
 	/**
@@ -274,15 +271,6 @@ class Server {
 		// Require user to be logged in.
 		if ( ! \is_user_logged_in() ) {
 			\auth_redirect();
-		}
-
-		// Check if C2S is enabled.
-		if ( ! self::is_c2s_enabled() ) {
-			\wp_die(
-				\esc_html__( 'Client-to-Server (C2S) support is not enabled.', 'activitypub' ),
-				\esc_html__( 'Authorization Error', 'activitypub' ),
-				array( 'response' => 403 )
-			);
 		}
 
 		$request_method = isset( $_SERVER['REQUEST_METHOD'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '';

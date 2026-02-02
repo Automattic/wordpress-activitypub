@@ -217,15 +217,6 @@ class Inbox_Controller extends \WP_REST_Controller {
 	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
 	 */
 	public function get_items_permissions_check( $request ) {
-		// Check if C2S is enabled.
-		if ( ! OAuth_Server::is_c2s_enabled() ) {
-			return new \WP_Error(
-				'activitypub_c2s_disabled',
-				\__( 'Client-to-Server (C2S) support is not enabled.', 'activitypub' ),
-				array( 'status' => 403 )
-			);
-		}
-
 		$user_id = $request->get_param( 'user_id' );
 
 		// Validate the user.

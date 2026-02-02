@@ -98,15 +98,6 @@ class Advanced_Settings_Fields {
 			'activitypub_advanced_settings',
 			array( 'label_for' => 'activitypub_object_type' )
 		);
-
-		\add_settings_field(
-			'activitypub_enable_c2s',
-			\__( 'Client-to-Server (C2S)', 'activitypub' ),
-			array( self::class, 'render_enable_c2s_field' ),
-			'activitypub_advanced_settings',
-			'activitypub_advanced_settings',
-			array( 'label_for' => 'activitypub_enable_c2s' )
-		);
 	}
 
 	/**
@@ -259,37 +250,6 @@ class Advanced_Settings_Fields {
 		</p>
 		<p class="description">
 			<?php \esc_html_e( 'This is mainly for backwards compatibility. It is not recommended to use the Template Tags, because it might not be supported in future versions.', 'activitypub' ); ?>
-		</p>
-		<?php
-	}
-
-	/**
-	 * Render Client-to-Server (C2S) field.
-	 */
-	public static function render_enable_c2s_field() {
-		$value = \get_option( 'activitypub_enable_c2s', '0' );
-		?>
-		<p>
-			<label>
-				<input type="checkbox" id="activitypub_enable_c2s" name="activitypub_enable_c2s" value="1" <?php \checked( '1', $value ); ?> />
-				<?php \esc_html_e( 'Enable Client-to-Server (C2S) support for third-party ActivityPub clients.', 'activitypub' ); ?>
-			</label>
-		</p>
-		<p class="description">
-			<?php \esc_html_e( 'Allows third-party ActivityPub applications to post on behalf of users via OAuth 2.0 authentication. When enabled, your actor profiles will advertise OAuth endpoints for client discovery.', 'activitypub' ); ?>
-		</p>
-		<p class="description">
-			<?php
-			echo \wp_kses(
-				\__( '⚠ This feature implements the <a href="https://github.com/swicg/activitypub-api" target="_blank">SWICG ActivityPub API</a> specification, which is still under development. Some features may change in future versions.', 'activitypub' ),
-				array(
-					'a' => array(
-						'href'   => true,
-						'target' => true,
-					),
-				)
-			);
-			?>
 		</p>
 		<?php
 	}

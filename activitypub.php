@@ -72,6 +72,7 @@ function rest_init() {
 
 	// Load OAuth REST endpoints.
 	( new Rest\OAuth_Controller() )->register_routes();
+	( new Rest\Proxy_Controller() )->register_routes();
 }
 \add_action( 'rest_api_init', __NAMESPACE__ . '\rest_init' );
 
