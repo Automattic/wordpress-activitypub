@@ -174,4 +174,36 @@ class Test_User extends \WP_UnitTestCase {
 
 		$this->assertSame( 'normaluser', $user3->get_preferred_username() );
 	}
+
+	/**
+	 * Test that user actor type changes to Service when marked as bot.
+	 *
+	 * @covers ::get_type
+	 */
+	public function test_user_actor_type_as_bot() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$user    = User::from_wp_user( $user_id );
+
+		// Default type should be Person.
+		$this->assertSame( 'Person', $user->get_type() );
+
+		// Enable bot mode for this user.
+		\update_user_option( $user_id, 'activitypub_is_bot', '1' );
+
+		// Type should now be Service.
+		$this->assertSame( 'Service', $user->get_type() );
+
+		// Verify it appears in the actor array.
+		$actor_array = $user->to_array( false );
+		$this->assertSame( 'Service', $actor_array['type'] );
+
+		// Disable bot mode.
+		\update_user_option( $user_id, 'activitypub_is_bot', '0' );
+
+		// Type should be Person again.
+		$this->assertSame( 'Person', $user->get_type() );
+
+		// Clean up.
+		\delete_user_option( $user_id, 'activitypub_is_bot' );
+	}
 }
