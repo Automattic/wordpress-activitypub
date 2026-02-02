@@ -26,6 +26,7 @@ use function Activitypub\object_to_uri;
  */
 class Outbox_Controller extends \WP_REST_Controller {
 	use Collection;
+	use Verification;
 
 	/**
 	 * The namespace of this controller's route.
@@ -59,7 +60,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_items' ),
-					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
+					'permission_callback' => array( $this, 'verify_signature' ),
 					'args'                => array(
 						'page'     => array(
 							'description' => 'Current page of the collection.',
@@ -334,13 +335,13 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 */
 	public function create_item_permissions_check( $request ) {
 		// Verify OAuth with write scope.
-		$result = Server::verify_oauth_write( $request );
+		$result = $this->verify_oauth_write( $request );
 		if ( \is_wp_error( $result ) ) {
 			return $result;
 		}
 
 		// Verify the token belongs to the requested user.
-		return Server::verify_owner( $request );
+		return $this->verify_owner( $request );
 	}
 
 	/**

@@ -22,6 +22,8 @@ use function Activitypub\is_actor;
  * Allows C2S clients to fetch remote ActivityPub objects through their home server.
  */
 class Proxy_Controller extends \WP_REST_Controller {
+	use Verification;
+
 	/**
 	 * The namespace of this controller's route.
 	 *
@@ -70,7 +72,7 @@ class Proxy_Controller extends \WP_REST_Controller {
 	 */
 	public function get_item_permissions_check( $request ) {
 		// Verify OAuth with read scope.
-		$result = Server::verify_oauth_read( $request );
+		$result = $this->verify_oauth_read( $request );
 		if ( \is_wp_error( $result ) ) {
 			return $result;
 		}

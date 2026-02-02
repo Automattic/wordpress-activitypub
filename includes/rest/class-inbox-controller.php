@@ -33,6 +33,7 @@ use function Activitypub\user_can_activitypub;
  */
 class Inbox_Controller extends \WP_REST_Controller {
 	use Collection;
+	use Verification;
 
 	/**
 	 * The namespace of this controller's route.
@@ -67,7 +68,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'create_item' ),
-					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
+					'permission_callback' => array( $this, 'verify_signature' ),
 					'args'                => $this->get_create_item_args(),
 				),
 				'schema' => array( $this, 'get_item_schema' ),
@@ -109,7 +110,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'create_item' ),
-					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
+					'permission_callback' => array( $this, 'verify_signature' ),
 					'args'                => $this->get_create_item_args(),
 				),
 				'schema' => array( $this, 'get_item_schema' ),
@@ -216,13 +217,13 @@ class Inbox_Controller extends \WP_REST_Controller {
 	 */
 	public function get_items_permissions_check( $request ) {
 		// Verify OAuth with read scope.
-		$result = Server::verify_oauth_read( $request );
+		$result = $this->verify_oauth_read( $request );
 		if ( \is_wp_error( $result ) ) {
 			return $result;
 		}
 
 		// Verify the token belongs to the requested user.
-		return Server::verify_owner( $request );
+		return $this->verify_owner( $request );
 	}
 
 	/**

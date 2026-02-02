@@ -65,7 +65,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'create_item' ),
-					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
+					'permission_callback' => array( $this, 'verify_signature' ),
 					'args'                => array(
 						'id'     => array(
 							'description' => 'The unique identifier for the activity.',
