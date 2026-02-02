@@ -322,18 +322,18 @@ class Test_Webfinger extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that WebFinger failures are cached.
+	 * Test that WebFinger 4xx failures are cached (longer duration).
 	 *
 	 * @covers ::get_data
 	 */
-	public function test_get_data_caches_failure() {
-		$uri = 'failure-test@unreachable.example';
+	public function test_get_data_caches_4xx_failure() {
+		$uri = 'failure-test-4xx@unreachable.example';
 
 		// Clear any existing cache.
 		$transient_key = Webfinger::generate_cache_key( $uri );
 		\delete_transient( $transient_key );
 
-		// Mock a failed HTTP response.
+		// Mock a 404 HTTP response.
 		$request_count = 0;
 		$filter        = function () use ( &$request_count ) {
 			++$request_count;
@@ -343,6 +343,91 @@ class Test_Webfinger extends \WP_UnitTestCase {
 				),
 				'body'     => 'Not Found',
 			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		// First call should make an HTTP request and return an error.
+		$result = Webfinger::get_data( $uri );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'webfinger_url_not_accessible', $result->get_error_code() );
+		$this->assertEquals( 1, $request_count, 'First call should make one HTTP request' );
+
+		// Second call should return cached error without making another HTTP request.
+		$result = Webfinger::get_data( $uri );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'webfinger_cached_failure', $result->get_error_code() );
+		$this->assertEquals( 1, $request_count, 'Second call should use cache, not make another HTTP request' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		// Clean up.
+		\delete_transient( $transient_key );
+	}
+
+	/**
+	 * Test that WebFinger 5xx failures are cached (shorter duration).
+	 *
+	 * @covers ::get_data
+	 */
+	public function test_get_data_caches_5xx_failure() {
+		$uri = 'failure-test-5xx@unreachable.example';
+
+		// Clear any existing cache.
+		$transient_key = Webfinger::generate_cache_key( $uri );
+		\delete_transient( $transient_key );
+
+		// Mock a 503 HTTP response.
+		$request_count = 0;
+		$filter        = function () use ( &$request_count ) {
+			++$request_count;
+			return array(
+				'response' => array(
+					'code' => 503,
+				),
+				'body'     => 'Service Unavailable',
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		// First call should make an HTTP request and return an error.
+		$result = Webfinger::get_data( $uri );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'webfinger_url_not_accessible', $result->get_error_code() );
+		$this->assertEquals( 1, $request_count, 'First call should make one HTTP request' );
+
+		// Second call should return cached error without making another HTTP request.
+		$result = Webfinger::get_data( $uri );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'webfinger_cached_failure', $result->get_error_code() );
+		$this->assertEquals( 1, $request_count, 'Second call should use cache, not make another HTTP request' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		// Clean up.
+		\delete_transient( $transient_key );
+	}
+
+	/**
+	 * Test that WebFinger timeout failures are cached (shorter duration).
+	 *
+	 * @covers ::get_data
+	 */
+	public function test_get_data_caches_timeout_failure() {
+		$uri = 'failure-test-timeout@unreachable.example';
+
+		// Clear any existing cache.
+		$transient_key = Webfinger::generate_cache_key( $uri );
+		\delete_transient( $transient_key );
+
+		// Mock a timeout (WP_Error).
+		$request_count = 0;
+		$filter        = function () use ( &$request_count ) {
+			++$request_count;
+			return new \WP_Error( 'http_request_failed', 'Connection timed out' );
 		};
 		\add_filter( 'pre_http_request', $filter );
 

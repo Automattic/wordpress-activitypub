@@ -234,8 +234,19 @@ class Webfinger {
 		);
 
 		if ( \is_wp_error( $response ) || \wp_remote_retrieve_response_code( $response ) >= 400 ) {
-			// Cache the failure for 5 minutes to prevent repeated timeout waits.
-			\set_transient( $transient_key, array( '__webfinger_error__' => $webfinger_url ), 5 * MINUTE_IN_SECONDS );
+			/*
+			 * Cache failures to prevent repeated timeout waits.
+			 * - Timeouts and 5xx errors: 1 minute (server may recover quickly).
+			 * - 4xx errors: 15 minutes (client errors are more permanent).
+			 */
+			$response_code = \wp_remote_retrieve_response_code( $response );
+			if ( \is_wp_error( $response ) || $response_code >= 500 ) {
+				$cache_duration = MINUTE_IN_SECONDS;
+			} else {
+				$cache_duration = 15 * MINUTE_IN_SECONDS;
+			}
+
+			\set_transient( $transient_key, array( '__webfinger_error__' => $webfinger_url ), $cache_duration );
 
 			return new \WP_Error(
 				'webfinger_url_not_accessible',
