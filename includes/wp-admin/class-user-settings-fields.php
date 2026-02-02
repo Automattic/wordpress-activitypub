@@ -92,6 +92,14 @@ class User_Settings_Fields {
 		);
 
 		\add_settings_field(
+			'activitypub_is_bot',
+			\esc_html__( 'Bot Account', 'activitypub' ),
+			array( self::class, 'bot_account_callback' ),
+			'activitypub_user_settings',
+			'activitypub_user_profile'
+		);
+
+		\add_settings_field(
 			'activitypub_hide_social_graph',
 			\__( 'Followers and Followings', 'activitypub' ),
 			array( self::class, 'hide_followers_callback' ),
@@ -386,6 +394,22 @@ class User_Settings_Fields {
 				</button>
 			</div>
 		</div>
+		<?php
+	}
+
+	/**
+	 * Bot account field callback.
+	 */
+	public static function bot_account_callback() {
+		$is_bot = \get_user_option( 'activitypub_is_bot', \get_current_user_id() );
+		?>
+		<label>
+			<input type="checkbox" name="activitypub_is_bot" id="activitypub_is_bot" value="1" <?php \checked( '1', $is_bot ); ?> />
+			<?php \esc_html_e( 'Mark this profile as a bot or automated account.', 'activitypub' ); ?>
+		</label>
+		<p class="description">
+			<?php \esc_html_e( 'Bot accounts are displayed with a "BOT" badge on Mastodon and other Fediverse platforms.', 'activitypub' ); ?>
+		</p>
 		<?php
 	}
 
