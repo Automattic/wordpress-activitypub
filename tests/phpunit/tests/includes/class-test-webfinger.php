@@ -320,4 +320,94 @@ class Test_Webfinger extends \WP_UnitTestCase {
 			),
 		);
 	}
+
+	/**
+	 * Test that WebFinger failures are cached.
+	 *
+	 * @covers ::get_data
+	 */
+	public function test_get_data_caches_failure() {
+		$uri = 'failure-test@unreachable.example';
+
+		// Clear any existing cache.
+		$transient_key = Webfinger::generate_cache_key( $uri );
+		\delete_transient( $transient_key );
+
+		// Mock a failed HTTP response.
+		$request_count = 0;
+		$filter        = function () use ( &$request_count ) {
+			++$request_count;
+			return array(
+				'response' => array(
+					'code' => 404,
+				),
+				'body'     => 'Not Found',
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		// First call should make an HTTP request and return an error.
+		$result = Webfinger::get_data( $uri );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'webfinger_url_not_accessible', $result->get_error_code() );
+		$this->assertEquals( 1, $request_count, 'First call should make one HTTP request' );
+
+		// Second call should return cached error without making another HTTP request.
+		$result = Webfinger::get_data( $uri );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'webfinger_cached_failure', $result->get_error_code() );
+		$this->assertEquals( 1, $request_count, 'Second call should use cache, not make another HTTP request' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		// Clean up.
+		\delete_transient( $transient_key );
+	}
+
+	/**
+	 * Test that WebFinger successes are still cached properly.
+	 *
+	 * @covers ::get_data
+	 */
+	public function test_get_data_caches_success() {
+		$uri = 'success-test@reachable.example';
+
+		// Clear any existing cache.
+		$transient_key = Webfinger::generate_cache_key( $uri );
+		\delete_transient( $transient_key );
+
+		// Mock a successful HTTP response.
+		$request_count = 0;
+		$filter        = function () use ( &$request_count ) {
+			++$request_count;
+			return array(
+				'response' => array(
+					'code' => 200,
+				),
+				'body'     => '{ "subject": "acct:success-test@reachable.example", "links": [] }',
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		// First call should make an HTTP request.
+		$result = Webfinger::get_data( $uri );
+
+		$this->assertIsArray( $result );
+		$this->assertEquals( 'acct:success-test@reachable.example', $result['subject'] );
+		$this->assertEquals( 1, $request_count, 'First call should make one HTTP request' );
+
+		// Second call should use cache.
+		$result = Webfinger::get_data( $uri );
+
+		$this->assertIsArray( $result );
+		$this->assertEquals( 'acct:success-test@reachable.example', $result['subject'] );
+		$this->assertEquals( 1, $request_count, 'Second call should use cache, not make another HTTP request' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		// Clean up.
+		\delete_transient( $transient_key );
+	}
 }

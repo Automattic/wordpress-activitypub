@@ -40,8 +40,16 @@ class Http {
 		 * @param string $user_agent The user agent string.
 		 */
 		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . get_masked_wp_version() . '; ' . \get_bloginfo( 'url' ) );
-		$args       = array(
-			'timeout'             => 100,
+
+		/**
+		 * Filters the timeout duration for remote POST requests in ActivityPub.
+		 *
+		 * @param int $timeout The timeout value in seconds. Default 30 seconds.
+		 */
+		$timeout = \apply_filters( 'activitypub_remote_post_timeout', 30 );
+
+		$args = array(
+			'timeout'             => $timeout,
 			'limit_response_size' => 1048576,
 			'redirection'         => 3,
 			'user-agent'          => "$user_agent; ActivityPub",
@@ -130,9 +138,9 @@ class Http {
 		/**
 		 * Filters the timeout duration for remote GET requests in ActivityPub.
 		 *
-		 * @param int $timeout The timeout value in seconds. Default 100 seconds.
+		 * @param int $timeout The timeout value in seconds. Default 15 seconds.
 		 */
-		$timeout = \apply_filters( 'activitypub_remote_get_timeout', 100 );
+		$timeout = \apply_filters( 'activitypub_remote_get_timeout', 15 );
 
 		$args = array(
 			'timeout'             => $timeout,
