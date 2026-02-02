@@ -270,7 +270,7 @@ class Options {
 			array(
 				'type'        => 'boolean',
 				'description' => 'Use RFC-9421 signature.',
-				'default'     => false,
+				'default'     => true,
 			)
 		);
 
