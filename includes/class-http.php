@@ -107,22 +107,21 @@ class Http {
 		 */
 		\do_action( 'activitypub_pre_http_get', $url );
 
-		if ( $cached ) {
-			$transient_key = self::generate_cache_key( $url );
+		$transient_key = self::generate_cache_key( $url );
 
-			$response = \get_transient( $transient_key );
+		// Check cache for both successful responses and errors.
+		$response = \get_transient( $transient_key );
 
-			if ( $response ) {
-				/**
-				 * Action to save the response of the remote GET request.
-				 *
-				 * @param array|\WP_Error $response The response of the remote GET request.
-				 * @param string          $url      The URL endpoint.
-				 */
-				\do_action( 'activitypub_safe_remote_get_response', $response, $url );
+		if ( $response ) {
+			/**
+			 * Action to save the response of the remote GET request.
+			 *
+			 * @param array|\WP_Error $response The response of the remote GET request.
+			 * @param string          $url      The URL endpoint.
+			 */
+			\do_action( 'activitypub_safe_remote_get_response', $response, $url );
 
-				return $response;
-			}
+			return $response;
 		}
 
 		/**
@@ -159,8 +158,23 @@ class Http {
 		$response = \wp_safe_remote_get( $url, $args );
 		$code     = \wp_remote_retrieve_response_code( $response );
 
-		if ( $code >= 400 ) {
+		if ( \is_wp_error( $response ) || $code >= 400 ) {
+			/*
+			 * Cache errors to prevent repeated timeout waits.
+			 * - Timeouts and 5xx errors: 1 minute (server may recover quickly).
+			 * - 4xx errors: 15 minutes (client errors are more permanent).
+			 */
+			if ( \is_wp_error( $response ) || $code >= 500 ) {
+				$cache_duration = MINUTE_IN_SECONDS;
+			} else {
+				$cache_duration = 15 * MINUTE_IN_SECONDS;
+			}
+
 			$response = new \WP_Error( $code, __( 'Failed HTTP Request', 'activitypub' ), array( 'status' => $code ) );
+
+			\set_transient( $transient_key, $response, $cache_duration );
+
+			return $response;
 		}
 
 		/**
