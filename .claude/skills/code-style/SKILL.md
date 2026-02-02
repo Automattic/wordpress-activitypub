@@ -235,6 +235,7 @@ function old_feature() {}
 **Deprecation functions:**
 ```php
 \_deprecated_function( __METHOD__, 'unreleased', 'New_Class::new_method' );
+\_deprecated_argument( __METHOD__, 'unreleased', \esc_html__( 'Message', 'activitypub' ) );
 \_doing_it_wrong( __METHOD__, \esc_html__( 'Message', 'activitypub' ), 'unreleased' );
 ```
 

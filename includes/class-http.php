@@ -104,10 +104,10 @@ class Http {
 	public static function get( $url, $args = array(), $cached = false ) {
 		// Backward compatibility: if $args is boolean/int, it's the old $cached parameter.
 		if ( ! \is_array( $args ) ) {
-			\_doing_it_wrong(
+			\_deprecated_argument(
 				__METHOD__,
-				\esc_html__( 'The $cached parameter should now be passed as the third argument.', 'activitypub' ),
-				'unreleased'
+				'unreleased',
+				\esc_html__( 'The $cached parameter should now be passed as the third argument.', 'activitypub' )
 			);
 			$cached = $args;
 			$args   = array();
