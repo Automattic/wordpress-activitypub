@@ -14,8 +14,6 @@ use Activitypub\Collection\Following;
 use Activitypub\Collection\Inbox;
 use Activitypub\Http;
 use Activitypub\Moderation;
-use Activitypub\OAuth\Scope;
-use Activitypub\OAuth\Server as OAuth_Server;
 
 use function Activitypub\camel_to_snake_case;
 use function Activitypub\extract_recipients_from_activity;
@@ -217,34 +215,14 @@ class Inbox_Controller extends \WP_REST_Controller {
 	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
 	 */
 	public function get_items_permissions_check( $request ) {
-		$user_id = $request->get_param( 'user_id' );
-
-		// Validate the user.
-		$user = Actors::get_by_id( $user_id );
-		if ( \is_wp_error( $user ) ) {
-			return $user;
-		}
-
-		// Validate OAuth token and scope.
-		$result = OAuth_Server::check_oauth_permission( $request, Scope::READ );
-
+		// Verify OAuth with read scope.
+		$result = Server::verify_oauth_read( $request );
 		if ( \is_wp_error( $result ) ) {
 			return $result;
 		}
 
 		// Verify the token belongs to the requested user.
-		$token   = OAuth_Server::get_current_token();
-		$user_id = absint( $user_id );
-
-		if ( ! $token || $token->get_user_id() !== $user_id ) {
-			return new \WP_Error(
-				'activitypub_unauthorized',
-				\__( 'You can only read your own inbox.', 'activitypub' ),
-				array( 'status' => 403 )
-			);
-		}
-
-		return true;
+		return Server::verify_owner( $request );
 	}
 
 	/**

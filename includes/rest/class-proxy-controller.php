@@ -12,8 +12,6 @@ namespace Activitypub\Rest;
 
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
-use Activitypub\OAuth\Scope;
-use Activitypub\OAuth\Server as OAuth_Server;
 
 use function Activitypub\is_actor;
 
@@ -71,10 +69,10 @@ class Proxy_Controller extends \WP_REST_Controller {
 	 * @return true|\WP_Error True if the request has permission, WP_Error otherwise.
 	 */
 	public function get_item_permissions_check( $request ) {
-		// Must be authenticated via OAuth with 'read' scope.
-		$permission = OAuth_Server::check_oauth_permission( $request, Scope::READ );
-		if ( \is_wp_error( $permission ) ) {
-			return $permission;
+		// Verify OAuth with read scope.
+		$result = Server::verify_oauth_read( $request );
+		if ( \is_wp_error( $result ) ) {
+			return $result;
 		}
 
 		// Validate the URL to prevent abuse.

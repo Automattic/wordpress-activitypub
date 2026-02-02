@@ -7,6 +7,9 @@
 
 namespace Activitypub\Rest;
 
+use Activitypub\Collection\Actors;
+use Activitypub\OAuth\Scope;
+use Activitypub\OAuth\Server as OAuth_Server;
 use Activitypub\Signature;
 
 use function Activitypub\use_authorized_fetch;
@@ -77,6 +80,62 @@ class Server {
 					array( 'status' => 401 )
 				);
 			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Verify OAuth authentication with 'read' scope.
+	 *
+	 * Use this as a permission_callback for endpoints requiring OAuth read access.
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
+	 */
+	public static function verify_oauth_read( $request ) {
+		return OAuth_Server::check_oauth_permission( $request, Scope::READ );
+	}
+
+	/**
+	 * Verify OAuth authentication with 'write' scope.
+	 *
+	 * Use this as a permission_callback for endpoints requiring OAuth write access.
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
+	 */
+	public static function verify_oauth_write( $request ) {
+		return OAuth_Server::check_oauth_permission( $request, Scope::WRITE );
+	}
+
+	/**
+	 * Verify that the OAuth token belongs to the actor specified in the request.
+	 *
+	 * This checks that the user_id parameter matches the token's user.
+	 * Should be called after verify_oauth_read or verify_oauth_write.
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 * @return bool|\WP_Error True if the token user matches, WP_Error otherwise.
+	 */
+	public static function verify_owner( $request ) {
+		$user_id = $request->get_param( 'user_id' );
+
+		// Validate the user exists.
+		$user = Actors::get_by_id( $user_id );
+		if ( \is_wp_error( $user ) ) {
+			return $user;
+		}
+
+		// Verify the token belongs to this user.
+		$token = OAuth_Server::get_current_token();
+
+		if ( ! $token || $token->get_user_id() !== absint( $user_id ) ) {
+			return new \WP_Error(
+				'activitypub_forbidden',
+				\__( 'You can only access your own resources.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
 		}
 
 		return true;

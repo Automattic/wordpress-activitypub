@@ -11,8 +11,6 @@ use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
-use Activitypub\OAuth\Scope;
-use Activitypub\OAuth\Server as OAuth_Server;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\get_masked_wp_version;
@@ -335,25 +333,14 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
 	 */
 	public function create_item_permissions_check( $request ) {
-		// Must be authenticated via OAuth with 'write' scope.
-		$permission = OAuth_Server::check_oauth_permission( $request, Scope::WRITE );
-		if ( \is_wp_error( $permission ) ) {
-			return $permission;
+		// Verify OAuth with write scope.
+		$result = Server::verify_oauth_write( $request );
+		if ( \is_wp_error( $result ) ) {
+			return $result;
 		}
 
-		// Token user must match actor in URL.
-		$user_id = absint( $request->get_param( 'user_id' ) );
-		$token   = OAuth_Server::get_current_token();
-
-		if ( ! $token || $token->get_user_id() !== $user_id ) {
-			return new \WP_Error(
-				'activitypub_forbidden',
-				\__( 'You can only post to your own outbox.', 'activitypub' ),
-				array( 'status' => 403 )
-			);
-		}
-
-		return true;
+		// Verify the token belongs to the requested user.
+		return Server::verify_owner( $request );
 	}
 
 	/**
