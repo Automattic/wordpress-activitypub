@@ -1,14 +1,12 @@
-import apiFetch from '@wordpress/api-fetch';
 import { SelectControl, RangeControl, PanelBody, Notice } from '@wordpress/components';
 import { InspectorControls, useBlockProps, InnerBlocks } from '@wordpress/block-editor';
 import { store as coreStore } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
-import { useState, useEffect, useMemo, useCallback, createInterpolateElement } from '@wordpress/element';
-import { addQueryArgs } from '@wordpress/url';
+import { useState, useEffect, useMemo, createInterpolateElement } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
-import { useOptions } from '../shared/use-options';
 import { useUserOptions } from '../shared/use-user-options';
 import { InheritModeBlockFallback } from '../shared/inherit-block-fallback';
+import { ActorList } from '../shared/actor-list';
 
 /**
  * Check if a user has their social graph hidden based on user meta.
@@ -237,7 +235,16 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 				) }
 
 				{ ! showHiddenNotice && selectedUser === 'inherit' && authorId && (
-					<Followers { ...attributes } page={ page } setPage={ setPage } selectedUser={ authorId } />
+					<ActorList
+						selectedUser={ authorId }
+						perPage={ perPage }
+						order={ order }
+						endpoint="followers"
+						page={ page }
+						setPage={ setPage }
+						emptyMessage={ __( 'No followers found.', 'activitypub' ) }
+						navLabel={ __( 'Follower navigation', 'activitypub' ) }
+					/>
 				) }
 
 				{ ! showHiddenNotice && selectedUser === 'inherit' && ! authorId && (
@@ -245,186 +252,18 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 				) }
 
 				{ ! showHiddenNotice && selectedUser !== 'inherit' && (
-					<Followers { ...attributes } page={ page } setPage={ setPage } />
+					<ActorList
+						selectedUser={ selectedUser }
+						perPage={ perPage }
+						order={ order }
+						endpoint="followers"
+						page={ page }
+						setPage={ setPage }
+						emptyMessage={ __( 'No followers found.', 'activitypub' ) }
+						navLabel={ __( 'Follower navigation', 'activitypub' ) }
+					/>
 				) }
 			</div>
 		</div>
-	);
-}
-
-/**
- * Component to display followers of a user.
- *
- * @param {Object}   props              The component props.
- * @param {string}   props.selectedUser The ID of the user whose followers are being fetched.
- * @param {number}   props.per_page     The number of followers to fetch per page.
- * @param {string}   props.order        The order in which to fetch followers ('asc' or 'desc').
- * @param {number}   props.page         The page number to fetch.
- * @param {Function} props.setPage      The function to set the page number.
- * @param {Object}   props.followerData Optional pre-fetched follower data.
- * @return {JSX.Element} The followers list component.
- */
-function Followers( {
-	selectedUser,
-	per_page: perPage,
-	order,
-	page: passedPage,
-	setPage: passedSetPage,
-	followerData = false,
-} ) {
-	const { namespace } = useOptions();
-	const userId = selectedUser === 'blog' ? 0 : selectedUser;
-	const [ followers, setFollowers ] = useState( [] );
-	const [ pages, setPages ] = useState( 0 );
-	const [ localPage, setLocalPage ] = useState( 1 );
-	const page = passedPage || localPage;
-	const setPage = passedSetPage || setLocalPage;
-
-	const setData = useCallback(
-		( newFollowers, total ) => {
-			setFollowers( newFollowers );
-			setPages( Math.ceil( total / perPage ) );
-		},
-		[ perPage ]
-	);
-
-	useEffect( () => {
-		if ( followerData && page === 1 ) {
-			return setData( followerData.followers, followerData.total );
-		}
-
-		const path = addQueryArgs( `/${ namespace }/actors/${ userId }/followers`, {
-			per_page: perPage,
-			order,
-			page,
-			context: 'full',
-		} );
-		apiFetch( { path } )
-			.then( ( { orderedItems = [], totalItems = 0 } ) => setData( orderedItems, totalItems ) )
-			.catch( () => setData( [], 0 ) );
-	}, [ namespace, userId, perPage, order, page, followerData, setData ] );
-
-	return (
-		<div className="followers-container">
-			{ followers.length ? (
-				<ul className="followers-list">
-					{ followers.map( ( follower ) => (
-						<li key={ follower.url } className="follower-item">
-							<Follower { ...follower } />
-						</li>
-					) ) }
-				</ul>
-			) : (
-				<p className="followers-placeholder">{ __( 'No followers found.', 'activitypub' ) }</p>
-			) }
-
-			<Pagination page={ page } pages={ pages } setPage={ setPage } />
-		</div>
-	);
-}
-
-/**
- * Component to display pagination navigation.
- *
- * @param {Object}   props         The component props.
- * @param {number}   props.page    The current page number.
- * @param {number}   props.pages   The total number of pages.
- * @param {Function} props.setPage The function to set the page number.
- * @return {JSX.Element|null} The pagination component or null if not needed.
- */
-function Pagination( { page, pages, setPage } ) {
-	if ( pages <= 1 ) {
-		return null;
-	}
-
-	const disablePreviousLink = page <= 1;
-	const disableNextLink = page >= pages;
-
-	return (
-		<nav className="followers-pagination" role="navigation">
-			<h1 className="screen-reader-text">{ __( 'Follower navigation', 'activitypub' ) }</h1>
-			{ /* eslint-disable-next-line jsx-a11y/anchor-is-valid -- Using anchor for visual consistency with frontend pagination */ }
-			<a
-				href="#followers-pagination"
-				className="pagination-previous"
-				aria-disabled={ disablePreviousLink }
-				aria-label={ __( 'Previous page', 'activitypub' ) }
-				onClick={ ( event ) => {
-					event.preventDefault();
-					if ( ! disablePreviousLink ) {
-						setPage( page - 1 );
-					}
-				} }
-			>
-				{ __( 'Previous', 'activitypub' ) }
-			</a>
-
-			<div className="pagination-info">{ `${ page } / ${ pages }` }</div>
-
-			{ /* eslint-disable-next-line jsx-a11y/anchor-is-valid -- Using anchor for visual consistency with frontend pagination */ }
-			<a
-				href="#followers-pagination"
-				className="pagination-next"
-				aria-disabled={ disableNextLink }
-				aria-label={ __( 'Next page', 'activitypub' ) }
-				onClick={ ( event ) => {
-					event.preventDefault();
-					if ( ! disableNextLink ) {
-						setPage( page + 1 );
-					}
-				} }
-			>
-				{ __( 'Next', 'activitypub' ) }
-			</a>
-		</nav>
-	);
-}
-
-/**
- * Component to display a single follower.
- *
- * @param {Object} props                   The component props.
- * @param {string} props.name              The name of the follower.
- * @param {Object} props.icon              The icon of the follower.
- * @param {string} props.url               The URL of the follower.
- * @param {string} props.preferredUsername The preferred username of the follower.
- * @return {JSX.Element} The follower component.
- */
-function Follower( { name, icon, url, preferredUsername } ) {
-	const handle = `@${ preferredUsername }`;
-	const { defaultAvatarUrl, showAvatars } = useOptions();
-	const avatar = icon?.url || defaultAvatarUrl;
-
-	return (
-		<a className="follower-link" href={ url } title={ handle } onClick={ ( event ) => event.preventDefault() }>
-			{ showAvatars && (
-				<img
-					width="48"
-					height="48"
-					src={ avatar }
-					className="follower-avatar"
-					alt={ name }
-					onError={ ( event ) => {
-						event.target.src = defaultAvatarUrl;
-					} }
-				/>
-			) }
-			<div className="follower-info">
-				<span className="follower-name">{ name }</span>
-				<span className="follower-username">{ handle }</span>
-			</div>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 24 24"
-				width="24"
-				height="24"
-				className="external-link-icon"
-				aria-hidden="true"
-				focusable="false"
-				fill="currentColor"
-			>
-				<path d="M18.2 17c0 .7-.6 1.2-1.2 1.2H7c-.7 0-1.2-.6-1.2-1.2V7c0-.7.6-1.2 1.2-1.2h3.2V4.2H7C5.5 4.2 4.2 5.5 4.2 7v10c0 1.5 1.2 2.8 2.8 2.8h10c1.5 0 2.8-1.2 2.8-2.8v-3.6h-1.5V17zM14.9 3v1.5h3.7l-6.4 6.4 1.1 1.1 6.4-6.4v3.7h1.5V3h-6.3z"></path>
-			</svg>
-		</a>
 	);
 }

@@ -48,8 +48,10 @@ test.describe( 'ActivityPub Following Collection REST API', () => {
 
 		// For a new user, following should be 0
 		if ( data.totalItems === 0 ) {
-			// Without a page parameter, orderedItems should not be present
-			expect( data.orderedItems ).toBeUndefined();
+			// Empty collections return orderedItems as empty array and skip pagination links.
+			expect( data.orderedItems ).toEqual( [] );
+			expect( data.first ).toBeUndefined();
+			expect( data.last ).toBeUndefined();
 		}
 	} );
 

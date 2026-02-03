@@ -31,6 +31,8 @@ function get_rest_url_by_path( $path = '' ) {
  * @return string The normalized URL.
  */
 function normalize_url( $url ) {
+	// Remove ActivityPub-specific query parameters.
+	$url = \remove_query_arg( array( 'activitypub', 'preview' ), $url );
 	$url = \untrailingslashit( $url );
 	$url = \preg_replace( '/^https?:\/\/(www\.)?/', '', $url );
 

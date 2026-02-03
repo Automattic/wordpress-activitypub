@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Move Jest mocks to tests/js directory for better project organization.

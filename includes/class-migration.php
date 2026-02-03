@@ -537,7 +537,7 @@ class Migration {
 				'meta_query'     => array(
 					array(
 						'key'   => 'activitypub_status',
-						'value' => 'federated',
+						'value' => ACTIVITYPUB_OBJECT_STATE_FEDERATED,
 					),
 				),
 			)
@@ -584,7 +584,7 @@ class Migration {
 				'meta_query'     => array(
 					array(
 						'key'   => 'activitypub_status',
-						'value' => 'federated',
+						'value' => ACTIVITYPUB_OBJECT_STATE_FEDERATED,
 					),
 				),
 			)

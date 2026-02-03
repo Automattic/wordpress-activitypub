@@ -397,7 +397,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		Scheduler::unlock( $key );
 
 		\remove_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ), 33 );
-		self::factory()->post->create( array( 'meta_input' => array( 'activitypub_status' => 'federated' ) ) );
+		self::factory()->post->create( array( 'meta_input' => array( 'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_FEDERATED ) ) );
 		\add_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ), 33, 4 );
 
 		// Test scheduling next batch when callback returns more work.

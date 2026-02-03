@@ -37,7 +37,8 @@ trait Collection {
 	 */
 	public function prepare_collection_response( $response, $request ) {
 		$page      = $request->get_param( 'page' );
-		$max_pages = \ceil( $response['totalItems'] / $request->get_param( 'per_page' ) );
+		$per_page  = \max( 1, \absint( $request->get_param( 'per_page' ) ) );
+		$max_pages = \max( 1, \ceil( $response['totalItems'] / $per_page ) );
 
 		if ( $page > $max_pages ) {
 			return new \WP_Error(
@@ -51,6 +52,11 @@ trait Collection {
 		if ( empty( $response['@context'] ) ) {
 			// Ensure the context is the first element in the response.
 			$response = array( '@context' => $this->json_ld_context ) + $response;
+		}
+
+		if ( empty( $response['items'] ) && empty( $response['orderedItems'] ) ) {
+			// Skip pagination metadata when items are intentionally hidden or collection is empty.
+			return $response;
 		}
 
 		$response['id']    = \add_query_arg( $request->get_query_params(), $response['id'] );

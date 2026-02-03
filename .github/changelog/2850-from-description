@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Don't filter the comment query when type__not_in has been set

@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Add soft delete support with Tombstone objects when post visibility changes to local/private.
