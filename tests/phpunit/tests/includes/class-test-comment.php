@@ -1459,7 +1459,7 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test rest_comment_query excludes ActivityPub comment types via REST API.
+	 * Test comment_query_filter excludes ActivityPub comment types via REST API.
 	 *
 	 * @covers ::rest_comment_query
 	 */
@@ -1508,25 +1508,39 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test rest_comment_query does not add type__not_in when type is explicitly set.
+	 * Test comment_query does not add type__not_in when type is explicitly set.
 	 *
-	 * @covers ::rest_comment_query
+	 * @covers ::comment_query
 	 */
-	public function test_rest_comment_query_respects_explicit_type() {
-		// Apply the REST API filter with explicit type.
-		$args = Comment::rest_comment_query( array( 'type' => 'like' ) );
+	public function test_comment_query_respects_explicit_type() {
+		$post_id = self::factory()->post->create();
 
-		// type__not_in should not be set when type is explicitly requested.
-		$this->assertArrayNotHasKey( 'type__not_in', $args, 'type__not_in should not be set when type is explicitly requested' );
-		$this->assertEquals( 'like', $args['type'], 'type should be preserved' );
+		// Create a like comment.
+		$like_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'like',
+				'comment_content'      => 'Like',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'like@example.com',
+			)
+		);
+
+		// Query with explicit type - should include like comments.
+		$query    = new \WP_Comment_Query();
+		$comments = $query->query( array( 'type' => 'like' ) );
+
+		$comment_ids = wp_list_pluck( $comments, 'comment_ID' );
+
+		$this->assertContains( (string) $like_comment_id, $comment_ids, 'Like should be included when explicitly requested via type' );
 	}
 
 	/**
-	 * Test rest_comment_query does not filter when type__in is explicitly set via filter.
+	 * Test comment_query does not filter when type__in is explicitly set.
 	 *
-	 * @covers ::rest_comment_query
+	 * @covers ::comment_query
 	 */
-	public function test_rest_comment_query_respects_explicit_type_in() {
+	public function test_comment_query_respects_explicit_type_in() {
 		$post_id = self::factory()->post->create();
 
 		// Create comments of different types.
@@ -1549,15 +1563,9 @@ class Test_Comment extends \WP_UnitTestCase {
 			)
 		);
 
-		// Apply the REST API filter with explicit type__in (simulates custom code setting type__in).
-		$args = Comment::rest_comment_query( array( 'type__in' => array( 'like', 'repost' ) ) );
-
-		// type__not_in should not be set when type__in is explicitly requested.
-		$this->assertArrayNotHasKey( 'type__not_in', $args, 'type__not_in should not be set when type__in is explicitly requested' );
-
-		// Query with the filtered args.
+		// Query with explicit type__in - should include likes and reposts.
 		$query    = new \WP_Comment_Query();
-		$comments = $query->query( $args );
+		$comments = $query->query( array( 'type__in' => array( 'like', 'repost' ) ) );
 
 		$comment_ids = wp_list_pluck( $comments, 'comment_ID' );
 

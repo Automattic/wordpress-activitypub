@@ -737,14 +737,14 @@ class Comment {
 			return;
 		}
 
-		// Do not exclude likes and reposts on REST requests.
+		// Do not exclude likes and reposts on REST requests (handled by rest_comment_query).
 		if ( \wp_is_serving_rest_request() ) {
 			return;
 		}
 
-		// Do only exclude interactions of `ap_post` post type.
+		// Filter post types for admin requests.
 		if ( \is_admin() ) {
-			$query->query_vars['post_type'] = array_diff( \get_post_types_by_support( 'comments' ), self::hide_for() );
+			$query->query_vars['post_type'] = self::get_allowed_comment_post_types();
 			return;
 		}
 
@@ -753,7 +753,7 @@ class Comment {
 			return;
 		}
 
-		// Do not exclude likes and reposts if the query is for comments.
+		// Do not exclude likes and reposts if the query is for specific types.
 		if ( ! empty( $query->query_vars['type__in'] ) || ! empty( $query->query_vars['type'] ) ) {
 			return;
 		}
@@ -763,11 +763,10 @@ class Comment {
 	}
 
 	/**
-	 * Filter comments in REST API requests.
+	 * Filters comments in REST API requests.
 	 *
 	 * Excludes comments on ActivityPub post types and ActivityPub comment
-	 * types (likes, reposts) from the REST API to prevent them from
-	 * appearing in mobile apps and other clients.
+	 * types (likes, reposts) from the REST API.
 	 *
 	 * @param array $prepared_args Array of arguments for WP_Comment_Query.
 	 *
@@ -775,12 +774,7 @@ class Comment {
 	 */
 	public static function rest_comment_query( $prepared_args ) {
 		// Exclude comments on ActivityPub post types.
-		$hide_for = self::hide_for();
-
-		if ( ! empty( $hide_for ) ) {
-			$post_types                 = \array_diff( \get_post_types_by_support( 'comments' ), $hide_for );
-			$prepared_args['post_type'] = $post_types;
-		}
+		$prepared_args['post_type'] = self::get_allowed_comment_post_types();
 
 		// Exclude ActivityPub comment types (likes, reposts) unless explicitly requested.
 		if ( empty( $prepared_args['type'] ) && empty( $prepared_args['type__in'] ) ) {
@@ -788,6 +782,21 @@ class Comment {
 		}
 
 		return $prepared_args;
+	}
+
+	/**
+	 * Returns post types that should show comments (excluding hidden post types).
+	 *
+	 * @return array Array of post type names.
+	 */
+	private static function get_allowed_comment_post_types() {
+		$hide_for = self::hide_for();
+
+		if ( empty( $hide_for ) ) {
+			return \get_post_types_by_support( 'comments' );
+		}
+
+		return \array_diff( \get_post_types_by_support( 'comments' ), $hide_for );
 	}
 
 	/**
