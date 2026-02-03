@@ -835,7 +835,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 */
 	public function test_optimize_image_skips_non_images() {
 		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		// Test with audio file.
 		$audio_file = AP_TESTS_DIR . '/data/assets/sample-audio.mp3';
@@ -855,7 +857,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 */
 	public function test_optimize_image_skips_gif() {
 		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		// Create a simple GIF file.
 		$gif_file = wp_tempnam( 'test.gif' ) . '.gif';
@@ -879,7 +883,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 */
 	public function test_optimize_image_converts_to_webp() {
 		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		// Copy test image to temp location with proper extension.
 		$source    = AP_TESTS_DIR . '/data/assets/test.jpg';
@@ -918,7 +924,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 */
 	public function test_optimize_image_resizes_large_images() {
 		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		// Create a large test image (2000x2000).
 		$large_image = wp_tempnam( 'large.jpg' ) . '.jpg';
@@ -926,7 +934,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$white       = imagecolorallocate( $image, 255, 255, 255 );
 		imagefill( $image, 0, 0, $white );
 		imagejpeg( $image, $large_image, 90 );
-		imagedestroy( $image );
+		unset( $image );
 
 		// Optimize with max dimension of 500.
 		$result = $method->invoke( null, $large_image, 500 );
@@ -955,7 +963,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 */
 	public function test_optimize_image_preserves_small_images() {
 		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		// Copy small test image (100x100) to temp location.
 		$source    = AP_TESTS_DIR . '/data/assets/test.jpg';
@@ -994,7 +1004,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 */
 	public function test_optimize_image_handles_nonexistent_file() {
 		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$fake_path = '/tmp/nonexistent-image-12345.jpg';
 		$result    = $method->invoke( null, $fake_path, 1200 );
@@ -1010,7 +1022,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 */
 	public function test_optimize_image_handles_png() {
 		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		// Create a test PNG image.
 		$png_file = wp_tempnam( 'test.png' ) . '.png';
@@ -1020,7 +1034,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$transparent = imagecolorallocatealpha( $image, 0, 0, 0, 127 );
 		imagefill( $image, 0, 0, $transparent );
 		imagepng( $image, $png_file );
-		imagedestroy( $image );
+		unset( $image );
 
 		$result = $method->invoke( null, $png_file, 1200 );
 
@@ -1047,7 +1061,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 */
 	public function test_get_unique_path() {
 		$method = new \ReflectionMethod( Attachments::class, 'get_unique_path' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$temp_dir = sys_get_temp_dir();
 
@@ -1360,7 +1376,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 */
 	private function call_get_emoji_url( $emoji_url ) {
 		$method = new \ReflectionMethod( Attachments::class, 'get_emoji_url' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		return $method->invoke( null, $emoji_url );
 	}
