@@ -17,7 +17,7 @@ use function Activitypub\use_authorized_fetch;
 /**
  * Verification Trait.
  *
- * Provides methods for verifying HTTP Signatures (S2S) and OAuth tokens (C2S).
+ * Provides methods for verifying HTTP Signatures (S2S) and OAuth/Application Passwords (C2S).
  * Controllers can use this trait for permission callbacks.
  */
 trait Verification {
@@ -71,37 +71,83 @@ trait Verification {
 	}
 
 	/**
-	 * Verify OAuth authentication with 'read' scope.
+	 * Verify Application Passwords authentication.
 	 *
-	 * Use this for endpoints requiring OAuth read access (C2S).
+	 * Uses WordPress core Application Passwords via Basic Auth.
+	 *
+	 * @see https://make.wordpress.org/core/2020/11/05/application-passwords-integration-guide/
+	 *
+	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
+	 */
+	public function verify_application_password() {
+		if ( \is_user_logged_in() ) {
+			return true;
+		}
+
+		return new \WP_Error(
+			'activitypub_unauthorized',
+			\__( 'Authentication required.', 'activitypub' ),
+			array( 'status' => 401 )
+		);
+	}
+
+	/**
+	 * Verify user authentication via OAuth or Application Passwords.
+	 *
+	 * Automatically determines the required scope based on the HTTP method:
+	 * - GET, HEAD: read scope
+	 * - POST, PUT, PATCH, DELETE: write scope
+	 *
+	 * If the request has a user_id parameter, also verifies that the
+	 * authenticated user matches that actor.
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
 	 */
-	public function verify_oauth_read( $request ) {
-		return OAuth_Server::check_oauth_permission( $request, Scope::READ );
+	public function verify_authentication( $request ) {
+		// Determine scope based on HTTP method.
+		$method       = $request->get_method();
+		$read_methods = array( 'GET', 'HEAD' );
+		$scope        = \in_array( $method, $read_methods, true ) ? Scope::READ : Scope::WRITE;
+
+		// Try OAuth first.
+		if ( true === OAuth_Server::check_oauth_permission( $request, $scope ) ) {
+			return $this->maybe_verify_owner( $request );
+		}
+
+		// Fall back to Application Passwords.
+		$result = $this->verify_application_password();
+		if ( \is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return $this->maybe_verify_owner( $request );
 	}
 
 	/**
-	 * Verify OAuth authentication with 'write' scope.
-	 *
-	 * Use this for endpoints requiring OAuth write access (C2S).
+	 * Verify owner if user_id parameter is present.
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
 	 */
-	public function verify_oauth_write( $request ) {
-		return OAuth_Server::check_oauth_permission( $request, Scope::WRITE );
+	private function maybe_verify_owner( $request ) {
+		$user_id = $request->get_param( 'user_id' );
+
+		if ( null === $user_id ) {
+			return true;
+		}
+
+		return $this->verify_owner( $request );
 	}
 
 	/**
-	 * Verify that the OAuth token belongs to the actor specified in the request.
+	 * Verify that the authenticated user matches the actor specified in the request.
 	 *
-	 * This checks that the user_id parameter matches the token's user.
-	 * Should be called after verify_oauth_read or verify_oauth_write.
+	 * Checks that the user_id parameter matches the OAuth token's user
+	 * or the WordPress authenticated user (via Application Passwords).
 	 *
 	 * @param \WP_REST_Request $request The request object.
-	 * @return bool|\WP_Error True if the token user matches, WP_Error otherwise.
+	 * @return bool|\WP_Error True if the user matches, WP_Error otherwise.
 	 */
 	public function verify_owner( $request ) {
 		$user_id = $request->get_param( 'user_id' );
@@ -112,17 +158,21 @@ trait Verification {
 			return $user;
 		}
 
-		// Verify the token belongs to this user.
+		// Try OAuth token first.
 		$token = OAuth_Server::get_current_token();
-
-		if ( ! $token || $token->get_user_id() !== absint( $user_id ) ) {
-			return new \WP_Error(
-				'activitypub_forbidden',
-				\__( 'You can only access your own resources.', 'activitypub' ),
-				array( 'status' => 403 )
-			);
+		if ( $token && $token->get_user_id() === \absint( $user_id ) ) {
+			return true;
 		}
 
-		return true;
+		// Fall back to WordPress authenticated user (Application Passwords).
+		if ( \is_user_logged_in() && \get_current_user_id() === \absint( $user_id ) ) {
+			return true;
+		}
+
+		return new \WP_Error(
+			'activitypub_forbidden',
+			\__( 'You can only access your own resources.', 'activitypub' ),
+			array( 'status' => 403 )
+		);
 	}
 }

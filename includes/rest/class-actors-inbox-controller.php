@@ -47,7 +47,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_items' ),
-					'permission_callback' => array( $this, 'get_items_permissions_check' ),
+					'permission_callback' => array( $this, 'verify_authentication' ),
 					'args'                => array(
 						'page'     => array(
 							'description' => 'Current page of the collection.',
@@ -109,23 +109,6 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		);
 
 		\add_action( 'activitypub_inbox_create_item', array( self::class, 'process_create_item' ) );
-	}
-
-	/**
-	 * Permission check for reading inbox items (C2S).
-	 *
-	 * @param \WP_REST_Request $request Full details about the request.
-	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
-	 */
-	public function get_items_permissions_check( $request ) {
-		// Verify OAuth with read scope.
-		$result = $this->verify_oauth_read( $request );
-		if ( \is_wp_error( $result ) ) {
-			return $result;
-		}
-
-		// Verify the token belongs to the requested user.
-		return $this->verify_owner( $request );
 	}
 
 	/**

@@ -80,7 +80,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'create_item' ),
-					'permission_callback' => array( $this, 'create_item_permissions_check' ),
+					'permission_callback' => array( $this, 'verify_authentication' ),
 				),
 				'schema' => array( $this, 'get_item_schema' ),
 			)
@@ -325,23 +325,6 @@ class Outbox_Controller extends \WP_REST_Controller {
 		$response['totalItems'] = (int) $posts->found_posts + (int) $comments->found_comments;
 
 		return $response;
-	}
-
-	/**
-	 * Permission check for creating items (C2S).
-	 *
-	 * @param \WP_REST_Request $request Full details about the request.
-	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
-	 */
-	public function create_item_permissions_check( $request ) {
-		// Verify OAuth with write scope.
-		$result = $this->verify_oauth_write( $request );
-		if ( \is_wp_error( $result ) ) {
-			return $result;
-		}
-
-		// Verify the token belongs to the requested user.
-		return $this->verify_owner( $request );
 	}
 
 	/**

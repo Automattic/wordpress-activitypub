@@ -74,7 +74,7 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 	/**
 	 * Test that proxy rejects non-HTTPS URLs.
 	 *
-	 * @covers ::get_item_permissions_check
+	 * @covers ::validate_url
 	 */
 	public function test_http_url_rejected() {
 		// Mock OAuth authentication.
@@ -86,37 +86,39 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 		$response = $this->server->dispatch( $request );
 
 		$this->assertEquals( 400, $response->get_status() );
-		$this->assertEquals( 'activitypub_invalid_url', $response->get_data()['code'] );
+		$this->assertEquals( 'rest_invalid_param', $response->get_data()['code'] );
 
 		$this->unmock_oauth_auth();
 	}
 
 	/**
-	 * Test that proxy rejects localhost URLs.
+	 * Test that proxy rejects private network URLs.
 	 *
-	 * @covers ::get_item_permissions_check
+	 * Uses wp_http_validate_url() which blocks private IP ranges.
+	 *
+	 * @covers ::validate_url
 	 */
-	public function test_localhost_rejected() {
+	public function test_private_network_rejected() {
 		// Mock OAuth authentication.
 		$this->mock_oauth_auth();
 
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
-		$request->set_body_params( array( 'id' => 'https://localhost/users/test' ) );
+		$request->set_body_params( array( 'id' => 'https://192.168.1.1/users/test' ) );
 
 		$response = $this->server->dispatch( $request );
 
 		$this->assertEquals( 400, $response->get_status() );
-		$this->assertEquals( 'activitypub_invalid_url', $response->get_data()['code'] );
+		$this->assertEquals( 'rest_invalid_param', $response->get_data()['code'] );
 
 		$this->unmock_oauth_auth();
 	}
 
 	/**
-	 * Test proxy requires OAuth authentication.
+	 * Test proxy requires authentication.
 	 *
-	 * @covers ::get_item_permissions_check
+	 * @covers ::verify_authentication
 	 */
-	public function test_requires_oauth() {
+	public function test_requires_authentication() {
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
 		$request->set_body_params( array( 'id' => 'https://example.com/users/test' ) );
 

@@ -49,13 +49,14 @@ class Proxy_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'get_item' ),
-					'permission_callback' => array( $this, 'get_item_permissions_check' ),
+					'permission_callback' => array( $this, 'verify_authentication' ),
 					'args'                => array(
 						'id' => array(
 							'description'       => 'The URI of the remote ActivityPub object to fetch.',
 							'type'              => 'string',
 							'required'          => true,
 							'sanitize_callback' => 'sanitize_url',
+							'validate_callback' => array( $this, 'validate_url' ),
 						),
 					),
 				),
@@ -65,41 +66,23 @@ class Proxy_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * Check if the request has permission to use the proxy.
+	 * Validate the URL parameter.
 	 *
-	 * @param \WP_REST_Request $request Full details about the request.
-	 * @return true|\WP_Error True if the request has permission, WP_Error otherwise.
+	 * Uses wp_http_validate_url() which blocks local/private IPs and restricts ports.
+	 *
+	 * @see https://developer.wordpress.org/reference/functions/wp_http_validate_url/
+	 *
+	 * @param string $url The URL to validate.
+	 * @return bool True if valid, false otherwise.
 	 */
-	public function get_item_permissions_check( $request ) {
-		// Verify OAuth with read scope.
-		$result = $this->verify_oauth_read( $request );
-		if ( \is_wp_error( $result ) ) {
-			return $result;
-		}
-
-		// Validate the URL to prevent abuse.
-		$url = $request->get_param( 'id' );
-
+	public function validate_url( $url ) {
 		// Must be HTTPS.
 		if ( 'https' !== \wp_parse_url( $url, PHP_URL_SCHEME ) ) {
-			return new \WP_Error(
-				'activitypub_invalid_url',
-				\__( 'Only HTTPS URLs are allowed.', 'activitypub' ),
-				array( 'status' => 400 )
-			);
+			return false;
 		}
 
-		// Block local/private network addresses.
-		$host = \wp_parse_url( $url, PHP_URL_HOST );
-		if ( $this->is_private_host( $host ) ) {
-			return new \WP_Error(
-				'activitypub_invalid_url',
-				\__( 'Private network addresses are not allowed.', 'activitypub' ),
-				array( 'status' => 400 )
-			);
-		}
-
-		return true;
+		// Use WordPress built-in validation (blocks local IPs, restricts ports).
+		return (bool) \wp_http_validate_url( $url );
 	}
 
 	/**
@@ -145,33 +128,6 @@ class Proxy_Controller extends \WP_REST_Controller {
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 
 		return $response;
-	}
-
-	/**
-	 * Check if a host is a private/local network address.
-	 *
-	 * @param string $host The hostname to check.
-	 * @return bool True if the host is private, false otherwise.
-	 */
-	private function is_private_host( $host ) {
-		// Check for localhost.
-		if ( 'localhost' === $host || '127.0.0.1' === $host || '::1' === $host ) {
-			return true;
-		}
-
-		// Check for private IP ranges.
-		$ip = \gethostbyname( $host );
-		if ( $ip === $host ) {
-			// DNS resolution failed, allow it (will fail on fetch anyway).
-			return false;
-		}
-
-		// Use filter_var to check for private/reserved IPs.
-		if ( false === \filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
-			return true;
-		}
-
-		return false;
 	}
 
 	/**
