@@ -816,6 +816,43 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that post comments are still being filtered by `type__not_in`.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_post_comments_filtered_by_type__not_in() {
+		// Create an ap_post.
+		$post_id = wp_insert_post(
+			array(
+				'post_title'   => 'Post',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Create comment on ap_post.
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID' => $post_id,
+				'comment_content' => 'Comment on post',
+				'comment_author'  => 'Test User',
+			)
+		);
+
+		// Query comments for specific post - should NOT include ap_post comments.
+		$query    = new \WP_Comment_Query();
+		$comments = $query->query(
+			array(
+				'post_id'      => $post_id,
+				'type__not_in' => 'comment',
+			)
+		);
+
+		$comment_ids = wp_list_pluck( $comments, 'comment_ID' );
+		$this->assertNotContains( (string) $comment_id, $comment_ids, 'AP post comment should be hidden even when querying specific post' );
+	}
+
+	/**
 	 * Test auto-approving comments on ap_post when option is enabled.
 	 *
 	 * @covers ::pre_comment_approved
