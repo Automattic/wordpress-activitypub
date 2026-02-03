@@ -349,7 +349,9 @@ class Blocks {
 		// Try to get and append the embed if requested.
 		$embed = null;
 		if ( $show_embed ) {
-			$embed = wp_oembed_get( $attrs['url'] );
+			// Use the theme's content width or a reasonable default to avoid narrow embeds.
+			$embed_width = ! empty( $GLOBALS['content_width'] ) ? $GLOBALS['content_width'] : 600;
+			$embed       = wp_oembed_get( $attrs['url'], array( 'width' => $embed_width ) );
 			if ( $embed ) {
 				$html .= $embed;
 				\wp_enqueue_script( 'wp-embed' );
