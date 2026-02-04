@@ -88,10 +88,10 @@ class Podlove_Podcast_Publisher extends Post {
 				'name'      => \esc_attr( $episode->title() ?? '' ),
 			);
 
-			// Add duration if available.
+			// Add duration if available (in ISO 8601 format).
 			$duration = $episode->get_duration( 'seconds' );
 			if ( $duration && is_numeric( $duration ) && (int) $duration > 0 ) {
-				$attachment['duration'] = (int) $duration;
+				$attachment['duration'] = $this->seconds_to_iso8601( (int) $duration );
 			}
 
 			$attachments[] = $attachment;
@@ -190,10 +190,20 @@ class Podlove_Podcast_Publisher extends Post {
 			return null;
 		}
 
-		// Convert seconds to ISO 8601 duration format.
-		$hours   = floor( $duration_seconds / 3600 );
-		$minutes = floor( ( $duration_seconds % 3600 ) / 60 );
-		$seconds = $duration_seconds % 60;
+		return $this->seconds_to_iso8601( $duration_seconds );
+	}
+
+	/**
+	 * Convert seconds to ISO 8601 duration format.
+	 *
+	 * @param int $seconds The duration in seconds.
+	 *
+	 * @return string The duration in ISO 8601 format (e.g., "PT1H23M45S").
+	 */
+	protected function seconds_to_iso8601( $seconds ) {
+		$hours   = floor( $seconds / 3600 );
+		$minutes = floor( ( $seconds % 3600 ) / 60 );
+		$secs    = $seconds % 60;
 
 		$iso_duration = 'PT';
 
@@ -205,8 +215,8 @@ class Podlove_Podcast_Publisher extends Post {
 			$iso_duration .= $minutes . 'M';
 		}
 
-		if ( $seconds > 0 || ( 0 === $hours && 0 === $minutes ) ) {
-			$iso_duration .= $seconds . 'S';
+		if ( $secs > 0 || ( 0 === $hours && 0 === $minutes ) ) {
+			$iso_duration .= $secs . 'S';
 		}
 
 		return $iso_duration;
