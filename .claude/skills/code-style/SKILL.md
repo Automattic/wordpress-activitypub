@@ -210,3 +210,33 @@ $activity = \apply_filters( 'activitypub_activity_object', $activity, $post );
 $content = \apply_filters( 'activitypub_the_content', $content, $post );
 $actor = \apply_filters( 'activitypub_actor_data', $actor, $user_id );
 ```
+
+## Version Numbers
+
+**Always use `'unreleased'`** for version strings in new code. The release script automatically replaces these with the actual version number during the release process.
+
+**PHPDoc tags:**
+```php
+/**
+ * New function description.
+ *
+ * @since unreleased
+ */
+function new_feature() {}
+
+/**
+ * Old function.
+ *
+ * @deprecated unreleased Use new_feature() instead.
+ */
+function old_feature() {}
+```
+
+**Deprecation functions:**
+```php
+\_deprecated_function( __METHOD__, 'unreleased', 'New_Class::new_method' );
+\_deprecated_argument( __METHOD__, 'unreleased', \esc_html__( 'Message', 'activitypub' ) );
+\_doing_it_wrong( __METHOD__, \esc_html__( 'Message', 'activitypub' ), 'unreleased' );
+```
+
+**Never hardcode version numbers** like `'5.1.0'` — always use `'unreleased'`.
