@@ -185,8 +185,8 @@ class Classic_Editor {
 				<?php \esc_html_e( 'Quoting allows others to cite your post while adding their own commentary.', 'activitypub' ); ?>
 				<?php
 				printf(
-					/* translators: %s: The current site default quote policy */
-					\esc_html__( 'Site default: %s', 'activitypub' ),
+					/* translators: %s: The current site default quote policy. Note the leading space. */
+					\esc_html__( ' Site default: %s', 'activitypub' ),
 					\esc_html( self::get_quote_policy_label( $default_quote_policy ) )
 				);
 				?>
