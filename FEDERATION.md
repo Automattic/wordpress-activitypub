@@ -12,35 +12,94 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 
 ## Supported FEPs
 
-- [FEP-f1d5: NodeInfo in Fediverse Software](https://codeberg.org/fediverse/fep/src/branch/main/fep/f1d5/fep-f1d5.md)
 - [FEP-0151: NodeInfo in Fediverse Software (2025 edition)](https://codeberg.org/fediverse/fep/src/branch/main/fep/0151/fep-0151.md)
-- [FEP-67ff: FEDERATION.md](https://codeberg.org/fediverse/fep/src/branch/main/fep/67ff/fep-67ff.md)
-- [FEP-5feb: Search indexing consent for actors](https://codeberg.org/fediverse/fep/src/branch/main/fep/5feb/fep-5feb.md)
+- [FEP-044f: Consent-respecting quote posts](https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md)
 - [FEP-2677: Identifying the Application Actor](https://codeberg.org/fediverse/fep/src/branch/main/fep/2677/fep-2677.md)
 - [FEP-2c59: Discovery of a Webfinger address from an ActivityPub actor](https://codeberg.org/fediverse/fep/src/branch/main/fep/2c59/fep-2c59.md)
-- [FEP-fb2a: Actor metadata](https://codeberg.org/fediverse/fep/src/branch/main/fep/fb2a/fep-fb2a.md)
-- [FEP-b2b8: Long-form Text](https://codeberg.org/fediverse/fep/src/branch/main/fep/b2b8/fep-b2b8.md)
-- [FEP-7888: Demystifying the context property](https://codeberg.org/fediverse/fep/src/branch/main/fep/7888/fep-7888.md)
-- [FEP-844e: Capability discovery](https://codeberg.org/fediverse/fep/src/branch/main/fep/844e/fep-844e.md)
-- [FEP-044f: Consent-respecting quote posts](https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md)
 - [FEP-3b86: Activity Intents](https://codeberg.org/fediverse/fep/src/branch/main/fep/3b86/fep-3b86.md)
 - [FEP-4f05: Soft Delete](https://codeberg.org/fediverse/fep/src/branch/main/fep/4f05/fep-4f05.md)
+- [FEP-5feb: Search indexing consent for actors](https://codeberg.org/fediverse/fep/src/branch/main/fep/5feb/fep-5feb.md)
+- [FEP-67ff: FEDERATION.md](https://codeberg.org/fediverse/fep/src/branch/main/fep/67ff/fep-67ff.md)
+- [FEP-7888: Demystifying the context property](https://codeberg.org/fediverse/fep/src/branch/main/fep/7888/fep-7888.md)
+- [FEP-844e: Capability discovery](https://codeberg.org/fediverse/fep/src/branch/main/fep/844e/fep-844e.md)
 - [FEP-8fcf: Followers collection synchronization across servers](https://codeberg.org/fediverse/fep/src/branch/main/fep/8fcf/fep-8fcf.md)
 - [FEP-9098: Custom Emojis](https://codeberg.org/fediverse/fep/src/branch/main/fep/9098/fep-9098.md)
+- [FEP-b2b8: Long-form Text](https://codeberg.org/fediverse/fep/src/branch/main/fep/b2b8/fep-b2b8.md)
+- [FEP-f1d5: NodeInfo in Fediverse Software](https://codeberg.org/fediverse/fep/src/branch/main/fep/f1d5/fep-f1d5.md)
+- [FEP-fb2a: Actor metadata](https://codeberg.org/fediverse/fep/src/branch/main/fep/fb2a/fep-fb2a.md)
 
-Partially supported FEPs
+### Partially supported FEPs
 
 - [FEP-1b12: Group federation](https://codeberg.org/fediverse/fep/src/branch/main/fep/1b12/fep-1b12.md)
 
 ## ActivityPub
 
+### Actor Types
+
+The plugin supports the following actor types:
+
+- `Person` - Individual WordPress users
+- `Group` - The WordPress blog as a whole
+- `Application` - Server-level actor for system operations
+
+### Supported Activities
+
+**Outgoing activities:**
+
+- `Create` - Publishing posts and comments
+- `Update` - Editing posts and comments
+- `Delete` - Removing posts and comments
+- `Announce` - Sharing/boosting content
+- `Like` - Liking content
+- `Follow` - Following remote actors
+- `Undo` - Reversing previous activities (unfollow, unlike, etc.)
+- `Accept` / `Reject` - Responding to follow requests
+
+**Incoming activities:**
+
+- `Create` - Receiving replies and mentions
+- `Update` - Updates to remote content
+- `Delete` - Deletion notifications
+- `Announce` - Boost notifications
+- `Like` - Like notifications
+- `Follow` - Follow requests
+- `Undo` - Reversal of activities
+- `Accept` / `Reject` - Follow request responses
+
+### Object Types
+
+- `Note` - Short-form content (default for posts)
+- `Article` - Long-form content (for posts with the Article post format)
+- `Image`, `Audio`, `Video`, `Document` - Media attachments
+
 ### HTTP Signatures
 
-In order to authenticate activities, Mastodon relies on HTTP Signatures, signing every `POST` and `GET` request to other ActivityPub implementations on behalf of the user authoring an activity (for `POST` requests) or an actor representing the Mastodon server itself (for most `GET` requests).
+The plugin signs all outgoing `POST` requests and supports signed `GET` requests for fetching remote actors and objects.
 
-Mastodon requires all `POST` requests to be signed, and MAY require `GET` requests to be signed, depending on the configuration of the Mastodon server.
+Two signature methods are supported for maximum compatibility:
 
-More information on HTTP Signatures, as well as examples, can be found here: <https://docs.joinmastodon.org/spec/security/#http>
+- **RFC-9421** (modern standard) - Used by default
+- **Draft Cavage** (legacy) - Automatic fallback for older implementations
+
+More information on HTTP Signatures: <https://swicg.github.io/activitypub-http-signature/>
+
+### WebFinger
+
+The plugin provides WebFinger discovery at `/.well-known/webfinger` for all enabled actors. Supported resource formats:
+
+- `acct:username@domain`
+- `https://domain/@username`
+- `https://domain/author/username`
+
+### Mastodon Extensions
+
+For compatibility with Mastodon, the plugin supports several extensions from the `toot:` namespace:
+
+- `toot:featured` - Pinned/featured posts collection
+- `toot:featuredTags` - Featured hashtags
+- `toot:discoverable` - Actor discovery preference
+- `toot:indexable` - Search indexing consent (see FEP-5feb)
+- `toot:attributionDomains` - Domain attribution for verification links
 
 ## Additional documentation
 
