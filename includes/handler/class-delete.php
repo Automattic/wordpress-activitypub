@@ -345,10 +345,10 @@ class Delete {
 			return;
 		}
 
+		Tombstone::bury( object_to_uri( $object ) );
+
 		if ( \is_object( $object ) ) {
-			Tombstone::bury( object_to_uri( $object ), $object->get_id(), $object->get_url() );
-		} else {
-			Tombstone::bury( object_to_uri( $object ) );
+			Tombstone::bury( $object->get_id(), $object->get_url() );
 		}
 	}
 }
