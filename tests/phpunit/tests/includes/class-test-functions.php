@@ -243,4 +243,43 @@ class Test_Functions extends \WP_UnitTestCase {
 		$result = \Activitypub\esc_hashtag( 'test&#039;s tag' );
 		$this->assertSame( '#testSTag', $result );
 	}
+
+	/**
+	 * Data provider for seconds_to_iso8601 tests.
+	 *
+	 * @return array Test cases with input seconds and expected ISO 8601 duration.
+	 */
+	public function seconds_to_iso8601_provider() {
+		return array(
+			'zero_seconds'          => array( 0, 'PT0S' ),
+			'negative_seconds'      => array( -10, 'PT0S' ),
+			'one_second'            => array( 1, 'PT1S' ),
+			'thirty_seconds'        => array( 30, 'PT30S' ),
+			'one_minute'            => array( 60, 'PT1M' ),
+			'one_minute_30_seconds' => array( 90, 'PT1M30S' ),
+			'five_minutes'          => array( 300, 'PT5M' ),
+			'one_hour'              => array( 3600, 'PT1H' ),
+			'one_hour_30_minutes'   => array( 5400, 'PT1H30M' ),
+			'one_hour_one_second'   => array( 3601, 'PT1H1S' ),
+			'full_duration'         => array( 3661, 'PT1H1M1S' ),
+			'two_hours_15_min_30s'  => array( 8130, 'PT2H15M30S' ),
+			'podcast_length'        => array( 2745, 'PT45M45S' ),
+			'long_podcast'          => array( 7384, 'PT2H3M4S' ),
+			'string_input'          => array( '3600', 'PT1H' ),
+		);
+	}
+
+	/**
+	 * Test seconds_to_iso8601 function.
+	 *
+	 * @dataProvider seconds_to_iso8601_provider
+	 * @covers \Activitypub\seconds_to_iso8601
+	 *
+	 * @param int|string $seconds  The input seconds.
+	 * @param string     $expected The expected ISO 8601 duration.
+	 */
+	public function test_seconds_to_iso8601( $seconds, $expected ) {
+		$result = \Activitypub\seconds_to_iso8601( $seconds );
+		$this->assertSame( $expected, $result );
+	}
 }
