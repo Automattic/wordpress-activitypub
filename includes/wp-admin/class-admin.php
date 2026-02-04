@@ -14,6 +14,7 @@ use Activitypub\Comment;
 use Activitypub\Model\Blog;
 use Activitypub\Moderation;
 use Activitypub\Scheduler\Actor;
+use Activitypub\Tombstone;
 
 use function Activitypub\count_followers;
 use function Activitypub\get_content_visibility;
@@ -625,6 +626,13 @@ class Admin {
 				foreach ( $users as $user_id ) {
 					$user = new \WP_User( $user_id );
 					$user->add_cap( 'activitypub' );
+
+					// Remove user from tombstone registry if they were previously buried.
+					$actor = Actors::get_by_id( $user_id );
+					if ( ! \is_wp_error( $actor ) ) {
+						Tombstone::remove( $actor->get_id() );
+						Tombstone::remove( $actor->get_url() );
+					}
 				}
 				return $send_back;
 			case 'remove_activitypub_cap':
