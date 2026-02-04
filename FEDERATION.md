@@ -101,6 +101,39 @@ For compatibility with Mastodon, the plugin supports several extensions from the
 - `toot:indexable` - Search indexing consent (see FEP-5feb)
 - `toot:attributionDomains` - Domain attribution for verification links
 
+### Endpoints
+
+All REST API endpoints use the `activitypub/1.0` namespace.
+
+**Well-Known:**
+
+- `/.well-known/webfinger` - Actor discovery
+- `/.well-known/nodeinfo` - Server capability discovery
+
+**Actor endpoints:**
+
+- `/activitypub/1.0/actors/{user_id}` - Actor profile
+- `/activitypub/1.0/actors/{user_id}/inbox` - User inbox
+- `/activitypub/1.0/actors/{user_id}/outbox` - Published activities
+- `/activitypub/1.0/actors/{user_id}/followers` - Followers collection
+- `/activitypub/1.0/actors/{user_id}/following` - Following collection
+- `/activitypub/1.0/actors/{user_id}/collections/{type}` - Featured posts or tags
+
+**Server endpoints:**
+
+- `/activitypub/1.0/inbox` - Shared inbox
+- `/activitypub/1.0/application` - Application actor
+
+**Object endpoints:**
+
+- `/activitypub/1.0/posts/{id}/replies` - Replies collection
+- `/activitypub/1.0/posts/{id}/likes` - Likes collection
+- `/activitypub/1.0/posts/{id}/shares` - Shares collection
+
+**Content negotiation:**
+
+Posts and author pages serve ActivityPub JSON-LD when the request includes an appropriate `Accept` header (`application/activity+json` or `application/ld+json`).
+
 ## Additional documentation
 
 - Plugin Documentation: [docs/readme.md](docs/readme.md)
