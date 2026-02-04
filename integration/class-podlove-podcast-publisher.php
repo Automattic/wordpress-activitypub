@@ -82,9 +82,16 @@ class Podlove_Podcast_Publisher extends Post {
 				continue;
 			}
 
+			// Use tracking URL if analytics is enabled, otherwise direct file URL.
+			if ( 'ptm_analytics' === \Podlove\get_setting( 'tracking', 'mode' ) ) {
+				$file_url = $media_file->get_public_file_url( 'activitypub' );
+			} else {
+				$file_url = $media_file->get_file_url();
+			}
+
 			$attachment = array(
 				'type'      => \esc_attr( ucfirst( $file_type->type ) ),
-				'url'       => \esc_url( $media_file->get_public_file_url( 'activitypub' ) ),
+				'url'       => \esc_url( $file_url ),
 				'mediaType' => \esc_attr( $file_type->mime_type ),
 				'name'      => \esc_attr( $episode->title() ?? '' ),
 			);

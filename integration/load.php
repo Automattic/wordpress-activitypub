@@ -108,7 +108,7 @@ function plugin_init() {
 	 *
 	 * @see https://wordpress.org/plugins/podlove-podcasting-plugin-for-wordpress/
 	 */
-	if ( \class_exists( '\Podlove\Model\Episode' ) ) {
+	if ( \defined( 'Podlove\PLUGIN_FILE' ) ) {
 		// Enable ActivityPub support for the podcast post type.
 		\add_post_type_support( 'podcast', 'activitypub' );
 
