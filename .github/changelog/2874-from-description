@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Ensure Extra Fields links always include `rel="me"` for Mastodon verification.
