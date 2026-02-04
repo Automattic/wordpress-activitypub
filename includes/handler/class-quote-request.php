@@ -53,6 +53,11 @@ class Quote_Request {
 
 		$content_policy = \get_post_meta( $post_id, 'activitypub_interaction_policy_quote', true );
 
+		// Fall back to global default if not set.
+		if ( ! $content_policy ) {
+			$content_policy = \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
+		}
+
 		switch ( $content_policy ) {
 			case ACTIVITYPUB_INTERACTION_POLICY_ME:
 				self::queue_reject( $activity, $user_id );
