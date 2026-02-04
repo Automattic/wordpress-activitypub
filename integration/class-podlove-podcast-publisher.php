@@ -11,6 +11,7 @@ use Activitypub\Transformer\Post;
 
 use function Activitypub\generate_post_summary;
 use function Activitypub\object_to_uri;
+use function Activitypub\seconds_to_iso8601;
 
 /**
  * Compatibility with the Podlove Podcast Publisher plugin.
@@ -91,7 +92,7 @@ class Podlove_Podcast_Publisher extends Post {
 			// Add duration if available (in ISO 8601 format).
 			$duration = $episode->get_duration( 'seconds' );
 			if ( $duration && is_numeric( $duration ) && (int) $duration > 0 ) {
-				$attachment['duration'] = $this->seconds_to_iso8601( (int) $duration );
+				$attachment['duration'] = seconds_to_iso8601( (int) $duration );
 			}
 
 			$attachments[] = $attachment;
@@ -190,35 +191,6 @@ class Podlove_Podcast_Publisher extends Post {
 			return null;
 		}
 
-		return $this->seconds_to_iso8601( $duration_seconds );
-	}
-
-	/**
-	 * Convert seconds to ISO 8601 duration format.
-	 *
-	 * @param int $seconds The duration in seconds.
-	 *
-	 * @return string The duration in ISO 8601 format (e.g., "PT1H23M45S").
-	 */
-	protected function seconds_to_iso8601( $seconds ) {
-		$hours   = floor( $seconds / 3600 );
-		$minutes = floor( ( $seconds % 3600 ) / 60 );
-		$secs    = $seconds % 60;
-
-		$iso_duration = 'PT';
-
-		if ( $hours > 0 ) {
-			$iso_duration .= $hours . 'H';
-		}
-
-		if ( $minutes > 0 ) {
-			$iso_duration .= $minutes . 'M';
-		}
-
-		if ( $secs > 0 || ( 0 === $hours && 0 === $minutes ) ) {
-			$iso_duration .= $secs . 'S';
-		}
-
-		return $iso_duration;
+		return seconds_to_iso8601( $duration_seconds );
 	}
 }
