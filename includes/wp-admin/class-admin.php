@@ -630,8 +630,7 @@ class Admin {
 					// Remove user from tombstone registry if they were previously buried.
 					$actor = Actors::get_by_id( $user_id );
 					if ( ! \is_wp_error( $actor ) ) {
-						Tombstone::remove( $actor->get_id() );
-						Tombstone::remove( $actor->get_url() );
+						Tombstone::remove( $actor->get_id(), $actor->get_url() );
 					}
 				}
 				return $send_back;
