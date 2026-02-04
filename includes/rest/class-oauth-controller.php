@@ -177,10 +177,10 @@ class OAuth_Controller extends \WP_REST_Controller {
 			)
 		);
 
-		// OAuth server metadata (RFC 8414).
+		// Authorization Server Metadata (RFC 8414).
 		\register_rest_route(
 			$this->namespace,
-			'/' . $this->rest_base . '/.well-known/oauth-authorization-server',
+			'/' . $this->rest_base . '/authorization-server-metadata',
 			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
