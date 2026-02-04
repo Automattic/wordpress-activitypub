@@ -25,6 +25,7 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 - [FEP-8fcf: Followers collection synchronization across servers](https://codeberg.org/fediverse/fep/src/branch/main/fep/8fcf/fep-8fcf.md)
 - [FEP-9098: Custom Emojis](https://codeberg.org/fediverse/fep/src/branch/main/fep/9098/fep-9098.md)
 - [FEP-b2b8: Long-form Text](https://codeberg.org/fediverse/fep/src/branch/main/fep/b2b8/fep-b2b8.md)
+- [FEP-c180: Problem Details for ActivityPub](https://codeberg.org/fediverse/fep/src/branch/main/fep/c180/fep-c180.md)
 - [FEP-f1d5: NodeInfo in Fediverse Software](https://codeberg.org/fediverse/fep/src/branch/main/fep/f1d5/fep-f1d5.md)
 - [FEP-fb2a: Actor metadata](https://codeberg.org/fediverse/fep/src/branch/main/fep/fb2a/fep-fb2a.md)
 
@@ -100,6 +101,46 @@ For compatibility with Mastodon, the plugin supports several extensions from the
 - `toot:discoverable` - Actor discovery preference
 - `toot:indexable` - Search indexing consent (see FEP-5feb)
 - `toot:attributionDomains` - Domain attribution for verification links
+
+### Other Extensions
+
+**[Dublin Core](http://purl.org/dc/terms/)**
+
+- `dcterms:subject` - Content warnings (see FEP-b2b8)
+
+**[GoToSocial](https://gotosocial.org/ns)**
+
+- `gts:interactionPolicy` - Interaction policies for objects
+
+**[iCalendar](http://www.w3.org/2002/12/cal/ical)**
+
+- `Event` - `ical:status` for event status
+
+**[Lemmy](https://join-lemmy.org/ns)**
+
+- `Actor` - `lemmy:matrixUserId`, `lemmy:chatMessage`
+
+**[LitePub](https://litepub.social/spec/)**
+
+- `Actor` - `litepub:invisible` visibility flag
+
+**[Misskey](https://misskey-hub.net/ns/)**
+
+- `Note` - `_misskey_quote` for quote posts
+
+**[Mobilizon](https://docs.mobilizon.org/5.%20Interoperability/1.activity_pub/#extensions)**
+
+- `Event` - `mz:externalParticipationUrl`, `mz:joinMode`, `mz:participantCount`
+
+**[PeerTube](https://joinpeertube.org/ns)**
+
+- `Event` - `pt:commentsEnabled`, `pt:isOnline`
+
+**[schema.org](https://schema.org/)**
+
+- `Actor`, `Group` - `PropertyValue` for metadata fields (see FEP-fb2a)
+- `Event` - `category`, `inLanguage`, `maximumAttendeeCapacity`
+- `Place` - Location objects with `PostalAddress` support
 
 ### Endpoints
 
