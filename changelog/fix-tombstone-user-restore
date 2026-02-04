@@ -1,4 +1,4 @@
 Significance: patch
 Type: fixed
 
-Add base `to_tombstone()` method to transformers and restore users from tombstone registry when re-enabled.
+Fix users not being accessible after re-enabling ActivityPub capability.
