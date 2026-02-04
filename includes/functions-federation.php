@@ -190,7 +190,7 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 		'Delete' => ACTIVITYPUB_OBJECT_STATE_DELETED,
 	);
 
-	if ( isset( $state_map[ $activity_type ] ) ) {
+	if ( $activity_type && isset( $state_map[ $activity_type ] ) ) {
 		set_wp_object_state( $data, $state_map[ $activity_type ] );
 	}
 
