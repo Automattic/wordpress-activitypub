@@ -29,6 +29,9 @@ class Server {
 		// Hook into REST authentication - priority 20 to run after default auth.
 		\add_filter( 'rest_authentication_errors', array( self::class, 'authenticate_oauth' ), 20 );
 
+		// Add CORS headers to OAuth endpoints.
+		\add_filter( 'rest_post_dispatch', array( self::class, 'add_cors_headers' ), 10, 3 );
+
 		// Schedule cleanup cron.
 		if ( ! \wp_next_scheduled( 'activitypub_oauth_cleanup' ) ) {
 			\wp_schedule_event( time(), 'daily', 'activitypub_oauth_cleanup' );
@@ -248,6 +251,63 @@ class Server {
 
 		// Clean up expired authorization codes.
 		Authorization_Code::cleanup();
+	}
+
+	/**
+	 * Add CORS headers to C2S endpoint responses.
+	 *
+	 * Enables browser-based C2S clients to interact with OAuth and C2S endpoints.
+	 *
+	 * @param \WP_REST_Response $response The response object.
+	 * @param \WP_REST_Server   $server   The REST server instance.
+	 * @param \WP_REST_Request  $request  The request object.
+	 * @return \WP_REST_Response The modified response.
+	 */
+	public static function add_cors_headers( $response, $server, $request ) {
+		$route = $request->get_route();
+
+		// Check if route needs CORS headers.
+		if ( ! self::route_needs_cors( $route ) ) {
+			return $response;
+		}
+
+		$response->header( 'Access-Control-Allow-Origin', '*' );
+		$response->header( 'Access-Control-Allow-Methods', 'GET, POST, OPTIONS' );
+		$response->header( 'Access-Control-Allow-Headers', 'Content-Type, Authorization' );
+
+		return $response;
+	}
+
+	/**
+	 * Check if a route needs CORS headers.
+	 *
+	 * @param string $route The REST API route.
+	 * @return bool True if the route needs CORS headers.
+	 */
+	private static function route_needs_cors( $route ) {
+		$namespace = '/' . ACTIVITYPUB_REST_NAMESPACE;
+
+		// OAuth endpoints (except authorize which redirects).
+		if ( 0 === strpos( $route, $namespace . '/oauth' ) ) {
+			return false === strpos( $route, '/oauth/authorize' );
+		}
+
+		// Proxy endpoint for fetching remote objects.
+		if ( $namespace . '/proxy' === $route ) {
+			return true;
+		}
+
+		// C2S outbox endpoints (POST to create activities).
+		if ( preg_match( '#^' . preg_quote( $namespace, '#' ) . '/(?:users|actors)/\d+/outbox$#', $route ) ) {
+			return true;
+		}
+
+		// C2S user inbox endpoints.
+		if ( preg_match( '#^' . preg_quote( $namespace, '#' ) . '/(?:users|actors)/\d+/inbox$#', $route ) ) {
+			return true;
+		}
+
+		return false;
 	}
 
 	/**
