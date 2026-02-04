@@ -69,7 +69,7 @@ The plugin supports the following actor types:
 ### Object Types
 
 - `Note` - Short-form content (default for posts)
-- `Article` - Long-form content (for posts with the Article post format)
+- `Article` - Long-form content (for standard posts without a specific post format)
 - `Image`, `Audio`, `Video`, `Document` - Media attachments
 
 ### HTTP Signatures
