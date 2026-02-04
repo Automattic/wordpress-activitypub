@@ -40,6 +40,92 @@ class Test_Extra_Fields extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that pre-linked URLs get rel="me" added to both PropertyValue and Link.
+	 *
+	 * When users create extra fields in the block editor, URLs are often
+	 * already wrapped in <a> tags without rel="me". This test ensures
+	 * verification works by always adding "me" to the rel attribute in both
+	 * the PropertyValue HTML and the Link attachment.
+	 *
+	 * @covers ::fields_to_attachments
+	 * @covers ::add_rel_me_to_links
+	 */
+	public function test_prelinked_url_gets_rel_me() {
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_type'    => Extra_Fields::BLOG_POST_TYPE,
+				'post_content' => '<a href="https://mastodon.social/@user">Mastodon</a>',
+				'post_title'   => 'Mastodon',
+			)
+		);
+
+		$attachments = Extra_Fields::fields_to_attachments( array( $post ) );
+
+		// The PropertyValue HTML should have rel="me" for verification.
+		$this->assertEquals( 'PropertyValue', $attachments[0]['type'] );
+		$this->assertStringContainsString( 'rel="me"', $attachments[0]['value'] );
+
+		// The Link attachment should also have rel="me".
+		$this->assertEquals( 'Link', $attachments[1]['type'] );
+		$this->assertEquals( 'https://mastodon.social/@user', $attachments[1]['href'] );
+		$this->assertContains( 'me', $attachments[1]['rel'] );
+	}
+
+	/**
+	 * Test that pre-linked URLs with existing rel attributes get "me" added.
+	 *
+	 * @covers ::fields_to_attachments
+	 * @covers ::add_rel_me_to_links
+	 */
+	public function test_prelinked_url_with_rel_gets_me_added() {
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_type'    => Extra_Fields::BLOG_POST_TYPE,
+				'post_content' => '<a href="https://example.com" rel="nofollow noopener">Example</a>',
+				'post_title'   => 'Example',
+			)
+		);
+
+		$attachments = Extra_Fields::fields_to_attachments( array( $post ) );
+
+		// The PropertyValue HTML should have rel with "me" added.
+		$this->assertEquals( 'PropertyValue', $attachments[0]['type'] );
+		$this->assertMatchesRegularExpression( '/rel="[^"]*me[^"]*"/', $attachments[0]['value'] );
+		$this->assertStringContainsString( 'nofollow', $attachments[0]['value'] );
+
+		// The Link attachment should have original rel values plus "me".
+		$this->assertEquals( 'Link', $attachments[1]['type'] );
+		$this->assertContains( 'nofollow', $attachments[1]['rel'] );
+		$this->assertContains( 'noopener', $attachments[1]['rel'] );
+		$this->assertContains( 'me', $attachments[1]['rel'] );
+	}
+
+	/**
+	 * Test that pre-linked URLs with existing rel="me" don't get duplicate.
+	 *
+	 * @covers ::fields_to_attachments
+	 * @covers ::add_rel_me_to_links
+	 */
+	public function test_prelinked_url_with_rel_me_no_duplicate() {
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_type'    => Extra_Fields::BLOG_POST_TYPE,
+				'post_content' => '<a href="https://example.com" rel="me nofollow">Example</a>',
+				'post_title'   => 'Example',
+			)
+		);
+
+		$attachments = Extra_Fields::fields_to_attachments( array( $post ) );
+
+		// PropertyValue should have "me" exactly once in the HTML.
+		$this->assertEquals( 1, \substr_count( $attachments[0]['value'], ' me' ) + \substr_count( $attachments[0]['value'], '"me' ) );
+
+		// Link attachment should have "me" exactly once.
+		$value_count = array_count_values( $attachments[1]['rel'] );
+		$this->assertEquals( 1, $value_count['me'] );
+	}
+
+	/**
 	 * Test that HTML entities are decoded in field names and values.
 	 *
 	 * @covers ::fields_to_attachments

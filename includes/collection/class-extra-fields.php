@@ -107,8 +107,12 @@ class Extra_Fields {
 		\add_filter( 'activitypub_link_rel', array( self::class, 'add_rel_me' ) );
 
 		foreach ( $fields as $post ) {
-			$title         = \html_entity_decode( \get_the_title( $post ), \ENT_QUOTES, 'UTF-8' );
-			$content       = self::get_formatted_content( $post );
+			$title   = \html_entity_decode( \get_the_title( $post ), \ENT_QUOTES, 'UTF-8' );
+			$content = self::get_formatted_content( $post );
+
+			// Ensure all links have rel="me" for verification (both in HTML and Link attachment).
+			$content = self::add_rel_me_to_links( $content );
+
 			$attachments[] = array(
 				'type'  => 'PropertyValue',
 				'name'  => $title,
@@ -290,6 +294,36 @@ class Extra_Fields {
 	 */
 	public static function add_rel_me( $rel ) {
 		return $rel . ' me';
+	}
+
+	/**
+	 * Add rel="me" to all links in HTML content.
+	 *
+	 * This ensures verification works for links that were already wrapped
+	 * in <a> tags (e.g., from the block editor) and didn't go through
+	 * the activitypub_link_rel filter.
+	 *
+	 * @param string $content The HTML content.
+	 * @return string The content with rel="me" added to all links.
+	 */
+	public static function add_rel_me_to_links( $content ) {
+		if ( ! \class_exists( '\WP_HTML_Tag_Processor' ) ) {
+			return $content;
+		}
+
+		$tags = new \WP_HTML_Tag_Processor( $content );
+
+		while ( $tags->next_tag( 'A' ) ) {
+			$rel       = $tags->get_attribute( 'rel' );
+			$rel_parts = $rel && \is_string( $rel ) ? \explode( ' ', $rel ) : array();
+
+			if ( ! \in_array( 'me', $rel_parts, true ) ) {
+				$rel_parts[] = 'me';
+				$tags->set_attribute( 'rel', \implode( ' ', $rel_parts ) );
+			}
+		}
+
+		return $tags->get_updated_html();
 	}
 
 	/**
