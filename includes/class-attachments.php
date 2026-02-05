@@ -772,8 +772,19 @@ class Attachments {
 			str_starts_with( $mime_type, 'video/' ) ||
 			str_starts_with( $mime_type, 'audio/' )
 		) {
+			/**
+			 * Filters remote media URLs when sideloading is skipped.
+			 *
+			 * Allows modifying remote URLs to use a CDN or image proxy service.
+			 *
+			 * @param string $url       The remote media URL.
+			 * @param string $mime_type The media MIME type.
+			 * @param string $context   The context: 'attachment'.
+			 */
+			$url = \apply_filters( 'activitypub_remote_media_url', $attachment_data['url'], $mime_type, 'attachment' );
+
 			return array(
-				'url'       => $attachment_data['url'],
+				'url'       => $url,
 				'mime_type' => $attachment_data['mediaType'] ?? '',
 				'alt'       => $attachment_data['name'] ?? '',
 			);
