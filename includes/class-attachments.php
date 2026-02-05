@@ -69,6 +69,41 @@ class Attachments {
 	public static function init() {
 		\add_action( 'before_delete_post', array( self::class, 'delete_ap_posts_directory' ) );
 		\add_action( 'before_delete_post', array( self::class, 'delete_actors_directory' ) );
+		\add_action( 'activitypub_cleanup_temp_files', array( self::class, 'cleanup_temp_files' ) );
+
+		// Schedule cleanup if not already scheduled.
+		if ( ! \wp_next_scheduled( 'activitypub_cleanup_temp_files' ) ) {
+			\wp_schedule_event( time(), 'hourly', 'activitypub_cleanup_temp_files' );
+		}
+	}
+
+	/**
+	 * Clean up old temporary files.
+	 *
+	 * Removes temp files older than 1 hour to prevent accumulation
+	 * from failed or interrupted downloads.
+	 */
+	public static function cleanup_temp_files() {
+		$upload_dir = \wp_upload_dir();
+		$temp_dir   = $upload_dir['basedir'] . self::$temp_dir;
+
+		if ( ! \is_dir( $temp_dir ) ) {
+			return;
+		}
+
+		$max_age = HOUR_IN_SECONDS;
+		$now     = time();
+		$files   = \glob( $temp_dir . '*' );
+
+		if ( ! $files ) {
+			return;
+		}
+
+		foreach ( $files as $file ) {
+			if ( \is_file( $file ) && ( $now - \filemtime( $file ) ) > $max_age ) {
+				\wp_delete_file( $file );
+			}
+		}
 	}
 
 	/**
@@ -83,7 +118,7 @@ class Attachments {
 	 * @return string|\WP_Error Path to temp file on success, WP_Error on failure.
 	 */
 	public static function download_to_temp( $url, $timeout = 300 ) {
-		if ( ! $url ) {
+		if ( ! \is_string( $url ) || ! \filter_var( $url, FILTER_VALIDATE_URL ) ) {
 			return new \WP_Error( 'http_no_url', \__( 'Invalid URL provided.', 'activitypub' ) );
 		}
 
@@ -107,13 +142,17 @@ class Attachments {
 		);
 
 		if ( \is_wp_error( $response ) ) {
-			\wp_delete_file( $temp_file );
+			if ( \file_exists( $temp_file ) ) {
+				\wp_delete_file( $temp_file );
+			}
 			return $response;
 		}
 
 		$response_code = \wp_remote_retrieve_response_code( $response );
 		if ( 200 !== $response_code ) {
-			\wp_delete_file( $temp_file );
+			if ( \file_exists( $temp_file ) ) {
+				\wp_delete_file( $temp_file );
+			}
 			return new \WP_Error(
 				'http_error',
 				/* translators: %d: HTTP response code */
@@ -690,18 +729,51 @@ class Attachments {
 		$is_local = ! preg_match( '#^https?://#i', $attachment_data['url'] );
 
 		if ( $is_local ) {
-			// Read local file from disk.
-			if ( ! $wp_filesystem->exists( $attachment_data['url'] ) ) {
+			// Resolve real path to prevent directory traversal attacks.
+			$real_path = \realpath( $attachment_data['url'] );
+			if ( false === $real_path ) {
 				/* translators: %s: file path */
-				return new \WP_Error( 'file_not_found', sprintf( \__( 'File not found: %s', 'activitypub' ), $attachment_data['url'] ) );
+				return new \WP_Error( 'file_not_found', \sprintf( \__( 'File not found: %s', 'activitypub' ), $attachment_data['url'] ) );
+			}
+
+			// Validate that path is within WordPress uploads or temp directories.
+			$upload_dir   = \wp_upload_dir();
+			$allowed_dirs = array(
+				\realpath( $upload_dir['basedir'] ),
+				\realpath( \sys_get_temp_dir() ),
+				\realpath( ABSPATH ),
+			);
+			$allowed_dirs = \array_filter( $allowed_dirs ); // Remove any false values.
+
+			$path_allowed = false;
+			foreach ( $allowed_dirs as $allowed_dir ) {
+				if ( 0 === \strpos( $real_path, $allowed_dir . DIRECTORY_SEPARATOR ) ) {
+					$path_allowed = true;
+					break;
+				}
+			}
+
+			if ( ! $path_allowed ) {
+				return new \WP_Error( 'invalid_path', \__( 'File path is not within allowed directories.', 'activitypub' ) );
+			}
+
+			// Read local file from disk.
+			if ( ! $wp_filesystem->exists( $real_path ) ) {
+				/* translators: %s: file path */
+				return new \WP_Error( 'file_not_found', \sprintf( \__( 'File not found: %s', 'activitypub' ), $attachment_data['url'] ) );
 			}
 
 			// Copy to temp file in uploads so media_handle_sideload doesn't move the original.
 			$upload_dir = \wp_upload_dir();
 			$temp_dir   = $upload_dir['basedir'] . self::$temp_dir;
-			\wp_mkdir_p( $temp_dir );
+			if ( ! \wp_mkdir_p( $temp_dir ) ) {
+				return new \WP_Error( 'mkdir_failed', \__( 'Could not create temporary directory.', 'activitypub' ) );
+			}
 			$tmp_file = $temp_dir . \wp_unique_filename( $temp_dir, \basename( $attachment_data['url'] ) );
-			$wp_filesystem->copy( $attachment_data['url'], $tmp_file, true );
+			if ( ! $wp_filesystem->copy( $real_path, $tmp_file, true ) ) {
+				/* translators: %s: file path */
+				return new \WP_Error( 'file_copy_error', \sprintf( \__( 'Failed to copy file to temporary location: %s', 'activitypub' ), $tmp_file ) );
+			}
 		} else {
 			// Download remote URL to uploads temp directory.
 			$tmp_file = self::download_to_temp( $attachment_data['url'] );
