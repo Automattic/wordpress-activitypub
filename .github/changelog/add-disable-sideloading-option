@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Add option to disable direct file sideloading via `ACTIVITYPUB_DISABLE_SIDELOADING` constant or `activitypub_sideloading_enabled` filter.

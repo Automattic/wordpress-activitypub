@@ -65,6 +65,36 @@ class Attachments {
 	}
 
 	/**
+	 * Check if direct file sideloading is enabled.
+	 *
+	 * Direct sideloading stores files in /uploads/activitypub/ directories
+	 * without creating WordPress attachment posts. This can be disabled on
+	 * hosts that restrict direct filesystem operations.
+	 *
+	 * When disabled:
+	 * - Emoji will not be cached locally (remote URLs used instead)
+	 * - Actor avatars will not be cached locally (remote URLs used instead)
+	 * - Post/comment attachments will not be stored directly
+	 *
+	 * Media library imports via save_attachment() are NOT affected.
+	 *
+	 * @return bool True if sideloading is enabled, false if disabled.
+	 */
+	public static function is_sideloading_enabled() {
+		// Check for constant first (allows wp-config.php override).
+		if ( \defined( 'ACTIVITYPUB_DISABLE_SIDELOADING' ) && ACTIVITYPUB_DISABLE_SIDELOADING ) {
+			return false;
+		}
+
+		/**
+		 * Filters whether direct file sideloading is enabled.
+		 *
+		 * @param bool $enabled Whether sideloading is enabled. Default true.
+		 */
+		return \apply_filters( 'activitypub_sideloading_enabled', true );
+	}
+
+	/**
 	 * Delete the activitypub files directory for a post.
 	 *
 	 * @param int $post_id The post ID.
@@ -185,6 +215,11 @@ class Attachments {
 	 */
 	public static function import_emoji( $emoji_url, $updated = null ) {
 		if ( empty( $emoji_url ) || ! \filter_var( $emoji_url, FILTER_VALIDATE_URL ) ) {
+			return false;
+		}
+
+		// Skip local caching if sideloading is disabled.
+		if ( ! self::is_sideloading_enabled() ) {
 			return false;
 		}
 
@@ -731,10 +766,15 @@ class Attachments {
 		$mime_type = $attachment_data['mediaType'] ?? '';
 
 		// Skip download for video and audio files - use remote URL directly.
-		if ( str_starts_with( $mime_type, 'video/' ) || str_starts_with( $mime_type, 'audio/' ) ) {
+		// Also skip if sideloading is disabled.
+		if (
+			! self::is_sideloading_enabled() ||
+			str_starts_with( $mime_type, 'video/' ) ||
+			str_starts_with( $mime_type, 'audio/' )
+		) {
 			return array(
 				'url'       => $attachment_data['url'],
-				'mime_type' => $attachment_data['mediaType'],
+				'mime_type' => $attachment_data['mediaType'] ?? '',
 				'alt'       => $attachment_data['name'] ?? '',
 			);
 		}
@@ -1184,6 +1224,11 @@ class Attachments {
 		}
 
 		if ( empty( $avatar_url ) || ! \filter_var( $avatar_url, FILTER_VALIDATE_URL ) ) {
+			return false;
+		}
+
+		// Skip local caching if sideloading is disabled, return false to use remote URL.
+		if ( ! self::is_sideloading_enabled() ) {
 			return false;
 		}
 
