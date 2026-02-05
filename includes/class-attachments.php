@@ -43,6 +43,13 @@ class Attachments {
 	public static $emoji_dir = '/activitypub/emoji/';
 
 	/**
+	 * Directory for storing temporary files during downloads.
+	 *
+	 * @var string
+	 */
+	public static $temp_dir = '/activitypub/tmp/';
+
+	/**
 	 * Maximum width for imported images.
 	 *
 	 * @var int
@@ -62,6 +69,59 @@ class Attachments {
 	public static function init() {
 		\add_action( 'before_delete_post', array( self::class, 'delete_ap_posts_directory' ) );
 		\add_action( 'before_delete_post', array( self::class, 'delete_actors_directory' ) );
+	}
+
+	/**
+	 * Download a URL to a temp file in the uploads directory.
+	 *
+	 * Unlike download_url(), this stores temp files in uploads/activitypub/tmp/
+	 * to avoid issues with hosts that restrict operations on system temp files.
+	 *
+	 * @param string $url     The URL to download.
+	 * @param int    $timeout Timeout in seconds. Default 300.
+	 *
+	 * @return string|\WP_Error Path to temp file on success, WP_Error on failure.
+	 */
+	public static function download_to_temp( $url, $timeout = 300 ) {
+		if ( ! $url ) {
+			return new \WP_Error( 'http_no_url', \__( 'Invalid URL provided.', 'activitypub' ) );
+		}
+
+		$upload_dir = \wp_upload_dir();
+		$temp_dir   = $upload_dir['basedir'] . self::$temp_dir;
+
+		if ( ! \wp_mkdir_p( $temp_dir ) ) {
+			return new \WP_Error( 'temp_dir_failed', \__( 'Could not create temp directory.', 'activitypub' ) );
+		}
+
+		// Generate unique temp filename.
+		$temp_file = $temp_dir . \wp_unique_filename( $temp_dir, 'download-' . \wp_generate_password( 12, false ) . '.tmp' );
+
+		$response = \wp_safe_remote_get(
+			$url,
+			array(
+				'timeout'  => $timeout,
+				'stream'   => true,
+				'filename' => $temp_file,
+			)
+		);
+
+		if ( \is_wp_error( $response ) ) {
+			\wp_delete_file( $temp_file );
+			return $response;
+		}
+
+		$response_code = \wp_remote_retrieve_response_code( $response );
+		if ( 200 !== $response_code ) {
+			\wp_delete_file( $temp_file );
+			return new \WP_Error(
+				'http_error',
+				/* translators: %d: HTTP response code */
+				\sprintf( \__( 'Download failed with response code %d.', 'activitypub' ), $response_code )
+			);
+		}
+
+		return $temp_file;
 	}
 
 	/**
@@ -225,12 +285,8 @@ class Attachments {
 			}
 		}
 
-		if ( ! \function_exists( 'download_url' ) ) {
-			require_once ABSPATH . 'wp-admin/includes/file.php';
-		}
-
-		// Download the emoji.
-		$tmp_file = \download_url( $emoji_url, 10 ); // 10 second timeout for emoji downloads.
+		// Download the emoji to uploads temp directory.
+		$tmp_file = self::download_to_temp( $emoji_url, 10 ); // 10 second timeout for emoji downloads.
 		if ( \is_wp_error( $tmp_file ) ) {
 			return false;
 		}
@@ -615,7 +671,7 @@ class Attachments {
 	 */
 	private static function save_attachment( $attachment_data, $post_id, $author_id = 0 ) {
 		// Ensure required WordPress functions are loaded.
-		if ( ! \function_exists( 'media_handle_sideload' ) || ! \function_exists( 'download_url' ) ) {
+		if ( ! \function_exists( 'media_handle_sideload' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/media.php';
 			require_once ABSPATH . 'wp-admin/includes/file.php';
 			require_once ABSPATH . 'wp-admin/includes/image.php';
@@ -640,12 +696,15 @@ class Attachments {
 				return new \WP_Error( 'file_not_found', sprintf( \__( 'File not found: %s', 'activitypub' ), $attachment_data['url'] ) );
 			}
 
-			// Copy to temp file so media_handle_sideload doesn't move the original.
-			$tmp_file = \wp_tempnam( \basename( $attachment_data['url'] ) );
+			// Copy to temp file in uploads so media_handle_sideload doesn't move the original.
+			$upload_dir = \wp_upload_dir();
+			$temp_dir   = $upload_dir['basedir'] . self::$temp_dir;
+			\wp_mkdir_p( $temp_dir );
+			$tmp_file = $temp_dir . \wp_unique_filename( $temp_dir, \basename( $attachment_data['url'] ) );
 			$wp_filesystem->copy( $attachment_data['url'], $tmp_file, true );
 		} else {
-			// Download remote URL.
-			$tmp_file = \download_url( $attachment_data['url'] );
+			// Download remote URL to uploads temp directory.
+			$tmp_file = self::download_to_temp( $attachment_data['url'] );
 
 			if ( \is_wp_error( $tmp_file ) ) {
 				return $tmp_file;
@@ -739,12 +798,8 @@ class Attachments {
 			);
 		}
 
-		if ( ! \function_exists( 'download_url' ) ) {
-			require_once ABSPATH . 'wp-admin/includes/file.php';
-		}
-
-		// Download remote URL.
-		$tmp_file = \download_url( $attachment_data['url'] );
+		// Download remote URL to uploads temp directory.
+		$tmp_file = self::download_to_temp( $attachment_data['url'] );
 
 		if ( \is_wp_error( $tmp_file ) ) {
 			return $tmp_file;
@@ -768,6 +823,7 @@ class Attachments {
 		}
 
 		if ( ! $wp_filesystem ) {
+			\wp_delete_file( $tmp_file );
 			return new \WP_Error( 'filesystem_error', \__( 'Could not initialize filesystem.', 'activitypub' ) );
 		}
 

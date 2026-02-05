@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Store temporary download files in uploads directory instead of system temp to avoid issues on hosts that restrict operations on /tmp/ files.
