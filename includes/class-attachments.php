@@ -218,9 +218,10 @@ class Attachments {
 			return false;
 		}
 
-		// Skip local caching if sideloading is disabled.
+		// Skip local caching if sideloading is disabled, return filtered remote URL.
 		if ( ! self::is_sideloading_enabled() ) {
-			return false;
+			/** This filter is documented in includes/class-attachments.php */
+			return \apply_filters( 'activitypub_remote_media_url', $emoji_url, 'image', 'emoji' );
 		}
 
 		/**
