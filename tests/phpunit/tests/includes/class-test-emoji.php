@@ -372,4 +372,84 @@ class Test_Emoji extends \WP_UnitTestCase {
 		$this->assertStringContainsString( 'kannawave.png', $result );
 		$this->assertEquals( 2, substr_count( $result, 'class="emoji"' ) );
 	}
+
+	/**
+	 * Test validate_emoji_src allows local emoji URLs by default.
+	 *
+	 * @covers ::validate_emoji_src
+	 */
+	public function test_validate_emoji_src_allows_local_urls() {
+		$upload_dir = \wp_upload_dir();
+		$local_url  = $upload_dir['baseurl'] . '/activitypub/emoji/example.com/test.png';
+
+		$result = Emoji::validate_emoji_src( $local_url );
+
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * Test validate_emoji_src rejects remote URLs by default.
+	 *
+	 * @covers ::validate_emoji_src
+	 */
+	public function test_validate_emoji_src_rejects_remote_urls_by_default() {
+		$remote_url = 'https://remote.example.com/emoji/test.png';
+
+		$result = Emoji::validate_emoji_src( $remote_url );
+
+		$this->assertFalse( $result );
+	}
+
+	/**
+	 * Test validate_emoji_src respects activitypub_validate_emoji_src filter.
+	 *
+	 * @covers ::validate_emoji_src
+	 */
+	public function test_validate_emoji_src_respects_filter() {
+		$remote_url = 'https://cdn.example.com/emoji/test.png';
+
+		// By default, remote URL should be rejected.
+		$this->assertFalse( Emoji::validate_emoji_src( $remote_url ) );
+
+		// Add filter to allow CDN URLs.
+		$allow_cdn = function ( $is_valid, $url ) {
+			if ( \str_starts_with( $url, 'https://cdn.example.com/' ) ) {
+				return true;
+			}
+			return $is_valid;
+		};
+		\add_filter( 'activitypub_validate_emoji_src', $allow_cdn, 10, 2 );
+
+		// Now CDN URL should be allowed.
+		$this->assertTrue( Emoji::validate_emoji_src( $remote_url ) );
+
+		// Other remote URLs should still be rejected.
+		$this->assertFalse( Emoji::validate_emoji_src( 'https://other.example.com/emoji/test.png' ) );
+
+		\remove_filter( 'activitypub_validate_emoji_src', $allow_cdn );
+
+		// After removing filter, CDN URL should be rejected again.
+		$this->assertFalse( Emoji::validate_emoji_src( $remote_url ) );
+	}
+
+	/**
+	 * Test validate_emoji_src filter can allow all remote URLs.
+	 *
+	 * @covers ::validate_emoji_src
+	 */
+	public function test_validate_emoji_src_filter_allow_all_remote() {
+		$allow_all = function ( $is_valid, $url ) {
+			return \filter_var( $url, FILTER_VALIDATE_URL ) !== false;
+		};
+		\add_filter( 'activitypub_validate_emoji_src', $allow_all, 10, 2 );
+
+		// Any valid URL should now be allowed.
+		$this->assertTrue( Emoji::validate_emoji_src( 'https://remote.example.com/emoji/test.png' ) );
+		$this->assertTrue( Emoji::validate_emoji_src( 'https://another.server.org/assets/emoji.gif' ) );
+
+		// Invalid URLs should still fail.
+		$this->assertFalse( Emoji::validate_emoji_src( 'not-a-url' ) );
+
+		\remove_filter( 'activitypub_validate_emoji_src', $allow_all );
+	}
 }
