@@ -99,13 +99,16 @@ class Blog_Settings_Fields {
 			'activitypub_blog_profile'
 		);
 
-		\add_settings_field(
-			'activitypub_blog_is_bot',
-			\__( 'Bot Account', 'activitypub' ),
-			array( self::class, 'bot_account_callback' ),
-			'activitypub_blog_settings',
-			'activitypub_blog_profile'
-		);
+		// Only show bot account option in single-user mode (where blog type is Person, not Group).
+		if ( ! \get_option( 'activitypub_relay_mode', false ) && \Activitypub\is_single_user() ) {
+			\add_settings_field(
+				'activitypub_blog_is_bot',
+				\__( 'Bot Account', 'activitypub' ),
+				array( self::class, 'bot_account_callback' ),
+				'activitypub_blog_settings',
+				'activitypub_blog_profile'
+			);
+		}
 
 		\add_settings_field(
 			'activitypub_hide_social_graph',
@@ -326,17 +329,6 @@ class Blog_Settings_Fields {
 	 * Bot account field callback.
 	 */
 	public static function bot_account_callback() {
-		$is_relay_mode = \get_option( 'activitypub_relay_mode', false );
-
-		// If relay mode is enabled, bot setting is effectively forced on.
-		if ( $is_relay_mode ) {
-			?>
-			<p class="description">
-				<?php \esc_html_e( 'The blog profile is automatically marked as a bot because relay mode is enabled.', 'activitypub' ); ?>
-			</p>
-			<?php
-			return;
-		}
 		?>
 		<label>
 			<input type="checkbox" name="activitypub_blog_is_bot" id="activitypub_blog_is_bot" value="1" <?php \checked( '1', \get_option( 'activitypub_blog_is_bot', '0' ) ); ?> />

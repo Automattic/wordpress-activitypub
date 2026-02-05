@@ -95,18 +95,19 @@ class Test_Blog extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test blog actor type changes to Service when marked as bot.
+	 * Test blog actor type changes to Service when marked as bot in single-user mode.
 	 *
 	 * @covers ::get_type
 	 */
-	public function test_blog_actor_type_as_bot() {
+	public function test_blog_actor_type_as_bot_single_user() {
 		$blog = new Blog();
 
-		// Ensure relay mode is off.
+		// Switch to single-user (blog-only) mode.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
 		\update_option( 'activitypub_relay_mode', false );
 
-		// Default type should be Group (in multi-user mode).
-		$this->assertSame( 'Group', $blog->get_type() );
+		// Default type should be Person in single-user mode.
+		$this->assertSame( 'Person', $blog->get_type() );
 
 		// Enable bot mode for blog.
 		\update_option( 'activitypub_blog_is_bot', '1' );
@@ -121,7 +122,33 @@ class Test_Blog extends \WP_UnitTestCase {
 		// Disable bot mode.
 		\update_option( 'activitypub_blog_is_bot', '0' );
 
-		// Type should be Group again.
+		// Type should be Person again.
+		$this->assertSame( 'Person', $blog->get_type() );
+
+		// Clean up.
+		\delete_option( 'activitypub_blog_is_bot' );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+	}
+
+	/**
+	 * Test that bot setting is ignored in multi-user mode to preserve Group type.
+	 *
+	 * @covers ::get_type
+	 */
+	public function test_blog_bot_ignored_in_multi_user_mode() {
+		$blog = new Blog();
+
+		// Ensure multi-user mode (actor_blog) and relay off.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_relay_mode', false );
+
+		// Default type should be Group.
+		$this->assertSame( 'Group', $blog->get_type() );
+
+		// Enable bot mode — should be ignored in multi-user mode.
+		\update_option( 'activitypub_blog_is_bot', '1' );
+
+		// Type should still be Group (bot setting ignored for FEP-1b12 compliance).
 		$this->assertSame( 'Group', $blog->get_type() );
 
 		// Clean up.
@@ -146,19 +173,24 @@ class Test_Blog extends \WP_UnitTestCase {
 		// Enable both relay mode and bot mode.
 		\update_option( 'activitypub_blog_is_bot', '1' );
 
-		// Type should still be Service (both result in Service, but relay is checked first).
+		// Type should still be Service.
 		$this->assertSame( 'Service', $blog->get_type() );
 
-		// Disable relay mode, bot should still keep it as Service.
+		// Disable relay mode — in multi-user mode, bot setting is ignored.
 		\update_option( 'activitypub_relay_mode', false );
+		$this->assertSame( 'Group', $blog->get_type() );
+
+		// Switch to single-user mode — now bot setting takes effect.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
 		$this->assertSame( 'Service', $blog->get_type() );
 
 		// Disable bot mode too.
 		\update_option( 'activitypub_blog_is_bot', '0' );
-		$this->assertSame( 'Group', $blog->get_type() );
+		$this->assertSame( 'Person', $blog->get_type() );
 
 		// Clean up.
 		\delete_option( 'activitypub_relay_mode' );
 		\delete_option( 'activitypub_blog_is_bot' );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 	}
 }

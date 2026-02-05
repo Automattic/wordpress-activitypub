@@ -103,7 +103,7 @@ class Blog extends Actor {
 	 * Get the type of the object.
 	 *
 	 * If relay mode is enabled, return "Service".
-	 * If the blog is marked as a bot, return "Service".
+	 * If the Blog is in "single user" mode and marked as a bot, return "Service".
 	 * If the Blog is in "single user" mode, return "Person" instead of "Group".
 	 *
 	 * @return string The type of the object.
@@ -113,15 +113,15 @@ class Blog extends Actor {
 			return 'Service';
 		}
 
-		if ( \get_option( 'activitypub_blog_is_bot', false ) ) {
-			return 'Service';
+		if ( is_single_user() ) {
+			if ( \get_option( 'activitypub_blog_is_bot', false ) ) {
+				return 'Service';
+			}
+
+			return 'Person';
 		}
 
-		if ( is_single_user() ) {
-			return 'Person';
-		} else {
-			return 'Group';
-		}
+		return 'Group';
 	}
 
 	/**
