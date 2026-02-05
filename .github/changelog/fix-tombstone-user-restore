@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix users not being accessible after re-enabling ActivityPub capability.

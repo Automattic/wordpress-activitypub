@@ -1,4 +1,0 @@
-Significance: minor
-Type: added
-
-Add global default quote policy setting that can be overridden per-post.

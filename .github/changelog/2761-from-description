@@ -1,4 +1,0 @@
-Significance: patch
-Type: changed
-
-Defer outbox processing to async execution to improve publishing performance.
