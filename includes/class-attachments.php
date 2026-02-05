@@ -72,9 +72,9 @@ class Attachments {
 	 * hosts that restrict direct filesystem operations.
 	 *
 	 * When disabled:
-	 * - Emoji will not be cached locally (remote URLs used instead)
-	 * - Actor avatars will not be cached locally (remote URLs used instead)
-	 * - Post/comment attachments will not be stored directly
+	 * - Emoji use remote URLs (requires `activitypub_validate_emoji_src` filter to allow)
+	 * - Actor avatars use remote URLs (filtered via `activitypub_remote_media_url`)
+	 * - Post/comment attachments use remote URLs (filtered via `activitypub_remote_media_url`)
 	 *
 	 * Media library imports via save_attachment() are NOT affected.
 	 *
@@ -786,7 +786,7 @@ class Attachments {
 
 			return array(
 				'url'       => $url,
-				'mime_type' => $attachment_data['mediaType'] ?? '',
+				'mime_type' => $mime_type,
 				'alt'       => $attachment_data['name'] ?? '',
 			);
 		}
