@@ -181,6 +181,24 @@ class Options {
 
 		\register_setting(
 			'activitypub',
+			'activitypub_default_quote_policy',
+			array(
+				'type'              => 'string',
+				'description'       => 'Default quote policy for new posts.',
+				'default'           => ACTIVITYPUB_INTERACTION_POLICY_ANYONE,
+				'sanitize_callback' => static function ( $value ) {
+					$allowed = array(
+						ACTIVITYPUB_INTERACTION_POLICY_ANYONE,
+						ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS,
+						ACTIVITYPUB_INTERACTION_POLICY_ME,
+					);
+					return \in_array( $value, $allowed, true ) ? $value : ACTIVITYPUB_INTERACTION_POLICY_ANYONE;
+				},
+			)
+		);
+
+		\register_setting(
+			'activitypub',
 			'activitypub_relays',
 			array(
 				'type'              => 'array',

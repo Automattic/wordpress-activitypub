@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fixed Federated Reply block embed appearing squished at 200x200 pixels for same-site embeds by passing explicit width to wp_oembed_get().

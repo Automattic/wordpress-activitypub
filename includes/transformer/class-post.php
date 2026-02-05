@@ -1143,7 +1143,14 @@ class Post extends Base {
 	 * @return array The quote policy.
 	 */
 	private function get_quote_policy() {
-		switch ( \get_post_meta( $this->item->ID, 'activitypub_interaction_policy_quote', true ) ) {
+		$policy = \get_post_meta( $this->item->ID, 'activitypub_interaction_policy_quote', true );
+
+		// Fall back to global default if not set.
+		if ( ! $policy ) {
+			$policy = \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
+		}
+
+		switch ( $policy ) {
 			case ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS:
 				return array( 'automaticApproval' => get_rest_url_by_path( sprintf( 'actors/%d/followers', $this->item->post_author ) ) );
 
