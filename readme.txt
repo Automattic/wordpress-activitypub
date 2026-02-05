@@ -524,9 +524,9 @@ See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activityp
 
 == Upgrade Notice ==
 
-= 7.8.0 =
+= 7.9.0 =
 
-This update introduces improved moderation tools, including blocklist subscriptions and bulk domain imports, making it easier to manage and scale moderation across the Fediverse.
+Custom emoji from the fediverse now show up instead of looking like :sad_trombone:.
 
 == Installation ==
 
