@@ -349,9 +349,7 @@ class Delete {
 		Tombstone::bury( object_to_uri( $object ) );
 
 		if ( \is_object( $object ) ) {
-			// Handle object with methods.
-			Tombstone::bury( $object->get_id() );
-			Tombstone::bury( $object->get_url() );
+			Tombstone::bury( $object->get_id(), $object->get_url() );
 		}
 	}
 

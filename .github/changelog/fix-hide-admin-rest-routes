@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Hide admin REST API endpoints from discovery index.

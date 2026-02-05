@@ -105,7 +105,7 @@ class Dispatcher {
 		 *
 		 * @param int[] $retry_error_codes The error codes. Default array( 408, 429, 500, 502, 503, 504 ).
 		 */
-		return apply_filters( 'activitypub_dispatcher_retry_error_codes', array( 408, 429, 500, 502, 503, 504 ) );
+		return apply_filters( 'activitypub_dispatcher_retry_error_codes', ACTIVITYPUB_RETRY_ERROR_CODES );
 	}
 
 	/**
