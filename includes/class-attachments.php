@@ -235,8 +235,16 @@ class Attachments {
 			return false;
 		}
 
-		if ( ! \wp_get_image_mime( $tmp_file ) ) {
-			\wp_delete_file( $tmp_file );
+		// Generate filename from URL path (consistent with get_emoji_url lookup).
+		$url_path  = \wp_parse_url( $emoji_url, PHP_URL_PATH );
+		$file_name = \sanitize_file_name( \basename( $url_path ) );
+
+		// Validate file type and extension.
+		$file_info = \wp_check_filetype_and_ext( $tmp_file, $file_name );
+		if ( empty( $file_info['type'] ) || ! \str_starts_with( $file_info['type'], 'image/' ) ) {
+			if ( \file_exists( $tmp_file ) ) {
+				\unlink( $tmp_file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Temp file cleanup to avoid wp_delete_file filter.
+			}
 			return false;
 		}
 
@@ -245,13 +253,11 @@ class Attachments {
 
 		// Create directory if it doesn't exist.
 		if ( ! \wp_mkdir_p( $paths['basedir'] ) ) {
-			\wp_delete_file( $tmp_file );
+			if ( \file_exists( $tmp_file ) ) {
+				\unlink( $tmp_file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Temp file cleanup to avoid wp_delete_file filter.
+			}
 			return false;
 		}
-
-		// Generate filename from URL path (consistent with get_emoji_url lookup).
-		$url_path  = \wp_parse_url( $emoji_url, PHP_URL_PATH );
-		$file_name = \sanitize_file_name( \basename( $url_path ) );
 		$file_path = $paths['basedir'] . '/' . $file_name;
 
 		// Initialize filesystem.
@@ -260,7 +266,9 @@ class Attachments {
 
 		// Move file to destination (overwrite if exists).
 		if ( ! $wp_filesystem->move( $tmp_file, $file_path, true ) ) {
-			\wp_delete_file( $tmp_file );
+			if ( \file_exists( $tmp_file ) ) {
+				\unlink( $tmp_file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Temp file cleanup to avoid wp_delete_file filter.
+			}
 			return false;
 		}
 
@@ -701,8 +709,8 @@ class Attachments {
 		$attachment_id = \media_handle_sideload( $file_array, $post_id, '', $post_data );
 
 		// Clean up temp file if there was an error.
-		if ( \is_wp_error( $attachment_id ) ) {
-			\wp_delete_file( $tmp_file );
+		if ( \is_wp_error( $attachment_id ) && \file_exists( $tmp_file ) ) {
+			\unlink( $tmp_file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Temp file cleanup to avoid wp_delete_file filter.
 		}
 
 		return $attachment_id;
@@ -785,7 +793,9 @@ class Attachments {
 
 		// Move file to destination.
 		if ( ! $wp_filesystem->move( $tmp_file, $file_path, true ) ) {
-			\wp_delete_file( $tmp_file );
+			if ( \file_exists( $tmp_file ) ) {
+				\unlink( $tmp_file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Temp file cleanup to avoid wp_delete_file filter.
+			}
 			return new \WP_Error( 'file_move_failed', \__( 'Failed to move file to destination.', 'activitypub' ) );
 		}
 
