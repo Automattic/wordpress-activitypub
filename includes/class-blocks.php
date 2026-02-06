@@ -36,17 +36,18 @@ class Blocks {
 	 */
 	public static function enqueue_editor_assets() {
 		$data = array(
-			'namespace'        => ACTIVITYPUB_REST_NAMESPACE,
-			'defaultAvatarUrl' => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
-			'enabled'          => array(
+			'namespace'          => ACTIVITYPUB_REST_NAMESPACE,
+			'defaultAvatarUrl'   => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
+			'enabled'            => array(
 				'blog'  => ! is_user_type_disabled( 'blog' ),
 				'users' => ! is_user_type_disabled( 'user' ),
 			),
-			'profileUrls'      => array(
+			'profileUrls'        => array(
 				'user' => \admin_url( 'profile.php#activitypub' ),
 				'blog' => \admin_url( 'options-general.php?page=activitypub&tab=blog-profile' ),
 			),
-			'showAvatars'      => (bool) \get_option( 'show_avatars' ),
+			'showAvatars'        => (bool) \get_option( 'show_avatars' ),
+			'defaultQuotePolicy' => \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE ),
 		);
 		wp_localize_script( 'wp-editor', '_activityPubOptions', $data );
 
@@ -348,7 +349,9 @@ class Blocks {
 		// Try to get and append the embed if requested.
 		$embed = null;
 		if ( $show_embed ) {
-			$embed = wp_oembed_get( $attrs['url'] );
+			// Use the theme's content width or a reasonable default to avoid narrow embeds.
+			$embed_width = ! empty( $GLOBALS['content_width'] ) ? $GLOBALS['content_width'] : 600;
+			$embed       = wp_oembed_get( $attrs['url'], array( 'width' => $embed_width ) );
 			if ( $embed ) {
 				$html .= $embed;
 				\wp_enqueue_script( 'wp-embed' );

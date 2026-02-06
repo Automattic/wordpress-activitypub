@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.9
-Stable tag: 7.8.5
+Stable tag: 7.9.0
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -109,6 +109,41 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 7.9.0 - 2026-02-05
+#### Added
+- Add Fediverse Following block to display accounts the user follows.
+- Add global default quote policy setting that can be overridden per-post.
+- Add health check to verify scheduled events are registered and auto-repair if missing.
+- Add location support for posts using WordPress Geodata post meta fields.
+- Add Podlove Podcast Publisher integration for podcast episode federation.
+- Add site health check to detect when security plugins block REST API access.
+- Add Social Web item to the admin bar for quick access to the reader.
+- Add soft delete support with Tombstone objects when post visibility changes to local/private.
+- Custom emoji from the fediverse now show up instead of looking like :sad_trombone:.
+- Make actor table columns filterable.
+- Send Add/Remove activities when changing a post's sticky status to improve interoperability with the featured collection.
+- Show warning instead of reply link when logged-in user cannot federate replies to fediverse comments.
+
+#### Changed
+- Defer outbox processing to async execution to improve publishing performance.
+- Move Jest mocks to tests/js directory for better project organization.
+- Remove redundant __nextHasNoMarginBottom props now that @wordpress/components 32.0.0 defaults to true.
+- Revert to synchronous outbox processing with improved timeout handling and WebFinger error caching.
+
+#### Fixed
+- Don't filter the comment query when type__not_in has been set
+- Filter comments on ActivityPub posts from REST API responses.
+- Fix duplicate media attachments when featured image is also in post content.
+- Fixed Federated Reply block embed appearing squished at 200x200 pixels for same-site embeds by passing explicit width to wp_oembed_get().
+- Fixed pagination metadata leaking when "Hide Social Graph" privacy setting is enabled.
+- Fix migration activities not being scheduled for federation due to hook registration timing.
+- Fix older comments with empty type not being federated.
+- Fix quote requests from Mastodon not being received.
+- Fix users not being accessible after re-enabling ActivityPub capability.
+- Hide admin REST API endpoints from discovery index.
+- Show informational notice when trying to follow an already-followed account.
+- Skip fetching public audience identifiers which are not actual recipients.
 
 ### 7.8.5 - 2026-01-14
 #### Fixed
@@ -489,9 +524,9 @@ See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activityp
 
 == Upgrade Notice ==
 
-= 7.8.0 =
+= 7.9.0 =
 
-This update introduces improved moderation tools, including blocklist subscriptions and bulk domain imports, making it easier to manage and scale moderation across the Fediverse.
+Custom emoji from the fediverse now show up instead of looking like :sad_trombone:.
 
 == Installation ==
 

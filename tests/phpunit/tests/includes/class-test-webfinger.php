@@ -8,6 +8,7 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Activity\Actor;
+use Activitypub\Http;
 use Activitypub\Webfinger;
 
 /**
@@ -130,12 +131,9 @@ class Test_Webfinger extends \WP_UnitTestCase {
 					'body'     => 'error',
 				),
 				new \WP_Error(
-					'webfinger_url_not_accessible',
-					__( 'The WebFinger Resource is not accessible.', 'activitypub' ),
-					array(
-						'status' => 400,
-						'data'   => 'https://example.org/.well-known/webfinger?resource=http%3A%2F%2Fexample.org%2F%3Fauthor%3D1',
-					)
+					400,
+					__( 'Failed HTTP Request', 'activitypub' ),
+					array( 'status' => 400 )
 				),
 			),
 			array(
@@ -144,15 +142,12 @@ class Test_Webfinger extends \WP_UnitTestCase {
 					'response' => array(
 						'code' => 404,
 					),
-					'body'     => '{"type":"about:blank","title":"activitypub_wrong_host","detail":"Der Ressourcen-Host stimmt nicht mit dem Blog-Host \u00fcberein","status":404,"metadata":{"code":"activitypub_wrong_host","message":"Der Ressourcen-Host stimmt nicht mit dem Blog-Host \u00fcberein","data":{"status":404}}}',
+					'body'     => '{"type":"about:blank","title":"activitypub_wrong_host"}',
 				),
 				new \WP_Error(
-					'webfinger_url_not_accessible',
-					__( 'The WebFinger Resource is not accessible.', 'activitypub' ),
-					array(
-						'status' => 400,
-						'data'   => 'https://example.org/.well-known/webfinger?resource=acct%3Atest%40example.org',
-					)
+					404,
+					__( 'Failed HTTP Request', 'activitypub' ),
+					array( 'status' => 404 )
 				),
 			),
 		);
@@ -319,5 +314,175 @@ class Test_Webfinger extends \WP_UnitTestCase {
 				'author@example.org',
 			),
 		);
+	}
+
+	/**
+	 * Test that WebFinger 4xx failures are cached (longer duration).
+	 *
+	 * @covers ::get_data
+	 */
+	public function test_get_data_caches_4xx_failure() {
+		$webfinger_url = 'https://unreachable.example/.well-known/webfinger?resource=acct%3Afailure-test-4xx%40unreachable.example';
+
+		// Clear Http cache.
+		\delete_transient( Http::generate_cache_key( $webfinger_url ) );
+
+		// Mock a 404 HTTP response.
+		$request_count = 0;
+		$filter        = function () use ( &$request_count ) {
+			++$request_count;
+			return array(
+				'response' => array(
+					'code' => 404,
+				),
+				'body'     => 'Not Found',
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		// First call should make an HTTP request and return an error.
+		$result = Webfinger::get_data( 'failure-test-4xx@unreachable.example' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 404, $result->get_error_code() );
+		$this->assertEquals( 1, $request_count, 'First call should make one HTTP request' );
+
+		// Second call should return cached error without making another HTTP request.
+		$result = Webfinger::get_data( 'failure-test-4xx@unreachable.example' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 404, $result->get_error_code() );
+		$this->assertEquals( 1, $request_count, 'Second call should use cache, not make another HTTP request' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		// Clean up.
+		\delete_transient( Http::generate_cache_key( $webfinger_url ) );
+	}
+
+	/**
+	 * Test that WebFinger 5xx failures are cached (shorter duration).
+	 *
+	 * @covers ::get_data
+	 */
+	public function test_get_data_caches_5xx_failure() {
+		$webfinger_url = 'https://unreachable.example/.well-known/webfinger?resource=acct%3Afailure-test-5xx%40unreachable.example';
+
+		// Clear Http cache.
+		\delete_transient( Http::generate_cache_key( $webfinger_url ) );
+
+		// Mock a 503 HTTP response.
+		$request_count = 0;
+		$filter        = function () use ( &$request_count ) {
+			++$request_count;
+			return array(
+				'response' => array(
+					'code' => 503,
+				),
+				'body'     => 'Service Unavailable',
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		// First call should make an HTTP request and return an error.
+		$result = Webfinger::get_data( 'failure-test-5xx@unreachable.example' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 503, $result->get_error_code() );
+		$this->assertEquals( 1, $request_count, 'First call should make one HTTP request' );
+
+		// Second call should return cached error without making another HTTP request.
+		$result = Webfinger::get_data( 'failure-test-5xx@unreachable.example' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 503, $result->get_error_code() );
+		$this->assertEquals( 1, $request_count, 'Second call should use cache, not make another HTTP request' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		// Clean up.
+		\delete_transient( Http::generate_cache_key( $webfinger_url ) );
+	}
+
+	/**
+	 * Test that WebFinger timeout failures are cached (shorter duration).
+	 *
+	 * @covers ::get_data
+	 */
+	public function test_get_data_caches_timeout_failure() {
+		$webfinger_url = 'https://unreachable.example/.well-known/webfinger?resource=acct%3Afailure-test-timeout%40unreachable.example';
+
+		// Clear Http cache.
+		\delete_transient( Http::generate_cache_key( $webfinger_url ) );
+
+		// Mock a timeout (WP_Error).
+		$request_count = 0;
+		$filter        = function () use ( &$request_count ) {
+			++$request_count;
+			return new \WP_Error( 'http_request_failed', 'Connection timed out' );
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		// First call should make an HTTP request and return an error.
+		$result = Webfinger::get_data( 'failure-test-timeout@unreachable.example' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 1, $request_count, 'First call should make one HTTP request' );
+
+		// Second call should return cached error without making another HTTP request.
+		$result = Webfinger::get_data( 'failure-test-timeout@unreachable.example' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 1, $request_count, 'Second call should use cache, not make another HTTP request' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		// Clean up.
+		\delete_transient( Http::generate_cache_key( $webfinger_url ) );
+	}
+
+	/**
+	 * Test that WebFinger successes are still cached properly.
+	 *
+	 * @covers ::get_data
+	 */
+	public function test_get_data_caches_success() {
+		$uri = 'success-test@reachable.example';
+
+		// Clear any existing cache.
+		$transient_key = Webfinger::generate_cache_key( $uri );
+		\delete_transient( $transient_key );
+
+		// Mock a successful HTTP response.
+		$request_count = 0;
+		$filter        = function () use ( &$request_count ) {
+			++$request_count;
+			return array(
+				'response' => array(
+					'code' => 200,
+				),
+				'body'     => '{ "subject": "acct:success-test@reachable.example", "links": [] }',
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		// First call should make an HTTP request.
+		$result = Webfinger::get_data( $uri );
+
+		$this->assertIsArray( $result );
+		$this->assertEquals( 'acct:success-test@reachable.example', $result['subject'] );
+		$this->assertEquals( 1, $request_count, 'First call should make one HTTP request' );
+
+		// Second call should use cache.
+		$result = Webfinger::get_data( $uri );
+
+		$this->assertIsArray( $result );
+		$this->assertEquals( 'acct:success-test@reachable.example', $result['subject'] );
+		$this->assertEquals( 1, $request_count, 'Second call should use cache, not make another HTTP request' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		// Clean up.
+		\delete_transient( $transient_key );
 	}
 }

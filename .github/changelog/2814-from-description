@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix duplicate media attachments when featured image is also in post content.
