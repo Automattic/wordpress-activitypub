@@ -13,6 +13,9 @@ namespace Activitypub\Cache;
  * Provides shared functionality for caching remote media files locally.
  * Subclasses implement type-specific storage paths and initialization.
  *
+ * Caching is lazy/filter-based: URLs pass through the `activitypub_remote_media_url`
+ * filter, and cache handlers check if already cached or download on demand.
+ *
  * @since 5.6.0
  */
 abstract class File {
@@ -135,12 +138,8 @@ abstract class File {
 			return false;
 		}
 
-		// Generate hash-based filename.
-		$hash      = static::generate_hash( $url );
-		$file_stem = $hash;
-
-		// Look for file with any extension.
-		$matches = \glob( $paths['basedir'] . '/' . $file_stem . '.*' );
+		$hash    = static::generate_hash( $url );
+		$matches = \glob( $paths['basedir'] . '/' . $hash . '.*' );
 
 		if ( ! empty( $matches ) && \is_file( $matches[0] ) ) {
 			return $paths['baseurl'] . '/' . \basename( $matches[0] );
@@ -152,9 +151,11 @@ abstract class File {
 	/**
 	 * Get a cached file or cache it if not present.
 	 *
+	 * This is the main entry point for lazy caching. Called via filter hooks.
+	 *
 	 * @param string     $url       The remote URL.
 	 * @param string|int $entity_id The entity identifier.
-	 * @param array      $options   Optional. Additional options.
+	 * @param array      $options   Optional. Additional options like 'updated' timestamp.
 	 *
 	 * @return string|false The local URL on success, false on failure.
 	 */
@@ -191,6 +192,8 @@ abstract class File {
 	/**
 	 * Cache a remote file locally.
 	 *
+	 * Downloads the file, validates it, optimizes images, and stores locally.
+	 *
 	 * @param string     $url       The remote URL.
 	 * @param string|int $entity_id The entity identifier.
 	 * @param array      $options   Optional. Additional options.
@@ -205,9 +208,7 @@ abstract class File {
 		}
 
 		$tmp_file = $result['file'];
-
-		// Get storage paths.
-		$paths = static::get_storage_paths( $entity_id );
+		$paths    = static::get_storage_paths( $entity_id );
 
 		// Create directory if it doesn't exist.
 		if ( ! \wp_mkdir_p( $paths['basedir'] ) ) {

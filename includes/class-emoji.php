@@ -7,6 +7,8 @@
 
 namespace Activitypub;
 
+use Activitypub\Cache\Emoji as Emoji_Cache;
+
 /**
  * Handles custom emoji processing for ActivityPub content.
  *
@@ -64,7 +66,7 @@ class Emoji {
 	 */
 	public static function validate_emoji_src( $value ) {
 		$upload_dir = \wp_upload_dir();
-		$emoji_base = $upload_dir['baseurl'] . Attachments::$emoji_dir;
+		$emoji_base = $upload_dir['baseurl'] . Emoji_Cache::BASE_DIR;
 
 		return \str_starts_with( $value, $emoji_base );
 	}
@@ -150,7 +152,7 @@ class Emoji {
 		}
 
 		foreach ( $emoji_data as $emoji ) {
-			$local_url = Attachments::import_emoji( $emoji['url'], $emoji['updated'] ?? null );
+			$local_url = Emoji_Cache::import( $emoji['url'], $emoji['updated'] ?? null );
 
 			// Only replace if the emoji was successfully uploaded locally.
 			if ( $local_url ) {

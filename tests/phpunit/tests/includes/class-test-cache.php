@@ -79,12 +79,17 @@ class Test_Cache extends WP_UnitTestCase {
 	public function test_init_registers_all_handlers() {
 		Cache::init();
 
+		// Avatar uses the filter for lazy caching.
 		$this->assertNotFalse(
 			has_filter( 'activitypub_remote_media_url', array( Avatar::class, 'maybe_cache' ) )
 		);
+
+		// Media uses the save_post hook for caching on save.
 		$this->assertNotFalse(
-			has_filter( 'activitypub_remote_media_url', array( Media::class, 'maybe_cache' ) )
+			has_action( 'save_post_ap_post', array( Media::class, 'cache_post_media' ) )
 		);
+
+		// Emoji uses the filter for lazy caching.
 		$this->assertNotFalse(
 			has_filter( 'activitypub_remote_media_url', array( Emoji::class, 'maybe_cache' ) )
 		);

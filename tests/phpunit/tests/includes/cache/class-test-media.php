@@ -62,32 +62,30 @@ class Test_Media extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test maybe_cache returns unchanged URL for wrong context.
+	 * Test cache_post_media skips non-existent posts.
 	 */
-	public function test_maybe_cache_wrong_context() {
-		$url    = 'https://example.com/image.jpg';
-		$result = Media::maybe_cache( $url, 'avatar', 123 );
-
-		$this->assertEquals( $url, $result );
+	public function test_cache_post_media_non_existent_post() {
+		// Should not throw error for non-existent post.
+		Media::cache_post_media( 999999 );
+		$this->assertTrue( true );
 	}
 
 	/**
-	 * Test maybe_cache returns unchanged URL for empty URL.
+	 * Test cache_post_media skips posts without content.
 	 */
-	public function test_maybe_cache_empty_url() {
-		$result = Media::maybe_cache( '', 'media', 123 );
+	public function test_cache_post_media_empty_content() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'    => 'ap_post',
+				'post_content' => '',
+			)
+		);
 
-		$this->assertEquals( '', $result );
-	}
+		// Should not throw error.
+		Media::cache_post_media( $post_id );
+		$this->assertTrue( true );
 
-	/**
-	 * Test maybe_cache returns unchanged URL for empty entity_id.
-	 */
-	public function test_maybe_cache_empty_entity_id() {
-		$url    = 'https://example.com/image.jpg';
-		$result = Media::maybe_cache( $url, 'media', null );
-
-		$this->assertEquals( $url, $result );
+		wp_delete_post( $post_id, true );
 	}
 
 	/**
@@ -156,13 +154,13 @@ class Test_Media extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test filter registration on init.
+	 * Test save_post hook registration on init.
 	 */
-	public function test_init_registers_filter() {
+	public function test_init_registers_save_post_hook() {
 		Media::init();
 
 		$this->assertNotFalse(
-			has_filter( 'activitypub_remote_media_url', array( Media::class, 'maybe_cache' ) )
+			has_action( 'save_post_ap_post', array( Media::class, 'cache_post_media' ) )
 		);
 	}
 

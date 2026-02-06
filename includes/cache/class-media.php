@@ -12,10 +12,14 @@ use Activitypub\Collection\Posts;
 /**
  * Media cache class.
  *
- * Handles caching of remote post and comment media locally.
- * Media is stored in /wp-content/uploads/activitypub/ap_posts/{post_id}/ or
- * /wp-content/uploads/activitypub/comments/{comment_id}/ and cleaned up
- * automatically when the parent post is deleted.
+ * Handles lazy caching of remote post and comment media locally.
+ * Media is cached on-demand when URLs pass through the `activitypub_remote_media_url` filter.
+ *
+ * Storage locations:
+ * - Posts: /wp-content/uploads/activitypub/ap_posts/{post_id}/
+ * - Comments: /wp-content/uploads/activitypub/comments/{comment_id}/
+ *
+ * Files are cleaned up automatically when the parent post is deleted.
  *
  * @since 5.6.0
  */
@@ -126,62 +130,114 @@ class Media extends File {
 			return;
 		}
 
-		// Hook into the universal remote media URL filter.
-		\add_filter( 'activitypub_remote_media_url', array( self::class, 'maybe_cache' ), 10, 3 );
+		// Cache media when post is saved/updated.
+		\add_action( 'save_post_' . Posts::POST_TYPE, array( self::class, 'cache_post_media' ), 20 );
 
 		// Clean up when post is deleted.
 		\add_action( 'before_delete_post', array( self::class, 'maybe_cleanup' ) );
 	}
 
 	/**
-	 * Maybe cache a media URL.
+	 * Cache media from post content and attachments meta.
 	 *
-	 * Hooked to the activitypub_remote_media_url filter.
+	 * Caches remote image URLs from both:
+	 * - Image tags in post content
+	 * - Attachment URLs stored in _activitypub_attachments meta
 	 *
-	 * @param string     $url       The remote URL.
-	 * @param string     $context   The context ('media', 'comment_media', etc.).
-	 * @param string|int $entity_id The entity identifier (post or comment ID).
+	 * Updates the post content with cached URLs.
 	 *
-	 * @return string The local URL if cached successfully, otherwise the original URL.
+	 * @param int $post_id The post ID.
 	 */
-	public static function maybe_cache( $url, $context, $entity_id = null ) {
-		if ( ! \in_array( $context, array( self::CONTEXT, self::CONTEXT_COMMENT ), true ) ) {
-			return $url;
+	public static function cache_post_media( $post_id ) {
+		$post = \get_post( $post_id );
+		if ( ! $post ) {
+			return;
 		}
 
-		if ( empty( $url ) || empty( $entity_id ) ) {
-			return $url;
+		// Invalidate existing cached media on update.
+		self::invalidate_entity( $post_id );
+
+		// Collect URLs from both content and attachments meta.
+		$urls_to_cache = array();
+
+		// Find image URLs in content.
+		if ( ! empty( $post->post_content ) ) {
+			\preg_match_all( '/<img[^>]+src=["\']([^"\']+)["\'][^>]*>/i', $post->post_content, $matches );
+			if ( ! empty( $matches[1] ) ) {
+				$urls_to_cache = array_merge( $urls_to_cache, $matches[1] );
+			}
 		}
 
-		$cached_url = self::cache_with_context(
-			$url,
-			$entity_id,
-			$context,
-			array( 'max_dimension' => self::MAX_DIMENSION )
-		);
+		// Get attachment URLs from meta.
+		$attachment_urls = \get_post_meta( $post_id, '_activitypub_attachments', true );
+		if ( ! empty( $attachment_urls ) && \is_array( $attachment_urls ) ) {
+			$urls_to_cache = array_merge( $urls_to_cache, $attachment_urls );
+		}
 
-		return $cached_url ?: $url;
+		// Remove duplicates.
+		$urls_to_cache = array_unique( $urls_to_cache );
+
+		if ( empty( $urls_to_cache ) ) {
+			return;
+		}
+
+		$content      = $post->post_content;
+		$urls_changed = false;
+		$upload_base  = \wp_upload_dir()['baseurl'];
+
+		foreach ( $urls_to_cache as $url ) {
+			// Skip non-http URLs (data URIs, relative paths, already local).
+			if ( ! \preg_match( '#^https?://#i', $url ) ) {
+				continue;
+			}
+
+			// Skip if already a local URL.
+			if ( \str_contains( $url, $upload_base ) ) {
+				continue;
+			}
+
+			// Cache the image.
+			$cached_url = self::cache_url( $url, $post_id );
+
+			if ( $cached_url && $cached_url !== $url && ! empty( $content ) ) {
+				$content      = \str_replace( $url, $cached_url, $content );
+				$urls_changed = true;
+			}
+		}
+
+		// Update post content if URLs were replaced.
+		if ( $urls_changed ) {
+			// Unhook to prevent infinite loop.
+			\remove_action( 'save_post_' . Posts::POST_TYPE, array( self::class, 'cache_post_media' ), 20 );
+
+			\wp_update_post(
+				array(
+					'ID'           => $post_id,
+					'post_content' => $content,
+				)
+			);
+
+			// Re-hook.
+			\add_action( 'save_post_' . Posts::POST_TYPE, array( self::class, 'cache_post_media' ), 20 );
+		}
+
+		// Clear the attachments meta after processing.
+		\delete_post_meta( $post_id, '_activitypub_attachments' );
 	}
 
 	/**
-	 * Cache a file with context-aware storage.
+	 * Cache a single URL.
 	 *
-	 * @param string     $url       The remote URL.
-	 * @param string|int $entity_id The entity identifier.
-	 * @param string     $context   The context for path resolution.
-	 * @param array      $options   Optional. Additional options.
+	 * @param string $url       The remote URL to cache.
+	 * @param int    $entity_id The entity ID (post or comment).
 	 *
-	 * @return string|false The local URL on success, false on failure.
+	 * @return string|false The cached local URL, or false on failure.
 	 */
-	public static function cache_with_context( $url, $entity_id, $context, $options = array() ) {
-		if ( empty( $url ) || ! \filter_var( $url, FILTER_VALIDATE_URL ) ) {
-			return false;
-		}
-
-		// Check if already cached.
-		$paths = self::get_storage_paths_for_context( $entity_id, $context );
+	public static function cache_url( $url, $entity_id ) {
+		$paths = self::get_storage_paths_for_context( $entity_id, self::CONTEXT );
 		$hash  = self::generate_hash( $url );
 
+		// Check if already cached.
 		if ( \is_dir( $paths['basedir'] ) ) {
 			$matches = \glob( $paths['basedir'] . '/' . $hash . '.*' );
 			if ( ! empty( $matches ) && \is_file( $matches[0] ) ) {
@@ -189,7 +245,7 @@ class Media extends File {
 			}
 		}
 
-		// Download and validate.
+		// Download and cache.
 		$result = self::download_and_validate( $url );
 		if ( \is_wp_error( $result ) || empty( $result['file'] ) ) {
 			return false;
@@ -197,7 +253,7 @@ class Media extends File {
 
 		$tmp_file = $result['file'];
 
-		// Create directory if it doesn't exist.
+		// Create directory if needed.
 		if ( ! \wp_mkdir_p( $paths['basedir'] ) ) {
 			\wp_delete_file( $tmp_file );
 			return false;
@@ -218,21 +274,14 @@ class Media extends File {
 			\WP_Filesystem();
 		}
 
-		if ( ! $wp_filesystem ) {
-			\wp_delete_file( $tmp_file );
-			return false;
-		}
-
-		// Move file to destination.
-		if ( ! $wp_filesystem->move( $tmp_file, $file_path, true ) ) {
+		if ( ! $wp_filesystem || ! $wp_filesystem->move( $tmp_file, $file_path, true ) ) {
 			\wp_delete_file( $tmp_file );
 			return false;
 		}
 
 		// Optimize image.
-		$max_dimension = $options['max_dimension'] ?? self::MAX_DIMENSION;
-		$file_path     = self::optimize_image( $file_path, $max_dimension );
-		$file_name     = \basename( $file_path );
+		$file_path = self::optimize_image( $file_path, self::MAX_DIMENSION );
+		$file_name = \basename( $file_path );
 
 		return $paths['baseurl'] . '/' . $file_name;
 	}

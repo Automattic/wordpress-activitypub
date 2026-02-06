@@ -7,7 +7,7 @@
 
 namespace Activitypub\Tests\Collection;
 
-use Activitypub\Attachments;
+use Activitypub\Cache\Media;
 use Activitypub\Collection\Posts;
 use Activitypub\Post_Types;
 
@@ -29,6 +29,9 @@ class Test_Posts extends \WP_UnitTestCase {
 		// Register required post types.
 		Post_Types::register_remote_actors_post_type();
 		Post_Types::register_post_post_type();
+
+		// Initialize cache to register hooks.
+		Media::init();
 
 		// Mock HTTP requests for Remote_Actors::fetch_by_uri.
 		\add_filter( 'pre_http_request', array( $this, 'mock_http_request' ), 10, 3 );
@@ -431,7 +434,8 @@ class Test_Posts extends \WP_UnitTestCase {
 				'id'           => 'https://example.com/objects/with-attachment',
 				'type'         => 'Note',
 				'name'         => 'Post with Image',
-				'content'      => '<p>Test content</p>',
+				// Real ActivityPub content includes img tags.
+				'content'      => '<p>Test content</p><p><img src="https://example.com/image.jpg" alt="Test Image"/></p>',
 				'attributedTo' => 'https://example.com/users/testuser',
 				'attachment'   => array(
 					array(
@@ -451,15 +455,15 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		// Verify file was created in activitypub directory.
 		$upload_dir = \wp_upload_dir();
-		$file_dir   = $upload_dir['basedir'] . Attachments::$ap_posts_dir . $result->ID;
+		$file_dir   = $upload_dir['basedir'] . Media::BASE_DIR_POSTS . $result->ID;
 		$this->assertTrue( file_exists( $file_dir ), 'ActivityPub directory should exist' );
 
 		// Verify file exists.
 		$files = glob( $file_dir . '/*' );
 		$this->assertCount( 1, $files, 'One file should be created' );
 
-		// Verify content includes media markup with the file URL.
-		$this->assertStringContainsString( Attachments::$ap_posts_dir . $result->ID . '/', $result->post_content );
+		// Verify content includes the cached file URL.
+		$this->assertStringContainsString( Media::BASE_DIR_POSTS . $result->ID . '/', $result->post_content );
 	}
 
 	/**
@@ -800,7 +804,7 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		// Verify file was created.
 		$upload_dir = \wp_upload_dir();
-		$file_dir   = $upload_dir['basedir'] . Attachments::$ap_posts_dir . $updated_post->ID;
+		$file_dir   = $upload_dir['basedir'] . Media::BASE_DIR_POSTS . $updated_post->ID;
 		$this->assertTrue( file_exists( $file_dir ), 'ActivityPub directory should exist' );
 
 		$files = glob( $file_dir . '/*' );
@@ -836,7 +840,7 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		// Verify original file was created.
 		$upload_dir = \wp_upload_dir();
-		$file_dir   = $upload_dir['basedir'] . Attachments::$ap_posts_dir . $original_post->ID;
+		$file_dir   = $upload_dir['basedir'] . Media::BASE_DIR_POSTS . $original_post->ID;
 		$this->assertTrue( file_exists( $file_dir ), 'ActivityPub directory should exist' );
 		$original_files = glob( $file_dir . '/*' );
 		$this->assertCount( 1, $original_files );
@@ -914,7 +918,7 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		// Verify original file was created.
 		$upload_dir = \wp_upload_dir();
-		$file_dir   = $upload_dir['basedir'] . Attachments::$ap_posts_dir . $original_post->ID;
+		$file_dir   = $upload_dir['basedir'] . Media::BASE_DIR_POSTS . $original_post->ID;
 		$this->assertTrue( file_exists( $file_dir ), 'ActivityPub directory should exist' );
 		$original_files = glob( $file_dir . '/*' );
 		$this->assertCount( 1, $original_files );

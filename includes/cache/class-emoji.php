@@ -32,6 +32,13 @@ class Emoji extends File {
 	const CONTEXT = 'emoji';
 
 	/**
+	 * Base directory for emoji storage.
+	 *
+	 * @var string
+	 */
+	const BASE_DIR = '/activitypub/emoji/';
+
+	/**
 	 * Get the cache type identifier.
 	 *
 	 * @return string Cache type.
@@ -46,7 +53,7 @@ class Emoji extends File {
 	 * @return string Base directory path.
 	 */
 	public static function get_base_dir() {
-		return '/activitypub/emoji/';
+		return self::BASE_DIR;
 	}
 
 	/**
@@ -70,10 +77,10 @@ class Emoji extends File {
 	/**
 	 * Initialize the cache handler.
 	 *
-	 * Note: Emoji caching is handled directly via Attachments::import_emoji()
-	 * calling Cache\Emoji::import() to support staleness checking with the
-	 * 'updated' timestamp. The filter is still registered to allow third-party
-	 * CDN plugins to intercept emoji URLs.
+	 * Note: Emoji caching is handled directly via Cache\Emoji::import()
+	 * to support staleness checking with the 'updated' timestamp.
+	 * The filter is still registered to allow third-party CDN plugins
+	 * to intercept emoji URLs.
 	 */
 	public static function init() {
 		if ( ! self::is_enabled() ) {
