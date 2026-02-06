@@ -697,6 +697,51 @@ class Test_Attachments extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that save_file returns the correct mime type after image optimization.
+	 *
+	 * Optimization can change the format (e.g., JPEG to WebP), so the returned
+	 * mime_type must reflect the actual file, not the original.
+	 *
+	 * @covers ::save_file
+	 * @covers ::optimize_image
+	 */
+	public function test_save_file_mime_type_matches_after_optimization() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type' => 'ap_post',
+			)
+		);
+
+		$attachments = array(
+			array(
+				'url'       => 'https://example.com/photo.png',
+				'mediaType' => 'image/png',
+				'name'      => 'Test Photo',
+				'type'      => 'Image',
+			),
+		);
+
+		$result = Attachments::import_post_files( $attachments, $post_id );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 1, $result );
+
+		$url       = $result[0]['url'];
+		$mime_type = $result[0]['mime_type'];
+		$extension = pathinfo( wp_parse_url( $url, PHP_URL_PATH ), PATHINFO_EXTENSION );
+
+		// The mime type must match the actual file extension.
+		$expected_mimes = array(
+			'webp' => 'image/webp',
+			'png'  => 'image/png',
+			'jpg'  => 'image/jpeg',
+		);
+
+		$this->assertArrayHasKey( $extension, $expected_mimes, "Unexpected extension: $extension" );
+		$this->assertSame( $expected_mimes[ $extension ], $mime_type, "Mime type '$mime_type' does not match extension '$extension'" );
+	}
+
+	/**
 	 * Test that video attachments use remote URL directly without downloading.
 	 *
 	 * @covers ::save_file

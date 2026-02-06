@@ -995,6 +995,9 @@ class Attachments {
 		$file_path = self::optimize_image( $file_path, $max_dimension );
 		$file_name = \basename( $file_path );
 
+		// Re-determine mime type after optimization (format may have changed).
+		$mime_type = self::validate_image_file( $file_path ) ?: $mime_type;
+
 		return array(
 			'url'       => $paths['baseurl'] . '/' . $file_name,
 			'mime_type' => $mime_type,
