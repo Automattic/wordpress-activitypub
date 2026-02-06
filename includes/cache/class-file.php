@@ -42,6 +42,16 @@ abstract class File {
 	);
 
 	/**
+	 * Cached finfo instance for MIME type detection.
+	 *
+	 * Using a cached instance avoids repeated finfo_open() calls and
+	 * the deprecated finfo_close() in PHP 8.5+.
+	 *
+	 * @var \finfo|null
+	 */
+	private static $finfo = null;
+
+	/**
 	 * Get the cache type identifier.
 	 *
 	 * @return string Cache type (e.g., 'avatar', 'media', 'emoji').
@@ -462,14 +472,17 @@ abstract class File {
 	protected static function validate_mime_type( $file_path ) {
 		$allowed_mime_types = static::get_allowed_mime_types();
 
-		// Method 1: Use finfo for reliable MIME detection.
-		$finfo = \finfo_open( FILEINFO_MIME_TYPE );
-		if ( ! $finfo ) {
-			return new \WP_Error( 'finfo_failed', \__( 'Could not open finfo.', 'activitypub' ) );
+		// Require fileinfo extension for validation.
+		if ( ! \extension_loaded( 'fileinfo' ) ) {
+			return new \WP_Error( 'finfo_failed', \__( 'Fileinfo extension not available.', 'activitypub' ) );
 		}
 
-		$mime = \finfo_file( $finfo, $file_path );
-		\finfo_close( $finfo );
+		// Method 1: Use cached finfo instance for reliable MIME detection.
+		if ( null === self::$finfo ) {
+			self::$finfo = new \finfo( FILEINFO_MIME_TYPE );
+		}
+
+		$mime = self::$finfo->file( $file_path );
 
 		if ( ! \in_array( $mime, $allowed_mime_types, true ) ) {
 			return new \WP_Error( 'invalid_mime', \__( 'File type not allowed.', 'activitypub' ) );
@@ -563,11 +576,11 @@ abstract class File {
 	 * @return string The MIME type.
 	 */
 	protected static function get_file_mime_type( $file_path ) {
-		$finfo = \finfo_open( FILEINFO_MIME_TYPE );
-		if ( $finfo ) {
-			$mime = \finfo_file( $finfo, $file_path );
-			\finfo_close( $finfo );
-			return $mime;
+		if ( \extension_loaded( 'fileinfo' ) ) {
+			if ( null === self::$finfo ) {
+				self::$finfo = new \finfo( FILEINFO_MIME_TYPE );
+			}
+			return self::$finfo->file( $file_path );
 		}
 
 		// Fallback to WordPress function.
