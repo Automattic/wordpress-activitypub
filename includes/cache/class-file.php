@@ -27,16 +27,18 @@ abstract class File {
 	const MAX_FILE_SIZE = 10485760; // 10 * 1024 * 1024
 
 	/**
-	 * Allowed MIME types for cached files.
+	 * Default allowed MIME types for cached files.
+	 *
+	 * Note: SVG is excluded by default due to XSS risks. Enable via filter
+	 * `activitypub_cache_allowed_mime_types` if your site sanitizes SVGs.
 	 *
 	 * @var array
 	 */
-	const ALLOWED_MIME_TYPES = array(
+	const DEFAULT_ALLOWED_MIME_TYPES = array(
 		'image/jpeg',
 		'image/png',
 		'image/gif',
 		'image/webp',
-		'image/svg+xml',
 	);
 
 	/**
@@ -248,7 +250,24 @@ abstract class File {
 		$file_path     = static::optimize_image( $file_path, $max_dimension );
 		$file_name     = \basename( $file_path );
 
-		return $paths['baseurl'] . '/' . $file_name;
+		$local_url = $paths['baseurl'] . '/' . $file_name;
+
+		/**
+		 * Fires after a remote media file has been successfully cached.
+		 *
+		 * Use this hook for logging, analytics, or post-processing.
+		 *
+		 * @since 5.6.0
+		 *
+		 * @param string     $local_url  The local URL of the cached file.
+		 * @param string     $url        The original remote URL.
+		 * @param string|int $entity_id  The entity identifier.
+		 * @param string     $type       The cache type ('avatar', 'media', 'emoji').
+		 * @param string     $file_path  The local file system path.
+		 */
+		\do_action( 'activitypub_media_cached', $local_url, $url, $entity_id, static::get_type(), $file_path );
+
+		return $local_url;
 	}
 
 	/**
@@ -283,14 +302,16 @@ abstract class File {
 	/**
 	 * Generate a hash for a URL.
 	 *
-	 * Used to create consistent, collision-resistant filenames.
+	 * Uses full MD5 hash (32 characters) for better collision resistance.
+	 * With truncated hashes, collision probability increases significantly
+	 * at scale.
 	 *
 	 * @param string $url The URL to hash.
 	 *
-	 * @return string The hash string (16 characters).
+	 * @return string The full MD5 hash string (32 characters).
 	 */
 	protected static function generate_hash( $url ) {
-		return substr( md5( $url ), 0, 16 );
+		return \md5( $url );
 	}
 
 	/**
@@ -309,6 +330,35 @@ abstract class File {
 	}
 
 	/**
+	 * Get allowed MIME types for this cache type.
+	 *
+	 * @return array Array of allowed MIME types.
+	 */
+	protected static function get_allowed_mime_types() {
+		$type = static::get_type();
+
+		/**
+		 * Filters the allowed MIME types for a cache type.
+		 *
+		 * Use this filter to add or remove allowed MIME types.
+		 * For example, to enable SVG support (requires proper sanitization):
+		 *
+		 *     add_filter( 'activitypub_cache_allowed_mime_types', function( $types, $cache_type ) {
+		 *         if ( 'emoji' === $cache_type ) {
+		 *             $types[] = 'image/svg+xml';
+		 *         }
+		 *         return $types;
+		 *     }, 10, 2 );
+		 *
+		 * @since 5.6.0
+		 *
+		 * @param array  $mime_types Array of allowed MIME types.
+		 * @param string $type       The cache type ('avatar', 'media', 'emoji').
+		 */
+		return (array) \apply_filters( 'activitypub_cache_allowed_mime_types', static::DEFAULT_ALLOWED_MIME_TYPES, $type );
+	}
+
+	/**
 	 * Download and validate a remote file.
 	 *
 	 * @param string $url The remote URL to download.
@@ -321,6 +371,26 @@ abstract class File {
 	 * }
 	 */
 	protected static function download_and_validate( $url ) {
+		$type = static::get_type();
+
+		/**
+		 * Filters whether a URL should be cached.
+		 *
+		 * Allows preventing specific URLs from being downloaded and cached.
+		 * Return false to skip caching this URL.
+		 *
+		 * @since 5.6.0
+		 *
+		 * @param bool   $should_cache Whether to cache this URL. Default true.
+		 * @param string $url          The remote URL.
+		 * @param string $type         The cache type ('avatar', 'media', 'emoji').
+		 */
+		$should_cache = \apply_filters( 'activitypub_should_cache_url', true, $url, $type );
+
+		if ( ! $should_cache ) {
+			return new \WP_Error( 'cache_skipped', \__( 'URL caching was skipped by filter.', 'activitypub' ) );
+		}
+
 		// Validate URL is safe to fetch.
 		if ( ! static::is_safe_url( $url ) ) {
 			return new \WP_Error( 'invalid_url', \__( 'URL is not allowed.', 'activitypub' ) );
@@ -371,6 +441,8 @@ abstract class File {
 	 * @return string|\WP_Error File path (possibly renamed) on success, WP_Error on failure.
 	 */
 	protected static function validate_mime_type( $file_path ) {
+		$allowed_mime_types = static::get_allowed_mime_types();
+
 		// Method 1: Use finfo for reliable MIME detection.
 		$finfo = \finfo_open( FILEINFO_MIME_TYPE );
 		if ( ! $finfo ) {
@@ -380,11 +452,11 @@ abstract class File {
 		$mime = \finfo_file( $finfo, $file_path );
 		\finfo_close( $finfo );
 
-		if ( ! \in_array( $mime, static::ALLOWED_MIME_TYPES, true ) ) {
+		if ( ! \in_array( $mime, $allowed_mime_types, true ) ) {
 			return new \WP_Error( 'invalid_mime', \__( 'File type not allowed.', 'activitypub' ) );
 		}
 
-		// Method 2: Verify it's actually a valid image (except SVG).
+		// Method 2: Verify it's actually a valid image (except SVG which needs special handling).
 		if ( 'image/svg+xml' !== $mime ) {
 			$image_info = @\getimagesize( $file_path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 			if ( false === $image_info ) {
@@ -399,12 +471,41 @@ abstract class File {
 			if ( ! \file_is_displayable_image( $file_path ) ) {
 				return new \WP_Error( 'not_displayable', \__( 'Image cannot be displayed.', 'activitypub' ) );
 			}
+		} else {
+			// SVG requires additional sanitization - only allow if explicitly enabled via filter.
+			// The filter `activitypub_cache_allowed_mime_types` must include 'image/svg+xml'.
+			// Sites enabling SVG should implement their own sanitization via
+			// the `activitypub_sanitize_svg` filter or use a library like enshrined/svg-sanitize.
+
+			/**
+			 * Filters the SVG content for sanitization.
+			 *
+			 * Only called when SVG is explicitly allowed via the
+			 * `activitypub_cache_allowed_mime_types` filter.
+			 *
+			 * @since 5.6.0
+			 *
+			 * @param string $content   The SVG file content.
+			 * @param string $file_path Path to the SVG file.
+			 */
+			$svg_content = \file_get_contents( $file_path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			$sanitized   = \apply_filters( 'activitypub_sanitize_svg', $svg_content, $file_path );
+
+			// If no sanitization filter is applied, reject the SVG for safety.
+			if ( $sanitized === $svg_content && ! \has_filter( 'activitypub_sanitize_svg' ) ) {
+				return new \WP_Error( 'svg_not_sanitized', \__( 'SVG files require a sanitization filter. See activitypub_sanitize_svg hook.', 'activitypub' ) );
+			}
+
+			// Write sanitized content back.
+			if ( $sanitized !== $svg_content ) {
+				\file_put_contents( $file_path, $sanitized ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			}
 		}
 
 		// Method 3: Use WordPress's wp_check_filetype_and_ext for additional validation.
 		$expected_ext = static::mime_to_extension( $mime );
 		$file_name    = \wp_basename( $file_path );
-		$file_info    = \wp_check_filetype_and_ext( $file_path, $file_name, static::ALLOWED_MIME_TYPES );
+		$file_info    = \wp_check_filetype_and_ext( $file_path, $file_name, $allowed_mime_types );
 
 		// If WordPress couldn't validate the file type, reject it.
 		if ( empty( $file_info['type'] ) || ! \str_starts_with( $file_info['type'], 'image/' ) ) {
