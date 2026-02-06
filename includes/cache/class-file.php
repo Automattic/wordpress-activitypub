@@ -287,10 +287,25 @@ abstract class File {
 	 *
 	 * @param string $url The URL to hash.
 	 *
-	 * @return string The hash string (8 characters).
+	 * @return string The hash string (16 characters).
 	 */
 	protected static function generate_hash( $url ) {
-		return substr( md5( $url ), 0, 8 );
+		return substr( md5( $url ), 0, 16 );
+	}
+
+	/**
+	 * Validate a URL is safe to fetch.
+	 *
+	 * @param string $url The URL to validate.
+	 *
+	 * @return bool True if URL is safe to fetch, false otherwise.
+	 */
+	protected static function is_safe_url( $url ) {
+		if ( empty( $url ) || ! \filter_var( $url, FILTER_VALIDATE_URL ) ) {
+			return false;
+		}
+
+		return (bool) \wp_http_validate_url( $url );
 	}
 
 	/**
@@ -306,6 +321,11 @@ abstract class File {
 	 * }
 	 */
 	protected static function download_and_validate( $url ) {
+		// Validate URL is safe to fetch.
+		if ( ! static::is_safe_url( $url ) ) {
+			return new \WP_Error( 'invalid_url', \__( 'URL is not allowed.', 'activitypub' ) );
+		}
+
 		if ( ! \function_exists( 'download_url' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/file.php';
 		}
@@ -369,6 +389,15 @@ abstract class File {
 			$image_info = @\getimagesize( $file_path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 			if ( false === $image_info ) {
 				return new \WP_Error( 'invalid_image', \__( 'File is not a valid image.', 'activitypub' ) );
+			}
+
+			// Verify image can actually be rendered.
+			if ( ! \function_exists( 'file_is_displayable_image' ) ) {
+				require_once ABSPATH . 'wp-admin/includes/image.php';
+			}
+
+			if ( ! \file_is_displayable_image( $file_path ) ) {
+				return new \WP_Error( 'not_displayable', \__( 'Image cannot be displayed.', 'activitypub' ) );
 			}
 		}
 
@@ -484,10 +513,12 @@ abstract class File {
 		$can_webp = $editor->supports_mime_type( 'image/webp' );
 
 		// Determine output format and save.
+		$dir = \dirname( $file_path );
+
 		if ( $can_webp ) {
 			// Convert to WebP.
-			$new_path = static::get_unique_path( \preg_replace( '/\.[^.]+$/', '.webp', $file_path ) );
-			$result   = $editor->save( $new_path, 'image/webp' );
+			$new_name = \wp_unique_filename( $dir, \preg_replace( '/\.[^.]+$/', '.webp', \basename( $file_path ) ) );
+			$result   = $editor->save( $dir . '/' . $new_name, 'image/webp' );
 		} elseif ( \in_array( $mime_type, array( 'image/png', 'image/webp' ), true ) ) {
 			// Keep original format for potentially transparent images when WebP not available.
 			if ( ! $needs_resize ) {
@@ -496,8 +527,8 @@ abstract class File {
 			$result = $editor->save( $file_path );
 		} else {
 			// Convert to JPEG when WebP not available.
-			$new_path = static::get_unique_path( \preg_replace( '/\.[^.]+$/', '.jpg', $file_path ) );
-			$result   = $editor->save( $new_path, 'image/jpeg' );
+			$new_name = \wp_unique_filename( $dir, \preg_replace( '/\.[^.]+$/', '.jpg', \basename( $file_path ) ) );
+			$result   = $editor->save( $dir . '/' . $new_name, 'image/jpeg' );
 		}
 
 		if ( \is_wp_error( $result ) ) {
@@ -513,31 +544,5 @@ abstract class File {
 		}
 
 		return $result_path;
-	}
-
-	/**
-	 * Get a unique file path by appending a counter if the file already exists.
-	 *
-	 * @param string $file_path The desired file path.
-	 *
-	 * @return string A unique file path that doesn't exist.
-	 */
-	protected static function get_unique_path( $file_path ) {
-		if ( ! \file_exists( $file_path ) ) {
-			return $file_path;
-		}
-
-		$path_info = \pathinfo( $file_path );
-		$dir       = $path_info['dirname'];
-		$base_name = $path_info['filename'];
-		$extension = isset( $path_info['extension'] ) ? '.' . $path_info['extension'] : '';
-		$counter   = 1;
-
-		do {
-			$new_path = $dir . '/' . $base_name . '-' . $counter . $extension;
-			++$counter;
-		} while ( \file_exists( $new_path ) );
-
-		return $new_path;
 	}
 }
