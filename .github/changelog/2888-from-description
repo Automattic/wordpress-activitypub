@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix temp file deletion warnings when plugins hook into wp_delete_file filter.
