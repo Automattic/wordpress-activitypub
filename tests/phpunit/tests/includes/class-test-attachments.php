@@ -1453,4 +1453,181 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$this->assertNotFalse( $result );
 		$this->assertStringContainsString( 'normal-emoji.png', $result );
 	}
+
+	/**
+	 * Test is_sideloading_enabled returns true by default.
+	 *
+	 * @covers ::is_sideloading_enabled
+	 */
+	public function test_is_sideloading_enabled_default() {
+		$this->assertTrue( Attachments::is_sideloading_enabled() );
+	}
+
+	/**
+	 * Test is_sideloading_enabled respects filter.
+	 *
+	 * @covers ::is_sideloading_enabled
+	 */
+	public function test_is_sideloading_enabled_filter() {
+		\add_filter( 'activitypub_sideloading_enabled', '__return_false' );
+
+		$this->assertFalse( Attachments::is_sideloading_enabled() );
+
+		\remove_filter( 'activitypub_sideloading_enabled', '__return_false' );
+
+		$this->assertTrue( Attachments::is_sideloading_enabled() );
+	}
+
+	/**
+	 * Test import_emoji returns filtered remote URL when sideloading disabled.
+	 *
+	 * @covers ::import_emoji
+	 */
+	public function test_import_emoji_returns_remote_url_when_sideloading_disabled() {
+		\add_filter( 'activitypub_sideloading_enabled', '__return_false' );
+
+		$emoji_url = 'https://example.com/emoji/test.png';
+		$result    = Attachments::import_emoji( $emoji_url );
+
+		// Should return the remote URL (not false, not local).
+		$this->assertSame( $emoji_url, $result );
+
+		\remove_filter( 'activitypub_sideloading_enabled', '__return_false' );
+	}
+
+	/**
+	 * Test import_emoji applies activitypub_remote_media_url filter when sideloading disabled.
+	 *
+	 * @covers ::import_emoji
+	 */
+	public function test_import_emoji_applies_cdn_filter_when_sideloading_disabled() {
+		\add_filter( 'activitypub_sideloading_enabled', '__return_false' );
+
+		$cdn_filter = function ( $url, $mime_type, $context ) {
+			if ( 'emoji' === $context ) {
+				return 'https://cdn.example.com/' . basename( $url );
+			}
+			return $url;
+		};
+		\add_filter( 'activitypub_remote_media_url', $cdn_filter, 10, 3 );
+
+		$emoji_url = 'https://example.com/emoji/test.png';
+		$result    = Attachments::import_emoji( $emoji_url );
+
+		$this->assertSame( 'https://cdn.example.com/test.png', $result );
+
+		\remove_filter( 'activitypub_remote_media_url', $cdn_filter );
+		\remove_filter( 'activitypub_sideloading_enabled', '__return_false' );
+	}
+
+	/**
+	 * Test save_file returns remote URL when sideloading disabled.
+	 *
+	 * @covers ::save_file
+	 */
+	public function test_save_file_returns_remote_url_when_sideloading_disabled() {
+		\add_filter( 'activitypub_sideloading_enabled', '__return_false' );
+
+		$attachment_data = array(
+			'url'       => 'https://example.com/image.jpg',
+			'mediaType' => 'image/jpeg',
+			'name'      => 'Test image',
+		);
+
+		$method = new \ReflectionMethod( Attachments::class, 'save_file' );
+		$method->setAccessible( true );
+
+		$result = $method->invoke( null, $attachment_data, self::$post_id, 'post' );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( 'https://example.com/image.jpg', $result['url'] );
+		$this->assertSame( 'image/jpeg', $result['mime_type'] );
+		$this->assertSame( 'Test image', $result['alt'] );
+
+		\remove_filter( 'activitypub_sideloading_enabled', '__return_false' );
+	}
+
+	/**
+	 * Test save_file applies activitypub_remote_media_url filter when sideloading disabled.
+	 *
+	 * @covers ::save_file
+	 */
+	public function test_save_file_applies_cdn_filter_when_sideloading_disabled() {
+		\add_filter( 'activitypub_sideloading_enabled', '__return_false' );
+
+		$received_main_type = null;
+		$cdn_filter         = function ( $url, $main_type, $context ) use ( &$received_main_type ) {
+			$received_main_type = $main_type;
+			if ( 'attachment' === $context ) {
+				return 'https://cdn.example.com/' . basename( $url );
+			}
+			return $url;
+		};
+		\add_filter( 'activitypub_remote_media_url', $cdn_filter, 10, 3 );
+
+		$attachment_data = array(
+			'url'       => 'https://example.com/image.jpg',
+			'mediaType' => 'image/jpeg',
+			'name'      => 'Test image',
+		);
+
+		$method = new \ReflectionMethod( Attachments::class, 'save_file' );
+		$method->setAccessible( true );
+
+		$result = $method->invoke( null, $attachment_data, self::$post_id, 'post' );
+
+		$this->assertSame( 'https://cdn.example.com/image.jpg', $result['url'] );
+		// Verify main type is passed, not full MIME type.
+		$this->assertSame( 'image', $received_main_type );
+
+		\remove_filter( 'activitypub_remote_media_url', $cdn_filter );
+		\remove_filter( 'activitypub_sideloading_enabled', '__return_false' );
+	}
+
+	/**
+	 * Test save_actor_avatar returns false when sideloading disabled.
+	 *
+	 * @covers ::save_actor_avatar
+	 */
+	public function test_save_actor_avatar_returns_false_when_sideloading_disabled() {
+		\add_filter( 'activitypub_sideloading_enabled', '__return_false' );
+
+		$result = Attachments::save_actor_avatar( 123, 'https://example.com/avatar.jpg' );
+
+		$this->assertFalse( $result );
+
+		\remove_filter( 'activitypub_sideloading_enabled', '__return_false' );
+	}
+
+	/**
+	 * Test save_file still downloads video/audio even when sideloading enabled.
+	 *
+	 * Video and audio files always return remote URL regardless of sideloading setting.
+	 *
+	 * @covers ::save_file
+	 */
+	public function test_save_file_returns_remote_url_for_video_audio() {
+		$method = new \ReflectionMethod( Attachments::class, 'save_file' );
+		$method->setAccessible( true );
+
+		// Test video.
+		$video_data = array(
+			'url'       => 'https://example.com/video.mp4',
+			'mediaType' => 'video/mp4',
+			'name'      => 'Test video',
+		);
+		$result     = $method->invoke( null, $video_data, self::$post_id, 'post' );
+
+		$this->assertSame( 'https://example.com/video.mp4', $result['url'] );
+
+		// Test audio.
+		$audio_data = array(
+			'url'       => 'https://example.com/audio.mp3',
+			'mediaType' => 'audio/mpeg',
+			'name'      => 'Test audio',
+		);
+		$result     = $method->invoke( null, $audio_data, self::$post_id, 'post' );
+
+		$this->assertSame( 'https://example.com/audio.mp3', $result['url'] );
+	}
 }
