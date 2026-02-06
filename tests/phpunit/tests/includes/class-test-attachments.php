@@ -62,6 +62,10 @@ class Test_Attachments extends \WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
+		// Disable Cache\Media so it doesn't interfere with Attachments tests.
+		// Cache\Media hooks into save_post and would cache images before Attachments::import() runs.
+		\add_filter( 'activitypub_cache_media_enabled', '__return_false' );
+
 		// Mock HTTP requests only for remote attachment tests.
 		\add_filter( 'pre_http_request', array( $this, 'mock_download_url' ), 10, 3 );
 		\add_filter( 'wp_delete_file', '__return_empty_string' ); // Prevent actual file deletion during tests.
@@ -71,6 +75,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 * Tear down each test.
 	 */
 	public function tear_down() {
+		// Re-enable Cache\Media.
+		\remove_filter( 'activitypub_cache_media_enabled', '__return_false' );
+
 		\remove_filter( 'pre_http_request', array( $this, 'mock_download_url' ) );
 		\remove_filter( 'wp_delete_file', '__return_empty_string' );
 

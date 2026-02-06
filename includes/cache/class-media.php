@@ -149,6 +149,11 @@ class Media extends File {
 	 * @param int $post_id The post ID.
 	 */
 	public static function cache_post_media( $post_id ) {
+		// Check if caching is still enabled (allows runtime disabling via filter).
+		if ( ! self::is_enabled() ) {
+			return;
+		}
+
 		$post = \get_post( $post_id );
 		if ( ! $post ) {
 			return;

@@ -7,14 +7,16 @@
 
 namespace Activitypub\Cache;
 
-use Activitypub\Collection\Posts;
-
 /**
  * Emoji cache class.
  *
- * Handles caching of custom emoji locally.
+ * Handles file caching of custom emoji locally.
  * Emoji are stored in /wp-content/uploads/activitypub/emoji/{domain}/
  * organized by source domain for easier management.
+ *
+ * This class is responsible ONLY for file operations (download, validate, store, optimize).
+ * Content transformation (replacing shortcodes with img tags) is handled by the main
+ * Activitypub\Emoji class.
  *
  * @since 5.6.0
  */
@@ -86,145 +88,7 @@ class Emoji extends File {
 
 		// Hook into the universal remote media URL filter.
 		// This allows third-party CDN plugins to intercept emoji URLs.
-		\add_filter( 'activitypub_remote_media_url', array( self::class, 'maybe_cache' ), 10, 3 );
-
-		// Process emoji in ap_post content after save.
-		\add_action( 'save_post_' . Posts::POST_TYPE, array( self::class, 'replace_post_emoji' ), 15 );
-
-		// Process emoji in comments after insert.
-		\add_action( 'wp_insert_comment', array( self::class, 'replace_comment_emoji' ), 10, 2 );
-	}
-
-	/**
-	 * Replace emoji in ap_post content via hook.
-	 *
-	 * @param int $post_id The post ID.
-	 */
-	public static function replace_post_emoji( $post_id ) {
-		$emoji_data = \get_post_meta( $post_id, '_activitypub_emoji', true );
-		if ( empty( $emoji_data ) || ! \is_array( $emoji_data ) ) {
-			return;
-		}
-
-		$post = \get_post( $post_id );
-		if ( ! $post || empty( $post->post_content ) ) {
-			\delete_post_meta( $post_id, '_activitypub_emoji' );
-			return;
-		}
-
-		$content = $post->post_content;
-		$changed = false;
-
-		foreach ( $emoji_data as $emoji ) {
-			if ( empty( $emoji['url'] ) || empty( $emoji['name'] ) ) {
-				continue;
-			}
-
-			$local_url = self::import( $emoji['url'], $emoji['updated'] ?? null );
-			if ( $local_url ) {
-				$new_content = self::replace_emoji_in_text( $content, $emoji['name'], $local_url );
-				if ( $new_content !== $content ) {
-					$content = $new_content;
-					$changed = true;
-				}
-			}
-		}
-
-		// Clear emoji meta.
-		\delete_post_meta( $post_id, '_activitypub_emoji' );
-
-		if ( $changed ) {
-			// Unhook to prevent infinite loop.
-			\remove_action( 'save_post_' . Posts::POST_TYPE, array( self::class, 'replace_post_emoji' ), 15 );
-
-			\wp_update_post(
-				array(
-					'ID'           => $post_id,
-					'post_content' => $content,
-				)
-			);
-
-			// Re-hook.
-			\add_action( 'save_post_' . Posts::POST_TYPE, array( self::class, 'replace_post_emoji' ), 15 );
-		}
-	}
-
-	/**
-	 * Replace emoji in comment content via hook.
-	 *
-	 * @param int         $comment_id The comment ID.
-	 * @param \WP_Comment $comment    The comment object.
-	 */
-	public static function replace_comment_emoji( $comment_id, $comment ) {
-		$emoji_data = \get_comment_meta( $comment_id, '_activitypub_emoji', true );
-		if ( empty( $emoji_data ) || ! \is_array( $emoji_data ) ) {
-			return;
-		}
-
-		$content = $comment->comment_content;
-		if ( empty( $content ) ) {
-			\delete_comment_meta( $comment_id, '_activitypub_emoji' );
-			return;
-		}
-
-		$changed = false;
-
-		foreach ( $emoji_data as $emoji ) {
-			if ( empty( $emoji['url'] ) || empty( $emoji['name'] ) ) {
-				continue;
-			}
-
-			$local_url = self::import( $emoji['url'], $emoji['updated'] ?? null );
-			if ( $local_url ) {
-				$new_content = self::replace_emoji_in_text( $content, $emoji['name'], $local_url );
-				if ( $new_content !== $content ) {
-					$content = $new_content;
-					$changed = true;
-				}
-			}
-		}
-
-		// Clear emoji meta.
-		\delete_comment_meta( $comment_id, '_activitypub_emoji' );
-
-		if ( $changed ) {
-			// Unhook to prevent infinite loop.
-			\remove_action( 'wp_insert_comment', array( self::class, 'replace_comment_emoji' ), 10 );
-
-			\wp_update_comment(
-				array(
-					'comment_ID'      => $comment_id,
-					'comment_content' => $content,
-				)
-			);
-
-			// Re-hook.
-			\add_action( 'wp_insert_comment', array( self::class, 'replace_comment_emoji' ), 10, 2 );
-		}
-	}
-
-	/**
-	 * Replace emoji placeholder in text with image tag.
-	 *
-	 * @param string $text        The text to process.
-	 * @param string $placeholder The emoji placeholder (e.g., ":kappa:").
-	 * @param string $emoji_url   The URL of the emoji image.
-	 *
-	 * @return string The processed text.
-	 */
-	private static function replace_emoji_in_text( $text, $placeholder, $emoji_url ) {
-		$name = \trim( $placeholder, ':' );
-
-		return \str_ireplace(
-			$placeholder,
-			\sprintf(
-				'<img src="%s" alt="%s" title="%s" class="emoji" width="20" height="20" draggable="false" />',
-				\esc_url( $emoji_url ),
-				\esc_attr( $name ),
-				\esc_attr( $name )
-			),
-			$text
-		);
+		\add_filter( 'activitypub_remote_media_url', array( self::class, 'maybe_cache' ), 10, 4 );
 	}
 
 	/**
@@ -235,10 +99,11 @@ class Emoji extends File {
 	 * @param string      $url       The remote URL.
 	 * @param string      $context   The context ('avatar', 'media', 'emoji', etc.).
 	 * @param string|null $entity_id The entity identifier (domain or null to extract from URL).
+	 * @param array       $options   Optional. Additional options like 'updated' timestamp.
 	 *
 	 * @return string The local URL if cached successfully, otherwise the original URL.
 	 */
-	public static function maybe_cache( $url, $context, $entity_id = null ) {
+	public static function maybe_cache( $url, $context, $entity_id = null, $options = array() ) {
 		if ( self::CONTEXT !== $context || empty( $url ) ) {
 			return $url;
 		}
@@ -249,11 +114,14 @@ class Emoji extends File {
 			return $url;
 		}
 
-		$cached_url = self::get_or_cache(
-			$url,
-			$domain,
-			array( 'max_dimension' => self::MAX_DIMENSION )
-		);
+		$cache_options = array( 'max_dimension' => self::MAX_DIMENSION );
+
+		// Pass through updated timestamp for staleness checking.
+		if ( ! empty( $options['updated'] ) ) {
+			$cache_options['updated'] = $options['updated'];
+		}
+
+		$cached_url = self::get_or_cache( $url, $domain, $cache_options );
 
 		return $cached_url ?: $url;
 	}

@@ -7,10 +7,12 @@
 
 namespace Activitypub;
 
-use Activitypub\Cache\Emoji as Emoji_Cache;
-
 /**
  * Handles custom emoji processing for ActivityPub content.
+ *
+ * This class handles content transformation (replacing shortcodes with img tags).
+ * Caching of emoji files is handled separately via the `activitypub_remote_media_url`
+ * filter, which Cache\Emoji hooks into when enabled.
  *
  * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/9098/fep-9098.md FEP-9098: Custom Emojis
  */
@@ -21,7 +23,7 @@ class Emoji {
 	 *
 	 * Uses WordPress KSES features (WP 5.9+) to strictly validate emoji images:
 	 * - Requires class="emoji"
-	 * - Validates src URL points to local emoji directory
+	 * - Validates src URL points to allowed emoji sources
 	 * - Requires standard emoji dimensions
 	 *
 	 * @return array The allowed HTML structure for use with wp_kses.
@@ -58,7 +60,8 @@ class Emoji {
 	/**
 	 * Validate emoji src attribute for wp_kses.
 	 *
-	 * Only allows emoji URLs from local uploads directory.
+	 * Allows emoji URLs from local uploads directory or valid remote URLs.
+	 * When caching is enabled, URLs will be local. When disabled, remote URLs are used.
 	 *
 	 * @param string $value The src attribute value.
 	 *
@@ -66,16 +69,55 @@ class Emoji {
 	 */
 	public static function validate_emoji_src( $value ) {
 		$upload_dir = \wp_upload_dir();
-		$emoji_base = $upload_dir['baseurl'] . Emoji_Cache::BASE_DIR;
+		$emoji_base = $upload_dir['baseurl'] . '/activitypub/emoji/';
 
-		return \str_starts_with( $value, $emoji_base );
+		// Allow local cached emoji.
+		if ( \str_starts_with( $value, $emoji_base ) ) {
+			return true;
+		}
+
+		/**
+		 * Filters whether a remote emoji URL is valid.
+		 *
+		 * When caching is disabled, this filter allows remote URLs to be used.
+		 * Third-party plugins can hook in to validate specific domains.
+		 *
+		 * @since 5.6.0
+		 *
+		 * @param bool   $valid Whether the URL is valid. Default true for https URLs.
+		 * @param string $value The emoji src URL.
+		 */
+		return \apply_filters(
+			'activitypub_validate_emoji_src',
+			\str_starts_with( $value, 'https://' ),
+			$value
+		);
+	}
+
+	/**
+	 * Prepare post content with emoji handling.
+	 *
+	 * Replaces emoji shortcodes in content at insert-time.
+	 * Uses the `activitypub_remote_media_url` filter for caching.
+	 *
+	 * @param string $content         The post content.
+	 * @param array  $activity_object The activity object containing emoji definitions in 'tag'.
+	 *
+	 * @return string The content with emoji shortcodes replaced by img tags.
+	 */
+	public static function prepare_post_content( $content, $activity_object ) {
+		if ( empty( $content ) || empty( $activity_object['tag'] ) ) {
+			return $content;
+		}
+
+		return self::replace_custom_emoji( $content, $activity_object );
 	}
 
 	/**
 	 * Prepare comment data with emoji handling.
 	 *
-	 * Replaces emoji in content at insert-time. Author emoji is handled
-	 * at display-time via the remote actor's stored emoji data.
+	 * Replaces emoji shortcodes in content at insert-time.
+	 * Uses the `activitypub_remote_media_url` filter for caching.
 	 *
 	 * @param array $comment_data The comment data array.
 	 * @param array $activity     The activity array.
@@ -140,6 +182,10 @@ class Emoji {
 	/**
 	 * Replace custom emoji shortcodes with their corresponding emoji.
 	 *
+	 * Uses the `activitypub_remote_media_url` filter to allow caching.
+	 * When Cache\Emoji is enabled, it hooks into this filter to cache
+	 * emoji files locally. When disabled, remote URLs are used directly.
+	 *
 	 * @param string $text     The text to process.
 	 * @param array  $activity The activity array containing emoji definitions.
 	 *
@@ -152,11 +198,30 @@ class Emoji {
 		}
 
 		foreach ( $emoji_data as $emoji ) {
-			$local_url = Emoji_Cache::import( $emoji['url'], $emoji['updated'] ?? null );
+			/**
+			 * Filters a remote media URL before use.
+			 *
+			 * Cache classes hook into this filter to download and cache
+			 * remote media locally, returning the local URL.
+			 *
+			 * @since 5.6.0
+			 *
+			 * @param string      $url       The remote URL.
+			 * @param string      $context   The context ('avatar', 'media', 'emoji').
+			 * @param string|null $entity_id Optional entity identifier.
+			 * @param array       $options   Optional. Additional options like 'updated' timestamp.
+			 */
+			$emoji_url = \apply_filters(
+				'activitypub_remote_media_url',
+				$emoji['url'],
+				'emoji',
+				null,
+				array( 'updated' => $emoji['updated'] ?? null )
+			);
 
-			// Only replace if the emoji was successfully uploaded locally.
-			if ( $local_url ) {
-				$text = self::replace_emoji_in_text( $text, $emoji['name'], $local_url );
+			// Replace shortcode with img tag using the (possibly cached) URL.
+			if ( $emoji_url ) {
+				$text = self::replace_emoji_in_text( $text, $emoji['name'], $emoji_url );
 			}
 		}
 
