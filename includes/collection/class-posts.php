@@ -7,6 +7,7 @@
 
 namespace Activitypub\Collection;
 
+use Activitypub\Emoji;
 use Activitypub\Sanitize;
 
 use function Activitypub\generate_post_summary;
@@ -274,9 +275,10 @@ class Posts {
 
 		$gm_date = \gmdate( 'Y-m-d H:i:s', \strtotime( $activity['published'] ?? 'now' ) );
 
-		// Sanitize content and remove hashtags.
+		// Sanitize content, remove hashtags, and replace custom emoji.
 		$content = isset( $activity['content'] ) ? Sanitize::content( $activity['content'] ) : '';
 		$content = self::remove_hashtags( $content, $activity['tag'] ?? array() );
+		$content = Emoji::replace_custom_emoji( $content, $activity );
 
 		return array(
 			'post_title'    => isset( $activity['name'] ) ? \wp_strip_all_tags( $activity['name'] ) : '',
