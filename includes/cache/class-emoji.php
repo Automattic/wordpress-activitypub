@@ -210,7 +210,8 @@ class Emoji extends File {
 		$file_stem = self::generate_hash( $url );
 
 		// Look for file with any extension (original or webp after optimization).
-		$matches = \glob( $paths['basedir'] . '/' . $file_stem . '.*' );
+		$pattern = self::escape_glob_pattern( $paths['basedir'] . '/' . $file_stem ) . '.*';
+		$matches = \glob( $pattern );
 
 		if ( ! empty( $matches ) && \is_file( $matches[0] ) ) {
 			return $paths['baseurl'] . '/' . \basename( $matches[0] );

@@ -39,11 +39,8 @@ class Test_Posts extends \WP_UnitTestCase {
 		// Also hook into the ActivityPub-specific filter to bypass URL validation.
 		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_remote_object' ), 10, 2 );
 
-		// Bypass URL safety validation for test URLs (avoids DNS lookups in CI).
-		\add_filter( 'activitypub_cache_is_safe_url', array( $this, 'bypass_url_validation' ), 10, 2 );
-
-		// Also bypass WordPress's internal URL validation for external hosts.
-		\add_filter( 'http_request_host_is_external', array( $this, 'allow_test_hosts' ), 10, 2 );
+		// Short-circuit file downloads in tests by providing pre-downloaded files.
+		\add_filter( 'activitypub_pre_download_url', array( $this, 'mock_file_download' ), 10, 3 );
 	}
 
 	/**
@@ -52,8 +49,7 @@ class Test_Posts extends \WP_UnitTestCase {
 	public function tear_down() {
 		\remove_filter( 'pre_http_request', array( $this, 'mock_http_request' ) );
 		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_remote_object' ) );
-		\remove_filter( 'activitypub_cache_is_safe_url', array( $this, 'bypass_url_validation' ) );
-		\remove_filter( 'http_request_host_is_external', array( $this, 'allow_test_hosts' ) );
+		\remove_filter( 'activitypub_pre_download_url', array( $this, 'mock_file_download' ) );
 
 		$this->remove_added_uploads();
 
@@ -85,40 +81,30 @@ class Test_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Bypass URL safety validation for test URLs.
+	 * Mock file downloads by providing pre-downloaded test files.
 	 *
-	 * This avoids DNS lookups in CI environments where example.com
-	 * may not resolve correctly.
+	 * This short-circuits the entire download process, avoiding DNS lookups
+	 * and URL validation that may fail in CI environments.
 	 *
-	 * @param bool|null $is_safe The current safety status.
-	 * @param string    $url     The URL being validated.
-	 * @return bool|null True for test URLs, null otherwise.
+	 * @param array|null $result The pre-download result.
+	 * @param string     $url    The URL being downloaded.
+	 * @param string     $type   The cache type.
+	 * @return array|null Array with file and mime_type for test URLs, null otherwise.
 	 */
-	public function bypass_url_validation( $is_safe, $url ) {
-		// Allow all example.com URLs in tests.
-		if ( str_starts_with( $url, 'https://example.com/' ) ) {
-			return true;
+	public function mock_file_download( $result, $url, $type ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Required for filter signature.
+		// Handle all example.com image URLs.
+		if ( str_starts_with( $url, 'https://example.com/' ) && preg_match( '/\.(jpg|jpeg|png|gif|webp)$/i', $url ) ) {
+			// Copy test asset to temp file.
+			$tmp_file = \wp_tempnam( 'test-image.jpg' );
+			copy( AP_TESTS_DIR . '/data/assets/test.jpg', $tmp_file );
+
+			return array(
+				'file'      => $tmp_file,
+				'mime_type' => 'image/jpeg',
+			);
 		}
 
-		return $is_safe;
-	}
-
-	/**
-	 * Allow test hosts to bypass WordPress's external host validation.
-	 *
-	 * This is needed because wp_safe_remote_get() validates URLs with
-	 * wp_http_validate_url() which may fail in CI environments.
-	 *
-	 * @param bool   $is_external Whether the host is external.
-	 * @param string $host        The host being checked.
-	 * @return bool True for test hosts, original value otherwise.
-	 */
-	public function allow_test_hosts( $is_external, $host ) {
-		if ( 'example.com' === $host ) {
-			return true;
-		}
-
-		return $is_external;
+		return $result;
 	}
 
 	/**

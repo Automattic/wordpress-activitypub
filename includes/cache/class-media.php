@@ -249,7 +249,9 @@ class Media extends File {
 			$processed_url = \apply_filters( 'activitypub_remote_media_url', $url, self::CONTEXT, $post_id, array() );
 
 			if ( $processed_url && $processed_url !== $url && ! empty( $content ) ) {
-				$content      = \str_replace( $url, $processed_url, $content );
+				// Use preg_replace with word boundaries to avoid replacing URLs that are substrings of other URLs.
+				$pattern      = '/' . \preg_quote( $url, '/' ) . '(?=["\'\s>]|$)/';
+				$content      = \preg_replace( $pattern, $processed_url, $content );
 				$urls_changed = true;
 			}
 		}
@@ -285,7 +287,8 @@ class Media extends File {
 
 		// Check if already cached.
 		if ( \is_dir( $paths['basedir'] ) ) {
-			$matches = \glob( $paths['basedir'] . '/' . $hash . '.*' );
+			$pattern = self::escape_glob_pattern( $paths['basedir'] . '/' . $hash ) . '.*';
+			$matches = \glob( $pattern );
 			if ( ! empty( $matches ) && \is_file( $matches[0] ) ) {
 				return $paths['baseurl'] . '/' . \basename( $matches[0] );
 			}

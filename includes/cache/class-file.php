@@ -151,7 +151,8 @@ abstract class File {
 		}
 
 		$hash    = static::generate_hash( $url );
-		$matches = \glob( $paths['basedir'] . '/' . $hash . '.*' );
+		$pattern = static::escape_glob_pattern( $paths['basedir'] . '/' . $hash ) . '.*';
+		$matches = \glob( $pattern );
 
 		if ( ! empty( $matches ) && \is_file( $matches[0] ) ) {
 			return $paths['baseurl'] . '/' . \basename( $matches[0] );
@@ -183,7 +184,8 @@ abstract class File {
 			if ( ! empty( $options['updated'] ) ) {
 				$paths       = static::get_storage_paths( $entity_id );
 				$hash        = static::generate_hash( $url );
-				$matches     = \glob( $paths['basedir'] . '/' . $hash . '.*' );
+				$pattern     = static::escape_glob_pattern( $paths['basedir'] . '/' . $hash ) . '.*';
+				$matches     = \glob( $pattern );
 				$file_path   = ( $matches && \is_file( $matches[0] ) ) ? $matches[0] : null;
 				$local_time  = $file_path ? \filemtime( $file_path ) : 0;
 				$remote_time = \strtotime( $options['updated'] );
@@ -325,6 +327,20 @@ abstract class File {
 	}
 
 	/**
+	 * Escape glob metacharacters in a pattern.
+	 *
+	 * This prevents special characters (*, ?, [, ]) from being interpreted
+	 * as glob patterns when searching for files.
+	 *
+	 * @param string $pattern The pattern to escape.
+	 *
+	 * @return string The escaped pattern safe for use in glob().
+	 */
+	protected static function escape_glob_pattern( $pattern ) {
+		return \preg_replace( '/([*?\[\]])/', '[$1]', $pattern );
+	}
+
+	/**
 	 * Validate a URL is safe to fetch.
 	 *
 	 * @param string $url The URL to validate.
@@ -401,6 +417,29 @@ abstract class File {
 	 */
 	protected static function download_and_validate( $url ) {
 		$type = static::get_type();
+
+		/**
+		 * Filters the download result before fetching a URL.
+		 *
+		 * Allows short-circuiting the download process by providing a pre-downloaded
+		 * file path. Useful for testing or when files are already available locally.
+		 *
+		 * @since 5.6.0
+		 *
+		 * @param array|null $result {
+		 *     Return null to proceed with download, or array with file info.
+		 *
+		 *     @type string $file      Path to the downloaded file.
+		 *     @type string $mime_type The file's MIME type.
+		 * }
+		 * @param string     $url  The URL that would be downloaded.
+		 * @param string     $type The cache type ('avatar', 'media', 'emoji').
+		 */
+		$pre_download = \apply_filters( 'activitypub_pre_download_url', null, $url, $type );
+
+		if ( null !== $pre_download ) {
+			return $pre_download;
+		}
 
 		/**
 		 * Filters whether a URL should be cached.
