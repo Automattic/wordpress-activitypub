@@ -779,10 +779,11 @@ class Attachments {
 			 * Allows modifying remote URLs to use a CDN or image proxy service.
 			 *
 			 * @param string $url       The remote media URL.
-			 * @param string $mime_type The media MIME type.
+			 * @param string $main_type The media main type (e.g., 'image', 'video', 'audio').
 			 * @param string $context   The context: 'attachment'.
 			 */
-			$url = \apply_filters( 'activitypub_remote_media_url', $attachment_data['url'], $mime_type, 'attachment' );
+			$main_type = \explode( '/', $mime_type )[0] ?: 'application';
+			$url       = \apply_filters( 'activitypub_remote_media_url', $attachment_data['url'], $main_type, 'attachment' );
 
 			return array(
 				'url'       => $url,

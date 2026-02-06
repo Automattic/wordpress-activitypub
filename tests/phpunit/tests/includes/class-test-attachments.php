@@ -1555,7 +1555,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 	public function test_save_file_applies_cdn_filter_when_sideloading_disabled() {
 		\add_filter( 'activitypub_sideloading_enabled', '__return_false' );
 
-		$cdn_filter = function ( $url, $mime_type, $context ) {
+		$received_main_type = null;
+		$cdn_filter         = function ( $url, $main_type, $context ) use ( &$received_main_type ) {
+			$received_main_type = $main_type;
 			if ( 'attachment' === $context ) {
 				return 'https://cdn.example.com/' . basename( $url );
 			}
@@ -1575,6 +1577,8 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$result = $method->invoke( null, $attachment_data, self::$post_id, 'post' );
 
 		$this->assertSame( 'https://cdn.example.com/image.jpg', $result['url'] );
+		// Verify main type is passed, not full MIME type.
+		$this->assertSame( 'image', $received_main_type );
 
 		\remove_filter( 'activitypub_remote_media_url', $cdn_filter );
 		\remove_filter( 'activitypub_sideloading_enabled', '__return_false' );
