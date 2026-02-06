@@ -326,6 +326,25 @@ abstract class File {
 			return false;
 		}
 
+		/**
+		 * Filters whether a URL passes safety validation.
+		 *
+		 * By default, uses wp_http_validate_url() which prevents SSRF attacks
+		 * by blocking private IPs and localhost. This filter allows overriding
+		 * for testing or custom validation needs.
+		 *
+		 * @since 5.6.0
+		 *
+		 * @param bool|null $is_safe Whether the URL is safe. Return true/false to override,
+		 *                           or null to use default wp_http_validate_url() check.
+		 * @param string    $url     The URL being validated.
+		 */
+		$is_safe = \apply_filters( 'activitypub_cache_is_safe_url', null, $url );
+
+		if ( null !== $is_safe ) {
+			return (bool) $is_safe;
+		}
+
 		return (bool) \wp_http_validate_url( $url );
 	}
 
