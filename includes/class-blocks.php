@@ -119,34 +119,35 @@ class Blocks {
 			)
 		);
 
-		// Scan patterns directory and register each pattern.
-		$patterns_dir = ACTIVITYPUB_PLUGIN_DIR . '/patterns';
-		if ( ! \is_dir( $patterns_dir ) ) {
-			return;
-		}
-
-		$pattern_files = \glob( $patterns_dir . '/*.php' );
-		if ( empty( $pattern_files ) ) {
-			return;
-		}
+		// Register each pattern directly.
+		$pattern_files = array(
+			'author-header',
+			'author-profile',
+			'follow-page',
+			'social-sidebar',
+		);
 
 		foreach ( $pattern_files as $pattern_file ) {
 			$pattern_data = self::get_pattern_data( $pattern_file );
-			if ( ! $pattern_data ) {
-				continue;
+			if ( $pattern_data ) {
+				\register_block_pattern( $pattern_data['slug'], $pattern_data );
 			}
-
-			\register_block_pattern( $pattern_data['slug'], $pattern_data );
 		}
 	}
 
 	/**
 	 * Get pattern data from a pattern file.
 	 *
-	 * @param string $file Path to the pattern file.
+	 * @param string $pattern_name The pattern filename without extension.
 	 * @return array|false Pattern data array or false on failure.
 	 */
-	private static function get_pattern_data( $file ) {
+	private static function get_pattern_data( $pattern_name ) {
+		$file = ACTIVITYPUB_PLUGIN_DIR . '/patterns/' . $pattern_name . '.php';
+
+		if ( ! \file_exists( $file ) ) {
+			return false;
+		}
+
 		$default_headers = array(
 			'title'         => 'Title',
 			'slug'          => 'Slug',
@@ -165,17 +166,9 @@ class Blocks {
 			return false;
 		}
 
-		// Validate file is within expected patterns directory to prevent path traversal.
-		$patterns_dir = \realpath( ACTIVITYPUB_PLUGIN_DIR . '/patterns' );
-		$real_file    = \realpath( $file );
-
-		if ( false === $real_file || false === $patterns_dir || 0 !== \strpos( $real_file, $patterns_dir . \DIRECTORY_SEPARATOR ) ) {
-			return false;
-		}
-
 		// Get pattern content via output buffering.
 		\ob_start();
-		include $real_file;
+		include $file;
 		$content = \ob_get_clean();
 
 		if ( empty( $content ) ) {
