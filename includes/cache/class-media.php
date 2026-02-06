@@ -249,10 +249,15 @@ class Media extends File {
 			$processed_url = \apply_filters( 'activitypub_remote_media_url', $url, self::CONTEXT, $post_id, array() );
 
 			if ( $processed_url && $processed_url !== $url && ! empty( $content ) ) {
-				// Use preg_replace with word boundaries to avoid replacing URLs that are substrings of other URLs.
-				$pattern      = '/' . \preg_quote( $url, '/' ) . '(?=["\'\s>]|$)/';
-				$content      = \preg_replace( $pattern, $processed_url, $content );
-				$urls_changed = true;
+				// Replace only in <img> src attributes to avoid changing URLs in links or other contexts.
+				$pattern     = '~(<img\b[^>]*\ssrc=)([\'"])' . \preg_quote( $url, '~' ) . '(\2)~i';
+				$replacement = '$1$2' . $processed_url . '$3';
+				$updated     = \preg_replace( $pattern, $replacement, $content, -1, $replaced_count );
+
+				if ( null !== $updated && $replaced_count > 0 ) {
+					$content      = $updated;
+					$urls_changed = true;
+				}
 			}
 		}
 
