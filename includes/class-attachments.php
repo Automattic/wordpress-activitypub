@@ -94,6 +94,24 @@ class Attachments {
 	}
 
 	/**
+	 * Validate that a local file path is within allowed directories.
+	 *
+	 * @param string $file_path The local file path to validate.
+	 *
+	 * @return bool True if the path is within allowed directories.
+	 */
+	private static function is_valid_file_path( $file_path ) {
+		$real_path = \realpath( $file_path );
+		if ( ! $real_path ) {
+			return false;
+		}
+
+		$base = \realpath( WP_CONTENT_DIR );
+
+		return $base && \str_starts_with( $real_path, $base . DIRECTORY_SEPARATOR );
+	}
+
+	/**
 	 * Extract base filename from a URL, stripping all extensions.
 	 *
 	 * Used to generate consistent cache keys for emoji lookups.
@@ -806,6 +824,11 @@ class Attachments {
 				return new \WP_Error( 'file_not_found', sprintf( \__( 'File not found: %s', 'activitypub' ), $attachment_data['url'] ) );
 			}
 
+			// Ensure path resolves to an allowed directory.
+			if ( ! self::is_valid_file_path( $attachment_data['url'] ) ) {
+				return new \WP_Error( 'invalid_path', \__( 'File path is not allowed.', 'activitypub' ) );
+			}
+
 			// Copy to temp file so media_handle_sideload doesn't move the original.
 			$tmp_file = \wp_tempnam( \basename( $attachment_data['url'] ) );
 			$wp_filesystem->copy( $attachment_data['url'], $tmp_file, true );
@@ -823,16 +846,7 @@ class Attachments {
 		}
 
 		// Get original filename from URL.
-		$original_name = \basename( \wp_parse_url( $attachment_data['url'], PHP_URL_PATH ) );
-
-		// Rename temp file to have proper extension for optimize_image to detect mime type.
-		$original_ext = \pathinfo( $original_name, PATHINFO_EXTENSION );
-		if ( $original_ext ) {
-			$renamed_tmp = $tmp_file . '.' . $original_ext;
-			if ( $wp_filesystem->move( $tmp_file, $renamed_tmp, true ) ) {
-				$tmp_file = $renamed_tmp;
-			}
-		}
+		$original_name = \sanitize_file_name( \basename( \wp_parse_url( $attachment_data['url'], PHP_URL_PATH ) ) );
 
 		// Optimize images before sideloading (resize and convert to WebP).
 		$tmp_file = self::optimize_image( $tmp_file, self::MAX_IMAGE_DIMENSION );
@@ -840,7 +854,10 @@ class Attachments {
 		// Update filename extension to match optimized file.
 		$new_ext = \pathinfo( $tmp_file, PATHINFO_EXTENSION );
 		if ( $new_ext ) {
-			$original_name = \preg_replace( '/\.[^.]+$/', '.' . $new_ext, $original_name );
+			$filetype = \wp_check_filetype( 'file.' . $new_ext );
+			if ( $filetype['type'] ) {
+				$original_name = \preg_replace( '/\.[^.]+$/', '.' . $new_ext, $original_name );
+			}
 		}
 
 		$file_array = array(
@@ -943,7 +960,6 @@ class Attachments {
 			\wp_delete_file( $tmp_file );
 			return new \WP_Error( 'invalid_filename', \__( 'Could not generate safe filename.', 'activitypub' ) );
 		}
-		$file_path = $paths['basedir'] . '/' . $file_name;
 
 		// Initialize filesystem if needed.
 		global $wp_filesystem;
@@ -1012,14 +1028,18 @@ class Attachments {
 			$editor->resize( $max_dimension, $max_dimension, false );
 		}
 
+		// Derive base name from the validated MIME type so extensionless temp files are handled.
+		$dir        = \dirname( $file_path );
+		$base_name  = \pathinfo( $file_path, PATHINFO_FILENAME );
+		$source_ext = self::MIME_TO_EXT[ $mime_type ] ?? '';
+
 		// Check if WebP is supported.
 		$can_webp = $editor->supports_mime_type( 'image/webp' );
 
 		// Determine output format and save.
 		if ( $can_webp ) {
 			// Convert to WebP.
-			$dir      = \dirname( $file_path );
-			$new_name = \wp_unique_filename( $dir, \preg_replace( '/\.[^.]+$/', '.webp', \basename( $file_path ) ) );
+			$new_name = \wp_unique_filename( $dir, $base_name . '.webp' );
 			$result   = $editor->save( $dir . '/' . $new_name, 'image/webp' );
 		} elseif ( \in_array( $mime_type, array( 'image/png', 'image/webp' ), true ) ) {
 			// Keep original format for potentially transparent images when WebP not available.
@@ -1027,11 +1047,11 @@ class Attachments {
 				// No changes needed.
 				return $file_path;
 			}
-			$result = $editor->save( $file_path );
+			$new_name = \wp_unique_filename( $dir, $base_name . '.' . $source_ext );
+			$result   = $editor->save( $dir . '/' . $new_name, $mime_type );
 		} else {
 			// Convert to JPEG when WebP not available.
-			$dir      = \dirname( $file_path );
-			$new_name = \wp_unique_filename( $dir, \preg_replace( '/\.[^.]+$/', '.jpg', \basename( $file_path ) ) );
+			$new_name = \wp_unique_filename( $dir, $base_name . '.jpg' );
 			$result   = $editor->save( $dir . '/' . $new_name, 'image/jpeg' );
 		}
 
