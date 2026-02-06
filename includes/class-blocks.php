@@ -120,7 +120,7 @@ class Blocks {
 		);
 
 		// Scan patterns directory and register each pattern.
-		$patterns_dir = ACTIVITYPUB_PLUGIN_DIR . 'patterns';
+		$patterns_dir = ACTIVITYPUB_PLUGIN_DIR . '/patterns';
 		if ( ! \is_dir( $patterns_dir ) ) {
 			return;
 		}
@@ -165,9 +165,17 @@ class Blocks {
 			return false;
 		}
 
+		// Validate file is within expected patterns directory to prevent path traversal.
+		$patterns_dir = \realpath( ACTIVITYPUB_PLUGIN_DIR . '/patterns' );
+		$real_file    = \realpath( $file );
+
+		if ( false === $real_file || false === $patterns_dir || 0 !== \strpos( $real_file, $patterns_dir . \DIRECTORY_SEPARATOR ) ) {
+			return false;
+		}
+
 		// Get pattern content via output buffering.
 		\ob_start();
-		include $file;
+		include $real_file;
 		$content = \ob_get_clean();
 
 		if ( empty( $content ) ) {
