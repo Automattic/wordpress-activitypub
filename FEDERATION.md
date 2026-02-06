@@ -20,6 +20,7 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 - [FEP-4f05: Soft Delete](https://codeberg.org/fediverse/fep/src/branch/main/fep/4f05/fep-4f05.md)
 - [FEP-5feb: Search indexing consent for actors](https://codeberg.org/fediverse/fep/src/branch/main/fep/5feb/fep-5feb.md)
 - [FEP-67ff: FEDERATION.md](https://codeberg.org/fediverse/fep/src/branch/main/fep/67ff/fep-67ff.md)
+- [FEP-7628: Move Actor](https://codeberg.org/fediverse/fep/src/branch/main/fep/7628/fep-7628.md)
 - [FEP-7888: Demystifying the context property](https://codeberg.org/fediverse/fep/src/branch/main/fep/7888/fep-7888.md)
 - [FEP-844e: Capability discovery](https://codeberg.org/fediverse/fep/src/branch/main/fep/844e/fep-844e.md)
 - [FEP-8fcf: Followers collection synchronization across servers](https://codeberg.org/fediverse/fep/src/branch/main/fep/8fcf/fep-8fcf.md)
@@ -32,6 +33,7 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 ### Partially supported FEPs
 
 - [FEP-1b12: Group federation](https://codeberg.org/fediverse/fep/src/branch/main/fep/1b12/fep-1b12.md)
+- [FEP-ae0c: Fediverse Relay Protocols](https://codeberg.org/fediverse/fep/src/branch/main/fep/ae0c/fep-ae0c.md)
 
 ## ActivityPub
 
@@ -53,6 +55,7 @@ The plugin supports the following actor types:
 - `Announce` - Sharing/boosting content
 - `Like` - Liking content
 - `Follow` - Following remote actors
+- `Move` - Actor migration (see FEP-7628)
 - `Undo` - Reversing previous activities (unfollow, unlike, etc.)
 - `Accept` / `Reject` - Responding to follow requests
 
@@ -64,6 +67,7 @@ The plugin supports the following actor types:
 - `Announce` - Boost notifications
 - `Like` - Like notifications
 - `Follow` - Follow requests
+- `Move` - Actor migration notifications (see FEP-7628)
 - `Undo` - Reversal of activities
 - `Accept` / `Reject` - Follow request responses
 
@@ -83,6 +87,25 @@ Two signature methods are supported for maximum compatibility:
 - **Draft Cavage** (legacy) - Automatic fallback for older implementations
 
 More information on HTTP Signatures: <https://swicg.github.io/activitypub-http-signature/>
+
+### Relays
+
+The plugin supports basic relay functionality for distributing public content across the Fediverse (see FEP-ae0c):
+
+**As relay client:**
+
+- Public activities can be sent to configured relay inboxes via settings
+- LitePub-style subscription: Follow a relay actor, receive reciprocal follow, relay becomes a follower and receives activities
+
+**As relay server:**
+
+- When relay mode is enabled, incoming public activities are wrapped in `Announce` and forwarded to followers
+- Blog actor type changes to `Service` in relay mode
+
+**Limitations:**
+
+- Mastodon-style relay subscription (Follow to `#Public`) is not supported
+- LD Signatures for forwarded activity attribution are not implemented
 
 ### WebFinger
 
