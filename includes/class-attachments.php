@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Cache;
 use Activitypub\Collection\Posts;
 use Activitypub\Collection\Remote_Actors;
 
@@ -157,6 +158,9 @@ class Attachments {
 	 * when the parent post is deleted. Media URLs point directly to the stored files
 	 * rather than going through WordPress attachment APIs.
 	 *
+	 * When the Cache\Media class is enabled, it handles the download with improved
+	 * MIME validation. Otherwise, falls back to the built-in implementation.
+	 *
 	 * Use this when:
 	 * - Processing ActivityPub Create/Update activities from the inbox.
 	 * - Handling federated content that won't be owned or edited by the user.
@@ -176,6 +180,9 @@ class Attachments {
 	 *
 	 * Downloads the emoji image and stores it organized by source domain.
 	 * If the emoji is already cached and not stale, returns the existing local URL.
+	 *
+	 * When the Cache\Emoji class is enabled, it handles the download with proper
+	 * staleness checking. Otherwise, falls back to the built-in implementation.
 	 *
 	 * @param string      $emoji_url The remote emoji URL.
 	 * @param string|null $updated   Optional. The remote emoji's updated timestamp (ISO 8601).
@@ -203,12 +210,18 @@ class Attachments {
 			return $pre_import;
 		}
 
+		// Use the Emoji cache class if available (it handles staleness checking).
+		if ( class_exists( 'Activitypub\Cache\Emoji' ) && Cache\Emoji::is_enabled() ) {
+			return Cache\Emoji::import( $emoji_url, $updated );
+		}
+
+		// Fallback: built-in emoji caching (when cache is disabled).
 		// Check if already cached.
-		$cached_url = self::get_emoji_url( $emoji_url );
-		if ( $cached_url ) {
+		$local_url = self::get_emoji_url( $emoji_url );
+		if ( $local_url ) {
 			// If no updated timestamp provided, use cached version.
 			if ( ! $updated ) {
-				return $cached_url;
+				return $local_url;
 			}
 
 			// Compare timestamps - re-download if remote is newer.
@@ -221,7 +234,7 @@ class Attachments {
 			$remote_time = \strtotime( $updated );
 
 			if ( $remote_time && $local_time >= $remote_time ) {
-				return $cached_url;
+				return $local_url;
 			}
 		}
 
@@ -729,12 +742,39 @@ class Attachments {
 	 */
 	private static function save_file( $attachment_data, $object_id, $object_type, $max_dimension = self::MAX_IMAGE_DIMENSION ) {
 		$mime_type = $attachment_data['mediaType'] ?? '';
+		$url       = $attachment_data['url'];
 
 		// Skip download for video and audio files - use remote URL directly.
 		if ( str_starts_with( $mime_type, 'video/' ) || str_starts_with( $mime_type, 'audio/' ) ) {
 			return array(
-				'url'       => $attachment_data['url'],
+				'url'       => $url,
 				'mime_type' => $attachment_data['mediaType'],
+				'alt'       => $attachment_data['name'] ?? '',
+			);
+		}
+
+		// Determine context for the filter.
+		$context = 'comment' === $object_type ? 'comment_media' : 'media';
+
+		/**
+		 * Filters a remote media URL before caching.
+		 *
+		 * Cache handlers (or third-party CDN plugins) can use this filter to provide
+		 * a cached/proxied URL instead of downloading the image directly.
+		 *
+		 * @since 5.6.0
+		 *
+		 * @param string     $url       The remote media URL.
+		 * @param string     $context   The context ('media' or 'comment_media').
+		 * @param int        $object_id The post or comment ID.
+		 */
+		$cached_url = \apply_filters( 'activitypub_remote_media_url', $url, $context, $object_id );
+
+		// If filter returned a different URL (cached), use it directly.
+		if ( $cached_url !== $url ) {
+			return array(
+				'url'       => $cached_url,
+				'mime_type' => $mime_type,
 				'alt'       => $attachment_data['name'] ?? '',
 			);
 		}
@@ -744,7 +784,7 @@ class Attachments {
 		}
 
 		// Download remote URL.
-		$tmp_file = \download_url( $attachment_data['url'] );
+		$tmp_file = \download_url( $url );
 
 		if ( \is_wp_error( $tmp_file ) ) {
 			return $tmp_file;
@@ -1185,6 +1225,28 @@ class Attachments {
 
 		if ( empty( $avatar_url ) || ! \filter_var( $avatar_url, FILTER_VALIDATE_URL ) ) {
 			return false;
+		}
+
+		/**
+		 * Filters a remote avatar URL before caching.
+		 *
+		 * Cache handlers (or third-party CDN plugins) can use this filter to provide
+		 * a cached/proxied URL instead of downloading the image directly.
+		 *
+		 * The Avatar cache handler will invalidate existing cached avatars before
+		 * caching the new one when called via this filter.
+		 *
+		 * @since 5.6.0
+		 *
+		 * @param string     $avatar_url The remote avatar URL.
+		 * @param string     $context    The context ('avatar').
+		 * @param int        $actor_id   The actor post ID.
+		 */
+		$cached_url = \apply_filters( 'activitypub_remote_media_url', $avatar_url, 'avatar', $actor_id );
+
+		// If filter returned a different URL (cached/handled), use it directly.
+		if ( $cached_url !== $avatar_url ) {
+			return $cached_url;
 		}
 
 		// Delete existing avatar files before saving new one.

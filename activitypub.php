@@ -79,6 +79,7 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Activitypub', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Attachments', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Avatars', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Cache', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Dispatcher', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Embed', 'init' ) );
