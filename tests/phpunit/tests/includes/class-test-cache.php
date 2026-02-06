@@ -84,9 +84,12 @@ class Test_Cache extends WP_UnitTestCase {
 			has_filter( 'activitypub_remote_media_url', array( Avatar::class, 'maybe_cache' ) )
 		);
 
-		// Media uses the save_post hook for caching on save.
+		// Media uses the save_post hook for URL processing and the filter for caching.
 		$this->assertNotFalse(
-			has_action( 'save_post_ap_post', array( Media::class, 'cache_post_media' ) )
+			has_action( 'save_post_ap_post', array( Media::class, 'process_post_media' ) )
+		);
+		$this->assertNotFalse(
+			has_filter( 'activitypub_remote_media_url', array( Media::class, 'maybe_cache' ) )
 		);
 
 		// Emoji uses the filter for lazy caching.

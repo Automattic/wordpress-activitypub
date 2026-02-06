@@ -62,18 +62,18 @@ class Test_Media extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test cache_post_media skips non-existent posts.
+	 * Test process_post_media skips non-existent posts.
 	 */
-	public function test_cache_post_media_non_existent_post() {
+	public function test_process_post_media_non_existent_post() {
 		// Should not throw error for non-existent post.
-		Media::cache_post_media( 999999 );
+		Media::process_post_media( 999999 );
 		$this->assertTrue( true );
 	}
 
 	/**
-	 * Test cache_post_media skips posts without content.
+	 * Test process_post_media skips posts without content.
 	 */
-	public function test_cache_post_media_empty_content() {
+	public function test_process_post_media_empty_content() {
 		$post_id = self::factory()->post->create(
 			array(
 				'post_type'    => 'ap_post',
@@ -82,7 +82,7 @@ class Test_Media extends WP_UnitTestCase {
 		);
 
 		// Should not throw error.
-		Media::cache_post_media( $post_id );
+		Media::process_post_media( $post_id );
 		$this->assertTrue( true );
 
 		wp_delete_post( $post_id, true );
@@ -154,24 +154,142 @@ class Test_Media extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test save_post hook registration on init.
+	 * Test save_post hook is always registered on init (for CDN plugin support).
 	 */
-	public function test_init_registers_save_post_hook() {
+	public function test_init_always_registers_save_post_hook() {
+		// Remove existing hooks.
+		remove_all_actions( 'save_post_ap_post' );
+
 		Media::init();
 
 		$this->assertNotFalse(
-			has_action( 'save_post_ap_post', array( Media::class, 'cache_post_media' ) )
+			has_action( 'save_post_ap_post', array( Media::class, 'process_post_media' ) )
 		);
 	}
 
 	/**
-	 * Test action registration on init.
+	 * Test save_post hook is registered even when caching is disabled.
 	 */
-	public function test_init_registers_action() {
+	public function test_init_registers_save_post_hook_when_disabled() {
+		// Remove existing hooks.
+		remove_all_actions( 'save_post_ap_post' );
+
+		add_filter( 'activitypub_cache_media_enabled', '__return_false' );
+
+		Media::init();
+
+		// save_post should still be registered for CDN plugin support.
+		$this->assertNotFalse(
+			has_action( 'save_post_ap_post', array( Media::class, 'process_post_media' ) )
+		);
+
+		remove_filter( 'activitypub_cache_media_enabled', '__return_false' );
+	}
+
+	/**
+	 * Test maybe_cache filter is registered when caching is enabled.
+	 */
+	public function test_init_registers_filter_when_enabled() {
+		// Remove existing filters.
+		remove_all_filters( 'activitypub_remote_media_url' );
+
+		Media::init();
+
+		$this->assertNotFalse(
+			has_filter( 'activitypub_remote_media_url', array( Media::class, 'maybe_cache' ) )
+		);
+	}
+
+	/**
+	 * Test maybe_cache filter is NOT registered when caching is disabled.
+	 */
+	public function test_init_does_not_register_filter_when_disabled() {
+		// Remove existing filters.
+		remove_all_filters( 'activitypub_remote_media_url' );
+
+		add_filter( 'activitypub_cache_media_enabled', '__return_false' );
+
+		Media::init();
+
+		// maybe_cache should NOT be registered.
+		$this->assertFalse(
+			has_filter( 'activitypub_remote_media_url', array( Media::class, 'maybe_cache' ) )
+		);
+
+		remove_filter( 'activitypub_cache_media_enabled', '__return_false' );
+	}
+
+	/**
+	 * Test cleanup action is registered when caching is enabled.
+	 */
+	public function test_init_registers_cleanup_action_when_enabled() {
+		// Remove existing actions.
+		remove_all_actions( 'before_delete_post' );
+
 		Media::init();
 
 		$this->assertNotFalse(
 			has_action( 'before_delete_post', array( Media::class, 'maybe_cleanup' ) )
 		);
+	}
+
+	/**
+	 * Test cleanup action is NOT registered when caching is disabled.
+	 */
+	public function test_init_does_not_register_cleanup_when_disabled() {
+		// Remove existing actions.
+		remove_all_actions( 'before_delete_post' );
+
+		add_filter( 'activitypub_cache_media_enabled', '__return_false' );
+
+		Media::init();
+
+		// Cleanup should NOT be registered.
+		$this->assertFalse(
+			has_action( 'before_delete_post', array( Media::class, 'maybe_cleanup' ) )
+		);
+
+		remove_filter( 'activitypub_cache_media_enabled', '__return_false' );
+	}
+
+	/**
+	 * Test that CDN filter can transform URLs when caching is disabled.
+	 */
+	public function test_cdn_filter_works_when_caching_disabled() {
+		add_filter( 'activitypub_cache_media_enabled', '__return_false' );
+
+		// Simulate a CDN filter.
+		$cdn_filter = function ( $url, $context ) {
+			if ( 'media' === $context ) {
+				return 'https://cdn.example.com/' . md5( $url );
+			}
+			return $url;
+		};
+		add_filter( 'activitypub_remote_media_url', $cdn_filter, 10, 2 );
+
+		// Create a post with remote image.
+		$remote_url = 'https://remote.example.com/image.jpg';
+		$post_id    = self::factory()->post->create(
+			array(
+				'post_type'    => 'ap_post',
+				'post_content' => '<img src="' . $remote_url . '">',
+			)
+		);
+
+		// Process the media.
+		Media::process_post_media( $post_id );
+
+		// Get updated content.
+		$post    = get_post( $post_id );
+		$content = $post->post_content;
+
+		// URL should be transformed by CDN filter (URL changes to CDN URL).
+		$this->assertStringContainsString( 'https://cdn.example.com/', $content );
+		$this->assertStringNotContainsString( $remote_url, $content );
+
+		// Clean up.
+		remove_filter( 'activitypub_remote_media_url', $cdn_filter );
+		remove_filter( 'activitypub_cache_media_enabled', '__return_false' );
+		wp_delete_post( $post_id, true );
 	}
 }

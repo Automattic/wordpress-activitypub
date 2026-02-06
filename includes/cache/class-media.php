@@ -126,63 +126,83 @@ class Media extends File {
 	 * Initialize the cache handler.
 	 */
 	public static function init() {
-		if ( ! self::is_enabled() ) {
-			return;
+		// Always process media URLs on save (allows CDN plugins to intercept via filter).
+		\add_action( 'save_post_' . Posts::POST_TYPE, array( self::class, 'process_post_media' ), 20 );
+
+		// Only register local caching filter when caching is enabled.
+		if ( self::is_enabled() ) {
+			\add_filter( 'activitypub_remote_media_url', array( self::class, 'maybe_cache' ), 10, 4 );
+
+			// Clean up when post is deleted.
+			\add_action( 'before_delete_post', array( self::class, 'maybe_cleanup' ) );
 		}
-
-		// Cache media when post is saved/updated.
-		\add_action( 'save_post_' . Posts::POST_TYPE, array( self::class, 'cache_post_media' ), 20 );
-
-		// Clean up when post is deleted.
-		\add_action( 'before_delete_post', array( self::class, 'maybe_cleanup' ) );
 	}
 
 	/**
-	 * Cache media from post content and attachments meta.
+	 * Maybe cache a media URL.
 	 *
-	 * Caches remote image URLs from both:
+	 * Hooked to the activitypub_remote_media_url filter.
+	 * Downloads and caches the file locally if not already cached.
+	 *
+	 * @param string     $url       The remote URL.
+	 * @param string     $context   The context ('avatar', 'media', 'emoji', etc.).
+	 * @param string|int $entity_id The entity identifier (post ID).
+	 * @param array      $options   Optional. Additional options.
+	 *
+	 * @return string The local URL if cached successfully, otherwise the original URL.
+	 */
+	public static function maybe_cache( $url, $context, $entity_id = null, $options = array() ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Required for filter signature.
+		if ( self::CONTEXT !== $context || empty( $url ) || empty( $entity_id ) ) {
+			return $url;
+		}
+
+		$cached_url = self::cache_url( $url, $entity_id );
+
+		return $cached_url ?: $url;
+	}
+
+	/**
+	 * Process media URLs from post content and attachments meta.
+	 *
+	 * Processes remote image URLs from both:
 	 * - Image tags in post content
 	 * - Attachment URLs stored in _activitypub_attachments meta
 	 *
-	 * Updates the post content with cached URLs.
+	 * Each URL is passed through the `activitypub_remote_media_url` filter,
+	 * allowing local caching (when enabled) or CDN proxy plugins to transform URLs.
 	 *
 	 * @param int $post_id The post ID.
 	 */
-	public static function cache_post_media( $post_id ) {
-		// Check if caching is still enabled (allows runtime disabling via filter).
-		if ( ! self::is_enabled() ) {
-			return;
-		}
-
+	public static function process_post_media( $post_id ) {
 		$post = \get_post( $post_id );
 		if ( ! $post ) {
 			return;
 		}
 
 		// Collect URLs from both content and attachments meta.
-		$urls_to_cache = array();
-		$upload_base   = \wp_upload_dir()['baseurl'];
+		$urls_to_process = array();
+		$upload_base     = \wp_upload_dir()['baseurl'];
 
 		// Find image URLs in content.
 		if ( ! empty( $post->post_content ) ) {
 			\preg_match_all( '/<img[^>]+src=["\']([^"\']+)["\'][^>]*>/i', $post->post_content, $matches );
 			if ( ! empty( $matches[1] ) ) {
-				$urls_to_cache = array_merge( $urls_to_cache, $matches[1] );
+				$urls_to_process = array_merge( $urls_to_process, $matches[1] );
 			}
 		}
 
 		// Get attachment URLs from meta.
 		$attachment_urls = \get_post_meta( $post_id, '_activitypub_attachments', true );
 		if ( ! empty( $attachment_urls ) && \is_array( $attachment_urls ) ) {
-			$urls_to_cache = array_merge( $urls_to_cache, $attachment_urls );
+			$urls_to_process = array_merge( $urls_to_process, $attachment_urls );
 		}
 
 		// Remove duplicates.
-		$urls_to_cache = array_unique( $urls_to_cache );
+		$urls_to_process = array_unique( $urls_to_process );
 
-		// Filter to only remote URLs that need caching.
+		// Filter to only remote URLs that need processing.
 		$remote_urls = array();
-		foreach ( $urls_to_cache as $url ) {
+		foreach ( $urls_to_process as $url ) {
 			// Skip non-http URLs (data URIs, relative paths).
 			if ( ! \preg_match( '#^https?://#i', $url ) ) {
 				continue;
@@ -196,26 +216,40 @@ class Media extends File {
 			$remote_urls[] = $url;
 		}
 
-		// Clear the attachments meta after processing (regardless of whether we cache).
+		// Clear the attachments meta after processing.
 		\delete_post_meta( $post_id, '_activitypub_attachments' );
 
-		// Only proceed if there are remote URLs to cache.
+		// Only proceed if there are remote URLs to process.
 		if ( empty( $remote_urls ) ) {
 			return;
 		}
 
-		// Invalidate existing cached media before re-caching.
-		self::invalidate_entity( $post_id );
+		// Invalidate existing cached media before re-processing (only if caching is enabled).
+		if ( self::is_enabled() ) {
+			self::invalidate_entity( $post_id );
+		}
 
 		$content      = $post->post_content;
 		$urls_changed = false;
 
 		foreach ( $remote_urls as $url ) {
-			// Cache the image.
-			$cached_url = self::cache_url( $url, $post_id );
+			/**
+			 * Filters a remote media URL for caching or CDN proxy.
+			 *
+			 * This filter allows local caching handlers or CDN plugins (like Jetpack Photon)
+			 * to transform remote media URLs.
+			 *
+			 * @since 5.6.0
+			 *
+			 * @param string   $url       The remote media URL.
+			 * @param string   $context   The context ('avatar', 'media', 'emoji', etc.).
+			 * @param int|null $entity_id The entity ID (post ID).
+			 * @param array    $options   Optional. Additional options.
+			 */
+			$processed_url = \apply_filters( 'activitypub_remote_media_url', $url, self::CONTEXT, $post_id, array() );
 
-			if ( $cached_url && $cached_url !== $url && ! empty( $content ) ) {
-				$content      = \str_replace( $url, $cached_url, $content );
+			if ( $processed_url && $processed_url !== $url && ! empty( $content ) ) {
+				$content      = \str_replace( $url, $processed_url, $content );
 				$urls_changed = true;
 			}
 		}
@@ -223,7 +257,7 @@ class Media extends File {
 		// Update post content if URLs were replaced.
 		if ( $urls_changed ) {
 			// Unhook to prevent infinite loop.
-			\remove_action( 'save_post_' . Posts::POST_TYPE, array( self::class, 'cache_post_media' ), 20 );
+			\remove_action( 'save_post_' . Posts::POST_TYPE, array( self::class, 'process_post_media' ), 20 );
 
 			\wp_update_post(
 				array(
@@ -233,7 +267,7 @@ class Media extends File {
 			);
 
 			// Re-hook.
-			\add_action( 'save_post_' . Posts::POST_TYPE, array( self::class, 'cache_post_media' ), 20 );
+			\add_action( 'save_post_' . Posts::POST_TYPE, array( self::class, 'process_post_media' ), 20 );
 		}
 	}
 

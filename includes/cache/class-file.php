@@ -344,7 +344,7 @@ abstract class File {
 	 * Validate MIME type of a file using multiple methods.
 	 *
 	 * This method addresses potential wp_get_image_mime() bypass concerns
-	 * by using finfo and getimagesize for validation.
+	 * by using finfo, getimagesize, and wp_check_filetype_and_ext for validation.
 	 *
 	 * @param string $file_path Path to the file.
 	 *
@@ -372,9 +372,18 @@ abstract class File {
 			}
 		}
 
-		// Method 3: Ensure file extension matches MIME type.
-		$ext          = \pathinfo( $file_path, PATHINFO_EXTENSION );
+		// Method 3: Use WordPress's wp_check_filetype_and_ext for additional validation.
 		$expected_ext = static::mime_to_extension( $mime );
+		$file_name    = \wp_basename( $file_path );
+		$file_info    = \wp_check_filetype_and_ext( $file_path, $file_name, static::ALLOWED_MIME_TYPES );
+
+		// If WordPress couldn't validate the file type, reject it.
+		if ( empty( $file_info['type'] ) || ! \str_starts_with( $file_info['type'], 'image/' ) ) {
+			return new \WP_Error( 'invalid_file_type', \__( 'File type validation failed.', 'activitypub' ) );
+		}
+
+		// Method 4: Ensure file extension matches MIME type.
+		$ext = \pathinfo( $file_path, PATHINFO_EXTENSION );
 
 		if ( strtolower( $ext ) !== $expected_ext ) {
 			// Rename file to correct extension using WP_Filesystem.
