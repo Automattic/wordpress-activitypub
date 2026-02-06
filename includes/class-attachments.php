@@ -106,9 +106,18 @@ class Attachments {
 			return false;
 		}
 
-		$base = \realpath( WP_CONTENT_DIR );
+		$allowed = array(
+			\realpath( WP_CONTENT_DIR ),
+			\realpath( ACTIVITYPUB_PLUGIN_DIR ),
+		);
 
-		return $base && \str_starts_with( $real_path, $base . DIRECTORY_SEPARATOR );
+		foreach ( $allowed as $base ) {
+			if ( $base && \str_starts_with( $real_path, $base . DIRECTORY_SEPARATOR ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
