@@ -19,6 +19,8 @@ class Blocks {
 	public static function init() {
 		// This is already being called on the init hook, so just add it.
 		self::register_blocks();
+		self::register_patterns();
+		self::register_templates();
 
 		\add_action( 'load-post-new.php', array( self::class, 'handle_in_reply_to_get_param' ) );
 		// Add editor plugin.
@@ -101,6 +103,149 @@ class Blocks {
 			ACTIVITYPUB_PLUGIN_DIR . '/build/reply',
 			array(
 				'render_callback' => array( self::class, 'render_reply_block' ),
+			)
+		);
+	}
+
+	/**
+	 * Register block patterns for ActivityPub.
+	 */
+	public static function register_patterns() {
+		// Register the ActivityPub pattern category.
+		\register_block_pattern_category(
+			'activitypub',
+			array(
+				'label' => \__( 'Fediverse', 'activitypub' ),
+			)
+		);
+
+		// Scan patterns directory and register each pattern.
+		$patterns_dir = ACTIVITYPUB_PLUGIN_DIR . 'patterns';
+		if ( ! \is_dir( $patterns_dir ) ) {
+			return;
+		}
+
+		$pattern_files = \glob( $patterns_dir . '/*.php' );
+		if ( empty( $pattern_files ) ) {
+			return;
+		}
+
+		foreach ( $pattern_files as $pattern_file ) {
+			$pattern_data = self::get_pattern_data( $pattern_file );
+			if ( ! $pattern_data ) {
+				continue;
+			}
+
+			\register_block_pattern( $pattern_data['slug'], $pattern_data );
+		}
+	}
+
+	/**
+	 * Get pattern data from a pattern file.
+	 *
+	 * @param string $file Path to the pattern file.
+	 * @return array|false Pattern data array or false on failure.
+	 */
+	private static function get_pattern_data( $file ) {
+		$default_headers = array(
+			'title'         => 'Title',
+			'slug'          => 'Slug',
+			'description'   => 'Description',
+			'categories'    => 'Categories',
+			'keywords'      => 'Keywords',
+			'viewportWidth' => 'Viewport Width',
+			'blockTypes'    => 'Block Types',
+			'inserter'      => 'Inserter',
+		);
+
+		$file_data = \get_file_data( $file, $default_headers );
+
+		// Title and Slug are required.
+		if ( empty( $file_data['title'] ) || empty( $file_data['slug'] ) ) {
+			return false;
+		}
+
+		// Get pattern content via output buffering.
+		\ob_start();
+		include $file;
+		$content = \ob_get_clean();
+
+		if ( empty( $content ) ) {
+			return false;
+		}
+
+		$pattern_data = array(
+			'title'   => $file_data['title'],
+			'slug'    => $file_data['slug'],
+			'content' => $content,
+		);
+
+		// Add optional fields.
+		if ( ! empty( $file_data['description'] ) ) {
+			$pattern_data['description'] = $file_data['description'];
+		}
+
+		if ( ! empty( $file_data['categories'] ) ) {
+			$pattern_data['categories'] = \array_map( 'trim', \explode( ',', $file_data['categories'] ) );
+		}
+
+		if ( ! empty( $file_data['keywords'] ) ) {
+			$pattern_data['keywords'] = \array_map( 'trim', \explode( ',', $file_data['keywords'] ) );
+		}
+
+		if ( ! empty( $file_data['viewportWidth'] ) ) {
+			$pattern_data['viewportWidth'] = \absint( $file_data['viewportWidth'] );
+		}
+
+		if ( ! empty( $file_data['blockTypes'] ) ) {
+			$pattern_data['blockTypes'] = \array_map( 'trim', \explode( ',', $file_data['blockTypes'] ) );
+		}
+
+		if ( ! empty( $file_data['inserter'] ) ) {
+			$pattern_data['inserter'] = 'false' !== \strtolower( $file_data['inserter'] );
+		}
+
+		return $pattern_data;
+	}
+
+	/**
+	 * Register FSE templates for block themes.
+	 */
+	public static function register_templates() {
+		// Only register templates for block themes on WP 6.7+.
+		if ( ! \function_exists( 'register_block_template' ) || ! \wp_is_block_theme() ) {
+			return;
+		}
+
+		\register_block_template(
+			'activitypub//author-archive-fediverse',
+			array(
+				'title'       => \__( 'Author Archive (Fediverse)', 'activitypub' ),
+				'description' => \__( 'Displays an author archive with Fediverse profile and follow options.', 'activitypub' ),
+				'content'     => '<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained"}} -->
+<main class="wp-block-group">
+	<!-- wp:pattern {"slug":"activitypub/author-profile"} /-->
+	<!-- wp:spacer {"height":"32px"} -->
+	<div style="height:32px" aria-hidden="true" class="wp-block-spacer"></div>
+	<!-- /wp:spacer -->
+	<!-- wp:query {"queryId":0,"query":{"perPage":10,"pages":0,"offset":0,"postType":"post","order":"desc","orderBy":"date","author":"","search":"","exclude":[],"sticky":"","inherit":true}} -->
+	<div class="wp-block-query">
+		<!-- wp:post-template -->
+			<!-- wp:post-title {"isLink":true} /-->
+			<!-- wp:post-excerpt /-->
+		<!-- /wp:post-template -->
+		<!-- wp:query-pagination -->
+			<!-- wp:query-pagination-previous /-->
+			<!-- wp:query-pagination-numbers /-->
+			<!-- wp:query-pagination-next /-->
+		<!-- /wp:query-pagination -->
+	</div>
+	<!-- /wp:query -->
+</main>
+<!-- /wp:group -->
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->',
+				'post_types'  => array(),
 			)
 		);
 	}
