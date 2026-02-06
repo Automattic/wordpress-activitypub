@@ -1,21 +1,28 @@
 <?php
 /**
- * Title: Fediverse Sidebar
- * Slug: activitypub/social-sidebar
- * Categories: activitypub
- * Keywords: sidebar, widget, fediverse, follow, followers, activitypub
- * Description: Compact sidebar widget with follow button and followers list.
- * Viewport Width: 400
- * Block Types: core/template-part/sidebar
+ * Fediverse Sidebar pattern.
  *
  * @package Activitypub
  */
 
-?>
-<!-- wp:group {"layout":{"type":"constrained"}} -->
+return array(
+	'title'         => _x( 'Fediverse Sidebar', 'Block pattern title', 'activitypub' ),
+	'slug'          => 'activitypub/social-sidebar',
+	'categories'    => array( 'activitypub' ),
+	'keywords'      => array(
+		_x( 'sidebar', 'Block pattern keyword', 'activitypub' ),
+		_x( 'widget', 'Block pattern keyword', 'activitypub' ),
+		_x( 'fediverse', 'Block pattern keyword', 'activitypub' ),
+		_x( 'follow', 'Block pattern keyword', 'activitypub' ),
+		_x( 'followers', 'Block pattern keyword', 'activitypub' ),
+	),
+	'description'   => _x( 'Compact sidebar widget with follow button and followers list.', 'Block pattern description', 'activitypub' ),
+	'viewportWidth' => 400,
+	'blockTypes'    => array( 'core/template-part/sidebar' ),
+	'content'       => '<!-- wp:group {"layout":{"type":"constrained"}} -->
 <div class="wp-block-group">
 	<!-- wp:heading {"level":3} -->
-	<h3 class="wp-block-heading"><?php esc_html_e( 'Follow on Fediverse', 'activitypub' ); ?></h3>
+	<h3 class="wp-block-heading">' . esc_html_x( 'Follow on Fediverse', 'Block pattern content', 'activitypub' ) . '</h3>
 	<!-- /wp:heading -->
 	<!-- wp:activitypub/follow-me {"selectedUser":"inherit","className":"is-style-button"} /-->
 	<!-- wp:spacer {"height":"16px"} -->
@@ -23,8 +30,9 @@
 	<!-- /wp:spacer -->
 	<!-- wp:activitypub/followers {"selectedUser":"inherit","per_page":5} -->
 	<!-- wp:heading {"level":4} -->
-	<h4 class="wp-block-heading"><?php esc_html_e( 'Recent Followers', 'activitypub' ); ?></h4>
+	<h4 class="wp-block-heading">' . esc_html_x( 'Recent Followers', 'Block pattern content', 'activitypub' ) . '</h4>
 	<!-- /wp:heading -->
 	<!-- /wp:activitypub/followers -->
 </div>
-<!-- /wp:group -->
+<!-- /wp:group -->',
+);

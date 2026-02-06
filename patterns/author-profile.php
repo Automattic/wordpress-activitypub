@@ -1,17 +1,23 @@
 <?php
 /**
- * Title: Author Profile with Follow
- * Slug: activitypub/author-profile
- * Categories: activitypub
- * Keywords: author, profile, fediverse, follow, activitypub
- * Description: Display author profile with follow button and extra fields.
- * Viewport Width: 1200
+ * Author Profile with Follow pattern.
  *
  * @package Activitypub
  */
 
-?>
-<!-- wp:group {"layout":{"type":"constrained"}} -->
+return array(
+	'title'         => _x( 'Author Profile with Follow', 'Block pattern title', 'activitypub' ),
+	'slug'          => 'activitypub/author-profile',
+	'categories'    => array( 'activitypub' ),
+	'keywords'      => array(
+		_x( 'author', 'Block pattern keyword', 'activitypub' ),
+		_x( 'profile', 'Block pattern keyword', 'activitypub' ),
+		_x( 'fediverse', 'Block pattern keyword', 'activitypub' ),
+		_x( 'follow', 'Block pattern keyword', 'activitypub' ),
+	),
+	'description'   => _x( 'Display author profile with follow button and extra fields.', 'Block pattern description', 'activitypub' ),
+	'viewportWidth' => 1200,
+	'content'       => '<!-- wp:group {"layout":{"type":"constrained"}} -->
 <div class="wp-block-group">
 	<!-- wp:activitypub/follow-me {"selectedUser":"inherit","className":"is-style-profile"} /-->
 	<!-- wp:spacer {"height":"24px"} -->
@@ -19,4 +25,5 @@
 	<!-- /wp:spacer -->
 	<!-- wp:activitypub/extra-fields {"selectedUser":"inherit"} /-->
 </div>
-<!-- /wp:group -->
+<!-- /wp:group -->',
+);

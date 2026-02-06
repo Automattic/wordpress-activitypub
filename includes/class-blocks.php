@@ -120,93 +120,17 @@ class Blocks {
 		);
 
 		// Register each pattern directly.
-		$pattern_files = array(
+		$patterns = array(
 			'author-header',
 			'author-profile',
 			'follow-page',
 			'social-sidebar',
 		);
 
-		foreach ( $pattern_files as $pattern_file ) {
-			$pattern_data = self::get_pattern_data( $pattern_file );
-			if ( $pattern_data ) {
-				\register_block_pattern( $pattern_data['slug'], $pattern_data );
-			}
+		foreach ( $patterns as $pattern ) {
+			$pattern_data = require ACTIVITYPUB_PLUGIN_DIR . '/patterns/' . $pattern . '.php';
+			\register_block_pattern( $pattern_data['slug'], $pattern_data );
 		}
-	}
-
-	/**
-	 * Get pattern data from a pattern file.
-	 *
-	 * @param string $pattern_name The pattern filename without extension.
-	 * @return array|false Pattern data array or false on failure.
-	 */
-	private static function get_pattern_data( $pattern_name ) {
-		$file = ACTIVITYPUB_PLUGIN_DIR . '/patterns/' . $pattern_name . '.php';
-
-		if ( ! \file_exists( $file ) ) {
-			return false;
-		}
-
-		$default_headers = array(
-			'title'         => 'Title',
-			'slug'          => 'Slug',
-			'description'   => 'Description',
-			'categories'    => 'Categories',
-			'keywords'      => 'Keywords',
-			'viewportWidth' => 'Viewport Width',
-			'blockTypes'    => 'Block Types',
-			'inserter'      => 'Inserter',
-		);
-
-		$file_data = \get_file_data( $file, $default_headers );
-
-		// Title and Slug are required.
-		if ( empty( $file_data['title'] ) || empty( $file_data['slug'] ) ) {
-			return false;
-		}
-
-		// Get pattern content via output buffering.
-		\ob_start();
-		include $file;
-		$content = \ob_get_clean();
-
-		if ( empty( $content ) ) {
-			return false;
-		}
-
-		$pattern_data = array(
-			'title'   => $file_data['title'],
-			'slug'    => $file_data['slug'],
-			'content' => $content,
-		);
-
-		// Add optional fields.
-		if ( ! empty( $file_data['description'] ) ) {
-			$pattern_data['description'] = $file_data['description'];
-		}
-
-		if ( ! empty( $file_data['categories'] ) ) {
-			$pattern_data['categories'] = \array_map( 'trim', \explode( ',', $file_data['categories'] ) );
-		}
-
-		if ( ! empty( $file_data['keywords'] ) ) {
-			$pattern_data['keywords'] = \array_map( 'trim', \explode( ',', $file_data['keywords'] ) );
-		}
-
-		if ( ! empty( $file_data['viewportWidth'] ) ) {
-			$pattern_data['viewportWidth'] = \absint( $file_data['viewportWidth'] );
-		}
-
-		if ( ! empty( $file_data['blockTypes'] ) ) {
-			$pattern_data['blockTypes'] = \array_map( 'trim', \explode( ',', $file_data['blockTypes'] ) );
-		}
-
-		if ( ! empty( $file_data['inserter'] ) ) {
-			$pattern_data['inserter'] = 'false' !== \strtolower( $file_data['inserter'] );
-		}
-
-		return $pattern_data;
 	}
 
 	/**
