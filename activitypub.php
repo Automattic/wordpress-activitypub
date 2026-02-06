@@ -163,13 +163,7 @@ function activation_redirect( $plugin ) {
 }
 \add_action( 'activated_plugin', __NAMESPACE__ . '\activation_redirect' );
 
-// Check for CLI env, to add the CLI commands.Add commentMore actions.
+// Check for CLI env, to add the CLI commands.
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
-	\WP_CLI::add_command(
-		'activitypub',
-		'\Activitypub\Cli',
-		array(
-			'shortdesc' => 'ActivityPub related commands to manage plugin functionality and the federation of posts and comments.',
-		)
-	);
+	Cli::register();
 }

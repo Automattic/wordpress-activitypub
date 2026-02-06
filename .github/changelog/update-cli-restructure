@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Restructure CLI into separate command classes for better organization.
