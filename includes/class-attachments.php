@@ -158,6 +158,11 @@ class Attachments {
 	 * - Overly long filenames
 	 * - Dotfiles (e.g., .htaccess)
 	 *
+	 * Note: All dots are stripped from the filename and only the base name
+	 * (before the first dot) is preserved. For example, "profile.photo.v2.jpg"
+	 * becomes "profile.jpg". This is intentional to prevent double-extension
+	 * attacks, but may result in information loss for legitimate filenames.
+	 *
 	 * @param string $filename  The filename to sanitize.
 	 * @param string $mime_type The validated mime type to determine correct extension.
 	 *
