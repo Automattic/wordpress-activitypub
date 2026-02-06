@@ -5,21 +5,22 @@
  * @package Activitypub
  */
 
-return array(
-	'title'         => _x( 'Fediverse Sidebar', 'Block pattern title', 'activitypub' ),
-	'slug'          => 'activitypub/social-sidebar',
-	'categories'    => array( 'activitypub' ),
-	'keywords'      => array(
-		_x( 'sidebar', 'Block pattern keyword', 'activitypub' ),
-		_x( 'widget', 'Block pattern keyword', 'activitypub' ),
-		_x( 'fediverse', 'Block pattern keyword', 'activitypub' ),
-		_x( 'follow', 'Block pattern keyword', 'activitypub' ),
-		_x( 'followers', 'Block pattern keyword', 'activitypub' ),
-	),
-	'description'   => _x( 'Compact sidebar widget with follow button and followers list.', 'Block pattern description', 'activitypub' ),
-	'viewportWidth' => 400,
-	'blockTypes'    => array( 'core/template-part/sidebar' ),
-	'content'       => '<!-- wp:group {"layout":{"type":"constrained"}} -->
+\register_block_pattern(
+	'activitypub/social-sidebar',
+	array(
+		'title'         => _x( 'Fediverse Sidebar', 'Block pattern title', 'activitypub' ),
+		'categories'    => array( 'activitypub' ),
+		'keywords'      => array(
+			_x( 'sidebar', 'Block pattern keyword', 'activitypub' ),
+			_x( 'widget', 'Block pattern keyword', 'activitypub' ),
+			_x( 'fediverse', 'Block pattern keyword', 'activitypub' ),
+			_x( 'follow', 'Block pattern keyword', 'activitypub' ),
+			_x( 'followers', 'Block pattern keyword', 'activitypub' ),
+		),
+		'description'   => _x( 'Compact sidebar widget with follow button and followers list.', 'Block pattern description', 'activitypub' ),
+		'viewportWidth' => 400,
+		'blockTypes'    => array( 'core/template-part/sidebar' ),
+		'content'       => '<!-- wp:group {"layout":{"type":"constrained"}} -->
 <div class="wp-block-group">
 	<!-- wp:heading {"level":3} -->
 	<h3 class="wp-block-heading">' . esc_html_x( 'Follow on Fediverse', 'Block pattern content', 'activitypub' ) . '</h3>
@@ -35,4 +36,5 @@ return array(
 	<!-- /wp:activitypub/followers -->
 </div>
 <!-- /wp:group -->',
+	)
 );

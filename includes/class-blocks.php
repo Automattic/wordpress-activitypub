@@ -119,18 +119,11 @@ class Blocks {
 			)
 		);
 
-		// Register each pattern directly.
-		$patterns = array(
-			'author-header',
-			'author-profile',
-			'follow-page',
-			'social-sidebar',
-		);
-
-		foreach ( $patterns as $pattern ) {
-			$pattern_data = require ACTIVITYPUB_PLUGIN_DIR . '/patterns/' . $pattern . '.php';
-			\register_block_pattern( $pattern_data['slug'], $pattern_data );
-		}
+		// Register each pattern.
+		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/author-header.php';
+		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/author-profile.php';
+		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/follow-page.php';
+		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/social-sidebar.php';
 	}
 
 	/**
