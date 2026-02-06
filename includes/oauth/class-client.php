@@ -310,13 +310,16 @@ class Client {
 			$metadata['client_uri'] = $data['client_uri'];
 		}
 
-		// ActivityPub Application format fields.
-		if ( ! empty( $data['type'] ) && 'Application' === $data['type'] ) {
+		// ActivityPub actor format fields (Application, Person, Service, etc.).
+		$actor_types = array( 'Application', 'Person', 'Service', 'Group', 'Organization' );
+		if ( ! empty( $data['type'] ) && in_array( $data['type'], $actor_types, true ) ) {
 			if ( ! empty( $data['id'] ) ) {
 				$metadata['client_id'] = $data['id'];
 			}
 			if ( ! empty( $data['name'] ) ) {
 				$metadata['client_name'] = $data['name'];
+			} elseif ( ! empty( $data['preferredUsername'] ) ) {
+				$metadata['client_name'] = $data['preferredUsername'];
 			}
 			// Handle redirectURI (singular) as used by ap CLI.
 			if ( ! empty( $data['redirectURI'] ) ) {
@@ -333,6 +336,8 @@ class Client {
 			if ( ! empty( $data['url'] ) ) {
 				$metadata['client_uri'] = is_array( $data['url'] ) ? $data['url'][0] : $data['url'];
 			}
+			// Mark as actor-based client for lenient redirect validation.
+			$metadata['is_actor'] = true;
 		}
 
 		return $metadata;
@@ -370,7 +375,7 @@ class Client {
 	/**
 	 * Check if redirect URI is valid for this client.
 	 *
-	 * If explicit redirect_uris are registered, requires exact match.
+	 * If explicit redirect_uris are registered, requires match (with RFC 8252 loopback handling).
 	 * For auto-discovered clients without redirect_uris, uses same-origin policy.
 	 *
 	 * @param string $redirect_uri The redirect URI to validate.
@@ -379,9 +384,22 @@ class Client {
 	public function is_valid_redirect_uri( $redirect_uri ) {
 		$allowed_uris = $this->get_redirect_uris();
 
-		// If explicit redirect URIs are registered, require exact match.
+		// If explicit redirect URIs are registered, check for match.
 		if ( ! empty( $allowed_uris ) ) {
-			return in_array( $redirect_uri, $allowed_uris, true );
+			// Exact match first.
+			if ( in_array( $redirect_uri, $allowed_uris, true ) ) {
+				return true;
+			}
+
+			// RFC 8252 Section 7.3: For loopback redirects, allow any port.
+			// Compare scheme, host, and path - ignore port for 127.0.0.1 and localhost.
+			foreach ( $allowed_uris as $allowed_uri ) {
+				if ( self::is_loopback_redirect_match( $allowed_uri, $redirect_uri ) ) {
+					return true;
+				}
+			}
+
+			return false;
 		}
 
 		// For auto-discovered clients without redirect_uris, use same-origin policy.
@@ -395,6 +413,46 @@ class Client {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Check if two URIs match under RFC 8252 loopback rules.
+	 *
+	 * For loopback addresses (127.0.0.1, localhost), the port is ignored.
+	 *
+	 * @param string $allowed_uri  The registered redirect URI.
+	 * @param string $redirect_uri The requested redirect URI.
+	 * @return bool True if they match under loopback rules.
+	 */
+	private static function is_loopback_redirect_match( $allowed_uri, $redirect_uri ) {
+		$allowed_parts  = \wp_parse_url( $allowed_uri );
+		$redirect_parts = \wp_parse_url( $redirect_uri );
+
+		// Must have same scheme.
+		if ( ( $allowed_parts['scheme'] ?? '' ) !== ( $redirect_parts['scheme'] ?? '' ) ) {
+			return false;
+		}
+
+		$allowed_host  = $allowed_parts['host'] ?? '';
+		$redirect_host = $redirect_parts['host'] ?? '';
+
+		// Must have same host.
+		if ( $allowed_host !== $redirect_host ) {
+			return false;
+		}
+
+		// Only apply port flexibility for loopback addresses.
+		$loopback_hosts = array( '127.0.0.1', 'localhost', '::1' );
+		if ( ! in_array( $allowed_host, $loopback_hosts, true ) ) {
+			// Not loopback - require exact match including port.
+			return $allowed_uri === $redirect_uri;
+		}
+
+		// For loopback, compare path (ignore port).
+		$allowed_path  = $allowed_parts['path'] ?? '/';
+		$redirect_path = $redirect_parts['path'] ?? '/';
+
+		return $allowed_path === $redirect_path;
 	}
 
 	/**

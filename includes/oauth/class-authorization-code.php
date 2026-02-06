@@ -176,7 +176,13 @@ class Authorization_Code {
 	 * @return bool True if valid.
 	 */
 	public static function verify_pkce( $code_verifier, $code_challenge, $method = 'S256' ) {
-		if ( empty( $code_verifier ) || empty( $code_challenge ) ) {
+		// If PKCE wasn't used during authorization (no challenge stored), skip verification.
+		if ( empty( $code_challenge ) ) {
+			return true;
+		}
+
+		// If challenge was provided but verifier is missing, fail.
+		if ( empty( $code_verifier ) ) {
 			return false;
 		}
 

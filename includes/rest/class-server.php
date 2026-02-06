@@ -121,6 +121,11 @@ class Server {
 			return $response;
 		}
 
+		// Exclude OAuth endpoints - they have their own error format per RFC 6749.
+		if ( \str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth' ) ) {
+			return $response;
+		}
+
 		// Only alter responses that return an error status code.
 		if ( $response->get_status() < 400 ) {
 			return $response;

@@ -231,16 +231,8 @@ class OAuth_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		// Check for PKCE (required).
+		// Check for PKCE (recommended but optional for compatibility).
 		$code_challenge = $request->get_param( 'code_challenge' );
-		if ( empty( $code_challenge ) ) {
-			return $this->redirect_with_error(
-				$redirect_uri,
-				'invalid_request',
-				'PKCE code_challenge is required.',
-				$state
-			);
-		}
 
 		// Redirect to wp-login.php with action=activitypub_authorize.
 		// This uses WordPress's login_form_{action} hook for proper cookie auth.
@@ -407,10 +399,6 @@ class OAuth_Controller extends \WP_REST_Controller {
 			return $this->token_error( 'invalid_request', 'Authorization code is required.' );
 		}
 
-		if ( empty( $code_verifier ) ) {
-			return $this->token_error( 'invalid_request', 'PKCE code_verifier is required.' );
-		}
-
 		$result = Authorization_Code::exchange( $code, $client_id, $redirect_uri, $code_verifier );
 
 		if ( \is_wp_error( $result ) ) {
@@ -571,9 +559,8 @@ class OAuth_Controller extends \WP_REST_Controller {
 				'type'        => 'string',
 			),
 			'code_challenge'        => array(
-				'description' => 'PKCE code challenge.',
+				'description' => 'PKCE code challenge (recommended).',
 				'type'        => 'string',
-				'required'    => true,
 			),
 			'code_challenge_method' => array(
 				'description' => 'PKCE code challenge method.',
