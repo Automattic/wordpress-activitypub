@@ -734,10 +734,11 @@ class Remote_Actors {
 		 *
 		 * @since 5.6.0
 		 *
-		 * @param string $url       The remote avatar URL.
-		 * @param string $context   The context ('avatar').
-		 * @param int    $entity_id The actor post ID.
+		 * @param string      $url       The remote avatar URL.
+		 * @param string      $context   The context ('avatar', 'media', 'emoji').
+		 * @param int|null    $entity_id The entity ID (actor post ID, post ID, or null for emoji).
+		 * @param array       $options   Optional. Additional options like 'updated' timestamp.
 		 */
-		return \apply_filters( 'activitypub_remote_media_url', $remote_avatar_url, 'avatar', $id );
+		return \apply_filters( 'activitypub_remote_media_url', $remote_avatar_url, 'avatar', $id, array() );
 	}
 }

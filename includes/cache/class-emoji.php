@@ -95,10 +95,11 @@ class Emoji extends File {
 	 * Maybe cache an emoji URL.
 	 *
 	 * Hooked to the activitypub_remote_media_url filter.
+	 * Delegates to import() to preserve the activitypub_pre_import_emoji filter.
 	 *
 	 * @param string      $url       The remote URL.
 	 * @param string      $context   The context ('avatar', 'media', 'emoji', etc.).
-	 * @param string|null $entity_id The entity identifier (domain or null to extract from URL).
+	 * @param string|null $entity_id The entity identifier (unused for emoji, domain extracted from URL).
 	 * @param array       $options   Optional. Additional options like 'updated' timestamp.
 	 *
 	 * @return string The local URL if cached successfully, otherwise the original URL.
@@ -108,20 +109,8 @@ class Emoji extends File {
 			return $url;
 		}
 
-		// For emoji, use domain as entity_id if not provided.
-		$domain = $entity_id ?: \wp_parse_url( $url, PHP_URL_HOST );
-		if ( empty( $domain ) ) {
-			return $url;
-		}
-
-		$cache_options = array( 'max_dimension' => self::MAX_DIMENSION );
-
-		// Pass through updated timestamp for staleness checking.
-		if ( ! empty( $options['updated'] ) ) {
-			$cache_options['updated'] = $options['updated'];
-		}
-
-		$cached_url = self::get_or_cache( $url, $domain, $cache_options );
+		// Delegate to import() which handles the activitypub_pre_import_emoji filter.
+		$cached_url = self::import( $url, $options['updated'] ?? null );
 
 		return $cached_url ?: $url;
 	}

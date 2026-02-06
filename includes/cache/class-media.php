@@ -159,11 +159,9 @@ class Media extends File {
 			return;
 		}
 
-		// Invalidate existing cached media on update.
-		self::invalidate_entity( $post_id );
-
 		// Collect URLs from both content and attachments meta.
 		$urls_to_cache = array();
+		$upload_base   = \wp_upload_dir()['baseurl'];
 
 		// Find image URLs in content.
 		if ( ! empty( $post->post_content ) ) {
@@ -182,16 +180,10 @@ class Media extends File {
 		// Remove duplicates.
 		$urls_to_cache = array_unique( $urls_to_cache );
 
-		if ( empty( $urls_to_cache ) ) {
-			return;
-		}
-
-		$content      = $post->post_content;
-		$urls_changed = false;
-		$upload_base  = \wp_upload_dir()['baseurl'];
-
+		// Filter to only remote URLs that need caching.
+		$remote_urls = array();
 		foreach ( $urls_to_cache as $url ) {
-			// Skip non-http URLs (data URIs, relative paths, already local).
+			// Skip non-http URLs (data URIs, relative paths).
 			if ( ! \preg_match( '#^https?://#i', $url ) ) {
 				continue;
 			}
@@ -201,6 +193,24 @@ class Media extends File {
 				continue;
 			}
 
+			$remote_urls[] = $url;
+		}
+
+		// Clear the attachments meta after processing (regardless of whether we cache).
+		\delete_post_meta( $post_id, '_activitypub_attachments' );
+
+		// Only proceed if there are remote URLs to cache.
+		if ( empty( $remote_urls ) ) {
+			return;
+		}
+
+		// Invalidate existing cached media before re-caching.
+		self::invalidate_entity( $post_id );
+
+		$content      = $post->post_content;
+		$urls_changed = false;
+
+		foreach ( $remote_urls as $url ) {
 			// Cache the image.
 			$cached_url = self::cache_url( $url, $post_id );
 
@@ -225,9 +235,6 @@ class Media extends File {
 			// Re-hook.
 			\add_action( 'save_post_' . Posts::POST_TYPE, array( self::class, 'cache_post_media' ), 20 );
 		}
-
-		// Clear the attachments meta after processing.
-		\delete_post_meta( $post_id, '_activitypub_attachments' );
 	}
 
 	/**

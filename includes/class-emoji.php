@@ -76,20 +76,24 @@ class Emoji {
 			return true;
 		}
 
+		// Allow remote URLs (both http and https) when caching is disabled.
+		$is_valid_url = (bool) \wp_http_validate_url( $value );
+
 		/**
 		 * Filters whether a remote emoji URL is valid.
 		 *
 		 * When caching is disabled, this filter allows remote URLs to be used.
-		 * Third-party plugins can hook in to validate specific domains.
+		 * Third-party plugins can hook in to validate specific domains or
+		 * restrict to https-only by returning false for http URLs.
 		 *
 		 * @since 5.6.0
 		 *
-		 * @param bool   $valid Whether the URL is valid. Default true for https URLs.
+		 * @param bool   $valid Whether the URL is valid. Default true for http/https URLs.
 		 * @param string $value The emoji src URL.
 		 */
 		return \apply_filters(
 			'activitypub_validate_emoji_src',
-			\str_starts_with( $value, 'https://' ),
+			$is_valid_url,
 			$value
 		);
 	}

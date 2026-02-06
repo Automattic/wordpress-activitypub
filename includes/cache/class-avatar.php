@@ -78,7 +78,7 @@ class Avatar extends File {
 		}
 
 		// Hook into the universal remote media URL filter for lazy caching.
-		\add_filter( 'activitypub_remote_media_url', array( self::class, 'maybe_cache' ), 10, 3 );
+		\add_filter( 'activitypub_remote_media_url', array( self::class, 'maybe_cache' ), 10, 4 );
 
 		// Clear cached avatar URL when actor is updated (allows lazy re-caching).
 		\add_action( 'save_post_' . Remote_Actors::POST_TYPE, array( self::class, 'clear_avatar_meta' ) );
@@ -112,10 +112,11 @@ class Avatar extends File {
 	 * @param string     $url       The remote URL.
 	 * @param string     $context   The context ('avatar', 'media', 'emoji', etc.).
 	 * @param string|int $entity_id The entity identifier (actor post ID).
+	 * @param array      $options   Optional. Additional options (unused for avatars).
 	 *
 	 * @return string The local URL if cached successfully, otherwise the original URL.
 	 */
-	public static function maybe_cache( $url, $context, $entity_id = null ) {
+	public static function maybe_cache( $url, $context, $entity_id = null, $options = array() ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Required for filter signature.
 		if ( self::CONTEXT !== $context || empty( $url ) || empty( $entity_id ) ) {
 			return $url;
 		}
