@@ -57,6 +57,169 @@ class Attachments {
 	const MAX_AVATAR_DIMENSION = 512;
 
 	/**
+	 * Mapping of MIME types to file extensions for supported image formats.
+	 *
+	 * @var string[]
+	 */
+	const MIME_TO_EXT = array(
+		'image/jpeg' => 'jpg',
+		'image/png'  => 'png',
+		'image/gif'  => 'gif',
+		'image/webp' => 'webp',
+		'image/avif' => 'avif',
+		'image/bmp'  => 'bmp',
+		'image/tiff' => 'tiff',
+	);
+
+	/**
+	 * Cached finfo instance for MIME type detection.
+	 *
+	 * @var \finfo|null
+	 */
+	private static $finfo = null;
+
+	/**
+	 * Validate a URL is safe to fetch.
+	 *
+	 * @param string $url The URL to validate.
+	 *
+	 * @return bool True if URL is safe to fetch, false otherwise.
+	 */
+	private static function is_safe_url( $url ) {
+		if ( empty( $url ) || ! \filter_var( $url, FILTER_VALIDATE_URL ) ) {
+			return false;
+		}
+
+		return (bool) \wp_http_validate_url( $url );
+	}
+
+	/**
+	 * Extract base filename from a URL, stripping all extensions.
+	 *
+	 * Used to generate consistent cache keys for emoji lookups.
+	 *
+	 * @param string $url The URL to extract filename from.
+	 *
+	 * @return string The sanitized base filename without extensions.
+	 */
+	private static function get_base_filename_from_url( $url ) {
+		$url_path = \wp_parse_url( $url, PHP_URL_PATH );
+		$filename = \basename( $url_path );
+		$filename = \sanitize_file_name( $filename );
+
+		$parts     = \explode( '.', $filename );
+		$base_name = $parts[0];
+
+		// If no base name left, generate one.
+		if ( empty( $base_name ) ) {
+			$base_name = 'image-' . \wp_generate_password( 8, false );
+		}
+
+		// Limit length.
+		if ( \strlen( $base_name ) > 200 ) {
+			$base_name = \substr( $base_name, 0, 200 );
+		}
+
+		return $base_name;
+	}
+
+	/**
+	 * Sanitize a filename to ensure it's safe for storage.
+	 *
+	 * Goes beyond sanitize_file_name() to prevent:
+	 * - Double extensions (e.g., shell.php.jpg)
+	 * - Overly long filenames
+	 * - Dotfiles (e.g., .htaccess)
+	 *
+	 * @param string $filename  The filename to sanitize.
+	 * @param string $mime_type The validated mime type to determine correct extension.
+	 *
+	 * @return string|false The sanitized filename, or false if unsafe.
+	 */
+	private static function sanitize_image_filename( $filename, $mime_type ) {
+		// Basic sanitization first.
+		$filename = \sanitize_file_name( $filename );
+
+		// Reject dotfiles.
+		if ( \str_starts_with( $filename, '.' ) ) {
+			return false;
+		}
+
+		// Reject unsupported image types.
+		if ( ! isset( self::MIME_TO_EXT[ $mime_type ] ) ) {
+			return false;
+		}
+
+		// Extract base name without any extensions.
+		$parts     = \explode( '.', $filename );
+		$base_name = $parts[0];
+
+		// If no base name left, generate one.
+		if ( empty( $base_name ) ) {
+			$base_name = 'image-' . \wp_generate_password( 8, false );
+		}
+
+		// Limit length.
+		if ( \strlen( $base_name ) > 200 ) {
+			$base_name = \substr( $base_name, 0, 200 );
+		}
+
+		return $base_name . '.' . self::MIME_TO_EXT[ $mime_type ];
+	}
+
+	/**
+	 * Validate a file is actually an image by checking its content.
+	 *
+	 * Uses three validation methods:
+	 * 1. getimagesize() via wp_get_image_mime() - parses actual image structure
+	 * 2. fileinfo extension - checks file magic bytes
+	 * 3. file_is_displayable_image() - verifies image can be rendered
+	 *
+	 * All must agree the file is a valid, displayable image.
+	 *
+	 * @param string $file_path Path to the file.
+	 *
+	 * @return string|false The mime type if valid image, false otherwise.
+	 */
+	private static function validate_image_file( $file_path ) {
+		if ( ! \file_exists( $file_path ) ) {
+			return false;
+		}
+
+		// Require fileinfo for validation.
+		if ( ! \extension_loaded( 'fileinfo' ) ) {
+			return false;
+		}
+
+		// Check 1: Verify file has valid image structure via getimagesize().
+		$image_mime = \wp_get_image_mime( $file_path );
+		if ( ! $image_mime ) {
+			return false;
+		}
+
+		// Check 2: Verify magic bytes match an image type.
+		if ( null === self::$finfo ) {
+			self::$finfo = new \finfo( FILEINFO_MIME_TYPE );
+		}
+		$finfo_mime = self::$finfo->file( $file_path );
+
+		if ( ! $finfo_mime || ! \str_starts_with( $finfo_mime, 'image/' ) ) {
+			return false;
+		}
+
+		// Check 3: Verify image can actually be rendered.
+		if ( ! \function_exists( 'file_is_displayable_image' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/image.php';
+		}
+
+		if ( ! \file_is_displayable_image( $file_path ) ) {
+			return false;
+		}
+
+		return $image_mime;
+	}
+
+	/**
 	 * Initialize the class and set up filters.
 	 */
 	public static function init() {
@@ -184,7 +347,7 @@ class Attachments {
 	 * @return string|false The local emoji URL on success, false on failure.
 	 */
 	public static function import_emoji( $emoji_url, $updated = null ) {
-		if ( empty( $emoji_url ) || ! \filter_var( $emoji_url, FILTER_VALIDATE_URL ) ) {
+		if ( ! self::is_safe_url( $emoji_url ) ) {
 			return false;
 		}
 
@@ -213,9 +376,8 @@ class Attachments {
 
 			// Compare timestamps - re-download if remote is newer.
 			$paths       = self::get_emoji_storage_paths( $emoji_url );
-			$url_path    = \wp_parse_url( $emoji_url, PHP_URL_PATH );
-			$file_stem   = \sanitize_file_name( \pathinfo( $url_path, PATHINFO_FILENAME ) );
-			$matches     = \glob( $paths['basedir'] . '/' . $file_stem . '.*' );
+			$base_name   = self::get_base_filename_from_url( $emoji_url );
+			$matches     = \glob( $paths['basedir'] . '/' . $base_name . '.*' );
 			$file_path   = ( $matches && \is_file( $matches[0] ) ) ? $matches[0] : null;
 			$local_time  = $file_path ? \filemtime( $file_path ) : 0;
 			$remote_time = \strtotime( $updated );
@@ -235,7 +397,9 @@ class Attachments {
 			return false;
 		}
 
-		if ( ! \wp_get_image_mime( $tmp_file ) ) {
+		// Validate file is actually an image using content-based checks.
+		$mime_type = self::validate_image_file( $tmp_file );
+		if ( ! $mime_type ) {
 			\wp_delete_file( $tmp_file );
 			return false;
 		}
@@ -249,9 +413,13 @@ class Attachments {
 			return false;
 		}
 
-		// Generate filename from URL path (consistent with get_emoji_url lookup).
+		// Generate safe filename based on validated mime type.
 		$url_path  = \wp_parse_url( $emoji_url, PHP_URL_PATH );
-		$file_name = \sanitize_file_name( \basename( $url_path ) );
+		$file_name = self::sanitize_image_filename( \basename( $url_path ), $mime_type );
+		if ( ! $file_name ) {
+			\wp_delete_file( $tmp_file );
+			return false;
+		}
 		$file_path = $paths['basedir'] . '/' . $file_name;
 
 		// Initialize filesystem.
@@ -394,13 +562,11 @@ class Attachments {
 			return false;
 		}
 
-		// Get the expected filename base from the URL.
-		$url_path  = \wp_parse_url( $emoji_url, PHP_URL_PATH );
-		$url_name  = \pathinfo( $url_path, PATHINFO_FILENAME );
-		$file_name = \sanitize_file_name( $url_name );
+		// Get the expected filename base from the URL (consistent with import_emoji).
+		$base_name = self::get_base_filename_from_url( $emoji_url );
 
 		// Look for file with any extension (original or webp after optimization).
-		$files = \glob( $paths['basedir'] . '/' . $file_name . '.*' );
+		$files = \glob( $paths['basedir'] . '/' . $base_name . '.*' );
 
 		if ( ! empty( $files ) ) {
 			return $paths['baseurl'] . '/' . \basename( $files[0] );
@@ -644,6 +810,10 @@ class Attachments {
 			$tmp_file = \wp_tempnam( \basename( $attachment_data['url'] ) );
 			$wp_filesystem->copy( $attachment_data['url'], $tmp_file, true );
 		} else {
+			if ( ! self::is_safe_url( $attachment_data['url'] ) ) {
+				return new \WP_Error( 'invalid_url', \__( 'URL is not allowed.', 'activitypub' ) );
+			}
+
 			// Download remote URL.
 			$tmp_file = \download_url( $attachment_data['url'] );
 
@@ -739,6 +909,10 @@ class Attachments {
 			);
 		}
 
+		if ( ! self::is_safe_url( $attachment_data['url'] ) ) {
+			return new \WP_Error( 'invalid_url', \__( 'URL is not allowed.', 'activitypub' ) );
+		}
+
 		if ( ! \function_exists( 'download_url' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/file.php';
 		}
@@ -750,15 +924,25 @@ class Attachments {
 			return $tmp_file;
 		}
 
+		$mime_type = self::validate_image_file( $tmp_file );
+		if ( ! $mime_type ) {
+			\wp_delete_file( $tmp_file );
+			return new \WP_Error( 'invalid_file_type', \__( 'File is not a valid image.', 'activitypub' ) );
+		}
+
 		// Get storage paths for this object.
 		$paths = self::get_storage_paths( $object_id, $object_type );
 
 		// Create directory if it doesn't exist.
 		\wp_mkdir_p( $paths['basedir'] );
 
-		// Generate unique file name.
+		// Generate safe filename based on validated mime type.
 		$url_path  = \wp_parse_url( $attachment_data['url'], PHP_URL_PATH );
-		$file_name = \sanitize_file_name( \basename( $url_path ) );
+		$file_name = self::sanitize_image_filename( \basename( $url_path ), $mime_type );
+		if ( ! $file_name ) {
+			\wp_delete_file( $tmp_file );
+			return new \WP_Error( 'invalid_filename', \__( 'Could not generate safe filename.', 'activitypub' ) );
+		}
 		$file_path = $paths['basedir'] . '/' . $file_name;
 
 		// Initialize filesystem if needed.
@@ -768,20 +952,13 @@ class Attachments {
 		}
 
 		if ( ! $wp_filesystem ) {
+			\wp_delete_file( $tmp_file );
 			return new \WP_Error( 'filesystem_error', \__( 'Could not initialize filesystem.', 'activitypub' ) );
 		}
 
 		// Make sure file name is unique.
-		$counter = 1;
-		while ( $wp_filesystem->exists( $file_path ) ) {
-			$path_info = pathinfo( $file_name );
-			$file_name = $path_info['filename'] . '-' . $counter;
-			if ( ! empty( $path_info['extension'] ) ) {
-				$file_name .= '.' . $path_info['extension'];
-			}
-			$file_path = $paths['basedir'] . '/' . $file_name;
-			++$counter;
-		}
+		$file_name = \wp_unique_filename( $paths['basedir'], $file_name );
+		$file_path = $paths['basedir'] . '/' . $file_name;
 
 		// Move file to destination.
 		if ( ! $wp_filesystem->move( $tmp_file, $file_path, true ) ) {
@@ -793,41 +970,11 @@ class Attachments {
 		$file_path = self::optimize_image( $file_path, $max_dimension );
 		$file_name = \basename( $file_path );
 
-		// Get mime type and validate file.
-		$file_info = \wp_check_filetype_and_ext( $file_path, $file_name );
-		$mime_type = $file_info['type'] ?? $attachment_data['mediaType'] ?? '';
-
 		return array(
 			'url'       => $paths['baseurl'] . '/' . $file_name,
 			'mime_type' => $mime_type,
 			'alt'       => $attachment_data['name'] ?? '',
 		);
-	}
-
-	/**
-	 * Get a unique file path by appending a counter if the file already exists.
-	 *
-	 * @param string $file_path The desired file path.
-	 *
-	 * @return string A unique file path that doesn't exist.
-	 */
-	private static function get_unique_path( $file_path ) {
-		if ( ! \file_exists( $file_path ) ) {
-			return $file_path;
-		}
-
-		$path_info = \pathinfo( $file_path );
-		$dir       = $path_info['dirname'];
-		$base_name = $path_info['filename'];
-		$extension = isset( $path_info['extension'] ) ? '.' . $path_info['extension'] : '';
-		$counter   = 1;
-
-		do {
-			$new_path = $dir . '/' . $base_name . '-' . $counter . $extension;
-			++$counter;
-		} while ( \file_exists( $new_path ) );
-
-		return $new_path;
 	}
 
 	/**
@@ -842,9 +989,8 @@ class Attachments {
 	 * @return string The optimized file path.
 	 */
 	private static function optimize_image( $file_path, $max_dimension ) {
-		// Check if it's an image.
-		$mime_type = \wp_check_filetype( $file_path )['type'] ?? '';
-		if ( ! $mime_type || ! \str_starts_with( $mime_type, 'image/' ) ) {
+		$mime_type = self::validate_image_file( $file_path );
+		if ( ! $mime_type ) {
 			return $file_path;
 		}
 
@@ -872,8 +1018,9 @@ class Attachments {
 		// Determine output format and save.
 		if ( $can_webp ) {
 			// Convert to WebP.
-			$new_path = self::get_unique_path( \preg_replace( '/\.[^.]+$/', '.webp', $file_path ) );
-			$result   = $editor->save( $new_path, 'image/webp' );
+			$dir      = \dirname( $file_path );
+			$new_name = \wp_unique_filename( $dir, \preg_replace( '/\.[^.]+$/', '.webp', \basename( $file_path ) ) );
+			$result   = $editor->save( $dir . '/' . $new_name, 'image/webp' );
 		} elseif ( \in_array( $mime_type, array( 'image/png', 'image/webp' ), true ) ) {
 			// Keep original format for potentially transparent images when WebP not available.
 			if ( ! $needs_resize ) {
@@ -883,8 +1030,9 @@ class Attachments {
 			$result = $editor->save( $file_path );
 		} else {
 			// Convert to JPEG when WebP not available.
-			$new_path = self::get_unique_path( \preg_replace( '/\.[^.]+$/', '.jpg', $file_path ) );
-			$result   = $editor->save( $new_path, 'image/jpeg' );
+			$dir      = \dirname( $file_path );
+			$new_name = \wp_unique_filename( $dir, \preg_replace( '/\.[^.]+$/', '.jpg', \basename( $file_path ) ) );
+			$result   = $editor->save( $dir . '/' . $new_name, 'image/jpeg' );
 		}
 
 		if ( \is_wp_error( $result ) ) {
@@ -1183,7 +1331,7 @@ class Attachments {
 			return false;
 		}
 
-		if ( empty( $avatar_url ) || ! \filter_var( $avatar_url, FILTER_VALIDATE_URL ) ) {
+		if ( ! self::is_safe_url( $avatar_url ) ) {
 			return false;
 		}
 

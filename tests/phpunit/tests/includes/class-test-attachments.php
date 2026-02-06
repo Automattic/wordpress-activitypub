@@ -1055,37 +1055,6 @@ class Test_Attachments extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test get_unique_path generates unique filenames.
-	 *
-	 * @covers ::get_unique_path
-	 */
-	public function test_get_unique_path() {
-		$method = new \ReflectionMethod( Attachments::class, 'get_unique_path' );
-		if ( \PHP_VERSION_ID < 80100 ) {
-			$method->setAccessible( true );
-		}
-
-		$temp_dir = sys_get_temp_dir();
-
-		// Test with non-existent file - should return same path.
-		$non_existent = $temp_dir . '/unique-test-' . uniqid() . '.jpg';
-		$result       = $method->invoke( null, $non_existent );
-		$this->assertEquals( $non_existent, $result );
-
-		// Test with existing file - should return path with counter.
-		$existing_file = wp_tempnam( 'existing.jpg' ) . '.jpg';
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test file creation.
-		file_put_contents( $existing_file, 'test' );
-
-		$result = $method->invoke( null, $existing_file );
-		$this->assertNotEquals( $existing_file, $result );
-		$this->assertStringContainsString( '-1.jpg', $result );
-
-		// Clean up.
-		wp_delete_file( $existing_file );
-	}
-
-	/**
 	 * Test save_actor_avatar with valid URL.
 	 *
 	 * @covers ::save_actor_avatar
@@ -1258,7 +1227,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 
 		$this->assertNotFalse( $result );
 		$this->assertStringContainsString( '/activitypub/emoji/', $result );
-		$this->assertStringContainsString( 'kappa.png', $result );
+		$this->assertStringContainsString( 'kappa.', $result );
 	}
 
 	/**
@@ -1309,9 +1278,11 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$this->assertNotFalse( $first_result );
 
 		// Get the cached file path and modify its timestamp to be old.
-		$upload_dir = \wp_upload_dir();
-		$file_path  = $upload_dir['basedir'] . '/activitypub/emoji/example.com/new.png';
-		$this->assertTrue( \file_exists( $file_path ), 'Cached file should exist' );
+		$upload_dir   = \wp_upload_dir();
+		$glob_pattern = $upload_dir['basedir'] . '/activitypub/emoji/example.com/new.*';
+		$matches      = \glob( $glob_pattern );
+		$this->assertNotEmpty( $matches, 'Cached file should exist' );
+		$file_path = \reset( $matches );
 
 		// Set file modification time to the past.
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_touch -- Direct touch() needed for test timestamp manipulation.
