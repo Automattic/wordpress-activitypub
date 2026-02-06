@@ -115,7 +115,12 @@ class Interactions {
 		// Found a local comment id.
 		$comment_data['comment_author']  = \esc_attr( empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'] );
 		$comment_data['comment_content'] = \addslashes( $activity['object']['content'] );
-		$comment_data                    = Emoji::prepare_comment_data( $comment_data, $activity );
+
+		// Store emoji data for hook-based processing.
+		$emoji_data = Emoji::extract_emoji_data( $activity['object'] ?? array() );
+		if ( ! empty( $emoji_data ) ) {
+			\update_comment_meta( $comment_data['comment_ID'], '_activitypub_emoji', $emoji_data );
+		}
 
 		return self::persist( $comment_data, self::UPDATE );
 	}
@@ -399,7 +404,13 @@ class Interactions {
 			$comment_data['comment_meta']['source_url'] = \esc_url_raw( object_to_uri( $activity['object']['url'] ) );
 		}
 
-		return Emoji::prepare_comment_data( $comment_data, $activity );
+		// Store emoji data for hook-based processing.
+		$emoji_data = Emoji::extract_emoji_data( $activity['object'] ?? array() );
+		if ( ! empty( $emoji_data ) ) {
+			$comment_data['comment_meta']['_activitypub_emoji'] = $emoji_data;
+		}
+
+		return $comment_data;
 	}
 
 	/**

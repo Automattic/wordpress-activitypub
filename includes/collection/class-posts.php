@@ -59,6 +59,12 @@ class Posts {
 			$post_array['meta_input']['_activitypub_attachments'] = $attachment_urls;
 		}
 
+		// Extract emoji data and add via meta_input for hook-based replacement.
+		$emoji_data = Emoji::extract_emoji_data( $activity_object );
+		if ( ! empty( $emoji_data ) ) {
+			$post_array['meta_input']['_activitypub_emoji'] = $emoji_data;
+		}
+
 		$post_id = \wp_insert_post( $post_array, true );
 
 		if ( \is_wp_error( $post_id ) ) {
@@ -141,6 +147,13 @@ class Posts {
 		$attachment_urls = self::extract_attachment_urls( $activity['object'] );
 		if ( ! empty( $attachment_urls ) ) {
 			\update_post_meta( $post->ID, '_activitypub_attachments', $attachment_urls );
+		}
+
+		// Store emoji data BEFORE wp_update_post for hook-based replacement.
+		\delete_post_meta( $post->ID, '_activitypub_emoji' );
+		$emoji_data = Emoji::extract_emoji_data( $activity['object'] );
+		if ( ! empty( $emoji_data ) ) {
+			\update_post_meta( $post->ID, '_activitypub_emoji', $emoji_data );
 		}
 
 		$post_id = \wp_update_post( $post_array, true );
@@ -275,10 +288,9 @@ class Posts {
 
 		$gm_date = \gmdate( 'Y-m-d H:i:s', \strtotime( $activity['published'] ?? 'now' ) );
 
-		// Sanitize content, remove hashtags, and replace custom emoji.
+		// Sanitize content and remove hashtags.
 		$content = isset( $activity['content'] ) ? Sanitize::content( $activity['content'] ) : '';
 		$content = self::remove_hashtags( $content, $activity['tag'] ?? array() );
-		$content = Emoji::replace_custom_emoji( $content, $activity );
 
 		return array(
 			'post_title'    => isset( $activity['name'] ) ? \wp_strip_all_tags( $activity['name'] ) : '',
