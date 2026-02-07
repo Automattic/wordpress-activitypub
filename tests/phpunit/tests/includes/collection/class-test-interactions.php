@@ -738,7 +738,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 	 * Test emoji replacement in activity_to_comment.
 	 *
 	 * @covers ::activity_to_comment
-	 * @covers \Activitypub\Emoji::replace_custom_emoji
+	 * @covers \Activitypub\Emoji::wrap_in_content
 	 */
 	public function test_activity_to_comment_with_emoji() {
 		$actor_uri = 'http://example.org/users/emoji-user';
