@@ -62,29 +62,46 @@ class Test_Media extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test process_post_media skips non-existent posts.
+	 * Test process_attachments_meta skips posts without meta.
 	 */
-	public function test_process_post_media_non_existent_post() {
-		// Should not throw error for non-existent post.
-		Media::process_post_media( 999999 );
-		$this->assertTrue( true );
-	}
-
-	/**
-	 * Test process_post_media skips posts without content.
-	 */
-	public function test_process_post_media_empty_content() {
+	public function test_process_attachments_meta_no_meta() {
 		$post_id = self::factory()->post->create(
 			array(
 				'post_type'    => 'ap_post',
-				'post_content' => '',
+				'post_content' => 'Test content',
 			)
 		);
 
-		// Should not throw error.
-		Media::process_post_media( $post_id );
+		// Should not throw error when no _activitypub_attachments meta exists.
+		Media::process_attachments_meta( $post_id );
 		$this->assertTrue( true );
 
+		wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Test process_attachments_meta processes URLs from meta.
+	 */
+	public function test_process_attachments_meta_caches_urls() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'    => 'ap_post',
+				'post_content' => 'Test content',
+			)
+		);
+
+		// Add attachments meta.
+		\update_post_meta( $post_id, '_activitypub_attachments', array( 'https://example.com/image.jpg' ) );
+
+		// Process attachments.
+		Media::process_attachments_meta( $post_id );
+
+		// Meta should be cleared after processing.
+		$meta = \get_post_meta( $post_id, '_activitypub_attachments', true );
+		$this->assertEmpty( $meta );
+
+		// Clean up.
+		Media::invalidate_entity( $post_id );
 		wp_delete_post( $post_id, true );
 	}
 
@@ -153,38 +170,6 @@ class Test_Media extends WP_UnitTestCase {
 		$this->assertFalse( is_dir( $paths['basedir'] ) );
 	}
 
-	/**
-	 * Test save_post hook is always registered on init (for CDN plugin support).
-	 */
-	public function test_init_always_registers_save_post_hook() {
-		// Remove existing hooks.
-		remove_all_actions( 'save_post_ap_post' );
-
-		Media::init();
-
-		$this->assertNotFalse(
-			has_action( 'save_post_ap_post', array( Media::class, 'process_post_media' ) )
-		);
-	}
-
-	/**
-	 * Test save_post hook is registered even when caching is disabled.
-	 */
-	public function test_init_registers_save_post_hook_when_disabled() {
-		// Remove existing hooks.
-		remove_all_actions( 'save_post_ap_post' );
-
-		add_filter( 'activitypub_cache_media_enabled', '__return_false' );
-
-		Media::init();
-
-		// save_post should still be registered for CDN plugin support.
-		$this->assertNotFalse(
-			has_action( 'save_post_ap_post', array( Media::class, 'process_post_media' ) )
-		);
-
-		remove_filter( 'activitypub_cache_media_enabled', '__return_false' );
-	}
 
 	/**
 	 * Test maybe_cache filter is registered when caching is enabled.
@@ -253,11 +238,9 @@ class Test_Media extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that CDN filter can transform URLs when caching is disabled.
+	 * Test that CDN filter can transform URLs at render time via blocks.
 	 */
-	public function test_cdn_filter_works_when_caching_disabled() {
-		add_filter( 'activitypub_cache_media_enabled', '__return_false' );
-
+	public function test_cdn_filter_works_at_render_time() {
 		// Simulate a CDN filter.
 		$cdn_filter = function ( $url, $context ) {
 			if ( 'media' === $context ) {
@@ -267,29 +250,18 @@ class Test_Media extends WP_UnitTestCase {
 		};
 		add_filter( 'activitypub_remote_media_url', $cdn_filter, 10, 2 );
 
-		// Create a post with remote image.
+		// Create content with a media block (as it would be stored).
 		$remote_url = 'https://remote.example.com/image.jpg';
-		$post_id    = self::factory()->post->create(
-			array(
-				'post_type'    => 'ap_post',
-				'post_content' => '<img src="' . $remote_url . '">',
-			)
-		);
+		$content    = '<!-- wp:activitypub/media {"url":"' . $remote_url . '"} --><img src="' . $remote_url . '" alt="Test" /><!-- /wp:activitypub/media -->';
 
-		// Process the media.
-		Media::process_post_media( $post_id );
+		// Render the block.
+		$rendered = \do_blocks( $content );
 
-		// Get updated content.
-		$post    = get_post( $post_id );
-		$content = $post->post_content;
-
-		// URL should be transformed by CDN filter (URL changes to CDN URL).
-		$this->assertStringContainsString( 'https://cdn.example.com/', $content );
-		$this->assertStringNotContainsString( $remote_url, $content );
+		// URL should be transformed by CDN filter at render time.
+		$this->assertStringContainsString( 'https://cdn.example.com/', $rendered );
+		$this->assertStringNotContainsString( $remote_url, $rendered );
 
 		// Clean up.
 		remove_filter( 'activitypub_remote_media_url', $cdn_filter );
-		remove_filter( 'activitypub_cache_media_enabled', '__return_false' );
-		wp_delete_post( $post_id, true );
 	}
 }

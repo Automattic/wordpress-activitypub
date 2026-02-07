@@ -37,6 +37,37 @@ class Comment {
 		\add_filter( 'get_comment_author', array( static::class, 'render_emoji' ), 10, 2 );
 		\add_filter( 'comment_author', array( static::class, 'unescape_emoji' ), 20 ); // After esc_html().
 		\add_filter( 'rest_comment_query', array( static::class, 'rest_comment_query' ) );
+		\add_filter( 'comment_text', array( static::class, 'render_blocks' ), 5 ); // Before other filters.
+	}
+
+	/**
+	 * Render blocks in comment content.
+	 *
+	 * Comments don't automatically parse blocks like posts do.
+	 * This filter applies do_blocks() to render activitypub/emoji
+	 * and activitypub/media blocks in comment content.
+	 *
+	 * @param string $content The comment content.
+	 *
+	 * @return string The content with blocks rendered.
+	 */
+	public static function render_blocks( $content ) {
+		if ( empty( $content ) || ! \str_contains( $content, '<!-- wp:activitypub/' ) ) {
+			return $content;
+		}
+
+		$blocks = \parse_blocks( $content );
+		$output = '';
+
+		foreach ( $blocks as $block ) {
+			if ( ! empty( $block['blockName'] ) && \str_starts_with( $block['blockName'], 'activitypub/' ) ) {
+				$output .= \render_block( $block );
+			} else {
+				$output .= \serialize_block( $block );
+			}
+		}
+
+		return $output;
 	}
 
 	/**

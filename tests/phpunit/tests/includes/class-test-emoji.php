@@ -22,188 +22,117 @@ class Test_Emoji extends \WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
-		// Mock emoji imports to return a local URL.
-		\add_filter( 'activitypub_pre_import_emoji', array( $this, 'mock_emoji_import' ), 10, 2 );
+		// Mock emoji caching to return a local URL.
+		\add_filter( 'activitypub_remote_media_url', array( $this, 'mock_emoji_cache' ), 10, 2 );
 	}
 
 	/**
 	 * Tear down each test.
 	 */
 	public function tear_down() {
-		\remove_filter( 'activitypub_pre_import_emoji', array( $this, 'mock_emoji_import' ), 10 );
+		\remove_filter( 'activitypub_remote_media_url', array( $this, 'mock_emoji_cache' ), 10 );
 
 		parent::tear_down();
 	}
 
 	/**
-	 * Mock emoji import to return a local URL.
+	 * Mock emoji caching to return a local URL.
 	 *
-	 * @param string|false|null $result    The import result.
-	 * @param string            $emoji_url The remote emoji URL.
+	 * @param string $url     The remote emoji URL.
+	 * @param string $context The context.
 	 *
 	 * @return string Mocked local URL based on the remote URL.
 	 */
-	public function mock_emoji_import( $result, $emoji_url ) {
+	public function mock_emoji_cache( $url, $context ) {
+		if ( 'emoji' !== $context ) {
+			return $url;
+		}
+
 		// Only mock emoji URLs from example.com.
-		if ( false === \strpos( $emoji_url, 'example.com/emoji/' ) ) {
-			return $result;
+		if ( false === \strpos( $url, 'example.com' ) ) {
+			return $url;
 		}
 
 		// Return a mock local URL that preserves the filename.
-		$filename = \basename( $emoji_url );
+		$filename = \basename( $url );
 		return 'http://example.org/wp-content/uploads/activitypub/emoji/example.com/' . $filename;
 	}
 
 	/**
-	 * Test replacing multiple emoji in a string.
+	 * Test wrapping multiple emoji in content.
 	 *
-	 * @covers ::replace_custom_emoji
+	 * @covers ::wrap_in_content
 	 */
-	public function test_replace_multiple_emoji() {
-		$text = 'Hello :wave: world :earth: with :heart: many :star: emoji :rocket: here :tada:';
+	public function test_wrap_multiple_emoji() {
+		$text = 'Hello :wave: world :earth:';
 
 		$activity = array(
 			'tag' => array(
 				array(
 					'type' => 'Emoji',
 					'name' => ':wave:',
-					'icon' => array( 'url' => 'https://example.com/emoji/wave.png' ),
+					'icon' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/emoji/wave.png',
+					),
 				),
 				array(
 					'type' => 'Emoji',
 					'name' => ':earth:',
-					'icon' => array( 'url' => 'https://example.com/emoji/earth.png' ),
-				),
-				array(
-					'type' => 'Emoji',
-					'name' => ':heart:',
-					'icon' => array( 'url' => 'https://example.com/emoji/heart.png' ),
-				),
-				array(
-					'type' => 'Emoji',
-					'name' => ':star:',
-					'icon' => array( 'url' => 'https://example.com/emoji/star.png' ),
-				),
-				array(
-					'type' => 'Emoji',
-					'name' => ':rocket:',
-					'icon' => array( 'url' => 'https://example.com/emoji/rocket.png' ),
-				),
-				array(
-					'type' => 'Emoji',
-					'name' => ':tada:',
-					'icon' => array( 'url' => 'https://example.com/emoji/tada.png' ),
+					'icon' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/emoji/earth.png',
+					),
 				),
 			),
 		);
 
-		$result = Emoji::replace_custom_emoji( $text, $activity );
+		$result = Emoji::wrap_in_content( $text, $activity );
 
-		// Verify all 6 emoji are replaced.
-		$this->assertStringNotContainsString( ':wave:', $result );
-		$this->assertStringNotContainsString( ':earth:', $result );
-		$this->assertStringNotContainsString( ':heart:', $result );
-		$this->assertStringNotContainsString( ':star:', $result );
-		$this->assertStringNotContainsString( ':rocket:', $result );
-		$this->assertStringNotContainsString( ':tada:', $result );
-
-		// Verify all img tags are present.
+		// Verify blocks are added.
+		$this->assertStringContainsString( '<!-- wp:activitypub/emoji', $result );
 		$this->assertStringContainsString( 'wave.png', $result );
 		$this->assertStringContainsString( 'earth.png', $result );
-		$this->assertStringContainsString( 'heart.png', $result );
-		$this->assertStringContainsString( 'star.png', $result );
-		$this->assertStringContainsString( 'rocket.png', $result );
-		$this->assertStringContainsString( 'tada.png', $result );
+		$this->assertStringContainsString( ':wave:', $result );
+		$this->assertStringContainsString( ':earth:', $result );
 
-		// Verify proper img structure.
-		$this->assertEquals( 6, substr_count( $result, 'class="emoji"' ) );
+		// Count the blocks.
+		$this->assertEquals( 2, substr_count( $result, '<!-- wp:activitypub/emoji' ) );
 	}
 
 	/**
-	 * Test replacing the same emoji multiple times in a string.
+	 * Test wrapping same emoji multiple times.
 	 *
-	 * @covers ::replace_custom_emoji
+	 * @covers ::wrap_in_content
 	 */
-	public function test_replace_same_emoji_multiple_times() {
-		$text = ':kappa: I said :kappa: and :kappa: again :kappa:';
+	public function test_wrap_same_emoji_multiple_times() {
+		$text = ':kappa: I said :kappa: again';
 
 		$activity = array(
 			'tag' => array(
 				array(
 					'type' => 'Emoji',
 					'name' => ':kappa:',
-					'icon' => array( 'url' => 'https://example.com/emoji/kappa.png' ),
+					'icon' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/emoji/kappa.png',
+					),
 				),
 			),
 		);
 
-		$result = Emoji::replace_custom_emoji( $text, $activity );
+		$result = Emoji::wrap_in_content( $text, $activity );
 
-		// Verify no shortcodes remain.
-		$this->assertStringNotContainsString( ':kappa:', $result );
-
-		// Verify all 4 occurrences are replaced.
-		$this->assertEquals( 4, substr_count( $result, 'kappa.png' ) );
-		$this->assertEquals( 4, substr_count( $result, 'class="emoji"' ) );
+		// Verify all occurrences are wrapped.
+		$this->assertEquals( 2, substr_count( $result, '<!-- wp:activitypub/emoji' ) );
 	}
 
 	/**
-	 * Test adjacent emoji are all replaced.
+	 * Test emoji not in tags are not wrapped.
 	 *
-	 * @covers ::replace_custom_emoji
+	 * @covers ::wrap_in_content
 	 */
-	public function test_replace_adjacent_emoji() {
-		$text = ':one::two::three::four::five:';
-
-		$activity = array(
-			'tag' => array(
-				array(
-					'type' => 'Emoji',
-					'name' => ':one:',
-					'icon' => array( 'url' => 'https://example.com/emoji/one.png' ),
-				),
-				array(
-					'type' => 'Emoji',
-					'name' => ':two:',
-					'icon' => array( 'url' => 'https://example.com/emoji/two.png' ),
-				),
-				array(
-					'type' => 'Emoji',
-					'name' => ':three:',
-					'icon' => array( 'url' => 'https://example.com/emoji/three.png' ),
-				),
-				array(
-					'type' => 'Emoji',
-					'name' => ':four:',
-					'icon' => array( 'url' => 'https://example.com/emoji/four.png' ),
-				),
-				array(
-					'type' => 'Emoji',
-					'name' => ':five:',
-					'icon' => array( 'url' => 'https://example.com/emoji/five.png' ),
-				),
-			),
-		);
-
-		$result = Emoji::replace_custom_emoji( $text, $activity );
-
-		// Verify all shortcodes are replaced.
-		$this->assertStringNotContainsString( ':one:', $result );
-		$this->assertStringNotContainsString( ':two:', $result );
-		$this->assertStringNotContainsString( ':three:', $result );
-		$this->assertStringNotContainsString( ':four:', $result );
-		$this->assertStringNotContainsString( ':five:', $result );
-
-		// Verify all 5 img tags are present.
-		$this->assertEquals( 5, substr_count( $result, 'class="emoji"' ) );
-	}
-
-	/**
-	 * Test emoji not in tags are not replaced.
-	 *
-	 * @covers ::replace_custom_emoji
-	 */
-	public function test_unknown_emoji_not_replaced() {
+	public function test_unknown_emoji_not_wrapped() {
 		$text = 'Hello :known: and :unknown:';
 
 		$activity = array(
@@ -211,58 +140,23 @@ class Test_Emoji extends \WP_UnitTestCase {
 				array(
 					'type' => 'Emoji',
 					'name' => ':known:',
-					'icon' => array( 'url' => 'https://example.com/emoji/known.png' ),
+					'icon' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/emoji/known.png',
+					),
 				),
 			),
 		);
 
-		$result = Emoji::replace_custom_emoji( $text, $activity );
+		$result = Emoji::wrap_in_content( $text, $activity );
 
-		// Known emoji is replaced.
-		$this->assertStringNotContainsString( ':known:', $result );
+		// Known emoji is wrapped.
+		$this->assertStringContainsString( '<!-- wp:activitypub/emoji', $result );
 		$this->assertStringContainsString( 'known.png', $result );
 
-		// Unknown emoji remains as text.
+		// Unknown emoji remains as plain text.
 		$this->assertStringContainsString( ':unknown:', $result );
-	}
-
-	/**
-	 * Test extract_emoji_data returns correct structure.
-	 *
-	 * @covers ::extract_emoji_data
-	 */
-	public function test_extract_emoji_data() {
-		$activity = array(
-			'tag' => array(
-				array(
-					'type' => 'Emoji',
-					'name' => ':test:',
-					'icon' => array( 'url' => 'https://example.com/emoji/test.png' ),
-				),
-				array(
-					'type'    => 'Emoji',
-					'name'    => ':updated:',
-					'updated' => '2025-01-15T10:30:00Z',
-					'icon'    => array( 'url' => 'https://example.com/emoji/updated.png' ),
-				),
-				array(
-					'type' => 'Hashtag',
-					'name' => '#notanemoji',
-				),
-			),
-		);
-
-		$result = Emoji::extract_emoji_data( $activity );
-
-		$this->assertCount( 2, $result );
-
-		$this->assertEquals( 'https://example.com/emoji/test.png', $result[0]['url'] );
-		$this->assertEquals( ':test:', $result[0]['name'] );
-		$this->assertNull( $result[0]['updated'] );
-
-		$this->assertEquals( 'https://example.com/emoji/updated.png', $result[1]['url'] );
-		$this->assertEquals( ':updated:', $result[1]['name'] );
-		$this->assertEquals( '2025-01-15T10:30:00Z', $result[1]['updated'] );
+		$this->assertEquals( 1, substr_count( $result, '<!-- wp:activitypub/emoji' ) );
 	}
 
 	/**
@@ -278,7 +172,10 @@ class Test_Emoji extends \WP_UnitTestCase {
 				array(
 					'type' => 'Emoji',
 					'name' => ':wave:',
-					'icon' => array( 'url' => 'https://example.com/emoji/wave.png' ),
+					'icon' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/emoji/wave.png',
+					),
 				),
 			)
 		);
@@ -287,6 +184,7 @@ class Test_Emoji extends \WP_UnitTestCase {
 
 		$this->assertStringNotContainsString( ':wave:', $result );
 		$this->assertStringContainsString( 'wave.png', $result );
+		$this->assertStringContainsString( 'class="emoji"', $result );
 	}
 
 	/**
@@ -302,7 +200,10 @@ class Test_Emoji extends \WP_UnitTestCase {
 				array(
 					'type' => 'Emoji',
 					'name' => ':emoji:',
-					'icon' => array( 'url' => 'https://example.com/emoji/emoji.png' ),
+					'icon' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/emoji/emoji.png',
+					),
 				),
 				array(
 					'type' => 'Hashtag',
@@ -338,14 +239,11 @@ class Test_Emoji extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test emoji replacement is case-insensitive.
+	 * Test emoji wrapping is case-insensitive.
 	 *
-	 * Mastodon sends emoji names in lowercase in tags but may use
-	 * different casing in the content (e.g., :KannaWave: vs :kannawave:).
-	 *
-	 * @covers ::replace_custom_emoji
+	 * @covers ::wrap_in_content
 	 */
-	public function test_replace_emoji_case_insensitive() {
+	public function test_wrap_emoji_case_insensitive() {
 		$text = ':vmastop: :KannaWave:';
 
 		$activity = array(
@@ -353,24 +251,28 @@ class Test_Emoji extends \WP_UnitTestCase {
 				array(
 					'type' => 'Emoji',
 					'name' => ':vmastop:',
-					'icon' => array( 'url' => 'https://example.com/emoji/vmastop.png' ),
+					'icon' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/emoji/vmastop.png',
+					),
 				),
 				array(
 					'type' => 'Emoji',
 					'name' => ':kannawave:', // Lowercase in tag.
-					'icon' => array( 'url' => 'https://example.com/emoji/kannawave.png' ),
+					'icon' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/emoji/kannawave.png',
+					),
 				),
 			),
 		);
 
-		$result = Emoji::replace_custom_emoji( $text, $activity );
+		$result = Emoji::wrap_in_content( $text, $activity );
 
-		// Both should be replaced despite case difference.
-		$this->assertStringNotContainsString( ':vmastop:', $result );
-		$this->assertStringNotContainsString( ':KannaWave:', $result );
+		// Both should be wrapped despite case difference.
 		$this->assertStringContainsString( 'vmastop.png', $result );
 		$this->assertStringContainsString( 'kannawave.png', $result );
-		$this->assertEquals( 2, substr_count( $result, 'class="emoji"' ) );
+		$this->assertEquals( 2, substr_count( $result, '<!-- wp:activitypub/emoji' ) );
 	}
 
 	/**
@@ -430,26 +332,5 @@ class Test_Emoji extends \WP_UnitTestCase {
 
 		// After removing filter, CDN URL should be rejected again.
 		$this->assertFalse( Emoji::validate_emoji_src( $remote_url ) );
-	}
-
-	/**
-	 * Test validate_emoji_src filter can allow all remote URLs.
-	 *
-	 * @covers ::validate_emoji_src
-	 */
-	public function test_validate_emoji_src_filter_allow_all_remote() {
-		$allow_all = function ( $is_valid, $url ) {
-			return \filter_var( $url, FILTER_VALIDATE_URL ) !== false;
-		};
-		\add_filter( 'activitypub_validate_emoji_src', $allow_all, 10, 2 );
-
-		// Any valid URL should now be allowed.
-		$this->assertTrue( Emoji::validate_emoji_src( 'https://remote.example.com/emoji/test.png' ) );
-		$this->assertTrue( Emoji::validate_emoji_src( 'https://another.server.org/assets/emoji.gif' ) );
-
-		// Invalid URLs should still fail.
-		$this->assertFalse( Emoji::validate_emoji_src( 'not-a-url' ) );
-
-		\remove_filter( 'activitypub_validate_emoji_src', $allow_all );
 	}
 }

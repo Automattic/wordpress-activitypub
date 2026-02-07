@@ -84,10 +84,7 @@ class Test_Cache extends WP_UnitTestCase {
 			has_filter( 'activitypub_remote_media_url', array( Avatar::class, 'maybe_cache' ) )
 		);
 
-		// Media uses the save_post hook for URL processing and the filter for caching.
-		$this->assertNotFalse(
-			has_action( 'save_post_ap_post', array( Media::class, 'process_post_media' ) )
-		);
+		// Media uses the filter for lazy caching (blocks handle URL replacement at render time).
 		$this->assertNotFalse(
 			has_filter( 'activitypub_remote_media_url', array( Media::class, 'maybe_cache' ) )
 		);

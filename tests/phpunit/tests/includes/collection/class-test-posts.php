@@ -484,7 +484,7 @@ class Test_Posts extends \WP_UnitTestCase {
 		$this->assertInstanceOf( '\WP_Post', $result );
 		$this->assertEquals( 'Post with Image', $result->post_title );
 
-		// Verify file was created in activitypub directory.
+		// Verify file was created in activitypub directory (from attachments meta).
 		$upload_dir = \wp_upload_dir();
 		$file_dir   = $upload_dir['basedir'] . Media::BASE_DIR_POSTS . $result->ID;
 		$this->assertTrue( file_exists( $file_dir ), 'ActivityPub directory should exist' );
@@ -493,8 +493,9 @@ class Test_Posts extends \WP_UnitTestCase {
 		$files = glob( $file_dir . '/*' );
 		$this->assertCount( 1, $files, 'One file should be created' );
 
-		// Verify content includes the cached file URL.
-		$this->assertStringContainsString( Media::BASE_DIR_POSTS . $result->ID . '/', $result->post_content );
+		// Verify content has the media block with original URL (caching happens at render time).
+		$this->assertStringContainsString( '<!-- wp:activitypub/media', $result->post_content );
+		$this->assertStringContainsString( 'https://example.com/image.jpg', $result->post_content );
 	}
 
 	/**

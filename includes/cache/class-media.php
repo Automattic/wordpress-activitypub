@@ -126,8 +126,8 @@ class Media extends File {
 	 * Initialize the cache handler.
 	 */
 	public static function init() {
-		// Always process media URLs on save (allows CDN plugins to intercept via filter).
-		\add_action( 'save_post_' . Posts::POST_TYPE, array( self::class, 'process_post_media' ), 20 );
+		// Process attachments meta on save for pre-caching (content is handled by blocks).
+		\add_action( 'save_post_' . Posts::POST_TYPE, array( self::class, 'process_attachments_meta' ), 20 );
 
 		// Only register local caching filter when caching is enabled.
 		if ( self::is_enabled() ) {
@@ -162,47 +162,30 @@ class Media extends File {
 	}
 
 	/**
-	 * Process media URLs from post content and attachments meta.
+	 * Process attachment URLs from meta for pre-caching.
 	 *
-	 * Processes remote image URLs from both:
-	 * - Image tags in post content
-	 * - Attachment URLs stored in _activitypub_attachments meta
-	 *
-	 * Each URL is passed through the `activitypub_remote_media_url` filter,
-	 * allowing local caching (when enabled) or CDN proxy plugins to transform URLs.
+	 * Processes remote URLs stored in _activitypub_attachments meta through
+	 * the activitypub_remote_media_url filter for pre-caching. Content images
+	 * are handled by blocks at render time.
 	 *
 	 * @param int $post_id The post ID.
 	 */
-	public static function process_post_media( $post_id ) {
-		$post = \get_post( $post_id );
-		if ( ! $post ) {
+	public static function process_attachments_meta( $post_id ) {
+		// Get attachment URLs from meta.
+		$attachment_urls = \get_post_meta( $post_id, '_activitypub_attachments', true );
+
+		// Clear the attachments meta.
+		\delete_post_meta( $post_id, '_activitypub_attachments' );
+
+		if ( empty( $attachment_urls ) || ! \is_array( $attachment_urls ) ) {
 			return;
 		}
 
-		// Collect URLs from both content and attachments meta.
-		$urls_to_process = array();
-		$upload_base     = \wp_upload_dir()['baseurl'];
-
-		// Find image URLs in content.
-		if ( ! empty( $post->post_content ) ) {
-			\preg_match_all( '/<img[^>]+src=["\']([^"\']+)["\'][^>]*>/i', $post->post_content, $matches );
-			if ( ! empty( $matches[1] ) ) {
-				$urls_to_process = array_merge( $urls_to_process, $matches[1] );
-			}
-		}
-
-		// Get attachment URLs from meta.
-		$attachment_urls = \get_post_meta( $post_id, '_activitypub_attachments', true );
-		if ( ! empty( $attachment_urls ) && \is_array( $attachment_urls ) ) {
-			$urls_to_process = array_merge( $urls_to_process, $attachment_urls );
-		}
-
-		// Remove duplicates.
-		$urls_to_process = array_unique( $urls_to_process );
+		$upload_base = \wp_upload_dir()['baseurl'];
 
 		// Filter to only remote URLs that need processing.
 		$remote_urls = array();
-		foreach ( $urls_to_process as $url ) {
+		foreach ( $attachment_urls as $url ) {
 			// Skip non-http URLs (data URIs, relative paths).
 			if ( ! \preg_match( '#^https?://#i', $url ) ) {
 				continue;
@@ -216,10 +199,6 @@ class Media extends File {
 			$remote_urls[] = $url;
 		}
 
-		// Clear the attachments meta after processing.
-		\delete_post_meta( $post_id, '_activitypub_attachments' );
-
-		// Only proceed if there are remote URLs to process.
 		if ( empty( $remote_urls ) ) {
 			return;
 		}
@@ -229,9 +208,7 @@ class Media extends File {
 			self::invalidate_entity( $post_id );
 		}
 
-		$content      = $post->post_content;
-		$urls_changed = false;
-
+		// Process each URL through the filter for pre-caching.
 		foreach ( $remote_urls as $url ) {
 			/**
 			 * Filters a remote media URL for caching or CDN proxy.
@@ -246,35 +223,7 @@ class Media extends File {
 			 * @param int|null $entity_id The entity ID (post ID).
 			 * @param array    $options   Optional. Additional options.
 			 */
-			$processed_url = \apply_filters( 'activitypub_remote_media_url', $url, self::CONTEXT, $post_id, array() );
-
-			if ( $processed_url && $processed_url !== $url && ! empty( $content ) ) {
-				// Replace only in <img> src attributes to avoid changing URLs in links or other contexts.
-				$pattern     = '~(<img\b[^>]*\ssrc=)([\'"])' . \preg_quote( $url, '~' ) . '(\2)~i';
-				$replacement = '$1$2' . $processed_url . '$3';
-				$updated     = \preg_replace( $pattern, $replacement, $content, -1, $replaced_count );
-
-				if ( null !== $updated && $replaced_count > 0 ) {
-					$content      = $updated;
-					$urls_changed = true;
-				}
-			}
-		}
-
-		// Update post content if URLs were replaced.
-		if ( $urls_changed ) {
-			// Unhook to prevent infinite loop.
-			\remove_action( 'save_post_' . Posts::POST_TYPE, array( self::class, 'process_post_media' ), 20 );
-
-			\wp_update_post(
-				array(
-					'ID'           => $post_id,
-					'post_content' => $content,
-				)
-			);
-
-			// Re-hook.
-			\add_action( 'save_post_' . Posts::POST_TYPE, array( self::class, 'process_post_media' ), 20 );
+			\apply_filters( 'activitypub_remote_media_url', $url, self::CONTEXT, $post_id, array() );
 		}
 	}
 

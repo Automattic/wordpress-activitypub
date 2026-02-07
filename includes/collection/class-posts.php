@@ -12,6 +12,7 @@ use Activitypub\Sanitize;
 
 use function Activitypub\generate_post_summary;
 use function Activitypub\object_to_uri;
+use function Activitypub\wrap_media_in_content;
 
 /**
  * Posts collection.
@@ -275,10 +276,11 @@ class Posts {
 
 		$gm_date = \gmdate( 'Y-m-d H:i:s', \strtotime( $activity['published'] ?? 'now' ) );
 
-		// Sanitize content, remove hashtags, and prepare emoji at insert-time.
+		// Sanitize content, remove hashtags, and wrap emoji/media in blocks.
 		$content = isset( $activity['content'] ) ? Sanitize::content( $activity['content'] ) : '';
 		$content = self::remove_hashtags( $content, $activity['tag'] ?? array() );
-		$content = Emoji::prepare_post_content( $content, $activity );
+		$content = Emoji::wrap_in_content( $content, $activity );
+		$content = wrap_media_in_content( $content );
 
 		return array(
 			'post_title'    => isset( $activity['name'] ) ? \wp_strip_all_tags( $activity['name'] ) : '',
