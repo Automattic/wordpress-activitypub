@@ -766,7 +766,19 @@ class Remote_Actors {
 		$local_url = Attachments::save_actor_avatar( $post_id, $remote_avatar_url );
 
 		// Store the local URL if caching succeeded, otherwise store the remote URL.
-		$avatar_url = $local_url ?: $remote_avatar_url;
+		if ( $local_url ) {
+			$avatar_url = $local_url;
+		} else {
+			/**
+			 * Filters remote avatar URLs when local caching is skipped.
+			 *
+			 * Allows modifying remote URLs to use a CDN or image proxy service.
+			 *
+			 * @param string $url     The remote avatar URL.
+			 * @param string $context The context: 'avatar'.
+			 */
+			$avatar_url = \apply_filters( 'activitypub_remote_media_url', $remote_avatar_url, 'image', 'avatar' );
+		}
 		\update_post_meta( $post_id, '_activitypub_avatar_url', \esc_url_raw( $avatar_url ) );
 
 		return $avatar_url;

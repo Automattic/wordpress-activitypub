@@ -697,6 +697,51 @@ class Test_Attachments extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that save_file returns the correct mime type after image optimization.
+	 *
+	 * Optimization can change the format (e.g., JPEG to WebP), so the returned
+	 * mime_type must reflect the actual file, not the original.
+	 *
+	 * @covers ::save_file
+	 * @covers ::optimize_image
+	 */
+	public function test_save_file_mime_type_matches_after_optimization() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type' => 'ap_post',
+			)
+		);
+
+		$attachments = array(
+			array(
+				'url'       => 'https://example.com/photo.png',
+				'mediaType' => 'image/png',
+				'name'      => 'Test Photo',
+				'type'      => 'Image',
+			),
+		);
+
+		$result = Attachments::import_post_files( $attachments, $post_id );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 1, $result );
+
+		$url       = $result[0]['url'];
+		$mime_type = $result[0]['mime_type'];
+		$extension = pathinfo( wp_parse_url( $url, PHP_URL_PATH ), PATHINFO_EXTENSION );
+
+		// The mime type must match the actual file extension.
+		$expected_mimes = array(
+			'webp' => 'image/webp',
+			'png'  => 'image/png',
+			'jpg'  => 'image/jpeg',
+		);
+
+		$this->assertArrayHasKey( $extension, $expected_mimes, "Unexpected extension: $extension" );
+		$this->assertSame( $expected_mimes[ $extension ], $mime_type, "Mime type '$mime_type' does not match extension '$extension'" );
+	}
+
+	/**
 	 * Test that video attachments use remote URL directly without downloading.
 	 *
 	 * @covers ::save_file
@@ -1055,37 +1100,6 @@ class Test_Attachments extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test get_unique_path generates unique filenames.
-	 *
-	 * @covers ::get_unique_path
-	 */
-	public function test_get_unique_path() {
-		$method = new \ReflectionMethod( Attachments::class, 'get_unique_path' );
-		if ( \PHP_VERSION_ID < 80100 ) {
-			$method->setAccessible( true );
-		}
-
-		$temp_dir = sys_get_temp_dir();
-
-		// Test with non-existent file - should return same path.
-		$non_existent = $temp_dir . '/unique-test-' . uniqid() . '.jpg';
-		$result       = $method->invoke( null, $non_existent );
-		$this->assertEquals( $non_existent, $result );
-
-		// Test with existing file - should return path with counter.
-		$existing_file = wp_tempnam( 'existing.jpg' ) . '.jpg';
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test file creation.
-		file_put_contents( $existing_file, 'test' );
-
-		$result = $method->invoke( null, $existing_file );
-		$this->assertNotEquals( $existing_file, $result );
-		$this->assertStringContainsString( '-1.jpg', $result );
-
-		// Clean up.
-		wp_delete_file( $existing_file );
-	}
-
-	/**
 	 * Test save_actor_avatar with valid URL.
 	 *
 	 * @covers ::save_actor_avatar
@@ -1258,7 +1272,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 
 		$this->assertNotFalse( $result );
 		$this->assertStringContainsString( '/activitypub/emoji/', $result );
-		$this->assertStringContainsString( 'kappa.png', $result );
+		$this->assertStringContainsString( 'kappa.', $result );
 	}
 
 	/**
@@ -1309,9 +1323,11 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$this->assertNotFalse( $first_result );
 
 		// Get the cached file path and modify its timestamp to be old.
-		$upload_dir = \wp_upload_dir();
-		$file_path  = $upload_dir['basedir'] . '/activitypub/emoji/example.com/new.png';
-		$this->assertTrue( \file_exists( $file_path ), 'Cached file should exist' );
+		$upload_dir   = \wp_upload_dir();
+		$glob_pattern = $upload_dir['basedir'] . '/activitypub/emoji/example.com/new.*';
+		$matches      = \glob( $glob_pattern );
+		$this->assertNotEmpty( $matches, 'Cached file should exist' );
+		$file_path = \reset( $matches );
 
 		// Set file modification time to the past.
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_touch -- Direct touch() needed for test timestamp manipulation.
@@ -1452,5 +1468,458 @@ class Test_Attachments extends \WP_UnitTestCase {
 
 		$this->assertNotFalse( $result );
 		$this->assertStringContainsString( 'normal-emoji.png', $result );
+	}
+
+	/**
+	 * Test is_sideloading_enabled returns true by default.
+	 *
+	 * @covers ::is_sideloading_enabled
+	 */
+	public function test_is_sideloading_enabled_default() {
+		$this->assertTrue( Attachments::is_sideloading_enabled() );
+	}
+
+	/**
+	 * Test is_sideloading_enabled respects filter.
+	 *
+	 * @covers ::is_sideloading_enabled
+	 */
+	public function test_is_sideloading_enabled_filter() {
+		\add_filter( 'activitypub_sideloading_enabled', '__return_false' );
+
+		$this->assertFalse( Attachments::is_sideloading_enabled() );
+
+		\remove_filter( 'activitypub_sideloading_enabled', '__return_false' );
+
+		$this->assertTrue( Attachments::is_sideloading_enabled() );
+	}
+
+	/**
+	 * Test import_emoji returns filtered remote URL when sideloading disabled.
+	 *
+	 * @covers ::import_emoji
+	 */
+	public function test_import_emoji_returns_remote_url_when_sideloading_disabled() {
+		\add_filter( 'activitypub_sideloading_enabled', '__return_false' );
+
+		$emoji_url = 'https://example.com/emoji/test.png';
+		$result    = Attachments::import_emoji( $emoji_url );
+
+		// Should return the remote URL (not false, not local).
+		$this->assertSame( $emoji_url, $result );
+
+		\remove_filter( 'activitypub_sideloading_enabled', '__return_false' );
+	}
+
+	/**
+	 * Test import_emoji applies activitypub_remote_media_url filter when sideloading disabled.
+	 *
+	 * @covers ::import_emoji
+	 */
+	public function test_import_emoji_applies_cdn_filter_when_sideloading_disabled() {
+		\add_filter( 'activitypub_sideloading_enabled', '__return_false' );
+
+		$cdn_filter = function ( $url, $mime_type, $context ) {
+			if ( 'emoji' === $context ) {
+				return 'https://cdn.example.com/' . basename( $url );
+			}
+			return $url;
+		};
+		\add_filter( 'activitypub_remote_media_url', $cdn_filter, 10, 3 );
+
+		$emoji_url = 'https://example.com/emoji/test.png';
+		$result    = Attachments::import_emoji( $emoji_url );
+
+		$this->assertSame( 'https://cdn.example.com/test.png', $result );
+
+		\remove_filter( 'activitypub_remote_media_url', $cdn_filter );
+		\remove_filter( 'activitypub_sideloading_enabled', '__return_false' );
+	}
+
+	/**
+	 * Test save_file returns remote URL when sideloading disabled.
+	 *
+	 * @covers ::save_file
+	 */
+	public function test_save_file_returns_remote_url_when_sideloading_disabled() {
+		\add_filter( 'activitypub_sideloading_enabled', '__return_false' );
+
+		$attachment_data = array(
+			'url'       => 'https://example.com/image.jpg',
+			'mediaType' => 'image/jpeg',
+			'name'      => 'Test image',
+		);
+
+		$method = new \ReflectionMethod( Attachments::class, 'save_file' );
+		$method->setAccessible( true );
+
+		$result = $method->invoke( null, $attachment_data, self::$post_id, 'post' );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( 'https://example.com/image.jpg', $result['url'] );
+		$this->assertSame( 'image/jpeg', $result['mime_type'] );
+		$this->assertSame( 'Test image', $result['alt'] );
+
+		\remove_filter( 'activitypub_sideloading_enabled', '__return_false' );
+	}
+
+	/**
+	 * Test save_file applies activitypub_remote_media_url filter when sideloading disabled.
+	 *
+	 * @covers ::save_file
+	 */
+	public function test_save_file_applies_cdn_filter_when_sideloading_disabled() {
+		\add_filter( 'activitypub_sideloading_enabled', '__return_false' );
+
+		$received_main_type = null;
+		$cdn_filter         = function ( $url, $main_type, $context ) use ( &$received_main_type ) {
+			$received_main_type = $main_type;
+			if ( 'attachment' === $context ) {
+				return 'https://cdn.example.com/' . basename( $url );
+			}
+			return $url;
+		};
+		\add_filter( 'activitypub_remote_media_url', $cdn_filter, 10, 3 );
+
+		$attachment_data = array(
+			'url'       => 'https://example.com/image.jpg',
+			'mediaType' => 'image/jpeg',
+			'name'      => 'Test image',
+		);
+
+		$method = new \ReflectionMethod( Attachments::class, 'save_file' );
+		$method->setAccessible( true );
+
+		$result = $method->invoke( null, $attachment_data, self::$post_id, 'post' );
+
+		$this->assertSame( 'https://cdn.example.com/image.jpg', $result['url'] );
+		// Verify main type is passed, not full MIME type.
+		$this->assertSame( 'image', $received_main_type );
+
+		\remove_filter( 'activitypub_remote_media_url', $cdn_filter );
+		\remove_filter( 'activitypub_sideloading_enabled', '__return_false' );
+	}
+
+	/**
+	 * Test save_actor_avatar returns false when sideloading disabled.
+	 *
+	 * @covers ::save_actor_avatar
+	 */
+	public function test_save_actor_avatar_returns_false_when_sideloading_disabled() {
+		\add_filter( 'activitypub_sideloading_enabled', '__return_false' );
+
+		$result = Attachments::save_actor_avatar( 123, 'https://example.com/avatar.jpg' );
+
+		$this->assertFalse( $result );
+
+		\remove_filter( 'activitypub_sideloading_enabled', '__return_false' );
+	}
+
+	/**
+	 * Test save_file still downloads video/audio even when sideloading enabled.
+	 *
+	 * Video and audio files always return remote URL regardless of sideloading setting.
+	 *
+	 * @covers ::save_file
+	 */
+	public function test_save_file_returns_remote_url_for_video_audio() {
+		$method = new \ReflectionMethod( Attachments::class, 'save_file' );
+		$method->setAccessible( true );
+
+		// Test video.
+		$video_data = array(
+			'url'       => 'https://example.com/video.mp4',
+			'mediaType' => 'video/mp4',
+			'name'      => 'Test video',
+		);
+		$result     = $method->invoke( null, $video_data, self::$post_id, 'post' );
+
+		$this->assertSame( 'https://example.com/video.mp4', $result['url'] );
+
+		// Test audio.
+		$audio_data = array(
+			'url'       => 'https://example.com/audio.mp3',
+			'mediaType' => 'audio/mpeg',
+			'name'      => 'Test audio',
+		);
+		$result     = $method->invoke( null, $audio_data, self::$post_id, 'post' );
+
+		$this->assertSame( 'https://example.com/audio.mp3', $result['url'] );
+	}
+
+	/**
+	 * Test is_safe_url validates URLs correctly.
+	 *
+	 * @covers ::is_safe_url
+	 * @dataProvider data_is_safe_url
+	 *
+	 * @param string $url      The URL to validate.
+	 * @param bool   $expected Expected result.
+	 */
+	public function test_is_safe_url( $url, $expected ) {
+		$method = new \ReflectionMethod( Attachments::class, 'is_safe_url' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$this->assertSame( $expected, $method->invoke( null, $url ) );
+	}
+
+	/**
+	 * Data provider for is_safe_url tests.
+	 *
+	 * @return array Test cases: [url, expected_result].
+	 */
+	public function data_is_safe_url() {
+		return array(
+			'valid_https'       => array( 'https://example.com/image.jpg', true ),
+			'valid_http'        => array( 'http://example.com/image.jpg', true ),
+			'empty_string'      => array( '', false ),
+			'null_value'        => array( null, false ),
+			'invalid_url'       => array( 'not-a-url', false ),
+			'javascript_scheme' => array( 'javascript:alert(1)', false ),
+			'data_uri'          => array( 'data:image/png;base64,abc', false ),
+			'file_scheme'       => array( 'file:///etc/passwd', false ),
+			'ftp_scheme'        => array( 'ftp://example.com/file', false ),
+		);
+	}
+
+	/**
+	 * Test is_valid_file_path validates paths correctly.
+	 *
+	 * @covers ::is_valid_file_path
+	 */
+	public function test_is_valid_file_path_allows_content_dir() {
+		$method = new \ReflectionMethod( Attachments::class, 'is_valid_file_path' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		// Use the test image from assets which is in the plugin directory.
+		$test_image = AP_TESTS_DIR . '/data/assets/test.jpg';
+		$this->assertTrue( $method->invoke( null, $test_image ) );
+	}
+
+	/**
+	 * Test is_valid_file_path rejects paths outside allowed directories.
+	 *
+	 * @covers ::is_valid_file_path
+	 */
+	public function test_is_valid_file_path_rejects_outside_paths() {
+		$method = new \ReflectionMethod( Attachments::class, 'is_valid_file_path' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		// Non-existent path.
+		$this->assertFalse( $method->invoke( null, '/nonexistent/path/file.jpg' ) );
+
+		// Path outside allowed directories (using system temp as example).
+		$this->assertFalse( $method->invoke( null, '/etc/passwd' ) );
+	}
+
+	/**
+	 * Test get_base_filename_from_url extracts filenames correctly.
+	 *
+	 * @covers ::get_base_filename_from_url
+	 * @dataProvider data_get_base_filename_from_url
+	 *
+	 * @param string $url      The URL to extract filename from.
+	 * @param string $expected Expected base filename.
+	 */
+	public function test_get_base_filename_from_url( $url, $expected ) {
+		$method = new \ReflectionMethod( Attachments::class, 'get_base_filename_from_url' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$result = $method->invoke( null, $url );
+
+		if ( 'generated' === $expected ) {
+			// For empty filenames, a random one is generated.
+			$this->assertMatchesRegularExpression( '/^image-[a-zA-Z0-9]{8}$/', $result );
+		} else {
+			$this->assertSame( $expected, $result );
+		}
+	}
+
+	/**
+	 * Data provider for get_base_filename_from_url tests.
+	 *
+	 * @return array Test cases: [url, expected_base_filename].
+	 */
+	public function data_get_base_filename_from_url() {
+		return array(
+			'simple'           => array( 'https://example.com/image.jpg', 'image' ),
+			'double_extension' => array( 'https://example.com/shell.php.jpg', 'shell' ),
+			'multiple_dots'    => array( 'https://example.com/profile.photo.v2.jpg', 'profile' ),
+			'query_string'     => array( 'https://example.com/image.jpg?size=large', 'image' ),
+			'no_extension'     => array( 'https://example.com/filename', 'filename' ),
+			'path_with_dirs'   => array( 'https://example.com/path/to/image.png', 'image' ),
+			'empty_filename'   => array( 'https://example.com/', 'generated' ),
+			'unicode_filename' => array( 'https://example.com/日本語.jpg', '日本語' ),
+		);
+	}
+
+	/**
+	 * Test get_base_filename_from_url limits length.
+	 *
+	 * @covers ::get_base_filename_from_url
+	 */
+	public function test_get_base_filename_from_url_limits_length() {
+		$method = new \ReflectionMethod( Attachments::class, 'get_base_filename_from_url' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		// Create URL with very long filename (300 characters).
+		$long_name = str_repeat( 'a', 300 );
+		$url       = 'https://example.com/' . $long_name . '.jpg';
+		$result    = $method->invoke( null, $url );
+
+		$this->assertLessThanOrEqual( 200, strlen( $result ) );
+	}
+
+	/**
+	 * Test sanitize_image_filename sanitizes correctly.
+	 *
+	 * @covers ::sanitize_image_filename
+	 * @dataProvider data_sanitize_image_filename
+	 *
+	 * @param string       $filename  The filename to sanitize.
+	 * @param string       $mime_type The mime type.
+	 * @param string|false $expected  Expected result.
+	 */
+	public function test_sanitize_image_filename( $filename, $mime_type, $expected ) {
+		$method = new \ReflectionMethod( Attachments::class, 'sanitize_image_filename' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$result = $method->invoke( null, $filename, $mime_type );
+		$this->assertSame( $expected, $result );
+	}
+
+	/**
+	 * Data provider for sanitize_image_filename tests.
+	 *
+	 * Note: WordPress sanitize_file_name() handles some edge cases before our code runs:
+	 * - '.htaccess' becomes 'htaccess' (leading dot stripped)
+	 * - '.jpg' becomes 'unnamed-file.jpg' (WordPress generates a name)
+	 *
+	 * @return array Test cases: [filename, mime_type, expected_result].
+	 */
+	public function data_sanitize_image_filename() {
+		return array(
+			'simple_jpg'          => array( 'image.jpg', 'image/jpeg', 'image.jpg' ),
+			'simple_png'          => array( 'image.png', 'image/png', 'image.png' ),
+			'double_extension'    => array( 'shell.php.jpg', 'image/jpeg', 'shell.jpg' ),
+			'multiple_dots'       => array( 'profile.photo.v2.jpg', 'image/jpeg', 'profile.jpg' ),
+			'dotfile_sanitized'   => array( '.htaccess', 'image/jpeg', 'htaccess.jpg' ),
+			'unsupported_mime'    => array( 'image.jpg', 'application/pdf', false ),
+			'webp'                => array( 'image.webp', 'image/webp', 'image.webp' ),
+			'gif'                 => array( 'animation.gif', 'image/gif', 'animation.gif' ),
+			'empty_base_fixed'    => array( '.jpg', 'image/jpeg', 'unnamed-file.jpg' ),
+			'mime_determines_ext' => array( 'image.png', 'image/jpeg', 'image.jpg' ),
+		);
+	}
+
+	/**
+	 * Test sanitize_image_filename limits length.
+	 *
+	 * @covers ::sanitize_image_filename
+	 */
+	public function test_sanitize_image_filename_limits_length() {
+		$method = new \ReflectionMethod( Attachments::class, 'sanitize_image_filename' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		// Create very long filename (300 characters).
+		$long_name = str_repeat( 'a', 300 ) . '.jpg';
+		$result    = $method->invoke( null, $long_name, 'image/jpeg' );
+
+		// Base name should be max 200 chars + extension.
+		$this->assertLessThanOrEqual( 204, strlen( $result ) ); // 200 + '.jpg'.
+	}
+
+	/**
+	 * Test validate_image_file validates image content.
+	 *
+	 * @covers ::validate_image_file
+	 */
+	public function test_validate_image_file_with_valid_image() {
+		$method = new \ReflectionMethod( Attachments::class, 'validate_image_file' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		// Use the test image from assets.
+		$test_image = AP_TESTS_DIR . '/data/assets/test.jpg';
+		$result     = $method->invoke( null, $test_image );
+
+		$this->assertSame( 'image/jpeg', $result );
+	}
+
+	/**
+	 * Test validate_image_file rejects non-existent files.
+	 *
+	 * @covers ::validate_image_file
+	 */
+	public function test_validate_image_file_rejects_nonexistent() {
+		$method = new \ReflectionMethod( Attachments::class, 'validate_image_file' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$result = $method->invoke( null, '/nonexistent/file.jpg' );
+		$this->assertFalse( $result );
+	}
+
+	/**
+	 * Test validate_image_file rejects non-image files.
+	 *
+	 * @covers ::validate_image_file
+	 */
+	public function test_validate_image_file_rejects_non_image() {
+		$method = new \ReflectionMethod( Attachments::class, 'validate_image_file' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		global $wp_filesystem;
+		\WP_Filesystem();
+
+		// Create a text file disguised as an image.
+		$fake_image = \wp_tempnam( 'fake.jpg' );
+		$wp_filesystem->put_contents( $fake_image, 'This is not an image, just text content.' );
+
+		$result = $method->invoke( null, $fake_image );
+		$this->assertFalse( $result );
+
+		\wp_delete_file( $fake_image );
+	}
+
+	/**
+	 * Test validate_image_file detects correct mime types.
+	 *
+	 * @covers ::validate_image_file
+	 */
+	public function test_validate_image_file_detects_png() {
+		$method = new \ReflectionMethod( Attachments::class, 'validate_image_file' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		// Create a test PNG image.
+		$png_file = \wp_tempnam( 'test.png' ) . '.png';
+		$image    = \imagecreatetruecolor( 10, 10 );
+		\imagepng( $image, $png_file );
+		\imagedestroy( $image );
+
+		$result = $method->invoke( null, $png_file );
+		$this->assertSame( 'image/png', $result );
+
+		\wp_delete_file( $png_file );
 	}
 }
