@@ -367,12 +367,7 @@ class Blocks {
 		 */
 		$cached_url = \apply_filters( 'activitypub_remote_media_url', $url, 'emoji', null, array() );
 
-		return \sprintf(
-			'<img src="%s" alt="%s" title="%s" class="emoji" width="20" height="20" draggable="false" />',
-			\esc_url( $cached_url ?: $url ),
-			\esc_attr( $name ),
-			\esc_attr( $name )
-		);
+		return Emoji::get_img_tag( $cached_url ?: $url, $name );
 	}
 
 	/**

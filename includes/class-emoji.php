@@ -61,6 +61,23 @@ class Emoji {
 	}
 
 	/**
+	 * Generate an emoji img tag.
+	 *
+	 * @param string $url  The emoji image URL.
+	 * @param string $name The emoji name (without colons).
+	 *
+	 * @return string The emoji img tag HTML.
+	 */
+	public static function get_img_tag( $url, $name ) {
+		return \sprintf(
+			'<img src="%s" alt="%s" title="%s" class="emoji" width="20" height="20" draggable="false" />',
+			\esc_url( $url ),
+			\esc_attr( $name ),
+			\esc_attr( $name )
+		);
+	}
+
+	/**
 	 * Get the allowed HTML structure for emoji img tags.
 	 *
 	 * Used by Comment class for KSES validation of emoji in author names.
@@ -202,12 +219,7 @@ class Emoji {
 			);
 
 			$name = \trim( $tag['name'], ':' );
-			$img  = \sprintf(
-				'<img src="%s" alt="%s" title="%s" class="emoji" width="20" height="20" draggable="false" />',
-				\esc_url( $cached_url ?: $url ),
-				\esc_attr( $name ),
-				\esc_attr( $name )
-			);
+			$img  = self::get_img_tag( $cached_url ?: $url, $name );
 
 			$text = \str_ireplace( $tag['name'], $img, $text );
 		}

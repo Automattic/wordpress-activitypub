@@ -181,23 +181,8 @@ class Media extends File {
 			return;
 		}
 
-		$upload_base = \wp_upload_dir()['baseurl'];
-
 		// Filter to only remote URLs that need processing.
-		$remote_urls = array();
-		foreach ( $attachment_urls as $url ) {
-			// Skip non-http URLs (data URIs, relative paths).
-			if ( ! \preg_match( '#^https?://#i', $url ) ) {
-				continue;
-			}
-
-			// Skip if already a local URL.
-			if ( \str_contains( $url, $upload_base ) ) {
-				continue;
-			}
-
-			$remote_urls[] = $url;
-		}
+		$remote_urls = \array_filter( $attachment_urls, '\\Activitypub\\is_remote_url' );
 
 		if ( empty( $remote_urls ) ) {
 			return;
