@@ -274,7 +274,7 @@ class Cache_Command extends \WP_CLI_Command {
 	 */
 	private function is_cache_enabled( $type ) {
 		// Check global disable constant.
-		if ( \defined( 'ACTIVITYPUB_DISABLE_MEDIA_CACHE' ) && ACTIVITYPUB_DISABLE_MEDIA_CACHE ) {
+		if ( ACTIVITYPUB_DISABLE_MEDIA_CACHE ) {
 			return false;
 		}
 
