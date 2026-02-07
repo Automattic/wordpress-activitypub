@@ -7,6 +7,8 @@
 
 namespace Activitypub\OAuth;
 
+use Activitypub\Collection\Actors;
+
 /**
  * Token class for managing OAuth 2.0 access and refresh tokens.
  *
@@ -113,12 +115,17 @@ class Token {
 		// Track user for cleanup.
 		self::track_user( $user_id );
 
+		// Get the actor URI for the 'me' parameter (IndieAuth convention).
+		$actor = Actors::get_by_id( $user_id );
+		$me    = ! \is_wp_error( $actor ) ? $actor->get_id() : null;
+
 		return array(
 			'access_token'  => $access_token,
 			'token_type'    => 'Bearer',
 			'expires_in'    => $expires,
 			'refresh_token' => $refresh_token,
 			'scope'         => Scope::to_string( $scopes ),
+			'me'            => $me,
 		);
 	}
 
@@ -568,7 +575,12 @@ class Token {
 			return array( 'active' => false );
 		}
 
-		$user = \get_userdata( $validated->get_user_id() );
+		$user_id = $validated->get_user_id();
+		$user    = \get_userdata( $user_id );
+
+		// Get the actor URI for the 'me' parameter (IndieAuth convention).
+		$actor = Actors::get_by_id( $user_id );
+		$me    = ! \is_wp_error( $actor ) ? $actor->get_id() : null;
 
 		return array(
 			'active'     => true,
@@ -578,7 +590,8 @@ class Token {
 			'token_type' => 'Bearer',
 			'exp'        => $validated->get_expires_at(),
 			'iat'        => $validated->get_created_at(),
-			'sub'        => (string) $validated->get_user_id(),
+			'sub'        => (string) $user_id,
+			'me'         => $me,
 		);
 	}
 }

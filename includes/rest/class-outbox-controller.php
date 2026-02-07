@@ -282,10 +282,14 @@ class Outbox_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * Overload total items.
+	 * Overload total items for public requests.
 	 *
-	 * The `totalItems` property is used by Mastodon to show the overall
-	 * number of federated posts and comments.
+	 * For unauthenticated (public) requests, the `totalItems` property shows
+	 * the overall number of federated posts and comments, which is what
+	 * Mastodon expects for display purposes.
+	 *
+	 * For authenticated C2S requests, we skip this override so that totalItems
+	 * accurately reflects the actual outbox collection size.
 	 *
 	 * @param array            $response The response array.
 	 * @param \WP_REST_Request $request  The request object.
@@ -293,6 +297,11 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * @return array The modified response array.
 	 */
 	public function overload_total_items( $response, $request ) {
+		// For authenticated requests, return accurate totalItems matching orderedItems.
+		if ( \get_current_user_id() ) {
+			return $response;
+		}
+
 		$posts = new \WP_Query(
 			array(
 				'post_status'   => 'publish',

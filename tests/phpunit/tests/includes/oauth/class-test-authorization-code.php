@@ -132,12 +132,19 @@ class Test_Authorization_Code extends \WP_UnitTestCase {
 	/**
 	 * Test verify_pkce method with empty values.
 	 *
+	 * PKCE is optional: if no code_challenge was stored during authorization,
+	 * verification is skipped (returns true). Only fail when a challenge exists
+	 * but no verifier is provided.
+	 *
 	 * @covers ::verify_pkce
 	 */
 	public function test_verify_pkce_empty() {
+		// Challenge exists but verifier missing: should fail.
 		$this->assertFalse( Authorization_Code::verify_pkce( '', 'challenge', 'S256' ) );
-		$this->assertFalse( Authorization_Code::verify_pkce( 'verifier', '', 'S256' ) );
-		$this->assertFalse( Authorization_Code::verify_pkce( '', '', 'S256' ) );
+
+		// No challenge stored (PKCE not used): should pass (skip verification).
+		$this->assertTrue( Authorization_Code::verify_pkce( 'verifier', '', 'S256' ) );
+		$this->assertTrue( Authorization_Code::verify_pkce( '', '', 'S256' ) );
 	}
 
 	/**
