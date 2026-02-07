@@ -42,7 +42,7 @@ class Cache {
 	 */
 	public static function is_enabled() {
 		// Check constant first.
-		if ( defined( 'ACTIVITYPUB_DISABLE_REMOTE_CACHE' ) && ACTIVITYPUB_DISABLE_REMOTE_CACHE ) {
+		if ( defined( 'ACTIVITYPUB_DISABLE_MEDIA_CACHE' ) && ACTIVITYPUB_DISABLE_MEDIA_CACHE ) {
 			return false;
 		}
 
