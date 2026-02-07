@@ -297,13 +297,8 @@ class Server {
 			return true;
 		}
 
-		// C2S outbox endpoints (POST to create activities).
-		if ( preg_match( '#^' . preg_quote( $namespace, '#' ) . '/(?:users|actors)/\d+/outbox$#', $route ) ) {
-			return true;
-		}
-
-		// C2S user inbox endpoints.
-		if ( preg_match( '#^' . preg_quote( $namespace, '#' ) . '/(?:users|actors)/\d+/inbox$#', $route ) ) {
+		// C2S outbox and inbox endpoints.
+		if ( \str_ends_with( $route, '/outbox' ) || \str_ends_with( $route, '/inbox' ) ) {
 			return true;
 		}
 
