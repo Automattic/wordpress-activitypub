@@ -282,4 +282,82 @@ class Test_Functions extends \WP_UnitTestCase {
 		$result = \Activitypub\seconds_to_iso8601( $seconds );
 		$this->assertSame( $expected, $result );
 	}
+
+	/**
+	 * Test wrap_media_in_content wraps remote images.
+	 *
+	 * @covers \Activitypub\wrap_media_in_content
+	 */
+	public function test_wrap_media_in_content_wraps_remote_images() {
+		$content = '<p>Text</p><img src="https://remote.example.com/image.jpg" alt="Test" />';
+		$result  = \Activitypub\wrap_media_in_content( $content );
+
+		$this->assertStringContainsString( '<!-- wp:activitypub/media', $result );
+		// wp_json_encode escapes slashes, so check for that format.
+		$this->assertStringContainsString( 'https:\/\/remote.example.com\/image.jpg', $result );
+		$this->assertStringContainsString( '<!-- /wp:activitypub/media -->', $result );
+	}
+
+	/**
+	 * Test wrap_media_in_content handles different attribute orders.
+	 *
+	 * @covers \Activitypub\wrap_media_in_content
+	 */
+	public function test_wrap_media_in_content_attribute_order() {
+		// Test with alt before src.
+		$content = '<img alt="Test" src="https://remote.example.com/image.jpg" />';
+		$result  = \Activitypub\wrap_media_in_content( $content );
+
+		$this->assertStringContainsString( '<!-- wp:activitypub/media', $result );
+		$this->assertStringContainsString( 'https:\/\/remote.example.com\/image.jpg', $result );
+
+		// Test with multiple attributes before src.
+		$content = '<img class="foo" alt="Test" width="100" src="https://remote.example.com/image2.jpg" height="50" />';
+		$result  = \Activitypub\wrap_media_in_content( $content );
+
+		$this->assertStringContainsString( '<!-- wp:activitypub/media', $result );
+		$this->assertStringContainsString( 'https:\/\/remote.example.com\/image2.jpg', $result );
+	}
+
+	/**
+	 * Test wrap_media_in_content does not double-wrap already wrapped images.
+	 *
+	 * @covers \Activitypub\wrap_media_in_content
+	 */
+	public function test_wrap_media_in_content_no_double_wrapping() {
+		$content = '<!-- wp:activitypub/media {"url":"https://remote.example.com/image.jpg"} --><img src="https://remote.example.com/image.jpg" alt="Test" /><!-- /wp:activitypub/media -->';
+		$result  = \Activitypub\wrap_media_in_content( $content );
+
+		// Count occurrences of the opening block comment.
+		$count = substr_count( $result, '<!-- wp:activitypub/media' );
+		$this->assertSame( 1, $count, 'Should not wrap already-wrapped images' );
+	}
+
+	/**
+	 * Test wrap_media_in_content preserves URL without normalization.
+	 *
+	 * @covers \Activitypub\wrap_media_in_content
+	 */
+	public function test_wrap_media_in_content_preserves_url() {
+		// URL with query params that esc_url() would modify.
+		$content = '<img src="https://remote.example.com/image.jpg?foo=1&bar=2" />';
+		$result  = \Activitypub\wrap_media_in_content( $content );
+
+		// The URL in the JSON should be preserved exactly (JSON-encoded with escaped slashes).
+		$this->assertStringContainsString( 'foo=1&bar=2', $result );
+		// Verify ampersand is NOT HTML-encoded (esc_url would make it &amp;).
+		$this->assertStringNotContainsString( '&amp;', $result );
+	}
+
+	/**
+	 * Test wrap_media_in_content does not wrap local images.
+	 *
+	 * @covers \Activitypub\wrap_media_in_content
+	 */
+	public function test_wrap_media_in_content_skips_local_images() {
+		$content = '<img src="' . home_url( '/image.jpg' ) . '" alt="Local" />';
+		$result  = \Activitypub\wrap_media_in_content( $content );
+
+		$this->assertStringNotContainsString( '<!-- wp:activitypub/media', $result );
+	}
 }

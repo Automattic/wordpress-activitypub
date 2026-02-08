@@ -212,7 +212,7 @@ function custom_large_numbers( $formatted, $number ) {
 function esc_hashtag( $input ) {
 	$hashtag = \wp_specialchars_decode( $input, ENT_QUOTES );
 	// Remove all characters that are not letters, numbers, or hyphens.
-	$hashtag = \preg_replace( '/emoji-regex(*SKIP)(?!)|[^\p{L}\p{Nd}-]+/u', '-', $hashtag );
+	$hashtag = \preg_replace( '/[^\p{L}\p{Nd}-]+/u', '-', $hashtag );
 
 	// Capitalize every letter that is preceded by a hyphen.
 	$hashtag = preg_replace_callback(
@@ -357,6 +357,9 @@ function is_remote_url( $url ) {
  * The blocks are rendered at display time via their render_callback,
  * allowing lazy caching of remote media.
  *
+ * Uses WP_HTML_Tag_Processor for robust HTML parsing to find img tags,
+ * then wraps them with block comments for lazy media caching.
+ *
  * @param string $content The content to process.
  *
  * @return string The content with wrapped images.
@@ -366,24 +369,45 @@ function wrap_media_in_content( $content ) {
 		return $content;
 	}
 
-	// Match img tags with src attribute.
-	$pattern = '/<img\s+[^>]*src=["\']([^"\']+)["\'][^>]*>/i';
+	$processor = new \WP_HTML_Tag_Processor( $content );
+	$to_wrap   = array();
 
-	return \preg_replace_callback(
-		$pattern,
-		function ( $matches ) {
-			$url = $matches[1];
+	// Collect all img tags with remote src URLs using proper HTML parsing.
+	while ( $processor->next_tag( 'IMG' ) ) {
+		$src = $processor->get_attribute( 'src' );
 
-			if ( ! is_remote_url( $url ) ) {
-				return $matches[0];
-			}
+		if ( $src && is_remote_url( $src ) ) {
+			$to_wrap[] = $src;
+		}
+	}
 
-			return \sprintf(
-				'<!-- wp:activitypub/media {"url":"%s"} -->%s<!-- /wp:activitypub/media -->',
-				\esc_url( $url ),
-				$matches[0]
-			);
-		},
-		$content
-	);
+	if ( empty( $to_wrap ) ) {
+		return $content;
+	}
+
+	// Wrap each remote image using regex replacement.
+	// The (*SKIP)(?!) pattern ensures already-wrapped blocks are not double-wrapped.
+	foreach ( $to_wrap as $url ) {
+		$escaped_url = \preg_quote( $url, '/' );
+		$pattern     = '/<!-- wp:activitypub\/media[^>]*-->.*?<!-- \/wp:activitypub\/media -->(*SKIP)(?!)|(<img\s+[^>]*src=["\']' . $escaped_url . '["\'][^>]*>)/is';
+
+		$content = \preg_replace_callback(
+			$pattern,
+			function ( $matches ) use ( $url ) {
+				// If capture group 1 is empty, this was a skipped block.
+				if ( empty( $matches[1] ) ) {
+					return $matches[0];
+				}
+
+				return \sprintf(
+					'<!-- wp:activitypub/media %s -->%s<!-- /wp:activitypub/media -->',
+					\wp_json_encode( array( 'url' => $url ) ),
+					$matches[1]
+				);
+			},
+			$content
+		);
+	}
+
+	return $content;
 }
