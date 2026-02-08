@@ -244,7 +244,7 @@ class Authorization_Code {
 			$wpdb->prepare(
 				"DELETE FROM {$wpdb->options}
 				WHERE option_name LIKE %s
-				AND option_name LIKE %s",
+				OR option_name LIKE %s",
 				$wpdb->esc_like( '_transient_' . self::TRANSIENT_PREFIX ) . '%',
 				$wpdb->esc_like( '_transient_timeout_' . self::TRANSIENT_PREFIX ) . '%'
 			)

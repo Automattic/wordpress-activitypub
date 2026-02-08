@@ -59,7 +59,7 @@ class Router {
 
 		// Authorization Server Metadata (RFC 8414).
 		\add_rewrite_rule(
-			'^.well-known/oauth-authorization-server',
+			'^\\.well-known/oauth-authorization-server',
 			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/authorization-server-metadata',
 			'top'
 		);

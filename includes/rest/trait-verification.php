@@ -111,11 +111,18 @@ trait Verification {
 		$scope        = \in_array( $method, $read_methods, true ) ? Scope::READ : Scope::WRITE;
 
 		// Try OAuth first.
-		if ( true === OAuth_Server::check_oauth_permission( $request, $scope ) ) {
+		$oauth_result = OAuth_Server::check_oauth_permission( $request, $scope );
+		if ( true === $oauth_result ) {
 			return $this->maybe_verify_owner( $request );
 		}
 
-		// Fall back to Application Passwords.
+		// If OAuth was attempted (Bearer token present), don't fall back to Application Passwords.
+		// This prevents scope bypass when OAuth auth succeeds but scope check fails.
+		if ( \is_wp_error( $oauth_result ) && OAuth_Server::is_oauth_request() ) {
+			return $oauth_result;
+		}
+
+		// Fall back to Application Passwords only when no OAuth token was used.
 		$result = $this->verify_application_password();
 		if ( \is_wp_error( $result ) ) {
 			return $result;

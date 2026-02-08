@@ -589,7 +589,9 @@ class Client {
 
 		// Allow http for localhost development.
 		if ( 'http' === $parsed['scheme'] ) {
-			$localhost_hosts = array( 'localhost', '127.0.0.1', '[::1]' );
+			// Include both bracketed and unbracketed IPv6 loopback since parse_url
+			// may return either format depending on PHP version.
+			$localhost_hosts = array( 'localhost', '127.0.0.1', '[::1]', '::1' );
 			if ( ! in_array( $parsed['host'], $localhost_hosts, true ) ) {
 				return false;
 			}

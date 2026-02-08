@@ -104,9 +104,9 @@ login_header(
 		<button type="submit" name="approve" value="1" class="button button-primary button-large">
 			<?php esc_html_e( 'Authorize', 'activitypub' ); ?>
 		</button>
-		<a href="<?php echo esc_url( home_url() ); ?>" class="button button-large">
+		<button type="submit" name="deny" value="1" class="button button-large">
 			<?php esc_html_e( 'Cancel', 'activitypub' ); ?>
-		</a>
+		</button>
 	</p>
 </form>
 
