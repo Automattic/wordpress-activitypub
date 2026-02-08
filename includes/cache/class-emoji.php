@@ -175,74 +175,10 @@ class Emoji extends File {
 	protected static function generate_hash( $url ) {
 		$url_path = \wp_parse_url( $url, PHP_URL_PATH );
 		if ( $url_path ) {
-			// Use full path for hashing to prevent collisions.
 			return \md5( $url_path );
 		}
 
 		// Fall back to full URL hash.
 		return parent::generate_hash( $url );
-	}
-
-	/**
-	 * Get a legacy filename-based hash for backward compatibility.
-	 *
-	 * @param string $url The URL to get the legacy hash for.
-	 *
-	 * @return string|null The legacy hash or null if not applicable.
-	 */
-	protected static function get_legacy_hash( $url ) {
-		$url_path = \wp_parse_url( $url, PHP_URL_PATH );
-		if ( $url_path ) {
-			$file_stem = \sanitize_file_name( \pathinfo( $url_path, PATHINFO_FILENAME ) );
-			if ( ! empty( $file_stem ) ) {
-				return $file_stem;
-			}
-		}
-		return null;
-	}
-
-	/**
-	 * Get a cached emoji URL if it exists.
-	 *
-	 * Checks for both new hash-based filenames and legacy filename-based
-	 * cache entries for backward compatibility.
-	 *
-	 * @param string     $url       The remote URL.
-	 * @param string|int $entity_id The entity identifier (domain).
-	 *
-	 * @return string|false The local URL if cached, false otherwise.
-	 */
-	public static function get( $url, $entity_id ) {
-		if ( empty( $url ) || ! \filter_var( $url, FILTER_VALIDATE_URL ) ) {
-			return false;
-		}
-
-		$paths = static::get_storage_paths( $entity_id );
-
-		if ( ! \is_dir( $paths['basedir'] ) ) {
-			return false;
-		}
-
-		// Try new hash-based filename first.
-		$hash    = self::generate_hash( $url );
-		$pattern = self::escape_glob_pattern( $paths['basedir'] . '/' . $hash ) . '.*';
-		$matches = \glob( $pattern );
-
-		if ( ! empty( $matches ) && \is_file( $matches[0] ) ) {
-			return $paths['baseurl'] . '/' . \basename( $matches[0] );
-		}
-
-		// Fall back to legacy filename-based lookup for backward compatibility.
-		$legacy_hash = self::get_legacy_hash( $url );
-		if ( $legacy_hash && $legacy_hash !== $hash ) {
-			$pattern = self::escape_glob_pattern( $paths['basedir'] . '/' . $legacy_hash ) . '.*';
-			$matches = \glob( $pattern );
-
-			if ( ! empty( $matches ) && \is_file( $matches[0] ) ) {
-				return $paths['baseurl'] . '/' . \basename( $matches[0] );
-			}
-		}
-
-		return false;
 	}
 }
