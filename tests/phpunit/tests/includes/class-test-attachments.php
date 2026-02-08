@@ -66,6 +66,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 		// Cache\Media hooks into save_post and would cache images before Attachments::import() runs.
 		\add_filter( 'activitypub_cache_media_enabled', '__return_false' );
 
+		// Allow the test directory for local file imports.
+		\add_filter( 'activitypub_allowed_import_directories', array( $this, 'allow_test_directory' ) );
+
 		// Mock HTTP requests only for remote attachment tests.
 		\add_filter( 'pre_http_request', array( $this, 'mock_download_url' ), 10, 3 );
 		\add_filter( 'wp_delete_file', '__return_empty_string' ); // Prevent actual file deletion during tests.
@@ -78,6 +81,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 		// Re-enable Cache\Media.
 		\remove_filter( 'activitypub_cache_media_enabled', '__return_false' );
 
+		\remove_filter( 'activitypub_allowed_import_directories', array( $this, 'allow_test_directory' ) );
 		\remove_filter( 'pre_http_request', array( $this, 'mock_download_url' ) );
 		\remove_filter( 'wp_delete_file', '__return_empty_string' );
 
@@ -90,6 +94,17 @@ class Test_Attachments extends \WP_UnitTestCase {
 		);
 
 		parent::tear_down();
+	}
+
+	/**
+	 * Add the test directory to allowed import directories.
+	 *
+	 * @param array $allowed_dirs The allowed directories.
+	 * @return array The modified allowed directories.
+	 */
+	public function allow_test_directory( $allowed_dirs ) {
+		$allowed_dirs[] = \realpath( AP_TESTS_DIR );
+		return $allowed_dirs;
 	}
 
 	/**
