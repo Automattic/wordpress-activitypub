@@ -97,6 +97,7 @@ class Router {
 			if ( ! $activitypub_object ) {
 				\status_header( 410 );
 			}
+			self::add_cors_headers();
 			return ACTIVITYPUB_PLUGIN_DIR . 'templates/tombstone-json.php';
 		}
 
@@ -142,6 +143,7 @@ class Router {
 				\status_header( 200 );
 			}
 
+			self::add_cors_headers();
 			return $activitypub_template;
 		}
 
@@ -173,6 +175,22 @@ class Router {
 				echo PHP_EOL . '<link rel="alternate" title="ActivityPub (JSON)" type="application/activity+json" href="' . esc_url( $id ) . '" />' . PHP_EOL;
 			}
 		);
+	}
+
+	/**
+	 * Add CORS headers for ActivityPub JSON responses.
+	 *
+	 * This enables C2S clients to fetch actor profiles and other
+	 * ActivityPub objects directly from the browser.
+	 */
+	private static function add_cors_headers() {
+		if ( \headers_sent() ) {
+			return;
+		}
+
+		\header( 'Access-Control-Allow-Origin: *' );
+		\header( 'Access-Control-Allow-Methods: GET, OPTIONS' );
+		\header( 'Access-Control-Allow-Headers: Accept, Authorization, Content-Type' );
 	}
 
 	/**
