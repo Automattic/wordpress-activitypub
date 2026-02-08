@@ -554,28 +554,23 @@ class Outbox_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * Ensure the activity object has an ID.
+	 * Ensure the activity object has required fields.
 	 *
-	 * For C2S activities, clients may not provide object IDs.
-	 * The server must generate them.
+	 * For C2S activities, clients may not provide all required fields.
+	 * The server should fill in attributedTo and published, but object IDs
+	 * should only be set by handlers that create WordPress content.
 	 *
 	 * @param array                        $data The activity data.
 	 * @param \Activitypub\Model\User|null $user The authenticated user.
-	 * @return array The activity data with object ID ensured.
+	 * @return array The activity data with required fields ensured.
 	 */
 	private function ensure_object_id( $data, $user ) {
-		// Check if there's an embedded object that needs an ID.
+		// Check if there's an embedded object that needs fields.
 		if ( ! isset( $data['object'] ) || ! is_array( $data['object'] ) ) {
 			return $data;
 		}
 
 		$object = &$data['object'];
-
-		// Generate ID if missing.
-		if ( empty( $object['id'] ) ) {
-			$uuid         = \wp_generate_uuid4();
-			$object['id'] = get_rest_url_by_path( 'objects/' . $uuid );
-		}
 
 		// Set attributedTo if missing.
 		if ( empty( $object['attributedTo'] ) && $user ) {

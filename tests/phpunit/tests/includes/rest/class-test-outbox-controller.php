@@ -647,4 +647,50 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 	public function test_get_item_schema() {
 		// Controller does not implement get_item_schema().
 	}
+
+	/**
+	 * Test C2S POST creates Note with proper object ID.
+	 *
+	 * When a client submits a Create activity with an object that has no ID,
+	 * the server should create a WordPress post and use its permalink as the
+	 * object ID (not generate a random /objects/uuid URL).
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_create_note_object_id() {
+		$user = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+
+		$data = array(
+			'type'   => 'Create',
+			'actor'  => $user->get_id(),
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'type'    => 'Note',
+				'content' => 'Hello from C2S test!',
+				// No ID provided - server should set it to the post permalink.
+			),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 201, $response->get_status() );
+
+		$response_data = $response->get_data();
+
+		// The object should have an ID that's a post permalink, not /objects/uuid.
+		$this->assertArrayHasKey( 'object', $response_data );
+		$object = $response_data['object'];
+
+		if ( is_array( $object ) ) {
+			$this->assertArrayHasKey( 'id', $object );
+			$this->assertStringNotContainsString( '/objects/', $object['id'], 'Object ID should not be a /objects/uuid URL' );
+			$this->assertStringContainsString( '?p=', $object['id'], 'Object ID should be a post permalink' );
+		}
+	}
 }
