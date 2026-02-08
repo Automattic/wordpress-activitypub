@@ -230,6 +230,9 @@ class Authorization_Code {
 	/**
 	 * Clean up expired authorization codes.
 	 *
+	 * Only deletes transients that have actually expired, to avoid breaking
+	 * in-progress authorization flows.
+	 *
 	 * Note: Transients auto-expire, but this cleans up any orphaned ones.
 	 * Should be called periodically via cron.
 	 *
@@ -238,18 +241,43 @@ class Authorization_Code {
 	public static function cleanup() {
 		global $wpdb;
 
-		// Clean up expired transients with our prefix.
-		// Transients should auto-expire, but this catches edge cases.
-		$count = $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$timeout_prefix = '_transient_timeout_' . self::TRANSIENT_PREFIX;
+		$now            = time();
+
+		// Find expired timeout rows for this prefix.
+		$timeout_option_names = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
-				"DELETE FROM {$wpdb->options}
+				"SELECT option_name FROM {$wpdb->options}
 				WHERE option_name LIKE %s
-				OR option_name LIKE %s",
-				$wpdb->esc_like( '_transient_' . self::TRANSIENT_PREFIX ) . '%',
-				$wpdb->esc_like( '_transient_timeout_' . self::TRANSIENT_PREFIX ) . '%'
+				AND option_value < %d",
+				$wpdb->esc_like( $timeout_prefix ) . '%',
+				$now
 			)
 		);
 
-		return $count ? (int) ( $count / 2 ) : 0; // Each transient has 2 rows.
+		if ( empty( $timeout_option_names ) ) {
+			return 0;
+		}
+
+		// Build list of timeout and corresponding value option names to delete.
+		$option_names_to_delete = array();
+		foreach ( $timeout_option_names as $timeout_name ) {
+			$option_names_to_delete[] = $timeout_name;
+			$option_names_to_delete[] = str_replace( '_transient_timeout_', '_transient_', $timeout_name );
+		}
+
+		$placeholders = implode( ', ', array_fill( 0, count( $option_names_to_delete ), '%s' ) );
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.DirectDatabaseQuery
+		$count = $wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->options} WHERE option_name IN ( {$placeholders} )",
+				$option_names_to_delete
+			)
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.DirectDatabaseQuery
+
+		// Each transient has 2 rows (value + timeout).
+		return $count ? (int) ( $count / 2 ) : 0;
 	}
 }

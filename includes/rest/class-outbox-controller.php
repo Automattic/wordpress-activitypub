@@ -348,7 +348,12 @@ class Outbox_Controller extends \WP_REST_Controller {
 	public function create_item( $request ) {
 		$user_id = $request->get_param( 'user_id' );
 		$user    = Actors::get_by_id( $user_id );
-		$data    = $request->get_json_params();
+
+		if ( \is_wp_error( $user ) ) {
+			return $user;
+		}
+
+		$data = $request->get_json_params();
 
 		if ( empty( $data ) ) {
 			return new \WP_Error(
@@ -383,7 +388,10 @@ class Outbox_Controller extends \WP_REST_Controller {
 		 *
 		 * Handlers can process the activity and return:
 		 * - WP_Post: A WordPress post was created (scheduler adds to outbox)
+		 * - int: An outbox post ID (activity already added to outbox)
 		 * - WP_Error: Stop processing and return error
+		 * - false: Stop processing (activity not allowed)
+		 * - array: Modified activity data (fallback to default handling)
 		 * - Other: No handler processed the activity (fallback to default)
 		 *
 		 * @param array  $data       The activity data.
@@ -396,11 +404,23 @@ class Outbox_Controller extends \WP_REST_Controller {
 			return $result;
 		}
 
+		// Handler returned false to signal "not allowed" or "stop processing".
+		if ( false === $result ) {
+			return new \WP_Error(
+				'activitypub_activity_not_allowed',
+				\__( 'This activity type is not allowed.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
+		}
+
 		// If handler returned a WP_Post, the scheduler already added it to outbox.
 		if ( $result instanceof \WP_Post ) {
 			$object_id     = \Activitypub\get_post_id( $result->ID );
 			$activity_type = \ucfirst( $data['type'] ?? 'Create' );
 			$outbox_item   = Outbox::get_by_object_id( $object_id, $activity_type );
+		} elseif ( \is_int( $result ) && $result > 0 ) {
+			// Handler returned an outbox post ID directly.
+			$outbox_item = \get_post( $result );
 		} else {
 			// Default handling for raw activities.
 			$data        = \is_array( $result ) ? $result : $data;

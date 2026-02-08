@@ -46,6 +46,10 @@ class Server {
 	 * @return \WP_Error|null|bool Authentication result.
 	 */
 	public static function authenticate_oauth( $result ) {
+		// Reset OAuth state at the start of each authentication to prevent
+		// leaking state between multiple REST dispatches in the same process.
+		self::$current_token = null;
+
 		// If another authentication method already succeeded, use that.
 		if ( true === $result || \is_user_logged_in() ) {
 			return $result;

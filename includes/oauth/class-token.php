@@ -136,43 +136,61 @@ class Token {
 	 * @return Token|\WP_Error The token object or error.
 	 */
 	public static function validate( $token ) {
+		global $wpdb;
+
 		$token_hash = self::hash_token( $token );
 		$meta_key   = self::META_PREFIX . $token_hash;
 
-		// Search for the token across all users with tokens.
-		$users = self::get_tracked_users();
+		// Direct DB lookup by meta_key - O(1) instead of O(n) users.
+		$user_id = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT user_id FROM $wpdb->usermeta WHERE meta_key = %s LIMIT 1",
+				$meta_key
+			)
+		);
 
-		foreach ( $users as $user_id ) {
-			$token_data = \get_user_meta( $user_id, $meta_key, true );
-
-			if ( ! empty( $token_data ) && is_array( $token_data ) ) {
-				// Verify hash matches.
-				if ( isset( $token_data['access_token_hash'] ) &&
-					hash_equals( $token_data['access_token_hash'], $token_hash ) ) {
-
-					// Check expiration.
-					if ( isset( $token_data['expires_at'] ) && $token_data['expires_at'] < time() ) {
-						return new \WP_Error(
-							'activitypub_token_expired',
-							\__( 'Access token has expired.', 'activitypub' ),
-							array( 'status' => 401 )
-						);
-					}
-
-					// Update last used timestamp.
-					$token_data['last_used_at'] = time();
-					\update_user_meta( $user_id, $meta_key, $token_data );
-
-					return new self( $user_id, $token_hash, $token_data );
-				}
-			}
+		if ( empty( $user_id ) ) {
+			return new \WP_Error(
+				'activitypub_invalid_token',
+				\__( 'Invalid access token.', 'activitypub' ),
+				array( 'status' => 401 )
+			);
 		}
 
-		return new \WP_Error(
-			'activitypub_invalid_token',
-			\__( 'Invalid access token.', 'activitypub' ),
-			array( 'status' => 401 )
-		);
+		$token_data = \get_user_meta( (int) $user_id, $meta_key, true );
+
+		if ( empty( $token_data ) || ! is_array( $token_data ) ) {
+			return new \WP_Error(
+				'activitypub_invalid_token',
+				\__( 'Invalid access token.', 'activitypub' ),
+				array( 'status' => 401 )
+			);
+		}
+
+		// Verify hash matches.
+		if ( ! isset( $token_data['access_token_hash'] ) ||
+			! hash_equals( $token_data['access_token_hash'], $token_hash ) ) {
+			return new \WP_Error(
+				'activitypub_invalid_token',
+				\__( 'Invalid access token.', 'activitypub' ),
+				array( 'status' => 401 )
+			);
+		}
+
+		// Check expiration.
+		if ( isset( $token_data['expires_at'] ) && $token_data['expires_at'] < time() ) {
+			return new \WP_Error(
+				'activitypub_token_expired',
+				\__( 'Access token has expired.', 'activitypub' ),
+				array( 'status' => 401 )
+			);
+		}
+
+		// Update last used timestamp.
+		$token_data['last_used_at'] = time();
+		\update_user_meta( (int) $user_id, $meta_key, $token_data );
+
+		return new self( (int) $user_id, $token_hash, $token_data );
 	}
 
 	/**
@@ -254,7 +272,9 @@ class Token {
 		$users      = self::get_tracked_users();
 
 		foreach ( $users as $user_id ) {
-			$all_meta = \get_user_meta( $user_id );
+			$all_meta        = \get_user_meta( $user_id );
+			$remaining_count = 0;
+			$found_token     = false;
 
 			foreach ( $all_meta as $meta_key => $meta_values ) {
 				if ( 0 !== strpos( $meta_key, self::META_PREFIX ) ) {
@@ -274,8 +294,18 @@ class Token {
 						hash_equals( $token_data['refresh_token_hash'], $token_hash ) ) ) {
 
 					\delete_user_meta( $user_id, $meta_key );
-					return true;
+					$found_token = true;
+				} else {
+					++$remaining_count;
 				}
+			}
+
+			if ( $found_token ) {
+				// Untrack user if no remaining tokens.
+				if ( 0 === $remaining_count ) {
+					self::untrack_user( $user_id );
+				}
+				return true;
 			}
 		}
 

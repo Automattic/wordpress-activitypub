@@ -122,6 +122,10 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		$user_id = $request->get_param( 'user_id' );
 		$user    = Actors::get_by_id( $user_id );
 
+		if ( \is_wp_error( $user ) ) {
+			return $user;
+		}
+
 		/**
 		 * Action triggered prior to the ActivityPub inbox being created and sent to the client.
 		 *
