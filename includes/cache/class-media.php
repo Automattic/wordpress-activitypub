@@ -131,9 +131,6 @@ class Media extends File {
 	 * Initialize the cache handler.
 	 */
 	public static function init() {
-		// Process attachments meta on save for pre-caching (content is handled by blocks).
-		\add_action( 'save_post_' . Posts::POST_TYPE, array( self::class, 'process_attachments_meta' ), 20 );
-
 		// Only register local caching filter when caching is enabled.
 		if ( self::is_enabled() ) {
 			\add_filter( 'activitypub_remote_media_url', array( self::class, 'maybe_cache' ), 10, 4 );
@@ -164,57 +161,6 @@ class Media extends File {
 		$cached_url = self::cache_url( $url, $entity_id );
 
 		return $cached_url ?: $url;
-	}
-
-	/**
-	 * Process attachment URLs from meta for pre-caching.
-	 *
-	 * Processes remote URLs stored in _activitypub_attachments meta through
-	 * the activitypub_remote_media_url filter for pre-caching. Content images
-	 * are handled by blocks at render time.
-	 *
-	 * @param int $post_id The post ID.
-	 */
-	public static function process_attachments_meta( $post_id ) {
-		// Get attachment URLs from meta.
-		$attachment_urls = \get_post_meta( $post_id, '_activitypub_attachments', true );
-
-		// Clear the attachments meta.
-		\delete_post_meta( $post_id, '_activitypub_attachments' );
-
-		if ( empty( $attachment_urls ) || ! \is_array( $attachment_urls ) ) {
-			return;
-		}
-
-		// Filter to only remote URLs that need processing.
-		$remote_urls = \array_filter( $attachment_urls, '\\Activitypub\\is_remote_url' );
-
-		if ( empty( $remote_urls ) ) {
-			return;
-		}
-
-		// Invalidate existing cached media before re-processing (only if caching is enabled).
-		if ( self::is_enabled() ) {
-			self::invalidate_entity( $post_id );
-		}
-
-		// Process each URL through the filter for pre-caching.
-		foreach ( $remote_urls as $url ) {
-			/**
-			 * Filters a remote media URL for caching or CDN proxy.
-			 *
-			 * This filter allows local caching handlers or CDN plugins (like Jetpack Photon)
-			 * to transform remote media URLs.
-			 *
-			 * @since 5.6.0
-			 *
-			 * @param string   $url       The remote media URL.
-			 * @param string   $context   The context ('avatar', 'media', 'emoji', etc.).
-			 * @param int|null $entity_id The entity ID (post ID).
-			 * @param array    $options   Optional. Additional options.
-			 */
-			\apply_filters( 'activitypub_remote_media_url', $url, self::CONTEXT, $post_id, array() );
-		}
 	}
 
 	/**

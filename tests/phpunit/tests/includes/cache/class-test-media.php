@@ -62,50 +62,6 @@ class Test_Media extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test process_attachments_meta skips posts without meta.
-	 */
-	public function test_process_attachments_meta_no_meta() {
-		$post_id = self::factory()->post->create(
-			array(
-				'post_type'    => 'ap_post',
-				'post_content' => 'Test content',
-			)
-		);
-
-		// Should not throw error when no _activitypub_attachments meta exists.
-		Media::process_attachments_meta( $post_id );
-		$this->assertTrue( true );
-
-		wp_delete_post( $post_id, true );
-	}
-
-	/**
-	 * Test process_attachments_meta processes URLs from meta.
-	 */
-	public function test_process_attachments_meta_caches_urls() {
-		$post_id = self::factory()->post->create(
-			array(
-				'post_type'    => 'ap_post',
-				'post_content' => 'Test content',
-			)
-		);
-
-		// Add attachments meta.
-		\update_post_meta( $post_id, '_activitypub_attachments', array( 'https://example.com/image.jpg' ) );
-
-		// Process attachments.
-		Media::process_attachments_meta( $post_id );
-
-		// Meta should be cleared after processing.
-		$meta = \get_post_meta( $post_id, '_activitypub_attachments', true );
-		$this->assertEmpty( $meta );
-
-		// Clean up.
-		Media::invalidate_entity( $post_id );
-		wp_delete_post( $post_id, true );
-	}
-
-	/**
 	 * Test get_storage_paths_for_context returns correct paths for media.
 	 */
 	public function test_get_storage_paths_for_context_media() {

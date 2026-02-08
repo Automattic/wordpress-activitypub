@@ -53,14 +53,7 @@ class Posts {
 		}
 
 		$post_array = self::activity_to_post( $activity_object );
-
-		// Extract attachment URLs and add via meta_input so they're available at save_post hook time.
-		$attachment_urls = self::extract_attachment_urls( $activity_object );
-		if ( ! empty( $attachment_urls ) ) {
-			$post_array['meta_input']['_activitypub_attachments'] = $attachment_urls;
-		}
-
-		$post_id = \wp_insert_post( $post_array, true );
+		$post_id    = \wp_insert_post( $post_array, true );
 
 		if ( \is_wp_error( $post_id ) ) {
 			return $post_id;
@@ -136,15 +129,7 @@ class Posts {
 
 		$post_array       = self::activity_to_post( $activity['object'] );
 		$post_array['ID'] = $post->ID;
-
-		// Store attachment URLs BEFORE wp_update_post so they're available at save_post hook time.
-		\delete_post_meta( $post->ID, '_activitypub_attachments' );
-		$attachment_urls = self::extract_attachment_urls( $activity['object'] );
-		if ( ! empty( $attachment_urls ) ) {
-			\update_post_meta( $post->ID, '_activitypub_attachments', $attachment_urls );
-		}
-
-		$post_id = \wp_update_post( $post_array, true );
+		$post_id          = \wp_update_post( $post_array, true );
 
 		if ( \is_wp_error( $post_id ) ) {
 			return $post_id;
@@ -276,11 +261,17 @@ class Posts {
 
 		$gm_date = \gmdate( 'Y-m-d H:i:s', \strtotime( $activity['published'] ?? 'now' ) );
 
-		// Sanitize content, remove hashtags, and wrap emoji/media in blocks.
+		// Sanitize content and remove hashtags.
 		$content = isset( $activity['content'] ) ? Sanitize::content( $activity['content'] ) : '';
 		$content = self::remove_hashtags( $content, $activity['tag'] ?? array() );
 		$content = Emoji::wrap_in_content( $content, $activity );
+
+		// Wrap existing remote images in content with media blocks.
 		$content = wrap_media_in_content( $content );
+
+		// Append any attachments not already in content (already wrapped in media blocks).
+		$attachments = self::extract_attachments( $activity );
+		$content     = self::append_attachment_media_blocks( $content, $attachments );
 
 		return array(
 			'post_title'    => isset( $activity['name'] ) ? \wp_strip_all_tags( $activity['name'] ) : '',
@@ -311,21 +302,21 @@ class Posts {
 	}
 
 	/**
-	 * Extract image attachment URLs from an activity object.
+	 * Extract image attachments from an activity object.
 	 *
-	 * Extracts URLs from image attachments for caching by Cache\Media class.
+	 * Extracts image attachments with URL and alt text for appending to content.
 	 * Skips video and audio attachments.
 	 *
 	 * @param array $activity_object The activity object data.
 	 *
-	 * @return array Array of image attachment URLs.
+	 * @return array Array of attachments with 'url' and 'alt' keys.
 	 */
-	private static function extract_attachment_urls( $activity_object ) {
+	private static function extract_attachments( $activity_object ) {
 		if ( empty( $activity_object['attachment'] ) || ! \is_array( $activity_object['attachment'] ) ) {
 			return array();
 		}
 
-		$urls = array();
+		$attachments = array();
 		foreach ( $activity_object['attachment'] as $attachment ) {
 			if ( \is_object( $attachment ) ) {
 				$attachment = \get_object_vars( $attachment );
@@ -342,10 +333,55 @@ class Posts {
 				continue;
 			}
 
-			$urls[] = $attachment['url'];
+			$attachments[] = array(
+				'url' => $attachment['url'],
+				'alt' => $attachment['name'] ?? '',
+			);
 		}
 
-		return $urls;
+		return $attachments;
+	}
+
+	/**
+	 * Append attachment media blocks to content.
+	 *
+	 * Generates media blocks for attachments not already in the content and appends them.
+	 * Blocks are wrapped with activitypub/media for lazy caching at render time.
+	 *
+	 * @param string $content     The post content (already has inline images wrapped).
+	 * @param array  $attachments Array of attachments with 'url' and 'alt' keys.
+	 *
+	 * @return string The content with appended media blocks.
+	 */
+	private static function append_attachment_media_blocks( $content, $attachments ) {
+		if ( empty( $attachments ) ) {
+			return $content;
+		}
+
+		$blocks = '';
+		foreach ( $attachments as $attachment ) {
+			$url = $attachment['url'];
+
+			// Skip if this URL is already in the content (check both raw and escaped forms).
+			if ( false !== \strpos( $content, $url ) || false !== \strpos( $content, \esc_url( $url ) ) ) {
+				continue;
+			}
+
+			// Generate img tag wrapped in media block (consistent with wrap_media_in_content).
+			$img_tag = \sprintf(
+				'<img src="%s" alt="%s" />',
+				\esc_url( $url ),
+				\esc_attr( $attachment['alt'] )
+			);
+
+			$blocks .= \sprintf(
+				"\n\n<!-- wp:activitypub/media %s -->%s<!-- /wp:activitypub/media -->",
+				\wp_json_encode( array( 'url' => $url ) ),
+				$img_tag
+			);
+		}
+
+		return $content . $blocks;
 	}
 
 	/**

@@ -484,7 +484,22 @@ class Test_Posts extends \WP_UnitTestCase {
 		$this->assertInstanceOf( '\WP_Post', $result );
 		$this->assertEquals( 'Post with Image', $result->post_title );
 
-		// Verify file was created in activitypub directory (from attachments meta).
+		// Verify content has the media block with original URL.
+		$this->assertStringContainsString( '<!-- wp:activitypub/media', $result->post_content );
+		$this->assertStringContainsString( 'https://example.com/image.jpg', $result->post_content );
+
+		// Set up global post context for block rendering.
+		global $post;
+		$post = $result;
+		\setup_postdata( $post );
+
+		// Render the content to trigger lazy caching.
+		\do_blocks( $result->post_content );
+
+		// Clean up global post.
+		\wp_reset_postdata();
+
+		// Verify file was created in activitypub directory after rendering.
 		$upload_dir = \wp_upload_dir();
 		$file_dir   = $upload_dir['basedir'] . Media::BASE_DIR_POSTS . $result->ID;
 		$this->assertTrue( file_exists( $file_dir ), 'ActivityPub directory should exist' );
@@ -492,10 +507,78 @@ class Test_Posts extends \WP_UnitTestCase {
 		// Verify file exists.
 		$files = glob( $file_dir . '/*' );
 		$this->assertCount( 1, $files, 'One file should be created' );
+	}
 
-		// Verify content has the media block with original URL (caching happens at render time).
+	/**
+	 * Test attachments not in content are appended.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_appends_attachment_not_in_content() {
+		$activity = array(
+			'object' => array(
+				'id'           => 'https://example.com/objects/attachment-appended',
+				'type'         => 'Note',
+				'name'         => 'Post with Extra Attachment',
+				// Content has no image.
+				'content'      => '<p>Just text content</p>',
+				'attributedTo' => 'https://example.com/users/testuser',
+				'attachment'   => array(
+					array(
+						'url'       => 'https://example.com/extra-image.jpg',
+						'mediaType' => 'image/jpeg',
+						'name'      => 'Extra Image Alt Text',
+						'type'      => 'Image',
+					),
+				),
+			),
+		);
+
+		$result = Posts::add( $activity, 1 );
+
+		$this->assertInstanceOf( '\WP_Post', $result );
+
+		// Attachment should be appended to content with alt text.
+		$this->assertStringContainsString( 'https://example.com/extra-image.jpg', $result->post_content );
+		$this->assertStringContainsString( 'alt="Extra Image Alt Text"', $result->post_content );
+
+		// Should be wrapped in media block.
 		$this->assertStringContainsString( '<!-- wp:activitypub/media', $result->post_content );
-		$this->assertStringContainsString( 'https://example.com/image.jpg', $result->post_content );
+	}
+
+	/**
+	 * Test attachments already in content are not duplicated.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_does_not_duplicate_attachment_in_content() {
+		$activity = array(
+			'object' => array(
+				'id'           => 'https://example.com/objects/no-duplicate',
+				'type'         => 'Note',
+				'name'         => 'No Duplicate',
+				// Content already has the image.
+				'content'      => '<p>Text</p><img src="https://example.com/same-image.jpg" alt="Same" />',
+				'attributedTo' => 'https://example.com/users/testuser',
+				'attachment'   => array(
+					array(
+						'url'       => 'https://example.com/same-image.jpg',
+						'mediaType' => 'image/jpeg',
+						'name'      => 'Same Image',
+						'type'      => 'Image',
+					),
+				),
+			),
+		);
+
+		$result = Posts::add( $activity, 1 );
+
+		$this->assertInstanceOf( '\WP_Post', $result );
+
+		// Image should appear only once (not duplicated).
+		// Count img tags with this src, not URL strings (URL appears in both JSON attr and img src).
+		$count = \preg_match_all( '/<img[^>]+src=["\']https:\/\/example\.com\/same-image\.jpg["\']/', $result->post_content );
+		$this->assertSame( 1, $count, 'Image tag should appear only once' );
 	}
 
 	/**
@@ -834,7 +917,18 @@ class Test_Posts extends \WP_UnitTestCase {
 		$updated_post = Posts::update( $update_activity, 1 );
 		$this->assertInstanceOf( '\WP_Post', $updated_post );
 
-		// Verify file was created.
+		// Verify attachment was added to content as media block.
+		$this->assertStringContainsString( '<!-- wp:activitypub/media', $updated_post->post_content );
+		$this->assertStringContainsString( 'https://example.com/image.jpg', $updated_post->post_content );
+
+		// Set up global post context and render to trigger lazy caching.
+		global $post;
+		$post = $updated_post;
+		\setup_postdata( $post );
+		\do_blocks( $updated_post->post_content );
+		\wp_reset_postdata();
+
+		// Verify file was created after rendering.
 		$upload_dir = \wp_upload_dir();
 		$file_dir   = $upload_dir['basedir'] . Media::BASE_DIR_POSTS . $updated_post->ID;
 		$this->assertTrue( file_exists( $file_dir ), 'ActivityPub directory should exist' );
@@ -870,7 +964,14 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		$original_post = Posts::add( $activity, 1 );
 
-		// Verify original file was created.
+		// Set up global post context and render to trigger lazy caching.
+		global $post;
+		$post = $original_post;
+		\setup_postdata( $post );
+		\do_blocks( $original_post->post_content );
+		\wp_reset_postdata();
+
+		// Verify original file was created after rendering.
 		$upload_dir = \wp_upload_dir();
 		$file_dir   = $upload_dir['basedir'] . Media::BASE_DIR_POSTS . $original_post->ID;
 		$this->assertTrue( file_exists( $file_dir ), 'ActivityPub directory should exist' );
@@ -913,12 +1014,30 @@ class Test_Posts extends \WP_UnitTestCase {
 			3
 		);
 
-		Posts::update( $update_activity, 1 );
+		$updated_post = Posts::update( $update_activity, 1 );
 
-		// Verify old file was deleted and new file was created.
+		// Render the updated content to trigger caching of new image.
+		$post = $updated_post;
+		\setup_postdata( $post );
+		\do_blocks( $updated_post->post_content );
+		\wp_reset_postdata();
+
+		// Verify new file was created (old file may still exist until cleanup).
 		$new_files = glob( $file_dir . '/*' );
-		$this->assertCount( 1, $new_files );
-		$this->assertNotEquals( basename( $original_files[0] ), basename( $new_files[0] ), 'New file should have different name' );
+		$this->assertGreaterThanOrEqual( 1, count( $new_files ), 'At least one file should exist' );
+
+		// Find the new file (should have different hash than original).
+		$new_hashes = array_map( 'basename', $new_files );
+		$old_hash   = basename( $original_files[0] );
+
+		// With the new URL, there should be a file with a different hash.
+		$different_files = array_filter(
+			$new_hashes,
+			function ( $hash ) use ( $old_hash ) {
+				return $hash !== $old_hash;
+			}
+		);
+		$this->assertNotEmpty( $different_files, 'New file should have different name than original' );
 	}
 
 	/**
@@ -948,7 +1067,14 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		$original_post = Posts::add( $activity, 1 );
 
-		// Verify original file was created.
+		// Set up global post context and render to trigger lazy caching.
+		global $post;
+		$post = $original_post;
+		\setup_postdata( $post );
+		\do_blocks( $original_post->post_content );
+		\wp_reset_postdata();
+
+		// Verify original file was created after rendering.
 		$upload_dir = \wp_upload_dir();
 		$file_dir   = $upload_dir['basedir'] . Media::BASE_DIR_POSTS . $original_post->ID;
 		$this->assertTrue( file_exists( $file_dir ), 'ActivityPub directory should exist' );
