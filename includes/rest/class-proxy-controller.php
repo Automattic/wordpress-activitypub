@@ -12,6 +12,8 @@ namespace Activitypub\Rest;
 
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
+use Activitypub\OAuth\Scope;
+use Activitypub\OAuth\Server as OAuth_Server;
 
 use function Activitypub\is_actor;
 
@@ -49,7 +51,7 @@ class Proxy_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'get_item' ),
-					'permission_callback' => array( $this, 'verify_authentication' ),
+					'permission_callback' => array( $this, 'verify_read_permission' ),
 					'args'                => array(
 						'id' => array(
 							'description'       => 'The URI of the remote ActivityPub object to fetch.',
@@ -83,6 +85,31 @@ class Proxy_Controller extends \WP_REST_Controller {
 
 		// Use WordPress built-in validation (blocks local IPs, restricts ports).
 		return (bool) \wp_http_validate_url( $url );
+	}
+
+	/**
+	 * Verify read permission for proxy endpoint.
+	 *
+	 * The proxy is a read operation (fetching remote objects) even though it uses POST.
+	 * This ensures clients with only read scope can use the proxy.
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
+	 */
+	public function verify_read_permission( $request ) {
+		// Try OAuth with read scope.
+		$oauth_result = OAuth_Server::check_oauth_permission( $request, Scope::READ );
+		if ( true === $oauth_result ) {
+			return true;
+		}
+
+		// If OAuth was attempted but failed, don't fall back.
+		if ( \is_wp_error( $oauth_result ) && OAuth_Server::is_oauth_request() ) {
+			return $oauth_result;
+		}
+
+		// Fall back to Application Passwords.
+		return $this->verify_application_password();
 	}
 
 	/**

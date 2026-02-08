@@ -199,6 +199,14 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		 */
 		\do_action( 'activitypub_rest_inbox_post', $request );
 
+		// Fire deprecated hook for backward compatibility.
+		\do_action_deprecated(
+			'activitypub_inbox_post',
+			array( $request ),
+			'4.8.0',
+			'activitypub_rest_inbox_post'
+		);
+
 		$response = \rest_ensure_response( $response );
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 

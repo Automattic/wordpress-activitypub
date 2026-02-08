@@ -22,6 +22,11 @@ class Token {
 	const META_PREFIX = '_activitypub_oauth_token_';
 
 	/**
+	 * User meta key prefix for refresh token index (maps refresh hash to access hash).
+	 */
+	const REFRESH_INDEX_PREFIX = '_activitypub_oauth_refresh_';
+
+	/**
 	 * Option key for tracking users with tokens (for cleanup).
 	 */
 	const USERS_OPTION = 'activitypub_oauth_token_users';
@@ -101,8 +106,9 @@ class Token {
 		);
 
 		// Store in user meta with access token hash as key.
-		$meta_key = self::META_PREFIX . self::hash_token( $access_token );
-		$result   = \update_user_meta( $user_id, $meta_key, $token_data );
+		$access_hash = self::hash_token( $access_token );
+		$meta_key    = self::META_PREFIX . $access_hash;
+		$result      = \update_user_meta( $user_id, $meta_key, $token_data );
 
 		if ( false === $result ) {
 			return new \WP_Error(
@@ -111,6 +117,10 @@ class Token {
 				array( 'status' => 500 )
 			);
 		}
+
+		// Store refresh token index for O(1) lookup during refresh.
+		$refresh_index_key = self::REFRESH_INDEX_PREFIX . self::hash_token( $refresh_token );
+		\update_user_meta( $user_id, $refresh_index_key, $access_hash );
 
 		// Track user for cleanup.
 		self::track_user( $user_id );
@@ -124,7 +134,7 @@ class Token {
 			'token_type'    => 'Bearer',
 			'expires_in'    => $expires,
 			'refresh_token' => $refresh_token,
-			'scope'         => Scope::to_string( $scopes ),
+			'scope'         => Scope::to_string( $token_data['scopes'] ),
 			'me'            => $me,
 		);
 	}
@@ -201,64 +211,90 @@ class Token {
 	 * @return array|\WP_Error New token data or error.
 	 */
 	public static function refresh( $refresh_token, $client_id ) {
-		$refresh_hash = self::hash_token( $refresh_token );
-		$users        = self::get_tracked_users();
+		global $wpdb;
 
-		foreach ( $users as $user_id ) {
-			// Get all token meta for this user.
-			$all_meta = \get_user_meta( $user_id );
+		$refresh_hash      = self::hash_token( $refresh_token );
+		$refresh_index_key = self::REFRESH_INDEX_PREFIX . $refresh_hash;
 
-			foreach ( $all_meta as $meta_key => $meta_values ) {
-				if ( 0 !== strpos( $meta_key, self::META_PREFIX ) ) {
-					continue;
-				}
+		// Direct DB lookup by refresh token index - O(1) instead of O(n) users.
+		$user_id = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT user_id FROM $wpdb->usermeta WHERE meta_key = %s LIMIT 1",
+				$refresh_index_key
+			)
+		);
 
-				$token_data = maybe_unserialize( $meta_values[0] );
-
-				if ( ! is_array( $token_data ) ) {
-					continue;
-				}
-
-				// Check if this is our refresh token.
-				if ( isset( $token_data['refresh_token_hash'] ) &&
-					hash_equals( $token_data['refresh_token_hash'], $refresh_hash ) ) {
-
-					// Verify client ID matches.
-					if ( $token_data['client_id'] !== $client_id ) {
-						return new \WP_Error(
-							'activitypub_client_mismatch',
-							\__( 'Client ID does not match.', 'activitypub' ),
-							array( 'status' => 400 )
-						);
-					}
-
-					// Check refresh token expiration.
-					if ( isset( $token_data['refresh_expires_at'] ) &&
-						$token_data['refresh_expires_at'] < time() ) {
-						// Delete the expired token.
-						\delete_user_meta( $user_id, $meta_key );
-
-						return new \WP_Error(
-							'activitypub_refresh_token_expired',
-							\__( 'Refresh token has expired.', 'activitypub' ),
-							array( 'status' => 401 )
-						);
-					}
-
-					// Delete the old token.
-					\delete_user_meta( $user_id, $meta_key );
-
-					// Create a new token.
-					return self::create( $user_id, $client_id, $token_data['scopes'] );
-				}
-			}
+		if ( empty( $user_id ) ) {
+			return new \WP_Error(
+				'activitypub_invalid_refresh_token',
+				\__( 'Invalid refresh token.', 'activitypub' ),
+				array( 'status' => 401 )
+			);
 		}
 
-		return new \WP_Error(
-			'activitypub_invalid_refresh_token',
-			\__( 'Invalid refresh token.', 'activitypub' ),
-			array( 'status' => 401 )
-		);
+		$user_id = (int) $user_id;
+
+		// Get the access token hash from the index.
+		$access_hash = \get_user_meta( $user_id, $refresh_index_key, true );
+		if ( empty( $access_hash ) ) {
+			return new \WP_Error(
+				'activitypub_invalid_refresh_token',
+				\__( 'Invalid refresh token.', 'activitypub' ),
+				array( 'status' => 401 )
+			);
+		}
+
+		// Get the full token data.
+		$meta_key   = self::META_PREFIX . $access_hash;
+		$token_data = \get_user_meta( $user_id, $meta_key, true );
+
+		if ( empty( $token_data ) || ! is_array( $token_data ) ) {
+			return new \WP_Error(
+				'activitypub_invalid_refresh_token',
+				\__( 'Invalid refresh token.', 'activitypub' ),
+				array( 'status' => 401 )
+			);
+		}
+
+		// Verify refresh token hash matches.
+		if ( ! isset( $token_data['refresh_token_hash'] ) ||
+			! hash_equals( $token_data['refresh_token_hash'], $refresh_hash ) ) {
+			return new \WP_Error(
+				'activitypub_invalid_refresh_token',
+				\__( 'Invalid refresh token.', 'activitypub' ),
+				array( 'status' => 401 )
+			);
+		}
+
+		// Verify client ID matches.
+		if ( $token_data['client_id'] !== $client_id ) {
+			return new \WP_Error(
+				'activitypub_client_mismatch',
+				\__( 'Client ID does not match.', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		// Check refresh token expiration.
+		if ( isset( $token_data['refresh_expires_at'] ) &&
+			$token_data['refresh_expires_at'] < time() ) {
+			// Delete the expired token and index.
+			\delete_user_meta( $user_id, $meta_key );
+			\delete_user_meta( $user_id, $refresh_index_key );
+
+			return new \WP_Error(
+				'activitypub_refresh_token_expired',
+				\__( 'Refresh token has expired.', 'activitypub' ),
+				array( 'status' => 401 )
+			);
+		}
+
+		// Delete the old token and index.
+		\delete_user_meta( $user_id, $meta_key );
+		\delete_user_meta( $user_id, $refresh_index_key );
+
+		// Create a new token.
+		return self::create( $user_id, $client_id, $token_data['scopes'] );
 	}
 
 	/**
@@ -268,49 +304,83 @@ class Token {
 	 * @return bool True on success (always returns true per RFC 7009).
 	 */
 	public static function revoke( $token ) {
+		global $wpdb;
+
 		$token_hash = self::hash_token( $token );
-		$users      = self::get_tracked_users();
 
-		foreach ( $users as $user_id ) {
-			$all_meta        = \get_user_meta( $user_id );
-			$remaining_count = 0;
-			$found_token     = false;
+		// Try as access token first (O(1) lookup).
+		$access_meta_key = self::META_PREFIX . $token_hash;
+		$user_id         = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT user_id FROM $wpdb->usermeta WHERE meta_key = %s LIMIT 1",
+				$access_meta_key
+			)
+		);
 
-			foreach ( $all_meta as $meta_key => $meta_values ) {
-				if ( 0 !== strpos( $meta_key, self::META_PREFIX ) ) {
-					continue;
-				}
+		if ( $user_id ) {
+			$user_id    = (int) $user_id;
+			$token_data = \get_user_meta( $user_id, $access_meta_key, true );
 
-				$token_data = maybe_unserialize( $meta_values[0] );
+			// Delete the token.
+			\delete_user_meta( $user_id, $access_meta_key );
 
-				if ( ! is_array( $token_data ) ) {
-					continue;
-				}
-
-				// Check both access and refresh token hashes.
-				if ( ( isset( $token_data['access_token_hash'] ) &&
-						hash_equals( $token_data['access_token_hash'], $token_hash ) ) ||
-					( isset( $token_data['refresh_token_hash'] ) &&
-						hash_equals( $token_data['refresh_token_hash'], $token_hash ) ) ) {
-
-					\delete_user_meta( $user_id, $meta_key );
-					$found_token = true;
-				} else {
-					++$remaining_count;
-				}
+			// Also delete the refresh token index if it exists.
+			if ( is_array( $token_data ) && isset( $token_data['refresh_token_hash'] ) ) {
+				$refresh_index_key = self::REFRESH_INDEX_PREFIX . $token_data['refresh_token_hash'];
+				\delete_user_meta( $user_id, $refresh_index_key );
 			}
 
-			if ( $found_token ) {
-				// Untrack user if no remaining tokens.
-				if ( 0 === $remaining_count ) {
-					self::untrack_user( $user_id );
-				}
-				return true;
+			self::maybe_untrack_user( $user_id );
+			return true;
+		}
+
+		// Try as refresh token (O(1) lookup via index).
+		$refresh_index_key = self::REFRESH_INDEX_PREFIX . $token_hash;
+		$user_id           = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT user_id FROM $wpdb->usermeta WHERE meta_key = %s LIMIT 1",
+				$refresh_index_key
+			)
+		);
+
+		if ( $user_id ) {
+			$user_id     = (int) $user_id;
+			$access_hash = \get_user_meta( $user_id, $refresh_index_key, true );
+
+			// Delete the token and index.
+			if ( $access_hash ) {
+				\delete_user_meta( $user_id, self::META_PREFIX . $access_hash );
 			}
+			\delete_user_meta( $user_id, $refresh_index_key );
+
+			self::maybe_untrack_user( $user_id );
+			return true;
 		}
 
 		// Token doesn't exist or already revoked - that's fine per RFC 7009.
 		return true;
+	}
+
+	/**
+	 * Untrack user if they have no remaining tokens.
+	 *
+	 * @param int $user_id The user ID.
+	 */
+	private static function maybe_untrack_user( $user_id ) {
+		global $wpdb;
+
+		// Check if user has any remaining tokens.
+		$count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM $wpdb->usermeta WHERE user_id = %d AND meta_key LIKE %s",
+				$user_id,
+				$wpdb->esc_like( self::META_PREFIX ) . '%'
+			)
+		);
+
+		if ( 0 === (int) $count ) {
+			self::untrack_user( $user_id );
+		}
 	}
 
 	/**
@@ -324,9 +394,14 @@ class Token {
 		$count    = 0;
 
 		foreach ( $all_meta as $meta_key => $meta_values ) {
+			// Delete token entries.
 			if ( 0 === strpos( $meta_key, self::META_PREFIX ) ) {
 				\delete_user_meta( $user_id, $meta_key );
 				++$count;
+			}
+			// Delete refresh token indices.
+			if ( 0 === strpos( $meta_key, self::REFRESH_INDEX_PREFIX ) ) {
+				\delete_user_meta( $user_id, $meta_key );
 			}
 		}
 
@@ -366,6 +441,10 @@ class Token {
 				// Check if this token belongs to the client.
 				if ( isset( $token_data['client_id'] ) && $token_data['client_id'] === $client_id ) {
 					\delete_user_meta( $user_id, $meta_key );
+					// Also delete refresh token index.
+					if ( isset( $token_data['refresh_token_hash'] ) ) {
+						\delete_user_meta( $user_id, self::REFRESH_INDEX_PREFIX . $token_data['refresh_token_hash'] );
+					}
 					++$count;
 				} else {
 					++$user_tokens;
@@ -576,6 +655,10 @@ class Token {
 
 				if ( $access_expired && $refresh_expired ) {
 					\delete_user_meta( $user_id, $meta_key );
+					// Also delete refresh token index.
+					if ( isset( $token_data['refresh_token_hash'] ) ) {
+						\delete_user_meta( $user_id, self::REFRESH_INDEX_PREFIX . $token_data['refresh_token_hash'] );
+					}
 					++$count;
 				} else {
 					++$user_tokens;
