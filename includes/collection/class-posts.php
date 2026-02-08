@@ -12,7 +12,7 @@ use Activitypub\Sanitize;
 
 use function Activitypub\generate_post_summary;
 use function Activitypub\object_to_uri;
-use function Activitypub\wrap_media_in_content;
+use function Activitypub\process_remote_images;
 
 /**
  * Posts collection.
@@ -266,12 +266,9 @@ class Posts {
 		$content = self::remove_hashtags( $content, $activity['tag'] ?? array() );
 		$content = Emoji::wrap_in_content( $content, $activity );
 
-		// Wrap existing remote images in content with media blocks.
-		$content = wrap_media_in_content( $content );
-
-		// Append any attachments not already in content (already wrapped in media blocks).
+		// Process remote media: wrap inline images and append attachments.
 		$attachments = self::extract_attachments( $activity );
-		$content     = self::append_attachment_media_blocks( $content, $attachments );
+		$content     = process_remote_images( $content, $attachments );
 
 		return array(
 			'post_title'    => isset( $activity['name'] ) ? \wp_strip_all_tags( $activity['name'] ) : '',
@@ -340,48 +337,6 @@ class Posts {
 		}
 
 		return $attachments;
-	}
-
-	/**
-	 * Append attachment media blocks to content.
-	 *
-	 * Generates media blocks for attachments not already in the content and appends them.
-	 * Blocks are wrapped with activitypub/media for lazy caching at render time.
-	 *
-	 * @param string $content     The post content (already has inline images wrapped).
-	 * @param array  $attachments Array of attachments with 'url' and 'alt' keys.
-	 *
-	 * @return string The content with appended media blocks.
-	 */
-	private static function append_attachment_media_blocks( $content, $attachments ) {
-		if ( empty( $attachments ) ) {
-			return $content;
-		}
-
-		$blocks = '';
-		foreach ( $attachments as $attachment ) {
-			$url = $attachment['url'];
-
-			// Skip if this URL is already in the content (check both raw and escaped forms).
-			if ( false !== \strpos( $content, $url ) || false !== \strpos( $content, \esc_url( $url ) ) ) {
-				continue;
-			}
-
-			// Generate img tag wrapped in media block (consistent with wrap_media_in_content).
-			$img_tag = \sprintf(
-				'<img src="%s" alt="%s" />',
-				\esc_url( $url ),
-				\esc_attr( $attachment['alt'] )
-			);
-
-			$blocks .= \sprintf(
-				"\n\n<!-- wp:activitypub/media %s -->%s<!-- /wp:activitypub/media -->",
-				\wp_json_encode( array( 'url' => $url ) ),
-				$img_tag
-			);
-		}
-
-		return $content . $blocks;
 	}
 
 	/**

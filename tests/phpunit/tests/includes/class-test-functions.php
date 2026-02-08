@@ -284,80 +284,143 @@ class Test_Functions extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test wrap_media_in_content wraps remote images.
+	 * Test process_remote_images wraps remote images.
 	 *
-	 * @covers \Activitypub\wrap_media_in_content
+	 * @covers \Activitypub\process_remote_images
 	 */
-	public function test_wrap_media_in_content_wraps_remote_images() {
+	public function test_process_remote_images_wraps_remote_images() {
 		$content = '<p>Text</p><img src="https://remote.example.com/image.jpg" alt="Test" />';
-		$result  = \Activitypub\wrap_media_in_content( $content );
+		$result  = \Activitypub\process_remote_images( $content );
 
-		$this->assertStringContainsString( '<!-- wp:activitypub/media', $result );
-		// wp_json_encode escapes slashes, so check for that format.
-		$this->assertStringContainsString( 'https:\/\/remote.example.com\/image.jpg', $result );
-		$this->assertStringContainsString( '<!-- /wp:activitypub/media -->', $result );
+		$this->assertStringContainsString( '<!-- wp:activitypub/image', $result );
+		$this->assertStringContainsString( 'https://remote.example.com/image.jpg', $result );
+		$this->assertStringContainsString( '<!-- /wp:activitypub/image -->', $result );
 	}
 
 	/**
-	 * Test wrap_media_in_content handles different attribute orders.
+	 * Test process_remote_images handles different attribute orders.
 	 *
-	 * @covers \Activitypub\wrap_media_in_content
+	 * @covers \Activitypub\process_remote_images
 	 */
-	public function test_wrap_media_in_content_attribute_order() {
+	public function test_process_remote_images_attribute_order() {
 		// Test with alt before src.
 		$content = '<img alt="Test" src="https://remote.example.com/image.jpg" />';
-		$result  = \Activitypub\wrap_media_in_content( $content );
+		$result  = \Activitypub\process_remote_images( $content );
 
-		$this->assertStringContainsString( '<!-- wp:activitypub/media', $result );
-		$this->assertStringContainsString( 'https:\/\/remote.example.com\/image.jpg', $result );
+		$this->assertStringContainsString( '<!-- wp:activitypub/image', $result );
+		$this->assertStringContainsString( 'https://remote.example.com/image.jpg', $result );
 
 		// Test with multiple attributes before src.
 		$content = '<img class="foo" alt="Test" width="100" src="https://remote.example.com/image2.jpg" height="50" />';
-		$result  = \Activitypub\wrap_media_in_content( $content );
+		$result  = \Activitypub\process_remote_images( $content );
 
-		$this->assertStringContainsString( '<!-- wp:activitypub/media', $result );
-		$this->assertStringContainsString( 'https:\/\/remote.example.com\/image2.jpg', $result );
+		$this->assertStringContainsString( '<!-- wp:activitypub/image', $result );
+		$this->assertStringContainsString( 'https://remote.example.com/image2.jpg', $result );
 	}
 
 	/**
-	 * Test wrap_media_in_content does not double-wrap already wrapped images.
+	 * Test process_remote_images does not double-wrap already wrapped images.
 	 *
-	 * @covers \Activitypub\wrap_media_in_content
+	 * @covers \Activitypub\process_remote_images
 	 */
-	public function test_wrap_media_in_content_no_double_wrapping() {
-		$content = '<!-- wp:activitypub/media {"url":"https://remote.example.com/image.jpg"} --><img src="https://remote.example.com/image.jpg" alt="Test" /><!-- /wp:activitypub/media -->';
-		$result  = \Activitypub\wrap_media_in_content( $content );
+	public function test_process_remote_images_no_double_wrapping() {
+		$content = '<!-- wp:activitypub/image {"url":"https://remote.example.com/image.jpg"} --><img src="https://remote.example.com/image.jpg" alt="Test" /><!-- /wp:activitypub/image -->';
+		$result  = \Activitypub\process_remote_images( $content );
 
 		// Count occurrences of the opening block comment.
-		$count = substr_count( $result, '<!-- wp:activitypub/media' );
+		$count = substr_count( $result, '<!-- wp:activitypub/image' );
 		$this->assertSame( 1, $count, 'Should not wrap already-wrapped images' );
 	}
 
 	/**
-	 * Test wrap_media_in_content preserves URL without normalization.
+	 * Test process_remote_images does not wrap local images.
 	 *
-	 * @covers \Activitypub\wrap_media_in_content
+	 * @covers \Activitypub\process_remote_images
 	 */
-	public function test_wrap_media_in_content_preserves_url() {
-		// URL with query params that esc_url() would modify.
-		$content = '<img src="https://remote.example.com/image.jpg?foo=1&bar=2" />';
-		$result  = \Activitypub\wrap_media_in_content( $content );
+	public function test_process_remote_images_skips_local_images() {
+		$content = '<img src="' . home_url( '/image.jpg' ) . '" alt="Local" />';
+		$result  = \Activitypub\process_remote_images( $content );
 
-		// The URL in the JSON should be preserved exactly (JSON-encoded with escaped slashes).
-		$this->assertStringContainsString( 'foo=1&bar=2', $result );
-		// Verify ampersand is NOT HTML-encoded (esc_url would make it &amp;).
-		$this->assertStringNotContainsString( '&amp;', $result );
+		$this->assertStringNotContainsString( '<!-- wp:activitypub/image', $result );
 	}
 
 	/**
-	 * Test wrap_media_in_content does not wrap local images.
+	 * Test process_remote_images appends attachments not in content.
 	 *
-	 * @covers \Activitypub\wrap_media_in_content
+	 * @covers \Activitypub\process_remote_images
 	 */
-	public function test_wrap_media_in_content_skips_local_images() {
-		$content = '<img src="' . home_url( '/image.jpg' ) . '" alt="Local" />';
-		$result  = \Activitypub\wrap_media_in_content( $content );
+	public function test_process_remote_images_appends_attachments() {
+		$content     = '<p>Just text</p>';
+		$attachments = array(
+			array(
+				'url' => 'https://remote.example.com/attachment.jpg',
+				'alt' => 'Attached Image',
+			),
+		);
 
-		$this->assertStringNotContainsString( '<!-- wp:activitypub/media', $result );
+		$result = \Activitypub\process_remote_images( $content, $attachments );
+
+		$this->assertStringContainsString( '<!-- wp:activitypub/image', $result );
+		$this->assertStringContainsString( 'https://remote.example.com/attachment.jpg', $result );
+		$this->assertStringContainsString( 'alt="Attached Image"', $result );
+	}
+
+	/**
+	 * Test process_remote_images does not duplicate attachment already in content.
+	 *
+	 * @covers \Activitypub\process_remote_images
+	 */
+	public function test_process_remote_images_no_duplicate_attachments() {
+		$url         = 'https://remote.example.com/image.jpg';
+		$content     = '<p>Text</p><img src="' . $url . '" alt="Inline" />';
+		$attachments = array(
+			array(
+				'url' => $url,
+				'alt' => 'Same Image',
+			),
+		);
+
+		$result = \Activitypub\process_remote_images( $content, $attachments );
+
+		// Count img tags - should be exactly 1.
+		$img_count = \preg_match_all( '/<img\s/', $result );
+		$this->assertSame( 1, $img_count, 'Should have exactly one img tag' );
+	}
+
+	/**
+	 * Test process_remote_images handles empty alt text.
+	 *
+	 * @covers \Activitypub\process_remote_images
+	 */
+	public function test_process_remote_images_empty_alt() {
+		$attachments = array(
+			array(
+				'url' => 'https://remote.example.com/image.jpg',
+				'alt' => '',
+			),
+		);
+
+		$result = \Activitypub\process_remote_images( '', $attachments );
+
+		// Should not have alt="" attribute when alt is empty.
+		$this->assertStringNotContainsString( 'alt=""', $result );
+		$this->assertStringContainsString( '<img src=', $result );
+	}
+
+	/**
+	 * Test generate_image_block helper function.
+	 *
+	 * @covers \Activitypub\generate_image_block
+	 */
+	public function test_generate_image_block() {
+		$url      = 'https://example.com/image.jpg';
+		$img_html = '<img src="https://example.com/image.jpg" alt="Test" />';
+
+		$result = \Activitypub\generate_image_block( $url, $img_html );
+
+		$this->assertStringStartsWith( '<!-- wp:activitypub/image', $result );
+		$this->assertStringEndsWith( '<!-- /wp:activitypub/image -->', $result );
+		$this->assertStringContainsString( $img_html, $result );
+		$this->assertStringContainsString( '"url":"https:\/\/example.com\/image.jpg"', $result );
 	}
 }

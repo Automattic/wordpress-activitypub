@@ -208,7 +208,7 @@ class Test_Media extends WP_UnitTestCase {
 
 		// Create content with a media block (as it would be stored).
 		$remote_url = 'https://remote.example.com/image.jpg';
-		$content    = '<!-- wp:activitypub/media {"url":"' . $remote_url . '"} --><img src="' . $remote_url . '" alt="Test" /><!-- /wp:activitypub/media -->';
+		$content    = '<!-- wp:activitypub/image {"url":"' . $remote_url . '"} --><img src="' . $remote_url . '" alt="Test" /><!-- /wp:activitypub/image -->';
 
 		// Render the block.
 		$rendered = \do_blocks( $content );

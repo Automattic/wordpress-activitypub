@@ -45,7 +45,7 @@ class Comment {
 	 *
 	 * Comments don't automatically parse blocks like posts do.
 	 * This filter applies do_blocks() to render activitypub/emoji
-	 * and activitypub/media blocks in comment content.
+	 * and activitypub/image blocks in comment content.
 	 *
 	 * @param string $content The comment content.
 	 *

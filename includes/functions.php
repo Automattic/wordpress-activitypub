@@ -351,62 +351,99 @@ function is_remote_url( $url ) {
 }
 
 /**
- * Wrap remote images in content with media blocks.
+ * Generate an image block wrapper for a remote image.
  *
- * Wraps `<img>` tags that have remote URLs with activitypub/media blocks.
- * The blocks are rendered at display time via their render_callback,
- * allowing lazy caching of remote media.
+ * @param string $url      The remote image URL.
+ * @param string $img_html The img tag HTML.
  *
- * Uses WP_HTML_Tag_Processor for robust HTML parsing to find img tags,
- * then wraps them with block comments for lazy media caching.
- *
- * @param string $content The content to process.
- *
- * @return string The content with wrapped images.
+ * @return string The wrapped image block.
  */
-function wrap_media_in_content( $content ) {
-	if ( empty( $content ) ) {
+function generate_image_block( $url, $img_html ) {
+	return \sprintf(
+		'<!-- wp:activitypub/image %s -->%s<!-- /wp:activitypub/image -->',
+		\wp_json_encode( array( 'url' => $url ) ),
+		$img_html
+	);
+}
+
+/**
+ * Process remote images in content and from attachments.
+ *
+ * Wraps remote `<img>` tags with activitypub/image blocks for lazy caching,
+ * and appends any attachments not already present in the content.
+ *
+ * @param string $content     The content to process.
+ * @param array  $attachments Optional. Array of attachments with 'url' and 'alt' keys.
+ *
+ * @return string The content with wrapped images and appended attachments.
+ */
+function process_remote_images( $content, $attachments = array() ) {
+	if ( empty( $content ) && empty( $attachments ) ) {
 		return $content;
 	}
 
-	$processor = new \WP_HTML_Tag_Processor( $content );
-	$to_wrap   = array();
+	// Track URLs we've seen to avoid duplicates.
+	$seen_urls = array();
 
-	// Collect all img tags with remote src URLs using proper HTML parsing.
-	while ( $processor->next_tag( 'IMG' ) ) {
-		$src = $processor->get_attribute( 'src' );
+	// Process existing images in content.
+	if ( ! empty( $content ) && false !== \strpos( $content, '<img' ) ) {
+		$processor = new \WP_HTML_Tag_Processor( $content );
 
-		if ( $src && is_remote_url( $src ) ) {
-			$to_wrap[] = $src;
+		// Mark remote images for wrapping using a data attribute.
+		while ( $processor->next_tag( 'IMG' ) ) {
+			$src = $processor->get_attribute( 'src' );
+
+			if ( $src && is_remote_url( $src ) && ! isset( $seen_urls[ $src ] ) ) {
+				$processor->set_attribute( 'data-activitypub-wrap', '1' );
+				$seen_urls[ $src ] = true;
+			}
 		}
-	}
 
-	if ( empty( $to_wrap ) ) {
-		return $content;
-	}
+		$content = $processor->get_updated_html();
 
-	// Wrap each remote image using regex replacement.
-	// The (*SKIP)(?!) pattern ensures already-wrapped blocks are not double-wrapped.
-	foreach ( $to_wrap as $url ) {
-		$escaped_url = \preg_quote( $url, '/' );
-		$pattern     = '/<!-- wp:activitypub\/media[^>]*-->.*?<!-- \/wp:activitypub\/media -->(*SKIP)(?!)|(<img\s+[^>]*src=["\']' . $escaped_url . '["\'][^>]*>)/is';
-
+		// Wrap marked images, skipping those already in image blocks.
 		$content = \preg_replace_callback(
-			$pattern,
-			function ( $matches ) use ( $url ) {
-				// If capture group 1 is empty, this was a skipped block.
-				if ( empty( $matches[1] ) ) {
-					return $matches[0];
+			'/<!-- wp:activitypub\/image[^>]*-->.*?<!-- \/wp:activitypub\/image -->(*SKIP)(?!)|<img\s+([^>]*)data-activitypub-wrap="1"([^>]*)>/is',
+			function ( $matches ) {
+				if ( empty( $matches[1] ) && empty( $matches[2] ) ) {
+					return $matches[0]; // Skipped block.
 				}
 
-				return \sprintf(
-					'<!-- wp:activitypub/media %s -->%s<!-- /wp:activitypub/media -->',
-					\wp_json_encode( array( 'url' => $url ) ),
-					$matches[1]
-				);
+				// Reconstruct img tag without the marker attribute.
+				$img_html = '<img ' . \trim( $matches[1] . $matches[2] ) . '>';
+
+				// Extract src URL from the img tag.
+				if ( \preg_match( '/src=["\']([^"\']+)["\']/', $img_html, $src_match ) ) {
+					return generate_image_block( $src_match[1], $img_html );
+				}
+
+				return $matches[0];
 			},
 			$content
 		);
+	}
+
+	// Append attachments not already in content.
+	if ( ! empty( $attachments ) ) {
+		foreach ( $attachments as $attachment ) {
+			$url = $attachment['url'] ?? '';
+			if ( empty( $url ) || isset( $seen_urls[ $url ] ) ) {
+				continue;
+			}
+
+			// Also check if URL appears in content (in case it wasn't in an img tag).
+			if ( false !== \strpos( $content, $url ) ) {
+				continue;
+			}
+
+			$alt     = ! empty( $attachment['alt'] ) ? \esc_attr( $attachment['alt'] ) : '';
+			$img_tag = $alt
+				? \sprintf( '<img src="%s" alt="%s" />', \esc_url( $url ), $alt )
+				: \sprintf( '<img src="%s" />', \esc_url( $url ) );
+
+			$content          .= "\n\n" . generate_image_block( $url, $img_tag );
+			$seen_urls[ $url ] = true;
+		}
 	}
 
 	return $content;

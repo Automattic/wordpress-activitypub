@@ -57,6 +57,21 @@ class Test_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Render post content to trigger lazy media caching.
+	 *
+	 * Sets up global post context, renders blocks, then cleans up.
+	 *
+	 * @param \WP_Post $the_post The post to render.
+	 */
+	protected function render_post_content( $the_post ) {
+		global $post;
+		$post = $the_post;
+		\setup_postdata( $the_post );
+		\do_blocks( $the_post->post_content );
+		\wp_reset_postdata();
+	}
+
+	/**
 	 * Mock remote object fetching to bypass URL validation.
 	 *
 	 * @param mixed  $response      The response to return.
@@ -485,19 +500,11 @@ class Test_Posts extends \WP_UnitTestCase {
 		$this->assertEquals( 'Post with Image', $result->post_title );
 
 		// Verify content has the media block with original URL.
-		$this->assertStringContainsString( '<!-- wp:activitypub/media', $result->post_content );
+		$this->assertStringContainsString( '<!-- wp:activitypub/image', $result->post_content );
 		$this->assertStringContainsString( 'https://example.com/image.jpg', $result->post_content );
 
-		// Set up global post context for block rendering.
-		global $post;
-		$post = $result;
-		\setup_postdata( $post );
-
 		// Render the content to trigger lazy caching.
-		\do_blocks( $result->post_content );
-
-		// Clean up global post.
-		\wp_reset_postdata();
+		$this->render_post_content( $result );
 
 		// Verify file was created in activitypub directory after rendering.
 		$upload_dir = \wp_upload_dir();
@@ -543,7 +550,7 @@ class Test_Posts extends \WP_UnitTestCase {
 		$this->assertStringContainsString( 'alt="Extra Image Alt Text"', $result->post_content );
 
 		// Should be wrapped in media block.
-		$this->assertStringContainsString( '<!-- wp:activitypub/media', $result->post_content );
+		$this->assertStringContainsString( '<!-- wp:activitypub/image', $result->post_content );
 	}
 
 	/**
@@ -918,15 +925,11 @@ class Test_Posts extends \WP_UnitTestCase {
 		$this->assertInstanceOf( '\WP_Post', $updated_post );
 
 		// Verify attachment was added to content as media block.
-		$this->assertStringContainsString( '<!-- wp:activitypub/media', $updated_post->post_content );
+		$this->assertStringContainsString( '<!-- wp:activitypub/image', $updated_post->post_content );
 		$this->assertStringContainsString( 'https://example.com/image.jpg', $updated_post->post_content );
 
-		// Set up global post context and render to trigger lazy caching.
-		global $post;
-		$post = $updated_post;
-		\setup_postdata( $post );
-		\do_blocks( $updated_post->post_content );
-		\wp_reset_postdata();
+		// Render to trigger lazy caching.
+		$this->render_post_content( $updated_post );
 
 		// Verify file was created after rendering.
 		$upload_dir = \wp_upload_dir();
@@ -964,12 +967,8 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		$original_post = Posts::add( $activity, 1 );
 
-		// Set up global post context and render to trigger lazy caching.
-		global $post;
-		$post = $original_post;
-		\setup_postdata( $post );
-		\do_blocks( $original_post->post_content );
-		\wp_reset_postdata();
+		// Render to trigger lazy caching.
+		$this->render_post_content( $original_post );
 
 		// Verify original file was created after rendering.
 		$upload_dir = \wp_upload_dir();
@@ -1016,11 +1015,8 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		$updated_post = Posts::update( $update_activity, 1 );
 
-		// Render the updated content to trigger caching of new image.
-		$post = $updated_post;
-		\setup_postdata( $post );
-		\do_blocks( $updated_post->post_content );
-		\wp_reset_postdata();
+		// Render to trigger caching of new image.
+		$this->render_post_content( $updated_post );
 
 		// Verify new file was created (old file may still exist until cleanup).
 		$new_files = glob( $file_dir . '/*' );
@@ -1067,12 +1063,8 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		$original_post = Posts::add( $activity, 1 );
 
-		// Set up global post context and render to trigger lazy caching.
-		global $post;
-		$post = $original_post;
-		\setup_postdata( $post );
-		\do_blocks( $original_post->post_content );
-		\wp_reset_postdata();
+		// Render to trigger lazy caching.
+		$this->render_post_content( $original_post );
 
 		// Verify original file was created after rendering.
 		$upload_dir = \wp_upload_dir();

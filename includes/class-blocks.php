@@ -116,12 +116,12 @@ class Blocks {
 		);
 
 		\register_block_type(
-			'activitypub/media',
+			'activitypub/image',
 			array(
 				'attributes'      => array(
 					'url' => array( 'type' => 'string' ),
 				),
-				'render_callback' => array( self::class, 'render_media_block' ),
+				'render_callback' => array( self::class, 'render_image_block' ),
 			)
 		);
 	}
@@ -371,7 +371,7 @@ class Blocks {
 	}
 
 	/**
-	 * Render the media block.
+	 * Render the image block.
 	 *
 	 * Replaces remote image URL with cached URL at runtime.
 	 *
@@ -380,7 +380,7 @@ class Blocks {
 	 *
 	 * @return string The rendered content with cached URL.
 	 */
-	public static function render_media_block( $attrs, $content ) {
+	public static function render_image_block( $attrs, $content ) {
 		if ( empty( $attrs['url'] ) || empty( $content ) ) {
 			return $content;
 		}
@@ -395,9 +395,9 @@ class Blocks {
 		}
 
 		/**
-		 * Filters a remote media URL for caching.
+		 * Filters a remote image URL for caching.
 		 *
-		 * @param string      $url       The remote media URL.
+		 * @param string      $url       The remote image URL.
 		 * @param string      $context   The context ('media').
 		 * @param int|null    $entity_id The entity ID.
 		 * @param array       $options   Additional options.
