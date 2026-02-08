@@ -236,17 +236,6 @@ class Server {
 	}
 
 	/**
-	 * Check if C2S (Client-to-Server) is enabled.
-	 *
-	 * @deprecated C2S is now always enabled.
-	 *
-	 * @return bool Always returns true.
-	 */
-	public static function is_c2s_enabled() {
-		return true;
-	}
-
-	/**
 	 * Run cleanup tasks for OAuth data.
 	 */
 	public static function cleanup() {
