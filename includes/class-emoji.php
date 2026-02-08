@@ -116,6 +116,9 @@ class Emoji {
 	/**
 	 * Validate emoji src attribute for wp_kses.
 	 *
+	 * By default, only allows locally cached emoji URLs for privacy.
+	 * Remote URLs are only allowed when caching is explicitly disabled.
+	 *
 	 * @param string $value The src attribute value.
 	 *
 	 * @return bool True if the src is valid, false otherwise.
@@ -129,18 +132,27 @@ class Emoji {
 			return true;
 		}
 
-		// Allow remote URLs when caching is disabled.
-		$is_valid_url = (bool) \wp_http_validate_url( $value );
+		// Only allow remote URLs when caching is explicitly disabled.
+		// This protects user privacy by defaulting to local-only emoji.
+		$allow_remote = ! Cache::is_enabled();
+
+		// Validate the URL format if remote is allowed.
+		if ( $allow_remote ) {
+			$allow_remote = (bool) \wp_http_validate_url( $value );
+		}
 
 		/**
 		 * Filters whether a remote emoji URL is valid.
+		 *
+		 * Use this filter to explicitly allow remote emoji URLs when needed
+		 * (e.g., for CDN proxying).
 		 *
 		 * @since 5.6.0
 		 *
 		 * @param bool   $valid Whether the URL is valid.
 		 * @param string $value The emoji src URL.
 		 */
-		return \apply_filters( 'activitypub_validate_emoji_src', $is_valid_url, $value );
+		return \apply_filters( 'activitypub_validate_emoji_src', $allow_remote, $value );
 	}
 
 	/**

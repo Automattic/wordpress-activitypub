@@ -214,6 +214,12 @@ class Attachments {
 		$is_local = ! preg_match( '#^https?://#i', $attachment_data['url'] );
 
 		if ( $is_local ) {
+			// Validate local path is within allowed directories to prevent file disclosure.
+			$allowed = self::is_allowed_local_path( $attachment_data['url'] );
+			if ( ! $allowed ) {
+				return new \WP_Error( 'invalid_path', \__( 'Local file path is not within allowed directories.', 'activitypub' ) );
+			}
+
 			// Read local file from disk.
 			if ( ! $wp_filesystem->exists( $attachment_data['url'] ) ) {
 				/* translators: %s: file path */
@@ -224,6 +230,11 @@ class Attachments {
 			$tmp_file = \wp_tempnam( \basename( $attachment_data['url'] ) );
 			$wp_filesystem->copy( $attachment_data['url'], $tmp_file, true );
 		} else {
+			// Validate remote URL before downloading.
+			if ( ! \wp_http_validate_url( $attachment_data['url'] ) ) {
+				return new \WP_Error( 'invalid_url', \__( 'URL is not allowed.', 'activitypub' ) );
+			}
+
 			// Download remote URL.
 			$tmp_file = \download_url( $attachment_data['url'] );
 
@@ -312,6 +323,59 @@ class Attachments {
 		} while ( \file_exists( $new_path ) );
 
 		return $new_path;
+	}
+
+	/**
+	 * Check if a local file path is within allowed directories.
+	 *
+	 * Prevents arbitrary file access by restricting local paths to known safe
+	 * directories like the uploads folder or WordPress temp directory.
+	 *
+	 * @param string $file_path The local file path to validate.
+	 *
+	 * @return bool True if the path is allowed, false otherwise.
+	 */
+	private static function is_allowed_local_path( $file_path ) {
+		// Normalize the path and resolve any relative components.
+		$real_path = \realpath( $file_path );
+		if ( false === $real_path ) {
+			// If file doesn't exist yet, check the directory.
+			$dir_path = \realpath( \dirname( $file_path ) );
+			if ( false === $dir_path ) {
+				return false;
+			}
+			$real_path = $dir_path . '/' . \basename( $file_path );
+		}
+
+		// Get allowed base directories.
+		$upload_dir   = \wp_upload_dir();
+		$allowed_dirs = array(
+			\realpath( $upload_dir['basedir'] ),
+			\realpath( \get_temp_dir() ),
+			\realpath( ABSPATH . 'wp-content' ),
+		);
+
+		/**
+		 * Filters the allowed directories for local file imports.
+		 *
+		 * @since 5.6.0
+		 *
+		 * @param string[] $allowed_dirs Array of allowed directory paths.
+		 * @param string   $file_path    The file path being validated.
+		 */
+		$allowed_dirs = \apply_filters( 'activitypub_allowed_import_directories', $allowed_dirs, $file_path );
+
+		// Remove any false values from realpath failures.
+		$allowed_dirs = \array_filter( $allowed_dirs );
+
+		// Check if the file is within any allowed directory.
+		foreach ( $allowed_dirs as $allowed_dir ) {
+			if ( \str_starts_with( $real_path, $allowed_dir ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

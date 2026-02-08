@@ -273,8 +273,8 @@ class Cache_Command extends \WP_CLI_Command {
 	 * @return bool True if enabled.
 	 */
 	private function is_cache_enabled( $type ) {
-		// Check global disable constant.
-		if ( ACTIVITYPUB_DISABLE_MEDIA_CACHE ) {
+		// Check global cache enablement (includes constant and activitypub_remote_cache_enabled filter).
+		if ( ! \Activitypub\Cache::is_enabled() ) {
 			return false;
 		}
 

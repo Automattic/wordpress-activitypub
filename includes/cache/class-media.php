@@ -41,6 +41,9 @@ class Media extends File {
 	/**
 	 * Context identifier for comment media.
 	 *
+	 * Reserved for future use when comment media caching is implemented.
+	 * Currently, only post media caching is active via maybe_cache().
+	 *
 	 * @var string
 	 */
 	const CONTEXT_COMMENT = 'comment_media';
@@ -54,6 +57,8 @@ class Media extends File {
 
 	/**
 	 * Base directory for comment media.
+	 *
+	 * Reserved for future use when comment media caching is implemented.
 	 *
 	 * @var string
 	 */

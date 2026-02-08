@@ -330,9 +330,20 @@ function is_remote_url( $url ) {
 		return false;
 	}
 
-	// Check if it's a local upload URL.
-	$upload_base = \wp_upload_dir()['baseurl'];
-	if ( \str_contains( $url, $upload_base ) ) {
+	// Compare hosts to determine if URL is local.
+	$site_host = \wp_parse_url( \home_url(), PHP_URL_HOST );
+	$url_host  = \wp_parse_url( $url, PHP_URL_HOST );
+
+	// If hosts match, it's a local URL.
+	if ( $site_host && $url_host && 0 === \strcasecmp( $site_host, $url_host ) ) {
+		return false;
+	}
+
+	// Also check uploads directory with strict prefix match.
+	$upload_dir  = \wp_upload_dir();
+	$upload_base = isset( $upload_dir['baseurl'] ) ? \trailingslashit( $upload_dir['baseurl'] ) : '';
+
+	if ( $upload_base && \str_starts_with( $url, $upload_base ) ) {
 		return false;
 	}
 
