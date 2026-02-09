@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.9
-Stable tag: 7.9.0
+Stable tag: 7.9.1
 Requires PHP: 7.2
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -109,6 +109,18 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 7.9.1 - 2026-02-09
+#### Added
+- Add option to disable direct file sideloading via `ACTIVITYPUB_DISABLE_SIDELOADING` constant or `activitypub_sideloading_enabled` filter, and `activitypub_remote_media_url` filter for CDN proxying.
+
+#### Changed
+- Refactor attachment download handling.
+- Restructure CLI into separate command classes for better organization.
+
+#### Fixed
+- Fix PHP warning when deleting quote comments.
+- Fix podcast integrations ignoring user-configured content template settings.
 
 ### 7.9.0 - 2026-02-05
 #### Added
