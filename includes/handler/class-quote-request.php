@@ -117,8 +117,13 @@ class Quote_Request {
 	 * @param \WP_Comment $comment    The comment object.
 	 */
 	public static function handle_quote_delete( $comment_id, $comment ) {
+		// Try to get comment if not provided.
+		if ( ! $comment ) {
+			$comment = \get_comment( $comment_id );
+		}
+
 		// Only handle quote comments.
-		if ( 'quote' !== $comment->comment_type ) {
+		if ( ! $comment || 'quote' !== $comment->comment_type ) {
 			return;
 		}
 
