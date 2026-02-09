@@ -1,4 +1,0 @@
-Significance: patch
-Type: added
-
-Show warning instead of reply link when logged-in user cannot federate replies to fediverse comments.

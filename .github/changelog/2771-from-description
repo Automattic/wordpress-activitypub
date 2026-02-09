@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix migration activities not being scheduled for federation due to hook registration timing.

@@ -66,7 +66,20 @@ class Emoji {
 		$upload_dir = \wp_upload_dir();
 		$emoji_base = $upload_dir['baseurl'] . Attachments::$emoji_dir;
 
-		return \str_starts_with( $value, $emoji_base );
+		// Check if URL is from local emoji directory.
+		$is_valid = \str_starts_with( $value, $emoji_base );
+
+		/**
+		 * Filters whether an emoji src URL is valid.
+		 *
+		 * By default, only URLs from the local emoji directory are allowed.
+		 * This filter allows additional URLs (e.g., from a CDN) to be accepted
+		 * when sideloading is disabled.
+		 *
+		 * @param bool   $is_valid Whether the URL is valid.
+		 * @param string $value    The emoji src URL being validated.
+		 */
+		return \apply_filters( 'activitypub_validate_emoji_src', $is_valid, $value );
 	}
 
 	/**

@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Filter comments on ActivityPub posts from REST API responses.

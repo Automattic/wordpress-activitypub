@@ -106,7 +106,7 @@ class Http {
 		if ( ! \is_array( $args ) ) {
 			\_deprecated_argument(
 				__METHOD__,
-				'unreleased',
+				'7.9.0',
 				\esc_html__( 'The $cached parameter should now be passed as the third argument.', 'activitypub' )
 			);
 			$cached = $args;

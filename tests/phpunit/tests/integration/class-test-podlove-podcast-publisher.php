@@ -41,7 +41,7 @@ class Test_Podlove_Podcast_Publisher extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that get_content returns summary.
+	 * Test that content is generated using the template engine.
 	 *
 	 * @covers ::get_content
 	 */
@@ -58,10 +58,10 @@ class Test_Podlove_Podcast_Publisher extends \WP_UnitTestCase {
 		$post = \get_post( $post );
 
 		$transformer = new \Activitypub\Integration\Podlove_Podcast_Publisher( $post );
-		$content     = $transformer->get_content();
+		$object      = $transformer->to_object();
 
-		$this->assertNotEmpty( $content );
-		$this->assertIsString( $content );
+		$this->assertNotEmpty( $object->get_content() );
+		$this->assertIsString( $object->get_content() );
 
 		// Clean up.
 		\wp_delete_post( $post->ID, true );
