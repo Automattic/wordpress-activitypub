@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.10.0] - 2026-02-09
+### Added
+- Add option to disable direct file sideloading via `ACTIVITYPUB_DISABLE_SIDELOADING` constant or `activitypub_sideloading_enabled` filter, and `activitypub_remote_media_url` filter for CDN proxying. [#2883]
+
+### Changed
+- Refactor attachment download handling. [#2889]
+- Restructure CLI into separate command classes for better organization. [#2881]
+
+### Fixed
+- Fix PHP warning when deleting quote comments. [#2895]
+- Fix podcast integrations ignoring user-configured content template settings. [#2897]
+
 ## [7.9.0] - 2026-02-05
 ### Added
 - Add Fediverse Following block to display accounts the user follows. [#2837]
@@ -1679,6 +1691,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[7.10.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.9.0...7.10.0
 [7.9.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.8.5...7.9.0
 [7.8.5]: https://github.com/Automattic/wordpress-activitypub/compare/7.8.4...7.8.5
 [7.8.4]: https://github.com/Automattic/wordpress-activitypub/compare/7.8.3...7.8.4
