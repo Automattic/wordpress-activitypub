@@ -113,8 +113,8 @@ class Quote_Request {
 	 * When a local quote comment is deleted, send a Reject activity to revoke
 	 * the previously accepted QuoteRequest.
 	 *
-	 * @param int         $comment_id The comment ID being deleted.
-	 * @param \WP_Comment $comment    The comment object.
+	 * @param int              $comment_id The comment ID being deleted.
+	 * @param \WP_Comment|null $comment    The comment object, or null if not available.
 	 */
 	public static function handle_quote_delete( $comment_id, $comment ) {
 		// Try to get comment if not provided.
