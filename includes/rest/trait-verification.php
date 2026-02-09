@@ -116,8 +116,10 @@ trait Verification {
 			return $this->maybe_verify_owner( $request );
 		}
 
-		// If OAuth was attempted (Bearer token present), don't fall back to Application Passwords.
-		// This prevents scope bypass when OAuth auth succeeds but scope check fails.
+		/*
+		 * If OAuth was attempted (Bearer token present), don't fall back to Application Passwords.
+		 * This prevents scope bypass when OAuth auth succeeds but scope check fails.
+		 */
 		if ( \is_wp_error( $oauth_result ) && OAuth_Server::is_oauth_request() ) {
 			return $oauth_result;
 		}
@@ -167,12 +169,12 @@ trait Verification {
 
 		// Try OAuth token first.
 		$token = OAuth_Server::get_current_token();
-		if ( $token && $token->get_user_id() === \absint( $user_id ) ) {
+		if ( $token && $token->get_user_id() === (int) $user_id ) {
 			return true;
 		}
 
 		// Fall back to WordPress authenticated user (Application Passwords).
-		if ( \is_user_logged_in() && \get_current_user_id() === \absint( $user_id ) ) {
+		if ( \is_user_logged_in() && \get_current_user_id() === (int) $user_id ) {
 			return true;
 		}
 

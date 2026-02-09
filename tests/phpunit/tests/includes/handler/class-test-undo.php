@@ -329,6 +329,111 @@ class Test_Undo extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test outgoing Undo Follow removes following metadata.
+	 *
+	 * @covers ::outgoing
+	 */
+	public function test_outgoing_undo_follow() {
+		$actor_url = 'https://example.com/users/unfollow-target';
+
+		// Mock the HTTP request used by Remote_Actors::fetch_by_uri().
+		$mock_callback = function ( $response, $url ) use ( $actor_url ) {
+			if ( $url === $actor_url ) {
+				return array(
+					'id'                => $actor_url,
+					'type'              => 'Person',
+					'preferredUsername' => 'unfollowtarget',
+					'inbox'             => $actor_url . '/inbox',
+				);
+			}
+			return $response;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_callback, 10, 2 );
+
+		// First add the following metadata by triggering a Follow outgoing.
+		\Activitypub\Handler\Follow::outgoing(
+			array(
+				'type'   => 'Follow',
+				'object' => $actor_url,
+			),
+			self::$user_id,
+			null,
+			0
+		);
+
+		$remote_actor = \Activitypub\Collection\Remote_Actors::get_by_uri( $actor_url );
+		$this->assertNotWPError( $remote_actor );
+
+		// Verify pending metadata exists.
+		$pending = \get_post_meta( $remote_actor->ID, \Activitypub\Collection\Following::PENDING_META_KEY, false );
+		$this->assertNotEmpty( $pending, 'Pending follow metadata should exist before undo.' );
+
+		// Now undo the follow.
+		$data = array(
+			'type'   => 'Undo',
+			'object' => array(
+				'type'   => 'Follow',
+				'object' => $actor_url,
+			),
+		);
+
+		Undo::outgoing( $data, self::$user_id, null, 0 );
+
+		// Verify following/pending metadata was removed.
+		$pending_after   = \get_post_meta( $remote_actor->ID, \Activitypub\Collection\Following::PENDING_META_KEY, false );
+		$following_after = \get_post_meta( $remote_actor->ID, \Activitypub\Collection\Following::FOLLOWING_META_KEY, false );
+
+		$this->assertNotContains( (string) self::$user_id, $pending_after, 'Pending metadata should be removed.' );
+		$this->assertNotContains( (string) self::$user_id, $following_after, 'Following metadata should be removed.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_callback );
+	}
+
+	/**
+	 * Test outgoing Undo ignores non-Follow types.
+	 *
+	 * @covers ::outgoing
+	 */
+	public function test_outgoing_ignores_non_follow() {
+		$fired = false;
+
+		$callback = function () use ( &$fired ) {
+			$fired = true;
+		};
+		\add_action( 'activitypub_outbox_undo_follow_sent', $callback );
+
+		$data = array(
+			'type'   => 'Undo',
+			'object' => array(
+				'type'   => 'Like',
+				'object' => 'https://example.com/post/123',
+			),
+		);
+
+		Undo::outgoing( $data, self::$user_id, null, 0 );
+
+		$this->assertFalse( $fired, 'Action should not fire for non-Follow undo.' );
+
+		\remove_action( 'activitypub_outbox_undo_follow_sent', $callback );
+	}
+
+	/**
+	 * Test outgoing Undo returns early for non-array object.
+	 *
+	 * @covers ::outgoing
+	 */
+	public function test_outgoing_returns_early_for_string_object() {
+		$data = array(
+			'type'   => 'Undo',
+			'object' => 'https://example.com/activity/123',
+		);
+
+		// Should not throw errors.
+		Undo::outgoing( $data, self::$user_id, null, 0 );
+		$this->assertTrue( true );
+	}
+
+	/**
 	 * Test validate_object with various scenarios.
 	 *
 	 * @dataProvider validate_object_provider

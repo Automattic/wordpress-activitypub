@@ -58,6 +58,15 @@ class Authorization_Code {
 			);
 		}
 
+		// PKCE is required for public clients (RFC 7636).
+		if ( $client->is_public() && empty( $code_challenge ) ) {
+			return new \WP_Error(
+				'activitypub_pkce_required',
+				\__( 'PKCE code_challenge is required for public clients.', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
+
 		// Filter scopes to only allowed ones.
 		$filtered_scopes = $client->filter_scopes( Scope::validate( $scopes ) );
 

@@ -373,8 +373,10 @@ class Delete {
 			return;
 		}
 
-		// Find the post by its ActivityPub ID.
-		// First try to find a local post by permalink (for C2S-created posts).
+		/*
+		 * Find the post by its ActivityPub ID.
+		 * First try to find a local post by permalink (for C2S-created posts).
+		 */
 		$post_id = \url_to_postid( $object_id );
 		$post    = $post_id ? \get_post( $post_id ) : null;
 

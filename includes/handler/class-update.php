@@ -19,6 +19,16 @@ use function Activitypub\is_activity_reply;
  */
 class Update {
 	/**
+	 * Whether the outgoing handler is currently running.
+	 *
+	 * Used to prevent infinite recursion when wp_update_post() re-triggers
+	 * the post scheduler which would fire another outbox Update.
+	 *
+	 * @var bool
+	 */
+	private static $is_outgoing = false;
+
+	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
@@ -159,6 +169,14 @@ class Update {
 	 * @param int                            $outbox_id  The outbox post ID.
 	 */
 	public static function outgoing( $data, $user_id, $activity, $outbox_id ) {
+		/*
+		 * Prevent infinite recursion: wp_update_post() below re-triggers
+		 * wp_after_insert_post → Post::triage() → outbox → this handler.
+		 */
+		if ( self::$is_outgoing ) {
+			return;
+		}
+
 		$object = $data['object'] ?? array();
 
 		if ( ! \is_array( $object ) ) {
@@ -178,8 +196,10 @@ class Update {
 			return;
 		}
 
-		// Find the post by its ActivityPub ID.
-		// First try to find a local post by permalink (for C2S-created posts).
+		/*
+		 * Find the post by its ActivityPub ID.
+		 * First try to find a local post by permalink (for C2S-created posts).
+		 */
 		$post_id = \url_to_postid( $object_id );
 		$post    = $post_id ? \get_post( $post_id ) : null;
 
@@ -214,9 +234,11 @@ class Update {
 			'post_excerpt' => $summary,
 		);
 
-		$post_id = \wp_update_post( $post_data, true );
+		self::$is_outgoing = true;
+		$post_id           = \wp_update_post( $post_data, true );
 
 		if ( \is_wp_error( $post_id ) ) {
+			self::$is_outgoing = false;
 			return;
 		}
 
@@ -229,6 +251,7 @@ class Update {
 		 * @param int   $outbox_id  The outbox post ID.
 		 */
 		\do_action( 'activitypub_outbox_updated_post', $post_id, $data, $user_id, $outbox_id );
+		self::$is_outgoing = false;
 	}
 
 	/**

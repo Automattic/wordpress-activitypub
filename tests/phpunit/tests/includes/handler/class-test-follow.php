@@ -354,6 +354,120 @@ class Test_Follow extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test outgoing Follow adds pending follow metadata.
+	 *
+	 * @covers ::outgoing
+	 */
+	public function test_outgoing_adds_pending_follow() {
+		$actor_url = 'https://example.com/users/to-follow';
+
+		// Mock the HTTP request used by Remote_Actors::fetch_by_uri().
+		$mock_callback = function ( $response, $url ) use ( $actor_url ) {
+			if ( $url === $actor_url ) {
+				return array(
+					'id'                => $actor_url,
+					'type'              => 'Person',
+					'preferredUsername' => 'tofollow',
+					'inbox'             => $actor_url . '/inbox',
+				);
+			}
+			return $response;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_callback, 10, 2 );
+
+		$data = array(
+			'type'   => 'Follow',
+			'object' => $actor_url,
+		);
+
+		Follow::outgoing( $data, self::$user_id, null, 0 );
+
+		// Verify pending follow was added.
+		$remote_actor = \Activitypub\Collection\Remote_Actors::get_by_uri( $actor_url );
+		$this->assertNotWPError( $remote_actor );
+
+		$pending = \get_post_meta( $remote_actor->ID, \Activitypub\Collection\Following::PENDING_META_KEY, false );
+		$this->assertContains( (string) self::$user_id, $pending );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_callback );
+	}
+
+	/**
+	 * Test outgoing Follow skips if already following.
+	 *
+	 * @covers ::outgoing
+	 */
+	public function test_outgoing_skips_if_already_following() {
+		$actor_url = 'https://example.com/users/already-following';
+
+		// Mock the HTTP request used by Remote_Actors::fetch_by_uri().
+		$mock_callback = function ( $response, $url ) use ( $actor_url ) {
+			if ( $url === $actor_url ) {
+				return array(
+					'id'                => $actor_url,
+					'type'              => 'Person',
+					'preferredUsername' => 'alreadyfollowing',
+					'inbox'             => $actor_url . '/inbox',
+				);
+			}
+			return $response;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_callback, 10, 2 );
+
+		$data = array(
+			'type'   => 'Follow',
+			'object' => $actor_url,
+		);
+
+		// First follow should succeed.
+		Follow::outgoing( $data, self::$user_id, null, 0 );
+
+		$remote_actor      = \Activitypub\Collection\Remote_Actors::get_by_uri( $actor_url );
+		$pending           = \get_post_meta( $remote_actor->ID, \Activitypub\Collection\Following::PENDING_META_KEY, false );
+		$count_after_first = count( $pending );
+
+		// Second follow should be skipped (already pending).
+		Follow::outgoing( $data, self::$user_id, null, 0 );
+
+		$pending_after = \get_post_meta( $remote_actor->ID, \Activitypub\Collection\Following::PENDING_META_KEY, false );
+		$this->assertCount( $count_after_first, $pending_after, 'Should not add duplicate pending follow.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_callback );
+	}
+
+	/**
+	 * Test outgoing Follow returns early for empty object.
+	 *
+	 * @covers ::outgoing
+	 */
+	public function test_outgoing_returns_early_for_empty_object() {
+		$data = array(
+			'type'   => 'Follow',
+			'object' => '',
+		);
+
+		// Should not throw errors.
+		Follow::outgoing( $data, self::$user_id, null, 0 );
+		$this->assertTrue( true );
+	}
+
+	/**
+	 * Test outgoing Follow returns early for non-string object.
+	 *
+	 * @covers ::outgoing
+	 */
+	public function test_outgoing_returns_early_for_non_string_object() {
+		$data = array(
+			'type'   => 'Follow',
+			'object' => array( 'id' => 'https://example.com/user' ),
+		);
+
+		// Should not throw errors.
+		Follow::outgoing( $data, self::$user_id, null, 0 );
+		$this->assertTrue( true );
+	}
+
+	/**
 	 * Test that deprecated hook still fires for backward compatibility.
 	 *
 	 * @covers ::incoming

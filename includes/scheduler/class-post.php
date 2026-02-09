@@ -98,8 +98,10 @@ class Post {
 			return;
 		}
 
-		// If the post was already federated and this is a Create, skip.
-		// The outbox controller already added it to the outbox.
+		/*
+		 * If the post was already federated and this is a Create, skip.
+		 * The outbox controller already added it to the outbox.
+		 */
 		if ( ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status && 'Create' === $type ) {
 			return;
 		}

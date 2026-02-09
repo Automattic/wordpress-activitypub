@@ -308,6 +308,59 @@ class Test_Announce extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test outgoing Announce fires action hook.
+	 *
+	 * @covers ::outgoing
+	 */
+	public function test_outgoing_fires_action() {
+		$object_url = 'https://example.com/post/123';
+		$fired      = false;
+
+		$callback = function ( $url ) use ( &$fired, $object_url ) {
+			if ( $url === $object_url ) {
+				$fired = true;
+			}
+		};
+		\add_action( 'activitypub_outbox_announce_sent', $callback );
+
+		$data = array(
+			'type'   => 'Announce',
+			'object' => $object_url,
+		);
+
+		Announce::outgoing( $data, $this->user_id, null, 0 );
+
+		$this->assertTrue( $fired, 'activitypub_outbox_announce_sent action should fire.' );
+
+		\remove_action( 'activitypub_outbox_announce_sent', $callback );
+	}
+
+	/**
+	 * Test outgoing Announce returns early for empty object.
+	 *
+	 * @covers ::outgoing
+	 */
+	public function test_outgoing_returns_early_for_empty_object() {
+		$fired = false;
+
+		$callback = function () use ( &$fired ) {
+			$fired = true;
+		};
+		\add_action( 'activitypub_outbox_announce_sent', $callback );
+
+		$data = array(
+			'type'   => 'Announce',
+			'object' => '',
+		);
+
+		Announce::outgoing( $data, $this->user_id, null, 0 );
+
+		$this->assertFalse( $fired, 'Action should not fire for empty object.' );
+
+		\remove_action( 'activitypub_outbox_announce_sent', $callback );
+	}
+
+	/**
 	 * Test that announces from same domain but different actor are not ignored.
 	 *
 	 * @covers ::incoming

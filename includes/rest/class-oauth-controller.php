@@ -122,7 +122,7 @@ class OAuth_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'introspect' ),
-					'permission_callback' => '__return_true',
+					'permission_callback' => array( $this, 'introspect_permissions_check' ),
 					'args'                => array(
 						'token'           => array(
 							'description' => 'The token to introspect.',
@@ -234,8 +234,10 @@ class OAuth_Controller extends \WP_REST_Controller {
 		// Check for PKCE (recommended but optional for compatibility).
 		$code_challenge = $request->get_param( 'code_challenge' );
 
-		// Redirect to wp-login.php with action=activitypub_authorize.
-		// This uses WordPress's login_form_{action} hook for proper cookie auth.
+		/*
+		 * Redirect to wp-login.php with action=activitypub_authorize.
+		 * This uses WordPress's login_form_{action} hook for proper cookie auth.
+		 */
 		$login_url = \wp_login_url();
 		$login_url = \add_query_arg(
 			array(
@@ -345,6 +347,25 @@ class OAuth_Controller extends \WP_REST_Controller {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Permission check for token introspection.
+	 *
+	 * Per RFC 7662, the introspection endpoint must be protected.
+	 *
+	 * @return bool|\WP_Error True if allowed, error otherwise.
+	 */
+	public function introspect_permissions_check() {
+		if ( \is_user_logged_in() ) {
+			return true;
+		}
+
+		return new \WP_Error(
+			'activitypub_unauthorized',
+			\__( 'Authentication required.', 'activitypub' ),
+			array( 'status' => 401 )
+		);
 	}
 
 	/**
@@ -675,104 +696,5 @@ class OAuth_Controller extends \WP_REST_Controller {
 			302,
 			array( 'Location' => $redirect_url )
 		);
-	}
-
-	/**
-	 * Render the consent page HTML.
-	 *
-	 * @param Client   $client  The OAuth client.
-	 * @param array    $scopes  Requested scopes.
-	 * @param \WP_User $user    The current user.
-	 * @param array    $params  Request parameters.
-	 * @param string   $nonce   Security nonce.
-	 * @return string HTML content.
-	 */
-	private function render_consent_page( $client, $scopes, $user, $params, $nonce ) {
-		$action_url = \rest_url( $this->namespace . '/' . $this->rest_base . '/authorize' );
-		$site_name  = \get_bloginfo( 'name' );
-
-		ob_start();
-		?>
-		<!DOCTYPE html>
-		<html <?php language_attributes(); ?>>
-		<head>
-			<meta charset="<?php bloginfo( 'charset' ); ?>">
-			<meta name="viewport" content="width=device-width, initial-scale=1">
-			<title><?php esc_html_e( 'Authorize Application', 'activitypub' ); ?> - <?php echo esc_html( $site_name ); ?></title>
-			<style>
-				body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif; background: #f0f0f1; margin: 0; padding: 20px; }
-				.oauth-container { max-width: 400px; margin: 50px auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.13); }
-				h1 { font-size: 24px; margin: 0 0 20px; }
-				.client-name { font-weight: 600; color: #1d2327; }
-				.user-info { background: #f6f7f7; padding: 15px; border-radius: 4px; margin: 20px 0; }
-				.scopes { margin: 20px 0; }
-				.scopes h3 { font-size: 14px; margin: 0 0 10px; }
-				.scopes ul { margin: 0; padding: 0 0 0 20px; }
-				.scopes li { margin: 5px 0; color: #50575e; }
-				.buttons { display: flex; gap: 10px; margin-top: 30px; }
-				.button { flex: 1; padding: 12px 20px; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; text-align: center; }
-				.button-primary { background: #2271b1; color: #fff; }
-				.button-primary:hover { background: #135e96; }
-				.button-secondary { background: #f0f0f1; color: #50575e; border: 1px solid #c3c4c7; }
-				.button-secondary:hover { background: #e0e0e0; }
-			</style>
-		</head>
-		<body>
-			<div class="oauth-container">
-				<h1><?php esc_html_e( 'Authorize Application', 'activitypub' ); ?></h1>
-
-				<p>
-					<?php
-					printf(
-						/* translators: %s: client application name */
-						esc_html__( '%s would like to access your account.', 'activitypub' ),
-						'<span class="client-name">' . esc_html( $client->get_name() ) . '</span>'
-					);
-					?>
-				</p>
-
-				<div class="user-info">
-					<?php
-					printf(
-						/* translators: %s: username */
-						esc_html__( 'Logged in as: %s', 'activitypub' ),
-						'<strong>' . esc_html( $user->display_name ) . '</strong>'
-					);
-					?>
-				</div>
-
-				<?php if ( ! empty( $scopes ) ) : ?>
-				<div class="scopes">
-					<h3><?php esc_html_e( 'This application will be able to:', 'activitypub' ); ?></h3>
-					<ul>
-						<?php foreach ( $scopes as $scope ) : ?>
-							<li><?php echo esc_html( Scope::get_description( $scope ) ); ?></li>
-						<?php endforeach; ?>
-					</ul>
-				</div>
-				<?php endif; ?>
-
-				<form method="post" action="<?php echo esc_url( $action_url ); ?>">
-					<?php foreach ( $params as $key => $value ) : ?>
-						<?php if ( ! in_array( $key, array( 'approve', '_wpnonce' ), true ) ) : ?>
-							<input type="hidden" name="<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( $value ); ?>">
-						<?php endif; ?>
-					<?php endforeach; ?>
-					<input type="hidden" name="_wpnonce" value="<?php echo esc_attr( $nonce ); ?>">
-
-					<div class="buttons">
-						<button type="submit" name="approve" value="0" class="button button-secondary">
-							<?php esc_html_e( 'Deny', 'activitypub' ); ?>
-						</button>
-						<button type="submit" name="approve" value="1" class="button button-primary">
-							<?php esc_html_e( 'Authorize', 'activitypub' ); ?>
-						</button>
-					</div>
-				</form>
-			</div>
-		</body>
-		</html>
-		<?php
-		return ob_get_clean();
 	}
 }

@@ -302,6 +302,59 @@ class Test_Like extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test outgoing Like fires action hook.
+	 *
+	 * @covers ::outgoing
+	 */
+	public function test_outgoing_fires_action() {
+		$object_url = 'https://example.com/post/456';
+		$fired      = false;
+
+		$callback = function ( $url ) use ( &$fired, $object_url ) {
+			if ( $url === $object_url ) {
+				$fired = true;
+			}
+		};
+		\add_action( 'activitypub_outbox_like_sent', $callback );
+
+		$data = array(
+			'type'   => 'Like',
+			'object' => $object_url,
+		);
+
+		Like::outgoing( $data, $this->user_id, null, 0 );
+
+		$this->assertTrue( $fired, 'activitypub_outbox_like_sent action should fire.' );
+
+		\remove_action( 'activitypub_outbox_like_sent', $callback );
+	}
+
+	/**
+	 * Test outgoing Like returns early for empty object.
+	 *
+	 * @covers ::outgoing
+	 */
+	public function test_outgoing_returns_early_for_empty_object() {
+		$fired = false;
+
+		$callback = function () use ( &$fired ) {
+			$fired = true;
+		};
+		\add_action( 'activitypub_outbox_like_sent', $callback );
+
+		$data = array(
+			'type'   => 'Like',
+			'object' => '',
+		);
+
+		Like::outgoing( $data, $this->user_id, null, 0 );
+
+		$this->assertFalse( $fired, 'Action should not fire for empty object.' );
+
+		\remove_action( 'activitypub_outbox_like_sent', $callback );
+	}
+
+	/**
 	 * Test outbox_activity method with Like activity.
 	 *
 	 * @covers ::outbox_activity

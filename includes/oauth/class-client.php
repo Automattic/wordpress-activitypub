@@ -391,8 +391,10 @@ class Client {
 				return true;
 			}
 
-			// RFC 8252 Section 7.3: For loopback redirects, allow any port.
-			// Compare scheme, host, and path - ignore port for 127.0.0.1 and localhost.
+			/*
+			 * RFC 8252 Section 7.3: For loopback redirects, allow any port.
+			 * Compare scheme, host, and path - ignore port for 127.0.0.1 and localhost.
+			 */
 			foreach ( $allowed_uris as $allowed_uri ) {
 				if ( self::is_loopback_redirect_match( $allowed_uri, $redirect_uri ) ) {
 					return true;
@@ -402,8 +404,10 @@ class Client {
 			return false;
 		}
 
-		// For auto-discovered clients without redirect_uris, use same-origin policy.
-		// The redirect_uri must be on the same host as the client_id.
+		/*
+		 * For auto-discovered clients without redirect_uris, use same-origin policy.
+		 * The redirect_uri must be on the same host as the client_id.
+		 */
 		$client_id = $this->get_client_id();
 		if ( filter_var( $client_id, FILTER_VALIDATE_URL ) ) {
 			$client_host   = \wp_parse_url( $client_id, PHP_URL_HOST );
@@ -589,8 +593,10 @@ class Client {
 
 		// Allow http for localhost development.
 		if ( 'http' === $parsed['scheme'] ) {
-			// Include both bracketed and unbracketed IPv6 loopback since parse_url
-			// may return either format depending on PHP version.
+			/*
+			 * Include both bracketed and unbracketed IPv6 loopback since parse_url
+			 * may return either format depending on PHP version.
+			 */
 			$localhost_hosts = array( 'localhost', '127.0.0.1', '[::1]', '::1' );
 			if ( ! in_array( $parsed['host'], $localhost_hosts, true ) ) {
 				return false;

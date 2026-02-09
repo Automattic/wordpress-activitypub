@@ -46,8 +46,10 @@ class Server {
 	 * @return \WP_Error|null|bool Authentication result.
 	 */
 	public static function authenticate_oauth( $result ) {
-		// Reset OAuth state at the start of each authentication to prevent
-		// leaking state between multiple REST dispatches in the same process.
+		/*
+		 * Reset OAuth state at the start of each authentication to prevent
+		 * leaking state between multiple REST dispatches in the same process.
+		 */
 		self::$current_token = null;
 
 		// If another authentication method already succeeded, use that.
@@ -318,7 +320,7 @@ class Server {
 			'response_modes_supported'              => array( 'query' ),
 			'grant_types_supported'                 => array( 'authorization_code', 'refresh_token' ),
 			'token_endpoint_auth_methods_supported' => array( 'none', 'client_secret_post' ),
-			'introspection_endpoint_auth_methods_supported' => array( 'none' ),
+			'introspection_endpoint_auth_methods_supported' => array( 'bearer' ),
 			'code_challenge_methods_supported'      => array( 'S256', 'plain' ),
 			'service_documentation'                 => 'https://github.com/swicg/activitypub-api',
 		);
@@ -435,7 +437,13 @@ class Server {
 				),
 				$redirect_uri
 			);
-			\wp_safe_redirect( $error_url );
+
+			/*
+			 * wp_safe_redirect() blocks external domains, but OAuth redirect_uris
+			 * are always external. The URI is pre-validated against the registered
+			 * client's redirect_uris by render_authorize_form().
+			 */
+			\wp_redirect( $error_url ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect
 			exit;
 		}
 
@@ -459,7 +467,8 @@ class Server {
 				),
 				$redirect_uri
 			);
-			\wp_safe_redirect( $error_url );
+			// See comment above regarding wp_redirect vs wp_safe_redirect.
+			\wp_redirect( $error_url ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect
 			exit;
 		}
 
