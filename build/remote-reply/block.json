@@ -2,7 +2,7 @@
   "$schema": "https://schemas.wp.org/trunk/block.json",
   "name": "activitypub/remote-reply",
   "apiVersion": 3,
-  "version": "7.9.0",
+  "version": "7.9.1",
   "title": "Reply on the Fediverse",
   "category": "widgets",
   "description": "",
