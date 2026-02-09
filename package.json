@@ -33,8 +33,8 @@
 	},
 	"homepage": "https://github.com/automattic/wordpress-activitypub#readme",
 	"devDependencies": {
-		"@playwright/test": "^1.58.1",
-		"@tanstack/react-router": "^1.158.1",
+		"@playwright/test": "^1.58.2",
+		"@tanstack/react-router": "^1.159.4",
 		"@testing-library/jest-dom": "^6.9.1",
 		"@testing-library/react": "^16.3.2",
 		"@testing-library/user-event": "^14.4.3",
