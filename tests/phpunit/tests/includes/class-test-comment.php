@@ -816,6 +816,43 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that post comments are still being filtered by `type__not_in`.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_post_comments_filtered_by_type__not_in() {
+		// Create an ap_post.
+		$post_id = wp_insert_post(
+			array(
+				'post_title'   => 'Post',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Create comment on ap_post.
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID' => $post_id,
+				'comment_content' => 'Comment on post',
+				'comment_author'  => 'Test User',
+			)
+		);
+
+		// Query comments for specific post - should NOT include ap_post comments.
+		$query    = new \WP_Comment_Query();
+		$comments = $query->query(
+			array(
+				'post_id'      => $post_id,
+				'type__not_in' => 'comment',
+			)
+		);
+
+		$comment_ids = wp_list_pluck( $comments, 'comment_ID' );
+		$this->assertNotContains( (string) $comment_id, $comment_ids, 'AP post comment should be hidden even when querying specific post' );
+	}
+
+	/**
 	 * Test auto-approving comments on ap_post when option is enabled.
 	 *
 	 * @covers ::pre_comment_approved
@@ -1417,5 +1454,159 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		// Should contain the remote reply block.
 		$this->assertStringContainsString( 'activitypub-remote-reply', $result, 'Should show remote reply block for non-logged-in users.' );
+	}
+
+	/**
+	 * Test rest_comment_query excludes comments on ap_post via REST API.
+	 *
+	 * @covers ::rest_comment_query
+	 */
+	public function test_rest_comment_query_excludes_ap_post_comments() {
+		// Create a regular post and an ap_post.
+		$regular_post_id = self::factory()->post->create();
+		$ap_post_id      = self::factory()->post->create( array( 'post_type' => 'ap_post' ) );
+
+		// Create comments on both.
+		$regular_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $regular_post_id,
+				'comment_content'      => 'Comment on regular post',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'test@example.com',
+			)
+		);
+		$ap_comment_id      = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $ap_post_id,
+				'comment_content'      => 'Comment on ap_post',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'test2@example.com',
+			)
+		);
+
+		// Make a REST API request to the comments endpoint.
+		$request  = new \WP_REST_Request( 'GET', '/wp/v2/comments' );
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$comment_ids = wp_list_pluck( $data, 'id' );
+
+		$this->assertContains( $regular_comment_id, $comment_ids, 'Regular post comment should be included in REST API' );
+		$this->assertNotContains( $ap_comment_id, $comment_ids, 'AP post comment should be excluded from REST API' );
+	}
+
+	/**
+	 * Test comment_query_filter excludes ActivityPub comment types via REST API.
+	 *
+	 * @covers ::rest_comment_query
+	 */
+	public function test_rest_comment_query_excludes_activitypub_comment_types() {
+		$post_id = self::factory()->post->create();
+
+		// Create different comment types.
+		$regular_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'comment',
+				'comment_content'      => 'Regular comment',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'regular@example.com',
+			)
+		);
+		$like_comment_id    = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'like',
+				'comment_content'      => 'Like',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'like@example.com',
+			)
+		);
+		$repost_comment_id  = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'repost',
+				'comment_content'      => 'Repost',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'repost@example.com',
+			)
+		);
+
+		// Make a REST API request to the comments endpoint.
+		$request  = new \WP_REST_Request( 'GET', '/wp/v2/comments' );
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$comment_ids = wp_list_pluck( $data, 'id' );
+
+		$this->assertContains( $regular_comment_id, $comment_ids, 'Regular comment should be included in REST API' );
+		$this->assertNotContains( $like_comment_id, $comment_ids, 'Like should be excluded from REST API' );
+		$this->assertNotContains( $repost_comment_id, $comment_ids, 'Repost should be excluded from REST API' );
+	}
+
+	/**
+	 * Test comment_query does not add type__not_in when type is explicitly set.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_comment_query_respects_explicit_type() {
+		$post_id = self::factory()->post->create();
+
+		// Create a like comment.
+		$like_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'like',
+				'comment_content'      => 'Like',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'like@example.com',
+			)
+		);
+
+		// Query with explicit type - should include like comments.
+		$query    = new \WP_Comment_Query();
+		$comments = $query->query( array( 'type' => 'like' ) );
+
+		$comment_ids = wp_list_pluck( $comments, 'comment_ID' );
+
+		$this->assertContains( (string) $like_comment_id, $comment_ids, 'Like should be included when explicitly requested via type' );
+	}
+
+	/**
+	 * Test comment_query does not filter when type__in is explicitly set.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_comment_query_respects_explicit_type_in() {
+		$post_id = self::factory()->post->create();
+
+		// Create comments of different types.
+		$like_comment_id   = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'like',
+				'comment_content'      => 'Like',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'like@example.com',
+			)
+		);
+		$repost_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'repost',
+				'comment_content'      => 'Repost',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'repost@example.com',
+			)
+		);
+
+		// Query with explicit type__in - should include likes and reposts.
+		$query    = new \WP_Comment_Query();
+		$comments = $query->query( array( 'type__in' => array( 'like', 'repost' ) ) );
+
+		$comment_ids = wp_list_pluck( $comments, 'comment_ID' );
+
+		$this->assertContains( (string) $like_comment_id, $comment_ids, 'Like should be included when explicitly requested via type__in' );
+		$this->assertContains( (string) $repost_comment_id, $comment_ids, 'Repost should be included when explicitly requested via type__in' );
 	}
 }

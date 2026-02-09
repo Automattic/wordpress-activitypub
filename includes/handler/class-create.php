@@ -171,8 +171,7 @@ class Create {
 		$object = $activity->get_object();
 
 		if ( $object ) {
-			Tombstone::remove( $object->get_id() );
-			Tombstone::remove( $object->get_url() );
+			Tombstone::remove( $object->get_id(), $object->get_url() );
 		}
 	}
 }

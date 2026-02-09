@@ -5,6 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.9.1] - 2026-02-09
+### Added
+- Add option to disable direct file sideloading via `ACTIVITYPUB_DISABLE_SIDELOADING` constant or `activitypub_sideloading_enabled` filter, and `activitypub_remote_media_url` filter for CDN proxying. [#2899]
+
+### Changed
+- Refactor attachment download handling. [#2889]
+- Restructure CLI into separate command classes for better organization. [#2881]
+
+### Fixed
+- Fix PHP warning when deleting quote comments. [#2895]
+- Fix podcast integrations ignoring user-configured content template settings. [#2897]
+
+## [7.9.0] - 2026-02-05
+### Added
+- Add Fediverse Following block to display accounts the user follows. [#2837]
+- Add global default quote policy setting that can be overridden per-post. [#2839]
+- Add health check to verify scheduled events are registered and auto-repair if missing. [#2786]
+- Add location support for posts using WordPress Geodata post meta fields. [#2760]
+- Add Podlove Podcast Publisher integration for podcast episode federation. [#2870]
+- Add site health check to detect when security plugins block REST API access. [#2768]
+- Add Social Web item to the admin bar for quick access to the reader. [#2805]
+- Add soft delete support with Tombstone objects when post visibility changes to local/private. [#2824]
+- Custom emoji from the fediverse now show up instead of looking like :sad_trombone:. [#1129]
+- Make actor table columns filterable. [#2704]
+- Send Add/Remove activities when changing a post's sticky status to improve interoperability with the featured collection. [#2802]
+- Show warning instead of reply link when logged-in user cannot federate replies to fediverse comments. [#2817]
+
+### Changed
+- Defer outbox processing to async execution to improve publishing performance. [#2761]
+- Move Jest mocks to tests/js directory for better project organization. [#2841]
+- Remove redundant __nextHasNoMarginBottom props now that @wordpress/components 32.0.0 defaults to true. [#2801]
+- Revert to synchronous outbox processing with improved timeout handling and WebFinger error caching. [#2858]
+
+### Fixed
+- Don't filter the comment query when type__not_in has been set [#2850]
+- Filter comments on ActivityPub posts from REST API responses. [#2777]
+- Fix duplicate media attachments when featured image is also in post content. [#2814]
+- Fixed Federated Reply block embed appearing squished at 200x200 pixels for same-site embeds by passing explicit width to wp_oembed_get(). [#2848]
+- Fixed pagination metadata leaking when "Hide Social Graph" privacy setting is enabled. [#2836]
+- Fix migration activities not being scheduled for federation due to hook registration timing. [#2771]
+- Fix older comments with empty type not being federated. [#2831]
+- Fix quote requests from Mastodon not being received. [#2830]
+- Fix users not being accessible after re-enabling ActivityPub capability. [#2875]
+- Hide admin REST API endpoints from discovery index. [#2873]
+- Show informational notice when trying to follow an already-followed account. [#2815]
+- Skip fetching public audience identifiers which are not actual recipients. [#2794]
+
 ## [7.8.5] - 2026-01-14
 ### Fixed
 - Only disable blocks for ClassicPress, not when Classic Editor plugin is installed. [#2765]
@@ -1644,6 +1691,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[7.9.1]: https://github.com/Automattic/wordpress-activitypub/compare/7.9.0...7.9.1
+[7.9.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.8.5...7.9.0
 [7.8.5]: https://github.com/Automattic/wordpress-activitypub/compare/7.8.4...7.8.5
 [7.8.4]: https://github.com/Automattic/wordpress-activitypub/compare/7.8.3...7.8.4
 [7.8.3]: https://github.com/Automattic/wordpress-activitypub/compare/7.8.2...7.8.3

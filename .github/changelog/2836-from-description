@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fixed pagination metadata leaking when "Hide Social Graph" privacy setting is enabled.

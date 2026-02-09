@@ -735,7 +735,7 @@ class Enable_Mastodon_Apps {
 				} else {
 					continue;
 				}
-				$response = Http::get( $url, true );
+				$response = Http::get( $url, array(), true );
 				if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
 					continue;
 				}
