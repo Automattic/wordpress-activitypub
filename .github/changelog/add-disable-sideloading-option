@@ -1,4 +1,0 @@
-Significance: patch
-Type: added
-
-Add option to disable direct file sideloading via `ACTIVITYPUB_DISABLE_SIDELOADING` constant or `activitypub_sideloading_enabled` filter, and `activitypub_remote_media_url` filter for CDN proxying.
