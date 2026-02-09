@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix null comment object handling in Quote_Request handler.
