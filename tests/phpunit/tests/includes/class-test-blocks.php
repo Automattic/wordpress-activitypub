@@ -805,6 +805,104 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test the reply block with embedPost uses proper width for same-site embeds.
+	 *
+	 * When rendering same-site embeds, WordPress Core's get_oembed_response_data()
+	 * clamps width to min=200 if no width is provided. This test verifies that
+	 * render_reply_block() passes an explicit width to wp_oembed_get() to avoid
+	 * the 200x200 minimum dimension issue.
+	 *
+	 * @covers ::render_reply_block
+	 */
+	public function test_render_reply_block_embed_uses_proper_width() {
+		// Create a post to embed.
+		$post_id  = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Embed Post',
+				'post_content' => 'Test content for embedding.',
+				'post_status'  => 'publish',
+			)
+		);
+		$post_url = get_permalink( $post_id );
+
+		// Track the width passed to wp_oembed_get via the pre_oembed_result filter.
+		$captured_width = null;
+		$capture_width  = function ( $result, $url, $args ) use ( &$captured_width, $post_url ) {
+			if ( false !== strpos( $url, $post_url ) || false !== strpos( $post_url, $url ) ) {
+				$captured_width = isset( $args['width'] ) ? $args['width'] : null;
+			}
+			// Return a mock embed to avoid actual HTTP request.
+			return '<iframe src="' . esc_url( $url ) . '" width="600" height="338"></iframe>';
+		};
+
+		add_filter( 'pre_oembed_result', $capture_width, 5, 3 ); // Priority 5 to run before wp_filter_pre_oembed_result.
+
+		$block_markup = sprintf(
+			'<!-- wp:activitypub/reply {"url":"%s","embedPost":true} /-->',
+			esc_url( $post_url )
+		);
+
+		do_blocks( $block_markup );
+
+		remove_filter( 'pre_oembed_result', $capture_width, 5 );
+
+		// Width should be set (not null) and should be a reasonable value (not 0).
+		$this->assertNotNull( $captured_width, 'Width should be passed to wp_oembed_get()' );
+		$this->assertGreaterThan( 200, $captured_width, 'Width should be greater than the 200px minimum to avoid squished embeds' );
+	}
+
+	/**
+	 * Test the reply block embed respects content_width global when set.
+	 *
+	 * @covers ::render_reply_block
+	 */
+	public function test_render_reply_block_embed_respects_content_width() {
+		// Set a custom content_width.
+		$original_content_width   = isset( $GLOBALS['content_width'] ) ? $GLOBALS['content_width'] : null;
+		$GLOBALS['content_width'] = 800;
+
+		// Create a post to embed.
+		$post_id  = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Content Width Post',
+				'post_content' => 'Test content.',
+				'post_status'  => 'publish',
+			)
+		);
+		$post_url = get_permalink( $post_id );
+
+		// Track the width passed to wp_oembed_get.
+		$captured_width = null;
+		$capture_width  = function ( $result, $url, $args ) use ( &$captured_width, $post_url ) {
+			if ( false !== strpos( $url, $post_url ) || false !== strpos( $post_url, $url ) ) {
+				$captured_width = isset( $args['width'] ) ? $args['width'] : null;
+			}
+			return '<iframe src="' . esc_url( $url ) . '" width="800" height="450"></iframe>';
+		};
+
+		add_filter( 'pre_oembed_result', $capture_width, 5, 3 );
+
+		$block_markup = sprintf(
+			'<!-- wp:activitypub/reply {"url":"%s","embedPost":true} /-->',
+			esc_url( $post_url )
+		);
+
+		do_blocks( $block_markup );
+
+		remove_filter( 'pre_oembed_result', $capture_width, 5 );
+
+		// Restore original content_width.
+		if ( null === $original_content_width ) {
+			unset( $GLOBALS['content_width'] );
+		} else {
+			$GLOBALS['content_width'] = $original_content_width;
+		}
+
+		// Width should match the content_width we set.
+		$this->assertSame( 800, $captured_width, 'Width should use $content_width when available' );
+	}
+
+	/**
 	 * Test Extra Fields block preserves HTML in field content.
 	 *
 	 * @covers ::get_user_id

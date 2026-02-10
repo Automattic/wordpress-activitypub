@@ -205,4 +205,259 @@ class Test_Tombstone extends \WP_UnitTestCase {
 		$response = Tombstone::exists_local( $url );
 		$this->assertFalse( $response );
 	}
+
+	/**
+	 * Tests that bury does not add empty strings to the tombstone registry.
+	 *
+	 * @covers ::bury
+	 */
+	public function test_bury_empty_string() {
+		$urls_before = \get_option( 'activitypub_tombstone_urls', array() );
+
+		Tombstone::bury( '' );
+
+		$urls_after = \get_option( 'activitypub_tombstone_urls', array() );
+		$this->assertEquals( $urls_before, $urls_after );
+	}
+
+	/**
+	 * Tests that bury does not add invalid URLs to the tombstone registry.
+	 *
+	 * @covers ::bury
+	 */
+	public function test_bury_invalid_url() {
+		$urls_before = \get_option( 'activitypub_tombstone_urls', array() );
+
+		Tombstone::bury( 'not-a-valid-url' );
+		Tombstone::bury( 'also not valid' );
+		Tombstone::bury( '/relative/path' );
+
+		$urls_after = \get_option( 'activitypub_tombstone_urls', array() );
+		$this->assertEquals( $urls_before, $urls_after );
+	}
+
+	/**
+	 * Tests that bury handles duplicate URLs properly.
+	 *
+	 * @covers ::bury
+	 */
+	public function test_bury_duplicate_urls() {
+		$url = 'https://fake.test/object/duplicate';
+
+		Tombstone::bury( $url );
+		Tombstone::bury( $url );
+		Tombstone::bury( $url );
+
+		$urls = \get_option( 'activitypub_tombstone_urls', array() );
+
+		// Count how many times the URL appears.
+		$count          = array_count_values( $urls );
+		$normalized_url = \Activitypub\normalize_url( $url );
+
+		$this->assertEquals( 1, $count[ $normalized_url ] ?? 0 );
+
+		\delete_option( 'activitypub_tombstone_urls' );
+	}
+
+	/**
+	 * Tests that remove handles empty strings gracefully.
+	 *
+	 * @covers ::remove
+	 */
+	public function test_remove_empty_string() {
+		$url = 'https://fake.test/object/remove-test';
+		Tombstone::bury( $url );
+
+		$urls_before = \get_option( 'activitypub_tombstone_urls', array() );
+
+		// This should not cause any errors.
+		Tombstone::remove( '' );
+
+		$urls_after = \get_option( 'activitypub_tombstone_urls', array() );
+		$this->assertEquals( $urls_before, $urls_after );
+
+		\delete_option( 'activitypub_tombstone_urls' );
+	}
+
+	/**
+	 * Tests that remove handles invalid URLs gracefully.
+	 *
+	 * @covers ::remove
+	 */
+	public function test_remove_invalid_url() {
+		$url = 'https://fake.test/object/remove-invalid';
+		Tombstone::bury( $url );
+
+		$urls_before = \get_option( 'activitypub_tombstone_urls', array() );
+
+		// This should not cause any errors or modify the list.
+		Tombstone::remove( 'not-a-valid-url' );
+
+		$urls_after = \get_option( 'activitypub_tombstone_urls', array() );
+		$this->assertEquals( $urls_before, $urls_after );
+
+		\delete_option( 'activitypub_tombstone_urls' );
+	}
+
+	/**
+	 * Tests that remove handles non-existent URLs gracefully.
+	 *
+	 * @covers ::remove
+	 */
+	public function test_remove_nonexistent_url() {
+		$url = 'https://fake.test/object/exists';
+		Tombstone::bury( $url );
+
+		// Remove a URL that was never added.
+		Tombstone::remove( 'https://fake.test/object/never-added' );
+
+		// Original URL should still be there.
+		$this->assertTrue( Tombstone::exists_local( $url ) );
+
+		\delete_option( 'activitypub_tombstone_urls' );
+	}
+
+	/**
+	 * Tests that exists_local normalizes URLs with ActivityPub query params.
+	 *
+	 * @covers ::exists_local
+	 */
+	public function test_exists_local_normalizes_activitypub_param() {
+		$url = 'https://fake.test/object/normalize';
+
+		Tombstone::bury( $url );
+
+		// Should match even with activitypub query param.
+		$url_with_param = $url . '?activitypub=1';
+		$this->assertTrue( Tombstone::exists_local( $url_with_param ) );
+
+		\delete_option( 'activitypub_tombstone_urls' );
+	}
+
+	/**
+	 * Tests that exists_local normalizes URLs with preview query params.
+	 *
+	 * @covers ::exists_local
+	 */
+	public function test_exists_local_normalizes_preview_param() {
+		$url = 'https://fake.test/object/preview-test';
+
+		Tombstone::bury( $url );
+
+		// Should match even with preview query param.
+		$url_with_param = $url . '?preview=1';
+		$this->assertTrue( Tombstone::exists_local( $url_with_param ) );
+
+		\delete_option( 'activitypub_tombstone_urls' );
+	}
+
+	/**
+	 * Tests that exists_local handles URLs with multiple query params.
+	 *
+	 * @covers ::exists_local
+	 */
+	public function test_exists_local_normalizes_multiple_params() {
+		$url = 'https://fake.test/object/multi-param';
+
+		Tombstone::bury( $url );
+
+		// Should match even with both activitypub and preview query params.
+		$url_with_params = $url . '?activitypub=1&preview=1';
+		$this->assertTrue( Tombstone::exists_local( $url_with_params ) );
+
+		\delete_option( 'activitypub_tombstone_urls' );
+	}
+
+	/**
+	 * Tests that bury accepts multiple URLs at once.
+	 *
+	 * @covers ::bury
+	 */
+	public function test_bury_multiple_urls() {
+		$url1 = 'https://fake.test/object/multi-1';
+		$url2 = 'https://fake.test/object/multi-2';
+		$url3 = 'https://fake.test/object/multi-3';
+
+		// Bury multiple URLs in a single call.
+		Tombstone::bury( $url1, $url2, $url3 );
+
+		// All URLs should be buried.
+		$this->assertTrue( Tombstone::exists_local( $url1 ) );
+		$this->assertTrue( Tombstone::exists_local( $url2 ) );
+		$this->assertTrue( Tombstone::exists_local( $url3 ) );
+
+		\delete_option( 'activitypub_tombstone_urls' );
+	}
+
+	/**
+	 * Tests that bury with multiple URLs filters out invalid ones.
+	 *
+	 * @covers ::bury
+	 */
+	public function test_bury_multiple_urls_with_invalid() {
+		$valid_url   = 'https://fake.test/object/valid';
+		$invalid_url = 'not-a-valid-url';
+
+		// Bury mixed valid and invalid URLs.
+		Tombstone::bury( $valid_url, $invalid_url );
+
+		// Only the valid URL should be buried.
+		$this->assertTrue( Tombstone::exists_local( $valid_url ) );
+
+		$urls = \get_option( 'activitypub_tombstone_urls', array() );
+		$this->assertNotContains( $invalid_url, $urls );
+
+		\delete_option( 'activitypub_tombstone_urls' );
+	}
+
+	/**
+	 * Tests that remove accepts multiple URLs at once.
+	 *
+	 * @covers ::remove
+	 */
+	public function test_remove_multiple_urls() {
+		$url1 = 'https://fake.test/object/remove-multi-1';
+		$url2 = 'https://fake.test/object/remove-multi-2';
+		$url3 = 'https://fake.test/object/remove-multi-3';
+
+		// Bury all URLs first.
+		Tombstone::bury( $url1, $url2, $url3 );
+
+		// Verify they are all buried.
+		$this->assertTrue( Tombstone::exists_local( $url1 ) );
+		$this->assertTrue( Tombstone::exists_local( $url2 ) );
+		$this->assertTrue( Tombstone::exists_local( $url3 ) );
+
+		// Remove multiple URLs in a single call.
+		Tombstone::remove( $url1, $url2, $url3 );
+
+		// All URLs should be removed.
+		$this->assertFalse( Tombstone::exists_local( $url1 ) );
+		$this->assertFalse( Tombstone::exists_local( $url2 ) );
+		$this->assertFalse( Tombstone::exists_local( $url3 ) );
+
+		\delete_option( 'activitypub_tombstone_urls' );
+	}
+
+	/**
+	 * Tests that remove with multiple URLs filters out invalid ones.
+	 *
+	 * @covers ::remove
+	 */
+	public function test_remove_multiple_urls_with_invalid() {
+		$url1 = 'https://fake.test/object/remove-valid-1';
+		$url2 = 'https://fake.test/object/remove-valid-2';
+
+		// Bury URLs first.
+		Tombstone::bury( $url1, $url2 );
+
+		// Remove with a mix of valid and invalid URLs.
+		Tombstone::remove( $url1, 'not-a-valid-url', $url2 );
+
+		// Both valid URLs should be removed.
+		$this->assertFalse( Tombstone::exists_local( $url1 ) );
+		$this->assertFalse( Tombstone::exists_local( $url2 ) );
+
+		\delete_option( 'activitypub_tombstone_urls' );
+	}
 }

@@ -198,7 +198,7 @@ class Mailer {
 				continue;
 			}
 
-			$result = Http::get( $actor[ $field ], true );
+			$result = Http::get( $actor[ $field ], array(), true );
 			if ( 200 === \wp_remote_retrieve_response_code( $result ) ) {
 				$body = \json_decode( \wp_remote_retrieve_body( $result ), true );
 				if ( isset( $body['totalItems'] ) ) {

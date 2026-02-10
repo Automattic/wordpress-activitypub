@@ -217,7 +217,7 @@ class Migration {
 			\wp_schedule_single_event( \time(), 'activitypub_migrate_avatar_to_remote_actors' );
 		}
 
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+		if ( \version_compare( $version_from_db, '7.9.0', '<' ) ) {
 			\wp_schedule_single_event( \time(), 'activitypub_migrate_actor_emoji' );
 			// Backfill historical statistics data (delay to avoid load immediately after upgrade).
 			\wp_schedule_single_event( \time() + HOUR_IN_SECONDS, 'activitypub_backfill_statistics' );
@@ -540,7 +540,7 @@ class Migration {
 				'meta_query'     => array(
 					array(
 						'key'   => 'activitypub_status',
-						'value' => 'federated',
+						'value' => ACTIVITYPUB_OBJECT_STATE_FEDERATED,
 					),
 				),
 			)
@@ -587,7 +587,7 @@ class Migration {
 				'meta_query'     => array(
 					array(
 						'key'   => 'activitypub_status',
-						'value' => 'federated',
+						'value' => ACTIVITYPUB_OBJECT_STATE_FEDERATED,
 					),
 				),
 			)

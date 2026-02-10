@@ -74,6 +74,12 @@ define( 'ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC', 'quiet_public' );
 define( 'ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE', 'private' );
 define( 'ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL', 'local' );
 
+// Object state constants (stored in activitypub_status meta).
+define( 'ACTIVITYPUB_OBJECT_STATE_PENDING', 'pending' );
+define( 'ACTIVITYPUB_OBJECT_STATE_FEDERATED', 'federated' );
+define( 'ACTIVITYPUB_OBJECT_STATE_FAILED', 'failed' );
+define( 'ACTIVITYPUB_OBJECT_STATE_DELETED', 'deleted' );
+
 // Interaction policy constants.
 define( 'ACTIVITYPUB_INTERACTION_POLICY_ANYONE', 'anyone' );
 define( 'ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS', 'followers' );
@@ -88,3 +94,13 @@ define(
 		'Public', // For backwards compatibility.
 	)
 );
+
+/*
+ * HTTP error codes that indicate temporary/retriable failures.
+ *
+ * These errors suggest the server may recover quickly, so they get
+ * shorter cache durations and qualify for automatic retries.
+ *
+ * @see https://github.com/tfredrich/RestApiTutorial.com/blob/master/content/advanced/responses/retries.md
+ */
+define( 'ACTIVITYPUB_RETRY_ERROR_CODES', array( 408, 429, 500, 502, 503, 504 ) );

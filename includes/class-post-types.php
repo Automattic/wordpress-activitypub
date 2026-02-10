@@ -539,10 +539,20 @@ class Post_Types {
 					'single'            => true,
 					'show_in_rest'      => true,
 					'sanitize_callback' => static function ( $value ) {
+						// Allow empty values to pass through without setting a default.
+						if ( empty( $value ) ) {
+							return '';
+						}
+
 						$schema = array(
 							'type'    => 'string',
-							'enum'    => array( 'pending', 'federated', 'failed' ),
-							'default' => 'pending',
+							'enum'    => array(
+								ACTIVITYPUB_OBJECT_STATE_PENDING,
+								ACTIVITYPUB_OBJECT_STATE_FEDERATED,
+								ACTIVITYPUB_OBJECT_STATE_FAILED,
+								ACTIVITYPUB_OBJECT_STATE_DELETED,
+							),
+							'default' => '',
 						);
 
 						if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
@@ -857,10 +867,9 @@ class Post_Types {
 	 */
 	public static function prevent_empty_post_meta( $check, $object_id, $meta_key, $meta_value ) {
 		$post_metas = array(
-			'activitypub_content_visibility'       => '',
-			'activitypub_content_warning'          => '',
-			'activitypub_interaction_policy_quote' => ACTIVITYPUB_INTERACTION_POLICY_ANYONE,
-			'activitypub_max_image_attachments'    => (string) \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
+			'activitypub_content_visibility'    => '',
+			'activitypub_content_warning'       => '',
+			'activitypub_max_image_attachments' => (string) \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
 		);
 
 		if ( isset( $post_metas[ $meta_key ] ) && $post_metas[ $meta_key ] === (string) $meta_value ) {

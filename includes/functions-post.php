@@ -26,16 +26,30 @@ function is_post_disabled( $post ) {
 		return true;
 	}
 
-	$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
+	$visibility          = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
+	$is_local_or_private = in_array( $visibility, array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ), true );
 
 	if (
-		ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === $visibility ||
-		ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === $visibility ||
+		$is_local_or_private ||
 		! \post_type_supports( $post->post_type, 'activitypub' ) ||
 		'private' === $post->post_status ||
 		! empty( $post->post_password )
 	) {
 		$disabled = true;
+	}
+
+	/*
+	 * Check for posts that need special handling.
+	 * Federated posts changed to local/private need Delete activity.
+	 * Deleted posts restored to public need Create activity.
+	 */
+	$object_state = get_wp_object_state( $post );
+
+	if (
+		ACTIVITYPUB_OBJECT_STATE_DELETED === $object_state ||
+		( $is_local_or_private && ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_state )
+	) {
+		$disabled = false;
 	}
 
 	/**

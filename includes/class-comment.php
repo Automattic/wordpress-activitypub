@@ -36,6 +36,7 @@ class Comment {
 		\add_filter( 'pre_wp_update_comment_count_now', array( static::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
 		\add_filter( 'get_comment_author', array( static::class, 'render_emoji' ), 10, 2 );
 		\add_filter( 'comment_author', array( static::class, 'unescape_emoji' ), 20 ); // After esc_html().
+		\add_filter( 'rest_comment_query', array( static::class, 'rest_comment_query' ) );
 	}
 
 	/**
@@ -736,14 +737,14 @@ class Comment {
 			return;
 		}
 
-		// Do not exclude likes and reposts on REST requests.
+		// Do not exclude likes and reposts on REST requests (handled by rest_comment_query).
 		if ( \wp_is_serving_rest_request() ) {
 			return;
 		}
 
-		// Do only exclude interactions of `ap_post` post type.
+		// Filter post types for admin requests.
 		if ( \is_admin() ) {
-			$query->query_vars['post_type'] = array_diff( \get_post_types_by_support( 'comments' ), self::hide_for() );
+			$query->query_vars['post_type'] = self::get_allowed_comment_post_types();
 			return;
 		}
 
@@ -752,13 +753,55 @@ class Comment {
 			return;
 		}
 
-		// Do not exclude likes and reposts if the query is for comments.
+		// Do not exclude likes and reposts if the query is for specific types.
 		if ( ! empty( $query->query_vars['type__in'] ) || ! empty( $query->query_vars['type'] ) ) {
+			return;
+		}
+
+		// Do not exclude likes and reposts if the query is already excluding other comment types.
+		if ( ! empty( $query->query_vars['type__not_in'] ) ) {
 			return;
 		}
 
 		// Exclude likes and reposts by the ActivityPub plugin.
 		$query->query_vars['type__not_in'] = self::get_comment_type_slugs();
+	}
+
+	/**
+	 * Filters comments in REST API requests.
+	 *
+	 * Excludes comments on ActivityPub post types and ActivityPub comment
+	 * types (likes, reposts) from the REST API.
+	 *
+	 * @param array $prepared_args Array of arguments for WP_Comment_Query.
+	 *
+	 * @return array Modified array of arguments.
+	 */
+	public static function rest_comment_query( $prepared_args ) {
+		// Exclude comments on ActivityPub post types.
+		$prepared_args['post_type'] = self::get_allowed_comment_post_types();
+
+		// Exclude ActivityPub comment types (likes, reposts) unless explicitly requested.
+		if ( empty( $prepared_args['type'] ) && empty( $prepared_args['type__in'] ) ) {
+			$prepared_args['type__not_in'] = self::get_comment_type_slugs();
+		}
+
+		return $prepared_args;
+	}
+
+	/**
+	 * Returns post types that should show comments (excluding hidden post types).
+	 *
+	 * @return array Array of post type names.
+	 */
+	private static function get_allowed_comment_post_types() {
+		$hide_for = self::hide_for();
+
+		if ( empty( $hide_for ) ) {
+			return \get_post_types_by_support( 'comments' );
+		}
+
+		return \array_diff( \get_post_types_by_support( 'comments' ), $hide_for );
 	}
 
 	/**

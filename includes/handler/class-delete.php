@@ -29,7 +29,7 @@ class Delete {
 		\add_action( 'activitypub_delete_remote_actor_posts', array( self::class, 'delete_posts' ) );
 
 		\add_filter( 'activitypub_get_outbox_activity', array( self::class, 'outbox_activity' ) );
-		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'post_add_to_outbox' ), 10, 2 );
+		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'maybe_bury' ), 10, 2 );
 	}
 
 	/**
@@ -329,15 +329,26 @@ class Delete {
 	}
 
 	/**
-	 * Add the activity to the outbox.
+	 * Add a URL to the tombstone registry when a Delete activity is sent.
 	 *
 	 * @param int                            $outbox_id The ID of the outbox activity.
 	 * @param \Activitypub\Activity\Activity $activity  The Activity object.
 	 */
-	public static function post_add_to_outbox( $outbox_id, $activity ) {
-		// Set Tombstones for deleted objects.
-		if ( 'Delete' === $activity->get_type() ) {
-			Tombstone::bury( object_to_uri( $activity->get_object() ) );
+	public static function maybe_bury( $outbox_id, $activity ) {
+		if ( 'Delete' !== $activity->get_type() ) {
+			return;
+		}
+
+		$object = $activity->get_object();
+
+		if ( ! $object ) {
+			return;
+		}
+
+		Tombstone::bury( object_to_uri( $object ) );
+
+		if ( \is_object( $object ) ) {
+			Tombstone::bury( $object->get_id(), $object->get_url() );
 		}
 	}
 }
