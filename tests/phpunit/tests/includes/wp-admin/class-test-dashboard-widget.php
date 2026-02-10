@@ -153,4 +153,26 @@ class Test_Dashboard_Widget extends \WP_UnitTestCase {
 
 		$this->assertSame( 1, $stats['comments'] );
 	}
+
+	/**
+	 * Test register adds widget to global.
+	 *
+	 * @covers ::register
+	 */
+	public function test_register_adds_widget() {
+		global $wp_meta_boxes;
+
+		require_once ABSPATH . 'wp-admin/includes/dashboard.php';
+
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$user    = new \WP_User( $user_id );
+		$user->add_cap( 'activitypub' );
+
+		wp_set_current_user( $user_id );
+		set_current_screen( 'dashboard' );
+
+		Dashboard_Widget::register();
+
+		$this->assertArrayHasKey( 'activitypub_stats', $wp_meta_boxes['dashboard']['normal']['core'] );
+	}
 }
