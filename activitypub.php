@@ -32,6 +32,7 @@ require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/functions-activity.php';
 require_once __DIR__ . '/includes/functions-comment.php';
 require_once __DIR__ . '/includes/functions-federation.php';
+require_once __DIR__ . '/includes/functions-media.php';
 require_once __DIR__ . '/includes/functions-post.php';
 require_once __DIR__ . '/includes/functions-request.php';
 require_once __DIR__ . '/includes/functions-url.php';

@@ -125,6 +125,26 @@ class Blocks {
 				'render_callback' => array( self::class, 'render_image_block' ),
 			)
 		);
+
+		\register_block_type(
+			'activitypub/audio',
+			array(
+				'attributes'      => array(
+					'url' => array( 'type' => 'string' ),
+				),
+				'render_callback' => array( self::class, 'render_audio_block' ),
+			)
+		);
+
+		\register_block_type(
+			'activitypub/video',
+			array(
+				'attributes'      => array(
+					'url' => array( 'type' => 'string' ),
+				),
+				'render_callback' => array( self::class, 'render_video_block' ),
+			)
+		);
 	}
 
 	/**
@@ -410,6 +430,88 @@ class Blocks {
 		 * @param array       $options   Additional options.
 		 */
 		$cached_url = \apply_filters( 'activitypub_remote_media_url', $url, 'media', $entity_id, array() );
+
+		if ( $cached_url && $cached_url !== $url ) {
+			return \str_replace( $url, $cached_url, $content );
+		}
+
+		return $content;
+	}
+
+	/**
+	 * Render the audio block.
+	 *
+	 * Replaces remote audio URL with cached URL at runtime.
+	 *
+	 * @param array  $attrs   The block attributes.
+	 * @param string $content The block inner content (audio tag).
+	 *
+	 * @return string The rendered content with cached URL.
+	 */
+	public static function render_audio_block( $attrs, $content ) {
+		if ( empty( $attrs['url'] ) || empty( $content ) ) {
+			return $content;
+		}
+
+		$url = $attrs['url'];
+
+		// Get entity ID from context.
+		$entity_id = null;
+		$post      = \get_post();
+		if ( $post ) {
+			$entity_id = $post->ID;
+		}
+
+		/**
+		 * Filters a remote audio URL for caching.
+		 *
+		 * @param string      $url       The remote audio URL.
+		 * @param string      $context   The context ('audio').
+		 * @param int|null    $entity_id The entity ID.
+		 * @param array       $options   Additional options.
+		 */
+		$cached_url = \apply_filters( 'activitypub_remote_media_url', $url, 'audio', $entity_id, array() );
+
+		if ( $cached_url && $cached_url !== $url ) {
+			return \str_replace( $url, $cached_url, $content );
+		}
+
+		return $content;
+	}
+
+	/**
+	 * Render the video block.
+	 *
+	 * Replaces remote video URL with cached URL at runtime.
+	 *
+	 * @param array  $attrs   The block attributes.
+	 * @param string $content The block inner content (video tag).
+	 *
+	 * @return string The rendered content with cached URL.
+	 */
+	public static function render_video_block( $attrs, $content ) {
+		if ( empty( $attrs['url'] ) || empty( $content ) ) {
+			return $content;
+		}
+
+		$url = $attrs['url'];
+
+		// Get entity ID from context.
+		$entity_id = null;
+		$post      = \get_post();
+		if ( $post ) {
+			$entity_id = $post->ID;
+		}
+
+		/**
+		 * Filters a remote video URL for caching.
+		 *
+		 * @param string      $url       The remote video URL.
+		 * @param string      $context   The context ('video').
+		 * @param int|null    $entity_id The entity ID.
+		 * @param array       $options   Additional options.
+		 */
+		$cached_url = \apply_filters( 'activitypub_remote_media_url', $url, 'video', $entity_id, array() );
 
 		if ( $cached_url && $cached_url !== $url ) {
 			return \str_replace( $url, $cached_url, $content );

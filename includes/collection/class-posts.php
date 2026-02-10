@@ -12,7 +12,7 @@ use Activitypub\Sanitize;
 
 use function Activitypub\generate_post_summary;
 use function Activitypub\object_to_uri;
-use function Activitypub\process_remote_images;
+use function Activitypub\process_remote_media;
 
 /**
  * Posts collection.
@@ -268,7 +268,7 @@ class Posts {
 
 		// Process remote media: wrap inline images and append attachments.
 		$attachments = self::extract_attachments( $activity );
-		$content     = process_remote_images( $content, $attachments );
+		$content     = process_remote_media( $content, $attachments );
 
 		return array(
 			'post_title'    => isset( $activity['name'] ) ? \wp_strip_all_tags( $activity['name'] ) : '',
@@ -299,14 +299,13 @@ class Posts {
 	}
 
 	/**
-	 * Extract image attachments from an activity object.
+	 * Extract media attachments from an activity object.
 	 *
-	 * Extracts image attachments with URL and alt text for appending to content.
-	 * Skips video and audio attachments.
+	 * Extracts attachments with URL, alt text, and media type for appending to content.
 	 *
 	 * @param array $activity_object The activity object data.
 	 *
-	 * @return array Array of attachments with 'url' and 'alt' keys.
+	 * @return array Array of attachments with 'url', 'alt', and 'type' keys.
 	 */
 	private static function extract_attachments( $activity_object ) {
 		if ( empty( $activity_object['attachment'] ) || ! \is_array( $activity_object['attachment'] ) ) {
@@ -325,14 +324,18 @@ class Posts {
 
 			$mime_type = $attachment['mediaType'] ?? '';
 
-			// Skip video/audio - keep remote URL.
-			if ( \str_starts_with( $mime_type, 'video/' ) || \str_starts_with( $mime_type, 'audio/' ) ) {
-				continue;
+			if ( \str_starts_with( $mime_type, 'video/' ) ) {
+				$type = 'video';
+			} elseif ( \str_starts_with( $mime_type, 'audio/' ) ) {
+				$type = 'audio';
+			} else {
+				$type = 'image';
 			}
 
 			$attachments[] = array(
-				'url' => $attachment['url'],
-				'alt' => $attachment['name'] ?? '',
+				'url'  => $attachment['url'],
+				'alt'  => $attachment['name'] ?? '',
+				'type' => $type,
 			);
 		}
 

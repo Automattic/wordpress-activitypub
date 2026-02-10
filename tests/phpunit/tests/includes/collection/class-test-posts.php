@@ -1816,6 +1816,70 @@ class Test_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test activity_to_post with video attachment.
+	 *
+	 * @covers ::add
+	 */
+	public function test_activity_to_post_with_video_attachment() {
+		$activity = array(
+			'object' => array(
+				'id'           => 'https://example.com/objects/video-post',
+				'type'         => 'Note',
+				'name'         => 'Video Post',
+				'content'      => '<p>Check out this video</p>',
+				'attributedTo' => 'https://example.com/users/testuser',
+				'attachment'   => array(
+					array(
+						'url'       => 'https://example.com/video.mp4',
+						'mediaType' => 'video/mp4',
+						'name'      => 'A cool video',
+						'type'      => 'Document',
+					),
+				),
+			),
+		);
+
+		$result = Posts::add( $activity, 1 );
+
+		$this->assertInstanceOf( '\WP_Post', $result );
+		$this->assertStringContainsString( '<!-- wp:activitypub/video', $result->post_content );
+		$this->assertStringContainsString( 'https://example.com/video.mp4', $result->post_content );
+		$this->assertStringContainsString( '<!-- /wp:activitypub/video -->', $result->post_content );
+	}
+
+	/**
+	 * Test activity_to_post with audio attachment.
+	 *
+	 * @covers ::add
+	 */
+	public function test_activity_to_post_with_audio_attachment() {
+		$activity = array(
+			'object' => array(
+				'id'           => 'https://example.com/objects/audio-post',
+				'type'         => 'Note',
+				'name'         => 'Audio Post',
+				'content'      => '<p>Listen to this</p>',
+				'attributedTo' => 'https://example.com/users/testuser',
+				'attachment'   => array(
+					array(
+						'url'       => 'https://example.com/podcast.mp3',
+						'mediaType' => 'audio/mpeg',
+						'name'      => 'Episode 1',
+						'type'      => 'Document',
+					),
+				),
+			),
+		);
+
+		$result = Posts::add( $activity, 1 );
+
+		$this->assertInstanceOf( '\WP_Post', $result );
+		$this->assertStringContainsString( '<!-- wp:activitypub/audio', $result->post_content );
+		$this->assertStringContainsString( 'https://example.com/podcast.mp3', $result->post_content );
+		$this->assertStringContainsString( '<!-- /wp:activitypub/audio -->', $result->post_content );
+	}
+
+	/**
 	 * Test purge returns count of deleted items.
 	 *
 	 * @covers ::purge
