@@ -135,8 +135,9 @@ class Blocks {
 			return;
 		}
 
+		// Use the core `author` hierarchy slug so WP can resolve this for author archives.
 		\register_block_template(
-			'activitypub//author-archive-fediverse',
+			'activitypub//author',
 			array(
 				'title'       => \__( 'Author Archive (Fediverse)', 'activitypub' ),
 				'description' => \__( 'Displays an author archive with Fediverse profile and follow options.', 'activitypub' ),
