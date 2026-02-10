@@ -401,6 +401,61 @@ input.blog-user-identifier {
 	}
 }
 
+/* stylelint-disable no-descending-specificity */
+
+/* Dashboard Stats Widget */
+.activitypub-dashboard-stats-grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 12px;
+	margin-bottom: 12px;
+}
+
+.activitypub-dashboard-stat-card {
+	background: #f6f7f7;
+	border-radius: 4px;
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+}
+
+.activitypub-dashboard-stat-card .dashicons {
+	font-size: 20px;
+	width: 20px;
+	height: 20px;
+	color: #50575e;
+	margin-bottom: 8px;
+}
+
+.activitypub-dashboard-stat-label {
+	font-size: 12px;
+	color: #50575e;
+	margin-bottom: 4px;
+}
+
+.activitypub-dashboard-stat-value {
+	font-size: 28px;
+	font-weight: 600;
+	line-height: 1.2;
+	color: #1d2327;
+}
+
+.activitypub-dashboard-onboarding {
+	border-top: 1px solid #f0f0f1;
+	padding-top: 12px;
+}
+
+.activitypub-dashboard-onboarding p {
+	margin: 0 0 8px;
+	font-size: 13px;
+	color: #50575e;
+}
+
+.activitypub-dashboard-onboarding p:last-child {
+	margin-bottom: 0;
+}
+/* stylelint-enable no-descending-specificity */
+
 @media screen and (max-width: 782px) {
 
 	.activitypub-settings {
@@ -410,5 +465,9 @@ input.blog-user-identifier {
 	.activitypub-settings .row > div {
 		max-width: calc(100% - 36px);
 		width: 100%;
+	}
+
+	.activitypub-dashboard-stats-grid {
+		grid-template-columns: 1fr;
 	}
 }
