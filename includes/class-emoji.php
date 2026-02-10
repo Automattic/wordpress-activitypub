@@ -45,10 +45,16 @@ class Emoji {
 				continue;
 			}
 
-			$shortcode = $tag['name'];
-			$wrapped   = \sprintf(
-				'<!-- wp:activitypub/emoji {"url":"%s"} -->%s<!-- /wp:activitypub/emoji -->',
-				\esc_url( $url ),
+			$shortcode   = $tag['name'];
+			$block_attrs = array( 'url' => \esc_url( $url ) );
+
+			if ( ! empty( $tag['updated'] ) ) {
+				$block_attrs['updated'] = $tag['updated'];
+			}
+
+			$wrapped = \sprintf(
+				'<!-- wp:activitypub/emoji %s -->%s<!-- /wp:activitypub/emoji -->',
+				\wp_json_encode( $block_attrs ),
 				$shortcode
 			);
 

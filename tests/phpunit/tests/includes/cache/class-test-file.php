@@ -104,4 +104,54 @@ class Test_File extends WP_UnitTestCase {
 		$result = Avatar::invalidate_entity( 'non-existent-entity' );
 		$this->assertTrue( $result );
 	}
+
+	/**
+	 * Test validate_mime_type accepts valid JPEG files.
+	 *
+	 * Validates that wp_check_filetype_and_ext receives a proper
+	 * extension-to-MIME map instead of a plain MIME list.
+	 */
+	public function test_validate_mime_type_accepts_valid_jpeg() {
+		$method = new \ReflectionMethod( Avatar::class, 'validate_mime_type' );
+		$method->setAccessible( true );
+
+		// Copy test asset to a temp file (simulates download_url() output with .tmp extension).
+		$tmp_file = \wp_tempnam( 'test-image.jpg' );
+		copy( AP_TESTS_DIR . '/data/assets/test.jpg', $tmp_file );
+
+		$result = $method->invoke( null, $tmp_file );
+
+		// Should return a file path string, not a WP_Error.
+		$this->assertNotWPError( $result, 'validate_mime_type should accept valid JPEG files' );
+		$this->assertIsString( $result );
+
+		// Clean up.
+		if ( \file_exists( $result ) && $result !== $tmp_file ) {
+			\wp_delete_file( $result );
+		}
+		if ( \file_exists( $tmp_file ) ) {
+			\wp_delete_file( $tmp_file );
+		}
+	}
+
+	/**
+	 * Test validate_mime_type rejects non-image files.
+	 */
+	public function test_validate_mime_type_rejects_text_file() {
+		$method = new \ReflectionMethod( Avatar::class, 'validate_mime_type' );
+		$method->setAccessible( true );
+
+		$tmp_file = \wp_tempnam( 'test.txt' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		\file_put_contents( $tmp_file, 'This is plain text, not an image.' );
+
+		$result = $method->invoke( null, $tmp_file );
+
+		$this->assertWPError( $result );
+
+		// Clean up.
+		if ( \file_exists( $tmp_file ) ) {
+			\wp_delete_file( $tmp_file );
+		}
+	}
 }

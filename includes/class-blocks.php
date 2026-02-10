@@ -109,7 +109,8 @@ class Blocks {
 			'activitypub/emoji',
 			array(
 				'attributes'      => array(
-					'url' => array( 'type' => 'string' ),
+					'url'     => array( 'type' => 'string' ),
+					'updated' => array( 'type' => 'string' ),
 				),
 				'render_callback' => array( self::class, 'render_emoji_block' ),
 			)
@@ -365,7 +366,13 @@ class Blocks {
 		 * @param int|null    $entity_id The entity ID.
 		 * @param array       $options   Additional options.
 		 */
-		$cached_url = \apply_filters( 'activitypub_remote_media_url', $url, 'emoji', null, array() );
+		$cached_url = \apply_filters(
+			'activitypub_remote_media_url',
+			$url,
+			'emoji',
+			null,
+			array( 'updated' => $attrs['updated'] ?? null )
+		);
 
 		return Emoji::get_img_tag( $cached_url ?: $url, $name );
 	}

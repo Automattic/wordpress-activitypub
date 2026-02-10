@@ -29,9 +29,6 @@ abstract class File {
 	/**
 	 * Default allowed MIME types for cached files.
 	 *
-	 * Note: SVG is excluded by default due to XSS risks. Enable via filter
-	 * `activitypub_cache_allowed_mime_types` if your site sanitizes SVGs.
-	 *
 	 * @var array
 	 */
 	const DEFAULT_ALLOWED_MIME_TYPES = array(
@@ -234,7 +231,7 @@ abstract class File {
 		$hash = static::generate_hash( $url );
 		$ext  = \pathinfo( $tmp_file, PATHINFO_EXTENSION );
 		if ( empty( $ext ) ) {
-			$ext = static::mime_to_extension( $result['mime_type'] );
+			$ext = \wp_get_default_extension_for_mime_type( $result['mime_type'] );
 		}
 		$file_name = $hash . '.' . $ext;
 		$file_path = $paths['basedir'] . '/' . $file_name;
@@ -386,14 +383,6 @@ abstract class File {
 		 * Filters the allowed MIME types for a cache type.
 		 *
 		 * Use this filter to add or remove allowed MIME types.
-		 * For example, to enable SVG support (requires proper sanitization):
-		 *
-		 *     add_filter( 'activitypub_cache_allowed_mime_types', function( $types, $cache_type ) {
-		 *         if ( 'emoji' === $cache_type ) {
-		 *             $types[] = 'image/svg+xml';
-		 *         }
-		 *         return $types;
-		 *     }, 10, 2 );
 		 *
 		 * @since 5.6.0
 		 *
@@ -527,56 +516,31 @@ abstract class File {
 			return new \WP_Error( 'invalid_mime', \__( 'File type not allowed.', 'activitypub' ) );
 		}
 
-		// Method 2: Verify it's actually a valid image (except SVG which needs special handling).
-		if ( 'image/svg+xml' !== $mime ) {
-			$image_info = @\getimagesize( $file_path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
-			if ( false === $image_info ) {
-				return new \WP_Error( 'invalid_image', \__( 'File is not a valid image.', 'activitypub' ) );
-			}
-
-			// Verify image can actually be rendered.
-			if ( ! \function_exists( 'file_is_displayable_image' ) ) {
-				require_once ABSPATH . 'wp-admin/includes/image.php';
-			}
-
-			if ( ! \file_is_displayable_image( $file_path ) ) {
-				return new \WP_Error( 'not_displayable', \__( 'Image cannot be displayed.', 'activitypub' ) );
-			}
-		} else {
-			// SVG requires additional sanitization - only allow if explicitly enabled via filter.
-			// The filter `activitypub_cache_allowed_mime_types` must include 'image/svg+xml'.
-			// Sites enabling SVG should implement their own sanitization via
-			// the `activitypub_sanitize_svg` filter or use a library like enshrined/svg-sanitize.
-
-			/**
-			 * Filters the SVG content for sanitization.
-			 *
-			 * Only called when SVG is explicitly allowed via the
-			 * `activitypub_cache_allowed_mime_types` filter.
-			 *
-			 * @since 5.6.0
-			 *
-			 * @param string $content   The SVG file content.
-			 * @param string $file_path Path to the SVG file.
-			 */
-			$svg_content = \file_get_contents( $file_path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-			$sanitized   = \apply_filters( 'activitypub_sanitize_svg', $svg_content, $file_path );
-
-			// If no sanitization filter is applied, reject the SVG for safety.
-			if ( $sanitized === $svg_content && ! \has_filter( 'activitypub_sanitize_svg' ) ) {
-				return new \WP_Error( 'svg_not_sanitized', \__( 'SVG files require a sanitization filter. See activitypub_sanitize_svg hook.', 'activitypub' ) );
-			}
-
-			// Write sanitized content back.
-			if ( $sanitized !== $svg_content ) {
-				\file_put_contents( $file_path, $sanitized ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-			}
+		// Method 2: Verify it's actually a valid image.
+		$image_info = @\getimagesize( $file_path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		if ( false === $image_info ) {
+			return new \WP_Error( 'invalid_image', \__( 'File is not a valid image.', 'activitypub' ) );
 		}
 
-		// Method 3: Use WordPress's wp_check_filetype_and_ext for additional validation.
-		$expected_ext = static::mime_to_extension( $mime );
-		$file_name    = \wp_basename( $file_path );
-		$file_info    = \wp_check_filetype_and_ext( $file_path, $file_name, $allowed_mime_types );
+		// Verify image can actually be rendered.
+		if ( ! \function_exists( 'file_is_displayable_image' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/image.php';
+		}
+
+		if ( ! \file_is_displayable_image( $file_path ) ) {
+			return new \WP_Error( 'not_displayable', \__( 'Image cannot be displayed.', 'activitypub' ) );
+		}
+
+		/*
+		 * Method 3: Use WordPress's wp_check_filetype_and_ext for additional validation.
+		 * MIME type restriction is already enforced by finfo in Method 1; this cross-checks
+		 * that file content matches the declared type using WordPress defaults.
+		 */
+		$expected_ext = \wp_get_default_extension_for_mime_type( $mime );
+
+		// Use the detected extension since temp files from download_url() have a .tmp extension.
+		$file_name = \pathinfo( \wp_basename( $file_path ), PATHINFO_FILENAME ) . '.' . $expected_ext;
+		$file_info = \wp_check_filetype_and_ext( $file_path, $file_name );
 
 		// If WordPress couldn't validate the file type, reject it.
 		if ( empty( $file_info['type'] ) || ! \str_starts_with( $file_info['type'], 'image/' ) ) {
@@ -627,25 +591,6 @@ abstract class File {
 	}
 
 	/**
-	 * Convert MIME type to file extension.
-	 *
-	 * @param string $mime The MIME type.
-	 *
-	 * @return string The file extension (without dot).
-	 */
-	protected static function mime_to_extension( $mime ) {
-		$map = array(
-			'image/jpeg'    => 'jpg',
-			'image/png'     => 'png',
-			'image/gif'     => 'gif',
-			'image/webp'    => 'webp',
-			'image/svg+xml' => 'svg',
-		);
-
-		return $map[ $mime ] ?? 'bin';
-	}
-
-	/**
 	 * Optimize an image file by resizing and converting to WebP.
 	 *
 	 * Uses WordPress image editor to resize large images and convert them
@@ -660,11 +605,6 @@ abstract class File {
 		// Check if it's an image.
 		$mime_type = static::get_file_mime_type( $file_path );
 		if ( ! $mime_type || ! \str_starts_with( $mime_type, 'image/' ) ) {
-			return $file_path;
-		}
-
-		// Skip SVG and GIF files (GIFs may be animated).
-		if ( \in_array( $mime_type, array( 'image/svg+xml', 'image/gif' ), true ) ) {
 			return $file_path;
 		}
 

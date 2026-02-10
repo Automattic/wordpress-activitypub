@@ -239,6 +239,60 @@ class Test_Emoji extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test wrap_in_content preserves updated timestamp in block attributes.
+	 *
+	 * @covers ::wrap_in_content
+	 */
+	public function test_wrap_preserves_updated_timestamp() {
+		$text = 'Hello :wave:';
+
+		$activity = array(
+			'tag' => array(
+				array(
+					'type'    => 'Emoji',
+					'name'    => ':wave:',
+					'icon'    => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/emoji/wave.png',
+					),
+					'updated' => '2024-01-15T12:00:00Z',
+				),
+			),
+		);
+
+		$result = Emoji::wrap_in_content( $text, $activity );
+
+		$this->assertStringContainsString( '"updated":"2024-01-15T12:00:00Z"', $result );
+		$this->assertStringContainsString( '"url":', $result );
+	}
+
+	/**
+	 * Test wrap_in_content omits updated when not present.
+	 *
+	 * @covers ::wrap_in_content
+	 */
+	public function test_wrap_omits_updated_when_absent() {
+		$text = 'Hello :wave:';
+
+		$activity = array(
+			'tag' => array(
+				array(
+					'type' => 'Emoji',
+					'name' => ':wave:',
+					'icon' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/emoji/wave.png',
+					),
+				),
+			),
+		);
+
+		$result = Emoji::wrap_in_content( $text, $activity );
+
+		$this->assertStringNotContainsString( 'updated', $result );
+	}
+
+	/**
 	 * Test emoji wrapping is case-insensitive.
 	 *
 	 * @covers ::wrap_in_content
