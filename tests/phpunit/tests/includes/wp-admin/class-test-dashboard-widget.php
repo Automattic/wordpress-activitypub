@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Collection\Actors;
 use Activitypub\WP_Admin\Dashboard_Widget;
 
 /**
@@ -174,5 +175,18 @@ class Test_Dashboard_Widget extends \WP_UnitTestCase {
 		Dashboard_Widget::register();
 
 		$this->assertArrayHasKey( 'activitypub_stats', $wp_meta_boxes['dashboard']['normal']['core'] );
+	}
+
+	/**
+	 * Test get_stats with blog user ID.
+	 *
+	 * @covers ::get_stats
+	 */
+	public function test_get_stats_for_blog_user() {
+		$stats = Dashboard_Widget::get_stats( Actors::BLOG_USER_ID );
+
+		$this->assertArrayHasKey( 'followers', $stats );
+		$this->assertArrayHasKey( 'likes', $stats );
+		$this->assertSame( 0, $stats['followers'] );
 	}
 }
