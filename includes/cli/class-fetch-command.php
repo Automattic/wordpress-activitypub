@@ -9,6 +9,7 @@ namespace Activitypub\Cli;
 
 use Activitypub\Http;
 use Activitypub\Signature;
+use Activitypub\Signature\Http_Message_Signature;
 
 /**
  * Fetch a remote ActivityPub URL with signed HTTP requests.
@@ -125,12 +126,15 @@ class Fetch_Command extends \WP_CLI_Command {
 	}
 
 	/**
-	 * Apply signature mode overrides via option filters.
+	 * Apply signature mode overrides via filters.
+	 *
+	 * For rfc9421, replaces the default sign_request and disables double-knock
+	 * to avoid an infinite retry loop when the server returns 4xx.
 	 *
 	 * @param string $mode The signature mode.
 	 * @param array  $args The request arguments, passed by reference.
 	 *
-	 * @return callable Cleanup callback to remove added filters.
+	 * @return callable Cleanup callback to restore original filters.
 	 */
 	private function apply_signature_mode( $mode, &$args ) {
 		$filters = array();
@@ -143,19 +147,21 @@ class Fetch_Command extends \WP_CLI_Command {
 				break;
 
 			case 'rfc9421':
-				$force_rfc9421      = function () {
-					return '1';
-				};
-				$bypass_unsupported = function () {
-					return array();
-				};
-
-				\add_filter( 'pre_option_activitypub_rfc9421_signature', $force_rfc9421 );
-				\add_filter( 'pre_option_activitypub_rfc9421_unsupported', $bypass_unsupported );
+				// Replace default signing to force RFC 9421 and prevent
+				// double-knock from re-signing with Draft Cavage in a loop.
+				\remove_filter( 'http_request_args', array( Signature::class, 'sign_request' ), 0 );
 				\remove_filter( 'http_response', array( Signature::class, 'maybe_double_knock' ), 10 );
 
-				$filters[] = array( 'pre_option_activitypub_rfc9421_signature', $force_rfc9421 );
-				$filters[] = array( 'pre_option_activitypub_rfc9421_unsupported', $bypass_unsupported );
+				$forced_signer = function ( $request_args, $url ) {
+					if ( ! isset( $request_args['key_id'], $request_args['private_key'] ) ) {
+						return $request_args;
+					}
+					return ( new Http_Message_Signature() )->sign( $request_args, $url );
+				};
+				\add_filter( 'http_request_args', $forced_signer, 0, 2 );
+
+				$filters[] = array( 'http_request_args', $forced_signer, 0 );
+				$restore[] = array( 'http_request_args', array( Signature::class, 'sign_request' ), 0, 2 );
 				$restore[] = array( 'http_response', array( Signature::class, 'maybe_double_knock' ), 10, 3 );
 				break;
 
@@ -172,7 +178,7 @@ class Fetch_Command extends \WP_CLI_Command {
 
 		return function () use ( $filters, $restore ) {
 			foreach ( $filters as $filter ) {
-				\remove_filter( $filter[0], $filter[1] );
+				\remove_filter( $filter[0], $filter[1], $filter[2] ?? 10 );
 			}
 			foreach ( $restore as $filter ) {
 				\add_filter( $filter[0], $filter[1], $filter[2], $filter[3] );
