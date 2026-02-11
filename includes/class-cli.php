@@ -30,6 +30,7 @@ class Cli {
 	 * - wp activitypub self-destruct [--status] [--yes]
 	 * - wp activitypub move <from> <to>
 	 * - wp activitypub follow <remote_user>
+	 * - wp activitypub stats <collect|compile>
 	 */
 	public static function register() {
 		// Register parent command with version subcommand.
@@ -94,6 +95,14 @@ class Cli {
 			'\Activitypub\Cli\Follow_Command',
 			array(
 				'shortdesc' => 'Follow a remote ActivityPub user.',
+			)
+		);
+
+		\WP_CLI::add_command(
+			'activitypub stats',
+			'\Activitypub\Cli\Stats_Command',
+			array(
+				'shortdesc' => 'Manage ActivityPub statistics (collect or compile).',
 			)
 		);
 	}
