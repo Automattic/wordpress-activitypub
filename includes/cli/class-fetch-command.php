@@ -33,13 +33,14 @@ class Fetch_Command extends \WP_CLI_Command {
 	 * : The URL to fetch.
 	 *
 	 * [--signature=<mode>]
-	 * : Signature mode: draft-cavage, rfc9421, or none.
+	 * : Signature mode: draft-cavage, rfc9421, double-knock, or none.
 	 * ---
 	 * default: default
 	 * options:
 	 *   - default
 	 *   - draft-cavage
 	 *   - rfc9421
+	 *   - double-knock
 	 *   - none
 	 * ---
 	 *
@@ -59,6 +60,9 @@ class Fetch_Command extends \WP_CLI_Command {
 	 *
 	 *     # Fetch with Draft Cavage signature
 	 *     $ wp activitypub fetch https://mastodon.social/@Gargron --signature=draft-cavage
+	 *
+	 *     # Fetch with double-knock (RFC 9421 first, Draft Cavage fallback on 4xx)
+	 *     $ wp activitypub fetch https://mastodon.social/@Gargron --signature=double-knock
 	 *
 	 *     # Fetch without signature
 	 *     $ wp activitypub fetch https://mastodon.social/@Gargron --signature=none
@@ -147,13 +151,24 @@ class Fetch_Command extends \WP_CLI_Command {
 				break;
 
 			case 'rfc9421':
-				// Replace default signing to force RFC 9421 and prevent
-				// double-knock from re-signing with Draft Cavage in a loop.
+			case 'double-knock':
+				// Replace default signing to force RFC 9421. For rfc9421 mode,
+				// also disable double-knock to prevent an infinite retry loop.
+				// For double-knock mode, keep it active but skip re-signing on retry.
 				\remove_filter( 'http_request_args', array( Signature::class, 'sign_request' ), 0 );
-				\remove_filter( 'http_response', array( Signature::class, 'maybe_double_knock' ), 10 );
 
-				$forced_signer = function ( $request_args, $url ) {
+				$is_double_knock = 'double-knock' === $mode;
+
+				if ( ! $is_double_knock ) {
+					\remove_filter( 'http_response', array( Signature::class, 'maybe_double_knock' ), 10 );
+				}
+
+				$forced_signer = function ( $request_args, $url ) use ( $is_double_knock ) {
 					if ( ! isset( $request_args['key_id'], $request_args['private_key'] ) ) {
+						return $request_args;
+					}
+					// In double-knock mode, skip if already signed (retry from maybe_double_knock).
+					if ( $is_double_knock && ! empty( $request_args['headers']['Signature'] ) ) {
 						return $request_args;
 					}
 					return ( new Http_Message_Signature() )->sign( $request_args, $url );
@@ -162,7 +177,10 @@ class Fetch_Command extends \WP_CLI_Command {
 
 				$filters[] = array( 'http_request_args', $forced_signer, 0 );
 				$restore[] = array( 'http_request_args', array( Signature::class, 'sign_request' ), 0, 2 );
-				$restore[] = array( 'http_response', array( Signature::class, 'maybe_double_knock' ), 10, 3 );
+
+				if ( ! $is_double_knock ) {
+					$restore[] = array( 'http_response', array( Signature::class, 'maybe_double_knock' ), 10, 3 );
+				}
 				break;
 
 			case 'draft-cavage':
