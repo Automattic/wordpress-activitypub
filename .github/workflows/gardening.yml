@@ -65,4 +65,6 @@ jobs:
             {"path": "includes/wp-admin", "label": "[Feature] WP Admin"},
             {"path": "includes/wp-admin/import", "label": "[Feature] Import"},
             {"path": "includes/wp-admin/class-health-check.php", "label": "[Feature] Health Check"}
+            {"path": "includes/class-cli.php", "label": "[Feature] CLI"}
+            {"path": "includes/cli", "label": "[Feature] CLI"}
             ]'
