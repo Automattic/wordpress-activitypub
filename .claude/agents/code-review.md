@@ -13,6 +13,9 @@ You are a code reviewer for the WordPress ActivityPub plugin. Review changes tho
 Run these commands to understand what's being reviewed:
 
 ```bash
+# Ensure trunk is up to date
+git fetch origin trunk
+
 # Current branch
 git branch --show-current
 
