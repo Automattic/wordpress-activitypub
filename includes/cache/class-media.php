@@ -16,7 +16,7 @@ use Activitypub\Collection\Posts;
  * Media is cached on-demand when URLs pass through the `activitypub_remote_media_url` filter.
  *
  * Storage locations:
- * - Posts: /wp-content/uploads/activitypub/ap_posts/{post_id}/
+ * - Posts: /wp-content/uploads/activitypub/posts/{post_id}/
  * - Comments: /wp-content/uploads/activitypub/comments/{comment_id}/
  *
  * Files are cleaned up automatically when the parent post is deleted.
@@ -53,7 +53,7 @@ class Media extends File {
 	 *
 	 * @var string
 	 */
-	const BASE_DIR_POSTS = '/activitypub/ap_posts/';
+	const BASE_DIR_POSTS = '/activitypub/posts/';
 
 	/**
 	 * Base directory for comment media.

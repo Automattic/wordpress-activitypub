@@ -26,7 +26,7 @@ class Test_Media extends WP_UnitTestCase {
 	 * Test that get_base_dir returns correct value.
 	 */
 	public function test_get_base_dir() {
-		$this->assertEquals( '/activitypub/ap_posts/', Media::get_base_dir() );
+		$this->assertEquals( '/activitypub/posts/', Media::get_base_dir() );
 	}
 
 	/**
@@ -68,8 +68,8 @@ class Test_Media extends WP_UnitTestCase {
 		$paths = Media::get_storage_paths_for_context( 123, 'media' );
 
 		$this->assertIsArray( $paths );
-		$this->assertStringContainsString( '/activitypub/ap_posts/', $paths['basedir'] );
-		$this->assertStringContainsString( '/activitypub/ap_posts/', $paths['baseurl'] );
+		$this->assertStringContainsString( '/activitypub/posts/', $paths['basedir'] );
+		$this->assertStringContainsString( '/activitypub/posts/', $paths['baseurl'] );
 	}
 
 	/**
