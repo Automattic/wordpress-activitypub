@@ -52,6 +52,7 @@ function rest_init() {
 	( new Rest\Actors_Controller() )->register_routes();
 	( new Rest\Actors_Inbox_Controller() )->register_routes();
 	( new Rest\Admin\Actions_Controller() )->register_routes();
+	( new Rest\Admin\Statistics_Controller() )->register_routes();
 	( new Rest\Application_Controller() )->register_routes();
 	( new Rest\Collections_Controller() )->register_routes();
 	( new Rest\Comments_Controller() )->register_routes();
@@ -63,7 +64,6 @@ function rest_init() {
 	( new Rest\Outbox_Controller() )->register_routes();
 	( new Rest\Post_Controller() )->register_routes();
 	( new Rest\Replies_Controller() )->register_routes();
-	( new Rest\Statistics_Controller() )->register_routes();
 	( new Rest\Webfinger_Controller() )->register_routes();
 
 	// Load NodeInfo endpoints only if blog is public.

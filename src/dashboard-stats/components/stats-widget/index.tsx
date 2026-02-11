@@ -72,7 +72,7 @@ export default function StatsWidget() {
 		// Fetch blog stats (global engagement data) - only if user has blog capability.
 		const blogStatsPromise = canUseBlogActor
 			? apiFetch< StatsResponse >( {
-					path: `/activitypub/1.0/stats/${ BLOG_USER_ID }`,
+					path: `/activitypub/1.0/admin/stats/${ BLOG_USER_ID }`,
 			  } ).catch( () => null )
 			: Promise.resolve( null );
 
@@ -80,7 +80,7 @@ export default function StatsWidget() {
 		const userStatsPromise =
 			canUseUserActor && currentUser?.id
 				? apiFetch< StatsResponse >( {
-						path: `/activitypub/1.0/stats/${ currentUser.id }`,
+						path: `/activitypub/1.0/admin/stats/${ currentUser.id }`,
 				  } ).catch( () => null )
 				: Promise.resolve( null );
 

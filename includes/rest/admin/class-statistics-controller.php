@@ -5,7 +5,7 @@
  * @package Activitypub
  */
 
-namespace Activitypub\Rest;
+namespace Activitypub\Rest\Admin;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Statistics;
@@ -29,7 +29,7 @@ class Statistics_Controller extends \WP_REST_Controller {
 	 *
 	 * @var string
 	 */
-	protected $rest_base = 'stats';
+	protected $rest_base = 'admin/stats';
 
 	/**
 	 * Register routes.
