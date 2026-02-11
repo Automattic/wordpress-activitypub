@@ -8,7 +8,6 @@
 namespace Activitypub\Collection;
 
 use Activitypub\Activity\Actor;
-use Activitypub\Attachments;
 use Activitypub\Emoji;
 use Activitypub\Http;
 use Activitypub\Sanitize;
@@ -130,11 +129,6 @@ class Remote_Actors {
 			\kses_init_filters();
 		}
 
-		// Cache the actor's avatar locally.
-		if ( ! \is_wp_error( $post_id ) ) {
-			self::cache_avatar( $post_id, $actor );
-		}
-
 		return $post_id;
 	}
 
@@ -180,11 +174,6 @@ class Remote_Actors {
 		if ( $has_kses ) {
 			// Restore KSES filters.
 			\kses_init_filters();
-		}
-
-		// Re-cache the actor's avatar if it has changed.
-		if ( ! \is_wp_error( $post_id ) ) {
-			self::cache_avatar( $post_id, $actor );
 		}
 
 		return $post_id;
@@ -710,8 +699,9 @@ class Remote_Actors {
 	/**
 	 * Get the avatar URL for a remote actor.
 	 *
-	 * Returns the locally cached avatar URL if available, otherwise falls back
-	 * to the default avatar.
+	 * Uses lazy caching - the avatar is only downloaded when first accessed.
+	 * Passes the URL through the activitypub_remote_media_url filter which
+	 * triggers caching if enabled.
 	 *
 	 * @param int $id The ID of the remote actor post.
 	 *
@@ -720,12 +710,7 @@ class Remote_Actors {
 	public static function get_avatar_url( $id ) {
 		$default_avatar_url = ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg';
 
-		$avatar_url = \get_post_meta( $id, '_activitypub_avatar_url', true );
-		if ( $avatar_url ) {
-			return $avatar_url;
-		}
-
-		// If not found in meta, try to extract from post_content JSON and cache it.
+		// Extract remote avatar URL from actor data.
 		$post = \get_post( $id );
 		if ( ! $post || empty( $post->post_content ) ) {
 			return $default_avatar_url;
@@ -733,54 +718,27 @@ class Remote_Actors {
 
 		$actor_data = \json_decode( $post->post_content, true );
 		if ( empty( $actor_data['icon'] ) ) {
-			\update_post_meta( $id, '_activitypub_avatar_url', \esc_url_raw( $default_avatar_url ) );
-
 			return $default_avatar_url;
 		}
 
-		return self::cache_avatar( $id, $actor_data );
-	}
-
-	/**
-	 * Cache a remote actor's avatar locally.
-	 *
-	 * Downloads the avatar image, optimizes it (resize/WebP), and stores it locally.
-	 *
-	 * @param int                $post_id The actor post ID.
-	 * @param Actor|array|object $actor   The actor object or data array.
-	 *
-	 * @return string|null The cached avatar URL, or null if no avatar.
-	 */
-	private static function cache_avatar( $post_id, $actor ) {
-		$data              = $actor instanceof Actor ? $actor->to_array() : (array) $actor;
-		$remote_avatar_url = object_to_uri( $data['icon'] ?? null );
-
+		$remote_avatar_url = object_to_uri( $actor_data['icon'] );
 		if ( empty( $remote_avatar_url ) ) {
-			// No avatar to save, clean up any existing avatar.
-			Attachments::delete_actors_directory( $post_id );
-			\delete_post_meta( $post_id, '_activitypub_avatar_url' );
-			return null;
+			return $default_avatar_url;
 		}
 
-		// Download and save the avatar locally.
-		$local_url = Attachments::save_actor_avatar( $post_id, $remote_avatar_url );
-
-		// Store the local URL if caching succeeded, otherwise store the remote URL.
-		if ( $local_url ) {
-			$avatar_url = $local_url;
-		} else {
-			/**
-			 * Filters remote avatar URLs when local caching is skipped.
-			 *
-			 * Allows modifying remote URLs to use a CDN or image proxy service.
-			 *
-			 * @param string $url     The remote avatar URL.
-			 * @param string $context The context: 'avatar'.
-			 */
-			$avatar_url = \apply_filters( 'activitypub_remote_media_url', $remote_avatar_url, 'image', 'avatar' );
-		}
-		\update_post_meta( $post_id, '_activitypub_avatar_url', \esc_url_raw( $avatar_url ) );
-
-		return $avatar_url;
+		/**
+		 * Filters a remote media URL before use.
+		 *
+		 * Cache handlers hook into this filter to provide lazy caching.
+		 * Returns cached local URL if available, otherwise original URL.
+		 *
+		 * @since 5.6.0
+		 *
+		 * @param string      $url       The remote avatar URL.
+		 * @param string      $context   The context ('avatar', 'media', 'emoji').
+		 * @param int|null    $entity_id The entity ID (actor post ID, post ID, or null for emoji).
+		 * @param array       $options   Optional. Additional options like 'updated' timestamp.
+		 */
+		return \apply_filters( 'activitypub_remote_media_url', $remote_avatar_url, 'avatar', $id, array() );
 	}
 }

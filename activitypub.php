@@ -32,6 +32,7 @@ require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/functions-activity.php';
 require_once __DIR__ . '/includes/functions-comment.php';
 require_once __DIR__ . '/includes/functions-federation.php';
+require_once __DIR__ . '/includes/functions-media.php';
 require_once __DIR__ . '/includes/functions-post.php';
 require_once __DIR__ . '/includes/functions-request.php';
 require_once __DIR__ . '/includes/functions-url.php';
@@ -77,8 +78,8 @@ function rest_init() {
  */
 function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Activitypub', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Attachments', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Avatars', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Cache', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Dispatcher', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Embed', 'init' ) );

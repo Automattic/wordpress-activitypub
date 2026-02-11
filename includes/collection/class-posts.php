@@ -7,11 +7,12 @@
 
 namespace Activitypub\Collection;
 
-use Activitypub\Attachments;
+use Activitypub\Emoji;
 use Activitypub\Sanitize;
 
 use function Activitypub\generate_post_summary;
 use function Activitypub\object_to_uri;
+use function Activitypub\process_remote_media;
 
 /**
  * Posts collection.
@@ -66,7 +67,6 @@ class Posts {
 		}
 
 		self::add_taxonomies( $post_id, $activity_object );
-		self::maybe_import_attachments( $activity_object, $post_id );
 
 		return \get_post( $post_id );
 	}
@@ -141,10 +141,6 @@ class Posts {
 		}
 
 		self::add_taxonomies( $post_id, $activity['object'] );
-
-		// Always delete existing attachments on update in case filter value changed.
-		Attachments::delete_ap_posts_directory( $post_id );
-		self::maybe_import_attachments( $activity['object'], $post_id );
 
 		return \get_post( $post_id );
 	}
@@ -268,6 +264,11 @@ class Posts {
 		// Sanitize content and remove hashtags.
 		$content = isset( $activity['content'] ) ? Sanitize::content( $activity['content'] ) : '';
 		$content = self::remove_hashtags( $content, $activity['tag'] ?? array() );
+		$content = Emoji::wrap_in_content( $content, $activity );
+
+		// Process remote media: wrap inline images and append attachments.
+		$attachments = self::extract_attachments( $activity );
+		$content     = process_remote_media( $content, $attachments );
 
 		return array(
 			'post_title'    => isset( $activity['name'] ) ? \wp_strip_all_tags( $activity['name'] ) : '',
@@ -298,35 +299,47 @@ class Posts {
 	}
 
 	/**
-	 * Maybe import attachments for an activity object.
+	 * Extract media attachments from an activity object.
 	 *
-	 * Checks if attachments should be stored locally via filter and imports them if enabled.
+	 * Extracts attachments with URL, alt text, and media type for appending to content.
 	 *
 	 * @param array $activity_object The activity object data.
-	 * @param int   $post_id         The post ID.
+	 *
+	 * @return array Array of attachments with 'url', 'alt', and 'type' keys.
 	 */
-	private static function maybe_import_attachments( $activity_object, $post_id ) {
-		// Process attachments if present.
-		if ( empty( $activity_object['attachment'] ) ) {
-			return;
+	private static function extract_attachments( $activity_object ) {
+		if ( empty( $activity_object['attachment'] ) || ! \is_array( $activity_object['attachment'] ) ) {
+			return array();
 		}
 
-		/**
-		 * Filters whether to store attachments locally for incoming ActivityPub posts.
-		 *
-		 * Allows plugins or users to disable local storage of attachments from
-		 * incoming ActivityPub posts. When disabled, attachments won't be downloaded
-		 * and stored locally, which can be useful for users with limited webspace.
-		 *
-		 * @param bool  $store_locally   Whether to store attachments locally. Default true.
-		 * @param array $activity_object The ActivityPub activity object.
-		 * @param int   $post_id         The post ID.
-		 */
-		$store_locally = \apply_filters( 'activitypub_store_attachments_locally', true, $activity_object, $post_id );
+		$attachments = array();
+		foreach ( $activity_object['attachment'] as $attachment ) {
+			if ( \is_object( $attachment ) ) {
+				$attachment = \get_object_vars( $attachment );
+			}
 
-		if ( $store_locally ) {
-			Attachments::import_post_files( $activity_object['attachment'], $post_id );
+			if ( empty( $attachment['url'] ) ) {
+				continue;
+			}
+
+			$mime_type = $attachment['mediaType'] ?? '';
+
+			if ( \str_starts_with( $mime_type, 'video/' ) ) {
+				$type = 'video';
+			} elseif ( \str_starts_with( $mime_type, 'audio/' ) ) {
+				$type = 'audio';
+			} else {
+				$type = 'image';
+			}
+
+			$attachments[] = array(
+				'url'  => $attachment['url'],
+				'alt'  => $attachment['name'] ?? '',
+				'type' => $type,
+			);
 		}
+
+		return $attachments;
 	}
 
 	/**
