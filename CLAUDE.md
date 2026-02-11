@@ -19,6 +19,8 @@ The following skills are available in `.claude/skills/`:
 The following agents are available in `.claude/agents/`:
 
 - **summary** — Summarize the session at its end (auto-invoked on goodbye)
+- **code-review** — Review code changes for quality and standards (auto-invoked before PR creation)
+- **spec-check** — Audit endpoints against W3C ActivityPub, SWICG, and FEP specs
 
 **CRITICAL:** After reading a skill, check if a local skill override file exists at `~/.claude/skills/{skill-name}-local/SKILL.md` and apply it too.
 For example, after reading `.claude/skills/dev/SKILL.md`, check for `~/.claude/skills/dev-local/SKILL.md`.

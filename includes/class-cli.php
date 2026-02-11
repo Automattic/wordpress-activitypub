@@ -27,9 +27,11 @@ class Cli {
 	 * - wp activitypub comment <delete|update> <id>
 	 * - wp activitypub actor <delete|update> <id>
 	 * - wp activitypub outbox <undo|reschedule> <id>
+	 * - wp activitypub cache <clear|status> [--type=<type>]
 	 * - wp activitypub self-destruct [--status] [--yes]
 	 * - wp activitypub move <from> <to>
 	 * - wp activitypub follow <remote_user>
+	 * - wp activitypub fetch <url>
 	 */
 	public static function register() {
 		// Register parent command with version subcommand.
@@ -94,6 +96,22 @@ class Cli {
 			'\Activitypub\Cli\Follow_Command',
 			array(
 				'shortdesc' => 'Follow a remote ActivityPub user.',
+			)
+		);
+
+		\WP_CLI::add_command(
+			'activitypub cache',
+			'\Activitypub\Cli\Cache_Command',
+			array(
+				'shortdesc' => 'Manage remote media cache (clear or show status).',
+			)
+		);
+
+		\WP_CLI::add_command(
+			'activitypub fetch',
+			'\Activitypub\Cli\Fetch_Command',
+			array(
+				'shortdesc' => 'Fetch a remote URL with a signed ActivityPub request.',
 			)
 		);
 	}

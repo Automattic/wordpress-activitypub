@@ -787,4 +787,52 @@ class Test_Create extends \WP_UnitTestCase {
 		// Clean up.
 		\delete_option( 'activitypub_tombstone_urls' );
 	}
+
+	/**
+	 * Test Create handler with JSON fixtures from data/create/.
+	 *
+	 * Drop a JSON file into tests/phpunit/data/create/ and it will be
+	 * automatically picked up. Use `{{LOCAL_POST_URL}}` as a placeholder
+	 * in `inReplyTo` to target the local test post.
+	 *
+	 * @dataProvider create_fixture_provider
+	 * @covers ::handle_create
+	 *
+	 * @param string $path The path to the fixture JSON file.
+	 */
+	public function test_handle_create_from_fixture( $path ) {
+		$json = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		$json = str_replace( '{{LOCAL_POST_URL}}', $this->post_permalink, $json );
+
+		$activity = json_decode( $json, true );
+
+		Create::handle_create( $activity, $this->user_id );
+
+		$comments = ( new \WP_Comment_Query(
+			array(
+				'type'    => 'comment',
+				'post_id' => $this->post_id,
+			)
+		) )->comments;
+
+		$this->assertCount( 1, $comments );
+		$this->assertInstanceOf( 'WP_Comment', $comments[0] );
+		$this->assertStringContainsString( \wp_strip_all_tags( $activity['object']['content'] ), \wp_strip_all_tags( $comments[0]->comment_content ) );
+	}
+
+	/**
+	 * Data provider that discovers JSON fixture files in data/create/.
+	 *
+	 * @return array Array of [ path ] arrays, keyed by fixture name.
+	 */
+	public function create_fixture_provider() {
+		$files    = glob( AP_TESTS_DIR . '/data/create/*.json' );
+		$fixtures = array();
+
+		foreach ( $files as $path ) {
+			$fixtures[ basename( $path, '.json' ) ] = array( $path );
+		}
+
+		return $fixtures;
+	}
 }

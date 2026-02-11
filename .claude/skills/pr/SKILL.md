@@ -16,6 +16,10 @@ description: INVOKE THIS SKILL before creating any PR to ensure compliance with 
 
 **Reserved:** `release/{X.Y.Z}` (releases only), `trunk` (main branch).
 
+## Pre-PR Review
+
+Before creating a PR, delegate to the **code-review** agent to review all changes on the branch. Address any critical issues before proceeding.
+
 ## PR Creation
 
 **Every PR must:**
