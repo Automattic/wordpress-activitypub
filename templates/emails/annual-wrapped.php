@@ -126,13 +126,13 @@ require __DIR__ . '/parts/header.php';
 		printf(
 			/* translators: %d: Year */
 			esc_html__( 'Your Blog&#8217;s %d Fediverse Wrapped', 'activitypub' ),
-			esc_html( $args['year'] )
+			(int) $args['year']
 		);
 	else :
 		printf(
 			/* translators: %d: Year */
 			esc_html__( 'Your %d Fediverse Wrapped', 'activitypub' ),
-			esc_html( $args['year'] )
+			(int) $args['year']
 		);
 	endif;
 	?>

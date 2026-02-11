@@ -294,6 +294,18 @@ class Activitypub {
 
 		\register_meta(
 			'user',
+			$blog_prefix . 'activitypub_mailer_annual_report',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Send the annual Fediverse Year in Review email.',
+				'single'            => true,
+				'sanitize_callback' => 'absint',
+			)
+		);
+		\add_filter( 'get_user_option_activitypub_mailer_annual_report', array( self::class, 'user_options_default' ) );
+
+		\register_meta(
+			'user',
 			'activitypub_show_welcome_tab',
 			array(
 				'type'              => 'integer',

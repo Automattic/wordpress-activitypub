@@ -250,6 +250,12 @@ class User_Settings_Fields {
 					<?php \esc_html_e( 'New Mentions', 'activitypub' ); ?>
 				</label>
 			</p>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_mailer_annual_report" id="activitypub_mailer_annual_report" value="1" <?php \checked( 1, \get_user_option( 'activitypub_mailer_annual_report' ) ); ?> />
+					<?php \esc_html_e( 'Annual Report', 'activitypub' ); ?>
+				</label>
+			</p>
 		</fieldset>
 		<?php
 	}

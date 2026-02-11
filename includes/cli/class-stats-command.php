@@ -7,6 +7,7 @@
 
 namespace Activitypub\Cli;
 
+use Activitypub\Scheduler\Statistics as Statistics_Scheduler;
 use Activitypub\Statistics;
 
 /**
@@ -114,5 +115,58 @@ class Stats_Command extends \WP_CLI_Command {
 
 		$count = count( $user_ids );
 		\WP_CLI::success( "Annual stats compiled for {$count} user(s) ({$year})." );
+	}
+
+	/**
+	 * Send the annual report email.
+	 *
+	 * Compiles annual statistics and sends the Fediverse Year in Review
+	 * email for the specified year.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--user_id=<user_id>]
+	 * : The user ID to send the email for. Omit to send for all active users.
+	 *
+	 * [--year=<year>]
+	 * : The year to send the report for. Defaults to previous year.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     # Send annual report for previous year
+	 *     $ wp activitypub stats send
+	 *
+	 *     # Send annual report for a specific year
+	 *     $ wp activitypub stats send --year=2025
+	 *
+	 *     # Send for a specific user
+	 *     $ wp activitypub stats send --user_id=1 --year=2025
+	 *
+	 * @subcommand send
+	 *
+	 * @param array $args       The positional arguments (unused).
+	 * @param array $assoc_args The associative arguments.
+	 */
+	public function send( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		$user_id = isset( $assoc_args['user_id'] ) ? (int) $assoc_args['user_id'] : null;
+		$year    = isset( $assoc_args['year'] ) ? (int) $assoc_args['year'] : ( (int) \gmdate( 'Y' ) - 1 );
+
+		$user_ids = $user_id ? array( $user_id ) : Statistics::get_active_user_ids();
+
+		$sent = 0;
+		foreach ( $user_ids as $uid ) {
+			$summary = Statistics::compile_annual_summary( $uid, $year );
+
+			if ( empty( $summary ) ) {
+				\WP_CLI::warning( "No stats found for user {$uid} ({$year}), skipping." );
+				continue;
+			}
+
+			Statistics_Scheduler::send_annual_email( $uid, $year, $summary );
+			\WP_CLI::log( "Annual report email sent for user {$uid} ({$year})." );
+			++$sent;
+		}
+
+		\WP_CLI::success( "Annual report email sent for {$sent} user(s) ({$year})." );
 	}
 }

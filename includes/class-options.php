@@ -416,6 +416,16 @@ class Options {
 
 		\register_setting(
 			'activitypub_blog',
+			'activitypub_mailer_annual_report',
+			array(
+				'type'        => 'integer',
+				'description' => 'Send the annual Fediverse Year in Review email.',
+				'default'     => 1,
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
 			'activitypub_blog_user_also_known_as',
 			array(
 				'type'              => 'array',

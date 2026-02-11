@@ -92,8 +92,17 @@ class Statistics {
 	 * @param int   $year    The year.
 	 * @param array $summary The annual summary data.
 	 */
-	private static function send_annual_email( $user_id, $year, $summary ) {
+	public static function send_annual_email( $user_id, $year, $summary ) {
 		if ( empty( $summary ) ) {
+			return;
+		}
+
+		// Check user preference for wrapped email.
+		if ( $user_id > \Activitypub\Collection\Actors::BLOG_USER_ID ) {
+			if ( ! \get_user_option( 'activitypub_mailer_annual_report', $user_id ) ) {
+				return;
+			}
+		} elseif ( '1' !== \get_option( 'activitypub_mailer_annual_report', '1' ) ) {
 			return;
 		}
 
@@ -134,6 +143,25 @@ class Statistics {
 			$year
 		);
 
-		Mailer::send( $user_id, $subject, 'annual-wrapped', $args );
+		// Build plain text alternative.
+		/* translators: %d: Year */
+		$alt_body = \sprintf( \__( "Here's your %d Fediverse year in review:\n\n", 'activitypub' ), $year );
+
+		if ( ! empty( $args['posts_count'] ) ) {
+			/* translators: %d: Number of posts */
+			$alt_body .= \sprintf( \__( "Posts published: %d\n", 'activitypub' ), $args['posts_count'] );
+		}
+
+		if ( ! empty( $args['followers_net_change'] ) ) {
+			/* translators: %d: Net follower change */
+			$alt_body .= \sprintf( \__( "Follower growth: %+d\n", 'activitypub' ), $args['followers_net_change'] );
+		}
+
+		if ( ! empty( $args['most_active_month_name'] ) ) {
+			/* translators: %s: Month name */
+			$alt_body .= \sprintf( \__( "Most active month: %s\n", 'activitypub' ), $args['most_active_month_name'] );
+		}
+
+		Mailer::send( $user_id, $subject, 'annual-wrapped', $args, $alt_body );
 	}
 }

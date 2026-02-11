@@ -434,10 +434,11 @@ class Mailer {
 	 * @param string $subject  The email subject.
 	 * @param string $template The template name (without path/extension).
 	 * @param array  $args     Template arguments.
+	 * @param string $alt_body Optional plain text alternative. Auto-generated from HTML if empty.
 	 *
 	 * @return bool True if email was sent, false otherwise.
 	 */
-	public static function send( $user_id, $subject, $template, $args = array() ) {
+	public static function send( $user_id, $subject, $template, $args = array(), $alt_body = '' ) {
 		// Get the recipient email address.
 		if ( $user_id > Actors::BLOG_USER_ID ) {
 			$user = \get_userdata( $user_id );
@@ -470,8 +471,10 @@ class Mailer {
 		\load_template( $template_file, false, $args );
 		$html_message = \ob_get_clean();
 
-		// Build plain text alternative.
-		$alt_body     = self::get_plain_text_body( $template, $args );
+		// Build plain text alternative from HTML if not provided.
+		if ( empty( $alt_body ) ) {
+			$alt_body = \wp_strip_all_tags( $html_message );
+		}
 		$alt_function = static function ( $mailer ) use ( $alt_body ) {
 			$mailer->{'AltBody'} = $alt_body;
 		};
@@ -482,42 +485,6 @@ class Mailer {
 		\remove_action( 'phpmailer_init', $alt_function );
 
 		return $result;
-	}
-
-	/**
-	 * Get the plain text body for a template.
-	 *
-	 * @param string $template The template name.
-	 * @param array  $args     Template arguments.
-	 *
-	 * @return string The plain text body.
-	 */
-	private static function get_plain_text_body( $template, $args ) {
-		switch ( $template ) {
-			case 'annual-wrapped':
-				$year = $args['year'] ?? \gmdate( 'Y' );
-				/* translators: %d: Year */
-				$message = \sprintf( \__( "Here's your %d Fediverse year in review:\n\n", 'activitypub' ), $year );
-
-				if ( ! empty( $args['posts_count'] ) ) {
-					/* translators: %d: Number of posts */
-					$message .= \sprintf( \__( "Posts published: %d\n", 'activitypub' ), $args['posts_count'] );
-				}
-
-				if ( ! empty( $args['followers_net_change'] ) ) {
-					/* translators: %d: Net follower change */
-					$message .= \sprintf( \__( "Follower growth: %+d\n", 'activitypub' ), $args['followers_net_change'] );
-				}
-
-				if ( ! empty( $args['most_active_month_name'] ) ) {
-					/* translators: %s: Month name */
-					$message .= \sprintf( \__( "Most active month: %s\n", 'activitypub' ), $args['most_active_month_name'] );
-				}
-
-				return $message;
-			default:
-				return '';
-		}
 	}
 
 	/**

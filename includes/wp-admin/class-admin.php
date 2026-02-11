@@ -249,6 +249,7 @@ class Admin {
 			'activitypub_mailer_new_dm',
 			'activitypub_mailer_new_follower',
 			'activitypub_mailer_new_mention',
+			'activitypub_mailer_annual_report',
 		);
 
 		foreach ( $required_user_options as $option ) {
