@@ -19,6 +19,8 @@ class Blocks {
 	public static function init() {
 		// This is already being called on the init hook, so just add it.
 		self::register_blocks();
+		self::register_patterns();
+		self::register_templates();
 
 		\add_action( 'load-post-new.php', array( self::class, 'handle_in_reply_to_get_param' ) );
 		// Add editor plugin.
@@ -101,6 +103,68 @@ class Blocks {
 			ACTIVITYPUB_PLUGIN_DIR . '/build/reply',
 			array(
 				'render_callback' => array( self::class, 'render_reply_block' ),
+			)
+		);
+	}
+
+	/**
+	 * Register block patterns for ActivityPub.
+	 */
+	public static function register_patterns() {
+		// Register the ActivityPub pattern category.
+		\register_block_pattern_category(
+			'activitypub',
+			array(
+				'label' => \__( 'Fediverse', 'activitypub' ),
+			)
+		);
+
+		// Register each pattern.
+		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/author-header.php';
+		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/author-profile.php';
+		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/follow-page.php';
+		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/social-sidebar.php';
+	}
+
+	/**
+	 * Register FSE templates for block themes.
+	 */
+	public static function register_templates() {
+		// Only register templates for block themes on WP 6.7+.
+		if ( ! \function_exists( 'register_block_template' ) || ! \wp_is_block_theme() ) {
+			return;
+		}
+
+		// Use the core `author` hierarchy slug so WP can resolve this for author archives.
+		\register_block_template(
+			'activitypub//author',
+			array(
+				'title'       => \__( 'Author Archive (Fediverse)', 'activitypub' ),
+				'description' => \__( 'Displays an author archive with Fediverse profile and follow options.', 'activitypub' ),
+				'content'     => '<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained"}} -->
+<main class="wp-block-group">
+	<!-- wp:pattern {"slug":"activitypub/author-profile"} /-->
+	<!-- wp:spacer {"height":"32px"} -->
+	<div style="height:32px" aria-hidden="true" class="wp-block-spacer"></div>
+	<!-- /wp:spacer -->
+	<!-- wp:query {"queryId":0,"query":{"perPage":10,"pages":0,"offset":0,"postType":"post","order":"desc","orderBy":"date","author":"","search":"","exclude":[],"sticky":"","inherit":true}} -->
+	<div class="wp-block-query">
+		<!-- wp:post-template -->
+			<!-- wp:post-title {"isLink":true} /-->
+			<!-- wp:post-excerpt /-->
+		<!-- /wp:post-template -->
+		<!-- wp:query-pagination -->
+			<!-- wp:query-pagination-previous /-->
+			<!-- wp:query-pagination-numbers /-->
+			<!-- wp:query-pagination-next /-->
+		<!-- /wp:query-pagination -->
+	</div>
+	<!-- /wp:query -->
+</main>
+<!-- /wp:group -->
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->',
+				'post_types'  => array(),
 			)
 		);
 	}
