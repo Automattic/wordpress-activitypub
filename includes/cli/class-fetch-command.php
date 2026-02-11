@@ -8,6 +8,7 @@
 namespace Activitypub\Cli;
 
 use Activitypub\Http;
+use Activitypub\Signature;
 
 /**
  * Fetch a remote ActivityPub URL with signed HTTP requests.
@@ -86,7 +87,7 @@ class Fetch_Command extends \WP_CLI_Command {
 		$cleanup();
 
 		if ( \is_wp_error( $response ) ) {
-			\WP_CLI::error( \sprintf( 'Request failed (HTTP %s).', $response->get_error_code() ) );
+			\WP_CLI::error( \sprintf( 'Request failed: %s (HTTP %s).', $response->get_error_message(), $response->get_error_code() ) );
 		}
 
 		$code = \wp_remote_retrieve_response_code( $response );
@@ -115,7 +116,7 @@ class Fetch_Command extends \WP_CLI_Command {
 		} else {
 			$data = \json_decode( $body, true );
 
-			if ( $data ) {
+			if ( null !== $data ) {
 				\WP_CLI::log( \wp_json_encode( $data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) );
 			} else {
 				\WP_CLI::log( $body );
@@ -133,6 +134,7 @@ class Fetch_Command extends \WP_CLI_Command {
 	 */
 	private function apply_signature_mode( $mode, &$args ) {
 		$filters = array();
+		$restore = array();
 
 		switch ( $mode ) {
 			case 'none':
@@ -150,9 +152,11 @@ class Fetch_Command extends \WP_CLI_Command {
 
 				\add_filter( 'pre_option_activitypub_rfc9421_signature', $force_rfc9421 );
 				\add_filter( 'pre_option_activitypub_rfc9421_unsupported', $bypass_unsupported );
+				\remove_filter( 'http_response', array( Signature::class, 'maybe_double_knock' ), 10 );
 
 				$filters[] = array( 'pre_option_activitypub_rfc9421_signature', $force_rfc9421 );
 				$filters[] = array( 'pre_option_activitypub_rfc9421_unsupported', $bypass_unsupported );
+				$restore[] = array( 'http_response', array( Signature::class, 'maybe_double_knock' ), 10, 3 );
 				break;
 
 			case 'draft-cavage':
@@ -166,9 +170,12 @@ class Fetch_Command extends \WP_CLI_Command {
 				break;
 		}
 
-		return function () use ( $filters ) {
+		return function () use ( $filters, $restore ) {
 			foreach ( $filters as $filter ) {
 				\remove_filter( $filter[0], $filter[1] );
+			}
+			foreach ( $restore as $filter ) {
+				\add_filter( $filter[0], $filter[1], $filter[2], $filter[3] );
 			}
 		};
 	}
