@@ -1,9 +1,21 @@
+/**
+ * External dependencies
+ */
+import type { ReactNode } from 'react';
+
+/**
+ * WordPress dependencies
+ */
 import apiFetch from '@wordpress/api-fetch';
 import { useState, useEffect } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
 import { Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+
+/**
+ * Internal dependencies
+ */
 import StatHighlights from '../stat-highlights';
 import LineChart from '../line-chart';
 import TopSupporter from '../top-supporter';
@@ -23,7 +35,7 @@ const BLOG_USER_ID = 0;
  *
  * Displays global engagement stats and follower counts for available actors.
  */
-export default function StatsWidget() {
+export default function StatsWidget(): ReactNode {
 	const { currentUser, actorMode, hasUserCap, hasBlogCap, isResolving } = useSelect(
 		( select ) => ( {
 			currentUser: select( coreStore ).getCurrentUser(),

@@ -18,6 +18,7 @@ use Activitypub\Scheduler\Actor;
 use Activitypub\Scheduler\Collection_Sync;
 use Activitypub\Scheduler\Comment;
 use Activitypub\Scheduler\Post;
+use Activitypub\Scheduler\Statistics;
 
 /**
  * Scheduler class.
@@ -100,6 +101,7 @@ class Scheduler {
 		Actor::init();
 		Collection_Sync::init();
 		Comment::init();
+		Statistics::init();
 
 		/**
 		 * Register additional schedulers.

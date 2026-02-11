@@ -1,4 +1,16 @@
+/**
+ * External dependencies
+ */
+import type { ReactNode } from 'react';
+
+/**
+ * WordPress dependencies
+ */
 import { __, sprintf } from '@wordpress/i18n';
+
+/**
+ * Internal dependencies
+ */
 import type { TopPost } from '../../types';
 
 interface Props {
@@ -7,10 +19,10 @@ interface Props {
 
 /**
  * Top Posts Component.
- * @param root0
- * @param root0.posts
+ *
+ * @param {Props} props Component props.
  */
-export default function TopPosts( { posts }: Props ) {
+export default function TopPosts( { posts }: Props ): ReactNode {
 	if ( ! posts?.length ) {
 		return null;
 	}

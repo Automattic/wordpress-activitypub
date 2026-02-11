@@ -1,4 +1,16 @@
+/**
+ * External dependencies
+ */
+import type { ReactNode } from 'react';
+
+/**
+ * WordPress dependencies
+ */
 import { __ } from '@wordpress/i18n';
+
+/**
+ * Internal dependencies
+ */
 import type { Comparison, CommentType } from '../../types';
 
 interface Props {
@@ -46,7 +58,7 @@ export default function StatHighlights( {
 	commentTypes,
 	canUseUserActor,
 	canUseBlogActor,
-}: Props ) {
+}: Props ): ReactNode {
 	if ( ! comparison ) {
 		return null;
 	}

@@ -181,7 +181,7 @@ class Dashboard {
 		<p><label for="activitypub-user-url"><?php \esc_html_e( 'Profile URL', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-user-url" value="<?php echo \esc_attr( $user->get_url() ); ?>" readonly /></p>
 		<p>
 			<?php \esc_html_e( 'This blog profile will federate all posts written on your blog, regardless of the author who posted it.', 'activitypub' ); ?>
-			<?php if ( current_user_can( 'manage_options' ) ) : ?>
+			<?php if ( \current_user_can( 'manage_options' ) ) : ?>
 			<a href="<?php echo \esc_url( \admin_url( '/options-general.php?page=activitypub&tab=blog-profile' ) ); ?>">
 				<?php \esc_html_e( 'Customize the blog profile.', 'activitypub' ); ?>
 			</a>

@@ -1,4 +1,16 @@
+/**
+ * External dependencies
+ */
+import type { ReactNode } from 'react';
+
+/**
+ * WordPress dependencies
+ */
 import { __, _n, sprintf } from '@wordpress/i18n';
+
+/**
+ * Internal dependencies
+ */
 import type { Multiplicator } from '../../types';
 
 interface Props {
@@ -7,10 +19,10 @@ interface Props {
 
 /**
  * Top Supporter Component.
- * @param root0
- * @param root0.multiplicator
+ *
+ * @param {Props} props Component props.
  */
-export default function TopSupporter( { multiplicator }: Props ) {
+export default function TopSupporter( { multiplicator }: Props ): ReactNode {
 	if ( ! multiplicator?.name ) {
 		return null;
 	}

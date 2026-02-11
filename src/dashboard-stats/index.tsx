@@ -1,4 +1,11 @@
+/**
+ * WordPress dependencies
+ */
 import { createRoot } from '@wordpress/element';
+
+/**
+ * Internal dependencies
+ */
 import StatsWidget from './components/stats-widget';
 import './style.scss';
 
@@ -14,6 +21,8 @@ declare global {
 
 /**
  * Initialize the dashboard stats widget.
+ *
+ * @param {string} id The container element ID.
  */
 export function initialize( id: string ) {
 	const container = document.getElementById( id );

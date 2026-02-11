@@ -1,4 +1,16 @@
+/**
+ * External dependencies
+ */
+import type { ReactNode } from 'react';
+
+/**
+ * WordPress dependencies
+ */
 import { __ } from '@wordpress/i18n';
+
+/**
+ * Internal dependencies
+ */
 import type { MonthData, CommentType } from '../../types';
 
 interface Props {
@@ -54,11 +66,10 @@ function getEngagementColor(): string {
  * Line Chart Component.
  *
  * Renders an SVG line chart for monthly engagement data.
- * @param root0
- * @param root0.monthly
- * @param root0.commentTypes
+ *
+ * @param {Props} props Component props.
  */
-export default function LineChart( { monthly, commentTypes }: Props ) {
+export default function LineChart( { monthly, commentTypes }: Props ): ReactNode {
 	if ( ! monthly?.length ) {
 		return null;
 	}
