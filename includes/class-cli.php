@@ -31,6 +31,7 @@ class Cli {
 	 * - wp activitypub self-destruct [--status] [--yes]
 	 * - wp activitypub move <from> <to>
 	 * - wp activitypub follow <remote_user>
+	 * - wp activitypub fetch <url>
 	 */
 	public static function register() {
 		// Register parent command with version subcommand.
@@ -103,6 +104,14 @@ class Cli {
 			'\Activitypub\Cli\Cache_Command',
 			array(
 				'shortdesc' => 'Manage remote media cache (clear or show status).',
+			)
+		);
+
+		\WP_CLI::add_command(
+			'activitypub fetch',
+			'\Activitypub\Cli\Fetch_Command',
+			array(
+				'shortdesc' => 'Fetch a remote URL with a signed ActivityPub request.',
 			)
 		);
 	}
