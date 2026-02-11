@@ -201,7 +201,7 @@ class Media extends File {
 		// Generate hash-based filename.
 		$ext = \pathinfo( $tmp_file, PATHINFO_EXTENSION );
 		if ( empty( $ext ) ) {
-			$ext = self::mime_to_extension( $result['mime_type'] );
+			$ext = \wp_get_default_extension_for_mime_type( $result['mime_type'] );
 		}
 		$file_name = $hash . '.' . $ext;
 		$file_path = $paths['basedir'] . '/' . $file_name;
