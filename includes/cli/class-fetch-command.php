@@ -33,7 +33,7 @@ class Fetch_Command extends \WP_CLI_Command {
 	 * : The URL to fetch.
 	 *
 	 * [--signature=<mode>]
-	 * : Signature mode: draft-cavage, rfc9421, double-knock, or none.
+	 * : Signature mode: default (plugin-configured), draft-cavage, rfc9421, double-knock, or none.
 	 * ---
 	 * default: default
 	 * options:
@@ -92,7 +92,7 @@ class Fetch_Command extends \WP_CLI_Command {
 		$cleanup();
 
 		if ( \is_wp_error( $response ) ) {
-			\WP_CLI::error( \sprintf( 'Request failed: %s (HTTP %s).', $response->get_error_message(), $response->get_error_code() ) );
+			\WP_CLI::error( \sprintf( 'Request failed: %s (Error code: %s).', $response->get_error_message(), $response->get_error_code() ) );
 		}
 
 		$code = \wp_remote_retrieve_response_code( $response );
@@ -121,7 +121,7 @@ class Fetch_Command extends \WP_CLI_Command {
 		} else {
 			$data = \json_decode( $body, true );
 
-			if ( null !== $data ) {
+			if ( \JSON_ERROR_NONE === \json_last_error() ) {
 				\WP_CLI::log( \wp_json_encode( $data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) );
 			} else {
 				\WP_CLI::log( $body );
@@ -145,6 +145,9 @@ class Fetch_Command extends \WP_CLI_Command {
 		$restore = array();
 
 		switch ( $mode ) {
+			case 'default':
+				break;
+
 			case 'none':
 				$args['key_id']      = null;
 				$args['private_key'] = null;
@@ -155,12 +158,13 @@ class Fetch_Command extends \WP_CLI_Command {
 				// Replace default signing to force RFC 9421. For rfc9421 mode,
 				// also disable double-knock to prevent an infinite retry loop.
 				// For double-knock mode, keep it active but skip re-signing on retry.
-				\remove_filter( 'http_request_args', array( Signature::class, 'sign_request' ), 0 );
+				$removed_sign_request = \remove_filter( 'http_request_args', array( Signature::class, 'sign_request' ), 0 );
 
-				$is_double_knock = 'double-knock' === $mode;
+				$is_double_knock      = 'double-knock' === $mode;
+				$removed_double_knock = false;
 
 				if ( ! $is_double_knock ) {
-					\remove_filter( 'http_response', array( Signature::class, 'maybe_double_knock' ), 10 );
+					$removed_double_knock = \remove_filter( 'http_response', array( Signature::class, 'maybe_double_knock' ), 10 );
 				}
 
 				$forced_signer = function ( $request_args, $url ) use ( $is_double_knock ) {
@@ -176,9 +180,12 @@ class Fetch_Command extends \WP_CLI_Command {
 				\add_filter( 'http_request_args', $forced_signer, 0, 2 );
 
 				$filters[] = array( 'http_request_args', $forced_signer, 0 );
-				$restore[] = array( 'http_request_args', array( Signature::class, 'sign_request' ), 0, 2 );
 
-				if ( ! $is_double_knock ) {
+				if ( $removed_sign_request ) {
+					$restore[] = array( 'http_request_args', array( Signature::class, 'sign_request' ), 0, 2 );
+				}
+
+				if ( $removed_double_knock ) {
 					$restore[] = array( 'http_response', array( Signature::class, 'maybe_double_knock' ), 10, 3 );
 				}
 				break;
@@ -192,6 +199,14 @@ class Fetch_Command extends \WP_CLI_Command {
 
 				$filters[] = array( 'pre_option_activitypub_rfc9421_signature', $force_cavage );
 				break;
+
+			default:
+				\WP_CLI::error(
+					\sprintf(
+						'Invalid signature mode "%s". Allowed modes: default, draft-cavage, rfc9421, double-knock, none.',
+						$mode
+					)
+				);
 		}
 
 		return function () use ( $filters, $restore ) {
