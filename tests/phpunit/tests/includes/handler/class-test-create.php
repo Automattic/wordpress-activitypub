@@ -132,7 +132,7 @@ class Test_Create extends \WP_UnitTestCase {
 		$object       = $this->create_test_object();
 		$object['cc'] = array();
 		$converted    = Create::handle_create( $object, $this->user_id );
-		$this->assertFalse( $converted );
+		$this->assertNull( $converted );
 	}
 
 	/**
@@ -299,6 +299,7 @@ class Test_Create extends \WP_UnitTestCase {
 	 * Test handling create activity for objects with content sanitization.
 	 *
 	 * @covers ::handle_create
+	 * @covers ::create_post
 	 */
 	public function test_handle_create_object_with_sanitization() {
 		// Mock HTTP request for Remote_Actors::fetch_by_uri.
@@ -440,11 +441,11 @@ class Test_Create extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test incoming returns false when activitypub_create_posts option is disabled.
+	 * Test create_post returns false when activitypub_create_posts option is disabled.
 	 *
-	 * @covers ::handle_create
+	 * @covers ::create_post
 	 */
-	public function test_incoming_post_disabled_by_option() {
+	public function test_create_post_disabled_by_option() {
 		// Ensure option is not set.
 		\delete_option( 'activitypub_create_posts' );
 
@@ -480,7 +481,7 @@ class Test_Create extends \WP_UnitTestCase {
 			),
 		);
 
-		$result = Create::handle_create( $activity, array( $this->user_id ) );
+		$result = Create::create_post( $activity, array( $this->user_id ) );
 
 		$this->assertFalse( $result );
 
@@ -492,11 +493,11 @@ class Test_Create extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test incoming works when activitypub_create_posts option is enabled.
+	 * Test create_post works when activitypub_create_posts option is enabled.
 	 *
-	 * @covers ::handle_create
+	 * @covers ::create_post
 	 */
-	public function test_incoming_post_enabled_by_option() {
+	public function test_create_post_enabled_by_option() {
 		// Enable the option.
 		\update_option( 'activitypub_create_posts', '1' );
 
@@ -532,7 +533,7 @@ class Test_Create extends \WP_UnitTestCase {
 			),
 		);
 
-		$result = Create::handle_create( $activity, array( $this->user_id ) );
+		$result = Create::create_post( $activity, array( $this->user_id ) );
 
 		$this->assertInstanceOf( 'WP_Post', $result );
 
@@ -567,7 +568,7 @@ class Test_Create extends \WP_UnitTestCase {
 
 		$result = Create::handle_create( $object, $this->user_id );
 
-		$this->assertFalse( $result );
+		$this->assertNull( $result );
 
 		// Verify no comment was created.
 		$args = array(

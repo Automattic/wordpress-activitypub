@@ -33,7 +33,7 @@ class Delete {
 	}
 
 	/**
-	 * Handle incoming "Delete" requests from remote actors.
+	 * Handles "Delete" requests.
 	 *
 	 * @param array     $activity The delete activity.
 	 * @param int|int[] $user_ids The local user ID(s).

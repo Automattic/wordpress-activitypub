@@ -24,7 +24,7 @@ class Undo {
 	}
 
 	/**
-	 * Handle incoming "Undo" requests from remote actors.
+	 * Handle "Unfollow" requests.
 	 *
 	 * @param array          $activity The JSON "Undo" Activity.
 	 * @param int|int[]|null $user_ids The user ID(s).

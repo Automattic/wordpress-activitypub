@@ -28,7 +28,7 @@ class Announce {
 	}
 
 	/**
-	 * Handle incoming "Announce" requests from remote actors.
+	 * Handles "Announce" requests.
 	 *
 	 * @param array                          $announcement The activity-object.
 	 * @param int|int[]                      $user_ids     The id(s) of the local blog-user(s).

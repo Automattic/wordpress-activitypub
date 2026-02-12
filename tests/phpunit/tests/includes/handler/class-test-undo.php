@@ -12,7 +12,6 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox as Inbox_Collection;
 use Activitypub\Comment;
-use Activitypub\Handler\Outbox\Undo as Outbox_Undo;
 use Activitypub\Handler\Undo;
 
 /**
@@ -200,9 +199,9 @@ class Test_Undo extends \WP_UnitTestCase {
 		Inbox_Collection::add( $activity_object, self::$user_id );
 
 		// Call the appropriate handler directly to create the comment.
-		$handler_class = '\\Activitypub\\Handler\\' . $activity_type;
-		$method        = 'handle_' . strtolower( $activity_type );
-		$handler_class::$method( $create_activity, self::$user_id );
+		$handler_class  = '\\Activitypub\\Handler\\' . $activity_type;
+		$handler_method = 'handle_' . strtolower( $activity_type );
+		$handler_class::$handler_method( $create_activity, self::$user_id );
 
 		// Find the comment that was created.
 		$found_comment = Comment::object_id_to_comment( $activity_id );
@@ -328,109 +327,6 @@ class Test_Undo extends \WP_UnitTestCase {
 		// Clean up hooks.
 		\remove_action( 'activitypub_handled_undo', $action_hook_callback );
 		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata );
-	}
-
-	/**
-	 * Test outgoing Undo Follow removes following metadata.
-	 *
-	 * @covers ::handle_undo
-	 */
-	public function test_outgoing_undo_follow() {
-		$actor_url = 'https://example.com/users/unfollow-target';
-
-		// Mock the HTTP request used by Remote_Actors::fetch_by_uri().
-		$mock_callback = function ( $response, $url ) use ( $actor_url ) {
-			if ( $url === $actor_url ) {
-				return array(
-					'id'                => $actor_url,
-					'type'              => 'Person',
-					'preferredUsername' => 'unfollowtarget',
-					'inbox'             => $actor_url . '/inbox',
-				);
-			}
-			return $response;
-		};
-		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_callback, 10, 2 );
-
-		// First add the following metadata by triggering a Follow outgoing.
-		\Activitypub\Handler\Outbox\Follow::handle_follow(
-			array(
-				'type'   => 'Follow',
-				'object' => $actor_url,
-			),
-			self::$user_id
-		);
-
-		$remote_actor = \Activitypub\Collection\Remote_Actors::get_by_uri( $actor_url );
-		$this->assertNotWPError( $remote_actor );
-
-		// Verify pending metadata exists.
-		$pending = \get_post_meta( $remote_actor->ID, \Activitypub\Collection\Following::PENDING_META_KEY, false );
-		$this->assertNotEmpty( $pending, 'Pending follow metadata should exist before undo.' );
-
-		// Now undo the follow.
-		$data = array(
-			'type'   => 'Undo',
-			'object' => array(
-				'type'   => 'Follow',
-				'object' => $actor_url,
-			),
-		);
-
-		Outbox_Undo::handle_undo( $data, self::$user_id );
-
-		// Verify following/pending metadata was removed.
-		$pending_after   = \get_post_meta( $remote_actor->ID, \Activitypub\Collection\Following::PENDING_META_KEY, false );
-		$following_after = \get_post_meta( $remote_actor->ID, \Activitypub\Collection\Following::FOLLOWING_META_KEY, false );
-
-		$this->assertNotContains( (string) self::$user_id, $pending_after, 'Pending metadata should be removed.' );
-		$this->assertNotContains( (string) self::$user_id, $following_after, 'Following metadata should be removed.' );
-
-		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_callback );
-	}
-
-	/**
-	 * Test outgoing Undo ignores non-Follow types.
-	 *
-	 * @covers ::handle_undo
-	 */
-	public function test_outgoing_ignores_non_follow() {
-		$fired = false;
-
-		$callback = function () use ( &$fired ) {
-			$fired = true;
-		};
-		\add_action( 'activitypub_outbox_undo_follow_sent', $callback );
-
-		$data = array(
-			'type'   => 'Undo',
-			'object' => array(
-				'type'   => 'Like',
-				'object' => 'https://example.com/post/123',
-			),
-		);
-
-		Outbox_Undo::handle_undo( $data, self::$user_id );
-
-		$this->assertFalse( $fired, 'Action should not fire for non-Follow undo.' );
-
-		\remove_action( 'activitypub_outbox_undo_follow_sent', $callback );
-	}
-
-	/**
-	 * Test outgoing Undo returns early for non-array object.
-	 *
-	 * @covers ::handle_undo
-	 */
-	public function test_outgoing_returns_early_for_string_object() {
-		$data = array(
-			'type'   => 'Undo',
-			'object' => 'https://example.com/activity/123',
-		);
-
-		// Should not throw errors.
-		Outbox_Undo::handle_undo( $data, self::$user_id );
-		$this->assertTrue( true );
 	}
 
 	/**

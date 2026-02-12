@@ -25,7 +25,7 @@ class Like {
 	}
 
 	/**
-	 * Handle incoming "Like" requests from remote actors.
+	 * Handles "Like" requests.
 	 *
 	 * @param array     $like     The Activity array.
 	 * @param int|int[] $user_ids The user ID(s).

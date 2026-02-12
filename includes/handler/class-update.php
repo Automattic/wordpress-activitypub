@@ -22,16 +22,17 @@ class Update {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action( 'activitypub_handled_inbox_update', array( self::class, 'handle_update' ), 10, 2 );
+		\add_action( 'activitypub_handled_inbox_update', array( self::class, 'handle_update' ), 10, 3 );
 	}
 
 	/**
 	 * Handle "Update" requests.
 	 *
-	 * @param array      $activity The Activity object.
-	 * @param int[]|null $user_ids The user IDs. Always null for Update activities.
+	 * @param array                          $activity        The Activity object.
+	 * @param int[]                          $user_ids        The user IDs. Always null for Update activities.
+	 * @param \Activitypub\Activity\Activity $activity_object The activity object. Default null.
 	 */
-	public static function handle_update( $activity, $user_ids = null ) {
+	public static function handle_update( $activity, $user_ids, $activity_object ) {
 		$object_type = $activity['object']['type'] ?? '';
 
 		switch ( $object_type ) {
@@ -60,7 +61,7 @@ class Update {
 			case 'Video':
 			case 'Event':
 			case 'Document':
-				self::update_object( $activity, $user_ids );
+				self::update_object( $activity, $user_ids, $activity_object );
 				break;
 
 			/*
@@ -76,10 +77,11 @@ class Update {
 	/**
 	 * Update an Object.
 	 *
-	 * @param array      $activity The Activity object.
-	 * @param int[]|null $user_ids The user IDs. Always null for Update activities.
+	 * @param array                          $activity        The Activity object.
+	 * @param int[]|null                     $user_ids        The user IDs. Always null for Update activities.
+	 * @param \Activitypub\Activity\Activity $activity_object The activity object. Default null.
 	 */
-	public static function update_object( $activity, $user_ids ) {
+	public static function update_object( $activity, $user_ids, $activity_object ) {
 		$result  = new \WP_Error( 'activitypub_update_failed', 'Update failed' );
 		$updated = true;
 
@@ -102,7 +104,7 @@ class Update {
 
 		// There is no object to update, try to trigger create instead.
 		if ( ! $updated ) {
-			return Create::handle_create( $activity, $user_ids );
+			return Create::handle_create( $activity, $user_ids, $activity_object );
 		}
 
 		$success = ( $result && ! \is_wp_error( $result ) );

@@ -11,7 +11,6 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
 use Activitypub\Handler\Follow;
-use Activitypub\Handler\Outbox\Follow as Outbox_Follow;
 
 /**
  * Test class for Follow handler.
@@ -352,120 +351,6 @@ class Test_Follow extends \WP_UnitTestCase {
 		$this->assertEquals( 'Follow', $activity_json['object']['type'] );
 		$this->assertEquals( array( $actor_url ), $activity_json['to'] );
 		$this->assertEquals( $actor_url, $activity_json['object']['actor'] );
-	}
-
-	/**
-	 * Test outgoing Follow adds pending follow metadata.
-	 *
-	 * @covers ::handle_follow
-	 */
-	public function test_outgoing_adds_pending_follow() {
-		$actor_url = 'https://example.com/users/to-follow';
-
-		// Mock the HTTP request used by Remote_Actors::fetch_by_uri().
-		$mock_callback = function ( $response, $url ) use ( $actor_url ) {
-			if ( $url === $actor_url ) {
-				return array(
-					'id'                => $actor_url,
-					'type'              => 'Person',
-					'preferredUsername' => 'tofollow',
-					'inbox'             => $actor_url . '/inbox',
-				);
-			}
-			return $response;
-		};
-		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_callback, 10, 2 );
-
-		$data = array(
-			'type'   => 'Follow',
-			'object' => $actor_url,
-		);
-
-		Outbox_Follow::handle_follow( $data, self::$user_id );
-
-		// Verify pending follow was added.
-		$remote_actor = \Activitypub\Collection\Remote_Actors::get_by_uri( $actor_url );
-		$this->assertNotWPError( $remote_actor );
-
-		$pending = \get_post_meta( $remote_actor->ID, \Activitypub\Collection\Following::PENDING_META_KEY, false );
-		$this->assertContains( (string) self::$user_id, $pending );
-
-		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_callback );
-	}
-
-	/**
-	 * Test outgoing Follow skips if already following.
-	 *
-	 * @covers ::handle_follow
-	 */
-	public function test_outgoing_skips_if_already_following() {
-		$actor_url = 'https://example.com/users/already-following';
-
-		// Mock the HTTP request used by Remote_Actors::fetch_by_uri().
-		$mock_callback = function ( $response, $url ) use ( $actor_url ) {
-			if ( $url === $actor_url ) {
-				return array(
-					'id'                => $actor_url,
-					'type'              => 'Person',
-					'preferredUsername' => 'alreadyfollowing',
-					'inbox'             => $actor_url . '/inbox',
-				);
-			}
-			return $response;
-		};
-		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_callback, 10, 2 );
-
-		$data = array(
-			'type'   => 'Follow',
-			'object' => $actor_url,
-		);
-
-		// First follow should succeed.
-		Outbox_Follow::handle_follow( $data, self::$user_id );
-
-		$remote_actor      = \Activitypub\Collection\Remote_Actors::get_by_uri( $actor_url );
-		$pending           = \get_post_meta( $remote_actor->ID, \Activitypub\Collection\Following::PENDING_META_KEY, false );
-		$count_after_first = count( $pending );
-
-		// Second follow should be skipped (already pending).
-		Outbox_Follow::handle_follow( $data, self::$user_id );
-
-		$pending_after = \get_post_meta( $remote_actor->ID, \Activitypub\Collection\Following::PENDING_META_KEY, false );
-		$this->assertCount( $count_after_first, $pending_after, 'Should not add duplicate pending follow.' );
-
-		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_callback );
-	}
-
-	/**
-	 * Test outgoing Follow returns early for empty object.
-	 *
-	 * @covers ::handle_follow
-	 */
-	public function test_outgoing_returns_early_for_empty_object() {
-		$data = array(
-			'type'   => 'Follow',
-			'object' => '',
-		);
-
-		// Should not throw errors.
-		Outbox_Follow::handle_follow( $data, self::$user_id );
-		$this->assertTrue( true );
-	}
-
-	/**
-	 * Test outgoing Follow returns early for non-string object.
-	 *
-	 * @covers ::handle_follow
-	 */
-	public function test_outgoing_returns_early_for_non_string_object() {
-		$data = array(
-			'type'   => 'Follow',
-			'object' => array( 'id' => 'https://example.com/user' ),
-		);
-
-		// Should not throw errors.
-		Outbox_Follow::handle_follow( $data, self::$user_id );
-		$this->assertTrue( true );
 	}
 
 	/**

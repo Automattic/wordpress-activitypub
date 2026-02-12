@@ -9,7 +9,6 @@ namespace Activitypub\Tests\Handler;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Handler\Announce;
-use Activitypub\Handler\Outbox\Announce as Outbox_Announce;
 use Activitypub\Model\Blog;
 
 /**
@@ -306,59 +305,6 @@ class Test_Announce extends \WP_UnitTestCase {
 		$this->assertInstanceOf( 'WP_Comment', $result[0] );
 
 		\remove_action( 'activitypub_handled_announce', array( $handled_action, 'action' ) );
-	}
-
-	/**
-	 * Test outgoing Announce fires action hook.
-	 *
-	 * @covers ::handle_announce
-	 */
-	public function test_outgoing_fires_action() {
-		$object_url = 'https://example.com/post/123';
-		$fired      = false;
-
-		$callback = function ( $url ) use ( &$fired, $object_url ) {
-			if ( $url === $object_url ) {
-				$fired = true;
-			}
-		};
-		\add_action( 'activitypub_outbox_announce_sent', $callback );
-
-		$data = array(
-			'type'   => 'Announce',
-			'object' => $object_url,
-		);
-
-		Outbox_Announce::handle_announce( $data, $this->user_id );
-
-		$this->assertTrue( $fired, 'activitypub_outbox_announce_sent action should fire.' );
-
-		\remove_action( 'activitypub_outbox_announce_sent', $callback );
-	}
-
-	/**
-	 * Test outgoing Announce returns early for empty object.
-	 *
-	 * @covers ::handle_announce
-	 */
-	public function test_outgoing_returns_early_for_empty_object() {
-		$fired = false;
-
-		$callback = function () use ( &$fired ) {
-			$fired = true;
-		};
-		\add_action( 'activitypub_outbox_announce_sent', $callback );
-
-		$data = array(
-			'type'   => 'Announce',
-			'object' => '',
-		);
-
-		Outbox_Announce::handle_announce( $data, $this->user_id );
-
-		$this->assertFalse( $fired, 'Action should not fire for empty object.' );
-
-		\remove_action( 'activitypub_outbox_announce_sent', $callback );
 	}
 
 	/**

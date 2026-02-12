@@ -27,7 +27,7 @@ class Follow {
 	}
 
 	/**
-	 * Handle incoming "Follow" requests from remote actors.
+	 * Handle "Follow" requests.
 	 *
 	 * @param array     $activity The activity object.
 	 * @param int|int[] $user_ids The user ID(s).

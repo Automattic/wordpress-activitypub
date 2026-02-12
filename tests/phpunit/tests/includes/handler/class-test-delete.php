@@ -10,8 +10,6 @@ namespace Activitypub\Tests\Handler;
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Handler\Delete;
-use Activitypub\Handler\Outbox\Delete as Outbox_Delete;
-use Activitypub\Scheduler\Post;
 use Activitypub\Tombstone;
 
 /**
@@ -45,9 +43,6 @@ class Test_Delete extends \WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
-		// Prevent wp_trash_post() from triggering the full outbox chain.
-		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
-
 		\add_filter( 'pre_get_remote_metadata_by_actor', array( self::class, 'get_remote_metadata_by_actor' ), 0, 2 );
 	}
 
@@ -56,8 +51,6 @@ class Test_Delete extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		\remove_filter( 'pre_get_remote_metadata_by_actor', array( self::class, 'get_remote_metadata_by_actor' ) );
-
-		\add_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33, 4 );
 
 		parent::tear_down();
 	}
@@ -500,126 +493,6 @@ class Test_Delete extends \WP_UnitTestCase {
 		$this->assertNull( \get_comment( $comment_id ), 'Comment should be deleted when object is string URL' );
 
 		\remove_filter( 'pre_http_request', $filter );
-	}
-
-	/**
-	 * Test outgoing Delete trashes a local post.
-	 *
-	 * @covers ::handle_delete
-	 */
-	public function test_outgoing_trashes_post() {
-		$post_id = self::factory()->post->create(
-			array(
-				'post_author' => self::$user_id,
-				'post_status' => 'publish',
-				'post_title'  => 'To Be Deleted',
-			)
-		);
-
-		$permalink = \get_permalink( $post_id );
-
-		$data = array(
-			'type'   => 'Delete',
-			'object' => $permalink,
-		);
-
-		Outbox_Delete::handle_delete( $data, self::$user_id );
-
-		$post = \get_post( $post_id );
-		$this->assertEquals( 'trash', $post->post_status );
-	}
-
-	/**
-	 * Test outgoing Delete fires action hook on success.
-	 *
-	 * @covers ::handle_delete
-	 */
-	public function test_outgoing_fires_action() {
-		$post_id = self::factory()->post->create(
-			array(
-				'post_author' => self::$user_id,
-				'post_status' => 'publish',
-			)
-		);
-
-		$permalink = \get_permalink( $post_id );
-		$fired     = false;
-
-		$callback = function () use ( &$fired ) {
-			$fired = true;
-		};
-		\add_action( 'activitypub_outbox_deleted_post', $callback );
-
-		$data = array(
-			'type'   => 'Delete',
-			'object' => $permalink,
-		);
-
-		Outbox_Delete::handle_delete( $data, self::$user_id );
-
-		$this->assertTrue( $fired, 'activitypub_outbox_deleted_post action should fire.' );
-
-		\remove_action( 'activitypub_outbox_deleted_post', $callback );
-	}
-
-	/**
-	 * Test outgoing Delete skips posts not owned by user.
-	 *
-	 * @covers ::handle_delete
-	 */
-	public function test_outgoing_skips_unowned_post() {
-		$other_user = self::factory()->user->create();
-		$post_id    = self::factory()->post->create(
-			array(
-				'post_author' => $other_user,
-				'post_status' => 'publish',
-				'post_title'  => 'Not My Post',
-			)
-		);
-
-		$permalink = \get_permalink( $post_id );
-
-		$data = array(
-			'type'   => 'Delete',
-			'object' => $permalink,
-		);
-
-		Outbox_Delete::handle_delete( $data, self::$user_id );
-
-		$post = \get_post( $post_id );
-		$this->assertEquals( 'publish', $post->post_status );
-	}
-
-	/**
-	 * Test outgoing Delete returns early for empty object.
-	 *
-	 * @covers ::handle_delete
-	 */
-	public function test_outgoing_returns_early_for_empty_object() {
-		$data = array(
-			'type'   => 'Delete',
-			'object' => '',
-		);
-
-		// Should not throw errors.
-		Outbox_Delete::handle_delete( $data, self::$user_id );
-		$this->assertTrue( true );
-	}
-
-	/**
-	 * Test outgoing Delete returns early for non-existent post.
-	 *
-	 * @covers ::handle_delete
-	 */
-	public function test_outgoing_returns_early_for_nonexistent_post() {
-		$data = array(
-			'type'   => 'Delete',
-			'object' => 'https://example.com/nonexistent/post',
-		);
-
-		// Should not throw errors.
-		Outbox_Delete::handle_delete( $data, self::$user_id );
-		$this->assertTrue( true );
 	}
 
 	/**

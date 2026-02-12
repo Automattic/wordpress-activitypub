@@ -11,7 +11,6 @@ use Activitypub\Activity\Actor;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Update;
-use Activitypub\Scheduler\Post;
 
 /**
  * Update Handler Test Class.
@@ -74,19 +73,7 @@ class Test_Update extends \WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
-		// Prevent wp_update_post() from triggering the full outbox chain.
-		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
-
 		$this->user_id = self::factory()->user->create();
-	}
-
-	/**
-	 * Tear down the test.
-	 */
-	public function tear_down() {
-		\add_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33, 4 );
-
-		parent::tear_down();
 	}
 
 	/**

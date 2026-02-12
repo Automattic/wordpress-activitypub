@@ -8,7 +8,6 @@
 namespace Activitypub\Tests\Handler;
 
 use Activitypub\Handler\Like;
-use Activitypub\Handler\Outbox\Like as Outbox_Like;
 
 /**
  * Test class for Activitypub Like Handler.
@@ -300,59 +299,6 @@ class Test_Like extends \WP_UnitTestCase {
 
 		// Clean up.
 		\remove_action( 'activitypub_handled_like', $handled_like_callback );
-	}
-
-	/**
-	 * Test outgoing Like fires action hook.
-	 *
-	 * @covers ::handle_like
-	 */
-	public function test_outgoing_fires_action() {
-		$object_url = 'https://example.com/post/456';
-		$fired      = false;
-
-		$callback = function ( $url ) use ( &$fired, $object_url ) {
-			if ( $url === $object_url ) {
-				$fired = true;
-			}
-		};
-		\add_action( 'activitypub_outbox_like_sent', $callback );
-
-		$data = array(
-			'type'   => 'Like',
-			'object' => $object_url,
-		);
-
-		Outbox_Like::handle_like( $data, $this->user_id );
-
-		$this->assertTrue( $fired, 'activitypub_outbox_like_sent action should fire.' );
-
-		\remove_action( 'activitypub_outbox_like_sent', $callback );
-	}
-
-	/**
-	 * Test outgoing Like returns early for empty object.
-	 *
-	 * @covers ::handle_like
-	 */
-	public function test_outgoing_returns_early_for_empty_object() {
-		$fired = false;
-
-		$callback = function () use ( &$fired ) {
-			$fired = true;
-		};
-		\add_action( 'activitypub_outbox_like_sent', $callback );
-
-		$data = array(
-			'type'   => 'Like',
-			'object' => '',
-		);
-
-		Outbox_Like::handle_like( $data, $this->user_id );
-
-		$this->assertFalse( $fired, 'Action should not fire for empty object.' );
-
-		\remove_action( 'activitypub_outbox_like_sent', $callback );
 	}
 
 	/**

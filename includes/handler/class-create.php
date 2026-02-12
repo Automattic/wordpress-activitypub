@@ -25,66 +25,60 @@ class Create {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action( 'activitypub_handled_inbox_create', array( self::class, 'handle_create' ), 10, 2 );
-
+		\add_action( 'activitypub_handled_inbox_create', array( self::class, 'handle_create' ), 10, 3 );
 		\add_filter( 'activitypub_validate_object', array( self::class, 'validate_object' ), 10, 3 );
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'maybe_unbury' ), 10, 2 );
 	}
 
 	/**
-	 * Handle incoming "Create" activities from remote actors.
+	 * Handles "Create" requests.
 	 *
-	 * @param array $activity The activity data.
-	 * @param int[] $user_ids The local user IDs targeted.
-	 *
-	 * @return \WP_Post|\WP_Comment|\WP_Error|false The created content or error.
+	 * @param array                          $activity        The activity-object.
+	 * @param int|int[]                      $user_ids        The id(s) of the local blog-user(s).
+	 * @param \Activitypub\Activity\Activity $activity_object Optional. The activity object. Default null.
 	 */
-	public static function handle_create( $activity, $user_ids = null ) {
+	public static function handle_create( $activity, $user_ids, $activity_object = null ) {
 		// Check for private and/or direct messages.
 		if ( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === get_activity_visibility( $activity ) ) {
-			return false;
-		}
-
-		// Route to appropriate handler based on content type.
-		if ( is_activity_reply( $activity ) || is_quote_activity( $activity ) ) {
-			$result = self::create_interaction( $activity, $user_ids );
-		} else {
-			$result = self::create_post( $activity, $user_ids );
+			$result = false;
+		} elseif ( is_activity_reply( $activity ) || is_quote_activity( $activity ) ) { // Check for replies and quotes.
+			$result = self::create_interaction( $activity, $user_ids, $activity_object );
+		} else { // Handle non-interaction objects.
+			$result = self::create_post( $activity, $user_ids, $activity_object );
 		}
 
 		if ( false === $result ) {
-			return $result;
+			return;
 		}
 
 		$success = ! \is_wp_error( $result );
 
 		/**
-		 * Fires after an incoming ActivityPub Create activity has been handled.
+		 * Fires after an ActivityPub Create activity has been handled.
 		 *
 		 * @param array                          $activity The ActivityPub activity data.
 		 * @param int[]                          $user_ids The local user IDs.
 		 * @param bool                           $success  True on success, false otherwise.
-		 * @param \WP_Comment|\WP_Post|\WP_Error $result   The created content or error.
+		 * @param \WP_Comment|\WP_Post|\WP_Error $result   The WP_Comment object of the created comment, or null if creation failed.
 		 */
 		\do_action( 'activitypub_handled_create', $activity, (array) $user_ids, $success, $result );
-
-		return $result;
 	}
 
 	/**
-	 * Handle incoming interaction (reply/quote) from remote actor.
+	 * Handle interactions like replies.
 	 *
-	 * @param array $activity The activity data.
-	 * @param int[] $user_ids The local user IDs targeted.
+	 * @param array                          $activity        The activity-object.
+	 * @param int[]                          $user_ids        The ids of the local blog-users.
+	 * @param \Activitypub\Activity\Activity $activity_object Optional. The activity object. Default null.
 	 *
-	 * @return \WP_Comment|\WP_Error|false Comment, WP_Error, or false.
+	 * @return \WP_Comment|\WP_Error|false The created comment, WP_Error on failure, false if already exists or not processed.
 	 */
-	public static function create_interaction( $activity, $user_ids ) {
+	public static function create_interaction( $activity, $user_ids, $activity_object = null ) {
 		$existing_comment = object_id_to_comment( $activity['object']['id'] );
 
 		// If comment exists, call update action.
 		if ( $existing_comment ) {
-			Update::handle_update( $activity, (array) $user_ids, null );
+			Update::handle_update( $activity, (array) $user_ids, $activity_object );
 
 			return false;
 		}
@@ -103,14 +97,15 @@ class Create {
 	}
 
 	/**
-	 * Handle incoming post from remote actor.
+	 * Handle non-interaction posts like posts.
 	 *
-	 * @param array $activity The activity data.
-	 * @param int[] $user_ids The local user IDs targeted.
+	 * @param array                          $activity        The activity-object.
+	 * @param int[]                          $user_ids        The ids of the local blog-users.
+	 * @param \Activitypub\Activity\Activity $activity_object Optional. The activity object. Default null.
 	 *
-	 * @return \WP_Post|\WP_Error|false Post, WP_Error, or false.
+	 * @return \WP_Post|\WP_Error|false The post on success, WP_Error on failure, false if already exists.
 	 */
-	public static function create_post( $activity, $user_ids ) {
+	public static function create_post( $activity, $user_ids, $activity_object = null ) {
 		if ( ! \get_option( 'activitypub_create_posts', false ) ) {
 			return false;
 		}
@@ -119,7 +114,7 @@ class Create {
 
 		// If post exists, call update action.
 		if ( $existing_post instanceof \WP_Post ) {
-			Update::handle_update( $activity, (array) $user_ids, null );
+			Update::handle_update( $activity, (array) $user_ids, $activity_object );
 
 			return false;
 		}
@@ -151,8 +146,7 @@ class Create {
 			return false;
 		}
 
-		// Only content is required; ID is optional for outbox activities (assigned by the server).
-		if ( ! isset( $activity['object']['content'] ) ) {
+		if ( ! isset( $activity['object']['id'], $activity['object']['content'] ) ) {
 			return false;
 		}
 
