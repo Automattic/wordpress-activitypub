@@ -212,7 +212,11 @@ class Update {
 			return;
 		}
 
-		// Verify the user owns this post.
+		/*
+		 * Verify the user owns this post.
+		 * The blog actor ($user_id === 0) can update any post since it
+		 * represents the site itself.
+		 */
 		if ( (int) $post->post_author !== $user_id && $user_id > 0 ) {
 			return;
 		}
@@ -235,23 +239,26 @@ class Update {
 		);
 
 		self::$is_outgoing = true;
-		$post_id           = \wp_update_post( $post_data, true );
 
-		if ( \is_wp_error( $post_id ) ) {
+		try {
+			$post_id = \wp_update_post( $post_data, true );
+
+			if ( \is_wp_error( $post_id ) ) {
+				return;
+			}
+
+			/**
+			 * Fires after a post has been updated from an outgoing Update activity.
+			 *
+			 * @param int   $post_id    The updated post ID.
+			 * @param array $data       The activity data.
+			 * @param int   $user_id    The user ID.
+			 * @param int   $outbox_id  The outbox post ID.
+			 */
+			\do_action( 'activitypub_outbox_updated_post', $post_id, $data, $user_id, $outbox_id );
+		} finally {
 			self::$is_outgoing = false;
-			return;
 		}
-
-		/**
-		 * Fires after a post has been updated from an outgoing Update activity.
-		 *
-		 * @param int   $post_id    The updated post ID.
-		 * @param array $data       The activity data.
-		 * @param int   $user_id    The user ID.
-		 * @param int   $outbox_id  The outbox post ID.
-		 */
-		\do_action( 'activitypub_outbox_updated_post', $post_id, $data, $user_id, $outbox_id );
-		self::$is_outgoing = false;
 	}
 
 	/**

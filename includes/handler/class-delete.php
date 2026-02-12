@@ -389,7 +389,11 @@ class Delete {
 			return;
 		}
 
-		// Verify the user owns this post.
+		/*
+		 * Verify the user owns this post.
+		 * The blog actor ($user_id === 0) can delete any post since it
+		 * represents the site itself.
+		 */
 		if ( (int) $post->post_author !== $user_id && $user_id > 0 ) {
 			return;
 		}
