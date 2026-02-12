@@ -795,7 +795,7 @@ class Test_Create extends \WP_UnitTestCase {
 	 * in `inReplyTo` to target the local test post.
 	 *
 	 * @dataProvider create_fixture_provider
-	 * @covers ::handle_create
+	 * @covers ::incoming
 	 *
 	 * @param string $path The path to the fixture JSON file.
 	 */
@@ -805,7 +805,7 @@ class Test_Create extends \WP_UnitTestCase {
 
 		$activity = json_decode( $json, true );
 
-		Create::handle_create( $activity, $this->user_id );
+		Create::incoming( $activity, $this->user_id );
 
 		$comments = ( new \WP_Comment_Query(
 			array(

@@ -185,9 +185,10 @@ class Create {
 	private static function outgoing_post( $activity, $user_id, $visibility ) {
 		$object = $activity['object'] ?? array();
 
-		$content = $object['content'] ?? '';
-		$name    = $object['name'] ?? '';
-		$summary = $object['summary'] ?? '';
+		$object_type = $object['type'] ?? '';
+		$content     = $object['content'] ?? '';
+		$name        = $object['name'] ?? '';
+		$summary     = $object['summary'] ?? '';
 
 		// Use name as title for Articles, or generate from content for Notes.
 		$title = $name;
@@ -216,6 +217,11 @@ class Create {
 
 		if ( \is_wp_error( $post_id ) ) {
 			return $post_id;
+		}
+
+		// Set post format to 'status' for Notes so the transformer maps it back correctly.
+		if ( 'Note' === $object_type ) {
+			\set_post_format( $post_id, 'status' );
 		}
 
 		$post = \get_post( $post_id );

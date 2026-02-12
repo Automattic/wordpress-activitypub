@@ -693,4 +693,90 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 			$this->assertStringContainsString( '?p=', $object['id'], 'Object ID should be a post permalink' );
 		}
 	}
+
+	/**
+	 * Test C2S POST creates Note with 'status' post format.
+	 *
+	 * When a client submits a Note via C2S, the created WordPress post
+	 * should have the 'status' post format so that the transformer maps
+	 * it back to a Note type.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_create_note_sets_status_post_format() {
+		$user = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+
+		$data = array(
+			'type'   => 'Create',
+			'actor'  => $user->get_id(),
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'type'    => 'Note',
+				'content' => 'A short status note via C2S.',
+			),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 201, $response->get_status() );
+
+		$response_data = $response->get_data();
+		$object        = $response_data['object'];
+
+		// Find the created post by its permalink.
+		if ( is_array( $object ) && ! empty( $object['id'] ) ) {
+			$post_id = \url_to_postid( $object['id'] );
+			$this->assertGreaterThan( 0, $post_id, 'Should find a post from the object ID.' );
+			$this->assertSame( 'status', \get_post_format( $post_id ), 'Note should have status post format.' );
+		}
+	}
+
+	/**
+	 * Test C2S POST creates Article without post format.
+	 *
+	 * When a client submits an Article via C2S, the created WordPress post
+	 * should not have a post format set (standard format).
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_create_article_has_no_post_format() {
+		$user = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+
+		$data = array(
+			'type'   => 'Create',
+			'actor'  => $user->get_id(),
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'type'    => 'Article',
+				'name'    => 'My Article Title',
+				'content' => '<p>This is a full article with a title.</p>',
+			),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 201, $response->get_status() );
+
+		$response_data = $response->get_data();
+		$object        = $response_data['object'];
+
+		// Find the created post by its permalink.
+		if ( is_array( $object ) && ! empty( $object['id'] ) ) {
+			$post_id = \url_to_postid( $object['id'] );
+			$this->assertGreaterThan( 0, $post_id, 'Should find a post from the object ID.' );
+			$this->assertFalse( \get_post_format( $post_id ), 'Article should have standard (no) post format.' );
+		}
+	}
 }
