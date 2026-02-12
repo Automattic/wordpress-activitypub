@@ -105,6 +105,17 @@ Changelogs are managed automatically through the PR workflow:
 ❌ Fix signature verification bug
 ```
 
+**Write end-user friendly messages:**
+- Focus on user benefit, not implementation details.
+- Avoid technical jargon where possible.
+- Describe what users can now do, not how it works internally.
+```
+✅ Add pre-built block patterns for easy profile and sidebar setup.
+✅ Fix follow button not appearing on author pages.
+❌ Add register_patterns() method to class-blocks.php.
+❌ Refactor User class to use Actors collection.
+```
+
 **Never mention AI tools or coding assistants in changelog messages.**
 
 See [PR Workflow - Changelog](../pr/SKILL.md#changelog-management) for complete changelog requirements.

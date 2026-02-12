@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Add Cache namespace for remote media caching with CLI commands, improved MIME validation, and filter-based architecture.
