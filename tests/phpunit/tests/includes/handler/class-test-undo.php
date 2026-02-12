@@ -12,6 +12,7 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox as Inbox_Collection;
 use Activitypub\Comment;
+use Activitypub\Handler\Outbox\Undo as Outbox_Undo;
 use Activitypub\Handler\Undo;
 
 /**
@@ -55,7 +56,7 @@ class Test_Undo extends \WP_UnitTestCase {
 	 * Test handle_undo with follow activities.
 	 *
 	 * @dataProvider follow_undo_provider
-	 * @covers ::incoming
+	 * @covers ::handle_undo
 	 *
 	 * @param string $actor_url     The actor URL to test with.
 	 * @param string $description   Description of the test case.
@@ -96,7 +97,7 @@ class Test_Undo extends \WP_UnitTestCase {
 		Inbox_Collection::add( $activity_object, self::$user_id );
 
 		// Call the Follow handler directly to add the follower.
-		\Activitypub\Handler\Follow::incoming( $follow_activity, self::$user_id );
+		\Activitypub\Handler\Follow::handle_follow( $follow_activity, self::$user_id );
 
 		// Verify follower was added.
 		$followers = Followers::get_many( self::$user_id );
@@ -117,7 +118,7 @@ class Test_Undo extends \WP_UnitTestCase {
 		);
 
 		// Call the Undo handler directly.
-		Undo::incoming( $undo_activity, self::$user_id );
+		Undo::handle_undo( $undo_activity, self::$user_id );
 
 		// Verify follower was removed.
 		$followers_after = Followers::get_many( self::$user_id );
@@ -153,7 +154,7 @@ class Test_Undo extends \WP_UnitTestCase {
 	 * Test handle_undo with comment-related activities (Like, Create, Announce).
 	 *
 	 * @dataProvider comment_activities_undo_provider
-	 * @covers ::incoming
+	 * @covers ::handle_undo
 	 *
 	 * @param string $actor_url     The actor URL to test with.
 	 * @param string $activity_type The type of activity being undone.
@@ -200,7 +201,8 @@ class Test_Undo extends \WP_UnitTestCase {
 
 		// Call the appropriate handler directly to create the comment.
 		$handler_class = '\\Activitypub\\Handler\\' . $activity_type;
-		$handler_class::incoming( $create_activity, self::$user_id );
+		$method        = 'handle_' . strtolower( $activity_type );
+		$handler_class::$method( $create_activity, self::$user_id );
 
 		// Find the comment that was created.
 		$found_comment = Comment::object_id_to_comment( $activity_id );
@@ -220,7 +222,7 @@ class Test_Undo extends \WP_UnitTestCase {
 		);
 
 		// Call the Undo handler directly.
-		Undo::incoming( $undo_activity, self::$user_id );
+		Undo::handle_undo( $undo_activity, self::$user_id );
 
 		// Verify comment was deleted.
 		$comment_after = \get_comment( $comment_id );
@@ -248,7 +250,7 @@ class Test_Undo extends \WP_UnitTestCase {
 	/**
 	 * Test handle_undo action hook is fired.
 	 *
-	 * @covers ::incoming
+	 * @covers ::handle_undo
 	 */
 	public function test_handle_undo_action_hook() {
 		$action_fired  = false;
@@ -297,7 +299,7 @@ class Test_Undo extends \WP_UnitTestCase {
 		$activity_object = Activity::init_from_array( $follow_activity );
 		Inbox_Collection::add( $activity_object, self::$user_id );
 
-		\Activitypub\Handler\Follow::incoming( $follow_activity, self::$user_id );
+		\Activitypub\Handler\Follow::handle_follow( $follow_activity, self::$user_id );
 
 		// Create Undo activity.
 		$activity = array(
@@ -314,7 +316,7 @@ class Test_Undo extends \WP_UnitTestCase {
 		);
 
 		// Call the Undo handler directly.
-		Undo::incoming( $activity, self::$user_id );
+		Undo::handle_undo( $activity, self::$user_id );
 
 		$this->assertTrue( $action_fired );
 		$this->assertEquals( $activity, $activity_data );
@@ -331,7 +333,7 @@ class Test_Undo extends \WP_UnitTestCase {
 	/**
 	 * Test outgoing Undo Follow removes following metadata.
 	 *
-	 * @covers ::outgoing
+	 * @covers ::handle_undo
 	 */
 	public function test_outgoing_undo_follow() {
 		$actor_url = 'https://example.com/users/unfollow-target';
@@ -351,14 +353,12 @@ class Test_Undo extends \WP_UnitTestCase {
 		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_callback, 10, 2 );
 
 		// First add the following metadata by triggering a Follow outgoing.
-		\Activitypub\Handler\Follow::outgoing(
+		\Activitypub\Handler\Outbox\Follow::handle_follow(
 			array(
 				'type'   => 'Follow',
 				'object' => $actor_url,
 			),
-			self::$user_id,
-			null,
-			0
+			self::$user_id
 		);
 
 		$remote_actor = \Activitypub\Collection\Remote_Actors::get_by_uri( $actor_url );
@@ -377,7 +377,7 @@ class Test_Undo extends \WP_UnitTestCase {
 			),
 		);
 
-		Undo::outgoing( $data, self::$user_id, null, 0 );
+		Outbox_Undo::handle_undo( $data, self::$user_id );
 
 		// Verify following/pending metadata was removed.
 		$pending_after   = \get_post_meta( $remote_actor->ID, \Activitypub\Collection\Following::PENDING_META_KEY, false );
@@ -392,7 +392,7 @@ class Test_Undo extends \WP_UnitTestCase {
 	/**
 	 * Test outgoing Undo ignores non-Follow types.
 	 *
-	 * @covers ::outgoing
+	 * @covers ::handle_undo
 	 */
 	public function test_outgoing_ignores_non_follow() {
 		$fired = false;
@@ -410,7 +410,7 @@ class Test_Undo extends \WP_UnitTestCase {
 			),
 		);
 
-		Undo::outgoing( $data, self::$user_id, null, 0 );
+		Outbox_Undo::handle_undo( $data, self::$user_id );
 
 		$this->assertFalse( $fired, 'Action should not fire for non-Follow undo.' );
 
@@ -420,7 +420,7 @@ class Test_Undo extends \WP_UnitTestCase {
 	/**
 	 * Test outgoing Undo returns early for non-array object.
 	 *
-	 * @covers ::outgoing
+	 * @covers ::handle_undo
 	 */
 	public function test_outgoing_returns_early_for_string_object() {
 		$data = array(
@@ -429,7 +429,7 @@ class Test_Undo extends \WP_UnitTestCase {
 		);
 
 		// Should not throw errors.
-		Undo::outgoing( $data, self::$user_id, null, 0 );
+		Outbox_Undo::handle_undo( $data, self::$user_id );
 		$this->assertTrue( true );
 	}
 

@@ -22,8 +22,7 @@ class Delete {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action( 'activitypub_inbox_delete', array( self::class, 'incoming' ), 10, 2 );
-		\add_action( 'activitypub_handled_outbox_delete', array( self::class, 'outgoing' ), 10, 4 );
+		\add_action( 'activitypub_inbox_delete', array( self::class, 'handle_delete' ), 10, 2 );
 		\add_filter( 'activitypub_skip_inbox_storage', array( self::class, 'skip_inbox_storage' ), 10, 2 );
 		\add_filter( 'activitypub_defer_signature_verification', array( self::class, 'defer_signature_verification' ), 10, 2 );
 		\add_action( 'activitypub_delete_remote_actor_interactions', array( self::class, 'delete_interactions' ) );
@@ -39,7 +38,7 @@ class Delete {
 	 * @param array     $activity The delete activity.
 	 * @param int|int[] $user_ids The local user ID(s).
 	 */
-	public static function incoming( $activity, $user_ids ) {
+	public static function handle_delete( $activity, $user_ids ) {
 		$object_type = $activity['object']['type'] ?? '';
 
 		switch ( $object_type ) {
@@ -351,98 +350,5 @@ class Delete {
 		if ( \is_object( $object ) ) {
 			Tombstone::bury( $object->get_id(), $object->get_url() );
 		}
-	}
-
-	/**
-	 * Handle outgoing "Delete" activities from local actors.
-	 *
-	 * Deletes a WordPress post.
-	 *
-	 * @param array                          $data       The activity data array.
-	 * @param int                            $user_id    The user ID.
-	 * @param \Activitypub\Activity\Activity $activity   The Activity object.
-	 * @param int                            $outbox_id  The outbox post ID.
-	 */
-	public static function outgoing( $data, $user_id, $activity, $outbox_id ) {
-		$object = $data['object'] ?? '';
-
-		// Get the object ID (can be a string URL or an object with an id).
-		$object_id = object_to_uri( $object );
-
-		if ( empty( $object_id ) ) {
-			return;
-		}
-
-		/*
-		 * Find the post by its ActivityPub ID.
-		 * First try to find a local post by permalink (for C2S-created posts).
-		 */
-		$post_id = \url_to_postid( $object_id );
-		$post    = $post_id ? \get_post( $post_id ) : null;
-
-		// Fall back to Posts collection for remote posts (ap_post type).
-		if ( ! $post instanceof \WP_Post ) {
-			$post = Posts::get_by_guid( $object_id );
-		}
-
-		if ( ! $post instanceof \WP_Post ) {
-			return;
-		}
-
-		/*
-		 * Verify the user owns this post.
-		 * The blog actor ($user_id === 0) can delete any post since it
-		 * represents the site itself.
-		 */
-		if ( (int) $post->post_author !== $user_id && $user_id > 0 ) {
-			return;
-		}
-
-		// Trash the post (use wp_delete_post with false to move to trash).
-		$result = \wp_trash_post( $post->ID );
-
-		if ( ! $result ) {
-			return;
-		}
-
-		/**
-		 * Fires after a post has been deleted from an outgoing Delete activity.
-		 *
-		 * @param int   $post_id    The deleted post ID.
-		 * @param array $data       The activity data.
-		 * @param int   $user_id    The user ID.
-		 * @param int   $outbox_id  The outbox post ID.
-		 */
-		\do_action( 'activitypub_outbox_deleted_post', $post->ID, $data, $user_id, $outbox_id );
-	}
-
-	/**
-	 * Handle "Delete" requests.
-	 *
-	 * @deprecated unreleased Use Delete::incoming() instead.
-	 *
-	 * @param array     $activity The delete activity.
-	 * @param int|int[] $user_ids The local user ID(s).
-	 */
-	public static function handle_delete( $activity, $user_ids ) {
-		\_deprecated_function( __METHOD__, 'unreleased', 'Delete::incoming()' );
-
-		return self::incoming( $activity, $user_ids );
-	}
-
-	/**
-	 * Handle outbox "Delete" activities.
-	 *
-	 * @deprecated unreleased Use Delete::outgoing() instead.
-	 *
-	 * @param array                          $data       The activity data array.
-	 * @param int                            $user_id    The user ID.
-	 * @param \Activitypub\Activity\Activity $activity   The Activity object.
-	 * @param int                            $outbox_id  The outbox post ID.
-	 */
-	public static function handle_outbox_delete( $data, $user_id, $activity, $outbox_id ) {
-		\_deprecated_function( __METHOD__, 'unreleased', 'Delete::outgoing()' );
-
-		return self::outgoing( $data, $user_id, $activity, $outbox_id );
 	}
 }

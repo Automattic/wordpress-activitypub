@@ -10,6 +10,7 @@ namespace Activitypub\Tests\Handler;
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Handler\Delete;
+use Activitypub\Handler\Outbox\Delete as Outbox_Delete;
 use Activitypub\Scheduler\Post;
 use Activitypub\Tombstone;
 
@@ -504,7 +505,7 @@ class Test_Delete extends \WP_UnitTestCase {
 	/**
 	 * Test outgoing Delete trashes a local post.
 	 *
-	 * @covers ::outgoing
+	 * @covers ::handle_delete
 	 */
 	public function test_outgoing_trashes_post() {
 		$post_id = self::factory()->post->create(
@@ -522,7 +523,7 @@ class Test_Delete extends \WP_UnitTestCase {
 			'object' => $permalink,
 		);
 
-		Delete::outgoing( $data, self::$user_id, null, 0 );
+		Outbox_Delete::handle_delete( $data, self::$user_id );
 
 		$post = \get_post( $post_id );
 		$this->assertEquals( 'trash', $post->post_status );
@@ -531,7 +532,7 @@ class Test_Delete extends \WP_UnitTestCase {
 	/**
 	 * Test outgoing Delete fires action hook on success.
 	 *
-	 * @covers ::outgoing
+	 * @covers ::handle_delete
 	 */
 	public function test_outgoing_fires_action() {
 		$post_id = self::factory()->post->create(
@@ -554,7 +555,7 @@ class Test_Delete extends \WP_UnitTestCase {
 			'object' => $permalink,
 		);
 
-		Delete::outgoing( $data, self::$user_id, null, 0 );
+		Outbox_Delete::handle_delete( $data, self::$user_id );
 
 		$this->assertTrue( $fired, 'activitypub_outbox_deleted_post action should fire.' );
 
@@ -564,7 +565,7 @@ class Test_Delete extends \WP_UnitTestCase {
 	/**
 	 * Test outgoing Delete skips posts not owned by user.
 	 *
-	 * @covers ::outgoing
+	 * @covers ::handle_delete
 	 */
 	public function test_outgoing_skips_unowned_post() {
 		$other_user = self::factory()->user->create();
@@ -583,7 +584,7 @@ class Test_Delete extends \WP_UnitTestCase {
 			'object' => $permalink,
 		);
 
-		Delete::outgoing( $data, self::$user_id, null, 0 );
+		Outbox_Delete::handle_delete( $data, self::$user_id );
 
 		$post = \get_post( $post_id );
 		$this->assertEquals( 'publish', $post->post_status );
@@ -592,7 +593,7 @@ class Test_Delete extends \WP_UnitTestCase {
 	/**
 	 * Test outgoing Delete returns early for empty object.
 	 *
-	 * @covers ::outgoing
+	 * @covers ::handle_delete
 	 */
 	public function test_outgoing_returns_early_for_empty_object() {
 		$data = array(
@@ -601,14 +602,14 @@ class Test_Delete extends \WP_UnitTestCase {
 		);
 
 		// Should not throw errors.
-		Delete::outgoing( $data, self::$user_id, null, 0 );
+		Outbox_Delete::handle_delete( $data, self::$user_id );
 		$this->assertTrue( true );
 	}
 
 	/**
 	 * Test outgoing Delete returns early for non-existent post.
 	 *
-	 * @covers ::outgoing
+	 * @covers ::handle_delete
 	 */
 	public function test_outgoing_returns_early_for_nonexistent_post() {
 		$data = array(
@@ -617,7 +618,7 @@ class Test_Delete extends \WP_UnitTestCase {
 		);
 
 		// Should not throw errors.
-		Delete::outgoing( $data, self::$user_id, null, 0 );
+		Outbox_Delete::handle_delete( $data, self::$user_id );
 		$this->assertTrue( true );
 	}
 

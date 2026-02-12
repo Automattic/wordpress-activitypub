@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Handler;
 
 use Activitypub\Handler\Like;
+use Activitypub\Handler\Outbox\Like as Outbox_Like;
 
 /**
  * Test class for Activitypub Like Handler.
@@ -110,7 +111,7 @@ class Test_Like extends \WP_UnitTestCase {
 	 * Test handle_like with different scenarios.
 	 *
 	 * @dataProvider handle_like_provider
-	 * @covers ::incoming
+	 * @covers ::handle_like
 	 *
 	 * @param array  $activity_data      The like activity data.
 	 * @param bool   $should_create_comment Whether a comment should be created.
@@ -130,7 +131,7 @@ class Test_Like extends \WP_UnitTestCase {
 		$count_before    = count( $comments_before );
 
 		// Process the like.
-		Like::incoming( $activity, $this->user_id );
+		Like::handle_like( $activity, $this->user_id );
 
 		// Check comment count after.
 		$comments_after = \get_comments(
@@ -191,7 +192,7 @@ class Test_Like extends \WP_UnitTestCase {
 	 * This test verifies that Like activities from Pixelfed and other platforms
 	 * that include trailing slashes in object URLs are processed correctly.
 	 *
-	 * @covers ::incoming
+	 * @covers ::handle_like
 	 * @covers \Activitypub\Collection\Interactions::add_reaction
 	 */
 	public function test_handle_like_with_trailing_slash() {
@@ -214,7 +215,7 @@ class Test_Like extends \WP_UnitTestCase {
 		$count_before    = count( $comments_before );
 
 		// Process the like.
-		Like::incoming( $activity, $this->user_id );
+		Like::handle_like( $activity, $this->user_id );
 
 		// Check that comment was created despite trailing slash.
 		$comments_after = \get_comments(
@@ -232,7 +233,7 @@ class Test_Like extends \WP_UnitTestCase {
 	/**
 	 * Test duplicate like handling.
 	 *
-	 * @covers ::incoming
+	 * @covers ::handle_like
 	 */
 	public function test_handle_like_duplicate() {
 		$activity = array_merge(
@@ -241,7 +242,7 @@ class Test_Like extends \WP_UnitTestCase {
 		);
 
 		// Process the like first time.
-		Like::incoming( $activity, $this->user_id );
+		Like::handle_like( $activity, $this->user_id );
 
 		$comments_after_first = \get_comments(
 			array(
@@ -252,7 +253,7 @@ class Test_Like extends \WP_UnitTestCase {
 		$count_after_first    = count( $comments_after_first );
 
 		// Process the same like again.
-		Like::incoming( $activity, $this->user_id );
+		Like::handle_like( $activity, $this->user_id );
 
 		$comments_after_second = \get_comments(
 			array(
@@ -268,7 +269,7 @@ class Test_Like extends \WP_UnitTestCase {
 	/**
 	 * Test handle_like action hook fires.
 	 *
-	 * @covers ::incoming
+	 * @covers ::handle_like
 	 */
 	public function test_handle_like_action_hook() {
 		$hook_fired    = false;
@@ -287,7 +288,7 @@ class Test_Like extends \WP_UnitTestCase {
 		\add_action( 'activitypub_handled_like', $handled_like_callback, 10, 4 );
 
 		$activity = $this->create_test_object();
-		Like::incoming( $activity, $this->user_id );
+		Like::handle_like( $activity, $this->user_id );
 
 		// Verify hook was fired.
 		$this->assertTrue( $hook_fired, 'Action hook should be fired' );
@@ -304,7 +305,7 @@ class Test_Like extends \WP_UnitTestCase {
 	/**
 	 * Test outgoing Like fires action hook.
 	 *
-	 * @covers ::outgoing
+	 * @covers ::handle_like
 	 */
 	public function test_outgoing_fires_action() {
 		$object_url = 'https://example.com/post/456';
@@ -322,7 +323,7 @@ class Test_Like extends \WP_UnitTestCase {
 			'object' => $object_url,
 		);
 
-		Like::outgoing( $data, $this->user_id, null, 0 );
+		Outbox_Like::handle_like( $data, $this->user_id );
 
 		$this->assertTrue( $fired, 'activitypub_outbox_like_sent action should fire.' );
 
@@ -332,7 +333,7 @@ class Test_Like extends \WP_UnitTestCase {
 	/**
 	 * Test outgoing Like returns early for empty object.
 	 *
-	 * @covers ::outgoing
+	 * @covers ::handle_like
 	 */
 	public function test_outgoing_returns_early_for_empty_object() {
 		$fired = false;
@@ -347,7 +348,7 @@ class Test_Like extends \WP_UnitTestCase {
 			'object' => '',
 		);
 
-		Like::outgoing( $data, $this->user_id, null, 0 );
+		Outbox_Like::handle_like( $data, $this->user_id );
 
 		$this->assertFalse( $fired, 'Action should not fire for empty object.' );
 

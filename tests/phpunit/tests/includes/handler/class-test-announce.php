@@ -9,6 +9,7 @@ namespace Activitypub\Tests\Handler;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Handler\Announce;
+use Activitypub\Handler\Outbox\Announce as Outbox_Announce;
 use Activitypub\Model\Blog;
 
 /**
@@ -102,7 +103,7 @@ class Test_Announce extends \WP_UnitTestCase {
 	/**
 	 * Test handle announce.
 	 *
-	 * @covers ::incoming
+	 * @covers ::handle_announce
 	 */
 	public function test_handle_announce() {
 		$external_actor = 'https://example.com/users/testuser';
@@ -116,7 +117,7 @@ class Test_Announce extends \WP_UnitTestCase {
 			'object' => $this->post_permalink,
 		);
 
-		Announce::incoming( $object, $this->user_id );
+		Announce::handle_announce( $object, $this->user_id );
 
 		$args = array(
 			'type'    => 'repost',
@@ -132,7 +133,7 @@ class Test_Announce extends \WP_UnitTestCase {
 	/**
 	 * Test handle announces.
 	 *
-	 * @covers ::incoming
+	 * @covers ::handle_announce
 	 *
 	 * @dataProvider data_handle_announces
 	 *
@@ -146,7 +147,7 @@ class Test_Announce extends \WP_UnitTestCase {
 		\add_action( 'activitypub_inbox', array( $inbox_action, 'action' ) );
 
 		$activity = Activity::init_from_array( $announce );
-		Announce::incoming( $announce, $this->user_id, $activity );
+		Announce::handle_announce( $announce, $this->user_id, $activity );
 
 		$this->assertEquals( $recursion, $inbox_action->get_call_count(), $message );
 	}
@@ -226,7 +227,7 @@ class Test_Announce extends \WP_UnitTestCase {
 	/**
 	 * Test that announces from the blog actor are ignored.
 	 *
-	 * @covers ::incoming
+	 * @covers ::handle_announce
 	 */
 	public function test_ignore_blog_actor_announce() {
 		$blog     = new Blog();
@@ -246,7 +247,7 @@ class Test_Announce extends \WP_UnitTestCase {
 		\add_action( 'activitypub_handled_announce', array( $handled_action, 'action' ) );
 
 		// Call with blog actor as sender - should be ignored.
-		Announce::incoming( $object, $this->user_id );
+		Announce::handle_announce( $object, $this->user_id );
 
 		// Verify the announce was NOT handled.
 		$this->assertEquals( 0, $handled_action->get_call_count() );
@@ -268,7 +269,7 @@ class Test_Announce extends \WP_UnitTestCase {
 	/**
 	 * Test that announces from external actors are not ignored.
 	 *
-	 * @covers ::incoming
+	 * @covers ::handle_announce
 	 */
 	public function test_external_actor_announce_not_ignored() {
 		$external_actor = 'https://external.example.com/users/someone';
@@ -287,7 +288,7 @@ class Test_Announce extends \WP_UnitTestCase {
 		\add_action( 'activitypub_handled_announce', array( $handled_action, 'action' ) );
 
 		// Call with external actor - should be processed.
-		Announce::incoming( $object, $this->user_id );
+		Announce::handle_announce( $object, $this->user_id );
 
 		// Verify the announce WAS handled.
 		$this->assertEquals( 1, $handled_action->get_call_count() );
@@ -310,7 +311,7 @@ class Test_Announce extends \WP_UnitTestCase {
 	/**
 	 * Test outgoing Announce fires action hook.
 	 *
-	 * @covers ::outgoing
+	 * @covers ::handle_announce
 	 */
 	public function test_outgoing_fires_action() {
 		$object_url = 'https://example.com/post/123';
@@ -328,7 +329,7 @@ class Test_Announce extends \WP_UnitTestCase {
 			'object' => $object_url,
 		);
 
-		Announce::outgoing( $data, $this->user_id, null, 0 );
+		Outbox_Announce::handle_announce( $data, $this->user_id );
 
 		$this->assertTrue( $fired, 'activitypub_outbox_announce_sent action should fire.' );
 
@@ -338,7 +339,7 @@ class Test_Announce extends \WP_UnitTestCase {
 	/**
 	 * Test outgoing Announce returns early for empty object.
 	 *
-	 * @covers ::outgoing
+	 * @covers ::handle_announce
 	 */
 	public function test_outgoing_returns_early_for_empty_object() {
 		$fired = false;
@@ -353,7 +354,7 @@ class Test_Announce extends \WP_UnitTestCase {
 			'object' => '',
 		);
 
-		Announce::outgoing( $data, $this->user_id, null, 0 );
+		Outbox_Announce::handle_announce( $data, $this->user_id );
 
 		$this->assertFalse( $fired, 'Action should not fire for empty object.' );
 
@@ -363,7 +364,7 @@ class Test_Announce extends \WP_UnitTestCase {
 	/**
 	 * Test that announces from same domain but different actor are not ignored.
 	 *
-	 * @covers ::incoming
+	 * @covers ::handle_announce
 	 */
 	public function test_same_domain_different_actor_not_ignored() {
 		// Get a regular user actor URL (not the blog actor).
@@ -383,7 +384,7 @@ class Test_Announce extends \WP_UnitTestCase {
 		\add_action( 'activitypub_handled_announce', array( $handled_action, 'action' ) );
 
 		// Call with same domain but user actor - should be processed.
-		Announce::incoming( $object, $this->user_id );
+		Announce::handle_announce( $object, $this->user_id );
 
 		// Verify the announce WAS handled.
 		$this->assertEquals( 1, $handled_action->get_call_count() );

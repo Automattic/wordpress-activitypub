@@ -11,6 +11,7 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
 use Activitypub\Handler\Follow;
+use Activitypub\Handler\Outbox\Follow as Outbox_Follow;
 
 /**
  * Test class for Follow handler.
@@ -42,7 +43,7 @@ class Test_Follow extends \WP_UnitTestCase {
 	 * Test handle_follow method with different scenarios.
 	 *
 	 * @dataProvider handle_follow_provider
-	 * @covers ::incoming
+	 * @covers ::handle_follow
 	 *
 	 * @param mixed  $target_user_id      The user ID being followed (int or 'test_user').
 	 * @param string $actor_url           The actor URL following.
@@ -81,7 +82,7 @@ class Test_Follow extends \WP_UnitTestCase {
 		$followers_before       = Followers::get_many( $target_user_id );
 		$followers_count_before = count( $followers_before );
 
-		Follow::incoming( $activity_object, $target_user_id );
+		Follow::handle_follow( $activity_object, $target_user_id );
 
 		// Check if follower was added.
 		$followers_after       = Followers::get_many( $target_user_id );
@@ -240,7 +241,7 @@ class Test_Follow extends \WP_UnitTestCase {
 	/**
 	 * Test that duplicate follow requests don't trigger notifications.
 	 *
-	 * @covers ::incoming
+	 * @covers ::handle_follow
 	 */
 	public function test_duplicate_follow_no_notification() {
 		$actor_url = 'https://example.com/duplicate-actor';
@@ -278,7 +279,7 @@ class Test_Follow extends \WP_UnitTestCase {
 		\add_action( 'activitypub_handled_follow', $test_callback, 10, 4 );
 
 		// First follow request - should succeed.
-		Follow::incoming( $activity_object, self::$user_id );
+		Follow::handle_follow( $activity_object, self::$user_id );
 
 		// Verify first follow was successful.
 		$this->assertCount( 1, $handled_follow_calls, 'First follow should trigger the action' );
@@ -291,7 +292,7 @@ class Test_Follow extends \WP_UnitTestCase {
 
 		// Second follow request with a different activity ID (simulating a retry).
 		$activity_object['id'] = $actor_url . '/activity/follow-2';
-		Follow::incoming( $activity_object, self::$user_id );
+		Follow::handle_follow( $activity_object, self::$user_id );
 
 		// Verify second follow was not successful (to prevent duplicate notification).
 		$this->assertCount( 2, $handled_follow_calls, 'Second follow should also trigger the action' );
@@ -356,7 +357,7 @@ class Test_Follow extends \WP_UnitTestCase {
 	/**
 	 * Test outgoing Follow adds pending follow metadata.
 	 *
-	 * @covers ::outgoing
+	 * @covers ::handle_follow
 	 */
 	public function test_outgoing_adds_pending_follow() {
 		$actor_url = 'https://example.com/users/to-follow';
@@ -380,7 +381,7 @@ class Test_Follow extends \WP_UnitTestCase {
 			'object' => $actor_url,
 		);
 
-		Follow::outgoing( $data, self::$user_id, null, 0 );
+		Outbox_Follow::handle_follow( $data, self::$user_id );
 
 		// Verify pending follow was added.
 		$remote_actor = \Activitypub\Collection\Remote_Actors::get_by_uri( $actor_url );
@@ -395,7 +396,7 @@ class Test_Follow extends \WP_UnitTestCase {
 	/**
 	 * Test outgoing Follow skips if already following.
 	 *
-	 * @covers ::outgoing
+	 * @covers ::handle_follow
 	 */
 	public function test_outgoing_skips_if_already_following() {
 		$actor_url = 'https://example.com/users/already-following';
@@ -420,14 +421,14 @@ class Test_Follow extends \WP_UnitTestCase {
 		);
 
 		// First follow should succeed.
-		Follow::outgoing( $data, self::$user_id, null, 0 );
+		Outbox_Follow::handle_follow( $data, self::$user_id );
 
 		$remote_actor      = \Activitypub\Collection\Remote_Actors::get_by_uri( $actor_url );
 		$pending           = \get_post_meta( $remote_actor->ID, \Activitypub\Collection\Following::PENDING_META_KEY, false );
 		$count_after_first = count( $pending );
 
 		// Second follow should be skipped (already pending).
-		Follow::outgoing( $data, self::$user_id, null, 0 );
+		Outbox_Follow::handle_follow( $data, self::$user_id );
 
 		$pending_after = \get_post_meta( $remote_actor->ID, \Activitypub\Collection\Following::PENDING_META_KEY, false );
 		$this->assertCount( $count_after_first, $pending_after, 'Should not add duplicate pending follow.' );
@@ -438,7 +439,7 @@ class Test_Follow extends \WP_UnitTestCase {
 	/**
 	 * Test outgoing Follow returns early for empty object.
 	 *
-	 * @covers ::outgoing
+	 * @covers ::handle_follow
 	 */
 	public function test_outgoing_returns_early_for_empty_object() {
 		$data = array(
@@ -447,14 +448,14 @@ class Test_Follow extends \WP_UnitTestCase {
 		);
 
 		// Should not throw errors.
-		Follow::outgoing( $data, self::$user_id, null, 0 );
+		Outbox_Follow::handle_follow( $data, self::$user_id );
 		$this->assertTrue( true );
 	}
 
 	/**
 	 * Test outgoing Follow returns early for non-string object.
 	 *
-	 * @covers ::outgoing
+	 * @covers ::handle_follow
 	 */
 	public function test_outgoing_returns_early_for_non_string_object() {
 		$data = array(
@@ -463,14 +464,14 @@ class Test_Follow extends \WP_UnitTestCase {
 		);
 
 		// Should not throw errors.
-		Follow::outgoing( $data, self::$user_id, null, 0 );
+		Outbox_Follow::handle_follow( $data, self::$user_id );
 		$this->assertTrue( true );
 	}
 
 	/**
 	 * Test that deprecated hook still fires for backward compatibility.
 	 *
-	 * @covers ::incoming
+	 * @covers ::handle_follow
 	 */
 	public function test_deprecated_hook_fires() {
 		// Expect the deprecation notice.
@@ -512,7 +513,7 @@ class Test_Follow extends \WP_UnitTestCase {
 			'object' => Actors::get_by_id( self::$user_id )->get_id(),
 		);
 
-		Follow::incoming( $activity_object, self::$user_id );
+		Follow::handle_follow( $activity_object, self::$user_id );
 
 		// Verify deprecated hook fired.
 		$this->assertTrue( $hook_fired, 'Deprecated hook should fire' );
@@ -529,7 +530,7 @@ class Test_Follow extends \WP_UnitTestCase {
 	/**
 	 * Test new hook fires correctly.
 	 *
-	 * @covers ::incoming
+	 * @covers ::handle_follow
 	 */
 	public function test_new_hook_fires() {
 		$hook_fired        = false;
@@ -569,7 +570,7 @@ class Test_Follow extends \WP_UnitTestCase {
 			'object' => Actors::get_by_id( self::$user_id )->get_id(),
 		);
 
-		Follow::incoming( $activity_object, self::$user_id );
+		Follow::handle_follow( $activity_object, self::$user_id );
 
 		// Verify new hook fired.
 		$this->assertTrue( $hook_fired, 'New hook should fire' );

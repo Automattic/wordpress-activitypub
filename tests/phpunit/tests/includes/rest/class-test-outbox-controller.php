@@ -37,6 +37,11 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 	 * Set up class test fixtures.
 	 */
 	public static function set_up_before_class() {
+		// Ensure the post scheduler hook is present (may be removed by other test classes).
+		if ( ! \has_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ) ) ) {
+			\add_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ), 33, 4 );
+		}
+
 		self::$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
 		\get_user_by( 'ID', self::$user_id )->add_cap( 'activitypub' );
 		\wp_set_current_user( self::$user_id );
@@ -59,6 +64,11 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 	public function set_up() {
 		parent::set_up();
 		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		// Ensure the post scheduler hook is present (may be removed by other test classes).
+		if ( ! \has_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ) ) ) {
+			\add_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ), 33, 4 );
+		}
 	}
 
 	/**

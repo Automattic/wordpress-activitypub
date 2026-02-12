@@ -11,6 +11,7 @@ use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
+use Activitypub\Comment;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\get_masked_wp_version;
@@ -413,9 +414,13 @@ class Outbox_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		// If handler returned a WP_Post, the scheduler already added it to outbox.
+		// If handler returned a WP_Post or WP_Comment, the scheduler already added it to outbox.
 		if ( $result instanceof \WP_Post ) {
 			$object_id     = \Activitypub\get_post_id( $result->ID );
+			$activity_type = \ucfirst( $data['type'] ?? 'Create' );
+			$outbox_item   = Outbox::get_by_object_id( $object_id, $activity_type );
+		} elseif ( $result instanceof \WP_Comment ) {
+			$object_id     = Comment::generate_id( $result );
 			$activity_type = \ucfirst( $data['type'] ?? 'Create' );
 			$outbox_item   = Outbox::get_by_object_id( $object_id, $activity_type );
 		} elseif ( \is_int( $result ) && $result > 0 ) {
