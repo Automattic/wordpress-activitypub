@@ -34,11 +34,11 @@ function add_fediblog_tag( $post_id ) {
 		return;
 	}
 
-	// Only apply to blog posts with standard format.
-	if ( 'post' === \get_post_type( $post_id ) && false === \get_post_format( $post_id ) ) {
+	// Only apply to standard-format posts.
+	if ( false === \get_post_format( $post_id ) ) {
 		\wp_set_post_tags( $post_id, 'FediBlog', true );
 	}
 }
 
-// Hook into the save_post action.
-\add_action( 'save_post', __NAMESPACE__ . '\add_fediblog_tag' );
+// Hook into the post-type-specific save_post_post action.
+\add_action( 'save_post_post', __NAMESPACE__ . '\add_fediblog_tag' );
