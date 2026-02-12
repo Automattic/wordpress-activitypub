@@ -245,6 +245,65 @@ class Test_Functions extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_object_id with a WP_Post.
+	 *
+	 * @covers \Activitypub\get_object_id
+	 */
+	public function test_get_object_id_with_post() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => 1,
+				'post_status' => 'publish',
+			)
+		);
+
+		$post   = \get_post( $post_id );
+		$result = \Activitypub\get_object_id( $post );
+
+		$this->assertIsString( $result );
+		$this->assertNotEmpty( $result );
+		$this->assertSame( \Activitypub\get_post_id( $post_id ), $result );
+
+		\wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Test get_object_id with a WP_Comment.
+	 *
+	 * @covers \Activitypub\get_object_id
+	 */
+	public function test_get_object_id_with_comment() {
+		$post_id    = self::factory()->post->create();
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+			)
+		);
+
+		$comment = \get_comment( $comment_id );
+		$result  = \Activitypub\get_object_id( $comment );
+
+		$this->assertIsString( $result );
+		$this->assertNotEmpty( $result );
+		$this->assertSame( \Activitypub\get_comment_id( $comment ), $result );
+
+		\wp_delete_comment( $comment_id, true );
+		\wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Test get_object_id with unsupported type returns null.
+	 *
+	 * @covers \Activitypub\get_object_id
+	 */
+	public function test_get_object_id_with_unsupported_type() {
+		$this->assertNull( \Activitypub\get_object_id( 'string' ) );
+		$this->assertNull( \Activitypub\get_object_id( 42 ) );
+		$this->assertNull( \Activitypub\get_object_id( null ) );
+		$this->assertNull( \Activitypub\get_object_id( new \stdClass() ) );
+	}
+
+	/**
 	 * Data provider for seconds_to_iso8601 tests.
 	 *
 	 * @return array Test cases with input seconds and expected ISO 8601 duration.

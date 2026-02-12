@@ -10,6 +10,27 @@
 namespace Activitypub;
 
 /**
+ * Get the ActivityPub ID for a WordPress object.
+ *
+ * Returns the canonical ActivityPub URI for a WP_Post or WP_Comment.
+ *
+ * @param \WP_Post|\WP_Comment $wp_object The WordPress post or comment.
+ *
+ * @return string|null The ActivityPub ID (a URL), or null if unsupported type.
+ */
+function get_object_id( $wp_object ) {
+	if ( $wp_object instanceof \WP_Post ) {
+		return get_post_id( $wp_object->ID );
+	}
+
+	if ( $wp_object instanceof \WP_Comment ) {
+		return get_comment_id( $wp_object );
+	}
+
+	return null;
+}
+
+/**
  * Convert a string from camelCase to snake_case.
  *
  * @param string $input The string to convert.
