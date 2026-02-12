@@ -64,10 +64,11 @@ class Test_Delete extends \WP_UnitTestCase {
 			'object' => $permalink,
 		);
 
-		Delete::handle_delete( $data, $this->user_id );
+		$result = Delete::handle_delete( $data, $this->user_id );
 
 		$post = \get_post( $post_id );
 		$this->assertEquals( 'trash', $post->post_status );
+		$this->assertInstanceOf( \WP_Post::class, $result );
 	}
 
 	/**
@@ -88,7 +89,7 @@ class Test_Delete extends \WP_UnitTestCase {
 		$callback = function () use ( &$fired ) {
 			$fired = true;
 		};
-		\add_action( 'activitypub_outbox_deleted_post', $callback );
+		\add_action( 'activitypub_outbox_handled_delete', $callback );
 
 		$data = array(
 			'type'   => 'Delete',
@@ -97,9 +98,9 @@ class Test_Delete extends \WP_UnitTestCase {
 
 		Delete::handle_delete( $data, $this->user_id );
 
-		$this->assertTrue( $fired, 'activitypub_outbox_deleted_post action should fire.' );
+		$this->assertTrue( $fired, 'activitypub_outbox_handled_delete action should fire.' );
 
-		\remove_action( 'activitypub_outbox_deleted_post', $callback );
+		\remove_action( 'activitypub_outbox_handled_delete', $callback );
 	}
 
 	/**
@@ -139,25 +140,23 @@ class Test_Delete extends \WP_UnitTestCase {
 			'object' => '',
 		);
 
-		// Should not throw errors.
-		Delete::handle_delete( $data, $this->user_id );
-		$this->assertTrue( true );
+		$result = Delete::handle_delete( $data, $this->user_id );
+		$this->assertNull( $result );
 	}
 
 	/**
-	 * Test outgoing Delete with non-existent post does nothing.
+	 * Test outgoing Delete with non-existent object does nothing.
 	 *
 	 * @covers ::handle_delete
 	 */
-	public function test_handle_delete_nonexistent_post() {
+	public function test_handle_delete_nonexistent_object() {
 		$data = array(
 			'type'   => 'Delete',
 			'object' => 'https://example.com/nonexistent-post',
 		);
 
-		// Should not throw errors.
-		Delete::handle_delete( $data, $this->user_id );
-		$this->assertTrue( true );
+		$result = Delete::handle_delete( $data, $this->user_id );
+		$this->assertFalse( $result );
 	}
 
 	/**
@@ -186,6 +185,66 @@ class Test_Delete extends \WP_UnitTestCase {
 
 		$post = \get_post( $post_id );
 		$this->assertEquals( 'trash', $post->post_status );
+	}
+
+	/**
+	 * Test outgoing Delete trashes a comment.
+	 *
+	 * @covers ::handle_delete
+	 */
+	public function test_handle_delete_trashes_comment() {
+		$post_id    = self::factory()->post->create(
+			array(
+				'post_author' => $this->user_id,
+			)
+		);
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'user_id'         => $this->user_id,
+			)
+		);
+
+		$comment_url = \add_query_arg( 'c', $comment_id, \trailingslashit( \home_url() ) );
+
+		$data = array(
+			'type'   => 'Delete',
+			'object' => $comment_url,
+		);
+
+		$result = Delete::handle_delete( $data, $this->user_id );
+
+		$comment = \get_comment( $comment_id );
+		$this->assertEquals( 'trash', $comment->comment_approved );
+		$this->assertInstanceOf( \WP_Comment::class, $result );
+	}
+
+	/**
+	 * Test outgoing Delete skips comments not owned by user.
+	 *
+	 * @covers ::handle_delete
+	 */
+	public function test_handle_delete_skips_unowned_comment() {
+		$other_user = self::factory()->user->create();
+		$post_id    = self::factory()->post->create();
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'user_id'         => $other_user,
+			)
+		);
+
+		$comment_url = \add_query_arg( 'c', $comment_id, \trailingslashit( \home_url() ) );
+
+		$data = array(
+			'type'   => 'Delete',
+			'object' => $comment_url,
+		);
+
+		Delete::handle_delete( $data, $this->user_id );
+
+		$comment = \get_comment( $comment_id );
+		$this->assertEquals( '1', $comment->comment_approved, 'Comment should not be trashed by non-owner.' );
 	}
 
 	/**
