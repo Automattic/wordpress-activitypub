@@ -10,7 +10,7 @@ This documentation provides information for developers who want to extend and bu
 
 ## Snippets
 
-The plugin ships with a collection of community-contributed [snippets](../snippets/) that extend or customize its behavior. Snippets are small, self-contained WordPress plugins that hook into the ActivityPub plugin to add or modify functionality.
+The repository includes a collection of community-contributed [snippets](../snippets/) that extend or customize its behavior. Snippets are small, self-contained WordPress plugins that hook into the ActivityPub plugin to add or modify functionality.
 
 This follows a concept similar to WordPress' [feature plugins](https://make.wordpress.org/core/handbook/about/release-cycle/features-as-plugins/) -- experimental ideas are developed as snippets, and mature ones may eventually be integrated into the main plugin.
 
