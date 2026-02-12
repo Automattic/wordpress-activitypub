@@ -7,8 +7,10 @@
 
 namespace Activitypub\Handler\Outbox;
 
-use Activitypub\Collection\Following;
-use Activitypub\Collection\Remote_Actors;
+use Activitypub\Collection\Outbox as Outbox_Collection;
+
+use function Activitypub\object_to_uri;
+use function Activitypub\unfollow;
 
 /**
  * Handle outgoing Undo activities.
@@ -24,50 +26,43 @@ class Undo {
 	/**
 	 * Handle outgoing "Undo" activities from local actors.
 	 *
-	 * Handles Undo Follow (unfollow) activities.
+	 * Resolves the referenced activity from the outbox and delegates
+	 * to the appropriate collection method to reverse its side effects
+	 * and create the Undo activity.
 	 *
 	 * @param array $data    The activity data array.
 	 * @param int   $user_id The user ID.
+	 *
+	 * @return int|\WP_Error The undo outbox item ID, or WP_Error on failure.
 	 */
 	public static function handle_undo( $data, $user_id = null ) {
-		$object = $data['object'] ?? array();
+		$id = object_to_uri( $data['object'] ?? '' );
 
-		if ( ! \is_array( $object ) ) {
-			return;
+		if ( empty( $id ) ) {
+			return $data;
 		}
 
-		$type = $object['type'] ?? '';
+		$outbox_item = Outbox_Collection::get_by_guid( $id );
 
-		// Only handle Undo Follow for now.
-		if ( 'Follow' !== $type ) {
-			return;
+		if ( \is_wp_error( $outbox_item ) ) {
+			return $data;
 		}
 
-		// Get the target actor from the original Follow activity.
-		$target = $object['object'] ?? '';
+		$activity_type = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
 
-		if ( empty( $target ) || ! \is_string( $target ) ) {
-			return;
+		switch ( $activity_type ) {
+			case 'Follow':
+				$stored = \json_decode( $outbox_item->post_content, true );
+				$target = object_to_uri( $stored['object'] ?? '' );
+
+				if ( $target ) {
+					return unfollow( $target, $user_id );
+				}
+
+				return $data;
+
+			default:
+				return Outbox_Collection::undo( $outbox_item );
 		}
-
-		// Get the remote actor.
-		$remote_actor = Remote_Actors::get_by_uri( $target );
-
-		if ( \is_wp_error( $remote_actor ) ) {
-			return;
-		}
-
-		// Remove following relationship.
-		\delete_post_meta( $remote_actor->ID, Following::FOLLOWING_META_KEY, $user_id );
-		\delete_post_meta( $remote_actor->ID, Following::PENDING_META_KEY, $user_id );
-
-		/**
-		 * Fires after an outgoing Undo Follow activity has been processed.
-		 *
-		 * @param int   $remote_actor_id The remote actor post ID.
-		 * @param array $data            The activity data.
-		 * @param int   $user_id         The user ID.
-		 */
-		\do_action( 'activitypub_outbox_undo_follow_sent', $remote_actor->ID, $data, $user_id );
 	}
 }
