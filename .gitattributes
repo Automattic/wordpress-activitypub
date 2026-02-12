@@ -28,6 +28,7 @@
 
 # Source and tests (build/ is distributed, src/ is not)
 /docs/               export-ignore
+/snippets/           export-ignore
 /src/                export-ignore
 /tests/              export-ignore
 
