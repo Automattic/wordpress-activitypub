@@ -36,6 +36,15 @@ Always use `'activitypub'` for translations:
 ### WordPress Global Functions
 When in a namespace, always escape WordPress functions with backslash: `\get_option()`, `\add_action()`, etc.
 
+### Comments
+Use `/* */` for multi-line comments, not `//` on consecutive lines:
+```php
+/*
+ * This is the correct way
+ * to write a multi-line comment.
+ */
+```
+
 ## Comprehensive Standards
 
 See [PHP Coding Standards](../../../docs/php-coding-standards.md) for complete WordPress coding standards.

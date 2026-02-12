@@ -342,11 +342,17 @@ class Test_Update extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test outgoing Update recursion guard prevents infinite loop.
+	 * Test outgoing Update does not re-trigger Post::triage via wp_update_post.
 	 *
 	 * @covers ::outgoing
 	 */
 	public function test_outgoing_recursion_guard() {
+		/*
+		 * Re-add the triage hook so we can verify it does NOT fire
+		 * during the wp_update_post() call inside outgoing().
+		 */
+		\add_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33, 4 );
+
 		$post_id = self::factory()->post->create(
 			array(
 				'post_author' => $this->user_id,
@@ -358,22 +364,14 @@ class Test_Update extends \WP_UnitTestCase {
 		$permalink  = \get_permalink( $post_id );
 		$call_count = 0;
 
-		// Hook into the update action to count calls and re-trigger.
-		$callback = function () use ( &$call_count, $permalink ) {
+		/*
+		 * Count how many times triage is invoked. If the recursion guard
+		 * works, triage should not fire during the outgoing update.
+		 */
+		$counter = function () use ( &$call_count ) {
 			++$call_count;
-
-			// Simulate what the scheduler would do: re-trigger the outgoing handler.
-			$data = array(
-				'type'   => 'Update',
-				'object' => array(
-					'type'    => 'Note',
-					'id'      => $permalink,
-					'content' => 'Re-triggered',
-				),
-			);
-			Update::outgoing( $data, 0, null, 0 );
 		};
-		\add_action( 'activitypub_outbox_updated_post', $callback );
+		\add_action( 'wp_after_insert_post', $counter, 32 );
 
 		$data = array(
 			'type'   => 'Update',
@@ -386,10 +384,10 @@ class Test_Update extends \WP_UnitTestCase {
 
 		Update::outgoing( $data, $this->user_id, null, 0 );
 
-		// Should only fire once due to recursion guard.
-		$this->assertEquals( 1, $call_count, 'Recursion guard should prevent re-entrant calls.' );
+		$this->assertEquals( 0, $call_count, 'wp_after_insert_post should not fire during outgoing update.' );
 
-		\remove_action( 'activitypub_outbox_updated_post', $callback );
+		\remove_action( 'wp_after_insert_post', $counter, 32 );
+		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
 	}
 
 	/**
