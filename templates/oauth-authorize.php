@@ -23,6 +23,15 @@ use Activitypub\OAuth\Scope;
 
 // Use WordPress login page header.
 $login_errors = new WP_Error();
+
+if ( empty( $code_challenge ) ) {
+	$login_errors->add(
+		'pkce_missing',
+		__( '<strong>Warning:</strong> This client does not support PKCE. The connection may be less secure.', 'activitypub' ),
+		'message'
+	);
+}
+
 login_header(
 	/* translators: %s: Client name */
 	sprintf( __( 'Authorize %s', 'activitypub' ), esc_html( $client_name ?: $client_id ) ),

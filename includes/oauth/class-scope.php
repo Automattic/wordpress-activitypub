@@ -71,6 +71,7 @@ class Scope {
 	 */
 	const DEFAULT_SCOPES = array(
 		self::READ,
+		self::WRITE,
 	);
 
 	/**
