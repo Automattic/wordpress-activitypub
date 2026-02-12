@@ -239,26 +239,23 @@ class Update {
 		);
 
 		self::$is_outgoing = true;
+		$post_id           = \wp_update_post( $post_data, true );
 
-		try {
-			$post_id = \wp_update_post( $post_data, true );
-
-			if ( \is_wp_error( $post_id ) ) {
-				return;
-			}
-
-			/**
-			 * Fires after a post has been updated from an outgoing Update activity.
-			 *
-			 * @param int   $post_id    The updated post ID.
-			 * @param array $data       The activity data.
-			 * @param int   $user_id    The user ID.
-			 * @param int   $outbox_id  The outbox post ID.
-			 */
-			\do_action( 'activitypub_outbox_updated_post', $post_id, $data, $user_id, $outbox_id );
-		} finally {
+		if ( \is_wp_error( $post_id ) ) {
 			self::$is_outgoing = false;
+			return;
 		}
+
+		/**
+		 * Fires after a post has been updated from an outgoing Update activity.
+		 *
+		 * @param int   $post_id    The updated post ID.
+		 * @param array $data       The activity data.
+		 * @param int   $user_id    The user ID.
+		 * @param int   $outbox_id  The outbox post ID.
+		 */
+		\do_action( 'activitypub_outbox_updated_post', $post_id, $data, $user_id, $outbox_id );
+		self::$is_outgoing = false;
 	}
 
 	/**
