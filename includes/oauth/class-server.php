@@ -432,6 +432,24 @@ class Server {
 		$approve               = isset( $_POST['approve'] );
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
+		// Re-validate client and redirect URI (form fields could be tampered with).
+		$client = Client::get( $client_id );
+		if ( \is_wp_error( $client ) ) {
+			\wp_die(
+				\esc_html( $client->get_error_message() ),
+				\esc_html__( 'Authorization Error', 'activitypub' ),
+				array( 'response' => 404 )
+			);
+		}
+
+		if ( ! $client->is_valid_redirect_uri( $redirect_uri ) ) {
+			\wp_die(
+				\esc_html__( 'Invalid redirect URI for this client.', 'activitypub' ),
+				\esc_html__( 'Authorization Error', 'activitypub' ),
+				array( 'response' => 400 )
+			);
+		}
+
 		// User denied authorization.
 		if ( ! $approve ) {
 			$error_url = \add_query_arg(

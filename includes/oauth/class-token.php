@@ -196,9 +196,12 @@ class Token {
 			);
 		}
 
-		// Update last used timestamp.
-		$token_data['last_used_at'] = time();
-		\update_user_meta( (int) $user_id, $meta_key, $token_data );
+		// Throttle last_used_at writes to avoid a DB write on every request.
+		$last_used = $token_data['last_used_at'] ?? 0;
+		if ( empty( $last_used ) || ( time() - $last_used ) > 5 * MINUTE_IN_SECONDS ) {
+			$token_data['last_used_at'] = time();
+			\update_user_meta( (int) $user_id, $meta_key, $token_data );
+		}
 
 		return new self( (int) $user_id, $token_hash, $token_data );
 	}

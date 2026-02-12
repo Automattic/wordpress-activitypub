@@ -246,6 +246,15 @@ class Authorization_Code {
 	public static function cleanup() {
 		global $wpdb;
 
+		/*
+		 * When an external object cache is active, transients are stored in
+		 * the cache backend (Redis, Memcached, etc.) and auto-expire there.
+		 * The direct SQL below only targets the options table, so skip it.
+		 */
+		if ( \wp_using_ext_object_cache() ) {
+			return 0;
+		}
+
 		$timeout_prefix = '_transient_timeout_' . self::TRANSIENT_PREFIX;
 		$now            = time();
 
