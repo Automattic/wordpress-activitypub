@@ -12,6 +12,7 @@ use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Posts;
 use Activitypub\Handler\Create;
 use Activitypub\Post_Types;
+use Activitypub\Scheduler\Post;
 use Activitypub\Tombstone;
 
 /**
@@ -833,5 +834,278 @@ class Test_Create extends \WP_UnitTestCase {
 		}
 
 		return $fixtures;
+	}
+
+	/**
+	 * Test outgoing Note creates a post with status post format.
+	 *
+	 * @covers ::outgoing
+	 */
+	public function test_outgoing_note_creates_post_with_status_format() {
+		// Prevent wp_insert_post() from triggering the full outbox chain.
+		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
+
+		$user_id  = self::factory()->user->create();
+		$activity = array(
+			'type'   => 'Create',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'type'    => 'Note',
+				'content' => '<p>Hello from the Fediverse!</p>',
+			),
+		);
+
+		$result = Create::outgoing( $activity, $user_id );
+
+		$this->assertInstanceOf( 'WP_Post', $result );
+		$this->assertEquals( 'status', \get_post_format( $result->ID ) );
+		$this->assertStringContainsString( 'Hello from the Fediverse!', $result->post_content );
+
+		\add_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33, 4 );
+	}
+
+	/**
+	 * Test outgoing Article creates a post without post format.
+	 *
+	 * @covers ::outgoing
+	 */
+	public function test_outgoing_article_creates_post_without_format() {
+		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
+
+		$user_id  = self::factory()->user->create();
+		$activity = array(
+			'type'   => 'Create',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'type'    => 'Article',
+				'name'    => 'My Article Title',
+				'content' => '<p>Article body here.</p>',
+			),
+		);
+
+		$result = Create::outgoing( $activity, $user_id );
+
+		$this->assertInstanceOf( 'WP_Post', $result );
+		$this->assertFalse( \get_post_format( $result->ID ) );
+		$this->assertEquals( 'My Article Title', $result->post_title );
+
+		\add_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33, 4 );
+	}
+
+	/**
+	 * Test outgoing private visibility returns false.
+	 *
+	 * @covers ::outgoing
+	 */
+	public function test_outgoing_private_visibility_returns_false() {
+		$activity = array(
+			'type'   => 'Create',
+			'to'     => array( 'https://example.com/users/recipient' ), // Private message.
+			'object' => array(
+				'type'    => 'Note',
+				'content' => 'Private note.',
+				'to'      => array( 'https://example.com/users/recipient' ),
+			),
+		);
+
+		$result = Create::outgoing( $activity, 1, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
+
+		$this->assertFalse( $result );
+	}
+
+	/**
+	 * Test outgoing non-Note/Article types return null.
+	 *
+	 * @covers ::outgoing
+	 */
+	public function test_outgoing_unsupported_type_returns_null() {
+		$activity = array(
+			'type'   => 'Create',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'type'    => 'Event',
+				'content' => 'An event.',
+			),
+		);
+
+		$result = Create::outgoing( $activity, 1 );
+
+		$this->assertNull( $result );
+	}
+
+	/**
+	 * Test outgoing replies return null.
+	 *
+	 * @covers ::outgoing
+	 */
+	public function test_outgoing_reply_returns_null() {
+		$activity = array(
+			'type'   => 'Create',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'type'      => 'Note',
+				'content'   => 'A reply.',
+				'inReplyTo' => 'https://example.com/note/123',
+			),
+		);
+
+		$result = Create::outgoing( $activity, 1 );
+
+		$this->assertNull( $result );
+	}
+
+	/**
+	 * Test outgoing invalid (non-array) object returns WP_Error.
+	 *
+	 * @covers ::outgoing
+	 */
+	public function test_outgoing_invalid_object_returns_error() {
+		$activity = array(
+			'type'   => 'Create',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => 'https://example.com/note/1',
+		);
+
+		$result = Create::outgoing( $activity, 1 );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'invalid_object', $result->get_error_code() );
+	}
+
+	/**
+	 * Test outgoing post sets content and title correctly.
+	 *
+	 * @covers ::outgoing
+	 */
+	public function test_outgoing_post_content_and_title() {
+		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
+
+		$user_id  = self::factory()->user->create();
+		$activity = array(
+			'type'   => 'Create',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'type'    => 'Article',
+				'name'    => 'Specific Title',
+				'content' => '<p>Specific content here.</p>',
+				'summary' => 'A brief summary.',
+			),
+		);
+
+		$result = Create::outgoing( $activity, $user_id );
+
+		$this->assertInstanceOf( 'WP_Post', $result );
+		$this->assertEquals( 'Specific Title', $result->post_title );
+		$this->assertEquals( '<p>Specific content here.</p>', $result->post_content );
+		$this->assertEquals( 'A brief summary.', $result->post_excerpt );
+
+		\add_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33, 4 );
+	}
+
+	/**
+	 * Test outgoing post auto-generates title from content when name is empty.
+	 *
+	 * @covers ::outgoing
+	 */
+	public function test_outgoing_post_generates_title_from_content() {
+		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
+
+		$user_id  = self::factory()->user->create();
+		$activity = array(
+			'type'   => 'Create',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'type'    => 'Note',
+				'content' => '<p>This is a short note without a title field.</p>',
+			),
+		);
+
+		$result = Create::outgoing( $activity, $user_id );
+
+		$this->assertInstanceOf( 'WP_Post', $result );
+		$this->assertNotEmpty( $result->post_title );
+		$this->assertStringContainsString( 'This is a short', $result->post_title );
+
+		\add_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33, 4 );
+	}
+
+	/**
+	 * Test outgoing post fires activitypub_outbox_created_post action.
+	 *
+	 * @covers ::outgoing
+	 */
+	public function test_outgoing_post_fires_action() {
+		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
+
+		$user_id = self::factory()->user->create();
+		$fired   = false;
+
+		$callback = function () use ( &$fired ) {
+			$fired = true;
+		};
+		\add_action( 'activitypub_outbox_created_post', $callback );
+
+		$activity = array(
+			'type'   => 'Create',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'type'    => 'Note',
+				'content' => 'Testing action hook.',
+			),
+		);
+
+		Create::outgoing( $activity, $user_id );
+
+		$this->assertTrue( $fired, 'activitypub_outbox_created_post action should fire.' );
+
+		\remove_action( 'activitypub_outbox_created_post', $callback );
+		\add_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33, 4 );
+	}
+
+	/**
+	 * Test outgoing post sets user_id as post_author.
+	 *
+	 * @covers ::outgoing
+	 */
+	public function test_outgoing_post_sets_author() {
+		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
+
+		$user_id  = self::factory()->user->create();
+		$activity = array(
+			'type'   => 'Create',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'type'    => 'Note',
+				'content' => 'Author test.',
+			),
+		);
+
+		$result = Create::outgoing( $activity, $user_id );
+
+		$this->assertInstanceOf( 'WP_Post', $result );
+		$this->assertEquals( $user_id, (int) $result->post_author );
+
+		\add_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33, 4 );
+	}
+
+	/**
+	 * Test outgoing quotes return null.
+	 *
+	 * @covers ::outgoing
+	 */
+	public function test_outgoing_quote_returns_null() {
+		$activity = array(
+			'type'   => 'Create',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'type'     => 'Note',
+				'content'  => 'A quote post.',
+				'quoteUrl' => 'https://example.com/note/456',
+			),
+		);
+
+		$result = Create::outgoing( $activity, 1 );
+
+		$this->assertNull( $result );
 	}
 }
