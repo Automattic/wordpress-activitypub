@@ -20,6 +20,7 @@ class Router {
 	public static function init() {
 		\add_action( 'init', array( self::class, 'add_rewrite_rules' ), 11 );
 
+		\add_action( 'send_headers', array( self::class, 'add_headers' ) );
 		\add_filter( 'template_include', array( self::class, 'render_activitypub_template' ), 99 );
 		\add_action( 'template_redirect', array( self::class, 'template_redirect' ) );
 		\add_filter( 'redirect_canonical', array( self::class, 'redirect_canonical' ), 10, 2 );
@@ -80,8 +81,6 @@ class Router {
 			return $template;
 		}
 
-		self::add_headers();
-
 		if ( ! is_activitypub_request() || ! should_negotiate_content() ) {
 			if ( \get_query_var( 'p' ) && Outbox::POST_TYPE === \get_post_type( \get_query_var( 'p' ) ) ) {
 				\set_query_var( 'is_404', true );
@@ -97,7 +96,7 @@ class Router {
 			if ( ! $activitypub_object ) {
 				\status_header( 410 );
 			}
-			self::add_cors_headers();
+
 			return ACTIVITYPUB_PLUGIN_DIR . 'templates/tombstone-json.php';
 		}
 
@@ -143,7 +142,6 @@ class Router {
 				\status_header( 200 );
 			}
 
-			self::add_cors_headers();
 			return $activitypub_template;
 		}
 
@@ -167,6 +165,10 @@ class Router {
 				// Send Vary header for Accept header.
 				\header( 'Vary: Accept', false );
 			}
+
+			\header( 'Access-Control-Allow-Origin: *' );
+			\header( 'Access-Control-Allow-Methods: GET, OPTIONS' );
+			\header( 'Access-Control-Allow-Headers: Accept, Authorization, Content-Type' );
 		}
 
 		add_action(
@@ -175,22 +177,6 @@ class Router {
 				echo PHP_EOL . '<link rel="alternate" title="ActivityPub (JSON)" type="application/activity+json" href="' . esc_url( $id ) . '" />' . PHP_EOL;
 			}
 		);
-	}
-
-	/**
-	 * Add CORS headers for ActivityPub JSON responses.
-	 *
-	 * This enables C2S clients to fetch actor profiles and other
-	 * ActivityPub objects directly from the browser.
-	 */
-	private static function add_cors_headers() {
-		if ( \headers_sent() ) {
-			return;
-		}
-
-		\header( 'Access-Control-Allow-Origin: *' );
-		\header( 'Access-Control-Allow-Methods: GET, OPTIONS' );
-		\header( 'Access-Control-Allow-Headers: Accept, Authorization, Content-Type' );
 	}
 
 	/**

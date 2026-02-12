@@ -297,6 +297,11 @@ class Server {
 			return true;
 		}
 
+		// WebFinger endpoint.
+		if ( $namespace . '/webfinger' === $route ) {
+			return true;
+		}
+
 		return false;
 	}
 
