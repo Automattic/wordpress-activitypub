@@ -311,6 +311,7 @@ curl https://site.com/.well-known/nodeinfo
 ## Resources
 
 - [ActivityPub Spec](https://www.w3.org/TR/activitypub/)
+- [ActivityPub API (C2S)](https://github.com/swicg/activitypub-api) — SWICG task force specs for Client-to-Server API: OAuth profile, feature discovery, media upload, CORS, collections/filtering, and more.
 - [ActivityStreams Vocabulary](https://www.w3.org/TR/activitystreams-vocabulary/)
 - [Project FEDERATION.md](../../../FEDERATION.md)
 - [FEPs Repository](https://codeberg.org/fediverse/fep)
