@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix comment count filter conflict with Gutenberg by running at a later priority and always recalculating to exclude ActivityPub comment types.
