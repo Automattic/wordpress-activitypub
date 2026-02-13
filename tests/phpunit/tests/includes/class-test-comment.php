@@ -230,7 +230,7 @@ class Test_Comment extends \WP_UnitTestCase {
 		// Case 4: $new is not null (set by another filter), should return $new unmodified.
 		$this->assertSame( 10, Comment::pre_wp_update_comment_count_now( 10, 0, $post_id ) );
 
-		// Case 5: Other plugins can add excluded types via the filter.
+		// Case 5: Other plugins can exclude additional types via the filter.
 		$add_note = function ( $types ) {
 			$types[] = 'note';
 			return $types;
@@ -249,6 +249,10 @@ class Test_Comment extends \WP_UnitTestCase {
 		$this->assertSame( 5, Comment::pre_wp_update_comment_count_now( null, 0, $post_id ) );
 
 		\remove_filter( 'activitypub_excluded_comment_types', $add_note );
+
+		// Case 6: Without the filter, 'note' types are counted normally.
+		// 5 regular + 2 note = 7 (only like excluded).
+		$this->assertSame( 7, Comment::pre_wp_update_comment_count_now( null, 0, $post_id ) );
 	}
 
 	/**
