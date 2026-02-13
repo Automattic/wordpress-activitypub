@@ -227,8 +227,28 @@ class Test_Comment extends \WP_UnitTestCase {
 		self::factory()->comment->create_post_comments( $post_id, 3, array( 'comment_approved' => '1' ) );
 		$this->assertSame( 5, Comment::pre_wp_update_comment_count_now( null, 0, $post_id ) );
 
-		// Case 4: $new is not null (set by another filter), should still recalculate to exclude ActivityPub types.
-		$this->assertSame( 5, Comment::pre_wp_update_comment_count_now( 10, 0, $post_id ) );
+		// Case 4: $new is not null (set by another filter), should return $new unmodified.
+		$this->assertSame( 10, Comment::pre_wp_update_comment_count_now( 10, 0, $post_id ) );
+
+		// Case 5: Other plugins can add excluded types via the filter.
+		$add_note = function ( $types ) {
+			$types[] = 'note';
+			return $types;
+		};
+		\add_filter( 'activitypub_excluded_comment_types', $add_note );
+
+		self::factory()->comment->create_post_comments(
+			$post_id,
+			2,
+			array(
+				'comment_approved' => '1',
+				'comment_type'     => 'note',
+			)
+		);
+		// 5 regular + 2 note + 3 like = 10 total, but like and note excluded = 5.
+		$this->assertSame( 5, Comment::pre_wp_update_comment_count_now( null, 0, $post_id ) );
+
+		\remove_filter( 'activitypub_excluded_comment_types', $add_note );
 	}
 
 	/**

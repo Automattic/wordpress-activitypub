@@ -33,7 +33,7 @@ class Comment {
 		\add_filter( 'get_avatar_comment_types', array( static::class, 'get_avatar_comment_types' ), 99 );
 		\add_action( 'update_option_activitypub_allow_likes', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_action( 'update_option_activitypub_allow_reposts', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
-		\add_filter( 'pre_wp_update_comment_count_now', array( static::class, 'pre_wp_update_comment_count_now' ), 20, 3 );
+		\add_filter( 'pre_wp_update_comment_count_now', array( static::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
 		\add_filter( 'get_comment_author', array( static::class, 'render_emoji' ), 10, 2 );
 		\add_filter( 'comment_author', array( static::class, 'unescape_emoji' ), 20 ); // After esc_html().
 		\add_filter( 'rest_comment_query', array( static::class, 'rest_comment_query' ) );
@@ -917,13 +917,29 @@ class Comment {
 	 * @return int|null The updated comment count, or null to use the default query.
 	 */
 	public static function pre_wp_update_comment_count_now( $new_count, $old_count, $post_id ) {
-		$excluded_types = array_filter( self::get_comment_type_slugs(), array( self::class, 'is_comment_type_enabled' ) );
+		if ( null === $new_count ) {
+			$excluded_types = array_filter( self::get_comment_type_slugs(), array( self::class, 'is_comment_type_enabled' ) );
 
-		if ( ! empty( $excluded_types ) ) {
-			global $wpdb;
+			if ( ! empty( $excluded_types ) ) {
+				/**
+				 * Filters the comment types excluded from the comment count.
+				 *
+				 * Other plugins can add their own comment types to this list
+				 * so a single query excludes all non-public types.
+				 *
+				 * @since unreleased
+				 *
+				 * @param string[] $excluded_types The comment type slugs to exclude.
+				 * @param int      $post_id        The post ID.
+				 */
+				$excluded_types = \apply_filters( 'activitypub_excluded_comment_types', $excluded_types, $post_id );
+				$excluded_types = array_unique( array_filter( $excluded_types ) );
 
-			// phpcs:ignore WordPress.DB
-			$new_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $wpdb->comments WHERE comment_post_ID = %d AND comment_approved = '1' AND comment_type NOT IN ('" . implode( "','", $excluded_types ) . "')", $post_id ) );
+				global $wpdb;
+
+				// phpcs:ignore WordPress.DB
+				$new_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $wpdb->comments WHERE comment_post_ID = %d AND comment_approved = '1' AND comment_type NOT IN ('" . implode( "','", $excluded_types ) . "')", $post_id ) );
+			}
 		}
 
 		return $new_count;
