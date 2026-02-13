@@ -445,4 +445,105 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 		Classic_Editor::add_meta_box( 'page' );
 		$this->assertArrayNotHasKey( 'page', $wp_meta_boxes );
 	}
+
+	/**
+	 * Test that rendering meta box persists default visibility for old posts.
+	 *
+	 * @covers ::render_meta_box
+	 * @covers ::get_default_visibility
+	 */
+	public function test_render_meta_box_persists_default_visibility_for_old_posts() {
+		// Create an old post (older than 30 days).
+		$old_post_id = self::factory()->post->create(
+			array(
+				'post_author'  => self::$user_id,
+				'post_status'  => 'publish',
+				'post_content' => 'Old post content',
+				'post_date'    => gmdate( 'Y-m-d H:i:s', strtotime( '-60 days' ) ),
+			)
+		);
+
+		// Ensure visibility is not set yet.
+		$this->assertEmpty( \get_post_meta( $old_post_id, 'activitypub_content_visibility', true ) );
+
+		// Render the meta box.
+		$post = \get_post( $old_post_id );
+		ob_start();
+		Classic_Editor::render_meta_box( $post );
+		ob_end_clean();
+
+		// Verify that the default visibility (local) was persisted.
+		$saved_visibility = \get_post_meta( $old_post_id, 'activitypub_content_visibility', true );
+		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, $saved_visibility );
+
+		// Clean up.
+		\wp_delete_post( $old_post_id, true );
+	}
+
+	/**
+	 * Test that rendering meta box does not persist visibility for new posts.
+	 *
+	 * @covers ::render_meta_box
+	 * @covers ::get_default_visibility
+	 */
+	public function test_render_meta_box_does_not_persist_public_for_new_posts() {
+		// Create a new post.
+		$new_post_id = self::factory()->post->create(
+			array(
+				'post_author'  => self::$user_id,
+				'post_status'  => 'publish',
+				'post_content' => 'New post content',
+			)
+		);
+
+		// Ensure visibility is not set yet.
+		$this->assertEmpty( \get_post_meta( $new_post_id, 'activitypub_content_visibility', true ) );
+
+		// Render the meta box.
+		$post = \get_post( $new_post_id );
+		ob_start();
+		Classic_Editor::render_meta_box( $post );
+		ob_end_clean();
+
+		// Verify that visibility was NOT persisted (because default is public).
+		$saved_visibility = \get_post_meta( $new_post_id, 'activitypub_content_visibility', true );
+		$this->assertEmpty( $saved_visibility );
+
+		// Clean up.
+		\wp_delete_post( $new_post_id, true );
+	}
+
+	/**
+	 * Test that rendering meta box does not overwrite existing visibility.
+	 *
+	 * @covers ::render_meta_box
+	 * @covers ::get_default_visibility
+	 */
+	public function test_render_meta_box_does_not_overwrite_existing_visibility() {
+		// Create an old post with explicit visibility set.
+		$old_post_id = self::factory()->post->create(
+			array(
+				'post_author'  => self::$user_id,
+				'post_status'  => 'publish',
+				'post_content' => 'Old post content',
+				'post_date'    => gmdate( 'Y-m-d H:i:s', strtotime( '-60 days' ) ),
+			)
+		);
+
+		// Set visibility to public (explicitly).
+		\update_post_meta( $old_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
+
+		// Render the meta box.
+		$post = \get_post( $old_post_id );
+		ob_start();
+		Classic_Editor::render_meta_box( $post );
+		ob_end_clean();
+
+		// Verify that visibility was NOT changed.
+		$saved_visibility = \get_post_meta( $old_post_id, 'activitypub_content_visibility', true );
+		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, $saved_visibility );
+
+		// Clean up.
+		\wp_delete_post( $old_post_id, true );
+	}
 }

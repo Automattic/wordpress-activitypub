@@ -138,6 +138,14 @@ class Classic_Editor {
 		$default_quote_policy  = \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
 		$quote_interaction     = \get_post_meta( $post->ID, 'activitypub_interaction_policy_quote', true ) ?: $default_quote_policy;
 
+		// Persist default visibility for old posts if not already set.
+		// This ensures old posts get their "do not federate" default saved immediately,
+		// matching the block editor behavior.
+		$saved_visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
+		if ( empty( $saved_visibility ) && ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC !== $content_visibility ) {
+			\update_post_meta( $post->ID, 'activitypub_content_visibility', $content_visibility );
+		}
+
 		?>
 		<p>
 			<label for="activitypub_content_warning">
