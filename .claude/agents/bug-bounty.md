@@ -24,6 +24,15 @@ gh issue list --state open --json number,title,body,labels --limit 30
 
 Review the issues and pick the one that is most straightforward to fix — look for clear reproduction steps, well-described expected behavior, and a scope that can be addressed with minimal changes.
 
+**Skip issues that already have a linked PR.** For each candidate issue, check:
+
+```bash
+gh issue view <number> --json comments,timelineItems --jq '.comments[].body' | grep -i "pull request\|/pull/"
+gh pr list --state open --search "Fixes #<number>" --json number,title
+```
+
+If any open PR already references the issue, move on to the next candidate.
+
 ## Step 2 — Analyze the Chosen Issue
 
 - Read the full issue including all comments: `gh issue view <number>`
@@ -53,9 +62,29 @@ Apply the **test** skill to add a PHPUnit test that reproduces the bug and verif
 
 Apply the **dev** skill to run linting, pre-push checks, and commit the changes. Push the branch.
 
-## Step 7 — Create Pull Request
+## Step 7 — Self-Review
+
+Before creating the PR, self-review your changes by applying the **code-review** agent checklist against `git diff origin/trunk...HEAD`.
+
+## Step 8 — Create Pull Request
 
 Apply the **pr** skill to create the PR as a **draft** (`--draft` flag). Reference the issue (`Fixes #<number>`), describe the fix, include a changelog entry (significance=Patch, type=Fixed). Always create PRs as drafts so a human can review before marking them ready.
+
+## Step 9 — Verify CI
+
+After pushing the branch and creating the PR, wait for CI to start and then monitor its status:
+
+```bash
+gh run list --branch <branch-name> --limit 1 --json status,conclusion,databaseId
+```
+
+Poll every 30 seconds until the run completes (status=completed). If CI **fails**:
+
+1. Fetch the failure logs: `gh run view <run-id> --log-failed`
+2. Apply the **code-style** and **test** skills to diagnose the issue.
+3. Fix the failing test(s), push, and repeat until CI is green.
+
+**Do NOT consider the task done until CI passes.** A draft PR with red CI is not a valid deliverable.
 
 ## Guidelines
 
