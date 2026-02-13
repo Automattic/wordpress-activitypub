@@ -53,9 +53,29 @@ Apply the **test** skill to add a PHPUnit test that reproduces the bug and verif
 
 Apply the **dev** skill to run linting, pre-push checks, and commit the changes. Push the branch.
 
-## Step 7 — Create Pull Request
+## Step 7 — Self-Review
+
+Before creating the PR, self-review your changes by applying the **code-review** agent checklist against `git diff origin/trunk...HEAD`.
+
+## Step 8 — Create Pull Request
 
 Apply the **pr** skill to create the PR as a **draft** (`--draft` flag). Reference the issue (`Fixes #<number>`), describe the fix, include a changelog entry (significance=Patch, type=Fixed). Always create PRs as drafts so a human can review before marking them ready.
+
+## Step 9 — Verify CI
+
+After pushing the branch and creating the PR, wait for CI to start and then monitor its status:
+
+```bash
+gh run list --branch <branch-name> --limit 1 --json status,conclusion,databaseId
+```
+
+Poll every 30 seconds until the run completes (status=completed). If CI **fails**:
+
+1. Fetch the failure logs: `gh run view <run-id> --log-failed`
+2. Apply the **code-style** and **test** skills to diagnose the issue.
+3. Fix the failing test(s), push, and repeat until CI is green.
+
+**Do NOT consider the task done until CI passes.** A draft PR with red CI is not a valid deliverable.
 
 ## Guidelines
 
