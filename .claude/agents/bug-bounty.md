@@ -24,6 +24,15 @@ gh issue list --state open --json number,title,body,labels --limit 30
 
 Review the issues and pick the one that is most straightforward to fix — look for clear reproduction steps, well-described expected behavior, and a scope that can be addressed with minimal changes.
 
+**Skip issues that already have a linked PR.** For each candidate issue, check:
+
+```bash
+gh issue view <number> --json comments,timelineItems --jq '.comments[].body' | grep -i "pull request\|/pull/"
+gh pr list --state open --search "Fixes #<number>" --json number,title
+```
+
+If any open PR already references the issue, move on to the next candidate.
+
 ## Step 2 — Analyze the Chosen Issue
 
 - Read the full issue including all comments: `gh issue view <number>`
