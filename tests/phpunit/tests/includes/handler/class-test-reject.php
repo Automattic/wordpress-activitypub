@@ -67,13 +67,13 @@ class Test_Reject extends \WP_UnitTestCase {
 	public function validate_object_provider() {
 		return array(
 			// Invalid cases.
-			'missing_type'            => array(
+			'missing_type'                       => array(
 				array(),
 				true,
 				false,
 				'Should return false when type is missing',
 			),
-			'missing_required_fields' => array(
+			'missing_required_fields'            => array(
 				array(
 					'type'  => 'Reject',
 					'actor' => 'foo',
@@ -82,15 +82,67 @@ class Test_Reject extends \WP_UnitTestCase {
 				false,
 				'Should return false when required fields are missing',
 			),
+			'object_is_string'                   => array(
+				array(
+					'type'   => 'Reject',
+					'actor'  => 'https://example.com/actor/1',
+					'object' => 'https://example.com/activity/1',
+				),
+				true,
+				false,
+				'Should return false when object is a string instead of an array',
+			),
+			'object_missing_id'                  => array(
+				array(
+					'type'   => 'Reject',
+					'actor'  => 'https://example.com/actor/1',
+					'object' => array(
+						'actor'  => 'https://example.com/actor/2',
+						'type'   => 'Follow',
+						'object' => 'https://example.com/actor/1',
+					),
+				),
+				true,
+				false,
+				'Should return false when object is missing id',
+			),
+			'object_missing_type'                => array(
+				array(
+					'type'   => 'Reject',
+					'actor'  => 'https://example.com/actor/1',
+					'object' => array(
+						'id'     => 'https://example.com/activity/1',
+						'actor'  => 'https://example.com/actor/2',
+						'object' => 'https://example.com/actor/1',
+					),
+				),
+				true,
+				false,
+				'Should return false when object is missing type',
+			),
+			'object_missing_actor'               => array(
+				array(
+					'type'   => 'Reject',
+					'actor'  => 'https://example.com/actor/1',
+					'object' => array(
+						'id'     => 'https://example.com/activity/1',
+						'type'   => 'Follow',
+						'object' => 'https://example.com/actor/1',
+					),
+				),
+				true,
+				false,
+				'Should return false when object is missing actor',
+			),
 			// Valid cases - non-Reject type should pass through.
-			'type_not_reject'         => array(
+			'type_not_reject'                    => array(
 				array( 'type' => 'Follow' ),
 				true,
 				true,
 				'Should return true when type is not Reject',
 			),
 			// Valid Reject activity.
-			'valid_reject_activity'   => array(
+			'valid_reject_activity'              => array(
 				array(
 					'type'   => 'Reject',
 					'actor'  => 'foo',
@@ -105,8 +157,23 @@ class Test_Reject extends \WP_UnitTestCase {
 				true,
 				'Should return true for valid Reject activity',
 			),
+			// Valid Reject without optional object.object field.
+			'valid_reject_without_object_object' => array(
+				array(
+					'type'   => 'Reject',
+					'actor'  => 'https://example.com/actor/1',
+					'object' => array(
+						'id'    => 'https://example.com/activity/1',
+						'actor' => 'https://example.com/actor/2',
+						'type'  => 'Follow',
+					),
+				),
+				true,
+				true,
+				'Should return true for valid Reject activity without object.object',
+			),
 			// Test with input_valid false.
-			'input_valid_false'       => array(
+			'input_valid_false'                  => array(
 				array( 'type' => 'Follow' ),
 				false,
 				false,

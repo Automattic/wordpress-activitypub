@@ -102,6 +102,14 @@ class Reject {
 			return false;
 		}
 
+		if ( ! \is_array( $activity['object'] ) ) {
+			return false;
+		}
+
+		if ( ! isset( $activity['object']['id'], $activity['object']['type'], $activity['object']['actor'] ) ) {
+			return false;
+		}
+
 		return $valid;
 	}
 }
