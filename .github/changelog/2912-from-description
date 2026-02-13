@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed missing object validation in the Reject handler that could cause PHP errors when processing malformed Reject activities.
