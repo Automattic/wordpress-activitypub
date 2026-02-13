@@ -299,4 +299,116 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 		);
 		$this->assertFalse( \Activitypub\is_ap_post( $custom_id ), 'Should return false for custom post type' );
 	}
+
+	/**
+	 * Test get_content_visibility defaults for old posts.
+	 *
+	 * @covers \Activitypub\get_content_visibility
+	 */
+	public function test_get_content_visibility_defaults_to_local_for_old_posts() {
+		// Create a post with a date older than 1 month.
+		$old_date    = gmdate( 'Y-m-d H:i:s', time() - ( 31 * DAY_IN_SECONDS ) );
+		$old_post_id = wp_insert_post(
+			array(
+				'post_type'     => 'post',
+				'post_title'    => 'Old Post',
+				'post_content'  => 'This post is more than a month old',
+				'post_status'   => 'publish',
+				'post_date'     => $old_date,
+				'post_date_gmt' => $old_date,
+			)
+		);
+
+		// Without explicit visibility meta, old posts should default to 'local'.
+		$visibility = \Activitypub\get_content_visibility( $old_post_id );
+		$this->assertEquals(
+			ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL,
+			$visibility,
+			'Old posts without explicit visibility should default to local'
+		);
+	}
+
+	/**
+	 * Test get_content_visibility defaults for new posts.
+	 *
+	 * @covers \Activitypub\get_content_visibility
+	 */
+	public function test_get_content_visibility_defaults_to_public_for_new_posts() {
+		// Create a recent post.
+		$new_post_id = wp_insert_post(
+			array(
+				'post_type'    => 'post',
+				'post_title'   => 'New Post',
+				'post_content' => 'This is a recent post',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Recent posts should default to 'public'.
+		$visibility = \Activitypub\get_content_visibility( $new_post_id );
+		$this->assertEquals(
+			ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+			$visibility,
+			'Recent posts without explicit visibility should default to public'
+		);
+	}
+
+	/**
+	 * Test get_content_visibility respects explicitly set values.
+	 *
+	 * @covers \Activitypub\get_content_visibility
+	 */
+	public function test_get_content_visibility_respects_explicit_values() {
+		// Create an old post with explicit quiet_public visibility.
+		$old_date    = gmdate( 'Y-m-d H:i:s', time() - ( 31 * DAY_IN_SECONDS ) );
+		$old_post_id = wp_insert_post(
+			array(
+				'post_type'     => 'post',
+				'post_title'    => 'Old Post with Explicit Visibility',
+				'post_content'  => 'This post has explicit visibility set',
+				'post_status'   => 'publish',
+				'post_date'     => $old_date,
+				'post_date_gmt' => $old_date,
+			)
+		);
+		add_post_meta( $old_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC );
+
+		// Should respect the explicit value even for old posts.
+		$visibility = \Activitypub\get_content_visibility( $old_post_id );
+		$this->assertEquals(
+			ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC,
+			$visibility,
+			'Explicitly set visibility should be respected even for old posts'
+		);
+	}
+
+	/**
+	 * Test get_content_visibility respects federated status.
+	 *
+	 * @covers \Activitypub\get_content_visibility
+	 */
+	public function test_get_content_visibility_respects_federated_status() {
+		// Create an old post that was already federated.
+		$old_date    = gmdate( 'Y-m-d H:i:s', time() - ( 31 * DAY_IN_SECONDS ) );
+		$old_post_id = wp_insert_post(
+			array(
+				'post_type'     => 'post',
+				'post_title'    => 'Old Federated Post',
+				'post_content'  => 'This post was already federated',
+				'post_status'   => 'publish',
+				'post_date'     => $old_date,
+				'post_date_gmt' => $old_date,
+			)
+		);
+		// Mark it as federated.
+		add_post_meta( $old_post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		// Old posts that were already federated should remain public.
+		$visibility = \Activitypub\get_content_visibility( $old_post_id );
+		$this->assertEquals(
+			ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+			$visibility,
+			'Old posts that were already federated should remain public'
+		);
+	}
 }

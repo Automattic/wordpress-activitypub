@@ -283,6 +283,20 @@ function get_content_visibility( $post_id ) {
 
 	if ( in_array( $visibility, $options, true ) ) {
 		$_visibility = $visibility;
+	} elseif ( ! \metadata_exists( 'post', $post->ID, 'activitypub_content_visibility' ) ) {
+		// Apply default visibility logic for posts without explicit visibility.
+		// Posts older than 1 month default to 'local' (not federated).
+		$object_state = get_wp_object_state( $post );
+
+		// If post was already federated, keep it public.
+		if ( ACTIVITYPUB_OBJECT_STATE_FEDERATED !== $object_state ) {
+			$post_timestamp = \strtotime( $post->post_date_gmt );
+			$one_month_ago  = time() - ( 30 * DAY_IN_SECONDS );
+
+			if ( $post_timestamp > 0 && $post_timestamp < $one_month_ago ) {
+				$_visibility = ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL;
+			}
+		}
 	}
 
 	/**
