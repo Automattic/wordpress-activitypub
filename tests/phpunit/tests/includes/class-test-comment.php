@@ -227,8 +227,8 @@ class Test_Comment extends \WP_UnitTestCase {
 		self::factory()->comment->create_post_comments( $post_id, 3, array( 'comment_approved' => '1' ) );
 		$this->assertSame( 5, Comment::pre_wp_update_comment_count_now( null, 0, $post_id ) );
 
-		// Case 4: $new is not null, should return $new unmodified.
-		$this->assertSame( 10, Comment::pre_wp_update_comment_count_now( 10, 0, $post_id ) );
+		// Case 4: $new is not null (set by another filter), should still recalculate to exclude ActivityPub types.
+		$this->assertSame( 5, Comment::pre_wp_update_comment_count_now( 10, 0, $post_id ) );
 	}
 
 	/**
