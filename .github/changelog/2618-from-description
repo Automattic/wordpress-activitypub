@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix visibility default for old posts to prevent unintentional federation when editing posts older than 1 month.
