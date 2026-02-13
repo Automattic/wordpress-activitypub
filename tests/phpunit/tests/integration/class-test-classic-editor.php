@@ -454,12 +454,14 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 	 */
 	public function test_render_meta_box_persists_default_visibility_for_old_posts() {
 		// Create an old post (older than 30 days).
+		$old_date    = gmdate( 'Y-m-d H:i:s', strtotime( '-60 days' ) );
 		$old_post_id = self::factory()->post->create(
 			array(
-				'post_author'  => self::$user_id,
-				'post_status'  => 'publish',
-				'post_content' => 'Old post content',
-				'post_date'    => gmdate( 'Y-m-d H:i:s', strtotime( '-60 days' ) ),
+				'post_author'   => self::$user_id,
+				'post_status'   => 'publish',
+				'post_content'  => 'Old post content',
+				'post_date'     => $old_date,
+				'post_date_gmt' => $old_date,
 			)
 		);
 
@@ -521,12 +523,14 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 	 */
 	public function test_render_meta_box_does_not_overwrite_existing_visibility() {
 		// Create an old post with explicit visibility set.
+		$old_date    = gmdate( 'Y-m-d H:i:s', strtotime( '-60 days' ) );
 		$old_post_id = self::factory()->post->create(
 			array(
-				'post_author'  => self::$user_id,
-				'post_status'  => 'publish',
-				'post_content' => 'Old post content',
-				'post_date'    => gmdate( 'Y-m-d H:i:s', strtotime( '-60 days' ) ),
+				'post_author'   => self::$user_id,
+				'post_status'   => 'publish',
+				'post_content'  => 'Old post content',
+				'post_date'     => $old_date,
+				'post_date_gmt' => $old_date,
 			)
 		);
 
