@@ -445,4 +445,175 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 		Classic_Editor::add_meta_box( 'page' );
 		$this->assertArrayNotHasKey( 'page', $wp_meta_boxes );
 	}
+
+	/**
+	 * Test get_default_visibility respects explicitly set public visibility.
+	 *
+	 * Regression test for issue #2618.
+	 * When a user explicitly sets visibility to "Public" (empty string) on an old post,
+	 * it should not be changed to "Local" when editing the post again.
+	 *
+	 * @covers ::get_default_visibility
+	 */
+	public function test_get_default_visibility_respects_explicit_public() {
+		// Create an old post (more than 30 days old).
+		$old_post_id = self::factory()->post->create(
+			array(
+				'post_author'  => self::$user_id,
+				'post_status'  => 'publish',
+				'post_content' => 'Old post content',
+				'post_date'    => gmdate( 'Y-m-d H:i:s', strtotime( '-60 days' ) ),
+			)
+		);
+
+		// Explicitly set visibility to public (empty string).
+		\update_post_meta( $old_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
+
+		// Use reflection to call the private method.
+		$reflection = new \ReflectionClass( Classic_Editor::class );
+		$method     = $reflection->getMethod( 'get_default_visibility' );
+		$method->setAccessible( true );
+
+		$post       = \get_post( $old_post_id );
+		$visibility = $method->invoke( null, $post );
+
+		// Should return public (empty string), not local.
+		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, $visibility );
+
+		// Clean up.
+		\wp_delete_post( $old_post_id, true );
+	}
+
+	/**
+	 * Test get_default_visibility defaults old posts to local when not set.
+	 *
+	 * @covers ::get_default_visibility
+	 */
+	public function test_get_default_visibility_defaults_old_posts_to_local() {
+		// Create an old post (more than 30 days old) with no visibility meta.
+		$old_post_id = self::factory()->post->create(
+			array(
+				'post_author'  => self::$user_id,
+				'post_status'  => 'draft', // Use draft to prevent auto-federation.
+				'post_content' => 'Old post content',
+				'post_date'    => gmdate( 'Y-m-d H:i:s', strtotime( '-60 days' ) ),
+			)
+		);
+
+		// Ensure no visibility meta exists.
+		\delete_post_meta( $old_post_id, 'activitypub_content_visibility' );
+		\delete_post_meta( $old_post_id, 'activitypub_status' );
+
+		// Use reflection to call the private method.
+		$reflection = new \ReflectionClass( Classic_Editor::class );
+		$method     = $reflection->getMethod( 'get_default_visibility' );
+		$method->setAccessible( true );
+
+		$post       = \get_post( $old_post_id );
+		$visibility = $method->invoke( null, $post );
+
+		// Should default to local for old posts without visibility meta.
+		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, $visibility );
+
+		// Clean up.
+		\wp_delete_post( $old_post_id, true );
+	}
+
+	/**
+	 * Test get_default_visibility respects explicitly set local visibility.
+	 *
+	 * @covers ::get_default_visibility
+	 */
+	public function test_get_default_visibility_respects_explicit_local() {
+		// Create a new post (less than 30 days old).
+		$new_post_id = self::factory()->post->create(
+			array(
+				'post_author'  => self::$user_id,
+				'post_status'  => 'publish',
+				'post_content' => 'New post content',
+			)
+		);
+
+		// Explicitly set visibility to local.
+		\update_post_meta( $new_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+
+		// Use reflection to call the private method.
+		$reflection = new \ReflectionClass( Classic_Editor::class );
+		$method     = $reflection->getMethod( 'get_default_visibility' );
+		$method->setAccessible( true );
+
+		$post       = \get_post( $new_post_id );
+		$visibility = $method->invoke( null, $post );
+
+		// Should return local, not public (the default for new posts).
+		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, $visibility );
+
+		// Clean up.
+		\wp_delete_post( $new_post_id, true );
+	}
+
+	/**
+	 * Test get_default_visibility defaults new posts to public.
+	 *
+	 * @covers ::get_default_visibility
+	 */
+	public function test_get_default_visibility_defaults_new_posts_to_public() {
+		// Create a new post (less than 30 days old) with no visibility meta.
+		$new_post_id = self::factory()->post->create(
+			array(
+				'post_author'  => self::$user_id,
+				'post_status'  => 'publish',
+				'post_content' => 'New post content',
+			)
+		);
+
+		// Use reflection to call the private method.
+		$reflection = new \ReflectionClass( Classic_Editor::class );
+		$method     = $reflection->getMethod( 'get_default_visibility' );
+		$method->setAccessible( true );
+
+		$post       = \get_post( $new_post_id );
+		$visibility = $method->invoke( null, $post );
+
+		// Should default to public for new posts.
+		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, $visibility );
+
+		// Clean up.
+		\wp_delete_post( $new_post_id, true );
+	}
+
+	/**
+	 * Test get_default_visibility returns public for federated old posts.
+	 *
+	 * @covers ::get_default_visibility
+	 */
+	public function test_get_default_visibility_federated_posts_default_to_public() {
+		// Create an old post that was already federated.
+		$old_post_id = self::factory()->post->create(
+			array(
+				'post_author'  => self::$user_id,
+				'post_status'  => 'draft', // Use draft to prevent auto-federation.
+				'post_content' => 'Old federated post',
+				'post_date'    => gmdate( 'Y-m-d H:i:s', strtotime( '-60 days' ) ),
+			)
+		);
+
+		// Ensure no visibility meta exists, then mark as federated.
+		\delete_post_meta( $old_post_id, 'activitypub_content_visibility' );
+		\update_post_meta( $old_post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		// Use reflection to call the private method.
+		$reflection = new \ReflectionClass( Classic_Editor::class );
+		$method     = $reflection->getMethod( 'get_default_visibility' );
+		$method->setAccessible( true );
+
+		$post       = \get_post( $old_post_id );
+		$visibility = $method->invoke( null, $post );
+
+		// Should default to public for federated posts, even if old.
+		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, $visibility );
+
+		// Clean up.
+		\wp_delete_post( $old_post_id, true );
+	}
 }

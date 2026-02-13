@@ -112,6 +112,22 @@ describe( 'EditorPlugin getDefaultVisibility', () => {
 		expect( result ).toBe( 'public' );
 	} );
 
+	test( 'respects explicit public visibility (empty string) on old posts', () => {
+		// Regression test for issue #2618.
+		// When visibility is explicitly set to public (empty string), it should be preserved.
+		const meta = {
+			activitypub_content_visibility: '',
+			activitypub_status: 'pending',
+		};
+		const postDate = new Date( Date.now() - 60 * 24 * 60 * 60 * 1000 ); // 60 days ago
+
+		const result = getDefaultVisibility( meta, postDate );
+
+		// Should return 'public' (or empty string normalized to 'public'),
+		// not 'local' based on post age.
+		expect( result ).toBe( 'public' );
+	} );
+
 	test( 'handles edge case: exactly 30 days old', () => {
 		const meta = {
 			activitypub_status: 'pending',
@@ -143,12 +159,16 @@ describe( 'EditorPlugin visibility sync logic', () => {
 	 */
 	const simulateSyncLogic = ( meta, postDate, setMetaFn ) => {
 		const defaultVisibility = getDefaultVisibility( meta, postDate );
-		const storedVisibility = meta?.activitypub_content_visibility;
 
-		// This mirrors the useEffect logic in plugin.js.
-		// WordPress may return '' (empty string) or undefined for unset meta.
+		// This mirrors the updated useEffect logic in plugin.js.
+		// Check if the meta key exists (not just if it's truthy).
+		// ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC is an empty string, so we need
+		// to distinguish between "not set" and "set to public".
+		const visibilityIsSet = meta && 'activitypub_content_visibility' in meta;
+
+		// Only sync if visibility was never set and the default isn't 'public'.
 		// We skip 'public' since it's the implicit default.
-		if ( ! storedVisibility && defaultVisibility !== 'public' ) {
+		if ( ! visibilityIsSet && defaultVisibility !== 'public' ) {
 			setMetaFn( { ...meta, activitypub_content_visibility: defaultVisibility } );
 		}
 	};
@@ -186,29 +206,28 @@ describe( 'EditorPlugin visibility sync logic', () => {
 		expect( setMeta ).not.toHaveBeenCalled();
 	} );
 
-	test( 'syncs when stored value is empty string and default is not public', () => {
+	test( 'does not sync when visibility is explicitly set to empty string (public)', () => {
 		const setMeta = jest.fn();
-		// Empty string means unset - sync if default differs from public.
+		// Regression test for issue #2618.
+		// Empty string means explicitly set to public - should not be overridden.
 		const meta = { activitypub_content_visibility: '' };
 		const postDate = new Date( Date.now() - 60 * 24 * 60 * 60 * 1000 ); // 60 days ago.
 
 		simulateSyncLogic( meta, postDate, setMeta );
 
-		// Old post defaults to local, so we sync.
-		expect( setMeta ).toHaveBeenCalledWith( {
-			activitypub_content_visibility: 'local',
-		} );
+		// Even though post is old, don't override explicit public choice.
+		expect( setMeta ).not.toHaveBeenCalled();
 	} );
 
-	test( 'does not sync when stored value is empty string and default is public', () => {
+	test( 'does not sync when visibility is explicitly set (any value)', () => {
 		const setMeta = jest.fn();
-		// Empty string stored, default is public = no sync needed.
-		const meta = { activitypub_content_visibility: '' };
-		const postDate = new Date(); // Now - defaults to public.
+		// Any explicitly set value should be preserved.
+		const meta = { activitypub_content_visibility: 'local' };
+		const postDate = new Date(); // New post - would normally default to public.
 
 		simulateSyncLogic( meta, postDate, setMeta );
 
-		// Default is public, no sync needed.
+		// Explicit local choice should be preserved even for new posts.
 		expect( setMeta ).not.toHaveBeenCalled();
 	} );
 

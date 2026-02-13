@@ -37,12 +37,14 @@ const EditorPlugin = () => {
 	// Sync computed default to meta when it differs from stored value.
 	// This ensures the default is persisted even if user doesn't change it.
 	useEffect( () => {
-		const storedVisibility = meta?.activitypub_content_visibility;
+		// Check if the meta key exists (not just if it's truthy).
+		// ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC is an empty string, so we need
+		// to distinguish between "not set" and "set to public".
+		const visibilityIsSet = meta && 'activitypub_content_visibility' in meta;
 
 		// Only sync if visibility was never set and the default isn't 'public'.
-		// WordPress may return '' (empty string) or undefined for unset meta.
 		// We skip 'public' since it's the implicit default.
-		if ( ! storedVisibility && defaultVisibility !== 'public' ) {
+		if ( ! visibilityIsSet && defaultVisibility !== 'public' ) {
 			setMeta( { ...meta, activitypub_content_visibility: defaultVisibility } );
 		}
 	}, [ defaultVisibility, meta, setMeta ] );

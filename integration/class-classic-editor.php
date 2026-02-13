@@ -221,8 +221,10 @@ class Classic_Editor {
 	 */
 	private static function get_default_visibility( $post ) {
 		// If already set, use that value.
+		// Note: ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC is an empty string, so we need to check
+		// if the meta key exists, not just if the value is truthy.
 		$saved_visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
-		if ( $saved_visibility ) {
+		if ( \metadata_exists( 'post', $post->ID, 'activitypub_content_visibility' ) ) {
 			return $saved_visibility;
 		}
 

@@ -17,9 +17,11 @@
  * @return {string} The default visibility value ('public', 'quiet_public', or 'local').
  */
 export const getDefaultVisibility = ( meta, postDate ) => {
-	// If already set, use that value (handles both 'public' and '' as public).
-	if ( meta?.activitypub_content_visibility ) {
-		return meta.activitypub_content_visibility;
+	// If already set, use that value.
+	// Note: We need to check if the key exists, not just if it's truthy,
+	// because ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC is an empty string.
+	if ( meta && 'activitypub_content_visibility' in meta ) {
+		return meta.activitypub_content_visibility || 'public';
 	}
 
 	// If post is federated, use public.
