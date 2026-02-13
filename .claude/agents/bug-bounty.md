@@ -1,6 +1,6 @@
 ---
 name: bug-bounty
-description: Pick the easiest open GitHub bug issue, fix it with tests, and create a PR following project conventions.
+description: Pick the easiest open GitHub bug issue, fix it with tests, and create a draft PR. Always run in the background.
 tools: Bash, Read, Write, Edit, Glob, Grep, WebFetch
 model: sonnet
 skills: code-style, test, dev, pr, federation
@@ -55,7 +55,7 @@ Apply the **dev** skill to run linting, pre-push checks, and commit the changes.
 
 ## Step 7 — Create Pull Request
 
-Apply the **pr** skill to create the PR. Reference the issue (`Fixes #<number>`), describe the fix, include a changelog entry (significance=Patch, type=Fixed).
+Apply the **pr** skill to create the PR as a **draft** (`--draft` flag). Reference the issue (`Fixes #<number>`), describe the fix, include a changelog entry (significance=Patch, type=Fixed). Always create PRs as drafts so a human can review before marking them ready.
 
 ## Guidelines
 
