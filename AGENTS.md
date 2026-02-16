@@ -92,7 +92,7 @@ See `tests/README.md` for test utilities, data factories, and detailed patterns.
 
 **REST Controllers** — Expose AP endpoints under `ACTIVITYPUB_REST_NAMESPACE`. See `includes/rest/`.
 
-**Key helpers:** `get_remote_metadata_by_actor()`, `object_to_uri()`, `Webfinger::resolve()`.
+**Key helpers** (see `includes/functions-*.php` and `includes/class-webfinger.php`): `get_remote_metadata_by_actor()`, `object_to_uri()`, `Webfinger::resolve()`.
 
 ## Documentation Index
 
