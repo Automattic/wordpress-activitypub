@@ -126,8 +126,13 @@ class Outbox {
 	 * @return void
 	 */
 	private static function invalidate_existing_items( $object_id, $activity_type, $current_id ) {
-		// Do not invalidate items for Announce activities.
-		if ( 'Announce' === $activity_type ) {
+		/*
+		 * Do not invalidate items for Announce, Accept, or Reject activities.
+		 * Accept/Reject are per-request responses (e.g. to individual incoming
+		 * QuoteRequests) and must not cancel each other even when they share
+		 * the same object ID.
+		 */
+		if ( in_array( $activity_type, array( 'Announce', 'Accept', 'Reject' ), true ) ) {
 			return;
 		}
 

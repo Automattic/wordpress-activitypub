@@ -33,7 +33,7 @@ class Comment {
 		\add_filter( 'get_avatar_comment_types', array( static::class, 'get_avatar_comment_types' ), 99 );
 		\add_action( 'update_option_activitypub_allow_likes', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_action( 'update_option_activitypub_allow_reposts', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
-		\add_filter( 'pre_wp_update_comment_count_now', array( static::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
+		\add_filter( 'pre_wp_update_comment_count_now', array( static::class, 'pre_wp_update_comment_count_now' ), 5, 3 );
 		\add_filter( 'get_comment_author', array( static::class, 'render_emoji' ), 10, 2 );
 		\add_filter( 'comment_author', array( static::class, 'unescape_emoji' ), 20 ); // After esc_html().
 		\add_filter( 'rest_comment_query', array( static::class, 'rest_comment_query' ) );
@@ -921,6 +921,29 @@ class Comment {
 			$excluded_types = array_filter( self::get_comment_type_slugs(), array( self::class, 'is_comment_type_enabled' ) );
 
 			if ( ! empty( $excluded_types ) ) {
+				/*
+				 * Include 'note' type when Gutenberg's filter is registered, so a
+				 * single query excludes both ActivityPub and Gutenberg types.
+				 */
+				if ( \has_filter( 'pre_wp_update_comment_count_now', 'gutenberg_exclude_notes_from_comment_count' ) ) {
+					$excluded_types[] = 'note';
+				}
+
+				/**
+				 * Filters the comment types excluded from the comment count.
+				 *
+				 * Runs at priority 5 on `pre_wp_update_comment_count_now` so that
+				 * a single query can exclude types from multiple plugins. Other
+				 * plugins can hook here to add their own comment types.
+				 *
+				 * @since unreleased
+				 *
+				 * @param string[] $excluded_types The comment type slugs to exclude.
+				 * @param int      $post_id        The post ID.
+				 */
+				$excluded_types = \apply_filters( 'activitypub_excluded_comment_types', $excluded_types, $post_id );
+				$excluded_types = array_unique( array_filter( $excluded_types ) );
+
 				global $wpdb;
 
 				// phpcs:ignore WordPress.DB
