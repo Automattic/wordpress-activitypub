@@ -102,4 +102,4 @@ git push --force-with-lease
 
 ## Reference
 
-See [Pull Request Guide](../../../docs/pull-request.md) for complete workflow details.
+See `docs/pull-request.md` for complete workflow details.

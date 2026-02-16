@@ -23,7 +23,7 @@ All integrations live in the `integration/` directory.
 - WP User Avatars
 - And 13+ more
 
-For complete directory structure and naming conventions, see [PHP Class Structure](../../../docs/php-class-structure.md).
+For complete directory structure and naming conventions, see `docs/php-class-structure.md`.
 
 ## Creating New Integration
 

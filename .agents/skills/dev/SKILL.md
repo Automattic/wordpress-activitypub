@@ -49,11 +49,11 @@ npm run env-test -- --coverage-html ./coverage  # Generate HTML report.
 
 ## Comprehensive Documentation
 
-See [Development Environment Setup](../../../docs/development-environment.md) for detailed setup instructions.
+See `docs/development-environment.md` for detailed setup instructions.
 
-See [Testing Reference](../../../tests/README.md) for comprehensive testing guidance.
+See `tests/README.md` for comprehensive testing guidance.
 
-See [Code Linting](../../../docs/code-linting.md) for linting configuration and standards.
+See `docs/code-linting.md` for linting configuration and standards.
 
 ## Pre-commit Hooks
 

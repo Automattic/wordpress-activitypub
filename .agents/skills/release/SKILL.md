@@ -23,7 +23,7 @@ When updating versions manually, change these files:
 
 ## Comprehensive Release Guide
 
-See [Release Process](../../../docs/release-process.md) for complete release workflow and detailed steps.
+See [Release Process](docs/release-process.md) for complete release workflow and detailed steps.
 
 ## Release Workflow
 
@@ -45,7 +45,7 @@ npm run release
 # 3. Create GitHub release from trunk using the new tag.
 ```
 
-See [Release Process - Major/Minor](../../../docs/release-process.md) for detailed steps.
+See [Release Process - Major/Minor](docs/release-process.md) for detailed steps.
 
 ### Patch Releases
 
@@ -72,7 +72,7 @@ git push -u origin tags/5.3.1
 
 **Important:** Use `-m 1` flag when cherry-picking merge commits to select the mainline parent.
 
-See [Release Process - Patch Releases](../../../docs/release-process.md#patch-releases) for detailed steps.
+See [Release Process - Patch Releases](docs/release-process.md#patch-releases) for detailed steps.
 
 ## Changelog Management
 

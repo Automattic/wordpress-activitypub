@@ -7,7 +7,7 @@ description: ActivityPub protocol specification and federation concepts. Use whe
 
 This skill provides understanding of the ActivityPub protocol specification and how federation works.
 
-**For supported features and compatibility:** See [FEDERATION.md](../../../FEDERATION.md) for the complete list of implemented FEPs, supported standards, and federation compatibility details.
+**For supported features and compatibility:** See [FEDERATION.md](FEDERATION.md) for the complete list of implemented FEPs, supported standards, and federation compatibility details.
 
 **For implementation details:** See AGENTS.md for transformers, handlers, and PHP code patterns.
 
@@ -246,7 +246,7 @@ For public posts with many recipients on same server:
 
 ### Supported Standards
 
-See [FEDERATION.md](../../../FEDERATION.md) for the complete list of implemented standards and FEPs, including:
+See [FEDERATION.md](FEDERATION.md) for the complete list of implemented standards and FEPs, including:
 - WebFinger - Actor discovery.
 - HTTP Signatures - Request authentication.
 - NodeInfo - Server metadata.
@@ -261,7 +261,7 @@ FEPs extend ActivityPub with additional features. Common FEP categories include:
 - Follower synchronization.
 - Actor metadata extensions.
 
-**For supported FEPs in this plugin:** See [FEDERATION.md](../../../FEDERATION.md) for the authoritative list of implemented FEPs.
+**For supported FEPs in this plugin:** See [FEDERATION.md](FEDERATION.md) for the authoritative list of implemented FEPs.
 
 ## Implementation Notes
 
@@ -312,5 +312,5 @@ curl https://site.com/.well-known/nodeinfo
 
 - [ActivityPub Spec](https://www.w3.org/TR/activitypub/)
 - [ActivityStreams Vocabulary](https://www.w3.org/TR/activitystreams-vocabulary/)
-- [Project FEDERATION.md](../../../FEDERATION.md)
+- [Project FEDERATION.md](FEDERATION.md)
 - [FEPs Repository](https://codeberg.org/fediverse/fep)

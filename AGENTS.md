@@ -6,7 +6,11 @@ WordPress plugin implementing the ActivityPub protocol, enabling federation with
 
 Prefer reading project files and `docs/` over relying on training data for WordPress and ActivityPub patterns.
 
-**Do NOT:** use PHP 7.3+ syntax (named args, union types, `match`, trailing commas in params) | edit WordPress core files | use `remove_all_filters('pre_http_request')` in tests | hardcode new version numbers (use `'unreleased'`).
+**Do NOT:**
+- Use PHP 7.3+ syntax (named args, union types, `match`, trailing commas in params)
+- Edit WordPress core files
+- Use `remove_all_filters('pre_http_request')` in tests
+- Hardcode new version numbers (use `'unreleased'`)
 
 ## Directory Structure
 

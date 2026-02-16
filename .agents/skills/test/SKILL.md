@@ -9,7 +9,7 @@ This skill provides guidance on writing and running tests for the WordPress Acti
 
 ## Quick Reference
 
-For complete testing commands and environment setup, see [Testing Reference](../../../tests/README.md).
+For complete testing commands and environment setup, see [Testing Reference](tests/README.md).
 
 ### Key Commands
 - **PHP:** `npm run env-test`
@@ -45,9 +45,9 @@ class Test_Feature extends WP_UnitTestCase {
 
 ### Common Test Patterns
 
-For transformer and handler testing patterns, see [Testing Reference - Writing Effective Tests](../../../tests/README.md#writing-effective-tests).
+For transformer and handler testing patterns, see [Testing Reference - Writing Effective Tests](tests/README.md#writing-effective-tests).
 
-For mocking HTTP requests and other utilities, see [Testing Reference - Test Utilities](../../../tests/README.md#test-utilities).
+For mocking HTTP requests and other utilities, see [Testing Reference - Test Utilities](tests/README.md#test-utilities).
 
 ### Test Groups
 
@@ -93,11 +93,11 @@ test('WebFinger discovery works', async ({ page }) => {
 
 ## Test Data Factories
 
-For creating test data (users, posts, comments), see [Testing Reference - Test Utilities](../../../tests/README.md#test-utilities).
+For creating test data (users, posts, comments), see [Testing Reference - Test Utilities](tests/README.md#test-utilities).
 
 ## Coverage Reports
 
-See [Testing Reference](../../../tests/README.md) for detailed coverage generation instructions.
+See [Testing Reference](tests/README.md) for detailed coverage generation instructions.
 
 ## Debugging Tests
 

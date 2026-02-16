@@ -38,9 +38,9 @@ When in a namespace, always escape WordPress functions with backslash: `\get_opt
 
 ## Comprehensive Standards
 
-See [PHP Coding Standards](../../../docs/php-coding-standards.md) for complete WordPress coding standards.
+See `docs/php-coding-standards.md` for complete WordPress coding standards.
 
-See [PHP Class Structure](../../../docs/php-class-structure.md) for detailed directory organization.
+See `docs/php-class-structure.md` for detailed directory organization.
 
 ## Directory Structure
 
