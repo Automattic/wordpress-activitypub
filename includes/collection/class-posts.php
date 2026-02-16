@@ -532,14 +532,12 @@ class Posts {
 		$exclude    = array();
 
 		// If total exceeds the hard cap, drop the date filter to purge oldest items first.
+		$overflow   = $total > self::MAX_ITEMS;
 		$date_query = array(
 			array(
 				'before' => $cutoff,
 			),
 		);
-		if ( $total > self::MAX_ITEMS ) {
-			$date_query = array();
-		}
 
 		$query_args = array(
 			'post_type'   => self::POST_TYPE,
@@ -550,7 +548,7 @@ class Posts {
 			'order'       => 'ASC',
 		);
 
-		if ( ! empty( $date_query ) ) {
+		if ( ! $overflow ) {
 			$query_args['date_query'] = $date_query;
 		}
 
@@ -593,12 +591,8 @@ class Posts {
 			}
 
 			// Once we're back under the cap, re-apply the date filter.
-			if ( empty( $date_query ) && ( $total - $deleted ) <= self::MAX_ITEMS ) {
-				$date_query               = array(
-					array(
-						'before' => $cutoff,
-					),
-				);
+			if ( $overflow && ( $total - $deleted ) <= self::MAX_ITEMS ) {
+				$overflow                 = false;
 				$query_args['date_query'] = $date_query;
 			}
 		} while ( ! empty( $post_ids ) && ( \time() - $start_time ) < 30 );
