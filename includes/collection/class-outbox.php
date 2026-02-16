@@ -28,6 +28,16 @@ class Outbox {
 	const POST_TYPE = 'ap_outbox';
 
 	/**
+	 * Maximum number of outbox items to keep.
+	 *
+	 * When the total count exceeds this, the oldest items are purged
+	 * regardless of their age. Acts as a safety net for runaway growth.
+	 *
+	 * @var int
+	 */
+	const MAX_ITEMS = 5000;
+
+	/**
 	 * Add an Item to the outbox.
 	 *
 	 * @param Activity $activity   Full Activity object that will be added to the outbox.
@@ -404,44 +414,81 @@ class Outbox {
 	 *
 	 * Deletes outbox items older than the specified number of days,
 	 * except for Follow activities which are always preserved.
+	 * Also enforces a hard cap on total items via MAX_ITEMS.
 	 *
 	 * @param int $days Number of days to keep items. Items older than this will be deleted.
 	 *
 	 * @return int The number of items deleted.
 	 */
 	public static function purge( $days ) {
-		$total_posts = (int) \wp_count_posts( self::POST_TYPE )->publish;
-		if ( $total_posts <= 20 ) {
+		if ( $days <= 0 ) {
 			return 0;
 		}
 
-		$post_ids = \get_posts(
+		$counts = \wp_count_posts( self::POST_TYPE );
+		$total  = 0;
+		foreach ( $counts as $count ) {
+			$total += (int) $count;
+		}
+
+		if ( $total <= 20 ) {
+			return 0;
+		}
+
+		$deleted    = 0;
+		$batch_size = 100;
+		$cutoff     = \gmdate( 'Y-m-d', \time() - ( $days * DAY_IN_SECONDS ) );
+		$start_time = \time();
+
+		// If total exceeds the hard cap, drop the date filter to purge oldest items first.
+		$date_query = array(
 			array(
-				'post_type'   => self::POST_TYPE,
-				'post_status' => 'any',
-				'fields'      => 'ids',
-				'numberposts' => -1,
-				'date_query'  => array(
-					array(
-						'before' => \gmdate( 'Y-m-d', \time() - ( $days * DAY_IN_SECONDS ) ),
-					),
+				'before' => $cutoff,
+			),
+		);
+		if ( $total > self::MAX_ITEMS ) {
+			$date_query = array();
+		}
+
+		$query_args = array(
+			'post_type'   => self::POST_TYPE,
+			'post_status' => 'any',
+			'fields'      => 'ids',
+			'numberposts' => $batch_size,
+			'orderby'     => 'date',
+			'order'       => 'ASC',
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query'  => array(
+				array(
+					'key'     => '_activitypub_activity_type',
+					'value'   => 'Follow',
+					'compare' => '!=',
 				),
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query'  => array(
-					array(
-						'key'     => '_activitypub_activity_type',
-						'value'   => 'Follow',
-						'compare' => '!=',
-					),
-				),
-			)
+			),
 		);
 
-		$deleted = 0;
-		foreach ( $post_ids as $post_id ) {
-			\wp_delete_post( $post_id, true );
-			++$deleted;
+		if ( ! empty( $date_query ) ) {
+			$query_args['date_query'] = $date_query;
 		}
+
+		do {
+			$post_ids = \get_posts( $query_args );
+
+			foreach ( $post_ids as $post_id ) {
+				\wp_delete_post( $post_id, true );
+				++$deleted;
+			}
+
+			// Once we're back under the cap, re-apply the date filter.
+			if ( empty( $date_query ) && ( $total - $deleted ) <= self::MAX_ITEMS ) {
+				$date_query               = array(
+					array(
+						'before' => $cutoff,
+					),
+				);
+				$query_args['date_query'] = $date_query;
+			}
+		} while ( ! empty( $post_ids ) && ( \time() - $start_time ) < 30 );
 
 		return $deleted;
 	}
