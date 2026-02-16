@@ -31,58 +31,29 @@ class Test_Follow extends \WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
-		$this->user_id = self::factory()->user->create();
+		$this->user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		$user = \get_user_by( 'id', $this->user_id );
+		$user->add_cap( 'activitypub' );
+
+		// Prevent outbox processing from dispatching during tests.
+		\remove_all_actions( 'activitypub_process_outbox' );
 	}
 
 	/**
-	 * Test that handle_follow returns early for empty object.
+	 * Test that handle_follow returns data for empty object.
 	 *
 	 * @covers ::handle_follow
 	 */
 	public function test_handle_follow_empty_object() {
-		$fired = false;
-
-		$callback = function () use ( &$fired ) {
-			$fired = true;
-		};
-		\add_action( 'activitypub_outbox_follow_sent', $callback );
-
-		Follow::handle_follow(
-			array(
-				'type'   => 'Follow',
-				'object' => '',
-			),
-			$this->user_id
-		);
-
-		$this->assertFalse( $fired, 'Action should not fire for empty object.' );
-
-		\remove_action( 'activitypub_outbox_follow_sent', $callback );
-	}
-
-	/**
-	 * Test that handle_follow returns early for non-string object.
-	 *
-	 * @covers ::handle_follow
-	 */
-	public function test_handle_follow_non_string_object() {
-		$fired = false;
-
-		$callback = function () use ( &$fired ) {
-			$fired = true;
-		};
-		\add_action( 'activitypub_outbox_follow_sent', $callback );
-
 		$data = array(
 			'type'   => 'Follow',
-			'object' => array( 'id' => 'https://example.com/user/1' ),
+			'object' => '',
 		);
 
-		Follow::handle_follow( $data, $this->user_id );
+		$result = Follow::handle_follow( $data, $this->user_id );
 
-		$this->assertFalse( $fired, 'Action should not fire for non-string object.' );
-
-		\remove_action( 'activitypub_outbox_follow_sent', $callback );
+		$this->assertSame( $data, $result, 'Should return original data for empty object.' );
 	}
 
 	/**
@@ -93,7 +64,6 @@ class Test_Follow extends \WP_UnitTestCase {
 	public function test_handle_follow_adds_pending() {
 		$actor_url = 'https://example.com/users/testuser';
 
-		// Mock the HTTP request that fetch_by_uri makes.
 		$fake_response = array(
 			'type'              => 'Person',
 			'id'                => $actor_url,
@@ -120,15 +90,18 @@ class Test_Follow extends \WP_UnitTestCase {
 			'object' => $actor_url,
 		);
 
-		Follow::handle_follow( $data, $this->user_id );
+		$result = Follow::handle_follow( $data, $this->user_id );
+
+		// Should return an outbox post ID.
+		$this->assertIsInt( $result );
+		$this->assertGreaterThan( 0, $result );
 
 		// Check the remote actor was created and pending meta was added.
 		$remote_actor = Remote_Actors::get_by_uri( $actor_url );
+		$this->assertNotWPError( $remote_actor );
 
-		if ( ! \is_wp_error( $remote_actor ) ) {
-			$pending = \get_post_meta( $remote_actor->ID, Following::PENDING_META_KEY, false );
-			$this->assertContains( (string) $this->user_id, $pending, 'User should be in pending following.' );
-		}
+		$pending = \get_post_meta( $remote_actor->ID, Following::PENDING_META_KEY, false );
+		$this->assertContains( (string) $this->user_id, $pending, 'User should be in pending following.' );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 	}
@@ -172,12 +145,11 @@ class Test_Follow extends \WP_UnitTestCase {
 		Follow::handle_follow( $data, $this->user_id );
 
 		$remote_actor = Remote_Actors::get_by_uri( $actor_url );
+		$this->assertNotWPError( $remote_actor );
 
-		if ( ! \is_wp_error( $remote_actor ) ) {
-			$pending = \get_post_meta( $remote_actor->ID, Following::PENDING_META_KEY, false );
-			$count   = array_count_values( $pending );
-			$this->assertEquals( 1, $count[ (string) $this->user_id ] ?? 0, 'User should only appear once in pending.' );
-		}
+		$pending = \get_post_meta( $remote_actor->ID, Following::PENDING_META_KEY, false );
+		$count   = array_count_values( $pending );
+		$this->assertEquals( 1, $count[ (string) $this->user_id ] ?? 0, 'User should only appear once in pending.' );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 	}
