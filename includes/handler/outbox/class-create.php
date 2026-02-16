@@ -56,7 +56,13 @@ class Create {
 		}
 
 		if ( is_activity_reply( $activity ) ) {
-			return self::create_comment( $activity, $user_id );
+			$result = self::create_comment( $activity, $user_id );
+
+			// If the reply target is not found locally (e.g. remote post),
+			// fall back to creating a post so it gets federated with inReplyTo.
+			if ( false !== $result ) {
+				return $result;
+			}
 		}
 
 		// TODO: Handle quotes differently.
