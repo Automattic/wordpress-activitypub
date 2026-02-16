@@ -226,7 +226,7 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 	public function test_handle_blocked_request() {
 		$activity = $this->create_quote_request_activity();
 
-		Quote_Request::handle_blocked_request( $activity, self::$user_id, 'QuoteRequest' );
+		Quote_Request::handle_blocked_request( $activity, self::$user_id, 'quote_request' );
 
 		// Check outbox for Reject response.
 		$outbox_posts = get_posts(
