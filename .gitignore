@@ -5,9 +5,10 @@
 /vendor/
 _site
 .idea/
-# Claude Code - track skills/agents but ignore local overrides and summaries
+# Claude Code / Agents - track skills/agents but ignore local overrides and summaries
 .claude/**/*.local*
 .claude/summaries/
+.agents/**/*.local*
 .cursor
 .DS_Store
 .php_cs.cache
