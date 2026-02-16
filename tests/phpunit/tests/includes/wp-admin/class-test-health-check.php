@@ -5,6 +5,7 @@
  * @package Activitypub
  */
 
+use Activitypub\Collection\Outbox;
 use Activitypub\Scheduler;
 use Activitypub\WP_Admin\Health_Check;
 
@@ -503,5 +504,198 @@ class Test_Health_Check extends WP_UnitTestCase {
 		$this->assertEquals( 'hourly', $schedules['activitypub_update_remote_actors'] );
 		$this->assertEquals( 'daily', $schedules['activitypub_cleanup_remote_actors'] );
 		$this->assertEquals( 'weekly', $schedules['activitypub_sync_blocklist_subscriptions'] );
+	}
+
+	/**
+	 * Test that outbox rate test is registered.
+	 */
+	public function test_outbox_rate_test_registered() {
+		$tests  = array();
+		$result = Health_Check::add_tests( $tests );
+
+		$this->assertArrayHasKey( 'activitypub_test_outbox_rate', $result['direct'] );
+
+		$test = $result['direct']['activitypub_test_outbox_rate'];
+		$this->assertArrayHasKey( 'label', $test );
+		$this->assertArrayHasKey( 'test', $test );
+		$this->assertEquals( array( Health_Check::class, 'test_outbox_rate' ), $test['test'] );
+	}
+
+	/**
+	 * Test outbox rate returns good status with no outbox items.
+	 */
+	public function test_outbox_rate_good() {
+		$result = Health_Check::test_outbox_rate();
+
+		$this->assertEquals( 'good', $result['status'] );
+		$this->assertEquals( 'Outbox activity rate is normal', $result['label'] );
+		$this->assertEquals( 'green', $result['badge']['color'] );
+	}
+
+	/**
+	 * Test outbox rate returns recommended status with moderate activity.
+	 */
+	public function test_outbox_rate_recommended() {
+		$this->delete_all_outbox_items();
+
+		// Create 15 outbox items (above 10, below 50).
+		$this->create_outbox_items( 15, 'https://example.com/post/1' );
+
+		$result = Health_Check::test_outbox_rate();
+
+		$this->assertEquals( 'recommended', $result['status'] );
+		$this->assertEquals( 'Unusual outbox activity detected', $result['label'] );
+		$this->assertEquals( 'orange', $result['badge']['color'] );
+		$this->assertStringContainsString( '15 outbox items', $result['description'] );
+		$this->assertStringContainsString( 'example.com/post/1', $result['description'] );
+	}
+
+	/**
+	 * Test outbox rate returns critical status with excessive activity.
+	 */
+	public function test_outbox_rate_critical() {
+		$this->delete_all_outbox_items();
+
+		// Create 55 outbox items (above 50).
+		$this->create_outbox_items( 55, 'https://example.com/post/2' );
+
+		$result = Health_Check::test_outbox_rate();
+
+		$this->assertEquals( 'critical', $result['status'] );
+		$this->assertEquals( 'Excessive outbox activity detected', $result['label'] );
+		$this->assertEquals( 'red', $result['badge']['color'] );
+		$this->assertStringContainsString( '55 outbox items', $result['description'] );
+		$this->assertStringContainsString( 'wp_update_post()', $result['description'] );
+	}
+
+	/**
+	 * Test get_outbox_rate_data groups by object ID.
+	 */
+	public function test_outbox_rate_data_groups_by_object() {
+		$this->delete_all_outbox_items();
+
+		$this->create_outbox_items( 5, 'https://example.com/post/a' );
+		$this->create_outbox_items( 3, 'https://example.com/post/b' );
+		$this->create_outbox_items( 7, 'https://example.com/post/c' );
+
+		$data = Health_Check::get_outbox_rate_data();
+
+		$this->assertEquals( 15, $data['total'] );
+		$this->assertArrayHasKey( 'https://example.com/post/c', $data['by_object'] );
+		$this->assertArrayHasKey( 'https://example.com/post/a', $data['by_object'] );
+		$this->assertArrayHasKey( 'https://example.com/post/b', $data['by_object'] );
+		$this->assertEquals( 7, $data['by_object']['https://example.com/post/c'] );
+		$this->assertEquals( 5, $data['by_object']['https://example.com/post/a'] );
+		$this->assertEquals( 3, $data['by_object']['https://example.com/post/b'] );
+
+		// Verify sorted descending.
+		$counts = array_values( $data['by_object'] );
+		$this->assertEquals( 7, $counts[0] );
+		$this->assertEquals( 5, $counts[1] );
+		$this->assertEquals( 3, $counts[2] );
+	}
+
+	/**
+	 * Test get_outbox_count returns correct counts.
+	 */
+	public function test_get_outbox_count() {
+		$this->create_outbox_items( 3, 'https://example.com/post/count-test' );
+
+		// Outbox items are created with 'pending' status.
+		$pending_count = Health_Check::get_outbox_count( 'pending' );
+		$this->assertGreaterThanOrEqual( 3, $pending_count );
+
+		$total_count = Health_Check::get_outbox_count();
+		$this->assertGreaterThanOrEqual( 3, $total_count );
+	}
+
+	/**
+	 * Test debug_information includes outbox stats.
+	 */
+	public function test_debug_information_includes_outbox_stats() {
+		$info   = array();
+		$result = Health_Check::debug_information( $info );
+
+		$fields = $result['activitypub']['fields'];
+
+		$this->assertArrayHasKey( 'outbox_total_count', $fields );
+		$this->assertArrayHasKey( 'outbox_pending_count', $fields );
+		$this->assertArrayHasKey( 'outbox_last_hour_count', $fields );
+
+		$this->assertEquals( 'Outbox Total Items', $fields['outbox_total_count']['label'] );
+		$this->assertEquals( 'Outbox Pending Items', $fields['outbox_pending_count']['label'] );
+		$this->assertEquals( 'Outbox Items (Last Hour)', $fields['outbox_last_hour_count']['label'] );
+	}
+
+	/**
+	 * Test outbox rate shows top 3 objects only.
+	 */
+	public function test_outbox_rate_shows_top_3_objects() {
+		$this->delete_all_outbox_items();
+
+		$this->create_outbox_items( 4, 'https://example.com/post/1' );
+		$this->create_outbox_items( 3, 'https://example.com/post/2' );
+		$this->create_outbox_items( 2, 'https://example.com/post/3' );
+		$this->create_outbox_items( 3, 'https://example.com/post/4' );
+
+		$result = Health_Check::test_outbox_rate();
+
+		// 12 items total, should be "recommended".
+		$this->assertEquals( 'recommended', $result['status'] );
+
+		// Should show top 3 objects.
+		$this->assertStringContainsString( 'example.com/post/1', $result['description'] );
+		// Posts 2 and 4 are tied at 3 each, so both could appear in top 3.
+		// Post 3 has only 2, so it should not appear.
+		$this->assertStringNotContainsString( 'example.com/post/3', $result['description'] );
+	}
+
+	/**
+	 * Delete all existing outbox items to ensure a clean test state.
+	 */
+	private function delete_all_outbox_items() {
+		$posts = get_posts(
+			array(
+				'post_type'      => Outbox::POST_TYPE,
+				'post_status'    => 'any',
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+			)
+		);
+
+		foreach ( $posts as $post_id ) {
+			wp_delete_post( $post_id, true );
+		}
+	}
+
+	/**
+	 * Helper to create outbox items for testing.
+	 *
+	 * @param int    $count     Number of items to create.
+	 * @param string $object_id The object ID meta value.
+	 *
+	 * @return int[] Array of created post IDs.
+	 */
+	private function create_outbox_items( $count, $object_id ) {
+		$post_ids = array();
+
+		for ( $i = 0; $i < $count; $i++ ) {
+			$post_id = $this->factory()->post->create(
+				array(
+					'post_type'   => Outbox::POST_TYPE,
+					'post_status' => 'pending',
+					'post_title'  => '[Update] Test Post',
+					'post_date'   => \current_time( 'mysql' ),
+					'meta_input'  => array(
+						'_activitypub_object_id'     => $object_id,
+						'_activitypub_activity_type' => 'Update',
+					),
+				)
+			);
+
+			$post_ids[] = $post_id;
+		}
+
+		return $post_ids;
 	}
 }

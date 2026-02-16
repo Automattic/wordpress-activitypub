@@ -8,6 +8,7 @@
 namespace Activitypub\WP_Admin;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Outbox;
 use Activitypub\Http;
 use Activitypub\Sanitize;
 use Activitypub\Scheduler;
@@ -140,6 +141,11 @@ class Health_Check {
 		$tests['direct']['activitypub_test_rest_api_accessibility'] = array(
 			'label' => \__( 'REST API Accessibility Test', 'activitypub' ),
 			'test'  => array( self::class, 'test_rest_api_accessibility' ),
+		);
+
+		$tests['direct']['activitypub_test_outbox_rate'] = array(
+			'label' => \__( 'Outbox Activity Rate Test', 'activitypub' ),
+			'test'  => array( self::class, 'test_outbox_rate' ),
 		);
 
 		return $tests;
@@ -391,6 +397,26 @@ class Health_Check {
 		$info['activitypub']['fields']['authorized_fetch'] = array(
 			'label'   => \__( 'Authorized Fetch', 'activitypub' ),
 			'value'   => \esc_attr( (int) \get_option( 'activitypub_authorized_fetch', '0' ) ),
+			'private' => false,
+		);
+
+		$info['activitypub']['fields']['outbox_total_count'] = array(
+			'label'   => \__( 'Outbox Total Items', 'activitypub' ),
+			'value'   => self::get_outbox_count(),
+			'private' => false,
+		);
+
+		$info['activitypub']['fields']['outbox_pending_count'] = array(
+			'label'   => \__( 'Outbox Pending Items', 'activitypub' ),
+			'value'   => self::get_outbox_count( 'pending' ),
+			'private' => false,
+		);
+
+		$outbox_rate_data = self::get_outbox_rate_data();
+
+		$info['activitypub']['fields']['outbox_last_hour_count'] = array(
+			'label'   => \__( 'Outbox Items (Last Hour)', 'activitypub' ),
+			'value'   => $outbox_rate_data['total'],
 			'private' => false,
 		);
 
@@ -741,6 +767,171 @@ class Health_Check {
 		);
 
 		return $result;
+	}
+
+	/**
+	 * Outbox activity rate test.
+	 *
+	 * Detects abnormally high outbox creation rates that may indicate
+	 * a third-party plugin is triggering excessive wp_update_post() calls.
+	 *
+	 * @since unreleased
+	 *
+	 * @return array The test result.
+	 */
+	public static function test_outbox_rate() {
+		$result = array(
+			'label'       => \__( 'Outbox activity rate is normal', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\__( 'The outbox activity rate is within normal limits.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_outbox_rate',
+		);
+
+		$data  = self::get_outbox_rate_data();
+		$total = $data['total'];
+
+		if ( $total <= 10 ) {
+			return $result;
+		}
+
+		// Build top objects description.
+		$top_objects = \array_slice( $data['by_object'], 0, 3, true );
+		$object_list = array();
+		foreach ( $top_objects as $object_id => $count ) {
+			$object_list[] = \sprintf(
+				'<code>%s</code> (%d)',
+				\esc_html( $object_id ),
+				$count
+			);
+		}
+
+		$details = \sprintf(
+			/* translators: %d: Number of outbox items. */
+			\__( '%d outbox items were created in the last hour.', 'activitypub' ),
+			$total
+		);
+
+		if ( ! empty( $object_list ) ) {
+			$details .= ' ' . \sprintf(
+				/* translators: %s: Comma-separated list of object URLs with counts. */
+				\__( 'Most active objects: %s.', 'activitypub' ),
+				\implode( ', ', $object_list )
+			);
+		}
+
+		if ( $total > 50 ) {
+			$result['status']         = 'critical';
+			$result['label']          = \__( 'Excessive outbox activity detected', 'activitypub' );
+			$result['badge']['color'] = 'red';
+			$result['description']    = \sprintf(
+				'<p>%s</p><p>%s</p>',
+				$details,
+				\__( 'A plugin may be calling wp_update_post() on published posts at a very high rate, causing excessive federation activity. This can impact site performance and may flood federated servers.', 'activitypub' )
+			);
+		} else {
+			$result['status']         = 'recommended';
+			$result['label']          = \__( 'Unusual outbox activity detected', 'activitypub' );
+			$result['badge']['color'] = 'orange';
+			$result['description']    = \sprintf(
+				'<p>%s</p><p>%s</p>',
+				$details,
+				\__( 'Check for plugins that may be triggering frequent updates to published posts, such as editorial calendars or cloud sync services.', 'activitypub' )
+			);
+		}
+
+		$result['actions'] = \sprintf(
+			'<p>%s</p>',
+			\sprintf(
+				/* translators: %s: Plugins page URL. */
+				\__( 'Review your <a href="%s">active plugins</a> for any that may be modifying published posts frequently.', 'activitypub' ),
+				\esc_url( \admin_url( 'plugins.php' ) )
+			)
+		);
+
+		return $result;
+	}
+
+	/**
+	 * Get outbox activity rate data for the last hour.
+	 *
+	 * @since unreleased
+	 *
+	 * @return array {
+	 *     Outbox rate data.
+	 *
+	 *     @type int   $total     Total items created in the last hour.
+	 *     @type array $by_object Object ID => count, sorted descending.
+	 * }
+	 */
+	public static function get_outbox_rate_data() {
+		$posts = \get_posts(
+			array(
+				'post_type'      => Outbox::POST_TYPE,
+				'post_status'    => 'any',
+				'posts_per_page' => 100,
+				'date_query'     => array(
+					array(
+						'after' => '1 hour ago',
+					),
+				),
+				'orderby'        => 'date',
+				'order'          => 'DESC',
+			)
+		);
+
+		$by_object = array();
+
+		foreach ( $posts as $post ) {
+			$object_id = \get_post_meta( $post->ID, '_activitypub_object_id', true );
+
+			if ( ! $object_id ) {
+				continue;
+			}
+
+			if ( ! isset( $by_object[ $object_id ] ) ) {
+				$by_object[ $object_id ] = 0;
+			}
+
+			++$by_object[ $object_id ];
+		}
+
+		\arsort( $by_object );
+
+		return array(
+			'total'     => \count( $posts ),
+			'by_object' => $by_object,
+		);
+	}
+
+	/**
+	 * Get the count of outbox items.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $status Optional. Post status to count. Default 'any' for all statuses.
+	 *
+	 * @return int The number of outbox items.
+	 */
+	public static function get_outbox_count( $status = 'any' ) {
+		$counts = \wp_count_posts( Outbox::POST_TYPE );
+
+		if ( 'any' === $status ) {
+			$total = 0;
+			foreach ( (array) $counts as $count ) {
+				$total += (int) $count;
+			}
+			return $total;
+		}
+
+		return isset( $counts->$status ) ? (int) $counts->$status : 0;
 	}
 
 	/**
