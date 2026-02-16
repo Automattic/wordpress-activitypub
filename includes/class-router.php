@@ -82,10 +82,16 @@ class Router {
 		}
 
 		if ( ! is_activitypub_request() || ! should_negotiate_content() ) {
-			if ( \get_query_var( 'p' ) && Outbox::POST_TYPE === \get_post_type( \get_query_var( 'p' ) ) ) {
+			// Return 406 for non-ActivityPub requests to outbox items,
+			// but skip for OPTIONS preflight so CORS succeeds with 200.
+			$is_outbox_item = \get_query_var( 'p' ) && Outbox::POST_TYPE === \get_post_type( \get_query_var( 'p' ) );
+			$is_preflight   = isset( $_SERVER['REQUEST_METHOD'] ) && 'OPTIONS' === $_SERVER['REQUEST_METHOD'];
+
+			if ( $is_outbox_item && ! $is_preflight ) {
 				\set_query_var( 'is_404', true );
 				\status_header( 406 );
 			}
+
 			return $template;
 		}
 
