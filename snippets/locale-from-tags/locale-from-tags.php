@@ -44,7 +44,7 @@ function set_locale_from_tags( $lang, $item ) {
 
 	$post_tags = \get_the_tags( $item->ID );
 
-	if ( empty( $post_tags ) ) {
+	if ( ! \is_array( $post_tags ) ) {
 		return $lang;
 	}
 
