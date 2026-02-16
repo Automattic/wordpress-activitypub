@@ -310,7 +310,7 @@ class Application {
 		$public_key  = \get_option( 'activitypub_application_user_public_key' );
 		$private_key = \get_option( 'activitypub_application_user_private_key' );
 
-		if ( ! empty( $public_key ) && is_string( $public_key ) && ! empty( $private_key ) && is_string( $private_key ) ) {
+		if ( ! empty( $public_key ) && \is_string( $public_key ) && ! empty( $private_key ) && \is_string( $private_key ) ) {
 			return array(
 				'private_key' => $private_key,
 				'public_key'  => $public_key,

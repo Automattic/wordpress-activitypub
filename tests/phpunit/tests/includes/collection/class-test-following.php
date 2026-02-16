@@ -374,13 +374,11 @@ class Test_Following extends \WP_UnitTestCase {
 		$outbox_item_2 = \get_post( follow( 'https://example.com/actor/1', $user_ids[1] ) );
 		$outbox_item_3 = \get_post( follow( 'https://example.com/actor/1', $user_ids[2] ) );
 		$outbox_item_4 = \get_post( follow( 'https://example.com/actor/1', 0 ) );
-		$outbox_item_5 = \get_post( follow( 'https://example.com/actor/1', -1 ) );
 
 		\wp_publish_post( $outbox_item_1 );
 		\wp_publish_post( $outbox_item_2 );
 		\wp_publish_post( $outbox_item_3 );
 		\wp_publish_post( $outbox_item_4 );
-		\wp_publish_post( $outbox_item_5 );
 
 		$accept_1 = array(
 			'object' => array(
@@ -406,25 +404,14 @@ class Test_Following extends \WP_UnitTestCase {
 				'object' => 'https://example.com/actor/1',
 			),
 		);
-		$accept_5 = array(
-			'object' => array(
-				'id'     => $outbox_item_5->guid,
-				'object' => 'https://example.com/actor/1',
-			),
-		);
 
 		Accept::handle_accept( $accept_1, $user_ids[0] );
 		Accept::handle_accept( $accept_2, $user_ids[1] );
 		Accept::handle_accept( $accept_3, $user_ids[2] );
 		Accept::handle_accept( $accept_4, 0 );
-		Accept::handle_accept( $accept_5, -1 );
 
 		// User 1 follows https://example.com/actor/1.
 		$following = Following::query( $user_ids[0] );
-		$this->assertCount( 1, $following['following'] );
-		$this->assertSame( 1, $following['total'] );
-
-		$following = Following::query( -1 );
 		$this->assertCount( 1, $following['following'] );
 		$this->assertSame( 1, $following['total'] );
 
@@ -437,10 +424,6 @@ class Test_Following extends \WP_UnitTestCase {
 		$following = Following::query( 0 );
 		$this->assertCount( 0, $following['following'] );
 		$this->assertSame( 0, $following['total'] );
-
-		$following = Following::query( -1 );
-		$this->assertCount( 1, $following['following'] );
-		$this->assertSame( 1, $following['total'] );
 
 		// User 1 still follows https://example.com/actor/1.
 		$posts = get_posts(

@@ -1225,7 +1225,7 @@ class Migration {
 	 * and consolidates the legacy separate key options.
 	 */
 	public static function migrate_application_keypair_option() {
-		wp_cache_flush();
+		\wp_cache_flush();
 		self::update_options_key( 'activitypub_keypair_for_-1', Application::KEYPAIR_OPTION_KEY );
 	}
 }
