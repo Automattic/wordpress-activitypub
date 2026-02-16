@@ -7,7 +7,6 @@
 
 namespace Activitypub\Cli;
 
-use Activitypub\Collection\Actors;
 use Activitypub\Scheduler\Actor;
 
 /**
@@ -39,10 +38,6 @@ class Actor_Command extends \WP_CLI_Command {
 	 * @param array $assoc_args The associative arguments (unused).
 	 */
 	public function delete( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		if ( Actors::APPLICATION_USER_ID === (int) $args[0] ) {
-			\WP_CLI::error( 'You cannot delete the application actor.' );
-		}
-
 		\add_filter( 'activitypub_user_can_activitypub', '__return_true' );
 		Actor::schedule_user_delete( $args[0] );
 		\remove_filter( 'activitypub_user_can_activitypub', '__return_true' );

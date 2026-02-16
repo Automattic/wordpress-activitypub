@@ -123,21 +123,14 @@ class Test_Follow extends \WP_UnitTestCase {
 	 */
 	public function handle_follow_provider() {
 		return array(
-			'application_user_follow' => array(
-				Actors::APPLICATION_USER_ID,
-				'https://example.com/actor',
-				'Reject',
-				false,
-				'Following application user should be rejected',
-			),
-			'regular_user_follow'     => array(
+			'regular_user_follow'    => array(
 				'test_user',
 				'https://example.com/regular-actor',
 				'Accept',
 				true,
 				'Following regular user should be accepted',
 			),
-			'subdomain_actor_follow'  => array(
+			'subdomain_actor_follow' => array(
 				'test_user',
 				'https://social.example.com/users/actor',
 				'Accept',

@@ -221,6 +221,7 @@ class Migration {
 		}
 
 		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			self::migrate_application_keypair_option();
 			Activitypub::flush_rewrite_rules();
 		}
 
@@ -1028,7 +1029,7 @@ class Migration {
 			$wpdb->postmeta,
 			array(
 				'meta_key'   => '_activitypub_following', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'meta_value' => Actors::APPLICATION_USER_ID, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+				'meta_value' => -1, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 			)
 		);
 	}
@@ -1215,5 +1216,16 @@ class Migration {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Migrate the Application key pair option from the old name to the new name.
+	 *
+	 * Renames `activitypub_keypair_for_-1` to `activitypub_application_keypair`
+	 * and consolidates the legacy separate key options.
+	 */
+	public static function migrate_application_keypair_option() {
+		wp_cache_flush();
+		self::update_options_key( 'activitypub_keypair_for_-1', Application::KEYPAIR_OPTION_KEY );
 	}
 }

@@ -78,6 +78,7 @@ function rest_init() {
  */
 function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Activitypub', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Application', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Avatars', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Cache', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );

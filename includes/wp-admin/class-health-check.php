@@ -255,7 +255,13 @@ class Health_Check {
 	 * @return boolean|\WP_Error
 	 */
 	public static function is_webfinger_endpoint_accessible() {
-		$user     = Actors::get_by_id( Actors::APPLICATION_USER_ID );
+		$user = Actors::get_by_id( \get_current_user_id() );
+		if ( \is_wp_error( $user ) ) {
+			$user = Actors::get_by_id( Actors::BLOG_USER_ID );
+		}
+		if ( \is_wp_error( $user ) ) {
+			return true; // Skip check if no actor is available.
+		}
 		$resource = $user->get_webfinger();
 
 		$url = Webfinger::resolve( $resource );
@@ -753,9 +759,8 @@ class Health_Check {
 	 * @return bool|\WP_Error True if accessible, WP_Error otherwise.
 	 */
 	public static function is_rest_api_accessible() {
-		// Test the application actor's inbox endpoint (always available).
-		$actor = Actors::get_by_id( Actors::APPLICATION_USER_ID );
-		$url   = $actor->get_inbox();
+		// Test the shared inbox endpoint (always available).
+		$url = \Activitypub\get_rest_url_by_path( 'inbox' );
 
 		// Make an unauthenticated request.
 		$response = \wp_remote_get(

@@ -7,6 +7,9 @@
 
 namespace Activitypub\Tests\Rest;
 
+use Activitypub\Application;
+use Activitypub\Rest\Application_Controller;
+
 /**
  * Tests for Application REST API endpoint.
  *
@@ -71,8 +74,14 @@ class Test_Application_Controller extends \Activitypub\Tests\Test_REST_Controlle
 		// Test property values.
 		$this->assertEquals( 'Application', $data['type'] );
 		$this->assertStringContainsString( '/activitypub/1.0/application', $data['id'] );
-		$this->assertStringContainsString( '/activitypub/1.0/actors/-1/inbox', $data['inbox'] );
-		$this->assertStringContainsString( '/activitypub/1.0/actors/-1/outbox', $data['outbox'] );
+		$this->assertStringContainsString( '/activitypub/1.0/inbox', $data['inbox'] );
+		$this->assertStringContainsString( '/activitypub/1.0/application/outbox', $data['outbox'] );
+
+		// Test that Application is not discoverable.
+		$this->assertFalse( $data['discoverable'] );
+		$this->assertFalse( $data['indexable'] );
+		$this->assertTrue( $data['invisible'] );
+		$this->assertTrue( $data['manuallyApprovesFollowers'] );
 	}
 
 	/**
@@ -85,9 +94,56 @@ class Test_Application_Controller extends \Activitypub\Tests\Test_REST_Controlle
 		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/application' );
 		$response = rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
-		$schema   = ( new \Activitypub\Rest\Application_Controller() )->get_item_schema();
+		$schema   = ( new Application_Controller() )->get_item_schema();
 
 		$valid = \rest_validate_value_from_schema( $data, $schema );
 		$this->assertNotWPError( $valid, 'Response failed schema validation: ' . ( \is_wp_error( $valid ) ? $valid->get_error_message() : '' ) );
+	}
+
+	/**
+	 * Test key management methods.
+	 *
+	 * @covers \Activitypub\Application::get_key_id
+	 * @covers \Activitypub\Application::get_public_key
+	 * @covers \Activitypub\Application::get_private_key
+	 */
+	public function test_key_management() {
+		\delete_option( Application::KEYPAIR_OPTION_KEY );
+
+		$key_id      = Application::get_key_id();
+		$public_key  = Application::get_public_key();
+		$private_key = Application::get_private_key();
+
+		$this->assertStringContainsString( '#main-key', $key_id );
+		$this->assertStringContainsString( '/activitypub/1.0/application', $key_id );
+		$this->assertNotEmpty( $public_key );
+		$this->assertNotEmpty( $private_key );
+
+		// Keys should be consistent across calls.
+		$this->assertEquals( $public_key, Application::get_public_key() );
+		$this->assertEquals( $private_key, Application::get_private_key() );
+	}
+
+	/**
+	 * Test legacy key pair migration.
+	 *
+	 * @covers \Activitypub\Application::get_public_key
+	 * @covers \Activitypub\Application::get_private_key
+	 */
+	public function test_legacy_key_pair() {
+		\delete_option( Application::KEYPAIR_OPTION_KEY );
+
+		$public_key  = 'legacy-public-key';
+		$private_key = 'legacy-private-key';
+
+		\add_option( 'activitypub_application_user_public_key', $public_key );
+		\add_option( 'activitypub_application_user_private_key', $private_key );
+
+		$this->assertEquals( $public_key, Application::get_public_key() );
+		$this->assertEquals( $private_key, Application::get_private_key() );
+
+		\delete_option( 'activitypub_application_user_public_key' );
+		\delete_option( 'activitypub_application_user_private_key' );
+		\delete_option( Application::KEYPAIR_OPTION_KEY );
 	}
 }

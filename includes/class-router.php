@@ -63,6 +63,7 @@ class Router {
 			);
 		}
 
+		\add_rewrite_rule( '^@application\/?$', 'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/application', 'top' );
 		\add_rewrite_rule( '^@([\w\-\.]+)\/?$', 'index.php?actor=$matches[1]', 'top' );
 		\add_rewrite_endpoint( 'activitypub', EP_AUTHORS | EP_PERMALINK | EP_PAGES );
 	}

@@ -306,9 +306,6 @@ class Outbox {
 			case 'blog':
 				$actor_id = Actors::BLOG_USER_ID;
 				break;
-			case 'application':
-				$actor_id = Actors::APPLICATION_USER_ID;
-				break;
 			case 'user':
 			default:
 				$actor_id = $outbox_item->post_author;

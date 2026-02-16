@@ -36,11 +36,6 @@ class Follow {
 		// Extract the user ID (follow requests are always for a single user).
 		$user_id = \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids;
 
-		if ( Actors::APPLICATION_USER_ID === $user_id ) {
-			self::queue_reject( $activity, $user_id );
-			return;
-		}
-
 		// Check if the actor already follows the user.
 		$already_following = false;
 		$remote_actor      = Remote_Actors::get_by_uri( $activity['actor'] );

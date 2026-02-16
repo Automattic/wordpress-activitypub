@@ -2,13 +2,16 @@
 /**
  * Application model file.
  *
+ * @deprecated Use {@see \Activitypub\Application} for key management
+ *             and {@see \Activitypub\Rest\Application_Controller} for the REST endpoint.
+ *
  * @package Activitypub
  */
 
 namespace Activitypub\Model;
 
 use Activitypub\Activity\Actor;
-use Activitypub\Collection\Actors;
+use Activitypub\Application as Application_Utility;
 
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\home_host;
@@ -16,7 +19,7 @@ use function Activitypub\home_host;
 /**
  * Application class.
  *
- * @method int get__id() Gets the internal user ID for the application (always returns APPLICATION_USER_ID).
+ * @deprecated Use {@see \Activitypub\Application} instead.
  */
 class Application extends Actor {
 	/**
@@ -24,7 +27,7 @@ class Application extends Actor {
 	 *
 	 * @var int
 	 */
-	protected $_id = Actors::APPLICATION_USER_ID; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
+	protected $_id = -1; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
 
 	/**
 	 * Whether the Application is discoverable.
@@ -102,12 +105,19 @@ class Application extends Actor {
 	protected $preferred_username = 'application';
 
 	/**
+	 * Constructor.
+	 */
+	public function __construct() {
+		_deprecated_class( __CLASS__, 'unreleased', 'Activitypub\Application' );
+	}
+
+	/**
 	 * Returns the ID of the Application.
 	 *
 	 * @return string The ID of the Application.
 	 */
 	public function get_id() {
-		return get_rest_url_by_path( 'application' );
+		return Application_Utility::get_id();
 	}
 
 	/**
@@ -207,7 +217,7 @@ class Application extends Actor {
 	 * @return string The Inbox-Endpoint.
 	 */
 	public function get_inbox() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/inbox', $this->get__id() ) );
+		return get_rest_url_by_path( 'inbox' );
 	}
 
 	/**
@@ -216,7 +226,7 @@ class Application extends Actor {
 	 * @return string The Outbox-Endpoint.
 	 */
 	public function get_outbox() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/outbox', $this->get__id() ) );
+		return get_rest_url_by_path( 'application/outbox' );
 	}
 
 	/**
@@ -235,9 +245,9 @@ class Application extends Actor {
 	 */
 	public function get_public_key() {
 		return array(
-			'id'           => $this->get_id() . '#main-key',
+			'id'           => Application_Utility::get_key_id(),
 			'owner'        => $this->get_id(),
-			'publicKeyPem' => Actors::get_public_key( Actors::APPLICATION_USER_ID ),
+			'publicKeyPem' => Application_Utility::get_public_key(),
 		);
 	}
 

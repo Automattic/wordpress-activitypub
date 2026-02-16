@@ -8,7 +8,6 @@
 namespace Activitypub\Collection;
 
 use Activitypub\Activity\Actor;
-use Activitypub\Model\Application;
 use Activitypub\Model\Blog;
 use Activitypub\Model\User;
 
@@ -33,13 +32,6 @@ class Actors {
 	const BLOG_USER_ID = 0;
 
 	/**
-	 * The ID of the Application User.
-	 *
-	 * @var int
-	 */
-	const APPLICATION_USER_ID = -1;
-
-	/**
 	 * Get the Actor by ID.
 	 *
 	 * @param int $user_id The user ID.
@@ -62,8 +54,6 @@ class Actors {
 		switch ( $user_id ) {
 			case self::BLOG_USER_ID:
 				return new Blog();
-			case self::APPLICATION_USER_ID:
-				return new Application();
 			default:
 				return User::from_wp_user( $user_id );
 		}
@@ -118,11 +108,6 @@ class Actors {
 			}
 
 			return self::BLOG_USER_ID;
-		}
-
-		// Check for application user.
-		if ( 'application' === $username ) {
-			return self::APPLICATION_USER_ID;
 		}
 
 		// Check for 'activitypub_username' meta.
@@ -421,10 +406,6 @@ class Actors {
 	public static function get_type_by_id( $user_id ) {
 		$user_id = (int) $user_id;
 
-		if ( self::APPLICATION_USER_ID === $user_id ) {
-			return 'application';
-		}
-
 		if ( self::BLOG_USER_ID === $user_id ) {
 			return 'blog';
 		}
@@ -569,10 +550,6 @@ class Actors {
 			case 0:
 				$public_key  = \get_option( 'activitypub_blog_user_public_key' );
 				$private_key = \get_option( 'activitypub_blog_user_private_key' );
-				break;
-			case -1:
-				$public_key  = \get_option( 'activitypub_application_user_public_key' );
-				$private_key = \get_option( 'activitypub_application_user_private_key' );
 				break;
 			default:
 				$public_key  = \get_user_meta( $user_id, 'magic_sig_public_key', true );

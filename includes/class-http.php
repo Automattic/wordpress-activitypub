@@ -166,8 +166,8 @@ class Http {
 				'Content-Type' => 'application/activity+json',
 				'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
 			),
-			'key_id'              => Actors::get_by_id( Actors::APPLICATION_USER_ID )->get_id() . '#main-key',
-			'private_key'         => Actors::get_private_key( Actors::APPLICATION_USER_ID ),
+			'key_id'              => Application::get_key_id(),
+			'private_key'         => Application::get_private_key(),
 		);
 
 		$args            = \wp_parse_args( $args, $defaults );
