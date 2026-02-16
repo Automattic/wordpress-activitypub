@@ -1,4 +1,4 @@
 Significance: patch
 Type: added
 
-Add Site Health test to detect excessive outbox activity rates.
+Add a Site Health check that warns when plugins are causing too many federation updates.
