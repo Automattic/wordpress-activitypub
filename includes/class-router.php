@@ -41,6 +41,12 @@ class Router {
 			return;
 		}
 
+		\add_rewrite_rule(
+			'^authorize_interaction/?$',
+			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions',
+			'top'
+		);
+
 		if ( ! \class_exists( 'Webfinger' ) ) {
 			\add_rewrite_rule(
 				'^.well-known/webfinger',
