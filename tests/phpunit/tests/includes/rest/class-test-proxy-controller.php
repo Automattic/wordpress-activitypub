@@ -5,7 +5,7 @@
  * @package Activitypub
  */
 
-namespace Activitypub\Tests;
+namespace Activitypub\Tests\Rest;
 
 use Activitypub\Rest\Proxy_Controller;
 
