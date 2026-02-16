@@ -6,12 +6,15 @@ WordPress plugin implementing the ActivityPub protocol, enabling federation with
 
 Prefer reading project files and `docs/` over relying on training data for WordPress and ActivityPub patterns.
 
+**Do NOT:** use PHP 7.3+ syntax (named args, union types, `match`, trailing commas in params) | edit WordPress core files | use `remove_all_filters('pre_http_request')` in tests | hardcode new version numbers (use `'unreleased'`).
+
 ## Directory Structure
 
 ```
 activitypub.php                 # Main plugin file.
 includes/
 ├── class-*.php                 # Core classes (Activitypub, Dispatcher, Scheduler, Signature…).
+├── model/                      # Actor models (User, Blog, Application — extend Actor).
 ├── activity/                   # Activity type classes (Activity, Follow, Undo…).
 ├── collection/                 # Collection classes (Followers, Following).
 ├── handler/                    # Incoming activity handlers (Follow, Create, Delete, Like…).
@@ -56,6 +59,15 @@ npm run build                   # Production build (formatted + minified).
 npm run dev                     # Development watch mode.
 ```
 
+## Common Pitfalls
+
+- **PHP 7.2 compatibility.** CI tests against PHP 7.2. No named arguments, no union types, no `match`, no trailing commas in function parameters.
+- **Never edit WordPress core files.** Only modify plugin code.
+- **Pre-commit hooks modify files.** If the hook changed files, stage and commit again — do not assume the first commit succeeded.
+- **`remove_all_filters('pre_http_request')` is forbidden in tests.** The pre-commit hook blocks this. Use targeted filter removal.
+- **Changelog entries MUST end with punctuation.** CI enforces this.
+- **`post_date_gmt` may be empty.** Check for `0000-00-00` or empty values; causes issues on PHP 7.2.
+
 ## Pre-commit Hooks
 
 Automated hooks (`.githooks/pre-commit`) run on `git commit`: sort PHP imports, check unused imports, validate test patterns, run PHPCS auto-fix, format JavaScript.
@@ -66,7 +78,7 @@ Automated hooks (`.githooks/pre-commit`) run on `git commit`: sort PHP imports, 
 
 Files: `class-{name}.php` | `trait-{name}.php` | `interface-{name}.php`
 
-Namespaces: `Activitypub`, `Activitypub\{Transformer,Collection,Handler,Activity,Rest}`
+Namespaces: `Activitypub`, `Activitypub\{Transformer,Collection,Handler,Activity,Rest,Model}`
 
 Text domain: always `'activitypub'`.
 
@@ -84,6 +96,8 @@ See `tests/README.md` for test utilities, data factories, and detailed patterns.
 
 ## Architectural Patterns
 
+**Actor types** — The plugin supports 3 actor types: `User` (WordPress users), `Blog` (site-wide blog actor), and `Application` (system-level). All extend `Actor` base class. See `includes/model/`.
+
 **Transformers** — Convert WordPress content into ActivityPub objects. Extend `Activitypub\Transformer\Base`. See `includes/transformer/`.
 
 **Handlers** — Process incoming activities from remote servers. One handler per activity type. See `includes/handler/`.
@@ -93,6 +107,8 @@ See `tests/README.md` for test utilities, data factories, and detailed patterns.
 **REST Controllers** — Expose AP endpoints under `ACTIVITYPUB_REST_NAMESPACE`. See `includes/rest/`.
 
 **Key helpers** (see `includes/functions-*.php` and `includes/class-webfinger.php`): `get_remote_metadata_by_actor()`, `object_to_uri()`, `Webfinger::resolve()`.
+
+**Custom hooks:** see `includes/class-activitypub.php` and `includes/class-dispatcher.php` for the plugin's main actions and filters.
 
 ## Documentation Index
 
@@ -107,17 +123,6 @@ tests/README.md                  — test utilities, data factories, writing pat
 FEDERATION.md                    — implemented FEPs, supported standards, compatibility
 ```
 
-## Common Pitfalls
-
-- **PHP 7.2 compatibility.** CI tests against PHP 7.2. No named arguments, no union types, no `match`, no trailing commas in function parameters.
-- **Never edit WordPress core files.** Only modify plugin code.
-- **Backslash all WP functions in namespaced code.** Project standard for consistency; missing backslashes won't crash but violate conventions.
-- **Pre-commit hooks modify files.** If the hook changed files, stage and commit again — do not assume the first commit succeeded.
-- **`remove_all_filters('pre_http_request')` is forbidden in tests.** The pre-commit hook blocks this. Use targeted filter removal.
-- **New version strings MUST be `'unreleased'`.** Never introduce new hardcoded versions; existing ones are fine.
-- **Changelog entries MUST end with punctuation.** CI enforces this.
-- **`post_date_gmt` may be empty.** Check for `0000-00-00` or empty values; causes issues on PHP 7.2.
-
 ## Skills and Agents
 
 Skills are complex procedures loaded on demand from `.agents/skills/`.
@@ -130,9 +135,6 @@ Skills are complex procedures loaded on demand from `.agents/skills/`.
 | **release** | Creating releases, bumping versions, managing changelogs. |
 | **federation** | Working with ActivityPub protocol, federation mechanics, or debugging. |
 | **integrations** | Adding or debugging third-party plugin integrations. |
-| **dev** | Deep reference for development workflows. Essentials already in this file. |
-| **code-style** | Deep reference for PHP conventions. Essentials already in this file. |
-| **test** | Deep reference for testing patterns. Essentials already in this file. |
 
 | Agent | Trigger |
 |-------|---------|
