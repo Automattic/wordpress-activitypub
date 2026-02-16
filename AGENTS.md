@@ -125,7 +125,7 @@ FEDERATION.md                    — implemented FEPs, supported standards, comp
 
 ## Skills and Agents
 
-Skills are complex procedures loaded on demand from `.agents/skills/`.
+Skills are complex procedures loaded on demand. Canonical files live in `.agents/skills/`, with stubs in `.claude/skills/` for Claude Code discovery.
 
 **CRITICAL:** After reading a skill, check for a local override at `~/.claude/skills/{skill-name}-local/SKILL.md`. Local overrides take precedence.
 
