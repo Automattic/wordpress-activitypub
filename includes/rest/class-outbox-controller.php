@@ -420,6 +420,12 @@ class Outbox_Controller extends \WP_REST_Controller {
 			// Handler returned a WP_Post or WP_Comment; look up its outbox entry.
 			$activity_type = \ucfirst( $data['type'] ?? 'Create' );
 			$outbox_item   = Outbox::get_by_object_id( $object_id, $activity_type );
+
+			// If the scheduler didn't create an outbox entry (e.g. user actors
+			// disabled), add directly so C2S activities are always federated.
+			if ( ! $outbox_item ) {
+				$outbox_item = \get_post( add_to_outbox( $result, $activity_type, $user_id, $visibility ) );
+			}
 		} elseif ( \is_int( $result ) && $result > 0 ) {
 			// Handler returned an outbox post ID directly.
 			$outbox_item = \get_post( $result );
