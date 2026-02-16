@@ -130,6 +130,9 @@ Skills are complex procedures loaded on demand from `.agents/skills/`.
 | **release** | Creating releases, bumping versions, managing changelogs. |
 | **federation** | Working with ActivityPub protocol, federation mechanics, or debugging. |
 | **integrations** | Adding or debugging third-party plugin integrations. |
+| **dev** | Deep reference for development workflows. Essentials already in this file. |
+| **code-style** | Deep reference for PHP conventions. Essentials already in this file. |
+| **test** | Deep reference for testing patterns. Essentials already in this file. |
 
 | Agent | Trigger |
 |-------|---------|
