@@ -3,8 +3,11 @@
 	"includeCoAuthoredBy": false,
 	"skills": {
 		"allowedSkills": [
+			"dev",
+			"code-style",
 			"pr",
 			"federation",
+			"test",
 			"release",
 			"integrations"
 		]
