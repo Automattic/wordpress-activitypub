@@ -160,6 +160,21 @@ class Router {
 	public static function add_headers() {
 		$id = Query::get_instance()->get_activitypub_object_id();
 
+		/*
+		 * Send CORS headers for resolved ActivityPub objects and outbox
+		 * items. Outbox items need CORS even when the object ID doesn't
+		 * resolve, because browser preflight requests don't carry the
+		 * Authorization header needed to authenticate private items.
+		 */
+		$post_id       = \get_query_var( 'p' );
+		$is_outbox_url = $post_id && Outbox::POST_TYPE === \get_post_type( $post_id );
+
+		if ( ! \headers_sent() && ( $id || $is_outbox_url ) ) {
+			\header( 'Access-Control-Allow-Origin: *' );
+			\header( 'Access-Control-Allow-Methods: GET, OPTIONS' );
+			\header( 'Access-Control-Allow-Headers: Accept, Authorization, Content-Type' );
+		}
+
 		if ( ! $id ) {
 			return;
 		}
@@ -171,13 +186,9 @@ class Router {
 				// Send Vary header for Accept header.
 				\header( 'Vary: Accept', false );
 			}
-
-			\header( 'Access-Control-Allow-Origin: *' );
-			\header( 'Access-Control-Allow-Methods: GET, OPTIONS' );
-			\header( 'Access-Control-Allow-Headers: Accept, Authorization, Content-Type' );
 		}
 
-		add_action(
+		\add_action(
 			'wp_head',
 			static function () use ( $id ) {
 				echo PHP_EOL . '<link rel="alternate" title="ActivityPub (JSON)" type="application/activity+json" href="' . esc_url( $id ) . '" />' . PHP_EOL;
