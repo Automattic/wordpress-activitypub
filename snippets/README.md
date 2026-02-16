@@ -9,6 +9,7 @@ Think of snippets as a testing ground, similar to WordPress' [feature plugin](ht
 | Snippet | Description |
 |---------|-------------|
 | [FediBlog Tag](fediblog-tag/) | Automatically adds the `FediBlog` tag to standard format blog posts. |
+| [Locale from Tags](locale-from-tags/) | Sets a post's ActivityPub language based on post tags matching language codes. |
 
 ## How to Use
 
