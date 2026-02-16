@@ -361,6 +361,18 @@ class OAuth_Controller extends \WP_REST_Controller {
 			return true;
 		}
 
+		// Support Bearer token auth for public OAuth clients.
+		$token = OAuth_Server::get_bearer_token();
+
+		if ( $token ) {
+			$validated = Token::validate( $token );
+
+			if ( ! \is_wp_error( $validated ) ) {
+				\wp_set_current_user( $validated->get_user_id() );
+				return true;
+			}
+		}
+
 		return new \WP_Error(
 			'activitypub_unauthorized',
 			\__( 'Authentication required.', 'activitypub' ),
