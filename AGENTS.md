@@ -69,7 +69,7 @@ npm run dev                     # Development watch mode.
 - **Never edit WordPress core files.** Only modify plugin code.
 - **Pre-commit hooks modify files.** If the hook changed files, stage and commit again — do not assume the first commit succeeded.
 - **`remove_all_filters('pre_http_request')` is forbidden in tests.** The pre-commit hook blocks this. Use targeted filter removal.
-- **Changelog entries MUST end with punctuation.** CI enforces this.
+- **Changelog entries MUST be end-user friendly and end with punctuation.** Users see these in the WordPress update screen. Describe what changed from their perspective — no jargon, class names, or method names.
 - **`post_date_gmt` may be empty.** Check for `0000-00-00` or empty values; causes issues on PHP 7.2.
 
 ## Pre-commit Hooks
