@@ -297,7 +297,8 @@ class Test_Create extends \WP_UnitTestCase {
 		$this->assertEquals( 0, (int) $result->comment_parent );
 		$this->assertEquals( $user_id, (int) $result->user_id );
 		$this->assertStringContainsString( 'This is a reply.', $result->comment_content );
-		$this->assertEquals( 'activitypub', \get_comment_meta( $result->comment_ID, 'protocol', true ) );
+		// C2S comments should NOT have protocol meta (only remote/inbox comments do).
+		$this->assertEmpty( \get_comment_meta( $result->comment_ID, 'protocol', true ) );
 
 		\add_action( 'wp_insert_comment', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity_on_insert' ), 10, 2 );
 	}
