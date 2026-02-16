@@ -82,12 +82,17 @@ class Router {
 		}
 
 		if ( ! is_activitypub_request() || ! should_negotiate_content() ) {
-			// Return 406 for non-ActivityPub requests to outbox items,
-			// but skip for OPTIONS preflight so CORS succeeds with 200.
 			$is_outbox_item = \get_query_var( 'p' ) && Outbox::POST_TYPE === \get_post_type( \get_query_var( 'p' ) );
 			$is_preflight   = isset( $_SERVER['REQUEST_METHOD'] ) && 'OPTIONS' === $_SERVER['REQUEST_METHOD'];
 
-			if ( $is_outbox_item && ! $is_preflight ) {
+			if ( $is_outbox_item && $is_preflight ) {
+				/*
+				 * CORS preflight: override WordPress 404 so the browser
+				 * accepts the preflight response (must be 2xx).
+				 */
+				\status_header( 200 );
+			} elseif ( $is_outbox_item ) {
+				// Return 406 for non-ActivityPub requests to outbox items since they only support ActivityPub requests.
 				\set_query_var( 'is_404', true );
 				\status_header( 406 );
 			}
