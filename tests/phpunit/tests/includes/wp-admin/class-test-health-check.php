@@ -651,6 +651,26 @@ class Test_Health_Check extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that outbox rate only counts items from the last hour.
+	 */
+	public function test_outbox_rate_excludes_old_items() {
+		$this->delete_all_outbox_items();
+
+		// Create 15 recent items (within the last hour).
+		$this->create_outbox_items( 15, 'https://example.com/post/recent' );
+
+		// Create 20 old items (2 hours ago — outside the window).
+		$this->create_outbox_items( 20, 'https://example.com/post/old', '2 hours ago' );
+
+		$data = Health_Check::get_outbox_rate_data();
+
+		// Only the 15 recent items should be counted.
+		$this->assertEquals( 15, $data['total'] );
+		$this->assertArrayHasKey( 'https://example.com/post/recent', $data['by_object'] );
+		$this->assertArrayNotHasKey( 'https://example.com/post/old', $data['by_object'] );
+	}
+
+	/**
 	 * Delete all existing outbox items to ensure a clean test state.
 	 */
 	private function delete_all_outbox_items() {
@@ -676,8 +696,18 @@ class Test_Health_Check extends WP_UnitTestCase {
 	 *
 	 * @return int[] Array of created post IDs.
 	 */
-	private function create_outbox_items( $count, $object_id ) {
-		$post_ids = array();
+	/**
+	 * Helper to create outbox items for testing.
+	 *
+	 * @param int    $count     Number of items to create.
+	 * @param string $object_id The object ID meta value.
+	 * @param string $post_date Optional. The post date. Default current time.
+	 *
+	 * @return int[] Array of created post IDs.
+	 */
+	private function create_outbox_items( $count, $object_id, $post_date = '' ) {
+		$post_ids  = array();
+		$base_time = $post_date ? \strtotime( $post_date ) : \time();
 
 		for ( $i = 0; $i < $count; $i++ ) {
 			$post_id = $this->factory()->post->create(
@@ -685,7 +715,7 @@ class Test_Health_Check extends WP_UnitTestCase {
 					'post_type'   => Outbox::POST_TYPE,
 					'post_status' => 'pending',
 					'post_title'  => '[Update] Test Post',
-					'post_date'   => \current_time( 'mysql' ),
+					'post_date'   => \gmdate( 'Y-m-d H:i:s', $base_time - $i ),
 					'meta_input'  => array(
 						'_activitypub_object_id'     => $object_id,
 						'_activitypub_activity_type' => 'Update',
