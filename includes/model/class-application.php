@@ -108,7 +108,7 @@ class Application extends Actor {
 	 * Constructor.
 	 */
 	public function __construct() {
-		_deprecated_class( __CLASS__, 'unreleased', 'Activitypub\Application' );
+		\_deprecated_class( __CLASS__, 'unreleased', 'Activitypub\Application' );
 	}
 
 	/**
@@ -196,15 +196,17 @@ class Application extends Actor {
 	public function get_published() {
 		$first_post = new \WP_Query(
 			array(
-				'orderby' => 'date',
-				'order'   => 'ASC',
-				'number'  => 1,
+				'orderby'        => 'date',
+				'order'          => 'ASC',
+				'posts_per_page' => 1,
 			)
 		);
 
 		if ( ! empty( $first_post->posts[0] ) ) {
 			$time = \strtotime( $first_post->posts[0]->post_date_gmt );
-		} else {
+		}
+
+		if ( empty( $time ) ) {
 			$time = \time();
 		}
 

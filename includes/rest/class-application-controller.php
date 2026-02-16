@@ -75,7 +75,7 @@ class Application_Controller extends \WP_REST_Controller {
 				\__( 'This is the Application Actor for %s.', 'activitypub' ),
 				home_host()
 			),
-			'url'                       => $id,
+			'url'                       => Application::get_url(),
 			'icon'                      => self::get_icon(),
 			'published'                 => self::get_published(),
 			'inbox'                     => get_rest_url_by_path( 'inbox' ),
@@ -146,15 +146,17 @@ class Application_Controller extends \WP_REST_Controller {
 	private static function get_published() {
 		$first_post = new \WP_Query(
 			array(
-				'orderby' => 'date',
-				'order'   => 'ASC',
-				'number'  => 1,
+				'orderby'        => 'date',
+				'order'          => 'ASC',
+				'posts_per_page' => 1,
 			)
 		);
 
 		if ( ! empty( $first_post->posts[0] ) ) {
 			$time = \strtotime( $first_post->posts[0]->post_date_gmt );
-		} else {
+		}
+
+		if ( empty( $time ) ) {
 			$time = \time();
 		}
 
@@ -256,6 +258,9 @@ class Application_Controller extends \WP_REST_Controller {
 					'type' => 'boolean',
 				),
 				'indexable'                 => array(
+					'type' => 'boolean',
+				),
+				'invisible'                 => array(
 					'type' => 'boolean',
 				),
 				'implements'                => array(

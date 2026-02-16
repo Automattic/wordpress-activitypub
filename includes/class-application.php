@@ -17,10 +17,14 @@ namespace Activitypub;
  *
  * This class provides static utility methods for the Application actor,
  * primarily key management for HTTP Signatures.
+ *
+ * @since unreleased
  */
 class Application {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @since unreleased
 	 */
 	public static function init() {
 		\add_filter( 'webfinger_data', array( self::class, 'add_webfinger_discovery' ), 0, 2 );
@@ -28,6 +32,8 @@ class Application {
 
 	/**
 	 * WebFinger discovery filter callback.
+	 *
+	 * @since unreleased
 	 *
 	 * @param array  $jrd The jrd array.
 	 * @param string $uri The WebFinger resource.
@@ -61,6 +67,8 @@ class Application {
 	/**
 	 * Returns the Application actor ID (URL).
 	 *
+	 * @since unreleased
+	 *
 	 * @return string The Application ID.
 	 */
 	public static function get_id() {
@@ -69,6 +77,8 @@ class Application {
 
 	/**
 	 * Returns the pretty URL for the Application actor.
+	 *
+	 * @since unreleased
 	 *
 	 * @return string The Application URL (e.g. https://example.com/@application).
 	 */
@@ -79,6 +89,8 @@ class Application {
 	/**
 	 * Returns the WebFinger identifier for the Application.
 	 *
+	 * @since unreleased
+	 *
 	 * @return string The WebFinger identifier (e.g. application@example.com).
 	 */
 	public static function get_webfinger() {
@@ -88,6 +100,8 @@ class Application {
 	/**
 	 * Returns the key ID for HTTP signatures.
 	 *
+	 * @since unreleased
+	 *
 	 * @return string The key ID.
 	 */
 	public static function get_key_id() {
@@ -96,6 +110,8 @@ class Application {
 
 	/**
 	 * Returns the public key PEM for the Application.
+	 *
+	 * @since unreleased
 	 *
 	 * @return string|null The public key PEM.
 	 */
@@ -107,6 +123,8 @@ class Application {
 	/**
 	 * Returns the private key for the Application.
 	 *
+	 * @since unreleased
+	 *
 	 * @return string|null The private key.
 	 */
 	public static function get_private_key() {
@@ -116,6 +134,8 @@ class Application {
 
 	/**
 	 * Returns the key pair for the Application.
+	 *
+	 * @since unreleased
 	 *
 	 * @return array The key pair with 'public_key' and 'private_key'.
 	 */
@@ -180,6 +200,8 @@ class Application {
 	/**
 	 * Check if the URI matches the Application actor and return WebFinger data.
 	 *
+	 * @since unreleased
+	 *
 	 * Handles the following URI formats:
 	 * - acct:application@example.com / application@example.com
 	 * - http(s)://example.com/@application
@@ -214,6 +236,8 @@ class Application {
 
 	/**
 	 * Check if a URI refers to the Application actor.
+	 *
+	 * @since unreleased
 	 *
 	 * @param string $uri The URI to check.
 	 *
