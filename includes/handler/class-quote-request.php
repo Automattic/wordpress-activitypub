@@ -15,6 +15,7 @@ use Activitypub\Collection\Remote_Actors;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\object_to_uri;
+use function Activitypub\user_can_activitypub;
 
 /**
  * Handler for QuoteRequest activities.
@@ -40,17 +41,18 @@ class Quote_Request {
 	 * @param int|int[] $user_ids The user ID(s).
 	 */
 	public static function handle_quote_request( $activity, $user_ids ) {
-		// Extract the user ID (quote requests are always for a single user).
-		$user_id = \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids;
-
 		$state   = true;
 		$post_id = \url_to_postid( object_to_uri( $activity['object'] ) );
+		$post    = $post_id ? \get_post( $post_id ) : null;
 
-		if ( ! $post_id ) {
+		if ( ! $post ) {
+			$user_id = \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids;
 			self::queue_reject( $activity, $user_id );
 			return;
 		}
 
+		// Use the post author as the responding actor — they own the quoted content.
+		$user_id        = (int) $post->post_author;
 		$content_policy = \get_post_meta( $post_id, 'activitypub_interaction_policy_quote', true );
 
 		// Fall back to global default if not set.
@@ -97,7 +99,7 @@ class Quote_Request {
 	 * @param string         $type     The type of the activity.
 	 */
 	public static function handle_blocked_request( $activity, $user_ids, $type ) {
-		if ( 'quoterequest' !== \strtolower( $type ) ) {
+		if ( ! in_array( strtolower( $type ), array( 'quoterequest', 'quote_request' ), true ) ) {
 			return;
 		}
 
@@ -202,6 +204,11 @@ class Quote_Request {
 	 * @param int   $post_id         The post ID.
 	 */
 	public static function queue_accept( $activity_object, $user_id, $post_id ) {
+		// Fall back to the blog actor if the user has ActivityPub disabled.
+		if ( ! user_can_activitypub( $user_id ) ) {
+			$user_id = Actors::BLOG_USER_ID;
+		}
+
 		$actor = Actors::get_by_id( $user_id );
 
 		if ( \is_wp_error( $actor ) ) {
@@ -266,6 +273,11 @@ class Quote_Request {
 	 * @param int   $user_id  The user ID.
 	 */
 	public static function queue_reject( $activity_object, $user_id ) {
+		// Fall back to the blog actor if the user has ActivityPub disabled.
+		if ( ! user_can_activitypub( $user_id ) ) {
+			$user_id = Actors::BLOG_USER_ID;
+		}
+
 		$actor = Actors::get_by_id( $user_id );
 
 		if ( \is_wp_error( $actor ) ) {
