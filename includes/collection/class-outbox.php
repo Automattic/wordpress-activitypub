@@ -360,6 +360,16 @@ class Outbox {
 			return new \WP_Error( 'invalid_outbox_item', 'Invalid Outbox item.' );
 		}
 
+		// Authenticate via Bearer token for non-REST requests (e.g. permalink access).
+		if ( ! \is_user_logged_in() && ! \wp_is_serving_rest_request() ) {
+			\Activitypub\OAuth\Server::authenticate_oauth( null );
+		}
+
+		// Allow the author to view their own outbox items regardless of visibility.
+		if ( \get_current_user_id() === (int) $outbox_item->post_author ) {
+			return self::get_activity( $outbox_item );
+		}
+
 		// Check if Outbox Activity is public.
 		$visibility = \get_post_meta( $outbox_item->ID, 'activitypub_content_visibility', true );
 
