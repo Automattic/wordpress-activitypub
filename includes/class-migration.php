@@ -224,6 +224,10 @@ class Migration {
 			\add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
 
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			Activitypub::flush_rewrite_rules();
+		}
+
 		// Ensure all required cron schedules are registered.
 		Scheduler::register_schedules();
 
