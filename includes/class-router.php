@@ -164,7 +164,7 @@ class Router {
 			return;
 		}
 
-		if ( ! headers_sent() ) {
+		if ( ! \headers_sent() ) {
 			\header( 'Link: <' . esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"', false );
 
 			if ( \get_option( 'activitypub_vary_header', '1' ) ) {
