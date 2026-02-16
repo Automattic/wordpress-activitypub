@@ -50,7 +50,7 @@ class Router {
 
 		if ( ! \class_exists( 'Webfinger' ) ) {
 			\add_rewrite_rule(
-				'^\\.well-known/webfinger',
+				'^.well-known/webfinger',
 				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/webfinger',
 				'top'
 			);
@@ -58,7 +58,7 @@ class Router {
 
 		if ( ! \class_exists( 'Nodeinfo_Endpoint' ) && true === (bool) \get_option( 'blog_public', 1 ) ) {
 			\add_rewrite_rule(
-				'^\\.well-known/nodeinfo',
+				'^.well-known/nodeinfo',
 				'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo',
 				'top'
 			);
@@ -66,7 +66,7 @@ class Router {
 
 		// Authorization Server Metadata (RFC 8414).
 		\add_rewrite_rule(
-			'^\\.well-known/oauth-authorization-server',
+			'^.well-known/oauth-authorization-server',
 			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/authorization-server-metadata',
 			'top'
 		);
