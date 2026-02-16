@@ -70,9 +70,9 @@ Namespaces: `Activitypub`, `Activitypub\{Transformer,Collection,Handler,Activity
 
 Text domain: always `'activitypub'`.
 
-**MUST** backslash-prefix all WordPress functions in namespaced code: `\get_option()`, `\add_action()`, `\apply_filters()`, `\__()`, `\_e()`, etc. Missing backslashes cause fatal errors.
+**MUST** backslash-prefix all WordPress functions in namespaced code: `\get_option()`, `\add_action()`, `\apply_filters()`, `\__()`, `\_e()`, etc. PHP falls back to global scope, but backslashes are a project standard for consistency and to avoid accidentally shadowing globals.
 
-**MUST** use `'unreleased'` for all `@since`, `@deprecated`, and deprecation function version strings. Never hardcode version numbers like `'5.1.0'`. The release script replaces these automatically.
+**For new or modified code**, MUST use `'unreleased'` for all `@since`, `@deprecated`, and deprecation function version strings so the release script can replace them. Do not introduce new hardcoded version numbers like `'5.1.0'`; existing versioned tags in the codebase are fine.
 
 ## Testing Conventions
 
@@ -92,7 +92,7 @@ See `tests/README.md` for test utilities, data factories, and detailed patterns.
 
 **REST Controllers** — Expose AP endpoints under `ACTIVITYPUB_REST_NAMESPACE`. See `includes/rest/`.
 
-**Key helpers:** `get_remote_metadata_by_actor()`, `object_to_uri()`, `Webfinger::resolve()`, `\is_post_type_enabled()`.
+**Key helpers:** `get_remote_metadata_by_actor()`, `object_to_uri()`, `Webfinger::resolve()`.
 
 ## Documentation Index
 
@@ -111,10 +111,10 @@ FEDERATION.md                    — implemented FEPs, supported standards, comp
 
 - **PHP 7.2 compatibility.** CI tests against PHP 7.2. No named arguments, no union types, no `match`, no trailing commas in function parameters.
 - **Never edit WordPress core files.** Only modify plugin code.
-- **Backslash all WP functions in namespaced code.** Missing backslashes cause fatal errors easy to miss locally.
+- **Backslash all WP functions in namespaced code.** Project standard for consistency; missing backslashes won't crash but violate conventions.
 - **Pre-commit hooks modify files.** If the hook changed files, stage and commit again — do not assume the first commit succeeded.
 - **`remove_all_filters('pre_http_request')` is forbidden in tests.** The pre-commit hook blocks this. Use targeted filter removal.
-- **Version strings MUST be `'unreleased'`.** Never hardcode in `@since`, `@deprecated`, or deprecation calls.
+- **New version strings MUST be `'unreleased'`.** Never introduce new hardcoded versions; existing ones are fine.
 - **Changelog entries MUST end with punctuation.** CI enforces this.
 - **`post_date_gmt` may be empty.** Check for `0000-00-00` or empty values; causes issues on PHP 7.2.
 
