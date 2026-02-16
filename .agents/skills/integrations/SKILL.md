@@ -12,7 +12,7 @@ This skill provides guidance on integrating the ActivityPub plugin with other Wo
 ### Integration Location
 All integrations live in the `integration/` directory.
 
-**File naming:** `class-{plugin-name}.php` (following [PHP conventions](../code-style/SKILL.md))
+**File naming:** `class-{plugin-name}.php` (following PHP conventions in AGENTS.md)
 
 ### Available Integrations
 - BuddyPress

@@ -69,7 +69,7 @@ npm run env-test      # Run tests
 npm run build         # If assets changed
 ```
 
-See [dev](../dev/SKILL.md) for complete commands.
+See AGENTS.md for complete commands.
 
 ### Keep Branch Updated
 ```bash

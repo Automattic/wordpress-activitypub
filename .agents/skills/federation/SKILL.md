@@ -9,7 +9,7 @@ This skill provides understanding of the ActivityPub protocol specification and 
 
 **For supported features and compatibility:** See [FEDERATION.md](../../../FEDERATION.md) for the complete list of implemented FEPs, supported standards, and federation compatibility details.
 
-**For implementation details:** See [PHP Conventions](../code-style/SKILL.md) for transformers, handlers, and PHP code patterns.
+**For implementation details:** See AGENTS.md for transformers, handlers, and PHP code patterns.
 
 ## Core Concepts
 
@@ -273,7 +273,7 @@ This plugin implements:
 - **Handlers**: Process incoming activities
 
 For implementation details, see:
-- [PHP Conventions](../code-style/SKILL.md) for code structure
+- AGENTS.md for code structure
 - [Integration Guide](../integrations/SKILL.md) for extending
 
 ### Testing Federation
