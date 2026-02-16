@@ -1,4 +1,4 @@
 Significance: patch
 Type: fixed
 
-Add rewrite rule for Mastodon's `authorize_interaction` endpoint to fix follow button redirects.
+Fix follow button redirect from Mastodon not being recognized.
