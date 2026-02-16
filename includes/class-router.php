@@ -42,7 +42,7 @@ class Router {
 		}
 
 		\add_rewrite_rule(
-			'^authorize_interaction',
+			'^authorize_interaction/?$',
 			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions',
 			'top'
 		);
