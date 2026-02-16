@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix collection purge methods to batch deletions and enforce a hard item cap, preventing silent OOM failures on large sites.
