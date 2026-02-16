@@ -289,9 +289,8 @@ class Comment {
 			return false;
 		}
 
-		// Fall back to the blog user when the comment author has no
-		// individual ActivityPub profile (e.g. user actors disabled).
-		if ( ! user_can_activitypub( $user_id ) ) {
+		if ( is_single_user() && \user_can( $user_id, 'activitypub' ) ) {
+			// On a single user site, comments by users with the `activitypub` capability will be federated as the blog user.
 			$user_id = Actors::BLOG_USER_ID;
 		}
 
