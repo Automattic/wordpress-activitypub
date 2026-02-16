@@ -409,14 +409,13 @@ class Interactions {
 			'comment_author_email' => $comment_author_email,
 			'comment_date'         => \get_date_from_gmt( $gm_date ),
 			'comment_date_gmt'     => $gm_date,
-			'comment_meta'         => array(
-				'protocol' => 'activitypub',
-			),
+			'comment_meta'         => array(),
 		);
 
 		if ( $user_id ) {
 			$comment_data['user_id'] = $user_id;
 		} else {
+			$comment_data['comment_meta']['protocol']  = 'activitypub';
 			$comment_data['comment_meta']['source_id'] = \esc_url_raw( object_to_uri( $activity['object'] ) );
 
 			// Store reference to remote actor post.
