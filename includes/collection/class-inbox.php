@@ -35,6 +35,20 @@ class Inbox {
 	const MAX_ITEMS = 5000;
 
 	/**
+	 * Number of items to process per batch during purge.
+	 *
+	 * @var int
+	 */
+	const PURGE_BATCH_SIZE = 100;
+
+	/**
+	 * Maximum seconds a purge run may take before yielding.
+	 *
+	 * @var int
+	 */
+	const PURGE_TIMEOUT = 30;
+
+	/**
 	 * Context for user inbox requests.
 	 *
 	 * @var string
@@ -497,7 +511,6 @@ class Inbox {
 		}
 
 		$deleted    = 0;
-		$batch_size = 100;
 		$cutoff     = \gmdate( 'Y-m-d', \time() - ( $days * DAY_IN_SECONDS ) );
 		$start_time = \time();
 
@@ -513,7 +526,7 @@ class Inbox {
 			'post_type'   => self::POST_TYPE,
 			'post_status' => 'any',
 			'fields'      => 'ids',
-			'numberposts' => $batch_size,
+			'numberposts' => self::PURGE_BATCH_SIZE,
 			'orderby'     => 'date',
 			'order'       => 'ASC',
 		);
@@ -535,7 +548,7 @@ class Inbox {
 				$overflow                 = false;
 				$query_args['date_query'] = $date_query;
 			}
-		} while ( ! empty( $post_ids ) && ( \time() - $start_time ) < 30 );
+		} while ( ! empty( $post_ids ) && ( \time() - $start_time ) < self::PURGE_TIMEOUT );
 
 		return $deleted;
 	}

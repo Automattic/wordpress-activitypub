@@ -35,6 +35,20 @@ class Posts {
 	const MAX_ITEMS = 5000;
 
 	/**
+	 * Number of items to process per batch during purge.
+	 *
+	 * @var int
+	 */
+	const PURGE_BATCH_SIZE = 100;
+
+	/**
+	 * Maximum seconds a purge run may take before yielding.
+	 *
+	 * @var int
+	 */
+	const PURGE_TIMEOUT = 30;
+
+	/**
 	 * Add an object to the collection.
 	 *
 	 * @param array     $activity   The activity object data.
@@ -526,7 +540,6 @@ class Posts {
 		global $wpdb;
 
 		$deleted    = 0;
-		$batch_size = 100;
 		$cutoff     = \gmdate( 'Y-m-d', \time() - ( $days * DAY_IN_SECONDS ) );
 		$start_time = \time();
 		$exclude    = array();
@@ -543,7 +556,7 @@ class Posts {
 			'post_type'   => self::POST_TYPE,
 			'post_status' => 'any',
 			'fields'      => 'ids',
-			'numberposts' => $batch_size,
+			'numberposts' => self::PURGE_BATCH_SIZE,
 			'orderby'     => 'date',
 			'order'       => 'ASC',
 		);
@@ -555,6 +568,20 @@ class Posts {
 		do {
 			$query_args['exclude'] = $exclude;
 			$post_ids              = \get_posts( $query_args );
+
+			if ( empty( $post_ids ) ) {
+				break;
+			}
+
+			// Batch-fetch post IDs that have local user comments (single query per batch).
+			$placeholders = \implode( ',', \array_fill( 0, \count( $post_ids ), '%d' ) );
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$commented_post_ids = $wpdb->get_col(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders
+				$wpdb->prepare( "SELECT DISTINCT comment_post_ID FROM $wpdb->comments WHERE comment_post_ID IN ($placeholders) AND user_id > 0", $post_ids )
+			);
+			$commented_post_ids = \array_flip( $commented_post_ids );
 
 			foreach ( $post_ids as $post_id ) {
 				/**
@@ -570,18 +597,8 @@ class Posts {
 					continue;
 				}
 
-				/*
-				 * Preserve posts with comments from local users.
-				 * Local user comments have a user_id > 0, while Fediverse comments have user_id = 0.
-				 */
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-				$has_local_comments = (bool) $wpdb->get_var(
-					$wpdb->prepare(
-						"SELECT 1 FROM $wpdb->comments WHERE comment_post_ID = %d AND user_id > 0 LIMIT 1",
-						$post_id
-					)
-				);
-				if ( $has_local_comments ) {
+				// Preserve posts with comments from local users.
+				if ( isset( $commented_post_ids[ $post_id ] ) ) {
 					$exclude[] = $post_id;
 					continue;
 				}
@@ -590,12 +607,17 @@ class Posts {
 				++$deleted;
 			}
 
+			// Stop if $exclude grows too large to keep queries fast.
+			if ( \count( $exclude ) > 500 ) {
+				break;
+			}
+
 			// Once we're back under the cap, re-apply the date filter.
 			if ( $overflow && ( $total - $deleted ) <= self::MAX_ITEMS ) {
 				$overflow                 = false;
 				$query_args['date_query'] = $date_query;
 			}
-		} while ( ! empty( $post_ids ) && ( \time() - $start_time ) < 30 );
+		} while ( ! empty( $post_ids ) && ( \time() - $start_time ) < self::PURGE_TIMEOUT );
 
 		return $deleted;
 	}
