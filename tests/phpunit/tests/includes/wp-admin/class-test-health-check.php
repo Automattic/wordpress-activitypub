@@ -669,14 +669,6 @@ class Test_Health_Check extends WP_UnitTestCase {
 	 *
 	 * @param int    $count     Number of items to create.
 	 * @param string $object_id The object ID meta value.
-	 *
-	 * @return int[] Array of created post IDs.
-	 */
-	/**
-	 * Helper to create outbox items for testing.
-	 *
-	 * @param int    $count     Number of items to create.
-	 * @param string $object_id The object ID meta value.
 	 * @param string $post_date Optional. The post date. Default current time.
 	 *
 	 * @return int[] Array of created post IDs.
