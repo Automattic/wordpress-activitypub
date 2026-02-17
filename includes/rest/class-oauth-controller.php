@@ -569,7 +569,7 @@ class OAuth_Controller extends \WP_REST_Controller {
 	 */
 	public function register_client( \WP_REST_Request $request ) {
 		// Check if dynamic registration is allowed (disabled by default for security).
-		if ( ! \apply_filters( 'activitypub_allow_dynamic_client_registration', false ) ) {
+		if ( ! \apply_filters( 'activitypub_allow_dynamic_client_registration', true ) ) {
 			return new \WP_Error(
 				'activitypub_registration_disabled',
 				\__( 'Dynamic client registration is not allowed.', 'activitypub' ),
