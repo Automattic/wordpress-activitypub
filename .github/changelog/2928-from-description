@@ -1,0 +1,4 @@
+Significance: patch
+Type: added
+
+Add a Site Health check that warns when plugins are causing too many federation updates.
