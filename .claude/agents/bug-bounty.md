@@ -10,25 +10,23 @@ You are a bug-fix agent for the WordPress ActivityPub plugin. Your job is to pic
 
 ## Step 1 — Find an Issue to Fix
 
-Fetch open bug issues from the repository:
+Fetch open bug issues from the repository. **Only consider issues labeled "Bug" or "[Type] Bug"** — skip everything else:
 
 ```bash
 gh issue list --label "Bug" --state open --json number,title,body,labels --limit 20
+gh issue list --label "[Type] Bug" --state open --json number,title,body,labels --limit 20
 ```
 
-If no "Bug" label exists, try:
+Merge and deduplicate the results.
 
-```bash
-gh issue list --state open --json number,title,body,labels --limit 30
-```
+From the results, **skip issues that also have the "Needs triage" label** — these are unverified and waiting for manual review.
 
-Review the issues and pick the one that is most straightforward to fix — look for clear reproduction steps, well-described expected behavior, and a scope that can be addressed with minimal changes.
+Review the remaining issues and pick the one that is most straightforward to fix — look for clear reproduction steps, well-described expected behavior, and a scope that can be addressed with minimal changes.
 
 **Skip issues that already have a linked PR.** For each candidate issue, check:
 
 ```bash
-gh issue view <number> --json comments,timelineItems --jq '.comments[].body' | grep -i "pull request\|/pull/"
-gh pr list --state open --search "Fixes #<number>" --json number,title
+gh pr list --state open --search "#<number>" --json number,title
 ```
 
 If any open PR already references the issue, move on to the next candidate.
@@ -41,7 +39,26 @@ If any open PR already references the issue, move on to the next candidate.
 - Identify the root cause **before** writing any code.
 - Explain what the bug is, where it lives, and what the fix should be.
 
-## Step 3 — Create a Branch
+## Step 3 — Verify the Bug
+
+Before investing time in a fix, confirm that the issue describes a real, reproducible bug:
+
+1. **Trace the code path.** Walk through the code described in the issue and verify the reported behavior actually occurs. Check whether the issue still exists on `trunk` — it may already be fixed.
+2. **Check for user error or misconfiguration.** Some reports describe expected behavior, unsupported setups, or configuration mistakes rather than actual bugs.
+3. **Look for missing context.** If the issue lacks reproduction steps, version info, or enough detail to understand the problem, it cannot be verified.
+
+**If you cannot confirm it is a bug** (ambiguous report, expected behavior, cannot reproduce, or insufficient information), do NOT attempt a fix. Instead:
+
+```bash
+gh issue edit <number> --add-label "Needs triage"
+gh issue comment <number> --body "Automated analysis: Could not confirm this as a bug. <brief reason — e.g., 'the described behavior appears to be expected' or 'cannot reproduce on trunk' or 'insufficient information to reproduce'>. Adding 'Needs triage' for manual review."
+```
+
+Then return to **Step 1** and pick the next candidate issue. If no further candidates remain, stop and report what was triaged.
+
+**If the bug is confirmed**, proceed to the next step.
+
+## Step 4 — Create a Branch
 
 Create a fix branch from trunk following the **pr** skill branch naming conventions:
 
@@ -50,27 +67,27 @@ git checkout trunk && git pull origin trunk
 git checkout -b fix/<short-description>
 ```
 
-## Step 4 — Implement the Fix
+## Step 5 — Implement the Fix
 
 Apply the **code-style** skill. Make minimal changes — fix only the bug; do not refactor unrelated code.
 
-## Step 5 — Add or Update Tests
+## Step 6 — Add or Update Tests
 
 Apply the **test** skill to add a PHPUnit test that reproduces the bug and verifies the fix. Run the full test suite and fix any failures before proceeding.
 
-## Step 6 — Quality Checks and Commit
+## Step 7 — Quality Checks and Commit
 
 Apply the **dev** skill to run linting, pre-push checks, and commit the changes. Push the branch.
 
-## Step 7 — Self-Review
+## Step 8 — Code Review
 
-Before creating the PR, self-review your changes by applying the **code-review** agent checklist against `git diff origin/trunk...HEAD`.
+Before creating the PR, run the **code-review** agent against your branch. Address any critical issues it flags before proceeding.
 
-## Step 8 — Create Pull Request
+## Step 9 — Create Pull Request
 
 Apply the **pr** skill to create the PR as a **draft** (`--draft` flag). Reference the issue (`Fixes #<number>`), describe the fix, include a changelog entry (significance=Patch, type=Fixed). Always create PRs as drafts so a human can review before marking them ready.
 
-## Step 9 — Verify CI
+## Step 10 — Verify CI
 
 After pushing the branch and creating the PR, wait for CI to start and then monitor its status:
 
@@ -78,7 +95,7 @@ After pushing the branch and creating the PR, wait for CI to start and then moni
 gh run list --branch <branch-name> --limit 1 --json status,conclusion,databaseId
 ```
 
-Poll every 30 seconds until the run completes (status=completed). If CI **fails**:
+Poll every 30 seconds for a maximum of 30 minutes (60 attempts). If the run has not completed by then, stop and report the current status. If CI **fails**:
 
 1. Fetch the failure logs: `gh run view <run-id> --log-failed`
 2. Apply the **code-style** and **test** skills to diagnose the issue.

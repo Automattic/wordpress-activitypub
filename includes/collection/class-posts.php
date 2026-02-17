@@ -28,6 +28,27 @@ class Posts {
 	const POST_TYPE = 'ap_post';
 
 	/**
+	 * Maximum number of remote post items to keep.
+	 *
+	 * @var int
+	 */
+	const MAX_ITEMS = 5000;
+
+	/**
+	 * Number of items to process per batch during purge.
+	 *
+	 * @var int
+	 */
+	const PURGE_BATCH_SIZE = 100;
+
+	/**
+	 * Maximum seconds a purge run may take before yielding.
+	 *
+	 * @var int
+	 */
+	const PURGE_TIMEOUT = 30;
+
+	/**
 	 * Add an object to the collection.
 	 *
 	 * @param array     $activity   The activity object data.
@@ -502,59 +523,96 @@ class Posts {
 	 * @return int The number of items deleted.
 	 */
 	public static function purge( $days ) {
-		$total_posts = (int) \wp_count_posts( self::POST_TYPE )->publish;
-		if ( $total_posts <= 200 ) {
+		if ( $days <= 0 ) {
 			return 0;
 		}
 
-		$post_ids = \get_posts(
-			array(
-				'post_type'   => self::POST_TYPE,
-				'post_status' => 'any',
-				'fields'      => 'ids',
-				'numberposts' => -1,
-				'date_query'  => array(
-					array(
-						'before' => \gmdate( 'Y-m-d', \time() - ( $days * DAY_IN_SECONDS ) ),
-					),
-				),
-			)
-		);
+		$counts = \wp_count_posts( self::POST_TYPE );
+		$total  = 0;
+		foreach ( $counts as $count ) {
+			$total += (int) $count;
+		}
+
+		if ( $total <= 200 ) {
+			return 0;
+		}
 
 		global $wpdb;
 
-		$deleted = 0;
-		foreach ( $post_ids as $post_id ) {
-			/**
-			 * Filter whether to preserve a specific ap_post from being purged.
-			 *
-			 * @param bool $preserve Whether to preserve this post. Default false.
-			 * @param int  $post_id  The ap_post ID being considered for deletion.
-			 *
-			 * @return bool Whether to preserve this post from deletion.
-			 */
-			if ( \apply_filters( 'activitypub_preserve_ap_post', false, $post_id ) ) {
-				continue;
-			}
+		$deleted    = 0;
+		$cutoff     = \gmdate( 'Y-m-d', \time() - ( $days * DAY_IN_SECONDS ) );
+		$start_time = \time();
+		$exclude    = array();
 
-			/*
-			 * Preserve posts with comments from local users.
-			 * Local user comments have a user_id > 0, while Fediverse comments have user_id = 0.
-			 */
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$has_local_comments = (bool) $wpdb->get_var(
-				$wpdb->prepare(
-					"SELECT 1 FROM $wpdb->comments WHERE comment_post_ID = %d AND user_id > 0 LIMIT 1",
-					$post_id
-				)
-			);
-			if ( $has_local_comments ) {
-				continue;
-			}
+		// If total exceeds the hard cap, drop the date filter to purge oldest items first.
+		$overflow   = $total > self::MAX_ITEMS;
+		$date_query = array(
+			array(
+				'before' => $cutoff,
+			),
+		);
 
-			\wp_delete_post( $post_id, true );
-			++$deleted;
+		$query_args = array(
+			'post_type'   => self::POST_TYPE,
+			'post_status' => 'any',
+			'fields'      => 'ids',
+			'numberposts' => self::PURGE_BATCH_SIZE,
+			'orderby'     => 'date',
+			'order'       => 'ASC',
+		);
+
+		if ( ! $overflow ) {
+			$query_args['date_query'] = $date_query;
 		}
+
+		do {
+			$query_args['exclude'] = $exclude;
+			$post_ids              = \get_posts( $query_args );
+
+			if ( empty( $post_ids ) ) {
+				break;
+			}
+
+			// Batch-fetch post IDs that have local user comments (single query per batch).
+			$placeholders = \implode( ',', \array_fill( 0, \count( $post_ids ), '%d' ) );
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$commented_post_ids = $wpdb->get_col(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders
+				$wpdb->prepare( "SELECT DISTINCT comment_post_ID FROM $wpdb->comments WHERE comment_post_ID IN ($placeholders) AND user_id > 0", $post_ids )
+			);
+			$commented_post_ids = \array_flip( $commented_post_ids );
+
+			foreach ( $post_ids as $post_id ) {
+				/**
+				 * Filter whether to preserve a specific ap_post from being purged.
+				 *
+				 * @param bool $preserve Whether to preserve this post. Default false.
+				 * @param int  $post_id  The ap_post ID being considered for deletion.
+				 *
+				 * @return bool Whether to preserve this post from deletion.
+				 */
+				if ( \apply_filters( 'activitypub_preserve_ap_post', false, $post_id ) ) {
+					$exclude[] = $post_id;
+					continue;
+				}
+
+				// Preserve posts with comments from local users.
+				if ( isset( $commented_post_ids[ $post_id ] ) ) {
+					$exclude[] = $post_id;
+					continue;
+				}
+
+				\wp_delete_post( $post_id, true );
+				++$deleted;
+			}
+
+			// Once we're back under the cap, re-apply the date filter.
+			if ( $overflow && ( $total - $deleted ) <= self::MAX_ITEMS ) {
+				$overflow                 = false;
+				$query_args['date_query'] = $date_query;
+			}
+		} while ( ! empty( $post_ids ) && ( \time() - $start_time ) < self::PURGE_TIMEOUT );
 
 		return $deleted;
 	}
