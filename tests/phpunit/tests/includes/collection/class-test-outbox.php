@@ -211,11 +211,11 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
-	 * Test invalidating existing outbox items.
+	 * Test that superseded outbox items are deleted.
 	 *
-	 * @covers ::invalidate_existing_items
+	 * @covers ::delete_superseded_items
 	 */
-	public function test_invalidate_existing_items() {
+	public function test_delete_superseded_items() {
 		$object        = $this->get_dummy_activity_object();
 		$activity_type = 'Create';
 
@@ -228,42 +228,42 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$second_id = \Activitypub\add_to_outbox( $object, $activity_type, 1 );
 		$this->assertNotFalse( $second_id );
 
-		// First item should now be published (invalidated).
-		$this->assertEquals( 'publish', \get_post_status( $first_id ) );
+		// First item should be deleted (superseded).
+		$this->assertFalse( \get_post_status( $first_id ) );
 		// New item should still be pending.
 		$this->assertEquals( 'pending', \get_post_status( $second_id ) );
 	}
 
 	/**
-	 * Test that only items with matching object_id and activity_type are invalidated.
+	 * Test that only items with matching object_id and activity_type are deleted.
 	 *
-	 * @covers ::invalidate_existing_items
+	 * @covers ::delete_superseded_items
 	 */
-	public function test_selective_invalidation() {
+	public function test_selective_superseding() {
 		$object1 = $this->get_dummy_activity_object();
 		$object2 = $this->get_dummy_activity_object();
 		$object2->set_id( 'https://example.com/different-object' );
 
 		// Create items with different combinations.
-		$item1 = \Activitypub\add_to_outbox( $object1, 'Create', 1 ); // Should be invalidated.
+		$item1 = \Activitypub\add_to_outbox( $object1, 'Create', 1 ); // Should be deleted.
 		$item2 = \Activitypub\add_to_outbox( $object2, 'Create', 1 ); // Should stay pending (different object).
 		$item3 = \Activitypub\add_to_outbox( $object1, 'Update', 1 ); // Should stay pending (different activity).
 
-		// Add new item that should trigger invalidation of item1.
+		// Add new item that should trigger deletion of item1.
 		$new_item = \Activitypub\add_to_outbox( $object1, 'Create', 1 );
 
-		$this->assertEquals( 'publish', \get_post_status( $item1 ) );
+		$this->assertFalse( \get_post_status( $item1 ) );
 		$this->assertEquals( 'pending', \get_post_status( $item2 ) );
 		$this->assertEquals( 'pending', \get_post_status( $item3 ) );
 		$this->assertEquals( 'pending', \get_post_status( $new_item ) );
 	}
 
 	/**
-	 * Test that Delete activities invalidate all existing items for the object.
+	 * Test that Delete activities delete all pending items for the object.
 	 *
-	 * @covers ::invalidate_existing_items
+	 * @covers ::delete_superseded_items
 	 */
-	public function test_delete_invalidates_all_activities() {
+	public function test_delete_supersedes_all_activities() {
 		$object = $this->get_dummy_activity_object();
 
 		// Create items with different activity types.
@@ -278,10 +278,10 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// Add Delete activity.
 		$delete_id = \Activitypub\add_to_outbox( $object, 'Delete', 1 );
 
-		// All previous activities should be published (invalidated).
-		$this->assertEquals( 'publish', \get_post_status( $create_id ) );
-		$this->assertEquals( 'publish', \get_post_status( $update_id ) );
-		$this->assertEquals( 'publish', \get_post_status( $like_id ) );
+		// All previous activities should be deleted (superseded).
+		$this->assertFalse( \get_post_status( $create_id ) );
+		$this->assertFalse( \get_post_status( $update_id ) );
+		$this->assertFalse( \get_post_status( $like_id ) );
 		// Delete activity should still be pending.
 		$this->assertEquals( 'pending', \get_post_status( $delete_id ) );
 	}
@@ -399,12 +399,15 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		$id = \Activitypub\add_to_outbox( $data, $type, self::$user_id );
 
+		// Capture permalink before undo — Delete supersedes the original item.
+		$permalink = \get_permalink( $id );
+
 		$undo_id  = Outbox::undo( $id );
 		$activity = Outbox::get_activity( $undo_id );
 
 		// Only ID for Deletes.
 		if ( 'Delete' === $expected ) {
-			$this->assertSame( \get_permalink( $id ), $activity->get_object() );
+			$this->assertSame( $permalink, $activity->get_object() );
 		} else {
 			$outbox_activity = \json_decode( \get_post( $undo_id )->post_content, true );
 			$this->assertEquals( $outbox_activity['object'], $activity->get_object()->to_array( false ) );
