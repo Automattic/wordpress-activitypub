@@ -753,8 +753,8 @@ class Health_Check {
 	 * @return bool|\WP_Error True if accessible, WP_Error otherwise.
 	 */
 	public static function is_rest_api_accessible() {
-		// Test the shared inbox endpoint (always available).
-		$url = \Activitypub\get_rest_url_by_path( 'inbox' );
+		// Test the Application endpoint (always available, publicly readable via GET).
+		$url = \Activitypub\get_rest_url_by_path( 'application' );
 
 		// Make an unauthenticated request.
 		$response = \wp_remote_get(

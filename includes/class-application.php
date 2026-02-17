@@ -295,7 +295,8 @@ class Application {
 
 				// Also check normalized host.
 				$normalized_host = normalize_host( $host );
-				$uri_host        = \substr( \strrchr( $uri_clean, '@' ), 1 );
+				$uri_host        = \strrchr( $uri_clean, '@' );
+				$uri_host        = false !== $uri_host ? \substr( $uri_host, 1 ) : false;
 
 				if ( ! $uri_host || normalize_host( $uri_host ) !== $normalized_host ) {
 					return false;

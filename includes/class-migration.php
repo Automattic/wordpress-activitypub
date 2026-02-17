@@ -1221,8 +1221,11 @@ class Migration {
 	/**
 	 * Migrate the Application key pair option from the old name to the new name.
 	 *
-	 * Renames `activitypub_keypair_for_-1` to `activitypub_application_keypair`
-	 * and consolidates the legacy separate key options.
+	 * Renames `activitypub_keypair_for_-1` to `activitypub_application_keypair`.
+	 * Older separate key options (activitypub_application_user_public_key /
+	 * activitypub_application_user_private_key) are migrated lazily on first read.
+	 *
+	 * @since unreleased
 	 */
 	public static function migrate_application_keypair_option() {
 		\wp_cache_flush();
