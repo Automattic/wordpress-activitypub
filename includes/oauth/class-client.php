@@ -476,6 +476,58 @@ class Client {
 	}
 
 	/**
+	 * Get all manually registered (non-discovered) clients.
+	 *
+	 * @since unreleased
+	 *
+	 * @return Client[] Array of Client objects.
+	 */
+	public static function get_manually_registered() {
+		// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Necessary to filter out discovered clients.
+		$posts = \get_posts(
+			array(
+				'post_type'   => self::POST_TYPE,
+				'post_status' => 'publish',
+				'numberposts' => 100,
+				'meta_query'  => array(
+					'relation' => 'OR',
+					array(
+						'key'     => '_activitypub_discovered',
+						'compare' => 'NOT EXISTS',
+					),
+					array(
+						'key'   => '_activitypub_discovered',
+						'value' => '',
+					),
+					array(
+						'key'   => '_activitypub_discovered',
+						'value' => '0',
+					),
+				),
+			)
+		);
+		// phpcs:enable WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+
+		return array_map(
+			function ( $post ) {
+				return new self( $post->ID );
+			},
+			$posts
+		);
+	}
+
+	/**
+	 * Get the post ID of the client.
+	 *
+	 * @since unreleased
+	 *
+	 * @return int The post ID.
+	 */
+	public function get_post_id() {
+		return $this->post_id;
+	}
+
+	/**
 	 * Get client name.
 	 *
 	 * @return string The client name.
