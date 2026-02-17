@@ -607,11 +607,6 @@ class Posts {
 				++$deleted;
 			}
 
-			// Stop if $exclude grows too large to keep queries fast.
-			if ( \count( $exclude ) > 500 ) {
-				break;
-			}
-
 			// Once we're back under the cap, re-apply the date filter.
 			if ( $overflow && ( $total - $deleted ) <= self::MAX_ITEMS ) {
 				$overflow                 = false;
