@@ -20,6 +20,7 @@ defined( 'ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS' ) || define( 'ACTIVITYPUB_D
 defined( 'ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS' ) || define( 'ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS', false );
 defined( 'ACTIVITYPUB_DEFAULT_OBJECT_TYPE' ) || define( 'ACTIVITYPUB_DEFAULT_OBJECT_TYPE', 'wordpress-post-format' );
 defined( 'ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE' ) || define( 'ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE', 100 );
+defined( 'ACTIVITYPUB_DISABLE_MEDIA_CACHE' ) || define( 'ACTIVITYPUB_DISABLE_MEDIA_CACHE', false );
 
 // The following constants are invariable and define values used throughout the plugin.
 
@@ -94,3 +95,13 @@ define(
 		'Public', // For backwards compatibility.
 	)
 );
+
+/*
+ * HTTP error codes that indicate temporary/retriable failures.
+ *
+ * These errors suggest the server may recover quickly, so they get
+ * shorter cache durations and qualify for automatic retries.
+ *
+ * @see https://github.com/tfredrich/RestApiTutorial.com/blob/master/content/advanced/responses/retries.md
+ */
+define( 'ACTIVITYPUB_RETRY_ERROR_CODES', array( 408, 429, 500, 502, 503, 504 ) );

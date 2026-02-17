@@ -1087,12 +1087,14 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
-	 * Test get_avatar_url with avatar in meta.
+	 * Test get_avatar_url lazy caching behavior.
+	 *
+	 * Avatar is not cached until get_avatar_url() is called (lazy loading).
 	 *
 	 * @covers ::get_avatar_url
 	 */
 	public function test_get_avatar_url_from_meta() {
-		// Create a remote actor with avatar in meta.
+		// Create a remote actor.
 		$actor_data = array(
 			'id'                => 'https://example.com/users/avatar-test',
 			'type'              => 'Person',
@@ -1108,15 +1110,17 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$remote_actor_id = Remote_Actors::upsert( $actor_data );
 		$this->assertIsInt( $remote_actor_id );
 
-		// Verify avatar URL is stored in meta.
+		// Avatar is NOT cached eagerly - meta should be empty after upsert.
 		$avatar_url = get_post_meta( $remote_actor_id, '_activitypub_avatar_url', true );
-		$this->assertEquals( 'https://example.com/avatar-test.jpg', $avatar_url );
+		$this->assertEmpty( $avatar_url, 'Avatar should not be eagerly cached on upsert' );
 
-		// Test get_avatar_url retrieves from meta.
+		// Calling get_avatar_url() triggers lazy caching.
 		$retrieved_avatar = Remote_Actors::get_avatar_url( $remote_actor_id );
 		$this->assertEquals( 'https://example.com/avatar-test.jpg', $retrieved_avatar );
 
-		// Clean up.
+		// Now meta should be populated for subsequent calls.
+		$cached_avatar = get_post_meta( $remote_actor_id, '_activitypub_avatar_url', true );
+		$this->assertEquals( 'https://example.com/avatar-test.jpg', $cached_avatar );
 	}
 
 	/**

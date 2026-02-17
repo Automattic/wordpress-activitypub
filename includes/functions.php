@@ -32,6 +32,41 @@ function snake_to_camel_case( $input ) {
 }
 
 /**
+ * Convert seconds to ISO 8601 duration format.
+ *
+ * @param int $seconds The duration in seconds.
+ *
+ * @return string The duration in ISO 8601 format (e.g., "PT1H23M45S").
+ */
+function seconds_to_iso8601( $seconds ) {
+	$seconds = (int) $seconds;
+
+	if ( $seconds <= 0 ) {
+		return 'PT0S';
+	}
+
+	$hours   = floor( $seconds / 3600 );
+	$minutes = floor( ( $seconds % 3600 ) / 60 );
+	$secs    = $seconds % 60;
+
+	$duration = 'PT';
+
+	if ( $hours > 0 ) {
+		$duration .= $hours . 'H';
+	}
+
+	if ( $minutes > 0 ) {
+		$duration .= $minutes . 'M';
+	}
+
+	if ( $secs > 0 || ( 0 === $hours && 0 === $minutes ) ) {
+		$duration .= $secs . 'S';
+	}
+
+	return $duration;
+}
+
+/**
  * Check if a site supports the block editor.
  *
  * @return boolean True if the site supports the block editor, false otherwise.
@@ -177,7 +212,7 @@ function custom_large_numbers( $formatted, $number ) {
 function esc_hashtag( $input ) {
 	$hashtag = \wp_specialchars_decode( $input, ENT_QUOTES );
 	// Remove all characters that are not letters, numbers, or hyphens.
-	$hashtag = \preg_replace( '/emoji-regex(*SKIP)(?!)|[^\p{L}\p{Nd}-]+/u', '-', $hashtag );
+	$hashtag = \preg_replace( '/[^\p{L}\p{Nd}-]+/u', '-', $hashtag );
 
 	// Capitalize every letter that is preceded by a hyphen.
 	$hashtag = preg_replace_callback(

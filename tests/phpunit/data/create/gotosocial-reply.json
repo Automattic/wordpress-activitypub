@@ -1,0 +1,58 @@
+{
+	"@context": [
+		"https://gotosocial.org/ns",
+		"https://www.w3.org/ns/activitystreams",
+		{
+			"sensitive": "as:sensitive"
+		}
+	],
+	"id": "https://gotosocial.example.com/users/testuser/statuses/create/01KH6H3G6HA0XX4JS79BWSRD4F",
+	"type": "Create",
+	"actor": "https://gotosocial.example.com/users/testuser",
+	"to": "https://www.w3.org/ns/activitystreams#Public",
+	"cc": [ "https://gotosocial.example.com/users/testuser/followers" ],
+	"object": {
+		"attachment": [],
+		"attributedTo": "https://gotosocial.example.com/users/testuser",
+		"cc": [ "https://gotosocial.example.com/users/testuser/followers" ],
+		"content": "<p><span class=\"h-card\"><a href=\"https://example.com/@someone\" class=\"u-url mention\" rel=\"nofollow noreferrer noopener\" target=\"_blank\">@<span>someone</span></a></span> Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>",
+		"contentMap": {
+			"en": "<p><span class=\"h-card\"><a href=\"https://example.com/@someone\" class=\"u-url mention\" rel=\"nofollow noreferrer noopener\" target=\"_blank\">@<span>someone</span></a></span> Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>"
+		},
+		"id": "https://gotosocial.example.com/users/testuser/statuses/01KH6H3G6HA0XX4JS79BWSRD4F",
+		"inReplyTo": "{{LOCAL_POST_URL}}",
+		"interactionPolicy": {
+			"canAnnounce": {
+				"always": [ "https://www.w3.org/ns/activitystreams#Public" ],
+				"approvalRequired": []
+			},
+			"canLike": {
+				"always": [ "https://www.w3.org/ns/activitystreams#Public" ],
+				"approvalRequired": []
+			},
+			"canReply": {
+				"always": [ "https://www.w3.org/ns/activitystreams#Public" ],
+				"approvalRequired": []
+			}
+		},
+		"published": "2026-02-11T15:18:55+01:00",
+		"replies": {
+			"first": {
+				"id": "https://gotosocial.example.com/users/testuser/statuses/01KH6H3G6HA0XX4JS79BWSRD4F/replies?page=true",
+				"type": "CollectionPage"
+			},
+			"id": "https://gotosocial.example.com/users/testuser/statuses/01KH6H3G6HA0XX4JS79BWSRD4F/replies",
+			"type": "Collection"
+		},
+		"sensitive": false,
+		"summary": "",
+		"tag": {
+			"href": "https://example.com/?author=0",
+			"name": "@someone@example.com",
+			"type": "Mention"
+		},
+		"to": "https://www.w3.org/ns/activitystreams#Public",
+		"type": "Note",
+		"url": "https://gotosocial.example.com/@testuser/statuses/01KH6H3G6HA0XX4JS79BWSRD4F"
+	}
+}

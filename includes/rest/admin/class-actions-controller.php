@@ -55,6 +55,7 @@ class Actions_Controller extends \WP_REST_Controller {
 					'methods'             => \WP_REST_Server::DELETABLE,
 					'callback'            => array( $this, 'unfollow_actor' ),
 					'permission_callback' => array( $this, 'check_permission' ),
+					'show_in_index'       => false,
 				),
 			)
 		);
@@ -76,6 +77,7 @@ class Actions_Controller extends \WP_REST_Controller {
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'block_actor' ),
 					'permission_callback' => array( $this, 'check_permission' ),
+					'show_in_index'       => false,
 					'args'                => array(
 						'site_wide' => array(
 							'description' => 'Whether to block site-wide (admin only).',
@@ -104,6 +106,7 @@ class Actions_Controller extends \WP_REST_Controller {
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'follow_actor' ),
 					'permission_callback' => array( $this, 'check_permission' ),
+					'show_in_index'       => false,
 				),
 			)
 		);

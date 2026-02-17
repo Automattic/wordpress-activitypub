@@ -13,6 +13,9 @@ use Activitypub\Post_Types;
 /**
  * Attachments Test Class.
  *
+ * Tests Media Library import functionality and file-based markup generation.
+ * For remote media caching tests, see the Cache namespace tests.
+ *
  * @coversDefaultClass \Activitypub\Attachments
  */
 class Test_Attachments extends \WP_UnitTestCase {
@@ -30,13 +33,6 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 * @var int
 	 */
 	protected static $author_id;
-
-	/**
-	 * Emoji test directory path.
-	 *
-	 * @var string
-	 */
-	protected static $emoji_dir;
 
 	/**
 	 * Set up before class.
@@ -58,25 +54,6 @@ class Test_Attachments extends \WP_UnitTestCase {
 				'post_author'  => self::$author_id,
 			)
 		);
-
-		// Create emoji test directory.
-		$upload_dir      = \wp_upload_dir();
-		self::$emoji_dir = $upload_dir['basedir'] . Attachments::$emoji_dir;
-		\wp_mkdir_p( self::$emoji_dir );
-	}
-
-	/**
-	 * Clean up after all tests.
-	 */
-	public static function tear_down_after_class() {
-		global $wp_filesystem;
-		\WP_Filesystem();
-
-		if ( $wp_filesystem->is_dir( self::$emoji_dir ) ) {
-			$wp_filesystem->rmdir( self::$emoji_dir, true );
-		}
-
-		parent::tear_down_after_class();
 	}
 
 	/**
@@ -84,6 +61,13 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 */
 	public function set_up() {
 		parent::set_up();
+
+		// Disable Cache\Media so it doesn't interfere with Attachments tests.
+		// Cache\Media hooks into save_post and would cache images before Attachments::import() runs.
+		\add_filter( 'activitypub_cache_media_enabled', '__return_false' );
+
+		// Allow the test directory for local file imports.
+		\add_filter( 'activitypub_allowed_import_directories', array( $this, 'allow_test_directory' ) );
 
 		// Mock HTTP requests only for remote attachment tests.
 		\add_filter( 'pre_http_request', array( $this, 'mock_download_url' ), 10, 3 );
@@ -94,6 +78,10 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 * Tear down each test.
 	 */
 	public function tear_down() {
+		// Re-enable Cache\Media.
+		\remove_filter( 'activitypub_cache_media_enabled', '__return_false' );
+
+		\remove_filter( 'activitypub_allowed_import_directories', array( $this, 'allow_test_directory' ) );
 		\remove_filter( 'pre_http_request', array( $this, 'mock_download_url' ) );
 		\remove_filter( 'wp_delete_file', '__return_empty_string' );
 
@@ -106,6 +94,17 @@ class Test_Attachments extends \WP_UnitTestCase {
 		);
 
 		parent::tear_down();
+	}
+
+	/**
+	 * Add the test directory to allowed import directories.
+	 *
+	 * @param array $allowed_dirs The allowed directories.
+	 * @return array The modified allowed directories.
+	 */
+	public function allow_test_directory( $allowed_dirs ) {
+		$allowed_dirs[] = \realpath( AP_TESTS_DIR );
+		return $allowed_dirs;
 	}
 
 	/**
@@ -661,172 +660,6 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$this->assertStringNotContainsString( 'nc_cat=', $attachment_file );
 	}
 
-	/**
-	 * Test that query parameters are stripped from direct file storage filenames.
-	 *
-	 * @covers ::save_file
-	 */
-	public function test_file_storage_filename_strips_query_parameters() {
-		// Create a test post.
-		$post_id = self::factory()->post->create(
-			array(
-				'post_type' => 'ap_post',
-			)
-		);
-
-		// URL with query parameters.
-		$attachments = array(
-			array(
-				'url'       => 'https://example.com/photo.png?size=large&quality=high&cache=12345',
-				'mediaType' => 'image/png',
-				'name'      => 'Test Photo',
-				'type'      => 'Image',
-			),
-		);
-
-		$result = Attachments::import_post_files( $attachments, $post_id );
-
-		$this->assertIsArray( $result );
-		$this->assertCount( 1, $result );
-
-		// Verify the URL doesn't contain query parameters.
-		// Note: Image may be converted to WebP during optimization.
-		$this->assertMatchesRegularExpression( '/\.(png|webp)$/', $result[0]['url'] );
-		$this->assertStringNotContainsString( '?', $result[0]['url'] );
-		$this->assertStringNotContainsString( 'size=', $result[0]['url'] );
-	}
-
-	/**
-	 * Test that video attachments use remote URL directly without downloading.
-	 *
-	 * @covers ::save_file
-	 */
-	public function test_video_uses_remote_url() {
-		// Create a test post.
-		$post_id = self::factory()->post->create(
-			array(
-				'post_type'    => 'ap_post',
-				'post_content' => 'Test video content',
-			)
-		);
-
-		$attachments = array(
-			array(
-				'url'       => 'https://example.com/video.mp4',
-				'mediaType' => 'video/mp4',
-				'name'      => 'Test Video',
-				'type'      => 'Video',
-			),
-		);
-
-		$result = Attachments::import_post_files( $attachments, $post_id );
-
-		$this->assertIsArray( $result );
-		$this->assertCount( 1, $result );
-
-		// Verify the URL is the original remote URL (not downloaded).
-		$this->assertEquals( 'https://example.com/video.mp4', $result[0]['url'] );
-		$this->assertEquals( 'video/mp4', $result[0]['mime_type'] );
-		$this->assertEquals( 'Test Video', $result[0]['alt'] );
-
-		// Verify content was updated with video block.
-		$post = get_post( $post_id );
-		$this->assertStringContainsString( '<!-- wp:video', $post->post_content );
-		$this->assertStringContainsString( 'https://example.com/video.mp4', $post->post_content );
-	}
-
-	/**
-	 * Test that audio attachments use remote URL directly without downloading.
-	 *
-	 * @covers ::save_file
-	 */
-	public function test_audio_uses_remote_url() {
-		// Create a test post.
-		$post_id = self::factory()->post->create(
-			array(
-				'post_type'    => 'ap_post',
-				'post_content' => 'Test audio content',
-			)
-		);
-
-		$attachments = array(
-			array(
-				'url'       => 'https://example.com/podcast.mp3',
-				'mediaType' => 'audio/mpeg',
-				'name'      => 'Test Audio',
-				'type'      => 'Audio',
-			),
-		);
-
-		$result = Attachments::import_post_files( $attachments, $post_id );
-
-		$this->assertIsArray( $result );
-		$this->assertCount( 1, $result );
-
-		// Verify the URL is the original remote URL (not downloaded).
-		$this->assertEquals( 'https://example.com/podcast.mp3', $result[0]['url'] );
-		$this->assertEquals( 'audio/mpeg', $result[0]['mime_type'] );
-		$this->assertEquals( 'Test Audio', $result[0]['alt'] );
-
-		// Verify content was updated with audio block.
-		$post = get_post( $post_id );
-		$this->assertStringContainsString( '<!-- wp:audio', $post->post_content );
-		$this->assertStringContainsString( 'https://example.com/podcast.mp3', $post->post_content );
-	}
-
-	/**
-	 * Test mixed attachments with images, video, and audio.
-	 *
-	 * @covers ::import_post_files
-	 * @covers ::save_file
-	 */
-	public function test_mixed_attachments_images_video_audio() {
-		// Create a test post.
-		$post_id = self::factory()->post->create(
-			array(
-				'post_type'    => 'ap_post',
-				'post_content' => 'Mixed media content',
-			)
-		);
-
-		$attachments = array(
-			array(
-				'url'       => 'https://example.com/image.jpg',
-				'mediaType' => 'image/jpeg',
-				'name'      => 'Test Image',
-				'type'      => 'Image',
-			),
-			array(
-				'url'       => 'https://example.com/video.mp4',
-				'mediaType' => 'video/mp4',
-				'name'      => 'Test Video',
-				'type'      => 'Video',
-			),
-			array(
-				'url'       => 'https://example.com/audio.mp3',
-				'mediaType' => 'audio/mpeg',
-				'name'      => 'Test Audio',
-				'type'      => 'Audio',
-			),
-		);
-
-		$result = Attachments::import_post_files( $attachments, $post_id );
-
-		$this->assertIsArray( $result );
-		$this->assertCount( 3, $result );
-
-		// Image should be downloaded to local storage (may be converted to WebP).
-		$this->assertStringContainsString( 'activitypub/ap_posts', $result[0]['url'] );
-		$this->assertContains( $result[0]['mime_type'], array( 'image/jpeg', 'image/webp' ) );
-
-		// Video should use remote URL.
-		$this->assertEquals( 'https://example.com/video.mp4', $result[1]['url'] );
-		$this->assertEquals( 'video/mp4', $result[1]['mime_type'] );
-
-		// Audio should use remote URL.
-		$this->assertEquals( 'https://example.com/audio.mp3', $result[2]['url'] );
-		$this->assertEquals( 'audio/mpeg', $result[2]['mime_type'] );
-	}
 
 	/**
 	 * Test optimize_image returns original path for non-image files.
@@ -835,7 +668,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 */
 	public function test_optimize_image_skips_non_images() {
 		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		// Test with audio file.
 		$audio_file = AP_TESTS_DIR . '/data/assets/sample-audio.mp3';
@@ -855,7 +690,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 */
 	public function test_optimize_image_skips_gif() {
 		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		// Create a simple GIF file.
 		$gif_file = wp_tempnam( 'test.gif' ) . '.gif';
@@ -879,7 +716,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 */
 	public function test_optimize_image_converts_to_webp() {
 		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		// Copy test image to temp location with proper extension.
 		$source    = AP_TESTS_DIR . '/data/assets/test.jpg';
@@ -918,7 +757,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 */
 	public function test_optimize_image_resizes_large_images() {
 		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		// Create a large test image (2000x2000).
 		$large_image = wp_tempnam( 'large.jpg' ) . '.jpg';
@@ -926,7 +767,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$white       = imagecolorallocate( $image, 255, 255, 255 );
 		imagefill( $image, 0, 0, $white );
 		imagejpeg( $image, $large_image, 90 );
-		imagedestroy( $image );
+		unset( $image );
 
 		// Optimize with max dimension of 500.
 		$result = $method->invoke( null, $large_image, 500 );
@@ -955,7 +796,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 */
 	public function test_optimize_image_preserves_small_images() {
 		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		// Copy small test image (100x100) to temp location.
 		$source    = AP_TESTS_DIR . '/data/assets/test.jpg';
@@ -994,7 +837,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 */
 	public function test_optimize_image_handles_nonexistent_file() {
 		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$fake_path = '/tmp/nonexistent-image-12345.jpg';
 		$result    = $method->invoke( null, $fake_path, 1200 );
@@ -1010,7 +855,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 */
 	public function test_optimize_image_handles_png() {
 		$method = new \ReflectionMethod( Attachments::class, 'optimize_image' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		// Create a test PNG image.
 		$png_file = wp_tempnam( 'test.png' ) . '.png';
@@ -1020,7 +867,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$transparent = imagecolorallocatealpha( $image, 0, 0, 0, 127 );
 		imagefill( $image, 0, 0, $transparent );
 		imagepng( $image, $png_file );
-		imagedestroy( $image );
+		unset( $image );
 
 		$result = $method->invoke( null, $png_file, 1200 );
 
@@ -1047,7 +894,9 @@ class Test_Attachments extends \WP_UnitTestCase {
 	 */
 	public function test_get_unique_path() {
 		$method = new \ReflectionMethod( Attachments::class, 'get_unique_path' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$temp_dir = sys_get_temp_dir();
 
@@ -1070,369 +919,255 @@ class Test_Attachments extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test save_actor_avatar with valid URL.
+	 * Test generate_files_markup with single image.
 	 *
-	 * @covers ::save_actor_avatar
+	 * @covers ::generate_files_markup
 	 */
-	public function test_save_actor_avatar_success() {
-		// Create a test actor post.
-		$actor_id = self::factory()->post->create(
+	public function test_generate_files_markup_single_image() {
+		$files = array(
 			array(
-				'post_type' => 'ap_actor',
-			)
+				'url'       => 'https://example.com/uploads/image.webp',
+				'mime_type' => 'image/webp',
+				'alt'       => 'Test Image',
+			),
 		);
 
-		$avatar_url = 'https://example.com/avatar.jpg';
-		$result     = Attachments::save_actor_avatar( $actor_id, $avatar_url );
+		$result = Attachments::generate_files_markup( $files );
 
-		$this->assertIsString( $result );
-		$this->assertStringContainsString( 'wp-content/uploads/activitypub/actors/' . $actor_id, $result );
-		// Note: Image may be converted to WebP during optimization.
-		$this->assertMatchesRegularExpression( '/\.(jpg|webp)$/', $result );
+		$this->assertStringContainsString( '<!-- wp:image', $result );
+		$this->assertStringContainsString( 'https://example.com/uploads/image.webp', $result );
+		$this->assertStringContainsString( 'Test Image', $result );
 	}
 
 	/**
-	 * Test save_actor_avatar with empty URL.
+	 * Test generate_files_markup with multiple images creates gallery.
 	 *
-	 * @covers ::save_actor_avatar
+	 * @covers ::generate_files_markup
+	 * @covers ::get_files_gallery_block
 	 */
-	public function test_save_actor_avatar_empty_url() {
-		$actor_id = self::factory()->post->create(
+	public function test_generate_files_markup_gallery() {
+		$files = array(
 			array(
-				'post_type' => 'ap_actor',
-			)
+				'url'       => 'https://example.com/uploads/image1.webp',
+				'mime_type' => 'image/webp',
+				'alt'       => 'First Image',
+			),
+			array(
+				'url'       => 'https://example.com/uploads/image2.webp',
+				'mime_type' => 'image/webp',
+				'alt'       => 'Second Image',
+			),
 		);
 
-		$result = Attachments::save_actor_avatar( $actor_id, '' );
+		$result = Attachments::generate_files_markup( $files );
 
-		$this->assertFalse( $result );
+		$this->assertStringContainsString( '<!-- wp:gallery', $result );
+		$this->assertStringContainsString( 'https://example.com/uploads/image1.webp', $result );
+		$this->assertStringContainsString( 'https://example.com/uploads/image2.webp', $result );
+		$this->assertStringContainsString( 'First Image', $result );
+		$this->assertStringContainsString( 'Second Image', $result );
 	}
 
 	/**
-	 * Test save_actor_avatar with invalid URL.
+	 * Test generate_files_markup with video.
 	 *
-	 * @covers ::save_actor_avatar
+	 * @covers ::generate_files_markup
 	 */
-	public function test_save_actor_avatar_invalid_url() {
-		$actor_id = self::factory()->post->create(
+	public function test_generate_files_markup_video() {
+		$files = array(
 			array(
-				'post_type' => 'ap_actor',
-			)
+				'url'       => 'https://example.com/video.mp4',
+				'mime_type' => 'video/mp4',
+				'alt'       => 'Test Video',
+			),
 		);
 
-		$result = Attachments::save_actor_avatar( $actor_id, 'not-a-valid-url' );
+		$result = Attachments::generate_files_markup( $files );
 
-		$this->assertFalse( $result );
+		$this->assertStringContainsString( '<!-- wp:video', $result );
+		$this->assertStringContainsString( '<video controls', $result );
+		$this->assertStringContainsString( 'https://example.com/video.mp4', $result );
 	}
 
 	/**
-	 * Test save_actor_avatar with download error.
+	 * Test generate_files_markup with audio.
 	 *
-	 * @covers ::save_actor_avatar
+	 * @covers ::generate_files_markup
 	 */
-	public function test_save_actor_avatar_download_error() {
-		$actor_id = self::factory()->post->create(
+	public function test_generate_files_markup_audio() {
+		$files = array(
 			array(
-				'post_type' => 'ap_actor',
-			)
+				'url'       => 'https://example.com/audio.mp3',
+				'mime_type' => 'audio/mpeg',
+				'alt'       => 'Test Audio',
+			),
 		);
 
-		// Use the missing.jpg URL that our mock returns as an error.
-		$result = Attachments::save_actor_avatar( $actor_id, 'https://example.com/missing.jpg' );
+		$result = Attachments::generate_files_markup( $files );
 
-		$this->assertFalse( $result );
+		$this->assertStringContainsString( '<!-- wp:audio', $result );
+		$this->assertStringContainsString( '<audio controls', $result );
+		$this->assertStringContainsString( 'https://example.com/audio.mp3', $result );
 	}
 
 	/**
-	 * Test save_actor_avatar replaces existing avatar.
+	 * Test generate_files_markup with empty array.
 	 *
-	 * @covers ::save_actor_avatar
-	 * @covers ::delete_actors_directory
+	 * @covers ::generate_files_markup
 	 */
-	public function test_save_actor_avatar_replaces_existing() {
-		$actor_id = self::factory()->post->create(
-			array(
-				'post_type' => 'ap_actor',
-			)
-		);
+	public function test_generate_files_markup_empty() {
+		$result = Attachments::generate_files_markup( array() );
 
-		// Save first avatar.
-		$first_result = Attachments::save_actor_avatar( $actor_id, 'https://example.com/avatar1.jpg' );
-		$this->assertIsString( $first_result );
-
-		// Save second avatar (should replace the first).
-		$second_result = Attachments::save_actor_avatar( $actor_id, 'https://example.com/avatar2.jpg' );
-		$this->assertIsString( $second_result );
-
-		// URLs should be different (different source filenames).
-		$this->assertNotEquals( $first_result, $second_result );
+		$this->assertEmpty( $result );
 	}
 
 	/**
-	 * Test delete_actors_directory removes actor files.
+	 * Test get_files_image_block.
 	 *
-	 * @covers ::delete_actors_directory
+	 * @covers ::get_files_image_block
 	 */
-	public function test_delete_actors_directory() {
-		$actor_id = self::factory()->post->create(
-			array(
-				'post_type' => 'ap_actor',
-			)
+	public function test_get_files_image_block() {
+		$file = array(
+			'url'       => 'https://example.com/image.webp',
+			'mime_type' => 'image/webp',
+			'alt'       => 'Test Alt Text',
 		);
 
-		// Save an avatar first.
-		$avatar_url = Attachments::save_actor_avatar( $actor_id, 'https://example.com/avatar.jpg' );
-		$this->assertIsString( $avatar_url );
+		$result = Attachments::get_files_image_block( $file );
 
-		// Get the directory path.
-		$upload_dir = \wp_upload_dir();
-		$actor_dir  = $upload_dir['basedir'] . '/activitypub/actors/' . $actor_id;
-
-		// Verify directory exists.
-		$this->assertTrue( \is_dir( $actor_dir ) );
-
-		// Delete the directory.
-		Attachments::delete_actors_directory( $actor_id );
-
-		// Verify directory is gone.
-		$this->assertFalse( \is_dir( $actor_dir ) );
+		$this->assertStringContainsString( '<!-- wp:image', $result );
+		$this->assertStringContainsString( '<figure class="wp-block-image size-large">', $result );
+		$this->assertStringContainsString( 'src="https://example.com/image.webp"', $result );
+		$this->assertStringContainsString( 'alt="Test Alt Text"', $result );
 	}
 
 	/**
-	 * Test delete_actors_directory ignores non-actor post types.
+	 * Test get_files_image_block handles missing alt.
 	 *
-	 * @covers ::delete_actors_directory
+	 * @covers ::get_files_image_block
 	 */
-	public function test_delete_actors_directory_ignores_non_actors() {
-		// Create a regular post (not an actor).
+	public function test_get_files_image_block_no_alt() {
+		$file = array(
+			'url'       => 'https://example.com/image.webp',
+			'mime_type' => 'image/webp',
+		);
+
+		$result = Attachments::get_files_image_block( $file );
+
+		$this->assertStringContainsString( 'alt=""', $result );
+	}
+
+	/**
+	 * Test get_files_gallery_block.
+	 *
+	 * @covers ::get_files_gallery_block
+	 */
+	public function test_get_files_gallery_block() {
+		$files = array(
+			array(
+				'url'       => 'https://example.com/image1.webp',
+				'mime_type' => 'image/webp',
+				'alt'       => 'Image 1',
+			),
+			array(
+				'url'       => 'https://example.com/image2.webp',
+				'mime_type' => 'image/webp',
+				'alt'       => 'Image 2',
+			),
+		);
+
+		$result = Attachments::get_files_gallery_block( $files );
+
+		$this->assertStringContainsString( '<!-- wp:gallery', $result );
+		$this->assertStringContainsString( 'has-nested-images', $result );
+		$this->assertStringContainsString( 'columns-2', $result );
+		$this->assertStringContainsString( 'https://example.com/image1.webp', $result );
+		$this->assertStringContainsString( 'https://example.com/image2.webp', $result );
+	}
+
+	/**
+	 * Test append_files_to_content for post.
+	 *
+	 * @covers ::append_files_to_content
+	 */
+	public function test_append_files_to_content_post() {
+		// Create test post with content.
 		$post_id = self::factory()->post->create(
 			array(
-				'post_type' => 'post',
+				'post_type'    => 'ap_post',
+				'post_content' => 'Original content here.',
 			)
 		);
 
-		// Create a directory that would match the path pattern.
-		$upload_dir = \wp_upload_dir();
-		$fake_dir   = $upload_dir['basedir'] . '/activitypub/actors/' . $post_id;
-		\wp_mkdir_p( $fake_dir );
-
-		// Verify directory exists.
-		$this->assertTrue( \is_dir( $fake_dir ) );
-
-		// Try to delete - should be ignored because it's not an actor post type.
-		Attachments::delete_actors_directory( $post_id );
-
-		// Directory should still exist.
-		$this->assertTrue( \is_dir( $fake_dir ) );
-
-		// Clean up.
-		global $wp_filesystem;
-		\WP_Filesystem();
-		$wp_filesystem->rmdir( $fake_dir );
-	}
-
-	/**
-	 * Test emoji import caches file and returns local URL.
-	 *
-	 * @covers ::import_emoji
-	 */
-	public function test_import_emoji_caches_file() {
-		$emoji_url = 'https://example.com/emoji/kappa.png';
-		$result    = Attachments::import_emoji( $emoji_url );
-
-		$this->assertNotFalse( $result );
-		$this->assertStringContainsString( '/activitypub/emoji/', $result );
-		$this->assertStringContainsString( 'kappa.png', $result );
-	}
-
-	/**
-	 * Test emoji import returns cached URL when no updated timestamp provided.
-	 *
-	 * @covers ::import_emoji
-	 */
-	public function test_import_emoji_uses_cache_without_updated() {
-		$emoji_url = 'https://example.com/emoji/smile.png';
-
-		// First import.
-		$first_result = Attachments::import_emoji( $emoji_url );
-		$this->assertNotFalse( $first_result );
-
-		// Second import without updated timestamp - should use cache.
-		$second_result = Attachments::import_emoji( $emoji_url );
-		$this->assertEquals( $first_result, $second_result );
-	}
-
-	/**
-	 * Test emoji import uses cache when updated timestamp is older than cached file.
-	 *
-	 * @covers ::import_emoji
-	 */
-	public function test_import_emoji_uses_cache_when_updated_is_older() {
-		$emoji_url = 'https://example.com/emoji/old.png';
-
-		// First import.
-		$first_result = Attachments::import_emoji( $emoji_url );
-		$this->assertNotFalse( $first_result );
-
-		// Second import with old updated timestamp - should use cache.
-		$old_timestamp = '2020-01-01T00:00:00Z';
-		$second_result = Attachments::import_emoji( $emoji_url, $old_timestamp );
-		$this->assertEquals( $first_result, $second_result );
-	}
-
-	/**
-	 * Test emoji import re-downloads when updated timestamp is newer than cached file.
-	 *
-	 * @covers ::import_emoji
-	 */
-	public function test_import_emoji_redownloads_when_updated_is_newer() {
-		$emoji_url = 'https://example.com/emoji/new.png';
-
-		// First import.
-		$first_result = Attachments::import_emoji( $emoji_url );
-		$this->assertNotFalse( $first_result );
-
-		// Get the cached file path and modify its timestamp to be old.
-		$upload_dir = \wp_upload_dir();
-		$file_path  = $upload_dir['basedir'] . '/activitypub/emoji/example.com/new.png';
-		$this->assertTrue( \file_exists( $file_path ), 'Cached file should exist' );
-
-		// Set file modification time to the past.
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_touch -- Direct touch() needed for test timestamp manipulation.
-		\touch( $file_path, \strtotime( '2020-01-01' ) );
-
-		// Track if download was attempted.
-		$download_attempted = false;
-		$track_download     = function ( $response, $parsed_args, $url ) use ( &$download_attempted, $emoji_url ) {
-			if ( $url === $emoji_url ) {
-				$download_attempted = true;
-			}
-			return $response;
-		};
-		\add_filter( 'pre_http_request', $track_download, 5, 3 );
-
-		// Import with newer updated timestamp - should re-download.
-		$new_timestamp = '2025-01-01T00:00:00Z';
-		$second_result = Attachments::import_emoji( $emoji_url, $new_timestamp );
-
-		\remove_filter( 'pre_http_request', $track_download, 5 );
-
-		$this->assertNotFalse( $second_result );
-		$this->assertTrue( $download_attempted, 'Should have attempted to re-download the emoji' );
-	}
-
-	/**
-	 * Test emoji import returns false for invalid URL.
-	 *
-	 * @covers ::import_emoji
-	 */
-	public function test_import_emoji_returns_false_for_invalid_url() {
-		$this->assertFalse( Attachments::import_emoji( '' ) );
-		$this->assertFalse( Attachments::import_emoji( 'not-a-url' ) );
-	}
-
-	/**
-	 * Test emoji import returns false when download fails.
-	 *
-	 * @covers ::import_emoji
-	 */
-	public function test_import_emoji_returns_false_on_download_failure() {
-		$emoji_url = 'https://example.com/emoji/download-fail.png';
-
-		// Mock a failed HTTP request.
-		$fail_download = function () {
-			return new \WP_Error( 'http_request_failed', 'Connection failed' );
-		};
-		\add_filter( 'pre_http_request', $fail_download );
-
-		$result = Attachments::import_emoji( $emoji_url );
-
-		\remove_filter( 'pre_http_request', $fail_download );
-
-		$this->assertFalse( $result );
-	}
-
-	/**
-	 * Call private get_emoji_url method via reflection.
-	 *
-	 * @param string $emoji_url The emoji URL.
-	 * @return string|false The local URL or false.
-	 */
-	private function call_get_emoji_url( $emoji_url ) {
-		$method = new \ReflectionMethod( Attachments::class, 'get_emoji_url' );
-		$method->setAccessible( true );
-
-		return $method->invoke( null, $emoji_url );
-	}
-
-	/**
-	 * Test that glob metacharacters in emoji URLs don't match unintended files.
-	 *
-	 * Without sanitization, glob patterns could match unintended files:
-	 * - '[abc].*' would match files starting with a, b, or c
-	 * - '*.*' would match all files
-	 * - '?.*' would match any single-character filename
-	 *
-	 * With sanitization, these metacharacters are removed.
-	 *
-	 * @covers ::get_emoji_url
-	 * @dataProvider data_glob_metacharacter_urls
-	 *
-	 * @param string   $malicious_filename Filename containing glob metacharacters.
-	 * @param string[] $files_to_create    Files that would match the unsanitized pattern.
-	 */
-	public function test_get_emoji_url_sanitizes_glob_metacharacters( $malicious_filename, $files_to_create ) {
-		global $wp_filesystem;
-		\WP_Filesystem();
-
-		$domain_dir = self::$emoji_dir . 'glob-test.example.com';
-		$wp_filesystem->mkdir( $domain_dir, FS_CHMOD_DIR );
-
-		// Create files that would match the unsanitized glob pattern.
-		foreach ( $files_to_create as $filename ) {
-			$wp_filesystem->put_contents( $domain_dir . '/' . $filename, 'test' );
-		}
-
-		// URL with glob metacharacters.
-		$url    = 'https://glob-test.example.com/emoji/' . $malicious_filename;
-		$result = $this->call_get_emoji_url( $url );
-
-		// Should NOT match any files because metacharacters are sanitized.
-		$this->assertFalse( $result, sprintf( 'Glob pattern "%s" should not match existing files', $malicious_filename ) );
-	}
-
-	/**
-	 * Data provider for glob metacharacter tests.
-	 *
-	 * @return array Test cases: [malicious_filename, files_that_would_match_if_not_sanitized].
-	 */
-	public function data_glob_metacharacter_urls() {
-		return array(
-			'brackets'      => array( '[abc].png', array( 'a.png', 'b.png', 'c.png' ) ),
-			'asterisk'      => array( 'test*.png', array( 'test1.png', 'test2.png', 'testing.png' ) ),
-			'question_mark' => array( 'tes?.png', array( 'test.png', 'tess.png', 'tesx.png' ) ),
-			'curly_braces'  => array( '{foo,bar}.png', array( 'foo.png', 'bar.png' ) ),
+		$files = array(
+			array(
+				'url'       => 'https://example.com/image.webp',
+				'mime_type' => 'image/webp',
+				'alt'       => 'Test Image',
+			),
 		);
+
+		Attachments::append_files_to_content( $post_id, $files, 'post' );
+
+		$post = \get_post( $post_id );
+		$this->assertStringContainsString( 'Original content here.', $post->post_content );
+		$this->assertStringContainsString( '<!-- wp:image', $post->post_content );
 	}
 
 	/**
-	 * Test that get_emoji_url finds cached files for normal URLs.
+	 * Test append_files_to_content for comment.
 	 *
-	 * @covers ::get_emoji_url
+	 * @covers ::append_files_to_content
 	 */
-	public function test_get_emoji_url_finds_cached_file() {
-		global $wp_filesystem;
-		\WP_Filesystem();
+	public function test_append_files_to_content_comment() {
+		// Create test comment with content.
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_content' => 'Original comment content.',
+				'comment_post_ID' => self::$post_id,
+			)
+		);
 
-		$domain_dir = self::$emoji_dir . 'cache-test.example.com';
-		$wp_filesystem->mkdir( $domain_dir, FS_CHMOD_DIR );
-		$wp_filesystem->put_contents( $domain_dir . '/normal-emoji.png', 'test' );
+		$files = array(
+			array(
+				'url'       => 'https://example.com/image.webp',
+				'mime_type' => 'image/webp',
+				'alt'       => 'Test Image',
+			),
+		);
 
-		// Normal URL should find the cached file.
-		$url    = 'https://cache-test.example.com/emoji/normal-emoji.png';
-		$result = $this->call_get_emoji_url( $url );
+		Attachments::append_files_to_content( $comment_id, $files, 'comment' );
 
-		$this->assertNotFalse( $result );
-		$this->assertStringContainsString( 'normal-emoji.png', $result );
+		$comment = \get_comment( $comment_id );
+		$this->assertStringContainsString( 'Original comment content.', $comment->comment_content );
+		$this->assertStringContainsString( '<!-- wp:image', $comment->comment_content );
+	}
+
+	/**
+	 * Test generate_files_markup filter.
+	 *
+	 * @covers ::generate_files_markup
+	 */
+	public function test_generate_files_markup_filter() {
+		$files = array(
+			array(
+				'url'       => 'https://example.com/image.webp',
+				'mime_type' => 'image/webp',
+				'alt'       => 'Test Image',
+			),
+		);
+
+		// Add filter to override markup.
+		$custom_markup = '<custom-markup />';
+		\add_filter(
+			'activitypub_files_media_markup',
+			function () use ( $custom_markup ) {
+				return $custom_markup;
+			}
+		);
+
+		$result = Attachments::generate_files_markup( $files );
+
+		$this->assertEquals( $custom_markup, $result );
 	}
 }

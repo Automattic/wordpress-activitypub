@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix outbox invalidation canceling pending Accept/Reject responses to QuoteRequests for the same post.

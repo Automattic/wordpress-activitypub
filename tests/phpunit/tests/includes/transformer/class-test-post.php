@@ -928,8 +928,9 @@ class Test_Post extends \WP_UnitTestCase {
 		$post = $this->create_test_post();
 		\update_post_meta( $post->ID, 'activitypub_interaction_policy_quote', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
 
+		// Quote policy is always stored to preserve user intent when global default changes.
 		$stored = \get_post_meta( $post->ID, 'activitypub_interaction_policy_quote', true );
-		$this->assertEmpty( $stored, 'Meta value not stored as expected.' );
+		$this->assertSame( ACTIVITYPUB_INTERACTION_POLICY_ANYONE, $stored, 'Meta value should be stored to preserve user intent.' );
 
 		$transformer = new Post( $post );
 		$policy      = $transformer->get_interaction_policy();
@@ -947,7 +948,7 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test fallback to 'anyone' when no quote permission meta is set.
+	 * Test fallback to global default when no quote permission meta is set.
 	 *
 	 * @covers ::get_interaction_policy
 	 */
@@ -956,7 +957,8 @@ class Test_Post extends \WP_UnitTestCase {
 		$transformer = new Post( $post );
 		$policy      = $transformer->get_interaction_policy();
 
-		$this->assertIsArray( $policy, 'Should fall back to anyone policy when no meta set.' );
+		// Default global setting is 'anyone'.
+		$this->assertIsArray( $policy, 'Should fall back to global default policy when no meta set.' );
 		$this->assertArrayHasKey( 'canQuote', $policy );
 		$this->assertSame(
 			array(
@@ -964,8 +966,28 @@ class Test_Post extends \WP_UnitTestCase {
 				'always'            => 'https://www.w3.org/ns/activitystreams#Public',
 			),
 			$policy['canQuote'],
-			'No meta should fall back to anyone (public) policy.'
+			'No meta should fall back to global default (anyone) policy.'
 		);
+	}
+
+	/**
+	 * Test fallback to global default 'followers' when no quote permission meta is set.
+	 *
+	 * @covers ::get_interaction_policy
+	 */
+	public function test_get_interaction_policy_no_meta_fallback_to_global_followers() {
+		\update_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS );
+
+		$post        = $this->create_test_post();
+		$transformer = new Post( $post );
+		$policy      = $transformer->get_interaction_policy();
+
+		$this->assertIsArray( $policy, 'Should fall back to global default policy when no meta set.' );
+		$this->assertArrayHasKey( 'canQuote', $policy );
+		$this->assertArrayHasKey( 'automaticApproval', $policy['canQuote'] );
+		$this->assertStringContainsString( 'followers', $policy['canQuote']['automaticApproval'], 'Should use global default followers policy.' );
+
+		\delete_option( 'activitypub_default_quote_policy' );
 	}
 
 	/**

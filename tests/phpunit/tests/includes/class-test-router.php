@@ -434,6 +434,84 @@ class Test_Router extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that the authorize_interaction rewrite rule is registered.
+	 *
+	 * @covers ::add_rewrite_rules
+	 */
+	public function test_authorize_interaction_rewrite_rule() {
+		$this->set_permalink_structure( '/%postname%/' );
+
+		Router::add_rewrite_rules();
+		\flush_rewrite_rules();
+
+		$rules = get_option( 'rewrite_rules' );
+
+		$this->assertArrayHasKey( '^authorize_interaction/?$', $rules );
+		$this->assertSame(
+			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions',
+			$rules['^authorize_interaction/?$']
+		);
+	}
+
+	/**
+	 * Test that the webfinger rewrite rule is registered when no Webfinger plugin is active.
+	 *
+	 * @covers ::add_rewrite_rules
+	 */
+	public function test_webfinger_rewrite_rule() {
+		$this->set_permalink_structure( '/%postname%/' );
+
+		Router::add_rewrite_rules();
+		\flush_rewrite_rules();
+
+		$rules = get_option( 'rewrite_rules' );
+
+		$this->assertArrayHasKey( '^.well-known/webfinger', $rules );
+		$this->assertSame(
+			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/webfinger',
+			$rules['^.well-known/webfinger']
+		);
+	}
+
+	/**
+	 * Test that the nodeinfo rewrite rule is registered when blog is public.
+	 *
+	 * @covers ::add_rewrite_rules
+	 */
+	public function test_nodeinfo_rewrite_rule() {
+		$this->set_permalink_structure( '/%postname%/' );
+		\update_option( 'blog_public', 1 );
+
+		Router::add_rewrite_rules();
+		\flush_rewrite_rules();
+
+		$rules = get_option( 'rewrite_rules' );
+
+		$this->assertArrayHasKey( '^.well-known/nodeinfo', $rules );
+		$this->assertSame(
+			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/nodeinfo',
+			$rules['^.well-known/nodeinfo']
+		);
+	}
+
+	/**
+	 * Test that the actor rewrite rule is registered.
+	 *
+	 * @covers ::add_rewrite_rules
+	 */
+	public function test_actor_rewrite_rule() {
+		$this->set_permalink_structure( '/%postname%/' );
+
+		Router::add_rewrite_rules();
+		\flush_rewrite_rules();
+
+		$rules = get_option( 'rewrite_rules' );
+
+		$this->assertArrayHasKey( '^@([\w\-\.]+)\/?$', $rules );
+		$this->assertSame( 'index.php?actor=$matches[1]', $rules['^@([\w\-\.]+)\/?$'] );
+	}
+
+	/**
 	 * Test that the activitypub_supported_taxonomies filter is actually used by the Router.
 	 *
 	 * This verifies that adding a custom taxonomy via the filter allows redirects for that taxonomy.
