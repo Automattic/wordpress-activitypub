@@ -412,11 +412,9 @@ class Health_Check {
 			'private' => false,
 		);
 
-		$outbox_rate_data = self::get_outbox_rate_data();
-
 		$info['activitypub']['fields']['outbox_last_hour_count'] = array(
 			'label'   => \__( 'Outbox Items (Last Hour)', 'activitypub' ),
-			'value'   => $outbox_rate_data['total'],
+			'value'   => self::get_outbox_rate_count(),
 			'private' => false,
 		);
 
@@ -795,22 +793,10 @@ class Health_Check {
 			'test'        => 'test_outbox_rate',
 		);
 
-		$data  = self::get_outbox_rate_data();
-		$total = $data['total'];
+		$total = self::get_outbox_rate_count();
 
 		if ( $total <= 10 ) {
 			return $result;
-		}
-
-		// Build top objects description.
-		$top_objects = \array_slice( $data['by_object'], 0, 3, true );
-		$object_list = array();
-		foreach ( $top_objects as $object_id => $count ) {
-			$object_list[] = \sprintf(
-				'<code>%s</code> (%d)',
-				\esc_html( $object_id ),
-				$count
-			);
 		}
 
 		$details = \sprintf(
@@ -818,14 +804,6 @@ class Health_Check {
 			\__( '%d outbox items were created in the last hour.', 'activitypub' ),
 			$total
 		);
-
-		if ( ! empty( $object_list ) ) {
-			$details .= ' ' . \sprintf(
-				/* translators: %s: Comma-separated list of object URLs with counts. */
-				\__( 'Most active objects: %s.', 'activitypub' ),
-				\implode( ', ', $object_list )
-			);
-		}
 
 		if ( $total > 50 ) {
 			$result['status']         = 'critical';
@@ -860,55 +838,28 @@ class Health_Check {
 	}
 
 	/**
-	 * Get outbox activity rate data for the last hour.
+	 * Count outbox items created in the last hour.
 	 *
 	 * @since unreleased
 	 *
-	 * @return array {
-	 *     Outbox rate data.
-	 *
-	 *     @type int   $total     Total items created in the last hour.
-	 *     @type array $by_object Object ID => count, sorted descending.
-	 * }
+	 * @return int Total items created in the last hour.
 	 */
-	public static function get_outbox_rate_data() {
-		$posts = \get_posts(
+	public static function get_outbox_rate_count() {
+		$query = new \WP_Query(
 			array(
 				'post_type'      => Outbox::POST_TYPE,
 				'post_status'    => 'any',
-				'posts_per_page' => 100,
+				'posts_per_page' => 1,
+				'fields'         => 'ids',
 				'date_query'     => array(
 					array(
 						'after' => '1 hour ago',
 					),
 				),
-				'orderby'        => 'date',
-				'order'          => 'DESC',
 			)
 		);
 
-		$by_object = array();
-
-		foreach ( $posts as $post ) {
-			$object_id = \get_post_meta( $post->ID, '_activitypub_object_id', true );
-
-			if ( ! $object_id ) {
-				continue;
-			}
-
-			if ( ! isset( $by_object[ $object_id ] ) ) {
-				$by_object[ $object_id ] = 0;
-			}
-
-			++$by_object[ $object_id ];
-		}
-
-		\arsort( $by_object );
-
-		return array(
-			'total'     => \count( $posts ),
-			'by_object' => $by_object,
-		);
+		return (int) $query->found_posts;
 	}
 
 	/**

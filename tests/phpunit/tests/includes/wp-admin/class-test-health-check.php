@@ -547,7 +547,6 @@ class Test_Health_Check extends WP_UnitTestCase {
 		$this->assertEquals( 'Unusual outbox activity detected', $result['label'] );
 		$this->assertEquals( 'orange', $result['badge']['color'] );
 		$this->assertStringContainsString( '15 outbox items', $result['description'] );
-		$this->assertStringContainsString( 'example.com/post/1', $result['description'] );
 	}
 
 	/**
@@ -569,30 +568,16 @@ class Test_Health_Check extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test get_outbox_rate_data groups by object ID.
+	 * Test get_outbox_rate_count returns correct total.
 	 */
-	public function test_outbox_rate_data_groups_by_object() {
+	public function test_outbox_rate_count() {
 		$this->delete_all_outbox_items();
 
 		$this->create_outbox_items( 5, 'https://example.com/post/a' );
 		$this->create_outbox_items( 3, 'https://example.com/post/b' );
 		$this->create_outbox_items( 7, 'https://example.com/post/c' );
 
-		$data = Health_Check::get_outbox_rate_data();
-
-		$this->assertEquals( 15, $data['total'] );
-		$this->assertArrayHasKey( 'https://example.com/post/c', $data['by_object'] );
-		$this->assertArrayHasKey( 'https://example.com/post/a', $data['by_object'] );
-		$this->assertArrayHasKey( 'https://example.com/post/b', $data['by_object'] );
-		$this->assertEquals( 7, $data['by_object']['https://example.com/post/c'] );
-		$this->assertEquals( 5, $data['by_object']['https://example.com/post/a'] );
-		$this->assertEquals( 3, $data['by_object']['https://example.com/post/b'] );
-
-		// Verify sorted descending.
-		$counts = array_values( $data['by_object'] );
-		$this->assertEquals( 7, $counts[0] );
-		$this->assertEquals( 5, $counts[1] );
-		$this->assertEquals( 3, $counts[2] );
+		$this->assertEquals( 15, Health_Check::get_outbox_rate_count() );
 	}
 
 	/**
@@ -628,9 +613,9 @@ class Test_Health_Check extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test outbox rate shows top 3 objects only.
+	 * Test outbox rate recommended status with multiple objects.
 	 */
-	public function test_outbox_rate_shows_top_3_objects() {
+	public function test_outbox_rate_recommended_multiple_objects() {
 		$this->delete_all_outbox_items();
 
 		$this->create_outbox_items( 4, 'https://example.com/post/1' );
@@ -642,12 +627,7 @@ class Test_Health_Check extends WP_UnitTestCase {
 
 		// 12 items total, should be "recommended".
 		$this->assertEquals( 'recommended', $result['status'] );
-
-		// Should show top 3 objects.
-		$this->assertStringContainsString( 'example.com/post/1', $result['description'] );
-		// Posts 2 and 4 are tied at 3 each, so both could appear in top 3.
-		// Post 3 has only 2, so it should not appear.
-		$this->assertStringNotContainsString( 'example.com/post/3', $result['description'] );
+		$this->assertStringContainsString( '12 outbox items', $result['description'] );
 	}
 
 	/**
@@ -662,12 +642,8 @@ class Test_Health_Check extends WP_UnitTestCase {
 		// Create 20 old items (2 hours ago — outside the window).
 		$this->create_outbox_items( 20, 'https://example.com/post/old', '2 hours ago' );
 
-		$data = Health_Check::get_outbox_rate_data();
-
 		// Only the 15 recent items should be counted.
-		$this->assertEquals( 15, $data['total'] );
-		$this->assertArrayHasKey( 'https://example.com/post/recent', $data['by_object'] );
-		$this->assertArrayNotHasKey( 'https://example.com/post/old', $data['by_object'] );
+		$this->assertEquals( 15, Health_Check::get_outbox_rate_count() );
 	}
 
 	/**
