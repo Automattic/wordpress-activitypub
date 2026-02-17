@@ -568,7 +568,14 @@ class OAuth_Controller extends \WP_REST_Controller {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function register_client( \WP_REST_Request $request ) {
-		// Check if dynamic registration is allowed (disabled by default for security).
+		/**
+		 * Filters whether RFC 7591 dynamic client registration is allowed.
+		 *
+		 * Enabled by default so C2S clients can register on the fly.
+		 * Return false to restrict registration to pre-configured clients only.
+		 *
+		 * @param bool $allowed Whether dynamic registration is allowed. Default true.
+		 */
 		if ( ! \apply_filters( 'activitypub_allow_dynamic_client_registration', true ) ) {
 			return new \WP_Error(
 				'activitypub_registration_disabled',
