@@ -829,7 +829,7 @@ class Health_Check {
 			'<p>%s</p>',
 			\sprintf(
 				/* translators: %s: Plugins page URL. */
-				\__( 'Review your <a href="%s">active plugins</a> for any that may be modifying published posts frequently.', 'activitypub' ),
+				\__( 'Review your <a href="%s">active plugins</a> for any that may be frequently modifying published posts.', 'activitypub' ),
 				\esc_url( \admin_url( 'plugins.php' ) )
 			)
 		);
