@@ -110,29 +110,38 @@ class Outbox {
 			return false;
 		}
 
-		self::invalidate_existing_items( $object_id, $activity->get_type(), $id );
+		self::delete_superseded_items( $object_id, $activity->get_type(), $id );
 
 		return $id;
 	}
 
 	/**
-	 * Invalidate existing outbox items with the same activity type and object ID
-	 * by setting their status to 'publish'.
+	 * Delete pending outbox items that have been superseded by a newer item.
 	 *
-	 * @param string $object_id     The ID of the activity object.
-	 * @param string $activity_type The type of the activity.
-	 * @param int    $current_id    The ID of the current outbox item to exclude.
+	 * For most activity types, only items with the same type and object ID are
+	 * deleted. Delete activities are a special case: they supersede all pending
+	 * items for the same object regardless of type.
+	 *
+	 * Unschedules all federation events before deleting each item.
+	 * Skips Follow, Announce, Accept, and Reject activities, as those are
+	 * independent per-request responses that must not cancel each other.
+	 *
+	 * @param string $object_id     The ActivityPub object ID (URL).
+	 * @param string $activity_type The activity type (e.g. 'Create', 'Update', 'Delete').
+	 * @param int    $exclude_id    The ID of the newly added outbox item to keep.
 	 *
 	 * @return void
 	 */
-	private static function invalidate_existing_items( $object_id, $activity_type, $current_id ) {
+	private static function delete_superseded_items( $object_id, $activity_type, $exclude_id ) {
 		/*
-		 * Do not invalidate items for Announce, Accept, or Reject activities.
+		 * Do not delete items for Follow, Announce, Accept, or Reject activities.
+		 * Follow activities from different users share the same object ID but are
+		 * independent and must survive until their Accept is received.
 		 * Accept/Reject are per-request responses (e.g. to individual incoming
 		 * QuoteRequests) and must not cancel each other even when they share
 		 * the same object ID.
 		 */
-		if ( in_array( $activity_type, array( 'Announce', 'Accept', 'Reject' ), true ) ) {
+		if ( in_array( $activity_type, array( 'Follow', 'Announce', 'Accept', 'Reject' ), true ) ) {
 			return;
 		}
 
@@ -143,7 +152,8 @@ class Outbox {
 			),
 		);
 
-		// For non-Delete activities, only invalidate items of the same type.
+		// For non-Delete activities, only delete items of the same type.
+		// Delete activities supersede all pending items for the same object.
 		if ( 'Delete' !== $activity_type ) {
 			$meta_query[] = array(
 				'key'   => '_activitypub_activity_type',
@@ -155,7 +165,7 @@ class Outbox {
 			array(
 				'post_type'   => self::POST_TYPE,
 				'post_status' => 'pending',
-				'exclude'     => array( $current_id ),
+				'exclude'     => array( $exclude_id ),
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query'  => $meta_query,
 				'fields'      => 'ids',
@@ -164,7 +174,7 @@ class Outbox {
 
 		foreach ( $existing_items as $existing_item_id ) {
 			Scheduler::unschedule_events_for_item( $existing_item_id );
-			\wp_publish_post( $existing_item_id );
+			\wp_delete_post( $existing_item_id, true );
 		}
 	}
 
