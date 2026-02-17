@@ -163,6 +163,8 @@ class Application {
 	/**
 	 * Generates a new key pair for the Application.
 	 *
+	 * @since unreleased
+	 *
 	 * @return array The key pair with 'public_key' and 'private_key'.
 	 */
 	private static function generate_key_pair() {
@@ -182,8 +184,8 @@ class Application {
 
 		// Check if keys are valid.
 		if (
-			empty( $private_key ) || ! is_string( $private_key ) ||
-			! isset( $detail['key'] ) || ! is_string( $detail['key'] )
+			empty( $private_key ) || ! \is_string( $private_key ) ||
+			! isset( $detail['key'] ) || ! \is_string( $detail['key'] )
 		) {
 			return array(
 				'private_key' => null,
@@ -196,7 +198,7 @@ class Application {
 			'public_key'  => $detail['key'],
 		);
 
-		\add_option( self::KEYPAIR_OPTION_KEY, $key_pair );
+		\update_option( self::KEYPAIR_OPTION_KEY, $key_pair );
 
 		return $key_pair;
 	}
@@ -307,6 +309,8 @@ class Application {
 
 	/**
 	 * Checks for legacy key pair options.
+	 *
+	 * @since unreleased
 	 *
 	 * @return array|false The key pair or false.
 	 */

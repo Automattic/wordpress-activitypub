@@ -70,6 +70,8 @@ class Application_Controller extends \WP_REST_Controller {
 	/**
 	 * Retrieves the application actor profile.
 	 *
+	 * @since unreleased
+	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return \WP_REST_Response Response object.
 	 */

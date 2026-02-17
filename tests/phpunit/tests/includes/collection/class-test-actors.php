@@ -100,6 +100,7 @@ class Test_Actors extends \WP_UnitTestCase {
 			array( 'acct:*@' . $home_host, 'Activitypub\Model\Blog' ),
 			array( 'acct:_@' . $home_host, 'Activitypub\Model\Blog' ),
 			array( 'acct:aksd@' . $home_host, 'WP_Error' ),
+			array( 'acct:application@' . $home_host, 'WP_Error' ),
 			array( 'admin@' . $home_host, 'Activitypub\Model\User' ),
 			array( $home_url . '/@admin', 'Activitypub\Model\User' ),
 			array( $home_url . '/@blog', 'Activitypub\Model\Blog' ),

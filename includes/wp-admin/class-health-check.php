@@ -7,6 +7,7 @@
 
 namespace Activitypub\WP_Admin;
 
+use Activitypub\Application;
 use Activitypub\Collection\Actors;
 use Activitypub\Http;
 use Activitypub\Sanitize;
@@ -255,14 +256,7 @@ class Health_Check {
 	 * @return boolean|\WP_Error
 	 */
 	public static function is_webfinger_endpoint_accessible() {
-		$user = Actors::get_by_id( \get_current_user_id() );
-		if ( \is_wp_error( $user ) ) {
-			$user = Actors::get_by_id( Actors::BLOG_USER_ID );
-		}
-		if ( \is_wp_error( $user ) ) {
-			return true; // Skip check if no actor is available.
-		}
-		$resource = $user->get_webfinger();
+		$resource = Application::get_webfinger();
 
 		$url = Webfinger::resolve( $resource );
 		if ( \is_wp_error( $url ) ) {
