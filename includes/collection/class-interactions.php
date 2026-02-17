@@ -119,8 +119,10 @@ class Interactions {
 		// Found a local comment id.
 		$comment_data['comment_author'] = \esc_attr( empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'] );
 
-		// Wrap emoji in content with blocks for runtime replacement.
-		// Note: Remote images in comments are stripped for security (only emoji allowed).
+		/*
+		 * Wrap emoji in content with blocks for runtime replacement.
+		 * Note: Remote images in comments are stripped for security (only emoji allowed).
+		 */
 		$content                         = Emoji::wrap_in_content( $activity['object']['content'], $activity['object'] );
 		$comment_data['comment_content'] = \addslashes( $content );
 
@@ -391,8 +393,10 @@ class Interactions {
 			}
 
 			if ( isset( $activity['object']['content'] ) ) {
-				// Wrap emoji in content with blocks for runtime replacement.
-				// Note: Remote images in comments are stripped for security (only emoji allowed).
+				/*
+				 * Wrap emoji in content with blocks for runtime replacement.
+				 * Note: Remote images in comments are stripped for security (only emoji allowed).
+				 */
 				$content         = Emoji::wrap_in_content( $activity['object']['content'], $activity['object'] );
 				$comment_content = \addslashes( $content );
 			}

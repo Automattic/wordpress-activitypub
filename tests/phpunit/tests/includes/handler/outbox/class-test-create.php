@@ -26,7 +26,7 @@ class Test_Create extends \WP_UnitTestCase {
 		// Prevent wp_insert_post() from triggering the full outbox chain.
 		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
 
-		$user_id  = self::factory()->user->create();
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
 		$activity = array(
 			'type'   => 'Create',
 			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
@@ -53,7 +53,7 @@ class Test_Create extends \WP_UnitTestCase {
 	public function test_outgoing_article_creates_post_without_format() {
 		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
 
-		$user_id  = self::factory()->user->create();
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
 		$activity = array(
 			'type'   => 'Create',
 			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
@@ -162,7 +162,7 @@ class Test_Create extends \WP_UnitTestCase {
 	public function test_outgoing_post_content_and_title() {
 		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
 
-		$user_id  = self::factory()->user->create();
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
 		$activity = array(
 			'type'   => 'Create',
 			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
@@ -192,7 +192,7 @@ class Test_Create extends \WP_UnitTestCase {
 	public function test_outgoing_post_generates_title_from_content() {
 		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
 
-		$user_id  = self::factory()->user->create();
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
 		$activity = array(
 			'type'   => 'Create',
 			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
@@ -219,7 +219,7 @@ class Test_Create extends \WP_UnitTestCase {
 	public function test_outgoing_post_fires_action() {
 		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
 
-		$user_id = self::factory()->user->create();
+		$user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
 		$fired   = false;
 
 		$callback = function () use ( &$fired ) {
@@ -252,7 +252,7 @@ class Test_Create extends \WP_UnitTestCase {
 	public function test_outgoing_post_sets_author() {
 		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
 
-		$user_id  = self::factory()->user->create();
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
 		$activity = array(
 			'type'   => 'Create',
 			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
@@ -278,7 +278,7 @@ class Test_Create extends \WP_UnitTestCase {
 	public function test_outgoing_reply_to_local_post() {
 		\remove_action( 'wp_insert_comment', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity_on_insert' ) );
 
-		$user_id  = self::factory()->user->create();
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
 		$post_id  = self::factory()->post->create( array( 'post_author' => $user_id ) );
 		$activity = array(
 			'type'   => 'Create',
@@ -311,7 +311,7 @@ class Test_Create extends \WP_UnitTestCase {
 	public function test_outgoing_reply_to_local_comment() {
 		\remove_action( 'wp_insert_comment', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity_on_insert' ) );
 
-		$user_id    = self::factory()->user->create();
+		$user_id    = self::factory()->user->create( array( 'role' => 'editor' ) );
 		$post_id    = self::factory()->post->create( array( 'post_author' => $user_id ) );
 		$comment_id = self::factory()->comment->create(
 			array(
@@ -353,6 +353,7 @@ class Test_Create extends \WP_UnitTestCase {
 
 		$user_id = self::factory()->user->create(
 			array(
+				'role'         => 'editor',
 				'display_name' => 'Test Author',
 				'user_email'   => 'test@example.org',
 				'user_url'     => 'https://example.org',

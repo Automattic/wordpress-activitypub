@@ -33,7 +33,7 @@ class Test_Update extends \WP_UnitTestCase {
 		// Prevent wp_update_post() from triggering the full outbox chain.
 		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
 
-		$this->user_id = self::factory()->user->create();
+		$this->user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
 	}
 
 	/**

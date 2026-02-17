@@ -98,7 +98,7 @@ class Client {
 				'post_content' => $description,
 				'meta_input'   => array(
 					'_activitypub_client_id'          => $client_id,
-					'_activitypub_client_secret_hash' => $client_secret ? Token::hash_token( $client_secret ) : '',
+					'_activitypub_client_secret_hash' => $client_secret ? \wp_hash_password( $client_secret ) : '',
 					'_activitypub_redirect_uris'      => array_map( 'sanitize_url', $redirect_uris ),
 					'_activitypub_allowed_scopes'     => Scope::validate( $scopes ),
 					'_activitypub_is_public'          => (bool) $is_public,
@@ -164,11 +164,27 @@ class Client {
 	 * Discover client metadata from URL and auto-register.
 	 *
 	 * Fetches the Client ID Metadata Document (CIMD) from the client_id URL.
+	 * Rate-limited via transients to prevent SSRF abuse.
 	 *
 	 * @param string $client_id The client ID URL.
 	 * @return Client|\WP_Error The client or error.
 	 */
 	private static function discover_and_register( $client_id ) {
+		// Rate-limit auto-discovery to prevent SSRF abuse (max 10 per minute per IP).
+		$ip            = isset( $_SERVER['REMOTE_ADDR'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown';
+		$transient_key = 'ap_oauth_disc_' . \md5( $ip );
+		$count         = (int) \get_transient( $transient_key );
+
+		if ( $count >= 10 ) {
+			return new \WP_Error(
+				'activitypub_rate_limited',
+				\__( 'Too many client discovery requests. Please try again later.', 'activitypub' ),
+				array( 'status' => 429 )
+			);
+		}
+
+		\set_transient( $transient_key, $count + 1, MINUTE_IN_SECONDS );
+
 		$metadata = self::fetch_client_metadata( $client_id );
 
 		if ( \is_wp_error( $metadata ) ) {
@@ -369,7 +385,7 @@ class Client {
 
 		$stored_hash = \get_post_meta( $client->post_id, '_activitypub_client_secret_hash', true );
 
-		return hash_equals( $stored_hash, Token::hash_token( $client_secret ) );
+		return \wp_check_password( $client_secret, $stored_hash );
 	}
 
 	/**

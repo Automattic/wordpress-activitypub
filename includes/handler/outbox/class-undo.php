@@ -48,6 +48,15 @@ class Undo {
 			return $data;
 		}
 
+		// Verify the user owns this outbox item (blog actor user_id === 0 can undo any).
+		if ( $user_id > 0 && (int) $outbox_item->post_author !== $user_id ) {
+			return new \WP_Error(
+				'activitypub_forbidden',
+				\__( 'You can only undo your own activities.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
+		}
+
 		$activity_type = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
 
 		switch ( $activity_type ) {

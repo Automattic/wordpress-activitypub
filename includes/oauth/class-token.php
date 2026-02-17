@@ -125,8 +125,10 @@ class Token {
 		// Track user for cleanup.
 		self::track_user( $user_id );
 
-		// Get the actor URI for the 'me' parameter (IndieAuth convention).
-		// Fall back to blog actor when user actors are disabled.
+		/*
+		 * Get the actor URI for the 'me' parameter (IndieAuth convention).
+		 * Fall back to blog actor when user actors are disabled.
+		 */
 		$actor = Actors::get_by_id( $user_id );
 		if ( \is_wp_error( $actor ) ) {
 			$actor = Actors::get_by_id( Actors::BLOG_USER_ID );
@@ -698,8 +700,10 @@ class Token {
 		$user_id = $validated->get_user_id();
 		$user    = \get_userdata( $user_id );
 
-		// Get the actor URI for the 'me' parameter (IndieAuth convention).
-		// Fall back to blog actor when user actors are disabled.
+		/*
+		 * Get the actor URI for the 'me' parameter (IndieAuth convention).
+		 * Fall back to blog actor when user actors are disabled.
+		 */
 		$actor = Actors::get_by_id( $user_id );
 		if ( \is_wp_error( $actor ) ) {
 			$actor = Actors::get_by_id( Actors::BLOG_USER_ID );

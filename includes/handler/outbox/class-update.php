@@ -85,9 +85,18 @@ class Update {
 			return null;
 		}
 
-		$content = $object['content'] ?? '';
-		$name    = $object['name'] ?? '';
-		$summary = $object['summary'] ?? '';
+		// Verify the user has permission to edit this post.
+		if ( $user_id > 0 && ! \user_can( $user_id, 'edit_post', $post->ID ) ) {
+			return new \WP_Error(
+				'activitypub_forbidden',
+				\__( 'You do not have permission to edit this post.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		$content = \wp_kses_post( $object['content'] ?? '' );
+		$name    = \sanitize_text_field( $object['name'] ?? '' );
+		$summary = \wp_kses_post( $object['summary'] ?? '' );
 
 		// Use name as title for Articles, or generate from content for Notes.
 		$title = $name;

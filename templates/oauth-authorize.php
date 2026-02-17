@@ -103,7 +103,7 @@ login_header(
 
 	<?php wp_nonce_field( 'activitypub_oauth_authorize' ); ?>
 	<input type="hidden" name="client_id" value="<?php echo esc_attr( $client_id ); ?>" />
-	<input type="hidden" name="redirect_uri" value="<?php echo esc_url( $redirect_uri ); ?>" />
+	<input type="hidden" name="redirect_uri" value="<?php echo esc_attr( $redirect_uri ); ?>" />
 	<input type="hidden" name="scope" value="<?php echo esc_attr( $scope ); ?>" />
 	<input type="hidden" name="state" value="<?php echo esc_attr( $state ); ?>" />
 	<input type="hidden" name="code_challenge" value="<?php echo esc_attr( $code_challenge ); ?>" />

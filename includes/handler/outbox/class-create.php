@@ -79,12 +79,21 @@ class Create {
 	 * @return \WP_Post|\WP_Error The created post on success, WP_Error on failure.
 	 */
 	private static function create_post( $activity, $user_id, $visibility ) {
+		// Verify the user has permission to create posts.
+		if ( $user_id > 0 && ! \user_can( $user_id, 'publish_posts' ) ) {
+			return new \WP_Error(
+				'activitypub_forbidden',
+				\__( 'You do not have permission to create posts.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
+		}
+
 		$object = $activity['object'] ?? array();
 
 		$object_type = $object['type'] ?? '';
-		$content     = $object['content'] ?? '';
-		$name        = $object['name'] ?? '';
-		$summary     = $object['summary'] ?? '';
+		$content     = \wp_kses_post( $object['content'] ?? '' );
+		$name        = \sanitize_text_field( $object['name'] ?? '' );
+		$summary     = \wp_kses_post( $object['summary'] ?? '' );
 
 		// Use name as title for Articles, or generate from content for Notes.
 		$title = $name;

@@ -345,8 +345,10 @@ class Test_Token extends \WP_UnitTestCase {
 		// Create a token that expires immediately.
 		Token::create( $this->user_id, $this->client_id, array( Scope::READ ), 0 );
 
-		// Wait for expiration plus grace period buffer (normally 1 day, but we can't wait that long).
-		// For this test, we'll just verify the method runs without error.
+		/*
+		 * Wait for expiration plus grace period buffer (normally 1 day, but we can't wait that long).
+		 * For this test, we'll just verify the method runs without error.
+		 */
 		$count = Token::cleanup_expired();
 		$this->assertIsInt( $count );
 	}

@@ -146,7 +146,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 			),
 		);
 
-		if ( get_current_user_id() !== $user_id && ! current_user_can( 'activitypub' ) ) {
+		if ( \get_current_user_id() !== (int) $user_id && ! \current_user_can( 'activitypub' ) ) {
 			$args['meta_query'][] = array(
 				'key'     => '_activitypub_activity_type',
 				'value'   => $activity_types,
@@ -383,6 +383,12 @@ class Outbox_Controller extends \WP_REST_Controller {
 		$visibility = $this->determine_visibility( $data );
 
 		$type = \strtolower( $data['type'] ?? 'create' );
+
+		// Validate type against known activity types to prevent hook name pollution.
+		$allowed_types = \array_map( 'strtolower', Activity::TYPES );
+		if ( ! \in_array( $type, $allowed_types, true ) ) {
+			$type = 'create';
+		}
 
 		/**
 		 * Filters the activity to add to outbox.

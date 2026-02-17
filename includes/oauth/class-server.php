@@ -52,35 +52,30 @@ class Server {
 		 */
 		self::$current_token = null;
 
-		// If another authentication method already succeeded, use that.
-		if ( true === $result || \is_user_logged_in() ) {
-			return $result;
-		}
-
-		// If a previous auth filter returned an error, respect it.
+		// Respect errors from earlier auth filters.
 		if ( \is_wp_error( $result ) ) {
 			return $result;
 		}
 
-		// Check for Bearer token.
+		/*
+		 * Check for Bearer token first — it takes priority over cookie auth.
+		 * Cookie-based `is_user_logged_in()` can be true in browsers, but
+		 * REST cookie auth requires a nonce that C2S clients won't have.
+		 * Skipping this check would silently drop valid Bearer tokens.
+		 */
 		$token = self::get_bearer_token();
 
 		if ( ! $token ) {
-			// No Bearer token present - let other auth methods handle it.
 			return $result;
 		}
 
-		// Validate the token.
 		$validated = Token::validate( $token );
 
 		if ( \is_wp_error( $validated ) ) {
 			return $validated;
 		}
 
-		// Store the validated token for later use.
 		self::$current_token = $validated;
-
-		// Set the current user.
 		\wp_set_current_user( $validated->get_user_id() );
 
 		return true;
@@ -144,27 +139,31 @@ class Server {
 	 * @return string|null The authorization header value or null.
 	 */
 	private static function get_authorization_header() {
-		// Check for standard header.
+		/*
+		 * Only wp_unslash() is used here — sanitize_text_field() could
+		 * corrupt opaque bearer tokens by stripping characters.
+		 */
+
+		// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Opaque auth token, must not be altered.
 		if ( ! empty( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
-			return sanitize_text_field( wp_unslash( $_SERVER['HTTP_AUTHORIZATION'] ) );
+			return \wp_unslash( $_SERVER['HTTP_AUTHORIZATION'] );
 		}
 
-		// Check for redirect header (some servers use this).
 		if ( ! empty( $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ) ) {
-			return sanitize_text_field( wp_unslash( $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ) );
+			return \wp_unslash( $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] );
+		}
+		// phpcs:enable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+
+		// Fallback: read from Apache's own header API (case-insensitive).
+		if ( ! function_exists( 'apache_request_headers' ) ) {
+			return null;
 		}
 
-		// Try to get from Apache.
-		if ( function_exists( 'apache_request_headers' ) ) {
-			$headers = apache_request_headers();
-			if ( isset( $headers['Authorization'] ) ) {
-				return sanitize_text_field( $headers['Authorization'] );
-			}
-			// Check case-insensitive.
-			foreach ( $headers as $key => $value ) {
-				if ( 'authorization' === strtolower( $key ) ) {
-					return sanitize_text_field( $value );
-				}
+		$headers = apache_request_headers();
+
+		foreach ( $headers as $key => $value ) {
+			if ( 'authorization' === strtolower( $key ) ) {
+				return $value;
 			}
 		}
 
@@ -211,11 +210,11 @@ class Server {
 		 * @param string|null      $scope   Required scope.
 		 */
 		$override = \apply_filters( 'activitypub_oauth_check_permission', null, $request, $scope );
+
 		if ( null !== $override ) {
 			return $override;
 		}
 
-		// Must be authenticated via OAuth.
 		if ( ! self::is_oauth_request() ) {
 			return new \WP_Error(
 				'activitypub_oauth_required',
@@ -224,7 +223,6 @@ class Server {
 			);
 		}
 
-		// Check scope if specified.
 		if ( $scope && ! self::has_scope( $scope ) ) {
 			return new \WP_Error(
 				'activitypub_insufficient_scope',
@@ -259,16 +257,22 @@ class Server {
 	 * @return \WP_REST_Response The modified response.
 	 */
 	public static function add_cors_headers( $response, $server, $request ) {
-		$route = $request->get_route();
-
-		// Check if route needs CORS headers.
-		if ( ! self::route_needs_cors( $route ) ) {
+		if ( ! self::route_needs_cors( $request->get_route() ) ) {
 			return $response;
 		}
 
-		$response->header( 'Access-Control-Allow-Origin', '*' );
+		/*
+		 * Reflect the request Origin instead of using a wildcard to avoid
+		 * leaking private data to arbitrary origins on authenticated endpoints.
+		 */
+		$origin = isset( $_SERVER['HTTP_ORIGIN'] ) ? \esc_url_raw( \wp_unslash( $_SERVER['HTTP_ORIGIN'] ) ) : '';
+		$response->header( 'Access-Control-Allow-Origin', $origin ? $origin : '*' );
 		$response->header( 'Access-Control-Allow-Methods', 'GET, POST, OPTIONS' );
 		$response->header( 'Access-Control-Allow-Headers', 'Content-Type, Authorization' );
+
+		if ( $origin ) {
+			$response->header( 'Vary', 'Origin' );
+		}
 
 		return $response;
 	}
@@ -282,9 +286,9 @@ class Server {
 	private static function route_needs_cors( $route ) {
 		$namespace = '/' . ACTIVITYPUB_REST_NAMESPACE;
 
-		// OAuth endpoints (except authorize which redirects).
-		if ( 0 === strpos( $route, $namespace . '/oauth' ) ) {
-			return false === strpos( $route, '/oauth/authorize' );
+		// OAuth endpoints (except the interactive authorize endpoint which redirects).
+		if ( 0 === strpos( $route, $namespace . '/oauth/' ) ) {
+			return $namespace . '/oauth/authorize' !== $route;
 		}
 
 		// Proxy endpoint for fetching remote objects.
@@ -361,7 +365,7 @@ class Server {
 		$client_id             = isset( $_GET['client_id'] ) ? \sanitize_text_field( \wp_unslash( $_GET['client_id'] ) ) : '';
 		$redirect_uri          = isset( $_GET['redirect_uri'] ) ? \esc_url_raw( \wp_unslash( $_GET['redirect_uri'] ) ) : '';
 		$scope                 = isset( $_GET['scope'] ) ? \sanitize_text_field( \wp_unslash( $_GET['scope'] ) ) : '';
-		$state                 = isset( $_GET['state'] ) ? \sanitize_text_field( \wp_unslash( $_GET['state'] ) ) : '';
+		$state                 = isset( $_GET['state'] ) ? \wp_unslash( $_GET['state'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- OAuth state is opaque; must be round-tripped exactly.
 		$code_challenge        = isset( $_GET['code_challenge'] ) ? \sanitize_text_field( \wp_unslash( $_GET['code_challenge'] ) ) : '';
 		$code_challenge_method = isset( $_GET['code_challenge_method'] ) ? \sanitize_text_field( \wp_unslash( $_GET['code_challenge_method'] ) ) : 'S256';
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
@@ -426,14 +430,19 @@ class Server {
 		$client_id             = isset( $_POST['client_id'] ) ? \sanitize_text_field( \wp_unslash( $_POST['client_id'] ) ) : '';
 		$redirect_uri          = isset( $_POST['redirect_uri'] ) ? \esc_url_raw( \wp_unslash( $_POST['redirect_uri'] ) ) : '';
 		$scope                 = isset( $_POST['scope'] ) ? \sanitize_text_field( \wp_unslash( $_POST['scope'] ) ) : '';
-		$state                 = isset( $_POST['state'] ) ? \sanitize_text_field( \wp_unslash( $_POST['state'] ) ) : '';
+		$state                 = isset( $_POST['state'] ) ? \wp_unslash( $_POST['state'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- OAuth state is opaque; must be round-tripped exactly.
 		$code_challenge        = isset( $_POST['code_challenge'] ) ? \sanitize_text_field( \wp_unslash( $_POST['code_challenge'] ) ) : '';
 		$code_challenge_method = isset( $_POST['code_challenge_method'] ) ? \sanitize_text_field( \wp_unslash( $_POST['code_challenge_method'] ) ) : 'S256';
 		$approve               = isset( $_POST['approve'] );
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
+		if ( ! \in_array( $code_challenge_method, array( 'S256', 'plain' ), true ) ) {
+			$code_challenge_method = 'S256';
+		}
+
 		// Re-validate client and redirect URI (form fields could be tampered with).
 		$client = Client::get( $client_id );
+
 		if ( \is_wp_error( $client ) ) {
 			\wp_die(
 				\esc_html( $client->get_error_message() ),
@@ -452,22 +461,14 @@ class Server {
 
 		// User denied authorization.
 		if ( ! $approve ) {
-			$error_url = \add_query_arg(
+			self::redirect_to_client(
+				$redirect_uri,
 				array(
 					'error'             => 'access_denied',
-					'error_description' => \rawurlencode( 'The user denied the authorization request.' ),
+					'error_description' => 'The user denied the authorization request.',
 					'state'             => $state,
-				),
-				$redirect_uri
+				)
 			);
-
-			/*
-			 * wp_safe_redirect() blocks external domains, but OAuth redirect_uris
-			 * are always external. The URI is pre-validated against the registered
-			 * client's redirect_uris by render_authorize_form().
-			 */
-			\wp_redirect( $error_url ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect
-			exit;
 		}
 
 		// Create authorization code.
@@ -482,28 +483,37 @@ class Server {
 		);
 
 		if ( \is_wp_error( $code ) ) {
-			$error_url = \add_query_arg(
+			self::redirect_to_client(
+				$redirect_uri,
 				array(
 					'error'             => 'server_error',
-					'error_description' => \rawurlencode( $code->get_error_message() ),
+					'error_description' => $code->get_error_message(),
 					'state'             => $state,
-				),
-				$redirect_uri
+				)
 			);
-			// See comment above regarding wp_redirect vs wp_safe_redirect.
-			\wp_redirect( $error_url ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect
-			exit;
 		}
 
-		// Redirect to client with authorization code.
-		$success_url = \add_query_arg(
+		self::redirect_to_client(
+			$redirect_uri,
 			array(
 				'code'  => $code,
 				'state' => $state,
-			),
-			$redirect_uri
+			)
 		);
-		\wp_redirect( $success_url ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- Redirecting to external client.
+	}
+
+	/**
+	 * Redirect to an OAuth client's redirect URI with query parameters.
+	 *
+	 * Uses wp_redirect() because OAuth redirect URIs are external domains
+	 * that wp_safe_redirect() would block. The URI is pre-validated against
+	 * the registered client's redirect_uris before this method is called.
+	 *
+	 * @param string $redirect_uri The client's redirect URI.
+	 * @param array  $params       Query parameters to append.
+	 */
+	private static function redirect_to_client( $redirect_uri, $params ) {
+		\wp_redirect( \add_query_arg( $params, $redirect_uri ) ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect
 		exit;
 	}
 }

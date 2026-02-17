@@ -89,7 +89,7 @@ class OAuth_Controller extends \WP_REST_Controller {
 			)
 		);
 
-		// Revocation endpoint.
+		// Revocation endpoint (RFC 7009 — requires authentication).
 		\register_rest_route(
 			$this->namespace,
 			'/' . $this->rest_base . '/revoke',
@@ -97,7 +97,7 @@ class OAuth_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'revoke' ),
-					'permission_callback' => '__return_true',
+					'permission_callback' => array( $this, 'revoke_permissions_check' ),
 					'args'                => array(
 						'token'           => array(
 							'description' => 'The token to revoke.',
@@ -275,6 +275,20 @@ class OAuth_Controller extends \WP_REST_Controller {
 		$code_challenge_method = $request->get_param( 'code_challenge_method' ) ?: 'S256';
 		$approve               = $request->get_param( 'approve' );
 
+		// Re-validate client and redirect URI (form fields could be tampered with).
+		$client = Client::get( $client_id );
+		if ( \is_wp_error( $client ) ) {
+			return $client;
+		}
+
+		if ( ! $client->is_valid_redirect_uri( $redirect_uri ) ) {
+			return new \WP_Error(
+				'activitypub_invalid_redirect_uri',
+				\__( 'Invalid redirect URI for this client.', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
+
 		// User denied authorization.
 		if ( ! $approve ) {
 			return $this->redirect_with_error(
@@ -350,6 +364,37 @@ class OAuth_Controller extends \WP_REST_Controller {
 	}
 
 	/**
+	 * Permission check for token revocation.
+	 *
+	 * Per RFC 7009, the revocation endpoint must be protected.
+	 * Requires either a logged-in user or a valid Bearer token.
+	 *
+	 * @return bool|\WP_Error True if allowed, error otherwise.
+	 */
+	public function revoke_permissions_check() {
+		if ( \is_user_logged_in() ) {
+			return true;
+		}
+
+		$token = OAuth_Server::get_bearer_token();
+
+		if ( $token ) {
+			$validated = Token::validate( $token );
+
+			if ( ! \is_wp_error( $validated ) ) {
+				\wp_set_current_user( $validated->get_user_id() );
+				return true;
+			}
+		}
+
+		return new \WP_Error(
+			'activitypub_unauthorized',
+			\__( 'Authentication required.', 'activitypub' ),
+			array( 'status' => 401 )
+		);
+	}
+
+	/**
 	 * Permission check for token introspection.
 	 *
 	 * Per RFC 7662, the introspection endpoint must be protected.
@@ -387,6 +432,17 @@ class OAuth_Controller extends \WP_REST_Controller {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function token( \WP_REST_Request $request ) {
+		// Rate-limit token requests to prevent brute-force attacks (max 20 per minute per IP).
+		$ip            = isset( $_SERVER['REMOTE_ADDR'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown'; // phpcs:ignore WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders
+		$transient_key = 'ap_oauth_tok_' . \md5( $ip );
+		$count         = (int) \get_transient( $transient_key );
+
+		if ( $count >= 20 ) {
+			return $this->token_error( 'invalid_request', 'Too many token requests. Please try again later.' );
+		}
+
+		\set_transient( $transient_key, $count + 1, MINUTE_IN_SECONDS );
+
 		$grant_type = $request->get_param( 'grant_type' );
 		$client_id  = $request->get_param( 'client_id' );
 
@@ -493,6 +549,15 @@ class OAuth_Controller extends \WP_REST_Controller {
 		// Introspect the token.
 		$response = Token::introspect( $token );
 
+		// Scope introspection to same client: non-admin users can only
+		// introspect tokens belonging to the same client as their own.
+		if ( $response['active'] && ! \current_user_can( 'manage_options' ) ) {
+			$current_token = OAuth_Server::get_current_token();
+			if ( $current_token && $current_token->get_client_id() !== $response['client_id'] ) {
+				$response = array( 'active' => false );
+			}
+		}
+
 		return new \WP_REST_Response( $response, 200 );
 	}
 
@@ -503,8 +568,8 @@ class OAuth_Controller extends \WP_REST_Controller {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function register_client( \WP_REST_Request $request ) {
-		// Check if dynamic registration is allowed.
-		if ( ! \apply_filters( 'activitypub_allow_dynamic_client_registration', true ) ) {
+		// Check if dynamic registration is allowed (disabled by default for security).
+		if ( ! \apply_filters( 'activitypub_allow_dynamic_client_registration', false ) ) {
 			return new \WP_Error(
 				'activitypub_registration_disabled',
 				\__( 'Dynamic client registration is not allowed.', 'activitypub' ),
