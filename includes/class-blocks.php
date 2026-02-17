@@ -19,6 +19,8 @@ class Blocks {
 	public static function init() {
 		// This is already being called on the init hook, so just add it.
 		self::register_blocks();
+		self::register_patterns();
+		self::register_templates();
 
 		\add_action( 'load-post-new.php', array( self::class, 'handle_in_reply_to_get_param' ) );
 		// Add editor plugin.
@@ -101,6 +103,110 @@ class Blocks {
 			ACTIVITYPUB_PLUGIN_DIR . '/build/reply',
 			array(
 				'render_callback' => array( self::class, 'render_reply_block' ),
+			)
+		);
+
+		// Register remote media blocks (server-side only, no editor UI).
+		\register_block_type(
+			'activitypub/emoji',
+			array(
+				'attributes'      => array(
+					'url'     => array( 'type' => 'string' ),
+					'updated' => array( 'type' => 'string' ),
+				),
+				'render_callback' => array( self::class, 'render_emoji_block' ),
+			)
+		);
+
+		\register_block_type(
+			'activitypub/image',
+			array(
+				'attributes'      => array(
+					'url' => array( 'type' => 'string' ),
+				),
+				'render_callback' => array( self::class, 'render_image_block' ),
+			)
+		);
+
+		\register_block_type(
+			'activitypub/audio',
+			array(
+				'attributes'      => array(
+					'url' => array( 'type' => 'string' ),
+				),
+				'render_callback' => array( self::class, 'render_audio_block' ),
+			)
+		);
+
+		\register_block_type(
+			'activitypub/video',
+			array(
+				'attributes'      => array(
+					'url' => array( 'type' => 'string' ),
+				),
+				'render_callback' => array( self::class, 'render_video_block' ),
+			)
+		);
+	}
+
+	/**
+	 * Register block patterns for ActivityPub.
+	 */
+	public static function register_patterns() {
+		// Register the ActivityPub pattern category.
+		\register_block_pattern_category(
+			'activitypub',
+			array(
+				'label' => \__( 'Fediverse', 'activitypub' ),
+			)
+		);
+
+		// Register each pattern.
+		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/author-header.php';
+		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/author-profile.php';
+		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/follow-page.php';
+		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/social-sidebar.php';
+	}
+
+	/**
+	 * Register FSE templates for block themes.
+	 */
+	public static function register_templates() {
+		// Only register templates for block themes on WP 6.7+.
+		if ( ! \function_exists( 'register_block_template' ) || ! \wp_is_block_theme() ) {
+			return;
+		}
+
+		// Use the core `author` hierarchy slug so WP can resolve this for author archives.
+		\register_block_template(
+			'activitypub//author',
+			array(
+				'title'       => \__( 'Author Archive (Fediverse)', 'activitypub' ),
+				'description' => \__( 'Displays an author archive with Fediverse profile and follow options.', 'activitypub' ),
+				'content'     => '<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained"}} -->
+<main class="wp-block-group">
+	<!-- wp:pattern {"slug":"activitypub/author-profile"} /-->
+	<!-- wp:spacer {"height":"32px"} -->
+	<div style="height:32px" aria-hidden="true" class="wp-block-spacer"></div>
+	<!-- /wp:spacer -->
+	<!-- wp:query {"queryId":0,"query":{"perPage":10,"pages":0,"offset":0,"postType":"post","order":"desc","orderBy":"date","author":"","search":"","exclude":[],"sticky":"","inherit":true}} -->
+	<div class="wp-block-query">
+		<!-- wp:post-template -->
+			<!-- wp:post-title {"isLink":true} /-->
+			<!-- wp:post-excerpt /-->
+		<!-- /wp:post-template -->
+		<!-- wp:query-pagination -->
+			<!-- wp:query-pagination-previous /-->
+			<!-- wp:query-pagination-numbers /-->
+			<!-- wp:query-pagination-next /-->
+		<!-- /wp:query-pagination -->
+	</div>
+	<!-- /wp:query -->
+</main>
+<!-- /wp:group -->
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->',
+				'post_types'  => array(),
 			)
 		);
 	}
@@ -315,6 +421,167 @@ class Blocks {
 		</div>
 		<?php
 		return \ob_get_clean();
+	}
+
+	/**
+	 * Render the emoji block.
+	 *
+	 * Replaces emoji shortcode with cached img tag at runtime.
+	 *
+	 * @param array  $attrs   The block attributes.
+	 * @param string $content The block inner content (emoji shortcode).
+	 *
+	 * @return string The rendered emoji img tag.
+	 */
+	public static function render_emoji_block( $attrs, $content ) {
+		if ( empty( $attrs['url'] ) || empty( $content ) ) {
+			return $content;
+		}
+
+		$url       = $attrs['url'];
+		$shortcode = trim( $content );
+		$name      = trim( $shortcode, ':' );
+
+		/**
+		 * Filters a remote media URL for caching.
+		 *
+		 * @param string      $url       The remote media URL.
+		 * @param string      $context   The context ('emoji').
+		 * @param int|null    $entity_id The entity ID.
+		 * @param array       $options   Additional options.
+		 */
+		$cached_url = \apply_filters(
+			'activitypub_remote_media_url',
+			$url,
+			'emoji',
+			null,
+			array( 'updated' => $attrs['updated'] ?? null )
+		);
+
+		return Emoji::get_img_tag( $cached_url ?: $url, $name );
+	}
+
+	/**
+	 * Render the image block.
+	 *
+	 * Replaces remote image URL with cached URL at runtime.
+	 *
+	 * @param array  $attrs   The block attributes.
+	 * @param string $content The block inner content (img tag).
+	 *
+	 * @return string The rendered content with cached URL.
+	 */
+	public static function render_image_block( $attrs, $content ) {
+		if ( empty( $attrs['url'] ) || empty( $content ) ) {
+			return $content;
+		}
+
+		$url = $attrs['url'];
+
+		// Get entity ID from context.
+		$entity_id = null;
+		$post      = \get_post();
+		if ( $post ) {
+			$entity_id = $post->ID;
+		}
+
+		/**
+		 * Filters a remote image URL for caching.
+		 *
+		 * @param string      $url       The remote image URL.
+		 * @param string      $context   The context ('media').
+		 * @param int|null    $entity_id The entity ID.
+		 * @param array       $options   Additional options.
+		 */
+		$cached_url = \apply_filters( 'activitypub_remote_media_url', $url, 'media', $entity_id, array() );
+
+		if ( $cached_url && $cached_url !== $url ) {
+			return \str_replace( $url, $cached_url, $content );
+		}
+
+		return $content;
+	}
+
+	/**
+	 * Render the audio block.
+	 *
+	 * Replaces remote audio URL with cached URL at runtime.
+	 *
+	 * @param array  $attrs   The block attributes.
+	 * @param string $content The block inner content (audio tag).
+	 *
+	 * @return string The rendered content with cached URL.
+	 */
+	public static function render_audio_block( $attrs, $content ) {
+		if ( empty( $attrs['url'] ) || empty( $content ) ) {
+			return $content;
+		}
+
+		$url = $attrs['url'];
+
+		// Get entity ID from context.
+		$entity_id = null;
+		$post      = \get_post();
+		if ( $post ) {
+			$entity_id = $post->ID;
+		}
+
+		/**
+		 * Filters a remote audio URL for caching.
+		 *
+		 * @param string      $url       The remote audio URL.
+		 * @param string      $context   The context ('audio').
+		 * @param int|null    $entity_id The entity ID.
+		 * @param array       $options   Additional options.
+		 */
+		$cached_url = \apply_filters( 'activitypub_remote_media_url', $url, 'audio', $entity_id, array() );
+
+		if ( $cached_url && $cached_url !== $url ) {
+			return \str_replace( $url, $cached_url, $content );
+		}
+
+		return $content;
+	}
+
+	/**
+	 * Render the video block.
+	 *
+	 * Replaces remote video URL with cached URL at runtime.
+	 *
+	 * @param array  $attrs   The block attributes.
+	 * @param string $content The block inner content (video tag).
+	 *
+	 * @return string The rendered content with cached URL.
+	 */
+	public static function render_video_block( $attrs, $content ) {
+		if ( empty( $attrs['url'] ) || empty( $content ) ) {
+			return $content;
+		}
+
+		$url = $attrs['url'];
+
+		// Get entity ID from context.
+		$entity_id = null;
+		$post      = \get_post();
+		if ( $post ) {
+			$entity_id = $post->ID;
+		}
+
+		/**
+		 * Filters a remote video URL for caching.
+		 *
+		 * @param string      $url       The remote video URL.
+		 * @param string      $context   The context ('video').
+		 * @param int|null    $entity_id The entity ID.
+		 * @param array       $options   Additional options.
+		 */
+		$cached_url = \apply_filters( 'activitypub_remote_media_url', $url, 'video', $entity_id, array() );
+
+		if ( $cached_url && $cached_url !== $url ) {
+			return \str_replace( $url, $cached_url, $content );
+		}
+
+		return $content;
 	}
 
 	/**

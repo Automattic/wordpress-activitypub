@@ -42,7 +42,7 @@ class Activitypub {
 		self::flush_rewrite_rules();
 		Scheduler::register_schedules();
 
-		\add_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
+		\add_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ), 5, 3 );
 		Migration::update_comment_counts();
 
 		if ( \is_multisite() && $network_wide && ! \wp_is_large_network() ) {
@@ -64,7 +64,7 @@ class Activitypub {
 		self::flush_rewrite_rules();
 		Scheduler::deregister_schedules();
 
-		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ) );
+		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ), 5 );
 		Migration::update_comment_counts( 2000 );
 
 		if ( \is_multisite() && $network_wide && ! \wp_is_large_network() ) {
@@ -83,7 +83,7 @@ class Activitypub {
 	public static function uninstall() {
 		Scheduler::deregister_schedules();
 
-		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ) );
+		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ), 5 );
 		Migration::update_comment_counts( 2000 );
 
 		Posts::delete_all();

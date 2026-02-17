@@ -20,6 +20,7 @@ defined( 'ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS' ) || define( 'ACTIVITYPUB_D
 defined( 'ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS' ) || define( 'ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS', false );
 defined( 'ACTIVITYPUB_DEFAULT_OBJECT_TYPE' ) || define( 'ACTIVITYPUB_DEFAULT_OBJECT_TYPE', 'wordpress-post-format' );
 defined( 'ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE' ) || define( 'ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE', 100 );
+defined( 'ACTIVITYPUB_DISABLE_MEDIA_CACHE' ) || define( 'ACTIVITYPUB_DISABLE_MEDIA_CACHE', false );
 
 // The following constants are invariable and define values used throughout the plugin.
 

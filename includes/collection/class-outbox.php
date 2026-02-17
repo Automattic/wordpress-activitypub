@@ -28,6 +28,30 @@ class Outbox {
 	const POST_TYPE = 'ap_outbox';
 
 	/**
+	 * Maximum number of outbox items to keep.
+	 *
+	 * When the total count exceeds this, the oldest items are purged
+	 * regardless of their age. Acts as a safety net for runaway growth.
+	 *
+	 * @var int
+	 */
+	const MAX_ITEMS = 5000;
+
+	/**
+	 * Number of items to process per batch during purge.
+	 *
+	 * @var int
+	 */
+	const PURGE_BATCH_SIZE = 100;
+
+	/**
+	 * Maximum seconds a purge run may take before yielding.
+	 *
+	 * @var int
+	 */
+	const PURGE_TIMEOUT = 30;
+
+	/**
 	 * Add an Item to the outbox.
 	 *
 	 * @param Activity $activity   Full Activity object that will be added to the outbox.
@@ -110,24 +134,38 @@ class Outbox {
 			return false;
 		}
 
-		self::invalidate_existing_items( $object_id, $activity->get_type(), $id );
+		self::delete_superseded_items( $object_id, $activity->get_type(), $id );
 
 		return $id;
 	}
 
 	/**
-	 * Invalidate existing outbox items with the same activity type and object ID
-	 * by setting their status to 'publish'.
+	 * Delete pending outbox items that have been superseded by a newer item.
 	 *
-	 * @param string $object_id     The ID of the activity object.
-	 * @param string $activity_type The type of the activity.
-	 * @param int    $current_id    The ID of the current outbox item to exclude.
+	 * For most activity types, only items with the same type and object ID are
+	 * deleted. Delete activities are a special case: they supersede all pending
+	 * items for the same object regardless of type.
+	 *
+	 * Unschedules all federation events before deleting each item.
+	 * Skips Follow, Announce, Accept, and Reject activities, as those are
+	 * independent per-request responses that must not cancel each other.
+	 *
+	 * @param string $object_id     The ActivityPub object ID (URL).
+	 * @param string $activity_type The activity type (e.g. 'Create', 'Update', 'Delete').
+	 * @param int    $exclude_id    The ID of the newly added outbox item to keep.
 	 *
 	 * @return void
 	 */
-	private static function invalidate_existing_items( $object_id, $activity_type, $current_id ) {
-		// Do not invalidate items for Announce activities.
-		if ( 'Announce' === $activity_type ) {
+	private static function delete_superseded_items( $object_id, $activity_type, $exclude_id ) {
+		/*
+		 * Do not delete items for Follow, Announce, Accept, or Reject activities.
+		 * Follow activities from different users share the same object ID but are
+		 * independent and must survive until their Accept is received.
+		 * Accept/Reject are per-request responses (e.g. to individual incoming
+		 * QuoteRequests) and must not cancel each other even when they share
+		 * the same object ID.
+		 */
+		if ( in_array( $activity_type, array( 'Follow', 'Announce', 'Accept', 'Reject' ), true ) ) {
 			return;
 		}
 
@@ -138,7 +176,8 @@ class Outbox {
 			),
 		);
 
-		// For non-Delete activities, only invalidate items of the same type.
+		// For non-Delete activities, only delete items of the same type.
+		// Delete activities supersede all pending items for the same object.
 		if ( 'Delete' !== $activity_type ) {
 			$meta_query[] = array(
 				'key'   => '_activitypub_activity_type',
@@ -150,7 +189,7 @@ class Outbox {
 			array(
 				'post_type'   => self::POST_TYPE,
 				'post_status' => 'pending',
-				'exclude'     => array( $current_id ),
+				'exclude'     => array( $exclude_id ),
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query'  => $meta_query,
 				'fields'      => 'ids',
@@ -159,7 +198,7 @@ class Outbox {
 
 		foreach ( $existing_items as $existing_item_id ) {
 			Scheduler::unschedule_events_for_item( $existing_item_id );
-			\wp_publish_post( $existing_item_id );
+			\wp_delete_post( $existing_item_id, true );
 		}
 	}
 
@@ -399,44 +438,74 @@ class Outbox {
 	 *
 	 * Deletes outbox items older than the specified number of days,
 	 * except for Follow activities which are always preserved.
+	 * Also enforces a hard cap on total items via MAX_ITEMS.
 	 *
 	 * @param int $days Number of days to keep items. Items older than this will be deleted.
 	 *
 	 * @return int The number of items deleted.
 	 */
 	public static function purge( $days ) {
-		$total_posts = (int) \wp_count_posts( self::POST_TYPE )->publish;
-		if ( $total_posts <= 20 ) {
+		if ( $days <= 0 ) {
 			return 0;
 		}
 
-		$post_ids = \get_posts(
+		$counts = \wp_count_posts( self::POST_TYPE );
+		$total  = 0;
+		foreach ( $counts as $count ) {
+			$total += (int) $count;
+		}
+
+		if ( $total <= 20 ) {
+			return 0;
+		}
+
+		$deleted    = 0;
+		$cutoff     = \gmdate( 'Y-m-d', \time() - ( $days * DAY_IN_SECONDS ) );
+		$start_time = \time();
+
+		// If total exceeds the hard cap, drop the date filter to purge oldest items first.
+		$overflow   = $total > self::MAX_ITEMS;
+		$date_query = array(
 			array(
-				'post_type'   => self::POST_TYPE,
-				'post_status' => 'any',
-				'fields'      => 'ids',
-				'numberposts' => -1,
-				'date_query'  => array(
-					array(
-						'before' => \gmdate( 'Y-m-d', \time() - ( $days * DAY_IN_SECONDS ) ),
-					),
-				),
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query'  => array(
-					array(
-						'key'     => '_activitypub_activity_type',
-						'value'   => 'Follow',
-						'compare' => '!=',
-					),
-				),
-			)
+				'before' => $cutoff,
+			),
 		);
 
-		$deleted = 0;
-		foreach ( $post_ids as $post_id ) {
-			\wp_delete_post( $post_id, true );
-			++$deleted;
+		$query_args = array(
+			'post_type'   => self::POST_TYPE,
+			'post_status' => 'any',
+			'fields'      => 'ids',
+			'numberposts' => self::PURGE_BATCH_SIZE,
+			'orderby'     => 'date',
+			'order'       => 'ASC',
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query'  => array(
+				array(
+					'key'     => '_activitypub_activity_type',
+					'value'   => 'Follow',
+					'compare' => '!=',
+				),
+			),
+		);
+
+		if ( ! $overflow ) {
+			$query_args['date_query'] = $date_query;
 		}
+
+		do {
+			$post_ids = \get_posts( $query_args );
+
+			foreach ( $post_ids as $post_id ) {
+				\wp_delete_post( $post_id, true );
+				++$deleted;
+			}
+
+			// Once we're back under the cap, re-apply the date filter.
+			if ( $overflow && ( $total - $deleted ) <= self::MAX_ITEMS ) {
+				$overflow                 = false;
+				$query_args['date_query'] = $date_query;
+			}
+		} while ( ! empty( $post_ids ) && ( \time() - $start_time ) < self::PURGE_TIMEOUT );
 
 		return $deleted;
 	}

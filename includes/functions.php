@@ -212,7 +212,7 @@ function custom_large_numbers( $formatted, $number ) {
 function esc_hashtag( $input ) {
 	$hashtag = \wp_specialchars_decode( $input, ENT_QUOTES );
 	// Remove all characters that are not letters, numbers, or hyphens.
-	$hashtag = \preg_replace( '/emoji-regex(*SKIP)(?!)|[^\p{L}\p{Nd}-]+/u', '-', $hashtag );
+	$hashtag = \preg_replace( '/[^\p{L}\p{Nd}-]+/u', '-', $hashtag );
 
 	// Capitalize every letter that is preceded by a hyphen.
 	$hashtag = preg_replace_callback(
