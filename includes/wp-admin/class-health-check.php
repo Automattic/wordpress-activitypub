@@ -812,7 +812,7 @@ class Health_Check {
 			$result['description']    = \sprintf(
 				'<p>%s</p><p>%s</p>',
 				$details,
-				\__( 'A plugin may be calling wp_update_post() on published posts at a very high rate, causing excessive federation activity. This can impact site performance and may flood federated servers.', 'activitypub' )
+				\__( 'A plugin may be triggering updates to published posts at a very high rate, causing excessive federation activity. This can impact site performance and may flood federated servers.', 'activitypub' )
 			);
 		} else {
 			$result['status']         = 'recommended';
