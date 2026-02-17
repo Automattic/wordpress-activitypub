@@ -564,7 +564,7 @@ class Test_Health_Check extends WP_UnitTestCase {
 		$this->assertEquals( 'Excessive outbox activity detected', $result['label'] );
 		$this->assertEquals( 'red', $result['badge']['color'] );
 		$this->assertStringContainsString( '55 outbox items', $result['description'] );
-		$this->assertStringContainsString( 'wp_update_post()', $result['description'] );
+		$this->assertStringContainsString( 'excessive federation activity', $result['description'] );
 	}
 
 	/**
