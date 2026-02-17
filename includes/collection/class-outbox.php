@@ -116,25 +116,32 @@ class Outbox {
 	}
 
 	/**
-	 * Delete pending outbox items that have been superseded by a newer item
-	 * with the same activity type and object ID.
+	 * Delete pending outbox items that have been superseded by a newer item.
+	 *
+	 * For most activity types, only items with the same type and object ID are
+	 * deleted. Delete activities are a special case: they supersede all pending
+	 * items for the same object regardless of type.
 	 *
 	 * Unschedules all federation events before deleting each item.
-	 * Skips Announce, Accept, and Reject activities, as those are
+	 * Skips Follow, Announce, Accept, and Reject activities, as those are
 	 * independent per-request responses that must not cancel each other.
 	 *
 	 * @param string $object_id     The ActivityPub object ID (URL).
 	 * @param string $activity_type The activity type (e.g. 'Create', 'Update', 'Delete').
 	 * @param int    $exclude_id    The ID of the newly added outbox item to keep.
+	 *
+	 * @return void
 	 */
 	private static function delete_superseded_items( $object_id, $activity_type, $exclude_id ) {
 		/*
-		 * Do not delete items for Announce, Accept, or Reject activities.
+		 * Do not delete items for Follow, Announce, Accept, or Reject activities.
+		 * Follow activities from different users share the same object ID but are
+		 * independent and must survive until their Accept is received.
 		 * Accept/Reject are per-request responses (e.g. to individual incoming
 		 * QuoteRequests) and must not cancel each other even when they share
 		 * the same object ID.
 		 */
-		if ( in_array( $activity_type, array( 'Announce', 'Accept', 'Reject' ), true ) ) {
+		if ( in_array( $activity_type, array( 'Follow', 'Announce', 'Accept', 'Reject' ), true ) ) {
 			return;
 		}
 

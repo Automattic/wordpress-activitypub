@@ -399,12 +399,15 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		$id = \Activitypub\add_to_outbox( $data, $type, self::$user_id );
 
+		// Capture permalink before undo — Delete supersedes the original item.
+		$permalink = \get_permalink( $id );
+
 		$undo_id  = Outbox::undo( $id );
 		$activity = Outbox::get_activity( $undo_id );
 
 		// Only ID for Deletes.
 		if ( 'Delete' === $expected ) {
-			$this->assertSame( \get_permalink( $id ), $activity->get_object() );
+			$this->assertSame( $permalink, $activity->get_object() );
 		} else {
 			$outbox_activity = \json_decode( \get_post( $undo_id )->post_content, true );
 			$this->assertEquals( $outbox_activity['object'], $activity->get_object()->to_array( false ) );
