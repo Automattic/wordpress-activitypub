@@ -29,29 +29,29 @@ if ( ! defined( 'ABSPATH' ) ) {
  * In multi-user mode the blog actor is a "Group" per FEP-1b12,
  * so this filter intentionally skips that case.
  *
- * @param array $array The ActivityPub actor array.
+ * @param array $actor_array The ActivityPub actor array.
  *
  * @return array The filtered actor array.
  */
-function set_blog_bot_type( $array ) {
+function set_blog_bot_type( $actor_array ) {
 	if ( \Activitypub\is_single_user() ) {
-		$array['type'] = 'Service';
+		$actor_array['type'] = 'Service';
 	}
 
-	return $array;
+	return $actor_array;
 }
 
 /**
  * Set the user actor type to "Service" (bot).
  *
- * @param array $array The ActivityPub actor array.
+ * @param array $actor_array The ActivityPub actor array.
  *
  * @return array The filtered actor array.
  */
-function set_user_bot_type( $array ) {
-	$array['type'] = 'Service';
+function set_user_bot_type( $actor_array ) {
+	$actor_array['type'] = 'Service';
 
-	return $array;
+	return $actor_array;
 }
 
 // Hook into the ActivityPub actor object array filters.
