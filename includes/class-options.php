@@ -427,17 +427,6 @@ class Options {
 
 		\register_setting(
 			'activitypub_blog',
-			'activitypub_blog_is_bot',
-			array(
-				'type'              => 'integer',
-				'description'       => 'Mark the blog profile as a bot or automated account.',
-				'default'           => 0,
-				'sanitize_callback' => 'absint',
-			)
-		);
-
-		\register_setting(
-			'activitypub_blog',
 			'activitypub_hide_social_graph',
 			array(
 				'type'              => 'integer',

@@ -99,17 +99,6 @@ class Blog_Settings_Fields {
 			'activitypub_blog_profile'
 		);
 
-		// Only show bot account option in single-user mode (where blog type is Person, not Group).
-		if ( ! \get_option( 'activitypub_relay_mode', false ) && \Activitypub\is_single_user() ) {
-			\add_settings_field(
-				'activitypub_blog_is_bot',
-				\__( 'Bot Account', 'activitypub' ),
-				array( self::class, 'bot_account_callback' ),
-				'activitypub_blog_settings',
-				'activitypub_blog_profile'
-			);
-		}
-
 		\add_settings_field(
 			'activitypub_hide_social_graph',
 			\__( 'Followers and Followings', 'activitypub' ),
@@ -321,21 +310,6 @@ class Blog_Settings_Fields {
 		</p>
 		<p class="description">
 		<?php echo \wp_kses_post( \__( 'Enter one account per line. Profile links or usernames like <code>@username@example.com</code> are accepted and will be automatically normalized to the correct format.', 'activitypub' ) ); ?>
-		</p>
-		<?php
-	}
-
-	/**
-	 * Bot account field callback.
-	 */
-	public static function bot_account_callback() {
-		?>
-		<label>
-			<input type="checkbox" name="activitypub_blog_is_bot" id="activitypub_blog_is_bot" value="1" <?php \checked( '1', \get_option( 'activitypub_blog_is_bot', '0' ) ); ?> />
-			<?php \esc_html_e( 'Mark this profile as a bot or automated account.', 'activitypub' ); ?>
-		</label>
-		<p class="description">
-			<?php \esc_html_e( 'Bot accounts are displayed with a "BOT" badge on Mastodon and other Fediverse platforms.', 'activitypub' ); ?>
 		</p>
 		<?php
 	}

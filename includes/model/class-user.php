@@ -79,15 +79,9 @@ class User extends Actor {
 	/**
 	 * The type of the object.
 	 *
-	 * If the user has marked their profile as a bot, return "Service".
-	 *
 	 * @return string The type of the object.
 	 */
 	public function get_type() {
-		if ( \get_user_option( 'activitypub_is_bot', $this->_id ) ) {
-			return 'Service';
-		}
-
 		return 'Person';
 	}
 
