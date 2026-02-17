@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Superseded outbox activities are now removed instead of kept, reducing clutter in the outbox.
