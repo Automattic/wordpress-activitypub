@@ -27,7 +27,11 @@ class Application {
 	 * @since unreleased
 	 */
 	public static function init() {
-		\add_filter( 'webfinger_data', array( self::class, 'add_webfinger_discovery' ), 0, 2 );
+		/*
+		 * Priority 2: must run after Integration\Webfinger::add_pseudo_user_discovery (priority 1),
+		 * which returns WP_Error for 'application' since it is not in the Actors collection.
+		 */
+		\add_filter( 'webfinger_data', array( self::class, 'add_webfinger_discovery' ), 2, 2 );
 	}
 
 	/**

@@ -26,6 +26,7 @@ class Test_Application_Controller extends \Activitypub\Tests\Test_REST_Controlle
 	public function test_register_routes() {
 		$routes = rest_get_server()->get_routes();
 		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/application', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/application/outbox', $routes );
 	}
 
 	/**
@@ -98,6 +99,26 @@ class Test_Application_Controller extends \Activitypub\Tests\Test_REST_Controlle
 
 		$valid = \rest_validate_value_from_schema( $data, $schema );
 		$this->assertNotWPError( $valid, 'Response failed schema validation: ' . ( \is_wp_error( $valid ) ? $valid->get_error_message() : '' ) );
+	}
+
+	/**
+	 * Test get_outbox response.
+	 *
+	 * @covers ::get_outbox
+	 */
+	public function test_get_outbox() {
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/application/outbox' );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertStringContainsString( 'application/activity+json', $response->get_headers()['Content-Type'] );
+
+		$data = $response->get_data();
+		$this->assertEquals( 'OrderedCollection', $data['type'] );
+		$this->assertEquals( 0, $data['totalItems'] );
+		$this->assertIsArray( $data['orderedItems'] );
+		$this->assertEmpty( $data['orderedItems'] );
+		$this->assertStringContainsString( '/activitypub/1.0/application/outbox', $data['id'] );
 	}
 
 	/**

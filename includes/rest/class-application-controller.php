@@ -53,6 +53,18 @@ class Application_Controller extends \WP_REST_Controller {
 				'schema' => array( $this, 'get_item_schema' ),
 			)
 		);
+
+		\register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/outbox',
+			array(
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_outbox' ),
+					'permission_callback' => '__return_true',
+				),
+			)
+		);
 	}
 
 	/**
@@ -96,6 +108,32 @@ class Application_Controller extends \WP_REST_Controller {
 					'name' => 'RFC-9421: HTTP Message Signatures',
 				),
 			),
+		);
+
+		$rest_response = new \WP_REST_Response( $json, 200 );
+		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
+
+		return $rest_response;
+	}
+
+	/**
+	 * Returns an empty outbox collection for the Application actor.
+	 *
+	 * The Application is a signing-only identity and does not publish
+	 * activities, so its outbox is always an empty OrderedCollection.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 * @return \WP_REST_Response Response object.
+	 */
+	public function get_outbox( $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		$json = array(
+			'@context'     => Actor::JSON_LD_CONTEXT,
+			'id'           => get_rest_url_by_path( 'application/outbox' ),
+			'type'         => 'OrderedCollection',
+			'totalItems'   => 0,
+			'orderedItems' => array(),
 		);
 
 		$rest_response = new \WP_REST_Response( $json, 200 );
