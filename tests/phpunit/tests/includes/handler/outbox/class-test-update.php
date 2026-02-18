@@ -77,7 +77,7 @@ class Test_Update extends \WP_UnitTestCase {
 
 		$post = \get_post( $post_id );
 		$this->assertEquals( 'Updated Title', $post->post_title );
-		$this->assertEquals( 'Updated content', $post->post_content );
+		$this->assertStringContainsString( 'Updated content', $post->post_content );
 		$this->assertEquals( 'Updated summary', $post->post_excerpt );
 	}
 

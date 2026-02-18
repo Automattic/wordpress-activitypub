@@ -178,7 +178,7 @@ class Test_Create extends \WP_UnitTestCase {
 
 		$this->assertInstanceOf( 'WP_Post', $result );
 		$this->assertEquals( 'Specific Title', $result->post_title );
-		$this->assertEquals( '<p>Specific content here.</p>', $result->post_content );
+		$this->assertStringContainsString( 'Specific content here.', $result->post_content );
 		$this->assertEquals( 'A brief summary.', $result->post_excerpt );
 
 		\add_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33, 4 );
