@@ -406,8 +406,8 @@ class User_Settings_Fields {
 
 		?>
 		<div class="activitypub-connected-apps hide-if-no-js" id="activitypub-connected-apps-section">
-			<h2><?php \esc_html_e( 'Connected Applications', 'activitypub' ); ?></h2>
-			<p><?php \esc_html_e( 'Applications that have been granted access to your account via OAuth. You can register new applications or revoke existing ones at any time.', 'activitypub' ); ?></p>
+			<h2><?php \esc_html_e( 'OAuth Applications', 'activitypub' ); ?></h2>
+			<p><?php \esc_html_e( 'Register OAuth applications to connect third-party clients to your account, or revoke access for existing ones.', 'activitypub' ); ?></p>
 
 			<div class="create-application-password form-wrap" id="activitypub-new-application">
 				<div class="form-field">
