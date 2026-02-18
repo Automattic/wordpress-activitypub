@@ -760,9 +760,11 @@ class Test_Signature extends \WP_UnitTestCase {
 		};
 		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_retrieval, 10, 2 );
 
-		$this->assertTrue( Signature::verify_http_signature( $request ), 'Valid signature with standalone key object should verify' );
-
-		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_retrieval, 10 );
+		try {
+			$this->assertTrue( Signature::verify_http_signature( $request ), 'Valid signature with standalone key object should verify' );
+		} finally {
+			\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_retrieval, 10 );
+		}
 	}
 
 	/**
@@ -819,10 +821,12 @@ class Test_Signature extends \WP_UnitTestCase {
 		};
 		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_retrieval, 10, 2 );
 
-		$result = Signature::verify_http_signature( $request );
-		$this->assertWPError( $result, 'Standalone key with mismatched owner should be rejected' );
-
-		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_retrieval, 10 );
+		try {
+			$result = Signature::verify_http_signature( $request );
+			$this->assertWPError( $result, 'Standalone key with mismatched owner should be rejected' );
+		} finally {
+			\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_retrieval, 10 );
+		}
 	}
 
 	/**

@@ -680,6 +680,14 @@ class Remote_Actors {
 
 		// Standalone key object with top-level publicKeyPem and owner.
 		if ( isset( $data['publicKeyPem'] ) && isset( $data['owner'] ) ) {
+			// Verify the owner URL is on the same host as the key ID to prevent cross-origin spoofing.
+			$key_host   = \wp_parse_url( $key_id, \PHP_URL_HOST );
+			$owner_host = \wp_parse_url( $data['owner'], \PHP_URL_HOST );
+
+			if ( ! $key_host || ! $owner_host || $key_host !== $owner_host ) {
+				return false;
+			}
+
 			// Fetch the owner actor and verify it references this key.
 			$owner = Http::get_remote_object( $data['owner'] );
 
