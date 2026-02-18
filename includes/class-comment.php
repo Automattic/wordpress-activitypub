@@ -8,7 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Posts;
+use Activitypub\Collection\Remote_Posts;
 
 /**
  * ActivityPub Comment Class.
@@ -973,7 +973,7 @@ class Comment {
 	 * @return string[] Array of post type names to hide comments for.
 	 */
 	public static function hide_for() {
-		$post_types = array( Posts::POST_TYPE );
+		$post_types = array( Remote_Posts::POST_TYPE );
 
 		/**
 		 * Filters the list of post types to hide comments for.

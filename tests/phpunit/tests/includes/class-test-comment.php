@@ -7,7 +7,7 @@
 
 namespace Activitypub\Tests;
 
-use Activitypub\Collection\Posts;
+use Activitypub\Collection\Remote_Posts;
 use Activitypub\Comment;
 
 /**
@@ -1063,7 +1063,7 @@ class Test_Comment extends \WP_UnitTestCase {
 		$post_types = Comment::hide_for();
 
 		$this->assertIsArray( $post_types );
-		$this->assertContains( Posts::POST_TYPE, $post_types, 'ap_post should be in the list of post types to hide comments for' );
+		$this->assertContains( Remote_Posts::POST_TYPE, $post_types, 'ap_post should be in the list of post types to hide comments for' );
 		$this->assertCount( 1, $post_types, 'Only ap_post should be in the default list' );
 	}
 
@@ -1083,7 +1083,7 @@ class Test_Comment extends \WP_UnitTestCase {
 		$post_types = Comment::hide_for();
 
 		$this->assertContains( 'custom_post_type', $post_types, 'Filter should be able to add custom post types' );
-		$this->assertContains( Posts::POST_TYPE, $post_types, 'ap_post should still be in the list' );
+		$this->assertContains( Remote_Posts::POST_TYPE, $post_types, 'ap_post should still be in the list' );
 
 		\remove_filter( 'activitypub_hide_comments_for', $filter );
 	}
@@ -1095,14 +1095,14 @@ class Test_Comment extends \WP_UnitTestCase {
 	 */
 	public function test_hide_for_filter_can_remove_post_types() {
 		$filter = function ( $post_types ) {
-			return array_diff( $post_types, array( Posts::POST_TYPE ) );
+			return array_diff( $post_types, array( Remote_Posts::POST_TYPE ) );
 		};
 
 		\add_filter( 'activitypub_hide_comments_for', $filter );
 
 		$post_types = Comment::hide_for();
 
-		$this->assertNotContains( Posts::POST_TYPE, $post_types, 'Filter should be able to remove ap_post from the list' );
+		$this->assertNotContains( Remote_Posts::POST_TYPE, $post_types, 'Filter should be able to remove ap_post from the list' );
 
 		\remove_filter( 'activitypub_hide_comments_for', $filter );
 	}

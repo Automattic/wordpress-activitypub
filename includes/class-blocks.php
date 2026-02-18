@@ -13,6 +13,53 @@ use Activitypub\Collection\Actors;
  * Block class.
  */
 class Blocks {
+
+	/**
+	 * HTML tags to skip during block conversion.
+	 *
+	 * @var array<string>
+	 */
+	const SKIP_TAGS = array( 'BR', 'CITE', 'SOURCE' );
+
+	/**
+	 * HTML void elements that have no closing tag.
+	 *
+	 * @var array<string>
+	 */
+	const VOID_TAGS = array( 'AREA', 'BASE', 'BR', 'COL', 'EMBED', 'HR', 'IMG', 'INPUT', 'LINK', 'META', 'SOURCE', 'TRACK', 'WBR' );
+
+	/**
+	 * Map of HTML tag names to WordPress block types.
+	 *
+	 * @var array<string, string>
+	 */
+	const BLOCK_MAP = array(
+		'UL'         => 'list',
+		'OL'         => 'list',
+		'IMG'        => 'image',
+		'BLOCKQUOTE' => 'quote',
+		'H1'         => 'heading',
+		'H2'         => 'heading',
+		'H3'         => 'heading',
+		'H4'         => 'heading',
+		'H5'         => 'heading',
+		'H6'         => 'heading',
+		'P'          => 'paragraph',
+		'A'          => 'paragraph',
+		'ABBR'       => 'paragraph',
+		'B'          => 'paragraph',
+		'CODE'       => 'paragraph',
+		'EM'         => 'paragraph',
+		'I'          => 'paragraph',
+		'STRONG'     => 'paragraph',
+		'SUB'        => 'paragraph',
+		'SUP'        => 'paragraph',
+		'SPAN'       => 'paragraph',
+		'U'          => 'paragraph',
+		'FIGURE'     => 'image',
+		'HR'         => 'separator',
+	);
+
 	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
@@ -948,5 +995,112 @@ class Blocks {
 			return $block_content;
 		}
 		return '<p><a href="' . esc_url( $block['attrs']['url'] ) . '">' . $block['attrs']['url'] . '</a></p>';
+	}
+
+	/**
+	 * Convert HTML content to blocks.
+	 *
+	 * Tokenizes the content with wp_html_split(), tracks nesting depth,
+	 * and wraps each top-level element in block comment delimiters.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $content The HTML content.
+	 *
+	 * @return string The content converted to blocks.
+	 */
+	public static function convert_from_html( $content ) {
+		if ( empty( $content ) ) {
+			return '';
+		}
+
+		$tokens       = \wp_html_split( $content );
+		$_content     = '';
+		$depth        = 0;
+		$current_tag  = '';
+		$current_html = '';
+
+		foreach ( $tokens as $token ) {
+			if ( '' === $token ) {
+				continue;
+			}
+
+			// Text content — accumulate only inside a top-level element.
+			if ( '<' !== $token[0] ) {
+				if ( $depth > 0 ) {
+					$current_html .= $token;
+				}
+				continue;
+			}
+
+			// Closing tag.
+			if ( '/' === $token[1] ) {
+				$current_html .= $token;
+				--$depth;
+
+				if ( 0 === $depth && '' !== $current_tag ) {
+					$_content    .= self::to_block( $current_tag, $current_html );
+					$current_tag  = '';
+					$current_html = '';
+				}
+				continue;
+			}
+
+			// Extract the tag name from the opening tag.
+			if ( ! \preg_match( '/^<([a-zA-Z][a-zA-Z0-9]*)/', $token, $m ) ) {
+				if ( $depth > 0 ) {
+					$current_html .= $token;
+				}
+				continue;
+			}
+
+			$tag = \strtoupper( $m[1] );
+
+			// Start of a new top-level element.
+			if ( 0 === $depth ) {
+				$current_tag  = $tag;
+				$current_html = $token;
+			} else {
+				$current_html .= $token;
+			}
+
+			// Void elements don't increase depth — flush immediately at top level.
+			if ( \in_array( $tag, self::VOID_TAGS, true ) ) {
+				if ( 0 === $depth && '' !== $current_tag ) {
+					$_content    .= self::to_block( $current_tag, $current_html );
+					$current_tag  = '';
+					$current_html = '';
+				}
+			} else {
+				++$depth;
+			}
+		}
+
+		return $_content;
+	}
+
+	/**
+	 * Wrap an HTML element in block comment delimiters.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $tag  The uppercase tag name.
+	 * @param string $html The element HTML.
+	 *
+	 * @return string The block-wrapped HTML, or empty string for skipped tags.
+	 */
+	private static function to_block( $tag, $html ) {
+		if ( \in_array( $tag, self::SKIP_TAGS, true ) ) {
+			return '';
+		}
+
+		$block_type  = self::BLOCK_MAP[ $tag ] ?? 'html';
+		$block_attrs = array();
+
+		if ( 'OL' === $tag ) {
+			$block_attrs['ordered'] = true;
+		}
+
+		return \get_comment_delimited_block_content( $block_type, $block_attrs, \trim( $html ) );
 	}
 }

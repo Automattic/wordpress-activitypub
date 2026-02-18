@@ -9,7 +9,7 @@ namespace Activitypub;
 
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
-use Activitypub\Collection\Posts;
+use Activitypub\Collection\Remote_Posts;
 
 /**
  * ActivityPub Class.
@@ -86,7 +86,7 @@ class Activitypub {
 		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ), 5 );
 		Migration::update_comment_counts( 2000 );
 
-		Posts::delete_all();
+		Remote_Posts::delete_all();
 
 		Options::delete();
 	}

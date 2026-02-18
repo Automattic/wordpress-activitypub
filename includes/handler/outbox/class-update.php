@@ -8,9 +8,9 @@
 namespace Activitypub\Handler\Outbox;
 
 use Activitypub\Collection\Posts;
+use Activitypub\Collection\Remote_Posts;
 
 use function Activitypub\get_activity_visibility;
-use function Activitypub\get_content_visibility;
 
 /**
  * Handle outgoing Update activities (C2S).
@@ -69,7 +69,7 @@ class Update {
 
 		// Fall back to Posts collection for remote posts (ap_post type).
 		if ( ! $post instanceof \WP_Post ) {
-			$post = Posts::get_by_guid( $object_id );
+			$post = Remote_Posts::get_by_guid( $object_id );
 		}
 
 		if ( ! $post instanceof \WP_Post ) {
@@ -94,38 +94,11 @@ class Update {
 			);
 		}
 
-		$content = \wp_kses_post( $object['content'] ?? '' );
-		$name    = \sanitize_text_field( $object['name'] ?? '' );
-		$summary = \wp_kses_post( $object['summary'] ?? '' );
+		$post = Posts::update( $post, $activity, $visibility );
 
-		// Use name as title for Articles, or generate from content for Notes.
-		$title = $name;
-		if ( empty( $title ) && ! empty( $content ) ) {
-			$title = \wp_trim_words( \wp_strip_all_tags( $content ), 10, '...' );
-		}
-
-		// Determine visibility if not provided.
-		if ( null === $visibility ) {
-			$visibility = get_content_visibility( $activity );
-		}
-
-		$post_data = array(
-			'ID'           => $post->ID,
-			'post_title'   => $title,
-			'post_content' => $content,
-			'post_excerpt' => $summary,
-			'meta_input'   => array(
-				'activitypub_content_visibility' => $visibility,
-			),
-		);
-
-		$post_id = \wp_update_post( $post_data, true );
-
-		if ( \is_wp_error( $post_id ) ) {
+		if ( \is_wp_error( $post ) ) {
 			return null;
 		}
-
-		$post = \get_post( $post_id );
 
 		/**
 		 * Fires after a post has been updated from an outgoing Update activity.
@@ -134,7 +107,7 @@ class Update {
 		 * @param array  $activity   The activity data.
 		 * @param int    $user_id    The user ID.
 		 */
-		\do_action( 'activitypub_outbox_updated_post', $post_id, $activity, $user_id );
+		\do_action( 'activitypub_outbox_updated_post', $post->ID, $activity, $user_id );
 
 		return $post;
 	}

@@ -75,7 +75,7 @@ class Interactions {
 
 		if ( ! $comment_post_id ) {
 			// Check for `ap_post`.
-			$comment_post = Posts::get_by_guid( $target_url );
+			$comment_post = Remote_Posts::get_by_guid( $target_url );
 			if ( $comment_post instanceof \WP_Post ) {
 				$comment_post_id = $comment_post->ID;
 			}
@@ -143,7 +143,7 @@ class Interactions {
 
 		if ( ! $comment_post_id ) {
 			// Check for `ap_post`.
-			$comment_post = Posts::get_by_guid( $url );
+			$comment_post = Remote_Posts::get_by_guid( $url );
 			if ( $comment_post instanceof \WP_Post ) {
 				$comment_post_id = $comment_post->ID;
 			}

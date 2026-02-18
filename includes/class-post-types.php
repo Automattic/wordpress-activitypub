@@ -13,8 +13,8 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
-use Activitypub\Collection\Posts;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Collection\Remote_Posts;
 use Activitypub\OAuth\Client;
 use Activitypub\OAuth\Scope;
 
@@ -348,7 +348,7 @@ class Post_Types {
 	 */
 	public static function register_post_post_type() {
 		\register_post_type(
-			Posts::POST_TYPE,
+			Remote_Posts::POST_TYPE,
 			array(
 				'labels'              => array(
 					'name'          => \_x( 'Posts', 'post_type plural name', 'activitypub' ),
@@ -372,7 +372,7 @@ class Post_Types {
 
 		\register_taxonomy(
 			'ap_tag',
-			array( Posts::POST_TYPE ),
+			array( Remote_Posts::POST_TYPE ),
 			array(
 				'public'       => false,
 				'query_var'    => true,
@@ -382,7 +382,7 @@ class Post_Types {
 
 		\register_taxonomy(
 			'ap_object_type',
-			array( Posts::POST_TYPE ),
+			array( Remote_Posts::POST_TYPE ),
 			array(
 				'public'       => false,
 				'query_var'    => true,
@@ -391,7 +391,7 @@ class Post_Types {
 		);
 
 		\register_post_meta(
-			Posts::POST_TYPE,
+			Remote_Posts::POST_TYPE,
 			'_activitypub_remote_actor_id',
 			array(
 				'type'              => 'integer',
@@ -402,7 +402,7 @@ class Post_Types {
 		);
 
 		\register_post_meta(
-			Posts::POST_TYPE,
+			Remote_Posts::POST_TYPE,
 			'_activitypub_user_id',
 			array(
 				'type'              => 'integer',
@@ -765,7 +765,7 @@ class Post_Types {
 	 */
 	public static function register_ap_post_actor_rest_field() {
 		\register_rest_field(
-			Posts::POST_TYPE,
+			Remote_Posts::POST_TYPE,
 			'actor_info',
 			array(
 				/**
@@ -805,7 +805,7 @@ class Post_Types {
 	 */
 	public static function register_ap_post_rest_params() {
 		\add_filter(
-			'rest_' . Posts::POST_TYPE . '_collection_params',
+			'rest_' . Remote_Posts::POST_TYPE . '_collection_params',
 			function ( $params ) {
 				$params['user_id'] = array(
 					'description'       => __( 'Filter posts by user ID (0 for site/blog actor).', 'activitypub' ),

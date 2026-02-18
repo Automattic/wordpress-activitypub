@@ -7,7 +7,7 @@
 
 namespace Activitypub\Handler\Outbox;
 
-use Activitypub\Collection\Posts;
+use Activitypub\Collection\Remote_Posts;
 
 use function Activitypub\object_to_uri;
 use function Activitypub\url_to_commentid;
@@ -109,7 +109,7 @@ class Delete {
 
 		// Fall back to Posts collection for remote posts (ap_post type).
 		if ( ! $post instanceof \WP_Post ) {
-			$post = Posts::get_by_guid( $object_id );
+			$post = Remote_Posts::get_by_guid( $object_id );
 		}
 
 		if ( ! $post instanceof \WP_Post ) {
