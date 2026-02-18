@@ -268,7 +268,7 @@ class Server {
 		$origin = isset( $_SERVER['HTTP_ORIGIN'] ) ? \esc_url_raw( \wp_unslash( $_SERVER['HTTP_ORIGIN'] ) ) : '';
 		$response->header( 'Access-Control-Allow-Origin', $origin ? $origin : '*' );
 		$response->header( 'Access-Control-Allow-Methods', 'GET, POST, OPTIONS' );
-		$response->header( 'Access-Control-Allow-Headers', 'Content-Type, Authorization' );
+		$response->header( 'Access-Control-Allow-Headers', 'Accept, Content-Type, Authorization' );
 
 		if ( $origin ) {
 			$response->header( 'Vary', 'Origin' );
@@ -286,24 +286,9 @@ class Server {
 	private static function route_needs_cors( $route ) {
 		$namespace = '/' . ACTIVITYPUB_REST_NAMESPACE;
 
-		// OAuth endpoints (except the interactive authorize endpoint which redirects).
-		if ( 0 === strpos( $route, $namespace . '/oauth/' ) ) {
+		// All ActivityPub endpoints need CORS except the interactive OAuth authorize endpoint.
+		if ( 0 === strpos( $route, $namespace ) ) {
 			return $namespace . '/oauth/authorize' !== $route;
-		}
-
-		// Proxy endpoint for fetching remote objects.
-		if ( $namespace . '/proxy' === $route ) {
-			return true;
-		}
-
-		// C2S outbox and inbox endpoints.
-		if ( \str_ends_with( $route, '/outbox' ) || \str_ends_with( $route, '/inbox' ) ) {
-			return true;
-		}
-
-		// WebFinger endpoint.
-		if ( $namespace . '/webfinger' === $route ) {
-			return true;
 		}
 
 		return false;
