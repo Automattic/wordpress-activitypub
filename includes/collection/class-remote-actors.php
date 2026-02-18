@@ -645,14 +645,50 @@ class Remote_Actors {
 			return new \WP_Error( 'activitypub_no_remote_profile_found', 'No Profile found or Profile not accessible', array( 'status' => 401 ) );
 		}
 
-		if ( isset( $actor['publicKey']['publicKeyPem'] ) ) {
-			$key_resource = \openssl_pkey_get_public( \rtrim( $actor['publicKey']['publicKeyPem'] ) );
+		$public_key_pem = self::extract_public_key_pem( $actor, $key_id );
+
+		if ( $public_key_pem ) {
+			$key_resource = \openssl_pkey_get_public( \rtrim( $public_key_pem ) );
 			if ( $key_resource ) {
 				return $key_resource;
 			}
 		}
 
 		return new \WP_Error( 'activitypub_no_remote_key_found', 'No Public-Key found', array( 'status' => 401 ) );
+	}
+
+	/**
+	 * Extract public key PEM from a fetched object.
+	 *
+	 * Supports two formats:
+	 * 1. Actor objects with a nested `publicKey` property (e.g. Mastodon-style `#main-key` fragments).
+	 * 2. Standalone key objects with a top-level `publicKeyPem` and `owner` (e.g. `activitypub.bot`).
+	 *    For standalone keys, the owner actor is fetched to verify the key relationship.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array  $data   The fetched JSON data (actor or standalone key).
+	 * @param string $key_id The original key ID URL.
+	 *
+	 * @return string|false The public key PEM string, or false if not found.
+	 */
+	private static function extract_public_key_pem( $data, $key_id ) {
+		// Standard actor with nested publicKey.
+		if ( isset( $data['publicKey']['publicKeyPem'] ) ) {
+			return $data['publicKey']['publicKeyPem'];
+		}
+
+		// Standalone key object with top-level publicKeyPem and owner.
+		if ( isset( $data['publicKeyPem'] ) && isset( $data['owner'] ) ) {
+			// Fetch the owner actor and verify it references this key.
+			$owner = Http::get_remote_object( $data['owner'] );
+
+			if ( ! \is_wp_error( $owner ) && isset( $owner['publicKey']['id'] ) && $owner['publicKey']['id'] === $key_id ) {
+				return $data['publicKeyPem'];
+			}
+		}
+
+		return false;
 	}
 
 	/**

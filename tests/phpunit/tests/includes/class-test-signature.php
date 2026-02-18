@@ -700,6 +700,132 @@ class Test_Signature extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test HTTP signature verification with a standalone key object (top-level publicKeyPem).
+	 *
+	 * Some servers use top-level ActivityPub objects as keys instead of fragment identifiers.
+	 * For example, `https://activitypub.bot/user/ok/publickey` returns a CryptographicKey
+	 * object with `publicKeyPem` and `owner` at the top level.
+	 *
+	 * @covers ::verify_http_signature
+	 */
+	public function test_verify_http_signature_with_standalone_key_object() {
+		$public_key  = self::$test_keys['rsa'][2048]['public_key'];
+		$private_key = \openssl_pkey_get_private( self::$test_keys['rsa'][2048]['private_key'] );
+
+		$date           = \gmdate( 'D, d M Y H:i:s T' );
+		$string_to_sign = "(request-target): post /wp-json/activitypub/1.0/inbox\nhost: example.org\ndate: {$date}";
+
+		$signature = '';
+		\openssl_sign( $string_to_sign, $signature, $private_key, \OPENSSL_ALGO_SHA256 );
+
+		$request = array(
+			'REQUEST_METHOD' => 'POST',
+			'REQUEST_URI'    => '/wp-json/activitypub/1.0/inbox',
+			'HTTP_HOST'      => 'example.org',
+			'HTTP_DATE'      => $date,
+			'HTTP_SIGNATURE' => \sprintf(
+				'keyId="https://activitypub.bot/user/ok/publickey",algorithm="hs2019",headers="(request-target) host date",signature="%s"',
+				\base64_encode( $signature )
+			),
+		);
+
+		// Mock the remote object retrieval to return different objects based on URL.
+		$mock_remote_retrieval = function ( $response, $url ) use ( $public_key ) {
+			// Standalone key object (returned when fetching the keyId URL).
+			if ( 'https://activitypub.bot/user/ok/publickey' === $url ) {
+				return array(
+					'@context'     => array( 'https://w3id.org/security/v1', 'https://www.w3.org/ns/activitystreams' ),
+					'id'           => 'https://activitypub.bot/user/ok/publickey',
+					'type'         => 'CryptographicKey',
+					'owner'        => 'https://activitypub.bot/user/ok',
+					'publicKeyPem' => $public_key,
+				);
+			}
+
+			// Owner actor (returned when verifying the key relationship).
+			if ( 'https://activitypub.bot/user/ok' === $url ) {
+				return array(
+					'id'        => 'https://activitypub.bot/user/ok',
+					'type'      => 'Person',
+					'name'      => 'OK Bot',
+					'publicKey' => array(
+						'id'           => 'https://activitypub.bot/user/ok/publickey',
+						'owner'        => 'https://activitypub.bot/user/ok',
+						'publicKeyPem' => $public_key,
+					),
+				);
+			}
+
+			return $response;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_retrieval, 10, 2 );
+
+		$this->assertTrue( Signature::verify_http_signature( $request ), 'Valid signature with standalone key object should verify' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_retrieval, 10 );
+	}
+
+	/**
+	 * Test HTTP signature verification rejects standalone key when owner does not reference it.
+	 *
+	 * @covers ::verify_http_signature
+	 */
+	public function test_verify_http_signature_rejects_standalone_key_with_mismatched_owner() {
+		$public_key  = self::$test_keys['rsa'][2048]['public_key'];
+		$private_key = \openssl_pkey_get_private( self::$test_keys['rsa'][2048]['private_key'] );
+
+		$date           = \gmdate( 'D, d M Y H:i:s T' );
+		$string_to_sign = "(request-target): post /wp-json/activitypub/1.0/inbox\nhost: example.org\ndate: {$date}";
+
+		$signature = '';
+		\openssl_sign( $string_to_sign, $signature, $private_key, \OPENSSL_ALGO_SHA256 );
+
+		$request = array(
+			'REQUEST_METHOD' => 'POST',
+			'REQUEST_URI'    => '/wp-json/activitypub/1.0/inbox',
+			'HTTP_HOST'      => 'example.org',
+			'HTTP_DATE'      => $date,
+			'HTTP_SIGNATURE' => \sprintf(
+				'keyId="https://evil.example/fake/publickey",algorithm="hs2019",headers="(request-target) host date",signature="%s"',
+				\base64_encode( $signature )
+			),
+		);
+
+		// Mock: standalone key claims to be owned by an actor, but the actor's publicKey.id doesn't match.
+		$mock_remote_retrieval = function ( $response, $url ) use ( $public_key ) {
+			if ( 'https://evil.example/fake/publickey' === $url ) {
+				return array(
+					'id'           => 'https://evil.example/fake/publickey',
+					'type'         => 'CryptographicKey',
+					'owner'        => 'https://activitypub.bot/user/ok',
+					'publicKeyPem' => $public_key,
+				);
+			}
+
+			if ( 'https://activitypub.bot/user/ok' === $url ) {
+				return array(
+					'id'        => 'https://activitypub.bot/user/ok',
+					'type'      => 'Person',
+					'name'      => 'OK Bot',
+					'publicKey' => array(
+						'id'           => 'https://activitypub.bot/user/ok/publickey',
+						'owner'        => 'https://activitypub.bot/user/ok',
+						'publicKeyPem' => $public_key,
+					),
+				);
+			}
+
+			return $response;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_retrieval, 10, 2 );
+
+		$result = Signature::verify_http_signature( $request );
+		$this->assertWPError( $result, 'Standalone key with mismatched owner should be rejected' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_retrieval, 10 );
+	}
+
+	/**
 	 * Test RFC-9421 signature verification when it is unsupported.
 	 *
 	 * @covers ::rfc9421_add_unsupported_host
