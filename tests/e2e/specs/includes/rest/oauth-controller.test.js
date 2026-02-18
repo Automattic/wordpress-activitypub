@@ -12,6 +12,7 @@ test.describe( 'OAuth Controller CORS Headers', () => {
 		expect( response.status() ).toBe( 200 );
 		expect( response.headers()[ 'access-control-allow-origin' ] ).toBe( '*' );
 		expect( response.headers()[ 'access-control-allow-methods' ] ).toContain( 'GET' );
+		expect( response.headers()[ 'access-control-allow-headers' ] ).toContain( 'Accept' );
 		expect( response.headers()[ 'access-control-allow-headers' ] ).toContain( 'Authorization' );
 	} );
 
@@ -46,17 +47,17 @@ test.describe( 'OAuth Controller CORS Headers', () => {
 		expect( response.headers()[ 'access-control-allow-origin' ] ).toBe( '*' );
 	} );
 
-	test( 'should NOT include CORS headers on actors endpoint', async ( { request } ) => {
+	test( 'should include CORS headers on actors endpoint', async ( { request } ) => {
 		const response = await request.get( `${ restBase }/activitypub/1.0/actors/1` );
 
 		expect( response.status() ).toBe( 200 );
-		expect( response.headers()[ 'access-control-allow-origin' ] ).toBeUndefined();
+		expect( response.headers()[ 'access-control-allow-origin' ] ).toBe( '*' );
 	} );
 
-	test( 'should NOT include CORS headers on followers endpoint', async ( { request } ) => {
+	test( 'should include CORS headers on followers endpoint', async ( { request } ) => {
 		const response = await request.get( `${ restBase }/activitypub/1.0/actors/1/followers` );
 
 		expect( response.status() ).toBe( 200 );
-		expect( response.headers()[ 'access-control-allow-origin' ] ).toBeUndefined();
+		expect( response.headers()[ 'access-control-allow-origin' ] ).toBe( '*' );
 	} );
 } );
