@@ -64,6 +64,7 @@ class Test_Update extends \WP_UnitTestCase {
 
 		$data = array(
 			'type'   => 'Update',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 			'object' => array(
 				'type'    => 'Note',
 				'id'      => $permalink,
@@ -98,6 +99,7 @@ class Test_Update extends \WP_UnitTestCase {
 
 		$data = array(
 			'type'   => 'Update',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 			'object' => array(
 				'type'    => 'Note',
 				'id'      => $permalink,
@@ -130,6 +132,7 @@ class Test_Update extends \WP_UnitTestCase {
 
 		$data = array(
 			'type'   => 'Update',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 			'object' => array(
 				'type'    => 'Event',
 				'id'      => $permalink,
@@ -162,6 +165,7 @@ class Test_Update extends \WP_UnitTestCase {
 
 		$data = array(
 			'type'   => 'Update',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 			'object' => array(
 				'type'    => 'Note',
 				'id'      => $permalink,
@@ -234,6 +238,7 @@ class Test_Update extends \WP_UnitTestCase {
 
 		$data = array(
 			'type'   => 'Update',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 			'object' => array(
 				'type'    => 'Note',
 				'id'      => $permalink,

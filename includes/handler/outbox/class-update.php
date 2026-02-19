@@ -10,7 +10,7 @@ namespace Activitypub\Handler\Outbox;
 use Activitypub\Collection\Posts;
 use Activitypub\Collection\Remote_Posts;
 
-use function Activitypub\get_activity_visibility;
+use function Activitypub\is_activity_public;
 
 /**
  * Handle outgoing Update activities (C2S).
@@ -36,8 +36,8 @@ class Update {
 	 * @return \WP_Post|null The updated post on success, null if not handled.
 	 */
 	public static function handle_update( $activity, $user_id = null, $visibility = null ) {
-		// Check for private and/or direct messages.
-		if ( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === get_activity_visibility( $activity ) ) {
+		// Skip private/direct activities.
+		if ( ! is_activity_public( $activity ) ) {
 			return false;
 		}
 

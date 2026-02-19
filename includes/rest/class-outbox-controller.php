@@ -13,6 +13,7 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\extract_recipients_from_activity;
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_object_id;
 use function Activitypub\get_rest_url_by_path;
@@ -379,6 +380,9 @@ class Outbox_Controller extends \WP_REST_Controller {
 			$data = $this->wrap_in_create( $data, $user );
 		}
 
+		// C2S: default to public addressing if client omits recipients.
+		$data = $this->ensure_addressing( $data, $user );
+
 		// Determine visibility from addressing.
 		$visibility = $this->determine_visibility( $data );
 
@@ -534,6 +538,31 @@ class Outbox_Controller extends \WP_REST_Controller {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Add default public addressing when the client omits recipients.
+	 *
+	 * Per the ActivityPub spec, the server adds addressing when the client
+	 * does not provide it. Defaults to public with followers in cc.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array                       $data The activity data.
+	 * @param \Activitypub\Activity\Actor $user The authenticated user.
+	 * @return array The activity data with addressing ensured.
+	 */
+	private function ensure_addressing( $data, $user ) {
+		$recipients = extract_recipients_from_activity( $data );
+
+		if ( ! empty( $recipients ) ) {
+			return $data;
+		}
+
+		$data['to'] = array( 'https://www.w3.org/ns/activitystreams#Public' );
+		$data['cc'] = array( $user->get_followers() );
+
+		return $data;
 	}
 
 	/**

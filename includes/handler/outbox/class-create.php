@@ -10,7 +10,7 @@ namespace Activitypub\Handler\Outbox;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Posts;
 
-use function Activitypub\get_activity_visibility;
+use function Activitypub\is_activity_public;
 use function Activitypub\is_activity_reply;
 use function Activitypub\is_quote_activity;
 
@@ -37,8 +37,8 @@ class Create {
 	 * @return int|\WP_Error|null The outbox ID on success, WP_Error on failure, null if not handled.
 	 */
 	public static function handle_create( $activity, $user_id = null, $visibility = null ) {
-		// Check for private and/or direct messages.
-		if ( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === get_activity_visibility( $activity ) ) {
+		// Skip private/direct activities.
+		if ( ! is_activity_public( $activity ) ) {
 			return false;
 		}
 
