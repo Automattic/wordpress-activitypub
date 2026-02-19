@@ -1277,12 +1277,10 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	 */
 	public function test_language_map_normalization_in_inbox() {
 		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
-		\add_filter(
-			'locale',
-			function () {
-				return 'de_DE';
-			}
-		);
+		$locale_callback = function () {
+			return 'de_DE';
+		};
+		\add_filter( 'locale', $locale_callback );
 
 		$captured_data = null;
 
@@ -1324,6 +1322,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$this->assertSame( 'Hallo', $captured_data['object']['content'], 'Language map in content should resolve to site locale.' );
 		$this->assertSame( 'Deutsche Zusammenfassung', $captured_data['object']['summary'], 'summaryMap should resolve to site locale.' );
 
+		\remove_filter( 'locale', $locale_callback );
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
 		\remove_action( 'activitypub_inbox_shared', $capture_action );
 	}

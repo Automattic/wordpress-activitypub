@@ -50,14 +50,14 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 	 */
 	public function test_localize_language_maps( $data, $key, $locale, $expected, $message ) {
 		/* Switch the site locale for this test. */
-		\add_filter(
-			'locale',
-			function () use ( $locale ) {
-				return $locale;
-			}
-		);
+		$callback = function () use ( $locale ) {
+			return $locale;
+		};
+		\add_filter( 'locale', $callback );
 
 		$result = $this->instance::localize_language_maps( $data );
+
+		\remove_filter( 'locale', $callback );
 
 		$this->assertSame( $expected, isset( $result[ $key ] ) ? $result[ $key ] : null, $message );
 	}
@@ -78,12 +78,10 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 	 * @covers ::localize_language_maps
 	 */
 	public function test_nested_object() {
-		\add_filter(
-			'locale',
-			function () {
-				return 'de_DE';
-			}
-		);
+		$callback = function () {
+			return 'de_DE';
+		};
+		\add_filter( 'locale', $callback );
 
 		$data   = array(
 			'type'   => 'Create',
@@ -98,6 +96,8 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 			),
 		);
 		$result = $this->instance::localize_language_maps( $data );
+
+		\remove_filter( 'locale', $callback );
 
 		$this->assertSame( 'Deutsche Zusammenfassung', $result['object']['summary'] );
 		$this->assertSame( 'Hello', $result['object']['content'] );
@@ -118,18 +118,18 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 	 * @param string      $message  Description of the test case.
 	 */
 	public function test_get_localized_value( $data, $key, $locale, $expected, $message ) {
-		\add_filter(
-			'locale',
-			function () use ( $locale ) {
-				return $locale;
-			}
-		);
+		$callback = function () use ( $locale ) {
+			return $locale;
+		};
+		\add_filter( 'locale', $callback );
 
 		$value       = isset( $data[ $key ] ) ? $data[ $key ] : null;
 		$map         = isset( $data[ $key . 'Map' ] ) ? $data[ $key . 'Map' ] : null;
 		$object_lang = isset( $data['language'] ) ? $data['language'] : null;
 
 		$result = $this->instance::get_localized_value( $value, $map, $object_lang );
+
+		\remove_filter( 'locale', $callback );
 
 		$this->assertSame( $expected, $result, $message );
 	}
