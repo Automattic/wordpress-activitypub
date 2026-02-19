@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix compatibility with actors that use a URL reference for their public key on older PHP versions.
