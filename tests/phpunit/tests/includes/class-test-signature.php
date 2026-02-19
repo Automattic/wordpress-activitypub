@@ -838,7 +838,7 @@ class Test_Signature extends \WP_UnitTestCase {
 	 *
 	 * @covers ::verify_http_signature
 	 */
-	public function test_verify_http_signature_standalone_key_follows_owner() {
+	public function test_verify_http_signature_standalone_key_follows_owner_same_host() {
 		$public_key  = self::$test_keys['rsa'][2048]['public_key'];
 		$private_key = \openssl_pkey_get_private( self::$test_keys['rsa'][2048]['private_key'] );
 
