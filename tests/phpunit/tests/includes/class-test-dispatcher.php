@@ -203,12 +203,10 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		$wp_actions = null;
 
-		$private_activity = Outbox::get_activity( $outbox_item->ID );
-		$private_activity->set_to( null );
-		$private_activity->set_cc( null );
-
-		// Clone object.
-		$private_activity = clone $private_activity;
+		$private_activity = new Activity();
+		$private_activity->set_type( 'Create' );
+		$private_activity->set_to( array() );
+		$private_activity->set_cc( array() );
 
 		try {
 			$send_to_additional_inboxes->invoke( null, $private_activity, Actors::get_by_id( self::$user_id ), $outbox_item );
@@ -264,28 +262,10 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 	 * @return Activity
 	 */
 	private function get_activity_mock() {
-		$activity = $this->createMock( Activity::class );
-
-		// Mock the static method using reflection.
-		$activity->expects( $this->any() )
-			->method( '__call' )
-			->willReturnCallback(
-				function ( $name ) {
-					if ( 'get_to' === $name ) {
-						return array( 'https://www.w3.org/ns/activitystreams#Public' );
-					}
-
-					if ( 'get_cc' === $name ) {
-						return array();
-					}
-
-					if ( 'get_type' === $name ) {
-						return 'Create';
-					}
-
-					return null;
-				}
-			);
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
+		$activity->set_cc( array() );
 
 		return $activity;
 	}
