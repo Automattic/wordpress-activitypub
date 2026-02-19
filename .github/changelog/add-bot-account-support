@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Add bot account snippet that marks ActivityPub profiles as automated accounts, displaying a "BOT" badge on Mastodon and other Fediverse platforms.
