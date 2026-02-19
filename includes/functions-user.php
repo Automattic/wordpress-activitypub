@@ -250,6 +250,7 @@ function get_active_users( $duration = 1 ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$post_authors = $wpdb->get_col(
 				$wpdb->prepare(
+					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 					"SELECT DISTINCT post_author FROM {$wpdb->posts} WHERE post_type IN ( {$placeholders} ) AND post_status = 'publish' AND post_date >= DATE_SUB( NOW(), INTERVAL %d MONTH )",
 					\array_merge( $post_types, array( $duration ) )
 				)
