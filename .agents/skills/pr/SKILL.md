@@ -38,11 +38,16 @@ gh pr create --assignee @me --reviewer Automattic/fediverse
 
 ## Changelog
 
-End all changelog messages with punctuation:
+**Write changelog messages for end users, not developers.** Users read these in the WordPress plugin update screen. Avoid internal jargon (OOM, batching, N+1), class names, or method names. Describe what the user experiences or what changed from their perspective.
+
 ```
-✅ Add support for custom post types.
-❌ Add support for custom post types
+✅ Fix automatic cleanup of old activities failing silently on sites with many items.
+✅ Add a Site Health check that warns when plugins are causing too many federation updates.
+❌ Fix collection purge methods to batch deletions and enforce a hard item cap.
+❌ Add Site Health test to detect excessive outbox activity rates.
 ```
+
+End all changelog messages with punctuation.
 
 Add manually if forgotten:
 ```bash
