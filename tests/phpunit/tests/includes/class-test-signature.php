@@ -830,6 +830,71 @@ class Test_Signature extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test HTTP signature verification rejects standalone key when owner references a different key ID.
+	 *
+	 * Both key and owner are on the same host, but the owner's publicKey.id points to a
+	 * different key than the one used to sign. This exercises the back-reference check.
+	 *
+	 * @covers ::verify_http_signature
+	 */
+	public function test_verify_http_signature_rejects_standalone_key_with_wrong_key_id() {
+		$public_key  = self::$test_keys['rsa'][2048]['public_key'];
+		$private_key = \openssl_pkey_get_private( self::$test_keys['rsa'][2048]['private_key'] );
+
+		$date           = \gmdate( 'D, d M Y H:i:s T' );
+		$string_to_sign = "(request-target): post /wp-json/activitypub/1.0/inbox\nhost: example.org\ndate: {$date}";
+
+		$signature = '';
+		\openssl_sign( $string_to_sign, $signature, $private_key, \OPENSSL_ALGO_SHA256 );
+
+		$request = array(
+			'REQUEST_METHOD' => 'POST',
+			'REQUEST_URI'    => '/wp-json/activitypub/1.0/inbox',
+			'HTTP_HOST'      => 'example.org',
+			'HTTP_DATE'      => $date,
+			'HTTP_SIGNATURE' => \sprintf(
+				'keyId="https://activitypub.bot/user/fake/publickey",algorithm="hs2019",headers="(request-target) host date",signature="%s"',
+				\base64_encode( $signature )
+			),
+		);
+
+		// Mock: key and owner are on the same host, but the owner's publicKey.id doesn't match.
+		$mock_remote_retrieval = function ( $response, $url ) use ( $public_key ) {
+			if ( 'https://activitypub.bot/user/fake/publickey' === $url ) {
+				return array(
+					'id'           => 'https://activitypub.bot/user/fake/publickey',
+					'type'         => 'CryptographicKey',
+					'owner'        => 'https://activitypub.bot/user/ok',
+					'publicKeyPem' => $public_key,
+				);
+			}
+
+			if ( 'https://activitypub.bot/user/ok' === $url ) {
+				return array(
+					'id'        => 'https://activitypub.bot/user/ok',
+					'type'      => 'Person',
+					'name'      => 'OK Bot',
+					'publicKey' => array(
+						'id'           => 'https://activitypub.bot/user/ok/publickey',
+						'owner'        => 'https://activitypub.bot/user/ok',
+						'publicKeyPem' => $public_key,
+					),
+				);
+			}
+
+			return $response;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_retrieval, 10, 2 );
+
+		try {
+			$result = Signature::verify_http_signature( $request );
+			$this->assertWPError( $result, 'Standalone key should be rejected when owner references a different key ID' );
+		} finally {
+			\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_retrieval, 10 );
+		}
+	}
+
+	/**
 	 * Test RFC-9421 signature verification when it is unsupported.
 	 *
 	 * @covers ::rfc9421_add_unsupported_host
