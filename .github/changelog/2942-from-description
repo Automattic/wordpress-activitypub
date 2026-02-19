@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+The minimum required PHP version is now 7.4.
