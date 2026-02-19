@@ -34,6 +34,7 @@ class Test_Update extends \WP_UnitTestCase {
 			'id'     => 'https://example.com/activities/12345',
 			'type'   => 'Update',
 			'actor'  => $test_actor,
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 			'object' => array(
 				'id'           => 'https://example.com/objects/12345',
 				'type'         => 'Note',
