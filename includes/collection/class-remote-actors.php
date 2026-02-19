@@ -697,8 +697,8 @@ class Remote_Actors {
 	 * @return string|false The public key PEM string, or false if not found.
 	 */
 	private static function extract_public_key_pem( $data ) {
-		// Standard actor with nested publicKey.
-		if ( isset( $data['publicKey']['publicKeyPem'] ) ) {
+		// Standard actor with nested publicKey (must check is_array to avoid PHP 7.x string offset quirk).
+		if ( \is_array( $data['publicKey'] ) && isset( $data['publicKey']['publicKeyPem'] ) ) {
 			return $data['publicKey']['publicKeyPem'];
 		}
 
