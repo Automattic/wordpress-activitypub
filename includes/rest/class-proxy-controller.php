@@ -47,8 +47,8 @@ class Proxy_Controller extends \WP_REST_Controller {
 			'/' . $this->rest_base,
 			array(
 				array(
-					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( $this, 'get_item' ),
+					'methods'             => \WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'create_item' ),
 					'permission_callback' => array( $this, 'verify_authentication' ),
 					'args'                => array(
 						'id' => array(
@@ -88,10 +88,12 @@ class Proxy_Controller extends \WP_REST_Controller {
 	/**
 	 * Fetch a remote ActivityPub object via the proxy.
 	 *
+	 * @see https://www.w3.org/wiki/ActivityPub/Primer/proxyUrl_endpoint
+	 *
 	 * @param \WP_REST_Request $request Full details about the request.
 	 * @return \WP_REST_Response|\WP_Error Response object on success, WP_Error on failure.
 	 */
-	public function get_item( $request ) {
+	public function create_item( $request ) {
 		$url = $request->get_param( 'id' );
 
 		// Try to fetch as an actor first using Remote_Actors which handles caching.
