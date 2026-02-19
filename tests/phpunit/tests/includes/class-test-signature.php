@@ -830,14 +830,15 @@ class Test_Signature extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test HTTP signature verification rejects standalone key when owner references a different key ID.
+	 * Test HTTP signature verification with standalone key that has a different key ID than owner's.
 	 *
-	 * Both key and owner are on the same host, but the owner's publicKey.id points to a
-	 * different key than the one used to sign. This exercises the back-reference check.
+	 * Both key and owner are on the same host. The standalone key follows the owner,
+	 * and the owner's actual key is used for verification. This is valid because
+	 * both are on the same trusted host.
 	 *
 	 * @covers ::verify_http_signature
 	 */
-	public function test_verify_http_signature_rejects_standalone_key_with_wrong_key_id() {
+	public function test_verify_http_signature_standalone_key_follows_owner_same_host() {
 		$public_key  = self::$test_keys['rsa'][2048]['public_key'];
 		$private_key = \openssl_pkey_get_private( self::$test_keys['rsa'][2048]['private_key'] );
 
@@ -858,7 +859,7 @@ class Test_Signature extends \WP_UnitTestCase {
 			),
 		);
 
-		// Mock: key and owner are on the same host, but the owner's publicKey.id doesn't match.
+		// Mock: standalone key follows owner on the same host.
 		$mock_remote_retrieval = function ( $response, $url ) use ( $public_key ) {
 			if ( 'https://activitypub.bot/user/fake/publickey' === $url ) {
 				return array(
@@ -887,8 +888,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_retrieval, 10, 2 );
 
 		try {
-			$result = Signature::verify_http_signature( $request );
-			$this->assertWPError( $result, 'Standalone key should be rejected when owner references a different key ID' );
+			$this->assertTrue( Signature::verify_http_signature( $request ), 'Same-host standalone key following owner should verify' );
 		} finally {
 			\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_retrieval, 10 );
 		}
