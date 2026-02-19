@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Improved active user counting for NodeInfo to include all federated content types and comments.
