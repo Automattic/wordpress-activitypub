@@ -322,6 +322,7 @@ class User extends Actor {
 			'oauthAuthorizationEndpoint' => get_rest_url_by_path( 'oauth/authorize' ),
 			'oauthTokenEndpoint'         => get_rest_url_by_path( 'oauth/token' ),
 			'proxyUrl'                   => get_rest_url_by_path( 'proxy' ),
+			'proxyEventStream'           => get_rest_url_by_path( 'proxy-event-stream' ),
 		);
 	}
 

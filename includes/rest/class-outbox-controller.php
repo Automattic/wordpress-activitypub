@@ -187,6 +187,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 			'actor'        => $user->get_id(),
 			'type'         => 'OrderedCollection',
 			'totalItems'   => (int) $outbox_query->found_posts,
+			'eventStream'  => Event_Stream_Controller::get_stream_url( $user_id, 'outbox' ),
 			'orderedItems' => array(),
 		);
 

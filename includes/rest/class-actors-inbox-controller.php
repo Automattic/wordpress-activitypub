@@ -167,6 +167,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			'actor'        => $user->get_id(),
 			'type'         => 'OrderedCollection',
 			'totalItems'   => (int) $inbox_query->found_posts,
+			'eventStream'  => Event_Stream_Controller::get_stream_url( $user_id, 'inbox' ),
 			'orderedItems' => array(),
 		);
 

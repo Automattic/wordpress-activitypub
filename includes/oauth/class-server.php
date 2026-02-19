@@ -121,16 +121,24 @@ class Server {
 	public static function get_bearer_token() {
 		$auth_header = self::get_authorization_header();
 
-		if ( ! $auth_header ) {
-			return null;
+		if ( $auth_header && 0 === strpos( $auth_header, 'Bearer ' ) ) {
+			return substr( $auth_header, 7 );
 		}
 
-		// Check for Bearer token.
-		if ( 0 !== strpos( $auth_header, 'Bearer ' ) ) {
-			return null;
+		/*
+		 * Fall back to `access_token` query parameter for EventSource clients.
+		 * The browser EventSource API cannot send custom headers, so the SSE
+		 * spec requires accepting the token as a query parameter.
+		 *
+		 * @see https://swicg.github.io/activitypub-api/sse
+		 */
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Opaque auth token, must not be altered.
+		if ( ! empty( $_GET['access_token'] ) ) {
+			return \wp_unslash( $_GET['access_token'] );
 		}
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
-		return substr( $auth_header, 7 );
+		return null;
 	}
 
 	/**

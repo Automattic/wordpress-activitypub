@@ -74,6 +74,7 @@ function rest_init() {
 	// Load OAuth REST endpoints.
 	( new Rest\OAuth_Controller() )->register_routes();
 	( new Rest\Proxy_Controller() )->register_routes();
+	( new Rest\Event_Stream_Controller() )->register_routes();
 }
 \add_action( 'rest_api_init', __NAMESPACE__ . '\rest_init' );
 
@@ -87,6 +88,7 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Dispatcher', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Embed', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Event_Stream', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Handler', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Hashtag', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Link', 'init' ) );
@@ -94,6 +96,7 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Mention', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Migration', 'init' ), 1 );
 	\add_action( 'init', array( __NAMESPACE__ . '\Move', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\OAuth\Server', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Options', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Post_Types', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Router', 'init' ) );
@@ -101,7 +104,6 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ), 0 );
 	\add_action( 'init', array( __NAMESPACE__ . '\Search', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Signature', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\OAuth\Server', 'init' ) );
 
 	if ( site_supports_blocks() ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );

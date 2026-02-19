@@ -1,0 +1,491 @@
+<?php
+/**
+ * Event Stream Controller file.
+ *
+ * Implements Server-Sent Events (SSE) for real-time ActivityPub collection updates.
+ *
+ * @package Activitypub
+ * @see https://swicg.github.io/activitypub-api/sse
+ * @since unreleased
+ */
+
+namespace Activitypub\Rest;
+
+use Activitypub\Collection\Actors;
+use Activitypub\Collection\Inbox;
+use Activitypub\Collection\Outbox;
+use Activitypub\OAuth\Scope;
+use Activitypub\OAuth\Server as OAuth_Server;
+
+use function Activitypub\get_rest_url_by_path;
+
+/**
+ * Event Stream Controller.
+ *
+ * Provides SSE endpoints for C2S clients to subscribe to real-time updates
+ * on outbox and inbox collections.
+ *
+ * @since unreleased
+ */
+class Event_Stream_Controller extends \WP_REST_Controller {
+	use Verification;
+
+	/**
+	 * The namespace of this controller's route.
+	 *
+	 * @var string
+	 */
+	protected $namespace = ACTIVITYPUB_REST_NAMESPACE;
+
+	/**
+	 * The base of this controller's route.
+	 *
+	 * @var string
+	 */
+	protected $rest_base = '(?:users|actors)/(?P<user_id>[-]?\d+)/(?P<collection>outbox|inbox)/stream';
+
+	/**
+	 * SSE polling interval in seconds.
+	 *
+	 * @var int
+	 */
+	const POLL_INTERVAL = 5;
+
+	/**
+	 * Maximum SSE connection duration in seconds.
+	 *
+	 * @var int
+	 */
+	const MAX_DURATION = 300;
+
+	/**
+	 * Map of outbox activity types to SSE event types.
+	 *
+	 * @see https://swicg.github.io/activitypub-api/sse
+	 *
+	 * @var array
+	 */
+	const EVENT_TYPE_MAP = array(
+		'Create'   => 'Add',
+		'Announce' => 'Add',
+		'Like'     => 'Add',
+		'Update'   => 'Update',
+		'Delete'   => 'Remove',
+		'Undo'     => 'Remove',
+	);
+
+	/**
+	 * Register routes.
+	 */
+	public function register_routes() {
+		\register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base,
+			array(
+				'args' => array(
+					'user_id'    => array(
+						'description'       => 'The ID of the user or actor.',
+						'type'              => 'integer',
+						'validate_callback' => array( $this, 'validate_user_id' ),
+					),
+					'collection' => array(
+						'description' => 'The collection to stream (outbox or inbox).',
+						'type'        => 'string',
+						'enum'        => array( 'outbox', 'inbox' ),
+					),
+				),
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_items' ),
+					'permission_callback' => array( $this, 'get_items_permissions_check' ),
+				),
+			)
+		);
+
+		\register_rest_route(
+			$this->namespace,
+			'/proxy-event-stream',
+			array(
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_proxy_stream' ),
+					'permission_callback' => array( $this, 'get_proxy_permissions_check' ),
+					'args'                => array(
+						'url' => array(
+							'description'       => 'The remote eventStream URL to proxy.',
+							'type'              => 'string',
+							'format'            => 'uri',
+							'required'          => true,
+							'sanitize_callback' => 'sanitize_url',
+						),
+					),
+				),
+			)
+		);
+	}
+
+	/**
+	 * Validates the user_id parameter.
+	 *
+	 * @param mixed $user_id The user_id parameter.
+	 * @return bool|\WP_Error True if the user_id is valid, WP_Error otherwise.
+	 */
+	public function validate_user_id( $user_id ) {
+		$user = Actors::get_by_id( $user_id );
+		if ( \is_wp_error( $user ) ) {
+			return $user;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Check permissions for the SSE stream endpoint.
+	 *
+	 * Requires OAuth authentication with the `push` scope.
+	 *
+	 * @param \WP_REST_Request $request Full details about the request.
+	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
+	 */
+	public function get_items_permissions_check( $request ) {
+		$oauth_result = OAuth_Server::check_oauth_permission( $request, Scope::PUSH );
+		if ( true !== $oauth_result ) {
+			return $oauth_result;
+		}
+
+		$user_id = $request->get_param( 'user_id' );
+
+		if ( null === $user_id ) {
+			return true;
+		}
+
+		return $this->verify_owner( $request );
+	}
+
+	/**
+	 * Check permissions for the proxy event stream endpoint.
+	 *
+	 * @param \WP_REST_Request $request Full details about the request.
+	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
+	 */
+	public function get_proxy_permissions_check( $request ) {
+		return OAuth_Server::check_oauth_permission( $request, Scope::PUSH );
+	}
+
+	/**
+	 * Stream SSE events for a collection.
+	 *
+	 * This method sends raw SSE output and calls exit — it does not
+	 * return a WP_REST_Response.
+	 *
+	 * @param \WP_REST_Request $request Full details about the request.
+	 * @return void
+	 */
+	public function get_items( $request ) {
+		$user_id    = $request->get_param( 'user_id' );
+		$collection = $request->get_param( 'collection' );
+
+		// Allow PHP to detect client disconnects instead of auto-terminating.
+		ignore_user_abort( true );
+
+		$this->send_sse_headers();
+
+		// Get the latest item ID as our starting point.
+		$since_id = $this->get_latest_item_id( $user_id, $collection );
+		$start    = time();
+
+		// Send initial connected event.
+		$this->send_sse_comment( 'connected' );
+
+		while ( ( time() - $start ) < self::MAX_DURATION ) {
+			if ( \connection_aborted() ) {
+				break;
+			}
+
+			// Check for signal transient before querying the DB.
+			$signal_key = sprintf( 'activitypub_sse_signal_%s_%s', $user_id, $collection );
+			$signal     = \get_transient( $signal_key );
+
+			if ( $signal ) {
+				\delete_transient( $signal_key );
+
+				$new_items = $this->get_new_items( $user_id, $collection, $since_id );
+
+				foreach ( $new_items as $item ) {
+					$this->send_sse_event( $item, $collection );
+
+					if ( $item->ID > $since_id ) {
+						$since_id = $item->ID;
+					}
+				}
+			}
+
+			// Send keepalive comment.
+			$this->send_sse_comment( 'keepalive ' . \gmdate( 'c' ) );
+
+			// Flush and sleep.
+			$this->flush_output();
+
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.sleep_sleep -- SSE long-polling requires blocking sleep.
+			sleep( self::POLL_INTERVAL );
+		}
+
+		$this->send_sse_comment( 'timeout' );
+		$this->flush_output();
+
+		exit;
+	}
+
+	/**
+	 * Proxy a remote eventStream (not yet implemented).
+	 *
+	 * WordPress's HTTP API does not support streaming responses,
+	 * so this endpoint returns 501 Not Implemented for now.
+	 *
+	 * @param \WP_REST_Request $request Full details about the request.
+	 * @return \WP_Error Always returns 501.
+	 */
+	public function get_proxy_stream( $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		return new \WP_Error(
+			'activitypub_not_implemented',
+			\__( 'Proxy event streaming is not yet supported.', 'activitypub' ),
+			array( 'status' => 501 )
+		);
+	}
+
+	/**
+	 * Send SSE-specific HTTP headers.
+	 */
+	private function send_sse_headers() {
+		// Clear any output buffers.
+		while ( ob_get_level() > 0 ) {
+			ob_end_clean();
+		}
+
+		\status_header( 200 );
+		\header( 'Content-Type: text/event-stream' );
+		\header( 'Cache-Control: no-cache' );
+		\header( 'X-Accel-Buffering: no' );
+
+		// CORS headers for browser-based clients.
+		$origin = isset( $_SERVER['HTTP_ORIGIN'] ) ? \esc_url_raw( \wp_unslash( $_SERVER['HTTP_ORIGIN'] ) ) : '';
+
+		if ( $origin ) {
+			\header( 'Access-Control-Allow-Origin: ' . $origin );
+			\header( 'Access-Control-Allow-Credentials: true' );
+			\header( 'Vary: Origin' );
+		} else {
+			\header( 'Access-Control-Allow-Origin: *' );
+		}
+	}
+
+	/**
+	 * Send an SSE event.
+	 *
+	 * @param \WP_Post $item       The outbox or inbox post item.
+	 * @param string   $collection The collection type ('outbox' or 'inbox').
+	 */
+	private function send_sse_event( $item, $collection ) {
+		$event_type = $this->get_event_type( $item, $collection );
+		$data       = $this->get_event_data( $item, $collection );
+
+		if ( ! $data ) {
+			return;
+		}
+
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- SSE protocol requires raw output.
+		echo 'event: ' . $event_type . "\n";
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- SSE protocol requires raw JSON output.
+		echo 'data: ' . \wp_json_encode( $data ) . "\n";
+		echo 'id: ' . (int) $item->ID . "\n\n";
+	}
+
+	/**
+	 * Send an SSE comment (keepalive or informational).
+	 *
+	 * @param string $comment The comment text.
+	 */
+	private function send_sse_comment( $comment ) {
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- SSE protocol requires raw output.
+		echo ': ' . $comment . "\n\n";
+	}
+
+	/**
+	 * Flush output buffers.
+	 */
+	private function flush_output() {
+		if ( ob_get_level() > 0 ) {
+			ob_flush();
+		}
+		flush();
+	}
+
+	/**
+	 * Get the SSE event type for an item.
+	 *
+	 * @param \WP_Post $item       The outbox or inbox post item.
+	 * @param string   $collection The collection type.
+	 * @return string The SSE event type (Add, Update, or Remove).
+	 */
+	private function get_event_type( $item, $collection ) {
+		if ( 'inbox' === $collection ) {
+			// Inbox items are always additions to the collection.
+			return 'Add';
+		}
+
+		$activity_type = \get_post_meta( $item->ID, '_activitypub_activity_type', true );
+
+		if ( isset( self::EVENT_TYPE_MAP[ $activity_type ] ) ) {
+			return self::EVENT_TYPE_MAP[ $activity_type ];
+		}
+
+		return 'Add';
+	}
+
+	/**
+	 * Get the event data (activity JSON) for an item.
+	 *
+	 * @param \WP_Post $item       The outbox or inbox post item.
+	 * @param string   $collection The collection type.
+	 * @return array|null The activity data or null on failure.
+	 */
+	private function get_event_data( $item, $collection ) {
+		if ( 'outbox' === $collection ) {
+			$activity = Outbox::get_activity( $item->ID );
+
+			if ( \is_wp_error( $activity ) ) {
+				return null;
+			}
+
+			return $activity->to_array( false );
+		}
+
+		// Inbox items store activity JSON directly in post_content.
+		$data = \json_decode( $item->post_content, true );
+
+		return $data ? $data : null;
+	}
+
+	/**
+	 * Get the latest item ID for a collection.
+	 *
+	 * @param int    $user_id    The user ID.
+	 * @param string $collection The collection type.
+	 * @return int The latest post ID or 0.
+	 */
+	private function get_latest_item_id( $user_id, $collection ) {
+		$post_type = 'outbox' === $collection ? Outbox::POST_TYPE : Inbox::POST_TYPE;
+
+		$args = array(
+			'post_type'      => $post_type,
+			'post_status'    => 'any',
+			'posts_per_page' => 1,
+			'orderby'        => 'ID',
+			'order'          => 'DESC',
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+		);
+
+		if ( 'outbox' === $collection ) {
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			$args['meta_query'] = array(
+				array(
+					'key'   => '_activitypub_activity_actor',
+					'value' => Actors::get_type_by_id( $user_id ),
+				),
+			);
+		} else {
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			$args['meta_query'] = array(
+				array(
+					'key'   => '_activitypub_user_id',
+					'value' => $user_id,
+				),
+			);
+		}
+
+		$query = new \WP_Query( $args );
+
+		return ! empty( $query->posts ) ? (int) $query->posts[0] : 0;
+	}
+
+	/**
+	 * Get new items since a given ID.
+	 *
+	 * Uses a `posts_where` filter to add `ID > $since_id` to the query,
+	 * since WP_Query does not natively support filtering by minimum post ID.
+	 *
+	 * @param int    $user_id    The user ID.
+	 * @param string $collection The collection type.
+	 * @param int    $since_id   Only return items with ID greater than this.
+	 * @return \WP_Post[] Array of new post items.
+	 */
+	private function get_new_items( $user_id, $collection, $since_id ) {
+		$post_type = 'outbox' === $collection ? Outbox::POST_TYPE : Inbox::POST_TYPE;
+
+		$args = array(
+			'post_type'      => $post_type,
+			'post_status'    => 'any',
+			'posts_per_page' => 20,
+			'orderby'        => 'ID',
+			'order'          => 'ASC',
+			'no_found_rows'  => true,
+		);
+
+		if ( 'outbox' === $collection ) {
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			$args['meta_query'] = array(
+				array(
+					'key'   => '_activitypub_activity_actor',
+					'value' => Actors::get_type_by_id( $user_id ),
+				),
+			);
+		} else {
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			$args['meta_query'] = array(
+				array(
+					'key'   => '_activitypub_user_id',
+					'value' => $user_id,
+				),
+			);
+		}
+
+		// Add a posts_where filter to restrict to items newer than $since_id.
+		if ( $since_id > 0 ) {
+			$where_filter = function ( $where ) use ( $since_id ) {
+				global $wpdb;
+				$where .= $wpdb->prepare( " AND {$wpdb->posts}.ID > %d", $since_id );
+				return $where;
+			};
+			\add_filter( 'posts_where', $where_filter );
+		}
+
+		$query = new \WP_Query( $args );
+
+		if ( $since_id > 0 ) {
+			\remove_filter( 'posts_where', $where_filter );
+		}
+
+		return $query->posts;
+	}
+
+	/**
+	 * Get the stream URL for a collection.
+	 *
+	 * @param int    $user_id    The user ID.
+	 * @param string $collection The collection name ('outbox' or 'inbox').
+	 * @return string The stream URL.
+	 */
+	public static function get_stream_url( $user_id, $collection ) {
+		return get_rest_url_by_path( sprintf( 'actors/%d/%s/stream', $user_id, $collection ) );
+	}
+
+	/**
+	 * Get the proxy event stream URL.
+	 *
+	 * @return string The proxy event stream URL.
+	 */
+	public static function get_proxy_url() {
+		return get_rest_url_by_path( 'proxy-event-stream' );
+	}
+}
