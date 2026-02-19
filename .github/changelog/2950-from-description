@@ -1,4 +1,4 @@
 Significance: patch
 Type: fixed
 
-Fix a fatal error when receiving activities with language maps instead of plain strings.
+Fix a crash when receiving posts from certain federated platforms that send multilingual content.
