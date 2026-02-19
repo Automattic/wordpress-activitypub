@@ -277,7 +277,7 @@ function get_active_users( $duration = 1 ) {
 				array(
 					'capability__in' => array( 'activitypub' ),
 					'include'        => $active_ids,
-					'number'         => 1,
+					'number'         => 1, // Minimize memory; get_total() still returns full count.
 				)
 			);
 			$count      = $user_query->get_total();
@@ -287,7 +287,7 @@ function get_active_users( $duration = 1 ) {
 	}
 
 	// If 0 authors were active.
-	if ( ! $count ) {
+	if ( 0 === (int) $count ) {
 		return 0;
 	}
 
