@@ -75,6 +75,51 @@ class Server {
 			return $validated;
 		}
 
+		// DPoP proof-of-possession validation (RFC 9449).
+		$dpop_jkt = $validated->get_dpop_jkt();
+
+		if ( $dpop_jkt ) {
+			// Token was issued with DPoP — proof is required.
+			$dpop_proof = DPoP::get_proof_from_request();
+
+			if ( ! $dpop_proof ) {
+				return new \WP_Error(
+					'activitypub_dpop_proof_required',
+					\__( 'DPoP proof required for this token.', 'activitypub' ),
+					array( 'status' => 401 )
+				);
+			}
+
+			// Require DPoP authorization scheme for DPoP-bound tokens.
+			if ( ! self::is_dpop_auth_scheme() ) {
+				return new \WP_Error(
+					'activitypub_dpop_scheme_required',
+					\__( 'DPoP-bound tokens must use the DPoP authorization scheme.', 'activitypub' ),
+					array( 'status' => 401 )
+				);
+			}
+
+			$proof_result = DPoP::validate_proof(
+				$dpop_proof,
+				DPoP::get_request_method(),
+				DPoP::get_request_uri(),
+				$token
+			);
+
+			if ( \is_wp_error( $proof_result ) ) {
+				return $proof_result;
+			}
+
+			// Verify the proof's JWK thumbprint matches the token's bound key.
+			if ( ! hash_equals( $dpop_jkt, $proof_result['jkt'] ) ) {
+				return new \WP_Error(
+					'activitypub_dpop_key_mismatch',
+					\__( 'DPoP proof key does not match token binding.', 'activitypub' ),
+					array( 'status' => 401 )
+				);
+			}
+		}
+
 		self::$current_token = $validated;
 		\wp_set_current_user( $validated->get_user_id() );
 
@@ -114,7 +159,7 @@ class Server {
 	}
 
 	/**
-	 * Extract Bearer token from Authorization header.
+	 * Extract Bearer or DPoP token from Authorization header.
 	 *
 	 * @return string|null The token string or null.
 	 */
@@ -126,11 +171,33 @@ class Server {
 		}
 
 		// Check for Bearer token.
-		if ( 0 !== strpos( $auth_header, 'Bearer ' ) ) {
-			return null;
+		if ( 0 === strpos( $auth_header, 'Bearer ' ) ) {
+			return substr( $auth_header, 7 );
 		}
 
-		return substr( $auth_header, 7 );
+		// Check for DPoP token scheme (RFC 9449).
+		if ( 0 === strpos( $auth_header, 'DPoP ' ) ) {
+			return substr( $auth_header, 5 );
+		}
+
+		return null;
+	}
+
+	/**
+	 * Check if the current request uses the DPoP authorization scheme.
+	 *
+	 * @since unreleased
+	 *
+	 * @return bool True if the Authorization header uses the DPoP scheme.
+	 */
+	public static function is_dpop_auth_scheme() {
+		$auth_header = self::get_authorization_header();
+
+		if ( ! $auth_header ) {
+			return false;
+		}
+
+		return 0 === strpos( $auth_header, 'DPoP ' );
 	}
 
 	/**
@@ -268,7 +335,7 @@ class Server {
 		$origin = isset( $_SERVER['HTTP_ORIGIN'] ) ? \esc_url_raw( \wp_unslash( $_SERVER['HTTP_ORIGIN'] ) ) : '';
 		$response->header( 'Access-Control-Allow-Origin', $origin ? $origin : '*' );
 		$response->header( 'Access-Control-Allow-Methods', 'GET, POST, OPTIONS' );
-		$response->header( 'Access-Control-Allow-Headers', 'Accept, Content-Type, Authorization' );
+		$response->header( 'Access-Control-Allow-Headers', 'Accept, Content-Type, Authorization, DPoP' );
 
 		if ( $origin ) {
 			$response->header( 'Vary', 'Origin' );
@@ -316,6 +383,7 @@ class Server {
 			'token_endpoint_auth_methods_supported' => array( 'none', 'client_secret_post' ),
 			'introspection_endpoint_auth_methods_supported' => array( 'bearer' ),
 			'code_challenge_methods_supported'      => array( 'S256', 'plain' ),
+			'dpop_signing_alg_values_supported'     => DPoP::SUPPORTED_ALGORITHMS,
 			'service_documentation'                 => 'https://github.com/swicg/activitypub-api',
 		);
 	}

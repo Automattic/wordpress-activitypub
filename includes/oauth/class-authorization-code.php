@@ -103,13 +103,14 @@ class Authorization_Code {
 	/**
 	 * Exchange authorization code for tokens.
 	 *
-	 * @param string $code          The authorization code.
-	 * @param string $client_id     The client ID.
-	 * @param string $redirect_uri  The redirect URI (must match original).
-	 * @param string $code_verifier The PKCE code verifier.
+	 * @param string      $code          The authorization code.
+	 * @param string      $client_id     The client ID.
+	 * @param string      $redirect_uri  The redirect URI (must match original).
+	 * @param string      $code_verifier The PKCE code verifier.
+	 * @param string|null $dpop_jkt      Optional DPoP JWK thumbprint for proof-of-possession binding.
 	 * @return array|\WP_Error Token data or error.
 	 */
-	public static function exchange( $code, $client_id, $redirect_uri, $code_verifier ) {
+	public static function exchange( $code, $client_id, $redirect_uri, $code_verifier, $dpop_jkt = null ) {
 		$code_hash = self::hash_code( $code );
 		$transient = self::TRANSIENT_PREFIX . $code_hash;
 		$code_data = \get_transient( $transient );
@@ -168,7 +169,9 @@ class Authorization_Code {
 		return Token::create(
 			$code_data['user_id'],
 			$client_id,
-			$code_data['scopes']
+			$code_data['scopes'],
+			Token::DEFAULT_EXPIRATION,
+			$dpop_jkt
 		);
 	}
 

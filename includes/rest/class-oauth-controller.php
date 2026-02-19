@@ -9,6 +9,7 @@ namespace Activitypub\Rest;
 
 use Activitypub\OAuth\Authorization_Code;
 use Activitypub\OAuth\Client;
+use Activitypub\OAuth\DPoP;
 use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Server as OAuth_Server;
 use Activitypub\OAuth\Token;
@@ -488,7 +489,14 @@ class OAuth_Controller extends \WP_REST_Controller {
 			return $this->token_error( 'invalid_request', 'Authorization code is required.' );
 		}
 
-		$result = Authorization_Code::exchange( $code, $client_id, $redirect_uri, $code_verifier );
+		// Check for DPoP proof (RFC 9449) — opt-in by client.
+		$dpop_jkt = $this->validate_dpop_for_token_request();
+
+		if ( \is_wp_error( $dpop_jkt ) ) {
+			return $this->token_error( 'invalid_dpop_proof', $dpop_jkt->get_error_message() );
+		}
+
+		$result = Authorization_Code::exchange( $code, $client_id, $redirect_uri, $code_verifier, $dpop_jkt );
 
 		if ( \is_wp_error( $result ) ) {
 			return $this->token_error( 'invalid_grant', $result->get_error_message() );
@@ -511,10 +519,36 @@ class OAuth_Controller extends \WP_REST_Controller {
 			return $this->token_error( 'invalid_request', 'Refresh token is required.' );
 		}
 
+		// Check for DPoP proof (RFC 9449) — opt-in by client.
+		$dpop_jkt = $this->validate_dpop_for_token_request();
+
+		if ( \is_wp_error( $dpop_jkt ) ) {
+			return $this->token_error( 'invalid_dpop_proof', $dpop_jkt->get_error_message() );
+		}
+
 		$result = Token::refresh( $refresh_token, $client_id );
 
 		if ( \is_wp_error( $result ) ) {
 			return $this->token_error( 'invalid_grant', $result->get_error_message() );
+		}
+
+		/*
+		 * If the refreshed token was DPoP-bound, verify the refresh request
+		 * used the same key. Token::refresh() preserves the original dpop_jkt.
+		 */
+		if ( 'DPoP' === $result['token_type'] ) {
+			if ( ! $dpop_jkt ) {
+				Token::revoke( $result['access_token'] );
+				return $this->token_error( 'invalid_dpop_proof', 'DPoP proof required when refreshing a DPoP-bound token.' );
+			}
+
+			// Verify the proof was signed with the same key that was originally bound.
+			$new_token = Token::validate( $result['access_token'] );
+
+			if ( ! \is_wp_error( $new_token ) && ! hash_equals( $new_token->get_dpop_jkt(), $dpop_jkt ) ) {
+				Token::revoke( $result['access_token'] );
+				return $this->token_error( 'invalid_dpop_proof', 'DPoP key does not match the original token binding.' );
+			}
 		}
 
 		return $this->token_response( $result );
@@ -752,6 +786,37 @@ class OAuth_Controller extends \WP_REST_Controller {
 				'Pragma'        => 'no-cache',
 			)
 		);
+	}
+
+	/**
+	 * Validate a DPoP proof for a token endpoint request (RFC 9449).
+	 *
+	 * If no DPoP header is present, returns null (opt-in by client).
+	 * If present and valid, returns the JWK thumbprint string.
+	 * If present and invalid, returns a WP_Error.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string|null|\WP_Error JWK thumbprint, null if no DPoP, or WP_Error.
+	 */
+	private function validate_dpop_for_token_request() {
+		$dpop_proof = DPoP::get_proof_from_request();
+
+		if ( ! $dpop_proof ) {
+			return null;
+		}
+
+		$result = DPoP::validate_proof(
+			$dpop_proof,
+			DPoP::get_request_method(),
+			DPoP::get_request_uri()
+		);
+
+		if ( \is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return $result['jkt'];
 	}
 
 	/**
