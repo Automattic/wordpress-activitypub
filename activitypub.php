@@ -61,6 +61,9 @@ function rest_init() {
 	( new Rest\Inbox_Controller() )->register_routes();
 	( new Rest\Interaction_Controller() )->register_routes();
 	( new Rest\Moderators_Controller() )->register_routes();
+	( new Rest\OAuth\Authorization_Controller() )->register_routes();
+	( new Rest\OAuth\Clients_Controller() )->register_routes();
+	( new Rest\OAuth\Token_Controller() )->register_routes();
 	( new Rest\Outbox_Controller() )->register_routes();
 	( new Rest\Post_Controller() )->register_routes();
 	( new Rest\Replies_Controller() )->register_routes();
@@ -70,9 +73,6 @@ function rest_init() {
 	if ( is_blog_public() ) {
 		( new Rest\Nodeinfo_Controller() )->register_routes();
 	}
-
-	// Load OAuth REST endpoints.
-	( new Rest\OAuth_Controller() )->register_routes();
 	( new Rest\Proxy_Controller() )->register_routes();
 }
 \add_action( 'rest_api_init', __NAMESPACE__ . '\rest_init' );
