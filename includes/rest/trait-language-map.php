@@ -25,6 +25,15 @@ namespace Activitypub\Rest;
 trait Language_Map {
 
 	/**
+	 * Default fallback language code.
+	 *
+	 * @since unreleased
+	 *
+	 * @var string
+	 */
+	protected $fallback_language = 'en';
+
+	/**
 	 * Localize language map properties in an activity object array.
 	 *
 	 * Normalizes `summary`, `content`, and `name` (and their `*Map` variants)
@@ -141,8 +150,8 @@ trait Language_Map {
 	public function get_preferred_languages( $site_lang ) {
 		$languages = array( $site_lang );
 
-		if ( 'en' !== $site_lang ) {
-			$languages[] = 'en';
+		if ( $this->fallback_language !== $site_lang ) {
+			$languages[] = $this->fallback_language;
 		}
 
 		/**
