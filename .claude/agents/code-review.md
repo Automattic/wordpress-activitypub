@@ -52,7 +52,7 @@ Apply the **code-style** skill standards when reviewing. In addition, check for:
 - Functions/methods have a single responsibility
 
 ### Compatibility
-- PHP 7.2+ compatible syntax
+- PHP 7.4+ compatible syntax
 - No breaking changes to public APIs without deprecation path
 - Integration points with third-party plugins preserved
 

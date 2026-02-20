@@ -4,7 +4,7 @@ Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.9
 Stable tag: 7.9.1
-Requires PHP: 7.2
+Requires PHP: 7.4
 License: MIT
 License URI: http://opensource.org/licenses/MIT
 
