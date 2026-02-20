@@ -55,7 +55,7 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 		};
 		\add_filter( 'locale', $callback );
 
-		$result = $this->instance::localize_language_maps( $data );
+		$result = $this->instance->localize_language_maps( $data );
 
 		\remove_filter( 'locale', $callback );
 
@@ -69,7 +69,7 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 	 */
 	public function test_string_passthrough() {
 		$url = 'https://example.com/post/1';
-		$this->assertSame( $url, $this->instance::localize_language_maps( $url ) );
+		$this->assertSame( $url, $this->instance->localize_language_maps( $url ) );
 	}
 
 	/**
@@ -95,7 +95,7 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 				'content'    => array( 'en' => 'Hello' ),
 			),
 		);
-		$result = $this->instance::localize_language_maps( $data );
+		$result = $this->instance->localize_language_maps( $data );
 
 		\remove_filter( 'locale', $callback );
 
@@ -127,11 +127,40 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 		$map         = isset( $data[ $key . 'Map' ] ) ? $data[ $key . 'Map' ] : null;
 		$object_lang = isset( $data['language'] ) ? $data['language'] : null;
 
-		$result = $this->instance::get_localized_value( $value, $map, $object_lang );
+		$result = $this->instance->get_localized_value( $value, $map, $object_lang );
 
 		\remove_filter( 'locale', $callback );
 
 		$this->assertSame( $expected, $result, $message );
+	}
+
+	/**
+	 * Test get_preferred_languages returns site locale and English fallback.
+	 *
+	 * @covers ::get_preferred_languages
+	 */
+	public function test_get_preferred_languages_default() {
+		$this->assertSame( array( 'de', 'en' ), $this->instance->get_preferred_languages( 'de' ) );
+		$this->assertSame( array( 'en' ), $this->instance->get_preferred_languages( 'en' ) );
+	}
+
+	/**
+	 * Test that the activitypub_preferred_languages filter can add languages.
+	 *
+	 * @covers ::get_preferred_languages
+	 */
+	public function test_get_preferred_languages_filter() {
+		$callback = function ( $languages ) {
+			$languages[] = 'fr';
+			return $languages;
+		};
+		\add_filter( 'activitypub_preferred_languages', $callback );
+
+		$result = $this->instance->get_preferred_languages( 'de' );
+
+		\remove_filter( 'activitypub_preferred_languages', $callback );
+
+		$this->assertSame( array( 'de', 'en', 'fr' ), $result );
 	}
 
 	/**

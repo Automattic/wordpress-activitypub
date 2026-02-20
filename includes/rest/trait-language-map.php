@@ -23,6 +23,14 @@ namespace Activitypub\Rest;
  * @see https://www.w3.org/wiki/Activity_Streams/Primer/Language_mapping
  */
 trait Language_Map {
+
+	/**
+	 * Default fallback language code.
+	 *
+	 * @var string
+	 */
+	const FALLBACK_LANGUAGE = 'en';
+
 	/**
 	 * Localize language map properties in an activity object array.
 	 *
@@ -37,7 +45,7 @@ trait Language_Map {
 	 *
 	 * @return mixed The data with language maps resolved, or unchanged if not an array.
 	 */
-	public static function localize_language_maps( $data ) {
+	public function localize_language_maps( $data ) {
 		if ( ! \is_array( $data ) ) {
 			return $data;
 		}
@@ -46,7 +54,7 @@ trait Language_Map {
 
 		foreach ( $properties as $key ) {
 			if ( isset( $data[ $key ] ) || isset( $data[ $key . 'Map' ] ) ) {
-				$data[ $key ] = self::get_localized_value(
+				$data[ $key ] = $this->get_localized_value(
 					isset( $data[ $key ] ) ? $data[ $key ] : null,
 					isset( $data[ $key . 'Map' ] ) ? $data[ $key . 'Map' ] : null,
 					isset( $data['language'] ) ? $data['language'] : null
@@ -56,7 +64,7 @@ trait Language_Map {
 
 		/* Also normalize within the nested object if it is an array. */
 		if ( isset( $data['object'] ) && \is_array( $data['object'] ) ) {
-			$data['object'] = self::localize_language_maps( $data['object'] );
+			$data['object'] = $this->localize_language_maps( $data['object'] );
 		}
 
 		return $data;
@@ -80,7 +88,7 @@ trait Language_Map {
 	 *
 	 * @return string|null The resolved string, or null if empty.
 	 */
-	public static function get_localized_value( $value, $map, $object_lang ) {
+	public function get_localized_value( $value, $map, $object_lang ) {
 		$site_lang = \strtolower( \strtok( \get_locale(), '_-' ) );
 
 		/*
@@ -93,15 +101,11 @@ trait Language_Map {
 			}
 		}
 
-		/* Build preferred languages: site locale, then English as fallback. */
-		$languages = array( $site_lang );
-		if ( 'en' !== $site_lang ) {
-			$languages[] = 'en';
-		}
+		$languages = $this->get_preferred_languages( $site_lang );
 
 		/* Check the *Map variant for a locale match. */
 		if ( \is_array( $map ) ) {
-			$resolved = self::resolve_language_map( $map, $languages );
+			$resolved = $this->resolve_language_map( $map, $languages );
 			if ( $resolved ) {
 				return $resolved;
 			}
@@ -117,7 +121,7 @@ trait Language_Map {
 		 * same locale resolution, then first available entry.
 		 */
 		if ( \is_array( $value ) ) {
-			$resolved = self::resolve_language_map( $value, $languages );
+			$resolved = $this->resolve_language_map( $value, $languages );
 			if ( $resolved ) {
 				return $resolved;
 			}
@@ -126,6 +130,37 @@ trait Language_Map {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Get the preferred language codes in priority order.
+	 *
+	 * Returns the site locale as primary, with English as fallback
+	 * (unless the site is already English). Additional languages can
+	 * be added via the `activitypub_preferred_languages` filter.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $site_lang The site's primary language code (e.g. 'de').
+	 *
+	 * @return string[] Language codes in priority order.
+	 */
+	public function get_preferred_languages( $site_lang ) {
+		$languages = array( $site_lang );
+
+		if ( self::FALLBACK_LANGUAGE !== $site_lang ) {
+			$languages[] = self::FALLBACK_LANGUAGE;
+		}
+
+		/**
+		 * Filters the preferred language codes for language map resolution.
+		 *
+		 * @since unreleased
+		 *
+		 * @param string[] $languages Preferred language codes in priority order.
+		 * @param string   $site_lang The site's primary language code.
+		 */
+		return \apply_filters( 'activitypub_preferred_languages', $languages, $site_lang );
 	}
 
 	/**
@@ -140,7 +175,7 @@ trait Language_Map {
 	 *
 	 * @return string|null The matched string, or null if no match found.
 	 */
-	private static function resolve_language_map( $map, $languages ) {
+	private function resolve_language_map( $map, $languages ) {
 		if ( empty( $map ) ) {
 			return null;
 		}

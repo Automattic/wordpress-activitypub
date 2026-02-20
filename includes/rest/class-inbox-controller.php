@@ -78,7 +78,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 						'object' => array(
 							'description'       => 'The object of the activity.',
 							'required'          => true,
-							'sanitize_callback' => array( self::class, 'localize_language_maps' ),
+							'sanitize_callback' => array( $this, 'localize_language_maps' ),
 							'validate_callback' => static function ( $param, $request, $key ) {
 								/**
 								 * Filter the ActivityPub object validation.
