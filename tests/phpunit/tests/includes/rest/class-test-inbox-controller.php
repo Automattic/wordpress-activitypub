@@ -498,9 +498,8 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		}
 
 		$result = $method->invoke( $this->inbox_controller, $activity );
-		// Activities with no recipients are treated as public and delivered to followers only.
-		$this->assertNotEmpty( $result, 'Should return followers when no recipients (treated as public)' );
-		$this->assertContains( self::$user_id, $result, 'Should contain the follower' );
+		// Activities with no recipients are treated as private per spec.
+		$this->assertEmpty( $result, 'Should return no recipients when no addressing is specified' );
 
 		// Clean up.
 		\delete_option( 'activitypub_actor_mode' );
