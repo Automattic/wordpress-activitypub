@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix a crash when receiving posts from certain federated platforms that send multilingual content.

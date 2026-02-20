@@ -30,6 +30,7 @@ use function Activitypub\user_can_activitypub;
  */
 class Inbox_Controller extends \WP_REST_Controller {
 	use Verification;
+	use Language_Map;
 
 	/**
 	 * The namespace of this controller's route.
@@ -56,8 +57,76 @@ class Inbox_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'create_item' ),
-					'permission_callback' => array( $this, 'verify_signature' ),
-					'args'                => $this->get_create_item_args(),
+					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
+					'args'                => array(
+						'id'     => array(
+							'description' => 'The unique identifier for the activity.',
+							'type'        => 'string',
+							'format'      => 'uri',
+							'required'    => true,
+						),
+						'actor'  => array(
+							'description'       => 'The actor performing the activity.',
+							'type'              => 'string',
+							'required'          => true,
+							'sanitize_callback' => '\Activitypub\object_to_uri',
+						),
+						'type'   => array(
+							'description' => 'The type of the activity.',
+							'type'        => 'string',
+							'required'    => true,
+						),
+						'object' => array(
+							'description'       => 'The object of the activity.',
+							'required'          => true,
+							'sanitize_callback' => array( $this, 'localize_language_maps' ),
+							'validate_callback' => static function ( $param, $request, $key ) {
+								/**
+								 * Filter the ActivityPub object validation.
+								 *
+								 * @param bool             $validate The validation result.
+								 * @param array            $param    The object data.
+								 * @param \WP_REST_Request $request  The request object.
+								 * @param string           $key      The key.
+								 */
+								return \apply_filters( 'activitypub_validate_object', true, $param, $request, $key );
+							},
+						),
+						'to'     => array(
+							'description'       => 'The primary recipients of the activity.',
+							'type'              => array( 'string', 'array' ),
+							'required'          => false,
+							'sanitize_callback' => static function ( $param ) {
+								if ( \is_string( $param ) ) {
+									$param = array( $param );
+								}
+
+								return $param;
+							},
+						),
+						'cc'     => array(
+							'description'       => 'The secondary recipients of the activity.',
+							'type'              => array( 'string', 'array' ),
+							'sanitize_callback' => static function ( $param ) {
+								if ( \is_string( $param ) ) {
+									$param = array( $param );
+								}
+
+								return $param;
+							},
+						),
+						'bcc'    => array(
+							'description'       => 'The private recipients of the activity.',
+							'type'              => array( 'string', 'array' ),
+							'sanitize_callback' => static function ( $param ) {
+								if ( \is_string( $param ) ) {
+									$param = array( $param );
+								}
+
+								return $param;
+							},
+						),
+					),
 				),
 				'schema' => array( $this, 'get_item_schema' ),
 			)
