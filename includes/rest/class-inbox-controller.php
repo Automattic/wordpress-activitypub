@@ -29,6 +29,8 @@ use function Activitypub\user_can_activitypub;
  * @see https://www.w3.org/TR/activitypub/#inbox
  */
 class Inbox_Controller extends \WP_REST_Controller {
+	use Language_Map;
+
 	/**
 	 * The namespace of this controller's route.
 	 *
@@ -76,6 +78,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 						'object' => array(
 							'description'       => 'The object of the activity.',
 							'required'          => true,
+							'sanitize_callback' => array( $this, 'localize_language_maps' ),
 							'validate_callback' => static function ( $param, $request, $key ) {
 								/**
 								 * Filter the ActivityPub object validation.

@@ -25,6 +25,7 @@ use function Activitypub\object_to_uri;
  */
 class Actors_Inbox_Controller extends Actors_Controller {
 	use Collection;
+	use Language_Map;
 
 	/**
 	 * Register routes.
@@ -87,6 +88,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 						'object' => array(
 							'description'       => 'The object of the activity.',
 							'required'          => true,
+							'sanitize_callback' => array( $this, 'localize_language_maps' ),
 							'validate_callback' => static function ( $param, $request, $key ) {
 								/**
 								 * Filter the ActivityPub object validation.
