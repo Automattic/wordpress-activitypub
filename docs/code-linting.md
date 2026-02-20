@@ -34,7 +34,7 @@ The project uses WordPress Coding Standards with custom rules defined in `.phpcs
 - WordPress-Docs standards
 - WordPress-Extra standards
 - Custom variable analysis
-- PHPCompatibility checks for PHP 7.2+
+- PHPCompatibility checks for PHP 7.4+
 
 **Excluded Patterns:**
 - `vendor/` directory

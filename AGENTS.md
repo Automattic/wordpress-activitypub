@@ -2,12 +2,12 @@
 
 WordPress plugin implementing the ActivityPub protocol, enabling federation with Mastodon, Pixelfed, Pleroma, and other compatible platforms.
 
-**Tech stack:** PHP 7.2+, WordPress 6.x, `@wordpress/scripts` for JS/CSS, Playwright for E2E, PHPUnit for unit/integration tests, wp-env for local dev.
+**Tech stack:** PHP 7.4+, WordPress 6.x, `@wordpress/scripts` for JS/CSS, Playwright for E2E, PHPUnit for unit/integration tests, wp-env for local dev.
 
 Prefer reading project files and `docs/` over relying on training data for WordPress and ActivityPub patterns.
 
 **Do NOT:**
-- Use PHP 7.3+ syntax (named args, union types, `match`, trailing commas in params)
+- Use PHP 8.0+ syntax (named args, union types, `match`)
 - Edit WordPress core files
 - Use `remove_all_filters('pre_http_request')` in tests
 - Hardcode new version numbers (use `'unreleased'`)
@@ -65,12 +65,12 @@ npm run dev                     # Development watch mode.
 
 ## Common Pitfalls
 
-- **PHP 7.2 compatibility.** CI tests against PHP 7.2. No named arguments, no union types, no `match`, no trailing commas in function parameters.
+- **PHP 7.4 compatibility.** CI tests against PHP 7.4. No named arguments, no union types, no `match` (PHP 8.0+).
 - **Never edit WordPress core files.** Only modify plugin code.
 - **Pre-commit hooks modify files.** If the hook changed files, stage and commit again — do not assume the first commit succeeded.
 - **`remove_all_filters('pre_http_request')` is forbidden in tests.** The pre-commit hook blocks this. Use targeted filter removal.
 - **Changelog entries MUST be end-user friendly and end with punctuation.** Users see these in the WordPress update screen. Describe what changed from their perspective — no jargon, class names, or method names.
-- **`post_date_gmt` may be empty.** Check for `0000-00-00` or empty values; causes issues on PHP 7.2.
+- **`post_date_gmt` may be empty.** Check for `0000-00-00` or empty values.
 
 ## Pre-commit Hooks
 

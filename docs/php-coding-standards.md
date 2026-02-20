@@ -14,7 +14,7 @@ The ActivityPub plugin follows WordPress Coding Standards with PHPCS configurati
 
 ### PHPCS Rules Applied
 - `WordPress` - Full WordPress coding standards
-- `PHPCompatibility` - PHP 7.2+ compatibility
+- `PHPCompatibility` - PHP 7.4+ compatibility
 - `PHPCompatibilityWP` - WordPress 6.5+ compatibility
 - `VariableAnalysis` - Detect undefined/unused variables
 
