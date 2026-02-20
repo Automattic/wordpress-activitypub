@@ -701,14 +701,14 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Capture the JSON that gets sent.
 		$sent_json = null;
-		$callback  = function ( $preempt, $args, $url ) use ( &$sent_json ) {
+		$callback  = function ( $preempt, $args ) use ( &$sent_json ) {
 			$sent_json = $args['body'];
 			return array(
 				'response' => array( 'code' => 200 ),
 				'body'     => '',
 			);
 		};
-		\add_filter( 'pre_http_request', $callback, 10, 3 );
+		\add_filter( 'pre_http_request', $callback, 10, 2 );
 
 		$send_to_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_inboxes' );
 		if ( \PHP_VERSION_ID < 80100 ) {

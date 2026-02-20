@@ -333,18 +333,18 @@ class Dispatcher {
 	 *
 	 * @see https://www.w3.org/TR/activitypub/#delivery
 	 *
-	 * @param array $array The Activity array.
+	 * @param array $data The Activity array.
 	 * @return array The sanitized array with bto and bcc removed.
 	 */
-	public static function strip_private_addressing( $array ) {
-		unset( $array['bto'], $array['bcc'] );
+	public static function strip_private_addressing( $data ) {
+		unset( $data['bto'], $data['bcc'] );
 
 		// Also strip from the embedded object, if present.
-		if ( isset( $array['object'] ) && \is_array( $array['object'] ) ) {
-			unset( $array['object']['bto'], $array['object']['bcc'] );
+		if ( isset( $data['object'] ) && \is_array( $data['object'] ) ) {
+			unset( $data['object']['bto'], $data['object']['bcc'] );
 		}
 
-		return $array;
+		return $data;
 	}
 
 	/**
