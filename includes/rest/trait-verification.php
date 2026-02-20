@@ -184,4 +184,21 @@ trait Verification {
 			array( 'status' => 403 )
 		);
 	}
+
+	/**
+	 * Check if the social graph should be shown for this request.
+	 *
+	 * Returns true if the social graph setting allows public display,
+	 * or if the request is authenticated by the resource owner.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 * @return bool True if the social graph should be shown.
+	 */
+	protected function show_social_graph( $request ) {
+		$user_id = $request->get_param( 'user_id' );
+
+		return Actors::show_social_graph( $user_id ) || true === $this->verify_owner( $request );
+	}
 }
