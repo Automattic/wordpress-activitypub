@@ -13,6 +13,9 @@ use Activitypub\Post_Types;
  * Test class for the OAuth Clients Controller.
  *
  * @coversDefaultClass \Activitypub\Rest\OAuth\Clients_Controller
+ *
+ * @group activitypub
+ * @group oauth
  */
 class Test_Clients_Controller extends \WP_UnitTestCase {
 

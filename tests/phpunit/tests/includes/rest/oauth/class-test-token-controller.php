@@ -17,6 +17,9 @@ use Activitypub\Post_Types;
  * Test class for the OAuth Token Controller.
  *
  * @coversDefaultClass \Activitypub\Rest\OAuth\Token_Controller
+ *
+ * @group activitypub
+ * @group oauth
  */
 class Test_Token_Controller extends \WP_UnitTestCase {
 

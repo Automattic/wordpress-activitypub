@@ -653,7 +653,7 @@ class Client {
 	 * @return bool True if valid.
 	 */
 	private static function validate_uri_format( $uri ) {
-		$parsed = wp_parse_url( $uri );
+		$parsed = \wp_parse_url( $uri );
 
 		if ( ! $parsed || empty( $parsed['scheme'] ) || empty( $parsed['host'] ) ) {
 			return false;

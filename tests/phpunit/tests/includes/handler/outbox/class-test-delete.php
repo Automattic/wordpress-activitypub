@@ -141,7 +141,7 @@ class Test_Delete extends \WP_UnitTestCase {
 		);
 
 		$result = Delete::handle_delete( $data, $this->user_id );
-		$this->assertNull( $result );
+		$this->assertFalse( $result );
 	}
 
 	/**

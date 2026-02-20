@@ -14,6 +14,9 @@ use Activitypub\Post_Types;
  * Test class for the OAuth Authorization Controller.
  *
  * @coversDefaultClass \Activitypub\Rest\OAuth\Authorization_Controller
+ *
+ * @group activitypub
+ * @group oauth
  */
 class Test_Authorization_Controller extends \WP_UnitTestCase {
 

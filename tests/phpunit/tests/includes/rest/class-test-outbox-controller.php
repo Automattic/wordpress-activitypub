@@ -152,18 +152,17 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		$this->assertStringContainsString( 'page=3', $data['next'] );
 
 		// Empty collections skip pagination metadata.
-		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1/outbox' );
+		// Use a fresh user with no outbox entries to test empty collection behavior.
+		$empty_user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_user_by( 'ID', $empty_user_id )->add_cap( 'activitypub' );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $empty_user_id . '/outbox' );
 		$request->set_param( 'per_page', 3 );
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
-		if ( empty( $data['orderedItems'] ) && ( ! isset( $data['totalItems'] ) || 0 === $data['totalItems'] ) ) {
-			$this->assertArrayNotHasKey( 'first', $data );
-			$this->assertArrayNotHasKey( 'last', $data );
-		} else {
-			$this->assertArrayHasKey( 'first', $data );
-			$this->assertArrayHasKey( 'last', $data );
-		}
+		$this->assertArrayNotHasKey( 'first', $data );
+		$this->assertArrayNotHasKey( 'last', $data );
 	}
 
 	/**

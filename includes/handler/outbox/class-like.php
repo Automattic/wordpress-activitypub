@@ -32,7 +32,7 @@ class Like {
 		$object_url = object_to_uri( $data['object'] ?? '' );
 
 		if ( empty( $object_url ) ) {
-			return;
+			return $data;
 		}
 
 		/**
@@ -43,5 +43,7 @@ class Like {
 		 * @param int    $user_id    The user ID.
 		 */
 		\do_action( 'activitypub_outbox_like_sent', $object_url, $data, $user_id );
+
+		return $data;
 	}
 }

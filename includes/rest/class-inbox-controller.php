@@ -157,7 +157,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 			 * @param string             $type     The type of the activity.
 			 * @param Activity|\WP_Error $activity The Activity object.
 			 */
-			do_action( 'activitypub_rest_inbox_disallowed', $data, null, $type, $activity );
+			\do_action( 'activitypub_rest_inbox_disallowed', $data, null, $type, $activity );
 		} else {
 			$recipients = $this->get_local_recipients( $data );
 

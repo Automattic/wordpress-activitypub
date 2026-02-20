@@ -111,7 +111,7 @@ class Test_Create extends \WP_UnitTestCase {
 
 		$result = Create::handle_create( $activity, 1 );
 
-		$this->assertNull( $result );
+		$this->assertFalse( $result );
 	}
 
 	/**
@@ -399,6 +399,6 @@ class Test_Create extends \WP_UnitTestCase {
 
 		$result = Create::handle_create( $activity, 1 );
 
-		$this->assertNull( $result );
+		$this->assertFalse( $result );
 	}
 }

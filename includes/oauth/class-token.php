@@ -441,7 +441,7 @@ class Token {
 					continue;
 				}
 
-				$token_data = maybe_unserialize( $meta_values[0] );
+				$token_data = \maybe_unserialize( $meta_values[0] );
 
 				if ( ! is_array( $token_data ) ) {
 					continue;
@@ -484,7 +484,7 @@ class Token {
 				continue;
 			}
 
-			$token_data = maybe_unserialize( $meta_values[0] );
+			$token_data = \maybe_unserialize( $meta_values[0] );
 
 			if ( is_array( $token_data ) ) {
 				// Don't expose hashes.
@@ -648,7 +648,7 @@ class Token {
 					continue;
 				}
 
-				$token_data = maybe_unserialize( $meta_values[0] );
+				$token_data = \maybe_unserialize( $meta_values[0] );
 
 				if ( ! is_array( $token_data ) ) {
 					\delete_user_meta( $user_id, $meta_key );

@@ -288,7 +288,7 @@ class Server {
 
 		// All ActivityPub endpoints need CORS except the interactive OAuth authorize endpoint.
 		if ( 0 === strpos( $route, $namespace ) ) {
-			return $namespace . '/oauth/authorize' !== $route;
+			return false === strpos( $route, $namespace . '/oauth/authorize' );
 		}
 
 		return false;
@@ -331,7 +331,7 @@ class Server {
 			\auth_redirect();
 		}
 
-		$request_method = isset( $_SERVER['REQUEST_METHOD'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '';
+		$request_method = isset( $_SERVER['REQUEST_METHOD'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '';
 
 		if ( 'GET' === $request_method ) {
 			self::render_authorize_form();
