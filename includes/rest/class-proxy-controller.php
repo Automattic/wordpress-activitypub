@@ -55,7 +55,7 @@ class Proxy_Controller extends \WP_REST_Controller {
 							'description'       => 'The URI of the remote ActivityPub object to fetch.',
 							'type'              => 'string',
 							'required'          => true,
-							'sanitize_callback' => 'sanitize_url',
+							'sanitize_callback' => array( $this, 'sanitize_url' ),
 							'validate_callback' => array( $this, 'validate_url' ),
 						),
 					),
@@ -65,6 +65,18 @@ class Proxy_Controller extends \WP_REST_Controller {
 		);
 	}
 
+	/**
+	 * Sanitizes the URL parameter.
+	 *
+	 * @see https://developer.wordpress.org/reference/functions/sanitize_url/
+	 *
+	 * @param string $url The urlencoded URL to sanitize.
+	 * @return string The sanitized URL.
+	 */
+	public function sanitize_url( $url ) {
+		// Decode and sanitize the URL.
+		return sanitize_url( urldecode( $url ) );
+	}
 	/**
 	 * Validate the URL parameter.
 	 *
@@ -76,13 +88,16 @@ class Proxy_Controller extends \WP_REST_Controller {
 	 * @return bool True if valid, false otherwise.
 	 */
 	public function validate_url( $url ) {
+		// Decode the url.
+		$decoded_url = urldecode( $url );
+
 		// Must be HTTPS.
-		if ( 'https' !== \wp_parse_url( $url, PHP_URL_SCHEME ) ) {
+		if ( 'https' !== \wp_parse_url( $decoded_url, PHP_URL_SCHEME ) ) {
 			return false;
 		}
 
 		// Use WordPress built-in validation (blocks local IPs, restricts ports).
-		return (bool) \wp_http_validate_url( $url );
+		return (bool) \wp_http_validate_url( $decoded_url );
 	}
 
 	/**
