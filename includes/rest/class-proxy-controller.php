@@ -88,7 +88,7 @@ class Proxy_Controller extends \WP_REST_Controller {
 	 * @return bool True if valid, false otherwise.
 	 */
 	public function validate_url( $url ) {
-		// Decode the url
+		// Decode the url.
 		$decoded_url = urldecode( $url );
 
 		// Must be HTTPS.
