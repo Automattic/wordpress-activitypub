@@ -74,7 +74,7 @@ class Proxy_Controller extends \WP_REST_Controller {
 	 * @return string The sanitized URL.
 	 */
 	public function sanitize_url( $url ) {
-		// Decode and sanitize the URL
+		// Decode and sanitize the URL.
 		return sanitize_url( urldecode( $url ) );
 	}
 	/**
