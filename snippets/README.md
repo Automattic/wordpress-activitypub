@@ -11,6 +11,7 @@ Think of snippets as a testing ground, similar to WordPress' [feature plugin](ht
 | [Bot Account](bot-account/) | Marks ActivityPub profiles as bot/automated accounts, displaying a "BOT" badge in the Fediverse. |
 | [FediBlog Tag](fediblog-tag/) | Automatically adds the `FediBlog` tag to standard format blog posts. |
 | [Locale from Tags](locale-from-tags/) | Sets a post's ActivityPub language based on post tags matching language codes. |
+| [Blockless ActivityPub](blockless-activitypub/) | Fediverse reactions without all that frontend-rendered but JavaScript-heavy blocks magic. |
 
 ## How to Use
 
