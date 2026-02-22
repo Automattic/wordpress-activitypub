@@ -95,8 +95,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 				transform: scale(1.77);
 			}
 		</style>
-		<div id="fedifeedback">
-		<h2>' . \absint( $totalreactioncount ) . ' Fediverse reactions</h2>';
+		<div id="fedifeedback">';
+
+		printf( '<h2>%d Fediverse reactions</h2>', \absint( $totalreactioncount ) );
 
 		// Iterate through the array for each reactiontype (like, repost, quote).
 		foreach ( $reactions as $reactiontype => $reactionlist ) {
@@ -107,7 +108,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 			// Output avatars for this reactiontype.
 			echo '<div class="fedireactiontyperow">';
 			foreach ( $reactionlist as $reaction ) {
-				echo '<a href="' . \esc_url( $reaction->comment_author_url ) . '"><img class="fedifacelet" src="' . \esc_url( \get_avatar_url( $reaction ) ) . '" alt="' . \esc_html( $reaction->comment_author ) . '" title="' . \esc_html( $reaction->comment_author ) . '" /></a>';
+				\printf(
+					'<a href="%1$s"><img class="fedifacelet" src="%2$s" alt="%3$s" title="%3$s" /></a>',
+					\esc_url( $reaction->comment_author_url ),
+					\esc_url( \get_avatar_url( $reaction ) ),
+					\esc_html( $reaction->comment_author )
+				);
 			}
 
 			// Ugly shortcut for plurals, no multilang yet either.
@@ -116,7 +122,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 				$reactiontype .= 's';
 			}
 
-			echo '<span class="fedireactioncounter">' . \absint( $reactioncount ) . ' ' . \esc_html( $reactiontype ) . '</span></div>';
+			\printf(
+				'<span class="fedireactioncounter">%d %s</span></div>',
+				\absint( $reactioncount ),
+				\esc_html( $reactiontype )
+			);
 		}
 
 		echo '</div>';
