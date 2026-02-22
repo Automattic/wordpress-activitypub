@@ -1,5 +1,5 @@
 <?php
-/*
+/**
  * Plugin Name:       Blockless ActivityPub
  * Plugin URI:        https://github.com/Automattic/wordpress-activitypub
  * Description:       Make activitypub blockless and use less JS
@@ -11,6 +11,8 @@
  * License:           GPL v2 or later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Requires Plugins:  activitypub
+ *
+ * @package Activitypub
  */
 
 namespace Activitypub\Snippets;
@@ -20,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// don't do 'remote reply' by removing the filter.
+// Don't do 'remote reply' by removing the filter.
 \add_action(
 	'template_redirect',
 	function () {
@@ -32,17 +34,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 	}
 );
 
-// this could be useful at some point?
+// This could be useful at some point.
+// phpcs:ignore Squiz.Commenting.InlineComment.InvalidEndChar
 // \add_filter( 'activitypub_site_supports_blocks', '__return_false', 8 );
 
-// render fediverse reactions server-side
+// Render fediverse reactions server-side.
 \add_action(
 	'comments_template',
 	function () {
 		$post_id            = \get_the_ID();
 		$totalreactioncount = 0;
+		$reactions          = array();
 
-		// get all reactions per type of reaction.
+		// Get all reactions per type of reaction.
 		foreach ( array( 'like', 'repost', 'quote' ) as $reactiontype ) {
 			$args = array(
 				'post_id' => $post_id,
@@ -51,20 +55,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 				'parent'  => 0,
 			);
 
-			// fetch results and store in array per reactiontype.
+			// Fetch results and store in array per reactiontype.
 			$query                      = new \WP_Comment_Query();
 			$reactions[ $reactiontype ] = $query->query( $args );
 
-			// keep track of total number of reactions to show in the title.
+			// Keep track of total number of reactions to show in the title.
 			$totalreactioncount += count( $reactions[ $reactiontype ] );
 		}
 
-		// bail if none found.
-		if ( $totalreactioncount == 0 ) {
+		// Bail if none found.
+		if ( 0 === $totalreactioncount ) {
 			return;
 		}
 
-		// start output, including styles (ugly, I know).
+		// Start output, including styles.
 		echo '<style>
 			div#fedifeedback{
 				padding-bottom:44px;
@@ -92,27 +96,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 			}
 		</style>
 		<div id="fedifeedback">
-		<h2>' . $totalreactioncount . ' Fediverse reactions</h2>';
+		<h2>' . \absint( $totalreactioncount ) . ' Fediverse reactions</h2>';
 
-		// iterate through the array for each reactiontype (like, repost, quote)
-		foreach ( $reactions as $reactiontype => $reactions ) {
-			if ( empty( $reactions ) ) {
+		// Iterate through the array for each reactiontype (like, repost, quote).
+		foreach ( $reactions as $reactiontype => $reactionlist ) {
+			if ( empty( $reactionlist ) ) {
 				continue;
 			}
 
-			// output avatars for this reactiontype
+			// Output avatars for this reactiontype.
 			echo '<div class="fedireactiontyperow">';
-			foreach ( $reactions as $reaction ) {
-				echo '<a href="' . esc_url( $reaction->comment_author_url ) . '"><img class="fedifacelet" src="' . esc_url( get_avatar_url( $reaction ) ) . '" alt="' . esc_html( $reaction->comment_author ) . '" title="' . esc_html( $reaction->comment_author ) . '" /></a>';
+			foreach ( $reactionlist as $reaction ) {
+				echo '<a href="' . \esc_url( $reaction->comment_author_url ) . '"><img class="fedifacelet" src="' . \esc_url( \get_avatar_url( $reaction ) ) . '" alt="' . \esc_html( $reaction->comment_author ) . '" title="' . \esc_html( $reaction->comment_author ) . '" /></a>';
 			}
 
-			// ugly shortcut for plurals, no multilang yet either.
-			$reactioncount = count( $reactions );
+			// Ugly shortcut for plurals, no multilang yet either.
+			$reactioncount = count( $reactionlist );
 			if ( $reactioncount > 1 ) {
 				$reactiontype .= 's';
 			}
 
-			echo '<span class="fedireactioncounter">' . $reactioncount . ' ' . $reactiontype . '</span></div>';
+			echo '<span class="fedireactioncounter">' . \absint( $reactioncount ) . ' ' . \esc_html( $reactiontype ) . '</span></div>';
 		}
 
 		echo '</div>';
