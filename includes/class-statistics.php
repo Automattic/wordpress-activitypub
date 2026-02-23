@@ -115,8 +115,9 @@ class Statistics {
 	 * @return array The collected stats.
 	 */
 	public static function collect_monthly_stats( $user_id, $year, $month ) {
-		$start = \gmdate( 'Y-m-d 00:00:00', \strtotime( sprintf( '%d-%02d-01', $year, $month ) ) );
-		$end   = \gmdate( 'Y-m-d 23:59:59', \strtotime( 'last day of ' . sprintf( '%d-%02d', $year, $month ) ) );
+		$last_day = (int) \gmdate( 't', \gmmktime( 0, 0, 0, $month, 1, $year ) );
+		$start    = \sprintf( '%d-%02d-01 00:00:00', $year, $month );
+		$end      = \sprintf( '%d-%02d-%02d 23:59:59', $year, $month, $last_day );
 
 		// Count new followers gained this month (by post_date in followers table).
 		$followers_count = Followers::count_in_range( $user_id, $start, $end );
@@ -282,11 +283,13 @@ class Statistics {
 		}
 
 		$args = array(
-			'post_type'      => Outbox::POST_TYPE,
-			'post_status'    => array( 'publish', 'pending' ),
-			'posts_per_page' => -1,
-			'fields'         => 'ids',
-			'date_query'     => array(
+			'post_type'              => Outbox::POST_TYPE,
+			'post_status'            => array( 'publish', 'pending' ),
+			'posts_per_page'         => 1,
+			'fields'                 => 'ids',
+			'update_post_meta_cache' => false,
+			'update_post_term_cache' => false,
+			'date_query'             => array(
 				array(
 					'after'     => $start,
 					'before'    => $end,
@@ -294,7 +297,7 @@ class Statistics {
 				),
 			),
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query'     => $meta_query,
+			'meta_query'             => $meta_query,
 		);
 
 		// Filter by post author for user-specific stats.
@@ -320,25 +323,8 @@ class Statistics {
 	public static function count_engagement_in_range( $user_id, $start, $end, $type = null ) {
 		global $wpdb;
 
-		// Get post IDs for the user (all supported post types).
-		$post_args = array(
-			'posts_per_page' => -1,
-			'fields'         => 'ids',
-			'post_status'    => 'publish',
-			'post_type'      => \get_option( 'activitypub_support_post_types', array( 'post' ) ),
-		);
-
-		if ( Actors::BLOG_USER_ID !== $user_id ) {
-			$post_args['author'] = $user_id;
-		}
-
-		$post_ids = \get_posts( $post_args );
-
-		if ( empty( $post_ids ) ) {
-			return 0;
-		}
-
-		$placeholders = \implode( ', ', \array_fill( 0, \count( $post_ids ), '%d' ) );
+		// Use a subquery to avoid loading all post IDs into memory.
+		$post_subquery = self::get_post_ids_subquery( $user_id );
 
 		$type_clause = '';
 		if ( $type ) {
@@ -356,18 +342,18 @@ class Statistics {
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.NoCaching
 		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		// phpcs:disable WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 		$count = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(DISTINCT c.comment_ID) FROM {$wpdb->comments} c
 				INNER JOIN {$wpdb->commentmeta} cm ON c.comment_ID = cm.comment_id
-				WHERE c.comment_post_ID IN ({$placeholders})
+				WHERE c.comment_post_ID IN ({$post_subquery})
 				AND cm.meta_key = 'protocol'
 				AND cm.meta_value = 'activitypub'
 				AND c.comment_date_gmt >= %s
 				AND c.comment_date_gmt <= %s
 				{$type_clause}",
-				\array_merge( $post_ids, array( $start, $end ) )
+				$start,
+				$end
 			)
 		);
 		// phpcs:enable
@@ -388,31 +374,8 @@ class Statistics {
 	public static function get_top_posts( $user_id, $start, $end, $limit = 5 ) {
 		global $wpdb;
 
-		$post_args = array(
-			'posts_per_page' => -1,
-			'fields'         => 'ids',
-			'post_status'    => 'publish',
-			'post_type'      => \get_option( 'activitypub_support_post_types', array( 'post' ) ),
-			'date_query'     => array(
-				array(
-					'after'     => $start,
-					'before'    => $end,
-					'inclusive' => true,
-				),
-			),
-		);
-
-		if ( Actors::BLOG_USER_ID !== $user_id ) {
-			$post_args['author'] = $user_id;
-		}
-
-		$post_ids = \get_posts( $post_args );
-
-		if ( empty( $post_ids ) ) {
-			return array();
-		}
-
-		$placeholders = \implode( ', ', \array_fill( 0, \count( $post_ids ), '%d' ) );
+		// Use a subquery with date range to only consider posts published in the period.
+		$post_subquery = self::get_post_ids_subquery( $user_id, $start, $end );
 
 		// Get registered comment types dynamically.
 		$comment_types = Comment::get_comment_type_slugs();
@@ -422,27 +385,30 @@ class Statistics {
 
 		$placeholders_types = \implode( ', ', \array_fill( 0, \count( $comment_types ), '%s' ) );
 
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		$type_clause = $wpdb->prepare( "AND c.comment_type IN ({$placeholders_types})", $comment_types );
+
 		// Get engagement counts per post (only engagement within the date range).
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.NoCaching
 		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared
-		// phpcs:disable WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 		$results = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT c.comment_post_ID as post_id, COUNT(c.comment_ID) as engagement_count
 				FROM {$wpdb->comments} c
 				INNER JOIN {$wpdb->commentmeta} cm ON c.comment_ID = cm.comment_id
-				WHERE c.comment_post_ID IN ({$placeholders})
+				WHERE c.comment_post_ID IN ({$post_subquery})
 				AND cm.meta_key = 'protocol'
 				AND cm.meta_value = 'activitypub'
-				AND c.comment_type IN ({$placeholders_types})
+				{$type_clause}
 				AND c.comment_date_gmt >= %s
 				AND c.comment_date_gmt <= %s
 				GROUP BY c.comment_post_ID
 				ORDER BY engagement_count DESC
 				LIMIT %d",
-				\array_merge( $post_ids, $comment_types, array( $start, $end, $limit ) )
+				$start,
+				$end,
+				$limit
 			),
 			ARRAY_A
 		);
@@ -476,36 +442,19 @@ class Statistics {
 	public static function get_top_multiplicator( $user_id, $start, $end ) {
 		global $wpdb;
 
-		$post_args = array(
-			'posts_per_page' => -1,
-			'fields'         => 'ids',
-			'post_status'    => 'publish',
-			'post_type'      => \get_option( 'activitypub_support_post_types', array( 'post' ) ),
-		);
-
-		if ( Actors::BLOG_USER_ID !== $user_id ) {
-			$post_args['author'] = $user_id;
-		}
-
-		$post_ids = \get_posts( $post_args );
-
-		if ( empty( $post_ids ) ) {
-			return null;
-		}
-
-		$placeholders = \implode( ', ', \array_fill( 0, \count( $post_ids ), '%d' ) );
+		// Use a subquery to avoid loading all post IDs into memory.
+		$post_subquery = self::get_post_ids_subquery( $user_id );
 
 		// Get actor who boosted the most.
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.NoCaching
 		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		// phpcs:disable WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 		$result = $wpdb->get_row(
 			$wpdb->prepare(
 				"SELECT c.comment_author as name, c.comment_author_url as url, COUNT(c.comment_ID) as boost_count
 				FROM {$wpdb->comments} c
 				INNER JOIN {$wpdb->commentmeta} cm ON c.comment_ID = cm.comment_id
-				WHERE c.comment_post_ID IN ({$placeholders})
+				WHERE c.comment_post_ID IN ({$post_subquery})
 				AND cm.meta_key = 'protocol'
 				AND cm.meta_value = 'activitypub'
 				AND c.comment_type = 'repost'
@@ -514,7 +463,8 @@ class Statistics {
 				GROUP BY c.comment_author_url
 				ORDER BY boost_count DESC
 				LIMIT 1",
-				\array_merge( $post_ids, array( $start, $end ) )
+				$start,
+				$end
 			),
 			ARRAY_A
 		);
@@ -671,8 +621,9 @@ class Statistics {
 			}
 		} else {
 			// Query live data.
-			$start = \gmdate( 'Y-m-d 00:00:00', \strtotime( sprintf( '%d-%02d-01', $year, $month ) ) );
-			$end   = \gmdate( 'Y-m-d 23:59:59', \strtotime( 'last day of ' . sprintf( '%d-%02d', $year, $month ) ) );
+			$last_day = (int) \gmdate( 't', \gmmktime( 0, 0, 0, $month, 1, $year ) );
+			$start    = \sprintf( '%d-%02d-01 00:00:00', $year, $month );
+			$end      = \sprintf( '%d-%02d-%02d 23:59:59', $year, $month, $last_day );
 
 			$engagement = self::count_engagement_in_range( $user_id, $start, $end );
 
@@ -784,11 +735,13 @@ class Statistics {
 		}
 
 		// Add federated comments (replies) which use the standard 'comment' type.
-		$result['comment'] = array(
-			'slug'     => 'comment',
-			'label'    => \__( 'Comments', 'activitypub' ),
-			'singular' => \__( 'Comment', 'activitypub' ),
-		);
+		if ( ! isset( $result['comment'] ) ) {
+			$result['comment'] = array(
+				'slug'     => 'comment',
+				'label'    => \__( 'Comments', 'activitypub' ),
+				'singular' => \__( 'Comment', 'activitypub' ),
+			);
+		}
 
 		/**
 		 * Filter the comment types tracked in statistics.
@@ -883,6 +836,48 @@ class Statistics {
 	}
 
 	/**
+	 * Get a prepared SQL subquery that returns post IDs for a user.
+	 *
+	 * This avoids loading all post IDs into PHP memory by using a SQL subquery
+	 * that can be embedded in other queries via IN (...).
+	 *
+	 * @param int         $user_id The user ID.
+	 * @param string|null $start   Optional start date (Y-m-d H:i:s).
+	 * @param string|null $end     Optional end date (Y-m-d H:i:s).
+	 *
+	 * @return string Prepared SQL subquery string.
+	 */
+	private static function get_post_ids_subquery( $user_id, $start = null, $end = null ) {
+		global $wpdb;
+
+		$post_types        = (array) \get_option( 'activitypub_support_post_types', array( 'post' ) );
+		$type_placeholders = \implode( ', ', \array_fill( 0, \count( $post_types ), '%s' ) );
+		$params            = $post_types;
+
+		$author_clause = '';
+		if ( Actors::BLOG_USER_ID !== $user_id ) {
+			$author_clause = ' AND post_author = %d';
+			$params[]      = $user_id;
+		}
+
+		$date_clause = '';
+		if ( $start && $end ) {
+			$date_clause = ' AND post_date_gmt >= %s AND post_date_gmt <= %s';
+			$params[]    = $start;
+			$params[]    = $end;
+		}
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+		// phpcs:disable WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		return $wpdb->prepare(
+			"SELECT ID FROM {$wpdb->posts} WHERE post_status = 'publish' AND post_type IN ({$type_placeholders}){$author_clause}{$date_clause}",
+			$params
+		);
+		// phpcs:enable
+	}
+
+	/**
 	 * Get the earliest year that has ActivityPub data for a user.
 	 *
 	 * @param int $user_id The user ID.
@@ -892,41 +887,19 @@ class Statistics {
 	private static function get_earliest_data_year( $user_id ) {
 		global $wpdb;
 
-		// Get post IDs for the user (all supported post types).
-		$post_args = array(
-			'posts_per_page' => -1,
-			'fields'         => 'ids',
-			'post_status'    => 'publish',
-			'post_type'      => \get_option( 'activitypub_support_post_types', array( 'post' ) ),
-		);
-
-		if ( Actors::BLOG_USER_ID !== $user_id ) {
-			$post_args['author'] = $user_id;
-		}
-
-		$post_ids = \get_posts( $post_args );
-
-		if ( empty( $post_ids ) ) {
-			return null;
-		}
-
-		$placeholders = \implode( ', ', \array_fill( 0, \count( $post_ids ), '%d' ) );
+		// Use a subquery to avoid loading all post IDs into memory.
+		$post_subquery = self::get_post_ids_subquery( $user_id );
 
 		// Find earliest comment with ActivityPub protocol.
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.NoCaching
 		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		// phpcs:disable WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
-		// phpcs:disable WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 		$earliest_date = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT MIN(c.comment_date_gmt) FROM {$wpdb->comments} c
-				INNER JOIN {$wpdb->commentmeta} cm ON c.comment_ID = cm.comment_id
-				WHERE c.comment_post_ID IN ({$placeholders})
-				AND cm.meta_key = 'protocol'
-				AND cm.meta_value = 'activitypub'",
-				$post_ids
-			)
+			"SELECT MIN(c.comment_date_gmt) FROM {$wpdb->comments} c
+			INNER JOIN {$wpdb->commentmeta} cm ON c.comment_ID = cm.comment_id
+			WHERE c.comment_post_ID IN ({$post_subquery})
+			AND cm.meta_key = 'protocol'
+			AND cm.meta_value = 'activitypub'"
 		);
 		// phpcs:enable
 

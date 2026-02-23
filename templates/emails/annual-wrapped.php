@@ -180,11 +180,14 @@ require __DIR__ . '/parts/header.php';
 	</p>
 	<p>
 		<?php
-		printf(
-			/* translators: 1: followers at start, 2: followers at end */
-			esc_html__( 'You started the year with %1$s followers and ended with %2$s.', 'activitypub' ),
-			'<strong>' . esc_html( number_format_i18n( $args['followers_start'] ?? 0 ) ) . '</strong>',
-			'<strong>' . esc_html( number_format_i18n( $args['followers_end'] ?? 0 ) ) . '</strong>'
+		echo wp_kses(
+			sprintf(
+				/* translators: 1: followers at start, 2: followers at end */
+				__( 'You started the year with %1$s followers and ended with %2$s.', 'activitypub' ),
+				'<strong>' . esc_html( number_format_i18n( $args['followers_start'] ?? 0 ) ) . '</strong>',
+				'<strong>' . esc_html( number_format_i18n( $args['followers_end'] ?? 0 ) ) . '</strong>'
+			),
+			array( 'strong' => array() )
 		);
 		?>
 	</p>
@@ -195,11 +198,17 @@ require __DIR__ . '/parts/header.php';
 	<h3><?php esc_html_e( 'Your Biggest Supporter', 'activitypub' ); ?></h3>
 	<p>
 		<?php
-		printf(
-			/* translators: 1: supporter name, 2: number of boosts */
-			esc_html__( '%1$s boosted your content %2$s times this year!', 'activitypub' ),
-			'<strong><a href="' . esc_url( $args['top_multiplicator']['url'] ?? '' ) . '">' . esc_html( $args['top_multiplicator']['name'] ) . '</a></strong>',
-			'<strong>' . esc_html( number_format_i18n( $args['top_multiplicator']['count'] ?? 0 ) ) . '</strong>'
+		echo wp_kses(
+			sprintf(
+				/* translators: 1: supporter name, 2: number of boosts */
+				__( '%1$s boosted your content %2$s times this year!', 'activitypub' ),
+				'<strong><a href="' . esc_url( $args['top_multiplicator']['url'] ?? '' ) . '">' . esc_html( $args['top_multiplicator']['name'] ) . '</a></strong>',
+				'<strong>' . esc_html( number_format_i18n( $args['top_multiplicator']['count'] ?? 0 ) ) . '</strong>'
+			),
+			array(
+				'strong' => array(),
+				'a'      => array( 'href' => array() ),
+			)
 		);
 		?>
 	</p>

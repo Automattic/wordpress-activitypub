@@ -451,7 +451,7 @@ class Mailer {
 		}
 
 		// Load the HTML template.
-		$template_file = ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/' . $template . '.php';
+		$template_file = ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/' . \sanitize_file_name( $template ) . '.php';
 
 		/**
 		 * Filter the email template file path.

@@ -43,6 +43,11 @@ class Statistics {
 			Statistics_Collector::collect_monthly_stats( $user_id, $year, $month );
 		}
 
+		// Reschedule to the exact next 1st of month to prevent drift from the 30-day interval.
+		$next_first = \strtotime( 'first day of next month 02:00:00', $now );
+		\wp_clear_scheduled_hook( 'activitypub_collect_monthly_stats' );
+		\wp_schedule_event( $next_first, 'monthly', 'activitypub_collect_monthly_stats' );
+
 		/**
 		 * Fires after monthly statistics have been collected for all users.
 		 *

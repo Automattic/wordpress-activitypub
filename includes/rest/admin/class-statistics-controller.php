@@ -63,7 +63,7 @@ class Statistics_Controller extends \WP_REST_Controller {
 	 * @return true|\WP_Error True if the request has access, WP_Error otherwise.
 	 */
 	public function get_item_permissions_check( $request ) {
-		$user_id = $request->get_param( 'user_id' );
+		$user_id = (int) $request->get_param( 'user_id' );
 
 		// Check if user can access stats for this actor.
 		if ( Actors::BLOG_USER_ID === $user_id ) {
@@ -93,24 +93,31 @@ class Statistics_Controller extends \WP_REST_Controller {
 	 * @return \WP_REST_Response|\WP_Error Response object or WP_Error object.
 	 */
 	public function get_item( $request ) {
-		$user_id = $request->get_param( 'user_id' );
+		$user_id       = (int) $request->get_param( 'user_id' );
+		$transient_key = 'activitypub_stats_' . $user_id;
 
-		$stats         = Statistics::get_current_stats( $user_id, 'month' );
-		$comparison    = Statistics::get_period_comparison( $user_id );
-		$monthly_data  = Statistics::get_rolling_monthly_breakdown( $user_id );
-		$comment_types = Statistics::get_comment_types_for_stats();
+		$response = \get_transient( $transient_key );
 
-		$response = array(
-			'stats'         => array(
-				'posts_count'       => $stats['posts_count'],
-				'followers_total'   => $stats['followers_total'],
-				'top_posts'         => $stats['top_posts'],
-				'top_multiplicator' => $stats['top_multiplicator'],
-			),
-			'comparison'    => $comparison,
-			'monthly'       => \array_values( $monthly_data ),
-			'comment_types' => $comment_types,
-		);
+		if ( false === $response ) {
+			$stats         = Statistics::get_current_stats( $user_id, 'month' );
+			$comparison    = Statistics::get_period_comparison( $user_id );
+			$monthly_data  = Statistics::get_rolling_monthly_breakdown( $user_id );
+			$comment_types = Statistics::get_comment_types_for_stats();
+
+			$response = array(
+				'stats'         => array(
+					'posts_count'       => $stats['posts_count'],
+					'followers_total'   => $stats['followers_total'],
+					'top_posts'         => $stats['top_posts'],
+					'top_multiplicator' => $stats['top_multiplicator'],
+				),
+				'comparison'    => $comparison,
+				'monthly'       => \array_values( $monthly_data ),
+				'comment_types' => $comment_types,
+			);
+
+			\set_transient( $transient_key, $response, 15 * MINUTE_IN_SECONDS );
+		}
 
 		return \rest_ensure_response( $response );
 	}
