@@ -680,6 +680,33 @@ class Client {
 	}
 
 	/**
+	 * Delete all OAuth clients and their associated tokens.
+	 *
+	 * Used during plugin uninstall to clean up all OAuth data.
+	 *
+	 * @return int The number of clients deleted.
+	 */
+	public static function delete_all() {
+		$post_ids = \get_posts(
+			array(
+				'post_type'   => self::POST_TYPE,
+				'post_status' => array( 'any', 'trash', 'auto-draft' ),
+				'fields'      => 'ids',
+				'numberposts' => -1,
+			)
+		);
+
+		foreach ( $post_ids as $post_id ) {
+			\wp_delete_post( $post_id, true );
+		}
+
+		// Also revoke all tokens stored in user meta.
+		Token::revoke_all();
+
+		return count( $post_ids );
+	}
+
+	/**
 	 * Delete a client and all its tokens.
 	 *
 	 * @param string $client_id The client ID to delete.

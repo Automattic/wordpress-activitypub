@@ -435,6 +435,26 @@ class Token {
 	}
 
 	/**
+	 * Revoke all tokens for all users.
+	 *
+	 * Used during plugin uninstall to clean up all OAuth token data.
+	 *
+	 * @return int Number of tokens revoked.
+	 */
+	public static function revoke_all() {
+		$users = self::get_tracked_users();
+		$count = 0;
+
+		foreach ( $users as $user_id ) {
+			$count += self::revoke_all_for_user( $user_id );
+		}
+
+		\delete_option( self::USERS_OPTION );
+
+		return $count;
+	}
+
+	/**
 	 * Revoke all tokens for a specific client.
 	 *
 	 * @param string $client_id OAuth client ID.
