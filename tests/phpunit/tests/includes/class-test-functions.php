@@ -304,6 +304,43 @@ class Test_Functions extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_client_ip returns REMOTE_ADDR by default.
+	 *
+	 * @covers \Activitypub\get_client_ip
+	 */
+	public function test_get_client_ip_default() {
+		$_SERVER['REMOTE_ADDR'] = '192.168.1.1';
+		$this->assertSame( '192.168.1.1', \Activitypub\get_client_ip() );
+	}
+
+	/**
+	 * Test get_client_ip is filterable.
+	 *
+	 * @covers \Activitypub\get_client_ip
+	 */
+	public function test_get_client_ip_filter() {
+		$_SERVER['REMOTE_ADDR'] = '10.0.0.1';
+
+		$filter = function () {
+			return '203.0.113.50';
+		};
+
+		\add_filter( 'activitypub_client_ip', $filter );
+		$this->assertSame( '203.0.113.50', \Activitypub\get_client_ip() );
+		\remove_filter( 'activitypub_client_ip', $filter );
+	}
+
+	/**
+	 * Test get_client_ip returns unknown when REMOTE_ADDR is missing.
+	 *
+	 * @covers \Activitypub\get_client_ip
+	 */
+	public function test_get_client_ip_missing_remote_addr() {
+		unset( $_SERVER['REMOTE_ADDR'] );
+		$this->assertSame( 'unknown', \Activitypub\get_client_ip() );
+	}
+
+	/**
 	 * Data provider for seconds_to_iso8601 tests.
 	 *
 	 * @return array Test cases with input seconds and expected ISO 8601 duration.

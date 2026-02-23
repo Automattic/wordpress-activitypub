@@ -7,6 +7,8 @@
 
 namespace Activitypub\OAuth;
 
+use function Activitypub\get_client_ip;
+
 /**
  * Client class for managing OAuth 2.0 client registrations.
  *
@@ -171,7 +173,7 @@ class Client {
 	 */
 	private static function discover_and_register( $client_id ) {
 		// Rate-limit auto-discovery to prevent SSRF abuse (max 10 per minute per IP).
-		$ip            = isset( $_SERVER['REMOTE_ADDR'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown';
+		$ip            = get_client_ip();
 		$transient_key = 'ap_oauth_disc_' . \md5( $ip );
 		$count         = (int) \get_transient( $transient_key );
 

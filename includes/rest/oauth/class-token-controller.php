@@ -12,6 +12,8 @@ use Activitypub\OAuth\Client;
 use Activitypub\OAuth\Server as OAuth_Server;
 use Activitypub\OAuth\Token;
 
+use function Activitypub\get_client_ip;
+
 /**
  * Token_Controller class for handling OAuth 2.0 token endpoints.
  *
@@ -147,7 +149,7 @@ class Token_Controller extends \WP_REST_Controller {
 	 */
 	public function token( \WP_REST_Request $request ) {
 		// Rate-limit token requests to prevent brute-force attacks (max 20 per minute per IP).
-		$ip            = isset( $_SERVER['REMOTE_ADDR'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown'; // phpcs:ignore WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders
+		$ip            = get_client_ip();
 		$transient_key = 'ap_oauth_tok_' . \md5( $ip );
 		$count         = (int) \get_transient( $transient_key );
 

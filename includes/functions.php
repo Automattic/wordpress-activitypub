@@ -337,3 +337,30 @@ function enrich_content_data( $content, $regex, $regex_callback ) {
 function get_embed_html( $url, $inline_css = true ) {
 	return Embed::get_html( $url, $inline_css );
 }
+
+/**
+ * Get the client IP address for rate-limiting purposes.
+ *
+ * Uses REMOTE_ADDR by default. Sites behind a reverse proxy (Nginx,
+ * Cloudflare, etc.) should use the `activitypub_client_ip` filter to
+ * return the real client IP from a trusted header like X-Forwarded-For.
+ *
+ * @since unreleased
+ *
+ * @return string The client IP address.
+ */
+function get_client_ip() {
+	$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown'; // phpcs:ignore WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders
+
+	/**
+	 * Filter the client IP address used for rate limiting.
+	 *
+	 * Sites behind a reverse proxy should hook here to return the real
+	 * client IP from a trusted header (e.g. X-Forwarded-For, CF-Connecting-IP).
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $ip The client IP address from REMOTE_ADDR.
+	 */
+	return \apply_filters( 'activitypub_client_ip', $ip );
+}
