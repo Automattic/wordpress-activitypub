@@ -45,7 +45,7 @@ class Create {
 		$object = $activity['object'] ?? array();
 
 		if ( ! \is_array( $object ) ) {
-			return new \WP_Error( 'invalid_object', \__( 'Invalid object in activity.', 'activitypub' ) );
+			return new \WP_Error( 'invalid_object', 'Invalid object in activity.' );
 		}
 
 		$object_type = $object['type'] ?? '';
