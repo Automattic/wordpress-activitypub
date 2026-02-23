@@ -271,6 +271,7 @@ class Server {
 		$response->header( 'Access-Control-Allow-Headers', 'Accept, Content-Type, Authorization' );
 
 		if ( $origin ) {
+			$response->header( 'Access-Control-Allow-Credentials', 'true' );
 			$response->header( 'Vary', 'Origin' );
 		}
 

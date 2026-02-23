@@ -59,7 +59,7 @@ class Handler {
 		/**
 		 * Register additional outbox handlers.
 		 *
-		 * @since 1.3.0
+		 * @since unreleased
 		 */
 		do_action( 'activitypub_register_outbox_handlers' );
 	}

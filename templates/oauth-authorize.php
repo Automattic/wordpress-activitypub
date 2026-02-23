@@ -62,11 +62,14 @@ login_header(
 		<?php echo get_avatar( $current_user->ID, 48 ); ?>
 		<p>
 		<?php
-		printf(
-			/* translators: 1: User display name, 2: User login */
-			esc_html__( 'Logged in as %1$s (%2$s). You can revoke access at any time.', 'activitypub' ),
-			'<strong>' . esc_html( $current_user->display_name ) . '</strong>',
-			esc_html( $current_user->user_login )
+		echo wp_kses(
+			sprintf(
+				/* translators: 1: User display name, 2: User login */
+				__( 'Logged in as %1$s (%2$s). You can revoke access at any time.', 'activitypub' ),
+				'<strong>' . esc_html( $current_user->display_name ) . '</strong>',
+				esc_html( $current_user->user_login )
+			),
+			array( 'strong' => array() )
 		);
 		?>
 		</p>
@@ -93,10 +96,13 @@ login_header(
 
 	<div class="activitypub-oauth-redirect" style="background: #f0f6fc; padding: 10px 15px; border-radius: 4px; margin: 20px 0; font-size: 13px;">
 		<?php
-		printf(
-			/* translators: %s: Redirect URI */
-			esc_html__( 'You will be redirected to %s after authorization.', 'activitypub' ),
-			'<code>' . esc_html( $redirect_uri ) . '</code>'
+		echo wp_kses(
+			sprintf(
+				/* translators: %s: Redirect URI */
+				__( 'You will be redirected to %s after authorization.', 'activitypub' ),
+				'<code>' . esc_html( $redirect_uri ) . '</code>'
+			),
+			array( 'code' => array() )
 		);
 		?>
 	</div>

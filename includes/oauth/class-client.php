@@ -149,7 +149,7 @@ class Client {
 		}
 
 		// If client_id is a URL, try auto-discovery.
-		if ( filter_var( $client_id, FILTER_VALIDATE_URL ) ) {
+		if ( \filter_var( $client_id, FILTER_VALIDATE_URL ) ) {
 			return self::discover_and_register( $client_id );
 		}
 
@@ -425,7 +425,7 @@ class Client {
 		 * The redirect_uri must be on the same host as the client_id.
 		 */
 		$client_id = $this->get_client_id();
-		if ( filter_var( $client_id, FILTER_VALIDATE_URL ) ) {
+		if ( \filter_var( $client_id, FILTER_VALIDATE_URL ) ) {
 			$client_host   = \wp_parse_url( $client_id, PHP_URL_HOST );
 			$redirect_host = \wp_parse_url( $redirect_uri, PHP_URL_HOST );
 
