@@ -27,9 +27,12 @@ class Token {
 	const REFRESH_INDEX_PREFIX = '_activitypub_oauth_refresh_';
 
 	/**
-	 * Option key for tracking users with tokens (for cleanup).
+	 * Post meta key on OAuth client posts to track users with tokens.
+	 *
+	 * Stored as non-unique post meta (one row per user) on ap_oauth_client posts,
+	 * following the same pattern as _activitypub_following on ap_actor posts.
 	 */
-	const USERS_OPTION = 'activitypub_oauth_token_users';
+	const USER_META_KEY = '_activitypub_user_id';
 
 	/**
 	 * Maximum number of active tokens per user.
@@ -131,8 +134,8 @@ class Token {
 		$refresh_index_key = self::REFRESH_INDEX_PREFIX . self::hash_token( $refresh_token );
 		\update_user_meta( $user_id, $refresh_index_key, $access_hash );
 
-		// Track user for cleanup.
-		self::track_user( $user_id );
+		// Track user on the client post for cleanup.
+		self::track_user( $user_id, $client_id );
 
 		// Enforce per-user token limit by revoking the oldest tokens.
 		self::enforce_token_limit( $user_id );
@@ -341,6 +344,7 @@ class Token {
 		if ( $user_id ) {
 			$user_id    = (int) $user_id;
 			$token_data = \get_user_meta( $user_id, $access_meta_key, true );
+			$client_id  = is_array( $token_data ) ? ( $token_data['client_id'] ?? '' ) : '';
 
 			// Delete the token.
 			\delete_user_meta( $user_id, $access_meta_key );
@@ -351,7 +355,7 @@ class Token {
 				\delete_user_meta( $user_id, $refresh_index_key );
 			}
 
-			self::maybe_untrack_user( $user_id );
+			self::maybe_untrack_user( $user_id, $client_id );
 			return true;
 		}
 
@@ -367,14 +371,17 @@ class Token {
 		if ( $user_id ) {
 			$user_id     = (int) $user_id;
 			$access_hash = \get_user_meta( $user_id, $refresh_index_key, true );
+			$client_id   = '';
 
 			// Delete the token and index.
 			if ( $access_hash ) {
+				$token_data = \get_user_meta( $user_id, self::META_PREFIX . $access_hash, true );
+				$client_id  = is_array( $token_data ) ? ( $token_data['client_id'] ?? '' ) : '';
 				\delete_user_meta( $user_id, self::META_PREFIX . $access_hash );
 			}
 			\delete_user_meta( $user_id, $refresh_index_key );
 
-			self::maybe_untrack_user( $user_id );
+			self::maybe_untrack_user( $user_id, $client_id );
 			return true;
 		}
 
@@ -383,25 +390,25 @@ class Token {
 	}
 
 	/**
-	 * Untrack user if they have no remaining tokens.
+	 * Untrack user from a client if they have no remaining tokens for that client.
 	 *
-	 * @param int $user_id The user ID.
+	 * @param int    $user_id   The user ID.
+	 * @param string $client_id The OAuth client ID.
 	 */
-	private static function maybe_untrack_user( $user_id ) {
-		global $wpdb;
-
-		// Check if user has any remaining tokens.
-		$count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$wpdb->prepare(
-				"SELECT COUNT(*) FROM $wpdb->usermeta WHERE user_id = %d AND meta_key LIKE %s",
-				$user_id,
-				$wpdb->esc_like( self::META_PREFIX ) . '%'
-			)
-		);
-
-		if ( 0 === (int) $count ) {
-			self::untrack_user( $user_id );
+	private static function maybe_untrack_user( $user_id, $client_id ) {
+		if ( empty( $client_id ) ) {
+			return;
 		}
+
+		// Check if user has any remaining tokens for this client.
+		$tokens = self::get_all_for_user( $user_id );
+		foreach ( $tokens as $token_data ) {
+			if ( isset( $token_data['client_id'] ) && $token_data['client_id'] === $client_id ) {
+				return; // Still has tokens for this client.
+			}
+		}
+
+		self::untrack_user( $user_id, $client_id );
 	}
 
 	/**
@@ -411,12 +418,17 @@ class Token {
 	 * @return int Number of tokens revoked.
 	 */
 	public static function revoke_all_for_user( $user_id ) {
-		$all_meta = \get_user_meta( $user_id );
-		$count    = 0;
+		$all_meta   = \get_user_meta( $user_id );
+		$count      = 0;
+		$client_ids = array();
 
 		foreach ( $all_meta as $meta_key => $meta_values ) {
-			// Delete token entries.
+			// Delete token entries and collect client IDs.
 			if ( 0 === strpos( $meta_key, self::META_PREFIX ) ) {
+				$token_data = \maybe_unserialize( $meta_values[0] );
+				if ( is_array( $token_data ) && ! empty( $token_data['client_id'] ) ) {
+					$client_ids[] = $token_data['client_id'];
+				}
 				\delete_user_meta( $user_id, $meta_key );
 				++$count;
 			}
@@ -426,9 +438,9 @@ class Token {
 			}
 		}
 
-		// Remove user from tracking if no more tokens.
-		if ( $count > 0 ) {
-			self::untrack_user( $user_id );
+		// Remove user from all client tracking.
+		foreach ( array_unique( $client_ids ) as $client_id ) {
+			self::untrack_user( $user_id, $client_id );
 		}
 
 		return $count;
@@ -442,14 +454,12 @@ class Token {
 	 * @return int Number of tokens revoked.
 	 */
 	public static function revoke_all() {
-		$users = self::get_tracked_users();
-		$count = 0;
+		$user_ids = self::get_all_tracked_users();
+		$count    = 0;
 
-		foreach ( $users as $user_id ) {
+		foreach ( $user_ids as $user_id ) {
 			$count += self::revoke_all_for_user( $user_id );
 		}
-
-		\delete_option( self::USERS_OPTION );
 
 		return $count;
 	}
@@ -461,12 +471,11 @@ class Token {
 	 * @return int Number of tokens revoked.
 	 */
 	public static function revoke_for_client( $client_id ) {
-		$users = self::get_tracked_users();
-		$count = 0;
+		$user_ids = self::get_tracked_users( $client_id );
+		$count    = 0;
 
-		foreach ( $users as $user_id ) {
-			$all_meta    = \get_user_meta( $user_id );
-			$user_tokens = 0;
+		foreach ( $user_ids as $user_id ) {
+			$all_meta = \get_user_meta( $user_id );
 
 			foreach ( $all_meta as $meta_key => $meta_values ) {
 				if ( 0 !== strpos( $meta_key, self::META_PREFIX ) ) {
@@ -479,7 +488,7 @@ class Token {
 					continue;
 				}
 
-				// Check if this token belongs to the client.
+				// Only revoke tokens belonging to this client.
 				if ( isset( $token_data['client_id'] ) && $token_data['client_id'] === $client_id ) {
 					\delete_user_meta( $user_id, $meta_key );
 					// Also delete refresh token index.
@@ -487,16 +496,12 @@ class Token {
 						\delete_user_meta( $user_id, self::REFRESH_INDEX_PREFIX . $token_data['refresh_token_hash'] );
 					}
 					++$count;
-				} else {
-					++$user_tokens;
 				}
 			}
-
-			// Untrack user if no more tokens.
-			if ( 0 === $user_tokens ) {
-				self::untrack_user( $user_id );
-			}
 		}
+
+		// Remove all user tracking for this client.
+		self::untrack_all_users( $client_id );
 
 		return $count;
 	}
@@ -624,15 +629,26 @@ class Token {
 	}
 
 	/**
-	 * Track a user as having tokens.
+	 * Track a user as having tokens for a client.
 	 *
-	 * @param int $user_id The user ID.
+	 * Stores user ID as non-unique post meta on the client post,
+	 * following the same pattern as _activitypub_following on ap_actor posts.
+	 *
+	 * @param int    $user_id   The user ID.
+	 * @param string $client_id The OAuth client ID.
 	 */
-	private static function track_user( $user_id ) {
-		$users = self::get_tracked_users();
-		if ( ! in_array( $user_id, $users, true ) ) {
-			$users[] = $user_id;
-			\update_option( self::USERS_OPTION, $users, false );
+	private static function track_user( $user_id, $client_id ) {
+		$client = Client::get( $client_id );
+
+		if ( \is_wp_error( $client ) ) {
+			return;
+		}
+
+		$post_id  = $client->get_post_id();
+		$existing = \get_post_meta( $post_id, self::USER_META_KEY, false );
+
+		if ( ! in_array( $user_id, array_map( 'intval', $existing ), true ) ) {
+			\add_post_meta( $post_id, self::USER_META_KEY, $user_id );
 		}
 	}
 
@@ -690,27 +706,74 @@ class Token {
 	}
 
 	/**
-	 * Untrack a user (when they have no more tokens).
+	 * Untrack a user from a specific client.
 	 *
-	 * @param int $user_id The user ID.
+	 * @param int    $user_id   The user ID.
+	 * @param string $client_id The OAuth client ID.
 	 */
-	private static function untrack_user( $user_id ) {
-		$users = self::get_tracked_users();
-		$key   = array_search( $user_id, $users, true );
-		if ( false !== $key ) {
-			unset( $users[ $key ] );
-			\update_option( self::USERS_OPTION, array_values( $users ), false );
+	private static function untrack_user( $user_id, $client_id ) {
+		$client = Client::get( $client_id );
+
+		if ( \is_wp_error( $client ) ) {
+			return;
 		}
+
+		\delete_post_meta( $client->get_post_id(), self::USER_META_KEY, $user_id );
 	}
 
 	/**
-	 * Get all tracked users with tokens.
+	 * Untrack all users from a specific client.
 	 *
+	 * @param string $client_id The OAuth client ID.
+	 */
+	private static function untrack_all_users( $client_id ) {
+		$client = Client::get( $client_id );
+
+		if ( \is_wp_error( $client ) ) {
+			return;
+		}
+
+		\delete_post_meta( $client->get_post_id(), self::USER_META_KEY );
+	}
+
+	/**
+	 * Get tracked users for a specific client.
+	 *
+	 * @param string $client_id The OAuth client ID.
 	 * @return array User IDs.
 	 */
-	private static function get_tracked_users() {
-		$users = \get_option( self::USERS_OPTION, array() );
-		return is_array( $users ) ? $users : array();
+	private static function get_tracked_users( $client_id ) {
+		$client = Client::get( $client_id );
+
+		if ( \is_wp_error( $client ) ) {
+			return array();
+		}
+
+		$user_ids = \get_post_meta( $client->get_post_id(), self::USER_META_KEY, false );
+
+		return array_map( 'intval', $user_ids );
+	}
+
+	/**
+	 * Get all user IDs with tokens across all clients.
+	 *
+	 * @return array Unique user IDs.
+	 */
+	private static function get_all_tracked_users() {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$user_ids = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT DISTINCT pm.meta_value FROM $wpdb->postmeta pm
+				INNER JOIN $wpdb->posts p ON pm.post_id = p.ID
+				WHERE p.post_type = %s AND pm.meta_key = %s",
+				Client::POST_TYPE,
+				self::USER_META_KEY
+			)
+		);
+
+		return array_map( 'intval', $user_ids );
 	}
 
 	/**
@@ -721,12 +784,12 @@ class Token {
 	 * @return int Number of tokens deleted.
 	 */
 	public static function cleanup_expired() {
-		$users = self::get_tracked_users();
-		$count = 0;
+		$user_ids = self::get_all_tracked_users();
+		$count    = 0;
 
-		foreach ( $users as $user_id ) {
-			$all_meta    = \get_user_meta( $user_id );
-			$user_tokens = 0;
+		foreach ( $user_ids as $user_id ) {
+			$all_meta   = \get_user_meta( $user_id );
+			$client_ids = array();
 
 			foreach ( $all_meta as $meta_key => $meta_values ) {
 				if ( 0 !== strpos( $meta_key, self::META_PREFIX ) ) {
@@ -754,14 +817,16 @@ class Token {
 						\delete_user_meta( $user_id, self::REFRESH_INDEX_PREFIX . $token_data['refresh_token_hash'] );
 					}
 					++$count;
-				} else {
-					++$user_tokens;
+
+					if ( ! empty( $token_data['client_id'] ) ) {
+						$client_ids[] = $token_data['client_id'];
+					}
 				}
 			}
 
-			// Untrack user if no more tokens.
-			if ( 0 === $user_tokens ) {
-				self::untrack_user( $user_id );
+			// Untrack user from clients where all tokens were removed.
+			foreach ( array_unique( $client_ids ) as $client_id ) {
+				self::maybe_untrack_user( $user_id, $client_id );
 			}
 		}
 

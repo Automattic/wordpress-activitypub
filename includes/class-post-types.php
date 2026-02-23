@@ -17,6 +17,7 @@ use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
 use Activitypub\OAuth\Client;
 use Activitypub\OAuth\Scope;
+use Activitypub\OAuth\Token;
 
 /**
  * Post Types class.
@@ -545,6 +546,17 @@ class Post_Types {
 				'description'       => 'Whether this is a public client (PKCE-only, no secret).',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'default'           => true,
+			)
+		);
+
+		\register_post_meta(
+			Client::POST_TYPE,
+			Token::USER_META_KEY,
+			array(
+				'type'              => 'integer',
+				'single'            => false,
+				'description'       => 'User IDs that have active tokens for this client.',
+				'sanitize_callback' => 'absint',
 			)
 		);
 	}
