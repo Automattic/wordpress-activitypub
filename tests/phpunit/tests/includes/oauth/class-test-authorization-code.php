@@ -445,6 +445,72 @@ class Test_Authorization_Code extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that public clients can skip PKCE by default.
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_without_pkce_allowed_by_default() {
+		$code = Authorization_Code::create(
+			$this->user_id,
+			$this->client_id,
+			$this->redirect_uri,
+			array( Scope::READ ),
+			'', // No PKCE.
+			'S256'
+		);
+
+		$this->assertIsString( $code );
+	}
+
+	/**
+	 * Test that the activitypub_oauth_require_pkce filter enforces PKCE.
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_without_pkce_blocked_by_filter() {
+		\add_filter( 'activitypub_oauth_require_pkce', '__return_true' );
+
+		$result = Authorization_Code::create(
+			$this->user_id,
+			$this->client_id,
+			$this->redirect_uri,
+			array( Scope::READ ),
+			'', // No PKCE.
+			'S256'
+		);
+
+		\remove_filter( 'activitypub_oauth_require_pkce', '__return_true' );
+
+		$this->assertInstanceOf( \WP_Error::class, $result );
+		$this->assertEquals( 'activitypub_pkce_required', $result->get_error_code() );
+	}
+
+	/**
+	 * Test that the PKCE filter does not affect requests that include PKCE.
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_with_pkce_passes_when_filter_enabled() {
+		\add_filter( 'activitypub_oauth_require_pkce', '__return_true' );
+
+		$verifier  = $this->generate_code_verifier();
+		$challenge = Authorization_Code::compute_code_challenge( $verifier );
+
+		$code = Authorization_Code::create(
+			$this->user_id,
+			$this->client_id,
+			$this->redirect_uri,
+			array( Scope::READ ),
+			$challenge,
+			'S256'
+		);
+
+		\remove_filter( 'activitypub_oauth_require_pkce', '__return_true' );
+
+		$this->assertIsString( $code );
+	}
+
+	/**
 	 * Test cleanup method.
 	 *
 	 * @covers ::cleanup
