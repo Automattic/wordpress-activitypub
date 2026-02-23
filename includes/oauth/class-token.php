@@ -32,6 +32,15 @@ class Token {
 	const USERS_OPTION = 'activitypub_oauth_token_users';
 
 	/**
+	 * Maximum number of active tokens per user.
+	 *
+	 * When exceeded, the oldest tokens are revoked automatically.
+	 *
+	 * @since unreleased
+	 */
+	const MAX_TOKENS_PER_USER = 50;
+
+	/**
 	 * Default access token expiration in seconds (1 hour).
 	 */
 	const DEFAULT_EXPIRATION = 3600;
@@ -124,6 +133,9 @@ class Token {
 
 		// Track user for cleanup.
 		self::track_user( $user_id );
+
+		// Enforce per-user token limit by revoking the oldest tokens.
+		self::enforce_token_limit( $user_id );
 
 		/*
 		 * Get the actor URI for the 'me' parameter (IndieAuth convention).
@@ -601,6 +613,59 @@ class Token {
 		if ( ! in_array( $user_id, $users, true ) ) {
 			$users[] = $user_id;
 			\update_option( self::USERS_OPTION, $users, false );
+		}
+	}
+
+	/**
+	 * Enforce per-user token limit by revoking oldest tokens.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $user_id The user ID.
+	 */
+	private static function enforce_token_limit( $user_id ) {
+		$all_meta = \get_user_meta( $user_id );
+		$tokens   = array();
+
+		foreach ( $all_meta as $meta_key => $meta_values ) {
+			if ( 0 !== strpos( $meta_key, self::META_PREFIX ) ) {
+				continue;
+			}
+
+			$token_data = \maybe_unserialize( $meta_values[0] );
+
+			if ( is_array( $token_data ) ) {
+				$tokens[ $meta_key ] = $token_data;
+			}
+		}
+
+		if ( count( $tokens ) <= self::MAX_TOKENS_PER_USER ) {
+			return;
+		}
+
+		// Sort by created_at ascending (oldest first).
+		uasort(
+			$tokens,
+			function ( $a, $b ) {
+				return ( $a['created_at'] ?? 0 ) - ( $b['created_at'] ?? 0 );
+			}
+		);
+
+		$to_remove = count( $tokens ) - self::MAX_TOKENS_PER_USER;
+
+		foreach ( $tokens as $meta_key => $token_data ) {
+			if ( $to_remove <= 0 ) {
+				break;
+			}
+
+			\delete_user_meta( $user_id, $meta_key );
+
+			// Also delete the refresh token index.
+			if ( isset( $token_data['refresh_token_hash'] ) ) {
+				\delete_user_meta( $user_id, self::REFRESH_INDEX_PREFIX . $token_data['refresh_token_hash'] );
+			}
+
+			--$to_remove;
 		}
 	}
 
