@@ -225,10 +225,9 @@ class Following {
 	 *
 	 * @since unreleased
 	 *
-	 * @param mixed $input Input parameters (unused).
 	 * @return bool
 	 */
-	public static function permission_callback( $input = null ) {
+	public static function permission_callback() {
 		return \current_user_can( 'activitypub' );
 	}
 
