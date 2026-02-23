@@ -107,6 +107,10 @@ function plugin_init() {
 		\add_action( 'init', array( __NAMESPACE__ . '\Relay', 'init' ) );
 	}
 
+	// WordPress Abilities API (WP 6.9+). These hooks only fire when the API is available.
+	\add_action( 'wp_abilities_api_categories_init', array( __NAMESPACE__ . '\Abilities', 'register_categories' ) );
+	\add_action( 'wp_abilities_api_init', array( __NAMESPACE__ . '\Abilities', 'register_abilities' ) );
+
 	// Load development tools.
 	if ( 'local' === wp_get_environment_type() ) {
 		$loader_file = __DIR__ . '/local/load.php';
