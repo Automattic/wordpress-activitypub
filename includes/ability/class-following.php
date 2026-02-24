@@ -246,6 +246,14 @@ class Following {
 			return new \WP_Error( 'activitypub_invalid_user_id', \__( 'Invalid user ID.', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
+		if ( \get_current_user_id() !== $user_id && ! \current_user_can( 'manage_options' ) ) {
+			return new \WP_Error(
+				'activitypub_forbidden',
+				\__( 'You are not allowed to view another user\'s following list.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
+		}
+
 		$per_page = isset( $input['per_page'] ) ? \min( \absint( $input['per_page'] ), 100 ) : 20;
 		$page     = isset( $input['page'] ) ? \absint( $input['page'] ) : 1;
 
@@ -283,10 +291,18 @@ class Following {
 	 * @return array|\WP_Error
 	 */
 	public static function follow( $input ) {
+		if ( '1' !== \get_option( 'activitypub_following_ui', '0' ) ) {
+			return new \WP_Error(
+				'activitypub_following_disabled',
+				\__( 'Following feature is disabled.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
+		}
+
 		$actor   = \sanitize_text_field( $input['actor'] );
 		$user_id = isset( $input['user_id'] ) ? \absint( $input['user_id'] ) : \get_current_user_id();
 
-		if ( \get_current_user_id() !== $user_id && ! \current_user_can( 'activitypub' ) ) {
+		if ( \get_current_user_id() !== $user_id && ! \current_user_can( 'manage_options' ) ) {
 			return new \WP_Error(
 				'activitypub_forbidden',
 				\__( 'You are not allowed to act on behalf of another user.', 'activitypub' ),
@@ -315,10 +331,18 @@ class Following {
 	 * @return array|\WP_Error
 	 */
 	public static function unfollow( $input ) {
+		if ( '1' !== \get_option( 'activitypub_following_ui', '0' ) ) {
+			return new \WP_Error(
+				'activitypub_following_disabled',
+				\__( 'Following feature is disabled.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
+		}
+
 		$actor   = \sanitize_text_field( $input['actor'] );
 		$user_id = isset( $input['user_id'] ) ? \absint( $input['user_id'] ) : \get_current_user_id();
 
-		if ( \get_current_user_id() !== $user_id && ! \current_user_can( 'activitypub' ) ) {
+		if ( \get_current_user_id() !== $user_id && ! \current_user_can( 'manage_options' ) ) {
 			return new \WP_Error(
 				'activitypub_forbidden',
 				\__( 'You are not allowed to act on behalf of another user.', 'activitypub' ),

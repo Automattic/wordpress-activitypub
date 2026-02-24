@@ -47,22 +47,6 @@ class Abilities {
 			)
 		);
 
-		\wp_register_ability_category(
-			'activitypub-publish',
-			array(
-				'label'       => \__( 'Publish', 'activitypub' ),
-				'description' => \__( 'Publish and share content to the Fediverse.', 'activitypub' ),
-			)
-		);
-
-		\wp_register_ability_category(
-			'activitypub-moderation',
-			array(
-				'label'       => \__( 'Moderation', 'activitypub' ),
-				'description' => \__( 'Moderate actors, domains, and activity delivery.', 'activitypub' ),
-			)
-		);
-
 		/**
 		 * Fires after built-in ability categories are registered.
 		 *

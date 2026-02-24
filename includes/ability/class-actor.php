@@ -26,9 +26,9 @@ class Actor {
 	 */
 	public static function register() {
 		\wp_register_ability(
-			'activitypub/get-actor-info',
+			'activitypub/get-actor',
 			array(
-				'label'               => \__( 'Get Actor Info', 'activitypub' ),
+				'label'               => \__( 'Get Actor', 'activitypub' ),
 				'description'         => \__( 'Fetch profile information for a remote ActivityPub actor.', 'activitypub' ),
 				'category'            => 'activitypub-discovery',
 				'execute_callback'    => array( self::class, 'get_actor_info' ),
