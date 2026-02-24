@@ -1,0 +1,8 @@
+{
+  "name": "pre-publish-panel",
+  "title": "Pre-Publish Panel: not a block, but block.json is very useful.",
+  "category": "widgets",
+  "icon": "admin-comments",
+  "keywords": [],
+  "editorScript": "file:./plugin.js"
+}
