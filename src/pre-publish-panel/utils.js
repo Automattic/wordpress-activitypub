@@ -1,3 +1,4 @@
+import { __unstableStripHTML as stripHTML } from '@wordpress/dom';
 import { __ } from '@wordpress/i18n';
 
 /**
@@ -77,8 +78,8 @@ export const analyzeBlocks = ( blocks ) => {
 		}
 
 		if ( textBlockNames.includes( name ) ) {
-			const content = ( attributes?.content || '' ).replace( /<[^>]*>/g, '' );
-			result.textLength += content.length;
+			const text = stripHTML( attributes?.content || '' );
+			result.textLength += text.length;
 			result.textBlockCount++;
 		}
 
