@@ -49,6 +49,18 @@ abstract class File {
 	private static $finfo = null;
 
 	/**
+	 * Whether filesystem initialization has already failed this request.
+	 *
+	 * Prevents repeated WP_Filesystem() calls when the server lacks
+	 * direct file access (e.g., FTP-only environments).
+	 *
+	 * @since unreleased
+	 *
+	 * @var bool
+	 */
+	private static $filesystem_failed = false;
+
+	/**
 	 * Get the cache type identifier.
 	 *
 	 * @return string Cache type (e.g., 'avatar', 'media', 'emoji').
@@ -237,11 +249,7 @@ abstract class File {
 		$file_path = $paths['basedir'] . '/' . $file_name;
 
 		// Initialize filesystem.
-		global $wp_filesystem;
-		if ( ! $wp_filesystem ) {
-			require_once ABSPATH . 'wp-admin/includes/file.php';
-			\WP_Filesystem();
-		}
+		$wp_filesystem = static::get_filesystem();
 
 		if ( ! $wp_filesystem ) {
 			\wp_delete_file( $tmp_file );
@@ -289,20 +297,66 @@ abstract class File {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function invalidate_entity( $entity_id ) {
+		$paths = static::get_storage_paths( $entity_id );
+
+		return static::delete_directory( $paths['basedir'] );
+	}
+
+	/**
+	 * Get a properly initialized WP_Filesystem instance.
+	 *
+	 * Handles the case where WP_Filesystem() returns false on failure but
+	 * still sets the global $wp_filesystem to a broken object (e.g., an
+	 * FTP object that can't connect). This method checks the return value
+	 * and nulls the global on failure to prevent fatal errors.
+	 *
+	 * @since unreleased
+	 *
+	 * @return \WP_Filesystem_Base|null The filesystem instance or null on failure.
+	 */
+	protected static function get_filesystem() {
 		global $wp_filesystem;
-		if ( ! $wp_filesystem ) {
-			require_once ABSPATH . 'wp-admin/includes/file.php';
-			\WP_Filesystem();
+
+		if ( $wp_filesystem ) {
+			return $wp_filesystem;
 		}
+
+		// Skip repeated initialization attempts within the same request.
+		if ( self::$filesystem_failed ) {
+			return null;
+		}
+
+		if ( ! \function_exists( 'WP_Filesystem' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+
+		if ( ! \WP_Filesystem() ) {
+			$wp_filesystem           = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Intentionally clearing broken FTP fallback object.
+			self::$filesystem_failed = true;
+			return null;
+		}
+
+		return $wp_filesystem;
+	}
+
+	/**
+	 * Delete a directory and all its contents.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $basedir The directory path to delete.
+	 *
+	 * @return bool True on success or if directory doesn't exist, false on failure.
+	 */
+	protected static function delete_directory( $basedir ) {
+		$wp_filesystem = static::get_filesystem();
 
 		if ( ! $wp_filesystem ) {
 			return false;
 		}
 
-		$paths = static::get_storage_paths( $entity_id );
-
-		if ( $wp_filesystem->is_dir( $paths['basedir'] ) ) {
-			return $wp_filesystem->rmdir( $paths['basedir'], true );
+		if ( $wp_filesystem->is_dir( $basedir ) ) {
+			return $wp_filesystem->rmdir( $basedir, true );
 		}
 
 		return true;
@@ -552,11 +606,7 @@ abstract class File {
 
 		if ( strtolower( $ext ) !== $expected_ext ) {
 			// Rename file to correct extension using WP_Filesystem.
-			global $wp_filesystem;
-			if ( ! $wp_filesystem ) {
-				require_once ABSPATH . 'wp-admin/includes/file.php';
-				\WP_Filesystem();
-			}
+			$wp_filesystem = static::get_filesystem();
 
 			$new_path = \preg_replace( '/\.[^.]+$/', '.' . $expected_ext, $file_path );
 			if ( empty( $new_path ) || $new_path === $file_path ) {

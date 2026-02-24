@@ -148,6 +148,11 @@ class Health_Check {
 			'test'  => array( self::class, 'test_outbox_rate' ),
 		);
 
+		$tests['direct']['activitypub_test_filesystem'] = array(
+			'label' => \__( 'Filesystem Access Test', 'activitypub' ),
+			'test'  => array( self::class, 'test_filesystem' ),
+		);
+
 		return $tests;
 	}
 
@@ -833,6 +838,54 @@ class Health_Check {
 				\esc_url( \admin_url( 'plugins.php' ) )
 			)
 		);
+
+		return $result;
+	}
+
+	/**
+	 * Filesystem access test.
+	 *
+	 * Checks whether WordPress can write files directly. When direct filesystem
+	 * access is unavailable (e.g., FTP-only servers), media caching will not work.
+	 *
+	 * @since unreleased
+	 *
+	 * @return array The test result.
+	 */
+	public static function test_filesystem() {
+		$result = array(
+			'label'       => \__( 'Filesystem access is available for media caching', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\__( 'WordPress can write files directly, so remote media caching (avatars, emoji, images) works correctly.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_filesystem',
+		);
+
+		if ( ! \function_exists( 'WP_Filesystem' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+
+		if ( ! \WP_Filesystem() ) {
+			$result['status']         = 'recommended';
+			$result['label']          = \__( 'Filesystem access is not available for media caching', 'activitypub' );
+			$result['badge']['color'] = 'orange';
+			$result['description']    = \sprintf(
+				'<p>%s</p><p>%s</p>',
+				\__( 'WordPress cannot access the filesystem directly and is falling back to FTP, which is not supported for media caching. Remote avatars, emoji, and images will be served from their original URLs instead of being cached locally.', 'activitypub' ),
+				\__( 'To fix this, ask your hosting provider to enable direct filesystem access, or add <code>define( \'FS_METHOD\', \'direct\' );</code> to your <code>wp-config.php</code> if your server permissions allow it.', 'activitypub' )
+			);
+			$result['actions']        = \sprintf(
+				'<p>%s</p>',
+				\__( 'If you cannot configure direct filesystem access, you can disable media caching by adding <code>define( \'ACTIVITYPUB_DISABLE_REMOTE_CACHE\', true );</code> to your <code>wp-config.php</code>. Remote media will then be served from its original URL.', 'activitypub' )
+			);
+		}
 
 		return $result;
 	}

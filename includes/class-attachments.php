@@ -204,7 +204,9 @@ class Attachments {
 		// Initialize filesystem.
 		global $wp_filesystem;
 		if ( ! $wp_filesystem ) {
-			\WP_Filesystem();
+			if ( ! \WP_Filesystem() ) {
+				$wp_filesystem = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Intentionally clearing broken FTP fallback object.
+			}
 		}
 
 		if ( ! $wp_filesystem ) {
