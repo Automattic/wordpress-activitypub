@@ -1,0 +1,4 @@
+Significance: patch
+Type: added
+
+Add backwards compatibility for the `ACTIVITYPUB_DISABLE_SIDELOADING` constant and `activitypub_sideloading_enabled` filter from version 7.9.1.
