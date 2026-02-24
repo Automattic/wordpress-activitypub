@@ -3,6 +3,7 @@ import { __ } from '@wordpress/i18n';
 
 /**
  * The maximum note length from the server-side ACTIVITYPUB_NOTE_LENGTH constant.
+ * Fallback matches ACTIVITYPUB_NOTE_LENGTH default; keep in sync with includes/constants.php.
  *
  * @type {number}
  */
@@ -21,6 +22,45 @@ const VIDEO_PROVIDERS = [ 'youtube', 'vimeo', 'dailymotion', 'tiktok', 'videopre
  * @type {string[]}
  */
 const AUDIO_PROVIDERS = [ 'spotify', 'soundcloud', 'mixcloud' ];
+
+/**
+ * Block names that contain text content.
+ *
+ * @type {string[]}
+ */
+const TEXT_BLOCK_NAMES = [
+	'core/paragraph',
+	'core/heading',
+	'core/list-item',
+	'core/preformatted',
+	'core/verse',
+	'core/pullquote',
+];
+
+/**
+ * Block names that represent gallery content.
+ *
+ * @type {string[]}
+ */
+const GALLERY_BLOCK_NAMES = [ 'core/gallery', 'jetpack/tiled-gallery', 'jetpack/slideshow' ];
+
+/**
+ * Returns the text content attribute for a given block name.
+ *
+ * Most text blocks store content in `attributes.content`, but some
+ * blocks use different attribute keys (e.g. `core/pullquote` uses `value`).
+ *
+ * @param {string} name       The block name.
+ * @param {Object} attributes The block attributes.
+ *
+ * @return {string} The text content.
+ */
+const getBlockTextContent = ( name, attributes ) => {
+	if ( name === 'core/pullquote' ) {
+		return attributes?.value || '';
+	}
+	return attributes?.content || '';
+};
 
 /**
  * Recursively analyzes blocks and returns content statistics.
@@ -46,23 +86,12 @@ export const analyzeBlocks = ( blocks ) => {
 		return result;
 	}
 
-	const textBlockNames = [
-		'core/paragraph',
-		'core/heading',
-		'core/list-item',
-		'core/preformatted',
-		'core/verse',
-		'core/pullquote',
-	];
-
-	const galleryBlockNames = [ 'core/gallery', 'jetpack/tiled-gallery', 'jetpack/slideshow' ];
-
 	for ( const block of blocks ) {
 		const { name, attributes, innerBlocks } = block;
 
 		if ( name === 'core/image' ) {
 			result.imageCount++;
-		} else if ( galleryBlockNames.includes( name ) ) {
+		} else if ( GALLERY_BLOCK_NAMES.includes( name ) ) {
 			result.galleryCount++;
 		} else if ( name === 'core/video' ) {
 			result.videoCount++;
@@ -77,8 +106,8 @@ export const analyzeBlocks = ( blocks ) => {
 			}
 		}
 
-		if ( textBlockNames.includes( name ) ) {
-			const text = stripHTML( attributes?.content || '' );
+		if ( TEXT_BLOCK_NAMES.includes( name ) ) {
+			const text = stripHTML( getBlockTextContent( name, attributes ) );
 			result.textLength += text.length;
 			result.textBlockCount++;
 		}
@@ -128,23 +157,12 @@ export const getSuggestedPostFormat = ( blocks, currentFormat ) => {
 		};
 	}
 
-	// Image: single image with short text.
-	if ( stats.imageCount === 1 && stats.textLength < NOTE_LENGTH ) {
-		return {
-			format: 'image',
-			message: __(
-				'This post contains an image. Setting the format to Image will share it as a media post, making it visible on platforms like Pixelfed.',
-				'activitypub'
-			),
-		};
-	}
-
 	// Video: video with short text.
 	if ( stats.videoCount > 0 && stats.textLength < NOTE_LENGTH ) {
 		return {
 			format: 'video',
 			message: __(
-				'This post contains video. Setting the format to Video will share it as a media post, improving compatibility with video-focused platforms.',
+				'This post contains a video. Setting the format to Video will share it as a media post, improving compatibility with video-focused platforms.',
 				'activitypub'
 			),
 		};
@@ -155,7 +173,23 @@ export const getSuggestedPostFormat = ( blocks, currentFormat ) => {
 		return {
 			format: 'audio',
 			message: __(
-				'This post contains audio. Setting the format to Audio will share it as a media post, improving compatibility with audio-focused platforms.',
+				'This post contains audio content. Setting the format to Audio will share it as a media post, improving compatibility with audio-focused platforms.',
+				'activitypub'
+			),
+		};
+	}
+
+	// Image: single image with short text (after video/audio to avoid wrong suggestion for mixed media).
+	if (
+		stats.imageCount === 1 &&
+		stats.videoCount === 0 &&
+		stats.audioCount === 0 &&
+		stats.textLength < NOTE_LENGTH
+	) {
+		return {
+			format: 'image',
+			message: __(
+				'This post contains an image. Setting the format to Image will share it as a media post, making it visible on platforms like Pixelfed.',
 				'activitypub'
 			),
 		};

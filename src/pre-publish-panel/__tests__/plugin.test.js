@@ -175,7 +175,7 @@ describe( 'analyzeBlocks', () => {
 			},
 			{
 				name: 'core/pullquote',
-				attributes: { content: 'Quote' },
+				attributes: { value: 'Quote' },
 				innerBlocks: [],
 			},
 			{
@@ -367,6 +367,24 @@ describe( 'getSuggestedPostFormat', () => {
 		expect( getSuggestedPostFormat( blocks, null ) ).not.toBeNull();
 		expect( getSuggestedPostFormat( blocks, undefined ) ).not.toBeNull();
 		expect( getSuggestedPostFormat( blocks, 'standard' ) ).not.toBeNull();
+	} );
+
+	test( 'suggests video over image for mixed media', () => {
+		const blocks = [
+			{ name: 'core/image', attributes: {}, innerBlocks: [] },
+			{ name: 'core/video', attributes: {}, innerBlocks: [] },
+		];
+		const result = getSuggestedPostFormat( blocks, '' );
+		expect( result.format ).toBe( 'video' );
+	} );
+
+	test( 'suggests audio over image for mixed media', () => {
+		const blocks = [
+			{ name: 'core/image', attributes: {}, innerBlocks: [] },
+			{ name: 'core/audio', attributes: {}, innerBlocks: [] },
+		];
+		const result = getSuggestedPostFormat( blocks, '' );
+		expect( result.format ).toBe( 'audio' );
 	} );
 
 	test( 'gallery has higher priority than image', () => {
