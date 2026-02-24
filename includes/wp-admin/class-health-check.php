@@ -868,11 +868,27 @@ class Health_Check {
 			'test'        => 'test_filesystem',
 		);
 
+		// Skip test when remote caching is disabled — filesystem access is not needed.
+		if ( ACTIVITYPUB_DISABLE_REMOTE_CACHE ) {
+			$result['description'] = \sprintf(
+				'<p>%s</p>',
+				\__( 'Remote media caching is disabled, so filesystem access is not required.', 'activitypub' )
+			);
+			return $result;
+		}
+
 		if ( ! \function_exists( 'WP_Filesystem' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/file.php';
 		}
 
-		if ( ! \WP_Filesystem() ) {
+		// Check filesystem without modifying global state for other health checks.
+		$filesystem_works = \WP_Filesystem();
+
+		if ( ! $filesystem_works ) {
+			// Clear the broken object that WP_Filesystem() may have left behind.
+			global $wp_filesystem;
+			$wp_filesystem = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Intentionally clearing broken FTP fallback object.
+
 			$result['status']         = 'recommended';
 			$result['label']          = \__( 'Filesystem access is not available for media caching', 'activitypub' );
 			$result['badge']['color'] = 'orange';
