@@ -89,6 +89,7 @@ The plugin uses PHP Constants to enable, disable or change its default behaviour
 * `ACTIVITYPUB_DISABLE_REWRITES` - Disable auto generation of `mod_rewrite` rules. Default: `false`.
 * `ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS` - Block incoming replies/comments/likes. Default: `false`.
 * `ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS` - Disable outgoing replies/comments/likes. Default: `false`.
+* `ACTIVITYPUB_DISABLE_REMOTE_CACHE` - Disable remote media caching (avatars, media, emoji). Default: `false`. Replaces `ACTIVITYPUB_DISABLE_SIDELOADING` from 7.9.1.
 * `ACTIVITYPUB_SHARED_INBOX_FEATURE` - Enable the shared inbox. Default: `false`.
 * `ACTIVITYPUB_SEND_VARY_HEADER` - Enable to send the `Vary: Accept` header. Default: `false`.
 
