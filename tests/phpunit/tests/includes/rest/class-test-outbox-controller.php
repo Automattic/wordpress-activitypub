@@ -788,4 +788,66 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 			$this->assertFalse( \get_post_format( $post_id ), 'Article should have standard (no) post format.' );
 		}
 	}
+
+	/**
+	 * Test C2S POST with an intransitive activity and object actor payload.
+	 *
+	 * Ensures activities like Arrive do not trigger object-ID resolution errors
+	 * when the actor is provided as an object and no explicit object is present.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_arrive_with_actor_object() {
+		$user = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+
+		$data = array(
+			'@context' => 'https://www.w3.org/ns/activitystreams',
+			'type'     => 'Arrive',
+			'actor'    => array(
+				'id'   => $user->get_id(),
+				'name' => $user->get_name(),
+				'url'  => $user->get_url(),
+			),
+			'location' => array(
+				'id'   => 'https://places.pub/relation/659839',
+				'name' => 'Ettlingen',
+			),
+			'content'  => 'Arrived.',
+			'to'       => 'https://www.w3.org/ns/activitystreams#Public',
+			'cc'       => $user->get_followers(),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = \rest_get_server()->dispatch( $request );
+		$this->assertEquals( 201, $response->get_status() );
+
+		$response_data = $response->get_data();
+		$this->assertSame( 'Arrive', $response_data['type'] );
+
+		$outbox_items = \get_posts(
+			array(
+				'post_type'      => Outbox::POST_TYPE,
+				'post_status'    => 'any',
+				'author'         => self::$user_id,
+				'posts_per_page' => 1,
+				'orderby'        => 'ID',
+				'order'          => 'DESC',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'     => array(
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Arrive',
+					),
+				),
+			)
+		);
+
+		$this->assertNotEmpty( $outbox_items );
+		$this->assertSame( $user->get_id(), \get_post_meta( $outbox_items[0]->ID, '_activitypub_object_id', true ) );
+	}
 }
