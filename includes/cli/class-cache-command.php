@@ -9,6 +9,7 @@ namespace Activitypub\Cli;
 
 use Activitypub\Cache\Avatar;
 use Activitypub\Cache\Emoji;
+use Activitypub\Cache\File;
 use Activitypub\Cache\Media;
 
 /**
@@ -206,7 +207,7 @@ class Cache_Command extends \WP_CLI_Command {
 
 		// Remove all subdirectories using the cache's native delete_directory helper.
 		foreach ( $subdirs as $subdir ) {
-			Avatar::delete_directory( $subdir );
+			File::delete_directory( $subdir );
 		}
 
 		// Also clear avatar URL meta for avatar cache.
