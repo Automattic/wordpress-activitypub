@@ -237,9 +237,8 @@ abstract class File {
 		$file_name = $hash . '.' . $ext;
 		$file_path = $paths['basedir'] . '/' . $file_name;
 
-		// Move file to destination (using rename like WordPress core's _wp_handle_upload).
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- Matching core behavior for uploads directory.
-		if ( ! \rename( $tmp_file, $file_path ) ) {
+		// Move file to destination.
+		if ( ! static::get_filesystem()->move( $tmp_file, $file_path, true ) ) {
 			\wp_delete_file( $tmp_file );
 			return false;
 		}
@@ -285,12 +284,33 @@ abstract class File {
 	}
 
 	/**
-	 * Delete a directory and all its contents.
+	 * Get a direct filesystem instance.
 	 *
-	 * Uses native PHP functions instead of WP_Filesystem, matching how
-	 * WordPress core handles files in the uploads directory. This avoids
-	 * the FTP fallback that WP_Filesystem() triggers on servers without
-	 * direct filesystem access.
+	 * Uses WP_Filesystem_Direct explicitly instead of WP_Filesystem(),
+	 * which may fall back to FTP on servers where ABSPATH is not writable.
+	 * The uploads directory (where cache files live) is always writable by
+	 * the web server — the same assumption WordPress core makes for media
+	 * uploads in _wp_handle_upload().
+	 *
+	 * @since unreleased
+	 *
+	 * @return \WP_Filesystem_Direct The direct filesystem instance.
+	 */
+	protected static function get_filesystem() {
+		static $filesystem = null;
+
+		if ( null === $filesystem ) {
+			require_once ABSPATH . 'wp-admin/includes/class-wp-filesystem-base.php';
+			require_once ABSPATH . 'wp-admin/includes/class-wp-filesystem-direct.php';
+
+			$filesystem = new \WP_Filesystem_Direct( null );
+		}
+
+		return $filesystem;
+	}
+
+	/**
+	 * Delete a directory and all its contents.
 	 *
 	 * @since unreleased
 	 *
@@ -303,22 +323,7 @@ abstract class File {
 			return true;
 		}
 
-		$files = new \RecursiveIteratorIterator(
-			new \RecursiveDirectoryIterator( $basedir, \FilesystemIterator::SKIP_DOTS ),
-			\RecursiveIteratorIterator::CHILD_FIRST
-		);
-
-		foreach ( $files as $file ) {
-			if ( $file->isDir() ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Using native PHP for uploads directory, matching core behavior.
-				\rmdir( $file->getRealPath() );
-			} else {
-				\wp_delete_file( $file->getRealPath() );
-			}
-		}
-
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Using native PHP for uploads directory, matching core behavior.
-		return \rmdir( $basedir );
+		return static::get_filesystem()->rmdir( $basedir, true );
 	}
 
 	/**
@@ -569,8 +574,7 @@ abstract class File {
 				$new_path = $file_path . '.' . $expected_ext;
 			}
 
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- Matching core behavior for uploads directory.
-			if ( \rename( $file_path, $new_path ) ) {
+			if ( static::get_filesystem()->move( $file_path, $new_path, true ) ) {
 				return $new_path;
 			}
 		}
