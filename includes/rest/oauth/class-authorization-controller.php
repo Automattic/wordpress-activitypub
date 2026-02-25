@@ -11,6 +11,8 @@ use Activitypub\OAuth\Authorization_Code;
 use Activitypub\OAuth\Client;
 use Activitypub\OAuth\Scope;
 
+use function Activitypub\get_client_ip;
+
 /**
  * Authorization_Controller class for handling the OAuth 2.0 authorization endpoint.
  *
@@ -150,6 +152,21 @@ class Authorization_Controller extends \WP_REST_Controller {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function authorize( \WP_REST_Request $request ) {
+		// Rate-limit authorization requests to prevent abuse (max 20 per minute per IP).
+		$ip            = get_client_ip();
+		$transient_key = 'ap_oauth_auth_' . \md5( $ip );
+		$count         = (int) \get_transient( $transient_key );
+
+		if ( $count >= 20 ) {
+			return new \WP_Error(
+				'activitypub_rate_limit',
+				\__( 'Too many authorization requests. Please try again later.', 'activitypub' ),
+				array( 'status' => 429 )
+			);
+		}
+
+		\set_transient( $transient_key, $count + 1, MINUTE_IN_SECONDS );
+
 		$client_id     = $request->get_param( 'client_id' );
 		$redirect_uri  = $request->get_param( 'redirect_uri' );
 		$response_type = $request->get_param( 'response_type' );
