@@ -17,7 +17,9 @@ use function Activitypub\get_content_visibility;
  * Posts collection.
  *
  * Provides CRUD methods for local WordPress posts created
- * via ActivityPub (C2S outbox).
+ * via ActivityPub Client-to-Server (C2S) outbox.
+ *
+ * @see Remote_Posts for federated posts received via Server-to-Server (S2S).
  */
 class Posts {
 	/**

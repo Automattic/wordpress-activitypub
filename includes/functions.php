@@ -341,26 +341,53 @@ function get_embed_html( $url, $inline_css = true ) {
 /**
  * Get the client IP address for rate-limiting purposes.
  *
- * Uses REMOTE_ADDR by default. Sites behind a reverse proxy (Nginx,
- * Cloudflare, etc.) should use the `activitypub_client_ip` filter to
- * return the real client IP from a trusted header like X-Forwarded-For.
+ * Checks common proxy headers before falling back to REMOTE_ADDR,
+ * similar to Jetpack's approach. The result can be overridden via
+ * the `activitypub_client_ip` filter.
  *
  * @since unreleased
  *
  * @return string The client IP address.
  */
 function get_client_ip() {
-	$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown'; // phpcs:ignore WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders
+	// phpcs:disable WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders
+	$ip = 'unknown';
+
+	$headers = array(
+		'HTTP_CF_CONNECTING_IP', // Cloudflare.
+		'HTTP_CLIENT_IP',
+		'HTTP_X_FORWARDED_FOR',
+		'HTTP_X_FORWARDED',
+		'HTTP_X_CLUSTER_CLIENT_IP',
+		'HTTP_FORWARDED_FOR',
+		'HTTP_FORWARDED',
+	);
+
+	foreach ( $headers as $header ) {
+		if ( ! empty( $_SERVER[ $header ] ) ) {
+			// Some headers (e.g. X-Forwarded-For) may contain a comma-separated list; use the first IP.
+			$ip_list = \sanitize_text_field( \wp_unslash( $_SERVER[ $header ] ) );
+			$ip      = \trim( \explode( ',', $ip_list )[0] );
+
+			if ( \filter_var( $ip, FILTER_VALIDATE_IP ) ) {
+				break;
+			}
+
+			$ip = 'unknown';
+		}
+	}
+
+	if ( 'unknown' === $ip && isset( $_SERVER['REMOTE_ADDR'] ) ) {
+		$ip = \sanitize_text_field( \wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
+	}
+	// phpcs:enable WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders
 
 	/**
 	 * Filter the client IP address used for rate limiting.
 	 *
-	 * Sites behind a reverse proxy should hook here to return the real
-	 * client IP from a trusted header (e.g. X-Forwarded-For, CF-Connecting-IP).
-	 *
 	 * @since unreleased
 	 *
-	 * @param string $ip The client IP address from REMOTE_ADDR.
+	 * @param string $ip The detected client IP address.
 	 */
 	return \apply_filters( 'activitypub_client_ip', $ip );
 }
