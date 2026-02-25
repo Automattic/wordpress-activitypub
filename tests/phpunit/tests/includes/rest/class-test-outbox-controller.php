@@ -790,14 +790,14 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 	}
 
 	/**
-	 * Test C2S POST with an intransitive activity and object actor payload.
+	 * Test C2S POST with an Arrive activity creates a WordPress post.
 	 *
-	 * Ensures activities like Arrive do not trigger object-ID resolution errors
-	 * when the actor is provided as an object and no explicit object is present.
+	 * Ensures the Arrive handler creates a check-in post with location
+	 * geodata and stores the activity in the outbox.
 	 *
 	 * @covers ::create_item
 	 */
-	public function test_c2s_arrive_with_actor_object() {
+	public function test_c2s_arrive_creates_post_with_geodata() {
 		$user = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
 
 		$data = array(
@@ -809,8 +809,11 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 				'url'  => $user->get_url(),
 			),
 			'location' => array(
-				'id'   => 'https://places.pub/relation/659839',
-				'name' => 'Ettlingen',
+				'type'      => 'Place',
+				'id'        => 'https://places.pub/relation/659839',
+				'name'      => 'Ettlingen',
+				'latitude'  => 48.9408,
+				'longitude' => 8.4075,
 			),
 			'content'  => 'Arrived.',
 			'to'       => 'https://www.w3.org/ns/activitystreams#Public',
@@ -827,27 +830,68 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		$this->assertEquals( 201, $response->get_status() );
 
 		$response_data = $response->get_data();
-		$this->assertSame( 'Arrive', $response_data['type'] );
+		$this->assertSame( 'Create', $response_data['type'] );
 
-		$outbox_items = \get_posts(
-			array(
-				'post_type'      => Outbox::POST_TYPE,
-				'post_status'    => 'any',
-				'author'         => self::$user_id,
-				'posts_per_page' => 1,
-				'orderby'        => 'ID',
-				'order'          => 'DESC',
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query'     => array(
-					array(
-						'key'   => '_activitypub_activity_type',
-						'value' => 'Arrive',
-					),
-				),
-			)
+		// Find the created post from the response object ID.
+		$object  = $response_data['object'];
+		$post_id = \url_to_postid( $object['id'] );
+		$this->assertGreaterThan( 0, $post_id, 'Arrive should create a WordPress post.' );
+
+		$this->assertSame( 'status', \get_post_format( $post_id ), 'Arrive post should have status format.' );
+		$this->assertStringContainsString( 'Ettlingen', \get_the_title( $post_id ), 'Post title should contain location name.' );
+
+		// Verify geodata meta.
+		$this->assertSame( 'Ettlingen', \get_post_meta( $post_id, 'geo_address', true ) );
+		$this->assertEquals( 48.9408, (float) \get_post_meta( $post_id, 'geo_latitude', true ) );
+		$this->assertEquals( 8.4075, (float) \get_post_meta( $post_id, 'geo_longitude', true ) );
+		$this->assertSame( '1', \get_post_meta( $post_id, 'geo_public', true ) );
+	}
+
+	/**
+	 * Test C2S POST with Arrive activity without coordinates.
+	 *
+	 * Ensures the handler works when the location only has a name
+	 * but no latitude/longitude, as is common with checkin.swf.pub.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_arrive_with_name_only_location() {
+		$user = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+
+		$data = array(
+			'@context'   => 'https://www.w3.org/ns/activitystreams',
+			'type'       => 'Arrive',
+			'actor'      => $user->get_id(),
+			'location'   => array(
+				'id'   => 'https://places.pub/relation/659839',
+				'name' => 'Ettlingen',
+			),
+			'content'    => 'Hello!',
+			'summaryMap' => array(
+				'en' => 'Arrived at Ettlingen',
+			),
+			'to'         => 'https://www.w3.org/ns/activitystreams#Public',
+			'cc'         => $user->get_followers(),
 		);
 
-		$this->assertNotEmpty( $outbox_items );
-		$this->assertSame( $user->get_id(), \get_post_meta( $outbox_items[0]->ID, '_activitypub_object_id', true ) );
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = \rest_get_server()->dispatch( $request );
+		$this->assertEquals( 201, $response->get_status() );
+
+		// Find the created post from the response object ID.
+		$response_data = $response->get_data();
+		$post_id       = \url_to_postid( $response_data['object']['id'] );
+		$this->assertGreaterThan( 0, $post_id, 'Arrive should create a WordPress post.' );
+
+		// Verify geodata - address saved but no coordinates.
+		$this->assertSame( 'Ettlingen', \get_post_meta( $post_id, 'geo_address', true ) );
+		$this->assertEmpty( \get_post_meta( $post_id, 'geo_latitude', true ), 'No latitude when not provided.' );
+		$this->assertEmpty( \get_post_meta( $post_id, 'geo_longitude', true ), 'No longitude when not provided.' );
+		$this->assertSame( '1', \get_post_meta( $post_id, 'geo_public', true ), 'geo_public set when name is present.' );
 	}
 }

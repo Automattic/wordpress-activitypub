@@ -49,6 +49,7 @@ class Handler {
 	 */
 	public static function register_outbox_handlers() {
 		Handler\Outbox\Announce::init();
+		Handler\Outbox\Arrive::init();
 		Handler\Outbox\Create::init();
 		Handler\Outbox\Delete::init();
 		Handler\Outbox\Follow::init();
