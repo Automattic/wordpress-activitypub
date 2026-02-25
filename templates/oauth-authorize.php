@@ -43,7 +43,7 @@ login_header(
 			$client_link_url = $client->get_link_url();
 			$client_display  = esc_html( $client->get_display_name() );
 			$client_label    = $client_link_url
-				? sprintf( '<a href="%s">%s</a>', esc_url( $client_link_url ), $client_display )
+				? sprintf( '<a href="%s" target="_blank">%s</a>', esc_url( $client_link_url ), $client_display )
 				: $client_display;
 
 			echo wp_kses(
@@ -52,7 +52,12 @@ login_header(
 					__( '%s wants to access your account.', 'activitypub' ),
 					$client_label
 				),
-				array( 'a' => array( 'href' => array() ) )
+				array(
+					'a' => array(
+						'href'   => array(),
+						'target' => array(),
+					),
+				)
 			);
 			?>
 			</strong>

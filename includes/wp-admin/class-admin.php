@@ -1194,6 +1194,10 @@ class Admin {
 			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
 		}
 
+		if ( ! \current_user_can( 'manage_options' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
+		}
+
 		$name         = \sanitize_text_field( \wp_unslash( $_POST['name'] ?? '' ) );
 		$redirect_uri = \sanitize_url( \wp_unslash( $_POST['redirect_uri'] ?? '' ) );
 
@@ -1240,6 +1244,10 @@ class Admin {
 			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
 		}
 
+		if ( ! \current_user_can( 'manage_options' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
+		}
+
 		$client_id = \sanitize_text_field( \wp_unslash( $_POST['client_id'] ?? '' ) );
 
 		if ( empty( $client_id ) ) {
@@ -1266,6 +1274,10 @@ class Admin {
 			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
 		}
 
+		if ( ! \current_user_can( 'manage_options' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
+		}
+
 		$clients = Client::get_manually_registered();
 
 		foreach ( $clients as $client ) {
@@ -1286,6 +1298,10 @@ class Admin {
 		// Verify nonce.
 		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_connected_apps' ) ) {
 			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
+		}
+
+		if ( ! \current_user_can( 'read' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
 		}
 
 		$meta_key = \sanitize_text_field( \wp_unslash( $_POST['meta_key'] ?? '' ) ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Not a DB query parameter.
@@ -1323,6 +1339,10 @@ class Admin {
 		// Verify nonce.
 		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_connected_apps' ) ) {
 			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
+		}
+
+		if ( ! \current_user_can( 'read' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
 		}
 
 		$count = Token::revoke_all_for_user( \get_current_user_id() );
