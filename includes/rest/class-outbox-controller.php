@@ -380,7 +380,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 			$data = $this->wrap_in_create( $data, $user );
 		}
 
-		// C2S: default to public addressing if client omits recipients.
+		// Default to public addressing if client omits recipients.
 		$data = $this->ensure_addressing( $data, $user );
 
 		// Determine visibility from addressing.
