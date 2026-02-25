@@ -540,6 +540,17 @@ class Client {
 	}
 
 	/**
+	 * Get client display name, falling back to client ID.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string The display name.
+	 */
+	public function get_display_name() {
+		return $this->get_name() ?: $this->get_client_id();
+	}
+
+	/**
 	 * Get client description.
 	 *
 	 * @return string The client description.
@@ -594,6 +605,43 @@ class Client {
 	 */
 	public function get_client_uri() {
 		return \get_post_meta( $this->post_id, '_activitypub_client_uri', true ) ?: '';
+	}
+
+	/**
+	 * Get a URL suitable for linking to this client.
+	 *
+	 * For CIMD apps the client_id is already a URL. For DCR apps it's a UUID,
+	 * so we fall back to the stored client_uri, then to the first redirect URI's origin.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string A URL for the client, or empty string if none available.
+	 */
+	public function get_link_url() {
+		$client_id = $this->get_client_id();
+
+		if ( \filter_var( $client_id, FILTER_VALIDATE_URL ) ) {
+			return $client_id;
+		}
+
+		$client_uri = $this->get_client_uri();
+
+		if ( $client_uri ) {
+			return $client_uri;
+		}
+
+		$redirect_uris = $this->get_redirect_uris();
+
+		if ( ! empty( $redirect_uris ) ) {
+			$scheme = \wp_parse_url( $redirect_uris[0], PHP_URL_SCHEME );
+			$host   = \wp_parse_url( $redirect_uris[0], PHP_URL_HOST );
+
+			if ( $scheme && $host ) {
+				return \trailingslashit( sprintf( '%s://%s', $scheme, $host ) );
+			}
+		}
+
+		return '';
 	}
 
 	/**

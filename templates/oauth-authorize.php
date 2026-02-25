@@ -5,16 +5,11 @@
  * @package Activitypub
  *
  * Variables available (passed via include from class-server.php):
- * @var WP_User $current_user          The current logged-in user.
- * @var array   $scopes                Array of requested scopes.
- * @var string  $client_id             The client ID.
- * @var string  $client_name           The client name.
- * @var string  $redirect_uri          The redirect URI.
- * @var string  $state                 The state parameter.
- * @var string  $code_challenge        The PKCE code challenge.
- * @var string  $code_challenge_method The PKCE method.
- * @var string  $form_url              The form action URL.
- * @var string  $scope                 The original scope string.
+ * @var WP_User                  $current_user     The current logged-in user.
+ * @var array                    $scopes           Array of requested scopes.
+ * @var Activitypub\OAuth\Client $client           The client object.
+ * @var array                    $authorize_params OAuth request parameters (client_id, redirect_uri, scope, state, code_challenge, code_challenge_method).
+ * @var string                   $form_url         The form action URL.
  */
 
 // phpcs:disable VariableAnalysis.CodeAnalysis.VariableAnalysis.UndefinedVariable -- Variables passed via include.
@@ -24,7 +19,7 @@ use Activitypub\OAuth\Scope;
 // Use WordPress login page header.
 $login_errors = new WP_Error();
 
-if ( empty( $code_challenge ) ) {
+if ( empty( $authorize_params['code_challenge'] ) ) {
 	$login_errors->add(
 		'pkce_missing',
 		__( '<strong>Warning:</strong> This client does not support PKCE. The connection may be less secure.', 'activitypub' ),
@@ -34,7 +29,7 @@ if ( empty( $code_challenge ) ) {
 
 login_header(
 	/* translators: %s: Client name */
-	sprintf( __( 'Authorize %s', 'activitypub' ), esc_html( $client_name ?: $client_id ) ),
+	sprintf( __( 'Authorize %s', 'activitypub' ), esc_html( $client->get_display_name() ) ),
 	'',
 	$login_errors
 );
@@ -45,11 +40,17 @@ login_header(
 		<p>
 			<strong>
 			<?php
+			$client_link_url = $client->get_link_url();
+			$client_display  = esc_html( $client->get_display_name() );
+			$client_label    = $client_link_url
+				? sprintf( '<a href="%s">%s</a>', esc_url( $client_link_url ), $client_display )
+				: $client_display;
+
 			echo wp_kses(
 				sprintf(
 					/* translators: %s: Client name or ID */
 					__( '%s wants to access your account.', 'activitypub' ),
-					'<a href="' . esc_url( $client_id ) . '">' . esc_html( $client_name ?: $client_id ) . '</a>'
+					$client_label
 				),
 				array( 'a' => array( 'href' => array() ) )
 			);
@@ -100,7 +101,7 @@ login_header(
 			sprintf(
 				/* translators: %s: Redirect URI */
 				__( 'You will be redirected to %s after authorization.', 'activitypub' ),
-				'<code>' . esc_html( $redirect_uri ) . '</code>'
+				'<code>' . esc_html( $authorize_params['redirect_uri'] ) . '</code>'
 			),
 			array( 'code' => array() )
 		);
@@ -108,12 +109,9 @@ login_header(
 	</div>
 
 	<?php wp_nonce_field( 'activitypub_oauth_authorize' ); ?>
-	<input type="hidden" name="client_id" value="<?php echo esc_attr( $client_id ); ?>" />
-	<input type="hidden" name="redirect_uri" value="<?php echo esc_attr( $redirect_uri ); ?>" />
-	<input type="hidden" name="scope" value="<?php echo esc_attr( $scope ); ?>" />
-	<input type="hidden" name="state" value="<?php echo esc_attr( $state ); ?>" />
-	<input type="hidden" name="code_challenge" value="<?php echo esc_attr( $code_challenge ); ?>" />
-	<input type="hidden" name="code_challenge_method" value="<?php echo esc_attr( $code_challenge_method ); ?>" />
+	<?php foreach ( $authorize_params as $param_name => $param_value ) : ?>
+		<input type="hidden" name="<?php echo esc_attr( $param_name ); ?>" value="<?php echo esc_attr( $param_value ); ?>" />
+	<?php endforeach; ?>
 
 	<p class="submit" style="display: flex; gap: 10px;">
 		<button type="submit" name="approve" value="1" class="button button-primary button-large">

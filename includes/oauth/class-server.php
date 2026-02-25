@@ -348,16 +348,18 @@ class Server {
 	 */
 	private static function render_authorize_form() {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Initial form display, nonce checked on POST.
-		$client_id             = isset( $_GET['client_id'] ) ? \sanitize_text_field( \wp_unslash( $_GET['client_id'] ) ) : '';
-		$redirect_uri          = isset( $_GET['redirect_uri'] ) ? \esc_url_raw( \wp_unslash( $_GET['redirect_uri'] ) ) : '';
-		$scope                 = isset( $_GET['scope'] ) ? \sanitize_text_field( \wp_unslash( $_GET['scope'] ) ) : '';
-		$state                 = isset( $_GET['state'] ) ? \wp_unslash( $_GET['state'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- OAuth state is opaque; must be round-tripped exactly.
-		$code_challenge        = isset( $_GET['code_challenge'] ) ? \sanitize_text_field( \wp_unslash( $_GET['code_challenge'] ) ) : '';
-		$code_challenge_method = isset( $_GET['code_challenge_method'] ) ? \sanitize_text_field( \wp_unslash( $_GET['code_challenge_method'] ) ) : 'S256';
+		$authorize_params = array(
+			'client_id'             => isset( $_GET['client_id'] ) ? \sanitize_text_field( \wp_unslash( $_GET['client_id'] ) ) : '',
+			'redirect_uri'          => isset( $_GET['redirect_uri'] ) ? \esc_url_raw( \wp_unslash( $_GET['redirect_uri'] ) ) : '',
+			'scope'                 => isset( $_GET['scope'] ) ? \sanitize_text_field( \wp_unslash( $_GET['scope'] ) ) : '',
+			'state'                 => isset( $_GET['state'] ) ? \wp_unslash( $_GET['state'] ) : '', // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- OAuth state is opaque; must be round-tripped exactly.
+			'code_challenge'        => isset( $_GET['code_challenge'] ) ? \sanitize_text_field( \wp_unslash( $_GET['code_challenge'] ) ) : '',
+			'code_challenge_method' => isset( $_GET['code_challenge_method'] ) ? \sanitize_text_field( \wp_unslash( $_GET['code_challenge_method'] ) ) : 'S256',
+		);
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		// Validate client.
-		$client = Client::get( $client_id );
+		$client = Client::get( $authorize_params['client_id'] );
 		if ( \is_wp_error( $client ) ) {
 			\wp_die(
 				\esc_html( $client->get_error_message() ),
@@ -367,7 +369,7 @@ class Server {
 		}
 
 		// Validate redirect URI.
-		if ( ! $client->is_valid_redirect_uri( $redirect_uri ) ) {
+		if ( ! $client->is_valid_redirect_uri( $authorize_params['redirect_uri'] ) ) {
 			\wp_die(
 				\esc_html__( 'Invalid redirect URI for this client.', 'activitypub' ),
 				\esc_html__( 'Authorization Error', 'activitypub' ),
@@ -375,28 +377,22 @@ class Server {
 			);
 		}
 
+		// Use the canonical client ID (may differ from the raw input for discovered clients).
+		$authorize_params['client_id'] = $client->get_client_id();
+
 		// These variables are used in the template.
 		$current_user = \wp_get_current_user(); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		$scopes       = Scope::validate( Scope::parse( $scope ) ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		$client_name  = $client->get_name(); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		$scopes       = Scope::validate( Scope::parse( $authorize_params['scope'] ) ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 
 		// Build form action URL.
 		// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$form_url = \add_query_arg(
-			array(
-				'action'                => 'activitypub_authorize',
-				'client_id'             => $client_id,
-				'redirect_uri'          => $redirect_uri,
-				'scope'                 => $scope,
-				'state'                 => $state,
-				'code_challenge'        => $code_challenge,
-				'code_challenge_method' => $code_challenge_method,
-			),
+			array_merge( array( 'action' => 'activitypub_authorize' ), $authorize_params ),
 			\wp_login_url()
 		);
 
 		// Include the template.
-		include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-authorize.php';
+		include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-authorize.php'; // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- $authorize_params used in template.
 	}
 
 	/**
