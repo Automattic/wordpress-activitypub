@@ -854,7 +854,7 @@ class Health_Check {
 	 */
 	public static function test_filesystem() {
 		$result = array(
-			'label'       => \__( 'Filesystem access is available for media caching', 'activitypub' ),
+			'label'       => \__( 'Uploads directory is writable for media caching', 'activitypub' ),
 			'status'      => 'good',
 			'badge'       => array(
 				'label' => \__( 'ActivityPub', 'activitypub' ),
@@ -862,44 +862,35 @@ class Health_Check {
 			),
 			'description' => \sprintf(
 				'<p>%s</p>',
-				\__( 'WordPress can write files directly, so remote media caching (avatars, emoji, images) works correctly.', 'activitypub' )
+				\__( 'The uploads directory is writable, so remote media caching (avatars, emoji, images) works correctly.', 'activitypub' )
 			),
 			'actions'     => '',
 			'test'        => 'test_filesystem',
 		);
 
-		// Skip test when remote caching is disabled — filesystem access is not needed.
+		// Skip test when remote caching is disabled.
 		if ( ACTIVITYPUB_DISABLE_REMOTE_CACHE ) {
 			$result['description'] = \sprintf(
 				'<p>%s</p>',
-				\__( 'Remote media caching is disabled, so filesystem access is not required.', 'activitypub' )
+				\__( 'Remote media caching is disabled, so uploads directory write access is not required.', 'activitypub' )
 			);
 			return $result;
 		}
 
-		if ( ! \function_exists( 'WP_Filesystem' ) ) {
-			require_once ABSPATH . 'wp-admin/includes/file.php';
-		}
+		$upload_dir = \wp_upload_dir();
 
-		// Check filesystem without modifying global state for other health checks.
-		$filesystem_works = \WP_Filesystem();
-
-		if ( ! $filesystem_works ) {
-			// Clear the broken object that WP_Filesystem() may have left behind.
-			global $wp_filesystem;
-			$wp_filesystem = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Intentionally clearing broken FTP fallback object.
-
+		if ( ! \wp_is_writable( $upload_dir['basedir'] ) ) {
 			$result['status']         = 'recommended';
-			$result['label']          = \__( 'Filesystem access is not available for media caching', 'activitypub' );
+			$result['label']          = \__( 'Uploads directory is not writable for media caching', 'activitypub' );
 			$result['badge']['color'] = 'orange';
 			$result['description']    = \sprintf(
 				'<p>%s</p><p>%s</p>',
-				\__( 'WordPress cannot access the filesystem directly and is falling back to FTP, which is not supported for media caching. Remote avatars, emoji, and images will be served from their original URLs instead of being cached locally.', 'activitypub' ),
-				\__( 'To fix this, ask your hosting provider to enable direct filesystem access, or add <code>define( \'FS_METHOD\', \'direct\' );</code> to your <code>wp-config.php</code> if your server permissions allow it.', 'activitypub' )
+				\__( 'The uploads directory is not writable by the web server. Remote avatars, emoji, and images will be served from their original URLs instead of being cached locally.', 'activitypub' ),
+				\__( 'To fix this, ask your hosting provider to ensure the uploads directory is writable by the web server.', 'activitypub' )
 			);
 			$result['actions']        = \sprintf(
 				'<p>%s</p>',
-				\__( 'If you cannot configure direct filesystem access, you can disable media caching by adding <code>define( \'ACTIVITYPUB_DISABLE_REMOTE_CACHE\', true );</code> to your <code>wp-config.php</code>. Remote media will then be served from its original URL.', 'activitypub' )
+				\__( 'If you cannot make the directory writable, you can disable media caching by adding <code>define( \'ACTIVITYPUB_DISABLE_REMOTE_CACHE\', true );</code> to your <code>wp-config.php</code>. Remote media will then be served from its original URL.', 'activitypub' )
 			);
 		}
 

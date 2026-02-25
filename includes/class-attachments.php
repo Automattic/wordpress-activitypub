@@ -201,18 +201,6 @@ class Attachments {
 			require_once ABSPATH . 'wp-admin/includes/image.php';
 		}
 
-		// Initialize filesystem.
-		global $wp_filesystem;
-		if ( ! $wp_filesystem ) {
-			if ( ! \WP_Filesystem() ) {
-				$wp_filesystem = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Intentionally clearing broken FTP fallback object.
-			}
-		}
-
-		if ( ! $wp_filesystem ) {
-			return new \WP_Error( 'filesystem_error', \__( 'Could not initialize filesystem.', 'activitypub' ) );
-		}
-
 		$is_local = ! preg_match( '#^https?://#i', $attachment_data['url'] );
 
 		if ( $is_local ) {
@@ -223,14 +211,15 @@ class Attachments {
 			}
 
 			// Read local file from disk.
-			if ( ! $wp_filesystem->exists( $attachment_data['url'] ) ) {
+			if ( ! \file_exists( $attachment_data['url'] ) ) {
 				/* translators: %s: file path */
 				return new \WP_Error( 'file_not_found', sprintf( \__( 'File not found: %s', 'activitypub' ), $attachment_data['url'] ) );
 			}
 
 			// Copy to temp file so media_handle_sideload doesn't move the original.
 			$tmp_file = \wp_tempnam( \basename( $attachment_data['url'] ) );
-			$wp_filesystem->copy( $attachment_data['url'], $tmp_file, true );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_copy -- Matching core behavior for uploads directory.
+			\copy( $attachment_data['url'], $tmp_file );
 		} else {
 			// Validate remote URL before downloading.
 			if ( ! \wp_http_validate_url( $attachment_data['url'] ) ) {
@@ -252,7 +241,8 @@ class Attachments {
 		$original_ext = \pathinfo( $original_name, PATHINFO_EXTENSION );
 		if ( $original_ext ) {
 			$renamed_tmp = $tmp_file . '.' . $original_ext;
-			if ( $wp_filesystem->move( $tmp_file, $renamed_tmp, true ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- Matching core behavior for uploads directory.
+			if ( \rename( $tmp_file, $renamed_tmp ) ) {
 				$tmp_file = $renamed_tmp;
 			}
 		}
