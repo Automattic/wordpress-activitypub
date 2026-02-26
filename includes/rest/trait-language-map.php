@@ -12,10 +12,9 @@ namespace Activitypub\Rest;
  *
  * Provides methods for resolving ActivityStreams natural language values.
  *
- * Properties like `summary`, `content`, and `name` can be either a plain
- * string or a language map (e.g. `{"en": "Hello"}`). Language maps should
- * use the `*Map` variant (`summaryMap`, `contentMap`, `nameMap`), but some
- * implementations incorrectly send them in the base property.
+ * Properties like `summary`, `content`, and `name` should be plain strings.
+ * Language maps should use the `*Map` variant (`summaryMap`, `contentMap`,
+ * `nameMap`).
  *
  * @since unreleased
  *
@@ -79,14 +78,15 @@ trait Language_Map {
 	 * 1. The base property when the object's language matches the site locale.
 	 * 2. Site locale or English match in the `*Map` variant.
 	 * 3. The base property as a plain string (the default).
-	 * 4. Site locale, English, or first match from a language map incorrectly
-	 *    placed in the base property (e.g. `summary: {"en": "Hello"}`).
+	 * 4. First `*Map` entry if no base string and no preferred language match.
+	 *
+	 * Non-string base values (e.g. arrays) are ignored.
 	 *
 	 * @since unreleased
 	 *
-	 * @param string|array|null $value       The base property value.
-	 * @param array|null        $map         The `*Map` variant (e.g. `summaryMap`).
-	 * @param string|null       $object_lang The object's language property.
+	 * @param mixed       $value       The base property value (only strings are used).
+	 * @param array|null  $map         The `*Map` variant (e.g. `summaryMap`).
+	 * @param string|null $object_lang The object's language property.
 	 *
 	 * @return string|null The resolved string, or null if empty.
 	 */
@@ -113,22 +113,13 @@ trait Language_Map {
 			}
 		}
 
-		/* Fall back to the base property as a plain string (the default). */
 		if ( \is_string( $value ) ) {
 			return $value;
 		}
 
-		/*
-		 * Handle incorrectly placed language map in the base property:
-		 * same locale resolution, then first available entry.
-		 */
-		if ( \is_array( $value ) ) {
-			$resolved = $this->resolve_language_map( $value, $languages );
-			if ( $resolved ) {
-				return $resolved;
-			}
-
-			return \reset( $value ) ?: null;
+		/* No base value and no language match: use first map entry. */
+		if ( \is_array( $map ) && ! empty( $map ) ) {
+			return \current( $map );
 		}
 
 		return null;

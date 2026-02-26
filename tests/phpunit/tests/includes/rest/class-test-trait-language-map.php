@@ -92,7 +92,11 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 					'en' => 'English summary',
 					'de' => 'Deutsche Zusammenfassung',
 				),
-				'content'    => array( 'en' => 'Hello' ),
+				'content'    => 'Hello World',
+				'contentMap' => array(
+					'en' => 'Hello World',
+					'de' => 'Hallo Welt',
+				),
 			),
 		);
 		$result = $this->instance->localize_language_maps( $data );
@@ -100,7 +104,7 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 		\remove_filter( 'locale', $callback );
 
 		$this->assertSame( 'Deutsche Zusammenfassung', $result['object']['summary'] );
-		$this->assertSame( 'Hello', $result['object']['content'] );
+		$this->assertSame( 'Hallo Welt', $result['object']['content'] );
 	}
 
 	/**
@@ -170,21 +174,21 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 	 */
 	public function data_language_map() {
 		return array(
-			'plain_string'                       => array(
+			'plain_string'                    => array(
 				array( 'summary' => 'Hello World' ),
 				'summary',
 				'en_US',
 				'Hello World',
 				'Plain string should be returned as-is.',
 			),
-			'null_value'                         => array(
+			'null_value'                      => array(
 				array(),
 				'summary',
 				'en_US',
 				null,
 				'Missing property should return null.',
 			),
-			'object_lang_matches_site'           => array(
+			'object_lang_matches_site'        => array(
 				array(
 					'summary'  => 'Hallo Welt',
 					'language' => 'de_DE',
@@ -194,7 +198,7 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 				'Hallo Welt',
 				'Object language matches site locale: return plain string immediately.',
 			),
-			'object_lang_does_not_match'         => array(
+			'object_lang_does_not_match'      => array(
 				array(
 					'summary'    => 'Bonjour le monde',
 					'summaryMap' => array( 'de' => 'Hallo Welt' ),
@@ -205,7 +209,7 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 				'Hallo Welt',
 				'Object language differs: prefer *Map locale match over plain string.',
 			),
-			'map_site_locale_match'              => array(
+			'map_site_locale_match'           => array(
 				array(
 					'summary'    => 'Hello World',
 					'summaryMap' => array(
@@ -218,7 +222,7 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 				'Hallo Welt',
 				'*Map with site locale match should win over plain string.',
 			),
-			'map_english_fallback'               => array(
+			'map_english_fallback'            => array(
 				array(
 					'summary'    => 'Bonjour le monde',
 					'summaryMap' => array(
@@ -231,7 +235,7 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 				'Hello World',
 				'*Map with no site locale should fall back to English.',
 			),
-			'map_no_match_default_wins'          => array(
+			'map_no_match_default_wins'       => array(
 				array(
 					'summary'    => 'Bonjour le monde',
 					'summaryMap' => array(
@@ -244,7 +248,19 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 				'Bonjour le monde',
 				'*Map with no locale or English match: plain string (default) wins.',
 			),
-			'map_no_match_no_default'            => array(
+			'map_only_no_base_value'          => array(
+				array(
+					'summaryMap' => array(
+						'en' => 'Hello World',
+						'de' => 'Hallo Welt',
+					),
+				),
+				'summary',
+				'de_DE',
+				'Hallo Welt',
+				'*Map with locale match and no base value should resolve from map.',
+			),
+			'map_no_match_no_default'         => array(
 				array(
 					'summaryMap' => array(
 						'fr' => 'Bonjour le monde',
@@ -253,10 +269,10 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 				),
 				'summary',
 				'de_DE',
-				null,
-				'*Map with no match and no plain string should return null.',
+				'Bonjour le monde',
+				'*Map with no match and no plain string should return first map entry.',
 			),
-			'value_is_language_map_locale_match' => array(
+			'value_is_language_map_ignored'   => array(
 				array(
 					'summary' => array(
 						'en' => 'Hello World',
@@ -265,34 +281,10 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 				),
 				'summary',
 				'de_DE',
-				'Hallo Welt',
-				'Incorrectly placed language map: site locale match.',
+				null,
+				'Language map in base property should return null.',
 			),
-			'value_is_language_map_english'      => array(
-				array(
-					'summary' => array(
-						'en' => 'Hello World',
-						'fr' => 'Bonjour le monde',
-					),
-				),
-				'summary',
-				'de_DE',
-				'Hello World',
-				'Incorrectly placed language map: English fallback.',
-			),
-			'value_is_language_map_first_entry'  => array(
-				array(
-					'summary' => array(
-						'fr' => 'Bonjour le monde',
-						'es' => 'Hola mundo',
-					),
-				),
-				'summary',
-				'de_DE',
-				'Bonjour le monde',
-				'Incorrectly placed language map with no match: first entry.',
-			),
-			'content_key'                        => array(
+			'content_key'                     => array(
 				array(
 					'content'    => 'Default content',
 					'contentMap' => array( 'de' => 'Deutscher Inhalt' ),
@@ -302,7 +294,7 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 				'Deutscher Inhalt',
 				'Works for content key with contentMap.',
 			),
-			'name_key'                           => array(
+			'name_key'                        => array(
 				array(
 					'name'    => 'Default name',
 					'nameMap' => array( 'de' => 'Deutscher Name' ),
@@ -312,7 +304,7 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 				'Deutscher Name',
 				'Works for name key with nameMap.',
 			),
-			'english_site_no_double_fallback'    => array(
+			'english_site_no_double_fallback' => array(
 				array(
 					'summary'    => 'Hello World',
 					'summaryMap' => array(
@@ -325,7 +317,7 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 				'English from map',
 				'English site: *Map English match is used.',
 			),
-			'object_lang_matches_skips_map'      => array(
+			'object_lang_matches_skips_map'   => array(
 				array(
 					'summary'    => 'Hallo Welt',
 					'summaryMap' => array( 'de' => 'Hallo Welt aus der Map' ),
@@ -336,7 +328,7 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 				'Hallo Welt',
 				'Object language matches site: plain string returned, *Map skipped.',
 			),
-			'object_lang_partial_match'          => array(
+			'object_lang_partial_match'       => array(
 				array(
 					'summary'  => 'Grüezi',
 					'language' => 'de-CH',
@@ -346,7 +338,7 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 				'Grüezi',
 				'Object language de-CH matches site de_DE (both normalize to "de").',
 			),
-			'empty_language_map'                 => array(
+			'empty_language_map'              => array(
 				array( 'summary' => array() ),
 				'summary',
 				'en_US',
