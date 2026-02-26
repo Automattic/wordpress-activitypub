@@ -119,7 +119,7 @@ trait Language_Map {
 
 		/* No base value and no language match: use first map entry. */
 		if ( \is_array( $map ) && ! empty( $map ) ) {
-			return \reset( $map );
+			return \current( $map );
 		}
 
 		return null;
