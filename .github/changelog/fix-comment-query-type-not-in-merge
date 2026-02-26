@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix likes and reposts appearing in the standard Comments block when another plugin also filters comment types.

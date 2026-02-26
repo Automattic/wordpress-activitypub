@@ -1633,4 +1633,72 @@ class Test_Comment extends \WP_UnitTestCase {
 		$this->assertContains( (string) $like_comment_id, $comment_ids, 'Like should be included when explicitly requested via type__in' );
 		$this->assertContains( (string) $repost_comment_id, $comment_ids, 'Repost should be included when explicitly requested via type__in' );
 	}
+
+	/**
+	 * Test that ActivityPub comment types are still excluded when another plugin sets type__not_in.
+	 *
+	 * Simulates a situation where another plugin (e.g. Friends, Webmention) adds its own
+	 * comment types to type__not_in via pre_get_comments. ActivityPub types must also
+	 * be excluded so that likes and reposts do not appear in the standard Comments block.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_comment_query_merges_with_existing_type__not_in() {
+		$post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+
+		// Navigate to the single post page so that is_singular() returns true.
+		$this->go_to( \get_permalink( $post_id ) );
+
+		// Create a regular comment, a like, and a "webmention" comment (simulating another plugin's type).
+		$regular_comment_id    = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'comment',
+				'comment_content'      => 'Regular comment',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'regular@example.com',
+			)
+		);
+		$like_comment_id       = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'like',
+				'comment_content'      => 'Like',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'like@example.com',
+			)
+		);
+		$webmention_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'webmention',
+				'comment_content'      => 'Webmention',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'webmention@example.com',
+			)
+		);
+
+		// Simulate another plugin adding its own type to type__not_in via pre_get_comments
+		// at an earlier priority (runs before ActivityPub's priority-10 callback).
+		$other_plugin_filter = function ( $query ) {
+			if ( ! empty( $query->query_vars['type__not_in'] ) ) {
+				return;
+			}
+			$query->query_vars['type__not_in'] = array( 'webmention' );
+		};
+		\add_action( 'pre_get_comments', $other_plugin_filter, 5 );
+
+		// Query without explicit type restrictions — both the other plugin's type and
+		// ActivityPub's types (like, repost) should be excluded.
+		$query    = new \WP_Comment_Query();
+		$comments = $query->query( array( 'post_id' => $post_id ) );
+
+		\remove_action( 'pre_get_comments', $other_plugin_filter, 5 );
+
+		$comment_ids = \wp_list_pluck( $comments, 'comment_ID' );
+
+		$this->assertContains( (string) $regular_comment_id, $comment_ids, 'Regular comment should be included.' );
+		$this->assertNotContains( (string) $like_comment_id, $comment_ids, 'Like should be excluded even when another plugin sets type__not_in first.' );
+		$this->assertNotContains( (string) $webmention_comment_id, $comment_ids, 'Webmention (excluded by the other plugin) should also be excluded.' );
+	}
 }

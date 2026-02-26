@@ -789,13 +789,16 @@ class Comment {
 			return;
 		}
 
-		// Do not exclude likes and reposts if the query is already excluding other comment types.
+		// Exclude likes and reposts by the ActivityPub plugin.
+		// Merge with any existing type__not_in values so other plugins' exclusions are preserved.
+		$excluded_types = self::get_comment_type_slugs();
+
 		if ( ! empty( $query->query_vars['type__not_in'] ) ) {
-			return;
+			$existing       = (array) $query->query_vars['type__not_in'];
+			$excluded_types = \array_unique( \array_merge( $existing, $excluded_types ) );
 		}
 
-		// Exclude likes and reposts by the ActivityPub plugin.
-		$query->query_vars['type__not_in'] = self::get_comment_type_slugs();
+		$query->query_vars['type__not_in'] = $excluded_types;
 	}
 
 	/**
