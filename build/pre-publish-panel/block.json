@@ -1,0 +1,11 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "activitypub/pre-publish-panel",
+  "title": "ActivityPub Post Format Suggestions",
+  "category": "widgets",
+  "description": "Suggests optimal post formats for ActivityPub federation before publishing.",
+  "icon": "layout",
+  "textdomain": "activitypub",
+  "editorScript": "file:./plugin.js"
+}
