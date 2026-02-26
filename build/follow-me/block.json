@@ -8,6 +8,12 @@
   "description": "Display your Fediverse profile so that visitors can follow you.",
   "textdomain": "activitypub",
   "icon": "groups",
+  "keywords": [
+    "fediverse",
+    "activitypub",
+    "follow",
+    "mastodon"
+  ],
   "example": {
     "attributes": {
       "className": "is-style-default"

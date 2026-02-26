@@ -6,7 +6,13 @@
   "title": "Fediverse Reactions",
   "category": "widgets",
   "icon": "heart",
-  "description": "Display Fediverse likes and reposts",
+  "keywords": [
+    "fediverse",
+    "activitypub",
+    "likes",
+    "reposts"
+  ],
+  "description": "Display Fediverse likes and reposts for your posts.",
   "example": {
     "attributes": {
       "className": "is-style-facepile"

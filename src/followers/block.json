@@ -8,6 +8,7 @@
 	"description": "Display your followers from the Fediverse on your website.",
 	"textdomain": "activitypub",
 	"icon": "groups",
+	"keywords": [ "fediverse", "activitypub", "followers", "mastodon" ],
 	"supports": {
 		"html": false,
 		"interactivity": true
