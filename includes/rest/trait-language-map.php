@@ -78,10 +78,13 @@ trait Language_Map {
 	 * 1. The base property when the object's language matches the site locale.
 	 * 2. Site locale or English match in the `*Map` variant.
 	 * 3. The base property as a plain string (the default).
+	 * 4. First `*Map` entry if no base string and no preferred language match.
+	 *
+	 * Non-string base values (e.g. arrays) are ignored.
 	 *
 	 * @since unreleased
 	 *
-	 * @param string|null $value       The base property value.
+	 * @param mixed       $value       The base property value (only strings are used).
 	 * @param array|null  $map         The `*Map` variant (e.g. `summaryMap`).
 	 * @param string|null $object_lang The object's language property.
 	 *
