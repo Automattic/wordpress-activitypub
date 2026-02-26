@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Improve language map resolution to strictly follow the ActivityStreams spec.
