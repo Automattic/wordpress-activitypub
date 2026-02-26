@@ -1,8 +1,11 @@
 {
-  "name": "editor-plugin",
-  "title": "Editor Plugin: not a block, but block.json is very useful.",
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "activitypub/editor-plugin",
+  "title": "ActivityPub Editor Integration",
   "category": "widgets",
-  "icon": "admin-comments",
-  "keywords": [],
+  "description": "Adds ActivityPub settings and controls to the WordPress block editor.",
+  "icon": "screenoptions",
+  "textdomain": "activitypub",
   "editorScript": "file:./plugin.js"
 }

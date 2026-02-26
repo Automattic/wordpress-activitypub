@@ -4,7 +4,8 @@
   "name": "activitypub/app",
   "title": "ActivityPub App",
   "category": "widgets",
-  "description": "ActivityPub admin interface",
+  "description": "Manage ActivityPub settings, followers, and federation from the WordPress admin.",
+  "icon": "smartphone",
   "textdomain": "activitypub",
   "editorScript": "file:./index.js"
 }
