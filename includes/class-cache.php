@@ -42,7 +42,22 @@ class Cache {
 	 */
 	public static function is_enabled() {
 		// Check constant first.
-		if ( ACTIVITYPUB_DISABLE_MEDIA_CACHE ) {
+		if ( ACTIVITYPUB_DISABLE_REMOTE_CACHE ) {
+			return false;
+		}
+
+		/**
+		 * Filters whether sideloading is enabled.
+		 *
+		 * This filter was introduced in 7.9.1 and replaced by
+		 * {@see 'activitypub_remote_cache_enabled'} in a subsequent release.
+		 *
+		 * @since 7.9.1
+		 * @deprecated unreleased Use {@see 'activitypub_remote_cache_enabled'} instead.
+		 *
+		 * @param bool $enabled Whether sideloading is enabled. Default true.
+		 */
+		if ( ! \apply_filters_deprecated( 'activitypub_sideloading_enabled', array( true ), 'unreleased', 'activitypub_remote_cache_enabled' ) ) {
 			return false;
 		}
 

@@ -148,6 +148,11 @@ class Health_Check {
 			'test'  => array( self::class, 'test_outbox_rate' ),
 		);
 
+		$tests['direct']['activitypub_test_filesystem'] = array(
+			'label' => \__( 'Filesystem Access Test', 'activitypub' ),
+			'test'  => array( self::class, 'test_filesystem' ),
+		);
+
 		return $tests;
 	}
 
@@ -833,6 +838,61 @@ class Health_Check {
 				\esc_url( \admin_url( 'plugins.php' ) )
 			)
 		);
+
+		return $result;
+	}
+
+	/**
+	 * Filesystem access test.
+	 *
+	 * Checks whether WordPress can write files directly. When direct filesystem
+	 * access is unavailable (e.g., FTP-only servers), media caching will not work.
+	 *
+	 * @since unreleased
+	 *
+	 * @return array The test result.
+	 */
+	public static function test_filesystem() {
+		$result = array(
+			'label'       => \__( 'Uploads directory is writable for media caching', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\__( 'The uploads directory is writable, so remote media caching (avatars, emoji, images) works correctly.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_filesystem',
+		);
+
+		// Skip test when remote caching is disabled.
+		if ( ACTIVITYPUB_DISABLE_REMOTE_CACHE ) {
+			$result['description'] = \sprintf(
+				'<p>%s</p>',
+				\__( 'Remote media caching is disabled, so uploads directory write access is not required.', 'activitypub' )
+			);
+			return $result;
+		}
+
+		$upload_dir = \wp_upload_dir();
+
+		if ( ! \wp_is_writable( $upload_dir['basedir'] ) ) {
+			$result['status']         = 'recommended';
+			$result['label']          = \__( 'Uploads directory is not writable for media caching', 'activitypub' );
+			$result['badge']['color'] = 'orange';
+			$result['description']    = \sprintf(
+				'<p>%s</p><p>%s</p>',
+				\__( 'The uploads directory is not writable by the web server. Remote avatars, emoji, and images will be served from their original URLs instead of being cached locally.', 'activitypub' ),
+				\__( 'To fix this, ask your hosting provider to ensure the uploads directory is writable by the web server.', 'activitypub' )
+			);
+			$result['actions']        = \sprintf(
+				'<p>%s</p>',
+				\__( 'If you cannot make the directory writable, you can disable media caching by adding <code>define( \'ACTIVITYPUB_DISABLE_REMOTE_CACHE\', true );</code> to your <code>wp-config.php</code>. Remote media will then be served from its original URL.', 'activitypub' )
+			);
+		}
 
 		return $result;
 	}

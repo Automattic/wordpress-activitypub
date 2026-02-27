@@ -1296,7 +1296,8 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 			'object' => array(
 				'id'         => 'https://remote.example/post/langmap',
 				'type'       => 'Note',
-				'content'    => array(
+				'content'    => 'Hello',
+				'contentMap' => array(
 					'en' => 'Hello',
 					'de' => 'Hallo',
 				),

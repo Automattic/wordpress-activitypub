@@ -50,6 +50,8 @@ class Blocks {
 			),
 			'showAvatars'        => (bool) \get_option( 'show_avatars' ),
 			'defaultQuotePolicy' => \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE ),
+			'objectType'         => \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ),
+			'noteLength'         => ACTIVITYPUB_NOTE_LENGTH,
 		);
 		wp_localize_script( 'wp-editor', '_activityPubOptions', $data );
 
@@ -63,6 +65,10 @@ class Blocks {
 		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/editor-plugin/plugin.asset.php';
 		$plugin_url = plugins_url( 'build/editor-plugin/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
 		wp_enqueue_script( 'activitypub-block-editor', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
+
+		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/pre-publish-panel/plugin.asset.php';
+		$plugin_url = plugins_url( 'build/pre-publish-panel/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
+		wp_enqueue_script( 'activitypub-pre-publish-panel', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
 	}
 
 	/**
