@@ -955,7 +955,14 @@ class Post extends Base {
 				case 'core/video':
 				case 'videopress/video':
 					if ( ! empty( $block['attrs']['id'] ) ) {
-						$media['video'][] = array( 'id' => $block['attrs']['id'] );
+						$video = array( 'id' => $block['attrs']['id'] );
+
+						// The poster is stored as an HTML attribute on the <video> tag, not in block attrs.
+						if ( preg_match( '/<video[^>]*poster\s*=\s*(["\'])(.*?)\1/i', $block['innerHTML'], $match ) ) {
+							$video['icon'] = \sanitize_url( $match[2] );
+						}
+
+						$media['video'][] = $video;
 					}
 					break;
 				case 'jetpack/slideshow':
