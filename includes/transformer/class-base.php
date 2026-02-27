@@ -22,7 +22,7 @@ use function Activitypub\object_to_uri;
  * Object-Types or Activities.
  *
  * @method string|null get_content() Returns the content for the transformed item.
- * @method array|null  get_icon()    Returns an icon for the transformed item.
+ * @method string|array|null get_icon() Returns an icon for the transformed item.
  * @method string|null get_id()      Returns the ID for the transformed item.
  * @method string|null get_name()    Returns the name for the transformed item.
  * @method string|null get_summary() Returns the summary for the transformed item.
@@ -565,7 +565,7 @@ abstract class Base {
 
 				// Use poster image from the block, or fall back to the transformer icon.
 				if ( ! empty( $media['icon'] ) ) {
-					$attachment['icon'] = \esc_url( $media['icon'] );
+					$attachment['icon'] = \esc_url_raw( $media['icon'] );
 				} elseif ( \method_exists( $this, 'get_icon' ) && $this->get_icon() ) {
 					$attachment['icon'] = object_to_uri( $this->get_icon() );
 				}

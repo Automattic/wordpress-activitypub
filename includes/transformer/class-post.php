@@ -958,8 +958,12 @@ class Post extends Base {
 						$video = array( 'id' => $block['attrs']['id'] );
 
 						// The poster is stored as an HTML attribute on the <video> tag, not in block attrs.
-						if ( preg_match( '/<video[^>]*poster\s*=\s*(["\'])(.*?)\1/i', $block['innerHTML'], $match ) ) {
-							$video['icon'] = \sanitize_url( $match[2] );
+						$processor = new \WP_HTML_Tag_Processor( $block['innerHTML'] );
+						if ( $processor->next_tag( array( 'tag_name' => 'video' ) ) ) {
+							$poster = $processor->get_attribute( 'poster' );
+							if ( ! empty( $poster ) ) {
+								$video['icon'] = \esc_url_raw( $poster );
+							}
 						}
 
 						$media['video'][] = $video;
