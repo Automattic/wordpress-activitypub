@@ -923,11 +923,10 @@ class Post extends Base {
 				case 'core/image':
 				case 'core/cover':
 					if ( ! empty( $block['attrs']['id'] ) ) {
-						$alt   = '';
-						$check = preg_match( '/<img.*?alt\s*=\s*([\"\'])(.*?)\1.*>/i', $block['innerHTML'], $match );
-
-						if ( $check ) {
-							$alt = $match[2];
+						$alt       = '';
+						$processor = new \WP_HTML_Tag_Processor( $block['innerHTML'] );
+						if ( $processor->next_tag( array( 'tag_name' => 'img' ) ) ) {
+							$alt = $processor->get_attribute( 'alt' ) ?? '';
 						}
 
 						$found = false;
