@@ -254,9 +254,9 @@ class Settings_Fields {
 		$switch_url = \wp_nonce_url(
 			\add_query_arg(
 				array(
-					'page'                       => 'activitypub',
-					'tab'                        => 'settings',
-					'activitypub_switch_to_auto' => '1',
+					'page' => 'activitypub',
+					'tab'  => 'settings',
+					'activitypub_disable_legacy_template_mode' => '1',
 				),
 				\admin_url( 'options-general.php' )
 			),
