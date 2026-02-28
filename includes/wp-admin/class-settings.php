@@ -296,7 +296,7 @@ class Settings {
 	 */
 	public static function handle_switch_object_type() {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( ! isset( $_GET['activitypub_disable_legacy_template_mode'] ) ) {
+		if ( ! isset( $_GET['activitypub_update_object_type'] ) ) {
 			return;
 		}
 
