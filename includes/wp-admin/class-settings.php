@@ -302,6 +302,10 @@ class Settings {
 
 		\check_admin_referer( 'activitypub_switch_object_type' );
 
+		if ( ! \current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
 		\update_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
 
 		\wp_safe_redirect( \admin_url( 'options-general.php?page=activitypub&tab=settings' ) );
