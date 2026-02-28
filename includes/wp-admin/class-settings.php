@@ -295,6 +295,7 @@ class Settings {
 	 * @since unreleased
 	 */
 	public static function handle_switch_object_type() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if ( ! isset( $_GET['activitypub_switch_to_auto'] ) ) {
 			return;
 		}
