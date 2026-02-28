@@ -264,7 +264,7 @@ class Settings_Fields {
 		);
 		?>
 		<p class="description">
-			<?php \esc_html_e( '⚠ You are using the legacy template system to format your posts for the fediverse. We recommend switching to automatic mode, which intelligently chooses the best format for each post.', 'activitypub' ); ?>
+			<?php \esc_html_e( '⚠ You are using the legacy template system to format your posts for the fediverse. We recommend switching to automatic mode, which intelligently chooses the best format for each post. Switching will remove this template field from the settings.', 'activitypub' ); ?>
 		</p>
 		<p>
 			<a href="<?php echo \esc_url( $switch_url ); ?>" class="button">
