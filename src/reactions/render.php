@@ -185,7 +185,6 @@ if ( $attributes['showActions'] ) {
 	$intent_map = array(
 		'like'   => 'like',
 		'repost' => 'announce',
-		'quote'  => 'announce',
 	);
 }
 

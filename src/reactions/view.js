@@ -147,7 +147,7 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 				context.isLoading = false;
 
 				// Open the remote intent URL in a new tab.
-				window.open( response.url, '_blank' );
+				window.open( response.url, '_blank', 'noopener,noreferrer' );
 
 				// Close via shared modal.
 				actions.closeModal();
@@ -316,7 +316,16 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 		getStore() {
 			const data = localStorage.getItem( STORAGE_KEY );
 
-			return data ? JSON.parse( data ) : {};
+			if ( ! data ) {
+				return {};
+			}
+
+			try {
+				return JSON.parse( data );
+			} catch ( e ) {
+				localStorage.removeItem( STORAGE_KEY );
+				return {};
+			}
 		},
 
 		/**
