@@ -1,5 +1,6 @@
 import clsx from 'clsx';
-import { useBlockProps, InnerBlocks } from '@wordpress/block-editor';
+import { useBlockProps, InnerBlocks, InspectorControls } from '@wordpress/block-editor';
+import { PanelBody, ToggleControl } from '@wordpress/components';
 import { __, _x, sprintf } from '@wordpress/i18n';
 import { select } from '@wordpress/data';
 import { useEffect, useRef } from '@wordpress/element';
@@ -59,7 +60,7 @@ const DUMMY_REACTIONS = {
  * @return {JSX.Element} Component to render.
  */
 export default function Edit( { attributes, setAttributes, __unstableLayoutClassNames } ) {
-	const { className = '', displayStyle = 'facepile' } = attributes;
+	const { className = '', displayStyle = 'facepile', showActions = false } = attributes;
 	const blockProps = useBlockProps( {
 		className: __unstableLayoutClassNames,
 	} );
@@ -106,18 +107,35 @@ export default function Edit( { attributes, setAttributes, __unstableLayoutClass
 	];
 
 	return (
-		<div { ...blockProps }>
-			<InnerBlocks
-				template={ TEMPLATE }
-				allowedBlocks={ [ 'core/heading' ] }
-				templateLock={ 'all' }
-				renderAppender={ false }
-			/>
-			<Reactions
-				postId={ getCurrentPostId() }
-				fallbackReactions={ DUMMY_REACTIONS }
-				displayStyle={ displayStyle }
-			/>
-		</div>
+		<>
+			<InspectorControls>
+				<PanelBody title={ __( 'Action Buttons', 'activitypub' ) }>
+					<ToggleControl
+						__nextHasNoMarginBottom
+						label={ __( 'Show action buttons', 'activitypub' ) }
+						help={ __(
+							'Display Like and Boost buttons so visitors can interact from their Fediverse server.',
+							'activitypub'
+						) }
+						checked={ showActions }
+						onChange={ ( value ) => setAttributes( { showActions: value } ) }
+					/>
+				</PanelBody>
+			</InspectorControls>
+			<div { ...blockProps }>
+				<InnerBlocks
+					template={ TEMPLATE }
+					allowedBlocks={ [ 'core/heading' ] }
+					templateLock={ 'all' }
+					renderAppender={ false }
+				/>
+				<Reactions
+					postId={ getCurrentPostId() }
+					fallbackReactions={ DUMMY_REACTIONS }
+					displayStyle={ displayStyle }
+					showActions={ showActions }
+				/>
+			</div>
+		</>
 	);
 }

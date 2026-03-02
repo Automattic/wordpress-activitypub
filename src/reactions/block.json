@@ -21,6 +21,10 @@
 		"displayStyle": {
 			"type": "string",
 			"default": "facepile"
+		},
+		"showActions": {
+			"type": "boolean",
+			"default": false
 		}
 	},
 	"supports": {
