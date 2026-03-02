@@ -650,14 +650,25 @@ class Blocks {
 	/**
 	 * Renders a modal component that can be used by different blocks.
 	 *
-	 * @param array $args Arguments for the modal.
+	 * @param array $args {
+	 *     Arguments for the modal.
+	 *
+	 *     @type string $content       The modal content HTML.
+	 *     @type string $id            Optional ID prefix for the modal elements.
+	 *     @type bool   $is_compact    Whether the modal is compact (popover-style). Default false.
+	 *     @type string $title         Static title text for the modal header.
+	 *     @type string $title_binding Optional Interactivity API binding for a dynamic title
+	 *                                 (e.g. 'context.modal.title'). When set, uses data-wp-text
+	 *                                 on the title element and enables dynamic compact toggling.
+	 * }
 	 */
 	public static function render_modal( $args = array() ) {
 		$defaults = array(
-			'content'    => '',
-			'id'         => '',
-			'is_compact' => false,
-			'title'      => '',
+			'content'       => '',
+			'id'            => '',
+			'is_compact'    => false,
+			'title'         => '',
+			'title_binding' => '',
 		);
 
 		$args = \wp_parse_args( $args, $defaults );
@@ -667,17 +678,23 @@ class Blocks {
 			class="activitypub-modal__overlay<?php echo \esc_attr( $args['is_compact'] ? ' compact' : '' ); ?>"
 			data-wp-bind--hidden="!context.modal.isOpen"
 			data-wp-watch="callbacks.handleModalEffects"
+			<?php if ( ! empty( $args['title_binding'] ) ) : ?>
+				data-wp-class--compact="context.modal.isCompact"
+			<?php endif; ?>
 			role="dialog"
 			aria-modal="true"
 			hidden
 		>
 			<div class="activitypub-modal__frame">
-				<?php if ( ! $args['is_compact'] || ! empty( $args['title'] ) ) : ?>
+				<?php if ( ! $args['is_compact'] || ! empty( $args['title'] ) || ! empty( $args['title_binding'] ) ) : ?>
 					<div class="activitypub-modal__header">
 						<h2
 							class="activitypub-modal__title"
 							<?php if ( ! empty( $args['id'] ) ) : ?>
 								id="<?php echo \esc_attr( $args['id'] . '-title' ); ?>"
+							<?php endif; ?>
+							<?php if ( ! empty( $args['title_binding'] ) ) : ?>
+								data-wp-text="<?php echo \esc_attr( $args['title_binding'] ); ?>"
 							<?php endif; ?>
 						><?php echo \esc_html( $args['title'] ); ?></h2>
 						<button

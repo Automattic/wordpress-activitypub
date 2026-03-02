@@ -120,6 +120,40 @@
 			}
 		}
 	}
+
+	// Inline action button within each reaction group.
+	// All buttons share the same min-width so they align across rows.
+	.reaction-action-button {
+		background: none;
+		border: 1px solid currentcolor;
+		border-radius: 4px;
+		flex: 0 0 auto;
+		min-width: 5.5em;
+		padding: 0.25rem 0.75rem;
+		font-size: var(--wp--preset--font-size--small, 0.875rem);
+		color: currentcolor;
+		cursor: pointer;
+		text-align: center;
+		transition: background-color 0.2s ease;
+		white-space: nowrap;
+		text-decoration: none;
+
+		&:hover {
+			background-color: rgba(0, 0, 0, 0.05);
+			color: currentcolor;
+		}
+
+		&:focus:not(:disabled) {
+			box-shadow: none;
+			outline: 1px solid currentcolor;
+			outline-offset: 2px;
+		}
+	}
+
+	// Match the compact list modal width to the action button column.
+	.activitypub-modal__overlay.compact .activitypub-modal__frame {
+		min-width: 5.5em;
+	}
 }
 
 /* Reactions list styles */
@@ -179,6 +213,85 @@
 	max-height: 300px;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 	padding: 0.5rem;
+}
+
+/* Intent dialog styles (inside shared modal) */
+.activitypub-intent-dialog {
+
+	.activitypub-dialog__section {
+		padding: 1.5rem 2rem;
+		border-bottom: 1px solid var(--wp--preset--color--light-gray, #f0f0f0);
+
+		&:last-child {
+			border-bottom: none;
+			padding-bottom: 2rem;
+		}
+
+		h4 {
+			margin-top: 0;
+			margin-bottom: 0.5rem;
+			font-size: 110%;
+		}
+	}
+
+	.activitypub-dialog__description {
+		margin-bottom: 1rem;
+		color: inherit;
+		font-size: 95%;
+	}
+
+	.activitypub-dialog__button-group {
+		display: flex;
+		width: 100%;
+		margin-bottom: 0.5rem;
+
+		input[type] {
+			flex: 1;
+			border: 1px solid var(--wp--preset--color--gray, #e2e4e7);
+			border-radius: 4px 0 0 4px;
+			line-height: 1;
+			margin: 0;
+
+			&::placeholder {
+				opacity: 0.5;
+			}
+
+			&[aria-invalid="true"] {
+				border-color: var(--wp--preset--color--vivid-red);
+			}
+		}
+
+		button {
+			border-radius: 0 4px 4px 0 !important;
+			margin-left: -1px !important;
+			min-width: 22.5%;
+			width: auto;
+		}
+	}
+
+	.activitypub-dialog__error {
+		color: var(--wp--preset--color--vivid-red);
+		font-size: 90%;
+		margin-top: 0.5rem;
+	}
+
+	.activitypub-dialog__remember {
+		margin-top: 1rem;
+		font-size: 90%;
+
+		label {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+		}
+
+		input[type="checkbox"] {
+			margin: 0;
+			position: relative;
+			top: 0;
+		}
+	}
+
 }
 
 /* Compact display style - inline buttons without avatars */
