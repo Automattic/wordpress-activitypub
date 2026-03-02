@@ -344,15 +344,9 @@ class Webfinger {
 		}
 
 		// Last-resort: construct a Mastodon-compatible authorize_interaction URL.
-		$host = \wp_parse_url( $uri, PHP_URL_HOST );
+		$identifier_and_host = self::get_identifier_and_host( $uri );
 
-		// If the URI is a handle (e.g. user@example.com), extract the host from it.
-		if ( ! $host && \strpos( $uri, '@' ) !== false ) {
-			$parts = \explode( '@', \ltrim( $uri, '@' ) );
-			$host  = isset( $parts[1] ) ? $parts[1] : null;
-		}
-
-		if ( ! $host ) {
+		if ( \is_wp_error( $identifier_and_host ) ) {
 			return new \WP_Error(
 				'webfinger_missing_intent_endpoint',
 				\__( 'No valid Intent endpoint found.', 'activitypub' ),
@@ -363,6 +357,6 @@ class Webfinger {
 			);
 		}
 
-		return 'https://' . $host . '/authorize_interaction?uri={uri}';
+		return 'https://' . $identifier_and_host[1] . '/authorize_interaction?uri={uri}';
 	}
 }

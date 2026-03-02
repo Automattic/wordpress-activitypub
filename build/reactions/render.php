@@ -181,11 +181,13 @@ if ( $attributes['showActions'] ) {
 }
 
 // Map comment types to remote intent types.
-$intent_map = array(
-	'like'   => 'like',
-	'repost' => 'announce',
-	'quote'  => 'announce',
-);
+if ( $attributes['showActions'] ) {
+	$intent_map = array(
+		'like'   => 'like',
+		'repost' => 'announce',
+		'quote'  => 'announce',
+	);
+}
 
 // Build reactions content.
 ob_start();
