@@ -20,6 +20,12 @@ use function Activitypub\object_to_uri;
  *
  * Transformers are responsible for transforming WordPress objects into different ActivityPub
  * Object-Types or Activities.
+ *
+ * @method string|null get_content() Returns the content for the transformed item.
+ * @method string|array|null get_icon() Returns an icon for the transformed item.
+ * @method string|null get_id()      Returns the ID for the transformed item.
+ * @method string|null get_name()    Returns the name for the transformed item.
+ * @method string|null get_summary() Returns the summary for the transformed item.
  */
 abstract class Base {
 	/**
@@ -493,7 +499,7 @@ abstract class Base {
 	/**
 	 * Transforms a WordPress attachment array to ActivityStreams attachment format.
 	 *
-	 * @param array $media The WordPress attachment array with 'id' and optional 'alt'.
+	 * @param array $media The WordPress attachment array with 'id', optional 'alt', and optional 'icon'.
 	 *
 	 * @return array The ActivityStreams attachment array.
 	 */
@@ -557,7 +563,10 @@ abstract class Base {
 					$attachment['height'] = \esc_attr( $meta['height'] );
 				}
 
-				if ( \method_exists( $this, 'get_icon' ) && $this->get_icon() ) {
+				// Use poster image from the block, or fall back to the transformer icon.
+				if ( ! empty( $media['icon'] ) ) {
+					$attachment['icon'] = \esc_url_raw( $media['icon'] );
+				} elseif ( \method_exists( $this, 'get_icon' ) && $this->get_icon() ) {
 					$attachment['icon'] = object_to_uri( $this->get_icon() );
 				}
 				break;

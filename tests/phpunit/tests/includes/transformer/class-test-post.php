@@ -503,6 +503,74 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_media_from_blocks extracts poster from video blocks.
+	 *
+	 * @covers ::get_media_from_blocks
+	 */
+	public function test_get_media_from_blocks_extracts_video_poster() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:video {"id":789} --><figure class="wp-block-video"><video controls poster="https://example.com/poster.jpg" src="https://example.com/video.mp4"></video></figure><!-- /wp:video -->',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$transformer = new Post( $post );
+		$media       = array(
+			'image' => array(),
+			'audio' => array(),
+			'video' => array(),
+		);
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_media_from_blocks' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$blocks = parse_blocks( $post->post_content );
+		$result = $method->invoke( $transformer, $blocks, $media );
+
+		$this->assertCount( 1, $result['video'] );
+		$this->assertSame( 789, $result['video'][0]['id'] );
+		$this->assertSame( 'https://example.com/poster.jpg', $result['video'][0]['icon'] );
+	}
+
+	/**
+	 * Test get_media_from_blocks handles video blocks without poster.
+	 *
+	 * @covers ::get_media_from_blocks
+	 */
+	public function test_get_media_from_blocks_video_without_poster() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:video {"id":789} --><figure class="wp-block-video"><video controls src="https://example.com/video.mp4"></video></figure><!-- /wp:video -->',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$transformer = new Post( $post );
+		$media       = array(
+			'image' => array(),
+			'audio' => array(),
+			'video' => array(),
+		);
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_media_from_blocks' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$blocks = parse_blocks( $post->post_content );
+		$result = $method->invoke( $transformer, $blocks, $media );
+
+		$this->assertCount( 1, $result['video'] );
+		$this->assertSame( 789, $result['video'][0]['id'] );
+		$this->assertArrayNotHasKey( 'icon', $result['video'][0] );
+	}
+
+	/**
 	 * Test get_icon method.
 	 *
 	 * @covers ::get_icon
