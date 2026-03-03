@@ -108,16 +108,11 @@ body.modal-open {
 		cursor: pointer;
 		color: inherit;
 		opacity: 0.8;
+		outline: none;
 
 		&:hover {
 			opacity: 1;
 			text-decoration: underline;
-		}
-
-		&:focus-visible {
-			opacity: 1;
-			outline: 1px solid currentcolor;
-			outline-offset: 2px;
 		}
 	}
 
