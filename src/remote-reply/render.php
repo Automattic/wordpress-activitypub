@@ -92,16 +92,14 @@ ob_start();
 			type="text"
 			value="<?php echo esc_attr( $selected_comment ); ?>"
 		/>
-		<div class="wp-block-button">
-			<button
-				aria-label="<?php esc_attr_e( 'Copy URL to clipboard', 'activitypub' ); ?>"
-				class="wp-element-button wp-block-button__link"
-				data-wp-on--click="actions.copyToClipboard"
-				type="button"
-			>
-				<span data-wp-text="context.copyButtonText"></span>
-			</button>
-		</div>
+		<button
+			aria-label="<?php esc_attr_e( 'Copy URL to clipboard', 'activitypub' ); ?>"
+			class="wp-element-button"
+			data-wp-on--click="actions.copyToClipboard"
+			type="button"
+		>
+			<span data-wp-text="context.copyButtonText"></span>
+		</button>
 	</div>
 </div>
 <div class="activitypub-dialog__section">
@@ -124,18 +122,16 @@ ob_start();
 			placeholder="<?php esc_attr_e( '@username@example.com', 'activitypub' ); ?>"
 			type="text"
 		/>
-		<div class="wp-block-button">
-			<button
-				aria-label="<?php esc_attr_e( 'Reply', 'activitypub' ); ?>"
-				class="wp-element-button wp-block-button__link"
-				data-wp-bind--disabled="context.isLoading"
-				data-wp-on--click="actions.submitRemoteProfile"
-				type="button"
-			>
-				<span data-wp-bind--hidden="context.isLoading"><?php esc_html_e( 'Reply', 'activitypub' ); ?></span>
-				<span data-wp-bind--hidden="!context.isLoading"><?php esc_html_e( 'Loading&hellip;', 'activitypub' ); ?></span>
-			</button>
-		</div>
+		<button
+			aria-label="<?php esc_attr_e( 'Reply', 'activitypub' ); ?>"
+			class="wp-element-button"
+			data-wp-bind--disabled="context.isLoading"
+			data-wp-on--click="actions.submitRemoteProfile"
+			type="button"
+		>
+			<span data-wp-bind--hidden="context.isLoading"><?php esc_html_e( 'Reply', 'activitypub' ); ?></span>
+			<span data-wp-bind--hidden="!context.isLoading"><?php esc_html_e( 'Loading&hellip;', 'activitypub' ); ?></span>
+		</button>
 	</div>
 	<div
 		class="activitypub-dialog__error"
@@ -180,7 +176,7 @@ $modal_content = ob_get_clean();
 
 		<button
 			type="button"
-			class="activitypub-remote-profile__close wp-element-button wp-block-button__link"
+			class="activitypub-remote-profile__close wp-element-button"
 			data-wp-on--click="actions.deleteRemoteUser"
 			title="<?php esc_attr_e( 'Delete Remote Profile', 'activitypub' ); ?>"
 		>

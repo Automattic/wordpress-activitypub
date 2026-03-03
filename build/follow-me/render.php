@@ -131,16 +131,14 @@ ob_start();
 			type="text"
 			value="<?php echo esc_attr( '@' . $actor->get_webfinger() ); ?>"
 		/>
-		<div class="wp-block-button">
-			<button
-				aria-label="<?php esc_attr_e( 'Copy handle to clipboard', 'activitypub' ); ?>"
-				class="wp-element-button wp-block-button__link"
-				data-wp-on--click="actions.copyToClipboard"
-				type="button"
-			>
-				<span data-wp-text="context.copyButtonText"></span>
-			</button>
-		</div>
+		<button
+			aria-label="<?php esc_attr_e( 'Copy handle to clipboard', 'activitypub' ); ?>"
+			class="wp-element-button"
+			data-wp-on--click="actions.copyToClipboard"
+			type="button"
+		>
+			<span data-wp-text="context.copyButtonText"></span>
+		</button>
 	</div>
 </div>
 <div class="activitypub-dialog__section">
@@ -163,18 +161,16 @@ ob_start();
 			placeholder="<?php esc_attr_e( '@username@example.com', 'activitypub' ); ?>"
 			type="text"
 		/>
-		<div class="wp-block-button">
-			<button
-				aria-label="<?php esc_attr_e( 'Follow', 'activitypub' ); ?>"
-				class="wp-element-button wp-block-button__link"
-				data-wp-bind--disabled="context.isLoading"
-				data-wp-on--click="actions.submitRemoteProfile"
-				type="button"
-			>
-				<span data-wp-bind--hidden="context.isLoading"><?php esc_html_e( 'Follow', 'activitypub' ); ?></span>
-				<span data-wp-bind--hidden="!context.isLoading"><?php esc_html_e( 'Loading&hellip;', 'activitypub' ); ?></span>
-			</button>
-		</div>
+		<button
+			aria-label="<?php esc_attr_e( 'Follow', 'activitypub' ); ?>"
+			class="wp-element-button"
+			data-wp-bind--disabled="context.isLoading"
+			data-wp-on--click="actions.submitRemoteProfile"
+			type="button"
+		>
+			<span data-wp-bind--hidden="context.isLoading"><?php esc_html_e( 'Follow', 'activitypub' ); ?></span>
+			<span data-wp-bind--hidden="!context.isLoading"><?php esc_html_e( 'Loading&hellip;', 'activitypub' ); ?></span>
+		</button>
 	</div>
 	<div
 		class="activitypub-dialog__error"
