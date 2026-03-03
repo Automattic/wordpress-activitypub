@@ -184,12 +184,14 @@ export function createModalStore( namespace ) {
 					return;
 				}
 
-				// If the click was on the button or its children, we should not close the modal.
-				const toggleButton = blockWrapper.querySelector(
+				// If the click was on any toggle trigger or its children, we should not close the modal.
+				const toggleButtons = blockWrapper.querySelectorAll(
 					'[data-wp-on--click="actions.toggleModal"], [data-wp-on-async--click="actions.toggleModal"]'
 				);
-				if ( toggleButton && ( toggleButton === event.target || toggleButton.contains( event.target ) ) ) {
-					return;
+				for ( const toggleButton of toggleButtons ) {
+					if ( toggleButton === event.target || toggleButton.contains( event.target ) ) {
+						return;
+					}
 				}
 
 				// Check if the click was inside the modal frame.

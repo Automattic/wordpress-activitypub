@@ -86,6 +86,9 @@
 
 		// Label showing count of reactions — styled as a plain link.
 		.reaction-label {
+			background: none;
+			border: none;
+			font: inherit;
 			display: flex;
 			align-items: center;
 			gap: 0.25rem;
