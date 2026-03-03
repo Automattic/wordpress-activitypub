@@ -237,9 +237,10 @@ ob_start();
 		</ul>
 		<?php endif; ?>
 		<button
-			class="reaction-label wp-element-button"
+			class="reaction-label"
 			data-reaction-type="<?php echo esc_attr( $_type ); ?>"
 			data-wp-on--click="actions.toggleModal"
+			type="button"
 			aria-label="<?php echo esc_attr( $aria_label ); ?>"
 		>
 			<?php echo esc_html( $reaction['label'] ); ?>
