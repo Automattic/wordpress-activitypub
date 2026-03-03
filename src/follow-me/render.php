@@ -113,6 +113,7 @@ $stats = array(
 
 ob_start();
 ?>
+<?php Blocks::render_modal_help(); ?>
 <div class="activitypub-dialog__section">
 	<h4><?php esc_html_e( 'My Profile', 'activitypub' ); ?></h4>
 	<div class="activitypub-dialog__description">

@@ -99,6 +99,49 @@ body.modal-open {
 	}
 }
 
+.activitypub-dialog__help {
+	padding: 1rem 2rem;
+	border-bottom: 1px solid var(--wp--preset--color--light-gray, #f0f0f0);
+	font-size: 0.875rem;
+
+	details summary {
+		cursor: pointer;
+		font-weight: 600;
+		list-style: none;
+		color: inherit;
+		opacity: 0.8;
+
+		&::-webkit-details-marker {
+			display: none;
+		}
+
+		&::before {
+			content: "⁂";
+			display: inline-block;
+			margin-right: 0.4em;
+			transition: transform 0.2s ease;
+		}
+
+		&:hover {
+			opacity: 1;
+			text-decoration: underline;
+		}
+	}
+
+	details[open] summary::before {
+		transform: rotate(90deg);
+	}
+
+	details p {
+		margin: 0.75rem 0 0;
+		line-height: 1.5;
+
+		&:last-child {
+			margin-bottom: 0;
+		}
+	}
+}
+
 @keyframes activitypub-modal-appear {
 
 	from {

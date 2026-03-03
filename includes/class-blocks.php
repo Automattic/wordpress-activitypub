@@ -718,6 +718,30 @@ class Blocks {
 	}
 
 	/**
+	 * Renders a help section explaining the Fediverse inside modal dialogs.
+	 *
+	 * Outputs a collapsible `<details>` element that explains decentralized
+	 * interactions to users unfamiliar with the Fediverse.
+	 *
+	 * @since unreleased
+	 */
+	public static function render_modal_help() {
+		?>
+		<div class="activitypub-dialog__help">
+			<details>
+				<summary><?php \esc_html_e( 'Why do I need to enter my profile?', 'activitypub' ); ?></summary>
+				<p>
+					<?php \esc_html_e( 'This site is part of the Fediverse, a network of interconnected social platforms (like Mastodon, Pixelfed, Friendica, and others). Unlike centralized social media, your account lives on a server of your choice, and you can interact with people across different servers and platforms.', 'activitypub' ); ?>
+				</p>
+				<p>
+					<?php \esc_html_e( 'By entering your profile, we can redirect you to your server where you can complete the action from your own account.', 'activitypub' ); ?>
+				</p>
+			</details>
+		</div>
+		<?php
+	}
+
+	/**
 	 * Renders an actor list component that can be used by different blocks.
 	 *
 	 * @param array $args Arguments for the actor list.
