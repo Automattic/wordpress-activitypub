@@ -105,8 +105,12 @@
 				color: currentcolor;
 			}
 
-			&:focus-visible {
+			&:focus {
 				box-shadow: none;
+				outline: none;
+			}
+
+			&:focus-visible {
 				outline: 1px solid currentcolor;
 				outline-offset: 2px;
 			}
