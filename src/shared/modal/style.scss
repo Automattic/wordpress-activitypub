@@ -150,22 +150,34 @@ body.modal-open {
 			font-size: 1em;
 			font-family: inherit;
 			line-height: 1;
-			padding: calc(0.667em + 2px);
-			border: 1px solid var(--activitypub-modal-border-color, #949494);
+			padding: calc(0.667em + 2px) !important;
+			border: 1px solid var(--activitypub-modal-border-color, #949494) !important;
+			background-color: var(--activitypub-modal-background-color, #fff) !important;
+			color: inherit !important;
 			box-sizing: border-box;
+			border-radius: 0;
 
 			&::placeholder {
 				opacity: 0.5;
 			}
 
 			&[aria-invalid="true"] {
-				border-color: var(--wp--preset--color--vivid-red, #b32d2e);
+				border-color: var(--wp--preset--color--vivid-red, #b32d2e) !important;
 			}
 		}
 
 		button {
 			min-width: 22.5%;
 			width: auto;
+			padding: calc(0.667em + 2px) 1.5em;
+			font-size: 1em;
+			font-family: inherit;
+			line-height: 1;
+			background-color: var(--wp--preset--color--contrast, #1e1e1e);
+			color: var(--wp--preset--color--base, #fff);
+			border: none;
+			cursor: pointer;
+			box-sizing: border-box;
 		}
 	}
 
@@ -192,37 +204,6 @@ body.modal-open {
 		}
 	}
 
-	&__help {
-		margin-top: 0.5rem;
-		font-size: 0.9rem;
-
-		summary {
-			cursor: pointer;
-			color: inherit;
-			opacity: 0.8;
-			outline: none;
-
-			&:hover {
-				opacity: 1;
-				text-decoration: underline;
-			}
-
-			&:focus-visible {
-				opacity: 1;
-				outline: 1px solid currentcolor;
-				outline-offset: 2px;
-			}
-		}
-
-		p {
-			margin: 0.5rem 0 0;
-			line-height: 1.5;
-
-			&:last-child {
-				margin-bottom: 0;
-			}
-		}
-	}
 }
 
 @keyframes activitypub-modal-appear {
