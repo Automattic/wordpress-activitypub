@@ -116,7 +116,7 @@ ob_start();
 <div class="activitypub-dialog__section">
 	<h4><?php esc_html_e( 'My Profile', 'activitypub' ); ?></h4>
 	<div class="activitypub-dialog__description">
-		<?php esc_html_e( 'Copy and paste my profile into the search field of your favorite fediverse app or server.', 'activitypub' ); ?>
+		<?php esc_html_e( 'Paste my profile into the search field of your favorite open social app or platform.', 'activitypub' ); ?>
 	</div>
 	<div class="activitypub-dialog__button-group">
 		<label for="<?php echo esc_attr( $block_id . '-profile-handle' ); ?>" class="screen-reader-text">

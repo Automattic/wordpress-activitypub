@@ -126,6 +126,7 @@ body.modal-open {
 		h4 {
 			margin-top: 0;
 			margin-bottom: 0.5rem;
+			font-size: 110%;
 		}
 	}
 
@@ -146,9 +147,14 @@ body.modal-open {
 			margin: 0;
 			font-size: 1em;
 			font-family: inherit;
+			line-height: 1;
 			padding: calc(0.667em + 2px);
 			border: 1px solid var(--activitypub-modal-border-color, #949494);
 			box-sizing: border-box;
+
+			&::placeholder {
+				opacity: 0.5;
+			}
 
 			&[aria-invalid="true"] {
 				border-color: var(--wp--preset--color--vivid-red, #b32d2e);
@@ -190,37 +196,40 @@ body.modal-open {
 
 		input[type="checkbox"] {
 			margin: 0;
-		}
-	}
-}
-
-.activitypub-dialog__help {
-	margin-top: 0.5rem;
-	font-size: 0.9rem;
-
-	summary {
-		cursor: pointer;
-		color: inherit;
-		opacity: 0.8;
-
-		&:hover {
-			opacity: 1;
-			text-decoration: underline;
-		}
-
-		&:focus-visible {
-			opacity: 1;
-			outline: 1px solid currentcolor;
-			outline-offset: 2px;
+			position: relative;
+			top: 0;
 		}
 	}
 
-	p {
-		margin: 0.5rem 0 0;
-		line-height: 1.5;
+	&__help {
+		margin-top: 0.5rem;
+		font-size: 0.9rem;
 
-		&:last-child {
-			margin-bottom: 0;
+		summary {
+			cursor: pointer;
+			color: inherit;
+			opacity: 0.8;
+			outline: none;
+
+			&:hover {
+				opacity: 1;
+				text-decoration: underline;
+			}
+
+			&:focus-visible {
+				opacity: 1;
+				outline: 1px solid currentcolor;
+				outline-offset: 2px;
+			}
+		}
+
+		p {
+			margin: 0.5rem 0 0;
+			line-height: 1.5;
+
+			&:last-child {
+				margin-bottom: 0;
+			}
 		}
 	}
 }
