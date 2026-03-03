@@ -41,6 +41,7 @@ body.modal-open {
 	&__frame {
 		max-width: 660px;
 		width: 100%;
+		font-size: 1rem;
 		background-color: var(--wp--preset--color--white, #fff);
 		border-radius: 8px;
 		box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
@@ -96,6 +97,37 @@ body.modal-open {
 
 	&__content {
 		overflow-y: auto;
+	}
+}
+
+.activitypub-dialog__help {
+	margin-top: 0.5rem;
+	font-size: 0.9rem;
+
+	summary {
+		cursor: pointer;
+		color: inherit;
+		opacity: 0.8;
+
+		&:hover {
+			opacity: 1;
+			text-decoration: underline;
+		}
+
+		&:focus-visible {
+			opacity: 1;
+			outline: 1px solid currentcolor;
+			outline-offset: 2px;
+		}
+	}
+
+	p {
+		margin: 0.5rem 0 0;
+		line-height: 1.5;
+
+		&:last-child {
+			margin-bottom: 0;
+		}
 	}
 }
 
