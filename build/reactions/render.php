@@ -202,7 +202,7 @@ ob_start();
 	<div class="reaction-group" data-reaction-type="<?php echo esc_attr( $_type ); ?>">
 		<?php if ( $attributes['showActions'] && $intent ) : ?>
 		<button
-			class="reaction-action-button wp-element-button"
+			class="reaction-action-button has-text-color has-background"
 			data-intent="<?php echo esc_attr( $intent ); ?>"
 			data-wp-on--click="actions.openIntentModal"
 			type="button"
@@ -237,7 +237,7 @@ ob_start();
 		</ul>
 		<?php endif; ?>
 		<button
-			class="reaction-label"
+			class="reaction-label has-text-color has-background"
 			data-reaction-type="<?php echo esc_attr( $_type ); ?>"
 			data-wp-on--click="actions.toggleModal"
 			type="button"
