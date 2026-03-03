@@ -100,33 +100,108 @@ body.modal-open {
 	}
 }
 
-.activitypub-dialog__help {
-	margin-top: 0.5rem;
-	font-size: 0.9rem;
+.activitypub-dialog {
 
-	summary {
-		cursor: pointer;
-		color: inherit;
-		opacity: 0.8;
+	&__section {
+		padding: 1.5rem 2rem;
+		border-bottom: 1px solid var(--wp--preset--color--light-gray, #f0f0f0);
 
-		&:hover {
-			opacity: 1;
-			text-decoration: underline;
+		&:last-child {
+			border-bottom: none;
+			padding-bottom: 2rem;
 		}
 
-		&:focus-visible {
-			opacity: 1;
-			outline: 1px solid currentcolor;
-			outline-offset: 2px;
+		h4 {
+			margin-top: 0;
+			margin-bottom: 0.5rem;
+			font-size: 110%;
 		}
 	}
 
-	p {
-		margin: 0.5rem 0 0;
-		line-height: 1.5;
+	&__description {
+		margin-bottom: 1rem;
+		color: inherit;
+	}
 
-		&:last-child {
-			margin-bottom: 0;
+	&__button-group {
+		display: flex;
+		width: 100%;
+		margin-bottom: 0.5rem;
+
+		input[type] {
+			flex: 1;
+			border: 1px solid var(--wp--preset--color--gray, #e2e4e7);
+			border-radius: 4px 0 0 4px;
+			box-sizing: border-box;
+			font-family: inherit;
+			font-size: 1em;
+			line-height: 1;
+			margin: 0;
+			padding: calc(0.667em + 2px);
+
+			&::placeholder {
+				opacity: 0.5;
+			}
+
+			&[aria-invalid="true"] {
+				border-color: var(--wp--preset--color--vivid-red);
+			}
+		}
+
+		button {
+			border-radius: 0 4px 4px 0 !important;
+			margin-left: -1px !important;
+			min-width: 22.5%;
+			width: auto;
+		}
+	}
+
+	&__error {
+		color: var(--wp--preset--color--vivid-red);
+		font-size: 90%;
+		margin-top: 0.5rem;
+	}
+
+	&__remember {
+		margin-top: 1rem;
+		font-size: 90%;
+
+		label {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+		}
+
+		input[type="checkbox"] {
+			margin: 0;
+			position: relative;
+			top: 0;
+		}
+	}
+
+	&__help {
+		margin-top: 0.5rem;
+		font-size: 0.9rem;
+
+		summary {
+			cursor: pointer;
+			color: inherit;
+			opacity: 0.8;
+			outline: none;
+
+			&:hover {
+				opacity: 1;
+				text-decoration: underline;
+			}
+		}
+
+		p {
+			margin: 0.5rem 0 0;
+			line-height: 1.5;
+
+			&:last-child {
+				margin-bottom: 0;
+			}
 		}
 	}
 }
