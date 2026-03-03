@@ -454,7 +454,6 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * a subsequent wp_update_post (e.g. from a plugin re-saving) should not
 	 * create a spurious Update activity that undoes the tombstone.
 	 *
-	 * @ticket https://github.com/Automattic/wordpress-activitypub/issues/2990
 	 * @covers ::triage
 	 */
 	public function test_resave_soft_deleted_post_no_new_activity() {
