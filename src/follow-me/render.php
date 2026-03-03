@@ -124,20 +124,23 @@ ob_start();
 		</label>
 		<input
 			aria-readonly="true"
+			class="wp-block-search__input"
 			id="<?php echo esc_attr( $block_id . '-profile-handle' ); ?>"
 			readonly
 			tabindex="-1"
 			type="text"
 			value="<?php echo esc_attr( '@' . $actor->get_webfinger() ); ?>"
 		/>
-		<button
-			aria-label="<?php esc_attr_e( 'Copy handle to clipboard', 'activitypub' ); ?>"
-			class="wp-element-button wp-block-button__link"
-			data-wp-on--click="actions.copyToClipboard"
-			type="button"
-		>
-			<span data-wp-text="context.copyButtonText"></span>
-		</button>
+		<div class="wp-block-button">
+			<button
+				aria-label="<?php esc_attr_e( 'Copy handle to clipboard', 'activitypub' ); ?>"
+				class="wp-element-button wp-block-button__link"
+				data-wp-on--click="actions.copyToClipboard"
+				type="button"
+			>
+				<span data-wp-text="context.copyButtonText"></span>
+			</button>
+		</div>
 	</div>
 </div>
 <div class="activitypub-dialog__section">
@@ -151,6 +154,7 @@ ob_start();
 			<?php esc_html_e( 'Your Fediverse profile', 'activitypub' ); ?>
 		</label>
 		<input
+			class="wp-block-search__input"
 			data-wp-bind--aria-invalid="context.isError"
 			data-wp-bind--value="context.remoteProfile"
 			data-wp-on--input="actions.updateRemoteProfile"
@@ -159,16 +163,18 @@ ob_start();
 			placeholder="<?php esc_attr_e( '@username@example.com', 'activitypub' ); ?>"
 			type="text"
 		/>
-		<button
-			aria-label="<?php esc_attr_e( 'Follow', 'activitypub' ); ?>"
-			class="wp-element-button wp-block-button__link"
-			data-wp-bind--disabled="context.isLoading"
-			data-wp-on--click="actions.submitRemoteProfile"
-			type="button"
-		>
-			<span data-wp-bind--hidden="context.isLoading"><?php esc_html_e( 'Follow', 'activitypub' ); ?></span>
-			<span data-wp-bind--hidden="!context.isLoading"><?php esc_html_e( 'Loading&hellip;', 'activitypub' ); ?></span>
-		</button>
+		<div class="wp-block-button">
+			<button
+				aria-label="<?php esc_attr_e( 'Follow', 'activitypub' ); ?>"
+				class="wp-element-button wp-block-button__link"
+				data-wp-bind--disabled="context.isLoading"
+				data-wp-on--click="actions.submitRemoteProfile"
+				type="button"
+			>
+				<span data-wp-bind--hidden="context.isLoading"><?php esc_html_e( 'Follow', 'activitypub' ); ?></span>
+				<span data-wp-bind--hidden="!context.isLoading"><?php esc_html_e( 'Loading&hellip;', 'activitypub' ); ?></span>
+			</button>
+		</div>
 	</div>
 	<div
 		class="activitypub-dialog__error"

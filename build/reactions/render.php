@@ -287,20 +287,23 @@ ob_start();
 			</label>
 			<input
 				aria-readonly="true"
+				class="wp-block-search__input"
 				id="<?php echo esc_attr( $block_id . '-post-url' ); ?>"
 				readonly
 				tabindex="-1"
 				type="text"
 				data-wp-bind--value="context.postUrl"
 			/>
-			<button
-				aria-label="<?php esc_attr_e( 'Copy URL to clipboard', 'activitypub' ); ?>"
-				class="wp-element-button wp-block-button__link"
-				data-wp-on--click="actions.copyPostUrl"
-				type="button"
-			>
-				<span data-wp-text="context.copyButtonText"></span>
-			</button>
+			<div class="wp-block-button">
+				<button
+					aria-label="<?php esc_attr_e( 'Copy URL to clipboard', 'activitypub' ); ?>"
+					class="wp-element-button wp-block-button__link"
+					data-wp-on--click="actions.copyPostUrl"
+					type="button"
+				>
+					<span data-wp-text="context.copyButtonText"></span>
+				</button>
+			</div>
 		</div>
 	</div>
 	<div class="activitypub-dialog__section">
@@ -314,6 +317,7 @@ ob_start();
 				<?php esc_html_e( 'Your Fediverse profile', 'activitypub' ); ?>
 			</label>
 			<input
+				class="wp-block-search__input"
 				data-wp-bind--aria-invalid="context.isError"
 				data-wp-bind--value="context.remoteProfile"
 				data-wp-on--input="actions.updateIntentProfile"
@@ -322,15 +326,17 @@ ob_start();
 				placeholder="<?php esc_attr_e( '@username@example.com', 'activitypub' ); ?>"
 				type="text"
 			/>
-			<button
-				class="wp-element-button wp-block-button__link"
-				data-wp-bind--disabled="context.isLoading"
-				data-wp-on--click="actions.submitIntent"
-				type="button"
-			>
-				<span data-wp-bind--hidden="context.isLoading"><?php esc_html_e( 'Go', 'activitypub' ); ?></span>
-				<span data-wp-bind--hidden="!context.isLoading"><?php esc_html_e( 'Loading…', 'activitypub' ); ?></span>
-			</button>
+			<div class="wp-block-button">
+				<button
+					class="wp-element-button wp-block-button__link"
+					data-wp-bind--disabled="context.isLoading"
+					data-wp-on--click="actions.submitIntent"
+					type="button"
+				>
+					<span data-wp-bind--hidden="context.isLoading"><?php esc_html_e( 'Go', 'activitypub' ); ?></span>
+					<span data-wp-bind--hidden="!context.isLoading"><?php esc_html_e( 'Loading…', 'activitypub' ); ?></span>
+				</button>
+			</div>
 		</div>
 		<div
 			class="activitypub-dialog__error"
