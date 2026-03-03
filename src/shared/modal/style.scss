@@ -107,24 +107,8 @@ body.modal-open {
 	details summary {
 		cursor: pointer;
 		font-weight: 600;
-		list-style: none;
 		color: inherit;
 		opacity: 0.8;
-
-		&::-webkit-details-marker {
-			display: none;
-		}
-
-		&::marker {
-			content: "";
-		}
-
-		&::before {
-			content: "⁂";
-			display: inline-block;
-			margin-right: 0.4em;
-			transition: transform 0.2s ease;
-		}
 
 		&:hover {
 			opacity: 1;
@@ -138,9 +122,6 @@ body.modal-open {
 		}
 	}
 
-	details[open] summary::before {
-		transform: rotate(90deg);
-	}
 
 	details p {
 		margin: 0.75rem 0 0;
