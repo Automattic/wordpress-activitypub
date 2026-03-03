@@ -101,13 +101,11 @@ body.modal-open {
 }
 
 .activitypub-dialog__help {
-	padding: 1rem 2rem;
-	border-top: 1px solid var(--wp--preset--color--light-gray, #f0f0f0);
-	font-size: 0.875rem;
+	margin-top: 0.5rem;
+	font-size: 85%;
 
-	details summary {
+	summary {
 		cursor: pointer;
-		font-weight: 600;
 		color: inherit;
 		opacity: 0.8;
 
@@ -123,9 +121,8 @@ body.modal-open {
 		}
 	}
 
-
-	details p {
-		margin: 0.75rem 0 0;
+	p {
+		margin: 0.5rem 0 0;
 		line-height: 1.5;
 
 		&:last-child {

@@ -144,6 +144,7 @@ ob_start();
 	<h4><?php esc_html_e( 'Your Profile', 'activitypub' ); ?></h4>
 	<div class="activitypub-dialog__description">
 		<?php esc_html_e( 'Or, if you know your own profile, we can start things that way!', 'activitypub' ); ?>
+		<?php Blocks::render_modal_help(); ?>
 	</div>
 	<div class="activitypub-dialog__button-group">
 		<label for="<?php echo esc_attr( $block_id . '-remote-profile' ); ?>" class="screen-reader-text">
@@ -175,7 +176,6 @@ ob_start();
 		data-wp-text="context.errorMessage"
 	></div>
 </div>
-<?php Blocks::render_modal_help(); ?>
 <?php
 $modal_content = ob_get_clean();
 

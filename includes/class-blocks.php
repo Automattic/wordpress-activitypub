@@ -727,17 +727,15 @@ class Blocks {
 	 */
 	public static function render_modal_help() {
 		?>
-		<div class="activitypub-dialog__help">
-			<details>
-				<summary><?php \esc_html_e( 'Why do I need to enter my profile?', 'activitypub' ); ?></summary>
-				<p>
-					<?php \esc_html_e( 'This site is part of the ⁂ open social web, a network of interconnected social platforms (like Mastodon, Pixelfed, Friendica, and others). Unlike centralized social media, your account lives on a platform of your choice, and you can interact with people across different platforms.', 'activitypub' ); ?>
-				</p>
-				<p>
-					<?php \esc_html_e( 'By entering your profile, we can send you to your account where you can complete this action.', 'activitypub' ); ?>
-				</p>
-			</details>
-		</div>
+		<details class="activitypub-dialog__help">
+			<summary><?php \esc_html_e( 'Why do I need to enter my profile?', 'activitypub' ); ?></summary>
+			<p>
+				<?php \esc_html_e( 'This site is part of the ⁂ open social web, a network of interconnected social platforms (like Mastodon, Pixelfed, Friendica, and others). Unlike centralized social media, your account lives on a platform of your choice, and you can interact with people across different platforms.', 'activitypub' ); ?>
+			</p>
+			<p>
+				<?php \esc_html_e( 'By entering your profile, we can send you to your account where you can complete this action.', 'activitypub' ); ?>
+			</p>
+		</details>
 		<?php
 	}
 
