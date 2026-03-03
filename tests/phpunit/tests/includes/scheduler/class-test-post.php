@@ -446,4 +446,70 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		$this->assertEmpty( $outbox_items, 'Should not create a Delete activity when visibility changes to public' );
 	}
+
+	/**
+	 * Test that re-saving a soft-deleted post does not create a new outbox activity.
+	 *
+	 * When a post has already been soft-deleted (state=deleted, visibility=local/private),
+	 * a subsequent wp_update_post (e.g. from a plugin re-saving) should not
+	 * create a spurious Update activity that undoes the tombstone.
+	 *
+	 * @ticket https://github.com/Automattic/wordpress-activitypub/issues/2990
+	 * @covers ::triage
+	 */
+	public function test_resave_soft_deleted_post_no_new_activity() {
+		// Create a post (will be federated).
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		// Verify the post was federated (Create activity exists).
+		$create_item = $this->get_latest_outbox_item( $activitypub_id );
+		$this->assertNotNull( $create_item );
+		$this->assertSame( 'Create', \get_post_meta( $create_item->ID, '_activitypub_activity_type', true ) );
+
+		// Simulate the post being soft-deleted: state=deleted, visibility=local.
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_DELETED );
+		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+
+		// Count existing outbox items before re-save.
+		$before_count = count(
+			\get_posts(
+				array(
+					'post_type'   => 'ap_outbox',
+					'post_status' => 'pending',
+					'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						array(
+							'key'   => '_activitypub_object_id',
+							'value' => $activitypub_id,
+						),
+					),
+					'numberposts' => -1,
+				)
+			)
+		);
+
+		$this->assertGreaterThan( 0, $before_count, 'Sanity check: post should have at least one outbox item before re-save.' );
+
+		// Re-save the post (simulates a plugin re-saving during save_post).
+		\wp_update_post( array( 'ID' => $post_id ) );
+
+		// Count outbox items after re-save.
+		$after_count = count(
+			\get_posts(
+				array(
+					'post_type'   => 'ap_outbox',
+					'post_status' => 'pending',
+					'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						array(
+							'key'   => '_activitypub_object_id',
+							'value' => $activitypub_id,
+						),
+					),
+					'numberposts' => -1,
+				)
+			)
+		);
+
+		$this->assertSame( $before_count, $after_count, 'Re-saving a soft-deleted post should not create any new outbox activities.' );
+	}
 }
