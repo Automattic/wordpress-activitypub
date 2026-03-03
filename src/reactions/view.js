@@ -1,4 +1,5 @@
 import { getContext, getElement, store, withScope, getConfig } from '@wordpress/interactivity';
+import './view-style.scss';
 import { createModalStore } from '../shared/modal';
 
 /** @member {Object} window.wp WordPress global object */
@@ -240,7 +241,9 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 					.forEach( ( container ) => {
 						const label = container.querySelector( '.reaction-label' );
 						const labelWidth = label.offsetWidth || 0;
-						const availableWidth = container.offsetWidth - labelWidth - BUTTON_GAP;
+						const actionButton = container.querySelector( '.reaction-action-button' );
+						const actionButtonWidth = actionButton ? actionButton.offsetWidth + BUTTON_GAP : 0;
+						const availableWidth = container.offsetWidth - labelWidth - actionButtonWidth - BUTTON_GAP;
 
 						// Calculate how many avatars can fit.
 						// The first avatar takes full width, the rest take effective width.

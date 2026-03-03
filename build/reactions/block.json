@@ -77,6 +77,7 @@
   "textdomain": "activitypub",
   "editorScript": "file:./index.js",
   "style": "file:./style-index.css",
+  "viewStyle": "file:./view.css",
   "viewScriptModule": "file:./view.js",
   "viewScript": "wp-api-fetch",
   "render": "file:./render.php"

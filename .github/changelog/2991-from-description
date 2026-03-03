@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix soft-deleted posts being served instead of a tombstone when the post is re-saved.
