@@ -74,7 +74,6 @@ wp_interactivity_state(
 
 ob_start();
 ?>
-<?php Blocks::render_modal_help(); ?>
 <div class="activitypub-dialog__section">
 	<h4><?php esc_html_e( 'Original Comment URL', 'activitypub' ); ?></h4>
 	<div class="activitypub-dialog__description">
@@ -148,6 +147,7 @@ ob_start();
 		</label>
 	</div>
 </div>
+<?php Blocks::render_modal_help(); ?>
 <?php
 $modal_content = ob_get_clean();
 

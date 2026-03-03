@@ -276,7 +276,6 @@ ob_start();
 </div>
 <?php if ( $attributes['showActions'] ) : ?>
 <div class="activitypub-intent-dialog" data-wp-bind--hidden="context.modal.isCompact">
-	<?php Blocks::render_modal_help(); ?>
 	<div class="activitypub-dialog__section">
 		<h4><?php esc_html_e( 'Post URL', 'activitypub' ); ?></h4>
 		<div class="activitypub-dialog__description">
@@ -349,6 +348,7 @@ ob_start();
 			</label>
 		</div>
 	</div>
+	<?php Blocks::render_modal_help(); ?>
 </div>
 <?php endif; ?>
 <?php

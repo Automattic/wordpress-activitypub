@@ -113,7 +113,6 @@ $stats = array(
 
 ob_start();
 ?>
-<?php Blocks::render_modal_help(); ?>
 <div class="activitypub-dialog__section">
 	<h4><?php esc_html_e( 'My Profile', 'activitypub' ); ?></h4>
 	<div class="activitypub-dialog__description">
@@ -176,6 +175,7 @@ ob_start();
 		data-wp-text="context.errorMessage"
 	></div>
 </div>
+<?php Blocks::render_modal_help(); ?>
 <?php
 $modal_content = ob_get_clean();
 
