@@ -102,7 +102,7 @@ export function createModalStore( namespace ) {
 			 * @param {Event} event Click event.
 			 */
 			toggleModal( event ) {
-				event.preventDefault();
+				event?.preventDefault?.();
 				const { modal } = getContext();
 
 				if ( modal.isOpen ) {
