@@ -115,6 +115,10 @@ body.modal-open {
 			display: none;
 		}
 
+		&::marker {
+			content: "";
+		}
+
 		&::before {
 			content: "⁂";
 			display: inline-block;
@@ -125,6 +129,12 @@ body.modal-open {
 		&:hover {
 			opacity: 1;
 			text-decoration: underline;
+		}
+
+		&:focus-visible {
+			opacity: 1;
+			outline: 1px solid currentcolor;
+			outline-offset: 2px;
 		}
 	}
 
