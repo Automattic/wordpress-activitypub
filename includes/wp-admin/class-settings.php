@@ -292,7 +292,7 @@ class Settings {
 	/**
 	 * Handle switching from legacy template mode to automatic object type.
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 */
 	public static function handle_switch_object_type() {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended

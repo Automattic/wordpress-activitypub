@@ -280,7 +280,7 @@ class Webfinger {
 	/**
 	 * Get the Intent endpoint for a given URI and intent.
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 *
 	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/3b86/fep-3b86.md
 	 *
