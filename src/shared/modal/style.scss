@@ -27,6 +27,12 @@ body.modal-open {
 		justify-content: center;
 		padding: 1rem;
 
+		// Override WordPress block layout rules (is-layout-constrained) that
+		// apply max-width, auto margins, and block spacing to children.
+		// The overlay is position:fixed and must cover the full viewport.
+		max-width: none !important;
+		margin: 0 !important;
+
 		&.compact {
 			position: absolute;
 			background-color: transparent;

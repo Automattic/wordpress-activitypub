@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix modal overlay not covering the full screen on block themes.
