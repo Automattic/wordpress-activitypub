@@ -41,12 +41,12 @@ if ( ! class_exists( '\Automattic\Jetpack\Image_CDN\Image_CDN_Core' ) ) {
  *
  * @return string The Photon-rewritten URL.
  */
-function photon_cdn_url( $url, $context, $entity_id, $options ) {
+function photon_cdn_url( $url, $context, $entity_id, $options ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed, VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 	return \Automattic\Jetpack\Image_CDN\Image_CDN_Core::cdn_url( $url );
 }
 
 // Rewrite remote media URLs through Photon.
-\add_filter( 'activitypub_remote_media_url', __NAMESPACE__ . '\photon_cdn_url', 5, 4 );
+\add_filter( 'activitypub_remote_media_url', __NAMESPACE__ . '\photon_cdn_url', 5 );
 
 // Disable local file caching since Photon handles CDN proxying.
 \add_filter( 'activitypub_remote_cache_enabled', '__return_false' );
