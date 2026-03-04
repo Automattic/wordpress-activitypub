@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix QuoteRequest handler to derive responding actor from post author instead of inbox recipient.

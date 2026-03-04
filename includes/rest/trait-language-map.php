@@ -16,7 +16,7 @@ namespace Activitypub\Rest;
  * Language maps should use the `*Map` variant (`summaryMap`, `contentMap`,
  * `nameMap`).
  *
- * @since unreleased
+ * @since 8.0.0
  *
  * @see https://www.w3.org/TR/activitystreams-core/#naturalLanguageValues
  * @see https://www.w3.org/wiki/Activity_Streams/Primer/Language_mapping
@@ -26,7 +26,7 @@ trait Language_Map {
 	/**
 	 * Default fallback language code.
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 *
 	 * @var string
 	 */
@@ -40,7 +40,7 @@ trait Language_Map {
 	 *
 	 * Can be used as a sanitize_callback for REST API args.
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 *
 	 * @param mixed $data The activity object data (array or string URI).
 	 *
@@ -82,7 +82,7 @@ trait Language_Map {
 	 *
 	 * Non-string base values (e.g. arrays) are ignored.
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 *
 	 * @param mixed       $value       The base property value (only strings are used).
 	 * @param array|null  $map         The `*Map` variant (e.g. `summaryMap`).
@@ -132,7 +132,7 @@ trait Language_Map {
 	 * (unless the site is already English). Additional languages can
 	 * be added via the `activitypub_preferred_languages` filter.
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 *
 	 * @param string $site_lang The site's primary language code (e.g. 'de').
 	 *
@@ -148,7 +148,7 @@ trait Language_Map {
 		/**
 		 * Filters the preferred language codes for language map resolution.
 		 *
-		 * @since unreleased
+		 * @since 8.0.0
 		 *
 		 * @param string[] $languages Preferred language codes in priority order.
 		 * @param string   $site_lang The site's primary language code.
@@ -161,7 +161,7 @@ trait Language_Map {
 	 *
 	 * Tries each preferred language in order (site locale, then English).
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 *
 	 * @param array    $map       The language map (e.g. `{"en": "Hello", "de": "Hallo"}`).
 	 * @param string[] $languages Preferred language codes in priority order (e.g. `['de', 'en']`).
