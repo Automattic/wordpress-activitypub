@@ -12,6 +12,7 @@ Think of snippets as a testing ground, similar to WordPress' [feature plugin](ht
 | [FediBlog Tag](fediblog-tag/) | Automatically adds the `FediBlog` tag to standard format blog posts. |
 | [Locale from Tags](locale-from-tags/) | Sets a post's ActivityPub language based on post tags matching language codes. |
 | [Blockless ActivityPub](blockless-activitypub/) | Fediverse reactions without all that frontend-rendered but JavaScript-heavy blocks magic. |
+| [Photon CDN](photon/) | Rewrites ActivityPub remote media URLs through Jetpack's Photon (Image CDN) instead of caching files locally. |
 
 ## How to Use
 
