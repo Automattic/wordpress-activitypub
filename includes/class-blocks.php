@@ -699,7 +699,7 @@ class Blocks {
 						><?php echo \esc_html( $args['title'] ); ?></h2>
 						<button
 							type="button"
-							class="activitypub-modal__close wp-element-button wp-block-button__link"
+							class="activitypub-modal__close wp-element-button"
 							data-wp-on--click="actions.closeModal"
 							aria-label="<?php echo \esc_attr__( 'Close dialog', 'activitypub' ); ?>"
 						>

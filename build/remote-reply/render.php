@@ -85,6 +85,7 @@ ob_start();
 		</label>
 		<input
 			aria-readonly="true"
+			class="wp-block-search__input"
 			id="<?php echo esc_attr( $block_id . '-profile-handle' ); ?>"
 			readonly
 			tabindex="-1"
@@ -93,7 +94,7 @@ ob_start();
 		/>
 		<button
 			aria-label="<?php esc_attr_e( 'Copy URL to clipboard', 'activitypub' ); ?>"
-			class="wp-element-button wp-block-button__link"
+			class="wp-element-button"
 			data-wp-on--click="actions.copyToClipboard"
 			type="button"
 		>
@@ -112,6 +113,7 @@ ob_start();
 			<?php esc_html_e( 'Your Fediverse profile', 'activitypub' ); ?>
 		</label>
 		<input
+			class="wp-block-search__input"
 			data-wp-bind--aria-invalid="context.isError"
 			data-wp-bind--value="context.remoteProfile"
 			data-wp-on--input="actions.updateRemoteProfile"
@@ -122,7 +124,7 @@ ob_start();
 		/>
 		<button
 			aria-label="<?php esc_attr_e( 'Reply', 'activitypub' ); ?>"
-			class="wp-element-button wp-block-button__link"
+			class="wp-element-button"
 			data-wp-bind--disabled="context.isLoading"
 			data-wp-on--click="actions.submitRemoteProfile"
 			type="button"
@@ -174,7 +176,7 @@ $modal_content = ob_get_clean();
 
 		<button
 			type="button"
-			class="activitypub-remote-profile__close wp-element-button wp-block-button__link"
+			class="activitypub-remote-profile__close wp-element-button"
 			data-wp-on--click="actions.deleteRemoteUser"
 			title="<?php esc_attr_e( 'Delete Remote Profile', 'activitypub' ); ?>"
 		>
