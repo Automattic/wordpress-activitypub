@@ -39,10 +39,18 @@ if ( ! class_exists( '\Automattic\Jetpack\Image_CDN\Image_CDN_Core' ) ) {
  * @param int|string|null $entity_id The entity ID.
  * @param array           $options   Additional options.
  *
- * @return string The Photon-rewritten URL.
+ * @return string The (potentially) Photon-rewritten URL.
  */
 function photon_cdn_url( $url, $context, $entity_id, $options ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed, VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-	return \Automattic\Jetpack\Image_CDN\Image_CDN_Core::cdn_url( $url );
+	// Only rewrite image-like contexts through Jetpack's Image CDN.
+	$image_contexts = array( 'avatar', 'media', 'emoji' );
+
+	if ( in_array( $context, $image_contexts, true ) ) {
+		return \Automattic\Jetpack\Image_CDN\Image_CDN_Core::cdn_url( $url );
+	}
+
+	// For non-image contexts (e.g., audio, video), leave the URL unchanged.
+	return $url;
 }
 
 // Rewrite remote media URLs through Photon.
