@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix reactions block layout on small screens and remove unwanted button highlight when clicking action buttons.

@@ -5,7 +5,13 @@
   "version": "7.9.1",
   "title": "Reply on the Fediverse",
   "category": "widgets",
-  "description": "",
+  "description": "Allow visitors to reply to your posts from their Fediverse account.",
+  "keywords": [
+    "fediverse",
+    "activitypub",
+    "reply",
+    "comments"
+  ],
   "textdomain": "activitypub",
   "style": "file:./style-view.css",
   "viewScriptModule": "file:./view.js",

@@ -6,7 +6,13 @@
   "title": "Fediverse Reactions",
   "category": "widgets",
   "icon": "heart",
-  "description": "Display Fediverse likes and reposts",
+  "keywords": [
+    "fediverse",
+    "activitypub",
+    "likes",
+    "reposts"
+  ],
+  "description": "Display Fediverse likes and reposts for your posts.",
   "example": {
     "attributes": {
       "className": "is-style-facepile"
@@ -27,6 +33,10 @@
     "displayStyle": {
       "type": "string",
       "default": "facepile"
+    },
+    "showActions": {
+      "type": "boolean",
+      "default": false
     }
   },
   "supports": {
@@ -67,6 +77,7 @@
   "textdomain": "activitypub",
   "editorScript": "file:./index.js",
   "style": "file:./style-index.css",
+  "viewStyle": "file:./view.css",
   "viewScriptModule": "file:./view.js",
   "viewScript": "wp-api-fetch",
   "render": "file:./render.php"

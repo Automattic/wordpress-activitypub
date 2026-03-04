@@ -116,7 +116,7 @@ ob_start();
 <div class="activitypub-dialog__section">
 	<h4><?php esc_html_e( 'My Profile', 'activitypub' ); ?></h4>
 	<div class="activitypub-dialog__description">
-		<?php esc_html_e( 'Copy and paste my profile into the search field of your favorite fediverse app or server.', 'activitypub' ); ?>
+		<?php esc_html_e( 'Paste my profile into the search field of your favorite open social app or platform.', 'activitypub' ); ?>
 	</div>
 	<div class="activitypub-dialog__button-group">
 		<label for="<?php echo esc_attr( $block_id . '-profile-handle' ); ?>" class="screen-reader-text">
@@ -124,6 +124,7 @@ ob_start();
 		</label>
 		<input
 			aria-readonly="true"
+			class="wp-block-search__input"
 			id="<?php echo esc_attr( $block_id . '-profile-handle' ); ?>"
 			readonly
 			tabindex="-1"
@@ -132,7 +133,7 @@ ob_start();
 		/>
 		<button
 			aria-label="<?php esc_attr_e( 'Copy handle to clipboard', 'activitypub' ); ?>"
-			class="wp-element-button wp-block-button__link"
+			class="wp-element-button"
 			data-wp-on--click="actions.copyToClipboard"
 			type="button"
 		>
@@ -144,12 +145,14 @@ ob_start();
 	<h4><?php esc_html_e( 'Your Profile', 'activitypub' ); ?></h4>
 	<div class="activitypub-dialog__description">
 		<?php esc_html_e( 'Or, if you know your own profile, we can start things that way!', 'activitypub' ); ?>
+		<?php Blocks::render_modal_help(); ?>
 	</div>
 	<div class="activitypub-dialog__button-group">
 		<label for="<?php echo esc_attr( $block_id . '-remote-profile' ); ?>" class="screen-reader-text">
 			<?php esc_html_e( 'Your Fediverse profile', 'activitypub' ); ?>
 		</label>
 		<input
+			class="wp-block-search__input"
 			data-wp-bind--aria-invalid="context.isError"
 			data-wp-bind--value="context.remoteProfile"
 			data-wp-on--input="actions.updateRemoteProfile"
@@ -160,7 +163,7 @@ ob_start();
 		/>
 		<button
 			aria-label="<?php esc_attr_e( 'Follow', 'activitypub' ); ?>"
-			class="wp-element-button wp-block-button__link"
+			class="wp-element-button"
 			data-wp-bind--disabled="context.isLoading"
 			data-wp-on--click="actions.submitRemoteProfile"
 			type="button"

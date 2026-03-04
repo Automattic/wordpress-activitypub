@@ -1,12 +1,11 @@
 {
-  "name": "reply-handler",
-  "title": "Reply Handler: not a block, but block.json is very useful.",
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "activitypub/reply-intent",
+  "title": "ActivityPub Reply Intent Handler",
   "category": "widgets",
-  "icon": "admin-comments",
-  "keywords": [
-    "reply",
-    "handler",
-    "comments"
-  ],
+  "description": "Handles reply intents for federated conversations in the block editor.",
+  "icon": "comments",
+  "textdomain": "activitypub",
   "editorScript": "file:./plugin.js"
 }

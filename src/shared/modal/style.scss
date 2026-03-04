@@ -7,13 +7,20 @@ body.modal-open {
 .activitypub-modal {
 
 	&__overlay {
+		--activitypub-modal-background-color: var(--wp--preset--color--base, var(--wp--preset--color--background, #fff));
+		--activitypub-modal-border-color: var(--wp--preset--color--contrast-3, var(--wp--preset--color--light-gray, #e2e4e7));
+		--activitypub-modal-radius: var(--wp--custom--border--radius--medium, 8px);
+		--activitypub-modal-shadow: var(--wp--preset--shadow--natural, 0 5px 15px rgba(0, 0, 0, 0.3));
+		--activitypub-modal-compact-shadow: var(--wp--preset--shadow--natural, 0 2px 8px rgba(0, 0, 0, 0.1));
+		--activitypub-modal-text-color: var(--wp--preset--color--contrast, var(--wp--preset--color--foreground, inherit));
+
 		position: fixed;
 		top: 0;
 		left: 0;
 		right: 0;
 		bottom: 0;
 		background-color: rgba(0, 0, 0, 0.5);
-		color: initial;
+		color: var(--activitypub-modal-text-color);
 		z-index: 100000;
 		display: flex;
 		align-items: center;
@@ -39,11 +46,15 @@ body.modal-open {
 	}
 
 	&__frame {
+		box-sizing: border-box;
 		max-width: 660px;
 		width: 100%;
-		background-color: var(--wp--preset--color--white, #fff);
-		border-radius: 8px;
-		box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+		background-color: var(--activitypub-modal-background-color);
+		border: 1px solid var(--activitypub-modal-border-color);
+		border-radius: var(--activitypub-modal-radius);
+		box-shadow: var(--activitypub-modal-shadow);
+		color: var(--wp--preset--color--contrast, #1e1e1e);
+		font-size: inherit;
 		overflow: hidden;
 		display: flex;
 		flex-direction: column;
@@ -55,7 +66,7 @@ body.modal-open {
 			max-width: min-content;
 			min-width: 250px;
 			max-height: 300px;
-			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+			box-shadow: var(--activitypub-modal-compact-shadow);
 		}
 	}
 
@@ -64,7 +75,7 @@ body.modal-open {
 		justify-content: space-between;
 		align-items: center;
 		padding: 2rem 2rem 1.5rem 2rem;
-		border-bottom: 1px solid var(--wp--preset--color--light-gray, #f0f0f0);
+		border-bottom: 1px solid var(--activitypub-modal-border-color);
 		flex-shrink: 0;
 
 		.compact & {
@@ -72,6 +83,7 @@ body.modal-open {
 		}
 
 		.activitypub-modal__close {
+			background: transparent;
 			border: none;
 			padding: 0.5rem;
 			cursor: pointer;
@@ -79,6 +91,8 @@ body.modal-open {
 			align-items: center;
 			justify-content: center;
 			width: auto;
+			border-radius: var(--activitypub-modal-radius);
+			color: inherit;
 
 			&:active {
 				border: none;
@@ -97,6 +111,99 @@ body.modal-open {
 	&__content {
 		overflow-y: auto;
 	}
+}
+
+.activitypub-dialog {
+
+	&__section {
+		padding: 1.5rem 2rem;
+		border-bottom: 1px solid var(--activitypub-modal-border-color, var(--wp--preset--color--light-gray, #f0f0f0));
+
+		&:last-child {
+			border-bottom: none;
+			padding-bottom: 2rem;
+		}
+
+		h4 {
+			margin-top: 0;
+			margin-bottom: 0.5rem;
+			font-size: 110%;
+		}
+	}
+
+	&__description {
+		margin-bottom: 1rem;
+		color: inherit;
+	}
+
+	&__button-group {
+		display: flex;
+		align-items: center;
+		width: 100%;
+		margin-bottom: 0.5rem;
+		gap: 0.5rem;
+
+		input[type] {
+			flex: 1;
+			min-width: 0;
+			margin: 0;
+			font-size: 1em;
+			font-family: inherit;
+			line-height: 1;
+			padding: calc(0.667em + 2px) !important;
+			border: 1px solid var(--activitypub-modal-border-color, #949494) !important;
+			background-color: var(--activitypub-modal-background-color, #fff) !important;
+			color: inherit !important;
+			box-sizing: border-box;
+			border-radius: 0;
+
+			&::placeholder {
+				opacity: 0.5;
+			}
+
+			&[aria-invalid="true"] {
+				border-color: var(--wp--preset--color--vivid-red, #b32d2e) !important;
+			}
+		}
+
+		button {
+			min-width: 22.5%;
+			width: auto;
+			padding: calc(0.667em + 2px) 1.5em;
+			font-size: 1em;
+			font-family: inherit;
+			line-height: 1;
+			background-color: var(--wp--preset--color--contrast, #1e1e1e);
+			color: var(--wp--preset--color--base, #fff);
+			border: none;
+			cursor: pointer;
+			box-sizing: border-box;
+		}
+	}
+
+	&__error {
+		color: var(--wp--preset--color--vivid-red, #b32d2e);
+		font-size: 90%;
+		margin-top: 0.5rem;
+	}
+
+	&__remember {
+		margin-top: 1rem;
+		font-size: 90%;
+
+		label {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+		}
+
+		input[type="checkbox"] {
+			margin: 0;
+			position: relative;
+			top: 0;
+		}
+	}
+
 }
 
 @keyframes activitypub-modal-appear {
