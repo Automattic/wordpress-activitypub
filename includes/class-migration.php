@@ -220,7 +220,7 @@ class Migration {
 			\wp_schedule_single_event( \time(), 'activitypub_migrate_actor_emoji' );
 		}
 
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+		if ( \version_compare( $version_from_db, '8.0.0', '<' ) ) {
 			Activitypub::flush_rewrite_rules();
 		}
 

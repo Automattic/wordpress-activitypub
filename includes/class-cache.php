@@ -53,11 +53,11 @@ class Cache {
 		 * {@see 'activitypub_remote_cache_enabled'} in a subsequent release.
 		 *
 		 * @since 7.9.1
-		 * @deprecated unreleased Use {@see 'activitypub_remote_cache_enabled'} instead.
+		 * @deprecated 8.0.0 Use {@see 'activitypub_remote_cache_enabled'} instead.
 		 *
 		 * @param bool $enabled Whether sideloading is enabled. Default true.
 		 */
-		if ( ! \apply_filters_deprecated( 'activitypub_sideloading_enabled', array( true ), 'unreleased', 'activitypub_remote_cache_enabled' ) ) {
+		if ( ! \apply_filters_deprecated( 'activitypub_sideloading_enabled', array( true ), '8.0.0', 'activitypub_remote_cache_enabled' ) ) {
 			return false;
 		}
 

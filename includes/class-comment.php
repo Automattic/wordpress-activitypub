@@ -936,7 +936,7 @@ class Comment {
 				 * a single query can exclude types from multiple plugins. Other
 				 * plugins can hook here to add their own comment types.
 				 *
-				 * @since unreleased
+				 * @since 8.0.0
 				 *
 				 * @param string[] $excluded_types The comment type slugs to exclude.
 				 * @param int      $post_id        The post ID.
