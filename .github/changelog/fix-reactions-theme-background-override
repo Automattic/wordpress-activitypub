@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix reactions block buttons inheriting theme background color on classic themes.

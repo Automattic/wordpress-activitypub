@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix a crash on servers where WordPress uses FTP instead of direct file access for media caching.

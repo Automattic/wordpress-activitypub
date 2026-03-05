@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Improve handling of all public audience identifiers when sending activities to followers and relays.
