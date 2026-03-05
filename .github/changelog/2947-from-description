@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Improve compatibility with federated services that use a URL reference for the actor's public key.

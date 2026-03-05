@@ -778,7 +778,7 @@ class Health_Check {
 	 * Detects abnormally high outbox creation rates that may indicate
 	 * a third-party plugin is triggering excessive wp_update_post() calls.
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 *
 	 * @return array The test result.
 	 */
@@ -848,7 +848,7 @@ class Health_Check {
 	 * Checks whether WordPress can write files directly. When direct filesystem
 	 * access is unavailable (e.g., FTP-only servers), media caching will not work.
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 *
 	 * @return array The test result.
 	 */
@@ -900,7 +900,7 @@ class Health_Check {
 	/**
 	 * Count outbox items created in the last hour.
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 *
 	 * @return int Total items created in the last hour.
 	 */
@@ -925,7 +925,7 @@ class Health_Check {
 	/**
 	 * Get the count of outbox items.
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 *
 	 * @param string $status Optional. Post status to count. Default 'any' for all statuses.
 	 *
