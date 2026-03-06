@@ -207,7 +207,7 @@ class Post_Controller extends \WP_REST_Controller {
 	/**
 	 * Get the remote intent template for a post.
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 *
 	 * @param \WP_REST_Request $request The request.
 	 *

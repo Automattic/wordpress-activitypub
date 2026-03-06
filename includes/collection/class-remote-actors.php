@@ -690,7 +690,7 @@ class Remote_Actors {
 	 * 2. Actor objects with a `publicKey` URL reference (e.g. `tags.pub`).
 	 *    The URL is dereferenced and the key's owner is verified against the actor.
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 *
 	 * @param array $data The fetched actor JSON data.
 	 *

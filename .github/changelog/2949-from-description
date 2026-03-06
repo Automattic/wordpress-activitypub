@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix signature verification rejecting valid requests that use lowercase algorithm names in the Digest header.

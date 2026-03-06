@@ -770,7 +770,7 @@ class Blocks {
 	 * Outputs a collapsible `<details>` element that explains decentralized
 	 * interactions to users unfamiliar with the Fediverse.
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 */
 	public static function render_modal_help() {
 		?>

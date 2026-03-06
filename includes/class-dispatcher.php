@@ -330,7 +330,7 @@ class Dispatcher {
 	 * Used as a temporary filter on `activitypub_activity_object_array` so that
 	 * `to_json()` handles encoding consistently.
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 *
 	 * @see https://www.w3.org/TR/activitypub/#delivery
 	 *
