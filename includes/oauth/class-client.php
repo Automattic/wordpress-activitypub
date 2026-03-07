@@ -347,9 +347,15 @@ class Client {
 			$metadata['client_uri'] = $data['client_uri'];
 		}
 
-		// ActivityPub actor format fields (Application, Person, Service, etc.).
+		/*
+		 * ActivityPub actor format fields (Application, Person, Service, etc.).
+		 *
+		 * Only used as fallback when the document doesn't contain CIMD fields.
+		 * If a client_id is already set from CIMD data, skip actor conversion
+		 * to prevent mixup/impersonation attacks.
+		 */
 		$actor_types = array( 'Application', 'Person', 'Service', 'Group', 'Organization' );
-		if ( ! empty( $data['type'] ) && in_array( $data['type'], $actor_types, true ) ) {
+		if ( ! empty( $data['type'] ) && in_array( $data['type'], $actor_types, true ) && empty( $metadata['client_id'] ) ) {
 			if ( ! empty( $data['id'] ) ) {
 				$metadata['client_id'] = $data['id'];
 			}
@@ -412,8 +418,12 @@ class Client {
 	/**
 	 * Check if redirect URI is valid for this client.
 	 *
-	 * If explicit redirect_uris are registered, requires match (with RFC 8252 loopback handling).
-	 * For auto-discovered clients without redirect_uris, uses same-origin policy.
+	 * Requires an exact match against registered redirect URIs,
+	 * with RFC 8252 loopback port flexibility.
+	 *
+	 * Clients must have at least one registered redirect URI.
+	 * Same-origin fallback is intentionally not supported to
+	 * prevent open redirector vulnerabilities.
 	 *
 	 * @param string $redirect_uri The redirect URI to validate.
 	 * @return bool True if valid.
@@ -421,42 +431,23 @@ class Client {
 	public function is_valid_redirect_uri( $redirect_uri ) {
 		$allowed_uris = $this->get_redirect_uris();
 
-		// If explicit redirect URIs are registered, check for match.
-		if ( ! empty( $allowed_uris ) ) {
-			// Exact match first.
-			if ( in_array( $redirect_uri, $allowed_uris, true ) ) {
-				return true;
-			}
-
-			/*
-			 * RFC 8252 Section 7.3: For loopback redirects, allow any port.
-			 * Compare scheme, host, and path - ignore port for 127.0.0.1 and localhost.
-			 */
-			foreach ( $allowed_uris as $allowed_uri ) {
-				if ( self::is_loopback_redirect_match( $allowed_uri, $redirect_uri ) ) {
-					return true;
-				}
-			}
-
+		if ( empty( $allowed_uris ) ) {
 			return false;
+		}
+
+		// Exact match first.
+		if ( in_array( $redirect_uri, $allowed_uris, true ) ) {
+			return true;
 		}
 
 		/*
-		 * For auto-discovered clients without redirect_uris, use same-origin policy.
-		 * The redirect_uri must be on the same host as the client_id.
-		 * Custom URI schemes (no host) are not allowed in same-origin fallback
-		 * and must be explicitly registered.
+		 * RFC 8252 Section 7.3: For loopback redirects, allow any port.
+		 * Compare scheme, host, and path - ignore port for 127.0.0.1 and localhost.
 		 */
-		$redirect_host = \wp_parse_url( $redirect_uri, PHP_URL_HOST );
-		if ( ! $redirect_host ) {
-			return false;
-		}
-
-		$client_id = $this->get_client_id();
-		if ( \filter_var( $client_id, FILTER_VALIDATE_URL ) ) {
-			$client_host = \wp_parse_url( $client_id, PHP_URL_HOST );
-
-			return $client_host === $redirect_host;
+		foreach ( $allowed_uris as $allowed_uri ) {
+			if ( self::is_loopback_redirect_match( $allowed_uri, $redirect_uri ) ) {
+				return true;
+			}
 		}
 
 		return false;
@@ -611,7 +602,7 @@ class Client {
 	 */
 	public function get_allowed_scopes() {
 		$scopes = \get_post_meta( $this->post_id, '_activitypub_allowed_scopes', true );
-		return is_array( $scopes ) ? $scopes : Scope::ALL;
+		return is_array( $scopes ) ? $scopes : Scope::DEFAULT_SCOPES;
 	}
 
 	/**
@@ -635,20 +626,15 @@ class Client {
 	/**
 	 * Get a URL suitable for linking to this client.
 	 *
-	 * For CIMD apps the client_id is already a URL. For DCR apps it's a UUID,
-	 * so we fall back to the stored client_uri, then to the first redirect URI's origin.
+	 * Uses client_uri (the client's homepage) rather than client_id,
+	 * since the client_id URL typically serves a JSON document (CIMD)
+	 * not intended for end-users.
 	 *
 	 * @since unreleased
 	 *
 	 * @return string A URL for the client, or empty string if none available.
 	 */
 	public function get_link_url() {
-		$client_id = $this->get_client_id();
-
-		if ( \filter_var( $client_id, FILTER_VALIDATE_URL ) ) {
-			return $client_id;
-		}
-
 		$client_uri = $this->get_client_uri();
 
 		if ( $client_uri ) {
@@ -759,21 +745,25 @@ class Client {
 			return false;
 		}
 
-		// Allow http for localhost development.
+		/*
+		 * Allow http only for loopback/localhost (RFC 8252 Section 8.3).
+		 * Includes various representations of loopback addresses.
+		 */
 		if ( 'http' === $scheme ) {
 			if ( empty( $parsed['host'] ) ) {
 				return false;
 			}
 
-			/*
-			 * Include both bracketed and unbracketed IPv6 loopback since parse_url
-			 * may return either format depending on PHP version.
-			 */
-			$localhost_hosts = array( 'localhost', '127.0.0.1', '[::1]', '::1' );
-			if ( ! in_array( $parsed['host'], $localhost_hosts, true ) ) {
-				return false;
-			}
-			return true;
+			$loopback_hosts = array(
+				'localhost',
+				'127.0.0.1',
+				'[::1]',
+				'::1',
+				'0.0.0.0',
+				'[::ffff:127.0.0.1]',
+			);
+
+			return in_array( $parsed['host'], $loopback_hosts, true );
 		}
 
 		// Allow https with any host.
@@ -830,7 +820,11 @@ class Client {
 			return false;
 		}
 
-		// Delete all tokens for this client (tokens are stored in user meta).
+		/*
+		 * Delete all tokens for this client (tokens are stored in user meta).
+		 * Authorization codes are transient-based and auto-expire within 10 minutes,
+		 * so they don't need explicit revocation here.
+		 */
 		Token::revoke_for_client( $client_id );
 
 		// Delete the client.

@@ -318,7 +318,7 @@ class Server {
 			'grant_types_supported'                 => array( 'authorization_code', 'refresh_token', 'password' ),
 			'token_endpoint_auth_methods_supported' => array( 'none', 'client_secret_post' ),
 			'introspection_endpoint_auth_methods_supported' => array( 'bearer' ),
-			'code_challenge_methods_supported'      => array( 'S256', 'plain' ),
+			'code_challenge_methods_supported'      => array( 'S256' ),
 			'service_documentation'                 => 'https://github.com/swicg/activitypub-api',
 		);
 	}
@@ -420,7 +420,7 @@ class Server {
 		$approve               = isset( $_POST['approve'] );
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
-		if ( ! \in_array( $code_challenge_method, array( 'S256', 'plain' ), true ) ) {
+		if ( 'S256' !== $code_challenge_method ) {
 			$code_challenge_method = 'S256';
 		}
 
@@ -501,7 +501,7 @@ class Server {
 		$url = Sanitize::redirect_uri( \add_query_arg( $params, $redirect_uri ) );
 
 		\nocache_headers();
-		header( 'Location: ' . $url, true, 302 );
+		header( 'Location: ' . $url, true, 303 );
 		exit;
 	}
 }

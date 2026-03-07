@@ -67,11 +67,13 @@ class Scope {
 	/**
 	 * Default scopes when none are requested.
 	 *
+	 * Defaults to read-only to prevent granting write access without
+	 * explicit scope request (fail-closed on access control).
+	 *
 	 * @var array
 	 */
 	const DEFAULT_SCOPES = array(
 		self::READ,
-		self::WRITE,
 	);
 
 	/**
