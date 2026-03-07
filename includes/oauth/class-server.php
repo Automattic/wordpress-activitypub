@@ -59,12 +59,6 @@ class Server {
 			return $result;
 		}
 
-		/*
-		 * Check for Bearer token first — it takes priority over cookie auth.
-		 * Cookie-based `is_user_logged_in()` can be true in browsers, but
-		 * REST cookie auth requires a nonce that C2S clients won't have.
-		 * Skipping this check would silently drop valid Bearer tokens.
-		 */
 		$token = self::get_bearer_token();
 
 		if ( ! $token ) {
@@ -74,7 +68,14 @@ class Server {
 		$validated = Token::validate( $token );
 
 		if ( \is_wp_error( $validated ) ) {
-			return $validated;
+			/*
+			 * Return null instead of the error so WordPress still dispatches
+			 * the request. Returning a WP_Error here would block the entire
+			 * request before the permission callback runs (WordPress skips
+			 * dispatch on auth errors). The permission callback will handle
+			 * the actual auth requirement.
+			 */
+			return null;
 		}
 
 		self::$current_token = $validated;
