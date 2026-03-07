@@ -130,10 +130,6 @@ class Token {
 			);
 		}
 
-		// Cache token → user_id so validate() works immediately,
-		// even when a DB read-replica hasn't replicated the row yet.
-		\wp_cache_set( 'oauth_token_' . $access_hash, (int) $user_id, 'activitypub', self::DEFAULT_EXPIRATION );
-
 		// Store refresh token index for O(1) lookup during refresh.
 		$refresh_index_key = self::REFRESH_INDEX_PREFIX . self::hash_token( $refresh_token );
 		\update_user_meta( $user_id, $refresh_index_key, $access_hash );
@@ -176,23 +172,13 @@ class Token {
 		$token_hash = self::hash_token( $token );
 		$meta_key   = self::META_PREFIX . $token_hash;
 
-		// Try cache first (avoids DB replication lag on read-replicas).
-		$user_id = \wp_cache_get( 'oauth_token_' . $token_hash, 'activitypub' );
-
-		// Fall back to direct DB lookup by meta_key.
-		if ( false === $user_id ) {
-			$user_id = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-				$wpdb->prepare(
-					"SELECT user_id FROM $wpdb->usermeta WHERE meta_key = %s LIMIT 1",
-					$meta_key
-				)
-			);
-
-			// Populate cache for future lookups.
-			if ( $user_id ) {
-				\wp_cache_set( 'oauth_token_' . $token_hash, (int) $user_id, 'activitypub', self::DEFAULT_EXPIRATION );
-			}
-		}
+		// Direct DB lookup by meta_key - O(1) instead of O(n) users.
+		$user_id = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT user_id FROM $wpdb->usermeta WHERE meta_key = %s LIMIT 1",
+				$meta_key
+			)
+		);
 
 		if ( empty( $user_id ) ) {
 			return new \WP_Error(
@@ -360,9 +346,8 @@ class Token {
 			$token_data = \get_user_meta( $user_id, $access_meta_key, true );
 			$client_id  = is_array( $token_data ) ? ( $token_data['client_id'] ?? '' ) : '';
 
-			// Delete the token and its cache entry.
+			// Delete the token.
 			\delete_user_meta( $user_id, $access_meta_key );
-			\wp_cache_delete( 'oauth_token_' . $token_hash, 'activitypub' );
 
 			// Also delete the refresh token index if it exists.
 			if ( is_array( $token_data ) && isset( $token_data['refresh_token_hash'] ) ) {
