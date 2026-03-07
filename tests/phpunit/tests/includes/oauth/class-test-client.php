@@ -215,11 +215,11 @@ class Test_Client extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test register method rejects http localhost (DNS name, not IP).
+	 * Test register method allows http localhost.
 	 *
 	 * @covers ::register
 	 */
-	public function test_register_rejects_http_localhost_dns() {
+	public function test_register_allows_http_localhost() {
 		$result = $this->create_client(
 			array(
 				'name'          => 'Localhost Client',
@@ -227,7 +227,8 @@ class Test_Client extends \WP_UnitTestCase {
 			)
 		);
 
-		$this->assertInstanceOf( \WP_Error::class, $result );
+		$this->assertIsArray( $result );
+		$this->assertArrayHasKey( 'client_id', $result );
 	}
 
 	/**

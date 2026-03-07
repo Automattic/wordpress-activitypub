@@ -496,17 +496,19 @@ class Client {
 	 * Check if a host is a loopback IP address.
 	 *
 	 * Supports:
+	 * - "localhost" (common in practice for native app development)
 	 * - IPv4 loopback range 127.0.0.0/8 (RFC 1122 Section 3.2.1.3)
 	 * - IPv6 loopback ::1 (RFC 4291 Section 2.5.3)
 	 * - IPv4-mapped IPv6 loopback ::ffff:127.x.x.x (RFC 4291 Section 2.5.5.2)
-	 *
-	 * DNS names like "localhost" are intentionally excluded per
-	 * RFC 8252 Section 8.3 ("localhost" is NOT RECOMMENDED).
 	 *
 	 * @param string $host The host to check (as returned by wp_parse_url).
 	 * @return bool True if loopback.
 	 */
 	private static function is_loopback_ip( $host ) {
+		if ( 'localhost' === \strtolower( $host ) ) {
+			return true;
+		}
+
 		// Strip brackets from IPv6 (parse_url returns "[::1]").
 		$ip = trim( $host, '[]' );
 
