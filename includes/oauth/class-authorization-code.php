@@ -7,6 +7,8 @@
 
 namespace Activitypub\OAuth;
 
+use Activitypub\Sanitize;
+
 /**
  * Authorization_Code class for managing OAuth 2.0 authorization codes.
  *
@@ -43,6 +45,8 @@ class Authorization_Code {
 		$code_challenge,
 		$code_challenge_method = 'S256'
 	) {
+		$redirect_uri = Sanitize::redirect_uri( $redirect_uri );
+
 		// Validate client.
 		$client = Client::get( $client_id );
 		if ( \is_wp_error( $client ) ) {
@@ -132,9 +136,10 @@ class Authorization_Code {
 	 * @return array|\WP_Error Token data or error.
 	 */
 	public static function exchange( $code, $client_id, $redirect_uri, $code_verifier ) {
-		$code_hash = self::hash_code( $code );
-		$transient = self::TRANSIENT_PREFIX . $code_hash;
-		$code_data = \get_transient( $transient );
+		$redirect_uri = Sanitize::redirect_uri( $redirect_uri );
+		$code_hash    = self::hash_code( $code );
+		$transient    = self::TRANSIENT_PREFIX . $code_hash;
+		$code_data    = \get_transient( $transient );
 
 		if ( false === $code_data ) {
 			return new \WP_Error(
