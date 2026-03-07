@@ -24,13 +24,8 @@ class Server {
 
 	/**
 	 * Initialize the OAuth server.
-	 *
-	 * Hooks into WordPress REST API authentication.
 	 */
 	public static function init() {
-		// Hook into REST authentication - priority 20 to run after default auth.
-		\add_filter( 'rest_authentication_errors', array( self::class, 'authenticate_oauth' ), 20 );
-
 		// Add CORS headers to OAuth endpoints.
 		\add_filter( 'rest_post_dispatch', array( self::class, 'add_cors_headers' ), 10, 3 );
 
@@ -216,6 +211,11 @@ class Server {
 
 		if ( null !== $override ) {
 			return $override;
+		}
+
+		// Attempt token validation if not already done for this request.
+		if ( ! self::is_oauth_request() ) {
+			self::authenticate_oauth( null );
 		}
 
 		if ( ! self::is_oauth_request() ) {
