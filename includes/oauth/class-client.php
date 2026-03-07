@@ -207,6 +207,16 @@ class Client {
 		// Get redirect URIs from metadata or derive from client_id origin.
 		$redirect_uris = array();
 		if ( ! empty( $metadata['redirect_uris'] ) && is_array( $metadata['redirect_uris'] ) ) {
+			foreach ( $metadata['redirect_uris'] as $uri ) {
+				if ( ! self::validate_uri_format( $uri ) ) {
+					return new \WP_Error(
+						'activitypub_invalid_redirect_uri',
+						/* translators: %s: The invalid redirect URI */
+						\sprintf( \__( 'Invalid redirect URI: %s', 'activitypub' ), $uri ),
+						array( 'status' => 400 )
+					);
+				}
+			}
 			$redirect_uris = $metadata['redirect_uris'];
 		}
 
@@ -718,7 +728,11 @@ class Client {
 	private static function validate_uri_format( $uri ) {
 		/*
 		 * Extract scheme manually first because wp_parse_url() returns false
-		 * for URIs like "myapp://" (scheme + empty authority, no path).
+		 * for some custom scheme URIs (e.g. "myapp:/callback").
+		 *
+		 * Note: per RFC 2396, custom scheme URIs use a single slash ("myapp:/path"),
+		 * but double-slash forms ("myapp://host") are common in practice, so both
+		 * are accepted.
 		 */
 		if ( ! preg_match( '/^([a-zA-Z][a-zA-Z0-9+.\-]*):/', $uri, $matches ) ) {
 			return false;
@@ -732,8 +746,8 @@ class Client {
 			$parsed = array( 'scheme' => $scheme );
 		}
 
-		// Block dangerous schemes.
-		$blocked_schemes = array( 'javascript', 'data', 'vbscript', 'blob', 'file' );
+		// Block dangerous schemes (see OWASP XSS prevention).
+		$blocked_schemes = array( 'javascript', 'data', 'vbscript', 'blob', 'file', 'mhtml', 'cid', 'jar', 'view-source' );
 		if ( in_array( $scheme, $blocked_schemes, true ) ) {
 			return false;
 		}
@@ -762,7 +776,7 @@ class Client {
 
 		/*
 		 * Allow custom URI schemes for native/mobile apps (RFC 8252 Section 7.1).
-		 * Examples: com.example.app:/oauth, myapp://callback
+		 * Examples: com.example.app:/oauth, myapp:/callback
 		 * Custom schemes must be at least 2 characters to avoid matching
 		 * Windows drive letters (e.g., "C:").
 		 */
