@@ -456,7 +456,7 @@ class Client {
 	/**
 	 * Check if two URIs match under RFC 8252 loopback rules.
 	 *
-	 * For loopback addresses (127.0.0.1, localhost), the port is ignored.
+	 * For loopback addresses, the port is ignored per RFC 8252 Section 7.3.
 	 *
 	 * @param string $allowed_uri  The registered redirect URI.
 	 * @param string $redirect_uri The requested redirect URI.
@@ -480,8 +480,7 @@ class Client {
 		}
 
 		// Only apply port flexibility for loopback addresses.
-		$loopback_hosts = array( '127.0.0.1', 'localhost', '::1' );
-		if ( ! in_array( $allowed_host, $loopback_hosts, true ) ) {
+		if ( ! self::is_loopback_ip( $allowed_host ) ) {
 			// Not loopback - require exact match including port.
 			return $allowed_uri === $redirect_uri;
 		}
@@ -491,6 +490,38 @@ class Client {
 		$redirect_path = $redirect_parts['path'] ?? '/';
 
 		return $allowed_path === $redirect_path;
+	}
+
+	/**
+	 * Check if a host is a loopback IP address.
+	 *
+	 * Supports:
+	 * - IPv4 loopback range 127.0.0.0/8 (RFC 1122 Section 3.2.1.3)
+	 * - IPv6 loopback ::1 (RFC 4291 Section 2.5.3)
+	 * - IPv4-mapped IPv6 loopback ::ffff:127.x.x.x (RFC 4291 Section 2.5.5.2)
+	 *
+	 * DNS names like "localhost" are intentionally excluded per
+	 * RFC 8252 Section 8.3 ("localhost" is NOT RECOMMENDED).
+	 *
+	 * @param string $host The host to check (as returned by wp_parse_url).
+	 * @return bool True if loopback.
+	 */
+	private static function is_loopback_ip( $host ) {
+		// Strip brackets from IPv6 (parse_url returns "[::1]").
+		$ip = trim( $host, '[]' );
+
+		// IPv6 loopback.
+		if ( '::1' === $ip ) {
+			return true;
+		}
+
+		// IPv4-mapped IPv6 loopback (::ffff:127.x.x.x).
+		if ( 0 === \strpos( \strtolower( $ip ), '::ffff:127.' ) ) {
+			return true;
+		}
+
+		// IPv4 loopback range 127.0.0.0/8.
+		return (bool) \preg_match( '/^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/', $ip );
 	}
 
 	/**
@@ -762,8 +793,7 @@ class Client {
 				return false;
 			}
 
-			$loopback_hosts = array( '127.0.0.1', '[::1]', '::1' );
-			if ( in_array( $parsed['host'], $loopback_hosts, true ) ) {
+			if ( self::is_loopback_ip( $parsed['host'] ) ) {
 				return true;
 			}
 
