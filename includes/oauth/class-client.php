@@ -743,6 +743,7 @@ class Client {
 			if ( empty( $parsed['host'] ) ) {
 				return false;
 			}
+
 			/*
 			 * Include both bracketed and unbracketed IPv6 loopback since parse_url
 			 * may return either format depending on PHP version.
