@@ -525,6 +525,26 @@ class Test_Client extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test register method allows scheme-only redirect URI.
+	 *
+	 * @covers ::register
+	 */
+	public function test_register_allows_scheme_only_redirect_uri() {
+		$result = $this->create_client(
+			array(
+				'name'          => 'Native App',
+				'redirect_uris' => array( 'activitypress://' ),
+			)
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertArrayHasKey( 'client_id', $result );
+
+		$client = Client::get( $result['client_id'] );
+		$this->assertTrue( $client->is_valid_redirect_uri( 'activitypress://' ) );
+	}
+
+	/**
 	 * Test register method rejects dangerous schemes.
 	 *
 	 * @covers ::register

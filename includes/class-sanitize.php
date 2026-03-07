@@ -229,13 +229,15 @@ class Sanitize {
 	 * @return string The sanitized URI.
 	 */
 	public static function redirect_uri( $uri ) {
-		$scheme = \wp_parse_url( $uri, PHP_URL_SCHEME );
-
-		if ( ! $scheme ) {
+		/*
+		 * Extract scheme manually because wp_parse_url() returns false
+		 * for URIs like "myapp://" (scheme + empty authority, no path).
+		 */
+		if ( ! preg_match( '/^([a-zA-Z][a-zA-Z0-9+.\-]*):/', $uri, $matches ) ) {
 			return '';
 		}
 
-		$scheme = \strtolower( $scheme );
+		$scheme = \strtolower( $matches[1] );
 
 		// For standard schemes, use default sanitization.
 		if ( in_array( $scheme, array( 'http', 'https' ), true ) ) {

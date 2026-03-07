@@ -716,13 +716,21 @@ class Client {
 	 * @return bool True if valid.
 	 */
 	private static function validate_uri_format( $uri ) {
-		$parsed = \wp_parse_url( $uri );
-
-		if ( ! $parsed || empty( $parsed['scheme'] ) ) {
+		/*
+		 * Extract scheme manually first because wp_parse_url() returns false
+		 * for URIs like "myapp://" (scheme + empty authority, no path).
+		 */
+		if ( ! preg_match( '/^([a-zA-Z][a-zA-Z0-9+.\-]*):/', $uri, $matches ) ) {
 			return false;
 		}
 
-		$scheme = \strtolower( $parsed['scheme'] );
+		$scheme = \strtolower( $matches[1] );
+		$parsed = \wp_parse_url( $uri );
+
+		if ( ! $parsed ) {
+			// wp_parse_url fails for "scheme://" — still valid for custom schemes.
+			$parsed = array( 'scheme' => $scheme );
+		}
 
 		// Block dangerous schemes.
 		$blocked_schemes = array( 'javascript', 'data', 'vbscript', 'blob', 'file' );
