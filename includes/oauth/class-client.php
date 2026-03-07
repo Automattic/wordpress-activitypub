@@ -480,7 +480,7 @@ class Client {
 		}
 
 		// Only apply port flexibility for loopback addresses.
-		if ( ! self::is_loopback_ip( $allowed_host ) ) {
+		if ( ! self::is_loopback( $allowed_host ) ) {
 			// Not loopback - require exact match including port.
 			return $allowed_uri === $redirect_uri;
 		}
@@ -493,7 +493,7 @@ class Client {
 	}
 
 	/**
-	 * Check if a host is a loopback IP address.
+	 * Check if a host is a loopback address.
 	 *
 	 * Supports:
 	 * - "localhost" (common in practice for native app development)
@@ -504,7 +504,7 @@ class Client {
 	 * @param string $host The host to check (as returned by wp_parse_url).
 	 * @return bool True if loopback.
 	 */
-	private static function is_loopback_ip( $host ) {
+	private static function is_loopback( $host ) {
 		if ( 'localhost' === \strtolower( $host ) ) {
 			return true;
 		}
@@ -795,7 +795,7 @@ class Client {
 				return false;
 			}
 
-			if ( self::is_loopback_ip( $parsed['host'] ) ) {
+			if ( self::is_loopback( $parsed['host'] ) ) {
 				return true;
 			}
 
