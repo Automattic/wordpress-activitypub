@@ -217,6 +217,36 @@ class Sanitize {
 	}
 
 	/**
+	 * Sanitize a redirect URI, preserving custom protocol schemes.
+	 *
+	 * WordPress's sanitize_url() and esc_url_raw() strip unknown protocols.
+	 * This method extracts the scheme and passes it as allowed so custom
+	 * URI schemes for native apps (RFC 8252 Section 7.1) are preserved.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $uri The redirect URI to sanitize.
+	 * @return string The sanitized URI.
+	 */
+	public static function redirect_uri( $uri ) {
+		$scheme = \wp_parse_url( $uri, PHP_URL_SCHEME );
+
+		if ( ! $scheme ) {
+			return '';
+		}
+
+		$scheme = \strtolower( $scheme );
+
+		// For standard schemes, use default sanitization.
+		if ( in_array( $scheme, array( 'http', 'https' ), true ) ) {
+			return \sanitize_url( $uri );
+		}
+
+		// For custom schemes, include the scheme in allowed protocols.
+		return \sanitize_url( $uri, array_merge( \wp_allowed_protocols(), array( $scheme ) ) );
+	}
+
+	/**
 	 * Clean HTML for ActivityPub federation.
 	 *
 	 * Keeps all WordPress allowed tags but removes global attributes like

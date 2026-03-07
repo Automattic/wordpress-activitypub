@@ -521,7 +521,7 @@ class Post_Types {
 					if ( ! is_array( $value ) ) {
 						return array();
 					}
-					return array_map( 'sanitize_url', $value );
+					return array_map( array( Sanitize::class, 'redirect_uri' ), $value );
 				},
 			)
 		);

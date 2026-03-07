@@ -55,11 +55,10 @@ class Clients_Controller extends \WP_REST_Controller {
 							'required'    => true,
 						),
 						'redirect_uris' => array(
-							'description' => 'Array of redirect URIs.',
+							'description' => 'Array of redirect URIs. Supports custom URI schemes for native apps.',
 							'type'        => 'array',
 							'items'       => array(
-								'type'   => 'string',
-								'format' => 'uri',
+								'type' => 'string',
 							),
 							'required'    => true,
 						),

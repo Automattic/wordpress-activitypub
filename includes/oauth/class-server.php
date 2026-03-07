@@ -7,6 +7,8 @@
 
 namespace Activitypub\OAuth;
 
+use Activitypub\Sanitize;
+
 /**
  * Server class for OAuth 2.0 authentication and PKCE verification.
  *
@@ -350,7 +352,7 @@ class Server {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Initial form display, nonce checked on POST.
 		$authorize_params = array(
 			'client_id'             => isset( $_GET['client_id'] ) ? \sanitize_text_field( \wp_unslash( $_GET['client_id'] ) ) : '',
-			'redirect_uri'          => isset( $_GET['redirect_uri'] ) ? \esc_url_raw( \wp_unslash( $_GET['redirect_uri'] ) ) : '',
+			'redirect_uri'          => isset( $_GET['redirect_uri'] ) ? Sanitize::redirect_uri( \wp_unslash( $_GET['redirect_uri'] ) ) : '',
 			'scope'                 => isset( $_GET['scope'] ) ? \sanitize_text_field( \wp_unslash( $_GET['scope'] ) ) : '',
 			'state'                 => isset( $_GET['state'] ) ? \wp_unslash( $_GET['state'] ) : '', // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- OAuth state is opaque; must be round-tripped exactly.
 			'code_challenge'        => isset( $_GET['code_challenge'] ) ? \sanitize_text_field( \wp_unslash( $_GET['code_challenge'] ) ) : '',
@@ -410,7 +412,7 @@ class Server {
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified above.
 		$client_id             = isset( $_POST['client_id'] ) ? \sanitize_text_field( \wp_unslash( $_POST['client_id'] ) ) : '';
-		$redirect_uri          = isset( $_POST['redirect_uri'] ) ? \esc_url_raw( \wp_unslash( $_POST['redirect_uri'] ) ) : '';
+		$redirect_uri          = isset( $_POST['redirect_uri'] ) ? Sanitize::redirect_uri( \wp_unslash( $_POST['redirect_uri'] ) ) : '';
 		$scope                 = isset( $_POST['scope'] ) ? \sanitize_text_field( \wp_unslash( $_POST['scope'] ) ) : '';
 		$state                 = isset( $_POST['state'] ) ? \wp_unslash( $_POST['state'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- OAuth state is opaque; must be round-tripped exactly.
 		$code_challenge        = isset( $_POST['code_challenge'] ) ? \sanitize_text_field( \wp_unslash( $_POST['code_challenge'] ) ) : '';
@@ -487,15 +489,19 @@ class Server {
 	/**
 	 * Redirect to an OAuth client's redirect URI with query parameters.
 	 *
-	 * Uses wp_redirect() because OAuth redirect URIs are external domains
-	 * that wp_safe_redirect() would block. The URI is pre-validated against
-	 * the registered client's redirect_uris before this method is called.
+	 * Uses a manual Location header because wp_redirect() strips custom
+	 * URI schemes used by native/mobile apps (RFC 8252 Section 7.1).
+	 * The URI is pre-validated against the registered client's redirect_uris
+	 * before this method is called.
 	 *
 	 * @param string $redirect_uri The client's redirect URI.
 	 * @param array  $params       Query parameters to append.
 	 */
 	private static function redirect_to_client( $redirect_uri, $params ) {
-		\wp_redirect( \add_query_arg( $params, $redirect_uri ) ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect
+		$url = Sanitize::redirect_uri( \add_query_arg( $params, $redirect_uri ) );
+
+		\nocache_headers();
+		header( 'Location: ' . $url, true, 302 );
 		exit;
 	}
 }

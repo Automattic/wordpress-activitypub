@@ -491,6 +491,107 @@ class Test_Client extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test register method allows custom URI schemes for native apps.
+	 *
+	 * @covers ::register
+	 */
+	public function test_register_allows_custom_scheme() {
+		$result = $this->create_client(
+			array(
+				'name'          => 'Native App',
+				'redirect_uris' => array( 'com.example.app:/oauth/callback' ),
+			)
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertArrayHasKey( 'client_id', $result );
+	}
+
+	/**
+	 * Test register method allows custom URI schemes with double slashes.
+	 *
+	 * @covers ::register
+	 */
+	public function test_register_allows_custom_scheme_double_slash() {
+		$result = $this->create_client(
+			array(
+				'name'          => 'Native App',
+				'redirect_uris' => array( 'myapp://callback' ),
+			)
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertArrayHasKey( 'client_id', $result );
+	}
+
+	/**
+	 * Test register method rejects dangerous schemes.
+	 *
+	 * @covers ::register
+	 */
+	public function test_register_rejects_dangerous_schemes() {
+		$dangerous = array( 'javascript:alert(1)', 'data:text/html,test', 'vbscript:test' );
+
+		foreach ( $dangerous as $uri ) {
+			$result = Client::register(
+				array(
+					'name'          => 'Bad Client',
+					'redirect_uris' => array( $uri ),
+				)
+			);
+
+			$this->assertInstanceOf( \WP_Error::class, $result, "Should reject: $uri" );
+		}
+	}
+
+	/**
+	 * Test is_valid_redirect_uri works with custom schemes.
+	 *
+	 * @covers ::is_valid_redirect_uri
+	 */
+	public function test_is_valid_redirect_uri_custom_scheme() {
+		$result = $this->create_client(
+			array(
+				'name'          => 'Native App',
+				'redirect_uris' => array( 'com.example.app:/oauth/callback' ),
+			)
+		);
+
+		$client = Client::get( $result['client_id'] );
+
+		$this->assertTrue( $client->is_valid_redirect_uri( 'com.example.app:/oauth/callback' ) );
+		$this->assertFalse( $client->is_valid_redirect_uri( 'com.other.app:/oauth/callback' ) );
+	}
+
+
+	/**
+	 * Test custom scheme redirect URIs are stored and retrieved correctly.
+	 *
+	 * @covers ::get_redirect_uris
+	 */
+	public function test_custom_scheme_redirect_uris_roundtrip() {
+		$uris   = array(
+			'com.example.app:/oauth/callback',
+			'https://example.com/callback',
+		);
+		$result = $this->create_client(
+			array(
+				'name'          => 'Hybrid App',
+				'redirect_uris' => $uris,
+			)
+		);
+
+		$this->assertIsArray( $result );
+
+		$client = Client::get( $result['client_id'] );
+		$stored = $client->get_redirect_uris();
+
+		$this->assertCount( 2, $stored );
+		$this->assertContains( 'com.example.app:/oauth/callback', $stored );
+		$this->assertContains( 'https://example.com/callback', $stored );
+	}
+
+	/**
 	 * Test get_client_id method.
 	 *
 	 * @covers ::get_client_id

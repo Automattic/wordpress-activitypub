@@ -7,6 +7,8 @@
 
 namespace Activitypub\OAuth;
 
+use Activitypub\Sanitize;
+
 use function Activitypub\get_client_ip;
 
 /**
@@ -101,7 +103,7 @@ class Client {
 				'meta_input'   => array(
 					'_activitypub_client_id'          => $client_id,
 					'_activitypub_client_secret_hash' => $client_secret ? \wp_hash_password( $client_secret ) : '',
-					'_activitypub_redirect_uris'      => array_map( 'sanitize_url', $redirect_uris ),
+					'_activitypub_redirect_uris'      => array_map( array( Sanitize::class, 'redirect_uri' ), $redirect_uris ),
 					'_activitypub_allowed_scopes'     => Scope::validate( $scopes ),
 					'_activitypub_is_public'          => (bool) $is_public,
 				),
@@ -220,7 +222,7 @@ class Client {
 				'meta_input'   => array(
 					'_activitypub_client_id'          => $client_id,
 					'_activitypub_client_secret_hash' => '', // Public client.
-					'_activitypub_redirect_uris'      => array_map( 'sanitize_url', $redirect_uris ),
+					'_activitypub_redirect_uris'      => array_map( array( Sanitize::class, 'redirect_uri' ), $redirect_uris ),
 					'_activitypub_allowed_scopes'     => Scope::DEFAULT_SCOPES,
 					'_activitypub_is_public'          => true,
 					'_activitypub_discovered'         => true,
@@ -425,11 +427,17 @@ class Client {
 		/*
 		 * For auto-discovered clients without redirect_uris, use same-origin policy.
 		 * The redirect_uri must be on the same host as the client_id.
+		 * Custom URI schemes (no host) are not allowed in same-origin fallback
+		 * and must be explicitly registered.
 		 */
+		$redirect_host = \wp_parse_url( $redirect_uri, PHP_URL_HOST );
+		if ( ! $redirect_host ) {
+			return false;
+		}
+
 		$client_id = $this->get_client_id();
 		if ( \filter_var( $client_id, FILTER_VALIDATE_URL ) ) {
-			$client_host   = \wp_parse_url( $client_id, PHP_URL_HOST );
-			$redirect_host = \wp_parse_url( $redirect_uri, PHP_URL_HOST );
+			$client_host = \wp_parse_url( $client_id, PHP_URL_HOST );
 
 			return $client_host === $redirect_host;
 		}
@@ -699,18 +707,34 @@ class Client {
 	/**
 	 * Validate a redirect URI format.
 	 *
+	 * Supports:
+	 * - https:// URIs (production)
+	 * - http:// URIs (localhost only, for development)
+	 * - Custom URI schemes for native apps (RFC 8252 Section 7.1)
+	 *
 	 * @param string $uri The URI to validate.
 	 * @return bool True if valid.
 	 */
 	private static function validate_uri_format( $uri ) {
 		$parsed = \wp_parse_url( $uri );
 
-		if ( ! $parsed || empty( $parsed['scheme'] ) || empty( $parsed['host'] ) ) {
+		if ( ! $parsed || empty( $parsed['scheme'] ) ) {
+			return false;
+		}
+
+		$scheme = \strtolower( $parsed['scheme'] );
+
+		// Block dangerous schemes.
+		$blocked_schemes = array( 'javascript', 'data', 'vbscript', 'blob', 'file' );
+		if ( in_array( $scheme, $blocked_schemes, true ) ) {
 			return false;
 		}
 
 		// Allow http for localhost development.
-		if ( 'http' === $parsed['scheme'] ) {
+		if ( 'http' === $scheme ) {
+			if ( empty( $parsed['host'] ) ) {
+				return false;
+			}
 			/*
 			 * Include both bracketed and unbracketed IPv6 loopback since parse_url
 			 * may return either format depending on PHP version.
@@ -719,12 +743,21 @@ class Client {
 			if ( ! in_array( $parsed['host'], $localhost_hosts, true ) ) {
 				return false;
 			}
-		} elseif ( 'https' !== $parsed['scheme'] ) {
-			// Only allow https for production.
-			return false;
+			return true;
 		}
 
-		return true;
+		// Allow https with any host.
+		if ( 'https' === $scheme ) {
+			return ! empty( $parsed['host'] );
+		}
+
+		/*
+		 * Allow custom URI schemes for native/mobile apps (RFC 8252 Section 7.1).
+		 * Examples: com.example.app:/oauth, myapp://callback
+		 * Custom schemes must be at least 2 characters to avoid matching
+		 * Windows drive letters (e.g., "C:").
+		 */
+		return strlen( $scheme ) >= 2;
 	}
 
 	/**

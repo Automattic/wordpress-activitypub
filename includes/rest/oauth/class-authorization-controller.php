@@ -62,9 +62,8 @@ class Authorization_Controller extends \WP_REST_Controller {
 							'required'    => true,
 						),
 						'redirect_uri'          => array(
-							'description' => 'The URI to redirect to after authorization.',
+							'description' => 'The URI to redirect to after authorization. Supports custom URI schemes for native apps.',
 							'type'        => 'string',
-							'format'      => 'uri',
 							'required'    => true,
 						),
 						'scope'                 => array(
@@ -104,9 +103,8 @@ class Authorization_Controller extends \WP_REST_Controller {
 							'required'    => true,
 						),
 						'redirect_uri'          => array(
-							'description' => 'The URI to redirect to after authorization.',
+							'description' => 'The URI to redirect to after authorization. Supports custom URI schemes for native apps.',
 							'type'        => 'string',
-							'format'      => 'uri',
 							'required'    => true,
 						),
 						'scope'                 => array(
