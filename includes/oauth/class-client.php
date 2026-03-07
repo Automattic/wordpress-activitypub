@@ -512,18 +512,18 @@ class Client {
 		// Strip brackets from IPv6 (parse_url returns "[::1]").
 		$ip = trim( $host, '[]' );
 
-		// IPv6 loopback.
-		if ( '::1' === $ip ) {
+		/*
+		 * PHP's FILTER_FLAG_NO_RES_RANGE rejects reserved IPs including
+		 * the full 127.0.0.0/8 range and ::1, so a valid IP that fails
+		 * this filter is a loopback/reserved address.
+		 */
+		$is_ip = \filter_var( $ip, FILTER_VALIDATE_IP );
+		if ( $is_ip && ! \filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_RES_RANGE ) ) {
 			return true;
 		}
 
-		// IPv4-mapped IPv6 loopback (::ffff:127.x.x.x).
-		if ( 0 === \strpos( \strtolower( $ip ), '::ffff:127.' ) ) {
-			return true;
-		}
-
-		// IPv4 loopback range 127.0.0.0/8.
-		return (bool) \preg_match( '/^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/', $ip );
+		// IPv4-mapped IPv6 loopback (::ffff:127.x.x.x) — not caught by FILTER_FLAG_NO_RES_RANGE.
+		return 0 === \strpos( \strtolower( $ip ), '::ffff:127.' );
 	}
 
 	/**
