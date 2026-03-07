@@ -309,7 +309,7 @@ class Client {
 		}
 
 		// Normalize ActivityPub Application format to CIMD format.
-		return self::normalize_client_metadata( $data, $url );
+		return self::normalize_client_metadata( $data );
 	}
 
 	/**
@@ -319,11 +319,10 @@ class Client {
 	 * - CIMD (Client ID Metadata Document)
 	 * - ActivityPub Application objects
 	 *
-	 * @param array  $data The raw metadata.
-	 * @param string $url  The client ID URL.
+	 * @param array $data The raw metadata.
 	 * @return array Normalized metadata.
 	 */
-	private static function normalize_client_metadata( $data, $url ) {
+	private static function normalize_client_metadata( $data ) {
 		$metadata = array(
 			'client_name'   => '',
 			'redirect_uris' => array(),
