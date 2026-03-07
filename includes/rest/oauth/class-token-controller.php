@@ -169,7 +169,30 @@ class Token_Controller extends \WP_REST_Controller {
 			return $this->handle_password_grant( $request );
 		}
 
-		$client_id = $request->get_param( 'client_id' );
+		/*
+		 * Extract client credentials from either:
+		 * - client_secret_basic: HTTP Basic Auth header (RFC 6749 Section 2.3.1)
+		 * - client_secret_post: POST body parameters
+		 */
+		$client_id     = null;
+		$client_secret = null;
+		$auth_header   = $request->get_header( 'Authorization' );
+
+		if ( $auth_header && 0 === \strpos( $auth_header, 'Basic ' ) ) {
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Required by OAuth spec.
+			$decoded = \base64_decode( \substr( $auth_header, 6 ), true );
+			if ( $decoded && false !== \strpos( $decoded, ':' ) ) {
+				list( $client_id, $client_secret ) = \explode( ':', $decoded, 2 );
+				$client_id                         = \urldecode( $client_id );
+				$client_secret                     = \urldecode( $client_secret );
+			}
+		}
+
+		// Fall back to POST body parameters (client_secret_post).
+		if ( ! $client_id ) {
+			$client_id     = $request->get_param( 'client_id' );
+			$client_secret = $request->get_param( 'client_secret' );
+		}
 
 		// Validate client.
 		$client = Client::get( $client_id );
@@ -179,7 +202,6 @@ class Token_Controller extends \WP_REST_Controller {
 
 		// Validate client credentials if confidential.
 		if ( ! $client->is_public() ) {
-			$client_secret = $request->get_param( 'client_secret' );
 			if ( ! Client::validate( $client_id, $client_secret ) ) {
 				return $this->token_error( 'invalid_client', 'Invalid client credentials.' );
 			}
