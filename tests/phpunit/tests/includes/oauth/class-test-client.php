@@ -182,11 +182,11 @@ class Test_Client extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test register method allows http for localhost.
+	 * Test register method rejects http by default.
 	 *
 	 * @covers ::register
 	 */
-	public function test_register_allows_localhost_http() {
+	public function test_register_rejects_http_by_default() {
 		$result = $this->create_client(
 			array(
 				'name'          => 'Localhost Client',
@@ -194,22 +194,25 @@ class Test_Client extends \WP_UnitTestCase {
 			)
 		);
 
-		$this->assertIsArray( $result );
-		$this->assertArrayHasKey( 'client_id', $result );
+		$this->assertInstanceOf( \WP_Error::class, $result );
 	}
 
 	/**
-	 * Test register method allows http for 127.0.0.1.
+	 * Test register method allows http when filter permits it.
 	 *
 	 * @covers ::register
 	 */
-	public function test_register_allows_loopback_http() {
+	public function test_register_allows_http_with_filter() {
+		\add_filter( 'activitypub_oauth_allow_http_redirect_uri', '__return_true' );
+
 		$result = $this->create_client(
 			array(
-				'name'          => 'Loopback Client',
-				'redirect_uris' => array( 'http://127.0.0.1:3000/callback' ),
+				'name'          => 'Localhost Client',
+				'redirect_uris' => array( 'http://localhost:8080/callback' ),
 			)
 		);
+
+		\remove_filter( 'activitypub_oauth_allow_http_redirect_uri', '__return_true' );
 
 		$this->assertIsArray( $result );
 		$this->assertArrayHasKey( 'client_id', $result );
