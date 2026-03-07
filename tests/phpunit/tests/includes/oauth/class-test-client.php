@@ -182,11 +182,44 @@ class Test_Client extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test register method rejects http by default.
+	 * Test register method allows http for loopback IP (RFC 8252).
 	 *
 	 * @covers ::register
 	 */
-	public function test_register_rejects_http_by_default() {
+	public function test_register_allows_loopback_http() {
+		$result = $this->create_client(
+			array(
+				'name'          => 'Loopback Client',
+				'redirect_uris' => array( 'http://127.0.0.1:3000/callback' ),
+			)
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertArrayHasKey( 'client_id', $result );
+	}
+
+	/**
+	 * Test register method rejects http for non-loopback hosts.
+	 *
+	 * @covers ::register
+	 */
+	public function test_register_rejects_http_non_loopback() {
+		$result = $this->create_client(
+			array(
+				'name'          => 'Remote Client',
+				'redirect_uris' => array( 'http://example.com/callback' ),
+			)
+		);
+
+		$this->assertInstanceOf( \WP_Error::class, $result );
+	}
+
+	/**
+	 * Test register method rejects http localhost (DNS name, not IP).
+	 *
+	 * @covers ::register
+	 */
+	public function test_register_rejects_http_localhost_dns() {
 		$result = $this->create_client(
 			array(
 				'name'          => 'Localhost Client',
@@ -198,7 +231,7 @@ class Test_Client extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test register method allows http when filter permits it.
+	 * Test register method allows http for non-loopback when filter permits.
 	 *
 	 * @covers ::register
 	 */

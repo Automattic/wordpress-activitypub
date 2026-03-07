@@ -746,14 +746,27 @@ class Client {
 		}
 
 		/*
-		 * Reject http by default. Use the filter to allow http redirect URIs
-		 * for local development (e.g. loopback addresses per RFC 8252 Section 8.3).
+		 * Allow http only for loopback addresses (RFC 8252 Section 8.3).
+		 * Native apps use loopback redirects during the OAuth flow.
 		 *
-		 * @param bool   $allowed Whether to allow this http redirect URI. Default false.
+		 * Non-loopback http URIs are rejected by default but can be
+		 * allowed via the activitypub_oauth_allow_http_redirect_uri filter
+		 * for local development environments.
+		 *
+		 * @param bool   $allowed Whether to allow this http redirect URI.
 		 * @param string $uri     The redirect URI being validated.
 		 * @param array  $parsed  The parsed URI components.
 		 */
 		if ( 'http' === $scheme ) {
+			if ( empty( $parsed['host'] ) ) {
+				return false;
+			}
+
+			$loopback_hosts = array( '127.0.0.1', '[::1]', '::1' );
+			if ( in_array( $parsed['host'], $loopback_hosts, true ) ) {
+				return true;
+			}
+
 			return (bool) \apply_filters( 'activitypub_oauth_allow_http_redirect_uri', false, $uri, $parsed );
 		}
 
