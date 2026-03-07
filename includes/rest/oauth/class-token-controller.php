@@ -73,9 +73,8 @@ class Token_Controller extends \WP_REST_Controller {
 							'type'        => 'string',
 						),
 						'redirect_uri'  => array(
-							'description' => 'The redirect URI (must match original for authorization_code grant).',
+							'description' => 'The redirect URI (must match original for authorization_code grant). Supports custom URI schemes for native apps.',
 							'type'        => 'string',
-							'format'      => 'uri',
 						),
 						'code_verifier' => array(
 							'description' => 'PKCE code verifier.',

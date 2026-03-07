@@ -343,6 +343,51 @@ class Test_Authorization_Code extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test exchange works with custom scheme redirect URI.
+	 *
+	 * @covers ::create
+	 * @covers ::exchange
+	 */
+	public function test_exchange_custom_scheme_redirect_uri() {
+		$custom_uri = 'activitypress://oauth/callback';
+
+		// Register a client with the custom scheme.
+		$client_result    = Client::register(
+			array(
+				'name'          => 'Native App',
+				'redirect_uris' => array( $custom_uri ),
+			)
+		);
+		$custom_client_id = $client_result['client_id'];
+
+		$verifier  = $this->generate_code_verifier();
+		$challenge = Authorization_Code::compute_code_challenge( $verifier );
+
+		$code = Authorization_Code::create(
+			$this->user_id,
+			$custom_client_id,
+			$custom_uri,
+			array( Scope::READ ),
+			$challenge,
+			'S256'
+		);
+
+		$this->assertNotInstanceOf( \WP_Error::class, $code );
+
+		$result = Authorization_Code::exchange(
+			$code,
+			$custom_client_id,
+			$custom_uri,
+			$verifier
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertArrayHasKey( 'access_token', $result );
+
+		Client::delete( $custom_client_id );
+	}
+
+	/**
 	 * Test exchange method with wrong PKCE verifier.
 	 *
 	 * @covers ::exchange
