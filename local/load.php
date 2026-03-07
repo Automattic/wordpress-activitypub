@@ -35,4 +35,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 // Defer signature verification on local development to better test API requests.
 \add_filter( 'activitypub_defer_signature_verification', '__return_true', 20 );
 
+// Allow http redirect URIs for OAuth clients in local development.
+\add_filter( 'activitypub_oauth_allow_http_redirect_uri', '__return_true' );
+
 \add_filter( 'option_activitypub_create_posts', '__return_true' );
