@@ -52,14 +52,10 @@ class Server {
 		 */
 		self::$current_token = null;
 
-		// Respect errors from earlier auth filters.
-		if ( \is_wp_error( $result ) ) {
-			return $result;
-		}
-
 		$token = self::get_bearer_token();
 
 		if ( ! $token ) {
+			// No Bearer token — respect errors from earlier auth filters.
 			return $result;
 		}
 
