@@ -195,8 +195,17 @@ class Client {
 			return $metadata;
 		}
 
-		// Validate client_id matches.
-		if ( ! empty( $metadata['client_id'] ) && $metadata['client_id'] !== $client_id ) {
+		// Validate client_id is present and matches.
+		// A missing client_id allows client impersonation through redirects.
+		if ( empty( $metadata['client_id'] ) ) {
+			return new \WP_Error(
+				'activitypub_missing_client_id',
+				\__( 'Client metadata must contain a client_id property.', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		if ( $metadata['client_id'] !== $client_id ) {
 			return new \WP_Error(
 				'activitypub_client_id_mismatch',
 				\__( 'Client ID in metadata does not match request.', 'activitypub' ),
@@ -264,9 +273,9 @@ class Client {
 			array(
 				'timeout'     => 10,
 				'headers'     => array(
-					'Accept' => 'application/json, application/ld+json, application/activity+json',
+					'Accept' => 'application/cimd+json, application/json, application/ld+json, application/activity+json',
 				),
-				'redirection' => 3,
+				'redirection' => 0, // CIMDs prohibit following redirects to prevent client impersonation.
 			)
 		);
 
@@ -316,7 +325,6 @@ class Client {
 	 */
 	private static function normalize_client_metadata( $data, $url ) {
 		$metadata = array(
-			'client_id'     => $url,
 			'client_name'   => '',
 			'redirect_uris' => array(),
 			'logo_uri'      => '',
