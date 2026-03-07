@@ -39,6 +39,11 @@ trait Verification {
 			return true;
 		}
 
+		// Accept OAuth Bearer tokens as an alternative to HTTP Signatures (C2S).
+		if ( OAuth_Server::is_oauth_request() ) {
+			return $this->verify_authentication( $request );
+		}
+
 		/**
 		 * Filter to defer signature verification.
 		 *

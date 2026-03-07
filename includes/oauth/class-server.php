@@ -66,14 +66,7 @@ class Server {
 		$validated = Token::validate( $token );
 
 		if ( \is_wp_error( $validated ) ) {
-			/*
-			 * Return null instead of the error so WordPress still dispatches
-			 * the request. Returning a WP_Error here would block the entire
-			 * request before the permission callback runs (WordPress skips
-			 * dispatch on auth errors). The permission callback will handle
-			 * the actual auth requirement.
-			 */
-			return null;
+			return $validated;
 		}
 
 		self::$current_token = $validated;
