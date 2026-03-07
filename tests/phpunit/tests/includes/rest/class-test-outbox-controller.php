@@ -64,6 +64,7 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 	public function set_up() {
 		parent::set_up();
 		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\add_filter( 'activitypub_oauth_check_permission', '__return_true' );
 
 		// Ensure the post scheduler hook is present (may be removed by other test classes).
 		if ( ! \has_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ) ) ) {

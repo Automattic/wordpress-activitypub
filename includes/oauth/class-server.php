@@ -315,7 +315,7 @@ class Server {
 			'scopes_supported'                      => Scope::ALL,
 			'response_types_supported'              => array( 'code' ),
 			'response_modes_supported'              => array( 'query' ),
-			'grant_types_supported'                 => array( 'authorization_code', 'refresh_token' ),
+			'grant_types_supported'                 => array( 'authorization_code', 'refresh_token', 'password' ),
 			'token_endpoint_auth_methods_supported' => array( 'none', 'client_secret_post' ),
 			'introspection_endpoint_auth_methods_supported' => array( 'bearer' ),
 			'code_challenge_methods_supported'      => array( 'S256', 'plain' ),

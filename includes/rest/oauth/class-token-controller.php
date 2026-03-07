@@ -9,6 +9,7 @@ namespace Activitypub\Rest\OAuth;
 
 use Activitypub\OAuth\Authorization_Code;
 use Activitypub\OAuth\Client;
+use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Server as OAuth_Server;
 use Activitypub\OAuth\Token;
 
@@ -57,12 +58,11 @@ class Token_Controller extends \WP_REST_Controller {
 							'description' => 'The grant type.',
 							'type'        => 'string',
 							'required'    => true,
-							'enum'        => array( 'authorization_code', 'refresh_token' ),
+							'enum'        => array( 'authorization_code', 'refresh_token', 'password' ),
 						),
 						'client_id'     => array(
-							'description' => 'The OAuth client identifier.',
+							'description' => 'The OAuth client identifier (not required for password grant).',
 							'type'        => 'string',
-							'required'    => true,
 						),
 						'client_secret' => array(
 							'description' => 'The OAuth client secret (for confidential clients).',
@@ -82,6 +82,10 @@ class Token_Controller extends \WP_REST_Controller {
 						),
 						'refresh_token' => array(
 							'description' => 'The refresh token (for refresh_token grant).',
+							'type'        => 'string',
+						),
+						'scope'         => array(
+							'description' => 'Space-separated list of requested scopes (for password grant).',
 							'type'        => 'string',
 						),
 					),
@@ -159,7 +163,13 @@ class Token_Controller extends \WP_REST_Controller {
 		\set_transient( $transient_key, $count + 1, MINUTE_IN_SECONDS );
 
 		$grant_type = $request->get_param( 'grant_type' );
-		$client_id  = $request->get_param( 'client_id' );
+
+		// Password grant uses Application Passwords via Basic Auth — no client required.
+		if ( 'password' === $grant_type ) {
+			return $this->handle_password_grant( $request );
+		}
+
+		$client_id = $request->get_param( 'client_id' );
 
 		// Validate client.
 		$client = Client::get( $client_id );
@@ -230,6 +240,35 @@ class Token_Controller extends \WP_REST_Controller {
 
 		if ( \is_wp_error( $result ) ) {
 			return $this->token_error( 'invalid_grant', $result->get_error_message() );
+		}
+
+		return $this->token_response( $result );
+	}
+
+	/**
+	 * Handle password grant using WordPress Application Passwords.
+	 *
+	 * Authenticates via Basic Auth (Application Password) and issues
+	 * a scoped OAuth access token. This allows clients to exchange
+	 * Application Password credentials for a proper scoped token.
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 * @return \WP_REST_Response
+	 */
+	private function handle_password_grant( \WP_REST_Request $request ) {
+		if ( ! \is_user_logged_in() ) {
+			return $this->token_error( 'invalid_grant', 'Invalid Application Password credentials.' );
+		}
+
+		$user_id   = \get_current_user_id();
+		$scope     = $request->get_param( 'scope' );
+		$scopes    = $scope ? Scope::parse( $scope ) : Scope::DEFAULT_SCOPES;
+		$client_id = $request->get_param( 'client_id' ) ?: 'app-password';
+
+		$result = Token::create( $user_id, $client_id, $scopes );
+
+		if ( \is_wp_error( $result ) ) {
+			return $this->token_error( 'server_error', $result->get_error_message() );
 		}
 
 		return $this->token_response( $result );

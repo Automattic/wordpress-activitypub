@@ -17,7 +17,7 @@ use function Activitypub\use_authorized_fetch;
 /**
  * Verification Trait.
  *
- * Provides methods for verifying HTTP Signatures (S2S) and OAuth/Application Passwords (C2S).
+ * Provides methods for verifying HTTP Signatures (S2S) and OAuth (C2S).
  * Controllers can use this trait for permission callbacks.
  */
 trait Verification {
@@ -71,28 +71,7 @@ trait Verification {
 	}
 
 	/**
-	 * Verify Application Passwords authentication.
-	 *
-	 * Uses WordPress core Application Passwords via Basic Auth.
-	 *
-	 * @see https://make.wordpress.org/core/2020/11/05/application-passwords-integration-guide/
-	 *
-	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
-	 */
-	public function verify_application_password() {
-		if ( \is_user_logged_in() ) {
-			return true;
-		}
-
-		return new \WP_Error(
-			'activitypub_unauthorized',
-			\__( 'Authentication required.', 'activitypub' ),
-			array( 'status' => 401 )
-		);
-	}
-
-	/**
-	 * Verify user authentication via OAuth or Application Passwords.
+	 * Verify user authentication via OAuth.
 	 *
 	 * Automatically determines the required scope based on the HTTP method:
 	 * - GET, HEAD: read scope
@@ -100,6 +79,10 @@ trait Verification {
 	 *
 	 * If the request has a user_id parameter, also verifies that the
 	 * authenticated user matches that actor.
+	 *
+	 * Application Passwords are not accepted directly on C2S endpoints.
+	 * Use the password grant on the token endpoint to exchange an
+	 * Application Password for a scoped OAuth token first.
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
@@ -110,27 +93,12 @@ trait Verification {
 		$read_methods = array( 'GET', 'HEAD' );
 		$scope        = \in_array( $method, $read_methods, true ) ? Scope::READ : Scope::WRITE;
 
-		// Try OAuth first.
-		$oauth_result = OAuth_Server::check_oauth_permission( $request, $scope );
-		if ( true === $oauth_result ) {
+		$result = OAuth_Server::check_oauth_permission( $request, $scope );
+		if ( true === $result ) {
 			return $this->maybe_verify_owner( $request );
 		}
 
-		/*
-		 * If OAuth was attempted (Bearer token present), don't fall back to Application Passwords.
-		 * This prevents scope bypass when OAuth auth succeeds but scope check fails.
-		 */
-		if ( \is_wp_error( $oauth_result ) && OAuth_Server::is_oauth_request() ) {
-			return $oauth_result;
-		}
-
-		// Fall back to Application Passwords only when no OAuth token was used.
-		$result = $this->verify_application_password();
-		if ( \is_wp_error( $result ) ) {
-			return $result;
-		}
-
-		return $this->maybe_verify_owner( $request );
+		return $result;
 	}
 
 	/**
@@ -152,8 +120,8 @@ trait Verification {
 	/**
 	 * Verify that the authenticated user matches the actor specified in the request.
 	 *
-	 * Checks that the user_id parameter matches the OAuth token's user
-	 * or the WordPress authenticated user (via Application Passwords).
+	 * Checks that the user_id parameter matches the authenticated user.
+	 * Works with both OAuth tokens and WordPress session auth (wp-login.php flow).
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return bool|\WP_Error True if the user matches, WP_Error otherwise.
@@ -167,14 +135,7 @@ trait Verification {
 			return $user;
 		}
 
-		// Try OAuth token first.
-		$token = OAuth_Server::get_current_token();
-		if ( $token && $token->get_user_id() === (int) $user_id ) {
-			return true;
-		}
-
-		// Fall back to WordPress authenticated user (Application Passwords).
-		if ( \is_user_logged_in() && \get_current_user_id() === (int) $user_id ) {
+		if ( \get_current_user_id() === (int) $user_id ) {
 			return true;
 		}
 

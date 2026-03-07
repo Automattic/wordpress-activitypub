@@ -138,32 +138,6 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test logged-in user returns true.
-	 *
-	 * @covers ::verify_application_password
-	 */
-	public function test_verify_application_password_logged_in() {
-		\wp_set_current_user( $this->user_id );
-
-		$this->assertTrue( $this->instance->verify_application_password() );
-	}
-
-	/**
-	 * Test not logged in returns WP_Error with 401.
-	 *
-	 * @covers ::verify_application_password
-	 */
-	public function test_verify_application_password_not_logged_in() {
-		\wp_set_current_user( 0 );
-
-		$result = $this->instance->verify_application_password();
-
-		$this->assertWPError( $result );
-		$this->assertEquals( 'activitypub_unauthorized', $result->get_error_code() );
-		$this->assertEquals( 401, $result->get_error_data()['status'] );
-	}
-
-	/**
 	 * Test GET request uses read scope.
 	 *
 	 * @covers ::verify_authentication
@@ -267,12 +241,12 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test no OAuth token falls back to Application Passwords.
+	 * Test no OAuth token returns error (Application Passwords not accepted directly).
 	 *
 	 * @covers ::verify_authentication
 	 */
-	public function test_verify_authentication_falls_back_to_app_passwords() {
-		// OAuth returns error but no token was present (not an OAuth request).
+	public function test_verify_authentication_requires_oauth() {
+		// OAuth returns error — no token present.
 		\add_filter(
 			'activitypub_oauth_check_permission',
 			function () {
@@ -280,15 +254,16 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 			}
 		);
 
-		// User is logged in via Application Passwords.
+		// User is logged in via Application Passwords, but that's not enough.
 		\wp_set_current_user( $this->user_id );
 
 		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/outbox' );
 
 		$result = $this->instance->verify_authentication( $request );
 
-		// Should fall back to Application Passwords and succeed.
-		$this->assertTrue( $result );
+		// Should NOT fall back — OAuth is required.
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_oauth_required', $result->get_error_code() );
 	}
 
 	/**
@@ -375,6 +350,8 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	 */
 	public function test_verify_owner_oauth_token_matches() {
 		$this->set_oauth_token( $this->create_mock_token( $this->user_id, true ) );
+		// OAuth Server sets current user during authentication.
+		\wp_set_current_user( $this->user_id );
 
 		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . $this->user_id . '/outbox' );
 		$request->set_param( 'user_id', $this->user_id );
