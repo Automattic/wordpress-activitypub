@@ -1,7 +1,6 @@
 /**
  * External dependencies
  */
-import { execSync } from 'node:child_process';
 import { request } from '@playwright/test';
 
 /**
@@ -11,6 +10,10 @@ import { RequestUtils } from '@wordpress/e2e-test-utils-playwright';
 
 /**
  * Global setup for ActivityPub E2E tests.
+ *
+ * Permalink structure and the activitypub_api option are configured via
+ * the lifecycleScripts.afterStart hook in .wp-env.json so they run once
+ * when the environment starts rather than on every test run.
  *
  * @param {import('@playwright/test').FullConfig} config
  * @return {Promise<void>}
@@ -25,17 +28,6 @@ async function globalSetup( config ) {
 
 	const requestUtils = new RequestUtils( requestContext, {
 		storageStatePath,
-	} );
-
-	// Activate the plugin and enable the ActivityPub API (OAuth/C2S) in the test environment.
-	execSync( 'npx wp-env run tests-cli wp plugin activate wordpress-activitypub', {
-		stdio: 'pipe',
-	} );
-	execSync( 'npx wp-env run tests-cli wp option update activitypub_api 1', {
-		stdio: 'pipe',
-	} );
-	execSync( 'npx wp-env run tests-cli wp rewrite structure "/%year%/%monthnum%/%postname%/"', {
-		stdio: 'pipe',
 	} );
 
 	// Authenticate and save the storageState to disk.
