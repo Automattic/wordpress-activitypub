@@ -38,7 +38,7 @@ function atproto_did_rest_init() {
 		'atproto-did',
 		array(
 			'methods'  => 'GET',
-			'callback' => 'atproto_did_rest_endpoint',
+			'callback' => __NAMESPACE__ . '\atproto_did_rest_endpoint',
 		)
 	);
 }
@@ -53,5 +53,5 @@ function atproto_did_rest_endpoint() {
 	exit();
 }
 
-\add_action( 'init', 'atproto_did_register_rule' );
-\add_action( 'rest_api_init', 'atproto_did_rest_init' );
+\add_action( 'init', __NAMESPACE__ . '\atproto_did_register_rule' );
+\add_action( 'rest_api_init', __NAMESPACE__ . '\atproto_did_rest_init' );
