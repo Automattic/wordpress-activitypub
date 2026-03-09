@@ -179,7 +179,7 @@
 // :focus-visible sets box-shadow, separate from color rules above
 /* stylelint-disable no-descending-specificity */
 .site-hub-mobile__button.components-button {
-	color: colors.$gray-400;
+	color: colors.$gray-200;
 
 	&:hover:not(:disabled),
 	&:focus:not(:disabled) {

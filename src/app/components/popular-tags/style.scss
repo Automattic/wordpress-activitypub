@@ -16,7 +16,7 @@
 		letter-spacing: 0.5px;
 		margin: var(--wpds-spacing-30, 12px) 0 var(--wpds-spacing-20, 8px) 0;
 		padding: 0 var(--wpds-spacing-20, 8px);
-		color: #999;
+		color: colors.$gray-600;
 	}
 
 	&__loading {
