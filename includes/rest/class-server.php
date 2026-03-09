@@ -23,6 +23,7 @@ class Server {
 		\add_filter( 'rest_request_parameter_order', array( self::class, 'request_parameter_order' ), 10, 2 );
 
 		\add_filter( 'rest_post_dispatch', array( self::class, 'filter_output' ), 10, 3 );
+		\add_filter( 'rest_post_dispatch', array( self::class, 'add_cors_headers' ), 10, 3 );
 	}
 
 	/**
@@ -154,6 +155,41 @@ class Server {
 		);
 
 		$response->set_data( $error );
+
+		return $response;
+	}
+
+	/**
+	 * Add CORS headers to ActivityPub REST responses.
+	 *
+	 * @param \WP_REST_Response $response The REST response.
+	 * @param \WP_REST_Server   $server   The REST server instance.
+	 * @param \WP_REST_Request  $request  The request object.
+	 *
+	 * @return \WP_REST_Response The modified response.
+	 */
+	public static function add_cors_headers( $response, $server, $request ) {
+		$route     = $request->get_route();
+		$namespace = '/' . ACTIVITYPUB_REST_NAMESPACE;
+
+		// Only add CORS to ActivityPub endpoints, except the interactive OAuth authorize endpoint.
+		if ( ! \str_starts_with( $route, $namespace ) || \str_contains( $route, $namespace . '/oauth/authorize' ) ) {
+			return $response;
+		}
+
+		/*
+		 * Reflect the request Origin instead of using a wildcard to avoid
+		 * leaking private data to arbitrary origins on authenticated endpoints.
+		 */
+		$origin = isset( $_SERVER['HTTP_ORIGIN'] ) ? \esc_url_raw( \wp_unslash( $_SERVER['HTTP_ORIGIN'] ) ) : '';
+		$response->header( 'Access-Control-Allow-Origin', $origin ? $origin : '*' );
+		$response->header( 'Access-Control-Allow-Methods', 'GET, POST, OPTIONS' );
+		$response->header( 'Access-Control-Allow-Headers', 'Accept, Content-Type, Authorization' );
+
+		if ( $origin ) {
+			$response->header( 'Access-Control-Allow-Credentials', 'true' );
+			$response->header( 'Vary', 'Origin' );
+		}
 
 		return $response;
 	}
