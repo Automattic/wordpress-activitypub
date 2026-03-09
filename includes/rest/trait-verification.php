@@ -81,8 +81,6 @@ trait Verification {
 	 * authenticated user matches that actor.
 	 *
 	 * Application Passwords are not accepted directly on C2S endpoints.
-	 * Use the password grant on the token endpoint to exchange an
-	 * Application Password for a scoped OAuth token first.
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
