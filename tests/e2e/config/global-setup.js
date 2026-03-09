@@ -27,8 +27,14 @@ async function globalSetup( config ) {
 		storageStatePath,
 	} );
 
-	// Enable the ActivityPub API (OAuth/C2S) for E2E tests.
-	execSync( 'npx wp-env run cli wp option update activitypub_api 1', {
+	// Activate the plugin and enable the ActivityPub API (OAuth/C2S) in the test environment.
+	execSync( 'npx wp-env run tests-cli wp plugin activate wordpress-activitypub', {
+		stdio: 'pipe',
+	} );
+	execSync( 'npx wp-env run tests-cli wp option update activitypub_api 1', {
+		stdio: 'pipe',
+	} );
+	execSync( 'npx wp-env run tests-cli wp rewrite structure "/%year%/%monthnum%/%postname%/"', {
 		stdio: 'pipe',
 	} );
 

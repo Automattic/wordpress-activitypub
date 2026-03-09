@@ -103,7 +103,10 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ), 0 );
 	\add_action( 'init', array( __NAMESPACE__ . '\Search', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Signature', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\OAuth\Server', 'init' ) );
+	// Only load OAuth Server if the ActivityPub API is enabled.
+	if ( \get_option( 'activitypub_api', false ) ) {
+		\add_action( 'init', array( __NAMESPACE__ . '\OAuth\Server', 'init' ) );
+	}
 
 	if ( site_supports_blocks() ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
