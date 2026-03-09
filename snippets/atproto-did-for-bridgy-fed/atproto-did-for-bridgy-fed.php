@@ -60,8 +60,19 @@ function atproto_did_rest_init() {
  * @return \WP_REST_Response The response containing the ATproto DID.
  */
 function atproto_did_rest_endpoint() {
-	// Insert your DID here.
-	$body    = 'did:plc:________________________';
+	if ( \defined( 'ATPROTO_DID' ) ) {
+		$did = ATPROTO_DID;
+	} else {
+		$host = \wp_parse_url( \home_url(), PHP_URL_HOST );
+		$did  = 'did:web:' . $host;
+	}
+
+	/**
+	 * Filters the ATproto DID served at /.well-known/atproto-did.
+	 *
+	 * @param string $did The ATproto DID. Defaults to ATPROTO_DID constant or did:web:{hostname}.
+	 */
+	$body    = \apply_filters( 'atproto_did', $did );
 	$status  = 200;
 	$headers = array(
 		'Content-Type' => 'text/plain',

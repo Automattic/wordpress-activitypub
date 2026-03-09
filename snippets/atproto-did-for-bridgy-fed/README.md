@@ -8,9 +8,23 @@ There is not yet a way to trigger the actual handle change from within WordPress
 
 ## Installation
 
-In `atproto-did-for-bridgy-fed.php`, replace the placeholder DID value (`did:plc:...`) with the DID of your blog's bridged account on Bluesky. Bridgy Fed [documents the process to find your DID](https://fed.brid.gy/docs#bluesky-enhanced).
+Copy this folder to `wp-content/plugins/` and activate **ATproto DID for Bridgy Fed** from the WordPress admin, or copy `atproto-did-for-bridgy-fed.php` to `wp-content/mu-plugins/` for automatic activation.
 
-Afterwards, copy this folder to `wp-content/plugins/` and activate **ATproto DID for Bridgy Fed** from the WordPress admin, or copy `atproto-did-for-bridgy-fed.php` to `wp-content/mu-plugins/` for automatic activation.
+By default, the snippet serves `did:web:{your-hostname}`. To override this with a specific DID (e.g. a `did:plc:` from Bridgy Fed), define the `ATPROTO_DID` constant in `wp-config.php`:
+
+```php
+define( 'ATPROTO_DID', 'did:plc:your_did_here' );
+```
+
+Alternatively, use the `atproto_did` filter:
+
+```php
+add_filter( 'atproto_did', function () {
+    return 'did:plc:your_did_here';
+} );
+```
+
+Bridgy Fed [documents the process to find your DID](https://fed.brid.gy/docs#bluesky-enhanced).
 
 ## Requirements
 
