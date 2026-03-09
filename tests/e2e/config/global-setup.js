@@ -1,6 +1,7 @@
 /**
  * External dependencies
  */
+import { execSync } from 'node:child_process';
 import { request } from '@playwright/test';
 
 /**
@@ -24,6 +25,11 @@ async function globalSetup( config ) {
 
 	const requestUtils = new RequestUtils( requestContext, {
 		storageStatePath,
+	} );
+
+	// Enable the ActivityPub API (OAuth/C2S) for E2E tests.
+	execSync( 'npx wp-env run cli wp option update activitypub_api 1', {
+		stdio: 'pipe',
 	} );
 
 	// Authenticate and save the storageState to disk.
