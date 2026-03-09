@@ -1,14 +1,14 @@
 @use "@wordpress/base-styles/mixins";
+@use "@wordpress/base-styles/colors";
 
 /**
  * ThemedSurface styles
  *
  * Provides themed container for light content areas.
- * Uses wpds tokens directly for consistent theming.
  */
 
 .themed-surface {
-	background: var(--wpds-color-bg-surface-neutral-strong, #fff);
+	background: colors.$white;
 	overflow: hidden;
 	display: flex;
 	flex-direction: column;

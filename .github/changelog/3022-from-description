@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix dark sidebar colors appearing incorrectly with non-default admin color schemes.
