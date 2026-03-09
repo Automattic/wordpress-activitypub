@@ -308,6 +308,7 @@ class Server {
 			'introspection_endpoint_auth_methods_supported' => array( 'bearer' ),
 			'code_challenge_methods_supported'      => array( 'S256' ),
 			'service_documentation'                 => 'https://github.com/swicg/activitypub-api',
+			'client_id_metadata_document_supported' => true,
 		);
 	}
 
