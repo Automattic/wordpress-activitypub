@@ -47,6 +47,8 @@ class Test_Authorization_Controller extends \WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
+		\update_option( 'activitypub_api', '1' );
+
 		Post_Types::register_oauth_post_types();
 
 		global $wp_rest_server;
