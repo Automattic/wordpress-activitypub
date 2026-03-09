@@ -7,35 +7,50 @@
  * License: Creative Commons Zero 1.0 Universal
  * License URI: https://creativecommons.org/publicdomain/zero/1.0/
  * Requires Plugins:  activitypub
+ *
+ * @package Activitypub
  */
 
 namespace Activitypub\Snippets;
 
 if ( ! defined( 'ABSPATH' ) ) {
-  exit;
+	exit;
 }
 
+/**
+ * Register rewrite rule for the ATproto DID endpoint.
+ */
 function atproto_did_register_rule() {
-    \add_rewrite_rule(
-        '^.well-known/atproto-did$',
-        'index.php?rest_route=/atproto_did/atproto-did',
-        'top'
-    );
-    \flush_rewrite_rules();
+	\add_rewrite_rule(
+		'^.well-known/atproto-did$',
+		'index.php?rest_route=/atproto_did/atproto-did',
+		'top'
+	);
+	\flush_rewrite_rules();
 }
 
+/**
+ * Register the REST API route for the ATproto DID.
+ */
 function atproto_did_rest_init() {
-    \register_rest_route( 'atproto_did', 'atproto-did', array(
-        'methods'   => 'GET',
-        'callback'  => 'atproto_did_rest_endpoint'
-    ) );
+	\register_rest_route(
+		'atproto_did',
+		'atproto-did',
+		array(
+			'methods'  => 'GET',
+			'callback' => 'atproto_did_rest_endpoint',
+		)
+	);
 }
 
+/**
+ * Handle the ATproto DID REST endpoint request.
+ */
 function atproto_did_rest_endpoint() {
-    \header( 'Content-Type: text/plain' );
-    // Insert your DID here:
-    echo( 'did:plc:________________________' );
-    exit();
+	\header( 'Content-Type: text/plain' );
+	// Insert your DID here.
+	echo( 'did:plc:________________________' );
+	exit();
 }
 
 \add_action( 'init', 'atproto_did_register_rule' );
