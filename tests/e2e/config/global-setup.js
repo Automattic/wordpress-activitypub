@@ -11,10 +11,6 @@ import { RequestUtils } from '@wordpress/e2e-test-utils-playwright';
 /**
  * Global setup for ActivityPub E2E tests.
  *
- * Permalink structure and the activitypub_api option are configured via
- * the lifecycleScripts.afterStart hook in .wp-env.json so they run once
- * when the environment starts rather than on every test run.
- *
  * @param {import('@playwright/test').FullConfig} config
  * @return {Promise<void>}
  */
