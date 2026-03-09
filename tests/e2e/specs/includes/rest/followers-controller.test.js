@@ -116,7 +116,8 @@ test.describe( 'ActivityPub Followers Endpoint', () => {
 
 	test( 'should handle page parameter', async ( { requestUtils } ) => {
 		const data = await requestUtils.rest( {
-			path: `${ followersEndpoint }?page=1&per_page=10`,
+			path: followersEndpoint,
+			params: { page: 1, per_page: 10 },
 		} );
 
 		// With no followers the response is a plain OrderedCollection;

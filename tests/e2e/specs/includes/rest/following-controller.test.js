@@ -96,7 +96,8 @@ test.describe( 'ActivityPub Following Collection REST API', () => {
 
 	test( 'should handle page parameter', async ( { requestUtils } ) => {
 		const data = await requestUtils.rest( {
-			path: `${ followingEndpoint }?page=1&per_page=10`,
+			path: followingEndpoint,
+			params: { page: 1, per_page: 10 },
 		} );
 
 		// With no following the response is a plain OrderedCollection;
