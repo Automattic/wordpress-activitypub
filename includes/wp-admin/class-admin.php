@@ -62,7 +62,9 @@ class Admin {
 
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
-			\add_action( 'show_user_profile', array( User_Settings_Fields::class, 'connected_apps_section' ) );
+			if ( \get_option( 'activitypub_api', false ) ) {
+				\add_action( 'show_user_profile', array( User_Settings_Fields::class, 'connected_apps_section' ) );
+			}
 		}
 
 		\add_filter( 'dashboard_glance_items', array( self::class, 'dashboard_glance_items' ) );

@@ -410,7 +410,7 @@ class Outbox {
 		}
 
 		// Authenticate via Bearer token for non-REST requests (e.g. permalink access).
-		if ( ! \is_user_logged_in() && ! \wp_is_serving_rest_request() ) {
+		if ( \get_option( 'activitypub_api', false ) && ! \is_user_logged_in() && ! \wp_is_serving_rest_request() ) {
 			\Activitypub\OAuth\Server::authenticate_oauth( null );
 		}
 

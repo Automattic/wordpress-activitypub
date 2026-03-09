@@ -61,9 +61,11 @@ function rest_init() {
 	( new Rest\Inbox_Controller() )->register_routes();
 	( new Rest\Interaction_Controller() )->register_routes();
 	( new Rest\Moderators_Controller() )->register_routes();
-	( new Rest\OAuth\Authorization_Controller() )->register_routes();
-	( new Rest\OAuth\Clients_Controller() )->register_routes();
-	( new Rest\OAuth\Token_Controller() )->register_routes();
+	if ( \get_option( 'activitypub_api', false ) ) {
+		( new Rest\OAuth\Authorization_Controller() )->register_routes();
+		( new Rest\OAuth\Clients_Controller() )->register_routes();
+		( new Rest\OAuth\Token_Controller() )->register_routes();
+	}
 	( new Rest\Outbox_Controller() )->register_routes();
 	( new Rest\Post_Controller() )->register_routes();
 	( new Rest\Replies_Controller() )->register_routes();
@@ -101,7 +103,9 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ), 0 );
 	\add_action( 'init', array( __NAMESPACE__ . '\Search', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Signature', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\OAuth\Server', 'init' ) );
+	if ( \get_option( 'activitypub_api', false ) ) {
+		\add_action( 'init', array( __NAMESPACE__ . '\OAuth\Server', 'init' ) );
+	}
 
 	if ( site_supports_blocks() ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
