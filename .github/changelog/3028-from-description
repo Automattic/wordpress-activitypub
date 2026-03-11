@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix new posts being marked as modified on load, which prevented Gutenberg's starter pattern modal from appearing.

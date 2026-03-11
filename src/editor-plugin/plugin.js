@@ -47,17 +47,6 @@ const EditorPlugin = () => {
 		}
 	}, [ defaultVisibility, meta, setMeta ] );
 
-	// Sync quote policy default to meta when not set.
-	// This ensures the value is saved even if user doesn't change the dropdown.
-	useEffect( () => {
-		const storedQuotePolicy = meta?.activitypub_interaction_policy_quote;
-
-		// Only sync if quote policy was never set.
-		if ( ! storedQuotePolicy ) {
-			setMeta( { ...meta, activitypub_interaction_policy_quote: defaultQuotePolicy } );
-		}
-	}, [ defaultQuotePolicy, meta, setMeta ] );
-
 	// Don't show when editing sync blocks.
 	if ( 'wp_block' === postType ) {
 		return null;
