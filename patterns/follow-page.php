@@ -5,6 +5,8 @@
  * @package Activitypub
  */
 
+$selected_user = ! \Activitypub\is_user_type_disabled( 'blog' ) ? 'blog' : 'inherit';
+
 \register_block_pattern(
 	'activitypub/follow-page',
 	array(
@@ -28,11 +30,11 @@
 	<!-- wp:spacer {"height":"32px"} -->
 	<div style="height:32px" aria-hidden="true" class="wp-block-spacer"></div>
 	<!-- /wp:spacer -->
-	<!-- wp:activitypub/follow-me {"selectedUser":"blog","className":"is-style-profile"} /-->
+	<!-- wp:activitypub/follow-me {"selectedUser":"' . $selected_user . '","className":"is-style-profile"} /-->
 	<!-- wp:spacer {"height":"32px"} -->
 	<div style="height:32px" aria-hidden="true" class="wp-block-spacer"></div>
 	<!-- /wp:spacer -->
-	<!-- wp:activitypub/followers {"selectedUser":"blog"} -->
+	<!-- wp:activitypub/followers {"selectedUser":"' . $selected_user . '"} -->
 	<!-- wp:heading {"level":2} -->
 	<h2 class="wp-block-heading">' . esc_html_x( 'Our Fediverse Followers', 'Block pattern content', 'activitypub' ) . '</h2>
 	<!-- /wp:heading -->
