@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.9
-Stable tag: 8.0.0
+Stable tag: 8.0.1
 Requires PHP: 7.4
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -110,6 +110,15 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 8.0.1 - 2026-03-11
+#### Changed
+- Simplify the follow page block pattern to avoid duplicate headings and improve accessibility.
+
+#### Fixed
+- Fix dark sidebar colors appearing incorrectly with non-default admin color schemes.
+- Fix Fediverse Reactions block not aligning with post content in block themes.
+- Fix new posts being marked as modified on load, which prevented Gutenberg's starter pattern modal from appearing.
 
 ### 8.0.0 - 2026-03-04
 #### Security
