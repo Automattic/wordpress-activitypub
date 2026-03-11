@@ -515,6 +515,7 @@ class Post_Types {
 					'type'              => 'string',
 					'single'            => true,
 					'show_in_rest'      => true,
+					'default'           => \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE ),
 					'sanitize_callback' => static function ( $value ) {
 						$schema = array(
 							'type'    => 'string',
