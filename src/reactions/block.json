@@ -40,14 +40,6 @@
 		},
 		"html": false,
 		"interactivity": true,
-		"layout": {
-			"default": {
-				"type": "constrained",
-				"orientation": "vertical",
-				"justifyContent": "center"
-			},
-			"allowEditing": false
-		},
 		"shadow": true,
 		"typography": {
 			"fontSize": true,
