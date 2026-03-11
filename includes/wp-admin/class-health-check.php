@@ -8,6 +8,7 @@
 namespace Activitypub\WP_Admin;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Outbox;
 use Activitypub\Http;
 use Activitypub\Sanitize;
 use Activitypub\Scheduler;
@@ -140,6 +141,16 @@ class Health_Check {
 		$tests['direct']['activitypub_test_rest_api_accessibility'] = array(
 			'label' => \__( 'REST API Accessibility Test', 'activitypub' ),
 			'test'  => array( self::class, 'test_rest_api_accessibility' ),
+		);
+
+		$tests['direct']['activitypub_test_outbox_rate'] = array(
+			'label' => \__( 'Outbox Activity Rate Test', 'activitypub' ),
+			'test'  => array( self::class, 'test_outbox_rate' ),
+		);
+
+		$tests['direct']['activitypub_test_filesystem'] = array(
+			'label' => \__( 'Filesystem Access Test', 'activitypub' ),
+			'test'  => array( self::class, 'test_filesystem' ),
 		);
 
 		return $tests;
@@ -391,6 +402,24 @@ class Health_Check {
 		$info['activitypub']['fields']['authorized_fetch'] = array(
 			'label'   => \__( 'Authorized Fetch', 'activitypub' ),
 			'value'   => \esc_attr( (int) \get_option( 'activitypub_authorized_fetch', '0' ) ),
+			'private' => false,
+		);
+
+		$info['activitypub']['fields']['outbox_total_count'] = array(
+			'label'   => \__( 'Outbox Total Items', 'activitypub' ),
+			'value'   => self::get_outbox_count(),
+			'private' => false,
+		);
+
+		$info['activitypub']['fields']['outbox_pending_count'] = array(
+			'label'   => \__( 'Outbox Pending Items', 'activitypub' ),
+			'value'   => self::get_outbox_count( 'pending' ),
+			'private' => false,
+		);
+
+		$info['activitypub']['fields']['outbox_last_hour_count'] = array(
+			'label'   => \__( 'Outbox Items (Last Hour)', 'activitypub' ),
+			'value'   => self::get_outbox_rate_count(),
 			'private' => false,
 		);
 
@@ -741,6 +770,179 @@ class Health_Check {
 		);
 
 		return $result;
+	}
+
+	/**
+	 * Outbox activity rate test.
+	 *
+	 * Detects abnormally high outbox creation rates that may indicate
+	 * a third-party plugin is triggering excessive wp_update_post() calls.
+	 *
+	 * @since 8.0.0
+	 *
+	 * @return array The test result.
+	 */
+	public static function test_outbox_rate() {
+		$result = array(
+			'label'       => \__( 'Outbox activity rate is normal', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\__( 'The outbox activity rate is within normal limits.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_outbox_rate',
+		);
+
+		$total = self::get_outbox_rate_count();
+
+		if ( $total <= 10 ) {
+			return $result;
+		}
+
+		$details = \sprintf(
+			/* translators: %d: Number of outbox items. */
+			\__( '%d outbox items were created in the last hour.', 'activitypub' ),
+			$total
+		);
+
+		if ( $total > 50 ) {
+			$result['status']         = 'critical';
+			$result['label']          = \__( 'Excessive outbox activity detected', 'activitypub' );
+			$result['badge']['color'] = 'red';
+			$result['description']    = \sprintf(
+				'<p>%s</p><p>%s</p>',
+				$details,
+				\__( 'A plugin may be triggering updates to published posts at a very high rate, causing excessive federation activity. This can impact site performance and may flood federated servers.', 'activitypub' )
+			);
+		} else {
+			$result['status']         = 'recommended';
+			$result['label']          = \__( 'Unusual outbox activity detected', 'activitypub' );
+			$result['badge']['color'] = 'orange';
+			$result['description']    = \sprintf(
+				'<p>%s</p><p>%s</p>',
+				$details,
+				\__( 'Check for plugins that may be triggering frequent updates to published posts, such as editorial calendars or cloud sync services.', 'activitypub' )
+			);
+		}
+
+		$result['actions'] = \sprintf(
+			'<p>%s</p>',
+			\sprintf(
+				/* translators: %s: Plugins page URL. */
+				\__( 'Review your <a href="%s">active plugins</a> for any that may be frequently modifying published posts.', 'activitypub' ),
+				\esc_url( \admin_url( 'plugins.php' ) )
+			)
+		);
+
+		return $result;
+	}
+
+	/**
+	 * Filesystem access test.
+	 *
+	 * Checks whether WordPress can write files directly. When direct filesystem
+	 * access is unavailable (e.g., FTP-only servers), media caching will not work.
+	 *
+	 * @since 8.0.0
+	 *
+	 * @return array The test result.
+	 */
+	public static function test_filesystem() {
+		$result = array(
+			'label'       => \__( 'Uploads directory is writable for media caching', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\__( 'The uploads directory is writable, so remote media caching (avatars, emoji, images) works correctly.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_filesystem',
+		);
+
+		// Skip test when remote caching is disabled.
+		if ( ACTIVITYPUB_DISABLE_REMOTE_CACHE ) {
+			$result['description'] = \sprintf(
+				'<p>%s</p>',
+				\__( 'Remote media caching is disabled, so uploads directory write access is not required.', 'activitypub' )
+			);
+			return $result;
+		}
+
+		$upload_dir = \wp_upload_dir();
+
+		if ( ! \wp_is_writable( $upload_dir['basedir'] ) ) {
+			$result['status']         = 'recommended';
+			$result['label']          = \__( 'Uploads directory is not writable for media caching', 'activitypub' );
+			$result['badge']['color'] = 'orange';
+			$result['description']    = \sprintf(
+				'<p>%s</p><p>%s</p>',
+				\__( 'The uploads directory is not writable by the web server. Remote avatars, emoji, and images will be served from their original URLs instead of being cached locally.', 'activitypub' ),
+				\__( 'To fix this, ask your hosting provider to ensure the uploads directory is writable by the web server.', 'activitypub' )
+			);
+			$result['actions']        = \sprintf(
+				'<p>%s</p>',
+				\__( 'If you cannot make the directory writable, you can disable media caching by adding <code>define( \'ACTIVITYPUB_DISABLE_REMOTE_CACHE\', true );</code> to your <code>wp-config.php</code>. Remote media will then be served from its original URL.', 'activitypub' )
+			);
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Count outbox items created in the last hour.
+	 *
+	 * @since 8.0.0
+	 *
+	 * @return int Total items created in the last hour.
+	 */
+	public static function get_outbox_rate_count() {
+		$query = new \WP_Query(
+			array(
+				'post_type'      => Outbox::POST_TYPE,
+				'post_status'    => 'any',
+				'posts_per_page' => 1,
+				'fields'         => 'ids',
+				'date_query'     => array(
+					array(
+						'after' => '1 hour ago',
+					),
+				),
+			)
+		);
+
+		return (int) $query->found_posts;
+	}
+
+	/**
+	 * Get the count of outbox items.
+	 *
+	 * @since 8.0.0
+	 *
+	 * @param string $status Optional. Post status to count. Default 'any' for all statuses.
+	 *
+	 * @return int The number of outbox items.
+	 */
+	public static function get_outbox_count( $status = 'any' ) {
+		$counts = \wp_count_posts( Outbox::POST_TYPE );
+
+		if ( 'any' === $status ) {
+			$total = 0;
+			foreach ( (array) $counts as $count ) {
+				$total += (int) $count;
+			}
+			return $total;
+		}
+
+		return isset( $counts->$status ) ? (int) $counts->$status : 0;
 	}
 
 	/**

@@ -5,6 +5,7 @@
   "title": "ActivityPub Command Palette",
   "category": "widgets",
   "description": "Registers ActivityPub commands for the WordPress Command Palette.",
+  "icon": "search",
   "textdomain": "activitypub",
   "editorScript": "file:./plugin.js"
 }

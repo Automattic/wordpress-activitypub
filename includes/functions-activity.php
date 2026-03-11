@@ -109,12 +109,6 @@ function get_activity_visibility( $activity ) {
 		return ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC;
 	}
 
-	// Activities with no recipients are treated as public.
-	$recipients = extract_recipients_from_activity( $activity );
-	if ( empty( $recipients ) ) {
-		return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
-	}
-
 	return ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
 }
 
@@ -122,6 +116,7 @@ function get_activity_visibility( $activity ) {
  * Check if passed Activity is Public.
  *
  * @see https://github.com/w3c/activitypub/issues/404#issuecomment-2926310561
+ * @see https://www.w3.org/TR/activitypub/#delivery (Section 7.1, "Silent and private activities")
  *
  * @param Base_Object|array $data The Activity object as Base_Object or array.
  *
@@ -135,7 +130,7 @@ function is_activity_public( $data ) {
 	$recipients = extract_recipients_from_activity( $data );
 
 	if ( empty( $recipients ) ) {
-		return true;
+		return false;
 	}
 
 	return ! empty( array_intersect( $recipients, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) );

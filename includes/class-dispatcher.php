@@ -104,7 +104,7 @@ class Dispatcher {
 		 *
 		 * @param int[] $retry_error_codes The error codes. Default array( 408, 429, 500, 502, 503, 504 ).
 		 */
-		return apply_filters( 'activitypub_dispatcher_retry_error_codes', array( 408, 429, 500, 502, 503, 504 ) );
+		return apply_filters( 'activitypub_dispatcher_retry_error_codes', ACTIVITYPUB_RETRY_ERROR_CODES );
 	}
 
 	/**
@@ -240,8 +240,13 @@ class Dispatcher {
 	 */
 	private static function send_to_inboxes( $inboxes, $outbox_item_id ) {
 		$outbox_item = \get_post( $outbox_item_id );
-		$json        = Outbox::get_activity( $outbox_item_id )->to_json();
-		$retries     = array();
+
+		// Strip bto and bcc before delivery per ActivityPub spec Section 6.2.
+		\add_filter( 'activitypub_activity_object_array', array( self::class, 'strip_private_addressing' ) );
+		$json = Outbox::get_activity( $outbox_item_id )->to_json();
+		\remove_filter( 'activitypub_activity_object_array', array( self::class, 'strip_private_addressing' ) );
+
+		$retries = array();
 
 		/**
 		 * Fires before sending an Activity to inboxes.
@@ -315,6 +320,34 @@ class Dispatcher {
 	}
 
 	/**
+	 * Strip bto and bcc fields from an Activity array before delivery.
+	 *
+	 * The ActivityPub spec (Section 6.2) requires servers to remove bto and bcc
+	 * from Activities and their embedded objects before delivery to prevent
+	 * revealing private recipient lists.
+	 *
+	 * Used as a temporary filter on `activitypub_activity_object_array` so that
+	 * `to_json()` handles encoding consistently.
+	 *
+	 * @since 8.0.0
+	 *
+	 * @see https://www.w3.org/TR/activitypub/#delivery
+	 *
+	 * @param array $data The Activity array.
+	 * @return array The sanitized array with bto and bcc removed.
+	 */
+	public static function strip_private_addressing( $data ) {
+		unset( $data['bto'], $data['bcc'] );
+
+		// Also strip from the embedded object, if present.
+		if ( isset( $data['object'] ) && \is_array( $data['object'] ) ) {
+			unset( $data['object']['bto'], $data['object']['bcc'] );
+		}
+
+		return $data;
+	}
+
+	/**
 	 * Schedule a retry.
 	 *
 	 * @param array $retries        The inboxes to retry.
@@ -376,7 +409,7 @@ class Dispatcher {
 		$audience = array_merge( $cc, $to );
 
 		// Remove "public placeholder" from the audience.
-		$audience = array_diff( $audience, array( 'https://www.w3.org/ns/activitystreams#Public' ) );
+		$audience = array_diff( $audience, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS );
 
 		if ( $audience ) {
 			$mentioned_inboxes = Mention::get_inboxes( $audience );
@@ -441,16 +474,15 @@ class Dispatcher {
 	}
 
 	/**
-	 * Check if passed Activity is public.
+	 * Check if an Activity should be sent to followers.
 	 *
 	 * @param Activity                                        $activity    The Activity object.
 	 * @param \Activitypub\Model\User|\Activitypub\Model\Blog $actor       The Actor object.
 	 * @param \WP_Post                                        $outbox_item The Outbox item.
 	 *
-	 * @return boolean True if public, false if not.
+	 * @return boolean True if the Activity should be sent to followers, false if not.
 	 */
 	protected static function should_send_to_followers( $activity, $actor, $outbox_item ) {
-		// Check if follower endpoint is set.
 		$cc = $activity->get_cc() ?? array();
 		$to = $activity->get_to() ?? array();
 
@@ -458,7 +490,7 @@ class Dispatcher {
 
 		$send = (
 			// Check if activity is public.
-			in_array( 'https://www.w3.org/ns/activitystreams#Public', $audience, true ) ||
+			is_activity_public( $activity ) ||
 			// ...or check if follower endpoint is set.
 			in_array( $actor->get_followers(), $audience, true )
 		);
@@ -491,14 +523,8 @@ class Dispatcher {
 	 * @return array The filtered Inboxes.
 	 */
 	public static function add_inboxes_of_relays( $inboxes, $actor_id, $activity ) {
-		// Check if follower endpoint is set.
-		$cc = $activity->get_cc() ?? array();
-		$to = $activity->get_to() ?? array();
-
-		$audience = array_merge( $cc, $to );
-
 		// Check if activity is public.
-		if ( ! in_array( 'https://www.w3.org/ns/activitystreams#Public', $audience, true ) ) {
+		if ( ! is_activity_public( $activity ) ) {
 			return $inboxes;
 		}
 

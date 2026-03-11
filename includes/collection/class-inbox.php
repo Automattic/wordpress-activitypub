@@ -28,6 +28,27 @@ class Inbox {
 	const POST_TYPE = 'ap_inbox';
 
 	/**
+	 * Maximum number of inbox items to keep.
+	 *
+	 * @var int
+	 */
+	const MAX_ITEMS = 5000;
+
+	/**
+	 * Number of items to process per batch during purge.
+	 *
+	 * @var int
+	 */
+	const PURGE_BATCH_SIZE = 100;
+
+	/**
+	 * Maximum seconds a purge run may take before yielding.
+	 *
+	 * @var int
+	 */
+	const PURGE_TIMEOUT = 30;
+
+	/**
 	 * Context for user inbox requests.
 	 *
 	 * @var string
@@ -475,30 +496,59 @@ class Inbox {
 	 * @return int The number of items deleted.
 	 */
 	public static function purge( $days ) {
-		$total_posts = (int) \wp_count_posts( self::POST_TYPE )->publish;
-		if ( $total_posts <= 200 ) {
+		if ( $days <= 0 ) {
 			return 0;
 		}
 
-		$post_ids = \get_posts(
+		$counts = \wp_count_posts( self::POST_TYPE );
+		$total  = 0;
+		foreach ( $counts as $count ) {
+			$total += (int) $count;
+		}
+
+		if ( $total <= 200 ) {
+			return 0;
+		}
+
+		$deleted    = 0;
+		$cutoff     = \gmdate( 'Y-m-d', \time() - ( $days * DAY_IN_SECONDS ) );
+		$start_time = \time();
+
+		// If total exceeds the hard cap, drop the date filter to purge oldest items first.
+		$overflow   = $total > self::MAX_ITEMS;
+		$date_query = array(
 			array(
-				'post_type'   => self::POST_TYPE,
-				'post_status' => 'any',
-				'fields'      => 'ids',
-				'numberposts' => -1,
-				'date_query'  => array(
-					array(
-						'before' => \gmdate( 'Y-m-d', \time() - ( $days * DAY_IN_SECONDS ) ),
-					),
-				),
-			)
+				'before' => $cutoff,
+			),
 		);
 
-		$deleted = 0;
-		foreach ( $post_ids as $post_id ) {
-			\wp_delete_post( $post_id, true );
-			++$deleted;
+		$query_args = array(
+			'post_type'   => self::POST_TYPE,
+			'post_status' => 'any',
+			'fields'      => 'ids',
+			'numberposts' => self::PURGE_BATCH_SIZE,
+			'orderby'     => 'date',
+			'order'       => 'ASC',
+		);
+
+		if ( ! $overflow ) {
+			$query_args['date_query'] = $date_query;
 		}
+
+		do {
+			$post_ids = \get_posts( $query_args );
+
+			foreach ( $post_ids as $post_id ) {
+				\wp_delete_post( $post_id, true );
+				++$deleted;
+			}
+
+			// Once we're back under the cap, re-apply the date filter.
+			if ( $overflow && ( $total - $deleted ) <= self::MAX_ITEMS ) {
+				$overflow                 = false;
+				$query_args['date_query'] = $date_query;
+			}
+		} while ( ! empty( $post_ids ) && ( \time() - $start_time ) < self::PURGE_TIMEOUT );
 
 		return $deleted;
 	}

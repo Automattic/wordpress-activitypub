@@ -1,13 +1,24 @@
 @use "../shared/modal/style";
 
 .wp-block-activitypub-reactions {
+	box-sizing: border-box;
 	margin-top: 2rem;
+	margin-right: auto;
 	margin-bottom: 2rem;
+	margin-left: auto;
+	max-width: var(--wp--style--global--content-size);
 	position: relative;
+
+	&.alignwide {
+		max-width: var(--wp--style--global--wide-size);
+	}
+
+	&.alignfull {
+		max-width: none;
+	}
 
 	&.has-background,
 	&.has-border {
-		box-sizing: border-box;
 		padding: 2rem;
 	}
 
@@ -27,14 +38,6 @@
 		width: 100%;
 		gap: 0.75rem;
 		justify-content: flex-start;
-
-		// When content overflows, switch to space-between.
-		&:has(.reaction-avatars:not(:empty)) {
-
-			@media (max-width: 782px) {
-				justify-content: space-between;
-			}
-		}
 
 		// Container for avatar images.
 		.reaction-avatars {
@@ -92,34 +95,69 @@
 			}
 		}
 
-		// Label showing count of reactions.
+		// Label showing count of reactions — styled as a plain link.
 		.reaction-label {
 			background: none;
 			border: none;
-			border-radius: 4px;
+			font: inherit;
 			display: flex;
 			align-items: center;
 			gap: 0.25rem;
 			flex: 0 0 auto;
-			padding: 0.25rem 0.5rem;
+			padding: 0.25rem 0;
 			font-size: var(--wp--preset--font-size--small, 0.875rem);
 			color: currentcolor;
-			transition: background-color 0.2s ease;
 			white-space: nowrap;
 			text-decoration: none;
+			cursor: pointer;
 
 			&:hover {
-				background-color: rgba(0, 0, 0, 0.05);
+				text-decoration: underline;
 				color: currentcolor;
 			}
 
-			&:focus:not(:disabled) {
+			&:focus {
 				box-shadow: none;
+				outline: none;
+			}
+
+			&:focus-visible {
 				outline: 1px solid currentcolor;
 				outline-offset: 2px;
 			}
 		}
 	}
+
+	// Inline action button within each reaction group.
+	// All buttons share the same min-width so they align across rows.
+	.reaction-action-button {
+		background: none;
+		border: 1px solid currentcolor;
+		border-radius: 4px;
+		flex: 0 0 auto;
+		min-width: 5.5em;
+		padding: 0.25rem 0.75rem;
+		font-size: var(--wp--preset--font-size--small, 0.875rem);
+		color: currentcolor;
+		cursor: pointer;
+		text-align: center;
+		transition: background-color 0.2s ease;
+		white-space: nowrap;
+		text-decoration: none;
+
+		&:hover {
+			background-color: rgba(0, 0, 0, 0.05);
+			color: currentcolor;
+		}
+
+		&:focus:not(:disabled) {
+			box-shadow: none;
+			outline: 1px solid currentcolor;
+			outline-offset: 2px;
+		}
+	}
+
+	// Compact modal width is set in view-style.scss (frontend only via viewStyle).
 }
 
 /* Reactions list styles */

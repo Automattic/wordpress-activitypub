@@ -176,6 +176,11 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 	 * @covers ::append_with_markers
 	 */
 	public function test_write_failure_handling() {
+		// Skip if running as root (e.g., in Docker), since root can write to any file.
+		if ( 0 === posix_getuid() ) {
+			$this->markTestSkipped( 'Cannot test file permission handling as root user.' );
+		}
+
 		// Create a read-only file.
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod
 		\chmod( $this->htaccess_file, 0444 );

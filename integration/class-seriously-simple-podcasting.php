@@ -9,7 +9,6 @@ namespace Activitypub\Integration;
 
 use Activitypub\Transformer\Post;
 
-use function Activitypub\generate_post_summary;
 use function Activitypub\object_to_uri;
 
 /**
@@ -57,16 +56,5 @@ class Seriously_Simple_Podcasting extends Post {
 	 */
 	public function get_type() {
 		return 'Note';
-	}
-
-	/**
-	 * Returns the content for the ActivityPub Item.
-	 *
-	 * The content will be generated based on the user settings.
-	 *
-	 * @return string The content.
-	 */
-	public function get_content() {
-		return generate_post_summary( $this->item );
 	}
 }

@@ -113,9 +113,12 @@ class Interactions {
 		}
 
 		// Found a local comment id.
-		$comment_data['comment_author']  = \esc_attr( empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'] );
-		$comment_data['comment_content'] = \addslashes( $activity['object']['content'] );
-		$comment_data                    = Emoji::prepare_comment_data( $comment_data, $activity );
+		$comment_data['comment_author'] = \esc_attr( empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'] );
+
+		// Wrap emoji in content with blocks for runtime replacement.
+		// Note: Remote images in comments are stripped for security (only emoji allowed).
+		$content                         = Emoji::wrap_in_content( $activity['object']['content'], $activity['object'] );
+		$comment_data['comment_content'] = \addslashes( $content );
 
 		return self::persist( $comment_data, self::UPDATE );
 	}
@@ -359,7 +362,10 @@ class Interactions {
 		$url = object_to_uri( $actor['url'] ?? $actor['id'] );
 
 		if ( isset( $activity['object']['content'] ) ) {
-			$comment_content = \addslashes( $activity['object']['content'] );
+			// Wrap emoji in content with blocks for runtime replacement.
+			// Note: Remote images in comments are stripped for security (only emoji allowed).
+			$content         = Emoji::wrap_in_content( $activity['object']['content'], $activity['object'] );
+			$comment_content = \addslashes( $content );
 		}
 
 		$webfinger = Webfinger::uri_to_acct( $url );
@@ -399,7 +405,7 @@ class Interactions {
 			$comment_data['comment_meta']['source_url'] = \esc_url_raw( object_to_uri( $activity['object']['url'] ) );
 		}
 
-		return Emoji::prepare_comment_data( $comment_data, $activity );
+		return $comment_data;
 	}
 
 	/**

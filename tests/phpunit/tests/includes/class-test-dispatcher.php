@@ -203,12 +203,10 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		$wp_actions = null;
 
-		$private_activity = Outbox::get_activity( $outbox_item->ID );
-		$private_activity->set_to( null );
-		$private_activity->set_cc( null );
-
-		// Clone object.
-		$private_activity = clone $private_activity;
+		$private_activity = new Activity();
+		$private_activity->set_type( 'Create' );
+		$private_activity->set_to( array() );
+		$private_activity->set_cc( array() );
 
 		try {
 			$send_to_additional_inboxes->invoke( null, $private_activity, Actors::get_by_id( self::$user_id ), $outbox_item );
@@ -264,28 +262,10 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 	 * @return Activity
 	 */
 	private function get_activity_mock() {
-		$activity = $this->createMock( Activity::class );
-
-		// Mock the static method using reflection.
-		$activity->expects( $this->any() )
-			->method( '__call' )
-			->willReturnCallback(
-				function ( $name ) {
-					if ( 'get_to' === $name ) {
-						return array( 'https://www.w3.org/ns/activitystreams#Public' );
-					}
-
-					if ( 'get_cc' === $name ) {
-						return array();
-					}
-
-					if ( 'get_type' === $name ) {
-						return 'Create';
-					}
-
-					return null;
-				}
-			);
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
+		$activity->set_cc( array() );
 
 		return $activity;
 	}
@@ -639,6 +619,115 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Clean up.
 		\remove_filter( 'pre_http_request', $http_callback );
+	}
+
+	/**
+	 * Test that bto and bcc are stripped before delivery.
+	 *
+	 * @covers ::strip_private_addressing
+	 */
+	public function test_strip_private_addressing() {
+		// Activity with bto and bcc at both activity and object level.
+		$array = array(
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/users/test',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'cc'     => array( 'https://example.com/users/test/followers' ),
+			'bto'    => array( 'https://example.com/users/secret' ),
+			'bcc'    => array( 'https://example.com/users/hidden' ),
+			'object' => array(
+				'type'    => 'Note',
+				'content' => 'Hello',
+				'bto'     => array( 'https://example.com/users/secret' ),
+				'bcc'     => array( 'https://example.com/users/hidden' ),
+			),
+		);
+
+		$result = Dispatcher::strip_private_addressing( $array );
+
+		// bto and bcc should be removed from the activity.
+		$this->assertArrayNotHasKey( 'bto', $result, 'bto should be stripped from activity' );
+		$this->assertArrayNotHasKey( 'bcc', $result, 'bcc should be stripped from activity' );
+
+		// bto and bcc should be removed from the embedded object.
+		$this->assertArrayNotHasKey( 'bto', $result['object'], 'bto should be stripped from object' );
+		$this->assertArrayNotHasKey( 'bcc', $result['object'], 'bcc should be stripped from object' );
+
+		// Other fields should be preserved.
+		$this->assertSame( 'Create', $result['type'] );
+		$this->assertArrayHasKey( 'to', $result );
+		$this->assertArrayHasKey( 'cc', $result );
+		$this->assertSame( 'Hello', $result['object']['content'] );
+	}
+
+	/**
+	 * Test that strip_private_addressing handles activities without bto/bcc.
+	 *
+	 * @covers ::strip_private_addressing
+	 */
+	public function test_strip_private_addressing_without_private_fields() {
+		$array = array(
+			'type'  => 'Create',
+			'actor' => 'https://example.com/users/test',
+			'to'    => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+		);
+
+		$result = Dispatcher::strip_private_addressing( $array );
+
+		$this->assertSame( 'Create', $result['type'] );
+		$this->assertArrayHasKey( 'to', $result );
+	}
+
+	/**
+	 * Test that bto and bcc are stripped during actual delivery.
+	 *
+	 * @covers ::send_to_inboxes
+	 */
+	public function test_send_to_inboxes_strips_bto_bcc() {
+		// Create a post and outbox item.
+		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+
+		// Add bto and bcc to the stored activity.
+		$activity_data        = \json_decode( $outbox_item->post_content, true );
+		$activity_data['bto'] = array( 'https://example.com/users/secret' );
+		$activity_data['bcc'] = array( 'https://example.com/users/hidden' );
+		\wp_update_post(
+			array(
+				'ID'           => $outbox_item->ID,
+				'post_content' => \wp_json_encode( $activity_data ),
+			)
+		);
+
+		// Capture the JSON that gets sent.
+		$sent_json = null;
+		$callback  = function ( $preempt, $args ) use ( &$sent_json ) {
+			$sent_json = $args['body'];
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => '',
+			);
+		};
+		\add_filter( 'pre_http_request', $callback, 10, 2 );
+
+		$send_to_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_inboxes' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$send_to_inboxes->setAccessible( true );
+		}
+
+		try {
+			$send_to_inboxes->invoke( null, array( 'https://remote.example/inbox' ), $outbox_item->ID );
+		} catch ( \Exception $e ) {
+			$this->fail( 'Invoke failed: ' . $e->getMessage() );
+		}
+
+		$this->assertNotNull( $sent_json, 'JSON should have been sent' );
+
+		$sent_data = \json_decode( $sent_json, true );
+		$this->assertArrayNotHasKey( 'bto', $sent_data, 'bto must be stripped before delivery' );
+		$this->assertArrayNotHasKey( 'bcc', $sent_data, 'bcc must be stripped before delivery' );
+
+		\remove_filter( 'pre_http_request', $callback );
 	}
 
 	/**

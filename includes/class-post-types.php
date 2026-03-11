@@ -515,6 +515,7 @@ class Post_Types {
 					'type'              => 'string',
 					'single'            => true,
 					'show_in_rest'      => true,
+					'default'           => \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE ),
 					'sanitize_callback' => static function ( $value ) {
 						$schema = array(
 							'type'    => 'string',
@@ -867,10 +868,9 @@ class Post_Types {
 	 */
 	public static function prevent_empty_post_meta( $check, $object_id, $meta_key, $meta_value ) {
 		$post_metas = array(
-			'activitypub_content_visibility'       => '',
-			'activitypub_content_warning'          => '',
-			'activitypub_interaction_policy_quote' => ACTIVITYPUB_INTERACTION_POLICY_ANYONE,
-			'activitypub_max_image_attachments'    => (string) \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
+			'activitypub_content_visibility'    => '',
+			'activitypub_content_warning'       => '',
+			'activitypub_max_image_attachments' => (string) \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
 		);
 
 		if ( isset( $post_metas[ $meta_key ] ) && $post_metas[ $meta_key ] === (string) $meta_value ) {
