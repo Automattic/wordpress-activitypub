@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.0.1] - 2026-03-11
+### Changed
+- Simplify the follow page block pattern to avoid duplicate headings and improve accessibility. [#3029]
+
+### Fixed
+- Fix dark sidebar colors appearing incorrectly with non-default admin color schemes. [#3022]
+- Fix Fediverse Reactions block not aligning with post content in block themes. [#3025]
+- Fix new posts being marked as modified on load, which prevented Gutenberg's starter pattern modal from appearing. [#3028]
+
 ## [8.0.0] - 2026-03-04
 ### Security
 - Prevent private recipient lists from being shared when sending activities to other servers. [#2956]
@@ -1733,6 +1742,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[8.0.1]: https://github.com/Automattic/wordpress-activitypub/compare/8.0.0...8.0.1
 [8.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.9.1...8.0.0
 [7.9.1]: https://github.com/Automattic/wordpress-activitypub/compare/7.9.0...7.9.1
 [7.9.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.8.5...7.9.0
