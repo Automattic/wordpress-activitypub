@@ -18,6 +18,7 @@
 		),
 		'description'   => _x( 'Follow page layout with profile and followers list.', 'Block pattern description', 'activitypub' ),
 		'viewportWidth' => 1200,
+		'postTypes'     => array( 'post', 'page' ),
 		'blockTypes'    => array( 'core/post-content' ),
 		'content'       => '<!-- wp:group {"layout":{"type":"constrained"}} -->
 <div class="wp-block-group">
