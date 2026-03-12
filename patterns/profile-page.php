@@ -32,7 +32,9 @@ if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
 			_x( 'extra fields', 'Block pattern keyword', 'activitypub' ),
 			_x( 'followers', 'Block pattern keyword', 'activitypub' ),
 		),
-		'description'   => _x( 'Full profile page with extra fields, followers, and following lists.', 'Block pattern description', 'activitypub' ),
+		'description'   => '1' === \get_option( 'activitypub_following_ui', '0' )
+			? _x( 'Full profile page with extra fields, followers, and following lists.', 'Block pattern description', 'activitypub' )
+			: _x( 'Full profile page with extra fields and followers list.', 'Block pattern description', 'activitypub' ),
 		'viewportWidth' => 1200,
 		'postTypes'     => array( 'page' ),
 		'blockTypes'    => array( 'core/post-content' ),

@@ -35,9 +35,9 @@ $selected_user = ! \Activitypub\is_user_type_disabled( 'blog' ) ? 'blog' : 'inhe
 	<div style="height:32px" aria-hidden="true" class="wp-block-spacer"></div>
 	<!-- /wp:spacer -->
 	<!-- wp:activitypub/followers {"selectedUser":"' . $selected_user . '"} -->
-	<!-- wp:heading {"level":3} -->
+	<div class="wp-block-activitypub-followers"><!-- wp:heading {"level":3} -->
 	<h3 class="wp-block-heading">' . esc_html_x( 'Our Fediverse Followers', 'Block pattern content', 'activitypub' ) . '</h3>
-	<!-- /wp:heading -->
+	<!-- /wp:heading --></div>
 	<!-- /wp:activitypub/followers -->
 </div>
 <!-- /wp:group -->',
