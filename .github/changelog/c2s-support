@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Support for ActivityPub Client-to-Server (C2S) protocol, allowing apps like federated clients to create, edit, and delete posts on your behalf.

@@ -61,6 +61,11 @@ function rest_init() {
 	( new Rest\Inbox_Controller() )->register_routes();
 	( new Rest\Interaction_Controller() )->register_routes();
 	( new Rest\Moderators_Controller() )->register_routes();
+	if ( \get_option( 'activitypub_api', false ) ) {
+		( new Rest\OAuth\Authorization_Controller() )->register_routes();
+		( new Rest\OAuth\Clients_Controller() )->register_routes();
+		( new Rest\OAuth\Token_Controller() )->register_routes();
+	}
 	( new Rest\Outbox_Controller() )->register_routes();
 	( new Rest\Post_Controller() )->register_routes();
 	( new Rest\Replies_Controller() )->register_routes();
@@ -70,6 +75,7 @@ function rest_init() {
 	if ( is_blog_public() ) {
 		( new Rest\Nodeinfo_Controller() )->register_routes();
 	}
+	( new Rest\Proxy_Controller() )->register_routes();
 }
 \add_action( 'rest_api_init', __NAMESPACE__ . '\rest_init' );
 
@@ -97,6 +103,10 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ), 0 );
 	\add_action( 'init', array( __NAMESPACE__ . '\Search', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Signature', 'init' ) );
+	// Only load OAuth Server if the ActivityPub API is enabled.
+	if ( \get_option( 'activitypub_api', false ) ) {
+		\add_action( 'init', array( __NAMESPACE__ . '\OAuth\Server', 'init' ) );
+	}
 
 	if ( site_supports_blocks() ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
@@ -168,3 +178,6 @@ function activation_redirect( $plugin ) {
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	Cli::register();
 }
+
+// Register OAuth login form handler early (before wp-login.php processes).
+\add_action( 'login_form_activitypub_authorize', array( __NAMESPACE__ . '\OAuth\Server', 'login_form_authorize' ) );

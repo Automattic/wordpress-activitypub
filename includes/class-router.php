@@ -20,6 +20,7 @@ class Router {
 	public static function init() {
 		\add_action( 'init', array( self::class, 'add_rewrite_rules' ), 11 );
 
+		\add_action( 'send_headers', array( self::class, 'add_headers' ) );
 		\add_filter( 'template_include', array( self::class, 'render_activitypub_template' ), 99 );
 		\add_action( 'template_redirect', array( self::class, 'template_redirect' ) );
 		\add_filter( 'redirect_canonical', array( self::class, 'redirect_canonical' ), 10, 2 );
@@ -63,6 +64,13 @@ class Router {
 			);
 		}
 
+		// Authorization Server Metadata (RFC 8414).
+		\add_rewrite_rule(
+			'^.well-known/oauth-authorization-server',
+			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/authorization-server-metadata',
+			'top'
+		);
+
 		\add_rewrite_rule( '^@([\w\-\.]+)\/?$', 'index.php?actor=$matches[1]', 'top' );
 		\add_rewrite_endpoint( 'activitypub', EP_AUTHORS | EP_PERMALINK | EP_PAGES );
 	}
@@ -79,13 +87,22 @@ class Router {
 			return $template;
 		}
 
-		self::add_headers();
-
 		if ( ! is_activitypub_request() || ! should_negotiate_content() ) {
-			if ( \get_query_var( 'p' ) && Outbox::POST_TYPE === \get_post_type( \get_query_var( 'p' ) ) ) {
+			$is_outbox_item = \get_query_var( 'p' ) && Outbox::POST_TYPE === \get_post_type( \get_query_var( 'p' ) );
+			$is_preflight   = isset( $_SERVER['REQUEST_METHOD'] ) && 'OPTIONS' === $_SERVER['REQUEST_METHOD'];
+
+			if ( $is_outbox_item && $is_preflight ) {
+				/*
+				 * CORS preflight: override WordPress 404 so the browser
+				 * accepts the preflight response (must be 2xx).
+				 */
+				\status_header( 200 );
+			} elseif ( $is_outbox_item ) {
+				// Return 406 for non-ActivityPub requests to outbox items since they only support ActivityPub requests.
 				\set_query_var( 'is_404', true );
 				\status_header( 406 );
 			}
+
 			return $template;
 		}
 
@@ -96,6 +113,7 @@ class Router {
 			if ( ! $activitypub_object ) {
 				\status_header( 410 );
 			}
+
 			return ACTIVITYPUB_PLUGIN_DIR . 'templates/tombstone-json.php';
 		}
 
@@ -153,11 +171,26 @@ class Router {
 	public static function add_headers() {
 		$id = Query::get_instance()->get_activitypub_object_id();
 
+		/*
+		 * Send CORS headers for resolved ActivityPub objects and outbox
+		 * items. Outbox items need CORS even when the object ID doesn't
+		 * resolve, because browser preflight requests don't carry the
+		 * Authorization header needed to authenticate private items.
+		 */
+		$post_id       = \get_query_var( 'p' );
+		$is_outbox_url = $post_id && Outbox::POST_TYPE === \get_post_type( $post_id );
+
+		if ( ! \headers_sent() && ( $id || $is_outbox_url ) ) {
+			\header( 'Access-Control-Allow-Origin: *' );
+			\header( 'Access-Control-Allow-Methods: GET, OPTIONS' );
+			\header( 'Access-Control-Allow-Headers: Accept, Authorization, Content-Type' );
+		}
+
 		if ( ! $id ) {
 			return;
 		}
 
-		if ( ! headers_sent() ) {
+		if ( ! \headers_sent() ) {
 			\header( 'Link: <' . esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"', false );
 
 			if ( \get_option( 'activitypub_vary_header', '1' ) ) {
@@ -166,7 +199,7 @@ class Router {
 			}
 		}
 
-		add_action(
+		\add_action(
 			'wp_head',
 			static function () use ( $id ) {
 				echo PHP_EOL . '<link rel="alternate" title="ActivityPub (JSON)" type="application/activity+json" href="' . esc_url( $id ) . '" />' . PHP_EOL;

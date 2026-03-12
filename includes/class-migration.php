@@ -219,6 +219,10 @@ class Migration {
 		if ( \version_compare( $version_from_db, '7.9.0', '<' ) ) {
 			\wp_schedule_single_event( \time(), 'activitypub_migrate_actor_emoji' );
 		}
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			// Flush rewrite rules for OAuth Authorization Server Metadata endpoint.
+			\add_action( 'init', 'flush_rewrite_rules', 20 );
+		}
 
 		if ( \version_compare( $version_from_db, '8.0.0', '<' ) ) {
 			Activitypub::flush_rewrite_rules();

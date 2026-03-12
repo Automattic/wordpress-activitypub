@@ -127,7 +127,7 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Invoke the method.
 		try {
-			$retries = $send_to_inboxes->invoke( null, $inboxes, $outbox_item ); // null for static methods.
+			$retries = $send_to_inboxes->invoke( null, $inboxes, $outbox_item->ID ); // null for static methods.
 		} catch ( \Exception $e ) {
 			$this->fail( 'Invoke failed: ' . $e->getMessage() );
 		}

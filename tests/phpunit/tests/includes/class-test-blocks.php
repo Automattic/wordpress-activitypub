@@ -903,6 +903,103 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Data provider for convert_from_html tests.
+	 *
+	 * @return array[] Each entry: [ html, expected_output ].
+	 */
+	public function data_convert_from_html() {
+		return array(
+			'empty string'        => array(
+				'',
+				'',
+			),
+			'single paragraph'    => array(
+				'<p>Hello world</p>',
+				'<!-- wp:paragraph --><p>Hello world</p><!-- /wp:paragraph -->',
+			),
+			'two paragraphs'      => array(
+				'<p>First</p><p>Second</p>',
+				'<!-- wp:paragraph --><p>First</p><!-- /wp:paragraph -->'
+				. '<!-- wp:paragraph --><p>Second</p><!-- /wp:paragraph -->',
+			),
+			'heading h1'          => array(
+				'<h1>Title</h1>',
+				'<!-- wp:heading --><h1>Title</h1><!-- /wp:heading -->',
+			),
+			'heading h3'          => array(
+				'<h3>Subtitle</h3>',
+				'<!-- wp:heading --><h3>Subtitle</h3><!-- /wp:heading -->',
+			),
+			'unordered list'      => array(
+				'<ul><li>One</li><li>Two</li></ul>',
+				'<!-- wp:list --><ul><li>One</li><li>Two</li></ul><!-- /wp:list -->',
+			),
+			'ordered list'        => array(
+				'<ol><li>First</li><li>Second</li></ol>',
+				'<!-- wp:list {"ordered":true} --><ol><li>First</li><li>Second</li></ol><!-- /wp:list -->',
+			),
+			'blockquote'          => array(
+				'<blockquote><p>A quote</p></blockquote>',
+				'<!-- wp:quote --><blockquote><p>A quote</p></blockquote><!-- /wp:quote -->',
+			),
+			'separator'           => array(
+				'<hr>',
+				'<!-- wp:separator --><hr><!-- /wp:separator -->',
+			),
+			'image'               => array(
+				'<img src="https://example.com/photo.jpg" alt="A photo">',
+				'<!-- wp:image --><img src="https://example.com/photo.jpg" alt="A photo"><!-- /wp:image -->',
+			),
+			'figure with caption' => array(
+				'<figure><img src="https://example.com/photo.jpg"><figcaption>Caption</figcaption></figure>',
+				'<!-- wp:image --><figure><img src="https://example.com/photo.jpg"><figcaption>Caption</figcaption></figure><!-- /wp:image -->',
+			),
+			'inline in paragraph' => array(
+				'<p>Visit <a href="https://example.com">my site</a> and <strong>enjoy</strong></p>',
+				'<!-- wp:paragraph --><p>Visit <a href="https://example.com">my site</a> and <strong>enjoy</strong></p><!-- /wp:paragraph -->',
+			),
+			'skips br'            => array(
+				'<p>Hello</p><br><p>World</p>',
+				'<!-- wp:paragraph --><p>Hello</p><!-- /wp:paragraph -->'
+				. '<!-- wp:paragraph --><p>World</p><!-- /wp:paragraph -->',
+			),
+			'nested list'         => array(
+				'<ul><li>Parent<ul><li>Child</li></ul></li></ul>',
+				'<!-- wp:list --><ul><li>Parent<ul><li>Child</li></ul></li></ul><!-- /wp:list -->',
+			),
+			'bare inline span'    => array(
+				'<span>Some text</span>',
+				'<!-- wp:paragraph --><span>Some text</span><!-- /wp:paragraph -->',
+			),
+			'unknown tag'         => array(
+				'<div>Custom content</div>',
+				'<!-- wp:html --><div>Custom content</div><!-- /wp:html -->',
+			),
+			'mixed content'       => array(
+				'<h2>Title</h2><p>Text</p><ul><li>Item</li></ul><hr><blockquote><p>Quote</p></blockquote>',
+				'<!-- wp:heading --><h2>Title</h2><!-- /wp:heading -->'
+				. '<!-- wp:paragraph --><p>Text</p><!-- /wp:paragraph -->'
+				. '<!-- wp:list --><ul><li>Item</li></ul><!-- /wp:list -->'
+				. '<!-- wp:separator --><hr><!-- /wp:separator -->'
+				. '<!-- wp:quote --><blockquote><p>Quote</p></blockquote><!-- /wp:quote -->',
+			),
+		);
+	}
+
+	/**
+	 * Test convert_from_html.
+	 *
+	 * @dataProvider data_convert_from_html
+	 * @covers ::convert_from_html
+	 *
+	 * @param string $html     The input HTML.
+	 * @param string $expected The expected block markup.
+	 */
+	public function test_convert_from_html( $html, $expected ) {
+		$this->assertSame( $expected, Blocks::convert_from_html( $html ) );
+	}
+
+	/**
 	 * Test Extra Fields block preserves HTML in field content.
 	 *
 	 * @covers ::get_user_id

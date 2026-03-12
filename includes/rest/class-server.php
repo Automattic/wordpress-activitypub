@@ -7,10 +7,6 @@
 
 namespace Activitypub\Rest;
 
-use Activitypub\Signature;
-
-use function Activitypub\use_authorized_fetch;
-
 /**
  * ActivityPub Server REST-Class.
  *
@@ -27,59 +23,7 @@ class Server {
 		\add_filter( 'rest_request_parameter_order', array( self::class, 'request_parameter_order' ), 10, 2 );
 
 		\add_filter( 'rest_post_dispatch', array( self::class, 'filter_output' ), 10, 3 );
-	}
-
-	/**
-	 * Callback function to authorize an api request.
-	 *
-	 * The function is meant to be used as part of permission callbacks for rest api endpoints.
-	 *
-	 * It verifies the signature of POST, PUT, PATCH, and DELETE requests, as well as GET requests in secure mode.
-	 * You can use the filter 'activitypub_defer_signature_verification' to defer the signature verification.
-	 * HEAD requests are always bypassed.
-	 *
-	 * @see https://www.w3.org/wiki/SocialCG/ActivityPub/Primer/Authentication_Authorization#Authorized_fetch
-	 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
-	 *
-	 * @param \WP_REST_Request $request The request object.
-	 *
-	 * @return bool|\WP_Error True if the request is authorized, WP_Error if not.
-	 */
-	public static function verify_signature( $request ) {
-		if ( 'HEAD' === $request->get_method() ) {
-			return true;
-		}
-
-		/**
-		 * Filter to defer signature verification.
-		 *
-		 * Skip signature verification for debugging purposes or to reduce load for
-		 * certain Activity-Types, like "Delete".
-		 *
-		 * @param bool             $defer   Whether to defer signature verification.
-		 * @param \WP_REST_Request $request The request used to generate the response.
-		 *
-		 * @return bool Whether to defer signature verification.
-		 */
-		$defer = \apply_filters( 'activitypub_defer_signature_verification', false, $request );
-
-		if ( $defer ) {
-			return true;
-		}
-
-		// POST-Requests always have to be signed, GET-Requests only require a signature in secure mode.
-		if ( 'GET' !== $request->get_method() || use_authorized_fetch() ) {
-			$verified_request = Signature::verify_http_signature( $request );
-			if ( \is_wp_error( $verified_request ) ) {
-				return new \WP_Error(
-					'activitypub_signature_verification',
-					$verified_request->get_error_message(),
-					array( 'status' => 401 )
-				);
-			}
-		}
-
-		return true;
+		\add_filter( 'rest_post_dispatch', array( self::class, 'add_cors_headers' ), 10, 3 );
 	}
 
 	/**
@@ -178,6 +122,11 @@ class Server {
 			return $response;
 		}
 
+		// Exclude OAuth endpoints - they have their own error format per RFC 6749.
+		if ( \str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth' ) ) {
+			return $response;
+		}
+
 		// Only alter responses that return an error status code.
 		if ( $response->get_status() < 400 ) {
 			return $response;
@@ -206,6 +155,41 @@ class Server {
 		);
 
 		$response->set_data( $error );
+
+		return $response;
+	}
+
+	/**
+	 * Add CORS headers to ActivityPub REST responses.
+	 *
+	 * @param \WP_REST_Response $response The REST response.
+	 * @param \WP_REST_Server   $server   The REST server instance.
+	 * @param \WP_REST_Request  $request  The request object.
+	 *
+	 * @return \WP_REST_Response The modified response.
+	 */
+	public static function add_cors_headers( $response, $server, $request ) {
+		$route     = $request->get_route();
+		$namespace = '/' . ACTIVITYPUB_REST_NAMESPACE;
+
+		// Only add CORS to ActivityPub endpoints, except the interactive OAuth authorize endpoint.
+		if ( ! \str_starts_with( $route, $namespace ) || \str_contains( $route, $namespace . '/oauth/authorize' ) ) {
+			return $response;
+		}
+
+		/*
+		 * Reflect the request Origin instead of using a wildcard to avoid
+		 * leaking private data to arbitrary origins on authenticated endpoints.
+		 */
+		$origin = isset( $_SERVER['HTTP_ORIGIN'] ) ? \esc_url_raw( \wp_unslash( $_SERVER['HTTP_ORIGIN'] ) ) : '';
+		$response->header( 'Access-Control-Allow-Origin', $origin ? $origin : '*' );
+		$response->header( 'Access-Control-Allow-Methods', 'GET, POST, OPTIONS' );
+		$response->header( 'Access-Control-Allow-Headers', 'Accept, Content-Type, Authorization' );
+
+		if ( $origin ) {
+			$response->header( 'Access-Control-Allow-Credentials', 'true' );
+			$response->header( 'Vary', 'Origin' );
+		}
 
 		return $response;
 	}

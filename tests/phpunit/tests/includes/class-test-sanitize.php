@@ -538,4 +538,39 @@ class Test_Sanitize extends \WP_UnitTestCase {
 		$expected = '<a href="https://example.com" rel="nofollow">Link</a>';
 		$this->assertSame( $expected, Sanitize::clean_html( $input ) );
 	}
+
+	/**
+	 * Test redirect_uri preserves custom protocol schemes.
+	 *
+	 * @covers ::redirect_uri
+	 */
+	public function test_redirect_uri_custom_scheme() {
+		$uri = 'com.example.app:/oauth/callback';
+		$this->assertEquals( $uri, Sanitize::redirect_uri( $uri ) );
+
+		$uri = 'myapp://callback?code=test';
+		$this->assertEquals( $uri, Sanitize::redirect_uri( $uri ) );
+	}
+
+	/**
+	 * Test redirect_uri handles standard schemes.
+	 *
+	 * @covers ::redirect_uri
+	 */
+	public function test_redirect_uri_standard_schemes() {
+		$uri = 'https://example.com/callback';
+		$this->assertEquals( $uri, Sanitize::redirect_uri( $uri ) );
+
+		$uri = 'http://localhost:8080/callback';
+		$this->assertEquals( $uri, Sanitize::redirect_uri( $uri ) );
+	}
+
+	/**
+	 * Test redirect_uri returns empty for no scheme.
+	 *
+	 * @covers ::redirect_uri
+	 */
+	public function test_redirect_uri_no_scheme() {
+		$this->assertEquals( '', Sanitize::redirect_uri( 'no-scheme' ) );
+	}
 }
