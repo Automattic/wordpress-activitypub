@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Block patterns for follow, following, and profile pages are now only suggested when editing pages.

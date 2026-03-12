@@ -543,6 +543,12 @@ abstract class Base {
 						}
 					}
 
+					// Add EXIF metadata using Schema.org exifData property (FEP-ee3a).
+					$exif_data = $this->get_exif_data( $id );
+					if ( $exif_data ) {
+						$image['exifData'] = $exif_data;
+					}
+
 					$attachment = $image;
 				}
 				break;
@@ -611,6 +617,99 @@ abstract class Base {
 		\do_action( 'activitypub_get_image_post', $id, $image_size );
 
 		return $image;
+	}
+
+	/**
+	 * Get EXIF metadata for an image attachment using Schema.org exifData property.
+	 *
+	 * Returns an array of PropertyValue objects as defined in FEP-ee3a.
+	 *
+	 * @link https://codeberg.org/fediverse/fep/src/branch/main/fep/ee3a/fep-ee3a.md
+	 *
+	 * @param int $attachment_id The attachment ID.
+	 *
+	 * @return array|null Array of PropertyValue objects or null if no EXIF data available.
+	 */
+	protected function get_exif_data( $attachment_id ) {
+		$metadata = \wp_get_attachment_metadata( $attachment_id );
+
+		if ( empty( $metadata['image_meta'] ) ) {
+			return null;
+		}
+
+		$image_meta = $metadata['image_meta'];
+		$exif_data  = array();
+
+		// Map WordPress image_meta to FEP-ee3a EXIF field names.
+		if ( ! empty( $image_meta['created_timestamp'] ) ) {
+			$exif_data[] = array(
+				'@type' => 'PropertyValue',
+				'name'  => 'DateTime',
+				'value' => \gmdate( 'Y:m:d H:i:s', (int) $image_meta['created_timestamp'] ),
+			);
+		}
+
+		if ( ! empty( $image_meta['shutter_speed'] ) ) {
+			$shutter_speed = (float) $image_meta['shutter_speed'];
+			// Format shutter speed as a fraction (e.g., "1/100") for speeds faster than 1 second.
+			if ( $shutter_speed > 0 && $shutter_speed < 1 ) {
+				$value = '1/' . \round( 1 / $shutter_speed );
+			} elseif ( $shutter_speed >= 1 ) {
+				$value = (string) $shutter_speed;
+			}
+			if ( isset( $value ) ) {
+				$exif_data[] = array(
+					'@type' => 'PropertyValue',
+					'name'  => 'ExposureTime',
+					'value' => $value,
+				);
+			}
+		}
+
+		if ( ! empty( $image_meta['aperture'] ) ) {
+			$exif_data[] = array(
+				'@type' => 'PropertyValue',
+				'name'  => 'FNumber',
+				'value' => 'f/' . (float) $image_meta['aperture'],
+			);
+		}
+
+		if ( ! empty( $image_meta['focal_length'] ) ) {
+			$exif_data[] = array(
+				'@type' => 'PropertyValue',
+				'name'  => 'FocalLength',
+				'value' => (string) (float) $image_meta['focal_length'],
+			);
+		}
+
+		if ( ! empty( $image_meta['iso'] ) ) {
+			$exif_data[] = array(
+				'@type' => 'PropertyValue',
+				'name'  => 'PhotographicSensitivity',
+				'value' => (string) (int) $image_meta['iso'],
+			);
+		}
+
+		if ( ! empty( $image_meta['camera'] ) ) {
+			$exif_data[] = array(
+				'@type' => 'PropertyValue',
+				'name'  => 'Model',
+				'value' => \sanitize_text_field( $image_meta['camera'] ),
+			);
+		}
+
+		/**
+		 * Filter the EXIF data for an image attachment.
+		 *
+		 * @param array $exif_data     Array of PropertyValue objects for Schema.org exifData.
+		 * @param array $image_meta    The WordPress image_meta array.
+		 * @param int   $attachment_id The attachment ID.
+		 *
+		 * @return array The filtered EXIF data array.
+		 */
+		$exif_data = \apply_filters( 'activitypub_image_exif', $exif_data, $image_meta, $attachment_id );
+
+		return ! empty( $exif_data ) ? $exif_data : null;
 	}
 
 	/**
