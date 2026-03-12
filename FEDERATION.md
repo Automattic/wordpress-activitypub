@@ -27,6 +27,7 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 - [FEP-9098: Custom Emojis](https://codeberg.org/fediverse/fep/src/branch/main/fep/9098/fep-9098.md)
 - [FEP-b2b8: Long-form Text](https://codeberg.org/fediverse/fep/src/branch/main/fep/b2b8/fep-b2b8.md)
 - [FEP-c180: Problem Details for ActivityPub](https://codeberg.org/fediverse/fep/src/branch/main/fep/c180/fep-c180.md)
+- [FEP-ee3a: Exif metadata support](https://codeberg.org/fediverse/fep/src/branch/main/fep/ee3a/fep-ee3a.md)
 - [FEP-f1d5: NodeInfo in Fediverse Software](https://codeberg.org/fediverse/fep/src/branch/main/fep/f1d5/fep-f1d5.md)
 - [FEP-fb2a: Actor metadata](https://codeberg.org/fediverse/fep/src/branch/main/fep/fb2a/fep-fb2a.md)
 
