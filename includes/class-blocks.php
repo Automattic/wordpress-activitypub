@@ -171,7 +171,13 @@ class Blocks {
 		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/author-header.php';
 		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/author-profile.php';
 		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/follow-page.php';
+		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/profile-page.php';
 		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/social-sidebar.php';
+
+		// Only register the Following page pattern if the Following feature is enabled.
+		if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
+			require ACTIVITYPUB_PLUGIN_DIR . '/patterns/following-page.php';
+		}
 	}
 
 	/**
