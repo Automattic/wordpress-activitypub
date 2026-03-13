@@ -126,10 +126,10 @@ class Stats_Command extends \WP_CLI_Command {
 	}
 
 	/**
-	 * Send the annual report email.
+	 * Send the stats report email.
 	 *
-	 * Compiles annual statistics and sends the Fediverse Year in Review
-	 * email for the specified year.
+	 * Without --month, sends the annual Fediverse Year in Review.
+	 * With --month, sends the monthly stats report for that month.
 	 *
 	 * ## OPTIONS
 	 *
@@ -137,7 +137,10 @@ class Stats_Command extends \WP_CLI_Command {
 	 * : The user ID to send the email for. Omit to send for all active users.
 	 *
 	 * [--year=<year>]
-	 * : The year to send the report for. Defaults to previous year.
+	 * : The year. Defaults to previous year (annual) or current year (monthly).
+	 *
+	 * [--month=<month>]
+	 * : The month (1-12). If provided, sends a monthly report instead of annual.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -147,8 +150,11 @@ class Stats_Command extends \WP_CLI_Command {
 	 *     # Send annual report for a specific year
 	 *     $ wp activitypub stats send --year=2025
 	 *
-	 *     # Send for a specific user
-	 *     $ wp activitypub stats send --user_id=1 --year=2025
+	 *     # Send monthly report for a specific month
+	 *     $ wp activitypub stats send --year=2025 --month=6
+	 *
+	 *     # Send monthly report for a specific user
+	 *     $ wp activitypub stats send --user_id=1 --year=2025 --month=6
 	 *
 	 * @subcommand send
 	 *
@@ -156,79 +162,43 @@ class Stats_Command extends \WP_CLI_Command {
 	 * @param array $assoc_args The associative arguments.
 	 */
 	public function send( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		$user_id = isset( $assoc_args['user_id'] ) ? (int) $assoc_args['user_id'] : null;
-		$year    = isset( $assoc_args['year'] ) ? (int) $assoc_args['year'] : ( (int) \gmdate( 'Y' ) - 1 );
-
-		$user_ids = $user_id ? array( $user_id ) : Statistics::get_active_user_ids();
-
-		$sent = 0;
-		foreach ( $user_ids as $uid ) {
-			$summary = Statistics::compile_annual_summary( $uid, $year );
-
-			if ( empty( $summary ) ) {
-				\WP_CLI::warning( "No stats found for user {$uid} ({$year}), skipping." );
-				continue;
-			}
-
-			Statistics_Scheduler::send_annual_email( $uid, $year, $summary );
-			\WP_CLI::log( "Annual report email sent for user {$uid} ({$year})." );
-			++$sent;
-		}
-
-		\WP_CLI::success( "Annual report email sent for {$sent} user(s) ({$year})." );
-	}
-
-	/**
-	 * Send the monthly report email.
-	 *
-	 * Sends the monthly Fediverse stats report email for the specified month.
-	 *
-	 * ## OPTIONS
-	 *
-	 * [--user_id=<user_id>]
-	 * : The user ID to send the email for. Omit to send for all active users.
-	 *
-	 * [--year=<year>]
-	 * : The year. Defaults to current year.
-	 *
-	 * [--month=<month>]
-	 * : The month (1-12). Defaults to previous month.
-	 *
-	 * ## EXAMPLES
-	 *
-	 *     # Send monthly report for previous month
-	 *     $ wp activitypub stats send-monthly
-	 *
-	 *     # Send monthly report for a specific month
-	 *     $ wp activitypub stats send-monthly --year=2025 --month=2
-	 *
-	 *     # Send for a specific user
-	 *     $ wp activitypub stats send-monthly --user_id=1 --year=2025 --month=6
-	 *
-	 * @subcommand send-monthly
-	 *
-	 * @param array $args       The positional arguments (unused).
-	 * @param array $assoc_args The associative arguments.
-	 */
-	public function send_monthly( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$user_id    = isset( $assoc_args['user_id'] ) ? (int) $assoc_args['user_id'] : null;
-		$prev_month = \strtotime( '-1 month' );
-		$year       = isset( $assoc_args['year'] ) ? (int) $assoc_args['year'] : (int) \gmdate( 'Y', $prev_month );
-		$month      = isset( $assoc_args['month'] ) ? (int) $assoc_args['month'] : (int) \gmdate( 'n', $prev_month );
+		$is_monthly = isset( $assoc_args['month'] );
 
-		if ( $month < 1 || $month > 12 ) {
-			\WP_CLI::error( "Invalid month: {$month}. Must be between 1 and 12." );
+		if ( $is_monthly ) {
+			$month = (int) $assoc_args['month'];
+			$year  = isset( $assoc_args['year'] ) ? (int) $assoc_args['year'] : (int) \gmdate( 'Y' );
+
+			if ( $month < 1 || $month > 12 ) {
+				\WP_CLI::error( "Invalid month: {$month}. Must be between 1 and 12." );
+			}
+		} else {
+			$year = isset( $assoc_args['year'] ) ? (int) $assoc_args['year'] : ( (int) \gmdate( 'Y' ) - 1 );
 		}
 
 		$user_ids = $user_id ? array( $user_id ) : Statistics::get_active_user_ids();
 
 		$sent = 0;
 		foreach ( $user_ids as $uid ) {
-			Statistics_Scheduler::send_monthly_email( $uid, $year, $month );
-			\WP_CLI::log( "Monthly report email sent for user {$uid} ({$year}-{$month})." );
+			if ( $is_monthly ) {
+				Statistics_Scheduler::send_monthly_email( $uid, $year, $month );
+				\WP_CLI::log( "Monthly report email sent for user {$uid} ({$year}-{$month})." );
+			} else {
+				$summary = Statistics::compile_annual_summary( $uid, $year );
+
+				if ( empty( $summary ) ) {
+					\WP_CLI::warning( "No stats found for user {$uid} ({$year}), skipping." );
+					continue;
+				}
+
+				Statistics_Scheduler::send_annual_email( $uid, $year, $summary );
+				\WP_CLI::log( "Annual report email sent for user {$uid} ({$year})." );
+			}
 			++$sent;
 		}
 
-		\WP_CLI::success( "Monthly report email sent for {$sent} user(s) ({$year}-{$month})." );
+		$type   = $is_monthly ? 'Monthly' : 'Annual';
+		$period = $is_monthly ? "{$year}-{$month}" : "{$year}";
+		\WP_CLI::success( "{$type} report email sent for {$sent} user(s) ({$period})." );
 	}
 }
