@@ -8,9 +8,7 @@
 namespace Activitypub\Handler\Outbox;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Scheduler\Post as Post_Scheduler;
 
-use function Activitypub\add_to_outbox;
 use function Activitypub\object_to_uri;
 
 /**
@@ -31,15 +29,15 @@ class Add {
 	 * Handle outgoing "Add" activities from local actors.
 	 *
 	 * When the target is the actor's featured collection, the referenced
-	 * post is made sticky. The activity is then added to the outbox for
-	 * federation.
+	 * post is made sticky. The sticky action triggers the scheduler which
+	 * creates the outbox entry automatically.
 	 *
 	 * @since unreleased
 	 *
 	 * @param array $data    The activity data array.
 	 * @param int   $user_id The user ID.
 	 *
-	 * @return array|int|\WP_Error The original data if unhandled, outbox post ID on success, or WP_Error on failure.
+	 * @return \WP_Post|\WP_Error|array The post object on success, WP_Error on failure, or original data if unhandled.
 	 */
 	public static function handle_add( $data, $user_id = null ) {
 		$object_uri = object_to_uri( $data['object'] ?? '' );
@@ -89,11 +87,9 @@ class Add {
 			);
 		}
 
-		// Temporarily unhook the scheduler to avoid a duplicate outbox entry.
-		\remove_action( 'post_stuck', array( Post_Scheduler::class, 'schedule_featured_add' ) );
+		// Making the post sticky triggers the scheduler which adds to outbox.
 		\stick_post( $post_id );
-		\add_action( 'post_stuck', array( Post_Scheduler::class, 'schedule_featured_add' ) );
 
-		return add_to_outbox( $data, 'Add', $user_id );
+		return $post;
 	}
 }

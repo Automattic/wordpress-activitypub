@@ -62,9 +62,8 @@ class Test_Add extends \WP_UnitTestCase {
 
 		$result = Add::handle_add( $data, $this->user_id );
 
-		// Should return an outbox post ID.
-		$this->assertIsInt( $result );
-		$this->assertGreaterThan( 0, $result );
+		// Should return the WP_Post object.
+		$this->assertInstanceOf( \WP_Post::class, $result );
 
 		// Verify the post is now sticky.
 		$this->assertTrue(

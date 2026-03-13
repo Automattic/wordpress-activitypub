@@ -66,9 +66,8 @@ class Test_Remove extends \WP_UnitTestCase {
 
 		$result = Remove::handle_remove( $data, $this->user_id );
 
-		// Should return an outbox post ID.
-		$this->assertIsInt( $result );
-		$this->assertGreaterThan( 0, $result );
+		// Should return the WP_Post object.
+		$this->assertInstanceOf( \WP_Post::class, $result );
 
 		// Verify the post is no longer sticky.
 		$this->assertFalse(
