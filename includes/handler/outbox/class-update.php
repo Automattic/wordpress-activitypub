@@ -33,7 +33,7 @@ class Update {
 	 * @param int         $user_id    The local user ID.
 	 * @param string|null $visibility Content visibility.
 	 *
-	 * @return \WP_Post|null The updated post on success, null if not handled.
+	 * @return \WP_Post|\WP_Error|false The updated post on success, WP_Error on failure, false if not handled.
 	 */
 	public static function handle_update( $activity, $user_id = null, $visibility = null ) {
 		// Skip private/direct activities.
@@ -44,20 +44,20 @@ class Update {
 		$object = $activity['object'] ?? array();
 
 		if ( ! \is_array( $object ) ) {
-			return null;
+			return false;
 		}
 
 		$type = $object['type'] ?? '';
 
 		// Only handle Note and Article types.
 		if ( ! \in_array( $type, array( 'Note', 'Article' ), true ) ) {
-			return null;
+			return false;
 		}
 
 		$object_id = $object['id'] ?? '';
 
 		if ( empty( $object_id ) ) {
-			return null;
+			return false;
 		}
 
 		/*
@@ -73,7 +73,7 @@ class Update {
 		}
 
 		if ( ! $post instanceof \WP_Post ) {
-			return null;
+			return false;
 		}
 
 		/*
@@ -82,7 +82,7 @@ class Update {
 		 * represents the site itself.
 		 */
 		if ( (int) $post->post_author !== $user_id && $user_id > 0 ) {
-			return null;
+			return false;
 		}
 
 		// Verify the user has permission to edit this post.
@@ -97,7 +97,7 @@ class Update {
 		$post = Posts::update( $post, $activity, $visibility );
 
 		if ( \is_wp_error( $post ) ) {
-			return null;
+			return $post;
 		}
 
 		/**

@@ -192,6 +192,113 @@ class Test_Post_Controller extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test remote-intent route is registered.
+	 *
+	 * @covers ::register_routes
+	 */
+	public function test_remote_intent_route_registered() {
+		$routes = $this->server->get_routes();
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>[-]?\d+)/remote-intent', $routes );
+	}
+
+	/**
+	 * Test remote-intent returns 404 for non-existent post.
+	 *
+	 * @covers ::get_remote_intent_template
+	 */
+	public function test_remote_intent_non_existent_post() {
+		$request = new WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/999999/remote-intent' );
+		$request->set_param( 'resource', 'user@example.com' );
+		$request->set_param( 'intent', 'like' );
+
+		$response = $this->server->dispatch( $request );
+
+		$this->assertEquals( 404, $response->get_status() );
+		$this->assertEquals( 'activitypub_post_not_found', $response->get_data()['code'] );
+	}
+
+	/**
+	 * Test remote-intent returns 404 for draft post.
+	 *
+	 * @covers ::get_remote_intent_template
+	 */
+	public function test_remote_intent_draft_post() {
+		$post_id = self::factory()->post->create( array( 'post_status' => 'draft' ) );
+		$request = new WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/' . $post_id . '/remote-intent' );
+		$request->set_param( 'resource', 'user@example.com' );
+		$request->set_param( 'intent', 'like' );
+
+		$response = $this->server->dispatch( $request );
+
+		$this->assertEquals( 404, $response->get_status() );
+	}
+
+	/**
+	 * Test remote-intent rejects invalid intent values via enum validation.
+	 *
+	 * @covers ::register_routes
+	 */
+	public function test_remote_intent_invalid_intent() {
+		$routes    = $this->server->get_routes();
+		$route_key = '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>[-]?\d+)/remote-intent';
+
+		$this->assertArrayHasKey( $route_key, $routes );
+
+		// Verify the intent parameter has enum validation.
+		$route_data  = $routes[ $route_key ];
+		$handler     = $route_data[0];
+		$intent_args = $handler['args']['intent'];
+
+		$this->assertArrayHasKey( 'enum', $intent_args );
+		$this->assertContains( 'like', $intent_args['enum'] );
+		$this->assertContains( 'announce', $intent_args['enum'] );
+		$this->assertContains( 'create', $intent_args['enum'] );
+		$this->assertNotContains( 'invalid_intent', $intent_args['enum'] );
+	}
+
+	/**
+	 * Test remote-intent returns url and template for a valid request.
+	 *
+	 * @covers ::get_remote_intent_template
+	 */
+	public function test_remote_intent_returns_url_and_template() {
+		$post_id = self::factory()->post->create();
+
+		// Mock the WebFinger response with an OStatus subscribe template.
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => array(
+							array(
+								'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+								'template' => 'https://example.com/authorize_interaction?uri={uri}',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$request = new WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/' . $post_id . '/remote-intent' );
+		$request->set_param( 'resource', 'user@example.com' );
+		$request->set_param( 'intent', 'like' );
+
+		$response = $this->server->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertArrayHasKey( 'url', $data );
+		$this->assertArrayHasKey( 'template', $data );
+		$this->assertStringContainsString( 'authorize_interaction', $data['url'] );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
 	 * Test getting reactions respects comment approval status.
 	 *
 	 * @covers ::get_reactions

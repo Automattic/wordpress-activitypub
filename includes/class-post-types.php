@@ -17,6 +17,7 @@ use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
 use Activitypub\OAuth\Client;
 use Activitypub\OAuth\Scope;
+use Activitypub\OAuth\Token;
 
 /**
  * Post Types class.
@@ -520,7 +521,7 @@ class Post_Types {
 					if ( ! is_array( $value ) ) {
 						return array();
 					}
-					return array_map( 'sanitize_url', $value );
+					return array_map( array( Sanitize::class, 'redirect_uri' ), $value );
 				},
 			)
 		);
@@ -545,6 +546,17 @@ class Post_Types {
 				'description'       => 'Whether this is a public client (PKCE-only, no secret).',
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'default'           => true,
+			)
+		);
+
+		\register_post_meta(
+			Client::POST_TYPE,
+			Token::USER_META_KEY,
+			array(
+				'type'              => 'integer',
+				'single'            => false,
+				'description'       => 'User IDs that have active tokens for this client.',
+				'sanitize_callback' => 'absint',
 			)
 		);
 	}
@@ -608,6 +620,7 @@ class Post_Types {
 					'type'              => 'string',
 					'single'            => true,
 					'show_in_rest'      => true,
+					'default'           => \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE ),
 					'sanitize_callback' => static function ( $value ) {
 						$schema = array(
 							'type'    => 'string',

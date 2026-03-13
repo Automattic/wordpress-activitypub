@@ -13,6 +13,7 @@ use Activitypub\Scheduler;
 use Activitypub\Webfinger;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\object_to_uri;
 
 /**
  * ActivityPub Outbox Collection
@@ -62,11 +63,20 @@ class Outbox {
 	 */
 	public static function add( Activity $activity, $user_id, $visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
 		$actor_type = Actors::get_type_by_id( $user_id );
-		$object_id  = self::get_object_id( $activity );
-		$title      = self::get_object_title( $activity->get_object() );
 
 		if ( ! $activity->get_actor() ) {
 			$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
+		}
+
+		$object_id = object_to_uri( self::get_object_id( $activity ) );
+		$title     = self::get_object_title( $activity->get_object() );
+
+		if ( ! $object_id || ! \is_string( $object_id ) ) {
+			return new \WP_Error(
+				'activitypub_outbox_invalid_object_id',
+				\__( 'Unable to determine an object ID for this activity.', 'activitypub' ),
+				array( 'status' => 400 )
+			);
 		}
 
 		if ( ! \filter_var( $object_id, FILTER_VALIDATE_URL ) ) {
@@ -400,7 +410,7 @@ class Outbox {
 		}
 
 		// Authenticate via Bearer token for non-REST requests (e.g. permalink access).
-		if ( ! \is_user_logged_in() && ! \wp_is_serving_rest_request() ) {
+		if ( \get_option( 'activitypub_api', false ) && ! \is_user_logged_in() && ! \wp_is_serving_rest_request() ) {
 			\Activitypub\OAuth\Server::authenticate_oauth( null );
 		}
 
@@ -431,7 +441,7 @@ class Outbox {
 	 *
 	 * @param Activity|Base_Object|string $data The activity object.
 	 *
-	 * @return string The object ID.
+	 * @return string|null The object ID.
 	 */
 	private static function get_object_id( $data ) {
 		$object = $data->get_object();
@@ -444,7 +454,11 @@ class Outbox {
 			return $object;
 		}
 
-		return $data->get_id() ?? $data->get_actor();
+		if ( $data->get_id() ) {
+			return $data->get_id();
+		}
+
+		return object_to_uri( $data->get_actor() );
 	}
 
 	/**

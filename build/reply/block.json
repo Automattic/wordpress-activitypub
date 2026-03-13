@@ -2,11 +2,17 @@
   "$schema": "https://schemas.wp.org/trunk/block.json",
   "apiVersion": 3,
   "name": "activitypub/reply",
-  "version": "7.9.1",
+  "version": "8.0.1",
   "title": "Federated Reply",
   "category": "widgets",
-  "icon": "commentReplyLink",
-  "description": "Respond to posts, notes, videos, and other content on the fediverse.  Ensure the URL originates from a federated social network like Mastodon, as other URLs might not function as expected.",
+  "icon": "admin-comments",
+  "description": "Reply to posts, notes, and other content on the Fediverse directly from the block editor.",
+  "keywords": [
+    "fediverse",
+    "activitypub",
+    "reply",
+    "federation"
+  ],
   "supports": {
     "html": false,
     "inserter": true,

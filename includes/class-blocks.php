@@ -97,6 +97,8 @@ class Blocks {
 			),
 			'showAvatars'        => (bool) \get_option( 'show_avatars' ),
 			'defaultQuotePolicy' => \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE ),
+			'objectType'         => \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ),
+			'noteLength'         => ACTIVITYPUB_NOTE_LENGTH,
 		);
 		wp_localize_script( 'wp-editor', '_activityPubOptions', $data );
 
@@ -110,6 +112,10 @@ class Blocks {
 		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/editor-plugin/plugin.asset.php';
 		$plugin_url = plugins_url( 'build/editor-plugin/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
 		wp_enqueue_script( 'activitypub-block-editor', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
+
+		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/pre-publish-panel/plugin.asset.php';
+		$plugin_url = plugins_url( 'build/pre-publish-panel/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
+		wp_enqueue_script( 'activitypub-pre-publish-panel', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
 	}
 
 	/**
@@ -212,7 +218,13 @@ class Blocks {
 		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/author-header.php';
 		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/author-profile.php';
 		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/follow-page.php';
+		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/profile-page.php';
 		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/social-sidebar.php';
+
+		// Only register the Following page pattern if the Following feature is enabled.
+		if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
+			require ACTIVITYPUB_PLUGIN_DIR . '/patterns/following-page.php';
+		}
 	}
 
 	/**
@@ -691,14 +703,25 @@ class Blocks {
 	/**
 	 * Renders a modal component that can be used by different blocks.
 	 *
-	 * @param array $args Arguments for the modal.
+	 * @param array $args {
+	 *     Arguments for the modal.
+	 *
+	 *     @type string $content       The modal content HTML.
+	 *     @type string $id            Optional ID prefix for the modal elements.
+	 *     @type bool   $is_compact    Whether the modal is compact (popover-style). Default false.
+	 *     @type string $title         Static title text for the modal header.
+	 *     @type string $title_binding Optional Interactivity API binding for a dynamic title
+	 *                                 (e.g. 'context.modal.title'). When set, uses data-wp-text
+	 *                                 on the title element and enables dynamic compact toggling.
+	 * }
 	 */
 	public static function render_modal( $args = array() ) {
 		$defaults = array(
-			'content'    => '',
-			'id'         => '',
-			'is_compact' => false,
-			'title'      => '',
+			'content'       => '',
+			'id'            => '',
+			'is_compact'    => false,
+			'title'         => '',
+			'title_binding' => '',
 		);
 
 		$args = \wp_parse_args( $args, $defaults );
@@ -708,22 +731,28 @@ class Blocks {
 			class="activitypub-modal__overlay<?php echo \esc_attr( $args['is_compact'] ? ' compact' : '' ); ?>"
 			data-wp-bind--hidden="!context.modal.isOpen"
 			data-wp-watch="callbacks.handleModalEffects"
+			<?php if ( ! empty( $args['title_binding'] ) ) : ?>
+				data-wp-class--compact="context.modal.isCompact"
+			<?php endif; ?>
 			role="dialog"
 			aria-modal="true"
 			hidden
 		>
 			<div class="activitypub-modal__frame">
-				<?php if ( ! $args['is_compact'] || ! empty( $args['title'] ) ) : ?>
+				<?php if ( ! $args['is_compact'] || ! empty( $args['title'] ) || ! empty( $args['title_binding'] ) ) : ?>
 					<div class="activitypub-modal__header">
 						<h2
 							class="activitypub-modal__title"
 							<?php if ( ! empty( $args['id'] ) ) : ?>
 								id="<?php echo \esc_attr( $args['id'] . '-title' ); ?>"
 							<?php endif; ?>
+							<?php if ( ! empty( $args['title_binding'] ) ) : ?>
+								data-wp-text="<?php echo \esc_attr( $args['title_binding'] ); ?>"
+							<?php endif; ?>
 						><?php echo \esc_html( $args['title'] ); ?></h2>
 						<button
 							type="button"
-							class="activitypub-modal__close wp-element-button wp-block-button__link"
+							class="activitypub-modal__close wp-element-button"
 							data-wp-on--click="actions.closeModal"
 							aria-label="<?php echo \esc_attr__( 'Close dialog', 'activitypub' ); ?>"
 						>
@@ -738,6 +767,28 @@ class Blocks {
 				</div>
 			</div>
 		</div>
+		<?php
+	}
+
+	/**
+	 * Renders a help section explaining the Fediverse inside modal dialogs.
+	 *
+	 * Outputs a collapsible `<details>` element that explains decentralized
+	 * interactions to users unfamiliar with the Fediverse.
+	 *
+	 * @since 8.0.0
+	 */
+	public static function render_modal_help() {
+		?>
+		<details class="activitypub-dialog__help">
+			<summary><?php \esc_html_e( 'Why do I need to enter my profile?', 'activitypub' ); ?></summary>
+			<p>
+				<?php \esc_html_e( 'This site is part of the ⁂ open social web, a network of interconnected social platforms (like Mastodon, Pixelfed, Friendica, and others). Unlike centralized social media, your account lives on a platform of your choice, and you can interact with people across different platforms.', 'activitypub' ); ?>
+			</p>
+			<p>
+				<?php \esc_html_e( 'By entering your profile, we can send you to your account where you can complete this action.', 'activitypub' ); ?>
+			</p>
+		</details>
 		<?php
 	}
 

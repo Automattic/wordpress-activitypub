@@ -158,71 +158,9 @@ class Media extends File {
 			return $url;
 		}
 
-		$cached_url = self::cache_url( $url, $entity_id );
+		$cached_url = self::get_or_cache( $url, $entity_id );
 
 		return $cached_url ?: $url;
-	}
-
-	/**
-	 * Cache a single URL.
-	 *
-	 * @param string $url       The remote URL to cache.
-	 * @param int    $entity_id The entity ID (post or comment).
-	 *
-	 * @return string|false The cached local URL, or false on failure.
-	 */
-	public static function cache_url( $url, $entity_id ) {
-		$paths = self::get_storage_paths_for_context( $entity_id, self::CONTEXT );
-		$hash  = self::generate_hash( $url );
-
-		// Check if already cached.
-		if ( \is_dir( $paths['basedir'] ) ) {
-			$pattern = self::escape_glob_pattern( $paths['basedir'] . '/' . $hash ) . '.*';
-			$matches = \glob( $pattern );
-			if ( ! empty( $matches ) && \is_file( $matches[0] ) ) {
-				return $paths['baseurl'] . '/' . \basename( $matches[0] );
-			}
-		}
-
-		// Download and cache.
-		$result = self::download_and_validate( $url );
-		if ( \is_wp_error( $result ) || empty( $result['file'] ) ) {
-			return false;
-		}
-
-		$tmp_file = $result['file'];
-
-		// Create directory if needed.
-		if ( ! \wp_mkdir_p( $paths['basedir'] ) ) {
-			\wp_delete_file( $tmp_file );
-			return false;
-		}
-
-		// Generate hash-based filename.
-		$ext = \pathinfo( $tmp_file, PATHINFO_EXTENSION );
-		if ( empty( $ext ) ) {
-			$ext = \wp_get_default_extension_for_mime_type( $result['mime_type'] );
-		}
-		$file_name = $hash . '.' . $ext;
-		$file_path = $paths['basedir'] . '/' . $file_name;
-
-		// Initialize filesystem.
-		global $wp_filesystem;
-		if ( ! $wp_filesystem ) {
-			require_once ABSPATH . 'wp-admin/includes/file.php';
-			\WP_Filesystem();
-		}
-
-		if ( ! $wp_filesystem || ! $wp_filesystem->move( $tmp_file, $file_path, true ) ) {
-			\wp_delete_file( $tmp_file );
-			return false;
-		}
-
-		// Optimize image.
-		$file_path = self::optimize_image( $file_path, self::MAX_DIMENSION );
-		$file_name = \basename( $file_path );
-
-		return $paths['baseurl'] . '/' . $file_name;
 	}
 
 	/**
@@ -246,22 +184,8 @@ class Media extends File {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function invalidate_comment( $comment_id ) {
-		global $wp_filesystem;
-		if ( ! $wp_filesystem ) {
-			require_once ABSPATH . 'wp-admin/includes/file.php';
-			\WP_Filesystem();
-		}
-
-		if ( ! $wp_filesystem ) {
-			return false;
-		}
-
 		$paths = self::get_storage_paths_for_context( $comment_id, self::CONTEXT_COMMENT );
 
-		if ( $wp_filesystem->is_dir( $paths['basedir'] ) ) {
-			return $wp_filesystem->rmdir( $paths['basedir'], true );
-		}
-
-		return true;
+		return static::delete_directory( $paths['basedir'] );
 	}
 }

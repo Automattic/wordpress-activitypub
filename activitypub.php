@@ -3,12 +3,12 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/Automattic/wordpress-activitypub
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 7.9.1
+ * Version: 8.0.1
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
  * License URI: http://opensource.org/licenses/MIT
- * Requires PHP: 7.2
+ * Requires PHP: 7.4
  * Text Domain: activitypub
  * Domain Path: /languages
  *
@@ -17,7 +17,7 @@
 
 namespace Activitypub;
 
-\define( 'ACTIVITYPUB_PLUGIN_VERSION', '7.9.1' );
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '8.0.1' );
 
 // Plugin related constants.
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -61,6 +61,11 @@ function rest_init() {
 	( new Rest\Inbox_Controller() )->register_routes();
 	( new Rest\Interaction_Controller() )->register_routes();
 	( new Rest\Moderators_Controller() )->register_routes();
+	if ( \get_option( 'activitypub_api', false ) ) {
+		( new Rest\OAuth\Authorization_Controller() )->register_routes();
+		( new Rest\OAuth\Clients_Controller() )->register_routes();
+		( new Rest\OAuth\Token_Controller() )->register_routes();
+	}
 	( new Rest\Outbox_Controller() )->register_routes();
 	( new Rest\Post_Controller() )->register_routes();
 	( new Rest\Replies_Controller() )->register_routes();
@@ -70,9 +75,6 @@ function rest_init() {
 	if ( is_blog_public() ) {
 		( new Rest\Nodeinfo_Controller() )->register_routes();
 	}
-
-	// Load OAuth REST endpoints.
-	( new Rest\OAuth_Controller() )->register_routes();
 	( new Rest\Proxy_Controller() )->register_routes();
 	( new Rest\Event_Stream_Controller() )->register_routes();
 }
@@ -96,7 +98,6 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Mention', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Migration', 'init' ), 1 );
 	\add_action( 'init', array( __NAMESPACE__ . '\Move', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\OAuth\Server', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Options', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Post_Types', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Router', 'init' ) );
@@ -104,6 +105,10 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ), 0 );
 	\add_action( 'init', array( __NAMESPACE__ . '\Search', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Signature', 'init' ) );
+	// Only load OAuth Server if the ActivityPub API is enabled.
+	if ( \get_option( 'activitypub_api', false ) ) {
+		\add_action( 'init', array( __NAMESPACE__ . '\OAuth\Server', 'init' ) );
+	}
 
 	if ( site_supports_blocks() ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );

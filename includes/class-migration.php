@@ -224,7 +224,7 @@ class Migration {
 			\add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
 
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+		if ( \version_compare( $version_from_db, '8.0.0', '<' ) ) {
 			Activitypub::flush_rewrite_rules();
 		}
 

@@ -16,6 +16,9 @@ use Activitypub\Post_Types;
  * Test class for OAuth Token.
  *
  * @coversDefaultClass \Activitypub\OAuth\Token
+ *
+ * @group activitypub
+ * @group oauth
  */
 class Test_Token extends \WP_UnitTestCase {
 
@@ -334,6 +337,40 @@ class Test_Token extends \WP_UnitTestCase {
 		$this->assertInstanceOf( \WP_Error::class, Token::validate( $token1['access_token'] ) );
 		$this->assertInstanceOf( \WP_Error::class, Token::validate( $token2['access_token'] ) );
 		$this->assertInstanceOf( \WP_Error::class, Token::validate( $token3['access_token'] ) );
+	}
+
+	/**
+	 * Test per-user token limit enforcement.
+	 *
+	 * @covers ::create
+	 */
+	public function test_enforce_token_limit() {
+		$scopes = array( Scope::READ );
+
+		// Create tokens up to the limit + 5.
+		$tokens = array();
+		for ( $i = 0; $i < Token::MAX_TOKENS_PER_USER + 5; $i++ ) {
+			$tokens[] = Token::create( $this->user_id, $this->client_id, $scopes );
+		}
+
+		// Count remaining tokens in user meta.
+		$all_meta = \get_user_meta( $this->user_id );
+		$count    = 0;
+		foreach ( $all_meta as $meta_key => $meta_values ) {
+			if ( 0 === strpos( $meta_key, Token::META_PREFIX ) ) {
+				++$count;
+			}
+		}
+
+		$this->assertLessThanOrEqual( Token::MAX_TOKENS_PER_USER, $count );
+
+		// The most recently created token should still be valid.
+		$latest = end( $tokens );
+		$this->assertNotInstanceOf( \WP_Error::class, Token::validate( $latest['access_token'] ) );
+
+		// The earliest tokens should have been revoked.
+		$earliest = $tokens[0];
+		$this->assertInstanceOf( \WP_Error::class, Token::validate( $earliest['access_token'] ) );
 	}
 
 	/**

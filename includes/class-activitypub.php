@@ -10,6 +10,7 @@ namespace Activitypub;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Remote_Posts;
+use Activitypub\OAuth\Client;
 
 /**
  * ActivityPub Class.
@@ -87,6 +88,7 @@ class Activitypub {
 		Migration::update_comment_counts( 2000 );
 
 		Remote_Posts::delete_all();
+		Client::delete_all();
 
 		Options::delete();
 	}

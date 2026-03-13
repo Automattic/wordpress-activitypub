@@ -1268,6 +1268,67 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	}
 
 	/**
+	 * Test that language maps in the object are normalized by the sanitize callback.
+	 *
+	 * Verifies that the Language_Map trait's sanitize_callback on the `object`
+	 * arg resolves language maps to plain strings before activity processing.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_language_map_normalization_in_inbox() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		$locale_callback = function () {
+			return 'de_DE';
+		};
+		\add_filter( 'locale', $locale_callback );
+
+		$captured_data = null;
+
+		$capture_action = function ( $data ) use ( &$captured_data ) {
+			$captured_data = $data;
+		};
+		\add_action( 'activitypub_inbox_shared', $capture_action, 10, 1 );
+
+		$json = array(
+			'id'     => 'https://remote.example/@id-langmap',
+			'type'   => 'Create',
+			'actor'  => 'https://remote.example/@test',
+			'object' => array(
+				'id'         => 'https://remote.example/post/langmap',
+				'type'       => 'Note',
+				'content'    => 'Hello',
+				'contentMap' => array(
+					'en' => 'Hello',
+					'de' => 'Hallo',
+				),
+				'summary'    => 'English summary',
+				'summaryMap' => array(
+					'en' => 'English summary',
+					'de' => 'Deutsche Zusammenfassung',
+				),
+				'published'  => '2020-01-01T00:00:00Z',
+			),
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $json ) );
+
+		$response = \rest_do_request( $request );
+		$this->assertEquals( 202, $response->get_status() );
+
+		/* Verify the object was normalized before reaching the hook. */
+		$this->assertNotNull( $captured_data, 'Shared inbox action should have fired.' );
+		$this->assertSame( 'Hallo', $captured_data['object']['content'], 'Language map in content should resolve to site locale.' );
+		$this->assertSame( 'Deutsche Zusammenfassung', $captured_data['object']['summary'], 'summaryMap should resolve to site locale.' );
+
+		\remove_filter( 'locale', $locale_callback );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\remove_action( 'activitypub_inbox_shared', $capture_action );
+	}
+
+	/**
 	 * Test Follow request without audience fields via REST endpoint.
 	 *
 	 * This simulates how Pixelfed sends Follow activities to the shared inbox

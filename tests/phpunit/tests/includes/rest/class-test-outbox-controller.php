@@ -64,6 +64,7 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 	public function set_up() {
 		parent::set_up();
 		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\add_filter( 'activitypub_oauth_check_permission', '__return_true' );
 
 		// Ensure the post scheduler hook is present (may be removed by other test classes).
 		if ( ! \has_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ) ) ) {
@@ -152,18 +153,17 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		$this->assertStringContainsString( 'page=3', $data['next'] );
 
 		// Empty collections skip pagination metadata.
-		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1/outbox' );
+		// Use a fresh user with no outbox entries to test empty collection behavior.
+		$empty_user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_user_by( 'ID', $empty_user_id )->add_cap( 'activitypub' );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $empty_user_id . '/outbox' );
 		$request->set_param( 'per_page', 3 );
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
-		if ( empty( $data['orderedItems'] ) && ( ! isset( $data['totalItems'] ) || 0 === $data['totalItems'] ) ) {
-			$this->assertArrayNotHasKey( 'first', $data );
-			$this->assertArrayNotHasKey( 'last', $data );
-		} else {
-			$this->assertArrayHasKey( 'first', $data );
-			$this->assertArrayHasKey( 'last', $data );
-		}
+		$this->assertArrayNotHasKey( 'first', $data );
+		$this->assertArrayNotHasKey( 'last', $data );
 	}
 
 	/**
@@ -788,5 +788,67 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 			$this->assertGreaterThan( 0, $post_id, 'Should find a post from the object ID.' );
 			$this->assertFalse( \get_post_format( $post_id ), 'Article should have standard (no) post format.' );
 		}
+	}
+
+	/**
+	 * Test C2S POST with an intransitive activity and object actor payload.
+	 *
+	 * Ensures activities like Arrive do not trigger object-ID resolution errors
+	 * when the actor is provided as an object and no explicit object is present.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_arrive_with_actor_object() {
+		$user = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+
+		$data = array(
+			'@context' => 'https://www.w3.org/ns/activitystreams',
+			'type'     => 'Arrive',
+			'actor'    => array(
+				'id'   => $user->get_id(),
+				'name' => $user->get_name(),
+				'url'  => $user->get_url(),
+			),
+			'location' => array(
+				'id'   => 'https://places.pub/relation/659839',
+				'name' => 'Ettlingen',
+			),
+			'content'  => 'Arrived.',
+			'to'       => 'https://www.w3.org/ns/activitystreams#Public',
+			'cc'       => $user->get_followers(),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = \rest_get_server()->dispatch( $request );
+		$this->assertEquals( 201, $response->get_status() );
+
+		$response_data = $response->get_data();
+		$this->assertSame( 'Arrive', $response_data['type'] );
+
+		$outbox_items = \get_posts(
+			array(
+				'post_type'      => Outbox::POST_TYPE,
+				'post_status'    => 'any',
+				'author'         => self::$user_id,
+				'posts_per_page' => 1,
+				'orderby'        => 'ID',
+				'order'          => 'DESC',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'     => array(
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Arrive',
+					),
+				),
+			)
+		);
+
+		$this->assertNotEmpty( $outbox_items );
+		$this->assertSame( $user->get_id(), \get_post_meta( $outbox_items[0]->ID, '_activitypub_object_id', true ) );
 	}
 }

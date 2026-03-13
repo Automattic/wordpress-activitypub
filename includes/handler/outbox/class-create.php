@@ -34,7 +34,7 @@ class Create {
 	 * @param int         $user_id    The local user ID.
 	 * @param string|null $visibility Content visibility.
 	 *
-	 * @return int|\WP_Error|null The outbox ID on success, WP_Error on failure, null if not handled.
+	 * @return int|\WP_Error|false The outbox ID on success, WP_Error on failure, false if not handled.
 	 */
 	public static function handle_create( $activity, $user_id = null, $visibility = null ) {
 		// Skip private/direct activities.
@@ -52,7 +52,7 @@ class Create {
 
 		// Only handle Note and Article types for now.
 		if ( ! \in_array( $object_type, array( 'Note', 'Article' ), true ) ) {
-			return null;
+			return false;
 		}
 
 		if ( is_activity_reply( $activity ) ) {
@@ -61,7 +61,7 @@ class Create {
 
 		// TODO: Handle quotes differently.
 		if ( is_quote_activity( $activity ) ) {
-			return null;
+			return false;
 		}
 
 		return self::create_post( $activity, $user_id, $visibility );

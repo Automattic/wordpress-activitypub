@@ -16,6 +16,9 @@ use Activitypub\Post_Types;
  * Test class for OAuth Client.
  *
  * @coversDefaultClass \Activitypub\OAuth\Client
+ *
+ * @group activitypub
+ * @group oauth
  */
 class Test_Client extends \WP_UnitTestCase {
 
@@ -179,11 +182,44 @@ class Test_Client extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test register method allows http for localhost.
+	 * Test register method allows http for loopback IP (RFC 8252).
 	 *
 	 * @covers ::register
 	 */
-	public function test_register_allows_localhost_http() {
+	public function test_register_allows_loopback_http() {
+		$result = $this->create_client(
+			array(
+				'name'          => 'Loopback Client',
+				'redirect_uris' => array( 'http://127.0.0.1:3000/callback' ),
+			)
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertArrayHasKey( 'client_id', $result );
+	}
+
+	/**
+	 * Test register method rejects http for non-loopback hosts.
+	 *
+	 * @covers ::register
+	 */
+	public function test_register_rejects_http_non_loopback() {
+		$result = $this->create_client(
+			array(
+				'name'          => 'Remote Client',
+				'redirect_uris' => array( 'http://example.com/callback' ),
+			)
+		);
+
+		$this->assertInstanceOf( \WP_Error::class, $result );
+	}
+
+	/**
+	 * Test register method allows http localhost.
+	 *
+	 * @covers ::register
+	 */
+	public function test_register_allows_http_localhost() {
 		$result = $this->create_client(
 			array(
 				'name'          => 'Localhost Client',
@@ -196,17 +232,21 @@ class Test_Client extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test register method allows http for 127.0.0.1.
+	 * Test register method allows http for non-loopback when filter permits.
 	 *
 	 * @covers ::register
 	 */
-	public function test_register_allows_loopback_http() {
+	public function test_register_allows_http_with_filter() {
+		\add_filter( 'activitypub_oauth_allow_http_redirect_uri', '__return_true' );
+
 		$result = $this->create_client(
 			array(
-				'name'          => 'Loopback Client',
-				'redirect_uris' => array( 'http://127.0.0.1:3000/callback' ),
+				'name'          => 'Localhost Client',
+				'redirect_uris' => array( 'http://localhost:8080/callback' ),
 			)
 		);
+
+		\remove_filter( 'activitypub_oauth_allow_http_redirect_uri', '__return_true' );
 
 		$this->assertIsArray( $result );
 		$this->assertArrayHasKey( 'client_id', $result );
@@ -485,6 +525,127 @@ class Test_Client extends \WP_UnitTestCase {
 		$client = Client::get( $result['client_id'] );
 
 		$this->assertEquals( 'Test client description', $client->get_description() );
+	}
+
+	/**
+	 * Test register method allows custom URI schemes for native apps.
+	 *
+	 * @covers ::register
+	 */
+	public function test_register_allows_custom_scheme() {
+		$result = $this->create_client(
+			array(
+				'name'          => 'Native App',
+				'redirect_uris' => array( 'com.example.app:/oauth/callback' ),
+			)
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertArrayHasKey( 'client_id', $result );
+	}
+
+	/**
+	 * Test register method allows custom URI schemes with double slashes.
+	 *
+	 * @covers ::register
+	 */
+	public function test_register_allows_custom_scheme_double_slash() {
+		$result = $this->create_client(
+			array(
+				'name'          => 'Native App',
+				'redirect_uris' => array( 'myapp://callback' ),
+			)
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertArrayHasKey( 'client_id', $result );
+	}
+
+	/**
+	 * Test register method allows scheme-only redirect URI.
+	 *
+	 * @covers ::register
+	 */
+	public function test_register_allows_scheme_only_redirect_uri() {
+		$result = $this->create_client(
+			array(
+				'name'          => 'Native App',
+				'redirect_uris' => array( 'activitypress://' ),
+			)
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertArrayHasKey( 'client_id', $result );
+
+		$client = Client::get( $result['client_id'] );
+		$this->assertTrue( $client->is_valid_redirect_uri( 'activitypress://' ) );
+	}
+
+	/**
+	 * Test register method rejects dangerous schemes.
+	 *
+	 * @covers ::register
+	 */
+	public function test_register_rejects_dangerous_schemes() {
+		$dangerous = array( 'javascript:alert(1)', 'data:text/html,test', 'vbscript:test' );
+
+		foreach ( $dangerous as $uri ) {
+			$result = Client::register(
+				array(
+					'name'          => 'Bad Client',
+					'redirect_uris' => array( $uri ),
+				)
+			);
+
+			$this->assertInstanceOf( \WP_Error::class, $result, "Should reject: $uri" );
+		}
+	}
+
+	/**
+	 * Test is_valid_redirect_uri works with custom schemes.
+	 *
+	 * @covers ::is_valid_redirect_uri
+	 */
+	public function test_is_valid_redirect_uri_custom_scheme() {
+		$result = $this->create_client(
+			array(
+				'name'          => 'Native App',
+				'redirect_uris' => array( 'com.example.app:/oauth/callback' ),
+			)
+		);
+
+		$client = Client::get( $result['client_id'] );
+
+		$this->assertTrue( $client->is_valid_redirect_uri( 'com.example.app:/oauth/callback' ) );
+		$this->assertFalse( $client->is_valid_redirect_uri( 'com.other.app:/oauth/callback' ) );
+	}
+
+
+	/**
+	 * Test custom scheme redirect URIs are stored and retrieved correctly.
+	 *
+	 * @covers ::get_redirect_uris
+	 */
+	public function test_custom_scheme_redirect_uris_roundtrip() {
+		$uris   = array(
+			'com.example.app:/oauth/callback',
+			'https://example.com/callback',
+		);
+		$result = $this->create_client(
+			array(
+				'name'          => 'Hybrid App',
+				'redirect_uris' => $uris,
+			)
+		);
+
+		$this->assertIsArray( $result );
+
+		$client = Client::get( $result['client_id'] );
+		$stored = $client->get_redirect_uris();
+
+		$this->assertCount( 2, $stored );
+		$this->assertContains( 'com.example.app:/oauth/callback', $stored );
+		$this->assertContains( 'https://example.com/callback', $stored );
 	}
 
 	/**

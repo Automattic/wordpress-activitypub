@@ -4,10 +4,10 @@
 import { test, expect } from '@wordpress/e2e-test-utils-playwright';
 
 test.describe( 'OAuth Controller CORS Headers', () => {
-	const restBase = 'http://localhost:8889/index.php?rest_route=';
+	const restRoute = '/index.php?rest_route=';
 
 	test( 'should include CORS headers on outbox endpoint', async ( { request } ) => {
-		const response = await request.get( `${ restBase }/activitypub/1.0/actors/1/outbox` );
+		const response = await request.get( `${ restRoute }/activitypub/1.0/actors/1/outbox` );
 
 		expect( response.status() ).toBe( 200 );
 		expect( response.headers()[ 'access-control-allow-origin' ] ).toBe( '*' );
@@ -17,21 +17,21 @@ test.describe( 'OAuth Controller CORS Headers', () => {
 	} );
 
 	test( 'should include CORS headers on inbox endpoint', async ( { request } ) => {
-		const response = await request.get( `${ restBase }/activitypub/1.0/actors/1/inbox` );
+		const response = await request.get( `${ restRoute }/activitypub/1.0/actors/1/inbox` );
 
 		expect( response.headers()[ 'access-control-allow-origin' ] ).toBe( '*' );
 	} );
 
-	test( 'should include CORS headers on webfinger endpoint', async ( { request } ) => {
-		const resource = encodeURIComponent( 'http://localhost:8889/?author=1' );
-		const response = await request.get( `${ restBase }/activitypub/1.0/webfinger&resource=${ resource }` );
+	test( 'should include CORS headers on webfinger endpoint', async ( { request, baseURL } ) => {
+		const resource = encodeURIComponent( `${ baseURL }?author=1` );
+		const response = await request.get( `${ restRoute }/activitypub/1.0/webfinger&resource=${ resource }` );
 
 		expect( response.status() ).toBe( 200 );
 		expect( response.headers()[ 'access-control-allow-origin' ] ).toBe( '*' );
 	} );
 
 	test( 'should include CORS headers on OAuth token endpoint', async ( { request } ) => {
-		const response = await request.post( `${ restBase }/activitypub/1.0/oauth/token`, {
+		const response = await request.post( `${ restRoute }/activitypub/1.0/oauth/token`, {
 			form: {
 				grant_type: 'authorization_code',
 				code: 'invalid',
@@ -48,14 +48,14 @@ test.describe( 'OAuth Controller CORS Headers', () => {
 	} );
 
 	test( 'should include CORS headers on actors endpoint', async ( { request } ) => {
-		const response = await request.get( `${ restBase }/activitypub/1.0/actors/1` );
+		const response = await request.get( `${ restRoute }/activitypub/1.0/actors/1` );
 
 		expect( response.status() ).toBe( 200 );
 		expect( response.headers()[ 'access-control-allow-origin' ] ).toBe( '*' );
 	} );
 
 	test( 'should include CORS headers on followers endpoint', async ( { request } ) => {
-		const response = await request.get( `${ restBase }/activitypub/1.0/actors/1/followers` );
+		const response = await request.get( `${ restRoute }/activitypub/1.0/actors/1/followers` );
 
 		expect( response.status() ).toBe( 200 );
 		expect( response.headers()[ 'access-control-allow-origin' ] ).toBe( '*' );

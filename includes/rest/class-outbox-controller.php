@@ -129,7 +129,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 		 *
 		 * @param string[] $activity_types The list of activity types.
 		 */
-		$activity_types = apply_filters( 'rest_activitypub_outbox_activity_types', array( 'Announce', 'Create', 'Like', 'Update' ) );
+		$activity_types = \apply_filters( 'activitypub_outbox_activity_types', array( 'Announce', 'Create', 'Like', 'Update' ) );
 
 		$args = array(
 			'posts_per_page' => $request->get_param( 'per_page' ),
@@ -202,7 +202,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 				 * @param array            $query_result The result of the query.
 				 * @param \WP_REST_Request $request      The request object.
 				 */
-				do_action( 'activitypub_rest_outbox_item_error', $outbox_item, $args, $query_result, $request );
+				\do_action( 'activitypub_rest_outbox_item_error', $outbox_item, $args, $query_result, $request );
 
 				continue;
 			}
@@ -211,7 +211,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 		}
 
 		$response = $this->prepare_collection_response( $response, $request );
-		if ( is_wp_error( $response ) ) {
+		if ( \is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -381,7 +381,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 			$data = $this->wrap_in_create( $data, $user );
 		}
 
-		// C2S: default to public addressing if client omits recipients.
+		// Default to public addressing if client omits recipients.
 		$data = $this->ensure_addressing( $data, $user );
 
 		// Determine visibility from addressing.

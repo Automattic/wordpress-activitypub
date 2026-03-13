@@ -31,13 +31,13 @@ class Delete {
 	 * @param array $data    The activity data array.
 	 * @param int   $user_id The user ID.
 	 *
-	 * @return \WP_Post|\WP_Comment|null The deleted object, or null on failure.
+	 * @return \WP_Post|\WP_Comment|false The deleted object, or false on failure.
 	 */
 	public static function handle_delete( $data, $user_id = null ) {
 		$object_id = object_to_uri( $data['object'] ?? '' );
 
 		if ( empty( $object_id ) ) {
-			return null;
+			return false;
 		}
 
 		// Try to delete a comment first, then fall back to a post.

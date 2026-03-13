@@ -13,6 +13,9 @@ use Activitypub\OAuth\Scope;
  * Test class for OAuth Scope.
  *
  * @coversDefaultClass \Activitypub\OAuth\Scope
+ *
+ * @group activitypub
+ * @group oauth
  */
 class Test_Scope extends \WP_UnitTestCase {
 

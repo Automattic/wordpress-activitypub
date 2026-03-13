@@ -7,6 +7,10 @@
 
 namespace Activitypub\OAuth;
 
+use Activitypub\Sanitize;
+
+use function Activitypub\get_client_ip;
+
 /**
  * Client class for managing OAuth 2.0 client registrations.
  *
@@ -99,7 +103,7 @@ class Client {
 				'meta_input'   => array(
 					'_activitypub_client_id'          => $client_id,
 					'_activitypub_client_secret_hash' => $client_secret ? \wp_hash_password( $client_secret ) : '',
-					'_activitypub_redirect_uris'      => array_map( 'sanitize_url', $redirect_uris ),
+					'_activitypub_redirect_uris'      => array_map( array( Sanitize::class, 'redirect_uri' ), $redirect_uris ),
 					'_activitypub_allowed_scopes'     => Scope::validate( $scopes ),
 					'_activitypub_is_public'          => (bool) $is_public,
 				),
@@ -149,7 +153,7 @@ class Client {
 		}
 
 		// If client_id is a URL, try auto-discovery.
-		if ( filter_var( $client_id, FILTER_VALIDATE_URL ) ) {
+		if ( \filter_var( $client_id, FILTER_VALIDATE_URL ) ) {
 			return self::discover_and_register( $client_id );
 		}
 
@@ -171,7 +175,7 @@ class Client {
 	 */
 	private static function discover_and_register( $client_id ) {
 		// Rate-limit auto-discovery to prevent SSRF abuse (max 10 per minute per IP).
-		$ip            = isset( $_SERVER['REMOTE_ADDR'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown';
+		$ip            = get_client_ip();
 		$transient_key = 'ap_oauth_disc_' . \md5( $ip );
 		$count         = (int) \get_transient( $transient_key );
 
@@ -191,8 +195,17 @@ class Client {
 			return $metadata;
 		}
 
-		// Validate client_id matches.
-		if ( ! empty( $metadata['client_id'] ) && $metadata['client_id'] !== $client_id ) {
+		// Validate client_id is present and matches.
+		// A missing client_id allows client impersonation through redirects.
+		if ( empty( $metadata['client_id'] ) ) {
+			return new \WP_Error(
+				'activitypub_missing_client_id',
+				\__( 'Client metadata must contain a client_id property.', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		if ( $metadata['client_id'] !== $client_id ) {
 			return new \WP_Error(
 				'activitypub_client_id_mismatch',
 				\__( 'Client ID in metadata does not match request.', 'activitypub' ),
@@ -203,6 +216,16 @@ class Client {
 		// Get redirect URIs from metadata or derive from client_id origin.
 		$redirect_uris = array();
 		if ( ! empty( $metadata['redirect_uris'] ) && is_array( $metadata['redirect_uris'] ) ) {
+			foreach ( $metadata['redirect_uris'] as $uri ) {
+				if ( ! self::validate_uri_format( $uri ) ) {
+					return new \WP_Error(
+						'activitypub_invalid_redirect_uri',
+						/* translators: %s: The invalid redirect URI */
+						\sprintf( \__( 'Invalid redirect URI: %s', 'activitypub' ), $uri ),
+						array( 'status' => 400 )
+					);
+				}
+			}
 			$redirect_uris = $metadata['redirect_uris'];
 		}
 
@@ -218,7 +241,7 @@ class Client {
 				'meta_input'   => array(
 					'_activitypub_client_id'          => $client_id,
 					'_activitypub_client_secret_hash' => '', // Public client.
-					'_activitypub_redirect_uris'      => array_map( 'sanitize_url', $redirect_uris ),
+					'_activitypub_redirect_uris'      => array_map( array( Sanitize::class, 'redirect_uri' ), $redirect_uris ),
 					'_activitypub_allowed_scopes'     => Scope::DEFAULT_SCOPES,
 					'_activitypub_is_public'          => true,
 					'_activitypub_discovered'         => true,
@@ -250,9 +273,9 @@ class Client {
 			array(
 				'timeout'     => 10,
 				'headers'     => array(
-					'Accept' => 'application/json, application/ld+json, application/activity+json',
+					'Accept' => 'application/cimd+json, application/json, application/ld+json, application/activity+json',
 				),
-				'redirection' => 3,
+				'redirection' => 0, // CIMDs prohibit following redirects to prevent client impersonation.
 			)
 		);
 
@@ -286,7 +309,7 @@ class Client {
 		}
 
 		// Normalize ActivityPub Application format to CIMD format.
-		return self::normalize_client_metadata( $data, $url );
+		return self::normalize_client_metadata( $data );
 	}
 
 	/**
@@ -296,13 +319,11 @@ class Client {
 	 * - CIMD (Client ID Metadata Document)
 	 * - ActivityPub Application objects
 	 *
-	 * @param array  $data The raw metadata.
-	 * @param string $url  The client ID URL.
+	 * @param array $data The raw metadata.
 	 * @return array Normalized metadata.
 	 */
-	private static function normalize_client_metadata( $data, $url ) {
+	private static function normalize_client_metadata( $data ) {
 		$metadata = array(
-			'client_id'     => $url,
 			'client_name'   => '',
 			'redirect_uris' => array(),
 			'logo_uri'      => '',
@@ -326,9 +347,15 @@ class Client {
 			$metadata['client_uri'] = $data['client_uri'];
 		}
 
-		// ActivityPub actor format fields (Application, Person, Service, etc.).
+		/*
+		 * ActivityPub actor format fields (Application, Person, Service, etc.).
+		 *
+		 * Only used as fallback when the document doesn't contain CIMD fields.
+		 * If a client_id is already set from CIMD data, skip actor conversion
+		 * to prevent mixup/impersonation attacks.
+		 */
 		$actor_types = array( 'Application', 'Person', 'Service', 'Group', 'Organization' );
-		if ( ! empty( $data['type'] ) && in_array( $data['type'], $actor_types, true ) ) {
+		if ( ! empty( $data['type'] ) && in_array( $data['type'], $actor_types, true ) && empty( $metadata['client_id'] ) ) {
 			if ( ! empty( $data['id'] ) ) {
 				$metadata['client_id'] = $data['id'];
 			}
@@ -391,8 +418,12 @@ class Client {
 	/**
 	 * Check if redirect URI is valid for this client.
 	 *
-	 * If explicit redirect_uris are registered, requires match (with RFC 8252 loopback handling).
-	 * For auto-discovered clients without redirect_uris, uses same-origin policy.
+	 * Requires an exact match against registered redirect URIs,
+	 * with RFC 8252 loopback port flexibility.
+	 *
+	 * Clients must have at least one registered redirect URI.
+	 * Same-origin fallback is intentionally not supported to
+	 * prevent open redirector vulnerabilities.
 	 *
 	 * @param string $redirect_uri The redirect URI to validate.
 	 * @return bool True if valid.
@@ -400,36 +431,23 @@ class Client {
 	public function is_valid_redirect_uri( $redirect_uri ) {
 		$allowed_uris = $this->get_redirect_uris();
 
-		// If explicit redirect URIs are registered, check for match.
-		if ( ! empty( $allowed_uris ) ) {
-			// Exact match first.
-			if ( in_array( $redirect_uri, $allowed_uris, true ) ) {
-				return true;
-			}
-
-			/*
-			 * RFC 8252 Section 7.3: For loopback redirects, allow any port.
-			 * Compare scheme, host, and path - ignore port for 127.0.0.1 and localhost.
-			 */
-			foreach ( $allowed_uris as $allowed_uri ) {
-				if ( self::is_loopback_redirect_match( $allowed_uri, $redirect_uri ) ) {
-					return true;
-				}
-			}
-
+		if ( empty( $allowed_uris ) ) {
 			return false;
 		}
 
-		/*
-		 * For auto-discovered clients without redirect_uris, use same-origin policy.
-		 * The redirect_uri must be on the same host as the client_id.
-		 */
-		$client_id = $this->get_client_id();
-		if ( filter_var( $client_id, FILTER_VALIDATE_URL ) ) {
-			$client_host   = \wp_parse_url( $client_id, PHP_URL_HOST );
-			$redirect_host = \wp_parse_url( $redirect_uri, PHP_URL_HOST );
+		// Exact match first.
+		if ( in_array( $redirect_uri, $allowed_uris, true ) ) {
+			return true;
+		}
 
-			return $client_host === $redirect_host;
+		/*
+		 * RFC 8252 Section 7.3: For loopback redirects, allow any port.
+		 * Compare scheme, host, and path - ignore port for 127.0.0.1 and localhost.
+		 */
+		foreach ( $allowed_uris as $allowed_uri ) {
+			if ( self::is_loopback_redirect_match( $allowed_uri, $redirect_uri ) ) {
+				return true;
+			}
 		}
 
 		return false;
@@ -438,7 +456,7 @@ class Client {
 	/**
 	 * Check if two URIs match under RFC 8252 loopback rules.
 	 *
-	 * For loopback addresses (127.0.0.1, localhost), the port is ignored.
+	 * For loopback addresses, the port is ignored per RFC 8252 Section 7.3.
 	 *
 	 * @param string $allowed_uri  The registered redirect URI.
 	 * @param string $redirect_uri The requested redirect URI.
@@ -462,8 +480,7 @@ class Client {
 		}
 
 		// Only apply port flexibility for loopback addresses.
-		$loopback_hosts = array( '127.0.0.1', 'localhost', '::1' );
-		if ( ! in_array( $allowed_host, $loopback_hosts, true ) ) {
+		if ( ! self::is_loopback( $allowed_host ) ) {
 			// Not loopback - require exact match including port.
 			return $allowed_uri === $redirect_uri;
 		}
@@ -473,6 +490,40 @@ class Client {
 		$redirect_path = $redirect_parts['path'] ?? '/';
 
 		return $allowed_path === $redirect_path;
+	}
+
+	/**
+	 * Check if a host is a loopback address.
+	 *
+	 * Supports:
+	 * - "localhost" (common in practice for native app development)
+	 * - IPv4 loopback range 127.0.0.0/8 (RFC 1122 Section 3.2.1.3)
+	 * - IPv6 loopback ::1 (RFC 4291 Section 2.5.3)
+	 * - IPv4-mapped IPv6 loopback ::ffff:127.x.x.x (RFC 4291 Section 2.5.5.2)
+	 *
+	 * @param string $host The host to check (as returned by wp_parse_url).
+	 * @return bool True if loopback.
+	 */
+	private static function is_loopback( $host ) {
+		if ( 'localhost' === \strtolower( $host ) ) {
+			return true;
+		}
+
+		// Strip brackets from IPv6 (parse_url returns "[::1]").
+		$ip = trim( $host, '[]' );
+
+		/*
+		 * PHP's FILTER_FLAG_NO_RES_RANGE rejects reserved IPs including
+		 * the full 127.0.0.0/8 range and ::1, so a valid IP that fails
+		 * this filter is a loopback/reserved address.
+		 */
+		$is_ip = \filter_var( $ip, FILTER_VALIDATE_IP );
+		if ( $is_ip && ! \filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_RES_RANGE ) ) {
+			return true;
+		}
+
+		// IPv4-mapped IPv6 loopback (::ffff:127.x.x.x) — not caught by FILTER_FLAG_NO_RES_RANGE.
+		return 0 === \strpos( \strtolower( $ip ), '::ffff:127.' );
 	}
 
 	/**
@@ -538,6 +589,17 @@ class Client {
 	}
 
 	/**
+	 * Get client display name, falling back to client ID.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string The display name.
+	 */
+	public function get_display_name() {
+		return $this->get_name() ?: $this->get_client_id();
+	}
+
+	/**
 	 * Get client description.
 	 *
 	 * @return string The client description.
@@ -573,7 +635,7 @@ class Client {
 	 */
 	public function get_allowed_scopes() {
 		$scopes = \get_post_meta( $this->post_id, '_activitypub_allowed_scopes', true );
-		return is_array( $scopes ) ? $scopes : Scope::ALL;
+		return is_array( $scopes ) ? $scopes : Scope::DEFAULT_SCOPES;
 	}
 
 	/**
@@ -592,6 +654,38 @@ class Client {
 	 */
 	public function get_client_uri() {
 		return \get_post_meta( $this->post_id, '_activitypub_client_uri', true ) ?: '';
+	}
+
+	/**
+	 * Get a URL suitable for linking to this client.
+	 *
+	 * Uses client_uri (the client's homepage) rather than client_id,
+	 * since the client_id URL typically serves a JSON document (CIMD)
+	 * not intended for end-users.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string A URL for the client, or empty string if none available.
+	 */
+	public function get_link_url() {
+		$client_uri = $this->get_client_uri();
+
+		if ( $client_uri ) {
+			return $client_uri;
+		}
+
+		$redirect_uris = $this->get_redirect_uris();
+
+		if ( ! empty( $redirect_uris ) ) {
+			$scheme = \wp_parse_url( $redirect_uris[0], PHP_URL_SCHEME );
+			$host   = \wp_parse_url( $redirect_uris[0], PHP_URL_HOST );
+
+			if ( $scheme && $host ) {
+				return \trailingslashit( sprintf( '%s://%s', $scheme, $host ) );
+			}
+		}
+
+		return '';
 	}
 
 	/**
@@ -649,32 +743,104 @@ class Client {
 	/**
 	 * Validate a redirect URI format.
 	 *
+	 * Supports:
+	 * - https:// URIs (production)
+	 * - http:// URIs (localhost only, for development)
+	 * - Custom URI schemes for native apps (RFC 8252 Section 7.1)
+	 *
 	 * @param string $uri The URI to validate.
 	 * @return bool True if valid.
 	 */
 	private static function validate_uri_format( $uri ) {
-		$parsed = wp_parse_url( $uri );
-
-		if ( ! $parsed || empty( $parsed['scheme'] ) || empty( $parsed['host'] ) ) {
+		/*
+		 * Extract scheme manually first because wp_parse_url() returns false
+		 * for some custom scheme URIs (e.g. "myapp:/callback").
+		 *
+		 * Note: per RFC 2396, custom scheme URIs use a single slash ("myapp:/path"),
+		 * but double-slash forms ("myapp://host") are common in practice, so both
+		 * are accepted.
+		 */
+		if ( ! preg_match( '/^([a-zA-Z][a-zA-Z0-9+.\-]*):/', $uri, $matches ) ) {
 			return false;
 		}
 
-		// Allow http for localhost development.
-		if ( 'http' === $parsed['scheme'] ) {
-			/*
-			 * Include both bracketed and unbracketed IPv6 loopback since parse_url
-			 * may return either format depending on PHP version.
-			 */
-			$localhost_hosts = array( 'localhost', '127.0.0.1', '[::1]', '::1' );
-			if ( ! in_array( $parsed['host'], $localhost_hosts, true ) ) {
+		$scheme = \strtolower( $matches[1] );
+		$parsed = \wp_parse_url( $uri );
+
+		if ( ! $parsed ) {
+			// wp_parse_url fails for "scheme://" — still valid for custom schemes.
+			$parsed = array( 'scheme' => $scheme );
+		}
+
+		// Block dangerous schemes (see OWASP XSS prevention).
+		$blocked_schemes = array( 'javascript', 'data', 'vbscript', 'blob', 'file', 'mhtml', 'cid', 'jar', 'view-source' );
+		if ( in_array( $scheme, $blocked_schemes, true ) ) {
+			return false;
+		}
+
+		/*
+		 * Allow http only for loopback addresses (RFC 8252 Section 8.3).
+		 * Native apps use loopback redirects during the OAuth flow.
+		 *
+		 * Non-loopback http URIs are rejected by default but can be
+		 * allowed via the activitypub_oauth_allow_http_redirect_uri filter
+		 * for local development environments.
+		 *
+		 * @param bool   $allowed Whether to allow this http redirect URI.
+		 * @param string $uri     The redirect URI being validated.
+		 * @param array  $parsed  The parsed URI components.
+		 */
+		if ( 'http' === $scheme ) {
+			if ( empty( $parsed['host'] ) ) {
 				return false;
 			}
-		} elseif ( 'https' !== $parsed['scheme'] ) {
-			// Only allow https for production.
-			return false;
+
+			if ( self::is_loopback( $parsed['host'] ) ) {
+				return true;
+			}
+
+			return (bool) \apply_filters( 'activitypub_oauth_allow_http_redirect_uri', false, $uri, $parsed );
 		}
 
-		return true;
+		// Allow https with any host.
+		if ( 'https' === $scheme ) {
+			return ! empty( $parsed['host'] );
+		}
+
+		/*
+		 * Allow custom URI schemes for native/mobile apps (RFC 8252 Section 7.1).
+		 * Examples: com.example.app:/oauth, myapp:/callback
+		 * Custom schemes must be at least 2 characters to avoid matching
+		 * Windows drive letters (e.g., "C:").
+		 */
+		return strlen( $scheme ) >= 2;
+	}
+
+	/**
+	 * Delete all OAuth clients and their associated tokens.
+	 *
+	 * Used during plugin uninstall to clean up all OAuth data.
+	 *
+	 * @return int The number of clients deleted.
+	 */
+	public static function delete_all() {
+		$post_ids = \get_posts(
+			array(
+				'post_type'   => self::POST_TYPE,
+				'post_status' => array( 'any', 'trash', 'auto-draft' ),
+				'fields'      => 'ids',
+				'numberposts' => -1,
+			)
+		);
+
+		foreach ( $post_ids as $post_id ) {
+			\wp_delete_post( $post_id, true );
+		}
+
+		// Also revoke all tokens stored in user meta.
+		Token::revoke_all();
+
+		return count( $post_ids );
 	}
 
 	/**
@@ -690,7 +856,11 @@ class Client {
 			return false;
 		}
 
-		// Delete all tokens for this client (tokens are stored in user meta).
+		/*
+		 * Delete all tokens for this client (tokens are stored in user meta).
+		 * Authorization codes are transient-based and auto-expire within 10 minutes,
+		 * so they don't need explicit revocation here.
+		 */
 		Token::revoke_for_client( $client_id );
 
 		// Delete the client.

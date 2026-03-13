@@ -17,7 +17,11 @@ use function Activitypub\process_remote_media;
 /**
  * Remote Posts collection.
  *
- * Provides methods to retrieve, create, update, and manage remote ActivityPub posts (articles, notes, media, etc.).
+ * Provides methods to retrieve, create, update, and manage remote
+ * ActivityPub posts (articles, notes, media, etc.) received via
+ * Server-to-Server (S2S) federation.
+ *
+ * @see Posts for local posts created via Client-to-Server (C2S) outbox.
  */
 class Remote_Posts {
 	/**

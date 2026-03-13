@@ -251,6 +251,27 @@ class Settings_Fields {
 	 * Render custom post content field.
 	 */
 	public static function render_custom_post_content_field() {
+		$switch_url = \wp_nonce_url(
+			\add_query_arg(
+				array(
+					'page'                           => 'activitypub',
+					'tab'                            => 'settings',
+					'activitypub_update_object_type' => '1',
+				),
+				\admin_url( 'options-general.php' )
+			),
+			'activitypub_switch_object_type'
+		);
+		?>
+		<p class="description">
+			<?php \esc_html_e( '⚠ You are using the legacy template system to format your posts for the fediverse. We recommend switching to automatic mode, which intelligently chooses the best format for each post. Switching will remove this template field from the settings.', 'activitypub' ); ?>
+		</p>
+		<p>
+			<a href="<?php echo \esc_url( $switch_url ); ?>" class="button">
+				<?php \esc_html_e( 'Switch to Automatic Mode', 'activitypub' ); ?>
+			</a>
+		</p>
+		<?php
 		$value = get_option( 'activitypub_custom_post_content', ACTIVITYPUB_CUSTOM_POST_CONTENT );
 		?>
 		<p>

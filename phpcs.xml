@@ -14,7 +14,7 @@
 	<arg name="colors"/>
 	<arg name="parallel" value="50"/>
 
-	<config name="testVersion" value="7.2-"/>
+	<config name="testVersion" value="7.4-"/>
 	<config name="minimum_supported_wp_version" value="6.5"/>
 	<config name="text_domain" value="activitypub,default"/>
 

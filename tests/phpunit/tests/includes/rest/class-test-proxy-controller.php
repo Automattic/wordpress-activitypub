@@ -80,8 +80,8 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 		// Mock OAuth authentication.
 		$this->mock_oauth_auth();
 
-		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
-		$request->set_query_params( array( 'id' => 'http://example.com/users/test' ) );
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => 'http://example.com/users/test' ) );
 
 		$response = $this->server->dispatch( $request );
 
@@ -102,8 +102,8 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 		// Mock OAuth authentication.
 		$this->mock_oauth_auth();
 
-		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
-		$request->set_query_params( array( 'id' => 'https://192.168.1.1/users/test' ) );
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => 'https://192.168.1.1/users/test' ) );
 
 		$response = $this->server->dispatch( $request );
 
@@ -119,8 +119,8 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 	 * @covers ::verify_authentication
 	 */
 	public function test_requires_authentication() {
-		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
-		$request->set_query_params( array( 'id' => 'https://example.com/users/test' ) );
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => 'https://example.com/users/test' ) );
 
 		$response = $this->server->dispatch( $request );
 
@@ -131,7 +131,7 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 	/**
 	 * Test successful proxy fetch of an actor.
 	 *
-	 * @covers ::get_item
+	 * @covers ::create_item
 	 */
 	public function test_successful_actor_fetch() {
 		// Mock OAuth authentication.
@@ -158,8 +158,8 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 			}
 		);
 
-		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
-		$request->set_query_params( array( 'id' => 'https://example.com/users/test' ) );
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => 'https://example.com/users/test' ) );
 
 		$response = $this->server->dispatch( $request );
 

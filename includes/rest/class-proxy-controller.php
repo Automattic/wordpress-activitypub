@@ -47,15 +47,15 @@ class Proxy_Controller extends \WP_REST_Controller {
 			'/' . $this->rest_base,
 			array(
 				array(
-					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( $this, 'get_item' ),
+					'methods'             => \WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'create_item' ),
 					'permission_callback' => array( $this, 'verify_authentication' ),
 					'args'                => array(
 						'id' => array(
 							'description'       => 'The URI of the remote ActivityPub object to fetch.',
 							'type'              => 'string',
 							'required'          => true,
-							'sanitize_callback' => 'sanitize_url',
+							'sanitize_callback' => array( $this, 'sanitize_url' ),
 							'validate_callback' => array( $this, 'validate_url' ),
 						),
 					),
@@ -65,6 +65,18 @@ class Proxy_Controller extends \WP_REST_Controller {
 		);
 	}
 
+	/**
+	 * Sanitizes the URL parameter.
+	 *
+	 * @see https://developer.wordpress.org/reference/functions/sanitize_url/
+	 *
+	 * @param string $url The urlencoded URL to sanitize.
+	 * @return string The sanitized URL.
+	 */
+	public function sanitize_url( $url ) {
+		// Decode and sanitize the URL.
+		return sanitize_url( urldecode( $url ) );
+	}
 	/**
 	 * Validate the URL parameter.
 	 *
@@ -76,22 +88,42 @@ class Proxy_Controller extends \WP_REST_Controller {
 	 * @return bool True if valid, false otherwise.
 	 */
 	public function validate_url( $url ) {
+		// Decode the url.
+		$decoded_url = urldecode( $url );
+
 		// Must be HTTPS.
-		if ( 'https' !== \wp_parse_url( $url, PHP_URL_SCHEME ) ) {
+		if ( 'https' !== \wp_parse_url( $decoded_url, PHP_URL_SCHEME ) ) {
 			return false;
 		}
 
 		// Use WordPress built-in validation (blocks local IPs, restricts ports).
-		return (bool) \wp_http_validate_url( $url );
+		return (bool) \wp_http_validate_url( $decoded_url );
 	}
 
 	/**
 	 * Fetch a remote ActivityPub object via the proxy.
 	 *
+	 * @see https://www.w3.org/wiki/ActivityPub/Primer/proxyUrl_endpoint
+	 *
 	 * @param \WP_REST_Request $request Full details about the request.
 	 * @return \WP_REST_Response|\WP_Error Response object on success, WP_Error on failure.
 	 */
-	public function get_item( $request ) {
+	public function create_item( $request ) {
+		// Rate-limit proxy requests (max 30 per minute per user).
+		$user_id       = \get_current_user_id();
+		$transient_key = 'ap_proxy_' . $user_id;
+		$count         = (int) \get_transient( $transient_key );
+
+		if ( $count >= 30 ) {
+			return new \WP_Error(
+				'activitypub_rate_limit',
+				\__( 'Too many proxy requests. Please try again later.', 'activitypub' ),
+				array( 'status' => 429 )
+			);
+		}
+
+		\set_transient( $transient_key, $count + 1, MINUTE_IN_SECONDS );
+
 		$url = $request->get_param( 'id' );
 
 		// Try to fetch as an actor first using Remote_Actors which handles caching.

@@ -7,6 +7,8 @@
 
 namespace Activitypub\OAuth;
 
+use Activitypub\Sanitize;
+
 /**
  * Authorization_Code class for managing OAuth 2.0 authorization codes.
  *
@@ -43,6 +45,8 @@ class Authorization_Code {
 		$code_challenge,
 		$code_challenge_method = 'S256'
 	) {
+		$redirect_uri = Sanitize::redirect_uri( $redirect_uri );
+
 		// Validate client.
 		$client = Client::get( $client_id );
 		if ( \is_wp_error( $client ) ) {
@@ -59,9 +63,31 @@ class Authorization_Code {
 		}
 
 		/*
-		 * PKCE is recommended for public clients (RFC 7636) but not enforced
-		 * to maintain compatibility with existing C2S clients.
+		 * PKCE is strongly recommended for public clients (RFC 7636) and
+		 * mandatory in the OAuth 2.1 draft. By default, it is not enforced
+		 * to maintain compatibility with existing C2S clients, but site
+		 * operators can require it via filter.
 		 */
+		if ( empty( $code_challenge ) && $client->is_public() ) {
+			/**
+			 * Filter whether PKCE is required for public OAuth clients.
+			 *
+			 * Return true to enforce PKCE (recommended per OAuth 2.1).
+			 * Default false for backward compatibility with older clients.
+			 *
+			 * @since unreleased
+			 *
+			 * @param bool   $require    Whether to require PKCE. Default false.
+			 * @param string $client_id  The OAuth client ID.
+			 */
+			if ( \apply_filters( 'activitypub_oauth_require_pkce', false, $client_id ) ) {
+				return new \WP_Error(
+					'activitypub_pkce_required',
+					\__( 'PKCE is required for public clients. Please include a code_challenge parameter.', 'activitypub' ),
+					array( 'status' => 400 )
+				);
+			}
+		}
 
 		// Filter scopes to only allowed ones.
 		$filtered_scopes = $client->filter_scopes( Scope::validate( $scopes ) );
@@ -110,9 +136,10 @@ class Authorization_Code {
 	 * @return array|\WP_Error Token data or error.
 	 */
 	public static function exchange( $code, $client_id, $redirect_uri, $code_verifier ) {
-		$code_hash = self::hash_code( $code );
-		$transient = self::TRANSIENT_PREFIX . $code_hash;
-		$code_data = \get_transient( $transient );
+		$redirect_uri = Sanitize::redirect_uri( $redirect_uri );
+		$code_hash    = self::hash_code( $code );
+		$transient    = self::TRANSIENT_PREFIX . $code_hash;
+		$code_data    = \get_transient( $transient );
 
 		if ( false === $code_data ) {
 			return new \WP_Error(
