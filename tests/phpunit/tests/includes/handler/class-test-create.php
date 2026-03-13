@@ -9,7 +9,7 @@ namespace Activitypub\Tests\Handler;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
-use Activitypub\Collection\Posts;
+use Activitypub\Collection\Remote_Posts;
 use Activitypub\Handler\Create;
 use Activitypub\Post_Types;
 use Activitypub\Tombstone;
@@ -343,7 +343,7 @@ class Test_Create extends \WP_UnitTestCase {
 		Create::handle_create( $activity, $this->user_id );
 
 		// Verify the object was created with sanitized content.
-		$created_object = Posts::get_by_guid( 'https://example.com/objects/note_sanitize' );
+		$created_object = Remote_Posts::get_by_guid( 'https://example.com/objects/note_sanitize' );
 
 		$this->assertNotNull( $created_object );
 
@@ -378,7 +378,7 @@ class Test_Create extends \WP_UnitTestCase {
 		// Count objects before.
 		$objects_before = get_posts(
 			array(
-				'post_type'      => Posts::POST_TYPE,
+				'post_type'      => Remote_Posts::POST_TYPE,
 				'post_status'    => 'any',
 				'posts_per_page' => -1,
 			)
@@ -389,7 +389,7 @@ class Test_Create extends \WP_UnitTestCase {
 		// Count objects after.
 		$objects_after = get_posts(
 			array(
-				'post_type'      => Posts::POST_TYPE,
+				'post_type'      => Remote_Posts::POST_TYPE,
 				'post_status'    => 'any',
 				'posts_per_page' => -1,
 			)
@@ -419,7 +419,7 @@ class Test_Create extends \WP_UnitTestCase {
 		// Count objects before.
 		$objects_before = get_posts(
 			array(
-				'post_type'      => Posts::POST_TYPE,
+				'post_type'      => Remote_Posts::POST_TYPE,
 				'post_status'    => 'any',
 				'posts_per_page' => -1,
 			)
@@ -430,7 +430,7 @@ class Test_Create extends \WP_UnitTestCase {
 		// Count objects after.
 		$objects_after = get_posts(
 			array(
-				'post_type'      => Posts::POST_TYPE,
+				'post_type'      => Remote_Posts::POST_TYPE,
 				'post_status'    => 'any',
 				'posts_per_page' => -1,
 			)
@@ -486,7 +486,7 @@ class Test_Create extends \WP_UnitTestCase {
 		$this->assertFalse( $result );
 
 		// Verify no post was created.
-		$created_object = Posts::get_by_guid( 'https://example.com/objects/note_disabled' );
+		$created_object = Remote_Posts::get_by_guid( 'https://example.com/objects/note_disabled' );
 		$this->assertTrue( \is_wp_error( $created_object ) );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_callback );
@@ -538,7 +538,7 @@ class Test_Create extends \WP_UnitTestCase {
 		$this->assertInstanceOf( 'WP_Post', $result );
 
 		// Verify post was created.
-		$created_object = Posts::get_by_guid( 'https://example.com/objects/note_enabled' );
+		$created_object = Remote_Posts::get_by_guid( 'https://example.com/objects/note_enabled' );
 		$this->assertNotNull( $created_object );
 		$this->assertStringContainsString( 'This should be created', $created_object->post_content );
 
@@ -786,5 +786,53 @@ class Test_Create extends \WP_UnitTestCase {
 
 		// Clean up.
 		\delete_option( 'activitypub_tombstone_urls' );
+	}
+
+	/**
+	 * Test Create handler with JSON fixtures from data/create/.
+	 *
+	 * Drop a JSON file into tests/phpunit/data/create/ and it will be
+	 * automatically picked up. Use `{{LOCAL_POST_URL}}` as a placeholder
+	 * in `inReplyTo` to target the local test post.
+	 *
+	 * @dataProvider create_fixture_provider
+	 * @covers ::handle_create
+	 *
+	 * @param string $path The path to the fixture JSON file.
+	 */
+	public function test_handle_create_from_fixture( $path ) {
+		$json = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		$json = str_replace( '{{LOCAL_POST_URL}}', $this->post_permalink, $json );
+
+		$activity = json_decode( $json, true );
+
+		Create::handle_create( $activity, $this->user_id );
+
+		$comments = ( new \WP_Comment_Query(
+			array(
+				'type'    => 'comment',
+				'post_id' => $this->post_id,
+			)
+		) )->comments;
+
+		$this->assertCount( 1, $comments );
+		$this->assertInstanceOf( 'WP_Comment', $comments[0] );
+		$this->assertStringContainsString( \wp_strip_all_tags( $activity['object']['content'] ), \wp_strip_all_tags( $comments[0]->comment_content ) );
+	}
+
+	/**
+	 * Data provider that discovers JSON fixture files in data/create/.
+	 *
+	 * @return array Array of [ path ] arrays, keyed by fixture name.
+	 */
+	public function create_fixture_provider() {
+		$files    = glob( AP_TESTS_DIR . '/data/create/*.json' );
+		$fixtures = array();
+
+		foreach ( $files as $path ) {
+			$fixtures[ basename( $path, '.json' ) ] = array( $path );
+		}
+
+		return $fixtures;
 	}
 }

@@ -13,12 +13,61 @@ use Activitypub\Collection\Actors;
  * Block class.
  */
 class Blocks {
+
+	/**
+	 * HTML tags to skip during block conversion.
+	 *
+	 * @var array<string>
+	 */
+	const SKIP_TAGS = array( 'BR', 'CITE', 'SOURCE' );
+
+	/**
+	 * HTML void elements that have no closing tag.
+	 *
+	 * @var array<string>
+	 */
+	const VOID_TAGS = array( 'AREA', 'BASE', 'BR', 'COL', 'EMBED', 'HR', 'IMG', 'INPUT', 'LINK', 'META', 'SOURCE', 'TRACK', 'WBR' );
+
+	/**
+	 * Map of HTML tag names to WordPress block types.
+	 *
+	 * @var array<string, string>
+	 */
+	const BLOCK_MAP = array(
+		'UL'         => 'list',
+		'OL'         => 'list',
+		'IMG'        => 'image',
+		'BLOCKQUOTE' => 'quote',
+		'H1'         => 'heading',
+		'H2'         => 'heading',
+		'H3'         => 'heading',
+		'H4'         => 'heading',
+		'H5'         => 'heading',
+		'H6'         => 'heading',
+		'P'          => 'paragraph',
+		'A'          => 'paragraph',
+		'ABBR'       => 'paragraph',
+		'B'          => 'paragraph',
+		'CODE'       => 'paragraph',
+		'EM'         => 'paragraph',
+		'I'          => 'paragraph',
+		'STRONG'     => 'paragraph',
+		'SUB'        => 'paragraph',
+		'SUP'        => 'paragraph',
+		'SPAN'       => 'paragraph',
+		'U'          => 'paragraph',
+		'FIGURE'     => 'image',
+		'HR'         => 'separator',
+	);
+
 	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		// This is already being called on the init hook, so just add it.
 		self::register_blocks();
+		self::register_patterns();
+		self::register_templates();
 
 		\add_action( 'load-post-new.php', array( self::class, 'handle_in_reply_to_get_param' ) );
 		// Add editor plugin.
@@ -36,17 +85,20 @@ class Blocks {
 	 */
 	public static function enqueue_editor_assets() {
 		$data = array(
-			'namespace'        => ACTIVITYPUB_REST_NAMESPACE,
-			'defaultAvatarUrl' => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
-			'enabled'          => array(
+			'namespace'          => ACTIVITYPUB_REST_NAMESPACE,
+			'defaultAvatarUrl'   => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
+			'enabled'            => array(
 				'blog'  => ! is_user_type_disabled( 'blog' ),
 				'users' => ! is_user_type_disabled( 'user' ),
 			),
-			'profileUrls'      => array(
+			'profileUrls'        => array(
 				'user' => \admin_url( 'profile.php#activitypub' ),
 				'blog' => \admin_url( 'options-general.php?page=activitypub&tab=blog-profile' ),
 			),
-			'showAvatars'      => (bool) \get_option( 'show_avatars' ),
+			'showAvatars'        => (bool) \get_option( 'show_avatars' ),
+			'defaultQuotePolicy' => \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE ),
+			'objectType'         => \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ),
+			'noteLength'         => ACTIVITYPUB_NOTE_LENGTH,
 		);
 		wp_localize_script( 'wp-editor', '_activityPubOptions', $data );
 
@@ -60,6 +112,10 @@ class Blocks {
 		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/editor-plugin/plugin.asset.php';
 		$plugin_url = plugins_url( 'build/editor-plugin/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
 		wp_enqueue_script( 'activitypub-block-editor', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
+
+		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/pre-publish-panel/plugin.asset.php';
+		$plugin_url = plugins_url( 'build/pre-publish-panel/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
+		wp_enqueue_script( 'activitypub-pre-publish-panel', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
 	}
 
 	/**
@@ -100,6 +156,116 @@ class Blocks {
 			ACTIVITYPUB_PLUGIN_DIR . '/build/reply',
 			array(
 				'render_callback' => array( self::class, 'render_reply_block' ),
+			)
+		);
+
+		// Register remote media blocks (server-side only, no editor UI).
+		\register_block_type(
+			'activitypub/emoji',
+			array(
+				'attributes'      => array(
+					'url'     => array( 'type' => 'string' ),
+					'updated' => array( 'type' => 'string' ),
+				),
+				'render_callback' => array( self::class, 'render_emoji_block' ),
+			)
+		);
+
+		\register_block_type(
+			'activitypub/image',
+			array(
+				'attributes'      => array(
+					'url' => array( 'type' => 'string' ),
+				),
+				'render_callback' => array( self::class, 'render_image_block' ),
+			)
+		);
+
+		\register_block_type(
+			'activitypub/audio',
+			array(
+				'attributes'      => array(
+					'url' => array( 'type' => 'string' ),
+				),
+				'render_callback' => array( self::class, 'render_audio_block' ),
+			)
+		);
+
+		\register_block_type(
+			'activitypub/video',
+			array(
+				'attributes'      => array(
+					'url' => array( 'type' => 'string' ),
+				),
+				'render_callback' => array( self::class, 'render_video_block' ),
+			)
+		);
+	}
+
+	/**
+	 * Register block patterns for ActivityPub.
+	 */
+	public static function register_patterns() {
+		// Register the ActivityPub pattern category.
+		\register_block_pattern_category(
+			'activitypub',
+			array(
+				'label' => \__( 'Fediverse', 'activitypub' ),
+			)
+		);
+
+		// Register each pattern.
+		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/author-header.php';
+		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/author-profile.php';
+		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/follow-page.php';
+		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/profile-page.php';
+		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/social-sidebar.php';
+
+		// Only register the Following page pattern if the Following feature is enabled.
+		if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
+			require ACTIVITYPUB_PLUGIN_DIR . '/patterns/following-page.php';
+		}
+	}
+
+	/**
+	 * Register FSE templates for block themes.
+	 */
+	public static function register_templates() {
+		// Only register templates for block themes on WP 6.7+.
+		if ( ! \function_exists( 'register_block_template' ) || ! \wp_is_block_theme() ) {
+			return;
+		}
+
+		// Use the core `author` hierarchy slug so WP can resolve this for author archives.
+		\register_block_template(
+			'activitypub//author',
+			array(
+				'title'       => \__( 'Author Archive (Fediverse)', 'activitypub' ),
+				'description' => \__( 'Displays an author archive with Fediverse profile and follow options.', 'activitypub' ),
+				'content'     => '<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained"}} -->
+<main class="wp-block-group">
+	<!-- wp:pattern {"slug":"activitypub/author-profile"} /-->
+	<!-- wp:spacer {"height":"32px"} -->
+	<div style="height:32px" aria-hidden="true" class="wp-block-spacer"></div>
+	<!-- /wp:spacer -->
+	<!-- wp:query {"queryId":0,"query":{"perPage":10,"pages":0,"offset":0,"postType":"post","order":"desc","orderBy":"date","author":"","search":"","exclude":[],"sticky":"","inherit":true}} -->
+	<div class="wp-block-query">
+		<!-- wp:post-template -->
+			<!-- wp:post-title {"isLink":true} /-->
+			<!-- wp:post-excerpt /-->
+		<!-- /wp:post-template -->
+		<!-- wp:query-pagination -->
+			<!-- wp:query-pagination-previous /-->
+			<!-- wp:query-pagination-numbers /-->
+			<!-- wp:query-pagination-next /-->
+		<!-- /wp:query-pagination -->
+	</div>
+	<!-- /wp:query -->
+</main>
+<!-- /wp:group -->
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->',
+				'post_types'  => array(),
 			)
 		);
 	}
@@ -317,6 +483,167 @@ class Blocks {
 	}
 
 	/**
+	 * Render the emoji block.
+	 *
+	 * Replaces emoji shortcode with cached img tag at runtime.
+	 *
+	 * @param array  $attrs   The block attributes.
+	 * @param string $content The block inner content (emoji shortcode).
+	 *
+	 * @return string The rendered emoji img tag.
+	 */
+	public static function render_emoji_block( $attrs, $content ) {
+		if ( empty( $attrs['url'] ) || empty( $content ) ) {
+			return $content;
+		}
+
+		$url       = $attrs['url'];
+		$shortcode = trim( $content );
+		$name      = trim( $shortcode, ':' );
+
+		/**
+		 * Filters a remote media URL for caching.
+		 *
+		 * @param string      $url       The remote media URL.
+		 * @param string      $context   The context ('emoji').
+		 * @param int|null    $entity_id The entity ID.
+		 * @param array       $options   Additional options.
+		 */
+		$cached_url = \apply_filters(
+			'activitypub_remote_media_url',
+			$url,
+			'emoji',
+			null,
+			array( 'updated' => $attrs['updated'] ?? null )
+		);
+
+		return Emoji::get_img_tag( $cached_url ?: $url, $name );
+	}
+
+	/**
+	 * Render the image block.
+	 *
+	 * Replaces remote image URL with cached URL at runtime.
+	 *
+	 * @param array  $attrs   The block attributes.
+	 * @param string $content The block inner content (img tag).
+	 *
+	 * @return string The rendered content with cached URL.
+	 */
+	public static function render_image_block( $attrs, $content ) {
+		if ( empty( $attrs['url'] ) || empty( $content ) ) {
+			return $content;
+		}
+
+		$url = $attrs['url'];
+
+		// Get entity ID from context.
+		$entity_id = null;
+		$post      = \get_post();
+		if ( $post ) {
+			$entity_id = $post->ID;
+		}
+
+		/**
+		 * Filters a remote image URL for caching.
+		 *
+		 * @param string      $url       The remote image URL.
+		 * @param string      $context   The context ('media').
+		 * @param int|null    $entity_id The entity ID.
+		 * @param array       $options   Additional options.
+		 */
+		$cached_url = \apply_filters( 'activitypub_remote_media_url', $url, 'media', $entity_id, array() );
+
+		if ( $cached_url && $cached_url !== $url ) {
+			return \str_replace( $url, $cached_url, $content );
+		}
+
+		return $content;
+	}
+
+	/**
+	 * Render the audio block.
+	 *
+	 * Replaces remote audio URL with cached URL at runtime.
+	 *
+	 * @param array  $attrs   The block attributes.
+	 * @param string $content The block inner content (audio tag).
+	 *
+	 * @return string The rendered content with cached URL.
+	 */
+	public static function render_audio_block( $attrs, $content ) {
+		if ( empty( $attrs['url'] ) || empty( $content ) ) {
+			return $content;
+		}
+
+		$url = $attrs['url'];
+
+		// Get entity ID from context.
+		$entity_id = null;
+		$post      = \get_post();
+		if ( $post ) {
+			$entity_id = $post->ID;
+		}
+
+		/**
+		 * Filters a remote audio URL for caching.
+		 *
+		 * @param string      $url       The remote audio URL.
+		 * @param string      $context   The context ('audio').
+		 * @param int|null    $entity_id The entity ID.
+		 * @param array       $options   Additional options.
+		 */
+		$cached_url = \apply_filters( 'activitypub_remote_media_url', $url, 'audio', $entity_id, array() );
+
+		if ( $cached_url && $cached_url !== $url ) {
+			return \str_replace( $url, $cached_url, $content );
+		}
+
+		return $content;
+	}
+
+	/**
+	 * Render the video block.
+	 *
+	 * Replaces remote video URL with cached URL at runtime.
+	 *
+	 * @param array  $attrs   The block attributes.
+	 * @param string $content The block inner content (video tag).
+	 *
+	 * @return string The rendered content with cached URL.
+	 */
+	public static function render_video_block( $attrs, $content ) {
+		if ( empty( $attrs['url'] ) || empty( $content ) ) {
+			return $content;
+		}
+
+		$url = $attrs['url'];
+
+		// Get entity ID from context.
+		$entity_id = null;
+		$post      = \get_post();
+		if ( $post ) {
+			$entity_id = $post->ID;
+		}
+
+		/**
+		 * Filters a remote video URL for caching.
+		 *
+		 * @param string      $url       The remote video URL.
+		 * @param string      $context   The context ('video').
+		 * @param int|null    $entity_id The entity ID.
+		 * @param array       $options   Additional options.
+		 */
+		$cached_url = \apply_filters( 'activitypub_remote_media_url', $url, 'video', $entity_id, array() );
+
+		if ( $cached_url && $cached_url !== $url ) {
+			return \str_replace( $url, $cached_url, $content );
+		}
+
+		return $content;
+	}
+
+	/**
 	 * Render the reply block.
 	 *
 	 * @param array $attrs The block attributes.
@@ -376,14 +703,25 @@ class Blocks {
 	/**
 	 * Renders a modal component that can be used by different blocks.
 	 *
-	 * @param array $args Arguments for the modal.
+	 * @param array $args {
+	 *     Arguments for the modal.
+	 *
+	 *     @type string $content       The modal content HTML.
+	 *     @type string $id            Optional ID prefix for the modal elements.
+	 *     @type bool   $is_compact    Whether the modal is compact (popover-style). Default false.
+	 *     @type string $title         Static title text for the modal header.
+	 *     @type string $title_binding Optional Interactivity API binding for a dynamic title
+	 *                                 (e.g. 'context.modal.title'). When set, uses data-wp-text
+	 *                                 on the title element and enables dynamic compact toggling.
+	 * }
 	 */
 	public static function render_modal( $args = array() ) {
 		$defaults = array(
-			'content'    => '',
-			'id'         => '',
-			'is_compact' => false,
-			'title'      => '',
+			'content'       => '',
+			'id'            => '',
+			'is_compact'    => false,
+			'title'         => '',
+			'title_binding' => '',
 		);
 
 		$args = \wp_parse_args( $args, $defaults );
@@ -393,22 +731,28 @@ class Blocks {
 			class="activitypub-modal__overlay<?php echo \esc_attr( $args['is_compact'] ? ' compact' : '' ); ?>"
 			data-wp-bind--hidden="!context.modal.isOpen"
 			data-wp-watch="callbacks.handleModalEffects"
+			<?php if ( ! empty( $args['title_binding'] ) ) : ?>
+				data-wp-class--compact="context.modal.isCompact"
+			<?php endif; ?>
 			role="dialog"
 			aria-modal="true"
 			hidden
 		>
 			<div class="activitypub-modal__frame">
-				<?php if ( ! $args['is_compact'] || ! empty( $args['title'] ) ) : ?>
+				<?php if ( ! $args['is_compact'] || ! empty( $args['title'] ) || ! empty( $args['title_binding'] ) ) : ?>
 					<div class="activitypub-modal__header">
 						<h2
 							class="activitypub-modal__title"
 							<?php if ( ! empty( $args['id'] ) ) : ?>
 								id="<?php echo \esc_attr( $args['id'] . '-title' ); ?>"
 							<?php endif; ?>
+							<?php if ( ! empty( $args['title_binding'] ) ) : ?>
+								data-wp-text="<?php echo \esc_attr( $args['title_binding'] ); ?>"
+							<?php endif; ?>
 						><?php echo \esc_html( $args['title'] ); ?></h2>
 						<button
 							type="button"
-							class="activitypub-modal__close wp-element-button wp-block-button__link"
+							class="activitypub-modal__close wp-element-button"
 							data-wp-on--click="actions.closeModal"
 							aria-label="<?php echo \esc_attr__( 'Close dialog', 'activitypub' ); ?>"
 						>
@@ -423,6 +767,28 @@ class Blocks {
 				</div>
 			</div>
 		</div>
+		<?php
+	}
+
+	/**
+	 * Renders a help section explaining the Fediverse inside modal dialogs.
+	 *
+	 * Outputs a collapsible `<details>` element that explains decentralized
+	 * interactions to users unfamiliar with the Fediverse.
+	 *
+	 * @since 8.0.0
+	 */
+	public static function render_modal_help() {
+		?>
+		<details class="activitypub-dialog__help">
+			<summary><?php \esc_html_e( 'Why do I need to enter my profile?', 'activitypub' ); ?></summary>
+			<p>
+				<?php \esc_html_e( 'This site is part of the ⁂ open social web, a network of interconnected social platforms (like Mastodon, Pixelfed, Friendica, and others). Unlike centralized social media, your account lives on a platform of your choice, and you can interact with people across different platforms.', 'activitypub' ); ?>
+			</p>
+			<p>
+				<?php \esc_html_e( 'By entering your profile, we can send you to your account where you can complete this action.', 'activitypub' ); ?>
+			</p>
+		</details>
 		<?php
 	}
 
@@ -680,5 +1046,112 @@ class Blocks {
 			return $block_content;
 		}
 		return '<p><a href="' . esc_url( $block['attrs']['url'] ) . '">' . $block['attrs']['url'] . '</a></p>';
+	}
+
+	/**
+	 * Convert HTML content to blocks.
+	 *
+	 * Tokenizes the content with wp_html_split(), tracks nesting depth,
+	 * and wraps each top-level element in block comment delimiters.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $content The HTML content.
+	 *
+	 * @return string The content converted to blocks.
+	 */
+	public static function convert_from_html( $content ) {
+		if ( empty( $content ) ) {
+			return '';
+		}
+
+		$tokens       = \wp_html_split( $content );
+		$_content     = '';
+		$depth        = 0;
+		$current_tag  = '';
+		$current_html = '';
+
+		foreach ( $tokens as $token ) {
+			if ( '' === $token ) {
+				continue;
+			}
+
+			// Text content — accumulate only inside a top-level element.
+			if ( '<' !== $token[0] ) {
+				if ( $depth > 0 ) {
+					$current_html .= $token;
+				}
+				continue;
+			}
+
+			// Closing tag.
+			if ( '/' === $token[1] ) {
+				$current_html .= $token;
+				--$depth;
+
+				if ( 0 === $depth && '' !== $current_tag ) {
+					$_content    .= self::to_block( $current_tag, $current_html );
+					$current_tag  = '';
+					$current_html = '';
+				}
+				continue;
+			}
+
+			// Extract the tag name from the opening tag.
+			if ( ! \preg_match( '/^<([a-zA-Z][a-zA-Z0-9]*)/', $token, $m ) ) {
+				if ( $depth > 0 ) {
+					$current_html .= $token;
+				}
+				continue;
+			}
+
+			$tag = \strtoupper( $m[1] );
+
+			// Start of a new top-level element.
+			if ( 0 === $depth ) {
+				$current_tag  = $tag;
+				$current_html = $token;
+			} else {
+				$current_html .= $token;
+			}
+
+			// Void elements don't increase depth — flush immediately at top level.
+			if ( \in_array( $tag, self::VOID_TAGS, true ) ) {
+				if ( 0 === $depth && '' !== $current_tag ) {
+					$_content    .= self::to_block( $current_tag, $current_html );
+					$current_tag  = '';
+					$current_html = '';
+				}
+			} else {
+				++$depth;
+			}
+		}
+
+		return $_content;
+	}
+
+	/**
+	 * Wrap an HTML element in block comment delimiters.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $tag  The uppercase tag name.
+	 * @param string $html The element HTML.
+	 *
+	 * @return string The block-wrapped HTML, or empty string for skipped tags.
+	 */
+	private static function to_block( $tag, $html ) {
+		if ( \in_array( $tag, self::SKIP_TAGS, true ) ) {
+			return '';
+		}
+
+		$block_type  = self::BLOCK_MAP[ $tag ] ?? 'html';
+		$block_attrs = array();
+
+		if ( 'OL' === $tag ) {
+			$block_attrs['ordered'] = true;
+		}
+
+		return \get_comment_delimited_block_content( $block_type, $block_attrs, \trim( $html ) );
 	}
 }

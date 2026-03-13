@@ -33,6 +33,17 @@ function is_comment() {
 }
 
 /**
+ * Get the ActivityPub ID of a Comment by the WordPress Comment ID.
+ *
+ * @param int|\WP_Comment $id The WordPress Comment ID or object.
+ *
+ * @return string The ActivityPub ID (a URL) of the Comment.
+ */
+function get_comment_id( $id ) {
+	return Comment::generate_id( $id );
+}
+
+/**
  * Get the comment from an ActivityPub Object ID.
  *
  * @param string $id ActivityPub object ID (usually a URL) to check.

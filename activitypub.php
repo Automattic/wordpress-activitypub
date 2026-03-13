@@ -3,12 +3,12 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/Automattic/wordpress-activitypub
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 7.8.5
+ * Version: 8.0.1
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
  * License URI: http://opensource.org/licenses/MIT
- * Requires PHP: 7.2
+ * Requires PHP: 7.4
  * Text Domain: activitypub
  * Domain Path: /languages
  *
@@ -17,7 +17,7 @@
 
 namespace Activitypub;
 
-\define( 'ACTIVITYPUB_PLUGIN_VERSION', '7.8.5' );
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '8.0.1' );
 
 // Plugin related constants.
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -32,6 +32,7 @@ require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/functions-activity.php';
 require_once __DIR__ . '/includes/functions-comment.php';
 require_once __DIR__ . '/includes/functions-federation.php';
+require_once __DIR__ . '/includes/functions-media.php';
 require_once __DIR__ . '/includes/functions-post.php';
 require_once __DIR__ . '/includes/functions-request.php';
 require_once __DIR__ . '/includes/functions-url.php';
@@ -60,6 +61,11 @@ function rest_init() {
 	( new Rest\Inbox_Controller() )->register_routes();
 	( new Rest\Interaction_Controller() )->register_routes();
 	( new Rest\Moderators_Controller() )->register_routes();
+	if ( \get_option( 'activitypub_api', false ) ) {
+		( new Rest\OAuth\Authorization_Controller() )->register_routes();
+		( new Rest\OAuth\Clients_Controller() )->register_routes();
+		( new Rest\OAuth\Token_Controller() )->register_routes();
+	}
 	( new Rest\Outbox_Controller() )->register_routes();
 	( new Rest\Post_Controller() )->register_routes();
 	( new Rest\Replies_Controller() )->register_routes();
@@ -69,6 +75,7 @@ function rest_init() {
 	if ( is_blog_public() ) {
 		( new Rest\Nodeinfo_Controller() )->register_routes();
 	}
+	( new Rest\Proxy_Controller() )->register_routes();
 }
 \add_action( 'rest_api_init', __NAMESPACE__ . '\rest_init' );
 
@@ -77,8 +84,8 @@ function rest_init() {
  */
 function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Activitypub', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Attachments', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Avatars', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Cache', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Dispatcher', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Embed', 'init' ) );
@@ -96,6 +103,10 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ), 0 );
 	\add_action( 'init', array( __NAMESPACE__ . '\Search', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Signature', 'init' ) );
+	// Only load OAuth Server if the ActivityPub API is enabled.
+	if ( \get_option( 'activitypub_api', false ) ) {
+		\add_action( 'init', array( __NAMESPACE__ . '\OAuth\Server', 'init' ) );
+	}
 
 	if ( site_supports_blocks() ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
@@ -163,13 +174,10 @@ function activation_redirect( $plugin ) {
 }
 \add_action( 'activated_plugin', __NAMESPACE__ . '\activation_redirect' );
 
-// Check for CLI env, to add the CLI commands.Add commentMore actions.
+// Check for CLI env, to add the CLI commands.
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
-	\WP_CLI::add_command(
-		'activitypub',
-		'\Activitypub\Cli',
-		array(
-			'shortdesc' => 'ActivityPub related commands to manage plugin functionality and the federation of posts and comments.',
-		)
-	);
+	Cli::register();
 }
+
+// Register OAuth login form handler early (before wp-login.php processes).
+\add_action( 'login_form_activitypub_authorize', array( __NAMESPACE__ . '\OAuth\Server', 'login_form_authorize' ) );

@@ -923,11 +923,10 @@ class Post extends Base {
 				case 'core/image':
 				case 'core/cover':
 					if ( ! empty( $block['attrs']['id'] ) ) {
-						$alt   = '';
-						$check = preg_match( '/<img.*?alt\s*=\s*([\"\'])(.*?)\1.*>/i', $block['innerHTML'], $match );
-
-						if ( $check ) {
-							$alt = $match[2];
+						$alt       = '';
+						$processor = new \WP_HTML_Tag_Processor( $block['innerHTML'] );
+						if ( $processor->next_tag( array( 'tag_name' => 'img' ) ) ) {
+							$alt = $processor->get_attribute( 'alt' ) ?? '';
 						}
 
 						$found = false;
@@ -955,7 +954,18 @@ class Post extends Base {
 				case 'core/video':
 				case 'videopress/video':
 					if ( ! empty( $block['attrs']['id'] ) ) {
-						$media['video'][] = array( 'id' => $block['attrs']['id'] );
+						$video = array( 'id' => $block['attrs']['id'] );
+
+						// The poster is stored as an HTML attribute on the <video> tag, not in block attrs.
+						$processor = new \WP_HTML_Tag_Processor( $block['innerHTML'] );
+						if ( $processor->next_tag( array( 'tag_name' => 'video' ) ) ) {
+							$poster = $processor->get_attribute( 'poster' );
+							if ( ! empty( $poster ) ) {
+								$video['icon'] = \esc_url_raw( $poster );
+							}
+						}
+
+						$media['video'][] = $video;
 					}
 					break;
 				case 'jetpack/slideshow':
@@ -1143,7 +1153,14 @@ class Post extends Base {
 	 * @return array The quote policy.
 	 */
 	private function get_quote_policy() {
-		switch ( \get_post_meta( $this->item->ID, 'activitypub_interaction_policy_quote', true ) ) {
+		$policy = \get_post_meta( $this->item->ID, 'activitypub_interaction_policy_quote', true );
+
+		// Fall back to global default if not set.
+		if ( ! $policy ) {
+			$policy = \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
+		}
+
+		switch ( $policy ) {
 			case ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS:
 				return array( 'automaticApproval' => get_rest_url_by_path( sprintf( 'actors/%d/followers', $this->item->post_author ) ) );
 

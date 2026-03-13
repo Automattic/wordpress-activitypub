@@ -27,9 +27,6 @@ class Post {
 		// Post transitions.
 		\add_action( 'wp_after_insert_post', array( self::class, 'triage' ), 33, 4 );
 
-		// Async handler for add_to_outbox.
-		\add_action( 'activitypub_add_to_outbox', array( self::class, 'add_to_outbox' ), 10, 3 );
-
 		// Attachment transitions.
 		\add_action( 'add_attachment', array( self::class, 'transition_attachment_status' ) );
 		\add_action( 'edit_attachment', array( self::class, 'transition_attachment_status' ) );
@@ -66,14 +63,23 @@ class Post {
 			return;
 		}
 
+		$object_status = get_wp_object_state( $post );
+
+		// If the post is already soft-deleted, do not create any more activities.
+		if (
+			ACTIVITYPUB_OBJECT_STATE_DELETED === $object_status &&
+			in_array( get_content_visibility( $post ), array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ), true )
+		) {
+			return;
+		}
+
 		// Bail on bulk edits, unless post author or post status changed.
 		if ( isset( $_REQUEST['bulk_edit'] ) && ( ! isset( $_REQUEST['post_author'] ) || -1 === (int) $_REQUEST['post_author'] ) && -1 === (int) $_REQUEST['_status'] ) { // phpcs:ignore WordPress
 			return;
 		}
 
-		$new_status    = get_post_status( $post );
-		$old_status    = $post_before ? get_post_status( $post_before ) : null;
-		$object_status = get_wp_object_state( $post );
+		$new_status = get_post_status( $post );
+		$old_status = $post_before ? get_post_status( $post_before ) : null;
 
 		switch ( $new_status ) {
 			case 'publish':
@@ -101,6 +107,14 @@ class Post {
 			return;
 		}
 
+		/*
+		 * If the post was already federated and this is a Create, skip.
+		 * The outbox controller already added it to the outbox.
+		 */
+		if ( ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status && 'Create' === $type ) {
+			return;
+		}
+
 		// If the post was never federated before, it should be a Create activity.
 		if ( empty( $object_status ) && 'Update' === $type ) {
 			$type = 'Create';
@@ -111,37 +125,7 @@ class Post {
 			$type = 'Delete';
 		}
 
-		// Schedule async add to outbox to avoid blocking post save.
-		$scheduled = \wp_schedule_single_event( time(), 'activitypub_add_to_outbox', array( $post_id, $type, $post->post_author ) );
-
-		// Fall back to synchronous execution if scheduling fails (e.g., in tests or when cron is disabled).
-		if ( true !== $scheduled ) {
-			add_to_outbox( $post, $type, $post->post_author );
-		}
-	}
-
-	/**
-	 * Async handler for adding a post to the outbox.
-	 *
-	 * This runs asynchronously via WP Cron to avoid blocking the post save process.
-	 *
-	 * @param int    $post_id Post ID.
-	 * @param string $type    Activity type (Create, Update, Delete).
-	 * @param int    $user_id User ID.
-	 */
-	public static function add_to_outbox( $post_id, $type, $user_id ) {
-		$post = \get_post( $post_id );
-
-		if ( ! $post ) {
-			return;
-		}
-
-		// Re-validate that the post is still eligible for federation.
-		if ( is_post_disabled( $post ) ) {
-			return;
-		}
-
-		add_to_outbox( $post, $type, $user_id );
+		add_to_outbox( $post, $type, $post->post_author );
 	}
 
 	/**
@@ -182,13 +166,7 @@ class Post {
 				return;
 		}
 
-		// Schedule async add to outbox to avoid blocking attachment save.
-		$scheduled = \wp_schedule_single_event( time(), 'activitypub_add_to_outbox', array( $post_id, $type, $post->post_author ) );
-
-		// Fall back to synchronous execution if scheduling fails (e.g., in tests or when cron is disabled).
-		if ( true !== $scheduled ) {
-			add_to_outbox( $post, $type, $post->post_author );
-		}
+		add_to_outbox( $post, $type, $post->post_author );
 	}
 
 	/**

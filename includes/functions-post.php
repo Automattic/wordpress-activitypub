@@ -9,7 +9,7 @@
 
 namespace Activitypub;
 
-use Activitypub\Collection\Posts;
+use Activitypub\Collection\Remote_Posts;
 
 /**
  * Check if a post is disabled for ActivityPub.
@@ -76,7 +76,7 @@ function is_ap_post( $post ) {
 	}
 
 	// Check for ap_post post type.
-	return Posts::POST_TYPE === $post->post_type;
+	return Remote_Posts::POST_TYPE === $post->post_type;
 }
 
 /**

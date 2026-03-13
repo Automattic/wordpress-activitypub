@@ -2,12 +2,18 @@
   "$schema": "https://schemas.wp.org/trunk/block.json",
   "name": "activitypub/followers",
   "apiVersion": 3,
-  "version": "7.8.4",
+  "version": "8.0.1",
   "title": "Fediverse Followers",
   "category": "widgets",
   "description": "Display your followers from the Fediverse on your website.",
   "textdomain": "activitypub",
   "icon": "groups",
+  "keywords": [
+    "fediverse",
+    "activitypub",
+    "followers",
+    "mastodon"
+  ],
   "supports": {
     "html": false,
     "interactivity": true

@@ -8,6 +8,7 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Activity\Actor;
+use Activitypub\Http;
 use Activitypub\Webfinger;
 
 /**
@@ -130,12 +131,9 @@ class Test_Webfinger extends \WP_UnitTestCase {
 					'body'     => 'error',
 				),
 				new \WP_Error(
-					'webfinger_url_not_accessible',
-					__( 'The WebFinger Resource is not accessible.', 'activitypub' ),
-					array(
-						'status' => 400,
-						'data'   => 'https://example.org/.well-known/webfinger?resource=http%3A%2F%2Fexample.org%2F%3Fauthor%3D1',
-					)
+					400,
+					__( 'Failed HTTP Request', 'activitypub' ),
+					array( 'status' => 400 )
 				),
 			),
 			array(
@@ -144,15 +142,12 @@ class Test_Webfinger extends \WP_UnitTestCase {
 					'response' => array(
 						'code' => 404,
 					),
-					'body'     => '{"type":"about:blank","title":"activitypub_wrong_host","detail":"Der Ressourcen-Host stimmt nicht mit dem Blog-Host \u00fcberein","status":404,"metadata":{"code":"activitypub_wrong_host","message":"Der Ressourcen-Host stimmt nicht mit dem Blog-Host \u00fcberein","data":{"status":404}}}',
+					'body'     => '{"type":"about:blank","title":"activitypub_wrong_host"}',
 				),
 				new \WP_Error(
-					'webfinger_url_not_accessible',
-					__( 'The WebFinger Resource is not accessible.', 'activitypub' ),
-					array(
-						'status' => 400,
-						'data'   => 'https://example.org/.well-known/webfinger?resource=acct%3Atest%40example.org',
-					)
+					404,
+					__( 'Failed HTTP Request', 'activitypub' ),
+					array( 'status' => 404 )
 				),
 			),
 		);
@@ -319,5 +314,359 @@ class Test_Webfinger extends \WP_UnitTestCase {
 				'author@example.org',
 			),
 		);
+	}
+
+	/**
+	 * Test get_intent_endpoint with FEP-3b86 link.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_fep3b86() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => array(
+							array(
+								'rel'      => 'https://w3id.org/fep/3b86/like',
+								'template' => 'https://example.com/intent/like?object={object}',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like' );
+
+		$this->assertEquals( 'https://example.com/intent/like?object={object}', $result );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test get_intent_endpoint falls back to OStatus subscribe.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_ostatus_fallback() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => array(
+							array(
+								'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+								'template' => 'https://example.com/authorize_interaction?uri={uri}',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like', true );
+
+		$this->assertEquals( 'https://example.com/authorize_interaction?uri={uri}', $result );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test get_intent_endpoint without fallback returns error.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_no_fallback_returns_error() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => array(
+							array(
+								'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+								'template' => 'https://example.com/authorize_interaction?uri={uri}',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like', false );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'webfinger_missing_intent_endpoint', $result->get_error_code() );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test get_intent_endpoint last-resort Mastodon-compatible URL for handle.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_mastodon_fallback_from_handle() {
+		// Provide links that don't match any intent or OStatus template.
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@mastodon.social',
+						'links'   => array(
+							array(
+								'rel'  => 'self',
+								'type' => 'application/activity+json',
+								'href' => 'https://mastodon.social/users/user',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@mastodon.social', 'like', true );
+
+		$this->assertEquals( 'https://mastodon.social/authorize_interaction?uri={uri}', $result );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test get_intent_endpoint with missing links returns error.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_missing_links() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'webfinger_missing_links', $result->get_error_code() );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test get_intent_endpoint with a full URL intent.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_full_url_intent() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => array(
+							array(
+								'rel'      => 'https://custom.example/intent/share',
+								'template' => 'https://example.com/share?url={uri}',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'https://custom.example/intent/share' );
+
+		$this->assertEquals( 'https://example.com/share?url={uri}', $result );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test that WebFinger 4xx failures are cached (longer duration).
+	 *
+	 * @covers ::get_data
+	 */
+	public function test_get_data_caches_4xx_failure() {
+		$webfinger_url = 'https://unreachable.example/.well-known/webfinger?resource=acct%3Afailure-test-4xx%40unreachable.example';
+
+		// Clear Http cache.
+		\delete_transient( Http::generate_cache_key( $webfinger_url ) );
+
+		// Mock a 404 HTTP response.
+		$request_count = 0;
+		$filter        = function () use ( &$request_count ) {
+			++$request_count;
+			return array(
+				'response' => array(
+					'code' => 404,
+				),
+				'body'     => 'Not Found',
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		// First call should make an HTTP request and return an error.
+		$result = Webfinger::get_data( 'failure-test-4xx@unreachable.example' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 404, $result->get_error_code() );
+		$this->assertEquals( 1, $request_count, 'First call should make one HTTP request' );
+
+		// Second call should return cached error without making another HTTP request.
+		$result = Webfinger::get_data( 'failure-test-4xx@unreachable.example' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 404, $result->get_error_code() );
+		$this->assertEquals( 1, $request_count, 'Second call should use cache, not make another HTTP request' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		// Clean up.
+		\delete_transient( Http::generate_cache_key( $webfinger_url ) );
+	}
+
+	/**
+	 * Test that WebFinger 5xx failures are cached (shorter duration).
+	 *
+	 * @covers ::get_data
+	 */
+	public function test_get_data_caches_5xx_failure() {
+		$webfinger_url = 'https://unreachable.example/.well-known/webfinger?resource=acct%3Afailure-test-5xx%40unreachable.example';
+
+		// Clear Http cache.
+		\delete_transient( Http::generate_cache_key( $webfinger_url ) );
+
+		// Mock a 503 HTTP response.
+		$request_count = 0;
+		$filter        = function () use ( &$request_count ) {
+			++$request_count;
+			return array(
+				'response' => array(
+					'code' => 503,
+				),
+				'body'     => 'Service Unavailable',
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		// First call should make an HTTP request and return an error.
+		$result = Webfinger::get_data( 'failure-test-5xx@unreachable.example' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 503, $result->get_error_code() );
+		$this->assertEquals( 1, $request_count, 'First call should make one HTTP request' );
+
+		// Second call should return cached error without making another HTTP request.
+		$result = Webfinger::get_data( 'failure-test-5xx@unreachable.example' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 503, $result->get_error_code() );
+		$this->assertEquals( 1, $request_count, 'Second call should use cache, not make another HTTP request' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		// Clean up.
+		\delete_transient( Http::generate_cache_key( $webfinger_url ) );
+	}
+
+	/**
+	 * Test that WebFinger timeout failures are cached (shorter duration).
+	 *
+	 * @covers ::get_data
+	 */
+	public function test_get_data_caches_timeout_failure() {
+		$webfinger_url = 'https://unreachable.example/.well-known/webfinger?resource=acct%3Afailure-test-timeout%40unreachable.example';
+
+		// Clear Http cache.
+		\delete_transient( Http::generate_cache_key( $webfinger_url ) );
+
+		// Mock a timeout (WP_Error).
+		$request_count = 0;
+		$filter        = function () use ( &$request_count ) {
+			++$request_count;
+			return new \WP_Error( 'http_request_failed', 'Connection timed out' );
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		// First call should make an HTTP request and return an error.
+		$result = Webfinger::get_data( 'failure-test-timeout@unreachable.example' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 1, $request_count, 'First call should make one HTTP request' );
+
+		// Second call should return cached error without making another HTTP request.
+		$result = Webfinger::get_data( 'failure-test-timeout@unreachable.example' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 1, $request_count, 'Second call should use cache, not make another HTTP request' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		// Clean up.
+		\delete_transient( Http::generate_cache_key( $webfinger_url ) );
+	}
+
+	/**
+	 * Test that WebFinger successes are still cached properly.
+	 *
+	 * @covers ::get_data
+	 */
+	public function test_get_data_caches_success() {
+		$uri = 'success-test@reachable.example';
+
+		// Clear any existing cache.
+		$transient_key = Webfinger::generate_cache_key( $uri );
+		\delete_transient( $transient_key );
+
+		// Mock a successful HTTP response.
+		$request_count = 0;
+		$filter        = function () use ( &$request_count ) {
+			++$request_count;
+			return array(
+				'response' => array(
+					'code' => 200,
+				),
+				'body'     => '{ "subject": "acct:success-test@reachable.example", "links": [] }',
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		// First call should make an HTTP request.
+		$result = Webfinger::get_data( $uri );
+
+		$this->assertIsArray( $result );
+		$this->assertEquals( 'acct:success-test@reachable.example', $result['subject'] );
+		$this->assertEquals( 1, $request_count, 'First call should make one HTTP request' );
+
+		// Second call should use cache.
+		$result = Webfinger::get_data( $uri );
+
+		$this->assertIsArray( $result );
+		$this->assertEquals( 'acct:success-test@reachable.example', $result['subject'] );
+		$this->assertEquals( 1, $request_count, 'Second call should use cache, not make another HTTP request' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		// Clean up.
+		\delete_transient( $transient_key );
 	}
 }

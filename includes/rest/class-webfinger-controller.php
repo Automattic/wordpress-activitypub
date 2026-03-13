@@ -85,8 +85,7 @@ class Webfinger_Controller extends \WP_REST_Controller {
 			$response,
 			$code,
 			array(
-				'Access-Control-Allow-Origin' => '*',
-				'Content-Type'                => 'application/jrd+json; charset=' . \get_option( 'blog_charset' ),
+				'Content-Type' => 'application/jrd+json; charset=' . \get_option( 'blog_charset' ),
 			)
 		);
 	}

@@ -1,10 +1,12 @@
+@use "@wordpress/base-styles/colors";
+
 .activitypub-feed-content {
-	border-bottom: var(--wpds-border-width-control, 1px) solid var(--wpds-color-stroke-neutral-weak, #dcdcde);
+	border-bottom: var(--wpds-border-width-control, 1px) solid colors.$gray-300;
 	min-width: 0;
 	max-width: 100%;
 
 	line-height: 1.6;
-	color: var(--wpds-color-fg-primary, #2c3338);
+	color: colors.$gray-900;
 	overflow-wrap: break-word;
 	word-wrap: break-word;
 

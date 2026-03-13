@@ -7,7 +7,7 @@
 
 namespace Activitypub\Tests;
 
-use Activitypub\Collection\Posts;
+use Activitypub\Collection\Remote_Posts;
 use Activitypub\Comment;
 
 /**
@@ -227,8 +227,32 @@ class Test_Comment extends \WP_UnitTestCase {
 		self::factory()->comment->create_post_comments( $post_id, 3, array( 'comment_approved' => '1' ) );
 		$this->assertSame( 5, Comment::pre_wp_update_comment_count_now( null, 0, $post_id ) );
 
-		// Case 4: $new is not null, should return $new unmodified.
+		// Case 4: $new is not null (set by another filter), should return $new unmodified.
 		$this->assertSame( 10, Comment::pre_wp_update_comment_count_now( 10, 0, $post_id ) );
+
+		// Case 5: Other plugins can exclude additional types via the filter.
+		$add_note = function ( $types ) {
+			$types[] = 'note';
+			return $types;
+		};
+		\add_filter( 'activitypub_excluded_comment_types', $add_note );
+
+		self::factory()->comment->create_post_comments(
+			$post_id,
+			2,
+			array(
+				'comment_approved' => '1',
+				'comment_type'     => 'note',
+			)
+		);
+		// 5 regular + 2 note + 3 like = 10 total, but like and note excluded = 5.
+		$this->assertSame( 5, Comment::pre_wp_update_comment_count_now( null, 0, $post_id ) );
+
+		\remove_filter( 'activitypub_excluded_comment_types', $add_note );
+
+		// Case 6: Without the filter, 'note' types are counted normally.
+		// 5 regular + 2 note = 7 (only like excluded).
+		$this->assertSame( 7, Comment::pre_wp_update_comment_count_now( null, 0, $post_id ) );
 	}
 
 	/**
@@ -1039,7 +1063,7 @@ class Test_Comment extends \WP_UnitTestCase {
 		$post_types = Comment::hide_for();
 
 		$this->assertIsArray( $post_types );
-		$this->assertContains( Posts::POST_TYPE, $post_types, 'ap_post should be in the list of post types to hide comments for' );
+		$this->assertContains( Remote_Posts::POST_TYPE, $post_types, 'ap_post should be in the list of post types to hide comments for' );
 		$this->assertCount( 1, $post_types, 'Only ap_post should be in the default list' );
 	}
 
@@ -1059,7 +1083,7 @@ class Test_Comment extends \WP_UnitTestCase {
 		$post_types = Comment::hide_for();
 
 		$this->assertContains( 'custom_post_type', $post_types, 'Filter should be able to add custom post types' );
-		$this->assertContains( Posts::POST_TYPE, $post_types, 'ap_post should still be in the list' );
+		$this->assertContains( Remote_Posts::POST_TYPE, $post_types, 'ap_post should still be in the list' );
 
 		\remove_filter( 'activitypub_hide_comments_for', $filter );
 	}
@@ -1071,14 +1095,14 @@ class Test_Comment extends \WP_UnitTestCase {
 	 */
 	public function test_hide_for_filter_can_remove_post_types() {
 		$filter = function ( $post_types ) {
-			return array_diff( $post_types, array( Posts::POST_TYPE ) );
+			return array_diff( $post_types, array( Remote_Posts::POST_TYPE ) );
 		};
 
 		\add_filter( 'activitypub_hide_comments_for', $filter );
 
 		$post_types = Comment::hide_for();
 
-		$this->assertNotContains( Posts::POST_TYPE, $post_types, 'Filter should be able to remove ap_post from the list' );
+		$this->assertNotContains( Remote_Posts::POST_TYPE, $post_types, 'Filter should be able to remove ap_post from the list' );
 
 		\remove_filter( 'activitypub_hide_comments_for', $filter );
 	}

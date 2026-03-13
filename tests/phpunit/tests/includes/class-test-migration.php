@@ -100,6 +100,17 @@ class Test_Migration extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Restore hooks removed in set_up_before_class.
+	 */
+	public static function tear_down_after_class() {
+		\add_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ), 33, 4 );
+		\add_action( 'transition_comment_status', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity' ), 20, 3 );
+		\add_action( 'wp_insert_comment', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity_on_insert' ), 10, 2 );
+
+		parent::tear_down_after_class();
+	}
+
+	/**
 	 * Tear down the test.
 	 */
 	public function tear_down() {
