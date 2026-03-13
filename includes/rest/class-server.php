@@ -177,14 +177,10 @@ class Server {
 			return $response;
 		}
 
-		/*
-		 * Reflect the request Origin instead of using a wildcard to avoid
-		 * leaking private data to arbitrary origins on authenticated endpoints.
-		 */
-		$origin = isset( $_SERVER['HTTP_ORIGIN'] ) ? \esc_url_raw( \wp_unslash( $_SERVER['HTTP_ORIGIN'] ) ) : '';
+		$origin = self::get_cors_origin();
 		$response->header( 'Access-Control-Allow-Origin', $origin ? $origin : '*' );
 		$response->header( 'Access-Control-Allow-Methods', 'GET, POST, OPTIONS' );
-		$response->header( 'Access-Control-Allow-Headers', 'Accept, Content-Type, Authorization' );
+		$response->header( 'Access-Control-Allow-Headers', 'Accept, Content-Type, Authorization, Last-Event-ID' );
 
 		if ( $origin ) {
 			$response->header( 'Access-Control-Allow-Credentials', 'true' );
@@ -192,5 +188,40 @@ class Server {
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Send CORS headers directly via header().
+	 *
+	 * Use this for endpoints that bypass the REST response flow
+	 * (e.g. SSE streams that call exit() instead of returning a WP_REST_Response).
+	 *
+	 * @since unreleased
+	 */
+	public static function send_cors_headers() {
+		$origin = self::get_cors_origin();
+
+		\header( 'Access-Control-Allow-Origin: ' . ( $origin ? $origin : '*' ) );
+		\header( 'Access-Control-Allow-Methods: GET, POST, OPTIONS' );
+		\header( 'Access-Control-Allow-Headers: Accept, Content-Type, Authorization, Last-Event-ID' );
+
+		if ( $origin ) {
+			\header( 'Access-Control-Allow-Credentials: true' );
+			\header( 'Vary: Origin' );
+		}
+	}
+
+	/**
+	 * Get the CORS origin from the request.
+	 *
+	 * Reflects the request Origin instead of using a wildcard to avoid
+	 * leaking private data to arbitrary origins on authenticated endpoints.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string The origin or empty string.
+	 */
+	private static function get_cors_origin() {
+		return isset( $_SERVER['HTTP_ORIGIN'] ) ? \esc_url_raw( \wp_unslash( $_SERVER['HTTP_ORIGIN'] ) ) : '';
 	}
 }

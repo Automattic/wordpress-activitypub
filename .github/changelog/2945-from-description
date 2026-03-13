@@ -1,0 +1,4 @@
+Significance: patch
+Type: added
+
+Add real-time streaming for inbox and outbox updates via Server-Sent Events (SSE).

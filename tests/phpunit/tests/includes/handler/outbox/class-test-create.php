@@ -95,11 +95,11 @@ class Test_Create extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test outgoing non-Note/Article types return null.
+	 * Test outgoing non-Note/Article types return false.
 	 *
 	 * @covers ::handle_create
 	 */
-	public function test_outgoing_unsupported_type_returns_null() {
+	public function test_outgoing_unsupported_type_returns_false() {
 		$activity = array(
 			'type'   => 'Create',
 			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
@@ -382,11 +382,11 @@ class Test_Create extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test outgoing quotes return null.
+	 * Test outgoing quotes return false.
 	 *
 	 * @covers ::handle_create
 	 */
-	public function test_outgoing_quote_returns_null() {
+	public function test_outgoing_quote_returns_false() {
 		$activity = array(
 			'type'   => 'Create',
 			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
