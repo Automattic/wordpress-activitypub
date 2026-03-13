@@ -51,12 +51,21 @@ trait Event_Stream {
 	 * Check permissions for the stream endpoint.
 	 *
 	 * Requires OAuth authentication with the push scope.
+	 * Falls back to `access_token` query parameter for EventSource clients,
+	 * since the browser EventSource API cannot send custom headers.
+	 *
+	 * @see https://swicg.github.io/activitypub-api/sse
 	 *
 	 * @param \WP_REST_Request $request Full details about the request.
 	 *
 	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
 	 */
 	public function get_stream_permissions_check( $request ) {
+		// If not already OAuth-authenticated, try the access_token query parameter.
+		if ( ! OAuth_Server::is_oauth_request() ) {
+			$this->authenticate_from_query_param();
+		}
+
 		$oauth_result = OAuth_Server::check_oauth_permission( $request, Scope::PUSH );
 
 		if ( true !== $oauth_result ) {
@@ -73,6 +82,34 @@ trait Event_Stream {
 	}
 
 	/**
+	 * Authenticate from the access_token query parameter.
+	 *
+	 * The browser EventSource API cannot send custom headers, so SSE
+	 * clients pass the OAuth token as a query parameter. This method
+	 * injects it as an Authorization header and re-runs OAuth
+	 * authentication so the server recognizes the request.
+	 *
+	 * @since unreleased
+	 *
+	 * @see https://swicg.github.io/activitypub-api/sse
+	 */
+	private function authenticate_from_query_param() {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Opaque auth token, must not be altered.
+		if ( empty( $_GET['access_token'] ) || ! \is_string( $_GET['access_token'] ) ) {
+			return;
+		}
+
+		$token_string = \wp_unslash( $_GET['access_token'] );
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+
+		// Inject as Authorization header so the OAuth server can find it.
+		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $token_string;
+
+		// Re-run OAuth authentication.
+		OAuth_Server::authenticate_oauth( null );
+	}
+
+	/**
 	 * Stream SSE events for a collection.
 	 *
 	 * Sends raw SSE output and calls exit.
@@ -83,6 +120,9 @@ trait Event_Stream {
 	protected function stream_collection( $user_id, $collection ) {
 		// Allow PHP to detect client disconnects instead of auto-terminating.
 		ignore_user_abort( true );
+
+		// Extend PHP execution time for long-lived SSE connections.
+		set_time_limit( 0 );
 
 		$this->send_sse_headers();
 
@@ -118,6 +158,11 @@ trait Event_Stream {
 						$since_id = $item->ID;
 					}
 				}
+
+				// Re-set signal if we hit the limit, so remaining items are fetched next iteration.
+				if ( count( $new_items ) >= 20 ) {
+					\set_transient( $signal_key, time(), 5 * MINUTE_IN_SECONDS );
+				}
 			}
 
 			$this->send_sse_comment( 'keepalive ' . \gmdate( 'c' ) );
@@ -143,6 +188,9 @@ trait Event_Stream {
 	 */
 	protected function relay_remote_stream( $stream_url ) {
 		ignore_user_abort( true );
+
+		// Extend PHP execution time for long-lived SSE connections.
+		set_time_limit( 0 );
 
 		$parsed = \wp_parse_url( $stream_url );
 		$host   = $parsed['host'];
@@ -175,6 +223,8 @@ trait Event_Stream {
 
 		if ( ! $stream ) {
 			\status_header( 502 );
+			\header( 'Content-Type: application/json' );
+			Server::send_cors_headers();
 			echo \wp_json_encode(
 				array(
 					'code'    => 'activitypub_proxy_connection_failed',
@@ -221,6 +271,8 @@ trait Event_Stream {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Raw stream operation.
 			fclose( $stream );
 			\status_header( 502 );
+			\header( 'Content-Type: application/json' );
+			Server::send_cors_headers();
 			echo \wp_json_encode(
 				array(
 					'code'    => 'activitypub_proxy_stream_error',
@@ -281,7 +333,8 @@ trait Event_Stream {
 
 		\status_header( 200 );
 		\header( 'Content-Type: text/event-stream' );
-		\header( 'Cache-Control: no-cache' );
+		\header( 'Cache-Control: no-cache, no-store' );
+		\header( 'Referrer-Policy: no-referrer' );
 		\header( 'X-Accel-Buffering: no' );
 
 		// SSE exits before rest_post_dispatch, so CORS must be sent directly.

@@ -109,19 +109,6 @@ class Server {
 		$auth_header = self::get_authorization_header();
 
 		if ( ! $auth_header ) {
-			/*
-			 * Fall back to `access_token` query parameter for EventSource clients.
-			 * The browser EventSource API cannot send custom headers, so the SSE
-			 * spec requires accepting the token as a query parameter.
-			 *
-			 * @see https://swicg.github.io/activitypub-api/sse
-			 */
-			// phpcs:disable WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Opaque auth token, must not be altered.
-			if ( ! empty( $_GET['access_token'] ) ) {
-				return \wp_unslash( $_GET['access_token'] );
-			}
-			// phpcs:enable WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-
 			return null;
 		}
 
