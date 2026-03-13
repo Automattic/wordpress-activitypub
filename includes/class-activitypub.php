@@ -308,6 +308,17 @@ class Activitypub {
 
 		\register_meta(
 			'user',
+			$blog_prefix . 'activitypub_mailer_monthly_report',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Send a monthly Fediverse stats report email.',
+				'single'            => true,
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		\register_meta(
+			'user',
 			'activitypub_show_welcome_tab',
 			array(
 				'type'              => 'integer',

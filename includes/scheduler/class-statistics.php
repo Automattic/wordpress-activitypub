@@ -41,6 +41,7 @@ class Statistics {
 
 		foreach ( $user_ids as $user_id ) {
 			Statistics_Collector::collect_monthly_stats( $user_id, $year, $month );
+			self::send_monthly_email( $user_id, $year, $month );
 		}
 
 		// Reschedule to the exact next 1st of month to prevent drift from the 30-day interval.
@@ -91,55 +92,60 @@ class Statistics {
 	}
 
 	/**
-	 * Send the annual wrapped email.
+	 * Send the annual report email.
 	 *
 	 * @param int   $user_id The user ID.
 	 * @param int   $year    The year.
 	 * @param array $summary The annual summary data.
 	 */
 	public static function send_annual_email( $user_id, $year, $summary ) {
-		if ( empty( $summary ) ) {
+		if ( ! self::should_send_report( $user_id, $summary, 'activitypub_mailer_annual_report', '1' ) ) {
 			return;
 		}
 
-		// Check user preference for wrapped email.
-		if ( $user_id > \Activitypub\Collection\Actors::BLOG_USER_ID ) {
-			if ( ! \get_user_option( 'activitypub_mailer_annual_report', $user_id ) ) {
-				return;
-			}
-		} elseif ( '1' !== \get_option( 'activitypub_mailer_annual_report', '1' ) ) {
-			return;
+		// Get month name for most_active_month.
+		$most_active_month_name = '';
+		if ( ! empty( $summary['most_active_month'] ) ) {
+			$most_active_month_name = \date_i18n( 'F', \strtotime( \sprintf( '%d-%02d-01', $year, $summary['most_active_month'] ) ) );
 		}
 
-		// Don't send email if there's no activity.
-		// Check posts and all registered comment types dynamically.
-		$has_activity = ! empty( $summary['posts_count'] );
-		if ( ! $has_activity ) {
-			$comment_types = \array_keys( Statistics_Collector::get_comment_types_for_stats() );
-			foreach ( $comment_types as $type ) {
-				if ( ! empty( $summary[ $type . '_count' ] ) ) {
-					$has_activity = true;
-					break;
-				}
-			}
+		// Build follower text.
+		$followers_text = '';
+		if ( ! empty( $summary['followers_start'] ) || ! empty( $summary['followers_end'] ) ) {
+			$followers_text = \sprintf(
+				/* translators: 1: follower count at start, 2: follower count at end */
+				\__( 'From <strong>%1$s</strong> to <strong>%2$s</strong> followers', 'activitypub' ),
+				\number_format_i18n( $summary['followers_start'] ?? 0 ),
+				\number_format_i18n( $summary['followers_end'] ?? 0 )
+			);
 		}
 
-		if ( ! $has_activity ) {
-			return;
+		// Build supporter text.
+		$supporter_text = '';
+		if ( ! empty( $summary['top_multiplicator'] ) ) {
+			$supporter_text = \sprintf(
+				/* translators: 1: supporter name, 2: engagement count */
+				\__( '<strong><a href="%1$s">%2$s</a></strong> with %3$s engagements', 'activitypub' ),
+				\esc_url( $summary['top_multiplicator']['url'] ),
+				\esc_html( $summary['top_multiplicator']['name'] ),
+				\number_format_i18n( $summary['top_multiplicator']['count'] )
+			);
 		}
 
 		$args = \array_merge(
 			$summary,
 			array(
-				'year'    => $year,
-				'user_id' => $user_id,
+				/* translators: %d: Year */
+				'title'                  => \sprintf( \__( 'Your %d Fediverse Year in Review', 'activitypub' ), $year ),
+				/* translators: %d: Year */
+				'intro'                  => \sprintf( \__( "Here's a look back at your %d activity on the Fediverse.", 'activitypub' ), $year ),
+				'closing'                => \__( 'Thanks for being part of the Fediverse! Here\'s to another great year.', 'activitypub' ),
+				'most_active_month_name' => $most_active_month_name,
+				'followers_text'         => $followers_text,
+				'supporter_text'         => $supporter_text,
+				'user_id'                => $user_id,
 			)
 		);
-
-		// Get month name for most_active_month.
-		if ( ! empty( $summary['most_active_month'] ) ) {
-			$args['most_active_month_name'] = \date_i18n( 'F', \strtotime( sprintf( '%d-%02d-01', $year, $summary['most_active_month'] ) ) );
-		}
 
 		$subject = \sprintf(
 			/* translators: 1: Blog name, 2: Year */
@@ -162,11 +168,129 @@ class Statistics {
 			$alt_body .= \sprintf( \__( "Follower growth: %+d\n", 'activitypub' ), $args['followers_net_change'] );
 		}
 
-		if ( ! empty( $args['most_active_month_name'] ) ) {
+		if ( ! empty( $most_active_month_name ) ) {
 			/* translators: %s: Month name */
-			$alt_body .= \sprintf( \__( "Most active month: %s\n", 'activitypub' ), $args['most_active_month_name'] );
+			$alt_body .= \sprintf( \__( "Most active month: %s\n", 'activitypub' ), $most_active_month_name );
 		}
 
-		Mailer::send( $user_id, $subject, 'annual-wrapped', $args, $alt_body );
+		Mailer::send( $user_id, $subject, 'stats-report', $args, $alt_body );
+	}
+
+	/**
+	 * Send the monthly stats report email.
+	 *
+	 * @param int $user_id The user ID.
+	 * @param int $year    The year.
+	 * @param int $month   The month (1-12).
+	 */
+	public static function send_monthly_email( $user_id, $year, $month ) {
+		$option_name = Statistics_Collector::get_monthly_option_name( $user_id, $year, $month );
+		$stats       = \get_option( $option_name, array() );
+
+		if ( ! self::should_send_report( $user_id, $stats, 'activitypub_mailer_monthly_report', '0' ) ) {
+			return;
+		}
+
+		$month_name = \date_i18n( 'F Y', \strtotime( \sprintf( '%d-%02d-01', $year, $month ) ) );
+
+		// Build follower text.
+		$followers_text = '';
+		if ( ! empty( $stats['followers_total'] ) ) {
+			$followers_text = \sprintf(
+				/* translators: %s: total follower count */
+				\__( 'You now have <strong>%s</strong> followers', 'activitypub' ),
+				\number_format_i18n( $stats['followers_total'] )
+			);
+		}
+
+		// Build supporter text.
+		$supporter_text = '';
+		if ( ! empty( $stats['top_multiplicator'] ) ) {
+			$supporter_text = \sprintf(
+				/* translators: 1: supporter URL, 2: supporter name, 3: engagement count */
+				\__( '<strong><a href="%1$s">%2$s</a></strong> with %3$s engagements', 'activitypub' ),
+				\esc_url( $stats['top_multiplicator']['url'] ),
+				\esc_html( $stats['top_multiplicator']['name'] ),
+				\number_format_i18n( $stats['top_multiplicator']['count'] )
+			);
+		}
+
+		$args = \array_merge(
+			$stats,
+			array(
+				/* translators: %s: Month and year, e.g. "March 2025" */
+				'title'          => \sprintf( \__( 'Your Fediverse Stats for %s', 'activitypub' ), $month_name ),
+				/* translators: %s: Month and year, e.g. "March 2025" */
+				'intro'          => \sprintf( \__( "Here's how your content performed on the Fediverse in %s.", 'activitypub' ), $month_name ),
+				'closing'        => \__( 'Keep sharing great content on the Fediverse!', 'activitypub' ),
+				'followers_text' => $followers_text,
+				'supporter_text' => $supporter_text,
+				'user_id'        => $user_id,
+			)
+		);
+
+		$subject = \sprintf(
+			/* translators: 1: Blog name, 2: Month and year */
+			\__( '[%1$s] Your Fediverse Stats for %2$s', 'activitypub' ),
+			\esc_html( \get_option( 'blogname' ) ),
+			$month_name
+		);
+
+		// Build plain text alternative.
+		/* translators: %s: Month and year */
+		$alt_body = \sprintf( \__( "Here's your Fediverse stats for %s:\n\n", 'activitypub' ), $month_name );
+
+		if ( ! empty( $stats['posts_count'] ) ) {
+			/* translators: %d: Number of posts */
+			$alt_body .= \sprintf( \__( "Posts published: %d\n", 'activitypub' ), $stats['posts_count'] );
+		}
+
+		if ( ! empty( $stats['followers_count'] ) ) {
+			/* translators: %d: New follower count */
+			$alt_body .= \sprintf( \__( "New followers: %+d\n", 'activitypub' ), $stats['followers_count'] );
+		}
+
+		Mailer::send( $user_id, $subject, 'stats-report', $args, $alt_body );
+	}
+
+	/**
+	 * Check whether a stats report should be sent.
+	 *
+	 * Verifies user preference and that there is meaningful activity.
+	 *
+	 * @param int    $user_id     The user ID.
+	 * @param array  $stats       The stats data.
+	 * @param string $option_name The preference option name (same for blog and user).
+	 * @param string $fallback    The fallback value for the blog option.
+	 *
+	 * @return bool True if the report should be sent.
+	 */
+	private static function should_send_report( $user_id, $stats, $option_name, $fallback = '1' ) {
+		if ( empty( $stats ) ) {
+			return false;
+		}
+
+		// Check user preference.
+		if ( $user_id > \Activitypub\Collection\Actors::BLOG_USER_ID ) {
+			if ( ! \get_user_option( $option_name, $user_id ) ) {
+				return false;
+			}
+		} elseif ( '1' !== \get_option( $option_name, $fallback ) ) {
+			return false;
+		}
+
+		// Check that there is meaningful activity.
+		if ( ! empty( $stats['posts_count'] ) ) {
+			return true;
+		}
+
+		$comment_types = \array_keys( Statistics_Collector::get_comment_types_for_stats() );
+		foreach ( $comment_types as $type ) {
+			if ( ! empty( $stats[ $type . '_count' ] ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }

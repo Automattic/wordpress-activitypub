@@ -177,4 +177,58 @@ class Stats_Command extends \WP_CLI_Command {
 
 		\WP_CLI::success( "Annual report email sent for {$sent} user(s) ({$year})." );
 	}
+
+	/**
+	 * Send the monthly report email.
+	 *
+	 * Sends the monthly Fediverse stats report email for the specified month.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--user_id=<user_id>]
+	 * : The user ID to send the email for. Omit to send for all active users.
+	 *
+	 * [--year=<year>]
+	 * : The year. Defaults to current year.
+	 *
+	 * [--month=<month>]
+	 * : The month (1-12). Defaults to previous month.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     # Send monthly report for previous month
+	 *     $ wp activitypub stats send-monthly
+	 *
+	 *     # Send monthly report for a specific month
+	 *     $ wp activitypub stats send-monthly --year=2025 --month=2
+	 *
+	 *     # Send for a specific user
+	 *     $ wp activitypub stats send-monthly --user_id=1 --year=2025 --month=6
+	 *
+	 * @subcommand send-monthly
+	 *
+	 * @param array $args       The positional arguments (unused).
+	 * @param array $assoc_args The associative arguments.
+	 */
+	public function send_monthly( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		$user_id    = isset( $assoc_args['user_id'] ) ? (int) $assoc_args['user_id'] : null;
+		$prev_month = \strtotime( '-1 month' );
+		$year       = isset( $assoc_args['year'] ) ? (int) $assoc_args['year'] : (int) \gmdate( 'Y', $prev_month );
+		$month      = isset( $assoc_args['month'] ) ? (int) $assoc_args['month'] : (int) \gmdate( 'n', $prev_month );
+
+		if ( $month < 1 || $month > 12 ) {
+			\WP_CLI::error( "Invalid month: {$month}. Must be between 1 and 12." );
+		}
+
+		$user_ids = $user_id ? array( $user_id ) : Statistics::get_active_user_ids();
+
+		$sent = 0;
+		foreach ( $user_ids as $uid ) {
+			Statistics_Scheduler::send_monthly_email( $uid, $year, $month );
+			\WP_CLI::log( "Monthly report email sent for user {$uid} ({$year}-{$month})." );
+			++$sent;
+		}
+
+		\WP_CLI::success( "Monthly report email sent for {$sent} user(s) ({$year}-{$month})." );
+	}
 }
