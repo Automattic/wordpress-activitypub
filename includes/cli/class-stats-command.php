@@ -181,7 +181,7 @@ class Stats_Command extends \WP_CLI_Command {
 		$sent = 0;
 		foreach ( $user_ids as $uid ) {
 			if ( $is_monthly ) {
-				Statistics_Scheduler::send_monthly_email( $uid, $year, $month );
+				Statistics_Scheduler::send_monthly_email( $uid, $year, $month, true );
 				\WP_CLI::log( "Monthly report email sent for user {$uid} ({$year}-{$month})." );
 			} else {
 				$summary = Statistics::compile_annual_summary( $uid, $year );
@@ -191,7 +191,7 @@ class Stats_Command extends \WP_CLI_Command {
 					continue;
 				}
 
-				Statistics_Scheduler::send_annual_email( $uid, $year, $summary );
+				Statistics_Scheduler::send_annual_email( $uid, $year, $summary, true );
 				\WP_CLI::log( "Annual report email sent for user {$uid} ({$year})." );
 			}
 			++$sent;

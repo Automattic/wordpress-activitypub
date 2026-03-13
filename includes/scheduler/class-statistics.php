@@ -97,9 +97,10 @@ class Statistics {
 	 * @param int   $user_id The user ID.
 	 * @param int   $year    The year.
 	 * @param array $summary The annual summary data.
+	 * @param bool  $force   Whether to bypass user preference checks.
 	 */
-	public static function send_annual_email( $user_id, $year, $summary ) {
-		if ( ! self::should_send_report( $user_id, $summary, 'activitypub_mailer_annual_report', '1' ) ) {
+	public static function send_annual_email( $user_id, $year, $summary, $force = false ) {
+		if ( ! $force && ! self::should_send_report( $user_id, $summary, 'activitypub_mailer_annual_report', '1' ) ) {
 			return;
 		}
 
@@ -179,15 +180,20 @@ class Statistics {
 	/**
 	 * Send the monthly stats report email.
 	 *
-	 * @param int $user_id The user ID.
-	 * @param int $year    The year.
-	 * @param int $month   The month (1-12).
+	 * @param int  $user_id The user ID.
+	 * @param int  $year    The year.
+	 * @param int  $month   The month (1-12).
+	 * @param bool $force   Whether to bypass user preference checks.
 	 */
-	public static function send_monthly_email( $user_id, $year, $month ) {
+	public static function send_monthly_email( $user_id, $year, $month, $force = false ) {
 		$option_name = Statistics_Collector::get_monthly_option_name( $user_id, $year, $month );
 		$stats       = \get_option( $option_name, array() );
 
-		if ( ! self::should_send_report( $user_id, $stats, 'activitypub_mailer_monthly_report', '0' ) ) {
+		if ( empty( $stats ) ) {
+			return;
+		}
+
+		if ( ! $force && ! self::should_send_report( $user_id, $stats, 'activitypub_mailer_monthly_report', '0' ) ) {
 			return;
 		}
 
@@ -280,7 +286,7 @@ class Statistics {
 		}
 
 		// Check that there is meaningful activity.
-		if ( ! empty( $stats['posts_count'] ) ) {
+		if ( ! empty( $stats['posts_count'] ) || ! empty( $stats['followers_count'] ) ) {
 			return true;
 		}
 
