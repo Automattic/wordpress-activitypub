@@ -14,6 +14,7 @@ namespace Activitypub\Rest;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
+use Activitypub\Http;
 use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Server as OAuth_Server;
 
@@ -104,7 +105,7 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 
 		\register_rest_route(
 			$this->namespace,
-			'/proxy-event-stream',
+			'/proxy/stream',
 			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
@@ -117,6 +118,7 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 							'format'            => 'uri',
 							'required'          => true,
 							'sanitize_callback' => 'sanitize_url',
+							'validate_callback' => array( $this, 'validate_proxy_url' ),
 						),
 					),
 				),
@@ -242,20 +244,201 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * Proxy a remote eventStream (not yet implemented).
+	 * Validate the proxy URL parameter.
 	 *
-	 * WordPress's HTTP API does not support streaming responses,
-	 * so this endpoint returns 501 Not Implemented for now.
+	 * @param string $url The URL to validate.
+	 * @return bool True if valid.
+	 */
+	public function validate_proxy_url( $url ) {
+		if ( 'https' !== \wp_parse_url( $url, PHP_URL_SCHEME ) ) {
+			return false;
+		}
+
+		return (bool) \wp_http_validate_url( $url );
+	}
+
+	/**
+	 * Proxy a remote eventStream.
+	 *
+	 * Fetches the remote object to discover its eventStream URL,
+	 * then opens a streaming connection and relays SSE events.
 	 *
 	 * @param \WP_REST_Request $request Full details about the request.
-	 * @return \WP_Error Always returns 501.
+	 * @return \WP_Error|void WP_Error on failure, exits on success.
 	 */
-	public function get_proxy_stream( $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		return new \WP_Error(
-			'activitypub_not_implemented',
-			\__( 'Proxy event streaming is not yet supported.', 'activitypub' ),
-			array( 'status' => 501 )
+	public function get_proxy_stream( $request ) {
+		$remote_id = $request->get_param( 'id' );
+
+		// Fetch the remote object to discover its eventStream URL.
+		$object = Http::get_remote_object( $remote_id );
+
+		if ( \is_wp_error( $object ) ) {
+			return new \WP_Error(
+				'activitypub_proxy_fetch_failed',
+				\__( 'Failed to fetch the remote object.', 'activitypub' ),
+				array( 'status' => 502 )
+			);
+		}
+
+		// Look for eventStream in the object itself or in its first/last/etc.
+		$stream_url = isset( $object['eventStream'] ) ? $object['eventStream'] : null;
+
+		if ( ! $stream_url ) {
+			return new \WP_Error(
+				'activitypub_no_event_stream',
+				\__( 'The remote object does not advertise an eventStream.', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		if ( ! $this->validate_proxy_url( $stream_url ) ) {
+			return new \WP_Error(
+				'activitypub_invalid_event_stream',
+				\__( 'The remote eventStream URL is not valid.', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$this->relay_remote_stream( $stream_url );
+	}
+
+	/**
+	 * Open a streaming connection to a remote SSE endpoint and relay events.
+	 *
+	 * Uses PHP streams directly since WordPress HTTP API does not support
+	 * streaming responses.
+	 *
+	 * @param string $stream_url The remote eventStream URL.
+	 */
+	private function relay_remote_stream( $stream_url ) {
+		ignore_user_abort( true );
+
+		$parsed = \wp_parse_url( $stream_url );
+		$host   = $parsed['host'];
+		$port   = isset( $parsed['port'] ) ? $parsed['port'] : 443;
+		$path   = isset( $parsed['path'] ) ? $parsed['path'] : '/';
+
+		if ( isset( $parsed['query'] ) ) {
+			$path .= '?' . $parsed['query'];
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_stream_socket_client -- SSE proxy requires raw streaming.
+		$context = stream_context_create(
+			array(
+				'ssl' => array(
+					'verify_peer'      => true,
+					'verify_peer_name' => true,
+				),
+			)
 		);
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_stream_socket_client -- SSE proxy requires raw streaming.
+		$stream = @stream_socket_client(
+			'ssl://' . $host . ':' . $port,
+			$errno,
+			$errstr,
+			30,
+			STREAM_CLIENT_CONNECT,
+			$context
+		);
+
+		if ( ! $stream ) {
+			\status_header( 502 );
+			echo \wp_json_encode(
+				array(
+					'code'    => 'activitypub_proxy_connection_failed',
+					'message' => \__( 'Failed to connect to the remote eventStream.', 'activitypub' ),
+				)
+			);
+			exit;
+		}
+
+		// Send HTTP request for SSE.
+		$request_headers  = "GET {$path} HTTP/1.1\r\n";
+		$request_headers .= "Host: {$host}\r\n";
+		$request_headers .= "Accept: text/event-stream\r\n";
+		$request_headers .= "Cache-Control: no-cache\r\n";
+		$request_headers .= "Connection: keep-alive\r\n";
+		$request_headers .= "\r\n";
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Raw stream operation.
+		fwrite( $stream, $request_headers );
+
+		// Read and skip the HTTP response headers.
+		$header_complete = false;
+		$status_code     = 0;
+
+		while ( ! feof( $stream ) ) {
+			$line = fgets( $stream, 8192 );
+
+			if ( false === $line ) {
+				break;
+			}
+
+			// Parse status line.
+			if ( ! $status_code && preg_match( '/^HTTP\/\d\.\d (\d{3})/', $line, $matches ) ) {
+				$status_code = (int) $matches[1];
+			}
+
+			// Empty line signals end of headers.
+			if ( "\r\n" === $line || "\n" === $line ) {
+				$header_complete = true;
+				break;
+			}
+		}
+
+		if ( ! $header_complete || 200 !== $status_code ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Raw stream operation.
+			fclose( $stream );
+			\status_header( 502 );
+			echo \wp_json_encode(
+				array(
+					'code'    => 'activitypub_proxy_stream_error',
+					'message' => \__( 'The remote eventStream returned an error.', 'activitypub' ),
+				)
+			);
+			exit;
+		}
+
+		// Now relay SSE: send our own SSE headers and forward the stream.
+		$this->send_sse_headers();
+		$this->send_sse_comment( 'proxying ' . $host );
+
+		$start = time();
+
+		stream_set_timeout( $stream, self::POLL_INTERVAL + 5 );
+
+		while ( ! feof( $stream ) && ( time() - $start ) < self::MAX_DURATION ) {
+			if ( \connection_aborted() ) {
+				break;
+			}
+
+			$line = fgets( $stream, 8192 );
+
+			if ( false === $line ) {
+				$meta = stream_get_meta_data( $stream );
+				if ( ! empty( $meta['timed_out'] ) ) {
+					// Send keepalive on timeout and continue.
+					$this->send_sse_comment( 'keepalive ' . \gmdate( 'c' ) );
+					$this->flush_output();
+					continue;
+				}
+				break;
+			}
+
+			// Relay the SSE line as-is from the remote server.
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Relaying raw SSE protocol data.
+			echo $line;
+			$this->flush_output();
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Raw stream operation.
+		fclose( $stream );
+
+		$this->send_sse_comment( 'proxy timeout' );
+		$this->flush_output();
+
+		exit;
 	}
 
 	/**
@@ -491,6 +674,6 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 	 * @return string The proxy event stream URL.
 	 */
 	public static function get_proxy_url() {
-		return get_rest_url_by_path( 'proxy-event-stream' );
+		return get_rest_url_by_path( 'proxy/stream' );
 	}
 }

@@ -180,10 +180,10 @@ The plugin provides real-time streaming of collection changes via [Server-Sent E
 - `Last-Event-ID` header honored on reconnect to replay missed events
 - Event payload contains the full ActivityStreams Activity object
 - SSE `event:` and `id:` fields set per event
+- `proxyEventStream` relays remote eventStreams through the local server
 
 **Known limitations:**
 
-- `proxyEventStream` endpoint returns 501 (not yet implemented)
 - No `retry:` field sent to hint reconnect interval
 
 ### Endpoints
