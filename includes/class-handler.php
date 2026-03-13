@@ -48,11 +48,14 @@ class Handler {
 	 * Register outbox handlers.
 	 */
 	public static function register_outbox_handlers() {
+		Handler\Outbox\Add::init();
 		Handler\Outbox\Announce::init();
+		Handler\Outbox\Block::init();
 		Handler\Outbox\Create::init();
 		Handler\Outbox\Delete::init();
 		Handler\Outbox\Follow::init();
 		Handler\Outbox\Like::init();
+		Handler\Outbox\Remove::init();
 		Handler\Outbox\Undo::init();
 		Handler\Outbox\Update::init();
 
