@@ -68,24 +68,26 @@ class Test_Block extends \WP_UnitTestCase {
 		};
 		\add_filter( 'activitypub_pre_http_get_remote_object', $filter );
 
-		$data = array(
-			'type'   => 'Block',
-			'object' => $actor_url,
-		);
+		try {
+			$data = array(
+				'type'   => 'Block',
+				'object' => $actor_url,
+			);
 
-		$result = Block::handle_block( $data, $this->user_id );
+			$result = Block::handle_block( $data, $this->user_id );
 
-		// Should return an outbox post ID.
-		$this->assertIsInt( $result );
-		$this->assertGreaterThan( 0, $result );
+			// Should return an outbox post ID.
+			$this->assertIsInt( $result );
+			$this->assertGreaterThan( 0, $result );
 
-		// Verify the actor is blocked.
-		$this->assertTrue(
-			Moderation::is_actor_blocked( $actor_url, $this->user_id ),
-			'Actor should be blocked.'
-		);
-
-		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+			// Verify the actor is blocked.
+			$this->assertTrue(
+				Moderation::is_actor_blocked( $actor_url, $this->user_id ),
+				'Actor should be blocked.'
+			);
+		} finally {
+			\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+		}
 	}
 
 	/**
@@ -133,21 +135,23 @@ class Test_Block extends \WP_UnitTestCase {
 		};
 		\add_filter( 'activitypub_pre_http_get_remote_object', $filter );
 
-		$data = array(
-			'type'   => 'Block',
-			'object' => $actor_url,
-			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
-			'cc'     => array( 'https://example.com/followers' ),
-		);
+		try {
+			$data = array(
+				'type'   => 'Block',
+				'object' => $actor_url,
+				'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+				'cc'     => array( 'https://example.com/followers' ),
+			);
 
-		$result = Block::handle_block( $data, $this->user_id );
+			$result = Block::handle_block( $data, $this->user_id );
 
-		// Verify the outbox item has private visibility.
-		$this->assertIsInt( $result );
-		$visibility = \get_post_meta( $result, 'activitypub_content_visibility', true );
-		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, $visibility );
-
-		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+			// Verify the outbox item has private visibility.
+			$this->assertIsInt( $result );
+			$visibility = \get_post_meta( $result, 'activitypub_content_visibility', true );
+			$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, $visibility );
+		} finally {
+			\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+		}
 	}
 
 	/**
