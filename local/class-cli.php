@@ -328,8 +328,31 @@ class Cli extends \WP_CLI_Command {
 				\WP_CLI::success( "Annual stats compiled for {$count} user(s) ({$y})." );
 				break;
 
+			case 'send':
+				// Delegate to the main ActivityPub stats send command for consistency.
+				$command = 'activitypub stats send';
+
+				if ( null !== $user_id ) {
+					$command .= ' --user_id=' . $user_id;
+				}
+
+				if ( null !== $year ) {
+					$command .= ' --year=' . $year;
+				}
+
+				if ( null !== $month ) {
+					$command .= ' --month=' . $month;
+				}
+
+				if ( $force ) {
+					$command .= ' --force';
+				}
+
+				\WP_CLI::runcommand( $command );
+				break;
+
 			default:
-				\WP_CLI::error( 'Unknown action. Use "populate", "clear", "collect", or "compile".' );
+				\WP_CLI::error( 'Unknown action. Use "populate", "clear", "collect", "compile", or "send".' );
 		}
 	}
 
