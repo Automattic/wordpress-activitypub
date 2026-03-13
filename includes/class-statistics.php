@@ -29,6 +29,23 @@ class Statistics {
 	const OPTION_PREFIX = 'activitypub_stats_';
 
 	/**
+	 * Get the start and end date strings for a given month.
+	 *
+	 * @param int $year  The year.
+	 * @param int $month The month (1-12).
+	 *
+	 * @return array { start: string, end: string } in 'Y-m-d H:i:s' format.
+	 */
+	public static function get_month_date_range( $year, $month ) {
+		$last_day = (int) \gmdate( 't', \gmmktime( 0, 0, 0, $month, 1, $year ) );
+
+		return array(
+			'start' => \sprintf( '%d-%02d-01 00:00:00', $year, $month ),
+			'end'   => \sprintf( '%d-%02d-%02d 23:59:59', $year, $month, $last_day ),
+		);
+	}
+
+	/**
 	 * Get the option name for monthly stats.
 	 *
 	 * @param int $user_id The user ID.
@@ -89,6 +106,9 @@ class Statistics {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function save_monthly_stats( $user_id, $year, $month, $stats ) {
+		// Invalidate the REST API transient cache so fresh data is served.
+		\delete_transient( 'activitypub_stats_' . $user_id );
+
 		return \update_option( self::get_monthly_option_name( $user_id, $year, $month ), $stats, false );
 	}
 
@@ -115,9 +135,9 @@ class Statistics {
 	 * @return array The collected stats.
 	 */
 	public static function collect_monthly_stats( $user_id, $year, $month ) {
-		$last_day = (int) \gmdate( 't', \gmmktime( 0, 0, 0, $month, 1, $year ) );
-		$start    = \sprintf( '%d-%02d-01 00:00:00', $year, $month );
-		$end      = \sprintf( '%d-%02d-%02d 23:59:59', $year, $month, $last_day );
+		$range = self::get_month_date_range( $year, $month );
+		$start = $range['start'];
+		$end   = $range['end'];
 
 		// Count new followers gained this month (by post_date in followers table).
 		$followers_count = Followers::count_in_range( $user_id, $start, $end );
@@ -262,52 +282,42 @@ class Statistics {
 	 * @return int The post count.
 	 */
 	public static function count_federated_posts_in_range( $user_id, $start, $end ) {
-		$meta_query = array(
-			array(
-				'key'   => '_activitypub_activity_type',
-				'value' => 'Create',
-			),
-		);
+		global $wpdb;
 
-		// Filter by actor type for user stats.
+		$actor_type = ( Actors::BLOG_USER_ID !== $user_id ) ? 'user' : 'blog';
+		$params     = array( $start, $end, $actor_type );
+
+		$author_clause = '';
 		if ( Actors::BLOG_USER_ID !== $user_id ) {
-			$meta_query[] = array(
-				'key'   => '_activitypub_activity_actor',
-				'value' => 'user',
-			);
-		} else {
-			$meta_query[] = array(
-				'key'   => '_activitypub_activity_actor',
-				'value' => 'blog',
-			);
+			$author_clause = ' AND p.post_author = %d';
+			$params[]      = $user_id;
 		}
 
-		$args = array(
-			'post_type'              => Outbox::POST_TYPE,
-			'post_status'            => array( 'publish', 'pending' ),
-			'posts_per_page'         => 1,
-			'fields'                 => 'ids',
-			'update_post_meta_cache' => false,
-			'update_post_term_cache' => false,
-			'date_query'             => array(
-				array(
-					'after'     => $start,
-					'before'    => $end,
-					'inclusive' => true,
-				),
-			),
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query'             => $meta_query,
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.SchemaChange
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+		$count = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->posts} p
+				INNER JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id
+				INNER JOIN {$wpdb->postmeta} pm_actor ON p.ID = pm_actor.post_id
+				WHERE p.post_type = %s
+				AND p.post_status IN ('publish', 'pending')
+				AND p.post_date_gmt >= %s
+				AND p.post_date_gmt <= %s
+				AND pm_type.meta_key = '_activitypub_activity_type'
+				AND pm_type.meta_value = 'Create'
+				AND pm_actor.meta_key = '_activitypub_activity_actor'
+				AND pm_actor.meta_value = %s
+				{$author_clause}",
+				\array_merge( array( Outbox::POST_TYPE ), $params )
+			)
 		);
+		// phpcs:enable
 
-		// Filter by post author for user-specific stats.
-		if ( Actors::BLOG_USER_ID !== $user_id ) {
-			$args['author'] = $user_id;
-		}
-
-		$query = new \WP_Query( $args );
-
-		return $query->found_posts;
+		return (int) $count;
 	}
 
 	/**
@@ -377,8 +387,8 @@ class Statistics {
 		// Use a subquery with date range to only consider posts published in the period.
 		$post_subquery = self::get_post_ids_subquery( $user_id, $start, $end );
 
-		// Get registered comment types dynamically.
-		$comment_types = Comment::get_comment_type_slugs();
+		// Use the same comment type source as all other statistics methods.
+		$comment_types = \array_keys( self::get_comment_types_for_stats() );
 		if ( empty( $comment_types ) ) {
 			return array();
 		}
@@ -422,6 +432,7 @@ class Statistics {
 					'post_id'          => $result['post_id'],
 					'title'            => \get_the_title( $post ),
 					'url'              => \get_permalink( $post ),
+					'edit_url'         => \get_edit_post_link( $post, 'raw' ),
 					'engagement_count' => (int) $result['engagement_count'],
 				);
 			}
@@ -621,21 +632,21 @@ class Statistics {
 			}
 		} else {
 			// Query live data.
-			$last_day = (int) \gmdate( 't', \gmmktime( 0, 0, 0, $month, 1, $year ) );
-			$start    = \sprintf( '%d-%02d-01 00:00:00', $year, $month );
-			$end      = \sprintf( '%d-%02d-%02d 23:59:59', $year, $month, $last_day );
-
-			$engagement = self::count_engagement_in_range( $user_id, $start, $end );
+			$range = self::get_month_date_range( $year, $month );
+			$start = $range['start'];
+			$end   = $range['end'];
 
 			$month_data = array(
 				'month'       => $month,
 				'posts_count' => self::count_federated_posts_in_range( $user_id, $start, $end ),
-				'engagement'  => $engagement,
+				'engagement'  => 0,
 			);
 
-			// Add counts for each comment type tracked in stats.
+			// Query each type and sum for total engagement (avoids extra N+1 total query).
 			foreach ( $comment_types as $type ) {
-				$month_data[ $type . '_count' ] = self::count_engagement_in_range( $user_id, $start, $end, $type );
+				$type_count                     = self::count_engagement_in_range( $user_id, $start, $end, $type );
+				$month_data[ $type . '_count' ] = $type_count;
+				$month_data['engagement']      += $type_count;
 			}
 		}
 
@@ -645,31 +656,37 @@ class Statistics {
 	/**
 	 * Get period-over-period comparison (current month vs previous month).
 	 *
-	 * Always queries live data for current month, uses stored stats for previous month.
+	 * Reuses pre-computed current stats when available to avoid duplicate queries.
+	 * Falls back to live queries for current month if no stats are provided.
 	 *
-	 * @param int $user_id The user ID.
+	 * @param int        $user_id       The user ID.
+	 * @param array|null $current_stats Optional. Pre-computed current month stats from get_current_stats().
 	 *
 	 * @return array Comparison data with current values and changes from previous month.
 	 */
-	public static function get_period_comparison( $user_id ) {
+	public static function get_period_comparison( $user_id, $current_stats = null ) {
 		$now = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
-
-		// Current month date range.
-		$current_start = \gmdate( 'Y-m-01 00:00:00', $now );
-		$current_end   = \gmdate( 'Y-m-t 23:59:59', $now );
 
 		// Previous month (handles year boundary).
 		$prev_timestamp = \strtotime( '-1 month', $now );
 		$prev_year      = (int) \gmdate( 'Y', $prev_timestamp );
 		$prev_month     = (int) \gmdate( 'n', $prev_timestamp );
-		$prev_start     = \gmdate( 'Y-m-01 00:00:00', $prev_timestamp );
-		$prev_end       = \gmdate( 'Y-m-t 23:59:59', $prev_timestamp );
 
 		// Check for stored stats (only for previous month - current month is always live).
 		$prev_stats = self::get_monthly_stats( $user_id, $prev_year, $prev_month );
 
-		// Always query live for current month to include recent engagement.
-		$current_posts     = self::count_federated_posts_in_range( $user_id, $current_start, $current_end );
+		// Reuse pre-computed current stats or query live.
+		if ( $current_stats ) {
+			$current_posts = $current_stats['posts_count'] ?? 0;
+		} else {
+			$current_start = \gmdate( 'Y-m-01 00:00:00', $now );
+			$current_end   = \gmdate( 'Y-m-t 23:59:59', $now );
+			$current_posts = self::count_federated_posts_in_range( $user_id, $current_start, $current_end );
+		}
+
+		$current_start = $current_start ?? \gmdate( 'Y-m-01 00:00:00', $now );
+		$current_end   = $current_end ?? \gmdate( 'Y-m-t 23:59:59', $now );
+
 		$current_followers = Followers::count_in_range( $user_id, $current_start, $current_end );
 
 		// Get previous month data (from stored stats or live query).
@@ -677,6 +694,8 @@ class Statistics {
 			$prev_posts     = $prev_stats['posts_count'] ?? 0;
 			$prev_followers = $prev_stats['followers_count'] ?? 0;
 		} else {
+			$prev_start     = \gmdate( 'Y-m-01 00:00:00', $prev_timestamp );
+			$prev_end       = \gmdate( 'Y-m-t 23:59:59', $prev_timestamp );
 			$prev_posts     = self::count_federated_posts_in_range( $user_id, $prev_start, $prev_end );
 			$prev_followers = Followers::count_in_range( $user_id, $prev_start, $prev_end );
 		}
@@ -695,8 +714,12 @@ class Statistics {
 		// Add comparison for each comment type tracked in statistics (includes federated comments).
 		$comment_types = \array_keys( self::get_comment_types_for_stats() );
 		foreach ( $comment_types as $type ) {
-			// Always query live for current month.
-			$current_count = self::count_engagement_in_range( $user_id, $current_start, $current_end, $type );
+			// Reuse pre-computed current stats or query live.
+			if ( $current_stats && isset( $current_stats[ $type . '_count' ] ) ) {
+				$current_count = $current_stats[ $type . '_count' ];
+			} else {
+				$current_count = self::count_engagement_in_range( $user_id, $current_start, $current_end, $type );
+			}
 
 			// Use stored stats for previous month if available.
 			if ( $prev_stats ) {
@@ -891,9 +914,12 @@ class Statistics {
 		$post_subquery = self::get_post_ids_subquery( $user_id );
 
 		// Find earliest comment with ActivityPub protocol.
+		// The $post_subquery is already prepared via $wpdb->prepare() in get_post_ids_subquery(),
+		// so the outer query is safe despite not using prepare() itself.
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.NoCaching
 		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared
 		$earliest_date = $wpdb->get_var(
 			"SELECT MIN(c.comment_date_gmt) FROM {$wpdb->comments} c
 			INNER JOIN {$wpdb->commentmeta} cm ON c.comment_ID = cm.comment_id

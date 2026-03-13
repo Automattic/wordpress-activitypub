@@ -100,17 +100,24 @@ class Statistics_Controller extends \WP_REST_Controller {
 
 		if ( false === $response ) {
 			$stats         = Statistics::get_current_stats( $user_id, 'month' );
-			$comparison    = Statistics::get_period_comparison( $user_id );
+			$comparison    = Statistics::get_period_comparison( $user_id, $stats );
 			$monthly_data  = Statistics::get_rolling_monthly_breakdown( $user_id );
 			$comment_types = Statistics::get_comment_types_for_stats();
 
+			$stats_response = array(
+				'posts_count'       => $stats['posts_count'],
+				'followers_total'   => $stats['followers_total'],
+				'top_posts'         => $stats['top_posts'],
+				'top_multiplicator' => $stats['top_multiplicator'],
+			);
+
+			// Include per-type engagement counts from current period stats.
+			foreach ( \array_keys( $comment_types ) as $type ) {
+				$stats_response[ $type . '_count' ] = $stats[ $type . '_count' ] ?? 0;
+			}
+
 			$response = array(
-				'stats'         => array(
-					'posts_count'       => $stats['posts_count'],
-					'followers_total'   => $stats['followers_total'],
-					'top_posts'         => $stats['top_posts'],
-					'top_multiplicator' => $stats['top_multiplicator'],
-				),
+				'stats'         => $stats_response,
 				'comparison'    => $comparison,
 				'monthly'       => \array_values( $monthly_data ),
 				'comment_types' => $comment_types,

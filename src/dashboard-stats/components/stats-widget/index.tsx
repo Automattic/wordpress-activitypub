@@ -79,12 +79,16 @@ export default function StatsWidget(): ReactNode {
 			return;
 		}
 
+		const controller = new AbortController();
+		const { signal } = controller;
+
 		setIsLoading( true );
 
 		// Fetch blog stats (global engagement data) - only if user has blog capability.
 		const blogStatsPromise = canUseBlogActor
 			? apiFetch< StatsResponse >( {
 					path: `/activitypub/1.0/admin/stats/${ BLOG_USER_ID }`,
+					signal,
 			  } ).catch( () => null )
 			: Promise.resolve( null );
 
@@ -93,17 +97,27 @@ export default function StatsWidget(): ReactNode {
 			canUseUserActor && currentUser?.id
 				? apiFetch< StatsResponse >( {
 						path: `/activitypub/1.0/admin/stats/${ currentUser.id }`,
+						signal,
 				  } ).catch( () => null )
 				: Promise.resolve( null );
 
 		Promise.all( [ blogStatsPromise, userStatsPromise ] )
 			.then( ( [ blogData, userData ] ) => {
+				if ( signal.aborted ) {
+					return;
+				}
 				// Use blog stats as primary if available, otherwise fall back to user stats.
 				setStats( blogData ?? userData );
 				setBlogStats( blogData );
 				setUserStats( userData );
 			} )
-			.finally( () => setIsLoading( false ) );
+			.finally( () => {
+				if ( ! signal.aborted ) {
+					setIsLoading( false );
+				}
+			} );
+
+		return () => controller.abort();
 	}, [ isResolving, canUseUserActor, canUseBlogActor, currentUser?.id ] );
 
 	// Show loading while resolving user data.

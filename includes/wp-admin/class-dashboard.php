@@ -115,7 +115,7 @@ class Dashboard {
 		// Add inline script to initialize the widget.
 		\wp_add_inline_script(
 			'activitypub-dashboard-stats',
-			'wp.domReady( function() { activitypub.dashboardStats.initialize( "activitypub-stats-widget-root" ); } );'
+			'wp.domReady( function() { if ( activitypub && activitypub.dashboardStats ) { activitypub.dashboardStats.initialize( "activitypub-stats-widget-root" ); } } );'
 		);
 	}
 

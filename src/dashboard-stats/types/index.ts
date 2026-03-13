@@ -35,6 +35,7 @@ export interface TopPost {
 	post_id: number;
 	title: string;
 	url: string;
+	edit_url: string | null;
 	engagement_count: number;
 }
 
@@ -43,6 +44,8 @@ export interface Stats {
 	followers_total: number;
 	top_posts: TopPost[];
 	top_multiplicator: Multiplicator | null;
+	// Dynamic keys for engagement type counts (like_count, repost_count, etc.)
+	[ key: string ]: number | TopPost[] | Multiplicator | null | undefined;
 }
 
 export interface StatsResponse {

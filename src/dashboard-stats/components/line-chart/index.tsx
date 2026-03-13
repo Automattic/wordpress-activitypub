@@ -7,6 +7,7 @@ import type { ReactNode } from 'react';
  * WordPress dependencies
  */
 import { __ } from '@wordpress/i18n';
+import { useInstanceId } from '@wordpress/compose';
 
 /**
  * Internal dependencies
@@ -70,11 +71,15 @@ function getEngagementColor(): string {
  * @param {Props} props Component props.
  */
 export default function LineChart( { monthly, commentTypes }: Props ): ReactNode {
+	// Hooks must be called before any early returns.
+	const instanceId = useInstanceId( LineChart, 'activitypub-chart' );
+
 	if ( ! monthly?.length ) {
 		return null;
 	}
 
 	// Get colors once at render time.
+	const gradientId = `areaGradient-${ instanceId }`;
 	const engagementColor = getEngagementColor();
 
 	const width = 600;
@@ -163,13 +168,13 @@ export default function LineChart( { monthly, commentTypes }: Props ): ReactNode
 					viewBox={ `0 0 ${ width } ${ height }` }
 					className="activitypub-line-chart"
 					role="img"
-					aria-labelledby="activitypub-chart-title"
+					aria-labelledby={ `${ instanceId }-title` }
 				>
-					<title id="activitypub-chart-title">
+					<title id={ `${ instanceId }-title` }>
 						{ __( 'Line chart showing engagement trends over the past 12 months', 'activitypub' ) }
 					</title>
 					<defs>
-						<linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+						<linearGradient id={ gradientId } x1="0%" y1="0%" x2="0%" y2="100%">
 							<stop offset="0%" stopColor={ engagementColor } stopOpacity={ 0.3 } />
 							<stop offset="100%" stopColor={ engagementColor } stopOpacity={ 0.05 } />
 						</linearGradient>
@@ -189,7 +194,7 @@ export default function LineChart( { monthly, commentTypes }: Props ): ReactNode
 					) ) }
 
 					{ /* Area fill for total engagement */ }
-					<path d={ areaPath } fill="url(#areaGradient)" />
+					<path d={ areaPath } fill={ `url(#${ gradientId })` } />
 
 					{ /* Lines for each engagement type */ }
 					{ typeKeys.map( ( type ) => (
