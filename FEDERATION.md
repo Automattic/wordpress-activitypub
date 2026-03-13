@@ -5,6 +5,7 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 ## Supported federation protocols and standards
 
 - [ActivityPub](https://www.w3.org/TR/activitypub/) (Server-to-Server)
+- [ActivityPub API: Server-Sent Events](https://swicg.github.io/activitypub-api/sse) (partial, see below)
 - [WebFinger](https://www.w3.org/community/reports/socialcg/CG-FINAL-apwf-20240608/)
 - [HTTP Signatures](https://swicg.github.io/activitypub-http-signature/)
 - [NodeInfo](https://nodeinfo.diaspora.software/)
@@ -166,6 +167,25 @@ For compatibility with Mastodon, the plugin supports several extensions from the
 - `Event` - `category`, `inLanguage`, `maximumAttendeeCapacity`
 - `Place` - Location objects with `PostalAddress` support
 
+### Server-Sent Events (SSE)
+
+The plugin provides real-time streaming of collection changes via [Server-Sent Events](https://swicg.github.io/activitypub-api/sse). Requires OAuth authentication with the `push` scope.
+
+**Supported features:**
+
+- `eventStream` property advertised on outbox and inbox collections
+- `proxyEventStream` advertised in actor `endpoints`
+- `access_token` URL parameter accepted (required for browser `EventSource` API)
+- SSE event types: `Add`, `Update`, `Remove`, `Delete` mapped from ActivityPub activities
+- `Last-Event-ID` header honored on reconnect to replay missed events
+- Event payload contains the full ActivityStreams Activity object
+- SSE `event:` and `id:` fields set per event
+
+**Known limitations:**
+
+- `proxyEventStream` endpoint returns 501 (not yet implemented)
+- No `retry:` field sent to hint reconnect interval
+
 ### Endpoints
 
 All REST API endpoints use the `activitypub/1.0` namespace.
@@ -188,6 +208,7 @@ All REST API endpoints use the `activitypub/1.0` namespace.
 
 - `/activitypub/1.0/inbox` - Shared inbox
 - `/activitypub/1.0/application` - Application actor
+- `/activitypub/1.0/proxy` - Proxy endpoint for fetching remote objects
 
 **Object endpoints:**
 

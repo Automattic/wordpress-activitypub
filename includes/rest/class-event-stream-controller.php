@@ -70,7 +70,7 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 		'Announce' => 'Add',
 		'Like'     => 'Add',
 		'Update'   => 'Update',
-		'Delete'   => 'Remove',
+		'Delete'   => 'Delete',
 		'Undo'     => 'Remove',
 	);
 
@@ -111,8 +111,8 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 					'callback'            => array( $this, 'get_proxy_stream' ),
 					'permission_callback' => array( $this, 'get_proxy_permissions_check' ),
 					'args'                => array(
-						'url' => array(
-							'description'       => 'The remote eventStream URL to proxy.',
+						'id' => array(
+							'description'       => 'The remote object ID (URI) whose eventStream to proxy.',
 							'type'              => 'string',
 							'format'            => 'uri',
 							'required'          => true,
@@ -190,8 +190,13 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 
 		$this->send_sse_headers();
 
-		// Get the latest item ID as our starting point.
-		$since_id = $this->get_latest_item_id( $user_id, $collection );
+		// Honor Last-Event-ID for reconnecting clients (per SSE spec).
+		$last_event_id = isset( $_SERVER['HTTP_LAST_EVENT_ID'] )
+			? \absint( \wp_unslash( $_SERVER['HTTP_LAST_EVENT_ID'] ) )
+			: 0;
+
+		// Use Last-Event-ID if provided, otherwise start from the latest item.
+		$since_id = $last_event_id ? $last_event_id : $this->get_latest_item_id( $user_id, $collection );
 		$start    = time();
 
 		// Send initial connected event.
