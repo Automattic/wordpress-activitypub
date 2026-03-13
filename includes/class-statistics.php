@@ -135,6 +135,13 @@ class Statistics {
 	 * @return array The collected stats.
 	 */
 	public static function collect_monthly_stats( $user_id, $year, $month ) {
+		$month = (int) $month;
+		$year  = (int) $year;
+
+		if ( $month < 1 || $month > 12 ) {
+			return array();
+		}
+
 		$range = self::get_month_date_range( $year, $month );
 		$start = $range['start'];
 		$end   = $range['end'];

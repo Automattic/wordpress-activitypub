@@ -21,61 +21,64 @@ require __DIR__ . '/parts/header.php';
 	.stats-grid {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 16px;
-		margin: 24px 0;
+		gap: 12px;
+		margin: 20px 0;
 	}
 	.stats-grid .stat {
-		flex: 1 1 calc(50% - 8px);
-		min-width: 120px;
-		background: #f0f0f1;
+		flex: 1 1 calc(50% - 6px);
+		min-width: 100px;
+		background: #fff;
 		border-radius: 8px;
-		padding: 16px;
+		padding: 14px;
 		text-align: center;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 	}
 	.stats-grid .stat-value {
 		display: block;
-		font-size: 32px;
+		font-size: 28px;
 		font-weight: 700;
 		color: #1d2327;
 		line-height: 1.2;
 	}
 	.stats-grid .stat-label {
 		display: block;
-		font-size: 14px;
+		font-size: 13px;
 		color: #50575e;
 		margin-top: 4px;
 	}
-	.highlight-box {
-		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-		color: #fff;
+	.info-box {
+		background: #fff;
 		border-radius: 8px;
-		padding: 20px;
-		margin: 24px 0;
-		text-align: center;
+		padding: 16px;
+		margin: 20px 0;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 	}
-	.highlight-box h3 {
+	.info-box h3 {
 		margin: 0 0 8px;
-		font-size: 18px;
-		font-weight: 600;
+		font-size: 16px;
+		color: #1d2327;
 	}
-	.highlight-box p {
+	.info-box p {
 		margin: 0;
 		font-size: 14px;
-		opacity: 0.9;
+		color: #50575e;
 	}
-	.top-posts {
-		margin: 24px 0;
+	.follower-change {
+		font-size: 24px;
+		font-weight: 700;
+		color: #00a32a;
+		margin: 4px 0 8px;
 	}
-	.top-posts h3 {
-		font-size: 16px;
-		margin: 0 0 12px;
+	.follower-change.negative {
+		color: #d63638;
 	}
 	.top-posts ol {
-		margin: 0;
+		margin: 8px 0 0;
 		padding-left: 20px;
 	}
 	.top-posts li {
-		margin: 8px 0;
+		margin: 6px 0;
+		font-size: 14px;
 	}
 	.top-posts a {
 		color: #2271b1;
@@ -84,39 +87,6 @@ require __DIR__ . '/parts/header.php';
 	.top-posts .engagement {
 		font-size: 12px;
 		color: #50575e;
-	}
-	.follower-section {
-		background: #f0f0f1;
-		border-radius: 8px;
-		padding: 16px;
-		margin: 24px 0;
-	}
-	.follower-section h3 {
-		margin: 0 0 8px;
-		font-size: 16px;
-	}
-	.follower-change {
-		font-size: 24px;
-		font-weight: 700;
-		color: #00a32a;
-	}
-	.follower-change.negative {
-		color: #d63638;
-	}
-	.supporter-section {
-		background: #fff8e5;
-		border-left: 4px solid #dba617;
-		padding: 16px;
-		margin: 24px 0;
-	}
-	.supporter-section h3 {
-		margin: 0 0 8px;
-		font-size: 16px;
-		color: #1d2327;
-	}
-	.supporter-section p {
-		margin: 0;
-		font-size: 14px;
 	}
 </style>
 
@@ -162,13 +132,13 @@ require __DIR__ . '/parts/header.php';
 </div>
 
 <?php if ( ! empty( $args['most_active_month_name'] ) ) : ?>
-<div class="highlight-box">
+<div class="info-box">
 	<h3><?php esc_html_e( 'Most Active Month', 'activitypub' ); ?></h3>
 	<p><?php echo esc_html( $args['most_active_month_name'] ); ?></p>
 </div>
 <?php endif; ?>
 
-<div class="follower-section">
+<div class="info-box">
 	<h3><?php esc_html_e( 'Follower Growth', 'activitypub' ); ?></h3>
 	<?php
 	$net_change   = $args['followers_net_change'] ?? 0;
@@ -194,7 +164,7 @@ require __DIR__ . '/parts/header.php';
 </div>
 
 <?php if ( ! empty( $args['top_multiplicator'] ) && ! empty( $args['top_multiplicator']['name'] ) ) : ?>
-<div class="supporter-section">
+<div class="info-box">
 	<h3><?php esc_html_e( 'Your Biggest Supporter', 'activitypub' ); ?></h3>
 	<p>
 		<?php

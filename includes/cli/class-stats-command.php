@@ -59,6 +59,14 @@ class Stats_Command extends \WP_CLI_Command {
 		$month   = isset( $assoc_args['month'] ) ? (int) $assoc_args['month'] : (int) \gmdate( 'n' );
 		$force   = isset( $assoc_args['force'] );
 
+		if ( $month < 1 || $month > 12 ) {
+			\WP_CLI::error( "Invalid month: {$month}. Must be between 1 and 12." );
+		}
+
+		if ( $year < 2000 || $year > (int) \gmdate( 'Y' ) + 1 ) {
+			\WP_CLI::error( "Invalid year: {$year}." );
+		}
+
 		$user_ids = $user_id ? array( $user_id ) : Statistics::get_active_user_ids();
 
 		foreach ( $user_ids as $uid ) {
