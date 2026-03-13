@@ -255,6 +255,10 @@ class Statistics {
 			$followers_start = ( $first_month_stats['followers_total'] ?? 0 ) - ( $first_month_stats['followers_count'] ?? 0 );
 		}
 
+		// Get top posts for the full year.
+		$year_start = \sprintf( '%d-01-01 00:00:00', $year );
+		$year_end   = \sprintf( '%d-12-31 23:59:59', $year );
+
 		$summary = array(
 			'posts_count'          => $totals['posts_count'],
 			'most_active_month'    => $most_active_month,
@@ -262,6 +266,7 @@ class Statistics {
 			'followers_end'        => $last_month_stats ? ( $last_month_stats['followers_total'] ?? 0 ) : self::get_follower_count( $user_id ),
 			'followers_net_change' => 0,
 			'top_multiplicator'    => $top_multiplicator,
+			'top_posts'            => self::get_top_posts( $user_id, $year_start, $year_end, 5 ),
 			'compiled_at'          => \gmdate( 'Y-m-d H:i:s' ),
 		);
 

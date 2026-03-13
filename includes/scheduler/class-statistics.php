@@ -125,8 +125,8 @@ class Statistics {
 		$supporter_text = '';
 		if ( ! empty( $summary['top_multiplicator'] ) ) {
 			$supporter_text = \sprintf(
-				/* translators: 1: supporter name, 2: engagement count */
-				\__( '<strong><a href="%1$s">%2$s</a></strong> with %3$s engagements', 'activitypub' ),
+				/* translators: 1: supporter URL, 2: supporter name, 3: boost count */
+				\__( '<strong><a href="%1$s">%2$s</a></strong> with %3$s boosts', 'activitypub' ),
 				\esc_url( $summary['top_multiplicator']['url'] ),
 				\esc_html( $summary['top_multiplicator']['name'] ),
 				\number_format_i18n( $summary['top_multiplicator']['count'] )
@@ -213,8 +213,8 @@ class Statistics {
 		$supporter_text = '';
 		if ( ! empty( $stats['top_multiplicator'] ) ) {
 			$supporter_text = \sprintf(
-				/* translators: 1: supporter URL, 2: supporter name, 3: engagement count */
-				\__( '<strong><a href="%1$s">%2$s</a></strong> with %3$s engagements', 'activitypub' ),
+				/* translators: 1: supporter URL, 2: supporter name, 3: boost count */
+				\__( '<strong><a href="%1$s">%2$s</a></strong> with %3$s boosts', 'activitypub' ),
 				\esc_url( $stats['top_multiplicator']['url'] ),
 				\esc_html( $stats['top_multiplicator']['name'] ),
 				\number_format_i18n( $stats['top_multiplicator']['count'] )
