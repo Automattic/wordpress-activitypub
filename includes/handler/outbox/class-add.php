@@ -39,7 +39,7 @@ class Add {
 	 * @param array $data    The activity data array.
 	 * @param int   $user_id The user ID.
 	 *
-	 * @return int|\WP_Error The outbox post ID on success, or WP_Error on failure.
+	 * @return array|int|\WP_Error The original data if unhandled, outbox post ID on success, or WP_Error on failure.
 	 */
 	public static function handle_add( $data, $user_id = null ) {
 		$object_uri = object_to_uri( $data['object'] ?? '' );

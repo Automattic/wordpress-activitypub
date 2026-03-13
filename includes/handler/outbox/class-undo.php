@@ -73,7 +73,7 @@ class Undo {
 
 			case 'Block':
 				$stored    = \json_decode( $outbox_item->post_content, true );
-				$actor_uri = object_to_uri( $stored['object'] ?? '' );
+				$actor_uri = \is_array( $stored ) ? object_to_uri( $stored['object'] ?? '' ) : '';
 
 				if ( $actor_uri ) {
 					Moderation::remove_user_block( $user_id, Moderation::TYPE_ACTOR, $actor_uri );
