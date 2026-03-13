@@ -76,7 +76,6 @@ function rest_init() {
 		( new Rest\Nodeinfo_Controller() )->register_routes();
 	}
 	( new Rest\Proxy_Controller() )->register_routes();
-	( new Rest\Event_Stream_Controller() )->register_routes();
 }
 \add_action( 'rest_api_init', __NAMESPACE__ . '\rest_init' );
 

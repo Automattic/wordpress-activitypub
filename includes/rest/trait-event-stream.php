@@ -1,8 +1,9 @@
 <?php
 /**
- * Event Stream Controller file.
+ * Event Stream Trait file.
  *
- * Implements Server-Sent Events (SSE) for real-time ActivityPub collection updates.
+ * Provides Server-Sent Events (SSE) functionality for real-time
+ * ActivityPub collection updates and proxy streaming.
  *
  * @package Activitypub
  * @see https://swicg.github.io/activitypub-api/sse
@@ -14,143 +15,50 @@ namespace Activitypub\Rest;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
-use Activitypub\Http;
 use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Server as OAuth_Server;
 
-use function Activitypub\get_rest_url_by_path;
 
 /**
- * Event Stream Controller.
+ * Event Stream Trait.
  *
- * Provides SSE endpoints for C2S clients to subscribe to real-time updates
- * on outbox and inbox collections.
+ * Provides SSE streaming capabilities for collection controllers
+ * (Outbox, Inbox) and the Proxy controller.
  *
  * @since unreleased
  */
-class Event_Stream_Controller extends \WP_REST_Controller {
-	use Verification;
+trait Event_Stream {
 
 	/**
-	 * The namespace of this controller's route.
-	 *
-	 * @var string
-	 */
-	protected $namespace = ACTIVITYPUB_REST_NAMESPACE;
-
-	/**
-	 * The base of this controller's route.
-	 *
-	 * @var string
-	 */
-	protected $rest_base = '(?:users|actors)/(?P<user_id>[-]?\d+)/(?P<collection>outbox|inbox)/stream';
-
-	/**
-	 * SSE polling interval in seconds.
-	 *
-	 * @var int
-	 */
-	const POLL_INTERVAL = 5;
-
-	/**
-	 * Maximum SSE connection duration in seconds.
-	 *
-	 * @var int
-	 */
-	const MAX_DURATION = 300;
-
-	/**
-	 * Map of outbox activity types to SSE event types.
+	 * Map of ActivityPub activity types to SSE event types.
 	 *
 	 * @see https://swicg.github.io/activitypub-api/sse
 	 *
-	 * @var array
+	 * @return array The event type map.
 	 */
-	const EVENT_TYPE_MAP = array(
-		'Create'   => 'Add',
-		'Announce' => 'Add',
-		'Like'     => 'Add',
-		'Update'   => 'Update',
-		'Delete'   => 'Delete',
-		'Undo'     => 'Remove',
-	);
-
-	/**
-	 * Register routes.
-	 */
-	public function register_routes() {
-		\register_rest_route(
-			$this->namespace,
-			'/' . $this->rest_base,
-			array(
-				'args' => array(
-					'user_id'    => array(
-						'description'       => 'The ID of the user or actor.',
-						'type'              => 'integer',
-						'validate_callback' => array( $this, 'validate_user_id' ),
-					),
-					'collection' => array(
-						'description' => 'The collection to stream (outbox or inbox).',
-						'type'        => 'string',
-						'enum'        => array( 'outbox', 'inbox' ),
-					),
-				),
-				array(
-					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( $this, 'get_items' ),
-					'permission_callback' => array( $this, 'get_items_permissions_check' ),
-				),
-			)
-		);
-
-		\register_rest_route(
-			$this->namespace,
-			'/proxy/stream',
-			array(
-				array(
-					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => array( $this, 'get_proxy_stream' ),
-					'permission_callback' => array( $this, 'get_proxy_permissions_check' ),
-					'args'                => array(
-						'id' => array(
-							'description'       => 'The remote object ID (URI) whose eventStream to proxy.',
-							'type'              => 'string',
-							'format'            => 'uri',
-							'required'          => true,
-							'sanitize_callback' => 'sanitize_url',
-							'validate_callback' => array( $this, 'validate_proxy_url' ),
-						),
-					),
-				),
-			)
+	protected static function get_event_type_map() {
+		return array(
+			'Create'   => 'Add',
+			'Announce' => 'Add',
+			'Like'     => 'Add',
+			'Update'   => 'Update',
+			'Delete'   => 'Delete',
+			'Undo'     => 'Remove',
 		);
 	}
 
 	/**
-	 * Validates the user_id parameter.
+	 * Check permissions for the stream endpoint.
 	 *
-	 * @param mixed $user_id The user_id parameter.
-	 * @return bool|\WP_Error True if the user_id is valid, WP_Error otherwise.
-	 */
-	public function validate_user_id( $user_id ) {
-		$user = Actors::get_by_id( $user_id );
-		if ( \is_wp_error( $user ) ) {
-			return $user;
-		}
-
-		return true;
-	}
-
-	/**
-	 * Check permissions for the SSE stream endpoint.
-	 *
-	 * Requires OAuth authentication with the `push` scope.
+	 * Requires OAuth authentication with the push scope.
 	 *
 	 * @param \WP_REST_Request $request Full details about the request.
+	 *
 	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
 	 */
-	public function get_items_permissions_check( $request ) {
+	public function get_stream_permissions_check( $request ) {
 		$oauth_result = OAuth_Server::check_oauth_permission( $request, Scope::PUSH );
+
 		if ( true !== $oauth_result ) {
 			return $oauth_result;
 		}
@@ -165,28 +73,14 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * Check permissions for the proxy event stream endpoint.
-	 *
-	 * @param \WP_REST_Request $request Full details about the request.
-	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
-	 */
-	public function get_proxy_permissions_check( $request ) {
-		return OAuth_Server::check_oauth_permission( $request, Scope::PUSH );
-	}
-
-	/**
 	 * Stream SSE events for a collection.
 	 *
-	 * This method sends raw SSE output and calls exit — it does not
-	 * return a WP_REST_Response.
+	 * Sends raw SSE output and calls exit.
 	 *
-	 * @param \WP_REST_Request $request Full details about the request.
-	 * @return void
+	 * @param int    $user_id    The actor ID.
+	 * @param string $collection The collection type ('outbox' or 'inbox').
 	 */
-	public function get_items( $request ) {
-		$user_id    = $request->get_param( 'user_id' );
-		$collection = $request->get_param( 'collection' );
-
+	protected function stream_collection( $user_id, $collection ) {
 		// Allow PHP to detect client disconnects instead of auto-terminating.
 		ignore_user_abort( true );
 
@@ -201,10 +95,9 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 		$since_id = $last_event_id ? $last_event_id : $this->get_latest_item_id( $user_id, $collection );
 		$start    = time();
 
-		// Send initial connected event.
 		$this->send_sse_comment( 'connected' );
 
-		while ( ( time() - $start ) < self::MAX_DURATION ) {
+		while ( ( time() - $start ) < 300 ) {
 			if ( \connection_aborted() ) {
 				break;
 			}
@@ -227,14 +120,11 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 				}
 			}
 
-			// Send keepalive comment.
 			$this->send_sse_comment( 'keepalive ' . \gmdate( 'c' ) );
-
-			// Flush and sleep.
 			$this->flush_output();
 
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.sleep_sleep -- SSE long-polling requires blocking sleep.
-			sleep( self::POLL_INTERVAL );
+			sleep( 5 );
 		}
 
 		$this->send_sse_comment( 'timeout' );
@@ -244,73 +134,14 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * Validate the proxy URL parameter.
-	 *
-	 * @param string $url The URL to validate.
-	 * @return bool True if valid.
-	 */
-	public function validate_proxy_url( $url ) {
-		if ( 'https' !== \wp_parse_url( $url, PHP_URL_SCHEME ) ) {
-			return false;
-		}
-
-		return (bool) \wp_http_validate_url( $url );
-	}
-
-	/**
-	 * Proxy a remote eventStream.
-	 *
-	 * Fetches the remote object to discover its eventStream URL,
-	 * then opens a streaming connection and relays SSE events.
-	 *
-	 * @param \WP_REST_Request $request Full details about the request.
-	 * @return \WP_Error|void WP_Error on failure, exits on success.
-	 */
-	public function get_proxy_stream( $request ) {
-		$remote_id = $request->get_param( 'id' );
-
-		// Fetch the remote object to discover its eventStream URL.
-		$object = Http::get_remote_object( $remote_id );
-
-		if ( \is_wp_error( $object ) ) {
-			return new \WP_Error(
-				'activitypub_proxy_fetch_failed',
-				\__( 'Failed to fetch the remote object.', 'activitypub' ),
-				array( 'status' => 502 )
-			);
-		}
-
-		// Look for eventStream in the object itself or in its first/last/etc.
-		$stream_url = isset( $object['eventStream'] ) ? $object['eventStream'] : null;
-
-		if ( ! $stream_url ) {
-			return new \WP_Error(
-				'activitypub_no_event_stream',
-				\__( 'The remote object does not advertise an eventStream.', 'activitypub' ),
-				array( 'status' => 404 )
-			);
-		}
-
-		if ( ! $this->validate_proxy_url( $stream_url ) ) {
-			return new \WP_Error(
-				'activitypub_invalid_event_stream',
-				\__( 'The remote eventStream URL is not valid.', 'activitypub' ),
-				array( 'status' => 400 )
-			);
-		}
-
-		$this->relay_remote_stream( $stream_url );
-	}
-
-	/**
 	 * Open a streaming connection to a remote SSE endpoint and relay events.
 	 *
-	 * Uses PHP streams directly since WordPress HTTP API does not support
-	 * streaming responses.
+	 * Uses PHP streams directly because the WordPress HTTP API
+	 * does not support streaming responses.
 	 *
 	 * @param string $stream_url The remote eventStream URL.
 	 */
-	private function relay_remote_stream( $stream_url ) {
+	protected function relay_remote_stream( $stream_url ) {
 		ignore_user_abort( true );
 
 		$parsed = \wp_parse_url( $stream_url );
@@ -333,7 +164,7 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 		);
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_stream_socket_client -- SSE proxy requires raw streaming.
-		$stream = @stream_socket_client(
+		$stream = stream_socket_client(
 			'ssl://' . $host . ':' . $port,
 			$errno,
 			$errstr,
@@ -353,7 +184,7 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 			exit;
 		}
 
-		// Send HTTP request for SSE.
+		// Send the HTTP request.
 		$request_headers  = "GET {$path} HTTP/1.1\r\n";
 		$request_headers .= "Host: {$host}\r\n";
 		$request_headers .= "Accept: text/event-stream\r\n";
@@ -375,7 +206,6 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 				break;
 			}
 
-			// Parse status line.
 			if ( ! $status_code && preg_match( '/^HTTP\/\d\.\d (\d{3})/', $line, $matches ) ) {
 				$status_code = (int) $matches[1];
 			}
@@ -400,15 +230,15 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 			exit;
 		}
 
-		// Now relay SSE: send our own SSE headers and forward the stream.
+		// Send our own SSE headers and relay the remote stream.
 		$this->send_sse_headers();
 		$this->send_sse_comment( 'proxying ' . $host );
 
 		$start = time();
 
-		stream_set_timeout( $stream, self::POLL_INTERVAL + 5 );
+		stream_set_timeout( $stream, 10 );
 
-		while ( ! feof( $stream ) && ( time() - $start ) < self::MAX_DURATION ) {
+		while ( ! feof( $stream ) && ( time() - $start ) < 300 ) {
 			if ( \connection_aborted() ) {
 				break;
 			}
@@ -417,16 +247,16 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 
 			if ( false === $line ) {
 				$meta = stream_get_meta_data( $stream );
+
 				if ( ! empty( $meta['timed_out'] ) ) {
-					// Send keepalive on timeout and continue.
 					$this->send_sse_comment( 'keepalive ' . \gmdate( 'c' ) );
 					$this->flush_output();
 					continue;
 				}
+
 				break;
 			}
 
-			// Relay the SSE line as-is from the remote server.
 			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Relaying raw SSE protocol data.
 			echo $line;
 			$this->flush_output();
@@ -444,8 +274,7 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 	/**
 	 * Send SSE-specific HTTP headers.
 	 */
-	private function send_sse_headers() {
-		// Clear any output buffers.
+	protected function send_sse_headers() {
 		while ( ob_get_level() > 0 ) {
 			ob_end_clean();
 		}
@@ -455,25 +284,17 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 		\header( 'Cache-Control: no-cache' );
 		\header( 'X-Accel-Buffering: no' );
 
-		// CORS headers for browser-based clients.
-		$origin = isset( $_SERVER['HTTP_ORIGIN'] ) ? \esc_url_raw( \wp_unslash( $_SERVER['HTTP_ORIGIN'] ) ) : '';
-
-		if ( $origin ) {
-			\header( 'Access-Control-Allow-Origin: ' . $origin );
-			\header( 'Access-Control-Allow-Credentials: true' );
-			\header( 'Vary: Origin' );
-		} else {
-			\header( 'Access-Control-Allow-Origin: *' );
-		}
+		// SSE exits before rest_post_dispatch, so CORS must be sent directly.
+		Server::send_cors_headers();
 	}
 
 	/**
-	 * Send an SSE event.
+	 * Send an SSE event for a collection item.
 	 *
-	 * @param \WP_Post $item       The outbox or inbox post item.
+	 * @param \WP_Post $item       The collection post item.
 	 * @param string   $collection The collection type ('outbox' or 'inbox').
 	 */
-	private function send_sse_event( $item, $collection ) {
+	protected function send_sse_event( $item, $collection ) {
 		$event_type = $this->get_event_type( $item, $collection );
 		$data       = $this->get_event_data( $item, $collection );
 
@@ -489,19 +310,19 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * Send an SSE comment (keepalive or informational).
+	 * Send an SSE comment line.
 	 *
 	 * @param string $comment The comment text.
 	 */
-	private function send_sse_comment( $comment ) {
+	protected function send_sse_comment( $comment ) {
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- SSE protocol requires raw output.
 		echo ': ' . $comment . "\n\n";
 	}
 
 	/**
-	 * Flush output buffers.
+	 * Flush all output buffers.
 	 */
-	private function flush_output() {
+	protected function flush_output() {
 		if ( ob_get_level() > 0 ) {
 			ob_flush();
 		}
@@ -509,35 +330,37 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * Get the SSE event type for an item.
+	 * Get the SSE event type for a collection item.
 	 *
-	 * @param \WP_Post $item       The outbox or inbox post item.
-	 * @param string   $collection The collection type.
-	 * @return string The SSE event type (Add, Update, or Remove).
+	 * @param \WP_Post $item       The collection post item.
+	 * @param string   $collection The collection type ('outbox' or 'inbox').
+	 *
+	 * @return string The SSE event type.
 	 */
-	private function get_event_type( $item, $collection ) {
+	protected function get_event_type( $item, $collection ) {
 		if ( 'inbox' === $collection ) {
-			// Inbox items are always additions to the collection.
 			return 'Add';
 		}
 
-		$activity_type = \get_post_meta( $item->ID, '_activitypub_activity_type', true );
+		$activity_type  = \get_post_meta( $item->ID, '_activitypub_activity_type', true );
+		$event_type_map = self::get_event_type_map();
 
-		if ( isset( self::EVENT_TYPE_MAP[ $activity_type ] ) ) {
-			return self::EVENT_TYPE_MAP[ $activity_type ];
+		if ( isset( $event_type_map[ $activity_type ] ) ) {
+			return $event_type_map[ $activity_type ];
 		}
 
 		return 'Add';
 	}
 
 	/**
-	 * Get the event data (activity JSON) for an item.
+	 * Get the activity data for a collection item.
 	 *
-	 * @param \WP_Post $item       The outbox or inbox post item.
-	 * @param string   $collection The collection type.
-	 * @return array|null The activity data or null on failure.
+	 * @param \WP_Post $item       The collection post item.
+	 * @param string   $collection The collection type ('outbox' or 'inbox').
+	 *
+	 * @return array|null The activity data, or null on failure.
 	 */
-	private function get_event_data( $item, $collection ) {
+	protected function get_event_data( $item, $collection ) {
 		if ( 'outbox' === $collection ) {
 			$activity = Outbox::get_activity( $item->ID );
 
@@ -548,7 +371,6 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 			return $activity->to_array( false );
 		}
 
-		// Inbox items store activity JSON directly in post_content.
 		$data = \json_decode( $item->post_content, true );
 
 		return $data ? $data : null;
@@ -557,11 +379,12 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 	/**
 	 * Get the latest item ID for a collection.
 	 *
-	 * @param int    $user_id    The user ID.
-	 * @param string $collection The collection type.
-	 * @return int The latest post ID or 0.
+	 * @param int    $user_id    The actor ID.
+	 * @param string $collection The collection type ('outbox' or 'inbox').
+	 *
+	 * @return int The latest post ID, or 0 if empty.
 	 */
-	private function get_latest_item_id( $user_id, $collection ) {
+	protected function get_latest_item_id( $user_id, $collection ) {
 		$post_type = 'outbox' === $collection ? Outbox::POST_TYPE : Inbox::POST_TYPE;
 
 		$args = array(
@@ -598,17 +421,27 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * Get new items since a given ID.
+	 * Get the eventStream URL for a collection.
 	 *
-	 * Uses a `posts_where` filter to add `ID > $since_id` to the query,
-	 * since WP_Query does not natively support filtering by minimum post ID.
+	 * @param int    $user_id    The actor ID.
+	 * @param string $collection The collection type ('outbox' or 'inbox').
 	 *
-	 * @param int    $user_id    The user ID.
-	 * @param string $collection The collection type.
+	 * @return string The eventStream URL.
+	 */
+	public function get_stream_url( $user_id, $collection ) {
+		return \rest_url( sprintf( '%s/actors/%d/%s/stream', $this->namespace, $user_id, $collection ) );
+	}
+
+	/**
+	 * Get new collection items since a given ID.
+	 *
+	 * @param int    $user_id    The actor ID.
+	 * @param string $collection The collection type ('outbox' or 'inbox').
 	 * @param int    $since_id   Only return items with ID greater than this.
+	 *
 	 * @return \WP_Post[] Array of new post items.
 	 */
-	private function get_new_items( $user_id, $collection, $since_id ) {
+	protected function get_new_items( $user_id, $collection, $since_id ) {
 		$post_type = 'outbox' === $collection ? Outbox::POST_TYPE : Inbox::POST_TYPE;
 
 		$args = array(
@@ -638,7 +471,6 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		// Add a posts_where filter to restrict to items newer than $since_id.
 		if ( $since_id > 0 ) {
 			$where_filter = function ( $where ) use ( $since_id ) {
 				global $wpdb;
@@ -655,25 +487,5 @@ class Event_Stream_Controller extends \WP_REST_Controller {
 		}
 
 		return $query->posts;
-	}
-
-	/**
-	 * Get the stream URL for a collection.
-	 *
-	 * @param int    $user_id    The user ID.
-	 * @param string $collection The collection name ('outbox' or 'inbox').
-	 * @return string The stream URL.
-	 */
-	public static function get_stream_url( $user_id, $collection ) {
-		return get_rest_url_by_path( sprintf( 'actors/%d/%s/stream', $user_id, $collection ) );
-	}
-
-	/**
-	 * Get the proxy event stream URL.
-	 *
-	 * @return string The proxy event stream URL.
-	 */
-	public static function get_proxy_url() {
-		return get_rest_url_by_path( 'proxy/stream' );
 	}
 }

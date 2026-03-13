@@ -28,6 +28,7 @@ use function Activitypub\object_to_uri;
  */
 class Outbox_Controller extends \WP_REST_Controller {
 	use Collection;
+	use Event_Stream;
 	use Verification;
 
 	/**
@@ -85,6 +86,28 @@ class Outbox_Controller extends \WP_REST_Controller {
 					'permission_callback' => array( $this, 'verify_authentication' ),
 				),
 				'schema' => array( $this, 'get_item_schema' ),
+			)
+		);
+
+		\register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/stream',
+			array(
+				'args' => array(
+					'user_id' => array(
+						'description'       => 'The ID of the actor.',
+						'type'              => 'integer',
+						'required'          => true,
+						'validate_callback' => array( $this, 'validate_user_id' ),
+					),
+				),
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => function ( $request ) {
+						$this->stream_collection( $request->get_param( 'user_id' ), 'outbox' );
+					},
+					'permission_callback' => array( $this, 'get_stream_permissions_check' ),
+				),
 			)
 		);
 
@@ -187,7 +210,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 			'actor'        => $user->get_id(),
 			'type'         => 'OrderedCollection',
 			'totalItems'   => (int) $outbox_query->found_posts,
-			'eventStream'  => Event_Stream_Controller::get_stream_url( $user_id, 'outbox' ),
+			'eventStream'  => $this->get_stream_url( $user_id, 'outbox' ),
 			'orderedItems' => array(),
 		);
 

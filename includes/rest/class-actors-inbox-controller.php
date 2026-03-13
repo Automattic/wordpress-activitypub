@@ -27,6 +27,7 @@ use function Activitypub\object_to_uri;
  */
 class Actors_Inbox_Controller extends Actors_Controller {
 	use Collection;
+	use Event_Stream;
 	use Language_Map;
 
 	/**
@@ -110,6 +111,28 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			)
 		);
 
+		\register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/inbox/stream',
+			array(
+				'args' => array(
+					'user_id' => array(
+						'description'       => 'The ID of the actor.',
+						'type'              => 'integer',
+						'required'          => true,
+						'validate_callback' => array( $this, 'validate_user_id' ),
+					),
+				),
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => function ( $request ) {
+						$this->stream_collection( $request->get_param( 'user_id' ), 'inbox' );
+					},
+					'permission_callback' => array( $this, 'get_stream_permissions_check' ),
+				),
+			)
+		);
+
 		\add_action( 'activitypub_inbox_create_item', array( self::class, 'process_create_item' ) );
 	}
 
@@ -169,7 +192,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			'actor'        => $user->get_id(),
 			'type'         => 'OrderedCollection',
 			'totalItems'   => (int) $inbox_query->found_posts,
-			'eventStream'  => Event_Stream_Controller::get_stream_url( $user_id, 'inbox' ),
+			'eventStream'  => $this->get_stream_url( $user_id, 'inbox' ),
 			'orderedItems' => array(),
 		);
 

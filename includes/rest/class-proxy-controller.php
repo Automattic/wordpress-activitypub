@@ -22,6 +22,7 @@ use function Activitypub\is_actor;
  * Allows C2S clients to fetch remote ActivityPub objects through their home server.
  */
 class Proxy_Controller extends \WP_REST_Controller {
+	use Event_Stream;
 	use Verification;
 
 	/**
@@ -61,6 +62,28 @@ class Proxy_Controller extends \WP_REST_Controller {
 					),
 				),
 				'schema' => array( $this, 'get_item_schema' ),
+			)
+		);
+
+		\register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/stream',
+			array(
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_stream' ),
+					'permission_callback' => array( $this, 'get_stream_permissions_check' ),
+					'args'                => array(
+						'id' => array(
+							'description'       => 'The remote object ID (URI) whose eventStream to proxy.',
+							'type'              => 'string',
+							'format'            => 'uri',
+							'required'          => true,
+							'sanitize_callback' => array( $this, 'sanitize_url' ),
+							'validate_callback' => array( $this, 'validate_url' ),
+						),
+					),
+				),
 			)
 		);
 	}
@@ -181,5 +204,49 @@ class Proxy_Controller extends \WP_REST_Controller {
 				),
 			),
 		);
+	}
+
+	/**
+	 * Proxy a remote eventStream.
+	 *
+	 * Fetches the remote object to discover its eventStream URL,
+	 * then opens a streaming connection and relays SSE events.
+	 *
+	 * @param \WP_REST_Request $request Full details about the request.
+	 *
+	 * @return \WP_Error|void WP_Error on failure, exits on success.
+	 */
+	public function get_stream( $request ) {
+		$remote_id = $request->get_param( 'id' );
+
+		$object = Http::get_remote_object( $remote_id );
+
+		if ( \is_wp_error( $object ) ) {
+			return new \WP_Error(
+				'activitypub_proxy_fetch_failed',
+				\__( 'Failed to fetch the remote object.', 'activitypub' ),
+				array( 'status' => 502 )
+			);
+		}
+
+		$stream_url = isset( $object['eventStream'] ) ? $object['eventStream'] : null;
+
+		if ( ! $stream_url ) {
+			return new \WP_Error(
+				'activitypub_no_event_stream',
+				\__( 'The remote object does not advertise an eventStream.', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		if ( ! $this->validate_url( $stream_url ) ) {
+			return new \WP_Error(
+				'activitypub_invalid_event_stream',
+				\__( 'The remote eventStream URL is not valid.', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$this->relay_remote_stream( $stream_url );
 	}
 }
