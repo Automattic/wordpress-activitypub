@@ -187,15 +187,15 @@ if ( null !== $net_change ) :
 <div class="info-box top-posts">
 	<h3><?php esc_html_e( 'Top Posts', 'activitypub' ); ?></h3>
 	<ol>
-		<?php foreach ( $args['top_posts'] as $post ) : ?>
+		<?php foreach ( $args['top_posts'] as $top_post ) : ?>
 		<li>
-			<a href="<?php echo esc_url( $post['url'] ); ?>"><?php echo esc_html( $post['title'] ?: __( '(no title)', 'activitypub' ) ); ?></a>
+			<a href="<?php echo esc_url( $top_post['url'] ); ?>"><?php echo esc_html( $top_post['title'] ?: __( '(no title)', 'activitypub' ) ); ?></a>
 			<span class="engagement">
 				<?php
 				printf(
 					/* translators: %s: engagement count */
 					esc_html__( '(%s engagements)', 'activitypub' ),
-					esc_html( number_format_i18n( $post['engagement_count'] ?? 0 ) )
+					esc_html( number_format_i18n( $top_post['engagement_count'] ?? 0 ) )
 				);
 				?>
 			</span>
