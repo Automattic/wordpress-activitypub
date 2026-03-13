@@ -8,8 +8,8 @@
 namespace Activitypub\Handler;
 
 use Activitypub\Collection\Interactions;
-use Activitypub\Collection\Posts;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Collection\Remote_Posts;
 
 use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\is_activity_reply;
@@ -95,7 +95,7 @@ class Update {
 				$result = \get_comment( $comment_data['comment_ID'] );
 			}
 		} elseif ( \get_option( 'activitypub_create_posts', false ) ) {
-			$result = Posts::update( $activity, $user_ids );
+			$result = Remote_Posts::update( $activity, $user_ids );
 
 			if ( \is_wp_error( $result ) && 'activitypub_post_not_found' === $result->get_error_code() ) {
 				$updated = false;

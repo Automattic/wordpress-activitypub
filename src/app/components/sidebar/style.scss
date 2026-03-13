@@ -1,3 +1,5 @@
+@use "@wordpress/base-styles/colors";
+
 /**
  * Disable no-descending-specificity: Focus states are separated into
  * reset rules (:focus:not(:disabled)) and color rules (:focus-visible).
@@ -8,8 +10,8 @@
 	display: flex;
 	flex-direction: column;
 	flex: 1;
-	color: var(--wpds-color-fg-inverted-secondary, #ccc);
-	background-color: var(--wpds-color-bg-surface-neutral-weak, #1e1e1e);
+	color: colors.$gray-400;
+	background-color: colors.$gray-900;
 
 	.nav {
 		flex: 1;
@@ -20,14 +22,14 @@
 	.sidebar-navigation__icon-title {
 		position: sticky;
 		top: 0;
-		background: var(--wpds-color-bg-surface-neutral-weak, #1e1e1e);
+		background: colors.$gray-900;
 		padding-top: var(--wpds-spacing-120, 48px);
 		margin-bottom: var(--wpds-spacing-20, 8px);
 		padding-bottom: var(--wpds-spacing-20, 8px);
 	}
 
 	.sidebar-navigation__button {
-		color: var(--wpds-color-fg-inverted-secondary, #e0e0e0);
+		color: colors.$gray-200;
 		flex-shrink: 0;
 
 		// Focus (resets default button focus and use focus-visible).
@@ -48,12 +50,12 @@
 		&:focus,
 		&:not(:disabled,[aria-disabled="true"]):active,
 		&[aria-expanded="true"] {
-			color: var(--wpds-color-private-bg-fg-fill, #f0f0f0);
+			color: colors.$gray-100;
 		}
 	}
 
 	.sidebar-navigation__title {
-		color: var(--wpds-color-fg-inverted-secondary, #e0e0e0);
+		color: colors.$gray-200;
 		flex-grow: 1;
 		overflow-wrap: break-word;
 		line-height: var(--wpds-spacing-80, 32px);
@@ -65,7 +67,7 @@
 	}
 
 	.menu-item {
-		color: var(--wpds-color-fg-inverted-secondary, #e0e0e0);
+		color: colors.$gray-200;
 
 		// Disable all transitions to prevent glow/blinking effects
 		transition: none !important;
@@ -83,25 +85,25 @@
 		}
 
 		&:hover {
-			background-color: var(--wpds-color-bg-interactive-neutral-hover, rgba(255, 255, 255, 0.1)) !important;
-			color: var(--wpds-color-fg-inverted-primary, #fff) !important;
+			background-color: rgba(colors.$white, 0.1) !important;
+			color: colors.$white !important;
 		}
 
 		&:active {
-			background-color: var(--wpds-color-bg-interactive-neutral-hover, rgba(255, 255, 255, 0.1)) !important;
+			background-color: rgba(colors.$white, 0.1) !important;
 		}
 
 		&.is-selected,
 		&[aria-pressed="true"] {
-			background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15)) !important;
-			color: var(--wpds-color-fg-inverted-primary, #fff) !important;
+			background-color: rgba(colors.$white, 0.15) !important;
+			color: colors.$white !important;
 
 			&:hover {
-				background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15)) !important;
+				background-color: rgba(colors.$white, 0.15) !important;
 			}
 
 			&:active {
-				background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15)) !important;
+				background-color: rgba(colors.$white, 0.15) !important;
 			}
 		}
 
@@ -120,25 +122,25 @@
 		padding: var(--wpds-spacing-20, 8px) var(--wpds-spacing-30, 12px);
 
 		&__loading {
-			color: var(--wpds-color-fg-inverted-secondary, #ccc);
+			color: colors.$gray-400;
 			font-size: 13px;
 		}
 	}
 
 	.footer {
 		padding: var(--wpds-spacing-40, 16px);
-		border-top: 1px solid var(--wpds-color-stroke-inverted, rgba(255, 255, 255, 0.1));
+		border-top: 1px solid rgba(colors.$white, 0.1);
 
 		> .components-h-stack {
 			padding: 2px 0;
 		}
 
 		.footer-settings-button {
-			color: var(--wpds-color-fg-inverted-secondary, #e0e0e0);
+			color: colors.$gray-200;
 			flex-shrink: 0;
 
 			&:hover:not(:disabled) {
-				color: var(--wpds-color-fg-inverted-primary, #fff);
+				color: colors.$white;
 			}
 		}
 	}

@@ -222,6 +222,14 @@ class Migration {
 			// Backfill historical statistics data (delay to avoid load immediately after upgrade).
 			\wp_schedule_single_event( \time() + HOUR_IN_SECONDS, 'activitypub_backfill_statistics' );
 		}
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			// Flush rewrite rules for OAuth Authorization Server Metadata endpoint.
+			\add_action( 'init', 'flush_rewrite_rules', 20 );
+		}
+
+		if ( \version_compare( $version_from_db, '8.0.0', '<' ) ) {
+			Activitypub::flush_rewrite_rules();
+		}
 
 		// Ensure all required cron schedules are registered.
 		Scheduler::register_schedules();

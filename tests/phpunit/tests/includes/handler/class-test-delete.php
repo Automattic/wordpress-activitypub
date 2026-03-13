@@ -200,13 +200,13 @@ class Test_Delete extends \WP_UnitTestCase {
 		for ( $i = 0; $i < 3; $i++ ) {
 			$post_id = self::factory()->post->create(
 				array(
-					'post_type'   => \Activitypub\Collection\Posts::POST_TYPE,
+					'post_type'   => \Activitypub\Collection\Remote_Posts::POST_TYPE,
 					'post_author' => $actor->ID,
 					'post_title'  => "Test Post $i",
 					'post_status' => 'publish',
 				)
 			);
-			// Add the remote actor ID meta that Posts::get_by_remote_actor() looks for.
+			// Add the remote actor ID meta that Remote_Posts::get_by_remote_actor() looks for.
 			\add_post_meta( $post_id, '_activitypub_remote_actor_id', $actor->ID );
 			$post_ids[] = $post_id;
 		}
@@ -334,7 +334,7 @@ class Test_Delete extends \WP_UnitTestCase {
 		// Create a post in the Posts collection.
 		$post_id = \wp_insert_post(
 			array(
-				'post_type'    => \Activitypub\Collection\Posts::POST_TYPE,
+				'post_type'    => \Activitypub\Collection\Remote_Posts::POST_TYPE,
 				'post_title'   => 'Test Note',
 				'post_content' => 'Test content',
 				'post_status'  => 'publish',

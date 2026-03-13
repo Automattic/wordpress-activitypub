@@ -738,7 +738,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 	 * Test emoji replacement in activity_to_comment.
 	 *
 	 * @covers ::activity_to_comment
-	 * @covers \Activitypub\Emoji::replace_custom_emoji
+	 * @covers \Activitypub\Emoji::wrap_in_content
 	 */
 	public function test_activity_to_comment_with_emoji() {
 		$actor_uri = 'http://example.org/users/emoji-user';
@@ -820,22 +820,28 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$comment_id = Interactions::add_comment( $activity );
 		$comment    = get_comment( $comment_id );
 
-		// Test emoji replacement in comment content (emoji is cached locally).
-		$this->assertStringContainsString( 'kappa.png" alt="kappa" title="kappa" class="emoji"', $comment->comment_content );
-		$this->assertStringContainsString( 'smile.png" alt="smile" title="smile" class="emoji"', $comment->comment_content );
-		$this->assertStringNotContainsString( ':kappa:', $comment->comment_content );
-		$this->assertStringNotContainsString( ':smile:', $comment->comment_content );
+		// Test that emoji are wrapped in blocks (not plain shortcodes).
+		$this->assertStringContainsString( '<!-- wp:activitypub/emoji', $comment->comment_content );
+		$this->assertStringContainsString( ':kappa:', $comment->comment_content );
+		$this->assertStringContainsString( ':smile:', $comment->comment_content );
 
-		// Test that shortcode is stored in database, not HTML.
+		// Test that shortcode is stored in database, not HTML (for author name).
 		$this->assertSame( 'Test User :kappa:', $comment->comment_author );
 
 		// Test that comment is linked to remote actor.
 		$remote_actor_id = get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true );
 		$this->assertEquals( $actor_post_id, $remote_actor_id );
 
-		// Test that emoji data is stored on remote actor.
+		// Test that emoji data is stored on remote actor (for author name rendering).
 		$emoji_data = get_post_meta( $actor_post_id, '_activitypub_emoji', true );
 		$this->assertNotEmpty( $emoji_data );
+
+		// Test emoji replacement on display via comment_text filter (blocks are rendered).
+		$comment_text_with_emoji = apply_filters( 'comment_text', $comment->comment_content, $comment );
+		$this->assertStringContainsString( 'kappa.png" alt="kappa" title="kappa" class="emoji"', $comment_text_with_emoji );
+		$this->assertStringContainsString( 'smile.png" alt="smile" title="smile" class="emoji"', $comment_text_with_emoji );
+		$this->assertStringNotContainsString( ':kappa:', $comment_text_with_emoji );
+		$this->assertStringNotContainsString( ':smile:', $comment_text_with_emoji );
 
 		// Test emoji replacement on display via comment_author filter.
 		$author_with_emoji = get_comment_author( $comment_id );

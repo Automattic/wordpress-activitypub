@@ -2,12 +2,18 @@
   "$schema": "https://schemas.wp.org/trunk/block.json",
   "name": "activitypub/extra-fields",
   "apiVersion": 3,
-  "version": "7.9.1",
+  "version": "8.0.1",
   "title": "Fediverse Extra Fields",
   "category": "widgets",
-  "description": "Display extra fields from ActivityPub user profiles",
+  "description": "Display extra fields from Fediverse user profiles.",
   "textdomain": "activitypub",
   "icon": "list-view",
+  "keywords": [
+    "fediverse",
+    "activitypub",
+    "profile",
+    "fields"
+  ],
   "supports": {
     "html": false,
     "align": [

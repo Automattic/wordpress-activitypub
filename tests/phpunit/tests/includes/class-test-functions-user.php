@@ -101,4 +101,84 @@ class Test_Functions_User extends \WP_UnitTestCase {
 		\delete_transient( 'monthly_active_users_1' );
 		\delete_transient( 'monthly_active_users_6' );
 	}
+
+	/**
+	 * Test get_active_users counts users who only comment.
+	 *
+	 * @covers \Activitypub\get_active_users
+	 */
+	public function test_get_active_users_with_comments() {
+		\delete_transient( 'monthly_active_users_1' );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		// Create a user with activitypub capability but no posts.
+		$commenter = self::factory()->user->create_and_get();
+		$commenter->add_cap( 'activitypub' );
+
+		// Create a post by another user for the comment to attach to.
+		$post_id = self::factory()->post->create();
+
+		// Create an approved comment by the user.
+		self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'user_id'          => $commenter->ID,
+				'comment_approved' => '1',
+			)
+		);
+
+		\delete_transient( 'monthly_active_users_1' );
+
+		$active_users = \Activitypub\get_active_users( 1 );
+		$this->assertGreaterThanOrEqual( 1, $active_users, 'Users who only comment should be counted as active.' );
+
+		\delete_transient( 'monthly_active_users_1' );
+	}
+
+	/**
+	 * Test get_active_users counts custom post types with ActivityPub support.
+	 *
+	 * @covers \Activitypub\get_active_users
+	 */
+	public function test_get_active_users_with_custom_post_types() {
+		\delete_transient( 'monthly_active_users_1' );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		// Register a custom post type with ActivityPub support.
+		\register_post_type(
+			'ap_test_cpt',
+			array(
+				'public'   => true,
+				'supports' => array( 'title', 'editor', 'activitypub' ),
+			)
+		);
+
+		// Ensure cleanup even if assertion fails.
+		$cleanup = function () {
+			\delete_transient( 'monthly_active_users_1' );
+			\unregister_post_type( 'ap_test_cpt' );
+		};
+
+		try {
+			// Create a user with activitypub capability.
+			$user = self::factory()->user->create_and_get();
+			$user->add_cap( 'activitypub' );
+
+			// Create a post of the custom type.
+			self::factory()->post->create(
+				array(
+					'post_author' => $user->ID,
+					'post_status' => 'publish',
+					'post_type'   => 'ap_test_cpt',
+				)
+			);
+
+			\delete_transient( 'monthly_active_users_1' );
+
+			$active_users = \Activitypub\get_active_users( 1 );
+			$this->assertGreaterThanOrEqual( 1, $active_users, 'Users publishing custom post types with ActivityPub support should be counted as active.' );
+		} finally {
+			$cleanup();
+		}
+	}
 }

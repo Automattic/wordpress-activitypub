@@ -12,8 +12,8 @@ use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
-use Activitypub\Collection\Posts;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Collection\Remote_Posts;
 use Activitypub\Scheduler\Actor;
 use Activitypub\Scheduler\Collection_Sync;
 use Activitypub\Scheduler\Comment;
@@ -404,7 +404,7 @@ class Scheduler {
 	 */
 	public static function purge_ap_posts() {
 		$days = (int) \get_option( 'activitypub_ap_post_purge_days', 30 );
-		Posts::purge( $days );
+		Remote_Posts::purge( $days );
 	}
 
 	/**

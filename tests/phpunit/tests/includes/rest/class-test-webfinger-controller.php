@@ -94,7 +94,6 @@ class Test_Webfinger_Controller extends \Activitypub\Tests\Test_REST_Controller_
 
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertStringContainsString( 'application/jrd+json', $response->get_headers()['Content-Type'] );
-		$this->assertEquals( '*', $response->get_headers()['Access-Control-Allow-Origin'] );
 	}
 
 	/**

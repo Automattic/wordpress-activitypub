@@ -317,6 +317,190 @@ class Test_Webfinger extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_intent_endpoint with FEP-3b86 link.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_fep3b86() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => array(
+							array(
+								'rel'      => 'https://w3id.org/fep/3b86/like',
+								'template' => 'https://example.com/intent/like?object={object}',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like' );
+
+		$this->assertEquals( 'https://example.com/intent/like?object={object}', $result );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test get_intent_endpoint falls back to OStatus subscribe.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_ostatus_fallback() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => array(
+							array(
+								'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+								'template' => 'https://example.com/authorize_interaction?uri={uri}',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like', true );
+
+		$this->assertEquals( 'https://example.com/authorize_interaction?uri={uri}', $result );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test get_intent_endpoint without fallback returns error.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_no_fallback_returns_error() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => array(
+							array(
+								'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+								'template' => 'https://example.com/authorize_interaction?uri={uri}',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like', false );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'webfinger_missing_intent_endpoint', $result->get_error_code() );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test get_intent_endpoint last-resort Mastodon-compatible URL for handle.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_mastodon_fallback_from_handle() {
+		// Provide links that don't match any intent or OStatus template.
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@mastodon.social',
+						'links'   => array(
+							array(
+								'rel'  => 'self',
+								'type' => 'application/activity+json',
+								'href' => 'https://mastodon.social/users/user',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@mastodon.social', 'like', true );
+
+		$this->assertEquals( 'https://mastodon.social/authorize_interaction?uri={uri}', $result );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test get_intent_endpoint with missing links returns error.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_missing_links() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'webfinger_missing_links', $result->get_error_code() );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test get_intent_endpoint with a full URL intent.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_full_url_intent() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => array(
+							array(
+								'rel'      => 'https://custom.example/intent/share',
+								'template' => 'https://example.com/share?url={uri}',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'https://custom.example/intent/share' );
+
+		$this->assertEquals( 'https://example.com/share?url={uri}', $result );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
 	 * Test that WebFinger 4xx failures are cached (longer duration).
 	 *
 	 * @covers ::get_data

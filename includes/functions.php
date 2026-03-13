@@ -10,6 +10,27 @@
 namespace Activitypub;
 
 /**
+ * Get the ActivityPub ID for a WordPress object.
+ *
+ * Returns the canonical ActivityPub URI for a WP_Post or WP_Comment.
+ *
+ * @param \WP_Post|\WP_Comment $wp_object The WordPress post or comment.
+ *
+ * @return string|null The ActivityPub ID (a URL), or null if unsupported type.
+ */
+function get_object_id( $wp_object ) {
+	if ( $wp_object instanceof \WP_Post ) {
+		return get_post_id( $wp_object->ID );
+	}
+
+	if ( $wp_object instanceof \WP_Comment ) {
+		return get_comment_id( $wp_object );
+	}
+
+	return null;
+}
+
+/**
  * Convert a string from camelCase to snake_case.
  *
  * @param string $input The string to convert.
@@ -212,7 +233,7 @@ function custom_large_numbers( $formatted, $number ) {
 function esc_hashtag( $input ) {
 	$hashtag = \wp_specialchars_decode( $input, ENT_QUOTES );
 	// Remove all characters that are not letters, numbers, or hyphens.
-	$hashtag = \preg_replace( '/emoji-regex(*SKIP)(?!)|[^\p{L}\p{Nd}-]+/u', '-', $hashtag );
+	$hashtag = \preg_replace( '/[^\p{L}\p{Nd}-]+/u', '-', $hashtag );
 
 	// Capitalize every letter that is preceded by a hyphen.
 	$hashtag = preg_replace_callback(
@@ -315,4 +336,58 @@ function enrich_content_data( $content, $regex, $regex_callback ) {
  */
 function get_embed_html( $url, $inline_css = true ) {
 	return Embed::get_html( $url, $inline_css );
+}
+
+/**
+ * Get the client IP address for rate-limiting purposes.
+ *
+ * Checks common proxy headers before falling back to REMOTE_ADDR,
+ * similar to Jetpack's approach. The result can be overridden via
+ * the `activitypub_client_ip` filter.
+ *
+ * @since unreleased
+ *
+ * @return string The client IP address.
+ */
+function get_client_ip() {
+	// phpcs:disable WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders
+	$ip = 'unknown';
+
+	$headers = array(
+		'HTTP_CF_CONNECTING_IP', // Cloudflare.
+		'HTTP_CLIENT_IP',
+		'HTTP_X_FORWARDED_FOR',
+		'HTTP_X_FORWARDED',
+		'HTTP_X_CLUSTER_CLIENT_IP',
+		'HTTP_FORWARDED_FOR',
+		'HTTP_FORWARDED',
+	);
+
+	foreach ( $headers as $header ) {
+		if ( ! empty( $_SERVER[ $header ] ) ) {
+			// Some headers (e.g. X-Forwarded-For) may contain a comma-separated list; use the first IP.
+			$ip_list = \sanitize_text_field( \wp_unslash( $_SERVER[ $header ] ) );
+			$ip      = \trim( \explode( ',', $ip_list )[0] );
+
+			if ( \filter_var( $ip, FILTER_VALIDATE_IP ) ) {
+				break;
+			}
+
+			$ip = 'unknown';
+		}
+	}
+
+	if ( 'unknown' === $ip && isset( $_SERVER['REMOTE_ADDR'] ) ) {
+		$ip = \sanitize_text_field( \wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
+	}
+	// phpcs:enable WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders
+
+	/**
+	 * Filter the client IP address used for rate limiting.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $ip The detected client IP address.
+	 */
+	return \apply_filters( 'activitypub_client_ip', $ip );
 }

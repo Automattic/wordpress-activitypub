@@ -324,6 +324,16 @@ class Options {
 
 		\register_setting(
 			'activitypub_advanced',
+			'activitypub_api',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Enable the ActivityPub API to allow third-party clients.',
+				'default'     => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
 			'activitypub_object_type',
 			array(
 				'type'         => 'string',

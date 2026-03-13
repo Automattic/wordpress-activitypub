@@ -8,8 +8,8 @@
 namespace Activitypub\Handler;
 
 use Activitypub\Collection\Interactions;
-use Activitypub\Collection\Posts;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Collection\Remote_Posts;
 use Activitypub\Tombstone;
 
 use function Activitypub\object_to_uri;
@@ -220,10 +220,10 @@ class Delete {
 	 * @return bool True on success, false otherwise.
 	 */
 	public static function delete_posts( $id ) {
-		$posts = Posts::get_by_remote_actor_id( $id );
+		$posts = Remote_Posts::get_by_remote_actor_id( $id );
 
 		foreach ( $posts as $post ) {
-			Posts::delete( $post->ID );
+			Remote_Posts::delete( $post->ID );
 		}
 
 		if ( $posts ) {
@@ -273,7 +273,7 @@ class Delete {
 
 		// Check if the object exists and is a tombstone.
 		if ( Tombstone::exists( $id ) ) {
-			return Posts::delete_by_guid( $id );
+			return Remote_Posts::delete_by_guid( $id );
 		}
 
 		return false;
