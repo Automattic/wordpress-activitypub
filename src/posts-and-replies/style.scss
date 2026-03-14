@@ -1,0 +1,89 @@
+.wp-block-activitypub-posts-and-replies {
+
+	.ap-tabs {
+		display: flex;
+		gap: 0;
+		border-bottom: 1px solid currentcolor;
+		margin-bottom: 1.5em;
+	}
+
+	.ap-tabs__tab {
+		padding: 0.5em 1em;
+		border: none;
+		background: none;
+		cursor: pointer;
+		font-size: inherit;
+		font-family: inherit;
+		color: inherit;
+		opacity: 0.6;
+		border-bottom: 2px solid transparent;
+		margin-bottom: -1px;
+		transition: opacity 0.2s, border-color 0.2s;
+
+		&:hover,
+		&:focus {
+			opacity: 1;
+		}
+
+		&.is-active {
+			opacity: 1;
+			border-bottom-color: currentcolor;
+		}
+	}
+
+	.ap-tabs__panel[hidden] {
+		display: none;
+	}
+
+	.ap-posts-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+
+	.ap-posts-list__item {
+		margin-bottom: 1.5em;
+		padding-bottom: 1.5em;
+		border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+
+		&:last-child {
+			border-bottom: none;
+		}
+	}
+
+	.ap-posts-list__title {
+		display: block;
+		font-size: 1.2em;
+		font-weight: 600;
+		text-decoration: none;
+		margin-bottom: 0.25em;
+	}
+
+	.ap-posts-list__date {
+		display: block;
+		font-size: 0.85em;
+		opacity: 0.6;
+		margin-bottom: 0.5em;
+	}
+
+	.ap-posts-list__excerpt {
+		margin-top: 0.5em;
+	}
+
+	.ap-posts-pagination {
+		display: flex;
+		justify-content: center;
+		gap: 0.5em;
+		margin-top: 2em;
+
+		a,
+		span {
+			padding: 0.25em 0.75em;
+			text-decoration: none;
+		}
+
+		.current {
+			font-weight: 700;
+		}
+	}
+}

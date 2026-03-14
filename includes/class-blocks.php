@@ -140,6 +140,7 @@ class Blocks {
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/extra-fields' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/follow-me' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/followers' );
+		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/posts-and-replies' );
 
 		// Only register the Following block if the Following feature is enabled.
 		if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
@@ -249,19 +250,7 @@ class Blocks {
 	<!-- wp:spacer {"height":"32px"} -->
 	<div style="height:32px" aria-hidden="true" class="wp-block-spacer"></div>
 	<!-- /wp:spacer -->
-	<!-- wp:query {"queryId":0,"query":{"perPage":10,"pages":0,"offset":0,"postType":"post","order":"desc","orderBy":"date","author":"","search":"","exclude":[],"sticky":"","inherit":true}} -->
-	<div class="wp-block-query">
-		<!-- wp:post-template -->
-			<!-- wp:post-title {"isLink":true} /-->
-			<!-- wp:post-excerpt /-->
-		<!-- /wp:post-template -->
-		<!-- wp:query-pagination -->
-			<!-- wp:query-pagination-previous /-->
-			<!-- wp:query-pagination-numbers /-->
-			<!-- wp:query-pagination-next /-->
-		<!-- /wp:query-pagination -->
-	</div>
-	<!-- /wp:query -->
+	<!-- wp:activitypub/posts-and-replies /-->
 </main>
 <!-- /wp:group -->
 <!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->',

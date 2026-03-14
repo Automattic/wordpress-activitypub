@@ -1,0 +1,1 @@
+import{getContext as t,store as s}from"@wordpress/interactivity";s("activitypub/posts-and-replies",{actions:{switchTab(s){s.preventDefault();const a=t(),e=s.target.closest("[data-tab]")?.dataset?.tab;e&&(a.activeTab=e)}},state:{get isPostsTab(){return"posts"===t().activeTab},get isPostsAndRepliesTab(){return"posts-and-replies"===t().activeTab}}});
