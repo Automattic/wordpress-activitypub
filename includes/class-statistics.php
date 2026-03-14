@@ -283,9 +283,9 @@ class Statistics {
 	}
 
 	/**
-	 * Count federated posts in a date range.
+	 * Count published posts in a date range.
 	 *
-	 * Counts posts sent via the outbox with activity type 'Create'.
+	 * Counts published posts in ActivityPub-enabled post types.
 	 *
 	 * @param int    $user_id The user ID.
 	 * @param string $start   Start date (Y-m-d H:i:s).
@@ -296,36 +296,14 @@ class Statistics {
 	public static function count_federated_posts_in_range( $user_id, $start, $end ) {
 		global $wpdb;
 
-		$actor_type = ( Actors::BLOG_USER_ID !== $user_id ) ? 'user' : 'blog';
-		$params     = array( $start, $end, $actor_type );
-
-		$author_clause = '';
-		if ( Actors::BLOG_USER_ID !== $user_id ) {
-			$author_clause = ' AND p.post_author = %d';
-			$params[]      = $user_id;
-		}
+		$post_subquery = self::get_post_ids_subquery( $user_id, $start, $end );
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.NoCaching
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.SchemaChange
 		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		// phpcs:disable WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared
 		$count = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT COUNT(*) FROM {$wpdb->posts} p
-				INNER JOIN {$wpdb->postmeta} pm_type ON p.ID = pm_type.post_id
-				INNER JOIN {$wpdb->postmeta} pm_actor ON p.ID = pm_actor.post_id
-				WHERE p.post_type = %s
-				AND p.post_status IN ('publish', 'pending')
-				AND p.post_date_gmt >= %s
-				AND p.post_date_gmt <= %s
-				AND pm_type.meta_key = '_activitypub_activity_type'
-				AND pm_type.meta_value = 'Create'
-				AND pm_actor.meta_key = '_activitypub_activity_actor'
-				AND pm_actor.meta_value = %s
-				{$author_clause}",
-				\array_merge( array( Outbox::POST_TYPE ), $params )
-			)
+			"SELECT COUNT(*) FROM ({$post_subquery}) AS posts"
 		);
 		// phpcs:enable
 
@@ -897,7 +875,8 @@ class Statistics {
 
 		$date_clause = '';
 		if ( $start && $end ) {
-			$date_clause = ' AND post_date_gmt >= %s AND post_date_gmt <= %s';
+			// Use COALESCE to fall back to post_date when post_date_gmt is empty.
+			$date_clause = " AND COALESCE(NULLIF(post_date_gmt, '0000-00-00 00:00:00'), post_date) >= %s AND COALESCE(NULLIF(post_date_gmt, '0000-00-00 00:00:00'), post_date) <= %s";
 			$params[]    = $start;
 			$params[]    = $end;
 		}
