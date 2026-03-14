@@ -11,7 +11,7 @@
 		padding: 0;
 		font-size: 14px;
 		font-weight: 400;
-		color: #1d2327;
+		color: var(--wp-admin--color--text, #1d2327);
 	}
 }
 
@@ -22,7 +22,7 @@
 }
 
 .activitypub-stats-empty {
-	color: #646970;
+	color: var(--wp-admin--color--text-secondary, #646970);
 	text-align: center;
 	padding: 24px 12px;
 	margin: 0;
@@ -55,7 +55,7 @@
 	li a::before,
 	li > span:not(.stat-change)::before {
 		content: "\f159";
-		color: #646970;
+		color: var(--wp-admin--color--text-secondary, #646970);
 		font: 400 20px/1 dashicons, sans-serif;
 		padding: 0 5px 0 0;
 		display: inline-block;
@@ -91,27 +91,27 @@
 	}
 
 	.stat-change {
-		color: #646970;
+		color: var(--wp-admin--color--text-secondary, #646970);
 
 		&.positive {
-			color: #00a32a;
+			color: var(--wp-admin--color--success, #00a32a);
 		}
 
 		&.negative {
-			color: #d63638;
+			color: var(--wp-admin--color--error, #d63638);
 		}
 	}
 }
 
 // Sub-section style - matches #dashboard_right_now .sub exactly.
 .activitypub-stats-sub {
-	color: #50575e;
-	background: #f6f7f7;
-	border-top: 1px solid #f0f0f1;
+	color: var(--wp-admin--color--text-secondary, #50575e);
+	background: var(--wp-admin--color--body-background, #f6f7f7);
+	border-top: 1px solid var(--wp-admin--color--border, #f0f0f1);
 	padding: 10px 12px 6px;
 
 	h3 {
-		color: #50575e;
+		color: var(--wp-admin--color--text-secondary, #50575e);
 		margin-left: 0;
 		margin-right: 0;
 	}
@@ -119,7 +119,7 @@
 
 // Chart section.
 .activitypub-stats-chart {
-	border-top: 1px solid #f0f0f1;
+	border-top: 1px solid var(--wp-admin--color--border, #f0f0f1);
 	padding: 8px 12px 4px;
 
 	h3 {
@@ -129,8 +129,8 @@
 }
 
 .activitypub-chart-container {
-	background: #f6f7f7;
-	border-bottom: 1px solid #f0f0f1;
+	background: var(--wp-admin--color--body-background, #f6f7f7);
+	border-bottom: 1px solid var(--wp-admin--color--border, #f0f0f1);
 	margin: 0 -12px 6px;
 	padding: 8px 12px;
 }
@@ -142,7 +142,7 @@
 
 	.chart-label {
 		font-size: 10px;
-		fill: #646970;
+		fill: var(--wp-admin--color--text-secondary, #646970);
 	}
 }
 
@@ -152,14 +152,14 @@
 	gap: 12px;
 	margin-top: 8px;
 	padding-top: 8px;
-	border-top: 1px solid #f0f0f1;
+	border-top: 1px solid var(--wp-admin--color--border, #f0f0f1);
 }
 
 .activitypub-legend-item {
 	display: flex;
 	align-items: center;
 	font-size: 11px;
-	color: #50575e;
+	color: var(--wp-admin--color--text-secondary, #50575e);
 
 	.legend-color {
 		width: 12px;
@@ -171,7 +171,7 @@
 
 // Top supporter section.
 .activitypub-stats-multiplicator {
-	border-top: 1px solid #f0f0f1;
+	border-top: 1px solid var(--wp-admin--color--border, #f0f0f1);
 	padding: 12px;
 
 	h3 {
@@ -182,25 +182,19 @@
 
 	p {
 		margin: 0;
-		color: #50575e;
+		color: var(--wp-admin--color--text-secondary, #50575e);
 	}
 
 	/* stylelint-disable-next-line no-descending-specificity */
 	a {
 		text-decoration: none;
 		font-weight: 600;
-		color: #2271b1;
-
-		&:hover {
-			text-decoration: underline;
-			color: #135e96;
-		}
 	}
 }
 
 // Top posts section.
 .activitypub-stats-top-posts {
-	border-top: 1px solid #f0f0f1;
+	border-top: 1px solid var(--wp-admin--color--border, #f0f0f1);
 	padding: 12px;
 
 	h3 {
@@ -219,7 +213,7 @@
 		justify-content: space-between;
 		align-items: center;
 		padding: 4px 0;
-		color: #50575e;
+		color: var(--wp-admin--color--text-secondary, #50575e);
 	}
 
 	/* stylelint-disable-next-line no-descending-specificity */
@@ -230,17 +224,11 @@
 		white-space: nowrap;
 		text-decoration: none;
 		margin-right: 10px;
-		color: #2271b1;
-
-		&:hover {
-			text-decoration: underline;
-			color: #135e96;
-		}
 	}
 
 	.engagement-count {
 		font-size: 12px;
-		color: #646970;
+		color: var(--wp-admin--color--text-secondary, #646970);
 		white-space: nowrap;
 	}
 }

@@ -113,7 +113,7 @@ export default function StatHighlights( {
 
 	return (
 		<div className="activitypub-stats-highlights main">
-			<h3>{ __( 'This month vs. last month', 'activitypub' ) }</h3>
+			<h3>{ __( 'Monthly Comparison', 'activitypub' ) }</h3>
 			<ul>
 				{ stats.map( ( stat ) => {
 					const url = getStatUrl( stat.key );

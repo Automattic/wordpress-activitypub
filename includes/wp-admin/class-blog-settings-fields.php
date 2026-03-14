@@ -247,7 +247,7 @@ class Blog_Settings_Fields {
 			</p>
 			<p>
 				<label>
-					<input type="checkbox" name="activitypub_mailer_monthly_report" id="activitypub_mailer_monthly_report" value="1" <?php \checked( '1', \get_option( 'activitypub_mailer_monthly_report', '0' ) ); ?> />
+					<input type="checkbox" name="activitypub_mailer_monthly_report" id="activitypub_mailer_monthly_report" value="1" <?php \checked( '1', \get_option( 'activitypub_mailer_monthly_report', '1' ) ); ?> />
 					<?php \esc_html_e( 'Monthly Report', 'activitypub' ); ?>
 				</label>
 			</p>

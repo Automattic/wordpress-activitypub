@@ -19,45 +19,42 @@ interface Props {
 	commentTypes: Record< string, CommentType > | null;
 }
 
-// WordPress default color palette (always available).
+// Visually distinct colors from the WordPress default palette.
+// Each color is chosen to be easily distinguishable from the others.
 // @see https://developer.wordpress.org/themes/global-settings-and-styles/settings/color/
-const WP_DEFAULT_COLORS = [
-	{ slug: 'vivid-red', hex: '#cf2e2e' },
-	{ slug: 'vivid-green-cyan', hex: '#00d084' },
-	{ slug: 'luminous-vivid-amber', hex: '#fcb900' },
+const TYPE_COLORS: Record< string, { slug: string; hex: string } > = {
+	like: { slug: 'luminous-vivid-amber', hex: '#fcb900' },
+	repost: { slug: 'vivid-green-cyan', hex: '#00d084' },
+	comment: { slug: 'vivid-red', hex: '#cf2e2e' },
+};
+
+// Fallback colors for unknown types, ordered for maximum contrast.
+const FALLBACK_COLORS = [
 	{ slug: 'vivid-purple', hex: '#9b51e0' },
-	{ slug: 'vivid-cyan-blue', hex: '#0693e3' },
 	{ slug: 'luminous-vivid-orange', hex: '#ff6900' },
+	{ slug: 'pale-pink', hex: '#f78da7' },
 ];
 
-/**
- * Simple string hash function for deterministic color assignment.
- * Uses djb2 algorithm for consistent results across page loads.
- * @param str The string to hash.
- */
-function hashString( str: string ): number {
-	let hash = 5381;
-	for ( let i = 0; i < str.length; i++ ) {
-		// eslint-disable-next-line no-bitwise -- djb2 hash algorithm requires XOR.
-		hash = ( hash * 33 ) ^ str.charCodeAt( i );
-	}
-	return Math.abs( hash );
-}
+// Track assigned fallback colors per render.
+let fallbackIndex = 0;
 
 /**
- * Get CSS variable with fallback to hex value.
- * Uses CSS var() with fallback for best compatibility.
- * Color assignment is deterministic based on type slug hash.
- * @param typeSlug The comment type slug for deterministic color.
+ * Get CSS variable with fallback to hex value for a comment type.
+ * Known types get stable, distinct colors. Unknown types get the next available fallback.
+ * @param typeSlug The comment type slug.
  */
 function getColorForType( typeSlug: string ): string {
-	const index = hashString( typeSlug ) % WP_DEFAULT_COLORS.length;
-	const color = WP_DEFAULT_COLORS[ index ];
+	const known = TYPE_COLORS[ typeSlug ];
+	if ( known ) {
+		return `var(--wp--preset--color--${ known.slug }, ${ known.hex })`;
+	}
+	const color = FALLBACK_COLORS[ fallbackIndex % FALLBACK_COLORS.length ];
+	fallbackIndex++;
 	return `var(--wp--preset--color--${ color.slug }, ${ color.hex })`;
 }
 
 /**
- * Get the engagement color (primary/accent, uses vivid-cyan-blue).
+ * Get the total engagement line color (vivid-cyan-blue).
  */
 function getEngagementColor(): string {
 	return 'var(--wp--preset--color--vivid-cyan-blue, #0693e3)';
@@ -77,6 +74,9 @@ export default function LineChart( { monthly, commentTypes }: Props ): ReactNode
 	if ( ! monthly?.length ) {
 		return null;
 	}
+
+	// Reset fallback color index for each render.
+	fallbackIndex = 0;
 
 	// Get colors once at render time.
 	const gradientId = `areaGradient-${ instanceId }`;

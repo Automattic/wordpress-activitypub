@@ -193,7 +193,7 @@ class Statistics {
 			return;
 		}
 
-		if ( ! $force && ! self::should_send_report( $user_id, $stats, 'activitypub_mailer_monthly_report', '0' ) ) {
+		if ( ! $force && ! self::should_send_report( $user_id, $stats, 'activitypub_mailer_monthly_report', '1' ) ) {
 			return;
 		}
 

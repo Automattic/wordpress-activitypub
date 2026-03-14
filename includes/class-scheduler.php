@@ -120,12 +120,12 @@ class Scheduler {
 	 */
 	public static function add_cron_schedules( $schedules ) {
 		$schedules['monthly'] = array(
-			'interval' => 30 * DAY_IN_SECONDS,
+			'interval' => MONTH_IN_SECONDS,
 			'display'  => \__( 'Once Monthly', 'activitypub' ),
 		);
 
 		$schedules['yearly'] = array(
-			'interval' => 365 * DAY_IN_SECONDS,
+			'interval' => YEAR_IN_SECONDS,
 			'display'  => \__( 'Once Yearly', 'activitypub' ),
 		);
 

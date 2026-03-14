@@ -33,19 +33,14 @@ export default function TopPosts( { posts }: Props ): ReactNode {
 			<ul>
 				{ posts.map( ( post ) => {
 					const title = post.title || __( '(no title)', 'activitypub' );
-					const href = post.edit_url || post.url;
-					const isExternal = ! post.edit_url;
-					const ariaLabel = isExternal
-						? /* translators: %s: post title */
-						  sprintf( __( '%s (opens in a new tab)', 'activitypub' ), title )
-						: /* translators: %s: post title */
-						  sprintf( __( 'Edit %s', 'activitypub' ), title );
 					return (
 						<li key={ post.post_id }>
 							<a
-								href={ href }
-								{ ...( isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {} ) }
-								aria-label={ ariaLabel }
+								href={ post.url }
+								aria-label={
+									/* translators: %s: post title */
+									sprintf( __( 'View %s', 'activitypub' ), title )
+								}
 							>
 								{ title }
 							</a>
