@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Add a "Posts and Replies" block for author archives that shows tabs to filter between posts and replies, similar to Mastodon's profile view.
