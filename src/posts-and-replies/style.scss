@@ -22,7 +22,7 @@
 		transition: opacity 0.2s, border-color 0.2s;
 
 		&:hover,
-		&:focus {
+		&:focus-visible {
 			opacity: 1;
 		}
 

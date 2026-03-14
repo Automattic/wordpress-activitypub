@@ -29,29 +29,27 @@ if ( ! in_array( $active_tab, array( 'posts', 'posts-and-replies' ), true ) ) {
 	$active_tab = 'posts';
 }
 
-$current_url = \remove_query_arg( 'ap_tab' );
+$current_url = \remove_query_arg( array( 'ap_tab', 'paged' ) );
 $posts_url   = \add_query_arg( 'ap_tab', 'posts', $current_url );
 $all_url     = \add_query_arg( 'ap_tab', 'posts-and-replies', $current_url );
 
 $wrapper_attributes = \get_block_wrapper_attributes();
 ?>
-<div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput ?>>
-	<div class="ap-tabs" role="tablist" aria-label="<?php \esc_attr_e( 'Post filtering', 'activitypub' ); ?>">
+<nav <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput ?> aria-label="<?php \esc_attr_e( 'Post filtering', 'activitypub' ); ?>">
+	<div class="ap-tabs">
 		<a
 			class="ap-tabs__tab <?php echo 'posts' === $active_tab ? 'is-active' : ''; ?>"
 			href="<?php echo \esc_url( $posts_url ); ?>"
-			role="tab"
-			aria-selected="<?php echo 'posts' === $active_tab ? 'true' : 'false'; ?>"
+			<?php echo 'posts' === $active_tab ? 'aria-current="page"' : ''; ?>
 		>
 			<?php \esc_html_e( 'Posts', 'activitypub' ); ?>
 		</a>
 		<a
 			class="ap-tabs__tab <?php echo 'posts-and-replies' === $active_tab ? 'is-active' : ''; ?>"
 			href="<?php echo \esc_url( $all_url ); ?>"
-			role="tab"
-			aria-selected="<?php echo 'posts-and-replies' === $active_tab ? 'true' : 'false'; ?>"
+			<?php echo 'posts-and-replies' === $active_tab ? 'aria-current="page"' : ''; ?>
 		>
 			<?php \esc_html_e( 'Posts & Replies', 'activitypub' ); ?>
 		</a>
 	</div>
-</div>
+</nav>
