@@ -31,7 +31,7 @@ class Cli {
 	 * - wp activitypub self-destruct [--status] [--yes]
 	 * - wp activitypub move <from> <to>
 	 * - wp activitypub follow <remote_user>
-	 * - wp activitypub stats <collect|compile>
+	 * - wp activitypub stats <collect|compile|send>
 	 * - wp activitypub fetch <url>
 	 */
 	public static function register() {
@@ -120,7 +120,7 @@ class Cli {
 			'activitypub stats',
 			'\Activitypub\Cli\Stats_Command',
 			array(
-				'shortdesc' => 'Manage ActivityPub statistics (collect or compile).',
+				'shortdesc' => 'Manage ActivityPub statistics (collect, compile or send).',
 			)
 		);
 	}
