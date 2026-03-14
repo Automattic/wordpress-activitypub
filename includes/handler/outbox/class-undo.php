@@ -8,6 +8,7 @@
 namespace Activitypub\Handler\Outbox;
 
 use Activitypub\Collection\Outbox as Outbox_Collection;
+use Activitypub\Moderation;
 
 use function Activitypub\object_to_uri;
 use function Activitypub\unfollow;
@@ -69,6 +70,16 @@ class Undo {
 				}
 
 				return $data;
+
+			case 'Block':
+				$stored    = \json_decode( $outbox_item->post_content, true );
+				$actor_uri = \is_array( $stored ) ? object_to_uri( $stored['object'] ?? '' ) : '';
+
+				if ( $actor_uri ) {
+					Moderation::remove_user_block( $user_id, Moderation::TYPE_ACTOR, $actor_uri );
+				}
+
+				return Outbox_Collection::undo( $outbox_item );
 
 			default:
 				return Outbox_Collection::undo( $outbox_item );
