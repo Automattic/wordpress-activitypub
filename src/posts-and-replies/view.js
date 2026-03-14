@@ -15,7 +15,7 @@ store( 'activitypub/posts-and-replies', {
 		switchTab( event ) {
 			event.preventDefault();
 			const context = getContext();
-			const tab = event.target.closest( '[data-tab]' )?.dataset?.tab;
+			const tab = event.currentTarget?.dataset?.tab;
 			if ( tab ) {
 				context.activeTab = tab;
 			}
