@@ -7,7 +7,7 @@
   "category": "widgets",
   "description": "Display posts with tabs to filter between posts only and posts with replies.",
   "textdomain": "activitypub",
-  "icon": "admin-post",
+  "icon": "loop",
   "keywords": [
     "fediverse",
     "activitypub",
