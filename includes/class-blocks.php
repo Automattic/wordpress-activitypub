@@ -69,7 +69,7 @@ class Blocks {
 		self::register_patterns();
 		self::register_templates();
 
-		\add_filter( 'query_loop_block_query_vars', array( self::class, 'filter_query_loop_vars' ) );
+		\add_action( 'pre_get_posts', array( self::class, 'filter_author_archive_query' ) );
 
 		\add_action( 'load-post-new.php', array( self::class, 'handle_in_reply_to_get_param' ) );
 		// Add editor plugin.
@@ -1160,20 +1160,20 @@ class Blocks {
 	}
 
 	/**
-	 * Filter the Query Loop block query to exclude replies on author archives.
+	 * Filter the main query on author archives to exclude replies.
 	 *
-	 * When the `activitypub/posts-and-replies` block is present and the "Posts"
-	 * tab is active, this adds a WHERE clause to exclude posts containing the
-	 * `activitypub/reply` block.
+	 * When on an author archive and the "Posts" tab is active (default),
+	 * adds a WHERE clause to exclude posts containing the
+	 * `activitypub/reply` block. This filters the main query so that
+	 * Query Loop blocks with `inherit: true` also pick up the filter.
 	 *
 	 * @since unreleased
 	 *
-	 * @param array $query Array of WP_Query arguments.
-	 * @return array Modified query arguments.
+	 * @param WP_Query $query The WP_Query instance.
 	 */
-	public static function filter_query_loop_vars( $query ) {
-		if ( ! \is_author() ) {
-			return $query;
+	public static function filter_author_archive_query( $query ) {
+		if ( ! $query->is_main_query() || ! $query->is_author() ) {
+			return;
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -1181,41 +1181,27 @@ class Blocks {
 
 		// Only filter when the "Posts" tab is active (default).
 		if ( 'posts-and-replies' === $active_tab ) {
-			return $query;
+			return;
 		}
 
-		// Add a marker so the posts_where filter knows to act.
-		$query['activitypub_exclude_replies'] = true;
+		\add_filter(
+			'posts_where',
+			/**
+			 * Exclude posts containing the activitypub/reply block.
+			 *
+			 * @param string $where The WHERE clause.
+			 * @return string Modified WHERE clause.
+			 */
+			static function ( $where ) {
+				global $wpdb;
 
-		\add_filter( 'posts_where', array( self::class, 'exclude_reply_posts' ), 10, 2 );
+				$where .= $wpdb->prepare(
+					" AND {$wpdb->posts}.post_content NOT LIKE %s",
+					'%<!-- wp:activitypub/reply%'
+				);
 
-		return $query;
-	}
-
-	/**
-	 * Exclude posts containing the activitypub/reply block from the query.
-	 *
-	 * @since unreleased
-	 *
-	 * @param string   $where The WHERE clause.
-	 * @param WP_Query $query The WP_Query instance.
-	 * @return string Modified WHERE clause.
-	 */
-	public static function exclude_reply_posts( $where, $query ) {
-		if ( ! $query->get( 'activitypub_exclude_replies' ) ) {
-			return $where;
-		}
-
-		global $wpdb;
-
-		$where .= $wpdb->prepare(
-			" AND {$wpdb->posts}.post_content NOT LIKE %s",
-			'%<!-- wp:activitypub/reply%'
+				return $where;
+			}
 		);
-
-		// Remove self to avoid affecting other queries.
-		\remove_filter( 'posts_where', array( self::class, 'exclude_reply_posts' ), 10 );
-
-		return $where;
 	}
 }
