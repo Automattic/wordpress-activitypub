@@ -93,27 +93,87 @@ $wrapper_attributes = \get_block_wrapper_attributes(
 );
 
 /**
- * Render a list of posts.
+ * Render a list of posts using inner blocks.
+ *
+ * Follows the core/post-template pattern: loops through query results
+ * and renders the block's inner blocks for each post, injecting the
+ * current post's context so blocks like post-title and post-date
+ * render the correct content.
  *
  * @param WP_Query $query The query object.
+ * @param WP_Block $block The parent block instance.
  * @return string HTML output.
  */
-$render_post_list = static function ( $query ) {
+$render_post_list = static function ( $query ) use ( $block ) {
 	if ( ! $query->have_posts() ) {
 		return '<p>' . \esc_html__( 'No posts found.', 'activitypub' ) . '</p>';
 	}
 
-	$output = '<ul class="ap-posts-list">';
+	// Use saved inner blocks, or fall back to a default template.
+	$block_instance = $block->parsed_block;
+	if ( empty( $block_instance['innerBlocks'] ) ) {
+		$block_instance['innerBlocks'] = array(
+			array(
+				'blockName'    => 'core/post-title',
+				'attrs'        => array( 'isLink' => true ),
+				'innerBlocks'  => array(),
+				'innerHTML'    => '',
+				'innerContent' => array(),
+			),
+			array(
+				'blockName'    => 'core/post-date',
+				'attrs'        => array(),
+				'innerBlocks'  => array(),
+				'innerHTML'    => '',
+				'innerContent' => array(),
+			),
+			array(
+				'blockName'    => 'core/post-excerpt',
+				'attrs'        => array(),
+				'innerBlocks'  => array(),
+				'innerHTML'    => '',
+				'innerContent' => array(),
+			),
+		);
+		// Each null maps to an inner block; WP_Block::render() uses this
+		// to determine where inner blocks are placed in the output.
+		$block_instance['innerContent'] = array( null, null, null );
+	}
+
+	// Prevent re-running this render callback for the inner content.
+	$block_instance['blockName'] = 'core/null';
+
+	// Enqueue core block styles since we render their markup without actual block registration.
+	$core_blocks = array( 'post-template', 'post-title', 'post-date', 'post-excerpt', 'query-pagination' );
+	foreach ( $core_blocks as $block_name ) {
+		\wp_enqueue_style( "wp-block-{$block_name}" );
+	}
+
+	$output = '<ul class="wp-block-post-template is-layout-flow wp-block-post-template-is-layout-flow">';
 
 	while ( $query->have_posts() ) {
 		$query->the_post();
-		$output .= '<li class="ap-posts-list__item">';
-		$output .= '<a class="ap-posts-list__title" href="' . \esc_url( \get_permalink() ) . '">' . \esc_html( \get_the_title() ) . '</a>';
-		$output .= '<time class="ap-posts-list__date" datetime="' . \esc_attr( \get_the_date( 'c' ) ) . '">' . \esc_html( \get_the_date() ) . '</time>';
-		if ( \has_excerpt() ) {
-			$output .= '<div class="ap-posts-list__excerpt">' . \wp_kses_post( \get_the_excerpt() ) . '</div>';
-		}
-		$output .= '</li>';
+
+		$post_id   = \get_the_ID();
+		$post_type = \get_post_type();
+
+		// Inject the current post's context so inner blocks (post-title,
+		// post-date, etc.) render content for this specific post.
+		$filter_block_context = static function ( $context ) use ( $post_id, $post_type ) {
+			$context['postType'] = $post_type;
+			$context['postId']   = $post_id;
+			return $context;
+		};
+
+		\add_filter( 'render_block_context', $filter_block_context, 1 );
+
+		// Render inner blocks with dynamic=false to skip the parent's render callback.
+		$block_content = ( new \WP_Block( $block_instance ) )->render( array( 'dynamic' => false ) );
+
+		\remove_filter( 'render_block_context', $filter_block_context, 1 );
+
+		$post_classes = \implode( ' ', \get_post_class( 'wp-block-post' ) );
+		$output      .= '<li class="' . \esc_attr( $post_classes ) . '">' . $block_content . '</li>';
 	}
 
 	$output .= '</ul>';
@@ -149,7 +209,7 @@ $render_pagination = static function ( $query ) {
 	}
 
 	// paginate_links() returns safe HTML with escaped URLs.
-	return '<nav class="ap-posts-pagination" aria-label="' . \esc_attr__( 'Posts pagination', 'activitypub' ) . '">' . $links . '</nav>';
+	return '<nav class="wp-block-query-pagination is-layout-flex wp-block-query-pagination-is-layout-flex" aria-label="' . \esc_attr__( 'Posts pagination', 'activitypub' ) . '">' . $links . '</nav>';
 };
 
 // Render posts tab content.
@@ -199,7 +259,7 @@ $all_posts_pagination = $render_pagination( $all_posts_query );
 		id="ap-tabpanel-posts"
 		aria-labelledby="ap-tab-posts"
 	>
-		<?php echo $posts_content; // phpcs:ignore WordPress.Security.EscapeOutput -- Content escaped in $render_post_list. ?>
+		<?php echo $posts_content; // phpcs:ignore WordPress.Security.EscapeOutput -- Content rendered via WP_Block::render(). ?>
 		<?php echo $posts_pagination; // phpcs:ignore WordPress.Security.EscapeOutput -- Output from paginate_links(). ?>
 	</div>
 
@@ -210,7 +270,7 @@ $all_posts_pagination = $render_pagination( $all_posts_query );
 		id="ap-tabpanel-posts-and-replies"
 		aria-labelledby="ap-tab-posts-and-replies"
 	>
-		<?php echo $all_posts_content; // phpcs:ignore WordPress.Security.EscapeOutput -- Content escaped in $render_post_list. ?>
+		<?php echo $all_posts_content; // phpcs:ignore WordPress.Security.EscapeOutput -- Content rendered via WP_Block::render(). ?>
 		<?php echo $all_posts_pagination; // phpcs:ignore WordPress.Security.EscapeOutput -- Output from paginate_links(). ?>
 	</div>
 </div>
