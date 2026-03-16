@@ -1321,25 +1321,17 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$remote_actor_id = Remote_Actors::upsert( $actor_data );
 		$this->assertIsInt( $remote_actor_id );
 
-		// Avatar is NOT cached eagerly - meta should be empty after upsert.
-		$avatar_url = get_post_meta( $remote_actor_id, '_activitypub_avatar_url', true );
-		$this->assertEmpty( $avatar_url, 'Avatar should not be eagerly cached on upsert' );
-
-		// Calling get_avatar_url() triggers lazy caching.
+		// Calling get_avatar_url() returns the avatar URL from the actor JSON.
 		$retrieved_avatar = Remote_Actors::get_avatar_url( $remote_actor_id );
 		$this->assertEquals( 'https://example.com/avatar-test.jpg', $retrieved_avatar );
-
-		// Now meta should be populated for subsequent calls.
-		$cached_avatar = get_post_meta( $remote_actor_id, '_activitypub_avatar_url', true );
-		$this->assertEquals( 'https://example.com/avatar-test.jpg', $cached_avatar );
 	}
 
 	/**
-	 * Test get_avatar_url fallback to JSON when meta is empty.
+	 * Test get_avatar_url extracts URL from actor JSON.
 	 *
 	 * @covers ::get_avatar_url
 	 */
-	public function test_get_avatar_url_fallback_to_json() {
+	public function test_get_avatar_url_from_json() {
 		// Create a remote actor.
 		$actor_data = array(
 			'id'                => 'https://example.com/users/json-avatar',
@@ -1356,22 +1348,9 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$remote_actor_id = Remote_Actors::upsert( $actor_data );
 		$this->assertIsInt( $remote_actor_id );
 
-		// Delete the avatar meta to simulate old data.
-		delete_post_meta( $remote_actor_id, '_activitypub_avatar_url' );
-
-		// Verify meta is empty.
-		$avatar_meta = get_post_meta( $remote_actor_id, '_activitypub_avatar_url', true );
-		$this->assertEmpty( $avatar_meta );
-
-		// Test get_avatar_url extracts from JSON and caches it.
+		// Test get_avatar_url extracts from JSON.
 		$retrieved_avatar = Remote_Actors::get_avatar_url( $remote_actor_id );
 		$this->assertEquals( 'https://example.com/json-avatar.jpg', $retrieved_avatar );
-
-		// Verify it was cached in meta.
-		$cached_avatar = get_post_meta( $remote_actor_id, '_activitypub_avatar_url', true );
-		$this->assertEquals( 'https://example.com/json-avatar.jpg', $cached_avatar );
-
-		// Clean up.
 	}
 
 	/**

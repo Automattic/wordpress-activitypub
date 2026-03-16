@@ -88,18 +88,17 @@ class Avatar extends File {
 	}
 
 	/**
-	 * Clear the cached avatar URL meta when an actor is updated.
+	 * Clear the cached avatar when an actor is updated.
 	 *
-	 * This allows lazy re-caching of the avatar on next access,
-	 * ensuring updated avatars are fetched.
+	 * Invalidates cached files so the avatar is re-downloaded on next access.
 	 *
 	 * @param int $post_id The actor post ID.
 	 */
 	public static function clear_avatar_meta( $post_id ) {
-		// Invalidate cached files.
+		// Invalidate cached files so next access re-downloads.
 		self::invalidate_entity( $post_id );
 
-		// Clear the meta so get_avatar_url() will re-cache on next access.
+		// Clean up legacy meta from previous versions.
 		\delete_post_meta( $post_id, '_activitypub_avatar_url' );
 	}
 
@@ -107,7 +106,7 @@ class Avatar extends File {
 	 * Maybe cache an avatar URL.
 	 *
 	 * Hooked to the activitypub_remote_media_url filter.
-	 * Returns cached URL from meta if available, otherwise downloads and caches.
+	 * Uses filesystem-based caching via get_or_cache() — no persistent meta storage.
 	 *
 	 * @param string     $url       The remote URL.
 	 * @param string     $context   The context ('avatar', 'media', 'emoji', etc.).
@@ -121,24 +120,9 @@ class Avatar extends File {
 			return $url;
 		}
 
-		// Check if we have a cached avatar URL in meta.
-		$cached_url = \get_post_meta( $entity_id, '_activitypub_avatar_url', true );
-		if ( $cached_url ) {
-			return $cached_url;
-		}
+		$cached_url = self::get_or_cache( $url, $entity_id, array( 'max_dimension' => self::MAX_DIMENSION ) );
 
-		// Download and cache the avatar.
-		$local_url = self::cache(
-			$url,
-			$entity_id,
-			array( 'max_dimension' => self::MAX_DIMENSION )
-		);
-
-		// Store the result in meta (local URL if cached, remote URL if not).
-		$avatar_url = $local_url ?: $url;
-		\update_post_meta( $entity_id, '_activitypub_avatar_url', \esc_url_raw( $avatar_url ) );
-
-		return $avatar_url;
+		return $cached_url ?: $url;
 	}
 
 	/**
