@@ -210,7 +210,7 @@ class Cache_Command extends \WP_CLI_Command {
 			File::delete_directory( $subdir );
 		}
 
-		// Also clear avatar URL meta for avatar cache.
+		// Clean up legacy avatar URL meta from previous versions.
 		if ( 'avatar' === $type ) {
 			\delete_metadata( 'post', 0, '_activitypub_avatar_url', '', true );
 		}
