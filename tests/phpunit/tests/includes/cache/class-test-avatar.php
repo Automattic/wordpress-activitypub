@@ -91,6 +91,78 @@ class Test_Avatar extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test maybe_cache caches a valid avatar URL via filesystem.
+	 */
+	public function test_maybe_cache_caches_valid_url() {
+		$post_id = self::factory()->post->create();
+		$url     = 'https://example.com/avatar.jpg';
+
+		// Mock the file download to return a local fixture.
+		$mock_download = function ( $result, $download_url ) use ( $url ) {
+			if ( $download_url === $url ) {
+				$tmp_file = \wp_tempnam( 'test-avatar.jpg' );
+				copy( AP_TESTS_DIR . '/data/assets/test.jpg', $tmp_file );
+
+				return array(
+					'file'      => $tmp_file,
+					'mime_type' => 'image/jpeg',
+				);
+			}
+
+			return $result;
+		};
+
+		\add_filter( 'activitypub_pre_download_url', $mock_download, 10, 2 );
+
+		// First call should download and cache.
+		$result = Avatar::maybe_cache( $url, 'avatar', $post_id );
+		$this->assertNotEquals( $url, $result, 'Should return a local cached URL, not the original' );
+		$this->assertStringContainsString( '/activitypub/actors/', $result );
+
+		// No meta should be stored (the old bug).
+		$meta = \get_post_meta( $post_id, '_activitypub_avatar_url', true );
+		$this->assertEmpty( $meta, 'Should not store avatar URL in post meta' );
+
+		// Second call should return the same cached URL from filesystem.
+		$result2 = Avatar::maybe_cache( $url, 'avatar', $post_id );
+		$this->assertEquals( $result, $result2, 'Subsequent calls should return the same cached URL' );
+
+		// Clean up.
+		\remove_filter( 'activitypub_pre_download_url', $mock_download );
+		Avatar::invalidate_entity( $post_id );
+	}
+
+	/**
+	 * Test maybe_cache returns original URL when download fails.
+	 */
+	public function test_maybe_cache_returns_original_url_on_failure() {
+		$post_id = self::factory()->post->create();
+		$url     = 'https://example.com/broken-avatar.jpg';
+
+		// Mock the download to fail by returning false.
+		$mock_download = function ( $result, $download_url ) use ( $url ) {
+			if ( $download_url === $url ) {
+				return false;
+			}
+
+			return $result;
+		};
+
+		\add_filter( 'activitypub_pre_download_url', $mock_download, 10, 2 );
+
+		// Should return the original URL as fallback.
+		$result = Avatar::maybe_cache( $url, 'avatar', $post_id );
+		$this->assertEquals( $url, $result, 'Should fall back to the original URL on download failure' );
+
+		// No meta should be stored (this was the root cause of #3038).
+		$meta = \get_post_meta( $post_id, '_activitypub_avatar_url', true );
+		$this->assertEmpty( $meta, 'Should not persist a broken URL in post meta' );
+
+		// Clean up.
+		\remove_filter( 'activitypub_pre_download_url', $mock_download );
+	}
+
+	/**
 	 * Test save returns false for invalid actor_id.
 	 */
 	public function test_save_invalid_actor_id() {

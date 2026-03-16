@@ -80,8 +80,8 @@ class Avatar extends File {
 		// Hook into the universal remote media URL filter for lazy caching.
 		\add_filter( 'activitypub_remote_media_url', array( self::class, 'maybe_cache' ), 10, 4 );
 
-		// Clear cached avatar URL when actor is updated (allows lazy re-caching).
-		\add_action( 'save_post_' . Remote_Actors::POST_TYPE, array( self::class, 'clear_avatar_meta' ) );
+		// Invalidate cached avatar when actor is updated so it re-downloads on next access.
+		\add_action( 'save_post_' . Remote_Actors::POST_TYPE, array( self::class, 'clear_cached_avatar' ) );
 
 		// Clean up files when actor is deleted.
 		\add_action( 'before_delete_post', array( self::class, 'maybe_cleanup' ) );
@@ -94,7 +94,7 @@ class Avatar extends File {
 	 *
 	 * @param int $post_id The actor post ID.
 	 */
-	public static function clear_avatar_meta( $post_id ) {
+	public static function clear_cached_avatar( $post_id ) {
 		// Invalidate cached files so next access re-downloads.
 		self::invalidate_entity( $post_id );
 
