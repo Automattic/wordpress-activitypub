@@ -35,6 +35,13 @@ if ( ! $author_id ) {
 	return;
 }
 
+// Determine active tab from URL parameter, falling back to 'posts'.
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+$active_tab = isset( $_GET['ap_tab'] ) ? \sanitize_key( $_GET['ap_tab'] ) : 'posts';
+if ( ! in_array( $active_tab, array( 'posts', 'posts-and-replies' ), true ) ) {
+	$active_tab = 'posts';
+}
+
 // Get the current page number from the main query.
 $current_page = max( 1, \get_query_var( 'paged', 1 ) );
 
@@ -80,9 +87,11 @@ $posts_query = new \WP_Query(
 // Query for "Posts & Replies" tab (all posts).
 $all_posts_query = new \WP_Query( $base_args );
 
+$is_posts_tab = 'posts' === $active_tab;
+
 // Set up the Interactivity API context.
 $context = array(
-	'activeTab' => 'posts',
+	'activeTab' => $active_tab,
 );
 
 $wrapper_attributes = \get_block_wrapper_attributes(
@@ -101,7 +110,6 @@ $wrapper_attributes = \get_block_wrapper_attributes(
  * render the correct content.
  *
  * @param WP_Query $query The query object.
- * @param WP_Block $block The parent block instance.
  * @return string HTML output.
  */
 // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UndefinedVariable -- $block is provided by WordPress to render.php files.
@@ -185,20 +193,26 @@ $render_post_list = static function ( $query ) use ( $block ) {
 };
 
 /**
- * Render pagination links.
+ * Render pagination links that preserve the active tab parameter.
  *
  * @param WP_Query $query The query object.
+ * @param string   $tab   The active tab identifier.
  * @return string HTML output.
  */
-$render_pagination = static function ( $query ) {
+$render_pagination = static function ( $query, $tab ) {
 	if ( $query->max_num_pages <= 1 ) {
 		return '';
 	}
 
-	$big   = 999999999;
+	$big  = 999999999;
+	$base = str_replace( $big, '%#%', \esc_url( \get_pagenum_link( $big ) ) );
+
+	// Ensure the tab parameter is preserved in pagination URLs.
+	$base = \add_query_arg( 'ap_tab', $tab, $base );
+
 	$links = \paginate_links(
 		array(
-			'base'    => str_replace( $big, '%#%', \esc_url( \get_pagenum_link( $big ) ) ),
+			'base'    => $base,
 			'format'  => '',
 			'total'   => $query->max_num_pages,
 			'current' => $query->get( 'paged' ) ? $query->get( 'paged' ) : 1,
@@ -215,39 +229,45 @@ $render_pagination = static function ( $query ) {
 
 // Render posts tab content.
 $posts_content    = $render_post_list( $posts_query );
-$posts_pagination = $render_pagination( $posts_query );
+$posts_pagination = $render_pagination( $posts_query, 'posts' );
 
 // Render posts & replies tab content.
 $all_posts_content    = $render_post_list( $all_posts_query );
-$all_posts_pagination = $render_pagination( $all_posts_query );
+$all_posts_pagination = $render_pagination( $all_posts_query, 'posts-and-replies' );
 ?>
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput ?>>
 	<div class="ap-tabs" role="tablist" aria-label="<?php \esc_attr_e( 'Post filtering', 'activitypub' ); ?>">
 		<button
-			class="ap-tabs__tab"
+			class="ap-tabs__tab <?php echo $is_posts_tab ? 'is-active' : ''; ?>"
 			data-tab="posts"
 			data-wp-on--click="actions.switchTab"
+			data-wp-on--keydown="actions.onKeyDown"
 			data-wp-class--is-active="state.isPostsTab"
 			data-wp-bind--aria-selected="state.isPostsTab"
+			data-wp-bind--tabindex="state.postsTabIndex"
 			role="tab"
-			aria-selected="true"
+			aria-selected="<?php echo $is_posts_tab ? 'true' : 'false'; ?>"
 			aria-controls="ap-tabpanel-posts"
 			id="ap-tab-posts"
 			type="button"
+			tabindex="<?php echo $is_posts_tab ? '0' : '-1'; ?>"
 		>
 			<?php \esc_html_e( 'Posts', 'activitypub' ); ?>
 		</button>
 		<button
-			class="ap-tabs__tab"
+			class="ap-tabs__tab <?php echo ! $is_posts_tab ? 'is-active' : ''; ?>"
 			data-tab="posts-and-replies"
 			data-wp-on--click="actions.switchTab"
+			data-wp-on--keydown="actions.onKeyDown"
 			data-wp-class--is-active="state.isPostsAndRepliesTab"
 			data-wp-bind--aria-selected="state.isPostsAndRepliesTab"
+			data-wp-bind--tabindex="state.postsAndRepliesTabIndex"
 			role="tab"
-			aria-selected="false"
+			aria-selected="<?php echo ! $is_posts_tab ? 'true' : 'false'; ?>"
 			aria-controls="ap-tabpanel-posts-and-replies"
 			id="ap-tab-posts-and-replies"
 			type="button"
+			tabindex="<?php echo ! $is_posts_tab ? '0' : '-1'; ?>"
 		>
 			<?php \esc_html_e( 'Posts & Replies', 'activitypub' ); ?>
 		</button>
@@ -259,6 +279,7 @@ $all_posts_pagination = $render_pagination( $all_posts_query );
 		role="tabpanel"
 		id="ap-tabpanel-posts"
 		aria-labelledby="ap-tab-posts"
+		<?php echo ! $is_posts_tab ? 'hidden' : ''; ?>
 	>
 		<?php echo $posts_content; // phpcs:ignore WordPress.Security.EscapeOutput -- Content rendered via WP_Block::render(). ?>
 		<?php echo $posts_pagination; // phpcs:ignore WordPress.Security.EscapeOutput -- Output from paginate_links(). ?>
@@ -270,6 +291,7 @@ $all_posts_pagination = $render_pagination( $all_posts_query );
 		role="tabpanel"
 		id="ap-tabpanel-posts-and-replies"
 		aria-labelledby="ap-tab-posts-and-replies"
+		<?php echo $is_posts_tab ? 'hidden' : ''; ?>
 	>
 		<?php echo $all_posts_content; // phpcs:ignore WordPress.Security.EscapeOutput -- Content rendered via WP_Block::render(). ?>
 		<?php echo $all_posts_pagination; // phpcs:ignore WordPress.Security.EscapeOutput -- Output from paginate_links(). ?>
