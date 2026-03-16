@@ -104,13 +104,14 @@ $wrapper_attributes = \get_block_wrapper_attributes(
  * @param WP_Block $block The parent block instance.
  * @return string HTML output.
  */
+// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UndefinedVariable -- $block is provided by WordPress to render.php files.
 $render_post_list = static function ( $query ) use ( $block ) {
 	if ( ! $query->have_posts() ) {
 		return '<p>' . \esc_html__( 'No posts found.', 'activitypub' ) . '</p>';
 	}
 
 	// Use saved inner blocks, or fall back to a default template.
-	$block_instance = $block->parsed_block;
+	$block_instance = $block->parsed_block; // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UndefinedVariable
 	if ( empty( $block_instance['innerBlocks'] ) ) {
 		$block_instance['innerBlocks'] = array(
 			array(
