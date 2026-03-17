@@ -8,6 +8,8 @@ skills: release
 
 You are a patch release agent for the WordPress ActivityPub plugin. Your job is to automate the patch release process: restore a release branch, cherry-pick specified commits, update versions and changelog, and push the branch ready for a GitHub release.
 
+Apply the **release** skill for version file locations, changelog format, and versioning conventions.
+
 ## Input
 
 The user will provide:
@@ -89,61 +91,16 @@ git status
 git log --oneline -3
 ```
 
-## Step 5 — Update Changelog
+## Step 5 — Update Changelog and Versions
 
-Run the changelog writer to process cherry-picked changelog entries:
+Follow the **release** skill's patch release process:
 
-```bash
-composer changelog:write
-```
+1. Run `composer changelog:write` — use the patch version when prompted.
+2. Copy new entries from `CHANGELOG.md` into the `== Changelog ==` section of `readme.txt`.
+3. Update version numbers in all version file locations (per the release skill).
+4. Replace any `unreleased` annotations in cherry-picked files with the patch version.
 
-This will update `CHANGELOG.md` with entries from `.github/changelog/`.
-
-If the command prompts for a version, use the patch version determined in Step 1.
-
-After running, verify the changelog was updated:
-
-```bash
-git diff CHANGELOG.md
-```
-
-## Step 6 — Update readme.txt Changelog Section
-
-Copy the new changelog entries from `CHANGELOG.md` into the `== Changelog ==` section of `readme.txt`. The format in `readme.txt` uses WordPress readme conventions:
-
-```
-= X.Y.Z =
-
-* Entry one.
-* Entry two.
-```
-
-Read both files, extract the new version's entries from `CHANGELOG.md`, and insert them into `readme.txt` under the `== Changelog ==` heading, before the previous version's entries.
-
-## Step 7 — Update Version Numbers
-
-Update the version number to the patch version in these files:
-
-### activitypub.php
-- Plugin header: `Version: X.Y.Z`
-- The `ACTIVITYPUB_PLUGIN_VERSION` constant (if present).
-
-### readme.txt
-- `Stable tag: X.Y.Z`
-
-### package.json
-- `"version": "X.Y.Z"`
-
-### Source files with `unreleased` tags
-Search for any `@since unreleased` or `@deprecated unreleased` annotations and replace `unreleased` with the patch version:
-
-```bash
-grep -r "unreleased" --include="*.php" -l
-```
-
-Replace all occurrences in those files.
-
-## Step 8 — Review Changes
+## Step 6 — Review Changes
 
 Show a summary of all changes for user review:
 
@@ -160,7 +117,7 @@ Present a clear summary:
 
 Ask the user to confirm before committing and pushing.
 
-## Step 9 — Commit and Push
+## Step 7 — Commit and Push
 
 Stage and commit all changes:
 
@@ -175,19 +132,9 @@ Push the branch:
 git push -u origin release/<base-version>
 ```
 
-## Step 10 — Final Instructions
+## Step 8 — Create Draft Release
 
-After pushing, provide the user with instructions for creating the GitHub release:
-
-1. Go to the repository's Releases page.
-2. Click "Draft a new release".
-3. Create a new tag: `X.Y.Z` (the patch version).
-4. Set **Target** to `release/<base-version>`.
-5. Set **Previous tag** to `<base-version>`.
-6. Click "Generate release notes".
-7. Publish the release.
-
-Alternatively, offer to create a draft release using `gh`:
+Offer to create a draft GitHub release:
 
 ```bash
 gh release create <patch-version> \
@@ -197,11 +144,12 @@ gh release create <patch-version> \
   --draft
 ```
 
+Or provide manual instructions for creating the release on GitHub (per the release skill).
+
 ## Guidelines
 
 - **Always confirm with the user** before cherry-picking, committing, or pushing.
 - **Use `-m 1`** when cherry-picking merge commits — this selects the mainline parent.
 - **Never force-push** to the release branch.
 - **Handle conflicts carefully** — when in doubt, ask the user.
-- **Version numbers must be consistent** across all files (activitypub.php, readme.txt, package.json).
-- **Changelog entries must end with punctuation** and be user-friendly (no jargon or class names).
+- **Defer to the release skill** for version file locations, changelog conventions, and version numbering.
