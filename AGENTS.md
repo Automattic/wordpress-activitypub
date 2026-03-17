@@ -146,3 +146,4 @@ Skills are complex procedures loaded on demand. Canonical files live in `.agents
 | **code-review** | Auto-invoked before PR creation to review changes. |
 | **spec-check** | Audit endpoints against W3C ActivityPub and SWICG specs. |
 | **bug-bounty** | Pick easiest open bug, fix with tests, create draft PR. Runs in background. |
+| **patch-release** | Create a patch release by cherry-picking fixes onto a release branch. |
