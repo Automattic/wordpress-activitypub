@@ -29,10 +29,14 @@ function is_post_disabled( $post ) {
 	$visibility          = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
 	$is_local_or_private = in_array( $visibility, array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ), true );
 
+	// Only 'publish' is public. 'inherit' is allowed only for attachments.
+	$is_public_status = 'publish' === $post->post_status ||
+		( 'inherit' === $post->post_status && 'attachment' === $post->post_type );
+
 	if (
 		$is_local_or_private ||
 		! \post_type_supports( $post->post_type, 'activitypub' ) ||
-		'private' === $post->post_status ||
+		! $is_public_status ||
 		! empty( $post->post_password )
 	) {
 		$disabled = true;
@@ -40,14 +44,17 @@ function is_post_disabled( $post ) {
 
 	/*
 	 * Check for posts that need special handling.
-	 * Federated posts changed to local/private need Delete activity.
+	 * Federated posts changed to local/private or non-public status need Delete activity.
 	 * Deleted posts restored to public need Create activity.
 	 */
 	$object_state = get_wp_object_state( $post );
 
 	if (
 		ACTIVITYPUB_OBJECT_STATE_DELETED === $object_state ||
-		( $is_local_or_private && ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_state )
+		(
+			ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_state &&
+			( $is_local_or_private || ! $is_public_status )
+		)
 	) {
 		$disabled = false;
 	}

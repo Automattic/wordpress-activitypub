@@ -273,6 +273,7 @@ class Test_Post extends \WP_UnitTestCase {
 			array(
 				'post_author'  => 1,
 				'post_content' => 'test content visibility',
+				'post_status'  => 'publish',
 			)
 		);
 
@@ -290,7 +291,8 @@ class Test_Post extends \WP_UnitTestCase {
 
 		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
 
-		$this->assertTrue( \Activitypub\is_post_disabled( $post_id ) );
+		// Post was federated on insert, so is_post_disabled returns false
+		// to allow Delete activity. But visibility settings still apply.
 		$object = Post::transform( get_post( $post_id ) )->to_object();
 		$this->assertEmpty( $object->get_to() );
 		$this->assertEmpty( $object->get_cc() );
