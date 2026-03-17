@@ -60,6 +60,73 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test is_post_disabled with non-public statuses.
+	 *
+	 * @covers \Activitypub\is_post_disabled
+	 */
+	public function test_is_post_disabled_non_public_statuses() {
+		$draft_post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'draft',
+			)
+		);
+		$this->assertTrue( \Activitypub\is_post_disabled( $draft_post_id ), 'Draft posts should be disabled.' );
+
+		$pending_post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'pending',
+			)
+		);
+		$this->assertTrue( \Activitypub\is_post_disabled( $pending_post_id ), 'Pending posts should be disabled.' );
+
+		$future_post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'future',
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '+1 day' ) ),
+			)
+		);
+		$this->assertTrue( \Activitypub\is_post_disabled( $future_post_id ), 'Future posts should be disabled.' );
+	}
+
+	/**
+	 * Test that previously federated posts with non-public statuses remain enabled.
+	 *
+	 * Federated posts that transition away from publish need to stay accessible
+	 * so the scheduler can determine the correct activity type (Update or Delete).
+	 *
+	 * @covers \Activitypub\is_post_disabled
+	 */
+	public function test_is_post_disabled_federated_non_public_statuses() {
+		// Draft post that was previously federated should NOT be disabled.
+		$draft_post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'draft',
+			)
+		);
+		\update_post_meta( $draft_post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+		$this->assertFalse( \Activitypub\is_post_disabled( $draft_post_id ), 'Federated draft posts should not be disabled.' );
+
+		// Pending post that was previously federated should NOT be disabled.
+		$pending_post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'pending',
+			)
+		);
+		\update_post_meta( $pending_post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+		$this->assertFalse( \Activitypub\is_post_disabled( $pending_post_id ), 'Federated pending posts should not be disabled.' );
+
+		// Future post that was previously federated should NOT be disabled.
+		$future_post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'future',
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '+1 day' ) ),
+			)
+		);
+		\update_post_meta( $future_post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+		$this->assertFalse( \Activitypub\is_post_disabled( $future_post_id ), 'Federated future posts should not be disabled.' );
+	}
+
+	/**
 	 * Test is_post_disabled with private visibility.
 	 *
 	 * @covers \Activitypub\is_post_disabled
