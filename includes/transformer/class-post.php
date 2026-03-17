@@ -359,10 +359,10 @@ class Post extends Base {
 		}
 
 		/*
-		 * Remove attachments from the Fediverse if a post was federated and then set back to draft.
+		 * Remove attachments from the Fediverse if a post was federated and then unpublished.
 		 * Except in preview mode, where we want to show attachments.
 		 */
-		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
+		if ( ! $this->is_preview() && 'publish' !== \get_post_status( $this->item ) ) {
 			$this->attachment = array();
 
 			return $this->attachment;
@@ -543,8 +543,8 @@ class Post extends Base {
 			return $this->summary;
 		}
 
-		// Remove Teaser from drafts.
-		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
+		// Remove Teaser from unpublished posts.
+		if ( ! $this->is_preview() && 'publish' !== \get_post_status( $this->item ) ) {
 			$this->summary = \__( '(This post is being modified)', 'activitypub' );
 
 			return $this->summary;
@@ -593,8 +593,8 @@ class Post extends Base {
 			return $this->content;
 		}
 
-		// Remove Content from drafts.
-		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
+		// Remove Content from unpublished posts.
+		if ( ! $this->is_preview() && 'publish' !== \get_post_status( $this->item ) ) {
 			$this->content = \__( '(This post is being modified)', 'activitypub' );
 
 			return $this->content;
