@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Prevent non-public posts (drafts, scheduled, pending review) from being accessible via ActivityPub.
