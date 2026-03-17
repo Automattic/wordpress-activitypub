@@ -27,6 +27,10 @@ class Options {
 		\add_filter( 'pre_option_activitypub_following_ui', array( self::class, 'pre_option_activitypub_following_ui' ) );
 		\add_filter( 'pre_option_activitypub_create_posts', array( self::class, 'pre_option_activitypub_create_posts' ) );
 
+		\add_filter( 'pre_option_activitypub_distribution_mode', array( self::class, 'pre_option_activitypub_distribution_mode' ) );
+		\add_filter( 'activitypub_dispatcher_batch_size', array( self::class, 'filter_dispatcher_batch_size' ) );
+		\add_filter( 'activitypub_scheduler_async_batch_pause', array( self::class, 'filter_scheduler_batch_pause' ) );
+
 		\add_filter( 'pre_option_activitypub_allow_likes', array( self::class, 'maybe_disable_interactions' ) );
 		\add_filter( 'pre_option_activitypub_allow_replies', array( self::class, 'maybe_disable_interactions' ) );
 
@@ -358,6 +362,42 @@ class Options {
 			)
 		);
 
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_distribution_mode',
+			array(
+				'type'              => 'string',
+				'description'       => 'Distribution mode for federation delivery.',
+				'default'           => 'default',
+				'sanitize_callback' => static function ( $value ) {
+					$allowed = array( 'default', 'balanced', 'eco', 'custom' );
+					return \in_array( $value, $allowed, true ) ? $value : 'default';
+				},
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_custom_batch_size',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Custom batch size for federation delivery.',
+				'default'           => 100,
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_custom_batch_pause',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Custom pause in seconds between batches.',
+				'default'           => 30,
+				'sanitize_callback' => 'absint',
+			)
+		);
+
 		/*
 		 * Options Group: activitypub_blog
 		 */
@@ -638,6 +678,87 @@ class Options {
 		}
 
 		return $value;
+	}
+
+	/**
+	 * Pre-get option filter for the Distribution Mode.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string|false $pre The pre-get option value.
+	 *
+	 * @return string|false The distribution mode or false if it should not be filtered.
+	 */
+	public static function pre_option_activitypub_distribution_mode( $pre ) {
+		if ( false !== ACTIVITYPUB_DISTRIBUTION_MODE ) {
+			return ACTIVITYPUB_DISTRIBUTION_MODE;
+		}
+
+		return $pre;
+	}
+
+	/**
+	 * Get distribution parameters for the current mode.
+	 *
+	 * @since unreleased
+	 *
+	 * @return array { batch_size: int, pause: int }
+	 */
+	public static function get_distribution_params() {
+		$mode = \get_option( 'activitypub_distribution_mode', 'default' );
+
+		$modes = array(
+			'default'  => array(
+				'batch_size' => 100,
+				'pause'      => 30,
+			),
+			'balanced' => array(
+				'batch_size' => 50,
+				'pause'      => 60,
+			),
+			'eco'      => array(
+				'batch_size' => 20,
+				'pause'      => 300,
+			),
+		);
+
+		if ( isset( $modes[ $mode ] ) ) {
+			return $modes[ $mode ];
+		}
+
+		// Custom mode.
+		return array(
+			'batch_size' => \absint( \get_option( 'activitypub_custom_batch_size', 100 ) ),
+			'pause'      => \absint( \get_option( 'activitypub_custom_batch_pause', 30 ) ),
+		);
+	}
+
+	/**
+	 * Filter the dispatcher batch size based on distribution mode.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $batch_size The default batch size.
+	 *
+	 * @return int The batch size for the current distribution mode.
+	 */
+	public static function filter_dispatcher_batch_size( $batch_size ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found, VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		$params = self::get_distribution_params();
+		return $params['batch_size'];
+	}
+
+	/**
+	 * Filter the scheduler batch pause based on distribution mode.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $pause The default pause in seconds.
+	 *
+	 * @return int The pause for the current distribution mode.
+	 */
+	public static function filter_scheduler_batch_pause( $pause ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found, VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		$params = self::get_distribution_params();
+		return $params['pause'];
 	}
 
 	/**

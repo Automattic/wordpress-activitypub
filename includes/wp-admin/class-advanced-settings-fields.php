@@ -30,6 +30,16 @@ class Advanced_Settings_Fields {
 			'activitypub_advanced_settings'
 		);
 
+		if ( ! ACTIVITYPUB_DISTRIBUTION_MODE ) {
+			\add_settings_field(
+				'activitypub_distribution_mode',
+				\__( 'Distribution Mode', 'activitypub' ),
+				array( self::class, 'render_distribution_mode_field' ),
+				'activitypub_advanced_settings',
+				'activitypub_advanced_settings'
+			);
+		}
+
 		if ( ! defined( 'ACTIVITYPUB_SEND_VARY_HEADER' ) ) {
 			\add_settings_field(
 				'activitypub_vary_header',
@@ -286,6 +296,88 @@ class Advanced_Settings_Fields {
 		<p class="description">
 			<?php \esc_html_e( 'This is mainly for backwards compatibility. It is not recommended to use the Template Tags, because it might not be supported in future versions.', 'activitypub' ); ?>
 		</p>
+		<?php
+	}
+
+	/**
+	 * Render distribution mode field.
+	 *
+	 * @since unreleased
+	 */
+	public static function render_distribution_mode_field() {
+		$mode         = \get_option( 'activitypub_distribution_mode', 'default' );
+		$custom_batch = \get_option( 'activitypub_custom_batch_size', 100 );
+		$custom_pause = \get_option( 'activitypub_custom_batch_pause', 30 );
+		$is_custom    = 'custom' === $mode;
+
+		$modes = array(
+			'default'  => array(
+				'label'       => \__( 'Default', 'activitypub' ),
+				'description' => \__( 'Deliver activities as fast as possible (<code>100</code> per batch, <code>30s</code> pause).', 'activitypub' ),
+			),
+			'balanced' => array(
+				'label'       => \__( 'Balanced', 'activitypub' ),
+				'description' => \__( 'Moderate pace with reasonable pauses between batches (<code>50</code> per batch, <code>60s</code> pause).', 'activitypub' ),
+			),
+			'eco'      => array(
+				'label'       => \__( 'Eco Mode', 'activitypub' ),
+				'description' => \__( 'Gentle on server resources, ideal for shared hosting (<code>20</code> per batch, <code>5min</code> pause).', 'activitypub' ),
+			),
+			'custom'   => array(
+				'label'       => \__( 'Custom', 'activitypub' ),
+				'description' => \__( 'Configure batch size and delay manually.', 'activitypub' ),
+			),
+		);
+
+		?>
+		<fieldset>
+			<legend class="screen-reader-text"><span><?php \esc_html_e( 'Distribution Mode', 'activitypub' ); ?></span></legend>
+			<p class="description">
+				<?php \esc_html_e( 'Controls how quickly the plugin sends posts to followers. Slower modes reduce server load but delay delivery.', 'activitypub' ); ?>
+			</p>
+			<?php
+			foreach ( $modes as $key => $data ) {
+				?>
+				<p>
+					<label>
+						<input type="radio" name="activitypub_distribution_mode" value="<?php echo \esc_attr( $key ); ?>" <?php \checked( $key, $mode ); ?> />
+						<strong><?php echo \esc_html( $data['label'] ); ?></strong>
+					</label>
+					<br />
+					<?php echo \wp_kses( $data['description'], array( 'code' => array() ) ); ?>
+				</p>
+				<?php
+			}
+			?>
+			<ul id="activitypub-custom-distribution-fields" <?php echo $is_custom ? '' : 'style="display:none;"'; ?>>
+				<li>
+					<label>
+						<?php \esc_html_e( 'Batch size:', 'activitypub' ); ?>
+						<input type="number" name="activitypub_custom_batch_size" value="<?php echo \esc_attr( $custom_batch ); ?>" min="1" step="1" class="small-text" />
+					</label>
+				</li>
+				<li>
+					<label>
+						<?php \esc_html_e( 'Pause between batches (seconds):', 'activitypub' ); ?>
+						<input type="number" name="activitypub_custom_batch_pause" value="<?php echo \esc_attr( $custom_pause ); ?>" min="0" step="1" class="small-text" />
+					</label>
+				</li>
+			</ul>
+			<p class="description">
+				<?php \esc_html_e( 'With many followers, slower modes may significantly delay delivery. For example, Eco Mode with 1,000 followers takes approximately 4 hours per post.', 'activitypub' ); ?>
+			</p>
+		</fieldset>
+		<script>
+		( function() {
+			var radios = document.querySelectorAll( 'input[name="activitypub_distribution_mode"]' );
+			var fields = document.getElementById( 'activitypub-custom-distribution-fields' );
+			radios.forEach( function( radio ) {
+				radio.addEventListener( 'change', function() {
+					fields.style.display = this.value === 'custom' ? '' : 'none';
+				} );
+			} );
+		} )();
+		</script>
 		<?php
 	}
 }
