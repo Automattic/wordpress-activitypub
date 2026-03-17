@@ -416,6 +416,112 @@ class Sanitize {
 			'srclang' => true,
 		);
 
+		/*
+		 * MathML safe elements per W3C MathML safe list.
+		 *
+		 * @see https://w3c.github.io/mathml-docs/mathml-safe-list.
+		 */
+		$mathml_global_attrs = array(
+			'displaystyle'   => true,
+			'mathbackground' => true,
+			'mathcolor'      => true,
+			'mathsize'       => true,
+			'scriptlevel'    => true,
+			'intent'         => true,
+			'arg'            => true,
+		);
+
+		$allowed_html['math']          = array_merge(
+			$mathml_global_attrs,
+			array(
+				'display' => true,
+			)
+		);
+		$allowed_html['merror']        = $mathml_global_attrs;
+		$allowed_html['mfrac']         = array_merge(
+			$mathml_global_attrs,
+			array(
+				'linethickness' => true,
+			)
+		);
+		$allowed_html['mi']            = $mathml_global_attrs;
+		$allowed_html['mmultiscripts'] = $mathml_global_attrs;
+		$allowed_html['mn']            = $mathml_global_attrs;
+		$allowed_html['mo']            = array_merge(
+			$mathml_global_attrs,
+			array(
+				'form'          => true,
+				'fence'         => true,
+				'separator'     => true,
+				'lspace'        => true,
+				'rspace'        => true,
+				'stretchy'      => true,
+				'symmetric'     => true,
+				'maxsize'       => true,
+				'minsize'       => true,
+				'largeop'       => true,
+				'movablelimits' => true,
+			)
+		);
+		$allowed_html['mover']         = $mathml_global_attrs;
+		$allowed_html['mpadded']       = array_merge(
+			$mathml_global_attrs,
+			array(
+				'width'   => true,
+				'height'  => true,
+				'depth'   => true,
+				'lspace'  => true,
+				'voffset' => true,
+			)
+		);
+		$allowed_html['mprescripts']   = $mathml_global_attrs;
+		$allowed_html['mroot']         = $mathml_global_attrs;
+		$allowed_html['mrow']          = $mathml_global_attrs;
+		$allowed_html['ms']            = $mathml_global_attrs;
+		$allowed_html['mspace']        = array_merge(
+			$mathml_global_attrs,
+			array(
+				'width'  => true,
+				'height' => true,
+				'depth'  => true,
+			)
+		);
+		$allowed_html['msqrt']         = $mathml_global_attrs;
+		$allowed_html['mstyle']        = $mathml_global_attrs;
+		$allowed_html['msub']          = $mathml_global_attrs;
+		$allowed_html['msubsup']       = $mathml_global_attrs;
+		$allowed_html['msup']          = $mathml_global_attrs;
+		$allowed_html['mtable']        = $mathml_global_attrs;
+		$allowed_html['mtd']           = array_merge(
+			$mathml_global_attrs,
+			array(
+				'columnspan' => true,
+				'rowspan'    => true,
+			)
+		);
+		$allowed_html['mtext']         = $mathml_global_attrs;
+		$allowed_html['mtr']           = $mathml_global_attrs;
+		$allowed_html['munder']        = $mathml_global_attrs;
+		$allowed_html['munderover']    = array_merge(
+			$mathml_global_attrs,
+			array(
+				'accent'      => true,
+				'accentunder' => true,
+			)
+		);
+		$allowed_html['semantics']     = array_merge(
+			$mathml_global_attrs,
+			array(
+				'encoding' => true,
+			)
+		);
+		$allowed_html['annotation']    = array_merge(
+			$mathml_global_attrs,
+			array(
+				'encoding' => true,
+			)
+		);
+
 		return $allowed_html;
 	}
 }

@@ -502,6 +502,10 @@ class Test_Sanitize extends \WP_UnitTestCase {
 				'<p>Hello</p><form action="/submit"><input type="text" /></form><p>World</p>',
 				'<p>Hello</p><p>World</p>',
 			),
+			'preserves_mathml'                => array(
+				'<math display="block"><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mn>1</mn></mrow></math>',
+				'<math display="block"><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mn>1</mn></mrow></math>',
+			),
 		);
 	}
 
