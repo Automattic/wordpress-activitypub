@@ -458,9 +458,9 @@ class Test_Sanitize extends \WP_UnitTestCase {
 				'<a href="https://example.de" hreflang="de">German</a>',
 				'<a href="https://example.de">German</a>',
 			),
-			'preserves_details_open'          => array(
-				'<details open><summary>Title</summary></details>',
-				'<details open><summary>Title</summary></details>',
+			'strips_details_summary'          => array(
+				'<details open><summary>Title</summary>Content</details>',
+				'TitleContent',
 			),
 			'self_closing_tags'               => array(
 				'<br class="clear" />',

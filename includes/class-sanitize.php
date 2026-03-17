@@ -271,6 +271,15 @@ class Sanitize {
 		$content = \preg_replace( '@<(script|style|button|nav|form|textarea|select|input|fieldset|iframe|embed|object)[^>]*?>.*?</\\1>@si', '', $content );
 
 		/**
+		 * Fires the deprecated attribute removal filter.
+		 *
+		 * @deprecated unreleased Use the {@see 'activitypub_allowed_html'} filter instead.
+		 */
+		if ( \has_filter( 'activitypub_remove_html_attributes' ) ) {
+			\_deprecated_hook( 'activitypub_remove_html_attributes', 'unreleased', 'activitypub_allowed_html' );
+		}
+
+		/**
 		 * Filters the allowed HTML for ActivityPub content.
 		 *
 		 * The default allowlist is based on FEP-b2b8 (Long-form Text),
@@ -395,10 +404,6 @@ class Sanitize {
 			'title' => true,
 		);
 		$allowed_html['mark']       = array();
-		$allowed_html['details']    = array(
-			'open' => true,
-		);
-		$allowed_html['summary']    = array();
 		$allowed_html['ins']        = array();
 		$allowed_html['cite']       = array();
 		$allowed_html['time']       = array(
