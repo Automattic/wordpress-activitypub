@@ -282,7 +282,12 @@ class Client {
 		if ( \is_wp_error( $response ) ) {
 			return new \WP_Error(
 				'activitypub_client_fetch_failed',
-				\__( 'Failed to fetch client metadata.', 'activitypub' ),
+				\sprintf(
+					/* translators: 1: The client metadata URL, 2: The error message from the HTTP request */
+					\__( 'Could not reach the application at %1$s: %2$s', 'activitypub' ),
+					\esc_url( $url ),
+					\esc_html( $response->get_error_message() )
+				),
 				array( 'status' => 502 )
 			);
 		}
@@ -291,8 +296,12 @@ class Client {
 		if ( 200 !== $code ) {
 			return new \WP_Error(
 				'activitypub_client_fetch_failed',
-				/* translators: %d: HTTP status code */
-				sprintf( \__( 'Client metadata returned HTTP %d.', 'activitypub' ), $code ),
+				\sprintf(
+					/* translators: 1: The client metadata URL, 2: HTTP status code */
+					\__( 'The application at %1$s returned an unexpected response (HTTP %2$d).', 'activitypub' ),
+					\esc_url( $url ),
+					$code
+				),
 				array( 'status' => 502 )
 			);
 		}

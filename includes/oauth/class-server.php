@@ -287,6 +287,14 @@ class Server {
 	 */
 	private static function render_authorize_form() {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Initial form display, nonce checked on POST.
+
+		// Check for error parameter (redirected from REST authorization endpoint).
+		if ( isset( $_GET['auth_error'] ) ) {
+			$error_message = \sanitize_text_field( \wp_unslash( $_GET['auth_error'] ) ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
+			include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-error.php';
+			return;
+		}
+
 		$authorize_params = array(
 			'client_id'             => isset( $_GET['client_id'] ) ? \sanitize_text_field( \wp_unslash( $_GET['client_id'] ) ) : '',
 			'redirect_uri'          => isset( $_GET['redirect_uri'] ) ? Sanitize::redirect_uri( \wp_unslash( $_GET['redirect_uri'] ) ) : '', // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized via Sanitize::redirect_uri().
@@ -300,20 +308,16 @@ class Server {
 		// Validate client.
 		$client = Client::get( $authorize_params['client_id'] );
 		if ( \is_wp_error( $client ) ) {
-			\wp_die(
-				\esc_html( $client->get_error_message() ),
-				\esc_html__( 'Authorization Error', 'activitypub' ),
-				array( 'response' => 404 )
-			);
+			$error_message = $client->get_error_message(); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
+			include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-error.php';
+			return;
 		}
 
 		// Validate redirect URI.
 		if ( ! $client->is_valid_redirect_uri( $authorize_params['redirect_uri'] ) ) {
-			\wp_die(
-				\esc_html__( 'Invalid redirect URI for this client.', 'activitypub' ),
-				\esc_html__( 'Authorization Error', 'activitypub' ),
-				array( 'response' => 400 )
-			);
+			$error_message = \__( 'Invalid redirect URI for this client.', 'activitypub' ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
+			include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-error.php';
+			return;
 		}
 
 		// Use the canonical client ID (may differ from the raw input for discovered clients).
@@ -340,11 +344,9 @@ class Server {
 	private static function process_authorize_form() {
 		// Verify nonce.
 		if ( ! isset( $_POST['_wpnonce'] ) || ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ) ), 'activitypub_oauth_authorize' ) ) {
-			\wp_die(
-				\esc_html__( 'Security check failed. Please try again.', 'activitypub' ),
-				\esc_html__( 'Authorization Error', 'activitypub' ),
-				array( 'response' => 403 )
-			);
+			$error_message = \__( 'Security check failed. Please try again.', 'activitypub' ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
+			include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-error.php';
+			exit;
 		}
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified above.
@@ -365,19 +367,15 @@ class Server {
 		$client = Client::get( $client_id );
 
 		if ( \is_wp_error( $client ) ) {
-			\wp_die(
-				\esc_html( $client->get_error_message() ),
-				\esc_html__( 'Authorization Error', 'activitypub' ),
-				array( 'response' => 404 )
-			);
+			$error_message = $client->get_error_message(); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
+			include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-error.php';
+			exit;
 		}
 
 		if ( ! $client->is_valid_redirect_uri( $redirect_uri ) ) {
-			\wp_die(
-				\esc_html__( 'Invalid redirect URI for this client.', 'activitypub' ),
-				\esc_html__( 'Authorization Error', 'activitypub' ),
-				array( 'response' => 400 )
-			);
+			$error_message = \__( 'Invalid redirect URI for this client.', 'activitypub' ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
+			include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-error.php';
+			exit;
 		}
 
 		// User denied authorization.

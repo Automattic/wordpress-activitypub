@@ -131,7 +131,7 @@ class Test_Authorization_Controller extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that GET authorize returns error for unknown client.
+	 * Test that GET authorize redirects to wp-login.php error page for unknown client.
 	 *
 	 * @covers ::authorize
 	 */
@@ -143,11 +143,14 @@ class Test_Authorization_Controller extends \WP_UnitTestCase {
 
 		$response = \rest_get_server()->dispatch( $request );
 
-		$this->assertGreaterThanOrEqual( 400, $response->get_status() );
+		$this->assertEquals( 302, $response->get_status() );
+		$location = $response->get_headers()['Location'];
+		$this->assertStringContainsString( 'action=activitypub_authorize', $location );
+		$this->assertStringContainsString( 'auth_error=', $location );
 	}
 
 	/**
-	 * Test that GET authorize returns error for mismatched redirect URI.
+	 * Test that GET authorize redirects to wp-login.php error page for mismatched redirect URI.
 	 *
 	 * @covers ::authorize
 	 */
@@ -159,7 +162,10 @@ class Test_Authorization_Controller extends \WP_UnitTestCase {
 
 		$response = \rest_get_server()->dispatch( $request );
 
-		$this->assertEquals( 400, $response->get_status() );
+		$this->assertEquals( 302, $response->get_status() );
+		$location = $response->get_headers()['Location'];
+		$this->assertStringContainsString( 'action=activitypub_authorize', $location );
+		$this->assertStringContainsString( 'auth_error=', $location );
 	}
 
 	/**
