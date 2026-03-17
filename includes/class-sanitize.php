@@ -251,9 +251,11 @@ class Sanitize {
 	/**
 	 * Clean HTML for ActivityPub federation.
 	 *
-	 * Keeps all WordPress allowed tags but removes global attributes like
-	 * class, id, style, data-*, aria-* that increase payload size.
+	 * Uses a positive allowlist based on FEP-b2b8 (Long-form Text) for the
+	 * `content` property, extended with common WordPress content elements.
+	 * Interactive, navigational, and scripting elements are stripped entirely.
 	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/b2b8/fep-b2b8.md
 	 * @see https://github.com/Automattic/wordpress-activitypub/issues/2619
 	 *
 	 * @param string $content The HTML content to clean.
@@ -265,61 +267,150 @@ class Sanitize {
 			return $content;
 		}
 
-		// Start with all WordPress allowed post tags.
-		$allowed_html = \wp_kses_allowed_html( 'post' );
-
-		// Global attributes to remove from all elements.
-		$remove_attrs = array(
-			'aria-controls',
-			'aria-current',
-			'aria-describedby',
-			'aria-details',
-			'aria-expanded',
-			'aria-hidden',
-			'aria-label',
-			'aria-labelledby',
-			'aria-live',
-			'class',
-			'data-*',
-			'decoding',
-			'dir',
-			'hidden',
-			'id',
-			'lang',
-			'loading',
-			'role',
-			'style',
-			'tabindex',
-			'title',
-			'xml:lang',
-		);
+		// Strip elements whose inner content is noise (scripts, styles, interactive UI, embeds).
+		$content = \preg_replace( '@<(script|style|button|nav|form|textarea|select|input|fieldset|iframe|embed|object)[^>]*?>.*?</\\1>@si', '', $content );
 
 		/**
-		 * Filter the global attributes to remove from all elements.
+		 * Filters the allowed HTML for ActivityPub content.
 		 *
-		 * @param array $remove_attrs Global attributes to remove.
-		 */
-		$remove_attrs = \apply_filters( 'activitypub_remove_html_attributes', $remove_attrs );
-
-		// Remove global attributes from all tags.
-		foreach ( $allowed_html as $tag => $attrs ) {
-			$allowed_html[ $tag ] = \array_diff_key( $attrs, \array_flip( $remove_attrs ) );
-		}
-
-		// Re-add class and title for anchors (needed for microformats).
-		$allowed_html['a']['class'] = true;
-		$allowed_html['a']['title'] = true;
-
-		// Re-add class for spans (needed for microformats).
-		$allowed_html['span']['class'] = true;
-
-		/**
-		 * Filter the final allowed HTML for ActivityPub content.
+		 * The default allowlist is based on FEP-b2b8 (Long-form Text),
+		 * extended with common WordPress content elements like figures,
+		 * tables, definition lists, and horizontal rules.
 		 *
 		 * @param array $allowed_html The allowed HTML structure for wp_kses.
 		 */
-		$allowed_html = \apply_filters( 'activitypub_allowed_html', $allowed_html );
+		$allowed_html = \apply_filters( 'activitypub_allowed_html', self::get_allowed_html() );
 
 		return \wp_kses( $content, $allowed_html, \wp_allowed_protocols() );
+	}
+
+	/**
+	 * Returns the allowed HTML elements and attributes for ActivityPub content.
+	 *
+	 * Based on the FEP-b2b8 allowlist for the `content` property, extended
+	 * with additional WordPress content elements (figures, tables, definition
+	 * lists, horizontal rules, etc.).
+	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/b2b8/fep-b2b8.md
+	 *
+	 * @return array The allowed HTML structure for wp_kses.
+	 */
+	public static function get_allowed_html() {
+		// FEP-b2b8 core allowlist.
+		$allowed_html = array(
+			'p'          => array(),
+			'span'       => array(
+				'class' => true,
+			),
+			'br'         => array(),
+			'a'          => array(
+				'href'  => true,
+				'rel'   => true,
+				'class' => true,
+				'title' => true,
+			),
+			'h1'         => array(),
+			'h2'         => array(),
+			'h3'         => array(),
+			'h4'         => array(),
+			'h5'         => array(),
+			'h6'         => array(),
+			'del'        => array(),
+			'pre'        => array(),
+			'code'       => array(),
+			'em'         => array(),
+			'strong'     => array(),
+			'b'          => array(),
+			'i'          => array(),
+			'u'          => array(),
+			'ul'         => array(),
+			'ol'         => array(
+				'start'    => true,
+				'reversed' => true,
+			),
+			'li'         => array(
+				'value' => true,
+			),
+			'blockquote' => array(
+				'cite' => true,
+			),
+			'img'        => array(
+				'src'    => true,
+				'alt'    => true,
+				'title'  => true,
+				'width'  => true,
+				'height' => true,
+				'class'  => true,
+			),
+			'video'      => array(
+				'src'      => true,
+				'controls' => true,
+				'loop'     => true,
+				'poster'   => true,
+				'width'    => true,
+				'height'   => true,
+				'class'    => true,
+			),
+			'audio'      => array(
+				'src'      => true,
+				'controls' => true,
+				'loop'     => true,
+				'class'    => true,
+			),
+			'source'     => array(
+				'src'  => true,
+				'type' => true,
+			),
+			'ruby'       => array(),
+			'rt'         => array(),
+			'rp'         => array(),
+		);
+
+		// WordPress content extensions beyond FEP-b2b8.
+		$allowed_html['figure']     = array();
+		$allowed_html['figcaption'] = array();
+		$allowed_html['hr']         = array();
+		$allowed_html['div']        = array();
+		$allowed_html['table']      = array();
+		$allowed_html['thead']      = array();
+		$allowed_html['tbody']      = array();
+		$allowed_html['tfoot']      = array();
+		$allowed_html['tr']         = array();
+		$allowed_html['th']         = array(
+			'colspan' => true,
+			'rowspan' => true,
+		);
+		$allowed_html['td']         = array(
+			'colspan' => true,
+			'rowspan' => true,
+		);
+		$allowed_html['caption']    = array();
+		$allowed_html['dl']         = array();
+		$allowed_html['dt']         = array();
+		$allowed_html['dd']         = array();
+		$allowed_html['s']          = array();
+		$allowed_html['sub']        = array();
+		$allowed_html['sup']        = array();
+		$allowed_html['abbr']       = array(
+			'title' => true,
+		);
+		$allowed_html['mark']       = array();
+		$allowed_html['details']    = array(
+			'open' => true,
+		);
+		$allowed_html['summary']    = array();
+		$allowed_html['ins']        = array();
+		$allowed_html['cite']       = array();
+		$allowed_html['time']       = array(
+			'datetime' => true,
+		);
+		$allowed_html['track']      = array(
+			'src'     => true,
+			'kind'    => true,
+			'label'   => true,
+			'srclang' => true,
+		);
+
+		return $allowed_html;
 	}
 }
