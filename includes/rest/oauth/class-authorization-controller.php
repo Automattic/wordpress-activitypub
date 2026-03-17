@@ -340,16 +340,24 @@ class Authorization_Controller extends \WP_REST_Controller {
 	 * wp-login.php where the error is rendered using login_header/login_footer
 	 * for a consistent, user-friendly appearance.
 	 *
+	 * The error message is stored in a short-lived transient (5 minutes)
+	 * keyed by a random token. Only the opaque token is passed in the URL,
+	 * preventing social-engineering attacks where an attacker crafts a URL
+	 * with arbitrary error text displayed inside WordPress login chrome.
+	 *
 	 * @since unreleased
 	 *
 	 * @param \WP_Error $error The error to display.
 	 * @return \WP_REST_Response Redirect response to wp-login.php.
 	 */
 	private function error_page( $error ) {
+		$token = \wp_generate_password( 20, false );
+		\set_transient( 'ap_oauth_err_' . $token, $error->get_error_message(), 5 * MINUTE_IN_SECONDS );
+
 		$login_url = \add_query_arg(
 			array(
 				'action'     => 'activitypub_authorize',
-				'auth_error' => $error->get_error_message(),
+				'auth_error' => $token,
 			),
 			\wp_login_url()
 		);

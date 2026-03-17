@@ -285,8 +285,8 @@ class Client {
 				\sprintf(
 					/* translators: 1: The client metadata URL, 2: The error message from the HTTP request */
 					\__( 'Could not reach the application at %1$s: %2$s', 'activitypub' ),
-					\esc_url( $url ),
-					\esc_html( $response->get_error_message() )
+					$url,
+					$response->get_error_message()
 				),
 				array( 'status' => 502 )
 			);
@@ -299,7 +299,7 @@ class Client {
 				\sprintf(
 					/* translators: 1: The client metadata URL, 2: HTTP status code */
 					\__( 'The application at %1$s returned an unexpected response (HTTP %2$d).', 'activitypub' ),
-					\esc_url( $url ),
+					$url,
 					$code
 				),
 				array( 'status' => 502 )

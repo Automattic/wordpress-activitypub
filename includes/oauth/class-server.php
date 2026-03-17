@@ -288,9 +288,16 @@ class Server {
 	private static function render_authorize_form() {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Initial form display, nonce checked on POST.
 
-		// Check for error parameter (redirected from REST authorization endpoint).
+		// Check for error token (redirected from REST authorization endpoint).
 		if ( isset( $_GET['auth_error'] ) ) {
-			$error_message = \sanitize_text_field( \wp_unslash( $_GET['auth_error'] ) ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
+			$token         = \sanitize_text_field( \wp_unslash( $_GET['auth_error'] ) );
+			$error_message = \get_transient( 'ap_oauth_err_' . $token ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
+			\delete_transient( 'ap_oauth_err_' . $token );
+
+			if ( ! $error_message ) {
+				$error_message = \__( 'An authorization error occurred. Please try again.', 'activitypub' ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
+			}
+
 			include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-error.php';
 			return;
 		}

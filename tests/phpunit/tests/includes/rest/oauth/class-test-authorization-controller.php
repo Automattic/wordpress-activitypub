@@ -147,6 +147,10 @@ class Test_Authorization_Controller extends \WP_UnitTestCase {
 		$location = $response->get_headers()['Location'];
 		$this->assertStringContainsString( 'action=activitypub_authorize', $location );
 		$this->assertStringContainsString( 'auth_error=', $location );
+
+		// Verify the error token resolves to a stored message.
+		\parse_str( \wp_parse_url( $location, PHP_URL_QUERY ), $query );
+		$this->assertNotEmpty( \get_transient( 'ap_oauth_err_' . $query['auth_error'] ) );
 	}
 
 	/**
@@ -166,6 +170,10 @@ class Test_Authorization_Controller extends \WP_UnitTestCase {
 		$location = $response->get_headers()['Location'];
 		$this->assertStringContainsString( 'action=activitypub_authorize', $location );
 		$this->assertStringContainsString( 'auth_error=', $location );
+
+		// Verify the error token resolves to a stored message.
+		\parse_str( \wp_parse_url( $location, PHP_URL_QUERY ), $query );
+		$this->assertNotEmpty( \get_transient( 'ap_oauth_err_' . $query['auth_error'] ) );
 	}
 
 	/**
