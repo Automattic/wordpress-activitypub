@@ -52,7 +52,7 @@ Files: `includes/class-signature.php`, `includes/signature/class-http-signature-
 - Verify that missing `date` or `digest` headers cause rejection for POST requests
 - Check algorithm negotiation — are weak algorithms accepted?
 - Verify key fetching does not allow SSRF (fetching actor's `publicKey` URL)
-- Check that the Delete handler's signature deferral (`handler/class-delete.php`) cannot be exploited to forge deletions
+- Note: the Delete handler's signature deferral (`handler/class-delete.php`) is **intentional by design** — the actor's key may already be deleted before the Delete activity arrives. It is mitigated by a Tombstone existence check. Do NOT flag this as a vulnerability.
 
 ### 4. Inbox Input Validation
 
