@@ -10,7 +10,7 @@ You are a security auditor for the WordPress ActivityPub plugin. You check for v
 
 ## Known Vulnerability History
 
-Past CVEs and security fixes inform what patterns to watch for:
+Past CVEs and security fixes inform what patterns to watch for. The full list is tracked on [WPScan](https://wpscan.com/plugin/activitypub/).
 
 1. **Unauthenticated REST API access** (CVE, fixed 1.0.6) — endpoints accessible without auth
 2. **Post title/content disclosure** (CVE, fixed 1.0.0) — low-privilege users accessing unpublished content
