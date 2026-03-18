@@ -2110,4 +2110,62 @@ class Test_Post extends \WP_UnitTestCase {
 		$this->assertSame( 'Tombstone', $array['type'] );
 		$this->assertSame( 'Article', $array['formerType'] );
 	}
+
+	/**
+	 * Test get_media_from_blocks skips blocks hidden from the Fediverse.
+	 *
+	 * @covers ::get_media_from_blocks
+	 */
+	public function test_get_media_from_blocks_skips_hidden_blocks() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:image {"id":123,"metadata":{"blockVisibility":{"fediverse":false}}} --><figure class="wp-block-image"><img src="hidden.jpg" alt="Hidden" /></figure><!-- /wp:image --><!-- wp:image {"id":456} --><figure class="wp-block-image"><img src="visible.jpg" alt="Visible" /></figure><!-- /wp:image -->',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$transformer = new Post( $post );
+		$media       = array(
+			'image' => array(),
+			'audio' => array(),
+			'video' => array(),
+		);
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_media_from_blocks' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$blocks = parse_blocks( $post->post_content );
+		$result = $method->invoke( $transformer, $blocks, $media );
+
+		$this->assertCount( 1, $result['image'] );
+		$this->assertSame( 456, $result['image'][0]['id'] );
+	}
+
+	/**
+	 * Test get_in_reply_to skips reply blocks hidden from the Fediverse.
+	 *
+	 * @covers ::get_in_reply_to
+	 */
+	public function test_get_in_reply_to_skips_hidden_reply_block() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:activitypub/reply {"url":"https://example.com/hidden","metadata":{"blockVisibility":{"fediverse":false}}} /--><!-- wp:paragraph --><p>Hello</p><!-- /wp:paragraph -->',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_in_reply_to' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$result = $method->invoke( $transformer );
+		$this->assertNull( $result );
+	}
 }

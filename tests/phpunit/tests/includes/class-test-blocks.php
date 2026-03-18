@@ -1027,4 +1027,82 @@ class Test_Blocks extends \WP_UnitTestCase {
 		$this->assertStringContainsString( '<strong>my site</strong>', $output );
 		$this->assertStringContainsString( '<a href="https://test.com"', $output );
 	}
+
+	/**
+	 * Test is_federated returns true by default.
+	 *
+	 * @covers ::is_federated
+	 */
+	public function test_is_federated_defaults_to_true() {
+		$block = array( 'attrs' => array() );
+		$this->assertTrue( Blocks::is_federated( $block ) );
+	}
+
+	/**
+	 * Test is_federated returns true when no metadata exists.
+	 *
+	 * @covers ::is_federated
+	 */
+	public function test_is_federated_without_metadata() {
+		$block = array( 'attrs' => array( 'metadata' => array() ) );
+		$this->assertTrue( Blocks::is_federated( $block ) );
+	}
+
+	/**
+	 * Test is_federated returns true when fediverse is explicitly true.
+	 *
+	 * @covers ::is_federated
+	 */
+	public function test_is_federated_when_explicitly_true() {
+		$block = array(
+			'attrs' => array(
+				'metadata' => array(
+					'blockVisibility' => array( 'fediverse' => true ),
+				),
+			),
+		);
+		$this->assertTrue( Blocks::is_federated( $block ) );
+	}
+
+	/**
+	 * Test is_federated returns false when fediverse is false.
+	 *
+	 * @covers ::is_federated
+	 */
+	public function test_is_federated_returns_false_when_hidden() {
+		$block = array(
+			'attrs' => array(
+				'metadata' => array(
+					'blockVisibility' => array( 'fediverse' => false ),
+				),
+			),
+		);
+		$this->assertFalse( Blocks::is_federated( $block ) );
+	}
+
+	/**
+	 * Test maybe_hide_block returns content for federated blocks.
+	 *
+	 * @covers ::maybe_hide_block
+	 */
+	public function test_maybe_hide_block_keeps_visible_block() {
+		$block = array( 'attrs' => array() );
+		$this->assertSame( '<p>Hello</p>', Blocks::maybe_hide_block( '<p>Hello</p>', $block ) );
+	}
+
+	/**
+	 * Test maybe_hide_block returns empty string for hidden blocks.
+	 *
+	 * @covers ::maybe_hide_block
+	 */
+	public function test_maybe_hide_block_strips_hidden_block() {
+		$block = array(
+			'attrs' => array(
+				'metadata' => array(
+					'blockVisibility' => array( 'fediverse' => false ),
+				),
+			),
+		);
+		$this->assertSame( '', Blocks::maybe_hide_block( '<p>Secret</p>', $block ) );
+	}
 }
