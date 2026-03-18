@@ -1160,24 +1160,24 @@ class Blocks {
 	}
 
 	/**
-	 * Filter the main query on author archives to exclude replies.
+	 * Filter the main query to exclude replies.
 	 *
-	 * When on an author archive and the "Posts" tab is active (default),
-	 * adds a WHERE clause to exclude posts containing the
-	 * `activitypub/reply` block. This filters the main query so that
-	 * Query Loop blocks with `inherit: true` also pick up the filter.
+	 * When the "Posts" tab is active (default), adds a WHERE clause to
+	 * exclude posts containing the `activitypub/reply` block. This
+	 * filters the main query so that Query Loop blocks with
+	 * `inherit: true` also pick up the filter.
 	 *
 	 * @since unreleased
 	 *
 	 * @param WP_Query $query The WP_Query instance.
 	 */
 	public static function filter_author_archive_query( $query ) {
-		if ( ! $query->is_main_query() || ! $query->is_author() ) {
+		if ( ! $query->is_main_query() || $query->is_singular() ) {
 			return;
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$active_tab = isset( $_GET['ap_tab'] ) ? \sanitize_key( $_GET['ap_tab'] ) : 'posts';
+		$active_tab = isset( $_GET['filter'] ) ? \sanitize_key( $_GET['filter'] ) : 'posts';
 
 		// Only filter when the "Posts" tab is active (default).
 		if ( 'posts-and-replies' === $active_tab ) {

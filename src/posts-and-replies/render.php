@@ -17,21 +17,16 @@ if ( is_activitypub_request() || \is_feed() ) {
 	return;
 }
 
-// Only render on author archives.
-if ( ! \is_author() ) {
-	return;
-}
-
 // Determine active tab from URL parameter.
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-$active_tab = isset( $_GET['ap_tab'] ) ? \sanitize_key( $_GET['ap_tab'] ) : 'posts';
+$active_tab = isset( $_GET['filter'] ) ? \sanitize_key( $_GET['filter'] ) : 'posts';
 if ( ! in_array( $active_tab, array( 'posts', 'posts-and-replies' ), true ) ) {
 	$active_tab = 'posts';
 }
 
-$current_url = \remove_query_arg( array( 'ap_tab', 'paged' ) );
-$posts_url   = \add_query_arg( 'ap_tab', 'posts', $current_url );
-$all_url     = \add_query_arg( 'ap_tab', 'posts-and-replies', $current_url );
+$current_url = \remove_query_arg( array( 'filter', 'paged' ) );
+$posts_url   = \add_query_arg( 'filter', 'posts', $current_url );
+$all_url     = \add_query_arg( 'filter', 'posts-and-replies', $current_url );
 
 $wrapper_attributes = \get_block_wrapper_attributes();
 ?>
