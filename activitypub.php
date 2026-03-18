@@ -53,6 +53,7 @@ function rest_init() {
 	( new Rest\Actors_Controller() )->register_routes();
 	( new Rest\Actors_Inbox_Controller() )->register_routes();
 	( new Rest\Admin\Actions_Controller() )->register_routes();
+	( new Rest\Admin\Statistics_Controller() )->register_routes();
 	( new Rest\Application_Controller() )->register_routes();
 	( new Rest\Collections_Controller() )->register_routes();
 	( new Rest\Comments_Controller() )->register_routes();
@@ -154,6 +155,7 @@ function plugin_admin_init() {
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Health_Check', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Settings', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Settings_Fields', 'init' ) );
+	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Dashboard', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\User_Settings_Fields', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Welcome_Fields', 'init' ) );
 
