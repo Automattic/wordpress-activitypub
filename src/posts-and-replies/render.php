@@ -7,6 +7,8 @@
  * @package Activitypub
  */
 
+use Activitypub\Posts_And_Replies;
+
 use function Activitypub\is_activitypub_request;
 
 if ( is_activitypub_request() || \is_feed() ) {
@@ -21,73 +23,19 @@ $attributes = \wp_parse_args(
 	)
 );
 
-// Determine the author from the current query context.
-$author_id = 0;
-if ( \is_author() ) {
-	$author = \get_queried_object();
-	if ( $author instanceof \WP_User ) {
-		$author_id = $author->ID;
-	}
-}
+$active_tab   = Posts_And_Replies::get_active_tab();
+$is_posts_tab = 'posts' === $active_tab;
 
-// If not on an author archive, bail.
-if ( ! $author_id ) {
-	return;
-}
-
-// Determine active tab from URL parameter, falling back to 'posts'.
-// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-$active_tab = isset( $_GET['ap_tab'] ) ? \sanitize_key( $_GET['ap_tab'] ) : 'posts';
-if ( ! in_array( $active_tab, array( 'posts', 'posts-and-replies' ), true ) ) {
-	$active_tab = 'posts';
-}
-
-// Get the current page number from the main query.
-$current_page = max( 1, \get_query_var( 'paged', 1 ) );
-
-// Base query args.
-$base_args = array(
-	'author'         => $author_id,
-	'post_type'      => 'post',
-	'post_status'    => 'publish',
-	'posts_per_page' => $attributes['postsPerPage'],
-	'paged'          => $current_page,
-);
-
-/**
- * Filter to exclude posts that contain the activitypub/reply block.
- *
- * @param string   $where The WHERE clause.
- * @param WP_Query $query The query object.
- * @return string Modified WHERE clause.
- */
-$exclude_replies_filter = static function ( $where, $query ) {
-	if ( $query->get( 'activitypub_exclude_replies' ) ) {
-		global $wpdb;
-		$where .= $wpdb->prepare(
-			" AND {$wpdb->posts}.post_content NOT LIKE %s",
-			'%<!-- wp:activitypub/reply%'
-		);
-	}
-	return $where;
-};
-
-\add_filter( 'posts_where', $exclude_replies_filter, 10, 2 );
-
-// Query for "Posts" tab (excluding replies).
-$posts_query = new \WP_Query(
-	array_merge(
-		$base_args,
-		array( 'activitypub_exclude_replies' => true )
+// Build query args from the current context (author archive or not).
+$query_args = Posts_And_Replies::get_query_args(
+	array(
+		'posts_per_page' => $attributes['postsPerPage'],
 	)
 );
 
-\remove_filter( 'posts_where', $exclude_replies_filter, 10 );
-
-// Query for "Posts & Replies" tab (all posts).
-$all_posts_query = new \WP_Query( $base_args );
-
-$is_posts_tab = 'posts' === $active_tab;
+// Run both queries: posts-only (excluding replies) and all posts.
+$posts_query     = Posts_And_Replies::query( $query_args, true );
+$all_posts_query = Posts_And_Replies::query( $query_args, false );
 
 // Set up the Interactivity API context.
 $context = array(
@@ -192,48 +140,11 @@ $render_post_list = static function ( $query ) use ( $block ) {
 	return $output;
 };
 
-/**
- * Render pagination links that preserve the active tab parameter.
- *
- * @param WP_Query $query The query object.
- * @param string   $tab   The active tab identifier.
- * @return string HTML output.
- */
-$render_pagination = static function ( $query, $tab ) {
-	if ( $query->max_num_pages <= 1 ) {
-		return '';
-	}
-
-	$big  = 999999999;
-	$base = str_replace( $big, '%#%', \esc_url( \get_pagenum_link( $big ) ) );
-
-	// Ensure the tab parameter is preserved in pagination URLs.
-	$base = \add_query_arg( 'ap_tab', $tab, $base );
-
-	$links = \paginate_links(
-		array(
-			'base'    => $base,
-			'format'  => '',
-			'total'   => $query->max_num_pages,
-			'current' => $query->get( 'paged' ) ? $query->get( 'paged' ) : 1,
-		)
-	);
-
-	if ( ! $links ) {
-		return '';
-	}
-
-	// paginate_links() returns safe HTML with escaped URLs.
-	return '<nav class="wp-block-query-pagination is-layout-flex wp-block-query-pagination-is-layout-flex" aria-label="' . \esc_attr__( 'Posts pagination', 'activitypub' ) . '">' . $links . '</nav>';
-};
-
-// Render posts tab content.
-$posts_content    = $render_post_list( $posts_query );
-$posts_pagination = $render_pagination( $posts_query, 'posts' );
-
-// Render posts & replies tab content.
+// Render tab contents.
+$posts_content        = $render_post_list( $posts_query );
+$posts_pagination     = Posts_And_Replies::render_pagination( $posts_query, 'posts' );
 $all_posts_content    = $render_post_list( $all_posts_query );
-$all_posts_pagination = $render_pagination( $all_posts_query, 'posts-and-replies' );
+$all_posts_pagination = Posts_And_Replies::render_pagination( $all_posts_query, 'posts-and-replies' );
 ?>
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput ?>>
 	<div class="ap-tabs" role="tablist" aria-label="<?php \esc_attr_e( 'Post filtering', 'activitypub' ); ?>">
