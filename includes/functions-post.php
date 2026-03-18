@@ -29,9 +29,18 @@ function is_post_disabled( $post ) {
 	$visibility          = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
 	$is_local_or_private = in_array( $visibility, array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ), true );
 
-	// Only 'publish' is public. 'inherit' is allowed only for attachments.
-	$is_public_status = 'publish' === $post->post_status ||
-		( 'inherit' === $post->post_status && 'attachment' === $post->post_type );
+	// 'inherit' is allowed only for attachments whose parent post is also published (or unattached).
+	$is_attachment_public = 'inherit' === $post->post_status &&
+		'attachment' === $post->post_type &&
+		( ! $post->post_parent || 'publish' === \get_post_status( $post->post_parent ) );
+
+	// Drafts and pending posts are allowed during preview requests so the Fediverse Preview works.
+	$is_preview = in_array( $post->post_status, array( 'draft', 'pending' ), true ) &&
+		\get_query_var( 'preview' ) &&
+		\current_user_can( 'edit_post', $post->ID );
+
+	// Only 'publish' is public, with the above exceptions.
+	$is_public_status = 'publish' === $post->post_status || $is_attachment_public || $is_preview;
 
 	if (
 		$is_local_or_private ||
