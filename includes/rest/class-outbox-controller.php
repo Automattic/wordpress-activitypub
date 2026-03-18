@@ -230,7 +230,13 @@ class Outbox_Controller extends \WP_REST_Controller {
 				continue;
 			}
 
-			$response['orderedItems'][] = $this->prepare_item_for_response( $outbox_item, $request );
+			$item = $this->prepare_item_for_response( $outbox_item, $request );
+
+			if ( \is_wp_error( $item ) ) {
+				continue;
+			}
+
+			$response['orderedItems'][] = $item;
 		}
 
 		$response = $this->prepare_collection_response( $response, $request );

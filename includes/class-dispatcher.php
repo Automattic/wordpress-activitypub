@@ -253,16 +253,16 @@ class Dispatcher {
 	private static function send_to_inboxes( $inboxes, $outbox_item_id ) {
 		$outbox_item = \get_post( $outbox_item_id );
 
-		// Strip bto and bcc before delivery per ActivityPub spec Section 6.2.
-		\add_filter( 'activitypub_activity_object_array', array( self::class, 'strip_private_addressing' ) );
 		$activity = Outbox::get_activity( $outbox_item_id );
-		\remove_filter( 'activitypub_activity_object_array', array( self::class, 'strip_private_addressing' ) );
 
 		if ( \is_wp_error( $activity ) ) {
-			return $inboxes;
+			return array();
 		}
 
+		// Strip bto and bcc before delivery per ActivityPub spec Section 6.2.
+		\add_filter( 'activitypub_activity_object_array', array( self::class, 'strip_private_addressing' ) );
 		$json = $activity->to_json();
+		\remove_filter( 'activitypub_activity_object_array', array( self::class, 'strip_private_addressing' ) );
 
 		$retries = array();
 
