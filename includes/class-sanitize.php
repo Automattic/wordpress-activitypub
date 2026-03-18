@@ -18,7 +18,7 @@ class Sanitize {
 	/**
 	 * Elements to strip including their inner content.
 	 *
-	 * wp_kses removes disallowed tags but preserves their inner text.
+	 * WordPress's wp_kses removes disallowed tags but preserves their inner text.
 	 * These elements contain content that is meaningless or harmful
 	 * without the surrounding tag (scripts, styles, interactive UI,
 	 * embedded objects), so we remove them entirely before wp_kses runs.
