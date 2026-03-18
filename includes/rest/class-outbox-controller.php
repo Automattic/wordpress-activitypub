@@ -269,6 +269,10 @@ class Outbox_Controller extends \WP_REST_Controller {
 	public function prepare_item_for_response( $item, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$activity = Outbox::get_activity( $item->ID );
 
+		if ( \is_wp_error( $activity ) ) {
+			return $activity;
+		}
+
 		return $activity->to_array( false );
 	}
 

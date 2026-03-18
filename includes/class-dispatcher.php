@@ -163,7 +163,12 @@ class Dispatcher {
 		}
 
 		$outbox_item = \get_post( $outbox_item_id );
-		$activity    = Outbox::get_activity( $outbox_item_id );
+
+		if ( ! $outbox_item ) {
+			return;
+		}
+
+		$activity = Outbox::get_activity( $outbox_item_id );
 
 		if ( \is_wp_error( $activity ) ) {
 			return;
