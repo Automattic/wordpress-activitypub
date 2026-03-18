@@ -36,6 +36,7 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 
 - [FEP-1b12: Group federation](https://codeberg.org/fediverse/fep/src/branch/main/fep/1b12/fep-1b12.md)
 - [FEP-ae0c: Fediverse Relay Protocols](https://codeberg.org/fediverse/fep/src/branch/main/fep/ae0c/fep-ae0c.md)
+- [FEP-dc88: MathML in ActivityPub](https://codeberg.org/fediverse/fep/src/branch/main/fep/dc88/fep-dc88.md)
 
 ## ActivityPub
 

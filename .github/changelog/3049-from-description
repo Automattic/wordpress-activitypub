@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Prevent third-party plugin UI elements and scripts from appearing in federated content.
