@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix Fediverse Preview showing the standard web view instead of the ActivityPub preview for draft posts.
