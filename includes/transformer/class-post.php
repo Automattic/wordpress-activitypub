@@ -678,7 +678,7 @@ class Post extends Base {
 		$blocks     = \parse_blocks( $this->item->post_content );
 
 		foreach ( $blocks as $block ) {
-			if ( Blocks::is_block_hidden_from_fediverse( $block ) ) {
+			if ( ! Blocks::is_federated( $block ) ) {
 				continue;
 			}
 
@@ -919,7 +919,7 @@ class Post extends Base {
 	protected function get_media_from_blocks( $blocks, $media ) {
 		foreach ( $blocks as $block ) {
 			// Skip blocks hidden from the Fediverse.
-			if ( Blocks::is_block_hidden_from_fediverse( $block ) ) {
+			if ( ! Blocks::is_federated( $block ) ) {
 				continue;
 			}
 
