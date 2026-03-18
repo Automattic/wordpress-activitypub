@@ -60,6 +60,191 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test is_post_disabled with non-public statuses.
+	 *
+	 * @covers \Activitypub\is_post_disabled
+	 */
+	public function test_is_post_disabled_non_public_statuses() {
+		$draft_post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'draft',
+			)
+		);
+		$this->assertTrue( \Activitypub\is_post_disabled( $draft_post_id ), 'Draft posts should be disabled.' );
+
+		$pending_post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'pending',
+			)
+		);
+		$this->assertTrue( \Activitypub\is_post_disabled( $pending_post_id ), 'Pending posts should be disabled.' );
+
+		$future_post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'future',
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '+1 day' ) ),
+			)
+		);
+		$this->assertTrue( \Activitypub\is_post_disabled( $future_post_id ), 'Future posts should be disabled.' );
+	}
+
+	/**
+	 * Test that draft and pending posts are not disabled during preview for authorized users.
+	 *
+	 * @covers \Activitypub\is_post_disabled
+	 */
+	public function test_is_post_disabled_preview_authorized() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\wp_set_current_user( $user_id );
+
+		$draft_post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'draft',
+				'post_author' => $user_id,
+			)
+		);
+
+		$pending_post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'pending',
+				'post_author' => $user_id,
+			)
+		);
+
+		// Without preview query var, both should be disabled.
+		$this->assertTrue( \Activitypub\is_post_disabled( $draft_post_id ), 'Draft posts should be disabled without preview.' );
+		$this->assertTrue( \Activitypub\is_post_disabled( $pending_post_id ), 'Pending posts should be disabled without preview.' );
+
+		// With preview query var, both should not be disabled for authorized user.
+		\set_query_var( 'preview', true );
+		$this->assertFalse( \Activitypub\is_post_disabled( $draft_post_id ), 'Draft posts should not be disabled during preview for authorized user.' );
+		$this->assertFalse( \Activitypub\is_post_disabled( $pending_post_id ), 'Pending posts should not be disabled during preview for authorized user.' );
+
+		// Clean up.
+		\set_query_var( 'preview', false );
+	}
+
+	/**
+	 * Test that draft posts remain disabled during preview for unauthorized users.
+	 *
+	 * @covers \Activitypub\is_post_disabled
+	 */
+	public function test_is_post_disabled_draft_preview_unauthorized() {
+		$author_id = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		$draft_post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'draft',
+				'post_author' => $author_id,
+			)
+		);
+
+		// Unauthenticated user with preview query var should still be disabled.
+		\wp_set_current_user( 0 );
+		\set_query_var( 'preview', true );
+		$this->assertTrue( \Activitypub\is_post_disabled( $draft_post_id ), 'Draft posts should be disabled during preview for unauthenticated user.' );
+
+		// Different user without edit capability should still be disabled.
+		$subscriber_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		\wp_set_current_user( $subscriber_id );
+		$this->assertTrue( \Activitypub\is_post_disabled( $draft_post_id ), 'Draft posts should be disabled during preview for unauthorized user.' );
+
+		// Clean up.
+		\set_query_var( 'preview', false );
+	}
+
+	/**
+	 * Test that private posts remain disabled even during preview.
+	 *
+	 * @covers \Activitypub\is_post_disabled
+	 */
+	public function test_is_post_disabled_private_preview() {
+		$user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		\wp_set_current_user( $user_id );
+		\set_query_var( 'preview', true );
+
+		$private_post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'private',
+				'post_author' => $user_id,
+			)
+		);
+		$this->assertTrue( \Activitypub\is_post_disabled( $private_post_id ), 'Private posts should be disabled even during preview.' );
+
+		// Clean up.
+		\set_query_var( 'preview', false );
+	}
+
+	/**
+	 * Test that attachments on non-public parent posts are disabled.
+	 *
+	 * @covers \Activitypub\is_post_disabled
+	 */
+	public function test_is_post_disabled_attachment_parent_status() {
+		\add_post_type_support( 'attachment', 'activitypub' );
+
+		// Attachment on a published post should not be disabled.
+		$published_post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		$attachment_id     = self::factory()->attachment->create_upload_object( DIR_TESTDATA . '/images/test-image.jpg', $published_post_id );
+		$this->assertFalse( \Activitypub\is_post_disabled( $attachment_id ), 'Attachment on published post should not be disabled.' );
+
+		// Attachment on a draft post should be disabled.
+		$draft_post_id       = self::factory()->post->create( array( 'post_status' => 'draft' ) );
+		$draft_attachment_id = self::factory()->attachment->create_upload_object( DIR_TESTDATA . '/images/test-image.jpg', $draft_post_id );
+		$this->assertTrue( \Activitypub\is_post_disabled( $draft_attachment_id ), 'Attachment on draft post should be disabled.' );
+
+		// Attachment on a private post should be disabled.
+		$private_post_id       = self::factory()->post->create( array( 'post_status' => 'private' ) );
+		$private_attachment_id = self::factory()->attachment->create_upload_object( DIR_TESTDATA . '/images/test-image.jpg', $private_post_id );
+		$this->assertTrue( \Activitypub\is_post_disabled( $private_attachment_id ), 'Attachment on private post should be disabled.' );
+
+		// Unattached attachment (no parent) should not be disabled.
+		$unattached_id = self::factory()->attachment->create_upload_object( DIR_TESTDATA . '/images/test-image.jpg', 0 );
+		$this->assertFalse( \Activitypub\is_post_disabled( $unattached_id ), 'Unattached attachment should not be disabled.' );
+
+		// Clean up.
+		\remove_post_type_support( 'attachment', 'activitypub' );
+	}
+
+	/**
+	 * Test that previously federated posts with non-public statuses remain enabled.
+	 *
+	 * Federated posts that transition away from publish need to stay accessible
+	 * so the scheduler can determine the correct activity type (Update or Delete).
+	 *
+	 * @covers \Activitypub\is_post_disabled
+	 */
+	public function test_is_post_disabled_federated_non_public_statuses() {
+		// Draft post that was previously federated should NOT be disabled.
+		$draft_post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'draft',
+			)
+		);
+		\update_post_meta( $draft_post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+		$this->assertFalse( \Activitypub\is_post_disabled( $draft_post_id ), 'Federated draft posts should not be disabled.' );
+
+		// Pending post that was previously federated should NOT be disabled.
+		$pending_post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'pending',
+			)
+		);
+		\update_post_meta( $pending_post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+		$this->assertFalse( \Activitypub\is_post_disabled( $pending_post_id ), 'Federated pending posts should not be disabled.' );
+
+		// Future post that was previously federated should NOT be disabled.
+		$future_post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'future',
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '+1 day' ) ),
+			)
+		);
+		\update_post_meta( $future_post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+		$this->assertFalse( \Activitypub\is_post_disabled( $future_post_id ), 'Federated future posts should not be disabled.' );
+	}
+
+	/**
 	 * Test is_post_disabled with private visibility.
 	 *
 	 * @covers \Activitypub\is_post_disabled

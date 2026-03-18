@@ -8,9 +8,11 @@
 namespace Activitypub\Development;
 
 use Activitypub\Activity\Activity;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox;
 use Activitypub\Comment;
+use Activitypub\Statistics;
 
 use function Activitypub\camel_to_snake_case;
 use function WP_CLI\Utils\get_flag_value;
@@ -238,5 +240,236 @@ class Cli extends \WP_CLI_Command {
 		\do_action( 'activitypub_handled_inbox_' . $type, $activity_data, $user_ids, $activity, $post_id, Inbox::CONTEXT_INBOX );
 
 		\WP_CLI::success( sprintf( 'Inbox item %d has been reprocessed as %s activity.', $post_id, $activity_data['type'] ) );
+	}
+
+	/**
+	 * Manage statistics data.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <action>
+	 * : The action to perform.
+	 * ---
+	 * options:
+	 *   - populate
+	 *   - clear
+	 *   - collect
+	 *   - compile
+	 * ---
+	 *
+	 * [--user_id=<user_id>]
+	 * : The user ID to operate on. Defaults to blog user (0).
+	 *
+	 * [--year=<year>]
+	 * : The year to collect/compile stats for. Defaults to current year.
+	 *
+	 * [--month=<month>]
+	 * : The month to collect stats for (1-12). Defaults to current month.
+	 *
+	 * [--force]
+	 * : Force recollection even if stats already exist.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     # Populate demo stats for the blog
+	 *     $ wp activitypub stats populate
+	 *
+	 *     # Populate demo stats for a specific user
+	 *     $ wp activitypub stats populate --user_id=1
+	 *
+	 *     # Clear demo stats for the blog
+	 *     $ wp activitypub stats clear
+	 *
+	 *     # Collect real stats for current month
+	 *     $ wp activitypub stats collect
+	 *
+	 *     # Collect stats for a specific month (force recollect)
+	 *     $ wp activitypub stats collect --year=2024 --month=6 --force
+	 *
+	 *     # Compile annual stats
+	 *     $ wp activitypub stats compile --year=2024
+	 *
+	 * @synopsis <action> [--user_id=<user_id>] [--year=<year>] [--month=<month>] [--force]
+	 *
+	 * @param array $args       The positional arguments.
+	 * @param array $assoc_args The associative arguments.
+	 */
+	public function stats( $args, $assoc_args = array() ) {
+		$user_id = isset( $assoc_args['user_id'] ) ? (int) $assoc_args['user_id'] : null;
+		$year    = isset( $assoc_args['year'] ) ? (int) $assoc_args['year'] : null;
+		$month   = isset( $assoc_args['month'] ) ? (int) $assoc_args['month'] : null;
+		$force   = isset( $assoc_args['force'] );
+
+		switch ( $args[0] ) {
+			case 'populate':
+				$target_user = $user_id ?? Actors::BLOG_USER_ID;
+				$this->populate_demo_stats( $target_user );
+				\WP_CLI::success( "Demo statistics populated for user ID: {$target_user}" );
+				break;
+
+			case 'clear':
+				$target_user = $user_id ?? Actors::BLOG_USER_ID;
+				$this->clear_demo_stats( $target_user );
+				\WP_CLI::success( "Demo statistics cleared for user ID: {$target_user}" );
+				break;
+
+			case 'collect':
+				$results = $this->collect_monthly_stats( $user_id, $year, $month, $force );
+				$count   = count( $results );
+				$y       = $year ?? gmdate( 'Y' );
+				$m       = $month ?? gmdate( 'n' );
+				\WP_CLI::success( "Monthly stats collected for {$count} user(s) ({$y}-{$m})." );
+				break;
+
+			case 'compile':
+				$results = $this->compile_annual_stats( $user_id, $year );
+				$count   = count( $results );
+				$y       = $year ?? ( gmdate( 'Y' ) - 1 );
+				\WP_CLI::success( "Annual stats compiled for {$count} user(s) ({$y})." );
+				break;
+
+			case 'send':
+				// Delegate to the main ActivityPub stats send command for consistency.
+				$command = 'activitypub stats send';
+
+				if ( null !== $user_id ) {
+					$command .= ' --user_id=' . $user_id;
+				}
+
+				if ( null !== $year ) {
+					$command .= ' --year=' . $year;
+				}
+
+				if ( null !== $month ) {
+					$command .= ' --month=' . $month;
+				}
+
+				if ( $force ) {
+					$command .= ' --force';
+				}
+
+				\WP_CLI::runcommand( $command );
+				break;
+
+			default:
+				\WP_CLI::error( 'Unknown action. Use "populate", "clear", "collect", "compile", or "send".' );
+		}
+	}
+
+	/**
+	 * Collect monthly statistics.
+	 *
+	 * @param int|null $user_id The user ID or null for all users.
+	 * @param int|null $year    The year.
+	 * @param int|null $month   The month.
+	 * @param bool     $force   Force recollection even if stats exist.
+	 *
+	 * @return array Results per user.
+	 */
+	private function collect_monthly_stats( $user_id, $year, $month, $force ) {
+		$year  = $year ?? (int) gmdate( 'Y' );
+		$month = $month ?? (int) gmdate( 'n' );
+
+		$user_ids = $user_id ? array( $user_id ) : Statistics::get_active_user_ids();
+		$results  = array();
+
+		foreach ( $user_ids as $uid ) {
+			if ( $force ) {
+				$option_name = Statistics::get_monthly_option_name( $uid, $year, $month );
+				\delete_option( $option_name );
+			}
+			$results[ $uid ] = Statistics::collect_monthly_stats( $uid, $year, $month );
+		}
+
+		return $results;
+	}
+
+	/**
+	 * Compile annual statistics.
+	 *
+	 * @param int|null $user_id The user ID or null for all users.
+	 * @param int|null $year    The year.
+	 *
+	 * @return array Results per user.
+	 */
+	private function compile_annual_stats( $user_id, $year ) {
+		$year = $year ?? ( (int) gmdate( 'Y' ) - 1 );
+
+		$user_ids = $user_id ? array( $user_id ) : Statistics::get_active_user_ids();
+		$results  = array();
+
+		foreach ( $user_ids as $uid ) {
+			$results[ $uid ] = Statistics::compile_annual_summary( $uid, $year );
+		}
+
+		return $results;
+	}
+
+	/**
+	 * Populate demo statistics data for testing.
+	 *
+	 * @param int $user_id The user ID to populate data for.
+	 */
+	private function populate_demo_stats( $user_id ) {
+		$current_year  = (int) \gmdate( 'Y' );
+		$current_month = (int) \gmdate( 'n' );
+
+		// Get registered comment types dynamically.
+		$comment_types = Comment::get_comment_type_slugs();
+
+		// Base values that will grow over time.
+		$followers_base = 50;
+
+		// Populate monthly stats for the current year.
+		for ( $month = 1; $month <= $current_month; $month++ ) {
+			// Create realistic growth patterns.
+			$growth_factor  = $month / 12;
+			$seasonal_boost = \in_array( $month, array( 3, 9, 10 ), true ) ? 1.3 : 1.0;
+
+			$posts_count = (int) ( \wp_rand( 6, 14 ) * $seasonal_boost );
+
+			// Followers grow over time.
+			$followers_gained = (int) ( \wp_rand( 10, 30 ) * ( 1 + $growth_factor * 0.5 ) );
+			$followers_lost   = \wp_rand( 1, 5 );
+			$followers_base  += $followers_gained - $followers_lost;
+
+			$stats = array(
+				'posts_count'       => $posts_count,
+				'followers_gained'  => $followers_gained,
+				'followers_lost'    => $followers_lost,
+				'followers_total'   => $followers_base,
+				'top_posts'         => array(),
+				'top_multiplicator' => array(
+					'name'  => '@supporter' . $month . '@mastodon.social',
+					'url'   => 'https://mastodon.social/@supporter' . $month,
+					'count' => \wp_rand( 3, 10 ),
+				),
+				'collected_at'      => \gmdate( 'Y-m-d H:i:s', \strtotime( "$current_year-$month-28" ) ),
+			);
+
+			// Add counts for each registered comment type dynamically.
+			foreach ( $comment_types as $type ) {
+				$stats[ $type . '_count' ] = (int) ( \wp_rand( 5, 30 ) * ( 1 + $growth_factor ) * $seasonal_boost );
+			}
+
+			Statistics::save_monthly_stats( $user_id, $current_year, $month, $stats );
+		}
+	}
+
+	/**
+	 * Clear demo statistics data.
+	 *
+	 * @param int $user_id The user ID to clear data for.
+	 */
+	private function clear_demo_stats( $user_id ) {
+		$current_year = (int) \gmdate( 'Y' );
+
+		for ( $month = 1; $month <= 12; $month++ ) {
+			$option_name = Statistics::get_monthly_option_name( $user_id, $current_year, $month );
+			\delete_option( $option_name );
+		}
+
+		$annual_option = Statistics::get_annual_option_name( $user_id, $current_year );
+		\delete_option( $annual_option );
 	}
 }
