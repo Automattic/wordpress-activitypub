@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Show a styled error page instead of raw technical output when an OAuth application cannot be reached during authorization.
