@@ -34,13 +34,13 @@ function is_post_disabled( $post ) {
 		'attachment' === $post->post_type &&
 		( ! $post->post_parent || 'publish' === \get_post_status( $post->post_parent ) );
 
-	// Drafts are allowed during preview requests so the Fediverse Preview works.
-	$is_draft_preview = 'draft' === $post->post_status &&
+	// Drafts and pending posts are allowed during preview requests so the Fediverse Preview works.
+	$is_preview = in_array( $post->post_status, array( 'draft', 'pending' ), true ) &&
 		\get_query_var( 'preview' ) &&
 		\current_user_can( 'edit_post', $post->ID );
 
 	// Only 'publish' is public, with the above exceptions.
-	$is_public_status = 'publish' === $post->post_status || $is_attachment_public || $is_draft_preview;
+	$is_public_status = 'publish' === $post->post_status || $is_attachment_public || $is_preview;
 
 	if (
 		$is_local_or_private ||

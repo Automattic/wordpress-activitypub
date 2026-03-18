@@ -89,11 +89,11 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that draft posts are not disabled during preview for authorized users.
+	 * Test that draft and pending posts are not disabled during preview for authorized users.
 	 *
 	 * @covers \Activitypub\is_post_disabled
 	 */
-	public function test_is_post_disabled_draft_preview_authorized() {
+	public function test_is_post_disabled_preview_authorized() {
 		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
 		\wp_set_current_user( $user_id );
 
@@ -104,12 +104,21 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 			)
 		);
 
-		// Without preview query var, draft should be disabled.
-		$this->assertTrue( \Activitypub\is_post_disabled( $draft_post_id ), 'Draft posts should be disabled without preview.' );
+		$pending_post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'pending',
+				'post_author' => $user_id,
+			)
+		);
 
-		// With preview query var, draft should not be disabled for authorized user.
+		// Without preview query var, both should be disabled.
+		$this->assertTrue( \Activitypub\is_post_disabled( $draft_post_id ), 'Draft posts should be disabled without preview.' );
+		$this->assertTrue( \Activitypub\is_post_disabled( $pending_post_id ), 'Pending posts should be disabled without preview.' );
+
+		// With preview query var, both should not be disabled for authorized user.
 		\set_query_var( 'preview', true );
 		$this->assertFalse( \Activitypub\is_post_disabled( $draft_post_id ), 'Draft posts should not be disabled during preview for authorized user.' );
+		$this->assertFalse( \Activitypub\is_post_disabled( $pending_post_id ), 'Pending posts should not be disabled during preview for authorized user.' );
 
 		// Clean up.
 		\set_query_var( 'preview', false );
@@ -145,22 +154,14 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that non-draft non-public statuses remain disabled even during preview.
+	 * Test that private posts remain disabled even during preview.
 	 *
 	 * @covers \Activitypub\is_post_disabled
 	 */
-	public function test_is_post_disabled_non_draft_preview() {
+	public function test_is_post_disabled_private_preview() {
 		$user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
 		\wp_set_current_user( $user_id );
 		\set_query_var( 'preview', true );
-
-		$pending_post_id = self::factory()->post->create(
-			array(
-				'post_status' => 'pending',
-				'post_author' => $user_id,
-			)
-		);
-		$this->assertTrue( \Activitypub\is_post_disabled( $pending_post_id ), 'Pending posts should be disabled even during preview.' );
 
 		$private_post_id = self::factory()->post->create(
 			array(
