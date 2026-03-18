@@ -163,9 +163,15 @@ class Dispatcher {
 		}
 
 		$outbox_item = \get_post( $outbox_item_id );
-		$json        = Outbox::get_activity( $outbox_item_id )->to_json();
-		$inboxes     = Followers::get_inboxes_for_activity( $json, $outbox_item->post_author, $batch_size, $offset );
-		$retries     = self::send_to_inboxes( $inboxes, $outbox_item_id );
+		$activity    = Outbox::get_activity( $outbox_item_id );
+
+		if ( \is_wp_error( $activity ) ) {
+			return;
+		}
+
+		$json    = $activity->to_json();
+		$inboxes = Followers::get_inboxes_for_activity( $json, $outbox_item->post_author, $batch_size, $offset );
+		$retries = self::send_to_inboxes( $inboxes, $outbox_item_id );
 
 		// Retry failed inboxes.
 		if ( ! empty( $retries ) ) {
@@ -244,8 +250,14 @@ class Dispatcher {
 
 		// Strip bto and bcc before delivery per ActivityPub spec Section 6.2.
 		\add_filter( 'activitypub_activity_object_array', array( self::class, 'strip_private_addressing' ) );
-		$json = Outbox::get_activity( $outbox_item_id )->to_json();
+		$activity = Outbox::get_activity( $outbox_item_id );
 		\remove_filter( 'activitypub_activity_object_array', array( self::class, 'strip_private_addressing' ) );
+
+		if ( \is_wp_error( $activity ) ) {
+			return $inboxes;
+		}
+
+		$json = $activity->to_json();
 
 		$retries = array();
 

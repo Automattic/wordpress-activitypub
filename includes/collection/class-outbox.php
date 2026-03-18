@@ -328,6 +328,14 @@ class Outbox {
 	public static function get_activity( $outbox_item ) {
 		$outbox_item = \get_post( $outbox_item );
 
+		if ( ! $outbox_item ) {
+			return new \WP_Error(
+				'activitypub_outbox_item_not_found',
+				\__( 'Outbox item not found.', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
 		$activity_object = \json_decode( $outbox_item->post_content, true );
 		$type            = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
 
