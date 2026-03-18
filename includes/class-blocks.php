@@ -116,6 +116,10 @@ class Blocks {
 		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/pre-publish-panel/plugin.asset.php';
 		$plugin_url = plugins_url( 'build/pre-publish-panel/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
 		wp_enqueue_script( 'activitypub-pre-publish-panel', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
+
+		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/block-visibility/plugin.asset.php';
+		$plugin_url = plugins_url( 'build/block-visibility/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
+		wp_enqueue_script( 'activitypub-block-visibility', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
 	}
 
 	/**
@@ -946,6 +950,7 @@ class Blocks {
 	 * @param object $post The post object.
 	 */
 	public static function add_post_transformation_callbacks( $post ) {
+		\add_filter( 'render_block', array( self::class, 'filter_blocks_hidden_from_fediverse' ), 5, 2 );
 		\add_filter( 'render_block_core/embed', array( self::class, 'revert_embed_links' ), 10, 2 );
 
 		// Only transform reply link if it's the first block in the post.
@@ -963,10 +968,51 @@ class Blocks {
 	 * @return string The updated content.
 	 */
 	public static function remove_post_transformation_callbacks( $content ) {
+		\remove_filter( 'render_block', array( self::class, 'filter_blocks_hidden_from_fediverse' ), 5 );
 		\remove_filter( 'render_block_core/embed', array( self::class, 'revert_embed_links' ) );
 		\remove_filter( 'render_block_activitypub/reply', array( self::class, 'generate_reply_link' ) );
 
 		return $content;
+	}
+
+	/**
+	 * Filter out blocks hidden from the Fediverse during content rendering.
+	 *
+	 * Checks the block's `metadata.blockVisibility.fediverse` attribute.
+	 * If set to `false`, the block content is removed from the output.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $block_content The rendered block content.
+	 * @param array  $block         The parsed block data.
+	 *
+	 * @return string The block content, or empty string if hidden.
+	 */
+	public static function filter_blocks_hidden_from_fediverse( $block_content, $block ) {
+		if ( self::is_block_hidden_from_fediverse( $block ) ) {
+			return '';
+		}
+
+		return $block_content;
+	}
+
+	/**
+	 * Check if a block is hidden from the Fediverse.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $block The parsed block data.
+	 *
+	 * @return bool True if the block is hidden from the Fediverse.
+	 */
+	public static function is_block_hidden_from_fediverse( $block ) {
+		$metadata = $block['attrs']['metadata'] ?? array();
+
+		if ( ! isset( $metadata['blockVisibility']['fediverse'] ) ) {
+			return false;
+		}
+
+		return false === $metadata['blockVisibility']['fediverse'];
 	}
 
 	/**

@@ -13,6 +13,7 @@
 		"inserter": true,
 		"reusable": false,
 		"lock": false,
+		"visibility": false,
 		"innerBlocks": {
 			"allowedBlocks": [ "core/embed" ]
 		}

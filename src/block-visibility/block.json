@@ -1,0 +1,11 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "activitypub/block-visibility",
+	"title": "ActivityPub Block Visibility",
+	"category": "widgets",
+	"description": "Adds Fediverse visibility controls to all blocks.",
+	"icon": "screenoptions",
+	"textdomain": "activitypub",
+	"editorScript": "file:./plugin.js"
+}

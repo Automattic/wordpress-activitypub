@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Add per-block Fediverse visibility toggle to control which blocks are shared to Mastodon and other Fediverse platforms.

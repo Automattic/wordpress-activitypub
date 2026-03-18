@@ -678,6 +678,10 @@ class Post extends Base {
 		$blocks     = \parse_blocks( $this->item->post_content );
 
 		foreach ( $blocks as $block ) {
+			if ( Blocks::is_block_hidden_from_fediverse( $block ) ) {
+				continue;
+			}
+
 			if ( 'activitypub/reply' === $block['blockName'] && isset( $block['attrs']['url'] ) ) {
 
 				// Check if the URL has been validated as ActivityPub. Default to true for backwards compatibility.
@@ -914,6 +918,11 @@ class Post extends Base {
 	 */
 	protected function get_media_from_blocks( $blocks, $media ) {
 		foreach ( $blocks as $block ) {
+			// Skip blocks hidden from the Fediverse.
+			if ( Blocks::is_block_hidden_from_fediverse( $block ) ) {
+				continue;
+			}
+
 			// Recurse into inner blocks.
 			if ( ! empty( $block['innerBlocks'] ) ) {
 				$media = $this->get_media_from_blocks( $block['innerBlocks'], $media );
