@@ -14,6 +14,50 @@ use Activitypub\Model\Blog;
  * Sanitization class.
  */
 class Sanitize {
+
+	/**
+	 * Elements to strip including their inner content.
+	 *
+	 * wp_kses removes disallowed tags but preserves their inner text.
+	 * These elements contain content that is meaningless or harmful
+	 * without the surrounding tag (scripts, styles, interactive UI,
+	 * embedded objects), so we remove them entirely before wp_kses runs.
+	 *
+	 * @var array<string>
+	 */
+	const STRIP_ELEMENTS = array(
+		'script',
+		'style',
+		'button',
+		'nav',
+		'form',
+		'textarea',
+		'select',
+		'input',
+		'fieldset',
+		'iframe',
+		'embed',
+		'object',
+	);
+
+	/**
+	 * MathML global attributes allowed per the W3C MathML safe list.
+	 *
+	 * @see https://w3c.github.io/mathml-docs/mathml-safe-list
+	 *
+	 * @var array<string, true>
+	 */
+	const MATHML_GLOBAL_ATTRS = array(
+		'dir'            => true,
+		'displaystyle'   => true,
+		'mathbackground' => true,
+		'mathcolor'      => true,
+		'mathsize'       => true,
+		'scriptlevel'    => true,
+		'intent'         => true,
+		'arg'            => true,
+	);
+
 	/**
 	 * Sanitize a list of URLs.
 	 *
@@ -267,8 +311,15 @@ class Sanitize {
 			return $content;
 		}
 
-		// Strip elements whose inner content is noise (scripts, styles, interactive UI, embeds).
-		$content = \preg_replace( '@<(script|style|button|nav|form|textarea|select|input|fieldset|iframe|embed|object)[^>]*?>.*?</\\1>@si', '', $content );
+		/*
+		 * Strip elements whose inner content is noise (scripts, styles, interactive UI, embeds).
+		 * This runs before wp_kses because wp_kses strips tags but keeps inner text,
+		 * and content inside <script>, <style>, <nav>, etc. is meaningless on its own.
+		 */
+		$strip_pattern = \implode( '|', self::STRIP_ELEMENTS );
+		$content       = \preg_replace( '@<(' . $strip_pattern . ')[^>]*?>.*?</\\1>@si', '', $content );
+		// Also catch self-closing variants (e.g. <input />, <embed />).
+		$content = \preg_replace( '@<(' . $strip_pattern . ')[^>]*?/?>@si', '', $content );
 
 		/**
 		 * Fires the deprecated attribute removal filter.
@@ -349,7 +400,6 @@ class Sanitize {
 				'title'  => true,
 				'width'  => true,
 				'height' => true,
-				'class'  => true,
 			),
 			'video'      => array(
 				'src'      => true,
@@ -358,13 +408,11 @@ class Sanitize {
 				'poster'   => true,
 				'width'    => true,
 				'height'   => true,
-				'class'    => true,
 			),
 			'audio'      => array(
 				'src'      => true,
 				'controls' => true,
 				'loop'     => true,
-				'class'    => true,
 			),
 			'source'     => array(
 				'src'  => true,
@@ -416,39 +464,25 @@ class Sanitize {
 			'srclang' => true,
 		);
 
-		/*
-		 * MathML safe elements per W3C MathML safe list.
-		 *
-		 * @see https://w3c.github.io/mathml-docs/mathml-safe-list.
-		 */
-		$mathml_global_attrs = array(
-			'displaystyle'   => true,
-			'mathbackground' => true,
-			'mathcolor'      => true,
-			'mathsize'       => true,
-			'scriptlevel'    => true,
-			'intent'         => true,
-			'arg'            => true,
-		);
-
-		$allowed_html['math']          = array_merge(
-			$mathml_global_attrs,
+		// MathML safe elements per W3C MathML safe list.
+		$allowed_html['math']          = \array_merge(
+			self::MATHML_GLOBAL_ATTRS,
 			array(
 				'display' => true,
 			)
 		);
-		$allowed_html['merror']        = $mathml_global_attrs;
-		$allowed_html['mfrac']         = array_merge(
-			$mathml_global_attrs,
+		$allowed_html['merror']        = self::MATHML_GLOBAL_ATTRS;
+		$allowed_html['mfrac']         = \array_merge(
+			self::MATHML_GLOBAL_ATTRS,
 			array(
 				'linethickness' => true,
 			)
 		);
-		$allowed_html['mi']            = $mathml_global_attrs;
-		$allowed_html['mmultiscripts'] = $mathml_global_attrs;
-		$allowed_html['mn']            = $mathml_global_attrs;
-		$allowed_html['mo']            = array_merge(
-			$mathml_global_attrs,
+		$allowed_html['mi']            = self::MATHML_GLOBAL_ATTRS;
+		$allowed_html['mmultiscripts'] = self::MATHML_GLOBAL_ATTRS;
+		$allowed_html['mn']            = self::MATHML_GLOBAL_ATTRS;
+		$allowed_html['mo']            = \array_merge(
+			self::MATHML_GLOBAL_ATTRS,
 			array(
 				'form'          => true,
 				'fence'         => true,
@@ -463,9 +497,9 @@ class Sanitize {
 				'movablelimits' => true,
 			)
 		);
-		$allowed_html['mover']         = $mathml_global_attrs;
-		$allowed_html['mpadded']       = array_merge(
-			$mathml_global_attrs,
+		$allowed_html['mover']         = self::MATHML_GLOBAL_ATTRS;
+		$allowed_html['mpadded']       = \array_merge(
+			self::MATHML_GLOBAL_ATTRS,
 			array(
 				'width'   => true,
 				'height'  => true,
@@ -474,54 +508,53 @@ class Sanitize {
 				'voffset' => true,
 			)
 		);
-		$allowed_html['mprescripts']   = $mathml_global_attrs;
-		$allowed_html['mroot']         = $mathml_global_attrs;
-		$allowed_html['mrow']          = $mathml_global_attrs;
-		$allowed_html['ms']            = $mathml_global_attrs;
-		$allowed_html['mspace']        = array_merge(
-			$mathml_global_attrs,
+		$allowed_html['mprescripts']   = self::MATHML_GLOBAL_ATTRS;
+		$allowed_html['mroot']         = self::MATHML_GLOBAL_ATTRS;
+		$allowed_html['mrow']          = self::MATHML_GLOBAL_ATTRS;
+		$allowed_html['ms']            = self::MATHML_GLOBAL_ATTRS;
+		$allowed_html['mspace']        = \array_merge(
+			self::MATHML_GLOBAL_ATTRS,
 			array(
 				'width'  => true,
 				'height' => true,
 				'depth'  => true,
 			)
 		);
-		$allowed_html['msqrt']         = $mathml_global_attrs;
-		$allowed_html['mstyle']        = $mathml_global_attrs;
-		$allowed_html['msub']          = $mathml_global_attrs;
-		$allowed_html['msubsup']       = $mathml_global_attrs;
-		$allowed_html['msup']          = $mathml_global_attrs;
-		$allowed_html['mtable']        = $mathml_global_attrs;
-		$allowed_html['mtd']           = array_merge(
-			$mathml_global_attrs,
+		$allowed_html['msqrt']         = self::MATHML_GLOBAL_ATTRS;
+		$allowed_html['mstyle']        = self::MATHML_GLOBAL_ATTRS;
+		$allowed_html['msub']          = self::MATHML_GLOBAL_ATTRS;
+		$allowed_html['msubsup']       = self::MATHML_GLOBAL_ATTRS;
+		$allowed_html['msup']          = self::MATHML_GLOBAL_ATTRS;
+		$allowed_html['mtable']        = self::MATHML_GLOBAL_ATTRS;
+		$allowed_html['mtd']           = \array_merge(
+			self::MATHML_GLOBAL_ATTRS,
 			array(
 				'columnspan' => true,
 				'rowspan'    => true,
 			)
 		);
-		$allowed_html['mtext']         = $mathml_global_attrs;
-		$allowed_html['mtr']           = $mathml_global_attrs;
-		$allowed_html['munder']        = $mathml_global_attrs;
-		$allowed_html['munderover']    = array_merge(
-			$mathml_global_attrs,
+		$allowed_html['mtext']         = self::MATHML_GLOBAL_ATTRS;
+		$allowed_html['mtr']           = self::MATHML_GLOBAL_ATTRS;
+		$allowed_html['munder']        = self::MATHML_GLOBAL_ATTRS;
+		$allowed_html['munderover']    = \array_merge(
+			self::MATHML_GLOBAL_ATTRS,
 			array(
 				'accent'      => true,
 				'accentunder' => true,
 			)
 		);
-		$allowed_html['semantics']     = array_merge(
-			$mathml_global_attrs,
+		$allowed_html['semantics']     = \array_merge(
+			self::MATHML_GLOBAL_ATTRS,
 			array(
 				'encoding' => true,
 			)
 		);
-		$allowed_html['annotation']    = array_merge(
-			$mathml_global_attrs,
+		$allowed_html['annotation']    = \array_merge(
+			self::MATHML_GLOBAL_ATTRS,
 			array(
 				'encoding' => true,
 			)
 		);
-
 		return $allowed_html;
 	}
 }

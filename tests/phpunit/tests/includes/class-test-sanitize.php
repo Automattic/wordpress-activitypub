@@ -476,7 +476,7 @@ class Test_Sanitize extends \WP_UnitTestCase {
 			),
 			'complex_wordpress_figure'        => array(
 				'<figure class="wp-block-image size-large"><img loading="lazy" decoding="async" width="1024" height="768" src="https://example.com/image.jpg" alt="Test" class="wp-image-123" data-id="123" /><figcaption class="wp-element-caption">Caption</figcaption></figure>',
-				'<figure><img width="1024" height="768" src="https://example.com/image.jpg" alt="Test" class="wp-image-123" /><figcaption>Caption</figcaption></figure>',
+				'<figure><img width="1024" height="768" src="https://example.com/image.jpg" alt="Test" /><figcaption>Caption</figcaption></figure>',
 			),
 			'strips_script_tags'              => array(
 				'<p>Hello</p><script>alert("xss")</script><p>World</p>',
@@ -502,9 +502,25 @@ class Test_Sanitize extends \WP_UnitTestCase {
 				'<p>Hello</p><form action="/submit"><input type="text" /></form><p>World</p>',
 				'<p>Hello</p><p>World</p>',
 			),
+			'strips_self_closing_input'       => array(
+				'<p>Hello</p><input type="hidden" /><p>World</p>',
+				'<p>Hello</p><p>World</p>',
+			),
+			'strips_self_closing_embed'       => array(
+				'<p>Hello</p><embed src="flash.swf" /><p>World</p>',
+				'<p>Hello</p><p>World</p>',
+			),
 			'preserves_mathml'                => array(
 				'<math display="block"><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mn>1</mn></mrow></math>',
 				'<math display="block"><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mn>1</mn></mrow></math>',
+			),
+			'preserves_mathml_dir'            => array(
+				'<math dir="rtl"><mi>x</mi></math>',
+				'<math dir="rtl"><mi>x</mi></math>',
+			),
+			'strips_annotation_xml'           => array(
+				'<math><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation><annotation-xml encoding="text/html"><span>x</span></annotation-xml></semantics></math>',
+				'<math><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation><span>x</span></semantics></math>',
 			),
 		);
 	}
