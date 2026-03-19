@@ -46,15 +46,4 @@ class Seriously_Simple_Podcasting extends Post {
 
 		return array( $attachment );
 	}
-
-	/**
-	 * Gets the object type for a podcast episode.
-	 *
-	 * Always returns 'Note' for the best possible compatibility with ActivityPub.
-	 *
-	 * @return string The object type.
-	 */
-	public function get_type() {
-		return 'Note';
-	}
 }
