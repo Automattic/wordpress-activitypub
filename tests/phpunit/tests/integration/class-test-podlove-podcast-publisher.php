@@ -30,15 +30,17 @@ class Test_Podlove_Podcast_Publisher extends \WP_UnitTestCase {
 		);
 		$post = \get_post( $post );
 
-		$transformer = new \Activitypub\Integration\Podlove_Podcast_Publisher( $post );
-
 		// Default setting uses post format logic: titled post without format = Article.
 		\update_option( 'activitypub_object_type', 'wordpress-post-format' );
-		$this->assertEquals( 'Article', $transformer->get_type() );
+		$transformer = new \Activitypub\Integration\Podlove_Podcast_Publisher( $post );
+		$object      = $transformer->to_object();
+		$this->assertEquals( 'Article', $object->get_type() );
 
 		// Explicit Note setting.
 		\update_option( 'activitypub_object_type', 'note' );
-		$this->assertEquals( 'Note', $transformer->get_type() );
+		$transformer = new \Activitypub\Integration\Podlove_Podcast_Publisher( $post );
+		$object      = $transformer->to_object();
+		$this->assertEquals( 'Note', $object->get_type() );
 
 		// Clean up.
 		\delete_option( 'activitypub_object_type' );
