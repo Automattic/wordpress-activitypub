@@ -30,7 +30,7 @@ class Test_Podlove_Podcast_Publisher extends \WP_UnitTestCase {
 		);
 		$post = \get_post( $post );
 
-		// Default setting uses post format logic: titled post without format = Article.
+		// Post-format mode: titled post without format = Article.
 		\update_option( 'activitypub_object_type', 'wordpress-post-format' );
 		$transformer = new \Activitypub\Integration\Podlove_Podcast_Publisher( $post );
 		$object      = $transformer->to_object();
@@ -41,10 +41,6 @@ class Test_Podlove_Podcast_Publisher extends \WP_UnitTestCase {
 		$transformer = new \Activitypub\Integration\Podlove_Podcast_Publisher( $post );
 		$object      = $transformer->to_object();
 		$this->assertEquals( 'Note', $object->get_type() );
-
-		// Clean up.
-		\delete_option( 'activitypub_object_type' );
-		\wp_delete_post( $post->ID, true );
 	}
 
 	/**
