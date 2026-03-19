@@ -16,11 +16,9 @@ namespace Activitypub\Tests\Integration;
 class Test_Podlove_Podcast_Publisher extends \WP_UnitTestCase {
 
 	/**
-	 * Test that the transformer returns Note type.
-	 *
-	 * @covers ::get_type
+	 * Test that the transformer respects the configured object type setting.
 	 */
-	public function test_get_type_returns_note() {
+	public function test_get_type_respects_setting() {
 		$post = \wp_insert_post(
 			array(
 				'post_author'  => 1,
@@ -34,9 +32,16 @@ class Test_Podlove_Podcast_Publisher extends \WP_UnitTestCase {
 
 		$transformer = new \Activitypub\Integration\Podlove_Podcast_Publisher( $post );
 
+		// Default setting uses post format logic: titled post without format = Article.
+		\update_option( 'activitypub_object_type', 'wordpress-post-format' );
+		$this->assertEquals( 'Article', $transformer->get_type() );
+
+		// Explicit Note setting.
+		\update_option( 'activitypub_object_type', 'note' );
 		$this->assertEquals( 'Note', $transformer->get_type() );
 
 		// Clean up.
+		\delete_option( 'activitypub_object_type' );
 		\wp_delete_post( $post->ID, true );
 	}
 
