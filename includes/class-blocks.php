@@ -140,6 +140,7 @@ class Blocks {
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/extra-fields' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/follow-me' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/followers' );
+		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/wrapped' );
 
 		// Only register the Following block if the Following feature is enabled.
 		if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
