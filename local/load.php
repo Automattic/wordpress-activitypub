@@ -39,23 +39,25 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
  */
 \add_filter( 'activitypub_defer_signature_verification', '__return_true', 20 );
 
-/*
- * Allow localhost URLs in local development.
+/**
+ * Allow unsafe HTTP request URLs (localhost, private IPs, etc.) in local development.
  *
  * Disables WordPress SSRF protection (`reject_unsafe_urls`) so that
  * HTTP requests to localhost, private IPs, etc. are permitted during
  * local development. Must NOT run in production.
  *
+ * @param array $parsed_args HTTP request arguments.
+ *
+ * @return array Filtered HTTP request arguments.
+ *
  * @see wp_http_validate_url()
  */
-\add_filter(
-	'http_request_args',
-	function ( $parsed_args ) {
-		$parsed_args['reject_unsafe_urls'] = false;
+function allow_unsafe_http_request_urls( $parsed_args ) {
+	$parsed_args['reject_unsafe_urls'] = false;
 
-		return $parsed_args;
-	}
-);
+	return $parsed_args;
+}
+\add_filter( 'http_request_args', __NAMESPACE__ . '\allow_unsafe_http_request_urls' );
 
 /*
  * Allow http redirect URIs for OAuth clients in local development.
