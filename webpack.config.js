@@ -15,22 +15,10 @@ const processConfig = ( config ) => {
 		( plugin ) => plugin.constructor.name !== 'DependencyExtractionWebpackPlugin'
 	);
 
-	// @wordpress/views is in BUNDLED_PACKAGES but WordPress core ships it as wp-views
-	// We need to externalize it to avoid bundling
-	filteredPlugins.push(
-		new DependencyExtractionWebpackPlugin( {
-			requestToExternal( request ) {
-				if ( request === '@wordpress/views' ) {
-					return [ 'wp', 'views' ];
-				}
-			},
-			requestToHandle( request ) {
-				if ( request === '@wordpress/views' ) {
-					return 'wp-views';
-				}
-			},
-		} )
-	);
+	// Re-add the default plugin without custom overrides.
+	// @wordpress/views is already in BUNDLED_PACKAGES and not yet shipped by WordPress core,
+	// so we let the default plugin bundle it.
+	filteredPlugins.push( new DependencyExtractionWebpackPlugin() );
 
 	return {
 		...config,
