@@ -34,7 +34,7 @@
 	"homepage": "https://github.com/automattic/wordpress-activitypub#readme",
 	"devDependencies": {
 		"@playwright/test": "^1.58.2",
-		"@tanstack/react-router": "^1.167.4",
+		"@tanstack/react-router": "^1.168.3",
 		"@testing-library/jest-dom": "^6.9.1",
 		"@testing-library/react": "^16.3.2",
 		"@testing-library/user-event": "^14.4.3",
@@ -75,7 +75,7 @@
 		"@wordpress/scripts": "^31.7.0",
 		"@wordpress/url": "^4.42.0",
 		"@wordpress/viewport": "^6.42.0",
-		"@wordpress/views": "^1.8.0",
+		"@wordpress/views": "^1.9.0",
 		"classnames": "^2.3.2",
 		"clsx": "^2.1.1",
 		"prettier": "npm:wp-prettier@^3.0.3"
