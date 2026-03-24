@@ -5,7 +5,7 @@ import { Button } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
 import { useMemo } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
-import { getSuggestedPostFormat } from './utils';
+import { getSuggestedPostFormat, FORMAT_LABELS } from './utils';
 
 /**
  * Pre-publish panel that suggests a post format for better federation.
@@ -35,7 +35,7 @@ const PrePublishPanel = () => {
 	if ( ! suggestion ) {
 		// Show confirmation when the user has a non-default format applied.
 		if ( postFormat && postFormat !== 'standard' ) {
-			const formatLabel = postFormat.charAt( 0 ).toUpperCase() + postFormat.slice( 1 );
+			const formatLabel = FORMAT_LABELS[ postFormat ] || postFormat;
 			return (
 				<PluginPrePublishPanel title={ __( 'Fediverse ⁂', 'activitypub' ) } initialOpen>
 					<p>
@@ -59,7 +59,7 @@ const PrePublishPanel = () => {
 				{ sprintf(
 					/* translators: %s: The suggested post format name (e.g., "Image", "Gallery", "Video"). */
 					__( 'Set format to %s', 'activitypub' ),
-					suggestion.format.charAt( 0 ).toUpperCase() + suggestion.format.slice( 1 )
+					FORMAT_LABELS[ suggestion.format ] || suggestion.format
 				) }
 			</Button>
 		</PluginPrePublishPanel>

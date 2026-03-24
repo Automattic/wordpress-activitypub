@@ -45,6 +45,19 @@ const TEXT_BLOCK_NAMES = [
 const GALLERY_BLOCK_NAMES = [ 'core/gallery', 'jetpack/tiled-gallery', 'jetpack/slideshow' ];
 
 /**
+ * Translatable labels for post format slugs used in suggestions.
+ *
+ * @type {Object<string, string>}
+ */
+export const FORMAT_LABELS = {
+	gallery: __( 'Gallery', 'activitypub' ),
+	video: __( 'Video', 'activitypub' ),
+	audio: __( 'Audio', 'activitypub' ),
+	image: __( 'Image', 'activitypub' ),
+	status: __( 'Status', 'activitypub' ),
+};
+
+/**
  * Returns the text content attribute for a given block name.
  *
  * Most text blocks store content in `attributes.content`, but some
@@ -151,7 +164,7 @@ export const getSuggestedPostFormat = ( blocks, currentFormat ) => {
 		return {
 			format: 'gallery',
 			message: __(
-				"This post contains multiple images. Changing the format to Gallery won't affect your site, but will share it as a media post on the Fediverse, making it visible on platforms like Pixelfed.",
+				"This post contains multiple images. Changing the format to Gallery won't change your post content, but will share it as a media post on the Fediverse, making it visible on platforms like Pixelfed.",
 				'activitypub'
 			),
 		};
@@ -162,7 +175,7 @@ export const getSuggestedPostFormat = ( blocks, currentFormat ) => {
 		return {
 			format: 'video',
 			message: __(
-				"This post contains a video. Changing the format to Video won't affect your site, but will share it as a media post on the Fediverse, improving compatibility with video-focused platforms.",
+				"This post contains a video. Changing the format to Video won't change your post content, but will share it as a media post on the Fediverse, improving compatibility with video-focused platforms.",
 				'activitypub'
 			),
 		};
@@ -173,7 +186,7 @@ export const getSuggestedPostFormat = ( blocks, currentFormat ) => {
 		return {
 			format: 'audio',
 			message: __(
-				"This post contains audio content. Changing the format to Audio won't affect your site, but will share it as a media post on the Fediverse, improving compatibility with audio-focused platforms.",
+				"This post contains audio content. Changing the format to Audio won't change your post content, but will share it as a media post on the Fediverse, improving compatibility with audio-focused platforms.",
 				'activitypub'
 			),
 		};
@@ -189,7 +202,7 @@ export const getSuggestedPostFormat = ( blocks, currentFormat ) => {
 		return {
 			format: 'image',
 			message: __(
-				"This post contains an image. Changing the format to Image won't affect your site, but will share it as a media post on the Fediverse, making it visible on platforms like Pixelfed.",
+				"This post contains an image. Changing the format to Image won't change your post content, but will share it as a media post on the Fediverse, making it visible on platforms like Pixelfed.",
 				'activitypub'
 			),
 		};
@@ -200,7 +213,7 @@ export const getSuggestedPostFormat = ( blocks, currentFormat ) => {
 		return {
 			format: 'status',
 			message: __(
-				"This is a short post with no media. Changing the format to Status won't affect your site, but will share it as a Note on the Fediverse, which is the standard format on platforms like Mastodon.",
+				"This is a short post with no media. Changing the format to Status won't change your post content, but will share it as a Note on the Fediverse, which is the standard format on platforms like Mastodon.",
 				'activitypub'
 			),
 		};
