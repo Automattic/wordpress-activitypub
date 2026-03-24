@@ -151,7 +151,7 @@ export const getSuggestedPostFormat = ( blocks, currentFormat ) => {
 		return {
 			format: 'gallery',
 			message: __(
-				'This post contains multiple images. Setting the format to Gallery will share it as a media post, making it visible on platforms like Pixelfed.',
+				"This post contains multiple images. Changing the format to Gallery won't affect your site, but will share it as a media post on the Fediverse, making it visible on platforms like Pixelfed.",
 				'activitypub'
 			),
 		};
@@ -162,7 +162,7 @@ export const getSuggestedPostFormat = ( blocks, currentFormat ) => {
 		return {
 			format: 'video',
 			message: __(
-				'This post contains a video. Setting the format to Video will share it as a media post, improving compatibility with video-focused platforms.',
+				"This post contains a video. Changing the format to Video won't affect your site, but will share it as a media post on the Fediverse, improving compatibility with video-focused platforms.",
 				'activitypub'
 			),
 		};
@@ -173,7 +173,7 @@ export const getSuggestedPostFormat = ( blocks, currentFormat ) => {
 		return {
 			format: 'audio',
 			message: __(
-				'This post contains audio content. Setting the format to Audio will share it as a media post, improving compatibility with audio-focused platforms.',
+				"This post contains audio content. Changing the format to Audio won't affect your site, but will share it as a media post on the Fediverse, improving compatibility with audio-focused platforms.",
 				'activitypub'
 			),
 		};
@@ -189,7 +189,7 @@ export const getSuggestedPostFormat = ( blocks, currentFormat ) => {
 		return {
 			format: 'image',
 			message: __(
-				'This post contains an image. Setting the format to Image will share it as a media post, making it visible on platforms like Pixelfed.',
+				"This post contains an image. Changing the format to Image won't affect your site, but will share it as a media post on the Fediverse, making it visible on platforms like Pixelfed.",
 				'activitypub'
 			),
 		};
@@ -200,7 +200,7 @@ export const getSuggestedPostFormat = ( blocks, currentFormat ) => {
 		return {
 			format: 'status',
 			message: __(
-				'This is a short post with no media. Setting the format to Status will share it as a Note, which is the standard format on platforms like Mastodon.',
+				"This is a short post with no media. Changing the format to Status won't affect your site, but will share it as a Note on the Fediverse, which is the standard format on platforms like Mastodon.",
 				'activitypub'
 			),
 		};

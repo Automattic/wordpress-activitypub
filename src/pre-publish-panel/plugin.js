@@ -33,6 +33,22 @@ const PrePublishPanel = () => {
 	}
 
 	if ( ! suggestion ) {
+		// Show confirmation when the user has a non-default format applied.
+		if ( postFormat && postFormat !== 'standard' ) {
+			const formatLabel = postFormat.charAt( 0 ).toUpperCase() + postFormat.slice( 1 );
+			return (
+				<PluginPrePublishPanel title={ __( 'Fediverse ⁂', 'activitypub' ) } initialOpen>
+					<p>
+						{ sprintf(
+							/* translators: %s: The current post format name (e.g., "Image", "Gallery", "Video"). */
+							__( 'This post will be shared as %s on the Fediverse.', 'activitypub' ),
+							formatLabel
+						) }
+					</p>
+				</PluginPrePublishPanel>
+			);
+		}
+
 		return null;
 	}
 
