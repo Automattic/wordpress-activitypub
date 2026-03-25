@@ -62,7 +62,7 @@ class Emoji {
 			$pattern = '/(?<!-->)' . \preg_quote( $shortcode, '/' ) . '(?!<!-- \/wp:activitypub\/emoji -->)/i';
 			$content = \preg_replace_callback(
 				$pattern,
-				function () use ( $wrapped ) {
+				function ( $matches ) use ( $wrapped ) {
 					return $wrapped;
 				},
 				$content
