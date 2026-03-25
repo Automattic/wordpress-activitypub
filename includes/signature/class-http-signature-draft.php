@@ -315,7 +315,8 @@ class Http_Signature_Draft implements Http_Signature {
 			}
 			if ( 'date' === $header ) {
 				if ( empty( $headers['date'][0] ) ) {
-					continue;
+					// Date is in the signed headers list but missing from the request.
+					return false;
 				}
 
 				// Allow a bit of leeway for misconfigured clocks.

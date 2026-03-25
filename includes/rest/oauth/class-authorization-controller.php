@@ -81,7 +81,7 @@ class Authorization_Controller extends \WP_REST_Controller {
 						'code_challenge_method' => array(
 							'description' => 'PKCE code challenge method.',
 							'type'        => 'string',
-							'enum'        => array( 'S256', 'plain' ),
+							'enum'        => array( 'S256' ),
 							'default'     => 'S256',
 						),
 					),
@@ -122,7 +122,7 @@ class Authorization_Controller extends \WP_REST_Controller {
 						'code_challenge_method' => array(
 							'description' => 'PKCE code challenge method.',
 							'type'        => 'string',
-							'enum'        => array( 'S256', 'plain' ),
+							'enum'        => array( 'S256' ),
 							'default'     => 'S256',
 						),
 						'approve'               => array(
