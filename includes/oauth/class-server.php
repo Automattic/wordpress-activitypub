@@ -162,7 +162,7 @@ class Server {
 	 *
 	 * @param string $code_verifier  The PKCE code verifier.
 	 * @param string $code_challenge The stored code challenge.
-	 * @param string $method         The challenge method (S256 or plain).
+	 * @param string $method         The challenge method (only S256 is supported).
 	 * @return bool True if valid.
 	 */
 	public static function verify_pkce( $code_verifier, $code_challenge, $method = 'S256' ) {
@@ -365,6 +365,15 @@ class Server {
 		$code_challenge_method = isset( $_POST['code_challenge_method'] ) ? \sanitize_text_field( \wp_unslash( $_POST['code_challenge_method'] ) ) : 'S256';
 		$approve               = isset( $_POST['approve'] );
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		// Only S256 is supported; normalize empty/missing values and reject anything else.
+		if ( empty( $code_challenge_method ) ) {
+			$code_challenge_method = 'S256';
+		} elseif ( 'S256' !== $code_challenge_method ) {
+			$error_message = \__( 'Only S256 is supported as PKCE code challenge method.', 'activitypub' ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
+			include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-error.php';
+			exit;
+		}
 
 		// Re-validate client and redirect URI (form fields could be tampered with).
 		$client = Client::get( $client_id );
