@@ -372,7 +372,16 @@ class Inbox_Controller extends \WP_REST_Controller {
 	 * @return array An array of user IDs who are the recipients of the activity.
 	 */
 	private function get_local_recipients( $activity ) {
-		$user_ids = array();
+		$user_ids       = array();
+		$remote_fetches = 0;
+
+		/**
+		 * Filters the maximum number of remote recipient URLs that can be
+		 * fetched per incoming activity.
+		 *
+		 * @param int $max_remote_fetches Maximum number of remote fetches. Default 5.
+		 */
+		$max_remote_fetches = (int) \apply_filters( 'activitypub_max_remote_recipient_fetches', 5 );
 
 		if ( is_activity_public( $activity ) ) {
 			$user_ids = Following::get_follower_ids( $activity['actor'] );
@@ -387,6 +396,12 @@ class Inbox_Controller extends \WP_REST_Controller {
 			}
 
 			if ( ! is_same_domain( $recipient ) ) {
+				// Cap remote fetches to prevent abuse via large to/cc/bcc lists.
+				if ( $remote_fetches >= $max_remote_fetches ) {
+					continue;
+				}
+
+				++$remote_fetches;
 				$collection = Http::get_remote_object( $recipient );
 
 				// If it is a remote actor we can skip it.
