@@ -293,6 +293,36 @@ class Test_Emoji extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test wrap_in_content discards invalid updated timestamps.
+	 *
+	 * @covers ::wrap_in_content
+	 */
+	public function test_wrap_discards_invalid_updated_timestamp() {
+		$text = 'Hello :wave:';
+
+		$activity = array(
+			'tag' => array(
+				array(
+					'type'    => 'Emoji',
+					'name'    => ':wave:',
+					'icon'    => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/emoji/wave.png',
+					),
+					'updated' => 'not-a-date-' . str_repeat( 'x', 500 ),
+				),
+			),
+		);
+
+		$result = Emoji::wrap_in_content( $text, $activity );
+
+		// Invalid timestamp should be discarded.
+		$this->assertStringNotContainsString( 'updated', $result );
+		// Emoji should still be wrapped.
+		$this->assertStringContainsString( '<!-- wp:activitypub/emoji', $result );
+	}
+
+	/**
 	 * Test emoji wrapping is case-insensitive.
 	 *
 	 * @covers ::wrap_in_content

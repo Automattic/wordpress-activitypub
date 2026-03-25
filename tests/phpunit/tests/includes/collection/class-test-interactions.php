@@ -1344,4 +1344,112 @@ class Test_Interactions extends \WP_UnitTestCase {
 		// Clean up.
 		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
 	}
+
+	/**
+	 * Test update_comment does not double-encode special characters in author name.
+	 *
+	 * @covers ::update_comment
+	 */
+	public function test_update_comment_author_no_double_encoding() {
+		// Mock actor with special characters in name.
+		$metadata_filter = static function () {
+			return array(
+				'name'              => "O'Brien & Friends",
+				'preferredUsername' => 'obrien',
+				'id'                => 'https://example.com/users/obrien',
+				'url'               => 'https://example.com/@obrien',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter, 1 );
+
+		// First create a comment.
+		$activity = array(
+			'actor'  => 'https://example.com/users/obrien',
+			'id'     => 'https://example.com/activities/comment/' . microtime( true ),
+			'object' => array(
+				'id'        => 'https://example.com/notes/obrien-1',
+				'content'   => 'Original content',
+				'inReplyTo' => self::$post_permalink,
+			),
+		);
+
+		$comment_id = Interactions::add_comment( $activity );
+		$this->assertIsInt( $comment_id );
+
+		// Now update it.
+		$update_activity = array(
+			'actor'  => 'https://example.com/users/obrien',
+			'id'     => 'https://example.com/activities/update/' . microtime( true ),
+			'object' => array(
+				'id'        => 'https://example.com/notes/obrien-1',
+				'content'   => 'Updated content',
+				'inReplyTo' => self::$post_permalink,
+			),
+		);
+
+		$result = Interactions::update_comment( $update_activity );
+		$this->assertNotFalse( $result );
+
+		$comment = \get_comment( $comment_id );
+
+		// Author name should not be entity-encoded in storage.
+		$this->assertEquals( "O'Brien &amp; Friends", $comment->comment_author );
+		$this->assertStringNotContainsString( '&#039;', $comment->comment_author );
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter, 1 );
+	}
+
+	/**
+	 * Test update_comment strips HTML tags from author name.
+	 *
+	 * @covers ::update_comment
+	 */
+	public function test_update_comment_author_strips_html() {
+		// Mock actor with HTML in name.
+		$metadata_filter = static function () {
+			return array(
+				'name'              => '<b>Evil</b> Actor',
+				'preferredUsername' => 'evil',
+				'id'                => 'https://example.com/users/evil',
+				'url'               => 'https://example.com/@evil',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter, 1 );
+
+		// Create a comment.
+		$activity = array(
+			'actor'  => 'https://example.com/users/evil',
+			'id'     => 'https://example.com/activities/comment/' . microtime( true ),
+			'object' => array(
+				'id'        => 'https://example.com/notes/evil-1',
+				'content'   => 'Original content',
+				'inReplyTo' => self::$post_permalink,
+			),
+		);
+
+		$comment_id = Interactions::add_comment( $activity );
+		$this->assertIsInt( $comment_id );
+
+		// Update it.
+		$update_activity = array(
+			'actor'  => 'https://example.com/users/evil',
+			'id'     => 'https://example.com/activities/update/' . microtime( true ),
+			'object' => array(
+				'id'        => 'https://example.com/notes/evil-1',
+				'content'   => 'Updated content',
+				'inReplyTo' => self::$post_permalink,
+			),
+		);
+
+		$result = Interactions::update_comment( $update_activity );
+		$this->assertNotFalse( $result );
+
+		$comment = \get_comment( $comment_id );
+
+		// HTML tags should be stripped.
+		$this->assertStringNotContainsString( '<b>', $comment->comment_author );
+		$this->assertStringContainsString( 'Evil', $comment->comment_author );
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter, 1 );
+	}
 }
