@@ -366,10 +366,6 @@ class Server {
 		$approve               = isset( $_POST['approve'] );
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
-		if ( 'S256' !== $code_challenge_method ) {
-			$code_challenge_method = 'S256';
-		}
-
 		// Re-validate client and redirect URI (form fields could be tampered with).
 		$client = Client::get( $client_id );
 
