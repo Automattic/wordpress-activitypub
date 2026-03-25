@@ -60,7 +60,13 @@ class Emoji {
 
 			// Case-insensitive replacement, avoid already wrapped shortcodes.
 			$pattern = '/(?<!-->)' . \preg_quote( $shortcode, '/' ) . '(?!<!-- \/wp:activitypub\/emoji -->)/i';
-			$content = \preg_replace( $pattern, $wrapped, $content );
+			$content = \preg_replace_callback(
+				$pattern,
+				function () use ( $wrapped ) {
+					return $wrapped;
+				},
+				$content
+			);
 		}
 
 		return $content;
