@@ -170,8 +170,9 @@ class Move {
 			return false;
 		}
 
-		// Check if the target has an alsoKnownAs property.
-		if ( empty( $target_object['alsoKnownAs'] ) ) {
+		// Normalize alsoKnownAs to an array (some JSON-LD payloads may use a string).
+		$also_known_as = (array) ( $target_object['alsoKnownAs'] ?? array() );
+		if ( empty( $also_known_as ) ) {
 			return false;
 		}
 
@@ -185,7 +186,7 @@ class Move {
 		);
 
 		// Check if any origin identifier is in the alsoKnownAs property of the target.
-		if ( ! array_intersect( $origin_ids, $target_object['alsoKnownAs'] ) ) {
+		if ( ! array_intersect( $origin_ids, $also_known_as ) ) {
 			return false;
 		}
 
