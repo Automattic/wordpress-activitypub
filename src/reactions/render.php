@@ -111,7 +111,7 @@ foreach ( Comment::get_comment_types() as $_type => $type_object ) {
 	);
 }
 
-if ( empty( $reactions ) ) {
+if ( empty( $reactions ) && ! $attributes['showActions'] ) {
 	echo '<!-- Reactions block: No reactions found. -->';
 	return;
 }
@@ -181,19 +181,18 @@ if ( $attributes['showActions'] ) {
 }
 
 // Map comment types to remote intent types.
-if ( $attributes['showActions'] ) {
-	$intent_map = array(
-		'like'   => 'like',
-		'repost' => 'announce',
-		'quote'  => 'announce',
-	);
-}
+$intent_map = array(
+	'like'   => 'like',
+	'repost' => 'announce',
+	'quote'  => 'announce',
+);
 
 // Build reactions content.
 ob_start();
 ?>
 <div class="activitypub-reactions">
 	<?php
+	// First pass: render reaction types that have items (full treatment).
 	foreach ( $reactions as $_type => $reaction ) :
 		/* translators: %s: reaction type. */
 		$aria_label = sprintf( __( 'View all %s', 'activitypub' ), Comment::get_comment_type_attr( $_type, 'label' ) );
@@ -247,6 +246,30 @@ ob_start();
 		</button>
 	</div>
 	<?php endforeach; ?>
+	<?php
+	// Second pass: render action buttons for reaction types without items.
+	if ( $attributes['showActions'] ) :
+		$empty_types = array_diff_key( $intent_map, $reactions );
+
+		if ( ! empty( $empty_types ) ) :
+			?>
+	<div class="reaction-actions-only">
+			<?php foreach ( $empty_types as $_type => $intent ) : ?>
+		<button
+			class="reaction-action-button has-text-color has-background"
+			data-intent="<?php echo esc_attr( $intent ); ?>"
+			data-wp-on--click="actions.openIntentModal"
+			type="button"
+			aria-label="<?php echo esc_attr( Comment::get_comment_type_attr( $_type, 'singular' ) ); ?>"
+		>
+				<?php echo esc_html( Comment::get_comment_type_attr( $_type, 'singular' ) ); ?>
+		</button>
+			<?php endforeach; ?>
+	</div>
+			<?php
+		endif;
+	endif;
+	?>
 </div>
 <?php
 $reactions_content = ob_get_clean();
