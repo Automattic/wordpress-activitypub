@@ -102,6 +102,11 @@ trait Event_Stream {
 		$token_string = \wp_unslash( $_GET['access_token'] );
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
+		// Reject tokens that are too long or contain unexpected characters.
+		if ( \strlen( $token_string ) > 512 || \preg_match( '/[^A-Za-z0-9._~+\/-]/', $token_string ) ) {
+			return;
+		}
+
 		// Inject as Authorization header so the OAuth server can find it.
 		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $token_string;
 
