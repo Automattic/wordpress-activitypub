@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Limited the number of remote recipient lookups per incoming activity.
