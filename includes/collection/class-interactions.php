@@ -117,7 +117,7 @@ class Interactions {
 		}
 
 		// Found a local comment id.
-		$comment_data['comment_author'] = \esc_attr( empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'] );
+		$comment_data['comment_author'] = \sanitize_text_field( empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'] );
 
 		/*
 		 * Wrap emoji in content with blocks for runtime replacement.
