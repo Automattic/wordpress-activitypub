@@ -253,7 +253,7 @@ ob_start();
 
 		if ( ! empty( $empty_types ) ) :
 			?>
-	<div class="reaction-actions-only">
+	<div class="reaction-actions-only" role="group" aria-label="<?php esc_attr_e( 'Reaction actions', 'activitypub' ); ?>">
 			<?php foreach ( $empty_types as $_type => $intent ) : ?>
 		<button
 			class="reaction-action-button has-text-color has-background"
