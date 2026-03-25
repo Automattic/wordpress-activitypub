@@ -396,7 +396,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 			}
 
 			if ( ! is_same_domain( $recipient ) ) {
-				// Cap remote fetches to prevent abuse via large to/cc/bcc lists.
+				// Cap remote fetches to prevent abuse via large audience/recipient fields.
 				if ( $remote_fetches >= $max_remote_fetches ) {
 					continue;
 				}
