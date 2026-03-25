@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Improved HTTP Signature validation for requests with a missing Date header.
