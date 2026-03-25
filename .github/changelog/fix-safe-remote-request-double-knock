@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Use safe HTTP request for signature retry to prevent requests to private IP ranges.
