@@ -1372,4 +1372,243 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		\remove_action( 'activitypub_inbox', array( $inbox_action, 'action' ) );
 		\delete_option( 'activitypub_actor_mode' );
 	}
+
+	/**
+	 * Test get_local_recipients detects actor's followers collection URL without fetching it.
+	 *
+	 * @covers ::get_local_recipients
+	 */
+	public function test_get_local_recipients_detects_followers_url_without_fetch() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		$remote_actor_url     = 'https://example.com/actor/followers-detect';
+		$remote_followers_url = 'https://example.com/actor/followers-detect/followers';
+
+		// Mock the remote actor fetch so the cached metadata includes a followers field.
+		$remote_object_filter = function ( $pre, $url ) use ( $remote_actor_url, $remote_followers_url ) {
+			if ( $url === $remote_actor_url ) {
+				return array(
+					'@context'          => 'https://www.w3.org/ns/activitystreams',
+					'id'                => $remote_actor_url,
+					'type'              => 'Person',
+					'preferredUsername' => 'testfollowersdetect',
+					'name'              => 'Test Actor',
+					'inbox'             => $remote_actor_url . '/inbox',
+					'followers'         => $remote_followers_url,
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter, 10, 2 );
+
+		// Create the cached remote actor.
+		$remote_actor = \Activitypub\Collection\Remote_Actors::fetch_by_uri( $remote_actor_url );
+
+		// Make test user follow the remote actor.
+		\add_post_meta( $remote_actor->ID, '_activitypub_followed_by', self::$user_id );
+
+		// Track which URLs are fetched via Http::get_remote_object.
+		$fetched_urls  = array();
+		$track_fetches = function ( $pre, $url ) use ( &$fetched_urls ) {
+			$fetched_urls[] = $url;
+			return new \WP_Error( 'test', 'Simulated error' );
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 5, 2 );
+
+		// Activity where the followers URL is in cc.
+		$activity = array(
+			'type'  => 'Create',
+			'actor' => $remote_actor_url,
+			'to'    => array( 'https://example.com/some-other-actor' ),
+			'cc'    => array( $remote_followers_url ),
+		);
+
+		$reflection = new \ReflectionClass( $this->inbox_controller );
+		$method     = $reflection->getMethod( 'get_local_recipients' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$result = $method->invoke( $this->inbox_controller, $activity );
+
+		// The followers URL should NOT have been fetched via HTTP.
+		$this->assertNotContains(
+			$remote_followers_url,
+			$fetched_urls,
+			'Should NOT fetch the actor followers URL via HTTP when it matches cached metadata'
+		);
+
+		// But the followers should still be resolved.
+		$this->assertContains( self::$user_id, $result, 'Should resolve followers without HTTP fetch' );
+
+		// Clean up.
+		\delete_option( 'activitypub_actor_mode' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 5 );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
+	}
+
+	/**
+	 * Test get_local_recipients still caps remote fetches for non-followers URLs.
+	 *
+	 * @covers ::get_local_recipients
+	 */
+	public function test_get_local_recipients_remote_fetch_cap_with_followers_detection() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		$remote_actor_url     = 'https://example.com/actor/cap-test';
+		$remote_followers_url = 'https://example.com/actor/cap-test/followers';
+
+		$remote_object_filter = function ( $pre, $url ) use ( $remote_actor_url, $remote_followers_url ) {
+			if ( $url === $remote_actor_url ) {
+				return array(
+					'@context'          => 'https://www.w3.org/ns/activitystreams',
+					'id'                => $remote_actor_url,
+					'type'              => 'Person',
+					'preferredUsername' => 'captest',
+					'name'              => 'Cap Test',
+					'inbox'             => $remote_actor_url . '/inbox',
+					'followers'         => $remote_followers_url,
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter, 10, 2 );
+
+		$remote_actor = \Activitypub\Collection\Remote_Actors::fetch_by_uri( $remote_actor_url );
+
+		// Make test user follow the remote actor.
+		\add_post_meta( $remote_actor->ID, '_activitypub_followed_by', self::$user_id );
+
+		// Track fetches.
+		$fetched_urls  = array();
+		$track_fetches = function ( $pre, $url ) use ( &$fetched_urls ) {
+			$fetched_urls[] = $url;
+			return new \WP_Error( 'test', 'Simulated error' );
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 5, 2 );
+
+		// Set cap to 3 for easier testing.
+		$cap_filter = function () {
+			return 3;
+		};
+		\add_filter( 'activitypub_max_remote_recipient_fetches', $cap_filter );
+
+		// 6 non-followers remote URLs + the followers URL.
+		$activity = array(
+			'type'  => 'Create',
+			'actor' => $remote_actor_url,
+			'to'    => array(
+				'https://other.example.com/user/1',
+				'https://other.example.com/user/2',
+				'https://other.example.com/user/3',
+				'https://other.example.com/user/4',
+			),
+			'cc'    => array(
+				'https://other.example.com/user/5',
+				'https://other.example.com/user/6',
+				$remote_followers_url,
+			),
+		);
+
+		$reflection = new \ReflectionClass( $this->inbox_controller );
+		$method     = $reflection->getMethod( 'get_local_recipients' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$result = $method->invoke( $this->inbox_controller, $activity );
+
+		// Only 3 remote URLs should have been fetched (the cap).
+		$this->assertCount( 3, $fetched_urls, 'Should only fetch up to the cap limit' );
+
+		// The followers URL should NOT be in the fetched list (detected from cache).
+		$this->assertNotContains(
+			$remote_followers_url,
+			$fetched_urls,
+			'Followers URL should be handled without consuming a fetch slot'
+		);
+
+		// Followers should still be resolved despite the cap.
+		$this->assertContains( self::$user_id, $result, 'Should resolve followers even when cap is exceeded' );
+
+		// Clean up.
+		\delete_option( 'activitypub_actor_mode' );
+		\remove_filter( 'activitypub_max_remote_recipient_fetches', $cap_filter );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 5 );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
+	}
+
+	/**
+	 * Test get_local_recipients detects followers URL even on a different domain.
+	 *
+	 * Some platforms (e.g., WordPress.com) may host actors and their collections
+	 * on different domains.
+	 *
+	 * @covers ::get_local_recipients
+	 */
+	public function test_get_local_recipients_cross_domain_followers_url() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		$remote_actor_url = 'https://actor-domain.example.com/actor/cross';
+		// Followers on a DIFFERENT domain than the actor.
+		$remote_followers_url = 'https://collections-domain.example.com/actor/cross/followers';
+
+		$remote_object_filter = function ( $pre, $url ) use ( $remote_actor_url, $remote_followers_url ) {
+			if ( $url === $remote_actor_url ) {
+				return array(
+					'@context'          => 'https://www.w3.org/ns/activitystreams',
+					'id'                => $remote_actor_url,
+					'type'              => 'Person',
+					'preferredUsername' => 'crossdomain',
+					'name'              => 'Cross Domain Actor',
+					'inbox'             => $remote_actor_url . '/inbox',
+					'followers'         => $remote_followers_url,
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter, 10, 2 );
+
+		$remote_actor = \Activitypub\Collection\Remote_Actors::fetch_by_uri( $remote_actor_url );
+
+		\add_post_meta( $remote_actor->ID, '_activitypub_followed_by', self::$user_id );
+
+		// Track fetches.
+		$fetched_urls  = array();
+		$track_fetches = function ( $pre, $url ) use ( &$fetched_urls ) {
+			$fetched_urls[] = $url;
+			return new \WP_Error( 'test', 'Simulated error' );
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 5, 2 );
+
+		$activity = array(
+			'type'  => 'Create',
+			'actor' => $remote_actor_url,
+			'to'    => array( 'https://someone-else.example.com/user/1' ),
+			'cc'    => array( $remote_followers_url ),
+		);
+
+		$reflection = new \ReflectionClass( $this->inbox_controller );
+		$method     = $reflection->getMethod( 'get_local_recipients' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$result = $method->invoke( $this->inbox_controller, $activity );
+
+		// Cross-domain followers URL should NOT have been fetched.
+		$this->assertNotContains(
+			$remote_followers_url,
+			$fetched_urls,
+			'Should detect cross-domain followers URL from cached metadata without fetch'
+		);
+
+		// But followers should still be resolved.
+		$this->assertContains( self::$user_id, $result, 'Should resolve followers for cross-domain collection URL' );
+
+		// Clean up.
+		\delete_option( 'activitypub_actor_mode' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 5 );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
+	}
 }

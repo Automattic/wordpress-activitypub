@@ -11,6 +11,7 @@ use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Inbox;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
 use Activitypub\Moderation;
 
@@ -383,6 +384,25 @@ class Inbox_Controller extends \WP_REST_Controller {
 		 */
 		$max_remote_fetches = (int) \apply_filters( 'activitypub_max_remote_recipient_fetches', 5 );
 
+		/*
+		 * Look up the actor's cached profile to identify their followers collection URL
+		 * without needing a remote fetch. The actor is typically already cached from
+		 * signature verification.
+		 */
+		$actor_followers_url = null;
+
+		if ( ! empty( $activity['actor'] ) ) {
+			$actor_post = Remote_Actors::get_by_uri( $activity['actor'] );
+
+			if ( ! \is_wp_error( $actor_post ) ) {
+				$actor_data = \json_decode( $actor_post->post_content, true );
+
+				if ( ! empty( $actor_data['followers'] ) ) {
+					$actor_followers_url = $actor_data['followers'];
+				}
+			}
+		}
+
 		if ( is_activity_public( $activity ) ) {
 			$user_ids = Following::get_follower_ids( $activity['actor'] );
 		}
@@ -396,6 +416,13 @@ class Inbox_Controller extends \WP_REST_Controller {
 			}
 
 			if ( ! is_same_domain( $recipient ) ) {
+				// Detect the actor's followers collection from cached metadata (no fetch needed).
+				if ( $actor_followers_url && $recipient === $actor_followers_url ) {
+					$_user_ids = Following::get_follower_ids( $activity['actor'] );
+					$user_ids  = array_merge( $user_ids, $_user_ids );
+					continue;
+				}
+
 				// Cap remote fetches to prevent abuse via large audience/recipient fields.
 				if ( $remote_fetches >= $max_remote_fetches ) {
 					continue;
