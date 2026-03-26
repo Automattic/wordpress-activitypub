@@ -401,7 +401,13 @@ class Query {
 			return false;
 		}
 
-		$post     = $this->get_queried_object();
+		$post = $this->get_queried_object();
+
+		// Ensure the meta belongs to the queried post to prevent arbitrary meta disclosure.
+		if ( (int) $meta->post_id !== $post->ID ) {
+			return false;
+		}
+
 		$user_uri = get_user_id( $post->post_author );
 
 		if ( ! $user_uri ) {
