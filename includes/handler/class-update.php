@@ -139,18 +139,17 @@ class Update {
 		if ( ! \is_array( $actor ) || ! isset( $actor['id'] ) ) {
 			$object = Http::get_remote_object( $activity['actor'], false );
 
-			if ( \is_wp_error( $object ) || ! \is_array( $object ) ) {
-				$state = new \WP_Error( 'activitypub_update_failed', 'Update failed: missing or invalid actor object in Update activity' );
-				$actor = array();
-
-				\do_action( 'activitypub_handled_update', $activity, (array) $user_ids, $state, $actor );
-				return;
+			if ( ! \is_wp_error( $object ) && \is_array( $object ) ) {
+				$actor = $object;
 			}
-
-			$actor = $object;
 		}
 
-		$state = Remote_Actors::upsert( $actor );
+		if ( \is_array( $actor ) && isset( $actor['id'] ) ) {
+			$state = Remote_Actors::upsert( $actor );
+		} else {
+			$state = new \WP_Error( 'activitypub_update_failed', 'Update failed: missing or invalid actor object in Update activity' );
+			$actor = array();
+		}
 
 		/**
 		 * Fires after an ActivityPub Update activity has been handled.
