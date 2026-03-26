@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Verify that the signing key belongs to the same server as the activity actor.
