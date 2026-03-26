@@ -10,8 +10,8 @@ namespace Activitypub\Handler;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
+use Activitypub\Http;
 
-use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\is_activity_reply;
 
 /**
@@ -127,17 +127,30 @@ class Update {
 	 * @param int[]|null $user_ids The user IDs. Always null for Update activities.
 	 */
 	public static function update_actor( $activity, $user_ids ) {
-		// Use the actor data from the activity object directly, as it contains
-		// the fresh data. Fetching via get_remote_metadata_by_actor() would return
-		// the stale locally cached copy because fetch_by_uri() short-circuits
-		// when the actor already exists locally.
-		$actor = $activity['object'] ?? array();
+		// Prefer the actor data embedded in the activity object, as it contains
+		// the fresh data sent by the remote server.
+		$actor = $activity['object'] ?? null;
 
-		if ( ! $actor || ! isset( $actor['id'] ) ) {
-			$state = new \WP_Error( 'activitypub_update_failed', 'Update failed: could not fetch actor data' );
-		} else {
-			$state = Remote_Actors::upsert( $actor );
+		// The object may be a string IRI instead of an embedded object,
+		// in which case we need to fetch the actor data remotely.
+		// We use Http::get_remote_object() directly instead of
+		// get_remote_metadata_by_actor() because the latter returns the
+		// stale locally cached copy via fetch_by_uri().
+		if ( ! \is_array( $actor ) || ! isset( $actor['id'] ) ) {
+			$object = Http::get_remote_object( $activity['actor'], false );
+
+			if ( \is_wp_error( $object ) || ! \is_array( $object ) ) {
+				$state = new \WP_Error( 'activitypub_update_failed', 'Update failed: missing or invalid actor object in Update activity' );
+				$actor = array();
+
+				\do_action( 'activitypub_handled_update', $activity, (array) $user_ids, $state, $actor );
+				return;
+			}
+
+			$actor = $object;
 		}
+
+		$state = Remote_Actors::upsert( $actor );
 
 		/**
 		 * Fires after an ActivityPub Update activity has been handled.
