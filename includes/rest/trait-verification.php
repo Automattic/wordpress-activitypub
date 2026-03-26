@@ -12,6 +12,7 @@ use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Server as OAuth_Server;
 use Activitypub\Signature;
 
+use function Activitypub\object_to_uri;
 use function Activitypub\use_authorized_fetch;
 
 /**
@@ -65,6 +66,51 @@ trait Verification {
 					array( 'status' => 401 )
 				);
 			}
+
+			// Verify the signing key's host matches the activity actor's host.
+			$key_id_check = $this->verify_key_id( $request );
+			if ( \is_wp_error( $key_id_check ) ) {
+				return $key_id_check;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Check that the signature keyId and activity actor share the same host.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 * @return true|\WP_Error True if valid, WP_Error on mismatch.
+	 */
+	private function verify_key_id( $request ) {
+		$sig = $request->get_header( 'signature' );
+		if ( ! $sig || ! \preg_match( '/keyId="([^"]+)"/i', $sig, $m ) ) {
+			// RFC 9421 Signature-Input.
+			$sig = $request->get_header( 'signature-input' );
+			if ( ! $sig || ! \preg_match( '/keyid="([^"]+)"/i', $sig, $m ) ) {
+				return true;
+			}
+		}
+
+		$key_host = \wp_parse_url( $m[1], \PHP_URL_HOST );
+		$json     = $request->get_json_params();
+		$actor    = isset( $json['actor'] ) ? object_to_uri( $json['actor'] ) : null;
+
+		if ( ! $actor || ! $key_host ) {
+			return true;
+		}
+
+		$actor_host = \wp_parse_url( $actor, \PHP_URL_HOST );
+
+		if ( $key_host !== $actor_host ) {
+			return new \WP_Error(
+				'activitypub_key_actor_mismatch',
+				\__( 'Signing key and activity actor must be on the same host.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
 		}
 
 		return true;

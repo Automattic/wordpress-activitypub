@@ -362,6 +362,93 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Data provider for verify_key_id tests.
+	 *
+	 * @return array[] Test cases: [ signature_header, actor, expected_pass ].
+	 */
+	public function data_verify_key_id() {
+		return array(
+			'matching hosts'          => array(
+				'keyId="https://remote.example/users/alice#main-key",algorithm="rsa-sha256",signature="abc"',
+				'https://remote.example/users/alice',
+				true,
+			),
+			'mismatched hosts'        => array(
+				'keyId="https://evil.example/users/alice#main-key",algorithm="rsa-sha256",signature="abc"',
+				'https://remote.example/users/alice',
+				false,
+			),
+			'no actor in body'        => array(
+				'keyId="https://remote.example/users/alice#main-key",algorithm="rsa-sha256",signature="abc"',
+				null,
+				true,
+			),
+			'no signature header'     => array(
+				null,
+				'https://remote.example/users/alice',
+				true,
+			),
+			'actor as object with id' => array(
+				'keyId="https://remote.example/users/alice#main-key",algorithm="rsa-sha256",signature="abc"',
+				array( 'id' => 'https://remote.example/users/alice' ),
+				true,
+			),
+			'actor object mismatch'   => array(
+				'keyId="https://evil.example/users/alice#main-key",algorithm="rsa-sha256",signature="abc"',
+				array( 'id' => 'https://remote.example/users/alice' ),
+				false,
+			),
+		);
+	}
+
+	/**
+	 * Test that verify_key_id checks keyId host against actor host.
+	 *
+	 * @dataProvider data_verify_key_id
+	 * @covers ::verify_key_id
+	 *
+	 * @param string|null       $signature The Signature header value.
+	 * @param string|array|null $actor     The actor value in the JSON body.
+	 * @param bool              $should_pass Whether the check should pass.
+	 */
+	public function test_verify_key_id( $signature, $actor, $should_pass ) {
+		// Defer actual signature crypto so we only test the keyId-actor check.
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
+
+		if ( null !== $signature ) {
+			$request->set_header( 'Signature', $signature );
+		}
+
+		$body = array(
+			'type' => 'Like',
+			'id'   => 'https://remote.example/activity/1',
+		);
+		if ( null !== $actor ) {
+			$body['actor'] = $actor;
+		}
+		$request->set_header( 'Content-Type', 'application/json' );
+		$request->set_body( \wp_json_encode( $body ) );
+
+		/*
+		 * verify_key_id is private, so call it via reflection.
+		 * This avoids coupling the test to the full verify_signature flow.
+		 */
+		$method = new \ReflectionMethod( $this->instance, 'verify_key_id' );
+		$method->setAccessible( true );
+		$result = $method->invoke( $this->instance, $request );
+
+		if ( $should_pass ) {
+			$this->assertTrue( $result );
+		} else {
+			$this->assertWPError( $result );
+			$this->assertEquals( 'activitypub_key_actor_mismatch', $result->get_error_code() );
+			$this->assertEquals( 403, $result->get_error_data()['status'] );
+		}
+	}
+
+	/**
 	 * Create a mock OAuth token object.
 	 *
 	 * @param int  $user_id   The user ID the token belongs to.
