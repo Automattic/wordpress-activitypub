@@ -11,6 +11,8 @@ use Activitypub\OAuth\Client;
 use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Server as OAuth_Server;
 
+use function Activitypub\get_client_ip;
+
 /**
  * Clients_Controller class for handling OAuth 2.0 client and metadata endpoints.
  *
@@ -112,6 +114,21 @@ class Clients_Controller extends \WP_REST_Controller {
 				array( 'status' => 403 )
 			);
 		}
+
+		// Rate-limit registrations to prevent DB spam (max 10 per minute per IP).
+		$ip            = get_client_ip();
+		$transient_key = 'ap_oauth_reg_' . \md5( $ip );
+		$count         = (int) \get_transient( $transient_key );
+
+		if ( $count >= 10 ) {
+			return new \WP_Error(
+				'activitypub_rate_limited',
+				\__( 'Too many client registration requests. Please try again later.', 'activitypub' ),
+				array( 'status' => 429 )
+			);
+		}
+
+		\set_transient( $transient_key, $count + 1, MINUTE_IN_SECONDS );
 
 		$client_name   = $request->get_param( 'client_name' );
 		$redirect_uris = $request->get_param( 'redirect_uris' );
