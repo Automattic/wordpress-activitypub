@@ -127,10 +127,13 @@ class Update {
 	 * @param int[]|null $user_ids The user IDs. Always null for Update activities.
 	 */
 	public static function update_actor( $activity, $user_ids ) {
-		// Update cache.
-		$actor = get_remote_metadata_by_actor( $activity['actor'], false );
+		// Use the actor data from the activity object directly, as it contains
+		// the fresh data. Fetching via get_remote_metadata_by_actor() would return
+		// the stale locally cached copy because fetch_by_uri() short-circuits
+		// when the actor already exists locally.
+		$actor = $activity['object'] ?? array();
 
-		if ( ! $actor || \is_wp_error( $actor ) || ! isset( $actor['id'] ) ) {
+		if ( ! $actor || ! isset( $actor['id'] ) ) {
 			$state = new \WP_Error( 'activitypub_update_failed', 'Update failed: could not fetch actor data' );
 		} else {
 			$state = Remote_Actors::upsert( $actor );
