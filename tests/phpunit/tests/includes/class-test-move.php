@@ -97,7 +97,7 @@ class Test_Move extends \WP_UnitTestCase {
 
 		$filter = function () use ( $from ) {
 			return array(
-				'body'     => wp_json_encode( array( 'also_known_as' => array( $from ) ) ),
+				'body'     => wp_json_encode( array( 'alsoKnownAs' => array( $from ) ) ),
 				'response' => array( 'code' => 200 ),
 			);
 		};
