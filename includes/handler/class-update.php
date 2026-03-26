@@ -127,15 +127,19 @@ class Update {
 	 * @param int[]|null $user_ids The user IDs. Always null for Update activities.
 	 */
 	public static function update_actor( $activity, $user_ids ) {
-		// Prefer the actor data embedded in the activity object, as it contains
-		// the fresh data sent by the remote server.
+		/*
+		 * Prefer the actor data embedded in the activity object, as it contains
+		 * the fresh data sent by the remote server.
+		 */
 		$actor = $activity['object'] ?? null;
 
-		// The object may be a string IRI instead of an embedded object,
-		// in which case we need to fetch the actor data remotely.
-		// We use Http::get_remote_object() directly instead of
-		// get_remote_metadata_by_actor() because the latter returns the
-		// stale locally cached copy via fetch_by_uri().
+		/*
+		 * The object may be a string IRI instead of an embedded object,
+		 * in which case we need to fetch the actor data remotely.
+		 * We use Http::get_remote_object() directly instead of
+		 * get_remote_metadata_by_actor() because the latter returns the
+		 * stale locally cached copy via fetch_by_uri().
+		 */
 		if ( ! \is_array( $actor ) || ! isset( $actor['id'] ) ) {
 			$object = Http::get_remote_object( $activity['actor'], false );
 
