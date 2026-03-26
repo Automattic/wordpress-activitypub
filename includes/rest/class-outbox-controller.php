@@ -230,7 +230,13 @@ class Outbox_Controller extends \WP_REST_Controller {
 				continue;
 			}
 
-			$response['orderedItems'][] = $this->prepare_item_for_response( $outbox_item, $request );
+			$item = $this->prepare_item_for_response( $outbox_item, $request );
+
+			if ( \is_wp_error( $item ) ) {
+				continue;
+			}
+
+			$response['orderedItems'][] = $item;
 		}
 
 		$response = $this->prepare_collection_response( $response, $request );
@@ -268,6 +274,10 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 */
 	public function prepare_item_for_response( $item, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$activity = Outbox::get_activity( $item->ID );
+
+		if ( \is_wp_error( $activity ) ) {
+			return $activity;
+		}
 
 		return $activity->to_array( false );
 	}

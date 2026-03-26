@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix a missing script dependency notice on the admin page in WordPress 6.9.1 and later.

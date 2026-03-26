@@ -121,14 +121,15 @@ class Test_Authorization_Code extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test verify_pkce method with plain.
+	 * Test verify_pkce method rejects plain method.
 	 *
 	 * @covers ::verify_pkce
 	 */
-	public function test_verify_pkce_plain() {
+	public function test_verify_pkce_plain_rejected() {
 		$verifier = $this->generate_code_verifier();
 
-		$this->assertTrue( Authorization_Code::verify_pkce( $verifier, $verifier, 'plain' ) );
+		// Plain PKCE is no longer supported; both cases should fail.
+		$this->assertFalse( Authorization_Code::verify_pkce( $verifier, $verifier, 'plain' ) );
 		$this->assertFalse( Authorization_Code::verify_pkce( 'wrong_verifier', $verifier, 'plain' ) );
 	}
 

@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.0.2] - 2026-03-17
+### Security
+- Prevent non-public posts (drafts, scheduled, pending review) from being accessible via ActivityPub. [#3045]
+
 ## [8.0.1] - 2026-03-11
 ### Changed
 - Simplify the follow page block pattern to avoid duplicate headings and improve accessibility. [#3029]
@@ -1742,6 +1746,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[8.0.2]: https://github.com/Automattic/wordpress-activitypub/compare/8.0.1...8.0.2
 [8.0.1]: https://github.com/Automattic/wordpress-activitypub/compare/8.0.0...8.0.1
 [8.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.9.1...8.0.0
 [7.9.1]: https://github.com/Automattic/wordpress-activitypub/compare/7.9.0...7.9.1
