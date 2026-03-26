@@ -95,7 +95,7 @@ trait Verification {
 			}
 		}
 
-		$key_host = \wp_parse_url( $m[1], \PHP_URL_HOST );
+		$key_host = \strtolower( (string) \wp_parse_url( $m[1], \PHP_URL_HOST ) );
 		$json     = $request->get_json_params();
 		$actor    = isset( $json['actor'] ) ? object_to_uri( $json['actor'] ) : null;
 
@@ -103,9 +103,9 @@ trait Verification {
 			return true;
 		}
 
-		$actor_host = \wp_parse_url( $actor, \PHP_URL_HOST );
+		$actor_host = \strtolower( (string) \wp_parse_url( $actor, \PHP_URL_HOST ) );
 
-		if ( $key_host !== $actor_host ) {
+		if ( ! $actor_host || $key_host !== $actor_host ) {
 			return new \WP_Error(
 				'activitypub_key_actor_mismatch',
 				\__( 'Signing key and activity actor must be on the same host.', 'activitypub' ),

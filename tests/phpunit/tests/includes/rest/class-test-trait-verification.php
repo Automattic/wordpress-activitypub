@@ -398,6 +398,11 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 				array( 'id' => 'https://remote.example/users/alice' ),
 				false,
 			),
+			'case-insensitive hosts'  => array(
+				'keyId="https://Remote.Example/users/alice#main-key",algorithm="rsa-sha256",signature="abc"',
+				'https://remote.example/users/alice',
+				true,
+			),
 		);
 	}
 
@@ -412,9 +417,6 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	 * @param bool              $should_pass Whether the check should pass.
 	 */
 	public function test_verify_key_id( $signature, $actor, $should_pass ) {
-		// Defer actual signature crypto so we only test the keyId-actor check.
-		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
-
 		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
 
 		if ( null !== $signature ) {
