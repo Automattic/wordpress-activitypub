@@ -11,6 +11,7 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Replies;
 use Activitypub\Comment as Comment_Utils;
 use Activitypub\Model\Blog;
+use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
 use function Activitypub\get_comment_ancestors;
@@ -141,8 +142,8 @@ class Comment extends Base {
 		 * @return string The filtered content of the comment.
 		 */
 		$content = \apply_filters( 'comment_text', $content, $comment, array() );
-		$content = \preg_replace( '/[\n\r\t]/', '', $content );
-		$content = \trim( $content );
+		$content = Sanitize::clean_html( $content );
+		$content = Sanitize::strip_whitespace( $content );
 
 		/**
 		 * Filter the content of the comment.

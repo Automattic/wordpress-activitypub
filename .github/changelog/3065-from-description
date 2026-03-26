@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Podcast episodes now respect the configured object type setting instead of always being sent as "Note".

@@ -128,6 +128,15 @@
 		}
 	}
 
+	// Horizontal row of action buttons for reaction types without items.
+	.reaction-actions-only {
+		display: flex;
+		flex-direction: row;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin: 0.5em 0;
+	}
+
 	// Inline action button within each reaction group.
 	// All buttons share the same min-width so they align across rows.
 	.reaction-action-button {
@@ -238,5 +247,10 @@
 		width: auto;
 		margin: 0;
 		display: inline-flex;
+	}
+
+	.reaction-actions-only {
+		display: inline-flex;
+		margin: 0;
 	}
 }

@@ -393,90 +393,134 @@ class Test_Sanitize extends \WP_UnitTestCase {
 	 */
 	public function clean_html_provider() {
 		return array(
-			'empty_string'             => array( '', '' ),
-			'removes_class_from_p'     => array(
+			'empty_string'                    => array( '', '' ),
+			'removes_class_from_p'            => array(
 				'<p class="wp-block-paragraph">Hello</p>',
 				'<p>Hello</p>',
 			),
-			'preserves_class_on_a'     => array(
+			'preserves_class_on_a'            => array(
 				'<a href="https://example.com" class="u-url mention">Link</a>',
 				'<a href="https://example.com" class="u-url mention">Link</a>',
 			),
-			'removes_id'               => array(
+			'removes_id'                      => array(
 				'<span id="main-content">Content</span>',
 				'<span>Content</span>',
 			),
-			'removes_style'            => array(
+			'removes_style'                   => array(
 				'<span style="color: red;">Styled</span>',
 				'<span>Styled</span>',
 			),
-			'removes_data_attributes'  => array(
+			'removes_data_attributes'         => array(
 				'<span data-id="123" data-custom="value">Content</span>',
 				'<span>Content</span>',
 			),
-			'strips_loading_decoding'  => array(
+			'strips_loading_decoding'         => array(
 				'<img src="image.jpg" loading="lazy" decoding="async" alt="Test" />',
 				'<img src="image.jpg" alt="Test" />',
 			),
-			'preserves_href'           => array(
+			'preserves_href'                  => array(
 				'<a href="https://example.com">Link</a>',
 				'<a href="https://example.com">Link</a>',
 			),
-			'strips_bad_protocol'      => array(
+			'strips_bad_protocol'             => array(
 				'<a href="javascript:alert(1)">Link</a>',
 				'<a href="alert(1)">Link</a>',
 			),
-			'preserves_img_essentials' => array(
+			'preserves_img_essentials'        => array(
 				'<img src="image.jpg" alt="Desc" width="300" height="200" />',
 				'<img src="image.jpg" alt="Desc" width="300" height="200" />',
 			),
-			'preserves_title'          => array(
+			'preserves_title'                 => array(
 				'<a href="https://example.com" title="Example">Link</a>',
 				'<a href="https://example.com" title="Example">Link</a>',
 			),
-			'preserves_rel_and_target' => array(
+			'strips_target_from_a'            => array(
 				'<a href="https://example.com" rel="me" target="_blank">Link</a>',
-				'<a href="https://example.com" rel="me" target="_blank">Link</a>',
+				'<a href="https://example.com" rel="me">Link</a>',
 			),
-			'strips_lang_dir'          => array(
+			'strips_lang_dir'                 => array(
 				'<p lang="en" dir="ltr">Hello</p>',
 				'<p>Hello</p>',
 			),
-			'preserves_cite'           => array(
+			'preserves_cite'                  => array(
 				'<blockquote cite="https://example.com">Quote</blockquote>',
 				'<blockquote cite="https://example.com">Quote</blockquote>',
 			),
-			'preserves_video_attrs'    => array(
+			'preserves_video_attrs'           => array(
 				'<video src="video.mp4" width="640" height="360" controls poster="thumb.jpg"></video>',
 				'<video src="video.mp4" width="640" height="360" controls poster="thumb.jpg"></video>',
 			),
-			'preserves_audio_attrs'    => array(
+			'preserves_audio_attrs'           => array(
 				'<audio src="audio.mp3" controls></audio>',
 				'<audio src="audio.mp3" controls></audio>',
 			),
-			'strips_hreflang'          => array(
+			'strips_hreflang'                 => array(
 				'<a href="https://example.de" hreflang="de">German</a>',
 				'<a href="https://example.de">German</a>',
 			),
-			'preserves_details_open'   => array(
-				'<details open><summary>Title</summary></details>',
-				'<details open><summary>Title</summary></details>',
+			'strips_details_summary'          => array(
+				'<details open><summary>Title</summary>Content</details>',
+				'TitleContent',
 			),
-			'self_closing_tags'        => array(
+			'self_closing_tags'               => array(
 				'<br class="clear" />',
 				'<br />',
 			),
-			'no_attributes'            => array(
+			'no_attributes'                   => array(
 				'<p>Simple paragraph</p>',
 				'<p>Simple paragraph</p>',
 			),
-			'plain_text'               => array(
+			'plain_text'                      => array(
 				'Just plain text',
 				'Just plain text',
 			),
-			'complex_wordpress_figure' => array(
+			'complex_wordpress_figure'        => array(
 				'<figure class="wp-block-image size-large"><img loading="lazy" decoding="async" width="1024" height="768" src="https://example.com/image.jpg" alt="Test" class="wp-image-123" data-id="123" /><figcaption class="wp-element-caption">Caption</figcaption></figure>',
 				'<figure><img width="1024" height="768" src="https://example.com/image.jpg" alt="Test" /><figcaption>Caption</figcaption></figure>',
+			),
+			'strips_script_tags'              => array(
+				'<p>Hello</p><script>alert("xss")</script><p>World</p>',
+				'<p>Hello</p><p>World</p>',
+			),
+			'strips_style_tags'               => array(
+				'<p>Hello</p><style>.foo { color: red; }</style><p>World</p>',
+				'<p>Hello</p><p>World</p>',
+			),
+			'preserves_encoded_script_in_pre' => array(
+				'<pre><code>&lt;script&gt;alert("hello")&lt;/script&gt;</code></pre>',
+				'<pre><code>&lt;script&gt;alert("hello")&lt;/script&gt;</code></pre>',
+			),
+			'strips_button_tags'              => array(
+				'<p>Hello</p><button>Click me</button><p>World</p>',
+				'<p>Hello</p><p>World</p>',
+			),
+			'strips_nav_with_content'         => array(
+				'<p>Hello</p><nav><a href="https://example.com">Link</a></nav><p>World</p>',
+				'<p>Hello</p><p>World</p>',
+			),
+			'strips_form_tags'                => array(
+				'<p>Hello</p><form action="/submit"><input type="text" /></form><p>World</p>',
+				'<p>Hello</p><p>World</p>',
+			),
+			'strips_self_closing_input'       => array(
+				'<p>Hello</p><input type="hidden" /><p>World</p>',
+				'<p>Hello</p><p>World</p>',
+			),
+			'strips_self_closing_embed'       => array(
+				'<p>Hello</p><embed src="flash.swf" /><p>World</p>',
+				'<p>Hello</p><p>World</p>',
+			),
+			'preserves_mathml'                => array(
+				'<math display="block"><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mn>1</mn></mrow></math>',
+				'<math display="block"><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mn>1</mn></mrow></math>',
+			),
+			'preserves_mathml_dir'            => array(
+				'<math dir="rtl"><mi>x</mi></math>',
+				'<math dir="rtl"><mi>x</mi></math>',
+			),
+			'strips_annotation_xml'           => array(
+				'<math><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation><annotation-xml encoding="text/html"><span>x</span></annotation-xml></semantics></math>',
+				'<math><semantics><mi>x</mi><annotation encoding="application/x-tex">x</annotation><span>x</span></semantics></math>',
 			),
 		);
 	}
