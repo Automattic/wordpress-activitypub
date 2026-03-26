@@ -41,6 +41,10 @@ class Test_Clients_Controller extends \WP_UnitTestCase {
 		global $wp_rest_server;
 		$wp_rest_server = null;
 
+		// Clean up rate-limit transient to avoid cross-test pollution.
+		$ip = \Activitypub\get_client_ip();
+		\delete_transient( 'ap_oauth_reg_' . \md5( $ip ) );
+
 		parent::tear_down();
 	}
 
@@ -143,10 +147,10 @@ class Test_Clients_Controller extends \WP_UnitTestCase {
 		$request->set_param( 'redirect_uris', array( 'https://limited.example.com/callback' ) );
 
 		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
 
 		$this->assertEquals( 429, $response->get_status() );
-
-		\delete_transient( $transient_key );
+		$this->assertEquals( 'activitypub_rate_limited', $data['code'] );
 	}
 
 	/**
@@ -169,8 +173,6 @@ class Test_Clients_Controller extends \WP_UnitTestCase {
 
 		$this->assertEquals( 201, $response->get_status() );
 		$this->assertEquals( 1, (int) \get_transient( $transient_key ) );
-
-		\delete_transient( $transient_key );
 	}
 
 	/**
