@@ -127,6 +127,199 @@ class Test_Update extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that update_actor uses embedded object data instead of stale cached data.
+	 *
+	 * @covers ::update_actor
+	 */
+	public function test_update_actor_uses_embedded_object_data() {
+		$actor_url = 'https://example.com/users/embedded';
+
+		$original_actor = array(
+			'type'              => 'Person',
+			'id'                => $actor_url,
+			'name'              => 'Original Name',
+			'preferredUsername' => 'embedded',
+			'inbox'             => $actor_url . '/inbox',
+			'outbox'            => $actor_url . '/outbox',
+			'followers'         => $actor_url . '/followers',
+			'following'         => $actor_url . '/following',
+			'publicKey'         => array(
+				'id'           => $actor_url . '#main-key',
+				'owner'        => $actor_url,
+				'publicKeyPem' => "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQE\n-----END PUBLIC KEY-----",
+			),
+		);
+
+		// Store the actor locally first, simulating a cached copy.
+		Remote_Actors::upsert( $original_actor );
+
+		$post = Remote_Actors::get_by_uri( $actor_url );
+		$this->assertNotWPError( $post, 'Actor should be stored locally.' );
+
+		// Build an Update activity with fresh embedded data.
+		$updated_actor = array_merge( $original_actor, array( 'name' => 'Updated Name' ) );
+
+		$activity = array(
+			'type'   => 'Update',
+			'actor'  => $actor_url,
+			'object' => $updated_actor,
+		);
+
+		/*
+		 * Mock HTTP to return stale data — if the handler incorrectly
+		 * fetches remotely, we'll catch it.
+		 */
+		$stale_response = function () use ( $original_actor ) {
+			return $original_actor;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $stale_response );
+
+		Update::update_actor( $activity, array( $this->user_id ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $stale_response );
+
+		// Verify the embedded (fresh) data was used.
+		$post  = Remote_Actors::get_by_uri( $actor_url );
+		$actor = Remote_Actors::get_actor( $post );
+		$this->assertEquals( 'Updated Name', $actor->get_name(), 'Should use embedded object data, not stale cached data.' );
+	}
+
+	/**
+	 * Test that update_actor falls back to remote fetch when object is a string IRI.
+	 *
+	 * @covers ::update_actor
+	 */
+	public function test_update_actor_fetches_remotely_for_string_iri() {
+		$actor_url = 'https://example.com/users/iri-test';
+
+		$remote_actor = array(
+			'type'              => 'Person',
+			'id'                => $actor_url,
+			'name'              => 'Fetched Remotely',
+			'preferredUsername' => 'iritest',
+			'inbox'             => $actor_url . '/inbox',
+			'outbox'            => $actor_url . '/outbox',
+			'followers'         => $actor_url . '/followers',
+			'following'         => $actor_url . '/following',
+			'publicKey'         => array(
+				'id'           => $actor_url . '#main-key',
+				'owner'        => $actor_url,
+				'publicKeyPem' => "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQE\n-----END PUBLIC KEY-----",
+			),
+		);
+
+		// Activity with string IRI instead of embedded object.
+		$activity = array(
+			'type'   => 'Update',
+			'actor'  => $actor_url,
+			'object' => $actor_url,
+		);
+
+		// Mock HTTP to return valid actor data.
+		$mock_response = function () use ( $remote_actor ) {
+			return $remote_actor;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_response );
+
+		Update::update_actor( $activity, array( $this->user_id ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_response );
+
+		$post  = Remote_Actors::get_by_uri( $actor_url );
+		$actor = Remote_Actors::get_actor( $post );
+		$this->assertEquals( 'Fetched Remotely', $actor->get_name(), 'Should fetch remotely when object is a string IRI.' );
+	}
+
+	/**
+	 * Test that update_actor fires activitypub_handled_update with WP_Error when fetch fails.
+	 *
+	 * @covers ::update_actor
+	 */
+	public function test_update_actor_fires_error_on_failed_fetch() {
+		$activity = array(
+			'type'   => 'Update',
+			'actor'  => 'https://example.com/users/missing',
+			'object' => 'https://example.com/users/missing',
+		);
+
+		// Mock HTTP to return an error.
+		$mock_error = function () {
+			return new \WP_Error( 'http_error', 'Could not fetch' );
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_error );
+
+		$state    = null;
+		$listener = function ( $act, $uids, $s ) use ( &$state ) {
+			$state = $s;
+		};
+		\add_action( 'activitypub_handled_update', $listener, 10, 3 );
+
+		Update::update_actor( $activity, array( $this->user_id ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_error );
+		\remove_action( 'activitypub_handled_update', $listener );
+
+		$this->assertWPError( $state, 'Should fire activitypub_handled_update with WP_Error when remote fetch fails.' );
+		$this->assertEquals( 'activitypub_update_failed', $state->get_error_code() );
+	}
+
+	/**
+	 * Test that update_actor always fires activitypub_handled_update exactly once.
+	 *
+	 * @covers ::update_actor
+	 */
+	public function test_update_actor_fires_action_exactly_once() {
+		$actor_url = 'https://example.com/users/action-count';
+
+		$actor_data = array(
+			'type'              => 'Person',
+			'id'                => $actor_url,
+			'name'              => 'Action Counter',
+			'preferredUsername' => 'actioncount',
+			'inbox'             => $actor_url . '/inbox',
+			'outbox'            => $actor_url . '/outbox',
+			'followers'         => $actor_url . '/followers',
+			'following'         => $actor_url . '/following',
+			'publicKey'         => array(
+				'id'           => $actor_url . '#main-key',
+				'owner'        => $actor_url,
+				'publicKeyPem' => "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQE\n-----END PUBLIC KEY-----",
+			),
+		);
+
+		$fire_count = 0;
+		$listener   = function () use ( &$fire_count ) {
+			++$fire_count;
+		};
+		\add_action( 'activitypub_handled_update', $listener );
+
+		// Test with embedded object (success path).
+		$activity = array(
+			'type'   => 'Update',
+			'actor'  => $actor_url,
+			'object' => $actor_data,
+		);
+
+		Update::update_actor( $activity, array( $this->user_id ) );
+		$this->assertSame( 1, $fire_count, 'Action should fire exactly once on success.' );
+
+		// Test with failed fetch (error path).
+		$fire_count = 0;
+		$mock_error = function () {
+			return new \WP_Error( 'http_error', 'fail' );
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_error );
+
+		$activity['object'] = 'https://example.com/users/nonexistent';
+		Update::update_actor( $activity, array( $this->user_id ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_error );
+		\remove_action( 'activitypub_handled_update', $listener );
+
+		$this->assertSame( 1, $fire_count, 'Action should fire exactly once on error.' );
+	}
+
+	/**
 	 * Data provider for update_actor tests.
 	 *
 	 * @return array Test cases with activity data, HTTP response, expected outcome, and description.
