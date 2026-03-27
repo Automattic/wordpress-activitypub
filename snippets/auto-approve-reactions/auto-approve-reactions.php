@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Auto-Approve Reactions
  * Plugin URI:        https://github.com/Automattic/wordpress-activitypub
- * Description:       Automatically approves all incoming ActivityPub reactions (likes and reposts) without requiring manual moderation.
+ * Description:       Automatically approves all incoming ActivityPub reactions (likes, reposts, and quotes) without requiring manual moderation.
  * Version:           1.0.0
  * Requires at least: 5.9
  * Requires PHP:      7.4
@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Auto-approve all ActivityPub reactions (likes and reposts).
+ * Auto-approve all ActivityPub reactions (likes, reposts, and quotes).
  *
  * Hooks into the comment approval flow at a higher priority than
  * the core plugin (which runs at 11) to approve reactions regardless
@@ -49,7 +49,8 @@ function auto_approve_reactions( $approved, $comment_data ) {
 		return $approved;
 	}
 
-	$reaction_types = \Activitypub\Comment::get_comment_type_slugs();
+	$reaction_types   = \Activitypub\Comment::get_comment_type_slugs();
+	$reaction_types[] = 'comment'; // Also auto-approve regular comments, which may be used for replies.
 
 	if ( \in_array( $comment_data['comment_type'], $reaction_types, true ) ) {
 		return 1;

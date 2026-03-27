@@ -1,10 +1,10 @@
 # Auto-Approve Reactions
 
-Automatically approves all incoming ActivityPub reactions (likes and reposts) without requiring manual moderation.
+Automatically approves all incoming ActivityPub reactions (likes, reposts, and quotes) without requiring manual moderation.
 
 ## How It Works
 
-The snippet hooks into WordPress's `pre_comment_approved` filter to automatically approve any incoming ActivityPub comment that has a reaction type (like or repost). It runs before the core plugin's approval logic, so reactions are approved regardless of the "Auto approve reactions" setting in the plugin's settings page.
+The snippet hooks into WordPress's `pre_comment_approved` filter to automatically approve any incoming ActivityPub comment that has a reaction type (like, repost, or quote). It runs before the core plugin's approval logic, so reactions are approved regardless of the "Auto approve reactions" setting in the plugin's settings page.
 
 Only ActivityPub comments are affected. Regular WordPress comments continue to follow your normal moderation rules.
 
