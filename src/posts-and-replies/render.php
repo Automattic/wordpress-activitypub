@@ -20,7 +20,7 @@ if ( is_activitypub_request() || \is_feed() ) {
 // Determine active tab from URL parameter.
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 $active_tab = isset( $_GET['filter'] ) ? \sanitize_key( $_GET['filter'] ) : 'posts';
-if ( ! in_array( $active_tab, array( 'posts', 'posts-and-replies' ), true ) ) {
+if ( ! \in_array( $active_tab, array( 'posts', 'posts-and-replies' ), true ) ) {
 	$active_tab = 'posts';
 }
 

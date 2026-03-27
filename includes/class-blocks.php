@@ -69,7 +69,7 @@ class Blocks {
 		self::register_patterns();
 		self::register_templates();
 
-		\add_action( 'pre_get_posts', array( self::class, 'filter_author_archive_query' ) );
+		\add_action( 'pre_get_posts', array( self::class, 'filter_query_loop_vars' ) );
 
 		\add_action( 'load-post-new.php', array( self::class, 'handle_in_reply_to_get_param' ) );
 		// Add editor plugin.
@@ -1171,7 +1171,7 @@ class Blocks {
 	 *
 	 * @param WP_Query $query The WP_Query instance.
 	 */
-	public static function filter_author_archive_query( $query ) {
+	public static function filter_query_loop_vars( $query ) {
 		if ( ! $query->is_main_query() || $query->is_singular() ) {
 			return;
 		}
@@ -1184,24 +1184,30 @@ class Blocks {
 			return;
 		}
 
-		\add_filter(
-			'posts_where',
-			/**
-			 * Exclude posts containing the activitypub/reply block.
-			 *
-			 * @param string $where The WHERE clause.
-			 * @return string Modified WHERE clause.
-			 */
-			static function ( $where ) {
-				global $wpdb;
+		\add_filter( 'posts_where', array( self::class, 'exclude_replies_where' ) );
+	}
 
-				$where .= $wpdb->prepare(
-					" AND {$wpdb->posts}.post_content NOT LIKE %s",
-					'%<!-- wp:activitypub/reply%'
-				);
+	/**
+	 * Exclude posts containing the activitypub/reply block.
+	 *
+	 * Removes itself after the first execution to avoid
+	 * affecting secondary queries on the same page.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $where The WHERE clause.
+	 * @return string Modified WHERE clause.
+	 */
+	public static function exclude_replies_where( $where ) {
+		\remove_filter( 'posts_where', array( self::class, 'exclude_replies_where' ) );
 
-				return $where;
-			}
+		global $wpdb;
+
+		$where .= $wpdb->prepare(
+			" AND {$wpdb->posts}.post_content NOT LIKE %s",
+			'%<!-- wp:activitypub/reply%'
 		);
+
+		return $where;
 	}
 }
