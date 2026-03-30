@@ -461,18 +461,9 @@ class Outbox_Controller extends \WP_REST_Controller {
 		$object_id = get_object_id( $result );
 
 		if ( $object_id ) {
-			/*
-			 * Handler returned a WP_Post or WP_Comment; look up its outbox entry.
-			 * Fall back to Create if the specific type isn't found, because the
-			 * Post scheduler wraps new posts in Create activities regardless of
-			 * the original C2S activity type (e.g. Arrive → Create).
-			 */
+			// Handler returned a WP_Post or WP_Comment; look up its outbox entry.
 			$activity_type = \ucfirst( $data['type'] ?? 'Create' );
 			$outbox_item   = Outbox::get_by_object_id( $object_id, $activity_type );
-
-			if ( ! $outbox_item && 'Create' !== $activity_type ) {
-				$outbox_item = Outbox::get_by_object_id( $object_id, 'Create' );
-			}
 		} elseif ( \is_int( $result ) && $result > 0 ) {
 			// Handler returned an outbox post ID directly.
 			$outbox_item = \get_post( $result );

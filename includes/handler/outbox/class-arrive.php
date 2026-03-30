@@ -9,6 +9,7 @@ namespace Activitypub\Handler\Outbox;
 
 use Activitypub\Collection\Posts;
 
+use function Activitypub\add_to_outbox;
 use function Activitypub\is_activity_public;
 
 /**
@@ -24,16 +25,18 @@ class Arrive {
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_outbox_arrive', array( self::class, 'handle_arrive' ), 10, 3 );
-		\add_action( 'activitypub_outbox_arrive_sent', array( self::class, 'save_location' ), 10, 4 );
 	}
 
 	/**
 	 * Handle outgoing "Arrive" activities from local actors.
 	 *
-	 * Arrive is an intransitive activity indicating that the actor
-	 * has arrived at a location. Creates a WordPress post so the
-	 * check-in appears on the blog. Location geodata is saved via
-	 * the `activitypub_outbox_arrive_sent` action.
+	 * Arrive is an intransitive activity (no object) indicating that
+	 * the actor has arrived at a location. Per the ActivityPub spec,
+	 * the server must preserve the original activity type, so this
+	 * handler adds the Arrive directly to the outbox as-is.
+	 *
+	 * As a local side effect, a WordPress post is created so the
+	 * check-in appears on the blog with location geodata.
 	 *
 	 * @since unreleased
 	 *
@@ -41,13 +44,59 @@ class Arrive {
 	 * @param int         $user_id    The user ID.
 	 * @param string|null $visibility Content visibility.
 	 *
-	 * @return \WP_Post|\WP_Error|false The created post, error, or false.
+	 * @return int|\WP_Error|false The outbox post ID, error, or false.
 	 */
 	public static function handle_arrive( $data, $user_id = null, $visibility = null ) {
 		if ( ! is_activity_public( $data ) ) {
 			return false;
 		}
 
+		// Create a local blog post as a side effect for on-site display.
+		$post = self::create_checkin_post( $data, $user_id, $visibility );
+
+		if ( $post && ! \is_wp_error( $post ) ) {
+			self::save_location( $post->ID, $data['location'] ?? null );
+
+			/*
+			 * Add a link to the blog post so remote servers can find
+			 * the rendered check-in from the Arrive activity.
+			 */
+			$data['url'] = \get_permalink( $post );
+		}
+
+		/*
+		 * Add the original Arrive activity to the outbox directly.
+		 * This preserves the intransitive activity type per the
+		 * ActivityPub spec (Section 6) instead of wrapping it in Create.
+		 */
+		$outbox_id = add_to_outbox( $data, null, $user_id, $visibility );
+
+		if ( ! $outbox_id ) {
+			return new \WP_Error(
+				'activitypub_outbox_error',
+				\__( 'Failed to add Arrive activity to outbox.', 'activitypub' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		return $outbox_id;
+	}
+
+	/**
+	 * Create a WordPress post from the Arrive activity.
+	 *
+	 * Synthesizes a Create-style payload from the intransitive
+	 * Arrive data so the check-in is visible on the blog.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array       $data       The activity data.
+	 * @param int         $user_id    The user ID.
+	 * @param string|null $visibility Content visibility.
+	 *
+	 * @return \WP_Post|\WP_Error|false The created post, error, or false.
+	 */
+	private static function create_checkin_post( $data, $user_id, $visibility ) {
 		$location_name = self::get_location_name( $data['location'] ?? null );
 
 		$title = $location_name
@@ -58,11 +107,6 @@ class Arrive {
 			)
 			: \__( 'Check-in', 'activitypub' );
 
-		/*
-		 * Synthesize a Create-style activity for Posts::create().
-		 * Arrive is intransitive (no object), so we build a Note
-		 * from the activity-level content/summary.
-		 */
 		$activity = array(
 			'object' => array(
 				'type'    => 'Note',
@@ -73,40 +117,21 @@ class Arrive {
 			'cc'     => $data['cc'] ?? array(),
 		);
 
-		$post = Posts::create( $activity, $user_id, $visibility );
-
-		if ( \is_wp_error( $post ) ) {
-			return $post;
-		}
-
-		/**
-		 * Fires after an outgoing Arrive activity has created a post.
-		 *
-		 * @param int        $post_id    The created post ID.
-		 * @param array|null $location   The location data from the activity.
-		 * @param array      $data       The activity data.
-		 * @param int        $user_id    The user ID.
-		 */
-		\do_action( 'activitypub_outbox_arrive_sent', $post->ID, $data['location'] ?? null, $data, $user_id );
-
-		return $post;
+		return Posts::create( $activity, $user_id, $visibility );
 	}
 
 	/**
-	 * Save location geodata on the created post.
+	 * Save location geodata on a post.
 	 *
-	 * Hooked to `activitypub_outbox_arrive_sent`. Uses the standard
-	 * `geo_*` meta keys that the Post transformer reads back when
-	 * converting to ActivityPub Place objects.
+	 * Uses the standard `geo_*` meta keys that the Post transformer
+	 * reads back when converting to ActivityPub Place objects.
 	 *
 	 * @since unreleased
 	 *
 	 * @param int        $post_id  The post ID.
 	 * @param array|null $location The ActivityPub location data.
-	 * @param array      $data     The activity data.
-	 * @param int        $user_id  The user ID.
 	 */
-	public static function save_location( $post_id, $location, $data, $user_id ) {
+	private static function save_location( $post_id, $location ) {
 		if ( ! \is_array( $location ) ) {
 			return;
 		}

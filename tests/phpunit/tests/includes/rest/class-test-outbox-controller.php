@@ -831,12 +831,12 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		$this->assertEquals( 201, $response->get_status() );
 
 		$response_data = $response->get_data();
-		$this->assertSame( 'Create', $response_data['type'] );
+		$this->assertSame( 'Arrive', $response_data['type'], 'Activity type should be preserved as Arrive.' );
+		$this->assertArrayHasKey( 'url', $response_data, 'Arrive should include a url to the blog post.' );
 
-		// Find the created post from the response object ID.
-		$object  = $response_data['object'];
-		$post_id = \url_to_postid( $object['id'] );
-		$this->assertGreaterThan( 0, $post_id, 'Arrive should create a WordPress post.' );
+		// Find the blog post created as a side effect.
+		$post_id = \url_to_postid( $response_data['url'] );
+		$this->assertGreaterThan( 0, $post_id, 'Arrive should create a WordPress post as side effect.' );
 
 		$this->assertSame( 'status', \get_post_format( $post_id ), 'Arrive post should have status format.' );
 		$this->assertStringContainsString( 'Ettlingen', \get_the_title( $post_id ), 'Post title should contain location name.' );
@@ -884,10 +884,12 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		$response = \rest_get_server()->dispatch( $request );
 		$this->assertEquals( 201, $response->get_status() );
 
-		// Find the created post from the response object ID.
+		// Find the blog post created as a side effect.
 		$response_data = $response->get_data();
-		$post_id       = \url_to_postid( $response_data['object']['id'] );
-		$this->assertGreaterThan( 0, $post_id, 'Arrive should create a WordPress post.' );
+		$this->assertSame( 'Arrive', $response_data['type'], 'Activity type should be preserved as Arrive.' );
+
+		$post_id = \url_to_postid( $response_data['url'] );
+		$this->assertGreaterThan( 0, $post_id, 'Arrive should create a WordPress post as side effect.' );
 
 		// Verify geodata - address saved but no coordinates.
 		$this->assertSame( 'Ettlingen', \get_post_meta( $post_id, 'geo_address', true ) );
