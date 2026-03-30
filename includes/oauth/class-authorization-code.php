@@ -129,10 +129,11 @@ class Authorization_Code {
 	/**
 	 * Exchange authorization code for tokens.
 	 *
-	 * @param string $code          The authorization code.
-	 * @param string $client_id     The client ID.
-	 * @param string $redirect_uri  The redirect URI (must match original).
-	 * @param string $code_verifier The PKCE code verifier.
+	 * @param string      $code          The authorization code.
+	 * @param string      $client_id     The client ID.
+	 * @param string      $redirect_uri  The redirect URI (must match original).
+	 * @param string      $code_verifier The PKCE code verifier.
+	 * @param string|null $dpop_jkt      Optional DPoP JWK thumbprint for token binding.
 	 * @return array|\WP_Error Token data or error.
 	 */
 	public static function exchange( $code, $client_id, $redirect_uri, $code_verifier, $dpop_jkt = null ) {
