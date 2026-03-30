@@ -8,6 +8,7 @@
 namespace Activitypub\Handler\Outbox;
 
 use Activitypub\Collection\Posts;
+use Activitypub\Scheduler\Post;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\is_activity_public;
@@ -25,6 +26,28 @@ class Arrive {
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_outbox_arrive', array( self::class, 'handle_arrive' ), 10, 3 );
+		\add_filter( 'activitypub_outbox_activity_types', array( self::class, 'register_activity_type' ) );
+		\add_filter( 'rest_activitypub_outbox_activity_types', array( self::class, 'register_activity_type' ) );
+	}
+
+	/**
+	 * Add Arrive to the outbox activity type allowlists.
+	 *
+	 * Without this, Arrive activities would be excluded from
+	 * the public outbox collection and REST API responses.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $types The existing activity types.
+	 *
+	 * @return array The filtered activity types.
+	 */
+	public static function register_activity_type( $types ) {
+		if ( ! \in_array( 'Arrive', $types, true ) ) {
+			$types[] = 'Arrive';
+		}
+
+		return $types;
 	}
 
 	/**
@@ -62,6 +85,18 @@ class Arrive {
 			 * the rendered check-in from the Arrive activity.
 			 */
 			$data['url'] = \get_permalink( $post );
+
+			/**
+			 * Fires after an Arrive activity has created a local blog post.
+			 *
+			 * @since unreleased
+			 *
+			 * @param int        $post_id  The created post ID.
+			 * @param array|null $location The location data from the activity.
+			 * @param array      $data     The activity data.
+			 * @param int        $user_id  The user ID.
+			 */
+			\do_action( 'activitypub_outbox_arrive_sent', $post->ID, $data['location'] ?? null, $data, $user_id );
 		}
 
 		/*
@@ -87,6 +122,9 @@ class Arrive {
 	 *
 	 * Synthesizes a Create-style payload from the intransitive
 	 * Arrive data so the check-in is visible on the blog.
+	 *
+	 * Temporarily suppresses the Post scheduler to prevent a
+	 * duplicate Create activity from being added to the outbox.
 	 *
 	 * @since unreleased
 	 *
@@ -117,7 +155,18 @@ class Arrive {
 			'cc'     => $data['cc'] ?? array(),
 		);
 
-		return Posts::create( $activity, $user_id, $visibility );
+		/*
+		 * Suppress the Post scheduler so wp_insert_post() does not
+		 * trigger a separate Create activity for the blog post.
+		 * Only the Arrive activity should be federated.
+		 */
+		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
+
+		$post = Posts::create( $activity, $user_id, $visibility );
+
+		\add_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33, 4 );
+
+		return $post;
 	}
 
 	/**
@@ -168,7 +217,8 @@ class Arrive {
 		}
 
 		if ( ! empty( $data['summaryMap'] ) && \is_array( $data['summaryMap'] ) ) {
-			return \reset( $data['summaryMap'] );
+			$summary_map = $data['summaryMap'];
+			return (string) \reset( $summary_map );
 		}
 
 		return '';
