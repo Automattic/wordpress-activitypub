@@ -225,7 +225,8 @@ class Move {
 
 			if ( \is_wp_error( $result ) ) {
 				// Log the error and continue with the next actor.
-				Debug::write_log( 'Error moving actor: ' . $actor_id . ' - ' . $result->get_error_message() );
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions
+				\error_log( 'Error moving actor: ' . $actor_id . ' - ' . $result->get_error_message() );
 				continue;
 			}
 
