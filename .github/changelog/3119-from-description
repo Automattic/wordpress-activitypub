@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Add DPoP (RFC 9449) support to protect OAuth tokens from theft and replay.
