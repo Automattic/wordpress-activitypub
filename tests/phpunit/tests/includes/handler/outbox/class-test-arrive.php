@@ -188,11 +188,11 @@ class Test_Arrive extends \WP_UnitTestCase {
 		$user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
 
 		$data = array(
-			'type'       => 'Arrive',
-			'actor'      => 'https://example.com/users/test',
-			'location'   => array( 'name' => 'Munich' ),
-			'summaryMap' => array( 'en' => 'Arrived at Munich' ),
-			'to'         => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'type'     => 'Arrive',
+			'actor'    => 'https://example.com/users/test',
+			'location' => array( 'name' => 'Munich' ),
+			'summary'  => 'Arrived at Munich',
+			'to'       => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 		);
 
 		Arrive::handle_arrive( $data, $user_id );

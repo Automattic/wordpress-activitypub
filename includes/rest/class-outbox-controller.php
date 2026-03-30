@@ -29,6 +29,7 @@ use function Activitypub\object_to_uri;
 class Outbox_Controller extends \WP_REST_Controller {
 	use Collection;
 	use Event_Stream;
+	use Language_Map;
 	use Verification;
 
 	/**
@@ -413,6 +414,9 @@ class Outbox_Controller extends \WP_REST_Controller {
 		if ( ! $is_activity ) {
 			$data = $this->wrap_in_create( $data, $user );
 		}
+
+		// Resolve language maps (summaryMap, contentMap, nameMap) to plain strings.
+		$data = $this->localize_language_maps( $data );
 
 		// Default to public addressing if client omits recipients.
 		$data = $this->ensure_addressing( $data, $user );

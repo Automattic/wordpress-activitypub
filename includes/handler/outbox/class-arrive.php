@@ -149,7 +149,7 @@ class Arrive {
 			'object' => array(
 				'type'    => 'Note',
 				'name'    => $title,
-				'content' => $data['content'] ?? self::get_summary( $data ),
+				'content' => $data['content'] ?? $data['summary'] ?? '',
 			),
 			'to'     => $data['to'] ?? array(),
 			'cc'     => $data['cc'] ?? array(),
@@ -200,28 +200,6 @@ class Arrive {
 		if ( ! empty( $location['name'] ) || ( isset( $location['latitude'] ) && isset( $location['longitude'] ) ) ) {
 			\update_post_meta( $post_id, 'geo_public', '1' );
 		}
-	}
-
-	/**
-	 * Extract the summary string from an Arrive activity.
-	 *
-	 * Supports both `summary` (string) and `summaryMap` (language map).
-	 *
-	 * @param array $data The activity data.
-	 *
-	 * @return string The summary text.
-	 */
-	private static function get_summary( $data ) {
-		if ( ! empty( $data['summary'] ) ) {
-			return $data['summary'];
-		}
-
-		if ( ! empty( $data['summaryMap'] ) && \is_array( $data['summaryMap'] ) ) {
-			$summary_map = $data['summaryMap'];
-			return (string) \reset( $summary_map );
-		}
-
-		return '';
 	}
 
 	/**
