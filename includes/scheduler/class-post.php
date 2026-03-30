@@ -91,6 +91,7 @@ class Post {
 				break;
 
 			case 'draft':
+			case 'pending':
 				$type = ( 'publish' === $old_status ) ? 'Update' : false;
 				break;
 

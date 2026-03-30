@@ -162,7 +162,7 @@ class Server {
 	 *
 	 * @param string $code_verifier  The PKCE code verifier.
 	 * @param string $code_challenge The stored code challenge.
-	 * @param string $method         The challenge method (S256 or plain).
+	 * @param string $method         The challenge method (only S256 is supported).
 	 * @return bool True if valid.
 	 */
 	public static function verify_pkce( $code_verifier, $code_challenge, $method = 'S256' ) {
@@ -287,6 +287,21 @@ class Server {
 	 */
 	private static function render_authorize_form() {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Initial form display, nonce checked on POST.
+
+		// Check for error token (redirected from REST authorization endpoint).
+		if ( isset( $_GET['auth_error'] ) ) {
+			$token         = \sanitize_text_field( \wp_unslash( $_GET['auth_error'] ) );
+			$error_message = \get_transient( 'ap_oauth_err_' . $token ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
+			\delete_transient( 'ap_oauth_err_' . $token );
+
+			if ( ! $error_message ) {
+				$error_message = \__( 'An authorization error occurred. Please try again.', 'activitypub' ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
+			}
+
+			include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-error.php';
+			return;
+		}
+
 		$authorize_params = array(
 			'client_id'             => isset( $_GET['client_id'] ) ? \sanitize_text_field( \wp_unslash( $_GET['client_id'] ) ) : '',
 			'redirect_uri'          => isset( $_GET['redirect_uri'] ) ? Sanitize::redirect_uri( \wp_unslash( $_GET['redirect_uri'] ) ) : '', // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized via Sanitize::redirect_uri().
@@ -300,20 +315,16 @@ class Server {
 		// Validate client.
 		$client = Client::get( $authorize_params['client_id'] );
 		if ( \is_wp_error( $client ) ) {
-			\wp_die(
-				\esc_html( $client->get_error_message() ),
-				\esc_html__( 'Authorization Error', 'activitypub' ),
-				array( 'response' => 404 )
-			);
+			$error_message = $client->get_error_message(); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
+			include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-error.php';
+			return;
 		}
 
 		// Validate redirect URI.
 		if ( ! $client->is_valid_redirect_uri( $authorize_params['redirect_uri'] ) ) {
-			\wp_die(
-				\esc_html__( 'Invalid redirect URI for this client.', 'activitypub' ),
-				\esc_html__( 'Authorization Error', 'activitypub' ),
-				array( 'response' => 400 )
-			);
+			$error_message = \__( 'Invalid redirect URI for this client.', 'activitypub' ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
+			include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-error.php';
+			return;
 		}
 
 		// Use the canonical client ID (may differ from the raw input for discovered clients).
@@ -340,11 +351,9 @@ class Server {
 	private static function process_authorize_form() {
 		// Verify nonce.
 		if ( ! isset( $_POST['_wpnonce'] ) || ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ) ), 'activitypub_oauth_authorize' ) ) {
-			\wp_die(
-				\esc_html__( 'Security check failed. Please try again.', 'activitypub' ),
-				\esc_html__( 'Authorization Error', 'activitypub' ),
-				array( 'response' => 403 )
-			);
+			$error_message = \__( 'Security check failed. Please try again.', 'activitypub' ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
+			include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-error.php';
+			exit;
 		}
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified above.
@@ -357,27 +366,28 @@ class Server {
 		$approve               = isset( $_POST['approve'] );
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
-		if ( 'S256' !== $code_challenge_method ) {
+		// Only S256 is supported; normalize empty/missing values and reject anything else.
+		if ( empty( $code_challenge_method ) ) {
 			$code_challenge_method = 'S256';
+		} elseif ( 'S256' !== $code_challenge_method ) {
+			$error_message = \__( 'Only S256 is supported as PKCE code challenge method.', 'activitypub' ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
+			include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-error.php';
+			exit;
 		}
 
 		// Re-validate client and redirect URI (form fields could be tampered with).
 		$client = Client::get( $client_id );
 
 		if ( \is_wp_error( $client ) ) {
-			\wp_die(
-				\esc_html( $client->get_error_message() ),
-				\esc_html__( 'Authorization Error', 'activitypub' ),
-				array( 'response' => 404 )
-			);
+			$error_message = $client->get_error_message(); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
+			include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-error.php';
+			exit;
 		}
 
 		if ( ! $client->is_valid_redirect_uri( $redirect_uri ) ) {
-			\wp_die(
-				\esc_html__( 'Invalid redirect URI for this client.', 'activitypub' ),
-				\esc_html__( 'Authorization Error', 'activitypub' ),
-				array( 'response' => 400 )
-			);
+			$error_message = \__( 'Invalid redirect URI for this client.', 'activitypub' ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
+			include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-error.php';
+			exit;
 		}
 
 		// User denied authorization.

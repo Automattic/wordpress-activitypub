@@ -34,7 +34,7 @@ class Authorization_Code {
 	 * @param string $redirect_uri          The redirect URI.
 	 * @param array  $scopes                Requested scopes.
 	 * @param string $code_challenge        PKCE code challenge.
-	 * @param string $code_challenge_method PKCE method (S256 or plain).
+	 * @param string $code_challenge_method PKCE method (only S256 is supported).
 	 * @return string|\WP_Error The authorization code or error.
 	 */
 	public static function create(
@@ -204,7 +204,7 @@ class Authorization_Code {
 	 *
 	 * @param string $code_verifier  The PKCE code verifier.
 	 * @param string $code_challenge The stored code challenge.
-	 * @param string $method         The challenge method (S256 or plain).
+	 * @param string $method         The challenge method (only S256 is supported).
 	 * @return bool True if valid.
 	 */
 	public static function verify_pkce( $code_verifier, $code_challenge, $method = 'S256' ) {
@@ -218,8 +218,9 @@ class Authorization_Code {
 			return false;
 		}
 
-		if ( 'plain' === $method ) {
-			return hash_equals( $code_challenge, $code_verifier );
+		// Only S256 is supported; reject anything else.
+		if ( 'S256' !== $method ) {
+			return false;
 		}
 
 		// S256: BASE64URL(SHA256(code_verifier)) == code_challenge.

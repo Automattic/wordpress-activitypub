@@ -298,9 +298,9 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$activity = new \Activitypub\Activity\Activity();
 		$activity->from_array(
 			array(
-				'id'     => 'https://example.com/activity/1',
+				'id'     => $actor->get_id() . '#activity-1',
 				'type'   => 'Like',
-				'actor'  => 'https://example.com/actor',
+				'actor'  => $actor->get_id(),
 				'object' => $object->get_id(),
 			)
 		);

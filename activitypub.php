@@ -3,7 +3,7 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/Automattic/wordpress-activitypub
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 8.0.1
+ * Version: 8.0.2
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
@@ -17,7 +17,7 @@
 
 namespace Activitypub;
 
-\define( 'ACTIVITYPUB_PLUGIN_VERSION', '8.0.1' );
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '8.0.2' );
 
 // Plugin related constants.
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -53,6 +53,7 @@ function rest_init() {
 	( new Rest\Actors_Controller() )->register_routes();
 	( new Rest\Actors_Inbox_Controller() )->register_routes();
 	( new Rest\Admin\Actions_Controller() )->register_routes();
+	( new Rest\Admin\Statistics_Controller() )->register_routes();
 	( new Rest\Application_Controller() )->register_routes();
 	( new Rest\Collections_Controller() )->register_routes();
 	( new Rest\Comments_Controller() )->register_routes();
@@ -127,14 +128,6 @@ function plugin_init() {
 			require_once $loader_file;
 		}
 	}
-
-	if ( \defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-		$debug_file = __DIR__ . '/includes/debug.php';
-		if ( \file_exists( $debug_file ) && \is_readable( $debug_file ) ) {
-			require_once $debug_file;
-			Debug::init();
-		}
-	}
 }
 \add_action( 'plugins_loaded', __NAMESPACE__ . '\plugin_init' );
 
@@ -154,6 +147,7 @@ function plugin_admin_init() {
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Health_Check', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Settings', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Settings_Fields', 'init' ) );
+	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Dashboard', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\User_Settings_Fields', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Welcome_Fields', 'init' ) );
 

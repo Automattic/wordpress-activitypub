@@ -273,6 +273,7 @@ class Test_Post extends \WP_UnitTestCase {
 			array(
 				'post_author'  => 1,
 				'post_content' => 'test content visibility',
+				'post_status'  => 'publish',
 			)
 		);
 
@@ -290,7 +291,8 @@ class Test_Post extends \WP_UnitTestCase {
 
 		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
 
-		$this->assertTrue( \Activitypub\is_post_disabled( $post_id ) );
+		// Post was federated on insert, so is_post_disabled returns false
+		// to allow Delete activity. But visibility settings still apply.
 		$object = Post::transform( get_post( $post_id ) )->to_object();
 		$this->assertEmpty( $object->get_to() );
 		$this->assertEmpty( $object->get_cc() );
@@ -896,8 +898,8 @@ class Test_Post extends \WP_UnitTestCase {
 		$content = $object->get_content();
 
 		// Assert that the reply block was not transformed into a mention link.
-		// Note: clean_html() strips class/aria-label/data-* from <div> but preserves class/title on <a>.
-		$this->assertStringContainsString( '<div><p><a title="This post is a response to the referenced content." href="https://example.com/posts/123" class="u-in-reply-to" target="_blank">&#8620;example.com/posts/123</a></p></div>', $content );
+		// Note: clean_html() strips target and non-allowed attributes per FEP-b2b8.
+		$this->assertStringContainsString( '<div><p><a title="This post is a response to the referenced content." href="https://example.com/posts/123" class="u-in-reply-to">&#8620;example.com/posts/123</a></p></div>', $content );
 	}
 
 	/**
@@ -956,8 +958,8 @@ class Test_Post extends \WP_UnitTestCase {
 		$this->assertStringContainsString( '<p><a rel="mention ugc" href="https://example.com/posts/123" title="@author1@example.com">@author1</a></p>', $content );
 
 		// Assert that the second reply block was NOT transformed into a mention link (should remain as regular reply block).
-		// Note: clean_html() strips class/aria-label/data-* from <div> but preserves class/title on <a>.
-		$this->assertStringContainsString( '<div><p><a title="This post is a response to the referenced content." href="https://other.site/posts/456" class="u-in-reply-to" target="_blank">&#8620;other.site/posts/456</a></p></div>', $content );
+		// Note: clean_html() strips target and non-allowed attributes per FEP-b2b8.
+		$this->assertStringContainsString( '<div><p><a title="This post is a response to the referenced content." href="https://other.site/posts/456" class="u-in-reply-to">&#8620;other.site/posts/456</a></p></div>', $content );
 
 		// Clean up.
 		remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );

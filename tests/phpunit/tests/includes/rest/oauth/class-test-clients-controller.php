@@ -41,6 +41,10 @@ class Test_Clients_Controller extends \WP_UnitTestCase {
 		global $wp_rest_server;
 		$wp_rest_server = null;
 
+		// Clean up rate-limit transient to avoid cross-test pollution.
+		$ip = \Activitypub\get_client_ip();
+		\delete_transient( 'ap_oauth_reg_' . \md5( $ip ) );
+
 		parent::tear_down();
 	}
 
@@ -124,6 +128,51 @@ class Test_Clients_Controller extends \WP_UnitTestCase {
 		$this->assertEquals( 403, $response->get_status() );
 
 		\remove_filter( 'activitypub_allow_dynamic_client_registration', '__return_false' );
+	}
+
+	/**
+	 * Test that the 11th registration request within a minute is rate-limited.
+	 *
+	 * @covers ::register_client
+	 */
+	public function test_register_client_rate_limited() {
+		$ip            = \Activitypub\get_client_ip();
+		$transient_key = 'ap_oauth_reg_' . \md5( $ip );
+
+		// Simulate 10 previous registrations.
+		\set_transient( $transient_key, 10, MINUTE_IN_SECONDS );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/clients' );
+		$request->set_param( 'client_name', 'Rate Limited App' );
+		$request->set_param( 'redirect_uris', array( 'https://limited.example.com/callback' ) );
+
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 429, $response->get_status() );
+		$this->assertEquals( 'activitypub_rate_limited', $data['code'] );
+	}
+
+	/**
+	 * Test that registrations below the limit succeed and increment the counter.
+	 *
+	 * @covers ::register_client
+	 */
+	public function test_register_client_increments_rate_limit_counter() {
+		$ip            = \Activitypub\get_client_ip();
+		$transient_key = 'ap_oauth_reg_' . \md5( $ip );
+
+		// Ensure clean state.
+		\delete_transient( $transient_key );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/clients' );
+		$request->set_param( 'client_name', 'Counter App' );
+		$request->set_param( 'redirect_uris', array( 'https://counter.example.com/callback' ) );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 201, $response->get_status() );
+		$this->assertEquals( 1, (int) \get_transient( $transient_key ) );
 	}
 
 	/**

@@ -7,34 +7,10 @@
  */
 
 const defaultConfig = require( '@wordpress/scripts/config/webpack.config' );
-const DependencyExtractionWebpackPlugin = require( '@wordpress/dependency-extraction-webpack-plugin' );
 
 const processConfig = ( config ) => {
-	// Remove the default DependencyExtractionWebpackPlugin to add our custom one
-	const filteredPlugins = config.plugins.filter(
-		( plugin ) => plugin.constructor.name !== 'DependencyExtractionWebpackPlugin'
-	);
-
-	// @wordpress/views is in BUNDLED_PACKAGES but WordPress core ships it as wp-views
-	// We need to externalize it to avoid bundling
-	filteredPlugins.push(
-		new DependencyExtractionWebpackPlugin( {
-			requestToExternal( request ) {
-				if ( request === '@wordpress/views' ) {
-					return [ 'wp', 'views' ];
-				}
-			},
-			requestToHandle( request ) {
-				if ( request === '@wordpress/views' ) {
-					return 'wp-views';
-				}
-			},
-		} )
-	);
-
 	return {
 		...config,
-		plugins: filteredPlugins,
 		output: {
 			...config.output,
 			// Place JS chunks in their source directory with content hash for cache busting

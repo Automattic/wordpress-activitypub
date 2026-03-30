@@ -10,6 +10,9 @@ namespace Activitypub\Development;
 \Activitypub\Autoloader::register_path( __NAMESPACE__, __DIR__ );
 
 // Initialize local development tools below.
+if ( \defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+	Debug::init();
+}
 
 /*
  * Enables Jetpack development/debug mode.
@@ -38,6 +41,26 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
  * @see includes/rest/trait-verification.php :: verify_signature()
  */
 \add_filter( 'activitypub_defer_signature_verification', '__return_true', 20 );
+
+/**
+ * Allow unsafe HTTP request URLs (localhost, private IPs, etc.) in local development.
+ *
+ * Disables WordPress SSRF protection (`reject_unsafe_urls`) so that
+ * HTTP requests to localhost, private IPs, etc. are permitted during
+ * local development. Must NOT run in production.
+ *
+ * @param array $parsed_args HTTP request arguments.
+ *
+ * @return array Filtered HTTP request arguments.
+ *
+ * @see wp_http_validate_url()
+ */
+function allow_unsafe_http_request_urls( $parsed_args ) {
+	$parsed_args['reject_unsafe_urls'] = false;
+
+	return $parsed_args;
+}
+\add_filter( 'http_request_args', __NAMESPACE__ . '\allow_unsafe_http_request_urls' );
 
 /*
  * Allow http redirect URIs for OAuth clients in local development.
