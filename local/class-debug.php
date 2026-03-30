@@ -36,6 +36,7 @@ class Debug {
 			\add_action( 'activitypub_rest_inbox_disallowed', array( self::class, 'log_inbox' ), 10, 3 );
 			\add_action( 'activitypub_add_to_outbox_failed', array( self::class, 'log_outbox_error' ), 10, 4 );
 			\add_action( 'activitypub_sent_to_inbox', array( self::class, 'log_sent_to_inbox' ), 10, 2 );
+			\add_action( 'activitypub_move_failed', array( self::class, 'log_move_failed' ), 10, 2 );
 		}
 	}
 
@@ -172,6 +173,17 @@ class Debug {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions
 			\error_log( "[DISPATCHER] Failed Request to: {$inbox} with Result: " . \print_r( $result, true ) );
 		}
+	}
+
+	/**
+	 * Log failed actor moves during domain change.
+	 *
+	 * @param \WP_Error $result   The error that occurred.
+	 * @param string    $actor_id The actor ID that failed to move.
+	 */
+	public static function log_move_failed( $result, $actor_id ) {
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions
+		\error_log( "[MOVE] Error moving actor: {$actor_id} - " . $result->get_error_message() );
 	}
 
 	/**
