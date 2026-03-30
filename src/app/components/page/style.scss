@@ -1,3 +1,5 @@
+@use "@wordpress/base-styles/colors";
+
 .page {
 	display: flex;
 	flex-direction: column;
@@ -10,7 +12,7 @@
 	flex-shrink: 0;
 
 	&.has-border {
-		border-bottom: var(--wpds-border-width-focus, 1px) solid var(--wpds-color-stroke-surface-neutral, #ddd);
+		border-bottom: var(--wpds-border-width-focus, 1px) solid colors.$gray-300;
 	}
 }
 
@@ -31,12 +33,12 @@
 	margin: 0;
 	font-size: var(--wpds-font-size-large, 20px);
 	font-weight: 500;
-	color: var(--wpds-color-fg-primary, #1e1e1e);
+	color: colors.$gray-900;
 }
 
 .sub-title {
 	margin: var(--wpds-spacing-20, 8px) 0 0;
-	color: var(--wpds-color-fg-secondary, #757575);
+	color: colors.$gray-700;
 	font-size: var(--wpds-font-size-small, 13px);
 }
 

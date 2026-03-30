@@ -5,6 +5,7 @@
  * @package Activitypub
  */
 
+use Activitypub\Collection\Outbox;
 use Activitypub\Scheduler;
 use Activitypub\WP_Admin\Health_Check;
 
@@ -503,5 +504,196 @@ class Test_Health_Check extends WP_UnitTestCase {
 		$this->assertEquals( 'hourly', $schedules['activitypub_update_remote_actors'] );
 		$this->assertEquals( 'daily', $schedules['activitypub_cleanup_remote_actors'] );
 		$this->assertEquals( 'weekly', $schedules['activitypub_sync_blocklist_subscriptions'] );
+	}
+
+	/**
+	 * Test that outbox rate test is registered.
+	 */
+	public function test_outbox_rate_test_registered() {
+		$tests  = array();
+		$result = Health_Check::add_tests( $tests );
+
+		$this->assertArrayHasKey( 'activitypub_test_outbox_rate', $result['direct'] );
+
+		$test = $result['direct']['activitypub_test_outbox_rate'];
+		$this->assertArrayHasKey( 'label', $test );
+		$this->assertArrayHasKey( 'test', $test );
+		$this->assertEquals( array( Health_Check::class, 'test_outbox_rate' ), $test['test'] );
+	}
+
+	/**
+	 * Test outbox rate returns good status with no outbox items.
+	 */
+	public function test_outbox_rate_good() {
+		$result = Health_Check::test_outbox_rate();
+
+		$this->assertEquals( 'good', $result['status'] );
+		$this->assertEquals( 'Outbox activity rate is normal', $result['label'] );
+		$this->assertEquals( 'green', $result['badge']['color'] );
+	}
+
+	/**
+	 * Test outbox rate returns recommended status with moderate activity.
+	 */
+	public function test_outbox_rate_recommended() {
+		$this->delete_all_outbox_items();
+
+		// Create 15 outbox items (above 10, below 50).
+		$this->create_outbox_items( 15, 'https://example.com/post/1' );
+
+		$result = Health_Check::test_outbox_rate();
+
+		$this->assertEquals( 'recommended', $result['status'] );
+		$this->assertEquals( 'Unusual outbox activity detected', $result['label'] );
+		$this->assertEquals( 'orange', $result['badge']['color'] );
+		$this->assertStringContainsString( '15 outbox items', $result['description'] );
+	}
+
+	/**
+	 * Test outbox rate returns critical status with excessive activity.
+	 */
+	public function test_outbox_rate_critical() {
+		$this->delete_all_outbox_items();
+
+		// Create 55 outbox items (above 50).
+		$this->create_outbox_items( 55, 'https://example.com/post/2' );
+
+		$result = Health_Check::test_outbox_rate();
+
+		$this->assertEquals( 'critical', $result['status'] );
+		$this->assertEquals( 'Excessive outbox activity detected', $result['label'] );
+		$this->assertEquals( 'red', $result['badge']['color'] );
+		$this->assertStringContainsString( '55 outbox items', $result['description'] );
+		$this->assertStringContainsString( 'excessive federation activity', $result['description'] );
+	}
+
+	/**
+	 * Test get_outbox_rate_count returns correct total.
+	 */
+	public function test_outbox_rate_count() {
+		$this->delete_all_outbox_items();
+
+		$this->create_outbox_items( 5, 'https://example.com/post/a' );
+		$this->create_outbox_items( 3, 'https://example.com/post/b' );
+		$this->create_outbox_items( 7, 'https://example.com/post/c' );
+
+		$this->assertEquals( 15, Health_Check::get_outbox_rate_count() );
+	}
+
+	/**
+	 * Test get_outbox_count returns correct counts.
+	 */
+	public function test_get_outbox_count() {
+		$this->create_outbox_items( 3, 'https://example.com/post/count-test' );
+
+		// Outbox items are created with 'pending' status.
+		$pending_count = Health_Check::get_outbox_count( 'pending' );
+		$this->assertGreaterThanOrEqual( 3, $pending_count );
+
+		$total_count = Health_Check::get_outbox_count();
+		$this->assertGreaterThanOrEqual( 3, $total_count );
+	}
+
+	/**
+	 * Test debug_information includes outbox stats.
+	 */
+	public function test_debug_information_includes_outbox_stats() {
+		$info   = array();
+		$result = Health_Check::debug_information( $info );
+
+		$fields = $result['activitypub']['fields'];
+
+		$this->assertArrayHasKey( 'outbox_total_count', $fields );
+		$this->assertArrayHasKey( 'outbox_pending_count', $fields );
+		$this->assertArrayHasKey( 'outbox_last_hour_count', $fields );
+
+		$this->assertEquals( 'Outbox Total Items', $fields['outbox_total_count']['label'] );
+		$this->assertEquals( 'Outbox Pending Items', $fields['outbox_pending_count']['label'] );
+		$this->assertEquals( 'Outbox Items (Last Hour)', $fields['outbox_last_hour_count']['label'] );
+	}
+
+	/**
+	 * Test outbox rate recommended status with multiple objects.
+	 */
+	public function test_outbox_rate_recommended_multiple_objects() {
+		$this->delete_all_outbox_items();
+
+		$this->create_outbox_items( 4, 'https://example.com/post/1' );
+		$this->create_outbox_items( 3, 'https://example.com/post/2' );
+		$this->create_outbox_items( 2, 'https://example.com/post/3' );
+		$this->create_outbox_items( 3, 'https://example.com/post/4' );
+
+		$result = Health_Check::test_outbox_rate();
+
+		// 12 items total, should be "recommended".
+		$this->assertEquals( 'recommended', $result['status'] );
+		$this->assertStringContainsString( '12 outbox items', $result['description'] );
+	}
+
+	/**
+	 * Test that outbox rate only counts items from the last hour.
+	 */
+	public function test_outbox_rate_excludes_old_items() {
+		$this->delete_all_outbox_items();
+
+		// Create 15 recent items (within the last hour).
+		$this->create_outbox_items( 15, 'https://example.com/post/recent' );
+
+		// Create 20 old items (2 hours ago — outside the window).
+		$this->create_outbox_items( 20, 'https://example.com/post/old', '2 hours ago' );
+
+		// Only the 15 recent items should be counted.
+		$this->assertEquals( 15, Health_Check::get_outbox_rate_count() );
+	}
+
+	/**
+	 * Delete all existing outbox items to ensure a clean test state.
+	 */
+	private function delete_all_outbox_items() {
+		$posts = get_posts(
+			array(
+				'post_type'      => Outbox::POST_TYPE,
+				'post_status'    => 'any',
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+			)
+		);
+
+		foreach ( $posts as $post_id ) {
+			wp_delete_post( $post_id, true );
+		}
+	}
+
+	/**
+	 * Helper to create outbox items for testing.
+	 *
+	 * @param int    $count     Number of items to create.
+	 * @param string $object_id The object ID meta value.
+	 * @param string $post_date Optional. The post date. Default current time.
+	 *
+	 * @return int[] Array of created post IDs.
+	 */
+	private function create_outbox_items( $count, $object_id, $post_date = '' ) {
+		$post_ids  = array();
+		$base_time = $post_date ? \strtotime( $post_date ) : \time();
+
+		for ( $i = 0; $i < $count; $i++ ) {
+			$post_id = $this->factory()->post->create(
+				array(
+					'post_type'   => Outbox::POST_TYPE,
+					'post_status' => 'pending',
+					'post_title'  => '[Update] Test Post',
+					'post_date'   => \gmdate( 'Y-m-d H:i:s', $base_time - $i ),
+					'meta_input'  => array(
+						'_activitypub_object_id'     => $object_id,
+						'_activitypub_activity_type' => 'Update',
+					),
+				)
+			);
+
+			$post_ids[] = $post_id;
+		}
+
+		return $post_ids;
 	}
 }

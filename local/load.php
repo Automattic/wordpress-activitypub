@@ -32,7 +32,45 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	);
 }
 
-// Defer signature verification on local development to better test API requests.
+/*
+ * Defer signature verification on local development to better test API requests.
+ *
+ * @see includes/rest/trait-verification.php :: verify_signature()
+ */
 \add_filter( 'activitypub_defer_signature_verification', '__return_true', 20 );
 
+/**
+ * Allow unsafe HTTP request URLs (localhost, private IPs, etc.) in local development.
+ *
+ * Disables WordPress SSRF protection (`reject_unsafe_urls`) so that
+ * HTTP requests to localhost, private IPs, etc. are permitted during
+ * local development. Must NOT run in production.
+ *
+ * @param array $parsed_args HTTP request arguments.
+ *
+ * @return array Filtered HTTP request arguments.
+ *
+ * @see wp_http_validate_url()
+ */
+function allow_unsafe_http_request_urls( $parsed_args ) {
+	$parsed_args['reject_unsafe_urls'] = false;
+
+	return $parsed_args;
+}
+\add_filter( 'http_request_args', __NAMESPACE__ . '\allow_unsafe_http_request_urls' );
+
+/*
+ * Allow http redirect URIs for OAuth clients in local development.
+ * In production, only https and custom URI schemes are accepted.
+ *
+ * @see includes/oauth/class-client.php :: validate_uri_format()
+ */
+\add_filter( 'activitypub_oauth_allow_http_redirect_uri', '__return_true' );
+
+/*
+ * Enable incoming post creation from federated sources without requiring
+ * the setting to be toggled in Settings → ActivityPub → General.
+ *
+ * @see includes/class-activitypub.php :: init()
+ */
 \add_filter( 'option_activitypub_create_posts', '__return_true' );

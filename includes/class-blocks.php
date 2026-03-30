@@ -13,6 +13,53 @@ use Activitypub\Collection\Actors;
  * Block class.
  */
 class Blocks {
+
+	/**
+	 * HTML tags to skip during block conversion.
+	 *
+	 * @var array<string>
+	 */
+	const SKIP_TAGS = array( 'BR', 'CITE', 'SOURCE' );
+
+	/**
+	 * HTML void elements that have no closing tag.
+	 *
+	 * @var array<string>
+	 */
+	const VOID_TAGS = array( 'AREA', 'BASE', 'BR', 'COL', 'EMBED', 'HR', 'IMG', 'INPUT', 'LINK', 'META', 'SOURCE', 'TRACK', 'WBR' );
+
+	/**
+	 * Map of HTML tag names to WordPress block types.
+	 *
+	 * @var array<string, string>
+	 */
+	const BLOCK_MAP = array(
+		'UL'         => 'list',
+		'OL'         => 'list',
+		'IMG'        => 'image',
+		'BLOCKQUOTE' => 'quote',
+		'H1'         => 'heading',
+		'H2'         => 'heading',
+		'H3'         => 'heading',
+		'H4'         => 'heading',
+		'H5'         => 'heading',
+		'H6'         => 'heading',
+		'P'          => 'paragraph',
+		'A'          => 'paragraph',
+		'ABBR'       => 'paragraph',
+		'B'          => 'paragraph',
+		'CODE'       => 'paragraph',
+		'EM'         => 'paragraph',
+		'I'          => 'paragraph',
+		'STRONG'     => 'paragraph',
+		'SUB'        => 'paragraph',
+		'SUP'        => 'paragraph',
+		'SPAN'       => 'paragraph',
+		'U'          => 'paragraph',
+		'FIGURE'     => 'image',
+		'HR'         => 'separator',
+	);
+
 	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
@@ -21,6 +68,8 @@ class Blocks {
 		self::register_blocks();
 		self::register_patterns();
 		self::register_templates();
+
+		\add_action( 'pre_get_posts', array( self::class, 'filter_query_loop_vars' ) );
 
 		\add_action( 'load-post-new.php', array( self::class, 'handle_in_reply_to_get_param' ) );
 		// Add editor plugin.
@@ -50,6 +99,8 @@ class Blocks {
 			),
 			'showAvatars'        => (bool) \get_option( 'show_avatars' ),
 			'defaultQuotePolicy' => \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE ),
+			'objectType'         => \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ),
+			'noteLength'         => ACTIVITYPUB_NOTE_LENGTH,
 		);
 		wp_localize_script( 'wp-editor', '_activityPubOptions', $data );
 
@@ -63,6 +114,10 @@ class Blocks {
 		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/editor-plugin/plugin.asset.php';
 		$plugin_url = plugins_url( 'build/editor-plugin/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
 		wp_enqueue_script( 'activitypub-block-editor', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
+
+		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/pre-publish-panel/plugin.asset.php';
+		$plugin_url = plugins_url( 'build/pre-publish-panel/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
+		wp_enqueue_script( 'activitypub-pre-publish-panel', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
 	}
 
 	/**
@@ -87,6 +142,7 @@ class Blocks {
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/extra-fields' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/follow-me' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/followers' );
+		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/posts-and-replies' );
 
 		// Only register the Following block if the Following feature is enabled.
 		if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
@@ -165,7 +221,13 @@ class Blocks {
 		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/author-header.php';
 		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/author-profile.php';
 		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/follow-page.php';
+		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/profile-page.php';
 		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/social-sidebar.php';
+
+		// Only register the Following page pattern if the Following feature is enabled.
+		if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
+			require ACTIVITYPUB_PLUGIN_DIR . '/patterns/following-page.php';
+		}
 	}
 
 	/**
@@ -190,6 +252,7 @@ class Blocks {
 	<!-- wp:spacer {"height":"32px"} -->
 	<div style="height:32px" aria-hidden="true" class="wp-block-spacer"></div>
 	<!-- /wp:spacer -->
+	<!-- wp:activitypub/posts-and-replies /-->
 	<!-- wp:query {"queryId":0,"query":{"perPage":10,"pages":0,"offset":0,"postType":"post","order":"desc","orderBy":"date","author":"","search":"","exclude":[],"sticky":"","inherit":true}} -->
 	<div class="wp-block-query">
 		<!-- wp:post-template -->
@@ -644,14 +707,25 @@ class Blocks {
 	/**
 	 * Renders a modal component that can be used by different blocks.
 	 *
-	 * @param array $args Arguments for the modal.
+	 * @param array $args {
+	 *     Arguments for the modal.
+	 *
+	 *     @type string $content       The modal content HTML.
+	 *     @type string $id            Optional ID prefix for the modal elements.
+	 *     @type bool   $is_compact    Whether the modal is compact (popover-style). Default false.
+	 *     @type string $title         Static title text for the modal header.
+	 *     @type string $title_binding Optional Interactivity API binding for a dynamic title
+	 *                                 (e.g. 'context.modal.title'). When set, uses data-wp-text
+	 *                                 on the title element and enables dynamic compact toggling.
+	 * }
 	 */
 	public static function render_modal( $args = array() ) {
 		$defaults = array(
-			'content'    => '',
-			'id'         => '',
-			'is_compact' => false,
-			'title'      => '',
+			'content'       => '',
+			'id'            => '',
+			'is_compact'    => false,
+			'title'         => '',
+			'title_binding' => '',
 		);
 
 		$args = \wp_parse_args( $args, $defaults );
@@ -661,22 +735,28 @@ class Blocks {
 			class="activitypub-modal__overlay<?php echo \esc_attr( $args['is_compact'] ? ' compact' : '' ); ?>"
 			data-wp-bind--hidden="!context.modal.isOpen"
 			data-wp-watch="callbacks.handleModalEffects"
+			<?php if ( ! empty( $args['title_binding'] ) ) : ?>
+				data-wp-class--compact="context.modal.isCompact"
+			<?php endif; ?>
 			role="dialog"
 			aria-modal="true"
 			hidden
 		>
 			<div class="activitypub-modal__frame">
-				<?php if ( ! $args['is_compact'] || ! empty( $args['title'] ) ) : ?>
+				<?php if ( ! $args['is_compact'] || ! empty( $args['title'] ) || ! empty( $args['title_binding'] ) ) : ?>
 					<div class="activitypub-modal__header">
 						<h2
 							class="activitypub-modal__title"
 							<?php if ( ! empty( $args['id'] ) ) : ?>
 								id="<?php echo \esc_attr( $args['id'] . '-title' ); ?>"
 							<?php endif; ?>
+							<?php if ( ! empty( $args['title_binding'] ) ) : ?>
+								data-wp-text="<?php echo \esc_attr( $args['title_binding'] ); ?>"
+							<?php endif; ?>
 						><?php echo \esc_html( $args['title'] ); ?></h2>
 						<button
 							type="button"
-							class="activitypub-modal__close wp-element-button wp-block-button__link"
+							class="activitypub-modal__close wp-element-button"
 							data-wp-on--click="actions.closeModal"
 							aria-label="<?php echo \esc_attr__( 'Close dialog', 'activitypub' ); ?>"
 						>
@@ -691,6 +771,28 @@ class Blocks {
 				</div>
 			</div>
 		</div>
+		<?php
+	}
+
+	/**
+	 * Renders a help section explaining the Fediverse inside modal dialogs.
+	 *
+	 * Outputs a collapsible `<details>` element that explains decentralized
+	 * interactions to users unfamiliar with the Fediverse.
+	 *
+	 * @since 8.0.0
+	 */
+	public static function render_modal_help() {
+		?>
+		<details class="activitypub-dialog__help">
+			<summary><?php \esc_html_e( 'Why do I need to enter my profile?', 'activitypub' ); ?></summary>
+			<p>
+				<?php \esc_html_e( 'This site is part of the ⁂ open social web, a network of interconnected social platforms (like Mastodon, Pixelfed, Friendica, and others). Unlike centralized social media, your account lives on a platform of your choice, and you can interact with people across different platforms.', 'activitypub' ); ?>
+			</p>
+			<p>
+				<?php \esc_html_e( 'By entering your profile, we can send you to your account where you can complete this action.', 'activitypub' ); ?>
+			</p>
+		</details>
 		<?php
 	}
 
@@ -948,5 +1050,164 @@ class Blocks {
 			return $block_content;
 		}
 		return '<p><a href="' . esc_url( $block['attrs']['url'] ) . '">' . $block['attrs']['url'] . '</a></p>';
+	}
+
+	/**
+	 * Convert HTML content to blocks.
+	 *
+	 * Tokenizes the content with wp_html_split(), tracks nesting depth,
+	 * and wraps each top-level element in block comment delimiters.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $content The HTML content.
+	 *
+	 * @return string The content converted to blocks.
+	 */
+	public static function convert_from_html( $content ) {
+		if ( empty( $content ) ) {
+			return '';
+		}
+
+		$tokens       = \wp_html_split( $content );
+		$_content     = '';
+		$depth        = 0;
+		$current_tag  = '';
+		$current_html = '';
+
+		foreach ( $tokens as $token ) {
+			if ( '' === $token ) {
+				continue;
+			}
+
+			// Text content — accumulate only inside a top-level element.
+			if ( '<' !== $token[0] ) {
+				if ( $depth > 0 ) {
+					$current_html .= $token;
+				}
+				continue;
+			}
+
+			// Closing tag.
+			if ( '/' === $token[1] ) {
+				$current_html .= $token;
+				--$depth;
+
+				if ( 0 === $depth && '' !== $current_tag ) {
+					$_content    .= self::to_block( $current_tag, $current_html );
+					$current_tag  = '';
+					$current_html = '';
+				}
+				continue;
+			}
+
+			// Extract the tag name from the opening tag.
+			if ( ! \preg_match( '/^<([a-zA-Z][a-zA-Z0-9]*)/', $token, $m ) ) {
+				if ( $depth > 0 ) {
+					$current_html .= $token;
+				}
+				continue;
+			}
+
+			$tag = \strtoupper( $m[1] );
+
+			// Start of a new top-level element.
+			if ( 0 === $depth ) {
+				$current_tag  = $tag;
+				$current_html = $token;
+			} else {
+				$current_html .= $token;
+			}
+
+			// Void elements don't increase depth — flush immediately at top level.
+			if ( \in_array( $tag, self::VOID_TAGS, true ) ) {
+				if ( 0 === $depth && '' !== $current_tag ) {
+					$_content    .= self::to_block( $current_tag, $current_html );
+					$current_tag  = '';
+					$current_html = '';
+				}
+			} else {
+				++$depth;
+			}
+		}
+
+		return $_content;
+	}
+
+	/**
+	 * Wrap an HTML element in block comment delimiters.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $tag  The uppercase tag name.
+	 * @param string $html The element HTML.
+	 *
+	 * @return string The block-wrapped HTML, or empty string for skipped tags.
+	 */
+	private static function to_block( $tag, $html ) {
+		if ( \in_array( $tag, self::SKIP_TAGS, true ) ) {
+			return '';
+		}
+
+		$block_type  = self::BLOCK_MAP[ $tag ] ?? 'html';
+		$block_attrs = array();
+
+		if ( 'OL' === $tag ) {
+			$block_attrs['ordered'] = true;
+		}
+
+		return \get_comment_delimited_block_content( $block_type, $block_attrs, \trim( $html ) );
+	}
+
+	/**
+	 * Filter the main query to exclude replies.
+	 *
+	 * When the "Posts" tab is active (default), adds a WHERE clause to
+	 * exclude posts containing the `activitypub/reply` block. This
+	 * filters the main query so that Query Loop blocks with
+	 * `inherit: true` also pick up the filter.
+	 *
+	 * @since unreleased
+	 *
+	 * @param WP_Query $query The WP_Query instance.
+	 */
+	public static function filter_query_loop_vars( $query ) {
+		if ( ! $query->is_main_query() || $query->is_singular() ) {
+			return;
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$active_tab = isset( $_GET['filter'] ) ? \sanitize_key( $_GET['filter'] ) : 'posts';
+
+		// Only filter when the "Posts" tab is active (default).
+		if ( 'posts-and-replies' === $active_tab ) {
+			return;
+		}
+
+		\add_filter( 'posts_where', array( self::class, 'exclude_replies_where' ) );
+	}
+
+	/**
+	 * Exclude posts containing the activitypub/reply block.
+	 *
+	 * Removes itself after the first execution to avoid
+	 * affecting secondary queries on the same page.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $where The WHERE clause.
+	 * @return string Modified WHERE clause.
+	 */
+	public static function exclude_replies_where( $where ) {
+		\remove_filter( 'posts_where', array( self::class, 'exclude_replies_where' ) );
+
+		global $wpdb;
+
+		$where .= $wpdb->prepare(
+			" AND {$wpdb->posts}.post_content NOT LIKE %s",
+			'%<!-- wp:activitypub/reply%'
+		);
+
+		return $where;
 	}
 }

@@ -633,26 +633,100 @@ class Remote_Actors {
 	 * @return resource|\WP_Error The public key resource or WP_Error.
 	 */
 	public static function get_public_key( $key_id ) {
+		$no_profile_error = new \WP_Error( 'activitypub_no_remote_profile_found', 'No Profile found or Profile not accessible', array( 'status' => 401 ) );
+		$no_key_error     = new \WP_Error( 'activitypub_no_remote_key_found', 'No Public-Key found', array( 'status' => 401 ) );
+
 		$actor = self::get_by_uri( \strip_fragment_from_url( $key_id ) );
 
-		if ( \is_wp_error( $actor ) ) {
-			$actor = Http::get_remote_object( $key_id );
-		} else {
+		if ( ! \is_wp_error( $actor ) ) {
 			$actor = \json_decode( $actor->post_content, true );
+		} else {
+			$data = Http::get_remote_object( $key_id );
+
+			if ( \is_wp_error( $data ) ) {
+				return $no_profile_error;
+			}
+
+			// If we fetched a standalone key object, follow the owner to get the actor.
+			if ( isset( $data['owner'] ) && ! isset( $data['publicKey'] ) ) {
+				// Verify the owner is on the same host as the key to prevent cross-origin spoofing.
+				$key_host   = \wp_parse_url( $key_id, \PHP_URL_HOST );
+				$owner_host = \wp_parse_url( $data['owner'], \PHP_URL_HOST );
+
+				if ( ! $key_host || ! $owner_host || $key_host !== $owner_host ) {
+					return $no_key_error;
+				}
+
+				$data = Http::get_remote_object( $data['owner'] );
+			}
+
+			$actor = $data;
 		}
 
 		if ( \is_wp_error( $actor ) ) {
-			return new \WP_Error( 'activitypub_no_remote_profile_found', 'No Profile found or Profile not accessible', array( 'status' => 401 ) );
+			return $no_profile_error;
 		}
 
-		if ( isset( $actor['publicKey']['publicKeyPem'] ) ) {
-			$key_resource = \openssl_pkey_get_public( \rtrim( $actor['publicKey']['publicKeyPem'] ) );
-			if ( $key_resource ) {
-				return $key_resource;
-			}
+		$public_key_pem = self::extract_public_key_pem( $actor );
+
+		if ( ! $public_key_pem ) {
+			return $no_key_error;
 		}
 
-		return new \WP_Error( 'activitypub_no_remote_key_found', 'No Public-Key found', array( 'status' => 401 ) );
+		$key_resource = \openssl_pkey_get_public( \rtrim( $public_key_pem ) );
+
+		if ( ! $key_resource ) {
+			return $no_key_error;
+		}
+
+		return $key_resource;
+	}
+
+	/**
+	 * Extract public key PEM from a fetched object.
+	 *
+	 * Supports two formats:
+	 * 1. Actor objects with a nested `publicKey` property (e.g. Mastodon-style `#main-key` fragments).
+	 * 2. Actor objects with a `publicKey` URL reference (e.g. `tags.pub`).
+	 *    The URL is dereferenced and the key's owner is verified against the actor.
+	 *
+	 * @since 8.0.0
+	 *
+	 * @param array $data The fetched actor JSON data.
+	 *
+	 * @return string|false The public key PEM string, or false if not found.
+	 */
+	private static function extract_public_key_pem( $data ) {
+		// Standard actor with nested publicKey.
+		if ( isset( $data['publicKey']['publicKeyPem'] ) ) {
+			return $data['publicKey']['publicKeyPem'];
+		}
+
+		// Actor with publicKey as a URL reference (e.g. tags.pub).
+		if ( ! isset( $data['publicKey'] ) || ! \is_string( $data['publicKey'] ) ) {
+			return false;
+		}
+
+		$actor_host   = isset( $data['id'] ) ? \wp_parse_url( $data['id'], \PHP_URL_HOST ) : null;
+		$key_url_host = \wp_parse_url( $data['publicKey'], \PHP_URL_HOST );
+
+		// Verify the key URL is on the same host as the actor.
+		if ( ! $actor_host || ! $key_url_host || $actor_host !== $key_url_host ) {
+			return false;
+		}
+
+		$key_data = Http::get_remote_object( $data['publicKey'] );
+
+		if ( \is_wp_error( $key_data ) || ! isset( $key_data['publicKeyPem'] ) ) {
+			return false;
+		}
+
+		// Verify the key's owner matches the actor.
+		if ( ! isset( $key_data['owner'] ) || $key_data['owner'] !== $data['id'] ) {
+			return false;
+		}
+
+		return $key_data['publicKeyPem'];
 	}
 
 	/**

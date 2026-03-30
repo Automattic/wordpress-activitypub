@@ -359,10 +359,10 @@ class Post extends Base {
 		}
 
 		/*
-		 * Remove attachments from the Fediverse if a post was federated and then set back to draft.
+		 * Remove attachments from the Fediverse if a post was federated and then unpublished.
 		 * Except in preview mode, where we want to show attachments.
 		 */
-		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
+		if ( ! $this->is_preview() && 'publish' !== \get_post_status( $this->item ) ) {
 			$this->attachment = array();
 
 			return $this->attachment;
@@ -543,8 +543,8 @@ class Post extends Base {
 			return $this->summary;
 		}
 
-		// Remove Teaser from drafts.
-		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
+		// Remove Teaser from unpublished posts.
+		if ( ! $this->is_preview() && 'publish' !== \get_post_status( $this->item ) ) {
 			$this->summary = \__( '(This post is being modified)', 'activitypub' );
 
 			return $this->summary;
@@ -593,8 +593,8 @@ class Post extends Base {
 			return $this->content;
 		}
 
-		// Remove Content from drafts.
-		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
+		// Remove Content from unpublished posts.
+		if ( ! $this->is_preview() && 'publish' !== \get_post_status( $this->item ) ) {
 			$this->content = \__( '(This post is being modified)', 'activitypub' );
 
 			return $this->content;
@@ -923,11 +923,10 @@ class Post extends Base {
 				case 'core/image':
 				case 'core/cover':
 					if ( ! empty( $block['attrs']['id'] ) ) {
-						$alt   = '';
-						$check = preg_match( '/<img.*?alt\s*=\s*([\"\'])(.*?)\1.*>/i', $block['innerHTML'], $match );
-
-						if ( $check ) {
-							$alt = $match[2];
+						$alt       = '';
+						$processor = new \WP_HTML_Tag_Processor( $block['innerHTML'] );
+						if ( $processor->next_tag( array( 'tag_name' => 'img' ) ) ) {
+							$alt = $processor->get_attribute( 'alt' ) ?? '';
 						}
 
 						$found = false;
@@ -955,7 +954,18 @@ class Post extends Base {
 				case 'core/video':
 				case 'videopress/video':
 					if ( ! empty( $block['attrs']['id'] ) ) {
-						$media['video'][] = array( 'id' => $block['attrs']['id'] );
+						$video = array( 'id' => $block['attrs']['id'] );
+
+						// The poster is stored as an HTML attribute on the <video> tag, not in block attrs.
+						$processor = new \WP_HTML_Tag_Processor( $block['innerHTML'] );
+						if ( $processor->next_tag( array( 'tag_name' => 'video' ) ) ) {
+							$poster = $processor->get_attribute( 'poster' );
+							if ( ! empty( $poster ) ) {
+								$video['icon'] = \esc_url_raw( $poster );
+							}
+						}
+
+						$media['video'][] = $video;
 					}
 					break;
 				case 'jetpack/slideshow':

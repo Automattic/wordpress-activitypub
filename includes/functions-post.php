@@ -9,7 +9,7 @@
 
 namespace Activitypub;
 
-use Activitypub\Collection\Posts;
+use Activitypub\Collection\Remote_Posts;
 
 /**
  * Check if a post is disabled for ActivityPub.
@@ -29,10 +29,23 @@ function is_post_disabled( $post ) {
 	$visibility          = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
 	$is_local_or_private = in_array( $visibility, array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ), true );
 
+	// 'inherit' is allowed only for attachments whose parent post is also published (or unattached).
+	$is_attachment_public = 'inherit' === $post->post_status &&
+		'attachment' === $post->post_type &&
+		( ! $post->post_parent || 'publish' === \get_post_status( $post->post_parent ) );
+
+	// Drafts and pending posts are allowed during preview requests so the Fediverse Preview works.
+	$is_preview = in_array( $post->post_status, array( 'draft', 'pending' ), true ) &&
+		\get_query_var( 'preview' ) &&
+		\current_user_can( 'edit_post', $post->ID );
+
+	// Only 'publish' is public, with the above exceptions.
+	$is_public_status = 'publish' === $post->post_status || $is_attachment_public || $is_preview;
+
 	if (
 		$is_local_or_private ||
 		! \post_type_supports( $post->post_type, 'activitypub' ) ||
-		'private' === $post->post_status ||
+		! $is_public_status ||
 		! empty( $post->post_password )
 	) {
 		$disabled = true;
@@ -40,14 +53,17 @@ function is_post_disabled( $post ) {
 
 	/*
 	 * Check for posts that need special handling.
-	 * Federated posts changed to local/private need Delete activity.
+	 * Federated posts changed to local/private or non-public status need Delete activity.
 	 * Deleted posts restored to public need Create activity.
 	 */
 	$object_state = get_wp_object_state( $post );
 
 	if (
 		ACTIVITYPUB_OBJECT_STATE_DELETED === $object_state ||
-		( $is_local_or_private && ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_state )
+		(
+			ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_state &&
+			( $is_local_or_private || ! $is_public_status )
+		)
 	) {
 		$disabled = false;
 	}
@@ -76,7 +92,7 @@ function is_ap_post( $post ) {
 	}
 
 	// Check for ap_post post type.
-	return Posts::POST_TYPE === $post->post_type;
+	return Remote_Posts::POST_TYPE === $post->post_type;
 }
 
 /**

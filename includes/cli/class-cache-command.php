@@ -9,6 +9,7 @@ namespace Activitypub\Cli;
 
 use Activitypub\Cache\Avatar;
 use Activitypub\Cache\Emoji;
+use Activitypub\Cache\File;
 use Activitypub\Cache\Media;
 
 /**
@@ -200,27 +201,16 @@ class Cache_Command extends \WP_CLI_Command {
 			return 0;
 		}
 
-		global $wp_filesystem;
-		if ( ! $wp_filesystem ) {
-			require_once ABSPATH . 'wp-admin/includes/file.php';
-			\WP_Filesystem();
-		}
-
-		if ( ! $wp_filesystem ) {
-			\WP_CLI::warning( 'Could not initialize filesystem.' );
-			return 0;
-		}
-
 		// Count subdirectories before clearing.
 		$subdirs = \glob( $base_dir . '/*', GLOB_ONLYDIR );
 		$count   = $subdirs ? \count( $subdirs ) : 0;
 
-		// Remove all subdirectories.
+		// Remove all subdirectories using the cache's native delete_directory helper.
 		foreach ( $subdirs as $subdir ) {
-			$wp_filesystem->rmdir( $subdir, true );
+			File::delete_directory( $subdir );
 		}
 
-		// Also clear avatar URL meta for avatar cache.
+		// Clean up legacy avatar URL meta from previous versions.
 		if ( 'avatar' === $type ) {
 			\delete_metadata( 'post', 0, '_activitypub_avatar_url', '', true );
 		}

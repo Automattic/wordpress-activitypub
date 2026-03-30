@@ -2,12 +2,13 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"name": "activitypub/follow-me",
 	"apiVersion": 3,
-	"version": "7.9.1",
+	"version": "8.0.1",
 	"title": "Follow me on the Fediverse",
 	"category": "widgets",
 	"description": "Display your Fediverse profile so that visitors can follow you.",
 	"textdomain": "activitypub",
 	"icon": "groups",
+	"keywords": [ "fediverse", "activitypub", "follow", "mastodon" ],
 	"example": {
 		"attributes": {
 			"className": "is-style-default"

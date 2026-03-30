@@ -9,21 +9,7 @@ namespace Activitypub;
 
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
-use Activitypub\Collection\Posts;
-
-/**
- * Allow localhost URLs if WP_DEBUG is true.
- *
- * @param array $parsed_args An array of HTTP request arguments.
- *
- * @return array Array or string of HTTP request arguments.
- */
-function allow_localhost( $parsed_args ) {
-	$parsed_args['reject_unsafe_urls'] = false;
-
-	return $parsed_args;
-}
-\add_filter( 'http_request_args', '\Activitypub\allow_localhost' );
+use Activitypub\Collection\Remote_Posts;
 
 /**
  * Debug the outbox post type.
@@ -34,7 +20,7 @@ function allow_localhost( $parsed_args ) {
  * @return array The arguments for the post type.
  */
 function debug_post_type( $args, $post_type ) {
-	if ( ! \in_array( $post_type, array( Outbox::POST_TYPE, Inbox::POST_TYPE, Posts::POST_TYPE ), true ) ) {
+	if ( ! \in_array( $post_type, array( Outbox::POST_TYPE, Inbox::POST_TYPE, Remote_Posts::POST_TYPE ), true ) ) {
 		return $args;
 	}
 
@@ -44,7 +30,7 @@ function debug_post_type( $args, $post_type ) {
 		$args['menu_icon'] = 'dashicons-upload';
 	} elseif ( Inbox::POST_TYPE === $post_type ) {
 		$args['menu_icon'] = 'dashicons-download';
-	} elseif ( Posts::POST_TYPE === $post_type ) {
+	} elseif ( Remote_Posts::POST_TYPE === $post_type ) {
 		$args['menu_icon'] = 'dashicons-media-document';
 	}
 

@@ -209,9 +209,10 @@ class Http_Signature_Draft implements Http_Signature {
 		}
 
 		list( $alg, $digest ) = \explode( '=', $headers['digest'][0], 2 );
+		$alg                  = \strtolower( $alg );
 		$map                  = array(
-			'SHA-256' => 'sha256',
-			'SHA-512' => 'sha512',
+			'sha-256' => 'sha256',
+			'sha-512' => 'sha512',
 		);
 
 		if ( ! isset( $map[ $alg ] ) ) {
@@ -314,7 +315,8 @@ class Http_Signature_Draft implements Http_Signature {
 			}
 			if ( 'date' === $header ) {
 				if ( empty( $headers['date'][0] ) ) {
-					continue;
+					// Date is in the signed headers list but missing from the request.
+					return false;
 				}
 
 				// Allow a bit of leeway for misconfigured clocks.

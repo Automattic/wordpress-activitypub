@@ -293,6 +293,36 @@ class Test_Emoji extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test wrap_in_content discards invalid updated timestamps.
+	 *
+	 * @covers ::wrap_in_content
+	 */
+	public function test_wrap_discards_invalid_updated_timestamp() {
+		$text = 'Hello :wave:';
+
+		$activity = array(
+			'tag' => array(
+				array(
+					'type'    => 'Emoji',
+					'name'    => ':wave:',
+					'icon'    => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/emoji/wave.png',
+					),
+					'updated' => 'not-a-date-' . str_repeat( 'x', 500 ),
+				),
+			),
+		);
+
+		$result = Emoji::wrap_in_content( $text, $activity );
+
+		// Invalid timestamp should be discarded.
+		$this->assertStringNotContainsString( 'updated', $result );
+		// Emoji should still be wrapped.
+		$this->assertStringContainsString( '<!-- wp:activitypub/emoji', $result );
+	}
+
+	/**
 	 * Test emoji wrapping is case-insensitive.
 	 *
 	 * @covers ::wrap_in_content
@@ -327,6 +357,63 @@ class Test_Emoji extends \WP_UnitTestCase {
 		$this->assertStringContainsString( 'vmastop.png', $result );
 		$this->assertStringContainsString( 'kannawave.png', $result );
 		$this->assertEquals( 2, substr_count( $result, '<!-- wp:activitypub/emoji' ) );
+	}
+
+	/**
+	 * Test emoji names with preg_replace backreference characters are handled safely.
+	 *
+	 * @covers ::wrap_in_content
+	 */
+	public function test_wrap_emoji_with_backreference_characters() {
+		$text = 'Hello :te$0st: world';
+
+		$activity = array(
+			'tag' => array(
+				array(
+					'type' => 'Emoji',
+					'name' => ':te$0st:',
+					'icon' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/emoji/test.png',
+					),
+				),
+			),
+		);
+
+		$result = Emoji::wrap_in_content( $text, $activity );
+
+		// The shortcode must appear literally, not expanded as a backreference.
+		$this->assertStringContainsString( ':te$0st:', $result );
+		$this->assertStringContainsString( '<!-- wp:activitypub/emoji', $result );
+		$this->assertStringContainsString( 'test.png', $result );
+	}
+
+	/**
+	 * Test emoji names with backslash sequences are handled safely.
+	 *
+	 * @covers ::wrap_in_content
+	 */
+	public function test_wrap_emoji_with_backslash_sequences() {
+		$text = 'Hello :te\\1st: world';
+
+		$activity = array(
+			'tag' => array(
+				array(
+					'type' => 'Emoji',
+					'name' => ':te\\1st:',
+					'icon' => array(
+						'type' => 'Image',
+						'url'  => 'https://example.com/emoji/test.png',
+					),
+				),
+			),
+		);
+
+		$result = Emoji::wrap_in_content( $text, $activity );
+
+		// The shortcode must appear literally, not treated as a backreference.
+		$this->assertStringContainsString( ':te\\1st:', $result );
+		$this->assertStringContainsString( '<!-- wp:activitypub/emoji', $result );
 	}
 
 	/**

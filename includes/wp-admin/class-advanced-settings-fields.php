@@ -91,6 +91,15 @@ class Advanced_Settings_Fields {
 		}
 
 		\add_settings_field(
+			'activitypub_api',
+			\__( 'ActivityPub API', 'activitypub' ),
+			array( self::class, 'render_api_field' ),
+			'activitypub_advanced_settings',
+			'activitypub_advanced_settings',
+			array( 'label_for' => 'activitypub_api' )
+		);
+
+		\add_settings_field(
 			'activitypub_object_type',
 			\__( 'Activity-Object-Type', 'activitypub' ),
 			array( self::class, 'render_object_type_field' ),
@@ -232,6 +241,32 @@ class Advanced_Settings_Fields {
 		</p>
 		<p class="description">
 			⚠ This feature is experimental and may change significantly in future updates.
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render ActivityPub API field.
+	 */
+	public static function render_api_field() {
+		$value = \get_option( 'activitypub_api', '0' );
+		?>
+		<p>
+			<label>
+				<input type="checkbox" id="activitypub_api" name="activitypub_api" value="1" <?php \checked( '1', $value ); ?> />
+				<?php \esc_html_e( 'Enable the ActivityPub API to connect third-party clients.', 'activitypub' ); ?>
+			</label>
+		</p>
+		<p class="description">
+			<?php \esc_html_e( 'Enables OAuth 2.0 authentication so third-party ActivityPub clients (like Mastodon apps) can post, follow, and interact on your behalf. You can manage connected apps from your profile page.', 'activitypub' ); ?>
+		</p>
+		<p class="description">
+			<?php
+			echo \wp_kses(
+				\__( '⚠ This feature is experimental and may change significantly in future updates.', 'activitypub' ),
+				'data'
+			);
+			?>
 		</p>
 		<?php
 	}

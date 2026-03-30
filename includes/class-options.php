@@ -324,6 +324,16 @@ class Options {
 
 		\register_setting(
 			'activitypub_advanced',
+			'activitypub_api',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Enable the ActivityPub API to allow third-party clients.',
+				'default'     => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
 			'activitypub_object_type',
 			array(
 				'type'         => 'string',
@@ -411,6 +421,26 @@ class Options {
 				'type'        => 'integer',
 				'description' => 'Send a notification when someone mentions a user of the blog.',
 				'default'     => 1,
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_mailer_annual_report',
+			array(
+				'type'        => 'integer',
+				'description' => 'Send the annual Fediverse Year in Review email.',
+				'default'     => 1,
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_mailer_monthly_report',
+			array(
+				'type'        => 'integer',
+				'description' => 'Send a monthly Fediverse stats report email.',
+				'default'     => 0,
 			)
 		);
 

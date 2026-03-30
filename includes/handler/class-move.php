@@ -26,7 +26,6 @@ class Move {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_move', array( self::class, 'handle_move' ), 10, 2 );
-		\add_filter( 'activitypub_get_outbox_activity', array( self::class, 'outbox_activity' ) );
 	}
 
 	/**
@@ -102,22 +101,6 @@ class Move {
 	}
 
 	/**
-	 * Convert the object and origin to the correct format.
-	 *
-	 * @param \Activitypub\Activity\Activity $activity The Activity object.
-	 * @return \Activitypub\Activity\Activity The filtered Activity object.
-	 */
-	public static function outbox_activity( $activity ) {
-		if ( 'Move' === $activity->get_type() ) {
-			$activity->set_object( object_to_uri( $activity->get_object() ) );
-			$activity->set_origin( $activity->get_actor() );
-			$activity->set_target( $activity->get_object() );
-		}
-
-		return $activity;
-	}
-
-	/**
 	 * Extract the target from the activity.
 	 *
 	 * The ActivityStreams spec define the `target` attribute as the
@@ -187,13 +170,23 @@ class Move {
 			return false;
 		}
 
-		// Check if the target has an alsoKnownAs property.
-		if ( empty( $target_object['also_known_as'] ) ) {
+		// Normalize alsoKnownAs to an array (some JSON-LD payloads may use a string).
+		$also_known_as = (array) ( $target_object['alsoKnownAs'] ?? array() );
+		if ( empty( $also_known_as ) ) {
 			return false;
 		}
 
-		// Check if the origin is in the alsoKnownAs property of the target.
-		if ( ! in_array( $origin_object['id'], $target_object['also_known_as'], true ) ) {
+		// Collect all possible origin identifiers (id, url, webfinger).
+		$origin_ids = array_filter(
+			array(
+				$origin_object['id'] ?? null,
+				$origin_object['url'] ?? null,
+				$origin_object['webfinger'] ?? null,
+			)
+		);
+
+		// Check if any origin identifier is in the alsoKnownAs property of the target.
+		if ( ! array_intersect( $origin_ids, $also_known_as ) ) {
 			return false;
 		}
 

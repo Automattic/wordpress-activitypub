@@ -154,11 +154,12 @@ export function getBlockStyles( base, style, backgroundColor ) {
  * @return {string} CSS styles.
  */
 export function getPopupStyles( style ) {
-	// We don't accept backgroundColor because the popup is always white (right?).
-	const buttonColor = getLinkColor( style?.elements?.link?.color?.text ) || '#111';
-	const buttonTextColor = '#fff';
-	const buttonHoverColor = getLinkColor( style?.elements?.link?.[ ':hover' ]?.color?.text ) || '#333';
-	const selector = '.activitypub-dialog__button-group .wp-block-button';
+	const buttonColor =
+		getLinkColor( style?.elements?.link?.color?.text ) ||
+		'var(--wp--preset--color--contrast, var(--wp--preset--color--foreground, #1e1e1e))';
+	const buttonTextColor = 'var(--wp--preset--color--base, var(--wp--preset--color--background, #fff))';
+	const buttonHoverColor = getLinkColor( style?.elements?.link?.[ ':hover' ]?.color?.text ) || buttonColor;
+	const selector = '.activitypub-dialog__button-group .wp-block-button__link';
 
 	return getStyles( selector, buttonColor, buttonTextColor, buttonHoverColor );
 }

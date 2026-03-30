@@ -42,20 +42,8 @@ if ( ! function_exists( 'str_ends_with' ) ) {
 	}
 }
 
-if ( ! function_exists( 'is_countable' ) ) {
-	/**
-	 * Polyfill for `is_countable()` function added in PHP 7.3.
-	 *
-	 * @param mixed $value The value to check.
-	 * @return bool True if `$value` is countable, otherwise false.
-	 */
-	function is_countable( $value ) {
-		return is_array( $value ) || $value instanceof Countable;
-	}
-}
-
 /**
- * Polyfill for `array_is_list()` function added in PHP 7.3.
+ * Polyfill for `array_is_list()` function added in PHP 8.1.
  *
  * @param array $array The array to check.
  *

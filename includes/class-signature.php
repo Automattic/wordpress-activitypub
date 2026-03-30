@@ -96,7 +96,7 @@ class Signature {
 			self::rfc9421_add_unsupported_host( $url );
 
 			$args     = ( new Http_Signature_Draft() )->sign( $args, $url );
-			$response = \wp_remote_request( $url, $args );
+			$response = \wp_safe_remote_request( $url, $args );
 		}
 
 		return $response;

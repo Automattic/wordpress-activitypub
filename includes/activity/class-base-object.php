@@ -127,6 +127,9 @@ class Base_Object extends Generic_Object {
 			'sensitive'         => 'as:sensitive',
 			'dcterms'           => 'http://purl.org/dc/terms/',
 			'gts'               => 'https://gotosocial.org/ns#',
+			'schema'            => 'http://schema.org/',
+			'exifData'          => 'schema:exifData',
+			'PropertyValue'     => 'schema:PropertyValue',
 			'interactionPolicy' => array(
 				'@id'   => 'gts:interactionPolicy',
 				'@type' => '@id',

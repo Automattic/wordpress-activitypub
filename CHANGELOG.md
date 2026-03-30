@@ -5,6 +5,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.0.2] - 2026-03-17
+### Security
+- Prevent non-public posts (drafts, scheduled, pending review) from being accessible via ActivityPub. [#3045]
+
+## [8.0.1] - 2026-03-11
+### Changed
+- Simplify the follow page block pattern to avoid duplicate headings and improve accessibility. [#3029]
+
+### Fixed
+- Fix dark sidebar colors appearing incorrectly with non-default admin color schemes. [#3022]
+- Fix Fediverse Reactions block not aligning with post content in block themes. [#3025]
+- Fix new posts being marked as modified on load, which prevented Gutenberg's starter pattern modal from appearing. [#3028]
+
+## [8.0.0] - 2026-03-04
+### Security
+- Prevent private recipient lists from being shared when sending activities to other servers. [#2956]
+
+### Added
+- Add a help section to interaction dialogs explaining the Fediverse and why entering a profile is needed. [#2993]
+- Add a notice on the Settings page to easily switch from legacy template mode to automatic mode. [#2985]
+- Add a pre-publish suggestion that recommends a post format for better compatibility with media-focused Fediverse platforms. [#2971]
+- Add a Site Health check that warns when plugins are causing too many federation updates. [#2928]
+- Add backwards compatibility for the `ACTIVITYPUB_DISABLE_SIDELOADING` constant and `activitypub_sideloading_enabled` filter from version 7.9.1. [#2973]
+- Add bot account snippet that marks ActivityPub profiles as automated accounts, displaying a "BOT" badge on Mastodon and other Fediverse platforms. [#2861]
+- Add Cache namespace for remote media caching with CLI commands, improved MIME validation, and filter-based architecture. [#2887]
+- Add federation of video poster images set in the WordPress video block. [#2982]
+- Add Locale from Tags community snippet. [#2923]
+- Add optional Like and Boost action buttons to the Fediverse Reactions block, allowing visitors to interact with posts from their own server. [#2988]
+- Add pre-built Fediverse block patterns for easy profile, follow page, and sidebar setup. [#2891]
+- Add snippet for blockless fediverse reactions [#2958]
+- Add `wp activitypub fetch` CLI command for fetching remote URLs with signed HTTP requests. [#2906]
+
+### Changed
+- Improved active user counting for NodeInfo to include all federated content types and comments. [#2943]
+- Improve language map resolution to strictly follow the ActivityStreams spec. [#2979]
+- Superseded outbox activities are now removed instead of kept, reducing clutter in the outbox. [#2932]
+- The minimum required PHP version is now 7.4. [#2942]
+
+### Fixed
+- Accept incoming activities from servers that use standalone key objects for HTTP Signatures. [#2935]
+- Fix a crash on servers where WordPress uses FTP instead of direct file access for media caching. [#2974]
+- Fix a crash when receiving posts from certain federated platforms that send multilingual content. [#2950]
+- Fix automatic cleanup of old activities failing silently on sites with large numbers of outbox, inbox, or remote post items. [#2929]
+- Fix comment count to properly exclude likes, shares, and notes. [#2913]
+- Fix follow button redirect from Mastodon not being recognized. [#2922]
+- Fix modal overlay not covering the full screen on block themes. [#3000]
+- Fix outbox invalidation canceling pending Accept/Reject responses to QuoteRequests for the same post. [#2911]
+- Fix QuoteRequest handler to derive responding actor from post author instead of inbox recipient. [#2924]
+- Fix reactions block buttons inheriting theme background color on classic themes. [#2996]
+- Fix reactions block layout on small screens and remove unwanted button highlight when clicking action buttons. [#2992]
+- Fix signature verification rejecting valid requests that use lowercase algorithm names in the Digest header. [#2949]
+- Fix soft-deleted posts being served instead of a tombstone when the post is re-saved. [#2991]
+- Improve compatibility with federated services that use a URL reference for the actor's public key. [#2947]
+- Improve handling of all public audience identifiers when sending activities to followers and relays. [#2944]
+
 ## [7.9.1] - 2026-02-09
 ### Added
 - Add option to disable direct file sideloading via `ACTIVITYPUB_DISABLE_SIDELOADING` constant or `activitypub_sideloading_enabled` filter, and `activitypub_remote_media_url` filter for CDN proxying. [#2899]
@@ -1691,6 +1746,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[8.0.2]: https://github.com/Automattic/wordpress-activitypub/compare/8.0.1...8.0.2
+[8.0.1]: https://github.com/Automattic/wordpress-activitypub/compare/8.0.0...8.0.1
+[8.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.9.1...8.0.0
 [7.9.1]: https://github.com/Automattic/wordpress-activitypub/compare/7.9.0...7.9.1
 [7.9.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.8.5...7.9.0
 [7.8.5]: https://github.com/Automattic/wordpress-activitypub/compare/7.8.4...7.8.5

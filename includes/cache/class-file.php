@@ -48,6 +48,7 @@ abstract class File {
 	 */
 	private static $finfo = null;
 
+
 	/**
 	 * Get the cache type identifier.
 	 *
@@ -236,20 +237,8 @@ abstract class File {
 		$file_name = $hash . '.' . $ext;
 		$file_path = $paths['basedir'] . '/' . $file_name;
 
-		// Initialize filesystem.
-		global $wp_filesystem;
-		if ( ! $wp_filesystem ) {
-			require_once ABSPATH . 'wp-admin/includes/file.php';
-			\WP_Filesystem();
-		}
-
-		if ( ! $wp_filesystem ) {
-			\wp_delete_file( $tmp_file );
-			return false;
-		}
-
 		// Move file to destination.
-		if ( ! $wp_filesystem->move( $tmp_file, $file_path, true ) ) {
+		if ( ! static::get_filesystem()->move( $tmp_file, $file_path, true ) ) {
 			\wp_delete_file( $tmp_file );
 			return false;
 		}
@@ -289,23 +278,52 @@ abstract class File {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function invalidate_entity( $entity_id ) {
-		global $wp_filesystem;
-		if ( ! $wp_filesystem ) {
-			require_once ABSPATH . 'wp-admin/includes/file.php';
-			\WP_Filesystem();
-		}
-
-		if ( ! $wp_filesystem ) {
-			return false;
-		}
-
 		$paths = static::get_storage_paths( $entity_id );
 
-		if ( $wp_filesystem->is_dir( $paths['basedir'] ) ) {
-			return $wp_filesystem->rmdir( $paths['basedir'], true );
+		return static::delete_directory( $paths['basedir'] );
+	}
+
+	/**
+	 * Get a direct filesystem instance.
+	 *
+	 * Uses WP_Filesystem_Direct explicitly instead of WP_Filesystem(),
+	 * which may fall back to FTP on servers where ABSPATH is not writable.
+	 * The uploads directory (where cache files live) is always writable by
+	 * the web server — the same assumption WordPress core makes for media
+	 * uploads in _wp_handle_upload().
+	 *
+	 * @since 8.0.0
+	 *
+	 * @return \WP_Filesystem_Direct The direct filesystem instance.
+	 */
+	protected static function get_filesystem() {
+		static $filesystem = null;
+
+		if ( null === $filesystem ) {
+			require_once ABSPATH . 'wp-admin/includes/class-wp-filesystem-base.php';
+			require_once ABSPATH . 'wp-admin/includes/class-wp-filesystem-direct.php';
+
+			$filesystem = new \WP_Filesystem_Direct( null );
 		}
 
-		return true;
+		return $filesystem;
+	}
+
+	/**
+	 * Delete a directory and all its contents.
+	 *
+	 * @since 8.0.0
+	 *
+	 * @param string $basedir The directory path to delete.
+	 *
+	 * @return bool True on success or if directory doesn't exist, false on failure.
+	 */
+	public static function delete_directory( $basedir ) {
+		if ( ! \is_dir( $basedir ) ) {
+			return true;
+		}
+
+		return static::get_filesystem()->rmdir( $basedir, true );
 	}
 
 	/**
@@ -551,19 +569,12 @@ abstract class File {
 		$ext = \pathinfo( $file_path, PATHINFO_EXTENSION );
 
 		if ( strtolower( $ext ) !== $expected_ext ) {
-			// Rename file to correct extension using WP_Filesystem.
-			global $wp_filesystem;
-			if ( ! $wp_filesystem ) {
-				require_once ABSPATH . 'wp-admin/includes/file.php';
-				\WP_Filesystem();
-			}
-
 			$new_path = \preg_replace( '/\.[^.]+$/', '.' . $expected_ext, $file_path );
 			if ( empty( $new_path ) || $new_path === $file_path ) {
 				$new_path = $file_path . '.' . $expected_ext;
 			}
 
-			if ( $wp_filesystem && $wp_filesystem->move( $file_path, $new_path, true ) ) {
+			if ( static::get_filesystem()->move( $file_path, $new_path, true ) ) {
 				return $new_path;
 			}
 		}

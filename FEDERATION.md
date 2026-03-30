@@ -5,6 +5,7 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 ## Supported federation protocols and standards
 
 - [ActivityPub](https://www.w3.org/TR/activitypub/) (Server-to-Server)
+- [ActivityPub API: Server-Sent Events](https://swicg.github.io/activitypub-api/sse) (partial, see below)
 - [WebFinger](https://www.w3.org/community/reports/socialcg/CG-FINAL-apwf-20240608/)
 - [HTTP Signatures](https://swicg.github.io/activitypub-http-signature/)
 - [NodeInfo](https://nodeinfo.diaspora.software/)
@@ -27,6 +28,7 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 - [FEP-9098: Custom Emojis](https://codeberg.org/fediverse/fep/src/branch/main/fep/9098/fep-9098.md)
 - [FEP-b2b8: Long-form Text](https://codeberg.org/fediverse/fep/src/branch/main/fep/b2b8/fep-b2b8.md)
 - [FEP-c180: Problem Details for ActivityPub](https://codeberg.org/fediverse/fep/src/branch/main/fep/c180/fep-c180.md)
+- [FEP-ee3a: Exif metadata support](https://codeberg.org/fediverse/fep/src/branch/main/fep/ee3a/fep-ee3a.md)
 - [FEP-f1d5: NodeInfo in Fediverse Software](https://codeberg.org/fediverse/fep/src/branch/main/fep/f1d5/fep-f1d5.md)
 - [FEP-fb2a: Actor metadata](https://codeberg.org/fediverse/fep/src/branch/main/fep/fb2a/fep-fb2a.md)
 
@@ -34,6 +36,7 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 
 - [FEP-1b12: Group federation](https://codeberg.org/fediverse/fep/src/branch/main/fep/1b12/fep-1b12.md)
 - [FEP-ae0c: Fediverse Relay Protocols](https://codeberg.org/fediverse/fep/src/branch/main/fep/ae0c/fep-ae0c.md)
+- [FEP-dc88: MathML in ActivityPub](https://codeberg.org/fediverse/fep/src/branch/main/fep/dc88/fep-dc88.md)
 
 ## ActivityPub
 
@@ -165,6 +168,25 @@ For compatibility with Mastodon, the plugin supports several extensions from the
 - `Event` - `category`, `inLanguage`, `maximumAttendeeCapacity`
 - `Place` - Location objects with `PostalAddress` support
 
+### Server-Sent Events (SSE)
+
+The plugin provides real-time streaming of collection changes via [Server-Sent Events](https://swicg.github.io/activitypub-api/sse). Requires OAuth authentication with the `push` scope.
+
+**Supported features:**
+
+- `eventStream` property advertised on outbox and inbox collections
+- `proxyEventStream` advertised in actor `endpoints`
+- `access_token` URL parameter accepted (required for browser `EventSource` API)
+- SSE event types: `Add`, `Update`, `Remove`, `Delete` mapped from ActivityPub activities
+- `Last-Event-ID` header honored on reconnect to replay missed events
+- Event payload contains the full ActivityStreams Activity object
+- SSE `event:` and `id:` fields set per event
+- `proxyEventStream` relays remote eventStreams through the local server
+
+**Known limitations:**
+
+- No `retry:` field sent to hint reconnect interval
+
 ### Endpoints
 
 All REST API endpoints use the `activitypub/1.0` namespace.
@@ -187,6 +209,7 @@ All REST API endpoints use the `activitypub/1.0` namespace.
 
 - `/activitypub/1.0/inbox` - Shared inbox
 - `/activitypub/1.0/application` - Application actor
+- `/activitypub/1.0/proxy` - Proxy endpoint for fetching remote objects
 
 **Object endpoints:**
 

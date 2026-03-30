@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Improve the pre-publish format suggestion panel with clearer messages and a confirmation after applying a format.

@@ -37,6 +37,17 @@ class Test_Cache extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test is_enabled respects deprecated sideloading filter.
+	 */
+	public function test_is_enabled_deprecated_sideloading_filter() {
+		$this->setExpectedDeprecated( 'activitypub_sideloading_enabled' );
+
+		add_filter( 'activitypub_sideloading_enabled', '__return_false' );
+		$this->assertFalse( Cache::is_enabled() );
+		remove_filter( 'activitypub_sideloading_enabled', '__return_false' );
+	}
+
+	/**
 	 * Test init does not run when disabled.
 	 */
 	public function test_init_disabled() {
