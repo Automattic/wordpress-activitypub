@@ -711,10 +711,51 @@ class Options {
 	 */
 	public static function pre_option_activitypub_distribution_mode( $pre ) {
 		if ( false !== ACTIVITYPUB_DISTRIBUTION_MODE ) {
-			return ACTIVITYPUB_DISTRIBUTION_MODE;
+			$allowed   = array_keys( self::get_distribution_modes() );
+			$allowed[] = 'custom';
+
+			if ( \in_array( ACTIVITYPUB_DISTRIBUTION_MODE, $allowed, true ) ) {
+				return ACTIVITYPUB_DISTRIBUTION_MODE;
+			}
+
+			// Invalid constant value, fall back to default.
+			return 'default';
 		}
 
 		return $pre;
+	}
+
+	/**
+	 * Get the available distribution mode presets.
+	 *
+	 * Centralized definition used by both the admin UI and the
+	 * parameter resolution in get_distribution_params().
+	 *
+	 * @since unreleased
+	 *
+	 * @return array Associative array of mode => { batch_size, pause, label, description }.
+	 */
+	public static function get_distribution_modes() {
+		return array(
+			'default'  => array(
+				'batch_size'  => 100,
+				'pause'       => 30,
+				'label'       => \__( 'Default', 'activitypub' ),
+				'description' => \__( 'Deliver activities as fast as possible (<code>100</code> per batch, <code>30s</code> pause).', 'activitypub' ),
+			),
+			'balanced' => array(
+				'batch_size'  => 50,
+				'pause'       => 60,
+				'label'       => \__( 'Balanced', 'activitypub' ),
+				'description' => \__( 'Moderate pace with reasonable pauses between batches (<code>50</code> per batch, <code>60s</code> pause).', 'activitypub' ),
+			),
+			'eco'      => array(
+				'batch_size'  => 20,
+				'pause'       => 300,
+				'label'       => \__( 'Eco Mode', 'activitypub' ),
+				'description' => \__( 'Gentle on server resources, ideal for shared hosting (<code>20</code> per batch, <code>5min</code> pause).', 'activitypub' ),
+			),
+		);
 	}
 
 	/**
@@ -725,32 +766,29 @@ class Options {
 	 * @return array { batch_size: int, pause: int }
 	 */
 	public static function get_distribution_params() {
-		$mode = \get_option( 'activitypub_distribution_mode', 'default' );
+		static $cached = null;
 
-		$modes = array(
-			'default'  => array(
-				'batch_size' => 100,
-				'pause'      => 30,
-			),
-			'balanced' => array(
-				'batch_size' => 50,
-				'pause'      => 60,
-			),
-			'eco'      => array(
-				'batch_size' => 20,
-				'pause'      => 300,
-			),
-		);
-
-		if ( isset( $modes[ $mode ] ) ) {
-			return $modes[ $mode ];
+		if ( null !== $cached ) {
+			return $cached;
 		}
 
-		// Custom mode.
-		return array(
-			'batch_size' => \absint( \get_option( 'activitypub_custom_batch_size', 100 ) ),
-			'pause'      => \absint( \get_option( 'activitypub_custom_batch_pause', 30 ) ),
-		);
+		$mode  = \get_option( 'activitypub_distribution_mode', 'default' );
+		$modes = self::get_distribution_modes();
+
+		if ( isset( $modes[ $mode ] ) ) {
+			$cached = array(
+				'batch_size' => $modes[ $mode ]['batch_size'],
+				'pause'      => $modes[ $mode ]['pause'],
+			);
+		} else {
+			// Custom mode.
+			$cached = array(
+				'batch_size' => \absint( \get_option( 'activitypub_custom_batch_size', 100 ) ),
+				'pause'      => \absint( \get_option( 'activitypub_custom_batch_pause', 30 ) ),
+			);
+		}
+
+		return $cached;
 	}
 
 	/**

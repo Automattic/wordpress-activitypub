@@ -7,6 +7,8 @@
 
 namespace Activitypub\WP_Admin;
 
+use Activitypub\Options;
+
 /**
  * Advanced Settings Fields class.
  */
@@ -30,7 +32,7 @@ class Advanced_Settings_Fields {
 			'activitypub_advanced_settings'
 		);
 
-		if ( ! ACTIVITYPUB_DISTRIBUTION_MODE ) {
+		if ( false === ACTIVITYPUB_DISTRIBUTION_MODE ) {
 			\add_settings_field(
 				'activitypub_distribution_mode',
 				\__( 'Distribution Mode', 'activitypub' ),
@@ -310,23 +312,11 @@ class Advanced_Settings_Fields {
 		$custom_pause = \get_option( 'activitypub_custom_batch_pause', 30 );
 		$is_custom    = 'custom' === $mode;
 
-		$modes = array(
-			'default'  => array(
-				'label'       => \__( 'Default', 'activitypub' ),
-				'description' => \__( 'Deliver activities as fast as possible (<code>100</code> per batch, <code>30s</code> pause).', 'activitypub' ),
-			),
-			'balanced' => array(
-				'label'       => \__( 'Balanced', 'activitypub' ),
-				'description' => \__( 'Moderate pace with reasonable pauses between batches (<code>50</code> per batch, <code>60s</code> pause).', 'activitypub' ),
-			),
-			'eco'      => array(
-				'label'       => \__( 'Eco Mode', 'activitypub' ),
-				'description' => \__( 'Gentle on server resources, ideal for shared hosting (<code>20</code> per batch, <code>5min</code> pause).', 'activitypub' ),
-			),
-			'custom'   => array(
-				'label'       => \__( 'Custom', 'activitypub' ),
-				'description' => \__( 'Configure batch size and delay manually.', 'activitypub' ),
-			),
+		// Use centralized presets and add the custom option for the UI.
+		$modes           = Options::get_distribution_modes();
+		$modes['custom'] = array(
+			'label'       => \__( 'Custom', 'activitypub' ),
+			'description' => \__( 'Configure batch size and delay manually.', 'activitypub' ),
 		);
 
 		?>
@@ -371,6 +361,9 @@ class Advanced_Settings_Fields {
 		( function() {
 			var radios = document.querySelectorAll( 'input[name="activitypub_distribution_mode"]' );
 			var fields = document.getElementById( 'activitypub-custom-distribution-fields' );
+			if ( ! fields ) {
+				return;
+			}
 			radios.forEach( function( radio ) {
 				radio.addEventListener( 'change', function() {
 					fields.style.display = this.value === 'custom' ? '' : 'none';
