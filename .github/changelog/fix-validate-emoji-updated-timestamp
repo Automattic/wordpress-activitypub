@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Validate emoji updated timestamps before storing them.

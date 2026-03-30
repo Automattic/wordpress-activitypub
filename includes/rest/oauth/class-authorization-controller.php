@@ -81,7 +81,7 @@ class Authorization_Controller extends \WP_REST_Controller {
 						'code_challenge_method' => array(
 							'description' => 'PKCE code challenge method.',
 							'type'        => 'string',
-							'enum'        => array( 'S256', 'plain' ),
+							'enum'        => array( 'S256' ),
 							'default'     => 'S256',
 						),
 					),
@@ -122,7 +122,7 @@ class Authorization_Controller extends \WP_REST_Controller {
 						'code_challenge_method' => array(
 							'description' => 'PKCE code challenge method.',
 							'type'        => 'string',
-							'enum'        => array( 'S256', 'plain' ),
+							'enum'        => array( 'S256' ),
 							'default'     => 'S256',
 						),
 						'approve'               => array(
@@ -174,15 +174,17 @@ class Authorization_Controller extends \WP_REST_Controller {
 		// Validate client.
 		$client = Client::get( $client_id );
 		if ( \is_wp_error( $client ) ) {
-			return $client;
+			return $this->error_page( $client );
 		}
 
 		// Validate redirect URI.
 		if ( ! $client->is_valid_redirect_uri( $redirect_uri ) ) {
-			return new \WP_Error(
-				'activitypub_invalid_redirect_uri',
-				\__( 'Invalid redirect URI for this client.', 'activitypub' ),
-				array( 'status' => 400 )
+			return $this->error_page(
+				new \WP_Error(
+					'activitypub_invalid_redirect_uri',
+					\__( 'Invalid redirect URI for this client.', 'activitypub' ),
+					array( 'status' => 400 )
+				)
 			);
 		}
 
@@ -243,14 +245,16 @@ class Authorization_Controller extends \WP_REST_Controller {
 		// Re-validate client and redirect URI (form fields could be tampered with).
 		$client = Client::get( $client_id );
 		if ( \is_wp_error( $client ) ) {
-			return $client;
+			return $this->error_page( $client );
 		}
 
 		if ( ! $client->is_valid_redirect_uri( $redirect_uri ) ) {
-			return new \WP_Error(
-				'activitypub_invalid_redirect_uri',
-				\__( 'Invalid redirect URI for this client.', 'activitypub' ),
-				array( 'status' => 400 )
+			return $this->error_page(
+				new \WP_Error(
+					'activitypub_invalid_redirect_uri',
+					\__( 'Invalid redirect URI for this client.', 'activitypub' ),
+					array( 'status' => 400 )
+				)
 			);
 		}
 
@@ -326,6 +330,43 @@ class Authorization_Controller extends \WP_REST_Controller {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Redirect to wp-login.php with a styled error message.
+	 *
+	 * These errors occur before a valid redirect URI is confirmed, so we
+	 * cannot safely redirect back to the client. Instead, redirect to
+	 * wp-login.php where the error is rendered using login_header/login_footer
+	 * for a consistent, user-friendly appearance.
+	 *
+	 * The error message is stored in a short-lived transient (5 minutes)
+	 * keyed by a random token. Only the opaque token is passed in the URL,
+	 * preventing social-engineering attacks where an attacker crafts a URL
+	 * with arbitrary error text displayed inside WordPress login chrome.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_Error $error The error to display.
+	 * @return \WP_REST_Response Redirect response to wp-login.php.
+	 */
+	private function error_page( $error ) {
+		$token = \wp_generate_password( 20, false );
+		\set_transient( 'ap_oauth_err_' . $token, $error->get_error_message(), 5 * MINUTE_IN_SECONDS );
+
+		$login_url = \add_query_arg(
+			array(
+				'action'     => 'activitypub_authorize',
+				'auth_error' => $token,
+			),
+			\wp_login_url()
+		);
+
+		return new \WP_REST_Response(
+			null,
+			302,
+			array( 'Location' => $login_url )
+		);
 	}
 
 	/**

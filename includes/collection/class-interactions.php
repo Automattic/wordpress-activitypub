@@ -108,6 +108,10 @@ class Interactions {
 	public static function update_comment( $activity ) {
 		$meta = get_remote_metadata_by_actor( $activity['actor'] );
 
+		if ( \is_wp_error( $meta ) || ! \is_array( $meta ) ) {
+			return $meta;
+		}
+
 		// Determine comment_ID.
 		$comment      = object_id_to_comment( \esc_url_raw( $activity['object']['id'] ) );
 		$comment_data = \get_comment( $comment, ARRAY_A );
@@ -117,7 +121,7 @@ class Interactions {
 		}
 
 		// Found a local comment id.
-		$comment_data['comment_author'] = \esc_attr( empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'] );
+		$comment_data['comment_author'] = \sanitize_text_field( empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'] );
 
 		/*
 		 * Wrap emoji in content with blocks for runtime replacement.

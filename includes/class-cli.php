@@ -31,6 +31,7 @@ class Cli {
 	 * - wp activitypub self-destruct [--status] [--yes]
 	 * - wp activitypub move <from> <to>
 	 * - wp activitypub follow <remote_user>
+	 * - wp activitypub stats <collect|compile|send>
 	 * - wp activitypub fetch <url>
 	 */
 	public static function register() {
@@ -112,6 +113,14 @@ class Cli {
 			'\Activitypub\Cli\Fetch_Command',
 			array(
 				'shortdesc' => 'Fetch a remote URL with a signed ActivityPub request.',
+			)
+		);
+
+		\WP_CLI::add_command(
+			'activitypub stats',
+			'\Activitypub\Cli\Stats_Command',
+			array(
+				'shortdesc' => 'Manage ActivityPub statistics (collect, compile or send).',
 			)
 		);
 	}

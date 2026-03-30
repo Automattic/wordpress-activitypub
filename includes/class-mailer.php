@@ -428,6 +428,66 @@ class Mailer {
 	}
 
 	/**
+	 * Send a templated email to a user.
+	 *
+	 * @param int    $user_id  The user ID (or BLOG_USER_ID for blog actor).
+	 * @param string $subject  The email subject.
+	 * @param string $template The template name (without path/extension).
+	 * @param array  $args     Template arguments.
+	 * @param string $alt_body Optional plain text alternative. Auto-generated from HTML if empty.
+	 *
+	 * @return bool True if email was sent, false otherwise.
+	 */
+	public static function send( $user_id, $subject, $template, $args = array(), $alt_body = '' ) {
+		// Get the recipient email address.
+		if ( $user_id > Actors::BLOG_USER_ID ) {
+			$user = \get_userdata( $user_id );
+			if ( ! $user || empty( $user->user_email ) ) {
+				return false;
+			}
+			$email = $user->user_email;
+		} else {
+			$email = \get_option( 'admin_email' );
+		}
+
+		// Load the HTML template.
+		$template_file = ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/' . \sanitize_file_name( $template ) . '.php';
+
+		/**
+		 * Filter the email template file path.
+		 *
+		 * @param string $template_file The template file path.
+		 * @param string $template      The template name.
+		 * @param int    $user_id       The user ID.
+		 * @param array  $args          Template arguments.
+		 */
+		$template_file = \apply_filters( 'activitypub_email_template', $template_file, $template, $user_id, $args );
+
+		if ( ! \file_exists( $template_file ) ) {
+			return false;
+		}
+
+		\ob_start();
+		\load_template( $template_file, false, $args );
+		$html_message = \ob_get_clean();
+
+		// Build plain text alternative from HTML if not provided.
+		if ( empty( $alt_body ) ) {
+			$alt_body = \wp_strip_all_tags( $html_message );
+		}
+		$alt_function = static function ( $mailer ) use ( $alt_body ) {
+			$mailer->{'AltBody'} = $alt_body;
+		};
+		\add_action( 'phpmailer_init', $alt_function );
+
+		$result = \wp_mail( $email, $subject, $html_message, array( 'Content-type: text/html' ) );
+
+		\remove_action( 'phpmailer_init', $alt_function );
+
+		return $result;
+	}
+
+	/**
 	 * Apply defaults to the actor object.
 	 *
 	 * Ensure that the actor object has a name, url, and webfinger.

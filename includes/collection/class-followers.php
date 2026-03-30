@@ -314,6 +314,34 @@ class Followers {
 	}
 
 	/**
+	 * Count followers gained in a date range.
+	 *
+	 * @param int    $user_id The ID of the WordPress User.
+	 * @param string $start   Start date (Y-m-d H:i:s).
+	 * @param string $end     End date (Y-m-d H:i:s).
+	 *
+	 * @return int The number of new followers in the date range.
+	 */
+	public static function count_in_range( $user_id, $start, $end ) {
+		$result = self::query(
+			$user_id,
+			1, // We only need the count.
+			null,
+			array(
+				'date_query' => array(
+					array(
+						'after'     => $start,
+						'before'    => $end,
+						'inclusive' => true,
+					),
+				),
+			)
+		);
+
+		return $result['total'];
+	}
+
+	/**
 	 * Count the total number of followers.
 	 *
 	 * @deprecated 7.6.0 Use {@see Followers::count()}.

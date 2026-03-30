@@ -239,6 +239,18 @@ class Blog_Settings_Fields {
 					<?php \esc_html_e( 'New Mentions', 'activitypub' ); ?>
 				</label>
 			</p>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_mailer_annual_report" id="activitypub_mailer_annual_report" value="1" <?php \checked( '1', \get_option( 'activitypub_mailer_annual_report', '1' ) ); ?> />
+					<?php \esc_html_e( 'Annual Report', 'activitypub' ); ?>
+				</label>
+			</p>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_mailer_monthly_report" id="activitypub_mailer_monthly_report" value="1" <?php \checked( '1', \get_option( 'activitypub_mailer_monthly_report', '1' ) ); ?> />
+					<?php \esc_html_e( 'Monthly Report', 'activitypub' ); ?>
+				</label>
+			</p>
 		</fieldset>
 		<?php
 	}

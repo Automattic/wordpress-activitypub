@@ -11,7 +11,6 @@ use Activitypub\Blocklist_Subscriptions;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Comment;
-use Activitypub\Model\Blog;
 use Activitypub\Moderation;
 use Activitypub\OAuth\Client;
 use Activitypub\OAuth\Token;
@@ -90,8 +89,6 @@ class Admin {
 		\add_action( 'admin_print_scripts-profile.php', array( self::class, 'enqueue_connected_apps_scripts' ) );
 		\add_action( 'admin_print_scripts-settings_page_activitypub', array( self::class, 'enqueue_moderation_scripts' ) );
 		\add_action( 'admin_print_footer_scripts-settings_page_activitypub', array( self::class, 'open_help_tab' ) );
-
-		\add_action( 'wp_dashboard_setup', array( self::class, 'add_dashboard_widgets' ) );
 
 		\add_action( 'wp_ajax_activitypub_moderation_settings', array( self::class, 'ajax_moderation_settings' ) );
 		\add_action( 'wp_ajax_activitypub_blocklist_subscription', array( self::class, 'ajax_blocklist_subscription' ) );
@@ -366,6 +363,8 @@ class Admin {
 			'activitypub_mailer_new_dm',
 			'activitypub_mailer_new_follower',
 			'activitypub_mailer_new_mention',
+			'activitypub_mailer_annual_report',
+			'activitypub_mailer_monthly_report',
 		);
 
 		foreach ( $required_user_options as $option ) {
@@ -1374,78 +1373,6 @@ class Admin {
 		window.addEventListener( 'DOMContentLoaded', activitypub_open_help_tab );
 		window.addEventListener( 'hashchange', activitypub_open_help_tab );
 		</script>
-		<?php
-	}
-
-	/**
-	 * Add Dashboard widgets.
-	 */
-	public static function add_dashboard_widgets() {
-		\wp_add_dashboard_widget( 'activitypub_blog', \__( 'ActivityPub Plugin News', 'activitypub' ), array( self::class, 'blog_dashboard_widget' ) );
-		if ( user_can_activitypub( \get_current_user_id() ) && ! is_user_type_disabled( 'user' ) ) {
-			\wp_add_dashboard_widget( 'activitypub_profile', \__( 'ActivityPub Author profile', 'activitypub' ), array( self::class, 'profile_dashboard_widget' ) );
-		}
-		if ( ! is_user_type_disabled( 'blog' ) ) {
-			\wp_add_dashboard_widget( 'activitypub_blog_profile', \__( 'ActivityPub Blog profile', 'activitypub' ), array( self::class, 'blogprofile_dashboard_widget' ) );
-		}
-	}
-
-	/**
-	 * Add the `ActivityPub.blog` feed as a Dashboard widget.
-	 */
-	public static function blog_dashboard_widget() {
-		echo '<div class="rss-widget">';
-		\wp_widget_rss_output(
-			array(
-				'url'          => 'https://activitypub.blog/feed/',
-				'items'        => 3,
-				'show_summary' => 1,
-				'show_author'  => 0,
-				'show_date'    => 1,
-			)
-		);
-		echo '</div>';
-	}
-
-	/**
-	 * Add the ActivityPub Author profile as a Dashboard widget.
-	 */
-	public static function profile_dashboard_widget() {
-		$user = Actors::get_by_id( \get_current_user_id() );
-		?>
-		<p>
-			<?php \esc_html_e( 'People can follow you by using your author name:', 'activitypub' ); ?>
-		</p>
-		<p><label for="activitypub-user-identifier"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-user-identifier" value="<?php echo \esc_attr( $user->get_webfinger() ); ?>" readonly /></p>
-		<p><label for="activitypub-user-url"><?php \esc_html_e( 'Profile URL', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-user-url" value="<?php echo \esc_attr( $user->get_url() ); ?>" readonly /></p>
-		<p>
-			<?php \esc_html_e( 'Authors who can not access this settings page will find their username on the "Edit Profile" page.', 'activitypub' ); ?>
-			<a href="<?php echo \esc_url( \admin_url( '/profile.php#activitypub' ) ); ?>">
-			<?php \esc_html_e( 'Customize username on "Edit Profile" page.', 'activitypub' ); ?>
-			</a>
-		</p>
-		<?php
-	}
-
-	/**
-	 * Add the ActivityPub Blog profile as a Dashboard widget.
-	 */
-	public static function blogprofile_dashboard_widget() {
-		$user = new Blog();
-		?>
-		<p>
-			<?php \esc_html_e( 'People can follow your blog by using:', 'activitypub' ); ?>
-		</p>
-		<p><label for="activitypub-user-identifier"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-user-identifier" value="<?php echo \esc_attr( $user->get_webfinger() ); ?>" readonly /></p>
-		<p><label for="activitypub-user-url"><?php \esc_html_e( 'Profile URL', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-user-url" value="<?php echo \esc_attr( $user->get_url() ); ?>" readonly /></p>
-		<p>
-			<?php \esc_html_e( 'This blog profile will federate all posts written on your blog, regardless of the author who posted it.', 'activitypub' ); ?>
-			<?php if ( current_user_can( 'manage_options' ) ) : ?>
-			<a href="<?php echo \esc_url( \admin_url( '/options-general.php?page=activitypub&tab=blog-profile' ) ); ?>">
-				<?php \esc_html_e( 'Customize the blog profile.', 'activitypub' ); ?>
-			</a>
-			<?php endif; ?>
-		</p>
 		<?php
 	}
 

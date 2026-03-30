@@ -69,6 +69,8 @@ class Blocks {
 		self::register_patterns();
 		self::register_templates();
 
+		\add_action( 'pre_get_posts', array( self::class, 'filter_query_loop_vars' ) );
+
 		\add_action( 'load-post-new.php', array( self::class, 'handle_in_reply_to_get_param' ) );
 		// Add editor plugin.
 		\add_action( 'enqueue_block_editor_assets', array( self::class, 'enqueue_editor_assets' ) );
@@ -140,6 +142,7 @@ class Blocks {
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/extra-fields' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/follow-me' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/followers' );
+		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/posts-and-replies' );
 
 		// Only register the Following block if the Following feature is enabled.
 		if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
@@ -249,6 +252,7 @@ class Blocks {
 	<!-- wp:spacer {"height":"32px"} -->
 	<div style="height:32px" aria-hidden="true" class="wp-block-spacer"></div>
 	<!-- /wp:spacer -->
+	<!-- wp:activitypub/posts-and-replies /-->
 	<!-- wp:query {"queryId":0,"query":{"perPage":10,"pages":0,"offset":0,"postType":"post","order":"desc","orderBy":"date","author":"","search":"","exclude":[],"sticky":"","inherit":true}} -->
 	<div class="wp-block-query">
 		<!-- wp:post-template -->
@@ -1153,5 +1157,57 @@ class Blocks {
 		}
 
 		return \get_comment_delimited_block_content( $block_type, $block_attrs, \trim( $html ) );
+	}
+
+	/**
+	 * Filter the main query to exclude replies.
+	 *
+	 * When the "Posts" tab is active (default), adds a WHERE clause to
+	 * exclude posts containing the `activitypub/reply` block. This
+	 * filters the main query so that Query Loop blocks with
+	 * `inherit: true` also pick up the filter.
+	 *
+	 * @since unreleased
+	 *
+	 * @param WP_Query $query The WP_Query instance.
+	 */
+	public static function filter_query_loop_vars( $query ) {
+		if ( ! $query->is_main_query() || $query->is_singular() ) {
+			return;
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$active_tab = isset( $_GET['filter'] ) ? \sanitize_key( $_GET['filter'] ) : 'posts';
+
+		// Only filter when the "Posts" tab is active (default).
+		if ( 'posts-and-replies' === $active_tab ) {
+			return;
+		}
+
+		\add_filter( 'posts_where', array( self::class, 'exclude_replies_where' ) );
+	}
+
+	/**
+	 * Exclude posts containing the activitypub/reply block.
+	 *
+	 * Removes itself after the first execution to avoid
+	 * affecting secondary queries on the same page.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $where The WHERE clause.
+	 * @return string Modified WHERE clause.
+	 */
+	public static function exclude_replies_where( $where ) {
+		\remove_filter( 'posts_where', array( self::class, 'exclude_replies_where' ) );
+
+		global $wpdb;
+
+		$where .= $wpdb->prepare(
+			" AND {$wpdb->posts}.post_content NOT LIKE %s",
+			'%<!-- wp:activitypub/reply%'
+		);
+
+		return $where;
 	}
 }

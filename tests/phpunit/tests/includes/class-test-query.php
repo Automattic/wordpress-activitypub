@@ -570,6 +570,64 @@ class Test_Query extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test maybe_get_stamp rejects a stamp belonging to a different post.
+	 *
+	 * @covers ::maybe_get_stamp
+	 */
+	public function test_maybe_get_stamp_wrong_post() {
+		// Create two posts.
+		$post_a = self::factory()->post->create(
+			array(
+				'post_author'  => self::$user_id,
+				'post_title'   => 'Post A',
+				'post_content' => 'Content A',
+				'post_status'  => 'publish',
+			)
+		);
+		$post_b = self::factory()->post->create(
+			array(
+				'post_author'  => self::$user_id,
+				'post_title'   => 'Post B',
+				'post_content' => 'Content B',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Add stamp meta to post A.
+		$meta_id = \add_post_meta( $post_a, '_activitypub_quoted_by', 'https://remote.example.com/posts/789' );
+
+		// Request post B with post A's stamp — should be rejected.
+		Query::get_instance()->__destruct();
+		$this->go_to( home_url( '/?p=' . $post_b . '&stamp=' . $meta_id ) );
+		\set_query_var( 'stamp', $meta_id );
+
+		$reflection = new \ReflectionClass( Query::class );
+		$method     = $reflection->getMethod( 'maybe_get_stamp' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$query  = Query::get_instance();
+		$result = $method->invoke( $query );
+
+		$this->assertFalse( $result, 'Should return false when stamp meta belongs to a different post' );
+
+		// Verify the same stamp works when queried with the correct post.
+		Query::get_instance()->__destruct();
+		$this->go_to( home_url( '/?p=' . $post_a . '&stamp=' . $meta_id ) );
+		\set_query_var( 'stamp', $meta_id );
+
+		$query  = Query::get_instance();
+		$object = $query->get_activitypub_object();
+
+		$this->assertNotNull( $object, 'Should create QuoteAuthorization when stamp matches the queried post' );
+		$this->assertEquals( 'QuoteAuthorization', $object->get_type(), 'Should be QuoteAuthorization type' );
+
+		// Clean up.
+		\delete_post_meta( $post_a, '_activitypub_quoted_by' );
+	}
+
+	/**
 	 * Test should_negotiate_content for author page with permalink as Actor ID.
 	 *
 	 * @covers ::should_negotiate_content

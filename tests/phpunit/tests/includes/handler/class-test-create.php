@@ -67,6 +67,7 @@ class Test_Create extends \WP_UnitTestCase {
 			array(
 				'post_author'  => $this->user_id,
 				'post_content' => 'test',
+				'post_status'  => 'publish',
 			)
 		);
 		$this->post_permalink = \get_permalink( $this->post_id );

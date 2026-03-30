@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix remote actor avatars getting stuck on broken URLs when the original image becomes unavailable.
