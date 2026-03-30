@@ -180,7 +180,7 @@ class Server {
 		$origin = self::get_cors_origin();
 		$response->header( 'Access-Control-Allow-Origin', $origin ? $origin : '*' );
 		$response->header( 'Access-Control-Allow-Methods', 'GET, POST, OPTIONS' );
-		$response->header( 'Access-Control-Allow-Headers', 'Accept, Content-Type, Authorization, Last-Event-ID' );
+		$response->header( 'Access-Control-Allow-Headers', 'Accept, Content-Type, Authorization, DPoP, Last-Event-ID' );
 
 		if ( $origin ) {
 			$response->header( 'Access-Control-Allow-Credentials', 'true' );
@@ -203,7 +203,7 @@ class Server {
 
 		\header( 'Access-Control-Allow-Origin: ' . ( $origin ? $origin : '*' ) );
 		\header( 'Access-Control-Allow-Methods: GET, POST, OPTIONS' );
-		\header( 'Access-Control-Allow-Headers: Accept, Content-Type, Authorization, Last-Event-ID' );
+		\header( 'Access-Control-Allow-Headers: Accept, Content-Type, Authorization, DPoP, Last-Event-ID' );
 
 		if ( $origin ) {
 			\header( 'Access-Control-Allow-Credentials: true' );

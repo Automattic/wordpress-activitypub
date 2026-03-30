@@ -52,7 +52,7 @@ class Server {
 		$token = self::get_bearer_token();
 
 		if ( ! $token ) {
-			// No Bearer token — respect errors from earlier auth filters.
+			// No Bearer/DPoP token — respect errors from earlier auth filters.
 			return $result;
 		}
 
@@ -60,6 +60,36 @@ class Server {
 
 		if ( \is_wp_error( $validated ) ) {
 			return $validated;
+		}
+
+		// DPoP proof validation (RFC 9449).
+		$dpop_jkt = $validated->get_dpop_jkt();
+
+		if ( $dpop_jkt ) {
+			// DPoP-bound token requires DPoP authorization scheme.
+			if ( ! self::is_dpop_auth_scheme() ) {
+				return new \WP_Error(
+					'activitypub_dpop_required',
+					\__( 'DPoP-bound token requires DPoP authorization scheme.', 'activitypub' ),
+					array( 'status' => 401 )
+				);
+			}
+
+			// Validate the DPoP proof.
+			$proof_result = DPoP::validate_proof( $token );
+
+			if ( \is_wp_error( $proof_result ) ) {
+				return $proof_result;
+			}
+
+			// Verify proof JWK thumbprint matches token binding.
+			if ( $proof_result['jkt'] !== $dpop_jkt ) {
+				return new \WP_Error(
+					'activitypub_dpop_key_mismatch',
+					\__( 'DPoP proof key does not match token binding.', 'activitypub' ),
+					array( 'status' => 401 )
+				);
+			}
 		}
 
 		self::$current_token = $validated;
@@ -101,7 +131,7 @@ class Server {
 	}
 
 	/**
-	 * Extract Bearer token from Authorization header.
+	 * Extract Bearer or DPoP token from Authorization header.
 	 *
 	 * @return string|null The token string or null.
 	 */
@@ -113,11 +143,29 @@ class Server {
 		}
 
 		// Check for Bearer token.
-		if ( 0 !== strpos( $auth_header, 'Bearer ' ) ) {
-			return null;
+		if ( 0 === strpos( $auth_header, 'Bearer ' ) ) {
+			return substr( $auth_header, 7 );
 		}
 
-		return substr( $auth_header, 7 );
+		// Check for DPoP token (RFC 9449).
+		if ( 0 === strpos( $auth_header, 'DPoP ' ) ) {
+			return substr( $auth_header, 5 );
+		}
+
+		return null;
+	}
+
+	/**
+	 * Check if the current request uses DPoP authorization scheme.
+	 *
+	 * @since unreleased
+	 *
+	 * @return bool True if using DPoP scheme.
+	 */
+	public static function is_dpop_auth_scheme() {
+		$auth_header = self::get_authorization_header();
+
+		return $auth_header && 0 === strpos( $auth_header, 'DPoP ' );
 	}
 
 	/**
@@ -257,6 +305,7 @@ class Server {
 			'code_challenge_methods_supported'      => array( 'S256' ),
 			'service_documentation'                 => 'https://github.com/swicg/activitypub-api',
 			'client_id_metadata_document_supported' => true,
+			'dpop_signing_alg_values_supported'     => DPoP::SUPPORTED_ALGORITHMS,
 		);
 	}
 

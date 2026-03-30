@@ -94,9 +94,10 @@ class Token {
 	 * @param string $client_id OAuth client ID.
 	 * @param array  $scopes    Granted scopes.
 	 * @param int    $expires   Expiration time in seconds.
+	 * @param string $dpop_jkt  Optional DPoP JWK thumbprint for proof-of-possession binding.
 	 * @return array|\WP_Error Token data or error.
 	 */
-	public static function create( $user_id, $client_id, $scopes, $expires = self::DEFAULT_EXPIRATION ) {
+	public static function create( $user_id, $client_id, $scopes, $expires = self::DEFAULT_EXPIRATION, $dpop_jkt = null ) {
 		// Generate tokens.
 		$access_token  = self::generate_token();
 		$refresh_token = self::generate_token();
@@ -116,6 +117,11 @@ class Token {
 			'created_at'         => time(),
 			'last_used_at'       => null,
 		);
+
+		// Store DPoP JWK thumbprint for proof-of-possession binding (RFC 9449).
+		if ( $dpop_jkt ) {
+			$token_data['dpop_jkt'] = $dpop_jkt;
+		}
 
 		// Store in user meta with access token hash as key.
 		$access_hash = self::hash_token( $access_token );
@@ -152,7 +158,7 @@ class Token {
 
 		return array(
 			'access_token'  => $access_token,
-			'token_type'    => 'Bearer',
+			'token_type'    => $dpop_jkt ? 'DPoP' : 'Bearer',
 			'expires_in'    => $expires,
 			'refresh_token' => $refresh_token,
 			'scope'         => Scope::to_string( $token_data['scopes'] ),
@@ -317,8 +323,11 @@ class Token {
 		\delete_user_meta( $user_id, $meta_key );
 		\delete_user_meta( $user_id, $refresh_index_key );
 
+		// Preserve DPoP binding (RFC 9449): new token inherits the JWK thumbprint.
+		$dpop_jkt = isset( $token_data['dpop_jkt'] ) ? $token_data['dpop_jkt'] : null;
+
 		// Create a new token.
-		return self::create( $user_id, $client_id, $token_data['scopes'] );
+		return self::create( $user_id, $client_id, $token_data['scopes'], self::DEFAULT_EXPIRATION, $dpop_jkt );
 	}
 
 	/**
@@ -609,6 +618,17 @@ class Token {
 	}
 
 	/**
+	 * Get the DPoP JWK thumbprint bound to this token.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string|null The JWK thumbprint, or null if not a DPoP-bound token.
+	 */
+	public function get_dpop_jkt() {
+		return $this->data['dpop_jkt'] ?? null;
+	}
+
+	/**
 	 * Generate a cryptographically secure random token.
 	 *
 	 * @param int $length The length of the token in bytes (default 32 = 64 hex chars).
@@ -860,16 +880,25 @@ class Token {
 		}
 		$me = ! \is_wp_error( $actor ) ? $actor->get_id() : null;
 
-		return array(
+		$dpop_jkt = $validated->get_dpop_jkt();
+
+		$response = array(
 			'active'     => true,
 			'scope'      => Scope::to_string( $validated->get_scopes() ),
 			'client_id'  => $validated->get_client_id(),
 			'username'   => $user ? $user->user_login : null,
-			'token_type' => 'Bearer',
+			'token_type' => $dpop_jkt ? 'DPoP' : 'Bearer',
 			'exp'        => $validated->get_expires_at(),
 			'iat'        => $validated->get_created_at(),
 			'sub'        => (string) $user_id,
 			'me'         => $me,
 		);
+
+		// Include confirmation claim for DPoP-bound tokens (RFC 9449 Section 6).
+		if ( $dpop_jkt ) {
+			$response['cnf'] = array( 'jkt' => $dpop_jkt );
+		}
+
+		return $response;
 	}
 }

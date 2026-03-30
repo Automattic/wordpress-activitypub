@@ -9,6 +9,7 @@ namespace Activitypub\Rest\OAuth;
 
 use Activitypub\OAuth\Authorization_Code;
 use Activitypub\OAuth\Client;
+use Activitypub\OAuth\DPoP;
 use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Server as OAuth_Server;
 use Activitypub\OAuth\Token;
@@ -230,7 +231,10 @@ class Token_Controller extends \WP_REST_Controller {
 			return $this->token_error( 'invalid_request', 'Authorization code is required.' );
 		}
 
-		$result = Authorization_Code::exchange( $code, $client_id, $redirect_uri, $code_verifier );
+		// If client provided a DPoP proof, bind the token to the client's key (RFC 9449).
+		$dpop_jkt = $this->extract_dpop_jkt();
+
+		$result = Authorization_Code::exchange( $code, $client_id, $redirect_uri, $code_verifier, $dpop_jkt );
 
 		if ( \is_wp_error( $result ) ) {
 			return $this->token_error( 'invalid_grant', $result->get_error_message() );
@@ -363,6 +367,32 @@ class Token_Controller extends \WP_REST_Controller {
 			\__( 'Authentication required.', 'activitypub' ),
 			array( 'status' => 401 )
 		);
+	}
+
+	/**
+	 * Extract DPoP JWK thumbprint from the request's DPoP proof header.
+	 *
+	 * If a DPoP proof is present and valid, returns the JWK thumbprint
+	 * for binding to the issued token (RFC 9449).
+	 *
+	 * @since unreleased
+	 *
+	 * @return string|null The JWK thumbprint, or null if no DPoP proof provided.
+	 */
+	private function extract_dpop_jkt() {
+		$proof = DPoP::get_proof_from_request();
+
+		if ( ! $proof ) {
+			return null;
+		}
+
+		$result = DPoP::validate_proof();
+
+		if ( \is_wp_error( $result ) ) {
+			return null;
+		}
+
+		return $result['jkt'];
 	}
 
 	/**

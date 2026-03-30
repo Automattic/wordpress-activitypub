@@ -135,7 +135,7 @@ class Authorization_Code {
 	 * @param string $code_verifier The PKCE code verifier.
 	 * @return array|\WP_Error Token data or error.
 	 */
-	public static function exchange( $code, $client_id, $redirect_uri, $code_verifier ) {
+	public static function exchange( $code, $client_id, $redirect_uri, $code_verifier, $dpop_jkt = null ) {
 		$redirect_uri = Sanitize::redirect_uri( $redirect_uri );
 		$code_hash    = self::hash_code( $code );
 		$transient    = self::TRANSIENT_PREFIX . $code_hash;
@@ -195,7 +195,9 @@ class Authorization_Code {
 		return Token::create(
 			$code_data['user_id'],
 			$client_id,
-			$code_data['scopes']
+			$code_data['scopes'],
+			Token::DEFAULT_EXPIRATION,
+			$dpop_jkt
 		);
 	}
 
