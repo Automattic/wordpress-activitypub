@@ -28,6 +28,9 @@ use function Activitypub\object_to_uri;
  */
 class Outbox_Controller extends \WP_REST_Controller {
 	use Collection;
+	use Event_Stream;
+	use Language_Map;
+	use Verification;
 
 	/**
 	 * Activity types accessible as individual outbox items via REST.
@@ -35,10 +38,6 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * @var string[]
 	 */
 	const PUBLIC_ACTIVITY_TYPES = array( 'Announce', 'Arrive', 'Create', 'Like', 'Update' );
-
-	use Event_Stream;
-	use Language_Map;
-	use Verification;
 
 	/**
 	 * The namespace of this controller's route.
