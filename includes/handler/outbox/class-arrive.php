@@ -78,13 +78,7 @@ class Arrive {
 		$post = self::create_checkin_post( $data, $user_id, $visibility );
 
 		if ( \is_wp_error( $post ) ) {
-			\error_log(
-				\sprintf(
-					'[ActivityPub] Arrive: blog post creation failed for user %d: %s',
-					$user_id,
-					$post->get_error_message()
-				)
-			);
+			return $post;
 		}
 
 		if ( $post instanceof \WP_Post ) {
