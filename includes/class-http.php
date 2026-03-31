@@ -177,8 +177,8 @@ class Http {
 		$code     = \wp_remote_retrieve_response_code( $response );
 
 		if ( \is_wp_error( $response ) || $code >= 400 ) {
-			if ( \is_wp_error( $response ) ) {
-				$code = $response->get_error_code();
+			if ( ! $code ) {
+				$code = 0;
 			}
 			$response = new \WP_Error( $code, __( 'Failed HTTP Request', 'activitypub' ), array( 'status' => $code ) );
 
