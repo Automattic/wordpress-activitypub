@@ -8,7 +8,6 @@
 namespace Activitypub\Handler\Outbox;
 
 use Activitypub\Collection\Posts;
-use Activitypub\Scheduler\Post;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\is_activity_public;
@@ -159,18 +158,7 @@ class Arrive {
 			'cc'     => $data['cc'] ?? array(),
 		);
 
-		/*
-		 * Suppress the Post scheduler so wp_insert_post() does not
-		 * trigger a separate Create activity for the blog post.
-		 * Only the Arrive activity should be federated.
-		 */
-		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
-
-		$post = Posts::create( $activity, $user_id, $visibility );
-
-		\add_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33, 4 );
-
-		return $post;
+		return Posts::create( $activity, $user_id, $visibility );
 	}
 
 	/**
