@@ -254,7 +254,7 @@ class Client {
 					'_activitypub_client_id'          => $client_id,
 					'_activitypub_client_secret_hash' => '', // Public client.
 					'_activitypub_redirect_uris'      => array_map( array( Sanitize::class, 'redirect_uri' ), $redirect_uris ),
-					'_activitypub_allowed_scopes'     => Scope::DEFAULT_SCOPES,
+					'_activitypub_allowed_scopes'     => Scope::ALL,
 					'_activitypub_is_public'          => true,
 					'_activitypub_discovered'         => true,
 					'_activitypub_logo_uri'           => ! empty( $metadata['logo_uri'] ) ? \sanitize_url( $metadata['logo_uri'] ) : '',
