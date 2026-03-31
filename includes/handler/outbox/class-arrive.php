@@ -25,28 +25,6 @@ class Arrive {
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_outbox_arrive', array( self::class, 'handle_arrive' ), 10, 3 );
-		\add_filter( 'activitypub_outbox_activity_types', array( self::class, 'register_activity_type' ) );
-		\add_filter( 'rest_activitypub_outbox_activity_types', array( self::class, 'register_activity_type' ) );
-	}
-
-	/**
-	 * Add Arrive to the outbox activity type allowlists.
-	 *
-	 * Without this, Arrive activities would be excluded from
-	 * the public outbox collection and REST API responses.
-	 *
-	 * @since unreleased
-	 *
-	 * @param array $types The existing activity types.
-	 *
-	 * @return array The filtered activity types.
-	 */
-	public static function register_activity_type( $types ) {
-		if ( ! \in_array( 'Arrive', $types, true ) ) {
-			$types[] = 'Arrive';
-		}
-
-		return $types;
 	}
 
 	/**

@@ -434,7 +434,7 @@ class Outbox {
 			return new \WP_Error( 'private_outbox_item', 'Not a public Outbox item.' );
 		}
 
-		$activity_types = \apply_filters( 'rest_activitypub_outbox_activity_types', array( 'Announce', 'Create', 'Like', 'Update' ) );
+		$activity_types = \apply_filters( 'rest_activitypub_outbox_activity_types', array( 'Announce', 'Arrive', 'Create', 'Like', 'Update' ) );
 		$activity_type  = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
 
 		if ( ! in_array( $activity_type, $activity_types, true ) ) {

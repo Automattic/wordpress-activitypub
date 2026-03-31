@@ -153,7 +153,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 		 *
 		 * @param string[] $activity_types The list of activity types.
 		 */
-		$activity_types = \apply_filters( 'activitypub_outbox_activity_types', array( 'Announce', 'Create', 'Like', 'Update' ) );
+		$activity_types = \apply_filters( 'activitypub_outbox_activity_types', array( 'Announce', 'Arrive', 'Create', 'Like', 'Update' ) );
 
 		$args = array(
 			'posts_per_page' => $request->get_param( 'per_page' ),
