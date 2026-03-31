@@ -77,7 +77,17 @@ class Arrive {
 		// Create a local blog post as a side effect for on-site display.
 		$post = self::create_checkin_post( $data, $user_id, $visibility );
 
-		if ( $post && ! \is_wp_error( $post ) ) {
+		if ( \is_wp_error( $post ) ) {
+			\error_log(
+				\sprintf(
+					'[ActivityPub] Arrive: blog post creation failed for user %d: %s',
+					$user_id,
+					$post->get_error_message()
+				)
+			);
+		}
+
+		if ( $post instanceof \WP_Post ) {
 			self::save_location( $post->ID, $data['location'] ?? null );
 
 			/*
