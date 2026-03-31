@@ -316,8 +316,13 @@ class Health_Check {
 				);
 			}
 
+			$error_code = $url->get_error_code();
+			if ( ! $error_code ) {
+				$error_code = 'webfinger_url_not_accessible';
+			}
+
 			return new \WP_Error(
-				$url->get_error_code(),
+				$error_code,
 				$message,
 				$url->get_error_data()
 			);
