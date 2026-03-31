@@ -897,4 +897,110 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		$this->assertEmpty( \get_post_meta( $post_id, 'geo_longitude', true ), 'No longitude when not provided.' );
 		$this->assertSame( '1', \get_post_meta( $post_id, 'geo_public', true ), 'geo_public set when name is present.' );
 	}
+
+	/**
+	 * Test C2S POST with exact checkin.swf.pub payload.
+	 *
+	 * The checkin app sends inline actor objects, string to/cc,
+	 * summaryMap without summary, and content. This test verifies
+	 * that Posts::create receives all required fields after the
+	 * outbox controller transforms the data.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_arrive_with_checkin_app_payload() {
+		$user = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+
+		$data = array(
+			'@context'   => 'https://www.w3.org/ns/activitystreams',
+			'actor'      => array(
+				'id'   => $user->get_id(),
+				'name' => $user->get_name(),
+				'url'  => $user->get_url(),
+			),
+			'type'       => 'Arrive',
+			'location'   => array(
+				'id'   => 'https://places.pub/relation/659839',
+				'name' => 'Ettlingen',
+				'url'  => 'https://places.pub/relation/659839',
+			),
+			'content'    => 'Great coffee here!',
+			'to'         => 'https://www.w3.org/ns/activitystreams#Public',
+			'cc'         => $user->get_followers(),
+			'summaryMap' => array(
+				'en' => $user->get_name() . ' arrived at Ettlingen',
+			),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = \rest_get_server()->dispatch( $request );
+		$this->assertEquals( 201, $response->get_status(), 'Outbox POST should return 201.' );
+
+		$response_data = $response->get_data();
+		$this->assertSame( 'Arrive', $response_data['type'] );
+		$this->assertArrayHasKey( 'url', $response_data, 'Arrive should have a url pointing to the blog post.' );
+
+		// Blog post should exist with correct content.
+		$post_id = \url_to_postid( $response_data['url'] );
+		$this->assertGreaterThan( 0, $post_id, 'Blog post should be created.' );
+
+		$post = \get_post( $post_id );
+		$this->assertStringContainsString( 'Ettlingen', $post->post_title );
+		$this->assertNotEmpty( $post->post_content, 'Post content should not be empty.' );
+		$this->assertSame( 'status', \get_post_format( $post_id ) );
+
+		// Geodata should be saved.
+		$this->assertSame( 'Ettlingen', \get_post_meta( $post_id, 'geo_address', true ) );
+		$this->assertSame( '1', \get_post_meta( $post_id, 'geo_public', true ) );
+	}
+
+	/**
+	 * Test C2S POST with Arrive without content uses summary fallback.
+	 *
+	 * When the checkin app omits content but provides summaryMap,
+	 * the localized summary should be used as post content.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_arrive_without_content_uses_summary() {
+		$user = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+
+		$data = array(
+			'@context'   => 'https://www.w3.org/ns/activitystreams',
+			'type'       => 'Arrive',
+			'actor'      => $user->get_id(),
+			'location'   => array(
+				'id'   => 'https://places.pub/relation/123',
+				'name' => 'Berlin',
+			),
+			'summaryMap' => array(
+				'en' => $user->get_name() . ' arrived at Berlin',
+			),
+			'to'         => 'https://www.w3.org/ns/activitystreams#Public',
+			'cc'         => $user->get_followers(),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = \rest_get_server()->dispatch( $request );
+		$this->assertEquals( 201, $response->get_status() );
+
+		$response_data = $response->get_data();
+		$post_id       = \url_to_postid( $response_data['url'] );
+		$this->assertGreaterThan( 0, $post_id, 'Blog post should be created even without content.' );
+
+		$post = \get_post( $post_id );
+		$this->assertStringContainsString( 'Berlin', $post->post_title );
+		// The summary should be used as content fallback.
+		$this->assertNotEmpty( $post->post_content, 'Post should have content from summary fallback.' );
+	}
 }
