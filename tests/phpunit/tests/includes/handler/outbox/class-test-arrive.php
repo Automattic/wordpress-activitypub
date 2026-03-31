@@ -213,11 +213,13 @@ class Test_Arrive extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test Arrive with non-public activity returns false.
+	 * Test Arrive with non-public activity still creates outbox entry but no blog post.
 	 *
 	 * @covers ::handle_arrive
 	 */
-	public function test_arrive_non_public_returns_false() {
+	public function test_arrive_non_public_creates_outbox_but_no_post() {
+		$user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+
 		$data = array(
 			'type'     => 'Arrive',
 			'actor'    => 'https://example.com/users/test',
@@ -226,9 +228,23 @@ class Test_Arrive extends \WP_UnitTestCase {
 			'to'       => array( 'https://example.com/users/friend' ),
 		);
 
-		$result = Arrive::handle_arrive( $data, 1 );
+		$result = Arrive::handle_arrive( $data, $user_id );
 
-		$this->assertFalse( $result );
+		$this->assertIsInt( $result, 'Non-public Arrive should still create an outbox entry.' );
+		$this->assertGreaterThan( 0, $result );
+
+		// No blog post should be created for non-public activities.
+		$posts = \get_posts(
+			array(
+				'author'         => $user_id,
+				'posts_per_page' => 1,
+				'orderby'        => 'ID',
+				'order'          => 'DESC',
+				'post_type'      => 'post',
+			)
+		);
+
+		$this->assertEmpty( $posts, 'Non-public Arrive should not create a blog post.' );
 	}
 
 	/**

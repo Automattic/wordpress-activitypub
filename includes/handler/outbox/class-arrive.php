@@ -47,37 +47,13 @@ class Arrive {
 	 * @return int|\WP_Error|false The outbox post ID, error, or false.
 	 */
 	public static function handle_arrive( $data, $user_id = null, $visibility = null ) {
-		if ( ! is_activity_public( $data ) ) {
-			return false;
-		}
+		// Create a blog post for public check-ins so they appear on the site.
+		if ( is_activity_public( $data ) ) {
+			$post = self::create_checkin_post( $data, $user_id, $visibility );
 
-		// Create a local blog post as a side effect for on-site display.
-		$post = self::create_checkin_post( $data, $user_id, $visibility );
-
-		if ( \is_wp_error( $post ) ) {
-			return $post;
-		}
-
-		if ( $post instanceof \WP_Post ) {
-			self::save_location( $post->ID, $data['location'] ?? null );
-
-			/*
-			 * Add a link to the blog post so remote servers can find
-			 * the rendered check-in from the Arrive activity.
-			 */
-			$data['url'] = \get_permalink( $post );
-
-			/**
-			 * Fires after an Arrive activity has created a local blog post.
-			 *
-			 * @since unreleased
-			 *
-			 * @param int        $post_id  The created post ID.
-			 * @param array|null $location The location data from the activity.
-			 * @param array      $data     The activity data.
-			 * @param int        $user_id  The user ID.
-			 */
-			\do_action( 'activitypub_outbox_arrive_sent', $post->ID, $data['location'] ?? null, $data, $user_id );
+			if ( ! \is_wp_error( $post ) ) {
+				$data['url'] = \get_permalink( $post );
+			}
 		}
 
 		/*
@@ -101,11 +77,8 @@ class Arrive {
 	/**
 	 * Create a WordPress post from the Arrive activity.
 	 *
-	 * Synthesizes a Create-style payload from the intransitive
-	 * Arrive data so the check-in is visible on the blog.
-	 *
-	 * Temporarily suppresses the Post scheduler to prevent a
-	 * duplicate Create activity from being added to the outbox.
+	 * Creates a blog post with the check-in content and saves
+	 * location geodata so it can be displayed on the site.
 	 *
 	 * @since unreleased
 	 *
@@ -113,10 +86,11 @@ class Arrive {
 	 * @param int         $user_id    The user ID.
 	 * @param string|null $visibility Content visibility.
 	 *
-	 * @return \WP_Post|\WP_Error|false The created post, error, or false.
+	 * @return \WP_Post|\WP_Error The created post or error.
 	 */
 	private static function create_checkin_post( $data, $user_id, $visibility ) {
-		$location_name = self::get_location_name( $data['location'] ?? null );
+		$location      = $data['location'] ?? null;
+		$location_name = self::get_location_name( $location );
 
 		$title = $location_name
 			? sprintf(
@@ -136,7 +110,27 @@ class Arrive {
 			'cc'     => $data['cc'] ?? array(),
 		);
 
-		return Posts::create( $activity, $user_id, $visibility );
+		$post = Posts::create( $activity, $user_id, $visibility );
+
+		if ( \is_wp_error( $post ) ) {
+			return $post;
+		}
+
+		self::save_location( $post->ID, $location );
+
+		/**
+		 * Fires after an Arrive activity has created a local blog post.
+		 *
+		 * @since unreleased
+		 *
+		 * @param int        $post_id  The created post ID.
+		 * @param array|null $location The location data from the activity.
+		 * @param array      $data     The activity data.
+		 * @param int        $user_id  The user ID.
+		 */
+		\do_action( 'activitypub_outbox_arrive_sent', $post->ID, $location, $data, $user_id );
+
+		return $post;
 	}
 
 	/**
