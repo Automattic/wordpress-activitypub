@@ -149,7 +149,19 @@ class Client {
 		// phpcs:enable WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 
 		if ( ! empty( $posts ) ) {
-			return new self( $posts[0]->ID );
+			$client = new self( $posts[0]->ID );
+
+			/*
+			 * Re-discover stale auto-discovered clients that have no redirect URIs.
+			 * This can happen when a previous discovery failed to parse the metadata
+			 * correctly (e.g. before ActivityStreams vocabulary support was added).
+			 */
+			if ( $client->is_discovered() && empty( $client->get_redirect_uris() ) && \filter_var( $client_id, FILTER_VALIDATE_URL ) ) {
+				\wp_delete_post( $posts[0]->ID, true );
+				return self::discover_and_register( $client_id );
+			}
+
+			return $client;
 		}
 
 		// If client_id is a URL, try auto-discovery.
