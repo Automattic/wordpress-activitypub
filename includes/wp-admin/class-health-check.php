@@ -302,14 +302,18 @@ class Health_Check {
 					$author_url
 				),
 				'webfinger_url_invalid_response' => \sprintf(
-					// translators: %s: Author URL.
 					$invalid_response,
 					$author_url
 				),
 			);
-			$message         = null;
+
 			if ( isset( $health_messages[ $url->get_error_code() ] ) ) {
 				$message = $health_messages[ $url->get_error_code() ];
+			} else {
+				$message = \sprintf(
+					$not_accessible,
+					$author_url
+				);
 			}
 
 			return new \WP_Error(
