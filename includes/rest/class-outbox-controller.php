@@ -28,6 +28,14 @@ use function Activitypub\object_to_uri;
  */
 class Outbox_Controller extends \WP_REST_Controller {
 	use Collection;
+
+	/**
+	 * Activity types accessible as individual outbox items via REST.
+	 *
+	 * @var string[]
+	 */
+	const PUBLIC_ACTIVITY_TYPES = array( 'Announce', 'Arrive', 'Create', 'Like', 'Update' );
+
 	use Event_Stream;
 	use Language_Map;
 	use Verification;
@@ -149,11 +157,11 @@ class Outbox_Controller extends \WP_REST_Controller {
 		\do_action( 'activitypub_rest_outbox_pre', $request );
 
 		/**
-		 * Filters the list of activity types to include in the outbox.
+		 * Filters the activity types included in the outbox collection.
 		 *
-		 * @param string[] $activity_types The list of activity types.
+		 * @param string[] $activity_types The activity types.
 		 */
-		$activity_types = \apply_filters( 'activitypub_outbox_activity_types', array( 'Announce', 'Arrive', 'Create', 'Like', 'Update' ) );
+		$activity_types = \apply_filters( 'activitypub_outbox_activity_types', self::PUBLIC_ACTIVITY_TYPES );
 
 		$args = array(
 			'posts_per_page' => $request->get_param( 'per_page' ),
