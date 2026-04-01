@@ -86,34 +86,42 @@ $title_text = \sprintf(
 	(int) $stats_year
 );
 
-// Build border styles manually since serialization is skipped.
+/*
+ * Build border styles manually since serialization is skipped.
+ * Each value is sanitized individually to prevent CSS injection from
+ * imported or migrated post content.
+ */
 $border        = $attributes['style']['border'] ?? array();
 $border_styles = array();
 
 $border_color = '';
-if ( ! empty( $border['color'] ) ) {
+if ( ! empty( $border['color'] ) && \preg_match( '/^(#[0-9a-f]{3,8}|var\(--[\w-]+\))$/i', $border['color'] ) ) {
 	$border_color    = $border['color'];
 	$border_styles[] = 'border-color:' . $border['color'];
-} elseif ( ! empty( $attributes['borderColor'] ) ) {
+} elseif ( ! empty( $attributes['borderColor'] ) && \preg_match( '/^[a-z0-9-]+$/i', $attributes['borderColor'] ) ) {
 	$border_color    = 'var(--wp--preset--color--' . $attributes['borderColor'] . ')';
 	$border_styles[] = 'border-color:' . $border_color;
 }
 
-if ( ! empty( $border['width'] ) ) {
+if ( ! empty( $border['width'] ) && \preg_match( '/^\d+(\.\d+)?(px|em|rem|%)$/', $border['width'] ) ) {
 	$border_styles[] = 'border-width:' . $border['width'];
 }
 
-if ( ! empty( $border['style'] ) ) {
+$allowed_styles = array( 'none', 'solid', 'dashed', 'dotted', 'double', 'groove', 'ridge', 'inset', 'outset' );
+if ( ! empty( $border['style'] ) && \in_array( $border['style'], $allowed_styles, true ) ) {
 	$border_styles[] = 'border-style:' . $border['style'];
 }
 
 if ( ! empty( $border['radius'] ) ) {
 	if ( \is_array( $border['radius'] ) ) {
-		$border_styles[] = 'border-top-left-radius:' . ( $border['radius']['topLeft'] ?? 0 );
-		$border_styles[] = 'border-top-right-radius:' . ( $border['radius']['topRight'] ?? 0 );
-		$border_styles[] = 'border-bottom-right-radius:' . ( $border['radius']['bottomRight'] ?? 0 );
-		$border_styles[] = 'border-bottom-left-radius:' . ( $border['radius']['bottomLeft'] ?? 0 );
-	} else {
+		foreach ( array( 'topLeft', 'topRight', 'bottomRight', 'bottomLeft' ) as $corner ) {
+			$value = $border['radius'][ $corner ] ?? '0';
+			if ( \preg_match( '/^\d+(\.\d+)?(px|em|rem|%)$/', $value ) ) {
+				$css_corner      = \preg_replace( '/([A-Z])/', '-$1', $corner );
+				$border_styles[] = 'border-' . \strtolower( $css_corner ) . '-radius:' . $value;
+			}
+		}
+	} elseif ( \preg_match( '/^\d+(\.\d+)?(px|em|rem|%)$/', $border['radius'] ) ) {
 		$border_styles[] = 'border-radius:' . $border['radius'];
 	}
 }

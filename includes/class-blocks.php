@@ -1064,8 +1064,13 @@ class Blocks {
 			}
 
 			$user_id = self::get_user_id( $block['attrs']['selectedUser'] ?? 'blog' );
-			$year    = (int) ( $block['attrs']['year'] ?? (int) \gmdate( 'Y' ) - 1 );
-			$url     = Stats_Image::get_url( $user_id, $year );
+
+			if ( null === $user_id ) {
+				continue;
+			}
+
+			$year = (int) ( $block['attrs']['year'] ?? (int) \gmdate( 'Y' ) - 1 );
+			$url  = Stats_Image::get_url( $user_id, $year );
 
 			if ( \is_wp_error( $url ) ) {
 				continue;
