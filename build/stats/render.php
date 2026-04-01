@@ -87,48 +87,29 @@ $title_text = \sprintf(
 );
 
 /*
- * Build border styles manually since serialization is skipped.
- * Each value is sanitized individually to prevent CSS injection from
- * imported or migrated post content.
+ * Build border styles using WP_Style_Engine for sanitization.
+ * Border serialization is skipped in block.json to avoid double
+ * rendering in the editor, so we apply it here manually.
  */
-$border        = $attributes['style']['border'] ?? array();
-$border_styles = array();
+$border_result = \wp_style_engine_get_styles( array( 'border' => $attributes['style']['border'] ?? array() ) );
+$extra_styles  = $border_result['css'] ?? '';
 
+// Handle preset border color slug (not part of style.border).
+if ( ! empty( $attributes['borderColor'] ) ) {
+	$preset_color = 'var(--wp--preset--color--' . \sanitize_key( $attributes['borderColor'] ) . ')';
+	$extra_styles = 'border-color:' . $preset_color . ';' . $extra_styles;
+}
+
+// Resolve the border color for inner elements via CSS variable.
 $border_color = '';
-if ( ! empty( $border['color'] ) && \preg_match( '/^(#[0-9a-f]{3,8}|var\(--[\w-]+\))$/i', $border['color'] ) ) {
-	$border_color    = $border['color'];
-	$border_styles[] = 'border-color:' . $border['color'];
-} elseif ( ! empty( $attributes['borderColor'] ) && \preg_match( '/^[a-z0-9-]+$/i', $attributes['borderColor'] ) ) {
-	$border_color    = 'var(--wp--preset--color--' . $attributes['borderColor'] . ')';
-	$border_styles[] = 'border-color:' . $border_color;
+if ( ! empty( $attributes['style']['border']['color'] ) ) {
+	$border_color = $attributes['style']['border']['color'];
+} elseif ( ! empty( $attributes['borderColor'] ) ) {
+	$border_color = 'var(--wp--preset--color--' . \sanitize_key( $attributes['borderColor'] ) . ')';
 }
 
-if ( ! empty( $border['width'] ) && \preg_match( '/^\d+(\.\d+)?(px|em|rem|%)$/', $border['width'] ) ) {
-	$border_styles[] = 'border-width:' . $border['width'];
-}
-
-$allowed_styles = array( 'none', 'solid', 'dashed', 'dotted', 'double', 'groove', 'ridge', 'inset', 'outset' );
-if ( ! empty( $border['style'] ) && \in_array( $border['style'], $allowed_styles, true ) ) {
-	$border_styles[] = 'border-style:' . $border['style'];
-}
-
-if ( ! empty( $border['radius'] ) ) {
-	if ( \is_array( $border['radius'] ) ) {
-		foreach ( array( 'topLeft', 'topRight', 'bottomRight', 'bottomLeft' ) as $corner ) {
-			$value = $border['radius'][ $corner ] ?? '0';
-			if ( \preg_match( '/^\d+(\.\d+)?(px|em|rem|%)$/', $value ) ) {
-				$css_corner      = \preg_replace( '/([A-Z])/', '-$1', $corner );
-				$border_styles[] = 'border-' . \strtolower( $css_corner ) . '-radius:' . $value;
-			}
-		}
-	} elseif ( \preg_match( '/^\d+(\.\d+)?(px|em|rem|%)$/', $border['radius'] ) ) {
-		$border_styles[] = 'border-radius:' . $border['radius'];
-	}
-}
-
-// Pass border color to inner elements via CSS variable.
 if ( $border_color ) {
-	$border_styles[] = '--activitypub-stats--border-color:' . $border_color;
+	$extra_styles .= '--activitypub-stats--border-color:' . \esc_attr( $border_color ) . ';';
 }
 
 $wrapper_attrs = array(
@@ -136,13 +117,12 @@ $wrapper_attrs = array(
 	'class' => 'activitypub-stats',
 );
 
-$extra_styles = ! empty( $border_styles ) ? \implode( ';', $border_styles ) : '';
 $wrapper_html = \get_block_wrapper_attributes( $wrapper_attrs );
 
-// Merge our border styles into the existing style attribute.
+// Merge border styles into the existing style attribute.
 if ( $extra_styles ) {
 	if ( \str_contains( $wrapper_html, 'style="' ) ) {
-		$wrapper_html = \str_replace( 'style="', 'style="' . \esc_attr( $extra_styles ) . ';', $wrapper_html );
+		$wrapper_html = \str_replace( 'style="', 'style="' . \esc_attr( $extra_styles ), $wrapper_html );
 	} else {
 		$wrapper_html .= ' style="' . \esc_attr( $extra_styles ) . '"';
 	}
