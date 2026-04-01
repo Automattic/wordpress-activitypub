@@ -277,6 +277,8 @@ class Stats_Image_Controller extends \WP_REST_Controller {
 	 * Uses the theme's base/contrast palette colors for background and
 	 * foreground text. Derives a muted color by blending toward the background.
 	 *
+	 * @param array $overrides Optional bg/fg hex color overrides (without #).
+	 *
 	 * @return array Associative array with 'bg', 'fg', and 'muted' keys,
 	 *               each containing an array of [r, g, b] values.
 	 */
@@ -326,7 +328,7 @@ class Stats_Image_Controller extends \WP_REST_Controller {
 		}
 
 		// Try to resolve background color from Global Styles.
-		$styles     = \wp_get_global_styles( array( 'color' ) );
+		$styles      = \wp_get_global_styles( array( 'color' ) );
 		$bg_resolved = $this->resolve_style_color( $styles['background'] ?? '', $palette );
 		$fg_resolved = $this->resolve_style_color( $styles['text'] ?? '', $palette );
 
@@ -555,11 +557,11 @@ class Stats_Image_Controller extends \WP_REST_Controller {
 	 * Uses TrueType rendering when a font is available, falls back to
 	 * GD built-in fonts.
 	 *
-	 * @param resource    $image The image resource.
-	 * @param string      $text  The text to draw.
-	 * @param int         $y     The y position (baseline for TTF, top for built-in).
-	 * @param int|float   $size  Font size in points (TTF) or 1-5 (built-in).
-	 * @param int         $color The text color.
+	 * @param resource     $image The image resource.
+	 * @param string       $text  The text to draw.
+	 * @param int          $y     The y position (baseline for TTF, top for built-in).
+	 * @param int|float    $size  Font size in points (TTF) or 1-5 (built-in).
+	 * @param int          $color The text color.
 	 * @param string|false $font  Path to TTF file, or false for built-in.
 	 */
 	private function draw_text_centered( $image, $text, $y, $size, $color, $font = false ) {
@@ -580,12 +582,12 @@ class Stats_Image_Controller extends \WP_REST_Controller {
 	/**
 	 * Draw text centered at a specific x position.
 	 *
-	 * @param resource    $image The image resource.
-	 * @param string      $text  The text to draw.
-	 * @param int         $x     The center x position.
-	 * @param int         $y     The y position.
-	 * @param int|float   $size  Font size in points (TTF) or 1-5 (built-in).
-	 * @param int         $color The text color.
+	 * @param resource     $image The image resource.
+	 * @param string       $text  The text to draw.
+	 * @param int          $x     The center x position.
+	 * @param int          $y     The y position.
+	 * @param int|float    $size  Font size in points (TTF) or 1-5 (built-in).
+	 * @param int          $color The text color.
 	 * @param string|false $font  Path to TTF file, or false for built-in.
 	 */
 	private function draw_text_at( $image, $text, $x, $y, $size, $color, $font = false ) {
@@ -600,5 +602,4 @@ class Stats_Image_Controller extends \WP_REST_Controller {
 			\imagestring( $image, $builtin_size, (int) ( $x - $text_width / 2 ), $y, $text, $color );
 		}
 	}
-
 }

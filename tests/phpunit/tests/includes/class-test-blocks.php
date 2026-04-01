@@ -1027,4 +1027,118 @@ class Test_Blocks extends \WP_UnitTestCase {
 		$this->assertStringContainsString( '<strong>my site</strong>', $output );
 		$this->assertStringContainsString( '<a href="https://test.com"', $output );
 	}
+
+	/**
+	 * Test add_stats_image_attachment adds image for stats block.
+	 *
+	 * @covers ::add_stats_image_attachment
+	 */
+	public function test_add_stats_image_attachment() {
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_content' => '<!-- wp:activitypub/stats {"selectedUser":"blog","year":2025} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$attachments = Blocks::add_stats_image_attachment( array(), $post );
+
+		$this->assertCount( 1, $attachments );
+		$this->assertSame( 'Image', $attachments[0]['type'] );
+		$this->assertSame( 'image/png', $attachments[0]['mediaType'] );
+		$this->assertStringContainsString( 'stats/image/0/2025', $attachments[0]['url'] );
+		$this->assertStringContainsString( '2025', $attachments[0]['name'] );
+	}
+
+	/**
+	 * Test add_stats_image_attachment with no stats block.
+	 *
+	 * @covers ::add_stats_image_attachment
+	 */
+	public function test_add_stats_image_attachment_no_block() {
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_content' => '<!-- wp:paragraph --><p>Hello world</p><!-- /wp:paragraph -->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$attachments = Blocks::add_stats_image_attachment( array(), $post );
+
+		$this->assertCount( 0, $attachments );
+	}
+
+	/**
+	 * Test add_stats_image_attachment preserves existing attachments.
+	 *
+	 * @covers ::add_stats_image_attachment
+	 */
+	public function test_add_stats_image_attachment_preserves_existing() {
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_content' => '<!-- wp:activitypub/stats {"selectedUser":"blog","year":2025} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$existing = array(
+			array(
+				'type' => 'Image',
+				'url'  => 'https://example.com/photo.jpg',
+			),
+		);
+
+		$attachments = Blocks::add_stats_image_attachment( $existing, $post );
+
+		$this->assertCount( 2, $attachments );
+		$this->assertSame( 'https://example.com/photo.jpg', $attachments[0]['url'] );
+		$this->assertStringContainsString( 'stats/image', $attachments[1]['url'] );
+	}
+
+	/**
+	 * Test add_stats_image_attachment with user ID.
+	 *
+	 * @covers ::add_stats_image_attachment
+	 */
+	public function test_add_stats_image_attachment_with_user_id() {
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_content' => '<!-- wp:activitypub/stats {"selectedUser":"1","year":2024} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$attachments = Blocks::add_stats_image_attachment( array(), $post );
+
+		$this->assertCount( 1, $attachments );
+		$this->assertStringContainsString( 'stats/image/1/2024', $attachments[0]['url'] );
+	}
+
+	/**
+	 * Test get_stats_image_url generates valid URL.
+	 *
+	 * @covers ::get_stats_image_url
+	 */
+	public function test_get_stats_image_url() {
+		$url = Blocks::get_stats_image_url( 0, 2025 );
+
+		$this->assertStringContainsString( 'stats/image/0/2025', $url );
+	}
+
+	/**
+	 * Test get_stats_image_url works with plain permalinks.
+	 *
+	 * @covers ::get_stats_image_url
+	 */
+	public function test_get_stats_image_url_plain_permalinks() {
+		\update_option( 'permalink_structure', '' );
+
+		$url = Blocks::get_stats_image_url( 1, 2024 );
+
+		$this->assertStringContainsString( 'stats/image/1/2024', $url );
+		$this->assertStringContainsString( 'rest_route', $url );
+
+		// Restore.
+		\update_option( 'permalink_structure', '/%postname%/' );
+	}
 }

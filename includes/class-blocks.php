@@ -954,7 +954,7 @@ class Blocks {
 	 */
 	public static function add_post_transformation_callbacks( $post ) {
 		\add_filter( 'render_block_core/embed', array( self::class, 'revert_embed_links' ), 10, 2 );
-		\add_filter( 'render_block_activitypub/stats', array( self::class, 'strip_stats_block' ), 10, 2 );
+		\add_filter( 'render_block_activitypub/stats', '__return_empty_string' );
 
 		// Only transform reply link if it's the first block in the post.
 		$blocks = \parse_blocks( $post->post_content );
@@ -973,7 +973,7 @@ class Blocks {
 	public static function remove_post_transformation_callbacks( $content ) {
 		\remove_filter( 'render_block_core/embed', array( self::class, 'revert_embed_links' ) );
 		\remove_filter( 'render_block_activitypub/reply', array( self::class, 'generate_reply_link' ) );
-		\remove_filter( 'render_block_activitypub/stats', array( self::class, 'strip_stats_block' ) );
+		\remove_filter( 'render_block_activitypub/stats', '__return_empty_string' );
 
 		return $content;
 	}
@@ -1074,23 +1074,6 @@ class Blocks {
 		}
 
 		return $attachments;
-	}
-
-	/**
-	 * Strip the stats block from federated content.
-	 *
-	 * The stats image is attached separately as an ActivityPub attachment,
-	 * so the block HTML should not appear in the content.
-	 *
-	 * @since unreleased
-	 *
-	 * @param string $block_content The block content.
-	 * @param array  $block         The block data.
-	 *
-	 * @return string Empty string.
-	 */
-	public static function strip_stats_block( $block_content, $block ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		return '';
 	}
 
 	/**

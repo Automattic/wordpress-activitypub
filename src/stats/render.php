@@ -128,8 +128,8 @@ $wrapper_attrs = array(
 	'class' => 'activitypub-stats',
 );
 
-$extra_styles     = ! empty( $border_styles ) ? \implode( ';', $border_styles ) : '';
-$wrapper_html     = \get_block_wrapper_attributes( $wrapper_attrs );
+$extra_styles = ! empty( $border_styles ) ? \implode( ';', $border_styles ) : '';
+$wrapper_html = \get_block_wrapper_attributes( $wrapper_attrs );
 
 // Merge our border styles into the existing style attribute.
 if ( $extra_styles ) {
