@@ -149,7 +149,19 @@ class Client {
 		// phpcs:enable WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 
 		if ( ! empty( $posts ) ) {
-			return new self( $posts[0]->ID );
+			$client = new self( $posts[0]->ID );
+
+			/*
+			 * Re-discover stale auto-discovered clients that have no redirect URIs.
+			 * This can happen when a previous discovery failed to parse the metadata
+			 * correctly (e.g. before ActivityStreams vocabulary support was added).
+			 */
+			if ( $client->is_discovered() && empty( $client->get_redirect_uris() ) && \filter_var( $client_id, FILTER_VALIDATE_URL ) ) {
+				\wp_delete_post( $posts[0]->ID, true );
+				return self::discover_and_register( $client_id );
+			}
+
+			return $client;
 		}
 
 		// If client_id is a URL, try auto-discovery.
@@ -242,7 +254,7 @@ class Client {
 					'_activitypub_client_id'          => $client_id,
 					'_activitypub_client_secret_hash' => '', // Public client.
 					'_activitypub_redirect_uris'      => array_map( array( Sanitize::class, 'redirect_uri' ), $redirect_uris ),
-					'_activitypub_allowed_scopes'     => Scope::DEFAULT_SCOPES,
+					'_activitypub_allowed_scopes'     => Scope::ALL,
 					'_activitypub_is_public'          => true,
 					'_activitypub_discovered'         => true,
 					'_activitypub_logo_uri'           => ! empty( $metadata['logo_uri'] ) ? \sanitize_url( $metadata['logo_uri'] ) : '',
@@ -357,38 +369,40 @@ class Client {
 		}
 
 		/*
-		 * ActivityPub actor format fields (Application, Person, Service, etc.).
+		 * ActivityStreams vocabulary fallbacks.
 		 *
-		 * Only used as fallback when the document doesn't contain CIMD fields.
-		 * If a client_id is already set from CIMD data, skip actor conversion
-		 * to prevent mixup/impersonation attacks.
+		 * Client ID Metadata Documents may use ActivityStreams context
+		 * (e.g. "id" instead of "client_id", "name" instead of "client_name",
+		 * "redirectURI" instead of "redirect_uris"). These are used as
+		 * fallbacks when the CIMD-specific fields are not present.
 		 */
-		$actor_types = array( 'Application', 'Person', 'Service', 'Group', 'Organization' );
-		if ( ! empty( $data['type'] ) && in_array( $data['type'], $actor_types, true ) && empty( $metadata['client_id'] ) ) {
-			if ( ! empty( $data['id'] ) ) {
-				$metadata['client_id'] = $data['id'];
-			}
+		if ( empty( $metadata['client_id'] ) && ! empty( $data['id'] ) ) {
+			$metadata['client_id'] = $data['id'];
+		}
+		if ( empty( $metadata['client_name'] ) ) {
 			if ( ! empty( $data['name'] ) ) {
 				$metadata['client_name'] = $data['name'];
 			} elseif ( ! empty( $data['preferredUsername'] ) ) {
 				$metadata['client_name'] = $data['preferredUsername'];
 			}
-			// Handle redirectURI (singular) as used by ap CLI.
-			if ( ! empty( $data['redirectURI'] ) ) {
-				$metadata['redirect_uris'] = (array) $data['redirectURI'];
+		}
+		if ( empty( $metadata['redirect_uris'] ) && ! empty( $data['redirectURI'] ) ) {
+			$metadata['redirect_uris'] = (array) $data['redirectURI'];
+		}
+		if ( empty( $metadata['logo_uri'] ) && ! empty( $data['icon'] ) ) {
+			if ( is_string( $data['icon'] ) ) {
+				$metadata['logo_uri'] = $data['icon'];
+			} elseif ( is_array( $data['icon'] ) && ! empty( $data['icon']['url'] ) ) {
+				$metadata['logo_uri'] = $data['icon']['url'];
 			}
-			// Handle icon object.
-			if ( ! empty( $data['icon'] ) ) {
-				if ( is_string( $data['icon'] ) ) {
-					$metadata['logo_uri'] = $data['icon'];
-				} elseif ( is_array( $data['icon'] ) && ! empty( $data['icon']['url'] ) ) {
-					$metadata['logo_uri'] = $data['icon']['url'];
-				}
-			}
-			if ( ! empty( $data['url'] ) ) {
-				$metadata['client_uri'] = is_array( $data['url'] ) ? $data['url'][0] : $data['url'];
-			}
-			// Mark as actor-based client for lenient redirect validation.
+		}
+		if ( empty( $metadata['client_uri'] ) && ! empty( $data['url'] ) ) {
+			$metadata['client_uri'] = is_array( $data['url'] ) ? $data['url'][0] : $data['url'];
+		}
+
+		// Mark ActivityPub actor-typed clients for lenient redirect validation.
+		$actor_types = array( 'Application', 'Person', 'Service', 'Group', 'Organization' );
+		if ( ! empty( $data['type'] ) && in_array( $data['type'], $actor_types, true ) ) {
 			$metadata['is_actor'] = true;
 		}
 
