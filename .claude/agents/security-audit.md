@@ -105,6 +105,17 @@ Files: `includes/wp-admin/`, `includes/rest/`
 - Verify nonce checks on all form submissions
 - Flag any `phpcs:ignore WordPress.Security.NonceVerification` with an explanation of why it's safe
 
+### 9. Supply Chain & Dependency Audit
+
+Files: `package.json`, `package-lock.json`, `composer.json`, `composer.lock`
+
+- Run `npm audit` and flag any high/critical vulnerabilities
+- Check `package-lock.json` for known compromised packages (e.g., axios 1.14.1/0.30.4, event-stream, ua-parser-js)
+- Verify no dependency uses `postinstall` scripts that fetch remote code (`grep -r postinstall node_modules/*/package.json`)
+- Check that `composer.lock` pins exact versions and run `composer audit` if available
+- Verify dev dependencies do not leak into production builds (check `wp-scripts build` output)
+- Flag any dependency that fetches remote resources at install time
+
 ## Running Against a Live Instance
 
 If the user provides a live URL, run these `curl` checks:
