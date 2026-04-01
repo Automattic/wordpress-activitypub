@@ -1056,6 +1056,12 @@ class Blocks {
 			return $attachments;
 		}
 
+		/*
+		 * The stats image intentionally bypasses the `activitypub_max_image_attachments`
+		 * limit because it replaces the block content rather than being an inline image
+		 * extracted from the post. It is always appended so that the share-pic is
+		 * included in the federated activity regardless of the attachment cap.
+		 */
 		$blocks = \parse_blocks( $post->post_content );
 
 		foreach ( $blocks as $block ) {
@@ -1092,29 +1098,6 @@ class Blocks {
 		}
 
 		return $attachments;
-	}
-
-	/**
-	 * Get the stats image URL for a given user and year.
-	 *
-	 * Returns the direct cached file URL if available, otherwise
-	 * falls back to the REST endpoint URL.
-	 *
-	 * @since unreleased
-	 *
-	 * @param int $user_id The user ID.
-	 * @param int $year    The year.
-	 *
-	 * @return string The image URL.
-	 */
-	public static function get_stats_image_url( $user_id, $year ) {
-		$url = Stats_Image::get_url( $user_id, $year );
-
-		if ( \is_wp_error( $url ) ) {
-			return \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image/' . $user_id . '/' . $year );
-		}
-
-		return $url;
 	}
 
 	/**

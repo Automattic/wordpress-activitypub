@@ -88,7 +88,7 @@ class Stats_Image_Controller extends \WP_REST_Controller {
 		// Return the image URL as JSON.
 		\register_rest_route(
 			$this->namespace,
-			'/stats/image-url' . $route_pattern,
+			'/' . $this->rest_base . '-url' . $route_pattern,
 			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,

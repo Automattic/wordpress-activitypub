@@ -83,6 +83,7 @@ class Test_Stats_Image_Controller extends \Activitypub\Tests\Test_REST_Controlle
 	public function test_register_routes() {
 		$routes = \rest_get_server()->get_routes();
 		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/stats/image/(?P<user_id>[\\d]+)/(?P<year>[\\d]{4})', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/stats/image-url/(?P<user_id>[\\d]+)/(?P<year>[\\d]{4})', $routes );
 	}
 
 	/**
@@ -185,5 +186,46 @@ class Test_Stats_Image_Controller extends \Activitypub\Tests\Test_REST_Controlle
 
 		// Route pattern requires 4 digits, so this should 404 (no route match).
 		$this->assertEquals( 404, $response->get_status() );
+	}
+
+	/**
+	 * Test image-url endpoint returns a URL when stats exist.
+	 *
+	 * @covers ::get_url
+	 */
+	public function test_get_url() {
+		if ( ! \Activitypub\Cache\Stats_Image::is_available() ) {
+			$this->markTestSkipped( 'GD library is not available.' );
+		}
+
+		$this->seed_stats( Actors::BLOG_USER_ID, 2025 );
+
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/stats/image-url/' . Actors::BLOG_USER_ID . '/2025' );
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertArrayHasKey( 'url', $data );
+		$this->assertStringContainsString( 'stats', $data['url'] );
+	}
+
+	/**
+	 * Test image-url endpoint returns 404 when no stats exist.
+	 *
+	 * @covers ::get_url
+	 */
+	public function test_get_url_no_stats() {
+		if ( ! \Activitypub\Cache\Stats_Image::is_available() ) {
+			$this->markTestSkipped( 'GD library is not available.' );
+		}
+
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/stats/image-url/' . self::$user_id . '/1999' );
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 404, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertEquals( 'no_stats', $data['code'] );
 	}
 }

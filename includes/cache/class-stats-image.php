@@ -197,7 +197,9 @@ class Stats_Image {
 		$actor_webfinger = ! \is_wp_error( $actor ) ? $actor->get_webfinger() : '';
 		$site_name       = \get_bloginfo( 'name' );
 
-		require_once ABSPATH . 'wp-admin/includes/file.php';
+		if ( ! \function_exists( 'wp_tempnam' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
 
 		$tmp_file = self::render( $summary, $actor_webfinger, $site_name, $year, $color_overrides );
 

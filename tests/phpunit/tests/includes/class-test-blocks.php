@@ -1187,12 +1187,17 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test get_stats_image_url generates valid URL.
+	 * Test Stats_Image::get_url generates valid URL.
 	 *
-	 * @covers ::get_stats_image_url
+	 * @covers \Activitypub\Cache\Stats_Image::get_url
 	 */
 	public function test_get_stats_image_url() {
-		$url = Blocks::get_stats_image_url( 0, 2025 );
+		$url = \Activitypub\Cache\Stats_Image::get_url( 0, 2025 );
+
+		if ( \is_wp_error( $url ) ) {
+			// GD not available; fall back to REST endpoint URL.
+			$url = \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image/0/2025' );
+		}
 
 		// URL contains the stats path (either cached file or REST endpoint).
 		$this->assertStringContainsString( 'stats', $url );
@@ -1200,14 +1205,19 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test get_stats_image_url works with plain permalinks.
+	 * Test Stats_Image::get_url works with plain permalinks.
 	 *
-	 * @covers ::get_stats_image_url
+	 * @covers \Activitypub\Cache\Stats_Image::get_url
 	 */
 	public function test_get_stats_image_url_plain_permalinks() {
 		\update_option( 'permalink_structure', '' );
 
-		$url = Blocks::get_stats_image_url( 1, 2024 );
+		$url = \Activitypub\Cache\Stats_Image::get_url( 1, 2024 );
+
+		if ( \is_wp_error( $url ) ) {
+			// GD not available; fall back to REST endpoint URL.
+			$url = \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image/1/2024' );
+		}
 
 		$this->assertStringContainsString( 'stats', $url );
 		$this->assertStringContainsString( '2024', $url );
