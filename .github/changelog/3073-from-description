@@ -1,0 +1,4 @@
+Significance: patch
+Type: added
+
+Added `activitypub_pre_get_by_id` filter to allow plugins to register custom virtual actors resolved by ID.
