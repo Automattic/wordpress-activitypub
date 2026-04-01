@@ -127,7 +127,8 @@ class Liked_Controller extends Actors_Controller {
 	 */
 	private function get_liked_object_ids( $user_id ) {
 		$args = array(
-			'posts_per_page' => -1,
+			// phpcs:ignore WordPress.WP.PostsPerPage.posts_per_page_posts_per_page
+			'posts_per_page' => 1000,
 			'post_type'      => Outbox::POST_TYPE,
 			'post_status'    => 'any',
 			'orderby'        => array(
