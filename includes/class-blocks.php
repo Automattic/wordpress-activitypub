@@ -1067,6 +1067,10 @@ class Blocks {
 			$year    = (int) ( $block['attrs']['year'] ?? (int) \gmdate( 'Y' ) - 1 );
 			$url     = Stats_Image::get_url( $user_id, $year );
 
+			if ( \is_wp_error( $url ) ) {
+				continue;
+			}
+
 			// Determine mime type from URL extension.
 			$mime_type = \str_ends_with( $url, '.webp' ) ? 'image/webp' : 'image/png';
 
