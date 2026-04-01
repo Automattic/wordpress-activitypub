@@ -384,7 +384,7 @@ class Options {
 				'description'       => 'Custom batch size for federation delivery.',
 				'default'           => 100,
 				'sanitize_callback' => static function ( $value ) {
-					return \max( 1, \absint( $value ) );
+					return \min( 500, \max( 1, \absint( $value ) ) );
 				},
 			)
 		);
@@ -396,7 +396,9 @@ class Options {
 				'type'              => 'integer',
 				'description'       => 'Custom pause in seconds between batches.',
 				'default'           => 30,
-				'sanitize_callback' => 'absint',
+				'sanitize_callback' => static function ( $value ) {
+					return \min( 3600, \absint( $value ) );
+				},
 			)
 		);
 
@@ -713,14 +715,19 @@ class Options {
 	 */
 	public static function pre_option_activitypub_distribution_mode( $pre ) {
 		if ( false !== ACTIVITYPUB_DISTRIBUTION_MODE ) {
-			$allowed   = array_keys( self::get_distribution_modes() );
-			$allowed[] = 'custom';
+			/*
+			 * Only preset modes are allowed via the constant. The 'custom'
+			 * mode is excluded because its batch size and pause values are
+			 * still read from the database, which defeats the purpose of
+			 * locking the mode via wp-config.php.
+			 */
+			$allowed = array_keys( self::get_distribution_modes() );
 
 			if ( \in_array( ACTIVITYPUB_DISTRIBUTION_MODE, $allowed, true ) ) {
 				return ACTIVITYPUB_DISTRIBUTION_MODE;
 			}
 
-			// Invalid constant value, fall back to default.
+			// Invalid or unsupported constant value, fall back to default.
 			return 'default';
 		}
 

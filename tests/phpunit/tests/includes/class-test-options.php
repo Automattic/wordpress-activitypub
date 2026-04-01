@@ -275,6 +275,30 @@ class Test_Options extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test custom batch size is capped at 500.
+	 *
+	 * @covers \Activitypub\Options::register_settings
+	 */
+	public function test_custom_batch_size_maximum() {
+		Options::register_settings();
+
+		\update_option( 'activitypub_custom_batch_size', 100000 );
+		$this->assertEquals( 500, \get_option( 'activitypub_custom_batch_size' ) );
+	}
+
+	/**
+	 * Test custom batch pause is capped at 3600.
+	 *
+	 * @covers \Activitypub\Options::register_settings
+	 */
+	public function test_custom_batch_pause_maximum() {
+		Options::register_settings();
+
+		\update_option( 'activitypub_custom_batch_pause', 99999 );
+		$this->assertEquals( 3600, \get_option( 'activitypub_custom_batch_pause' ) );
+	}
+
+	/**
 	 * Test distribution mode sanitizes invalid values.
 	 *
 	 * @covers \Activitypub\Options::register_settings
