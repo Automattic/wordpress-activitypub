@@ -114,23 +114,25 @@ export default function Edit( { attributes, setAttributes } ) {
 						onChange={ ( value ) => setAttributes( { year: parseInt( value, 10 ) } ) }
 					/>
 				</PanelBody>
-				<PanelBody title={ __( 'Share Image', 'activitypub' ) } initialOpen={ false }>
-					<p className="description">
-						{ __( 'Use this URL to share your stats as an image on social media.', 'activitypub' ) }
-					</p>
-					<TextControl
-						__nextHasNoMarginBottom
-						value={ imageUrl }
-						readOnly
-						onClick={ ( e ) => e.target.select() }
-					/>
-					<div style={ { display: 'flex', gap: '8px', alignItems: 'center' } }>
-						<Button variant="secondary" onClick={ handleCopy }>
-							{ copied ? __( 'Copied!', 'activitypub' ) : __( 'Copy URL', 'activitypub' ) }
-						</Button>
-						<ExternalLink href={ imageUrl }>{ __( 'Preview', 'activitypub' ) }</ExternalLink>
-					</div>
-				</PanelBody>
+				{ imageUrl && (
+					<PanelBody title={ __( 'Share Image', 'activitypub' ) } initialOpen={ false }>
+						<p className="description">
+							{ __( 'Use this URL to share your stats as an image on social media.', 'activitypub' ) }
+						</p>
+						<TextControl
+							__nextHasNoMarginBottom
+							value={ imageUrl }
+							readOnly
+							onClick={ ( e ) => e.target.select() }
+						/>
+						<div style={ { display: 'flex', gap: '8px', alignItems: 'center' } }>
+							<Button variant="secondary" onClick={ handleCopy }>
+								{ copied ? __( 'Copied!', 'activitypub' ) : __( 'Copy URL', 'activitypub' ) }
+							</Button>
+							<ExternalLink href={ imageUrl }>{ __( 'Preview', 'activitypub' ) }</ExternalLink>
+						</div>
+					</PanelBody>
+				) }
 			</InspectorControls>
 
 			<Disabled>

@@ -41,6 +41,15 @@ class Stats_Image {
 	const HEIGHT = 630;
 
 	/**
+	 * Check if the GD library is available.
+	 *
+	 * @return bool Whether GD is available.
+	 */
+	public static function is_available() {
+		return \function_exists( 'imagecreatetruecolor' );
+	}
+
+	/**
 	 * Get the public URL for a stats image, generating it if needed.
 	 *
 	 * @param int   $user_id         The user ID.
@@ -50,6 +59,10 @@ class Stats_Image {
 	 * @return string|\WP_Error The public URL or error.
 	 */
 	public static function get_url( $user_id, $year, $color_overrides = array() ) {
+		if ( ! self::is_available() ) {
+			return new \WP_Error( 'gd_not_available', \__( 'GD library is not available.', 'activitypub' ), array( 'status' => 501 ) );
+		}
+
 		// If local caching is disabled, use the REST endpoint for on-the-fly generation.
 		if ( ! self::is_enabled() ) {
 			$url = \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image/' . $user_id . '/' . $year );
@@ -116,6 +129,10 @@ class Stats_Image {
 	 * @return \WP_Error|void Error on failure, exits on success.
 	 */
 	public static function serve( $user_id, $year, $color_overrides = array() ) {
+		if ( ! self::is_available() ) {
+			return new \WP_Error( 'gd_not_available', \__( 'GD library is not available.', 'activitypub' ), array( 'status' => 501 ) );
+		}
+
 		$cache_key = self::get_cache_key( $user_id, $year, $color_overrides );
 		$cached    = self::get_cached( $cache_key );
 

@@ -103,7 +103,7 @@ class Blocks {
 			'defaultQuotePolicy'    => \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE ),
 			'objectType'            => \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ),
 			'noteLength'            => ACTIVITYPUB_NOTE_LENGTH,
-			'statsImageUrlEndpoint' => \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image-url/{user_id}/{year}' ),
+			'statsImageUrlEndpoint' => Stats_Image::is_available() ? \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image-url/{user_id}/{year}' ) : '',
 		);
 		wp_localize_script( 'wp-editor', '_activityPubOptions', $data );
 
@@ -1052,6 +1052,10 @@ class Blocks {
 	 * @return array The attachments with stats images appended.
 	 */
 	public static function add_stats_image_attachment( $attachments, $post ) {
+		if ( ! Stats_Image::is_available() ) {
+			return $attachments;
+		}
+
 		$blocks = \parse_blocks( $post->post_content );
 
 		foreach ( $blocks as $block ) {
