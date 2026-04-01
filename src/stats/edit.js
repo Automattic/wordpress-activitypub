@@ -3,7 +3,8 @@ import ServerSideRender from '@wordpress/server-side-render';
 import { SelectControl, PanelBody, Disabled, ExternalLink, Button, TextControl } from '@wordpress/components';
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useEffect, useCallback } from '@wordpress/element';
+import apiFetch from '@wordpress/api-fetch';
 import { useUserOptions } from '../shared/use-user-options';
 
 const currentYear = new Date().getFullYear();
@@ -22,19 +23,18 @@ function getYearOptions() {
 }
 
 /**
- * Build the image endpoint URL.
+ * Build the full URL for the stats image-url endpoint.
  *
  * @param {string} selectedUser The selected user ID.
  * @param {number} displayYear  The year to display.
- * @return {string} The image URL.
+ * @return {string} The full URL, or empty string if template unavailable.
  */
-function getImageUrl( selectedUser, displayYear ) {
-	const userId = selectedUser === 'blog' ? 0 : selectedUser;
-	// URL template from PHP with get_rest_url(), handles pretty/plain permalinks.
-	const template = window._activityPubOptions?.statsImageUrl || '';
+function getImageUrlEndpoint( selectedUser, displayYear ) {
+	const template = window._activityPubOptions?.statsImageUrlEndpoint || '';
 	if ( ! template ) {
 		return '';
 	}
+	const userId = ! selectedUser || selectedUser === 'blog' ? 0 : selectedUser;
 	return template.replace( '{user_id}', userId ).replace( '{year}', displayYear );
 }
 
@@ -71,7 +71,22 @@ export default function Edit( { attributes, setAttributes } ) {
 	}, [ usersOptions ] ); // eslint-disable-line react-hooks/exhaustive-deps
 
 	const displayYear = year || currentYear - 1;
-	const imageUrl = getImageUrl( selectedUser || 'blog', displayYear );
+	const [ imageUrl, setImageUrl ] = useState( '' );
+
+	// Fetch the resolved image URL (cached file or REST endpoint).
+	const fetchImageUrl = useCallback( () => {
+		const endpoint = getImageUrlEndpoint( selectedUser || 'blog', displayYear );
+		if ( ! endpoint ) {
+			return;
+		}
+		apiFetch( { url: endpoint } )
+			.then( ( response ) => setImageUrl( response.url || '' ) )
+			.catch( () => setImageUrl( '' ) );
+	}, [ selectedUser, displayYear ] );
+
+	useEffect( () => {
+		fetchImageUrl();
+	}, [ fetchImageUrl ] );
 
 	const handleCopy = () => {
 		navigator.clipboard.writeText( imageUrl ).then( () => {

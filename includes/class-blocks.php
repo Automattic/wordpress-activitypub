@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Cache\Stats_Image;
 use Activitypub\Collection\Actors;
 
 /**
@@ -88,21 +89,21 @@ class Blocks {
 	 */
 	public static function enqueue_editor_assets() {
 		$data = array(
-			'namespace'          => ACTIVITYPUB_REST_NAMESPACE,
-			'defaultAvatarUrl'   => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
-			'enabled'            => array(
+			'namespace'             => ACTIVITYPUB_REST_NAMESPACE,
+			'defaultAvatarUrl'      => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
+			'enabled'               => array(
 				'blog'  => ! is_user_type_disabled( 'blog' ),
 				'users' => ! is_user_type_disabled( 'user' ),
 			),
-			'profileUrls'        => array(
+			'profileUrls'           => array(
 				'user' => \admin_url( 'profile.php#activitypub' ),
 				'blog' => \admin_url( 'options-general.php?page=activitypub&tab=blog-profile' ),
 			),
-			'showAvatars'        => (bool) \get_option( 'show_avatars' ),
-			'defaultQuotePolicy' => \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE ),
-			'objectType'         => \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ),
-			'noteLength'         => ACTIVITYPUB_NOTE_LENGTH,
-			'statsImageUrl'      => \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image/{user_id}/{year}' ),
+			'showAvatars'           => (bool) \get_option( 'show_avatars' ),
+			'defaultQuotePolicy'    => \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE ),
+			'objectType'            => \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ),
+			'noteLength'            => ACTIVITYPUB_NOTE_LENGTH,
+			'statsImageUrlEndpoint' => \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image-url/{user_id}/{year}' ),
 		);
 		wp_localize_script( 'wp-editor', '_activityPubOptions', $data );
 
@@ -1060,11 +1061,15 @@ class Blocks {
 
 			$user_id = self::get_user_id( $block['attrs']['selectedUser'] ?? 'blog' );
 			$year    = (int) ( $block['attrs']['year'] ?? (int) \gmdate( 'Y' ) - 1 );
+			$url     = Stats_Image::get_url( $user_id, $year );
+
+			// Determine mime type from URL extension.
+			$mime_type = \str_ends_with( $url, '.webp' ) ? 'image/webp' : 'image/png';
 
 			$attachments[] = array(
 				'type'      => 'Image',
-				'mediaType' => 'image/png',
-				'url'       => self::get_stats_image_url( $user_id, $year ),
+				'mediaType' => $mime_type,
+				'url'       => $url,
 				'name'      => \sprintf(
 					/* translators: %d: The year */
 					\__( 'Fediverse Stats %d', 'activitypub' ),
@@ -1079,7 +1084,8 @@ class Blocks {
 	/**
 	 * Get the stats image URL for a given user and year.
 	 *
-	 * Uses get_rest_url() which works with both pretty and plain permalinks.
+	 * Returns the direct cached file URL if available, otherwise
+	 * falls back to the REST endpoint URL.
 	 *
 	 * @since unreleased
 	 *
@@ -1089,7 +1095,13 @@ class Blocks {
 	 * @return string The image URL.
 	 */
 	public static function get_stats_image_url( $user_id, $year ) {
-		return \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image/' . $user_id . '/' . $year );
+		$url = Stats_Image::get_url( $user_id, $year );
+
+		if ( \is_wp_error( $url ) ) {
+			return \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image/' . $user_id . '/' . $year );
+		}
+
+		return $url;
 	}
 
 	/**
