@@ -15,16 +15,10 @@ use Activitypub\Statistics;
  * Stats Image cache class.
  *
  * Generates, caches, and serves shareable stats images.
+ * Extends the File cache base class for storage, optimization, and cleanup.
  * Images are stored in /wp-content/uploads/activitypub/stats/{user_id}/
  */
-class Stats_Image {
-
-	/**
-	 * Base directory for cached stats images relative to uploads.
-	 *
-	 * @var string
-	 */
-	const BASE_DIR = '/activitypub/stats/';
+class Stats_Image extends File {
 
 	/**
 	 * Image width in pixels.
@@ -39,6 +33,44 @@ class Stats_Image {
 	 * @var int
 	 */
 	const HEIGHT = 630;
+
+	/**
+	 * Get the cache type identifier.
+	 *
+	 * @return string Cache type.
+	 */
+	public static function get_type() {
+		return 'stats_image';
+	}
+
+	/**
+	 * Get the base directory path relative to uploads.
+	 *
+	 * @return string Base directory path.
+	 */
+	public static function get_base_dir() {
+		return '/activitypub/stats/';
+	}
+
+	/**
+	 * Get the context identifier for the filter.
+	 *
+	 * @return string Context identifier.
+	 */
+	public static function get_context() {
+		return 'stats_image';
+	}
+
+	/**
+	 * Get the maximum dimension for images of this type.
+	 *
+	 * Stats images have a fixed size, so no resizing is needed.
+	 *
+	 * @return int Maximum width/height in pixels.
+	 */
+	public static function get_max_dimension() {
+		return self::WIDTH;
+	}
 
 	/**
 	 * Check if the GD library is available.
@@ -64,7 +96,7 @@ class Stats_Image {
 		}
 
 		// If local caching is disabled, use the REST endpoint for on-the-fly generation.
-		if ( ! self::is_enabled() ) {
+		if ( ! static::is_enabled() ) {
 			$url = \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image/' . $user_id . '/' . $year );
 
 			/**
@@ -81,40 +113,31 @@ class Stats_Image {
 			return \apply_filters( 'activitypub_stats_image_url', $url, $user_id, $year );
 		}
 
-		$cache_key = self::get_cache_key( $user_id, $year, $color_overrides );
-		$cached    = self::get_cached( $cache_key );
+		$hash  = self::get_hash( $color_overrides );
+		$paths = static::get_storage_paths( $user_id );
 
-		if ( ! $cached ) {
-			$cached = self::generate( $user_id, $year, $color_overrides );
+		// Check for cached file using the base class glob pattern.
+		$pattern = static::escape_glob_pattern( $paths['basedir'] . '/stats-' . $year . '-' . $hash ) . '.*';
+		$matches = \glob( $pattern );
+
+		if ( ! empty( $matches ) && \is_file( $matches[0] ) ) {
+			$url = $paths['baseurl'] . '/' . \basename( $matches[0] );
+
+			/** This filter is documented in includes/cache/class-stats-image.php */
+			return \apply_filters( 'activitypub_stats_image_url', $url, $user_id, $year );
 		}
 
-		if ( \is_wp_error( $cached ) ) {
-			return $cached;
+		// Generate the image.
+		$result = self::generate( $user_id, $year, $color_overrides );
+
+		if ( \is_wp_error( $result ) ) {
+			return $result;
 		}
 
-		$url = self::path_to_url( $cached['path'] );
+		$url = $paths['baseurl'] . '/' . \basename( $result );
 
 		/** This filter is documented in includes/cache/class-stats-image.php */
 		return \apply_filters( 'activitypub_stats_image_url', $url, $user_id, $year );
-	}
-
-	/**
-	 * Check if stats image caching is enabled.
-	 *
-	 * Uses the same filter pattern as other cache types:
-	 * `activitypub_cache_stats_image_enabled`.
-	 *
-	 * @return bool Whether caching is enabled.
-	 */
-	private static function is_enabled() {
-		/**
-		 * Filters whether stats image caching is enabled.
-		 *
-		 * @since unreleased
-		 *
-		 * @param bool $enabled Whether caching is enabled. Default true.
-		 */
-		return (bool) \apply_filters( 'activitypub_cache_stats_image_enabled', true );
 	}
 
 	/**
@@ -133,22 +156,29 @@ class Stats_Image {
 			return new \WP_Error( 'gd_not_available', \__( 'GD library is not available.', 'activitypub' ), array( 'status' => 501 ) );
 		}
 
-		$cache_key = self::get_cache_key( $user_id, $year, $color_overrides );
-		$cached    = self::get_cached( $cache_key );
+		$hash  = self::get_hash( $color_overrides );
+		$paths = static::get_storage_paths( $user_id );
 
-		if ( ! $cached ) {
-			$cached = self::generate( $user_id, $year, $color_overrides );
+		// Check for cached file.
+		$pattern = static::escape_glob_pattern( $paths['basedir'] . '/stats-' . $year . '-' . $hash ) . '.*';
+		$matches = \glob( $pattern );
+		$file    = ( ! empty( $matches ) && \is_file( $matches[0] ) ) ? $matches[0] : null;
+
+		if ( ! $file ) {
+			$file = self::generate( $user_id, $year, $color_overrides );
 		}
 
-		if ( \is_wp_error( $cached ) ) {
-			return $cached;
+		if ( \is_wp_error( $file ) ) {
+			return $file;
 		}
 
-		\header( 'Content-Type: ' . $cached['mime_type'] );
-		\header( 'Content-Length: ' . \filesize( $cached['path'] ) );
+		$mime_type = static::get_file_mime_type( $file );
+
+		\header( 'Content-Type: ' . ( $mime_type ?: 'image/png' ) );
+		\header( 'Content-Length: ' . \filesize( $file ) );
 		\header( 'Cache-Control: public, max-age=86400' );
 
-		\readfile( $cached['path'] ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
+		\readfile( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
 		exit;
 	}
 
@@ -159,15 +189,11 @@ class Stats_Image {
 	 * @param int   $year            The year.
 	 * @param array $color_overrides Optional bg/fg hex overrides (without #).
 	 *
-	 * @return array|\WP_Error { path, mime_type } or error.
+	 * @return string|\WP_Error Cached file path or error.
 	 */
 	public static function generate( $user_id, $year, $color_overrides = array() ) {
-		if ( ! \function_exists( 'imagecreatetruecolor' ) ) {
-			return new \WP_Error(
-				'gd_not_available',
-				\__( 'GD library is not available.', 'activitypub' ),
-				array( 'status' => 501 )
-			);
+		if ( ! self::is_available() ) {
+			return new \WP_Error( 'gd_not_available', \__( 'GD library is not available.', 'activitypub' ), array( 'status' => 501 ) );
 		}
 
 		$summary = Statistics::get_annual_summary( $user_id, $year );
@@ -177,11 +203,7 @@ class Stats_Image {
 		}
 
 		if ( ! $summary || empty( $summary['posts_count'] ) ) {
-			return new \WP_Error(
-				'no_stats',
-				\__( 'No statistics available for this period.', 'activitypub' ),
-				array( 'status' => 404 )
-			);
+			return new \WP_Error( 'no_stats', \__( 'No statistics available for this period.', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
 		$actor = Actors::get_by_id( $user_id );
@@ -207,116 +229,36 @@ class Stats_Image {
 			return $tmp_file;
 		}
 
-		$cache_key = self::get_cache_key( $user_id, $year, $color_overrides );
-		$result    = self::optimize_and_store( $tmp_file, $cache_key );
+		// Use the base class storage paths and optimization.
+		$paths = static::get_storage_paths( $user_id );
 
-		\wp_delete_file( $tmp_file );
+		if ( ! \wp_mkdir_p( $paths['basedir'] ) ) {
+			\wp_delete_file( $tmp_file );
+			return new \WP_Error( 'cache_dir_failed', \__( 'Failed to create cache directory.', 'activitypub' ), array( 'status' => 500 ) );
+		}
 
-		return $result;
+		// Move to cache dir with a descriptive name, then optimize (WebP conversion).
+		$hash      = self::get_hash( $color_overrides );
+		$dest_name = \sprintf( 'stats-%d-%s.png', $year, $hash );
+		$dest_path = $paths['basedir'] . '/' . $dest_name;
+
+		static::get_filesystem()->move( $tmp_file, $dest_path, true );
+
+		// Optimize via WP_Image_Editor (handles WebP conversion).
+		$optimized = static::optimize_image( $dest_path, self::WIDTH );
+
+		return $optimized;
 	}
 
 	/**
-	 * Build a cache key from the image parameters.
+	 * Generate a hash for color overrides.
 	 *
-	 * @param int   $user_id         The user ID.
-	 * @param int   $year            The year.
 	 * @param array $color_overrides The color overrides.
 	 *
-	 * @return array Cache key with dir, base, hash.
+	 * @return string The hash string.
 	 */
-	private static function get_cache_key( $user_id, $year, $color_overrides ) {
-		$upload_dir = \wp_upload_dir();
-		$hash       = \md5( \wp_json_encode( \array_filter( $color_overrides ) ) );
-
-		return array(
-			'dir'  => $upload_dir['basedir'] . self::BASE_DIR . $user_id,
-			'base' => \sprintf( 'stats-%d-%s', $year, $hash ),
-		);
-	}
-
-	/**
-	 * Look for a cached image.
-	 *
-	 * @param array $cache_key The cache key.
-	 *
-	 * @return array|false { path, mime_type } or false if not cached.
-	 */
-	private static function get_cached( $cache_key ) {
-		$extensions = array(
-			'webp' => 'image/webp',
-			'png'  => 'image/png',
-		);
-
-		foreach ( $extensions as $ext => $mime ) {
-			$path = $cache_key['dir'] . '/' . $cache_key['base'] . '.' . $ext;
-			if ( \file_exists( $path ) ) {
-				return array(
-					'path'      => $path,
-					'mime_type' => $mime,
-				);
-			}
-		}
-
-		return false;
-	}
-
-	/**
-	 * Optimize the image via WP_Image_Editor and save to cache.
-	 *
-	 * @param string $tmp_file  Path to the temporary PNG.
-	 * @param array  $cache_key The cache key.
-	 *
-	 * @return array|\WP_Error { path, mime_type } or error.
-	 */
-	private static function optimize_and_store( $tmp_file, $cache_key ) {
-		if ( ! \wp_mkdir_p( $cache_key['dir'] ) ) {
-			return new \WP_Error(
-				'cache_dir_failed',
-				\__( 'Failed to create cache directory.', 'activitypub' ),
-				array( 'status' => 500 )
-			);
-		}
-
-		$editor    = \wp_get_image_editor( $tmp_file );
-		$mime_type = 'image/png';
-		$ext       = 'png';
-
-		if ( ! \is_wp_error( $editor ) && $editor->supports_mime_type( 'image/webp' ) ) {
-			$mime_type = 'image/webp';
-			$ext       = 'webp';
-		}
-
-		$dest_path = $cache_key['dir'] . '/' . $cache_key['base'] . '.' . $ext;
-
-		if ( ! \is_wp_error( $editor ) ) {
-			$result = $editor->save( $dest_path, $mime_type );
-
-			if ( ! \is_wp_error( $result ) ) {
-				return array(
-					'path'      => $result['path'],
-					'mime_type' => $mime_type,
-				);
-			}
-		}
-
-		// Fallback: copy the PNG directly.
-		\copy( $tmp_file, $dest_path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_copy
-		return array(
-			'path'      => $dest_path,
-			'mime_type' => 'image/png',
-		);
-	}
-
-	/**
-	 * Convert a filesystem path to a public URL.
-	 *
-	 * @param string $path The filesystem path.
-	 *
-	 * @return string The public URL.
-	 */
-	private static function path_to_url( $path ) {
-		$upload_dir = \wp_upload_dir();
-		return \str_replace( $upload_dir['basedir'], $upload_dir['baseurl'], $path );
+	private static function get_hash( $color_overrides ) {
+		return \md5( \wp_json_encode( \array_filter( $color_overrides ) ) );
 	}
 
 	/**
@@ -337,11 +279,7 @@ class Stats_Image {
 		$image = \imagecreatetruecolor( $width, $height );
 
 		if ( ! $image ) {
-			return new \WP_Error(
-				'image_create_failed',
-				\__( 'Failed to create image.', 'activitypub' ),
-				array( 'status' => 500 )
-			);
+			return new \WP_Error( 'image_create_failed', \__( 'Failed to create image.', 'activitypub' ), array( 'status' => 500 ) );
 		}
 
 		\imageantialias( $image, true );
@@ -362,19 +300,17 @@ class Stats_Image {
 			$total_engagement += $summary[ $slug . '_count' ] ?? 0;
 		}
 
-		$followers_end = $summary['followers_end'] ?? 0;
-
 		// Title.
 		$title = \sprintf(
 			/* translators: %d: The year */
 			\__( 'Fediverse Stats %d', 'activitypub' ),
 			$year
 		);
-		self::draw_text_centered( $image, $title, 100, 36, $fg, $font );
+		self::draw_text( $image, $title, null, 100, 36, $fg, $font );
 
 		// Actor webfinger.
 		if ( $actor_webfinger ) {
-			self::draw_text_centered( $image, $actor_webfinger, 150, 20, $muted, $font );
+			self::draw_text( $image, $actor_webfinger, null, 150, 20, $muted, $font );
 		}
 
 		// Three big stats in a row.
@@ -388,7 +324,7 @@ class Stats_Image {
 				'label' => \__( 'Engagements', 'activitypub' ),
 			),
 			array(
-				'value' => \number_format_i18n( $followers_end ),
+				'value' => \number_format_i18n( $summary['followers_end'] ?? 0 ),
 				'label' => \__( 'Followers', 'activitypub' ),
 			),
 		);
@@ -397,8 +333,8 @@ class Stats_Image {
 
 		foreach ( $stats as $i => $stat ) {
 			$center_x = (int) ( $col_width * $i + $col_width / 2 );
-			self::draw_text_at( $image, $stat['value'], $center_x, 300, 56, $fg, $font );
-			self::draw_text_at( $image, $stat['label'], $center_x, 355, 18, $muted, $font );
+			self::draw_text( $image, $stat['value'], $center_x, 300, 56, $fg, $font );
+			self::draw_text( $image, $stat['label'], $center_x, 355, 18, $muted, $font );
 		}
 
 		// Follower growth line.
@@ -409,11 +345,11 @@ class Stats_Image {
 			\__( '%s followers this year', 'activitypub' ),
 			$change_sign . \number_format_i18n( $followers_net )
 		);
-		self::draw_text_centered( $image, $growth_text, 450, 20, $muted, $font );
+		self::draw_text( $image, $growth_text, null, 450, 20, $muted, $font );
 
 		// Branding.
 		$branding = $site_name . ' - ' . \__( 'Powered by ActivityPub', 'activitypub' );
-		self::draw_text_centered( $image, $branding, $height - 40, 14, $muted, $font );
+		self::draw_text( $image, $branding, null, $height - 40, 14, $muted, $font );
 
 		// Save to temp file.
 		$tmp_file = \wp_tempnam( 'activitypub-stats-' );
@@ -425,6 +361,39 @@ class Stats_Image {
 		}
 
 		return $tmp_file;
+	}
+
+	/**
+	 * Draw text on the image, centered on the canvas or at a specific x position.
+	 *
+	 * Uses TrueType rendering when a font is available, falls back to
+	 * GD built-in fonts.
+	 *
+	 * @param resource     $image The image resource.
+	 * @param string       $text  The text to draw.
+	 * @param int|null     $x     The center x position, or null to center on canvas.
+	 * @param int          $y     The y position.
+	 * @param int|float    $size  Font size in points (TTF) or 1-5 (built-in).
+	 * @param int          $color The text color.
+	 * @param string|false $font  Path to TTF file, or false for built-in.
+	 */
+	private static function draw_text( $image, $text, $x, $y, $size, $color, $font = false ) {
+		if ( $font && \function_exists( 'imagefttext' ) ) {
+			$bbox       = \imageftbbox( $size, 0, $font, $text );
+			$text_width = $bbox[2] - $bbox[0];
+			$draw_x     = null === $x
+				? (int) ( ( self::WIDTH - $text_width ) / 2 )
+				: (int) ( $x - $text_width / 2 );
+			\imagefttext( $image, $size, 0, $draw_x, $y, $color, $font, $text );
+		} else {
+			$builtin_size = \min( 5, \max( 1, (int) ( $size / 10 ) ) );
+			$font_width   = \imagefontwidth( $builtin_size );
+			$text_width   = $font_width * \strlen( $text );
+			$draw_x       = null === $x
+				? (int) ( ( self::WIDTH - $text_width ) / 2 )
+				: (int) ( $x - $text_width / 2 );
+			\imagestring( $image, $builtin_size, $draw_x, $y, $text, $color );
+		}
 	}
 
 	/**
@@ -548,9 +517,8 @@ class Stats_Image {
 		}
 
 		if ( \preg_match( '/--color--([a-z0-9-]+)/', $value, $matches ) ) {
-			$slug = $matches[1];
-			if ( ! empty( $palette[ $slug ] ) ) {
-				return self::parse_hex( $palette[ $slug ] );
+			if ( ! empty( $palette[ $matches[1] ] ) ) {
+				return self::parse_hex( $palette[ $matches[1] ] );
 			}
 		}
 
@@ -575,11 +543,9 @@ class Stats_Image {
 			return false;
 		}
 
-		return array(
-			\hexdec( \substr( $hex, 0, 2 ) ),
-			\hexdec( \substr( $hex, 2, 2 ) ),
-			\hexdec( \substr( $hex, 4, 2 ) ),
-		);
+		$result = \sscanf( $hex, '%02x%02x%02x' );
+
+		return ( 3 === \count( $result ) ) ? $result : false;
 	}
 
 	/**
@@ -590,10 +556,8 @@ class Stats_Image {
 	private static function resolve_font() {
 		$body_slug = '';
 		$styles    = \wp_get_global_styles( array( 'typography' ) );
-		if ( ! empty( $styles['fontFamily'] ) ) {
-			if ( \preg_match( '/--font-family--([a-z0-9-]+)/', $styles['fontFamily'], $matches ) ) {
-				$body_slug = $matches[1];
-			}
+		if ( ! empty( $styles['fontFamily'] ) && \preg_match( '/--font-family--([a-z0-9-]+)/', $styles['fontFamily'], $matches ) ) {
+			$body_slug = $matches[1];
 		}
 
 		$settings = \wp_get_global_settings();
@@ -605,40 +569,81 @@ class Stats_Image {
 				}
 			}
 
+			// Sort so the body font family is tried first.
 			if ( $body_slug ) {
 				\usort(
 					$all_families,
 					function ( $a, $b ) use ( $body_slug ) {
-						$a_match = ( $a['slug'] ?? '' ) === $body_slug ? 0 : 1;
-						$b_match = ( $b['slug'] ?? '' ) === $body_slug ? 0 : 1;
-						return $a_match - $b_match;
+						return ( ( $a['slug'] ?? '' ) === $body_slug ? 0 : 1 ) - ( ( $b['slug'] ?? '' ) === $body_slug ? 0 : 1 );
 					}
 				);
 			}
 
-			foreach ( $all_families as $family ) {
-				if ( empty( $family['fontFace'] ) ) {
-					continue;
-				}
-				foreach ( $family['fontFace'] as $face ) {
-					$src = \is_array( $face['src'] ) ? $face['src'][0] : $face['src'];
-
-					if ( ! \preg_match( '/\.(ttf|otf)$/i', $src ) ) {
-						continue;
-					}
-
-					if ( 0 === \strpos( $src, 'file:./' ) ) {
-						$src = \get_theme_file_path( \substr( $src, 7 ) );
-					}
-
-					if ( \file_exists( $src ) ) {
-						return $src;
-					}
-				}
+			$font = self::find_ttf_in_families( $all_families );
+			if ( $font ) {
+				return $font;
 			}
 		}
 
 		// Try the Font Library (WP 6.5+).
+		$font = self::find_ttf_in_font_library();
+		if ( $font ) {
+			return $font;
+		}
+
+		// Fall back to bundled WordPress theme fonts.
+		$fallbacks = array(
+			ABSPATH . 'wp-content/themes/twentytwentytwo/assets/fonts/dm-sans/DMSans-Regular.ttf',
+			ABSPATH . 'wp-content/themes/twentytwentythree/assets/fonts/dm-sans/DMSans-Regular.ttf',
+		);
+
+		foreach ( $fallbacks as $path ) {
+			if ( \file_exists( $path ) ) {
+				return $path;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Find a TTF/OTF file in font family definitions.
+	 *
+	 * @param array $families The font families to search.
+	 *
+	 * @return string|false Path to TTF file or false.
+	 */
+	private static function find_ttf_in_families( $families ) {
+		foreach ( $families as $family ) {
+			if ( empty( $family['fontFace'] ) ) {
+				continue;
+			}
+			foreach ( $family['fontFace'] as $face ) {
+				$src = \is_array( $face['src'] ) ? $face['src'][0] : $face['src'];
+
+				if ( ! \preg_match( '/\.(ttf|otf)$/i', $src ) ) {
+					continue;
+				}
+
+				if ( 0 === \strpos( $src, 'file:./' ) ) {
+					$src = \get_theme_file_path( \substr( $src, 7 ) );
+				}
+
+				if ( \file_exists( $src ) ) {
+					return $src;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Find a TTF/OTF file from the WordPress Font Library.
+	 *
+	 * @return string|false Path to TTF file or false.
+	 */
+	private static function find_ttf_in_font_library() {
 		$font_families = \get_posts(
 			array(
 				'post_type'      => 'wp_font_family',
@@ -668,66 +673,6 @@ class Stats_Image {
 			}
 		}
 
-		$fallbacks = array(
-			ABSPATH . 'wp-content/themes/twentytwentytwo/assets/fonts/dm-sans/DMSans-Regular.ttf',
-			ABSPATH . 'wp-content/themes/twentytwentythree/assets/fonts/dm-sans/DMSans-Regular.ttf',
-		);
-
-		foreach ( $fallbacks as $path ) {
-			if ( \file_exists( $path ) ) {
-				return $path;
-			}
-		}
-
 		return false;
-	}
-
-	/**
-	 * Draw centered text on the image.
-	 *
-	 * @param resource     $image The image resource.
-	 * @param string       $text  The text to draw.
-	 * @param int          $y     The y position.
-	 * @param int|float    $size  Font size in points (TTF) or 1-5 (built-in).
-	 * @param int          $color The text color.
-	 * @param string|false $font  Path to TTF file, or false for built-in.
-	 */
-	private static function draw_text_centered( $image, $text, $y, $size, $color, $font = false ) {
-		if ( $font && \function_exists( 'imagefttext' ) ) {
-			$bbox       = \imageftbbox( $size, 0, $font, $text );
-			$text_width = $bbox[2] - $bbox[0];
-			$x          = (int) ( ( self::WIDTH - $text_width ) / 2 );
-			\imagefttext( $image, $size, 0, $x, $y, $color, $font, $text );
-		} else {
-			$builtin_size = \min( 5, \max( 1, (int) ( $size / 10 ) ) );
-			$font_width   = \imagefontwidth( $builtin_size );
-			$text_width   = $font_width * \strlen( $text );
-			$x            = (int) ( ( self::WIDTH - $text_width ) / 2 );
-			\imagestring( $image, $builtin_size, $x, $y, $text, $color );
-		}
-	}
-
-	/**
-	 * Draw text centered at a specific x position.
-	 *
-	 * @param resource     $image The image resource.
-	 * @param string       $text  The text to draw.
-	 * @param int          $x     The center x position.
-	 * @param int          $y     The y position.
-	 * @param int|float    $size  Font size in points (TTF) or 1-5 (built-in).
-	 * @param int          $color The text color.
-	 * @param string|false $font  Path to TTF file, or false for built-in.
-	 */
-	private static function draw_text_at( $image, $text, $x, $y, $size, $color, $font = false ) {
-		if ( $font && \function_exists( 'imagefttext' ) ) {
-			$bbox       = \imageftbbox( $size, 0, $font, $text );
-			$text_width = $bbox[2] - $bbox[0];
-			\imagefttext( $image, $size, 0, (int) ( $x - $text_width / 2 ), $y, $color, $font, $text );
-		} else {
-			$builtin_size = \min( 5, \max( 1, (int) ( $size / 10 ) ) );
-			$font_width   = \imagefontwidth( $builtin_size );
-			$text_width   = $font_width * \strlen( $text );
-			\imagestring( $image, $builtin_size, (int) ( $x - $text_width / 2 ), $y, $text, $color );
-		}
 	}
 }
