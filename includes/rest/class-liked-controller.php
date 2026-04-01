@@ -127,8 +127,7 @@ class Liked_Controller extends Actors_Controller {
 	 */
 	private function get_liked_object_ids( $user_id ) {
 		$args = array(
-			// phpcs:ignore WordPress.WP.PostsPerPage.posts_per_page_posts_per_page -- Need all items to filter undone likes.
-			'posts_per_page' => 1000,
+			'posts_per_page' => -1,
 			'post_type'      => Outbox::POST_TYPE,
 			'post_status'    => 'any',
 			'orderby'        => array(

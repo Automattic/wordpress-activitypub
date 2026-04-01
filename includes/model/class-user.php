@@ -294,11 +294,11 @@ class User extends Actor {
 	}
 
 	/**
-	 * Returns the Liked-API-Endpoint.
+	 * Returns the Liked API endpoint.
 	 *
 	 * @since unreleased
 	 *
-	 * @return string The Liked-Endpoint.
+	 * @return string The Liked endpoint.
 	 */
 	public function get_liked() {
 		return get_rest_url_by_path( sprintf( 'actors/%d/liked', $this->get__id() ) );

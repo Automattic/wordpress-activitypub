@@ -117,9 +117,9 @@ class Test_Liked_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$this->create_like_outbox_item( self::$user_id, 'https://example.com/post/5' );
 		$this->create_undo_outbox_item( self::$user_id, 'https://example.com/post/5' );
 
-		// Re-like: sleep 1 second to ensure different post_date.
-		sleep( 1 );
-		$this->create_like_outbox_item( self::$user_id, 'https://example.com/post/5' );
+		// Re-like with a later date to ensure deterministic ordering.
+		$future = \gmdate( 'Y-m-d H:i:s', \time() + 10 );
+		$this->create_like_outbox_item( self::$user_id, 'https://example.com/post/5', $future );
 
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/liked' );
 		$request->set_param( 'page', 1 );
@@ -191,31 +191,37 @@ class Test_Liked_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	/**
 	 * Create a Like outbox item for testing.
 	 *
-	 * @param int    $user_id   The user ID.
-	 * @param string $object_id The liked object URL.
+	 * @param int         $user_id   The user ID.
+	 * @param string      $object_id The liked object URL.
+	 * @param string|null $post_date Optional. The post date in MySQL format.
 	 * @return int The post ID.
 	 */
-	private function create_like_outbox_item( $user_id, $object_id ) {
+	private function create_like_outbox_item( $user_id, $object_id, $post_date = null ) {
 		$activity = array(
 			'type'   => 'Like',
 			'actor'  => 'https://example.com/user/' . $user_id,
 			'object' => $object_id,
 		);
 
-		return \wp_insert_post(
-			array(
-				'post_type'    => Outbox::POST_TYPE,
-				'post_status'  => 'publish',
-				'post_author'  => $user_id,
-				'post_title'   => '[Like] ' . $object_id,
-				'post_content' => \wp_json_encode( $activity ),
-				'meta_input'   => array(
-					'_activitypub_object_id'      => $object_id,
-					'_activitypub_activity_type'  => 'Like',
-					'_activitypub_activity_actor' => 'user',
-				),
-			)
+		$post_data = array(
+			'post_type'    => Outbox::POST_TYPE,
+			'post_status'  => 'publish',
+			'post_author'  => $user_id,
+			'post_title'   => '[Like] ' . $object_id,
+			'post_content' => \wp_json_encode( $activity ),
+			'meta_input'   => array(
+				'_activitypub_object_id'      => $object_id,
+				'_activitypub_activity_type'  => 'Like',
+				'_activitypub_activity_actor' => 'user',
+			),
 		);
+
+		if ( $post_date ) {
+			$post_data['post_date']     = $post_date;
+			$post_data['post_date_gmt'] = $post_date;
+		}
+
+		return \wp_insert_post( $post_data );
 	}
 
 	/**
