@@ -45,7 +45,8 @@
       "style": true,
       "width": true,
       "__experimentalSkipSerialization": true
-    }
+    },
+    "shadow": true
   },
   "attributes": {
     "selectedUser": {
