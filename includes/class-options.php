@@ -383,7 +383,9 @@ class Options {
 				'type'              => 'integer',
 				'description'       => 'Custom batch size for federation delivery.',
 				'default'           => 100,
-				'sanitize_callback' => 'absint',
+				'sanitize_callback' => static function ( $value ) {
+					return \max( 1, \absint( $value ) );
+				},
 			)
 		);
 
@@ -766,33 +768,28 @@ class Options {
 	 * @return array { batch_size: int, pause: int }
 	 */
 	public static function get_distribution_params() {
-		static $cached = null;
-
-		if ( null !== $cached ) {
-			return $cached;
-		}
-
 		$mode  = \get_option( 'activitypub_distribution_mode', 'default' );
 		$modes = self::get_distribution_modes();
 
 		if ( isset( $modes[ $mode ] ) ) {
-			$cached = array(
+			return array(
 				'batch_size' => $modes[ $mode ]['batch_size'],
 				'pause'      => $modes[ $mode ]['pause'],
 			);
-		} else {
-			// Custom mode.
-			$cached = array(
-				'batch_size' => \absint( \get_option( 'activitypub_custom_batch_size', 100 ) ),
-				'pause'      => \absint( \get_option( 'activitypub_custom_batch_pause', 30 ) ),
-			);
 		}
 
-		return $cached;
+		// Custom mode.
+		return array(
+			'batch_size' => \max( 1, \absint( \get_option( 'activitypub_custom_batch_size', 100 ) ) ),
+			'pause'      => \absint( \get_option( 'activitypub_custom_batch_pause', 30 ) ),
+		);
 	}
 
 	/**
 	 * Filter the dispatcher batch size based on distribution mode.
+	 *
+	 * Only overrides the value when a non-default mode is active,
+	 * so other plugins or constants can still set the batch size.
 	 *
 	 * @since unreleased
 	 *
@@ -800,7 +797,13 @@ class Options {
 	 *
 	 * @return int The batch size for the current distribution mode.
 	 */
-	public static function filter_dispatcher_batch_size( $batch_size ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found, VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+	public static function filter_dispatcher_batch_size( $batch_size ) {
+		$mode = \get_option( 'activitypub_distribution_mode', 'default' );
+
+		if ( 'default' === $mode ) {
+			return $batch_size;
+		}
+
 		$params = self::get_distribution_params();
 		return $params['batch_size'];
 	}
@@ -808,13 +811,22 @@ class Options {
 	/**
 	 * Filter the scheduler batch pause based on distribution mode.
 	 *
+	 * Only overrides the value when a non-default mode is active,
+	 * so other plugins or constants can still set the pause.
+	 *
 	 * @since unreleased
 	 *
 	 * @param int $pause The default pause in seconds.
 	 *
 	 * @return int The pause for the current distribution mode.
 	 */
-	public static function filter_scheduler_batch_pause( $pause ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found, VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+	public static function filter_scheduler_batch_pause( $pause ) {
+		$mode = \get_option( 'activitypub_distribution_mode', 'default' );
+
+		if ( 'default' === $mode ) {
+			return $pause;
+		}
+
 		$params = self::get_distribution_params();
 		return $params['pause'];
 	}

@@ -42,6 +42,11 @@ class Test_Options extends \WP_UnitTestCase {
 		// Clean up quote policy option.
 		\delete_option( 'activitypub_default_quote_policy' );
 
+		// Clean up distribution mode options.
+		\delete_option( 'activitypub_distribution_mode' );
+		\delete_option( 'activitypub_custom_batch_size' );
+		\delete_option( 'activitypub_custom_batch_pause' );
+
 		parent::tear_down();
 	}
 
@@ -223,6 +228,86 @@ class Test_Options extends \WP_UnitTestCase {
 		// Test 'me' value.
 		\update_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ME );
 		$this->assertEquals( ACTIVITYPUB_INTERACTION_POLICY_ME, \get_option( 'activitypub_default_quote_policy' ) );
+	}
+
+	/**
+	 * Test distribution mode returns correct params for presets.
+	 *
+	 * @covers \Activitypub\Options::get_distribution_params
+	 */
+	public function test_distribution_params_presets() {
+		\update_option( 'activitypub_distribution_mode', 'eco' );
+
+		$params = Options::get_distribution_params();
+
+		$this->assertEquals( 20, $params['batch_size'] );
+		$this->assertEquals( 300, $params['pause'] );
+	}
+
+	/**
+	 * Test distribution mode custom params.
+	 *
+	 * @covers \Activitypub\Options::get_distribution_params
+	 */
+	public function test_distribution_params_custom() {
+		Options::register_settings();
+
+		\update_option( 'activitypub_distribution_mode', 'custom' );
+		\update_option( 'activitypub_custom_batch_size', 42 );
+		\update_option( 'activitypub_custom_batch_pause', 120 );
+
+		$params = Options::get_distribution_params();
+
+		$this->assertEquals( 42, $params['batch_size'] );
+		$this->assertEquals( 120, $params['pause'] );
+	}
+
+	/**
+	 * Test custom batch size cannot be zero.
+	 *
+	 * @covers \Activitypub\Options::register_settings
+	 */
+	public function test_custom_batch_size_minimum() {
+		Options::register_settings();
+
+		\update_option( 'activitypub_custom_batch_size', 0 );
+		$this->assertGreaterThanOrEqual( 1, \get_option( 'activitypub_custom_batch_size' ) );
+	}
+
+	/**
+	 * Test distribution mode sanitizes invalid values.
+	 *
+	 * @covers \Activitypub\Options::register_settings
+	 */
+	public function test_distribution_mode_sanitizes_invalid() {
+		Options::register_settings();
+
+		\update_option( 'activitypub_distribution_mode', 'turbo' );
+		$this->assertEquals( 'default', \get_option( 'activitypub_distribution_mode' ) );
+	}
+
+	/**
+	 * Test default mode does not override filter values.
+	 *
+	 * @covers \Activitypub\Options::filter_dispatcher_batch_size
+	 */
+	public function test_default_mode_preserves_filter_value() {
+		\update_option( 'activitypub_distribution_mode', 'default' );
+
+		$result = Options::filter_dispatcher_batch_size( 42 );
+		$this->assertEquals( 42, $result );
+	}
+
+	/**
+	 * Test non-default mode overrides filter values.
+	 *
+	 * @covers \Activitypub\Options::filter_dispatcher_batch_size
+	 */
+	public function test_non_default_mode_overrides_filter_value() {
+		\update_option( 'activitypub_distribution_mode', 'eco' );
+
+		$result = Options::filter_dispatcher_batch_size( 42 );
+		$this->assertEquals( 20, $result );
 	}
 
 	/**
