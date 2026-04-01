@@ -1,0 +1,48 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"name": "activitypub/stats",
+	"apiVersion": 3,
+	"version": "unreleased",
+	"title": "ActivityPub Stats",
+	"category": "widgets",
+	"description": "Display your annual Fediverse stats as a shareable card.",
+	"textdomain": "activitypub",
+	"icon": "chart-bar",
+	"keywords": [ "fediverse", "activitypub", "stats", "statistics", "annual", "year" ],
+	"supports": {
+		"html": false,
+		"align": [ "wide", "full" ],
+		"color": {
+			"gradients": true,
+			"__experimentalSkipSerialization": true,
+			"__experimentalDefaultControls": {
+				"background": true,
+				"text": true
+			}
+		},
+		"typography": {
+			"fontSize": true
+		},
+		"spacing": {
+			"margin": true,
+			"padding": true
+		}
+	},
+	"attributes": {
+		"selectedUser": {
+			"type": "string",
+			"default": "blog"
+		},
+		"year": {
+			"type": "number"
+		},
+		"displayMode": {
+			"type": "string",
+			"default": "card",
+			"enum": [ "card", "image" ]
+		}
+	},
+	"editorScript": "file:./index.js",
+	"style": "file:./style-index.css",
+	"render": "file:./render.php"
+}
