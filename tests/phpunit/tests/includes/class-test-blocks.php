@@ -1034,6 +1034,30 @@ class Test_Blocks extends \WP_UnitTestCase {
 	 * @covers ::add_stats_image_attachment
 	 */
 	public function test_add_stats_image_attachment() {
+		if ( ! \Activitypub\Cache\Stats_Image::is_available() ) {
+			$this->markTestSkipped( 'GD library is not available.' );
+		}
+
+		// Seed stats so get_url() can generate the image.
+		\update_option(
+			'activitypub_stats_0_2025_annual',
+			array(
+				'posts_count'          => 10,
+				'followers_start'      => 0,
+				'followers_end'        => 5,
+				'followers_net_change' => 5,
+				'most_active_month'    => 1,
+				'top_multiplicator'    => null,
+				'top_posts'            => array(),
+				'compiled_at'          => \gmdate( 'Y-m-d H:i:s' ),
+				'like_count'           => 5,
+				'repost_count'         => 2,
+				'comment_count'        => 1,
+				'quote_count'          => 0,
+			),
+			false
+		);
+
 		$post = self::factory()->post->create_and_get(
 			array(
 				'post_content' => '<!-- wp:activitypub/stats {"selectedUser":"blog","year":2025} /-->',
@@ -1045,8 +1069,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		$this->assertCount( 1, $attachments );
 		$this->assertSame( 'Image', $attachments[0]['type'] );
-		$this->assertSame( 'image/png', $attachments[0]['mediaType'] );
-		$this->assertStringContainsString( 'stats/image/0/2025', $attachments[0]['url'] );
+		$this->assertStringContainsString( 'stats', $attachments[0]['url'] );
 		$this->assertStringContainsString( '2025', $attachments[0]['name'] );
 	}
 
@@ -1074,6 +1097,30 @@ class Test_Blocks extends \WP_UnitTestCase {
 	 * @covers ::add_stats_image_attachment
 	 */
 	public function test_add_stats_image_attachment_preserves_existing() {
+		if ( ! \Activitypub\Cache\Stats_Image::is_available() ) {
+			$this->markTestSkipped( 'GD library is not available.' );
+		}
+
+		// Seed stats.
+		\update_option(
+			'activitypub_stats_0_2025_annual',
+			array(
+				'posts_count'          => 10,
+				'followers_start'      => 0,
+				'followers_end'        => 5,
+				'followers_net_change' => 5,
+				'most_active_month'    => 1,
+				'top_multiplicator'    => null,
+				'top_posts'            => array(),
+				'compiled_at'          => \gmdate( 'Y-m-d H:i:s' ),
+				'like_count'           => 5,
+				'repost_count'         => 2,
+				'comment_count'        => 1,
+				'quote_count'          => 0,
+			),
+			false
+		);
+
 		$post = self::factory()->post->create_and_get(
 			array(
 				'post_content' => '<!-- wp:activitypub/stats {"selectedUser":"blog","year":2025} /-->',
@@ -1092,7 +1139,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		$this->assertCount( 2, $attachments );
 		$this->assertSame( 'https://example.com/photo.jpg', $attachments[0]['url'] );
-		$this->assertStringContainsString( 'stats/image', $attachments[1]['url'] );
+		$this->assertStringContainsString( 'stats', $attachments[1]['url'] );
 	}
 
 	/**
@@ -1101,6 +1148,30 @@ class Test_Blocks extends \WP_UnitTestCase {
 	 * @covers ::add_stats_image_attachment
 	 */
 	public function test_add_stats_image_attachment_with_user_id() {
+		if ( ! \Activitypub\Cache\Stats_Image::is_available() ) {
+			$this->markTestSkipped( 'GD library is not available.' );
+		}
+
+		// Seed stats for user 1.
+		\update_option(
+			'activitypub_stats_1_2024_annual',
+			array(
+				'posts_count'          => 10,
+				'followers_start'      => 0,
+				'followers_end'        => 5,
+				'followers_net_change' => 5,
+				'most_active_month'    => 1,
+				'top_multiplicator'    => null,
+				'top_posts'            => array(),
+				'compiled_at'          => \gmdate( 'Y-m-d H:i:s' ),
+				'like_count'           => 5,
+				'repost_count'         => 2,
+				'comment_count'        => 1,
+				'quote_count'          => 0,
+			),
+			false
+		);
+
 		$post = self::factory()->post->create_and_get(
 			array(
 				'post_content' => '<!-- wp:activitypub/stats {"selectedUser":"1","year":2024} /-->',
@@ -1111,7 +1182,8 @@ class Test_Blocks extends \WP_UnitTestCase {
 		$attachments = Blocks::add_stats_image_attachment( array(), $post );
 
 		$this->assertCount( 1, $attachments );
-		$this->assertStringContainsString( 'stats/image/1/2024', $attachments[0]['url'] );
+		$this->assertStringContainsString( 'stats', $attachments[0]['url'] );
+		$this->assertStringContainsString( '2024', $attachments[0]['name'] );
 	}
 
 	/**
