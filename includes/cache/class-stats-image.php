@@ -591,18 +591,6 @@ class Stats_Image extends File {
 			return $font;
 		}
 
-		// Fall back to bundled WordPress theme fonts.
-		$fallbacks = array(
-			ABSPATH . 'wp-content/themes/twentytwentytwo/assets/fonts/dm-sans/DMSans-Regular.ttf',
-			ABSPATH . 'wp-content/themes/twentytwentythree/assets/fonts/dm-sans/DMSans-Regular.ttf',
-		);
-
-		foreach ( $fallbacks as $path ) {
-			if ( \file_exists( $path ) ) {
-				return $path;
-			}
-		}
-
 		return false;
 	}
 
