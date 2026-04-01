@@ -1210,6 +1210,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 	 * @covers \Activitypub\Cache\Stats_Image::get_url
 	 */
 	public function test_get_stats_image_url_plain_permalinks() {
+		$original = \get_option( 'permalink_structure' );
 		\update_option( 'permalink_structure', '' );
 
 		$url = \Activitypub\Cache\Stats_Image::get_url( 1, 2024 );
@@ -1222,7 +1223,6 @@ class Test_Blocks extends \WP_UnitTestCase {
 		$this->assertStringContainsString( 'stats', $url );
 		$this->assertStringContainsString( '2024', $url );
 
-		// Restore.
-		\update_option( 'permalink_structure', '/%postname%/' );
+		\update_option( 'permalink_structure', $original );
 	}
 }

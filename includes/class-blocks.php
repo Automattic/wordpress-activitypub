@@ -1062,13 +1062,10 @@ class Blocks {
 		 * extracted from the post. It is always appended so that the share-pic is
 		 * included in the federated activity regardless of the attachment cap.
 		 */
-		$blocks = \parse_blocks( $post->post_content );
+		$blocks      = \parse_blocks( $post->post_content );
+		$stats_blocks = self::find_blocks_recursive( $blocks, 'activitypub/stats' );
 
-		foreach ( $blocks as $block ) {
-			if ( 'activitypub/stats' !== $block['blockName'] ) {
-				continue;
-			}
-
+		foreach ( $stats_blocks as $block ) {
 			$user_id = self::get_user_id( $block['attrs']['selectedUser'] ?? 'blog' );
 
 			if ( null === $user_id ) {
@@ -1098,6 +1095,32 @@ class Blocks {
 		}
 
 		return $attachments;
+	}
+
+	/**
+	 * Recursively find blocks of a given type in a block tree.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array  $blocks     The parsed blocks.
+	 * @param string $block_name The block name to search for.
+	 *
+	 * @return array The matching blocks.
+	 */
+	private static function find_blocks_recursive( $blocks, $block_name ) {
+		$found = array();
+
+		foreach ( $blocks as $block ) {
+			if ( $block_name === $block['blockName'] ) {
+				$found[] = $block;
+			}
+
+			if ( ! empty( $block['innerBlocks'] ) ) {
+				$found = \array_merge( $found, self::find_blocks_recursive( $block['innerBlocks'], $block_name ) );
+			}
+		}
+
+		return $found;
 	}
 
 	/**

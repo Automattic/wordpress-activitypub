@@ -97,7 +97,11 @@ class Stats_Image extends File {
 
 		// If local caching is disabled, use the REST endpoint for on-the-fly generation.
 		if ( ! static::is_enabled() ) {
-			$url = \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image/' . $user_id . '/' . $year );
+			$url  = \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image/' . $user_id . '/' . $year );
+			$args = \array_filter( $color_overrides );
+			if ( ! empty( $args ) ) {
+				$url = \add_query_arg( $args, $url );
+			}
 
 			/**
 			 * Filters the stats image URL.
@@ -258,7 +262,17 @@ class Stats_Image extends File {
 	 * @return string The hash string.
 	 */
 	private static function get_hash( $color_overrides ) {
-		return \md5( \wp_json_encode( \array_filter( $color_overrides ) ) );
+		/*
+		 * Include the theme stylesheet and version in the hash so cached
+		 * images are regenerated when the theme (and its colors/fonts) changes.
+		 */
+		$parts = array(
+			\array_filter( $color_overrides ),
+			\get_stylesheet(),
+			\wp_get_theme()->get( 'Version' ),
+		);
+
+		return \md5( \wp_json_encode( $parts ) );
 	}
 
 	/**
@@ -353,11 +367,21 @@ class Stats_Image extends File {
 
 		// Save to temp file.
 		$tmp_file = \wp_tempnam( 'activitypub-stats-' );
-		\imagepng( $image, $tmp_file );
+
+		if ( ! $tmp_file ) {
+			return new \WP_Error( 'temp_file_failed', \__( 'Could not create temporary file.', 'activitypub' ), array( 'status' => 500 ) );
+		}
+
+		$saved = \imagepng( $image, $tmp_file );
 
 		// imagedestroy() is deprecated since PHP 8.5 and a no-op since 8.0.
 		if ( \PHP_VERSION_ID < 80000 ) {
 			\imagedestroy( $image );
+		}
+
+		if ( ! $saved ) {
+			\wp_delete_file( $tmp_file );
+			return new \WP_Error( 'image_write_failed', \__( 'Failed to write stats image.', 'activitypub' ), array( 'status' => 500 ) );
 		}
 
 		return $tmp_file;
