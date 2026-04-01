@@ -74,6 +74,16 @@ class Stats_Image_Controller extends \WP_REST_Controller {
 							'required'          => true,
 							'sanitize_callback' => 'absint',
 						),
+						'bg'      => array(
+							'description'       => \__( 'Background color as hex (without #).', 'activitypub' ),
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_hex_color_no_hash',
+						),
+						'fg'      => array(
+							'description'       => \__( 'Text color as hex (without #).', 'activitypub' ),
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_hex_color_no_hash',
+						),
 					),
 				),
 			)
@@ -113,11 +123,25 @@ class Stats_Image_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		$actor      = Actors::get_by_id( $user_id );
-		$actor_name = ! \is_wp_error( $actor ) ? $actor->get_name() : \get_bloginfo( 'name' );
-		$site_name  = \get_bloginfo( 'name' );
+		$actor = Actors::get_by_id( $user_id );
 
-		$png_data = $this->render_image( $summary, $actor_name, $site_name, $year );
+		if ( \is_wp_error( $actor ) ) {
+			if ( Actors::BLOG_USER_ID === $user_id ) {
+				$actor = new \Activitypub\Model\Blog();
+			} elseif ( Actors::APPLICATION_USER_ID === $user_id ) {
+				$actor = new \Activitypub\Model\Application();
+			}
+		}
+
+		$actor_webfinger = ! \is_wp_error( $actor ) ? $actor->get_webfinger() : '';
+		$site_name       = \get_bloginfo( 'name' );
+
+		$color_overrides = array(
+			'bg' => $request->get_param( 'bg' ),
+			'fg' => $request->get_param( 'fg' ),
+		);
+
+		$png_data = $this->render_image( $summary, $actor_webfinger, $site_name, $year, $color_overrides );
 
 		if ( \is_wp_error( $png_data ) ) {
 			return $png_data;
@@ -143,14 +167,15 @@ class Stats_Image_Controller extends \WP_REST_Controller {
 	/**
 	 * Render the stats image as PNG.
 	 *
-	 * @param array  $summary    The annual stats summary.
-	 * @param string $actor_name The actor display name.
-	 * @param string $site_name  The site name.
-	 * @param int    $year       The year.
+	 * @param array  $summary          The annual stats summary.
+	 * @param string $actor_webfinger The actor webfinger identifier.
+	 * @param string $site_name       The site name.
+	 * @param int    $year            The year.
+	 * @param array  $color_overrides Optional bg/fg hex color overrides (without #).
 	 *
 	 * @return string|\WP_Error PNG binary data or error.
 	 */
-	private function render_image( $summary, $actor_name, $site_name, $year ) {
+	private function render_image( $summary, $actor_webfinger, $site_name, $year, $color_overrides = array() ) {
 		$width  = self::WIDTH;
 		$height = self::HEIGHT;
 
@@ -164,151 +189,78 @@ class Stats_Image_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		// Enable anti-aliasing.
 		\imageantialias( $image, true );
 
-		// Colors.
-		$bg     = \imagecolorallocate( $image, 255, 255, 255 );
-		$fg     = \imagecolorallocate( $image, 29, 35, 39 );
-		$muted  = \imagecolorallocate( $image, 120, 120, 120 );
-		$subtle = \imagecolorallocate( $image, 170, 170, 170 );
-		$border = \imagecolorallocate( $image, 230, 230, 230 );
+		// Resolve colors: query params override theme detection.
+		$colors = $this->resolve_colors( $color_overrides );
+		$bg     = \imagecolorallocate( $image, $colors['bg'][0], $colors['bg'][1], $colors['bg'][2] );
+		$fg     = \imagecolorallocate( $image, $colors['fg'][0], $colors['fg'][1], $colors['fg'][2] );
+		$muted  = \imagecolorallocate( $image, $colors['muted'][0], $colors['muted'][1], $colors['muted'][2] );
 
 		\imagefill( $image, 0, 0, $bg );
 
-		// Comment types for engagement breakdown.
+		// Resolve a TTF font from the active theme or fall back.
+		$font = $this->resolve_font();
+
+		// Total engagement.
 		$comment_types    = Statistics::get_comment_types_for_stats();
 		$total_engagement = 0;
 		foreach ( \array_keys( $comment_types ) as $slug ) {
 			$total_engagement += $summary[ $slug . '_count' ] ?? 0;
 		}
 
+		$followers_end = $summary['followers_end'] ?? 0;
+
 		// Title.
-		$cur_y = 60;
 		$title = \sprintf(
 			/* translators: %d: The year */
 			\__( 'Fediverse Stats %d', 'activitypub' ),
 			$year
 		);
-		$this->draw_text_centered( $image, $title, $cur_y, 5, $fg );
-		$cur_y += 40;
+		$this->draw_text_centered( $image, $title, 100, 36, $fg, $font );
 
-		// Subtitle (actor name).
-		$this->draw_text_centered( $image, $actor_name, $cur_y, 3, $muted );
-		$cur_y += 50;
-
-		// Highlight stats: Posts & Engagements.
-		$box_gap   = 20;
-		$box_width = ( $width - 80 - $box_gap ) / 2;
-
-		$this->draw_stat_box(
-			$image,
-			40,
-			$cur_y,
-			$box_width,
-			90,
-			\number_format_i18n( $summary['posts_count'] ),
-			\__( 'Posts Federated', 'activitypub' ),
-			$fg,
-			$muted,
-			$border
-		);
-
-		$this->draw_stat_box(
-			$image,
-			40 + $box_width + $box_gap,
-			$cur_y,
-			$box_width,
-			90,
-			\number_format_i18n( $total_engagement ),
-			\__( 'Total Engagements', 'activitypub' ),
-			$fg,
-			$muted,
-			$border
-		);
-		$cur_y += 110;
-
-		// Engagement breakdown.
-		$engagement_items = array();
-		foreach ( $comment_types as $slug => $type_info ) {
-			$count = $summary[ $slug . '_count' ] ?? 0;
-			if ( $count > 0 ) {
-				$engagement_items[] = array(
-					'value' => \number_format_i18n( $count ),
-					'label' => $type_info['label'],
-				);
-			}
+		// Actor name.
+		if ( $actor_webfinger ) {
+			$this->draw_text_centered( $image, $actor_webfinger, 150, 20, $muted, $font );
 		}
 
-		if ( ! empty( $engagement_items ) ) {
-			$cols       = \min( \count( $engagement_items ), 4 );
-			$gap        = 12;
-			$item_width = ( $width - 80 - $gap * ( $cols - 1 ) ) / $cols;
-
-			foreach ( $engagement_items as $i => $item ) {
-				$col = $i % $cols;
-				$row = (int) ( $i / $cols );
-				$x   = 40 + $col * ( $item_width + $gap );
-				$y   = $cur_y + $row * 70;
-
-				$this->draw_stat_box( $image, $x, $y, $item_width, 58, $item['value'], $item['label'], $fg, $muted, $border );
-			}
-
-			$rows   = (int) ceil( \count( $engagement_items ) / $cols );
-			$cur_y += $rows * 70 + 20;
-		}
-
-		// Details row: Follower Growth, Most Active Month, Top Supporter.
-		$details = array();
-
-		$followers_net = $summary['followers_net_change'] ?? ( ( $summary['followers_end'] ?? 0 ) - ( $summary['followers_start'] ?? 0 ) );
-		$change_sign   = $followers_net >= 0 ? '+' : '';
-		$details[]     = array(
-			'label' => \__( 'Follower Growth', 'activitypub' ),
-			'value' => $change_sign . \number_format_i18n( $followers_net ),
-			'extra' => \sprintf(
-				/* translators: 1: follower count at start of year, 2: follower count at end of year */
-				\__( '%1$s → %2$s followers', 'activitypub' ),
-				\number_format_i18n( $summary['followers_start'] ?? 0 ),
-				\number_format_i18n( $summary['followers_end'] ?? 0 )
+		// Three big stats in a row.
+		$stats = array(
+			array(
+				'value' => \number_format_i18n( $summary['posts_count'] ),
+				'label' => \__( 'Posts', 'activitypub' ),
+			),
+			array(
+				'value' => \number_format_i18n( $total_engagement ),
+				'label' => \__( 'Engagements', 'activitypub' ),
+			),
+			array(
+				'value' => \number_format_i18n( $followers_end ),
+				'label' => \__( 'Followers', 'activitypub' ),
 			),
 		);
 
-		if ( ! empty( $summary['most_active_month'] ) ) {
-			$details[] = array(
-				'label' => \__( 'Most Active Month', 'activitypub' ),
-				'value' => \gmdate( 'F', \gmmktime( 0, 0, 0, $summary['most_active_month'], 1, $year ) ),
-				'extra' => '',
-			);
+		$col_width = (int) ( $width / 3 );
+
+		foreach ( $stats as $i => $stat ) {
+			$center_x = (int) ( $col_width * $i + $col_width / 2 );
+			$this->draw_text_at( $image, $stat['value'], $center_x, 300, 56, $fg, $font );
+			$this->draw_text_at( $image, $stat['label'], $center_x, 355, 18, $muted, $font );
 		}
 
-		if ( ! empty( $summary['top_multiplicator'] ) ) {
-			$details[] = array(
-				'label' => \__( 'Top Supporter', 'activitypub' ),
-				'value' => $summary['top_multiplicator']['name'],
-				'extra' => \sprintf(
-					/* translators: %s: Number of boosts */
-					\_n( '%s boost', '%s boosts', (int) $summary['top_multiplicator']['count'], 'activitypub' ),
-					\number_format_i18n( $summary['top_multiplicator']['count'] )
-				),
-			);
-		}
+		// Follower growth line.
+		$followers_net = $summary['followers_net_change'] ?? 0;
+		$change_sign   = $followers_net >= 0 ? '+' : '';
+		$growth_text   = \sprintf(
+			/* translators: %s: follower net change */
+			\__( '%s followers this year', 'activitypub' ),
+			$change_sign . \number_format_i18n( $followers_net )
+		);
+		$this->draw_text_centered( $image, $growth_text, 450, 20, $muted, $font );
 
-		if ( ! empty( $details ) ) {
-			$cols       = \min( \count( $details ), 3 );
-			$gap        = 16;
-			$item_width = ( $width - 80 - $gap * ( $cols - 1 ) ) / $cols;
-
-			foreach ( $details as $i => $detail ) {
-				$x = 40 + $i * ( $item_width + $gap );
-				$this->draw_detail_box( $image, $x, $cur_y, $item_width, 80, $detail, $fg, $muted, $subtle, $border );
-			}
-			$cur_y += 100;
-		}
-
-		// Branding footer.
-		$branding = $site_name . ' · ' . \__( 'Powered by ActivityPub', 'activitypub' );
-		$this->draw_text_centered( $image, $branding, $height - 30, 2, $subtle );
+		// Branding.
+		$branding = $site_name . ' - ' . \__( 'Powered by ActivityPub', 'activitypub' );
+		$this->draw_text_centered( $image, $branding, $height - 40, 14, $muted, $font );
 
 		// Output to buffer.
 		\ob_start();
@@ -320,73 +272,333 @@ class Stats_Image_Controller extends \WP_REST_Controller {
 	}
 
 	/**
+	 * Resolve colors from the active theme's Global Styles.
+	 *
+	 * Uses the theme's base/contrast palette colors for background and
+	 * foreground text. Derives a muted color by blending toward the background.
+	 *
+	 * @return array Associative array with 'bg', 'fg', and 'muted' keys,
+	 *               each containing an array of [r, g, b] values.
+	 */
+	private function resolve_colors( $overrides = array() ) {
+		$bg_rgb = array( 255, 255, 255 );
+		$fg_rgb = array( 17, 17, 17 );
+
+		// Apply query param overrides first.
+		if ( ! empty( $overrides['bg'] ) ) {
+			$parsed = $this->parse_hex( $overrides['bg'] );
+			if ( $parsed ) {
+				$bg_rgb = $parsed;
+			}
+		}
+
+		if ( ! empty( $overrides['fg'] ) ) {
+			$parsed = $this->parse_hex( $overrides['fg'] );
+			if ( $parsed ) {
+				$fg_rgb = $parsed;
+			}
+		}
+
+		// If both overrides are set, skip theme detection.
+		if ( ! empty( $overrides['bg'] ) && ! empty( $overrides['fg'] ) ) {
+			$muted_rgb = array(
+				(int) ( ( $fg_rgb[0] + $bg_rgb[0] ) / 2 ),
+				(int) ( ( $fg_rgb[1] + $bg_rgb[1] ) / 2 ),
+				(int) ( ( $fg_rgb[2] + $bg_rgb[2] ) / 2 ),
+			);
+
+			return array(
+				'bg'    => $bg_rgb,
+				'fg'    => $fg_rgb,
+				'muted' => $muted_rgb,
+			);
+		}
+
+		$palette = array();
+
+		$settings = \wp_get_global_settings();
+		if ( ! empty( $settings['color']['palette'] ) ) {
+			foreach ( $settings['color']['palette'] as $colors ) {
+				foreach ( $colors as $color ) {
+					$palette[ $color['slug'] ] = $color['color'];
+				}
+			}
+		}
+
+		// Try to resolve background color from Global Styles.
+		$styles     = \wp_get_global_styles( array( 'color' ) );
+		$bg_resolved = $this->resolve_style_color( $styles['background'] ?? '', $palette );
+		$fg_resolved = $this->resolve_style_color( $styles['text'] ?? '', $palette );
+
+		if ( $bg_resolved ) {
+			$bg_rgb = $bg_resolved;
+		}
+
+		if ( $fg_resolved ) {
+			$fg_rgb = $fg_resolved;
+		}
+
+		// If styles didn't give us colors, try common palette slug conventions.
+		if ( ! $bg_resolved || ! $fg_resolved ) {
+			// Slug conventions across themes: base/contrast, background/foreground, white/black.
+			$bg_slugs = array( 'base', 'background', 'white' );
+			$fg_slugs = array( 'contrast', 'foreground', 'black', 'dark-gray' );
+
+			if ( ! $bg_resolved ) {
+				foreach ( $bg_slugs as $slug ) {
+					if ( ! empty( $palette[ $slug ] ) ) {
+						$parsed = $this->parse_hex( $palette[ $slug ] );
+						if ( $parsed ) {
+							$bg_rgb = $parsed;
+							break;
+						}
+					}
+				}
+			}
+
+			if ( ! $fg_resolved ) {
+				foreach ( $fg_slugs as $slug ) {
+					if ( ! empty( $palette[ $slug ] ) ) {
+						$parsed = $this->parse_hex( $palette[ $slug ] );
+						if ( $parsed ) {
+							$fg_rgb = $parsed;
+							break;
+						}
+					}
+				}
+			}
+		}
+
+		// Muted: blend foreground 50% toward background.
+		$muted_rgb = array(
+			(int) ( ( $fg_rgb[0] + $bg_rgb[0] ) / 2 ),
+			(int) ( ( $fg_rgb[1] + $bg_rgb[1] ) / 2 ),
+			(int) ( ( $fg_rgb[2] + $bg_rgb[2] ) / 2 ),
+		);
+
+		return array(
+			'bg'    => $bg_rgb,
+			'fg'    => $fg_rgb,
+			'muted' => $muted_rgb,
+		);
+	}
+
+	/**
+	 * Resolve a color value from Global Styles.
+	 *
+	 * Handles hex colors directly and CSS variables referencing palette colors.
+	 *
+	 * @param string $value   The color value (hex or CSS variable).
+	 * @param array  $palette The merged color palette (slug => hex).
+	 *
+	 * @return array|false RGB array or false if unresolvable.
+	 */
+	private function resolve_style_color( $value, $palette ) {
+		if ( empty( $value ) ) {
+			return false;
+		}
+
+		// Direct hex.
+		if ( '#' === $value[0] ) {
+			return $this->parse_hex( $value );
+		}
+
+		// CSS variable: var(--wp--preset--color--slug).
+		if ( \preg_match( '/--color--([a-z0-9-]+)/', $value, $matches ) ) {
+			$slug = $matches[1];
+			if ( ! empty( $palette[ $slug ] ) ) {
+				return $this->parse_hex( $palette[ $slug ] );
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Parse a hex color string into an RGB array.
+	 *
+	 * @param string $hex The hex color (e.g. '#FF0000' or '#F00').
+	 *
+	 * @return array|false Array of [r, g, b] or false on failure.
+	 */
+	private function parse_hex( $hex ) {
+		$hex = \ltrim( $hex, '#' );
+
+		if ( 3 === \strlen( $hex ) ) {
+			$hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+		}
+
+		if ( 6 !== \strlen( $hex ) ) {
+			return false;
+		}
+
+		return array(
+			\hexdec( \substr( $hex, 0, 2 ) ),
+			\hexdec( \substr( $hex, 2, 2 ) ),
+			\hexdec( \substr( $hex, 4, 2 ) ),
+		);
+	}
+
+	/**
+	 * Resolve a TTF font file from the active theme.
+	 *
+	 * Looks for TTF files referenced in the theme's font families via
+	 * Global Styles, then falls back to any TTF in the theme directory,
+	 * then to bundled WordPress theme fonts.
+	 *
+	 * @return string|false Path to a TTF file, or false if none found.
+	 */
+	private function resolve_font() {
+		// Determine which font family slug the body text uses.
+		$body_slug = '';
+		$styles    = \wp_get_global_styles( array( 'typography' ) );
+		if ( ! empty( $styles['fontFamily'] ) ) {
+			// Extract slug from var(--wp--preset--font-family--slug).
+			if ( \preg_match( '/--font-family--([a-z0-9-]+)/', $styles['fontFamily'], $matches ) ) {
+				$body_slug = $matches[1];
+			}
+		}
+
+		// Search theme font families for a TTF/OTF file.
+		$settings = \wp_get_global_settings();
+		if ( ! empty( $settings['typography']['fontFamilies'] ) ) {
+			// If we know the body slug, try that family first.
+			$all_families = array();
+			foreach ( $settings['typography']['fontFamilies'] as $families ) {
+				foreach ( $families as $family ) {
+					$all_families[] = $family;
+				}
+			}
+
+			// Sort: body font first.
+			if ( $body_slug ) {
+				\usort(
+					$all_families,
+					function ( $a, $b ) use ( $body_slug ) {
+						$a_match = ( $a['slug'] ?? '' ) === $body_slug ? 0 : 1;
+						$b_match = ( $b['slug'] ?? '' ) === $body_slug ? 0 : 1;
+						return $a_match - $b_match;
+					}
+				);
+			}
+
+			foreach ( $all_families as $family ) {
+				if ( empty( $family['fontFace'] ) ) {
+					continue;
+				}
+				foreach ( $family['fontFace'] as $face ) {
+					$src = \is_array( $face['src'] ) ? $face['src'][0] : $face['src'];
+
+					if ( ! \preg_match( '/\.(ttf|otf)$/i', $src ) ) {
+						continue;
+					}
+
+					if ( 0 === \strpos( $src, 'file:./' ) ) {
+						$src = \get_theme_file_path( \substr( $src, 7 ) );
+					}
+
+					if ( \file_exists( $src ) ) {
+						return $src;
+					}
+				}
+			}
+		}
+
+		// Try the Font Library (WP 6.5+).
+		$font_families = \get_posts(
+			array(
+				'post_type'      => 'wp_font_family',
+				'posts_per_page' => 10,
+				'post_status'    => 'publish',
+			)
+		);
+
+		foreach ( $font_families as $font_family ) {
+			$faces = \get_posts(
+				array(
+					'post_type'      => 'wp_font_face',
+					'post_parent'    => $font_family->ID,
+					'posts_per_page' => 10,
+					'post_status'    => 'publish',
+				)
+			);
+
+			foreach ( $faces as $face ) {
+				$file = \get_post_meta( $face->ID, '_wp_font_face_file', true );
+				if ( $file && \preg_match( '/\.(ttf|otf)$/i', $file ) ) {
+					$path = \path_join( \wp_get_font_dir()['path'], $file );
+					if ( \file_exists( $path ) ) {
+						return $path;
+					}
+				}
+			}
+		}
+
+		// Fall back: common WordPress bundled theme fonts.
+		$fallbacks = array(
+			ABSPATH . 'wp-content/themes/twentytwentytwo/assets/fonts/dm-sans/DMSans-Regular.ttf',
+			ABSPATH . 'wp-content/themes/twentytwentythree/assets/fonts/dm-sans/DMSans-Regular.ttf',
+		);
+
+		foreach ( $fallbacks as $path ) {
+			if ( \file_exists( $path ) ) {
+				return $path;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * Draw centered text on the image.
 	 *
-	 * @param resource $image The image resource.
-	 * @param string   $text  The text to draw.
-	 * @param int      $y     The y position.
-	 * @param int      $size  The font size (1-5 for built-in fonts).
-	 * @param int      $color The text color.
-	 */
-	private function draw_text_centered( $image, $text, $y, $size, $color ) {
-		$font_width = \imagefontwidth( $size );
-		$text_width = $font_width * \strlen( $text );
-		$x          = (int) ( ( self::WIDTH - $text_width ) / 2 );
-		\imagestring( $image, $size, $x, $y, $text, $color );
-	}
-
-	/**
-	 * Draw a stat box with value and label.
+	 * Uses TrueType rendering when a font is available, falls back to
+	 * GD built-in fonts.
 	 *
-	 * @param resource $image     The image resource.
-	 * @param int      $x         The x position.
-	 * @param int      $y         The y position.
-	 * @param int      $w         The width.
-	 * @param int      $h         The height.
-	 * @param string   $value     The stat value.
-	 * @param string   $label     The stat label.
-	 * @param int      $fg_color  Foreground color.
-	 * @param int      $sub_color Muted color for label.
-	 * @param int      $border    Border color.
+	 * @param resource    $image The image resource.
+	 * @param string      $text  The text to draw.
+	 * @param int         $y     The y position (baseline for TTF, top for built-in).
+	 * @param int|float   $size  Font size in points (TTF) or 1-5 (built-in).
+	 * @param int         $color The text color.
+	 * @param string|false $font  Path to TTF file, or false for built-in.
 	 */
-	private function draw_stat_box( $image, $x, $y, $w, $h, $value, $label, $fg_color, $sub_color, $border ) {
-		\imagerectangle( $image, $x, $y, $x + $w, $y + $h, $border );
-
-		// Value centered.
-		$font_width = \imagefontwidth( 5 );
-		$text_width = $font_width * \strlen( $value );
-		$text_x     = (int) ( $x + ( $w - $text_width ) / 2 );
-		\imagestring( $image, 5, $text_x, $y + (int) ( $h / 2 ) - 16, $value, $fg_color );
-
-		// Label centered below.
-		$font_width = \imagefontwidth( 2 );
-		$text_width = $font_width * \strlen( $label );
-		$text_x     = (int) ( $x + ( $w - $text_width ) / 2 );
-		\imagestring( $image, 2, $text_x, $y + (int) ( $h / 2 ) + 8, $label, $sub_color );
-	}
-
-	/**
-	 * Draw a detail box with label, value, and extra text.
-	 *
-	 * @param resource $image        The image resource.
-	 * @param int      $x            The x position.
-	 * @param int      $y            The y position.
-	 * @param int      $w            The width.
-	 * @param int      $h            The height.
-	 * @param array    $detail       Detail data with label, value, extra.
-	 * @param int      $fg_color     Foreground color.
-	 * @param int      $muted_color  Muted color.
-	 * @param int      $subtle_color Subtle color.
-	 * @param int      $border       Border color.
-	 */
-	private function draw_detail_box( $image, $x, $y, $w, $h, $detail, $fg_color, $muted_color, $subtle_color, $border ) {
-		\imagerectangle( $image, $x, $y, $x + $w, $y + $h, $border );
-
-		\imagestring( $image, 2, $x + 10, $y + 8, $detail['label'], $subtle_color );
-		\imagestring( $image, 4, $x + 10, $y + 28, $detail['value'], $fg_color );
-
-		if ( ! empty( $detail['extra'] ) ) {
-			\imagestring( $image, 2, $x + 10, $y + 52, $detail['extra'], $subtle_color );
+	private function draw_text_centered( $image, $text, $y, $size, $color, $font = false ) {
+		if ( $font && \function_exists( 'imagefttext' ) ) {
+			$bbox       = \imageftbbox( $size, 0, $font, $text );
+			$text_width = $bbox[2] - $bbox[0];
+			$x          = (int) ( ( self::WIDTH - $text_width ) / 2 );
+			\imagefttext( $image, $size, 0, $x, $y, $color, $font, $text );
+		} else {
+			$builtin_size = \min( 5, \max( 1, (int) ( $size / 10 ) ) );
+			$font_width   = \imagefontwidth( $builtin_size );
+			$text_width   = $font_width * \strlen( $text );
+			$x            = (int) ( ( self::WIDTH - $text_width ) / 2 );
+			\imagestring( $image, $builtin_size, $x, $y, $text, $color );
 		}
 	}
+
+	/**
+	 * Draw text centered at a specific x position.
+	 *
+	 * @param resource    $image The image resource.
+	 * @param string      $text  The text to draw.
+	 * @param int         $x     The center x position.
+	 * @param int         $y     The y position.
+	 * @param int|float   $size  Font size in points (TTF) or 1-5 (built-in).
+	 * @param int         $color The text color.
+	 * @param string|false $font  Path to TTF file, or false for built-in.
+	 */
+	private function draw_text_at( $image, $text, $x, $y, $size, $color, $font = false ) {
+		if ( $font && \function_exists( 'imagefttext' ) ) {
+			$bbox       = \imageftbbox( $size, 0, $font, $text );
+			$text_width = $bbox[2] - $bbox[0];
+			\imagefttext( $image, $size, 0, (int) ( $x - $text_width / 2 ), $y, $color, $font, $text );
+		} else {
+			$builtin_size = \min( 5, \max( 1, (int) ( $size / 10 ) ) );
+			$font_width   = \imagefontwidth( $builtin_size );
+			$text_width   = $font_width * \strlen( $text );
+			\imagestring( $image, $builtin_size, (int) ( $x - $text_width / 2 ), $y, $text, $color );
+		}
+	}
+
 }

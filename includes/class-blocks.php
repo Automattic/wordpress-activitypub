@@ -77,6 +77,7 @@ class Blocks {
 		\add_action( 'rest_api_init', array( self::class, 'register_rest_fields' ) );
 
 		\add_filter( 'activitypub_import_mastodon_post_data', array( self::class, 'filter_import_mastodon_post_data' ), 10, 2 );
+		\add_filter( 'activitypub_attachments', array( self::class, 'add_stats_image_attachment' ), 10, 2 );
 
 		\add_action( 'activitypub_before_get_content', array( self::class, 'add_post_transformation_callbacks' ) );
 		\add_filter( 'activitypub_the_content', array( self::class, 'remove_post_transformation_callbacks' ) );
@@ -101,6 +102,7 @@ class Blocks {
 			'defaultQuotePolicy' => \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE ),
 			'objectType'         => \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ),
 			'noteLength'         => ACTIVITYPUB_NOTE_LENGTH,
+			'statsImageUrl'      => \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image/{user_id}/{year}' ),
 		);
 		wp_localize_script( 'wp-editor', '_activityPubOptions', $data );
 
@@ -952,6 +954,7 @@ class Blocks {
 	 */
 	public static function add_post_transformation_callbacks( $post ) {
 		\add_filter( 'render_block_core/embed', array( self::class, 'revert_embed_links' ), 10, 2 );
+		\add_filter( 'render_block_activitypub/stats', array( self::class, 'strip_stats_block' ), 10, 2 );
 
 		// Only transform reply link if it's the first block in the post.
 		$blocks = \parse_blocks( $post->post_content );
@@ -970,6 +973,7 @@ class Blocks {
 	public static function remove_post_transformation_callbacks( $content ) {
 		\remove_filter( 'render_block_core/embed', array( self::class, 'revert_embed_links' ) );
 		\remove_filter( 'render_block_activitypub/reply', array( self::class, 'generate_reply_link' ) );
+		\remove_filter( 'render_block_activitypub/stats', array( self::class, 'strip_stats_block' ) );
 
 		return $content;
 	}
@@ -1031,6 +1035,78 @@ class Blocks {
 			\esc_attr( $webfinger ),
 			\esc_html( '@' . strtok( $webfinger, '@' ) )
 		);
+	}
+
+	/**
+	 * Add the stats image as an attachment when a post contains the stats block.
+	 *
+	 * Parses the post content for activitypub/stats blocks and appends each
+	 * as an Image attachment to the ActivityPub object.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array    $attachments The existing attachments.
+	 * @param \WP_Post $post        The post object.
+	 *
+	 * @return array The attachments with stats images appended.
+	 */
+	public static function add_stats_image_attachment( $attachments, $post ) {
+		$blocks = \parse_blocks( $post->post_content );
+
+		foreach ( $blocks as $block ) {
+			if ( 'activitypub/stats' !== $block['blockName'] ) {
+				continue;
+			}
+
+			$user_id = self::get_user_id( $block['attrs']['selectedUser'] ?? 'blog' );
+			$year    = (int) ( $block['attrs']['year'] ?? (int) \gmdate( 'Y' ) - 1 );
+
+			$attachments[] = array(
+				'type'      => 'Image',
+				'mediaType' => 'image/png',
+				'url'       => self::get_stats_image_url( $user_id, $year ),
+				'name'      => \sprintf(
+					/* translators: %d: The year */
+					\__( 'Fediverse Stats %d', 'activitypub' ),
+					$year
+				),
+			);
+		}
+
+		return $attachments;
+	}
+
+	/**
+	 * Strip the stats block from federated content.
+	 *
+	 * The stats image is attached separately as an ActivityPub attachment,
+	 * so the block HTML should not appear in the content.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $block_content The block content.
+	 * @param array  $block         The block data.
+	 *
+	 * @return string Empty string.
+	 */
+	public static function strip_stats_block( $block_content, $block ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		return '';
+	}
+
+	/**
+	 * Get the stats image URL for a given user and year.
+	 *
+	 * Uses get_rest_url() which works with both pretty and plain permalinks.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $user_id The user ID.
+	 * @param int $year    The year.
+	 *
+	 * @return string The image URL.
+	 */
+	public static function get_stats_image_url( $user_id, $year ) {
+		return \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image/' . $user_id . '/' . $year );
 	}
 
 	/**

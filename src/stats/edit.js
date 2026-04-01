@@ -1,8 +1,9 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
 import ServerSideRender from '@wordpress/server-side-render';
-import { SelectControl, PanelBody, Disabled } from '@wordpress/components';
+import { SelectControl, PanelBody, Disabled, ExternalLink, Button, TextControl } from '@wordpress/components';
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
+import { useState, useEffect } from '@wordpress/element';
 import { useUserOptions } from '../shared/use-user-options';
 
 const currentYear = new Date().getFullYear();
@@ -21,6 +22,23 @@ function getYearOptions() {
 }
 
 /**
+ * Build the image endpoint URL.
+ *
+ * @param {string} selectedUser The selected user ID.
+ * @param {number} displayYear  The year to display.
+ * @return {string} The image URL.
+ */
+function getImageUrl( selectedUser, displayYear ) {
+	const userId = selectedUser === 'blog' ? 0 : selectedUser;
+	// URL template from PHP with get_rest_url(), handles pretty/plain permalinks.
+	const template = window._activityPubOptions?.statsImageUrl || '';
+	if ( ! template ) {
+		return '';
+	}
+	return template.replace( '{user_id}', userId ).replace( '{year}', displayYear );
+}
+
+/**
  * Edit component for the ActivityPub Stats block.
  *
  * @param {Object}   props               Component props.
@@ -29,11 +47,38 @@ function getYearOptions() {
  * @return {JSX.Element} Edit component.
  */
 export default function Edit( { attributes, setAttributes } ) {
-	const { selectedUser, year, displayMode } = attributes;
-	const blockProps = useBlockProps();
+	const { selectedUser, year } = attributes;
+	const blockProps = useBlockProps( {
+		style: {
+			border: 'none',
+			borderRadius: undefined,
+			padding: undefined,
+			margin: undefined,
+			background: undefined,
+			backgroundColor: undefined,
+			color: undefined,
+		},
+	} );
 	const usersOptions = useUserOptions( {} );
+	const [ copied, setCopied ] = useState( false );
+
+	// Set the selected user to the first available option when no user is selected yet.
+	useEffect( () => {
+		if ( selectedUser || ! usersOptions.length ) {
+			return;
+		}
+		setAttributes( { selectedUser: usersOptions[ 0 ].value } );
+	}, [ usersOptions ] ); // eslint-disable-line react-hooks/exhaustive-deps
 
 	const displayYear = year || currentYear - 1;
+	const imageUrl = getImageUrl( selectedUser || 'blog', displayYear );
+
+	const handleCopy = () => {
+		navigator.clipboard.writeText( imageUrl ).then( () => {
+			setCopied( true );
+			setTimeout( () => setCopied( false ), 2000 );
+		} );
+	};
 
 	return (
 		<div { ...blockProps }>
@@ -53,15 +98,23 @@ export default function Edit( { attributes, setAttributes } ) {
 						options={ getYearOptions() }
 						onChange={ ( value ) => setAttributes( { year: parseInt( value, 10 ) } ) }
 					/>
-					<SelectControl
-						label={ __( 'Display Mode', 'activitypub' ) }
-						value={ displayMode || 'card' }
-						options={ [
-							{ label: __( 'Card', 'activitypub' ), value: 'card' },
-							{ label: __( 'Image', 'activitypub' ), value: 'image' },
-						] }
-						onChange={ ( value ) => setAttributes( { displayMode: value } ) }
+				</PanelBody>
+				<PanelBody title={ __( 'Share Image', 'activitypub' ) } initialOpen={ false }>
+					<p className="description">
+						{ __( 'Use this URL to share your stats as an image on social media.', 'activitypub' ) }
+					</p>
+					<TextControl
+						__nextHasNoMarginBottom
+						value={ imageUrl }
+						readOnly
+						onClick={ ( e ) => e.target.select() }
 					/>
+					<div style={ { display: 'flex', gap: '8px', alignItems: 'center' } }>
+						<Button variant="secondary" onClick={ handleCopy }>
+							{ copied ? __( 'Copied!', 'activitypub' ) : __( 'Copy URL', 'activitypub' ) }
+						</Button>
+						<ExternalLink href={ imageUrl }>{ __( 'Preview', 'activitypub' ) }</ExternalLink>
+					</div>
 				</PanelBody>
 			</InspectorControls>
 

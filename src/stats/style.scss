@@ -1,6 +1,11 @@
 .wp-block-activitypub-stats {
 	max-width: var(--wp--style--global--content-size, 600px);
-	margin: 2rem auto;
+	background-color: var(--wp--preset--color--base, var(--wp--preset--color--white, #fff));
+	color: var(--wp--preset--color--contrast, var(--wp--preset--color--black, inherit));
+
+	// Inner border color: uses block border-color if set, otherwise muted text color.
+	--activitypub-stats--border-color: color-mix(in srgb, currentcolor 20%, transparent);
+
 
 	&.alignwide {
 		max-width: var(--wp--style--global--wide-size);
@@ -9,14 +14,6 @@
 	&.alignfull {
 		max-width: none;
 	}
-}
-
-.activitypub-stats__card {
-	color: inherit;
-	border: 1px solid color-mix(in srgb, currentcolor 20%, transparent);
-	border-radius: 12px;
-	padding: 2rem;
-
 }
 
 .activitypub-stats__header {
@@ -51,7 +48,7 @@
 }
 
 .activitypub-stats__stat--highlight {
-	border: 1px solid color-mix(in srgb, currentcolor 20%, transparent);
+	border: 1px solid var(--activitypub-stats--border-color);
 	border-radius: 8px;
 }
 
@@ -86,7 +83,7 @@
 .activitypub-stats__engagement .activitypub-stats__stat {
 	flex: 1 1 calc(33.333% - 0.5rem);
 	min-width: 5rem;
-	border: 1px solid color-mix(in srgb, currentcolor 15%, transparent);
+	border: 1px solid var(--activitypub-stats--border-color);
 	border-radius: 8px;
 	padding: 0.625rem 0.5rem;
 }
@@ -101,7 +98,7 @@
 .activitypub-stats__detail {
 	flex: 1 1 calc(50% - 0.5rem);
 	min-width: 7.5rem;
-	border: 1px solid color-mix(in srgb, currentcolor 15%, transparent);
+	border: 1px solid var(--activitypub-stats--border-color);
 	border-radius: 8px;
 	padding: 0.875rem;
 }
@@ -165,10 +162,9 @@
 /* stylelint-disable no-descending-specificity */
 .activitypub-stats__top-posts li {
 	padding: 0.5rem 0;
-	border-bottom: 1px solid color-mix(in srgb, currentcolor 10%, transparent);
 
 	&:last-child {
-		border-bottom: none;
+		padding-bottom: 0;
 	}
 
 	a {
@@ -197,9 +193,3 @@
 	color: color-mix(in srgb, currentcolor 45%, transparent);
 }
 
-.activitypub-stats__image {
-	display: block;
-	width: 100%;
-	height: auto;
-	border-radius: 12px;
-}

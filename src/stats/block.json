@@ -14,7 +14,6 @@
 		"align": [ "wide", "full" ],
 		"color": {
 			"gradients": true,
-			"__experimentalSkipSerialization": true,
 			"__experimentalDefaultControls": {
 				"background": true,
 				"text": true
@@ -25,21 +24,25 @@
 		},
 		"spacing": {
 			"margin": true,
-			"padding": true
+			"padding": true,
+			"__experimentalDefaultControls": {
+				"padding": true
+			}
+		},
+		"__experimentalBorder": {
+			"color": true,
+			"radius": true,
+			"style": true,
+			"width": true,
+			"__experimentalSkipSerialization": true
 		}
 	},
 	"attributes": {
 		"selectedUser": {
-			"type": "string",
-			"default": "blog"
+			"type": "string"
 		},
 		"year": {
 			"type": "number"
-		},
-		"displayMode": {
-			"type": "string",
-			"default": "card",
-			"enum": [ "card", "image" ]
 		}
 	},
 	"editorScript": "file:./index.js",
