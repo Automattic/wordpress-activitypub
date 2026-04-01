@@ -45,24 +45,40 @@ class Stats_Image_Controller extends \WP_REST_Controller {
 				'type'              => 'integer',
 				'required'          => true,
 				'sanitize_callback' => 'absint',
+				'validate_callback' => array( $this, 'validate_user_id' ),
 			),
 			'year'    => array(
 				'description'       => \__( 'The year to display stats for.', 'activitypub' ),
 				'type'              => 'integer',
 				'required'          => true,
 				'sanitize_callback' => 'absint',
-			),
-			'bg'      => array(
-				'description'       => \__( 'Background color as hex (without #).', 'activitypub' ),
-				'type'              => 'string',
-				'sanitize_callback' => 'sanitize_hex_color_no_hash',
-			),
-			'fg'      => array(
-				'description'       => \__( 'Text color as hex (without #).', 'activitypub' ),
-				'type'              => 'string',
-				'sanitize_callback' => 'sanitize_hex_color_no_hash',
+				'minimum'           => 2000,
+				'maximum'           => (int) \gmdate( 'Y' ),
 			),
 		);
+	}
+
+	/**
+	 * Validate the user_id parameter.
+	 *
+	 * @param mixed $value The parameter value.
+	 *
+	 * @return true|\WP_Error True if valid, error otherwise.
+	 */
+	public function validate_user_id( $value ) {
+		$user_id = (int) $value;
+
+		// Blog and Application user IDs are always valid.
+		if ( 0 === $user_id || \Activitypub\Collection\Actors::APPLICATION_USER_ID === $user_id ) {
+			return true;
+		}
+
+		// Check that the user exists.
+		if ( ! \get_user_by( 'id', $user_id ) ) {
+			return new \WP_Error( 'invalid_user', \__( 'Invalid user ID.', 'activitypub' ), array( 'status' => 404 ) );
+		}
+
+		return true;
 	}
 
 	/**
@@ -110,8 +126,7 @@ class Stats_Image_Controller extends \WP_REST_Controller {
 	public function get_item( $request ) {
 		return Stats_Image::serve(
 			(int) $request->get_param( 'user_id' ),
-			(int) $request->get_param( 'year' ),
-			$this->get_color_overrides( $request )
+			(int) $request->get_param( 'year' )
 		);
 	}
 
@@ -129,8 +144,7 @@ class Stats_Image_Controller extends \WP_REST_Controller {
 	public function get_url( $request ) {
 		$url = Stats_Image::get_url(
 			(int) $request->get_param( 'user_id' ),
-			(int) $request->get_param( 'year' ),
-			$this->get_color_overrides( $request )
+			(int) $request->get_param( 'year' )
 		);
 
 		if ( \is_wp_error( $url ) ) {
@@ -138,19 +152,5 @@ class Stats_Image_Controller extends \WP_REST_Controller {
 		}
 
 		return \rest_ensure_response( array( 'url' => $url ) );
-	}
-
-	/**
-	 * Extract color overrides from the request.
-	 *
-	 * @param \WP_REST_Request $request The request object.
-	 *
-	 * @return array The color overrides.
-	 */
-	private function get_color_overrides( $request ) {
-		return array(
-			'bg' => $request->get_param( 'bg' ),
-			'fg' => $request->get_param( 'fg' ),
-		);
 	}
 }

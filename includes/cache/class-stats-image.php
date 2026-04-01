@@ -84,24 +84,19 @@ class Stats_Image extends File {
 	/**
 	 * Get the public URL for a stats image, generating it if needed.
 	 *
-	 * @param int   $user_id         The user ID.
-	 * @param int   $year            The year.
-	 * @param array $color_overrides Optional bg/fg hex overrides (without #).
+	 * @param int $user_id The user ID.
+	 * @param int $year    The year.
 	 *
 	 * @return string|\WP_Error The public URL or error.
 	 */
-	public static function get_url( $user_id, $year, $color_overrides = array() ) {
+	public static function get_url( $user_id, $year ) {
 		if ( ! self::is_available() ) {
 			return new \WP_Error( 'gd_not_available', \__( 'GD library is not available.', 'activitypub' ), array( 'status' => 501 ) );
 		}
 
 		// If local caching is disabled, use the REST endpoint for on-the-fly generation.
 		if ( ! static::is_enabled() ) {
-			$url  = \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image/' . $user_id . '/' . $year );
-			$args = \array_filter( $color_overrides );
-			if ( ! empty( $args ) ) {
-				$url = \add_query_arg( $args, $url );
-			}
+			$url = \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image/' . $user_id . '/' . $year );
 
 			/**
 			 * Filters the stats image URL.
@@ -117,7 +112,7 @@ class Stats_Image extends File {
 			return \apply_filters( 'activitypub_stats_image_url', $url, $user_id, $year );
 		}
 
-		$hash  = self::get_hash( $color_overrides );
+		$hash  = self::get_hash();
 		$paths = static::get_storage_paths( $user_id );
 
 		// Check for cached file using the base class glob pattern.
@@ -132,7 +127,7 @@ class Stats_Image extends File {
 		}
 
 		// Generate the image.
-		$result = self::generate( $user_id, $year, $color_overrides );
+		$result = self::generate( $user_id, $year );
 
 		if ( \is_wp_error( $result ) ) {
 			return $result;
@@ -149,18 +144,17 @@ class Stats_Image extends File {
 	 *
 	 * Outputs headers and image data, then exits.
 	 *
-	 * @param int   $user_id         The user ID.
-	 * @param int   $year            The year.
-	 * @param array $color_overrides Optional bg/fg hex overrides (without #).
+	 * @param int $user_id The user ID.
+	 * @param int $year    The year.
 	 *
 	 * @return \WP_Error|void Error on failure, exits on success.
 	 */
-	public static function serve( $user_id, $year, $color_overrides = array() ) {
+	public static function serve( $user_id, $year ) {
 		if ( ! self::is_available() ) {
 			return new \WP_Error( 'gd_not_available', \__( 'GD library is not available.', 'activitypub' ), array( 'status' => 501 ) );
 		}
 
-		$hash  = self::get_hash( $color_overrides );
+		$hash  = self::get_hash();
 		$paths = static::get_storage_paths( $user_id );
 
 		// Check for cached file.
@@ -169,7 +163,7 @@ class Stats_Image extends File {
 		$file    = ( ! empty( $matches ) && \is_file( $matches[0] ) ) ? $matches[0] : null;
 
 		if ( ! $file ) {
-			$file = self::generate( $user_id, $year, $color_overrides );
+			$file = self::generate( $user_id, $year );
 		}
 
 		if ( \is_wp_error( $file ) ) {
@@ -181,6 +175,7 @@ class Stats_Image extends File {
 		\header( 'Content-Type: ' . ( $mime_type ?: 'image/png' ) );
 		\header( 'Content-Length: ' . \filesize( $file ) );
 		\header( 'Cache-Control: public, max-age=86400' );
+		\header( 'X-Content-Type-Options: nosniff' );
 
 		\readfile( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
 		exit;
@@ -189,13 +184,12 @@ class Stats_Image extends File {
 	/**
 	 * Generate the stats image and save to cache.
 	 *
-	 * @param int   $user_id         The user ID.
-	 * @param int   $year            The year.
-	 * @param array $color_overrides Optional bg/fg hex overrides (without #).
+	 * @param int $user_id The user ID.
+	 * @param int $year    The year.
 	 *
 	 * @return string|\WP_Error Cached file path or error.
 	 */
-	public static function generate( $user_id, $year, $color_overrides = array() ) {
+	public static function generate( $user_id, $year ) {
 		if ( ! self::is_available() ) {
 			return new \WP_Error( 'gd_not_available', \__( 'GD library is not available.', 'activitypub' ), array( 'status' => 501 ) );
 		}
@@ -227,7 +221,7 @@ class Stats_Image extends File {
 			require_once ABSPATH . 'wp-admin/includes/file.php';
 		}
 
-		$tmp_file = self::render( $summary, $actor_webfinger, $site_name, $year, $color_overrides );
+		$tmp_file = self::render( $summary, $actor_webfinger, $site_name, $year );
 
 		if ( \is_wp_error( $tmp_file ) ) {
 			return $tmp_file;
@@ -242,7 +236,7 @@ class Stats_Image extends File {
 		}
 
 		// Move to cache dir with a descriptive name, then optimize (WebP conversion).
-		$hash      = self::get_hash( $color_overrides );
+		$hash      = self::get_hash();
 		$dest_name = \sprintf( 'stats-%d-%s.png', $year, $hash );
 		$dest_path = $paths['basedir'] . '/' . $dest_name;
 
@@ -255,19 +249,16 @@ class Stats_Image extends File {
 	}
 
 	/**
-	 * Generate a hash for color overrides.
+	/**
+	 * Generate a hash based on the active theme.
 	 *
-	 * @param array $color_overrides The color overrides.
+	 * Includes the theme stylesheet and version so cached images are
+	 * regenerated when the theme (and its colors/fonts) changes.
 	 *
 	 * @return string The hash string.
 	 */
-	private static function get_hash( $color_overrides ) {
-		/*
-		 * Include the theme stylesheet and version in the hash so cached
-		 * images are regenerated when the theme (and its colors/fonts) changes.
-		 */
+	private static function get_hash() {
 		$parts = array(
-			\array_filter( $color_overrides ),
 			\get_stylesheet(),
 			\wp_get_theme()->get( 'Version' ),
 		);
@@ -282,11 +273,9 @@ class Stats_Image extends File {
 	 * @param string $actor_webfinger The actor webfinger identifier.
 	 * @param string $site_name       The site name.
 	 * @param int    $year            The year.
-	 * @param array  $color_overrides Optional bg/fg hex color overrides.
-	 *
 	 * @return string|\WP_Error Path to temporary PNG file or error.
 	 */
-	private static function render( $summary, $actor_webfinger, $site_name, $year, $color_overrides = array() ) {
+	private static function render( $summary, $actor_webfinger, $site_name, $year ) {
 		$width  = self::WIDTH;
 		$height = self::HEIGHT;
 
@@ -298,7 +287,7 @@ class Stats_Image extends File {
 
 		\imageantialias( $image, true );
 
-		$colors = self::resolve_colors( $color_overrides );
+		$colors = self::resolve_colors();
 		$bg     = \imagecolorallocate( $image, $colors['bg'][0], $colors['bg'][1], $colors['bg'][2] );
 		$fg     = \imagecolorallocate( $image, $colors['fg'][0], $colors['fg'][1], $colors['fg'][2] );
 		$muted  = \imagecolorallocate( $image, $colors['muted'][0], $colors['muted'][1], $colors['muted'][2] );
@@ -423,31 +412,11 @@ class Stats_Image extends File {
 	/**
 	 * Resolve colors from theme Global Styles or overrides.
 	 *
-	 * @param array $overrides Optional bg/fg hex color overrides.
-	 *
 	 * @return array Associative array with 'bg', 'fg', and 'muted' RGB arrays.
 	 */
-	private static function resolve_colors( $overrides = array() ) {
+	private static function resolve_colors() {
 		$bg_rgb = array( 255, 255, 255 );
 		$fg_rgb = array( 17, 17, 17 );
-
-		if ( ! empty( $overrides['bg'] ) ) {
-			$parsed = self::parse_hex( $overrides['bg'] );
-			if ( $parsed ) {
-				$bg_rgb = $parsed;
-			}
-		}
-
-		if ( ! empty( $overrides['fg'] ) ) {
-			$parsed = self::parse_hex( $overrides['fg'] );
-			if ( $parsed ) {
-				$fg_rgb = $parsed;
-			}
-		}
-
-		if ( ! empty( $overrides['bg'] ) && ! empty( $overrides['fg'] ) ) {
-			return self::build_color_set( $bg_rgb, $fg_rgb );
-		}
 
 		$palette  = array();
 		$settings = \wp_get_global_settings();
@@ -626,6 +595,8 @@ class Stats_Image extends File {
 	 * @return string|false Path to TTF file or false.
 	 */
 	private static function find_ttf_in_families( $families ) {
+		$theme_dir = \get_theme_root();
+
 		foreach ( $families as $family ) {
 			if ( empty( $family['fontFace'] ) ) {
 				continue;
@@ -637,13 +608,18 @@ class Stats_Image extends File {
 					continue;
 				}
 
+				// Resolve theme-relative paths.
 				if ( 0 === \strpos( $src, 'file:./' ) ) {
 					$src = \get_theme_file_path( \substr( $src, 7 ) );
 				}
 
-				if ( \file_exists( $src ) ) {
-					return $src;
+				// Only allow fonts within the themes directory for security.
+				$real_path = \realpath( $src );
+				if ( ! $real_path || 0 !== \strpos( $real_path, \realpath( $theme_dir ) ) ) {
+					continue;
 				}
+
+				return $real_path;
 			}
 		}
 

@@ -160,22 +160,6 @@ class Test_Stats_Image_Controller extends \Activitypub\Tests\Test_REST_Controlle
 	}
 
 	/**
-	 * Test route accepts color parameters.
-	 *
-	 * @covers ::register_routes
-	 */
-	public function test_route_accepts_color_params() {
-		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/stats/image/' . self::$user_id . '/1999' );
-		$request->set_param( 'bg', 'ff0000' );
-		$request->set_param( 'fg', '00ff00' );
-
-		$response = \rest_get_server()->dispatch( $request );
-
-		// Should get 404 (no stats), not 400 (bad params).
-		$this->assertEquals( 404, $response->get_status() );
-	}
-
-	/**
 	 * Test invalid year format.
 	 *
 	 * @covers ::register_routes

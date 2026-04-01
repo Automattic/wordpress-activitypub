@@ -1062,7 +1062,7 @@ class Blocks {
 		 * extracted from the post. It is always appended so that the share-pic is
 		 * included in the federated activity regardless of the attachment cap.
 		 */
-		$blocks      = \parse_blocks( $post->post_content );
+		$blocks       = \parse_blocks( $post->post_content );
 		$stats_blocks = self::find_blocks_recursive( $blocks, 'activitypub/stats' );
 
 		foreach ( $stats_blocks as $block ) {
