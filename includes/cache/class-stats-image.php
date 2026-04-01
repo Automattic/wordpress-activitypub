@@ -9,6 +9,8 @@
 namespace Activitypub\Cache;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Model\Application;
+use Activitypub\Model\Blog;
 use Activitypub\Statistics;
 
 /**
@@ -208,9 +210,9 @@ class Stats_Image extends File {
 
 		if ( \is_wp_error( $actor ) ) {
 			if ( Actors::BLOG_USER_ID === $user_id ) {
-				$actor = new \Activitypub\Model\Blog();
+				$actor = new Blog();
 			} elseif ( Actors::APPLICATION_USER_ID === $user_id ) {
-				$actor = new \Activitypub\Model\Application();
+				$actor = new Application();
 			}
 		}
 
