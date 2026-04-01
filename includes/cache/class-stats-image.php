@@ -416,7 +416,11 @@ class Stats_Image {
 		// Save to temp file.
 		$tmp_file = \wp_tempnam( 'activitypub-stats-' );
 		\imagepng( $image, $tmp_file );
-		\imagedestroy( $image );
+
+		// imagedestroy() is deprecated since PHP 8.5 and a no-op since 8.0.
+		if ( \PHP_VERSION_ID < 80000 ) {
+			\imagedestroy( $image );
+		}
 
 		return $tmp_file;
 	}

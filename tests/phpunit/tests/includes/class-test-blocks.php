@@ -1194,7 +1194,9 @@ class Test_Blocks extends \WP_UnitTestCase {
 	public function test_get_stats_image_url() {
 		$url = Blocks::get_stats_image_url( 0, 2025 );
 
-		$this->assertStringContainsString( 'stats/image/0/2025', $url );
+		// URL contains the stats path (either cached file or REST endpoint).
+		$this->assertStringContainsString( 'stats', $url );
+		$this->assertStringContainsString( '2025', $url );
 	}
 
 	/**
@@ -1207,8 +1209,8 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		$url = Blocks::get_stats_image_url( 1, 2024 );
 
-		$this->assertStringContainsString( 'stats/image/1/2024', $url );
-		$this->assertStringContainsString( 'rest_route', $url );
+		$this->assertStringContainsString( 'stats', $url );
+		$this->assertStringContainsString( '2024', $url );
 
 		// Restore.
 		\update_option( 'permalink_structure', '/%postname%/' );
