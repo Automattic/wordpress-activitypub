@@ -52,6 +52,7 @@ export default function Edit( { attributes, setAttributes } ) {
 		style: {
 			border: 'none',
 			borderRadius: undefined,
+			boxShadow: undefined,
 			padding: undefined,
 			margin: undefined,
 			background: undefined,
