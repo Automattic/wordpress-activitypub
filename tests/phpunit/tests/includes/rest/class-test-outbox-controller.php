@@ -1003,4 +1003,56 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		// The summary should be used as content fallback.
 		$this->assertNotEmpty( $post->post_content, 'Post should have content from summary fallback.' );
 	}
+
+	/**
+	 * Test that totalItems for the blog actor excludes anonymous comments.
+	 *
+	 * @covers ::overload_total_items
+	 */
+	public function test_blog_actor_total_items_excludes_anonymous_comments() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\wp_set_current_user( 0 );
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => self::$user_id,
+				'post_status' => 'publish',
+			)
+		);
+		\update_post_meta( $post_id, 'activitypub_status', 'federated' );
+
+		// Create a federated comment from a local user (should be counted).
+		$local_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'user_id'         => self::$user_id,
+			)
+		);
+		\update_comment_meta( $local_comment_id, 'activitypub_status', 'federated' );
+
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertArrayHasKey( 'totalItems', $data );
+
+		$count_before = $data['totalItems'];
+
+		// Create a federated comment from an anonymous/remote user (should NOT be counted).
+		$remote_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'    => $post_id,
+				'user_id'            => 0,
+				'comment_author'     => 'Remote User',
+				'comment_author_url' => 'https://remote.example/user',
+			)
+		);
+		\update_comment_meta( $remote_comment_id, 'activitypub_status', 'federated' );
+
+		$response2 = \rest_get_server()->dispatch( $request );
+		$data2     = $response2->get_data();
+
+		$this->assertEquals( $count_before, $data2['totalItems'], 'Remote comment should not inflate totalItems.' );
+	}
 }
