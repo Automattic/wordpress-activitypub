@@ -387,24 +387,21 @@ class Scheduler {
 	 * Purge outbox items based on a schedule.
 	 */
 	public static function purge_outbox() {
-		$days = (int) \get_option( 'activitypub_outbox_purge_days', ACTIVITYPUB_OUTBOX_PURGE_DAYS );
-		Outbox::purge( $days ?: ACTIVITYPUB_OUTBOX_PURGE_DAYS );
+		Outbox::purge( \get_option( 'activitypub_outbox_purge_days', ACTIVITYPUB_OUTBOX_PURGE_DAYS ) );
 	}
 
 	/**
 	 * Purge inbox items based on a schedule.
 	 */
 	public static function purge_inbox() {
-		$days = (int) \get_option( 'activitypub_inbox_purge_days', ACTIVITYPUB_INBOX_PURGE_DAYS );
-		Inbox::purge( $days ?: ACTIVITYPUB_INBOX_PURGE_DAYS );
+		Inbox::purge( \get_option( 'activitypub_inbox_purge_days', ACTIVITYPUB_INBOX_PURGE_DAYS ) );
 	}
 
 	/**
 	 * Purge remote posts based on a schedule.
 	 */
 	public static function purge_ap_posts() {
-		$days = (int) \get_option( 'activitypub_ap_post_purge_days', ACTIVITYPUB_AP_POST_PURGE_DAYS );
-		Remote_Posts::purge( $days ?: ACTIVITYPUB_AP_POST_PURGE_DAYS );
+		Remote_Posts::purge( \get_option( 'activitypub_ap_post_purge_days', ACTIVITYPUB_AP_POST_PURGE_DAYS ) );
 	}
 
 	/**
