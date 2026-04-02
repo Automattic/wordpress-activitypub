@@ -22,16 +22,8 @@
       "wide",
       "full"
     ],
-    "color": {
-      "gradients": true,
-      "__experimentalDefaultControls": {
-        "background": true,
-        "text": true
-      }
-    },
-    "typography": {
-      "fontSize": true
-    },
+    "color": false,
+    "typography": false,
     "spacing": {
       "margin": true,
       "padding": true,

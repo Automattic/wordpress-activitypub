@@ -48,18 +48,7 @@ function getImageUrlEndpoint( selectedUser, displayYear ) {
  */
 export default function Edit( { attributes, setAttributes } ) {
 	const { selectedUser, year } = attributes;
-	const blockProps = useBlockProps( {
-		style: {
-			border: 'none',
-			borderRadius: undefined,
-			boxShadow: undefined,
-			padding: undefined,
-			margin: undefined,
-			background: undefined,
-			backgroundColor: undefined,
-			color: undefined,
-		},
-	} );
+	const blockProps = useBlockProps();
 	const usersOptions = useUserOptions( {} );
 	const [ copied, setCopied ] = useState( false );
 

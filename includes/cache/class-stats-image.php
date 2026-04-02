@@ -237,7 +237,14 @@ class Stats_Image extends File {
 			return new \WP_Error( 'cache_dir_failed', \__( 'Failed to create cache directory.', 'activitypub' ), array( 'status' => 500 ) );
 		}
 
-		// Move to cache dir with a descriptive name, then optimize (WebP conversion).
+		// Remove old cached images for this year before saving the new one.
+		$old_files = \glob( static::escape_glob_pattern( $paths['basedir'] . '/stats-' . $year . '-' ) . '*.*' );
+		if ( $old_files ) {
+			foreach ( $old_files as $old_file ) {
+				\wp_delete_file( $old_file );
+			}
+		}
+
 		$hash      = self::get_hash( $user_id, $year );
 		$dest_name = \sprintf( 'stats-%d-%s.png', $year, $hash );
 		$dest_path = $paths['basedir'] . '/' . $dest_name;
