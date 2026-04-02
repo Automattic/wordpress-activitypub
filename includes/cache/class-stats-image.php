@@ -114,7 +114,7 @@ class Stats_Image extends File {
 			return \apply_filters( 'activitypub_stats_image_url', $url, $user_id, $year );
 		}
 
-		$hash  = self::get_hash();
+		$hash  = self::get_hash( $user_id, $year );
 		$paths = static::get_storage_paths( $user_id );
 
 		// Check for cached file using the base class glob pattern.
@@ -156,7 +156,7 @@ class Stats_Image extends File {
 			return new \WP_Error( 'gd_not_available', \__( 'GD library is not available.', 'activitypub' ), array( 'status' => 501 ) );
 		}
 
-		$hash  = self::get_hash();
+		$hash  = self::get_hash( $user_id, $year );
 		$paths = static::get_storage_paths( $user_id );
 
 		// Check for cached file.
@@ -238,7 +238,7 @@ class Stats_Image extends File {
 		}
 
 		// Move to cache dir with a descriptive name, then optimize (WebP conversion).
-		$hash      = self::get_hash();
+		$hash      = self::get_hash( $user_id, $year );
 		$dest_name = \sprintf( 'stats-%d-%s.png', $year, $hash );
 		$dest_path = $paths['basedir'] . '/' . $dest_name;
 
@@ -251,19 +251,30 @@ class Stats_Image extends File {
 	}
 
 	/**
-	/**
-	 * Generate a hash based on the active theme.
+	 * Generate a hash for cache invalidation.
 	 *
-	 * Includes the theme stylesheet and version so cached images are
-	 * regenerated when the theme (and its colors/fonts) changes.
+	 * Includes the theme stylesheet, version, and stats compilation
+	 * timestamp so cached images are regenerated when the theme or
+	 * the underlying stats data changes.
+	 *
+	 * @param int $user_id The user ID.
+	 * @param int $year    The year.
 	 *
 	 * @return string The hash string.
 	 */
-	private static function get_hash() {
+	private static function get_hash( $user_id = 0, $year = 0 ) {
 		$parts = array(
 			\get_stylesheet(),
 			\wp_get_theme()->get( 'Version' ),
 		);
+
+		if ( $user_id && $year ) {
+			$summary = Statistics::get_annual_summary( $user_id, $year );
+
+			if ( $summary && ! empty( $summary['compiled_at'] ) ) {
+				$parts[] = $summary['compiled_at'];
+			}
+		}
 
 		return \md5( \wp_json_encode( $parts ) );
 	}

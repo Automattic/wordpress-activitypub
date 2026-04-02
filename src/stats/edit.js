@@ -76,7 +76,10 @@ export default function Edit( { attributes, setAttributes } ) {
 
 	// Fetch the resolved image URL (cached file or REST endpoint).
 	const fetchImageUrl = useCallback( () => {
-		const endpoint = getImageUrlEndpoint( selectedUser || 'blog', displayYear );
+		if ( ! selectedUser ) {
+			return;
+		}
+		const endpoint = getImageUrlEndpoint( selectedUser, displayYear );
 		if ( ! endpoint ) {
 			return;
 		}
