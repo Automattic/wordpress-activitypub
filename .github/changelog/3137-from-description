@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix the Fediverse profile "Joined" date showing the oldest post date instead of when the site started federating.

@@ -363,15 +363,17 @@ class Outbox_Controller extends \WP_REST_Controller {
 			)
 		);
 
+		$user_id  = (int) $request->get_param( 'user_id' );
 		$comments = new \WP_Comment_Query(
 			array(
-				'status'        => 'approve',
-				'user_id'       => $request->get_param( 'user_id' ),
+				'status'         => 'approve',
+				'user_id'        => $user_id,
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'meta_key'      => 'activitypub_status',
-				'fields'        => 'ids',
-				'no_found_rows' => false,
-				'number'        => 1,
+				'meta_key'       => 'activitypub_status',
+				'fields'         => 'ids',
+				'no_found_rows'  => false,
+				'number'         => 1,
+				'author__not_in' => array( 0 ),
 			)
 		);
 

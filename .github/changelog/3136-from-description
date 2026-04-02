@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix the Fediverse profile showing an inflated post count by excluding incoming comments from the total.
