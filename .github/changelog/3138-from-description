@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix cleanup jobs silently doing nothing on sites where purge retention options were not set.
