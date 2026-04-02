@@ -86,12 +86,14 @@ class Stats_Image extends File {
 	/**
 	 * Get the public URL for a stats image, generating it if needed.
 	 *
-	 * @param int $user_id The user ID.
-	 * @param int $year    The year.
+	 * @param int   $user_id         The user ID.
+	 * @param int   $year            The year.
+	 * @param array $color_overrides Optional. Array with 'bg' and/or 'fg' hex colors
+	 *                               from block attributes. Falls back to theme colors.
 	 *
 	 * @return string|\WP_Error The public URL or error.
 	 */
-	public static function get_url( $user_id, $year ) {
+	public static function get_url( $user_id, $year, $color_overrides = array() ) {
 		if ( ! self::is_available() ) {
 			return new \WP_Error( 'gd_not_available', \__( 'GD library is not available.', 'activitypub' ), array( 'status' => 501 ) );
 		}
@@ -114,7 +116,7 @@ class Stats_Image extends File {
 			return \apply_filters( 'activitypub_stats_image_url', $url, $user_id, $year );
 		}
 
-		$hash  = self::get_hash( $user_id, $year );
+		$hash  = self::get_hash( $user_id, $year, $color_overrides );
 		$paths = static::get_storage_paths( $user_id );
 
 		// Check for cached file using the base class glob pattern.
@@ -129,7 +131,7 @@ class Stats_Image extends File {
 		}
 
 		// Generate the image.
-		$result = self::generate( $user_id, $year );
+		$result = self::generate( $user_id, $year, $color_overrides );
 
 		if ( \is_wp_error( $result ) ) {
 			return $result;
@@ -186,12 +188,13 @@ class Stats_Image extends File {
 	/**
 	 * Generate the stats image and save to cache.
 	 *
-	 * @param int $user_id The user ID.
-	 * @param int $year    The year.
+	 * @param int   $user_id         The user ID.
+	 * @param int   $year            The year.
+	 * @param array $color_overrides Optional. Array with 'bg' and/or 'fg' hex colors.
 	 *
 	 * @return string|\WP_Error Cached file path or error.
 	 */
-	public static function generate( $user_id, $year ) {
+	public static function generate( $user_id, $year, $color_overrides = array() ) {
 		if ( ! self::is_available() ) {
 			return new \WP_Error( 'gd_not_available', \__( 'GD library is not available.', 'activitypub' ), array( 'status' => 501 ) );
 		}
@@ -223,7 +226,7 @@ class Stats_Image extends File {
 			require_once ABSPATH . 'wp-admin/includes/file.php';
 		}
 
-		$tmp_file = self::render( $summary, $actor_webfinger, $site_name, $year );
+		$tmp_file = self::render( $summary, $actor_webfinger, $site_name, $year, $color_overrides );
 
 		if ( \is_wp_error( $tmp_file ) ) {
 			return $tmp_file;
@@ -238,7 +241,7 @@ class Stats_Image extends File {
 		}
 
 		// Move to cache dir with a descriptive name, then optimize (WebP conversion).
-		$hash      = self::get_hash( $user_id, $year );
+		$hash      = self::get_hash( $user_id, $year, $color_overrides );
 		$dest_name = \sprintf( 'stats-%d-%s.png', $year, $hash );
 		$dest_path = $paths['basedir'] . '/' . $dest_name;
 
@@ -255,12 +258,13 @@ class Stats_Image extends File {
 	 * timestamp so cached images are regenerated when the theme or
 	 * the underlying stats data changes.
 	 *
-	 * @param int $user_id The user ID.
-	 * @param int $year    The year.
+	 * @param int   $user_id         The user ID.
+	 * @param int   $year            The year.
+	 * @param array $color_overrides Optional. Color overrides from block attributes.
 	 *
 	 * @return string The hash string.
 	 */
-	private static function get_hash( $user_id = 0, $year = 0 ) {
+	private static function get_hash( $user_id = 0, $year = 0, $color_overrides = array() ) {
 		$parts = array(
 			\get_stylesheet(),
 			\wp_get_theme()->get( 'Version' ),
@@ -274,6 +278,10 @@ class Stats_Image extends File {
 			}
 		}
 
+		if ( ! empty( $color_overrides ) ) {
+			$parts[] = $color_overrides;
+		}
+
 		return \md5( \wp_json_encode( $parts ) );
 	}
 
@@ -284,9 +292,10 @@ class Stats_Image extends File {
 	 * @param string $actor_webfinger The actor webfinger identifier.
 	 * @param string $site_name       The site name.
 	 * @param int    $year            The year.
+	 * @param array  $color_overrides Optional. Array with 'bg' and/or 'fg' hex colors.
 	 * @return string|\WP_Error Path to temporary PNG file or error.
 	 */
-	private static function render( $summary, $actor_webfinger, $site_name, $year ) {
+	private static function render( $summary, $actor_webfinger, $site_name, $year, $color_overrides = array() ) {
 		$width  = self::WIDTH;
 		$height = self::HEIGHT;
 
@@ -298,7 +307,7 @@ class Stats_Image extends File {
 
 		\imageantialias( $image, true );
 
-		$colors = self::resolve_colors();
+		$colors = self::resolve_colors( $color_overrides );
 		$bg     = \imagecolorallocate( $image, $colors['bg'][0], $colors['bg'][1], $colors['bg'][2] );
 		$fg     = \imagecolorallocate( $image, $colors['fg'][0], $colors['fg'][1], $colors['fg'][2] );
 		$muted  = \imagecolorallocate( $image, $colors['muted'][0], $colors['muted'][1], $colors['muted'][2] );
@@ -423,9 +432,21 @@ class Stats_Image extends File {
 	/**
 	 * Resolve colors from theme Global Styles or overrides.
 	 *
+	 * @param array $overrides Optional. Array with 'bg' and/or 'fg' hex colors.
 	 * @return array Associative array with 'bg', 'fg', and 'muted' RGB arrays.
 	 */
-	private static function resolve_colors() {
+	private static function resolve_colors( $overrides = array() ) {
+		/*
+		 * If the block provides explicit color overrides, use them
+		 * and fall back to theme colors only for missing values.
+		 */
+		$bg_override = ! empty( $overrides['bg'] ) ? self::parse_hex( $overrides['bg'] ) : null;
+		$fg_override = ! empty( $overrides['fg'] ) ? self::parse_hex( $overrides['fg'] ) : null;
+
+		if ( $bg_override && $fg_override ) {
+			return self::build_color_set( $bg_override, $fg_override );
+		}
+
 		$bg_rgb = array( 255, 255, 255 );
 		$fg_rgb = array( 17, 17, 17 );
 
@@ -478,6 +499,14 @@ class Stats_Image extends File {
 					}
 				}
 			}
+		}
+
+		// Apply individual overrides on top of theme-resolved colors.
+		if ( $bg_override ) {
+			$bg_rgb = $bg_override;
+		}
+		if ( $fg_override ) {
+			$fg_rgb = $fg_override;
 		}
 
 		return self::build_color_set( $bg_rgb, $fg_rgb );

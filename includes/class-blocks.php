@@ -1072,8 +1072,9 @@ class Blocks {
 				continue;
 			}
 
-			$year = (int) ( $block['attrs']['year'] ?? (int) \gmdate( 'Y' ) - 1 );
-			$url  = Stats_Image::get_url( $user_id, $year );
+			$year            = (int) ( $block['attrs']['year'] ?? (int) \gmdate( 'Y' ) - 1 );
+			$color_overrides = self::get_block_color_overrides( $block['attrs'] ?? array() );
+			$url             = Stats_Image::get_url( $user_id, $year, $color_overrides );
 
 			if ( \is_wp_error( $url ) ) {
 				continue;
@@ -1095,6 +1096,67 @@ class Blocks {
 		}
 
 		return $attachments;
+	}
+
+	/**
+	 * Extract background and text color overrides from block attributes.
+	 *
+	 * Checks both custom colors (style.color.background/text) and
+	 * preset slugs (backgroundColor/textColor), resolving preset
+	 * slugs to hex via the theme palette.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $attrs The block attributes.
+	 * @return array Array with optional 'bg' and 'fg' hex color strings.
+	 */
+	private static function get_block_color_overrides( $attrs ) {
+		$overrides = array();
+
+		// Custom color from style.color.background.
+		if ( ! empty( $attrs['style']['color']['background'] ) ) {
+			$overrides['bg'] = $attrs['style']['color']['background'];
+		} elseif ( ! empty( $attrs['backgroundColor'] ) ) {
+			$overrides['bg'] = self::resolve_preset_color( $attrs['backgroundColor'] );
+		}
+
+		// Custom color from style.color.text.
+		if ( ! empty( $attrs['style']['color']['text'] ) ) {
+			$overrides['fg'] = $attrs['style']['color']['text'];
+		} elseif ( ! empty( $attrs['textColor'] ) ) {
+			$overrides['fg'] = self::resolve_preset_color( $attrs['textColor'] );
+		}
+
+		return \array_filter( $overrides );
+	}
+
+	/**
+	 * Resolve a preset color slug to its hex value.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $slug The preset color slug.
+	 * @return string|null The hex color or null if not found.
+	 */
+	private static function resolve_preset_color( $slug ) {
+		$settings = \wp_get_global_settings( array( 'color', 'palette' ) );
+
+		if ( empty( $settings ) ) {
+			return null;
+		}
+
+		foreach ( $settings as $palette_group ) {
+			if ( ! \is_array( $palette_group ) ) {
+				continue;
+			}
+			foreach ( $palette_group as $color ) {
+				if ( isset( $color['slug'] ) && $slug === $color['slug'] ) {
+					return $color['color'];
+				}
+			}
+		}
+
+		return null;
 	}
 
 	/**

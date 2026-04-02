@@ -138,7 +138,7 @@ if ( $extra_styles ) {
 			<div class="activitypub-stats__header">
 				<h2 class="activitypub-stats__title"><?php echo \esc_html( $title_text ); ?></h2>
 				<?php if ( $actor_webfinger ) : ?>
-					<p class="activitypub-stats__subtitle"><?php echo \esc_html( $actor_webfinger ); ?></p>
+					<p class="activitypub-stats__subtitle"><?php echo \esc_html( '@' . $actor_webfinger ); ?></p>
 				<?php endif; ?>
 			</div>
 
@@ -234,6 +234,6 @@ if ( $extra_styles ) {
 			<?php endif; ?>
 
 			<div class="activitypub-stats__footer">
-				<span class="activitypub-stats__branding"><?php echo \esc_html( $site_name ); ?> · <?php \esc_html_e( 'Powered by ActivityPub', 'activitypub' ); ?></span>
+				<span class="activitypub-stats__branding"><?php echo \esc_html( $site_name ); ?> · <?php \esc_html_e( 'Powered by the ActivityPub plugin', 'activitypub' ); ?></span>
 			</div>
 </div>
