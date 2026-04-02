@@ -307,7 +307,7 @@ class Blog extends Actor {
 
 		$published = \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $time );
 
-		\update_option( 'activitypub_blog_published', $published, true );
+		\update_option( 'activitypub_blog_published', $published, false );
 
 		return $published;
 	}
