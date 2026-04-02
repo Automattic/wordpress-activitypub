@@ -241,7 +241,7 @@ class Test_Options extends \WP_UnitTestCase {
 		$params = Options::get_distribution_params();
 
 		$this->assertEquals( 20, $params['batch_size'] );
-		$this->assertEquals( 300, $params['pause'] );
+		$this->assertEquals( 30, $params['pause'] );
 	}
 
 	/**

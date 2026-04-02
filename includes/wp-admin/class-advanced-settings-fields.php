@@ -354,7 +354,7 @@ class Advanced_Settings_Fields {
 				</li>
 			</ul>
 			<p class="description">
-				<?php \esc_html_e( 'With many followers, slower modes may significantly delay delivery. For example, Eco Mode with 1,000 followers takes approximately 4 hours per post.', 'activitypub' ); ?>
+				<?php \esc_html_e( 'With many followers, slower modes may delay delivery. For example, Eco Mode with 1,000 followers takes approximately 25 minutes per post.', 'activitypub' ); ?>
 			</p>
 		</fieldset>
 		<script>

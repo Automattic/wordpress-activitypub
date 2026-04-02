@@ -748,21 +748,21 @@ class Options {
 		return array(
 			'default'  => array(
 				'batch_size'  => 100,
-				'pause'       => 30,
+				'pause'       => 15,
 				'label'       => \__( 'Default', 'activitypub' ),
-				'description' => \__( 'Deliver activities as fast as possible (<code>100</code> per batch, <code>30s</code> pause).', 'activitypub' ),
+				'description' => \__( 'Deliver activities as fast as possible (<code>100</code> per batch, <code>15s</code> pause).', 'activitypub' ),
 			),
 			'balanced' => array(
 				'batch_size'  => 50,
-				'pause'       => 60,
+				'pause'       => 30,
 				'label'       => \__( 'Balanced', 'activitypub' ),
-				'description' => \__( 'Moderate pace with reasonable pauses between batches (<code>50</code> per batch, <code>60s</code> pause).', 'activitypub' ),
+				'description' => \__( 'Moderate pace with reasonable pauses between batches (<code>50</code> per batch, <code>30s</code> pause).', 'activitypub' ),
 			),
 			'eco'      => array(
 				'batch_size'  => 20,
-				'pause'       => 300,
+				'pause'       => 30,
 				'label'       => \__( 'Eco Mode', 'activitypub' ),
-				'description' => \__( 'Gentle on server resources, ideal for shared hosting (<code>20</code> per batch, <code>5min</code> pause).', 'activitypub' ),
+				'description' => \__( 'Gentle on server resources, ideal for shared hosting (<code>20</code> per batch, <code>30s</code> pause).', 'activitypub' ),
 			),
 		);
 	}
