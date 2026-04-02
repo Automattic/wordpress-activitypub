@@ -1010,8 +1010,8 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 	 * @covers ::overload_total_items
 	 */
 	public function test_blog_actor_total_items_excludes_anonymous_comments() {
-		$original_mode = \get_option( 'activitypub_actor_mode' );
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\wp_set_current_user( 0 );
 
 		$post_id = self::factory()->post->create(
 			array(
@@ -1019,6 +1019,7 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 				'post_status' => 'publish',
 			)
 		);
+		\update_post_meta( $post_id, 'activitypub_status', 'federated' );
 
 		// Create a federated comment from a local user (should be counted).
 		$local_comment_id = self::factory()->comment->create(
@@ -1028,6 +1029,15 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 			)
 		);
 		\update_comment_meta( $local_comment_id, 'activitypub_status', 'federated' );
+
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertArrayHasKey( 'totalItems', $data );
+
+		$count_before = $data['totalItems'];
 
 		// Create a federated comment from an anonymous/remote user (should NOT be counted).
 		$remote_comment_id = self::factory()->comment->create(
@@ -1040,39 +1050,9 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		);
 		\update_comment_meta( $remote_comment_id, 'activitypub_status', 'federated' );
 
-		/*
-		 * Query comments the same way overload_total_items does
-		 * to verify the author__not_in filter excludes user_id = 0.
-		 */
-		$with_filter = new \WP_Comment_Query(
-			array(
-				'status'         => 'approve',
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'meta_key'       => 'activitypub_status',
-				'fields'         => 'ids',
-				'no_found_rows'  => false,
-				'number'         => 1,
-				'author__not_in' => array( 0 ),
-			)
-		);
+		$response2 = \rest_get_server()->dispatch( $request );
+		$data2     = $response2->get_data();
 
-		$without_filter = new \WP_Comment_Query(
-			array(
-				'status'        => 'approve',
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'meta_key'      => 'activitypub_status',
-				'fields'        => 'ids',
-				'no_found_rows' => false,
-				'number'        => 1,
-			)
-		);
-
-		$this->assertGreaterThan(
-			(int) $with_filter->found_comments,
-			(int) $without_filter->found_comments,
-			'Without author__not_in, the count should be higher (includes remote comments).'
-		);
-
-		\update_option( 'activitypub_actor_mode', $original_mode );
+		$this->assertEquals( $count_before, $data2['totalItems'], 'Remote comment should not inflate totalItems.' );
 	}
 }
