@@ -60,6 +60,7 @@ function rest_init() {
 	( new Rest\Comments_Controller() )->register_routes();
 	( new Rest\Followers_Controller() )->register_routes();
 	( new Rest\Following_Controller() )->register_routes();
+	( new Rest\Liked_Controller() )->register_routes();
 	( new Rest\Inbox_Controller() )->register_routes();
 	( new Rest\Interaction_Controller() )->register_routes();
 	( new Rest\Moderators_Controller() )->register_routes();

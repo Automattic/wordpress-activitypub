@@ -1127,7 +1127,7 @@ class Post extends Base {
 		return array(
 			'id'         => get_rest_url_by_path( sprintf( 'posts/%d/shares', $this->item->ID ) ),
 			'type'       => 'Collection',
-			'totalItems' => Interactions::count_by_type( $this->item->ID, 'repost' ),
+			'totalItems' => Interactions::count_by_type( $this->item->ID, 'repost' ) + Interactions::count_by_type( $this->item->ID, 'quote' ),
 		);
 	}
 
