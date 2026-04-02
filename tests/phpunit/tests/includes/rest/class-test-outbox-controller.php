@@ -1003,4 +1003,76 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		// The summary should be used as content fallback.
 		$this->assertNotEmpty( $post->post_content, 'Post should have content from summary fallback.' );
 	}
+
+	/**
+	 * Test that totalItems for the blog actor excludes anonymous comments.
+	 *
+	 * @covers ::overload_total_items
+	 */
+	public function test_blog_actor_total_items_excludes_anonymous_comments() {
+		$original_mode = \get_option( 'activitypub_actor_mode' );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => self::$user_id,
+				'post_status' => 'publish',
+			)
+		);
+
+		// Create a federated comment from a local user (should be counted).
+		$local_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'user_id'         => self::$user_id,
+			)
+		);
+		\update_comment_meta( $local_comment_id, 'activitypub_status', 'federated' );
+
+		// Create a federated comment from an anonymous/remote user (should NOT be counted).
+		$remote_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'    => $post_id,
+				'user_id'            => 0,
+				'comment_author'     => 'Remote User',
+				'comment_author_url' => 'https://remote.example/user',
+			)
+		);
+		\update_comment_meta( $remote_comment_id, 'activitypub_status', 'federated' );
+
+		/*
+		 * Query comments the same way overload_total_items does
+		 * to verify the author__not_in filter excludes user_id = 0.
+		 */
+		$with_filter = new \WP_Comment_Query(
+			array(
+				'status'         => 'approve',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_key'       => 'activitypub_status',
+				'fields'         => 'ids',
+				'no_found_rows'  => false,
+				'number'         => 1,
+				'author__not_in' => array( 0 ),
+			)
+		);
+
+		$without_filter = new \WP_Comment_Query(
+			array(
+				'status'        => 'approve',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_key'      => 'activitypub_status',
+				'fields'        => 'ids',
+				'no_found_rows' => false,
+				'number'        => 1,
+			)
+		);
+
+		$this->assertGreaterThan(
+			(int) $with_filter->found_comments,
+			(int) $without_filter->found_comments,
+			'Without author__not_in, the count should be higher (includes remote comments).'
+		);
+
+		\update_option( 'activitypub_actor_mode', $original_mode );
+	}
 }
