@@ -1,10 +1,9 @@
 .wp-block-activitypub-stats {
 	max-width: var(--wp--style--global--content-size, 600px);
-	background-color: var(--wp--preset--color--base, inherit);
-	color: var(--wp--preset--color--contrast, inherit);
+	background-color: var(--wp--preset--color--base, var(--wp--preset--color--white, #fff));
+	color: var(--wp--preset--color--contrast, var(--wp--preset--color--black, inherit));
 
-	// Inner border color: uses block border-color if set,
-	// otherwise muted text color.
+	// Inner border color: uses block border-color if set, otherwise muted text color.
 	--activitypub-stats--border-color: color-mix(in srgb, currentcolor 20%, transparent);
 
 
