@@ -276,21 +276,40 @@ class Blog extends Actor {
 	 * @return string The published date.
 	 */
 	public function get_published() {
-		$first_post = new \WP_Query(
+		$published = \get_option( 'activitypub_blog_published' );
+
+		if ( $published ) {
+			return $published;
+		}
+
+		// Backfill from the first federated post.
+		$first_federated = new \WP_Query(
 			array(
-				'orderby' => 'date',
-				'order'   => 'ASC',
-				'number'  => 1,
+				'orderby'        => 'date',
+				'order'          => 'ASC',
+				'posts_per_page' => 1,
+				'post_status'    => 'publish',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'     => array(
+					array(
+						'key'     => 'activitypub_status',
+						'compare' => 'EXISTS',
+					),
+				),
 			)
 		);
 
-		if ( ! empty( $first_post->posts[0] ) ) {
-			$time = \strtotime( $first_post->posts[0]->post_date_gmt );
+		if ( ! empty( $first_federated->posts[0] ) ) {
+			$time = \strtotime( $first_federated->posts[0]->post_date_gmt );
 		} else {
 			$time = \time();
 		}
 
-		return \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $time );
+		$published = \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $time );
+
+		\update_option( 'activitypub_blog_published', $published, true );
+
+		return $published;
 	}
 
 	/**
