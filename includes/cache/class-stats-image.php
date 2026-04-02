@@ -244,10 +244,8 @@ class Stats_Image extends File {
 
 		static::get_filesystem()->move( $tmp_file, $dest_path, true );
 
-		// Optimize via WP_Image_Editor (handles WebP conversion).
-		$optimized = static::optimize_image( $dest_path, self::WIDTH );
-
-		return $optimized;
+		// Keep as PNG for maximum compatibility when sharing on social networks.
+		return $dest_path;
 	}
 
 	/**
