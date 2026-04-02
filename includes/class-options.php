@@ -226,9 +226,12 @@ class Options {
 			'activitypub_advanced',
 			'activitypub_outbox_purge_days',
 			array(
-				'type'        => 'integer',
-				'description' => 'Number of days to keep items in the Outbox.',
-				'default'     => 180,
+				'type'              => 'integer',
+				'description'       => 'Number of days to keep items in the Outbox.',
+				'default'           => ACTIVITYPUB_OUTBOX_PURGE_DAYS,
+				'sanitize_callback' => static function ( $value ) {
+					return \max( 1, \absint( $value ) );
+				},
 			)
 		);
 
@@ -236,9 +239,12 @@ class Options {
 			'activitypub_advanced',
 			'activitypub_inbox_purge_days',
 			array(
-				'type'        => 'integer',
-				'description' => 'Number of days to keep items in the Inbox.',
-				'default'     => 180,
+				'type'              => 'integer',
+				'description'       => 'Number of days to keep items in the Inbox.',
+				'default'           => ACTIVITYPUB_INBOX_PURGE_DAYS,
+				'sanitize_callback' => static function ( $value ) {
+					return \max( 1, \absint( $value ) );
+				},
 			)
 		);
 
@@ -246,9 +252,12 @@ class Options {
 			'activitypub_advanced',
 			'activitypub_ap_post_purge_days',
 			array(
-				'type'        => 'integer',
-				'description' => 'Number of days to keep remote posts.',
-				'default'     => 30,
+				'type'              => 'integer',
+				'description'       => 'Number of days to keep remote posts.',
+				'default'           => ACTIVITYPUB_AP_POST_PURGE_DAYS,
+				'sanitize_callback' => static function ( $value ) {
+					return \max( 1, \absint( $value ) );
+				},
 			)
 		);
 
