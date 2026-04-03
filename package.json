@@ -68,7 +68,7 @@
 		"@wordpress/keyboard-shortcuts": "^5.43.0",
 		"@wordpress/keycodes": "^4.40.0",
 		"@wordpress/notices": "^5.43.0",
-		"@wordpress/plugins": "^7.42.0",
+		"@wordpress/plugins": "^7.43.0",
 		"@wordpress/preferences": "^4.37.0",
 		"@wordpress/prettier-config": "^4.43.0",
 		"@wordpress/primitives": "^4.37.0",
