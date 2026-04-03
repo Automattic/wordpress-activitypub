@@ -430,6 +430,70 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Test that Outbox::add() does not cause infinite recursion via Post::triage().
+	 *
+	 * When wp_insert_post() fires inside Outbox::add(), it triggers wp_after_insert_post,
+	 * which could re-enter Post::triage() → add_to_outbox() → Outbox::add() in an infinite
+	 * loop if the triage hook is not temporarily removed.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_does_not_recurse_via_post_triage() {
+		// Ensure the triage hook is registered as a baseline.
+		\add_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ), 33, 4 );
+
+		$triage_hooked_during_insert = null;
+
+		// Check whether Post::triage is hooked when wp_after_insert_post fires
+		// during the outbox insert.
+		\add_action(
+			'wp_after_insert_post',
+			function ( $post_id ) use ( &$triage_hooked_during_insert ) {
+				if ( Outbox::POST_TYPE === \get_post_type( $post_id ) ) {
+					$triage_hooked_during_insert = \has_action(
+						'wp_after_insert_post',
+						array( \Activitypub\Scheduler\Post::class, 'triage' )
+					);
+				}
+			},
+			0 // Run before priority 33 to inspect hook state.
+		);
+
+		$object = new Base_Object();
+		$object->set_id( 'https://example.com/recursion-test' );
+		$object->set_type( 'Note' );
+		$object->set_content( '<p>Recursion test</p>' );
+
+		$id = \Activitypub\add_to_outbox( $object, 'Create', self::$user_id );
+
+		$this->assertIsInt( $id );
+		$this->assertFalse( $triage_hooked_during_insert, 'Post::triage should be unhooked during Outbox::add() to prevent recursion.' );
+	}
+
+	/**
+	 * Test that Outbox::add() restores the Post::triage hook after inserting.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_restores_triage_hook() {
+		// Ensure the triage hook is registered as a baseline.
+		\add_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ), 33, 4 );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://example.com/restore-hook-test' );
+		$object->set_type( 'Note' );
+		$object->set_content( '<p>Hook restore test</p>' );
+
+		\Activitypub\add_to_outbox( $object, 'Create', self::$user_id );
+
+		// After add_to_outbox completes, the triage hook should be restored.
+		$this->assertNotFalse(
+			\has_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ) ),
+			'Post::triage hook should be restored after Outbox::add() completes.'
+		);
+	}
+
+	/**
 	 * Helper method to create a dummy activity object for testing.
 	 *
 	 * @return Activity

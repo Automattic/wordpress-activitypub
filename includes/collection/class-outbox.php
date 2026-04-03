@@ -126,6 +126,13 @@ class Outbox {
 			\kses_remove_filters();
 		}
 
+		// Prevent infinite recursion: wp_insert_post fires wp_after_insert_post,
+		// which would re-enter Post::triage() -> add_to_outbox() -> Outbox::add().
+		$has_triage = false !== \has_action( 'wp_after_insert_post', array( Scheduler\Post::class, 'triage' ) );
+		if ( $has_triage ) {
+			\remove_action( 'wp_after_insert_post', array( Scheduler\Post::class, 'triage' ), 33 );
+		}
+
 		$id = \wp_insert_post( $outbox_item, true );
 
 		// Update the activity ID if the post was inserted successfully.
@@ -138,6 +145,10 @@ class Outbox {
 					'post_content' => \wp_slash( $activity->to_json() ),
 				)
 			);
+		}
+
+		if ( $has_triage ) {
+			\add_action( 'wp_after_insert_post', array( Scheduler\Post::class, 'triage' ), 33, 4 );
 		}
 
 		if ( $has_kses ) {

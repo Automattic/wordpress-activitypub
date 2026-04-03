@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix an infinite loop when saving activities to the outbox on sites where the outbox post type passes through content filters.
