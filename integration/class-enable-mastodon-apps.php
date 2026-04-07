@@ -54,7 +54,7 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_status_context', array( self::class, 'api_get_replies' ), 10, 3 );
 		\add_filter( 'mastodon_api_update_credentials', array( self::class, 'api_update_credentials' ), 10, 2 );
 		\add_filter( 'mastodon_api_submit_status_text', array( Mention::class, 'the_content' ) );
-		\add_filter( 'mastodon_api_notifications_get', array( self::class, 'api_notifications_get' ), 10, 2 );
+		\add_filter( 'mastodon_api_notifications_get', array( self::class, 'api_notifications_get' ), 10, 5 );
 	}
 
 	/**
@@ -756,14 +756,17 @@ class Enable_Mastodon_Apps {
 	}
 
 	/**
-	 * Add repost and like notifications from ActivityPub comments.
+	 * Add repost, like, and follow notifications from ActivityPub data.
 	 *
-	 * @param array  $notifications The notifications array.
-	 * @param object $request       The request object.
+	 * @param array       $notifications The notifications array.
+	 * @param object      $request       The request object.
+	 * @param int|null    $limit         Max number of notifications per page.
+	 * @param string|null $before_date   MySQL datetime; only return notifications before this date.
+	 * @param string|null $after_date    MySQL datetime; only return notifications after this date.
 	 *
 	 * @return array The filtered notifications.
 	 */
-	public static function api_notifications_get( $notifications, $request ) {
+	public static function api_notifications_get( $notifications, $request, $limit = null, $before_date = null, $after_date = null ) {
 		$types         = $request->get_param( 'types' );
 		$exclude_types = $request->get_param( 'exclude_types' );
 
@@ -783,10 +786,12 @@ class Enable_Mastodon_Apps {
 			return $notifications;
 		}
 
-		$limit = $request->get_param( 'limit' ) ? $request->get_param( 'limit' ) : self::DEFAULT_NOTIFICATION_LIMIT;
-
 		if ( ! \class_exists( Notification::class ) ) {
 			return $notifications;
+		}
+
+		if ( null === $limit ) {
+			$limit = $request->get_param( 'limit' ) ? $request->get_param( 'limit' ) : self::DEFAULT_NOTIFICATION_LIMIT;
 		}
 
 		// Get reblog/favourite notifications from comments.
@@ -801,16 +806,36 @@ class Enable_Mastodon_Apps {
 
 			$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
 
-			$comments = \get_comments(
-				array(
-					'post_author' => $user_id,
-					'post_type'   => $post_types,
-					'type__in'    => $comment_types,
-					'number'      => $limit,
-					'orderby'     => 'comment_date',
-					'order'       => 'DESC',
-				)
+			$comment_args = array(
+				'post_author' => $user_id,
+				'post_type'   => $post_types,
+				'type__in'    => $comment_types,
+				'number'      => $limit,
+				'orderby'     => 'comment_date',
+				'order'       => 'DESC',
 			);
+
+			if ( $before_date || $after_date ) {
+				$date_query = array();
+				if ( $before_date ) {
+					$date_query[] = array(
+						'before'    => $before_date,
+						'column'    => 'comment_date',
+						'inclusive' => false,
+					);
+				}
+				if ( $after_date ) {
+					$date_query[] = array(
+						'after'     => $after_date,
+						'column'    => 'comment_date',
+						'inclusive' => false,
+					);
+				}
+				$comment_args['date_query'] = $date_query;
+				$comment_args['number']     = -1;
+			}
+
+			$comments = \get_comments( $comment_args );
 
 			foreach ( $comments as $comment ) {
 				$type = 'repost' === $comment->comment_type ? 'reblog' : 'favourite';
@@ -838,42 +863,54 @@ class Enable_Mastodon_Apps {
 
 		// Get follow notifications from followers.
 		if ( $include_follow ) {
-			$notifications = self::add_follow_notifications( $notifications, $user_id, $limit );
+			$notifications = self::add_follow_notifications( $notifications, $user_id, $limit, $before_date, $after_date );
 		}
 
-		// Sort by date descending.
-		\usort(
-			$notifications,
-			static function ( $a, $b ) {
-				$a_date = \is_array( $a ) ? $a['created_at'] : $a->created_at;
-				$b_date = \is_array( $b ) ? $b['created_at'] : $b->created_at;
-				return \strcmp( $b_date, $a_date );
-			}
-		);
-
-		return \array_slice( $notifications, 0, $limit );
+		return $notifications;
 	}
 
 	/**
 	 * Add follow notifications from ActivityPub followers.
 	 *
-	 * @param array $notifications The notifications array.
-	 * @param int   $user_id       The user ID.
-	 * @param int   $limit         The limit.
+	 * @param array       $notifications The notifications array.
+	 * @param int         $user_id       The user ID.
+	 * @param int         $limit         Max number of followers to fetch when no date window is set.
+	 * @param string|null $before_date   MySQL datetime; only return followers added before this date.
+	 * @param string|null $after_date    MySQL datetime; only return followers added after this date.
 	 *
 	 * @return array The notifications array with follow notifications added.
 	 */
-	private static function add_follow_notifications( $notifications, $user_id, $limit ) {
+	private static function add_follow_notifications( $notifications, $user_id, $limit = self::DEFAULT_NOTIFICATION_LIMIT, $before_date = null, $after_date = null ) {
 		$user_id = self::maybe_map_user_to_blog( $user_id );
+
+		$follower_args = array(
+			'orderby' => 'post_date',
+			'order'   => 'DESC',
+		);
+
+		if ( $before_date || $after_date ) {
+			$date_query = array();
+			if ( $before_date ) {
+				$date_query[] = array(
+					'before'    => $before_date,
+					'inclusive' => false,
+				);
+			}
+			if ( $after_date ) {
+				$date_query[] = array(
+					'after'     => $after_date,
+					'inclusive' => false,
+				);
+			}
+			$follower_args['date_query'] = $date_query;
+			$limit                       = -1;
+		}
 
 		$followers = Followers::get_many(
 			$user_id,
 			$limit,
 			null,
-			array(
-				'orderby' => 'post_date',
-				'order'   => 'DESC',
-			)
+			$follower_args
 		);
 
 		foreach ( $followers as $follower ) {
