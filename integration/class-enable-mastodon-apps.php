@@ -870,14 +870,20 @@ class Enable_Mastodon_Apps {
 
 		$date_query = array();
 		if ( $before_date ) {
-			$clause = array( 'before' => $before_date, 'inclusive' => false );
+			$clause = array(
+				'before'    => $before_date,
+				'inclusive' => false,
+			);
 			if ( $column ) {
 				$clause['column'] = $column;
 			}
 			$date_query[] = $clause;
 		}
 		if ( $after_date ) {
-			$clause = array( 'after' => $after_date, 'inclusive' => false );
+			$clause = array(
+				'after'     => $after_date,
+				'inclusive' => false,
+			);
 			if ( $column ) {
 				$clause['column'] = $column;
 			}
