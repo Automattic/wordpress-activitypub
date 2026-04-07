@@ -714,8 +714,8 @@ class Enable_Mastodon_Apps {
 	 * Fetches the outbox of the corresponding tags.pub actor (e.g. @wordpress@tags.pub)
 	 * and resolves Announce activities to their original posts.
 	 *
-	 * @param mixed             $statuses The current statuses.
-	 * @param \WP_REST_Request  $request  The request object.
+	 * @param mixed            $statuses The current statuses.
+	 * @param \WP_REST_Request $request  The request object.
 	 *
 	 * @return \WP_REST_Response|array|null The statuses including remote ones.
 	 */
@@ -758,7 +758,7 @@ class Enable_Mastodon_Apps {
 			return $statuses;
 		}
 
-		return new \WP_REST_Response( $merged );
+		return $merged;
 	}
 
 	/**
