@@ -815,24 +815,9 @@ class Enable_Mastodon_Apps {
 				'order'       => 'DESC',
 			);
 
-			if ( $before_date || $after_date ) {
-				$date_query = array();
-				if ( $before_date ) {
-					$date_query[] = array(
-						'before'    => $before_date,
-						'column'    => 'comment_date',
-						'inclusive' => false,
-					);
-				}
-				if ( $after_date ) {
-					$date_query[] = array(
-						'after'     => $after_date,
-						'column'    => 'comment_date',
-						'inclusive' => false,
-					);
-				}
+			$date_query = self::build_date_query( $before_date, $after_date, 'comment_date' );
+			if ( $date_query ) {
 				$comment_args['date_query'] = $date_query;
-				$comment_args['number']     = -1;
 			}
 
 			$comments = \get_comments( $comment_args );
@@ -870,11 +855,44 @@ class Enable_Mastodon_Apps {
 	}
 
 	/**
+	 * Build a WP_Query/WP_Comment_Query date_query array from optional date bounds.
+	 *
+	 * @param string|null $before_date MySQL datetime upper bound (exclusive).
+	 * @param string|null $after_date  MySQL datetime lower bound (exclusive).
+	 * @param string|null $column      Optional date column name (e.g. 'comment_date'). Omit for default.
+	 *
+	 * @return array|null date_query array, or null when no bounds are set.
+	 */
+	private static function build_date_query( $before_date, $after_date, $column = null ) {
+		if ( ! $before_date && ! $after_date ) {
+			return null;
+		}
+
+		$date_query = array();
+		if ( $before_date ) {
+			$clause = array( 'before' => $before_date, 'inclusive' => false );
+			if ( $column ) {
+				$clause['column'] = $column;
+			}
+			$date_query[] = $clause;
+		}
+		if ( $after_date ) {
+			$clause = array( 'after' => $after_date, 'inclusive' => false );
+			if ( $column ) {
+				$clause['column'] = $column;
+			}
+			$date_query[] = $clause;
+		}
+
+		return $date_query;
+	}
+
+	/**
 	 * Add follow notifications from ActivityPub followers.
 	 *
 	 * @param array       $notifications The notifications array.
 	 * @param int         $user_id       The user ID.
-	 * @param int         $limit         Max number of followers to fetch when no date window is set.
+	 * @param int         $limit         Max number of followers to fetch.
 	 * @param string|null $before_date   MySQL datetime; only return followers added before this date.
 	 * @param string|null $after_date    MySQL datetime; only return followers added after this date.
 	 *
@@ -888,22 +906,9 @@ class Enable_Mastodon_Apps {
 			'order'   => 'DESC',
 		);
 
-		if ( $before_date || $after_date ) {
-			$date_query = array();
-			if ( $before_date ) {
-				$date_query[] = array(
-					'before'    => $before_date,
-					'inclusive' => false,
-				);
-			}
-			if ( $after_date ) {
-				$date_query[] = array(
-					'after'     => $after_date,
-					'inclusive' => false,
-				);
-			}
+		$date_query = self::build_date_query( $before_date, $after_date );
+		if ( $date_query ) {
 			$follower_args['date_query'] = $date_query;
-			$limit                       = -1;
 		}
 
 		$followers = Followers::get_many(
