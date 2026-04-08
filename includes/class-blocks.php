@@ -1176,6 +1176,11 @@ class Blocks {
 			return;
 		}
 
+		$query_post_types = (array) $query->get( 'post_type' );
+		if ( $query_post_types && ! array_intersect( $query_post_types, \get_post_types_by_support( 'activitypub' ) ) ) {
+			return;
+		}
+
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$active_tab = isset( $_GET['filter'] ) ? \sanitize_key( $_GET['filter'] ) : 'posts';
 
