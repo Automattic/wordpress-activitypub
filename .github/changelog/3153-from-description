@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix performance regression from reply-exclusion filter by skipping it for queries targeting non-ActivityPub post types.
