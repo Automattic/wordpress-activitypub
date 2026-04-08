@@ -460,7 +460,7 @@ class Enable_Mastodon_Apps {
 	 * Fetch a status by its remote URL.
 	 *
 	 * @param Status|null $status The current status.
-	 * @param string      $url   The remote URL of the status.
+	 * @param string      $url The remote URL of the status.
 	 *
 	 * @return Status|null The status, or null if it could not be fetched.
 	 */
@@ -496,7 +496,7 @@ class Enable_Mastodon_Apps {
 			return $search_data;
 		}
 
-		$status = self::api_status_by_url( null, $request->get_param( 'q' ) );
+		$status = \apply_filters( 'mastodon_api_status_by_url', null, $request->get_param( 'q' ) );
 		if ( $status ) {
 			$search_data['statuses'][] = $status;
 		}
