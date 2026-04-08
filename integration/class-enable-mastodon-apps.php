@@ -188,14 +188,6 @@ class Enable_Mastodon_Apps {
 	}
 
 	/**
-	 * Add followers to Mastodon API.
-	 *
-	 * @param array  $followers An array of followers.
-	 * @param string $user_id   The user id.
-	 *
-	 * @return array The filtered followers
-	 */
-	/**
 	 * Validate ap_actor post IDs as valid Mastodon API users.
 	 *
 	 * @param bool       $is_valid Whether the user is valid.
@@ -215,6 +207,14 @@ class Enable_Mastodon_Apps {
 		return $is_valid;
 	}
 
+	/**
+	 * Add followers to Mastodon API.
+	 *
+	 * @param array  $followers An array of followers.
+	 * @param string $user_id   The user id.
+	 *
+	 * @return array The filtered followers
+	 */
 	public static function api_account_followers( $followers, $user_id ) {
 		$user_id               = self::maybe_map_user_to_blog( $user_id );
 		$activitypub_followers = Followers::get_many( $user_id, 40 );
