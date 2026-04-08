@@ -1176,9 +1176,14 @@ class Blocks {
 			return;
 		}
 
-		$query_post_types = (array) $query->get( 'post_type' );
-		if ( $query_post_types && ! array_intersect( $query_post_types, \get_post_types_by_support( 'activitypub' ) ) ) {
-			return;
+		// Skip the reply-exclusion filter for queries that only target
+		// non-ActivityPub post types to avoid a full table scan.
+		$query_post_type = $query->get( 'post_type' );
+		if ( ! empty( $query_post_type ) && 'any' !== $query_post_type ) {
+			$query_post_types = (array) $query_post_type;
+			if ( ! array_intersect( $query_post_types, \get_post_types_by_support( 'activitypub' ) ) ) {
+				return;
+			}
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
