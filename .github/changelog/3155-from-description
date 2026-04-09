@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Update DataViews to v14 with improved infinite scroll performance.
