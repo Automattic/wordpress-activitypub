@@ -43,6 +43,7 @@ class Enable_Mastodon_Apps {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
+		\add_filter( 'mastodon_api_valid_user', array( self::class, 'is_ap_actor' ), 10, 2 );
 		\add_filter( 'mastodon_api_account_followers', array( self::class, 'api_account_followers' ), 10, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_external' ), 15, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_internal' ), 9, 2 );
@@ -51,6 +52,7 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_search', array( self::class, 'api_search_by_url' ), 40, 2 );
 		\add_filter( 'mastodon_api_get_posts_query_args', array( self::class, 'api_get_posts_query_args' ) );
 		\add_filter( 'mastodon_api_statuses', array( self::class, 'api_statuses_external' ), 10, 2 );
+		\add_filter( 'mastodon_api_status_by_url', array( self::class, 'api_status_by_url' ), 10, 2 );
 		\add_filter( 'mastodon_api_status_context', array( self::class, 'api_get_replies' ), 10, 3 );
 		\add_filter( 'mastodon_api_update_credentials', array( self::class, 'api_update_credentials' ), 10, 2 );
 		\add_filter( 'mastodon_api_submit_status_text', array( Mention::class, 'the_content' ) );
@@ -186,6 +188,26 @@ class Enable_Mastodon_Apps {
 	}
 
 	/**
+	 * Validate ap_actor post IDs as valid Mastodon API users.
+	 *
+	 * @param bool       $is_valid Whether the user is valid.
+	 * @param string|int $user_id  The user ID to check.
+	 *
+	 * @return bool True if the user ID is a valid ap_actor post.
+	 */
+	public static function is_ap_actor( $is_valid, $user_id ) {
+		if ( $is_valid ) {
+			return $is_valid;
+		}
+
+		if ( \is_numeric( $user_id ) && Remote_Actors::POST_TYPE === \get_post_type( (int) $user_id ) ) {
+			return true;
+		}
+
+		return $is_valid;
+	}
+
+	/**
 	 * Add followers to Mastodon API.
 	 *
 	 * @param array  $followers An array of followers.
@@ -204,7 +226,7 @@ class Enable_Mastodon_Apps {
 				continue;
 			}
 
-			$account = self::actor_to_account( $actor );
+			$account = self::actor_to_account( $actor, $follower->ID );
 
 			$account->followers_count = 0;
 			$account->following_count = 0;
@@ -232,6 +254,13 @@ class Enable_Mastodon_Apps {
 	 * @return Account The filtered Account.
 	 */
 	public static function api_account_external( $user_data, $user_id ) {
+		if ( ! $user_data && \is_numeric( $user_id ) && Remote_Actors::POST_TYPE === \get_post_type( (int) $user_id ) ) {
+			$actor = Remote_Actors::get_actor( (int) $user_id );
+			if ( $actor && ! \is_wp_error( $actor ) ) {
+				return self::actor_to_account( $actor, (int) $user_id );
+			}
+		}
+
 		if ( $user_data || ( is_numeric( $user_id ) && $user_id ) ) {
 			// Only augment.
 			return $user_data;
@@ -388,20 +417,21 @@ class Enable_Mastodon_Apps {
 			return null;
 		}
 
-		return self::actor_to_account( $actor );
+		return self::actor_to_account( $actor, $actor_post->ID );
 	}
 
 	/**
 	 * Convert an Actor object to an Account.
 	 *
-	 * @param Actor $actor The actor object.
+	 * @param Actor    $actor   The actor object.
+	 * @param int|null $post_id Optional WordPress post ID for the actor.
 	 *
 	 * @return Account The account.
 	 */
-	private static function actor_to_account( $actor ) {
+	private static function actor_to_account( $actor, $post_id = null ) {
 		$account = new Account();
 
-		$actor_id = $actor->get__id();
+		$actor_id = $post_id ? $post_id : $actor->get__id();
 		if ( ! $actor_id ) {
 			$actor_id = $actor->get_id();
 		}
@@ -455,6 +485,32 @@ class Enable_Mastodon_Apps {
 	}
 
 	/**
+	 * Fetch a status by its remote URL.
+	 *
+	 * @param Status|null $status The current status.
+	 * @param string      $url The remote URL of the status.
+	 *
+	 * @return Status|null The status, or null if it could not be fetched.
+	 */
+	public static function api_status_by_url( $status, $url ) {
+		if ( $status ) {
+			return $status;
+		}
+
+		$object = Http::get_remote_object( $url, true );
+		if ( \is_wp_error( $object ) || ! isset( $object['attributedTo'] ) ) {
+			return null;
+		}
+
+		$account = self::get_account_for_actor( $object['attributedTo'] );
+		if ( ! $account ) {
+			return null;
+		}
+
+		return self::activity_to_status( $object, $account );
+	}
+
+	/**
 	 * Search by URL for Mastodon API.
 	 *
 	 * @param array  $search_data The search data.
@@ -468,17 +524,7 @@ class Enable_Mastodon_Apps {
 			return $search_data;
 		}
 
-		$object = Http::get_remote_object( $request->get_param( 'q' ), true );
-		if ( is_wp_error( $object ) || ! isset( $object['attributedTo'] ) ) {
-			return $search_data;
-		}
-
-		$account = self::get_account_for_actor( $object['attributedTo'] );
-		if ( ! $account ) {
-			return $search_data;
-		}
-
-		$status = self::activity_to_status( $object, $account );
+		$status = \apply_filters( 'mastodon_api_status_by_url', null, $request->get_param( 'q' ) );
 		if ( $status ) {
 			$search_data['statuses'][] = $status;
 		}
@@ -517,7 +563,7 @@ class Enable_Mastodon_Apps {
 				continue;
 			}
 
-			$account = self::actor_to_account( $actor );
+			$account = self::actor_to_account( $actor, $follower->ID );
 
 			$account->uri = $actor->get_id();
 
@@ -930,7 +976,7 @@ class Enable_Mastodon_Apps {
 				continue;
 			}
 
-			$account = self::get_account_for_actor( $actor );
+			$account = self::actor_to_account( $actor, $follower->ID );
 			if ( ! $account ) {
 				continue;
 			}
