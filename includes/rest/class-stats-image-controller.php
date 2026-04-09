@@ -9,7 +9,6 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Cache\Stats_Image;
-use Activitypub\Collection\Actors;
 
 /**
  * REST controller that serves stats share images.
@@ -69,8 +68,8 @@ class Stats_Image_Controller extends \WP_REST_Controller {
 	public function validate_user_id( $value ) {
 		$user_id = (int) $value;
 
-		// Blog and Application user IDs are always valid.
-		if ( 0 === $user_id || Actors::APPLICATION_USER_ID === $user_id ) {
+		// Blog user ID (0) is always valid.
+		if ( 0 === $user_id ) {
 			return true;
 		}
 

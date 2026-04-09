@@ -9,7 +9,6 @@ namespace Activitypub\Tests\Rest;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Rest\Stats_Image_Controller;
-use Activitypub\Statistics;
 
 /**
  * Tests for Stats Image REST API endpoint.
@@ -135,7 +134,7 @@ class Test_Stats_Image_Controller extends \Activitypub\Tests\Test_REST_Controlle
 	 * @covers ::get_item
 	 */
 	public function test_get_item_no_stats() {
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/stats/image/' . self::$user_id . '/1999' );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/stats/image/' . self::$user_id . '/2001' );
 		$response = \rest_get_server()->dispatch( $request );
 
 		$this->assertEquals( 404, $response->get_status() );
@@ -152,7 +151,7 @@ class Test_Stats_Image_Controller extends \Activitypub\Tests\Test_REST_Controlle
 	public function test_endpoint_is_public() {
 		\wp_set_current_user( 0 );
 
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/stats/image/' . self::$user_id . '/1999' );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/stats/image/' . self::$user_id . '/2001' );
 		$response = \rest_get_server()->dispatch( $request );
 
 		// Should get 404 (no stats), not 401/403.
@@ -204,7 +203,7 @@ class Test_Stats_Image_Controller extends \Activitypub\Tests\Test_REST_Controlle
 			$this->markTestSkipped( 'GD library is not available.' );
 		}
 
-		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/stats/image-url/' . self::$user_id . '/1999' );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/stats/image-url/' . self::$user_id . '/2001' );
 		$response = \rest_get_server()->dispatch( $request );
 
 		$this->assertEquals( 404, $response->get_status() );

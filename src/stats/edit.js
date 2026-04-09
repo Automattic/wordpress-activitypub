@@ -113,6 +113,8 @@ export default function Edit( { attributes, setAttributes } ) {
 							{ __( 'Use this URL to share your stats as an image on social media.', 'activitypub' ) }
 						</p>
 						<TextControl
+							label={ __( 'Share image URL', 'activitypub' ) }
+							hideLabelFromVision
 							__nextHasNoMarginBottom
 							value={ imageUrl }
 							readOnly
