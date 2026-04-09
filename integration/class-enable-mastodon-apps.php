@@ -810,6 +810,10 @@ class Enable_Mastodon_Apps {
 	/**
 	 * Fetch posts from the tags.pub outbox for a given hashtag.
 	 *
+	 * Resolved ActivityPub objects are cached as plain arrays in a transient
+	 * to avoid storing PHP objects (which is brittle across deployments).
+	 * Status entities are built fresh from the cached data on each request.
+	 *
 	 * @param string $hashtag The hashtag name (without #).
 	 * @param int    $limit   Maximum number of posts to return.
 	 *
@@ -818,54 +822,75 @@ class Enable_Mastodon_Apps {
 	private static function fetch_tags_pub_outbox( $hashtag, $limit = 20 ) {
 		$transient_key = 'activitypub_tags_pub_' . \md5( $hashtag );
 		$cached        = \get_transient( $transient_key );
-		if ( false !== $cached ) {
-			return $cached;
+
+		if ( false === $cached ) {
+			$cached = self::resolve_tags_pub_items( $hashtag, $limit );
+			$ttl    = empty( $cached ) ? 5 * \MINUTE_IN_SECONDS : 15 * \MINUTE_IN_SECONDS;
+			\set_transient( $transient_key, $cached, $ttl );
 		}
 
-		$outbox_url = 'https://tags.pub/user/' . \rawurlencode( $hashtag ) . '/outbox';
-		$outbox     = Http::get_remote_object( $outbox_url, true );
-
-		if ( \is_wp_error( $outbox ) || empty( $outbox['first'] ) ) {
-			\set_transient( $transient_key, array(), 5 * \MINUTE_IN_SECONDS );
-			return array();
-		}
-
-		// Fetch the first (most recent) page of the outbox.
-		$page = Http::get_remote_object( $outbox['first'], true );
-		if ( \is_wp_error( $page ) ) {
-			\set_transient( $transient_key, array(), 5 * \MINUTE_IN_SECONDS );
-			return array();
-		}
-
-		$items = $page['orderedItems'] ?? $page['items'] ?? array();
-
+		// Build Status entities from the cached ActivityPub data.
 		$statuses = array();
-		foreach ( $items as $item ) {
-			if ( \count( $statuses ) >= $limit ) {
-				break;
-			}
-
-			$status = self::resolve_tags_pub_item( $item );
-			if ( $status ) {
-				$statuses[] = $status;
+		foreach ( $cached as $entry ) {
+			$account = self::get_account_for_actor( $entry['actor_uri'] );
+			if ( $account ) {
+				$status = self::activity_to_status( $entry['object'], $account );
+				if ( $status ) {
+					$statuses[] = $status;
+				}
 			}
 		}
-
-		\set_transient( $transient_key, $statuses, 15 * \MINUTE_IN_SECONDS );
 
 		return $statuses;
 	}
 
 	/**
-	 * Resolve a tags.pub outbox item (Announce activity) to a Status.
+	 * Fetch and resolve tags.pub outbox items to cacheable arrays.
 	 *
-	 * Items can be URI strings or inline activity objects. The Announce
-	 * activity's object points to the original post which we fetch and
-	 * convert to a Status entity.
+	 * Each item requires multiple HTTP round-trips (Announce → original
+	 * post → author actor), so results are cached by the caller.
+	 *
+	 * @param string $hashtag The hashtag name (without #).
+	 * @param int    $limit   Maximum number of items to resolve.
+	 *
+	 * @return array[] Array of arrays with 'object' and 'actor_uri' keys.
+	 */
+	private static function resolve_tags_pub_items( $hashtag, $limit ) {
+		$outbox_url = 'https://tags.pub/user/' . \rawurlencode( $hashtag ) . '/outbox';
+		$outbox     = Http::get_remote_object( $outbox_url, true );
+
+		if ( \is_wp_error( $outbox ) || empty( $outbox['first'] ) ) {
+			return array();
+		}
+
+		$page = Http::get_remote_object( $outbox['first'], true );
+		if ( \is_wp_error( $page ) ) {
+			return array();
+		}
+
+		$items   = $page['orderedItems'] ?? $page['items'] ?? array();
+		$results = array();
+
+		foreach ( $items as $item ) {
+			if ( \count( $results ) >= $limit ) {
+				break;
+			}
+
+			$resolved = self::resolve_tags_pub_item( $item );
+			if ( $resolved ) {
+				$results[] = $resolved;
+			}
+		}
+
+		return $results;
+	}
+
+	/**
+	 * Resolve a tags.pub outbox item (Announce activity) to cacheable data.
 	 *
 	 * @param string|array $item The outbox item (URI string or activity object).
 	 *
-	 * @return Status|null The status entity or null on failure.
+	 * @return array|null Array with 'object' and 'actor_uri' keys, or null on failure.
 	 */
 	private static function resolve_tags_pub_item( $item ) {
 		// Resolve item to an activity object.
@@ -897,12 +922,14 @@ class Enable_Mastodon_Apps {
 		}
 
 		$actor_uri = $object['attributedTo'] ?? '';
-		$account   = self::get_account_for_actor( $actor_uri );
-		if ( ! $account ) {
+		if ( ! $actor_uri ) {
 			return null;
 		}
 
-		return self::activity_to_status( $object, $account );
+		return array(
+			'object'    => $object,
+			'actor_uri' => $actor_uri,
+		);
 	}
 
 	/**
