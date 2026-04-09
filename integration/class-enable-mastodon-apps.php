@@ -783,7 +783,7 @@ class Enable_Mastodon_Apps {
 		$merged = \array_merge( $statuses->data, $remote_statuses );
 
 		// Deduplicate by status ID to prevent client crashes (e.g. Tusky).
-		$seen = array();
+		$seen   = array();
 		$merged = \array_values(
 			\array_filter(
 				$merged,
@@ -801,7 +801,9 @@ class Enable_Mastodon_Apps {
 		\usort(
 			$merged,
 			function ( $a, $b ) {
-				return $b->created_at->getTimestamp() - $a->created_at->getTimestamp();
+				$a_ts = isset( $a->created_at ) ? $a->created_at->getTimestamp() : 0;
+				$b_ts = isset( $b->created_at ) ? $b->created_at->getTimestamp() : 0;
+				return $b_ts - $a_ts;
 			}
 		);
 
@@ -860,7 +862,15 @@ class Enable_Mastodon_Apps {
 	 * @return array[] Array of arrays with 'object' and 'actor_uri' keys.
 	 */
 	private static function resolve_tags_pub_items( $hashtag, $limit ) {
-		$outbox_url = 'https://tags.pub/user/' . \rawurlencode( $hashtag ) . '/outbox';
+		/**
+		 * Filters the tags.pub base URL for tag timeline lookups.
+		 *
+		 * @since unreleased
+		 *
+		 * @param string $base_url The base URL. Default 'https://tags.pub'.
+		 */
+		$base_url   = \apply_filters( 'activitypub_tags_pub_base_url', 'https://tags.pub' );
+		$outbox_url = \trailingslashit( $base_url ) . 'user/' . \rawurlencode( $hashtag ) . '/outbox';
 		$outbox     = Http::get_remote_object( $outbox_url, true );
 
 		if ( \is_wp_error( $outbox ) || empty( $outbox['first'] ) ) {
