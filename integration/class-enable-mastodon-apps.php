@@ -760,10 +760,10 @@ class Enable_Mastodon_Apps {
 	 * Fetches the outbox of the corresponding tags.pub actor (e.g. @wordpress@tags.pub)
 	 * and resolves Announce activities to their original posts.
 	 *
-	 * @param Status[] $statuses The current statuses.
-	 * @param \WP_REST_Request $request  The request object.
+	 * @param \WP_REST_Response|null $statuses The current statuses (WP_REST_Response with Status[] data).
+	 * @param \WP_REST_Request       $request  The request object.
 	 *
-	 * @return Status[] The statuses including remote ones.
+	 * @return \WP_REST_Response|null The statuses including remote ones.
 	 */
 	public static function api_tag_timeline_tags_pub( $statuses, $request ) {
 		$hashtag = \strtolower( $request->get_param( 'hashtag' ) );
@@ -776,7 +776,11 @@ class Enable_Mastodon_Apps {
 			return $statuses;
 		}
 
-		$merged = \array_merge( (array) $statuses, $remote_statuses );
+		if ( ! $statuses instanceof \WP_REST_Response ) {
+			return $statuses;
+		}
+
+		$merged = \array_merge( $statuses->data, $remote_statuses );
 
 		// Sort by created_at descending.
 		\usort(
@@ -786,9 +790,10 @@ class Enable_Mastodon_Apps {
 			}
 		);
 
-		$limit = $request->get_param( 'limit' ) ?: 20;
+		$limit          = $request->get_param( 'limit' ) ?: 20;
+		$statuses->data = \array_slice( $merged, 0, $limit );
 
-		return \array_slice( $merged, 0, $limit );
+		return $statuses;
 	}
 
 	/**
