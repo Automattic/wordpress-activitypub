@@ -57,6 +57,7 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_update_credentials', array( self::class, 'api_update_credentials' ), 10, 2 );
 		\add_filter( 'mastodon_api_submit_status_text', array( Mention::class, 'the_content' ) );
 		\add_filter( 'mastodon_api_notifications_get', array( self::class, 'api_notifications_get' ), 10, 5 );
+		\add_filter( 'mastodon_api_tag_timeline', array( self::class, 'api_tag_timeline_tags_pub' ), 20, 2 );
 	}
 
 	/**
@@ -741,6 +742,208 @@ class Enable_Mastodon_Apps {
 		}
 
 		return array_slice( $activitypub_statuses, 0, $limit );
+	}
+
+	/**
+	 * Maximum number of tags.pub items to resolve per request.
+	 *
+	 * Each outbox item requires multiple HTTP round-trips to resolve
+	 * (Announce activity → original post → author actor), so we ignore
+	 * the client-requested limit and use this small batch size instead.
+	 * Results are cached, so subsequent requests are fast.
+	 */
+	const TAGS_PUB_BATCH_SIZE = 5;
+
+	/**
+	 * Supplement tag timeline with posts from tags.pub outbox.
+	 *
+	 * Fetches the outbox of the corresponding tags.pub actor (e.g. @wordpress@tags.pub)
+	 * and resolves Announce activities to their original posts.
+	 *
+	 * @param \WP_REST_Response|null $statuses The current statuses (WP_REST_Response with Status[] data).
+	 * @param \WP_REST_Request       $request  The request object.
+	 *
+	 * @return \WP_REST_Response|null The statuses including remote ones.
+	 */
+	public static function api_tag_timeline_tags_pub( $statuses, $request ) {
+		$hashtag = \strtolower( $request->get_param( 'hashtag' ) );
+		if ( ! $hashtag ) {
+			return $statuses;
+		}
+
+		$remote_statuses = self::fetch_tags_pub_outbox( $hashtag, self::TAGS_PUB_BATCH_SIZE );
+		if ( empty( $remote_statuses ) ) {
+			return $statuses;
+		}
+
+		if ( ! $statuses instanceof \WP_REST_Response ) {
+			return $statuses;
+		}
+
+		$merged = \array_merge( $statuses->data, $remote_statuses );
+
+		// Deduplicate by status ID to prevent client crashes (e.g. Tusky).
+		$seen   = array();
+		$merged = \array_values(
+			\array_filter(
+				$merged,
+				function ( $status ) use ( &$seen ) {
+					if ( isset( $seen[ $status->id ] ) ) {
+						return false;
+					}
+					$seen[ $status->id ] = true;
+					return true;
+				}
+			)
+		);
+
+		// Sort by created_at descending.
+		\usort(
+			$merged,
+			function ( $a, $b ) {
+				$a_ts = isset( $a->created_at ) ? $a->created_at->getTimestamp() : 0;
+				$b_ts = isset( $b->created_at ) ? $b->created_at->getTimestamp() : 0;
+				return $b_ts - $a_ts;
+			}
+		);
+
+		$limit          = $request->get_param( 'limit' ) ?: 20;
+		$statuses->data = \array_slice( $merged, 0, $limit );
+
+		return $statuses;
+	}
+
+	/**
+	 * Fetch posts from the tags.pub outbox for a given hashtag.
+	 *
+	 * Resolved ActivityPub objects are cached as plain arrays in a transient
+	 * to avoid storing PHP objects (which is brittle across deployments).
+	 * Status entities are built fresh from the cached data on each request.
+	 *
+	 * @param string $hashtag The hashtag name (without #).
+	 * @param int    $limit   Maximum number of posts to return.
+	 *
+	 * @return Status[] Array of Status entities.
+	 */
+	private static function fetch_tags_pub_outbox( $hashtag, $limit = 20 ) {
+		$transient_key = 'activitypub_tags_pub_' . \md5( $hashtag );
+		$cached        = \get_transient( $transient_key );
+
+		if ( false === $cached ) {
+			$cached = self::resolve_tags_pub_items( $hashtag, $limit );
+			$ttl    = empty( $cached ) ? 5 * \MINUTE_IN_SECONDS : 15 * \MINUTE_IN_SECONDS;
+			\set_transient( $transient_key, $cached, $ttl );
+		}
+
+		// Build Status entities from the cached ActivityPub data.
+		$statuses = array();
+		foreach ( $cached as $entry ) {
+			$account = self::get_account_for_actor( $entry['actor_uri'] );
+			if ( $account ) {
+				$status = self::activity_to_status( $entry['object'], $account );
+				if ( $status ) {
+					$statuses[] = $status;
+				}
+			}
+		}
+
+		return $statuses;
+	}
+
+	/**
+	 * Fetch and resolve tags.pub outbox items to cacheable arrays.
+	 *
+	 * Each item requires multiple HTTP round-trips (Announce → original
+	 * post → author actor), so results are cached by the caller.
+	 *
+	 * @param string $hashtag The hashtag name (without #).
+	 * @param int    $limit   Maximum number of items to resolve.
+	 *
+	 * @return array[] Array of arrays with 'object' and 'actor_uri' keys.
+	 */
+	private static function resolve_tags_pub_items( $hashtag, $limit ) {
+		/**
+		 * Filters the tags.pub base URL for tag timeline lookups.
+		 *
+		 * @since unreleased
+		 *
+		 * @param string $base_url The base URL. Default 'https://tags.pub'.
+		 */
+		$base_url   = \apply_filters( 'activitypub_tags_pub_base_url', 'https://tags.pub' );
+		$outbox_url = \trailingslashit( $base_url ) . 'user/' . \rawurlencode( $hashtag ) . '/outbox';
+		$outbox     = Http::get_remote_object( $outbox_url, true );
+
+		if ( \is_wp_error( $outbox ) || empty( $outbox['first'] ) ) {
+			return array();
+		}
+
+		$page = Http::get_remote_object( $outbox['first'], true );
+		if ( \is_wp_error( $page ) ) {
+			return array();
+		}
+
+		$items   = $page['orderedItems'] ?? $page['items'] ?? array();
+		$results = array();
+
+		foreach ( $items as $item ) {
+			if ( \count( $results ) >= $limit ) {
+				break;
+			}
+
+			$resolved = self::resolve_tags_pub_item( $item );
+			if ( $resolved ) {
+				$results[] = $resolved;
+			}
+		}
+
+		return $results;
+	}
+
+	/**
+	 * Resolve a tags.pub outbox item (Announce activity) to cacheable data.
+	 *
+	 * @param string|array $item The outbox item (URI string or activity object).
+	 *
+	 * @return array|null Array with 'object' and 'actor_uri' keys, or null on failure.
+	 */
+	private static function resolve_tags_pub_item( $item ) {
+		// Resolve item to an activity object.
+		if ( \is_string( $item ) ) {
+			$activity = Http::get_remote_object( $item, true );
+			if ( \is_wp_error( $activity ) ) {
+				return null;
+			}
+		} elseif ( \is_array( $item ) ) {
+			$activity = $item;
+		} else {
+			return null;
+		}
+
+		$type = $activity['type'] ?? '';
+		if ( 'Announce' !== $type ) {
+			return null;
+		}
+
+		// Get the original post URL from the Announce.
+		$object_url = \is_string( $activity['object'] ) ? $activity['object'] : ( $activity['object']['id'] ?? null );
+		if ( ! $object_url ) {
+			return null;
+		}
+
+		$object = Http::get_remote_object( $object_url, true );
+		if ( \is_wp_error( $object ) ) {
+			return null;
+		}
+
+		$actor_uri = $object['attributedTo'] ?? '';
+		if ( ! $actor_uri ) {
+			return null;
+		}
+
+		return array(
+			'object'    => $object,
+			'actor_uri' => $actor_uri,
+		);
 	}
 
 	/**
