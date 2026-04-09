@@ -43,6 +43,7 @@ class Enable_Mastodon_Apps {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
+		\add_filter( 'mastodon_api_valid_user', array( self::class, 'is_ap_actor' ), 10, 2 );
 		\add_filter( 'mastodon_api_account_followers', array( self::class, 'api_account_followers' ), 10, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_external' ), 15, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_internal' ), 9, 2 );
@@ -188,6 +189,26 @@ class Enable_Mastodon_Apps {
 	}
 
 	/**
+	 * Validate ap_actor post IDs as valid Mastodon API users.
+	 *
+	 * @param bool       $is_valid Whether the user is valid.
+	 * @param string|int $user_id  The user ID to check.
+	 *
+	 * @return bool True if the user ID is a valid ap_actor post.
+	 */
+	public static function is_ap_actor( $is_valid, $user_id ) {
+		if ( $is_valid ) {
+			return $is_valid;
+		}
+
+		if ( \is_numeric( $user_id ) && Remote_Actors::POST_TYPE === \get_post_type( (int) $user_id ) ) {
+			return true;
+		}
+
+		return $is_valid;
+	}
+
+	/**
 	 * Add followers to Mastodon API.
 	 *
 	 * @param array  $followers An array of followers.
@@ -234,6 +255,13 @@ class Enable_Mastodon_Apps {
 	 * @return Account The filtered Account.
 	 */
 	public static function api_account_external( $user_data, $user_id ) {
+		if ( ! $user_data && \is_numeric( $user_id ) && Remote_Actors::POST_TYPE === \get_post_type( (int) $user_id ) ) {
+			$actor = Remote_Actors::get_actor( (int) $user_id );
+			if ( $actor && ! \is_wp_error( $actor ) ) {
+				return self::actor_to_account( $actor, (int) $user_id );
+			}
+		}
+
 		if ( $user_data || ( is_numeric( $user_id ) && $user_id ) ) {
 			// Only augment.
 			return $user_data;
