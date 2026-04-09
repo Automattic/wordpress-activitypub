@@ -782,6 +782,21 @@ class Enable_Mastodon_Apps {
 
 		$merged = \array_merge( $statuses->data, $remote_statuses );
 
+		// Deduplicate by status ID to prevent client crashes (e.g. Tusky).
+		$seen = array();
+		$merged = \array_values(
+			\array_filter(
+				$merged,
+				function ( $status ) use ( &$seen ) {
+					if ( isset( $seen[ $status->id ] ) ) {
+						return false;
+					}
+					$seen[ $status->id ] = true;
+					return true;
+				}
+			)
+		);
+
 		// Sort by created_at descending.
 		\usort(
 			$merged,
