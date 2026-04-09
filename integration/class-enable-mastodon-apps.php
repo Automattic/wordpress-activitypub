@@ -760,10 +760,10 @@ class Enable_Mastodon_Apps {
 	 * Fetches the outbox of the corresponding tags.pub actor (e.g. @wordpress@tags.pub)
 	 * and resolves Announce activities to their original posts.
 	 *
-	 * @param mixed            $statuses The current statuses.
+	 * @param Status[] $statuses The current statuses.
 	 * @param \WP_REST_Request $request  The request object.
 	 *
-	 * @return \WP_REST_Response|array|null The statuses including remote ones.
+	 * @return Status[] The statuses including remote ones.
 	 */
 	public static function api_tag_timeline_tags_pub( $statuses, $request ) {
 		$hashtag = \strtolower( $request->get_param( 'hashtag' ) );
@@ -776,35 +776,19 @@ class Enable_Mastodon_Apps {
 			return $statuses;
 		}
 
-		// Merge with existing statuses.
-		$existing = array();
-		if ( $statuses instanceof \WP_REST_Response ) {
-			$existing = $statuses->data;
-		} elseif ( \is_array( $statuses ) ) {
-			$existing = $statuses;
-		}
-
-		$merged = \array_merge( $existing, $remote_statuses );
+		$merged = \array_merge( (array) $statuses, $remote_statuses );
 
 		// Sort by created_at descending.
 		\usort(
 			$merged,
 			function ( $a, $b ) {
-				$a_ts = $a instanceof Status ? $a->created_at->getTimestamp() : 0;
-				$b_ts = $b instanceof Status ? $b->created_at->getTimestamp() : 0;
-				return $b_ts - $a_ts;
+				return $b->created_at->getTimestamp() - $a->created_at->getTimestamp();
 			}
 		);
 
-		$limit  = $request->get_param( 'limit' ) ?: 20;
-		$merged = \array_slice( $merged, 0, $limit );
+		$limit = $request->get_param( 'limit' ) ?: 20;
 
-		if ( $statuses instanceof \WP_REST_Response ) {
-			$statuses->data = $merged;
-			return $statuses;
-		}
-
-		return $merged;
+		return \array_slice( $merged, 0, $limit );
 	}
 
 	/**
