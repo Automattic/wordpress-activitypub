@@ -105,17 +105,11 @@ export default function FeedStage(): ReactNode {
 				search: args.search || undefined,
 			} );
 		};
-
 		window.addEventListener( 'popstate', updateQueryParams );
-		window.addEventListener( 'hashchange', updateQueryParams );
-
-		return (): void => {
-			window.removeEventListener( 'popstate', updateQueryParams );
-			window.removeEventListener( 'hashchange', updateQueryParams );
-		};
+		return (): void => window.removeEventListener( 'popstate', updateQueryParams );
 	}, [] );
 
-	// Memoize onChangeQueryParams to prevent updateView from changing on every render.
+	// Push view changes (page / search) to the URL so browser back works.
 	const handleChangeQueryParams = useCallback( ( params: { page?: number; search?: string } ): void => {
 		const currentUrl: string = window.location.href;
 		const currentArgs = getQueryArgs( currentUrl );
@@ -188,9 +182,8 @@ export default function FeedStage(): ReactNode {
 
 	const [ selection, setSelection ] = useState< string[] >( [] );
 
-	// State for infinite scroll
+	// Accumulate data across pages for infinite scroll
 	const [ allLoadedRecords, setAllLoadedRecords ] = useState< FeedPost[] >( [] );
-	const [ isLoadingMore, setIsLoadingMore ] = useState( false );
 	const lastProcessedPage = useRef< number >( 0 );
 
 	const changeSelection = useCallback(
@@ -207,22 +200,6 @@ export default function FeedStage(): ReactNode {
 		[ selectItem ]
 	);
 
-	// Infinite scroll handler
-	const infiniteScrollHandler = useCallback( (): void => {
-		const currentPage: number = view.page || 1;
-
-		// Prevent concurrent requests or loading beyond available pages
-		if ( isLoadingMore || currentPage >= ( totalPages || 1 ) ) {
-			return;
-		}
-
-		setIsLoadingMore( true );
-		updateFeedView( {
-			...view,
-			page: currentPage + 1,
-		} );
-	}, [ isLoadingMore, view, totalPages, updateFeedView ] );
-
 	// Accumulate data across pages for infinite scroll
 	useEffect( (): void => {
 		const currentPage: number = normalizedView.page || 1;
@@ -232,7 +209,6 @@ export default function FeedStage(): ReactNode {
 		if ( feed.length === 0 && currentPage === 1 ) {
 			setAllLoadedRecords( [] );
 			lastProcessedPage.current = currentPage;
-			setIsLoadingMore( false );
 			return;
 		}
 
@@ -250,7 +226,6 @@ export default function FeedStage(): ReactNode {
 		if ( currentPage === 1 || ! infiniteScrollEnabled ) {
 			setAllLoadedRecords( feed );
 			lastProcessedPage.current = currentPage;
-			setIsLoadingMore( false );
 		} else {
 			// Append new records while avoiding duplicates
 			setAllLoadedRecords( ( prev: FeedPost[] ): FeedPost[] => {
@@ -261,7 +236,6 @@ export default function FeedStage(): ReactNode {
 				return newRecords.length > 0 ? [ ...prev, ...newRecords ] : prev;
 			} );
 			lastProcessedPage.current = currentPage;
-			setIsLoadingMore( false );
 		}
 	}, [
 		feed,
@@ -277,7 +251,7 @@ export default function FeedStage(): ReactNode {
 			fields={ fields }
 			view={ normalizedView as DataViewsView }
 			onChangeView={ updateFeedView as ( view: DataViewsView ) => void }
-			isLoading={ isResolving || isLoadingMore }
+			isLoading={ isResolving }
 			onClickItem={ ( item: FeedPost ): void => selectItem( item.id ) }
 			isItemClickable={ (): true => true }
 			getItemId={ ( item: FeedPost ): string => item.id.toString() }
@@ -287,7 +261,6 @@ export default function FeedStage(): ReactNode {
 			paginationInfo={ {
 				totalItems,
 				totalPages,
-				infiniteScrollHandler,
 			} }
 			defaultLayouts={ defaultLayouts }
 		/>
