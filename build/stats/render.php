@@ -17,7 +17,7 @@ if ( is_feed() ) {
 $attributes = wp_parse_args( $attributes );
 
 $user_id    = Blocks::get_user_id( $attributes['selectedUser'] ?? 'blog' );
-$stats_year = (int) ( $attributes['year'] ?? (int) gmdate( 'Y' ) - 1 );
+$stats_year = (int) ( $attributes['year'] ?? ( (int) \gmdate( 'Y' ) - 1 ) );
 
 // Try stored annual summary first, fall back to live computation.
 $summary = Statistics::get_annual_summary( $user_id, $stats_year );
