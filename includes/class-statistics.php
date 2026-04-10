@@ -420,7 +420,7 @@ class Statistics {
 			if ( $post ) {
 				$top_posts[] = array(
 					'post_id'          => $result['post_id'],
-					'title'            => \get_the_title( $post ),
+					'title'            => \html_entity_decode( \get_the_title( $post ), ENT_QUOTES, 'UTF-8' ),
 					'url'              => \get_permalink( $post ),
 					'edit_url'         => \get_edit_post_link( $post, 'raw' ),
 					'engagement_count' => (int) $result['engagement_count'],
