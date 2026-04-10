@@ -27,65 +27,6 @@ class Server {
 	}
 
 	/**
-	 * Callback function to authorize an api request.
-	 *
-	 * The function is meant to be used as part of permission callbacks for rest api endpoints.
-	 *
-	 * It verifies the signature of POST, PUT, PATCH, and DELETE requests, as well as GET requests in secure mode.
-	 * You can use the filter 'activitypub_defer_signature_verification' to defer the signature verification.
-	 * HEAD requests are always bypassed.
-	 *
-	 * On successful signature verification, the verified keyId is stored in the request
-	 * as the 'activitypub_verified_keyid' attribute for use by endpoint callbacks.
-	 *
-	 * @see https://www.w3.org/wiki/SocialCG/ActivityPub/Primer/Authentication_Authorization#Authorized_fetch
-	 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
-	 *
-	 * @param \WP_REST_Request $request The request object.
-	 *
-	 * @return bool|\WP_Error True if the request is authorized, WP_Error if not.
-	 */
-	public static function verify_signature( $request ) {
-		if ( 'HEAD' === $request->get_method() ) {
-			return true;
-		}
-
-		/**
-		 * Filter to defer signature verification.
-		 *
-		 * Skip signature verification for debugging purposes or to reduce load for
-		 * certain Activity-Types, like "Delete".
-		 *
-		 * @param bool             $defer   Whether to defer signature verification.
-		 * @param \WP_REST_Request $request The request used to generate the response.
-		 *
-		 * @return bool Whether to defer signature verification.
-		 */
-		$defer = \apply_filters( 'activitypub_defer_signature_verification', false, $request );
-
-		if ( $defer ) {
-			return true;
-		}
-
-		// POST-Requests always have to be signed, GET-Requests only require a signature in secure mode.
-		if ( 'GET' !== $request->get_method() || use_authorized_fetch() ) {
-			$verified_keyid = Signature::verify_http_signature( $request );
-			if ( \is_wp_error( $verified_keyid ) ) {
-				return new \WP_Error(
-					'activitypub_signature_verification',
-					$verified_keyid->get_error_message(),
-					array( 'status' => 401 )
-				);
-			}
-
-			// Store the verified keyId in the request for use by endpoint callbacks.
-			$request->set_param( 'activitypub_verified_keyid', $verified_keyid );
-		}
-
-		return true;
-	}
-
-	/**
 	 * Callback function to validate incoming ActivityPub requests
 	 *
 	 * @param \WP_REST_Response|\WP_HTTP_Response|\WP_Error|mixed $response Result to send to the client.

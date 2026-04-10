@@ -21,6 +21,8 @@ use Activitypub\Signature\Http_Message_Signature;
  * @see https://github.com/mastodon/fediverse_auxiliary_service_provider_specifications/blob/main/general/v0.1/registration.md
  */
 class Fasp_Controller extends \WP_REST_Controller {
+	use Verification;
+
 	/**
 	 * The namespace of this controller's route.
 	 *
@@ -46,7 +48,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_provider_info' ),
-					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
+					'permission_callback' => array( $this, 'verify_signature' ),
 				),
 				'schema' => array( $this, 'get_provider_info_schema' ),
 			)
@@ -102,7 +104,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'enable_capability' ),
-					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
+					'permission_callback' => array( $this, 'verify_signature' ),
 					'args'                => array(
 						'identifier' => array(
 							'required'    => true,
@@ -128,7 +130,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::DELETABLE,
 					'callback'            => array( $this, 'disable_capability' ),
-					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
+					'permission_callback' => array( $this, 'verify_signature' ),
 					'args'                => array(
 						'identifier' => array(
 							'required'    => true,
@@ -351,7 +353,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 	 * Validate a capability request and return the validated data.
 	 *
 	 * Per FASP spec, the keyId in the signature MUST be the serverId exchanged during registration.
-	 * Signature verification is handled by the permission callback (Server::verify_signature).
+	 * Signature verification is handled by the Verification trait's verify_signature method.
 	 *
 	 * @param \WP_REST_Request $request The REST request.
 	 * @return array|\WP_Error Validated data or error.
@@ -362,7 +364,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 
 		/*
 		 * Get the verified keyId from the signature verification.
-		 * This is set by Server::verify_signature() and ensures we use the keyId
+		 * This is set by the Verification trait and ensures we use the keyId
 		 * from the signature that was actually verified, not just any keyId in headers.
 		 */
 		$keyid = $request->get_param( 'activitypub_verified_keyid' );
