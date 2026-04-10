@@ -96,14 +96,13 @@ class Fasp_Controller extends \WP_REST_Controller {
 			)
 		);
 
-		// Capability activation endpoint (enable).
 		\register_rest_route(
 			$this->namespace,
 			'/' . $this->rest_base . '/capabilities/(?P<identifier>[a-zA-Z0-9_-]+)/(?P<version>[0-9]+(?:\.[0-9]+)*)/activation',
 			array(
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
-					'callback'            => array( $this, 'enable_capability' ),
+					'callback'            => array( $this, 'toggle_capability' ),
 					'permission_callback' => array( $this, 'verify_signature' ),
 					'args'                => array(
 						'identifier' => array(
@@ -119,17 +118,9 @@ class Fasp_Controller extends \WP_REST_Controller {
 						),
 					),
 				),
-			)
-		);
-
-		// Capability deactivation endpoint (disable).
-		\register_rest_route(
-			$this->namespace,
-			'/' . $this->rest_base . '/capabilities/(?P<identifier>[a-zA-Z0-9_-]+)/(?P<version>[0-9]+(?:\.[0-9]+)*)/activation',
-			array(
 				array(
 					'methods'             => \WP_REST_Server::DELETABLE,
-					'callback'            => array( $this, 'disable_capability' ),
+					'callback'            => array( $this, 'toggle_capability' ),
 					'permission_callback' => array( $this, 'verify_signature' ),
 					'args'                => array(
 						'identifier' => array(
@@ -254,7 +245,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 		}
 
 		// Generate unique FASP ID.
-		$fasp_id = $this->generate_unique_id();
+		$fasp_id = \wp_generate_uuid4();
 
 		// Store registration request (pending approval).
 		$registration_data = array(
@@ -292,18 +283,20 @@ class Fasp_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * Enable a capability for a FASP.
+	 * Toggle a capability for a FASP (enable on POST, disable on DELETE).
 	 *
 	 * @param \WP_REST_Request $request The REST request.
 	 * @return \WP_REST_Response|\WP_Error The response or error.
 	 */
-	public function enable_capability( $request ) {
+	public function toggle_capability( $request ) {
 		$validation = $this->validate_capability_request( $request );
 		if ( \is_wp_error( $validation ) ) {
 			return $validation;
 		}
 
-		$result = Fasp::enable_capability(
+		$enable = \WP_REST_Server::CREATABLE === $request->get_method();
+		$method = $enable ? 'enable_capability' : 'disable_capability';
+		$result = Fasp::$method(
 			$validation['fasp_id'],
 			$validation['identifier'],
 			$validation['version']
@@ -312,36 +305,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 		if ( ! $result ) {
 			return new \WP_Error(
 				'capability_update_failed',
-				'Failed to enable capability',
-				array( 'status' => 500 )
-			);
-		}
-
-		return new \WP_REST_Response( null, 204 );
-	}
-
-	/**
-	 * Disable a capability for a FASP.
-	 *
-	 * @param \WP_REST_Request $request The REST request.
-	 * @return \WP_REST_Response|\WP_Error The response or error.
-	 */
-	public function disable_capability( $request ) {
-		$validation = $this->validate_capability_request( $request );
-		if ( \is_wp_error( $validation ) ) {
-			return $validation;
-		}
-
-		$result = Fasp::disable_capability(
-			$validation['fasp_id'],
-			$validation['identifier'],
-			$validation['version']
-		);
-
-		if ( ! $result ) {
-			return new \WP_Error(
-				'capability_update_failed',
-				'Failed to disable capability',
+				'Failed to update capability',
 				array( 'status' => 500 )
 			);
 		}
@@ -376,10 +340,14 @@ class Fasp_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		// Look up FASP registration by serverId.
-		$fasp_data = $this->get_fasp_by_keyid( $keyid );
-		if ( \is_wp_error( $fasp_data ) ) {
-			return $fasp_data;
+		// Look up FASP registration by serverId (keyId in FASP signatures).
+		$fasp_data = Fasp::get_registration_by_server_id( $keyid );
+		if ( ! $fasp_data ) {
+			return new \WP_Error(
+				'fasp_not_found',
+				'FASP not found for provided keyId',
+				array( 'status' => 404 )
+			);
 		}
 
 		// Verify FASP is approved.
@@ -420,39 +388,6 @@ class Fasp_Controller extends \WP_REST_Controller {
 		// Registration endpoint is publicly accessible but should verify.
 		// the request comes from a legitimate FASP.
 		return true;
-	}
-
-	/**
-	 * Generate unique ID for FASP.
-	 *
-	 * @return string Unique ID.
-	 */
-	private function generate_unique_id() {
-		return \wp_generate_uuid4();
-	}
-
-	/**
-	 * Look up FASP registration by keyId (serverId).
-	 *
-	 * Per FASP spec, the keyId MUST be the identifier exchanged during registration (serverId).
-	 *
-	 * @see https://github.com/mastodon/fediverse_auxiliary_service_provider_specifications/blob/main/general/v0.1/protocol_basics.md
-	 *
-	 * @param string $keyid The keyId from the signature (should be the serverId).
-	 * @return array|\WP_Error FASP data or error.
-	 */
-	private function get_fasp_by_keyid( $keyid ) {
-		$registration = Fasp::get_registration_by_server_id( $keyid );
-
-		if ( ! $registration ) {
-			return new \WP_Error(
-				'fasp_not_found',
-				'FASP not found for provided keyId',
-				array( 'status' => 404 )
-			);
-		}
-
-		return $registration;
 	}
 
 	/**

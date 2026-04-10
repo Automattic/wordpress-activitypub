@@ -301,9 +301,8 @@ class Test_Fasp extends \WP_UnitTestCase {
 	/**
 	 * Test FASP registration management methods.
 	 *
-	 * @covers Activitypub\Fasp::get_pending_registrations
+	 * @covers Activitypub\Fasp::get_registrations_by_status
 	 * @covers Activitypub\Fasp::approve_registration
-	 * @covers Activitypub\Fasp::get_approved_registrations
 	 */
 	public function test_registration_management() {
 		// Create a test registration.
@@ -323,7 +322,7 @@ class Test_Fasp extends \WP_UnitTestCase {
 		update_option( 'activitypub_fasp_registrations', $registrations );
 
 		// Test getting pending registrations.
-		$pending = Fasp::get_pending_registrations();
+		$pending = Fasp::get_registrations_by_status( 'pending' );
 		$this->assertCount( 1, $pending );
 		$this->assertEquals( 'Test FASP', $pending[0]['name'] );
 		$this->assertEquals( 'pending', $pending[0]['status'] );
@@ -333,13 +332,13 @@ class Test_Fasp extends \WP_UnitTestCase {
 		$this->assertTrue( $result );
 
 		// Test getting approved registrations.
-		$approved = Fasp::get_approved_registrations();
+		$approved = Fasp::get_registrations_by_status( 'approved' );
 		$this->assertCount( 1, $approved );
 		$this->assertEquals( 'Test FASP', $approved[0]['name'] );
 		$this->assertEquals( 'approved', $approved[0]['status'] );
 
 		// Test pending registrations is now empty.
-		$pending = Fasp::get_pending_registrations();
+		$pending = Fasp::get_registrations_by_status( 'pending' );
 		$this->assertCount( 0, $pending );
 	}
 

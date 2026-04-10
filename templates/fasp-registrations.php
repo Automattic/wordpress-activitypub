@@ -9,8 +9,8 @@ use Activitypub\Fasp;
 
 // phpcs:disable WordPress.Security.NonceVerification.Recommended
 
-$pending_registrations  = Fasp::get_pending_registrations();
-$approved_registrations = Fasp::get_approved_registrations();
+$pending_registrations  = Fasp::get_registrations_by_status( 'pending' );
+$approved_registrations = Fasp::get_registrations_by_status( 'approved' );
 $highlighted_id         = isset( $_GET['highlight'] ) ? \sanitize_text_field( \wp_unslash( $_GET['highlight'] ) ) : '';
 ?>
 

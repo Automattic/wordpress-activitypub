@@ -106,55 +106,31 @@ class Fasp {
 	}
 
 	/**
-	 * Get all pending registration requests.
+	 * Get registrations filtered by status.
 	 *
-	 * @return array Array of registration requests.
+	 * @param string $status The status to filter by ('pending', 'approved', 'rejected').
+	 * @return array Array of matching registrations, sorted newest first.
 	 */
-	public static function get_pending_registrations() {
+	public static function get_registrations_by_status( $status ) {
 		$registrations = self::get_registrations_store();
-		$pending       = array();
+		$filtered      = array();
 
 		foreach ( $registrations as $registration ) {
-			if ( 'pending' === $registration['status'] ) {
-				$pending[] = $registration;
+			if ( $status === $registration['status'] ) {
+				$filtered[] = $registration;
 			}
 		}
 
-		// Sort by requested_at DESC.
-		usort(
-			$pending,
-			function ( $a, $b ) {
-				return strcmp( $b['requested_at'], $a['requested_at'] );
+		// Sort newest first by the relevant timestamp.
+		\usort(
+			$filtered,
+			function ( $a, $b ) use ( $status ) {
+				$key = 'approved' === $status ? 'approved_at' : 'requested_at';
+				return ( $b[ $key ] ?? '' ) <=> ( $a[ $key ] ?? '' );
 			}
 		);
 
-		return $pending;
-	}
-
-	/**
-	 * Get all approved registrations.
-	 *
-	 * @return array Array of approved registrations.
-	 */
-	public static function get_approved_registrations() {
-		$registrations = self::get_registrations_store();
-		$approved      = array();
-
-		foreach ( $registrations as $registration ) {
-			if ( 'approved' === $registration['status'] ) {
-				$approved[] = $registration;
-			}
-		}
-
-		// Sort by approved_at DESC.
-		usort(
-			$approved,
-			function ( $a, $b ) {
-				return ( $b['approved_at'] ?? '' ) <=> ( $a['approved_at'] ?? '' );
-			}
-		);
-
-		return $approved;
+		return $filtered;
 	}
 
 	/**
@@ -364,16 +340,9 @@ class Fasp {
 		$modified = false;
 
 		foreach ( $registrations as $fasp_id => $registration ) {
-			if ( isset( $registration['server_private_key'] ) ) {
-				unset( $registration['server_private_key'] );
-				$registrations[ $fasp_id ] = $registration;
-				$modified                  = true;
-			}
-
 			if ( isset( $registration['fasp_public_key'] ) && empty( $registration['fasp_public_key_fingerprint'] ) ) {
-				$registration['fasp_public_key_fingerprint'] = self::get_public_key_fingerprint( $registration['fasp_public_key'] );
-				$registrations[ $fasp_id ]                   = $registration;
-				$modified                                    = true;
+				$registrations[ $fasp_id ]['fasp_public_key_fingerprint'] = self::get_public_key_fingerprint( $registration['fasp_public_key'] );
+				$modified = true;
 			}
 		}
 
