@@ -55,10 +55,12 @@ function rest_init() {
 	( new Rest\Admin\Actions_Controller() )->register_routes();
 	( new Rest\Admin\Statistics_Controller() )->register_routes();
 	( new Rest\Application_Controller() )->register_routes();
+	( new Rest\Stats_Image_Controller() )->register_routes();
 	( new Rest\Collections_Controller() )->register_routes();
 	( new Rest\Comments_Controller() )->register_routes();
 	( new Rest\Followers_Controller() )->register_routes();
 	( new Rest\Following_Controller() )->register_routes();
+	( new Rest\Liked_Controller() )->register_routes();
 	( new Rest\Inbox_Controller() )->register_routes();
 	( new Rest\Interaction_Controller() )->register_routes();
 	( new Rest\Moderators_Controller() )->register_routes();
@@ -126,14 +128,6 @@ function plugin_init() {
 		$loader_file = __DIR__ . '/local/load.php';
 		if ( \file_exists( $loader_file ) && \is_readable( $loader_file ) ) {
 			require_once $loader_file;
-		}
-	}
-
-	if ( \defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-		$debug_file = __DIR__ . '/includes/debug.php';
-		if ( \file_exists( $debug_file ) && \is_readable( $debug_file ) ) {
-			require_once $debug_file;
-			Debug::init();
 		}
 	}
 }

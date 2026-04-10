@@ -109,3 +109,8 @@ define(
  * @see https://github.com/tfredrich/RestApiTutorial.com/blob/master/content/advanced/responses/retries.md
  */
 define( 'ACTIVITYPUB_RETRY_ERROR_CODES', array( 408, 429, 500, 502, 503, 504 ) );
+
+// Default purge retention periods (in days).
+define( 'ACTIVITYPUB_OUTBOX_PURGE_DAYS', 180 );
+define( 'ACTIVITYPUB_INBOX_PURGE_DAYS', 180 );
+define( 'ACTIVITYPUB_AP_POST_PURGE_DAYS', 30 );

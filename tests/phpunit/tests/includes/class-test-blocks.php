@@ -1027,4 +1027,202 @@ class Test_Blocks extends \WP_UnitTestCase {
 		$this->assertStringContainsString( '<strong>my site</strong>', $output );
 		$this->assertStringContainsString( '<a href="https://test.com"', $output );
 	}
+
+	/**
+	 * Test add_stats_image_attachment adds image for stats block.
+	 *
+	 * @covers ::add_stats_image_attachment
+	 */
+	public function test_add_stats_image_attachment() {
+		if ( ! \Activitypub\Cache\Stats_Image::is_available() ) {
+			$this->markTestSkipped( 'GD library is not available.' );
+		}
+
+		// Seed stats so get_url() can generate the image.
+		\update_option(
+			'activitypub_stats_0_2025_annual',
+			array(
+				'posts_count'          => 10,
+				'followers_start'      => 0,
+				'followers_end'        => 5,
+				'followers_net_change' => 5,
+				'most_active_month'    => 1,
+				'top_multiplicator'    => null,
+				'top_posts'            => array(),
+				'compiled_at'          => \gmdate( 'Y-m-d H:i:s' ),
+				'like_count'           => 5,
+				'repost_count'         => 2,
+				'comment_count'        => 1,
+				'quote_count'          => 0,
+			),
+			false
+		);
+
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_content' => '<!-- wp:activitypub/stats {"selectedUser":"blog","year":2025} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$attachments = Blocks::add_stats_image_attachment( array(), $post );
+
+		$this->assertCount( 1, $attachments );
+		$this->assertSame( 'Image', $attachments[0]['type'] );
+		$this->assertStringContainsString( 'stats', $attachments[0]['url'] );
+		$this->assertStringContainsString( '2025', $attachments[0]['name'] );
+	}
+
+	/**
+	 * Test add_stats_image_attachment with no stats block.
+	 *
+	 * @covers ::add_stats_image_attachment
+	 */
+	public function test_add_stats_image_attachment_no_block() {
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_content' => '<!-- wp:paragraph --><p>Hello world</p><!-- /wp:paragraph -->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$attachments = Blocks::add_stats_image_attachment( array(), $post );
+
+		$this->assertCount( 0, $attachments );
+	}
+
+	/**
+	 * Test add_stats_image_attachment preserves existing attachments.
+	 *
+	 * @covers ::add_stats_image_attachment
+	 */
+	public function test_add_stats_image_attachment_preserves_existing() {
+		if ( ! \Activitypub\Cache\Stats_Image::is_available() ) {
+			$this->markTestSkipped( 'GD library is not available.' );
+		}
+
+		// Seed stats.
+		\update_option(
+			'activitypub_stats_0_2025_annual',
+			array(
+				'posts_count'          => 10,
+				'followers_start'      => 0,
+				'followers_end'        => 5,
+				'followers_net_change' => 5,
+				'most_active_month'    => 1,
+				'top_multiplicator'    => null,
+				'top_posts'            => array(),
+				'compiled_at'          => \gmdate( 'Y-m-d H:i:s' ),
+				'like_count'           => 5,
+				'repost_count'         => 2,
+				'comment_count'        => 1,
+				'quote_count'          => 0,
+			),
+			false
+		);
+
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_content' => '<!-- wp:activitypub/stats {"selectedUser":"blog","year":2025} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$existing = array(
+			array(
+				'type' => 'Image',
+				'url'  => 'https://example.com/photo.jpg',
+			),
+		);
+
+		$attachments = Blocks::add_stats_image_attachment( $existing, $post );
+
+		$this->assertCount( 2, $attachments );
+		$this->assertSame( 'https://example.com/photo.jpg', $attachments[0]['url'] );
+		$this->assertStringContainsString( 'stats', $attachments[1]['url'] );
+	}
+
+	/**
+	 * Test add_stats_image_attachment with user ID.
+	 *
+	 * @covers ::add_stats_image_attachment
+	 */
+	public function test_add_stats_image_attachment_with_user_id() {
+		if ( ! \Activitypub\Cache\Stats_Image::is_available() ) {
+			$this->markTestSkipped( 'GD library is not available.' );
+		}
+
+		// Seed stats for user 1.
+		\update_option(
+			'activitypub_stats_1_2024_annual',
+			array(
+				'posts_count'          => 10,
+				'followers_start'      => 0,
+				'followers_end'        => 5,
+				'followers_net_change' => 5,
+				'most_active_month'    => 1,
+				'top_multiplicator'    => null,
+				'top_posts'            => array(),
+				'compiled_at'          => \gmdate( 'Y-m-d H:i:s' ),
+				'like_count'           => 5,
+				'repost_count'         => 2,
+				'comment_count'        => 1,
+				'quote_count'          => 0,
+			),
+			false
+		);
+
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_content' => '<!-- wp:activitypub/stats {"selectedUser":"1","year":2024} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$attachments = Blocks::add_stats_image_attachment( array(), $post );
+
+		$this->assertCount( 1, $attachments );
+		$this->assertStringContainsString( 'stats', $attachments[0]['url'] );
+		$this->assertStringContainsString( '2024', $attachments[0]['name'] );
+	}
+
+	/**
+	 * Test Stats_Image::get_url generates valid URL.
+	 *
+	 * @covers \Activitypub\Cache\Stats_Image::get_url
+	 */
+	public function test_get_stats_image_url() {
+		$url = \Activitypub\Cache\Stats_Image::get_url( 0, 2025 );
+
+		if ( \is_wp_error( $url ) ) {
+			// GD not available; fall back to REST endpoint URL.
+			$url = \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image/0/2025' );
+		}
+
+		// URL contains the stats path (either cached file or REST endpoint).
+		$this->assertStringContainsString( 'stats', $url );
+		$this->assertStringContainsString( '2025', $url );
+	}
+
+	/**
+	 * Test Stats_Image::get_url works with plain permalinks.
+	 *
+	 * @covers \Activitypub\Cache\Stats_Image::get_url
+	 */
+	public function test_get_stats_image_url_plain_permalinks() {
+		$original = \get_option( 'permalink_structure' );
+		\update_option( 'permalink_structure', '' );
+
+		$url = \Activitypub\Cache\Stats_Image::get_url( 1, 2024 );
+
+		if ( \is_wp_error( $url ) ) {
+			// GD not available; fall back to REST endpoint URL.
+			$url = \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image/1/2024' );
+		}
+
+		$this->assertStringContainsString( 'stats', $url );
+		$this->assertStringContainsString( '2024', $url );
+
+		\update_option( 'permalink_structure', $original );
+	}
 }

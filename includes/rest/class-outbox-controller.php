@@ -29,7 +29,15 @@ use function Activitypub\object_to_uri;
 class Outbox_Controller extends \WP_REST_Controller {
 	use Collection;
 	use Event_Stream;
+	use Language_Map;
 	use Verification;
+
+	/**
+	 * Activity types accessible as individual outbox items via REST.
+	 *
+	 * @var string[]
+	 */
+	const PUBLIC_ACTIVITY_TYPES = array( 'Announce', 'Arrive', 'Create', 'Like', 'Update' );
 
 	/**
 	 * The namespace of this controller's route.
@@ -148,11 +156,11 @@ class Outbox_Controller extends \WP_REST_Controller {
 		\do_action( 'activitypub_rest_outbox_pre', $request );
 
 		/**
-		 * Filters the list of activity types to include in the outbox.
+		 * Filters the activity types included in the outbox collection.
 		 *
-		 * @param string[] $activity_types The list of activity types.
+		 * @param string[] $activity_types The activity types.
 		 */
-		$activity_types = \apply_filters( 'activitypub_outbox_activity_types', array( 'Announce', 'Create', 'Like', 'Update' ) );
+		$activity_types = \apply_filters( 'activitypub_outbox_activity_types', self::PUBLIC_ACTIVITY_TYPES );
 
 		$args = array(
 			'posts_per_page' => $request->get_param( 'per_page' ),
@@ -355,15 +363,17 @@ class Outbox_Controller extends \WP_REST_Controller {
 			)
 		);
 
+		$user_id  = (int) $request->get_param( 'user_id' );
 		$comments = new \WP_Comment_Query(
 			array(
-				'status'        => 'approve',
-				'user_id'       => $request->get_param( 'user_id' ),
+				'status'         => 'approve',
+				'user_id'        => $user_id,
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'meta_key'      => 'activitypub_status',
-				'fields'        => 'ids',
-				'no_found_rows' => false,
-				'number'        => 1,
+				'meta_key'       => 'activitypub_status',
+				'fields'         => 'ids',
+				'no_found_rows'  => false,
+				'number'         => 1,
+				'author__not_in' => array( 0 ),
 			)
 		);
 
@@ -413,6 +423,9 @@ class Outbox_Controller extends \WP_REST_Controller {
 		if ( ! $is_activity ) {
 			$data = $this->wrap_in_create( $data, $user );
 		}
+
+		// Resolve language maps (summaryMap, contentMap, nameMap) to plain strings.
+		$data = $this->localize_language_maps( $data );
 
 		// Default to public addressing if client omits recipients.
 		$data = $this->ensure_addressing( $data, $user );
