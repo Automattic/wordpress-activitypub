@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix double-encoded HTML entities in post titles on the Fediverse Stats dashboard.
