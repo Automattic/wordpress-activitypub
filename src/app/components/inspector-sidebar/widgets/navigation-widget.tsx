@@ -7,35 +7,33 @@
 import { __ } from '@wordpress/i18n';
 import { Icon, MenuGroup, MenuItem } from '@wordpress/components';
 import { cog, people, plus } from '@wordpress/icons';
-import { useSettings } from '../../../contexts/settings-context';
+import { addQueryArgs } from '@wordpress/url';
 
 export default function NavigationWidget() {
-	const { adminUrl } = useSettings();
-
 	const navigationItems = [
 		{
 			id: 'new-post',
 			label: __( 'New Post', 'activitypub' ),
 			icon: plus,
-			href: `${ adminUrl }post-new.php`,
+			href: 'post-new.php',
 		},
 		{
 			id: 'followers',
 			label: __( 'Followers', 'activitypub' ),
 			icon: people,
-			href: `${ adminUrl }users.php?page=activitypub-followers-list`,
+			href: addQueryArgs( 'users.php', { page: 'activitypub-followers-list' } ),
 		},
 		{
 			id: 'following',
 			label: __( 'Following', 'activitypub' ),
 			icon: people,
-			href: `${ adminUrl }users.php?page=activitypub-following-list`,
+			href: addQueryArgs( 'users.php', { page: 'activitypub-following-list' } ),
 		},
 		{
 			id: 'settings',
 			label: __( 'Settings', 'activitypub' ),
 			icon: cog,
-			href: `${ adminUrl }admin.php?page=activitypub`,
+			href: addQueryArgs( 'admin.php', { page: 'activitypub' } ),
 		},
 	];
 

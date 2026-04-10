@@ -25,6 +25,7 @@ import { close } from '@wordpress/icons';
  * Internal dependencies
  */
 import Avatar from '../../components/avatar';
+import InspectorSidebar from '../../components/inspector-sidebar';
 import { getRelativeTime } from '../../utils';
 import { useTagFilter } from '../../hooks/use-tag-filter';
 import { useSearch, useNavigate } from '../../router';
@@ -79,9 +80,9 @@ export default function FeedInspector(): ReactNode {
 	// Use the shared tag filter hook - must be called before early return
 	const { selectedTagId, updateTagFilter } = useTagFilter();
 
-	// Early return if no id (shouldn't happen due to route config, but handle gracefully)
+	// Show inspector sidebar when no post is selected
 	if ( ! id ) {
-		return null;
+		return <InspectorSidebar />;
 	}
 
 	const handleTagClick: ( tagId: number ) => void = ( tagId: number ): void => {

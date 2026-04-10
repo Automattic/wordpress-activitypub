@@ -8,13 +8,13 @@
 /**
  * Internal dependencies
  */
-import type { RouteConfig, RouteLoaderContext } from '../../router/types';
+import type { RouteConfig } from '../../router/types';
 
 export const route: RouteConfig = {
 	/**
-	 * Show inspector only when a post is selected (postId in search params)
-	 * @param context        Route loader context.
-	 * @param context.search URL search parameters.
+	 * Always show the inspector panel.
+	 * When a post is selected (postId in search params), the post detail view is shown.
+	 * When no post is selected, the inspector sidebar with widgets is displayed.
 	 */
-	inspector: ( { search }: RouteLoaderContext ): boolean => !! search.postId,
+	inspector: (): boolean => true,
 };
