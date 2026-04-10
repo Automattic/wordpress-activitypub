@@ -33,7 +33,7 @@
 	},
 	"homepage": "https://github.com/automattic/wordpress-activitypub#readme",
 	"devDependencies": {
-		"@playwright/test": "^1.59.0",
+		"@playwright/test": "^1.59.1",
 		"@tanstack/react-router": "^1.168.10",
 		"@testing-library/jest-dom": "^6.9.1",
 		"@testing-library/react": "^16.3.2",
@@ -49,7 +49,7 @@
 		"@wordpress/compose": "^7.32.0",
 		"@wordpress/core-data": "^7.41.0",
 		"@wordpress/data": "^10.33.0",
-		"@wordpress/data-controls": "^4.42.0",
+		"@wordpress/data-controls": "^4.43.0",
 		"@wordpress/dataviews": "^13.1.0",
 		"@wordpress/date": "^5.33.0",
 		"@wordpress/dependency-extraction-webpack-plugin": "^6.40.0",
