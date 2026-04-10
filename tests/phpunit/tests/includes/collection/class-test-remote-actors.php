@@ -1015,6 +1015,217 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
+	 * Test get_public_key with a standalone key object that has an owner.
+	 *
+	 * When key_id URL returns a CryptographicKey object (no publicKey, has owner),
+	 * get_public_key should follow the owner to get the actor.
+	 *
+	 * @covers ::get_public_key
+	 * @group activitypub
+	 */
+	public function test_get_public_key_standalone_key_follows_owner() {
+		$mock = function ( $pre, $url ) {
+			// Standalone key object.
+			if ( 'https://example.com/user/publickey' === $url ) {
+				return array(
+					'id'           => 'https://example.com/user/publickey',
+					'type'         => 'CryptographicKey',
+					'owner'        => 'https://example.com/user',
+					'publicKeyPem' => $this->x509_key,
+				);
+			}
+
+			// Owner actor with nested publicKey.
+			if ( 'https://example.com/user' === $url ) {
+				return array(
+					'id'        => 'https://example.com/user',
+					'type'      => 'Person',
+					'publicKey' => array(
+						'id'           => 'https://example.com/user#main-key',
+						'owner'        => 'https://example.com/user',
+						'publicKeyPem' => $this->x509_key,
+					),
+				);
+			}
+
+			return $pre;
+		};
+
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock, 10, 2 );
+
+		$result = Remote_Actors::get_public_key( 'https://example.com/user/publickey' );
+		$this->assertNotWPError( $result );
+
+		$details = \openssl_pkey_get_details( $result );
+		$this->assertSame( $this->x509_key, $details['key'] );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+	}
+
+	/**
+	 * Test get_public_key rejects standalone key with cross-origin owner.
+	 *
+	 * @covers ::get_public_key
+	 * @group activitypub
+	 */
+	public function test_get_public_key_rejects_standalone_key_cross_origin_owner() {
+		$mock = function ( $pre, $url ) {
+			if ( 'https://evil.example/publickey' === $url ) {
+				return array(
+					'id'           => 'https://evil.example/publickey',
+					'type'         => 'CryptographicKey',
+					'owner'        => 'https://example.com/user',
+					'publicKeyPem' => $this->x509_key,
+				);
+			}
+
+			return $pre;
+		};
+
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock, 10, 2 );
+
+		$result = Remote_Actors::get_public_key( 'https://evil.example/publickey' );
+		$this->assertWPError( $result );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+	}
+
+	/**
+	 * Test get_public_key with actor whose publicKey is a URL reference.
+	 *
+	 * When an actor has publicKey as a URL string (like tags.pub),
+	 * the URL should be dereferenced to get the actual key.
+	 *
+	 * @covers ::get_public_key
+	 * @group activitypub
+	 */
+	public function test_get_public_key_url_reference() {
+		$mock = function ( $pre, $url ) {
+			// Actor with publicKey as URL.
+			if ( 'https://example.com/actor' === $url ) {
+				return array(
+					'id'        => 'https://example.com/actor',
+					'type'      => 'Service',
+					'publicKey' => 'https://example.com/actor/publickey',
+				);
+			}
+
+			// Key object at the referenced URL.
+			if ( 'https://example.com/actor/publickey' === $url ) {
+				return array(
+					'id'           => 'https://example.com/actor/publickey',
+					'type'         => 'CryptographicKey',
+					'owner'        => 'https://example.com/actor',
+					'publicKeyPem' => $this->x509_key,
+				);
+			}
+
+			return $pre;
+		};
+
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock, 10, 2 );
+
+		// Store actor in cache so get_by_uri finds it.
+		$actor_data = array(
+			'id'                => 'https://example.com/actor',
+			'type'              => 'Service',
+			'inbox'             => 'https://example.com/actor/inbox',
+			'preferredUsername' => 'actor',
+			'publicKey'         => 'https://example.com/actor/publickey',
+		);
+		Remote_Actors::upsert( $actor_data );
+
+		$result = Remote_Actors::get_public_key( 'https://example.com/actor#main-key' );
+		$this->assertNotWPError( $result );
+
+		$details = \openssl_pkey_get_details( $result );
+		$this->assertSame( $this->x509_key, $details['key'] );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+	}
+
+	/**
+	 * Test get_public_key rejects publicKey URL on a different host than the actor.
+	 *
+	 * @covers ::get_public_key
+	 * @group activitypub
+	 */
+	public function test_get_public_key_rejects_cross_origin_key_url() {
+		$mock = function ( $pre, $url ) {
+			if ( 'https://example.com/actor' === $url ) {
+				return array(
+					'id'        => 'https://example.com/actor',
+					'type'      => 'Service',
+					'publicKey' => 'https://evil.example/publickey',
+				);
+			}
+
+			return $pre;
+		};
+
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock, 10, 2 );
+
+		$actor_data = array(
+			'id'                => 'https://example.com/actor',
+			'type'              => 'Service',
+			'inbox'             => 'https://example.com/actor/inbox',
+			'preferredUsername' => 'crossorigin',
+			'publicKey'         => 'https://evil.example/publickey',
+		);
+		Remote_Actors::upsert( $actor_data );
+
+		$result = Remote_Actors::get_public_key( 'https://example.com/actor#main-key' );
+		$this->assertWPError( $result );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+	}
+
+	/**
+	 * Test get_public_key rejects when key owner doesn't match actor.
+	 *
+	 * @covers ::get_public_key
+	 * @group activitypub
+	 */
+	public function test_get_public_key_rejects_owner_mismatch() {
+		$mock = function ( $pre, $url ) {
+			if ( 'https://example.com/actor' === $url ) {
+				return array(
+					'id'        => 'https://example.com/actor',
+					'type'      => 'Service',
+					'publicKey' => 'https://example.com/actor/publickey',
+				);
+			}
+
+			if ( 'https://example.com/actor/publickey' === $url ) {
+				return array(
+					'id'           => 'https://example.com/actor/publickey',
+					'type'         => 'CryptographicKey',
+					'owner'        => 'https://example.com/other-actor',
+					'publicKeyPem' => $this->x509_key,
+				);
+			}
+
+			return $pre;
+		};
+
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock, 10, 2 );
+
+		$actor_data = array(
+			'id'                => 'https://example.com/actor',
+			'type'              => 'Service',
+			'inbox'             => 'https://example.com/actor/inbox',
+			'preferredUsername' => 'ownermismatch',
+			'publicKey'         => 'https://example.com/actor/publickey',
+		);
+		Remote_Actors::upsert( $actor_data );
+
+		$result = Remote_Actors::get_public_key( 'https://example.com/actor#main-key' );
+		$this->assertWPError( $result );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+	}
+
+	/**
 	 * Pre http get remote object.
 	 *
 	 * @param mixed  $pre           The preempted value.
@@ -1087,12 +1298,14 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
-	 * Test get_avatar_url with avatar in meta.
+	 * Test get_avatar_url lazy caching behavior.
+	 *
+	 * Avatar is not cached until get_avatar_url() is called (lazy loading).
 	 *
 	 * @covers ::get_avatar_url
 	 */
 	public function test_get_avatar_url_from_meta() {
-		// Create a remote actor with avatar in meta.
+		// Create a remote actor.
 		$actor_data = array(
 			'id'                => 'https://example.com/users/avatar-test',
 			'type'              => 'Person',
@@ -1108,23 +1321,17 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$remote_actor_id = Remote_Actors::upsert( $actor_data );
 		$this->assertIsInt( $remote_actor_id );
 
-		// Verify avatar URL is stored in meta.
-		$avatar_url = get_post_meta( $remote_actor_id, '_activitypub_avatar_url', true );
-		$this->assertEquals( 'https://example.com/avatar-test.jpg', $avatar_url );
-
-		// Test get_avatar_url retrieves from meta.
+		// Calling get_avatar_url() returns the avatar URL from the actor JSON.
 		$retrieved_avatar = Remote_Actors::get_avatar_url( $remote_actor_id );
 		$this->assertEquals( 'https://example.com/avatar-test.jpg', $retrieved_avatar );
-
-		// Clean up.
 	}
 
 	/**
-	 * Test get_avatar_url fallback to JSON when meta is empty.
+	 * Test get_avatar_url extracts URL from actor JSON.
 	 *
 	 * @covers ::get_avatar_url
 	 */
-	public function test_get_avatar_url_fallback_to_json() {
+	public function test_get_avatar_url_from_json() {
 		// Create a remote actor.
 		$actor_data = array(
 			'id'                => 'https://example.com/users/json-avatar',
@@ -1141,22 +1348,9 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$remote_actor_id = Remote_Actors::upsert( $actor_data );
 		$this->assertIsInt( $remote_actor_id );
 
-		// Delete the avatar meta to simulate old data.
-		delete_post_meta( $remote_actor_id, '_activitypub_avatar_url' );
-
-		// Verify meta is empty.
-		$avatar_meta = get_post_meta( $remote_actor_id, '_activitypub_avatar_url', true );
-		$this->assertEmpty( $avatar_meta );
-
-		// Test get_avatar_url extracts from JSON and caches it.
+		// Test get_avatar_url extracts from JSON.
 		$retrieved_avatar = Remote_Actors::get_avatar_url( $remote_actor_id );
 		$this->assertEquals( 'https://example.com/json-avatar.jpg', $retrieved_avatar );
-
-		// Verify it was cached in meta.
-		$cached_avatar = get_post_meta( $remote_actor_id, '_activitypub_avatar_url', true );
-		$this->assertEquals( 'https://example.com/json-avatar.jpg', $cached_avatar );
-
-		// Clean up.
 	}
 
 	/**
@@ -1215,5 +1409,318 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$this->assertStringContainsString( 'assets/img/mp.jpg', $retrieved_avatar );
 
 		// Clean up.
+	}
+
+	/**
+	 * Test that webfinger acct is stored when creating an actor.
+	 *
+	 * @covers ::create
+	 */
+	public function test_webfinger_acct_stored_on_create() {
+		// Create an actor with webfinger.
+		$actor = array(
+			'id'                => 'https://example.com/users/webfinger-store',
+			'type'              => 'Person',
+			'url'               => 'https://example.com/users/webfinger-store',
+			'inbox'             => 'https://example.com/users/webfinger-store/inbox',
+			'name'              => 'Webfinger Store',
+			'preferredUsername' => 'webfinger',
+		);
+
+		// Mock webfinger resolution.
+		$webfinger_callback = function ( $preempt, $parsed_args, $url ) {
+			if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
+				return array(
+					'response' => array( 'code' => 200 ),
+					'body'     => wp_json_encode(
+						array(
+							'subject' => 'acct:webfinger@example.com',
+							'links'   => array(
+								array(
+									'rel'  => 'self',
+									'type' => 'application/activity+json',
+									'href' => 'https://example.com/users/webfinger-store',
+								),
+							),
+						)
+					),
+				);
+			}
+			return $preempt;
+		};
+		\add_filter( 'pre_http_request', $webfinger_callback, 10, 3 );
+
+		$post_id = Remote_Actors::create( $actor );
+		$this->assertIsInt( $post_id );
+
+		// Verify acct was stored.
+		$stored_acct = \get_post_meta( $post_id, '_activitypub_acct', true );
+		$this->assertEquals( 'webfinger@example.com', $stored_acct );
+
+		\remove_filter( 'pre_http_request', $webfinger_callback );
+	}
+
+	/**
+	 * Test that webfinger is populated when loading an actor from database.
+	 *
+	 * @covers ::get_actor
+	 */
+	public function test_webfinger_populated_on_load() {
+		// Create an actor.
+		$actor = array(
+			'id'                => 'https://example.com/users/webfinger-load',
+			'type'              => 'Person',
+			'url'               => 'https://example.com/users/webfinger-load',
+			'inbox'             => 'https://example.com/users/webfinger-load/inbox',
+			'name'              => 'Webfinger Load',
+			'preferredUsername' => 'webfingerload',
+		);
+
+		$post_id = Remote_Actors::create( $actor );
+		$this->assertIsInt( $post_id );
+
+		// Store acct manually.
+		\update_post_meta( $post_id, '_activitypub_acct', 'webfingerload@example.com' );
+
+		// Load the actor.
+		$actor_obj = Remote_Actors::get_actor( $post_id );
+
+		// Verify webfinger was populated.
+		$this->assertEquals( 'webfingerload@example.com', $actor_obj->get_webfinger() );
+	}
+
+	/**
+	 * Test that webfinger is generated from actor URL when not available.
+	 *
+	 * @covers ::get_actor
+	 */
+	public function test_webfinger_generated_from_url() {
+		// Create an actor without stored webfinger.
+		$actor = array(
+			'id'                => 'https://example.com/users/generate-webfinger',
+			'type'              => 'Person',
+			'url'               => 'https://example.com/users/generate-webfinger',
+			'inbox'             => 'https://example.com/users/generate-webfinger/inbox',
+			'name'              => 'Generate Webfinger',
+			'preferredUsername' => 'generatewf',
+		);
+
+		$post_id = Remote_Actors::create( $actor );
+		$this->assertIsInt( $post_id );
+
+		// Don't store acct meta.
+		\delete_post_meta( $post_id, '_activitypub_acct' );
+
+		// Mock webfinger resolution failure (will fall back to guess).
+		$webfinger_callback = function ( $preempt, $parsed_args, $url ) {
+			if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
+				return array(
+					'response' => array( 'code' => 404 ),
+					'body'     => 'Not Found',
+				);
+			}
+			return $preempt;
+		};
+		\add_filter( 'pre_http_request', $webfinger_callback, 10, 3 );
+
+		// Load the actor.
+		$actor_obj = Remote_Actors::get_actor( $post_id );
+
+		// Verify webfinger was guessed from URL.
+		$expected = 'generatewf@example.com';
+		$this->assertEquals( $expected, $actor_obj->get_webfinger() );
+
+		\remove_filter( 'pre_http_request', $webfinger_callback );
+	}
+
+	/**
+	 * Test that webfinger acct is updated when actor is updated.
+	 *
+	 * @covers ::update
+	 */
+	public function test_webfinger_acct_updated_on_update() {
+		// Create an actor.
+		$actor = array(
+			'id'                => 'https://example.com/users/webfinger-update',
+			'type'              => 'Person',
+			'url'               => 'https://example.com/users/webfinger-update',
+			'inbox'             => 'https://example.com/users/webfinger-update/inbox',
+			'name'              => 'Webfinger Update',
+			'preferredUsername' => 'webfingerupdate',
+		);
+
+		// Mock webfinger resolution.
+		$webfinger_callback = function ( $preempt, $parsed_args, $url ) {
+			if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
+				return array(
+					'response' => array( 'code' => 200 ),
+					'body'     => wp_json_encode(
+						array(
+							'subject' => 'acct:webfingerupdate@example.com',
+							'links'   => array(
+								array(
+									'rel'  => 'self',
+									'type' => 'application/activity+json',
+									'href' => 'https://example.com/users/webfinger-update',
+								),
+							),
+						)
+					),
+				);
+			}
+			return $preempt;
+		};
+		\add_filter( 'pre_http_request', $webfinger_callback, 10, 3 );
+
+		$post_id = Remote_Actors::create( $actor );
+		$this->assertIsInt( $post_id );
+
+		// Verify initial acct.
+		$stored_acct = \get_post_meta( $post_id, '_activitypub_acct', true );
+		$this->assertEquals( 'webfingerupdate@example.com', $stored_acct );
+
+		// Update the actor with modified name.
+		$updated_actor         = $actor;
+		$updated_actor['name'] = 'Webfinger Updated Name';
+
+		Remote_Actors::update( $post_id, $updated_actor );
+
+		// Verify acct is still stored correctly after update.
+		$updated_acct = \get_post_meta( $post_id, '_activitypub_acct', true );
+		$this->assertEquals( 'webfingerupdate@example.com', $updated_acct );
+
+		\remove_filter( 'pre_http_request', $webfinger_callback );
+	}
+
+	/**
+	 * Test that webfinger acct is stored when provided in actor data.
+	 *
+	 * @covers ::create
+	 */
+	public function test_webfinger_from_actor_data() {
+		// Create an actor with webfinger in the data.
+		$actor = array(
+			'id'                => 'https://example.com/users/actor-data-wf',
+			'type'              => 'Person',
+			'url'               => 'https://example.com/users/actor-data-wf',
+			'inbox'             => 'https://example.com/users/actor-data-wf/inbox',
+			'name'              => 'Actor Data Webfinger',
+			'preferredUsername' => 'actordatawf',
+			'webfinger'         => 'custom@example.org',
+		);
+
+		$post_id = Remote_Actors::create( $actor );
+		$this->assertIsInt( $post_id );
+
+		// Verify custom webfinger was stored.
+		$stored_acct = \get_post_meta( $post_id, '_activitypub_acct', true );
+		$this->assertEquals( 'custom@example.org', $stored_acct );
+	}
+
+	/**
+	 * Test get_by_uri returns WP_Error when post is deleted after ID lookup.
+	 *
+	 * This is a regression test for the fix that prevents PHP warnings like:
+	 * "Attempt to read property 'post_content' on null"
+	 *
+	 * The scenario: A post ID exists in the database but get_post() returns null
+	 * (e.g., due to race condition or database inconsistency).
+	 *
+	 * @covers ::get_by_uri
+	 */
+	public function test_get_by_uri_returns_wp_error_when_post_deleted_after_id_lookup() {
+		global $wpdb;
+
+		// Create a remote actor.
+		$actor = array(
+			'id'                => 'https://remote.example.com/actor/disappearing',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/disappearing',
+			'inbox'             => 'https://remote.example.com/actor/disappearing/inbox',
+			'name'              => 'Disappearing Actor',
+			'preferredUsername' => 'disappearing',
+			'endpoints'         => array(
+				'sharedInbox' => 'https://remote.example.com/inbox',
+			),
+		);
+
+		$post_id = Remote_Actors::create( $actor );
+		$this->assertIsInt( $post_id );
+
+		// Verify actor exists.
+		$post = Remote_Actors::get_by_uri( 'https://remote.example.com/actor/disappearing' );
+		$this->assertInstanceOf( 'WP_Post', $post );
+
+		// Simulate a race condition: delete the post directly from DB and clear cache.
+		// This mimics the scenario where the post is deleted between the guid lookup
+		// and the get_post() call.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->delete( $wpdb->posts, array( 'ID' => $post_id ) );
+		\clean_post_cache( $post_id );
+
+		// Now get_by_uri should return WP_Error, not null (which would cause PHP warnings).
+		$result = Remote_Actors::get_by_uri( 'https://remote.example.com/actor/disappearing' );
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_actor_not_found', $result->get_error_code() );
+	}
+
+	/**
+	 * Test fetch_by_acct returns WP_Error when post is deleted after ID lookup.
+	 *
+	 * This is a regression test for the fix that prevents PHP warnings when
+	 * get_post() returns null after finding a post ID via meta query.
+	 *
+	 * @covers ::fetch_by_acct
+	 */
+	public function test_fetch_by_acct_returns_wp_error_when_post_deleted_after_id_lookup() {
+		global $wpdb;
+
+		// Create a remote actor.
+		$actor = array(
+			'id'                => 'https://remote.example.com/actor/disappearing-acct',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/disappearing-acct',
+			'inbox'             => 'https://remote.example.com/actor/disappearing-acct/inbox',
+			'name'              => 'Disappearing Acct Actor',
+			'preferredUsername' => 'disappearingacct',
+			'endpoints'         => array(
+				'sharedInbox' => 'https://remote.example.com/inbox',
+			),
+		);
+
+		$post_id = Remote_Actors::create( $actor );
+		$this->assertIsInt( $post_id );
+
+		// Store the acct meta.
+		\update_post_meta( $post_id, '_activitypub_acct', 'disappearingacct@remote.example.com' );
+
+		// Verify actor exists via acct.
+		$post = Remote_Actors::fetch_by_acct( 'disappearingacct@remote.example.com' );
+		$this->assertInstanceOf( 'WP_Post', $post );
+
+		// Simulate a race condition: delete the post directly from DB and clear cache,
+		// but leave the postmeta intact (this is the scenario that triggers the bug).
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->delete( $wpdb->posts, array( 'ID' => $post_id ) );
+		\clean_post_cache( $post_id );
+
+		// Mock webfinger to fail, so it doesn't try to re-fetch.
+		$webfinger_callback = function ( $preempt, $parsed_args, $url ) {
+			if ( strpos( $url, '.well-known/webfinger' ) !== false ) {
+				return array(
+					'response' => array( 'code' => 404 ),
+					'body'     => 'Not Found',
+				);
+			}
+			return $preempt;
+		};
+		\add_filter( 'pre_http_request', $webfinger_callback, 10, 3 );
+
+		// Now fetch_by_acct should return WP_Error, not null.
+		$result = Remote_Actors::fetch_by_acct( 'disappearingacct@remote.example.com' );
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_actor_not_found', $result->get_error_code() );
+
+		\remove_filter( 'pre_http_request', $webfinger_callback );
 	}
 }

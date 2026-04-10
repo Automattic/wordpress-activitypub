@@ -45,6 +45,7 @@ const registerCommand = ( command: CommandConfig ) => {
 	try {
 		dispatch( 'core/commands' ).registerCommand( command );
 	} catch ( error ) {
+		// eslint-disable-next-line no-console
 		console.error( 'Failed to register ActivityPub command:', command.name, error );
 	}
 };
@@ -54,12 +55,16 @@ const registerCommandLoader = ( loaderConfig: CommandLoaderConfig ) => {
 	try {
 		dispatch( 'core/commands' ).registerCommandLoader( loaderConfig );
 	} catch ( error ) {
+		// eslint-disable-next-line no-console
 		console.error( 'Failed to register ActivityPub command loader:', loaderConfig.name, error );
 	}
 };
 
 /**
  * Hook to load user extra fields as dynamic commands.
+ *
+ * @param options        Hook options.
+ * @param options.search Search term to filter extra fields.
  */
 const useExtraFieldsCommandLoader = ( { search }: { search: string } ) => {
 	// Retrieving the extra fields for the "search" term.
@@ -118,6 +123,9 @@ const useExtraFieldsCommandLoader = ( { search }: { search: string } ) => {
 
 /**
  * Hook to load blog extra fields as dynamic commands.
+ *
+ * @param options        Hook options.
+ * @param options.search Search term to filter extra fields.
  */
 const useBlogExtraFieldsCommandLoader = ( { search }: { search: string } ) => {
 	// Retrieving the blog extra fields for the "search" term.

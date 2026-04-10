@@ -1,0 +1,4 @@
+Significance: patch
+Type: added
+
+Add support for Block, Add (pin post), and Remove (unpin post) activities via Client-to-Server API.

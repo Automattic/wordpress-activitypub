@@ -22,6 +22,10 @@ class Classic_Editor {
 		\add_filter( 'activitypub_attachment_ids', array( self::class, 'filter_attached_media_ids' ), 10, 2 );
 		\add_action( 'add_meta_boxes', array( self::class, 'add_meta_box' ) );
 		\add_action( 'save_post', array( self::class, 'save_meta_data' ) );
+
+		if ( \function_exists( 'classicpress_version' ) ) {
+			\add_filter( 'activitypub_site_supports_blocks', '__return_false' );
+		}
 	}
 
 	/**
@@ -88,7 +92,7 @@ class Classic_Editor {
 
 		// Transform IDs into associative arrays.
 		$media_ids = \array_map(
-			function ( $id ) {
+			static function ( $id ) {
 				return array( 'id' => $id );
 			},
 			$query->get_posts()
@@ -131,7 +135,8 @@ class Classic_Editor {
 		$content_warning       = \get_post_meta( $post->ID, 'activitypub_content_warning', true );
 		$max_image_attachments = \get_post_meta( $post->ID, 'activitypub_max_image_attachments', true );
 		$content_visibility    = self::get_default_visibility( $post );
-		$quote_interaction     = \get_post_meta( $post->ID, 'activitypub_interaction_policy_quote', true ) ?: ACTIVITYPUB_INTERACTION_POLICY_ANYONE;
+		$default_quote_policy  = \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
+		$quote_interaction     = \get_post_meta( $post->ID, 'activitypub_interaction_policy_quote', true ) ?: $default_quote_policy;
 
 		?>
 		<p>
@@ -153,15 +158,15 @@ class Classic_Editor {
 		<p>
 			<strong><?php \esc_html_e( 'Visibility', 'activitypub' ); ?></strong><br />
 			<label>
-				<input type="radio" name="activitypub_content_visibility" value="public" <?php \checked( $content_visibility, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ); ?> />
+				<input type="radio" name="activitypub_content_visibility" value="<?php echo \esc_attr( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ); ?>" <?php \checked( $content_visibility, ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ); ?> />
 				<?php \esc_html_e( 'Public', 'activitypub' ); ?>
 			</label><br />
 			<label>
-				<input type="radio" name="activitypub_content_visibility" value="quiet_public" <?php \checked( $content_visibility, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC ); ?> />
+				<input type="radio" name="activitypub_content_visibility" value="<?php echo \esc_attr( ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC ); ?>" <?php \checked( $content_visibility, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC ); ?> />
 				<?php \esc_html_e( 'Quiet public', 'activitypub' ); ?>
 			</label><br />
 			<label>
-				<input type="radio" name="activitypub_content_visibility" value="local" <?php \checked( $content_visibility, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ); ?> />
+				<input type="radio" name="activitypub_content_visibility" value="<?php echo \esc_attr( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ); ?>" <?php \checked( $content_visibility, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ); ?> />
 				<?php \esc_html_e( 'Do not federate', 'activitypub' ); ?>
 			</label><br />
 			<span class="howto"><?php \esc_html_e( 'This adjusts the visibility of a post in the fediverse, but note that it won\'t affect how the post appears on the blog.', 'activitypub' ); ?></span>
@@ -172,13 +177,39 @@ class Classic_Editor {
 				<strong><?php \esc_html_e( 'Who can quote this post?', 'activitypub' ); ?></strong>
 			</label><br />
 			<select id="activitypub_interaction_policy_quote" name="activitypub_interaction_policy_quote" class="widefat">
-				<option value="anyone" <?php \selected( $quote_interaction, ACTIVITYPUB_INTERACTION_POLICY_ANYONE ); ?>><?php \esc_html_e( 'Anyone', 'activitypub' ); ?></option>
-				<option value="followers" <?php \selected( $quote_interaction, ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS ); ?>><?php \esc_html_e( 'Followers only', 'activitypub' ); ?></option>
-				<option value="me" <?php \selected( $quote_interaction, ACTIVITYPUB_INTERACTION_POLICY_ME ); ?>><?php \esc_html_e( 'Just me', 'activitypub' ); ?></option>
+				<option value="<?php echo \esc_attr( ACTIVITYPUB_INTERACTION_POLICY_ANYONE ); ?>" <?php \selected( $quote_interaction, ACTIVITYPUB_INTERACTION_POLICY_ANYONE ); ?>><?php \esc_html_e( 'Anyone', 'activitypub' ); ?></option>
+				<option value="<?php echo \esc_attr( ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS ); ?>" <?php \selected( $quote_interaction, ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS ); ?>><?php \esc_html_e( 'Followers only', 'activitypub' ); ?></option>
+				<option value="<?php echo \esc_attr( ACTIVITYPUB_INTERACTION_POLICY_ME ); ?>" <?php \selected( $quote_interaction, ACTIVITYPUB_INTERACTION_POLICY_ME ); ?>><?php \esc_html_e( 'Just me', 'activitypub' ); ?></option>
 			</select>
-			<span class="howto"><?php \esc_html_e( 'Quoting allows others to cite your post while adding their own commentary.', 'activitypub' ); ?></span>
+			<span class="howto">
+				<?php \esc_html_e( 'Quoting allows others to cite your post while adding their own commentary.', 'activitypub' ); ?>
+				<?php
+				printf(
+					/* translators: %s: The current site default quote policy. Note the leading space. */
+					\esc_html__( ' Site default: %s', 'activitypub' ),
+					\esc_html( self::get_quote_policy_label( $default_quote_policy ) )
+				);
+				?>
+			</span>
 		</p>
 		<?php
+	}
+
+	/**
+	 * Get the label for a quote policy value.
+	 *
+	 * @param string $policy The policy value.
+	 *
+	 * @return string The translated label.
+	 */
+	private static function get_quote_policy_label( $policy ) {
+		$labels = array(
+			ACTIVITYPUB_INTERACTION_POLICY_ANYONE    => \__( 'Anyone', 'activitypub' ),
+			ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS => \__( 'Followers only', 'activitypub' ),
+			ACTIVITYPUB_INTERACTION_POLICY_ME        => \__( 'Just me', 'activitypub' ),
+		);
+
+		return $labels[ $policy ] ?? $labels[ ACTIVITYPUB_INTERACTION_POLICY_ANYONE ];
 	}
 
 	/**
@@ -197,7 +228,7 @@ class Classic_Editor {
 
 		// If post is federated, use public.
 		$status = \get_post_meta( $post->ID, 'activitypub_status', true );
-		if ( 'federated' === $status ) {
+		if ( ACTIVITYPUB_OBJECT_STATE_FEDERATED === $status ) {
 			return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
 		}
 

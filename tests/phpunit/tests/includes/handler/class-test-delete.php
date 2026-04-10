@@ -7,7 +7,10 @@
 
 namespace Activitypub\Tests\Handler;
 
+use Activitypub\Activity\Activity;
+use Activitypub\Activity\Base_Object;
 use Activitypub\Handler\Delete;
+use Activitypub\Tombstone;
 
 /**
  * Test class for Delete handler.
@@ -85,19 +88,17 @@ class Test_Delete extends \WP_UnitTestCase {
 		$actor_url = 'https://example.com/users/testactor';
 
 		// Mock actor metadata.
-		\add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function () use ( $actor_url ) {
-				return array(
-					'type'              => 'Person',
-					'name'              => 'Test Actor',
-					'preferredUsername' => 'testactor',
-					'id'                => $actor_url,
-					'url'               => 'https://example.com/@testactor',
-					'inbox'             => $actor_url . '/inbox',
-				);
-			}
-		);
+		$http_get_filter = static function () use ( $actor_url ) {
+			return array(
+				'type'              => 'Person',
+				'name'              => 'Test Actor',
+				'preferredUsername' => 'testactor',
+				'id'                => $actor_url,
+				'url'               => 'https://example.com/@testactor',
+				'inbox'             => $actor_url . '/inbox',
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $http_get_filter );
 
 		$actor = \Activitypub\Collection\Remote_Actors::fetch_by_uri( $actor_url );
 
@@ -145,7 +146,7 @@ class Test_Delete extends \WP_UnitTestCase {
 		$this->assertNotNull( \get_comment( $other_comment_id ), 'Other comment should not be deleted' );
 
 		// Clean up.
-		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $http_get_filter );
 	}
 
 	/**
@@ -157,21 +158,18 @@ class Test_Delete extends \WP_UnitTestCase {
 		$nonexistent_actor_id = 999999;
 
 		// Mock the return value to capture it.
-		$result = null;
-		\add_action(
-			'activitypub_delete_remote_actor_interactions',
-			function ( $actor_id ) use ( &$result ) {
-				$result = Delete::delete_interactions( $actor_id );
-			},
-			5
-		);
+		$result                     = null;
+		$delete_interactions_action = static function ( $actor_id ) use ( &$result ) {
+			$result = Delete::delete_interactions( $actor_id );
+		};
+		\add_action( 'activitypub_delete_remote_actor_interactions', $delete_interactions_action, 5 );
 
 		\do_action( 'activitypub_delete_remote_actor_interactions', $nonexistent_actor_id );
 
 		// Verify it returns false when no comments exist.
 		$this->assertFalse( $result, 'Should return false when no comments exist' );
 
-		\remove_all_actions( 'activitypub_delete_remote_actor_interactions', 5 );
+		\remove_action( 'activitypub_delete_remote_actor_interactions', $delete_interactions_action, 5 );
 	}
 
 	/**
@@ -183,19 +181,17 @@ class Test_Delete extends \WP_UnitTestCase {
 		$actor_url = 'https://example.com/users/testactor';
 
 		// Mock actor metadata.
-		\add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function () use ( $actor_url ) {
-				return array(
-					'type'              => 'Person',
-					'name'              => 'Test Actor',
-					'preferredUsername' => 'testactor',
-					'id'                => $actor_url,
-					'url'               => 'https://example.com/@testactor',
-					'inbox'             => $actor_url . '/inbox',
-				);
-			}
-		);
+		$http_get_filter = static function () use ( $actor_url ) {
+			return array(
+				'type'              => 'Person',
+				'name'              => 'Test Actor',
+				'preferredUsername' => 'testactor',
+				'id'                => $actor_url,
+				'url'               => 'https://example.com/@testactor',
+				'inbox'             => $actor_url . '/inbox',
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $http_get_filter );
 
 		$actor = \Activitypub\Collection\Remote_Actors::fetch_by_uri( $actor_url );
 
@@ -204,13 +200,13 @@ class Test_Delete extends \WP_UnitTestCase {
 		for ( $i = 0; $i < 3; $i++ ) {
 			$post_id = self::factory()->post->create(
 				array(
-					'post_type'   => \Activitypub\Collection\Posts::POST_TYPE,
+					'post_type'   => \Activitypub\Collection\Remote_Posts::POST_TYPE,
 					'post_author' => $actor->ID,
 					'post_title'  => "Test Post $i",
 					'post_status' => 'publish',
 				)
 			);
-			// Add the remote actor ID meta that Posts::get_by_remote_actor() looks for.
+			// Add the remote actor ID meta that Remote_Posts::get_by_remote_actor() looks for.
 			\add_post_meta( $post_id, '_activitypub_remote_actor_id', $actor->ID );
 			$post_ids[] = $post_id;
 		}
@@ -229,7 +225,7 @@ class Test_Delete extends \WP_UnitTestCase {
 		}
 
 		// Clean up.
-		\remove_all_filters( 'activitypub_pre_http_get_remote_object' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $http_get_filter );
 	}
 
 	/**
@@ -241,21 +237,18 @@ class Test_Delete extends \WP_UnitTestCase {
 		$nonexistent_actor_id = 999999;
 
 		// Mock the return value to capture it.
-		$result = null;
-		\add_action(
-			'activitypub_delete_remote_actor_posts',
-			function ( $actor_id ) use ( &$result ) {
-				$result = Delete::delete_posts( $actor_id );
-			},
-			5
-		);
+		$result              = null;
+		$delete_posts_action = static function ( $actor_id ) use ( &$result ) {
+			$result = Delete::delete_posts( $actor_id );
+		};
+		\add_action( 'activitypub_delete_remote_actor_posts', $delete_posts_action, 5 );
 
 		\do_action( 'activitypub_delete_remote_actor_posts', $nonexistent_actor_id );
 
 		// Verify it returns false when no posts exist.
 		$this->assertFalse( $result, 'Should return false when no posts exist' );
 
-		\remove_all_actions( 'activitypub_delete_remote_actor_posts', 5 );
+		\remove_action( 'activitypub_delete_remote_actor_posts', $delete_posts_action, 5 );
 	}
 
 	/**
@@ -341,7 +334,7 @@ class Test_Delete extends \WP_UnitTestCase {
 		// Create a post in the Posts collection.
 		$post_id = \wp_insert_post(
 			array(
-				'post_type'    => \Activitypub\Collection\Posts::POST_TYPE,
+				'post_type'    => \Activitypub\Collection\Remote_Posts::POST_TYPE,
 				'post_title'   => 'Test Note',
 				'post_content' => 'Test content',
 				'post_status'  => 'publish',
@@ -422,15 +415,11 @@ class Test_Delete extends \WP_UnitTestCase {
 		$action_fired   = false;
 		$action_success = null;
 
-		\add_action(
-			'activitypub_handled_delete',
-			function ( $act, $users, $success ) use ( &$action_fired, &$action_success ) {
-				$action_fired   = true;
-				$action_success = $success;
-			},
-			10,
-			3
-		);
+		$handled_delete_action = static function ( $act, $users, $success ) use ( &$action_fired, &$action_success ) {
+			$action_fired   = true;
+			$action_success = $success;
+		};
+		\add_action( 'activitypub_handled_delete', $handled_delete_action, 10, 3 );
 
 		// Call delete_object - should not throw errors.
 		Delete::delete_object( $activity, array( self::$user_id ) );
@@ -440,7 +429,7 @@ class Test_Delete extends \WP_UnitTestCase {
 		$this->assertFalse( $action_success, 'Success should be false when nothing was deleted' );
 
 		\remove_filter( 'pre_http_request', $filter );
-		\remove_all_actions( 'activitypub_handled_delete' );
+		\remove_action( 'activitypub_handled_delete', $handled_delete_action, 10 );
 	}
 
 	/**
@@ -522,5 +511,137 @@ class Test_Delete extends \WP_UnitTestCase {
 			'url'  => $actor,
 			'id'   => $actor,
 		);
+	}
+
+	/**
+	 * Test maybe_bury adds URL to tombstone registry for Delete activity with object.
+	 *
+	 * @covers ::maybe_bury
+	 */
+	public function test_maybe_bury_adds_url_for_delete_activity() {
+		$object_url = 'https://example.com/posts/bury-test-' . time();
+
+		// Create a mock activity object.
+		$object = new Base_Object();
+		$object->set_id( $object_url );
+		$object->set_url( $object_url );
+		$object->set_type( 'Note' );
+
+		$activity = new Activity();
+		$activity->set_type( 'Delete' );
+		$activity->set_object( $object );
+
+		// Verify URL is not in tombstone registry.
+		$this->assertFalse( Tombstone::exists_local( $object_url ) );
+
+		// Trigger maybe_bury.
+		Delete::maybe_bury( 1, $activity );
+
+		// Verify URL was added to tombstone registry.
+		$this->assertTrue( Tombstone::exists_local( $object_url ) );
+
+		// Clean up.
+		\delete_option( 'activitypub_tombstone_urls' );
+	}
+
+	/**
+	 * Test maybe_bury handles Delete activity with string object.
+	 *
+	 * @covers ::maybe_bury
+	 */
+	public function test_maybe_bury_handles_string_object() {
+		$object_url = 'https://example.com/posts/string-object-' . time();
+
+		$activity = new Activity();
+		$activity->set_type( 'Delete' );
+		$activity->set_object( $object_url );
+
+		// Verify URL is not in tombstone registry.
+		$this->assertFalse( Tombstone::exists_local( $object_url ) );
+
+		// Trigger maybe_bury.
+		Delete::maybe_bury( 1, $activity );
+
+		// Verify URL was added to tombstone registry.
+		$this->assertTrue( Tombstone::exists_local( $object_url ) );
+
+		// Clean up.
+		\delete_option( 'activitypub_tombstone_urls' );
+	}
+
+	/**
+	 * Test maybe_bury ignores non-Delete activities.
+	 *
+	 * @covers ::maybe_bury
+	 */
+	public function test_maybe_bury_ignores_non_delete_activities() {
+		$object_url = 'https://example.com/posts/non-delete-' . time();
+
+		$object = new Base_Object();
+		$object->set_id( $object_url );
+		$object->set_url( $object_url );
+		$object->set_type( 'Note' );
+
+		// Test with Create activity.
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_object( $object );
+
+		Delete::maybe_bury( 1, $activity );
+
+		// URL should NOT be in tombstone registry.
+		$this->assertFalse( Tombstone::exists_local( $object_url ) );
+
+		// Test with Update activity.
+		$activity->set_type( 'Update' );
+		Delete::maybe_bury( 1, $activity );
+
+		// URL should still NOT be in tombstone registry.
+		$this->assertFalse( Tombstone::exists_local( $object_url ) );
+	}
+
+	/**
+	 * Test maybe_bury handles Delete activity with null object.
+	 *
+	 * @covers ::maybe_bury
+	 */
+	public function test_maybe_bury_handles_null_object() {
+		$activity = new Activity();
+		$activity->set_type( 'Delete' );
+		// Object is null/not set.
+
+		// This should not throw any errors.
+		Delete::maybe_bury( 1, $activity );
+
+		// Just verify no exception was thrown.
+		$this->assertTrue( true );
+	}
+
+	/**
+	 * Test maybe_bury buries both ID and URL when they differ.
+	 *
+	 * @covers ::maybe_bury
+	 */
+	public function test_maybe_bury_buries_both_id_and_url() {
+		$object_id  = 'https://example.com/posts/id-' . time();
+		$object_url = 'https://example.com/@user/posts/url-' . time();
+
+		$object = new Base_Object();
+		$object->set_id( $object_id );
+		$object->set_url( $object_url );
+		$object->set_type( 'Note' );
+
+		$activity = new Activity();
+		$activity->set_type( 'Delete' );
+		$activity->set_object( $object );
+
+		Delete::maybe_bury( 1, $activity );
+
+		// Both ID and URL should be in tombstone registry.
+		$this->assertTrue( Tombstone::exists_local( $object_id ) );
+		$this->assertTrue( Tombstone::exists_local( $object_url ) );
+
+		// Clean up.
+		\delete_option( 'activitypub_tombstone_urls' );
 	}
 }

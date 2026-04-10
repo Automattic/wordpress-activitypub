@@ -1,0 +1,10 @@
+@use "@wordpress/base-styles/colors";
+
+.activitypub-avatar {
+	width: var(--wpds-spacing-120, 48px);
+	height: var(--wpds-spacing-120, 48px);
+	border-radius: 50%;
+	object-fit: cover;
+	background-color: colors.$gray-100;
+	flex-shrink: 0;
+}

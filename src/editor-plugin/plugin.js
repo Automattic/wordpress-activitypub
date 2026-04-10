@@ -12,20 +12,40 @@ import {
 import { Icon, globe, people, external } from '@wordpress/icons';
 import { useSelect, select } from '@wordpress/data';
 import { useEntityProp } from '@wordpress/core-data';
+import { useEffect } from '@wordpress/element';
 import { addQueryArgs } from '@wordpress/url';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 import { SVG, Path } from '@wordpress/primitives';
 import { getDefaultVisibility } from './utils';
 
 /**
  * Editor plugin for ActivityPub settings in the block editor.
  *
- * @returns {React.JSX.Element|null} The settings panel for ActivityPub or null for sync blocks.
+ * @return {React.JSX.Element|null} The settings panel for ActivityPub or null for sync blocks.
  */
 const EditorPlugin = () => {
-	const postType = useSelect( ( select ) => select( editorStore ).getCurrentPostType(), [] );
+	const postType = useSelect( ( selectFn ) => selectFn( editorStore ).getCurrentPostType(), [] );
 	const [ meta, setMeta ] = useEntityProp( 'postType', postType, 'meta' );
-	const postDate = useSelect( ( select ) => select( editorStore ).getCurrentPost().date, [] );
+	const postDate = useSelect( ( selectFn ) => selectFn( editorStore ).getCurrentPost().date, [] );
+
+	// Get the computed default visibility.
+	const defaultVisibility = getDefaultVisibility( meta, postDate );
+
+	// Get the default quote policy from settings.
+	const defaultQuotePolicy = window._activityPubOptions?.defaultQuotePolicy || 'anyone';
+
+	// Sync computed default to meta when it differs from stored value.
+	// This ensures the default is persisted even if user doesn't change it.
+	useEffect( () => {
+		const storedVisibility = meta?.activitypub_content_visibility;
+
+		// Only sync if visibility was never set and the default isn't 'public'.
+		// WordPress may return '' (empty string) or undefined for unset meta.
+		// We skip 'public' since it's the implicit default.
+		if ( ! storedVisibility && defaultVisibility !== 'public' ) {
+			setMeta( { ...meta, activitypub_content_visibility: defaultVisibility } );
+		}
+	}, [ defaultVisibility, meta, setMeta ] );
 
 	// Don't show when editing sync blocks.
 	if ( 'wp_block' === postType ) {
@@ -37,7 +57,7 @@ const EditorPlugin = () => {
 	 *
 	 * @see https://github.com/WordPress/gutenberg/blob/trunk/packages/icons/src/library/not-allowed.js
 	 *
-	 * @var {React.JSX.Element} notAllowed The SVG for the not-allowed icon.
+	 * @member {React.JSX.Element} notAllowed The SVG for the not-allowed icon.
 	 */
 	const notAllowed = (
 		<SVG xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -64,7 +84,7 @@ const EditorPlugin = () => {
 	 * @param {string}            text    The label text.
 	 * @param {string}            tooltip The tooltip text.
 	 *
-	 * @returns {React.JSX.Element} The enhanced label component.
+	 * @return {React.JSX.Element} The enhanced label component.
 	 */
 	const enhancedLabel = ( icon, text, tooltip ) => (
 		<Tooltip text={ tooltip }>
@@ -80,6 +100,30 @@ const EditorPlugin = () => {
 	 * @todo Remove when 6.5 is no longer supported.
 	 */
 	const SettingsPanel = PluginDocumentSettingPanel || DocumentSettingPanel;
+
+	/**
+	 * Get the help text for the quote policy selector, including the site default.
+	 *
+	 * @return {string} The help text with site default.
+	 */
+	const getQuotePolicyHelp = () => {
+		const policyLabels = {
+			anyone: __( 'Anyone', 'activitypub' ),
+			followers: __( 'Followers only', 'activitypub' ),
+			me: __( 'Just me', 'activitypub' ),
+		};
+		const defaultLabel = policyLabels[ defaultQuotePolicy ] || policyLabels.anyone;
+
+		return (
+			__( 'Quoting allows others to cite your post while adding their own commentary.', 'activitypub' ) +
+			' ' +
+			sprintf(
+				/* translators: %s: The site default quote policy (e.g., "Anyone", "Followers only", "Just me") */
+				__( 'Site default: %s', 'activitypub' ),
+				defaultLabel
+			)
+		);
+	};
 
 	return (
 		<SettingsPanel
@@ -99,7 +143,6 @@ const EditorPlugin = () => {
 					'activitypub'
 				) }
 				__next40pxDefaultSize
-				__nextHasNoMarginBottom
 			/>
 
 			<RangeControl
@@ -115,7 +158,6 @@ const EditorPlugin = () => {
 					'activitypub'
 				) }
 				__next40pxDefaultSize
-				__nextHasNoMarginBottom
 			/>
 
 			<RadioControl
@@ -124,7 +166,7 @@ const EditorPlugin = () => {
 					"This adjusts the visibility of a post in the fediverse, but note that it won't affect how the post appears on the blog.",
 					'activitypub'
 				) }
-				selected={ getDefaultVisibility( meta, postDate ) }
+				selected={ defaultVisibility }
 				options={ [
 					{
 						label: enhancedLabel(
@@ -162,11 +204,8 @@ const EditorPlugin = () => {
 
 			<SelectControl
 				label={ __( 'Who can quote this post?', 'activitypub' ) }
-				help={ __(
-					'Quoting allows others to cite your post while adding their own commentary.',
-					'activitypub'
-				) }
-				value={ meta?.activitypub_interaction_policy_quote }
+				help={ getQuotePolicyHelp() }
+				value={ meta?.activitypub_interaction_policy_quote || defaultQuotePolicy }
 				options={ [
 					{ label: __( 'Anyone', 'activitypub' ), value: 'anyone' },
 					{ label: __( 'Followers only', 'activitypub' ), value: 'followers' },
@@ -176,7 +215,6 @@ const EditorPlugin = () => {
 					setMeta( { ...meta, activitypub_interaction_policy_quote: value } );
 				} }
 				__next40pxDefaultSize
-				__nextHasNoMarginBottom
 			/>
 		</SettingsPanel>
 	);
@@ -185,10 +223,10 @@ const EditorPlugin = () => {
 /**
  * Renders the preview menu item for Fediverse preview.
  *
- * @returns {React.JSX.Element} The preview menu item component.
+ * @return {React.JSX.Element} The preview menu item component.
  */
 const EditorPreview = () => {
-	const post_status = useSelect( ( select ) => select( editorStore ).getCurrentPost().status, [] );
+	const postStatus = useSelect( ( selectFn ) => selectFn( editorStore ).getCurrentPost().status, [] );
 
 	/**
 	 * Opens the Fediverse preview for the current post in a new tab.
@@ -206,7 +244,7 @@ const EditorPreview = () => {
 				<PluginPreviewMenuItem
 					onClick={ onActivityPubPreview }
 					icon={ external }
-					disabled={ post_status === 'auto-draft' }
+					disabled={ postStatus === 'auto-draft' }
 				>
 					{ __( 'Fediverse preview ⁂', 'activitypub' ) }
 				</PluginPreviewMenuItem>

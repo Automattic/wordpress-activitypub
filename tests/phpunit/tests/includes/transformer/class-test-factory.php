@@ -13,6 +13,7 @@ use Activitypub\Transformer\Comment;
 use Activitypub\Transformer\Factory;
 use Activitypub\Transformer\Json;
 use Activitypub\Transformer\Post;
+use Activitypub\Transformer\Term;
 
 /**
  * Test class for Transformer Factory.
@@ -49,6 +50,13 @@ class Test_Factory extends \WP_UnitTestCase {
 	protected static $user_id;
 
 	/**
+	 * Test term ID.
+	 *
+	 * @var int
+	 */
+	protected static $term_id;
+
+	/**
 	 * Create fake data before tests run.
 	 *
 	 * @param \WP_UnitTest_Factory $factory Helper that creates fake data.
@@ -76,10 +84,20 @@ class Test_Factory extends \WP_UnitTestCase {
 				'comment_post_ID' => self::$post_id,
 				'user_id'         => self::$user_id,
 				'comment_meta'    => array(
-					'activitypub_status' => 'pending',
+					'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_PENDING,
 				),
 			)
 		);
+
+		// Create test term.
+		$term          = $factory->term->create_and_get(
+			array(
+				'taxonomy' => 'post_tag',
+				'name'     => 'Test Tag',
+				'slug'     => 'test-tag',
+			)
+		);
+		self::$term_id = $term->term_id;
 	}
 
 	/**
@@ -265,5 +283,17 @@ class Test_Factory extends \WP_UnitTestCase {
 		$this->assertWPError( $result );
 		$this->assertEquals( 'test_error', $result->get_error_code() );
 		$this->assertEquals( 'Test error message', $result->get_error_message() );
+	}
+
+	/**
+	 * Test get_transformer with WP_Term.
+	 *
+	 * @covers ::get_transformer
+	 */
+	public function test_get_transformer_term() {
+		$term        = get_term( self::$term_id );
+		$transformer = Factory::get_transformer( $term );
+
+		$this->assertInstanceOf( Term::class, $transformer );
 	}
 }

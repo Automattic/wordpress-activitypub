@@ -2,10 +2,28 @@
 
 ## Table of Contents
 - [Introduction](#introduction)
+- [Snippets](#snippets)
 - [Extending the Settings Interface](#extending-the-settings-interface)
 
 ## Introduction
 This documentation provides information for developers who want to extend and build upon the ActivityPub plugin. Whether you're developing a complementary plugin or integrating ActivityPub features into your existing WordPress plugin, this guide will help you understand the available hooks and customization options.
+
+## Snippets
+
+The repository includes a collection of community-contributed [snippets](../snippets/) that extend or customize its behavior. Snippets are small, self-contained WordPress plugins that hook into the ActivityPub plugin to add or modify functionality.
+
+This follows a concept similar to WordPress' [feature plugins](https://make.wordpress.org/core/handbook/about/release-cycle/features-as-plugins/) -- experimental ideas are developed as snippets, and mature ones may eventually be integrated into the main plugin.
+
+### Using Snippets
+
+1. Copy the desired snippet folder from `snippets/` into your `wp-content/plugins/` directory.
+2. Activate the plugin from the WordPress admin.
+
+Alternatively, copy the snippet's main PHP file to `wp-content/mu-plugins/` for automatic activation.
+
+### Contributing Snippets
+
+See the [Snippets README](../snippets/README.md) for guidelines on contributing new snippets.
 
 ## Extending the Settings Interface
 

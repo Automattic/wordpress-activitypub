@@ -34,7 +34,7 @@ function plugin_init() {
 	 *
 	 * @see https://wordpress.org/plugins/classic-editor/
 	 */
-	if ( class_exists( '\Classic_Editor' ) || ! site_supports_blocks() ) {
+	if ( \class_exists( '\Classic_Editor' ) || \function_exists( 'classicpress_version' ) || ! site_supports_blocks() ) {
 		Classic_Editor::init();
 	}
 
@@ -102,6 +102,34 @@ function plugin_init() {
 	}
 
 	/**
+	 * Adds Podlove Podcast Publisher support.
+	 *
+	 * This class handles the compatibility with Podlove Podcast Publisher.
+	 *
+	 * @see https://wordpress.org/plugins/podlove-podcasting-plugin-for-wordpress/
+	 */
+	if ( \defined( 'Podlove\PLUGIN_FILE' ) ) {
+		// Enable ActivityPub support for the podcast post type.
+		\add_post_type_support( 'podcast', 'activitypub' );
+
+		\add_filter(
+			'activitypub_transformer',
+			static function ( $transformer, $data, $object_class ) {
+				if (
+					'WP_Post' === $object_class &&
+					'podcast' === $data->post_type &&
+					\Podlove\Model\Episode::find_one_by_post_id( $data->ID )
+				) {
+					return new Podlove_Podcast_Publisher( $data );
+				}
+				return $transformer;
+			},
+			10,
+			3
+		);
+	}
+
+	/**
 	 * Adds Seriously Simple Podcasting support.
 	 *
 	 * This class handles the compatibility with Seriously Simple Podcasting.
@@ -111,7 +139,7 @@ function plugin_init() {
 	if ( \defined( 'SSP_VERSION' ) ) {
 		add_filter(
 			'activitypub_transformer',
-			function ( $transformer, $data, $object_class ) {
+			static function ( $transformer, $data, $object_class ) {
 				if (
 					'WP_Post' === $object_class &&
 					\get_post_meta( $data->ID, 'audio_file', true )

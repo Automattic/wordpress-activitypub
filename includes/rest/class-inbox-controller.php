@@ -29,6 +29,9 @@ use function Activitypub\user_can_activitypub;
  * @see https://www.w3.org/TR/activitypub/#inbox
  */
 class Inbox_Controller extends \WP_REST_Controller {
+	use Verification;
+	use Language_Map;
+
 	/**
 	 * The namespace of this controller's route.
 	 *
@@ -54,7 +57,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'create_item' ),
-					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
+					'permission_callback' => array( $this, 'verify_signature' ),
 					'args'                => array(
 						'id'     => array(
 							'description' => 'The unique identifier for the activity.',
@@ -76,7 +79,8 @@ class Inbox_Controller extends \WP_REST_Controller {
 						'object' => array(
 							'description'       => 'The object of the activity.',
 							'required'          => true,
-							'validate_callback' => function ( $param, $request, $key ) {
+							'sanitize_callback' => array( $this, 'localize_language_maps' ),
+							'validate_callback' => static function ( $param, $request, $key ) {
 								/**
 								 * Filter the ActivityPub object validation.
 								 *
@@ -92,7 +96,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 							'description'       => 'The primary recipients of the activity.',
 							'type'              => array( 'string', 'array' ),
 							'required'          => false,
-							'sanitize_callback' => function ( $param ) {
+							'sanitize_callback' => static function ( $param ) {
 								if ( \is_string( $param ) ) {
 									$param = array( $param );
 								}
@@ -103,7 +107,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 						'cc'     => array(
 							'description'       => 'The secondary recipients of the activity.',
 							'type'              => array( 'string', 'array' ),
-							'sanitize_callback' => function ( $param ) {
+							'sanitize_callback' => static function ( $param ) {
 								if ( \is_string( $param ) ) {
 									$param = array( $param );
 								}
@@ -114,7 +118,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 						'bcc'    => array(
 							'description'       => 'The private recipients of the activity.',
 							'type'              => array( 'string', 'array' ),
-							'sanitize_callback' => function ( $param ) {
+							'sanitize_callback' => static function ( $param ) {
 								if ( \is_string( $param ) ) {
 									$param = array( $param );
 								}
@@ -153,7 +157,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 			 * @param string             $type     The type of the activity.
 			 * @param Activity|\WP_Error $activity The Activity object.
 			 */
-			do_action( 'activitypub_rest_inbox_disallowed', $data, null, $type, $activity );
+			\do_action( 'activitypub_rest_inbox_disallowed', $data, null, $type, $activity );
 		} else {
 			$recipients = $this->get_local_recipients( $data );
 
@@ -368,15 +372,19 @@ class Inbox_Controller extends \WP_REST_Controller {
 	 * @return array An array of user IDs who are the recipients of the activity.
 	 */
 	private function get_local_recipients( $activity ) {
-		// Public activity, deliver to all local ActivityPub users.
+		$user_ids = array();
+
 		if ( is_activity_public( $activity ) ) {
-			return Actors::get_all_ids();
+			$user_ids = Following::get_follower_ids( $activity['actor'] );
 		}
 
 		$recipients = extract_recipients_from_activity( $activity );
-		$user_ids   = array();
 
 		foreach ( $recipients as $recipient ) {
+			// Skip public audience identifiers - they're not actual recipients to fetch.
+			if ( \in_array( $recipient, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS, true ) ) {
+				continue;
+			}
 
 			if ( ! is_same_domain( $recipient ) ) {
 				$collection = Http::get_remote_object( $recipient );
@@ -404,6 +412,15 @@ class Inbox_Controller extends \WP_REST_Controller {
 			}
 
 			$user_ids[] = $user_id;
+		}
+
+		// Check for an Actor in the Object field.
+		if ( empty( $user_ids ) && ! empty( $activity['object'] ) ) {
+			$user_id = Actors::get_id_by_resource( $activity['object'] );
+
+			if ( ! \is_wp_error( $user_id ) && user_can_activitypub( $user_id ) ) {
+				$user_ids[] = $user_id;
+			}
 		}
 
 		return array_unique( array_map( 'intval', $user_ids ) );

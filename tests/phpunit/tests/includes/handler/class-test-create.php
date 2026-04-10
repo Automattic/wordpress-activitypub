@@ -7,9 +7,12 @@
 
 namespace Activitypub\Tests\Handler;
 
-use Activitypub\Collection\Posts;
+use Activitypub\Activity\Activity;
+use Activitypub\Activity\Base_Object;
+use Activitypub\Collection\Remote_Posts;
 use Activitypub\Handler\Create;
 use Activitypub\Post_Types;
+use Activitypub\Tombstone;
 
 /**
  * Test class for Create Handler.
@@ -64,6 +67,7 @@ class Test_Create extends \WP_UnitTestCase {
 			array(
 				'post_author'  => $this->user_id,
 				'post_content' => 'test',
+				'post_status'  => 'publish',
 			)
 		);
 		$this->post_permalink = \get_permalink( $this->post_id );
@@ -340,7 +344,7 @@ class Test_Create extends \WP_UnitTestCase {
 		Create::handle_create( $activity, $this->user_id );
 
 		// Verify the object was created with sanitized content.
-		$created_object = Posts::get_by_guid( 'https://example.com/objects/note_sanitize' );
+		$created_object = Remote_Posts::get_by_guid( 'https://example.com/objects/note_sanitize' );
 
 		$this->assertNotNull( $created_object );
 
@@ -375,7 +379,7 @@ class Test_Create extends \WP_UnitTestCase {
 		// Count objects before.
 		$objects_before = get_posts(
 			array(
-				'post_type'      => Posts::POST_TYPE,
+				'post_type'      => Remote_Posts::POST_TYPE,
 				'post_status'    => 'any',
 				'posts_per_page' => -1,
 			)
@@ -386,7 +390,7 @@ class Test_Create extends \WP_UnitTestCase {
 		// Count objects after.
 		$objects_after = get_posts(
 			array(
-				'post_type'      => Posts::POST_TYPE,
+				'post_type'      => Remote_Posts::POST_TYPE,
 				'post_status'    => 'any',
 				'posts_per_page' => -1,
 			)
@@ -416,7 +420,7 @@ class Test_Create extends \WP_UnitTestCase {
 		// Count objects before.
 		$objects_before = get_posts(
 			array(
-				'post_type'      => Posts::POST_TYPE,
+				'post_type'      => Remote_Posts::POST_TYPE,
 				'post_status'    => 'any',
 				'posts_per_page' => -1,
 			)
@@ -427,7 +431,7 @@ class Test_Create extends \WP_UnitTestCase {
 		// Count objects after.
 		$objects_after = get_posts(
 			array(
-				'post_type'      => Posts::POST_TYPE,
+				'post_type'      => Remote_Posts::POST_TYPE,
 				'post_status'    => 'any',
 				'posts_per_page' => -1,
 			)
@@ -435,5 +439,401 @@ class Test_Create extends \WP_UnitTestCase {
 
 		// Should not create objects with malformed data.
 		$this->assertEquals( count( $objects_before ), count( $objects_after ) );
+	}
+
+	/**
+	 * Test create_post returns false when activitypub_create_posts option is disabled.
+	 *
+	 * @covers ::create_post
+	 */
+	public function test_create_post_disabled_by_option() {
+		// Ensure option is not set.
+		\delete_option( 'activitypub_create_posts' );
+
+		// Mock HTTP request for Remote_Actors::fetch_by_uri.
+		$mock_callback = function ( $pre, $url_or_object ) {
+			$url = \Activitypub\object_to_uri( $url_or_object );
+			if ( 'https://example.com/users/testuser' === $url ) {
+				return array(
+					'id'                => 'https://example.com/users/testuser',
+					'type'              => 'Person',
+					'name'              => 'Test Actor',
+					'preferredUsername' => 'testuser',
+					'url'               => 'https://example.com/users/testuser',
+					'inbox'             => 'https://example.com/users/testuser/inbox',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_callback, 10, 2 );
+
+		$activity = array(
+			'id'     => 'https://example.com/activities/create_disabled',
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/users/testuser',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'id'           => 'https://example.com/objects/note_disabled',
+				'type'         => 'Note',
+				'content'      => '<p>This should not be created</p>',
+				'attributedTo' => 'https://example.com/users/testuser',
+				'published'    => '2023-01-01T12:00:00Z',
+				'to'           => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			),
+		);
+
+		$result = Create::create_post( $activity, array( $this->user_id ) );
+
+		$this->assertFalse( $result );
+
+		// Verify no post was created.
+		$created_object = Remote_Posts::get_by_guid( 'https://example.com/objects/note_disabled' );
+		$this->assertTrue( \is_wp_error( $created_object ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_callback );
+	}
+
+	/**
+	 * Test create_post works when activitypub_create_posts option is enabled.
+	 *
+	 * @covers ::create_post
+	 */
+	public function test_create_post_enabled_by_option() {
+		// Enable the option.
+		\update_option( 'activitypub_create_posts', '1' );
+
+		// Mock HTTP request for Remote_Actors::fetch_by_uri.
+		$mock_callback = function ( $pre, $url_or_object ) {
+			$url = \Activitypub\object_to_uri( $url_or_object );
+			if ( 'https://example.com/users/testuser2' === $url ) {
+				return array(
+					'id'                => 'https://example.com/users/testuser2',
+					'type'              => 'Person',
+					'name'              => 'Test Actor 2',
+					'preferredUsername' => 'testuser2',
+					'url'               => 'https://example.com/users/testuser2',
+					'inbox'             => 'https://example.com/users/testuser2/inbox',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_callback, 10, 2 );
+
+		$activity = array(
+			'id'     => 'https://example.com/activities/create_enabled',
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/users/testuser2',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'id'           => 'https://example.com/objects/note_enabled',
+				'type'         => 'Note',
+				'content'      => '<p>This should be created</p>',
+				'attributedTo' => 'https://example.com/users/testuser2',
+				'published'    => '2023-01-01T12:00:00Z',
+				'to'           => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			),
+		);
+
+		$result = Create::create_post( $activity, array( $this->user_id ) );
+
+		$this->assertInstanceOf( 'WP_Post', $result );
+
+		// Verify post was created.
+		$created_object = Remote_Posts::get_by_guid( 'https://example.com/objects/note_enabled' );
+		$this->assertNotNull( $created_object );
+		$this->assertStringContainsString( 'This should be created', $created_object->post_content );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_callback );
+		\delete_option( 'activitypub_create_posts' );
+	}
+
+	/**
+	 * Test that replies to non-existent posts return false.
+	 *
+	 * @covers \Activitypub\Collection\Interactions::add_comment
+	 */
+	public function test_reply_to_non_existent_post_returns_false() {
+		$object = array(
+			'actor'  => $this->user_url,
+			'type'   => 'Create',
+			'id'     => 'https://example.com/id/' . microtime( true ),
+			'to'     => array( $this->user_url ),
+			'cc'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'id'        => 'https://example.com/reply/123',
+				'url'       => 'https://example.com/reply/123',
+				'inReplyTo' => 'https://non-existent-site.example/post/999',
+				'content'   => 'Reply to non-existent post',
+			),
+		);
+
+		$result = Create::handle_create( $object, $this->user_id );
+
+		$this->assertNull( $result );
+
+		// Verify no comment was created.
+		$args = array(
+			'type'   => 'comment',
+			'status' => 'any',
+		);
+
+		$query    = new \WP_Comment_Query( $args );
+		$comments = $query->comments;
+
+		// Filter to check for our specific comment.
+		$found = array_filter(
+			$comments,
+			function ( $comment ) {
+				return 'Reply to non-existent post' === $comment->comment_content;
+			}
+		);
+
+		$this->assertEmpty( $found );
+	}
+
+	/**
+	 * Test maybe_unbury removes URL from tombstone registry for Create activity.
+	 *
+	 * @covers ::maybe_unbury
+	 */
+	public function test_maybe_unbury_removes_url_for_create_activity() {
+		$object_url = 'https://example.com/posts/unbury-create-' . time();
+
+		// First, bury the URL.
+		Tombstone::bury( $object_url );
+		$this->assertTrue( Tombstone::exists_local( $object_url ) );
+
+		// Create a mock activity object.
+		$object = new Base_Object();
+		$object->set_id( $object_url );
+		$object->set_url( $object_url );
+		$object->set_type( 'Note' );
+
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_object( $object );
+
+		// Trigger maybe_unbury.
+		Create::maybe_unbury( 1, $activity );
+
+		// Verify URL was removed from tombstone registry.
+		$this->assertFalse( Tombstone::exists_local( $object_url ) );
+	}
+
+	/**
+	 * Test maybe_unbury removes URL from tombstone registry for Update activity.
+	 *
+	 * @covers ::maybe_unbury
+	 */
+	public function test_maybe_unbury_removes_url_for_update_activity() {
+		$object_url = 'https://example.com/posts/unbury-update-' . time();
+
+		// First, bury the URL.
+		Tombstone::bury( $object_url );
+		$this->assertTrue( Tombstone::exists_local( $object_url ) );
+
+		// Create a mock activity object.
+		$object = new Base_Object();
+		$object->set_id( $object_url );
+		$object->set_url( $object_url );
+		$object->set_type( 'Note' );
+
+		$activity = new Activity();
+		$activity->set_type( 'Update' );
+		$activity->set_object( $object );
+
+		// Trigger maybe_unbury.
+		Create::maybe_unbury( 1, $activity );
+
+		// Verify URL was removed from tombstone registry.
+		$this->assertFalse( Tombstone::exists_local( $object_url ) );
+	}
+
+	/**
+	 * Test maybe_unbury ignores non-Create/Update activities.
+	 *
+	 * @covers ::maybe_unbury
+	 */
+	public function test_maybe_unbury_ignores_other_activities() {
+		$object_url = 'https://example.com/posts/unbury-ignore-' . time();
+
+		// First, bury the URL.
+		Tombstone::bury( $object_url );
+		$this->assertTrue( Tombstone::exists_local( $object_url ) );
+
+		// Create a mock activity object.
+		$object = new Base_Object();
+		$object->set_id( $object_url );
+		$object->set_url( $object_url );
+		$object->set_type( 'Note' );
+
+		// Test with Delete activity.
+		$activity = new Activity();
+		$activity->set_type( 'Delete' );
+		$activity->set_object( $object );
+
+		Create::maybe_unbury( 1, $activity );
+
+		// URL should still be in tombstone registry.
+		$this->assertTrue( Tombstone::exists_local( $object_url ) );
+
+		// Test with Announce activity.
+		$activity->set_type( 'Announce' );
+		Create::maybe_unbury( 1, $activity );
+
+		// URL should still be in tombstone registry.
+		$this->assertTrue( Tombstone::exists_local( $object_url ) );
+
+		// Clean up.
+		\delete_option( 'activitypub_tombstone_urls' );
+	}
+
+	/**
+	 * Test maybe_unbury handles activity with null object.
+	 *
+	 * @covers ::maybe_unbury
+	 */
+	public function test_maybe_unbury_handles_null_object() {
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		// Object is null/not set.
+
+		// This should not throw any errors.
+		Create::maybe_unbury( 1, $activity );
+
+		// Just verify no exception was thrown.
+		$this->assertTrue( true );
+	}
+
+	/**
+	 * Test maybe_unbury removes both ID and URL when they differ.
+	 *
+	 * @covers ::maybe_unbury
+	 */
+	public function test_maybe_unbury_removes_both_id_and_url() {
+		$object_id  = 'https://example.com/posts/id-unbury-' . time();
+		$object_url = 'https://example.com/@user/posts/url-unbury-' . time();
+
+		// Bury both URLs.
+		Tombstone::bury( $object_id );
+		Tombstone::bury( $object_url );
+		$this->assertTrue( Tombstone::exists_local( $object_id ) );
+		$this->assertTrue( Tombstone::exists_local( $object_url ) );
+
+		$object = new Base_Object();
+		$object->set_id( $object_id );
+		$object->set_url( $object_url );
+		$object->set_type( 'Note' );
+
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_object( $object );
+
+		Create::maybe_unbury( 1, $activity );
+
+		// Both ID and URL should be removed from tombstone registry.
+		$this->assertFalse( Tombstone::exists_local( $object_id ) );
+		$this->assertFalse( Tombstone::exists_local( $object_url ) );
+	}
+
+	/**
+	 * Test soft delete to re-federate lifecycle.
+	 *
+	 * This tests the complete cycle of:
+	 * 1. Burying a URL when Delete activity is sent (soft delete)
+	 * 2. Unburying the URL when Create/Update activity is sent (re-federate)
+	 *
+	 * @covers ::maybe_unbury
+	 */
+	public function test_soft_delete_refederate_lifecycle() {
+		$object_url = 'https://example.com/posts/lifecycle-' . time();
+
+		$object = new Base_Object();
+		$object->set_id( $object_url );
+		$object->set_url( $object_url );
+		$object->set_type( 'Note' );
+
+		// Step 1: Simulate soft delete (Delete activity sent).
+		$delete_activity = new Activity();
+		$delete_activity->set_type( 'Delete' );
+		$delete_activity->set_object( $object );
+
+		\Activitypub\Handler\Delete::maybe_bury( 1, $delete_activity );
+
+		// URL should be in tombstone registry.
+		$this->assertTrue( Tombstone::exists_local( $object_url ), 'URL should be tombstoned after Delete' );
+
+		// Step 2: Simulate re-federation (Update activity sent).
+		$update_activity = new Activity();
+		$update_activity->set_type( 'Update' );
+		$update_activity->set_object( $object );
+
+		Create::maybe_unbury( 2, $update_activity );
+
+		// URL should be removed from tombstone registry.
+		$this->assertFalse( Tombstone::exists_local( $object_url ), 'URL should not be tombstoned after Update' );
+
+		// Step 3: Soft delete again.
+		\Activitypub\Handler\Delete::maybe_bury( 3, $delete_activity );
+		$this->assertTrue( Tombstone::exists_local( $object_url ), 'URL should be tombstoned again after second Delete' );
+
+		// Step 4: Re-federate with Create.
+		$create_activity = new Activity();
+		$create_activity->set_type( 'Create' );
+		$create_activity->set_object( $object );
+
+		Create::maybe_unbury( 4, $create_activity );
+		$this->assertFalse( Tombstone::exists_local( $object_url ), 'URL should not be tombstoned after Create' );
+
+		// Clean up.
+		\delete_option( 'activitypub_tombstone_urls' );
+	}
+
+	/**
+	 * Test Create handler with JSON fixtures from data/create/.
+	 *
+	 * Drop a JSON file into tests/phpunit/data/create/ and it will be
+	 * automatically picked up. Use `{{LOCAL_POST_URL}}` as a placeholder
+	 * in `inReplyTo` to target the local test post.
+	 *
+	 * @dataProvider create_fixture_provider
+	 * @covers ::handle_create
+	 *
+	 * @param string $path The path to the fixture JSON file.
+	 */
+	public function test_handle_create_from_fixture( $path ) {
+		$json = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		$json = str_replace( '{{LOCAL_POST_URL}}', $this->post_permalink, $json );
+
+		$activity = json_decode( $json, true );
+
+		Create::handle_create( $activity, $this->user_id );
+
+		$comments = ( new \WP_Comment_Query(
+			array(
+				'type'    => 'comment',
+				'post_id' => $this->post_id,
+			)
+		) )->comments;
+
+		$this->assertCount( 1, $comments );
+		$this->assertInstanceOf( 'WP_Comment', $comments[0] );
+		$this->assertStringContainsString( \wp_strip_all_tags( $activity['object']['content'] ), \wp_strip_all_tags( $comments[0]->comment_content ) );
+	}
+
+	/**
+	 * Data provider that discovers JSON fixture files in data/create/.
+	 *
+	 * @return array Array of [ path ] arrays, keyed by fixture name.
+	 */
+	public function create_fixture_provider() {
+		$files    = glob( AP_TESTS_DIR . '/data/create/*.json' );
+		$fixtures = array();
+
+		foreach ( $files as $path ) {
+			$fixtures[ basename( $path, '.json' ) ] = array( $path );
+		}
+
+		return $fixtures;
 	}
 }

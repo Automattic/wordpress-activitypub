@@ -458,19 +458,52 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	 * @covers ::get_local_recipients
 	 */
 	public function test_get_local_recipients_no_recipients() {
+		// Enable actor mode to allow user actors.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		// Create a remote actor and make a user follow them.
+		$remote_actor_url = 'https://example.com/actor/no-recipients';
+
+		// Mock the remote actor fetch.
+		$remote_object_filter = function ( $pre, $url ) use ( $remote_actor_url ) {
+			if ( $url === $remote_actor_url ) {
+				return array(
+					'@context'          => 'https://www.w3.org/ns/activitystreams',
+					'id'                => $remote_actor_url,
+					'type'              => 'Person',
+					'preferredUsername' => 'testactor',
+					'name'              => 'Test Actor',
+					'inbox'             => 'https://example.com/actor/1/inbox',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter, 10, 2 );
+
+		$remote_actor = \Activitypub\Collection\Remote_Actors::fetch_by_uri( $remote_actor_url );
+
+		// Make test user follow the remote actor.
+		\add_post_meta( $remote_actor->ID, '_activitypub_followed_by', self::$user_id );
+
 		$activity = array(
-			'type' => 'Create',
+			'type'  => 'Create',
+			'actor' => $remote_actor_url,
 		);
 
 		// Use reflection to test the private method.
 		$reflection = new \ReflectionClass( $this->inbox_controller );
 		$method     = $reflection->getMethod( 'get_local_recipients' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$result = $method->invoke( $this->inbox_controller, $activity );
-		// Activities with no recipients are treated as public and delivered to all local actors.
-		$this->assertNotEmpty( $result, 'Should return all local actors when no recipients (treated as public)' );
-		$this->assertEquals( Actors::get_all_ids(), $result, 'Should match all local actor IDs' );
+		// Activities with no recipients are treated as private per spec.
+		$this->assertEmpty( $result, 'Should return no recipients when no addressing is specified' );
+
+		// Clean up.
+		\delete_option( 'activitypub_actor_mode' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
 	}
 
 	/**
@@ -480,15 +513,18 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	 */
 	public function test_get_local_recipients_external_only() {
 		$activity = array(
-			'type' => 'Create',
-			'to'   => array( 'https://external.example.com/user/123' ),
-			'cc'   => array( 'https://another.example.com/user/456' ),
+			'type'   => 'Create',
+			'object' => 'https://external.example.com/post/123',
+			'to'     => array( 'https://external.example.com/user/123' ),
+			'cc'     => array( 'https://another.example.com/user/456' ),
 		);
 
 		// Use reflection to test the private method.
 		$reflection = new \ReflectionClass( $this->inbox_controller );
 		$method     = $reflection->getMethod( 'get_local_recipients' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$result = $method->invoke( $this->inbox_controller, $activity );
 		$this->assertEmpty( $result, 'Should return empty array for external recipients only' );
@@ -513,7 +549,9 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		// Use reflection to test the private method.
 		$reflection = new \ReflectionClass( $this->inbox_controller );
 		$method     = $reflection->getMethod( 'get_local_recipients' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$result = $method->invoke( $this->inbox_controller, $activity );
 		$this->assertContains( self::$user_id, $result, 'Should contain local user ID' );
@@ -527,18 +565,21 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	 */
 	public function test_get_local_recipients_with_malformed_urls() {
 		$activity = array(
-			'type' => 'Create',
-			'to'   => array(
+			'type'   => 'Create',
+			'object' => 'https://external.example.com/post/123',
+			'to'     => array(
 				'not-a-valid-url',
 				get_home_url() . '/invalid-actor-path',
 			),
-			'cc'   => array(),
+			'cc'     => array(),
 		);
 
 		// Use reflection to test the private method.
 		$reflection = new \ReflectionClass( $this->inbox_controller );
 		$method     = $reflection->getMethod( 'get_local_recipients' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$result = $method->invoke( $this->inbox_controller, $activity );
 		$this->assertEmpty( $result, 'Should handle malformed URLs gracefully' );
@@ -580,10 +621,10 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$remote_actor = \Activitypub\Collection\Remote_Actors::fetch_by_uri( $remote_actor_url );
 
 		// Make users follow the remote actor.
-		\add_post_meta( $remote_actor->ID, '_activitypub_followers', self::$user_id );
-		\add_post_meta( $remote_actor->ID, '_activitypub_followers', $user_id_1 );
-		\add_post_meta( $remote_actor->ID, '_activitypub_followers', $user_id_2 );
-		\add_post_meta( $remote_actor->ID, '_activitypub_followers', $user_id_3 );
+		\add_post_meta( $remote_actor->ID, '_activitypub_followed_by', self::$user_id );
+		\add_post_meta( $remote_actor->ID, '_activitypub_followed_by', $user_id_1 );
+		\add_post_meta( $remote_actor->ID, '_activitypub_followed_by', $user_id_2 );
+		\add_post_meta( $remote_actor->ID, '_activitypub_followed_by', $user_id_3 );
 
 		// Public activity with "to" containing the public collection.
 		$activity = array(
@@ -596,7 +637,9 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		// Use reflection to test the private method.
 		$reflection = new \ReflectionClass( $this->inbox_controller );
 		$method     = $reflection->getMethod( 'get_local_recipients' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$result = $method->invoke( $this->inbox_controller, $activity );
 
@@ -651,8 +694,8 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$remote_actor = \Activitypub\Collection\Remote_Actors::fetch_by_uri( $remote_actor_url );
 
 		// Make users follow the remote actor.
-		\add_post_meta( $remote_actor->ID, '_activitypub_followers', self::$user_id );
-		\add_post_meta( $remote_actor->ID, '_activitypub_followers', $user_id );
+		\add_post_meta( $remote_actor->ID, '_activitypub_followed_by', self::$user_id );
+		\add_post_meta( $remote_actor->ID, '_activitypub_followed_by', $user_id );
 
 		// Public activity with "cc" containing the public collection.
 		$activity = array(
@@ -665,7 +708,9 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		// Use reflection to test the private method.
 		$reflection = new \ReflectionClass( $this->inbox_controller );
 		$method     = $reflection->getMethod( 'get_local_recipients' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$result = $method->invoke( $this->inbox_controller, $activity );
 
@@ -889,6 +934,442 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
 		\remove_action( 'activitypub_inbox', $inbox_action );
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * Test get_local_recipients combines followers and explicit recipients for public activities.
+	 *
+	 * @covers ::get_local_recipients
+	 */
+	public function test_get_local_recipients_public_activity_with_explicit_recipients() {
+		// Enable actor mode to allow user actors.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		// Create test users (authors have activitypub capability by default).
+		$follower_user_id  = self::factory()->user->create( array( 'role' => 'author' ) );
+		$mentioned_user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		// Get actor IDs.
+		$mentioned_actor    = Actors::get_by_id( $mentioned_user_id );
+		$mentioned_actor_id = $mentioned_actor->get_id();
+
+		// Create a remote actor and make follower_user follow them.
+		$remote_actor_url = 'https://example.com/actor/combined-test';
+
+		// Mock the remote actor fetch.
+		$remote_object_filter = function ( $pre, $url ) use ( $remote_actor_url ) {
+			if ( $url === $remote_actor_url ) {
+				return array(
+					'@context'          => 'https://www.w3.org/ns/activitystreams',
+					'id'                => $remote_actor_url,
+					'type'              => 'Person',
+					'preferredUsername' => 'testactor',
+					'name'              => 'Test Actor',
+					'inbox'             => 'https://example.com/actor/combined-test/inbox',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter, 10, 2 );
+
+		$remote_actor = \Activitypub\Collection\Remote_Actors::fetch_by_uri( $remote_actor_url );
+
+		// Make follower_user follow the remote actor.
+		\add_post_meta( $remote_actor->ID, '_activitypub_followed_by', $follower_user_id );
+
+		// Public activity that explicitly addresses mentioned_user (who is NOT a follower).
+		$activity = array(
+			'type'  => 'Create',
+			'actor' => $remote_actor_url,
+			'to'    => array(
+				'https://www.w3.org/ns/activitystreams#Public',
+				$mentioned_actor_id,
+			),
+		);
+
+		// Use reflection to test the private method.
+		$reflection = new \ReflectionClass( $this->inbox_controller );
+		$method     = $reflection->getMethod( 'get_local_recipients' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$result = $method->invoke( $this->inbox_controller, $activity );
+
+		// Should return BOTH the follower AND the explicitly mentioned user.
+		$this->assertNotEmpty( $result, 'Should return recipients for public activity with explicit addressing' );
+		$this->assertContains( $follower_user_id, $result, 'Should contain follower' );
+		$this->assertContains( $mentioned_user_id, $result, 'Should contain explicitly mentioned user' );
+
+		// Verify no duplicates if someone is both a follower and explicitly mentioned.
+		$this->assertEquals( count( $result ), count( array_unique( $result ) ), 'Should not contain duplicate user IDs' );
+
+		// Clean up.
+		\delete_option( 'activitypub_actor_mode' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
+	}
+
+	/**
+	 * Test get_local_recipients deduplicates when user is both follower and explicit recipient.
+	 *
+	 * @covers ::get_local_recipients
+	 */
+	public function test_get_local_recipients_deduplicates_follower_and_explicit() {
+		// Enable actor mode to allow user actors.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		// Create test user (author has activitypub capability by default).
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		// Get actor ID.
+		$user_actor    = Actors::get_by_id( $user_id );
+		$user_actor_id = $user_actor->get_id();
+
+		// Create a remote actor and make user follow them.
+		$remote_actor_url = 'https://example.com/actor/dedup-test';
+
+		// Mock the remote actor fetch.
+		$remote_object_filter = function ( $pre, $url ) use ( $remote_actor_url ) {
+			if ( $url === $remote_actor_url ) {
+				return array(
+					'@context'          => 'https://www.w3.org/ns/activitystreams',
+					'id'                => $remote_actor_url,
+					'type'              => 'Person',
+					'preferredUsername' => 'testactor',
+					'name'              => 'Test Actor',
+					'inbox'             => 'https://example.com/actor/dedup-test/inbox',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter, 10, 2 );
+
+		$remote_actor = \Activitypub\Collection\Remote_Actors::fetch_by_uri( $remote_actor_url );
+
+		// Make user follow the remote actor.
+		\add_post_meta( $remote_actor->ID, '_activitypub_followed_by', $user_id );
+
+		// Public activity that ALSO explicitly addresses the same user.
+		$activity = array(
+			'type'  => 'Create',
+			'actor' => $remote_actor_url,
+			'to'    => array(
+				'https://www.w3.org/ns/activitystreams#Public',
+				$user_actor_id,  // User is both follower AND explicitly addressed.
+			),
+		);
+
+		// Use reflection to test the private method.
+		$reflection = new \ReflectionClass( $this->inbox_controller );
+		$method     = $reflection->getMethod( 'get_local_recipients' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$result = $method->invoke( $this->inbox_controller, $activity );
+
+		// Should return the user only once (no duplicates).
+		$this->assertContains( $user_id, $result, 'Should contain user' );
+
+		// Count occurrences of user_id in result.
+		$occurrences = count( array_keys( $result, $user_id, true ) );
+		$this->assertEquals( 1, $occurrences, 'User should appear exactly once in result' );
+
+		// Clean up.
+		\delete_option( 'activitypub_actor_mode' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
+	}
+
+	/**
+	 * Test get_local_recipients for non-public activity with followers.
+	 *
+	 * @covers ::get_local_recipients
+	 */
+	public function test_get_local_recipients_non_public_activity_ignores_followers() {
+		// Enable actor mode to allow user actors.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		// Create test users.
+		$follower_user_id  = self::factory()->user->create( array( 'role' => 'author' ) );
+		$mentioned_user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		// Get actor ID for mentioned user.
+		$mentioned_actor    = Actors::get_by_id( $mentioned_user_id );
+		$mentioned_actor_id = $mentioned_actor->get_id();
+
+		// Create a remote actor and make follower_user follow them.
+		$remote_actor_url = 'https://example.com/actor/non-public-test';
+
+		// Mock the remote actor fetch.
+		$remote_object_filter = function ( $pre, $url ) use ( $remote_actor_url ) {
+			if ( $url === $remote_actor_url ) {
+				return array(
+					'@context'          => 'https://www.w3.org/ns/activitystreams',
+					'id'                => $remote_actor_url,
+					'type'              => 'Person',
+					'preferredUsername' => 'testactor',
+					'name'              => 'Test Actor',
+					'inbox'             => 'https://example.com/actor/non-public-test/inbox',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter, 10, 2 );
+
+		$remote_actor = \Activitypub\Collection\Remote_Actors::fetch_by_uri( $remote_actor_url );
+
+		// Make follower_user follow the remote actor.
+		\add_post_meta( $remote_actor->ID, '_activitypub_followed_by', $follower_user_id );
+
+		// Non-public activity (direct message) that explicitly addresses only mentioned_user.
+		$activity = array(
+			'type'  => 'Create',
+			'actor' => $remote_actor_url,
+			'to'    => array( $mentioned_actor_id ),  // Only mentioned user, NOT public.
+		);
+
+		// Use reflection to test the private method.
+		$reflection = new \ReflectionClass( $this->inbox_controller );
+		$method     = $reflection->getMethod( 'get_local_recipients' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$result = $method->invoke( $this->inbox_controller, $activity );
+
+		// Should return ONLY the mentioned user, NOT the follower.
+		$this->assertNotEmpty( $result, 'Should return explicitly addressed recipient' );
+		$this->assertContains( $mentioned_user_id, $result, 'Should contain mentioned user' );
+		$this->assertNotContains( $follower_user_id, $result, 'Should NOT contain follower for non-public activity' );
+
+		// Clean up.
+		\delete_option( 'activitypub_actor_mode' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
+	}
+
+	/**
+	 * Test get_local_recipients for Follow activity without audience fields.
+	 *
+	 * Some ActivityPub implementations like Pixelfed do not set audience fields
+	 * (to/cc/bcc) for Follow activities, even when sent to the shared inbox.
+	 * The recipient should be determined from the object field instead.
+	 *
+	 * @covers ::get_local_recipients
+	 */
+	public function test_get_local_recipients_follow_without_audience() {
+		// Enable actor mode to allow user actors.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		// Get actor ID for the test user.
+		$user_actor    = Actors::get_by_id( self::$user_id );
+		$user_actor_id = $user_actor->get_id();
+
+		// Follow activity without any audience fields (to/cc/bcc).
+		// The object field contains the actor being followed.
+		$activity = array(
+			'id'     => 'https://pixelfed.example/follow/123',
+			'type'   => 'Follow',
+			'actor'  => 'https://pixelfed.example/users/remoteuser',
+			'object' => $user_actor_id,
+		);
+
+		// Use reflection to test the private method.
+		$reflection = new \ReflectionClass( $this->inbox_controller );
+		$method     = $reflection->getMethod( 'get_local_recipients' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$result = $method->invoke( $this->inbox_controller, $activity );
+
+		// Should return the user from the object field.
+		$this->assertNotEmpty( $result, 'Should return recipient from object field when no audience' );
+		$this->assertContains( self::$user_id, $result, 'Should contain user referenced in object field' );
+
+		// Clean up.
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * Test get_local_recipients skips public audience identifiers without fetching them.
+	 *
+	 * This tests the fix for issue #2793 where public audience identifiers like
+	 * https://www.w3.org/ns/activitystreams#Public were being passed to Http::get_remote_object(),
+	 * causing unnecessary HTTP requests to the W3C namespace URL.
+	 *
+	 * @covers ::get_local_recipients
+	 */
+	public function test_get_local_recipients_skips_public_audience_identifiers() {
+		// Enable actor mode to allow user actors.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		// Track which URLs are being fetched.
+		$fetched_urls = array();
+
+		$track_fetches = function ( $pre, $url ) use ( &$fetched_urls ) {
+			$fetched_urls[] = $url;
+			// Return WP_Error for non-local URLs to simulate failed fetch.
+			return new \WP_Error( 'test', 'Simulated error' );
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 10, 2 );
+
+		// Activity with multiple public audience identifiers that should all be skipped.
+		$activity = array(
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/actor/test',
+			'object' => 'https://example.com/post/123',
+			'to'     => array(
+				'https://www.w3.org/ns/activitystreams#Public',
+				'as:Public',
+			),
+			'cc'     => array(
+				'Public',
+				'https://example.com/actor/test/followers',
+			),
+		);
+
+		// Use reflection to test the private method.
+		$reflection = new \ReflectionClass( $this->inbox_controller );
+		$method     = $reflection->getMethod( 'get_local_recipients' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$method->invoke( $this->inbox_controller, $activity );
+
+		// Verify that public audience identifiers were NOT fetched.
+		$this->assertNotContains(
+			'https://www.w3.org/ns/activitystreams#Public',
+			$fetched_urls,
+			'Should NOT fetch https://www.w3.org/ns/activitystreams#Public'
+		);
+		$this->assertNotContains(
+			'as:Public',
+			$fetched_urls,
+			'Should NOT fetch as:Public'
+		);
+		$this->assertNotContains(
+			'Public',
+			$fetched_urls,
+			'Should NOT fetch Public'
+		);
+
+		// Verify that other external URLs ARE still fetched (like the followers collection).
+		$this->assertContains(
+			'https://example.com/actor/test/followers',
+			$fetched_urls,
+			'Should still fetch legitimate external URLs'
+		);
+
+		// Clean up.
+		\delete_option( 'activitypub_actor_mode' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $track_fetches );
+	}
+
+	/**
+	 * Test that language maps in the object are normalized by the sanitize callback.
+	 *
+	 * Verifies that the Language_Map trait's sanitize_callback on the `object`
+	 * arg resolves language maps to plain strings before activity processing.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_language_map_normalization_in_inbox() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		$locale_callback = function () {
+			return 'de_DE';
+		};
+		\add_filter( 'locale', $locale_callback );
+
+		$captured_data = null;
+
+		$capture_action = function ( $data ) use ( &$captured_data ) {
+			$captured_data = $data;
+		};
+		\add_action( 'activitypub_inbox_shared', $capture_action, 10, 1 );
+
+		$json = array(
+			'id'     => 'https://remote.example/@id-langmap',
+			'type'   => 'Create',
+			'actor'  => 'https://remote.example/@test',
+			'object' => array(
+				'id'         => 'https://remote.example/post/langmap',
+				'type'       => 'Note',
+				'content'    => 'Hello',
+				'contentMap' => array(
+					'en' => 'Hello',
+					'de' => 'Hallo',
+				),
+				'summary'    => 'English summary',
+				'summaryMap' => array(
+					'en' => 'English summary',
+					'de' => 'Deutsche Zusammenfassung',
+				),
+				'published'  => '2020-01-01T00:00:00Z',
+			),
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $json ) );
+
+		$response = \rest_do_request( $request );
+		$this->assertEquals( 202, $response->get_status() );
+
+		/* Verify the object was normalized before reaching the hook. */
+		$this->assertNotNull( $captured_data, 'Shared inbox action should have fired.' );
+		$this->assertSame( 'Hallo', $captured_data['object']['content'], 'Language map in content should resolve to site locale.' );
+		$this->assertSame( 'Deutsche Zusammenfassung', $captured_data['object']['summary'], 'summaryMap should resolve to site locale.' );
+
+		\remove_filter( 'locale', $locale_callback );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\remove_action( 'activitypub_inbox_shared', $capture_action );
+	}
+
+	/**
+	 * Test Follow request without audience fields via REST endpoint.
+	 *
+	 * This simulates how Pixelfed sends Follow activities to the shared inbox
+	 * without setting audience fields.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_follow_request_without_audience_via_rest() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		// Get actor ID for the test user.
+		$user_actor    = Actors::get_by_id( self::$user_id );
+		$user_actor_id = $user_actor->get_id();
+
+		// Set up mock action.
+		$inbox_action = new \MockAction();
+		\add_action( 'activitypub_inbox', array( $inbox_action, 'action' ) );
+
+		// Follow activity without any audience fields - simulating Pixelfed behavior.
+		$json = array(
+			'@context' => 'https://www.w3.org/ns/activitystreams',
+			'id'       => 'https://pixelfed.example/follow/456',
+			'type'     => 'Follow',
+			'actor'    => 'https://pixelfed.example/users/remoteuser',
+			'object'   => $user_actor_id,
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $json ) );
+
+		$response = \rest_do_request( $request );
+		$this->assertEquals( 202, $response->get_status() );
+
+		// Verify the action was triggered for the user.
+		$this->assertGreaterThanOrEqual( 1, $inbox_action->get_call_count(), 'activitypub_inbox hook should be called' );
+
+		// Clean up.
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\remove_action( 'activitypub_inbox', array( $inbox_action, 'action' ) );
 		\delete_option( 'activitypub_actor_mode' );
 	}
 }

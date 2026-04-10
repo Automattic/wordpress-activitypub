@@ -213,34 +213,6 @@ class Followers extends \WP_List_Table {
 	}
 
 	/**
-	 * Get columns.
-	 *
-	 * @return array
-	 */
-	public function get_columns() {
-		return array(
-			'cb'         => '<input type="checkbox" />',
-			'username'   => \esc_html__( 'Username', 'activitypub' ),
-			'post_title' => \esc_html__( 'Name', 'activitypub' ),
-			'webfinger'  => \esc_html__( 'Profile', 'activitypub' ),
-			'modified'   => \esc_html__( 'Last updated', 'activitypub' ),
-		);
-	}
-
-	/**
-	 * Returns sortable columns.
-	 *
-	 * @return array
-	 */
-	public function get_sortable_columns() {
-		return array(
-			'username'   => array( 'username', true ),
-			'post_title' => array( 'post_title', true ),
-			'modified'   => array( 'modified', false ),
-		);
-	}
-
-	/**
 	 * Prepare items.
 	 */
 	public function prepare_items() {
@@ -286,7 +258,7 @@ class Followers extends \WP_List_Table {
 				'post_title' => $actor->get_name() ?: $actor->get_preferred_username(),
 				'username'   => $actor->get_preferred_username(),
 				'url'        => object_to_uri( $actor->get_url() ?: $actor->get_id() ),
-				'webfinger'  => Remote_Actors::get_acct( $follower->ID ),
+				'webfinger'  => $actor->get_webfinger(),
 				'identifier' => $actor->get_id(),
 				'modified'   => $follower->post_modified_gmt,
 			);
@@ -337,21 +309,6 @@ class Followers extends \WP_List_Table {
 			'delete' => \__( 'Delete', 'activitypub' ),
 			'block'  => \__( 'Block', 'activitypub' ),
 		);
-	}
-
-	/**
-	 * Column default.
-	 *
-	 * @param array  $item        Item.
-	 * @param string $column_name Column name.
-	 * @return string
-	 */
-	public function column_default( $item, $column_name ) {
-		if ( ! array_key_exists( $column_name, $item ) ) {
-			return \esc_html__( 'None', 'activitypub' );
-		}
-
-		return \esc_html( $item[ $column_name ] );
 	}
 
 	/**

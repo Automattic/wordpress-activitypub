@@ -184,7 +184,7 @@ class Replies_Controller extends \WP_REST_Controller {
 	 */
 	public function get_shares( $request, $wp_object ) {
 		if ( $wp_object instanceof \WP_Post ) {
-			$shares = Interactions::count_by_type( $wp_object->ID, 'repost' );
+			$shares = Interactions::count_by_type( $wp_object->ID, 'repost' ) + Interactions::count_by_type( $wp_object->ID, 'quote' );
 		} else {
 			$shares = 0;
 		}

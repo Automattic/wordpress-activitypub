@@ -64,14 +64,16 @@ class Test_Replies extends \WP_UnitTestCase {
 	 * @covers ::get_context_collection
 	 */
 	public function test_get_context_collection() {
-		// Create a test post.
+		// Create a test post without federating it (to test disabled post behavior).
+		\remove_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ), 33 );
 		$context_post_id = self::factory()->post->create(
 			array(
 				'post_author' => 1,
 			)
 		);
+		\add_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ), 33, 4 );
 
-		// Test with disabled post.
+		// Test with disabled post (not previously federated).
 		add_post_meta( $context_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
 		$this->assertFalse( Replies::get_context_collection( $context_post_id ), 'Should return false for disabled posts' );
 		delete_post_meta( $context_post_id, 'activitypub_content_visibility' );
@@ -94,7 +96,7 @@ class Test_Replies extends \WP_UnitTestCase {
 				'comment_content'  => 'Local comment',
 				'comment_approved' => '1',
 				'comment_meta'     => array(
-					'activitypub_status' => 'federated',
+					'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_FEDERATED,
 				),
 			)
 		);
@@ -151,7 +153,7 @@ class Test_Replies extends \WP_UnitTestCase {
 
 		$context = Replies::get_context_collection( $context_post_id );
 
-		$this->assertSame( \get_author_posts_url( Actors::BLOG_USER_ID ), $context['attributedTo'] );
+		$this->assertSame( Actors::get_by_id( Actors::BLOG_USER_ID )->get_id(), $context['attributedTo'] );
 
 		\delete_option( 'activitypub_actor_mode' );
 	}

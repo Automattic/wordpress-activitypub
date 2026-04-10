@@ -2,9 +2,9 @@ import { getContext, store, getElement } from '@wordpress/interactivity';
 
 /**
  * @typedef {Object} context
- * @property {String} blockId - The ID of the block.
- * @property {Object} modal - The modal state.
- * @property {boolean} modal.isOpen - Whether the modal is open.
+ * @property {string}  blockId         - The ID of the block.
+ * @property {Object}  modal           - The modal state.
+ * @property {boolean} modal.isOpen    - Whether the modal is open.
  * @property {boolean} modal.isCompact - Whether the modal is compact.
  */
 
@@ -14,7 +14,7 @@ import { getContext, store, getElement } from '@wordpress/interactivity';
  * The Interactivity API merges all stores that share the same namespace,
  * so these actions and callbacks are added directly to the importing block’s existing store.
  *
- * @param {string} namespace - The interactivity namespace for the block.
+ * @param {string} namespace The interactivity namespace for the block.
  */
 export function createModalStore( namespace ) {
 	const { actions, callbacks } = store( namespace, {
@@ -34,10 +34,19 @@ export function createModalStore( namespace ) {
 					// Position the compact modal relative to the button.
 					setTimeout( callbacks.positionModal, 0 );
 				} else {
+					// Clear any inline positioning left over from compact mode.
+					const blockWrapper = document.getElementById( context.blockId );
+					if ( blockWrapper ) {
+						const modalOverlay = blockWrapper.querySelector( '.activitypub-modal__overlay' );
+						if ( modalOverlay ) {
+							[ 'top', 'left', 'right', 'bottom' ].forEach( ( prop ) => {
+								modalOverlay.style.removeProperty( prop );
+							} );
+						}
+					}
+
 					// Set up the focus trap after modal is open.
 					setTimeout( () => {
-						// Use the blockId to find the specific modal frame for this block
-						const blockWrapper = document.getElementById( context.blockId );
 						if ( blockWrapper ) {
 							const modalFrame = blockWrapper.querySelector( '.activitypub-modal__frame' );
 							if ( modalFrame ) {
@@ -93,9 +102,14 @@ export function createModalStore( namespace ) {
 			 * @param {Event} event Click event.
 			 */
 			toggleModal( event ) {
+				event?.preventDefault?.();
 				const { modal } = getContext();
 
-				modal.isOpen ? actions.closeModal( event ) : actions.openModal( event );
+				if ( modal.isOpen ) {
+					actions.closeModal( event );
+				} else {
+					actions.openModal( event );
+				}
 			},
 		},
 
@@ -142,8 +156,8 @@ export function createModalStore( namespace ) {
 			/**
 			 * Handles keydown events on the document.
 			 *
-			 * @param {Event} event Keydown event.
-			 * @param {String} event.key The key that was pressed.
+			 * @param {Event}  event     Keydown event.
+			 * @param {string} event.key The key that was pressed.
 			 */
 			documentKeydown( event ) {
 				const { modal } = getContext();
@@ -170,12 +184,14 @@ export function createModalStore( namespace ) {
 					return;
 				}
 
-				// If the click was on the button or its children, we should not close the modal.
-				const toggleButton = blockWrapper.querySelector(
-					'.wp-element-button[data-wp-on--click="actions.toggleModal"]'
+				// If the click was on any toggle trigger or its children, we should not close the modal.
+				const toggleButtons = blockWrapper.querySelectorAll(
+					'[data-wp-on--click="actions.toggleModal"], [data-wp-on-async--click="actions.toggleModal"]'
 				);
-				if ( toggleButton && ( toggleButton === event.target || toggleButton.contains( event.target ) ) ) {
-					return;
+				for ( const toggleButton of toggleButtons ) {
+					if ( toggleButton === event.target || toggleButton.contains( event.target ) ) {
+						return;
+					}
 				}
 
 				// Check if the click was inside the modal frame.
@@ -226,7 +242,7 @@ export function createModalStore( namespace ) {
 				const spaceRight = viewportWidth - buttonRect.right;
 
 				// Default position (below button, relative to the block).
-				let position = {
+				const position = {
 					top: `${ relativeTop + 8 }px`,
 					left: `${ relativeLeft - 2 }px`, // -2 px to account for the button border.
 				};
@@ -271,17 +287,16 @@ export function createModalStore( namespace ) {
 						return;
 					}
 
+					const activeEl = element.ownerDocument.activeElement;
 					if ( event.shiftKey ) {
 						/* shift + tab */
-						if ( document.activeElement === firstFocusableElement ) {
+						if ( activeEl === firstFocusableElement ) {
 							lastFocusableElement.focus();
 							event.preventDefault();
 						}
-					} /* tab */ else {
-						if ( document.activeElement === lastFocusableElement ) {
-							firstFocusableElement.focus();
-							event.preventDefault();
-						}
+					} /* tab */ else if ( activeEl === lastFocusableElement ) {
+						firstFocusableElement.focus();
+						event.preventDefault();
 					}
 				} );
 			},

@@ -7,13 +7,20 @@
 
 namespace Activitypub\WP_Admin;
 
-use function Activitypub\site_supports_blocks;
 use function Activitypub\user_can_activitypub;
 
 /**
  * ActivityPub Menu Class.
  */
 class Menu {
+
+	/**
+	 * Initialize the Menu class.
+	 */
+	public static function init() {
+		\add_action( 'admin_menu', array( self::class, 'admin_menu' ) );
+		\add_action( 'admin_bar_menu', array( self::class, 'admin_bar_menu' ), 100 );
+	}
 
 	/**
 	 * Add admin menu entry.
@@ -32,24 +39,21 @@ class Menu {
 		\add_action( 'load-' . $settings_page, array( Admin::class, 'add_settings_list_tables' ) );
 		\add_action( 'load-' . $settings_page, array( Screen_Options::class, 'add_settings_list_options' ) );
 
+		if ( \get_option( 'activitypub_reader_ui', '0' ) && \version_compare( \get_bloginfo( 'version' ), '6.9-alpha', '>=' ) ) {
+			$app_hook = \add_dashboard_page(
+				\__( 'Social Web', 'activitypub' ),
+				\__( 'Social Web', 'activitypub' ),
+				ACTIVITYPUB_BLOG_MODE === \get_option( 'activitypub_actor_mode' ) ? 'manage_options' : 'activitypub',
+				'activitypub-social-web',
+				array( App::class, 'render_page' )
+			);
+
+			\add_action( 'load-' . $app_hook, array( App::class, 'remove_admin_notices' ) );
+			\add_action( 'admin_print_scripts-' . $app_hook, array( App::class, 'enqueue_scripts' ) );
+		}
+
 		// User has to be able to publish posts.
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
-			$capability = ACTIVITYPUB_BLOG_MODE === \get_option( 'activitypub_actor_mode' ) ? 'manage_options' : 'activitypub';
-
-			// Check for block support and WP version.
-			if ( site_supports_blocks() && \version_compare( \get_bloginfo( 'version' ), '6.9-alpha', '>=' ) ) {
-				$app_hook = \add_dashboard_page(
-					\__( 'Social Web', 'activitypub' ),
-					\__( 'Social Web', 'activitypub' ),
-					$capability,
-					'activitypub-social-web',
-					array( Social_Web::class, 'render_page' )
-				);
-
-				\add_action( 'load-' . $app_hook, array( Social_Web::class, 'remove_admin_notices' ) );
-				\add_action( 'admin_print_scripts-' . $app_hook, array( Social_Web::class, 'enqueue_scripts' ) );
-			}
-
 			$followers_list_page = \add_users_page(
 				\__( 'Followers ⁂', 'activitypub' ),
 				\__( 'Followers ⁂', 'activitypub' ),
@@ -94,5 +98,43 @@ class Menu {
 				\esc_url( \admin_url( '/edit.php?post_type=ap_extrafield' ) )
 			);
 		}
+	}
+
+	/**
+	 * Add Social Web item to the admin bar.
+	 *
+	 * @param \WP_Admin_Bar $wp_admin_bar The WP_Admin_Bar instance.
+	 */
+	public static function admin_bar_menu( $wp_admin_bar ) {
+		// Only show if reader UI is enabled and WordPress version supports it.
+		if ( ! \get_option( 'activitypub_reader_ui', '0' ) || \version_compare( \get_bloginfo( 'version' ), '6.9-alpha', '<' ) ) {
+			return;
+		}
+
+		// Check user capability based on actor mode.
+		$capability = ACTIVITYPUB_BLOG_MODE === \get_option( 'activitypub_actor_mode' ) ? 'manage_options' : 'activitypub';
+		if ( ! \current_user_can( $capability ) ) {
+			return;
+		}
+
+		$wp_admin_bar->add_node(
+			array(
+				'id'    => 'activitypub-social-web',
+				'title' => \__( 'Social Web', 'activitypub' ),
+				'href'  => \admin_url( 'admin.php?page=activitypub-social-web' ),
+				'meta'  => array(
+					'class' => 'activitypub-admin-bar-social-web',
+					'title' => \__( 'View your Social Web feed', 'activitypub' ),
+				),
+			)
+		);
+
+		// Enqueue styles for the admin bar icon.
+		\wp_enqueue_style(
+			'activitypub-admin-bar-styles',
+			\plugins_url( 'assets/css/activitypub-admin-bar.css', ACTIVITYPUB_PLUGIN_FILE ),
+			array(),
+			ACTIVITYPUB_PLUGIN_VERSION
+		);
 	}
 }

@@ -9,6 +9,8 @@ namespace Activitypub;
 
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
+use Activitypub\Collection\Remote_Posts;
+use Activitypub\OAuth\Client;
 
 /**
  * ActivityPub Class.
@@ -41,7 +43,7 @@ class Activitypub {
 		self::flush_rewrite_rules();
 		Scheduler::register_schedules();
 
-		\add_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
+		\add_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ), 5, 3 );
 		Migration::update_comment_counts();
 
 		if ( \is_multisite() && $network_wide && ! \wp_is_large_network() ) {
@@ -63,7 +65,7 @@ class Activitypub {
 		self::flush_rewrite_rules();
 		Scheduler::deregister_schedules();
 
-		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ) );
+		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ), 5 );
 		Migration::update_comment_counts( 2000 );
 
 		if ( \is_multisite() && $network_wide && ! \wp_is_large_network() ) {
@@ -82,8 +84,11 @@ class Activitypub {
 	public static function uninstall() {
 		Scheduler::deregister_schedules();
 
-		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ) );
+		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ), 5 );
 		Migration::update_comment_counts( 2000 );
+
+		Remote_Posts::delete_all();
+		Client::delete_all();
 
 		Options::delete();
 	}
@@ -191,6 +196,7 @@ class Activitypub {
 				'single'            => true,
 				'default'           => 0,
 				'sanitize_callback' => 'absint',
+				'show_in_rest'      => true,
 			)
 		);
 
@@ -222,7 +228,7 @@ class Activitypub {
 				'description'       => 'The user description.',
 				'single'            => true,
 				'default'           => '',
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					return wp_kses( $value, 'user_description' );
 				},
 			)
@@ -290,6 +296,29 @@ class Activitypub {
 
 		\register_meta(
 			'user',
+			$blog_prefix . 'activitypub_mailer_annual_report',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Send the annual Fediverse Year in Review email.',
+				'single'            => true,
+				'sanitize_callback' => 'absint',
+			)
+		);
+		\add_filter( 'get_user_option_activitypub_mailer_annual_report', array( self::class, 'user_options_default' ) );
+
+		\register_meta(
+			'user',
+			$blog_prefix . 'activitypub_mailer_monthly_report',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Send a monthly Fediverse stats report email.',
+				'single'            => true,
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		\register_meta(
+			'user',
 			'activitypub_show_welcome_tab',
 			array(
 				'type'              => 'integer',
@@ -333,7 +362,7 @@ class Activitypub {
 				'description'       => 'User-specific blocked ActivityPub domains.',
 				'single'            => true,
 				'default'           => array(),
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					return \array_unique( \array_map( array( Sanitize::class, 'host_list' ), $value ) );
 				},
 			)
@@ -347,7 +376,7 @@ class Activitypub {
 				'description'       => 'User-specific blocked ActivityPub keywords.',
 				'single'            => true,
 				'default'           => array(),
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					return \array_map( 'sanitize_text_field', $value );
 				},
 			)

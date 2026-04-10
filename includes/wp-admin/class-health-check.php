@@ -8,8 +8,10 @@
 namespace Activitypub\WP_Admin;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Outbox;
 use Activitypub\Http;
 use Activitypub\Sanitize;
+use Activitypub\Scheduler;
 use Activitypub\Webfinger;
 
 use function Activitypub\user_can_activitypub;
@@ -27,6 +29,23 @@ class Health_Check {
 	public static function init() {
 		\add_filter( 'site_status_tests', array( self::class, 'add_tests' ) );
 		\add_filter( 'debug_information', array( self::class, 'debug_information' ) );
+
+		// Ensure schedules are registered when viewing the ActivityPub settings page.
+		\add_action( 'load-settings_page_activitypub', array( self::class, 'ensure_schedules_registered' ) );
+	}
+
+	/**
+	 * Ensure all required ActivityPub schedules are registered.
+	 *
+	 * This is called when the ActivityPub settings page is loaded to
+	 * automatically restore any missing scheduled events.
+	 */
+	public static function ensure_schedules_registered() {
+		$missing_schedules = self::get_missing_schedules();
+
+		if ( ! empty( $missing_schedules ) ) {
+			Scheduler::register_schedules();
+		}
 	}
 
 	/**
@@ -107,6 +126,31 @@ class Health_Check {
 		$tests['direct']['activitypub_check_for_captcha_plugins'] = array(
 			'label' => \__( 'Check for Captcha Plugins', 'activitypub' ),
 			'test'  => array( self::class, 'test_check_for_captcha_plugins' ),
+		);
+
+		$tests['direct']['activitypub_test_wp_cron'] = array(
+			'label' => \__( 'WP-Cron Configuration Test', 'activitypub' ),
+			'test'  => array( self::class, 'test_wp_cron' ),
+		);
+
+		$tests['direct']['activitypub_test_scheduled_events'] = array(
+			'label' => \__( 'Scheduled Events Test', 'activitypub' ),
+			'test'  => array( self::class, 'test_scheduled_events' ),
+		);
+
+		$tests['direct']['activitypub_test_rest_api_accessibility'] = array(
+			'label' => \__( 'REST API Accessibility Test', 'activitypub' ),
+			'test'  => array( self::class, 'test_rest_api_accessibility' ),
+		);
+
+		$tests['direct']['activitypub_test_outbox_rate'] = array(
+			'label' => \__( 'Outbox Activity Rate Test', 'activitypub' ),
+			'test'  => array( self::class, 'test_outbox_rate' ),
+		);
+
+		$tests['direct']['activitypub_test_filesystem'] = array(
+			'label' => \__( 'Filesystem Access Test', 'activitypub' ),
+			'test'  => array( self::class, 'test_filesystem' ),
 		);
 
 		return $tests;
@@ -258,18 +302,27 @@ class Health_Check {
 					$author_url
 				),
 				'webfinger_url_invalid_response' => \sprintf(
-					// translators: %s: Author URL.
 					$invalid_response,
 					$author_url
 				),
 			);
-			$message         = null;
+
 			if ( isset( $health_messages[ $url->get_error_code() ] ) ) {
 				$message = $health_messages[ $url->get_error_code() ];
+			} else {
+				$message = \sprintf(
+					$not_accessible,
+					$author_url
+				);
+			}
+
+			$error_code = $url->get_error_code();
+			if ( ! $error_code ) {
+				$error_code = 'webfinger_url_not_accessible';
 			}
 
 			return new \WP_Error(
-				$url->get_error_code(),
+				$error_code,
 				$message,
 				$url->get_error_data()
 			);
@@ -333,7 +386,13 @@ class Health_Check {
 
 		$info['activitypub']['fields']['activitypub_outbox_purge_days'] = array(
 			'label'   => \__( 'Outbox Retention Period', 'activitypub' ),
-			'value'   => \esc_attr( (int) \get_option( 'activitypub_outbox_purge_days', 180 ) ),
+			'value'   => \esc_attr( (int) \get_option( 'activitypub_outbox_purge_days', ACTIVITYPUB_OUTBOX_PURGE_DAYS ) ),
+			'private' => false,
+		);
+
+		$info['activitypub']['fields']['activitypub_ap_post_purge_days'] = array(
+			'label'   => \__( 'Remote Posts Retention Period', 'activitypub' ),
+			'value'   => \esc_attr( (int) \get_option( 'activitypub_ap_post_purge_days', ACTIVITYPUB_AP_POST_PURGE_DAYS ) ),
 			'private' => false,
 		);
 
@@ -352,6 +411,24 @@ class Health_Check {
 		$info['activitypub']['fields']['authorized_fetch'] = array(
 			'label'   => \__( 'Authorized Fetch', 'activitypub' ),
 			'value'   => \esc_attr( (int) \get_option( 'activitypub_authorized_fetch', '0' ) ),
+			'private' => false,
+		);
+
+		$info['activitypub']['fields']['outbox_total_count'] = array(
+			'label'   => \__( 'Outbox Total Items', 'activitypub' ),
+			'value'   => self::get_outbox_count(),
+			'private' => false,
+		);
+
+		$info['activitypub']['fields']['outbox_pending_count'] = array(
+			'label'   => \__( 'Outbox Pending Items', 'activitypub' ),
+			'value'   => self::get_outbox_count( 'pending' ),
+			'private' => false,
+		);
+
+		$info['activitypub']['fields']['outbox_last_hour_count'] = array(
+			'label'   => \__( 'Outbox Items (Last Hour)', 'activitypub' ),
+			'value'   => self::get_outbox_rate_count(),
 			'private' => false,
 		);
 
@@ -495,7 +572,7 @@ class Health_Check {
 		// search for the word 'captcha' in the list of active plugins.
 		$captcha_plugins = array_filter(
 			$active_plugins,
-			function ( $plugin ) {
+			static function ( $plugin ) {
 				return \str_contains( strtolower( $plugin ), 'captcha' );
 			}
 		);
@@ -507,7 +584,7 @@ class Health_Check {
 		// Get nice plugin names instead of file paths using WordPress built-in functions.
 		$all_plugins          = \get_plugins();
 		$captcha_plugin_names = array_map(
-			function ( $plugin_file ) use ( $all_plugins ) {
+			static function ( $plugin_file ) use ( $all_plugins ) {
 				if ( isset( $all_plugins[ $plugin_file ]['Name'] ) ) {
 					return $all_plugins[ $plugin_file ]['Name'];
 				}
@@ -538,5 +615,407 @@ class Health_Check {
 		);
 
 		return $result;
+	}
+
+	/**
+	 * WP-Cron configuration test.
+	 *
+	 * @return array The test result.
+	 */
+	public static function test_wp_cron() {
+		$result = array(
+			'label'       => \__( 'WP-Cron is properly configured', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\__( 'Your WP-Cron configuration allows for timely publishing and processing of ActivityPub activities.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_wp_cron',
+		);
+
+		if ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) {
+			$result['status']         = 'recommended';
+			$result['label']          = \__( 'WP-Cron is disabled', 'activitypub' );
+			$result['badge']['color'] = 'orange';
+			$result['description']    = \sprintf(
+				'<p>%s</p><p>%s</p>',
+				\__( 'The constant <code>DISABLE_WP_CRON</code> is set to <code>true</code> in your configuration. This disables WordPress&#8217;s built-in cron system, which ActivityPub relies on for timely publishing of posts and processing of reactions (likes, boosts, replies).', 'activitypub' ),
+				\__( 'While it is fine to have a system cron job that calls <code>wp-cron.php</code> at regular intervals, completely disabling WP-Cron may cause delays in ActivityPub functionality. If you notice delays in post publishing or reactions appearing, consider either removing this constant or ensuring you have a system cron job running frequently (every 1-5 minutes).', 'activitypub' )
+			);
+			$result['actions']        = \sprintf(
+				'<p><a href="%s" target="_blank">%s</a></p>',
+				'https://developer.wordpress.org/plugins/cron/hooking-wp-cron-into-the-system-task-scheduler/',
+				\__( 'Learn more about setting up system cron for WordPress', 'activitypub' )
+			);
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Scheduled events test.
+	 *
+	 * Verifies all required ActivityPub scheduled events are registered
+	 * and auto-repairs them if missing.
+	 *
+	 * @return array The test result.
+	 */
+	public static function test_scheduled_events() {
+		$result = array(
+			'label'       => \__( 'ActivityPub scheduled events are registered', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\__( 'All required ActivityPub scheduled events are properly registered and will run as expected.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_scheduled_events',
+		);
+
+		$missing_schedules = self::get_missing_schedules();
+
+		if ( empty( $missing_schedules ) ) {
+			return $result;
+		}
+
+		// Auto-repair: Register missing schedules.
+		Scheduler::register_schedules();
+
+		// Check again after repair.
+		$still_missing = self::get_missing_schedules();
+
+		if ( empty( $still_missing ) ) {
+			$result['description'] = \sprintf(
+				'<p>%s</p>',
+				\__( 'Some scheduled events were missing but have been automatically restored. All ActivityPub scheduled events are now properly registered.', 'activitypub' )
+			);
+			return $result;
+		}
+
+		// Some schedules could not be restored.
+		$result['status']         = 'critical';
+		$result['label']          = \__( 'Some ActivityPub scheduled events are not registered', 'activitypub' );
+		$result['badge']['color'] = 'red';
+		$result['description']    = \sprintf(
+			'<p>%s</p><p>%s</p>',
+			\__( 'The following scheduled events could not be registered:', 'activitypub' ),
+			'<code>' . \implode( '</code>, <code>', \array_keys( $still_missing ) ) . '</code>'
+		);
+		$result['actions']        = \sprintf(
+			'<p>%s</p>',
+			\__( 'Try deactivating and reactivating the ActivityPub plugin. If the issue persists, check for conflicts with other plugins that may be interfering with WP-Cron.', 'activitypub' )
+		);
+
+		return $result;
+	}
+
+	/**
+	 * Get missing scheduled events.
+	 *
+	 * @return array Associative array of missing hook name => recurrence.
+	 */
+	public static function get_missing_schedules() {
+		$missing = array();
+
+		foreach ( Scheduler::SCHEDULES as $hook => $recurrence ) {
+			if ( ! \wp_next_scheduled( $hook ) ) {
+				$missing[ $hook ] = $recurrence;
+			}
+		}
+
+		return $missing;
+	}
+
+	/**
+	 * REST API accessibility test.
+	 *
+	 * Checks if a security plugin is blocking unauthenticated REST API access.
+	 * This is different from AUTHORIZED_FETCH which uses HTTP Signatures.
+	 *
+	 * @return array The test result.
+	 */
+	public static function test_rest_api_accessibility() {
+		$result = array(
+			'label'       => \__( 'REST API is accessible', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\__( 'Your REST API is accessible to remote servers, allowing ActivityPub federation to work properly.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_rest_api_accessibility',
+		);
+
+		$check = self::is_rest_api_accessible();
+
+		if ( true === $check ) {
+			return $result;
+		}
+
+		$result['status']         = 'critical';
+		$result['label']          = \__( 'REST API is restricted to authenticated users', 'activitypub' );
+		$result['badge']['color'] = 'red';
+		$result['description']    = \sprintf(
+			'<p>%s</p><p>%s</p>',
+			\__( 'A plugin or custom code is restricting REST API access to authenticated users only. This prevents remote ActivityPub servers from interacting with your site.', 'activitypub' ),
+			\esc_html( $check->get_error_message() )
+		);
+		$result['actions']        = \sprintf(
+			'<p>%s</p>',
+			\__( 'Check your security plugin settings and ensure ActivityPub endpoints are accessible to unauthenticated requests.', 'activitypub' )
+		);
+
+		return $result;
+	}
+
+	/**
+	 * Outbox activity rate test.
+	 *
+	 * Detects abnormally high outbox creation rates that may indicate
+	 * a third-party plugin is triggering excessive wp_update_post() calls.
+	 *
+	 * @since 8.0.0
+	 *
+	 * @return array The test result.
+	 */
+	public static function test_outbox_rate() {
+		$result = array(
+			'label'       => \__( 'Outbox activity rate is normal', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\__( 'The outbox activity rate is within normal limits.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_outbox_rate',
+		);
+
+		$total = self::get_outbox_rate_count();
+
+		if ( $total <= 10 ) {
+			return $result;
+		}
+
+		$details = \sprintf(
+			/* translators: %d: Number of outbox items. */
+			\__( '%d outbox items were created in the last hour.', 'activitypub' ),
+			$total
+		);
+
+		if ( $total > 50 ) {
+			$result['status']         = 'critical';
+			$result['label']          = \__( 'Excessive outbox activity detected', 'activitypub' );
+			$result['badge']['color'] = 'red';
+			$result['description']    = \sprintf(
+				'<p>%s</p><p>%s</p>',
+				$details,
+				\__( 'A plugin may be triggering updates to published posts at a very high rate, causing excessive federation activity. This can impact site performance and may flood federated servers.', 'activitypub' )
+			);
+		} else {
+			$result['status']         = 'recommended';
+			$result['label']          = \__( 'Unusual outbox activity detected', 'activitypub' );
+			$result['badge']['color'] = 'orange';
+			$result['description']    = \sprintf(
+				'<p>%s</p><p>%s</p>',
+				$details,
+				\__( 'Check for plugins that may be triggering frequent updates to published posts, such as editorial calendars or cloud sync services.', 'activitypub' )
+			);
+		}
+
+		$result['actions'] = \sprintf(
+			'<p>%s</p>',
+			\sprintf(
+				/* translators: %s: Plugins page URL. */
+				\__( 'Review your <a href="%s">active plugins</a> for any that may be frequently modifying published posts.', 'activitypub' ),
+				\esc_url( \admin_url( 'plugins.php' ) )
+			)
+		);
+
+		return $result;
+	}
+
+	/**
+	 * Filesystem access test.
+	 *
+	 * Checks whether WordPress can write files directly. When direct filesystem
+	 * access is unavailable (e.g., FTP-only servers), media caching will not work.
+	 *
+	 * @since 8.0.0
+	 *
+	 * @return array The test result.
+	 */
+	public static function test_filesystem() {
+		$result = array(
+			'label'       => \__( 'Uploads directory is writable for media caching', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\__( 'The uploads directory is writable, so remote media caching (avatars, emoji, images) works correctly.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_filesystem',
+		);
+
+		// Skip test when remote caching is disabled.
+		if ( ACTIVITYPUB_DISABLE_REMOTE_CACHE ) {
+			$result['description'] = \sprintf(
+				'<p>%s</p>',
+				\__( 'Remote media caching is disabled, so uploads directory write access is not required.', 'activitypub' )
+			);
+			return $result;
+		}
+
+		$upload_dir = \wp_upload_dir();
+
+		if ( ! \wp_is_writable( $upload_dir['basedir'] ) ) {
+			$result['status']         = 'recommended';
+			$result['label']          = \__( 'Uploads directory is not writable for media caching', 'activitypub' );
+			$result['badge']['color'] = 'orange';
+			$result['description']    = \sprintf(
+				'<p>%s</p><p>%s</p>',
+				\__( 'The uploads directory is not writable by the web server. Remote avatars, emoji, and images will be served from their original URLs instead of being cached locally.', 'activitypub' ),
+				\__( 'To fix this, ask your hosting provider to ensure the uploads directory is writable by the web server.', 'activitypub' )
+			);
+			$result['actions']        = \sprintf(
+				'<p>%s</p>',
+				\__( 'If you cannot make the directory writable, you can disable media caching by adding <code>define( \'ACTIVITYPUB_DISABLE_REMOTE_CACHE\', true );</code> to your <code>wp-config.php</code>. Remote media will then be served from its original URL.', 'activitypub' )
+			);
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Count outbox items created in the last hour.
+	 *
+	 * @since 8.0.0
+	 *
+	 * @return int Total items created in the last hour.
+	 */
+	public static function get_outbox_rate_count() {
+		$query = new \WP_Query(
+			array(
+				'post_type'      => Outbox::POST_TYPE,
+				'post_status'    => 'any',
+				'posts_per_page' => 1,
+				'fields'         => 'ids',
+				'date_query'     => array(
+					array(
+						'after' => '1 hour ago',
+					),
+				),
+			)
+		);
+
+		return (int) $query->found_posts;
+	}
+
+	/**
+	 * Get the count of outbox items.
+	 *
+	 * @since 8.0.0
+	 *
+	 * @param string $status Optional. Post status to count. Default 'any' for all statuses.
+	 *
+	 * @return int The number of outbox items.
+	 */
+	public static function get_outbox_count( $status = 'any' ) {
+		$counts = \wp_count_posts( Outbox::POST_TYPE );
+
+		if ( 'any' === $status ) {
+			$total = 0;
+			foreach ( (array) $counts as $count ) {
+				$total += (int) $count;
+			}
+			return $total;
+		}
+
+		return isset( $counts->$status ) ? (int) $counts->$status : 0;
+	}
+
+	/**
+	 * Check if ActivityPub endpoints are accessible to unauthenticated requests.
+	 *
+	 * Makes an actual HTTP request to the ActivityPub inbox endpoint.
+	 * Only reports errors from security plugins (error titles not starting
+	 * with 'activitypub_').
+	 *
+	 * @return bool|\WP_Error True if accessible, WP_Error otherwise.
+	 */
+	public static function is_rest_api_accessible() {
+		// Test the application actor's inbox endpoint (always available).
+		$actor = Actors::get_by_id( Actors::APPLICATION_USER_ID );
+		$url   = $actor->get_inbox();
+
+		// Make an unauthenticated request.
+		$response = \wp_remote_get(
+			$url,
+			array(
+				'timeout' => 5,
+				'cookies' => array(),
+			)
+		);
+
+		if ( \is_wp_error( $response ) ) {
+			return new \WP_Error(
+				'rest_api_not_accessible',
+				\sprintf(
+					/* translators: %s: Error message. */
+					\__( 'Could not connect to REST API: %s', 'activitypub' ),
+					\esc_html( $response->get_error_message() )
+				)
+			);
+		}
+
+		$status_code = \wp_remote_retrieve_response_code( $response );
+
+		// Success - endpoint is accessible.
+		if ( $status_code >= 200 && $status_code < 300 ) {
+			return true;
+		}
+
+		// Error response - check if it's from a security plugin (not our own error).
+		$body  = \wp_remote_retrieve_body( $response );
+		$data  = \json_decode( $body, true );
+		$title = isset( $data['title'] ) ? $data['title'] : '';
+
+		// If the error title starts with 'activitypub_', it's our own error, not a security plugin.
+		if ( \str_starts_with( $title, 'activitypub_' ) ) {
+			return true;
+		}
+
+		// Security plugin is blocking access.
+		$message = isset( $data['message'] ) ? $data['message'] : $body;
+
+		return new \WP_Error(
+			'rest_api_restricted',
+			\sprintf(
+				/* translators: 1: HTTP status code, 2: Response body or error message. */
+				\__( 'HTTP %1$d: %2$s', 'activitypub' ),
+				$status_code,
+				\esc_html( \wp_trim_words( $message, 20 ) )
+			)
+		);
 	}
 }

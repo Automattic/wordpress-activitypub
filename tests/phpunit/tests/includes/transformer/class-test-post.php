@@ -34,7 +34,9 @@ class Test_Post extends \WP_UnitTestCase {
 		// Set up reflection method.
 		$reflection              = new \ReflectionClass( Post::class );
 		$this->reflection_method = $reflection->getMethod( 'get_type' );
-		$this->reflection_method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$this->reflection_method->setAccessible( true );
+		}
 	}
 
 	/**
@@ -55,7 +57,7 @@ class Test_Post extends \WP_UnitTestCase {
 	public function test_get_type_returns_configured_type_when_option_set() {
 		update_option( 'activitypub_object_type', 'Article' );
 
-		$post_id = $this->factory->post->create(
+		$post_id = self::factory()->post->create(
 			array(
 				'post_title'   => 'Test Post',
 				'post_content' => 'Test content that is longer than the note length limit',
@@ -81,7 +83,7 @@ class Test_Post extends \WP_UnitTestCase {
 	 * @param string $description    Description of the test case.
 	 */
 	public function test_get_type( $post_data, $post_format, $expected_type, $description ) {
-		$post_id = $this->factory->post->create( $post_data );
+		$post_id = self::factory()->post->create( $post_data );
 
 		if ( $post_format ) {
 			set_post_format( $post_id, $post_format );
@@ -110,8 +112,8 @@ class Test_Post extends \WP_UnitTestCase {
 					'post_content' => 'Short content',
 				),
 				null,
-				'Note',
-				'Should return Note for short content',
+				'Article',
+				'Should return Article for short content with title',
 			),
 			'no_title'             => array(
 				array(
@@ -180,7 +182,7 @@ class Test_Post extends \WP_UnitTestCase {
 			)
 		);
 
-		$post_id = $this->factory->post->create(
+		$post_id = self::factory()->post->create(
 			array(
 				'post_title'   => 'Test Post',
 				'post_content' => str_repeat( 'Long content. ', 100 ),
@@ -213,7 +215,7 @@ class Test_Post extends \WP_UnitTestCase {
 			)
 		);
 
-		$post_id = $this->factory->post->create(
+		$post_id = self::factory()->post->create(
 			array(
 				'post_title'   => 'Test Post',
 				'post_content' => str_repeat( 'Long content. ', 100 ),
@@ -271,6 +273,7 @@ class Test_Post extends \WP_UnitTestCase {
 			array(
 				'post_author'  => 1,
 				'post_content' => 'test content visibility',
+				'post_status'  => 'publish',
 			)
 		);
 
@@ -288,7 +291,8 @@ class Test_Post extends \WP_UnitTestCase {
 
 		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
 
-		$this->assertTrue( \Activitypub\is_post_disabled( $post_id ) );
+		// Post was federated on insert, so is_post_disabled returns false
+		// to allow Delete activity. But visibility settings still apply.
 		$object = Post::transform( get_post( $post_id ) )->to_object();
 		$this->assertEmpty( $object->get_to() );
 		$this->assertEmpty( $object->get_cc() );
@@ -383,7 +387,9 @@ class Test_Post extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Post::class );
 		$method     = $reflection->getMethod( 'get_media_from_blocks' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$blocks = parse_blocks( $post->post_content );
 		$result = $method->invoke( $transformer, $blocks, $media );
@@ -411,7 +417,9 @@ class Test_Post extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Post::class );
 		$method     = $reflection->getMethod( 'get_attachment' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$result = $method->invoke( $transformer );
 
@@ -420,7 +428,9 @@ class Test_Post extends \WP_UnitTestCase {
 
 		\delete_post_meta( $post_id, 'activitypub_max_image_attachments' );
 
-		$result = $method->invoke( $transformer );
+		// Create a new transformer instance to avoid cached attachment result.
+		$transformer = new Post( $post );
+		$result      = $method->invoke( $transformer );
 		$this->assertTrue( (bool) \did_filter( 'activitypub_attachment_ids' ) );
 	}
 
@@ -446,7 +456,9 @@ class Test_Post extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Post::class );
 		$method     = $reflection->getMethod( 'get_media_from_blocks' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$blocks = parse_blocks( $post->post_content );
 		$result = $method->invoke( $transformer, $blocks, $media );
@@ -478,7 +490,9 @@ class Test_Post extends \WP_UnitTestCase {
 
 		$reflection = new \ReflectionClass( Post::class );
 		$method     = $reflection->getMethod( 'get_media_from_blocks' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$blocks = parse_blocks( $post->post_content );
 		$result = $method->invoke( $transformer, $blocks, $media );
@@ -491,12 +505,80 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_media_from_blocks extracts poster from video blocks.
+	 *
+	 * @covers ::get_media_from_blocks
+	 */
+	public function test_get_media_from_blocks_extracts_video_poster() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:video {"id":789} --><figure class="wp-block-video"><video controls poster="https://example.com/poster.jpg" src="https://example.com/video.mp4"></video></figure><!-- /wp:video -->',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$transformer = new Post( $post );
+		$media       = array(
+			'image' => array(),
+			'audio' => array(),
+			'video' => array(),
+		);
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_media_from_blocks' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$blocks = parse_blocks( $post->post_content );
+		$result = $method->invoke( $transformer, $blocks, $media );
+
+		$this->assertCount( 1, $result['video'] );
+		$this->assertSame( 789, $result['video'][0]['id'] );
+		$this->assertSame( 'https://example.com/poster.jpg', $result['video'][0]['icon'] );
+	}
+
+	/**
+	 * Test get_media_from_blocks handles video blocks without poster.
+	 *
+	 * @covers ::get_media_from_blocks
+	 */
+	public function test_get_media_from_blocks_video_without_poster() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:video {"id":789} --><figure class="wp-block-video"><video controls src="https://example.com/video.mp4"></video></figure><!-- /wp:video -->',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$transformer = new Post( $post );
+		$media       = array(
+			'image' => array(),
+			'audio' => array(),
+			'video' => array(),
+		);
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_media_from_blocks' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$blocks = parse_blocks( $post->post_content );
+		$result = $method->invoke( $transformer, $blocks, $media );
+
+		$this->assertCount( 1, $result['video'] );
+		$this->assertSame( 789, $result['video'][0]['id'] );
+		$this->assertArrayNotHasKey( 'icon', $result['video'][0] );
+	}
+
+	/**
 	 * Test get_icon method.
 	 *
 	 * @covers ::get_icon
 	 */
 	public function test_get_icon() {
-		$post_id = $this->factory->post->create(
+		$post_id = self::factory()->post->create(
 			array(
 				'post_title'   => 'Test Post',
 				'post_content' => 'Test content',
@@ -510,7 +592,9 @@ class Test_Post extends \WP_UnitTestCase {
 		// Set up reflection method.
 		$reflection = new \ReflectionClass( Post::class );
 		$method     = $reflection->getMethod( 'get_icon' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		// Test with featured image.
 		set_post_thumbnail( $post_id, $attachment_id );
@@ -620,7 +704,7 @@ class Test_Post extends \WP_UnitTestCase {
 	 */
 	public function test_preview_property() {
 		// Create a test post of type "Article".
-		$post = $this->factory->post->create_and_get(
+		$post = self::factory()->post->create_and_get(
 			array(
 				'post_title'   => 'Test Article',
 				'post_content' => str_repeat( 'Long content. ', 100 ),
@@ -638,7 +722,7 @@ class Test_Post extends \WP_UnitTestCase {
 		$this->assertNotEmpty( $preview['content'] );
 
 		// Create a test post of type "Note" (short content).
-		$note_post = $this->factory->post->create_and_get(
+		$note_post = self::factory()->post->create_and_get(
 			array(
 				'post_title'   => '',
 				'post_content' => 'Short note content',
@@ -734,7 +818,9 @@ class Test_Post extends \WP_UnitTestCase {
 		$object      = new Base_Object();
 		$get_content = new \ReflectionMethod( Post::class, 'transform_object_properties' );
 
-		$get_content->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$get_content->setAccessible( true );
+		}
 
 		$object = $get_content->invoke( new Post( $post ), $object );
 
@@ -780,7 +866,8 @@ class Test_Post extends \WP_UnitTestCase {
 		$object = Post::transform( $post )->to_object();
 
 		// Assert that the reply block was transformed into a mention link.
-		$this->assertStringContainsString( '<p class="ap-reply-mention"><a rel="mention ugc" href="https://example.com/posts/123" title="@author@example.com">@author</a></p>', $object->get_content() );
+		// Note: clean_html() strips class from <p> and the mention link doesn't include u-in-reply-to class.
+		$this->assertStringContainsString( '<p><a rel="mention ugc" href="https://example.com/posts/123" title="@author@example.com">@author</a></p>', $object->get_content() );
 
 		// Clean up.
 		remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );
@@ -811,7 +898,8 @@ class Test_Post extends \WP_UnitTestCase {
 		$content = $object->get_content();
 
 		// Assert that the reply block was not transformed into a mention link.
-		$this->assertStringContainsString( '<div class="activitypub-reply-block wp-block-activitypub-reply" aria-label="Reply" data-in-reply-to="https://example.com/posts/123"><p><a title="This post is a response to the referenced content." aria-label="This post is a response to the referenced content." href="https://example.com/posts/123" class="u-in-reply-to" target="_blank">&#8620;example.com/posts/123</a></p></div>', $content );
+		// Note: clean_html() strips target and non-allowed attributes per FEP-b2b8.
+		$this->assertStringContainsString( '<div><p><a title="This post is a response to the referenced content." href="https://example.com/posts/123" class="u-in-reply-to">&#8620;example.com/posts/123</a></p></div>', $content );
 	}
 
 	/**
@@ -866,10 +954,12 @@ class Test_Post extends \WP_UnitTestCase {
 		$content = $object->get_content();
 
 		// Assert that the first reply block was transformed into a mention link.
-		$this->assertStringContainsString( '<p class="ap-reply-mention"><a rel="mention ugc" href="https://example.com/posts/123" title="@author1@example.com">@author1</a></p>', $content );
+		// Note: clean_html() strips class from <p> and the mention link doesn't include u-in-reply-to class.
+		$this->assertStringContainsString( '<p><a rel="mention ugc" href="https://example.com/posts/123" title="@author1@example.com">@author1</a></p>', $content );
 
 		// Assert that the second reply block was NOT transformed into a mention link (should remain as regular reply block).
-		$this->assertStringContainsString( '<div class="activitypub-reply-block wp-block-activitypub-reply" aria-label="Reply" data-in-reply-to="https://other.site/posts/456"><p><a title="This post is a response to the referenced content." aria-label="This post is a response to the referenced content." href="https://other.site/posts/456" class="u-in-reply-to" target="_blank">&#8620;other.site/posts/456</a></p></div>', $content );
+		// Note: clean_html() strips target and non-allowed attributes per FEP-b2b8.
+		$this->assertStringContainsString( '<div><p><a title="This post is a response to the referenced content." href="https://other.site/posts/456" class="u-in-reply-to">&#8620;other.site/posts/456</a></p></div>', $content );
 
 		// Clean up.
 		remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );
@@ -908,8 +998,9 @@ class Test_Post extends \WP_UnitTestCase {
 		$post = $this->create_test_post();
 		\update_post_meta( $post->ID, 'activitypub_interaction_policy_quote', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
 
+		// Quote policy is always stored to preserve user intent when global default changes.
 		$stored = \get_post_meta( $post->ID, 'activitypub_interaction_policy_quote', true );
-		$this->assertEmpty( $stored, 'Meta value not stored as expected.' );
+		$this->assertSame( ACTIVITYPUB_INTERACTION_POLICY_ANYONE, $stored, 'Meta value should be stored to preserve user intent.' );
 
 		$transformer = new Post( $post );
 		$policy      = $transformer->get_interaction_policy();
@@ -927,7 +1018,7 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test fallback to 'anyone' when no quote permission meta is set.
+	 * Test fallback to global default when no quote permission meta is set.
 	 *
 	 * @covers ::get_interaction_policy
 	 */
@@ -936,7 +1027,8 @@ class Test_Post extends \WP_UnitTestCase {
 		$transformer = new Post( $post );
 		$policy      = $transformer->get_interaction_policy();
 
-		$this->assertIsArray( $policy, 'Should fall back to anyone policy when no meta set.' );
+		// Default global setting is 'anyone'.
+		$this->assertIsArray( $policy, 'Should fall back to global default policy when no meta set.' );
 		$this->assertArrayHasKey( 'canQuote', $policy );
 		$this->assertSame(
 			array(
@@ -944,8 +1036,28 @@ class Test_Post extends \WP_UnitTestCase {
 				'always'            => 'https://www.w3.org/ns/activitystreams#Public',
 			),
 			$policy['canQuote'],
-			'No meta should fall back to anyone (public) policy.'
+			'No meta should fall back to global default (anyone) policy.'
 		);
+	}
+
+	/**
+	 * Test fallback to global default 'followers' when no quote permission meta is set.
+	 *
+	 * @covers ::get_interaction_policy
+	 */
+	public function test_get_interaction_policy_no_meta_fallback_to_global_followers() {
+		\update_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS );
+
+		$post        = $this->create_test_post();
+		$transformer = new Post( $post );
+		$policy      = $transformer->get_interaction_policy();
+
+		$this->assertIsArray( $policy, 'Should fall back to global default policy when no meta set.' );
+		$this->assertArrayHasKey( 'canQuote', $policy );
+		$this->assertArrayHasKey( 'automaticApproval', $policy['canQuote'] );
+		$this->assertStringContainsString( 'followers', $policy['canQuote']['automaticApproval'], 'Should use global default followers policy.' );
+
+		\delete_option( 'activitypub_default_quote_policy' );
 	}
 
 	/**
@@ -1073,7 +1185,9 @@ class Test_Post extends \WP_UnitTestCase {
 		$transformer = new Post( $post );
 		$reflection  = new \ReflectionClass( Post::class );
 		$method      = $reflection->getMethod( 'get_post_content_template' );
-		$method->setAccessible( true );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
 
 		$template = $method->invoke( $transformer );
 
@@ -1119,7 +1233,7 @@ class Test_Post extends \WP_UnitTestCase {
 					'post_content' => 'Short note',
 					'post_status'  => 'publish',
 				),
-				"[ap_title type=\"html\"]\n\n[ap_content]",
+				'[ap_title type="html"][ap_content]',
 				'wordpress-post-format',
 				'[ap_title]\n\n[ap_content]',
 				'wordpress-post-format should add title for Note type without reply.',
@@ -1181,5 +1295,819 @@ class Test_Post extends \WP_UnitTestCase {
 				'Empty activitypub_custom_post_content option should fall back to ACTIVITYPUB_CUSTOM_POST_CONTENT constant.',
 			),
 		);
+	}
+
+	/**
+	 * Test get_location method with public geodata.
+	 *
+	 * @covers ::get_location
+	 */
+	public function test_get_location_with_public_geodata() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post with Location',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Set geodata.
+		\update_post_meta( $post_id, 'geo_latitude', '52.5200' );
+		\update_post_meta( $post_id, 'geo_longitude', '13.4050' );
+		\update_post_meta( $post_id, 'geo_address', 'Berlin, Germany' );
+		\update_post_meta( $post_id, 'geo_public', '1' );
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_location' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$location = $method->invoke( $transformer );
+
+		$this->assertIsArray( $location );
+		$this->assertSame( 'Place', $location['type'] );
+		$this->assertSame( 52.52, $location['latitude'] );
+		$this->assertSame( 13.405, $location['longitude'] );
+		$this->assertSame( 'Berlin, Germany', $location['name'] );
+	}
+
+	/**
+	 * Test get_location method without geo_public set (defaults to public).
+	 *
+	 * @covers ::get_location
+	 */
+	public function test_get_location_without_geo_public_defaults_public() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post with Location',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Set geodata without geo_public.
+		\update_post_meta( $post_id, 'geo_latitude', '48.8566' );
+		\update_post_meta( $post_id, 'geo_longitude', '2.3522' );
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_location' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$location = $method->invoke( $transformer );
+
+		$this->assertIsArray( $location );
+		$this->assertSame( 'Place', $location['type'] );
+		$this->assertSame( 48.8566, $location['latitude'] );
+		$this->assertSame( 2.3522, $location['longitude'] );
+		$this->assertArrayNotHasKey( 'name', $location );
+	}
+
+	/**
+	 * Test get_location method with private geodata (geo_public = 0).
+	 *
+	 * @covers ::get_location
+	 */
+	public function test_get_location_with_private_geodata() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post with Private Location',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Set geodata as private.
+		\update_post_meta( $post_id, 'geo_latitude', '40.7128' );
+		\update_post_meta( $post_id, 'geo_longitude', '-74.0060' );
+		\update_post_meta( $post_id, 'geo_public', '0' );
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_location' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$location = $method->invoke( $transformer );
+
+		$this->assertNull( $location, 'Location should be null when geo_public is 0.' );
+	}
+
+	/**
+	 * Test get_location method without geodata.
+	 *
+	 * @covers ::get_location
+	 */
+	public function test_get_location_without_geodata() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post without Location',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_location' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$location = $method->invoke( $transformer );
+
+		$this->assertNull( $location, 'Location should be null when no geodata is present.' );
+	}
+
+	/**
+	 * Test get_location method with zero coordinates (Equator/Prime Meridian).
+	 *
+	 * @covers ::get_location
+	 */
+	public function test_get_location_with_zero_coordinates() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post at Null Island',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Set geodata to 0,0 (Null Island - valid coordinates).
+		\update_post_meta( $post_id, 'geo_latitude', '0' );
+		\update_post_meta( $post_id, 'geo_longitude', '0' );
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_location' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$location = $method->invoke( $transformer );
+
+		$this->assertIsArray( $location, 'Location should not be null for coordinates 0,0' );
+		$this->assertSame( 'Place', $location['type'] );
+		$this->assertSame( 0.0, $location['latitude'] );
+		$this->assertSame( 0.0, $location['longitude'] );
+	}
+
+	/**
+	 * Test get_location method with only latitude (missing longitude).
+	 *
+	 * @covers ::get_location
+	 */
+	public function test_get_location_with_incomplete_geodata() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post with Incomplete Location',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Set only latitude.
+		\update_post_meta( $post_id, 'geo_latitude', '51.5074' );
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_location' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$location = $method->invoke( $transformer );
+
+		$this->assertNull( $location, 'Location should be null when longitude is missing.' );
+	}
+
+	/**
+	 * Test get_location filter.
+	 *
+	 * @covers ::get_location
+	 */
+	public function test_get_location_filter() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post with Location Filter',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Set geodata.
+		\update_post_meta( $post_id, 'geo_latitude', '35.6762' );
+		\update_post_meta( $post_id, 'geo_longitude', '139.6503' );
+
+		// Add a filter to modify the location.
+		$filter = function ( $place ) {
+			$place['name']     = 'Tokyo, Japan';
+			$place['altitude'] = 40;
+			return $place;
+		};
+		\add_filter( 'activitypub_post_location', $filter, 10, 3 );
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_location' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$location = $method->invoke( $transformer );
+
+		$this->assertIsArray( $location );
+		$this->assertSame( 'Tokyo, Japan', $location['name'] );
+		$this->assertSame( 40, $location['altitude'] );
+
+		\remove_filter( 'activitypub_post_location', $filter );
+	}
+
+	/**
+	 * Test that location is included in to_object output.
+	 *
+	 * @covers ::to_object
+	 */
+	public function test_location_in_to_object() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post with Location',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Set geodata.
+		\update_post_meta( $post_id, 'geo_latitude', '51.5074' );
+		\update_post_meta( $post_id, 'geo_longitude', '-0.1278' );
+		\update_post_meta( $post_id, 'geo_address', 'London, UK' );
+
+		$post   = get_post( $post_id );
+		$object = Post::transform( $post )->to_object();
+
+		$location = $object->get_location();
+
+		$this->assertIsArray( $location );
+		$this->assertSame( 'Place', $location['type'] );
+		$this->assertSame( 51.5074, $location['latitude'] );
+		$this->assertSame( -0.1278, $location['longitude'] );
+		$this->assertSame( 'London, UK', $location['name'] );
+	}
+
+	/**
+	 * Test get_exif_data method returns null when no EXIF data.
+	 *
+	 * @covers \Activitypub\Transformer\Base::get_exif_data
+	 */
+	public function test_get_exif_data_returns_null_when_no_exif() {
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		// Clear image_meta to simulate no EXIF data.
+		$metadata               = \wp_get_attachment_metadata( $attachment_id );
+		$metadata['image_meta'] = array();
+		\wp_update_attachment_metadata( $attachment_id, $metadata );
+
+		$post        = self::factory()->post->create_and_get();
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_exif_data' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$exif = $method->invoke( $transformer, $attachment_id );
+
+		$this->assertNull( $exif, 'Should return null when no EXIF data is available.' );
+
+		\wp_delete_attachment( $attachment_id, true );
+	}
+
+	/**
+	 * Test get_exif_data method returns EXIF data in FEP-ee3a format.
+	 *
+	 * @covers \Activitypub\Transformer\Base::get_exif_data
+	 */
+	public function test_get_exif_data_returns_fep_format() {
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		// Set up mock EXIF data.
+		$metadata               = \wp_get_attachment_metadata( $attachment_id );
+		$metadata['image_meta'] = array(
+			'created_timestamp' => 1704067200, // 2024-01-01 00:00:00 UTC.
+			'shutter_speed'     => 0.01,       // 1/100.
+			'aperture'          => 2.8,
+			'focal_length'      => 50,
+			'iso'               => 400,
+			'camera'            => 'Canon EOS R5',
+		);
+		\wp_update_attachment_metadata( $attachment_id, $metadata );
+
+		$post        = self::factory()->post->create_and_get();
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_exif_data' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$exif_data = $method->invoke( $transformer, $attachment_id );
+
+		$this->assertIsArray( $exif_data, 'Should return an array.' );
+		$this->assertCount( 6, $exif_data, 'Should have 6 PropertyValue objects.' );
+
+		// Convert to associative array for easier testing.
+		$exif_by_name = array();
+		foreach ( $exif_data as $prop ) {
+			$this->assertArrayHasKey( '@type', $prop, 'Each item should have @type.' );
+			$this->assertSame( 'PropertyValue', $prop['@type'], '@type should be PropertyValue.' );
+			$this->assertArrayHasKey( 'name', $prop, 'Each item should have name.' );
+			$this->assertArrayHasKey( 'value', $prop, 'Each item should have value.' );
+			$exif_by_name[ $prop['name'] ] = $prop['value'];
+		}
+
+		// Check FEP-ee3a field names and value formats.
+		$this->assertArrayHasKey( 'DateTime', $exif_by_name, 'Should contain DateTime.' );
+		$this->assertArrayHasKey( 'ExposureTime', $exif_by_name, 'Should contain ExposureTime.' );
+		$this->assertArrayHasKey( 'FNumber', $exif_by_name, 'Should contain FNumber.' );
+		$this->assertArrayHasKey( 'FocalLength', $exif_by_name, 'Should contain FocalLength.' );
+		$this->assertArrayHasKey( 'PhotographicSensitivity', $exif_by_name, 'Should contain PhotographicSensitivity.' );
+		$this->assertArrayHasKey( 'Model', $exif_by_name, 'Should contain Model.' );
+
+		// Check value formats per FEP-ee3a.
+		$this->assertSame( '2024:01:01 00:00:00', $exif_by_name['DateTime'], 'DateTime should be EXIF format.' );
+		$this->assertSame( '1/100', $exif_by_name['ExposureTime'], 'ExposureTime should be fraction format.' );
+		$this->assertSame( 'f/2.8', $exif_by_name['FNumber'], 'FNumber should be f/X.X format.' );
+		$this->assertSame( '50', $exif_by_name['FocalLength'], 'FocalLength should be numeric string.' );
+		$this->assertSame( '400', $exif_by_name['PhotographicSensitivity'], 'PhotographicSensitivity should be string.' );
+		$this->assertSame( 'Canon EOS R5', $exif_by_name['Model'], 'Model should be camera name.' );
+
+		\wp_delete_attachment( $attachment_id, true );
+	}
+
+	/**
+	 * Test get_exif_data with long exposure (>= 1 second).
+	 *
+	 * @covers \Activitypub\Transformer\Base::get_exif_data
+	 */
+	public function test_get_exif_data_long_exposure() {
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		// Set up mock EXIF data with long exposure.
+		$metadata               = \wp_get_attachment_metadata( $attachment_id );
+		$metadata['image_meta'] = array(
+			'shutter_speed' => 2.5, // 2.5 seconds.
+		);
+		\wp_update_attachment_metadata( $attachment_id, $metadata );
+
+		$post        = self::factory()->post->create_and_get();
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_exif_data' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$exif_data = $method->invoke( $transformer, $attachment_id );
+
+		$this->assertCount( 1, $exif_data, 'Should have 1 PropertyValue object.' );
+		$this->assertSame( 'ExposureTime', $exif_data[0]['name'], 'Should be ExposureTime.' );
+		$this->assertSame( '2.5', $exif_data[0]['value'], 'Long exposure should be shown as seconds.' );
+
+		\wp_delete_attachment( $attachment_id, true );
+	}
+
+	/**
+	 * Test that EXIF data is included in image attachments.
+	 *
+	 * @covers \Activitypub\Transformer\Base::transform_attachment
+	 */
+	public function test_transform_attachment_includes_exif() {
+		$attachment_id  = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		$attachment_src = \wp_get_attachment_image_src( $attachment_id );
+
+		// Set up mock EXIF data.
+		$metadata               = \wp_get_attachment_metadata( $attachment_id );
+		$metadata['image_meta'] = array(
+			'iso'    => 800,
+			'camera' => 'Nikon Z6',
+		);
+		\wp_update_attachment_metadata( $attachment_id, $metadata );
+
+		$post_id = \wp_insert_post(
+			array(
+				'post_author'  => 1,
+				'post_content' => sprintf(
+					'<!-- wp:image {"id": %1$d,"sizeSlug":"large"} --><figure class="wp-block-image"><img src="%2$s" alt="" class="wp-image-%1$d"/></figure><!-- /wp:image -->',
+					$attachment_id,
+					$attachment_src[0]
+				),
+				'post_status'  => 'publish',
+			)
+		);
+
+		$object      = Post::transform( get_post( $post_id ) )->to_object();
+		$attachments = $object->get_attachment();
+
+		$this->assertCount( 1, $attachments, 'Should have one attachment.' );
+		$this->assertArrayHasKey( 'exifData', $attachments[0], 'Attachment should include exifData array.' );
+		$this->assertIsArray( $attachments[0]['exifData'], 'exifData should be an array of PropertyValue objects.' );
+		$this->assertCount( 2, $attachments[0]['exifData'], 'Should have 2 PropertyValue objects.' );
+
+		// Convert to associative array for easier testing.
+		$exif_by_name = array();
+		foreach ( $attachments[0]['exifData'] as $prop ) {
+			$exif_by_name[ $prop['name'] ] = $prop['value'];
+		}
+
+		$this->assertArrayHasKey( 'PhotographicSensitivity', $exif_by_name, 'EXIF should include ISO.' );
+		$this->assertArrayHasKey( 'Model', $exif_by_name, 'EXIF should include camera model.' );
+		$this->assertSame( '800', $exif_by_name['PhotographicSensitivity'], 'ISO should be 800.' );
+		$this->assertSame( 'Nikon Z6', $exif_by_name['Model'], 'Camera model should be Nikon Z6.' );
+
+		\wp_delete_attachment( $attachment_id, true );
+	}
+
+	/**
+	 * Test activitypub_image_exif filter.
+	 *
+	 * @covers \Activitypub\Transformer\Base::get_exif_data
+	 */
+	public function test_get_exif_data_filter() {
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		// Set up mock EXIF data.
+		$metadata               = \wp_get_attachment_metadata( $attachment_id );
+		$metadata['image_meta'] = array(
+			'camera' => 'Test Camera',
+		);
+		\wp_update_attachment_metadata( $attachment_id, $metadata );
+
+		// Add filter to extend EXIF data with a Make property.
+		$filter = function ( $exif_data, $image_meta, $id ) use ( $attachment_id ) {
+			$this->assertSame( $attachment_id, $id, 'Filter should receive correct attachment ID.' );
+			$exif_data[] = array(
+				'@type' => 'PropertyValue',
+				'name'  => 'Make',
+				'value' => 'Test Manufacturer',
+			);
+			return $exif_data;
+		};
+		\add_filter( 'activitypub_image_exif', $filter, 10, 3 );
+
+		$post        = self::factory()->post->create_and_get();
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_exif_data' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$exif_data = $method->invoke( $transformer, $attachment_id );
+
+		$this->assertCount( 2, $exif_data, 'Should have 2 PropertyValue objects (Model + Make).' );
+
+		// Convert to associative array for easier testing.
+		$exif_by_name = array();
+		foreach ( $exif_data as $prop ) {
+			$exif_by_name[ $prop['name'] ] = $prop['value'];
+		}
+
+		$this->assertArrayHasKey( 'Make', $exif_by_name, 'Filter should be able to add Make property.' );
+		$this->assertSame( 'Test Manufacturer', $exif_by_name['Make'], 'Filter should set Make value.' );
+
+		\remove_filter( 'activitypub_image_exif', $filter );
+		\wp_delete_attachment( $attachment_id, true );
+	}
+
+	/**
+	 * Test that duplicate attachments are filtered after activitypub_attachment_ids filter.
+	 *
+	 * This ensures that when plugins add attachments via the filter (like Classic Editor),
+	 * duplicates are properly removed to prevent the same image appearing multiple times.
+	 *
+	 * @covers ::get_attachment
+	 */
+	public function test_duplicate_attachments_filtered_after_filter() {
+		// Create an image attachment.
+		$attachment_id  = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		$attachment_url = \wp_get_attachment_url( $attachment_id );
+
+		// Create a post with the image as featured image.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post with Duplicate Image',
+				'post_content' => sprintf( '<p>Test content with image</p><img src="%s" />', $attachment_url ),
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Set the same image as featured image.
+		\set_post_thumbnail( $post_id, $attachment_id );
+
+		// Add a filter that simulates Classic Editor behavior - adding attached images.
+		$filter = function ( $attachments ) use ( $attachment_id ) {
+			// Simulate Classic Editor adding the same attachment again.
+			$attachments[] = array( 'id' => $attachment_id );
+			return $attachments;
+		};
+		\add_filter( 'activitypub_attachment_ids', $filter, 10, 1 );
+
+		$post   = get_post( $post_id );
+		$object = Post::transform( $post )->to_object();
+
+		// Get the attachments.
+		$attachments = $object->get_attachment();
+
+		// Remove the filter.
+		\remove_filter( 'activitypub_attachment_ids', $filter );
+
+		// Clean up.
+		\delete_post_thumbnail( $post_id );
+		\wp_delete_attachment( $attachment_id, true );
+
+		// There should be only ONE attachment, not duplicates.
+		$this->assertCount( 1, $attachments, 'Duplicate attachments should be filtered out' );
+		$this->assertSame( $attachment_url, $attachments[0]['url'] );
+	}
+
+	/**
+	 * Test to_tombstone returns a Tombstone object with correct type.
+	 *
+	 * @covers ::to_tombstone
+	 */
+	public function test_to_tombstone_returns_tombstone_type() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post for Tombstone',
+				'post_content' => 'Content for tombstone test',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+		$tombstone   = $transformer->to_tombstone();
+
+		$this->assertInstanceOf( Base_Object::class, $tombstone );
+		$this->assertSame( 'Tombstone', $tombstone->get_type() );
+	}
+
+	/**
+	 * Test to_tombstone includes the original post ID.
+	 *
+	 * @covers ::to_tombstone
+	 */
+	public function test_to_tombstone_includes_id() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post for Tombstone ID',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$post        = get_post( $post_id );
+		$permalink   = \get_permalink( $post_id );
+		$transformer = new Post( $post );
+		$tombstone   = $transformer->to_tombstone();
+
+		$this->assertSame( $permalink, $tombstone->get_id() );
+	}
+
+	/**
+	 * Test to_tombstone includes formerType from original post.
+	 *
+	 * @covers ::to_tombstone
+	 */
+	public function test_to_tombstone_includes_former_type() {
+		// Create an Article type post (long content with title).
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Article for Tombstone',
+				'post_content' => str_repeat( 'Long content. ', 100 ),
+				'post_status'  => 'publish',
+			)
+		);
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+		$tombstone   = $transformer->to_tombstone();
+
+		$this->assertSame( 'Article', $tombstone->get_former_type() );
+	}
+
+	/**
+	 * Test to_tombstone includes formerType for Note.
+	 *
+	 * @covers ::to_tombstone
+	 */
+	public function test_to_tombstone_includes_former_type_note() {
+		// Create a Note type post (no title).
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => '',
+				'post_content' => 'Short note content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+		$tombstone   = $transformer->to_tombstone();
+
+		$this->assertSame( 'Note', $tombstone->get_former_type() );
+	}
+
+	/**
+	 * Test to_tombstone includes deleted timestamp when meta is set.
+	 *
+	 * @covers ::to_tombstone
+	 */
+	public function test_to_tombstone_includes_deleted_timestamp_when_meta_set() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post for Tombstone Timestamp',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Set the deleted timestamp meta.
+		$deleted_time = time();
+		\update_post_meta( $post_id, 'activitypub_deleted_at', $deleted_time );
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+		$tombstone   = $transformer->to_tombstone();
+
+		$deleted = $tombstone->get_deleted();
+		$this->assertNotNull( $deleted );
+		// Check it's a valid timestamp format.
+		$this->assertMatchesRegularExpression( '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/', $deleted );
+	}
+
+	/**
+	 * Test to_tombstone does not include deleted timestamp without meta.
+	 *
+	 * @covers ::to_tombstone
+	 */
+	public function test_to_tombstone_no_deleted_timestamp_without_meta() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post for Tombstone No Timestamp',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+		$tombstone   = $transformer->to_tombstone();
+
+		// Without the meta, deleted should be null.
+		$this->assertNull( $tombstone->get_deleted() );
+	}
+
+	/**
+	 * Test to_tombstone includes published timestamp in array output.
+	 *
+	 * @covers ::to_tombstone
+	 */
+	public function test_to_tombstone_includes_published() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post for Tombstone Timestamps',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+		$tombstone   = $transformer->to_tombstone();
+		$array       = $tombstone->to_array();
+
+		// Published should be in the array output.
+		$this->assertArrayHasKey( 'published', $array );
+		// Check it's a valid timestamp format.
+		$this->assertMatchesRegularExpression( '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/', $array['published'] );
+	}
+
+	/**
+	 * Test to_tombstone for trashed post preserves cached canonical URL.
+	 *
+	 * @covers ::to_tombstone
+	 */
+	public function test_to_tombstone_trashed_post_uses_cached_url() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post for Trash',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$post      = get_post( $post_id );
+		$permalink = \get_permalink( $post_id );
+
+		// First transform to cache the URL.
+		$transformer = new Post( $post );
+		$transformer->to_object();
+
+		// Now trash the post.
+		\wp_trash_post( $post_id );
+
+		// Get the trashed post.
+		$trashed_post = get_post( $post_id );
+		$transformer  = new Post( $trashed_post );
+		$tombstone    = $transformer->to_tombstone();
+
+		// The cached URL should be used, not the trashed permalink.
+		$this->assertSame( $permalink, $tombstone->get_id() );
+	}
+
+	/**
+	 * Test to_tombstone to_array output has correct structure.
+	 *
+	 * @covers ::to_tombstone
+	 */
+	public function test_to_tombstone_to_array_structure() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post for Tombstone Array',
+				'post_content' => str_repeat( 'Long content. ', 100 ),
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Set the deleted timestamp meta to include deleted in output.
+		\update_post_meta( $post_id, 'activitypub_deleted_at', time() );
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+		$tombstone   = $transformer->to_tombstone();
+		$array       = $tombstone->to_array();
+
+		$this->assertArrayHasKey( '@context', $array );
+		$this->assertArrayHasKey( 'type', $array );
+		$this->assertArrayHasKey( 'id', $array );
+		$this->assertArrayHasKey( 'formerType', $array );
+		$this->assertArrayHasKey( 'deleted', $array );
+
+		$this->assertSame( 'Tombstone', $array['type'] );
+		$this->assertSame( 'Article', $array['formerType'] );
+	}
+
+	/**
+	 * Test to_tombstone to_array without deleted meta.
+	 *
+	 * @covers ::to_tombstone
+	 */
+	public function test_to_tombstone_to_array_without_deleted() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Post for Tombstone Array No Deleted',
+				'post_content' => str_repeat( 'Long content. ', 100 ),
+				'post_status'  => 'publish',
+			)
+		);
+
+		$post        = get_post( $post_id );
+		$transformer = new Post( $post );
+		$tombstone   = $transformer->to_tombstone();
+		$array       = $tombstone->to_array();
+
+		$this->assertArrayHasKey( '@context', $array );
+		$this->assertArrayHasKey( 'type', $array );
+		$this->assertArrayHasKey( 'id', $array );
+		$this->assertArrayHasKey( 'formerType', $array );
+		// Without meta, deleted should not be in array.
+		$this->assertArrayNotHasKey( 'deleted', $array );
+
+		$this->assertSame( 'Tombstone', $array['type'] );
+		$this->assertSame( 'Article', $array['formerType'] );
 	}
 }

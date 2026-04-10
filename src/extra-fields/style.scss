@@ -2,34 +2,15 @@
  * Styles for the Extra Fields block.
  */
 
-.activitypub-extra-fields-block-wrapper {
-	// Add padding to content when background or border is set (stacked and compact styles)
-	&.has-background .activitypub-extra-fields,
-	&.has-border .activitypub-extra-fields,
-	&.is-style-stacked.has-background .activitypub-extra-fields,
-	&.is-style-stacked.has-border .activitypub-extra-fields {
-		padding: 1rem;
-	}
-
-	// Remove default padding for cards style
-	&.is-style-cards.has-background .activitypub-extra-fields,
-	&.is-style-cards.has-border .activitypub-extra-fields {
-		padding: 0;
-	}
-}
-
-.activitypub-extra-fields {
-	margin: 0;
-	padding: 0;
-	list-style: none;
-}
-
 /**
  * Default Compact Style
  * Displays fields in a table-like format with aligned labels and values.
  * This is the default style, so it applies without a style class.
  */
 .activitypub-extra-fields {
+	margin: 0;
+	padding: 0;
+	list-style: none;
 	display: table;
 	table-layout: fixed;
 }
@@ -50,7 +31,7 @@
 		color: inherit;
 
 		&::after {
-			content: ':';
+			content: ":";
 		}
 	}
 
@@ -88,6 +69,7 @@
  * Displays fields in a stacked format with label on top and value below.
  */
 .is-style-stacked {
+
 	.activitypub-extra-fields {
 		display: block;
 		table-layout: auto;
@@ -126,20 +108,14 @@
  * Displays each field in its own bordered card with padding.
  */
 .is-style-cards {
-	// Remove wrapper background for cards style - background goes on individual cards only
-	&.has-background {
-		background: transparent !important;
-
-		.activitypub-extra-fields {
-			padding: 1rem;
-		}
-	}
 
 	.activitypub-extra-fields {
 		display: block;
 		table-layout: auto;
 	}
 
+	// Mutually exclusive style variations won't conflict.
+	/* stylelint-disable-next-line no-descending-specificity */
 	.activitypub-extra-field {
 		display: block;
 		border: 1px solid var(--wp--preset--color--contrast-2, #ddd);
@@ -158,7 +134,7 @@
 			font-size: 0.9em;
 			text-transform: uppercase;
 			letter-spacing: 0.5px;
-			color: currentColor;
+			color: currentcolor;
 			margin-bottom: 0.5em;
 			padding-bottom: 0;
 			padding-right: 0;
@@ -174,5 +150,34 @@
 			font-size: 1em;
 			padding-bottom: 0;
 		}
+	}
+
+	// Remove wrapper background - goes on individual cards instead
+	&.has-background {
+		background: transparent !important;
+
+		.activitypub-extra-fields {
+			padding: 1rem;
+		}
+	}
+}
+
+/**
+ * Wrapper padding overrides
+ * Applied last so they properly override the style variations above.
+ */
+.activitypub-extra-fields-block-wrapper {
+	// Add padding when background or border is set
+	&.has-background .activitypub-extra-fields,
+	&.has-border .activitypub-extra-fields,
+	&.is-style-stacked.has-background .activitypub-extra-fields,
+	&.is-style-stacked.has-border .activitypub-extra-fields {
+		padding: 1rem;
+	}
+
+	// Remove default padding for cards style
+	&.is-style-cards.has-background .activitypub-extra-fields,
+	&.is-style-cards.has-border .activitypub-extra-fields {
+		padding: 0;
 	}
 }

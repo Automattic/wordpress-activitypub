@@ -5,15 +5,17 @@
 /vendor/
 _site
 .idea/
-# Claude Code - track skills but ignore local overrides
+# Claude Code / Agents - track skills/agents but ignore local overrides and summaries
 .claude/**/*.local*
+.claude/summaries/
+.agents/**/*.local*
 .cursor
 .DS_Store
 .php_cs.cache
 .phpunit.cache
 .phpunit.result.cache
 .sass-cache
-.vscode/settings.json
+.vscode
 .windsurf
 .windsurfrules
 .wp-env.override.json

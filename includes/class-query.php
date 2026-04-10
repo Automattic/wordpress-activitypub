@@ -198,6 +198,14 @@ class Query {
 			}
 		}
 
+		// Check Term by ID.
+		if ( ! $queried_object ) {
+			$term_id = \get_query_var( 'term_id' );
+			if ( $term_id ) {
+				$queried_object = \get_term( $term_id );
+			}
+		}
+
 		// Try to get Author by ID.
 		if ( ! $queried_object ) {
 			$url       = $this->get_request_url();
@@ -330,6 +338,10 @@ class Query {
 			$return = true;
 		}
 
+		if ( \is_author() && \get_user_option( 'activitypub_use_permalink_as_id', \get_queried_object_id() ) ) {
+			$return = true;
+		}
+
 		/**
 		 * Filters whether content negotiation should be forced.
 		 *
@@ -389,7 +401,13 @@ class Query {
 			return false;
 		}
 
-		$post     = $this->get_queried_object();
+		$post = $this->get_queried_object();
+
+		// Ensure the meta belongs to the queried post to prevent arbitrary meta disclosure.
+		if ( (int) $meta->post_id !== $post->ID ) {
+			return false;
+		}
+
 		$user_uri = get_user_id( $post->post_author );
 
 		if ( ! $user_uri ) {

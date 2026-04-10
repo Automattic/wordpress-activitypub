@@ -1,0 +1,20 @@
+/**
+ * Main stylesheet entry point for ActivityPub App
+ * This compiles to style-index.css
+ */
+
+// Import global styles (design tokens, body styles, root element)
+@use "./styles/design-tokens";
+
+// Main layout container.
+.activitypub-app-layout {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+}
+
+#wpfooter {
+	display: none;
+}

@@ -145,15 +145,12 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	 * @covers ::get_items
 	 */
 	public function test_get_items_pagination() {
-		$actor_mode = \get_option( 'activitypub_actor_mode' );
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
 
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
 		$request->set_param( 'page', 2 );
 		$request->set_param( 'per_page', 10 );
 		$response = rest_get_server()->dispatch( $request );
-
-		\update_option( 'activitypub_actor_mode', $actor_mode );
 
 		$data = $response->get_data();
 
@@ -168,6 +165,8 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$response = rest_get_server()->dispatch( $request );
 
 		$this->assertErrorResponse( 'rest_post_invalid_page_number', $response, 400 );
+
+		\delete_option( 'activitypub_actor_mode' );
 	}
 
 	/**

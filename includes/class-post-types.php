@@ -13,8 +13,11 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
-use Activitypub\Collection\Posts;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Collection\Remote_Posts;
+use Activitypub\OAuth\Client;
+use Activitypub\OAuth\Scope;
+use Activitypub\OAuth\Token;
 
 /**
  * Post Types class.
@@ -30,12 +33,15 @@ class Post_Types {
 		\add_action( 'init', array( self::class, 'register_post_post_type' ), 11 );
 		\add_action( 'init', array( self::class, 'register_extra_fields_post_types' ), 11 );
 		\add_action( 'init', array( self::class, 'register_activitypub_post_meta' ), 11 );
+		\add_action( 'init', array( self::class, 'register_oauth_post_types' ), 11 );
 
 		\add_action( 'rest_api_init', array( self::class, 'register_ap_actor_rest_field' ) );
 		\add_action( 'rest_api_init', array( self::class, 'register_ap_post_actor_rest_field' ) );
 		\add_action( 'rest_api_init', array( self::class, 'register_ap_post_rest_params' ) );
 
 		\add_filter( 'rest_ap_post_query', array( self::class, 'filter_ap_post_by_user' ), 10, 2 );
+		\add_filter( 'rest_ap_object_type_query', array( self::class, 'filter_object_type_by_user' ), 10, 2 );
+		\add_filter( 'rest_ap_object_type_collection_params', array( self::class, 'register_object_type_user_param' ) );
 
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
@@ -149,7 +155,7 @@ class Post_Types {
 				'description'       => 'The type of the activity',
 				'single'            => true,
 				'show_in_rest'      => true,
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					$schema = array(
 						'type'    => 'string',
 						'enum'    => Activity::TYPES,
@@ -183,7 +189,7 @@ class Post_Types {
 				'type'              => 'string',
 				'single'            => true,
 				'show_in_rest'      => true,
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					$schema = array(
 						'type'    => 'string',
 						'enum'    => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
@@ -252,7 +258,7 @@ class Post_Types {
 				'description'       => 'The type of the activity',
 				'single'            => true,
 				'show_in_rest'      => true,
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					$schema = array(
 						'type'    => 'string',
 						'enum'    => Activity::TYPES,
@@ -275,7 +281,7 @@ class Post_Types {
 				'type'              => 'string',
 				'single'            => true,
 				'show_in_rest'      => true,
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					$schema = array(
 						'type'    => 'string',
 						'enum'    => array( 'application', 'blog', 'user' ),
@@ -321,7 +327,7 @@ class Post_Types {
 				'type'              => 'string',
 				'single'            => true,
 				'show_in_rest'      => true,
-				'sanitize_callback' => function ( $value ) {
+				'sanitize_callback' => static function ( $value ) {
 					$schema = array(
 						'type'    => 'string',
 						'enum'    => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
@@ -343,7 +349,7 @@ class Post_Types {
 	 */
 	public static function register_post_post_type() {
 		\register_post_type(
-			Posts::POST_TYPE,
+			Remote_Posts::POST_TYPE,
 			array(
 				'labels'              => array(
 					'name'          => \_x( 'Posts', 'post_type plural name', 'activitypub' ),
@@ -367,7 +373,7 @@ class Post_Types {
 
 		\register_taxonomy(
 			'ap_tag',
-			array( Posts::POST_TYPE ),
+			array( Remote_Posts::POST_TYPE ),
 			array(
 				'public'       => false,
 				'query_var'    => true,
@@ -377,7 +383,7 @@ class Post_Types {
 
 		\register_taxonomy(
 			'ap_object_type',
-			array( Posts::POST_TYPE ),
+			array( Remote_Posts::POST_TYPE ),
 			array(
 				'public'       => false,
 				'query_var'    => true,
@@ -386,7 +392,7 @@ class Post_Types {
 		);
 
 		\register_post_meta(
-			Posts::POST_TYPE,
+			Remote_Posts::POST_TYPE,
 			'_activitypub_remote_actor_id',
 			array(
 				'type'              => 'integer',
@@ -397,7 +403,7 @@ class Post_Types {
 		);
 
 		\register_post_meta(
-			Posts::POST_TYPE,
+			Remote_Posts::POST_TYPE,
 			'_activitypub_user_id',
 			array(
 				'type'              => 'integer',
@@ -437,19 +443,122 @@ class Post_Types {
 			'show_ui'             => true,
 			'supports'            => array( 'title', 'editor', 'page-attributes', 'author' ),
 			'capabilities'        => array(
+				'create_posts'      => 'activitypub', // Require activitypub capability to create extra fields.
 				'edit_others_posts' => 'do_not_allow', // Disallow editing others' Extra Fields (only own ones).
 			),
 		);
 
 		\register_post_type( Extra_Fields::USER_POST_TYPE, $extra_field_args );
 
-		unset( $extra_field_args['capabilities'] ); // Allow editing the Blog's Extra Fields.
+		// Blog Extra Fields require manage_options capability.
+		$extra_field_args['capabilities'] = array( 'create_posts' => 'manage_options' );
 		\register_post_type( Extra_Fields::BLOG_POST_TYPE, $extra_field_args );
 
 		/**
 		 * Fires after ActivityPub custom post types have been registered.
 		 */
 		\do_action( 'activitypub_after_register_post_type' );
+	}
+
+	/**
+	 * Register OAuth 2.0 post types for C2S support.
+	 *
+	 * Registers post type for OAuth clients.
+	 * Note: Tokens are stored in user meta and authorization codes in transients.
+	 */
+	public static function register_oauth_post_types() {
+		// OAuth Clients post type.
+		\register_post_type(
+			Client::POST_TYPE,
+			array(
+				'labels'              => array(
+					'name'          => \_x( 'OAuth Clients', 'post_type plural name', 'activitypub' ),
+					'singular_name' => \_x( 'OAuth Client', 'post_type single name', 'activitypub' ),
+				),
+				'public'              => false,
+				'show_in_rest'        => false,
+				'hierarchical'        => false,
+				'rewrite'             => false,
+				'query_var'           => false,
+				'delete_with_user'    => false,
+				'can_export'          => true,
+				'supports'            => array( 'title', 'editor', 'custom-fields' ),
+				'exclude_from_search' => true,
+			)
+		);
+
+		// OAuth Client meta.
+		\register_post_meta(
+			Client::POST_TYPE,
+			'_activitypub_client_id',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'Unique OAuth client identifier (UUID).',
+				'sanitize_callback' => 'sanitize_text_field',
+			)
+		);
+
+		\register_post_meta(
+			Client::POST_TYPE,
+			'_activitypub_client_secret_hash',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'SHA-256 hash of the client secret (null for public clients).',
+				'sanitize_callback' => 'sanitize_text_field',
+			)
+		);
+
+		\register_post_meta(
+			Client::POST_TYPE,
+			'_activitypub_redirect_uris',
+			array(
+				'type'              => 'array',
+				'single'            => true,
+				'description'       => 'Allowed redirect URIs for this client.',
+				'sanitize_callback' => static function ( $value ) {
+					if ( ! is_array( $value ) ) {
+						return array();
+					}
+					return array_map( array( Sanitize::class, 'redirect_uri' ), $value );
+				},
+			)
+		);
+
+		\register_post_meta(
+			Client::POST_TYPE,
+			'_activitypub_allowed_scopes',
+			array(
+				'type'              => 'array',
+				'single'            => true,
+				'description'       => 'Allowed OAuth scopes for this client.',
+				'sanitize_callback' => array( Scope::class, 'sanitize' ),
+			)
+		);
+
+		\register_post_meta(
+			Client::POST_TYPE,
+			'_activitypub_is_public',
+			array(
+				'type'              => 'boolean',
+				'single'            => true,
+				'description'       => 'Whether this is a public client (PKCE-only, no secret).',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'default'           => true,
+			)
+		);
+
+		\register_post_meta(
+			Client::POST_TYPE,
+			Token::USER_META_KEY,
+			array(
+				'type'              => 'integer',
+				'single'            => false,
+				'description'       => 'User IDs that have active tokens for this client.',
+				'sanitize_callback' => 'absint',
+			)
+		);
 	}
 
 	/**
@@ -476,7 +585,7 @@ class Post_Types {
 					'type'              => 'string',
 					'single'            => true,
 					'show_in_rest'      => true,
-					'sanitize_callback' => function ( $value ) {
+					'sanitize_callback' => static function ( $value ) {
 						$schema = array(
 							'type'    => 'string',
 							'enum'    => array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
@@ -511,7 +620,8 @@ class Post_Types {
 					'type'              => 'string',
 					'single'            => true,
 					'show_in_rest'      => true,
-					'sanitize_callback' => function ( $value ) {
+					'default'           => \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE ),
+					'sanitize_callback' => static function ( $value ) {
 						$schema = array(
 							'type'    => 'string',
 							'enum'    => array( ACTIVITYPUB_INTERACTION_POLICY_ANYONE, ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS, ACTIVITYPUB_INTERACTION_POLICY_ME ),
@@ -534,11 +644,21 @@ class Post_Types {
 					'type'              => 'string',
 					'single'            => true,
 					'show_in_rest'      => true,
-					'sanitize_callback' => function ( $value ) {
+					'sanitize_callback' => static function ( $value ) {
+						// Allow empty values to pass through without setting a default.
+						if ( empty( $value ) ) {
+							return '';
+						}
+
 						$schema = array(
 							'type'    => 'string',
-							'enum'    => array( 'pending', 'federated', 'failed' ),
-							'default' => 'pending',
+							'enum'    => array(
+								ACTIVITYPUB_OBJECT_STATE_PENDING,
+								ACTIVITYPUB_OBJECT_STATE_FEDERATED,
+								ACTIVITYPUB_OBJECT_STATE_FAILED,
+								ACTIVITYPUB_OBJECT_STATE_DELETED,
+							),
+							'default' => '',
 						);
 
 						if ( \is_wp_error( \rest_validate_enum( $value, $schema, '' ) ) ) {
@@ -566,7 +686,7 @@ class Post_Types {
 				 * @param array $response Prepared response array.
 				 * @return string The raw post content.
 				 */
-				'get_callback' => function ( $response ) {
+				'get_callback' => static function ( $response ) {
 					return \get_post_field( 'post_content', $response['id'] );
 				},
 				'schema'       => array(
@@ -658,7 +778,7 @@ class Post_Types {
 	 */
 	public static function register_ap_post_actor_rest_field() {
 		\register_rest_field(
-			Posts::POST_TYPE,
+			Remote_Posts::POST_TYPE,
 			'actor_info',
 			array(
 				/**
@@ -698,7 +818,7 @@ class Post_Types {
 	 */
 	public static function register_ap_post_rest_params() {
 		\add_filter(
-			'rest_' . Posts::POST_TYPE . '_collection_params',
+			'rest_' . Remote_Posts::POST_TYPE . '_collection_params',
 			function ( $params ) {
 				$params['user_id'] = array(
 					'description'       => __( 'Filter posts by user ID (0 for site/blog actor).', 'activitypub' ),
@@ -708,6 +828,15 @@ class Post_Types {
 
 				$params['ap_object_type'] = array(
 					'description' => 'Filter posts by ActivityPub object type.',
+					'type'        => 'array',
+					'items'       => array(
+						'type'    => 'integer',
+						'minimum' => 0,
+					),
+				);
+
+				$params['ap_tag'] = array(
+					'description' => 'Filter posts by ActivityPub tag (term IDs).',
 					'type'        => 'array',
 					'items'       => array(
 						'type'    => 'integer',
@@ -729,19 +858,24 @@ class Post_Types {
 	 * @return array Modified query arguments.
 	 */
 	public static function filter_ap_post_by_user( $args, $request ) {
-		// Check if a specific user_id is requested via query parameter.
-		$user_id = \get_current_user_id();
-		if ( isset( $request['user_id'] ) ) {
-			$user_id = (int) $request['user_id'];
-		}
+		$ap_tag = $request->get_param( 'ap_tag' );
+		if ( ! empty( $ap_tag ) ) {
+			if ( ! isset( $args['tax_query'] ) ) {
+				$args['tax_query'] = array(); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+			}
 
-		if ( ! $user_id && 0 !== $user_id ) {
-			// If no user is logged in, return empty results.
-			$args['post__in'] = array( 0 );
+			$args['tax_query'][] = array(
+				'taxonomy' => 'ap_tag',
+				'field'    => 'term_id',
+				'terms'    => $ap_tag,
+			);
+
 			return $args;
 		}
 
-		// Add meta query to filter by _activitypub_user_id.
+		// Filter by user_id (defaults to current user, use 0 for site/blog actor).
+		$user_id = isset( $request['user_id'] ) ? (int) $request['user_id'] : \get_current_user_id();
+
 		if ( ! isset( $args['meta_query'] ) ) {
 			$args['meta_query'] = array(); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 		}
@@ -769,6 +903,67 @@ class Post_Types {
 	}
 
 	/**
+	 * Register user_id parameter for ap_object_type taxonomy REST API.
+	 *
+	 * @param array $params Existing collection parameters.
+	 *
+	 * @return array Modified collection parameters.
+	 */
+	public static function register_object_type_user_param( $params ) {
+		$params['user_id'] = array(
+			'description'       => __( 'Filter terms to those with posts from this user ID.', 'activitypub' ),
+			'type'              => 'integer',
+			'sanitize_callback' => 'absint',
+		);
+
+		return $params;
+	}
+
+	/**
+	 * Filter ap_object_type REST query to only return terms that have posts for the given user.
+	 *
+	 * Uses a direct SQL query to efficiently get term IDs without loading all post IDs.
+	 *
+	 * @param array            $args    Query arguments.
+	 * @param \WP_REST_Request $request The REST API request.
+	 *
+	 * @return array Modified query arguments.
+	 */
+	public static function filter_object_type_by_user( $args, $request ) {
+		$user_id = $request->get_param( 'user_id' );
+		if ( null === $user_id ) {
+			return $args;
+		}
+
+		global $wpdb;
+
+		// Get term IDs that have at least one ap_post for this user.
+		$term_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT DISTINCT tt.term_id
+				FROM {$wpdb->term_taxonomy} tt
+				INNER JOIN {$wpdb->term_relationships} tr ON tt.term_taxonomy_id = tr.term_taxonomy_id
+				INNER JOIN {$wpdb->posts} p ON tr.object_id = p.ID
+				INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+				WHERE tt.taxonomy = 'ap_object_type'
+				AND p.post_type = 'ap_post'
+				AND pm.meta_key = '_activitypub_user_id'
+				AND pm.meta_value = %s",
+				$user_id
+			)
+		);
+
+		if ( empty( $term_ids ) ) {
+			// Force empty result.
+			$term_ids = array( 0 );
+		}
+
+		$args['include'] = \array_map( 'intval', $term_ids );
+
+		return $args;
+	}
+
+	/**
 	 * Prevent empty or default meta values.
 	 *
 	 * @param null|bool $check      Whether to allow updating metadata for the given type.
@@ -778,10 +973,9 @@ class Post_Types {
 	 */
 	public static function prevent_empty_post_meta( $check, $object_id, $meta_key, $meta_value ) {
 		$post_metas = array(
-			'activitypub_content_visibility'       => '',
-			'activitypub_content_warning'          => '',
-			'activitypub_interaction_policy_quote' => ACTIVITYPUB_INTERACTION_POLICY_ANYONE,
-			'activitypub_max_image_attachments'    => (string) \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
+			'activitypub_content_visibility'    => '',
+			'activitypub_content_warning'       => '',
+			'activitypub_max_image_attachments' => (string) \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS ),
 		);
 
 		if ( isset( $post_metas[ $meta_key ] ) && $post_metas[ $meta_key ] === (string) $meta_value ) {

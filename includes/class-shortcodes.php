@@ -62,7 +62,7 @@ class Shortcodes {
 			$hash_tags[] = \sprintf(
 				'<a rel="tag" class="hashtag u-tag u-category" href="%s">%s</a>',
 				\esc_url( \get_tag_link( $tag ) ),
-				esc_hashtag( $tag->slug )
+				esc_hashtag( $tag->name )
 			);
 		}
 
@@ -188,10 +188,9 @@ class Shortcodes {
 			$content = \wp_filter_content_tags( $content );
 		}
 
-		// Replace script and style elements.
-		$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
 		$content = \strip_shortcodes( $content );
-		$content = \trim( \preg_replace( '/[\n\r\t]/', '', $content ) );
+		$content = Sanitize::clean_html( $content );
+		$content = Sanitize::strip_whitespace( $content );
 
 		add_shortcode( 'ap_content', array( 'Activitypub\Shortcodes', 'content' ) );
 

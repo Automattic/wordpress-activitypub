@@ -479,22 +479,150 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test the reactions block with deprecated markup.
+	 * Test the reactions block with v1 deprecated markup (title attribute, no HTML content).
+	 *
+	 * Block v1 (plugin 1.0.0): Dynamic block with title attribute, self-closing.
 	 */
-	public function test_render_reactions_block_with_deprecated_markup() {
+	public function test_render_reactions_block_with_v1_markup() {
 		$post_id = $this->get_post_id_with_reactions();
 
+		// v1 with custom title.
 		$block_markup = '<!-- wp:activitypub/reactions {"title":"What people think about it on the Fediverse!","postId":' . $post_id . '} /-->';
 		$output       = do_blocks( $block_markup );
 		$expected     = '<h6 class="wp-block-heading">What people think about it on the Fediverse!</h6>';
 
 		$this->assertStringContainsString( $expected, $output );
 
+		// v1 with default title.
 		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} /-->';
 		$output       = do_blocks( $block_markup );
 		$expected     = '<h6 class="wp-block-heading">Fediverse Reactions</h6>';
 
 		$this->assertStringContainsString( $expected, $output );
+	}
+
+	/**
+	 * Test the reactions block with v2 deprecated markup (fragment with separate div).
+	 *
+	 * Block v2 (plugin 2.0.0): Fragment with InnerBlocks and separate div, no wp-block- prefix.
+	 */
+	public function test_render_reactions_block_with_v2_markup() {
+		$post_id = $this->get_post_id_with_reactions();
+
+		// v2 format: fragment with heading innerBlock and separate div (no wp-block- prefix).
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} -->
+<!-- wp:heading {"level":6} -->
+<h6 class="wp-block-heading">Fediverse reactions</h6>
+<!-- /wp:heading -->
+<div class="activitypub-reactions-block"></div>
+<!-- /wp:activitypub/reactions -->';
+
+		$output = do_blocks( $block_markup );
+
+		// Should render the heading from innerBlocks.
+		$this->assertStringContainsString( 'Fediverse reactions', $output );
+		// Should have the wrapper with wp-block- prefix (from get_block_wrapper_attributes).
+		$this->assertStringContainsString( 'wp-block-activitypub-reactions', $output );
+		// Should have reaction content.
+		$this->assertStringContainsString( 'activitypub-reactions', $output );
+	}
+
+	/**
+	 * Test the reactions block with v3 markup (useBlockProps with wp-block- prefix).
+	 *
+	 * Block v3 (plugin 3.0.0+): Uses useBlockProps.save() with wp-block- prefix class.
+	 */
+	public function test_render_reactions_block_with_v3_markup() {
+		$post_id = $this->get_post_id_with_reactions();
+
+		// v3 format: div with useBlockProps (has wp-block- prefix) wrapping InnerBlocks.
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} -->
+<div class="wp-block-activitypub-reactions activitypub-reactions-block"><!-- wp:heading {"level":6} -->
+<h6 class="wp-block-heading">Fediverse reactions</h6>
+<!-- /wp:heading --></div>
+<!-- /wp:activitypub/reactions -->';
+
+		$output = do_blocks( $block_markup );
+
+		// Should render the heading from innerBlocks.
+		$this->assertStringContainsString( 'Fediverse reactions', $output );
+		// Should have the wrapper with wp-block- prefix.
+		$this->assertStringContainsString( 'wp-block-activitypub-reactions', $output );
+		// Should have reaction content.
+		$this->assertStringContainsString( 'activitypub-reactions', $output );
+	}
+
+	/**
+	 * Test the reactions block with facepile style shows avatars.
+	 */
+	public function test_render_reactions_block_facepile_style_shows_avatars() {
+		$post_id = $this->get_post_id_with_reactions();
+
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . ',"className":"is-style-facepile","displayStyle":"facepile"} /-->';
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( 'is-style-facepile', $output );
+		$this->assertStringContainsString( 'reaction-avatars', $output );
+	}
+
+	/**
+	 * Test the reactions block with compact style hides avatars.
+	 */
+	public function test_render_reactions_block_compact_style_hides_avatars() {
+		$post_id = $this->get_post_id_with_reactions();
+
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . ',"className":"is-style-compact","displayStyle":"compact"} /-->';
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( 'is-style-compact', $output );
+		$this->assertStringNotContainsString( 'reaction-avatars', $output );
+	}
+
+	/**
+	 * Test the reactions block defaults to facepile when avatars are enabled.
+	 */
+	public function test_render_reactions_block_defaults_to_facepile_with_avatars_enabled() {
+		\update_option( 'show_avatars', true );
+
+		$post_id = $this->get_post_id_with_reactions();
+
+		// Block without explicit style class.
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} /-->';
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( 'is-style-facepile', $output );
+		$this->assertStringContainsString( 'reaction-avatars', $output );
+	}
+
+	/**
+	 * Test the reactions block defaults to compact when avatars are disabled.
+	 */
+	public function test_render_reactions_block_defaults_to_compact_with_avatars_disabled() {
+		\update_option( 'show_avatars', false );
+
+		$post_id = $this->get_post_id_with_reactions();
+
+		// Block without explicit style class.
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} /-->';
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( 'is-style-compact', $output );
+		$this->assertStringNotContainsString( 'reaction-avatars', $output );
+
+		// Restore default.
+		\update_option( 'show_avatars', true );
+	}
+
+	/**
+	 * Test the reactions block with no reactions returns empty comment.
+	 */
+	public function test_render_reactions_block_with_no_reactions() {
+		$post_id = self::factory()->post->create();
+
+		$block_markup = '<!-- wp:activitypub/reactions {"postId":' . $post_id . '} /-->';
+		$output       = do_blocks( $block_markup );
+
+		$this->assertStringContainsString( '<!-- Reactions block: No reactions found. -->', $output );
 	}
 
 	/**
@@ -677,6 +805,201 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test the reply block with embedPost uses proper width for same-site embeds.
+	 *
+	 * When rendering same-site embeds, WordPress Core's get_oembed_response_data()
+	 * clamps width to min=200 if no width is provided. This test verifies that
+	 * render_reply_block() passes an explicit width to wp_oembed_get() to avoid
+	 * the 200x200 minimum dimension issue.
+	 *
+	 * @covers ::render_reply_block
+	 */
+	public function test_render_reply_block_embed_uses_proper_width() {
+		// Create a post to embed.
+		$post_id  = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Embed Post',
+				'post_content' => 'Test content for embedding.',
+				'post_status'  => 'publish',
+			)
+		);
+		$post_url = get_permalink( $post_id );
+
+		// Track the width passed to wp_oembed_get via the pre_oembed_result filter.
+		$captured_width = null;
+		$capture_width  = function ( $result, $url, $args ) use ( &$captured_width, $post_url ) {
+			if ( false !== strpos( $url, $post_url ) || false !== strpos( $post_url, $url ) ) {
+				$captured_width = isset( $args['width'] ) ? $args['width'] : null;
+			}
+			// Return a mock embed to avoid actual HTTP request.
+			return '<iframe src="' . esc_url( $url ) . '" width="600" height="338"></iframe>';
+		};
+
+		add_filter( 'pre_oembed_result', $capture_width, 5, 3 ); // Priority 5 to run before wp_filter_pre_oembed_result.
+
+		$block_markup = sprintf(
+			'<!-- wp:activitypub/reply {"url":"%s","embedPost":true} /-->',
+			esc_url( $post_url )
+		);
+
+		do_blocks( $block_markup );
+
+		remove_filter( 'pre_oembed_result', $capture_width, 5 );
+
+		// Width should be set (not null) and should be a reasonable value (not 0).
+		$this->assertNotNull( $captured_width, 'Width should be passed to wp_oembed_get()' );
+		$this->assertGreaterThan( 200, $captured_width, 'Width should be greater than the 200px minimum to avoid squished embeds' );
+	}
+
+	/**
+	 * Test the reply block embed respects content_width global when set.
+	 *
+	 * @covers ::render_reply_block
+	 */
+	public function test_render_reply_block_embed_respects_content_width() {
+		// Set a custom content_width.
+		$original_content_width   = isset( $GLOBALS['content_width'] ) ? $GLOBALS['content_width'] : null;
+		$GLOBALS['content_width'] = 800;
+
+		// Create a post to embed.
+		$post_id  = self::factory()->post->create(
+			array(
+				'post_title'   => 'Test Content Width Post',
+				'post_content' => 'Test content.',
+				'post_status'  => 'publish',
+			)
+		);
+		$post_url = get_permalink( $post_id );
+
+		// Track the width passed to wp_oembed_get.
+		$captured_width = null;
+		$capture_width  = function ( $result, $url, $args ) use ( &$captured_width, $post_url ) {
+			if ( false !== strpos( $url, $post_url ) || false !== strpos( $post_url, $url ) ) {
+				$captured_width = isset( $args['width'] ) ? $args['width'] : null;
+			}
+			return '<iframe src="' . esc_url( $url ) . '" width="800" height="450"></iframe>';
+		};
+
+		add_filter( 'pre_oembed_result', $capture_width, 5, 3 );
+
+		$block_markup = sprintf(
+			'<!-- wp:activitypub/reply {"url":"%s","embedPost":true} /-->',
+			esc_url( $post_url )
+		);
+
+		do_blocks( $block_markup );
+
+		remove_filter( 'pre_oembed_result', $capture_width, 5 );
+
+		// Restore original content_width.
+		if ( null === $original_content_width ) {
+			unset( $GLOBALS['content_width'] );
+		} else {
+			$GLOBALS['content_width'] = $original_content_width;
+		}
+
+		// Width should match the content_width we set.
+		$this->assertSame( 800, $captured_width, 'Width should use $content_width when available' );
+	}
+
+	/**
+	 * Data provider for convert_from_html tests.
+	 *
+	 * @return array[] Each entry: [ html, expected_output ].
+	 */
+	public function data_convert_from_html() {
+		return array(
+			'empty string'        => array(
+				'',
+				'',
+			),
+			'single paragraph'    => array(
+				'<p>Hello world</p>',
+				'<!-- wp:paragraph --><p>Hello world</p><!-- /wp:paragraph -->',
+			),
+			'two paragraphs'      => array(
+				'<p>First</p><p>Second</p>',
+				'<!-- wp:paragraph --><p>First</p><!-- /wp:paragraph -->'
+				. '<!-- wp:paragraph --><p>Second</p><!-- /wp:paragraph -->',
+			),
+			'heading h1'          => array(
+				'<h1>Title</h1>',
+				'<!-- wp:heading --><h1>Title</h1><!-- /wp:heading -->',
+			),
+			'heading h3'          => array(
+				'<h3>Subtitle</h3>',
+				'<!-- wp:heading --><h3>Subtitle</h3><!-- /wp:heading -->',
+			),
+			'unordered list'      => array(
+				'<ul><li>One</li><li>Two</li></ul>',
+				'<!-- wp:list --><ul><li>One</li><li>Two</li></ul><!-- /wp:list -->',
+			),
+			'ordered list'        => array(
+				'<ol><li>First</li><li>Second</li></ol>',
+				'<!-- wp:list {"ordered":true} --><ol><li>First</li><li>Second</li></ol><!-- /wp:list -->',
+			),
+			'blockquote'          => array(
+				'<blockquote><p>A quote</p></blockquote>',
+				'<!-- wp:quote --><blockquote><p>A quote</p></blockquote><!-- /wp:quote -->',
+			),
+			'separator'           => array(
+				'<hr>',
+				'<!-- wp:separator --><hr><!-- /wp:separator -->',
+			),
+			'image'               => array(
+				'<img src="https://example.com/photo.jpg" alt="A photo">',
+				'<!-- wp:image --><img src="https://example.com/photo.jpg" alt="A photo"><!-- /wp:image -->',
+			),
+			'figure with caption' => array(
+				'<figure><img src="https://example.com/photo.jpg"><figcaption>Caption</figcaption></figure>',
+				'<!-- wp:image --><figure><img src="https://example.com/photo.jpg"><figcaption>Caption</figcaption></figure><!-- /wp:image -->',
+			),
+			'inline in paragraph' => array(
+				'<p>Visit <a href="https://example.com">my site</a> and <strong>enjoy</strong></p>',
+				'<!-- wp:paragraph --><p>Visit <a href="https://example.com">my site</a> and <strong>enjoy</strong></p><!-- /wp:paragraph -->',
+			),
+			'skips br'            => array(
+				'<p>Hello</p><br><p>World</p>',
+				'<!-- wp:paragraph --><p>Hello</p><!-- /wp:paragraph -->'
+				. '<!-- wp:paragraph --><p>World</p><!-- /wp:paragraph -->',
+			),
+			'nested list'         => array(
+				'<ul><li>Parent<ul><li>Child</li></ul></li></ul>',
+				'<!-- wp:list --><ul><li>Parent<ul><li>Child</li></ul></li></ul><!-- /wp:list -->',
+			),
+			'bare inline span'    => array(
+				'<span>Some text</span>',
+				'<!-- wp:paragraph --><span>Some text</span><!-- /wp:paragraph -->',
+			),
+			'unknown tag'         => array(
+				'<div>Custom content</div>',
+				'<!-- wp:html --><div>Custom content</div><!-- /wp:html -->',
+			),
+			'mixed content'       => array(
+				'<h2>Title</h2><p>Text</p><ul><li>Item</li></ul><hr><blockquote><p>Quote</p></blockquote>',
+				'<!-- wp:heading --><h2>Title</h2><!-- /wp:heading -->'
+				. '<!-- wp:paragraph --><p>Text</p><!-- /wp:paragraph -->'
+				. '<!-- wp:list --><ul><li>Item</li></ul><!-- /wp:list -->'
+				. '<!-- wp:separator --><hr><!-- /wp:separator -->'
+				. '<!-- wp:quote --><blockquote><p>Quote</p></blockquote><!-- /wp:quote -->',
+			),
+		);
+	}
+
+	/**
+	 * Test convert_from_html.
+	 *
+	 * @dataProvider data_convert_from_html
+	 * @covers ::convert_from_html
+	 *
+	 * @param string $html     The input HTML.
+	 * @param string $expected The expected block markup.
+	 */
+	public function test_convert_from_html( $html, $expected ) {
+		$this->assertSame( $expected, Blocks::convert_from_html( $html ) );
+	}
+
+	/**
 	 * Test Extra Fields block preserves HTML in field content.
 	 *
 	 * @covers ::get_user_id
@@ -703,5 +1026,203 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		$this->assertStringContainsString( '<strong>my site</strong>', $output );
 		$this->assertStringContainsString( '<a href="https://test.com"', $output );
+	}
+
+	/**
+	 * Test add_stats_image_attachment adds image for stats block.
+	 *
+	 * @covers ::add_stats_image_attachment
+	 */
+	public function test_add_stats_image_attachment() {
+		if ( ! \Activitypub\Cache\Stats_Image::is_available() ) {
+			$this->markTestSkipped( 'GD library is not available.' );
+		}
+
+		// Seed stats so get_url() can generate the image.
+		\update_option(
+			'activitypub_stats_0_2025_annual',
+			array(
+				'posts_count'          => 10,
+				'followers_start'      => 0,
+				'followers_end'        => 5,
+				'followers_net_change' => 5,
+				'most_active_month'    => 1,
+				'top_multiplicator'    => null,
+				'top_posts'            => array(),
+				'compiled_at'          => \gmdate( 'Y-m-d H:i:s' ),
+				'like_count'           => 5,
+				'repost_count'         => 2,
+				'comment_count'        => 1,
+				'quote_count'          => 0,
+			),
+			false
+		);
+
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_content' => '<!-- wp:activitypub/stats {"selectedUser":"blog","year":2025} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$attachments = Blocks::add_stats_image_attachment( array(), $post );
+
+		$this->assertCount( 1, $attachments );
+		$this->assertSame( 'Image', $attachments[0]['type'] );
+		$this->assertStringContainsString( 'stats', $attachments[0]['url'] );
+		$this->assertStringContainsString( '2025', $attachments[0]['name'] );
+	}
+
+	/**
+	 * Test add_stats_image_attachment with no stats block.
+	 *
+	 * @covers ::add_stats_image_attachment
+	 */
+	public function test_add_stats_image_attachment_no_block() {
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_content' => '<!-- wp:paragraph --><p>Hello world</p><!-- /wp:paragraph -->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$attachments = Blocks::add_stats_image_attachment( array(), $post );
+
+		$this->assertCount( 0, $attachments );
+	}
+
+	/**
+	 * Test add_stats_image_attachment preserves existing attachments.
+	 *
+	 * @covers ::add_stats_image_attachment
+	 */
+	public function test_add_stats_image_attachment_preserves_existing() {
+		if ( ! \Activitypub\Cache\Stats_Image::is_available() ) {
+			$this->markTestSkipped( 'GD library is not available.' );
+		}
+
+		// Seed stats.
+		\update_option(
+			'activitypub_stats_0_2025_annual',
+			array(
+				'posts_count'          => 10,
+				'followers_start'      => 0,
+				'followers_end'        => 5,
+				'followers_net_change' => 5,
+				'most_active_month'    => 1,
+				'top_multiplicator'    => null,
+				'top_posts'            => array(),
+				'compiled_at'          => \gmdate( 'Y-m-d H:i:s' ),
+				'like_count'           => 5,
+				'repost_count'         => 2,
+				'comment_count'        => 1,
+				'quote_count'          => 0,
+			),
+			false
+		);
+
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_content' => '<!-- wp:activitypub/stats {"selectedUser":"blog","year":2025} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$existing = array(
+			array(
+				'type' => 'Image',
+				'url'  => 'https://example.com/photo.jpg',
+			),
+		);
+
+		$attachments = Blocks::add_stats_image_attachment( $existing, $post );
+
+		$this->assertCount( 2, $attachments );
+		$this->assertSame( 'https://example.com/photo.jpg', $attachments[0]['url'] );
+		$this->assertStringContainsString( 'stats', $attachments[1]['url'] );
+	}
+
+	/**
+	 * Test add_stats_image_attachment with user ID.
+	 *
+	 * @covers ::add_stats_image_attachment
+	 */
+	public function test_add_stats_image_attachment_with_user_id() {
+		if ( ! \Activitypub\Cache\Stats_Image::is_available() ) {
+			$this->markTestSkipped( 'GD library is not available.' );
+		}
+
+		// Seed stats for user 1.
+		\update_option(
+			'activitypub_stats_1_2024_annual',
+			array(
+				'posts_count'          => 10,
+				'followers_start'      => 0,
+				'followers_end'        => 5,
+				'followers_net_change' => 5,
+				'most_active_month'    => 1,
+				'top_multiplicator'    => null,
+				'top_posts'            => array(),
+				'compiled_at'          => \gmdate( 'Y-m-d H:i:s' ),
+				'like_count'           => 5,
+				'repost_count'         => 2,
+				'comment_count'        => 1,
+				'quote_count'          => 0,
+			),
+			false
+		);
+
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_content' => '<!-- wp:activitypub/stats {"selectedUser":"1","year":2024} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$attachments = Blocks::add_stats_image_attachment( array(), $post );
+
+		$this->assertCount( 1, $attachments );
+		$this->assertStringContainsString( 'stats', $attachments[0]['url'] );
+		$this->assertStringContainsString( '2024', $attachments[0]['name'] );
+	}
+
+	/**
+	 * Test Stats_Image::get_url generates valid URL.
+	 *
+	 * @covers \Activitypub\Cache\Stats_Image::get_url
+	 */
+	public function test_get_stats_image_url() {
+		$url = \Activitypub\Cache\Stats_Image::get_url( 0, 2025 );
+
+		if ( \is_wp_error( $url ) ) {
+			// GD not available; fall back to REST endpoint URL.
+			$url = \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image/0/2025' );
+		}
+
+		// URL contains the stats path (either cached file or REST endpoint).
+		$this->assertStringContainsString( 'stats', $url );
+		$this->assertStringContainsString( '2025', $url );
+	}
+
+	/**
+	 * Test Stats_Image::get_url works with plain permalinks.
+	 *
+	 * @covers \Activitypub\Cache\Stats_Image::get_url
+	 */
+	public function test_get_stats_image_url_plain_permalinks() {
+		$original = \get_option( 'permalink_structure' );
+		\update_option( 'permalink_structure', '' );
+
+		$url = \Activitypub\Cache\Stats_Image::get_url( 1, 2024 );
+
+		if ( \is_wp_error( $url ) ) {
+			// GD not available; fall back to REST endpoint URL.
+			$url = \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image/1/2024' );
+		}
+
+		$this->assertStringContainsString( 'stats', $url );
+		$this->assertStringContainsString( '2024', $url );
+
+		\update_option( 'permalink_structure', $original );
 	}
 }

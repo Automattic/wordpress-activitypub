@@ -5,6 +5,8 @@
  * @package Activitypub
  */
 
+use Activitypub\Collection\Outbox;
+use Activitypub\Scheduler;
 use Activitypub\WP_Admin\Health_Check;
 
 /**
@@ -207,5 +209,491 @@ class Test_Health_Check extends WP_UnitTestCase {
 		$this->assertContains( 'Really Simple CAPTCHA', $filtered );
 		$this->assertContains( 'Another Plugin', $filtered );
 		$this->assertNotContains( false, $filtered );
+	}
+
+	/**
+	 * Test that REST API accessibility test is registered.
+	 */
+	public function test_rest_api_accessibility_test_registered() {
+		$tests  = array();
+		$result = Health_Check::add_tests( $tests );
+
+		$this->assertArrayHasKey( 'activitypub_test_rest_api_accessibility', $result['direct'] );
+
+		$test = $result['direct']['activitypub_test_rest_api_accessibility'];
+		$this->assertArrayHasKey( 'label', $test );
+		$this->assertArrayHasKey( 'test', $test );
+		$this->assertEquals( array( Health_Check::class, 'test_rest_api_accessibility' ), $test['test'] );
+	}
+
+	/**
+	 * Mock HTTP response for accessible ActivityPub endpoint.
+	 *
+	 * @return array Mocked response.
+	 */
+	public function mock_activitypub_accessible() {
+		return array(
+			'response' => array(
+				'code'    => 200,
+				'message' => 'OK',
+			),
+			'body'     => '{"@context":"https://www.w3.org/ns/activitystreams","type":"OrderedCollection","totalItems":0}',
+		);
+	}
+
+	/**
+	 * Mock HTTP response for blocked ActivityPub endpoint (security plugin).
+	 *
+	 * @return array Mocked response.
+	 */
+	public function mock_activitypub_blocked() {
+		return array(
+			'response' => array(
+				'code'    => 401,
+				'message' => 'Unauthorized',
+			),
+			'body'     => '{"title":"rest_login_required","message":"REST API restricted to authenticated users.","data":{"status":401}}',
+		);
+	}
+
+	/**
+	 * Mock HTTP response for ActivityPub's own error (not a security plugin).
+	 *
+	 * @return array Mocked response.
+	 */
+	public function mock_activitypub_own_error() {
+		return array(
+			'response' => array(
+				'code'    => 401,
+				'message' => 'Unauthorized',
+			),
+			'body'     => '{"title":"activitypub_signature_verification_failed","message":"Signature verification failed."}',
+		);
+	}
+
+	/**
+	 * Mock HTTP response for connection error.
+	 *
+	 * @return WP_Error Mocked error response.
+	 */
+	public function mock_activitypub_connection_error() {
+		return new WP_Error( 'http_request_failed', 'Connection refused' );
+	}
+
+	/**
+	 * Test REST API accessibility when ActivityPub endpoint is accessible.
+	 */
+	public function test_rest_api_accessible() {
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_accessible' ) );
+
+		$result = Health_Check::test_rest_api_accessibility();
+
+		$this->assertEquals( 'good', $result['status'] );
+		$this->assertEquals( 'REST API is accessible', $result['label'] );
+		$this->assertEquals( 'green', $result['badge']['color'] );
+
+		remove_filter( 'pre_http_request', array( $this, 'mock_activitypub_accessible' ) );
+	}
+
+	/**
+	 * Test REST API accessibility when endpoint is blocked.
+	 */
+	public function test_rest_api_blocked() {
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_blocked' ) );
+
+		$result = Health_Check::test_rest_api_accessibility();
+
+		$this->assertEquals( 'critical', $result['status'] );
+		$this->assertEquals( 'REST API is restricted to authenticated users', $result['label'] );
+		$this->assertEquals( 'red', $result['badge']['color'] );
+		$this->assertStringContainsString( 'security plugin settings', $result['actions'] );
+
+		remove_filter( 'pre_http_request', array( $this, 'mock_activitypub_blocked' ) );
+	}
+
+	/**
+	 * Test REST API accessibility with connection error.
+	 */
+	public function test_rest_api_connection_error() {
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_connection_error' ) );
+
+		$result = Health_Check::test_rest_api_accessibility();
+
+		$this->assertEquals( 'critical', $result['status'] );
+		$this->assertStringContainsString( 'Could not connect to REST API', $result['description'] );
+
+		remove_filter( 'pre_http_request', array( $this, 'mock_activitypub_connection_error' ) );
+	}
+
+	/**
+	 * Test is_rest_api_accessible returns true for successful response.
+	 */
+	public function test_is_rest_api_accessible_returns_true() {
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_accessible' ) );
+
+		$result = Health_Check::is_rest_api_accessible();
+
+		$this->assertTrue( $result );
+
+		remove_filter( 'pre_http_request', array( $this, 'mock_activitypub_accessible' ) );
+	}
+
+	/**
+	 * Test is_rest_api_accessible returns WP_Error when blocked by security plugin.
+	 */
+	public function test_is_rest_api_accessible_returns_error_when_blocked() {
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_blocked' ) );
+
+		$result = Health_Check::is_rest_api_accessible();
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'rest_api_restricted', $result->get_error_code() );
+
+		remove_filter( 'pre_http_request', array( $this, 'mock_activitypub_blocked' ) );
+	}
+
+	/**
+	 * Test is_rest_api_accessible ignores ActivityPub's own errors.
+	 */
+	public function test_is_rest_api_accessible_ignores_activitypub_errors() {
+		add_filter( 'pre_http_request', array( $this, 'mock_activitypub_own_error' ) );
+
+		$result = Health_Check::is_rest_api_accessible();
+
+		// Should return true because error title starts with 'activitypub_'.
+		$this->assertTrue( $result );
+
+		remove_filter( 'pre_http_request', array( $this, 'mock_activitypub_own_error' ) );
+	}
+
+	/**
+	 * Test that scheduled events test is registered.
+	 */
+	public function test_scheduled_events_test_registered() {
+		$tests  = array();
+		$result = Health_Check::add_tests( $tests );
+
+		$this->assertArrayHasKey( 'activitypub_test_scheduled_events', $result['direct'] );
+
+		$test = $result['direct']['activitypub_test_scheduled_events'];
+		$this->assertArrayHasKey( 'label', $test );
+		$this->assertArrayHasKey( 'test', $test );
+		$this->assertEquals( array( Health_Check::class, 'test_scheduled_events' ), $test['test'] );
+	}
+
+	/**
+	 * Test scheduled events health check when all schedules are registered.
+	 */
+	public function test_scheduled_events_all_registered() {
+		// Ensure all schedules are registered.
+		Scheduler::register_schedules();
+
+		$result = Health_Check::test_scheduled_events();
+
+		$this->assertEquals( 'good', $result['status'] );
+		$this->assertEquals( 'ActivityPub scheduled events are registered', $result['label'] );
+		$this->assertEquals( 'green', $result['badge']['color'] );
+	}
+
+	/**
+	 * Test scheduled events health check auto-repairs missing schedules.
+	 */
+	public function test_scheduled_events_auto_repair() {
+		// Remove all schedules.
+		Scheduler::deregister_schedules();
+
+		// Verify they are missing.
+		$missing_before = Health_Check::get_missing_schedules();
+		$this->assertNotEmpty( $missing_before );
+
+		// Run the health check (should auto-repair).
+		$result = Health_Check::test_scheduled_events();
+
+		// Should report good status after auto-repair.
+		$this->assertEquals( 'good', $result['status'] );
+		$this->assertStringContainsString( 'automatically restored', $result['description'] );
+
+		// Verify schedules are now registered.
+		$missing_after = Health_Check::get_missing_schedules();
+		$this->assertEmpty( $missing_after );
+	}
+
+	/**
+	 * Test get_missing_schedules returns empty when all schedules are registered.
+	 */
+	public function test_get_missing_schedules_none_missing() {
+		// Ensure all schedules are registered.
+		Scheduler::register_schedules();
+
+		$missing = Health_Check::get_missing_schedules();
+
+		$this->assertEmpty( $missing );
+	}
+
+	/**
+	 * Test get_missing_schedules returns missing schedules.
+	 */
+	public function test_get_missing_schedules_some_missing() {
+		// Remove all schedules.
+		Scheduler::deregister_schedules();
+
+		$missing = Health_Check::get_missing_schedules();
+
+		$this->assertNotEmpty( $missing );
+		$this->assertArrayHasKey( 'activitypub_update_remote_actors', $missing );
+		$this->assertArrayHasKey( 'activitypub_cleanup_remote_actors', $missing );
+		$this->assertArrayHasKey( 'activitypub_reprocess_outbox', $missing );
+
+		// Re-register for other tests.
+		Scheduler::register_schedules();
+	}
+
+	/**
+	 * Test ensure_schedules_registered repairs missing schedules.
+	 */
+	public function test_ensure_schedules_registered() {
+		// Remove all schedules.
+		Scheduler::deregister_schedules();
+
+		// Verify they are missing.
+		$missing_before = Health_Check::get_missing_schedules();
+		$this->assertNotEmpty( $missing_before );
+
+		// Call ensure_schedules_registered.
+		Health_Check::ensure_schedules_registered();
+
+		// Verify schedules are now registered.
+		$missing_after = Health_Check::get_missing_schedules();
+		$this->assertEmpty( $missing_after );
+	}
+
+	/**
+	 * Test ensure_schedules_registered does nothing when all schedules exist.
+	 */
+	public function test_ensure_schedules_registered_no_op_when_all_exist() {
+		// Ensure all schedules are registered.
+		Scheduler::register_schedules();
+
+		// Get next scheduled time for a schedule.
+		$before = wp_next_scheduled( 'activitypub_update_remote_actors' );
+
+		// Call ensure_schedules_registered.
+		Health_Check::ensure_schedules_registered();
+
+		// Verify the schedule time hasn't changed (wasn't re-registered).
+		$after = wp_next_scheduled( 'activitypub_update_remote_actors' );
+		$this->assertEquals( $before, $after );
+	}
+
+	/**
+	 * Test Scheduler::SCHEDULES constant contains expected schedules.
+	 */
+	public function test_scheduler_schedules_constant() {
+		$schedules = Scheduler::SCHEDULES;
+
+		$this->assertIsArray( $schedules );
+		$this->assertArrayHasKey( 'activitypub_update_remote_actors', $schedules );
+		$this->assertArrayHasKey( 'activitypub_cleanup_remote_actors', $schedules );
+		$this->assertArrayHasKey( 'activitypub_reprocess_outbox', $schedules );
+		$this->assertArrayHasKey( 'activitypub_outbox_purge', $schedules );
+		$this->assertArrayHasKey( 'activitypub_inbox_purge', $schedules );
+		$this->assertArrayHasKey( 'activitypub_ap_post_purge', $schedules );
+		$this->assertArrayHasKey( 'activitypub_sync_blocklist_subscriptions', $schedules );
+
+		// Verify recurrence values.
+		$this->assertEquals( 'hourly', $schedules['activitypub_update_remote_actors'] );
+		$this->assertEquals( 'daily', $schedules['activitypub_cleanup_remote_actors'] );
+		$this->assertEquals( 'weekly', $schedules['activitypub_sync_blocklist_subscriptions'] );
+	}
+
+	/**
+	 * Test that outbox rate test is registered.
+	 */
+	public function test_outbox_rate_test_registered() {
+		$tests  = array();
+		$result = Health_Check::add_tests( $tests );
+
+		$this->assertArrayHasKey( 'activitypub_test_outbox_rate', $result['direct'] );
+
+		$test = $result['direct']['activitypub_test_outbox_rate'];
+		$this->assertArrayHasKey( 'label', $test );
+		$this->assertArrayHasKey( 'test', $test );
+		$this->assertEquals( array( Health_Check::class, 'test_outbox_rate' ), $test['test'] );
+	}
+
+	/**
+	 * Test outbox rate returns good status with no outbox items.
+	 */
+	public function test_outbox_rate_good() {
+		$result = Health_Check::test_outbox_rate();
+
+		$this->assertEquals( 'good', $result['status'] );
+		$this->assertEquals( 'Outbox activity rate is normal', $result['label'] );
+		$this->assertEquals( 'green', $result['badge']['color'] );
+	}
+
+	/**
+	 * Test outbox rate returns recommended status with moderate activity.
+	 */
+	public function test_outbox_rate_recommended() {
+		$this->delete_all_outbox_items();
+
+		// Create 15 outbox items (above 10, below 50).
+		$this->create_outbox_items( 15, 'https://example.com/post/1' );
+
+		$result = Health_Check::test_outbox_rate();
+
+		$this->assertEquals( 'recommended', $result['status'] );
+		$this->assertEquals( 'Unusual outbox activity detected', $result['label'] );
+		$this->assertEquals( 'orange', $result['badge']['color'] );
+		$this->assertStringContainsString( '15 outbox items', $result['description'] );
+	}
+
+	/**
+	 * Test outbox rate returns critical status with excessive activity.
+	 */
+	public function test_outbox_rate_critical() {
+		$this->delete_all_outbox_items();
+
+		// Create 55 outbox items (above 50).
+		$this->create_outbox_items( 55, 'https://example.com/post/2' );
+
+		$result = Health_Check::test_outbox_rate();
+
+		$this->assertEquals( 'critical', $result['status'] );
+		$this->assertEquals( 'Excessive outbox activity detected', $result['label'] );
+		$this->assertEquals( 'red', $result['badge']['color'] );
+		$this->assertStringContainsString( '55 outbox items', $result['description'] );
+		$this->assertStringContainsString( 'excessive federation activity', $result['description'] );
+	}
+
+	/**
+	 * Test get_outbox_rate_count returns correct total.
+	 */
+	public function test_outbox_rate_count() {
+		$this->delete_all_outbox_items();
+
+		$this->create_outbox_items( 5, 'https://example.com/post/a' );
+		$this->create_outbox_items( 3, 'https://example.com/post/b' );
+		$this->create_outbox_items( 7, 'https://example.com/post/c' );
+
+		$this->assertEquals( 15, Health_Check::get_outbox_rate_count() );
+	}
+
+	/**
+	 * Test get_outbox_count returns correct counts.
+	 */
+	public function test_get_outbox_count() {
+		$this->create_outbox_items( 3, 'https://example.com/post/count-test' );
+
+		// Outbox items are created with 'pending' status.
+		$pending_count = Health_Check::get_outbox_count( 'pending' );
+		$this->assertGreaterThanOrEqual( 3, $pending_count );
+
+		$total_count = Health_Check::get_outbox_count();
+		$this->assertGreaterThanOrEqual( 3, $total_count );
+	}
+
+	/**
+	 * Test debug_information includes outbox stats.
+	 */
+	public function test_debug_information_includes_outbox_stats() {
+		$info   = array();
+		$result = Health_Check::debug_information( $info );
+
+		$fields = $result['activitypub']['fields'];
+
+		$this->assertArrayHasKey( 'outbox_total_count', $fields );
+		$this->assertArrayHasKey( 'outbox_pending_count', $fields );
+		$this->assertArrayHasKey( 'outbox_last_hour_count', $fields );
+
+		$this->assertEquals( 'Outbox Total Items', $fields['outbox_total_count']['label'] );
+		$this->assertEquals( 'Outbox Pending Items', $fields['outbox_pending_count']['label'] );
+		$this->assertEquals( 'Outbox Items (Last Hour)', $fields['outbox_last_hour_count']['label'] );
+	}
+
+	/**
+	 * Test outbox rate recommended status with multiple objects.
+	 */
+	public function test_outbox_rate_recommended_multiple_objects() {
+		$this->delete_all_outbox_items();
+
+		$this->create_outbox_items( 4, 'https://example.com/post/1' );
+		$this->create_outbox_items( 3, 'https://example.com/post/2' );
+		$this->create_outbox_items( 2, 'https://example.com/post/3' );
+		$this->create_outbox_items( 3, 'https://example.com/post/4' );
+
+		$result = Health_Check::test_outbox_rate();
+
+		// 12 items total, should be "recommended".
+		$this->assertEquals( 'recommended', $result['status'] );
+		$this->assertStringContainsString( '12 outbox items', $result['description'] );
+	}
+
+	/**
+	 * Test that outbox rate only counts items from the last hour.
+	 */
+	public function test_outbox_rate_excludes_old_items() {
+		$this->delete_all_outbox_items();
+
+		// Create 15 recent items (within the last hour).
+		$this->create_outbox_items( 15, 'https://example.com/post/recent' );
+
+		// Create 20 old items (2 hours ago — outside the window).
+		$this->create_outbox_items( 20, 'https://example.com/post/old', '2 hours ago' );
+
+		// Only the 15 recent items should be counted.
+		$this->assertEquals( 15, Health_Check::get_outbox_rate_count() );
+	}
+
+	/**
+	 * Delete all existing outbox items to ensure a clean test state.
+	 */
+	private function delete_all_outbox_items() {
+		$posts = get_posts(
+			array(
+				'post_type'      => Outbox::POST_TYPE,
+				'post_status'    => 'any',
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+			)
+		);
+
+		foreach ( $posts as $post_id ) {
+			wp_delete_post( $post_id, true );
+		}
+	}
+
+	/**
+	 * Helper to create outbox items for testing.
+	 *
+	 * @param int    $count     Number of items to create.
+	 * @param string $object_id The object ID meta value.
+	 * @param string $post_date Optional. The post date. Default current time.
+	 *
+	 * @return int[] Array of created post IDs.
+	 */
+	private function create_outbox_items( $count, $object_id, $post_date = '' ) {
+		$post_ids  = array();
+		$base_time = $post_date ? \strtotime( $post_date ) : \time();
+
+		for ( $i = 0; $i < $count; $i++ ) {
+			$post_id = $this->factory()->post->create(
+				array(
+					'post_type'   => Outbox::POST_TYPE,
+					'post_status' => 'pending',
+					'post_title'  => '[Update] Test Post',
+					'post_date'   => \gmdate( 'Y-m-d H:i:s', $base_time - $i ),
+					'meta_input'  => array(
+						'_activitypub_object_id'     => $object_id,
+						'_activitypub_activity_type' => 'Update',
+					),
+				)
+			);
+
+			$post_ids[] = $post_id;
+		}
+
+		return $post_ids;
 	}
 }

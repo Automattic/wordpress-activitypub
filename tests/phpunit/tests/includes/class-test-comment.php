@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Collection\Remote_Posts;
 use Activitypub\Comment;
 
 /**
@@ -172,7 +173,7 @@ class Test_Comment extends \WP_UnitTestCase {
 		$comment_autoapproved = \get_comment( $comment_id_autoapproved );
 		$this->assertEquals( '1', $comment_autoapproved->comment_approved );
 
-		\remove_filter( 'pre_comment_approved', array( 'Activitypub\Comment', 'pre_comment_approved' ) );
+		\remove_filter( 'pre_comment_approved', array( 'Activitypub\Comment', 'pre_comment_approved' ), 11 );
 
 		$comment_id_unapproved = \wp_new_comment(
 			array(
@@ -226,8 +227,32 @@ class Test_Comment extends \WP_UnitTestCase {
 		self::factory()->comment->create_post_comments( $post_id, 3, array( 'comment_approved' => '1' ) );
 		$this->assertSame( 5, Comment::pre_wp_update_comment_count_now( null, 0, $post_id ) );
 
-		// Case 4: $new is not null, should return $new unmodified.
+		// Case 4: $new is not null (set by another filter), should return $new unmodified.
 		$this->assertSame( 10, Comment::pre_wp_update_comment_count_now( 10, 0, $post_id ) );
+
+		// Case 5: Other plugins can exclude additional types via the filter.
+		$add_note = function ( $types ) {
+			$types[] = 'note';
+			return $types;
+		};
+		\add_filter( 'activitypub_excluded_comment_types', $add_note );
+
+		self::factory()->comment->create_post_comments(
+			$post_id,
+			2,
+			array(
+				'comment_approved' => '1',
+				'comment_type'     => 'note',
+			)
+		);
+		// 5 regular + 2 note + 3 like = 10 total, but like and note excluded = 5.
+		$this->assertSame( 5, Comment::pre_wp_update_comment_count_now( null, 0, $post_id ) );
+
+		\remove_filter( 'activitypub_excluded_comment_types', $add_note );
+
+		// Case 6: Without the filter, 'note' types are counted normally.
+		// 5 regular + 2 note = 7 (only like excluded).
+		$this->assertSame( 7, Comment::pre_wp_update_comment_count_now( null, 0, $post_id ) );
 	}
 
 	/**
@@ -259,7 +284,7 @@ class Test_Comment extends \WP_UnitTestCase {
 					'comment_author_url'   => 'https://example.com',
 					'comment_author_email' => '',
 					'comment_meta'         => array(
-						'activitypub_status' => 'pending',
+						'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_PENDING,
 					),
 				),
 				'expected' => array(
@@ -331,7 +356,7 @@ class Test_Comment extends \WP_UnitTestCase {
 					'comment_author_url'   => 'https://example.com',
 					'comment_author_email' => '',
 					'comment_meta'         => array(
-						'activitypub_status' => 'pending',
+						'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_PENDING,
 					),
 				),
 				'expected'       => array(
@@ -348,7 +373,7 @@ class Test_Comment extends \WP_UnitTestCase {
 					'comment_author_url'   => 'https://example.com',
 					'comment_author_email' => '',
 					'comment_meta'         => array(
-						'activitypub_status' => 'federated',
+						'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_FEDERATED,
 					),
 				),
 				'comment'        => array(
@@ -358,7 +383,7 @@ class Test_Comment extends \WP_UnitTestCase {
 					'comment_author_url'   => 'https://example.com',
 					'comment_author_email' => '',
 					'comment_meta'         => array(
-						'activitypub_status' => 'pending',
+						'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_PENDING,
 					),
 				),
 				'expected'       => array(
@@ -415,7 +440,7 @@ class Test_Comment extends \WP_UnitTestCase {
 					'comment_author_url'   => 'https://example.com',
 					'comment_author_email' => '',
 					'comment_meta'         => array(
-						'activitypub_status' => 'federated',
+						'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_FEDERATED,
 					),
 				),
 				'comment'        => array(
@@ -772,11 +797,11 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that ap_post comments are shown when querying for specific post.
+	 * Test that ap_post comments are hidden even when querying for specific post.
 	 *
 	 * @covers ::comment_query
 	 */
-	public function test_ap_post_comments_shown_when_querying_specific_post() {
+	public function test_ap_post_comments_hidden_when_querying_specific_post() {
 		// Create an ap_post.
 		$ap_post_id = wp_insert_post(
 			array(
@@ -799,7 +824,7 @@ class Test_Comment extends \WP_UnitTestCase {
 		// Simulate admin context.
 		\set_current_screen( 'edit-comments' );
 
-		// Query comments for specific post - should include ap_post comments.
+		// Query comments for specific post - should NOT include ap_post comments.
 		$query    = new \WP_Comment_Query();
 		$comments = $query->query(
 			array(
@@ -808,10 +833,47 @@ class Test_Comment extends \WP_UnitTestCase {
 		);
 
 		$comment_ids = wp_list_pluck( $comments, 'comment_ID' );
-		$this->assertContains( (string) $ap_comment_id, $comment_ids, 'AP post comment should be shown when querying specific post' );
+		$this->assertNotContains( (string) $ap_comment_id, $comment_ids, 'AP post comment should be hidden even when querying specific post' );
 
 		// Clean up.
 		\set_current_screen( 'front' );
+	}
+
+	/**
+	 * Test that post comments are still being filtered by `type__not_in`.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_post_comments_filtered_by_type__not_in() {
+		// Create an ap_post.
+		$post_id = wp_insert_post(
+			array(
+				'post_title'   => 'Post',
+				'post_content' => 'Content',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Create comment on ap_post.
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID' => $post_id,
+				'comment_content' => 'Comment on post',
+				'comment_author'  => 'Test User',
+			)
+		);
+
+		// Query comments for specific post - should NOT include ap_post comments.
+		$query    = new \WP_Comment_Query();
+		$comments = $query->query(
+			array(
+				'post_id'      => $post_id,
+				'type__not_in' => 'comment',
+			)
+		);
+
+		$comment_ids = wp_list_pluck( $comments, 'comment_ID' );
+		$this->assertNotContains( (string) $comment_id, $comment_ids, 'AP post comment should be hidden even when querying specific post' );
 	}
 
 	/**
@@ -859,11 +921,11 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test not auto-approving comments on ap_post when option is disabled.
+	 * Test auto-approving comments on ap_post regardless of option.
 	 *
 	 * @covers ::pre_comment_approved
 	 */
-	public function test_no_auto_approve_comments_on_ap_post_when_disabled() {
+	public function test_auto_approve_comments_on_ap_post_always() {
 		// Disable flood control.
 		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
 
@@ -893,9 +955,9 @@ class Test_Comment extends \WP_UnitTestCase {
 			)
 		);
 
-		// The comment should NOT be auto-approved.
+		// The comment should be auto-approved on ap_post regardless of option.
 		$comment = \get_comment( $comment_id );
-		$this->assertEquals( '0', $comment->comment_approved, 'Comment on ap_post should not be auto-approved when option is disabled' );
+		$this->assertEquals( '1', $comment->comment_approved, 'Comment on ap_post should be auto-approved regardless of option' );
 
 		// Clean up.
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
@@ -989,6 +1051,195 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		// Clean up.
 		\delete_option( 'activitypub_create_posts' );
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
+	/**
+	 * Test hide_for returns ap_post by default.
+	 *
+	 * @covers ::hide_for
+	 */
+	public function test_hide_for() {
+		$post_types = Comment::hide_for();
+
+		$this->assertIsArray( $post_types );
+		$this->assertContains( Remote_Posts::POST_TYPE, $post_types, 'ap_post should be in the list of post types to hide comments for' );
+		$this->assertCount( 1, $post_types, 'Only ap_post should be in the default list' );
+	}
+
+	/**
+	 * Test hide_for filter can add post types.
+	 *
+	 * @covers ::hide_for
+	 */
+	public function test_hide_for_filter_can_add_post_types() {
+		$filter = function ( $post_types ) {
+			$post_types[] = 'custom_post_type';
+			return $post_types;
+		};
+
+		\add_filter( 'activitypub_hide_comments_for', $filter );
+
+		$post_types = Comment::hide_for();
+
+		$this->assertContains( 'custom_post_type', $post_types, 'Filter should be able to add custom post types' );
+		$this->assertContains( Remote_Posts::POST_TYPE, $post_types, 'ap_post should still be in the list' );
+
+		\remove_filter( 'activitypub_hide_comments_for', $filter );
+	}
+
+	/**
+	 * Test hide_for filter can remove post types.
+	 *
+	 * @covers ::hide_for
+	 */
+	public function test_hide_for_filter_can_remove_post_types() {
+		$filter = function ( $post_types ) {
+			return array_diff( $post_types, array( Remote_Posts::POST_TYPE ) );
+		};
+
+		\add_filter( 'activitypub_hide_comments_for', $filter );
+
+		$post_types = Comment::hide_for();
+
+		$this->assertNotContains( Remote_Posts::POST_TYPE, $post_types, 'Filter should be able to remove ap_post from the list' );
+
+		\remove_filter( 'activitypub_hide_comments_for', $filter );
+	}
+
+	/**
+	 * Test hide_for filter affects comment_query behavior.
+	 *
+	 * @covers ::hide_for
+	 * @covers ::comment_query
+	 */
+	public function test_hide_for_filter_affects_comment_query() {
+		// Register a custom post type for testing.
+		\register_post_type(
+			'custom_hidden',
+			array(
+				'public'   => true,
+				'supports' => array( 'comments' ),
+			)
+		);
+
+		// Create a custom post.
+		$custom_post_id = wp_insert_post(
+			array(
+				'post_type'   => 'custom_hidden',
+				'post_title'  => 'Custom Post',
+				'post_status' => 'publish',
+			)
+		);
+
+		// Create a comment on the custom post.
+		$custom_comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID' => $custom_post_id,
+				'comment_content' => 'Comment on custom post',
+				'comment_author'  => 'Test User',
+			)
+		);
+
+		// Simulate admin context.
+		\set_current_screen( 'edit-comments' );
+
+		// Without filter, comment should be visible.
+		$query       = new \WP_Comment_Query();
+		$comments    = $query->query( array() );
+		$comment_ids = wp_list_pluck( $comments, 'comment_ID' );
+		$this->assertContains( (string) $custom_comment_id, $comment_ids, 'Custom post comment should be visible without filter' );
+
+		// Add filter to hide custom_hidden post type.
+		$filter = function ( $post_types ) {
+			$post_types[] = 'custom_hidden';
+			return $post_types;
+		};
+		\add_filter( 'activitypub_hide_comments_for', $filter );
+
+		// With filter, comment should be hidden.
+		$query       = new \WP_Comment_Query();
+		$comments    = $query->query( array() );
+		$comment_ids = wp_list_pluck( $comments, 'comment_ID' );
+		$this->assertNotContains( (string) $custom_comment_id, $comment_ids, 'Custom post comment should be hidden with filter' );
+
+		// Clean up.
+		\remove_filter( 'activitypub_hide_comments_for', $filter );
+		\set_current_screen( 'front' );
+		\unregister_post_type( 'custom_hidden' );
+	}
+
+	/**
+	 * Test hide_for filter affects pre_comment_approved behavior.
+	 *
+	 * @covers ::hide_for
+	 * @covers ::pre_comment_approved
+	 */
+	public function test_hide_for_filter_affects_auto_approval() {
+		// Disable flood control.
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db', 10 );
+
+		// Register a custom post type for testing.
+		\register_post_type(
+			'custom_hidden',
+			array(
+				'public'   => true,
+				'supports' => array( 'comments' ),
+			)
+		);
+
+		// Create a custom post.
+		$custom_post_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'custom_hidden',
+				'post_status' => 'publish',
+			)
+		);
+
+		// Without filter, comment should NOT be auto-approved.
+		$comment_id = \wp_new_comment(
+			array(
+				'comment_type'         => 'comment',
+				'comment_content'      => 'Comment without filter.',
+				'comment_author'       => 'Test User',
+				'comment_author_url'   => 'https://example.com/@testuser',
+				'comment_post_ID'      => $custom_post_id,
+				'comment_author_email' => '',
+				'comment_meta'         => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+		$comment    = \get_comment( $comment_id );
+		$this->assertEquals( '0', $comment->comment_approved, 'Comment should not be auto-approved without filter' );
+
+		// Add filter to include custom_hidden in hide_for list.
+		$filter = function ( $post_types ) {
+			$post_types[] = 'custom_hidden';
+			return $post_types;
+		};
+		\add_filter( 'activitypub_hide_comments_for', $filter );
+
+		// With filter, comment should be auto-approved.
+		$comment_id_2 = \wp_new_comment(
+			array(
+				'comment_type'         => 'comment',
+				'comment_content'      => 'Comment with filter.',
+				'comment_author'       => 'Test User 2',
+				'comment_author_url'   => 'https://example.com/@testuser2',
+				'comment_post_ID'      => $custom_post_id,
+				'comment_author_email' => '',
+				'comment_meta'         => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+		$comment_2    = \get_comment( $comment_id_2 );
+		$this->assertEquals( '1', $comment_2->comment_approved, 'Comment should be auto-approved with filter' );
+
+		// Clean up.
+		\remove_filter( 'activitypub_hide_comments_for', $filter );
+		\unregister_post_type( 'custom_hidden' );
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 	}
 
@@ -1091,5 +1342,295 @@ class Test_Comment extends \WP_UnitTestCase {
 		// Clean up.
 		\set_current_screen( 'front' );
 		\delete_option( 'activitypub_create_posts' );
+	}
+
+	/**
+	 * Test comment_reply_link for local comments.
+	 *
+	 * @covers ::comment_reply_link
+	 */
+	public function test_comment_reply_link_local_comment() {
+		$post_id = self::factory()->post->create();
+
+		$comment_id = \wp_insert_comment(
+			array(
+				'comment_post_ID' => $post_id,
+				'comment_content' => 'This is a local comment.',
+				'comment_author'  => 'Local User',
+			)
+		);
+
+		$comment  = \get_comment( $comment_id );
+		$original = '<a href="#">Reply</a>';
+		$result   = Comment::comment_reply_link( $original, array(), $comment );
+
+		$this->assertSame( $original, $result, 'Local comments should return the original reply link unchanged.' );
+	}
+
+	/**
+	 * Test comment_reply_link for fediverse comment with logged-in user without ActivityPub capability.
+	 *
+	 * @covers ::comment_reply_link
+	 */
+	public function test_comment_reply_link_fediverse_comment_user_without_capability() {
+		$post_id = self::factory()->post->create();
+
+		// Create a fediverse comment (received via ActivityPub).
+		$comment_id = \wp_insert_comment(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_content'      => 'This is a fediverse comment.',
+				'comment_author'       => 'Fediverse User',
+				'comment_author_url'   => 'https://mastodon.social/@user',
+				'comment_author_email' => '',
+				'comment_meta'         => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		// Create a user without ActivityPub capability.
+		$user_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		\wp_set_current_user( $user_id );
+
+		$comment  = \get_comment( $comment_id );
+		$original = '<a href="#">Reply</a>';
+		$result   = Comment::comment_reply_link( $original, array(), $comment );
+
+		// Should NOT contain the original link.
+		$this->assertStringNotContainsString( $original, $result, 'Should not include the original reply link.' );
+
+		// Should contain the warning with the comment author's name.
+		$this->assertStringContainsString( 'activitypub-reply-warning', $result, 'Should include the warning class.' );
+		$this->assertStringContainsString( 'Fediverse User is on the Fediverse', $result, 'Should include author name and fediverse mention.' );
+		$this->assertStringContainsString( 'ask your administrator', $result, 'Should ask to contact administrator.' );
+
+		\wp_set_current_user( 0 );
+	}
+
+	/**
+	 * Test comment_reply_link for fediverse comment with user who can ActivityPub.
+	 *
+	 * @covers ::comment_reply_link
+	 */
+	public function test_comment_reply_link_fediverse_comment_user_with_capability() {
+		$post_id = self::factory()->post->create();
+
+		// Create a fediverse comment (received via ActivityPub).
+		$comment_id = \wp_insert_comment(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_content'      => 'This is a fediverse comment.',
+				'comment_author'       => 'Fediverse User',
+				'comment_author_url'   => 'https://mastodon.social/@user',
+				'comment_author_email' => '',
+				'comment_meta'         => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		// Create a user with ActivityPub capability (editor role has publish_posts).
+		$user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		\wp_set_current_user( $user_id );
+
+		$comment  = \get_comment( $comment_id );
+		$original = '<a href="#">Reply</a>';
+		$result   = Comment::comment_reply_link( $original, array(), $comment );
+
+		// Should return the original link unchanged.
+		$this->assertSame( $original, $result, 'Users with ActivityPub capability should get the original reply link.' );
+
+		\wp_set_current_user( 0 );
+	}
+
+	/**
+	 * Test comment_reply_link for fediverse comment with no logged-in user.
+	 *
+	 * @covers ::comment_reply_link
+	 */
+	public function test_comment_reply_link_fediverse_comment_not_logged_in() {
+		$post_id = self::factory()->post->create();
+
+		// Create a fediverse comment (received via ActivityPub).
+		$comment_id = \wp_insert_comment(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_content'      => 'This is a fediverse comment.',
+				'comment_author'       => 'Fediverse User',
+				'comment_author_url'   => 'https://mastodon.social/@user',
+				'comment_author_email' => '',
+				'comment_meta'         => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		// Ensure no user is logged in.
+		\wp_set_current_user( 0 );
+
+		$comment  = \get_comment( $comment_id );
+		$original = '<a href="#">Reply</a>';
+		$result   = Comment::comment_reply_link( $original, array(), $comment );
+
+		// Should NOT contain the original link (remote reply block is shown instead).
+		$this->assertStringNotContainsString( $original, $result, 'Non-logged-in users should not see the original reply link.' );
+
+		// Should contain the remote reply block.
+		$this->assertStringContainsString( 'activitypub-remote-reply', $result, 'Should show remote reply block for non-logged-in users.' );
+	}
+
+	/**
+	 * Test rest_comment_query excludes comments on ap_post via REST API.
+	 *
+	 * @covers ::rest_comment_query
+	 */
+	public function test_rest_comment_query_excludes_ap_post_comments() {
+		// Create a regular post and an ap_post.
+		$regular_post_id = self::factory()->post->create();
+		$ap_post_id      = self::factory()->post->create( array( 'post_type' => 'ap_post' ) );
+
+		// Create comments on both.
+		$regular_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $regular_post_id,
+				'comment_content'      => 'Comment on regular post',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'test@example.com',
+			)
+		);
+		$ap_comment_id      = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $ap_post_id,
+				'comment_content'      => 'Comment on ap_post',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'test2@example.com',
+			)
+		);
+
+		// Make a REST API request to the comments endpoint.
+		$request  = new \WP_REST_Request( 'GET', '/wp/v2/comments' );
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$comment_ids = wp_list_pluck( $data, 'id' );
+
+		$this->assertContains( $regular_comment_id, $comment_ids, 'Regular post comment should be included in REST API' );
+		$this->assertNotContains( $ap_comment_id, $comment_ids, 'AP post comment should be excluded from REST API' );
+	}
+
+	/**
+	 * Test comment_query_filter excludes ActivityPub comment types via REST API.
+	 *
+	 * @covers ::rest_comment_query
+	 */
+	public function test_rest_comment_query_excludes_activitypub_comment_types() {
+		$post_id = self::factory()->post->create();
+
+		// Create different comment types.
+		$regular_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'comment',
+				'comment_content'      => 'Regular comment',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'regular@example.com',
+			)
+		);
+		$like_comment_id    = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'like',
+				'comment_content'      => 'Like',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'like@example.com',
+			)
+		);
+		$repost_comment_id  = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'repost',
+				'comment_content'      => 'Repost',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'repost@example.com',
+			)
+		);
+
+		// Make a REST API request to the comments endpoint.
+		$request  = new \WP_REST_Request( 'GET', '/wp/v2/comments' );
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$comment_ids = wp_list_pluck( $data, 'id' );
+
+		$this->assertContains( $regular_comment_id, $comment_ids, 'Regular comment should be included in REST API' );
+		$this->assertNotContains( $like_comment_id, $comment_ids, 'Like should be excluded from REST API' );
+		$this->assertNotContains( $repost_comment_id, $comment_ids, 'Repost should be excluded from REST API' );
+	}
+
+	/**
+	 * Test comment_query does not add type__not_in when type is explicitly set.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_comment_query_respects_explicit_type() {
+		$post_id = self::factory()->post->create();
+
+		// Create a like comment.
+		$like_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'like',
+				'comment_content'      => 'Like',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'like@example.com',
+			)
+		);
+
+		// Query with explicit type - should include like comments.
+		$query    = new \WP_Comment_Query();
+		$comments = $query->query( array( 'type' => 'like' ) );
+
+		$comment_ids = wp_list_pluck( $comments, 'comment_ID' );
+
+		$this->assertContains( (string) $like_comment_id, $comment_ids, 'Like should be included when explicitly requested via type' );
+	}
+
+	/**
+	 * Test comment_query does not filter when type__in is explicitly set.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_comment_query_respects_explicit_type_in() {
+		$post_id = self::factory()->post->create();
+
+		// Create comments of different types.
+		$like_comment_id   = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'like',
+				'comment_content'      => 'Like',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'like@example.com',
+			)
+		);
+		$repost_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'repost',
+				'comment_content'      => 'Repost',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'repost@example.com',
+			)
+		);
+
+		// Query with explicit type__in - should include likes and reposts.
+		$query    = new \WP_Comment_Query();
+		$comments = $query->query( array( 'type__in' => array( 'like', 'repost' ) ) );
+
+		$comment_ids = wp_list_pluck( $comments, 'comment_ID' );
+
+		$this->assertContains( (string) $like_comment_id, $comment_ids, 'Like should be included when explicitly requested via type__in' );
+		$this->assertContains( (string) $repost_comment_id, $comment_ids, 'Repost should be included when explicitly requested via type__in' );
 	}
 }

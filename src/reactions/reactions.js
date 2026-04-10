@@ -1,22 +1,35 @@
-import { useState, useEffect, useRef } from '@wordpress/element';
+import { useState, useEffect, useRef, useCallback } from '@wordpress/element';
 import { Popover, Button } from '@wordpress/components';
+import { __ } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
 import { useOptions } from '../shared/use-options';
 
 /**
- * @typedef {Object} JSX
- * @typedef {import('react').ReactElement} JSX.Element
+ * Map reaction type keys to action button labels.
  */
+const ACTION_LABELS = {
+	like: __( 'Like', 'activitypub' ),
+	likes: __( 'Like', 'activitypub' ),
+	repost: __( 'Repost', 'activitypub' ),
+	reposts: __( 'Repost', 'activitypub' ),
+	quote: __( 'Quote', 'activitypub' ),
+	quotes: __( 'Quote', 'activitypub' ),
+};
 
 /**
  * A component that renders a row of user avatars for a given set of reactions.
  *
- * @param {Object} props           Component props.
- * @param {Array}  props.reactions Array of reaction objects.
+ * @param {Object} props              Component props.
+ * @param {Array}  props.reactions    Array of reaction objects.
+ * @param {string} props.displayStyle The display style ('facepile' or 'compact').
  * @return {JSX.Element}           The rendered component.
  */
-const FacepileRow = ( { reactions } ) => {
+const FacepileRow = ( { reactions, displayStyle } ) => {
 	const { defaultAvatarUrl } = useOptions();
+
+	if ( displayStyle === 'compact' ) {
+		return null;
+	}
 
 	return (
 		<ul className="reaction-avatars">
@@ -48,11 +61,12 @@ const FacepileRow = ( { reactions } ) => {
 /**
  * A component that renders a dropdown list of reactions.
  *
- * @param {Object} props           Component props.
- * @param {Array}  props.reactions Array of reaction objects.
+ * @param {Object} props              Component props.
+ * @param {Array}  props.reactions    Array of reaction objects.
+ * @param {string} props.displayStyle The display style ('facepile' or 'compact').
  * @return {JSX.Element} The rendered component.
  */
-const ReactionList = ( { reactions } ) => {
+const ReactionList = ( { reactions, displayStyle } ) => {
 	const { defaultAvatarUrl } = useOptions();
 
 	return (
@@ -62,15 +76,17 @@ const ReactionList = ( { reactions } ) => {
 				return (
 					<li key={ index } className="reaction-item">
 						<a href={ reaction.url } className="reaction-item" target="_blank" rel="noopener noreferrer">
-							<img
-								src={ avatar }
-								alt={ reaction.name }
-								width="32"
-								height="32"
-								onError={ ( e ) => {
-									e.target.src = defaultAvatarUrl;
-								} }
-							/>
+							{ displayStyle === 'facepile' && (
+								<img
+									src={ avatar }
+									alt={ reaction.name }
+									width="32"
+									height="32"
+									onError={ ( e ) => {
+										e.target.src = defaultAvatarUrl;
+									} }
+								/>
+							) }
 							<span className="reaction-name">{ reaction.name }</span>
 						</a>
 					</li>
@@ -83,12 +99,15 @@ const ReactionList = ( { reactions } ) => {
 /**
  * A component that renders a reaction group with facepile and dropdown.
  *
- * @param {Object} props       Component props.
- * @param {Array}  props.items Array of reaction objects.
- * @param {string} props.label Label for the reaction group.
- * @return {JSX.Element}          The rendered component.
+ * @param {Object}  props              Component props.
+ * @param {Array}   props.items        Array of reaction objects.
+ * @param {string}  props.label        Label for the reaction group.
+ * @param {string}  props.displayStyle The display style ('facepile' or 'compact').
+ * @param {boolean} props.showActions  Whether to show the action button.
+ * @param {string}  props.actionLabel  Label for the action button.
+ * @return {JSX.Element}              The rendered component.
  */
-const ReactionGroup = ( { items, label } ) => {
+const ReactionGroup = ( { items, label, displayStyle, showActions, actionLabel } ) => {
 	const [ isOpen, setIsOpen ] = useState( false );
 	const [ buttonRef, setButtonRef ] = useState( null );
 	const containerRef = useRef( null );
@@ -97,7 +116,12 @@ const ReactionGroup = ( { items, label } ) => {
 
 	return (
 		<div className="reaction-group" ref={ containerRef }>
-			<FacepileRow reactions={ visibleItems } />
+			{ showActions && actionLabel && (
+				<button className="reaction-action-button wp-element-button" type="button" disabled>
+					{ actionLabel }
+				</button>
+			) }
+			<FacepileRow reactions={ visibleItems } displayStyle={ displayStyle } />
 			<Button
 				ref={ setButtonRef }
 				className="reaction-label is-link"
@@ -107,8 +131,8 @@ const ReactionGroup = ( { items, label } ) => {
 				{ label }
 			</Button>
 			{ isOpen && buttonRef && (
-				<Popover anchor={ buttonRef } onClose={ () => setIsOpen( false ) }>
-					<ReactionList reactions={ items } />
+				<Popover anchor={ buttonRef } onClose={ () => setIsOpen( false ) } className="activitypub-popover">
+					<ReactionList reactions={ items } displayStyle={ displayStyle } />
 				</Popover>
 			) }
 		</div>
@@ -118,24 +142,32 @@ const ReactionGroup = ( { items, label } ) => {
 /**
  * The Reactions component.
  *
- * @param {Object}  props           Component props.
- * @param {?number} props.postId    The Post ID.
- * @param {?Object} props.reactions Optional reactions data.
+ * @param {Object}  props                   Component props.
+ * @param {?number} props.postId            The Post ID.
+ * @param {?Object} props.reactions         Optional reactions data.
  * @param {?Object} props.fallbackReactions Optional fallback reactions data to use if no real reactions are found.
- * @return {?JSX.Element}               The rendered component.
+ * @param {string}  props.displayStyle      The display style ('facepile' or 'summary').
+ * @param {boolean} props.showActions       Whether to show action buttons.
+ * @return {?JSX.Element}                  The rendered component.
  */
-export function Reactions( { postId = null, reactions: providedReactions = null, fallbackReactions = null } ) {
+export function Reactions( {
+	postId = null,
+	reactions: providedReactions = null,
+	fallbackReactions = null,
+	displayStyle = 'facepile',
+	showActions = false,
+} ) {
 	const { namespace } = useOptions();
 	const [ reactions, setReactions ] = useState( providedReactions );
 	const [ loading, setLoading ] = useState( ! providedReactions );
 
-	const onError = () => {
+	const onError = useCallback( () => {
 		// On error, use fallback reactions if provided
 		if ( fallbackReactions ) {
 			setReactions( fallbackReactions );
 		}
 		setLoading( false );
-	};
+	}, [ fallbackReactions ] );
 
 	useEffect( () => {
 		if ( providedReactions ) {
@@ -144,7 +176,7 @@ export function Reactions( { postId = null, reactions: providedReactions = null,
 			return;
 		}
 
-		// if no postId is provided or it's not a number (Site Editor), return early.
+		// if no postId is provided, or it's not a number (Site Editor), return early.
 		if ( ! postId || typeof postId !== 'number' ) {
 			onError();
 			return;
@@ -167,7 +199,7 @@ export function Reactions( { postId = null, reactions: providedReactions = null,
 				setLoading( false );
 			} )
 			.catch( onError );
-	}, [ postId, providedReactions, fallbackReactions, namespace ] );
+	}, [ postId, providedReactions, fallbackReactions, namespace, onError ] );
 
 	if ( loading ) {
 		return null;
@@ -179,15 +211,24 @@ export function Reactions( { postId = null, reactions: providedReactions = null,
 	}
 
 	return (
-		<>
+		<div className="activitypub-reactions">
 			{ Object.entries( reactions ).map( ( [ key, group ] ) => {
 				if ( ! group.items?.length ) {
 					return null;
 				}
 
-				return <ReactionGroup key={ key } items={ group.items } label={ group.label } />;
+				return (
+					<ReactionGroup
+						key={ key }
+						items={ group.items }
+						label={ group.label }
+						displayStyle={ displayStyle }
+						showActions={ showActions }
+						actionLabel={ ACTION_LABELS[ key ] }
+					/>
+				);
 			} ) }
-		</>
+		</div>
 	);
 }
 

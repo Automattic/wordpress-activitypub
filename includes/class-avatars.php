@@ -47,6 +47,11 @@ class Avatars {
 			return $args;
 		}
 
+		// Respect WordPress "show avatars" setting.
+		if ( ! \get_option( 'show_avatars' ) ) {
+			return $args;
+		}
+
 		$avatar = null;
 
 		// First, try to get avatar from remote actor.

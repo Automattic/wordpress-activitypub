@@ -1,0 +1,10 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "activitypub/dashboard-stats",
+  "title": "ActivityPub Dashboard Stats",
+  "category": "widgets",
+  "description": "ActivityPub statistics dashboard widget",
+  "textdomain": "activitypub",
+  "editorScript": "file:./index.js"
+}

@@ -79,6 +79,26 @@ class Advanced_Settings_Fields {
 			array( 'label_for' => 'activitypub_following_ui' )
 		);
 
+		if ( \version_compare( \get_bloginfo( 'version' ), '6.9-alpha', '>=' ) ) {
+			\add_settings_field(
+				'activitypub_reader_ui',
+				\__( 'Reader', 'activitypub' ),
+				array( self::class, 'render_reader_field' ),
+				'activitypub_advanced_settings',
+				'activitypub_advanced_settings',
+				array( 'label_for' => 'activitypub_reader_ui' )
+			);
+		}
+
+		\add_settings_field(
+			'activitypub_api',
+			\__( 'ActivityPub API', 'activitypub' ),
+			array( self::class, 'render_api_field' ),
+			'activitypub_advanced_settings',
+			'activitypub_advanced_settings',
+			array( 'label_for' => 'activitypub_api' )
+		);
+
 		\add_settings_field(
 			'activitypub_object_type',
 			\__( 'Activity-Object-Type', 'activitypub' ),
@@ -200,6 +220,53 @@ class Advanced_Settings_Fields {
 		</p>
 		<p class="description">
 			⚠ A reader interface is not available yet. Please follow accounts sparingly—you won't be able to see their posts or shares. This feature is intended for testing the follow functionality. Once fully implemented, it will be enabled by default.
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render reader field.
+	 */
+	public static function render_reader_field() {
+		$value = \get_option( 'activitypub_reader_ui', '0' );
+		?>
+		<p>
+			<label>
+				<input type="checkbox" id="activitypub_reader_ui" name="activitypub_reader_ui" value="1" <?php checked( '1', $value ); ?> />
+				Enable the Reader to view posts from accounts you follow.
+			</label>
+		</p>
+		<p class="description">
+			Adds a "Social Web" interface where you can read posts and shares from accounts you follow. Also enables the Following feature. Look for it in Dashboard > Social Web.
+		</p>
+		<p class="description">
+			⚠ This feature is experimental and may change significantly in future updates.
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render ActivityPub API field.
+	 */
+	public static function render_api_field() {
+		$value = \get_option( 'activitypub_api', '0' );
+		?>
+		<p>
+			<label>
+				<input type="checkbox" id="activitypub_api" name="activitypub_api" value="1" <?php \checked( '1', $value ); ?> />
+				<?php \esc_html_e( 'Enable the ActivityPub API to connect third-party clients.', 'activitypub' ); ?>
+			</label>
+		</p>
+		<p class="description">
+			<?php \esc_html_e( 'Enables OAuth 2.0 authentication so third-party ActivityPub clients (like Mastodon apps) can post, follow, and interact on your behalf. You can manage connected apps from your profile page.', 'activitypub' ); ?>
+		</p>
+		<p class="description">
+			<?php
+			echo \wp_kses(
+				\__( '⚠ This feature is experimental and may change significantly in future updates.', 'activitypub' ),
+				'data'
+			);
+			?>
 		</p>
 		<?php
 	}

@@ -93,7 +93,7 @@ class Blog extends Actor {
 		$permalink = \get_option( 'activitypub_use_permalink_as_id_for_blog', false );
 
 		if ( $permalink ) {
-			return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_preferred_username() );
+			return \esc_url( \home_url( '/@' . $this->get_preferred_username() ) );
 		}
 
 		return \add_query_arg( 'author', $this->_id, \home_url( '/' ) );
@@ -102,11 +102,16 @@ class Blog extends Actor {
 	/**
 	 * Get the type of the object.
 	 *
+	 * If relay mode is enabled, return "Service".
 	 * If the Blog is in "single user" mode, return "Person" instead of "Group".
 	 *
 	 * @return string The type of the object.
 	 */
 	public function get_type() {
+		if ( \get_option( 'activitypub_relay_mode', false ) ) {
+			return 'Service';
+		}
+
 		if ( is_single_user() ) {
 			return 'Person';
 		} else {
@@ -271,21 +276,44 @@ class Blog extends Actor {
 	 * @return string The published date.
 	 */
 	public function get_published() {
-		$first_post = new \WP_Query(
+		$published = \get_option( 'activitypub_blog_published' );
+
+		if ( $published ) {
+			return $published;
+		}
+
+		// Backfill from the first federated post.
+		$first_federated = new \WP_Query(
 			array(
-				'orderby' => 'date',
-				'order'   => 'ASC',
-				'number'  => 1,
+				'orderby'                => 'date',
+				'order'                  => 'ASC',
+				'posts_per_page'         => 1,
+				'post_status'            => 'publish',
+				'no_found_rows'          => true,
+				'ignore_sticky_posts'    => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'             => array(
+					array(
+						'key'     => 'activitypub_status',
+						'compare' => 'EXISTS',
+					),
+				),
 			)
 		);
 
-		if ( ! empty( $first_post->posts[0] ) ) {
-			$time = \strtotime( $first_post->posts[0]->post_date_gmt );
+		if ( ! empty( $first_federated->posts[0] ) ) {
+			$time = \strtotime( $first_federated->posts[0]->post_date_gmt );
 		} else {
 			$time = \time();
 		}
 
-		return \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $time );
+		$published = \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $time );
+
+		\update_option( 'activitypub_blog_published', $published, false );
+
+		return $published;
 	}
 
 	/**
@@ -392,7 +420,11 @@ class Blog extends Actor {
 	 */
 	public function get_endpoints() {
 		return array(
-			'sharedInbox' => get_rest_url_by_path( 'inbox' ),
+			'sharedInbox'                => get_rest_url_by_path( 'inbox' ),
+			'oauthAuthorizationEndpoint' => get_rest_url_by_path( 'oauth/authorize' ),
+			'oauthTokenEndpoint'         => get_rest_url_by_path( 'oauth/token' ),
+			'proxyUrl'                   => get_rest_url_by_path( 'proxy' ),
+			'proxyEventStream'           => get_rest_url_by_path( 'proxy/stream' ),
 		);
 	}
 
@@ -403,6 +435,17 @@ class Blog extends Actor {
 	 */
 	public function get_webfinger() {
 		return $this->get_preferred_username() . '@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
+	}
+
+	/**
+	 * Returns the Liked API endpoint.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string The Liked endpoint.
+	 */
+	public function get_liked() {
+		return get_rest_url_by_path( sprintf( 'actors/%d/liked', $this->get__id() ) );
 	}
 
 	/**
@@ -504,7 +547,7 @@ class Blog extends Actor {
 			$hashtags[] = array(
 				'type' => 'Hashtag',
 				'href' => \get_tag_link( $tag->term_id ),
-				'name' => esc_hashtag( $tag->slug ),
+				'name' => esc_hashtag( $tag->name ),
 			);
 		}
 

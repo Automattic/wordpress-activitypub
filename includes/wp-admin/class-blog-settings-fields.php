@@ -54,14 +54,17 @@ class Blog_Settings_Fields {
 			'activitypub_blog_profile'
 		);
 
-		\add_settings_field(
-			'activitypub_blog_identifier',
-			\__( 'Change Profile ID', 'activitypub' ),
-			array( self::class, 'profile_id_callback' ),
-			'activitypub_blog_settings',
-			'activitypub_blog_profile',
-			array( 'label_for' => 'activitypub_blog_identifier' )
-		);
+		// Don't show profile ID field when relay mode is enabled.
+		if ( ! \get_option( 'activitypub_relay_mode', false ) ) {
+			\add_settings_field(
+				'activitypub_blog_identifier',
+				\__( 'Change Profile ID', 'activitypub' ),
+				array( self::class, 'profile_id_callback' ),
+				'activitypub_blog_settings',
+				'activitypub_blog_profile',
+				array( 'label_for' => 'activitypub_blog_identifier' )
+			);
+		}
 
 		\add_settings_field(
 			'activitypub_blog_description',
@@ -234,6 +237,18 @@ class Blog_Settings_Fields {
 				<label>
 					<input type="checkbox" name="activitypub_blog_user_mailer_new_mention" id="activitypub_blog_user_mailer_new_mention" value="1" <?php \checked( '1', \get_option( 'activitypub_blog_user_mailer_new_mention', '1' ) ); ?> />
 					<?php \esc_html_e( 'New Mentions', 'activitypub' ); ?>
+				</label>
+			</p>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_mailer_annual_report" id="activitypub_mailer_annual_report" value="1" <?php \checked( '1', \get_option( 'activitypub_mailer_annual_report', '1' ) ); ?> />
+					<?php \esc_html_e( 'Annual Report', 'activitypub' ); ?>
+				</label>
+			</p>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_mailer_monthly_report" id="activitypub_mailer_monthly_report" value="1" <?php \checked( '1', \get_option( 'activitypub_mailer_monthly_report', '1' ) ); ?> />
+					<?php \esc_html_e( 'Monthly Report', 'activitypub' ); ?>
 				</label>
 			</p>
 		</fieldset>

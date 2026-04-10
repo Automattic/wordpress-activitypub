@@ -8,7 +8,6 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Posts;
 
 /**
  * Mailer Class.
@@ -173,6 +172,14 @@ class Mailer {
 
 		$actor = self::normalize_actor( $actor );
 
+		// Replace emoji in actor name and summary.
+		if ( ! empty( $actor['name'] ) ) {
+			$actor['name'] = Emoji::replace_for_actor( $actor['name'], $actor['url'] );
+		}
+		if ( ! empty( $actor['summary'] ) ) {
+			$actor['summary'] = Emoji::replace_for_actor( $actor['summary'], $actor['url'] );
+		}
+
 		$template_args = array_merge(
 			$actor,
 			array(
@@ -191,7 +198,7 @@ class Mailer {
 				continue;
 			}
 
-			$result = Http::get( $actor[ $field ], true );
+			$result = Http::get( $actor[ $field ], array(), true );
 			if ( 200 === \wp_remote_retrieve_response_code( $result ) ) {
 				$body = \json_decode( \wp_remote_retrieve_body( $result ), true );
 				if ( isset( $body['totalItems'] ) ) {
@@ -207,7 +214,7 @@ class Mailer {
 		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/new-follower.php', false, $template_args );
 		$html_message = \ob_get_clean();
 
-		$alt_function = function ( $mailer ) use ( $actor, $admin_url ) {
+		$alt_function = static function ( $mailer ) use ( $actor, $admin_url ) {
 			/* translators: 1: Follower name */
 			$message = \sprintf( \__( 'New Follower: %1$s.', 'activitypub' ), $actor['name'] ) . "\r\n\r\n";
 			/* translators: Follower URL */
@@ -295,7 +302,7 @@ class Mailer {
 			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/new-dm.php', false, $template_args );
 			$html_message = \ob_get_clean();
 
-			$alt_function = function ( $mailer ) use ( $actor, $activity ) {
+			$alt_function = static function ( $mailer ) use ( $actor, $activity ) {
 				$content = \html_entity_decode(
 					\wp_strip_all_tags(
 						str_replace( '</p>', PHP_EOL . PHP_EOL, $activity['object']['content'] )
@@ -327,8 +334,8 @@ class Mailer {
 	 * @param int|int[] $user_ids The id(s) of the local blog-user(s).
 	 */
 	public static function mention( $activity, $user_ids ) {
-		// Early return if activity has no cc recipients.
-		if ( empty( $activity['cc'] ) ) {
+		// Early return if activity has no mentions.
+		if ( empty( $activity['object']['tag'] ) ) {
 			return;
 		}
 
@@ -337,19 +344,17 @@ class Mailer {
 			return;
 		}
 
-		// Normalize to array.
-		$user_ids = (array) $user_ids;
-
-		// Build a map of user_id => actor_id and filter to only users in the "cc" field.
 		$recipients = array();
-		foreach ( $user_ids as $user_id ) {
+		$mentions   = wp_list_filter( (array) $activity['object']['tag'], array( 'type' => 'Mention' ) );
+		$mentions   = array_map( '\Activitypub\object_to_uri', $mentions );
+		foreach ( (array) $user_ids as $user_id ) {
 			$actor = Actors::get_by_id( $user_id );
 			if ( \is_wp_error( $actor ) ) {
 				continue;
 			}
 
 			$actor_id = $actor->get_id();
-			if ( \in_array( $actor_id, (array) $activity['cc'], true ) ) {
+			if ( \in_array( $actor_id, $mentions, true ) ) {
 				$recipients[ $user_id ] = $actor_id;
 			}
 		}
@@ -397,7 +402,7 @@ class Mailer {
 			\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/new-mention.php', false, $template_args );
 			$html_message = \ob_get_clean();
 
-			$alt_function = function ( $mailer ) use ( $actor, $activity ) {
+			$alt_function = static function ( $mailer ) use ( $actor, $activity ) {
 				$content = \html_entity_decode(
 					\wp_strip_all_tags(
 						str_replace( '</p>', PHP_EOL . PHP_EOL, $activity['object']['content'] )
@@ -420,6 +425,66 @@ class Mailer {
 
 			\remove_action( 'phpmailer_init', $alt_function );
 		}
+	}
+
+	/**
+	 * Send a templated email to a user.
+	 *
+	 * @param int    $user_id  The user ID (or BLOG_USER_ID for blog actor).
+	 * @param string $subject  The email subject.
+	 * @param string $template The template name (without path/extension).
+	 * @param array  $args     Template arguments.
+	 * @param string $alt_body Optional plain text alternative. Auto-generated from HTML if empty.
+	 *
+	 * @return bool True if email was sent, false otherwise.
+	 */
+	public static function send( $user_id, $subject, $template, $args = array(), $alt_body = '' ) {
+		// Get the recipient email address.
+		if ( $user_id > Actors::BLOG_USER_ID ) {
+			$user = \get_userdata( $user_id );
+			if ( ! $user || empty( $user->user_email ) ) {
+				return false;
+			}
+			$email = $user->user_email;
+		} else {
+			$email = \get_option( 'admin_email' );
+		}
+
+		// Load the HTML template.
+		$template_file = ACTIVITYPUB_PLUGIN_DIR . 'templates/emails/' . \sanitize_file_name( $template ) . '.php';
+
+		/**
+		 * Filter the email template file path.
+		 *
+		 * @param string $template_file The template file path.
+		 * @param string $template      The template name.
+		 * @param int    $user_id       The user ID.
+		 * @param array  $args          Template arguments.
+		 */
+		$template_file = \apply_filters( 'activitypub_email_template', $template_file, $template, $user_id, $args );
+
+		if ( ! \file_exists( $template_file ) ) {
+			return false;
+		}
+
+		\ob_start();
+		\load_template( $template_file, false, $args );
+		$html_message = \ob_get_clean();
+
+		// Build plain text alternative from HTML if not provided.
+		if ( empty( $alt_body ) ) {
+			$alt_body = \wp_strip_all_tags( $html_message );
+		}
+		$alt_function = static function ( $mailer ) use ( $alt_body ) {
+			$mailer->{'AltBody'} = $alt_body;
+		};
+		\add_action( 'phpmailer_init', $alt_function );
+
+		$result = \wp_mail( $email, $subject, $html_message, array( 'Content-type: text/html' ) );
+
+		\remove_action( 'phpmailer_init', $alt_function );
+
+		return $result;
 	}
 
 	/**
@@ -465,11 +530,6 @@ class Mailer {
 			return $maybe_notify;
 		}
 
-		// Only prevent if the create_posts option is enabled.
-		if ( '1' !== \get_option( 'activitypub_create_posts', false ) ) {
-			return $maybe_notify;
-		}
-
 		$comment = \get_comment( $comment_id );
 		if ( ! $comment ) {
 			return $maybe_notify;
@@ -481,7 +541,7 @@ class Mailer {
 		}
 
 		// Prevent notifications for comments on ap_post.
-		if ( Posts::POST_TYPE === $post->post_type ) {
+		if ( is_ap_post( $post ) ) {
 			return false;
 		}
 

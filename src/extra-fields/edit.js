@@ -4,6 +4,7 @@
 import { __, sprintf } from '@wordpress/i18n';
 import { useBlockProps, InspectorControls } from '@wordpress/block-editor';
 import { PanelBody, SelectControl, RangeControl, Placeholder, Spinner, Button } from '@wordpress/components';
+import { safeHTML } from '@wordpress/dom';
 import { useSelect } from '@wordpress/data';
 import { useState, useEffect } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
@@ -33,22 +34,23 @@ export default function Edit( { attributes, setAttributes, context } ) {
 	// Get author ID from context or current post depending on editor.
 	const authorId = useSelect(
 		( select ) => {
-			const editorStore = select( 'core/editor' );
-			const coreStore = select( 'core' );
+			if ( contextPostId && contextPostType ) {
+				const coreStore = select( 'core' );
+				if ( coreStore ) {
+					const editedRecord =
+						coreStore.getEditedEntityRecord?.( 'postType', contextPostType, contextPostId ) ?? null;
+					if ( editedRecord?.author ) {
+						return editedRecord.author;
+					}
 
-			if ( contextPostId && contextPostType && coreStore ) {
-				const editedRecord =
-					coreStore.getEditedEntityRecord?.( 'postType', contextPostType, contextPostId ) ?? null;
-				if ( editedRecord?.author ) {
-					return editedRecord.author;
-				}
-
-				const record = coreStore.getEntityRecord?.( 'postType', contextPostType, contextPostId ) ?? null;
-				if ( record?.author ) {
-					return record.author;
+					const record = coreStore.getEntityRecord?.( 'postType', contextPostType, contextPostId ) ?? null;
+					if ( record?.author ) {
+						return record.author;
+					}
 				}
 			}
 
+			const editorStore = select( 'core/editor' );
 			if ( editorStore && editorStore.getCurrentPostAttribute ) {
 				return editorStore.getCurrentPostAttribute( 'author' );
 			}
@@ -257,7 +259,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 							<dt>{ field.name }</dt>
 							<dd
 								dangerouslySetInnerHTML={ {
-									__html: field.value,
+									__html: safeHTML( field.value ),
 								} }
 							/>
 						</div>

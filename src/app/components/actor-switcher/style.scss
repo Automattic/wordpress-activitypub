@@ -1,0 +1,28 @@
+@use "@wordpress/base-styles/colors";
+
+.actor-switcher {
+	display: flex;
+	align-items: center;
+	text-decoration: none;
+	color: colors.$gray-200;
+	transition: color 0.2s ease;
+	min-width: 0; // Allow text truncation
+	padding-left: 2px;
+
+	&:hover:not(:disabled) {
+		color: colors.$white;
+	}
+
+	&__avatar {
+		width: 32px;
+		height: 32px;
+		border-radius: 50%;
+		flex-shrink: 0;
+	}
+
+	&__name {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+}

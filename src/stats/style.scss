@@ -1,0 +1,195 @@
+.wp-block-activitypub-stats {
+	max-width: var(--wp--style--global--content-size, 600px);
+	background-color: var(--wp--preset--color--base, var(--wp--preset--color--white, #fff));
+	color: var(--wp--preset--color--contrast, var(--wp--preset--color--black, inherit));
+
+	// Inner border color: uses block border-color if set, otherwise muted text color.
+	--activitypub-stats--border-color: color-mix(in srgb, currentcolor 20%, transparent);
+
+
+	&.alignwide {
+		max-width: var(--wp--style--global--wide-size);
+	}
+
+	&.alignfull {
+		max-width: none;
+	}
+}
+
+.activitypub-stats__header {
+	text-align: center;
+	margin-bottom: 1.5rem;
+}
+
+.activitypub-stats__title {
+	font-size: 1.75em;
+	font-weight: 800;
+	margin: 0 0 0.25rem;
+	color: inherit;
+	letter-spacing: -0.02em;
+}
+
+.activitypub-stats__subtitle {
+	font-size: 1em;
+	color: color-mix(in srgb, currentcolor 60%, transparent);
+	margin: 0;
+}
+
+.activitypub-stats__stats {
+	display: flex;
+	gap: 1rem;
+	margin-bottom: 1.25rem;
+}
+
+.activitypub-stats__stat {
+	flex: 1;
+	text-align: center;
+	padding: 0.75rem 0.5rem;
+}
+
+.activitypub-stats__stat--highlight {
+	border: 1px solid var(--activitypub-stats--border-color);
+	border-radius: 8px;
+}
+
+.activitypub-stats__stat-value {
+	display: block;
+	font-size: 2em;
+	font-weight: 800;
+	line-height: 1.2;
+	color: inherit;
+}
+
+.activitypub-stats__stat--highlight .activitypub-stats__stat-value {
+	font-size: 2.5em;
+}
+
+.activitypub-stats__stat-label {
+	display: block;
+	font-size: 0.8em;
+	color: color-mix(in srgb, currentcolor 50%, transparent);
+	margin-top: 0.25rem;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.activitypub-stats__engagement {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin-bottom: 1.5rem;
+}
+
+.activitypub-stats__engagement .activitypub-stats__stat {
+	flex: 1 1 calc(33.333% - 0.5rem);
+	min-width: 5rem;
+	border: 1px solid var(--activitypub-stats--border-color);
+	border-radius: 8px;
+	padding: 0.625rem 0.5rem;
+}
+
+.activitypub-stats__details {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+	margin-bottom: 1.5rem;
+}
+
+.activitypub-stats__detail {
+	flex: 1 1 calc(50% - 0.5rem);
+	min-width: 7.5rem;
+	border: 1px solid var(--activitypub-stats--border-color);
+	border-radius: 8px;
+	padding: 0.875rem;
+}
+
+.activitypub-stats__detail-label {
+	display: block;
+	font-size: 0.75em;
+	color: color-mix(in srgb, currentcolor 50%, transparent);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	margin-bottom: 0.25rem;
+}
+
+.activitypub-stats__detail-value {
+	display: block;
+	font-size: 1.25em;
+	font-weight: 700;
+	color: inherit;
+
+	a {
+		color: inherit;
+		text-decoration: underline;
+		text-underline-offset: 0.15em;
+
+		&:hover {
+			color: color-mix(in srgb, currentcolor 70%, transparent);
+		}
+	}
+}
+
+.activitypub-stats__detail-value--positive,
+.activitypub-stats__detail-value--negative {
+	color: inherit;
+}
+
+.activitypub-stats__detail-extra {
+	display: block;
+	font-size: 0.8em;
+	color: color-mix(in srgb, currentcolor 45%, transparent);
+	margin-top: 0.125rem;
+}
+
+.activitypub-stats__top-posts {
+	margin-bottom: 1.25rem;
+}
+
+.activitypub-stats__section-title {
+	font-size: 0.85em;
+	color: color-mix(in srgb, currentcolor 50%, transparent);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	margin: 0 0 0.75rem;
+}
+
+.activitypub-stats__top-posts ol {
+	list-style: decimal;
+	margin: 0;
+	padding-left: 1.5em;
+}
+
+/* stylelint-disable no-descending-specificity */
+.activitypub-stats__top-posts li {
+	padding: 0.5rem 0;
+
+	&:last-child {
+		padding-bottom: 0;
+	}
+
+	a {
+		color: inherit;
+		text-decoration: none;
+
+		&:hover {
+			text-decoration: underline;
+		}
+	}
+}
+
+.activitypub-stats__post-engagement {
+	font-size: 0.8em;
+	color: color-mix(in srgb, currentcolor 45%, transparent);
+	margin-left: 0.25rem;
+}
+
+.activitypub-stats__footer {
+	text-align: center;
+	margin-top: 1.25rem;
+}
+
+.activitypub-stats__branding {
+	font-size: 0.75em;
+	color: color-mix(in srgb, currentcolor 45%, transparent);
+}
+

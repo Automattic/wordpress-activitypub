@@ -7,54 +7,24 @@
 
 namespace Activitypub;
 
-use Activitypub\Collection\Posts;
-
 /**
  * Attachments processor class.
+ *
+ * Handles importing media attachments into the WordPress Media Library.
+ * Creates full WordPress attachment posts that are searchable and manageable.
+ *
+ * For lightweight file caching without Media Library overhead, use the
+ * Cache\Media, Cache\Avatar, and Cache\Emoji classes instead.
+ *
+ * @since 1.0.0
  */
 class Attachments {
 	/**
-	 * Directory for storing ap_post media files.
+	 * Maximum width for imported images into Media Library.
 	 *
-	 * @var string
+	 * @var int
 	 */
-	public static $ap_posts_dir = '/activitypub/ap_posts/';
-
-	/**
-	 * Directory for storing comment media files.
-	 *
-	 * @var string
-	 */
-	public static $comments_dir = '/activitypub/comments/';
-
-	/**
-	 * Initialize the class and set up filters.
-	 */
-	public static function init() {
-		\add_action( 'before_delete_post', array( self::class, 'delete_ap_posts_directory' ) );
-	}
-
-	/**
-	 * Delete the activitypub files directory for a post.
-	 *
-	 * @param int $post_id The post ID.
-	 */
-	public static function delete_ap_posts_directory( $post_id ) {
-		if ( Posts::POST_TYPE !== \get_post_type( $post_id ) ) {
-			return;
-		}
-
-		require_once ABSPATH . 'wp-admin/includes/file.php';
-
-		\WP_Filesystem();
-		global $wp_filesystem;
-
-		$activitypub_dir = self::get_storage_paths( $post_id, 'post' )['basedir'];
-
-		if ( $wp_filesystem->is_dir( $activitypub_dir ) ) {
-			$wp_filesystem->delete( $activitypub_dir, true );
-		}
-	}
+	const MAX_IMAGE_DIMENSION = 1200;
 
 	/**
 	 * Import attachments from an ActivityPub object and attach them to a post.
@@ -109,145 +79,6 @@ class Attachments {
 		}
 
 		return $attachment_ids;
-	}
-
-	/**
-	 * Import attachments as direct files for posts.
-	 *
-	 * Saves files directly to uploads/activitypub/ap_posts/{post_id}/ without creating
-	 * WordPress attachment posts. This lightweight approach is ideal for federated content
-	 * that doesn't require full WordPress media management.
-	 *
-	 * Files are stored in a dedicated directory structure and automatically cleaned up
-	 * when the parent post is deleted. Media URLs point directly to the stored files
-	 * rather than going through WordPress attachment APIs.
-	 *
-	 * Use this when:
-	 * - Processing ActivityPub Create/Update activities from the inbox.
-	 * - Handling federated content that won't be owned or edited by the user.
-	 * - You want lightweight storage without Media Library overhead.
-	 *
-	 * @param array $attachments Array of ActivityPub attachment objects.
-	 * @param int   $post_id     The post ID to attach files to.
-	 *
-	 * @return array[] Array of file data arrays.
-	 */
-	public static function import_post_files( $attachments, $post_id ) {
-		return self::import_files_for_object( $attachments, $post_id, 'post' );
-	}
-
-	/**
-	 * Import attachments as direct files for any object type.
-	 *
-	 * Saves files directly to uploads/activitypub/{type}/{id}/ without creating
-	 * WordPress attachment posts. This is the internal method that handles
-	 * the actual import logic for both posts and comments.
-	 *
-	 * @param array  $attachments Array of ActivityPub attachment objects.
-	 * @param int    $object_id   The object ID (post or comment).
-	 * @param string $object_type The object type ('post' or 'comment').
-	 *
-	 * @return array[] Array of file data arrays.
-	 */
-	private static function import_files_for_object( $attachments, $object_id, $object_type ) {
-		// First, import inline images from the content.
-		$inline_mappings = self::import_inline_files( $object_id, $object_type );
-
-		if ( empty( $attachments ) || ! is_array( $attachments ) ) {
-			return array();
-		}
-
-		$files = array();
-		foreach ( $attachments as $attachment ) {
-			$attachment_data = self::normalize_attachment( $attachment );
-
-			if ( empty( $attachment_data['url'] ) ) {
-				continue;
-			}
-
-			// Skip if this URL was already processed as an inline image.
-			if ( isset( $inline_mappings[ $attachment_data['url'] ] ) ) {
-				continue;
-			}
-
-			$file_data = self::save_file( $attachment_data, $object_id, $object_type );
-
-			if ( ! \is_wp_error( $file_data ) ) {
-				$files[] = $file_data;
-			}
-		}
-
-		// Append media markup to content.
-		if ( ! empty( $files ) ) {
-			self::append_files_to_content( $object_id, $files, $object_type );
-		}
-
-		return $files;
-	}
-
-	/**
-	 * Get storage paths for an object based on its type.
-	 *
-	 * @param int    $object_id   The object ID (post or comment).
-	 * @param string $object_type The object type ('post' or 'comment').
-	 *
-	 * @return array {
-	 *     Storage paths for the object.
-	 *
-	 *     @type string $basedir Base directory path.
-	 *     @type string $baseurl Base URL.
-	 * }
-	 */
-	private static function get_storage_paths( $object_id, $object_type ) {
-		$upload_dir = \wp_upload_dir();
-		$sub_dir    = 'comment' === $object_type ? self::$comments_dir : self::$ap_posts_dir;
-
-		return array(
-			'basedir' => $upload_dir['basedir'] . $sub_dir . $object_id,
-			'baseurl' => $upload_dir['baseurl'] . $sub_dir . $object_id,
-		);
-	}
-
-	/**
-	 * Get content for an object based on its type.
-	 *
-	 * @param int    $object_id   The object ID (post or comment).
-	 * @param string $object_type The object type ('post' or 'comment').
-	 *
-	 * @return string The content string or empty if not found.
-	 */
-	private static function get_object_content( $object_id, $object_type ) {
-		if ( 'comment' === $object_type ) {
-			$comment = \get_comment( $object_id );
-			return $comment ? $comment->comment_content : '';
-		}
-
-		return \get_post_field( 'post_content', $object_id );
-	}
-
-	/**
-	 * Update content for an object based on its type.
-	 *
-	 * @param int    $object_id   The object ID (post or comment).
-	 * @param string $object_type The object type ('post' or 'comment').
-	 * @param string $content     The new content.
-	 */
-	private static function update_object_content( $object_id, $object_type, $content ) {
-		if ( 'comment' === $object_type ) {
-			\wp_update_comment(
-				array(
-					'comment_ID'      => $object_id,
-					'comment_content' => $content,
-				)
-			);
-		} else {
-			\wp_update_post(
-				array(
-					'ID'           => $object_id,
-					'post_content' => $content,
-				)
-			);
-		}
 	}
 
 	/**
@@ -329,56 +160,6 @@ class Attachments {
 	}
 
 	/**
-	 * Process inline images from content (for direct file storage).
-	 *
-	 * @param int    $object_id   The post or comment ID.
-	 * @param string $object_type The object type ('post' or 'comment').
-	 *
-	 * @return array Array of URL mappings (old URL => new URL).
-	 */
-	private static function import_inline_files( $object_id, $object_type ) {
-		$content = self::get_object_content( $object_id, $object_type );
-		if ( ! $content ) {
-			return array();
-		}
-
-		// Find all img tags in the content.
-		preg_match_all( '/<img[^>]+src=["\']([^"\']+)["\'][^>]*>/i', $content, $matches );
-
-		if ( empty( $matches[1] ) ) {
-			return array();
-		}
-
-		$url_mappings = array();
-
-		foreach ( $matches[1] as $image_url ) {
-			// Skip if already processed.
-			if ( isset( $url_mappings[ $image_url ] ) ) {
-				continue;
-			}
-
-			$file_data = self::save_file( array( 'url' => $image_url ), $object_id, $object_type );
-
-			if ( \is_wp_error( $file_data ) ) {
-				continue;
-			}
-
-			$new_url = $file_data['url'];
-			if ( $new_url ) {
-				$url_mappings[ $image_url ] = $new_url;
-				$content                    = \str_replace( $image_url, $new_url, $content );
-			}
-		}
-
-		// Update content if URLs were replaced.
-		if ( ! empty( $url_mappings ) ) {
-			self::update_object_content( $object_id, $object_type, $content );
-		}
-
-		return $url_mappings;
-	}
-
-	/**
 	 * Normalize an ActivityPub attachment object to a standard format.
 	 *
 	 * @param mixed $attachment The attachment data (array or object).
@@ -420,22 +201,36 @@ class Attachments {
 			require_once ABSPATH . 'wp-admin/includes/image.php';
 		}
 
+		// Use WP_Filesystem_Direct explicitly to avoid FTP fallback from WP_Filesystem().
+		require_once ABSPATH . 'wp-admin/includes/class-wp-filesystem-base.php';
+		require_once ABSPATH . 'wp-admin/includes/class-wp-filesystem-direct.php';
+
+		$filesystem = new \WP_Filesystem_Direct( null );
+
 		$is_local = ! preg_match( '#^https?://#i', $attachment_data['url'] );
 
 		if ( $is_local ) {
-			// Read local file from disk.
-			\WP_Filesystem();
-			global $wp_filesystem;
+			// Validate local path is within allowed directories to prevent file disclosure.
+			$allowed = self::is_allowed_local_path( $attachment_data['url'] );
+			if ( ! $allowed ) {
+				return new \WP_Error( 'invalid_path', \__( 'Local file path is not within allowed directories.', 'activitypub' ) );
+			}
 
-			if ( ! $wp_filesystem->exists( $attachment_data['url'] ) ) {
+			// Read local file from disk.
+			if ( ! $filesystem->exists( $attachment_data['url'] ) ) {
 				/* translators: %s: file path */
 				return new \WP_Error( 'file_not_found', sprintf( \__( 'File not found: %s', 'activitypub' ), $attachment_data['url'] ) );
 			}
 
 			// Copy to temp file so media_handle_sideload doesn't move the original.
 			$tmp_file = \wp_tempnam( \basename( $attachment_data['url'] ) );
-			$wp_filesystem->copy( $attachment_data['url'], $tmp_file, true );
+			$filesystem->copy( $attachment_data['url'], $tmp_file, true );
 		} else {
+			// Validate remote URL before downloading.
+			if ( ! \wp_http_validate_url( $attachment_data['url'] ) ) {
+				return new \WP_Error( 'invalid_url', \__( 'URL is not allowed.', 'activitypub' ) );
+			}
+
 			// Download remote URL.
 			$tmp_file = \download_url( $attachment_data['url'] );
 
@@ -444,27 +239,47 @@ class Attachments {
 			}
 		}
 
-		// Prepare file array for WordPress.
+		// Get original filename from URL.
+		$original_name = \basename( \wp_parse_url( $attachment_data['url'], PHP_URL_PATH ) );
+
+		// Rename temp file to have proper extension for optimize_image to detect mime type.
+		$original_ext = \pathinfo( $original_name, PATHINFO_EXTENSION );
+		if ( $original_ext ) {
+			$renamed_tmp = $tmp_file . '.' . $original_ext;
+			if ( $filesystem->move( $tmp_file, $renamed_tmp, true ) ) {
+				$tmp_file = $renamed_tmp;
+			}
+		}
+
+		// Optimize images before sideloading (resize and convert to WebP).
+		$tmp_file = self::optimize_image( $tmp_file, self::MAX_IMAGE_DIMENSION );
+
+		// Update filename extension to match optimized file.
+		$new_ext = \pathinfo( $tmp_file, PATHINFO_EXTENSION );
+		if ( $new_ext ) {
+			$original_name = \preg_replace( '/\.[^.]+$/', '.' . $new_ext, $original_name );
+		}
+
 		$file_array = array(
-			'name'     => \basename( \wp_parse_url( $attachment_data['url'], PHP_URL_PATH ) ),
+			'name'     => $original_name,
 			'tmp_name' => $tmp_file,
 		);
 
 		// Prepare attachment post data.
+		// Let WordPress auto-detect the mime type from the file.
 		$post_data = array(
-			'post_mime_type' => $attachment_data['mediaType'] ?? '',
-			'post_title'     => $attachment_data['name'] ?? '',
-			'post_content'   => $attachment_data['name'] ?? '',
-			'post_author'    => $author_id,
-			'meta_input'     => array(
+			'post_title'   => $attachment_data['name'] ?? '',
+			'post_content' => $attachment_data['name'] ?? '',
+			'post_author'  => $author_id,
+			'meta_input'   => array(
 				'_source_url' => $attachment_data['url'],
 			),
 		);
 
 		// Add alt text for images.
 		if ( ! empty( $attachment_data['name'] ) ) {
-			$mime_type = $attachment_data['mediaType'] ?? '';
-			if ( 'image' === strtok( $mime_type, '/' ) ) {
+			$original_mime = $attachment_data['mediaType'] ?? '';
+			if ( 'image' === strtok( $original_mime, '/' ) ) {
 				$post_data['meta_input']['_wp_attachment_image_alt'] = $attachment_data['name'];
 			}
 		}
@@ -481,74 +296,154 @@ class Attachments {
 	}
 
 	/**
-	 * Save a file directly to uploads/activitypub/{type}/{id}/.
+	 * Get a unique file path by appending a counter if the file already exists.
 	 *
-	 * @param array  $attachment_data The normalized attachment data.
-	 * @param int    $object_id       The post or comment ID to attach to.
-	 * @param string $object_type     The object type ('post' or 'comment').
+	 * @param string $file_path The desired file path.
 	 *
-	 * @return array|\WP_Error {
-	 *     Array of file data on success, WP_Error on failure.
-	 *
-	 *     @type string $url       Full URL to the saved file.
-	 *     @type string $mime_type MIME type of the file.
-	 *     @type string $alt       Alt text from attachment name field.
-	 * }
+	 * @return string A unique file path that doesn't exist.
 	 */
-	private static function save_file( $attachment_data, $object_id, $object_type ) {
-		if ( ! \function_exists( 'download_url' ) ) {
-			require_once ABSPATH . 'wp-admin/includes/file.php';
+	private static function get_unique_path( $file_path ) {
+		if ( ! \file_exists( $file_path ) ) {
+			return $file_path;
 		}
 
-		// Download remote URL.
-		$tmp_file = \download_url( $attachment_data['url'] );
+		$path_info = \pathinfo( $file_path );
+		$dir       = $path_info['dirname'];
+		$base_name = $path_info['filename'];
+		$extension = isset( $path_info['extension'] ) ? '.' . $path_info['extension'] : '';
+		$counter   = 1;
 
-		if ( \is_wp_error( $tmp_file ) ) {
-			return $tmp_file;
-		}
-
-		// Get storage paths for this object.
-		$paths = self::get_storage_paths( $object_id, $object_type );
-
-		// Create directory if it doesn't exist.
-		\wp_mkdir_p( $paths['basedir'] );
-
-		// Generate unique file name.
-		$url_path  = \wp_parse_url( $attachment_data['url'], PHP_URL_PATH );
-		$file_name = \sanitize_file_name( \basename( $url_path ) );
-		$file_path = $paths['basedir'] . '/' . $file_name;
-
-		// Initialize filesystem if needed.
-		\WP_Filesystem();
-		global $wp_filesystem;
-
-		// Make sure file name is unique.
-		$counter = 1;
-		while ( $wp_filesystem->exists( $file_path ) ) {
-			$path_info = pathinfo( $file_name );
-			$file_name = $path_info['filename'] . '-' . $counter;
-			if ( ! empty( $path_info['extension'] ) ) {
-				$file_name .= '.' . $path_info['extension'];
-			}
-			$file_path = $paths['basedir'] . '/' . $file_name;
+		do {
+			$new_path = $dir . '/' . $base_name . '-' . $counter . $extension;
 			++$counter;
+		} while ( \file_exists( $new_path ) );
+
+		return $new_path;
+	}
+
+	/**
+	 * Check if a local file path is within allowed directories.
+	 *
+	 * Prevents arbitrary file access by restricting local paths to known safe
+	 * directories like the uploads folder or WordPress temp directory.
+	 *
+	 * @param string $file_path The local file path to validate.
+	 *
+	 * @return bool True if the path is allowed, false otherwise.
+	 */
+	private static function is_allowed_local_path( $file_path ) {
+		// Normalize the path and resolve any relative components.
+		$real_path = \realpath( $file_path );
+		if ( false === $real_path ) {
+			// If file doesn't exist yet, check the directory.
+			$dir_path = \realpath( \dirname( $file_path ) );
+			if ( false === $dir_path ) {
+				return false;
+			}
+			$real_path = $dir_path . '/' . \basename( $file_path );
 		}
 
-		// Move file to destination.
-		if ( ! $wp_filesystem->move( $tmp_file, $file_path, true ) ) {
-			\wp_delete_file( $tmp_file );
-			return new \WP_Error( 'file_move_failed', \__( 'Failed to move file to destination.', 'activitypub' ) );
-		}
-
-		// Get mime type and validate file.
-		$file_info = \wp_check_filetype_and_ext( $file_path, $file_name );
-		$mime_type = $file_info['type'] ?? $attachment_data['mediaType'] ?? '';
-
-		return array(
-			'url'       => $paths['baseurl'] . '/' . $file_name,
-			'mime_type' => $mime_type,
-			'alt'       => $attachment_data['name'] ?? '',
+		// Get allowed base directories.
+		$upload_dir   = \wp_upload_dir();
+		$allowed_dirs = array(
+			\realpath( $upload_dir['basedir'] ),
+			\realpath( \get_temp_dir() ),
+			\realpath( ABSPATH . 'wp-content' ),
 		);
+
+		/**
+		 * Filters the allowed directories for local file imports.
+		 *
+		 * @since 5.6.0
+		 *
+		 * @param string[] $allowed_dirs Array of allowed directory paths.
+		 * @param string   $file_path    The file path being validated.
+		 */
+		$allowed_dirs = \apply_filters( 'activitypub_allowed_import_directories', $allowed_dirs, $file_path );
+
+		// Remove any false values from realpath failures.
+		$allowed_dirs = \array_filter( $allowed_dirs );
+
+		// Check if the file is within any allowed directory.
+		foreach ( $allowed_dirs as $allowed_dir ) {
+			if ( \str_starts_with( $real_path, $allowed_dir ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Optimize an image file by resizing and converting to WebP.
+	 *
+	 * Uses WordPress image editor to resize large images and convert them
+	 * to WebP format for better compression while maintaining quality.
+	 *
+	 * @param string $file_path     Path to the image file.
+	 * @param int    $max_dimension Maximum width/height in pixels.
+	 *
+	 * @return string The optimized file path.
+	 */
+	private static function optimize_image( $file_path, $max_dimension ) {
+		// Check if it's an image.
+		$mime_type = \wp_check_filetype( $file_path )['type'] ?? '';
+		if ( ! $mime_type || ! \str_starts_with( $mime_type, 'image/' ) ) {
+			return $file_path;
+		}
+
+		// Skip SVG and GIF files (GIFs may be animated).
+		if ( \in_array( $mime_type, array( 'image/svg+xml', 'image/gif' ), true ) ) {
+			return $file_path;
+		}
+
+		$editor = \wp_get_image_editor( $file_path );
+		if ( \is_wp_error( $editor ) ) {
+			return $file_path;
+		}
+
+		$size         = $editor->get_size();
+		$needs_resize = $size['width'] > $max_dimension || $size['height'] > $max_dimension;
+
+		// Resize if needed.
+		if ( $needs_resize ) {
+			$editor->resize( $max_dimension, $max_dimension, false );
+		}
+
+		// Check if WebP is supported.
+		$can_webp = $editor->supports_mime_type( 'image/webp' );
+
+		// Determine output format and save.
+		if ( $can_webp ) {
+			// Convert to WebP.
+			$new_path = self::get_unique_path( \preg_replace( '/\.[^.]+$/', '.webp', $file_path ) );
+			$result   = $editor->save( $new_path, 'image/webp' );
+		} elseif ( \in_array( $mime_type, array( 'image/png', 'image/webp' ), true ) ) {
+			// Keep original format for potentially transparent images when WebP not available.
+			if ( ! $needs_resize ) {
+				// No changes needed.
+				return $file_path;
+			}
+			$result = $editor->save( $file_path );
+		} else {
+			// Convert to JPEG when WebP not available.
+			$new_path = self::get_unique_path( \preg_replace( '/\.[^.]+$/', '.jpg', $file_path ) );
+			$result   = $editor->save( $new_path, 'image/jpeg' );
+		}
+
+		if ( \is_wp_error( $result ) ) {
+			return $file_path;
+		}
+
+		// Handle result - $result is always an array from $editor->save().
+		$result_path = $result['path'] ?? $file_path;
+
+		// If path changed (format conversion), delete the original file.
+		if ( $result_path !== $file_path ) {
+			\wp_delete_file( $file_path );
+		}
+
+		return $result_path;
 	}
 
 	/**
@@ -572,25 +467,6 @@ class Attachments {
 				'post_content' => $post->post_content . $separator . $media,
 			)
 		);
-	}
-
-	/**
-	 * Append file-based media to content.
-	 *
-	 * @param int     $object_id   The post or comment ID.
-	 * @param array[] $files       Array of file data arrays.
-	 * @param string  $object_type The object type ('post' or 'comment').
-	 */
-	private static function append_files_to_content( $object_id, $files, $object_type ) {
-		$content = self::get_object_content( $object_id, $object_type );
-		if ( empty( $content ) ) {
-			return;
-		}
-
-		$media     = self::generate_files_markup( $files );
-		$separator = empty( trim( $content ) ) ? '' : "\n\n";
-
-		self::update_object_content( $object_id, $object_type, $content . $separator . $media );
 	}
 
 	/**
@@ -641,84 +517,6 @@ class Attachments {
 
 		// Multiple attachments: use gallery block.
 		return self::get_gallery_block( $attachment_ids );
-	}
-
-	/**
-	 * Generate media markup for file-based attachments.
-	 *
-	 * @param array[] $files {
-	 *     Array of file data arrays.
-	 *
-	 *     @type string $url       Full URL to the file.
-	 *     @type string $mime_type MIME type of the file.
-	 *     @type string $alt       Alt text for the file.
-	 * }
-	 *
-	 * @return string The generated markup.
-	 */
-	private static function generate_files_markup( $files ) {
-		if ( empty( $files ) ) {
-			return '';
-		}
-
-		/**
-		 * Filters the media markup for ActivityPub file-based attachments.
-		 *
-		 * Allows plugins to provide custom markup for file-based attachments.
-		 * If this filter returns a non-empty string, it will be used instead of
-		 * the default block markup.
-		 *
-		 * @param string $markup The custom markup. Default empty string.
-		 * @param array  $files  Array of file data arrays.
-		 */
-		$custom_markup = \apply_filters( 'activitypub_files_media_markup', '', $files );
-
-		if ( ! empty( $custom_markup ) ) {
-			return $custom_markup;
-		}
-
-		// Default to block markup.
-		$type = strtok( $files[0]['mime_type'], '/' );
-
-		// Single video or audio file.
-		if ( 1 === \count( $files ) && ( 'video' === $type || 'audio' === $type ) ) {
-			return sprintf(
-				'<!-- wp:%1$s --><figure class="wp-block-%1$s"><%1$s controls src="%2$s"></%1$s></figure><!-- /wp:%1$s -->',
-				\esc_attr( $type ),
-				\esc_url( $files[0]['url'] )
-			);
-		}
-
-		// Single image: use standalone image block.
-		if ( 1 === \count( $files ) && 'image' === $type ) {
-			return self::get_files_image_block( $files[0] );
-		}
-
-		// Multiple attachments: use gallery block.
-		return self::get_files_gallery_block( $files );
-	}
-
-	/**
-	 * Get standalone image block markup for file-based attachments.
-	 *
-	 * @param array $file {
-	 *     File data array.
-	 *
-	 *     @type string $url       Full URL to the file.
-	 *     @type string $mime_type MIME type of the file.
-	 *     @type string $alt       Alt text for the file.
-	 * }
-	 *
-	 * @return string The image block markup.
-	 */
-	private static function get_files_image_block( $file ) {
-		$block  = '<!-- wp:image {"sizeSlug":"large","linkDestination":"none"} -->' . "\n";
-		$block .= '<figure class="wp-block-image size-large">';
-		$block .= '<img src="' . \esc_url( $file['url'] ) . '" alt="' . \esc_attr( $file['alt'] ) . '"/>';
-		$block .= '</figure>' . "\n";
-		$block .= '<!-- /wp:image -->';
-
-		return $block;
 	}
 
 	/**
@@ -784,6 +582,151 @@ class Attachments {
 	}
 
 	/**
+	 * Get content from an object based on its type.
+	 *
+	 * @param int    $object_id   The object ID (post or comment).
+	 * @param string $object_type The object type ('post' or 'comment').
+	 *
+	 * @return string The object content.
+	 */
+	private static function get_object_content( $object_id, $object_type ) {
+		if ( 'comment' === $object_type ) {
+			$comment = \get_comment( $object_id );
+			return $comment ? $comment->comment_content : '';
+		}
+
+		return \get_post_field( 'post_content', $object_id );
+	}
+
+	/**
+	 * Update content for an object based on its type.
+	 *
+	 * @param int    $object_id   The object ID (post or comment).
+	 * @param string $object_type The object type ('post' or 'comment').
+	 * @param string $content     The new content.
+	 */
+	private static function update_object_content( $object_id, $object_type, $content ) {
+		if ( 'comment' === $object_type ) {
+			\wp_update_comment(
+				array(
+					'comment_ID'      => $object_id,
+					'comment_content' => $content,
+				)
+			);
+		} else {
+			\wp_update_post(
+				array(
+					'ID'           => $object_id,
+					'post_content' => $content,
+				)
+			);
+		}
+	}
+
+	/**
+	 * Append file-based media markup to an object's content.
+	 *
+	 * Used for cached remote media (via Cache classes) that doesn't go through
+	 * the Media Library. Works with posts and comments.
+	 *
+	 * @param int    $object_id   The object ID (post or comment).
+	 * @param array  $files       Array of file data arrays with 'url', 'mime_type', and 'alt' keys.
+	 * @param string $object_type The object type ('post' or 'comment').
+	 */
+	public static function append_files_to_content( $object_id, $files, $object_type = 'post' ) {
+		$content = self::get_object_content( $object_id, $object_type );
+		if ( empty( $content ) ) {
+			return;
+		}
+
+		$media     = self::generate_files_markup( $files );
+		$separator = empty( trim( $content ) ) ? '' : "\n\n";
+
+		self::update_object_content( $object_id, $object_type, $content . $separator . $media );
+	}
+
+	/**
+	 * Generate media markup for file-based attachments.
+	 *
+	 * Creates WordPress block markup from file data arrays. Used for cached
+	 * remote media that doesn't have WordPress attachment posts.
+	 *
+	 * @param array[] $files {
+	 *     Array of file data arrays.
+	 *
+	 *     @type string $url       Full URL to the file.
+	 *     @type string $mime_type MIME type of the file.
+	 *     @type string $alt       Alt text for the file.
+	 * }
+	 *
+	 * @return string The generated markup.
+	 */
+	public static function generate_files_markup( $files ) {
+		if ( empty( $files ) ) {
+			return '';
+		}
+
+		/**
+		 * Filters the media markup for ActivityPub file-based attachments.
+		 *
+		 * Allows plugins to provide custom markup for file-based attachments.
+		 * If this filter returns a non-empty string, it will be used instead of
+		 * the default block markup.
+		 *
+		 * @param string $markup The custom markup. Default empty string.
+		 * @param array  $files  Array of file data arrays.
+		 */
+		$custom_markup = \apply_filters( 'activitypub_files_media_markup', '', $files );
+
+		if ( ! empty( $custom_markup ) ) {
+			return $custom_markup;
+		}
+
+		// Default to block markup.
+		$type = strtok( $files[0]['mime_type'], '/' );
+
+		// Single video or audio file.
+		if ( 1 === \count( $files ) && ( 'video' === $type || 'audio' === $type ) ) {
+			return sprintf(
+				'<!-- wp:%1$s --><figure class="wp-block-%1$s"><%1$s controls src="%2$s"></%1$s></figure><!-- /wp:%1$s -->',
+				\esc_attr( $type ),
+				\esc_url( $files[0]['url'] )
+			);
+		}
+
+		// Single image: use standalone image block.
+		if ( 1 === \count( $files ) && 'image' === $type ) {
+			return self::get_files_image_block( $files[0] );
+		}
+
+		// Multiple attachments: use gallery block.
+		return self::get_files_gallery_block( $files );
+	}
+
+	/**
+	 * Get standalone image block markup for file-based attachments.
+	 *
+	 * @param array $file {
+	 *     File data array.
+	 *
+	 *     @type string $url       Full URL to the file.
+	 *     @type string $mime_type MIME type of the file.
+	 *     @type string $alt       Alt text for the file.
+	 * }
+	 *
+	 * @return string The image block markup.
+	 */
+	public static function get_files_image_block( $file ) {
+		$block  = '<!-- wp:image {"sizeSlug":"large","linkDestination":"none"} -->' . "\n";
+		$block .= '<figure class="wp-block-image size-large">';
+		$block .= '<img src="' . \esc_url( $file['url'] ) . '" alt="' . \esc_attr( $file['alt'] ?? '' ) . '"/>';
+		$block .= '</figure>' . "\n";
+		$block .= '<!-- /wp:image -->';
+
+		return $block;
+	}
+
+	/**
 	 * Get gallery block markup for file-based attachments.
 	 *
 	 * @param array[] $files {
@@ -796,14 +739,14 @@ class Attachments {
 	 *
 	 * @return string The gallery block markup.
 	 */
-	private static function get_files_gallery_block( $files ) {
+	public static function get_files_gallery_block( $files ) {
 		$gallery  = '<!-- wp:gallery {"columns":2,"linkTo":"none","imageCrop":true} -->' . "\n";
 		$gallery .= '<figure class="wp-block-gallery has-nested-images columns-2 is-cropped">';
 
 		foreach ( $files as $file ) {
 			$gallery .= "\n<!-- wp:image {\"sizeSlug\":\"large\",\"linkDestination\":\"none\"} -->\n";
 			$gallery .= '<figure class="wp-block-image size-large">';
-			$gallery .= '<img src="' . \esc_url( $file['url'] ) . '" alt="' . \esc_attr( $file['alt'] ) . '"/>';
+			$gallery .= '<img src="' . \esc_url( $file['url'] ) . '" alt="' . \esc_attr( $file['alt'] ?? '' ) . '"/>';
 			$gallery .= '</figure>';
 			$gallery .= "\n<!-- /wp:image -->\n";
 		}

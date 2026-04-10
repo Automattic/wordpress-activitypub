@@ -13,10 +13,12 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Collection\Remote_Posts;
 use Activitypub\Scheduler\Actor;
 use Activitypub\Scheduler\Collection_Sync;
 use Activitypub\Scheduler\Comment;
 use Activitypub\Scheduler\Post;
+use Activitypub\Scheduler\Statistics;
 
 /**
  * Scheduler class.
@@ -24,6 +26,21 @@ use Activitypub\Scheduler\Post;
  * @author Matthias Pfefferle
  */
 class Scheduler {
+
+	/**
+	 * Scheduled events with their recurrence.
+	 *
+	 * @var array
+	 */
+	const SCHEDULES = array(
+		'activitypub_update_remote_actors'         => 'hourly',
+		'activitypub_cleanup_remote_actors'        => 'daily',
+		'activitypub_reprocess_outbox'             => 'hourly',
+		'activitypub_outbox_purge'                 => 'daily',
+		'activitypub_inbox_purge'                  => 'daily',
+		'activitypub_ap_post_purge'                => 'daily',
+		'activitypub_sync_blocklist_subscriptions' => 'weekly',
+	);
 
 	/**
 	 * Allowed batch callbacks.
@@ -52,6 +69,9 @@ class Scheduler {
 	public static function init() {
 		self::register_schedulers();
 
+		// Custom cron schedules.
+		\add_filter( 'cron_schedules', array( self::class, 'add_cron_schedules' ) );
+
 		// Follower Cleanups.
 		\add_action( 'activitypub_update_remote_actors', array( self::class, 'update_remote_actors' ) );
 		\add_action( 'activitypub_cleanup_remote_actors', array( self::class, 'cleanup_remote_actors' ) );
@@ -61,13 +81,16 @@ class Scheduler {
 		\add_action( 'activitypub_reprocess_outbox', array( self::class, 'reprocess_outbox' ) );
 		\add_action( 'activitypub_outbox_purge', array( self::class, 'purge_outbox' ) );
 		\add_action( 'activitypub_inbox_purge', array( self::class, 'purge_inbox' ) );
+		\add_action( 'activitypub_ap_post_purge', array( self::class, 'purge_ap_posts' ) );
 		\add_action( 'activitypub_inbox_create_item', array( self::class, 'process_inbox_activity' ) );
+		\add_action( 'activitypub_sync_blocklist_subscriptions', array( Blocklist_Subscriptions::class, 'sync_all' ) );
 
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_outbox_activity_for_federation' ) );
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'schedule_announce_activity' ), 10, 4 );
 
-		\add_action( 'update_option_activitypub_outbox_purge_days', array( self::class, 'handle_outbox_purge_days_update' ), 10, 2 );
-		\add_action( 'update_option_activitypub_inbox_purge_days', array( self::class, 'handle_inbox_purge_days_update' ), 10, 2 );
+		\add_action( 'update_option_activitypub_outbox_purge_days', array( self::class, 'update_outbox_purge_schedule' ), 10, 2 );
+		\add_action( 'update_option_activitypub_inbox_purge_days', array( self::class, 'update_inbox_purge_schedule' ), 10, 2 );
+		\add_action( 'update_option_activitypub_ap_post_purge_days', array( self::class, 'update_ap_post_purge_schedule' ), 10, 2 );
 	}
 
 	/**
@@ -78,6 +101,7 @@ class Scheduler {
 		Actor::init();
 		Collection_Sync::init();
 		Comment::init();
+		Statistics::init();
 
 		/**
 		 * Register additional schedulers.
@@ -85,6 +109,27 @@ class Scheduler {
 		 * @since 5.0.0
 		 */
 		\do_action( 'activitypub_register_schedulers' );
+	}
+
+	/**
+	 * Add custom cron schedules.
+	 *
+	 * @param array $schedules Existing cron schedules.
+	 *
+	 * @return array Modified cron schedules.
+	 */
+	public static function add_cron_schedules( $schedules ) {
+		$schedules['monthly'] = array(
+			'interval' => MONTH_IN_SECONDS,
+			'display'  => \__( 'Once Monthly', 'activitypub' ),
+		);
+
+		$schedules['yearly'] = array(
+			'interval' => YEAR_IN_SECONDS,
+			'display'  => \__( 'Once Yearly', 'activitypub' ),
+		);
+
+		return $schedules;
 	}
 
 	/**
@@ -113,24 +158,23 @@ class Scheduler {
 	 * Schedule all ActivityPub schedules.
 	 */
 	public static function register_schedules() {
-		if ( ! \wp_next_scheduled( 'activitypub_update_remote_actors' ) ) {
-			\wp_schedule_event( time(), 'hourly', 'activitypub_update_remote_actors' );
+		foreach ( self::SCHEDULES as $hook => $recurrence ) {
+			if ( ! \wp_next_scheduled( $hook ) ) {
+				\wp_schedule_event( time(), $recurrence, $hook );
+			}
 		}
 
-		if ( ! \wp_next_scheduled( 'activitypub_cleanup_remote_actors' ) ) {
-			\wp_schedule_event( time(), 'daily', 'activitypub_cleanup_remote_actors' );
+		// Schedule monthly stats collection for the 1st of each month.
+		if ( ! \wp_next_scheduled( 'activitypub_collect_monthly_stats' ) ) {
+			// Calculate next 1st of month at 2:00 AM.
+			$next_first = self::get_next_first_of_month();
+			\wp_schedule_event( $next_first, 'monthly', 'activitypub_collect_monthly_stats' );
 		}
 
-		if ( ! \wp_next_scheduled( 'activitypub_reprocess_outbox' ) ) {
-			\wp_schedule_event( time(), 'hourly', 'activitypub_reprocess_outbox' );
-		}
-
-		if ( ! \wp_next_scheduled( 'activitypub_outbox_purge' ) ) {
-			\wp_schedule_event( time(), 'daily', 'activitypub_outbox_purge' );
-		}
-
-		if ( ! \wp_next_scheduled( 'activitypub_inbox_purge' ) ) {
-			\wp_schedule_event( time(), 'daily', 'activitypub_inbox_purge' );
+		// Schedule annual stats compilation for December 1st (wrapped notification).
+		if ( ! \wp_next_scheduled( 'activitypub_compile_annual_stats' ) ) {
+			$next_december = self::get_next_december_first();
+			\wp_schedule_event( $next_december, 'yearly', 'activitypub_compile_annual_stats' );
 		}
 	}
 
@@ -140,11 +184,45 @@ class Scheduler {
 	 * @return void
 	 */
 	public static function deregister_schedules() {
-		\wp_unschedule_hook( 'activitypub_update_remote_actors' );
-		\wp_unschedule_hook( 'activitypub_cleanup_remote_actors' );
-		\wp_unschedule_hook( 'activitypub_reprocess_outbox' );
-		\wp_unschedule_hook( 'activitypub_outbox_purge' );
-		\wp_unschedule_hook( 'activitypub_inbox_purge' );
+		foreach ( array_keys( self::SCHEDULES ) as $hook ) {
+			\wp_unschedule_hook( $hook );
+		}
+
+		// Statistics schedules.
+		\wp_unschedule_hook( 'activitypub_collect_monthly_stats' );
+		\wp_unschedule_hook( 'activitypub_compile_annual_stats' );
+	}
+
+	/**
+	 * Get the next 1st of month timestamp.
+	 *
+	 * @return int Unix timestamp of next 1st of month at 2:00 AM.
+	 */
+	private static function get_next_first_of_month() {
+		$now        = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
+		$next_month = \strtotime( 'first day of next month 02:00:00', $now );
+
+		return $next_month;
+	}
+
+	/**
+	 * Get the next December 1st timestamp for wrapped notification.
+	 *
+	 * @return int Unix timestamp of next December 1st at 3:00 AM.
+	 */
+	private static function get_next_december_first() {
+		$now  = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
+		$year = (int) \gmdate( 'Y', $now );
+
+		// Get December 1st 3:00 AM for this year.
+		$this_year_dec_first = \strtotime( sprintf( '%d-12-01 03:00:00', $year ) );
+
+		// If we're already past this year's December 1st, schedule for next year.
+		if ( $now >= $this_year_dec_first ) {
+			return \strtotime( sprintf( '%d-12-01 03:00:00', $year + 1 ) );
+		}
+
+		return $this_year_dec_first;
 	}
 
 	/**
@@ -260,9 +338,9 @@ class Scheduler {
 	 * Schedule the outbox item for federation.
 	 *
 	 * @param int $id     The ID of the outbox item.
-	 * @param int $offset The offset to add to the scheduled time.
+	 * @param int $offset The offset to add to the scheduled time. Default 3 seconds.
 	 */
-	public static function schedule_outbox_activity_for_federation( $id, $offset = 0 ) {
+	public static function schedule_outbox_activity_for_federation( $id, $offset = 3 ) {
 		$hook = 'activitypub_process_outbox';
 		$args = array( $id );
 
@@ -309,66 +387,21 @@ class Scheduler {
 	 * Purge outbox items based on a schedule.
 	 */
 	public static function purge_outbox() {
-		$total_posts = (int) wp_count_posts( Outbox::POST_TYPE )->publish;
-		if ( $total_posts <= 20 ) {
-			return;
-		}
-
-		$days     = (int) get_option( 'activitypub_outbox_purge_days', 180 );
-		$post_ids = \get_posts(
-			array(
-				'post_type'   => Outbox::POST_TYPE,
-				'post_status' => 'any',
-				'fields'      => 'ids',
-				'numberposts' => -1,
-				'date_query'  => array(
-					array(
-						'before' => gmdate( 'Y-m-d', time() - ( $days * DAY_IN_SECONDS ) ),
-					),
-				),
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query'  => array(
-					array(
-						'key'     => '_activitypub_activity_type',
-						'value'   => 'Follow',
-						'compare' => '!=',
-					),
-				),
-			)
-		);
-
-		foreach ( $post_ids as $post_id ) {
-			\wp_delete_post( $post_id, true );
-		}
+		Outbox::purge( \get_option( 'activitypub_outbox_purge_days', ACTIVITYPUB_OUTBOX_PURGE_DAYS ) );
 	}
 
 	/**
 	 * Purge inbox items based on a schedule.
 	 */
 	public static function purge_inbox() {
-		$total_posts = (int) wp_count_posts( Inbox::POST_TYPE )->publish;
-		if ( $total_posts <= 200 ) {
-			return;
-		}
+		Inbox::purge( \get_option( 'activitypub_inbox_purge_days', ACTIVITYPUB_INBOX_PURGE_DAYS ) );
+	}
 
-		$days     = (int) get_option( 'activitypub_inbox_purge_days', 180 );
-		$post_ids = \get_posts(
-			array(
-				'post_type'   => Inbox::POST_TYPE,
-				'post_status' => 'any',
-				'fields'      => 'ids',
-				'numberposts' => -1,
-				'date_query'  => array(
-					array(
-						'before' => gmdate( 'Y-m-d', time() - ( $days * DAY_IN_SECONDS ) ),
-					),
-				),
-			)
-		);
-
-		foreach ( $post_ids as $post_id ) {
-			\wp_delete_post( $post_id, true );
-		}
+	/**
+	 * Purge remote posts based on a schedule.
+	 */
+	public static function purge_ap_posts() {
+		Remote_Posts::purge( \get_option( 'activitypub_ap_post_purge_days', ACTIVITYPUB_AP_POST_PURGE_DAYS ) );
 	}
 
 	/**
@@ -424,7 +457,7 @@ class Scheduler {
 	 * @param int $old_value The old value.
 	 * @param int $value     The new value.
 	 */
-	public static function handle_outbox_purge_days_update( $old_value, $value ) {
+	public static function update_outbox_purge_schedule( $old_value, $value ) {
 		if ( 0 === (int) $value ) {
 			\wp_clear_scheduled_hook( 'activitypub_outbox_purge' );
 		} elseif ( ! \wp_next_scheduled( 'activitypub_outbox_purge' ) ) {
@@ -438,11 +471,25 @@ class Scheduler {
 	 * @param int $old_value The old value.
 	 * @param int $value     The new value.
 	 */
-	public static function handle_inbox_purge_days_update( $old_value, $value ) {
+	public static function update_inbox_purge_schedule( $old_value, $value ) {
 		if ( 0 === (int) $value ) {
 			\wp_clear_scheduled_hook( 'activitypub_inbox_purge' );
 		} elseif ( ! \wp_next_scheduled( 'activitypub_inbox_purge' ) ) {
 			\wp_schedule_event( \time(), 'daily', 'activitypub_inbox_purge' );
+		}
+	}
+
+	/**
+	 * Update schedules when remote posts purge days settings change.
+	 *
+	 * @param int $old_value The old value.
+	 * @param int $value     The new value.
+	 */
+	public static function update_ap_post_purge_schedule( $old_value, $value ) {
+		if ( 0 === (int) $value ) {
+			\wp_clear_scheduled_hook( 'activitypub_ap_post_purge' );
+		} elseif ( ! \wp_next_scheduled( 'activitypub_ap_post_purge' ) ) {
+			\wp_schedule_event( \time(), 'daily', 'activitypub_ap_post_purge' );
 		}
 	}
 

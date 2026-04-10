@@ -75,9 +75,9 @@ class Test_Inbox extends \WP_UnitTestCase {
 		$remote_actor_meta = \get_post_meta( $inbox_id, '_activitypub_activity_remote_actor', true );
 		$this->assertEquals( 'https://remote.example.com/users/testuser', $remote_actor_meta );
 
-		// Activities with no recipients are treated as public.
+		// Activities with no recipients are treated as private per spec.
 		$visibility_meta = \get_post_meta( $inbox_id, 'activitypub_content_visibility', true );
-		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, $visibility_meta );
+		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, $visibility_meta );
 	}
 
 	/**
@@ -1101,5 +1101,155 @@ class Test_Inbox extends \WP_UnitTestCase {
 		// Test _activitypub_activity_remote_actor meta.
 		$remote_actor_meta = \get_post_meta( $inbox_id, '_activitypub_activity_remote_actor', true );
 		$this->assertEquals( 'https://pixelfed.social/users/pfefferle', $remote_actor_meta );
+	}
+
+	/**
+	 * Test purge method with more than 200 posts.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_more_than_200_posts() {
+		// Create 20 old posts (will be deleted).
+		self::factory()->post->create_many(
+			20,
+			array(
+				'post_type'   => Inbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-7 months' ) ),
+			)
+		);
+
+		// Create 5 new posts (will be kept).
+		self::factory()->post->create_many(
+			5,
+			array(
+				'post_type'   => Inbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 month' ) ),
+			)
+		);
+
+		// Mock the count to exceed the 200-post threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Inbox::POST_TYPE === $type ) {
+				$counts->publish = 225;
+			}
+			return $counts;
+		};
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		$deleted = Inbox::purge( 180 );
+		\wp_cache_delete( \_count_posts_cache_key( Inbox::POST_TYPE ), 'counts' );
+
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		// Assert that 20 old posts were deleted.
+		$this->assertEquals( 20, $deleted );
+
+		// Verify 5 new posts remain.
+		$remaining = \get_posts(
+			array(
+				'post_type'   => Inbox::POST_TYPE,
+				'post_status' => 'publish',
+				'numberposts' => -1,
+				'fields'      => 'ids',
+			)
+		);
+		$this->assertCount( 5, $remaining );
+	}
+
+	/**
+	 * Test purge method with 200 or fewer posts.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_200_or_fewer_posts() {
+		// Create 20 old posts.
+		self::factory()->post->create_many(
+			20,
+			array(
+				'post_type'   => Inbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
+			)
+		);
+
+		$deleted = Inbox::purge( 180 );
+		\wp_cache_delete( \_count_posts_cache_key( Inbox::POST_TYPE ), 'counts' );
+
+		// Assert no posts were deleted (below threshold).
+		$this->assertEquals( 0, $deleted );
+		$this->assertEquals( 20, \wp_count_posts( Inbox::POST_TYPE )->publish );
+	}
+
+	/**
+	 * Test purge method with different retention days.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_with_different_days() {
+		// Create posts older than 60 days but newer than 30 days.
+		self::factory()->post->create_many(
+			10,
+			array(
+				'post_type'   => Inbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-45 days' ) ),
+			)
+		);
+
+		// Mock the count to exceed threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Inbox::POST_TYPE === $type ) {
+				$counts->publish = 225;
+			}
+			return $counts;
+		};
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		// Purge with 60 days retention - should not delete.
+		$deleted = Inbox::purge( 60 );
+		$this->assertEquals( 0, $deleted );
+
+		// Purge with 30 days retention - should delete all.
+		$deleted = Inbox::purge( 30 );
+		\wp_cache_delete( \_count_posts_cache_key( Inbox::POST_TYPE ), 'counts' );
+
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		$this->assertEquals( 10, $deleted );
+	}
+
+	/**
+	 * Test purge returns count of deleted items.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_returns_deleted_count() {
+		// Create 15 old posts.
+		self::factory()->post->create_many(
+			15,
+			array(
+				'post_type'   => Inbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
+			)
+		);
+
+		// Mock the count to exceed threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Inbox::POST_TYPE === $type ) {
+				$counts->publish = 225;
+			}
+			return $counts;
+		};
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		$deleted = Inbox::purge( 180 );
+
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		// Should return exact count of deleted posts.
+		$this->assertEquals( 15, $deleted );
 	}
 }

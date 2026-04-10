@@ -1,3 +1,5 @@
+@use "../shared/modal/style";
+
 .activitypub-remote-reply {
 	margin-top: 24px;
 
@@ -28,83 +30,8 @@
 
 .activitypub-remote-profile,
 .activitypub-remote-reply__link {
+
 	&[hidden] {
 		display: none !important;
-	}
-}
-
-.activitypub-dialog {
-	&__section {
-		padding: 1.5rem 2rem;
-		border-bottom: 1px solid var(--wp--preset--color--light-gray, #f0f0f0);
-
-		&:last-child {
-			border-bottom: none;
-			padding-bottom: 2rem;
-		}
-
-		h4 {
-			margin-top: 0;
-			margin-bottom: 0.5rem;
-			font-size: 110%;
-		}
-	}
-
-	&__description {
-		margin-bottom: 1rem;
-		color: inherit;
-		font-size: 95%;
-	}
-
-	&__button-group {
-		display: flex;
-		width: 100%;
-		margin-bottom: 0.5rem;
-
-		input[type] {
-			flex: 1;
-			border: 1px solid var(--wp--preset--color--gray, #e2e4e7);
-			border-radius: 4px 0 0 4px;
-			line-height: 1;
-			margin: 0;
-
-			&::placeholder {
-				opacity: 0.5;
-			}
-
-			&[aria-invalid="true"] {
-				border-color: var(--wp--preset--color--vivid-red);
-			}
-		}
-
-		button {
-			border-radius: 0 4px 4px 0 !important;
-			margin-left: -1px !important;
-			min-width: 22.5%;
-			width: auto;
-		}
-	}
-
-	&__error {
-		color: var(--wp--preset--color--vivid-red);
-		font-size: 90%;
-		margin-top: 0.5rem;
-	}
-
-	&__remember {
-		margin-top: 1rem;
-		font-size: 90%;
-
-		label {
-			display: flex;
-			align-items: center;
-			gap: 0.5rem;
-		}
-
-		input[type="checkbox"] {
-			margin: 0;
-			position: relative;
-			top: 0;
-		}
 	}
 }

@@ -1,7 +1,11 @@
-import { useBlockProps, InnerBlocks } from '@wordpress/block-editor';
+import clsx from 'clsx';
+import { useBlockProps, InnerBlocks, InspectorControls } from '@wordpress/block-editor';
+import { PanelBody, ToggleControl } from '@wordpress/components';
 import { __, _x, sprintf } from '@wordpress/i18n';
 import { select } from '@wordpress/data';
+import { useEffect, useRef } from '@wordpress/element';
 import { Reactions } from './reactions';
+import { useOptions } from '../shared/use-options';
 
 // Generate reaction items with SVG avatars.
 const generateReactionItems = ( count, prefix, startChar, colors ) =>
@@ -36,20 +40,56 @@ const DUMMY_REACTIONS = {
 		),
 		items: generateReactionItems( 6, 'Reposter', 82, COLORS ), // 82 is ASCII for 'R'
 	},
+	quotes: {
+		label: sprintf(
+			/* translators: %d: Number of quotes */
+			_x( '%d quotes', 'number of quotes', 'activitypub' ),
+			7
+		),
+		items: generateReactionItems( 7, 'Quoter', 81, COLORS ), // 81 is ASCII for 'Q'
+	},
 };
 
 /**
  * Edit component for the Reactions block.
  *
- * @param {Object} props                            Block props.
- * @param          props.__unstableLayoutClassNames Layout class names.
+ * @param {Object}   props               Block props.
+ * @param {Object}   props.attributes    Block attributes.
+ * @param {Function} props.setAttributes Set block attributes.
  * @return {JSX.Element} Component to render.
  */
-export default function Edit( { __unstableLayoutClassNames } ) {
-	const blockProps = useBlockProps( {
-		className: __unstableLayoutClassNames,
-	} );
+export default function Edit( { attributes, setAttributes } ) {
+	const { className = '', displayStyle = 'facepile', showActions = false } = attributes;
+	const blockProps = useBlockProps();
 	const { getCurrentPostId } = select( 'core/editor' );
+	const { showAvatars = true } = useOptions();
+	const hasInitialized = useRef( false );
+
+	// On first render, set default style based on avatar setting.
+	useEffect( () => {
+		if ( hasInitialized.current ) {
+			return;
+		}
+		hasInitialized.current = true;
+
+		// Only apply default if no style has been explicitly chosen yet.
+		const hasStyleClass = className?.includes( 'is-style-' );
+		if ( ! hasStyleClass ) {
+			const defaultStyle = showAvatars ? 'facepile' : 'compact';
+			setAttributes( {
+				className: clsx( className, `is-style-${ defaultStyle }` ),
+				displayStyle: defaultStyle,
+			} );
+		}
+	}, [ className, showAvatars, setAttributes ] );
+
+	// Sync displayStyle attribute with className when style changes.
+	const classNameStyle = className?.includes( 'is-style-compact' ) ? 'compact' : 'facepile';
+	useEffect( () => {
+		if ( classNameStyle !== displayStyle ) {
+			setAttributes( { displayStyle: classNameStyle } );
+		}
+	}, [ classNameStyle, displayStyle, setAttributes ] );
 
 	// Template for InnerBlocks - allows only a heading block.
 	const TEMPLATE = [
@@ -64,14 +104,35 @@ export default function Edit( { __unstableLayoutClassNames } ) {
 	];
 
 	return (
-		<div { ...blockProps }>
-			<InnerBlocks
-				template={ TEMPLATE }
-				allowedBlocks={ [ 'core/heading' ] }
-				templateLock={ 'all' }
-				renderAppender={ false }
-			/>
-			<Reactions postId={ getCurrentPostId() } fallbackReactions={ DUMMY_REACTIONS } />
-		</div>
+		<>
+			<InspectorControls>
+				<PanelBody title={ __( 'Action Buttons', 'activitypub' ) }>
+					<ToggleControl
+						__nextHasNoMarginBottom
+						label={ __( 'Show action buttons', 'activitypub' ) }
+						help={ __(
+							'Display Like and Boost buttons so visitors can interact from their Fediverse server.',
+							'activitypub'
+						) }
+						checked={ showActions }
+						onChange={ ( value ) => setAttributes( { showActions: value } ) }
+					/>
+				</PanelBody>
+			</InspectorControls>
+			<div { ...blockProps }>
+				<InnerBlocks
+					template={ TEMPLATE }
+					allowedBlocks={ [ 'core/heading' ] }
+					templateLock={ 'all' }
+					renderAppender={ false }
+				/>
+				<Reactions
+					postId={ getCurrentPostId() }
+					fallbackReactions={ DUMMY_REACTIONS }
+					displayStyle={ displayStyle }
+					showActions={ showActions }
+				/>
+			</div>
+		</>
 	);
 }

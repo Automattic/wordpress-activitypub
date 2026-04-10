@@ -44,7 +44,7 @@ class Following_Controller extends Actors_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_items' ),
-					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
+					'permission_callback' => array( $this, 'verify_signature' ),
 					'args'                => array(
 						'page'     => array(
 							'description' => 'Current page of the collection.',
@@ -115,10 +115,10 @@ class Following_Controller extends Actors_Controller {
 			$response = array( '@context' => Base_Object::JSON_LD_CONTEXT ) + $response;
 		}
 
-		if ( Actors::show_social_graph( $user_id ) ) {
+		if ( $this->show_social_graph( $request ) ) {
 			$response['orderedItems'] = \array_filter(
 				\array_map(
-					function ( $item ) use ( $context ) {
+					static function ( $item ) use ( $context ) {
 						if ( 'full' === $context ) {
 							$actor = Remote_Actors::get_actor( $item );
 							if ( \is_wp_error( $actor ) ) {

@@ -7,449 +7,184 @@
 
 namespace Activitypub\Collection;
 
-use Activitypub\Attachments;
-use Activitypub\Sanitize;
+use Activitypub\Blocks;
+use Activitypub\Hashtag;
+use Activitypub\Link;
 
-use function Activitypub\generate_post_summary;
-use function Activitypub\object_to_uri;
+use function Activitypub\get_content_visibility;
 
 /**
  * Posts collection.
  *
- * Provides methods to retrieve, create, update, and manage ActivityPub posts (articles, notes, media, etc.).
+ * Provides CRUD methods for local WordPress posts created
+ * via ActivityPub Client-to-Server (C2S) outbox.
+ *
+ * @see Remote_Posts for federated posts received via Server-to-Server (S2S).
  */
 class Posts {
 	/**
-	 * The post type for the posts.
+	 * Create a WordPress post from an ActivityPub activity.
 	 *
-	 * @var string
+	 * @since unreleased
+	 *
+	 * @param array       $activity   The activity data.
+	 * @param int         $user_id    The local user ID.
+	 * @param string|null $visibility Content visibility.
+	 *
+	 * @return \WP_Post|\WP_Error The created post on success, WP_Error on failure.
 	 */
-	const POST_TYPE = 'ap_post';
-
-	/**
-	 * Add an object to the collection.
-	 *
-	 * @param array     $activity   The activity object data.
-	 * @param int|int[] $recipients The id(s) of the local blog-user(s).
-	 *
-	 * @return \WP_Post|\WP_Error The object post or WP_Error on failure.
-	 */
-	public static function add( $activity, $recipients ) {
-		$recipients      = (array) $recipients;
-		$activity_object = $activity['object'];
-
-		$existing = self::get_by_guid( $activity_object['id'] );
-		// If post exists, call update instead.
-		if ( ! \is_wp_error( $existing ) ) {
-			return self::update( $activity, $recipients );
-		}
-
-		// Post doesn't exist, create new post.
-		$actor = Remote_Actors::fetch_by_uri( object_to_uri( $activity_object['attributedTo'] ) );
-
-		if ( \is_wp_error( $actor ) ) {
-			return $actor;
-		}
-
-		$post_array = self::activity_to_post( $activity_object );
-		$post_id    = \wp_insert_post( $post_array, true );
-
-		if ( \is_wp_error( $post_id ) ) {
-			return $post_id;
-		}
-
-		\add_post_meta( $post_id, '_activitypub_remote_actor_id', $actor->ID );
-
-		// Add recipients as separate meta entries after post is created.
-		foreach ( $recipients as $user_id ) {
-			self::add_recipient( $post_id, $user_id );
-		}
-
-		self::add_taxonomies( $post_id, $activity_object );
-		self::maybe_import_attachments( $activity_object, $post_id );
-
-		return \get_post( $post_id );
-	}
-
-	/**
-	 * Get an object from the collection.
-	 *
-	 * @param int $id The object ID.
-	 *
-	 * @return \WP_Post|null The post object or null on failure.
-	 */
-	public static function get( $id ) {
-		return \get_post( $id );
-	}
-
-	/**
-	 * Get an object by its GUID.
-	 *
-	 * @param string $guid The object GUID.
-	 *
-	 * @return \WP_Post|\WP_Error The object post or WP_Error on failure.
-	 */
-	public static function get_by_guid( $guid ) {
-		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$post_id = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
-				\esc_url( $guid ),
-				self::POST_TYPE
-			)
-		);
-
-		if ( ! $post_id ) {
+	public static function create( $activity, $user_id, $visibility = null ) {
+		// Verify the user has permission to create posts.
+		if ( $user_id > 0 && ! \user_can( $user_id, 'publish_posts' ) ) {
 			return new \WP_Error(
-				'activitypub_post_not_found',
-				\__( 'Post not found', 'activitypub' ),
-				array( 'status' => 404 )
+				'activitypub_forbidden',
+				\__( 'You do not have permission to create posts.', 'activitypub' ),
+				array( 'status' => 403 )
 			);
 		}
 
-		return \get_post( $post_id );
-	}
+		$object = $activity['object'] ?? array();
 
-	/**
-	 * Update an object in the collection.
-	 *
-	 * @param array     $activity   The activity object data.
-	 * @param int|int[] $recipients The id(s) of the local blog-user(s).
-	 *
-	 * @return \WP_Post|\WP_Error The updated object post or WP_Error on failure.
-	 */
-	public static function update( $activity, $recipients ) {
-		$recipients = (array) $recipients;
+		$object_type = $object['type'] ?? '';
+		$content     = \wp_kses_post( $object['content'] ?? '' );
+		$name        = \sanitize_text_field( $object['name'] ?? '' );
+		$summary     = \wp_kses_post( $object['summary'] ?? '' );
 
-		$post = self::get_by_guid( $activity['object']['id'] );
-		if ( \is_wp_error( $post ) ) {
-			return $post;
+		// Process content: autop, autolink, hashtags, and convert to blocks.
+		$content = self::prepare_content( $content );
+
+		// Use name as title for Articles, or generate from content for Notes.
+		$title = $name;
+		if ( empty( $title ) && ! empty( $content ) ) {
+			$title = \wp_trim_words( \wp_strip_all_tags( $content ), 10, '...' );
 		}
 
-		$post_array       = self::activity_to_post( $activity['object'] );
-		$post_array['ID'] = $post->ID;
-		$post_id          = \wp_update_post( $post_array, true );
+		// Determine visibility if not provided.
+		if ( null === $visibility ) {
+			$visibility = get_content_visibility( $activity );
+		}
+
+		$post_data = array(
+			'post_author'  => $user_id > 0 ? $user_id : 0,
+			'post_title'   => $title,
+			'post_content' => $content,
+			'post_excerpt' => $summary,
+			'post_status'  => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === $visibility ? 'private' : 'publish',
+			'post_type'    => 'post',
+			'meta_input'   => array(
+				'activitypub_content_visibility' => $visibility,
+			),
+		);
+
+		$post_id = \wp_insert_post( $post_data, true );
 
 		if ( \is_wp_error( $post_id ) ) {
 			return $post_id;
 		}
 
-		// Add new recipients using add_recipient (handles deduplication).
-		foreach ( $recipients as $user_id ) {
-			self::add_recipient( $post_id, $user_id );
+		// Set post format to 'status' for Notes so the transformer maps it back correctly.
+		if ( 'Note' === $object_type ) {
+			\set_post_format( $post_id, 'status' );
 		}
-
-		self::add_taxonomies( $post_id, $activity['object'] );
-
-		// Always delete existing attachments on update in case filter value changed.
-		Attachments::delete_ap_posts_directory( $post_id );
-		self::maybe_import_attachments( $activity['object'], $post_id );
 
 		return \get_post( $post_id );
 	}
 
 	/**
-	 * Delete an object from the collection.
+	 * Update a WordPress post from an ActivityPub activity.
 	 *
-	 * @param int $id The object ID.
+	 * @since unreleased
+	 *
+	 * @param \WP_Post    $post       The post to update.
+	 * @param array       $activity   The activity data.
+	 * @param string|null $visibility Content visibility.
+	 *
+	 * @return \WP_Post|\WP_Error The updated post on success, WP_Error on failure.
+	 */
+	public static function update( $post, $activity, $visibility = null ) {
+		$object = $activity['object'] ?? array();
+
+		$content = \wp_kses_post( $object['content'] ?? '' );
+		$name    = \sanitize_text_field( $object['name'] ?? '' );
+		$summary = \wp_kses_post( $object['summary'] ?? '' );
+
+		// Process content: autop, autolink, hashtags, and convert to blocks.
+		$content = self::prepare_content( $content );
+
+		// Use name as title for Articles, or generate from content for Notes.
+		$title = $name;
+		if ( empty( $title ) && ! empty( $content ) ) {
+			$title = \wp_trim_words( \wp_strip_all_tags( $content ), 10, '...' );
+		}
+
+		// Determine visibility if not provided.
+		if ( null === $visibility ) {
+			$visibility = get_content_visibility( $activity );
+		}
+
+		$post_data = array(
+			'ID'           => $post->ID,
+			'post_title'   => $title,
+			'post_content' => $content,
+			'post_excerpt' => $summary,
+			'meta_input'   => array(
+				'activitypub_content_visibility' => $visibility,
+			),
+		);
+
+		$post_id = \wp_update_post( $post_data, true );
+
+		if ( \is_wp_error( $post_id ) ) {
+			return $post_id;
+		}
+
+		return \get_post( $post_id );
+	}
+
+	/**
+	 * Delete (trash) a WordPress post.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $post_id The post ID.
 	 *
 	 * @return \WP_Post|false|null Post data on success, false or null on failure.
 	 */
-	public static function delete( $id ) {
-		return \wp_delete_post( $id, true );
+	public static function delete( $post_id ) {
+		return \wp_trash_post( $post_id );
 	}
 
 	/**
-	 * Delete an object from the collection by its GUID.
+	 * Prepare content for storage as a WordPress post.
 	 *
-	 * @param string $guid The object GUID.
+	 * Applies wpautop (for plain text), autolinks bare URLs,
+	 * converts hashtags to links, and wraps in block markup.
 	 *
-	 * @return \WP_Post|\WP_Error|false|null Post data on success, false or null on failure, or WP_Error if no post to delete.
+	 * @since unreleased
+	 *
+	 * @param string $content The HTML or plain-text content.
+	 *
+	 * @return string The processed content with block markup.
 	 */
-	public static function delete_by_guid( $guid ) {
-		$post = self::get_by_guid( $guid );
-		if ( \is_wp_error( $post ) ) {
-			return $post;
+	public static function prepare_content( $content ) {
+		if ( empty( $content ) ) {
+			return '';
 		}
 
-		return self::delete( $post->ID );
-	}
-
-	/**
-	 * Extract hashtag names from ActivityPub tag array.
-	 *
-	 * @param array $tags Array of ActivityPub tags.
-	 *
-	 * @return array Array of normalized hashtag names (without # prefix, trimmed, sanitized).
-	 */
-	public static function extract_hashtags( $tags ) {
-		$hashtags = array();
-
-		if ( empty( $tags ) || ! \is_array( $tags ) ) {
-			return $hashtags;
+		// Wrap plain text in paragraphs if it has no block-level HTML.
+		if ( ! \preg_match( '/<(p|h[1-6]|ul|ol|blockquote|figure|hr|img|div|pre|table)\b/i', $content ) ) {
+			$content = \wpautop( $content );
 		}
 
-		foreach ( $tags as $tag ) {
-			if ( isset( $tag['type'] ) && 'Hashtag' === $tag['type'] && isset( $tag['name'] ) ) {
-				// Strip # prefix, trim whitespace, and sanitize.
-				$normalized = \trim( \ltrim( $tag['name'], '#' ) );
-				$normalized = \wp_strip_all_tags( $normalized );
+		// Convert bare URLs to links.
+		$content = Link::the_content( $content );
 
-				if ( ! empty( $normalized ) ) {
-					$hashtags[] = $normalized;
-				}
-			}
-		}
+		// Convert #hashtags to links.
+		$content = Hashtag::the_content( $content );
 
-		return $hashtags;
-	}
+		// Convert HTML to block markup.
+		$content = Blocks::convert_from_html( $content );
 
-	/**
-	 * Remove hashtags from content.
-	 *
-	 * Removes hashtags that appear at the end of the content.
-	 * Handles both plain text and HTML content, including hashtags within anchor tags.
-	 *
-	 * @param string $content The content to process.
-	 * @param array  $tags    Array of tag objects from activity (with 'type' and 'name' keys).
-	 *
-	 * @return string The content with trailing hashtags removed.
-	 */
-	public static function remove_hashtags( $content, $tags ) {
-		if ( empty( $content ) || empty( $tags ) || ! \is_array( $tags ) ) {
-			return $content;
-		}
-
-		// Extract and normalize hashtags from tag objects.
-		$normalized_tags = self::extract_hashtags( $tags );
-
-		if ( empty( $normalized_tags ) ) {
-			return $content;
-		}
-
-		// Build pattern to match trailing hashtags (at end of content or before closing tags).
-		$tag_patterns = array();
-		foreach ( $normalized_tags as $tag ) {
-			$escaped_tag    = \preg_quote( $tag, '/' );
-			$tag_patterns[] = '(?:<a[^>]*>\s*)?#' . $escaped_tag . '(?=\s|<|$)(?:\s*<\/a>)?';
-		}
-
-		/*
-		 * Pattern explanation:
-		 * Match one or more hashtags (plain or in anchor tags) at the end of content.
-		 * The pattern matches trailing hashtags before closing HTML tags or at end of string.
-		 */
-		$pattern = '/(?:\s+(?:' . \implode( '|', $tag_patterns ) . '))+(?=\s*(?:<\/[^>]+>)*\s*$)/i';
-		$content = \preg_replace( $pattern, '', $content );
-
-		// Clean up any extra whitespace at end of paragraphs.
-		$content = \preg_replace( '/<p>\s*<\/p>/', '', $content );
-		$content = \preg_replace( '/\s+<\/p>/', '</p>', $content );
-		$content = \preg_replace( '/\s+<\/strong>/', '</strong>', $content );
-
-		return \trim( $content );
-	}
-
-	/**
-	 * Convert an activity to a post array.
-	 *
-	 * @param array $activity The activity array.
-	 *
-	 * @return array|\WP_Error The post array or WP_Error on failure.
-	 */
-	private static function activity_to_post( $activity ) {
-		if ( ! is_array( $activity ) ) {
-			return new \WP_Error( 'invalid_activity', __( 'Invalid activity format', 'activitypub' ) );
-		}
-
-		$gm_date = \gmdate( 'Y-m-d H:i:s', \strtotime( $activity['published'] ?? 'now' ) );
-
-		// Sanitize content and remove hashtags.
-		$content = isset( $activity['content'] ) ? Sanitize::content( $activity['content'] ) : '';
-		$content = self::remove_hashtags( $content, $activity['tag'] ?? array() );
-
-		return array(
-			'post_title'    => isset( $activity['name'] ) ? \wp_strip_all_tags( $activity['name'] ) : '',
-			'post_content'  => $content,
-			'post_excerpt'  => isset( $activity['summary'] ) ? \wp_strip_all_tags( $activity['summary'] ) : generate_post_summary( $activity['content'] ?? '' ),
-			'post_status'   => 'publish',
-			'post_type'     => self::POST_TYPE,
-			'post_date_gmt' => $gm_date,
-			'post_date'     => \get_date_from_gmt( $gm_date ),
-			'guid'          => isset( $activity['id'] ) ? \esc_url_raw( $activity['id'] ) : '',
-		);
-	}
-
-	/**
-	 * Add taxonomies to the object post.
-	 *
-	 * @param int   $post_id         The post ID.
-	 * @param array $activity_object The activity object data.
-	 */
-	private static function add_taxonomies( $post_id, $activity_object ) {
-		// Save Object Type as Taxonomy item.
-		\wp_set_post_terms( $post_id, array( $activity_object['type'] ), 'ap_object_type' );
-
-		// Save the Hashtags as Taxonomy items.
-		$tags = self::extract_hashtags( $activity_object['tag'] ?? array() );
-
-		\wp_set_post_terms( $post_id, $tags, 'ap_tag' );
-	}
-
-	/**
-	 * Maybe import attachments for an activity object.
-	 *
-	 * Checks if attachments should be stored locally via filter and imports them if enabled.
-	 *
-	 * @param array $activity_object The activity object data.
-	 * @param int   $post_id         The post ID.
-	 */
-	private static function maybe_import_attachments( $activity_object, $post_id ) {
-		// Process attachments if present.
-		if ( empty( $activity_object['attachment'] ) ) {
-			return;
-		}
-
-		/**
-		 * Filters whether to store attachments locally for incoming ActivityPub posts.
-		 *
-		 * Allows plugins or users to disable local storage of attachments from
-		 * incoming ActivityPub posts. When disabled, attachments won't be downloaded
-		 * and stored locally, which can be useful for users with limited webspace.
-		 *
-		 * @param bool  $store_locally   Whether to store attachments locally. Default true.
-		 * @param array $activity_object The ActivityPub activity object.
-		 * @param int   $post_id         The post ID.
-		 */
-		$store_locally = \apply_filters( 'activitypub_store_attachments_locally', true, $activity_object, $post_id );
-
-		if ( $store_locally ) {
-			Attachments::import_post_files( $activity_object['attachment'], $post_id );
-		}
-	}
-
-	/**
-	 * Get posts by remote actor.
-	 *
-	 * @param string $actor The remote actor URI.
-	 *
-	 * @return array Array of WP_Post objects.
-	 */
-	public static function get_by_remote_actor( $actor ) {
-		$remote_actor = Remote_Actors::fetch_by_uri( $actor );
-
-		if ( \is_wp_error( $remote_actor ) ) {
-			return array();
-		}
-
-		return self::get_by_remote_actor_id( $remote_actor->ID );
-	}
-
-	/**
-	 * Get posts by remote actor ID.
-	 *
-	 * @param int $actor_id The remote actor post ID.
-	 *
-	 * @return array Array of WP_Post objects.
-	 */
-	public static function get_by_remote_actor_id( $actor_id ) {
-		$query = new \WP_Query(
-			array(
-				'post_type'      => self::POST_TYPE,
-				'posts_per_page' => -1,
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'meta_key'       => '_activitypub_remote_actor_id',
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-				'meta_value'     => $actor_id,
-			)
-		);
-
-		return $query->posts;
-	}
-
-	/**
-	 * Get all recipients for a post.
-	 *
-	 * @param int $post_id The post ID.
-	 *
-	 * @return int[] Array of user IDs who are recipients.
-	 */
-	public static function get_recipients( $post_id ) {
-		// Get all meta values with key '_activitypub_user_id' (single => false).
-		$recipients = \get_post_meta( $post_id, '_activitypub_user_id', false );
-		$recipients = \array_map( 'intval', $recipients );
-
-		return $recipients;
-	}
-
-	/**
-	 * Check if a user is a recipient of a post.
-	 *
-	 * @param int $post_id The post ID.
-	 * @param int $user_id The user ID to check.
-	 *
-	 * @return bool True if user is a recipient, false otherwise.
-	 */
-	public static function has_recipient( $post_id, $user_id ) {
-		$recipients = self::get_recipients( $post_id );
-
-		return \in_array( (int) $user_id, $recipients, true );
-	}
-
-	/**
-	 * Add a recipient to an existing post.
-	 *
-	 * @param int $post_id The post ID.
-	 * @param int $user_id The user ID to add.
-	 *
-	 * @return bool True on success, false on failure.
-	 */
-	public static function add_recipient( $post_id, $user_id ) {
-		$user_id = (int) $user_id;
-		// Allow 0 for blog user, but reject negative values.
-		if ( $user_id < 0 ) {
-			return false;
-		}
-
-		// Check if already a recipient.
-		if ( self::has_recipient( $post_id, $user_id ) ) {
-			return true;
-		}
-
-		// Add new recipient as separate meta entry.
-		return (bool) \add_post_meta( $post_id, '_activitypub_user_id', $user_id, false );
-	}
-
-	/**
-	 * Add multiple recipients to an existing post.
-	 *
-	 * @param int   $post_id  The post ID.
-	 * @param int[] $user_ids The user ID or array of user IDs to add.
-	 */
-	public static function add_recipients( $post_id, $user_ids ) {
-		foreach ( $user_ids as $user_id ) {
-			self::add_recipient( $post_id, $user_id );
-		}
-	}
-
-	/**
-	 * Remove a recipient from a post.
-	 *
-	 * @param int $post_id The post ID.
-	 * @param int $user_id The user ID to remove.
-	 *
-	 * @return bool True on success, false on failure.
-	 */
-	public static function remove_recipient( $post_id, $user_id ) {
-		$user_id = (int) $user_id;
-
-		// Allow 0 for blog user, but reject negative values.
-		if ( $user_id < 0 ) {
-			return false;
-		}
-
-		// Delete the specific meta entry with this value.
-		return \delete_post_meta( $post_id, '_activitypub_user_id', $user_id );
+		return $content;
 	}
 }
