@@ -232,6 +232,12 @@ class Blocks {
 		if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
 			require ACTIVITYPUB_PLUGIN_DIR . '/patterns/following-page.php';
 		}
+
+		// Only register the Stats post starter pattern in December and January.
+		$month = (int) \gmdate( 'n' );
+		if ( 12 === $month || 1 === $month ) {
+			require ACTIVITYPUB_PLUGIN_DIR . '/patterns/stats-post.php';
+		}
 	}
 
 	/**
