@@ -48,7 +48,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_provider_info' ),
-					'permission_callback' => array( $this, 'verify_signature' ),
+					'permission_callback' => '__return_true',
 				),
 				'schema' => array( $this, 'get_provider_info_schema' ),
 			)
@@ -167,7 +167,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 			$privacy_policy = array(
 				array(
 					'url'      => $privacy_policy_url,
-					'language' => \get_locale(),
+					'language' => \substr( \get_locale(), 0, 2 ),
 				),
 			);
 		}
@@ -428,7 +428,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 	 * @return string Unique ID.
 	 */
 	private function generate_unique_id() {
-		return \wp_generate_password( 12, false );
+		return \wp_generate_uuid4();
 	}
 
 	/**

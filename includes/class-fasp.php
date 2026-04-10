@@ -172,10 +172,10 @@ class Fasp {
 		}
 
 		$registrations[ $fasp_id ]['status']      = 'approved';
-		$registrations[ $fasp_id ]['approved_at'] = current_time( 'mysql', true );
+		$registrations[ $fasp_id ]['approved_at'] = \current_time( 'mysql', true );
 		$registrations[ $fasp_id ]['approved_by'] = $user_id;
 
-		return update_option( 'activitypub_fasp_registrations', $registrations, false );
+		return \update_option( 'activitypub_fasp_registrations', $registrations, false );
 	}
 
 	/**
@@ -193,10 +193,10 @@ class Fasp {
 		}
 
 		$registrations[ $fasp_id ]['status']      = 'rejected';
-		$registrations[ $fasp_id ]['rejected_at'] = current_time( 'mysql', true );
+		$registrations[ $fasp_id ]['rejected_at'] = \current_time( 'mysql', true );
 		$registrations[ $fasp_id ]['rejected_by'] = $user_id;
 
-		return update_option( 'activitypub_fasp_registrations', $registrations, false );
+		return \update_option( 'activitypub_fasp_registrations', $registrations, false );
 	}
 
 	/**
@@ -226,7 +226,7 @@ class Fasp {
 
 		unset( $registrations[ $fasp_id ] );
 
-		return update_option( 'activitypub_fasp_registrations', $registrations, false );
+		return \update_option( 'activitypub_fasp_registrations', $registrations, false );
 	}
 
 	/**
@@ -242,7 +242,7 @@ class Fasp {
 		$registrations[ $data['fasp_id'] ] = $data;
 
 		// Store updated registrations without autoloading.
-		return update_option( 'activitypub_fasp_registrations', $registrations, false );
+		return \update_option( 'activitypub_fasp_registrations', $registrations, false );
 	}
 
 	/**
@@ -340,14 +340,14 @@ class Fasp {
 	 * @return array
 	 */
 	private static function get_registrations_store() {
-		$registrations = get_option( 'activitypub_fasp_registrations', null );
+		$registrations = \get_option( 'activitypub_fasp_registrations', null );
 
 		if ( null === $registrations ) {
-			add_option( 'activitypub_fasp_registrations', array(), '', 'no' );
+			\add_option( 'activitypub_fasp_registrations', array(), '', 'no' );
 			return array();
 		}
 
-		if ( ! is_array( $registrations ) ) {
+		if ( ! \is_array( $registrations ) ) {
 			$registrations = array();
 		}
 
@@ -378,7 +378,7 @@ class Fasp {
 		}
 
 		if ( $modified ) {
-			update_option( 'activitypub_fasp_registrations', $registrations, false );
+			\update_option( 'activitypub_fasp_registrations', $registrations, false );
 		}
 
 		return $registrations;
@@ -390,14 +390,14 @@ class Fasp {
 	 * @return array
 	 */
 	private static function get_capabilities_store() {
-		$capabilities = get_option( 'activitypub_fasp_capabilities', null );
+		$capabilities = \get_option( 'activitypub_fasp_capabilities', null );
 
 		if ( null === $capabilities ) {
-			add_option( 'activitypub_fasp_capabilities', array(), '', 'no' );
+			\add_option( 'activitypub_fasp_capabilities', array(), '', 'no' );
 			return array();
 		}
 
-		if ( ! is_array( $capabilities ) ) {
+		if ( ! \is_array( $capabilities ) ) {
 			return array();
 		}
 

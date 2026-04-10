@@ -108,6 +108,11 @@ class Nodeinfo {
 			'activeHalfyear' => get_active_users( 6 ),
 		);
 
+		// Only expose FASP base URL when the feature is enabled.
+		if ( '1' === \get_option( 'activitypub_enable_fasp', '0' ) ) {
+			$nodeinfo['metadata']['faspBaseUrl'] = get_rest_url_by_path( 'fasp' );
+		}
+
 		return $nodeinfo;
 	}
 
