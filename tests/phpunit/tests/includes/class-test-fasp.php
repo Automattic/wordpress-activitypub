@@ -395,7 +395,7 @@ class Test_Fasp extends \WP_UnitTestCase {
 	 *
 	 * Per FASP spec, keyId MUST be the serverId exchanged during registration.
 	 *
-	 * @covers ::enable_capability
+	 * @covers ::toggle_capability
 	 */
 	public function test_capability_activation_with_valid_server_id() {
 		$key_base64        = 'dGVzdC1wdWJsaWMta2V5';
@@ -434,7 +434,7 @@ class Test_Fasp extends \WP_UnitTestCase {
 		 */
 		$request->set_param( 'activitypub_verified_keyid', 'test-server-123' );
 
-		$response = $this->controller->enable_capability( $request );
+		$response = $this->controller->toggle_capability( $request );
 
 		$this->assertInstanceOf( 'WP_REST_Response', $response );
 		$this->assertEquals( 204, $response->get_status() );
@@ -451,7 +451,7 @@ class Test_Fasp extends \WP_UnitTestCase {
 	 * When a request comes with a serverId that doesn't match any registered FASP,
 	 * it should be rejected.
 	 *
-	 * @covers ::enable_capability
+	 * @covers ::toggle_capability
 	 */
 	public function test_capability_activation_rejects_unknown_fasp() {
 		$key_base64        = 'dGVzdC1wdWJsaWMta2V5';
@@ -490,7 +490,7 @@ class Test_Fasp extends \WP_UnitTestCase {
 		 */
 		$request->set_param( 'activitypub_verified_keyid', 'unknown-server-456' );
 
-		$response = $this->controller->enable_capability( $request );
+		$response = $this->controller->toggle_capability( $request );
 
 		$this->assertInstanceOf( 'WP_Error', $response );
 		$this->assertEquals( 'fasp_not_found', $response->get_error_code() );

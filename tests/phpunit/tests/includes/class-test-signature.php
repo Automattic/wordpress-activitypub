@@ -770,7 +770,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_retrieval, 10, 2 );
 
 		try {
-			$this->assertTrue( Signature::verify_http_signature( $request ), 'Valid signature with standalone key object should verify' );
+			$this->assertNotWPError( Signature::verify_http_signature( $request ), 'Valid signature with standalone key object should verify' );
 		} finally {
 			\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_retrieval, 10 );
 		}
@@ -897,7 +897,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_retrieval, 10, 2 );
 
 		try {
-			$this->assertTrue( Signature::verify_http_signature( $request ), 'Same-host standalone key following owner should verify' );
+			$this->assertNotWPError( Signature::verify_http_signature( $request ), 'Same-host standalone key following owner should verify' );
 		} finally {
 			\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_retrieval, 10 );
 		}
