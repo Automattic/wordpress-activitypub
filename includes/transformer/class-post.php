@@ -7,6 +7,7 @@
 
 namespace Activitypub\Transformer;
 
+use Activitypub\Activity\Base_Object;
 use Activitypub\Blocks;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Interactions;
@@ -98,6 +99,27 @@ class Post extends Base {
 			$object->set_summary( $content_warning );
 			$object->set_summary_map( null );
 			$object->set_dcterms( array( 'subject' => $content_warning ) );
+		}
+
+		return $object;
+	}
+
+	/**
+	 * Returns a Tombstone object for the post.
+	 *
+	 * @return Base_Object The Tombstone object.
+	 */
+	public function to_tombstone() {
+		$object = new Base_Object();
+		$object->set_type( 'Tombstone' );
+		$object->set_id( $this->get_id() );
+		$object->set_former_type( $this->get_type() );
+		$object->set_published( $this->get_published() );
+		$object->set_updated( $this->get_updated() );
+
+		$deleted_at = \get_post_meta( $this->item->ID, 'activitypub_deleted_at', true );
+		if ( $deleted_at ) {
+			$object->set_deleted( \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $deleted_at ) );
 		}
 
 		return $object;
@@ -337,10 +359,10 @@ class Post extends Base {
 		}
 
 		/*
-		 * Remove attachments from the Fediverse if a post was federated and then set back to draft.
+		 * Remove attachments from the Fediverse if a post was federated and then unpublished.
 		 * Except in preview mode, where we want to show attachments.
 		 */
-		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
+		if ( ! $this->is_preview() && 'publish' !== \get_post_status( $this->item ) ) {
 			$this->attachment = array();
 
 			return $this->attachment;
@@ -521,8 +543,8 @@ class Post extends Base {
 			return $this->summary;
 		}
 
-		// Remove Teaser from drafts.
-		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
+		// Remove Teaser from unpublished posts.
+		if ( ! $this->is_preview() && 'publish' !== \get_post_status( $this->item ) ) {
 			$this->summary = \__( '(This post is being modified)', 'activitypub' );
 
 			return $this->summary;
@@ -571,8 +593,8 @@ class Post extends Base {
 			return $this->content;
 		}
 
-		// Remove Content from drafts.
-		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
+		// Remove Content from unpublished posts.
+		if ( ! $this->is_preview() && 'publish' !== \get_post_status( $this->item ) ) {
 			$this->content = \__( '(This post is being modified)', 'activitypub' );
 
 			return $this->content;
@@ -901,11 +923,10 @@ class Post extends Base {
 				case 'core/image':
 				case 'core/cover':
 					if ( ! empty( $block['attrs']['id'] ) ) {
-						$alt   = '';
-						$check = preg_match( '/<img.*?alt\s*=\s*([\"\'])(.*?)\1.*>/i', $block['innerHTML'], $match );
-
-						if ( $check ) {
-							$alt = $match[2];
+						$alt       = '';
+						$processor = new \WP_HTML_Tag_Processor( $block['innerHTML'] );
+						if ( $processor->next_tag( array( 'tag_name' => 'img' ) ) ) {
+							$alt = $processor->get_attribute( 'alt' ) ?? '';
 						}
 
 						$found = false;
@@ -933,7 +954,18 @@ class Post extends Base {
 				case 'core/video':
 				case 'videopress/video':
 					if ( ! empty( $block['attrs']['id'] ) ) {
-						$media['video'][] = array( 'id' => $block['attrs']['id'] );
+						$video = array( 'id' => $block['attrs']['id'] );
+
+						// The poster is stored as an HTML attribute on the <video> tag, not in block attrs.
+						$processor = new \WP_HTML_Tag_Processor( $block['innerHTML'] );
+						if ( $processor->next_tag( array( 'tag_name' => 'video' ) ) ) {
+							$poster = $processor->get_attribute( 'poster' );
+							if ( ! empty( $poster ) ) {
+								$video['icon'] = \esc_url_raw( $poster );
+							}
+						}
+
+						$media['video'][] = $video;
 					}
 					break;
 				case 'jetpack/slideshow':
@@ -1095,7 +1127,7 @@ class Post extends Base {
 		return array(
 			'id'         => get_rest_url_by_path( sprintf( 'posts/%d/shares', $this->item->ID ) ),
 			'type'       => 'Collection',
-			'totalItems' => Interactions::count_by_type( $this->item->ID, 'repost' ),
+			'totalItems' => Interactions::count_by_type( $this->item->ID, 'repost' ) + Interactions::count_by_type( $this->item->ID, 'quote' ),
 		);
 	}
 
@@ -1121,7 +1153,14 @@ class Post extends Base {
 	 * @return array The quote policy.
 	 */
 	private function get_quote_policy() {
-		switch ( \get_post_meta( $this->item->ID, 'activitypub_interaction_policy_quote', true ) ) {
+		$policy = \get_post_meta( $this->item->ID, 'activitypub_interaction_policy_quote', true );
+
+		// Fall back to global default if not set.
+		if ( ! $policy ) {
+			$policy = \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
+		}
+
+		switch ( $policy ) {
 			case ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS:
 				return array( 'automaticApproval' => get_rest_url_by_path( sprintf( 'actors/%d/followers', $this->item->post_author ) ) );
 

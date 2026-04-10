@@ -48,8 +48,10 @@ test.describe( 'ActivityPub Following Collection REST API', () => {
 
 		// For a new user, following should be 0
 		if ( data.totalItems === 0 ) {
-			// Without a page parameter, orderedItems should not be present
-			expect( data.orderedItems ).toBeUndefined();
+			// Empty collections return orderedItems as empty array and skip pagination links.
+			expect( data.orderedItems ).toEqual( [] );
+			expect( data.first ).toBeUndefined();
+			expect( data.last ).toBeUndefined();
 		}
 	} );
 
@@ -93,17 +95,14 @@ test.describe( 'ActivityPub Following Collection REST API', () => {
 	} );
 
 	test( 'should handle page parameter', async ( { requestUtils } ) => {
-		try {
-			const data = await requestUtils.rest( {
-				path: `${ followingEndpoint }?page=1&per_page=10`,
-			} );
+		const data = await requestUtils.rest( {
+			path: followingEndpoint,
+			params: { page: 1, per_page: 10 },
+		} );
 
-			// If successful, verify the response structure
-			expect( data.type ).toBe( 'OrderedCollectionPage' );
-		} catch ( error ) {
-			// Skip this test if pagination isn't available yet
-			expect( error.status || error.code ).toBeGreaterThanOrEqual( 400 );
-		}
+		// With no following the response is a plain OrderedCollection;
+		// with following it becomes an OrderedCollectionPage.
+		expect( [ 'OrderedCollection', 'OrderedCollectionPage' ] ).toContain( data.type );
 	} );
 
 	test( 'should validate collection structure matches ActivityStreams spec', async ( { requestUtils } ) => {

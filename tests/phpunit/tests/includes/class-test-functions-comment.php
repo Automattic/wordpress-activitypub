@@ -123,6 +123,50 @@ class Test_Functions_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_comment_id returns ActivityPub ID for a comment.
+	 *
+	 * @covers \Activitypub\get_comment_id
+	 */
+	public function test_get_comment_id() {
+		$comment_id = \wp_insert_comment(
+			array(
+				'comment_post_ID'      => $this->post_id,
+				'comment_content'      => 'Test comment for ID.',
+				'comment_author_email' => '',
+			)
+		);
+
+		$result = \Activitypub\get_comment_id( $comment_id );
+
+		$this->assertIsString( $result );
+		$this->assertNotEmpty( $result );
+		// Should match Comment::generate_id output.
+		$this->assertSame( \Activitypub\Comment::generate_id( $comment_id ), $result );
+	}
+
+	/**
+	 * Test get_comment_id with a WP_Comment object.
+	 *
+	 * @covers \Activitypub\get_comment_id
+	 */
+	public function test_get_comment_id_with_object() {
+		$comment_id = \wp_insert_comment(
+			array(
+				'comment_post_ID'      => $this->post_id,
+				'comment_content'      => 'Test comment object.',
+				'comment_author_email' => '',
+			)
+		);
+
+		$comment = \get_comment( $comment_id );
+		$result  = \Activitypub\get_comment_id( $comment );
+
+		$this->assertIsString( $result );
+		$this->assertNotEmpty( $result );
+		$this->assertSame( \Activitypub\Comment::generate_id( $comment ), $result );
+	}
+
+	/**
 	 * Test get comment ancestors.
 	 *
 	 * @covers \Activitypub\get_comment_ancestors

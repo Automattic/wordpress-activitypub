@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix Update handler using stale local actor data instead of the activity payload

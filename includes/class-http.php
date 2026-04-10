@@ -40,8 +40,16 @@ class Http {
 		 * @param string $user_agent The user agent string.
 		 */
 		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . get_masked_wp_version() . '; ' . \get_bloginfo( 'url' ) );
-		$args       = array(
-			'timeout'             => 100,
+
+		/**
+		 * Filters the timeout duration for remote POST requests in ActivityPub.
+		 *
+		 * @param int $timeout The timeout value in seconds. Default 10 seconds.
+		 */
+		$timeout = \apply_filters( 'activitypub_remote_post_timeout', 10 );
+
+		$args = array(
+			'timeout'             => $timeout,
 			'limit_response_size' => 1048576,
 			'redirection'         => 3,
 			'user-agent'          => "$user_agent; ActivityPub",
@@ -87,11 +95,24 @@ class Http {
 	 * Send a GET Request with the needed HTTP Headers.
 	 *
 	 * @param string   $url    The URL endpoint.
-	 * @param bool|int $cached Optional. Whether the result should be cached, or its duration. Default false.
+	 * @param array    $args   Optional. Additional arguments to customize the request.
+	 *                         - 'headers': Array of headers to override defaults.
+	 * @param bool|int $cached Optional. Whether to return cached results, or cache duration. Default false.
 	 *
 	 * @return array|\WP_Error The GET Response or a WP_Error.
 	 */
-	public static function get( $url, $cached = false ) {
+	public static function get( $url, $args = array(), $cached = false ) {
+		// Backward compatibility: if $args is boolean/int, it's the old $cached parameter.
+		if ( ! \is_array( $args ) ) {
+			\_deprecated_argument(
+				__METHOD__,
+				'7.9.0',
+				\esc_html__( 'The $cached parameter should now be passed as the third argument.', 'activitypub' )
+			);
+			$cached = $args;
+			$args   = array();
+		}
+
 		/**
 		 * Fires before an HTTP GET request is made.
 		 *
@@ -99,9 +120,10 @@ class Http {
 		 */
 		\do_action( 'activitypub_pre_http_get', $url );
 
-		if ( $cached ) {
-			$transient_key = self::generate_cache_key( $url );
+		$transient_key = self::generate_cache_key( $url );
 
+		// Check cache only if caching is requested.
+		if ( $cached ) {
 			$response = \get_transient( $transient_key );
 
 			if ( $response ) {
@@ -130,11 +152,11 @@ class Http {
 		/**
 		 * Filters the timeout duration for remote GET requests in ActivityPub.
 		 *
-		 * @param int $timeout The timeout value in seconds. Default 100 seconds.
+		 * @param int $timeout The timeout value in seconds. Default 10 seconds.
 		 */
-		$timeout = \apply_filters( 'activitypub_remote_get_timeout', 100 );
+		$timeout = \apply_filters( 'activitypub_remote_get_timeout', 10 );
 
-		$args = array(
+		$defaults = array(
 			'timeout'             => $timeout,
 			'limit_response_size' => 1048576,
 			'redirection'         => 3,
@@ -148,11 +170,32 @@ class Http {
 			'private_key'         => Actors::get_private_key( Actors::APPLICATION_USER_ID ),
 		);
 
+		$args            = \wp_parse_args( $args, $defaults );
+		$args['headers'] = \wp_parse_args( $args['headers'], $defaults['headers'] );
+
 		$response = \wp_safe_remote_get( $url, $args );
 		$code     = \wp_remote_retrieve_response_code( $response );
 
-		if ( $code >= 400 ) {
+		if ( \is_wp_error( $response ) || $code >= 400 ) {
+			if ( ! $code ) {
+				$code = 0;
+			}
 			$response = new \WP_Error( $code, __( 'Failed HTTP Request', 'activitypub' ), array( 'status' => $code ) );
+
+			/*
+			 * Always cache errors to prevent repeated timeout waits.
+			 * - Retriable errors (timeouts, 5xx): 1 minute (server may recover quickly).
+			 * - Other errors (4xx): 15 minutes (client errors are more permanent).
+			 */
+			if ( \in_array( $code, ACTIVITYPUB_RETRY_ERROR_CODES, true ) || 0 === $code ) {
+				$cache_duration = MINUTE_IN_SECONDS;
+			} else {
+				$cache_duration = 15 * MINUTE_IN_SECONDS;
+			}
+
+			\set_transient( $transient_key, $response, $cache_duration );
+
+			return $response;
 		}
 
 		/**
@@ -163,13 +206,12 @@ class Http {
 		 */
 		\do_action( 'activitypub_safe_remote_get_response', $response, $url );
 
-		if ( $cached ) {
-			$cache_duration = $cached;
-			if ( ! is_int( $cache_duration ) ) {
-				$cache_duration = HOUR_IN_SECONDS;
-			}
-			\set_transient( $transient_key, $response, $cache_duration );
+		// Always cache successful responses.
+		$cache_duration = $cached;
+		if ( ! is_int( $cache_duration ) ) {
+			$cache_duration = HOUR_IN_SECONDS;
 		}
+		\set_transient( $transient_key, $response, $cache_duration );
 
 		return $response;
 	}
@@ -250,7 +292,7 @@ class Http {
 			);
 		}
 
-		$response = self::get( $url, $cached );
+		$response = self::get( $url, array(), $cached );
 
 		if ( \is_wp_error( $response ) ) {
 			return $response;

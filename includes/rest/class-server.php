@@ -7,10 +7,6 @@
 
 namespace Activitypub\Rest;
 
-use Activitypub\Signature;
-
-use function Activitypub\use_authorized_fetch;
-
 /**
  * ActivityPub Server REST-Class.
  *
@@ -27,6 +23,7 @@ class Server {
 		\add_filter( 'rest_request_parameter_order', array( self::class, 'request_parameter_order' ), 10, 2 );
 
 		\add_filter( 'rest_post_dispatch', array( self::class, 'filter_output' ), 10, 3 );
+		\add_filter( 'rest_post_dispatch', array( self::class, 'add_cors_headers' ), 10, 3 );
 	}
 
 	/**
@@ -184,6 +181,11 @@ class Server {
 			return $response;
 		}
 
+		// Exclude OAuth endpoints - they have their own error format per RFC 6749.
+		if ( \str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth' ) ) {
+			return $response;
+		}
+
 		// Only alter responses that return an error status code.
 		if ( $response->get_status() < 400 ) {
 			return $response;
@@ -214,5 +216,71 @@ class Server {
 		$response->set_data( $error );
 
 		return $response;
+	}
+
+	/**
+	 * Add CORS headers to ActivityPub REST responses.
+	 *
+	 * @param \WP_REST_Response $response The REST response.
+	 * @param \WP_REST_Server   $server   The REST server instance.
+	 * @param \WP_REST_Request  $request  The request object.
+	 *
+	 * @return \WP_REST_Response The modified response.
+	 */
+	public static function add_cors_headers( $response, $server, $request ) {
+		$route     = $request->get_route();
+		$namespace = '/' . ACTIVITYPUB_REST_NAMESPACE;
+
+		// Only add CORS to ActivityPub endpoints, except the interactive OAuth authorize endpoint.
+		if ( ! \str_starts_with( $route, $namespace ) || \str_contains( $route, $namespace . '/oauth/authorize' ) ) {
+			return $response;
+		}
+
+		$origin = self::get_cors_origin();
+		$response->header( 'Access-Control-Allow-Origin', $origin ? $origin : '*' );
+		$response->header( 'Access-Control-Allow-Methods', 'GET, POST, OPTIONS' );
+		$response->header( 'Access-Control-Allow-Headers', 'Accept, Content-Type, Authorization, Last-Event-ID' );
+
+		if ( $origin ) {
+			$response->header( 'Access-Control-Allow-Credentials', 'true' );
+			$response->header( 'Vary', 'Origin' );
+		}
+
+		return $response;
+	}
+
+	/**
+	 * Send CORS headers directly via header().
+	 *
+	 * Use this for endpoints that bypass the REST response flow
+	 * (e.g. SSE streams that call exit() instead of returning a WP_REST_Response).
+	 *
+	 * @since unreleased
+	 */
+	public static function send_cors_headers() {
+		$origin = self::get_cors_origin();
+
+		\header( 'Access-Control-Allow-Origin: ' . ( $origin ? $origin : '*' ) );
+		\header( 'Access-Control-Allow-Methods: GET, POST, OPTIONS' );
+		\header( 'Access-Control-Allow-Headers: Accept, Content-Type, Authorization, Last-Event-ID' );
+
+		if ( $origin ) {
+			\header( 'Access-Control-Allow-Credentials: true' );
+			\header( 'Vary: Origin' );
+		}
+	}
+
+	/**
+	 * Get the CORS origin from the request.
+	 *
+	 * Reflects the request Origin instead of using a wildcard to avoid
+	 * leaking private data to arbitrary origins on authenticated endpoints.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string The origin or empty string.
+	 */
+	private static function get_cors_origin() {
+		return isset( $_SERVER['HTTP_ORIGIN'] ) ? \esc_url_raw( \wp_unslash( $_SERVER['HTTP_ORIGIN'] ) ) : '';
 	}
 }

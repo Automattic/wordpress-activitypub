@@ -105,8 +105,8 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	public function activity_object_provider() {
 		$home_url = \addcslashes( \home_url(), '/' );
 
-		$note1_json = '{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive","dcterms":"http:\/\/purl.org\/dc\/terms\/","gts":"https:\/\/gotosocial.org\/ns#","interactionPolicy":{"@id":"gts:interactionPolicy","@type":"@id"},"canQuote":{"@id":"gts:canQuote","@type":"@id"},"canReply":{"@id":"gts:canReply","@type":"@id"},"canLike":{"@id":"gts:canLike","@type":"@id"},"canAnnounce":{"@id":"gts:canAnnounce","@type":"@id"},"automaticApproval":{"@id":"gts:automaticApproval","@type":"@id"},"manualApproval":{"@id":"gts:manualApproval","@type":"@id"},"always":{"@id":"gts:always","@type":"@id"}}],"actor":"http:\/\/example.org\/?author=1","id":"http:\/\/example.org\/?post_type=ap_outbox\u0026p=351","type":"Create","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"object":{"id":"https:\/\/example.com\/1","type":"Note","content":"\u003Cp\u003EThis is a note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is a note\u003C\/p\u003E"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html"}}';
-		$note2_json = '{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive","dcterms":"http:\/\/purl.org\/dc\/terms\/","gts":"https:\/\/gotosocial.org\/ns#","interactionPolicy":{"@id":"gts:interactionPolicy","@type":"@id"},"canQuote":{"@id":"gts:canQuote","@type":"@id"},"canReply":{"@id":"gts:canReply","@type":"@id"},"canLike":{"@id":"gts:canLike","@type":"@id"},"canAnnounce":{"@id":"gts:canAnnounce","@type":"@id"},"automaticApproval":{"@id":"gts:automaticApproval","@type":"@id"},"manualApproval":{"@id":"gts:manualApproval","@type":"@id"},"always":{"@id":"gts:always","@type":"@id"}}],"actor":"http:\/\/example.org\/?author=0","id":"http:\/\/example.org\/?post_type=ap_outbox\u0026p=352","type":"Create","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"object":{"id":"https:\/\/example.com\/2","type":"Note","content":"\u003Cp\u003EThis is another note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is another note\u003C\/p\u003E"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html"}}';
+		$note1_json = '{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive","dcterms":"http:\/\/purl.org\/dc\/terms\/","gts":"https:\/\/gotosocial.org\/ns#","schema":"http:\/\/schema.org\/","exifData":"schema:exifData","PropertyValue":"schema:PropertyValue","interactionPolicy":{"@id":"gts:interactionPolicy","@type":"@id"},"canQuote":{"@id":"gts:canQuote","@type":"@id"},"canReply":{"@id":"gts:canReply","@type":"@id"},"canLike":{"@id":"gts:canLike","@type":"@id"},"canAnnounce":{"@id":"gts:canAnnounce","@type":"@id"},"automaticApproval":{"@id":"gts:automaticApproval","@type":"@id"},"manualApproval":{"@id":"gts:manualApproval","@type":"@id"},"always":{"@id":"gts:always","@type":"@id"}}],"actor":"http:\/\/example.org\/?author=1","id":"http:\/\/example.org\/?post_type=ap_outbox\u0026p=351","type":"Create","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"object":{"id":"https:\/\/example.com\/1","type":"Note","content":"\u003Cp\u003EThis is a note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is a note\u003C\/p\u003E"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html"}}';
+		$note2_json = '{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive","dcterms":"http:\/\/purl.org\/dc\/terms\/","gts":"https:\/\/gotosocial.org\/ns#","schema":"http:\/\/schema.org\/","exifData":"schema:exifData","PropertyValue":"schema:PropertyValue","interactionPolicy":{"@id":"gts:interactionPolicy","@type":"@id"},"canQuote":{"@id":"gts:canQuote","@type":"@id"},"canReply":{"@id":"gts:canReply","@type":"@id"},"canLike":{"@id":"gts:canLike","@type":"@id"},"canAnnounce":{"@id":"gts:canAnnounce","@type":"@id"},"automaticApproval":{"@id":"gts:automaticApproval","@type":"@id"},"manualApproval":{"@id":"gts:manualApproval","@type":"@id"},"always":{"@id":"gts:always","@type":"@id"}}],"actor":"http:\/\/example.org\/?author=0","id":"http:\/\/example.org\/?post_type=ap_outbox\u0026p=352","type":"Create","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"object":{"id":"https:\/\/example.com\/2","type":"Note","content":"\u003Cp\u003EThis is another note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is another note\u003C\/p\u003E"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html"}}';
 		$event_json = '{"@context":["https:\/\/schema.org\/","https:\/\/www.w3.org\/ns\/activitystreams",{"pt":"https:\/\/joinpeertube.org\/ns#","mz":"https:\/\/joinmobilizon.org\/ns#","status":"http:\/\/www.w3.org\/2002\/12\/cal\/ical#status","commentsEnabled":"pt:commentsEnabled","isOnline":"mz:isOnline","timezone":"mz:timezone","participantCount":"mz:participantCount","anonymousParticipationEnabled":"mz:anonymousParticipationEnabled","joinMode":{"@id":"mz:joinMode","@type":"mz:joinModeType"},"externalParticipationUrl":{"@id":"mz:externalParticipationUrl","@type":"schema:URL"},"repliesModerationOption":{"@id":"mz:repliesModerationOption","@type":"@vocab"},"contacts":{"@id":"mz:contacts","@type":"@id"}}],"actor":"http:\/\/example.org\/?author=1","id":"http:\/\/example.org\/?post_type=ap_outbox\u0026p=353","type":"Create","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"object":{"id":"https:\/\/example.com\/3","type":"Event","content":"\u003Cp\u003EYou should not miss this Event!\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EYou should not miss this Event!\u003C\/p\u003E"},"name":"WP Test Event","nameMap":{"en":"WP Test Event"},"endTime":"2030-02-29T17:00:00+01:00","location":[{"id":"https:\/\/example.com\/place\/1","type":"Place","attributedTo":"https:\/\/wp-test.event-federation.eu\/@test","name":"Fediverse Place","address":{"type":"PostalAddress","addressCountry":"FediCountry","addressLocality":"FediTown","postalCode":"1337","streetAddress":"FediStreet"}},{"type":"VirtualLocation","url":"https:\/\/example.com\/VirtualMeetingRoom"}],"startTime":"2030-02-29T16:00:00+01:00","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html","tag":[],"timezone":"Europe\/Vienna","category":"MOVEMENTS_POLITICS","joinMode":"external"}}';
 		return array(
 			array(
@@ -211,11 +211,11 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
-	 * Test invalidating existing outbox items.
+	 * Test that superseded outbox items are deleted.
 	 *
-	 * @covers ::invalidate_existing_items
+	 * @covers ::delete_superseded_items
 	 */
-	public function test_invalidate_existing_items() {
+	public function test_delete_superseded_items() {
 		$object        = $this->get_dummy_activity_object();
 		$activity_type = 'Create';
 
@@ -228,42 +228,42 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$second_id = \Activitypub\add_to_outbox( $object, $activity_type, 1 );
 		$this->assertNotFalse( $second_id );
 
-		// First item should now be published (invalidated).
-		$this->assertEquals( 'publish', \get_post_status( $first_id ) );
+		// First item should be deleted (superseded).
+		$this->assertFalse( \get_post_status( $first_id ) );
 		// New item should still be pending.
 		$this->assertEquals( 'pending', \get_post_status( $second_id ) );
 	}
 
 	/**
-	 * Test that only items with matching object_id and activity_type are invalidated.
+	 * Test that only items with matching object_id and activity_type are deleted.
 	 *
-	 * @covers ::invalidate_existing_items
+	 * @covers ::delete_superseded_items
 	 */
-	public function test_selective_invalidation() {
+	public function test_selective_superseding() {
 		$object1 = $this->get_dummy_activity_object();
 		$object2 = $this->get_dummy_activity_object();
 		$object2->set_id( 'https://example.com/different-object' );
 
 		// Create items with different combinations.
-		$item1 = \Activitypub\add_to_outbox( $object1, 'Create', 1 ); // Should be invalidated.
+		$item1 = \Activitypub\add_to_outbox( $object1, 'Create', 1 ); // Should be deleted.
 		$item2 = \Activitypub\add_to_outbox( $object2, 'Create', 1 ); // Should stay pending (different object).
 		$item3 = \Activitypub\add_to_outbox( $object1, 'Update', 1 ); // Should stay pending (different activity).
 
-		// Add new item that should trigger invalidation of item1.
+		// Add new item that should trigger deletion of item1.
 		$new_item = \Activitypub\add_to_outbox( $object1, 'Create', 1 );
 
-		$this->assertEquals( 'publish', \get_post_status( $item1 ) );
+		$this->assertFalse( \get_post_status( $item1 ) );
 		$this->assertEquals( 'pending', \get_post_status( $item2 ) );
 		$this->assertEquals( 'pending', \get_post_status( $item3 ) );
 		$this->assertEquals( 'pending', \get_post_status( $new_item ) );
 	}
 
 	/**
-	 * Test that Delete activities invalidate all existing items for the object.
+	 * Test that Delete activities delete all pending items for the object.
 	 *
-	 * @covers ::invalidate_existing_items
+	 * @covers ::delete_superseded_items
 	 */
-	public function test_delete_invalidates_all_activities() {
+	public function test_delete_supersedes_all_activities() {
 		$object = $this->get_dummy_activity_object();
 
 		// Create items with different activity types.
@@ -278,10 +278,10 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// Add Delete activity.
 		$delete_id = \Activitypub\add_to_outbox( $object, 'Delete', 1 );
 
-		// All previous activities should be published (invalidated).
-		$this->assertEquals( 'publish', \get_post_status( $create_id ) );
-		$this->assertEquals( 'publish', \get_post_status( $update_id ) );
-		$this->assertEquals( 'publish', \get_post_status( $like_id ) );
+		// All previous activities should be deleted (superseded).
+		$this->assertFalse( \get_post_status( $create_id ) );
+		$this->assertFalse( \get_post_status( $update_id ) );
+		$this->assertFalse( \get_post_status( $like_id ) );
 		// Delete activity should still be pending.
 		$this->assertEquals( 'pending', \get_post_status( $delete_id ) );
 	}
@@ -399,12 +399,15 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		$id = \Activitypub\add_to_outbox( $data, $type, self::$user_id );
 
+		// Capture permalink before undo — Delete supersedes the original item.
+		$permalink = \get_permalink( $id );
+
 		$undo_id  = Outbox::undo( $id );
 		$activity = Outbox::get_activity( $undo_id );
 
 		// Only ID for Deletes.
 		if ( 'Delete' === $expected ) {
-			$this->assertSame( \get_permalink( $id ), $activity->get_object() );
+			$this->assertSame( $permalink, $activity->get_object() );
 		} else {
 			$outbox_activity = \json_decode( \get_post( $undo_id )->post_content, true );
 			$this->assertEquals( $outbox_activity['object'], $activity->get_object()->to_array( false ) );

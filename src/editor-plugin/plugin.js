@@ -14,7 +14,7 @@ import { useSelect, select } from '@wordpress/data';
 import { useEntityProp } from '@wordpress/core-data';
 import { useEffect } from '@wordpress/element';
 import { addQueryArgs } from '@wordpress/url';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 import { SVG, Path } from '@wordpress/primitives';
 import { getDefaultVisibility } from './utils';
 
@@ -30,6 +30,9 @@ const EditorPlugin = () => {
 
 	// Get the computed default visibility.
 	const defaultVisibility = getDefaultVisibility( meta, postDate );
+
+	// Get the default quote policy from settings.
+	const defaultQuotePolicy = window._activityPubOptions?.defaultQuotePolicy || 'anyone';
 
 	// Sync computed default to meta when it differs from stored value.
 	// This ensures the default is persisted even if user doesn't change it.
@@ -97,6 +100,30 @@ const EditorPlugin = () => {
 	 * @todo Remove when 6.5 is no longer supported.
 	 */
 	const SettingsPanel = PluginDocumentSettingPanel || DocumentSettingPanel;
+
+	/**
+	 * Get the help text for the quote policy selector, including the site default.
+	 *
+	 * @return {string} The help text with site default.
+	 */
+	const getQuotePolicyHelp = () => {
+		const policyLabels = {
+			anyone: __( 'Anyone', 'activitypub' ),
+			followers: __( 'Followers only', 'activitypub' ),
+			me: __( 'Just me', 'activitypub' ),
+		};
+		const defaultLabel = policyLabels[ defaultQuotePolicy ] || policyLabels.anyone;
+
+		return (
+			__( 'Quoting allows others to cite your post while adding their own commentary.', 'activitypub' ) +
+			' ' +
+			sprintf(
+				/* translators: %s: The site default quote policy (e.g., "Anyone", "Followers only", "Just me") */
+				__( 'Site default: %s', 'activitypub' ),
+				defaultLabel
+			)
+		);
+	};
 
 	return (
 		<SettingsPanel
@@ -177,11 +204,8 @@ const EditorPlugin = () => {
 
 			<SelectControl
 				label={ __( 'Who can quote this post?', 'activitypub' ) }
-				help={ __(
-					'Quoting allows others to cite your post while adding their own commentary.',
-					'activitypub'
-				) }
-				value={ meta?.activitypub_interaction_policy_quote }
+				help={ getQuotePolicyHelp() }
+				value={ meta?.activitypub_interaction_policy_quote || defaultQuotePolicy }
 				options={ [
 					{ label: __( 'Anyone', 'activitypub' ), value: 'anyone' },
 					{ label: __( 'Followers only', 'activitypub' ), value: 'followers' },

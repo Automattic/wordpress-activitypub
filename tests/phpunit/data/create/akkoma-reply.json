@@ -1,0 +1,85 @@
+{
+	"@context": [
+		"https://www.w3.org/ns/activitystreams",
+		"https://akkoma.example.com/schemas/litepub-0.1.jsonld",
+		{
+			"@language": "und"
+		}
+	],
+	"id": "https://akkoma.example.com/activities/create/2ec68a36-b298-488d-9f99-25b21c336a0f",
+	"type": "Create",
+	"actor": "https://akkoma.example.com/users/testuser",
+	"to": [ "https://www.w3.org/ns/activitystreams#Public" ],
+	"cc": [ "https://akkoma.example.com/users/testuser/followers" ],
+	"object": {
+		"actor": "https://akkoma.example.com/users/testuser",
+		"attachment": [],
+		"attributedTo": "https://akkoma.example.com/users/testuser",
+		"cc": [ "https://akkoma.example.com/users/testuser/followers" ],
+		"content": "@<a href=\"https://example.com/@someone\" rel=\"ugc\">someone@example.com</a> Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+		"contentMap": {
+			"en": "@<a href=\"https://example.com/@someone\" rel=\"ugc\">someone@example.com</a> Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+		},
+		"context": "https://example.com/context/12345",
+		"conversation": "https://example.com/context/12345",
+		"formerRepresentations": {
+			"orderedItems": [
+				{
+					"actor": "https://akkoma.example.com/users/testuser",
+					"attachment": [],
+					"attributedTo": "https://akkoma.example.com/users/testuser",
+					"cc": [ "https://akkoma.example.com/users/testuser/followers" ],
+					"content": "@<a href=\"https://example.com/@someone\" rel=\"ugc\">someone@example.com</a> Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+					"contentMap": {
+						"en": "@<a href=\"https://example.com/@someone\" rel=\"ugc\">someone@example.com</a> Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+					},
+					"context": "https://example.com/context/12345",
+					"conversation": "https://example.com/context/12345",
+					"inReplyTo": "{{LOCAL_POST_URL}}",
+					"published": "2026-02-05T16:00:07.036477Z",
+					"sensitive": true,
+					"source": {
+						"content": "@someone@example.com Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+						"mediaType": "text/plain"
+					},
+					"summary": "",
+					"tag": [
+						{
+							"href": "https://example.com/?author=0",
+							"name": "@someone@example.com",
+							"type": "Mention"
+						}
+					],
+					"to": [ "https://example.com/?author=0", "https://www.w3.org/ns/activitystreams#Public" ],
+					"type": "Note"
+				}
+			],
+			"totalItems": 1,
+			"type": "OrderedCollection"
+		},
+		"id": "https://akkoma.example.com/objects/2ec68a36-b298-488d-9f99-25b21c336a0f",
+		"inReplyTo": "{{LOCAL_POST_URL}}",
+		"published": "2026-02-05T16:00:07.036477Z",
+		"replies": {
+			"items": [ "https://akkoma.example.com/objects/495613a4-084a-44c4-a234-f5498e43a78b" ],
+			"type": "Collection"
+		},
+		"repliesCount": 1,
+		"sensitive": true,
+		"source": {
+			"content": "@someone@example.com Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+			"mediaType": "text/plain"
+		},
+		"summary": "",
+		"tag": [
+			{
+				"href": "https://example.com/?author=0",
+				"name": "@someone@example.com",
+				"type": "Mention"
+			}
+		],
+		"to": [ "https://example.com/?author=0", "https://www.w3.org/ns/activitystreams#Public" ],
+		"type": "Note",
+		"updated": "2026-02-05T16:00:25.855603Z"
+	}
+}

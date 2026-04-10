@@ -64,6 +64,8 @@ use Activitypub\Activity\Extended_Object\Place;
  * @method string                  get_type()               Gets the type of the object.
  * @method string|null             get_updated()            Gets the date and time the object was updated in ISO 8601 format.
  * @method string|null             get_url()                Gets the URL of the object.
+ * @method string|null             get_former_type()        Gets the former type of a Tombstone object.
+ * @method string|null             get_deleted()            Gets the date and time the object was deleted in ISO 8601 format.
  *
  * @method string|string[] add_cc( string|array $cc ) Adds one or more entities to the secondary audience of the object.
  * @method string|string[] add_to( string|array $to ) Adds one or more entities to the primary audience of the object.
@@ -109,6 +111,8 @@ use Activitypub\Activity\Extended_Object\Place;
  * @method Base_Object set_type( string $type )                        Sets the type of the object.
  * @method Base_Object set_updated( string $updated )                  Sets the date and time the object was updated in ISO 8601 format.
  * @method Base_Object set_url( string $url )                          Sets the URL of the object.
+ * @method Base_Object set_former_type( string $former_type )          Sets the former type of a Tombstone object.
+ * @method Base_Object set_deleted( string $deleted )                  Sets the date and time the object was deleted in ISO 8601 format.
  */
 class Base_Object extends Generic_Object {
 	/**
@@ -123,6 +127,9 @@ class Base_Object extends Generic_Object {
 			'sensitive'         => 'as:sensitive',
 			'dcterms'           => 'http://purl.org/dc/terms/',
 			'gts'               => 'https://gotosocial.org/ns#',
+			'schema'            => 'http://schema.org/',
+			'exifData'          => 'schema:exifData',
+			'PropertyValue'     => 'schema:PropertyValue',
 			'interactionPolicy' => array(
 				'@id'   => 'gts:interactionPolicy',
 				'@type' => '@id',
@@ -259,6 +266,25 @@ class Base_Object extends Generic_Object {
 	 * @var array|null
 	 */
 	protected $content_map;
+
+	/**
+	 * The date and time at which the object was deleted.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-deleted
+	 *
+	 * @var string|null
+	 */
+	protected $deleted;
+
+	/**
+	 * The former type of the object. Used in Tombstone objects to
+	 * indicate the type of the object prior to deletion.
+	 *
+	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-formertype
+	 *
+	 * @var string|null
+	 */
+	protected $former_type;
 
 	/**
 	 * A simple, human-readable, plain-text name for the object.

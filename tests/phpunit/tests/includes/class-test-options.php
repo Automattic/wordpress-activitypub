@@ -39,6 +39,9 @@ class Test_Options extends \WP_UnitTestCase {
 		\delete_option( 'activitypub_following_ui' );
 		\delete_option( 'activitypub_create_posts' );
 
+		// Clean up quote policy option.
+		\delete_option( 'activitypub_default_quote_policy' );
+
 		parent::tear_down();
 	}
 
@@ -188,5 +191,107 @@ class Test_Options extends \WP_UnitTestCase {
 
 		// Create posts should be disabled.
 		$this->assertFalse( \get_option( 'activitypub_create_posts', false ) );
+	}
+
+	/**
+	 * Test default quote policy option has correct default value.
+	 *
+	 * @covers \Activitypub\Options::register_settings
+	 */
+	public function test_default_quote_policy_default_value() {
+		// Without setting the option, it should return the default.
+		$this->assertEquals(
+			ACTIVITYPUB_INTERACTION_POLICY_ANYONE,
+			\get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE )
+		);
+	}
+
+	/**
+	 * Test default quote policy option accepts valid values.
+	 *
+	 * @covers \Activitypub\Options::register_settings
+	 */
+	public function test_default_quote_policy_accepts_valid_values() {
+		// Test 'anyone' value.
+		\update_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
+		$this->assertEquals( ACTIVITYPUB_INTERACTION_POLICY_ANYONE, \get_option( 'activitypub_default_quote_policy' ) );
+
+		// Test 'followers' value.
+		\update_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS );
+		$this->assertEquals( ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS, \get_option( 'activitypub_default_quote_policy' ) );
+
+		// Test 'me' value.
+		\update_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ME );
+		$this->assertEquals( ACTIVITYPUB_INTERACTION_POLICY_ME, \get_option( 'activitypub_default_quote_policy' ) );
+	}
+
+	/**
+	 * Test default quote policy option sanitizes invalid values.
+	 *
+	 * @covers \Activitypub\Options::register_settings
+	 */
+	public function test_default_quote_policy_sanitizes_invalid_values() {
+		// Register settings to enable sanitize callback (admin_init/rest_api_init don't fire in tests).
+		\Activitypub\Options::register_settings();
+
+		// Test invalid value gets sanitized to default.
+		\update_option( 'activitypub_default_quote_policy', 'invalid_value' );
+		$this->assertEquals( ACTIVITYPUB_INTERACTION_POLICY_ANYONE, \get_option( 'activitypub_default_quote_policy' ) );
+
+		// Test empty value gets sanitized to default.
+		\update_option( 'activitypub_default_quote_policy', '' );
+		$this->assertEquals( ACTIVITYPUB_INTERACTION_POLICY_ANYONE, \get_option( 'activitypub_default_quote_policy' ) );
+	}
+
+	/**
+	 * Test purge days returns default when option is not set.
+	 *
+	 * @covers \Activitypub\Options::sanitize_purge_days
+	 */
+	public function test_purge_days_returns_default_when_unset() {
+		\delete_option( 'activitypub_outbox_purge_days' );
+
+		$this->assertEquals(
+			ACTIVITYPUB_OUTBOX_PURGE_DAYS,
+			\get_option( 'activitypub_outbox_purge_days', ACTIVITYPUB_OUTBOX_PURGE_DAYS )
+		);
+	}
+
+	/**
+	 * Test purge days does not allow zero.
+	 *
+	 * @covers \Activitypub\Options::sanitize_purge_days
+	 */
+	public function test_purge_days_does_not_allow_zero() {
+		Options::register_settings();
+
+		\update_option( 'activitypub_outbox_purge_days', 0 );
+		$this->assertGreaterThanOrEqual( 1, \get_option( 'activitypub_outbox_purge_days' ) );
+	}
+
+	/**
+	 * Test purge days returns default when stored value is empty string.
+	 *
+	 * @covers \Activitypub\Options::sanitize_purge_days
+	 */
+	public function test_purge_days_returns_default_for_empty_string() {
+		\update_option( 'activitypub_outbox_purge_days', '' );
+
+		$this->assertEquals(
+			ACTIVITYPUB_OUTBOX_PURGE_DAYS,
+			\get_option( 'activitypub_outbox_purge_days' )
+		);
+	}
+
+	/**
+	 * Test purge days sanitizes negative values.
+	 *
+	 * @covers \Activitypub\Options::sanitize_purge_days
+	 */
+	public function test_purge_days_sanitizes_negative() {
+		Options::register_settings();
+
+		\update_option( 'activitypub_outbox_purge_days', -5 );
+		$this->assertGreaterThanOrEqual( 1, \get_option( 'activitypub_outbox_purge_days' ) );
 	}
 }

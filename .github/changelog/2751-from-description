@@ -1,0 +1,4 @@
+Significance: patch
+Type: added
+
+Add EXIF metadata support for image attachments using Vernissage namespace.

@@ -84,7 +84,7 @@ class Test_Factory extends \WP_UnitTestCase {
 				'comment_post_ID' => self::$post_id,
 				'user_id'         => self::$user_id,
 				'comment_meta'    => array(
-					'activitypub_status' => 'pending',
+					'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_PENDING,
 				),
 			)
 		);

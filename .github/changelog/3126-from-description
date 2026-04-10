@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Add a stats block that displays annual Fediverse statistics as a card on the site and as a shareable image on the Fediverse, with automatic color and font adoption from the site's theme.

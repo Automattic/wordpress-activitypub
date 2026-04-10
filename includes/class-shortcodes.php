@@ -188,8 +188,6 @@ class Shortcodes {
 			$content = \wp_filter_content_tags( $content );
 		}
 
-		// Replace script and style elements.
-		$content = \preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $content );
 		$content = \strip_shortcodes( $content );
 		$content = Sanitize::clean_html( $content );
 		$content = Sanitize::strip_whitespace( $content );

@@ -288,4 +288,227 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$this->assertEquals( $activitypub_id, $activity['object'] );
 		$this->assertEquals( $actor->get_featured(), $activity['target'] );
 	}
+
+	/**
+	 * Test that changing visibility to local creates a Delete activity for federated posts.
+	 *
+	 * @covers ::triage
+	 */
+	public function test_visibility_change_to_local_creates_delete_activity() {
+		// Create a post (will be federated).
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		// Verify the post was federated (Create activity exists).
+		$create_item = $this->get_latest_outbox_item( $activitypub_id );
+		$this->assertNotNull( $create_item );
+		$this->assertSame( 'Create', \get_post_meta( $create_item->ID, '_activitypub_activity_type', true ) );
+
+		// Simulate the post being marked as federated (normally done by dispatcher).
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		// Change visibility to local and trigger triage via post update.
+		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+		\wp_update_post( array( 'ID' => $post_id ) );
+
+		// Query for the Delete activity.
+		$outbox_items = \get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'pending',
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitypub_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Delete',
+					),
+				),
+			)
+		);
+
+		$this->assertCount( 1, $outbox_items, 'Should create a Delete activity when visibility changes to local' );
+	}
+
+	/**
+	 * Test that changing visibility to private creates a Delete activity for federated posts.
+	 *
+	 * @covers ::triage
+	 */
+	public function test_visibility_change_to_private_creates_delete_activity() {
+		// Create a post (will be federated).
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		// Simulate the post being marked as federated.
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		// Change visibility to private and trigger triage via post update.
+		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
+		\wp_update_post( array( 'ID' => $post_id ) );
+
+		// Query for the Delete activity.
+		$outbox_items = \get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'pending',
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitypub_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Delete',
+					),
+				),
+			)
+		);
+
+		$this->assertCount( 1, $outbox_items, 'Should create a Delete activity when visibility changes to private' );
+	}
+
+	/**
+	 * Test that changing visibility does not create Delete activity for unfederated posts.
+	 *
+	 * @covers ::triage
+	 */
+	public function test_visibility_change_no_delete_for_unfederated_post() {
+		// Create a post without federating it.
+		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+		\add_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33, 4 );
+
+		// Ensure the post has no federated status.
+		\delete_post_meta( $post_id, 'activitypub_status' );
+
+		// Change visibility to local and trigger triage via post update.
+		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+		\wp_update_post( array( 'ID' => $post_id ) );
+
+		// Query for any Delete activity.
+		$outbox_items = \get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'pending',
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitypub_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Delete',
+					),
+				),
+			)
+		);
+
+		$this->assertEmpty( $outbox_items, 'Should not create a Delete activity for unfederated posts' );
+	}
+
+	/**
+	 * Test that changing visibility to public does not create Delete activity.
+	 *
+	 * @covers ::triage
+	 */
+	public function test_visibility_change_to_public_no_delete_activity() {
+		// Create a post (will be federated).
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		// Simulate the post being marked as federated.
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		// Change visibility to public (empty string).
+		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
+
+		// Query for any Delete activity.
+		$outbox_items = \get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'pending',
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitypub_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Delete',
+					),
+				),
+			)
+		);
+
+		$this->assertEmpty( $outbox_items, 'Should not create a Delete activity when visibility changes to public' );
+	}
+
+	/**
+	 * Test that re-saving a soft-deleted post does not create a new outbox activity.
+	 *
+	 * When a post has already been soft-deleted (state=deleted, visibility=local/private),
+	 * a subsequent wp_update_post (e.g. from a plugin re-saving) should not
+	 * create a spurious Update activity that undoes the tombstone.
+	 *
+	 * @covers ::triage
+	 */
+	public function test_resave_soft_deleted_post_no_new_activity() {
+		// Create a post (will be federated).
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		// Verify the post was federated (Create activity exists).
+		$create_item = $this->get_latest_outbox_item( $activitypub_id );
+		$this->assertNotNull( $create_item );
+		$this->assertSame( 'Create', \get_post_meta( $create_item->ID, '_activitypub_activity_type', true ) );
+
+		// Simulate the post being soft-deleted: state=deleted, visibility=local.
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_DELETED );
+		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+
+		// Count existing outbox items before re-save.
+		$before_count = count(
+			\get_posts(
+				array(
+					'post_type'   => 'ap_outbox',
+					'post_status' => 'pending',
+					'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						array(
+							'key'   => '_activitypub_object_id',
+							'value' => $activitypub_id,
+						),
+					),
+					'numberposts' => -1,
+				)
+			)
+		);
+
+		$this->assertGreaterThan( 0, $before_count, 'Sanity check: post should have at least one outbox item before re-save.' );
+
+		// Re-save the post (simulates a plugin re-saving during save_post).
+		\wp_update_post( array( 'ID' => $post_id ) );
+
+		// Count outbox items after re-save.
+		$after_count = count(
+			\get_posts(
+				array(
+					'post_type'   => 'ap_outbox',
+					'post_status' => 'pending',
+					'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						array(
+							'key'   => '_activitypub_object_id',
+							'value' => $activitypub_id,
+						),
+					),
+					'numberposts' => -1,
+				)
+			)
+		);
+
+		$this->assertSame( $before_count, $after_count, 'Re-saving a soft-deleted post should not create any new outbox activities.' );
+	}
 }

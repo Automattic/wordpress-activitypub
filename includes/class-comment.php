@@ -8,7 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Posts;
+use Activitypub\Collection\Remote_Posts;
 
 /**
  * ActivityPub Comment Class.
@@ -33,9 +33,41 @@ class Comment {
 		\add_filter( 'get_avatar_comment_types', array( static::class, 'get_avatar_comment_types' ), 99 );
 		\add_action( 'update_option_activitypub_allow_likes', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_action( 'update_option_activitypub_allow_reposts', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
-		\add_filter( 'pre_wp_update_comment_count_now', array( static::class, 'pre_wp_update_comment_count_now' ), 10, 3 );
+		\add_filter( 'pre_wp_update_comment_count_now', array( static::class, 'pre_wp_update_comment_count_now' ), 5, 3 );
 		\add_filter( 'get_comment_author', array( static::class, 'render_emoji' ), 10, 2 );
 		\add_filter( 'comment_author', array( static::class, 'unescape_emoji' ), 20 ); // After esc_html().
+		\add_filter( 'rest_comment_query', array( static::class, 'rest_comment_query' ) );
+		\add_filter( 'comment_text', array( static::class, 'render_blocks' ), 5 ); // Before other filters.
+	}
+
+	/**
+	 * Render blocks in comment content.
+	 *
+	 * Comments don't automatically parse blocks like posts do.
+	 * This filter applies do_blocks() to render activitypub/emoji
+	 * and activitypub/image blocks in comment content.
+	 *
+	 * @param string $content The comment content.
+	 *
+	 * @return string The content with blocks rendered.
+	 */
+	public static function render_blocks( $content ) {
+		if ( empty( $content ) || ! \str_contains( $content, '<!-- wp:activitypub/' ) ) {
+			return $content;
+		}
+
+		$blocks = \parse_blocks( $content );
+		$output = '';
+
+		foreach ( $blocks as $block ) {
+			if ( ! empty( $block['blockName'] ) && \str_starts_with( $block['blockName'], 'activitypub/' ) ) {
+				$output .= \render_block( $block );
+			} else {
+				$output .= \serialize_block( $block );
+			}
+		}
+
+		return $output;
 	}
 
 	/**
@@ -736,14 +768,14 @@ class Comment {
 			return;
 		}
 
-		// Do not exclude likes and reposts on REST requests.
+		// Do not exclude likes and reposts on REST requests (handled by rest_comment_query).
 		if ( \wp_is_serving_rest_request() ) {
 			return;
 		}
 
-		// Do only exclude interactions of `ap_post` post type.
+		// Filter post types for admin requests.
 		if ( \is_admin() ) {
-			$query->query_vars['post_type'] = array_diff( \get_post_types_by_support( 'comments' ), self::hide_for() );
+			$query->query_vars['post_type'] = self::get_allowed_comment_post_types();
 			return;
 		}
 
@@ -752,13 +784,55 @@ class Comment {
 			return;
 		}
 
-		// Do not exclude likes and reposts if the query is for comments.
+		// Do not exclude likes and reposts if the query is for specific types.
 		if ( ! empty( $query->query_vars['type__in'] ) || ! empty( $query->query_vars['type'] ) ) {
+			return;
+		}
+
+		// Do not exclude likes and reposts if the query is already excluding other comment types.
+		if ( ! empty( $query->query_vars['type__not_in'] ) ) {
 			return;
 		}
 
 		// Exclude likes and reposts by the ActivityPub plugin.
 		$query->query_vars['type__not_in'] = self::get_comment_type_slugs();
+	}
+
+	/**
+	 * Filters comments in REST API requests.
+	 *
+	 * Excludes comments on ActivityPub post types and ActivityPub comment
+	 * types (likes, reposts) from the REST API.
+	 *
+	 * @param array $prepared_args Array of arguments for WP_Comment_Query.
+	 *
+	 * @return array Modified array of arguments.
+	 */
+	public static function rest_comment_query( $prepared_args ) {
+		// Exclude comments on ActivityPub post types.
+		$prepared_args['post_type'] = self::get_allowed_comment_post_types();
+
+		// Exclude ActivityPub comment types (likes, reposts) unless explicitly requested.
+		if ( empty( $prepared_args['type'] ) && empty( $prepared_args['type__in'] ) ) {
+			$prepared_args['type__not_in'] = self::get_comment_type_slugs();
+		}
+
+		return $prepared_args;
+	}
+
+	/**
+	 * Returns post types that should show comments (excluding hidden post types).
+	 *
+	 * @return array Array of post type names.
+	 */
+	private static function get_allowed_comment_post_types() {
+		$hide_for = self::hide_for();
+
+		if ( empty( $hide_for ) ) {
+			return \get_post_types_by_support( 'comments' );
+		}
+
+		return \array_diff( \get_post_types_by_support( 'comments' ), $hide_for );
 	}
 
 	/**
@@ -787,6 +861,17 @@ class Comment {
 			return 1;
 		}
 
+		/*
+		 * Always auto-approve comments on remote posts (ap_post) since
+		 * they are not visible in the WP admin comment moderation screen.
+		 */
+		$post_id = $comment_data['comment_post_ID'];
+		$post    = \get_post( $post_id );
+
+		if ( $post && \in_array( $post->post_type, self::hide_for(), true ) ) {
+			return 1;
+		}
+
 		if ( '1' !== \get_option( 'comment_previously_approved' ) ) {
 			return $approved;
 		}
@@ -806,13 +891,6 @@ class Comment {
 		$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author = %s AND comment_author_url = %s and comment_approved = '1' LIMIT 1", $author, $author_url ) );
 
 		if ( 1 === (int) $ok_to_comment ) {
-			return 1;
-		}
-
-		$post_id = $comment_data['comment_post_ID'];
-		$post    = \get_post( $post_id );
-
-		if ( $post && in_array( $post->post_type, self::hide_for(), true ) ) {
 			return 1;
 		}
 
@@ -847,6 +925,29 @@ class Comment {
 			$excluded_types = array_filter( self::get_comment_type_slugs(), array( self::class, 'is_comment_type_enabled' ) );
 
 			if ( ! empty( $excluded_types ) ) {
+				/*
+				 * Include 'note' type when Gutenberg's filter is registered, so a
+				 * single query excludes both ActivityPub and Gutenberg types.
+				 */
+				if ( \has_filter( 'pre_wp_update_comment_count_now', 'gutenberg_exclude_notes_from_comment_count' ) ) {
+					$excluded_types[] = 'note';
+				}
+
+				/**
+				 * Filters the comment types excluded from the comment count.
+				 *
+				 * Runs at priority 5 on `pre_wp_update_comment_count_now` so that
+				 * a single query can exclude types from multiple plugins. Other
+				 * plugins can hook here to add their own comment types.
+				 *
+				 * @since 8.0.0
+				 *
+				 * @param string[] $excluded_types The comment type slugs to exclude.
+				 * @param int      $post_id        The post ID.
+				 */
+				$excluded_types = \apply_filters( 'activitypub_excluded_comment_types', $excluded_types, $post_id );
+				$excluded_types = array_unique( array_filter( $excluded_types ) );
+
 				global $wpdb;
 
 				// phpcs:ignore WordPress.DB
@@ -876,7 +977,7 @@ class Comment {
 	 * @return string[] Array of post type names to hide comments for.
 	 */
 	public static function hide_for() {
-		$post_types = array( Posts::POST_TYPE );
+		$post_types = array( Remote_Posts::POST_TYPE );
 
 		/**
 		 * Filters the list of post types to hide comments for.

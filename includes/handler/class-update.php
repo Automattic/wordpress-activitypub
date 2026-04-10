@@ -8,10 +8,10 @@
 namespace Activitypub\Handler;
 
 use Activitypub\Collection\Interactions;
-use Activitypub\Collection\Posts;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Collection\Remote_Posts;
+use Activitypub\Http;
 
-use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\is_activity_reply;
 
 /**
@@ -95,7 +95,7 @@ class Update {
 				$result = \get_comment( $comment_data['comment_ID'] );
 			}
 		} elseif ( \get_option( 'activitypub_create_posts', false ) ) {
-			$result = Posts::update( $activity, $user_ids );
+			$result = Remote_Posts::update( $activity, $user_ids );
 
 			if ( \is_wp_error( $result ) && 'activitypub_post_not_found' === $result->get_error_code() ) {
 				$updated = false;
@@ -127,13 +127,32 @@ class Update {
 	 * @param int[]|null $user_ids The user IDs. Always null for Update activities.
 	 */
 	public static function update_actor( $activity, $user_ids ) {
-		// Update cache.
-		$actor = get_remote_metadata_by_actor( $activity['actor'], false );
+		/*
+		 * Prefer the actor data embedded in the activity object, as it contains
+		 * the fresh data sent by the remote server.
+		 */
+		$actor = $activity['object'] ?? null;
 
-		if ( ! $actor || \is_wp_error( $actor ) || ! isset( $actor['id'] ) ) {
-			$state = new \WP_Error( 'activitypub_update_failed', 'Update failed: could not fetch actor data' );
-		} else {
+		/*
+		 * The object may be a string IRI instead of an embedded object,
+		 * in which case we need to fetch the actor data remotely.
+		 * We use Http::get_remote_object() directly instead of
+		 * get_remote_metadata_by_actor() because the latter returns the
+		 * stale locally cached copy via fetch_by_uri().
+		 */
+		if ( ! \is_array( $actor ) || ! isset( $actor['id'] ) ) {
+			$object = Http::get_remote_object( $activity['actor'], false );
+
+			if ( ! \is_wp_error( $object ) && \is_array( $object ) ) {
+				$actor = $object;
+			}
+		}
+
+		if ( \is_array( $actor ) && isset( $actor['id'] ) ) {
 			$state = Remote_Actors::upsert( $actor );
+		} else {
+			$state = new \WP_Error( 'activitypub_update_failed', 'Update failed: missing or invalid actor object in Update activity' );
+			$actor = array();
 		}
 
 		/**

@@ -294,6 +294,17 @@ class User extends Actor {
 	}
 
 	/**
+	 * Returns the Liked API endpoint.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string The Liked endpoint.
+	 */
+	public function get_liked() {
+		return get_rest_url_by_path( sprintf( 'actors/%d/liked', $this->get__id() ) );
+	}
+
+	/**
 	 * Returns the Featured-API-Endpoint.
 	 *
 	 * @return string The Featured-Endpoint.
@@ -318,7 +329,11 @@ class User extends Actor {
 	 */
 	public function get_endpoints() {
 		return array(
-			'sharedInbox' => get_rest_url_by_path( 'inbox' ),
+			'sharedInbox'                => get_rest_url_by_path( 'inbox' ),
+			'oauthAuthorizationEndpoint' => get_rest_url_by_path( 'oauth/authorize' ),
+			'oauthTokenEndpoint'         => get_rest_url_by_path( 'oauth/token' ),
+			'proxyUrl'                   => get_rest_url_by_path( 'proxy' ),
+			'proxyEventStream'           => get_rest_url_by_path( 'proxy/stream' ),
 		);
 	}
 

@@ -243,4 +243,139 @@ class Test_Functions extends \WP_UnitTestCase {
 		$result = \Activitypub\esc_hashtag( 'test&#039;s tag' );
 		$this->assertSame( '#testSTag', $result );
 	}
+
+	/**
+	 * Test get_object_id with a WP_Post.
+	 *
+	 * @covers \Activitypub\get_object_id
+	 */
+	public function test_get_object_id_with_post() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => 1,
+				'post_status' => 'publish',
+			)
+		);
+
+		$post   = \get_post( $post_id );
+		$result = \Activitypub\get_object_id( $post );
+
+		$this->assertIsString( $result );
+		$this->assertNotEmpty( $result );
+		$this->assertSame( \Activitypub\get_post_id( $post_id ), $result );
+
+		\wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Test get_object_id with a WP_Comment.
+	 *
+	 * @covers \Activitypub\get_object_id
+	 */
+	public function test_get_object_id_with_comment() {
+		$post_id    = self::factory()->post->create();
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+			)
+		);
+
+		$comment = \get_comment( $comment_id );
+		$result  = \Activitypub\get_object_id( $comment );
+
+		$this->assertIsString( $result );
+		$this->assertNotEmpty( $result );
+		$this->assertSame( \Activitypub\get_comment_id( $comment ), $result );
+
+		\wp_delete_comment( $comment_id, true );
+		\wp_delete_post( $post_id, true );
+	}
+
+	/**
+	 * Test get_object_id with unsupported type returns null.
+	 *
+	 * @covers \Activitypub\get_object_id
+	 */
+	public function test_get_object_id_with_unsupported_type() {
+		$this->assertNull( \Activitypub\get_object_id( 'string' ) );
+		$this->assertNull( \Activitypub\get_object_id( 42 ) );
+		$this->assertNull( \Activitypub\get_object_id( null ) );
+		$this->assertNull( \Activitypub\get_object_id( new \stdClass() ) );
+	}
+
+	/**
+	 * Test get_client_ip returns REMOTE_ADDR by default.
+	 *
+	 * @covers \Activitypub\get_client_ip
+	 */
+	public function test_get_client_ip_default() {
+		$_SERVER['REMOTE_ADDR'] = '192.168.1.1';
+		$this->assertSame( '192.168.1.1', \Activitypub\get_client_ip() );
+	}
+
+	/**
+	 * Test get_client_ip is filterable.
+	 *
+	 * @covers \Activitypub\get_client_ip
+	 */
+	public function test_get_client_ip_filter() {
+		$_SERVER['REMOTE_ADDR'] = '10.0.0.1';
+
+		$filter = function () {
+			return '203.0.113.50';
+		};
+
+		\add_filter( 'activitypub_client_ip', $filter );
+		$this->assertSame( '203.0.113.50', \Activitypub\get_client_ip() );
+		\remove_filter( 'activitypub_client_ip', $filter );
+	}
+
+	/**
+	 * Test get_client_ip returns unknown when REMOTE_ADDR is missing.
+	 *
+	 * @covers \Activitypub\get_client_ip
+	 */
+	public function test_get_client_ip_missing_remote_addr() {
+		unset( $_SERVER['REMOTE_ADDR'] );
+		$this->assertSame( 'unknown', \Activitypub\get_client_ip() );
+	}
+
+	/**
+	 * Data provider for seconds_to_iso8601 tests.
+	 *
+	 * @return array Test cases with input seconds and expected ISO 8601 duration.
+	 */
+	public function seconds_to_iso8601_provider() {
+		return array(
+			'zero_seconds'          => array( 0, 'PT0S' ),
+			'negative_seconds'      => array( -10, 'PT0S' ),
+			'one_second'            => array( 1, 'PT1S' ),
+			'thirty_seconds'        => array( 30, 'PT30S' ),
+			'one_minute'            => array( 60, 'PT1M' ),
+			'one_minute_30_seconds' => array( 90, 'PT1M30S' ),
+			'five_minutes'          => array( 300, 'PT5M' ),
+			'one_hour'              => array( 3600, 'PT1H' ),
+			'one_hour_30_minutes'   => array( 5400, 'PT1H30M' ),
+			'one_hour_one_second'   => array( 3601, 'PT1H1S' ),
+			'full_duration'         => array( 3661, 'PT1H1M1S' ),
+			'two_hours_15_min_30s'  => array( 8130, 'PT2H15M30S' ),
+			'podcast_length'        => array( 2745, 'PT45M45S' ),
+			'long_podcast'          => array( 7384, 'PT2H3M4S' ),
+			'string_input'          => array( '3600', 'PT1H' ),
+		);
+	}
+
+	/**
+	 * Test seconds_to_iso8601 function.
+	 *
+	 * @dataProvider seconds_to_iso8601_provider
+	 * @covers \Activitypub\seconds_to_iso8601
+	 *
+	 * @param int|string $seconds  The input seconds.
+	 * @param string     $expected The expected ISO 8601 duration.
+	 */
+	public function test_seconds_to_iso8601( $seconds, $expected ) {
+		$result = \Activitypub\seconds_to_iso8601( $seconds );
+		$this->assertSame( $expected, $result );
+	}
 }

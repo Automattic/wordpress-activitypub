@@ -1,14 +1,16 @@
+@use "@wordpress/base-styles/colors";
+
 .actor-switcher {
 	display: flex;
 	align-items: center;
 	text-decoration: none;
-	color: var(--wpds-color-fg-inverted-secondary, #e0e0e0);
+	color: colors.$gray-200;
 	transition: color 0.2s ease;
 	min-width: 0; // Allow text truncation
 	padding-left: 2px;
 
 	&:hover:not(:disabled) {
-		color: var(--wpds-color-fg-inverted-primary, #fff);
+		color: colors.$white;
 	}
 
 	&__avatar {

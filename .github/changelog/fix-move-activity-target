@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix account migration (Move) not working when moving back to an external account.

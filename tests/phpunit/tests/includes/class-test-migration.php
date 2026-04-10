@@ -50,7 +50,7 @@ class Test_Migration extends \WP_UnitTestCase {
 			3,
 			array(
 				'post_author' => 1,
-				'meta_input'  => array( 'activitypub_status' => 'federated' ),
+				'meta_input'  => array( 'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_FEDERATED ),
 			)
 		);
 
@@ -61,7 +61,7 @@ class Test_Migration extends \WP_UnitTestCase {
 				'post_status'  => 'publish',
 				'post_type'    => 'post',
 				'post_date'    => '2020-01-01 00:00:00',
-				'meta_input'   => array( 'activitypub_status' => 'federated' ),
+				'meta_input'   => array( 'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_FEDERATED ),
 			)
 		);
 		self::factory()->post->update_object( $modified_post_id, array( 'post_content' => 'Test post 2 updated' ) );
@@ -96,7 +96,18 @@ class Test_Migration extends \WP_UnitTestCase {
 				'comment_approved' => '1',
 			)
 		);
-		\add_comment_meta( self::$fixtures['comment'], 'activitypub_status', 'federated' );
+		\add_comment_meta( self::$fixtures['comment'], 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+	}
+
+	/**
+	 * Restore hooks removed in set_up_before_class.
+	 */
+	public static function tear_down_after_class() {
+		\add_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ), 33, 4 );
+		\add_action( 'transition_comment_status', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity' ), 20, 3 );
+		\add_action( 'wp_insert_comment', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity_on_insert' ), 10, 2 );
+
+		parent::tear_down_after_class();
 	}
 
 	/**
