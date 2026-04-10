@@ -16,7 +16,7 @@ import { UseNavigateResult } from '@tanstack/react-router';
 import { useMemo, useCallback, useState, useEffect, useRef } from '@wordpress/element';
 import { DataViews } from '@wordpress/dataviews/wp';
 import type { Field, View as DataViewsView } from '@wordpress/dataviews/wp';
-import { useView } from '@wordpress/views';
+import { useView } from '../../hooks/use-view';
 import { addQueryArgs, getQueryArgs } from '@wordpress/url';
 import { useSelect } from '@wordpress/data';
 

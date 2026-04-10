@@ -8,7 +8,7 @@ import type { UseNavigateResult } from '@tanstack/react-router';
  */
 import type { Filter } from '@wordpress/dataviews/wp';
 import { useMemo, useCallback } from '@wordpress/element';
-import { useView } from '@wordpress/views';
+import { useView } from './use-view';
 
 /**
  * Internal dependencies

@@ -15,7 +15,7 @@ import type { ReactNode } from 'react';
 import { useMemo } from '@wordpress/element';
 import { Action, DataViews } from '@wordpress/dataviews/wp';
 import type { Field, View as DataViewsView } from '@wordpress/dataviews/wp';
-import { useView } from '@wordpress/views';
+import { useView } from '../../hooks/use-view';
 import { __ } from '@wordpress/i18n';
 import { useSelect } from '@wordpress/data';
 

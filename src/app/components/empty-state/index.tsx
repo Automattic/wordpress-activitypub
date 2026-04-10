@@ -16,7 +16,7 @@ import { __ } from '@wordpress/i18n';
 import { createInterpolateElement } from '@wordpress/element';
 import { addQueryArgs } from '@wordpress/url';
 import { useSelect } from '@wordpress/data';
-import { useView } from '@wordpress/views';
+import { useView } from '../../hooks/use-view';
 
 /**
  * Internal dependencies

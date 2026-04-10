@@ -12,9 +12,8 @@ import type { RouteConfig } from '../../router/types';
 
 export const route: RouteConfig = {
 	/**
-	 * Always show the inspector panel.
-	 * When a post is selected (postId in search params), the post detail view is shown.
-	 * When no post is selected, the inspector sidebar with widgets is displayed.
+	 * Always show the inspector panel. When a post is selected it shows
+	 * post details; otherwise it renders the persistent sidebar widgets.
 	 */
 	inspector: (): boolean => true,
 };

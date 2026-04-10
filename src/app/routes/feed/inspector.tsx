@@ -80,7 +80,7 @@ export default function FeedInspector(): ReactNode {
 	// Use the shared tag filter hook - must be called before early return
 	const { selectedTagId, updateTagFilter } = useTagFilter();
 
-	// Show inspector sidebar when no post is selected
+	// Show the persistent sidebar when no post is selected.
 	if ( ! id ) {
 		return <InspectorSidebar />;
 	}

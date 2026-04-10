@@ -5,7 +5,7 @@
 /**
  * WordPress dependencies
  */
-import { useView } from '@wordpress/views';
+import { useView } from '../../hooks/use-view';
 
 // Using ReturnType to get the View type from useView to avoid version conflicts
 // between @wordpress/views and @wordpress/dataviews

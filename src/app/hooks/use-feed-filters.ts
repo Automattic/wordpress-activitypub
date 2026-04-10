@@ -2,7 +2,7 @@
  * WordPress dependencies
  */
 import { useMemo, useCallback } from '@wordpress/element';
-import { useView } from '@wordpress/views';
+import { useView } from './use-view';
 
 interface UseFeedFiltersReturn {
 	hasActiveFilters: boolean;
