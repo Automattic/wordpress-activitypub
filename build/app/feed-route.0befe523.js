@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunkwordpress_activitypub=globalThis.webpackChunkwordpress_activitypub||[]).push([[843],{4831(s,t,i){i.r(t),i.d(t,{route:()=>p});const p={inspector:()=>!0}}}]);
