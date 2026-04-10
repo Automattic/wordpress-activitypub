@@ -9,7 +9,6 @@
  */
 
 $selected_user = ! \Activitypub\is_user_type_disabled( 'blog' ) ? 'blog' : 'inherit';
-$stats_year    = (int) \gmdate( 'Y' ) - 1;
 
 /*
  * Skip if a post with the stats block was already published
@@ -21,8 +20,8 @@ $stats_year    = (int) \gmdate( 'Y' ) - 1;
  */
 $month        = (int) \gmdate( 'n' );
 $current_year = (int) \gmdate( 'Y' );
-$window_key   = 12 === $month ? $current_year : ( $current_year - 1 );
-$transient    = 'activitypub_stats_pattern_' . $window_key;
+$stats_year   = 12 === $month ? $current_year : ( $current_year - 1 );
+$transient    = 'activitypub_stats_pattern_' . $stats_year;
 $cached       = \get_transient( $transient );
 
 if ( 'hide' === $cached ) {
@@ -30,14 +29,14 @@ if ( 'hide' === $cached ) {
 }
 
 if ( false === $cached ) {
-	$after = $window_key . '-12-01';
+	$after = $stats_year . '-12-01';
 
 	global $wpdb;
 
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	$has_stats_post = $wpdb->get_var(
 		$wpdb->prepare(
-			"SELECT ID FROM {$wpdb->posts} WHERE post_type = 'post' AND post_status = 'publish' AND post_date >= %s AND post_content LIKE %s LIMIT 1",
+			"SELECT 1 FROM {$wpdb->posts} WHERE post_type = 'post' AND post_status = 'publish' AND post_date_gmt >= %s AND post_content LIKE %s LIMIT 1",
 			$after,
 			'%<!-- wp:activitypub/stats%'
 		)
