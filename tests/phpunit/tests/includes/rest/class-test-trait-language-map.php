@@ -345,6 +345,20 @@ class Test_Trait_Language_Map extends \WP_UnitTestCase {
 				null,
 				'Empty language map in base property should return null.',
 			),
+			'language_as_array'               => array(
+				array(
+					'summary'    => '<img style="max-width:100%" src="https://example.com/image.png"/>',
+					'summaryMap' => array(
+						'en' => 'English summary',
+						'de' => 'Deutsche Zusammenfassung',
+					),
+					'language'   => array( 'en', 'de' ),
+				),
+				'summary',
+				'de_DE',
+				'Deutsche Zusammenfassung',
+				'Array language property should not cause a fatal error, fall through to *Map resolution.',
+			),
 		);
 	}
 }

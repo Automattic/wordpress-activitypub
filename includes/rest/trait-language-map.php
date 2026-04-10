@@ -97,7 +97,7 @@ trait Language_Map {
 		 * If the object's language matches the site locale,
 		 * the base property is already in the right language.
 		 */
-		if ( $object_lang && \is_string( $value ) ) {
+		if ( $object_lang && \is_string( $object_lang ) && \is_string( $value ) ) {
 			if ( \strtolower( \strtok( $object_lang, '_-' ) ) === $site_lang ) {
 				return $value;
 			}
