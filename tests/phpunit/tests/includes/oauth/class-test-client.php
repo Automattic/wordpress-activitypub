@@ -232,6 +232,23 @@ class Test_Client extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test register method allows http for localhost subdomains (RFC 6761).
+	 *
+	 * @covers ::register
+	 */
+	public function test_register_allows_http_localhost_subdomain() {
+		$result = $this->create_client(
+			array(
+				'name'          => 'Localhost Subdomain Client',
+				'redirect_uris' => array( 'http://calypso.localhost:3000/callback' ),
+			)
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertArrayHasKey( 'client_id', $result );
+	}
+
+	/**
 	 * Test register method allows http for non-loopback when filter permits.
 	 *
 	 * @covers ::register
