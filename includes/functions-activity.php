@@ -212,6 +212,10 @@ function object_to_uri( $data ) {
 			$data = $data['href'];
 			break;
 
+		case 'FeaturedItem': // See https://github.com/mastodon/featured_collections/pull/1.
+			$data = object_to_uri( $data['featuredObject'] ?? null );
+			break;
+
 		default:
 			$data = $data['id'];
 			break;

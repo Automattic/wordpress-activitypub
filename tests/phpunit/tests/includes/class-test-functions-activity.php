@@ -93,6 +93,20 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 				),
 				'https://example.com',
 			),
+			array(
+				array(
+					'type'                 => 'FeaturedItem',
+					'featuredObject'       => 'https://example.com/users/alice',
+					'featureAuthorization' => 'https://example.com/users/alice/stamps/1',
+				),
+				'https://example.com/users/alice',
+			),
+			array(
+				array(
+					'type' => 'FeaturedItem',
+				),
+				null,
+			),
 		);
 	}
 
