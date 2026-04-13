@@ -41,7 +41,7 @@ If you want to move away from your WordPress blog to a Mastodon (or other Fedive
 
 ### Step 2: Initiate the move from WordPress
 
-You can trigger the move using WP-CLI:
+There is currently no admin UI for this. You can trigger the move using WP-CLI:
 
 ```bash
 wp activitypub move https://yourblog.com/author/username https://mastodon.social/users/username

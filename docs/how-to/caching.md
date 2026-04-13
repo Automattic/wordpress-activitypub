@@ -65,13 +65,7 @@ Alternatively, add `Vary: Accept` in your Apache or Nginx config so Varnish sees
 
 ### Nginx FastCGI Cache
 
-Add the `Accept` header to your cache key:
-
-```nginx
-fastcgi_cache_key "$scheme$request_method$host$request_uri$http_accept";
-```
-
-Or use a simplified variant that only distinguishes JSON from HTML:
+Use a map to distinguish JSON from HTML and add it to your cache key. Avoid using the raw `$http_accept` header directly, as browsers send many different Accept values that would fragment your cache unnecessarily:
 
 ```nginx
 map $http_accept $activitypub_suffix {
@@ -84,7 +78,7 @@ fastcgi_cache_key "$scheme$request_method$host$request_uri$activitypub_suffix";
 
 ### Cloudflare
 
-Cloudflare does not vary cache by `Accept` header on most plans. You can work around this by disabling content negotiation and using the `?activitypub` query parameter instead (see below), which gives each response type a distinct URL that Cloudflare can cache separately.
+Cloudflare does not vary cache by `Accept` header on most plans. The simplest workaround is to disable content negotiation (see below). Federation still works because Fediverse servers discover your content through the REST API endpoints and the `Link` alternate header, which point to distinct URLs that Cloudflare can cache normally.
 
 ### LiteSpeed / OpenLiteSpeed
 
