@@ -280,16 +280,26 @@ class Client {
 	 * @return array|\WP_Error Metadata array or error.
 	 */
 	private static function fetch_client_metadata( $url ) {
-		$response = \wp_safe_remote_get(
-			$url,
-			array(
-				'timeout'     => 10,
-				'headers'     => array(
-					'Accept' => 'application/cimd+json, application/json, application/ld+json, application/activity+json',
-				),
-				'redirection' => 0, // CIMDs prohibit following redirects to prevent client impersonation.
-			)
+		$args = array(
+			'timeout'     => 10,
+			'headers'     => array(
+				'Accept' => 'application/cimd+json, application/json, application/ld+json, application/activity+json',
+			),
+			'redirection' => 0, // CIMDs prohibit following redirects to prevent client impersonation.
 		);
+
+		$host = \wp_parse_url( $url, PHP_URL_HOST );
+
+		/*
+		 * Use wp_remote_get for loopback hosts (localhost, *.localhost, 127.x.x.x, ::1).
+		 * wp_safe_remote_get blocks private IPs as SSRF protection, but the OAuth spec
+		 * explicitly allows loopback clients for development (RFC 8252 Section 8.3).
+		 */
+		if ( $host && self::is_loopback( $host ) ) {
+			$response = \wp_remote_get( $url, $args );
+		} else {
+			$response = \wp_safe_remote_get( $url, $args );
+		}
 
 		if ( \is_wp_error( $response ) ) {
 			return new \WP_Error(
@@ -528,7 +538,10 @@ class Client {
 	 * @return bool True if loopback.
 	 */
 	private static function is_loopback( $host ) {
-		if ( 'localhost' === \strtolower( $host ) ) {
+		$host = \strtolower( $host );
+
+		// Match "localhost" and any subdomain of localhost (RFC 6761 Section 6.3).
+		if ( 'localhost' === $host || '.localhost' === \substr( $host, -\strlen( '.localhost' ) ) ) {
 			return true;
 		}
 
