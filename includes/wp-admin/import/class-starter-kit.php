@@ -385,7 +385,7 @@ class Starter_Kit {
 				\printf(
 					'<img src="%s" style="max-width: 500px;" alt="%s" />',
 					\esc_url( $image_url ),
-					\esc_attr( self::$starter_kit['name'] ?? '' )
+					\esc_attr( $name )
 				);
 			}
 		}
