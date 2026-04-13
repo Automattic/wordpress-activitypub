@@ -217,7 +217,15 @@ function object_to_uri( $data ) {
 			break;
 
 		default:
-			$data = $data['id'];
+			if ( isset( $data['id'] ) ) {
+				$data = $data['id'];
+			} elseif ( isset( $data['url'] ) ) {
+				$data = object_to_uri( $data['url'] );
+			} elseif ( isset( $data['href'] ) ) {
+				$data = $data['href'];
+			} else {
+				$data = null;
+			}
 			break;
 	}
 

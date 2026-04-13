@@ -107,6 +107,29 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 				),
 				null,
 			),
+			// Default fallback: object with url but no id.
+			array(
+				array(
+					'type' => 'Unknown',
+					'url'  => 'https://example.com/image.jpg',
+				),
+				'https://example.com/image.jpg',
+			),
+			// Default fallback: object with href but no id or url.
+			array(
+				array(
+					'type' => 'Unknown',
+					'href' => 'https://example.com/link',
+				),
+				'https://example.com/link',
+			),
+			// Default fallback: object with no id, url, or href.
+			array(
+				array(
+					'type' => 'Unknown',
+				),
+				null,
+			),
 		);
 	}
 
