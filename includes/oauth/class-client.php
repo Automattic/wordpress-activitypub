@@ -541,7 +541,8 @@ class Client {
 		$host = \strtolower( $host );
 
 		// Match "localhost" and any subdomain of localhost (RFC 6761 Section 6.3).
-		if ( 'localhost' === $host || '.localhost' === \substr( $host, -10 ) ) {
+		$suffix = '.localhost';
+		if ( 'localhost' === $host || $suffix === \substr( $host, -\strlen( $suffix ) ) ) {
 			return true;
 		}
 
