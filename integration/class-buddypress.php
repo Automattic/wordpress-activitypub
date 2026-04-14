@@ -16,6 +16,16 @@ class Buddypress {
 	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
+	/**
+	 * Whether the BuddyPress at-name filter was removed for the current content pass.
+	 *
+	 * @var bool
+	 */
+	private static $at_name_filter_removed = false;
+
+	/**
+	 * Initialize the class, registering WordPress hooks.
+	 */
 	public static function init() {
 		\add_filter( 'activitypub_json_author_array', array( self::class, 'add_user_metadata' ), 11, 2 );
 		\add_filter( 'render_block_activitypub/followers', array( self::class, 'disable_at_name_filter' ), 0 );
@@ -23,13 +33,16 @@ class Buddypress {
 	}
 
 	/**
-	 * Disable BuddyPress @mention linking during block rendering.
+	 * Disable BuddyPress `@mention` linking during block rendering.
 	 *
 	 * BuddyPress hooks `bp_activity_at_name_filter` into `the_content` to convert
-	 *
-	 * @username mentions into profile links. This corrupts the JSON in the
+	 * `@username` mentions into profile links. This corrupts the JSON in the
 	 * `data-wp-context` attribute of Followers/Following blocks because the handles
-	 * contain @username patterns that get replaced with HTML.
+	 * contain `@username` patterns that get replaced with HTML.
+	 *
+	 * The filter is restored after the current `the_content` pass completes so that
+	 * subsequent calls (other posts in a loop, widgets, etc.) still get BuddyPress
+	 * mention linking.
 	 *
 	 * @since unreleased
 	 *
@@ -38,9 +51,33 @@ class Buddypress {
 	 * @return string The unmodified block content.
 	 */
 	public static function disable_at_name_filter( $block_content ) {
-		\remove_filter( 'the_content', 'bp_activity_at_name_filter' );
+		if ( ! self::$at_name_filter_removed ) {
+			\remove_filter( 'the_content', 'bp_activity_at_name_filter' );
+			\add_filter( 'the_content', array( self::class, 'restore_at_name_filter' ), 999 );
+			self::$at_name_filter_removed = true;
+		}
 
 		return $block_content;
+	}
+
+	/**
+	 * Restore BuddyPress `@mention` filter after the current content pass.
+	 *
+	 * Runs at priority 999 on `the_content` to ensure it executes after all other
+	 * filters, then re-adds the BuddyPress filter for subsequent `the_content` calls.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $content The post content.
+	 *
+	 * @return string The unmodified content.
+	 */
+	public static function restore_at_name_filter( $content ) {
+		\add_filter( 'the_content', 'bp_activity_at_name_filter' );
+		\remove_filter( 'the_content', array( self::class, 'restore_at_name_filter' ), 999 );
+		self::$at_name_filter_removed = false;
+
+		return $content;
 	}
 
 	/**
