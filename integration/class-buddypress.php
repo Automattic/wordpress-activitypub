@@ -31,7 +31,8 @@ class Buddypress {
 	 * contain `@username` patterns that match BuddyPress's regex.
 	 *
 	 * Encoding `@` as `&#x40;` in the HTML attribute makes it invisible to
-	 * BuddyPress's regex while browsers and JSON parsers decode it correctly.
+	 * BuddyPress's regex. The browser decodes the HTML entity before JavaScript
+	 * reads the attribute, so the Interactivity API receives the original `@`.
 	 *
 	 * @since unreleased
 	 *
