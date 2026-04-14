@@ -25,8 +25,8 @@ Run ALL checks below in order. Use `curl` via Bash for HTTP requests. For each c
 # Check site is reachable
 curl -sI -o /dev/null -w "%{http_code}" "SITE_URL"
 
-# Check HTTPS redirect
-curl -sI -o /dev/null -w "%{http_code} -> %{redirect_url}" "http://DOMAIN"
+# Check HTTPS redirect (follow up to 10 hops, record each)
+curl -sIL --max-redirs 10 -o /dev/null -w "final_status=%{http_code} redirects=%{num_redirects} final_url=%{url_effective}" "http://DOMAIN"
 ```
 
 - Verify HTTPS is working
@@ -35,7 +35,7 @@ curl -sI -o /dev/null -w "%{http_code} -> %{redirect_url}" "http://DOMAIN"
 ### 2. NodeInfo Discovery
 
 ```bash
-curl -s "SITE_URL/.well-known/nodeinfo" | python3 -m json.tool 2>/dev/null
+curl -s "SITE_URL/.well-known/nodeinfo" | python3 -m json.tool
 ```
 
 - Verify nodeinfo is accessible and returns valid JSON
@@ -46,8 +46,9 @@ curl -s "SITE_URL/.well-known/nodeinfo" | python3 -m json.tool 2>/dev/null
 ### 3. WebFinger
 
 ```bash
-# Test the default blog actor
+# Test common blog actor identifiers (the blog identifier is configurable)
 curl -s "SITE_URL/.well-known/webfinger?resource=acct:DOMAIN@DOMAIN"
+curl -s "SITE_URL/.well-known/webfinger?resource=acct:blog@DOMAIN"
 
 # Test with a specific username if provided
 curl -s "SITE_URL/.well-known/webfinger?resource=acct:USERNAME@DOMAIN"
@@ -56,6 +57,7 @@ curl -s "SITE_URL/.well-known/webfinger?resource=acct:USERNAME@DOMAIN"
 curl -s "SITE_URL/.well-known/webfinger?resource=SITE_URL"
 ```
 
+- Try multiple blog actor identifiers: the plugin's `activitypub_blog_identifier` option defaults to the domain but can be configured to `blog` or other values. Treat individual misses as WARN, not FAIL, unless all identifiers fail.
 - Verify WebFinger returns valid JSON with `links` array
 - Check for `rel: "self"` link with `type: "application/activity+json"`
 - Extract the actor URL from the self link
@@ -68,7 +70,7 @@ For each actor found via WebFinger:
 
 ```bash
 # Fetch the actor object
-curl -s -H "Accept: application/activity+json" "ACTOR_URL" | python3 -m json.tool 2>/dev/null
+curl -s -H "Accept: application/activity+json" "ACTOR_URL" | python3 -m json.tool
 ```
 
 - Verify the actor has required properties: `id`, `type`, `inbox`, `outbox`, `preferredUsername`
@@ -77,6 +79,7 @@ curl -s -H "Accept: application/activity+json" "ACTOR_URL" | python3 -m json.too
 - Check for `endpoints.sharedInbox`
 - Verify `url` points to a working profile page
 - Check the `icon` and `image` URLs are accessible
+- **Extract URLs for subsequent checks:** save `inbox`, `outbox`, `followers`, `following`, and `endpoints.sharedInbox` from the actor JSON. If paginated collections return a `first` property, it may be a URL string or an object with an `id` field.
 
 ### 5. Author Discovery (WordPress-specific)
 
@@ -85,10 +88,10 @@ curl -s -H "Accept: application/activity+json" "ACTOR_URL" | python3 -m json.too
 curl -sI -o /dev/null -w "%{http_code}" "SITE_URL/?author=1"
 
 # Check with Accept header for ActivityPub
-curl -s -H "Accept: application/activity+json" "SITE_URL/?author=1" | python3 -m json.tool 2>/dev/null
+curl -s -H "Accept: application/activity+json" "SITE_URL/?author=1" | python3 -m json.tool
 
 # Also try the REST API users endpoint
-curl -s "SITE_URL/wp-json/activitypub/1.0/actors" | python3 -m json.tool 2>/dev/null
+curl -s "SITE_URL/wp-json/activitypub/1.0/actors" | python3 -m json.tool
 ```
 
 - Verify author pages are not blocked (some security plugins block `?author=` enumeration)
@@ -99,10 +102,10 @@ curl -s "SITE_URL/wp-json/activitypub/1.0/actors" | python3 -m json.tool 2>/dev/
 
 ```bash
 # Fetch the outbox
-curl -s -H "Accept: application/activity+json" "OUTBOX_URL" | python3 -m json.tool 2>/dev/null
+curl -s -H "Accept: application/activity+json" "OUTBOX_URL" | python3 -m json.tool
 
 # Fetch the first page if paginated
-curl -s -H "Accept: application/activity+json" "OUTBOX_FIRST_PAGE_URL" | python3 -m json.tool 2>/dev/null
+curl -s -H "Accept: application/activity+json" "OUTBOX_FIRST_PAGE_URL" | python3 -m json.tool
 ```
 
 - Verify the outbox is accessible and returns a valid OrderedCollection
@@ -115,7 +118,7 @@ curl -s -H "Accept: application/activity+json" "OUTBOX_FIRST_PAGE_URL" | python3
 ### 7. Followers Collection
 
 ```bash
-curl -s -H "Accept: application/activity+json" "FOLLOWERS_URL" | python3 -m json.tool 2>/dev/null
+curl -s -H "Accept: application/activity+json" "FOLLOWERS_URL" | python3 -m json.tool
 ```
 
 - Check `totalItems` (0 followers = nobody will receive posts)
@@ -139,7 +142,7 @@ curl -sI -o /dev/null -w "%{http_code}" -H "Accept: application/activity+json" "
 
 ```bash
 # Fetch a recent post URL with ActivityPub Accept header
-curl -s -H "Accept: application/activity+json" "POST_URL" | python3 -m json.tool 2>/dev/null
+curl -s -H "Accept: application/activity+json" "POST_URL" | python3 -m json.tool
 
 # Compare with HTML response
 curl -sI -o /dev/null -w "%{http_code}" "POST_URL"
@@ -218,13 +221,13 @@ curl -s "https://mas.to/.well-known/webfinger?resource=acct:USER@DOMAIN"
 
 ## Guidelines
 
-- Always run ALL checks, even if an early check fails. A complete picture helps diagnosis.
+- Always run ALL checks, even if an early check fails, unless the site itself is completely unreachable. A complete picture helps diagnosis, and complete unreachability is the only case where it is acceptable to stop early.
 - Be specific about what is working vs what is not. "Federation is broken" is not a diagnosis.
 - When checking WordPress.com sites, note that you cannot access wp-admin, cron, or server config. Focus on what is externally observable.
-- If the site is completely unreachable, note that and skip further checks.
+- If the site is completely unreachable, note that explicitly in the diagnosis as the reason no further checks were run.
 - Include timestamps in your diagnosis to help with timeline correlation.
 - If outbox is empty but the site has posts, this is a strong signal that ActivityPub processing has stopped.
 - Pending follows (stuck in "Cancel request") combined with empty outbox strongly suggest outbound activity processing is broken.
 - Always check from both the site's perspective AND a remote instance's perspective when possible.
-- Use `python3 -m json.tool` to pretty-print JSON for readability, but fall back to raw output if python3 is unavailable.
+- Use `python3 -m json.tool` to pretty-print JSON for readability. Do not suppress stderr (`2>/dev/null`) so parse errors are visible. If the response is not valid JSON (e.g. HTML error page, WAF block), capture the raw response as evidence.
 - Use `-L` flag with curl when following redirects is needed, but note each redirect hop.
