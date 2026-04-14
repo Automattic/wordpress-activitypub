@@ -330,8 +330,10 @@ class User extends Actor {
 	public function get_endpoints() {
 		return array(
 			'sharedInbox'                => get_rest_url_by_path( 'inbox' ),
+			'oauthAuthorizationServer'   => \home_url( '/.well-known/oauth-authorization-server' ),
 			'oauthAuthorizationEndpoint' => get_rest_url_by_path( 'oauth/authorize' ),
 			'oauthTokenEndpoint'         => get_rest_url_by_path( 'oauth/token' ),
+			'oauthRegistrationEndpoint'  => get_rest_url_by_path( 'oauth/clients' ),
 			'proxyUrl'                   => get_rest_url_by_path( 'proxy' ),
 			'proxyEventStream'           => get_rest_url_by_path( 'proxy/stream' ),
 		);
