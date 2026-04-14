@@ -18,6 +18,29 @@ class Buddypress {
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_json_author_array', array( self::class, 'add_user_metadata' ), 11, 2 );
+		\add_filter( 'render_block_activitypub/followers', array( self::class, 'disable_at_name_filter' ), 0 );
+		\add_filter( 'render_block_activitypub/following', array( self::class, 'disable_at_name_filter' ), 0 );
+	}
+
+	/**
+	 * Disable BuddyPress @mention linking during block rendering.
+	 *
+	 * BuddyPress hooks `bp_activity_at_name_filter` into `the_content` to convert
+	 *
+	 * @username mentions into profile links. This corrupts the JSON in the
+	 * `data-wp-context` attribute of Followers/Following blocks because the handles
+	 * contain @username patterns that get replaced with HTML.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $block_content The block content.
+	 *
+	 * @return string The unmodified block content.
+	 */
+	public static function disable_at_name_filter( $block_content ) {
+		\remove_filter( 'the_content', 'bp_activity_at_name_filter' );
+
+		return $block_content;
 	}
 
 	/**
