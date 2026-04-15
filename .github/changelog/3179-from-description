@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix fatal error when other plugins hook into the user agent filter expecting two arguments.
