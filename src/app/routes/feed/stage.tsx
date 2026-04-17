@@ -48,6 +48,7 @@ const DEFAULT_VIEW: ViewType = {
 	filters: [],
 	fields: [ 'metadata', 'title.rendered', 'content' ],
 	infiniteScrollEnabled: true,
+	startPosition: 1,
 };
 
 const defaultLayouts = {
@@ -142,16 +143,29 @@ export default function FeedStage(): ReactNode {
 		onChangeQueryParams: handleChangeQueryParams,
 	} );
 
-	// Wrap updateView to reset page when filters change
+	// Wrap updateView to reset page when filters change and to translate
+	// dataviews' infinite-scroll `startPosition` into our page-based loader.
 	const updateFeedView = useCallback(
 		( updatedView: ViewType ): void => {
-			// Reset to page 1 when filters change
 			const filtersChanged: boolean = JSON.stringify( view.filters ) !== JSON.stringify( updatedView.filters );
-			const page: number = filtersChanged ? 1 : updatedView.page ?? 1;
+			const perPage: number = updatedView.perPage || 20;
+			let page: number = updatedView.page ?? 1;
+
+			if ( filtersChanged ) {
+				page = 1;
+			} else if (
+				typeof updatedView.startPosition === 'number' &&
+				updatedView.startPosition !== view.startPosition
+			) {
+				// DataViews 14 advances startPosition as the user scrolls;
+				// map it to the next page we need to fetch.
+				const targetPage: number = Math.max( 1, Math.ceil( updatedView.startPosition / perPage ) );
+				page = Math.max( page, targetPage );
+			}
 
 			updateView( { ...updatedView, page } );
 		},
-		[ view.filters, updateView ]
+		[ view.filters, view.startPosition, updateView ]
 	);
 
 	// Reset view to default state when actor switches
@@ -206,22 +220,6 @@ export default function FeedStage(): ReactNode {
 		},
 		[ selectItem ]
 	);
-
-	// Infinite scroll handler
-	const infiniteScrollHandler = useCallback( (): void => {
-		const currentPage: number = view.page || 1;
-
-		// Prevent concurrent requests or loading beyond available pages
-		if ( isLoadingMore || currentPage >= ( totalPages || 1 ) ) {
-			return;
-		}
-
-		setIsLoadingMore( true );
-		updateFeedView( {
-			...view,
-			page: currentPage + 1,
-		} );
-	}, [ isLoadingMore, view, totalPages, updateFeedView ] );
 
 	// Accumulate data across pages for infinite scroll
 	useEffect( (): void => {
@@ -287,7 +285,6 @@ export default function FeedStage(): ReactNode {
 			paginationInfo={ {
 				totalItems,
 				totalPages,
-				infiniteScrollHandler,
 			} }
 			defaultLayouts={ defaultLayouts }
 		/>
