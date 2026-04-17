@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Fix blog actor outbox exposing private activities to unauthenticated visitors.
