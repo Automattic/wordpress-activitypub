@@ -178,7 +178,9 @@ class Outbox_Controller extends \WP_REST_Controller {
 			),
 		);
 
-		if ( \get_current_user_id() !== (int) $user_id && ! \current_user_can( 'activitypub' ) ) {
+		// When user_id=0 (blog actor), get_current_user_id() also returns 0 for unauthenticated
+		// visitors, so the equality check alone is insufficient — we must test login state first.
+		if ( ! \is_user_logged_in() || ( \get_current_user_id() !== (int) $user_id && ! \current_user_can( 'activitypub' ) ) ) {
 			$args['meta_query'][] = array(
 				'key'     => '_activitypub_activity_type',
 				'value'   => $activity_types,
