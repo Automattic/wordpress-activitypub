@@ -204,7 +204,6 @@ export default function FeedStage(): ReactNode {
 
 	// State for infinite scroll
 	const [ allLoadedRecords, setAllLoadedRecords ] = useState< FeedPost[] >( [] );
-	const [ isLoadingMore, setIsLoadingMore ] = useState( false );
 	const lastProcessedPage = useRef< number >( 0 );
 
 	const changeSelection = useCallback(
@@ -230,7 +229,6 @@ export default function FeedStage(): ReactNode {
 		if ( feed.length === 0 && currentPage === 1 ) {
 			setAllLoadedRecords( [] );
 			lastProcessedPage.current = currentPage;
-			setIsLoadingMore( false );
 			return;
 		}
 
@@ -248,7 +246,6 @@ export default function FeedStage(): ReactNode {
 		if ( currentPage === 1 || ! infiniteScrollEnabled ) {
 			setAllLoadedRecords( feed );
 			lastProcessedPage.current = currentPage;
-			setIsLoadingMore( false );
 		} else {
 			// Append new records while avoiding duplicates
 			setAllLoadedRecords( ( prev: FeedPost[] ): FeedPost[] => {
@@ -259,7 +256,6 @@ export default function FeedStage(): ReactNode {
 				return newRecords.length > 0 ? [ ...prev, ...newRecords ] : prev;
 			} );
 			lastProcessedPage.current = currentPage;
-			setIsLoadingMore( false );
 		}
 	}, [
 		feed,
@@ -275,7 +271,7 @@ export default function FeedStage(): ReactNode {
 			fields={ fields }
 			view={ normalizedView as DataViewsView }
 			onChangeView={ updateFeedView as ( view: DataViewsView ) => void }
-			isLoading={ isResolving || isLoadingMore }
+			isLoading={ isResolving }
 			onClickItem={ ( item: FeedPost ): void => selectItem( item.id ) }
 			isItemClickable={ (): true => true }
 			getItemId={ ( item: FeedPost ): string => item.id.toString() }
