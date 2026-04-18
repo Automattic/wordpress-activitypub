@@ -551,6 +551,37 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Regression: get_comment_types() must coerce null to an empty array.
+	 *
+	 * $activitypub_comment_types can be null until comment types are registered
+	 * (for example via Comment::register_comment_types()), which isn't
+	 * guaranteed on every request. array_keys( null ) fatals under PHP 8+,
+	 * so callers must see an array either way.
+	 *
+	 * @covers ::get_comment_types
+	 * @covers ::get_comment_type_slugs
+	 */
+	public function test_get_comment_types_returns_array_when_global_is_null() {
+		global $activitypub_comment_types;
+
+		$backup                    = $activitypub_comment_types;
+		$activitypub_comment_types = null;
+
+		try {
+			$result = Comment::get_comment_types();
+			$this->assertIsArray( $result );
+			$this->assertSame( array(), $result );
+
+			// And the downstream call that triggered the original crash.
+			$slugs = Comment::get_comment_type_slugs();
+			$this->assertIsArray( $slugs );
+			$this->assertSame( array(), $slugs );
+		} finally {
+			$activitypub_comment_types = $backup;
+		}
+	}
+
+	/**
 	 * Test object_id_to_comment method.
 	 *
 	 * @covers ::object_id_to_comment

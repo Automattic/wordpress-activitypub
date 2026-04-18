@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix a fatal `array_keys(null)` in `Comment::get_comment_type_slugs()` that could take down any request where a third-party plugin transitioned a custom comment type before `add_comment_type()` had been called.

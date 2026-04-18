@@ -581,7 +581,7 @@ class Comment {
 	public static function get_comment_types() {
 		global $activitypub_comment_types;
 
-		return $activitypub_comment_types;
+		return (array) $activitypub_comment_types;
 	}
 
 	/**
