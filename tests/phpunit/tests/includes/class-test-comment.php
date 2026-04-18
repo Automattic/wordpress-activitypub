@@ -553,9 +553,10 @@ class Test_Comment extends \WP_UnitTestCase {
 	/**
 	 * Regression: get_comment_types() must coerce null to an empty array.
 	 *
-	 * $activitypub_comment_types is null until add_comment_type() runs at
-	 * least once, which isn't guaranteed on every request. array_keys( null )
-	 * fatals under PHP 8+, so callers must see an array either way.
+	 * $activitypub_comment_types can be null until comment types are registered
+	 * (for example via Comment::register_comment_types()), which isn't
+	 * guaranteed on every request. array_keys( null ) fatals under PHP 8+,
+	 * so callers must see an array either way.
 	 *
 	 * @covers ::get_comment_types
 	 * @covers ::get_comment_type_slugs
