@@ -16,6 +16,7 @@ Past CVEs and security fixes inform what patterns to watch for. The full list is
 2. **Post title/content disclosure** (CVE, fixed 1.0.0) — low-privilege users accessing unpublished content
 3. **Stored XSS** (CVE, fixed 1.0.0/1.0.1) — contributor+ injecting scripts
 4. **Content negotiation leak** (PR #3045, 2026) — non-public posts served via ActivityPub Accept header
+5. **Per-post REST routes leaking non-public posts** (2026) — `/posts/{id}/reactions`, `/posts/{id}/replies`, `/posts/{id}/likes`, `/posts/{id}/shares` returned reaction/like/share metadata for private, draft, password-protected, and local-only posts. Root cause: routes loaded the post via `get_post()` and only bailed on "post doesn't exist", never calling `is_post_disabled()`.
 
 ## Audit Scope
 
@@ -31,6 +32,8 @@ Files: `includes/class-router.php`, `includes/class-query.php`, `includes/functi
 - Verify attachments (`inherit` status) are only served when the parent post is published
 - Check that the transformer strips content/summary/attachments for non-published posts
 - Verify `pre_handle_404` and `template_include` hooks respect post visibility
+
+- **Per-post REST routes must gate on `is_post_disabled()`.** Audit every route under `/posts/(?P<id>[^/]+)/…` and every controller that accepts a post ID (via URL param, query string, or resolved from a comment's `comment_post_ID`). For each: find the handler, follow the request-id → `get_post()` lookup, and confirm it rejects disabled posts (status other than `publish`, password-protected, local-only visibility, non-ActivityPub post types). `! $post` or `'publish' !== get_post_status( $post )` is not sufficient on its own — `is_post_disabled()` covers the full federation-visibility contract and is the canonical check. Known correct callers: `Replies::get_context_collection`, `Post_Controller::get_remote_intent_template` (uses the narrower status-only check, still acceptable). Controllers that must all use `is_post_disabled()` as the gate: `Post_Controller::get_reactions`, `Replies_Controller::get_items`, `Comments_Controller::validate_comment`. When the route accepts a comment ID, also resolve `$comment->comment_post_ID` and gate on the parent post's visibility — and where existence-leakage matters (e.g. remote-reply URL generation), return the same "not found" shape that a missing comment produces, so callers cannot distinguish "no comment" from "comment on private post".
 
 ### 2. REST API Authentication
 

@@ -112,6 +112,30 @@ class Test_Comments_Controller extends \Activitypub\Tests\Test_REST_Controller_T
 	}
 
 	/**
+	 * Comments whose parent post is not public must not expose the
+	 * remote-reply template. Response shape matches "comment not found"
+	 * to avoid leaking existence.
+	 *
+	 * @covers ::validate_comment
+	 */
+	public function test_get_item_hidden_when_parent_post_is_private() {
+		$private_post_id = self::factory()->post->create( array( 'post_status' => 'private' ) );
+		$comment_id      = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $private_post_id,
+				'comment_type'     => 'comment',
+				'comment_approved' => 1,
+			)
+		);
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/comments/' . $comment_id . '/remote-reply' );
+		$request->set_param( 'resource', 'https://example.com/user' );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertErrorResponse( 'rest_invalid_param', $response );
+	}
+
+	/**
 	 * Test schema.
 	 *
 	 * @covers ::get_item_schema

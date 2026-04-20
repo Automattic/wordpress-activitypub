@@ -15,6 +15,7 @@ use Activitypub\Webfinger;
 
 use function Activitypub\get_post_id;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_post_disabled;
 
 /**
  * Class Post_Controller
@@ -123,7 +124,7 @@ class Post_Controller extends \WP_REST_Controller {
 		$post_id = $request->get_param( 'id' );
 		$post    = \get_post( $post_id );
 
-		if ( ! $post ) {
+		if ( ! $post || is_post_disabled( $post ) ) {
 			return new \WP_Error( 'activitypub_post_not_found', 'Post not found', array( 'status' => 404 ) );
 		}
 
@@ -183,6 +184,11 @@ class Post_Controller extends \WP_REST_Controller {
 	 */
 	public function get_context( $request ) {
 		$post_id = $request->get_param( 'id' );
+		$post    = \get_post( $post_id );
+
+		if ( ! $post || is_post_disabled( $post ) ) {
+			return new \WP_Error( 'activitypub_post_not_found', 'Post not found', array( 'status' => 404 ) );
+		}
 
 		$collection = Replies::get_context_collection( $post_id );
 

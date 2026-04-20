@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+ActivityPub endpoints that surface comment, reply, like, share, and remote-reply metadata now honor the parent post's visibility setting.

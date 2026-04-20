@@ -163,6 +163,57 @@ class Test_Replies_Controller extends \Activitypub\Tests\Test_REST_Controller_Te
 	}
 
 	/**
+	 * Non-public posts must not expose replies, likes, or shares collections.
+	 *
+	 * @covers ::get_items
+	 * @dataProvider data_private_post_collections
+	 *
+	 * @param string $collection replies, likes, or shares.
+	 */
+	public function test_get_items_hides_private_post_collections( $collection ) {
+		$private_post_id = self::factory()->post->create( array( 'post_status' => 'private' ) );
+
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/' . $private_post_id . '/' . $collection );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertErrorResponse( 'activitypub_replies_collection_does_not_exist', $response, 404 );
+	}
+
+	/**
+	 * Data provider for the private-post collection visibility test.
+	 *
+	 * @return array[] Test cases.
+	 */
+	public function data_private_post_collections() {
+		return array(
+			'replies' => array( 'replies' ),
+			'likes'   => array( 'likes' ),
+			'shares'  => array( 'shares' ),
+		);
+	}
+
+	/**
+	 * A comment whose parent post is private must not expose its collections.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_items_hides_comment_on_private_post() {
+		$private_post_id = self::factory()->post->create( array( 'post_status' => 'private' ) );
+		$comment_id      = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $private_post_id,
+				'comment_type'     => 'comment',
+				'comment_approved' => 1,
+			)
+		);
+
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/comments/' . $comment_id . '/replies' );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertErrorResponse( 'activitypub_replies_collection_does_not_exist', $response, 404 );
+	}
+
+	/**
 	 * Test getting likes for a post.
 	 *
 	 * @covers ::get_items

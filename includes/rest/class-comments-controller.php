@@ -10,6 +10,8 @@ namespace Activitypub\Rest;
 use Activitypub\Comment;
 use Activitypub\Webfinger;
 
+use function Activitypub\is_post_disabled;
+
 /**
  * Comments_Controller class.
  *
@@ -83,6 +85,18 @@ class Comments_Controller extends \WP_REST_Controller {
 
 		if ( $is_local ) {
 			return new \WP_Error( 'activitypub_local_only_comment', \__( 'Comment is local only', 'activitypub' ), array( 'status' => 403 ) );
+		}
+
+		/*
+		 * A comment inherits the visibility of its parent post. Do not expose
+		 * the remote-reply template for comments whose parent post is not
+		 * publicly federated; return the same "not found" shape so outsiders
+		 * cannot distinguish a missing comment from a private-parent comment.
+		 */
+		$parent = \get_post( $comment->comment_post_ID );
+
+		if ( ! $parent || is_post_disabled( $parent ) ) {
+			return new \WP_Error( 'activitypub_comment_not_found', \__( 'Comment not found', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
 		return true;

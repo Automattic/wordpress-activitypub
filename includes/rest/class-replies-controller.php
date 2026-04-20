@@ -12,6 +12,7 @@ use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Replies;
 
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_post_disabled;
 
 /**
  * ActivityPub Replies_Controller class.
@@ -90,11 +91,21 @@ class Replies_Controller extends \WP_REST_Controller {
 
 		if ( 'comment' === $object_type ) {
 			$wp_object = \get_comment( $id );
+
+			/*
+			 * A comment inherits the visibility of its parent post. Reject
+			 * collections for comments whose parent post is not publicly
+			 * federated, so we don't leak metadata for private, draft,
+			 * password-protected, or local-only posts.
+			 */
+			$parent_post = $wp_object ? \get_post( $wp_object->comment_post_ID ) : null;
+			$disabled    = ! $parent_post || is_post_disabled( $parent_post );
 		} else {
 			$wp_object = \get_post( $id );
+			$disabled  = ! $wp_object || is_post_disabled( $wp_object );
 		}
 
-		if ( ! isset( $wp_object ) || \is_wp_error( $wp_object ) ) {
+		if ( ! isset( $wp_object ) || \is_wp_error( $wp_object ) || $disabled ) {
 			return new \WP_Error(
 				'activitypub_replies_collection_does_not_exist',
 				\sprintf(

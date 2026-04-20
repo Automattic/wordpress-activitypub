@@ -63,6 +63,66 @@ class Test_Post_Controller extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Non-public posts (private, draft, trashed, password-protected) must not
+	 * leak reaction metadata via the public reactions route.
+	 *
+	 * @covers ::get_reactions
+	 * @dataProvider data_non_public_post_states
+	 *
+	 * @param array $overrides wp_insert_post overrides describing the non-public state.
+	 */
+	public function test_get_reactions_non_public_post( $overrides ) {
+		$post_id = self::factory()->post->create(
+			array_merge( array( 'post_status' => 'publish' ), $overrides )
+		);
+
+		wp_insert_comment(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_author'       => 'Remote User',
+				'comment_author_url'   => 'https://mastodon.social/users/remoteuser',
+				'comment_author_email' => '',
+				'comment_content'      => '',
+				'comment_type'         => 'like',
+				'comment_parent'       => 0,
+				'user_id'              => 0,
+				'comment_approved'     => 1,
+			)
+		);
+
+		$request  = new WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/' . $post_id . '/reactions' );
+		$response = $this->server->dispatch( $request );
+
+		$this->assertEquals( 404, $response->get_status() );
+		$this->assertEquals( 'activitypub_post_not_found', $response->get_data()['code'] );
+	}
+
+	/**
+	 * Data provider covering the post states that should not expose reactions.
+	 *
+	 * @return array[] Test cases.
+	 */
+	public function data_non_public_post_states() {
+		return array(
+			'private post'       => array( array( 'post_status' => 'private' ) ),
+			'draft post'         => array( array( 'post_status' => 'draft' ) ),
+			'pending post'       => array( array( 'post_status' => 'pending' ) ),
+			'trashed post'       => array( array( 'post_status' => 'trash' ) ),
+			'password protected' => array( array( 'post_password' => 'secret' ) ),
+			'local visibility'   => array(
+				array(
+					'meta_input' => array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
+				),
+			),
+			'private visibility' => array(
+				array(
+					'meta_input' => array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ),
+				),
+			),
+		);
+	}
+
+	/**
 	 * Test getting reactions for a post with no reactions.
 	 *
 	 * @covers ::get_reactions

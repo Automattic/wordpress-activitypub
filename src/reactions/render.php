@@ -10,6 +10,7 @@ use Activitypub\Comment;
 
 use function Activitypub\get_post_id;
 use function Activitypub\is_activitypub_request;
+use function Activitypub\is_post_disabled;
 
 if ( is_activitypub_request() || is_feed() ) {
 	return;
@@ -49,6 +50,12 @@ if ( empty( $content ) ) {
 
 // Get the Post ID from attributes or use the current post.
 $_post_id = $attributes['postId'] ?? get_the_ID();
+
+// Don't leak reaction metadata for posts that are not publicly federated.
+if ( ! $_post_id || is_post_disabled( $_post_id ) ) {
+	echo '<!-- Reactions block: post is not publicly available. -->';
+	return;
+}
 
 // Generate a unique ID for the block.
 $block_id = 'activitypub-reactions-block-' . wp_unique_id();
