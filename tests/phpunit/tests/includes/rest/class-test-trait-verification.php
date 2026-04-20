@@ -516,4 +516,22 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		$property->setAccessible( true );
 		$property->setValue( null, $token );
 	}
+
+	/**
+	 * Test that `$force_signature = true` makes a GET require a signature even
+	 * when Authorized Fetch is disabled.
+	 *
+	 * @covers ::verify_signature
+	 */
+	public function test_verify_signature_force_requires_signature_on_get() {
+		\delete_option( 'activitypub_authorized_fetch' );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/actors/1/followers/sync' );
+
+		$result = $this->instance->verify_signature( $request, true );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_signature_verification', $result->get_error_code() );
+		$this->assertEquals( 401, $result->get_error_data()['status'] );
+	}
 }

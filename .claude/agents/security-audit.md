@@ -43,6 +43,19 @@ Files: `includes/rest/`, `includes/rest/trait-verification.php`
 - Verify `verify_authentication()` (OAuth) is applied to all C2S endpoints
 - Check the `activitypub_defer_signature_verification` filter — what hooks it, can third parties disable all auth?
 
+**Signing on GETs — especially with Authorized Fetch off:**
+
+The default `verify_signature()` callback only enforces signatures on GETs when `use_authorized_fetch()` is true. That makes Authorized Fetch the site-wide flag for "are anonymous GETs allowed", and flips the default for every endpoint gated by the shared callback. This is correct for endpoints whose data is genuinely public (actor profiles, `/followers` summary, `/outbox`), but **dangerous for any endpoint that is intended to be peer-only** (FEP-8fcf's `/followers/sync`, anything that encodes a peer-specific authority or identity in the response). For those, Authorized Fetch being off must NOT loosen the signing requirement.
+
+Audit pattern:
+
+1. Enumerate every route registered with `verify_signature` as its permission_callback. Classify each by whether its response is public (anyone can legitimately call it) or peer-only (only a specific authenticated peer should call it).
+2. For each peer-only route, confirm the permission_callback forces signature verification regardless of `use_authorized_fetch()`. The canonical pattern is `verify_signature( $request, true )` via a closure — the `$force_signature` parameter bypasses the Authorized-Fetch-off short-circuit. Any peer-only route that uses the raw `verify_signature` callable is a finding.
+3. For any route that encodes a peer-specific value in its response (an `authority` query parameter, a peer-specific identity in the URL, a filter-by-host selector, etc.), also confirm the handler compares the signer's keyId host against that peer value and rejects mismatches. Signing alone is not enough — FEP-8fcf explicitly requires the authority match so an instance "cannot get tricked into requesting the followers list of a third-party individual". Missing authority check on a peer-only route is a finding even when the signature is verified.
+4. Cross-check: turn Authorized Fetch **off** in a test environment, replay each peer-only route unsigned and confirm 401. Turn Authorized Fetch **on** and confirm public-data routes still respond correctly when signed. Flag any endpoint whose behavior is reachable because of a local `activitypub_defer_signature_verification` filter (some dev environments set `__return_true` site-wide — do not rely on that for the audit; either disable the filter or verify the callbacks run).
+5. Read the `activitypub_defer_signature_verification` filter's hooks on the audited branch — list every site that hooks `__return_true` or a permissive callback, and confirm each is either scoped (e.g., `includes/class-dispatcher.php` wraps a single delivery with it) or intentional (e.g., Delete handler's documented exception). Any unscoped `__return_true` on that filter is an auth-wide bypass and must be flagged.
+6. Report each peer-only route with a one-line pass/fail for: (a) mandatory signing, (b) authority / identity match, (c) graceful rejection of mismatched keyId host, and (d) the signing check runs even when Authorized Fetch is off.
+
 ### 3. HTTP Signature Verification
 
 Files: `includes/class-signature.php`, `includes/signature/class-http-signature-draft.php`, `includes/signature/class-http-message-signature.php`
