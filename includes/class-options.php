@@ -362,6 +362,8 @@ class Options {
 			)
 		);
 
+		$default_distribution = self::get_distribution_modes()['default'];
+
 		\register_setting(
 			'activitypub_advanced',
 			'activitypub_distribution_mode',
@@ -382,7 +384,7 @@ class Options {
 			array(
 				'type'              => 'integer',
 				'description'       => \__( 'Custom batch size for federation delivery.', 'activitypub' ),
-				'default'           => 100,
+				'default'           => $default_distribution['batch_size'],
 				'sanitize_callback' => static function ( $value ) {
 					return \min( 500, \max( 1, \absint( $value ) ) );
 				},
@@ -395,7 +397,7 @@ class Options {
 			array(
 				'type'              => 'integer',
 				'description'       => \__( 'Custom pause in seconds between batches.', 'activitypub' ),
-				'default'           => 30,
+				'default'           => $default_distribution['pause'],
 				'sanitize_callback' => static function ( $value ) {
 					return \min( 3600, \absint( $value ) );
 				},
@@ -812,11 +814,14 @@ class Options {
 			);
 		}
 
-		// Custom mode.
+		// Custom mode falls back to the default preset values if the
+		// custom options have never been saved.
+		$default_params = $modes['default'];
+
 		return array(
 			'mode'       => $mode,
-			'batch_size' => \max( 1, \absint( \get_option( 'activitypub_custom_batch_size', 100 ) ) ),
-			'pause'      => \absint( \get_option( 'activitypub_custom_batch_pause', 30 ) ),
+			'batch_size' => \max( 1, \absint( \get_option( 'activitypub_custom_batch_size', $default_params['batch_size'] ) ) ),
+			'pause'      => \absint( \get_option( 'activitypub_custom_batch_pause', $default_params['pause'] ) ),
 		);
 	}
 

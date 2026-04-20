@@ -315,10 +315,8 @@ class Advanced_Settings_Fields {
 	 * @since unreleased
 	 */
 	public static function render_distribution_mode_field() {
-		$mode         = \get_option( 'activitypub_distribution_mode', 'default' );
-		$custom_batch = \get_option( 'activitypub_custom_batch_size', 100 );
-		$custom_pause = \get_option( 'activitypub_custom_batch_pause', 30 );
-		$is_custom    = 'custom' === $mode;
+		$mode      = \get_option( 'activitypub_distribution_mode', 'default' );
+		$is_custom = 'custom' === $mode;
 
 		// Use centralized presets and add the custom option for the UI.
 		$modes           = Options::get_distribution_modes();
@@ -326,6 +324,10 @@ class Advanced_Settings_Fields {
 			'label'       => \__( 'Custom', 'activitypub' ),
 			'description' => \__( 'Configure batch size and delay manually.', 'activitypub' ),
 		);
+
+		// Custom fields fall back to the default preset values when unset.
+		$custom_batch = \get_option( 'activitypub_custom_batch_size', $modes['default']['batch_size'] );
+		$custom_pause = \get_option( 'activitypub_custom_batch_pause', $modes['default']['pause'] );
 
 		?>
 		<fieldset>
