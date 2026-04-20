@@ -367,7 +367,7 @@ class Options {
 			'activitypub_distribution_mode',
 			array(
 				'type'              => 'string',
-				'description'       => 'Distribution mode for federation delivery.',
+				'description'       => \__( 'Distribution mode for federation delivery.', 'activitypub' ),
 				'default'           => 'default',
 				'sanitize_callback' => static function ( $value ) {
 					$allowed = array( 'default', 'balanced', 'eco', 'custom' );
@@ -381,7 +381,7 @@ class Options {
 			'activitypub_custom_batch_size',
 			array(
 				'type'              => 'integer',
-				'description'       => 'Custom batch size for federation delivery.',
+				'description'       => \__( 'Custom batch size for federation delivery.', 'activitypub' ),
 				'default'           => 100,
 				'sanitize_callback' => static function ( $value ) {
 					return \min( 500, \max( 1, \absint( $value ) ) );
@@ -394,7 +394,7 @@ class Options {
 			'activitypub_custom_batch_pause',
 			array(
 				'type'              => 'integer',
-				'description'       => 'Custom pause in seconds between batches.',
+				'description'       => \__( 'Custom pause in seconds between batches.', 'activitypub' ),
 				'default'           => 30,
 				'sanitize_callback' => static function ( $value ) {
 					return \min( 3600, \absint( $value ) );
@@ -747,7 +747,16 @@ class Options {
 			return $constant_value;
 		}
 
-		// Invalid or unsupported constant value, fall back to default.
+		\_doing_it_wrong(
+			__METHOD__,
+			\sprintf(
+				/* translators: %s: invalid constant value */
+				\esc_html__( 'ACTIVITYPUB_DISTRIBUTION_MODE value %s is not a valid preset; falling back to default.', 'activitypub' ),
+				\esc_html( (string) $constant_value )
+			),
+			'unreleased'
+		);
+
 		return 'default';
 	}
 
@@ -789,7 +798,7 @@ class Options {
 	 *
 	 * @since unreleased
 	 *
-	 * @return array { batch_size: int, pause: int }
+	 * @return array { mode: string, batch_size: int, pause: int }
 	 */
 	public static function get_distribution_params() {
 		$mode  = \get_option( 'activitypub_distribution_mode', 'default' );
@@ -797,6 +806,7 @@ class Options {
 
 		if ( isset( $modes[ $mode ] ) ) {
 			return array(
+				'mode'       => $mode,
 				'batch_size' => $modes[ $mode ]['batch_size'],
 				'pause'      => $modes[ $mode ]['pause'],
 			);
@@ -804,6 +814,7 @@ class Options {
 
 		// Custom mode.
 		return array(
+			'mode'       => $mode,
 			'batch_size' => \max( 1, \absint( \get_option( 'activitypub_custom_batch_size', 100 ) ) ),
 			'pause'      => \absint( \get_option( 'activitypub_custom_batch_pause', 30 ) ),
 		);
@@ -822,14 +833,9 @@ class Options {
 	 * @return int The batch size for the current distribution mode.
 	 */
 	public static function filter_dispatcher_batch_size( $batch_size ) {
-		$mode = \get_option( 'activitypub_distribution_mode', 'default' );
-
-		if ( 'default' === $mode ) {
-			return $batch_size;
-		}
-
 		$params = self::get_distribution_params();
-		return $params['batch_size'];
+
+		return 'default' === $params['mode'] ? $batch_size : $params['batch_size'];
 	}
 
 	/**
@@ -845,14 +851,9 @@ class Options {
 	 * @return int The pause for the current distribution mode.
 	 */
 	public static function filter_scheduler_batch_pause( $pause ) {
-		$mode = \get_option( 'activitypub_distribution_mode', 'default' );
-
-		if ( 'default' === $mode ) {
-			return $pause;
-		}
-
 		$params = self::get_distribution_params();
-		return $params['pause'];
+
+		return 'default' === $params['mode'] ? $pause : $params['pause'];
 	}
 
 	/**

@@ -346,16 +346,28 @@ class Test_Options extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test constant-lock falls back to default for unsupported values.
+	 * Test constant-lock falls back to default for the 'custom' mode.
 	 *
 	 * 'custom' is deliberately excluded because its batch size and pause
-	 * values are still read from the database. A bogus string gets the
-	 * same treatment.
+	 * values are still read from the database, which would defeat the
+	 * purpose of locking the mode via wp-config.php.
 	 *
 	 * @covers \Activitypub\Options::resolve_distribution_mode
 	 */
-	public function test_resolve_distribution_mode_falls_back_to_default() {
+	public function test_resolve_distribution_mode_rejects_custom() {
+		$this->setExpectedIncorrectUsage( 'Activitypub\Options::resolve_distribution_mode' );
+
 		$this->assertEquals( 'default', Options::resolve_distribution_mode( 'eco', 'custom' ) );
+	}
+
+	/**
+	 * Test constant-lock falls back to default for bogus values.
+	 *
+	 * @covers \Activitypub\Options::resolve_distribution_mode
+	 */
+	public function test_resolve_distribution_mode_rejects_invalid_values() {
+		$this->setExpectedIncorrectUsage( 'Activitypub\Options::resolve_distribution_mode' );
+
 		$this->assertEquals( 'default', Options::resolve_distribution_mode( 'eco', 'turbo' ) );
 		$this->assertEquals( 'default', Options::resolve_distribution_mode( false, '' ) );
 	}
