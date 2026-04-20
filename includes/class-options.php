@@ -714,24 +714,41 @@ class Options {
 	 * @return string|false The distribution mode or false if it should not be filtered.
 	 */
 	public static function pre_option_activitypub_distribution_mode( $pre ) {
-		if ( false !== ACTIVITYPUB_DISTRIBUTION_MODE ) {
-			/*
-			 * Only preset modes are allowed via the constant. The 'custom'
-			 * mode is excluded because its batch size and pause values are
-			 * still read from the database, which defeats the purpose of
-			 * locking the mode via wp-config.php.
-			 */
-			$allowed = array_keys( self::get_distribution_modes() );
+		return self::resolve_distribution_mode( $pre, ACTIVITYPUB_DISTRIBUTION_MODE );
+	}
 
-			if ( \in_array( ACTIVITYPUB_DISTRIBUTION_MODE, $allowed, true ) ) {
-				return ACTIVITYPUB_DISTRIBUTION_MODE;
-			}
-
-			// Invalid or unsupported constant value, fall back to default.
-			return 'default';
+	/**
+	 * Resolve the distribution mode against the wp-config constant.
+	 *
+	 * Extracted from `pre_option_activitypub_distribution_mode()` so the
+	 * constant-lock path can be exercised from tests without redefining
+	 * the real constant.
+	 *
+	 * Only preset modes are honored via the constant. The 'custom' mode
+	 * is excluded because its batch size and pause values are still read
+	 * from the database, which would defeat the purpose of locking the
+	 * mode via wp-config.php.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string|false $pre            The pre-get option value.
+	 * @param mixed        $constant_value The value of `ACTIVITYPUB_DISTRIBUTION_MODE`.
+	 *
+	 * @return string|false Mode if locked, `$pre` otherwise.
+	 */
+	public static function resolve_distribution_mode( $pre, $constant_value ) {
+		if ( false === $constant_value ) {
+			return $pre;
 		}
 
-		return $pre;
+		$allowed = array_keys( self::get_distribution_modes() );
+
+		if ( \in_array( $constant_value, $allowed, true ) ) {
+			return $constant_value;
+		}
+
+		// Invalid or unsupported constant value, fall back to default.
+		return 'default';
 	}
 
 	/**

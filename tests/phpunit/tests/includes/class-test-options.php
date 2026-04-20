@@ -335,6 +335,42 @@ class Test_Options extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test constant-lock returns a valid preset.
+	 *
+	 * @covers \Activitypub\Options::resolve_distribution_mode
+	 */
+	public function test_resolve_distribution_mode_locks_preset() {
+		$this->assertEquals( 'balanced', Options::resolve_distribution_mode( 'eco', 'balanced' ) );
+		$this->assertEquals( 'eco', Options::resolve_distribution_mode( false, 'eco' ) );
+		$this->assertEquals( 'default', Options::resolve_distribution_mode( 'eco', 'default' ) );
+	}
+
+	/**
+	 * Test constant-lock falls back to default for unsupported values.
+	 *
+	 * 'custom' is deliberately excluded because its batch size and pause
+	 * values are still read from the database. A bogus string gets the
+	 * same treatment.
+	 *
+	 * @covers \Activitypub\Options::resolve_distribution_mode
+	 */
+	public function test_resolve_distribution_mode_falls_back_to_default() {
+		$this->assertEquals( 'default', Options::resolve_distribution_mode( 'eco', 'custom' ) );
+		$this->assertEquals( 'default', Options::resolve_distribution_mode( 'eco', 'turbo' ) );
+		$this->assertEquals( 'default', Options::resolve_distribution_mode( false, '' ) );
+	}
+
+	/**
+	 * Test constant-lock is a no-op when unset.
+	 *
+	 * @covers \Activitypub\Options::resolve_distribution_mode
+	 */
+	public function test_resolve_distribution_mode_noop_when_unset() {
+		$this->assertEquals( 'eco', Options::resolve_distribution_mode( 'eco', false ) );
+		$this->assertFalse( Options::resolve_distribution_mode( false, false ) );
+	}
+
+	/**
 	 * Test default quote policy option sanitizes invalid values.
 	 *
 	 * @covers \Activitypub\Options::register_settings

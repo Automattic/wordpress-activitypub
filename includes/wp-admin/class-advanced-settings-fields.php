@@ -40,6 +40,14 @@ class Advanced_Settings_Fields {
 				'activitypub_advanced_settings',
 				'activitypub_advanced_settings'
 			);
+
+			\wp_enqueue_script(
+				'activitypub-distribution-mode',
+				\plugins_url( 'assets/js/activitypub-distribution-mode.js', ACTIVITYPUB_PLUGIN_FILE ),
+				array(),
+				ACTIVITYPUB_PLUGIN_VERSION,
+				true
+			);
 		}
 
 		if ( ! defined( 'ACTIVITYPUB_SEND_VARY_HEADER' ) ) {
@@ -357,20 +365,6 @@ class Advanced_Settings_Fields {
 				<?php \esc_html_e( 'With many followers, slower modes may delay delivery. For example, Eco Mode with 1,000 followers takes approximately 25 minutes per post.', 'activitypub' ); ?>
 			</p>
 		</fieldset>
-		<script>
-		( function() {
-			var radios = document.querySelectorAll( 'input[name="activitypub_distribution_mode"]' );
-			var fields = document.getElementById( 'activitypub-custom-distribution-fields' );
-			if ( ! fields ) {
-				return;
-			}
-			radios.forEach( function( radio ) {
-				radio.addEventListener( 'change', function() {
-					fields.style.display = this.value === 'custom' ? '' : 'none';
-				} );
-			} );
-		} )();
-		</script>
 		<?php
 	}
 }
