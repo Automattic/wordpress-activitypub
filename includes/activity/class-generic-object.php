@@ -296,7 +296,19 @@ class Generic_Object {
 		 *
 		 * @return array The filtered array of the ActivityPub object.
 		 */
-		return \apply_filters( "activitypub_activity_{$class}_object_array", $array, $this->id, $this );
+		$array = \apply_filters( "activitypub_activity_{$class}_object_array", $array, $this->id, $this );
+
+		/*
+		 * Strip `bto` and `bcc` from the serialized array per ActivityPub spec Section 6.
+		 * Internal callers that need the private audience must read it from the object
+		 * directly via `get_bto()` / `get_bcc()` instead of the serialized output.
+		 */
+		unset( $array['bto'], $array['bcc'] );
+		if ( isset( $array['object'] ) && \is_array( $array['object'] ) ) {
+			unset( $array['object']['bto'], $array['object']['bcc'] );
+		}
+
+		return $array;
 	}
 
 	/**

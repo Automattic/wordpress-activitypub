@@ -121,6 +121,62 @@ class Test_Generic_Object extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that to_array strips `bto` and `bcc` per ActivityPub spec Section 6.
+	 *
+	 * @covers Activitypub\Activity\Generic_Object::to_array
+	 */
+	public function test_to_array_strips_private_addressing() {
+		$test_data = array(
+			'id'     => 'https://example.com/note/123',
+			'type'   => 'Note',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'cc'     => array( 'https://example.com/users/test/followers' ),
+			'bto'    => array( 'https://example.com/users/secret' ),
+			'bcc'    => array( 'https://example.com/users/hidden' ),
+			'object' => array(
+				'type'    => 'Note',
+				'content' => 'Hello',
+				'bto'     => array( 'https://example.com/users/secret' ),
+				'bcc'     => array( 'https://example.com/users/hidden' ),
+			),
+		);
+
+		$object = Generic_Object::init_from_array( $test_data );
+
+		$array = $object->to_array( false );
+
+		$this->assertArrayNotHasKey( 'bto', $array, 'bto should be stripped from activity' );
+		$this->assertArrayNotHasKey( 'bcc', $array, 'bcc should be stripped from activity' );
+		$this->assertArrayNotHasKey( 'bto', $array['object'], 'bto should be stripped from embedded object' );
+		$this->assertArrayNotHasKey( 'bcc', $array['object'], 'bcc should be stripped from embedded object' );
+
+		/* Other fields should be preserved. */
+		$this->assertArrayHasKey( 'to', $array );
+		$this->assertArrayHasKey( 'cc', $array );
+		$this->assertSame( 'Hello', $array['object']['content'] );
+	}
+
+	/**
+	 * Test that to_array does not error when no `bto`/`bcc` are present.
+	 *
+	 * @covers Activitypub\Activity\Generic_Object::to_array
+	 */
+	public function test_to_array_without_private_addressing() {
+		$test_data = array(
+			'id'   => 'https://example.com/note/123',
+			'type' => 'Note',
+			'to'   => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+		);
+
+		$object = Generic_Object::init_from_array( $test_data );
+
+		$array = $object->to_array( false );
+
+		$this->assertSame( 'Note', $array['type'] );
+		$this->assertArrayHasKey( 'to', $array );
+	}
+
+	/**
 	 * Test if init_from_array correctly handles quote property.
 	 *
 	 * Tests that the quote property can be set from array.
