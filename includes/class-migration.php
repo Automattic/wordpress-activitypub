@@ -213,8 +213,13 @@ class Migration {
 			\wp_schedule_single_event( \time() + HOUR_IN_SECONDS, 'activitypub_backfill_statistics' );
 		}
 
-		// Flush rewrite rules after all migrations are done to ensure any changes to custom endpoints are registered.
-		Activitypub::flush_rewrite_rules();
+		/*
+		 * Defer the flush to late in the `init` cycle (priority 20). Migration::init
+		 * runs at priority 1, which is earlier than most plugins register their
+		 * rewrite rules. Flushing synchronously here would persist a truncated
+		 * ruleset that omits third-party rules added on `init` at priority 10.
+		 */
+		\add_action( 'init', array( Activitypub::class, 'flush_rewrite_rules' ), 20 );
 
 		// Ensure all required cron schedules are registered.
 		Scheduler::register_schedules();
