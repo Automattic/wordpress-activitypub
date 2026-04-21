@@ -16,6 +16,7 @@ Past CVEs and security fixes inform what patterns to watch for. The full list is
 2. **Post title/content disclosure** (CVE, fixed 1.0.0) — low-privilege users accessing unpublished content
 3. **Stored XSS** (CVE, fixed 1.0.0/1.0.1) — contributor+ injecting scripts
 4. **Content negotiation leak** (PR #3045, 2026) — non-public posts served via ActivityPub Accept header
+5. **Per-post REST routes leaking non-public posts** (2026) — `/posts/{id}/reactions`, `/posts/{id}/replies`, `/posts/{id}/likes`, `/posts/{id}/shares`, and `/comments/{id}/remote-reply` returned reaction / reply / like / share / remote-reply metadata for private, draft, password-protected, and local-only posts — including posts that had been federated earlier and were then made non-public. Root cause: routes loaded the post via `get_post()` and only bailed on "post doesn't exist", rather than gating on current public visibility. The canonical content-exposure predicate is now `is_post_publicly_queryable()`; `is_post_disabled()` is the pipeline gate only and must not be used as a content-exposure check (its lifecycle escape hatch intentionally lets previously-federated posts through so Delete / Create activities can fire).
 
 ## Audit Scope
 
@@ -26,11 +27,18 @@ Run ALL checks below unless the user specifies a subset. Each check should read 
 Files: `includes/class-router.php`, `includes/class-query.php`, `includes/functions-post.php`
 
 - Verify `is_activitypub_request()` cannot be abused to bypass access controls (check `?activitypub` query param path)
-- Verify `is_post_disabled()` blocks all non-public statuses (draft, pending, future, trash, private)
+- Verify `is_post_publicly_queryable()` blocks all non-public statuses (draft, pending, future, trash, private) on content-exposure surfaces
 - Check that password-protected posts are not served via ActivityPub
 - Verify attachments (`inherit` status) are only served when the parent post is published
 - Check that the transformer strips content/summary/attachments for non-published posts
 - Verify `pre_handle_404` and `template_include` hooks respect post visibility
+
+- **Know which gate to use — `is_post_disabled()` vs `is_post_publicly_queryable()`.** The plugin has two post-visibility predicates with different jobs, and using the wrong one leaks data.
+  - `is_post_disabled()` is the **pipeline gate**: schedulers, transformers, and outbox dispatch use it to decide whether a post participates in federation processing at all. It intentionally returns `false` for posts in a federation lifecycle transition (`federated` → now private, or `deleted` → now restored) so Delete/Create activities can still fire.
+  - `is_post_publicly_queryable()` is the **content-exposure gate**: no lifecycle escape hatch. A post that was federated and is now non-public returns `false` here. Use this on any surface that exposes a post's current content, metadata, or existence to unauthenticated callers.
+  - **Using `is_post_disabled()` as a content-exposure gate is a known leak vector** — it passes previously-federated-now-private posts through and keeps exposing their reactions/replies/likes/shares/remote-reply metadata.
+
+- **Per-post REST routes and post-scoped block renders must gate on `is_post_publicly_queryable()`.** Audit every route under `/posts/(?P<id>[^/]+)/…` and every controller that accepts a post ID (via URL param, query string, or resolved from a comment's `comment_post_ID`). Known callers that must use `is_post_publicly_queryable()`: `Post_Controller::get_reactions`, `Post_Controller::get_context`, `Post_Controller::get_remote_intent_template`, `Replies_Controller::get_items`, `Comments_Controller::validate_comment`, `src/reactions/render.php`, `Replies::get_context_collection`. When the route accepts a comment ID, resolve `$comment->comment_post_ID` and gate on the parent post. Where existence-leakage matters (e.g. remote-reply URL generation), return the same "not found" shape that a missing comment produces, so callers cannot distinguish "no comment" from "comment on private-parent post". Prefer wiring `is_post_publicly_queryable` in as a `validate_callback` on the `id` arg schema so the REST server rejects non-public posts before the handler runs — see the post-controller routes for the pattern.
 
 ### 2. REST API Authentication
 

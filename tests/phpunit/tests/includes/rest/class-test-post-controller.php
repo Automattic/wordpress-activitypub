@@ -46,7 +46,7 @@ class Test_Post_Controller extends WP_UnitTestCase {
 	 */
 	public function test_init() {
 		$routes = $this->server->get_routes();
-		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>[-]?\d+)/reactions', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>[\d]+)/reactions', $routes );
 	}
 
 	/**
@@ -58,8 +58,97 @@ class Test_Post_Controller extends WP_UnitTestCase {
 		$request  = new WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/999999/reactions' );
 		$response = $this->server->dispatch( $request );
 
-		$this->assertEquals( 404, $response->get_status() );
-		$this->assertEquals( 'activitypub_post_not_found', $response->get_data()['code'] );
+		$this->assertEquals( 400, $response->get_status() );
+		$this->assertEquals( 'rest_invalid_param', $response->get_data()['code'] );
+	}
+
+	/**
+	 * Non-public posts (private, draft, trashed, password-protected) must not
+	 * leak reaction metadata via the public reactions route.
+	 *
+	 * @covers ::get_reactions
+	 * @dataProvider data_non_public_post_states
+	 *
+	 * @param array $overrides wp_insert_post overrides describing the non-public state.
+	 */
+	public function test_get_reactions_non_public_post( $overrides ) {
+		$post_id = self::factory()->post->create(
+			array_merge( array( 'post_status' => 'publish' ), $overrides )
+		);
+
+		wp_insert_comment(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_author'       => 'Remote User',
+				'comment_author_url'   => 'https://mastodon.social/users/remoteuser',
+				'comment_author_email' => '',
+				'comment_content'      => '',
+				'comment_type'         => 'like',
+				'comment_parent'       => 0,
+				'user_id'              => 0,
+				'comment_approved'     => 1,
+			)
+		);
+
+		$request  = new WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/' . $post_id . '/reactions' );
+		$response = $this->server->dispatch( $request );
+
+		$this->assertEquals( 400, $response->get_status() );
+		$this->assertEquals( 'rest_invalid_param', $response->get_data()['code'] );
+	}
+
+	/**
+	 * A previously-federated post that has since been made non-public must not
+	 * expose reactions. Regression test for the `is_post_disabled()` escape hatch
+	 * that kept the gate open for posts in a `federated` lifecycle state.
+	 *
+	 * @covers ::get_reactions
+	 */
+	public function test_get_reactions_previously_federated_post_made_private() {
+		$post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		$post    = \get_post( $post_id );
+
+		/* Simulate federation having already happened. */
+		\Activitypub\set_wp_object_state( $post, ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		/* Post is later made private. */
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'private',
+			)
+		);
+
+		$request  = new WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/' . $post_id . '/reactions' );
+		$response = $this->server->dispatch( $request );
+
+		$this->assertEquals( 400, $response->get_status() );
+		$this->assertEquals( 'rest_invalid_param', $response->get_data()['code'] );
+	}
+
+	/**
+	 * Data provider covering the post states that should not expose reactions.
+	 *
+	 * @return array[] Test cases.
+	 */
+	public function data_non_public_post_states() {
+		return array(
+			'private post'       => array( array( 'post_status' => 'private' ) ),
+			'draft post'         => array( array( 'post_status' => 'draft' ) ),
+			'pending post'       => array( array( 'post_status' => 'pending' ) ),
+			'trashed post'       => array( array( 'post_status' => 'trash' ) ),
+			'password protected' => array( array( 'post_password' => 'secret' ) ),
+			'local visibility'   => array(
+				array(
+					'meta_input' => array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
+				),
+			),
+			'private visibility' => array(
+				array(
+					'meta_input' => array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ),
+				),
+			),
+		);
 	}
 
 	/**
@@ -198,11 +287,11 @@ class Test_Post_Controller extends WP_UnitTestCase {
 	 */
 	public function test_remote_intent_route_registered() {
 		$routes = $this->server->get_routes();
-		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>[-]?\d+)/remote-intent', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>[\d]+)/remote-intent', $routes );
 	}
 
 	/**
-	 * Test remote-intent returns 404 for non-existent post.
+	 * Test remote-intent rejects a non-existent post at arg validation.
 	 *
 	 * @covers ::get_remote_intent_template
 	 */
@@ -213,12 +302,12 @@ class Test_Post_Controller extends WP_UnitTestCase {
 
 		$response = $this->server->dispatch( $request );
 
-		$this->assertEquals( 404, $response->get_status() );
-		$this->assertEquals( 'activitypub_post_not_found', $response->get_data()['code'] );
+		$this->assertEquals( 400, $response->get_status() );
+		$this->assertEquals( 'rest_invalid_param', $response->get_data()['code'] );
 	}
 
 	/**
-	 * Test remote-intent returns 404 for draft post.
+	 * Test remote-intent rejects a draft post at arg validation.
 	 *
 	 * @covers ::get_remote_intent_template
 	 */
@@ -230,7 +319,8 @@ class Test_Post_Controller extends WP_UnitTestCase {
 
 		$response = $this->server->dispatch( $request );
 
-		$this->assertEquals( 404, $response->get_status() );
+		$this->assertEquals( 400, $response->get_status() );
+		$this->assertEquals( 'rest_invalid_param', $response->get_data()['code'] );
 	}
 
 	/**
@@ -240,7 +330,7 @@ class Test_Post_Controller extends WP_UnitTestCase {
 	 */
 	public function test_remote_intent_invalid_intent() {
 		$routes    = $this->server->get_routes();
-		$route_key = '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>[-]?\d+)/remote-intent';
+		$route_key = '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>[\d]+)/remote-intent';
 
 		$this->assertArrayHasKey( $route_key, $routes );
 
