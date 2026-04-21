@@ -107,7 +107,7 @@ class Replies_Controller extends \WP_REST_Controller {
 			$publicly_queryable = $wp_object && is_post_publicly_queryable( $wp_object );
 		}
 
-		if ( ! isset( $wp_object ) || \is_wp_error( $wp_object ) || ! $publicly_queryable ) {
+		if ( ! $publicly_queryable ) {
 			return new \WP_Error(
 				'activitypub_replies_collection_does_not_exist',
 				\sprintf(

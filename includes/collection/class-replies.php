@@ -14,7 +14,7 @@ use Activitypub\Transformer\Post as Post_Transformer;
 
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\is_local_comment;
-use function Activitypub\is_post_disabled;
+use function Activitypub\is_post_publicly_queryable;
 use function Activitypub\is_user_type_disabled;
 
 /**
@@ -152,7 +152,7 @@ class Replies {
 	public static function get_context_collection( $post_id ) {
 		$post = \get_post( $post_id );
 
-		if ( ! $post || is_post_disabled( $post_id ) ) {
+		if ( ! is_post_publicly_queryable( $post_id ) ) {
 			return false;
 		}
 
