@@ -106,7 +106,8 @@ class Outbox {
 				$activity->get_type(),
 				\wp_trim_words( $title, 5 )
 			),
-			'post_content' => wp_slash( $activity->to_json() ),
+			// Persist the blind audience so later dispatch can compute recipients from `bto`/`bcc`.
+			'post_content' => wp_slash( $activity->to_json( true, true ) ),
 			// ensure that user ID is not below 0.
 			'post_author'  => \max( $user_id, 0 ),
 			'post_status'  => 'pending',
@@ -135,7 +136,7 @@ class Outbox {
 			\wp_update_post(
 				array(
 					'ID'           => $id,
-					'post_content' => \wp_slash( $activity->to_json() ),
+					'post_content' => \wp_slash( $activity->to_json( true, true ) ),
 				)
 			);
 		}

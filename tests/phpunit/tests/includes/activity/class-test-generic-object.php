@@ -177,6 +177,57 @@ class Test_Generic_Object extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that `$include_blind_audience = true` preserves `bto` and `bcc` at both levels.
+	 *
+	 * @covers Activitypub\Activity\Generic_Object::to_array
+	 */
+	public function test_to_array_preserves_blind_audience_when_opted_in() {
+		$test_data = array(
+			'id'     => 'https://example.com/note/123',
+			'type'   => 'Note',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'bto'    => array( 'https://example.com/users/secret' ),
+			'bcc'    => array( 'https://example.com/users/hidden' ),
+			'object' => array(
+				'type' => 'Note',
+				'bto'  => array( 'https://example.com/users/secret-object' ),
+				'bcc'  => array( 'https://example.com/users/hidden-object' ),
+			),
+		);
+
+		$object = Generic_Object::init_from_array( $test_data );
+
+		$array = $object->to_array( false, true );
+
+		$this->assertSame( $test_data['bto'], $array['bto'], 'bto preserved at activity level' );
+		$this->assertSame( $test_data['bcc'], $array['bcc'], 'bcc preserved at activity level' );
+		$this->assertSame( $test_data['object']['bto'], $array['object']['bto'], 'bto preserved in embedded object' );
+		$this->assertSame( $test_data['object']['bcc'], $array['object']['bcc'], 'bcc preserved in embedded object' );
+	}
+
+	/**
+	 * Test that `bto`/`bcc` survive a JSON storage roundtrip when opted in.
+	 *
+	 * @covers Activitypub\Activity\Generic_Object::to_json
+	 * @covers Activitypub\Activity\Generic_Object::init_from_json
+	 */
+	public function test_to_json_roundtrip_preserves_blind_audience_when_opted_in() {
+		$test_data = array(
+			'id'   => 'https://example.com/note/123',
+			'type' => 'Note',
+			'to'   => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'bto'  => array( 'https://example.com/users/secret' ),
+			'bcc'  => array( 'https://example.com/users/hidden' ),
+		);
+
+		$json     = Generic_Object::init_from_array( $test_data )->to_json( true, true );
+		$reloaded = Generic_Object::init_from_json( $json );
+
+		$this->assertSame( $test_data['bto'], $reloaded->get_bto(), 'bto survives JSON roundtrip' );
+		$this->assertSame( $test_data['bcc'], $reloaded->get_bcc(), 'bcc survives JSON roundtrip' );
+	}
+
+	/**
 	 * Test if init_from_array correctly handles quote property.
 	 *
 	 * Tests that the quote property can be set from array.
