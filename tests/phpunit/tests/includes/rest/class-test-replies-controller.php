@@ -193,6 +193,33 @@ class Test_Replies_Controller extends \Activitypub\Tests\Test_REST_Controller_Te
 	}
 
 	/**
+	 * A previously-federated post that has since been made non-public must not
+	 * expose reply/like/share collections. Regression test for the
+	 * `is_post_disabled()` escape hatch that kept the gate open for posts in a
+	 * `federated` lifecycle state.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_items_hides_previously_federated_post_made_private() {
+		$post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		$post    = \get_post( $post_id );
+
+		\Activitypub\set_wp_object_state( $post, ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'private',
+			)
+		);
+
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/' . $post_id . '/replies' );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertErrorResponse( 'activitypub_replies_collection_does_not_exist', $response, 404 );
+	}
+
+	/**
 	 * A comment whose parent post is private must not expose its collections.
 	 *
 	 * @covers ::get_items

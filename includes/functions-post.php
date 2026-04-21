@@ -12,18 +12,105 @@ namespace Activitypub;
 use Activitypub\Collection\Remote_Posts;
 
 /**
- * Check if a post is disabled for ActivityPub.
+ * Check whether ActivityPub processing should be skipped for this post.
+ *
+ * Pipeline-level gate. Used by schedulers, transformers, and the outbox to
+ * decide whether a post participates in federation processing at all.
+ *
+ * Intentionally returns `false` for posts that are undergoing a federation
+ * lifecycle transition — e.g., a previously federated post whose visibility
+ * was changed to private, or a previously deleted post that was restored —
+ * so that the Delete or Create activity can still be emitted to notify
+ * remote servers.
+ *
+ * DO NOT use this as a content-exposure gate for REST metadata, block
+ * rendering, content-negotiated frontend JSON, or any other surface that
+ * reveals a post's current content or existence to unauthenticated readers.
+ * Use {@see is_post_publicly_queryable()} for those: it answers the simpler
+ * "is this post currently public?" question with no lifecycle escape hatch.
+ *
+ * @see is_post_publicly_queryable() For the current-visibility gate used by
+ *                                   content-exposure surfaces.
  *
  * @param mixed $post The post object or ID.
  *
- * @return boolean True if the post is disabled, false otherwise.
+ * @return boolean True if ActivityPub processing should be skipped for this post, false otherwise.
  */
 function is_post_disabled( $post ) {
-	$post     = \get_post( $post );
-	$disabled = false;
+	$post = \get_post( $post );
 
 	if ( ! $post ) {
 		return true;
+	}
+
+	$disabled = ! is_post_publicly_queryable( $post );
+
+	/*
+	 * Lifecycle-transition override.
+	 *
+	 * A previously federated post that has since been moved to any non-
+	 * publicly-queryable state (local/private visibility, non-public
+	 * status, password-protected, or whose post type no longer supports
+	 * federation) still needs the pipeline to run so it can emit a Delete
+	 * activity. A post that was deleted but later restored needs the
+	 * pipeline to emit Create. In both cases we flip the gate back open
+	 * even though the post is not currently publicly queryable.
+	 */
+	$object_state = get_wp_object_state( $post );
+
+	if (
+		ACTIVITYPUB_OBJECT_STATE_DELETED === $object_state ||
+		( ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_state && $disabled )
+	) {
+		$disabled = false;
+	}
+
+	/**
+	 * Allow plugins to disable posts for ActivityPub.
+	 *
+	 * @param boolean  $disabled True if the post is disabled, false otherwise.
+	 * @param \WP_Post $post     The post object.
+	 */
+	return \apply_filters( 'activitypub_is_post_disabled', $disabled, $post );
+}
+
+/**
+ * Check whether a post's current content is publicly queryable via ActivityPub.
+ *
+ * Content-exposure gate. Use wherever a post's current content, metadata, or
+ * mere existence could leak to an unauthenticated request. Unlike
+ * {@see is_post_disabled()}, this function ignores the federation lifecycle
+ * state: a post that was federated publicly and has since been made private,
+ * local, trashed, or password-protected returns `false` here, even while its
+ * Delete activity is still pending in the outbox.
+ *
+ * Use for: per-post REST metadata routes (reactions, replies, context,
+ * remote-reply), block server-side render callbacks that expose post
+ * content, content-negotiated frontend JSON. Do NOT use for federation
+ * pipeline decisions — that's what {@see is_post_disabled()} is for.
+ *
+ * A post is publicly queryable when it satisfies ALL of the following:
+ *   - `post_status` is `publish` (or a well-defined equivalent: published
+ *     attachments inheriting from a public parent, or a preview requested
+ *     by a user with edit capability).
+ *   - Its `activitypub_content_visibility` meta is neither `local` nor
+ *     `private`.
+ *   - The post type supports the `activitypub` feature.
+ *   - No `post_password` is set.
+ *
+ * @since unreleased
+ *
+ * @see is_post_disabled() For the pipeline-level federation gate.
+ *
+ * @param mixed $post The post object or ID.
+ *
+ * @return boolean True if the post is currently publicly queryable, false otherwise.
+ */
+function is_post_publicly_queryable( $post ) {
+	$post = \get_post( $post );
+
+	if ( ! $post ) {
+		return false;
 	}
 
 	$visibility          = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
@@ -39,42 +126,22 @@ function is_post_disabled( $post ) {
 		\get_query_var( 'preview' ) &&
 		\current_user_can( 'edit_post', $post->ID );
 
-	// Only 'publish' is public, with the above exceptions.
 	$is_public_status = 'publish' === $post->post_status || $is_attachment_public || $is_preview;
 
-	if (
-		$is_local_or_private ||
-		! \post_type_supports( $post->post_type, 'activitypub' ) ||
-		! $is_public_status ||
-		! empty( $post->post_password )
-	) {
-		$disabled = true;
-	}
-
-	/*
-	 * Check for posts that need special handling.
-	 * Federated posts changed to local/private or non-public status need Delete activity.
-	 * Deleted posts restored to public need Create activity.
-	 */
-	$object_state = get_wp_object_state( $post );
-
-	if (
-		ACTIVITYPUB_OBJECT_STATE_DELETED === $object_state ||
-		(
-			ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_state &&
-			( $is_local_or_private || ! $is_public_status )
-		)
-	) {
-		$disabled = false;
-	}
+	$queryable = $is_public_status &&
+		! $is_local_or_private &&
+		\post_type_supports( $post->post_type, 'activitypub' ) &&
+		empty( $post->post_password );
 
 	/**
-	 * Allow plugins to disable posts for ActivityPub.
+	 * Filter whether a post is publicly queryable via ActivityPub.
 	 *
-	 * @param boolean  $disabled True if the post is disabled, false otherwise.
-	 * @param \WP_Post $post     The post object.
+	 * @since unreleased
+	 *
+	 * @param boolean  $queryable True if the post is publicly queryable, false otherwise.
+	 * @param \WP_Post $post      The post object.
 	 */
-	return \apply_filters( 'activitypub_is_post_disabled', $disabled, $post );
+	return \apply_filters( 'activitypub_is_post_publicly_queryable', $queryable, $post );
 }
 
 /**

@@ -12,7 +12,7 @@ use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Replies;
 
 use function Activitypub\get_rest_url_by_path;
-use function Activitypub\is_post_disabled;
+use function Activitypub\is_post_publicly_queryable;
 
 /**
  * ActivityPub Replies_Controller class.
@@ -94,18 +94,20 @@ class Replies_Controller extends \WP_REST_Controller {
 
 			/*
 			 * A comment inherits the visibility of its parent post. Reject
-			 * collections for comments whose parent post is not publicly
-			 * federated, so we don't leak metadata for private, draft,
-			 * password-protected, or local-only posts.
+			 * collections for comments whose parent post is not currently
+			 * publicly queryable, so we don't leak metadata for private,
+			 * draft, password-protected, or local-only posts — including
+			 * posts that were once federated and have since been made
+			 * non-public.
 			 */
-			$parent_post = $wp_object ? \get_post( $wp_object->comment_post_ID ) : null;
-			$disabled    = ! $parent_post || is_post_disabled( $parent_post );
+			$parent_post        = $wp_object ? \get_post( $wp_object->comment_post_ID ) : null;
+			$publicly_queryable = is_post_publicly_queryable( $parent_post );
 		} else {
-			$wp_object = \get_post( $id );
-			$disabled  = ! $wp_object || is_post_disabled( $wp_object );
+			$wp_object          = \get_post( $id );
+			$publicly_queryable = is_post_publicly_queryable( $wp_object );
 		}
 
-		if ( ! isset( $wp_object ) || \is_wp_error( $wp_object ) || $disabled ) {
+		if ( ! isset( $wp_object ) || \is_wp_error( $wp_object ) || ! $publicly_queryable ) {
 			return new \WP_Error(
 				'activitypub_replies_collection_does_not_exist',
 				\sprintf(

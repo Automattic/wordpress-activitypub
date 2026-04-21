@@ -15,7 +15,7 @@ use Activitypub\Webfinger;
 
 use function Activitypub\get_post_id;
 use function Activitypub\get_rest_url_by_path;
-use function Activitypub\is_post_disabled;
+use function Activitypub\is_post_publicly_queryable;
 
 /**
  * Class Post_Controller
@@ -124,8 +124,8 @@ class Post_Controller extends \WP_REST_Controller {
 		$post_id = $request->get_param( 'id' );
 		$post    = \get_post( $post_id );
 
-		if ( ! $post || is_post_disabled( $post ) ) {
-			return new \WP_Error( 'activitypub_post_not_found', 'Post not found', array( 'status' => 404 ) );
+		if ( ! is_post_publicly_queryable( $post ) ) {
+			return new \WP_Error( 'activitypub_post_not_found', \__( 'Post not found.', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
 		$reactions = array();
@@ -186,14 +186,14 @@ class Post_Controller extends \WP_REST_Controller {
 		$post_id = $request->get_param( 'id' );
 		$post    = \get_post( $post_id );
 
-		if ( ! $post || is_post_disabled( $post ) ) {
-			return new \WP_Error( 'activitypub_post_not_found', 'Post not found', array( 'status' => 404 ) );
+		if ( ! is_post_publicly_queryable( $post ) ) {
+			return new \WP_Error( 'activitypub_post_not_found', \__( 'Post not found.', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
 		$collection = Replies::get_context_collection( $post_id );
 
 		if ( false === $collection ) {
-			return new \WP_Error( 'activitypub_post_not_found', 'Post not found', array( 'status' => 404 ) );
+			return new \WP_Error( 'activitypub_post_not_found', \__( 'Post not found.', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
 		$response = array_merge(
