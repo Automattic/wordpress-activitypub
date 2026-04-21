@@ -103,7 +103,7 @@ function is_post_disabled( $post ) {
  *   - The post type supports the `activitypub` feature.
  *   - No `post_password` is set.
  *
- * @since unreleased
+ * @since 8.1.0
  *
  * @see is_post_disabled() For the pipeline-level federation gate.
  *
@@ -157,7 +157,7 @@ function is_post_publicly_queryable( $post ) {
 	/**
 	 * Filter whether a post is publicly queryable via ActivityPub.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param boolean  $queryable True if the post is publicly queryable, false otherwise.
 	 * @param \WP_Post $post      The post object.

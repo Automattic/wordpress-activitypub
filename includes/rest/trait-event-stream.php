@@ -7,7 +7,7 @@
  *
  * @package Activitypub
  * @see https://swicg.github.io/activitypub-api/sse
- * @since unreleased
+ * @since 8.1.0
  */
 
 namespace Activitypub\Rest;
@@ -25,7 +25,7 @@ use Activitypub\OAuth\Server as OAuth_Server;
  * Provides SSE streaming capabilities for collection controllers
  * (Outbox, Inbox) and the Proxy controller.
  *
- * @since unreleased
+ * @since 8.1.0
  */
 trait Event_Stream {
 
@@ -89,7 +89,7 @@ trait Event_Stream {
 	 * injects it as an Authorization header and re-runs OAuth
 	 * authentication so the server recognizes the request.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @see https://swicg.github.io/activitypub-api/sse
 	 */

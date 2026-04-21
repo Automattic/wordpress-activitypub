@@ -20,7 +20,7 @@ use function Activitypub\get_client_ip;
  * - Dynamic client registration (POST /oauth/clients)
  * - Authorization Server Metadata (GET /oauth/authorization-server-metadata)
  *
- * @since unreleased
+ * @since 8.1.0
  */
 class Clients_Controller extends \WP_REST_Controller {
 	/**

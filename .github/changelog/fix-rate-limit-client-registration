@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Add rate limiting to app registration to prevent abuse.

@@ -229,7 +229,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		\do_action_deprecated(
 			'activitypub_inbox_post',
 			array( $request ),
-			'unreleased',
+			'8.1.0',
 			'activitypub_rest_inbox_post'
 		);
 

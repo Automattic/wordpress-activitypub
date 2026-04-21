@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.9
-Stable tag: 8.0.2
+Stable tag: 8.1.0
 Requires PHP: 7.4
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -111,6 +111,72 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+### 8.1.0 - 2026-04-21
+#### Security
+- Add rate limiting to app registration to prevent abuse.
+- Fix blog actor outbox exposing private activities to unauthenticated visitors.
+- Restrict localhost URL allowance to local development environments only.
+- Verify that the signing key belongs to the same server as the activity actor.
+
+#### Added
+- Add a "Posts and Replies" tab bar for author archives that filters between posts and replies, similar to Mastodon's profile view.
+- Add a liked collection to actor profiles, showing all posts the actor has liked.
+- Add a seasonal starter pattern that suggests sharing Fediverse stats when creating a new post in December and January.
+- Add a stats block that displays annual Fediverse statistics as a card on the site and as a shareable image on the Fediverse, with automatic color and font adoption from the site's theme.
+- Added `activitypub_pre_get_by_id` filter to allow plugins to register custom virtual actors resolved by ID.
+- Add EXIF metadata support for image attachments using Vernissage namespace.
+- Add new Fediverse Following Page and Profile Page block patterns.
+- Add OAuth server metadata and registration endpoint discovery to actor profiles.
+- Add real-time streaming for inbox and outbox updates via Server-Sent Events (SSE).
+- Add support for Block, Add (pin post), and Remove (unpin post) activities via Client-to-Server API.
+- Add support for check-in activities posted via compatible apps.
+- Add support for importing Starter Packs in both the Pixelfed and Mastodon formats.
+- Add tags.pub integration to supplement tag timelines with posts from across the Fediverse.
+- Support for ActivityPub Client-to-Server (C2S) protocol, allowing apps like federated clients to create, edit, and delete posts on your behalf.
+
+#### Changed
+- Block patterns for follow, following, and profile pages are now only suggested when editing pages.
+- Fix notification pagination when using Enable Mastodon Apps: use date-constrained queries instead of truncating the shared notification pool, and expose `$limit`, `$before_date`, and `$after_date` as additional filter arguments so third-party handlers can fetch the correct window.
+- Improve the pre-publish format suggestion panel with clearer messages and a confirmation after applying a format.
+- Podcast episodes now respect the configured object type setting instead of always being sent as "Note".
+- Show reaction action buttons even when a post has no reactions yet.
+
+#### Fixed
+- ActivityPub endpoints that surface comment, reply, like, share, and remote-reply metadata now honor the parent post's visibility setting.
+- Added validation for SSE access tokens passed via query parameter.
+- Fix account migration (Move) not working when moving back to an external account.
+- Fix a fatal error during activity delivery when the outbox item has been deleted.
+- Fix a fatal error when receiving activities with a non-string language property.
+- Fix a fatal `array_keys(null)` in `Comment::get_comment_type_slugs()` that could take down any request where a third-party plugin transitioned a custom comment type before `add_comment_type()` had been called.
+- Fix a missing script dependency notice on the admin page in WordPress 6.9.1 and later.
+- Fix BuddyPress @mention filter corrupting Fediverse Followers and Following blocks.
+- Fix cleanup jobs silently doing nothing on sites where purge retention options were not set.
+- Fix comments on remote posts being incorrectly held in moderation.
+- Fix double-encoded HTML entities in post titles on the Fediverse Stats dashboard.
+- Fixed an issue where quote authorization stamps could reference unrelated posts.
+- Fixed double-encoding of special characters in comment author names on updates.
+- Fixed emoji shortcode replacement to handle special characters in emoji names correctly.
+- Fix fatal error when other plugins hook into the user agent filter expecting two arguments.
+- Fix Fediverse Preview showing the standard web view instead of the ActivityPub preview for draft posts.
+- Fix OAuth authentication failing for local development clients using localhost subdomains.
+- Fix performance regression from reply-exclusion filter by skipping it for queries targeting non-ActivityPub post types.
+- Fix Reader feed failing to load with newer WordPress versions.
+- Fix remote actor avatars getting stuck on broken URLs when the original image becomes unavailable.
+- Fix Site Health check showing an empty error message when the WebFinger endpoint is not reachable.
+- Fix the Fediverse profile "Joined" date showing the oldest post date instead of when the site started federating.
+- Fix the Fediverse profile showing an inflated post count by excluding incoming comments from the total.
+- Fix Update handler using stale local actor data instead of the activity payload
+- Improved HTTP Signature validation for requests with a missing Date header.
+- Only allow S256 as PKCE code challenge method for OAuth authorization.
+- Prevent third-party plugin UI elements and scripts from appearing in federated content.
+- Require signed peer requests for the followers synchronization endpoint per FEP-8fcf.
+- Show a styled error page instead of raw technical output when an OAuth application cannot be reached during authorization.
+- Strip private recipient fields from all outgoing activities to prevent leaking private audiences.
+- Sync ActivityPub blog actor settings via Jetpack.
+- Use ap_actor post ID for remote account IDs instead of remapping URI strings.
+- Use safe HTTP request for signature retry to prevent requests to private IP ranges.
+- Validate emoji updated timestamps before storing them.
+
 ### 8.0.2 - 2026-03-17
 #### Security
 - Prevent non-public posts (drafts, scheduled, pending review) from being accessible via ActivityPub.
@@ -170,9 +236,9 @@ See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activityp
 
 == Upgrade Notice ==
 
-= 7.9.0 =
+= 8.1.0 =
 
-Custom emoji from the fediverse now show up instead of looking like :sad_trombone:.
+See your year on the Fediverse with the new Stats feature, bringing your highlights together in one simple view you can share anywhere.
 
 == Installation ==
 

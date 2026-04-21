@@ -89,7 +89,7 @@ trait Verification {
 	/**
 	 * Check that the signature keyId and activity actor share the same host.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return true|\WP_Error True if valid, WP_Error on mismatch.
@@ -205,7 +205,7 @@ trait Verification {
 	 * Returns true if the social graph setting allows public display,
 	 * or if the request is authenticated by the resource owner.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return bool True if the social graph should be shown.

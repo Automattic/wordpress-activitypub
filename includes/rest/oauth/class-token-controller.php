@@ -23,7 +23,7 @@ use function Activitypub\get_client_ip;
  * - Revocation endpoint (POST /oauth/revoke)
  * - Token introspection endpoint (POST /oauth/introspect)
  *
- * @since unreleased
+ * @since 8.1.0
  */
 class Token_Controller extends \WP_REST_Controller {
 	/**

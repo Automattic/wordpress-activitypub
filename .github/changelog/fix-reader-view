@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix Reader feed failing to load with newer WordPress versions.

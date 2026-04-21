@@ -680,7 +680,7 @@ class Options {
 	 * registered default when the stored value is empty or false
 	 * (option not properly set), but allows 0 to disable purging.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param mixed $value The stored option value.
 	 *

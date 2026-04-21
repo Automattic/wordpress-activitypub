@@ -34,7 +34,7 @@ class Buddypress {
 	 * BuddyPress's regex. The browser decodes the HTML entity before JavaScript
 	 * reads the attribute, so the Interactivity API receives the original `@`.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param string $block_content The block content.
 	 *

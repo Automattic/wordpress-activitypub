@@ -196,7 +196,7 @@ class Server {
 	 * Use this for endpoints that bypass the REST response flow
 	 * (e.g. SSE streams that call exit() instead of returning a WP_REST_Response).
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 */
 	public static function send_cors_headers() {
 		$origin = self::get_cors_origin();
@@ -217,7 +217,7 @@ class Server {
 	 * Reflects the request Origin instead of using a wildcard to avoid
 	 * leaking private data to arbitrary origins on authenticated endpoints.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @return string The origin or empty string.
 	 */
