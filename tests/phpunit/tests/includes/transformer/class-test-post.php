@@ -234,6 +234,45 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that the activitypub_post_object_type filter overrides the computed type.
+	 *
+	 * Verifies the filter receives the computed default and the post being
+	 * transformed, and that the return value replaces the computed value
+	 * for downstream callers of get_type().
+	 *
+	 * @covers ::get_type
+	 */
+	public function test_get_type_filter_overrides_computed_value() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'A Titled Post With No Format',
+				'post_content' => 'Default behavior here would return Article.',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$received_post = null;
+		$received_type = null;
+		$callback      = function ( $object_type, $filter_post ) use ( &$received_type, &$received_post ) {
+			$received_type = $object_type;
+			$received_post = $filter_post;
+			return 'Note';
+		};
+
+		\add_filter( 'activitypub_post_object_type', $callback, 10, 2 );
+
+		$transformer = new Post( $post );
+		$type        = $this->reflection_method->invoke( $transformer );
+
+		\remove_filter( 'activitypub_post_object_type', $callback, 10 );
+
+		$this->assertSame( 'Article', $received_type, 'Filter should receive the computed default type.' );
+		$this->assertInstanceOf( '\WP_Post', $received_post );
+		$this->assertSame( $post_id, $received_post->ID, 'Filter should receive the post being transformed.' );
+		$this->assertSame( 'Note', $type, 'Filtered value should replace the computed default.' );
+	}
+
+	/**
 	 * Test the to_array method.
 	 *
 	 * @covers ::to_object

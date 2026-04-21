@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Added the `activitypub_post_object_type` filter so plugins can override the federated object type (Note, Article, Page) for a post.
