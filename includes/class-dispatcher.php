@@ -470,10 +470,10 @@ class Dispatcher {
 	 * @return boolean True if the Activity should be sent to followers, false if not.
 	 */
 	protected static function should_send_to_followers( $activity, $actor, $outbox_item ) {
-		$cc  = $activity->get_cc() ?? array();
-		$to  = $activity->get_to() ?? array();
-		$bcc = $activity->get_bcc() ?? array();
-		$bto = $activity->get_bto() ?? array();
+		$cc  = (array) ( $activity->get_cc() ?? array() );
+		$to  = (array) ( $activity->get_to() ?? array() );
+		$bcc = (array) ( $activity->get_bcc() ?? array() );
+		$bto = (array) ( $activity->get_bto() ?? array() );
 
 		$audience = array_merge( $cc, $to, $bcc, $bto );
 
