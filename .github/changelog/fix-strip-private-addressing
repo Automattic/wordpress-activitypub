@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Strip private recipient fields from all outgoing activities to prevent leaking private audiences.

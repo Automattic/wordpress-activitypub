@@ -231,11 +231,18 @@ class Generic_Object {
 	 * It tries to get the object attributes if they exist
 	 * and falls back to the getters. Empty values are ignored.
 	 *
+	 * By default, `bto` and `bcc` (the blind audience fields) are stripped
+	 * from the output per ActivityPub Section 6, so every serialization path
+	 * is safe for emission. Internal callers that need to persist the blind
+	 * audience (e.g., outbox/inbox storage) can opt in by passing
+	 * `$include_blind_audience = true`.
+	 *
 	 * @param bool $include_json_ld_context Whether to include the JSON-LD context. Default true.
+	 * @param bool $include_blind_audience  Whether to keep `bto` and `bcc` in the output. Default false.
 	 *
 	 * @return array An array built from the Object.
 	 */
-	public function to_array( $include_json_ld_context = true ) {
+	public function to_array( $include_json_ld_context = true, $include_blind_audience = false ) {
 		$array = array();
 		$vars  = get_object_vars( $this );
 
@@ -255,7 +262,7 @@ class Generic_Object {
 			}
 
 			if ( is_object( $value ) ) {
-				$value = $value->to_array( false );
+				$value = $value->to_array( false, $include_blind_audience );
 			}
 
 			if ( is_array( $value ) && $this->is_namespaced( $key ) ) {
@@ -296,18 +303,33 @@ class Generic_Object {
 		 *
 		 * @return array The filtered array of the ActivityPub object.
 		 */
-		return \apply_filters( "activitypub_activity_{$class}_object_array", $array, $this->id, $this );
+		$array = \apply_filters( "activitypub_activity_{$class}_object_array", $array, $this->id, $this );
+
+		if ( ! $include_blind_audience ) {
+			/*
+			 * Strip `bto` and `bcc` from the serialized array per ActivityPub Section 6.
+			 * Callers that need the blind audience either read it from the object via
+			 * `get_bto()` / `get_bcc()` or opt in with `$include_blind_audience = true`.
+			 */
+			unset( $array['bto'], $array['bcc'] );
+			if ( isset( $array['object'] ) && \is_array( $array['object'] ) ) {
+				unset( $array['object']['bto'], $array['object']['bcc'] );
+			}
+		}
+
+		return $array;
 	}
 
 	/**
 	 * Convert Object to JSON.
 	 *
 	 * @param bool $include_json_ld_context Whether to include the JSON-LD context. Default true.
+	 * @param bool $include_blind_audience  Whether to keep `bto` and `bcc` in the output. Default false.
 	 *
 	 * @return string The JSON string.
 	 */
-	public function to_json( $include_json_ld_context = true ) {
-		$array   = $this->to_array( $include_json_ld_context );
+	public function to_json( $include_json_ld_context = true, $include_blind_audience = false ) {
+		$array   = $this->to_array( $include_json_ld_context, $include_blind_audience );
 		$options = \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_QUOT | \JSON_UNESCAPED_SLASHES;
 
 		/**

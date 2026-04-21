@@ -123,7 +123,8 @@ class Inbox {
 				$activity->get_type(),
 				\wp_trim_words( $title, 5 )
 			),
-			'post_content' => wp_slash( $activity->to_json() ),
+			// Persist the blind audience so we keep the full addressing the sender used.
+			'post_content' => wp_slash( $activity->to_json( true, true ) ),
 			'post_author'  => 0, // No specific author, recipients stored in meta.
 			'post_status'  => 'publish',
 			'guid'         => $activity->get_id(),
