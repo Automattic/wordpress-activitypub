@@ -46,7 +46,7 @@ class Test_Post_Controller extends WP_UnitTestCase {
 	 */
 	public function test_init() {
 		$routes = $this->server->get_routes();
-		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>[-]?\d+)/reactions', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>[1-9]\d*)/reactions', $routes );
 	}
 
 	/**
@@ -58,8 +58,8 @@ class Test_Post_Controller extends WP_UnitTestCase {
 		$request  = new WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/999999/reactions' );
 		$response = $this->server->dispatch( $request );
 
-		$this->assertEquals( 404, $response->get_status() );
-		$this->assertEquals( 'activitypub_post_not_found', $response->get_data()['code'] );
+		$this->assertEquals( 400, $response->get_status() );
+		$this->assertEquals( 'rest_invalid_param', $response->get_data()['code'] );
 	}
 
 	/**
@@ -93,8 +93,8 @@ class Test_Post_Controller extends WP_UnitTestCase {
 		$request  = new WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/' . $post_id . '/reactions' );
 		$response = $this->server->dispatch( $request );
 
-		$this->assertEquals( 404, $response->get_status() );
-		$this->assertEquals( 'activitypub_post_not_found', $response->get_data()['code'] );
+		$this->assertEquals( 400, $response->get_status() );
+		$this->assertEquals( 'rest_invalid_param', $response->get_data()['code'] );
 	}
 
 	/**
@@ -122,8 +122,8 @@ class Test_Post_Controller extends WP_UnitTestCase {
 		$request  = new WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/' . $post_id . '/reactions' );
 		$response = $this->server->dispatch( $request );
 
-		$this->assertEquals( 404, $response->get_status() );
-		$this->assertEquals( 'activitypub_post_not_found', $response->get_data()['code'] );
+		$this->assertEquals( 400, $response->get_status() );
+		$this->assertEquals( 'rest_invalid_param', $response->get_data()['code'] );
 	}
 
 	/**
@@ -287,11 +287,11 @@ class Test_Post_Controller extends WP_UnitTestCase {
 	 */
 	public function test_remote_intent_route_registered() {
 		$routes = $this->server->get_routes();
-		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>[-]?\d+)/remote-intent', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>[1-9]\d*)/remote-intent', $routes );
 	}
 
 	/**
-	 * Test remote-intent returns 404 for non-existent post.
+	 * Test remote-intent rejects a non-existent post at arg validation.
 	 *
 	 * @covers ::get_remote_intent_template
 	 */
@@ -302,12 +302,12 @@ class Test_Post_Controller extends WP_UnitTestCase {
 
 		$response = $this->server->dispatch( $request );
 
-		$this->assertEquals( 404, $response->get_status() );
-		$this->assertEquals( 'activitypub_post_not_found', $response->get_data()['code'] );
+		$this->assertEquals( 400, $response->get_status() );
+		$this->assertEquals( 'rest_invalid_param', $response->get_data()['code'] );
 	}
 
 	/**
-	 * Test remote-intent returns 404 for draft post.
+	 * Test remote-intent rejects a draft post at arg validation.
 	 *
 	 * @covers ::get_remote_intent_template
 	 */
@@ -319,7 +319,8 @@ class Test_Post_Controller extends WP_UnitTestCase {
 
 		$response = $this->server->dispatch( $request );
 
-		$this->assertEquals( 404, $response->get_status() );
+		$this->assertEquals( 400, $response->get_status() );
+		$this->assertEquals( 'rest_invalid_param', $response->get_data()['code'] );
 	}
 
 	/**
@@ -329,7 +330,7 @@ class Test_Post_Controller extends WP_UnitTestCase {
 	 */
 	public function test_remote_intent_invalid_intent() {
 		$routes    = $this->server->get_routes();
-		$route_key = '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>[-]?\d+)/remote-intent';
+		$route_key = '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>[1-9]\d*)/remote-intent';
 
 		$this->assertArrayHasKey( $route_key, $routes );
 

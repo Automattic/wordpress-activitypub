@@ -32,7 +32,7 @@ class Comments_Controller extends \WP_REST_Controller {
 	 *
 	 * @var string
 	 */
-	protected $rest_base = 'comments/(?P<comment_id>[-]?\d+)';
+	protected $rest_base = 'comments/(?P<comment_id>[1-9]\d*)';
 
 	/**
 	 * Register routes.
@@ -46,6 +46,7 @@ class Comments_Controller extends \WP_REST_Controller {
 					'comment_id' => array(
 						'description'       => 'The ID of the comment.',
 						'type'              => 'integer',
+						'minimum'           => 1,
 						'required'          => true,
 						'validate_callback' => array( $this, 'validate_comment' ),
 					),

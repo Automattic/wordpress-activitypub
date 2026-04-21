@@ -31,7 +31,7 @@ class Replies_Controller extends \WP_REST_Controller {
 	 *
 	 * @var string
 	 */
-	protected $rest_base = '(?P<object_type>[\w\-\.]+)s/(?P<id>[\w\-\.]+)/(?P<type>[\w\-\.]+)';
+	protected $rest_base = '(?P<object_type>[\w\-\.]+)s/(?P<id>[1-9]\d*)/(?P<type>[\w\-\.]+)';
 
 	/**
 	 * Register routes.
@@ -50,7 +50,8 @@ class Replies_Controller extends \WP_REST_Controller {
 					),
 					'id'          => array(
 						'description' => 'The ID of the object.',
-						'type'        => 'string',
+						'type'        => 'integer',
+						'minimum'     => 1,
 						'required'    => true,
 					),
 					'type'        => array(
