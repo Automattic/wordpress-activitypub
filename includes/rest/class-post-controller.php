@@ -35,7 +35,7 @@ class Post_Controller extends \WP_REST_Controller {
 	 *
 	 * @var string
 	 */
-	protected $rest_base = 'posts/(?P<id>[1-9]\d*)';
+	protected $rest_base = 'posts/(?P<id>[\d]+)';
 
 	/**
 	 * Register routes.

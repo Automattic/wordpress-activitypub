@@ -46,7 +46,7 @@ class Test_Post_Controller extends WP_UnitTestCase {
 	 */
 	public function test_init() {
 		$routes = $this->server->get_routes();
-		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>[1-9]\d*)/reactions', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>[\d]+)/reactions', $routes );
 	}
 
 	/**
@@ -287,7 +287,7 @@ class Test_Post_Controller extends WP_UnitTestCase {
 	 */
 	public function test_remote_intent_route_registered() {
 		$routes = $this->server->get_routes();
-		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>[1-9]\d*)/remote-intent', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>[\d]+)/remote-intent', $routes );
 	}
 
 	/**
@@ -330,7 +330,7 @@ class Test_Post_Controller extends WP_UnitTestCase {
 	 */
 	public function test_remote_intent_invalid_intent() {
 		$routes    = $this->server->get_routes();
-		$route_key = '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>[1-9]\d*)/remote-intent';
+		$route_key = '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/(?P<id>[\d]+)/remote-intent';
 
 		$this->assertArrayHasKey( $route_key, $routes );
 

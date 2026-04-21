@@ -78,7 +78,7 @@ class Test_Replies_Controller extends \Activitypub\Tests\Test_REST_Controller_Te
 	 */
 	public function test_register_routes() {
 		$routes = rest_get_server()->get_routes();
-		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/(?P<object_type>[\w\-\.]+)s/(?P<id>[1-9]\d*)/(?P<type>[\w\-\.]+)', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/(?P<object_type>[\w\-\.]+)s/(?P<id>[\d]+)/(?P<type>[\w\-\.]+)', $routes );
 	}
 
 	/**
