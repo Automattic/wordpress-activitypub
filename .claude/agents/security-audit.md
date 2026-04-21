@@ -16,7 +16,7 @@ Past CVEs and security fixes inform what patterns to watch for. The full list is
 2. **Post title/content disclosure** (CVE, fixed 1.0.0) — low-privilege users accessing unpublished content
 3. **Stored XSS** (CVE, fixed 1.0.0/1.0.1) — contributor+ injecting scripts
 4. **Content negotiation leak** (PR #3045, 2026) — non-public posts served via ActivityPub Accept header
-5. **Per-post REST routes leaking non-public posts** (2026) — `/posts/{id}/reactions`, `/posts/{id}/replies`, `/posts/{id}/likes`, `/posts/{id}/shares` returned reaction/like/share metadata for private, draft, password-protected, and local-only posts. Root cause: routes loaded the post via `get_post()` and only bailed on "post doesn't exist", never calling `is_post_disabled()`.
+5. **Per-post REST routes leaking non-public posts** (2026) — `/posts/{id}/reactions`, `/posts/{id}/replies`, `/posts/{id}/likes`, `/posts/{id}/shares`, and `/comments/{id}/remote-reply` returned reaction / reply / like / share / remote-reply metadata for private, draft, password-protected, and local-only posts — including posts that had been federated earlier and were then made non-public. Root cause: routes loaded the post via `get_post()` and only bailed on "post doesn't exist", rather than gating on current public visibility. The canonical content-exposure predicate is now `is_post_publicly_queryable()`; `is_post_disabled()` is the pipeline gate only and must not be used as a content-exposure check (its lifecycle escape hatch intentionally lets previously-federated posts through so Delete / Create activities can fire).
 
 ## Audit Scope
 
