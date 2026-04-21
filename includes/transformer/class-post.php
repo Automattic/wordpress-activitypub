@@ -471,8 +471,9 @@ class Post extends Base {
 		 * Allows downstream consumers to override the discriminator that
 		 * decides whether a post federates as Note, Article, or Page.
 		 * The filtered value propagates to all internal callers of
-		 * get_type() (content composition, attachment handling, content
-		 * templates, preview), not only the wire-format type property.
+		 * get_type(), including former_type/tombstone handling,
+		 * summary and title decisions, the content template, and the
+		 * preview guard, not only the wire-format type property.
 		 *
 		 * @since unreleased
 		 *

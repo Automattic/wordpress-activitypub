@@ -261,10 +261,12 @@ class Test_Post extends \WP_UnitTestCase {
 
 		\add_filter( 'activitypub_post_object_type', $callback, 10, 2 );
 
-		$transformer = new Post( $post );
-		$type        = $this->reflection_method->invoke( $transformer );
-
-		\remove_filter( 'activitypub_post_object_type', $callback, 10 );
+		try {
+			$transformer = new Post( $post );
+			$type        = $this->reflection_method->invoke( $transformer );
+		} finally {
+			\remove_filter( 'activitypub_post_object_type', $callback, 10 );
+		}
 
 		$this->assertSame( 'Article', $received_type, 'Filter should receive the computed default type.' );
 		$this->assertInstanceOf( '\WP_Post', $received_post );
