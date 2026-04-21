@@ -103,7 +103,7 @@ class Replies_Controller extends \WP_REST_Controller {
 			$publicly_queryable = $wp_object && is_post_publicly_queryable( $wp_object->comment_post_ID );
 		} else {
 			$wp_object          = \get_post( $id );
-			$publicly_queryable = is_post_publicly_queryable( $id );
+			$publicly_queryable = $wp_object && is_post_publicly_queryable( $wp_object );
 		}
 
 		if ( ! isset( $wp_object ) || \is_wp_error( $wp_object ) || ! $publicly_queryable ) {

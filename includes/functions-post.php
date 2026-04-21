@@ -132,10 +132,15 @@ function is_post_publicly_queryable( $post ) {
 	$visibility          = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
 	$is_local_or_private = in_array( $visibility, array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ), true );
 
-	// 'inherit' is allowed only for attachments whose parent post is also published (or unattached).
+	/*
+	 * An attachment (`inherit` status) inherits its parent's visibility.
+	 * Recurse into the parent so the attachment also picks up the parent's
+	 * content-visibility meta, password protection, and post-type support,
+	 * not just its post_status. Unattached attachments are allowed through.
+	 */
 	$is_attachment_public = 'inherit' === $post->post_status &&
 		'attachment' === $post->post_type &&
-		( ! $post->post_parent || 'publish' === \get_post_status( $post->post_parent ) );
+		( ! $post->post_parent || is_post_publicly_queryable( $post->post_parent ) );
 
 	// Drafts and pending posts are allowed during preview requests so the Fediverse Preview works.
 	$is_preview = in_array( $post->post_status, array( 'draft', 'pending' ), true ) &&
