@@ -1264,11 +1264,21 @@ class Blocks {
 	 * filters the main query so that Query Loop blocks with
 	 * `inherit: true` also pick up the filter.
 	 *
+	 * The filter is only attached when the current frontend request
+	 * renders the `activitypub/posts-and-replies` tab block. Admin and
+	 * feed queries are never touched, and neither is any frontend
+	 * request whose template does not contain the tab block.
+	 *
 	 * @since 8.1.0
 	 *
 	 * @param WP_Query $query The WP_Query instance.
 	 */
 	public static function filter_query_loop_vars( $query ) {
+		// Never touch admin or feed queries.
+		if ( \is_admin() || $query->is_feed() ) {
+			return;
+		}
+
 		if ( ! $query->is_main_query() || $query->is_singular() ) {
 			return;
 		}
@@ -1283,6 +1293,11 @@ class Blocks {
 			}
 		}
 
+		// Only filter when the current request actually renders the posts-and-replies block.
+		if ( ! self::current_request_has_posts_and_replies_block( $query ) ) {
+			return;
+		}
+
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$active_tab = isset( $_GET['filter'] ) ? \sanitize_key( $_GET['filter'] ) : 'posts';
 
@@ -1292,6 +1307,79 @@ class Blocks {
 		}
 
 		\add_filter( 'posts_where', array( self::class, 'exclude_replies_where' ) );
+	}
+
+	/**
+	 * Best-effort check for whether the current request will render the posts-and-replies block.
+	 *
+	 * Looks at the static front page or posts page (classic / hybrid setups)
+	 * and at the block template the query is most likely to use (block themes).
+	 * Widgets, shortcodes and other embed points are not detected — when in
+	 * doubt, we err on the side of not filtering.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_Query $query The WP_Query instance.
+	 * @return bool Whether the posts-and-replies block is present.
+	 */
+	private static function current_request_has_posts_and_replies_block( $query ) {
+		$block_name = 'activitypub/posts-and-replies';
+
+		if ( $query->is_front_page() ) {
+			$page_on_front = (int) \get_option( 'page_on_front' );
+			if ( $page_on_front && \has_block( $block_name, $page_on_front ) ) {
+				return true;
+			}
+		}
+
+		if ( $query->is_home() ) {
+			$page_for_posts = (int) \get_option( 'page_for_posts' );
+			if ( $page_for_posts && \has_block( $block_name, $page_for_posts ) ) {
+				return true;
+			}
+		}
+
+		if ( \function_exists( 'wp_is_block_theme' ) && \wp_is_block_theme() && \function_exists( 'get_block_template' ) ) {
+			$stylesheet = \get_stylesheet();
+			foreach ( self::candidate_template_slugs( $query ) as $slug ) {
+				$template = \get_block_template( $stylesheet . '//' . $slug );
+				if ( $template && ! empty( $template->content ) && \has_block( $block_name, $template->content ) ) {
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Candidate block template slugs for a query, ordered from most specific to least.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_Query $query The WP_Query instance.
+	 * @return string[] Template slugs to probe.
+	 */
+	private static function candidate_template_slugs( $query ) {
+		if ( $query->is_front_page() ) {
+			return array( 'front-page', 'home', 'index' );
+		}
+		if ( $query->is_home() ) {
+			return array( 'home', 'index' );
+		}
+		if ( $query->is_category() || $query->is_tag() || $query->is_tax() ) {
+			return array( 'archive', 'index' );
+		}
+		if ( $query->is_author() ) {
+			return array( 'author', 'archive', 'index' );
+		}
+		if ( $query->is_date() ) {
+			return array( 'date', 'archive', 'index' );
+		}
+		if ( $query->is_search() ) {
+			return array( 'search', 'index' );
+		}
+		return array( 'index' );
 	}
 
 	/**
