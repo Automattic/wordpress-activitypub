@@ -124,7 +124,7 @@ class Post_Controller extends \WP_REST_Controller {
 		$post_id = $request->get_param( 'id' );
 
 		if ( ! is_post_publicly_queryable( $post_id ) ) {
-			return new \WP_Error( 'activitypub_post_not_found', \__( 'Post not found.', 'activitypub' ), array( 'status' => 404 ) );
+			return new \WP_Error( 'activitypub_post_not_found', \__( 'Post not found', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
 		$reactions = array();
@@ -185,13 +185,13 @@ class Post_Controller extends \WP_REST_Controller {
 		$post_id = $request->get_param( 'id' );
 
 		if ( ! is_post_publicly_queryable( $post_id ) ) {
-			return new \WP_Error( 'activitypub_post_not_found', \__( 'Post not found.', 'activitypub' ), array( 'status' => 404 ) );
+			return new \WP_Error( 'activitypub_post_not_found', \__( 'Post not found', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
 		$collection = Replies::get_context_collection( $post_id );
 
 		if ( false === $collection ) {
-			return new \WP_Error( 'activitypub_post_not_found', \__( 'Post not found.', 'activitypub' ), array( 'status' => 404 ) );
+			return new \WP_Error( 'activitypub_post_not_found', \__( 'Post not found', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
 		$response = array_merge(
@@ -224,7 +224,7 @@ class Post_Controller extends \WP_REST_Controller {
 		$post     = \get_post( $post_id );
 
 		if ( ! $post || 'publish' !== \get_post_status( $post ) ) {
-			return new \WP_Error( 'activitypub_post_not_found', \__( 'Post not found.', 'activitypub' ), array( 'status' => 404 ) );
+			return new \WP_Error( 'activitypub_post_not_found', \__( 'Post not found', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
 		$template = Webfinger::get_intent_endpoint( $resource, $intent, true );
