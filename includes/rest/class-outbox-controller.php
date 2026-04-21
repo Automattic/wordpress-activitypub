@@ -595,7 +595,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * Per the ActivityPub spec, the server adds addressing when the client
 	 * does not provide it. Defaults to public with followers in cc.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param array                       $data The activity data.
 	 * @param \Activitypub\Activity\Actor $user The authenticated user.

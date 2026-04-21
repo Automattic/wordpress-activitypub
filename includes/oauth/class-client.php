@@ -565,7 +565,7 @@ class Client {
 	/**
 	 * Get all manually registered (non-discovered) clients.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @return Client[] Array of Client objects.
 	 */
@@ -606,7 +606,7 @@ class Client {
 	/**
 	 * Get the post ID of the client.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @return int The post ID.
 	 */
@@ -627,7 +627,7 @@ class Client {
 	/**
 	 * Get client display name, falling back to client ID.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @return string The display name.
 	 */
@@ -699,7 +699,7 @@ class Client {
 	 * since the client_id URL typically serves a JSON document (CIMD)
 	 * not intended for end-users.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @return string A URL for the client, or empty string if none available.
 	 */

@@ -25,7 +25,7 @@ class Posts {
 	/**
 	 * Create a WordPress post from an ActivityPub activity.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param array       $activity   The activity data.
 	 * @param int         $user_id    The local user ID.
@@ -93,7 +93,7 @@ class Posts {
 	/**
 	 * Update a WordPress post from an ActivityPub activity.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param \WP_Post    $post       The post to update.
 	 * @param array       $activity   The activity data.
@@ -144,7 +144,7 @@ class Posts {
 	/**
 	 * Delete (trash) a WordPress post.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param int $post_id The post ID.
 	 *
@@ -160,7 +160,7 @@ class Posts {
 	 * Applies wpautop (for plain text), autolinks bare URLs,
 	 * converts hashtags to links, and wraps in block markup.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param string $content The HTML or plain-text content.
 	 *

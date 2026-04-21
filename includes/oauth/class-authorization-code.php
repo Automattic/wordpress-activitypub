@@ -75,7 +75,7 @@ class Authorization_Code {
 			 * Return true to enforce PKCE (recommended per OAuth 2.1).
 			 * Default false for backward compatibility with older clients.
 			 *
-			 * @since unreleased
+			 * @since 8.1.0
 			 *
 			 * @param bool   $require    Whether to require PKCE. Default false.
 			 * @param string $client_id  The OAuth client ID.

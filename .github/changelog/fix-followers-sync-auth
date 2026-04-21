@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Require signed peer requests for the followers synchronization endpoint per FEP-8fcf.

@@ -865,7 +865,7 @@ class Enable_Mastodon_Apps {
 		/**
 		 * Filters the tags.pub base URL for tag timeline lookups.
 		 *
-		 * @since unreleased
+		 * @since 8.1.0
 		 *
 		 * @param string $base_url The base URL. Default 'https://tags.pub'.
 		 */

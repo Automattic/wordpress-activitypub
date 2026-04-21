@@ -1050,7 +1050,7 @@ class Blocks {
 	 * Parses the post content for activitypub/stats blocks and appends each
 	 * as an Image attachment to the ActivityPub object.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param array    $attachments The existing attachments.
 	 * @param \WP_Post $post        The post object.
@@ -1106,7 +1106,7 @@ class Blocks {
 	/**
 	 * Recursively find blocks of a given type in a block tree.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param array  $blocks     The parsed blocks.
 	 * @param string $block_name The block name to search for.
@@ -1155,7 +1155,7 @@ class Blocks {
 	 * Tokenizes the content with wp_html_split(), tracks nesting depth,
 	 * and wraps each top-level element in block comment delimiters.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param string $content The HTML content.
 	 *
@@ -1234,7 +1234,7 @@ class Blocks {
 	/**
 	 * Wrap an HTML element in block comment delimiters.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param string $tag  The uppercase tag name.
 	 * @param string $html The element HTML.
@@ -1264,7 +1264,7 @@ class Blocks {
 	 * filters the main query so that Query Loop blocks with
 	 * `inherit: true` also pick up the filter.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param WP_Query $query The WP_Query instance.
 	 */
@@ -1300,7 +1300,7 @@ class Blocks {
 	 * Removes itself after the first execution to avoid
 	 * affecting secondary queries on the same page.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param string $where The WHERE clause.
 	 * @return string Modified WHERE clause.

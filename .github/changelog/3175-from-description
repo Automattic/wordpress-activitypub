@@ -1,4 +1,0 @@
-Significance: patch
-Type: added
-
-Add OAuth server metadata and registration endpoint discovery to actor profiles.

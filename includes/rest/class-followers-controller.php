@@ -257,7 +257,7 @@ class Followers_Controller extends Actors_Controller {
 	 * `Signature-Input: …keyid="…"`. Returns the host component of the key
 	 * ID URI, lowercased, or an empty string when none is present.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return string The signer's host, or an empty string.

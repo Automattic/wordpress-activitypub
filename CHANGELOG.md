@@ -5,6 +5,72 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.1.0] - 2026-04-21
+### Security
+- Add rate limiting to app registration to prevent abuse. [#3108]
+- Fix blog actor outbox exposing private activities to unauthenticated visitors. [#3188]
+- Restrict localhost URL allowance to local development environments only. [#3076]
+- Verify that the signing key belongs to the same server as the activity actor. [#3109]
+
+### Added
+- Add a "Posts and Replies" tab bar for author archives that filters between posts and replies, similar to Mastodon's profile view. [#3036]
+- Add a liked collection to actor profiles, showing all posts the actor has liked. [#3128]
+- Add a seasonal starter pattern that suggests sharing Fediverse stats when creating a new post in December and January. [#3160]
+- Add a stats block that displays annual Fediverse statistics as a card on the site and as a shareable image on the Fediverse, with automatic color and font adoption from the site's theme. [#3126]
+- Added `activitypub_pre_get_by_id` filter to allow plugins to register custom virtual actors resolved by ID. [#3124]
+- Add EXIF metadata support for image attachments using Vernissage namespace. [#2751]
+- Add new Fediverse Following Page and Profile Page block patterns. [#3032]
+- Add OAuth server metadata and registration endpoint discovery to actor profiles. [#3175]
+- Add real-time streaming for inbox and outbox updates via Server-Sent Events (SSE). [#2945]
+- Add support for Block, Add (pin post), and Remove (unpin post) activities via Client-to-Server API. [#3033]
+- Add support for check-in activities posted via compatible apps. [#3120]
+- Add support for importing Starter Packs in both the Pixelfed and Mastodon formats. [#3168]
+- Add tags.pub integration to supplement tag timelines with posts from across the Fediverse. [#3151]
+- Support for ActivityPub Client-to-Server (C2S) protocol, allowing apps like federated clients to create, edit, and delete posts on your behalf. [#2851]
+
+### Changed
+- Block patterns for follow, following, and profile pages are now only suggested when editing pages. [#3032]
+- Fix notification pagination when using Enable Mastodon Apps: use date-constrained queries instead of truncating the shared notification pool, and expose `$limit`, `$before_date`, and `$after_date` as additional filter arguments so third-party handlers can fetch the correct window. [#3150]
+- Improve the pre-publish format suggestion panel with clearer messages and a confirmation after applying a format. [#3090]
+- Podcast episodes now respect the configured object type setting instead of always being sent as "Note". [#3065]
+- Show reaction action buttons even when a post has no reactions yet. [#3091]
+
+### Fixed
+- ActivityPub endpoints that surface comment, reply, like, share, and remote-reply metadata now honor the parent post's visibility setting. [#3203]
+- Added validation for SSE access tokens passed via query parameter. [#3095]
+- Fix account migration (Move) not working when moving back to an external account. [#3102]
+- Fix a fatal error during activity delivery when the outbox item has been deleted. [#3058]
+- Fix a fatal error when receiving activities with a non-string language property. [#3158]
+- Fix a fatal `array_keys(null)` in `Comment::get_comment_type_slugs()` that could take down any request where a third-party plugin transitioned a custom comment type before `add_comment_type()` had been called. [#3196]
+- Fix a missing script dependency notice on the admin page in WordPress 6.9.1 and later. [#3084]
+- Fix BuddyPress @mention filter corrupting Fediverse Followers and Following blocks. [#3174]
+- Fix cleanup jobs silently doing nothing on sites where purge retention options were not set. [#3138]
+- Fix comments on remote posts being incorrectly held in moderation. [#3129]
+- Fix double-encoded HTML entities in post titles on the Fediverse Stats dashboard. [#3162]
+- Fixed an issue where quote authorization stamps could reference unrelated posts. [#3093]
+- Fixed double-encoding of special characters in comment author names on updates. [#3100]
+- Fixed emoji shortcode replacement to handle special characters in emoji names correctly. [#3099]
+- Fix fatal error when other plugins hook into the user agent filter expecting two arguments. [#3179]
+- Fix Fediverse Preview showing the standard web view instead of the ActivityPub preview for draft posts. [#3054]
+- Fix OAuth authentication failing for local development clients using localhost subdomains. [#3169]
+- Fix performance regression from reply-exclusion filter by skipping it for queries targeting non-ActivityPub post types. [#3153]
+- Fix Reader feed failing to load with newer WordPress versions. [#3194]
+- Fix remote actor avatars getting stuck on broken URLs when the original image becomes unavailable. [#3041]
+- Fix Site Health check showing an empty error message when the WebFinger endpoint is not reachable. [#3123]
+- Fix the Fediverse profile "Joined" date showing the oldest post date instead of when the site started federating. [#3137]
+- Fix the Fediverse profile showing an inflated post count by excluding incoming comments from the total. [#3136]
+- Fix Update handler using stale local actor data instead of the activity payload [#3110]
+- Improved HTTP Signature validation for requests with a missing Date header. [#3096]
+- Only allow S256 as PKCE code challenge method for OAuth authorization. [#3097]
+- Prevent third-party plugin UI elements and scripts from appearing in federated content. [#3049]
+- Require signed peer requests for the followers synchronization endpoint per FEP-8fcf. [#3202]
+- Show a styled error page instead of raw technical output when an OAuth application cannot be reached during authorization. [#3043]
+- Strip private recipient fields from all outgoing activities to prevent leaking private audiences. [#3200]
+- Sync ActivityPub blog actor settings via Jetpack. [#3176]
+- Use ap_actor post ID for remote account IDs instead of remapping URI strings. [#3152]
+- Use safe HTTP request for signature retry to prevent requests to private IP ranges. [#3098]
+- Validate emoji updated timestamps before storing them. [#3101]
+
 ## [8.0.2] - 2026-03-17
 ### Security
 - Prevent non-public posts (drafts, scheduled, pending review) from being accessible via ActivityPub. [#3045]
@@ -1746,6 +1812,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[8.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/8.0.2...8.1.0
 [8.0.2]: https://github.com/Automattic/wordpress-activitypub/compare/8.0.1...8.0.2
 [8.0.1]: https://github.com/Automattic/wordpress-activitypub/compare/8.0.0...8.0.1
 [8.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/7.9.1...8.0.0

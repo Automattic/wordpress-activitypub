@@ -296,7 +296,7 @@ class User extends Actor {
 	/**
 	 * Returns the Liked API endpoint.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @return string The Liked endpoint.
 	 */

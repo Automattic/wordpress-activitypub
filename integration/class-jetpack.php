@@ -46,7 +46,7 @@ class Jetpack {
 	/**
 	 * Add ActivityPub options to the Jetpack sync allow list.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param array $allow_list The Jetpack sync options allow list.
 	 *

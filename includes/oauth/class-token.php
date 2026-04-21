@@ -39,7 +39,7 @@ class Token {
 	 *
 	 * When exceeded, the oldest tokens are revoked automatically.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 */
 	const MAX_TOKENS_PER_USER = 50;
 
@@ -655,7 +655,7 @@ class Token {
 	/**
 	 * Enforce per-user token limit by revoking oldest tokens.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param int $user_id The user ID.
 	 */

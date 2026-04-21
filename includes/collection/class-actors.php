@@ -58,7 +58,7 @@ class Actors {
 		 * resolved by ID, mirroring the `activitypub_pre_get_by_username`
 		 * filter for username lookups.
 		 *
-		 * @since unreleased
+		 * @since 8.1.0
 		 *
 		 * @param null $pre     The pre-existing value.
 		 * @param int  $user_id The user ID.

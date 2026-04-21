@@ -6,7 +6,7 @@
  * Works with a sibling `core/query` block that inherits from the template.
  * The actual query filtering happens in {@see Blocks::filter_query_loop_vars()}.
  *
- * @since unreleased
+ * @since 8.1.0
  *
  * @package Activitypub
  */

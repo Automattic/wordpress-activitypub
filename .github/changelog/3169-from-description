@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix OAuth authentication failing for local development clients using localhost subdomains.

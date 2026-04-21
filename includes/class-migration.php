@@ -220,7 +220,7 @@ class Migration {
 		if ( \version_compare( $version_from_db, '7.9.0', '<' ) ) {
 			\wp_schedule_single_event( \time(), 'activitypub_migrate_actor_emoji' );
 		}
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+		if ( \version_compare( $version_from_db, '8.1.0', '<' ) ) {
 			// Flush rewrite rules for OAuth Authorization Server Metadata endpoint.
 			\add_action( 'init', 'flush_rewrite_rules', 20 );
 			// Backfill historical statistics data (delay to avoid load immediately after upgrade).
