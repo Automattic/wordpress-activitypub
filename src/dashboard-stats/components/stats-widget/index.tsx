@@ -27,8 +27,16 @@ const ACTOR_MODE = 'actor';
 const BLOG_MODE = 'blog';
 const ACTOR_AND_BLOG_MODE = 'actor_blog';
 
-// Blog user ID constant matching PHP.
-const BLOG_USER_ID = 0;
+// REST URLs resolved by PHP via wp_localize_script, so the REST namespace can
+// be filtered on environments like WordPress.com.
+declare global {
+	interface Window {
+		activitypubDashboardStats?: {
+			blogStatsUrl: string;
+			userStatsUrl: string;
+		};
+	}
+}
 
 /**
  * Stats Widget Component.
@@ -84,19 +92,22 @@ export default function StatsWidget(): ReactNode {
 
 		setIsLoading( true );
 
+		const localized = window.activitypubDashboardStats;
+
 		// Fetch blog stats (global engagement data) - only if user has blog capability.
-		const blogStatsPromise = canUseBlogActor
-			? apiFetch< StatsResponse >( {
-					path: `/activitypub/1.0/admin/stats/${ BLOG_USER_ID }`,
-					signal,
-			  } ).catch( () => null )
-			: Promise.resolve( null );
+		const blogStatsPromise =
+			canUseBlogActor && localized?.blogStatsUrl
+				? apiFetch< StatsResponse >( {
+						url: localized.blogStatsUrl,
+						signal,
+				  } ).catch( () => null )
+				: Promise.resolve( null );
 
 		// Fetch user-specific stats if user actor is available.
 		const userStatsPromise =
-			canUseUserActor && currentUser?.id
+			canUseUserActor && currentUser?.id && localized?.userStatsUrl
 				? apiFetch< StatsResponse >( {
-						path: `/activitypub/1.0/admin/stats/${ currentUser.id }`,
+						url: `${ localized.userStatsUrl }${ currentUser.id }`,
 						signal,
 				  } ).catch( () => null )
 				: Promise.resolve( null );
