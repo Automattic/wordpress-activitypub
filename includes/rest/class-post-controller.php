@@ -122,9 +122,8 @@ class Post_Controller extends \WP_REST_Controller {
 	 */
 	public function get_reactions( $request ) {
 		$post_id = $request->get_param( 'id' );
-		$post    = \get_post( $post_id );
 
-		if ( ! is_post_publicly_queryable( $post ) ) {
+		if ( ! is_post_publicly_queryable( $post_id ) ) {
 			return new \WP_Error( 'activitypub_post_not_found', \__( 'Post not found.', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
@@ -184,9 +183,8 @@ class Post_Controller extends \WP_REST_Controller {
 	 */
 	public function get_context( $request ) {
 		$post_id = $request->get_param( 'id' );
-		$post    = \get_post( $post_id );
 
-		if ( ! is_post_publicly_queryable( $post ) ) {
+		if ( ! is_post_publicly_queryable( $post_id ) ) {
 			return new \WP_Error( 'activitypub_post_not_found', \__( 'Post not found.', 'activitypub' ), array( 'status' => 404 ) );
 		}
 

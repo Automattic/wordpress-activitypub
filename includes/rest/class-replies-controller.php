@@ -100,11 +100,10 @@ class Replies_Controller extends \WP_REST_Controller {
 			 * posts that were once federated and have since been made
 			 * non-public.
 			 */
-			$parent_post        = $wp_object ? \get_post( $wp_object->comment_post_ID ) : null;
-			$publicly_queryable = is_post_publicly_queryable( $parent_post );
+			$publicly_queryable = $wp_object && is_post_publicly_queryable( $wp_object->comment_post_ID );
 		} else {
 			$wp_object          = \get_post( $id );
-			$publicly_queryable = is_post_publicly_queryable( $wp_object );
+			$publicly_queryable = is_post_publicly_queryable( $id );
 		}
 
 		if ( ! isset( $wp_object ) || \is_wp_error( $wp_object ) || ! $publicly_queryable ) {

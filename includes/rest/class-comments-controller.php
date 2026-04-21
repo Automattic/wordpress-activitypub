@@ -94,9 +94,7 @@ class Comments_Controller extends \WP_REST_Controller {
 		 * outsiders cannot distinguish a missing comment from a comment whose
 		 * parent post has been made non-public.
 		 */
-		$parent = \get_post( $comment->comment_post_ID );
-
-		if ( ! is_post_publicly_queryable( $parent ) ) {
+		if ( ! is_post_publicly_queryable( $comment->comment_post_ID ) ) {
 			return new \WP_Error( 'activitypub_comment_not_found', \__( 'Comment not found', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
