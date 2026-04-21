@@ -259,10 +259,7 @@ class Dispatcher {
 			return array();
 		}
 
-		// Strip bto and bcc before delivery per ActivityPub spec Section 6.2.
-		\add_filter( 'activitypub_activity_object_array', array( self::class, 'strip_private_addressing' ) );
 		$json = $activity->to_json();
-		\remove_filter( 'activitypub_activity_object_array', array( self::class, 'strip_private_addressing' ) );
 
 		$retries = array();
 
@@ -335,34 +332,6 @@ class Dispatcher {
 			),
 			'body'     => \wp_json_encode( $response->get_data() ),
 		);
-	}
-
-	/**
-	 * Strip bto and bcc fields from an Activity array before delivery.
-	 *
-	 * The ActivityPub spec (Section 6.2) requires servers to remove bto and bcc
-	 * from Activities and their embedded objects before delivery to prevent
-	 * revealing private recipient lists.
-	 *
-	 * Used as a temporary filter on `activitypub_activity_object_array` so that
-	 * `to_json()` handles encoding consistently.
-	 *
-	 * @since 8.0.0
-	 *
-	 * @see https://www.w3.org/TR/activitypub/#delivery
-	 *
-	 * @param array $data The Activity array.
-	 * @return array The sanitized array with bto and bcc removed.
-	 */
-	public static function strip_private_addressing( $data ) {
-		unset( $data['bto'], $data['bcc'] );
-
-		// Also strip from the embedded object, if present.
-		if ( isset( $data['object'] ) && \is_array( $data['object'] ) ) {
-			unset( $data['object']['bto'], $data['object']['bcc'] );
-		}
-
-		return $data;
 	}
 
 	/**
@@ -501,10 +470,12 @@ class Dispatcher {
 	 * @return boolean True if the Activity should be sent to followers, false if not.
 	 */
 	protected static function should_send_to_followers( $activity, $actor, $outbox_item ) {
-		$cc = $activity->get_cc() ?? array();
-		$to = $activity->get_to() ?? array();
+		$cc  = (array) ( $activity->get_cc() ?? array() );
+		$to  = (array) ( $activity->get_to() ?? array() );
+		$bcc = (array) ( $activity->get_bcc() ?? array() );
+		$bto = (array) ( $activity->get_bto() ?? array() );
 
-		$audience = array_merge( $cc, $to );
+		$audience = array_merge( $cc, $to, $bcc, $bto );
 
 		$send = (
 			// Check if activity is public.
