@@ -37,6 +37,11 @@ use Activitypub\Collection\Remote_Posts;
  * @return boolean True if ActivityPub processing should be skipped for this post, false otherwise.
  */
 function is_post_disabled( $post ) {
+	// Refuse empty input so `get_post()` doesn't silently resolve to the global $post.
+	if ( empty( $post ) ) {
+		return true;
+	}
+
 	$post = \get_post( $post );
 
 	if ( ! $post ) {
@@ -107,6 +112,17 @@ function is_post_disabled( $post ) {
  * @return boolean True if the post is currently publicly queryable, false otherwise.
  */
 function is_post_publicly_queryable( $post ) {
+	/*
+	 * Refuse to resolve an empty/zero input through `get_post()`. A bare
+	 * `get_post( null )` or `get_post( 0 )` falls back to the global
+	 * `$post` during a WordPress loop, which would silently check the
+	 * wrong post and potentially leak reactions/replies/metadata for a
+	 * looped-over post instead of the one the caller intended.
+	 */
+	if ( empty( $post ) ) {
+		return false;
+	}
+
 	$post = \get_post( $post );
 
 	if ( ! $post ) {

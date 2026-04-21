@@ -81,21 +81,19 @@ class Comments_Controller extends \WP_REST_Controller {
 			return new \WP_Error( 'activitypub_comment_not_found', \__( 'Comment not found', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
-		$is_local = Comment::is_local( $comment );
-
-		if ( $is_local ) {
-			return new \WP_Error( 'activitypub_local_only_comment', \__( 'Comment is local only', 'activitypub' ), array( 'status' => 403 ) );
-		}
-
 		/*
-		 * A comment inherits the visibility of its parent post. Do not expose
-		 * the remote-reply template for comments whose parent post is not
-		 * currently publicly queryable; return the same "not found" shape so
-		 * outsiders cannot distinguish a missing comment from a comment whose
-		 * parent post has been made non-public.
+		 * A comment inherits the visibility of its parent post. Check this
+		 * BEFORE the local-only guard below, so that any comment on a non-
+		 * publicly-queryable parent returns the same "not found" shape — we
+		 * never want an outsider to distinguish "comment exists but is local"
+		 * from "comment missing" when the parent post is private.
 		 */
 		if ( ! is_post_publicly_queryable( $comment->comment_post_ID ) ) {
 			return new \WP_Error( 'activitypub_comment_not_found', \__( 'Comment not found', 'activitypub' ), array( 'status' => 404 ) );
+		}
+
+		if ( Comment::is_local( $comment ) ) {
+			return new \WP_Error( 'activitypub_local_only_comment', \__( 'Comment is local only', 'activitypub' ), array( 'status' => 403 ) );
 		}
 
 		return true;

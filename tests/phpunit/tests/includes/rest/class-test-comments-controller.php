@@ -112,6 +112,34 @@ class Test_Comments_Controller extends \Activitypub\Tests\Test_REST_Controller_T
 	}
 
 	/**
+	 * A local-only comment on a non-public parent post must return the same
+	 * "not found" shape as any other private-parent comment, not the
+	 * local-only 403 — otherwise an outsider can distinguish "comment exists
+	 * but is local" from "comment missing" when the parent post is private.
+	 *
+	 * @covers ::validate_comment
+	 */
+	public function test_get_item_local_comment_on_private_parent_returns_not_found() {
+		$private_post_id = self::factory()->post->create( array( 'post_status' => 'private' ) );
+		$comment_id      = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $private_post_id,
+				'comment_type'     => 'comment',
+				'comment_approved' => 1,
+			)
+		);
+		/* No `protocol=activitypub` meta — the comment is local-only. */
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/comments/' . $comment_id . '/remote-reply' );
+		$request->set_param( 'resource', 'https://example.com/user' );
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertErrorResponse( 'rest_invalid_param', $response );
+		$this->assertSame( 'activitypub_comment_not_found', $data['data']['details']['comment_id']['code'] );
+	}
+
+	/**
 	 * Comments whose parent post is not currently publicly queryable must not
 	 * expose the remote-reply template. Response shape matches "comment not
 	 * found" to avoid leaking existence.
