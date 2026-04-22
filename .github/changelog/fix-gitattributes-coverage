@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Trim dev-only configuration files from the plugin release package.
