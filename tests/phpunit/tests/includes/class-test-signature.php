@@ -355,6 +355,68 @@ class Test_Signature extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Signatures whose Date is outside the clock-skew tolerance must be rejected.
+	 *
+	 * Asymmetric: up to 5 minutes into the future, up to 1 hour into the past.
+	 * Values comfortably outside the window must fail, values comfortably
+	 * inside it must verify.
+	 *
+	 * @covers ::verify_http_signature
+	 * @covers \Activitypub\Signature\Http_Signature_Draft::get_signed_data
+	 */
+	public function test_verify_http_signature_rejects_out_of_window_date() {
+		$keys = Actors::get_keypair( 1 );
+
+		$mock_remote_key_retrieval = function () use ( $keys ) {
+			return array(
+				'name'      => 'Admin',
+				'url'       => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+
+		$sign = static function ( $date ) {
+			$args = \apply_filters(
+				'http_request_args',
+				array(
+					'method'      => 'POST',
+					'body'        => '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"x"}}',
+					'key_id'      => 'https://example.org/author/admin#main-key',
+					'private_key' => Actors::get_private_key( 1 ),
+					'user_id'     => 1,
+					'headers'     => array(
+						'Content-Type' => 'application/activity+json',
+						'Date'         => $date,
+						'Host'         => 'example.org',
+					),
+				),
+				'https://example.org/wp-json/activitypub/1.0/inbox'
+			);
+
+			$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+			$request->set_body( $args['body'] );
+			$request->set_headers( $args['headers'] );
+
+			return Signature::verify_http_signature( $request );
+		};
+
+		$far_past   = \gmdate( 'D, d M Y H:i:s T', \time() - ( 2 * HOUR_IN_SECONDS ) );
+		$far_future = \gmdate( 'D, d M Y H:i:s T', \time() + ( 10 * MINUTE_IN_SECONDS ) );
+		$within     = \gmdate( 'D, d M Y H:i:s T', \time() - ( 30 * MINUTE_IN_SECONDS ) );
+
+		$this->assertWPError( $sign( $far_past ), 'Signatures more than an hour old must be rejected.' );
+		$this->assertWPError( $sign( $far_future ), 'Signatures more than five minutes in the future must be rejected.' );
+		$this->assertTrue( $sign( $within ), 'Signatures within the skew window must verify.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+	}
+
+	/**
 	 * Test HTTP signature verification with RFC-9421 compliant signatures.
 	 *
 	 * @covers ::verify_http_signature

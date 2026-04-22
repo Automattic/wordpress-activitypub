@@ -319,13 +319,23 @@ class Http_Signature_Draft implements Http_Signature {
 					return false;
 				}
 
-				// Allow a bit of leeway for misconfigured clocks.
 				$date = \date_create( $headers['date'][0] );
 				$date->setTimeZone( \timezone_open( 'UTC' ) );
 				$date = $date->format( 'U' );
 
-				$max = \time() + ( 3 * HOUR_IN_SECONDS );
-				$min = \time() - ( 3 * HOUR_IN_SECONDS );
+				/*
+				 * Asymmetric skew tolerance.
+				 *
+				 * Future-dated signatures are tolerated by up to five minutes
+				 * of clock drift; anything further is either a misconfigured
+				 * peer or a forged replay envelope.
+				 *
+				 * Past-dated signatures are tolerated for up to an hour so
+				 * that retried / queued federation traffic from peers with
+				 * backed-up outboxes still verifies.
+				 */
+				$max = \time() + ( 5 * MINUTE_IN_SECONDS );
+				$min = \time() - HOUR_IN_SECONDS;
 
 				if ( $date > $max || $date < $min ) {
 					// Time out of range.

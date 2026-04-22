@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Tighten the clock-skew window for HTTP signature verification so future-dated signatures can no longer buy hours of replay time.
