@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Harden the reactions API response so stored author names and URLs cannot introduce markup or non-HTTP schemes into the JSON output.
