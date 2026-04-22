@@ -1342,9 +1342,18 @@ class Blocks {
 		if ( \function_exists( 'wp_is_block_theme' ) && \wp_is_block_theme() && \function_exists( 'get_block_template' ) ) {
 			$stylesheet = \get_stylesheet();
 			foreach ( self::candidate_template_slugs( $query ) as $slug ) {
-				$template = \get_block_template( $stylesheet . '//' . $slug );
-				if ( $template && ! empty( $template->content ) && \has_block( $block_name, $template->content ) ) {
-					return true;
+				/*
+				 * Probe the theme template first so themes can override.
+				 * Fall back to plugin-registered templates (e.g. the
+				 * `activitypub//author` template the plugin itself registers
+				 * for author archives) so the block is detected even when
+				 * the active theme does not ship its own template.
+				 */
+				foreach ( array( $stylesheet, 'activitypub' ) as $namespace ) {
+					$template = \get_block_template( $namespace . '//' . $slug );
+					if ( $template && ! empty( $template->content ) && \has_block( $block_name, $template->content ) ) {
+						return true;
+					}
 				}
 			}
 		}
@@ -1367,14 +1376,30 @@ class Blocks {
 		if ( $query->is_home() ) {
 			return array( 'home', 'index' );
 		}
-		if ( $query->is_category() || $query->is_tag() || $query->is_tax() ) {
-			return array( 'archive', 'index' );
+		if ( $query->is_category() ) {
+			return array( 'category', 'archive', 'index' );
+		}
+		if ( $query->is_tag() ) {
+			return array( 'tag', 'archive', 'index' );
+		}
+		if ( $query->is_tax() ) {
+			return array( 'taxonomy', 'archive', 'index' );
 		}
 		if ( $query->is_author() ) {
 			return array( 'author', 'archive', 'index' );
 		}
 		if ( $query->is_date() ) {
 			return array( 'date', 'archive', 'index' );
+		}
+		if ( $query->is_post_type_archive() ) {
+			$slugs     = array();
+			$post_type = $query->get( 'post_type' );
+			if ( \is_string( $post_type ) && '' !== $post_type ) {
+				$slugs[] = 'archive-' . $post_type;
+			}
+			$slugs[] = 'archive';
+			$slugs[] = 'index';
+			return $slugs;
 		}
 		if ( $query->is_search() ) {
 			return array( 'search', 'index' );
