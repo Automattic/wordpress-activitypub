@@ -320,6 +320,10 @@ class Http_Signature_Draft implements Http_Signature {
 				}
 
 				$date = \date_create( $headers['date'][0] );
+				if ( ! $date ) {
+					// Malformed Date header — refuse rather than fatal on setTimeZone().
+					return false;
+				}
 				$date->setTimeZone( \timezone_open( 'UTC' ) );
 				$date = $date->format( 'U' );
 
@@ -334,8 +338,9 @@ class Http_Signature_Draft implements Http_Signature {
 				 * that retried / queued federation traffic from peers with
 				 * backed-up outboxes still verifies.
 				 */
-				$max = \time() + ( 5 * MINUTE_IN_SECONDS );
-				$min = \time() - HOUR_IN_SECONDS;
+				$now = \time();
+				$max = $now + ( 5 * MINUTE_IN_SECONDS );
+				$min = $now - HOUR_IN_SECONDS;
 
 				if ( $date > $max || $date < $min ) {
 					// Time out of range.
