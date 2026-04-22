@@ -475,7 +475,7 @@ class Post extends Base {
 		 * summary and title decisions, the content template, and the
 		 * preview guard, not only the wire-format type property.
 		 *
-		 * @since unreleased
+		 * @since 8.1.1
 		 *
 		 * @param string   $object_type The computed ActivityPub object type.
 		 * @param \WP_Post $post        The WordPress post being transformed.
