@@ -1259,15 +1259,16 @@ class Blocks {
 	/**
 	 * Filter the main query to exclude replies.
 	 *
-	 * When the "Posts" tab is active (default), adds a WHERE clause to
-	 * exclude posts containing the `activitypub/reply` block. This
-	 * filters the main query so that Query Loop blocks with
-	 * `inherit: true` also pick up the filter.
+	 * Adds a WHERE clause to exclude posts containing the `activitypub/reply`
+	 * block when the visitor has explicitly requested the "Posts" tab via
+	 * `?filter=posts`. This filters the main query so that Query Loop blocks
+	 * with `inherit: true` also pick up the filter.
 	 *
-	 * The filter is only attached when the current frontend request
-	 * renders the `activitypub/posts-and-replies` tab block. Admin and
-	 * feed queries are never touched, and neither is any frontend
-	 * request whose template does not contain the tab block.
+	 * The filter only attaches on that explicit opt-in. Admin, feed, and any
+	 * regular frontend request (front page, archives, search…) are never
+	 * touched, which is why no block-presence probing is needed: the only
+	 * way `?filter=posts` appears in a URL is from a click on the
+	 * `activitypub/posts-and-replies` tab block.
 	 *
 	 * @since 8.1.0
 	 *
@@ -1293,118 +1294,13 @@ class Blocks {
 			}
 		}
 
-		// Only filter when the current request actually renders the posts-and-replies block.
-		if ( ! self::current_request_has_posts_and_replies_block( $query ) ) {
-			return;
-		}
-
+		// Only filter when the "Posts" tab has been explicitly selected.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$active_tab = isset( $_GET['filter'] ) ? \sanitize_key( $_GET['filter'] ) : 'posts';
-
-		// Only filter when the "Posts" tab is active (default).
-		if ( 'posts-and-replies' === $active_tab ) {
+		if ( ! isset( $_GET['filter'] ) || 'posts' !== \sanitize_key( \wp_unslash( $_GET['filter'] ) ) ) {
 			return;
 		}
 
 		\add_filter( 'posts_where', array( self::class, 'exclude_replies_where' ) );
-	}
-
-	/**
-	 * Best-effort check for whether the current request will render the posts-and-replies block.
-	 *
-	 * Looks at the static front page or posts page (classic / hybrid setups)
-	 * and at the block template the query is most likely to use (block themes).
-	 * Widgets, shortcodes and other embed points are not detected — when in
-	 * doubt, we err on the side of not filtering.
-	 *
-	 * @since unreleased
-	 *
-	 * @param \WP_Query $query The WP_Query instance.
-	 * @return bool Whether the posts-and-replies block is present.
-	 */
-	private static function current_request_has_posts_and_replies_block( $query ) {
-		$block_name = 'activitypub/posts-and-replies';
-
-		if ( $query->is_front_page() ) {
-			$page_on_front = (int) \get_option( 'page_on_front' );
-			if ( $page_on_front && \has_block( $block_name, $page_on_front ) ) {
-				return true;
-			}
-		}
-
-		if ( $query->is_home() ) {
-			$page_for_posts = (int) \get_option( 'page_for_posts' );
-			if ( $page_for_posts && \has_block( $block_name, $page_for_posts ) ) {
-				return true;
-			}
-		}
-
-		if ( \function_exists( 'wp_is_block_theme' ) && \wp_is_block_theme() && \function_exists( 'get_block_template' ) ) {
-			$stylesheet = \get_stylesheet();
-			foreach ( self::candidate_template_slugs( $query ) as $slug ) {
-				/*
-				 * Probe the theme template first so themes can override.
-				 * Fall back to plugin-registered templates (e.g. the
-				 * `activitypub//author` template the plugin itself registers
-				 * for author archives) so the block is detected even when
-				 * the active theme does not ship its own template.
-				 */
-				foreach ( array( $stylesheet, 'activitypub' ) as $namespace ) {
-					$template = \get_block_template( $namespace . '//' . $slug );
-					if ( $template && ! empty( $template->content ) && \has_block( $block_name, $template->content ) ) {
-						return true;
-					}
-				}
-			}
-		}
-
-		return false;
-	}
-
-	/**
-	 * Candidate block template slugs for a query, ordered from most specific to least.
-	 *
-	 * @since unreleased
-	 *
-	 * @param \WP_Query $query The WP_Query instance.
-	 * @return string[] Template slugs to probe.
-	 */
-	private static function candidate_template_slugs( $query ) {
-		if ( $query->is_front_page() ) {
-			return array( 'front-page', 'home', 'index' );
-		}
-		if ( $query->is_home() ) {
-			return array( 'home', 'index' );
-		}
-		if ( $query->is_category() ) {
-			return array( 'category', 'archive', 'index' );
-		}
-		if ( $query->is_tag() ) {
-			return array( 'tag', 'archive', 'index' );
-		}
-		if ( $query->is_tax() ) {
-			return array( 'taxonomy', 'archive', 'index' );
-		}
-		if ( $query->is_author() ) {
-			return array( 'author', 'archive', 'index' );
-		}
-		if ( $query->is_date() ) {
-			return array( 'date', 'archive', 'index' );
-		}
-		if ( $query->is_post_type_archive() ) {
-			$slugs     = array();
-			$post_type = $query->get( 'post_type' );
-			if ( \is_string( $post_type ) && '' !== $post_type ) {
-				$slugs[] = 'archive-' . $post_type;
-			}
-			$slugs[] = 'archive';
-			$slugs[] = 'index';
-			return $slugs;
-		}
-		if ( $query->is_search() ) {
-			return array( 'search', 'index' );
-		}
-		return array( 'index' );
 	}
 
 	/**

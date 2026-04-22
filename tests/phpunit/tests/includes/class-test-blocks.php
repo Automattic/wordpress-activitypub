@@ -1227,7 +1227,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Admin main queries must not attach the reply-exclusion filter.
+	 * Admin main queries must not attach the reply-exclusion filter, even when ?filter=posts is set.
 	 *
 	 * @covers ::filter_query_loop_vars
 	 */
@@ -1238,7 +1238,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 		$this->go_to( \home_url( '/' ) );
 		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
 
-		// Now pretend we're in wp-admin and re-run the hook on the main query.
+		$_GET['filter'] = 'posts';
 		\set_current_screen( 'edit-post' );
 		$this->assertTrue( \is_admin(), 'Precondition: set_current_screen must make is_admin() true.' );
 
@@ -1246,7 +1246,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		$attached = false !== \has_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
 
-		// Cleanup.
+		unset( $_GET['filter'] );
 		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
 		\set_current_screen( 'front' );
 
@@ -1254,33 +1254,64 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Frontend main queries must not attach the exclusion filter when the tab block is nowhere on the site.
+	 * Feed queries must not attach the reply-exclusion filter.
 	 *
 	 * @covers ::filter_query_loop_vars
-	 * @covers ::current_request_has_posts_and_replies_block
 	 */
-	public function test_filter_query_loop_vars_skips_when_block_not_present() {
+	public function test_filter_query_loop_vars_does_not_touch_feed_queries() {
 		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
 
-		$this->go_to( \home_url( '/' ) );
+		$this->go_to( \home_url( '/?feed=rss2' ) );
 		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		$_GET['filter'] = 'posts';
+
+		$this->assertTrue( $GLOBALS['wp_query']->is_feed(), 'Precondition: the main query must be a feed query.' );
 
 		Blocks::filter_query_loop_vars( $GLOBALS['wp_query'] );
 
 		$attached = false !== \has_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
 
+		unset( $_GET['filter'] );
 		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
 
-		$this->assertFalse( $attached, 'Without the tab block, the exclusion filter must not be attached.' );
+		$this->assertFalse( $attached, 'Feed queries must never attach the posts_where exclusion filter.' );
 	}
 
 	/**
-	 * When the tab block is present on the posts page, the default "Posts" tab still hides reply posts.
+	 * Frontend main queries must not attach the exclusion filter without an explicit ?filter=posts opt-in.
+	 *
+	 * @covers ::filter_query_loop_vars
+	 */
+	public function test_filter_query_loop_vars_skips_without_explicit_filter_param() {
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		$this->go_to( \home_url( '/' ) );
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		unset( $_GET['filter'] );
+		Blocks::filter_query_loop_vars( $GLOBALS['wp_query'] );
+		$attached_default = false !== \has_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		$_GET['filter'] = 'posts-and-replies';
+		Blocks::filter_query_loop_vars( $GLOBALS['wp_query'] );
+		$attached_all = false !== \has_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		unset( $_GET['filter'] );
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		$this->assertFalse( $attached_default, 'Without ?filter the exclusion filter must not be attached.' );
+		$this->assertFalse( $attached_all, 'With ?filter=posts-and-replies the exclusion filter must not be attached.' );
+	}
+
+	/**
+	 * An explicit ?filter=posts opt-in attaches the filter and hides reply-block posts.
 	 *
 	 * @covers ::filter_query_loop_vars
 	 * @covers ::exclude_replies_where
 	 */
-	public function test_filter_query_loop_vars_applies_when_block_present_on_posts_page() {
+	public function test_filter_query_loop_vars_applies_on_explicit_posts_filter() {
 		$reply_post = self::factory()->post->create(
 			array(
 				'post_title'   => 'Reply post',
@@ -1296,43 +1327,15 @@ class Test_Blocks extends \WP_UnitTestCase {
 			)
 		);
 
-		$posts_page = self::factory()->post->create(
-			array(
-				'post_type'    => 'page',
-				'post_status'  => 'publish',
-				'post_title'   => 'Blog',
-				'post_content' => '<!-- wp:activitypub/posts-and-replies /-->',
-			)
-		);
-
-		$original_show_on_front  = \get_option( 'show_on_front' );
-		$original_page_for_posts = \get_option( 'page_for_posts' );
-		$original_page_on_front  = \get_option( 'page_on_front' );
-
-		\update_option( 'show_on_front', 'page' );
-		\update_option( 'page_for_posts', $posts_page );
-		\update_option(
-			'page_on_front',
-			self::factory()->post->create(
-				array(
-					'post_type'   => 'page',
-					'post_status' => 'publish',
-				)
-			)
-		);
-
-		$this->go_to( \get_permalink( $posts_page ) );
+		$this->go_to( \home_url( '/?filter=posts' ) );
 
 		$ids = \wp_list_pluck( $GLOBALS['wp_query']->posts, 'ID' );
 
-		\update_option( 'show_on_front', $original_show_on_front );
-		\update_option( 'page_for_posts', $original_page_for_posts );
-		\update_option( 'page_on_front', $original_page_on_front );
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
 		\wp_delete_post( $reply_post, true );
 		\wp_delete_post( $plain_post, true );
-		\wp_delete_post( $posts_page, true );
 
-		$this->assertContains( $plain_post, $ids, 'Plain posts must stay visible when the tab block is on the posts page.' );
-		$this->assertNotContains( $reply_post, $ids, 'Reply-block posts must be hidden under the default "Posts" tab when the tab block is on the posts page.' );
+		$this->assertContains( $plain_post, $ids, 'Plain posts must stay visible under ?filter=posts.' );
+		$this->assertNotContains( $reply_post, $ids, 'Reply-block posts must be hidden under ?filter=posts.' );
 	}
 }
