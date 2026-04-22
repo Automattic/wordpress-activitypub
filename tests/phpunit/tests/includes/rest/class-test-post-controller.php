@@ -326,6 +326,36 @@ class Test_Post_Controller extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Reactions URL is locked to http/https — other schemes esc_url() allows
+	 * by default (mailto:, tel:, etc.) must be rejected.
+	 *
+	 * @covers ::get_reactions
+	 */
+	public function test_get_reactions_rejects_non_http_schemes() {
+		$post_id = self::factory()->post->create();
+
+		wp_insert_comment(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_author'       => 'Mailer Daemon',
+				'comment_author_url'   => 'mailto:evil@example.com',
+				'comment_author_email' => '',
+				'comment_content'      => '',
+				'comment_type'         => 'like',
+				'comment_parent'       => 0,
+				'user_id'              => 0,
+				'comment_approved'     => 1,
+			)
+		);
+
+		$request  = new WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/' . $post_id . '/reactions' );
+		$response = $this->server->dispatch( $request );
+		$item     = $response->get_data()['likes']['items'][0];
+
+		$this->assertSame( '', $item['url'], 'mailto: scheme must be stripped' );
+	}
+
+	/**
 	 * Test remote-intent route is registered.
 	 *
 	 * @covers ::register_routes
