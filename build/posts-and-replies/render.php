@@ -37,18 +37,18 @@ $wrapper_attributes = \get_block_wrapper_attributes();
 <nav <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput ?> aria-label="<?php \esc_attr_e( 'Post filtering', 'activitypub' ); ?>">
 	<div class="ap-tabs">
 		<a
-			class="ap-tabs__tab <?php echo 'posts' === $active_tab ? 'is-active' : ''; ?>"
-			href="<?php echo \esc_url( $posts_url ); ?>"
-			<?php echo 'posts' === $active_tab ? 'aria-current="page"' : ''; ?>
-		>
-			<?php \esc_html_e( 'Posts', 'activitypub' ); ?>
-		</a>
-		<a
 			class="ap-tabs__tab <?php echo 'posts-and-replies' === $active_tab ? 'is-active' : ''; ?>"
 			href="<?php echo \esc_url( $all_url ); ?>"
 			<?php echo 'posts-and-replies' === $active_tab ? 'aria-current="page"' : ''; ?>
 		>
 			<?php \esc_html_e( 'Posts & Replies', 'activitypub' ); ?>
+		</a>
+		<a
+			class="ap-tabs__tab <?php echo 'posts' === $active_tab ? 'is-active' : ''; ?>"
+			href="<?php echo \esc_url( $posts_url ); ?>"
+			<?php echo 'posts' === $active_tab ? 'aria-current="page"' : ''; ?>
+		>
+			<?php \esc_html_e( 'Posts', 'activitypub' ); ?>
 		</a>
 	</div>
 </nav>
