@@ -160,19 +160,14 @@ class Migration {
 		if ( \version_compare( $version_from_db, '4.7.2', '<' ) ) {
 			self::migrate_to_4_7_2();
 		}
-		if ( \version_compare( $version_from_db, '4.7.3', '<' ) ) {
-			add_action( 'init', 'flush_rewrite_rules', 20 );
-		}
 		if ( \version_compare( $version_from_db, '5.0.0', '<' ) ) {
 			Scheduler::register_schedules();
 			\wp_schedule_single_event( \time(), 'activitypub_create_post_outbox_items' );
 			\wp_schedule_single_event( \time() + 15, 'activitypub_create_comment_outbox_items' );
-			add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
 		if ( \version_compare( $version_from_db, '5.4.0', '<' ) ) {
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_slashing' ) );
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_comment_author_emails' ) );
-			\add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
 		if ( \version_compare( $version_from_db, '5.7.0', '<' ) ) {
 			self::delete_mastodon_api_orphaned_extra_fields();
@@ -180,17 +175,14 @@ class Migration {
 		if ( \version_compare( $version_from_db, '5.8.0', '<' ) ) {
 			self::update_notification_options();
 		}
-
 		if ( \version_compare( $version_from_db, '6.0.0', '<' ) ) {
 			self::migrate_followers_to_ap_actor_cpt();
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_storage' ) );
 		}
-
 		if ( \version_compare( $version_from_db, '6.0.1', '<' ) ) {
 			self::migrate_followers_to_ap_actor_cpt();
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_storage' ) );
 		}
-
 		if ( \version_compare( $version_from_db, '7.0.0', '<' ) ) {
 			wp_unschedule_hook( 'activitypub_update_followers' );
 			wp_unschedule_hook( 'activitypub_cleanup_followers' );
@@ -203,33 +195,31 @@ class Migration {
 				\wp_schedule_event( time(), 'daily', 'activitypub_cleanup_remote_actors' );
 			}
 		}
-
 		if ( \version_compare( $version_from_db, '7.3.0', '<' ) ) {
 			self::remove_pending_application_user_follow_requests();
 		}
-
 		if ( \version_compare( $version_from_db, '7.5.0', '<' ) ) {
 			self::sync_jetpack_following_meta();
 		}
-
 		if ( \version_compare( $version_from_db, '7.6.0', '<' ) ) {
 			self::clean_up_inbox();
 			\wp_schedule_single_event( \time(), 'activitypub_migrate_avatar_to_remote_actors' );
 		}
-
 		if ( \version_compare( $version_from_db, '7.9.0', '<' ) ) {
 			\wp_schedule_single_event( \time(), 'activitypub_migrate_actor_emoji' );
 		}
 		if ( \version_compare( $version_from_db, '8.1.0', '<' ) ) {
-			// Flush rewrite rules for OAuth Authorization Server Metadata endpoint.
-			\add_action( 'init', 'flush_rewrite_rules', 20 );
 			// Backfill historical statistics data (delay to avoid load immediately after upgrade).
 			\wp_schedule_single_event( \time() + HOUR_IN_SECONDS, 'activitypub_backfill_statistics' );
 		}
 
-		if ( \version_compare( $version_from_db, '8.0.0', '<' ) ) {
-			Activitypub::flush_rewrite_rules();
-		}
+		/*
+		 * Defer the flush to late in the `init` cycle (priority 20). Migration::init
+		 * runs at priority 1, which is earlier than most plugins register their
+		 * rewrite rules. Flushing synchronously here would persist a truncated
+		 * ruleset that omits third-party rules added on `init` at priority 10.
+		 */
+		\add_action( 'init', array( Activitypub::class, 'flush_rewrite_rules' ), 20 );
 
 		// Ensure all required cron schedules are registered.
 		Scheduler::register_schedules();
@@ -310,8 +300,6 @@ class Migration {
 				}
 			}
 		}
-
-		Activitypub::flush_rewrite_rules();
 	}
 
 	/**
