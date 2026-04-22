@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Stop hiding posts that contain a federated reply block from the main blog listing and the admin post list on sites that do not use the Posts and Replies block.

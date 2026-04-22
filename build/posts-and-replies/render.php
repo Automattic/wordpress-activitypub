@@ -17,11 +17,15 @@ if ( is_activitypub_request() || \is_feed() ) {
 	return;
 }
 
-// Determine active tab from URL parameter.
+/*
+ * Determine active tab from URL parameter. Default to "Posts & Replies" so
+ * the reply-exclusion filter only attaches on an explicit opt-in via
+ * ?filter=posts (clicked from the tab bar below).
+ */
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-$active_tab = isset( $_GET['filter'] ) ? \sanitize_key( $_GET['filter'] ) : 'posts';
+$active_tab = isset( $_GET['filter'] ) ? \sanitize_key( \wp_unslash( $_GET['filter'] ) ) : 'posts-and-replies';
 if ( ! \in_array( $active_tab, array( 'posts', 'posts-and-replies' ), true ) ) {
-	$active_tab = 'posts';
+	$active_tab = 'posts-and-replies';
 }
 
 $current_url = \remove_query_arg( array( 'filter', 'paged' ) );
