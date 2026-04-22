@@ -1225,4 +1225,117 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		\update_option( 'permalink_structure', $original );
 	}
+
+	/**
+	 * Admin main queries must not attach the reply-exclusion filter, even when ?filter=posts is set.
+	 *
+	 * @covers ::filter_query_loop_vars
+	 */
+	public function test_filter_query_loop_vars_does_not_touch_admin_queries() {
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		// Land on the frontend so $GLOBALS['wp_query'] is a real main query.
+		$this->go_to( \home_url( '/' ) );
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		$_GET['filter'] = 'posts';
+		\set_current_screen( 'edit-post' );
+		$this->assertTrue( \is_admin(), 'Precondition: set_current_screen must make is_admin() true.' );
+
+		Blocks::filter_query_loop_vars( $GLOBALS['wp_query'] );
+
+		$attached = false !== \has_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		unset( $_GET['filter'] );
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+		\set_current_screen( 'front' );
+
+		$this->assertFalse( $attached, 'Admin queries must never attach the posts_where exclusion filter.' );
+	}
+
+	/**
+	 * Feed queries must not attach the reply-exclusion filter.
+	 *
+	 * @covers ::filter_query_loop_vars
+	 */
+	public function test_filter_query_loop_vars_does_not_touch_feed_queries() {
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		$this->go_to( \home_url( '/?feed=rss2' ) );
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		$_GET['filter'] = 'posts';
+
+		$this->assertTrue( $GLOBALS['wp_query']->is_feed(), 'Precondition: the main query must be a feed query.' );
+
+		Blocks::filter_query_loop_vars( $GLOBALS['wp_query'] );
+
+		$attached = false !== \has_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		unset( $_GET['filter'] );
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		$this->assertFalse( $attached, 'Feed queries must never attach the posts_where exclusion filter.' );
+	}
+
+	/**
+	 * Frontend main queries must not attach the exclusion filter without an explicit ?filter=posts opt-in.
+	 *
+	 * @covers ::filter_query_loop_vars
+	 */
+	public function test_filter_query_loop_vars_skips_without_explicit_filter_param() {
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		$this->go_to( \home_url( '/' ) );
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		unset( $_GET['filter'] );
+		Blocks::filter_query_loop_vars( $GLOBALS['wp_query'] );
+		$attached_default = false !== \has_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		$_GET['filter'] = 'posts-and-replies';
+		Blocks::filter_query_loop_vars( $GLOBALS['wp_query'] );
+		$attached_all = false !== \has_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		unset( $_GET['filter'] );
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		$this->assertFalse( $attached_default, 'Without ?filter the exclusion filter must not be attached.' );
+		$this->assertFalse( $attached_all, 'With ?filter=posts-and-replies the exclusion filter must not be attached.' );
+	}
+
+	/**
+	 * An explicit ?filter=posts opt-in attaches the filter and hides reply-block posts.
+	 *
+	 * @covers ::filter_query_loop_vars
+	 * @covers ::exclude_replies_where
+	 */
+	public function test_filter_query_loop_vars_applies_on_explicit_posts_filter() {
+		$reply_post = self::factory()->post->create(
+			array(
+				'post_title'   => 'Reply post',
+				'post_content' => '<!-- wp:activitypub/reply {"url":"https://example.com/c"} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+		$plain_post = self::factory()->post->create(
+			array(
+				'post_title'   => 'Plain post',
+				'post_content' => '<!-- wp:paragraph --><p>Hi.</p><!-- /wp:paragraph -->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$this->go_to( \home_url( '/?filter=posts' ) );
+
+		$ids = \wp_list_pluck( $GLOBALS['wp_query']->posts, 'ID' );
+
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+		\wp_delete_post( $reply_post, true );
+		\wp_delete_post( $plain_post, true );
+
+		$this->assertContains( $plain_post, $ids, 'Plain posts must stay visible under ?filter=posts.' );
+		$this->assertNotContains( $reply_post, $ids, 'Reply-block posts must be hidden under ?filter=posts.' );
+	}
 }

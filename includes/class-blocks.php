@@ -1259,16 +1259,27 @@ class Blocks {
 	/**
 	 * Filter the main query to exclude replies.
 	 *
-	 * When the "Posts" tab is active (default), adds a WHERE clause to
-	 * exclude posts containing the `activitypub/reply` block. This
-	 * filters the main query so that Query Loop blocks with
-	 * `inherit: true` also pick up the filter.
+	 * Adds a WHERE clause to exclude posts containing the `activitypub/reply`
+	 * block when the visitor has explicitly requested the "Posts" tab via
+	 * `?filter=posts`. This filters the main query so that Query Loop blocks
+	 * with `inherit: true` also pick up the filter.
+	 *
+	 * The filter only attaches on that explicit opt-in. Admin, feed, and any
+	 * regular frontend request (front page, archives, search…) are never
+	 * touched, which is why no block-presence probing is needed: the only
+	 * way `?filter=posts` appears in a URL is from a click on the
+	 * `activitypub/posts-and-replies` tab block.
 	 *
 	 * @since 8.1.0
 	 *
 	 * @param WP_Query $query The WP_Query instance.
 	 */
 	public static function filter_query_loop_vars( $query ) {
+		// Never touch admin or feed queries.
+		if ( \is_admin() || $query->is_feed() ) {
+			return;
+		}
+
 		if ( ! $query->is_main_query() || $query->is_singular() ) {
 			return;
 		}
@@ -1283,11 +1294,9 @@ class Blocks {
 			}
 		}
 
+		// Only filter when the "Posts" tab has been explicitly selected.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$active_tab = isset( $_GET['filter'] ) ? \sanitize_key( $_GET['filter'] ) : 'posts';
-
-		// Only filter when the "Posts" tab is active (default).
-		if ( 'posts-and-replies' === $active_tab ) {
+		if ( ! isset( $_GET['filter'] ) || 'posts' !== \sanitize_key( \wp_unslash( $_GET['filter'] ) ) ) {
 			return;
 		}
 
