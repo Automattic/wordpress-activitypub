@@ -281,6 +281,51 @@ class Test_Post_Controller extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Reactions response sanitizes author name and URL defensively.
+	 *
+	 * Remote actor metadata is trusted only so far. Stored author names must
+	 * not introduce markup into the JSON response, and stored URLs must not
+	 * carry non-HTTP(S) schemes even if a storage-time bug let them through.
+	 *
+	 * @covers ::get_reactions
+	 */
+	public function test_get_reactions_sanitizes_remote_actor_metadata() {
+		$post_id = self::factory()->post->create();
+
+		wp_insert_comment(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_author'       => '<img src=x onerror=alert(1)>&amp;friends',
+				'comment_author_url'   => 'javascript:alert(1)',
+				'comment_author_email' => '',
+				'comment_content'      => '',
+				'comment_type'         => 'like',
+				'comment_parent'       => 0,
+				'user_id'              => 0,
+				'comment_approved'     => 1,
+			)
+		);
+
+		$request  = new WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/' . $post_id . '/reactions' );
+		$response = $this->server->dispatch( $request );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$data = $response->get_data();
+		$this->assertArrayHasKey( 'likes', $data );
+		$this->assertCount( 1, $data['likes']['items'] );
+
+		$item = $data['likes']['items'][0];
+
+		/* Author name must have no HTML tags and should have entities decoded. */
+		$this->assertStringNotContainsString( '<', $item['name'], 'Tags must be stripped from author name' );
+		$this->assertStringNotContainsString( '>', $item['name'], 'Tags must be stripped from author name' );
+		$this->assertStringContainsString( '&friends', $item['name'], 'Entity-encoded ampersand should be decoded' );
+
+		/* URL must reject non-HTTP(S) schemes — esc_url() returns an empty string. */
+		$this->assertSame( '', $item['url'], 'javascript: scheme must be stripped' );
+	}
+
+	/**
 	 * Test remote-intent route is registered.
 	 *
 	 * @covers ::register_routes
