@@ -161,10 +161,16 @@ class Post_Controller extends \WP_REST_Controller {
 				'label' => $label,
 				'items' => \array_map(
 					static function ( $comment ) {
+						/*
+						 * Strip any tags before decoding entities so a stored author
+						 * name cannot introduce markup into the JSON response, and
+						 * sanitize the URL so non-HTTP(S) schemes (e.g. `javascript:`)
+						 * are rejected.
+						 */
 						return array(
-							'name'   => html_entity_decode( $comment->comment_author ),
-							'url'    => $comment->comment_author_url,
-							'avatar' => \get_avatar_url( $comment ),
+							'name'   => \wp_strip_all_tags( \html_entity_decode( $comment->comment_author, ENT_QUOTES ) ),
+							'url'    => \esc_url( $comment->comment_author_url ),
+							'avatar' => \esc_url( \get_avatar_url( $comment ) ),
 						);
 					},
 					$comments
