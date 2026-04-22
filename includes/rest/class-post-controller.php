@@ -165,15 +165,13 @@ class Post_Controller extends \WP_REST_Controller {
 						 * Decode entities first so a stored pseudo-tag like
 						 * `&lt;img&gt;` becomes a real `<img>` for the next
 						 * step to remove, then strip any tags so the JSON
-						 * response contains only plain text. URLs are locked
-						 * to http/https so `javascript:`, `mailto:`, and the
-						 * other schemes `esc_url()` permits by default are
-						 * rejected.
+						 * response contains only plain text. `esc_url()`
+						 * rejects `javascript:` and other unsafe schemes.
 						 */
 						return array(
 							'name'   => \wp_strip_all_tags( \html_entity_decode( $comment->comment_author, ENT_QUOTES ) ),
-							'url'    => \esc_url( $comment->comment_author_url, array( 'http', 'https' ) ),
-							'avatar' => \esc_url( \get_avatar_url( $comment ), array( 'http', 'https' ) ),
+							'url'    => \esc_url( $comment->comment_author_url ),
+							'avatar' => \esc_url( \get_avatar_url( $comment ) ),
 						);
 					},
 					$comments
