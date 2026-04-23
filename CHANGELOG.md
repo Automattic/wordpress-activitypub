@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.1.1] - 2026-04-22
+### Added
+- Added the `activitypub_post_object_type` filter so plugins can override the federated object type (Note, Article, Page) for a post. [#3210]
+
+### Changed
+- Always flush rewrite rules at the end of a plugin migration so that users upgrading across multiple versions do not miss a flush. [#3207]
+
+### Fixed
+- Fix the Fediverse stats widget on sites where the REST namespace is remapped, such as WordPress.com. [#3206]
+- Harden the reactions API response so stored author names and URLs cannot introduce markup or non-HTTP schemes into the JSON output. [#3211]
+- Stop hiding posts that contain a federated reply block from the main blog listing and the admin post list on sites that do not use the Posts and Replies block. [#3209]
+
 ## [8.1.0] - 2026-04-21
 ### Security
 - Add rate limiting to app registration to prevent abuse. [#3108]
@@ -1812,6 +1824,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[8.1.1]: https://github.com/Automattic/wordpress-activitypub/compare/8.1.0...8.1.1
 [8.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/8.0.2...8.1.0
 [8.0.2]: https://github.com/Automattic/wordpress-activitypub/compare/8.0.1...8.0.2
 [8.0.1]: https://github.com/Automattic/wordpress-activitypub/compare/8.0.0...8.0.1

@@ -17,11 +17,15 @@ if ( is_activitypub_request() || \is_feed() ) {
 	return;
 }
 
-// Determine active tab from URL parameter.
+/*
+ * Determine active tab from URL parameter. Default to "Posts & Replies" so
+ * the reply-exclusion filter only attaches on an explicit opt-in via
+ * ?filter=posts (clicked from the tab bar below).
+ */
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-$active_tab = isset( $_GET['filter'] ) ? \sanitize_key( $_GET['filter'] ) : 'posts';
+$active_tab = isset( $_GET['filter'] ) ? \sanitize_key( \wp_unslash( $_GET['filter'] ) ) : 'posts-and-replies';
 if ( ! \in_array( $active_tab, array( 'posts', 'posts-and-replies' ), true ) ) {
-	$active_tab = 'posts';
+	$active_tab = 'posts-and-replies';
 }
 
 $current_url = \remove_query_arg( array( 'filter', 'paged' ) );
@@ -33,18 +37,18 @@ $wrapper_attributes = \get_block_wrapper_attributes();
 <nav <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput ?> aria-label="<?php \esc_attr_e( 'Post filtering', 'activitypub' ); ?>">
 	<div class="ap-tabs">
 		<a
-			class="ap-tabs__tab <?php echo 'posts' === $active_tab ? 'is-active' : ''; ?>"
-			href="<?php echo \esc_url( $posts_url ); ?>"
-			<?php echo 'posts' === $active_tab ? 'aria-current="page"' : ''; ?>
-		>
-			<?php \esc_html_e( 'Posts', 'activitypub' ); ?>
-		</a>
-		<a
 			class="ap-tabs__tab <?php echo 'posts-and-replies' === $active_tab ? 'is-active' : ''; ?>"
 			href="<?php echo \esc_url( $all_url ); ?>"
 			<?php echo 'posts-and-replies' === $active_tab ? 'aria-current="page"' : ''; ?>
 		>
 			<?php \esc_html_e( 'Posts & Replies', 'activitypub' ); ?>
+		</a>
+		<a
+			class="ap-tabs__tab <?php echo 'posts' === $active_tab ? 'is-active' : ''; ?>"
+			href="<?php echo \esc_url( $posts_url ); ?>"
+			<?php echo 'posts' === $active_tab ? 'aria-current="page"' : ''; ?>
+		>
+			<?php \esc_html_e( 'Posts', 'activitypub' ); ?>
 		</a>
 	</div>
 </nav>

@@ -454,25 +454,33 @@ class Post extends Base {
 		$post_format_setting = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
 
 		if ( 'wordpress-post-format' !== $post_format_setting ) {
-			return \ucfirst( $post_format_setting );
-		}
-
-		// Check if the post has a title.
-		if ( ! \post_type_supports( $this->item->post_type, 'title' ) || ! $this->item->post_title ) {
-			return 'Note';
-		}
-
-		// Default to Note.
-		$object_type = 'Note';
-		$post_type   = \get_post_type( $this->item );
-
-		if ( 'page' === $post_type ) {
+			$object_type = \ucfirst( $post_format_setting );
+		} elseif ( ! \post_type_supports( $this->item->post_type, 'title' ) || ! $this->item->post_title ) {
+			$object_type = 'Note';
+		} elseif ( 'page' === \get_post_type( $this->item ) ) {
 			$object_type = 'Page';
 		} elseif ( ! \get_post_format( $this->item ) ) {
 			$object_type = 'Article';
+		} else {
+			$object_type = 'Note';
 		}
 
-		return $object_type;
+		/**
+		 * Filters the ActivityPub object type for a post.
+		 *
+		 * Allows downstream consumers to override the discriminator that
+		 * decides whether a post federates as Note, Article, or Page.
+		 * The filtered value propagates to all internal callers of
+		 * get_type(), including former_type/tombstone handling,
+		 * summary and title decisions, the content template, and the
+		 * preview guard, not only the wire-format type property.
+		 *
+		 * @since 8.1.1
+		 *
+		 * @param string   $object_type The computed ActivityPub object type.
+		 * @param \WP_Post $post        The WordPress post being transformed.
+		 */
+		return \apply_filters( 'activitypub_post_object_type', $object_type, $this->item );
 	}
 
 	/**

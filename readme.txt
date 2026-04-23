@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.9
-Stable tag: 8.1.0
+Stable tag: 8.1.1
 Requires PHP: 7.4
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -110,6 +110,18 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 8.1.1 - 2026-04-22
+#### Added
+- Added the `activitypub_post_object_type` filter so plugins can override the federated object type (Note, Article, Page) for a post.
+
+#### Changed
+- Always flush rewrite rules at the end of a plugin migration so that users upgrading across multiple versions do not miss a flush.
+
+#### Fixed
+- Fix the Fediverse stats widget on sites where the REST namespace is remapped, such as WordPress.com.
+- Harden the reactions API response so stored author names and URLs cannot introduce markup or non-HTTP schemes into the JSON output.
+- Stop hiding posts that contain a federated reply block from the main blog listing and the admin post list on sites that do not use the Posts and Replies block.
 
 ### 8.1.0 - 2026-04-21
 #### Security

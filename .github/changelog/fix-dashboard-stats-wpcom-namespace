@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix the Fediverse stats widget on sites where the REST namespace is remapped, such as WordPress.com.
