@@ -48,8 +48,42 @@ class Post_Types {
 		\add_filter( 'add_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
 		\add_filter( 'update_post_metadata', array( self::class, 'prevent_empty_post_meta' ), 10, 4 );
 
-		// Add support for ActivityPub to custom post types.
-		foreach ( \get_option( 'activitypub_support_post_types', array( 'post' ) ) as $post_type ) {
+		self::register_supported_post_type_feature();
+	}
+
+	/**
+	 * Registers the `activitypub` feature for each supported post type.
+	 *
+	 * Reads the admin-selected post types from the `activitypub_support_post_types`
+	 * option and applies the `activitypub_supported_post_types` filter before calling
+	 * `add_post_type_support()`. The admin UI continues to reflect the stored option,
+	 * not the filtered value.
+	 *
+	 * Note: integrations that read the `activitypub_support_post_types` option directly
+	 * (rather than checking `post_type_supports( $type, 'activitypub' )`) are not
+	 * affected by the filter.
+	 *
+	 * @since unreleased
+	 */
+	public static function register_supported_post_type_feature() {
+		$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
+
+		/**
+		 * Filters the post types registered for the `activitypub` post type feature.
+		 *
+		 * Runs before `add_post_type_support()` is called, letting integrators add or
+		 * remove post types regardless of the stored admin selection. The admin UI
+		 * continues to reflect the stored option, not the filtered value. Integrations
+		 * that read the `activitypub_support_post_types` option directly are not
+		 * affected by this filter.
+		 *
+		 * @since unreleased
+		 *
+		 * @param string[] $post_types Array of post type slugs with ActivityPub support.
+		 */
+		$post_types = (array) \apply_filters( 'activitypub_supported_post_types', $post_types );
+
+		foreach ( $post_types as $post_type ) {
 			\add_post_type_support( $post_type, 'activitypub' );
 		}
 	}

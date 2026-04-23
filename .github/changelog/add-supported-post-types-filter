@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Added the `activitypub_supported_post_types` filter so integrators can control which post types federate.
