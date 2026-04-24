@@ -380,17 +380,19 @@ class Test_Token extends \WP_UnitTestCase {
 		);
 		$other_client_id     = $other_client_result['client_id'];
 
-		$token = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+		try {
+			$token = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
 
-		// Different user AND different client — both checks must fail.
-		$other_user_id = $this->factory->user->create( array( 'role' => 'editor' ) );
-		$result        = Token::revoke( $token['access_token'], $other_user_id, $other_client_id );
-		$this->assertTrue( $result );
+			// Different user AND different client — both checks must fail.
+			$other_user_id = $this->factory->user->create( array( 'role' => 'editor' ) );
+			$result        = Token::revoke( $token['access_token'], $other_user_id, $other_client_id );
+			$this->assertTrue( $result );
 
-		$validation = Token::validate( $token['access_token'] );
-		$this->assertNotWPError( $validation, 'Cross-client revoke must not delete.' );
-
-		Client::delete( $other_client_id );
+			$validation = Token::validate( $token['access_token'] );
+			$this->assertNotWPError( $validation, 'Cross-client revoke must not delete.' );
+		} finally {
+			Client::delete( $other_client_id );
+		}
 	}
 
 	/**

@@ -87,6 +87,9 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 		global $wp_rest_server;
 		$wp_rest_server = null;
 
+		// Reset the OAuth current_token static so Bearer-auth tests do not leak state.
+		$this->set_oauth_current_token( null );
+
 		if ( $this->client_id ) {
 			Client::delete( $this->client_id );
 		}
@@ -388,20 +391,20 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 		$this->set_oauth_current_token( $caller_token );
 		\wp_set_current_user( $this->user_id );
 
-		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/revoke' );
-		$request->set_param( 'token', $target_token_data['access_token'] );
+		try {
+			$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/revoke' );
+			$request->set_param( 'token', $target_token_data['access_token'] );
 
-		$response = \rest_get_server()->dispatch( $request );
+			$response = \rest_get_server()->dispatch( $request );
 
-		$this->set_oauth_current_token( null );
+			$this->assertEquals( 200, $response->get_status(), 'Revoke must respond 200 regardless of ownership.' );
 
-		$this->assertEquals( 200, $response->get_status(), 'Revoke must respond 200 regardless of ownership.' );
-
-		$validation = Token::validate( $target_token_data['access_token'] );
-		$this->assertNotWPError( $validation, 'A bearer token from a different client must not revoke the target.' );
-		$this->assertEquals( $this->client_id, $validation->get_client_id() );
-
-		Client::delete( $other_client_id );
+			$validation = Token::validate( $target_token_data['access_token'] );
+			$this->assertNotWPError( $validation, 'A bearer token from a different client must not revoke the target.' );
+			$this->assertEquals( $this->client_id, $validation->get_client_id() );
+		} finally {
+			Client::delete( $other_client_id );
+		}
 	}
 
 	/**
@@ -427,8 +430,6 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 		$request->set_param( 'token', $target_token_data['access_token'] );
 
 		$response = \rest_get_server()->dispatch( $request );
-
-		$this->set_oauth_current_token( null );
 
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertInstanceOf( \WP_Error::class, Token::validate( $target_token_data['access_token'] ) );

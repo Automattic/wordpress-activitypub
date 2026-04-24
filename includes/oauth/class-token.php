@@ -385,7 +385,6 @@ class Token {
 			$user_id     = (int) $user_id;
 			$access_hash = \get_user_meta( $user_id, $refresh_index_key, true );
 			$client_id   = '';
-			$token_data  = null;
 
 			if ( $access_hash ) {
 				$token_data = \get_user_meta( $user_id, self::META_PREFIX . $access_hash, true );
