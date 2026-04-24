@@ -483,6 +483,158 @@ class Test_Signature extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Signed headers that include neither Date nor (created) must be rejected.
+	 *
+	 * A captured signed request with no time anchor can otherwise be
+	 * replayed indefinitely because nothing in the signed base string
+	 * bounds its freshness.
+	 *
+	 * @covers \Activitypub\Signature\Http_Signature_Draft::get_signed_data
+	 */
+	public function test_get_signed_data_requires_time_anchor() {
+		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Signature_Draft::class, 'get_signed_data' );
+		$method->setAccessible( true );
+		$instance = new \Activitypub\Signature\Http_Signature_Draft();
+
+		$result = $method->invoke(
+			$instance,
+			array( '(request-target)', 'host', 'digest' ),
+			array(),
+			array(
+				'(request-target)' => array( 'post /inbox' ),
+				'host'             => array( 'example.org' ),
+				'digest'           => array( 'sha-256=abc' ),
+			)
+		);
+
+		$this->assertFalse( $result, 'Signed headers without Date or (created) must fail verification.' );
+	}
+
+	/**
+	 * The (created) pseudo-header must observe the same asymmetric window
+	 * as the Date header: five minutes ahead, one hour behind.
+	 *
+	 * @covers \Activitypub\Signature\Http_Signature_Draft::get_signed_data
+	 */
+	public function test_get_signed_data_enforces_created_window() {
+		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Signature_Draft::class, 'get_signed_data' );
+		$method->setAccessible( true );
+		$instance = new \Activitypub\Signature\Http_Signature_Draft();
+
+		$now        = \time();
+		$far_past   = $now - ( 2 * HOUR_IN_SECONDS );
+		$far_future = $now + ( 10 * MINUTE_IN_SECONDS );
+		$within     = $now - ( 30 * MINUTE_IN_SECONDS );
+
+		$invoke = function ( $created ) use ( $method, $instance ) {
+			return $method->invoke(
+				$instance,
+				array( '(request-target)', '(created)' ),
+				array( '(created)' => (string) $created ),
+				array(
+					'(request-target)' => array( 'post /inbox' ),
+				)
+			);
+		};
+
+		$this->assertFalse( $invoke( $far_past ), '(created) more than an hour old must fail.' );
+		$this->assertFalse( $invoke( $far_future ), '(created) more than five minutes in the future must fail.' );
+		$this->assertNotFalse( $invoke( $within ), '(created) within the window must be accepted.' );
+	}
+
+	/**
+	 * The (expires) pseudo-header must reject already-expired values and
+	 * absurdly-far-future values that neuter replay protection.
+	 *
+	 * @covers \Activitypub\Signature\Http_Signature_Draft::get_signed_data
+	 */
+	public function test_get_signed_data_enforces_expires_window() {
+		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Signature_Draft::class, 'get_signed_data' );
+		$method->setAccessible( true );
+		$instance = new \Activitypub\Signature\Http_Signature_Draft();
+
+		$now = \time();
+
+		$invoke = function ( $expires ) use ( $method, $instance, $now ) {
+			return $method->invoke(
+				$instance,
+				array( '(request-target)', 'date', '(expires)' ),
+				array( '(expires)' => (string) $expires ),
+				array(
+					'(request-target)' => array( 'post /inbox' ),
+					'date'             => array( \gmdate( 'D, d M Y H:i:s T', $now ) ),
+				)
+			);
+		};
+
+		$this->assertFalse( $invoke( $now - MINUTE_IN_SECONDS ), 'Already-expired (expires) must fail.' );
+		$this->assertFalse( $invoke( $now + ( 7 * DAY_IN_SECONDS ) ), '(expires) absurdly far in the future must fail.' );
+		$this->assertNotFalse( $invoke( $now + ( 30 * MINUTE_IN_SECONDS ) ), '(expires) within a day must be accepted.' );
+	}
+
+	/**
+	 * RFC-9421 signatures must enforce the same asymmetric window as Cavage.
+	 *
+	 * @covers ::verify_http_signature
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
+	 */
+	public function test_verify_http_signature_rfc9421_rejects_out_of_window_created() {
+		\update_option( 'activitypub_rfc9421_signature', '1' );
+		$keys = self::$test_keys['rsa']['4096'];
+
+		$mock_remote_key_retrieval = function () use ( $keys ) {
+			return array(
+				'name'      => 'Admin',
+				'url'       => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+
+		$sign = static function ( $date_offset_seconds ) use ( $keys ) {
+			$date = \gmdate( 'D, d M Y H:i:s T', \time() + $date_offset_seconds );
+
+			$args = \apply_filters(
+				'http_request_args',
+				array(
+					'method'      => 'POST',
+					'body'        => '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"x"}}',
+					'headers'     => array(
+						'Date' => $date,
+						'Host' => 'example.org',
+					),
+					'key_id'      => 'https://example.org/author/admin#main-key',
+					'private_key' => \openssl_pkey_get_private( $keys['private_key'] ),
+					'user_id'     => 1,
+				),
+				'https://example.org/wp-json/activitypub/1.0/inbox'
+			);
+
+			$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+			$request->set_body( $args['body'] );
+			$request->set_headers( $args['headers'] );
+
+			return Signature::verify_http_signature( $request );
+		};
+
+		$far_past   = $sign( -2 * HOUR_IN_SECONDS );
+		$far_future = $sign( 10 * MINUTE_IN_SECONDS );
+
+		$this->assertWPError( $far_past, 'RFC-9421 created more than an hour old must be rejected.' );
+		$this->assertSame( 'expired_created', $far_past->get_error_code() );
+
+		$this->assertWPError( $far_future, 'RFC-9421 created more than five minutes in the future must be rejected.' );
+		$this->assertSame( 'invalid_created', $far_future->get_error_code() );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+		\delete_option( 'activitypub_rfc9421_signature' );
+	}
+
+	/**
 	 * Test HTTP signature verification with RFC-9421 compliant signatures.
 	 *
 	 * @covers ::verify_http_signature

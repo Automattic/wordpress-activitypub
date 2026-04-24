@@ -273,7 +273,12 @@ class Http_Signature_Draft implements Http_Signature {
 	 * @return string signed headers for comparison
 	 */
 	private function get_signed_data( $signed_headers, $signature_block, $headers ) {
-		$signed_data = '';
+		$signed_data       = '';
+		$has_time_anchor   = false;
+		$now               = \time();
+		$max_future_skew   = $now + ( 5 * MINUTE_IN_SECONDS );
+		$min_past_skew     = $now - HOUR_IN_SECONDS;
+		$max_expires_drift = $now + DAY_IN_SECONDS;
 
 		// This also verifies time-based values by returning false if any of these are out of range.
 		foreach ( $signed_headers as $header ) {
@@ -292,9 +297,13 @@ class Http_Signature_Draft implements Http_Signature {
 				continue;
 			}
 			if ( '(created)' === $header ) {
-				if ( ! empty( $signature_block['(created)'] ) && \intval( $signature_block['(created)'] ) > \time() ) {
-					// Created in the future.
-					return false;
+				$has_time_anchor = true;
+				if ( ! empty( $signature_block['(created)'] ) ) {
+					$created = \intval( $signature_block['(created)'] );
+					if ( $created > $max_future_skew || $created < $min_past_skew ) {
+						// Created out of asymmetric window.
+						return false;
+					}
 				}
 
 				if ( ! \array_key_exists( '(created)', $headers ) ) {
@@ -303,9 +312,17 @@ class Http_Signature_Draft implements Http_Signature {
 				}
 			}
 			if ( '(expires)' === $header ) {
-				if ( ! empty( $signature_block['(expires)'] ) && \intval( $signature_block['(expires)'] ) < \time() ) {
-					// Expired in the past.
-					return false;
+				if ( ! empty( $signature_block['(expires)'] ) ) {
+					$expires = \intval( $signature_block['(expires)'] );
+
+					/*
+					 * Reject signatures that have already expired, and also
+					 * reject absurdly-far-future expiries that a malicious
+					 * sender could use to neuter replay protection.
+					 */
+					if ( $expires < $now || $expires > $max_expires_drift ) {
+						return false;
+					}
 				}
 
 				if ( ! \array_key_exists( '(expires)', $headers ) ) {
@@ -314,6 +331,7 @@ class Http_Signature_Draft implements Http_Signature {
 				}
 			}
 			if ( 'date' === $header ) {
+				$has_time_anchor = true;
 				if ( empty( $headers['date'][0] ) ) {
 					// Date is in the signed headers list but missing from the request.
 					return false;
@@ -338,11 +356,7 @@ class Http_Signature_Draft implements Http_Signature {
 				 * that retried / queued federation traffic from peers with
 				 * backed-up outboxes still verifies.
 				 */
-				$now = \time();
-				$max = $now + ( 5 * MINUTE_IN_SECONDS );
-				$min = $now - HOUR_IN_SECONDS;
-
-				if ( $date > $max || $date < $min ) {
+				if ( $date > $max_future_skew || $date < $min_past_skew ) {
 					// Time out of range.
 					return false;
 				}
@@ -352,6 +366,16 @@ class Http_Signature_Draft implements Http_Signature {
 				$signed_data .= $header . ': ' . $headers[ $header ][0] . "\n";
 			}
 		}
+
+		/*
+		 * Require a signed time anchor (Date or (created)). Without one,
+		 * a captured signed request could be replayed indefinitely because
+		 * no field inside the signed base string bounds its freshness.
+		 */
+		if ( ! $has_time_anchor ) {
+			return false;
+		}
+
 		return \rtrim( $signed_data, "\n" );
 	}
 }

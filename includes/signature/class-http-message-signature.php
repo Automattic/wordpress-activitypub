@@ -221,12 +221,28 @@ class Http_Message_Signature implements Http_Signature {
 	private function verify_signature_label( $data, $headers, $body ) {
 		$params = $data['params'];
 
-		// Timestamp verification.
-		if ( isset( $params['created'] ) && (int) $params['created'] > \time() + MINUTE_IN_SECONDS ) {
-			return new \WP_Error( 'invalid_created', 'The signature creation time is in the future.' );
+		/*
+		 * Timestamp verification.
+		 *
+		 * Mirrors the Cavage path: five minutes of forward drift, one hour
+		 * of backward drift. Without the past-side bound, peers that omit
+		 * `expires` can present arbitrarily old signatures for replay.
+		 */
+		$now = \time();
+		if ( isset( $params['created'] ) ) {
+			$created = (int) $params['created'];
+			if ( $created > $now + ( 5 * MINUTE_IN_SECONDS ) ) {
+				return new \WP_Error( 'invalid_created', 'The signature creation time is too far in the future.' );
+			}
+			if ( $created < $now - HOUR_IN_SECONDS ) {
+				return new \WP_Error( 'expired_created', 'The signature creation time is too far in the past.' );
+			}
 		}
-		if ( isset( $params['expires'] ) && (int) $params['expires'] < \time() ) {
-			return new \WP_Error( 'expired_signature', 'The signature has expired.' );
+		if ( isset( $params['expires'] ) ) {
+			$expires = (int) $params['expires'];
+			if ( $expires < $now || $expires > $now + DAY_IN_SECONDS ) {
+				return new \WP_Error( 'expired_signature', 'The signature has expired or has an unreasonable expiry.' );
+			}
 		}
 
 		// KeyId verification.
