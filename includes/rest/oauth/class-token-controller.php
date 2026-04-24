@@ -272,14 +272,16 @@ class Token_Controller extends \WP_REST_Controller {
 		$token = $request->get_param( 'token' );
 
 		if ( \current_user_can( 'manage_options' ) ) {
-			// Site admins may revoke any token.
+			// Site admins may revoke any token. Null-null disables the ownership check.
 			Token::revoke( $token );
 		} else {
 			/*
 			 * RFC 7009 §2.1: the server must verify the token was issued to
 			 * the requesting client. Scope the revocation to either the
 			 * logged-in user or the OAuth client whose bearer token
-			 * authenticated this request.
+			 * authenticated this request. `$caller_client_id` is null for
+			 * pure cookie-authenticated callers; the user check still
+			 * applies in that case.
 			 */
 			$caller_token     = OAuth_Server::get_current_token();
 			$caller_client_id = $caller_token ? $caller_token->get_client_id() : null;

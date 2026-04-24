@@ -436,6 +436,11 @@ class Token {
 			return true;
 		}
 
+		/*
+		 * Require a real client_id on the token. An empty string on both
+		 * sides would otherwise match and let an un-attributed token be
+		 * revoked by any caller presenting an empty client claim.
+		 */
 		if ( null !== $caller_client_id && '' !== $token_client_id && $token_client_id === $caller_client_id ) {
 			return true;
 		}

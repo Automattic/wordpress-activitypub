@@ -339,7 +339,6 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 		$this->assertInstanceOf( \WP_Error::class, Token::validate( $token_data['access_token'] ) );
 	}
 
-
 	/**
 	 * Test introspect endpoint requires authentication.
 	 *
