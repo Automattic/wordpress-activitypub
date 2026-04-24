@@ -422,6 +422,67 @@ class Test_Signature extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A malformed Date header must reject the request gracefully rather than
+	 * fatal on `setTimeZone()` of a `false` date object.
+	 *
+	 * @covers ::verify_http_signature
+	 * @covers \Activitypub\Signature\Http_Signature_Draft::get_signed_data
+	 */
+	public function test_verify_http_signature_rejects_malformed_date() {
+		$keys = Actors::get_keypair( 1 );
+
+		$force_cavage = '__return_zero';
+		\add_filter( 'pre_option_activitypub_rfc9421_signature', $force_cavage );
+
+		$mock_remote_key_retrieval = function () use ( $keys ) {
+			return array(
+				'name'      => 'Admin',
+				'url'       => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+
+		/*
+		 * Sign with an unparseable Date string. The signing helper drops the
+		 * literal value into the signed string without validating it, so the
+		 * signature itself stays valid; the verifier then has to handle
+		 * date_create() returning false on the same value.
+		 */
+		$args = \apply_filters(
+			'http_request_args',
+			array(
+				'method'      => 'POST',
+				'body'        => '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"x"}}',
+				'key_id'      => 'https://example.org/author/admin#main-key',
+				'private_key' => Actors::get_private_key( 1 ),
+				'user_id'     => 1,
+				'headers'     => array(
+					'Content-Type' => 'application/activity+json',
+					'Date'         => 'not a real date',
+					'Host'         => 'example.org',
+				),
+			),
+			'https://example.org/wp-json/activitypub/1.0/inbox'
+		);
+
+		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_body( $args['body'] );
+		$request->set_headers( $args['headers'] );
+
+		$result = Signature::verify_http_signature( $request );
+		$this->assertWPError( $result, 'Malformed Date header must produce a WP_Error, not a fatal.' );
+		$this->assertSame( 'invalid_signed_data', $result->get_error_code() );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+		\remove_filter( 'pre_option_activitypub_rfc9421_signature', $force_cavage );
+	}
+
+	/**
 	 * Test HTTP signature verification with RFC-9421 compliant signatures.
 	 *
 	 * @covers ::verify_http_signature
