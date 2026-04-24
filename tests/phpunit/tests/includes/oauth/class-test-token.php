@@ -320,6 +320,112 @@ class Test_Token extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A mismatched caller user must not be able to revoke another user's token.
+	 *
+	 * @covers ::revoke
+	 */
+	public function test_revoke_rejects_mismatched_caller_user() {
+		$other_user_id = $this->factory->user->create( array( 'role' => 'editor' ) );
+		$token         = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+
+		// Different user, no client context — must not delete.
+		$result = Token::revoke( $token['access_token'], $other_user_id );
+		$this->assertTrue( $result, 'Revoke must return true per RFC 7009 even when it skipped the delete.' );
+
+		$validation = Token::validate( $token['access_token'] );
+		$this->assertNotWPError( $validation, 'Token must survive a cross-user revoke attempt.' );
+	}
+
+	/**
+	 * A matching caller user may revoke.
+	 *
+	 * @covers ::revoke
+	 */
+	public function test_revoke_allows_matching_caller_user() {
+		$token = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+
+		$result = Token::revoke( $token['access_token'], $this->user_id );
+		$this->assertTrue( $result );
+
+		$this->assertInstanceOf( \WP_Error::class, Token::validate( $token['access_token'] ) );
+	}
+
+	/**
+	 * A matching caller client may revoke even when the user differs (same client, other user's token).
+	 *
+	 * @covers ::revoke
+	 */
+	public function test_revoke_allows_matching_caller_client() {
+		$other_user_id = $this->factory->user->create( array( 'role' => 'editor' ) );
+		$token         = Token::create( $other_user_id, $this->client_id, array( Scope::READ ) );
+
+		// Caller is a different user, but presents the same client_id.
+		$result = Token::revoke( $token['access_token'], $this->user_id, $this->client_id );
+		$this->assertTrue( $result );
+
+		$this->assertInstanceOf( \WP_Error::class, Token::validate( $token['access_token'] ) );
+	}
+
+	/**
+	 * A mismatched caller client must not revoke a token issued to a different client.
+	 *
+	 * @covers ::revoke
+	 */
+	public function test_revoke_rejects_mismatched_caller_client() {
+		$other_client_result = Client::register(
+			array(
+				'name'          => 'Another Client',
+				'redirect_uris' => array( 'https://example.com/callback' ),
+			)
+		);
+		$other_client_id     = $other_client_result['client_id'];
+
+		$token = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+
+		// Different user AND different client — both checks must fail.
+		$other_user_id = $this->factory->user->create( array( 'role' => 'editor' ) );
+		$result        = Token::revoke( $token['access_token'], $other_user_id, $other_client_id );
+		$this->assertTrue( $result );
+
+		$validation = Token::validate( $token['access_token'] );
+		$this->assertNotWPError( $validation, 'Cross-client revoke must not delete.' );
+
+		Client::delete( $other_client_id );
+	}
+
+	/**
+	 * Refresh-token revocation must also honour the caller ownership check.
+	 *
+	 * @covers ::revoke
+	 */
+	public function test_revoke_refresh_token_honours_caller_check() {
+		$other_user_id = $this->factory->user->create( array( 'role' => 'editor' ) );
+		$token         = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+
+		$result = Token::revoke( $token['refresh_token'], $other_user_id );
+		$this->assertTrue( $result );
+
+		// Refresh must still work because revocation should have been skipped.
+		$refresh = Token::refresh( $token['refresh_token'], $this->client_id );
+		$this->assertIsArray( $refresh, 'Refresh token must survive a cross-user revoke attempt.' );
+	}
+
+	/**
+	 * Internal callers that pass neither caller user nor caller client
+	 * retain the pre-check behavior and delete the token regardless.
+	 *
+	 * @covers ::revoke
+	 */
+	public function test_revoke_without_caller_args_preserves_internal_behavior() {
+		$token = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+
+		$result = Token::revoke( $token['access_token'] );
+		$this->assertTrue( $result );
+
+		$this->assertInstanceOf( \WP_Error::class, Token::validate( $token['access_token'] ) );
+	}
+
+	/**
 	 * Test revoke_all_for_user method.
 	 *
 	 * @covers ::revoke_all_for_user

@@ -271,9 +271,23 @@ class Token_Controller extends \WP_REST_Controller {
 	public function revoke( \WP_REST_Request $request ) {
 		$token = $request->get_param( 'token' );
 
-		// Per RFC 7009, always return 200 even if token doesn't exist.
-		Token::revoke( $token );
+		if ( \current_user_can( 'manage_options' ) ) {
+			// Site admins may revoke any token.
+			Token::revoke( $token );
+		} else {
+			/*
+			 * RFC 7009 §2.1: the server must verify the token was issued to
+			 * the requesting client. Scope the revocation to either the
+			 * logged-in user or the OAuth client whose bearer token
+			 * authenticated this request.
+			 */
+			$caller_token     = OAuth_Server::get_current_token();
+			$caller_client_id = $caller_token ? $caller_token->get_client_id() : null;
 
+			Token::revoke( $token, \get_current_user_id(), $caller_client_id );
+		}
+
+		// Per RFC 7009, always return 200 even if the token doesn't exist or was not owned.
 		return new \WP_REST_Response( null, 200 );
 	}
 

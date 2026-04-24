@@ -294,6 +294,53 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A non-admin user must not be able to revoke a token belonging to another user.
+	 *
+	 * Per RFC 7009 the endpoint returns 200 either way so the caller cannot
+	 * probe for token existence, but the victim's token must still verify.
+	 *
+	 * @covers ::revoke
+	 */
+	public function test_revoke_cross_user_is_silently_skipped() {
+		$other_user_id = $this->factory->user->create( array( 'role' => 'editor' ) );
+		$token_data    = Token::create( $other_user_id, $this->client_id, array( Scope::READ ) );
+
+		\wp_set_current_user( $this->user_id );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/revoke' );
+		$request->set_param( 'token', $token_data['access_token'] );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 200, $response->get_status(), 'Revoke must respond 200 regardless of ownership.' );
+
+		$validation = Token::validate( $token_data['access_token'] );
+		$this->assertNotWPError( $validation, 'Another user must not be able to revoke this token.' );
+		$this->assertEquals( $other_user_id, $validation->get_user_id() );
+	}
+
+	/**
+	 * A site admin may revoke any token.
+	 *
+	 * @covers ::revoke
+	 */
+	public function test_revoke_allows_admin_to_revoke_any_token() {
+		$admin_id   = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		$token_data = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+
+		\wp_set_current_user( $admin_id );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/revoke' );
+		$request->set_param( 'token', $token_data['access_token'] );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertInstanceOf( \WP_Error::class, Token::validate( $token_data['access_token'] ) );
+	}
+
+
+	/**
 	 * Test introspect endpoint requires authentication.
 	 *
 	 * @covers ::introspect_permissions_check
