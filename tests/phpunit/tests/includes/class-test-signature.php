@@ -543,6 +543,46 @@ class Test_Signature extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An empty or zero (created) value must not satisfy the time-anchor
+	 * requirement, because the signed base string would then carry no
+	 * freshness information.
+	 *
+	 * @covers \Activitypub\Signature\Http_Signature_Draft::get_signed_data
+	 * @dataProvider empty_created_provider
+	 *
+	 * @param string $created Raw (created) value as it would be parsed from the signature header.
+	 */
+	public function test_get_signed_data_rejects_empty_or_zero_created( $created ) {
+		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Signature_Draft::class, 'get_signed_data' );
+		$method->setAccessible( true );
+		$instance = new \Activitypub\Signature\Http_Signature_Draft();
+
+		$result = $method->invoke(
+			$instance,
+			array( '(request-target)', '(created)' ),
+			array( '(created)' => $created ),
+			array(
+				'(request-target)' => array( 'post /inbox' ),
+			)
+		);
+
+		$this->assertFalse( $result, 'Empty or zero (created) value must not be treated as a valid time anchor.' );
+	}
+
+	/**
+	 * Data provider for empty or zero (created) values.
+	 *
+	 * @return array[]
+	 */
+	public function empty_created_provider() {
+		return array(
+			'empty string' => array( '' ),
+			'zero string'  => array( '0' ),
+			'zero integer' => array( 0 ),
+		);
+	}
+
+	/**
 	 * The (expires) pseudo-header must reject already-expired values and
 	 * absurdly-far-future values that neuter replay protection.
 	 *
@@ -632,6 +672,34 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 		\delete_option( 'activitypub_rfc9421_signature' );
+	}
+
+	/**
+	 * RFC-9421 signatures without `created` or `expires` must be rejected.
+	 *
+	 * A signature with neither parameter has no freshness bound inside
+	 * the signed base string and could be replayed indefinitely.
+	 *
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
+	 */
+	public function test_verify_rfc9421_rejects_missing_time_anchor() {
+		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Message_Signature::class, 'verify_signature_label' );
+		$method->setAccessible( true );
+		$instance = new \Activitypub\Signature\Http_Message_Signature();
+
+		$data = array(
+			'components' => array( '"@method"', '"@target-uri"' ),
+			'params'     => array(
+				'keyid' => 'https://example.org/author/admin#main-key',
+				'alg'   => 'rsa-v1_5-sha256',
+			),
+			'signature'  => '',
+		);
+
+		$result = $method->invoke( $instance, $data, array(), null );
+
+		$this->assertWPError( $result, 'Signature without created or expires must be rejected.' );
+		$this->assertSame( 'missing_time_anchor', $result->get_error_code() );
 	}
 
 	/**

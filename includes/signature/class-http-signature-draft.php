@@ -297,13 +297,13 @@ class Http_Signature_Draft implements Http_Signature {
 				continue;
 			}
 			if ( '(created)' === $header ) {
-				$has_time_anchor = true;
 				if ( ! empty( $signature_block['(created)'] ) ) {
 					$created = \intval( $signature_block['(created)'] );
-					if ( $created > $max_future_skew || $created < $min_past_skew ) {
-						// Created out of asymmetric window.
+					if ( $created <= 0 || $created > $max_future_skew || $created < $min_past_skew ) {
+						// Created is missing, zero, or out of the asymmetric window.
 						return false;
 					}
+					$has_time_anchor = true;
 				}
 
 				if ( ! \array_key_exists( '(created)', $headers ) ) {

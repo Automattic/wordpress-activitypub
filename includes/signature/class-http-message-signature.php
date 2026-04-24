@@ -245,6 +245,15 @@ class Http_Message_Signature implements Http_Signature {
 			}
 		}
 
+		/*
+		 * Require a time anchor. Both `created` and `expires` are optional
+		 * in RFC-9421; a signature without either has no freshness bound
+		 * and could be replayed indefinitely.
+		 */
+		if ( ! isset( $params['created'] ) && ! isset( $params['expires'] ) ) {
+			return new \WP_Error( 'missing_time_anchor', 'The signature is missing a time anchor (created or expires).' );
+		}
+
 		// KeyId verification.
 		if ( empty( $params['keyid'] ) ) {
 			return new \WP_Error( 'missing_keyid', 'Missing keyId in signature parameters.' );
