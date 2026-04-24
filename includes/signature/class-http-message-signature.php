@@ -240,8 +240,11 @@ class Http_Message_Signature implements Http_Signature {
 		}
 		if ( isset( $params['expires'] ) ) {
 			$expires = (int) $params['expires'];
-			if ( $expires < $now || $expires > $now + DAY_IN_SECONDS ) {
-				return new \WP_Error( 'expired_signature', 'The signature has expired or has an unreasonable expiry.' );
+			if ( $expires < $now ) {
+				return new \WP_Error( 'expired_signature', 'The signature has expired.' );
+			}
+			if ( $expires > $now + DAY_IN_SECONDS ) {
+				return new \WP_Error( 'invalid_expires', 'The signature expiry time is too far in the future.' );
 			}
 		}
 

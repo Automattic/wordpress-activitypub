@@ -297,14 +297,17 @@ class Http_Signature_Draft implements Http_Signature {
 				continue;
 			}
 			if ( '(created)' === $header ) {
-				if ( ! empty( $signature_block['(created)'] ) ) {
-					$created = \intval( $signature_block['(created)'] );
-					if ( $created <= 0 || $created > $max_future_skew || $created < $min_past_skew ) {
-						// Created is missing, zero, or out of the asymmetric window.
-						return false;
-					}
-					$has_time_anchor = true;
+				if ( empty( $signature_block['(created)'] ) ) {
+					// (created) listed in signed headers but the signature omitted the value.
+					return false;
 				}
+
+				$created = \intval( $signature_block['(created)'] );
+				if ( $created <= 0 || $created > $max_future_skew || $created < $min_past_skew ) {
+					// Created is zero or out of the asymmetric window.
+					return false;
+				}
+				$has_time_anchor = true;
 
 				if ( ! \array_key_exists( '(created)', $headers ) ) {
 					$signed_data .= $header . ': ' . $signature_block['(created)'] . "\n";
@@ -312,17 +315,20 @@ class Http_Signature_Draft implements Http_Signature {
 				}
 			}
 			if ( '(expires)' === $header ) {
-				if ( ! empty( $signature_block['(expires)'] ) ) {
-					$expires = \intval( $signature_block['(expires)'] );
+				if ( empty( $signature_block['(expires)'] ) ) {
+					// (expires) listed in signed headers but the signature omitted the value.
+					return false;
+				}
 
-					/*
-					 * Reject signatures that have already expired, and also
-					 * reject absurdly-far-future expiries that a malicious
-					 * sender could use to neuter replay protection.
-					 */
-					if ( $expires < $now || $expires > $max_expires_drift ) {
-						return false;
-					}
+				$expires = \intval( $signature_block['(expires)'] );
+
+				/*
+				 * Reject signatures that have already expired, and also
+				 * reject absurdly-far-future expiries that a malicious
+				 * sender could use to neuter replay protection.
+				 */
+				if ( $expires < $now || $expires > $max_expires_drift ) {
+					return false;
 				}
 
 				if ( ! \array_key_exists( '(expires)', $headers ) ) {

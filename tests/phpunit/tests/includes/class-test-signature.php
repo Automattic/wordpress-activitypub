@@ -583,6 +583,31 @@ class Test_Signature extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * If (expires) is in the signed headers list but the signature
+	 * omitted the value, fail closed rather than accessing an undefined
+	 * array key.
+	 *
+	 * @covers \Activitypub\Signature\Http_Signature_Draft::get_signed_data
+	 */
+	public function test_get_signed_data_rejects_missing_expires_value() {
+		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Signature_Draft::class, 'get_signed_data' );
+		$method->setAccessible( true );
+		$instance = new \Activitypub\Signature\Http_Signature_Draft();
+
+		$result = $method->invoke(
+			$instance,
+			array( '(request-target)', 'date', '(expires)' ),
+			array(), // Signature header omitted expires=.
+			array(
+				'(request-target)' => array( 'post /inbox' ),
+				'date'             => array( \gmdate( 'D, d M Y H:i:s T' ) ),
+			)
+		);
+
+		$this->assertFalse( $result, '(expires) listed in signed headers without a value must fail.' );
+	}
+
+	/**
 	 * The (expires) pseudo-header must reject already-expired values and
 	 * absurdly-far-future values that neuter replay protection.
 	 *

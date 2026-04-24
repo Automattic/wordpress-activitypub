@@ -1,4 +1,4 @@
 Significance: patch
 Type: fixed
 
-Tighten the clock-skew window for HTTP signature verification so future-dated signatures can no longer buy hours of replay time.
+Tighten HTTP signature verification: narrow the clock-skew window, reject signatures that carry no freshness timestamp, and cap unreasonable expiry times. Peers that sign without a Date or creation timestamp will no longer verify.
