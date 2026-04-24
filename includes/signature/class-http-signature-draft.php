@@ -331,6 +331,13 @@ class Http_Signature_Draft implements Http_Signature {
 					return false;
 				}
 
+				/*
+				 * A validated (expires) bounds the signature's lifetime
+				 * to at most one day in the future, so it's a legitimate
+				 * freshness signal on its own.
+				 */
+				$has_time_anchor = true;
+
 				if ( ! \array_key_exists( '(expires)', $headers ) ) {
 					$signed_data .= $header . ': ' . $signature_block['(expires)'] . "\n";
 					continue;

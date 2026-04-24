@@ -638,7 +638,32 @@ class Test_Signature extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * RFC-9421 signatures must enforce the same asymmetric window as Cavage.
+	 * A validated (expires) caps the signature's lifetime on its own, so
+	 * it must satisfy the time-anchor requirement even without Date or
+	 * (created).
+	 *
+	 * @covers \Activitypub\Signature\Http_Signature_Draft::get_signed_data
+	 */
+	public function test_get_signed_data_accepts_expires_as_time_anchor() {
+		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Signature_Draft::class, 'get_signed_data' );
+		$method->setAccessible( true );
+		$instance = new \Activitypub\Signature\Http_Signature_Draft();
+
+		$result = $method->invoke(
+			$instance,
+			array( '(request-target)', '(expires)' ),
+			array( '(expires)' => (string) ( \time() + ( 30 * MINUTE_IN_SECONDS ) ) ),
+			array(
+				'(request-target)' => array( 'post /inbox' ),
+			)
+		);
+
+		$this->assertNotFalse( $result, '(expires) within the cap must satisfy the time-anchor requirement on its own.' );
+	}
+
+	/**
+	 * RFC-9421 signatures must reject `created` more than one hour in the
+	 * past or more than one minute in the future.
 	 *
 	 * @covers ::verify_http_signature
 	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
@@ -687,12 +712,12 @@ class Test_Signature extends \WP_UnitTestCase {
 		};
 
 		$far_past   = $sign( -2 * HOUR_IN_SECONDS );
-		$far_future = $sign( 10 * MINUTE_IN_SECONDS );
+		$far_future = $sign( 5 * MINUTE_IN_SECONDS );
 
 		$this->assertWPError( $far_past, 'RFC-9421 created more than an hour old must be rejected.' );
 		$this->assertSame( 'expired_created', $far_past->get_error_code() );
 
-		$this->assertWPError( $far_future, 'RFC-9421 created more than five minutes in the future must be rejected.' );
+		$this->assertWPError( $far_future, 'RFC-9421 created more than one minute in the future must be rejected.' );
 		$this->assertSame( 'invalid_created', $far_future->get_error_code() );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
@@ -725,6 +750,49 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		$this->assertWPError( $result, 'Signature without created or expires must be rejected.' );
 		$this->assertSame( 'missing_time_anchor', $result->get_error_code() );
+	}
+
+	/**
+	 * RFC-9421 `expires` values outside the accepted window must be rejected
+	 * with distinct error codes.
+	 *
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
+	 * @dataProvider rfc9421_expires_provider
+	 *
+	 * @param int    $offset Seconds offset from now for the `expires` value.
+	 * @param string $code   Expected WP_Error code.
+	 */
+	public function test_verify_rfc9421_rejects_out_of_window_expires( $offset, $code ) {
+		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Message_Signature::class, 'verify_signature_label' );
+		$method->setAccessible( true );
+		$instance = new \Activitypub\Signature\Http_Message_Signature();
+
+		$data = array(
+			'components' => array( '"@method"', '"@target-uri"' ),
+			'params'     => array(
+				'expires' => (string) ( \time() + $offset ),
+				'keyid'   => 'https://example.org/author/admin#main-key',
+				'alg'     => 'rsa-v1_5-sha256',
+			),
+			'signature'  => '',
+		);
+
+		$result = $method->invoke( $instance, $data, array(), null );
+
+		$this->assertWPError( $result );
+		$this->assertSame( $code, $result->get_error_code() );
+	}
+
+	/**
+	 * Data provider for out-of-window `expires` values.
+	 *
+	 * @return array[]
+	 */
+	public function rfc9421_expires_provider() {
+		return array(
+			'already expired'            => array( -1 * MINUTE_IN_SECONDS, 'expired_signature' ),
+			'absurdly far in the future' => array( 7 * DAY_IN_SECONDS, 'invalid_expires' ),
+		);
 	}
 
 	/**
