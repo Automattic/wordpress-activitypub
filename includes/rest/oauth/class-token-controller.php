@@ -277,16 +277,19 @@ class Token_Controller extends \WP_REST_Controller {
 		} else {
 			/*
 			 * RFC 7009 §2.1: the server must verify the token was issued to
-			 * the requesting client. Scope the revocation to either the
-			 * logged-in user or the OAuth client whose bearer token
-			 * authenticated this request. `$caller_client_id` is null for
-			 * pure cookie-authenticated callers; the user check still
-			 * applies in that case.
+			 * the requesting client. When the caller authenticated with a
+			 * bearer token we know the calling client, so require a client
+			 * match and ignore the user — otherwise a low-trust client
+			 * could revoke tokens the user had granted to a different
+			 * client. For pure cookie-authenticated callers there is no
+			 * client context, so user match is the only available check.
 			 */
-			$caller_token     = OAuth_Server::get_current_token();
-			$caller_client_id = $caller_token ? $caller_token->get_client_id() : null;
-
-			Token::revoke( $token, \get_current_user_id(), $caller_client_id );
+			$caller_token = OAuth_Server::get_current_token();
+			if ( $caller_token ) {
+				Token::revoke( $token, null, $caller_token->get_client_id() );
+			} else {
+				Token::revoke( $token, \get_current_user_id(), null );
+			}
 		}
 
 		// Per RFC 7009, always return 200 even if the token doesn't exist or was not owned.

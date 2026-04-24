@@ -340,6 +340,95 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A bearer-authenticated client must not be able to revoke a token its
+	 * user granted to a different OAuth client.
+	 *
+	 * Per RFC 7009 §2.1, when the caller authenticated as a client, the
+	 * token being revoked must have been issued to that same client.
+	 * User-based ownership must not override the client scoping.
+	 *
+	 * @covers ::revoke
+	 */
+	public function test_revoke_cross_client_bearer_is_silently_skipped() {
+		$other_client_result = Client::register(
+			array(
+				'name'          => 'Other Client',
+				'redirect_uris' => array( $this->redirect_uri ),
+			)
+		);
+		$other_client_id     = $other_client_result['client_id'];
+
+		$caller_token_data = Token::create( $this->user_id, $other_client_id, array( Scope::READ ) );
+		$target_token_data = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+
+		$caller_token = Token::validate( $caller_token_data['access_token'] );
+		$this->assertInstanceOf( Token::class, $caller_token );
+
+		$this->set_oauth_current_token( $caller_token );
+		\wp_set_current_user( $this->user_id );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/revoke' );
+		$request->set_param( 'token', $target_token_data['access_token'] );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->set_oauth_current_token( null );
+
+		$this->assertEquals( 200, $response->get_status(), 'Revoke must respond 200 regardless of ownership.' );
+
+		$validation = Token::validate( $target_token_data['access_token'] );
+		$this->assertNotWPError( $validation, 'A bearer token from a different client must not revoke the target.' );
+		$this->assertEquals( $this->client_id, $validation->get_client_id() );
+
+		Client::delete( $other_client_id );
+	}
+
+	/**
+	 * A bearer-authenticated client must be able to revoke a token it
+	 * issued, even when the token belongs to a different user than the
+	 * one currently authenticated via the bearer.
+	 *
+	 * @covers ::revoke
+	 */
+	public function test_revoke_same_client_bearer_succeeds() {
+		$other_user_id = $this->factory->user->create( array( 'role' => 'editor' ) );
+
+		$caller_token_data = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+		$target_token_data = Token::create( $other_user_id, $this->client_id, array( Scope::READ ) );
+
+		$caller_token = Token::validate( $caller_token_data['access_token'] );
+		$this->assertInstanceOf( Token::class, $caller_token );
+
+		$this->set_oauth_current_token( $caller_token );
+		\wp_set_current_user( $this->user_id );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/revoke' );
+		$request->set_param( 'token', $target_token_data['access_token'] );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->set_oauth_current_token( null );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertInstanceOf( \WP_Error::class, Token::validate( $target_token_data['access_token'] ) );
+	}
+
+	/**
+	 * Inject an OAuth current_token via reflection so tests can simulate
+	 * bearer authentication without relying on the plugin bootstrap hook
+	 * that only fires when the `activitypub_api` option was enabled
+	 * before the plugin loaded.
+	 *
+	 * @param \Activitypub\OAuth\Token|null $token The token to inject, or null to reset.
+	 */
+	protected function set_oauth_current_token( $token ) {
+		$reflection = new \ReflectionClass( \Activitypub\OAuth\Server::class );
+		$property   = $reflection->getProperty( 'current_token' );
+		$property->setAccessible( true );
+		$property->setValue( null, $token );
+	}
+
+	/**
 	 * Test introspect endpoint requires authentication.
 	 *
 	 * @covers ::introspect_permissions_check
