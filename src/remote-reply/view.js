@@ -1,4 +1,4 @@
-import { store, getContext, getConfig } from '@wordpress/interactivity';
+import { store, getContext, getConfig, withSyncEvent } from '@wordpress/interactivity';
 import { createModalStore } from '../shared/modal';
 import './style.scss';
 
@@ -53,13 +53,13 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 		 * @param {Event}  event     The event that triggered the modal opening/closing.
 		 * @param {string} event.key The key pressed, if any.
 		 */
-		onReplyLinkKeydown( event ) {
+		onReplyLinkKeydown: withSyncEvent( ( event ) => {
 			// Handle Enter key to open the modal.
 			if ( event.key === 'Enter' || event.key === ' ' ) {
 				event.preventDefault();
 				actions.toggleModal( event );
 			}
-		},
+		} ),
 
 		/**
 		 * Copy the comment URL to the clipboard.

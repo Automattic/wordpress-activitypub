@@ -1,4 +1,4 @@
-import { store, getContext, getConfig } from '@wordpress/interactivity';
+import { store, getContext, getConfig, withSyncEvent } from '@wordpress/interactivity';
 
 /**
  * @member {Object} window.wp WordPress global object
@@ -101,7 +101,7 @@ export function createActorListStore( storeName ) {
 			 *
 			 * @param {Event} event The click event.
 			 */
-			previousPage( event ) {
+			previousPage: withSyncEvent( ( event ) => {
 				event.preventDefault();
 				const context = getContext();
 
@@ -109,14 +109,14 @@ export function createActorListStore( storeName ) {
 					context.page--;
 					actions.fetchItems();
 				}
-			},
+			} ),
 
 			/**
 			 * Navigate to the next page.
 			 *
 			 * @param {Event} event The click event.
 			 */
-			nextPage( event ) {
+			nextPage: withSyncEvent( ( event ) => {
 				event.preventDefault();
 				const context = getContext();
 
@@ -124,7 +124,7 @@ export function createActorListStore( storeName ) {
 					context.page++;
 					actions.fetchItems();
 				}
-			},
+			} ),
 		},
 		callbacks: {
 			/**
