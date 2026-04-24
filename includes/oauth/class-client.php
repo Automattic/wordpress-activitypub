@@ -546,20 +546,28 @@ class Client {
 		}
 
 		// Strip brackets from IPv6 (parse_url returns "[::1]").
-		$ip = trim( $host, '[]' );
+		$ip = \trim( $host, '[]' );
+
+		if ( ! \filter_var( $ip, FILTER_VALIDATE_IP ) ) {
+			return false;
+		}
+
+		// IPv4 loopback 127.0.0.0/8 (RFC 1122 Section 3.2.1.3).
+		if ( \filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) ) {
+			return 0 === \strpos( $ip, '127.' );
+		}
 
 		/*
-		 * PHP's FILTER_FLAG_NO_RES_RANGE rejects reserved IPs including
-		 * the full 127.0.0.0/8 range and ::1, so a valid IP that fails
-		 * this filter is a loopback/reserved address.
+		 * IPv6 loopback ::1 (RFC 4291 Section 2.5.3). Normalised via inet_pton
+		 * so equivalents like 0:0:0:0:0:0:0:1 and ::0001 also match.
 		 */
-		$is_ip = \filter_var( $ip, FILTER_VALIDATE_IP );
-		if ( $is_ip && ! \filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_RES_RANGE ) ) {
+		$packed = \inet_pton( $ip );
+		if ( false !== $packed && "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1" === $packed ) {
 			return true;
 		}
 
-		// IPv4-mapped IPv6 loopback (::ffff:127.x.x.x) — not caught by FILTER_FLAG_NO_RES_RANGE.
-		return 0 === \strpos( \strtolower( $ip ), '::ffff:127.' );
+		// IPv4-mapped IPv6 loopback ::ffff:127.x.x.x (RFC 4291 Section 2.5.5.2).
+		return 0 === \strpos( $ip, '::ffff:127.' );
 	}
 
 	/**

@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Hardened OAuth client discovery to block requests to internal network addresses.
