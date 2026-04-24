@@ -254,6 +254,9 @@ class Test_Authorization_Controller extends \WP_UnitTestCase {
 		\wp_set_current_user( $this->user_id );
 		$nonce = \wp_create_nonce( 'activitypub_oauth_authorize' );
 
+		$verifier  = \bin2hex( \random_bytes( 32 ) );
+		$challenge = \Activitypub\OAuth\Authorization_Code::compute_code_challenge( $verifier );
+
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/authorize' );
 		$request->set_param( 'response_type', 'code' );
 		$request->set_param( 'client_id', $this->client_id );
@@ -262,6 +265,8 @@ class Test_Authorization_Controller extends \WP_UnitTestCase {
 		$request->set_param( 'approve', true );
 		$request->set_param( '_wpnonce', $nonce );
 		$request->set_param( 'state', 'success_state' );
+		$request->set_param( 'code_challenge', $challenge );
+		$request->set_param( 'code_challenge_method', 'S256' );
 
 		$response = \rest_get_server()->dispatch( $request );
 
