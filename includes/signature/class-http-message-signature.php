@@ -224,15 +224,17 @@ class Http_Message_Signature implements Http_Signature {
 		/*
 		 * Timestamp verification.
 		 *
-		 * Mirrors the Cavage path: five minutes of forward drift, one hour
-		 * of backward drift. Without the past-side bound, peers that omit
-		 * `expires` can present arbitrarily old signatures for replay.
+		 * Keep the pre-existing one-minute forward bound (tighter than the
+		 * Cavage path's five minutes, appropriate for RFC 9421 where fresh
+		 * peers tend to ship with synced clocks) and add one hour of
+		 * backward drift. Without the past-side bound, peers that omit
+		 * `expires` could present arbitrarily old signatures for replay.
 		 */
 		$now = \time();
 		if ( isset( $params['created'] ) ) {
 			$created = (int) $params['created'];
-			if ( $created > $now + ( 5 * MINUTE_IN_SECONDS ) ) {
-				return new \WP_Error( 'invalid_created', 'The signature creation time is too far in the future.' );
+			if ( $created > $now + MINUTE_IN_SECONDS ) {
+				return new \WP_Error( 'invalid_created', 'The signature creation time is in the future.' );
 			}
 			if ( $created < $now - HOUR_IN_SECONDS ) {
 				return new \WP_Error( 'expired_created', 'The signature creation time is too far in the past.' );
