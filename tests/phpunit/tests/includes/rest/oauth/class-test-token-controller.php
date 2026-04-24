@@ -45,6 +45,13 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 	protected $redirect_uri = 'https://example.com/callback';
 
 	/**
+	 * PKCE verifier generated alongside the authorization code.
+	 *
+	 * @var string
+	 */
+	protected $code_verifier = '';
+
+	/**
 	 * Set up the test.
 	 */
 	public function set_up() {
@@ -90,14 +97,26 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 	/**
 	 * Helper: create an authorization code for the test user/client.
 	 *
-	 * @param array  $scopes Scopes for the code.
-	 * @param string $code_challenge Optional PKCE code challenge.
-	 * @param string $code_challenge_method Optional PKCE method.
+	 * Generates a PKCE verifier + challenge by default so the helper works
+	 * with the PKCE-required default. The verifier is stored on the test
+	 * case as `$this->code_verifier` so callers can pass it when exchanging.
+	 *
+	 * @param array       $scopes                Scopes for the code.
+	 * @param string|null $code_challenge        Optional explicit PKCE code challenge. Null auto-generates.
+	 * @param string      $code_challenge_method Optional PKCE method.
 	 * @return string The authorization code.
 	 */
-	protected function create_auth_code( $scopes = null, $code_challenge = '', $code_challenge_method = 'S256' ) {
+	protected function create_auth_code( $scopes = null, $code_challenge = null, $code_challenge_method = 'S256' ) {
 		if ( null === $scopes ) {
 			$scopes = array( Scope::READ, Scope::WRITE );
+		}
+
+		if ( null === $code_challenge ) {
+			$this->code_verifier = \bin2hex( \random_bytes( 32 ) );
+			$code_challenge      = Authorization_Code::compute_code_challenge( $this->code_verifier );
+		} else {
+			// Caller supplied an explicit challenge; they are responsible for the verifier.
+			$this->code_verifier = '';
 		}
 
 		return Authorization_Code::create(
@@ -191,6 +210,7 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 		$request->set_param( 'client_id', $this->client_id );
 		$request->set_param( 'code', $code );
 		$request->set_param( 'redirect_uri', $this->redirect_uri );
+		$request->set_param( 'code_verifier', $this->code_verifier );
 
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
@@ -217,6 +237,7 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 		$request->set_param( 'client_id', $this->client_id );
 		$request->set_param( 'code', $code );
 		$request->set_param( 'redirect_uri', $this->redirect_uri );
+		$request->set_param( 'code_verifier', $this->code_verifier );
 
 		$response      = \rest_get_server()->dispatch( $request );
 		$token_data    = $response->get_data();
