@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Tighten HTTP signature verification: narrow the clock-skew window, reject signatures that carry no freshness timestamp, and cap unreasonable expiry times. Peers that sign without a Date or creation timestamp will no longer verify.
