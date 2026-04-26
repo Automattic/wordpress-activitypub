@@ -20,6 +20,7 @@ use function Activitypub\extract_recipients_from_activity;
 use function Activitypub\is_activity_public;
 use function Activitypub\is_collection;
 use function Activitypub\is_same_domain;
+use function Activitypub\object_to_uri;
 use function Activitypub\user_can_activitypub;
 
 /**
@@ -384,6 +385,9 @@ class Inbox_Controller extends \WP_REST_Controller {
 		 */
 		$max_remote_fetches = (int) \apply_filters( 'activitypub_max_remote_recipient_fetches', 5 );
 
+		// AS2 allows actor and followers to be either an IRI string or an inline object; normalize to a URI.
+		$actor_uri = ! empty( $activity['actor'] ) ? object_to_uri( $activity['actor'] ) : null;
+
 		/*
 		 * Look up the actor's cached profile to identify their followers collection URL
 		 * without needing a remote fetch. The actor is typically already cached from
@@ -391,20 +395,20 @@ class Inbox_Controller extends \WP_REST_Controller {
 		 */
 		$actor_followers_url = null;
 
-		if ( ! empty( $activity['actor'] ) ) {
-			$actor_post = Remote_Actors::get_by_uri( $activity['actor'] );
+		if ( ! empty( $actor_uri ) ) {
+			$actor_post = Remote_Actors::get_by_uri( $actor_uri );
 
 			if ( ! \is_wp_error( $actor_post ) ) {
 				$actor_data = \json_decode( $actor_post->post_content, true );
 
 				if ( ! empty( $actor_data['followers'] ) ) {
-					$actor_followers_url = $actor_data['followers'];
+					$actor_followers_url = object_to_uri( $actor_data['followers'] );
 				}
 			}
 		}
 
 		if ( is_activity_public( $activity ) ) {
-			$user_ids = Following::get_follower_ids( $activity['actor'] );
+			$user_ids = Following::get_follower_ids( $actor_uri );
 		}
 
 		$recipients = extract_recipients_from_activity( $activity );
@@ -418,7 +422,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 			if ( ! is_same_domain( $recipient ) ) {
 				// Detect the actor's followers collection from cached metadata (no fetch needed).
 				if ( $actor_followers_url && $recipient === $actor_followers_url ) {
-					$_user_ids = Following::get_follower_ids( $activity['actor'] );
+					$_user_ids = Following::get_follower_ids( $actor_uri );
 					$user_ids  = array_merge( $user_ids, $_user_ids );
 					continue;
 				}
@@ -437,7 +441,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				}
 
 				if ( is_collection( $collection ) ) {
-					$_user_ids = Following::get_follower_ids( $activity['actor'] );
+					$_user_ids = Following::get_follower_ids( $actor_uri );
 					$user_ids  = array_merge( $user_ids, $_user_ids );
 					continue;
 				}
