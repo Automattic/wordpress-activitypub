@@ -111,4 +111,119 @@ class Test_Functions_Request extends ActivityPub_TestCase_Cache_HTTP {
 	public function test_is_ipv4_mapped_ipv6( $ip, $expected ) {
 		$this->assertSame( $expected, \Activitypub\is_ipv4_mapped_ipv6( $ip ) );
 	}
+
+	/**
+	 * Inject a fixed set of resolved addresses for the next call so the test
+	 * doesn't depend on real DNS.
+	 *
+	 * @param array $addresses ipv4/ipv6 lists to inject.
+	 */
+	private function stub_resolved_addresses( $addresses ) {
+		\add_filter(
+			'activitypub_pre_resolve_public_host',
+			static function () use ( $addresses ) {
+				return $addresses;
+			},
+			10,
+			2
+		);
+	}
+
+	/**
+	 * Public IPv4 from DNS is preferred over the IPv6 fallback.
+	 *
+	 * @covers \Activitypub\resolve_public_host
+	 */
+	public function test_resolve_public_host_prefers_ipv4_when_both_exist() {
+		$this->stub_resolved_addresses(
+			array(
+				'ipv4' => array( '93.184.216.34' ),
+				'ipv6' => array( '2606:2800:220:1:248:1893:25c8:1946' ),
+			)
+		);
+
+		$this->assertSame( '93.184.216.34', \Activitypub\resolve_public_host( 'example.com' ) );
+	}
+
+	/**
+	 * IPv6 is returned when no A records resolve.
+	 *
+	 * @covers \Activitypub\resolve_public_host
+	 */
+	public function test_resolve_public_host_falls_through_to_ipv6() {
+		$this->stub_resolved_addresses(
+			array(
+				'ipv4' => array(),
+				'ipv6' => array( '2606:4700:4700::1111' ),
+			)
+		);
+
+		$this->assertSame( '2606:4700:4700::1111', \Activitypub\resolve_public_host( 'ipv6.example' ) );
+	}
+
+	/**
+	 * A single private IPv4 in the answer set rejects the whole resolution
+	 * (split-horizon DNS defence).
+	 *
+	 * @covers \Activitypub\resolve_public_host
+	 */
+	public function test_resolve_public_host_rejects_split_horizon_ipv4() {
+		$this->stub_resolved_addresses(
+			array(
+				'ipv4' => array( '93.184.216.34', '10.0.0.1' ),
+				'ipv6' => array(),
+			)
+		);
+
+		$this->assertFalse( \Activitypub\resolve_public_host( 'split.example' ) );
+	}
+
+	/**
+	 * A single private IPv6 in the answer set rejects the whole resolution.
+	 *
+	 * @covers \Activitypub\resolve_public_host
+	 */
+	public function test_resolve_public_host_rejects_split_horizon_ipv6() {
+		$this->stub_resolved_addresses(
+			array(
+				'ipv4' => array(),
+				'ipv6' => array( '2606:4700:4700::1111', 'fc00::1' ),
+			)
+		);
+
+		$this->assertFalse( \Activitypub\resolve_public_host( 'split6.example' ) );
+	}
+
+	/**
+	 * IPv4-mapped IPv6 in the AAAA path rejects the whole resolution, just
+	 * like the IP-literal path.
+	 *
+	 * @covers \Activitypub\resolve_public_host
+	 */
+	public function test_resolve_public_host_rejects_ipv4_mapped_aaaa() {
+		$this->stub_resolved_addresses(
+			array(
+				'ipv4' => array(),
+				'ipv6' => array( '::ffff:127.0.0.1' ),
+			)
+		);
+
+		$this->assertFalse( \Activitypub\resolve_public_host( 'mapped.example' ) );
+	}
+
+	/**
+	 * No resolved addresses (empty A and AAAA) yields false.
+	 *
+	 * @covers \Activitypub\resolve_public_host
+	 */
+	public function test_resolve_public_host_returns_false_for_unresolvable() {
+		$this->stub_resolved_addresses(
+			array(
+				'ipv4' => array(),
+				'ipv6' => array(),
+			)
+		);
+
+		$this->assertFalse( \Activitypub\resolve_public_host( 'nx.example' ) );
+	}
 }

@@ -162,16 +162,33 @@ function resolve_public_host( $host ) {
 			: false;
 	}
 
-	$ipv4 = \gethostbynamel( $host ) ?: array();
-	$ipv6 = array();
+	/**
+	 * Filters the resolved addresses for a hostname before validation.
+	 *
+	 * Returning a non-null array of `array{ipv4: string[], ipv6: string[]}` skips
+	 * the DNS lookup. Tests use this to exercise the validation/preference logic
+	 * without making real DNS queries; production code should leave it null.
+	 *
+	 * @param array{ipv4: string[], ipv6: string[]}|null $pre  Pre-resolved addresses, or null to perform DNS lookup.
+	 * @param string                                     $host The hostname being resolved.
+	 */
+	$pre = \apply_filters( 'activitypub_pre_resolve_public_host', null, $host );
 
-	if ( \function_exists( 'dns_get_record' ) ) {
-		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- dns_get_record() emits a warning on lookup failure; we already handle the empty case.
-		$aaaa = @\dns_get_record( $host, DNS_AAAA );
-		if ( \is_array( $aaaa ) ) {
-			foreach ( $aaaa as $record ) {
-				if ( ! empty( $record['ipv6'] ) ) {
-					$ipv6[] = $record['ipv6'];
+	if ( \is_array( $pre ) ) {
+		$ipv4 = $pre['ipv4'] ?? array();
+		$ipv6 = $pre['ipv6'] ?? array();
+	} else {
+		$ipv4 = \gethostbynamel( $host ) ?: array();
+		$ipv6 = array();
+
+		if ( \function_exists( 'dns_get_record' ) ) {
+			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- dns_get_record() emits a warning on lookup failure; we already handle the empty case.
+			$aaaa = @\dns_get_record( $host, DNS_AAAA );
+			if ( \is_array( $aaaa ) ) {
+				foreach ( $aaaa as $record ) {
+					if ( ! empty( $record['ipv6'] ) ) {
+						$ipv6[] = $record['ipv6'];
+					}
 				}
 			}
 		}
