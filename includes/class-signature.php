@@ -424,11 +424,12 @@ class Signature {
 				}
 			}
 			if ( 'date' === $header ) {
+				// A signed `date` header with no value must fail closed, otherwise the time-window check is skipped.
 				if ( empty( $headers[ $header ][0] ) ) {
-					continue;
+					return false;
 				}
 
-				// date_create() returns false on malformed input rather than throwing (PHP 8+ behaviour of `new DateTime`).
+				// date_create() returns false on malformed input; new DateTime() would instead throw.
 				$d = \date_create( $headers[ $header ][0], new \DateTimeZone( 'UTC' ) );
 				if ( false === $d ) {
 					return false;
