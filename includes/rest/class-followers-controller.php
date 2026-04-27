@@ -116,8 +116,16 @@ class Followers_Controller extends Actors_Controller {
 								 * that code at all. Both places run the value through
 								 * self::normalize_host() so semantically equivalent hosts always
 								 * agree.
+								 *
+								 * Percent-decode the input first so encoded forms like
+								 * `https://%5B::1%5D` (bracketed IPv6 literal hidden inside
+								 * %5B/%5D) get checked against the same blocklist as the
+								 * unencoded equivalent. Use rawurldecode() rather than
+								 * urldecode() — the latter also turns `+` into a space, which
+								 * would corrupt otherwise-valid reg-name hosts.
 								 */
-								$host = self::normalize_host( (string) \wp_parse_url( (string) $param, PHP_URL_HOST ) );
+								$decoded = \rawurldecode( (string) $param );
+								$host    = self::normalize_host( (string) \wp_parse_url( $decoded, PHP_URL_HOST ) );
 								if ( '' === $host ) {
 									return false;
 								}
@@ -233,8 +241,19 @@ class Followers_Controller extends Actors_Controller {
 	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error object on failure.
 	 */
 	public function get_partial_followers( $request ) {
-		$user_id   = $request->get_param( 'user_id' );
-		$authority = $request->get_param( 'authority' );
+		$user_id = $request->get_param( 'user_id' );
+
+		/*
+		 * Decode the percent-encoded authority once and use the canonical form
+		 * everywhere downstream. The route accepts authorities whose host has
+		 * percent-encoded octets (RFC 3986 reg-name), so the signer-host
+		 * check, the inbox LIKE query in Followers::get_by_authority(), and
+		 * the response `id` all need to agree on one canonical string. Mixing
+		 * raw and decoded forms would let a request pass the authority match
+		 * yet return an empty follower set, because stored inbox URLs are
+		 * unencoded.
+		 */
+		$authority = \rawurldecode( (string) $request->get_param( 'authority' ) );
 
 		/*
 		 * FEP-8fcf: the responding server MUST ensure the requested authority
@@ -242,7 +261,7 @@ class Followers_Controller extends Actors_Controller {
 		 * into requesting the followers list of a third-party individual".
 		 */
 		$signer_host = self::normalize_host( self::get_signer_host( $request ) );
-		$asked_host  = self::normalize_host( (string) \wp_parse_url( (string) $authority, \PHP_URL_HOST ) );
+		$asked_host  = self::normalize_host( (string) \wp_parse_url( $authority, \PHP_URL_HOST ) );
 
 		if ( ! $signer_host || ! $asked_host || $signer_host !== $asked_host ) {
 			return new \WP_Error(
