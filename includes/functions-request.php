@@ -153,7 +153,7 @@ function resolve_public_host( $host ) {
 
 	// Already an IP literal — validate directly. Accepts IPv4 and IPv6.
 	if ( \filter_var( $host, FILTER_VALIDATE_IP ) ) {
-		if ( is_ipv4_mapped_ipv6( $host ) ) {
+		if ( is_unsafe_ipv6_literal( $host ) ) {
 			return false;
 		}
 
@@ -205,7 +205,7 @@ function resolve_public_host( $host ) {
 	}
 
 	foreach ( $ipv6 as $ip ) {
-		if ( is_ipv4_mapped_ipv6( $ip ) ) {
+		if ( is_unsafe_ipv6_literal( $ip ) ) {
 			return false;
 		}
 		if ( ! \filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
@@ -238,4 +238,78 @@ function is_ipv4_mapped_ipv6( $ip ) {
 	return false !== $packed
 		&& 16 === \strlen( $packed )
 		&& "\0\0\0\0\0\0\0\0\0\0\xff\xff" === \substr( $packed, 0, 12 );
+}
+
+/**
+ * Detect IPv6 literals in transitional / special-use ranges that PHP's
+ * FILTER_FLAG_NO_RES_RANGE doesn't reliably block.
+ *
+ * Covers, in addition to the IPv4-mapped range handled by
+ * {@see is_ipv4_mapped_ipv6()}:
+ *
+ * - `2002::/16` — 6to4 (RFC 3056). Embeds an IPv4 address in the next 32 bits,
+ *   so e.g. `2002:7f00:0001::1` routes back to `127.0.0.1` on a host with 6to4.
+ * - `2001:0000::/32` — Teredo tunneling (RFC 4380). The check matches the
+ *   exact 32-bit prefix `2001:0000`, so legitimate `2001::/16` global unicast
+ *   allocations (e.g. Google DNS `2001:4860::/32`) are unaffected. The
+ *   `2001:db8::/32` documentation range is also blocked, by its own entry
+ *   below — they're separate `2001::/16` sub-allocations.
+ * - `2001:db8::/32` — Documentation prefix (RFC 3849); should never be routed.
+ * - `64:ff9b::/96` — NAT64 well-known prefix (RFC 6052).
+ * - `64:ff9b:1::/48` — NAT64 local-use prefix (RFC 8215).
+ * - `100::/64` — Discard prefix (RFC 6666).
+ *
+ * Returns false for IPv4 literals, hostnames, and IPv6 literals outside the
+ * listed ranges.
+ *
+ * @param string $ip An IP literal.
+ *
+ * @return bool True if the value is an unsafe IPv6 literal.
+ */
+function is_unsafe_ipv6_literal( $ip ) {
+	if ( ! is_string( $ip ) || ! \filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 ) ) {
+		return false;
+	}
+
+	$packed = \inet_pton( $ip );
+	if ( false === $packed || 16 !== \strlen( $packed ) ) {
+		return false;
+	}
+
+	// IPv4-mapped IPv6 prefix.
+	if ( "\0\0\0\0\0\0\0\0\0\0\xff\xff" === \substr( $packed, 0, 12 ) ) {
+		return true;
+	}
+
+	// 6to4 prefix.
+	if ( "\x20\x02" === \substr( $packed, 0, 2 ) ) {
+		return true;
+	}
+
+	// Teredo prefix.
+	if ( "\x20\x01\x00\x00" === \substr( $packed, 0, 4 ) ) {
+		return true;
+	}
+
+	// Documentation prefix.
+	if ( "\x20\x01\x0d\xb8" === \substr( $packed, 0, 4 ) ) {
+		return true;
+	}
+
+	// NAT64 well-known prefix.
+	if ( "\x00\x64\xff\x9b\x00\x00\x00\x00\x00\x00\x00\x00" === \substr( $packed, 0, 12 ) ) {
+		return true;
+	}
+
+	// NAT64 local-use prefix.
+	if ( "\x00\x64\xff\x9b\x00\x01" === \substr( $packed, 0, 6 ) ) {
+		return true;
+	}
+
+	// Discard prefix.
+	if ( "\x01\x00\x00\x00\x00\x00\x00\x00" === \substr( $packed, 0, 8 ) ) {
+		return true;
+	}
+
+	return false;
 }
