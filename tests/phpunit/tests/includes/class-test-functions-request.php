@@ -144,7 +144,7 @@ class Test_Functions_Request extends ActivityPub_TestCase_Cache_HTTP {
 		};
 
 		$this->stub_callbacks[] = $callback;
-		\add_filter( 'activitypub_pre_resolve_public_host', $callback, 10, 2 );
+		\add_filter( 'activitypub_pre_resolve_public_host', $callback );
 	}
 
 	/**
