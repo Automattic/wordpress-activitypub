@@ -237,6 +237,49 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	}
 
 	/**
+	 * Data provider for authority values that must be rejected by route validation
+	 * before any handler logic runs.
+	 *
+	 * @return array<string, array{0: string}>
+	 */
+	public function rejected_authority_provider() {
+		return array(
+			'loopback_ipv4'       => array( 'https://127.0.0.1' ),
+			'rfc1918'             => array( 'https://10.0.0.1' ),
+			'link_local_metadata' => array( 'https://169.254.169.254' ),
+			'unspecified'         => array( 'https://0.0.0.0' ),
+			'ipv6_loopback'       => array( 'https://[::1]' ),
+			'localhost_name'      => array( 'https://localhost' ),
+			'localhost_subdomain' => array( 'https://api.localhost' ),
+			'mdns_local'          => array( 'https://printer.local' ),
+		);
+	}
+
+	/**
+	 * Sync requests with an internal-address authority must be rejected at the
+	 * route validation stage, before signature verification or handler logic.
+	 *
+	 * @dataProvider rejected_authority_provider
+	 *
+	 * @param string $authority The authority value under test.
+	 */
+	public function test_sync_rejects_internal_authority( $authority ) {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/followers/sync' );
+		$request->set_param( 'authority', $authority );
+		$request->set_param( 'page', 1 );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		\delete_option( 'activitypub_actor_mode' );
+
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( 'rest_invalid_param', $response->get_data()['code'] );
+	}
+
+	/**
 	 * Unsigned anonymous requests to the sync endpoint must be rejected
 	 * because the route is not on the unsigned-GET allowlist.
 	 *

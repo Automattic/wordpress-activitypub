@@ -102,11 +102,34 @@ class Followers_Controller extends Actors_Controller {
 					},
 					'args'                => array(
 						'authority' => array(
-							'description' => 'The host to filter followers by.',
-							'type'        => 'string',
-							'format'      => 'uri',
-							'pattern'     => '^https?://[^/]+$',
-							'required'    => true,
+							'description'       => 'The host to filter followers by.',
+							'type'              => 'string',
+							'format'            => 'uri',
+							'pattern'           => '^https?://[^/]+$',
+							'required'          => true,
+							'validate_callback' => static function ( $param ) {
+								// Reject internal-address shapes early. The signer-host check downstream
+								// already enforces authority matching the verified peer; this just
+								// keeps obviously-internal values from reaching that code at all.
+								$host = \strtolower( (string) \wp_parse_url( (string) $param, PHP_URL_HOST ) );
+								if ( '' === $host ) {
+									return false;
+								}
+
+								// wp_parse_url returns IPv6 hosts with brackets (e.g. "[::1]") — strip before validation.
+								$host = \trim( $host, '[]' );
+
+								if ( \filter_var( $host, FILTER_VALIDATE_IP ) ) {
+									return (bool) \filter_var( $host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE );
+								}
+
+								if ( 'localhost' === $host ) {
+									return false;
+								}
+
+								return ! \str_ends_with( $host, '.localhost' )
+									&& ! \str_ends_with( $host, '.local' );
+							},
 						),
 						'page'      => array(
 							'description' => 'Current page of the collection.',
