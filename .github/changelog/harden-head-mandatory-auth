@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Required signatures on HEAD requests to peer-only endpoints.

@@ -27,20 +27,23 @@ trait Verification {
 	 *
 	 * Verifies the signature of POST, PUT, PATCH, and DELETE requests,
 	 * as well as GET requests when authorized fetch is enabled.
-	 * HEAD requests are always bypassed.
+	 * HEAD requests are bypassed by default so caches and link-checkers
+	 * can probe public endpoints; callers that pass `$force_signature`
+	 * (e.g. FEP-8fcf's `/followers/sync`) require signatures on HEAD too.
 	 *
 	 * @see https://www.w3.org/wiki/SocialCG/ActivityPub/Primer/Authentication_Authorization#Authorized_fetch
 	 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
 	 *
 	 * @param \WP_REST_Request $request         The request object.
-	 * @param bool             $force_signature Optional. When true, GET requests also require a
-	 *                                          valid signature even with Authorized Fetch
-	 *                                          disabled. Use for endpoints that are peer-only
-	 *                                          (e.g. FEP-8fcf's `/followers/sync`). Default false.
+	 * @param bool             $force_signature Optional. When true, GET and HEAD requests also
+	 *                                          require a valid signature even with Authorized
+	 *                                          Fetch disabled. Use for endpoints that are
+	 *                                          peer-only (e.g. FEP-8fcf's `/followers/sync`).
+	 *                                          Default false.
 	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
 	 */
 	public function verify_signature( $request, $force_signature = false ) {
-		if ( 'HEAD' === $request->get_method() ) {
+		if ( 'HEAD' === $request->get_method() && ! $force_signature ) {
 			return true;
 		}
 
