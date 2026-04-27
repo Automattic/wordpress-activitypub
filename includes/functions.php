@@ -341,14 +341,18 @@ function get_embed_html( $url, $inline_css = true ) {
 /**
  * Get the client IP address for rate-limiting purposes.
  *
- * Checks common proxy headers before falling back to REMOTE_ADDR,
- * similar to Jetpack's approach. Every step validates the candidate
- * value with `filter_var( ..., FILTER_VALIDATE_IP )`, so the function
- * either returns a real IP literal or an empty string. The result can
- * be overridden via the `activitypub_client_ip` filter; filter output
- * is also validated and replaced with `''` if it isn't a valid IP, so
- * a misbehaving filter can't collide all callers into the same
- * rate-limit bucket.
+ * Walks the ordered list of $_SERVER keys returned by the
+ * `activitypub_client_ip_sources` filter (default: `['REMOTE_ADDR']`) and
+ * returns the first value that parses as a valid IP literal, validated via
+ * `filter_var( ..., FILTER_VALIDATE_IP )`. The result can be overridden
+ * outright via the `activitypub_client_ip` filter; that filter's output is
+ * also validated and replaced with `''` when it isn't a valid IP, so a
+ * misbehaving filter can't collide all callers into the same rate-limit
+ * bucket.
+ *
+ * Trusting any source other than `REMOTE_ADDR` is only safe behind a
+ * reverse proxy that sets and overwrites the corresponding header — see
+ * the `activitypub_client_ip_sources` filter docblock for guidance.
  *
  * Callers using the return value as a rate-limit key should treat an
  * empty return as "client unidentifiable" and fail closed rather than
