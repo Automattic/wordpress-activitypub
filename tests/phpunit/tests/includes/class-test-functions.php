@@ -460,7 +460,7 @@ class Test_Functions extends \WP_UnitTestCase {
 
 	/**
 	 * Operators behind a trusted reverse proxy can opt the relevant header
-	 * back in via the activitypub_trusted_proxy_headers filter.
+	 * back in via the activitypub_client_ip_sources filter.
 	 *
 	 * @covers \Activitypub\get_client_ip
 	 */
@@ -469,7 +469,7 @@ class Test_Functions extends \WP_UnitTestCase {
 		$filter = function () {
 			return array( 'HTTP_CF_CONNECTING_IP' );
 		};
-		\add_filter( 'activitypub_trusted_proxy_headers', $filter );
+		\add_filter( 'activitypub_client_ip_sources', $filter );
 
 		try {
 			$_SERVER['REMOTE_ADDR']           = '10.0.0.1';
@@ -477,24 +477,24 @@ class Test_Functions extends \WP_UnitTestCase {
 
 			$this->assertSame( '203.0.113.50', \Activitypub\get_client_ip() );
 		} finally {
-			\remove_filter( 'activitypub_trusted_proxy_headers', $filter );
+			\remove_filter( 'activitypub_client_ip_sources', $filter );
 			$this->restore_client_ip_server();
 		}
 	}
 
 	/**
-	 * When a trusted proxy header is present but contains a non-IP value,
-	 * the next trusted header is consulted, then REMOTE_ADDR — so a
-	 * misconfigured proxy doesn't accidentally fail closed.
+	 * When a configured source has a non-IP value, the next source in the
+	 * filter's list is consulted — so a misconfigured proxy doesn't
+	 * accidentally fail closed.
 	 *
 	 * @covers \Activitypub\get_client_ip
 	 */
 	public function test_get_client_ip_falls_back_when_trusted_header_invalid() {
 		$this->snapshot_client_ip_server();
 		$filter = function () {
-			return array( 'HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR' );
+			return array( 'HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR' );
 		};
-		\add_filter( 'activitypub_trusted_proxy_headers', $filter );
+		\add_filter( 'activitypub_client_ip_sources', $filter );
 
 		try {
 			$_SERVER['REMOTE_ADDR']           = '198.51.100.10';
@@ -503,7 +503,7 @@ class Test_Functions extends \WP_UnitTestCase {
 
 			$this->assertSame( '203.0.113.7', \Activitypub\get_client_ip() );
 		} finally {
-			\remove_filter( 'activitypub_trusted_proxy_headers', $filter );
+			\remove_filter( 'activitypub_client_ip_sources', $filter );
 			$this->restore_client_ip_server();
 		}
 	}
@@ -520,7 +520,7 @@ class Test_Functions extends \WP_UnitTestCase {
 		$filter = function () {
 			return array( 'HTTP_X_FORWARDED_FOR' );
 		};
-		\add_filter( 'activitypub_trusted_proxy_headers', $filter );
+		\add_filter( 'activitypub_client_ip_sources', $filter );
 
 		try {
 			$_SERVER['REMOTE_ADDR']          = '10.0.0.1';
@@ -528,15 +528,14 @@ class Test_Functions extends \WP_UnitTestCase {
 
 			$this->assertSame( '203.0.113.50', \Activitypub\get_client_ip() );
 		} finally {
-			\remove_filter( 'activitypub_trusted_proxy_headers', $filter );
+			\remove_filter( 'activitypub_client_ip_sources', $filter );
 			$this->restore_client_ip_server();
 		}
 	}
 
 	/**
-	 * A filter that returns null (or any other empty-ish non-array) must
-	 * leave proxy headers untrusted; the function falls through to
-	 * REMOTE_ADDR.
+	 * A filter that returns null (or any other non-array) must not blow up;
+	 * the function falls back to its safe default of REMOTE_ADDR only.
 	 *
 	 * @covers \Activitypub\get_client_ip
 	 */
@@ -545,7 +544,7 @@ class Test_Functions extends \WP_UnitTestCase {
 		$filter = function () {
 			return null;
 		};
-		\add_filter( 'activitypub_trusted_proxy_headers', $filter );
+		\add_filter( 'activitypub_client_ip_sources', $filter );
 
 		try {
 			$_SERVER['REMOTE_ADDR']           = '198.51.100.10';
@@ -553,7 +552,7 @@ class Test_Functions extends \WP_UnitTestCase {
 
 			$this->assertSame( '198.51.100.10', \Activitypub\get_client_ip() );
 		} finally {
-			\remove_filter( 'activitypub_trusted_proxy_headers', $filter );
+			\remove_filter( 'activitypub_client_ip_sources', $filter );
 			$this->restore_client_ip_server();
 		}
 	}

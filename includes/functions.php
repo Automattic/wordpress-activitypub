@@ -363,19 +363,19 @@ function get_client_ip() {
 	$ip = '';
 
 	/**
-	 * Filter the list of $_SERVER keys that should be trusted as a source for
-	 * the client IP, before falling back to REMOTE_ADDR.
+	 * Filter the ordered list of $_SERVER keys to consult as a source for the
+	 * client IP. The first key whose value parses as a valid IP wins.
 	 *
-	 * Empty by default. Only opt a header in here when a trusted reverse
-	 * proxy in front of the site sets it and overwrites any client-supplied
-	 * value. Trusting one of these headers on a site that PHP serves
-	 * directly lets attackers spoof the value and bypass the rate limits
-	 * that depend on it.
+	 * Default: array( 'REMOTE_ADDR' ) — the actual TCP peer, the only value
+	 * that an HTTP client cannot spoof. Trusting any other $_SERVER key is
+	 * only safe when a reverse proxy in front of the site sets that key and
+	 * overwrites any client-supplied version; otherwise an attacker can spoof
+	 * the value and bypass the per-IP rate limits that depend on it.
 	 *
-	 * Common values:
-	 *   array( 'HTTP_CF_CONNECTING_IP' )   on Cloudflare.
-	 *   array( 'HTTP_TRUE_CLIENT_IP' )     on Akamai or Cloudflare Enterprise.
-	 *   array( 'HTTP_X_REAL_IP' )          on nginx that strips the client copy.
+	 * Common operator overrides:
+	 *   array( 'HTTP_CF_CONNECTING_IP' )                      on Cloudflare.
+	 *   array( 'HTTP_TRUE_CLIENT_IP', 'REMOTE_ADDR' )         Akamai with a fallback.
+	 *   array( 'HTTP_X_REAL_IP' )                             nginx that strips the client copy.
 	 *
 	 * X-Forwarded-For pitfall: even with a trusted proxy, an attacker can
 	 * prepend their own value before the proxy appends the real client IP.
@@ -386,29 +386,26 @@ function get_client_ip() {
 	 *
 	 * @since unreleased
 	 *
-	 * @param string[] $headers $_SERVER keys to consult, in priority order.
+	 * @param string[] $sources $_SERVER keys to consult, in priority order.
 	 */
-	$headers = (array) \apply_filters( 'activitypub_trusted_proxy_headers', array() );
+	$sources = \apply_filters( 'activitypub_client_ip_sources', array( 'REMOTE_ADDR' ) );
 
-	foreach ( $headers as $header ) {
-		if ( ! \is_string( $header ) || empty( $_SERVER[ $header ] ) ) {
+	if ( ! \is_array( $sources ) ) {
+		$sources = array( 'REMOTE_ADDR' );
+	}
+
+	foreach ( $sources as $source ) {
+		if ( ! \is_string( $source ) || empty( $_SERVER[ $source ] ) ) {
 			continue;
 		}
 
 		// Some headers (e.g. X-Forwarded-For) may contain a comma-separated list; use the first IP.
-		$ip_list   = \sanitize_text_field( \wp_unslash( $_SERVER[ $header ] ) );
+		$ip_list   = \sanitize_text_field( \wp_unslash( $_SERVER[ $source ] ) );
 		$candidate = \trim( \explode( ',', $ip_list )[0] );
 
 		if ( \filter_var( $candidate, FILTER_VALIDATE_IP ) ) {
 			$ip = $candidate;
 			break;
-		}
-	}
-
-	if ( '' === $ip && ! empty( $_SERVER['REMOTE_ADDR'] ) ) {
-		$candidate = \sanitize_text_field( \wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
-		if ( \filter_var( $candidate, FILTER_VALIDATE_IP ) ) {
-			$ip = $candidate;
 		}
 	}
 	// phpcs:enable WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders
