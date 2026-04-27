@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Returned the standard rate-limit response from the OAuth token endpoint when too many requests are sent.
