@@ -173,7 +173,7 @@ class Server {
 		$namespace = '/' . ACTIVITYPUB_REST_NAMESPACE;
 
 		// Only add CORS to ActivityPub endpoints, except the interactive OAuth authorize endpoint.
-		if ( ! \str_starts_with( $route, $namespace ) || \str_contains( $route, $namespace . '/oauth/authorize' ) ) {
+		if ( ! \str_starts_with( $route, $namespace ) || \str_starts_with( $route, $namespace . '/oauth/authorize' ) ) {
 			return $response;
 		}
 
