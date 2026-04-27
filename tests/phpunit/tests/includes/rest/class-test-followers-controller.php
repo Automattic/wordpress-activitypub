@@ -294,6 +294,32 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	}
 
 	/**
+	 * HEAD requests to the FEP-8fcf endpoint must require a signature too.
+	 *
+	 * The default verify_signature() bypasses HEAD so caches/link-checkers
+	 * can probe public endpoints, but a peer-only route (`$force_signature`
+	 * = true) must not leak existence to unauthenticated callers via HEAD.
+	 *
+	 * @covers \Activitypub\Rest\Verification::verify_signature
+	 */
+	public function test_sync_rejects_unsigned_head_request() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		try {
+			$request = new \WP_REST_Request( 'HEAD', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/followers/sync' );
+			$request->set_param( 'authority', 'https://evil.example' );
+			$request->set_param( 'page', 1 );
+
+			$response = rest_get_server()->dispatch( $request );
+
+			$this->assertErrorResponse( 'activitypub_signature_verification', $response, 401 );
+		} finally {
+			\delete_option( 'activitypub_actor_mode' );
+		}
+	}
+
+	/**
 	 * Unsigned anonymous requests to the sync endpoint must be rejected
 	 * because the route is not on the unsigned-GET allowlist.
 	 *
