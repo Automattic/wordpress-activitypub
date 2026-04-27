@@ -421,23 +421,6 @@ class Test_Functions extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test get_client_ip ignores a header that contains a non-IP value.
-	 *
-	 * @covers \Activitypub\get_client_ip
-	 */
-	public function test_get_client_ip_ignores_non_ip_header() {
-		$this->snapshot_client_ip_server();
-		try {
-			$_SERVER['REMOTE_ADDR']           = '198.51.100.10';
-			$_SERVER['HTTP_CF_CONNECTING_IP'] = 'unknown';
-
-			$this->assertSame( '198.51.100.10', \Activitypub\get_client_ip() );
-		} finally {
-			$this->restore_client_ip_server();
-		}
-	}
-
-	/**
 	 * Proxy headers must NOT be trusted by default. A site that PHP serves
 	 * directly receives X-Forwarded-For / CF-Connecting-IP straight from the
 	 * client, so trusting them by default would let an attacker rotate the
@@ -484,8 +467,8 @@ class Test_Functions extends \WP_UnitTestCase {
 
 	/**
 	 * When a configured source has a non-IP value, the next source in the
-	 * filter's list is consulted — so a misconfigured proxy doesn't
-	 * accidentally fail closed.
+	 * filter's list is consulted — so a typo'd or temporarily missing proxy
+	 * header doesn't lock all callers out of rate-limited endpoints.
 	 *
 	 * @covers \Activitypub\get_client_ip
 	 */
