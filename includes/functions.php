@@ -342,16 +342,25 @@ function get_embed_html( $url, $inline_css = true ) {
  * Get the client IP address for rate-limiting purposes.
  *
  * Checks common proxy headers before falling back to REMOTE_ADDR,
- * similar to Jetpack's approach. The result can be overridden via
- * the `activitypub_client_ip` filter.
+ * similar to Jetpack's approach. Every step validates the candidate
+ * value with `filter_var( ..., FILTER_VALIDATE_IP )`, so the function
+ * either returns a real IP literal or an empty string. The result can
+ * be overridden via the `activitypub_client_ip` filter; filter output
+ * is also validated and replaced with `''` if it isn't a valid IP, so
+ * a misbehaving filter can't collide all callers into the same
+ * rate-limit bucket.
+ *
+ * Callers using the return value as a rate-limit key should treat an
+ * empty return as "client unidentifiable" and fail closed rather than
+ * share a single bucket across every such request.
  *
  * @since 8.1.0
  *
- * @return string The client IP address.
+ * @return string A valid IP address, or '' when no IP could be determined.
  */
 function get_client_ip() {
 	// phpcs:disable WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders
-	$ip = 'unknown';
+	$ip = '';
 
 	$headers = array(
 		'HTTP_CF_CONNECTING_IP', // Cloudflare.
@@ -364,21 +373,25 @@ function get_client_ip() {
 	);
 
 	foreach ( $headers as $header ) {
-		if ( ! empty( $_SERVER[ $header ] ) ) {
-			// Some headers (e.g. X-Forwarded-For) may contain a comma-separated list; use the first IP.
-			$ip_list = \sanitize_text_field( \wp_unslash( $_SERVER[ $header ] ) );
-			$ip      = \trim( \explode( ',', $ip_list )[0] );
+		if ( empty( $_SERVER[ $header ] ) ) {
+			continue;
+		}
 
-			if ( \filter_var( $ip, FILTER_VALIDATE_IP ) ) {
-				break;
-			}
+		// Some headers (e.g. X-Forwarded-For) may contain a comma-separated list; use the first IP.
+		$ip_list   = \sanitize_text_field( \wp_unslash( $_SERVER[ $header ] ) );
+		$candidate = \trim( \explode( ',', $ip_list )[0] );
 
-			$ip = 'unknown';
+		if ( \filter_var( $candidate, FILTER_VALIDATE_IP ) ) {
+			$ip = $candidate;
+			break;
 		}
 	}
 
-	if ( 'unknown' === $ip && isset( $_SERVER['REMOTE_ADDR'] ) ) {
-		$ip = \sanitize_text_field( \wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
+	if ( '' === $ip && ! empty( $_SERVER['REMOTE_ADDR'] ) ) {
+		$candidate = \sanitize_text_field( \wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
+		if ( \filter_var( $candidate, FILTER_VALIDATE_IP ) ) {
+			$ip = $candidate;
+		}
 	}
 	// phpcs:enable WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders
 
@@ -387,7 +400,10 @@ function get_client_ip() {
 	 *
 	 * @since 8.1.0
 	 *
-	 * @param string $ip The detected client IP address.
+	 * @param string $ip The detected client IP address (empty when none could be determined).
 	 */
-	return \apply_filters( 'activitypub_client_ip', $ip );
+	$ip = \apply_filters( 'activitypub_client_ip', $ip );
+
+	// Re-validate so a misbehaving filter can't return a sentinel string that would collapse all callers into one bucket.
+	return \is_string( $ip ) && \filter_var( $ip, FILTER_VALIDATE_IP ) ? $ip : '';
 }

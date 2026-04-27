@@ -116,7 +116,14 @@ class Clients_Controller extends \WP_REST_Controller {
 		}
 
 		// Rate-limit registrations to prevent DB spam (max 10 per minute per IP).
-		$ip            = get_client_ip();
+		$ip = get_client_ip();
+		if ( '' === $ip ) {
+			return new \WP_Error(
+				'activitypub_rate_limited',
+				\__( 'Too many client registration requests. Please try again later.', 'activitypub' ),
+				array( 'status' => 429 )
+			);
+		}
 		$transient_key = 'ap_oauth_reg_' . \md5( $ip );
 		$count         = (int) \get_transient( $transient_key );
 

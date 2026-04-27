@@ -331,13 +331,45 @@ class Test_Functions extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test get_client_ip returns unknown when REMOTE_ADDR is missing.
+	 * Test get_client_ip returns an empty string when REMOTE_ADDR is missing.
 	 *
 	 * @covers \Activitypub\get_client_ip
 	 */
 	public function test_get_client_ip_missing_remote_addr() {
 		unset( $_SERVER['REMOTE_ADDR'] );
-		$this->assertSame( 'unknown', \Activitypub\get_client_ip() );
+		$this->assertSame( '', \Activitypub\get_client_ip() );
+	}
+
+	/**
+	 * Test get_client_ip rejects non-IP values from a filter so a misbehaving
+	 * filter can't collapse all callers into one rate-limit bucket.
+	 *
+	 * @covers \Activitypub\get_client_ip
+	 */
+	public function test_get_client_ip_rejects_invalid_filter_output() {
+		$_SERVER['REMOTE_ADDR'] = '198.51.100.10';
+
+		$filter = function () {
+			return 'unknown';
+		};
+
+		\add_filter( 'activitypub_client_ip', $filter );
+		$this->assertSame( '', \Activitypub\get_client_ip() );
+		\remove_filter( 'activitypub_client_ip', $filter );
+	}
+
+	/**
+	 * Test get_client_ip ignores a header that contains a non-IP value.
+	 *
+	 * @covers \Activitypub\get_client_ip
+	 */
+	public function test_get_client_ip_ignores_non_ip_header() {
+		$_SERVER['REMOTE_ADDR']           = '198.51.100.10';
+		$_SERVER['HTTP_CF_CONNECTING_IP'] = 'unknown';
+
+		$this->assertSame( '198.51.100.10', \Activitypub\get_client_ip() );
+
+		unset( $_SERVER['HTTP_CF_CONNECTING_IP'] );
 	}
 
 	/**
