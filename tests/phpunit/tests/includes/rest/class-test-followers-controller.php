@@ -419,6 +419,42 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	}
 
 	/**
+	 * A percent-encoded authority that decodes to a registered peer host must
+	 * pass the signer-host match AND return the matching follower set. The
+	 * route accepts percent-encoded reg-names, so the handler has to canonicalise
+	 * the value once and use that canonical form for both the authority match
+	 * and the inbox LIKE query — otherwise the request would pass the match
+	 * but fall through to an empty result because stored inbox URLs are
+	 * unencoded.
+	 *
+	 * @covers ::get_partial_followers
+	 */
+	public function test_sync_decodes_percent_encoded_authority_for_query() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\delete_user_option( $user_id, 'activitypub_hide_social_graph' );
+
+		$post_id = $this->seed_follower_on_host( 'peer.example' );
+		Followers::add( $user_id, 'https://peer.example/users/alice' );
+
+		// "%70" decodes to "p"; "%65" decodes to "e". Decoded authority is "https://peer.example".
+		$request    = $this->build_sync_request( $user_id, 'https://%70eer.example', 'https://peer.example/users/peer' );
+		$controller = new \Activitypub\Rest\Followers_Controller();
+
+		try {
+			$response = $controller->get_partial_followers( $request );
+
+			$this->assertNotWPError( $response );
+			$data = $response->get_data();
+			$this->assertArrayHasKey( 'orderedItems', $data );
+			$this->assertContains( 'https://peer.example/users/alice', $data['orderedItems'] );
+		} finally {
+			\wp_delete_post( $post_id, true );
+			\delete_option( 'activitypub_actor_mode' );
+		}
+	}
+
+	/**
 	 * The defer-signature filter receives `$force_signature` as a third
 	 * argument so hooks can preserve mandatory signing on peer-only
 	 * endpoints like `/followers/sync` without touching unrelated requests.

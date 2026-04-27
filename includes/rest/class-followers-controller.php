@@ -241,17 +241,27 @@ class Followers_Controller extends Actors_Controller {
 	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error object on failure.
 	 */
 	public function get_partial_followers( $request ) {
-		$user_id   = $request->get_param( 'user_id' );
-		$authority = $request->get_param( 'authority' );
+		$user_id = $request->get_param( 'user_id' );
+
+		/*
+		 * Decode the percent-encoded authority once and use the canonical form
+		 * everywhere downstream. The route accepts authorities whose host has
+		 * percent-encoded octets (RFC 3986 reg-name), so the signer-host
+		 * check, the inbox LIKE query in Followers::get_by_authority(), and
+		 * the response `id` all need to agree on one canonical string. Mixing
+		 * raw and decoded forms would let a request pass the authority match
+		 * yet return an empty follower set, because stored inbox URLs are
+		 * unencoded.
+		 */
+		$authority = \rawurldecode( (string) $request->get_param( 'authority' ) );
 
 		/*
 		 * FEP-8fcf: the responding server MUST ensure the requested authority
 		 * matches the signing peer, so that instances cannot "get tricked
 		 * into requesting the followers list of a third-party individual".
 		 */
-		// Match the validate_callback's normalisation so semantically equivalent (decoded) authorities compare equal.
 		$signer_host = self::normalize_host( self::get_signer_host( $request ) );
-		$asked_host  = self::normalize_host( (string) \wp_parse_url( \rawurldecode( (string) $authority ), \PHP_URL_HOST ) );
+		$asked_host  = self::normalize_host( (string) \wp_parse_url( $authority, \PHP_URL_HOST ) );
 
 		if ( ! $signer_host || ! $asked_host || $signer_host !== $asked_host ) {
 			return new \WP_Error(
