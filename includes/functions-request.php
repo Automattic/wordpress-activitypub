@@ -151,6 +151,17 @@ function resolve_public_host( $host ) {
 
 	// Already an IP literal — validate directly. Accepts IPv4 and IPv6.
 	if ( \filter_var( $host, FILTER_VALIDATE_IP ) ) {
+		/*
+		 * Reject IPv4-mapped IPv6 literals (`::ffff:0:0/96`). PHP's
+		 * FILTER_FLAG_NO_RES_RANGE catches them on some builds but not
+		 * others, so let the SSRF guard not depend on that. These forms
+		 * serve no legitimate purpose for our callers anyway.
+		 */
+		$packed = \inet_pton( $host );
+		if ( false !== $packed && 16 === \strlen( $packed ) && "\0\0\0\0\0\0\0\0\0\0\xff\xff" === \substr( $packed, 0, 12 ) ) {
+			return false;
+		}
+
 		return \filter_var( $host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE )
 			? $host
 			: false;
