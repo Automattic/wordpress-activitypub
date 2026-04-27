@@ -154,6 +154,42 @@ class Test_Clients_Controller extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that registration fails closed when no client IP can be determined.
+	 *
+	 * The endpoint must reject the request rather than share a single
+	 * rate-limit bucket across every unidentifiable caller.
+	 *
+	 * @covers ::register_client
+	 */
+	public function test_register_client_fails_closed_without_client_ip() {
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- Capturing existing test fixture value for restore.
+		$snapshot = \array_key_exists( 'REMOTE_ADDR', $_SERVER ) ? $_SERVER['REMOTE_ADDR'] : null;
+
+		try {
+			unset( $_SERVER['REMOTE_ADDR'] );
+
+			$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/clients' );
+			$request->set_param( 'client_name', 'No-IP App' );
+			$request->set_param( 'redirect_uris', array( 'https://no-ip.example.com/callback' ) );
+
+			$response = \rest_get_server()->dispatch( $request );
+			$data     = $response->get_data();
+
+			$this->assertEquals( 429, $response->get_status() );
+			$this->assertEquals( 'activitypub_rate_limited', $data['code'] );
+
+			// Ensure the empty-IP path didn't write a shared transient.
+			$this->assertFalse( \get_transient( 'ap_oauth_reg_' . \md5( '' ) ) );
+		} finally {
+			if ( null === $snapshot ) {
+				unset( $_SERVER['REMOTE_ADDR'] );
+			} else {
+				$_SERVER['REMOTE_ADDR'] = $snapshot;
+			}
+		}
+	}
+
+	/**
 	 * Test that registrations below the limit succeed and increment the counter.
 	 *
 	 * @covers ::register_client

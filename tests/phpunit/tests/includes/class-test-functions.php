@@ -304,13 +304,61 @@ class Test_Functions extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Snapshot the $_SERVER keys this group mutates so tear_down can restore
+	 * them, keeping the suite order-independent.
+	 *
+	 * @var array<string, mixed>
+	 */
+	private $client_ip_server_snapshot = array();
+
+	/**
+	 * Capture the values of every $_SERVER key get_client_ip touches before
+	 * each test in this group.
+	 */
+	private function snapshot_client_ip_server() {
+		$keys                            = array(
+			'REMOTE_ADDR',
+			'HTTP_CF_CONNECTING_IP',
+			'HTTP_CLIENT_IP',
+			'HTTP_X_FORWARDED_FOR',
+			'HTTP_X_FORWARDED',
+			'HTTP_X_CLUSTER_CLIENT_IP',
+			'HTTP_FORWARDED_FOR',
+			'HTTP_FORWARDED',
+		);
+		$this->client_ip_server_snapshot = array();
+		foreach ( $keys as $key ) {
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- Capturing existing test fixture values for restore.
+			$this->client_ip_server_snapshot[ $key ] = \array_key_exists( $key, $_SERVER ) ? $_SERVER[ $key ] : null;
+		}
+	}
+
+	/**
+	 * Restore $_SERVER values captured by snapshot_client_ip_server.
+	 */
+	private function restore_client_ip_server() {
+		foreach ( $this->client_ip_server_snapshot as $key => $value ) {
+			if ( null === $value ) {
+				unset( $_SERVER[ $key ] );
+			} else {
+				$_SERVER[ $key ] = $value;
+			}
+		}
+	}
+
+	/**
 	 * Test get_client_ip returns REMOTE_ADDR by default.
 	 *
 	 * @covers \Activitypub\get_client_ip
 	 */
 	public function test_get_client_ip_default() {
-		$_SERVER['REMOTE_ADDR'] = '192.168.1.1';
-		$this->assertSame( '192.168.1.1', \Activitypub\get_client_ip() );
+		$this->snapshot_client_ip_server();
+		try {
+			$_SERVER['REMOTE_ADDR'] = '192.168.1.1';
+			$this->assertSame( '192.168.1.1', \Activitypub\get_client_ip() );
+		} finally {
+			$this->restore_client_ip_server();
+		}
 	}
 
 	/**
@@ -319,15 +367,19 @@ class Test_Functions extends \WP_UnitTestCase {
 	 * @covers \Activitypub\get_client_ip
 	 */
 	public function test_get_client_ip_filter() {
-		$_SERVER['REMOTE_ADDR'] = '10.0.0.1';
-
+		$this->snapshot_client_ip_server();
 		$filter = function () {
 			return '203.0.113.50';
 		};
-
 		\add_filter( 'activitypub_client_ip', $filter );
-		$this->assertSame( '203.0.113.50', \Activitypub\get_client_ip() );
-		\remove_filter( 'activitypub_client_ip', $filter );
+
+		try {
+			$_SERVER['REMOTE_ADDR'] = '10.0.0.1';
+			$this->assertSame( '203.0.113.50', \Activitypub\get_client_ip() );
+		} finally {
+			\remove_filter( 'activitypub_client_ip', $filter );
+			$this->restore_client_ip_server();
+		}
 	}
 
 	/**
@@ -336,8 +388,13 @@ class Test_Functions extends \WP_UnitTestCase {
 	 * @covers \Activitypub\get_client_ip
 	 */
 	public function test_get_client_ip_missing_remote_addr() {
-		unset( $_SERVER['REMOTE_ADDR'] );
-		$this->assertSame( '', \Activitypub\get_client_ip() );
+		$this->snapshot_client_ip_server();
+		try {
+			unset( $_SERVER['REMOTE_ADDR'] );
+			$this->assertSame( '', \Activitypub\get_client_ip() );
+		} finally {
+			$this->restore_client_ip_server();
+		}
 	}
 
 	/**
@@ -347,15 +404,19 @@ class Test_Functions extends \WP_UnitTestCase {
 	 * @covers \Activitypub\get_client_ip
 	 */
 	public function test_get_client_ip_rejects_invalid_filter_output() {
-		$_SERVER['REMOTE_ADDR'] = '198.51.100.10';
-
+		$this->snapshot_client_ip_server();
 		$filter = function () {
 			return 'unknown';
 		};
-
 		\add_filter( 'activitypub_client_ip', $filter );
-		$this->assertSame( '', \Activitypub\get_client_ip() );
-		\remove_filter( 'activitypub_client_ip', $filter );
+
+		try {
+			$_SERVER['REMOTE_ADDR'] = '198.51.100.10';
+			$this->assertSame( '', \Activitypub\get_client_ip() );
+		} finally {
+			\remove_filter( 'activitypub_client_ip', $filter );
+			$this->restore_client_ip_server();
+		}
 	}
 
 	/**
@@ -364,12 +425,15 @@ class Test_Functions extends \WP_UnitTestCase {
 	 * @covers \Activitypub\get_client_ip
 	 */
 	public function test_get_client_ip_ignores_non_ip_header() {
-		$_SERVER['REMOTE_ADDR']           = '198.51.100.10';
-		$_SERVER['HTTP_CF_CONNECTING_IP'] = 'unknown';
+		$this->snapshot_client_ip_server();
+		try {
+			$_SERVER['REMOTE_ADDR']           = '198.51.100.10';
+			$_SERVER['HTTP_CF_CONNECTING_IP'] = 'unknown';
 
-		$this->assertSame( '198.51.100.10', \Activitypub\get_client_ip() );
-
-		unset( $_SERVER['HTTP_CF_CONNECTING_IP'] );
+			$this->assertSame( '198.51.100.10', \Activitypub\get_client_ip() );
+		} finally {
+			$this->restore_client_ip_server();
+		}
 	}
 
 	/**
