@@ -72,9 +72,10 @@ class Inbox_Controller extends \WP_REST_Controller {
 							'sanitize_callback' => '\Activitypub\object_to_uri',
 						),
 						'type'   => array(
-							'description' => 'The type of the activity.',
-							'type'        => 'string',
-							'required'    => true,
+							'description'       => 'The type of the activity.',
+							'type'              => 'string',
+							'required'          => true,
+							'sanitize_callback' => 'sanitize_html_class',
 						),
 						'object' => array(
 							'description'       => 'The object of the activity.',

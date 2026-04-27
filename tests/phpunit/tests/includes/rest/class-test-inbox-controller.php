@@ -422,6 +422,55 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	}
 
 	/**
+	 * Test that a crafted activity type is sanitized so it can't pollute action hook names.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_create_item_sanitizes_activity_type() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		$user_actor    = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+		$captured_type = null;
+
+		$capture = function ( $data, $user_id, $type ) use ( &$captured_type ) {
+			$captured_type = $type;
+		};
+		\add_action( 'activitypub_inbox', $capture, 10, 3 );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'id'     => 'https://remote.example/@id',
+					'type'   => 'Create/../evil',
+					'actor'  => 'https://remote.example/@test',
+					'object' => array(
+						'id'        => 'https://remote.example/post/test',
+						'type'      => 'Note',
+						'content'   => 'Hi.',
+						'to'        => array( $user_actor->get_id() ),
+						'published' => '2020-01-01T00:00:00Z',
+					),
+					'to'     => array( $user_actor->get_id() ),
+				)
+			)
+		);
+
+		\rest_do_request( $request );
+
+		$this->assertNotNull( $captured_type, 'activitypub_inbox should fire' );
+		$this->assertStringNotContainsString( '/', $captured_type, 'Slashes must be stripped from the activity type' );
+		$this->assertStringNotContainsString( '.', $captured_type, 'Dots must be stripped from the activity type' );
+		$this->assertMatchesRegularExpression( '/^[a-z0-9_]+$/', $captured_type, 'Type passed to action hooks must be safe' );
+
+		\remove_action( 'activitypub_inbox', $capture, 10 );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
 	 * Test creating an inbox item with invalid request.
 	 *
 	 * @covers ::create_item
