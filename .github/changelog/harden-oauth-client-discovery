@@ -1,4 +1,4 @@
 Significance: patch
-Type: fixed
+Type: security
 
-Hardened OAuth client discovery to block requests to internal network addresses.
+Hardened outbound request handling for third-party app connections and live activity streams.

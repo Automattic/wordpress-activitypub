@@ -265,13 +265,13 @@ FEPs extend ActivityPub with additional features. Common FEP categories include:
 
 ## OAuth 2.0 Client-to-Server
 
-When the ActivityPub API option is enabled, third-party clients can authenticate via OAuth 2.0 under `activitypub/1.0/oauth/`. The plugin supports RFC 7591 dynamic registration, RFC 7636 PKCE (S256 only, required by default for public clients), and the CIMD draft (URL-form `client_id`).
+When the ActivityPub API option is enabled, third-party clients can authenticate via OAuth 2.0 under `activitypub/1.0/oauth/`. The plugin supports RFC 7591 dynamic registration, RFC 7636 PKCE (S256 only, required by default for public clients), and the CIMD draft (URL-form `client_id`, HTTPS required).
 
 ### RFC 8252 — Loopback Redirect URIs
 
 Native apps receive the OAuth callback on a loopback port they opened locally. Per RFC 8252 §7.3 / §8.3, redirect URIs of the form `http://127.0.0.1:{port}/{path}` and `http://[::1]:{port}/{path}` are accepted with port flexibility (any port may be used at request time). `localhost` is also accepted for compatibility, although §8.3 marks it "NOT RECOMMENDED".
 
-The loopback allowance applies *only* to redirect URI matching. Reserved-but-not-loopback addresses — `0.0.0.0`, link-local `169.254.0.0/16`, RFC1918 private ranges (`10/8`, `172.16/12`, `192.168/16`), and similar — are not treated as loopback and never bypass `wp_safe_remote_get()`. CIMD metadata fetches always go through `wp_safe_remote_get()` regardless of host, since the CIMD draft expects publicly resolvable HTTPS URLs for the metadata document.
+The loopback allowance applies *only* to redirect URI matching. Reserved-but-not-loopback addresses — `0.0.0.0`, link-local `169.254.0.0/16`, RFC1918 private ranges (`10/8`, `172.16/12`, `192.168/16`), and similar — are not treated as loopback and never bypass `wp_safe_remote_get()`. CIMD metadata URLs must use `https://`, and the metadata host is resolved and validated against private/reserved ranges before any fetch — loopback CIMD origins are not supported, even on dev installs.
 
 **For implementation details:** See `includes/oauth/class-client.php` (especially the class docblock and `is_loopback()`) and the OAuth section of [FEDERATION.md](FEDERATION.md).
 

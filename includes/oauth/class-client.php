@@ -34,10 +34,12 @@ use function Activitypub\resolve_public_host;
  * treated as loopback and never bypass `wp_safe_remote_get()`.
  *
  * RFC 8252's loopback allowance applies to redirect URIs only. The CIMD
- * document is expected to be a publicly resolvable HTTPS resource, so
- * `fetch_client_metadata()` always uses `wp_safe_remote_get()` regardless of
- * host. Local development against a loopback CIMD endpoint is intentionally
- * not supported.
+ * document must be served over HTTPS from a publicly resolvable host:
+ * `client_id` discovery rejects non-`https` URLs up front, and
+ * `fetch_client_metadata()` resolves the host first and rejects anything
+ * private or loopback before falling through to `wp_safe_remote_get()`.
+ * Local development against a loopback CIMD endpoint is intentionally not
+ * supported.
  *
  * @see https://datatracker.ietf.org/doc/html/rfc8252 RFC 8252 — OAuth 2.0 for Native Apps
  * @see https://datatracker.ietf.org/doc/html/rfc7591 RFC 7591 — OAuth 2.0 Dynamic Client Registration
