@@ -410,7 +410,7 @@ class User_Settings_Fields {
 	 * Rendered as a standalone section (like core's Application Passwords),
 	 * not through the Settings API.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 */
 	public static function connected_apps_section() {
 		$tokens  = Token::get_all_for_user( \get_current_user_id() );

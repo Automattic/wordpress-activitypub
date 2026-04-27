@@ -8,7 +8,7 @@
  *
  * @package Activitypub
  * @see https://swicg.github.io/activitypub-api/sse
- * @since unreleased
+ * @since 8.1.0
  */
 
 namespace Activitypub;
@@ -19,7 +19,7 @@ namespace Activitypub;
  * Hooks into outbox and inbox actions to set transient signals
  * that the SSE controller checks during its polling loop.
  *
- * @since unreleased
+ * @since 8.1.0
  */
 class Event_Stream {
 	/**

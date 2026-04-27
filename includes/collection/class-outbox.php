@@ -39,6 +39,14 @@ class Outbox {
 	const MAX_ITEMS = 5000;
 
 	/**
+	 * Activity types included in the outbox collection listing.
+	 *
+	 * @var string[]
+	 */
+	const ACTIVITY_TYPES = array( 'Announce', 'Arrive', 'Create', 'Like', 'Update' );
+
+
+	/**
 	 * Number of items to process per batch during purge.
 	 *
 	 * @var int
@@ -98,7 +106,8 @@ class Outbox {
 				$activity->get_type(),
 				\wp_trim_words( $title, 5 )
 			),
-			'post_content' => wp_slash( $activity->to_json() ),
+			// Persist the blind audience so later dispatch can compute recipients from `bto`/`bcc`.
+			'post_content' => wp_slash( $activity->to_json( true, true ) ),
 			// ensure that user ID is not below 0.
 			'post_author'  => \max( $user_id, 0 ),
 			'post_status'  => 'pending',
@@ -127,7 +136,7 @@ class Outbox {
 			\wp_update_post(
 				array(
 					'ID'           => $id,
-					'post_content' => \wp_slash( $activity->to_json() ),
+					'post_content' => \wp_slash( $activity->to_json( true, true ) ),
 				)
 			);
 		}
@@ -434,7 +443,7 @@ class Outbox {
 			return new \WP_Error( 'private_outbox_item', 'Not a public Outbox item.' );
 		}
 
-		$activity_types = \apply_filters( 'rest_activitypub_outbox_activity_types', array( 'Announce', 'Create', 'Like', 'Update' ) );
+		$activity_types = \apply_filters( 'rest_activitypub_outbox_activity_types', self::ACTIVITY_TYPES );
 		$activity_type  = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
 
 		if ( ! in_array( $activity_type, $activity_types, true ) ) {

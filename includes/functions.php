@@ -345,7 +345,7 @@ function get_embed_html( $url, $inline_css = true ) {
  * similar to Jetpack's approach. The result can be overridden via
  * the `activitypub_client_ip` filter.
  *
- * @since unreleased
+ * @since 8.1.0
  *
  * @return string The client IP address.
  */
@@ -385,7 +385,7 @@ function get_client_ip() {
 	/**
 	 * Filter the client IP address used for rate limiting.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param string $ip The detected client IP address.
 	 */

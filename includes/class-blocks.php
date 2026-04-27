@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Cache\Stats_Image;
 use Activitypub\Collection\Actors;
 
 /**
@@ -77,6 +78,7 @@ class Blocks {
 		\add_action( 'rest_api_init', array( self::class, 'register_rest_fields' ) );
 
 		\add_filter( 'activitypub_import_mastodon_post_data', array( self::class, 'filter_import_mastodon_post_data' ), 10, 2 );
+		\add_filter( 'activitypub_attachments', array( self::class, 'add_stats_image_attachment' ), 10, 2 );
 
 		\add_action( 'activitypub_before_get_content', array( self::class, 'add_post_transformation_callbacks' ) );
 		\add_filter( 'activitypub_the_content', array( self::class, 'remove_post_transformation_callbacks' ) );
@@ -87,20 +89,21 @@ class Blocks {
 	 */
 	public static function enqueue_editor_assets() {
 		$data = array(
-			'namespace'          => ACTIVITYPUB_REST_NAMESPACE,
-			'defaultAvatarUrl'   => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
-			'enabled'            => array(
+			'namespace'             => ACTIVITYPUB_REST_NAMESPACE,
+			'defaultAvatarUrl'      => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
+			'enabled'               => array(
 				'blog'  => ! is_user_type_disabled( 'blog' ),
 				'users' => ! is_user_type_disabled( 'user' ),
 			),
-			'profileUrls'        => array(
+			'profileUrls'           => array(
 				'user' => \admin_url( 'profile.php#activitypub' ),
 				'blog' => \admin_url( 'options-general.php?page=activitypub&tab=blog-profile' ),
 			),
-			'showAvatars'        => (bool) \get_option( 'show_avatars' ),
-			'defaultQuotePolicy' => \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE ),
-			'objectType'         => \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ),
-			'noteLength'         => ACTIVITYPUB_NOTE_LENGTH,
+			'showAvatars'           => (bool) \get_option( 'show_avatars' ),
+			'defaultQuotePolicy'    => \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE ),
+			'objectType'            => \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ),
+			'noteLength'            => ACTIVITYPUB_NOTE_LENGTH,
+			'statsImageUrlEndpoint' => Stats_Image::is_available() ? \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image-url/{user_id}/{year}' ) : '',
 		);
 		wp_localize_script( 'wp-editor', '_activityPubOptions', $data );
 
@@ -143,6 +146,7 @@ class Blocks {
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/follow-me' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/followers' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/posts-and-replies' );
+		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/stats' );
 
 		// Only register the Following block if the Following feature is enabled.
 		if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
@@ -227,6 +231,12 @@ class Blocks {
 		// Only register the Following page pattern if the Following feature is enabled.
 		if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
 			require ACTIVITYPUB_PLUGIN_DIR . '/patterns/following-page.php';
+		}
+
+		// Only register the Stats post starter pattern in December and January.
+		$month = (int) \gmdate( 'n' );
+		if ( 12 === $month || 1 === $month ) {
+			require ACTIVITYPUB_PLUGIN_DIR . '/patterns/stats-post.php';
 		}
 	}
 
@@ -951,6 +961,7 @@ class Blocks {
 	 */
 	public static function add_post_transformation_callbacks( $post ) {
 		\add_filter( 'render_block_core/embed', array( self::class, 'revert_embed_links' ), 10, 2 );
+		\add_filter( 'render_block_activitypub/stats', '__return_empty_string' );
 
 		// Only transform reply link if it's the first block in the post.
 		$blocks = \parse_blocks( $post->post_content );
@@ -969,6 +980,7 @@ class Blocks {
 	public static function remove_post_transformation_callbacks( $content ) {
 		\remove_filter( 'render_block_core/embed', array( self::class, 'revert_embed_links' ) );
 		\remove_filter( 'render_block_activitypub/reply', array( self::class, 'generate_reply_link' ) );
+		\remove_filter( 'render_block_activitypub/stats', '__return_empty_string' );
 
 		return $content;
 	}
@@ -1033,6 +1045,91 @@ class Blocks {
 	}
 
 	/**
+	 * Add the stats image as an attachment when a post contains the stats block.
+	 *
+	 * Parses the post content for activitypub/stats blocks and appends each
+	 * as an Image attachment to the ActivityPub object.
+	 *
+	 * @since 8.1.0
+	 *
+	 * @param array    $attachments The existing attachments.
+	 * @param \WP_Post $post        The post object.
+	 *
+	 * @return array The attachments with stats images appended.
+	 */
+	public static function add_stats_image_attachment( $attachments, $post ) {
+		if ( ! Stats_Image::is_available() ) {
+			return $attachments;
+		}
+
+		/*
+		 * The stats image intentionally bypasses the `activitypub_max_image_attachments`
+		 * limit because it replaces the block content rather than being an inline image
+		 * extracted from the post. It is always appended so that the share-pic is
+		 * included in the federated activity regardless of the attachment cap.
+		 */
+		$blocks       = \parse_blocks( $post->post_content );
+		$stats_blocks = self::find_blocks_recursive( $blocks, 'activitypub/stats' );
+
+		foreach ( $stats_blocks as $block ) {
+			$user_id = self::get_user_id( $block['attrs']['selectedUser'] ?? 'blog' );
+
+			if ( null === $user_id ) {
+				continue;
+			}
+
+			$year = (int) ( $block['attrs']['year'] ?? (int) \gmdate( 'Y' ) - 1 );
+			$url  = Stats_Image::get_url( $user_id, $year );
+
+			if ( \is_wp_error( $url ) ) {
+				continue;
+			}
+
+			// Determine mime type from URL extension.
+			$mime_type = \str_ends_with( $url, '.webp' ) ? 'image/webp' : 'image/png';
+
+			$attachments[] = array(
+				'type'      => 'Image',
+				'mediaType' => $mime_type,
+				'url'       => $url,
+				'name'      => \sprintf(
+					/* translators: %d: The year */
+					\__( 'Fediverse Stats %d', 'activitypub' ),
+					$year
+				),
+			);
+		}
+
+		return $attachments;
+	}
+
+	/**
+	 * Recursively find blocks of a given type in a block tree.
+	 *
+	 * @since 8.1.0
+	 *
+	 * @param array  $blocks     The parsed blocks.
+	 * @param string $block_name The block name to search for.
+	 *
+	 * @return array The matching blocks.
+	 */
+	private static function find_blocks_recursive( $blocks, $block_name ) {
+		$found = array();
+
+		foreach ( $blocks as $block ) {
+			if ( $block_name === $block['blockName'] ) {
+				$found[] = $block;
+			}
+
+			if ( ! empty( $block['innerBlocks'] ) ) {
+				$found = \array_merge( $found, self::find_blocks_recursive( $block['innerBlocks'], $block_name ) );
+			}
+		}
+
+		return $found;
+	}
+
+	/**
 	 * Transform Embed blocks to block level link.
 	 *
 	 * Remote servers will simply drop iframe elements, rendering incomplete content.
@@ -1058,7 +1155,7 @@ class Blocks {
 	 * Tokenizes the content with wp_html_split(), tracks nesting depth,
 	 * and wraps each top-level element in block comment delimiters.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param string $content The HTML content.
 	 *
@@ -1137,7 +1234,7 @@ class Blocks {
 	/**
 	 * Wrap an HTML element in block comment delimiters.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param string $tag  The uppercase tag name.
 	 * @param string $html The element HTML.
@@ -1162,25 +1259,44 @@ class Blocks {
 	/**
 	 * Filter the main query to exclude replies.
 	 *
-	 * When the "Posts" tab is active (default), adds a WHERE clause to
-	 * exclude posts containing the `activitypub/reply` block. This
-	 * filters the main query so that Query Loop blocks with
-	 * `inherit: true` also pick up the filter.
+	 * Adds a WHERE clause to exclude posts containing the `activitypub/reply`
+	 * block when the visitor has explicitly requested the "Posts" tab via
+	 * `?filter=posts`. This filters the main query so that Query Loop blocks
+	 * with `inherit: true` also pick up the filter.
 	 *
-	 * @since unreleased
+	 * The filter only attaches on that explicit opt-in. Admin, feed, and any
+	 * regular frontend request (front page, archives, search…) are never
+	 * touched, which is why no block-presence probing is needed: the only
+	 * way `?filter=posts` appears in a URL is from a click on the
+	 * `activitypub/posts-and-replies` tab block.
+	 *
+	 * @since 8.1.0
 	 *
 	 * @param WP_Query $query The WP_Query instance.
 	 */
 	public static function filter_query_loop_vars( $query ) {
+		// Never touch admin or feed queries.
+		if ( \is_admin() || $query->is_feed() ) {
+			return;
+		}
+
 		if ( ! $query->is_main_query() || $query->is_singular() ) {
 			return;
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$active_tab = isset( $_GET['filter'] ) ? \sanitize_key( $_GET['filter'] ) : 'posts';
+		// Skip the reply-exclusion filter for queries that only target
+		// non-ActivityPub post types to avoid a full table scan.
+		$query_post_type = $query->get( 'post_type' );
+		if ( ! empty( $query_post_type ) && 'any' !== $query_post_type ) {
+			$query_post_types = (array) $query_post_type;
+			if ( ! array_intersect( $query_post_types, \get_post_types_by_support( 'activitypub' ) ) ) {
+				return;
+			}
+		}
 
-		// Only filter when the "Posts" tab is active (default).
-		if ( 'posts-and-replies' === $active_tab ) {
+		// Only filter when the "Posts" tab has been explicitly selected.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( ! isset( $_GET['filter'] ) || 'posts' !== \sanitize_key( \wp_unslash( $_GET['filter'] ) ) ) {
 			return;
 		}
 
@@ -1193,7 +1309,7 @@ class Blocks {
 	 * Removes itself after the first execution to avoid
 	 * affecting secondary queries on the same page.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param string $where The WHERE clause.
 	 * @return string Modified WHERE clause.

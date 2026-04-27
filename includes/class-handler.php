@@ -50,6 +50,7 @@ class Handler {
 	public static function register_outbox_handlers() {
 		Handler\Outbox\Add::init();
 		Handler\Outbox\Announce::init();
+		Handler\Outbox\Arrive::init();
 		Handler\Outbox\Block::init();
 		Handler\Outbox\Create::init();
 		Handler\Outbox\Delete::init();
@@ -62,7 +63,7 @@ class Handler {
 		/**
 		 * Register additional outbox handlers.
 		 *
-		 * @since unreleased
+		 * @since 8.1.0
 		 */
 		do_action( 'activitypub_register_outbox_handlers' );
 	}

@@ -23,7 +23,7 @@ use function Activitypub\get_client_ip;
  * - Revocation endpoint (POST /oauth/revoke)
  * - Token introspection endpoint (POST /oauth/introspect)
  *
- * @since unreleased
+ * @since 8.1.0
  */
 class Token_Controller extends \WP_REST_Controller {
 	/**
@@ -271,9 +271,28 @@ class Token_Controller extends \WP_REST_Controller {
 	public function revoke( \WP_REST_Request $request ) {
 		$token = $request->get_param( 'token' );
 
-		// Per RFC 7009, always return 200 even if token doesn't exist.
-		Token::revoke( $token );
+		if ( \current_user_can( 'manage_options' ) ) {
+			// Site admins may revoke any token. Null-null disables the ownership check.
+			Token::revoke( $token );
+		} else {
+			/*
+			 * RFC 7009 §2.1: the server must verify the token was issued to
+			 * the requesting client. When the caller authenticated with a
+			 * bearer token we know the calling client, so require a client
+			 * match and ignore the user — otherwise a low-trust client
+			 * could revoke tokens the user had granted to a different
+			 * client. For pure cookie-authenticated callers there is no
+			 * client context, so user match is the only available check.
+			 */
+			$caller_token = OAuth_Server::get_current_token();
+			if ( $caller_token ) {
+				Token::revoke( $token, null, $caller_token->get_client_id() );
+			} else {
+				Token::revoke( $token, \get_current_user_id(), null );
+			}
+		}
 
+		// Per RFC 7009, always return 200 even if the token doesn't exist or was not owned.
 		return new \WP_REST_Response( null, 200 );
 	}
 

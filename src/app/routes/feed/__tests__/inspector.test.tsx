@@ -346,6 +346,7 @@ describe( 'FeedInspector', () => {
 
 			// Component renders the button in some configurations
 			// If button exists, verify it has proper attributes
+			/* eslint-disable jest/no-conditional-expect -- component has multiple valid render paths */
 			if ( button ) {
 				expect( button ).toBeInTheDocument();
 				if ( button.hasAttribute( 'data-href' ) ) {
@@ -356,6 +357,7 @@ describe( 'FeedInspector', () => {
 				// The component shows the post link through other means
 				expect( true ).toBe( true );
 			}
+			/* eslint-enable jest/no-conditional-expect */
 		} );
 	} );
 

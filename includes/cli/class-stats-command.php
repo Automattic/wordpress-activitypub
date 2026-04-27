@@ -33,6 +33,8 @@ class Stats_Command extends \WP_CLI_Command {
 	 *
 	 * [--month=<month>]
 	 * : The month to collect stats for (1-12). Defaults to current month.
+	 *   When --year is provided without --month, all months of that year
+	 *   are collected (up to the current month for the current year).
 	 *
 	 * [--force]
 	 * : Force recollection even if stats already exist.
@@ -45,6 +47,9 @@ class Stats_Command extends \WP_CLI_Command {
 	 *     # Collect stats for a specific month
 	 *     $ wp activitypub stats collect --year=2024 --month=6
 	 *
+	 *     # Collect all months of a year
+	 *     $ wp activitypub stats collect --year=2024
+	 *
 	 *     # Force recollect stats for a specific user
 	 *     $ wp activitypub stats collect --user_id=1 --force
 	 *
@@ -54,31 +59,52 @@ class Stats_Command extends \WP_CLI_Command {
 	 * @param array $assoc_args The associative arguments.
 	 */
 	public function collect( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		$user_id = isset( $assoc_args['user_id'] ) ? (int) $assoc_args['user_id'] : null;
-		$year    = isset( $assoc_args['year'] ) ? (int) $assoc_args['year'] : (int) \gmdate( 'Y' );
-		$month   = isset( $assoc_args['month'] ) ? (int) $assoc_args['month'] : (int) \gmdate( 'n' );
-		$force   = isset( $assoc_args['force'] );
+		$user_id       = isset( $assoc_args['user_id'] ) ? (int) $assoc_args['user_id'] : null;
+		$year          = isset( $assoc_args['year'] ) ? (int) $assoc_args['year'] : (int) \gmdate( 'Y' );
+		$has_month     = isset( $assoc_args['month'] );
+		$force         = isset( $assoc_args['force'] );
+		$current_year  = (int) \gmdate( 'Y' );
+		$current_month = (int) \gmdate( 'n' );
 
-		if ( $month < 1 || $month > 12 ) {
-			\WP_CLI::error( "Invalid month: {$month}. Must be between 1 and 12." );
+		if ( $year < 2000 || $year > $current_year + 1 ) {
+			\WP_CLI::error( "Invalid year: {$year}." );
 		}
 
-		if ( $year < 2000 || $year > (int) \gmdate( 'Y' ) + 1 ) {
-			\WP_CLI::error( "Invalid year: {$year}." );
+		/*
+		 * When --month is provided, collect that single month.
+		 * When only --year is provided, collect all months of the year
+		 * (up to the current month for the current year).
+		 */
+		if ( $has_month ) {
+			$months = array( (int) $assoc_args['month'] );
+
+			if ( $months[0] < 1 || $months[0] > 12 ) {
+				\WP_CLI::error( "Invalid month: {$months[0]}. Must be between 1 and 12." );
+			}
+		} elseif ( isset( $assoc_args['year'] ) ) {
+			$last_month = ( $year === $current_year ) ? $current_month : 12;
+			$months     = \range( 1, $last_month );
+		} else {
+			$months = array( $current_month );
 		}
 
 		$user_ids = $user_id ? array( $user_id ) : Statistics::get_active_user_ids();
 
-		foreach ( $user_ids as $uid ) {
-			if ( $force ) {
-				$option_name = Statistics::get_monthly_option_name( $uid, $year, $month );
-				\delete_option( $option_name );
+		foreach ( $months as $month ) {
+			foreach ( $user_ids as $uid ) {
+				if ( $force ) {
+					$option_name = Statistics::get_monthly_option_name( $uid, $year, $month );
+					\delete_option( $option_name );
+				}
+				Statistics::collect_monthly_stats( $uid, $year, $month );
 			}
-			Statistics::collect_monthly_stats( $uid, $year, $month );
+
+			$count = \count( $user_ids );
+			\WP_CLI::log( "Collected {$year}-{$month} for {$count} user(s)." );
 		}
 
-		$count = count( $user_ids );
-		\WP_CLI::success( "Monthly stats collected for {$count} user(s) ({$year}-{$month})." );
+		$total_months = \count( $months );
+		\WP_CLI::success( "Monthly stats collected for {$total_months} month(s)." );
 	}
 
 	/**

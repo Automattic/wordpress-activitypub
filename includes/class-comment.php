@@ -581,7 +581,7 @@ class Comment {
 	public static function get_comment_types() {
 		global $activitypub_comment_types;
 
-		return $activitypub_comment_types;
+		return (array) $activitypub_comment_types;
 	}
 
 	/**
@@ -861,6 +861,17 @@ class Comment {
 			return 1;
 		}
 
+		/*
+		 * Always auto-approve comments on remote posts (ap_post) since
+		 * they are not visible in the WP admin comment moderation screen.
+		 */
+		$post_id = $comment_data['comment_post_ID'];
+		$post    = \get_post( $post_id );
+
+		if ( $post && \in_array( $post->post_type, self::hide_for(), true ) ) {
+			return 1;
+		}
+
 		if ( '1' !== \get_option( 'comment_previously_approved' ) ) {
 			return $approved;
 		}
@@ -880,13 +891,6 @@ class Comment {
 		$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author = %s AND comment_author_url = %s and comment_approved = '1' LIMIT 1", $author, $author_url ) );
 
 		if ( 1 === (int) $ok_to_comment ) {
-			return 1;
-		}
-
-		$post_id = $comment_data['comment_post_ID'];
-		$post    = \get_post( $post_id );
-
-		if ( $post && in_array( $post->post_type, self::hide_for(), true ) ) {
 			return 1;
 		}
 

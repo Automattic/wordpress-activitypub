@@ -378,12 +378,16 @@ class Starter_Kit {
 
 		echo '<h3>' . \esc_html( $name ) . '</h3>';
 
-		if ( ! empty( self::$starter_kit['image']['url'] ) ) {
-			\printf(
-				'<img src="%s" style="max-width: 500px;" alt="%s" />',
-				\esc_url( self::$starter_kit['image']['url'] ),
-				\esc_attr( self::$starter_kit['image']['summary'] ?? '' )
-			);
+		if ( ! empty( self::$starter_kit['image'] ) ) {
+			$image_url = object_to_uri( self::$starter_kit['image'] );
+
+			if ( $image_url ) {
+				\printf(
+					'<img src="%s" style="max-width: 500px;" alt="%s" />',
+					\esc_url( $image_url ),
+					\esc_attr( $name )
+				);
+			}
 		}
 
 		if ( ! empty( self::$starter_kit['summary'] ) ) {
@@ -440,11 +444,18 @@ class Starter_Kit {
 				if ( ! self::is_valid_actor( $actor_uri ) ) {
 					continue;
 				}
+
+				$actor_name = \is_array( $actor ) ? ( $actor['name'] ?? '' ) : '';
 				?>
 				<li>
 					<label>
 						<input type="checkbox" name="actors[]" value="<?php echo \esc_attr( $actor_uri ); ?>" checked />
-						<?php echo \esc_html( $actor_uri ); ?>
+						<?php if ( $actor_name ) : ?>
+							<strong><?php echo \esc_html( $actor_name ); ?></strong>
+							(<?php echo \esc_html( $actor_uri ); ?>)
+						<?php else : ?>
+							<?php echo \esc_html( $actor_uri ); ?>
+						<?php endif; ?>
 					</label>
 				</li>
 			<?php endforeach; ?>
@@ -610,6 +621,18 @@ class Starter_Kit {
 		self::$starter_kit = \json_decode( $file_contents, true );
 		if ( null === self::$starter_kit ) {
 			return new \WP_Error( 'invalid_json', \esc_html__( 'Invalid JSON format in the uploaded file.', 'activitypub' ) );
+		}
+
+		/*
+		 * Validate that the type is a Collection-like type.
+		 * FeaturedCollection is from the Mastodon FEP draft:
+		 * https://github.com/mastodon/featured_collections/pull/1
+		 */
+		$type        = (array) ( self::$starter_kit['type'] ?? array() );
+		$valid_types = array( 'Collection', 'OrderedCollection', 'FeaturedCollection' );
+
+		if ( ! \array_intersect( $type, $valid_types ) ) {
+			return new \WP_Error( 'invalid_type', \esc_html__( 'The file does not contain a valid Starter Kit Collection.', 'activitypub' ) );
 		}
 
 		$actors = self::$starter_kit['items'] ?? self::$starter_kit['orderedItems'] ?? array();

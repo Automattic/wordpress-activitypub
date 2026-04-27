@@ -32,10 +32,14 @@ trait Verification {
 	 * @see https://www.w3.org/wiki/SocialCG/ActivityPub/Primer/Authentication_Authorization#Authorized_fetch
 	 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
 	 *
-	 * @param \WP_REST_Request $request The request object.
+	 * @param \WP_REST_Request $request         The request object.
+	 * @param bool             $force_signature Optional. When true, GET requests also require a
+	 *                                          valid signature even with Authorized Fetch
+	 *                                          disabled. Use for endpoints that are peer-only
+	 *                                          (e.g. FEP-8fcf's `/followers/sync`). Default false.
 	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
 	 */
-	public function verify_signature( $request ) {
+	public function verify_signature( $request, $force_signature = false ) {
 		if ( 'HEAD' === $request->get_method() ) {
 			return true;
 		}
@@ -44,20 +48,25 @@ trait Verification {
 		 * Filter to defer signature verification.
 		 *
 		 * Skip signature verification for debugging purposes or to reduce load for
-		 * certain Activity-Types, like "Delete".
+		 * certain Activity-Types, like "Delete". Callers that want to preserve
+		 * mandatory signing for endpoints passing `$force_signature = true`
+		 * (e.g. FEP-8fcf's `/followers/sync`) should inspect the third argument
+		 * and return `false` in that case.
 		 *
-		 * @param bool             $defer   Whether to defer signature verification.
-		 * @param \WP_REST_Request $request The request used to generate the response.
+		 * @param bool             $defer           Whether to defer signature verification.
+		 * @param \WP_REST_Request $request         The request used to generate the response.
+		 * @param bool             $force_signature Whether the caller has forced signature
+		 *                                          verification for this endpoint.
 		 * @return bool Whether to defer signature verification.
 		 */
-		$defer = \apply_filters( 'activitypub_defer_signature_verification', false, $request );
+		$defer = \apply_filters( 'activitypub_defer_signature_verification', false, $request, $force_signature );
 
 		if ( $defer ) {
 			return true;
 		}
 
-		// POST-Requests always have to be signed, GET-Requests only require a signature in secure mode.
-		if ( 'GET' !== $request->get_method() || use_authorized_fetch() ) {
+		// POST-Requests always have to be signed, GET-Requests only require a signature in secure mode or when forced.
+		if ( 'GET' !== $request->get_method() || use_authorized_fetch() || $force_signature ) {
 			$verified_request = Signature::verify_http_signature( $request );
 			if ( \is_wp_error( $verified_request ) ) {
 				return new \WP_Error(
@@ -80,7 +89,7 @@ trait Verification {
 	/**
 	 * Check that the signature keyId and activity actor share the same host.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return true|\WP_Error True if valid, WP_Error on mismatch.
@@ -196,7 +205,7 @@ trait Verification {
 	 * Returns true if the social graph setting allows public display,
 	 * or if the request is authenticated by the resource owner.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return bool True if the social graph should be shown.

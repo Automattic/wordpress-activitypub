@@ -232,6 +232,23 @@ class Test_Client extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test register method allows http for localhost subdomains (RFC 6761).
+	 *
+	 * @covers ::register
+	 */
+	public function test_register_allows_http_localhost_subdomain() {
+		$result = $this->create_client(
+			array(
+				'name'          => 'Localhost Subdomain Client',
+				'redirect_uris' => array( 'http://calypso.localhost:3000/callback' ),
+			)
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertArrayHasKey( 'client_id', $result );
+	}
+
+	/**
 	 * Test register method allows http for non-loopback when filter permits.
 	 *
 	 * @covers ::register
@@ -664,5 +681,114 @@ class Test_Client extends \WP_UnitTestCase {
 		$client = Client::get( $result['client_id'] );
 
 		$this->assertEquals( $result['client_id'], $client->get_client_id() );
+	}
+
+	/**
+	 * Test normalize_client_metadata with CIMD format.
+	 *
+	 * @covers ::normalize_client_metadata
+	 */
+	public function test_normalize_client_metadata_cimd_format() {
+		$data = array(
+			'client_id'     => 'https://example.com/client',
+			'client_name'   => 'CIMD Client',
+			'redirect_uris' => array( 'https://example.com/callback' ),
+			'logo_uri'      => 'https://example.com/logo.png',
+			'client_uri'    => 'https://example.com/',
+		);
+
+		$metadata = $this->call_normalize_client_metadata( $data );
+
+		$this->assertEquals( 'https://example.com/client', $metadata['client_id'] );
+		$this->assertEquals( 'CIMD Client', $metadata['client_name'] );
+		$this->assertEquals( array( 'https://example.com/callback' ), $metadata['redirect_uris'] );
+		$this->assertEquals( 'https://example.com/logo.png', $metadata['logo_uri'] );
+		$this->assertEquals( 'https://example.com/', $metadata['client_uri'] );
+		$this->assertArrayNotHasKey( 'is_actor', $metadata );
+	}
+
+	/**
+	 * Test normalize_client_metadata with ActivityStreams vocabulary (no type).
+	 *
+	 * Client ID Metadata Documents may use ActivityStreams context with
+	 * fields like "id", "name", and "redirectURI" instead of CIMD fields.
+	 *
+	 * @covers ::normalize_client_metadata
+	 */
+	public function test_normalize_client_metadata_activitystreams_vocabulary() {
+		$data = array(
+			'id'          => 'https://checkin.example.com/client.jsonld',
+			'name'        => 'Checkin Sample App',
+			'summary'     => 'A sample client for geosocial activities',
+			'redirectURI' => 'https://checkin.example.com/',
+		);
+
+		$metadata = $this->call_normalize_client_metadata( $data );
+
+		$this->assertEquals( 'https://checkin.example.com/client.jsonld', $metadata['client_id'] );
+		$this->assertEquals( 'Checkin Sample App', $metadata['client_name'] );
+		$this->assertEquals( array( 'https://checkin.example.com/' ), $metadata['redirect_uris'] );
+		$this->assertArrayNotHasKey( 'is_actor', $metadata );
+	}
+
+	/**
+	 * Test normalize_client_metadata with ActivityPub actor format.
+	 *
+	 * @covers ::normalize_client_metadata
+	 */
+	public function test_normalize_client_metadata_actor_format() {
+		$data = array(
+			'type'              => 'Application',
+			'id'                => 'https://app.example.com/actor',
+			'name'              => 'AP App',
+			'preferredUsername' => 'app',
+			'redirectURI'       => 'https://app.example.com/callback',
+			'icon'              => array( 'url' => 'https://app.example.com/icon.png' ),
+			'url'               => 'https://app.example.com/',
+		);
+
+		$metadata = $this->call_normalize_client_metadata( $data );
+
+		$this->assertEquals( 'https://app.example.com/actor', $metadata['client_id'] );
+		$this->assertEquals( 'AP App', $metadata['client_name'] );
+		$this->assertEquals( array( 'https://app.example.com/callback' ), $metadata['redirect_uris'] );
+		$this->assertEquals( 'https://app.example.com/icon.png', $metadata['logo_uri'] );
+		$this->assertEquals( 'https://app.example.com/', $metadata['client_uri'] );
+		$this->assertTrue( $metadata['is_actor'] );
+	}
+
+	/**
+	 * Test CIMD fields take precedence over ActivityStreams fields.
+	 *
+	 * @covers ::normalize_client_metadata
+	 */
+	public function test_normalize_client_metadata_cimd_takes_precedence() {
+		$data = array(
+			'client_id'     => 'https://example.com/cimd-client',
+			'client_name'   => 'CIMD Name',
+			'redirect_uris' => array( 'https://example.com/cimd-callback' ),
+			'id'            => 'https://example.com/as-id',
+			'name'          => 'AS Name',
+			'redirectURI'   => 'https://example.com/as-callback',
+		);
+
+		$metadata = $this->call_normalize_client_metadata( $data );
+
+		$this->assertEquals( 'https://example.com/cimd-client', $metadata['client_id'] );
+		$this->assertEquals( 'CIMD Name', $metadata['client_name'] );
+		$this->assertEquals( array( 'https://example.com/cimd-callback' ), $metadata['redirect_uris'] );
+	}
+
+	/**
+	 * Helper to call the private normalize_client_metadata method.
+	 *
+	 * @param array $data The raw metadata.
+	 * @return array Normalized metadata.
+	 */
+	private function call_normalize_client_metadata( $data ) {
+		$method = new \ReflectionMethod( Client::class, 'normalize_client_metadata' );
+		$method->setAccessible( true );
+
+		return $method->invoke( null, $data );
 	}
 }
