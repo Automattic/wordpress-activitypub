@@ -206,19 +206,41 @@ trait Event_Stream {
 			$path .= '?' . $parsed['query'];
 		}
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_stream_socket_client -- SSE proxy requires raw streaming.
+		/*
+		 * Resolve the host once and verify every returned address is public.
+		 * stream_socket_client would otherwise do its own lookup, which opens
+		 * a DNS-rebinding window after validate_url() already passed.
+		 */
+		$ip = self::resolve_public_host( $host );
+		if ( false === $ip ) {
+			\status_header( 502 );
+			\header( 'Content-Type: application/json' );
+			Server::send_cors_headers();
+			echo \wp_json_encode(
+				array(
+					'code'    => 'activitypub_proxy_unsafe_host',
+					'message' => \__( 'The remote eventStream host is not reachable.', 'activitypub' ),
+				)
+			);
+			exit;
+		}
+
 		$context = stream_context_create(
 			array(
 				'ssl' => array(
 					'verify_peer'      => true,
 					'verify_peer_name' => true,
+					// Pin SNI / cert verification to the original hostname even though we connect by IP.
+					'peer_name'        => $host,
 				),
 			)
 		);
 
+		$target = ( false !== strpos( $ip, ':' ) ? '[' . $ip . ']' : $ip ) . ':' . $port;
+
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_stream_socket_client -- SSE proxy requires raw streaming.
 		$stream = stream_socket_client(
-			'ssl://' . $host . ':' . $port,
+			'ssl://' . $target,
 			$errno,
 			$errstr,
 			30,
@@ -545,5 +567,37 @@ trait Event_Stream {
 		}
 
 		return $query->posts;
+	}
+
+	/**
+	 * Resolve a hostname to an IP address and reject anything in a private
+	 * or reserved range. Returns the resolved IP for direct connection so
+	 * the actual TCP connect can't be redirected by a later DNS change.
+	 *
+	 * @param string $host The hostname to resolve.
+	 *
+	 * @return string|false Resolved public IP, or false when no safe address is available.
+	 */
+	private static function resolve_public_host( $host ) {
+		// Already an IP literal — validate directly.
+		if ( \filter_var( $host, FILTER_VALIDATE_IP ) ) {
+			return \filter_var( $host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE )
+				? $host
+				: false;
+		}
+
+		$ips = \gethostbynamel( $host );
+		if ( ! $ips ) {
+			return false;
+		}
+
+		// Reject if any resolved address is private/reserved (defends against split-horizon DNS).
+		foreach ( $ips as $ip ) {
+			if ( ! \filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
+				return false;
+			}
+		}
+
+		return $ips[0];
 	}
 }
