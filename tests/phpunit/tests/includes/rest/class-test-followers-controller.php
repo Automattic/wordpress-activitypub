@@ -307,7 +307,7 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 
 		\delete_option( 'activitypub_actor_mode' );
 
-		$this->assertSame( 401, $response->get_status() );
+		$this->assertErrorResponse( 'activitypub_signature_verification', $response, 401 );
 	}
 
 	/**
