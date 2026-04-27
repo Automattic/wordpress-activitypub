@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Hardened input handling for incoming federated activity types.
