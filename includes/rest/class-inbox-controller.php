@@ -501,7 +501,13 @@ class Inbox_Controller extends \WP_REST_Controller {
 			return null;
 		}
 
-		$actor_data = \json_decode( $actor_post->post_content, true );
+		// Match Remote_Actors::get_actor()'s storage fallback: legacy actor JSON lives in postmeta when post_content is empty.
+		$json = $actor_post->post_content;
+		if ( empty( $json ) ) {
+			$json = \get_post_meta( $actor_post->ID, '_activitypub_actor_json', true );
+		}
+
+		$actor_data = \json_decode( $json, true );
 		if ( empty( $actor_data['followers'] ) ) {
 			return null;
 		}
