@@ -306,15 +306,17 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
-		$request = new \WP_REST_Request( 'HEAD', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/followers/sync' );
-		$request->set_param( 'authority', 'https://evil.example' );
-		$request->set_param( 'page', 1 );
+		try {
+			$request = new \WP_REST_Request( 'HEAD', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/followers/sync' );
+			$request->set_param( 'authority', 'https://evil.example' );
+			$request->set_param( 'page', 1 );
 
-		$response = rest_get_server()->dispatch( $request );
+			$response = rest_get_server()->dispatch( $request );
 
-		\delete_option( 'activitypub_actor_mode' );
-
-		$this->assertErrorResponse( 'activitypub_signature_verification', $response, 401 );
+			$this->assertErrorResponse( 'activitypub_signature_verification', $response, 401 );
+		} finally {
+			\delete_option( 'activitypub_actor_mode' );
+		}
 	}
 
 	/**
