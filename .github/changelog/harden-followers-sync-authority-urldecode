@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Decoded percent-encoded forms in the follower sync authority before the safety check.

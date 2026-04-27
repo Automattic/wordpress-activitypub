@@ -116,8 +116,14 @@ class Followers_Controller extends Actors_Controller {
 								 * that code at all. Both places run the value through
 								 * self::normalize_host() so semantically equivalent hosts always
 								 * agree.
+								 *
+								 * Percent-decode the input first so encoded forms like
+								 * `http://%5B::1%5D/` (bracketed IPv6 literal hidden inside
+								 * %5B/%5D) get checked against the same blocklist as the
+								 * unencoded equivalent.
 								 */
-								$host = self::normalize_host( (string) \wp_parse_url( (string) $param, PHP_URL_HOST ) );
+								$decoded = \urldecode( (string) $param );
+								$host    = self::normalize_host( (string) \wp_parse_url( $decoded, PHP_URL_HOST ) );
 								if ( '' === $host ) {
 									return false;
 								}

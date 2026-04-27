@@ -266,6 +266,10 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 			'documentation'              => array( 'https://[2001:db8::1]' ),
 			'nat64_well_known'           => array( 'https://[64:ff9b::8.8.8.8]' ),
 			'discard_prefix'             => array( 'https://[100::1]' ),
+			// Percent-encoded forms must be decoded before the blocklist check.
+			'pctenc_localhost'           => array( 'https://%6Cocalhost' ),
+			'pctenc_v6_brackets_lo'      => array( 'https://%5B::1%5D' ),
+			'pctenc_v6_brackets_rfc1918' => array( 'https://%5B::ffff:10.0.0.1%5D' ),
 		);
 	}
 
