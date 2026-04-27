@@ -44,6 +44,10 @@ class Test_Functions_Request extends ActivityPub_TestCase_Cache_HTTP {
 			'ipv6_loopback_bracketed'     => array( '[::1]', false ),
 			'public_ipv6'                 => array( '2606:4700:4700::1111', '2606:4700:4700::1111' ),
 			'public_ipv6_bracketed'       => array( '[2606:4700:4700::1111]', '2606:4700:4700::1111' ),
+			'ipv4_mapped_loopback'        => array( '::ffff:127.0.0.1', false ),
+			'ipv4_mapped_rfc1918'         => array( '::ffff:10.0.0.1', false ),
+			'ipv4_mapped_link_local'      => array( '::ffff:169.254.169.254', false ),
+			'ipv4_mapped_public'          => array( '::ffff:8.8.8.8', false ),
 			'empty_string'                => array( '', false ),
 		);
 	}
