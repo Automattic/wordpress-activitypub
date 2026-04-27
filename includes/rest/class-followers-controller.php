@@ -249,8 +249,9 @@ class Followers_Controller extends Actors_Controller {
 		 * matches the signing peer, so that instances cannot "get tricked
 		 * into requesting the followers list of a third-party individual".
 		 */
+		// Match the validate_callback's normalisation so semantically equivalent (decoded) authorities compare equal.
 		$signer_host = self::normalize_host( self::get_signer_host( $request ) );
-		$asked_host  = self::normalize_host( (string) \wp_parse_url( (string) $authority, \PHP_URL_HOST ) );
+		$asked_host  = self::normalize_host( (string) \wp_parse_url( \rawurldecode( (string) $authority ), \PHP_URL_HOST ) );
 
 		if ( ! $signer_host || ! $asked_host || $signer_host !== $asked_host ) {
 			return new \WP_Error(
