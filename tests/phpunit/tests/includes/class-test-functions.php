@@ -304,8 +304,9 @@ class Test_Functions extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Snapshot the $_SERVER keys this group mutates so tear_down can restore
-	 * them, keeping the suite order-independent.
+	 * Holds the $_SERVER values captured by snapshot_client_ip_server() so
+	 * each test in this group can restore them in its own try/finally,
+	 * keeping the suite order-independent.
 	 *
 	 * @var array<string, mixed>
 	 */
