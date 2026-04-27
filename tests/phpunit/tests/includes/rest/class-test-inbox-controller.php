@@ -438,36 +438,81 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		};
 		\add_action( 'activitypub_inbox', $capture, 10, 3 );
 
-		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$request->set_header( 'Content-Type', 'application/activity+json' );
-		$request->set_body(
-			\wp_json_encode(
-				array(
-					'id'     => 'https://remote.example/@id',
-					'type'   => 'Create/../evil',
-					'actor'  => 'https://remote.example/@test',
-					'object' => array(
-						'id'        => 'https://remote.example/post/test',
-						'type'      => 'Note',
-						'content'   => 'Hi.',
-						'to'        => array( $user_actor->get_id() ),
-						'published' => '2020-01-01T00:00:00Z',
-					),
-					'to'     => array( $user_actor->get_id() ),
+		try {
+			$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+			$request->set_header( 'Content-Type', 'application/activity+json' );
+			$request->set_body(
+				\wp_json_encode(
+					array(
+						'id'     => 'https://remote.example/@id',
+						'type'   => 'Create/../evil',
+						'actor'  => 'https://remote.example/@test',
+						'object' => array(
+							'id'        => 'https://remote.example/post/test',
+							'type'      => 'Note',
+							'content'   => 'Hi.',
+							'to'        => array( $user_actor->get_id() ),
+							'published' => '2020-01-01T00:00:00Z',
+						),
+						'to'     => array( $user_actor->get_id() ),
+					)
 				)
-			)
-		);
+			);
 
-		\rest_do_request( $request );
+			\rest_do_request( $request );
 
-		$this->assertNotNull( $captured_type, 'activitypub_inbox should fire' );
-		$this->assertStringNotContainsString( '/', $captured_type, 'Slashes must be stripped from the activity type' );
-		$this->assertStringNotContainsString( '.', $captured_type, 'Dots must be stripped from the activity type' );
-		$this->assertMatchesRegularExpression( '/^[a-z0-9_]+$/', $captured_type, 'Type passed to action hooks must be safe' );
+			$this->assertNotNull( $captured_type, 'activitypub_inbox should fire' );
+			$this->assertSame( 'createevil', $captured_type, 'Crafted activity types should be normalized to the expected canonical value' );
+		} finally {
+			\remove_action( 'activitypub_inbox', $capture, 10 );
+			\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+			\delete_option( 'activitypub_actor_mode' );
+		}
+	}
 
-		\remove_action( 'activitypub_inbox', $capture, 10 );
-		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
-		\delete_option( 'activitypub_actor_mode' );
+	/**
+	 * Test that activity types that sanitize to an empty string are rejected.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_create_item_rejects_empty_sanitized_activity_type() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		$user_actor   = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+		$inbox_action = new \MockAction();
+		\add_action( 'activitypub_inbox', array( $inbox_action, 'action' ) );
+
+		try {
+			$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+			$request->set_header( 'Content-Type', 'application/activity+json' );
+			$request->set_body(
+				\wp_json_encode(
+					array(
+						'id'     => 'https://remote.example/@id',
+						'type'   => '!!!',
+						'actor'  => 'https://remote.example/@test',
+						'object' => array(
+							'id'        => 'https://remote.example/post/test',
+							'type'      => 'Note',
+							'content'   => 'Hi.',
+							'to'        => array( $user_actor->get_id() ),
+							'published' => '2020-01-01T00:00:00Z',
+						),
+						'to'     => array( $user_actor->get_id() ),
+					)
+				)
+			);
+
+			$response = \rest_do_request( $request );
+
+			$this->assertSame( 400, $response->get_status(), 'A type that sanitizes to empty must be rejected' );
+			$this->assertSame( 0, $inbox_action->get_call_count(), 'No inbox hook may fire for a rejected request' );
+		} finally {
+			\remove_action( 'activitypub_inbox', array( $inbox_action, 'action' ) );
+			\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+			\delete_option( 'activitypub_actor_mode' );
+		}
 	}
 
 	/**

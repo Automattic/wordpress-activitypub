@@ -89,6 +89,10 @@ class Actors_Inbox_Controller extends Actors_Controller {
 							'type'              => 'string',
 							'required'          => true,
 							'sanitize_callback' => 'sanitize_html_class',
+							'validate_callback' => static function ( $param ) {
+								// Reject values that sanitize to empty so dynamic hook names always have a suffix.
+								return '' !== \sanitize_html_class( (string) $param );
+							},
 						),
 						'object' => array(
 							'description'       => 'The object of the activity.',
@@ -384,7 +388,8 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		$data = \json_decode( $inbox_item->post_content, true );
 		// Reconstruct activity from inbox post.
 		$activity = Activity::init_from_array( $data );
-		$type     = camel_to_snake_case( $activity->get_type() );
+		// Sanitize again here: the type comes from stored activity JSON, which bypassed REST arg sanitization.
+		$type     = camel_to_snake_case( \sanitize_html_class( (string) $activity->get_type() ) );
 		$context  = Inbox::CONTEXT_INBOX;
 		$user_ids = Inbox::get_recipients( $inbox_item->ID );
 
