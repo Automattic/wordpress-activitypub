@@ -119,3 +119,50 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) { // phpcs:ignor
 
 	return json_decode( $remote_actor->post_content, true );
 }
+
+/**
+ * Resolve a hostname or IP literal to a public IPv4 address.
+ *
+ * Used as an SSRF guard before opening connections to user-supplied URLs.
+ * `wp_safe_remote_get()` ultimately calls `wp_http_validate_url()`, which has
+ * a same-host carve-out that lets local/private addresses through when the
+ * WordPress site itself is hosted on one. This helper performs an explicit
+ * resolve-and-validate without that carve-out, and returns the resolved IP so
+ * callers can pin the connection to it (defends against DNS rebinding).
+ *
+ * IP literals are validated directly. Hostnames are resolved via
+ * `gethostbynamel()`; if any returned address is private or reserved the
+ * helper rejects, defending against split-horizon DNS that returns a public
+ * answer to one resolver and a private one to another. Only IPv4 records are
+ * considered, mirroring the default behaviour of `wp_http_validate_url`.
+ *
+ * @param string $host The hostname or IP literal to resolve.
+ *
+ * @return string|false A safe public IP, or false when no safe address is available.
+ */
+function resolve_public_host( $host ) {
+	if ( ! is_string( $host ) || '' === $host ) {
+		return false;
+	}
+
+	// Already an IP literal — validate directly.
+	if ( \filter_var( $host, FILTER_VALIDATE_IP ) ) {
+		return \filter_var( $host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE )
+			? $host
+			: false;
+	}
+
+	$ips = \gethostbynamel( $host );
+	if ( ! $ips ) {
+		return false;
+	}
+
+	// Reject if any resolved address is private/reserved.
+	foreach ( $ips as $ip ) {
+		if ( ! \filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
+			return false;
+		}
+	}
+
+	return $ips[0];
+}

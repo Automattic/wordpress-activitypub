@@ -10,6 +10,7 @@ namespace Activitypub\OAuth;
 use Activitypub\Sanitize;
 
 use function Activitypub\get_client_ip;
+use function Activitypub\resolve_public_host;
 
 /**
  * Client class for managing OAuth 2.0 client registrations.
@@ -181,7 +182,7 @@ class Client {
 			 * This can happen when a previous discovery failed to parse the metadata
 			 * correctly (e.g. before ActivityStreams vocabulary support was added).
 			 */
-			if ( $client->is_discovered() && empty( $client->get_redirect_uris() ) && \filter_var( $client_id, FILTER_VALIDATE_URL ) ) {
+			if ( $client->is_discovered() && empty( $client->get_redirect_uris() ) && self::is_discoverable_url( $client_id ) ) {
 				\wp_delete_post( $posts[0]->ID, true );
 				return self::discover_and_register( $client_id );
 			}
@@ -189,8 +190,8 @@ class Client {
 			return $client;
 		}
 
-		// If client_id is a URL, try auto-discovery.
-		if ( \filter_var( $client_id, FILTER_VALIDATE_URL ) ) {
+		// If client_id is a discoverable URL (HTTPS), try auto-discovery.
+		if ( self::is_discoverable_url( $client_id ) ) {
 			return self::discover_and_register( $client_id );
 		}
 
@@ -199,6 +200,25 @@ class Client {
 			\__( 'OAuth client not found.', 'activitypub' ),
 			array( 'status' => 404 )
 		);
+	}
+
+	/**
+	 * Determine whether a client_id is a discoverable URL.
+	 *
+	 * Only HTTPS URLs are eligible. The CIMD draft requires HTTPS for
+	 * production, and accepting cleartext URLs would let a network-position
+	 * attacker rewrite the metadata response and inject attacker-controlled
+	 * redirect URIs that preserve the same client_id.
+	 *
+	 * @param string $client_id The client ID to check.
+	 * @return bool True if the client_id is an HTTPS URL eligible for discovery.
+	 */
+	private static function is_discoverable_url( $client_id ) {
+		if ( ! \filter_var( $client_id, FILTER_VALIDATE_URL ) ) {
+			return false;
+		}
+
+		return 'https' === \strtolower( (string) \wp_parse_url( $client_id, PHP_URL_SCHEME ) );
 	}
 
 	/**
@@ -305,6 +325,22 @@ class Client {
 	 * @return array|\WP_Error Metadata array or error.
 	 */
 	private static function fetch_client_metadata( $url ) {
+		/*
+		 * Resolve the host explicitly and reject private/loopback addresses.
+		 * wp_safe_remote_get() also performs URL validation but has a same-host
+		 * carve-out (it allows requests to the WordPress site's own host even
+		 * when that host is loopback/private). The CIMD document is meant to
+		 * be a publicly resolvable HTTPS URL, so close that gap up front.
+		 */
+		$host = \wp_parse_url( $url, PHP_URL_HOST );
+		if ( ! $host || false === resolve_public_host( $host ) ) {
+			return new \WP_Error(
+				'activitypub_client_unsafe_host',
+				\__( 'The client metadata URL host is not allowed.', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
+
 		$args = array(
 			'timeout'     => 10,
 			'headers'     => array(
@@ -317,8 +353,7 @@ class Client {
 		 * Always use wp_safe_remote_get for the metadata document fetch. RFC 8252's
 		 * loopback allowance applies to redirect URIs (Section 7.3), not to the
 		 * client metadata document — that's expected to be a publicly resolvable
-		 * HTTPS URL. Allowing loopback here would expose the server to SSRF via a
-		 * crafted client_id pointing at localhost or *.localhost subdomains.
+		 * HTTPS URL.
 		 */
 		$response = \wp_safe_remote_get( $url, $args );
 

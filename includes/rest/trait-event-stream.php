@@ -18,6 +18,8 @@ use Activitypub\Collection\Outbox;
 use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Server as OAuth_Server;
 
+use function Activitypub\resolve_public_host;
+
 
 /**
  * Event Stream Trait.
@@ -211,7 +213,7 @@ trait Event_Stream {
 		 * stream_socket_client would otherwise do its own lookup, which opens
 		 * a DNS-rebinding window after validate_url() already passed.
 		 */
-		$ip = self::resolve_public_host( $host );
+		$ip = resolve_public_host( $host );
 		if ( false === $ip ) {
 			\status_header( 502 );
 			\header( 'Content-Type: application/json' );
@@ -567,37 +569,5 @@ trait Event_Stream {
 		}
 
 		return $query->posts;
-	}
-
-	/**
-	 * Resolve a hostname to an IP address and reject anything in a private
-	 * or reserved range. Returns the resolved IP for direct connection so
-	 * the actual TCP connect can't be redirected by a later DNS change.
-	 *
-	 * @param string $host The hostname to resolve.
-	 *
-	 * @return string|false Resolved public IP, or false when no safe address is available.
-	 */
-	private static function resolve_public_host( $host ) {
-		// Already an IP literal — validate directly.
-		if ( \filter_var( $host, FILTER_VALIDATE_IP ) ) {
-			return \filter_var( $host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE )
-				? $host
-				: false;
-		}
-
-		$ips = \gethostbynamel( $host );
-		if ( ! $ips ) {
-			return false;
-		}
-
-		// Reject if any resolved address is private/reserved (defends against split-horizon DNS).
-		foreach ( $ips as $ip ) {
-			if ( ! \filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
-				return false;
-			}
-		}
-
-		return $ips[0];
 	}
 }
