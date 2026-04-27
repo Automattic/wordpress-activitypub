@@ -13,6 +13,25 @@ namespace Activitypub\Tests;
 class Test_Functions_Request extends ActivityPub_TestCase_Cache_HTTP {
 
 	/**
+	 * Filter callbacks registered by stub_resolved_addresses(), removed in tear_down().
+	 *
+	 * @var callable[]
+	 */
+	private $stub_callbacks = array();
+
+	/**
+	 * Tear down registered stubs so they can't leak between tests.
+	 */
+	public function tear_down() {
+		foreach ( $this->stub_callbacks as $callback ) {
+			\remove_filter( 'activitypub_pre_resolve_public_host', $callback );
+		}
+		$this->stub_callbacks = array();
+
+		parent::tear_down();
+	}
+
+	/**
 	 * Test the get_remote_metadata_by_actor function.
 	 *
 	 * @covers \Activitypub\get_remote_metadata_by_actor
@@ -114,19 +133,18 @@ class Test_Functions_Request extends ActivityPub_TestCase_Cache_HTTP {
 
 	/**
 	 * Inject a fixed set of resolved addresses for the next call so the test
-	 * doesn't depend on real DNS.
+	 * doesn't depend on real DNS. The registered filter is recorded and removed
+	 * automatically in tear_down() so it can't leak into later tests.
 	 *
 	 * @param array $addresses ipv4/ipv6 lists to inject.
 	 */
 	private function stub_resolved_addresses( $addresses ) {
-		\add_filter(
-			'activitypub_pre_resolve_public_host',
-			static function () use ( $addresses ) {
-				return $addresses;
-			},
-			10,
-			2
-		);
+		$callback = static function () use ( $addresses ) {
+			return $addresses;
+		};
+
+		$this->stub_callbacks[] = $callback;
+		\add_filter( 'activitypub_pre_resolve_public_host', $callback, 10, 2 );
 	}
 
 	/**
