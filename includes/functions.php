@@ -404,6 +404,11 @@ function get_client_ip() {
 	 */
 	$ip = \apply_filters( 'activitypub_client_ip', $ip );
 
+	// Tolerate surrounding whitespace from filter callbacks; FILTER_VALIDATE_IP would otherwise reject it.
+	if ( \is_string( $ip ) ) {
+		$ip = \trim( $ip );
+	}
+
 	// Re-validate so a misbehaving filter can't return a sentinel string that would collapse all callers into one bucket.
 	return \is_string( $ip ) && \filter_var( $ip, FILTER_VALIDATE_IP ) ? $ip : '';
 }

@@ -131,6 +131,61 @@ class Test_Authorization_Controller extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that GET authorize fails closed when no client IP can be determined.
+	 *
+	 * The endpoint must reject the request rather than share a single
+	 * rate-limit bucket across every unidentifiable caller.
+	 *
+	 * @covers ::authorize
+	 */
+	public function test_authorize_fails_closed_without_client_ip() {
+		$server_keys = array(
+			'REMOTE_ADDR',
+			'HTTP_CF_CONNECTING_IP',
+			'HTTP_CLIENT_IP',
+			'HTTP_X_FORWARDED_FOR',
+			'HTTP_X_FORWARDED',
+			'HTTP_X_CLUSTER_CLIENT_IP',
+			'HTTP_FORWARDED_FOR',
+			'HTTP_FORWARDED',
+		);
+		$snapshot    = array();
+		foreach ( $server_keys as $key ) {
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- Capturing existing test fixture values for restore.
+			$snapshot[ $key ] = \array_key_exists( $key, $_SERVER ) ? $_SERVER[ $key ] : null;
+		}
+
+		$empty_ip_transient = 'ap_oauth_auth_' . \md5( '' );
+		\delete_transient( $empty_ip_transient );
+
+		try {
+			foreach ( $server_keys as $key ) {
+				unset( $_SERVER[ $key ] );
+			}
+
+			$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/authorize' );
+			$request->set_param( 'response_type', 'code' );
+			$request->set_param( 'client_id', $this->client_id );
+			$request->set_param( 'redirect_uri', $this->redirect_uri );
+
+			$response = \rest_get_server()->dispatch( $request );
+			$data     = $response->get_data();
+
+			$this->assertEquals( 429, $response->get_status() );
+			$this->assertEquals( 'activitypub_rate_limit', $data['code'] );
+			$this->assertFalse( \get_transient( $empty_ip_transient ) );
+		} finally {
+			foreach ( $snapshot as $key => $value ) {
+				if ( null === $value ) {
+					unset( $_SERVER[ $key ] );
+				} else {
+					$_SERVER[ $key ] = $value;
+				}
+			}
+		}
+	}
+
+	/**
 	 * Test that GET authorize redirects to wp-login.php error page for unknown client.
 	 *
 	 * @covers ::authorize
