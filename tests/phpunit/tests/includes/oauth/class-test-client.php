@@ -376,6 +376,57 @@ class Test_Client extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that auto-discovery via Client::get() fails closed when no client
+	 * IP can be determined.
+	 *
+	 * The discover_and_register() rate limiter must reject the request
+	 * rather than share a single bucket across every unidentifiable caller.
+	 *
+	 * @covers ::get
+	 */
+	public function test_discovery_fails_closed_without_client_ip() {
+		$server_keys = array(
+			'REMOTE_ADDR',
+			'HTTP_CF_CONNECTING_IP',
+			'HTTP_CLIENT_IP',
+			'HTTP_X_FORWARDED_FOR',
+			'HTTP_X_FORWARDED',
+			'HTTP_X_CLUSTER_CLIENT_IP',
+			'HTTP_FORWARDED_FOR',
+			'HTTP_FORWARDED',
+		);
+		$snapshot    = array();
+		foreach ( $server_keys as $key ) {
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- Capturing existing test fixture values for restore.
+			$snapshot[ $key ] = \array_key_exists( $key, $_SERVER ) ? $_SERVER[ $key ] : null;
+		}
+
+		$empty_ip_transient = 'ap_oauth_disc_' . \md5( '' );
+		\delete_transient( $empty_ip_transient );
+
+		try {
+			foreach ( $server_keys as $key ) {
+				unset( $_SERVER[ $key ] );
+			}
+
+			// URL-form client_id triggers discover_and_register().
+			$result = Client::get( 'https://unidentifiable.example.com/cimd.json' );
+
+			$this->assertInstanceOf( \WP_Error::class, $result );
+			$this->assertEquals( 'activitypub_rate_limited', $result->get_error_code() );
+			$this->assertFalse( \get_transient( $empty_ip_transient ) );
+		} finally {
+			foreach ( $snapshot as $key => $value ) {
+				if ( null === $value ) {
+					unset( $_SERVER[ $key ] );
+				} else {
+					$_SERVER[ $key ] = $value;
+				}
+			}
+		}
+	}
+
+	/**
 	 * Test get method returns error for non-existent client.
 	 *
 	 * @covers ::get
