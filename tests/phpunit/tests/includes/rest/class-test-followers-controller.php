@@ -244,14 +244,21 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	 */
 	public function rejected_authority_provider() {
 		return array(
-			'loopback_ipv4'       => array( 'https://127.0.0.1' ),
-			'rfc1918'             => array( 'https://10.0.0.1' ),
-			'link_local_metadata' => array( 'https://169.254.169.254' ),
-			'unspecified'         => array( 'https://0.0.0.0' ),
-			'ipv6_loopback'       => array( 'https://[::1]' ),
-			'localhost_name'      => array( 'https://localhost' ),
-			'localhost_subdomain' => array( 'https://api.localhost' ),
-			'mdns_local'          => array( 'https://printer.local' ),
+			'loopback_ipv4'              => array( 'https://127.0.0.1' ),
+			'rfc1918'                    => array( 'https://10.0.0.1' ),
+			'link_local_metadata'        => array( 'https://169.254.169.254' ),
+			'unspecified'                => array( 'https://0.0.0.0' ),
+			'ipv6_loopback'              => array( 'https://[::1]' ),
+			'localhost_name'             => array( 'https://localhost' ),
+			'localhost_subdomain'        => array( 'https://api.localhost' ),
+			'mdns_local'                 => array( 'https://printer.local' ),
+			// FQDN trailing dot is the same host as without the dot.
+			'localhost_trailing_dot'     => array( 'https://localhost.' ),
+			'mdns_local_trailing_dot'    => array( 'https://printer.local.' ),
+			'sub_localhost_trailing_dot' => array( 'https://api.localhost.' ),
+			// IPv4-mapped IPv6 literals are accepted by FILTER_FLAG_NO_RES_RANGE on some PHP builds; reject them explicitly.
+			'ipv4_mapped_loopback'       => array( 'https://[::ffff:127.0.0.1]' ),
+			'ipv4_mapped_rfc1918'        => array( 'https://[::ffff:10.0.0.1]' ),
 		);
 	}
 

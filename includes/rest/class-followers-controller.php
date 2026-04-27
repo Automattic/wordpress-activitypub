@@ -13,6 +13,7 @@ use Activitypub\Collection\Remote_Actors;
 
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_ipv4_mapped_ipv6;
 
 /**
  * Followers_Controller class.
@@ -119,7 +120,18 @@ class Followers_Controller extends Actors_Controller {
 								// wp_parse_url returns IPv6 hosts with brackets (e.g. "[::1]") — strip before validation.
 								$host = \trim( $host, '[]' );
 
+								// FQDN trailing dot (e.g. "localhost.") is the same host — strip before comparison.
+								$host = \rtrim( $host, '.' );
+
+								if ( '' === $host ) {
+									return false;
+								}
+
 								if ( \filter_var( $host, FILTER_VALIDATE_IP ) ) {
+									if ( is_ipv4_mapped_ipv6( $host ) ) {
+										return false;
+									}
+
 									return (bool) \filter_var( $host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE );
 								}
 
