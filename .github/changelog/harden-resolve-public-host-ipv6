@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Hardened outbound request safety to cover IPv6-only third-party hosts.
