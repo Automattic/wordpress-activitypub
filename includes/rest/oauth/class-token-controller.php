@@ -154,13 +154,13 @@ class Token_Controller extends \WP_REST_Controller {
 		// Rate-limit token requests to prevent brute-force attacks (max 20 per minute per IP).
 		$ip = get_client_ip();
 		if ( '' === $ip ) {
-			return $this->token_error( 'invalid_request', 'Too many token requests. Please try again later.' );
+			return $this->token_error( 'rate_limited', 'Too many token requests. Please try again later.', 429 );
 		}
 		$transient_key = 'ap_oauth_tok_' . \md5( $ip );
 		$count         = (int) \get_transient( $transient_key );
 
 		if ( $count >= 20 ) {
-			return $this->token_error( 'invalid_request', 'Too many token requests. Please try again later.' );
+			return $this->token_error( 'rate_limited', 'Too many token requests. Please try again later.', 429 );
 		}
 
 		\set_transient( $transient_key, $count + 1, MINUTE_IN_SECONDS );
@@ -392,15 +392,17 @@ class Token_Controller extends \WP_REST_Controller {
 	 *
 	 * @param string $error             Error code.
 	 * @param string $error_description Error description.
+	 * @param int    $status            Optional. HTTP status code. Defaults to 400 per RFC 6749 §5.2;
+	 *                                  callers should pass 429 for rate-limit responses (RFC 6585).
 	 * @return \WP_REST_Response
 	 */
-	private function token_error( $error, $error_description ) {
+	private function token_error( $error, $error_description, $status = 400 ) {
 		return new \WP_REST_Response(
 			array(
 				'error'             => $error,
 				'error_description' => $error_description,
 			),
-			400,
+			$status,
 			array( 'Content-Type' => 'application/json' )
 		);
 	}

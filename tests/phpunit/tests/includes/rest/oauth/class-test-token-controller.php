@@ -147,6 +147,35 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that the token endpoint returns 429 when the per-IP rate limit
+	 * is hit, rather than the previous 400 / `invalid_request` shape.
+	 *
+	 * @covers ::token
+	 */
+	public function test_token_rate_limited_returns_429() {
+		$ip            = \Activitypub\get_client_ip();
+		$transient_key = 'ap_oauth_tok_' . \md5( $ip );
+
+		\set_transient( $transient_key, 20, MINUTE_IN_SECONDS );
+
+		try {
+			$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/token' );
+			$request->set_param( 'grant_type', 'authorization_code' );
+			$request->set_param( 'client_id', $this->client_id );
+			$request->set_param( 'code', 'irrelevant' );
+			$request->set_param( 'redirect_uri', $this->redirect_uri );
+
+			$response = \rest_get_server()->dispatch( $request );
+			$data     = $response->get_data();
+
+			$this->assertEquals( 429, $response->get_status() );
+			$this->assertEquals( 'rate_limited', $data['error'] );
+		} finally {
+			\delete_transient( $transient_key );
+		}
+	}
+
+	/**
 	 * Test token request with unknown client.
 	 *
 	 * @covers ::token
