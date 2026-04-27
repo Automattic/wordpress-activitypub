@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Delete activities no longer bypass signature verification on endpoints that explicitly require it.

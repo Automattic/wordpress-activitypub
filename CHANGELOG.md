@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.2.0] - 2026-04-27
+### Security
+- ActivityPub REST endpoints no longer advertise credentialed cross-origin access. Browser-based clients using OAuth bearer tokens continue to work as before. [#3237]
+- Aligned the deprecated signature verifier's clock tolerance with the supported verifiers. [#3230]
+- Blocked additional reserved IPv6 ranges from outbound request safety checks. [#3233]
+- Decoded percent-encoded forms in the follower sync authority before the safety check. [#3234]
+- Fail closed when an OAuth request can't be tied to a client IP, instead of sharing one rate-limit bucket. [#3231]
+- Hardened input handling for incoming federated activity types. [#3227]
+- Hardened outbound request handling for third-party app connections and live activity streams. [#3228]
+- Hardened outbound request safety to cover IPv6-only third-party hosts. [#3229]
+- Per-IP rate limits now only trust the actual TCP peer by default, so an attacker on a directly-exposed site cannot bypass the cap by spoofing X-Forwarded-For or similar proxy headers. Sites behind a trusted reverse proxy (Cloudflare, Akamai, nginx) can opt the relevant header back in via the new "activitypub_client_ip_sources" filter. [#3238]
+- Reject follower sync requests targeted at internal-network hosts at the route layer. [#3232]
+- Required signatures on HEAD requests to peer-only endpoints. [#3235]
+
+### Changed
+- Development tooling: require PHPUnit 9.6.33 or newer (security fix CVE-2026-24765). No runtime impact for end users. [#3224]
+- OAuth public clients must now use PKCE by default, matching OAuth 2.1. Site operators can relax this via the activitypub_oauth_require_pkce filter if legacy clients need to connect. [#3222]
+- Returned the standard rate-limit response from the OAuth token endpoint when too many requests are sent. [#3236]
+
+### Fixed
+- Delete activities no longer bypass signature verification on endpoints that explicitly require it. [#3223]
+- OAuth token revocation now verifies the caller owns the token being revoked. [#3221]
+- Tighten HTTP signature verification: narrow the clock-skew window, reject signatures that carry no freshness timestamp, and cap unreasonable expiry times. Peers that sign without a Date or creation timestamp will no longer verify. [#3212]
+- Trim dev-only configuration files from the plugin release package. [#3214]
+
 ## [8.1.1] - 2026-04-22
 ### Added
 - Added the `activitypub_post_object_type` filter so plugins can override the federated object type (Note, Article, Page) for a post. [#3210]
@@ -1824,6 +1849,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[8.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/8.1.1...8.2.0
 [8.1.1]: https://github.com/Automattic/wordpress-activitypub/compare/8.1.0...8.1.1
 [8.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/8.0.2...8.1.0
 [8.0.2]: https://github.com/Automattic/wordpress-activitypub/compare/8.0.1...8.0.2

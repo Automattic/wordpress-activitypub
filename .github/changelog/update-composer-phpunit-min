@@ -1,4 +1,0 @@
-Significance: patch
-Type: changed
-
-Development tooling: require PHPUnit 9.6.33 or newer (security fix CVE-2026-24765). No runtime impact for end users.
