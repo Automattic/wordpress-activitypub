@@ -1509,36 +1509,37 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		};
 		\add_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 5, 2 );
 
-		// Activity where the followers URL is in cc.
-		$activity = array(
-			'type'  => 'Create',
-			'actor' => $remote_actor_url,
-			'to'    => array( 'https://example.com/some-other-actor' ),
-			'cc'    => array( $remote_followers_url ),
-		);
+		try {
+			// Activity where the followers URL is in cc.
+			$activity = array(
+				'type'  => 'Create',
+				'actor' => $remote_actor_url,
+				'to'    => array( 'https://example.com/some-other-actor' ),
+				'cc'    => array( $remote_followers_url ),
+			);
 
-		$reflection = new \ReflectionClass( $this->inbox_controller );
-		$method     = $reflection->getMethod( 'get_local_recipients' );
-		if ( \PHP_VERSION_ID < 80100 ) {
-			$method->setAccessible( true );
+			$reflection = new \ReflectionClass( $this->inbox_controller );
+			$method     = $reflection->getMethod( 'get_local_recipients' );
+			if ( \PHP_VERSION_ID < 80100 ) {
+				$method->setAccessible( true );
+			}
+
+			$result = $method->invoke( $this->inbox_controller, $activity );
+
+			// The followers URL should NOT have been fetched via HTTP.
+			$this->assertNotContains(
+				$remote_followers_url,
+				$fetched_urls,
+				'Should NOT fetch the actor followers URL via HTTP when it matches cached metadata'
+			);
+
+			// But the followers should still be resolved.
+			$this->assertContains( self::$user_id, $result, 'Should resolve followers without HTTP fetch' );
+		} finally {
+			\delete_option( 'activitypub_actor_mode' );
+			\remove_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 5 );
+			\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
 		}
-
-		$result = $method->invoke( $this->inbox_controller, $activity );
-
-		// The followers URL should NOT have been fetched via HTTP.
-		$this->assertNotContains(
-			$remote_followers_url,
-			$fetched_urls,
-			'Should NOT fetch the actor followers URL via HTTP when it matches cached metadata'
-		);
-
-		// But the followers should still be resolved.
-		$this->assertContains( self::$user_id, $result, 'Should resolve followers without HTTP fetch' );
-
-		// Clean up.
-		\delete_option( 'activitypub_actor_mode' );
-		\remove_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 5 );
-		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
 	}
 
 	/**
@@ -1587,49 +1588,50 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		};
 		\add_filter( 'activitypub_max_remote_recipient_fetches', $cap_filter );
 
-		// 6 non-followers remote URLs + the followers URL.
-		$activity = array(
-			'type'  => 'Create',
-			'actor' => $remote_actor_url,
-			'to'    => array(
-				'https://other.example.com/user/1',
-				'https://other.example.com/user/2',
-				'https://other.example.com/user/3',
-				'https://other.example.com/user/4',
-			),
-			'cc'    => array(
-				'https://other.example.com/user/5',
-				'https://other.example.com/user/6',
+		try {
+			// 6 non-followers remote URLs + the followers URL.
+			$activity = array(
+				'type'  => 'Create',
+				'actor' => $remote_actor_url,
+				'to'    => array(
+					'https://other.example.com/user/1',
+					'https://other.example.com/user/2',
+					'https://other.example.com/user/3',
+					'https://other.example.com/user/4',
+				),
+				'cc'    => array(
+					'https://other.example.com/user/5',
+					'https://other.example.com/user/6',
+					$remote_followers_url,
+				),
+			);
+
+			$reflection = new \ReflectionClass( $this->inbox_controller );
+			$method     = $reflection->getMethod( 'get_local_recipients' );
+			if ( \PHP_VERSION_ID < 80100 ) {
+				$method->setAccessible( true );
+			}
+
+			$result = $method->invoke( $this->inbox_controller, $activity );
+
+			// Only 3 remote URLs should have been fetched (the cap).
+			$this->assertCount( 3, $fetched_urls, 'Should only fetch up to the cap limit' );
+
+			// The followers URL should NOT be in the fetched list (detected from cache).
+			$this->assertNotContains(
 				$remote_followers_url,
-			),
-		);
+				$fetched_urls,
+				'Followers URL should be handled without consuming a fetch slot'
+			);
 
-		$reflection = new \ReflectionClass( $this->inbox_controller );
-		$method     = $reflection->getMethod( 'get_local_recipients' );
-		if ( \PHP_VERSION_ID < 80100 ) {
-			$method->setAccessible( true );
+			// Followers should still be resolved despite the cap.
+			$this->assertContains( self::$user_id, $result, 'Should resolve followers even when cap is exceeded' );
+		} finally {
+			\delete_option( 'activitypub_actor_mode' );
+			\remove_filter( 'activitypub_max_remote_recipient_fetches', $cap_filter );
+			\remove_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 5 );
+			\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
 		}
-
-		$result = $method->invoke( $this->inbox_controller, $activity );
-
-		// Only 3 remote URLs should have been fetched (the cap).
-		$this->assertCount( 3, $fetched_urls, 'Should only fetch up to the cap limit' );
-
-		// The followers URL should NOT be in the fetched list (detected from cache).
-		$this->assertNotContains(
-			$remote_followers_url,
-			$fetched_urls,
-			'Followers URL should be handled without consuming a fetch slot'
-		);
-
-		// Followers should still be resolved despite the cap.
-		$this->assertContains( self::$user_id, $result, 'Should resolve followers even when cap is exceeded' );
-
-		// Clean up.
-		\delete_option( 'activitypub_actor_mode' );
-		\remove_filter( 'activitypub_max_remote_recipient_fetches', $cap_filter );
-		\remove_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 5 );
-		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
 	}
 
 	/**
@@ -1675,34 +1677,35 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		};
 		\add_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 5, 2 );
 
-		$activity = array(
-			'type'  => 'Create',
-			'actor' => $remote_actor_url,
-			'to'    => array( 'https://someone-else.example.com/user/1' ),
-			'cc'    => array( $remote_followers_url ),
-		);
+		try {
+			$activity = array(
+				'type'  => 'Create',
+				'actor' => $remote_actor_url,
+				'to'    => array( 'https://someone-else.example.com/user/1' ),
+				'cc'    => array( $remote_followers_url ),
+			);
 
-		$reflection = new \ReflectionClass( $this->inbox_controller );
-		$method     = $reflection->getMethod( 'get_local_recipients' );
-		if ( \PHP_VERSION_ID < 80100 ) {
-			$method->setAccessible( true );
+			$reflection = new \ReflectionClass( $this->inbox_controller );
+			$method     = $reflection->getMethod( 'get_local_recipients' );
+			if ( \PHP_VERSION_ID < 80100 ) {
+				$method->setAccessible( true );
+			}
+
+			$result = $method->invoke( $this->inbox_controller, $activity );
+
+			// Cross-domain followers URL should NOT have been fetched.
+			$this->assertNotContains(
+				$remote_followers_url,
+				$fetched_urls,
+				'Should detect cross-domain followers URL from cached metadata without fetch'
+			);
+
+			// But followers should still be resolved.
+			$this->assertContains( self::$user_id, $result, 'Should resolve followers for cross-domain collection URL' );
+		} finally {
+			\delete_option( 'activitypub_actor_mode' );
+			\remove_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 5 );
+			\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
 		}
-
-		$result = $method->invoke( $this->inbox_controller, $activity );
-
-		// Cross-domain followers URL should NOT have been fetched.
-		$this->assertNotContains(
-			$remote_followers_url,
-			$fetched_urls,
-			'Should detect cross-domain followers URL from cached metadata without fetch'
-		);
-
-		// But followers should still be resolved.
-		$this->assertContains( self::$user_id, $result, 'Should resolve followers for cross-domain collection URL' );
-
-		// Clean up.
-		\delete_option( 'activitypub_actor_mode' );
-		\remove_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 5 );
-		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
 	}
 }

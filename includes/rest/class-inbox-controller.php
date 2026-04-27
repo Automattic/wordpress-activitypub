@@ -398,7 +398,30 @@ class Inbox_Controller extends \WP_REST_Controller {
 			$user_ids = Following::get_follower_ids( $actor_uri );
 		}
 
-		foreach ( extract_recipients_from_activity( $activity ) as $recipient ) {
+		$recipients = extract_recipients_from_activity( $activity );
+
+		/*
+		 * Pre-compute which recipients are already known remote actors so the
+		 * cached-actor short-circuit becomes an O(1) array lookup rather than
+		 * one DB query per recipient. This bounds the DB cost of a flood of
+		 * unknown recipient URIs to one batched SELECT (chunked) regardless
+		 * of how many were sent.
+		 */
+		$candidate_uris = array();
+		foreach ( $recipients as $recipient ) {
+			if (
+				! \is_string( $recipient )
+				|| \in_array( $recipient, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS, true )
+				|| is_same_domain( $recipient )
+				|| $recipient === $actor_followers_url
+			) {
+				continue;
+			}
+			$candidate_uris[] = $recipient;
+		}
+		$cached_uris = $candidate_uris ? Remote_Actors::get_existing_uris( $candidate_uris ) : array();
+
+		foreach ( $recipients as $recipient ) {
 			// Skip public audience identifiers - they're not actual recipients to fetch.
 			if ( \in_array( $recipient, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS, true ) ) {
 				continue;
@@ -412,7 +435,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				}
 
 				// Already cached as a remote actor: not a collection, so no local recipients to add.
-				if ( ! \is_wp_error( Remote_Actors::get_by_uri( $recipient ) ) ) {
+				if ( isset( $cached_uris[ $recipient ] ) ) {
 					continue;
 				}
 
