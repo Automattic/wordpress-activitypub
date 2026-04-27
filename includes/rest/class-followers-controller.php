@@ -109,20 +109,15 @@ class Followers_Controller extends Actors_Controller {
 							'pattern'           => '^https?://[^/]+$',
 							'required'          => true,
 							'validate_callback' => static function ( $param ) {
-								// Reject internal-address shapes early. The signer-host check downstream
-								// already enforces authority matching the verified peer; this just
-								// keeps obviously-internal values from reaching that code at all.
-								$host = \strtolower( (string) \wp_parse_url( (string) $param, PHP_URL_HOST ) );
-								if ( '' === $host ) {
-									return false;
-								}
-
-								// wp_parse_url returns IPv6 hosts with brackets (e.g. "[::1]") — strip before validation.
-								$host = \trim( $host, '[]' );
-
-								// FQDN trailing dot (e.g. "localhost.") is the same host — strip before comparison.
-								$host = \rtrim( $host, '.' );
-
+								/*
+								 * Reject internal-address shapes early. The signer-host check
+								 * downstream already enforces authority matching the verified
+								 * peer; this just keeps obviously-internal values from reaching
+								 * that code at all. Both places run the value through
+								 * self::normalize_host() so semantically equivalent hosts always
+								 * agree.
+								 */
+								$host = self::normalize_host( (string) \wp_parse_url( (string) $param, PHP_URL_HOST ) );
 								if ( '' === $host ) {
 									return false;
 								}
@@ -246,8 +241,8 @@ class Followers_Controller extends Actors_Controller {
 		 * matches the signing peer, so that instances cannot "get tricked
 		 * into requesting the followers list of a third-party individual".
 		 */
-		$signer_host = self::get_signer_host( $request );
-		$asked_host  = \strtolower( (string) \wp_parse_url( (string) $authority, \PHP_URL_HOST ) );
+		$signer_host = self::normalize_host( self::get_signer_host( $request ) );
+		$asked_host  = self::normalize_host( (string) \wp_parse_url( (string) $authority, \PHP_URL_HOST ) );
 
 		if ( ! $signer_host || ! $asked_host || $signer_host !== $asked_host ) {
 			return new \WP_Error(
@@ -283,6 +278,23 @@ class Followers_Controller extends Actors_Controller {
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 
 		return $response;
+	}
+
+	/**
+	 * Normalize a host so comparisons are consistent.
+	 *
+	 * Lowercases, strips IPv6 brackets, and trims a single FQDN trailing
+	 * dot. Used by both the validate_callback for the `authority` arg and
+	 * the signer-host comparison in get_partial_followers() so semantically
+	 * equivalent host strings always match.
+	 *
+	 * @param string $host Raw host string.
+	 * @return string Normalized host.
+	 */
+	private static function normalize_host( $host ) {
+		$host = \strtolower( (string) $host );
+		$host = \trim( $host, '[]' );
+		return \rtrim( $host, '.' );
 	}
 
 	/**
