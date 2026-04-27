@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.9
-Stable tag: 8.1.1
+Stable tag: 8.2.0
 Requires PHP: 7.4
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -110,6 +110,31 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 8.2.0 - 2026-04-27
+#### Security
+- ActivityPub REST endpoints no longer advertise credentialed cross-origin access. Browser-based clients using OAuth bearer tokens continue to work as before.
+- Aligned the deprecated signature verifier's clock tolerance with the supported verifiers.
+- Blocked additional reserved IPv6 ranges from outbound request safety checks.
+- Decoded percent-encoded forms in the follower sync authority before the safety check.
+- Fail closed when an OAuth request can't be tied to a client IP, instead of sharing one rate-limit bucket.
+- Hardened input handling for incoming federated activity types.
+- Hardened outbound request handling for third-party app connections and live activity streams.
+- Hardened outbound request safety to cover IPv6-only third-party hosts.
+- Per-IP rate limits now only trust the actual TCP peer by default, so an attacker on a directly-exposed site cannot bypass the cap by spoofing X-Forwarded-For or similar proxy headers. Sites behind a trusted reverse proxy (Cloudflare, Akamai, nginx) can opt the relevant header back in via the new "activitypub_client_ip_sources" filter.
+- Reject follower sync requests targeted at internal-network hosts at the route layer.
+- Required signatures on HEAD requests to peer-only endpoints.
+
+#### Changed
+- Development tooling: require PHPUnit 9.6.33 or newer (security fix CVE-2026-24765). No runtime impact for end users.
+- OAuth public clients must now use PKCE by default, matching OAuth 2.1. Site operators can relax this via the activitypub_oauth_require_pkce filter if legacy clients need to connect.
+- Returned the standard rate-limit response from the OAuth token endpoint when too many requests are sent.
+
+#### Fixed
+- Delete activities no longer bypass signature verification on endpoints that explicitly require it.
+- OAuth token revocation now verifies the caller owns the token being revoked.
+- Tighten HTTP signature verification: narrow the clock-skew window, reject signatures that carry no freshness timestamp, and cap unreasonable expiry times. Peers that sign without a Date or creation timestamp will no longer verify.
+- Trim dev-only configuration files from the plugin release package.
 
 ### 8.1.1 - 2026-04-22
 #### Added

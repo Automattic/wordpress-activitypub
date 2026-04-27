@@ -259,6 +259,17 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 			// IPv4-mapped IPv6 literals are accepted by FILTER_FLAG_NO_RES_RANGE on some PHP builds; reject them explicitly.
 			'ipv4_mapped_loopback'       => array( 'https://[::ffff:127.0.0.1]' ),
 			'ipv4_mapped_rfc1918'        => array( 'https://[::ffff:10.0.0.1]' ),
+			// IPv6 transitional / reserved ranges PHP filter doesn't catch.
+			'sixtofour_loopback'         => array( 'https://[2002:7f00:1::1]' ),
+			'sixtofour_rfc1918'          => array( 'https://[2002:0a00:0001::1]' ),
+			'teredo'                     => array( 'https://[2001:0:53aa:64c:18:7d:11ee:c4]' ),
+			'documentation'              => array( 'https://[2001:db8::1]' ),
+			'nat64_well_known'           => array( 'https://[64:ff9b::8.8.8.8]' ),
+			'discard_prefix'             => array( 'https://[100::1]' ),
+			// Percent-encoded forms must be decoded before the blocklist check.
+			'pctenc_localhost'           => array( 'https://%6Cocalhost' ),
+			'pctenc_v6_brackets_lo'      => array( 'https://%5B::1%5D' ),
+			'pctenc_v6_brackets_rfc1918' => array( 'https://%5B::ffff:10.0.0.1%5D' ),
 		);
 	}
 
@@ -284,6 +295,32 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 
 		$this->assertSame( 400, $response->get_status() );
 		$this->assertSame( 'rest_invalid_param', $response->get_data()['code'] );
+	}
+
+	/**
+	 * HEAD requests to the FEP-8fcf endpoint must require a signature too.
+	 *
+	 * The default verify_signature() bypasses HEAD so caches/link-checkers
+	 * can probe public endpoints, but a peer-only route (`$force_signature`
+	 * = true) must not leak existence to unauthenticated callers via HEAD.
+	 *
+	 * @covers \Activitypub\Rest\Verification::verify_signature
+	 */
+	public function test_sync_rejects_unsigned_head_request() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		try {
+			$request = new \WP_REST_Request( 'HEAD', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/followers/sync' );
+			$request->set_param( 'authority', 'https://evil.example' );
+			$request->set_param( 'page', 1 );
+
+			$response = rest_get_server()->dispatch( $request );
+
+			$this->assertErrorResponse( 'activitypub_signature_verification', $response, 401 );
+		} finally {
+			\delete_option( 'activitypub_actor_mode' );
+		}
 	}
 
 	/**
@@ -405,6 +442,42 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 		$data = $response->get_data();
 		$this->assertArrayHasKey( 'orderedItems', $data );
 		$this->assertContains( 'https://peer.example/users/alice', $data['orderedItems'] );
+	}
+
+	/**
+	 * A percent-encoded authority that decodes to a registered peer host must
+	 * pass the signer-host match AND return the matching follower set. The
+	 * route accepts percent-encoded reg-names, so the handler has to canonicalise
+	 * the value once and use that canonical form for both the authority match
+	 * and the inbox LIKE query — otherwise the request would pass the match
+	 * but fall through to an empty result because stored inbox URLs are
+	 * unencoded.
+	 *
+	 * @covers ::get_partial_followers
+	 */
+	public function test_sync_decodes_percent_encoded_authority_for_query() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\delete_user_option( $user_id, 'activitypub_hide_social_graph' );
+
+		$post_id = $this->seed_follower_on_host( 'peer.example' );
+		Followers::add( $user_id, 'https://peer.example/users/alice' );
+
+		// "%70" decodes to "p"; "%65" decodes to "e". Decoded authority is "https://peer.example".
+		$request    = $this->build_sync_request( $user_id, 'https://%70eer.example', 'https://peer.example/users/peer' );
+		$controller = new \Activitypub\Rest\Followers_Controller();
+
+		try {
+			$response = $controller->get_partial_followers( $request );
+
+			$this->assertNotWPError( $response );
+			$data = $response->get_data();
+			$this->assertArrayHasKey( 'orderedItems', $data );
+			$this->assertContains( 'https://peer.example/users/alice', $data['orderedItems'] );
+		} finally {
+			\wp_delete_post( $post_id, true );
+			\delete_option( 'activitypub_actor_mode' );
+		}
 	}
 
 	/**

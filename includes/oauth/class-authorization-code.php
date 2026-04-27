@@ -77,7 +77,7 @@ class Authorization_Code {
 			 * not recommended.
 			 *
 			 * @since 8.1.0
-			 * @since unreleased Default changed from false to true.
+			 * @since 8.2.0 Default changed from false to true.
 			 *
 			 * @param bool   $require    Whether to require PKCE. Default true.
 			 * @param string $client_id  The OAuth client ID.

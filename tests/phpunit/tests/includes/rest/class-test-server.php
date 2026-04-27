@@ -283,4 +283,69 @@ class Test_Server extends \WP_Test_REST_TestCase {
 		$this->assertEquals( $expected_title, $data['title'] );
 		$this->assertEquals( $expected_detail, $data['detail'] );
 	}
+
+	/**
+	 * ActivityPub data is publicly readable, so CORS uses a wildcard origin
+	 * with no credentials. Reflecting an arbitrary Origin together with
+	 * Allow-Credentials would let a logged-in user's browser expose
+	 * authenticated responses to a third-party page; we explicitly avoid
+	 * that combination on every ActivityPub REST response.
+	 *
+	 * @covers ::add_cors_headers
+	 */
+	public function test_add_cors_headers_uses_wildcard_without_credentials() {
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Test snapshot of raw global; restored verbatim.
+		$origin_backup = $_SERVER['HTTP_ORIGIN'] ?? null;
+
+		try {
+			$_SERVER['HTTP_ORIGIN'] = 'https://evil.example';
+
+			$response = new \WP_REST_Response( array(), 200 );
+			$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+
+			$result  = Server::add_cors_headers( $response, new \WP_REST_Server(), $request );
+			$headers = $result->get_headers();
+
+			$this->assertSame( '*', $headers['Access-Control-Allow-Origin'] );
+			$this->assertArrayNotHasKey( 'Access-Control-Allow-Credentials', $headers );
+			$this->assertArrayNotHasKey( 'Vary', $headers );
+		} finally {
+			if ( null === $origin_backup ) {
+				unset( $_SERVER['HTTP_ORIGIN'] );
+			} else {
+				$_SERVER['HTTP_ORIGIN'] = $origin_backup;
+			}
+		}
+	}
+
+	/**
+	 * Non-ActivityPub routes must not receive ActivityPub CORS headers.
+	 *
+	 * @covers ::add_cors_headers
+	 */
+	public function test_add_cors_headers_skips_non_activitypub_routes() {
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/wp/v2/posts' );
+
+		$result  = Server::add_cors_headers( $response, new \WP_REST_Server(), $request );
+		$headers = $result->get_headers();
+
+		$this->assertArrayNotHasKey( 'Access-Control-Allow-Origin', $headers );
+	}
+
+	/**
+	 * The interactive OAuth authorize endpoint must not advertise CORS;
+	 * it relies on top-level navigation, not cross-origin XHR.
+	 *
+	 * @covers ::add_cors_headers
+	 */
+	public function test_add_cors_headers_skips_oauth_authorize() {
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/authorize' );
+
+		$result  = Server::add_cors_headers( $response, new \WP_REST_Server(), $request );
+		$headers = $result->get_headers();
+
+		$this->assertArrayNotHasKey( 'Access-Control-Allow-Origin', $headers );
+	}
 }

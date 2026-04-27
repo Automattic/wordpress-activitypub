@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-OAuth token revocation now verifies the caller owns the token being revoked.
