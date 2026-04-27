@@ -147,17 +147,66 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * $_SERVER keys get_client_ip() walks. Tests that exercise specific
+	 * rate-limit branches need to control all of them so a stray header
+	 * from another test or the runner can't change which branch fires.
+	 *
+	 * @var string[]
+	 */
+	private static $client_ip_server_keys = array(
+		'REMOTE_ADDR',
+		'HTTP_CF_CONNECTING_IP',
+		'HTTP_CLIENT_IP',
+		'HTTP_X_FORWARDED_FOR',
+		'HTTP_X_FORWARDED',
+		'HTTP_X_CLUSTER_CLIENT_IP',
+		'HTTP_FORWARDED_FOR',
+		'HTTP_FORWARDED',
+	);
+
+	/**
+	 * Capture every $_SERVER key get_client_ip() touches so each test in
+	 * this group can restore them in its own try/finally.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function snapshot_client_ip_server() {
+		$snapshot = array();
+		foreach ( self::$client_ip_server_keys as $key ) {
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- Capturing existing test fixture values for restore.
+			$snapshot[ $key ] = \array_key_exists( $key, $_SERVER ) ? $_SERVER[ $key ] : null;
+		}
+		return $snapshot;
+	}
+
+	/**
+	 * Restore $_SERVER values captured by snapshot_client_ip_server().
+	 *
+	 * @param array<string, mixed> $snapshot Snapshot returned by snapshot_client_ip_server().
+	 */
+	private function restore_client_ip_server( $snapshot ) {
+		foreach ( $snapshot as $key => $value ) {
+			if ( null === $value ) {
+				unset( $_SERVER[ $key ] );
+			} else {
+				$_SERVER[ $key ] = $value;
+			}
+		}
+	}
+
+	/**
 	 * Test that the token endpoint returns 429 when the per-IP rate limit
 	 * is hit, rather than the previous 400 / `invalid_request` shape.
 	 *
 	 * @covers ::token
 	 */
 	public function test_token_rate_limited_returns_429() {
-		// Pin REMOTE_ADDR so this test exercises the >=20 cap branch, not the
-		// fail-closed empty-IP branch (both produce 429 today, but the cap
-		// branch is what this test claims to cover).
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- Capturing test fixture for restore.
-		$snapshot_remote_addr   = \array_key_exists( 'REMOTE_ADDR', $_SERVER ) ? $_SERVER['REMOTE_ADDR'] : null;
+		// Snapshot every IP-bearing header so a stray HTTP_X_FORWARDED_FOR from
+		// the runner or another test can't change which branch fires.
+		$snapshot = $this->snapshot_client_ip_server();
+		foreach ( self::$client_ip_server_keys as $key ) {
+			unset( $_SERVER[ $key ] );
+		}
 		$_SERVER['REMOTE_ADDR'] = '198.51.100.42';
 
 		$ip            = \Activitypub\get_client_ip();
@@ -182,11 +231,42 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 			$this->assertSame( 'no-cache', $headers['Pragma'] ?? null, 'Token error responses must set Pragma: no-cache per RFC 6749 §5.1.' );
 		} finally {
 			\delete_transient( $transient_key );
-			if ( null === $snapshot_remote_addr ) {
-				unset( $_SERVER['REMOTE_ADDR'] );
-			} else {
-				$_SERVER['REMOTE_ADDR'] = $snapshot_remote_addr;
-			}
+			$this->restore_client_ip_server( $snapshot );
+		}
+	}
+
+	/**
+	 * Test that the token endpoint fails closed with 429 when no client IP
+	 * can be determined — the empty-IP branch in token() must behave the
+	 * same as the >=20 cap branch.
+	 *
+	 * @covers ::token
+	 */
+	public function test_token_rate_limited_returns_429_without_client_ip() {
+		$snapshot = $this->snapshot_client_ip_server();
+		foreach ( self::$client_ip_server_keys as $key ) {
+			unset( $_SERVER[ $key ] );
+		}
+
+		$empty_ip_transient = 'ap_oauth_tok_' . \md5( '' );
+		\delete_transient( $empty_ip_transient );
+
+		try {
+			$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/token' );
+			$request->set_param( 'grant_type', 'authorization_code' );
+			$request->set_param( 'client_id', $this->client_id );
+			$request->set_param( 'code', 'irrelevant' );
+			$request->set_param( 'redirect_uri', $this->redirect_uri );
+
+			$response = \rest_get_server()->dispatch( $request );
+			$data     = $response->get_data();
+
+			$this->assertEquals( 429, $response->get_status() );
+			$this->assertEquals( 'rate_limited', $data['error'] );
+			// The fail-closed branch must not write a shared empty-IP transient.
+			$this->assertFalse( \get_transient( $empty_ip_transient ) );
+		} finally {
+			$this->restore_client_ip_server( $snapshot );
 		}
 	}
 
