@@ -221,6 +221,21 @@ All REST API endpoints use the `activitypub/1.0` namespace.
 
 Posts and author pages serve ActivityPub JSON-LD when the request includes an appropriate `Accept` header (`application/activity+json` or `application/ld+json`).
 
+### OAuth 2.0 for Client-to-Server
+
+When the ActivityPub API option is enabled, the plugin exposes OAuth 2.0 endpoints under the `activitypub/1.0/oauth/` namespace for third-party clients (Mastodon-compatible apps, native apps, browser apps).
+
+**Supported standards:**
+
+- [RFC 8252](https://datatracker.ietf.org/doc/html/rfc8252) - OAuth 2.0 for Native Apps. Loopback redirect URIs (`http://127.0.0.1:{port}` and `http://[::1]:{port}`) are accepted with port flexibility per §7.3/§8.3. `localhost` is also accepted for compatibility; §8.3 marks this "NOT RECOMMENDED" but it remains common practice.
+- [RFC 7591](https://datatracker.ietf.org/doc/html/rfc7591) - Dynamic Client Registration.
+- [RFC 7636](https://datatracker.ietf.org/doc/html/rfc7636) - PKCE. Required by default for public clients; only `S256` is accepted.
+- [`draft-ietf-oauth-client-id-metadata-document`](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document) - Client Identifier Metadata Document (CIMD). When `client_id` is a URL, the plugin fetches the metadata document and auto-registers the client.
+
+**Loopback scope:**
+
+The loopback allowance from RFC 8252 applies *only* to redirect URI matching. Reserved-but-not-loopback addresses (`0.0.0.0`, link-local `169.254.0.0/16`, RFC1918 private ranges, etc.) are not treated as loopback. CIMD metadata fetches always use `wp_safe_remote_get()` regardless of host, since the spec expects publicly resolvable HTTPS URLs for the metadata document.
+
 ## Additional documentation
 
 - Plugin Documentation: [docs/readme.md](docs/readme.md)

@@ -14,7 +14,32 @@ use function Activitypub\get_client_ip;
 /**
  * Client class for managing OAuth 2.0 client registrations.
  *
- * Supports both manual registration and RFC 7591 dynamic client registration.
+ * Supports both manual registration and RFC 7591 dynamic client registration,
+ * plus Client Identifier Metadata Documents (CIMD) where the `client_id` is
+ * itself a URL hosting a metadata document.
+ *
+ * ## Loopback policy (RFC 8252)
+ *
+ * Native apps register loopback redirect URIs to receive the OAuth callback
+ * on a port the app opened locally. RFC 8252 §7.3 / §8.3 cover this and
+ * specifically authorise `http://127.0.0.1:{port}/{path}` (IPv4) and
+ * `http://[::1]:{port}/{path}` (IPv6). `localhost` is permitted by common
+ * practice, though §8.3 marks it "NOT RECOMMENDED".
+ *
+ * `is_loopback()` reflects that scope: it matches `127.0.0.0/8`, `::1`
+ * (any spelling, normalised via `inet_pton`), `::ffff:127.x.x.x`, `localhost`,
+ * and `*.localhost`. Reserved-but-not-loopback addresses such as `0.0.0.0`,
+ * link-local `169.254.0.0/16`, and RFC1918 ranges are explicitly *not*
+ * treated as loopback and never bypass `wp_safe_remote_get()`.
+ *
+ * RFC 8252's loopback allowance applies to redirect URIs only. The CIMD
+ * document is expected to be a publicly resolvable HTTPS resource, so
+ * `fetch_client_metadata()` always uses `wp_safe_remote_get()` regardless of
+ * host. Local development against a loopback CIMD endpoint is intentionally
+ * not supported.
+ *
+ * @see https://datatracker.ietf.org/doc/html/rfc8252 RFC 8252 — OAuth 2.0 for Native Apps
+ * @see https://datatracker.ietf.org/doc/html/rfc7591 RFC 7591 — OAuth 2.0 Dynamic Client Registration
  */
 class Client {
 	/**
