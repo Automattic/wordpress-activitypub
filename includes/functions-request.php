@@ -249,7 +249,10 @@ function is_ipv4_mapped_ipv6( $ip ) {
  *
  * - `2002::/16` — 6to4 (RFC 3056). Embeds an IPv4 address in the next 32 bits,
  *   so e.g. `2002:7f00:0001::1` routes back to `127.0.0.1` on a host with 6to4.
- * - `2001::/32` — Teredo tunneling (RFC 4380).
+ * - `2001:0000::/32` — Teredo tunneling (RFC 4380). The check matches the
+ *   exact 32-bit prefix `2001:0000`, so legitimate `2001::/16` allocations
+ *   like Google DNS `2001:4860::/32` or `2001:db8::/32` (handled separately
+ *   below) are unaffected.
  * - `2001:db8::/32` — Documentation prefix (RFC 3849); should never be routed.
  * - `64:ff9b::/96` — NAT64 well-known prefix (RFC 6052).
  * - `64:ff9b:1::/48` — NAT64 local-use prefix (RFC 8215).
