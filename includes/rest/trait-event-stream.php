@@ -18,6 +18,8 @@ use Activitypub\Collection\Outbox;
 use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Server as OAuth_Server;
 
+use function Activitypub\resolve_public_host;
+
 
 /**
  * Event Stream Trait.
@@ -206,19 +208,41 @@ trait Event_Stream {
 			$path .= '?' . $parsed['query'];
 		}
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_stream_socket_client -- SSE proxy requires raw streaming.
+		/*
+		 * Resolve the host once and verify every returned address is public.
+		 * stream_socket_client would otherwise do its own lookup, which opens
+		 * a DNS-rebinding window after validate_url() already passed.
+		 */
+		$ip = resolve_public_host( $host );
+		if ( false === $ip ) {
+			\status_header( 502 );
+			\header( 'Content-Type: application/json' );
+			Server::send_cors_headers();
+			echo \wp_json_encode(
+				array(
+					'code'    => 'activitypub_proxy_unsafe_host',
+					'message' => \__( 'The remote eventStream host is not allowed.', 'activitypub' ),
+				)
+			);
+			exit;
+		}
+
 		$context = stream_context_create(
 			array(
 				'ssl' => array(
 					'verify_peer'      => true,
 					'verify_peer_name' => true,
+					// Pin SNI / cert verification to the original hostname even though we connect by IP.
+					'peer_name'        => $host,
 				),
 			)
 		);
 
+		$target = ( false !== strpos( $ip, ':' ) ? '[' . $ip . ']' : $ip ) . ':' . $port;
+
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_stream_socket_client -- SSE proxy requires raw streaming.
 		$stream = stream_socket_client(
-			'ssl://' . $host . ':' . $port,
+			'ssl://' . $target,
 			$errno,
 			$errstr,
 			30,
