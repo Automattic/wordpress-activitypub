@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+OAuth public clients must now use PKCE by default, matching OAuth 2.1. Site operators can relax this via the activitypub_oauth_require_pkce filter if legacy clients need to connect.
