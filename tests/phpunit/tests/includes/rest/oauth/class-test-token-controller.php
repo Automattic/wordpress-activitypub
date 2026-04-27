@@ -153,6 +153,13 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 	 * @covers ::token
 	 */
 	public function test_token_rate_limited_returns_429() {
+		// Pin REMOTE_ADDR so this test exercises the >=20 cap branch, not the
+		// fail-closed empty-IP branch (both produce 429 today, but the cap
+		// branch is what this test claims to cover).
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- Capturing test fixture for restore.
+		$snapshot_remote_addr   = \array_key_exists( 'REMOTE_ADDR', $_SERVER ) ? $_SERVER['REMOTE_ADDR'] : null;
+		$_SERVER['REMOTE_ADDR'] = '198.51.100.42';
+
 		$ip            = \Activitypub\get_client_ip();
 		$transient_key = 'ap_oauth_tok_' . \md5( $ip );
 
@@ -167,11 +174,19 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 
 			$response = \rest_get_server()->dispatch( $request );
 			$data     = $response->get_data();
+			$headers  = $response->get_headers();
 
 			$this->assertEquals( 429, $response->get_status() );
 			$this->assertEquals( 'rate_limited', $data['error'] );
+			$this->assertSame( 'no-store', $headers['Cache-Control'] ?? null, 'Token error responses must set Cache-Control: no-store per RFC 6749 §5.1.' );
+			$this->assertSame( 'no-cache', $headers['Pragma'] ?? null, 'Token error responses must set Pragma: no-cache per RFC 6749 §5.1.' );
 		} finally {
 			\delete_transient( $transient_key );
+			if ( null === $snapshot_remote_addr ) {
+				unset( $_SERVER['REMOTE_ADDR'] );
+			} else {
+				$_SERVER['REMOTE_ADDR'] = $snapshot_remote_addr;
+			}
 		}
 	}
 

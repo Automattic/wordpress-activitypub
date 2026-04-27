@@ -403,7 +403,12 @@ class Token_Controller extends \WP_REST_Controller {
 				'error_description' => $error_description,
 			),
 			$status,
-			array( 'Content-Type' => 'application/json' )
+			array(
+				'Content-Type'  => 'application/json',
+				// RFC 6749 §5.1 requires the same no-cache headers on error responses as on success responses.
+				'Cache-Control' => 'no-store',
+				'Pragma'        => 'no-cache',
+			)
 		);
 	}
 
