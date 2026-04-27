@@ -288,18 +288,14 @@ class Client {
 			'redirection' => 0, // CIMDs prohibit following redirects to prevent client impersonation.
 		);
 
-		$host = \wp_parse_url( $url, PHP_URL_HOST );
-
 		/*
-		 * Use wp_remote_get for loopback hosts (localhost, *.localhost, 127.x.x.x, ::1).
-		 * wp_safe_remote_get blocks private IPs as SSRF protection, but the OAuth spec
-		 * explicitly allows loopback clients for development (RFC 8252 Section 8.3).
+		 * Always use wp_safe_remote_get for the metadata document fetch. RFC 8252's
+		 * loopback allowance applies to redirect URIs (Section 7.3), not to the
+		 * client metadata document — that's expected to be a publicly resolvable
+		 * HTTPS URL. Allowing loopback here would expose the server to SSRF via a
+		 * crafted client_id pointing at localhost or *.localhost subdomains.
 		 */
-		if ( $host && self::is_loopback( $host ) ) {
-			$response = \wp_remote_get( $url, $args );
-		} else {
-			$response = \wp_safe_remote_get( $url, $args );
-		}
+		$response = \wp_safe_remote_get( $url, $args );
 
 		if ( \is_wp_error( $response ) ) {
 			return new \WP_Error(
