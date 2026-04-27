@@ -386,63 +386,45 @@ class Inbox_Controller extends \WP_REST_Controller {
 		$max_remote_fetches = (int) \apply_filters( 'activitypub_max_remote_recipient_fetches', 5 );
 
 		// AS2 allows actor and followers to be either an IRI string or an inline object; normalize to a URI.
-		$actor_uri = ! empty( $activity['actor'] ) ? object_to_uri( $activity['actor'] ) : null;
-
-		/*
-		 * Look up the actor's cached profile to identify their followers collection URL
-		 * without needing a remote fetch. The actor is typically already cached from
-		 * signature verification.
-		 */
-		$actor_followers_url = null;
-
-		if ( ! empty( $actor_uri ) ) {
-			$actor_post = Remote_Actors::get_by_uri( $actor_uri );
-
-			if ( ! \is_wp_error( $actor_post ) ) {
-				$actor_data = \json_decode( $actor_post->post_content, true );
-
-				if ( ! empty( $actor_data['followers'] ) ) {
-					$actor_followers_url = object_to_uri( $actor_data['followers'] );
-				}
-			}
-		}
+		$actor_uri           = ! empty( $activity['actor'] ) ? object_to_uri( $activity['actor'] ) : null;
+		$actor_followers_url = $this->get_cached_followers_url( $actor_uri );
 
 		if ( is_activity_public( $activity ) ) {
 			$user_ids = Following::get_follower_ids( $actor_uri );
 		}
 
-		$recipients = extract_recipients_from_activity( $activity );
-
-		foreach ( $recipients as $recipient ) {
+		foreach ( extract_recipients_from_activity( $activity ) as $recipient ) {
 			// Skip public audience identifiers - they're not actual recipients to fetch.
 			if ( \in_array( $recipient, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS, true ) ) {
 				continue;
 			}
 
 			if ( ! is_same_domain( $recipient ) ) {
-				// Detect the actor's followers collection from cached metadata (no fetch needed).
-				if ( $actor_followers_url && $recipient === $actor_followers_url ) {
-					$_user_ids = Following::get_follower_ids( $actor_uri );
-					$user_ids  = array_merge( $user_ids, $_user_ids );
+				// Known followers collection: resolve from local DB, no fetch needed.
+				if ( $recipient === $actor_followers_url ) {
+					$user_ids = array_merge( $user_ids, Following::get_follower_ids( $actor_uri ) );
 					continue;
 				}
 
-				// Cap remote fetches to prevent abuse via large audience/recipient fields.
+				// Already cached as a remote actor: not a collection, so no local recipients to add.
+				if ( ! \is_wp_error( Remote_Actors::get_by_uri( $recipient ) ) ) {
+					continue;
+				}
+
+				// Unknown URL: cap remote fetches to prevent abuse via large audience/recipient fields.
 				if ( $remote_fetches >= $max_remote_fetches ) {
 					continue;
 				}
-
 				++$remote_fetches;
+
 				$collection = Http::get_remote_object( $recipient );
 
-				// If it is a remote actor we can skip it.
 				if ( \is_wp_error( $collection ) ) {
 					continue;
 				}
 
 				if ( is_collection( $collection ) ) {
-					$_user_ids = Following::get_follower_ids( $actor_uri );
-					$user_ids  = array_merge( $user_ids, $_user_ids );
+					$user_ids = array_merge( $user_ids, Following::get_follower_ids( $actor_uri ) );
 					continue;
 				}
 			}
@@ -470,5 +452,32 @@ class Inbox_Controller extends \WP_REST_Controller {
 		}
 
 		return array_unique( array_map( 'intval', $user_ids ) );
+	}
+
+	/**
+	 * Look up an actor's followers collection URL from the cached profile.
+	 *
+	 * Used to detect followers-addressed recipients without an outbound fetch.
+	 *
+	 * @param string|null $actor_uri Normalized actor URI.
+	 *
+	 * @return string|null The followers collection URL, or null if not cached/available.
+	 */
+	private function get_cached_followers_url( $actor_uri ) {
+		if ( empty( $actor_uri ) ) {
+			return null;
+		}
+
+		$actor_post = Remote_Actors::get_by_uri( $actor_uri );
+		if ( \is_wp_error( $actor_post ) ) {
+			return null;
+		}
+
+		$actor_data = \json_decode( $actor_post->post_content, true );
+		if ( empty( $actor_data['followers'] ) ) {
+			return null;
+		}
+
+		return object_to_uri( $actor_data['followers'] );
 	}
 }
