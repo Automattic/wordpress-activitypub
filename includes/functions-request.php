@@ -175,8 +175,8 @@ function resolve_public_host( $host ) {
 	$pre = \apply_filters( 'activitypub_pre_resolve_public_host', null, $host );
 
 	if ( \is_array( $pre ) ) {
-		$ipv4 = $pre['ipv4'] ?? array();
-		$ipv6 = $pre['ipv6'] ?? array();
+		$ipv4 = isset( $pre['ipv4'] ) && \is_array( $pre['ipv4'] ) ? $pre['ipv4'] : array();
+		$ipv6 = isset( $pre['ipv6'] ) && \is_array( $pre['ipv6'] ) ? $pre['ipv6'] : array();
 	} else {
 		$ipv4 = \gethostbynamel( $host ) ?: array();
 		$ipv6 = array();
@@ -228,6 +228,11 @@ function resolve_public_host( $host ) {
  * @return bool True if the value is an IPv4-mapped IPv6 address.
  */
 function is_ipv4_mapped_ipv6( $ip ) {
+	// Short-circuit before inet_pton() so it doesn't emit a warning for non-IP input.
+	if ( ! is_string( $ip ) || ! \filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 ) ) {
+		return false;
+	}
+
 	$packed = \inet_pton( $ip );
 
 	return false !== $packed
