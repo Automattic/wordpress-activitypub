@@ -381,9 +381,9 @@ class Inbox_Controller extends \WP_REST_Controller {
 		 * Filters the maximum number of remote recipient URLs that can be
 		 * fetched per incoming activity.
 		 *
-		 * @param int $max_remote_fetches Maximum number of remote fetches. Default 5.
+		 * @param int $max_remote_fetches Maximum number of remote fetches. Default 10.
 		 */
-		$max_remote_fetches = (int) \apply_filters( 'activitypub_max_remote_recipient_fetches', 5 );
+		$max_remote_fetches = (int) \apply_filters( 'activitypub_max_remote_recipient_fetches', 10 );
 
 		// AS2 allows actor and followers to be either an IRI string or an inline object; normalize to a URI.
 		$actor_uri           = ! empty( $activity['actor'] ) ? object_to_uri( $activity['actor'] ) : null;
