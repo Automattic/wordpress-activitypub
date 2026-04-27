@@ -131,11 +131,13 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) { // phpcs:ignor
  * callers can pin the connection to it (defends against DNS rebinding).
  *
  * Both IPv4 and IPv6 literals are accepted (bracketed IPv6 like `[::1]` is
- * normalised first). Hostname resolution uses `gethostbynamel()`, which is
- * IPv4-only, mirroring the default behaviour of `wp_http_validate_url`. If any
- * returned address is private or reserved the helper rejects, defending
- * against split-horizon DNS that returns a public answer to one resolver and a
- * private one to another.
+ * normalised first). For hostnames, A records are looked up via
+ * `gethostbynamel()` and AAAA records via `dns_get_record()` when available.
+ * Every returned address is validated against private/reserved ranges; a
+ * single bad address fails the whole resolution, defending against
+ * split-horizon DNS that returns a public answer to one resolver and a
+ * private one to another. IPv4 addresses are preferred over IPv6 when both
+ * exist, mirroring `wp_safe_remote_get()`'s default.
  *
  * @param string $host The hostname or IP literal to resolve.
  *
@@ -151,14 +153,7 @@ function resolve_public_host( $host ) {
 
 	// Already an IP literal — validate directly. Accepts IPv4 and IPv6.
 	if ( \filter_var( $host, FILTER_VALIDATE_IP ) ) {
-		/*
-		 * Reject IPv4-mapped IPv6 literals (`::ffff:0:0/96`). PHP's
-		 * FILTER_FLAG_NO_RES_RANGE catches them on some builds but not
-		 * others, so let the SSRF guard not depend on that. These forms
-		 * serve no legitimate purpose for our callers anyway.
-		 */
-		$packed = \inet_pton( $host );
-		if ( false !== $packed && 16 === \strlen( $packed ) && "\0\0\0\0\0\0\0\0\0\0\xff\xff" === \substr( $packed, 0, 12 ) ) {
+		if ( is_ipv4_mapped_ipv6( $host ) ) {
 			return false;
 		}
 
@@ -167,17 +162,80 @@ function resolve_public_host( $host ) {
 			: false;
 	}
 
-	$ips = \gethostbynamel( $host );
-	if ( ! $ips ) {
+	/**
+	 * Filters the resolved addresses for a hostname before validation.
+	 *
+	 * Returning a non-null array of `array{ipv4: string[], ipv6: string[]}` skips
+	 * the DNS lookup. Tests use this to exercise the validation/preference logic
+	 * without making real DNS queries; production code should leave it null.
+	 *
+	 * @param array{ipv4: string[], ipv6: string[]}|null $pre  Pre-resolved addresses, or null to perform DNS lookup.
+	 * @param string                                     $host The hostname being resolved.
+	 */
+	$pre = \apply_filters( 'activitypub_pre_resolve_public_host', null, $host );
+
+	if ( \is_array( $pre ) ) {
+		$ipv4 = isset( $pre['ipv4'] ) && \is_array( $pre['ipv4'] ) ? $pre['ipv4'] : array();
+		$ipv6 = isset( $pre['ipv6'] ) && \is_array( $pre['ipv6'] ) ? $pre['ipv6'] : array();
+	} else {
+		$ipv4 = \gethostbynamel( $host ) ?: array();
+		$ipv6 = array();
+
+		if ( \function_exists( 'dns_get_record' ) ) {
+			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- dns_get_record() emits a warning on lookup failure; we already handle the empty case.
+			$aaaa = @\dns_get_record( $host, DNS_AAAA );
+			if ( \is_array( $aaaa ) ) {
+				foreach ( $aaaa as $record ) {
+					if ( ! empty( $record['ipv6'] ) ) {
+						$ipv6[] = $record['ipv6'];
+					}
+				}
+			}
+		}
+	}
+
+	if ( ! $ipv4 && ! $ipv6 ) {
 		return false;
 	}
 
-	// Reject if any resolved address is private/reserved.
-	foreach ( $ips as $ip ) {
+	foreach ( $ipv4 as $ip ) {
 		if ( ! \filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
 			return false;
 		}
 	}
 
-	return $ips[0];
+	foreach ( $ipv6 as $ip ) {
+		if ( is_ipv4_mapped_ipv6( $ip ) ) {
+			return false;
+		}
+		if ( ! \filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
+			return false;
+		}
+	}
+
+	return $ipv4[0] ?? $ipv6[0];
+}
+
+/**
+ * Detect IPv4-mapped IPv6 literals (`::ffff:0:0/96`).
+ *
+ * PHP's FILTER_FLAG_NO_RES_RANGE catches this range on some builds but not
+ * others. These forms serve no legitimate purpose for the SSRF-guard callers,
+ * so reject the entire range explicitly via packed-byte comparison.
+ *
+ * @param string $ip An IP literal.
+ *
+ * @return bool True if the value is an IPv4-mapped IPv6 address.
+ */
+function is_ipv4_mapped_ipv6( $ip ) {
+	// Short-circuit before inet_pton() so it doesn't emit a warning for non-IP input.
+	if ( ! is_string( $ip ) || ! \filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 ) ) {
+		return false;
+	}
+
+	$packed = \inet_pton( $ip );
+
+	return false !== $packed
+		&& 16 === \strlen( $packed )
+		&& "\0\0\0\0\0\0\0\0\0\0\xff\xff" === \substr( $packed, 0, 12 );
 }

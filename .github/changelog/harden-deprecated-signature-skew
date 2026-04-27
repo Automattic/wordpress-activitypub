@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Aligned the deprecated signature verifier's clock tolerance with the supported verifiers.
