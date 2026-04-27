@@ -76,4 +76,39 @@ class Test_Functions_Request extends ActivityPub_TestCase_Cache_HTTP {
 		$this->assertFalse( \Activitypub\resolve_public_host( 12345 ) );
 		$this->assertFalse( \Activitypub\resolve_public_host( array( '8.8.8.8' ) ) );
 	}
+
+	/**
+	 * Data provider for is_ipv4_mapped_ipv6.
+	 *
+	 * @return array<string, array{0: string, 1: bool}>
+	 */
+	public function is_ipv4_mapped_ipv6_provider() {
+		return array(
+			'mapped_loopback'    => array( '::ffff:127.0.0.1', true ),
+			'mapped_rfc1918'     => array( '::ffff:10.0.0.1', true ),
+			'mapped_link_local'  => array( '::ffff:169.254.169.254', true ),
+			'mapped_public'      => array( '::ffff:8.8.8.8', true ),
+			'mapped_hex_form'    => array( '::ffff:7f00:1', true ),
+			'pure_ipv6_loopback' => array( '::1', false ),
+			'pure_ipv6_public'   => array( '2606:4700:4700::1111', false ),
+			'pure_ipv4'          => array( '8.8.8.8', false ),
+			'private_ipv4'       => array( '10.0.0.1', false ),
+			'not_an_ip'          => array( 'not-an-ip', false ),
+			'empty_string'       => array( '', false ),
+		);
+	}
+
+	/**
+	 * Test the IPv4-mapped IPv6 detector.
+	 *
+	 * @dataProvider is_ipv4_mapped_ipv6_provider
+	 *
+	 * @covers \Activitypub\is_ipv4_mapped_ipv6
+	 *
+	 * @param string $ip       The IP literal to check.
+	 * @param bool   $expected Whether it's an IPv4-mapped IPv6 address.
+	 */
+	public function test_is_ipv4_mapped_ipv6( $ip, $expected ) {
+		$this->assertSame( $expected, \Activitypub\is_ipv4_mapped_ipv6( $ip ) );
+	}
 }
