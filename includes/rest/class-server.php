@@ -173,19 +173,21 @@ class Server {
 		$namespace = '/' . ACTIVITYPUB_REST_NAMESPACE;
 
 		// Only add CORS to ActivityPub endpoints, except the interactive OAuth authorize endpoint.
-		if ( ! \str_starts_with( $route, $namespace ) || \str_contains( $route, $namespace . '/oauth/authorize' ) ) {
+		if ( ! \str_starts_with( $route, $namespace ) || \str_starts_with( $route, $namespace . '/oauth/authorize' ) ) {
 			return $response;
 		}
 
-		$origin = self::get_cors_origin();
-		$response->header( 'Access-Control-Allow-Origin', $origin ? $origin : '*' );
+		/*
+		 * ActivityPub data is meant to be publicly readable by federation peers
+		 * and browser-side clients. We do not enable credentialed cross-origin
+		 * access: cookie auth would still be rejected by WordPress core's
+		 * REST nonce check, and OAuth Bearer tokens travel in the
+		 * Authorization header — which is permitted via Allow-Headers and
+		 * does not require Allow-Credentials.
+		 */
+		$response->header( 'Access-Control-Allow-Origin', '*' );
 		$response->header( 'Access-Control-Allow-Methods', 'GET, POST, OPTIONS' );
 		$response->header( 'Access-Control-Allow-Headers', 'Accept, Content-Type, Authorization, Last-Event-ID' );
-
-		if ( $origin ) {
-			$response->header( 'Access-Control-Allow-Credentials', 'true' );
-			$response->header( 'Vary', 'Origin' );
-		}
 
 		return $response;
 	}
@@ -199,29 +201,8 @@ class Server {
 	 * @since 8.1.0
 	 */
 	public static function send_cors_headers() {
-		$origin = self::get_cors_origin();
-
-		\header( 'Access-Control-Allow-Origin: ' . ( $origin ? $origin : '*' ) );
+		\header( 'Access-Control-Allow-Origin: *' );
 		\header( 'Access-Control-Allow-Methods: GET, POST, OPTIONS' );
 		\header( 'Access-Control-Allow-Headers: Accept, Content-Type, Authorization, Last-Event-ID' );
-
-		if ( $origin ) {
-			\header( 'Access-Control-Allow-Credentials: true' );
-			\header( 'Vary: Origin' );
-		}
-	}
-
-	/**
-	 * Get the CORS origin from the request.
-	 *
-	 * Reflects the request Origin instead of using a wildcard to avoid
-	 * leaking private data to arbitrary origins on authenticated endpoints.
-	 *
-	 * @since 8.1.0
-	 *
-	 * @return string The origin or empty string.
-	 */
-	private static function get_cors_origin() {
-		return isset( $_SERVER['HTTP_ORIGIN'] ) ? \esc_url_raw( \wp_unslash( $_SERVER['HTTP_ORIGIN'] ) ) : '';
 	}
 }
