@@ -438,6 +438,127 @@ class Test_Functions extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Proxy headers must NOT be trusted by default. A site that PHP serves
+	 * directly receives X-Forwarded-For / CF-Connecting-IP straight from the
+	 * client, so trusting them by default would let an attacker rotate the
+	 * spoofed value to bypass per-IP rate limits.
+	 *
+	 * @covers \Activitypub\get_client_ip
+	 */
+	public function test_get_client_ip_ignores_proxy_headers_by_default() {
+		$this->snapshot_client_ip_server();
+		try {
+			$_SERVER['REMOTE_ADDR']           = '10.0.0.1';
+			$_SERVER['HTTP_CF_CONNECTING_IP'] = '203.0.113.50';
+			$_SERVER['HTTP_X_FORWARDED_FOR']  = '203.0.113.51';
+
+			$this->assertSame( '10.0.0.1', \Activitypub\get_client_ip() );
+		} finally {
+			$this->restore_client_ip_server();
+		}
+	}
+
+	/**
+	 * Operators behind a trusted reverse proxy can opt the relevant header
+	 * back in via the activitypub_trusted_proxy_headers filter.
+	 *
+	 * @covers \Activitypub\get_client_ip
+	 */
+	public function test_get_client_ip_honors_trusted_proxy_filter() {
+		$this->snapshot_client_ip_server();
+		$filter = function () {
+			return array( 'HTTP_CF_CONNECTING_IP' );
+		};
+		\add_filter( 'activitypub_trusted_proxy_headers', $filter );
+
+		try {
+			$_SERVER['REMOTE_ADDR']           = '10.0.0.1';
+			$_SERVER['HTTP_CF_CONNECTING_IP'] = '203.0.113.50';
+
+			$this->assertSame( '203.0.113.50', \Activitypub\get_client_ip() );
+		} finally {
+			\remove_filter( 'activitypub_trusted_proxy_headers', $filter );
+			$this->restore_client_ip_server();
+		}
+	}
+
+	/**
+	 * When a trusted proxy header is present but contains a non-IP value,
+	 * the next trusted header is consulted, then REMOTE_ADDR — so a
+	 * misconfigured proxy doesn't accidentally fail closed.
+	 *
+	 * @covers \Activitypub\get_client_ip
+	 */
+	public function test_get_client_ip_falls_back_when_trusted_header_invalid() {
+		$this->snapshot_client_ip_server();
+		$filter = function () {
+			return array( 'HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR' );
+		};
+		\add_filter( 'activitypub_trusted_proxy_headers', $filter );
+
+		try {
+			$_SERVER['REMOTE_ADDR']           = '198.51.100.10';
+			$_SERVER['HTTP_CF_CONNECTING_IP'] = 'unknown';
+			$_SERVER['HTTP_X_FORWARDED_FOR']  = '203.0.113.7';
+
+			$this->assertSame( '203.0.113.7', \Activitypub\get_client_ip() );
+		} finally {
+			\remove_filter( 'activitypub_trusted_proxy_headers', $filter );
+			$this->restore_client_ip_server();
+		}
+	}
+
+	/**
+	 * X-Forwarded-For may carry "client, proxy1, proxy2" — when the operator
+	 * trusts the proxy that overwrites the header, the leftmost entry is the
+	 * client.
+	 *
+	 * @covers \Activitypub\get_client_ip
+	 */
+	public function test_get_client_ip_uses_leftmost_of_xff_list() {
+		$this->snapshot_client_ip_server();
+		$filter = function () {
+			return array( 'HTTP_X_FORWARDED_FOR' );
+		};
+		\add_filter( 'activitypub_trusted_proxy_headers', $filter );
+
+		try {
+			$_SERVER['REMOTE_ADDR']          = '10.0.0.1';
+			$_SERVER['HTTP_X_FORWARDED_FOR'] = '203.0.113.50, 198.51.100.7';
+
+			$this->assertSame( '203.0.113.50', \Activitypub\get_client_ip() );
+		} finally {
+			\remove_filter( 'activitypub_trusted_proxy_headers', $filter );
+			$this->restore_client_ip_server();
+		}
+	}
+
+	/**
+	 * A filter that returns null (or any other empty-ish non-array) must
+	 * leave proxy headers untrusted; the function falls through to
+	 * REMOTE_ADDR.
+	 *
+	 * @covers \Activitypub\get_client_ip
+	 */
+	public function test_get_client_ip_tolerates_null_filter_return() {
+		$this->snapshot_client_ip_server();
+		$filter = function () {
+			return null;
+		};
+		\add_filter( 'activitypub_trusted_proxy_headers', $filter );
+
+		try {
+			$_SERVER['REMOTE_ADDR']           = '198.51.100.10';
+			$_SERVER['HTTP_CF_CONNECTING_IP'] = '203.0.113.50';
+
+			$this->assertSame( '198.51.100.10', \Activitypub\get_client_ip() );
+		} finally {
+			\remove_filter( 'activitypub_trusted_proxy_headers', $filter );
+			$this->restore_client_ip_server();
+		}
+	}
+
+	/**
 	 * Data provider for seconds_to_iso8601 tests.
 	 *
 	 * @return array Test cases with input seconds and expected ISO 8601 duration.

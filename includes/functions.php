@@ -362,18 +362,36 @@ function get_client_ip() {
 	// phpcs:disable WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders
 	$ip = '';
 
-	$headers = array(
-		'HTTP_CF_CONNECTING_IP', // Cloudflare.
-		'HTTP_CLIENT_IP',
-		'HTTP_X_FORWARDED_FOR',
-		'HTTP_X_FORWARDED',
-		'HTTP_X_CLUSTER_CLIENT_IP',
-		'HTTP_FORWARDED_FOR',
-		'HTTP_FORWARDED',
-	);
+	/**
+	 * Filter the list of $_SERVER keys that should be trusted as a source for
+	 * the client IP, before falling back to REMOTE_ADDR.
+	 *
+	 * Empty by default. Only opt a header in here when a trusted reverse
+	 * proxy in front of the site sets it and overwrites any client-supplied
+	 * value. Trusting one of these headers on a site that PHP serves
+	 * directly lets attackers spoof the value and bypass the rate limits
+	 * that depend on it.
+	 *
+	 * Common values:
+	 *   array( 'HTTP_CF_CONNECTING_IP' )   on Cloudflare.
+	 *   array( 'HTTP_TRUE_CLIENT_IP' )     on Akamai or Cloudflare Enterprise.
+	 *   array( 'HTTP_X_REAL_IP' )          on nginx that strips the client copy.
+	 *
+	 * X-Forwarded-For pitfall: even with a trusted proxy, an attacker can
+	 * prepend their own value before the proxy appends the real client IP.
+	 * This helper takes the leftmost entry, which is correct only when the
+	 * trusted proxy fully overwrites the header. If you trust X-Forwarded-For
+	 * end-to-end, prefer to resolve from the right by your known proxy count
+	 * via the activitypub_client_ip filter.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string[] $headers $_SERVER keys to consult, in priority order.
+	 */
+	$headers = (array) \apply_filters( 'activitypub_trusted_proxy_headers', array() );
 
 	foreach ( $headers as $header ) {
-		if ( empty( $_SERVER[ $header ] ) ) {
+		if ( ! \is_string( $header ) || empty( $_SERVER[ $header ] ) ) {
 			continue;
 		}
 
