@@ -13,7 +13,7 @@ use Activitypub\Collection\Remote_Actors;
 
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
-use function Activitypub\is_ipv4_mapped_ipv6;
+use function Activitypub\is_unsafe_ipv6_literal;
 
 /**
  * Followers_Controller class.
@@ -123,7 +123,7 @@ class Followers_Controller extends Actors_Controller {
 								}
 
 								if ( \filter_var( $host, FILTER_VALIDATE_IP ) ) {
-									if ( is_ipv4_mapped_ipv6( $host ) ) {
+									if ( is_unsafe_ipv6_literal( $host ) ) {
 										return false;
 									}
 
