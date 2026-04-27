@@ -433,8 +433,9 @@ class Signature {
 				$d->setTimeZone( new \DateTimeZone( 'UTC' ) );
 				$c = $d->format( 'U' );
 
-				$d_plus  = time() + ( 3 * HOUR_IN_SECONDS );
-				$d_minus = time() - ( 3 * HOUR_IN_SECONDS );
+				// Match the tolerance used by the supported verifiers (Http_Signature_Draft / Http_Message_Signature).
+				$d_plus  = time() + ( 5 * MINUTE_IN_SECONDS );
+				$d_minus = time() - HOUR_IN_SECONDS;
 
 				if ( $c > $d_plus || $c < $d_minus ) {
 					// Time out of range.
