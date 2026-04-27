@@ -221,7 +221,7 @@ trait Event_Stream {
 			echo \wp_json_encode(
 				array(
 					'code'    => 'activitypub_proxy_unsafe_host',
-					'message' => \__( 'The remote eventStream host is not reachable.', 'activitypub' ),
+					'message' => \__( 'The remote eventStream host is not allowed.', 'activitypub' ),
 				)
 			);
 			exit;

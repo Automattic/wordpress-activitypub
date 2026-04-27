@@ -121,7 +121,7 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) { // phpcs:ignor
 }
 
 /**
- * Resolve a hostname or IP literal to a public IPv4 address.
+ * Resolve a hostname or IP literal to a public IP address.
  *
  * Used as an SSRF guard before opening connections to user-supplied URLs.
  * `wp_safe_remote_get()` ultimately calls `wp_http_validate_url()`, which has
@@ -130,11 +130,12 @@ function get_remote_metadata_by_actor( $actor, $cached = true ) { // phpcs:ignor
  * resolve-and-validate without that carve-out, and returns the resolved IP so
  * callers can pin the connection to it (defends against DNS rebinding).
  *
- * IP literals are validated directly. Hostnames are resolved via
- * `gethostbynamel()`; if any returned address is private or reserved the
- * helper rejects, defending against split-horizon DNS that returns a public
- * answer to one resolver and a private one to another. Only IPv4 records are
- * considered, mirroring the default behaviour of `wp_http_validate_url`.
+ * Both IPv4 and IPv6 literals are accepted (bracketed IPv6 like `[::1]` is
+ * normalised first). Hostname resolution uses `gethostbynamel()`, which is
+ * IPv4-only, mirroring the default behaviour of `wp_http_validate_url`. If any
+ * returned address is private or reserved the helper rejects, defending
+ * against split-horizon DNS that returns a public answer to one resolver and a
+ * private one to another.
  *
  * @param string $host The hostname or IP literal to resolve.
  *
@@ -145,7 +146,10 @@ function resolve_public_host( $host ) {
 		return false;
 	}
 
-	// Already an IP literal — validate directly.
+	// Normalise bracketed IPv6 literals (parse_url returns "[::1]").
+	$host = \trim( $host, '[]' );
+
+	// Already an IP literal — validate directly. Accepts IPv4 and IPv6.
 	if ( \filter_var( $host, FILTER_VALIDATE_IP ) ) {
 		return \filter_var( $host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE )
 			? $host

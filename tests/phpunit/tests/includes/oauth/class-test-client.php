@@ -288,9 +288,8 @@ class Test_Client extends \WP_UnitTestCase {
 	/**
 	 * Test register method rejects reserved addresses that are not loopback.
 	 *
-	 * Guards against treating any reserved IP as loopback and routing it past
-	 * SSRF protection. Each host below must flow through wp_safe_remote_get()
-	 * rather than wp_remote_get().
+	 * Guards against treating reserved or otherwise non-loopback hosts as
+	 * loopback for the `http://` redirect URI allowance during registration.
 	 *
 	 * @covers ::register
 	 * @dataProvider non_loopback_host_provider
