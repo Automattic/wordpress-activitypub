@@ -118,11 +118,13 @@ class Followers_Controller extends Actors_Controller {
 								 * agree.
 								 *
 								 * Percent-decode the input first so encoded forms like
-								 * `http://%5B::1%5D/` (bracketed IPv6 literal hidden inside
+								 * `https://%5B::1%5D` (bracketed IPv6 literal hidden inside
 								 * %5B/%5D) get checked against the same blocklist as the
-								 * unencoded equivalent.
+								 * unencoded equivalent. Use rawurldecode() rather than
+								 * urldecode() — the latter also turns `+` into a space, which
+								 * would corrupt otherwise-valid reg-name hosts.
 								 */
-								$decoded = \urldecode( (string) $param );
+								$decoded = \rawurldecode( (string) $param );
 								$host    = self::normalize_host( (string) \wp_parse_url( $decoded, PHP_URL_HOST ) );
 								if ( '' === $host ) {
 									return false;
