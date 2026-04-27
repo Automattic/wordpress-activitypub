@@ -428,14 +428,18 @@ class Signature {
 					continue;
 				}
 
-				// Allow a bit of leeway for misconfigured clocks.
-				$d = new \DateTime( $headers[ $header ][0] );
+				// date_create() returns false on malformed input rather than throwing (PHP 8+ behaviour of `new DateTime`).
+				$d = \date_create( $headers[ $header ][0], new \DateTimeZone( 'UTC' ) );
+				if ( false === $d ) {
+					return false;
+				}
 				$d->setTimeZone( new \DateTimeZone( 'UTC' ) );
-				$c = $d->format( 'U' );
+				$c = (int) $d->format( 'U' );
 
-				// Match the tolerance used by the supported verifiers (Http_Signature_Draft / Http_Message_Signature).
-				$d_plus  = time() + ( 5 * MINUTE_IN_SECONDS );
-				$d_minus = time() - HOUR_IN_SECONDS;
+				// Match the past-skew of the maintained Http_Signature_Draft verifier (1 hour); use its 5-minute future allowance.
+				$now     = \time();
+				$d_plus  = $now + ( 5 * MINUTE_IN_SECONDS );
+				$d_minus = $now - HOUR_IN_SECONDS;
 
 				if ( $c > $d_plus || $c < $d_minus ) {
 					// Time out of range.
