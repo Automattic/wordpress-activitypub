@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Blocked additional reserved IPv6 ranges from outbound request safety checks.

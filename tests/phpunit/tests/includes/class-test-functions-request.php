@@ -67,6 +67,13 @@ class Test_Functions_Request extends ActivityPub_TestCase_Cache_HTTP {
 			'ipv4_mapped_rfc1918'         => array( '::ffff:10.0.0.1', false ),
 			'ipv4_mapped_link_local'      => array( '::ffff:169.254.169.254', false ),
 			'ipv4_mapped_public'          => array( '::ffff:8.8.8.8', false ),
+			'sixtofour_loopback'          => array( '2002:7f00:1::1', false ),
+			'sixtofour_rfc1918'           => array( '2002:0a00:0001::1', false ),
+			'teredo'                      => array( '2001:0:53aa:64c:18:7d:11ee:c4', false ),
+			'documentation'               => array( '2001:db8::1', false ),
+			'nat64_well_known'            => array( '64:ff9b::8.8.8.8', false ),
+			'nat64_local_use'             => array( '64:ff9b:1::8.8.8.8', false ),
+			'discard_prefix'              => array( '100::1', false ),
 			'empty_string'                => array( '', false ),
 		);
 	}
@@ -129,6 +136,59 @@ class Test_Functions_Request extends ActivityPub_TestCase_Cache_HTTP {
 	 */
 	public function test_is_ipv4_mapped_ipv6( $ip, $expected ) {
 		$this->assertSame( $expected, \Activitypub\is_ipv4_mapped_ipv6( $ip ) );
+	}
+
+	/**
+	 * Data provider for is_unsafe_ipv6_literal.
+	 *
+	 * @return array<string, array{0: string, 1: bool}>
+	 */
+	public function is_unsafe_ipv6_literal_provider() {
+		return array(
+			// IPv4-mapped IPv6 prefix.
+			'mapped_loopback'        => array( '::ffff:127.0.0.1', true ),
+			'mapped_rfc1918'         => array( '::ffff:10.0.0.1', true ),
+			'mapped_public'          => array( '::ffff:8.8.8.8', true ),
+			// 6to4 prefix; embeds IPv4 in the next 32 bits.
+			'sixtofour_loopback'     => array( '2002:7f00:1::1', true ),
+			'sixtofour_rfc1918'      => array( '2002:0a00:0001::1', true ),
+			'sixtofour_public_embed' => array( '2002:0808:0808::1', true ),
+			// Teredo prefix.
+			'teredo'                 => array( '2001:0:53aa:64c:18:7d:11ee:c4', true ),
+			// Documentation prefix.
+			'documentation'          => array( '2001:db8::1', true ),
+			'documentation_long'     => array( '2001:0db8:85a3::8a2e:0370:7334', true ),
+			// NAT64 well-known prefix.
+			'nat64_well_known'       => array( '64:ff9b::8.8.8.8', true ),
+			// NAT64 local-use prefix.
+			'nat64_local_use'        => array( '64:ff9b:1::8.8.8.8', true ),
+			// Discard prefix.
+			'discard_prefix'         => array( '100::1', true ),
+			// Routable IPv6, unaffected.
+			'pure_ipv6_public'       => array( '2606:4700:4700::1111', false ),
+			'google_dns_v6'          => array( '2001:4860:4860::8888', false ),
+			// Loopback caught elsewhere by NO_RES_RANGE, not by this helper.
+			'pure_ipv6_loopback'     => array( '::1', false ),
+			// Non-IPv6 input.
+			'pure_ipv4'              => array( '8.8.8.8', false ),
+			'private_ipv4'           => array( '10.0.0.1', false ),
+			'not_an_ip'              => array( 'not-an-ip', false ),
+			'empty_string'           => array( '', false ),
+		);
+	}
+
+	/**
+	 * Test the unsafe IPv6 literal detector.
+	 *
+	 * @dataProvider is_unsafe_ipv6_literal_provider
+	 *
+	 * @covers \Activitypub\is_unsafe_ipv6_literal
+	 *
+	 * @param string $ip       The IP literal to check.
+	 * @param bool   $expected Whether it's in an unsafe IPv6 range.
+	 */
+	public function test_is_unsafe_ipv6_literal( $ip, $expected ) {
+		$this->assertSame( $expected, \Activitypub\is_unsafe_ipv6_literal( $ip ) );
 	}
 
 	/**
