@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Reject follower sync requests targeted at internal-network hosts at the route layer.

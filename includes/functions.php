@@ -388,7 +388,7 @@ function get_client_ip() {
 	 * end-to-end, prefer to resolve from the right by your known proxy count
 	 * via the activitypub_client_ip filter.
 	 *
-	 * @since unreleased
+	 * @since 8.2.0
 	 *
 	 * @param string[] $sources $_SERVER keys to consult, in priority order.
 	 */

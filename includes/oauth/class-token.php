@@ -329,7 +329,7 @@ class Token {
 	 * RFC 7009 Section 2.1. A mismatch is treated as a successful no-op so
 	 * the caller cannot probe for token existence belonging to others.
 	 *
-	 * @since unreleased The `$caller_user_id` and `$caller_client_id` parameters were added.
+	 * @since 8.2.0 The `$caller_user_id` and `$caller_client_id` parameters were added.
 	 *
 	 * @param string      $token            The token to revoke (access or refresh).
 	 * @param int|null    $caller_user_id   Optional. User ID of the caller. Null disables the user check.

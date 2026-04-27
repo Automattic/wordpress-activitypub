@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Fail closed when an OAuth request can't be tied to a client IP, instead of sharing one rate-limit bucket.

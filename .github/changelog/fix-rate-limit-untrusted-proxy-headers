@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Per-IP rate limits now only trust the actual TCP peer by default, so an attacker on a directly-exposed site cannot bypass the cap by spoofing X-Forwarded-For or similar proxy headers. Sites behind a trusted reverse proxy (Cloudflare, Akamai, nginx) can opt the relevant header back in via the new "activitypub_client_ip_sources" filter.
