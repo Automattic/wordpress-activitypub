@@ -259,6 +259,13 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 			// IPv4-mapped IPv6 literals are accepted by FILTER_FLAG_NO_RES_RANGE on some PHP builds; reject them explicitly.
 			'ipv4_mapped_loopback'       => array( 'https://[::ffff:127.0.0.1]' ),
 			'ipv4_mapped_rfc1918'        => array( 'https://[::ffff:10.0.0.1]' ),
+			// IPv6 transitional / reserved ranges PHP filter doesn't catch.
+			'sixtofour_loopback'         => array( 'https://[2002:7f00:1::1]' ),
+			'sixtofour_rfc1918'          => array( 'https://[2002:0a00:0001::1]' ),
+			'teredo'                     => array( 'https://[2001:0:53aa:64c:18:7d:11ee:c4]' ),
+			'documentation'              => array( 'https://[2001:db8::1]' ),
+			'nat64_well_known'           => array( 'https://[64:ff9b::8.8.8.8]' ),
+			'discard_prefix'             => array( 'https://[100::1]' ),
 		);
 	}
 
