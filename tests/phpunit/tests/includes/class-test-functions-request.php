@@ -42,8 +42,8 @@ class Test_Functions_Request extends ActivityPub_TestCase_Cache_HTTP {
 			'rfc1918_192'                 => array( '192.168.1.1', false ),
 			'ipv6_loopback'               => array( '::1', false ),
 			'ipv6_loopback_bracketed'     => array( '[::1]', false ),
-			'public_ipv6'                 => array( '2001:db8::1', '2001:db8::1' ),
-			'public_ipv6_bracketed'       => array( '[2001:db8::1]', '2001:db8::1' ),
+			'public_ipv6'                 => array( '2606:4700:4700::1111', '2606:4700:4700::1111' ),
+			'public_ipv6_bracketed'       => array( '[2606:4700:4700::1111]', '2606:4700:4700::1111' ),
 			'empty_string'                => array( '', false ),
 		);
 	}
