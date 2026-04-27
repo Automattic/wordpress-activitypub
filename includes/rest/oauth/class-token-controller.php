@@ -152,7 +152,10 @@ class Token_Controller extends \WP_REST_Controller {
 	 */
 	public function token( \WP_REST_Request $request ) {
 		// Rate-limit token requests to prevent brute-force attacks (max 20 per minute per IP).
-		$ip            = get_client_ip();
+		$ip = get_client_ip();
+		if ( '' === $ip ) {
+			return $this->token_error( 'invalid_request', 'Too many token requests. Please try again later.' );
+		}
 		$transient_key = 'ap_oauth_tok_' . \md5( $ip );
 		$count         = (int) \get_transient( $transient_key );
 
