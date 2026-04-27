@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Hardened outbound request handling for third-party app connections and live activity streams.

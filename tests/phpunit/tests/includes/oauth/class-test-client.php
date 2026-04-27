@@ -249,6 +249,93 @@ class Test_Client extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test register method accepts every legitimate loopback form.
+	 *
+	 * @covers ::register
+	 * @dataProvider loopback_host_provider
+	 *
+	 * @param string $host Host portion of the redirect URI.
+	 */
+	public function test_register_allows_loopback_variants( $host ) {
+		$result = $this->create_client(
+			array(
+				'name'          => 'Loopback Variant Client',
+				'redirect_uris' => array( 'http://' . $host . ':3000/callback' ),
+			)
+		);
+
+		$this->assertIsArray( $result, \sprintf( 'Loopback host %s should be accepted.', $host ) );
+		$this->assertArrayHasKey( 'client_id', $result );
+	}
+
+	/**
+	 * Data provider for loopback hosts that must be treated as loopback.
+	 *
+	 * @return array[]
+	 */
+	public function loopback_host_provider() {
+		return array(
+			'IPv4 loopback literal'       => array( '127.0.0.1' ),
+			'IPv4 loopback upper range'   => array( '127.0.0.2' ),
+			'IPv4 loopback high address'  => array( '127.255.255.254' ),
+			'IPv6 loopback shorthand'     => array( '[::1]' ),
+			'IPv6 loopback full form'     => array( '[0:0:0:0:0:0:0:1]' ),
+			'IPv6 loopback leading zeros' => array( '[::0001]' ),
+			'IPv4-mapped IPv6 loopback'   => array( '[::ffff:127.0.0.1]' ),
+		);
+	}
+
+	/**
+	 * Test register method rejects reserved addresses that are not loopback.
+	 *
+	 * Guards against treating reserved or otherwise non-loopback hosts as
+	 * loopback for the `http://` redirect URI allowance during registration.
+	 *
+	 * @covers ::register
+	 * @dataProvider non_loopback_host_provider
+	 *
+	 * @param string $host Host portion of the redirect URI.
+	 */
+	public function test_register_rejects_non_loopback_reserved_hosts( $host ) {
+		$result = $this->create_client(
+			array(
+				'name'          => 'Non-loopback Reserved Client',
+				'redirect_uris' => array( 'http://' . $host . ':3000/callback' ),
+			)
+		);
+
+		$this->assertInstanceOf(
+			\WP_Error::class,
+			$result,
+			\sprintf( 'Host %s must not be treated as loopback.', $host )
+		);
+	}
+
+	/**
+	 * Data provider for reserved or external hosts that must not be loopback.
+	 *
+	 * @return array[]
+	 */
+	public function non_loopback_host_provider() {
+		return array(
+			'unspecified IPv4'           => array( '0.0.0.0' ),
+			'link-local cloud metadata'  => array( '169.254.169.254' ),
+			'link-local generic'         => array( '169.254.1.1' ),
+			'multicast'                  => array( '224.0.0.1' ),
+			'reserved future use'        => array( '240.0.0.1' ),
+			'TEST-NET-1'                 => array( '192.0.2.1' ),
+			'TEST-NET-2'                 => array( '198.51.100.1' ),
+			'TEST-NET-3'                 => array( '203.0.113.1' ),
+			'private 10/8'               => array( '10.0.0.5' ),
+			'private 172.16/12'          => array( '172.20.0.7' ),
+			'private 192.168/16'         => array( '192.168.1.1' ),
+			'public host'                => array( '8.8.8.8' ),
+			'IPv4-mapped public address' => array( '[::ffff:8.8.8.8]' ),
+			'IPv4-mapped link-local'     => array( '[::ffff:169.254.169.254]' ),
+		);
+	}
+
+	/**
 	 * Test register method allows http for non-loopback when filter permits.
 	 *
 	 * @covers ::register
