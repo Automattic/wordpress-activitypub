@@ -13,6 +13,7 @@ use Activitypub\Collection\Remote_Actors;
 
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_unsafe_ipv6_literal;
 
 /**
  * Followers_Controller class.
@@ -102,11 +103,48 @@ class Followers_Controller extends Actors_Controller {
 					},
 					'args'                => array(
 						'authority' => array(
-							'description' => 'The host to filter followers by.',
-							'type'        => 'string',
-							'format'      => 'uri',
-							'pattern'     => '^https?://[^/]+$',
-							'required'    => true,
+							'description'       => 'The host to filter followers by.',
+							'type'              => 'string',
+							'format'            => 'uri',
+							'pattern'           => '^https?://[^/]+$',
+							'required'          => true,
+							'validate_callback' => static function ( $param ) {
+								/*
+								 * Reject internal-address shapes early. The signer-host check
+								 * downstream already enforces authority matching the verified
+								 * peer; this just keeps obviously-internal values from reaching
+								 * that code at all. Both places run the value through
+								 * self::normalize_host() so semantically equivalent hosts always
+								 * agree.
+								 *
+								 * Percent-decode the input first so encoded forms like
+								 * `https://%5B::1%5D` (bracketed IPv6 literal hidden inside
+								 * %5B/%5D) get checked against the same blocklist as the
+								 * unencoded equivalent. Use rawurldecode() rather than
+								 * urldecode() — the latter also turns `+` into a space, which
+								 * would corrupt otherwise-valid reg-name hosts.
+								 */
+								$decoded = \rawurldecode( (string) $param );
+								$host    = self::normalize_host( (string) \wp_parse_url( $decoded, PHP_URL_HOST ) );
+								if ( '' === $host ) {
+									return false;
+								}
+
+								if ( \filter_var( $host, FILTER_VALIDATE_IP ) ) {
+									if ( is_unsafe_ipv6_literal( $host ) ) {
+										return false;
+									}
+
+									return (bool) \filter_var( $host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE );
+								}
+
+								if ( 'localhost' === $host ) {
+									return false;
+								}
+
+								return ! \str_ends_with( $host, '.localhost' )
+									&& ! \str_ends_with( $host, '.local' );
+							},
 						),
 						'page'      => array(
 							'description' => 'Current page of the collection.',
@@ -203,16 +241,27 @@ class Followers_Controller extends Actors_Controller {
 	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error object on failure.
 	 */
 	public function get_partial_followers( $request ) {
-		$user_id   = $request->get_param( 'user_id' );
-		$authority = $request->get_param( 'authority' );
+		$user_id = $request->get_param( 'user_id' );
+
+		/*
+		 * Decode the percent-encoded authority once and use the canonical form
+		 * everywhere downstream. The route accepts authorities whose host has
+		 * percent-encoded octets (RFC 3986 reg-name), so the signer-host
+		 * check, the inbox LIKE query in Followers::get_by_authority(), and
+		 * the response `id` all need to agree on one canonical string. Mixing
+		 * raw and decoded forms would let a request pass the authority match
+		 * yet return an empty follower set, because stored inbox URLs are
+		 * unencoded.
+		 */
+		$authority = \rawurldecode( (string) $request->get_param( 'authority' ) );
 
 		/*
 		 * FEP-8fcf: the responding server MUST ensure the requested authority
 		 * matches the signing peer, so that instances cannot "get tricked
 		 * into requesting the followers list of a third-party individual".
 		 */
-		$signer_host = self::get_signer_host( $request );
-		$asked_host  = \strtolower( (string) \wp_parse_url( (string) $authority, \PHP_URL_HOST ) );
+		$signer_host = self::normalize_host( self::get_signer_host( $request ) );
+		$asked_host  = self::normalize_host( (string) \wp_parse_url( $authority, \PHP_URL_HOST ) );
 
 		if ( ! $signer_host || ! $asked_host || $signer_host !== $asked_host ) {
 			return new \WP_Error(
@@ -248,6 +297,23 @@ class Followers_Controller extends Actors_Controller {
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 
 		return $response;
+	}
+
+	/**
+	 * Normalize a host so comparisons are consistent.
+	 *
+	 * Lowercases, strips IPv6 brackets, and trims a single FQDN trailing
+	 * dot. Used by both the validate_callback for the `authority` arg and
+	 * the signer-host comparison in get_partial_followers() so semantically
+	 * equivalent host strings always match.
+	 *
+	 * @param string $host Raw host string.
+	 * @return string Normalized host.
+	 */
+	private static function normalize_host( $host ) {
+		$host = \strtolower( (string) $host );
+		$host = \trim( $host, '[]' );
+		return \rtrim( $host, '.' );
 	}
 
 	/**

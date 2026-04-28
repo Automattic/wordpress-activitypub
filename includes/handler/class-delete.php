@@ -304,7 +304,7 @@ class Delete {
 	 * remote actor's keys may legitimately be gone before the Delete
 	 * arrives.
 	 *
-	 * @since unreleased The `$force_signature` parameter is now respected.
+	 * @since 8.2.0 The `$force_signature` parameter is now respected.
 	 *
 	 * @param bool             $defer           Whether to defer signature verification.
 	 * @param \WP_REST_Request $request         The request object.

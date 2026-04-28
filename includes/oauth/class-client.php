@@ -10,11 +10,39 @@ namespace Activitypub\OAuth;
 use Activitypub\Sanitize;
 
 use function Activitypub\get_client_ip;
+use function Activitypub\resolve_public_host;
 
 /**
  * Client class for managing OAuth 2.0 client registrations.
  *
- * Supports both manual registration and RFC 7591 dynamic client registration.
+ * Supports both manual registration and RFC 7591 dynamic client registration,
+ * plus Client Identifier Metadata Documents (CIMD) where the `client_id` is
+ * itself a URL hosting a metadata document.
+ *
+ * ## Loopback policy (RFC 8252)
+ *
+ * Native apps register loopback redirect URIs to receive the OAuth callback
+ * on a port the app opened locally. RFC 8252 §7.3 / §8.3 cover this and
+ * specifically authorise `http://127.0.0.1:{port}/{path}` (IPv4) and
+ * `http://[::1]:{port}/{path}` (IPv6). `localhost` is permitted by common
+ * practice, though §8.3 marks it "NOT RECOMMENDED".
+ *
+ * `is_loopback()` reflects that scope: it matches `127.0.0.0/8`, `::1`
+ * (any spelling, normalised via `inet_pton`), `::ffff:127.x.x.x`, `localhost`,
+ * and `*.localhost`. Reserved-but-not-loopback addresses such as `0.0.0.0`,
+ * link-local `169.254.0.0/16`, and RFC1918 ranges are explicitly *not*
+ * treated as loopback and never bypass `wp_safe_remote_get()`.
+ *
+ * RFC 8252's loopback allowance applies to redirect URIs only. The CIMD
+ * document must be served over HTTPS from a publicly resolvable host:
+ * `client_id` discovery rejects non-`https` URLs up front, and
+ * `fetch_client_metadata()` resolves the host first and rejects anything
+ * private or loopback before falling through to `wp_safe_remote_get()`.
+ * Local development against a loopback CIMD endpoint is intentionally not
+ * supported.
+ *
+ * @see https://datatracker.ietf.org/doc/html/rfc8252 RFC 8252 — OAuth 2.0 for Native Apps
+ * @see https://datatracker.ietf.org/doc/html/rfc7591 RFC 7591 — OAuth 2.0 Dynamic Client Registration
  */
 class Client {
 	/**
@@ -156,7 +184,7 @@ class Client {
 			 * This can happen when a previous discovery failed to parse the metadata
 			 * correctly (e.g. before ActivityStreams vocabulary support was added).
 			 */
-			if ( $client->is_discovered() && empty( $client->get_redirect_uris() ) && \filter_var( $client_id, FILTER_VALIDATE_URL ) ) {
+			if ( $client->is_discovered() && empty( $client->get_redirect_uris() ) && self::is_discoverable_url( $client_id ) ) {
 				\wp_delete_post( $posts[0]->ID, true );
 				return self::discover_and_register( $client_id );
 			}
@@ -164,8 +192,8 @@ class Client {
 			return $client;
 		}
 
-		// If client_id is a URL, try auto-discovery.
-		if ( \filter_var( $client_id, FILTER_VALIDATE_URL ) ) {
+		// If client_id is a discoverable URL (HTTPS), try auto-discovery.
+		if ( self::is_discoverable_url( $client_id ) ) {
 			return self::discover_and_register( $client_id );
 		}
 
@@ -174,6 +202,25 @@ class Client {
 			\__( 'OAuth client not found.', 'activitypub' ),
 			array( 'status' => 404 )
 		);
+	}
+
+	/**
+	 * Determine whether a client_id is a discoverable URL.
+	 *
+	 * Only HTTPS URLs are eligible. The CIMD draft requires HTTPS for
+	 * production, and accepting cleartext URLs would let a network-position
+	 * attacker rewrite the metadata response and inject attacker-controlled
+	 * redirect URIs that preserve the same client_id.
+	 *
+	 * @param string $client_id The client ID to check.
+	 * @return bool True if the client_id is an HTTPS URL eligible for discovery.
+	 */
+	private static function is_discoverable_url( $client_id ) {
+		if ( ! \filter_var( $client_id, FILTER_VALIDATE_URL ) ) {
+			return false;
+		}
+
+		return 'https' === \strtolower( (string) \wp_parse_url( $client_id, PHP_URL_SCHEME ) );
 	}
 
 	/**
@@ -187,7 +234,14 @@ class Client {
 	 */
 	private static function discover_and_register( $client_id ) {
 		// Rate-limit auto-discovery to prevent SSRF abuse (max 10 per minute per IP).
-		$ip            = get_client_ip();
+		$ip = get_client_ip();
+		if ( '' === $ip ) {
+			return new \WP_Error(
+				'activitypub_rate_limited',
+				\__( 'Too many client discovery requests. Please try again later.', 'activitypub' ),
+				array( 'status' => 429 )
+			);
+		}
 		$transient_key = 'ap_oauth_disc_' . \md5( $ip );
 		$count         = (int) \get_transient( $transient_key );
 
@@ -280,6 +334,22 @@ class Client {
 	 * @return array|\WP_Error Metadata array or error.
 	 */
 	private static function fetch_client_metadata( $url ) {
+		/*
+		 * Resolve the host explicitly and reject private/loopback addresses.
+		 * wp_safe_remote_get() also performs URL validation but has a same-host
+		 * carve-out (it allows requests to the WordPress site's own host even
+		 * when that host is loopback/private). The CIMD document is meant to
+		 * be a publicly resolvable HTTPS URL, so close that gap up front.
+		 */
+		$host = \wp_parse_url( $url, PHP_URL_HOST );
+		if ( ! $host || false === resolve_public_host( $host ) ) {
+			return new \WP_Error(
+				'activitypub_client_unsafe_host',
+				\__( 'The client metadata URL host is not allowed.', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
+
 		$args = array(
 			'timeout'     => 10,
 			'headers'     => array(
@@ -288,18 +358,13 @@ class Client {
 			'redirection' => 0, // CIMDs prohibit following redirects to prevent client impersonation.
 		);
 
-		$host = \wp_parse_url( $url, PHP_URL_HOST );
-
 		/*
-		 * Use wp_remote_get for loopback hosts (localhost, *.localhost, 127.x.x.x, ::1).
-		 * wp_safe_remote_get blocks private IPs as SSRF protection, but the OAuth spec
-		 * explicitly allows loopback clients for development (RFC 8252 Section 8.3).
+		 * Always use wp_safe_remote_get for the metadata document fetch. RFC 8252's
+		 * loopback allowance applies to redirect URIs (Section 7.3), not to the
+		 * client metadata document — that's expected to be a publicly resolvable
+		 * HTTPS URL.
 		 */
-		if ( $host && self::is_loopback( $host ) ) {
-			$response = \wp_remote_get( $url, $args );
-		} else {
-			$response = \wp_safe_remote_get( $url, $args );
-		}
+		$response = \wp_safe_remote_get( $url, $args );
 
 		if ( \is_wp_error( $response ) ) {
 			return new \WP_Error(
@@ -546,20 +611,28 @@ class Client {
 		}
 
 		// Strip brackets from IPv6 (parse_url returns "[::1]").
-		$ip = trim( $host, '[]' );
+		$ip = \trim( $host, '[]' );
+
+		if ( ! \filter_var( $ip, FILTER_VALIDATE_IP ) ) {
+			return false;
+		}
+
+		// IPv4 loopback 127.0.0.0/8 (RFC 1122 Section 3.2.1.3).
+		if ( \filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) ) {
+			return 0 === \strpos( $ip, '127.' );
+		}
 
 		/*
-		 * PHP's FILTER_FLAG_NO_RES_RANGE rejects reserved IPs including
-		 * the full 127.0.0.0/8 range and ::1, so a valid IP that fails
-		 * this filter is a loopback/reserved address.
+		 * IPv6 loopback ::1 (RFC 4291 Section 2.5.3). Normalised via inet_pton
+		 * so equivalents like 0:0:0:0:0:0:0:1 and ::0001 also match.
 		 */
-		$is_ip = \filter_var( $ip, FILTER_VALIDATE_IP );
-		if ( $is_ip && ! \filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_RES_RANGE ) ) {
+		$packed = \inet_pton( $ip );
+		if ( false !== $packed && "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1" === $packed ) {
 			return true;
 		}
 
-		// IPv4-mapped IPv6 loopback (::ffff:127.x.x.x) — not caught by FILTER_FLAG_NO_RES_RANGE.
-		return 0 === \strpos( \strtolower( $ip ), '::ffff:127.' );
+		// IPv4-mapped IPv6 loopback ::ffff:127.x.x.x (RFC 4291 Section 2.5.5.2).
+		return 0 === \strpos( $ip, '::ffff:127.' );
 	}
 
 	/**

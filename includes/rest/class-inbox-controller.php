@@ -72,9 +72,14 @@ class Inbox_Controller extends \WP_REST_Controller {
 							'sanitize_callback' => '\Activitypub\object_to_uri',
 						),
 						'type'   => array(
-							'description' => 'The type of the activity.',
-							'type'        => 'string',
-							'required'    => true,
+							'description'       => 'The type of the activity.',
+							'type'              => 'string',
+							'required'          => true,
+							'sanitize_callback' => 'sanitize_html_class',
+							'validate_callback' => static function ( $param ) {
+								// Reject values that sanitize to empty so dynamic hook names always have a suffix.
+								return '' !== \sanitize_html_class( (string) $param );
+							},
 						),
 						'object' => array(
 							'description'       => 'The object of the activity.',

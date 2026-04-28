@@ -324,10 +324,19 @@ class Token {
 	/**
 	 * Revoke a token.
 	 *
-	 * @param string $token The token to revoke (access or refresh).
+	 * When `$caller_user_id` or `$caller_client_id` is provided, the token
+	 * is only deleted if it was issued to that user or that client, per
+	 * RFC 7009 Section 2.1. A mismatch is treated as a successful no-op so
+	 * the caller cannot probe for token existence belonging to others.
+	 *
+	 * @since 8.2.0 The `$caller_user_id` and `$caller_client_id` parameters were added.
+	 *
+	 * @param string      $token            The token to revoke (access or refresh).
+	 * @param int|null    $caller_user_id   Optional. User ID of the caller. Null disables the user check.
+	 * @param string|null $caller_client_id Optional. OAuth client ID of the caller. Null disables the client check.
 	 * @return bool True on success (always returns true per RFC 7009).
 	 */
-	public static function revoke( $token ) {
+	public static function revoke( $token, $caller_user_id = null, $caller_client_id = null ) {
 		global $wpdb;
 
 		$token_hash = self::hash_token( $token );
@@ -345,6 +354,10 @@ class Token {
 			$user_id    = (int) $user_id;
 			$token_data = \get_user_meta( $user_id, $access_meta_key, true );
 			$client_id  = is_array( $token_data ) ? ( $token_data['client_id'] ?? '' ) : '';
+
+			if ( ! self::caller_owns_token( $user_id, $client_id, $caller_user_id, $caller_client_id ) ) {
+				return true;
+			}
 
 			// Delete the token.
 			\delete_user_meta( $user_id, $access_meta_key );
@@ -373,10 +386,16 @@ class Token {
 			$access_hash = \get_user_meta( $user_id, $refresh_index_key, true );
 			$client_id   = '';
 
-			// Delete the token and index.
 			if ( $access_hash ) {
 				$token_data = \get_user_meta( $user_id, self::META_PREFIX . $access_hash, true );
 				$client_id  = is_array( $token_data ) ? ( $token_data['client_id'] ?? '' ) : '';
+			}
+
+			if ( ! self::caller_owns_token( $user_id, $client_id, $caller_user_id, $caller_client_id ) ) {
+				return true;
+			}
+
+			if ( $access_hash ) {
 				\delete_user_meta( $user_id, self::META_PREFIX . $access_hash );
 			}
 			\delete_user_meta( $user_id, $refresh_index_key );
@@ -387,6 +406,45 @@ class Token {
 
 		// Token doesn't exist or already revoked - that's fine per RFC 7009.
 		return true;
+	}
+
+	/**
+	 * Decide whether a caller is permitted to revoke a specific token.
+	 *
+	 * A null caller user and null caller client disable the check entirely,
+	 * preserving the pre-RFC-7009-enforcement behavior for internal callers
+	 * that already know they have authority (admin unlink, uninstall, etc.).
+	 *
+	 * When either caller parameter is provided, the token is considered
+	 * owned if it matches the caller user OR the caller client. Matching
+	 * client alone is enough to let an OAuth client clean up any token it
+	 * issued, regardless of which user granted consent.
+	 *
+	 * @param int         $token_user_id    User ID the token was issued to.
+	 * @param string      $token_client_id  OAuth client ID the token was issued to.
+	 * @param int|null    $caller_user_id   Caller user ID, or null to skip the user check.
+	 * @param string|null $caller_client_id Caller client ID, or null to skip the client check.
+	 * @return bool True if the caller may revoke, false otherwise.
+	 */
+	private static function caller_owns_token( $token_user_id, $token_client_id, $caller_user_id, $caller_client_id ) {
+		if ( null === $caller_user_id && null === $caller_client_id ) {
+			return true;
+		}
+
+		if ( null !== $caller_user_id && $token_user_id === $caller_user_id ) {
+			return true;
+		}
+
+		/*
+		 * Require a real client_id on the token. An empty string on both
+		 * sides would otherwise match and let an un-attributed token be
+		 * revoked by any caller presenting an empty client claim.
+		 */
+		if ( null !== $caller_client_id && '' !== $token_client_id && $token_client_id === $caller_client_id ) {
+			return true;
+		}
+
+		return false;
 	}
 
 	/**

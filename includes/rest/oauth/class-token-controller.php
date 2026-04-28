@@ -152,12 +152,15 @@ class Token_Controller extends \WP_REST_Controller {
 	 */
 	public function token( \WP_REST_Request $request ) {
 		// Rate-limit token requests to prevent brute-force attacks (max 20 per minute per IP).
-		$ip            = get_client_ip();
+		$ip = get_client_ip();
+		if ( '' === $ip ) {
+			return $this->token_error( 'rate_limited', 'Too many token requests. Please try again later.', 429 );
+		}
 		$transient_key = 'ap_oauth_tok_' . \md5( $ip );
 		$count         = (int) \get_transient( $transient_key );
 
 		if ( $count >= 20 ) {
-			return $this->token_error( 'invalid_request', 'Too many token requests. Please try again later.' );
+			return $this->token_error( 'rate_limited', 'Too many token requests. Please try again later.', 429 );
 		}
 
 		\set_transient( $transient_key, $count + 1, MINUTE_IN_SECONDS );
@@ -271,9 +274,28 @@ class Token_Controller extends \WP_REST_Controller {
 	public function revoke( \WP_REST_Request $request ) {
 		$token = $request->get_param( 'token' );
 
-		// Per RFC 7009, always return 200 even if token doesn't exist.
-		Token::revoke( $token );
+		if ( \current_user_can( 'manage_options' ) ) {
+			// Site admins may revoke any token. Null-null disables the ownership check.
+			Token::revoke( $token );
+		} else {
+			/*
+			 * RFC 7009 §2.1: the server must verify the token was issued to
+			 * the requesting client. When the caller authenticated with a
+			 * bearer token we know the calling client, so require a client
+			 * match and ignore the user — otherwise a low-trust client
+			 * could revoke tokens the user had granted to a different
+			 * client. For pure cookie-authenticated callers there is no
+			 * client context, so user match is the only available check.
+			 */
+			$caller_token = OAuth_Server::get_current_token();
+			if ( $caller_token ) {
+				Token::revoke( $token, null, $caller_token->get_client_id() );
+			} else {
+				Token::revoke( $token, \get_current_user_id(), null );
+			}
+		}
 
+		// Per RFC 7009, always return 200 even if the token doesn't exist or was not owned.
 		return new \WP_REST_Response( null, 200 );
 	}
 
@@ -370,16 +392,23 @@ class Token_Controller extends \WP_REST_Controller {
 	 *
 	 * @param string $error             Error code.
 	 * @param string $error_description Error description.
+	 * @param int    $status            Optional. HTTP status code. Defaults to 400 per RFC 6749 §5.2;
+	 *                                  callers should pass 429 for rate-limit responses (RFC 6585).
 	 * @return \WP_REST_Response
 	 */
-	private function token_error( $error, $error_description ) {
+	private function token_error( $error, $error_description, $status = 400 ) {
 		return new \WP_REST_Response(
 			array(
 				'error'             => $error,
 				'error_description' => $error_description,
 			),
-			400,
-			array( 'Content-Type' => 'application/json' )
+			$status,
+			array(
+				'Content-Type'  => 'application/json',
+				// RFC 6749 §5.1 requires the same no-cache headers on error responses as on success responses.
+				'Cache-Control' => 'no-store',
+				'Pragma'        => 'no-cache',
+			)
 		);
 	}
 

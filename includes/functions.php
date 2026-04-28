@@ -341,44 +341,76 @@ function get_embed_html( $url, $inline_css = true ) {
 /**
  * Get the client IP address for rate-limiting purposes.
  *
- * Checks common proxy headers before falling back to REMOTE_ADDR,
- * similar to Jetpack's approach. The result can be overridden via
- * the `activitypub_client_ip` filter.
+ * Walks the ordered list of $_SERVER keys returned by the
+ * `activitypub_client_ip_sources` filter (default: `['REMOTE_ADDR']`) and
+ * returns the first value that parses as a valid IP literal, validated via
+ * `filter_var( ..., FILTER_VALIDATE_IP )`. The result can be overridden
+ * outright via the `activitypub_client_ip` filter; that filter's output is
+ * also validated and replaced with `''` when it isn't a valid IP, so a
+ * misbehaving filter can't collide all callers into the same rate-limit
+ * bucket.
+ *
+ * Trusting any source other than `REMOTE_ADDR` is only safe behind a
+ * reverse proxy that sets and overwrites the corresponding header — see
+ * the `activitypub_client_ip_sources` filter docblock for guidance.
+ *
+ * Callers using the return value as a rate-limit key should treat an
+ * empty return as "client unidentifiable" and fail closed rather than
+ * share a single bucket across every such request.
  *
  * @since 8.1.0
  *
- * @return string The client IP address.
+ * @return string A valid IP address, or '' when no IP could be determined.
  */
 function get_client_ip() {
 	// phpcs:disable WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders
-	$ip = 'unknown';
+	$ip = '';
 
-	$headers = array(
-		'HTTP_CF_CONNECTING_IP', // Cloudflare.
-		'HTTP_CLIENT_IP',
-		'HTTP_X_FORWARDED_FOR',
-		'HTTP_X_FORWARDED',
-		'HTTP_X_CLUSTER_CLIENT_IP',
-		'HTTP_FORWARDED_FOR',
-		'HTTP_FORWARDED',
-	);
+	/**
+	 * Filter the ordered list of $_SERVER keys to consult as a source for the
+	 * client IP. The first key whose value parses as a valid IP wins.
+	 *
+	 * Default: array( 'REMOTE_ADDR' ) — the actual TCP peer, the only value
+	 * that an HTTP client cannot spoof. Trusting any other $_SERVER key is
+	 * only safe when a reverse proxy in front of the site sets that key and
+	 * overwrites any client-supplied version; otherwise an attacker can spoof
+	 * the value and bypass the per-IP rate limits that depend on it.
+	 *
+	 * Common operator overrides:
+	 *   array( 'HTTP_CF_CONNECTING_IP' )                      on Cloudflare.
+	 *   array( 'HTTP_TRUE_CLIENT_IP', 'REMOTE_ADDR' )         Akamai with a fallback.
+	 *   array( 'HTTP_X_REAL_IP' )                             nginx that strips the client copy.
+	 *
+	 * X-Forwarded-For pitfall: even with a trusted proxy, an attacker can
+	 * prepend their own value before the proxy appends the real client IP.
+	 * This helper takes the leftmost entry, which is correct only when the
+	 * trusted proxy fully overwrites the header. If you trust X-Forwarded-For
+	 * end-to-end, prefer to resolve from the right by your known proxy count
+	 * via the activitypub_client_ip filter.
+	 *
+	 * @since 8.2.0
+	 *
+	 * @param string[] $sources $_SERVER keys to consult, in priority order.
+	 */
+	$sources = \apply_filters( 'activitypub_client_ip_sources', array( 'REMOTE_ADDR' ) );
 
-	foreach ( $headers as $header ) {
-		if ( ! empty( $_SERVER[ $header ] ) ) {
-			// Some headers (e.g. X-Forwarded-For) may contain a comma-separated list; use the first IP.
-			$ip_list = \sanitize_text_field( \wp_unslash( $_SERVER[ $header ] ) );
-			$ip      = \trim( \explode( ',', $ip_list )[0] );
-
-			if ( \filter_var( $ip, FILTER_VALIDATE_IP ) ) {
-				break;
-			}
-
-			$ip = 'unknown';
-		}
+	if ( ! \is_array( $sources ) ) {
+		$sources = array( 'REMOTE_ADDR' );
 	}
 
-	if ( 'unknown' === $ip && isset( $_SERVER['REMOTE_ADDR'] ) ) {
-		$ip = \sanitize_text_field( \wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
+	foreach ( $sources as $source ) {
+		if ( ! \is_string( $source ) || empty( $_SERVER[ $source ] ) ) {
+			continue;
+		}
+
+		// Some headers (e.g. X-Forwarded-For) may contain a comma-separated list; use the first IP.
+		$ip_list   = \sanitize_text_field( \wp_unslash( $_SERVER[ $source ] ) );
+		$candidate = \trim( \explode( ',', $ip_list )[0] );
+
+		if ( \filter_var( $candidate, FILTER_VALIDATE_IP ) ) {
+			$ip = $candidate;
+			break;
+		}
 	}
 	// phpcs:enable WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders
 
@@ -387,7 +419,15 @@ function get_client_ip() {
 	 *
 	 * @since 8.1.0
 	 *
-	 * @param string $ip The detected client IP address.
+	 * @param string $ip The detected client IP address (empty when none could be determined).
 	 */
-	return \apply_filters( 'activitypub_client_ip', $ip );
+	$ip = \apply_filters( 'activitypub_client_ip', $ip );
+
+	// Tolerate surrounding whitespace from filter callbacks; FILTER_VALIDATE_IP would otherwise reject it.
+	if ( \is_string( $ip ) ) {
+		$ip = \trim( $ip );
+	}
+
+	// Re-validate so a misbehaving filter can't return a sentinel string that would collapse all callers into one bucket.
+	return \is_string( $ip ) && \filter_var( $ip, FILTER_VALIDATE_IP ) ? $ip : '';
 }

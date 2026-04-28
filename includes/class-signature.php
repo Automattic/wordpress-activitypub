@@ -424,17 +424,23 @@ class Signature {
 				}
 			}
 			if ( 'date' === $header ) {
+				// A signed `date` header with no value must fail closed, otherwise the time-window check is skipped.
 				if ( empty( $headers[ $header ][0] ) ) {
-					continue;
+					return false;
 				}
 
-				// Allow a bit of leeway for misconfigured clocks.
-				$d = new \DateTime( $headers[ $header ][0] );
+				// date_create() returns false on malformed input; new DateTime() would instead throw.
+				$d = \date_create( $headers[ $header ][0], new \DateTimeZone( 'UTC' ) );
+				if ( false === $d ) {
+					return false;
+				}
 				$d->setTimeZone( new \DateTimeZone( 'UTC' ) );
-				$c = $d->format( 'U' );
+				$c = (int) $d->format( 'U' );
 
-				$d_plus  = time() + ( 3 * HOUR_IN_SECONDS );
-				$d_minus = time() - ( 3 * HOUR_IN_SECONDS );
+				// Match the past-skew of the maintained Http_Signature_Draft verifier (1 hour); use its 5-minute future allowance.
+				$now     = \time();
+				$d_plus  = $now + ( 5 * MINUTE_IN_SECONDS );
+				$d_minus = $now - HOUR_IN_SECONDS;
 
 				if ( $c > $d_plus || $c < $d_minus ) {
 					// Time out of range.
