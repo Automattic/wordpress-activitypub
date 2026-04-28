@@ -586,6 +586,100 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 	}
 
 	/**
+	 * Test that blog actor outbox filters private activities for unauthenticated users.
+	 *
+	 * Regression test: When user_id=0 (blog actor) and the visitor is unauthenticated
+	 * (get_current_user_id() also returns 0), the visibility filters must still apply.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_blog_actor_outbox_filters_private_activities_for_unauthenticated() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		\wp_set_current_user( 0 );
+
+		// Create a public Create activity for the blog actor.
+		self::factory()->post->create(
+			array(
+				'post_author'  => 0,
+				'post_type'    => Outbox::POST_TYPE,
+				'post_status'  => 'pending',
+				'post_title'   => 'https://example.org/activity/public-create',
+				'post_content' => \wp_json_encode(
+					array(
+						'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
+						'id'       => 'https://example.org/activity/public-create',
+						'type'     => 'Create',
+						'actor'    => 'https://example.org/blog',
+						'object'   => array(
+							'id'      => 'https://example.org/note/public',
+							'type'    => 'Note',
+							'content' => 'Public note',
+						),
+					)
+				),
+				'meta_input'   => array(
+					'_activitypub_activity_type'     => 'Create',
+					'_activitypub_activity_actor'    => 'blog',
+					'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+				),
+			)
+		);
+
+		// Create a private Accept activity for the blog actor.
+		self::factory()->post->create(
+			array(
+				'post_author'  => 0,
+				'post_type'    => Outbox::POST_TYPE,
+				'post_status'  => 'pending',
+				'post_title'   => 'https://example.org/activity/private-accept',
+				'post_content' => \wp_json_encode(
+					array(
+						'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
+						'id'       => 'https://example.org/activity/private-accept',
+						'type'     => 'Accept',
+						'actor'    => 'https://example.org/blog',
+						'object'   => 'https://example.org/follow/1',
+					)
+				),
+				'meta_input'   => array(
+					'_activitypub_activity_type'     => 'Accept',
+					'_activitypub_activity_actor'    => 'blog',
+					'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
+				),
+			)
+		);
+
+		// Unauthenticated request to blog actor outbox.
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
+		$request->set_param( 'page', 1 );
+		$request->set_param( 'per_page', 10 );
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+
+		// The private Accept should be filtered out, only the public Create should remain.
+		$activity_types = \wp_list_pluck( $data['orderedItems'], 'type' );
+		$this->assertContains( 'Create', $activity_types, 'Public Create should be visible.' );
+		$this->assertNotContains( 'Accept', $activity_types, 'Private Accept should be filtered from unauthenticated blog actor outbox.' );
+
+		// Verify a privileged user CAN see the private Accept activity.
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $admin_id );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
+		$request->set_param( 'page', 1 );
+		$request->set_param( 'per_page', 10 );
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$activity_types = \wp_list_pluck( $data['orderedItems'], 'type' );
+		$this->assertContains( 'Accept', $activity_types, 'Private Accept should be visible to privileged users.' );
+
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
 	 * Test meta query behavior for non-privileged users.
 	 *
 	 * @covers ::get_items
@@ -1002,5 +1096,57 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		$this->assertStringContainsString( 'Berlin', $post->post_title );
 		// The summary should be used as content fallback.
 		$this->assertNotEmpty( $post->post_content, 'Post should have content from summary fallback.' );
+	}
+
+	/**
+	 * Test that totalItems for the blog actor excludes anonymous comments.
+	 *
+	 * @covers ::overload_total_items
+	 */
+	public function test_blog_actor_total_items_excludes_anonymous_comments() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\wp_set_current_user( 0 );
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => self::$user_id,
+				'post_status' => 'publish',
+			)
+		);
+		\update_post_meta( $post_id, 'activitypub_status', 'federated' );
+
+		// Create a federated comment from a local user (should be counted).
+		$local_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'user_id'         => self::$user_id,
+			)
+		);
+		\update_comment_meta( $local_comment_id, 'activitypub_status', 'federated' );
+
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertArrayHasKey( 'totalItems', $data );
+
+		$count_before = $data['totalItems'];
+
+		// Create a federated comment from an anonymous/remote user (should NOT be counted).
+		$remote_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'    => $post_id,
+				'user_id'            => 0,
+				'comment_author'     => 'Remote User',
+				'comment_author_url' => 'https://remote.example/user',
+			)
+		);
+		\update_comment_meta( $remote_comment_id, 'activitypub_status', 'federated' );
+
+		$response2 = \rest_get_server()->dispatch( $request );
+		$data2     = $response2->get_data();
+
+		$this->assertEquals( $count_before, $data2['totalItems'], 'Remote comment should not inflate totalItems.' );
 	}
 }

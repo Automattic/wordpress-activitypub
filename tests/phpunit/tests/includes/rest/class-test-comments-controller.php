@@ -78,7 +78,7 @@ class Test_Comments_Controller extends \Activitypub\Tests\Test_REST_Controller_T
 	 */
 	public function test_register_routes() {
 		$routes = rest_get_server()->get_routes();
-		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/comments/(?P<comment_id>[-]?\d+)/remote-reply', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/comments/(?P<comment_id>[\d]+)/remote-reply', $routes );
 	}
 
 	/**
@@ -109,6 +109,105 @@ class Test_Comments_Controller extends \Activitypub\Tests\Test_REST_Controller_T
 		$response = rest_get_server()->dispatch( $request );
 
 		$this->assertErrorResponse( 'rest_invalid_param', $response );
+	}
+
+	/**
+	 * A local-only comment on a non-public parent post must return the same
+	 * "not found" shape as any other private-parent comment, not the
+	 * local-only 403 — otherwise an outsider can distinguish "comment exists
+	 * but is local" from "comment missing" when the parent post is private.
+	 *
+	 * @covers ::validate_comment
+	 */
+	public function test_get_item_local_comment_on_private_parent_returns_not_found() {
+		$private_post_id = self::factory()->post->create( array( 'post_status' => 'private' ) );
+		$comment_id      = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $private_post_id,
+				'comment_type'     => 'comment',
+				'comment_approved' => 1,
+			)
+		);
+		/* No `protocol=activitypub` meta — the comment is local-only. */
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/comments/' . $comment_id . '/remote-reply' );
+		$request->set_param( 'resource', 'https://example.com/user' );
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertErrorResponse( 'rest_invalid_param', $response );
+		$this->assertSame( 'activitypub_comment_not_found', $data['data']['details']['comment_id']['code'] );
+	}
+
+	/**
+	 * Comments whose parent post is not currently publicly queryable must not
+	 * expose the remote-reply template. Response shape matches "comment not
+	 * found" to avoid leaking existence.
+	 *
+	 * The comment is flagged as ActivityPub-protocol so the request reaches the
+	 * parent-post visibility gate instead of short-circuiting on the "local
+	 * only" guard.
+	 *
+	 * @covers ::validate_comment
+	 */
+	public function test_get_item_hidden_when_parent_post_is_private() {
+		$private_post_id = self::factory()->post->create( array( 'post_status' => 'private' ) );
+		$comment_id      = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $private_post_id,
+				'comment_type'     => 'comment',
+				'comment_approved' => 1,
+			)
+		);
+		\add_comment_meta( $comment_id, 'protocol', 'activitypub', true );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/comments/' . $comment_id . '/remote-reply' );
+		$request->set_param( 'resource', 'https://example.com/user' );
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		/* Outer error code is the REST wrapper for validate_callback failures. */
+		$this->assertErrorResponse( 'rest_invalid_param', $response );
+		$this->assertSame( 'activitypub_comment_not_found', $data['data']['details']['comment_id']['code'] );
+	}
+
+	/**
+	 * A previously-federated post that has since been made non-public must not
+	 * expose the remote-reply template for its comments. Regression test for
+	 * the `is_post_disabled()` escape hatch that kept the gate open for posts
+	 * in a `federated` lifecycle state.
+	 *
+	 * @covers ::validate_comment
+	 */
+	public function test_get_item_hidden_for_previously_federated_post_made_private() {
+		$post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		$post    = \get_post( $post_id );
+
+		\Activitypub\set_wp_object_state( $post, ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'private',
+			)
+		);
+
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_type'     => 'comment',
+				'comment_approved' => 1,
+			)
+		);
+		\add_comment_meta( $comment_id, 'protocol', 'activitypub', true );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/comments/' . $comment_id . '/remote-reply' );
+		$request->set_param( 'resource', 'https://example.com/user' );
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertErrorResponse( 'rest_invalid_param', $response );
+		$this->assertSame( 'activitypub_comment_not_found', $data['data']['details']['comment_id']['code'] );
 	}
 
 	/**

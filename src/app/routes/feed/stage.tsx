@@ -48,6 +48,7 @@ const DEFAULT_VIEW: ViewType = {
 	filters: [],
 	fields: [ 'metadata', 'title.rendered', 'content' ],
 	infiniteScrollEnabled: true,
+	startPosition: 1,
 };
 
 const defaultLayouts = {
@@ -142,16 +143,29 @@ export default function FeedStage(): ReactNode {
 		onChangeQueryParams: handleChangeQueryParams,
 	} );
 
-	// Wrap updateView to reset page when filters change
+	// Wrap updateView to reset page when filters change and to translate
+	// dataviews' infinite-scroll `startPosition` into our page-based loader.
 	const updateFeedView = useCallback(
 		( updatedView: ViewType ): void => {
-			// Reset to page 1 when filters change
 			const filtersChanged: boolean = JSON.stringify( view.filters ) !== JSON.stringify( updatedView.filters );
-			const page: number = filtersChanged ? 1 : updatedView.page ?? 1;
+			const perPage: number = updatedView.perPage || 20;
+			let page: number = updatedView.page ?? 1;
+
+			if ( filtersChanged ) {
+				page = 1;
+			} else if (
+				typeof updatedView.startPosition === 'number' &&
+				updatedView.startPosition !== view.startPosition
+			) {
+				// DataViews 14 advances startPosition as the user scrolls;
+				// map it to the next page we need to fetch.
+				const targetPage: number = Math.max( 1, Math.ceil( updatedView.startPosition / perPage ) );
+				page = Math.max( page, targetPage );
+			}
 
 			updateView( { ...updatedView, page } );
 		},
-		[ view.filters, updateView ]
+		[ view.filters, view.startPosition, updateView ]
 	);
 
 	// Reset view to default state when actor switches
@@ -190,7 +204,6 @@ export default function FeedStage(): ReactNode {
 
 	// State for infinite scroll
 	const [ allLoadedRecords, setAllLoadedRecords ] = useState< FeedPost[] >( [] );
-	const [ isLoadingMore, setIsLoadingMore ] = useState( false );
 	const lastProcessedPage = useRef< number >( 0 );
 
 	const changeSelection = useCallback(
@@ -207,22 +220,6 @@ export default function FeedStage(): ReactNode {
 		[ selectItem ]
 	);
 
-	// Infinite scroll handler
-	const infiniteScrollHandler = useCallback( (): void => {
-		const currentPage: number = view.page || 1;
-
-		// Prevent concurrent requests or loading beyond available pages
-		if ( isLoadingMore || currentPage >= ( totalPages || 1 ) ) {
-			return;
-		}
-
-		setIsLoadingMore( true );
-		updateFeedView( {
-			...view,
-			page: currentPage + 1,
-		} );
-	}, [ isLoadingMore, view, totalPages, updateFeedView ] );
-
 	// Accumulate data across pages for infinite scroll
 	useEffect( (): void => {
 		const currentPage: number = normalizedView.page || 1;
@@ -232,7 +229,6 @@ export default function FeedStage(): ReactNode {
 		if ( feed.length === 0 && currentPage === 1 ) {
 			setAllLoadedRecords( [] );
 			lastProcessedPage.current = currentPage;
-			setIsLoadingMore( false );
 			return;
 		}
 
@@ -250,7 +246,6 @@ export default function FeedStage(): ReactNode {
 		if ( currentPage === 1 || ! infiniteScrollEnabled ) {
 			setAllLoadedRecords( feed );
 			lastProcessedPage.current = currentPage;
-			setIsLoadingMore( false );
 		} else {
 			// Append new records while avoiding duplicates
 			setAllLoadedRecords( ( prev: FeedPost[] ): FeedPost[] => {
@@ -261,7 +256,6 @@ export default function FeedStage(): ReactNode {
 				return newRecords.length > 0 ? [ ...prev, ...newRecords ] : prev;
 			} );
 			lastProcessedPage.current = currentPage;
-			setIsLoadingMore( false );
 		}
 	}, [
 		feed,
@@ -277,7 +271,7 @@ export default function FeedStage(): ReactNode {
 			fields={ fields }
 			view={ normalizedView as DataViewsView }
 			onChangeView={ updateFeedView as ( view: DataViewsView ) => void }
-			isLoading={ isResolving || isLoadingMore }
+			isLoading={ isResolving }
 			onClickItem={ ( item: FeedPost ): void => selectItem( item.id ) }
 			isItemClickable={ (): true => true }
 			getItemId={ ( item: FeedPost ): string => item.id.toString() }
@@ -287,7 +281,6 @@ export default function FeedStage(): ReactNode {
 			paginationInfo={ {
 				totalItems,
 				totalPages,
-				infiniteScrollHandler,
 			} }
 			defaultLayouts={ defaultLayouts }
 		/>

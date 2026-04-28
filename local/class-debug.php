@@ -18,7 +18,7 @@ use Activitypub\Collection\Remote_Posts;
  * in the WordPress admin for easier debugging during
  * local development, and provides logging utilities.
  *
- * @since unreleased
+ * @since 8.1.0
  */
 class Debug {
 	/**

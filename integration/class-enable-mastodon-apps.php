@@ -43,6 +43,7 @@ class Enable_Mastodon_Apps {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
+		\add_filter( 'mastodon_api_valid_user', array( self::class, 'is_ap_actor' ), 10, 2 );
 		\add_filter( 'mastodon_api_account_followers', array( self::class, 'api_account_followers' ), 10, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_external' ), 15, 2 );
 		\add_filter( 'mastodon_api_account', array( self::class, 'api_account_internal' ), 9, 2 );
@@ -51,10 +52,12 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_search', array( self::class, 'api_search_by_url' ), 40, 2 );
 		\add_filter( 'mastodon_api_get_posts_query_args', array( self::class, 'api_get_posts_query_args' ) );
 		\add_filter( 'mastodon_api_statuses', array( self::class, 'api_statuses_external' ), 10, 2 );
+		\add_filter( 'mastodon_api_status_by_url', array( self::class, 'api_status_by_url' ), 10, 2 );
 		\add_filter( 'mastodon_api_status_context', array( self::class, 'api_get_replies' ), 10, 3 );
 		\add_filter( 'mastodon_api_update_credentials', array( self::class, 'api_update_credentials' ), 10, 2 );
 		\add_filter( 'mastodon_api_submit_status_text', array( Mention::class, 'the_content' ) );
-		\add_filter( 'mastodon_api_notifications_get', array( self::class, 'api_notifications_get' ), 10, 2 );
+		\add_filter( 'mastodon_api_notifications_get', array( self::class, 'api_notifications_get' ), 10, 5 );
+		\add_filter( 'mastodon_api_tag_timeline', array( self::class, 'api_tag_timeline_tags_pub' ), 20, 2 );
 	}
 
 	/**
@@ -186,6 +189,26 @@ class Enable_Mastodon_Apps {
 	}
 
 	/**
+	 * Validate ap_actor post IDs as valid Mastodon API users.
+	 *
+	 * @param bool       $is_valid Whether the user is valid.
+	 * @param string|int $user_id  The user ID to check.
+	 *
+	 * @return bool True if the user ID is a valid ap_actor post.
+	 */
+	public static function is_ap_actor( $is_valid, $user_id ) {
+		if ( $is_valid ) {
+			return $is_valid;
+		}
+
+		if ( \is_numeric( $user_id ) && Remote_Actors::POST_TYPE === \get_post_type( (int) $user_id ) ) {
+			return true;
+		}
+
+		return $is_valid;
+	}
+
+	/**
 	 * Add followers to Mastodon API.
 	 *
 	 * @param array  $followers An array of followers.
@@ -204,7 +227,7 @@ class Enable_Mastodon_Apps {
 				continue;
 			}
 
-			$account = self::actor_to_account( $actor );
+			$account = self::actor_to_account( $actor, $follower->ID );
 
 			$account->followers_count = 0;
 			$account->following_count = 0;
@@ -232,6 +255,13 @@ class Enable_Mastodon_Apps {
 	 * @return Account The filtered Account.
 	 */
 	public static function api_account_external( $user_data, $user_id ) {
+		if ( ! $user_data && \is_numeric( $user_id ) && Remote_Actors::POST_TYPE === \get_post_type( (int) $user_id ) ) {
+			$actor = Remote_Actors::get_actor( (int) $user_id );
+			if ( $actor && ! \is_wp_error( $actor ) ) {
+				return self::actor_to_account( $actor, (int) $user_id );
+			}
+		}
+
 		if ( $user_data || ( is_numeric( $user_id ) && $user_id ) ) {
 			// Only augment.
 			return $user_data;
@@ -388,20 +418,21 @@ class Enable_Mastodon_Apps {
 			return null;
 		}
 
-		return self::actor_to_account( $actor );
+		return self::actor_to_account( $actor, $actor_post->ID );
 	}
 
 	/**
 	 * Convert an Actor object to an Account.
 	 *
-	 * @param Actor $actor The actor object.
+	 * @param Actor    $actor   The actor object.
+	 * @param int|null $post_id Optional WordPress post ID for the actor.
 	 *
 	 * @return Account The account.
 	 */
-	private static function actor_to_account( $actor ) {
+	private static function actor_to_account( $actor, $post_id = null ) {
 		$account = new Account();
 
-		$actor_id = $actor->get__id();
+		$actor_id = $post_id ? $post_id : $actor->get__id();
 		if ( ! $actor_id ) {
 			$actor_id = $actor->get_id();
 		}
@@ -455,6 +486,32 @@ class Enable_Mastodon_Apps {
 	}
 
 	/**
+	 * Fetch a status by its remote URL.
+	 *
+	 * @param Status|null $status The current status.
+	 * @param string      $url The remote URL of the status.
+	 *
+	 * @return Status|null The status, or null if it could not be fetched.
+	 */
+	public static function api_status_by_url( $status, $url ) {
+		if ( $status ) {
+			return $status;
+		}
+
+		$object = Http::get_remote_object( $url, true );
+		if ( \is_wp_error( $object ) || ! isset( $object['attributedTo'] ) ) {
+			return null;
+		}
+
+		$account = self::get_account_for_actor( $object['attributedTo'] );
+		if ( ! $account ) {
+			return null;
+		}
+
+		return self::activity_to_status( $object, $account );
+	}
+
+	/**
 	 * Search by URL for Mastodon API.
 	 *
 	 * @param array  $search_data The search data.
@@ -468,17 +525,7 @@ class Enable_Mastodon_Apps {
 			return $search_data;
 		}
 
-		$object = Http::get_remote_object( $request->get_param( 'q' ), true );
-		if ( is_wp_error( $object ) || ! isset( $object['attributedTo'] ) ) {
-			return $search_data;
-		}
-
-		$account = self::get_account_for_actor( $object['attributedTo'] );
-		if ( ! $account ) {
-			return $search_data;
-		}
-
-		$status = self::activity_to_status( $object, $account );
+		$status = \apply_filters( 'mastodon_api_status_by_url', null, $request->get_param( 'q' ) );
 		if ( $status ) {
 			$search_data['statuses'][] = $status;
 		}
@@ -517,7 +564,7 @@ class Enable_Mastodon_Apps {
 				continue;
 			}
 
-			$account = self::actor_to_account( $actor );
+			$account = self::actor_to_account( $actor, $follower->ID );
 
 			$account->uri = $actor->get_id();
 
@@ -698,6 +745,208 @@ class Enable_Mastodon_Apps {
 	}
 
 	/**
+	 * Maximum number of tags.pub items to resolve per request.
+	 *
+	 * Each outbox item requires multiple HTTP round-trips to resolve
+	 * (Announce activity → original post → author actor), so we ignore
+	 * the client-requested limit and use this small batch size instead.
+	 * Results are cached, so subsequent requests are fast.
+	 */
+	const TAGS_PUB_BATCH_SIZE = 5;
+
+	/**
+	 * Supplement tag timeline with posts from tags.pub outbox.
+	 *
+	 * Fetches the outbox of the corresponding tags.pub actor (e.g. @wordpress@tags.pub)
+	 * and resolves Announce activities to their original posts.
+	 *
+	 * @param \WP_REST_Response|null $statuses The current statuses (WP_REST_Response with Status[] data).
+	 * @param \WP_REST_Request       $request  The request object.
+	 *
+	 * @return \WP_REST_Response|null The statuses including remote ones.
+	 */
+	public static function api_tag_timeline_tags_pub( $statuses, $request ) {
+		$hashtag = \strtolower( $request->get_param( 'hashtag' ) );
+		if ( ! $hashtag ) {
+			return $statuses;
+		}
+
+		$remote_statuses = self::fetch_tags_pub_outbox( $hashtag, self::TAGS_PUB_BATCH_SIZE );
+		if ( empty( $remote_statuses ) ) {
+			return $statuses;
+		}
+
+		if ( ! $statuses instanceof \WP_REST_Response ) {
+			return $statuses;
+		}
+
+		$merged = \array_merge( $statuses->data, $remote_statuses );
+
+		// Deduplicate by status ID to prevent client crashes (e.g. Tusky).
+		$seen   = array();
+		$merged = \array_values(
+			\array_filter(
+				$merged,
+				function ( $status ) use ( &$seen ) {
+					if ( isset( $seen[ $status->id ] ) ) {
+						return false;
+					}
+					$seen[ $status->id ] = true;
+					return true;
+				}
+			)
+		);
+
+		// Sort by created_at descending.
+		\usort(
+			$merged,
+			function ( $a, $b ) {
+				$a_ts = isset( $a->created_at ) ? $a->created_at->getTimestamp() : 0;
+				$b_ts = isset( $b->created_at ) ? $b->created_at->getTimestamp() : 0;
+				return $b_ts - $a_ts;
+			}
+		);
+
+		$limit          = $request->get_param( 'limit' ) ?: 20;
+		$statuses->data = \array_slice( $merged, 0, $limit );
+
+		return $statuses;
+	}
+
+	/**
+	 * Fetch posts from the tags.pub outbox for a given hashtag.
+	 *
+	 * Resolved ActivityPub objects are cached as plain arrays in a transient
+	 * to avoid storing PHP objects (which is brittle across deployments).
+	 * Status entities are built fresh from the cached data on each request.
+	 *
+	 * @param string $hashtag The hashtag name (without #).
+	 * @param int    $limit   Maximum number of posts to return.
+	 *
+	 * @return Status[] Array of Status entities.
+	 */
+	private static function fetch_tags_pub_outbox( $hashtag, $limit = 20 ) {
+		$transient_key = 'activitypub_tags_pub_' . \md5( $hashtag );
+		$cached        = \get_transient( $transient_key );
+
+		if ( false === $cached ) {
+			$cached = self::resolve_tags_pub_items( $hashtag, $limit );
+			$ttl    = empty( $cached ) ? 5 * \MINUTE_IN_SECONDS : 15 * \MINUTE_IN_SECONDS;
+			\set_transient( $transient_key, $cached, $ttl );
+		}
+
+		// Build Status entities from the cached ActivityPub data.
+		$statuses = array();
+		foreach ( $cached as $entry ) {
+			$account = self::get_account_for_actor( $entry['actor_uri'] );
+			if ( $account ) {
+				$status = self::activity_to_status( $entry['object'], $account );
+				if ( $status ) {
+					$statuses[] = $status;
+				}
+			}
+		}
+
+		return $statuses;
+	}
+
+	/**
+	 * Fetch and resolve tags.pub outbox items to cacheable arrays.
+	 *
+	 * Each item requires multiple HTTP round-trips (Announce → original
+	 * post → author actor), so results are cached by the caller.
+	 *
+	 * @param string $hashtag The hashtag name (without #).
+	 * @param int    $limit   Maximum number of items to resolve.
+	 *
+	 * @return array[] Array of arrays with 'object' and 'actor_uri' keys.
+	 */
+	private static function resolve_tags_pub_items( $hashtag, $limit ) {
+		/**
+		 * Filters the tags.pub base URL for tag timeline lookups.
+		 *
+		 * @since 8.1.0
+		 *
+		 * @param string $base_url The base URL. Default 'https://tags.pub'.
+		 */
+		$base_url   = \apply_filters( 'activitypub_tags_pub_base_url', 'https://tags.pub' );
+		$outbox_url = \trailingslashit( $base_url ) . 'user/' . \rawurlencode( $hashtag ) . '/outbox';
+		$outbox     = Http::get_remote_object( $outbox_url, true );
+
+		if ( \is_wp_error( $outbox ) || empty( $outbox['first'] ) ) {
+			return array();
+		}
+
+		$page = Http::get_remote_object( $outbox['first'], true );
+		if ( \is_wp_error( $page ) ) {
+			return array();
+		}
+
+		$items   = $page['orderedItems'] ?? $page['items'] ?? array();
+		$results = array();
+
+		foreach ( $items as $item ) {
+			if ( \count( $results ) >= $limit ) {
+				break;
+			}
+
+			$resolved = self::resolve_tags_pub_item( $item );
+			if ( $resolved ) {
+				$results[] = $resolved;
+			}
+		}
+
+		return $results;
+	}
+
+	/**
+	 * Resolve a tags.pub outbox item (Announce activity) to cacheable data.
+	 *
+	 * @param string|array $item The outbox item (URI string or activity object).
+	 *
+	 * @return array|null Array with 'object' and 'actor_uri' keys, or null on failure.
+	 */
+	private static function resolve_tags_pub_item( $item ) {
+		// Resolve item to an activity object.
+		if ( \is_string( $item ) ) {
+			$activity = Http::get_remote_object( $item, true );
+			if ( \is_wp_error( $activity ) ) {
+				return null;
+			}
+		} elseif ( \is_array( $item ) ) {
+			$activity = $item;
+		} else {
+			return null;
+		}
+
+		$type = $activity['type'] ?? '';
+		if ( 'Announce' !== $type ) {
+			return null;
+		}
+
+		// Get the original post URL from the Announce.
+		$object_url = \is_string( $activity['object'] ) ? $activity['object'] : ( $activity['object']['id'] ?? null );
+		if ( ! $object_url ) {
+			return null;
+		}
+
+		$object = Http::get_remote_object( $object_url, true );
+		if ( \is_wp_error( $object ) ) {
+			return null;
+		}
+
+		$actor_uri = $object['attributedTo'] ?? '';
+		if ( ! $actor_uri ) {
+			return null;
+		}
+
+		return array(
+			'object'    => $object,
+			'actor_uri' => $actor_uri,
+		);
+	}
+
+	/**
 	 * Get replies for Mastodon API.
 	 *
 	 * @param array  $context The context.
@@ -756,14 +1005,17 @@ class Enable_Mastodon_Apps {
 	}
 
 	/**
-	 * Add repost and like notifications from ActivityPub comments.
+	 * Add repost, like, and follow notifications from ActivityPub data.
 	 *
-	 * @param array  $notifications The notifications array.
-	 * @param object $request       The request object.
+	 * @param array       $notifications The notifications array.
+	 * @param object      $request       The request object.
+	 * @param int|null    $limit         Max number of notifications per page.
+	 * @param string|null $before_date   MySQL datetime; only return notifications before this date.
+	 * @param string|null $after_date    MySQL datetime; only return notifications after this date.
 	 *
 	 * @return array The filtered notifications.
 	 */
-	public static function api_notifications_get( $notifications, $request ) {
+	public static function api_notifications_get( $notifications, $request, $limit = null, $before_date = null, $after_date = null ) {
 		$types         = $request->get_param( 'types' );
 		$exclude_types = $request->get_param( 'exclude_types' );
 
@@ -783,10 +1035,12 @@ class Enable_Mastodon_Apps {
 			return $notifications;
 		}
 
-		$limit = $request->get_param( 'limit' ) ? $request->get_param( 'limit' ) : self::DEFAULT_NOTIFICATION_LIMIT;
-
 		if ( ! \class_exists( Notification::class ) ) {
 			return $notifications;
+		}
+
+		if ( null === $limit ) {
+			$limit = $request->get_param( 'limit' ) ? $request->get_param( 'limit' ) : self::DEFAULT_NOTIFICATION_LIMIT;
 		}
 
 		// Get reblog/favourite notifications from comments.
@@ -801,16 +1055,21 @@ class Enable_Mastodon_Apps {
 
 			$post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
 
-			$comments = \get_comments(
-				array(
-					'post_author' => $user_id,
-					'post_type'   => $post_types,
-					'type__in'    => $comment_types,
-					'number'      => $limit,
-					'orderby'     => 'comment_date',
-					'order'       => 'DESC',
-				)
+			$comment_args = array(
+				'post_author' => $user_id,
+				'post_type'   => $post_types,
+				'type__in'    => $comment_types,
+				'number'      => $limit,
+				'orderby'     => 'comment_date',
+				'order'       => 'DESC',
 			);
+
+			$date_query = self::build_date_query( $before_date, $after_date, 'comment_date' );
+			if ( $date_query ) {
+				$comment_args['date_query'] = $date_query;
+			}
+
+			$comments = \get_comments( $comment_args );
 
 			foreach ( $comments as $comment ) {
 				$type = 'repost' === $comment->comment_type ? 'reblog' : 'favourite';
@@ -838,42 +1097,80 @@ class Enable_Mastodon_Apps {
 
 		// Get follow notifications from followers.
 		if ( $include_follow ) {
-			$notifications = self::add_follow_notifications( $notifications, $user_id, $limit );
+			$notifications = self::add_follow_notifications( $notifications, $user_id, $limit, $before_date, $after_date );
 		}
 
-		// Sort by date descending.
-		\usort(
-			$notifications,
-			static function ( $a, $b ) {
-				$a_date = \is_array( $a ) ? $a['created_at'] : $a->created_at;
-				$b_date = \is_array( $b ) ? $b['created_at'] : $b->created_at;
-				return \strcmp( $b_date, $a_date );
-			}
-		);
+		return $notifications;
+	}
 
-		return \array_slice( $notifications, 0, $limit );
+	/**
+	 * Build a WP_Query/WP_Comment_Query date_query array from optional date bounds.
+	 *
+	 * @param string|null $before_date MySQL datetime upper bound (exclusive).
+	 * @param string|null $after_date  MySQL datetime lower bound (exclusive).
+	 * @param string|null $column      Optional date column name (e.g. 'comment_date'). Omit for default.
+	 *
+	 * @return array|null date_query array, or null when no bounds are set.
+	 */
+	private static function build_date_query( $before_date, $after_date, $column = null ) {
+		if ( ! $before_date && ! $after_date ) {
+			return null;
+		}
+
+		$date_query = array();
+		if ( $before_date ) {
+			$clause = array(
+				'before'    => $before_date,
+				'inclusive' => false,
+			);
+			if ( $column ) {
+				$clause['column'] = $column;
+			}
+			$date_query[] = $clause;
+		}
+		if ( $after_date ) {
+			$clause = array(
+				'after'     => $after_date,
+				'inclusive' => false,
+			);
+			if ( $column ) {
+				$clause['column'] = $column;
+			}
+			$date_query[] = $clause;
+		}
+
+		return $date_query;
 	}
 
 	/**
 	 * Add follow notifications from ActivityPub followers.
 	 *
-	 * @param array $notifications The notifications array.
-	 * @param int   $user_id       The user ID.
-	 * @param int   $limit         The limit.
+	 * @param array       $notifications The notifications array.
+	 * @param int         $user_id       The user ID.
+	 * @param int         $limit         Max number of followers to fetch.
+	 * @param string|null $before_date   MySQL datetime; only return followers added before this date.
+	 * @param string|null $after_date    MySQL datetime; only return followers added after this date.
 	 *
 	 * @return array The notifications array with follow notifications added.
 	 */
-	private static function add_follow_notifications( $notifications, $user_id, $limit ) {
+	private static function add_follow_notifications( $notifications, $user_id, $limit = self::DEFAULT_NOTIFICATION_LIMIT, $before_date = null, $after_date = null ) {
 		$user_id = self::maybe_map_user_to_blog( $user_id );
+
+		$follower_args = array(
+			'orderby' => 'post_date',
+			'order'   => 'DESC',
+		);
+
+		$date_query = self::build_date_query( $before_date, $after_date );
+		if ( $date_query ) {
+			$follower_args['date_query'] = $date_query;
+		}
 
 		$followers = Followers::get_many(
 			$user_id,
 			$limit,
 			null,
-			array(
-				'orderby' => 'post_date',
-				'order'   => 'DESC',
-			)
+			$follower_args
 		);
 
 		foreach ( $followers as $follower ) {
@@ -882,7 +1179,7 @@ class Enable_Mastodon_Apps {
 				continue;
 			}
 
-			$account = self::get_account_for_actor( $actor );
+			$account = self::actor_to_account( $actor, $follower->ID );
 			if ( ! $account ) {
 				continue;
 			}

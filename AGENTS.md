@@ -150,3 +150,4 @@ Skills are complex procedures loaded on demand. Canonical files live in `.agents
 | **bug-bounty** | Pick easiest open bug, fix with tests, create draft PR. Runs in background. |
 | **patch-release** | Create a patch release by cherry-picking fixes onto a release branch. |
 | **security-audit** | Audit for SSRF, auth bypass, content disclosure, XSS, and content negotiation issues. |
+| **support** | Diagnose federation issues on live sites (WebFinger, outbox, actors, common misconfigurations). |

@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix Site Health check showing an empty error message when the WebFinger endpoint is not reachable.

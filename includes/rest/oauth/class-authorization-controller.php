@@ -19,7 +19,7 @@ use function Activitypub\get_client_ip;
  * Implements:
  * - Authorization endpoint (GET/POST /oauth/authorize)
  *
- * @since unreleased
+ * @since 8.1.0
  */
 class Authorization_Controller extends \WP_REST_Controller {
 	/**
@@ -151,7 +151,14 @@ class Authorization_Controller extends \WP_REST_Controller {
 	 */
 	public function authorize( \WP_REST_Request $request ) {
 		// Rate-limit authorization requests to prevent abuse (max 20 per minute per IP).
-		$ip            = get_client_ip();
+		$ip = get_client_ip();
+		if ( '' === $ip ) {
+			return new \WP_Error(
+				'activitypub_rate_limit',
+				\__( 'Too many authorization requests. Please try again later.', 'activitypub' ),
+				array( 'status' => 429 )
+			);
+		}
 		$transient_key = 'ap_oauth_auth_' . \md5( $ip );
 		$count         = (int) \get_transient( $transient_key );
 
@@ -345,7 +352,7 @@ class Authorization_Controller extends \WP_REST_Controller {
 	 * preventing social-engineering attacks where an attacker crafts a URL
 	 * with arbitrary error text displayed inside WordPress login chrome.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param \WP_Error $error The error to display.
 	 * @return \WP_REST_Response Redirect response to wp-login.php.

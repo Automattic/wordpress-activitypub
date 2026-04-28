@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fixed emoji shortcode replacement to handle special characters in emoji names correctly.

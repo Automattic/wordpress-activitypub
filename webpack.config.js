@@ -11,6 +11,22 @@ const defaultConfig = require( '@wordpress/scripts/config/webpack.config' );
 const processConfig = ( config ) => {
 	return {
 		...config,
+		module: {
+			...config.module,
+			rules: [
+				...( config.module?.rules || [] ),
+				// Mark `@wordpress/views` side-effect-free so webpack can tree-shake
+				// its barrel export. Views' `useViewConfig` pulls in `lock-unlock.mjs`,
+				// which opts into `@wordpress/private-apis` under the name
+				// `@wordpress/views` — a name WordPress core's allowlist rejects,
+				// crashing the app at module-eval time. We only use `useView`, so
+				// letting webpack drop the unused chain avoids the crash.
+				{
+					test: /node_modules[\\/]@wordpress[\\/]views[\\/]/,
+					sideEffects: false,
+				},
+			],
+		},
 		output: {
 			...config.output,
 			// Place JS chunks in their source directory with content hash for cache busting

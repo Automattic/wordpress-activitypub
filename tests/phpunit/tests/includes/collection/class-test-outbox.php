@@ -444,6 +444,45 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Test that the blind audience (`bto`/`bcc`) is persisted to the database and
+	 * survives the `add` → `get_activity` roundtrip.
+	 *
+	 * @covers ::add
+	 * @covers ::get_activity
+	 */
+	public function test_add_persists_blind_audience() {
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://example.com/author/test' );
+		$activity->set_object(
+			array(
+				'id'      => 'https://example.com/note/123',
+				'type'    => 'Note',
+				'content' => 'Hello',
+			)
+		);
+		$activity->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
+		$activity->set_cc( array() );
+		$activity->set_bto( array( 'https://example.com/users/secret' ) );
+		$activity->set_bcc( array( 'https://example.com/users/hidden' ) );
+
+		$id = Outbox::add( $activity, self::$user_id );
+
+		$this->assertIsInt( $id );
+
+		/* Stored JSON in the DB must keep the blind audience. */
+		$stored = \json_decode( \get_post( $id )->post_content, true );
+		$this->assertSame( array( 'https://example.com/users/secret' ), $stored['bto'], 'bto persisted to DB' );
+		$this->assertSame( array( 'https://example.com/users/hidden' ), $stored['bcc'], 'bcc persisted to DB' );
+
+		/* Rehydrated Activity must expose the blind audience via its getters. */
+		$reloaded = Outbox::get_activity( $id );
+		$this->assertInstanceOf( Activity::class, $reloaded );
+		$this->assertSame( array( 'https://example.com/users/secret' ), $reloaded->get_bto(), 'bto exposed after reload' );
+		$this->assertSame( array( 'https://example.com/users/hidden' ), $reloaded->get_bcc(), 'bcc exposed after reload' );
+	}
+
+	/**
 	 * Test that Update activities have the updated attribute set.
 	 *
 	 * @covers ::get_activity

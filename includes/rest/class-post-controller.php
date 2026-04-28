@@ -35,7 +35,7 @@ class Post_Controller extends \WP_REST_Controller {
 	 *
 	 * @var string
 	 */
-	protected $rest_base = 'posts/(?P<id>[-]?\d+)';
+	protected $rest_base = 'posts/(?P<id>[\d]+)';
 
 	/**
 	 * Register routes.
@@ -47,8 +47,10 @@ class Post_Controller extends \WP_REST_Controller {
 			array(
 				'args' => array(
 					'id' => array(
-						'required' => true,
-						'type'     => 'integer',
+						'required'          => true,
+						'type'              => 'integer',
+						'minimum'           => 1,
+						'validate_callback' => 'Activitypub\is_post_publicly_queryable',
 					),
 				),
 				array(
@@ -65,8 +67,10 @@ class Post_Controller extends \WP_REST_Controller {
 			array(
 				'args' => array(
 					'id' => array(
-						'required' => true,
-						'type'     => 'integer',
+						'required'          => true,
+						'type'              => 'integer',
+						'minimum'           => 1,
+						'validate_callback' => 'Activitypub\is_post_publicly_queryable',
 					),
 				),
 				array(
@@ -83,9 +87,11 @@ class Post_Controller extends \WP_REST_Controller {
 			array(
 				'args' => array(
 					'id' => array(
-						'description' => 'Unique identifier for the post.',
-						'type'        => 'integer',
-						'required'    => true,
+						'description'       => 'Unique identifier for the post.',
+						'type'              => 'integer',
+						'minimum'           => 1,
+						'required'          => true,
+						'validate_callback' => 'Activitypub\is_post_publicly_queryable',
 					),
 				),
 				array(
@@ -121,11 +127,6 @@ class Post_Controller extends \WP_REST_Controller {
 	 */
 	public function get_reactions( $request ) {
 		$post_id = $request->get_param( 'id' );
-		$post    = \get_post( $post_id );
-
-		if ( ! $post ) {
-			return new \WP_Error( 'activitypub_post_not_found', 'Post not found', array( 'status' => 404 ) );
-		}
 
 		$reactions = array();
 
@@ -160,10 +161,17 @@ class Post_Controller extends \WP_REST_Controller {
 				'label' => $label,
 				'items' => \array_map(
 					static function ( $comment ) {
+						/*
+						 * Decode entities first so a stored pseudo-tag like
+						 * `&lt;img&gt;` becomes a real `<img>` for the next
+						 * step to remove, then strip any tags so the JSON
+						 * response contains only plain text. `esc_url()`
+						 * rejects `javascript:` and other unsafe schemes.
+						 */
 						return array(
-							'name'   => html_entity_decode( $comment->comment_author ),
-							'url'    => $comment->comment_author_url,
-							'avatar' => \get_avatar_url( $comment ),
+							'name'   => \wp_strip_all_tags( \html_entity_decode( $comment->comment_author, ENT_QUOTES ) ),
+							'url'    => \esc_url( $comment->comment_author_url ),
+							'avatar' => \esc_url( \get_avatar_url( $comment ) ),
 						);
 					},
 					$comments
@@ -182,12 +190,11 @@ class Post_Controller extends \WP_REST_Controller {
 	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error object on failure.
 	 */
 	public function get_context( $request ) {
-		$post_id = $request->get_param( 'id' );
-
+		$post_id    = $request->get_param( 'id' );
 		$collection = Replies::get_context_collection( $post_id );
 
 		if ( false === $collection ) {
-			return new \WP_Error( 'activitypub_post_not_found', 'Post not found', array( 'status' => 404 ) );
+			return new \WP_Error( 'activitypub_post_not_found', \__( 'Post not found', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
 		$response = array_merge(
@@ -218,10 +225,6 @@ class Post_Controller extends \WP_REST_Controller {
 		$resource = $request->get_param( 'resource' );
 		$intent   = $request->get_param( 'intent' );
 		$post     = \get_post( $post_id );
-
-		if ( ! $post || 'publish' !== \get_post_status( $post ) ) {
-			return new \WP_Error( 'activitypub_post_not_found', \__( 'Post not found.', 'activitypub' ), array( 'status' => 404 ) );
-		}
 
 		$template = Webfinger::get_intent_endpoint( $resource, $intent, true );
 

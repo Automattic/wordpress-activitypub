@@ -325,7 +325,7 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 
 			try {
 				return JSON.parse( data );
-			} catch ( e ) {
+			} catch ( _ ) {
 				localStorage.removeItem( STORAGE_KEY );
 				return {};
 			}

@@ -267,7 +267,7 @@ class Sanitize {
 	 * This method extracts the scheme and passes it as allowed so custom
 	 * URI schemes for native apps (RFC 8252 Section 7.1) are preserved.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param string $uri The redirect URI to sanitize.
 	 * @return string The sanitized URI.
@@ -324,10 +324,10 @@ class Sanitize {
 		/**
 		 * Fires the deprecated attribute removal filter.
 		 *
-		 * @deprecated unreleased Use the {@see 'activitypub_allowed_html'} filter instead.
+		 * @deprecated 8.1.0 Use the {@see 'activitypub_allowed_html'} filter instead.
 		 */
 		if ( \has_filter( 'activitypub_remove_html_attributes' ) ) {
-			\_deprecated_hook( 'activitypub_remove_html_attributes', 'unreleased', 'activitypub_allowed_html' );
+			\_deprecated_hook( 'activitypub_remove_html_attributes', '8.1.0', 'activitypub_allowed_html' );
 		}
 
 		/**

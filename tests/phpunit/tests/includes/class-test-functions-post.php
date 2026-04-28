@@ -273,6 +273,205 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A publicly published post is queryable.
+	 *
+	 * @covers \Activitypub\is_post_publicly_queryable
+	 */
+	public function test_is_post_publicly_queryable_public_post() {
+		$post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+
+		$this->assertTrue( \Activitypub\is_post_publicly_queryable( $post_id ) );
+	}
+
+	/**
+	 * Non-public statuses, password-protected posts, and local/private visibility
+	 * must not be queryable. Unlike is_post_disabled(), there is no lifecycle
+	 * override — a previously federated post that is now non-public is still
+	 * reported as not queryable.
+	 *
+	 * @covers \Activitypub\is_post_publicly_queryable
+	 * @dataProvider data_non_public_post_overrides
+	 *
+	 * @param array $overrides Post overrides describing the non-public state.
+	 */
+	public function test_is_post_publicly_queryable_rejects_non_public( $overrides ) {
+		$post_id = self::factory()->post->create(
+			array_merge( array( 'post_status' => 'publish' ), $overrides )
+		);
+
+		$this->assertFalse( \Activitypub\is_post_publicly_queryable( $post_id ) );
+	}
+
+	/**
+	 * Data provider for non-public post states.
+	 *
+	 * @return array[]
+	 */
+	public function data_non_public_post_overrides() {
+		return array(
+			'private'            => array( array( 'post_status' => 'private' ) ),
+			'draft'              => array( array( 'post_status' => 'draft' ) ),
+			'pending'            => array( array( 'post_status' => 'pending' ) ),
+			'trash'              => array( array( 'post_status' => 'trash' ) ),
+			'password protected' => array( array( 'post_password' => 'secret' ) ),
+			'local visibility'   => array(
+				array(
+					'meta_input' => array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
+				),
+			),
+			'private visibility' => array(
+				array(
+					'meta_input' => array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ),
+				),
+			),
+		);
+	}
+
+	/**
+	 * A previously-federated post that has since been moved to a non-public
+	 * state is NOT queryable (is_post_disabled would return false here to let
+	 * Delete fire; is_post_publicly_queryable has no such escape hatch).
+	 *
+	 * @covers \Activitypub\is_post_publicly_queryable
+	 */
+	public function test_is_post_publicly_queryable_rejects_previously_federated() {
+		$post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		$post    = \get_post( $post_id );
+
+		\Activitypub\set_wp_object_state( $post, ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'private',
+			)
+		);
+
+		$this->assertFalse( \Activitypub\is_post_publicly_queryable( $post_id ) );
+		/* is_post_disabled flips back to false for this case so Delete can fire. */
+		$this->assertFalse( \Activitypub\is_post_disabled( $post_id ) );
+	}
+
+	/**
+	 * Invalid input never resolves via the global $post fallback.
+	 *
+	 * @covers \Activitypub\is_post_publicly_queryable
+	 */
+	public function test_is_post_publicly_queryable_invalid_input() {
+		$this->assertFalse( \Activitypub\is_post_publicly_queryable( 0 ) );
+		$this->assertFalse( \Activitypub\is_post_publicly_queryable( null ) );
+		$this->assertFalse( \Activitypub\is_post_publicly_queryable( '' ) );
+		$this->assertFalse( \Activitypub\is_post_publicly_queryable( 999999 ) );
+	}
+
+	/**
+	 * `empty( $post )` input must not silently resolve to the loop's global
+	 * $post during content-exposure checks.
+	 *
+	 * @covers \Activitypub\is_post_publicly_queryable
+	 */
+	public function test_is_post_publicly_queryable_ignores_global_post() {
+		$post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+
+		global $post;
+		$post = \get_post( $post_id );
+
+		try {
+			$this->assertFalse( \Activitypub\is_post_publicly_queryable( 0 ) );
+			$this->assertFalse( \Activitypub\is_post_publicly_queryable( null ) );
+		} finally {
+			$post = null;
+		}
+	}
+
+	/**
+	 * An attachment inherits its parent's visibility. Parent checks include
+	 * post_status, password, content visibility, and post-type support — not
+	 * just the parent's post_status.
+	 *
+	 * @covers \Activitypub\is_post_publicly_queryable
+	 */
+	public function test_is_post_publicly_queryable_attachment_inherits_parent() {
+		\add_post_type_support( 'attachment', 'activitypub' );
+
+		$parent_public = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		$attach_ok     = self::factory()->post->create(
+			array(
+				'post_type'   => 'attachment',
+				'post_status' => 'inherit',
+				'post_parent' => $parent_public,
+			)
+		);
+		$this->assertTrue( \Activitypub\is_post_publicly_queryable( $attach_ok ), 'attachment of public parent is queryable' );
+
+		$parent_private = self::factory()->post->create( array( 'post_status' => 'private' ) );
+		$attach_priv    = self::factory()->post->create(
+			array(
+				'post_type'   => 'attachment',
+				'post_status' => 'inherit',
+				'post_parent' => $parent_private,
+			)
+		);
+		$this->assertFalse( \Activitypub\is_post_publicly_queryable( $attach_priv ), 'attachment of private parent is not queryable' );
+
+		$parent_pw = self::factory()->post->create(
+			array(
+				'post_status'   => 'publish',
+				'post_password' => 'secret',
+			)
+		);
+		$attach_pw = self::factory()->post->create(
+			array(
+				'post_type'   => 'attachment',
+				'post_status' => 'inherit',
+				'post_parent' => $parent_pw,
+			)
+		);
+		$this->assertFalse( \Activitypub\is_post_publicly_queryable( $attach_pw ), 'attachment of password-protected parent is not queryable' );
+
+		$parent_local = self::factory()->post->create(
+			array(
+				'post_status' => 'publish',
+				'meta_input'  => array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
+			)
+		);
+		$attach_local = self::factory()->post->create(
+			array(
+				'post_type'   => 'attachment',
+				'post_status' => 'inherit',
+				'post_parent' => $parent_local,
+			)
+		);
+		$this->assertFalse( \Activitypub\is_post_publicly_queryable( $attach_local ), 'attachment of local-visibility parent is not queryable' );
+
+		$unattached = self::factory()->post->create(
+			array(
+				'post_type'   => 'attachment',
+				'post_status' => 'inherit',
+				'post_parent' => 0,
+			)
+		);
+		$this->assertTrue( \Activitypub\is_post_publicly_queryable( $unattached ), 'unattached attachment is queryable' );
+	}
+
+	/**
+	 * The activitypub_is_post_publicly_queryable filter can override the result.
+	 *
+	 * @covers \Activitypub\is_post_publicly_queryable
+	 */
+	public function test_is_post_publicly_queryable_filter() {
+		$post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+
+		\add_filter( 'activitypub_is_post_publicly_queryable', '__return_false' );
+
+		try {
+			$this->assertFalse( \Activitypub\is_post_publicly_queryable( $post_id ) );
+		} finally {
+			\remove_filter( 'activitypub_is_post_publicly_queryable', '__return_false' );
+		}
+	}
+
+	/**
 	 * Test generate_post_summary function.
 	 *
 	 * @covers \Activitypub\generate_post_summary

@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fixed double-encoding of special characters in comment author names on updates.

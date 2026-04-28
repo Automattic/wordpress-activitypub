@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Restrict localhost URL allowance to local development environments only.

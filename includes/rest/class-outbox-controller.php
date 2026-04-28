@@ -178,7 +178,9 @@ class Outbox_Controller extends \WP_REST_Controller {
 			),
 		);
 
-		if ( \get_current_user_id() !== (int) $user_id && ! \current_user_can( 'activitypub' ) ) {
+		// When user_id=0 (blog actor), get_current_user_id() also returns 0 for unauthenticated
+		// visitors, so the equality check alone is insufficient — we must test login state first.
+		if ( ! \is_user_logged_in() || ( \get_current_user_id() !== (int) $user_id && ! \current_user_can( 'activitypub' ) ) ) {
 			$args['meta_query'][] = array(
 				'key'     => '_activitypub_activity_type',
 				'value'   => $activity_types,
@@ -363,15 +365,17 @@ class Outbox_Controller extends \WP_REST_Controller {
 			)
 		);
 
+		$user_id  = (int) $request->get_param( 'user_id' );
 		$comments = new \WP_Comment_Query(
 			array(
-				'status'        => 'approve',
-				'user_id'       => $request->get_param( 'user_id' ),
+				'status'         => 'approve',
+				'user_id'        => $user_id,
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'meta_key'      => 'activitypub_status',
-				'fields'        => 'ids',
-				'no_found_rows' => false,
-				'number'        => 1,
+				'meta_key'       => 'activitypub_status',
+				'fields'         => 'ids',
+				'no_found_rows'  => false,
+				'number'         => 1,
+				'author__not_in' => array( 0 ),
 			)
 		);
 
@@ -591,7 +595,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * Per the ActivityPub spec, the server adds addressing when the client
 	 * does not provide it. Defaults to public with followers in cc.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param array                       $data The activity data.
 	 * @param \Activitypub\Activity\Actor $user The authenticated user.

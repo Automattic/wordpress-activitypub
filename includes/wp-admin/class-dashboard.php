@@ -105,6 +105,21 @@ class Dashboard {
 			true
 		);
 
+		/*
+		 * Pass the resolved REST URLs to the JS so it uses get_rest_url() — which
+		 * is filtered on environments like WordPress.com that remap the REST
+		 * namespace — rather than a hardcoded `/activitypub/1.0/…` path that only
+		 * works on the default namespace.
+		 */
+		\wp_localize_script(
+			'activitypub-dashboard-stats',
+			'activitypubDashboardStats',
+			array(
+				'blogStatsUrl' => \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/admin/stats/' . Actors::BLOG_USER_ID ),
+				'userStatsUrl' => \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/admin/stats/' ),
+			)
+		);
+
 		\wp_enqueue_style(
 			'activitypub-dashboard-stats',
 			\plugins_url( 'build/dashboard-stats/style-index.css', ACTIVITYPUB_PLUGIN_FILE ),

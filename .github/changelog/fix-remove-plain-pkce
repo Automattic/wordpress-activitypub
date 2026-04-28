@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Only allow S256 as PKCE code challenge method for OAuth authorization.
