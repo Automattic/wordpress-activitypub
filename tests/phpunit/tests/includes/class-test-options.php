@@ -263,6 +263,25 @@ class Test_Options extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_distribution_params falls back to default for an unrecognized mode.
+	 *
+	 * Skips register_settings() so the bogus value bypasses the sanitize
+	 * callback (mimicking a stale option from an older release or a direct
+	 * DB write).
+	 *
+	 * @covers \Activitypub\Options::get_distribution_params
+	 */
+	public function test_distribution_params_unknown_mode_falls_back_to_default() {
+		\update_option( 'activitypub_distribution_mode', 'turbo' );
+
+		$params = Options::get_distribution_params();
+
+		$this->assertEquals( 'default', $params['mode'] );
+		$this->assertEquals( 100, $params['batch_size'] );
+		$this->assertEquals( 15, $params['pause'] );
+	}
+
+	/**
 	 * Test custom batch size cannot be zero.
 	 *
 	 * @covers \Activitypub\Options::register_settings
@@ -296,6 +315,18 @@ class Test_Options extends \WP_UnitTestCase {
 
 		\update_option( 'activitypub_custom_batch_pause', 99999 );
 		$this->assertEquals( 3600, \get_option( 'activitypub_custom_batch_pause' ) );
+	}
+
+	/**
+	 * Test custom batch pause normalizes negative input.
+	 *
+	 * @covers \Activitypub\Options::register_settings
+	 */
+	public function test_custom_batch_pause_negative_is_normalized() {
+		Options::register_settings();
+
+		\update_option( 'activitypub_custom_batch_pause', -120 );
+		$this->assertEquals( 120, \get_option( 'activitypub_custom_batch_pause' ) );
 	}
 
 	/**
