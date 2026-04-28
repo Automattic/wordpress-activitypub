@@ -381,6 +381,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 	private function get_local_recipients( $activity ) {
 		$user_ids       = array();
 		$remote_fetches = 0;
+		$cap_notified   = false;
 
 		/**
 		 * Filters the maximum number of remote recipient URLs that can be
@@ -443,6 +444,24 @@ class Inbox_Controller extends \WP_REST_Controller {
 
 				// Unknown URL: cap remote fetches to prevent abuse via large audience/recipient fields.
 				if ( $remote_fetches >= $max_remote_fetches ) {
+					if ( ! $cap_notified ) {
+						$cap_notified = true;
+
+						/**
+						 * Fires when an incoming activity hits the remote recipient fetch cap.
+						 *
+						 * Fires once per activity on the first recipient that exceeds the cap,
+						 * not for each subsequent skipped recipient. Hook this to surface
+						 * cap hits in your logging system of choice (Jetpack, Sentry, syslog, etc.).
+						 *
+						 * @since unreleased
+						 *
+						 * @param array  $activity  The incoming activity data.
+						 * @param string $recipient The recipient URI that was skipped.
+						 * @param int    $cap       The configured cap.
+						 */
+						\do_action( 'activitypub_remote_recipient_fetch_cap_reached', $activity, $recipient, $max_remote_fetches );
+					}
 					continue;
 				}
 				++$remote_fetches;

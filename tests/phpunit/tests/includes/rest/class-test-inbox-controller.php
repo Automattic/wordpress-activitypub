@@ -1710,6 +1710,60 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	}
 
 	/**
+	 * Test that the cap-reached action fires exactly once per activity, even with many over-cap recipients.
+	 *
+	 * @covers ::get_local_recipients
+	 */
+	public function test_get_local_recipients_fires_cap_reached_action_once() {
+		$cap_filter = function () {
+			return 2;
+		};
+		\add_filter( 'activitypub_max_remote_recipient_fetches', $cap_filter );
+
+		$track_fetches = function () {
+			return new \WP_Error( 'test', 'Simulated error' );
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 5 );
+
+		$cap_action = new \MockAction();
+		\add_action( 'activitypub_remote_recipient_fetch_cap_reached', array( $cap_action, 'action' ), 10, 3 );
+
+		try {
+			// 5 unknown remote recipients, cap of 2 -> 3 should be skipped, but action fires only once.
+			$activity = array(
+				'type'  => 'Create',
+				'actor' => 'https://example.com/actor/cap-action',
+				'to'    => array(
+					'https://other.example.com/user/1',
+					'https://other.example.com/user/2',
+					'https://other.example.com/user/3',
+					'https://other.example.com/user/4',
+					'https://other.example.com/user/5',
+				),
+			);
+
+			$reflection = new \ReflectionClass( $this->inbox_controller );
+			$method     = $reflection->getMethod( 'get_local_recipients' );
+			if ( \PHP_VERSION_ID < 80100 ) {
+				$method->setAccessible( true );
+			}
+
+			$method->invoke( $this->inbox_controller, $activity );
+
+			$this->assertSame( 1, $cap_action->get_call_count(), 'Cap-reached action should fire exactly once per activity' );
+
+			$args = $cap_action->get_args();
+			$this->assertSame( $activity, $args[0][0], 'First action arg should be the activity data' );
+			$this->assertSame( 'https://other.example.com/user/3', $args[0][1], 'Second action arg should be the first over-cap recipient' );
+			$this->assertSame( 2, $args[0][2], 'Third action arg should be the configured cap' );
+		} finally {
+			\remove_action( 'activitypub_remote_recipient_fetch_cap_reached', array( $cap_action, 'action' ), 10 );
+			\remove_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 5 );
+			\remove_filter( 'activitypub_max_remote_recipient_fetches', $cap_filter );
+		}
+	}
+
+	/**
 	 * Test that an `actor` serialized as an inline object (not a string IRI) is normalized to a URI.
 	 *
 	 * Some peers send `"actor": { "id": "https://...", "type": "Person" }` rather than a string.
