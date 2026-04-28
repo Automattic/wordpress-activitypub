@@ -527,6 +527,57 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
+	 * Test get_existing_uris returns the cached subset of input URIs.
+	 *
+	 * @covers ::get_existing_uris
+	 */
+	public function test_get_existing_uris() {
+		$alice = array(
+			'id'                => 'https://remote.example.com/actor/alice-batch',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/alice-batch',
+			'inbox'             => 'https://remote.example.com/actor/alice-batch/inbox',
+			'name'              => 'Alice',
+			'preferredUsername' => 'alice-batch',
+		);
+		$bob   = array(
+			'id'                => 'https://remote.example.com/actor/bob-batch',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/bob-batch',
+			'inbox'             => 'https://remote.example.com/actor/bob-batch/inbox',
+			'name'              => 'Bob',
+			'preferredUsername' => 'bob-batch',
+		);
+		$this->assertNotWPError( Remote_Actors::create( $alice ) );
+		$this->assertNotWPError( Remote_Actors::create( $bob ) );
+
+		$result = Remote_Actors::get_existing_uris(
+			array(
+				$alice['id'],
+				$bob['id'],
+				'https://nowhere.example/never-cached',
+			)
+		);
+
+		$this->assertSame(
+			array(
+				$alice['id'] => true,
+				$bob['id']   => true,
+			),
+			$result
+		);
+	}
+
+	/**
+	 * Test get_existing_uris returns an empty array when given no input.
+	 *
+	 * @covers ::get_existing_uris
+	 */
+	public function test_get_existing_uris_empty_input() {
+		$this->assertSame( array(), Remote_Actors::get_existing_uris( array() ) );
+	}
+
+	/**
 	 * Tests clear_errors.
 	 *
 	 * @covers ::clear_errors
