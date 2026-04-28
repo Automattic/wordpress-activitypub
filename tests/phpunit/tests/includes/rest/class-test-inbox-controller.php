@@ -1708,4 +1708,232 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 			\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
 		}
 	}
+
+	/**
+	 * Test that an `actor` serialized as an inline object (not a string IRI) is normalized to a URI.
+	 *
+	 * Some peers send `"actor": { "id": "https://...", "type": "Person" }` rather than a string.
+	 *
+	 * @covers ::get_local_recipients
+	 */
+	public function test_get_local_recipients_with_inline_actor_object() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		$remote_actor_url     = 'https://example.com/actor/inline-actor';
+		$remote_followers_url = 'https://example.com/actor/inline-actor/followers';
+
+		$remote_object_filter = function ( $pre, $url ) use ( $remote_actor_url, $remote_followers_url ) {
+			if ( $url === $remote_actor_url ) {
+				return array(
+					'@context'          => 'https://www.w3.org/ns/activitystreams',
+					'id'                => $remote_actor_url,
+					'type'              => 'Person',
+					'preferredUsername' => 'inlineactor',
+					'name'              => 'Inline Actor',
+					'inbox'             => $remote_actor_url . '/inbox',
+					'followers'         => $remote_followers_url,
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter, 10, 2 );
+
+		$remote_actor = \Activitypub\Collection\Remote_Actors::fetch_by_uri( $remote_actor_url );
+		\add_post_meta( $remote_actor->ID, '_activitypub_followed_by', self::$user_id );
+
+		$fetched_urls  = array();
+		$track_fetches = function ( $pre, $url ) use ( &$fetched_urls ) {
+			$fetched_urls[] = $url;
+			return new \WP_Error( 'test', 'Simulated error' );
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 5, 2 );
+
+		try {
+			$activity = array(
+				'type'  => 'Create',
+				'actor' => array(
+					'id'   => $remote_actor_url,
+					'type' => 'Person',
+				),
+				'to'    => array( 'https://other.example.com/user/1' ),
+				'cc'    => array( $remote_followers_url ),
+			);
+
+			$reflection = new \ReflectionClass( $this->inbox_controller );
+			$method     = $reflection->getMethod( 'get_local_recipients' );
+			if ( \PHP_VERSION_ID < 80100 ) {
+				$method->setAccessible( true );
+			}
+
+			$result = $method->invoke( $this->inbox_controller, $activity );
+
+			$this->assertNotContains(
+				$remote_followers_url,
+				$fetched_urls,
+				'Should resolve followers from cached actor when actor is supplied as an inline object'
+			);
+			$this->assertContains( self::$user_id, $result, 'Should resolve followers for inline actor object' );
+		} finally {
+			\delete_option( 'activitypub_actor_mode' );
+			\remove_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 5 );
+			\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
+		}
+	}
+
+	/**
+	 * Test that a cached actor with `followers` stored as an inline object resolves correctly.
+	 *
+	 * The cached actor JSON may serialize `followers` as `{ "id": "...", "type": "OrderedCollection" }`
+	 * rather than a bare string. `get_cached_followers_url()` must normalize this through `object_to_uri()`.
+	 *
+	 * @covers ::get_local_recipients
+	 */
+	public function test_get_local_recipients_with_inline_followers_object_in_cache() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		$remote_actor_url     = 'https://example.com/actor/inline-followers';
+		$remote_followers_url = 'https://example.com/actor/inline-followers/followers';
+
+		// Bypass fetch_by_uri() so we control the exact stored JSON shape (followers as inline object).
+		$actor_json = \wp_json_encode(
+			array(
+				'@context'          => 'https://www.w3.org/ns/activitystreams',
+				'id'                => $remote_actor_url,
+				'type'              => 'Person',
+				'preferredUsername' => 'inlinefollowers',
+				'name'              => 'Inline Followers',
+				'inbox'             => $remote_actor_url . '/inbox',
+				'followers'         => array(
+					'id'   => $remote_followers_url,
+					'type' => 'OrderedCollection',
+				),
+			)
+		);
+
+		$post_id = \wp_insert_post(
+			array(
+				'guid'         => $remote_actor_url,
+				'post_title'   => 'Inline Followers',
+				'post_author'  => 0,
+				'post_type'    => \Activitypub\Collection\Remote_Actors::POST_TYPE,
+				'post_content' => \wp_slash( $actor_json ),
+				'post_status'  => 'publish',
+			)
+		);
+		$this->assertIsInt( $post_id, 'Should create remote actor post' );
+
+		\add_post_meta( $post_id, '_activitypub_followed_by', self::$user_id );
+
+		$fetched_urls  = array();
+		$track_fetches = function ( $pre, $url ) use ( &$fetched_urls ) {
+			$fetched_urls[] = $url;
+			return new \WP_Error( 'test', 'Simulated error' );
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 5, 2 );
+
+		try {
+			$activity = array(
+				'type'  => 'Create',
+				'actor' => $remote_actor_url,
+				'to'    => array( 'https://other.example.com/user/1' ),
+				'cc'    => array( $remote_followers_url ),
+			);
+
+			$reflection = new \ReflectionClass( $this->inbox_controller );
+			$method     = $reflection->getMethod( 'get_local_recipients' );
+			if ( \PHP_VERSION_ID < 80100 ) {
+				$method->setAccessible( true );
+			}
+
+			$result = $method->invoke( $this->inbox_controller, $activity );
+
+			$this->assertNotContains(
+				$remote_followers_url,
+				$fetched_urls,
+				'Should detect followers URL when stored as an inline object in cached actor JSON'
+			);
+			$this->assertContains( self::$user_id, $result, 'Should resolve followers when cached followers is an inline object' );
+		} finally {
+			\delete_option( 'activitypub_actor_mode' );
+			\remove_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 5 );
+			\wp_delete_post( $post_id, true );
+		}
+	}
+
+	/**
+	 * Test that the legacy `_activitypub_actor_json` postmeta fallback is honored when post_content is empty.
+	 *
+	 * Mirrors `Remote_Actors::get_actor()`'s storage fallback so cached actors migrated from older
+	 * versions still resolve their followers collection without an HTTP fetch.
+	 *
+	 * @covers ::get_local_recipients
+	 */
+	public function test_get_local_recipients_uses_legacy_actor_json_postmeta() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		$remote_actor_url     = 'https://example.com/actor/legacy-meta';
+		$remote_followers_url = 'https://example.com/actor/legacy-meta/followers';
+
+		// Legacy actor stored its JSON in post meta with empty post_content.
+		$actor_json = \wp_json_encode(
+			array(
+				'@context'          => 'https://www.w3.org/ns/activitystreams',
+				'id'                => $remote_actor_url,
+				'type'              => 'Person',
+				'preferredUsername' => 'legacymeta',
+				'name'              => 'Legacy Meta',
+				'inbox'             => $remote_actor_url . '/inbox',
+				'followers'         => $remote_followers_url,
+			)
+		);
+
+		$post_id = \wp_insert_post(
+			array(
+				'guid'         => $remote_actor_url,
+				'post_title'   => 'Legacy Meta',
+				'post_author'  => 0,
+				'post_type'    => \Activitypub\Collection\Remote_Actors::POST_TYPE,
+				'post_content' => '',
+				'post_status'  => 'publish',
+			)
+		);
+		$this->assertIsInt( $post_id, 'Should create remote actor post' );
+		\add_post_meta( $post_id, '_activitypub_actor_json', $actor_json );
+		\add_post_meta( $post_id, '_activitypub_followed_by', self::$user_id );
+
+		$fetched_urls  = array();
+		$track_fetches = function ( $pre, $url ) use ( &$fetched_urls ) {
+			$fetched_urls[] = $url;
+			return new \WP_Error( 'test', 'Simulated error' );
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 5, 2 );
+
+		try {
+			$activity = array(
+				'type'  => 'Create',
+				'actor' => $remote_actor_url,
+				'to'    => array( 'https://other.example.com/user/1' ),
+				'cc'    => array( $remote_followers_url ),
+			);
+
+			$reflection = new \ReflectionClass( $this->inbox_controller );
+			$method     = $reflection->getMethod( 'get_local_recipients' );
+			if ( \PHP_VERSION_ID < 80100 ) {
+				$method->setAccessible( true );
+			}
+
+			$result = $method->invoke( $this->inbox_controller, $activity );
+
+			$this->assertNotContains(
+				$remote_followers_url,
+				$fetched_urls,
+				'Should read followers URL from legacy _activitypub_actor_json postmeta when post_content is empty'
+			);
+			$this->assertContains( self::$user_id, $result, 'Should resolve followers via legacy postmeta fallback' );
+		} finally {
+			\delete_option( 'activitypub_actor_mode' );
+			\remove_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 5 );
+			\wp_delete_post( $post_id, true );
+		}
+	}
 }

@@ -386,6 +386,8 @@ class Inbox_Controller extends \WP_REST_Controller {
 		 * Filters the maximum number of remote recipient URLs that can be
 		 * fetched per incoming activity.
 		 *
+		 * @since unreleased
+		 *
 		 * @param int $max_remote_fetches Maximum number of remote fetches. Default 10.
 		 */
 		$max_remote_fetches = (int) \apply_filters( 'activitypub_max_remote_recipient_fetches', 10 );
