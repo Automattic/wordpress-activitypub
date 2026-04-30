@@ -64,7 +64,7 @@
 		"@wordpress/html-entities": "^4.36.0",
 		"@wordpress/i18n": "^6.0.0",
 		"@wordpress/icons": "^12.2.0",
-		"@wordpress/interactivity": "^6.41.0",
+		"@wordpress/interactivity": "^6.45.0",
 		"@wordpress/interface": "^9.25.0",
 		"@wordpress/keyboard-shortcuts": "^5.45.0",
 		"@wordpress/keycodes": "^4.40.0",
