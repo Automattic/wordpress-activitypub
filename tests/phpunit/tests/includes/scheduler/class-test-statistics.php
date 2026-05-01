@@ -48,13 +48,25 @@ class Test_Statistics extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 		$this->sent_count = 0;
-		\add_filter(
-			'pre_wp_mail',
-			function () {
-				++$this->sent_count;
-				return true;
-			}
-		);
+		\add_filter( 'pre_wp_mail', array( $this, 'short_circuit_wp_mail' ) );
+	}
+
+	/**
+	 * Remove the test mail filter so it doesn't leak across tests.
+	 */
+	public function tear_down() {
+		\remove_filter( 'pre_wp_mail', array( $this, 'short_circuit_wp_mail' ) );
+		parent::tear_down();
+	}
+
+	/**
+	 * Count sent emails and short-circuit wp_mail during tests.
+	 *
+	 * @return bool Always true to short-circuit wp_mail.
+	 */
+	public function short_circuit_wp_mail() {
+		++$this->sent_count;
+		return true;
 	}
 
 	/**
@@ -109,5 +121,74 @@ class Test_Statistics extends WP_UnitTestCase {
 
 		$marker = \sprintf( 'activitypub_stats_emailed_%d_%d_annual', self::$user_id, $year );
 		$this->assertNotFalse( \get_option( $marker, false ), 'Sent marker option should be persisted.' );
+	}
+
+	/**
+	 * Test that a forced monthly send still records the marker so a later non-forced
+	 * cron run cannot send another copy for the same period.
+	 *
+	 * @covers ::send_monthly_email
+	 */
+	public function test_send_monthly_email_force_records_marker() {
+		$year   = 2026;
+		$month  = 3;
+		$option = Statistics_Collector::get_monthly_option_name( self::$user_id, $year, $month );
+
+		\update_option(
+			$option,
+			array(
+				'posts_count'     => 1,
+				'followers_count' => 2,
+				'followers_total' => 7,
+			)
+		);
+
+		// Forced send writes the marker even though no marker existed yet.
+		Statistics_Scheduler::send_monthly_email( self::$user_id, $year, $month, true );
+
+		$marker = \sprintf( 'activitypub_stats_emailed_%d_%d_%d', self::$user_id, $year, $month );
+		$this->assertNotFalse( \get_option( $marker, false ), 'Forced send should still persist the marker.' );
+
+		// A subsequent non-forced send must be suppressed by the marker.
+		Statistics_Scheduler::send_monthly_email( self::$user_id, $year, $month );
+
+		$this->assertSame( 1, $this->sent_count, 'Marker written by forced send must block later non-forced sends.' );
+
+		// Forced still sends regardless of an existing marker.
+		Statistics_Scheduler::send_monthly_email( self::$user_id, $year, $month, true );
+
+		$this->assertSame( 2, $this->sent_count, 'Forced send should bypass the marker check and still send.' );
+	}
+
+	/**
+	 * Test that a forced annual send still records the marker so a later non-forced
+	 * cron run cannot send another copy for the same year.
+	 *
+	 * @covers ::send_annual_email
+	 */
+	public function test_send_annual_email_force_records_marker() {
+		\update_user_option( self::$user_id, 'activitypub_mailer_annual_report', '1' );
+
+		$year    = 2025;
+		$summary = array(
+			'posts_count'     => 8,
+			'followers_count' => 4,
+		);
+
+		// Forced send writes the marker even though no marker existed yet.
+		Statistics_Scheduler::send_annual_email( self::$user_id, $year, $summary, true );
+
+		$marker = \sprintf( 'activitypub_stats_emailed_%d_%d_annual', self::$user_id, $year );
+		$this->assertNotFalse( \get_option( $marker, false ), 'Forced send should still persist the marker.' );
+
+		// A subsequent non-forced send must be suppressed by the marker.
+		Statistics_Scheduler::send_annual_email( self::$user_id, $year, $summary );
+
+		$this->assertSame( 1, $this->sent_count, 'Marker written by forced send must block later non-forced sends.' );
+
+		// Forced still sends regardless of marker presence.
+		Statistics_Scheduler::send_annual_email( self::$user_id, $year, $summary, true );
+
+		$this->assertSame( 2, $this->sent_count, 'Forced send should bypass the marker check and still send.' );
 	}
 }

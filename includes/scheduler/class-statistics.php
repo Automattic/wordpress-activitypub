@@ -106,8 +106,15 @@ class Statistics {
 
 		// Atomic claim: add_option only succeeds if the row doesn't yet exist, so this
 		// is race-safe across concurrent cron workers and re-entrant invocations.
-		if ( ! $force && ! \add_option( self::sent_marker_option_name( $user_id, $year ), \time(), '', false ) ) {
-			return;
+		// When $force is true, we still record the marker so a later non-forced cron run
+		// won't send another copy for the same period.
+		$marker_option = self::sent_marker_option_name( $user_id, $year );
+		if ( ! \add_option( $marker_option, \time(), '', false ) ) {
+			if ( ! $force ) {
+				return;
+			}
+
+			\update_option( $marker_option, \time(), false );
 		}
 
 		// Get month name for most_active_month.
@@ -205,8 +212,15 @@ class Statistics {
 
 		// Atomic claim: add_option only succeeds if the row doesn't yet exist, so this
 		// is race-safe across concurrent cron workers and re-entrant invocations.
-		if ( ! $force && ! \add_option( self::sent_marker_option_name( $user_id, $year, $month ), \time(), '', false ) ) {
-			return;
+		// When $force is true, we still record the marker so a later non-forced cron run
+		// won't send another copy for the same period.
+		$marker_option = self::sent_marker_option_name( $user_id, $year, $month );
+		if ( ! \add_option( $marker_option, \time(), '', false ) ) {
+			if ( ! $force ) {
+				return;
+			}
+
+			\update_option( $marker_option, \time(), false );
 		}
 
 		$month_name = \date_i18n( 'F Y', \strtotime( \sprintf( '%d-%02d-01', $year, $month ) ) );
