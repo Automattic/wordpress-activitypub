@@ -104,6 +104,12 @@ class Statistics {
 			return;
 		}
 
+		// Atomic claim: add_option only succeeds if the row doesn't yet exist, so this
+		// is race-safe across concurrent cron workers and re-entrant invocations.
+		if ( ! $force && ! \add_option( self::sent_marker_option_name( $user_id, $year ), \time(), '', false ) ) {
+			return;
+		}
+
 		// Get month name for most_active_month.
 		$most_active_month_name = '';
 		if ( ! empty( $summary['most_active_month'] ) ) {
@@ -197,6 +203,12 @@ class Statistics {
 			return;
 		}
 
+		// Atomic claim: add_option only succeeds if the row doesn't yet exist, so this
+		// is race-safe across concurrent cron workers and re-entrant invocations.
+		if ( ! $force && ! \add_option( self::sent_marker_option_name( $user_id, $year, $month ), \time(), '', false ) ) {
+			return;
+		}
+
 		$month_name = \date_i18n( 'F Y', \strtotime( \sprintf( '%d-%02d-01', $year, $month ) ) );
 
 		// Build follower text.
@@ -257,6 +269,20 @@ class Statistics {
 		}
 
 		Mailer::send( $user_id, $subject, 'stats-report', $args, $alt_body );
+	}
+
+	/**
+	 * Build the option name used as an idempotency marker for a sent stats email.
+	 *
+	 * @param int      $user_id The user ID.
+	 * @param int      $year    The year.
+	 * @param int|null $month   The month (1-12), or null for the annual report.
+	 *
+	 * @return string The option name. Truncated to fit MySQL's 191-character key.
+	 */
+	private static function sent_marker_option_name( $user_id, $year, $month = null ) {
+		$suffix = null === $month ? \sprintf( '%d_annual', $year ) : \sprintf( '%d_%d', $year, $month );
+		return \substr( \sprintf( 'activitypub_stats_emailed_%d_%s', $user_id, $suffix ), 0, 191 );
 	}
 
 	/**

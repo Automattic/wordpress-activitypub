@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix monthly and annual Fediverse Stats emails being sent more than once per period when the scheduler ran multiple times.
