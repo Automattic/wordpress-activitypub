@@ -387,7 +387,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 		 * Filters the maximum number of remote recipient URLs that can be
 		 * fetched per incoming activity.
 		 *
-		 * @since unreleased
+		 * @since 8.2.1
 		 *
 		 * @param int $max_remote_fetches Maximum number of remote fetches. Default 10.
 		 */
@@ -454,7 +454,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 						 * not for each subsequent skipped recipient. Hook this to surface
 						 * cap hits in your logging system of choice (Jetpack, Sentry, syslog, etc.).
 						 *
-						 * @since unreleased
+						 * @since 8.2.1
 						 *
 						 * @param array  $activity  The incoming activity data.
 						 * @param string $recipient The recipient URI that was skipped.
