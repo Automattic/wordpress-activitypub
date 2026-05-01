@@ -237,7 +237,7 @@ class Remote_Actors {
 	 * recipient resolver, where a flood of unknown recipients would otherwise
 	 * trigger one DB query per recipient.
 	 *
-	 * @since unreleased
+	 * @since 8.2.1
 	 *
 	 * @param string[] $uris Candidate actor URIs.
 	 *

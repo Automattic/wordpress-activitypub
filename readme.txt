@@ -111,6 +111,13 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+### 8.2.1 - 2026-05-01
+#### Security
+- Hardened how the inbox processes large recipient lists in incoming activities.
+
+#### Fixed
+- Fix monthly and annual Fediverse Stats emails being sent more than once per period when the scheduler ran multiple times.
+
 ### 8.2.0 - 2026-04-27
 #### Security
 - ActivityPub REST endpoints no longer advertise credentialed cross-origin access. Browser-based clients using OAuth bearer tokens continue to work as before.
