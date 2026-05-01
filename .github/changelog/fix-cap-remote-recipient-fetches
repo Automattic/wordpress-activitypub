@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Hardened how the inbox processes large recipient lists in incoming activities.
