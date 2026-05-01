@@ -71,6 +71,7 @@ npm run dev                     # Development watch mode.
 - **`remove_all_filters('pre_http_request')` is forbidden in tests.** The pre-commit hook blocks this. Use targeted filter removal.
 - **Changelog entries MUST be end-user friendly and end with punctuation.** Users see these in the WordPress update screen. Describe what changed from their perspective — no jargon, class names, or method names.
 - **`post_date_gmt` may be empty.** Check for `0000-00-00` or empty values.
+- **Scheduled cron handlers must be idempotent if they have user-visible side effects** (emails, external API calls, push notifications). WP-Cron can re-enter the same callback via concurrent workers, plugin deactivate→reactivate (which re-runs `register_schedules()`), `wp cron event run`, and traffic spikes that fire overlapping loopback requests. Claim the unit of work atomically — `add_option( $key, $value, '', false )` only succeeds when the row doesn't yet exist, which makes it a race-safe sentinel — *before* the side effect runs, not after. See `Activitypub\Scheduler\Statistics::send_monthly_email()` for the canonical pattern.
 
 ## Pre-commit Hooks
 
