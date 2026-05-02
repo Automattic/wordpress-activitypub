@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.9
-Stable tag: 8.2.1
+Stable tag: 8.2.2
 Requires PHP: 7.4
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -110,6 +110,10 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 8.2.2 - 2026-05-02
+#### Changed
+- Refresh bundled scripts to pick up the latest WordPress component updates.
 
 ### 8.2.1 - 2026-05-01
 #### Security

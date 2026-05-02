@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.2.2] - 2026-05-02
+### Changed
+- Refresh bundled scripts to pick up the latest WordPress component updates. [#3259]
+
 ## [8.2.1] - 2026-05-01
 ### Security
 - Hardened how the inbox processes large recipient lists in incoming activities. [#3094]
@@ -1856,6 +1860,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[8.2.2]: https://github.com/Automattic/wordpress-activitypub/compare/8.2.1...8.2.2
 [8.2.1]: https://github.com/Automattic/wordpress-activitypub/compare/8.2.0...8.2.1
 [8.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/8.1.1...8.2.0
 [8.1.1]: https://github.com/Automattic/wordpress-activitypub/compare/8.1.0...8.1.1
