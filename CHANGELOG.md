@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.2.1] - 2026-05-01
+### Security
+- Hardened how the inbox processes large recipient lists in incoming activities. [#3094]
+
+### Fixed
+- Fix monthly and annual Fediverse Stats emails being sent more than once per period when the scheduler ran multiple times. [#3252]
+
 ## [8.2.0] - 2026-04-27
 ### Security
 - ActivityPub REST endpoints no longer advertise credentialed cross-origin access. Browser-based clients using OAuth bearer tokens continue to work as before. [#3237]
@@ -1849,6 +1856,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[8.2.1]: https://github.com/Automattic/wordpress-activitypub/compare/8.2.0...8.2.1
 [8.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/8.1.1...8.2.0
 [8.1.1]: https://github.com/Automattic/wordpress-activitypub/compare/8.1.0...8.1.1
 [8.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/8.0.2...8.1.0
