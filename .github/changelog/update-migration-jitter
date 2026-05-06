@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Stagger background data processing after plugin updates to reduce server load on hosts running many sites.
