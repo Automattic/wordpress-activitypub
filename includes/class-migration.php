@@ -209,8 +209,8 @@ class Migration {
 			\wp_schedule_single_event( \time(), 'activitypub_migrate_actor_emoji' );
 		}
 		if ( \version_compare( $version_from_db, '8.1.0', '<' ) ) {
-			// Backfill historical statistics data (delay to avoid load immediately after upgrade).
-			\wp_schedule_single_event( \time() + HOUR_IN_SECONDS, 'activitypub_backfill_statistics' );
+			// Backfill historical statistics data (delay + jitter to avoid load spikes on hosts running many sites).
+			\wp_schedule_single_event( \time() + HOUR_IN_SECONDS + \wp_rand( 0, 6 * HOUR_IN_SECONDS ), 'activitypub_backfill_statistics' );
 		}
 
 		/*
