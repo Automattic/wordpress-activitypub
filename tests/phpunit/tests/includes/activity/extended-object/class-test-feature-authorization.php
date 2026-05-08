@@ -42,7 +42,8 @@ class Test_Feature_Authorization extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that the JSON-LD context includes the FEP-7aa9 namespace.
+	 * Test that the JSON-LD context includes the FEP-7aa9 namespace and
+	 * the gts:-namespaced stamp link properties.
 	 */
 	public function test_json_ld_context_includes_fep_7aa9() {
 		$object = new Feature_Authorization();
@@ -52,6 +53,11 @@ class Test_Feature_Authorization extends \WP_UnitTestCase {
 		foreach ( (array) $array['@context'] as $entry ) {
 			if ( is_array( $entry ) && isset( $entry['FeatureAuthorization'] ) ) {
 				$this->assertSame( 'https://w3id.org/fep/7aa9#FeatureAuthorization', $entry['FeatureAuthorization'] );
+				$this->assertSame( 'https://gotosocial.org/ns#', $entry['gts'] );
+				$this->assertSame( 'gts:interactingObject', $entry['interactingObject']['@id'] );
+				$this->assertSame( '@id', $entry['interactingObject']['@type'] );
+				$this->assertSame( 'gts:interactionTarget', $entry['interactionTarget']['@id'] );
+				$this->assertSame( '@id', $entry['interactionTarget']['@type'] );
 				$found = true;
 			}
 		}

@@ -29,6 +29,10 @@ class Feature_Authorization extends Base_Object {
 	/**
 	 * The JSON-LD context for the object.
 	 *
+	 * Intentionally minimal: stamps are always served standalone at their own
+	 * URL, so we ship only the vocabulary the stamp document itself uses.
+	 * Mirrors the Quote_Authorization (FEP-044f) approach.
+	 *
 	 * @var array
 	 */
 	const JSON_LD_CONTEXT = array(
