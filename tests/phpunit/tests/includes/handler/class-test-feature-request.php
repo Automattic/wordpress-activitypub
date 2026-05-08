@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Handler;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
 use Activitypub\Handler\Feature_Request;
 use Activitypub\Tests\ActivityPub_Outbox_TestCase;
@@ -212,5 +213,136 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 		$actual_keys   = array_keys( $payload['object'] );
 		$this->assertEmpty( array_diff( $expected_keys, $actual_keys ), 'All expected keys should be present.' );
 		$this->assertEmpty( array_diff( $actual_keys, $expected_keys ), 'No unexpected keys should be present.' );
+	}
+
+	/**
+	 * Data provider for policy tests.
+	 *
+	 * @return array Test cases keyed by name.
+	 */
+	public function policy_test_data() {
+		return array(
+			'default (me) - reject'                      => array( '', null, 'Reject' ),
+			'me policy - reject'                         => array( ACTIVITYPUB_INTERACTION_POLICY_ME, null, 'Reject' ),
+			'anyone policy - accept'                     => array( ACTIVITYPUB_INTERACTION_POLICY_ANYONE, null, 'Accept' ),
+			'followers policy with follower - accept'    => array(
+				ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS,
+				'add_follower',
+				'Accept',
+			),
+			'followers policy without follower - reject' => array(
+				ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS,
+				null,
+				'Reject',
+			),
+		);
+	}
+
+	/**
+	 * Test handle_feature_request branches.
+	 *
+	 * @dataProvider policy_test_data
+	 * @covers ::handle_feature_request
+	 *
+	 * @param string      $policy        Site policy to set, or '' to leave default.
+	 * @param string|null $setup         Optional setup callback name.
+	 * @param string      $expected_type Activity type expected in the outbox.
+	 */
+	public function test_handle_feature_request_policies( $policy, $setup, $expected_type ) {
+		if ( '' !== $policy ) {
+			update_option( 'activitypub_default_feature_policy', $policy );
+		} else {
+			delete_option( 'activitypub_default_feature_policy' );
+		}
+
+		$activity = $this->create_feature_request_activity();
+		$actor    = $activity['actor'];
+
+		$pre = function () use ( $actor ) {
+			return array(
+				'id'    => $actor,
+				'type'  => 'Person',
+				'inbox' => str_replace( '/users/', '/inbox/', $actor ),
+			);
+		};
+		add_filter( 'pre_get_remote_metadata_by_actor', $pre );
+
+		if ( 'add_follower' === $setup ) {
+			$follower_id = Followers::add( self::$user_id, $actor );
+			$this->assertNotFalse( $follower_id );
+		}
+
+		Feature_Request::handle_feature_request( $activity, self::$user_id );
+
+		$outbox = get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				'author'      => self::$user_id,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => $expected_type,
+					),
+				),
+			)
+		);
+		$this->assertNotEmpty( $outbox, "{$expected_type} activity should be queued." );
+
+		remove_filter( 'pre_get_remote_metadata_by_actor', $pre );
+	}
+
+	/**
+	 * Test that queue_accept stores a stamp and emits an Accept with the stamp URL.
+	 *
+	 * @covers ::queue_accept
+	 */
+	public function test_queue_accept_stores_stamp_and_emits_result() {
+		$activity = $this->create_feature_request_activity();
+
+		Feature_Request::queue_accept( $activity, self::$user_id );
+
+		// Verify usermeta row was created.
+		$stored = get_user_meta( self::$user_id, '_activitypub_featured_by', false );
+		$this->assertContains( $activity['instrument'], $stored, 'Instrument URL should be recorded in user meta.' );
+
+		// Verify Accept activity in outbox carries a `result` URL containing actor and stamp params.
+		$outbox = get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				'author'      => self::$user_id,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Accept',
+					),
+				),
+			)
+		);
+		$this->assertNotEmpty( $outbox );
+		$payload = json_decode( $outbox[0]->post_content, true );
+		$this->assertSame( 'Accept', $payload['type'] );
+		$this->assertNotEmpty( $payload['result'] );
+		$this->assertStringContainsString( 'actor=' . self::$user_id, $payload['result'] );
+		$this->assertStringContainsString( 'stamp=', $payload['result'] );
+	}
+
+	/**
+	 * Test that queue_accept is idempotent: calling it twice with the same instrument
+	 * reuses the existing usermeta row and does not duplicate stamps.
+	 *
+	 * @covers ::queue_accept
+	 */
+	public function test_queue_accept_idempotent() {
+		$activity = $this->create_feature_request_activity();
+
+		Feature_Request::queue_accept( $activity, self::$user_id );
+		Feature_Request::queue_accept( $activity, self::$user_id );
+
+		$stored = get_user_meta( self::$user_id, '_activitypub_featured_by', false );
+		$this->assertCount( 1, $stored, 'Duplicate FeatureRequests for the same instrument must not produce multiple stamps.' );
 	}
 }
