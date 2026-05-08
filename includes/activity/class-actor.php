@@ -382,10 +382,12 @@ class Actor extends Base_Object {
 	 *
 	 * @see https://w3id.org/fep/7aa9
 	 *
+	 * @since unreleased
+	 *
 	 * @return array
 	 */
 	public function get_interaction_policy() {
-		return array( 'canFeature' => $this->build_can_feature_policy() );
+		return array_merge( (array) parent::get_interaction_policy(), array( 'canFeature' => $this->build_can_feature_policy() ) );
 	}
 
 	/**
