@@ -291,7 +291,7 @@ class Router {
 		}
 
 		$actor = \get_query_var( 'actor', null );
-		if ( $actor ) {
+		if ( $actor && ! \get_query_var( 'stamp' ) ) {
 			$actor = Actors::get_by_username( $actor );
 			if ( ! $actor || \is_wp_error( $actor ) ) {
 				$wp_query->set_404();
