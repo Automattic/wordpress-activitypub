@@ -9,6 +9,7 @@ namespace Activitypub\Tests;
 
 use Activitypub\Activity\Extended_Object\Feature_Authorization;
 use Activitypub\Query;
+use Activitypub\Router;
 
 /**
  * Test class for FeatureAuthorization stamp resolution via Query.
@@ -100,5 +101,42 @@ class Test_Query_Feature_Stamp extends \WP_UnitTestCase {
 
 		$object = Query::get_instance()->get_activitypub_object();
 		$this->assertNotInstanceOf( Feature_Authorization::class, $object );
+	}
+
+	/**
+	 * End-to-end: a stamp URL goes through the same lifecycle as a real
+	 * request (go_to → template_redirect → Query) and produces a
+	 * FeatureAuthorization. This guards against the router reverting to
+	 * the pre-guard state where it would 404 the request before content
+	 * negotiation could resolve the stamp.
+	 *
+	 * @covers ::get_activitypub_object
+	 * @covers \Activitypub\Router::template_redirect
+	 */
+	public function test_stamp_url_routes_and_resolves_end_to_end() {
+		$instrument = 'https://other.example.com/users/curator/featured/integration';
+		$umeta_id   = add_user_meta( self::$user_id, '_activitypub_featured_by', $instrument );
+
+		$stamp_url = add_query_arg(
+			array(
+				'actor' => self::$user_id,
+				'stamp' => $umeta_id,
+			),
+			home_url( '/' )
+		);
+
+		$this->go_to( $stamp_url );
+
+		/*
+		 * The pre-guard router would have called set_404() here for any
+		 * non-numeric-username site. Just calling template_redirect without
+		 * exception means the guard fired and let the request through to
+		 * content negotiation.
+		 */
+		Router::template_redirect();
+
+		$object = Query::get_instance()->get_activitypub_object();
+		$this->assertInstanceOf( Feature_Authorization::class, $object );
+		$this->assertSame( $instrument, $object->to_array()['interactingObject'] );
 	}
 }

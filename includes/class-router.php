@@ -290,6 +290,13 @@ class Router {
 			exit;
 		}
 
+		/*
+		 * Skip the actor branch when `stamp` is also set: those URLs are
+		 * actor-scoped FEP-7aa9 stamps (`?actor=USER_ID&stamp=UMETA_ID`)
+		 * resolved by Activitypub\Query, not Mastodon-style profile URLs.
+		 * Without this guard the username lookup runs against the numeric
+		 * USER_ID, fails, and 404s the stamp before content negotiation.
+		 */
 		$actor = \get_query_var( 'actor', null );
 		if ( $actor && ! \get_query_var( 'stamp' ) ) {
 			$actor = Actors::get_by_username( $actor );

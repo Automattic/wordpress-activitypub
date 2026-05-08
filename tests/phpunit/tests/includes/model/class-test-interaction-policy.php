@@ -84,7 +84,7 @@ class Test_Interaction_Policy extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Blog actor inherits the same canFeature behavior.
+	 * Blog actor inherits the same canFeature behavior, including default-deny.
 	 */
 	public function test_blog_actor_emits_canfeature() {
 		$blog   = new Blog();
@@ -92,5 +92,10 @@ class Test_Interaction_Policy extends \WP_UnitTestCase {
 
 		$this->assertIsArray( $policy );
 		$this->assertArrayHasKey( 'canFeature', $policy );
+		$this->assertSame(
+			array( $blog->get_id() ),
+			$policy['canFeature']['automaticApproval'],
+			'Blog actor must default to explicit denial (its own id as the only approved target).'
+		);
 	}
 }

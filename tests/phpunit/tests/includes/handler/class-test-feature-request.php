@@ -345,4 +345,35 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 		$stored = get_user_meta( self::$user_id, '_activitypub_featured_by', false );
 		$this->assertCount( 1, $stored, 'Duplicate FeatureRequests for the same instrument must not produce multiple stamps.' );
 	}
+
+	/**
+	 * Test that an unresolvable target (no local actor matches the activity object)
+	 * still produces a Reject so the curator gets a definitive answer.
+	 *
+	 * @covers ::handle_feature_request
+	 */
+	public function test_handle_feature_request_rejects_unresolvable_target() {
+		update_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
+
+		$activity           = $this->create_feature_request_activity();
+		$activity['object'] = 'https://this-host-does-not-host.example/users/ghost';
+
+		Feature_Request::handle_feature_request( $activity, self::$user_id );
+
+		$outbox = get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				'author'      => self::$user_id,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Reject',
+					),
+				),
+			)
+		);
+		$this->assertNotEmpty( $outbox, 'Unresolvable target should still produce a Reject activity.' );
+	}
 }
