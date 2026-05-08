@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Handler;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
 use Activitypub\Handler\Feature_Request;
 use Activitypub\Tests\ActivityPub_Outbox_TestCase;
@@ -38,7 +39,7 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 			'id'         => 'https://remote.example.com/activities/feat-1',
 			'type'       => 'FeatureRequest',
 			'actor'      => $actor_uri,
-			'object'     => \Activitypub\Collection\Actors::get_by_id( self::$user_id )->get_id(),
+			'object'     => Actors::get_by_id( self::$user_id )->get_id(),
 			'instrument' => 'https://remote.example.com/users/curator/featured/42',
 		);
 	}
@@ -141,5 +142,75 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 			)
 		);
 		$this->assertEmpty( $outbox, 'No outbox activity should be created for unrelated types.' );
+	}
+
+	/**
+	 * Test that the snake_case 'feature_request' type alias is accepted.
+	 *
+	 * The inbox dispatcher snake-cases activity types before firing per-type
+	 * actions, so handle_blocked_request must accept both spellings.
+	 *
+	 * @covers ::handle_blocked_request
+	 */
+	public function test_handle_blocked_request_accepts_snake_case_alias() {
+		$activity = $this->create_feature_request_activity();
+
+		Feature_Request::handle_blocked_request( $activity, self::$user_id, 'feature_request' );
+
+		$outbox = get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				'author'      => self::$user_id,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Reject',
+					),
+				),
+			)
+		);
+		$this->assertNotEmpty( $outbox, 'Reject activity should be queued when dispatcher uses snake_case type.' );
+	}
+
+	/**
+	 * Test that queue_reject creates a private Reject activity addressed to the requester.
+	 *
+	 * @covers ::queue_reject
+	 */
+	public function test_queue_reject_emits_minimal_private_activity() {
+		$activity = $this->create_feature_request_activity();
+
+		Feature_Request::queue_reject( $activity, self::$user_id );
+
+		$outbox = get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				'author'      => self::$user_id,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Reject',
+					),
+				),
+			)
+		);
+		$this->assertNotEmpty( $outbox, 'Reject activity should be created.' );
+
+		$payload    = json_decode( $outbox[0]->post_content, true );
+		$visibility = get_post_meta( $outbox[0]->ID, 'activitypub_content_visibility', true );
+
+		$this->assertSame( 'Reject', $payload['type'] );
+		$this->assertSame( 'private', $visibility );
+		$this->assertContains( $activity['actor'], $payload['to'] );
+
+		// Object payload should be trimmed to a stable allow-list.
+		$expected_keys = array( 'id', 'type', 'object', 'actor', 'instrument' );
+		$actual_keys   = array_keys( $payload['object'] );
+		$this->assertEmpty( array_diff( $expected_keys, $actual_keys ), 'All expected keys should be present.' );
+		$this->assertEmpty( array_diff( $actual_keys, $expected_keys ), 'No unexpected keys should be present.' );
 	}
 }
