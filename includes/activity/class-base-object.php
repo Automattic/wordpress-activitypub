@@ -123,43 +123,58 @@ class Base_Object extends Generic_Object {
 	const JSON_LD_CONTEXT = array(
 		'https://www.w3.org/ns/activitystreams',
 		array(
-			'Hashtag'           => 'as:Hashtag',
-			'sensitive'         => 'as:sensitive',
-			'dcterms'           => 'http://purl.org/dc/terms/',
-			'gts'               => 'https://gotosocial.org/ns#',
-			'schema'            => 'http://schema.org/',
-			'exifData'          => 'schema:exifData',
-			'PropertyValue'     => 'schema:PropertyValue',
-			'interactionPolicy' => array(
+			'Hashtag'              => 'as:Hashtag',
+			'sensitive'            => 'as:sensitive',
+			'dcterms'              => 'http://purl.org/dc/terms/',
+			'gts'                  => 'https://gotosocial.org/ns#',
+			'schema'               => 'http://schema.org/',
+			'exifData'             => 'schema:exifData',
+			'PropertyValue'        => 'schema:PropertyValue',
+			'interactionPolicy'    => array(
 				'@id'   => 'gts:interactionPolicy',
 				'@type' => '@id',
 			),
-			'canQuote'          => array(
+			'canQuote'             => array(
 				'@id'   => 'gts:canQuote',
 				'@type' => '@id',
 			),
-			'canReply'          => array(
+			'canFeature'           => array(
+				'@id'   => 'https://w3id.org/fep/7aa9#canFeature',
+				'@type' => '@id',
+			),
+			'canReply'             => array(
 				'@id'   => 'gts:canReply',
 				'@type' => '@id',
 			),
-			'canLike'           => array(
+			'canLike'              => array(
 				'@id'   => 'gts:canLike',
 				'@type' => '@id',
 			),
-			'canAnnounce'       => array(
+			'canAnnounce'          => array(
 				'@id'   => 'gts:canAnnounce',
 				'@type' => '@id',
 			),
-			'automaticApproval' => array(
+			'automaticApproval'    => array(
 				'@id'   => 'gts:automaticApproval',
 				'@type' => '@id',
 			),
-			'manualApproval'    => array(
+			'manualApproval'       => array(
 				'@id'   => 'gts:manualApproval',
 				'@type' => '@id',
 			),
-			'always'            => array(
+			'always'               => array(
 				'@id'   => 'gts:always',
+				'@type' => '@id',
+			),
+			'FeaturedCollection'   => 'https://w3id.org/fep/7aa9#FeaturedCollection',
+			'FeaturedItem'         => 'https://w3id.org/fep/7aa9#FeaturedItem',
+			'featuredObject'       => array(
+				'@id'   => 'https://w3id.org/fep/7aa9#featuredObject',
+				'@type' => '@id',
+			),
+			'featuredObjectType'   => 'https://w3id.org/fep/7aa9#featuredObjectType',
+			'featureAuthorization' => array(
+				'@id'   => 'https://w3id.org/fep/7aa9#featureAuthorization',
 				'@type' => '@id',
 			),
 		),

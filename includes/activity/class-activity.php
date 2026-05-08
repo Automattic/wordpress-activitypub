@@ -38,8 +38,9 @@ class Activity extends Base_Object {
 	const JSON_LD_CONTEXT = array(
 		'https://www.w3.org/ns/activitystreams',
 		array(
-			'toot'         => 'http://joinmastodon.org/ns#',
-			'QuoteRequest' => 'toot:QuoteRequest',
+			'toot'           => 'http://joinmastodon.org/ns#',
+			'QuoteRequest'   => 'toot:QuoteRequest',
+			'FeatureRequest' => 'https://w3id.org/fep/7aa9#FeatureRequest',
 		),
 	);
 
@@ -70,6 +71,7 @@ class Activity extends Base_Object {
 		'Move',
 		'Offer',
 		'QuoteRequest', // @see https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md
+		'FeatureRequest', // @see https://github.com/mastodon/featured_collections/pull/1 (FEP-7aa9 draft)
 		'Read',
 		'Reject',
 		'Remove',
