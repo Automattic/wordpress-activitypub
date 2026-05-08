@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.9
-Stable tag: 8.2.0
+Stable tag: 8.2.1
 Requires PHP: 7.4
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -110,6 +110,13 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 8.2.1 - 2026-05-01
+#### Security
+- Hardened how the inbox processes large recipient lists in incoming activities.
+
+#### Fixed
+- Fix monthly and annual Fediverse Stats emails being sent more than once per period when the scheduler ran multiple times.
 
 ### 8.2.0 - 2026-04-27
 #### Security

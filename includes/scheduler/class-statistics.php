@@ -104,6 +104,19 @@ class Statistics {
 			return;
 		}
 
+		// Atomic claim: add_option only succeeds if the row doesn't yet exist, so this
+		// is race-safe across concurrent cron workers and re-entrant invocations.
+		// When $force is true, we still record the marker so a later non-forced cron run
+		// won't send another copy for the same period.
+		$email_sent_option = self::get_email_sent_option_name( $user_id, $year );
+		if ( ! \add_option( $email_sent_option, \time(), '', false ) ) {
+			if ( ! $force ) {
+				return;
+			}
+
+			\update_option( $email_sent_option, \time(), false );
+		}
+
 		// Get month name for most_active_month.
 		$most_active_month_name = '';
 		if ( ! empty( $summary['most_active_month'] ) ) {
@@ -197,6 +210,19 @@ class Statistics {
 			return;
 		}
 
+		// Atomic claim: add_option only succeeds if the row doesn't yet exist, so this
+		// is race-safe across concurrent cron workers and re-entrant invocations.
+		// When $force is true, we still record the marker so a later non-forced cron run
+		// won't send another copy for the same period.
+		$email_sent_option = self::get_email_sent_option_name( $user_id, $year, $month );
+		if ( ! \add_option( $email_sent_option, \time(), '', false ) ) {
+			if ( ! $force ) {
+				return;
+			}
+
+			\update_option( $email_sent_option, \time(), false );
+		}
+
 		$month_name = \date_i18n( 'F Y', \strtotime( \sprintf( '%d-%02d-01', $year, $month ) ) );
 
 		// Build follower text.
@@ -257,6 +283,23 @@ class Statistics {
 		}
 
 		Mailer::send( $user_id, $subject, 'stats-report', $args, $alt_body );
+	}
+
+	/**
+	 * Build the option name used to record that a stats email has been sent for a given period.
+	 *
+	 * The presence of this option is the idempotency signal: a row exists once an email
+	 * has been delivered (or claimed for delivery) for the given user and period.
+	 *
+	 * @param int      $user_id The user ID.
+	 * @param int      $year    The year.
+	 * @param int|null $month   The month (1-12), or null for the annual report.
+	 *
+	 * @return string The option name. Truncated to fit MySQL's 191-character key.
+	 */
+	private static function get_email_sent_option_name( $user_id, $year, $month = null ) {
+		$suffix = null === $month ? \sprintf( '%d_annual', $year ) : \sprintf( '%d_%d', $year, $month );
+		return \substr( \sprintf( 'activitypub_stats_emailed_%d_%s', $user_id, $suffix ), 0, 191 );
 	}
 
 	/**
