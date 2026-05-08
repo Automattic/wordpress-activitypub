@@ -138,10 +138,6 @@ class Base_Object extends Generic_Object {
 				'@id'   => 'gts:canQuote',
 				'@type' => '@id',
 			),
-			'canFeature'        => array(
-				'@id'   => 'https://w3id.org/fep/7aa9#canFeature',
-				'@type' => '@id',
-			),
 			'canReply'          => array(
 				'@id'   => 'gts:canReply',
 				'@type' => '@id',

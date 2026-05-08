@@ -74,6 +74,7 @@ class Actor extends Base_Object {
 			'toot'                      => 'http://joinmastodon.org/ns#',
 			'lemmy'                     => 'https://join-lemmy.org/ns#',
 			'litepub'                   => 'http://litepub.social/ns#',
+			'gts'                       => 'https://gotosocial.org/ns#',
 			'manuallyApprovesFollowers' => 'as:manuallyApprovesFollowers',
 			'PropertyValue'             => 'schema:PropertyValue',
 			'value'                     => 'schema:value',
@@ -106,6 +107,18 @@ class Actor extends Base_Object {
 				'@id'        => 'https://w3id.org/fep/844e/implements',
 				'@type'      => '@id',
 				'@container' => '@list',
+			),
+			'interactionPolicy'         => array(
+				'@id'   => 'gts:interactionPolicy',
+				'@type' => '@id',
+			),
+			'canFeature'                => array(
+				'@id'   => 'https://w3id.org/fep/7aa9#canFeature',
+				'@type' => '@id',
+			),
+			'automaticApproval'         => array(
+				'@id'   => 'gts:automaticApproval',
+				'@type' => '@id',
 			),
 			'postingRestrictedToMods'   => 'lemmy:postingRestrictedToMods',
 			'discoverable'              => 'toot:discoverable',
