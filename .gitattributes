@@ -3,20 +3,20 @@
 /.agents/            export-ignore
 /.claude/            export-ignore
 /.editorconfig       export-ignore
-/.eslintignore       export-ignore
-/.eslintrc.js        export-ignore
 /.gitattributes      export-ignore
 /.githooks/          export-ignore
 /.github/            export-ignore
 /.gitignore          export-ignore
 /.prettierignore     export-ignore
 /.prettierrc.js      export-ignore
+/.stylelintrc.json   export-ignore
 /.wordpress-org/     export-ignore
 /.wp-env.json        export-ignore
 
 # Build and config files
 /bin/                export-ignore
 /composer.json       export-ignore
+/eslint.config.cjs   export-ignore
 /jest.config.js      export-ignore
 /jest.setup.js       export-ignore
 /local/              export-ignore

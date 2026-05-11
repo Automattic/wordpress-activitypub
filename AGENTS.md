@@ -71,6 +71,7 @@ npm run dev                     # Development watch mode.
 - **`remove_all_filters('pre_http_request')` is forbidden in tests.** The pre-commit hook blocks this. Use targeted filter removal.
 - **Changelog entries MUST be end-user friendly and end with punctuation.** Users see these in the WordPress update screen. Describe what changed from their perspective — no jargon, class names, or method names.
 - **`post_date_gmt` may be empty.** Check for `0000-00-00` or empty values.
+- **Scheduled cron handlers must be idempotent if they have user-visible side effects** (emails, external API calls, push notifications). WP-Cron can re-enter the same callback via concurrent workers, plugin deactivate→reactivate (which re-runs `register_schedules()`), `wp cron event run`, and traffic spikes that fire overlapping loopback requests. Claim the unit of work atomically — `add_option( $key, $value, '', false )` only succeeds when the row doesn't yet exist, which makes it a race-safe sentinel — *before* the side effect runs, not after. See `Activitypub\Scheduler\Statistics::send_monthly_email()` for the canonical pattern.
 
 ## Pre-commit Hooks
 
@@ -146,3 +147,6 @@ Skills are complex procedures loaded on demand. Canonical files live in `.agents
 | **code-review** | Auto-invoked before PR creation to review changes. |
 | **spec-check** | Audit endpoints against W3C ActivityPub and SWICG specs. |
 | **bug-bounty** | Pick easiest open bug, fix with tests, create draft PR. Runs in background. |
+| **patch-release** | Create a patch release by cherry-picking fixes onto a release branch. |
+| **security-audit** | Audit for SSRF, auth bypass, content disclosure, XSS, and content negotiation issues. |
+| **support** | Diagnose federation issues on live sites (WebFinger, outbox, actors, common misconfigurations). |

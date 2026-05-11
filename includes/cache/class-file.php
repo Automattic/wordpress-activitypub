@@ -292,7 +292,7 @@ abstract class File {
 	 * the web server — the same assumption WordPress core makes for media
 	 * uploads in _wp_handle_upload().
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 *
 	 * @return \WP_Filesystem_Direct The direct filesystem instance.
 	 */
@@ -312,7 +312,7 @@ abstract class File {
 	/**
 	 * Delete a directory and all its contents.
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 *
 	 * @param string $basedir The directory path to delete.
 	 *

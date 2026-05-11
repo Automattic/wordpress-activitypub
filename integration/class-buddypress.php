@@ -18,6 +18,36 @@ class Buddypress {
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_json_author_array', array( self::class, 'add_user_metadata' ), 11, 2 );
+		\add_filter( 'render_block_activitypub/followers', array( self::class, 'escape_at_signs' ) );
+		\add_filter( 'render_block_activitypub/following', array( self::class, 'escape_at_signs' ) );
+	}
+
+	/**
+	 * Escape `@` signs in block output to prevent BuddyPress mention linking.
+	 *
+	 * BuddyPress hooks `bp_activity_at_name_filter` into `the_content` to convert
+	 * `@username` mentions into profile links. This corrupts the JSON in the
+	 * `data-wp-context` attribute of Followers/Following blocks because the handles
+	 * contain `@username` patterns that match BuddyPress's regex.
+	 *
+	 * Encoding `@` as `&#x40;` in the HTML attribute makes it invisible to
+	 * BuddyPress's regex. The browser decodes the HTML entity before JavaScript
+	 * reads the attribute, so the Interactivity API receives the original `@`.
+	 *
+	 * @since 8.1.0
+	 *
+	 * @param string $block_content The block content.
+	 *
+	 * @return string The block content with `@` signs escaped in data attributes.
+	 */
+	public static function escape_at_signs( $block_content ) {
+		return \preg_replace_callback(
+			'/data-wp-context="([^"]*)"/',
+			static function ( $matches ) {
+				return 'data-wp-context="' . \str_replace( '@', '&#x40;', $matches[1] ) . '"';
+			},
+			$block_content
+		);
 	}
 
 	/**

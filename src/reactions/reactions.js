@@ -1,7 +1,20 @@
 import { useState, useEffect, useRef, useCallback } from '@wordpress/element';
 import { Popover, Button } from '@wordpress/components';
+import { __ } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
 import { useOptions } from '../shared/use-options';
+
+/**
+ * Map reaction type keys to action button labels.
+ */
+const ACTION_LABELS = {
+	like: __( 'Like', 'activitypub' ),
+	likes: __( 'Like', 'activitypub' ),
+	repost: __( 'Repost', 'activitypub' ),
+	reposts: __( 'Repost', 'activitypub' ),
+	quote: __( 'Quote', 'activitypub' ),
+	quotes: __( 'Quote', 'activitypub' ),
+};
 
 /**
  * A component that renders a row of user avatars for a given set of reactions.
@@ -86,13 +99,15 @@ const ReactionList = ( { reactions, displayStyle } ) => {
 /**
  * A component that renders a reaction group with facepile and dropdown.
  *
- * @param {Object} props              Component props.
- * @param {Array}  props.items        Array of reaction objects.
- * @param {string} props.label        Label for the reaction group.
- * @param {string} props.displayStyle The display style ('facepile' or 'compact').
+ * @param {Object}  props              Component props.
+ * @param {Array}   props.items        Array of reaction objects.
+ * @param {string}  props.label        Label for the reaction group.
+ * @param {string}  props.displayStyle The display style ('facepile' or 'compact').
+ * @param {boolean} props.showActions  Whether to show the action button.
+ * @param {string}  props.actionLabel  Label for the action button.
  * @return {JSX.Element}              The rendered component.
  */
-const ReactionGroup = ( { items, label, displayStyle } ) => {
+const ReactionGroup = ( { items, label, displayStyle, showActions, actionLabel } ) => {
 	const [ isOpen, setIsOpen ] = useState( false );
 	const [ buttonRef, setButtonRef ] = useState( null );
 	const containerRef = useRef( null );
@@ -101,6 +116,11 @@ const ReactionGroup = ( { items, label, displayStyle } ) => {
 
 	return (
 		<div className="reaction-group" ref={ containerRef }>
+			{ showActions && actionLabel && (
+				<button className="reaction-action-button wp-element-button" type="button" disabled>
+					{ actionLabel }
+				</button>
+			) }
 			<FacepileRow reactions={ visibleItems } displayStyle={ displayStyle } />
 			<Button
 				ref={ setButtonRef }
@@ -127,6 +147,7 @@ const ReactionGroup = ( { items, label, displayStyle } ) => {
  * @param {?Object} props.reactions         Optional reactions data.
  * @param {?Object} props.fallbackReactions Optional fallback reactions data to use if no real reactions are found.
  * @param {string}  props.displayStyle      The display style ('facepile' or 'summary').
+ * @param {boolean} props.showActions       Whether to show action buttons.
  * @return {?JSX.Element}                  The rendered component.
  */
 export function Reactions( {
@@ -134,6 +155,7 @@ export function Reactions( {
 	reactions: providedReactions = null,
 	fallbackReactions = null,
 	displayStyle = 'facepile',
+	showActions = false,
 } ) {
 	const { namespace } = useOptions();
 	const [ reactions, setReactions ] = useState( providedReactions );
@@ -201,6 +223,8 @@ export function Reactions( {
 						items={ group.items }
 						label={ group.label }
 						displayStyle={ displayStyle }
+						showActions={ showActions }
+						actionLabel={ ACTION_LABELS[ key ] }
 					/>
 				);
 			} ) }

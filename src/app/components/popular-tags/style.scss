@@ -1,6 +1,8 @@
+@use "@wordpress/base-styles/colors";
+
 .popular-tags {
 	padding: 0 var(--wpds-spacing-30, 12px) var(--wpds-spacing-30, 12px);
-	border-top: 1px solid var(--wpds-color-stroke-inverted, rgba(255, 255, 255, 0.1));
+	border-top: 1px solid rgba(colors.$white, 0.1);
 	background: transparent !important;
 	border-bottom: none !important;
 	border-left: none !important;
@@ -14,13 +16,13 @@
 		letter-spacing: 0.5px;
 		margin: var(--wpds-spacing-30, 12px) 0 var(--wpds-spacing-20, 8px) 0;
 		padding: 0 var(--wpds-spacing-20, 8px);
-		color: var(--wpds-color-fg-inverted-tertiary, #999);
+		color: colors.$gray-600;
 	}
 
 	&__loading {
 		font-size: 13px;
 		padding: var(--wpds-spacing-20, 8px);
-		color: var(--wpds-color-fg-inverted-secondary, #ccc);
+		color: colors.$gray-400;
 	}
 
 	// Override WordPress core MenuGroup styles
@@ -36,16 +38,16 @@
 		display: flex;
 		align-items: center;
 		gap: var(--wpds-spacing-20, 8px);
-		color: var(--wpds-color-fg-inverted-secondary, #e0e0e0);
+		color: colors.$gray-200;
 
 		&:hover {
-			background-color: var(--wpds-color-bg-interactive-neutral-hover, rgba(255, 255, 255, 0.1));
-			color: var(--wpds-color-fg-inverted-primary, #fff);
+			background-color: rgba(colors.$white, 0.1);
+			color: colors.$white;
 		}
 
 		&.is-pressed {
-			background-color: var(--wpds-color-bg-interactive-neutral-active, rgba(255, 255, 255, 0.15));
-			color: var(--wpds-color-fg-inverted-primary, #fff);
+			background-color: rgba(colors.$white, 0.15);
+			color: colors.$white;
 		}
 
 		svg {

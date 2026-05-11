@@ -18,6 +18,8 @@ use Activitypub\Webfinger;
  * @see https://www.w3.org/TR/activitypub/#followers
  */
 class Actors_Controller extends \WP_REST_Controller {
+	use Verification;
+
 	/**
 	 * The namespace of this controller's route.
 	 *
@@ -51,7 +53,7 @@ class Actors_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_item' ),
-					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
+					'permission_callback' => array( $this, 'verify_signature' ),
 				),
 				'schema' => array( $this, 'get_public_item_schema' ),
 			)

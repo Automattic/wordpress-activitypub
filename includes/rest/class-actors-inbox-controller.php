@@ -8,6 +8,8 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Activity\Activity;
+use Activitypub\Activity\Base_Object;
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Inbox;
 use Activitypub\Moderation;
 
@@ -25,6 +27,7 @@ use function Activitypub\object_to_uri;
  */
 class Actors_Inbox_Controller extends Actors_Controller {
 	use Collection;
+	use Event_Stream;
 	use Language_Map;
 
 	/**
@@ -46,7 +49,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_items' ),
-					'permission_callback' => '__return_true',
+					'permission_callback' => array( $this, 'verify_authentication' ),
 					'args'                => array(
 						'page'     => array(
 							'description' => 'Current page of the collection.',
@@ -59,6 +62,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 							'type'        => 'integer',
 							'default'     => 20,
 							'minimum'     => 1,
+							'maximum'     => 100,
 						),
 					),
 					'schema'              => array( $this, 'get_collection_schema' ),
@@ -66,7 +70,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'create_item' ),
-					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
+					'permission_callback' => array( $this, 'verify_signature' ),
 					'args'                => array(
 						'id'     => array(
 							'description' => 'The unique identifier for the activity.',
@@ -81,9 +85,14 @@ class Actors_Inbox_Controller extends Actors_Controller {
 							'sanitize_callback' => '\Activitypub\object_to_uri',
 						),
 						'type'   => array(
-							'description' => 'The type of the activity.',
-							'type'        => 'string',
-							'required'    => true,
+							'description'       => 'The type of the activity.',
+							'type'              => 'string',
+							'required'          => true,
+							'sanitize_callback' => 'sanitize_html_class',
+							'validate_callback' => static function ( $param ) {
+								// Reject values that sanitize to empty so dynamic hook names always have a suffix.
+								return '' !== \sanitize_html_class( (string) $param );
+							},
 						),
 						'object' => array(
 							'description'       => 'The object of the activity.',
@@ -107,37 +116,99 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			)
 		);
 
+		\register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/inbox/stream',
+			array(
+				'args' => array(
+					'user_id' => array(
+						'description'       => 'The ID of the actor.',
+						'type'              => 'integer',
+						'required'          => true,
+						'validate_callback' => array( $this, 'validate_user_id' ),
+					),
+				),
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => function ( $request ) {
+						$this->stream_collection( $request->get_param( 'user_id' ), 'inbox' );
+					},
+					'permission_callback' => array( $this, 'get_stream_permissions_check' ),
+				),
+			)
+		);
+
 		\add_action( 'activitypub_inbox_create_item', array( self::class, 'process_create_item' ) );
 	}
 
 	/**
-	 * Renders the user-inbox.
+	 * Retrieves a collection of inbox items.
 	 *
-	 * @param \WP_REST_Request $request The request object.
-	 * @return \WP_REST_Response|\WP_Error Response object or WP_Error.
+	 * @param \WP_REST_Request $request Full details about the request.
+	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error object on failure.
 	 */
 	public function get_items( $request ) {
+		$page    = $request->get_param( 'page' ) ?? 1;
 		$user_id = $request->get_param( 'user_id' );
+		$user    = Actors::get_by_id( $user_id );
+
+		if ( \is_wp_error( $user ) ) {
+			return $user;
+		}
 
 		/**
-		 * Fires before the ActivityPub inbox is created and sent to the client.
+		 * Action triggered prior to the ActivityPub inbox being created and sent to the client.
+		 *
+		 * @param \WP_REST_Request $request The request object.
 		 */
-		\do_action( 'activitypub_rest_inbox_pre' );
+		\do_action( 'activitypub_rest_inbox_pre', $request );
 
-		$response = array(
-			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/inbox', $user_id ) ),
-			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
-			'type'         => 'OrderedCollection',
-			'totalItems'   => 0,
-			'orderedItems' => array(),
+		$args = array(
+			'posts_per_page' => $request->get_param( 'per_page' ),
+			'paged'          => $page,
+			'post_type'      => Inbox::POST_TYPE,
+			'post_status'    => 'publish',
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query'     => array(
+				array(
+					'key'   => '_activitypub_user_id',
+					'value' => $user_id,
+				),
+			),
 		);
 
 		/**
-		 * Filters the ActivityPub inbox data before it is sent to the client.
+		 * Filters WP_Query arguments when querying Inbox items via the REST API.
 		 *
-		 * @param array $response The ActivityPub inbox array.
+		 * Enables adding extra arguments or setting defaults for an inbox collection request.
+		 *
+		 * @param array            $args    Array of arguments for WP_Query.
+		 * @param \WP_REST_Request $request The REST API request.
 		 */
-		$response = \apply_filters( 'activitypub_rest_inbox_array', $response );
+		$args = \apply_filters( 'activitypub_rest_inbox_query', $args, $request );
+
+		$inbox_query  = new \WP_Query();
+		$query_result = $inbox_query->query( $args );
+
+		$response = array(
+			'@context'     => Base_Object::JSON_LD_CONTEXT,
+			'id'           => get_rest_url_by_path( sprintf( 'actors/%d/inbox', $user_id ) ),
+			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
+			'actor'        => $user->get_id(),
+			'type'         => 'OrderedCollection',
+			'totalItems'   => (int) $inbox_query->found_posts,
+			'eventStream'  => $this->get_stream_url( $user_id, 'inbox' ),
+			'orderedItems' => array(),
+		);
+
+		\update_postmeta_cache( \wp_list_pluck( $query_result, 'ID' ) );
+		foreach ( $query_result as $inbox_item ) {
+			if ( ! $inbox_item instanceof \WP_Post ) {
+				continue;
+			}
+
+			$response['orderedItems'][] = $this->prepare_item_for_response( $inbox_item, $request );
+		}
 
 		$response = $this->prepare_collection_response( $response, $request );
 		if ( \is_wp_error( $response ) ) {
@@ -145,14 +216,45 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		}
 
 		/**
-		 * Fires after the ActivityPub inbox has been created and sent to the client.
+		 * Filter the ActivityPub inbox array.
+		 *
+		 * @param array            $response The ActivityPub inbox array.
+		 * @param \WP_REST_Request $request  The request object.
 		 */
-		\do_action( 'activitypub_inbox_post' );
+		$response = \apply_filters( 'activitypub_rest_inbox_array', $response, $request );
+
+		/**
+		 * Action triggered after the ActivityPub inbox has been created and sent to the client.
+		 *
+		 * @param \WP_REST_Request $request The request object.
+		 */
+		\do_action( 'activitypub_rest_inbox_post', $request );
+
+		// Fire deprecated hook for backward compatibility.
+		\do_action_deprecated(
+			'activitypub_inbox_post',
+			array( $request ),
+			'8.1.0',
+			'activitypub_rest_inbox_post'
+		);
 
 		$response = \rest_ensure_response( $response );
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 
 		return $response;
+	}
+
+	/**
+	 * Prepares the item for the REST response.
+	 *
+	 * @param mixed            $item    WordPress representation of the item.
+	 * @param \WP_REST_Request $request Request object.
+	 * @return array Response object on success.
+	 */
+	public function prepare_item_for_response( $item, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		$activity = \json_decode( $item->post_content, true );
+
+		return $activity;
 	}
 
 	/**
@@ -286,7 +388,8 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		$data = \json_decode( $inbox_item->post_content, true );
 		// Reconstruct activity from inbox post.
 		$activity = Activity::init_from_array( $data );
-		$type     = camel_to_snake_case( $activity->get_type() );
+		// Sanitize again here: the type comes from stored activity JSON, which bypassed REST arg sanitization.
+		$type     = camel_to_snake_case( \sanitize_html_class( (string) $activity->get_type() ) );
 		$context  = Inbox::CONTEXT_INBOX;
 		$user_ids = Inbox::get_recipients( $inbox_item->ID );
 

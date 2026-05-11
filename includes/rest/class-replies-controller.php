@@ -12,6 +12,7 @@ use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Replies;
 
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_post_publicly_queryable;
 
 /**
  * ActivityPub Replies_Controller class.
@@ -30,7 +31,7 @@ class Replies_Controller extends \WP_REST_Controller {
 	 *
 	 * @var string
 	 */
-	protected $rest_base = '(?P<object_type>[\w\-\.]+)s/(?P<id>[\w\-\.]+)/(?P<type>[\w\-\.]+)';
+	protected $rest_base = '(?P<object_type>[\w\-\.]+)s/(?P<id>[\d]+)/(?P<type>[\w\-\.]+)';
 
 	/**
 	 * Register routes.
@@ -49,7 +50,8 @@ class Replies_Controller extends \WP_REST_Controller {
 					),
 					'id'          => array(
 						'description' => 'The ID of the object.',
-						'type'        => 'string',
+						'type'        => 'integer',
+						'minimum'     => 1,
 						'required'    => true,
 					),
 					'type'        => array(
@@ -90,11 +92,22 @@ class Replies_Controller extends \WP_REST_Controller {
 
 		if ( 'comment' === $object_type ) {
 			$wp_object = \get_comment( $id );
+
+			/*
+			 * A comment inherits the visibility of its parent post. Reject
+			 * collections for comments whose parent post is not currently
+			 * publicly queryable, so we don't leak metadata for private,
+			 * draft, password-protected, or local-only posts — including
+			 * posts that were once federated and have since been made
+			 * non-public.
+			 */
+			$publicly_queryable = $wp_object && is_post_publicly_queryable( $wp_object->comment_post_ID );
 		} else {
-			$wp_object = \get_post( $id );
+			$wp_object          = \get_post( $id );
+			$publicly_queryable = $wp_object && is_post_publicly_queryable( $wp_object );
 		}
 
-		if ( ! isset( $wp_object ) || \is_wp_error( $wp_object ) ) {
+		if ( ! $publicly_queryable ) {
 			return new \WP_Error(
 				'activitypub_replies_collection_does_not_exist',
 				\sprintf(
@@ -184,7 +197,7 @@ class Replies_Controller extends \WP_REST_Controller {
 	 */
 	public function get_shares( $request, $wp_object ) {
 		if ( $wp_object instanceof \WP_Post ) {
-			$shares = Interactions::count_by_type( $wp_object->ID, 'repost' );
+			$shares = Interactions::count_by_type( $wp_object->ID, 'repost' ) + Interactions::count_by_type( $wp_object->ID, 'quote' );
 		} else {
 			$shares = 0;
 		}

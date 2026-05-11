@@ -37,168 +37,6 @@ class Test_Server extends \WP_Test_REST_TestCase {
 	}
 
 	/**
-	 * Test verify_signature method with HEAD request.
-	 *
-	 * @covers ::verify_signature
-	 */
-	public function test_verify_signature_head_request() {
-		$request = new \WP_REST_Request( 'HEAD', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$this->assertTrue( Server::verify_signature( $request ) );
-	}
-
-	/**
-	 * Test verify_signature method with deferred verification.
-	 *
-	 * @covers ::verify_signature
-	 */
-	public function test_verify_signature_deferred() {
-		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
-
-		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$this->assertTrue( Server::verify_signature( $request ) );
-
-		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
-	}
-
-	/**
-	 * Data provider for HTTP methods that require signature verification.
-	 *
-	 * @return array
-	 */
-	public function signature_required_methods_provider() {
-		return array(
-			'POST request'   => array( 'POST', true ),
-			'PUT request'    => array( 'PUT', false ),
-			'PATCH request'  => array( 'PATCH', false ),
-			'DELETE request' => array( 'DELETE', false ),
-		);
-	}
-
-	/**
-	 * Test verify_signature method with requests requiring signature.
-	 *
-	 * @dataProvider signature_required_methods_provider
-	 * @covers ::verify_signature
-	 *
-	 * @param string $method HTTP method.
-	 * @param bool   $expect_status Whether to expect status in error data.
-	 */
-	public function test_verify_signature_methods_requiring_signature( $method, $expect_status ) {
-		$request = new \WP_REST_Request( $method, '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$result  = Server::verify_signature( $request );
-		$this->assertInstanceOf( '\WP_Error', $result );
-		$this->assertEquals( 'activitypub_signature_verification', $result->get_error_code() );
-
-		if ( $expect_status ) {
-			$this->assertEquals( 401, $result->get_error_data()['status'] );
-		}
-	}
-
-	/**
-	 * Test verify_signature method with GET request and authorized fetch enabled.
-	 *
-	 * @covers ::verify_signature
-	 */
-	public function test_verify_signature_get_request_authorized_fetch() {
-		\add_filter( 'activitypub_use_authorized_fetch', '__return_true' );
-
-		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$result  = Server::verify_signature( $request );
-		$this->assertInstanceOf( '\WP_Error', $result );
-		$this->assertEquals( 'activitypub_signature_verification', $result->get_error_code() );
-
-		\remove_filter( 'activitypub_use_authorized_fetch', '__return_true' );
-	}
-
-	/**
-	 * Test verify_signature method with GET request and authorized fetch disabled.
-	 *
-	 * @covers ::verify_signature
-	 */
-	public function test_verify_signature_get_request_no_authorized_fetch() {
-		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$this->assertTrue( Server::verify_signature( $request ) );
-	}
-
-	/**
-	 * Test verify_signature method with custom filter callback.
-	 *
-	 * @covers ::verify_signature
-	 */
-	public function test_verify_signature_with_custom_filter() {
-		$filter_called = false;
-		$test_filter   = function ( $defer, $request ) use ( &$filter_called ) {
-			$filter_called = true;
-			$this->assertFalse( $defer );
-			$this->assertInstanceOf( '\WP_REST_Request', $request );
-			return false;
-		};
-
-		\add_filter( 'activitypub_defer_signature_verification', $test_filter, 10, 2 );
-
-		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$result  = Server::verify_signature( $request );
-
-		$this->assertTrue( $filter_called );
-		$this->assertInstanceOf( '\WP_Error', $result );
-
-		\remove_filter( 'activitypub_defer_signature_verification', $test_filter );
-	}
-
-	/**
-	 * Test verify_signature method with filter that returns different values.
-	 *
-	 * @covers ::verify_signature
-	 */
-	public function test_verify_signature_filter_context() {
-		$defer_filter = function ( $defer, $request ) {
-			// Test that filter receives correct parameters.
-			if ( $request->get_method() === 'PUT' ) {
-				return true; // Defer for PUT.
-			}
-			return $defer; // Don't defer for others.
-		};
-
-		\add_filter( 'activitypub_defer_signature_verification', $defer_filter, 10, 2 );
-
-		// Test PUT request (should be deferred).
-		$put_request = new \WP_REST_Request( 'PUT', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$this->assertTrue( Server::verify_signature( $put_request ) );
-
-		// Test POST request (should not be deferred).
-		$post_request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$result       = Server::verify_signature( $post_request );
-		$this->assertInstanceOf( '\WP_Error', $result );
-
-		\remove_filter( 'activitypub_defer_signature_verification', $defer_filter );
-	}
-
-	/**
-	 * Test verify_signature method.
-	 *
-	 * @covers ::verify_signature
-	 */
-	public function test_verify_signature() {
-		// HEAD requests are always bypassed.
-		$request = new \WP_REST_Request( 'HEAD', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$this->assertTrue( Server::verify_signature( $request ) );
-
-		// POST requests require a signature.
-		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$this->assertErrorResponse( 'activitypub_signature_verification', Server::verify_signature( $request ) );
-
-		// GET requests with secure mode enabled require a signature.
-		\add_filter( 'activitypub_use_authorized_fetch', '__return_true' );
-
-		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$this->assertErrorResponse( 'activitypub_signature_verification', Server::verify_signature( $request ) );
-
-		// GET requests with secure mode disabled are bypassed.
-		\remove_filter( 'activitypub_use_authorized_fetch', '__return_true' );
-		$this->assertTrue( Server::verify_signature( $request ) );
-	}
-
-	/**
 	 * Data provider for validate_requests scenarios that return response unchanged.
 	 *
 	 * @return array[]
@@ -444,5 +282,70 @@ class Test_Server extends \WP_Test_REST_TestCase {
 		$data = $result->get_data();
 		$this->assertEquals( $expected_title, $data['title'] );
 		$this->assertEquals( $expected_detail, $data['detail'] );
+	}
+
+	/**
+	 * ActivityPub data is publicly readable, so CORS uses a wildcard origin
+	 * with no credentials. Reflecting an arbitrary Origin together with
+	 * Allow-Credentials would let a logged-in user's browser expose
+	 * authenticated responses to a third-party page; we explicitly avoid
+	 * that combination on every ActivityPub REST response.
+	 *
+	 * @covers ::add_cors_headers
+	 */
+	public function test_add_cors_headers_uses_wildcard_without_credentials() {
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Test snapshot of raw global; restored verbatim.
+		$origin_backup = $_SERVER['HTTP_ORIGIN'] ?? null;
+
+		try {
+			$_SERVER['HTTP_ORIGIN'] = 'https://evil.example';
+
+			$response = new \WP_REST_Response( array(), 200 );
+			$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+
+			$result  = Server::add_cors_headers( $response, new \WP_REST_Server(), $request );
+			$headers = $result->get_headers();
+
+			$this->assertSame( '*', $headers['Access-Control-Allow-Origin'] );
+			$this->assertArrayNotHasKey( 'Access-Control-Allow-Credentials', $headers );
+			$this->assertArrayNotHasKey( 'Vary', $headers );
+		} finally {
+			if ( null === $origin_backup ) {
+				unset( $_SERVER['HTTP_ORIGIN'] );
+			} else {
+				$_SERVER['HTTP_ORIGIN'] = $origin_backup;
+			}
+		}
+	}
+
+	/**
+	 * Non-ActivityPub routes must not receive ActivityPub CORS headers.
+	 *
+	 * @covers ::add_cors_headers
+	 */
+	public function test_add_cors_headers_skips_non_activitypub_routes() {
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/wp/v2/posts' );
+
+		$result  = Server::add_cors_headers( $response, new \WP_REST_Server(), $request );
+		$headers = $result->get_headers();
+
+		$this->assertArrayNotHasKey( 'Access-Control-Allow-Origin', $headers );
+	}
+
+	/**
+	 * The interactive OAuth authorize endpoint must not advertise CORS;
+	 * it relies on top-level navigation, not cross-origin XHR.
+	 *
+	 * @covers ::add_cors_headers
+	 */
+	public function test_add_cors_headers_skips_oauth_authorize() {
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/authorize' );
+
+		$result  = Server::add_cors_headers( $response, new \WP_REST_Server(), $request );
+		$headers = $result->get_headers();
+
+		$this->assertArrayNotHasKey( 'Access-Control-Allow-Origin', $headers );
 	}
 }

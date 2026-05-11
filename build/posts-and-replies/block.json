@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "name": "activitypub/posts-and-replies",
+  "apiVersion": 3,
+  "version": "unreleased",
+  "title": "Posts and Replies",
+  "category": "widgets",
+  "description": "Display a tab bar to filter between posts only and posts with replies on author archives.",
+  "textdomain": "activitypub",
+  "icon": "admin-post",
+  "keywords": [
+    "fediverse",
+    "activitypub",
+    "posts",
+    "replies",
+    "tabs"
+  ],
+  "supports": {
+    "html": false
+  },
+  "editorScript": "file:./index.js",
+  "style": [
+    "file:./style-index.css"
+  ],
+  "render": "file:./render.php"
+}

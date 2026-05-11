@@ -63,14 +63,23 @@ class Post {
 			return;
 		}
 
+		$object_status = get_wp_object_state( $post );
+
+		// If the post is already soft-deleted, do not create any more activities.
+		if (
+			ACTIVITYPUB_OBJECT_STATE_DELETED === $object_status &&
+			in_array( get_content_visibility( $post ), array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ), true )
+		) {
+			return;
+		}
+
 		// Bail on bulk edits, unless post author or post status changed.
 		if ( isset( $_REQUEST['bulk_edit'] ) && ( ! isset( $_REQUEST['post_author'] ) || -1 === (int) $_REQUEST['post_author'] ) && -1 === (int) $_REQUEST['_status'] ) { // phpcs:ignore WordPress
 			return;
 		}
 
-		$new_status    = get_post_status( $post );
-		$old_status    = $post_before ? get_post_status( $post_before ) : null;
-		$object_status = get_wp_object_state( $post );
+		$new_status = get_post_status( $post );
+		$old_status = $post_before ? get_post_status( $post_before ) : null;
 
 		switch ( $new_status ) {
 			case 'publish':
@@ -82,6 +91,7 @@ class Post {
 				break;
 
 			case 'draft':
+			case 'pending':
 				$type = ( 'publish' === $old_status ) ? 'Update' : false;
 				break;
 
@@ -95,6 +105,14 @@ class Post {
 
 		// Do not send Activities if `$type` is not set or unknown.
 		if ( empty( $type ) ) {
+			return;
+		}
+
+		/*
+		 * If the post was already federated and this is a Create, skip.
+		 * The outbox controller already added it to the outbox.
+		 */
+		if ( ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status && 'Create' === $type ) {
 			return;
 		}
 

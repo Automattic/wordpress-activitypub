@@ -38,8 +38,9 @@ class Http {
 		 * Filters the HTTP headers user agent string.
 		 *
 		 * @param string $user_agent The user agent string.
+		 * @param string $url        The request URL.
 		 */
-		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . get_masked_wp_version() . '; ' . \get_bloginfo( 'url' ) );
+		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . get_masked_wp_version() . '; ' . \get_bloginfo( 'url' ), $url );
 
 		/**
 		 * Filters the timeout duration for remote POST requests in ActivityPub.
@@ -142,12 +143,10 @@ class Http {
 		/**
 		 * Filters the HTTP headers user agent string.
 		 *
-		 * This filter allows developers to modify the user agent string that is
-		 * sent with HTTP requests.
-		 *
 		 * @param string $user_agent The user agent string.
+		 * @param string $url        The request URL.
 		 */
-		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . get_masked_wp_version() . '; ' . \get_bloginfo( 'url' ) );
+		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . get_masked_wp_version() . '; ' . \get_bloginfo( 'url' ), $url );
 
 		/**
 		 * Filters the timeout duration for remote GET requests in ActivityPub.
@@ -177,6 +176,9 @@ class Http {
 		$code     = \wp_remote_retrieve_response_code( $response );
 
 		if ( \is_wp_error( $response ) || $code >= 400 ) {
+			if ( ! $code ) {
+				$code = 0;
+			}
 			$response = new \WP_Error( $code, __( 'Failed HTTP Request', 'activitypub' ), array( 'status' => $code ) );
 
 			/*

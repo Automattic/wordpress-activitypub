@@ -12,6 +12,10 @@ Think of snippets as a testing ground, similar to WordPress' [feature plugin](ht
 | [FediBlog Tag](fediblog-tag/) | Automatically adds the `FediBlog` tag to standard format blog posts. |
 | [Locale from Tags](locale-from-tags/) | Sets a post's ActivityPub language based on post tags matching language codes. |
 | [Blockless ActivityPub](blockless-activitypub/) | Fediverse reactions without all that frontend-rendered but JavaScript-heavy blocks magic. |
+| [Use Jetpack's Site Accelerator CDN (Photon) for Remote Media](photon/) | Rewrites ActivityPub remote media URLs through Jetpack's free image CDN instead of caching files locally. |
+| [ATproto DID for Bridgy Fed](atproto-did-for-bridgy-fed/) | Allows you to serve an ATproto DID from your blog's `.well-known` directory to allow Bridgy Fed to use your blog's hostname as its Bluesky handle. |
+| [Quotes as Comments](quotes-as-comments/) | Displays ActivityPub quotes as regular comments instead of facepile reactions. |
+| [Auto-Approve Reactions](auto-approve-reactions/) | Automatically approves all incoming ActivityPub reactions (likes, reposts, and quotes) without manual moderation. |
 
 ## How to Use
 

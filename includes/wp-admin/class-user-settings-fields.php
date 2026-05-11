@@ -10,6 +10,9 @@ namespace Activitypub\WP_Admin;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Moderation;
+use Activitypub\OAuth\Client;
+use Activitypub\OAuth\Scope;
+use Activitypub\OAuth\Token;
 
 /**
  * Class to handle all user settings fields and callbacks.
@@ -250,6 +253,18 @@ class User_Settings_Fields {
 					<?php \esc_html_e( 'New Mentions', 'activitypub' ); ?>
 				</label>
 			</p>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_mailer_annual_report" id="activitypub_mailer_annual_report" value="1" <?php \checked( 1, \get_user_option( 'activitypub_mailer_annual_report' ) ); ?> />
+					<?php \esc_html_e( 'Annual Report', 'activitypub' ); ?>
+				</label>
+			</p>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_mailer_monthly_report" id="activitypub_mailer_monthly_report" value="1" <?php \checked( 1, \get_user_option( 'activitypub_mailer_monthly_report' ) ); ?> />
+					<?php \esc_html_e( 'Monthly Report', 'activitypub' ); ?>
+				</label>
+			</p>
 		</fieldset>
 		<?php
 	}
@@ -385,6 +400,156 @@ class User_Settings_Fields {
 					<?php \esc_html_e( 'Add Block', 'activitypub' ); ?>
 				</button>
 			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render the Connected Applications section on the profile page.
+	 *
+	 * Rendered as a standalone section (like core's Application Passwords),
+	 * not through the Settings API.
+	 *
+	 * @since 8.1.0
+	 */
+	public static function connected_apps_section() {
+		$tokens  = Token::get_all_for_user( \get_current_user_id() );
+		$clients = Client::get_manually_registered();
+
+		?>
+		<div class="activitypub-connected-apps hide-if-no-js" id="activitypub-connected-apps-section">
+			<h2><?php \esc_html_e( 'OAuth Applications', 'activitypub' ); ?></h2>
+			<p><?php \esc_html_e( 'Register OAuth applications to connect third-party clients to your account, or revoke access for existing ones.', 'activitypub' ); ?></p>
+
+			<div class="create-application-password form-wrap" id="activitypub-new-application">
+				<div class="form-field">
+					<label for="activitypub-new-app-name"><?php \esc_html_e( 'New Application Name', 'activitypub' ); ?></label>
+					<input type="text" size="30" id="activitypub-new-app-name" class="input" aria-required="true" spellcheck="false" />
+				</div>
+				<div class="form-field">
+					<label for="activitypub-new-app-redirect-uri"><?php \esc_html_e( 'Redirect URI', 'activitypub' ); ?></label>
+					<input type="url" size="30" id="activitypub-new-app-redirect-uri" class="input" aria-required="true" spellcheck="false" />
+				</div>
+				<button type="button" class="button button-secondary" id="activitypub-register-app">
+					<?php \esc_html_e( 'Register Application', 'activitypub' ); ?>
+				</button>
+			</div>
+
+			<div class="activitypub-registered-apps-wrapper" id="activitypub-registered-apps-wrapper" <?php echo empty( $clients ) ? 'style="display: none;"' : ''; ?>>
+				<h3><?php \esc_html_e( 'Registered Applications', 'activitypub' ); ?></h3>
+				<table class="wp-list-table widefat fixed striped table-view-list">
+					<thead>
+						<tr>
+							<th scope="col"><?php \esc_html_e( 'Name', 'activitypub' ); ?></th>
+							<th scope="col"><?php \esc_html_e( 'Redirect URI', 'activitypub' ); ?></th>
+							<th scope="col"><?php \esc_html_e( 'Created', 'activitypub' ); ?></th>
+							<th scope="col"><?php \esc_html_e( 'Delete', 'activitypub' ); ?></th>
+						</tr>
+					</thead>
+					<tbody id="activitypub-registered-apps-tbody">
+						<?php foreach ( $clients as $client ) : ?>
+							<?php
+							$redirect_uris = $client->get_redirect_uris();
+							$redirect_uri  = ! empty( $redirect_uris ) ? $redirect_uris[0] : '&mdash;';
+							$post          = \get_post( $client->get_post_id() );
+							$created       = $post ? \date_i18n( \get_option( 'date_format' ), \strtotime( $post->post_date ) ) : '&mdash;';
+							?>
+							<tr data-client-id="<?php echo \esc_attr( $client->get_client_id() ); ?>">
+								<td><?php echo \esc_html( $client->get_name() ); ?></td>
+								<td><?php echo \esc_html( $redirect_uri ); ?></td>
+								<td><?php echo \esc_html( $created ); ?></td>
+								<td>
+									<?php
+									\printf(
+										'<button type="button" class="button delete" aria-label="%1$s">%2$s</button>',
+										/* translators: %s: the application name */
+										\esc_attr( \sprintf( \__( 'Delete "%s"', 'activitypub' ), $client->get_name() ) ),
+										\esc_html__( 'Delete', 'activitypub' )
+									);
+									?>
+								</td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+					<tfoot>
+						<tr>
+							<th scope="col"><?php \esc_html_e( 'Name', 'activitypub' ); ?></th>
+							<th scope="col"><?php \esc_html_e( 'Redirect URI', 'activitypub' ); ?></th>
+							<th scope="col"><?php \esc_html_e( 'Created', 'activitypub' ); ?></th>
+							<th scope="col"><?php \esc_html_e( 'Delete', 'activitypub' ); ?></th>
+						</tr>
+					</tfoot>
+				</table>
+				<div class="tablenav bottom">
+					<div class="alignright">
+						<button type="button" class="button delete" id="activitypub-delete-all-clients">
+							<?php \esc_html_e( 'Delete all registered applications', 'activitypub' ); ?>
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<?php if ( ! empty( $tokens ) ) : ?>
+			<div class="activitypub-connected-apps-list-table-wrapper">
+				<h3><?php \esc_html_e( 'Active Tokens', 'activitypub' ); ?></h3>
+				<table class="wp-list-table widefat fixed striped table-view-list">
+					<thead>
+						<tr>
+							<th scope="col"><?php \esc_html_e( 'Name', 'activitypub' ); ?></th>
+							<th scope="col"><?php \esc_html_e( 'Scopes', 'activitypub' ); ?></th>
+							<th scope="col"><?php \esc_html_e( 'Created', 'activitypub' ); ?></th>
+							<th scope="col"><?php \esc_html_e( 'Last Used', 'activitypub' ); ?></th>
+							<th scope="col"><?php \esc_html_e( 'Revoke', 'activitypub' ); ?></th>
+						</tr>
+					</thead>
+					<tbody id="activitypub-connected-apps-tbody">
+						<?php foreach ( $tokens as $token ) : ?>
+							<?php
+							$client_id   = $token['client_id'] ?? '';
+							$client      = Client::get( $client_id );
+							$client_name = ! \is_wp_error( $client ) ? $client->get_name() : $client_id;
+							$scopes      = isset( $token['scopes'] ) ? Scope::to_string( $token['scopes'] ) : '';
+							$created     = ! empty( $token['created_at'] ) ? \date_i18n( \get_option( 'date_format' ), $token['created_at'] ) : '&mdash;';
+							$last_used   = ! empty( $token['last_used_at'] ) ? \date_i18n( \get_option( 'date_format' ), $token['last_used_at'] ) : '&mdash;';
+							$meta_key    = $token['meta_key'] ?? ''; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Not a DB query, just array key.
+							?>
+							<tr data-meta-key="<?php echo \esc_attr( $meta_key ); ?>">
+								<td><?php echo \esc_html( $client_name ); ?></td>
+								<td><?php echo \esc_html( $scopes ); ?></td>
+								<td><?php echo \esc_html( $created ); ?></td>
+								<td><?php echo $last_used; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Contains only escaped date or &mdash; entity. ?></td>
+								<td>
+									<?php
+									\printf(
+										'<button type="button" class="button delete" aria-label="%1$s">%2$s</button>',
+										/* translators: %s: the application name */
+										\esc_attr( \sprintf( \__( 'Revoke "%s"', 'activitypub' ), $client_name ) ),
+										\esc_html__( 'Revoke', 'activitypub' )
+									);
+									?>
+								</td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+					<tfoot>
+						<tr>
+							<th scope="col"><?php \esc_html_e( 'Name', 'activitypub' ); ?></th>
+							<th scope="col"><?php \esc_html_e( 'Scopes', 'activitypub' ); ?></th>
+							<th scope="col"><?php \esc_html_e( 'Created', 'activitypub' ); ?></th>
+							<th scope="col"><?php \esc_html_e( 'Last Used', 'activitypub' ); ?></th>
+							<th scope="col"><?php \esc_html_e( 'Revoke', 'activitypub' ); ?></th>
+						</tr>
+					</tfoot>
+				</table>
+				<div class="tablenav bottom">
+					<div class="alignright">
+						<button type="button" class="button delete" id="activitypub-revoke-all-tokens">
+							<?php \esc_html_e( 'Revoke all connected applications', 'activitypub' ); ?>
+						</button>
+					</div>
+				</div>
+			</div>
+			<?php endif; ?>
 		</div>
 		<?php
 	}

@@ -51,6 +51,23 @@ class Actors {
 			$user_id = (int) $user_id;
 		}
 
+		/**
+		 * Filter the actor before resolving by ID.
+		 *
+		 * Allows third-party plugins to register custom virtual actors
+		 * resolved by ID, mirroring the `activitypub_pre_get_by_username`
+		 * filter for username lookups.
+		 *
+		 * @since 8.1.0
+		 *
+		 * @param null $pre     The pre-existing value.
+		 * @param int  $user_id The user ID.
+		 */
+		$pre = \apply_filters( 'activitypub_pre_get_by_id', null, $user_id );
+		if ( null !== $pre ) {
+			return $pre;
+		}
+
 		if ( ! user_can_activitypub( $user_id ) ) {
 			return new \WP_Error(
 				'activitypub_user_not_found',

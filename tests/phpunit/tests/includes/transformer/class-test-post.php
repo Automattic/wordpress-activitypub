@@ -234,6 +234,47 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that the activitypub_post_object_type filter overrides the computed type.
+	 *
+	 * Verifies the filter receives the computed default and the post being
+	 * transformed, and that the return value replaces the computed value
+	 * for downstream callers of get_type().
+	 *
+	 * @covers ::get_type
+	 */
+	public function test_get_type_filter_overrides_computed_value() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'A Titled Post With No Format',
+				'post_content' => 'Default behavior here would return Article.',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$received_post = null;
+		$received_type = null;
+		$callback      = function ( $object_type, $filter_post ) use ( &$received_type, &$received_post ) {
+			$received_type = $object_type;
+			$received_post = $filter_post;
+			return 'Note';
+		};
+
+		\add_filter( 'activitypub_post_object_type', $callback, 10, 2 );
+
+		try {
+			$transformer = new Post( $post );
+			$type        = $this->reflection_method->invoke( $transformer );
+		} finally {
+			\remove_filter( 'activitypub_post_object_type', $callback, 10 );
+		}
+
+		$this->assertSame( 'Article', $received_type, 'Filter should receive the computed default type.' );
+		$this->assertInstanceOf( '\WP_Post', $received_post );
+		$this->assertSame( $post_id, $received_post->ID, 'Filter should receive the post being transformed.' );
+		$this->assertSame( 'Note', $type, 'Filtered value should replace the computed default.' );
+	}
+
+	/**
 	 * Test the to_array method.
 	 *
 	 * @covers ::to_object
@@ -273,6 +314,7 @@ class Test_Post extends \WP_UnitTestCase {
 			array(
 				'post_author'  => 1,
 				'post_content' => 'test content visibility',
+				'post_status'  => 'publish',
 			)
 		);
 
@@ -290,7 +332,8 @@ class Test_Post extends \WP_UnitTestCase {
 
 		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
 
-		$this->assertTrue( \Activitypub\is_post_disabled( $post_id ) );
+		// Post was federated on insert, so is_post_disabled returns false
+		// to allow Delete activity. But visibility settings still apply.
 		$object = Post::transform( get_post( $post_id ) )->to_object();
 		$this->assertEmpty( $object->get_to() );
 		$this->assertEmpty( $object->get_cc() );
@@ -500,6 +543,74 @@ class Test_Post extends \WP_UnitTestCase {
 		$this->assertSame( 'Test alt 1', $result['image'][0]['alt'] );
 		$this->assertSame( 456, $result['image'][1]['id'] );
 		$this->assertSame( 'Test alt 2', $result['image'][1]['alt'] );
+	}
+
+	/**
+	 * Test get_media_from_blocks extracts poster from video blocks.
+	 *
+	 * @covers ::get_media_from_blocks
+	 */
+	public function test_get_media_from_blocks_extracts_video_poster() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:video {"id":789} --><figure class="wp-block-video"><video controls poster="https://example.com/poster.jpg" src="https://example.com/video.mp4"></video></figure><!-- /wp:video -->',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$transformer = new Post( $post );
+		$media       = array(
+			'image' => array(),
+			'audio' => array(),
+			'video' => array(),
+		);
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_media_from_blocks' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$blocks = parse_blocks( $post->post_content );
+		$result = $method->invoke( $transformer, $blocks, $media );
+
+		$this->assertCount( 1, $result['video'] );
+		$this->assertSame( 789, $result['video'][0]['id'] );
+		$this->assertSame( 'https://example.com/poster.jpg', $result['video'][0]['icon'] );
+	}
+
+	/**
+	 * Test get_media_from_blocks handles video blocks without poster.
+	 *
+	 * @covers ::get_media_from_blocks
+	 */
+	public function test_get_media_from_blocks_video_without_poster() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:video {"id":789} --><figure class="wp-block-video"><video controls src="https://example.com/video.mp4"></video></figure><!-- /wp:video -->',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$transformer = new Post( $post );
+		$media       = array(
+			'image' => array(),
+			'audio' => array(),
+			'video' => array(),
+		);
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_media_from_blocks' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$blocks = parse_blocks( $post->post_content );
+		$result = $method->invoke( $transformer, $blocks, $media );
+
+		$this->assertCount( 1, $result['video'] );
+		$this->assertSame( 789, $result['video'][0]['id'] );
+		$this->assertArrayNotHasKey( 'icon', $result['video'][0] );
 	}
 
 	/**
@@ -828,8 +939,8 @@ class Test_Post extends \WP_UnitTestCase {
 		$content = $object->get_content();
 
 		// Assert that the reply block was not transformed into a mention link.
-		// Note: clean_html() strips class/aria-label/data-* from <div> but preserves class/title on <a>.
-		$this->assertStringContainsString( '<div><p><a title="This post is a response to the referenced content." href="https://example.com/posts/123" class="u-in-reply-to" target="_blank">&#8620;example.com/posts/123</a></p></div>', $content );
+		// Note: clean_html() strips target and non-allowed attributes per FEP-b2b8.
+		$this->assertStringContainsString( '<div><p><a title="This post is a response to the referenced content." href="https://example.com/posts/123" class="u-in-reply-to">&#8620;example.com/posts/123</a></p></div>', $content );
 	}
 
 	/**
@@ -888,8 +999,8 @@ class Test_Post extends \WP_UnitTestCase {
 		$this->assertStringContainsString( '<p><a rel="mention ugc" href="https://example.com/posts/123" title="@author1@example.com">@author1</a></p>', $content );
 
 		// Assert that the second reply block was NOT transformed into a mention link (should remain as regular reply block).
-		// Note: clean_html() strips class/aria-label/data-* from <div> but preserves class/title on <a>.
-		$this->assertStringContainsString( '<div><p><a title="This post is a response to the referenced content." href="https://other.site/posts/456" class="u-in-reply-to" target="_blank">&#8620;other.site/posts/456</a></p></div>', $content );
+		// Note: clean_html() strips target and non-allowed attributes per FEP-b2b8.
+		$this->assertStringContainsString( '<div><p><a title="This post is a response to the referenced content." href="https://other.site/posts/456" class="u-in-reply-to">&#8620;other.site/posts/456</a></p></div>', $content );
 
 		// Clean up.
 		remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );
@@ -1501,6 +1612,235 @@ class Test_Post extends \WP_UnitTestCase {
 		$this->assertSame( 51.5074, $location['latitude'] );
 		$this->assertSame( -0.1278, $location['longitude'] );
 		$this->assertSame( 'London, UK', $location['name'] );
+	}
+
+	/**
+	 * Test get_exif_data method returns null when no EXIF data.
+	 *
+	 * @covers \Activitypub\Transformer\Base::get_exif_data
+	 */
+	public function test_get_exif_data_returns_null_when_no_exif() {
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		// Clear image_meta to simulate no EXIF data.
+		$metadata               = \wp_get_attachment_metadata( $attachment_id );
+		$metadata['image_meta'] = array();
+		\wp_update_attachment_metadata( $attachment_id, $metadata );
+
+		$post        = self::factory()->post->create_and_get();
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_exif_data' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$exif = $method->invoke( $transformer, $attachment_id );
+
+		$this->assertNull( $exif, 'Should return null when no EXIF data is available.' );
+
+		\wp_delete_attachment( $attachment_id, true );
+	}
+
+	/**
+	 * Test get_exif_data method returns EXIF data in FEP-ee3a format.
+	 *
+	 * @covers \Activitypub\Transformer\Base::get_exif_data
+	 */
+	public function test_get_exif_data_returns_fep_format() {
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		// Set up mock EXIF data.
+		$metadata               = \wp_get_attachment_metadata( $attachment_id );
+		$metadata['image_meta'] = array(
+			'created_timestamp' => 1704067200, // 2024-01-01 00:00:00 UTC.
+			'shutter_speed'     => 0.01,       // 1/100.
+			'aperture'          => 2.8,
+			'focal_length'      => 50,
+			'iso'               => 400,
+			'camera'            => 'Canon EOS R5',
+		);
+		\wp_update_attachment_metadata( $attachment_id, $metadata );
+
+		$post        = self::factory()->post->create_and_get();
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_exif_data' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$exif_data = $method->invoke( $transformer, $attachment_id );
+
+		$this->assertIsArray( $exif_data, 'Should return an array.' );
+		$this->assertCount( 6, $exif_data, 'Should have 6 PropertyValue objects.' );
+
+		// Convert to associative array for easier testing.
+		$exif_by_name = array();
+		foreach ( $exif_data as $prop ) {
+			$this->assertArrayHasKey( '@type', $prop, 'Each item should have @type.' );
+			$this->assertSame( 'PropertyValue', $prop['@type'], '@type should be PropertyValue.' );
+			$this->assertArrayHasKey( 'name', $prop, 'Each item should have name.' );
+			$this->assertArrayHasKey( 'value', $prop, 'Each item should have value.' );
+			$exif_by_name[ $prop['name'] ] = $prop['value'];
+		}
+
+		// Check FEP-ee3a field names and value formats.
+		$this->assertArrayHasKey( 'DateTime', $exif_by_name, 'Should contain DateTime.' );
+		$this->assertArrayHasKey( 'ExposureTime', $exif_by_name, 'Should contain ExposureTime.' );
+		$this->assertArrayHasKey( 'FNumber', $exif_by_name, 'Should contain FNumber.' );
+		$this->assertArrayHasKey( 'FocalLength', $exif_by_name, 'Should contain FocalLength.' );
+		$this->assertArrayHasKey( 'PhotographicSensitivity', $exif_by_name, 'Should contain PhotographicSensitivity.' );
+		$this->assertArrayHasKey( 'Model', $exif_by_name, 'Should contain Model.' );
+
+		// Check value formats per FEP-ee3a.
+		$this->assertSame( '2024:01:01 00:00:00', $exif_by_name['DateTime'], 'DateTime should be EXIF format.' );
+		$this->assertSame( '1/100', $exif_by_name['ExposureTime'], 'ExposureTime should be fraction format.' );
+		$this->assertSame( 'f/2.8', $exif_by_name['FNumber'], 'FNumber should be f/X.X format.' );
+		$this->assertSame( '50', $exif_by_name['FocalLength'], 'FocalLength should be numeric string.' );
+		$this->assertSame( '400', $exif_by_name['PhotographicSensitivity'], 'PhotographicSensitivity should be string.' );
+		$this->assertSame( 'Canon EOS R5', $exif_by_name['Model'], 'Model should be camera name.' );
+
+		\wp_delete_attachment( $attachment_id, true );
+	}
+
+	/**
+	 * Test get_exif_data with long exposure (>= 1 second).
+	 *
+	 * @covers \Activitypub\Transformer\Base::get_exif_data
+	 */
+	public function test_get_exif_data_long_exposure() {
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		// Set up mock EXIF data with long exposure.
+		$metadata               = \wp_get_attachment_metadata( $attachment_id );
+		$metadata['image_meta'] = array(
+			'shutter_speed' => 2.5, // 2.5 seconds.
+		);
+		\wp_update_attachment_metadata( $attachment_id, $metadata );
+
+		$post        = self::factory()->post->create_and_get();
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_exif_data' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$exif_data = $method->invoke( $transformer, $attachment_id );
+
+		$this->assertCount( 1, $exif_data, 'Should have 1 PropertyValue object.' );
+		$this->assertSame( 'ExposureTime', $exif_data[0]['name'], 'Should be ExposureTime.' );
+		$this->assertSame( '2.5', $exif_data[0]['value'], 'Long exposure should be shown as seconds.' );
+
+		\wp_delete_attachment( $attachment_id, true );
+	}
+
+	/**
+	 * Test that EXIF data is included in image attachments.
+	 *
+	 * @covers \Activitypub\Transformer\Base::transform_attachment
+	 */
+	public function test_transform_attachment_includes_exif() {
+		$attachment_id  = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		$attachment_src = \wp_get_attachment_image_src( $attachment_id );
+
+		// Set up mock EXIF data.
+		$metadata               = \wp_get_attachment_metadata( $attachment_id );
+		$metadata['image_meta'] = array(
+			'iso'    => 800,
+			'camera' => 'Nikon Z6',
+		);
+		\wp_update_attachment_metadata( $attachment_id, $metadata );
+
+		$post_id = \wp_insert_post(
+			array(
+				'post_author'  => 1,
+				'post_content' => sprintf(
+					'<!-- wp:image {"id": %1$d,"sizeSlug":"large"} --><figure class="wp-block-image"><img src="%2$s" alt="" class="wp-image-%1$d"/></figure><!-- /wp:image -->',
+					$attachment_id,
+					$attachment_src[0]
+				),
+				'post_status'  => 'publish',
+			)
+		);
+
+		$object      = Post::transform( get_post( $post_id ) )->to_object();
+		$attachments = $object->get_attachment();
+
+		$this->assertCount( 1, $attachments, 'Should have one attachment.' );
+		$this->assertArrayHasKey( 'exifData', $attachments[0], 'Attachment should include exifData array.' );
+		$this->assertIsArray( $attachments[0]['exifData'], 'exifData should be an array of PropertyValue objects.' );
+		$this->assertCount( 2, $attachments[0]['exifData'], 'Should have 2 PropertyValue objects.' );
+
+		// Convert to associative array for easier testing.
+		$exif_by_name = array();
+		foreach ( $attachments[0]['exifData'] as $prop ) {
+			$exif_by_name[ $prop['name'] ] = $prop['value'];
+		}
+
+		$this->assertArrayHasKey( 'PhotographicSensitivity', $exif_by_name, 'EXIF should include ISO.' );
+		$this->assertArrayHasKey( 'Model', $exif_by_name, 'EXIF should include camera model.' );
+		$this->assertSame( '800', $exif_by_name['PhotographicSensitivity'], 'ISO should be 800.' );
+		$this->assertSame( 'Nikon Z6', $exif_by_name['Model'], 'Camera model should be Nikon Z6.' );
+
+		\wp_delete_attachment( $attachment_id, true );
+	}
+
+	/**
+	 * Test activitypub_image_exif filter.
+	 *
+	 * @covers \Activitypub\Transformer\Base::get_exif_data
+	 */
+	public function test_get_exif_data_filter() {
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		// Set up mock EXIF data.
+		$metadata               = \wp_get_attachment_metadata( $attachment_id );
+		$metadata['image_meta'] = array(
+			'camera' => 'Test Camera',
+		);
+		\wp_update_attachment_metadata( $attachment_id, $metadata );
+
+		// Add filter to extend EXIF data with a Make property.
+		$filter = function ( $exif_data, $image_meta, $id ) use ( $attachment_id ) {
+			$this->assertSame( $attachment_id, $id, 'Filter should receive correct attachment ID.' );
+			$exif_data[] = array(
+				'@type' => 'PropertyValue',
+				'name'  => 'Make',
+				'value' => 'Test Manufacturer',
+			);
+			return $exif_data;
+		};
+		\add_filter( 'activitypub_image_exif', $filter, 10, 3 );
+
+		$post        = self::factory()->post->create_and_get();
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_exif_data' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$exif_data = $method->invoke( $transformer, $attachment_id );
+
+		$this->assertCount( 2, $exif_data, 'Should have 2 PropertyValue objects (Model + Make).' );
+
+		// Convert to associative array for easier testing.
+		$exif_by_name = array();
+		foreach ( $exif_data as $prop ) {
+			$exif_by_name[ $prop['name'] ] = $prop['value'];
+		}
+
+		$this->assertArrayHasKey( 'Make', $exif_by_name, 'Filter should be able to add Make property.' );
+		$this->assertSame( 'Test Manufacturer', $exif_by_name['Make'], 'Filter should set Make value.' );
+
+		\remove_filter( 'activitypub_image_exif', $filter );
+		\wp_delete_attachment( $attachment_id, true );
 	}
 
 	/**

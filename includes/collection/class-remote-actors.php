@@ -229,6 +229,49 @@ class Remote_Actors {
 	}
 
 	/**
+	 * Look up which of the given URIs already exist as cached remote actors.
+	 *
+	 * Single batched query (chunked at 200 placeholders to stay well within
+	 * common DB limits). Use this instead of looping over `get_by_uri()` when
+	 * a caller only needs to know which URIs are known — e.g. the inbox
+	 * recipient resolver, where a flood of unknown recipients would otherwise
+	 * trigger one DB query per recipient.
+	 *
+	 * @since 8.2.1
+	 *
+	 * @param string[] $uris Candidate actor URIs.
+	 *
+	 * @return array<string, true> Map of URIs that exist, keyed for O(1) lookup.
+	 */
+	public static function get_existing_uris( $uris ) {
+		if ( empty( $uris ) ) {
+			return array();
+		}
+
+		global $wpdb;
+		$existing = array();
+
+		foreach ( \array_chunk( \array_values( \array_unique( $uris ) ), 200 ) as $chunk ) {
+			$placeholders = \implode( ', ', \array_fill( 0, \count( $chunk ), '%s' ) );
+
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$found = $wpdb->get_col(
+				$wpdb->prepare(
+					"SELECT guid FROM $wpdb->posts WHERE post_type = %s AND guid IN ( $placeholders )",
+					\array_merge( array( self::POST_TYPE ), $chunk )
+				)
+			);
+			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+			foreach ( $found as $uri ) {
+				$existing[ $uri ] = true;
+			}
+		}
+
+		return $existing;
+	}
+
+	/**
 	 * Fetch a remote actor post by either actor URI or acct, fetching from remote if not found locally.
 	 *
 	 * @param string $uri_or_acct The actor URI or acct identifier.
@@ -690,7 +733,7 @@ class Remote_Actors {
 	 * 2. Actor objects with a `publicKey` URL reference (e.g. `tags.pub`).
 	 *    The URL is dereferenced and the key's owner is verified against the actor.
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 *
 	 * @param array $data The fetched actor JSON data.
 	 *

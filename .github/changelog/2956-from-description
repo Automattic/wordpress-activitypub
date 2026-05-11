@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Prevent private recipient lists from being shared when sending activities to other servers.

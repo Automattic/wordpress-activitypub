@@ -302,18 +302,27 @@ class Health_Check {
 					$author_url
 				),
 				'webfinger_url_invalid_response' => \sprintf(
-					// translators: %s: Author URL.
 					$invalid_response,
 					$author_url
 				),
 			);
-			$message         = null;
+
 			if ( isset( $health_messages[ $url->get_error_code() ] ) ) {
 				$message = $health_messages[ $url->get_error_code() ];
+			} else {
+				$message = \sprintf(
+					$not_accessible,
+					$author_url
+				);
+			}
+
+			$error_code = $url->get_error_code();
+			if ( ! $error_code ) {
+				$error_code = 'webfinger_url_not_accessible';
 			}
 
 			return new \WP_Error(
-				$url->get_error_code(),
+				$error_code,
 				$message,
 				$url->get_error_data()
 			);
@@ -377,13 +386,13 @@ class Health_Check {
 
 		$info['activitypub']['fields']['activitypub_outbox_purge_days'] = array(
 			'label'   => \__( 'Outbox Retention Period', 'activitypub' ),
-			'value'   => \esc_attr( (int) \get_option( 'activitypub_outbox_purge_days', 180 ) ),
+			'value'   => \esc_attr( (int) \get_option( 'activitypub_outbox_purge_days', ACTIVITYPUB_OUTBOX_PURGE_DAYS ) ),
 			'private' => false,
 		);
 
 		$info['activitypub']['fields']['activitypub_ap_post_purge_days'] = array(
 			'label'   => \__( 'Remote Posts Retention Period', 'activitypub' ),
-			'value'   => \esc_attr( (int) \get_option( 'activitypub_ap_post_purge_days', 30 ) ),
+			'value'   => \esc_attr( (int) \get_option( 'activitypub_ap_post_purge_days', ACTIVITYPUB_AP_POST_PURGE_DAYS ) ),
 			'private' => false,
 		);
 
@@ -778,7 +787,7 @@ class Health_Check {
 	 * Detects abnormally high outbox creation rates that may indicate
 	 * a third-party plugin is triggering excessive wp_update_post() calls.
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 *
 	 * @return array The test result.
 	 */
@@ -848,7 +857,7 @@ class Health_Check {
 	 * Checks whether WordPress can write files directly. When direct filesystem
 	 * access is unavailable (e.g., FTP-only servers), media caching will not work.
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 *
 	 * @return array The test result.
 	 */
@@ -900,7 +909,7 @@ class Health_Check {
 	/**
 	 * Count outbox items created in the last hour.
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 *
 	 * @return int Total items created in the last hour.
 	 */
@@ -925,7 +934,7 @@ class Health_Check {
 	/**
 	 * Get the count of outbox items.
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 *
 	 * @param string $status Optional. Post status to count. Default 'any' for all statuses.
 	 *

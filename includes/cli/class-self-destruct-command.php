@@ -10,7 +10,7 @@ namespace Activitypub\Cli;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
-use Activitypub\Collection\Posts;
+use Activitypub\Collection\Remote_Posts;
 
 use function Activitypub\add_to_outbox;
 
@@ -107,7 +107,7 @@ class Self_Destruct_Command extends \WP_CLI_Command {
 		$processed = $this->process_user_deletions( $user_ids );
 
 		// Delete all remote posts.
-		$deleted_posts = Posts::delete_all();
+		$deleted_posts = Remote_Posts::delete_all();
 		if ( $deleted_posts > 0 ) {
 			\WP_CLI::line( \WP_CLI::colorize( "%G✓%n Deleted {$deleted_posts} remote post(s)." ) );
 		}

@@ -35,6 +35,10 @@ class Options {
 		\add_filter( 'option_activitypub_support_post_types', array( self::class, 'support_post_types_ensure_array' ) );
 		\add_filter( 'option_activitypub_object_type', array( self::class, 'default_object_type' ) );
 
+		\add_filter( 'option_activitypub_outbox_purge_days', array( self::class, 'sanitize_purge_days' ) );
+		\add_filter( 'option_activitypub_inbox_purge_days', array( self::class, 'sanitize_purge_days' ) );
+		\add_filter( 'option_activitypub_ap_post_purge_days', array( self::class, 'sanitize_purge_days' ) );
+
 		\add_action( 'update_option_activitypub_relay_mode', array( self::class, 'relay_mode_changed' ), 10, 2 );
 	}
 
@@ -226,9 +230,12 @@ class Options {
 			'activitypub_advanced',
 			'activitypub_outbox_purge_days',
 			array(
-				'type'        => 'integer',
-				'description' => 'Number of days to keep items in the Outbox.',
-				'default'     => 180,
+				'type'              => 'integer',
+				'description'       => 'Number of days to keep items in the Outbox.',
+				'default'           => ACTIVITYPUB_OUTBOX_PURGE_DAYS,
+				'sanitize_callback' => static function ( $value ) {
+					return \max( 1, \absint( $value ) );
+				},
 			)
 		);
 
@@ -236,9 +243,12 @@ class Options {
 			'activitypub_advanced',
 			'activitypub_inbox_purge_days',
 			array(
-				'type'        => 'integer',
-				'description' => 'Number of days to keep items in the Inbox.',
-				'default'     => 180,
+				'type'              => 'integer',
+				'description'       => 'Number of days to keep items in the Inbox.',
+				'default'           => ACTIVITYPUB_INBOX_PURGE_DAYS,
+				'sanitize_callback' => static function ( $value ) {
+					return \max( 1, \absint( $value ) );
+				},
 			)
 		);
 
@@ -246,9 +256,12 @@ class Options {
 			'activitypub_advanced',
 			'activitypub_ap_post_purge_days',
 			array(
-				'type'        => 'integer',
-				'description' => 'Number of days to keep remote posts.',
-				'default'     => 30,
+				'type'              => 'integer',
+				'description'       => 'Number of days to keep remote posts.',
+				'default'           => ACTIVITYPUB_AP_POST_PURGE_DAYS,
+				'sanitize_callback' => static function ( $value ) {
+					return \max( 1, \absint( $value ) );
+				},
 			)
 		);
 
@@ -318,6 +331,16 @@ class Options {
 			array(
 				'type'        => 'boolean',
 				'description' => 'Allow creating posts via ActivityPub.',
+				'default'     => false,
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_api',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Enable the ActivityPub API to allow third-party clients.',
 				'default'     => false,
 			)
 		);
@@ -411,6 +434,26 @@ class Options {
 				'type'        => 'integer',
 				'description' => 'Send a notification when someone mentions a user of the blog.',
 				'default'     => 1,
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_mailer_annual_report',
+			array(
+				'type'        => 'integer',
+				'description' => 'Send the annual Fediverse Year in Review email.',
+				'default'     => 1,
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_mailer_monthly_report',
+			array(
+				'type'        => 'integer',
+				'description' => 'Send a monthly Fediverse stats report email.',
+				'default'     => 0,
 			)
 		);
 
@@ -628,6 +671,34 @@ class Options {
 		}
 
 		return $value;
+	}
+
+	/**
+	 * Sanitize purge day values.
+	 *
+	 * Ensures the value is a non-negative integer. Returns the
+	 * registered default when the stored value is empty or false
+	 * (option not properly set), but allows 0 to disable purging.
+	 *
+	 * @since 8.1.0
+	 *
+	 * @param mixed $value The stored option value.
+	 *
+	 * @return int The sanitized value.
+	 */
+	public static function sanitize_purge_days( $value ) {
+		if ( '' === $value || false === $value ) {
+			$filter   = \current_filter();
+			$defaults = array(
+				'option_activitypub_outbox_purge_days'  => ACTIVITYPUB_OUTBOX_PURGE_DAYS,
+				'option_activitypub_inbox_purge_days'   => ACTIVITYPUB_INBOX_PURGE_DAYS,
+				'option_activitypub_ap_post_purge_days' => ACTIVITYPUB_AP_POST_PURGE_DAYS,
+			);
+
+			return $defaults[ $filter ] ?? ACTIVITYPUB_OUTBOX_PURGE_DAYS;
+		}
+
+		return \max( 1, \absint( $value ) );
 	}
 
 	/**

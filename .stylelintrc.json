@@ -1,0 +1,7 @@
+{
+	"extends": "@wordpress/scripts/config/.stylelintrc.json",
+	"rules": {
+		"plugin-wpds/no-unknown-ds-tokens": null,
+		"plugin-wpds/no-setting-wpds-custom-properties": null
+	}
+}

@@ -105,8 +105,8 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	public function activity_object_provider() {
 		$home_url = \addcslashes( \home_url(), '/' );
 
-		$note1_json = '{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive","dcterms":"http:\/\/purl.org\/dc\/terms\/","gts":"https:\/\/gotosocial.org\/ns#","interactionPolicy":{"@id":"gts:interactionPolicy","@type":"@id"},"canQuote":{"@id":"gts:canQuote","@type":"@id"},"canReply":{"@id":"gts:canReply","@type":"@id"},"canLike":{"@id":"gts:canLike","@type":"@id"},"canAnnounce":{"@id":"gts:canAnnounce","@type":"@id"},"automaticApproval":{"@id":"gts:automaticApproval","@type":"@id"},"manualApproval":{"@id":"gts:manualApproval","@type":"@id"},"always":{"@id":"gts:always","@type":"@id"}}],"actor":"http:\/\/example.org\/?author=1","id":"http:\/\/example.org\/?post_type=ap_outbox\u0026p=351","type":"Create","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"object":{"id":"https:\/\/example.com\/1","type":"Note","content":"\u003Cp\u003EThis is a note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is a note\u003C\/p\u003E"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html"}}';
-		$note2_json = '{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive","dcterms":"http:\/\/purl.org\/dc\/terms\/","gts":"https:\/\/gotosocial.org\/ns#","interactionPolicy":{"@id":"gts:interactionPolicy","@type":"@id"},"canQuote":{"@id":"gts:canQuote","@type":"@id"},"canReply":{"@id":"gts:canReply","@type":"@id"},"canLike":{"@id":"gts:canLike","@type":"@id"},"canAnnounce":{"@id":"gts:canAnnounce","@type":"@id"},"automaticApproval":{"@id":"gts:automaticApproval","@type":"@id"},"manualApproval":{"@id":"gts:manualApproval","@type":"@id"},"always":{"@id":"gts:always","@type":"@id"}}],"actor":"http:\/\/example.org\/?author=0","id":"http:\/\/example.org\/?post_type=ap_outbox\u0026p=352","type":"Create","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"object":{"id":"https:\/\/example.com\/2","type":"Note","content":"\u003Cp\u003EThis is another note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is another note\u003C\/p\u003E"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html"}}';
+		$note1_json = '{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive","dcterms":"http:\/\/purl.org\/dc\/terms\/","gts":"https:\/\/gotosocial.org\/ns#","schema":"http:\/\/schema.org\/","exifData":"schema:exifData","PropertyValue":"schema:PropertyValue","interactionPolicy":{"@id":"gts:interactionPolicy","@type":"@id"},"canQuote":{"@id":"gts:canQuote","@type":"@id"},"canReply":{"@id":"gts:canReply","@type":"@id"},"canLike":{"@id":"gts:canLike","@type":"@id"},"canAnnounce":{"@id":"gts:canAnnounce","@type":"@id"},"automaticApproval":{"@id":"gts:automaticApproval","@type":"@id"},"manualApproval":{"@id":"gts:manualApproval","@type":"@id"},"always":{"@id":"gts:always","@type":"@id"}}],"actor":"http:\/\/example.org\/?author=1","id":"http:\/\/example.org\/?post_type=ap_outbox\u0026p=351","type":"Create","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"object":{"id":"https:\/\/example.com\/1","type":"Note","content":"\u003Cp\u003EThis is a note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is a note\u003C\/p\u003E"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html"}}';
+		$note2_json = '{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive","dcterms":"http:\/\/purl.org\/dc\/terms\/","gts":"https:\/\/gotosocial.org\/ns#","schema":"http:\/\/schema.org\/","exifData":"schema:exifData","PropertyValue":"schema:PropertyValue","interactionPolicy":{"@id":"gts:interactionPolicy","@type":"@id"},"canQuote":{"@id":"gts:canQuote","@type":"@id"},"canReply":{"@id":"gts:canReply","@type":"@id"},"canLike":{"@id":"gts:canLike","@type":"@id"},"canAnnounce":{"@id":"gts:canAnnounce","@type":"@id"},"automaticApproval":{"@id":"gts:automaticApproval","@type":"@id"},"manualApproval":{"@id":"gts:manualApproval","@type":"@id"},"always":{"@id":"gts:always","@type":"@id"}}],"actor":"http:\/\/example.org\/?author=0","id":"http:\/\/example.org\/?post_type=ap_outbox\u0026p=352","type":"Create","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"object":{"id":"https:\/\/example.com\/2","type":"Note","content":"\u003Cp\u003EThis is another note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is another note\u003C\/p\u003E"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html"}}';
 		$event_json = '{"@context":["https:\/\/schema.org\/","https:\/\/www.w3.org\/ns\/activitystreams",{"pt":"https:\/\/joinpeertube.org\/ns#","mz":"https:\/\/joinmobilizon.org\/ns#","status":"http:\/\/www.w3.org\/2002\/12\/cal\/ical#status","commentsEnabled":"pt:commentsEnabled","isOnline":"mz:isOnline","timezone":"mz:timezone","participantCount":"mz:participantCount","anonymousParticipationEnabled":"mz:anonymousParticipationEnabled","joinMode":{"@id":"mz:joinMode","@type":"mz:joinModeType"},"externalParticipationUrl":{"@id":"mz:externalParticipationUrl","@type":"schema:URL"},"repliesModerationOption":{"@id":"mz:repliesModerationOption","@type":"@vocab"},"contacts":{"@id":"mz:contacts","@type":"@id"}}],"actor":"http:\/\/example.org\/?author=1","id":"http:\/\/example.org\/?post_type=ap_outbox\u0026p=353","type":"Create","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"object":{"id":"https:\/\/example.com\/3","type":"Event","content":"\u003Cp\u003EYou should not miss this Event!\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EYou should not miss this Event!\u003C\/p\u003E"},"name":"WP Test Event","nameMap":{"en":"WP Test Event"},"endTime":"2030-02-29T17:00:00+01:00","location":[{"id":"https:\/\/example.com\/place\/1","type":"Place","attributedTo":"https:\/\/wp-test.event-federation.eu\/@test","name":"Fediverse Place","address":{"type":"PostalAddress","addressCountry":"FediCountry","addressLocality":"FediTown","postalCode":"1337","streetAddress":"FediStreet"}},{"type":"VirtualLocation","url":"https:\/\/example.com\/VirtualMeetingRoom"}],"startTime":"2030-02-29T16:00:00+01:00","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html","tag":[],"timezone":"Europe\/Vienna","category":"MOVEMENTS_POLITICS","joinMode":"external"}}';
 		return array(
 			array(
@@ -441,6 +441,45 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$object->set_content( 'Test content' );
 
 		return $object;
+	}
+
+	/**
+	 * Test that the blind audience (`bto`/`bcc`) is persisted to the database and
+	 * survives the `add` → `get_activity` roundtrip.
+	 *
+	 * @covers ::add
+	 * @covers ::get_activity
+	 */
+	public function test_add_persists_blind_audience() {
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://example.com/author/test' );
+		$activity->set_object(
+			array(
+				'id'      => 'https://example.com/note/123',
+				'type'    => 'Note',
+				'content' => 'Hello',
+			)
+		);
+		$activity->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
+		$activity->set_cc( array() );
+		$activity->set_bto( array( 'https://example.com/users/secret' ) );
+		$activity->set_bcc( array( 'https://example.com/users/hidden' ) );
+
+		$id = Outbox::add( $activity, self::$user_id );
+
+		$this->assertIsInt( $id );
+
+		/* Stored JSON in the DB must keep the blind audience. */
+		$stored = \json_decode( \get_post( $id )->post_content, true );
+		$this->assertSame( array( 'https://example.com/users/secret' ), $stored['bto'], 'bto persisted to DB' );
+		$this->assertSame( array( 'https://example.com/users/hidden' ), $stored['bcc'], 'bcc persisted to DB' );
+
+		/* Rehydrated Activity must expose the blind audience via its getters. */
+		$reloaded = Outbox::get_activity( $id );
+		$this->assertInstanceOf( Activity::class, $reloaded );
+		$this->assertSame( array( 'https://example.com/users/secret' ), $reloaded->get_bto(), 'bto exposed after reload' );
+		$this->assertSame( array( 'https://example.com/users/hidden' ), $reloaded->get_bcc(), 'bcc exposed after reload' );
 	}
 
 	/**

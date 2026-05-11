@@ -359,10 +359,10 @@ class Post extends Base {
 		}
 
 		/*
-		 * Remove attachments from the Fediverse if a post was federated and then set back to draft.
+		 * Remove attachments from the Fediverse if a post was federated and then unpublished.
 		 * Except in preview mode, where we want to show attachments.
 		 */
-		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
+		if ( ! $this->is_preview() && 'publish' !== \get_post_status( $this->item ) ) {
 			$this->attachment = array();
 
 			return $this->attachment;
@@ -454,25 +454,33 @@ class Post extends Base {
 		$post_format_setting = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
 
 		if ( 'wordpress-post-format' !== $post_format_setting ) {
-			return \ucfirst( $post_format_setting );
-		}
-
-		// Check if the post has a title.
-		if ( ! \post_type_supports( $this->item->post_type, 'title' ) || ! $this->item->post_title ) {
-			return 'Note';
-		}
-
-		// Default to Note.
-		$object_type = 'Note';
-		$post_type   = \get_post_type( $this->item );
-
-		if ( 'page' === $post_type ) {
+			$object_type = \ucfirst( $post_format_setting );
+		} elseif ( ! \post_type_supports( $this->item->post_type, 'title' ) || ! $this->item->post_title ) {
+			$object_type = 'Note';
+		} elseif ( 'page' === \get_post_type( $this->item ) ) {
 			$object_type = 'Page';
 		} elseif ( ! \get_post_format( $this->item ) ) {
 			$object_type = 'Article';
+		} else {
+			$object_type = 'Note';
 		}
 
-		return $object_type;
+		/**
+		 * Filters the ActivityPub object type for a post.
+		 *
+		 * Allows downstream consumers to override the discriminator that
+		 * decides whether a post federates as Note, Article, or Page.
+		 * The filtered value propagates to all internal callers of
+		 * get_type(), including former_type/tombstone handling,
+		 * summary and title decisions, the content template, and the
+		 * preview guard, not only the wire-format type property.
+		 *
+		 * @since 8.1.1
+		 *
+		 * @param string   $object_type The computed ActivityPub object type.
+		 * @param \WP_Post $post        The WordPress post being transformed.
+		 */
+		return \apply_filters( 'activitypub_post_object_type', $object_type, $this->item );
 	}
 
 	/**
@@ -543,8 +551,8 @@ class Post extends Base {
 			return $this->summary;
 		}
 
-		// Remove Teaser from drafts.
-		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
+		// Remove Teaser from unpublished posts.
+		if ( ! $this->is_preview() && 'publish' !== \get_post_status( $this->item ) ) {
 			$this->summary = \__( '(This post is being modified)', 'activitypub' );
 
 			return $this->summary;
@@ -593,8 +601,8 @@ class Post extends Base {
 			return $this->content;
 		}
 
-		// Remove Content from drafts.
-		if ( ! $this->is_preview() && 'draft' === \get_post_status( $this->item ) ) {
+		// Remove Content from unpublished posts.
+		if ( ! $this->is_preview() && 'publish' !== \get_post_status( $this->item ) ) {
 			$this->content = \__( '(This post is being modified)', 'activitypub' );
 
 			return $this->content;
@@ -923,11 +931,10 @@ class Post extends Base {
 				case 'core/image':
 				case 'core/cover':
 					if ( ! empty( $block['attrs']['id'] ) ) {
-						$alt   = '';
-						$check = preg_match( '/<img.*?alt\s*=\s*([\"\'])(.*?)\1.*>/i', $block['innerHTML'], $match );
-
-						if ( $check ) {
-							$alt = $match[2];
+						$alt       = '';
+						$processor = new \WP_HTML_Tag_Processor( $block['innerHTML'] );
+						if ( $processor->next_tag( array( 'tag_name' => 'img' ) ) ) {
+							$alt = $processor->get_attribute( 'alt' ) ?? '';
 						}
 
 						$found = false;
@@ -955,7 +962,18 @@ class Post extends Base {
 				case 'core/video':
 				case 'videopress/video':
 					if ( ! empty( $block['attrs']['id'] ) ) {
-						$media['video'][] = array( 'id' => $block['attrs']['id'] );
+						$video = array( 'id' => $block['attrs']['id'] );
+
+						// The poster is stored as an HTML attribute on the <video> tag, not in block attrs.
+						$processor = new \WP_HTML_Tag_Processor( $block['innerHTML'] );
+						if ( $processor->next_tag( array( 'tag_name' => 'video' ) ) ) {
+							$poster = $processor->get_attribute( 'poster' );
+							if ( ! empty( $poster ) ) {
+								$video['icon'] = \esc_url_raw( $poster );
+							}
+						}
+
+						$media['video'][] = $video;
 					}
 					break;
 				case 'jetpack/slideshow':
@@ -1117,7 +1135,7 @@ class Post extends Base {
 		return array(
 			'id'         => get_rest_url_by_path( sprintf( 'posts/%d/shares', $this->item->ID ) ),
 			'type'       => 'Collection',
-			'totalItems' => Interactions::count_by_type( $this->item->ID, 'repost' ),
+			'totalItems' => Interactions::count_by_type( $this->item->ID, 'repost' ) + Interactions::count_by_type( $this->item->ID, 'quote' ),
 		);
 	}
 

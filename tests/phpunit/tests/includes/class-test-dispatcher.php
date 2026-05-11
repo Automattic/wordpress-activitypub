@@ -127,7 +127,7 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Invoke the method.
 		try {
-			$retries = $send_to_inboxes->invoke( null, $inboxes, $outbox_item ); // null for static methods.
+			$retries = $send_to_inboxes->invoke( null, $inboxes, $outbox_item->ID ); // null for static methods.
 		} catch ( \Exception $e ) {
 			$this->fail( 'Invoke failed: ' . $e->getMessage() );
 		}
@@ -254,6 +254,95 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 			$this->fail( 'Invoke failed: ' . $e->getMessage() );
 		}
 		$this->assertTrue( $result );
+	}
+
+	/**
+	 * Data provider for `test_should_send_to_followers_with_addressing`.
+	 *
+	 * @return array[]
+	 */
+	public function data_should_send_to_followers_addressing() {
+		return array(
+			'to addresses followers'  => array( 'set_to' ),
+			'cc addresses followers'  => array( 'set_cc' ),
+			'bto addresses followers' => array( 'set_bto' ),
+			'bcc addresses followers' => array( 'set_bcc' ),
+		);
+	}
+
+	/**
+	 * Test that `to`, `cc`, `bto`, and `bcc` all count when addressing followers.
+	 *
+	 * @covers ::should_send_to_followers
+	 *
+	 * @dataProvider data_should_send_to_followers_addressing
+	 *
+	 * @param string $setter The audience setter method to populate with the followers URL.
+	 */
+	public function test_should_send_to_followers_with_addressing( $setter ) {
+		Followers::add( self::$user_id, 'https://example.org/users/username' );
+
+		$actor = Actors::get_by_id( self::$user_id );
+
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_actor( $actor->get_id() );
+		$activity->set_to( array() );
+		$activity->set_cc( array() );
+		$activity->{$setter}( array( $actor->get_followers() ) );
+
+		$outbox_item = (object) array(
+			'ID'          => 0,
+			'post_author' => self::$user_id,
+		);
+
+		$should_send = new \ReflectionMethod( Dispatcher::class, 'should_send_to_followers' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$should_send->setAccessible( true );
+		}
+
+		try {
+			$result = $should_send->invoke( null, $activity, $actor, $outbox_item );
+		} catch ( \Exception $e ) {
+			$this->fail( 'Invoke failed: ' . $e->getMessage() );
+		}
+
+		$this->assertTrue( $result, 'Activity addressed via ' . $setter . ' should be sent to followers.' );
+	}
+
+	/**
+	 * Test that an activity without any follower addressing is not sent to followers.
+	 *
+	 * @covers ::should_send_to_followers
+	 */
+	public function test_should_not_send_to_followers_when_no_addressing_matches() {
+		Followers::add( self::$user_id, 'https://example.org/users/username' );
+
+		$actor = Actors::get_by_id( self::$user_id );
+
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_actor( $actor->get_id() );
+		$activity->set_to( array( 'https://example.com/users/other' ) );
+		$activity->set_cc( array() );
+
+		$outbox_item = (object) array(
+			'ID'          => 0,
+			'post_author' => self::$user_id,
+		);
+
+		$should_send = new \ReflectionMethod( Dispatcher::class, 'should_send_to_followers' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$should_send->setAccessible( true );
+		}
+
+		try {
+			$result = $should_send->invoke( null, $activity, $actor, $outbox_item );
+		} catch ( \Exception $e ) {
+			$this->fail( 'Invoke failed: ' . $e->getMessage() );
+		}
+
+		$this->assertFalse( $result, 'Activity with no matching addressing should not be sent to followers.' );
 	}
 
 	/**
@@ -619,63 +708,6 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Clean up.
 		\remove_filter( 'pre_http_request', $http_callback );
-	}
-
-	/**
-	 * Test that bto and bcc are stripped before delivery.
-	 *
-	 * @covers ::strip_private_addressing
-	 */
-	public function test_strip_private_addressing() {
-		// Activity with bto and bcc at both activity and object level.
-		$array = array(
-			'type'   => 'Create',
-			'actor'  => 'https://example.com/users/test',
-			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
-			'cc'     => array( 'https://example.com/users/test/followers' ),
-			'bto'    => array( 'https://example.com/users/secret' ),
-			'bcc'    => array( 'https://example.com/users/hidden' ),
-			'object' => array(
-				'type'    => 'Note',
-				'content' => 'Hello',
-				'bto'     => array( 'https://example.com/users/secret' ),
-				'bcc'     => array( 'https://example.com/users/hidden' ),
-			),
-		);
-
-		$result = Dispatcher::strip_private_addressing( $array );
-
-		// bto and bcc should be removed from the activity.
-		$this->assertArrayNotHasKey( 'bto', $result, 'bto should be stripped from activity' );
-		$this->assertArrayNotHasKey( 'bcc', $result, 'bcc should be stripped from activity' );
-
-		// bto and bcc should be removed from the embedded object.
-		$this->assertArrayNotHasKey( 'bto', $result['object'], 'bto should be stripped from object' );
-		$this->assertArrayNotHasKey( 'bcc', $result['object'], 'bcc should be stripped from object' );
-
-		// Other fields should be preserved.
-		$this->assertSame( 'Create', $result['type'] );
-		$this->assertArrayHasKey( 'to', $result );
-		$this->assertArrayHasKey( 'cc', $result );
-		$this->assertSame( 'Hello', $result['object']['content'] );
-	}
-
-	/**
-	 * Test that strip_private_addressing handles activities without bto/bcc.
-	 *
-	 * @covers ::strip_private_addressing
-	 */
-	public function test_strip_private_addressing_without_private_fields() {
-		$array = array(
-			'type'  => 'Create',
-			'actor' => 'https://example.com/users/test',
-			'to'    => array( 'https://www.w3.org/ns/activitystreams#Public' ),
-		);
-
-		$result = Dispatcher::strip_private_addressing( $array );
-
-		$this->assertSame( 'Create', $result['type'] );
-		$this->assertArrayHasKey( 'to', $result );
 	}
 
 	/**
