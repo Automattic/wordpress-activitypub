@@ -141,6 +141,11 @@ trait Verification {
 	 *
 	 * Application Passwords are not accepted directly on C2S endpoints.
 	 *
+	 * Security: `check_oauth_permission()` requires a valid Bearer token via
+	 * `is_oauth_request()`. Cookie-authenticated sessions never satisfy that
+	 * check, so a wp-admin session in another browser tab cannot be hijacked
+	 * to drive C2S writes on behalf of the user (no CSRF path on this surface).
+	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
 	 */
