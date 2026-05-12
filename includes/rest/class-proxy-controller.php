@@ -89,30 +89,47 @@ class Proxy_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * Sanitizes the URL parameter.
+	 * Sanitize the `id` parameter.
+	 *
+	 * Accepts either an HTTPS URL or a WebFinger handle (`user@host`,
+	 * `@user@host`). Handles are returned as-is; URLs are run through
+	 * `sanitize_url()`. Matches the dual-shape contract of
+	 * `Remote_Actors::fetch_by_various()`.
 	 *
 	 * @see https://developer.wordpress.org/reference/functions/sanitize_url/
 	 *
-	 * @param string $url The urlencoded URL to sanitize.
-	 * @return string The sanitized URL.
+	 * @param string $url The urlencoded URL or WebFinger handle to sanitize.
+	 * @return string The sanitized value.
 	 */
 	public function sanitize_url( $url ) {
-		// Decode and sanitize the URL.
-		return sanitize_url( urldecode( $url ) );
+		$decoded = urldecode( $url );
+
+		if ( $this->is_webfinger_handle( $decoded ) ) {
+			return $decoded;
+		}
+
+		return sanitize_url( $decoded );
 	}
+
 	/**
-	 * Validate the URL parameter.
+	 * Validate the `id` parameter.
 	 *
-	 * Uses wp_http_validate_url() which blocks local/private IPs and restricts ports.
+	 * Accepts either an HTTPS URL (validated via `wp_http_validate_url()`,
+	 * which blocks local/private IPs and restricts ports) or a WebFinger
+	 * handle that matches `ACTIVITYPUB_USERNAME_REGEXP`. Matches the
+	 * dual-shape contract of `Remote_Actors::fetch_by_various()`.
 	 *
 	 * @see https://developer.wordpress.org/reference/functions/wp_http_validate_url/
 	 *
-	 * @param string $url The URL to validate.
+	 * @param string $url The URL or WebFinger handle to validate.
 	 * @return bool True if valid, false otherwise.
 	 */
 	public function validate_url( $url ) {
-		// Decode the url.
 		$decoded_url = urldecode( $url );
+
+		if ( $this->is_webfinger_handle( $decoded_url ) ) {
+			return true;
+		}
 
 		// Must be HTTPS.
 		if ( 'https' !== \wp_parse_url( $decoded_url, PHP_URL_SCHEME ) ) {
@@ -121,6 +138,16 @@ class Proxy_Controller extends \WP_REST_Controller {
 
 		// Use WordPress built-in validation (blocks local IPs, restricts ports).
 		return (bool) \wp_http_validate_url( $decoded_url );
+	}
+
+	/**
+	 * Check whether a value is a WebFinger handle (optionally prefixed with `@`).
+	 *
+	 * @param string $value The candidate value.
+	 * @return bool True if the value looks like a WebFinger handle.
+	 */
+	private function is_webfinger_handle( $value ) {
+		return (bool) \preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $value );
 	}
 
 	/**

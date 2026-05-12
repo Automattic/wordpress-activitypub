@@ -173,6 +173,111 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that proxy accepts a WebFinger handle (`user@host`) and resolves it.
+	 *
+	 * @covers ::validate_url
+	 * @covers ::sanitize_url
+	 * @covers ::create_item
+	 */
+	public function test_successful_actor_fetch_by_handle() {
+		$this->mock_oauth_auth();
+
+		$actor_data = array(
+			'@context'          => 'https://www.w3.org/ns/activitystreams',
+			'type'              => 'Person',
+			'id'                => 'https://mitra.social/users/silverpill',
+			'inbox'             => 'https://mitra.social/users/silverpill/inbox',
+			'preferredUsername' => 'silverpill',
+			'name'              => 'silverpill',
+		);
+
+		$filter = function ( $preempt, $args, $url ) use ( $actor_data ) {
+			if ( false !== \strpos( $url, '/.well-known/webfinger' ) ) {
+				return array(
+					'response' => array( 'code' => 200 ),
+					'body'     => \wp_json_encode(
+						array(
+							'subject' => 'acct:silverpill@mitra.social',
+							'links'   => array(
+								array(
+									'rel'  => 'self',
+									'type' => 'application/activity+json',
+									'href' => $actor_data['id'],
+								),
+							),
+						)
+					),
+					'headers'  => array( 'content-type' => 'application/jrd+json' ),
+				);
+			}
+
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode( $actor_data ),
+				'headers'  => array( 'content-type' => 'application/activity+json' ),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => 'silverpill@mitra.social' ) );
+
+		$response = $this->server->dispatch( $request );
+
+		\remove_filter( 'pre_http_request', $filter, 10 );
+		$this->unmock_oauth_auth();
+
+		$this->assertEquals( 200, $response->get_status(), \wp_json_encode( $response->get_data() ) );
+		$data = $response->get_data();
+		$this->assertEquals( 'Person', $data['type'] );
+		$this->assertEquals( 'https://mitra.social/users/silverpill', $data['id'] );
+	}
+
+	/**
+	 * Test that proxy accepts a WebFinger handle with leading `@`.
+	 *
+	 * @covers ::validate_url
+	 */
+	public function test_handle_with_leading_at_accepted() {
+		$this->mock_oauth_auth();
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => '@silverpill@mitra.social' ) );
+
+		$response = $this->server->dispatch( $request );
+
+		$this->unmock_oauth_auth();
+
+		// Must not be rejected at param validation. Downstream resolution may still
+		// 502 because no HTTP mock is installed, but the route should not 400 with
+		// rest_invalid_param.
+		$this->assertNotEquals(
+			'rest_invalid_param',
+			$response->get_data()['code'] ?? '',
+			'WebFinger handle with leading @ was rejected at route validation.'
+		);
+	}
+
+	/**
+	 * Test that proxy still rejects garbage input that is neither URL nor handle.
+	 *
+	 * @covers ::validate_url
+	 */
+	public function test_malformed_input_rejected() {
+		$this->mock_oauth_auth();
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => 'not-a-url-or-handle' ) );
+
+		$response = $this->server->dispatch( $request );
+
+		$this->unmock_oauth_auth();
+
+		$this->assertEquals( 400, $response->get_status() );
+		$this->assertEquals( 'rest_invalid_param', $response->get_data()['code'] );
+	}
+
+	/**
 	 * Mock OAuth authentication for testing.
 	 */
 	private function mock_oauth_auth() {
