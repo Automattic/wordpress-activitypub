@@ -35,22 +35,22 @@ class Posts {
 	 * @return \WP_Post|\WP_Error The created post on success, WP_Error on failure.
 	 */
 	public static function create( $activity, $user_id, $visibility = null ) {
+		// Resolve the post author. Blog actor falls back to the current user for a real byline.
+		$post_author = $user_id > 0 ? $user_id : \get_current_user_id();
+
 		/*
 		 * Blog actor path (user_id = 0): require the act-as-blog grant.
 		 * `publish_posts` is implicit because the helper defaults to
 		 * `manage_options` (administrators). The cron/CLI path has no current
 		 * user and keeps `post_author = 0`, bypassing this check intentionally.
 		 */
-		if ( $user_id <= 0 && \get_current_user_id() > 0 && ! user_can_act_as_blog() ) {
+		if ( $user_id <= 0 && $post_author > 0 && ! user_can_act_as_blog() ) {
 			return new \WP_Error(
 				'activitypub_forbidden',
 				\__( 'You do not have permission to create posts.', 'activitypub' ),
 				array( 'status' => 403 )
 			);
 		}
-
-		// Resolve the post author. Blog actor falls back to the current user for a real byline.
-		$post_author = $user_id > 0 ? $user_id : \get_current_user_id();
 
 		$object = $activity['object'] ?? array();
 
