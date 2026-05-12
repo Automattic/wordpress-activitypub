@@ -680,4 +680,75 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		$this->assertEquals( 10, $deleted );
 	}
+
+	/**
+	 * Create a private outbox item authored by the blog actor for the tests below.
+	 *
+	 * @return \WP_Post The created outbox post.
+	 */
+	private function create_private_blog_actor_outbox_item() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author'  => 0,
+				'post_type'    => Outbox::POST_TYPE,
+				'post_status'  => 'pending',
+				'post_content' => \wp_json_encode(
+					array(
+						'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
+						'id'       => 'https://example.org/activity/private-accept',
+						'type'     => 'Accept',
+						'actor'    => 'https://example.org/blog',
+						'object'   => 'https://example.org/follow/1',
+					)
+				),
+				'meta_input'   => array(
+					'_activitypub_activity_type'     => 'Accept',
+					'_activitypub_activity_actor'    => 'blog',
+					'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
+				),
+			)
+		);
+
+		return \get_post( $post_id );
+	}
+
+	/**
+	 * Test that anonymous visitors cannot fetch a private blog-actor outbox item by permalink.
+	 *
+	 * Regression test for the `0 === 0` identity match: when `post_author` is `0`
+	 * (blog actor) and the visitor is unauthenticated, `get_current_user_id()` also
+	 * returns `0`, so the author bypass at the top of `maybe_get_activity()` would
+	 * return private items without an `is_user_logged_in()` guard.
+	 *
+	 * @covers ::maybe_get_activity
+	 */
+	public function test_maybe_get_activity_anonymous_cannot_read_private_blog_actor_item() {
+		$post = $this->create_private_blog_actor_outbox_item();
+
+		\wp_set_current_user( 0 );
+
+		$result = Outbox::maybe_get_activity( $post );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'private_outbox_item', $result->get_error_code() );
+	}
+
+	/**
+	 * Test that administrators can fetch a private blog-actor outbox item by permalink.
+	 *
+	 * Mirrors the `verify_owner` blog-actor capability bypass: a user authorized to
+	 * act as the blog actor reads the same private outbox they can post to.
+	 *
+	 * @covers ::maybe_get_activity
+	 */
+	public function test_maybe_get_activity_admin_can_read_private_blog_actor_item() {
+		$post = $this->create_private_blog_actor_outbox_item();
+
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $admin_id );
+
+		$result = Outbox::maybe_get_activity( $post );
+
+		$this->assertInstanceOf( Activity::class, $result );
+	}
 }
