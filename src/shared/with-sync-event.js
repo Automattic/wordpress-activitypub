@@ -9,7 +9,14 @@
  * directive already delivers events synchronously on those versions, so the
  * identity fallback below preserves behavior without bumping the plugin's
  * minimum WordPress version.
+ *
+ * Implementation note: the property is read via a `const`-aliased bracket
+ * access (`Interactivity[ key ]`) so webpack does not tree-shake the
+ * namespace import into a named binding. A named import would throw at
+ * module instantiation on cores that don't export `withSyncEvent`, before
+ * the `??` fallback could run.
  */
-import * as iAPI from '@wordpress/interactivity';
+import * as Interactivity from '@wordpress/interactivity';
 
-export const withSyncEvent = iAPI.withSyncEvent ?? ( ( fn ) => fn );
+const key = 'withSyncEvent';
+export const withSyncEvent = Interactivity[ key ] ?? ( ( fn ) => fn );
