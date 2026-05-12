@@ -259,6 +259,70 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that the stream sub-route also accepts acct identifiers.
+	 *
+	 * Guards against the `format => 'uri'` schema constraint that previously
+	 * rejected handles before the validate_callback ran.
+	 *
+	 * @covers ::register_routes
+	 * @covers ::get_stream
+	 */
+	public function test_stream_accepts_acct_identifier() {
+		$this->mock_oauth_auth();
+
+		$filter = function ( $preempt, $args, $url ) {
+			if ( false !== \strpos( $url, '/.well-known/webfinger' ) ) {
+				return array(
+					'response' => array( 'code' => 200 ),
+					'body'     => \wp_json_encode(
+						array(
+							'subject' => 'acct:test@example.com',
+							'links'   => array(
+								array(
+									'rel'  => 'self',
+									'type' => 'application/activity+json',
+									'href' => 'https://example.com/users/test',
+								),
+							),
+						)
+					),
+					'headers'  => array( 'content-type' => 'application/jrd+json' ),
+				);
+			}
+
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'type' => 'Person',
+						'id'   => 'https://example.com/users/test',
+					)
+				),
+				'headers'  => array( 'content-type' => 'application/activity+json' ),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy/stream' );
+		$request->set_query_params( array( 'id' => 'test@example.com' ) );
+
+		$response = $this->server->dispatch( $request );
+
+		\remove_filter( 'pre_http_request', $filter, 10 );
+		$this->unmock_oauth_auth();
+
+		// The route must accept the handle and reach get_stream, which then
+		// returns a 404 because the resolved actor has no eventStream field.
+		// What we explicitly do not expect is `rest_invalid_param` from
+		// schema-level validation.
+		$this->assertNotEquals(
+			'rest_invalid_param',
+			$response->get_data()['code'] ?? '',
+			'Stream route rejected the acct identifier at schema validation.'
+		);
+	}
+
+	/**
 	 * Test that proxy still rejects garbage input that is neither URL nor handle.
 	 *
 	 * @covers ::validate_url

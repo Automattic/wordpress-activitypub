@@ -76,9 +76,8 @@ class Proxy_Controller extends \WP_REST_Controller {
 					'permission_callback' => array( $this, 'get_stream_permissions_check' ),
 					'args'                => array(
 						'id' => array(
-							'description'       => 'The remote object ID (URI) whose eventStream to proxy.',
+							'description'       => 'The remote actor identifier (URL or WebFinger acct) whose eventStream to proxy.',
 							'type'              => 'string',
-							'format'            => 'uri',
 							'required'          => true,
 							'sanitize_callback' => array( $this, 'sanitize_url' ),
 							'validate_callback' => array( $this, 'validate_url' ),
