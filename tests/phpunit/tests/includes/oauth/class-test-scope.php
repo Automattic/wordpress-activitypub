@@ -195,6 +195,7 @@ class Test_Scope extends \WP_UnitTestCase {
 		$this->assertTrue( Scope::is_valid( 'follow' ) );
 		$this->assertTrue( Scope::is_valid( 'push' ) );
 		$this->assertTrue( Scope::is_valid( 'profile' ) );
+		$this->assertTrue( Scope::is_valid( 'upload' ) );
 	}
 
 	/**
@@ -240,6 +241,7 @@ class Test_Scope extends \WP_UnitTestCase {
 		$this->assertArrayHasKey( 'follow', $result );
 		$this->assertArrayHasKey( 'push', $result );
 		$this->assertArrayHasKey( 'profile', $result );
+		$this->assertArrayHasKey( 'upload', $result );
 	}
 
 	/**
