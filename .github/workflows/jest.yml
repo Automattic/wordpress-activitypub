@@ -41,5 +41,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify @tanstack/history pin (GHSA-rmmr-r34h-pfm5)
+        run: |
+          EXPECTED=$(node -p "require('./package.json').overrides['@tanstack/history']")
+          INSTALLED=$(node -p "require('./node_modules/@tanstack/history/package.json').version")
+          if [ "$INSTALLED" != "$EXPECTED" ]; then
+            echo "::error::@tanstack/history install drift: package.json pins '$EXPECTED', node_modules has '$INSTALLED'. See GHSA-rmmr-r34h-pfm5."
+            exit 1
+          fi
+
       - name: Run JavaScript unit tests
         run: npm run test:unit

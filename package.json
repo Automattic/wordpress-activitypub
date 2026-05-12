@@ -32,6 +32,10 @@
 		"url": "https://github.com/automattic/wordpress-activitypub/issues"
 	},
 	"homepage": "https://github.com/automattic/wordpress-activitypub#readme",
+	"_overrides_comment": "@tanstack/history pinned to 1.161.6 per GHSA-rmmr-r34h-pfm5 (versions 1.161.9 and 1.161.12 contain malware). Remove once TanStack ships a clean version above 1.161.12.",
+	"overrides": {
+		"@tanstack/history": "1.161.6"
+	},
 	"devDependencies": {
 		"@base-ui/react": "^1.4.1",
 		"@playwright/test": "^1.60.0",
