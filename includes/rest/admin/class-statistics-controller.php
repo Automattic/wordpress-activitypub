@@ -10,6 +10,8 @@ namespace Activitypub\Rest\Admin;
 use Activitypub\Collection\Actors;
 use Activitypub\Statistics;
 
+use function Activitypub\user_can_act_as_blog;
+
 /**
  * ActivityPub Statistics_Controller class.
  *
@@ -67,7 +69,7 @@ class Statistics_Controller extends \WP_REST_Controller {
 
 		// Check if user can access stats for this actor.
 		if ( Actors::BLOG_USER_ID === $user_id ) {
-			if ( ! \current_user_can( 'manage_options' ) ) {
+			if ( ! user_can_act_as_blog() ) {
 				return new \WP_Error(
 					'rest_forbidden',
 					\__( 'You do not have permission to view blog stats.', 'activitypub' ),
