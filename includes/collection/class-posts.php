@@ -12,6 +12,7 @@ use Activitypub\Hashtag;
 use Activitypub\Link;
 
 use function Activitypub\get_content_visibility;
+use function Activitypub\user_can_act_as_blog;
 
 /**
  * Posts collection.
@@ -35,29 +36,21 @@ class Posts {
 	 */
 	public static function create( $activity, $user_id, $visibility = null ) {
 		/*
-		 * Resolve the post author. For the blog actor (user_id = 0) fall back to
-		 * the current user so C2S posts get a real byline. The `get_current_user_id()`
-		 * read relies on the REST stack having already authenticated the request:
-		 * `Outbox_Controller::create_item` is gated by `verify_authentication`, which
-		 * calls `OAuth\Server::check_oauth_permission` and ultimately
-		 * `wp_set_current_user( $token->get_user_id() )` before this method runs.
-		 *
-		 * `$post_author = 0` survives only when no current user is loaded — i.e. the
-		 * internal scheduler / WP-Cron paths that legitimately have no actor. The
-		 * cap check below intentionally short-circuits for `post_author = 0`; any
-		 * new caller that can reach this method without a current user MUST stay
-		 * inside that trusted scheduler context.
+		 * Blog actor path (user_id = 0): require the act-as-blog grant.
+		 * `publish_posts` is implicit because the helper defaults to
+		 * `manage_options` (administrators). The cron/CLI path has no current
+		 * user and keeps `post_author = 0`, bypassing this check intentionally.
 		 */
-		$post_author = $user_id > 0 ? $user_id : \get_current_user_id();
-
-		// Verify the resolved author has permission to publish posts.
-		if ( $post_author > 0 && ! \user_can( $post_author, 'publish_posts' ) ) {
+		if ( $user_id <= 0 && \get_current_user_id() > 0 && ! user_can_act_as_blog() ) {
 			return new \WP_Error(
 				'activitypub_forbidden',
 				\__( 'You do not have permission to create posts.', 'activitypub' ),
 				array( 'status' => 403 )
 			);
 		}
+
+		// Resolve the post author. Blog actor falls back to the current user for a real byline.
+		$post_author = $user_id > 0 ? $user_id : \get_current_user_id();
 
 		$object = $activity['object'] ?? array();
 
