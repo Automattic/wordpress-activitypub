@@ -127,6 +127,26 @@ class Test_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test creating a post fails for users without publish_posts capability.
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_forbidden_for_subscriber() {
+		$user_id  = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		$activity = array(
+			'object' => array(
+				'type'    => 'Note',
+				'content' => '<p>Should not be created.</p>',
+			),
+		);
+
+		$result = Posts::create( $activity, $user_id );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_forbidden', $result->get_error_code() );
+	}
+
+	/**
 	 * Test creating a post with blog actor (user_id = 0) and no current user keeps post_author = 0.
 	 *
 	 * Covers the cron/CLI path where no user is loaded.

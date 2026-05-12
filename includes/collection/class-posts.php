@@ -39,17 +39,25 @@ class Posts {
 		$post_author = $user_id > 0 ? $user_id : \get_current_user_id();
 
 		/*
-		 * Blog actor path (user_id = 0): require the act-as-blog grant.
-		 * `publish_posts` is implicit because the helper defaults to
-		 * `manage_options` (administrators). The cron/CLI path has no current
-		 * user and keeps `post_author = 0`, bypassing this check intentionally.
+		 * Authorize the request:
+		 * - Per-user path: require `publish_posts` on the URL-specified user.
+		 * - Blog actor path (post_author falls back to current user): require
+		 *   the act-as-blog grant. `publish_posts` is implicit because the
+		 *   helper defaults to `manage_options` (administrators).
+		 * - Cron/CLI path keeps `post_author = 0` and bypasses both checks.
 		 */
-		if ( $user_id <= 0 && $post_author > 0 && ! user_can_act_as_blog() ) {
-			return new \WP_Error(
-				'activitypub_forbidden',
-				\__( 'You do not have permission to create posts.', 'activitypub' ),
-				array( 'status' => 403 )
-			);
+		if ( $post_author > 0 ) {
+			$authorized = $post_author === (int) $user_id
+				? \user_can( $user_id, 'publish_posts' )
+				: user_can_act_as_blog();
+
+			if ( ! $authorized ) {
+				return new \WP_Error(
+					'activitypub_forbidden',
+					\__( 'You do not have permission to create posts.', 'activitypub' ),
+					array( 'status' => 403 )
+				);
+			}
 		}
 
 		$object = $activity['object'] ?? array();
