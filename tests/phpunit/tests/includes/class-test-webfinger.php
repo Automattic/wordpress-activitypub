@@ -691,6 +691,7 @@ class Test_Webfinger extends \WP_UnitTestCase {
 		return array(
 			'plain acct'          => array( 'user@example.com' ),
 			'leading at'          => array( '@user@example.com' ),
+			'acct uri'            => array( 'acct:user@example.com' ),
 			'multi-segment host'  => array( 'user@subdomain.example.com' ),
 			'numeric local part'  => array( 'user42@example.com' ),
 			'dots in local part'  => array( 'first.last@example.com' ),
@@ -721,7 +722,6 @@ class Test_Webfinger extends \WP_UnitTestCase {
 			'empty string'   => array( '' ),
 			'plain word'     => array( 'user' ),
 			'url'            => array( 'https://example.com/users/user' ),
-			'acct uri'       => array( 'acct:user@example.com' ),
 			'mailto uri'     => array( 'mailto:user@example.com' ),
 			'host only'      => array( '@example.com' ),
 			'no tld'         => array( 'user@host' ),

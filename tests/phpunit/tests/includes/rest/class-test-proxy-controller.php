@@ -234,6 +234,67 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that proxy accepts an `acct:` URI and resolves it via WebFinger.
+	 *
+	 * @covers ::validate_url
+	 * @covers ::sanitize_url
+	 * @covers ::create_item
+	 */
+	public function test_successful_actor_fetch_by_acct_uri() {
+		$this->mock_oauth_auth();
+
+		$actor_data = array(
+			'@context'          => 'https://www.w3.org/ns/activitystreams',
+			'type'              => 'Person',
+			'id'                => 'https://example.com/users/test',
+			'inbox'             => 'https://example.com/users/test/inbox',
+			'preferredUsername' => 'test',
+			'name'              => 'Test User',
+		);
+
+		$filter = function ( $preempt, $args, $url ) use ( $actor_data ) {
+			if ( false !== \strpos( $url, '/.well-known/webfinger' ) ) {
+				return array(
+					'response' => array( 'code' => 200 ),
+					'body'     => \wp_json_encode(
+						array(
+							'subject' => 'acct:test@example.com',
+							'links'   => array(
+								array(
+									'rel'  => 'self',
+									'type' => 'application/activity+json',
+									'href' => $actor_data['id'],
+								),
+							),
+						)
+					),
+					'headers'  => array( 'content-type' => 'application/jrd+json' ),
+				);
+			}
+
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode( $actor_data ),
+				'headers'  => array( 'content-type' => 'application/activity+json' ),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => 'acct:test@example.com' ) );
+
+		$response = $this->server->dispatch( $request );
+
+		\remove_filter( 'pre_http_request', $filter, 10 );
+		$this->unmock_oauth_auth();
+
+		$this->assertEquals( 200, $response->get_status(), \wp_json_encode( $response->get_data() ) );
+		$data = $response->get_data();
+		$this->assertEquals( 'Person', $data['type'] );
+		$this->assertEquals( 'https://example.com/users/test', $data['id'] );
+	}
+
+	/**
 	 * Test that proxy accepts a WebFinger handle with leading `@`.
 	 *
 	 * @covers ::validate_url

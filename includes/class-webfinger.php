@@ -22,13 +22,13 @@ class Webfinger {
 	/**
 	 * Check whether a value looks like an `acct` identifier.
 	 *
-	 * Matches a Mastodon-style `user@host` string, optionally prefixed with
-	 * a single `@` (e.g. `user@example.com` or `@user@example.com`). The
-	 * pattern is `ACTIVITYPUB_USERNAME_REGEXP`.
+	 * Accepts any of:
 	 *
-	 * The `acct:` URI scheme form is NOT accepted by this check; callers
-	 * that need to support it should strip the prefix first
-	 * (e.g. via {@see Sanitize::webfinger()}).
+	 * - `user@host` — bare WebFinger handle.
+	 * - `@user@host` — Mastodon display form with a leading `@`.
+	 * - `acct:user@host` — full RFC 7565 URI form.
+	 *
+	 * The host/local-part pattern follows `ACTIVITYPUB_USERNAME_REGEXP`.
 	 *
 	 * @since unreleased
 	 *
@@ -40,7 +40,7 @@ class Webfinger {
 			return false;
 		}
 
-		return (bool) \preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $value );
+		return (bool) \preg_match( '/^(?:acct:)?@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $value );
 	}
 
 	/**
