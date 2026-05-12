@@ -192,6 +192,32 @@ class Test_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test the blog actor path rejects a current user without `publish_posts`.
+	 *
+	 * Defense-in-depth: even if `verify_owner` lets a filter-granted user reach
+	 * `Posts::create` for the blog actor, the resolved author must still hold
+	 * `publish_posts`. Contributors do not.
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_with_blog_actor_forbidden_for_contributor() {
+		$user_id = self::factory()->user->create( array( 'role' => 'contributor' ) );
+		\wp_set_current_user( $user_id );
+
+		$activity = array(
+			'object' => array(
+				'type'    => 'Note',
+				'content' => '<p>Should not be created.</p>',
+			),
+		);
+
+		$result = Posts::create( $activity, 0 );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_forbidden', $result->get_error_code() );
+	}
+
+	/**
 	 * Test content is processed through prepare_content pipeline.
 	 *
 	 * @covers ::create

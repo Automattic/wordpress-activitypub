@@ -34,8 +34,15 @@ class Posts {
 	 * @return \WP_Post|\WP_Error The created post on success, WP_Error on failure.
 	 */
 	public static function create( $activity, $user_id, $visibility = null ) {
-		// Verify the user has permission to create posts.
-		if ( $user_id > 0 && ! \user_can( $user_id, 'publish_posts' ) ) {
+		/*
+		 * Resolve the post author. For the blog actor (user_id = 0) fall back to
+		 * the current user so C2S posts get a real byline; the cron/CLI paths
+		 * have no current user and keep `post_author = 0`.
+		 */
+		$post_author = $user_id > 0 ? $user_id : \get_current_user_id();
+
+		// Verify the resolved author has permission to publish posts.
+		if ( $post_author > 0 && ! \user_can( $post_author, 'publish_posts' ) ) {
 			return new \WP_Error(
 				'activitypub_forbidden',
 				\__( 'You do not have permission to create posts.', 'activitypub' ),
@@ -63,9 +70,6 @@ class Posts {
 		if ( null === $visibility ) {
 			$visibility = get_content_visibility( $activity );
 		}
-
-		// Fall back to the current user for the blog actor so C2S posts get a real byline.
-		$post_author = $user_id > 0 ? $user_id : \get_current_user_id();
 
 		$post_data = array(
 			'post_author'  => $post_author,
