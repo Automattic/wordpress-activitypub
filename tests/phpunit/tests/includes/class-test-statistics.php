@@ -71,7 +71,9 @@ class Test_Statistics extends \WP_UnitTestCase {
 		);
 
 		try {
-			$result = Statistics::backfill_historical_stats( 12, $user_index );
+			// Single-month batch so the returned `year` is exactly the derived
+			// earliest year, not the year-after-batch.
+			$result = Statistics::backfill_historical_stats( 1, $user_index );
 		} finally {
 			\restore_error_handler();
 		}
@@ -83,10 +85,15 @@ class Test_Statistics extends \WP_UnitTestCase {
 			$result['user_index'],
 			'User should not be skipped — fallback to `post_date` must yield a valid earliest year.'
 		);
-		$this->assertGreaterThan(
-			0,
+		$this->assertSame(
+			2024,
 			$result['year'],
-			'A valid earliest year must be derived from `post_date` when `post_date_gmt` is zero-dated.'
+			'Earliest year must come from `post_date` (2024-06-15), not a coerced epoch / null.'
+		);
+		$this->assertSame(
+			2,
+			$result['month'],
+			'After one batched month starting at January, the cursor should advance to February.'
 		);
 	}
 }
