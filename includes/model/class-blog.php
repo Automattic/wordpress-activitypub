@@ -426,6 +426,7 @@ class Blog extends Actor {
 			'oauthRegistrationEndpoint'  => get_rest_url_by_path( 'oauth/clients' ),
 			'proxyUrl'                   => get_rest_url_by_path( 'proxy' ),
 			'proxyEventStream'           => get_rest_url_by_path( 'proxy/stream' ),
+			'uploadMedia'                => get_rest_url_by_path( sprintf( 'actors/%d/uploadMedia', $this->get__id() ) ),
 		);
 	}
 

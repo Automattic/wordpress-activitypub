@@ -359,4 +359,34 @@ class Test_Media_Controller extends Test_REST_Controller_Testcase {
 		$this->assertEquals( 400, $response->get_status() );
 		$this->assertEquals( 'activitypub_invalid_object', $response->get_data()['code'] );
 	}
+
+	/**
+	 * Test that the User actor advertises uploadMedia in endpoints.
+	 */
+	public function test_user_actor_advertises_upload_media_endpoint() {
+		$user      = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+		$endpoints = $user->get_endpoints();
+
+		$this->assertArrayHasKey( 'uploadMedia', $endpoints );
+		$this->assertStringContainsString(
+			sprintf( '/activitypub/1.0/actors/%d/uploadMedia', self::$user_id ),
+			$endpoints['uploadMedia']
+		);
+	}
+
+	/**
+	 * Test that the Blog actor advertises uploadMedia in endpoints.
+	 */
+	public function test_blog_actor_advertises_upload_media_endpoint() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		$blog = \Activitypub\Collection\Actors::get_by_id( \Activitypub\Collection\Actors::BLOG_USER_ID );
+		\delete_option( 'activitypub_actor_mode' );
+		$endpoints = $blog->get_endpoints();
+
+		$this->assertArrayHasKey( 'uploadMedia', $endpoints );
+		$this->assertStringContainsString(
+			'/activitypub/1.0/actors/0/uploadMedia',
+			$endpoints['uploadMedia']
+		);
+	}
 }
