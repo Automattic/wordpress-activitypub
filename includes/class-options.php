@@ -730,6 +730,27 @@ class Options {
 	}
 
 	/**
+	 * Whether the distribution mode is locked to a valid preset by the
+	 * `ACTIVITYPUB_DISTRIBUTION_MODE` constant.
+	 *
+	 * Returns true only when the constant is set to a key recognized by
+	 * `get_distribution_preset_values()`. Invalid constant values fall back
+	 * to `'default'` at runtime (see `resolve_distribution_mode()`) but the
+	 * UI stays visible so admins can spot the misconfiguration.
+	 *
+	 * @since unreleased
+	 *
+	 * @return bool True when the constant pins the mode to a valid preset.
+	 */
+	public static function is_distribution_mode_locked() {
+		if ( false === ACTIVITYPUB_DISTRIBUTION_MODE ) {
+			return false;
+		}
+
+		return \in_array( ACTIVITYPUB_DISTRIBUTION_MODE, \array_keys( self::get_distribution_preset_values() ), true );
+	}
+
+	/**
 	 * Resolve the distribution mode against the wp-config constant.
 	 *
 	 * Extracted from `pre_option_activitypub_distribution_mode()` so the

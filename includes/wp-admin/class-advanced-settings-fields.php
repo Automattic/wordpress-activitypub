@@ -32,7 +32,7 @@ class Advanced_Settings_Fields {
 			'activitypub_advanced_settings'
 		);
 
-		if ( false === ACTIVITYPUB_DISTRIBUTION_MODE ) {
+		if ( ! Options::is_distribution_mode_locked() ) {
 			\add_settings_field(
 				'activitypub_distribution_mode',
 				\__( 'Distribution Mode', 'activitypub' ),
@@ -41,13 +41,17 @@ class Advanced_Settings_Fields {
 				'activitypub_advanced_settings'
 			);
 
-			\wp_enqueue_script(
-				'activitypub-distribution-mode',
-				\plugins_url( 'assets/js/activitypub-distribution-mode.js', ACTIVITYPUB_PLUGIN_FILE ),
-				array(),
-				ACTIVITYPUB_PLUGIN_VERSION,
-				true
-			);
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$current_tab = isset( $_GET['tab'] ) ? \sanitize_key( \wp_unslash( $_GET['tab'] ) ) : '';
+			if ( 'advanced' === $current_tab ) {
+				\wp_enqueue_script(
+					'activitypub-distribution-mode',
+					\plugins_url( 'assets/js/activitypub-distribution-mode.js', ACTIVITYPUB_PLUGIN_FILE ),
+					array(),
+					ACTIVITYPUB_PLUGIN_VERSION,
+					true
+				);
+			}
 		}
 
 		if ( ! defined( 'ACTIVITYPUB_SEND_VARY_HEADER' ) ) {
@@ -347,6 +351,7 @@ class Advanced_Settings_Fields {
 				</p>
 				<?php
 			}
+
 			/*
 			 * The custom fields are rendered visible so they remain usable when
 			 * JavaScript is disabled. The accompanying script collapses them on
