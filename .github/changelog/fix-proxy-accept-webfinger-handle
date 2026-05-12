@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Allow third-party apps connected to your site to look up Fediverse users by their handle (like @user@example.com).

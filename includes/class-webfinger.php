@@ -20,6 +20,30 @@ use Activitypub\Collection\Remote_Actors;
  */
 class Webfinger {
 	/**
+	 * Check whether a value looks like an `acct` identifier.
+	 *
+	 * Accepts any of:
+	 *
+	 * - `user@host` — bare WebFinger handle.
+	 * - `@user@host` — Mastodon display form with a leading `@`.
+	 * - `acct:user@host` — full RFC 7565 URI form.
+	 *
+	 * The host/local-part pattern follows `ACTIVITYPUB_USERNAME_REGEXP`.
+	 *
+	 * @since unreleased
+	 *
+	 * @param mixed $value The candidate value.
+	 * @return bool True if the value matches the acct identifier pattern.
+	 */
+	public static function is_acct( $value ) {
+		if ( ! \is_string( $value ) || '' === $value ) {
+			return false;
+		}
+
+		return (bool) \preg_match( '/^(?:acct:)?@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $value );
+	}
+
+	/**
 	 * Returns a users WebFinger "resource".
 	 *
 	 * @param int $user_id The WordPress user id.
