@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Set a real author on posts created via the blog actor outbox so they no longer appear without a byline.

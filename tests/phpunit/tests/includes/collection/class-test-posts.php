@@ -147,11 +147,15 @@ class Test_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test creating a post with blog actor (user_id = 0) skips permission check.
+	 * Test creating a post with blog actor (user_id = 0) and no current user keeps post_author = 0.
+	 *
+	 * Covers the cron/CLI path where no user is loaded.
 	 *
 	 * @covers ::create
 	 */
-	public function test_create_with_blog_actor() {
+	public function test_create_with_blog_actor_no_current_user() {
+		\wp_set_current_user( 0 );
+
 		$activity = array(
 			'object' => array(
 				'type'    => 'Note',
@@ -163,6 +167,28 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		$this->assertInstanceOf( '\WP_Post', $post );
 		$this->assertEquals( 0, (int) $post->post_author );
+	}
+
+	/**
+	 * Test creating a post with blog actor (user_id = 0) falls back to the current user for the byline.
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_with_blog_actor_uses_current_user() {
+		$user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		\wp_set_current_user( $user_id );
+
+		$activity = array(
+			'object' => array(
+				'type'    => 'Note',
+				'content' => '<p>Blog actor post from authenticated request.</p>',
+			),
+		);
+
+		$post = Posts::create( $activity, 0 );
+
+		$this->assertInstanceOf( '\WP_Post', $post );
+		$this->assertEquals( $user_id, (int) $post->post_author );
 	}
 
 	/**

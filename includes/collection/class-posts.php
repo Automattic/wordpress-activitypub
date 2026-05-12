@@ -64,8 +64,11 @@ class Posts {
 			$visibility = get_content_visibility( $activity );
 		}
 
+		// Fall back to the current user for the blog actor so C2S posts get a real byline.
+		$post_author = $user_id > 0 ? $user_id : \get_current_user_id();
+
 		$post_data = array(
-			'post_author'  => $user_id > 0 ? $user_id : 0,
+			'post_author'  => $post_author,
 			'post_title'   => $title,
 			'post_content' => $content,
 			'post_excerpt' => $summary,
