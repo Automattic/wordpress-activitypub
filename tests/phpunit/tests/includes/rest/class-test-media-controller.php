@@ -243,7 +243,8 @@ class Test_Media_Controller extends Test_REST_Controller_Testcase {
 
 		$data = $response->get_data();
 		$this->assertEquals( 'Image', $data['type'] );
-		$this->assertEquals( 'image/png', $data['mediaType'] );
+		// Uploaded PNGs are optimized to WebP when the server supports it; fall back to PNG otherwise.
+		$this->assertContains( $data['mediaType'], array( 'image/webp', 'image/png' ) );
 		$this->assertEquals( 'Test pixel', $data['name'] );
 		$this->assertSame( $headers['Location'], $data['id'] );
 

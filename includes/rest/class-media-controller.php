@@ -7,6 +7,7 @@
 
 namespace Activitypub\Rest;
 
+use Activitypub\Attachments;
 use Activitypub\Collection\Actors;
 use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Server as OAuth_Server;
@@ -229,6 +230,14 @@ class Media_Controller extends \WP_REST_Controller {
 				\__( 'Unsupported media type.', 'activitypub' ),
 				array( 'status' => 415 )
 			);
+		}
+
+		// Apply the same image-optimization the import path uses
+		// (resize + WebP conversion when supported).
+		$optimized = Attachments::optimize_image( $uploaded['file'], Attachments::MAX_IMAGE_DIMENSION );
+		if ( $optimized !== $uploaded['file'] ) {
+			$uploaded['file'] = $optimized;
+			$uploaded['type'] = \wp_check_filetype( $optimized )['type'] ?? $uploaded['type'];
 		}
 
 		// Insert the file as a media library attachment.
