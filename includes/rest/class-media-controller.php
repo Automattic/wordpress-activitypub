@@ -142,17 +142,118 @@ class Media_Controller extends \WP_REST_Controller {
 	/**
 	 * POST /actors/{user_id}/uploadMedia — accept a multipart upload.
 	 *
-	 * Implemented in Task 4.
+	 * Accepts the W3C-wiki shape (`object` JSON + `file` binary) and the
+	 * Pleroma shape (just `file`). Always returns the bare media object;
+	 * never auto-wraps in a Create. Per the wiki spec the endpoint is not
+	 * the outbox, so the client is responsible for any follow-up publish.
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return \WP_REST_Response|\WP_Error Response or error.
 	 */
-	public function upload_item( $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		return new \WP_Error(
-			'activitypub_not_implemented',
-			\__( 'Not implemented yet.', 'activitypub' ),
-			array( 'status' => 501 )
+	public function upload_item( $request ) {
+		$files = $request->get_file_params();
+		$file  = isset( $files['file'] ) ? $files['file'] : null;
+
+		if ( empty( $file ) || empty( $file['tmp_name'] ) ) {
+			return new \WP_Error(
+				'activitypub_missing_file',
+				\__( 'A "file" part is required.', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		// Optional `object` part: a JSON-LD shell that supplies name (alt text), etc.
+		$shell      = array();
+		$raw_object = $request->get_param( 'object' );
+		if ( ! empty( $raw_object ) ) {
+			$decoded = \json_decode( $raw_object, true );
+			if ( ! \is_array( $decoded ) ) {
+				return new \WP_Error(
+					'activitypub_invalid_object',
+					\__( 'The "object" part must be valid JSON.', 'activitypub' ),
+					array( 'status' => 400 )
+				);
+			}
+			$shell = $decoded;
+		}
+
+		// Run through wp_handle_upload to apply WP's MIME validation and upload_mimes filter.
+		if ( ! \function_exists( 'wp_handle_upload' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+
+		$overrides = array(
+			'test_form' => false,
+			'action'    => 'activitypub_upload_media',
 		);
+
+		$uploaded = \wp_handle_upload( $file, $overrides );
+
+		if ( isset( $uploaded['error'] ) ) {
+			return new \WP_Error(
+				'activitypub_upload_failed',
+				$uploaded['error'],
+				array( 'status' => 400 )
+			);
+		}
+
+		$top_level = \strtok( (string) $uploaded['type'], '/' );
+		if ( ! \in_array( $top_level, self::ALLOWED_TOP_LEVEL_TYPES, true ) ) {
+			\wp_delete_file( $uploaded['file'] );
+			return new \WP_Error(
+				'activitypub_unsupported_media_type',
+				\__( 'Unsupported media type.', 'activitypub' ),
+				array( 'status' => 415 )
+			);
+		}
+
+		// Insert the file as a media library attachment.
+		$user_id    = (int) $request->get_param( 'user_id' );
+		$author     = $user_id > 0 ? $user_id : \get_current_user_id();
+		$title      = isset( $shell['name'] ) ? \sanitize_text_field( $shell['name'] ) : \wp_basename( $uploaded['file'] );
+		$attachment = array(
+			'post_mime_type' => $uploaded['type'],
+			'post_title'     => $title,
+			'post_content'   => '',
+			'post_status'    => 'inherit',
+			'post_author'    => $author,
+		);
+
+		$attachment_id = \wp_insert_attachment( $attachment, $uploaded['file'] );
+
+		if ( \is_wp_error( $attachment_id ) || 0 === $attachment_id ) {
+			\wp_delete_file( $uploaded['file'] );
+			return new \WP_Error(
+				'activitypub_attachment_insert_failed',
+				\__( 'Failed to register uploaded file as a media library attachment.', 'activitypub' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		// Generate metadata (dimensions, intermediate sizes, etc.).
+		if ( ! \function_exists( 'wp_generate_attachment_metadata' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/image.php';
+		}
+		\wp_update_attachment_metadata(
+			$attachment_id,
+			\wp_generate_attachment_metadata( $attachment_id, $uploaded['file'] )
+		);
+
+		// If the shell carries a name (typically alt text for images), store it.
+		if ( ! empty( $shell['name'] ) && 'image' === $top_level ) {
+			\update_post_meta( $attachment_id, '_wp_attachment_image_alt', \sanitize_text_field( $shell['name'] ) );
+		}
+
+		$object = $this->build_attachment_object( $attachment_id );
+
+		if ( \is_wp_error( $object ) ) {
+			return $object;
+		}
+
+		$response = new \WP_REST_Response( $object, 201 );
+		$response->header( 'Location', $object['id'] );
+		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
+		return $response;
 	}
 
 	/**

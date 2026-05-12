@@ -183,4 +183,108 @@ class Test_Media_Controller extends Test_REST_Controller_Testcase {
 
 		$this->assertEquals( 415, $response->get_status() );
 	}
+
+	/**
+	 * Build a 1x1 PNG and write it to a temp file. Returns the path.
+	 *
+	 * @return string Path to the temp PNG.
+	 */
+	private function create_png_temp_file() {
+		// 1x1 transparent PNG.
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Test data, not obfuscation.
+		$png = base64_decode( 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=' );
+		$tmp = \wp_tempnam( 'media-upload-test.png' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test file creation.
+		\file_put_contents( $tmp, $png );
+		return $tmp;
+	}
+
+	/**
+	 * Test POST /actors/{id}/uploadMedia with file + object parts.
+	 *
+	 * @covers ::upload_item
+	 */
+	public function test_upload_item_creates_attachment_and_returns_location() {
+		$tmp     = $this->create_png_temp_file();
+		$request = new \WP_REST_Request( 'POST', sprintf( '/%s/actors/%d/uploadMedia', ACTIVITYPUB_REST_NAMESPACE, self::$user_id ) );
+		\wp_set_current_user( self::$user_id );
+
+		$request->set_file_params(
+			array(
+				'file' => array(
+					'name'     => 'pixel.png',
+					'type'     => 'image/png',
+					'tmp_name' => $tmp,
+					'error'    => 0,
+					'size'     => \filesize( $tmp ),
+				),
+			)
+		);
+		$request->set_body_params(
+			array(
+				'object' => \wp_json_encode(
+					array(
+						'type' => 'Image',
+						'name' => 'Test pixel',
+					)
+				),
+			)
+		);
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 201, $response->get_status(), \wp_json_encode( $response->get_data() ) );
+
+		$headers = $response->get_headers();
+		$this->assertArrayHasKey( 'Location', $headers );
+		$this->assertStringContainsString( '/activitypub/1.0/media/', $headers['Location'] );
+
+		$data = $response->get_data();
+		$this->assertEquals( 'Image', $data['type'] );
+		$this->assertEquals( 'image/png', $data['mediaType'] );
+		$this->assertEquals( 'Test pixel', $data['name'] );
+		$this->assertSame( $headers['Location'], $data['id'] );
+	}
+
+	/**
+	 * Test POST /uploadMedia with no file returns 400.
+	 *
+	 * @covers ::upload_item
+	 */
+	public function test_upload_item_missing_file() {
+		\wp_set_current_user( self::$user_id );
+		$request  = new \WP_REST_Request( 'POST', sprintf( '/%s/actors/%d/uploadMedia', ACTIVITYPUB_REST_NAMESPACE, self::$user_id ) );
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 400, $response->get_status() );
+		$this->assertEquals( 'activitypub_missing_file', $response->get_data()['code'] );
+	}
+
+	/**
+	 * Test POST /uploadMedia with malformed object JSON returns 400.
+	 *
+	 * @covers ::upload_item
+	 */
+	public function test_upload_item_malformed_object_json() {
+		$tmp = $this->create_png_temp_file();
+		\wp_set_current_user( self::$user_id );
+
+		$request = new \WP_REST_Request( 'POST', sprintf( '/%s/actors/%d/uploadMedia', ACTIVITYPUB_REST_NAMESPACE, self::$user_id ) );
+		$request->set_file_params(
+			array(
+				'file' => array(
+					'name'     => 'pixel.png',
+					'type'     => 'image/png',
+					'tmp_name' => $tmp,
+					'error'    => 0,
+					'size'     => \filesize( $tmp ),
+				),
+			)
+		);
+		$request->set_body_params( array( 'object' => '{not json' ) );
+
+		$response = \rest_get_server()->dispatch( $request );
+		$this->assertEquals( 400, $response->get_status() );
+		$this->assertEquals( 'activitypub_invalid_object', $response->get_data()['code'] );
+	}
 }
