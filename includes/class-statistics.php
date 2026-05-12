@@ -921,13 +921,15 @@ class Statistics {
 		// phpcs:enable
 
 		if ( ! $earliest_date ) {
-			// No ActivityPub data, check outbox instead.
+			// No ActivityPub data, check outbox instead. Outbox items are never
+			// updated after insertion, so `post_modified_gmt` mirrors the
+			// creation time and is more resilient than `post_date_gmt` to the
+			// rare zero-date corruption seen on some production sites.
 			$outbox_args = array(
 				'post_type'      => Outbox::POST_TYPE,
 				'posts_per_page' => 1,
 				'orderby'        => 'date',
 				'order'          => 'ASC',
-				'fields'         => 'ids',
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query'     => array(
 					array(
@@ -942,32 +944,14 @@ class Statistics {
 			}
 
 			$earliest_outbox = \get_posts( $outbox_args );
-
-			if ( empty( $earliest_outbox ) ) {
-				return null;
-			}
-
-			$earliest_post = \get_post( $earliest_outbox[0] );
-
-			/*
-			 * `get_post()` returns null if the row was deleted between the
-			 * `get_posts()` lookup and this call (cron race / cache miss).
-			 * `post_date_gmt` can also be empty or the MySQL zero-date — both
-			 * would fall through to `strtotime( false ) === false` below and
-			 * silently produce 1970 as the earliest year. Bail in all three
-			 * cases.
-			 */
-			if (
-				! $earliest_post
-				|| empty( $earliest_post->post_date_gmt )
-				|| '0000-00-00 00:00:00' === $earliest_post->post_date_gmt
-			) {
-				return null;
-			}
-
-			$earliest_date = $earliest_post->post_date_gmt;
+			$earliest_date   = $earliest_outbox ? $earliest_outbox[0]->post_modified_gmt : '';
 		}
 
-		return (int) \gmdate( 'Y', \strtotime( $earliest_date ) );
+		$timestamp = \strtotime( (string) $earliest_date );
+		if ( $timestamp <= 0 ) {
+			return null;
+		}
+
+		return (int) \gmdate( 'Y', $timestamp );
 	}
 }
