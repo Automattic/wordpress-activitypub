@@ -38,6 +38,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify @tanstack/history pin (GHSA-rmmr-r34h-pfm5)
+        run: |
+          INSTALLED=$(node -p "require('./node_modules/@tanstack/history/package.json').version")
+          if [ "$INSTALLED" != "1.161.6" ]; then
+            echo "::error::@tanstack/history must be pinned to 1.161.6 (got $INSTALLED). See GHSA-rmmr-r34h-pfm5."
+            exit 1
+          fi
+
       - name: Restore Playwright browsers from cache
         id: playwright-cache
         uses: actions/cache@v5
