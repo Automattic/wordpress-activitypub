@@ -31,6 +31,33 @@ function get_object_id( $wp_object ) {
 }
 
 /**
+ * Return the canonical ActivityPub URL for a WordPress attachment.
+ *
+ * The URL points at the plugin's media REST endpoint, which serves the
+ * AP-JSON representation of the attachment. Used as the `id` of an
+ * uploaded media object and as the value of the `Location` header on
+ * a successful `uploadMedia` response.
+ *
+ * @since unreleased
+ *
+ * @param int $attachment_id The WordPress attachment ID.
+ * @return string|false The canonical URL, or false if $attachment_id is not an attachment.
+ */
+function get_attachment_ap_id( $attachment_id ) {
+	$attachment_id = (int) $attachment_id;
+
+	if ( $attachment_id <= 0 ) {
+		return false;
+	}
+
+	if ( 'attachment' !== \get_post_type( $attachment_id ) ) {
+		return false;
+	}
+
+	return get_rest_url_by_path( 'media/' . $attachment_id );
+}
+
+/**
  * Convert a string from camelCase to snake_case.
  *
  * @param string $input The string to convert.
