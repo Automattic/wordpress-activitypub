@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Block a recently compromised JavaScript dependency from being installed during builds.
