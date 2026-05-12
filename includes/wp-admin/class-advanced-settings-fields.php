@@ -315,8 +315,7 @@ class Advanced_Settings_Fields {
 	 * @since unreleased
 	 */
 	public static function render_distribution_mode_field() {
-		$mode      = \get_option( 'activitypub_distribution_mode', 'default' );
-		$is_custom = 'custom' === $mode;
+		$mode = \get_option( 'activitypub_distribution_mode', 'default' );
 
 		// Use centralized presets and add the custom option for the UI.
 		$modes           = Options::get_distribution_modes();
@@ -348,8 +347,14 @@ class Advanced_Settings_Fields {
 				</p>
 				<?php
 			}
+			/*
+			 * The custom fields are rendered visible so they remain usable when
+			 * JavaScript is disabled. The accompanying script collapses them on
+			 * page load when the active mode is not "custom" and toggles them
+			 * as the radio changes.
+			 */
 			?>
-			<ul id="activitypub-custom-distribution-fields" <?php echo $is_custom ? '' : 'style="display:none;"'; ?>>
+			<ul id="activitypub-custom-distribution-fields">
 				<li>
 					<label>
 						<?php \esc_html_e( 'Batch size:', 'activitypub' ); ?>

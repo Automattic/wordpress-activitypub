@@ -813,12 +813,27 @@ class Options {
 	public static function get_distribution_modes() {
 		$modes = self::get_distribution_preset_values();
 
-		$modes['default']['label']        = \__( 'Default', 'activitypub' );
-		$modes['default']['description']  = \__( 'Deliver activities as fast as possible (<code>100</code> per batch, <code>15s</code> pause).', 'activitypub' );
+		$modes['default']['label']       = \__( 'Default', 'activitypub' );
+		$modes['default']['description'] = \sprintf(
+			/* translators: 1: batch size, 2: pause in seconds */
+			\__( 'Deliver activities as fast as possible (<code>%1$d</code> per batch, <code>%2$ds</code> pause).', 'activitypub' ),
+			$modes['default']['batch_size'],
+			$modes['default']['pause']
+		);
 		$modes['balanced']['label']       = \__( 'Balanced', 'activitypub' );
-		$modes['balanced']['description'] = \__( 'Moderate pace with reasonable pauses between batches (<code>50</code> per batch, <code>30s</code> pause).', 'activitypub' );
-		$modes['eco']['label']            = \__( 'Eco Mode', 'activitypub' );
-		$modes['eco']['description']      = \__( 'Gentle on server resources, ideal for shared hosting (<code>20</code> per batch, <code>30s</code> pause).', 'activitypub' );
+		$modes['balanced']['description'] = \sprintf(
+			/* translators: 1: batch size, 2: pause in seconds */
+			\__( 'Moderate pace with reasonable pauses between batches (<code>%1$d</code> per batch, <code>%2$ds</code> pause).', 'activitypub' ),
+			$modes['balanced']['batch_size'],
+			$modes['balanced']['pause']
+		);
+		$modes['eco']['label']       = \__( 'Eco Mode', 'activitypub' );
+		$modes['eco']['description'] = \sprintf(
+			/* translators: 1: batch size, 2: pause in seconds */
+			\__( 'Gentle on server resources, ideal for shared hosting (<code>%1$d</code> per batch, <code>%2$ds</code> pause).', 'activitypub' ),
+			$modes['eco']['batch_size'],
+			$modes['eco']['pause']
+		);
 
 		return $modes;
 	}
