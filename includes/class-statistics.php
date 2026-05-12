@@ -947,12 +947,15 @@ class Statistics {
 			 * is empty or the MySQL zero-date (rare corruption seen on some production
 			 * sites). The zero-date is a truthy string, so it has to be detected
 			 * explicitly rather than via `?:`.
+			 *
+			 * Convert the local `post_date` fallback to GMT first so the later
+			 * `strtotime()` + `gmdate()` flow consistently derives the year in UTC.
 			 */
 			$earliest_date = '';
 			if ( $earliest_outbox ) {
 				$gmt           = $earliest_outbox[0]->post_date_gmt;
 				$earliest_date = ( empty( $gmt ) || '0000-00-00 00:00:00' === $gmt )
-					? $earliest_outbox[0]->post_date
+					? \get_gmt_from_date( $earliest_outbox[0]->post_date )
 					: $gmt;
 			}
 		}
