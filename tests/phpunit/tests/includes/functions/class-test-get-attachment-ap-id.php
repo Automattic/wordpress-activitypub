@@ -48,4 +48,28 @@ class Test_Get_Attachment_AP_ID extends \WP_UnitTestCase {
 		$post_id = self::factory()->post->create();
 		$this->assertFalse( \Activitypub\get_attachment_ap_id( $post_id ) );
 	}
+
+	/**
+	 * Test that non-positive IDs return false.
+	 *
+	 * @dataProvider data_non_positive_ids
+	 *
+	 * @param int $invalid_id The non-positive ID under test.
+	 */
+	public function test_returns_false_for_non_positive_id( $invalid_id ) {
+		$this->assertFalse( \Activitypub\get_attachment_ap_id( $invalid_id ) );
+	}
+
+	/**
+	 * Data provider for non-positive IDs.
+	 *
+	 * @return array
+	 */
+	public function data_non_positive_ids() {
+		return array(
+			'zero'           => array( 0 ),
+			'negative one'   => array( -1 ),
+			'negative large' => array( -999 ),
+		);
+	}
 }
