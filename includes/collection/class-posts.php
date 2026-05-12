@@ -12,6 +12,7 @@ use Activitypub\Hashtag;
 use Activitypub\Link;
 
 use function Activitypub\get_content_visibility;
+use function Activitypub\user_can_act_as_blog;
 
 /**
  * Posts collection.
@@ -34,13 +35,29 @@ class Posts {
 	 * @return \WP_Post|\WP_Error The created post on success, WP_Error on failure.
 	 */
 	public static function create( $activity, $user_id, $visibility = null ) {
-		// Verify the user has permission to create posts.
-		if ( $user_id > 0 && ! \user_can( $user_id, 'publish_posts' ) ) {
-			return new \WP_Error(
-				'activitypub_forbidden',
-				\__( 'You do not have permission to create posts.', 'activitypub' ),
-				array( 'status' => 403 )
-			);
+		// Resolve the post author. Blog actor falls back to the current user for a real byline.
+		$post_author = $user_id > 0 ? $user_id : \get_current_user_id();
+
+		/*
+		 * Authorize the request:
+		 * - Per-user path: require `publish_posts` on the URL-specified user.
+		 * - Blog actor path (post_author falls back to current user): require
+		 *   the act-as-blog grant. `publish_posts` is implicit because the
+		 *   helper defaults to `manage_options` (administrators).
+		 * - Cron/CLI path keeps `post_author = 0` and bypasses both checks.
+		 */
+		if ( $post_author > 0 ) {
+			$authorized = $post_author === (int) $user_id
+				? \user_can( $user_id, 'publish_posts' )
+				: user_can_act_as_blog();
+
+			if ( ! $authorized ) {
+				return new \WP_Error(
+					'activitypub_forbidden',
+					\__( 'You do not have permission to create posts.', 'activitypub' ),
+					array( 'status' => 403 )
+				);
+			}
 		}
 
 		$object = $activity['object'] ?? array();
@@ -65,7 +82,7 @@ class Posts {
 		}
 
 		$post_data = array(
-			'post_author'  => $user_id > 0 ? $user_id : 0,
+			'post_author'  => $post_author,
 			'post_title'   => $title,
 			'post_content' => $content,
 			'post_excerpt' => $summary,
