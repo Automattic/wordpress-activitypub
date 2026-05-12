@@ -147,6 +147,8 @@ class Media_Controller extends \WP_REST_Controller {
 	 * never auto-wraps in a Create. Per the wiki spec the endpoint is not
 	 * the outbox, so the client is responsible for any follow-up publish.
 	 *
+	 * @since unreleased
+	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return \WP_REST_Response|\WP_Error Response or error.
 	 */
@@ -192,7 +194,7 @@ class Media_Controller extends \WP_REST_Controller {
 		if ( isset( $uploaded['error'] ) ) {
 			return new \WP_Error(
 				'activitypub_upload_failed',
-				$uploaded['error'],
+				\sanitize_text_field( (string) $uploaded['error'] ),
 				array( 'status' => 400 )
 			);
 		}
@@ -208,7 +210,8 @@ class Media_Controller extends \WP_REST_Controller {
 		}
 
 		// Insert the file as a media library attachment.
-		$user_id    = (int) $request->get_param( 'user_id' );
+		$user_id = (int) $request->get_param( 'user_id' );
+		// For the blog actor (user_id = 0) fall back to the acting user so post_author is never 0.
 		$author     = $user_id > 0 ? $user_id : \get_current_user_id();
 		$title      = isset( $shell['name'] ) ? \sanitize_text_field( $shell['name'] ) : \wp_basename( $uploaded['file'] );
 		$attachment = array(
@@ -247,6 +250,7 @@ class Media_Controller extends \WP_REST_Controller {
 		$object = $this->build_attachment_object( $attachment_id );
 
 		if ( \is_wp_error( $object ) ) {
+			\wp_delete_attachment( $attachment_id, true );
 			return $object;
 		}
 

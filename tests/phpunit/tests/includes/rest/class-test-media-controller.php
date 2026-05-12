@@ -205,9 +205,9 @@ class Test_Media_Controller extends Test_REST_Controller_Testcase {
 	 * @covers ::upload_item
 	 */
 	public function test_upload_item_creates_attachment_and_returns_location() {
-		$tmp     = $this->create_png_temp_file();
-		$request = new \WP_REST_Request( 'POST', sprintf( '/%s/actors/%d/uploadMedia', ACTIVITYPUB_REST_NAMESPACE, self::$user_id ) );
+		$tmp = $this->create_png_temp_file();
 		\wp_set_current_user( self::$user_id );
+		$request = new \WP_REST_Request( 'POST', sprintf( '/%s/actors/%d/uploadMedia', ACTIVITYPUB_REST_NAMESPACE, self::$user_id ) );
 
 		$request->set_file_params(
 			array(
@@ -244,6 +244,13 @@ class Test_Media_Controller extends Test_REST_Controller_Testcase {
 		$this->assertEquals( 'image/png', $data['mediaType'] );
 		$this->assertEquals( 'Test pixel', $data['name'] );
 		$this->assertSame( $headers['Location'], $data['id'] );
+
+		// Parse attachment id out of the Location URL and verify the DB state.
+		\preg_match( '#/media/(\d+)#', $headers['Location'], $matches );
+		$attachment_id = isset( $matches[1] ) ? (int) $matches[1] : 0;
+		$this->assertGreaterThan( 0, $attachment_id );
+		$this->assertEquals( 'attachment', \get_post_type( $attachment_id ) );
+		$this->assertEquals( 'Test pixel', \get_post_meta( $attachment_id, '_wp_attachment_image_alt', true ) );
 	}
 
 	/**
@@ -268,7 +275,6 @@ class Test_Media_Controller extends Test_REST_Controller_Testcase {
 	public function test_upload_item_malformed_object_json() {
 		$tmp = $this->create_png_temp_file();
 		\wp_set_current_user( self::$user_id );
-
 		$request = new \WP_REST_Request( 'POST', sprintf( '/%s/actors/%d/uploadMedia', ACTIVITYPUB_REST_NAMESPACE, self::$user_id ) );
 		$request->set_file_params(
 			array(
