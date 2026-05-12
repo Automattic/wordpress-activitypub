@@ -268,6 +268,34 @@ class Test_Media_Controller extends Test_REST_Controller_Testcase {
 	}
 
 	/**
+	 * Test POST /uploadMedia Pleroma-style: file only, with `description` form field.
+	 *
+	 * @covers ::upload_item
+	 */
+	public function test_upload_item_pleroma_style() {
+		$tmp = $this->create_png_temp_file();
+		\wp_set_current_user( self::$user_id );
+
+		$request = new \WP_REST_Request( 'POST', sprintf( '/%s/actors/%d/uploadMedia', ACTIVITYPUB_REST_NAMESPACE, self::$user_id ) );
+		$request->set_file_params(
+			array(
+				'file' => array(
+					'name'     => 'pixel.png',
+					'type'     => 'image/png',
+					'tmp_name' => $tmp,
+					'error'    => 0,
+					'size'     => \filesize( $tmp ),
+				),
+			)
+		);
+		$request->set_body_params( array( 'description' => 'Pleroma alt text' ) );
+
+		$response = \rest_get_server()->dispatch( $request );
+		$this->assertEquals( 201, $response->get_status() );
+		$this->assertEquals( 'Pleroma alt text', $response->get_data()['name'] );
+	}
+
+	/**
 	 * Test POST /uploadMedia with malformed object JSON returns 400.
 	 *
 	 * @covers ::upload_item

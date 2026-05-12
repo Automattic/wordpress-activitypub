@@ -179,6 +179,14 @@ class Media_Controller extends \WP_REST_Controller {
 			$shell = $decoded;
 		}
 
+		// Pleroma-style: a top-level `description` form field is a synonym for `object.name`.
+		if ( empty( $shell['name'] ) ) {
+			$description = $request->get_param( 'description' );
+			if ( ! empty( $description ) && \is_string( $description ) ) {
+				$shell['name'] = $description;
+			}
+		}
+
 		// Run through wp_handle_upload to apply WP's MIME validation and upload_mimes filter.
 		if ( ! \function_exists( 'wp_handle_upload' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/file.php';
