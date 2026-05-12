@@ -18,16 +18,15 @@ use Activitypub\Statistics;
 class Test_Statistics extends \WP_UnitTestCase {
 
 	/**
-	 * Test that the earliest-outbox lookup ignores a corrupt `post_date_gmt`
-	 * by reading the auto-stamped `post_modified_gmt` instead.
+	 * Test that the earliest-outbox lookup falls back to `post_date` when
+	 * `post_date_gmt` is the MySQL zero-date.
 	 *
-	 * Regression for a production warning where `post_date_gmt` on the
-	 * earliest outbox row was empty/null, dereferenced into a PHP warning,
-	 * and silently produced 1970 as the earliest year.
+	 * Regression for a production warning where dereferencing
+	 * `post_date_gmt` produced a PHP warning and a silent 1970 year.
 	 *
 	 * @covers ::backfill_historical_stats
 	 */
-	public function test_backfill_uses_post_modified_gmt_when_post_date_gmt_corrupt() {
+	public function test_backfill_falls_back_to_post_date_when_gmt_is_corrupt() {
 		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
 		\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
 		self::factory()->post->create( array( 'post_author' => $user_id ) );
@@ -41,7 +40,7 @@ class Test_Statistics extends \WP_UnitTestCase {
 			)
 		);
 
-		// Corrupt `post_date_gmt` after insert; `post_modified_gmt` stays valid.
+		// Corrupt `post_date_gmt` after insert; `post_date` stays valid.
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$wpdb->update(
@@ -53,19 +52,27 @@ class Test_Statistics extends \WP_UnitTestCase {
 		);
 		\clean_post_cache( $outbox_id );
 
+		// Target the regression user explicitly so the assertion isn't sensitive
+		// to other AP-capable users that may already exist in the suite.
+		$user_index = \array_search( $user_id, Statistics::get_active_user_ids(), true );
+		$this->assertNotFalse( $user_index, 'Test user should be in the active-user list.' );
+
 		$errors = array();
 		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler
 		\set_error_handler(
 			static function ( $errno, $errstr ) use ( &$errors ) {
 				$errors[] = $errstr;
+				return true;
 			}
 		);
 
-		$result = Statistics::backfill_historical_stats();
+		try {
+			$result = Statistics::backfill_historical_stats( 12, $user_index );
+		} finally {
+			\restore_error_handler();
+		}
 
-		\restore_error_handler();
-
-		$this->assertEmpty( $errors, 'No warnings should fire when the outbox row has a zero `post_date_gmt`.' );
+		$this->assertEmpty( $errors, 'No warnings should fire when `post_date_gmt` is zero-dated.' );
 		$this->assertIsArray( $result, 'Scheduler should keep going, not crash.' );
 	}
 }

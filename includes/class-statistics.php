@@ -921,12 +921,7 @@ class Statistics {
 		// phpcs:enable
 
 		if ( ! $earliest_date ) {
-			/*
-			 * No ActivityPub data, check outbox instead. Outbox items are never
-			 * updated after insertion, so `post_modified_gmt` mirrors the
-			 * creation time and is more resilient than `post_date_gmt` to the
-			 * rare zero-date corruption seen on some production sites.
-			 */
+			// No ActivityPub data, check outbox instead.
 			$outbox_args = array(
 				'post_type'      => Outbox::POST_TYPE,
 				'posts_per_page' => 1,
@@ -946,7 +941,12 @@ class Statistics {
 			}
 
 			$earliest_outbox = \get_posts( $outbox_args );
-			$earliest_date   = $earliest_outbox ? $earliest_outbox[0]->post_modified_gmt : '';
+
+			// Prefer `post_date_gmt`; fall back to local `post_date` if the GMT field is
+			// empty (rare zero-date corruption seen on some production sites).
+			$earliest_date = $earliest_outbox
+				? ( $earliest_outbox[0]->post_date_gmt ?: $earliest_outbox[0]->post_date )
+				: '';
 		}
 
 		$timestamp = \strtotime( (string) $earliest_date );
