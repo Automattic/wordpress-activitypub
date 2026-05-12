@@ -158,6 +158,11 @@ function user_can_act_as_blog() {
 	 * Defaults to true for users with the `manage_options` capability (administrators).
 	 * Filter to broaden the allow-list, for example to editors on multi-author sites.
 	 *
+	 * Security note: returning a static `true` (e.g. via `__return_true`) grants
+	 * EVERY authenticated user the right to post as, read private outbox items of,
+	 * and view stats for the blog actor. Always inspect the current user inside
+	 * the callback (`current_user_can()`, role, allowlist) before returning `true`.
+	 *
 	 * @since unreleased
 	 *
 	 * @param bool $can_act_as_blog Whether the current user can act as the blog actor.
