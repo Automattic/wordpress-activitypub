@@ -399,21 +399,24 @@ class Test_Media_Controller extends Test_REST_Controller_Testcase {
 		global $wp_rest_server;
 
 		$previous = \get_option( 'activitypub_api', false );
-		\update_option( 'activitypub_api', false );
 
-		// Reset the server so previously-registered routes are cleared.
-		$wp_rest_server = new \WP_REST_Server();
-		\do_action( 'rest_api_init' );
+		try {
+			\update_option( 'activitypub_api', false );
 
-		$routes = \rest_get_server()->get_routes();
-		$this->assertArrayNotHasKey(
-			'/' . ACTIVITYPUB_REST_NAMESPACE . '/(?:users|actors)/(?P<user_id>[-]?\d+)/uploadMedia',
-			$routes
-		);
+			// Reset the server so previously-registered routes are cleared.
+			$wp_rest_server = new \WP_REST_Server();
+			\do_action( 'rest_api_init' );
 
-		// Restore state.
-		\update_option( 'activitypub_api', $previous );
-		$wp_rest_server = new \WP_REST_Server();
-		\do_action( 'rest_api_init' );
+			$routes = \rest_get_server()->get_routes();
+			$this->assertArrayNotHasKey(
+				'/' . ACTIVITYPUB_REST_NAMESPACE . '/(?:users|actors)/(?P<user_id>[-]?\d+)/uploadMedia',
+				$routes
+			);
+		} finally {
+			// Restore state.
+			\update_option( 'activitypub_api', $previous );
+			$wp_rest_server = new \WP_REST_Server();
+			\do_action( 'rest_api_init' );
+		}
 	}
 }
