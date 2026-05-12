@@ -14,6 +14,7 @@ use Activitypub\Signature;
 
 use function Activitypub\object_to_uri;
 use function Activitypub\use_authorized_fetch;
+use function Activitypub\user_can_act_as_blog;
 
 /**
  * Verification Trait.
@@ -209,23 +210,9 @@ trait Verification {
 			return true;
 		}
 
-		/**
-		 * Filters whether the current user is allowed to act as the blog actor.
-		 *
-		 * The blog actor has no `wp_users` row, so no logged-in user satisfies the
-		 * identity-equality check above when `user_id` is `BLOG_USER_ID`. This filter
-		 * defaults to true for users with the `manage_options` capability (administrators).
-		 * Filter to broaden the allow-list, for example to editors on multi-author sites.
-		 *
-		 * @since unreleased
-		 *
-		 * @param bool $can_act_as_blog Whether the current user can act as the blog actor.
-		 * @param int  $user_id         The user ID being acted upon (always BLOG_USER_ID at this call site).
-		 */
-		if (
-			Actors::BLOG_USER_ID === (int) $user_id
-			&& \apply_filters( 'activitypub_user_can_act_as_blog', \current_user_can( 'manage_options' ), $user_id )
-		) {
+		// The blog actor has no `wp_users` row, so the identity-equality check above
+		// cannot match for a logged-in user. Delegate to the capability helper.
+		if ( Actors::BLOG_USER_ID === (int) $user_id && user_can_act_as_blog() ) {
 			return true;
 		}
 

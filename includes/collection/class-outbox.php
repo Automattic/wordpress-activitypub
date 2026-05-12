@@ -14,6 +14,7 @@ use Activitypub\Webfinger;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\object_to_uri;
+use function Activitypub\user_can_act_as_blog;
 
 /**
  * ActivityPub Outbox Collection
@@ -431,9 +432,25 @@ class Outbox {
 			\Activitypub\OAuth\Server::authenticate_oauth( null );
 		}
 
-		// Allow the author to view their own outbox items regardless of visibility.
-		if ( \get_current_user_id() === (int) $outbox_item->post_author ) {
-			return self::get_activity( $outbox_item );
+		/*
+		 * Allow the author to view their own outbox items regardless of visibility.
+		 * The `is_user_logged_in()` guard prevents anonymous visitors from matching
+		 * the blog actor's items (where both `get_current_user_id()` and `post_author`
+		 * are `0`), which would otherwise expose private activities at their permalink.
+		 *
+		 * Users authorized to act as the blog actor are treated as the author of
+		 * blog-actor items so they can read the same private outbox they can post to.
+		 */
+		if ( \is_user_logged_in() ) {
+			$author = (int) $outbox_item->post_author;
+
+			if ( \get_current_user_id() === $author ) {
+				return self::get_activity( $outbox_item );
+			}
+
+			if ( Actors::BLOG_USER_ID === $author && user_can_act_as_blog() ) {
+				return self::get_activity( $outbox_item );
+			}
 		}
 
 		// Check if Outbox Activity is public.
