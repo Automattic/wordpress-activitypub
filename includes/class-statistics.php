@@ -948,6 +948,23 @@ class Statistics {
 			}
 
 			$earliest_post = \get_post( $earliest_outbox[0] );
+
+			/*
+			 * `get_post()` returns null if the row was deleted between the
+			 * `get_posts()` lookup and this call (cron race / cache miss).
+			 * `post_date_gmt` can also be empty or the MySQL zero-date — both
+			 * would fall through to `strtotime( false ) === false` below and
+			 * silently produce 1970 as the earliest year. Bail in all three
+			 * cases.
+			 */
+			if (
+				! $earliest_post
+				|| empty( $earliest_post->post_date_gmt )
+				|| '0000-00-00 00:00:00' === $earliest_post->post_date_gmt
+			) {
+				return null;
+			}
+
 			$earliest_date = $earliest_post->post_date_gmt;
 		}
 
