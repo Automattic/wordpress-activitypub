@@ -421,6 +421,28 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test the `activitypub_user_can_act_as_blog` filter can revoke admin access.
+	 *
+	 * @covers ::verify_owner
+	 */
+	public function test_verify_owner_blog_actor_filter_revokes_admin_access() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $admin_id );
+		\add_filter( 'activitypub_user_can_act_as_blog', '__return_false' );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/actors/0/outbox' );
+		$request->set_param( 'user_id', 0 );
+
+		$result = $this->instance->verify_owner( $request );
+
+		\remove_filter( 'activitypub_user_can_act_as_blog', '__return_false' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_forbidden', $result->get_error_code() );
+	}
+
+	/**
 	 * Data provider for verify_key_id tests.
 	 *
 	 * @return array[] Test cases: [ signature_header, actor, expected_pass ].
