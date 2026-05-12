@@ -147,11 +147,15 @@ class Test_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test creating a post with blog actor (user_id = 0) skips permission check.
+	 * Test creating a post with blog actor (user_id = 0) and no current user keeps post_author = 0.
+	 *
+	 * Covers the cron/CLI path where no user is loaded.
 	 *
 	 * @covers ::create
 	 */
-	public function test_create_with_blog_actor() {
+	public function test_create_with_blog_actor_no_current_user() {
+		\wp_set_current_user( 0 );
+
 		$activity = array(
 			'object' => array(
 				'type'    => 'Note',
@@ -163,6 +167,85 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		$this->assertInstanceOf( '\WP_Post', $post );
 		$this->assertEquals( 0, (int) $post->post_author );
+	}
+
+	/**
+	 * Test creating a post with blog actor (user_id = 0) falls back to the current user for the byline.
+	 *
+	 * Administrators pass `user_can_act_as_blog()` by default (`manage_options`).
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_with_blog_actor_uses_current_user() {
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $user_id );
+
+		$activity = array(
+			'object' => array(
+				'type'    => 'Note',
+				'content' => '<p>Blog actor post from authenticated request.</p>',
+			),
+		);
+
+		$post = Posts::create( $activity, 0 );
+
+		$this->assertInstanceOf( '\WP_Post', $post );
+		$this->assertEquals( $user_id, (int) $post->post_author );
+
+		\wp_set_current_user( 0 );
+	}
+
+	/**
+	 * Test the blog actor path rejects users who cannot act as the blog.
+	 *
+	 * Editors do not hold `manage_options`, so `user_can_act_as_blog()` returns
+	 * false for them by default and `Posts::create` must 403.
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_with_blog_actor_forbidden_without_grant() {
+		$user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		\wp_set_current_user( $user_id );
+
+		$activity = array(
+			'object' => array(
+				'type'    => 'Note',
+				'content' => '<p>Should not be created.</p>',
+			),
+		);
+
+		$result = Posts::create( $activity, 0 );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_forbidden', $result->get_error_code() );
+
+		\wp_set_current_user( 0 );
+	}
+
+	/**
+	 * Test the `activitypub_user_can_act_as_blog` filter unlocks the blog actor path.
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_with_blog_actor_filter_grants_access() {
+		$user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		\wp_set_current_user( $user_id );
+		\add_filter( 'activitypub_user_can_act_as_blog', '__return_true' );
+
+		$activity = array(
+			'object' => array(
+				'type'    => 'Note',
+				'content' => '<p>Filter-granted blog actor post.</p>',
+			),
+		);
+
+		$post = Posts::create( $activity, 0 );
+
+		\remove_filter( 'activitypub_user_can_act_as_blog', '__return_true' );
+		\wp_set_current_user( 0 );
+
+		$this->assertInstanceOf( '\WP_Post', $post );
+		$this->assertEquals( $user_id, (int) $post->post_author );
 	}
 
 	/**
