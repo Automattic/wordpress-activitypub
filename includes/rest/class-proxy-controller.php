@@ -54,7 +54,7 @@ class Proxy_Controller extends \WP_REST_Controller {
 					'permission_callback' => array( $this, 'verify_authentication' ),
 					'args'                => array(
 						'id' => array(
-							'description'       => 'The URI of the remote ActivityPub object to fetch.',
+							'description'       => 'The remote ActivityPub object to fetch: an HTTPS URL or an acct identifier (`user@host`, `@user@host`, or `acct:user@host`).',
 							'type'              => 'string',
 							'required'          => true,
 							'sanitize_callback' => array( $this, 'sanitize_url' ),
@@ -91,14 +91,14 @@ class Proxy_Controller extends \WP_REST_Controller {
 	/**
 	 * Sanitize the `id` parameter.
 	 *
-	 * Accepts either an HTTPS URL or a WebFinger handle (`user@host`,
-	 * `@user@host`). Handles are returned as-is; URLs are run through
-	 * `sanitize_url()`. Matches the dual-shape contract of
-	 * `Remote_Actors::fetch_by_various()`.
+	 * Accepts either an HTTPS URL or an acct identifier (`user@host`,
+	 * `@user@host`, or `acct:user@host`). Acct identifiers are returned
+	 * as-is; URLs are run through `sanitize_url()`. Matches the dual-shape
+	 * contract of `Remote_Actors::fetch_by_various()`.
 	 *
 	 * @see https://developer.wordpress.org/reference/functions/sanitize_url/
 	 *
-	 * @param string $url The urlencoded URL or WebFinger handle to sanitize.
+	 * @param string $url The urlencoded URL or acct identifier to sanitize.
 	 * @return string The sanitized value.
 	 */
 	public function sanitize_url( $url ) {
@@ -115,13 +115,14 @@ class Proxy_Controller extends \WP_REST_Controller {
 	 * Validate the `id` parameter.
 	 *
 	 * Accepts either an HTTPS URL (validated via `wp_http_validate_url()`,
-	 * which blocks local/private IPs and restricts ports) or a WebFinger
-	 * handle that matches `ACTIVITYPUB_USERNAME_REGEXP`. Matches the
+	 * which blocks local/private IPs and restricts ports) or an acct
+	 * identifier in any of the forms accepted by `Webfinger::is_acct()`:
+	 * `user@host`, `@user@host`, or `acct:user@host`. Matches the
 	 * dual-shape contract of `Remote_Actors::fetch_by_various()`.
 	 *
 	 * @see https://developer.wordpress.org/reference/functions/wp_http_validate_url/
 	 *
-	 * @param string $url The URL or WebFinger handle to validate.
+	 * @param string $url The URL or acct identifier to validate.
 	 * @return bool True if valid, false otherwise.
 	 */
 	public function validate_url( $url ) {

@@ -295,28 +295,64 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that proxy accepts a WebFinger handle with leading `@`.
+	 * Test that proxy accepts a WebFinger handle with leading `@` and resolves it.
 	 *
 	 * @covers ::validate_url
+	 * @covers ::sanitize_url
+	 * @covers ::create_item
 	 */
-	public function test_handle_with_leading_at_accepted() {
+	public function test_successful_actor_fetch_by_handle_with_leading_at() {
 		$this->mock_oauth_auth();
+
+		$actor_data = array(
+			'@context'          => 'https://www.w3.org/ns/activitystreams',
+			'type'              => 'Person',
+			'id'                => 'https://example.com/users/test',
+			'inbox'             => 'https://example.com/users/test/inbox',
+			'preferredUsername' => 'test',
+			'name'              => 'Test User',
+		);
+
+		$filter = function ( $preempt, $args, $url ) use ( $actor_data ) {
+			if ( false !== \strpos( $url, '/.well-known/webfinger' ) ) {
+				return array(
+					'response' => array( 'code' => 200 ),
+					'body'     => \wp_json_encode(
+						array(
+							'subject' => 'acct:test@example.com',
+							'links'   => array(
+								array(
+									'rel'  => 'self',
+									'type' => 'application/activity+json',
+									'href' => $actor_data['id'],
+								),
+							),
+						)
+					),
+					'headers'  => array( 'content-type' => 'application/jrd+json' ),
+				);
+			}
+
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode( $actor_data ),
+				'headers'  => array( 'content-type' => 'application/activity+json' ),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
 
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
 		$request->set_body_params( array( 'id' => '@test@example.com' ) );
 
 		$response = $this->server->dispatch( $request );
 
+		\remove_filter( 'pre_http_request', $filter, 10 );
 		$this->unmock_oauth_auth();
 
-		// Must not be rejected at param validation. Downstream resolution may still
-		// 502 because no HTTP mock is installed, but the route should not 400 with
-		// rest_invalid_param.
-		$this->assertNotEquals(
-			'rest_invalid_param',
-			$response->get_data()['code'] ?? '',
-			'WebFinger handle with leading @ was rejected at route validation.'
-		);
+		$this->assertEquals( 200, $response->get_status(), \wp_json_encode( $response->get_data() ) );
+		$data = $response->get_data();
+		$this->assertEquals( 'Person', $data['type'] );
+		$this->assertEquals( 'https://example.com/users/test', $data['id'] );
 	}
 
 	/**
@@ -372,15 +408,12 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 		\remove_filter( 'pre_http_request', $filter, 10 );
 		$this->unmock_oauth_auth();
 
-		// The route must accept the handle and reach get_stream, which then
-		// returns a 404 because the resolved actor has no eventStream field.
-		// What we explicitly do not expect is `rest_invalid_param` from
-		// schema-level validation.
-		$this->assertNotEquals(
-			'rest_invalid_param',
-			$response->get_data()['code'] ?? '',
-			'Stream route rejected the acct identifier at schema validation.'
-		);
+		// The route accepts the handle, the webfinger lookup resolves, and
+		// get_stream() reaches the "no eventStream" branch — returning 404
+		// rather than the schema-level `rest_invalid_param` 400 it would
+		// have produced with the previous `format => 'uri'` constraint.
+		$this->assertEquals( 404, $response->get_status() );
+		$this->assertEquals( 'activitypub_no_event_stream', $response->get_data()['code'] );
 	}
 
 	/**
