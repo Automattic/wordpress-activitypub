@@ -189,6 +189,8 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		$this->assertInstanceOf( '\WP_Post', $post );
 		$this->assertEquals( $user_id, (int) $post->post_author );
+
+		\wp_set_current_user( 0 );
 	}
 
 	/**
@@ -215,6 +217,8 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		$this->assertWPError( $result );
 		$this->assertEquals( 'activitypub_forbidden', $result->get_error_code() );
+
+		\wp_set_current_user( 0 );
 	}
 
 	/**
