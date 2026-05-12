@@ -364,6 +364,28 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test unauthenticated requests cannot satisfy ownership for the blog actor.
+	 *
+	 * Guards against the pre-existing 0 === 0 path where `get_current_user_id()`
+	 * for an anonymous request would equal `BLOG_USER_ID`.
+	 *
+	 * @covers ::verify_owner
+	 */
+	public function test_verify_owner_anonymous_cannot_act_as_blog() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\wp_set_current_user( 0 );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/actors/0/followers' );
+		$request->set_param( 'user_id', 0 );
+
+		$result = $this->instance->verify_owner( $request );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_forbidden', $result->get_error_code() );
+		$this->assertEquals( 403, $result->get_error_data()['status'] );
+	}
+
+	/**
 	 * Test administrators can act as the blog actor.
 	 *
 	 * @covers ::verify_owner

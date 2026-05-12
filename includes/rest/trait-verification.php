@@ -191,6 +191,20 @@ trait Verification {
 			return $user;
 		}
 
+		/*
+		 * Require an authenticated session before the identity-equality check below.
+		 * Without this guard, anonymous requests with `user_id = 0` (blog actor)
+		 * would match because `\get_current_user_id()` also returns `0`, exposing
+		 * owner-only behaviors such as the hidden social graph for the blog actor.
+		 */
+		if ( ! \is_user_logged_in() ) {
+			return new \WP_Error(
+				'activitypub_forbidden',
+				\__( 'You can only access your own resources.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
+		}
+
 		if ( \get_current_user_id() === (int) $user_id ) {
 			return true;
 		}
