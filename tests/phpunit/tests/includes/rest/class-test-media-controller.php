@@ -296,6 +296,44 @@ class Test_Media_Controller extends Test_REST_Controller_Testcase {
 	}
 
 	/**
+	 * Test that explicit object.name beats a competing description form field.
+	 *
+	 * @covers ::upload_item
+	 */
+	public function test_upload_item_object_name_beats_description() {
+		$tmp = $this->create_png_temp_file();
+		\wp_set_current_user( self::$user_id );
+
+		$request = new \WP_REST_Request( 'POST', sprintf( '/%s/actors/%d/uploadMedia', ACTIVITYPUB_REST_NAMESPACE, self::$user_id ) );
+		$request->set_file_params(
+			array(
+				'file' => array(
+					'name'     => 'pixel.png',
+					'type'     => 'image/png',
+					'tmp_name' => $tmp,
+					'error'    => 0,
+					'size'     => \filesize( $tmp ),
+				),
+			)
+		);
+		$request->set_body_params(
+			array(
+				'object'      => \wp_json_encode(
+					array(
+						'type' => 'Image',
+						'name' => 'From object.name',
+					)
+				),
+				'description' => 'From description',
+			)
+		);
+
+		$response = \rest_get_server()->dispatch( $request );
+		$this->assertEquals( 201, $response->get_status() );
+		$this->assertEquals( 'From object.name', $response->get_data()['name'] );
+	}
+
+	/**
 	 * Test POST /uploadMedia with malformed object JSON returns 400.
 	 *
 	 * @covers ::upload_item
