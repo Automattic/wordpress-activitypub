@@ -680,6 +680,60 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 	}
 
 	/**
+	 * Test that AP-capable non-admin users cannot see private blog-actor activities.
+	 *
+	 * Regression test for the `! current_user_can( 'activitypub' )` branch in
+	 * `get_items()` which previously skipped visibility filters for anyone with the
+	 * `activitypub` capability, allowing every publisher to read the blog actor's
+	 * private Accepts. The blog-actor branch now routes through `user_can_act_as_blog()`.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_blog_actor_outbox_filters_private_activities_for_ap_capable_non_admin() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+
+		$author_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_user_by( 'id', $author_id )->add_cap( 'activitypub' );
+		\wp_set_current_user( $author_id );
+		$this->assertTrue( \current_user_can( 'activitypub' ) );
+
+		self::factory()->post->create(
+			array(
+				'post_author'  => 0,
+				'post_type'    => Outbox::POST_TYPE,
+				'post_status'  => 'pending',
+				'post_title'   => 'https://example.org/activity/private-accept-2',
+				'post_content' => \wp_json_encode(
+					array(
+						'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
+						'id'       => 'https://example.org/activity/private-accept-2',
+						'type'     => 'Accept',
+						'actor'    => 'https://example.org/blog',
+						'object'   => 'https://example.org/follow/2',
+					)
+				),
+				'meta_input'   => array(
+					'_activitypub_activity_type'     => 'Accept',
+					'_activitypub_activity_actor'    => 'blog',
+					'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
+				),
+			)
+		);
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
+		$request->set_param( 'page', 1 );
+		$request->set_param( 'per_page', 10 );
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$activity_types = \wp_list_pluck( $data['orderedItems'], 'type' );
+		$this->assertNotContains( 'Accept', $activity_types, 'Private Accept must not be visible to non-admin AP-capable users on the blog actor outbox.' );
+
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
 	 * Test meta query behavior for non-privileged users.
 	 *
 	 * @covers ::get_items

@@ -14,6 +14,7 @@ use Activitypub\Signature;
 
 use function Activitypub\object_to_uri;
 use function Activitypub\use_authorized_fetch;
+use function Activitypub\user_can_act_as_blog;
 
 /**
  * Verification Trait.
@@ -140,6 +141,11 @@ trait Verification {
 	 *
 	 * Application Passwords are not accepted directly on C2S endpoints.
 	 *
+	 * Security: `check_oauth_permission()` requires a valid Bearer token via
+	 * `is_oauth_request()`. Cookie-authenticated sessions never satisfy that
+	 * check, so a wp-admin session in another browser tab cannot be hijacked
+	 * to drive C2S writes on behalf of the user (no CSRF path on this surface).
+	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
 	 */
@@ -191,7 +197,27 @@ trait Verification {
 			return $user;
 		}
 
+		/*
+		 * Require an authenticated session before the identity-equality check below.
+		 * Without this guard, anonymous requests with `user_id = 0` (blog actor)
+		 * would match because `\get_current_user_id()` also returns `0`, exposing
+		 * owner-only behaviors such as the hidden social graph for the blog actor.
+		 */
+		if ( ! \is_user_logged_in() ) {
+			return new \WP_Error(
+				'activitypub_forbidden',
+				\__( 'You can only access your own resources.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
+		}
+
 		if ( \get_current_user_id() === (int) $user_id ) {
+			return true;
+		}
+
+		// The blog actor has no `wp_users` row, so the identity-equality check above
+		// cannot match for a logged-in user. Delegate to the capability helper.
+		if ( Actors::BLOG_USER_ID === (int) $user_id && user_can_act_as_blog() ) {
 			return true;
 		}
 
