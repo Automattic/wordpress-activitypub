@@ -117,7 +117,21 @@ class Media_Controller extends \WP_REST_Controller {
 		if ( true !== $result ) {
 			return $result;
 		}
-		return $this->verify_owner( $request );
+
+		$owner_check = $this->verify_owner( $request );
+		if ( true !== $owner_check ) {
+			return $owner_check;
+		}
+
+		if ( ! \current_user_can( 'upload_files' ) ) {
+			return new \WP_Error(
+				'activitypub_cannot_upload',
+				\__( 'You do not have permission to upload media.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		return true;
 	}
 
 	/**

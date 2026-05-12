@@ -393,6 +393,65 @@ class Test_Media_Controller extends Test_REST_Controller_Testcase {
 	}
 
 	/**
+	 * Test that a user cannot upload media to another user's uploadMedia route.
+	 *
+	 * @covers ::upload_permissions_check
+	 */
+	public function test_upload_item_forbidden_for_other_user() {
+		$other_user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_user_by( 'ID', $other_user_id )->add_cap( 'activitypub' );
+
+		$tmp = $this->create_png_temp_file();
+		\wp_set_current_user( self::$user_id );
+
+		$request = new \WP_REST_Request( 'POST', sprintf( '/%s/actors/%d/uploadMedia', ACTIVITYPUB_REST_NAMESPACE, $other_user_id ) );
+		$request->set_file_params(
+			array(
+				'file' => array(
+					'name'     => 'pixel.png',
+					'type'     => 'image/png',
+					'tmp_name' => $tmp,
+					'error'    => 0,
+					'size'     => \filesize( $tmp ),
+				),
+			)
+		);
+
+		$response = \rest_get_server()->dispatch( $request );
+		$this->assertEquals( 403, $response->get_status() );
+	}
+
+	/**
+	 * Test that a user without upload_files capability cannot upload.
+	 *
+	 * @covers ::upload_permissions_check
+	 */
+	public function test_upload_item_forbidden_without_upload_files_capability() {
+		$subscriber_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		\get_user_by( 'ID', $subscriber_id )->add_cap( 'activitypub' );
+
+		$tmp = $this->create_png_temp_file();
+		\wp_set_current_user( $subscriber_id );
+
+		$request = new \WP_REST_Request( 'POST', sprintf( '/%s/actors/%d/uploadMedia', ACTIVITYPUB_REST_NAMESPACE, $subscriber_id ) );
+		$request->set_file_params(
+			array(
+				'file' => array(
+					'name'     => 'pixel.png',
+					'type'     => 'image/png',
+					'tmp_name' => $tmp,
+					'error'    => 0,
+					'size'     => \filesize( $tmp ),
+				),
+			)
+		);
+
+		$response = \rest_get_server()->dispatch( $request );
+		$this->assertEquals( 403, $response->get_status() );
+		$this->assertEquals( 'activitypub_cannot_upload', $response->get_data()['code'] );
+	}
+
+	/**
 	 * Test that the route is only registered when activitypub_api is enabled.
 	 */
 	public function test_route_gated_behind_activitypub_api_option() {
