@@ -39,7 +39,9 @@ class Test_Media_Controller extends Test_REST_Controller_Testcase {
 	public function set_up() {
 		parent::set_up();
 		\add_filter( 'activitypub_oauth_check_permission', '__return_true' );
-		( new Media_Controller() )->register_routes();
+
+		\update_option( 'activitypub_api', true );
+		\do_action( 'rest_api_init' );
 	}
 
 	/**
@@ -388,5 +390,30 @@ class Test_Media_Controller extends Test_REST_Controller_Testcase {
 			'/activitypub/1.0/actors/0/uploadMedia',
 			$endpoints['uploadMedia']
 		);
+	}
+
+	/**
+	 * Test that the route is only registered when activitypub_api is enabled.
+	 */
+	public function test_route_gated_behind_activitypub_api_option() {
+		global $wp_rest_server;
+
+		$previous = \get_option( 'activitypub_api', false );
+		\update_option( 'activitypub_api', false );
+
+		// Reset the server so previously-registered routes are cleared.
+		$wp_rest_server = new \WP_REST_Server();
+		\do_action( 'rest_api_init' );
+
+		$routes = \rest_get_server()->get_routes();
+		$this->assertArrayNotHasKey(
+			'/' . ACTIVITYPUB_REST_NAMESPACE . '/(?:users|actors)/(?P<user_id>[-]?\d+)/uploadMedia',
+			$routes
+		);
+
+		// Restore state.
+		\update_option( 'activitypub_api', $previous );
+		$wp_rest_server = new \WP_REST_Server();
+		\do_action( 'rest_api_init' );
 	}
 }
