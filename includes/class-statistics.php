@@ -942,15 +942,23 @@ class Statistics {
 
 			$earliest_outbox = \get_posts( $outbox_args );
 
-			// Prefer `post_date_gmt`; fall back to local `post_date` if the GMT field is
-			// empty (rare zero-date corruption seen on some production sites).
-			$earliest_date = $earliest_outbox
-				? ( $earliest_outbox[0]->post_date_gmt ?: $earliest_outbox[0]->post_date )
-				: '';
+			/*
+			 * Prefer `post_date_gmt`; fall back to local `post_date` when the GMT field
+			 * is empty or the MySQL zero-date (rare corruption seen on some production
+			 * sites). The zero-date is a truthy string, so it has to be detected
+			 * explicitly rather than via `?:`.
+			 */
+			$earliest_date = '';
+			if ( $earliest_outbox ) {
+				$gmt           = $earliest_outbox[0]->post_date_gmt;
+				$earliest_date = ( empty( $gmt ) || '0000-00-00 00:00:00' === $gmt )
+					? $earliest_outbox[0]->post_date
+					: $gmt;
+			}
 		}
 
 		$timestamp = \strtotime( (string) $earliest_date );
-		if ( $timestamp <= 0 ) {
+		if ( false === $timestamp ) {
 			return null;
 		}
 

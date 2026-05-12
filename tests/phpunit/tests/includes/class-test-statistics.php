@@ -57,13 +57,17 @@ class Test_Statistics extends \WP_UnitTestCase {
 		$user_index = \array_search( $user_id, Statistics::get_active_user_ids(), true );
 		$this->assertNotFalse( $user_index, 'Test user should be in the active-user list.' );
 
-		$errors = array();
+		$errors   = array();
+		$relevant = E_WARNING | E_USER_WARNING | E_NOTICE | E_USER_NOTICE;
 		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler
 		\set_error_handler(
-			static function ( $errno, $errstr ) use ( &$errors ) {
-				$errors[] = $errstr;
-				return true;
-			}
+			static function ( $errno, $errstr ) use ( &$errors, $relevant ) {
+				if ( $errno & $relevant ) {
+					$errors[] = $errstr;
+				}
+				return false;
+			},
+			$relevant
 		);
 
 		try {
@@ -74,5 +78,15 @@ class Test_Statistics extends \WP_UnitTestCase {
 
 		$this->assertEmpty( $errors, 'No warnings should fire when `post_date_gmt` is zero-dated.' );
 		$this->assertIsArray( $result, 'Scheduler should keep going, not crash.' );
+		$this->assertSame(
+			$user_index,
+			$result['user_index'],
+			'User should not be skipped — fallback to `post_date` must yield a valid earliest year.'
+		);
+		$this->assertGreaterThan(
+			0,
+			$result['year'],
+			'A valid earliest year must be derived from `post_date` when `post_date_gmt` is zero-dated.'
+		);
 	}
 }
