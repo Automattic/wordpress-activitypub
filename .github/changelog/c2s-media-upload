@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Allow third-party apps to upload images, audio, and video to your site via the standard ActivityPub media upload endpoint.
