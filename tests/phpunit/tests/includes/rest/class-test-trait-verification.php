@@ -55,6 +55,8 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		\wp_set_current_user( 0 );
 		\remove_all_filters( 'activitypub_defer_signature_verification' );
 		\remove_all_filters( 'activitypub_oauth_check_permission' );
+		\remove_all_filters( 'activitypub_user_can_act_as_blog' );
+		\delete_option( 'activitypub_actor_mode' );
 
 		// Reset OAuth token state.
 		$reflection = new \ReflectionClass( OAuth_Server::class );
@@ -357,6 +359,63 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		$request->set_param( 'user_id', $this->user_id );
 
 		$result = $this->instance->verify_owner( $request );
+
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * Test administrators can act as the blog actor.
+	 *
+	 * @covers ::verify_owner
+	 */
+	public function test_verify_owner_admin_can_act_as_blog() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $admin_id );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/actors/0/outbox' );
+		$request->set_param( 'user_id', 0 );
+
+		$result = $this->instance->verify_owner( $request );
+
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * Test non-administrators cannot act as the blog actor by default.
+	 *
+	 * @covers ::verify_owner
+	 */
+	public function test_verify_owner_non_admin_cannot_act_as_blog() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\wp_set_current_user( $this->user_id );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/actors/0/outbox' );
+		$request->set_param( 'user_id', 0 );
+
+		$result = $this->instance->verify_owner( $request );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_forbidden', $result->get_error_code() );
+		$this->assertEquals( 403, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Test the `activitypub_user_can_act_as_blog` filter can grant access.
+	 *
+	 * @covers ::verify_owner
+	 */
+	public function test_verify_owner_blog_actor_filter_grants_access() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\wp_set_current_user( $this->user_id );
+		\add_filter( 'activitypub_user_can_act_as_blog', '__return_true' );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/actors/0/outbox' );
+		$request->set_param( 'user_id', 0 );
+
+		$result = $this->instance->verify_owner( $request );
+
+		\remove_filter( 'activitypub_user_can_act_as_blog', '__return_true' );
 
 		$this->assertTrue( $result );
 	}

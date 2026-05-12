@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Allow site administrators to perform Client-to-Server actions on behalf of the site's blog actor.

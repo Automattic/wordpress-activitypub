@@ -195,6 +195,25 @@ trait Verification {
 			return true;
 		}
 
+		/**
+		 * Filters whether the current user is allowed to act as the blog actor.
+		 *
+		 * The blog actor has no `wp_users` row, so identity-equality can never match.
+		 * Defaults to true for users with the `manage_options` capability (administrators).
+		 * Filter to broaden the allow-list, for example to editors on multi-author sites.
+		 *
+		 * @since unreleased
+		 *
+		 * @param bool $can_act_as_blog Whether the current user can act as the blog actor.
+		 * @param int  $user_id         The user ID being acted upon (always BLOG_USER_ID at this call site).
+		 */
+		if (
+			Actors::BLOG_USER_ID === (int) $user_id
+			&& \apply_filters( 'activitypub_user_can_act_as_blog', \current_user_can( 'manage_options' ), $user_id )
+		) {
+			return true;
+		}
+
 		return new \WP_Error(
 			'activitypub_forbidden',
 			\__( 'You can only access your own resources.', 'activitypub' ),
