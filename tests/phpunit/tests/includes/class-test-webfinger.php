@@ -669,4 +669,66 @@ class Test_Webfinger extends \WP_UnitTestCase {
 		// Clean up.
 		\delete_transient( $transient_key );
 	}
+
+	/**
+	 * Test that valid acct identifiers are recognized.
+	 *
+	 * @covers ::is_acct
+	 * @dataProvider data_valid_accts
+	 *
+	 * @param string $value The value under test.
+	 */
+	public function test_is_acct_valid( $value ) {
+		$this->assertTrue( Webfinger::is_acct( $value ) );
+	}
+
+	/**
+	 * Provider for valid acct identifiers.
+	 *
+	 * @return array
+	 */
+	public function data_valid_accts() {
+		return array(
+			'plain acct'          => array( 'user@example.com' ),
+			'leading at'          => array( '@user@example.com' ),
+			'multi-segment host'  => array( 'user@subdomain.example.com' ),
+			'numeric local part'  => array( 'user42@example.com' ),
+			'dots in local part'  => array( 'first.last@example.com' ),
+			'underscore in local' => array( 'first_last@example.com' ),
+			'dash in local'       => array( 'first-last@example.com' ),
+		);
+	}
+
+	/**
+	 * Test that non-acct values are rejected.
+	 *
+	 * @covers ::is_acct
+	 * @dataProvider data_invalid_accts
+	 *
+	 * @param mixed $value The value under test.
+	 */
+	public function test_is_acct_invalid( $value ) {
+		$this->assertFalse( Webfinger::is_acct( $value ) );
+	}
+
+	/**
+	 * Provider for non-acct values.
+	 *
+	 * @return array
+	 */
+	public function data_invalid_accts() {
+		return array(
+			'empty string'   => array( '' ),
+			'plain word'     => array( 'user' ),
+			'url'            => array( 'https://example.com/users/user' ),
+			'acct uri'       => array( 'acct:user@example.com' ),
+			'mailto uri'     => array( 'mailto:user@example.com' ),
+			'host only'      => array( '@example.com' ),
+			'no tld'         => array( 'user@host' ),
+			'trailing slash' => array( 'user@example.com/' ),
+			'null'           => array( null ),
+			'integer'        => array( 42 ),
+			'array'          => array( array( 'user@example.com' ) ),
+		);
+	}
 }

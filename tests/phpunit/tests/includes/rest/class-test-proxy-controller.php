@@ -185,10 +185,10 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 		$actor_data = array(
 			'@context'          => 'https://www.w3.org/ns/activitystreams',
 			'type'              => 'Person',
-			'id'                => 'https://mitra.social/users/silverpill',
-			'inbox'             => 'https://mitra.social/users/silverpill/inbox',
-			'preferredUsername' => 'silverpill',
-			'name'              => 'silverpill',
+			'id'                => 'https://example.com/users/test',
+			'inbox'             => 'https://example.com/users/test/inbox',
+			'preferredUsername' => 'test',
+			'name'              => 'Test User',
 		);
 
 		$filter = function ( $preempt, $args, $url ) use ( $actor_data ) {
@@ -197,7 +197,7 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 					'response' => array( 'code' => 200 ),
 					'body'     => \wp_json_encode(
 						array(
-							'subject' => 'acct:silverpill@mitra.social',
+							'subject' => 'acct:test@example.com',
 							'links'   => array(
 								array(
 									'rel'  => 'self',
@@ -220,7 +220,7 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 		\add_filter( 'pre_http_request', $filter, 10, 3 );
 
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
-		$request->set_body_params( array( 'id' => 'silverpill@mitra.social' ) );
+		$request->set_body_params( array( 'id' => 'test@example.com' ) );
 
 		$response = $this->server->dispatch( $request );
 
@@ -230,7 +230,7 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 		$this->assertEquals( 200, $response->get_status(), \wp_json_encode( $response->get_data() ) );
 		$data = $response->get_data();
 		$this->assertEquals( 'Person', $data['type'] );
-		$this->assertEquals( 'https://mitra.social/users/silverpill', $data['id'] );
+		$this->assertEquals( 'https://example.com/users/test', $data['id'] );
 	}
 
 	/**
@@ -242,7 +242,7 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 		$this->mock_oauth_auth();
 
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
-		$request->set_body_params( array( 'id' => '@silverpill@mitra.social' ) );
+		$request->set_body_params( array( 'id' => '@test@example.com' ) );
 
 		$response = $this->server->dispatch( $request );
 

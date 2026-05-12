@@ -261,7 +261,7 @@ class Http {
 
 		$url = object_to_uri( $url_or_object );
 
-		if ( preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $url ) ) {
+		if ( Webfinger::is_acct( $url ) ) {
 			$url = Webfinger::resolve( $url );
 		}
 

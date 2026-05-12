@@ -12,6 +12,7 @@ namespace Activitypub\Rest;
 
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
+use Activitypub\Webfinger;
 
 use function Activitypub\is_actor;
 
@@ -104,7 +105,7 @@ class Proxy_Controller extends \WP_REST_Controller {
 	public function sanitize_url( $url ) {
 		$decoded = urldecode( $url );
 
-		if ( $this->is_webfinger_handle( $decoded ) ) {
+		if ( Webfinger::is_acct( $decoded ) ) {
 			return $decoded;
 		}
 
@@ -127,7 +128,7 @@ class Proxy_Controller extends \WP_REST_Controller {
 	public function validate_url( $url ) {
 		$decoded_url = urldecode( $url );
 
-		if ( $this->is_webfinger_handle( $decoded_url ) ) {
+		if ( Webfinger::is_acct( $decoded_url ) ) {
 			return true;
 		}
 
@@ -138,16 +139,6 @@ class Proxy_Controller extends \WP_REST_Controller {
 
 		// Use WordPress built-in validation (blocks local IPs, restricts ports).
 		return (bool) \wp_http_validate_url( $decoded_url );
-	}
-
-	/**
-	 * Check whether a value is a WebFinger handle (optionally prefixed with `@`).
-	 *
-	 * @param string $value The candidate value.
-	 * @return bool True if the value looks like a WebFinger handle.
-	 */
-	private function is_webfinger_handle( $value ) {
-		return (bool) \preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $value );
 	}
 
 	/**
