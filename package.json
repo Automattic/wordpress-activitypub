@@ -32,6 +32,9 @@
 		"url": "https://github.com/automattic/wordpress-activitypub/issues"
 	},
 	"homepage": "https://github.com/automattic/wordpress-activitypub#readme",
+	"overrides": {
+		"@tanstack/history": "1.161.6"
+	},
 	"devDependencies": {
 		"@base-ui/react": "^1.4.1",
 		"@playwright/test": "^1.60.0",
