@@ -43,6 +43,14 @@ class Test_Media_Controller extends Test_REST_Controller_Testcase {
 	}
 
 	/**
+	 * Tear down test environment.
+	 */
+	public function tear_down() {
+		\remove_filter( 'activitypub_oauth_check_permission', '__return_true' );
+		parent::tear_down();
+	}
+
+	/**
 	 * Test route registration.
 	 *
 	 * @covers ::register_routes
@@ -105,5 +113,74 @@ class Test_Media_Controller extends Test_REST_Controller_Testcase {
 		$response = \rest_get_server()->dispatch( $request );
 
 		$this->assertEquals( 404, $response->get_status() );
+	}
+
+	/**
+	 * Test GET /media/{id} returns the AP representation of an audio file.
+	 *
+	 * @covers ::get_item
+	 */
+	public function test_get_item_returns_audio() {
+		$attachment_id = self::factory()->attachment->create_object(
+			'song.mp3',
+			0,
+			array(
+				'post_mime_type' => 'audio/mpeg',
+				'post_type'      => 'attachment',
+			)
+		);
+
+		$request  = new \WP_REST_Request( 'GET', sprintf( '/%s/media/%d', ACTIVITYPUB_REST_NAMESPACE, $attachment_id ) );
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$data = $response->get_data();
+		$this->assertEquals( 'Audio', $data['type'] );
+		$this->assertEquals( 'audio/mpeg', $data['mediaType'] );
+	}
+
+	/**
+	 * Test GET /media/{id} returns the AP representation of a video file.
+	 *
+	 * @covers ::get_item
+	 */
+	public function test_get_item_returns_video() {
+		$attachment_id = self::factory()->attachment->create_object(
+			'clip.mp4',
+			0,
+			array(
+				'post_mime_type' => 'video/mp4',
+				'post_type'      => 'attachment',
+			)
+		);
+
+		$request  = new \WP_REST_Request( 'GET', sprintf( '/%s/media/%d', ACTIVITYPUB_REST_NAMESPACE, $attachment_id ) );
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$data = $response->get_data();
+		$this->assertEquals( 'Video', $data['type'] );
+		$this->assertEquals( 'video/mp4', $data['mediaType'] );
+	}
+
+	/**
+	 * Test GET /media/{id} returns 415 for an unsupported MIME type.
+	 *
+	 * @covers ::get_item
+	 */
+	public function test_get_item_415_for_unsupported_mime() {
+		$attachment_id = self::factory()->attachment->create_object(
+			'document.pdf',
+			0,
+			array(
+				'post_mime_type' => 'application/pdf',
+				'post_type'      => 'attachment',
+			)
+		);
+
+		$request  = new \WP_REST_Request( 'GET', sprintf( '/%s/media/%d', ACTIVITYPUB_REST_NAMESPACE, $attachment_id ) );
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 415, $response->get_status() );
 	}
 }
