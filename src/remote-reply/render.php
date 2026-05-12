@@ -188,8 +188,8 @@ $modal_content = ob_get_clean();
 
 	<a
 		class="comment-reply-link activitypub-remote-reply__link"
-		data-wp-on-async--click="actions.toggleModal"
-		data-wp-on-async--keydown="actions.onReplyLinkKeydown"
+		data-wp-on--click="actions.toggleModal"
+		data-wp-on--keydown="actions.onReplyLinkKeydown"
 		data-wp-bind--hidden="state.hasRemoteUser"
 		data-wp-bind--aria-expanded="context.modal.isOpen"
 		aria-label="<?php esc_attr_e( 'Reply on the Fediverse', 'activitypub' ); ?>"

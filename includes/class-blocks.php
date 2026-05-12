@@ -870,7 +870,7 @@ class Blocks {
 					href="#"
 					role="button"
 					class="pagination-previous"
-					data-wp-on-async--click="actions.previousPage"
+					data-wp-on--click="actions.previousPage"
 					data-wp-bind--aria-disabled="state.disablePreviousLink"
 					aria-label="<?php \esc_attr_e( 'Previous page', 'activitypub' ); ?>"
 				>
@@ -883,7 +883,7 @@ class Blocks {
 					href="#"
 					role="button"
 					class="pagination-next"
-					data-wp-on-async--click="actions.nextPage"
+					data-wp-on--click="actions.nextPage"
 					data-wp-bind--aria-disabled="state.disableNextLink"
 					aria-label="<?php \esc_attr_e( 'Next page', 'activitypub' ); ?>"
 				>

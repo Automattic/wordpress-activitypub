@@ -1,4 +1,5 @@
 import { store, getContext, getElement, getConfig } from '@wordpress/interactivity';
+import { withSyncEvent } from '../shared/with-sync-event';
 import { getBlockStyles, getPopupStyles } from './button-style';
 import { createModalStore } from '../shared/modal';
 
@@ -81,12 +82,12 @@ const { actions, callbacks } = store( 'activitypub/follow-me', {
 		 * @param {Event}  event     The event that triggered the modal opening/closing.
 		 * @param {string} event.key The key pressed, if any.
 		 */
-		onKeydown( event ) {
+		onKeydown: withSyncEvent( ( event ) => {
 			if ( getElement().ref.tagName === 'A' && ( event.key === 'Enter' || event.key === ' ' ) ) {
 				event.preventDefault();
 				actions.toggleModal( event );
 			}
-		},
+		} ),
 
 		/**
 		 * Handle keydown event for remote profile input.
