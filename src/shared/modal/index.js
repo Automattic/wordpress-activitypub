@@ -1,4 +1,5 @@
-import { getContext, store, getElement, withSyncEvent } from '@wordpress/interactivity';
+import { getContext, store, getElement } from '@wordpress/interactivity';
+import { withSyncEvent } from '../with-sync-event';
 
 /**
  * @typedef {Object} context

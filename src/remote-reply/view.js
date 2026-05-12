@@ -1,4 +1,5 @@
-import { store, getContext, getConfig, withSyncEvent } from '@wordpress/interactivity';
+import { store, getContext, getConfig } from '@wordpress/interactivity';
+import { withSyncEvent } from '../shared/with-sync-event';
 import { createModalStore } from '../shared/modal';
 import './style.scss';
 

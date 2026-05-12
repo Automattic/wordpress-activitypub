@@ -1,4 +1,5 @@
-import { store, getContext, getConfig, withSyncEvent } from '@wordpress/interactivity';
+import { store, getContext, getConfig } from '@wordpress/interactivity';
+import { withSyncEvent } from '../with-sync-event';
 
 /**
  * @member {Object} window.wp WordPress global object

@@ -1,4 +1,5 @@
-import { store, getContext, getElement, getConfig, withSyncEvent } from '@wordpress/interactivity';
+import { store, getContext, getElement, getConfig } from '@wordpress/interactivity';
+import { withSyncEvent } from '../shared/with-sync-event';
 import { getBlockStyles, getPopupStyles } from './button-style';
 import { createModalStore } from '../shared/modal';
 
