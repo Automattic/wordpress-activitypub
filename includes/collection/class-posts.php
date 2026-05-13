@@ -62,10 +62,16 @@ class Posts {
 
 		$object = $activity['object'] ?? array();
 
-		$object_type = $object['type'] ?? '';
-		$content     = \wp_kses_post( $object['content'] ?? '' );
-		$name        = \sanitize_text_field( $object['name'] ?? '' );
-		$summary     = \wp_kses_post( $object['summary'] ?? '' );
+		$object_type   = $object['type'] ?? '';
+		$content       = \wp_kses_post( $object['content'] ?? '' );
+		$name          = \sanitize_text_field( $object['name'] ?? '' );
+		$summary       = \wp_kses_post( $object['summary'] ?? '' );
+		$plain_summary = \sanitize_text_field( $summary );
+
+		// A summary marked sensitive is a content warning (plain text); otherwise it's a regular excerpt.
+		// Route on the sanitized summary so whitespace-only values don't pollute either field.
+		$content_warning = ! empty( $object['sensitive'] ) && '' !== $plain_summary ? $plain_summary : '';
+		$post_excerpt    = '' === $content_warning && '' !== $plain_summary ? $summary : '';
 
 		// Process content: autop, autolink, hashtags, and convert to blocks.
 		$content = self::prepare_content( $content );
@@ -85,11 +91,12 @@ class Posts {
 			'post_author'  => $post_author,
 			'post_title'   => $title,
 			'post_content' => $content,
-			'post_excerpt' => $summary,
+			'post_excerpt' => $post_excerpt,
 			'post_status'  => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === $visibility ? 'private' : 'publish',
 			'post_type'    => 'post',
 			'meta_input'   => array(
 				'activitypub_content_visibility' => $visibility,
+				'activitypub_content_warning'    => $content_warning,
 			),
 		);
 
@@ -121,9 +128,15 @@ class Posts {
 	public static function update( $post, $activity, $visibility = null ) {
 		$object = $activity['object'] ?? array();
 
-		$content = \wp_kses_post( $object['content'] ?? '' );
-		$name    = \sanitize_text_field( $object['name'] ?? '' );
-		$summary = \wp_kses_post( $object['summary'] ?? '' );
+		$content       = \wp_kses_post( $object['content'] ?? '' );
+		$name          = \sanitize_text_field( $object['name'] ?? '' );
+		$summary       = \wp_kses_post( $object['summary'] ?? '' );
+		$plain_summary = \sanitize_text_field( $summary );
+
+		// A summary marked sensitive is a content warning (plain text); otherwise it's a regular excerpt.
+		// Route on the sanitized summary so whitespace-only values don't pollute either field.
+		$content_warning = ! empty( $object['sensitive'] ) && '' !== $plain_summary ? $plain_summary : '';
+		$post_excerpt    = '' === $content_warning && '' !== $plain_summary ? $summary : '';
 
 		// Process content: autop, autolink, hashtags, and convert to blocks.
 		$content = self::prepare_content( $content );
@@ -143,9 +156,10 @@ class Posts {
 			'ID'           => $post->ID,
 			'post_title'   => $title,
 			'post_content' => $content,
-			'post_excerpt' => $summary,
+			'post_excerpt' => $post_excerpt,
 			'meta_input'   => array(
 				'activitypub_content_visibility' => $visibility,
+				'activitypub_content_warning'    => $content_warning,
 			),
 		);
 
