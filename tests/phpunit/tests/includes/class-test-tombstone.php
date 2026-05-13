@@ -564,4 +564,35 @@ class Test_Tombstone extends \WP_UnitTestCase {
 		$this->assertSame( 0, $deleted );
 		$this->assertNotNull( \get_page_by_path( $hash, OBJECT, Tombstone::POST_TYPE ) );
 	}
+
+	/**
+	 * Test migrate_legacy() bails when a fresh lock is held by another worker.
+	 *
+	 * @covers ::migrate_legacy
+	 */
+	public function test_migrate_legacy_respects_fresh_lock() {
+		\update_option( 'activitypub_tombstone_urls', array( 'fake.test/x' ) );
+		\add_option( 'activitypub_tombstone_migrate_lock', \time(), '', false );
+
+		$result = Tombstone::migrate_legacy( 10 );
+
+		$this->assertFalse( $result );
+		// Legacy option is untouched while another worker holds the lock.
+		$this->assertSame( array( 'fake.test/x' ), \get_option( 'activitypub_tombstone_urls' ) );
+	}
+
+	/**
+	 * Test migrate_legacy() takes over a stale lock (older than 10 minutes).
+	 *
+	 * @covers ::migrate_legacy
+	 */
+	public function test_migrate_legacy_takes_over_stale_lock() {
+		\update_option( 'activitypub_tombstone_urls', array( 'fake.test/y' ) );
+		\add_option( 'activitypub_tombstone_migrate_lock', \time() - 15 * MINUTE_IN_SECONDS, '', false );
+
+		$result = Tombstone::migrate_legacy( 10 );
+
+		$this->assertTrue( $result );
+		$this->assertFalse( \get_option( 'activitypub_tombstone_urls', false ) );
+	}
 }

@@ -294,11 +294,18 @@ class Tombstone {
 	 * @return bool True when no more work remains, false if another call is required.
 	 */
 	public static function migrate_legacy( $batch_size = 500 ) {
-		/*
-		 * Atomic claim: add_option returns true only when the row didn't exist.
-		 * If another worker holds the lock, retry on the next cron run.
-		 */
-		if ( ! \add_option( 'activitypub_tombstone_migrate_lock', \time(), '', false ) ) {
+		$lock = (int) \get_option( 'activitypub_tombstone_migrate_lock', 0 );
+
+		// Abandon locks older than 10 minutes — a worker fatal'd or timed out.
+		if ( $lock > 0 && ( \time() - $lock ) < 10 * MINUTE_IN_SECONDS ) {
+			return false;
+		}
+
+		if ( $lock > 0 ) {
+			// Stale lock: refresh the timestamp instead of using add_option.
+			\update_option( 'activitypub_tombstone_migrate_lock', \time(), false );
+		} elseif ( ! \add_option( 'activitypub_tombstone_migrate_lock', \time(), '', false ) ) {
+			// Race: another worker claimed between our get_option and add_option.
 			return false;
 		}
 

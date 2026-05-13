@@ -423,19 +423,13 @@ class Scheduler {
 	/**
 	 * Daily cron handler that purges expired tombstones.
 	 *
-	 * Reschedules itself five minutes out if a full batch was deleted,
-	 * so a backlog drains within the day. The `wp_next_scheduled` guard
-	 * prevents concurrent workers from double-queueing the continuation.
+	 * Retention is non-urgent: large backlogs (e.g. after retention is first enforced)
+	 * drain across multiple daily runs.
 	 *
 	 * @since unreleased
 	 */
 	public static function purge_tombstones() {
-		$batch_size = 200;
-		$deleted    = \Activitypub\Tombstone::purge( $batch_size );
-
-		if ( $deleted >= $batch_size && ! \wp_next_scheduled( 'activitypub_tombstone_purge' ) ) {
-			\wp_schedule_single_event( \time() + 5 * MINUTE_IN_SECONDS, 'activitypub_tombstone_purge' );
-		}
+		\Activitypub\Tombstone::purge();
 	}
 
 	/**
