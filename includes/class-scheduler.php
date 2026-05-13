@@ -406,7 +406,7 @@ class Scheduler {
 	public static function migrate_tombstones() {
 		$done = \Activitypub\Tombstone::migrate_legacy();
 
-		if ( ! $done ) {
+		if ( ! $done && ! \wp_next_scheduled( 'activitypub_tombstone_migrate' ) ) {
 			\wp_schedule_single_event( \time() + 5 * MINUTE_IN_SECONDS, 'activitypub_tombstone_migrate' );
 		}
 	}

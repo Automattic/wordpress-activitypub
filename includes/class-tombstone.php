@@ -285,16 +285,28 @@ class Tombstone {
 	 * Legacy entries are already-normalized strings (no scheme), so they bypass
 	 * the URL-validation guard in bury().
 	 *
+	 * The function uses a race-safe option lock so concurrent cron workers
+	 * cooperate cleanly: only one chunk is processed per call across the cluster.
+	 *
 	 * @since unreleased
 	 *
 	 * @param int $batch_size Number of URLs to process per call.
 	 * @return bool True when no more work remains, false if another call is required.
 	 */
 	public static function migrate_legacy( $batch_size = 500 ) {
+		/*
+		 * Atomic claim: add_option returns true only when the row didn't exist.
+		 * If another worker holds the lock, retry on the next cron run.
+		 */
+		if ( ! \add_option( 'activitypub_tombstone_migrate_lock', \time(), '', false ) ) {
+			return false;
+		}
+
 		$urls = \get_option( 'activitypub_tombstone_urls', null );
 
 		if ( null === $urls || ! \is_array( $urls ) || empty( $urls ) ) {
 			\delete_option( 'activitypub_tombstone_urls' );
+			\delete_option( 'activitypub_tombstone_migrate_lock' );
 			return true;
 		}
 
@@ -325,10 +337,12 @@ class Tombstone {
 
 		if ( empty( $remaining ) ) {
 			\delete_option( 'activitypub_tombstone_urls' );
+			\delete_option( 'activitypub_tombstone_migrate_lock' );
 			return true;
 		}
 
 		\update_option( 'activitypub_tombstone_urls', \array_values( $remaining ) );
+		\delete_option( 'activitypub_tombstone_migrate_lock' );
 		return false;
 	}
 }
