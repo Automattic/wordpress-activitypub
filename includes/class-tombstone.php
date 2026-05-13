@@ -385,7 +385,6 @@ class Tombstone {
 				'orderby'        => 'date',
 				'order'          => 'ASC',
 				'no_found_rows'  => true,
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'date_query'     => array(
 					array(
 						'column' => 'post_date_gmt',

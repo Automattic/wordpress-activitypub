@@ -430,9 +430,10 @@ class Scheduler {
 	 * @since unreleased
 	 */
 	public static function purge_tombstones() {
-		$deleted = \Activitypub\Tombstone::purge();
+		$batch_size = 200;
+		$deleted    = \Activitypub\Tombstone::purge( $batch_size );
 
-		if ( 200 === $deleted && ! \wp_next_scheduled( 'activitypub_tombstone_purge' ) ) {
+		if ( $deleted >= $batch_size && ! \wp_next_scheduled( 'activitypub_tombstone_purge' ) ) {
 			\wp_schedule_single_event( \time() + 5 * MINUTE_IN_SECONDS, 'activitypub_tombstone_purge' );
 		}
 	}
