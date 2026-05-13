@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Prevent migrations from running twice when concurrent requests race through the upgrade check.

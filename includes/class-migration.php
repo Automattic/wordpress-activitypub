@@ -117,7 +117,14 @@ class Migration {
 			return;
 		}
 
-		self::lock();
+		/*
+		 * Atomic claim. lock() returns true only when this caller's INSERT IGNORE
+		 * actually inserted the row. If a concurrent worker won the race (lock
+		 * returns the existing timestamp), bail so we don't double-run migrations.
+		 */
+		if ( true !== self::lock() ) {
+			return;
+		}
 
 		$version_from_db = self::get_version();
 

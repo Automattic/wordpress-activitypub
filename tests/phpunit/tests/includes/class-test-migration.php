@@ -374,6 +374,65 @@ class Test_Migration extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that maybe_migrate() bails when another worker holds the lock,
+	 * even if is_locked() failed to see it (the time-of-check / time-of-use race).
+	 *
+	 * @covers ::maybe_migrate
+	 */
+	public function test_maybe_migrate_bails_when_lock_acquired_by_concurrent_worker() {
+		// Create a user that would receive a default extra field if migration runs.
+		$user_id = self::factory()->user->create();
+		$user    = \get_user_by( 'id', $user_id );
+		$user->add_cap( 'activitypub' );
+
+		\delete_option( 'activitypub_db_version' );
+		\delete_option( 'activitypub_migration_lock' );
+
+		// Physically insert a lock row — simulates a concurrent worker
+		// that won the INSERT IGNORE race.
+		\update_option( 'activitypub_migration_lock', \time(), false );
+
+		// Hide the lock from is_locked()'s get_option call, simulating the
+		// race window where the existence check ran before the other worker
+		// inserted. lock()'s raw INSERT IGNORE will still see the conflict
+		// and return the existing timestamp.
+		\add_filter( 'option_activitypub_migration_lock', '__return_false' );
+
+		// Capture db_version before migration runs to detect whether it actually executed.
+		$db_version_before = \get_option( 'activitypub_db_version', 'missing' );
+
+		Migration::maybe_migrate();
+
+		\remove_filter( 'option_activitypub_migration_lock', '__return_false' );
+
+		$db_version_after = \get_option( 'activitypub_db_version', 'missing' );
+
+		// Sanity: confirm lock() actually saw the existing row.
+		$this->assertNotSame( true, Migration::lock(), 'lock() must report the existing lock' );
+
+		// Did maybe_migrate run? If db_version changed, it ran.
+		$this->assertSame( $db_version_before, $db_version_after, 'maybe_migrate must not have run (db_version unchanged)' );
+
+		// Defaults must NOT have been created: the caller must bail when
+		// lock() returns a non-true value.
+		$fields = \get_posts(
+			array(
+				'post_type'      => Extra_Fields::USER_POST_TYPE,
+				'author'         => $user_id,
+				'posts_per_page' => -1,
+			)
+		);
+		$this->assertCount( 0, $fields, 'maybe_migrate must not provision defaults when lock acquisition failed' );
+
+		// db_version must remain unset too.
+		$this->assertFalse( \get_option( 'activitypub_db_version' ) );
+
+		\delete_option( 'activitypub_migration_lock' );
+		\delete_option( 'activitypub_db_version' );
+		_delete_all_data();
+	}
+
+	/**
 	 * Test update_comment_counts() properly cleans up the lock.
 	 *
 	 * @covers ::update_comment_counts
