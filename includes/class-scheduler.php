@@ -83,7 +83,6 @@ class Scheduler {
 		\add_action( 'activitypub_outbox_purge', array( self::class, 'purge_outbox' ) );
 		\add_action( 'activitypub_inbox_purge', array( self::class, 'purge_inbox' ) );
 		\add_action( 'activitypub_ap_post_purge', array( self::class, 'purge_ap_posts' ) );
-		\add_action( 'activitypub_tombstone_migrate', array( self::class, 'migrate_tombstones' ) );
 		\add_action( 'activitypub_tombstone_purge', array( self::class, 'purge_tombstones' ) );
 		\add_action( 'activitypub_inbox_create_item', array( self::class, 'process_inbox_activity' ) );
 		\add_action( 'activitypub_sync_blocklist_subscriptions', array( Blocklist_Subscriptions::class, 'sync_all' ) );
@@ -398,19 +397,6 @@ class Scheduler {
 	 */
 	public static function purge_inbox() {
 		Inbox::purge( \get_option( 'activitypub_inbox_purge_days', ACTIVITYPUB_INBOX_PURGE_DAYS ) );
-	}
-
-	/**
-	 * Cron handler that migrates the legacy tombstone option to the CPT in chunks.
-	 *
-	 * @since unreleased
-	 */
-	public static function migrate_tombstones() {
-		$done = \Activitypub\Tombstone::migrate_legacy();
-
-		if ( ! $done && ! \wp_next_scheduled( 'activitypub_tombstone_migrate' ) ) {
-			\wp_schedule_single_event( \time() + 5 * MINUTE_IN_SECONDS, 'activitypub_tombstone_migrate' );
-		}
 	}
 
 	/**

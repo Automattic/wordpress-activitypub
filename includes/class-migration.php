@@ -34,6 +34,7 @@ class Migration {
 		Scheduler::register_async_batch_callback( 'activitypub_migrate_avatar_to_remote_actors', array( self::class, 'migrate_avatar_to_remote_actors' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_migrate_actor_emoji', array( self::class, 'migrate_actor_emoji' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_backfill_statistics', array( Statistics::class, 'backfill_historical_stats' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_tombstone_migrate', array( self::class, 'migrate_tombstones_to_cpt' ) );
 	}
 
 	/**
@@ -1090,6 +1091,64 @@ class Migration {
 		foreach ( $inbox_ids as $post_id ) {
 			\wp_delete_post( $post_id, true );
 		}
+	}
+
+	/**
+	 * Migrate URLs from the legacy `activitypub_tombstone_urls` option into the
+	 * `ap_tombstone` custom post type.
+	 *
+	 * Chunked async migration. Locking and rescheduling is handled by
+	 * Scheduler::async_batch — the callback returns `array( 'batch_size' => N )`
+	 * to request another run, or `null` when the option is fully drained.
+	 *
+	 * Legacy entries are already-normalized strings (no scheme), so we bypass
+	 * URL validation and insert directly via wp_insert_post.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $batch_size Optional. Number of URLs to process per call. Default 500.
+	 * @return array|null Args for the next run, or null when migration is complete.
+	 */
+	public static function migrate_tombstones_to_cpt( $batch_size = 500 ) {
+		$urls = \get_option( 'activitypub_tombstone_urls', null );
+
+		if ( null === $urls || ! \is_array( $urls ) || empty( $urls ) ) {
+			\delete_option( 'activitypub_tombstone_urls' );
+			return null;
+		}
+
+		$chunk     = \array_slice( $urls, 0, (int) $batch_size );
+		$remaining = \array_slice( $urls, (int) $batch_size );
+
+		foreach ( $chunk as $normalized ) {
+			if ( ! \is_string( $normalized ) || '' === $normalized ) {
+				continue;
+			}
+
+			$hash = \md5( $normalized );
+			if ( \get_page_by_path( $hash, OBJECT, Tombstone::POST_TYPE ) ) {
+				continue;
+			}
+
+			\wp_insert_post(
+				array(
+					'post_type'   => Tombstone::POST_TYPE,
+					'post_status' => 'publish',
+					'post_name'   => $hash,
+					'guid'        => $normalized,
+					'post_author' => 0,
+				),
+				true
+			);
+		}
+
+		if ( empty( $remaining ) ) {
+			\delete_option( 'activitypub_tombstone_urls' );
+			return null;
+		}
+
+		\update_option( 'activitypub_tombstone_urls', \array_values( $remaining ) );
+		return array( 'batch_size' => (int) $batch_size );
 	}
 
 	/**

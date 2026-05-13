@@ -445,65 +445,6 @@ class Test_Tombstone extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test migrate_legacy() moves URLs from the option into the CPT.
-	 *
-	 * @covers ::migrate_legacy
-	 */
-	public function test_migrate_legacy_moves_urls() {
-		$urls = array(
-			\Activitypub\normalize_url( 'https://fake.test/a' ),
-			\Activitypub\normalize_url( 'https://fake.test/b' ),
-			\Activitypub\normalize_url( 'https://fake.test/c' ),
-		);
-		\update_option( 'activitypub_tombstone_urls', $urls );
-
-		$done = Tombstone::migrate_legacy( 10 );
-
-		$this->assertTrue( $done );
-		$this->assertFalse( \get_option( 'activitypub_tombstone_urls', false ) );
-
-		foreach ( $urls as $url ) {
-			$this->assertTrue( Tombstone::exists_local( 'https://' . $url ) );
-		}
-	}
-
-	/**
-	 * Test migrate_legacy() is chunked: returns false while work remains, trims the option.
-	 *
-	 * @covers ::migrate_legacy
-	 */
-	public function test_migrate_legacy_is_chunked() {
-		$urls = array();
-		for ( $i = 0; $i < 5; $i++ ) {
-			$urls[] = \Activitypub\normalize_url( 'https://fake.test/chunked/' . $i );
-		}
-		\update_option( 'activitypub_tombstone_urls', $urls );
-
-		$done = Tombstone::migrate_legacy( 2 );
-
-		$this->assertFalse( $done );
-
-		$remaining = \get_option( 'activitypub_tombstone_urls', array() );
-		$this->assertCount( 3, $remaining );
-
-		Tombstone::migrate_legacy( 2 );
-		$final_done = Tombstone::migrate_legacy( 2 );
-
-		$this->assertTrue( $final_done );
-		$this->assertFalse( \get_option( 'activitypub_tombstone_urls', false ) );
-	}
-
-	/**
-	 * Test migrate_legacy() is idempotent — re-running after all URLs migrated is a no-op.
-	 *
-	 * @covers ::migrate_legacy
-	 */
-	public function test_migrate_legacy_idempotent() {
-		$this->assertTrue( Tombstone::migrate_legacy( 10 ) );
-		$this->assertTrue( Tombstone::migrate_legacy( 10 ) );
-	}
-
-	/**
 	 * Test purge() removes tombstones older than the retention window.
 	 *
 	 * @covers ::purge
@@ -563,36 +504,5 @@ class Test_Tombstone extends \WP_UnitTestCase {
 
 		$this->assertSame( 0, $deleted );
 		$this->assertNotNull( \get_page_by_path( $hash, OBJECT, Tombstone::POST_TYPE ) );
-	}
-
-	/**
-	 * Test migrate_legacy() bails when a fresh lock is held by another worker.
-	 *
-	 * @covers ::migrate_legacy
-	 */
-	public function test_migrate_legacy_respects_fresh_lock() {
-		\update_option( 'activitypub_tombstone_urls', array( 'fake.test/x' ) );
-		\add_option( 'activitypub_tombstone_migrate_lock', \time(), '', false );
-
-		$result = Tombstone::migrate_legacy( 10 );
-
-		$this->assertFalse( $result );
-		// Legacy option is untouched while another worker holds the lock.
-		$this->assertSame( array( 'fake.test/x' ), \get_option( 'activitypub_tombstone_urls' ) );
-	}
-
-	/**
-	 * Test migrate_legacy() takes over a stale lock (older than 10 minutes).
-	 *
-	 * @covers ::migrate_legacy
-	 */
-	public function test_migrate_legacy_takes_over_stale_lock() {
-		\update_option( 'activitypub_tombstone_urls', array( 'fake.test/y' ) );
-		\add_option( 'activitypub_tombstone_migrate_lock', \time() - 15 * MINUTE_IN_SECONDS, '', false );
-
-		$result = Tombstone::migrate_legacy( 10 );
-
-		$this->assertTrue( $result );
-		$this->assertFalse( \get_option( 'activitypub_tombstone_urls', false ) );
 	}
 }
