@@ -31,6 +31,13 @@ class Tombstone {
 	private static $codes = array( 404, 410 );
 
 	/**
+	 * The custom post type used to store local tombstones.
+	 *
+	 * @var string
+	 */
+	const POST_TYPE = 'ap_tombstone';
+
+	/**
 	 * Check if a tombstone exists for the given resource.
 	 *
 	 * This is the main entry point for tombstone detection. It accepts various
@@ -115,9 +122,14 @@ class Tombstone {
 	 * @return bool True if the local URL is in the tombstone registry, false otherwise.
 	 */
 	public static function exists_local( $url ) {
-		$urls = get_option( 'activitypub_tombstone_urls', array() );
+		if ( ! \is_string( $url ) || '' === $url ) {
+			return false;
+		}
 
-		return in_array( normalize_url( $url ), $urls, true );
+		$hash = \md5( normalize_url( $url ) );
+		$post = \get_page_by_path( $hash, OBJECT, self::POST_TYPE );
+
+		return null !== $post;
 	}
 
 	/**
@@ -202,23 +214,29 @@ class Tombstone {
 	 * @param string ...$urls The URLs to add to the tombstone registry.
 	 */
 	public static function bury( ...$urls ) {
-		$to_add = array();
-
 		foreach ( $urls as $url ) {
-			if ( \filter_var( $url, \FILTER_VALIDATE_URL ) ) {
-				$to_add[] = normalize_url( $url );
+			if ( ! \filter_var( $url, \FILTER_VALIDATE_URL ) ) {
+				continue;
 			}
+
+			$normalized = normalize_url( $url );
+			$hash       = \md5( $normalized );
+
+			if ( \get_page_by_path( $hash, OBJECT, self::POST_TYPE ) ) {
+				continue;
+			}
+
+			\wp_insert_post(
+				array(
+					'post_type'   => self::POST_TYPE,
+					'post_status' => 'publish',
+					'post_name'   => $hash,
+					'guid'        => $normalized,
+					'post_author' => 0,
+				),
+				true
+			);
 		}
-
-		if ( empty( $to_add ) ) {
-			return;
-		}
-
-		$stored_urls = \get_option( 'activitypub_tombstone_urls', array() );
-		$stored_urls = \array_merge( $stored_urls, $to_add );
-		$stored_urls = \array_unique( $stored_urls );
-
-		\update_option( 'activitypub_tombstone_urls', $stored_urls );
 	}
 
 	/**
@@ -231,20 +249,17 @@ class Tombstone {
 	 * @param string ...$urls The URLs to remove from the tombstone registry.
 	 */
 	public static function remove( ...$urls ) {
-		$to_remove = array();
-
 		foreach ( $urls as $url ) {
-			if ( \filter_var( $url, \FILTER_VALIDATE_URL ) ) {
-				$to_remove[] = normalize_url( $url );
+			if ( ! \filter_var( $url, \FILTER_VALIDATE_URL ) ) {
+				continue;
+			}
+
+			$hash = \md5( normalize_url( $url ) );
+			$post = \get_page_by_path( $hash, OBJECT, self::POST_TYPE );
+
+			if ( $post ) {
+				\wp_delete_post( (int) $post->ID, true );
 			}
 		}
-
-		if ( empty( $to_remove ) ) {
-			return;
-		}
-
-		$stored_urls = \get_option( 'activitypub_tombstone_urls', array() );
-		$stored_urls = \array_diff( $stored_urls, $to_remove );
-		\update_option( 'activitypub_tombstone_urls', $stored_urls );
 	}
 }
