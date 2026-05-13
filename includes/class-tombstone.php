@@ -114,12 +114,13 @@ class Tombstone {
 	/**
 	 * Check if a local URL is tombstoned.
 	 *
-	 * Checks against the local tombstone URL registry stored in WordPress options.
-	 * Local URLs are normalized before comparison to ensure consistent matching.
+	 * Looks up the normalized URL's hash against the `ap_tombstone` custom
+	 * post type. Falls back to the legacy `activitypub_tombstone_urls`
+	 * option for tombstones that have not yet been migrated.
 	 *
 	 * @param string $url The local URL to check for tombstone status.
 	 *
-	 * @return bool True if the local URL is in the tombstone registry, false otherwise.
+	 * @return bool True if the local URL is tombstoned, false otherwise.
 	 */
 	public static function exists_local( $url ) {
 		if ( ! \is_string( $url ) || '' === $url ) {
