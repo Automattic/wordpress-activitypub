@@ -420,4 +420,29 @@ class Test_Tombstone extends \WP_UnitTestCase {
 		$this->assertFalse( Tombstone::exists_local( $url1 ) );
 		$this->assertFalse( Tombstone::exists_local( $url2 ) );
 	}
+
+	/**
+	 * Test exists_local() falls back to the legacy option when a URL has not yet been migrated.
+	 *
+	 * @covers ::exists_local
+	 */
+	public function test_exists_local_falls_back_to_legacy_option() {
+		$url        = 'https://fake.test/object/legacy';
+		$normalized = \Activitypub\normalize_url( $url );
+
+		\update_option( 'activitypub_tombstone_urls', array( $normalized ) );
+
+		$this->assertTrue( Tombstone::exists_local( $url ) );
+
+		\delete_option( 'activitypub_tombstone_urls' );
+	}
+
+	/**
+	 * Test exists_local() returns false when neither store has the URL.
+	 *
+	 * @covers ::exists_local
+	 */
+	public function test_exists_local_returns_false_when_neither_store_has_url() {
+		$this->assertFalse( Tombstone::exists_local( 'https://fake.test/object/missing' ) );
+	}
 }

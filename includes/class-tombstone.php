@@ -127,10 +127,22 @@ class Tombstone {
 			return false;
 		}
 
-		$hash = \md5( normalize_url( $url ) );
-		$post = \get_page_by_path( $hash, OBJECT, self::POST_TYPE );
+		$normalized = normalize_url( $url );
+		$hash       = \md5( $normalized );
 
-		return null !== $post;
+		if ( \get_page_by_path( $hash, OBJECT, self::POST_TYPE ) ) {
+			return true;
+		}
+
+		// Fallback to the legacy option during migration. Once the option is
+		// deleted (migration complete), get_option returns the default array
+		// and in_array returns false — cheap short-circuit.
+		$legacy = \get_option( 'activitypub_tombstone_urls', array() );
+		if ( \is_array( $legacy ) && \in_array( $normalized, $legacy, true ) ) {
+			return true;
+		}
+
+		return false;
 	}
 
 	/**
