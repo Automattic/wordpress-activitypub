@@ -474,6 +474,43 @@ class Test_Tombstone extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test remove() clears a URL from the legacy option when present (mid-migration).
+	 *
+	 * @covers ::remove
+	 */
+	public function test_remove_clears_legacy_option_entry() {
+		$url        = 'https://fake.test/object/legacy-remove';
+		$normalized = \Activitypub\normalize_url( $url );
+
+		\update_option( 'activitypub_tombstone_urls', array( $normalized ) );
+
+		Tombstone::remove( $url );
+
+		$this->assertFalse( Tombstone::exists_local( $url ) );
+		$this->assertFalse( \get_option( 'activitypub_tombstone_urls', false ) );
+	}
+
+	/**
+	 * Test remove() preserves other legacy entries while removing the targeted one.
+	 *
+	 * @covers ::remove
+	 */
+	public function test_remove_preserves_other_legacy_entries() {
+		$keep_url    = 'https://fake.test/object/keep';
+		$remove_url  = 'https://fake.test/object/remove';
+		$keep_norm   = \Activitypub\normalize_url( $keep_url );
+		$remove_norm = \Activitypub\normalize_url( $remove_url );
+
+		\update_option( 'activitypub_tombstone_urls', array( $keep_norm, $remove_norm ) );
+
+		Tombstone::remove( $remove_url );
+
+		$this->assertTrue( Tombstone::exists_local( $keep_url ) );
+		$this->assertFalse( Tombstone::exists_local( $remove_url ) );
+		$this->assertSame( array( $keep_norm ), \get_option( 'activitypub_tombstone_urls' ) );
+	}
+
+	/**
 	 * Test purge() is a no-op when the retention filter is 0 or negative.
 	 *
 	 * @covers ::purge

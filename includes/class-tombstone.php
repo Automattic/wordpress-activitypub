@@ -262,16 +262,36 @@ class Tombstone {
 	 * @param string ...$urls The URLs to remove from the tombstone registry.
 	 */
 	public static function remove( ...$urls ) {
+		$legacy         = \get_option( 'activitypub_tombstone_urls', false );
+		$legacy_changed = false;
+
 		foreach ( $urls as $url ) {
 			if ( ! \filter_var( $url, \FILTER_VALIDATE_URL ) ) {
 				continue;
 			}
 
-			$hash = \md5( normalize_url( $url ) );
-			$post = \get_page_by_path( $hash, OBJECT, self::POST_TYPE );
+			$normalized = normalize_url( $url );
+			$hash       = \md5( $normalized );
 
+			$post = \get_page_by_path( $hash, OBJECT, self::POST_TYPE );
 			if ( $post ) {
 				\wp_delete_post( (int) $post->ID, true );
+			}
+
+			if ( \is_array( $legacy ) ) {
+				$index = \array_search( $normalized, $legacy, true );
+				if ( false !== $index ) {
+					unset( $legacy[ $index ] );
+					$legacy_changed = true;
+				}
+			}
+		}
+
+		if ( $legacy_changed ) {
+			if ( empty( $legacy ) ) {
+				\delete_option( 'activitypub_tombstone_urls' );
+			} else {
+				\update_option( 'activitypub_tombstone_urls', \array_values( $legacy ) );
 			}
 		}
 	}
@@ -279,9 +299,9 @@ class Tombstone {
 	/**
 	 * Delete tombstones older than the retention window.
 	 *
-	 * Processes up to `$batch_size` tombstones per call. The Scheduler handler
-	 * reschedules a single-shot event when a full batch was deleted, so a
-	 * backlog drains across multiple runs within a day.
+	 * Processes up to `$batch_size` tombstones per call. Retention is
+	 * non-urgent: large backlogs drain across multiple daily runs of the
+	 * `activitypub_tombstone_purge` cron event.
 	 *
 	 * @since unreleased
 	 *
