@@ -775,6 +775,10 @@ class Migration {
 
 		// Add a default extra field for each user.
 		foreach ( $users as $user ) {
+			if ( self::has_powered_by_extra_field( $user->ID, Extra_Fields::USER_POST_TYPE ) ) {
+				continue;
+			}
+
 			\wp_insert_post(
 				array(
 					'post_type'    => Extra_Fields::USER_POST_TYPE,
@@ -786,6 +790,10 @@ class Migration {
 			);
 		}
 
+		if ( self::has_powered_by_extra_field( 0, Extra_Fields::BLOG_POST_TYPE ) ) {
+			return;
+		}
+
 		\wp_insert_post(
 			array(
 				'post_type'    => Extra_Fields::BLOG_POST_TYPE,
@@ -795,6 +803,31 @@ class Migration {
 				'post_content' => $content,
 			)
 		);
+	}
+
+	/**
+	 * Whether a Powered-by extra field already exists for the given author and post type.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int    $author_id The author ID (0 for the blog actor).
+	 * @param string $post_type The extra field post type.
+	 * @return bool True if a matching extra field exists, false otherwise.
+	 */
+	private static function has_powered_by_extra_field( $author_id, $post_type ) {
+		$query = new \WP_Query(
+			array(
+				'post_type'      => $post_type,
+				'author'         => $author_id,
+				'post_status'    => 'any',
+				'title'          => \__( 'Powered by', 'activitypub' ),
+				'posts_per_page' => 1,
+				'fields'         => 'ids',
+				'no_found_rows'  => true,
+			)
+		);
+
+		return $query->have_posts();
 	}
 
 	/**

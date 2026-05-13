@@ -708,6 +708,44 @@ class Test_Migration extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test add_default_extra_field does not duplicate entries when called more than once.
+	 */
+	public function test_add_default_extra_field_is_idempotent() {
+		$user_id = self::factory()->user->create();
+		$user    = get_user_by( 'id', $user_id );
+		$user->add_cap( 'activitypub' );
+
+		$reflection = new \ReflectionClass( Migration::class );
+		$method     = $reflection->getMethod( 'add_default_extra_field' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$method->invoke( null );
+		$method->invoke( null );
+
+		$user_fields = get_posts(
+			array(
+				'post_type'      => Extra_Fields::USER_POST_TYPE,
+				'author'         => $user_id,
+				'posts_per_page' => -1,
+			)
+		);
+		$this->assertCount( 1, $user_fields, 'A second run must not create another user extra field.' );
+
+		$blog_fields = get_posts(
+			array(
+				'post_type'      => Extra_Fields::BLOG_POST_TYPE,
+				'author'         => 0,
+				'posts_per_page' => -1,
+			)
+		);
+		$this->assertCount( 1, $blog_fields, 'A second run must not create another blog extra field.' );
+
+		_delete_all_data();
+	}
+
+	/**
 	 * Test update_notification_options.
 	 *
 	 * @covers ::update_notification_options

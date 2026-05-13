@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Stop the "Powered by WordPress" profile field from being added more than once.
