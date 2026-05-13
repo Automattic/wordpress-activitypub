@@ -773,9 +773,15 @@ class Migration {
 		$title   = \__( 'Powered by', 'activitypub' );
 		$content = 'WordPress';
 
-		// Add a default extra field for each user.
+		/*
+		 * Skip users that already have any user extra field — they were either provisioned
+		 * by a previous run of this migration or have manually added fields. Locale-independent,
+		 * and one prefetched query rather than one per user.
+		 */
+		$authors_with_user_fields = self::get_extra_field_authors( Extra_Fields::USER_POST_TYPE );
+
 		foreach ( $users as $user ) {
-			if ( self::has_powered_by_extra_field( $user->ID, Extra_Fields::USER_POST_TYPE ) ) {
+			if ( \in_array( (int) $user->ID, $authors_with_user_fields, true ) ) {
 				continue;
 			}
 
@@ -790,7 +796,8 @@ class Migration {
 			);
 		}
 
-		if ( self::has_powered_by_extra_field( 0, Extra_Fields::BLOG_POST_TYPE ) ) {
+		// Same idea for the blog actor: skip if any blog extra field already exists.
+		if ( ! empty( self::get_extra_field_authors( Extra_Fields::BLOG_POST_TYPE ) ) ) {
 			return;
 		}
 
@@ -806,28 +813,24 @@ class Migration {
 	}
 
 	/**
-	 * Whether a Powered-by extra field already exists for the given author and post type.
+	 * Return the distinct author IDs that already own at least one extra field post.
 	 *
 	 * @since unreleased
 	 *
-	 * @param int    $author_id The author ID (0 for the blog actor).
 	 * @param string $post_type The extra field post type.
-	 * @return bool True if a matching extra field exists, false otherwise.
+	 * @return int[] Distinct author IDs.
 	 */
-	private static function has_powered_by_extra_field( $author_id, $post_type ) {
-		$query = new \WP_Query(
-			array(
-				'post_type'      => $post_type,
-				'author'         => $author_id,
-				'post_status'    => 'any',
-				'title'          => \__( 'Powered by', 'activitypub' ),
-				'posts_per_page' => 1,
-				'fields'         => 'ids',
-				'no_found_rows'  => true,
+	private static function get_extra_field_authors( $post_type ) {
+		global $wpdb;
+
+		$authors = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT DISTINCT post_author FROM $wpdb->posts WHERE post_type = %s",
+				$post_type
 			)
 		);
 
-		return $query->have_posts();
+		return \array_map( 'intval', $authors );
 	}
 
 	/**
