@@ -275,4 +275,60 @@ class Tombstone {
 			}
 		}
 	}
+
+	/**
+	 * Migrate URLs from the legacy `activitypub_tombstone_urls` option into the CPT.
+	 *
+	 * Processes up to `$batch_size` URLs per call (slicing from the front) and
+	 * trims them out of the option. Deletes the option once empty.
+	 *
+	 * Legacy entries are already-normalized strings (no scheme), so they bypass
+	 * the URL-validation guard in bury().
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $batch_size Number of URLs to process per call.
+	 * @return bool True when no more work remains, false if another call is required.
+	 */
+	public static function migrate_legacy( $batch_size = 500 ) {
+		$urls = \get_option( 'activitypub_tombstone_urls', null );
+
+		if ( null === $urls || ! \is_array( $urls ) || empty( $urls ) ) {
+			\delete_option( 'activitypub_tombstone_urls' );
+			return true;
+		}
+
+		$chunk     = \array_slice( $urls, 0, (int) $batch_size );
+		$remaining = \array_slice( $urls, (int) $batch_size );
+
+		foreach ( $chunk as $normalized ) {
+			if ( ! \is_string( $normalized ) || '' === $normalized ) {
+				continue;
+			}
+
+			$hash = \md5( $normalized );
+			if ( \get_page_by_path( $hash, OBJECT, self::POST_TYPE ) ) {
+				continue;
+			}
+
+			\wp_insert_post(
+				array(
+					'post_type'   => self::POST_TYPE,
+					'post_status' => 'publish',
+					'post_name'   => $hash,
+					'guid'        => $normalized,
+					'post_author' => 0,
+				),
+				true
+			);
+		}
+
+		if ( empty( $remaining ) ) {
+			\delete_option( 'activitypub_tombstone_urls' );
+			return true;
+		}
+
+		\update_option( 'activitypub_tombstone_urls', \array_values( $remaining ) );
+		return false;
+	}
 }

@@ -443,4 +443,63 @@ class Test_Tombstone extends \WP_UnitTestCase {
 	public function test_exists_local_returns_false_when_neither_store_has_url() {
 		$this->assertFalse( Tombstone::exists_local( 'https://fake.test/object/missing' ) );
 	}
+
+	/**
+	 * Test migrate_legacy() moves URLs from the option into the CPT.
+	 *
+	 * @covers ::migrate_legacy
+	 */
+	public function test_migrate_legacy_moves_urls() {
+		$urls = array(
+			\Activitypub\normalize_url( 'https://fake.test/a' ),
+			\Activitypub\normalize_url( 'https://fake.test/b' ),
+			\Activitypub\normalize_url( 'https://fake.test/c' ),
+		);
+		\update_option( 'activitypub_tombstone_urls', $urls );
+
+		$done = Tombstone::migrate_legacy( 10 );
+
+		$this->assertTrue( $done );
+		$this->assertFalse( \get_option( 'activitypub_tombstone_urls', false ) );
+
+		foreach ( $urls as $url ) {
+			$this->assertTrue( Tombstone::exists_local( 'https://' . $url ) );
+		}
+	}
+
+	/**
+	 * Test migrate_legacy() is chunked: returns false while work remains, trims the option.
+	 *
+	 * @covers ::migrate_legacy
+	 */
+	public function test_migrate_legacy_is_chunked() {
+		$urls = array();
+		for ( $i = 0; $i < 5; $i++ ) {
+			$urls[] = \Activitypub\normalize_url( 'https://fake.test/chunked/' . $i );
+		}
+		\update_option( 'activitypub_tombstone_urls', $urls );
+
+		$done = Tombstone::migrate_legacy( 2 );
+
+		$this->assertFalse( $done );
+
+		$remaining = \get_option( 'activitypub_tombstone_urls', array() );
+		$this->assertCount( 3, $remaining );
+
+		Tombstone::migrate_legacy( 2 );
+		$final_done = Tombstone::migrate_legacy( 2 );
+
+		$this->assertTrue( $final_done );
+		$this->assertFalse( \get_option( 'activitypub_tombstone_urls', false ) );
+	}
+
+	/**
+	 * Test migrate_legacy() is idempotent — re-running after all URLs migrated is a no-op.
+	 *
+	 * @covers ::migrate_legacy
+	 */
+	public function test_migrate_legacy_idempotent() {
+		$this->assertTrue( Tombstone::migrate_legacy( 10 ) );
+		$this->assertTrue( Tombstone::migrate_legacy( 10 ) );
+	}
 }
