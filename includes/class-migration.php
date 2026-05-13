@@ -214,6 +214,9 @@ class Migration {
 			// Backfill historical statistics data (delay + jitter to avoid load spikes on hosts running many sites).
 			\wp_schedule_single_event( \time() + HOUR_IN_SECONDS + \wp_rand( 0, 6 * HOUR_IN_SECONDS ), 'activitypub_backfill_statistics' );
 		}
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			self::backfill_default_extra_fields_flag();
+		}
 
 		if ( \version_compare( $version_from_db, '8.3.0', '<' ) ) {
 			if ( ! \wp_next_scheduled( 'activitypub_tombstone_migrate' ) ) {
@@ -785,7 +788,9 @@ class Migration {
 		$title   = \__( 'Powered by', 'activitypub' );
 		$content = 'WordPress';
 
-		// Add a default extra field for each user.
+		// Add a default extra field for each user, and mark them as provisioned so
+		// Extra_Fields::default_actor_extra_fields does not spawn Blog/Profile/Homepage
+		// replacements once the user deletes the Powered-by entry.
 		foreach ( $users as $user ) {
 			\wp_insert_post(
 				array(
@@ -796,6 +801,8 @@ class Migration {
 					'post_content' => $content,
 				)
 			);
+
+			\update_user_meta( $user->ID, 'activitypub_default_extra_fields', true );
 		}
 
 		\wp_insert_post(
@@ -807,6 +814,35 @@ class Migration {
 				'post_content' => $content,
 			)
 		);
+
+		\update_option( 'activitypub_default_extra_fields', true );
+	}
+
+	/**
+	 * Backfill the `activitypub_default_extra_fields` flag for existing installs.
+	 *
+	 * Before this migration, `add_default_extra_field` provisioned a "Powered by"
+	 * entry for each user but did not set the flag that
+	 * `Extra_Fields::default_actor_extra_fields` checks. If a user deleted the
+	 * provisioned field, the filter saw an empty list and no flag and spawned
+	 * Blog/Profile/Homepage replacements (#3280). Marking every user with the
+	 * `activitypub` capability and the blog actor as already-provisioned stops that.
+	 *
+	 * @since unreleased
+	 */
+	private static function backfill_default_extra_fields_flag() {
+		$user_ids = \get_users(
+			array(
+				'capability__in' => array( 'activitypub' ),
+				'fields'         => 'ID',
+			)
+		);
+
+		foreach ( $user_ids as $user_id ) {
+			\update_user_meta( $user_id, 'activitypub_default_extra_fields', true );
+		}
+
+		\update_option( 'activitypub_default_extra_fields', true );
 	}
 
 	/**

@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Stop default profile fields from being re-added after the "Powered by WordPress" entry is deleted.

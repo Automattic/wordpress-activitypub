@@ -680,6 +680,111 @@ class Test_Migration extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that deleting a Migration-provisioned extra field does not cause
+	 * Extra_Fields::default_actor_extra_fields to spawn Blog/Profile/Homepage replacements.
+	 *
+	 * This was the actual user-visible bug in #3280 — the user sees fields "reappear"
+	 * after deletion because a different set of defaults is auto-provisioned by the
+	 * filter once the user's field list goes empty.
+	 *
+	 * @covers ::add_default_extra_field
+	 */
+	public function test_add_default_extra_field_marks_user_as_provisioned() {
+		$user_id = self::factory()->user->create();
+		$user    = \get_user_by( 'id', $user_id );
+		$user->add_cap( 'activitypub' );
+
+		\delete_user_meta( $user_id, 'activitypub_default_extra_fields' );
+
+		$reflection = new \ReflectionClass( Migration::class );
+		$method     = $reflection->getMethod( 'add_default_extra_field' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+		$method->invoke( null );
+
+		// Delete every provisioned field for this user.
+		foreach ( \get_posts(
+			array(
+				'post_type'      => Extra_Fields::USER_POST_TYPE,
+				'author'         => $user_id,
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+			)
+		) as $id ) {
+			\wp_delete_post( $id, true );
+		}
+
+		// get_actor_fields() must NOT auto-provision replacement defaults now that the user has been provisioned once.
+		$fields = Extra_Fields::get_actor_fields( $user_id );
+		$this->assertCount( 0, $fields, 'Deleting the Powered-by default must not trigger Extra_Fields::default_actor_extra_fields to spawn replacements.' );
+
+		_delete_all_data();
+	}
+
+	/**
+	 * Same guarantee for the blog actor.
+	 *
+	 * @covers ::add_default_extra_field
+	 */
+	public function test_add_default_extra_field_marks_blog_as_provisioned() {
+		\delete_option( 'activitypub_default_extra_fields' );
+
+		$reflection = new \ReflectionClass( Migration::class );
+		$method     = $reflection->getMethod( 'add_default_extra_field' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+		$method->invoke( null );
+
+		foreach ( \get_posts(
+			array(
+				'post_type'      => Extra_Fields::BLOG_POST_TYPE,
+				'author'         => 0,
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+			)
+		) as $id ) {
+			\wp_delete_post( $id, true );
+		}
+
+		$fields = Extra_Fields::get_actor_fields( 0 );
+		$this->assertCount( 0, $fields, 'Deleting the blog-actor Powered-by default must not trigger replacement defaults.' );
+
+		_delete_all_data();
+	}
+
+	/**
+	 * Test backfill_default_extra_fields_flag marks existing activitypub users and the blog actor as provisioned.
+	 *
+	 * @covers ::backfill_default_extra_fields_flag
+	 */
+	public function test_backfill_default_extra_fields_flag() {
+		$user_id = self::factory()->user->create();
+		$user    = \get_user_by( 'id', $user_id );
+		$user->add_cap( 'activitypub' );
+
+		$other_id = self::factory()->user->create();
+
+		\delete_user_meta( $user_id, 'activitypub_default_extra_fields' );
+		\delete_user_meta( $other_id, 'activitypub_default_extra_fields' );
+		\delete_option( 'activitypub_default_extra_fields' );
+
+		$reflection = new \ReflectionClass( Migration::class );
+		$method     = $reflection->getMethod( 'backfill_default_extra_fields_flag' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+		$method->invoke( null );
+
+		$this->assertSame( '1', \get_user_meta( $user_id, 'activitypub_default_extra_fields', true ), 'User with activitypub cap is marked as provisioned.' );
+		$this->assertSame( '', \get_user_meta( $other_id, 'activitypub_default_extra_fields', true ), 'User without activitypub cap is left alone.' );
+		$this->assertTrue( (bool) \get_option( 'activitypub_default_extra_fields' ), 'Blog actor is marked as provisioned.' );
+
+		_delete_all_data();
+	}
+
+	/**
 	 * Test add_default_extra_field with multiple users.
 	 */
 	public function test_add_default_extra_field_multiple_users() {
