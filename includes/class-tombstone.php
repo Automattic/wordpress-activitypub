@@ -135,9 +135,9 @@ class Tombstone {
 		}
 
 		// Fallback to the legacy option during migration. Once the option is
-		// deleted (migration complete), get_option returns the default array
-		// and in_array returns false — cheap short-circuit.
-		$legacy = \get_option( 'activitypub_tombstone_urls', array() );
+		// deleted (migration complete), get_option returns false and the
+		// is_array() guard short-circuits immediately.
+		$legacy = \get_option( 'activitypub_tombstone_urls', false );
 		if ( \is_array( $legacy ) && \in_array( $normalized, $legacy, true ) ) {
 			return true;
 		}

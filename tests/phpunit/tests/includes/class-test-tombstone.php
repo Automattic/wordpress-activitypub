@@ -433,8 +433,6 @@ class Test_Tombstone extends \WP_UnitTestCase {
 		\update_option( 'activitypub_tombstone_urls', array( $normalized ) );
 
 		$this->assertTrue( Tombstone::exists_local( $url ) );
-
-		\delete_option( 'activitypub_tombstone_urls' );
 	}
 
 	/**
