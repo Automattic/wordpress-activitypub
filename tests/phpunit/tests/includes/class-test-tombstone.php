@@ -502,4 +502,66 @@ class Test_Tombstone extends \WP_UnitTestCase {
 		$this->assertTrue( Tombstone::migrate_legacy( 10 ) );
 		$this->assertTrue( Tombstone::migrate_legacy( 10 ) );
 	}
+
+	/**
+	 * Test purge() removes tombstones older than the retention window.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_deletes_old_tombstones() {
+		Tombstone::bury( 'https://fake.test/object/old' );
+		Tombstone::bury( 'https://fake.test/object/new' );
+
+		$old_hash = \md5( \Activitypub\normalize_url( 'https://fake.test/object/old' ) );
+		$old_post = \get_page_by_path( $old_hash, OBJECT, Tombstone::POST_TYPE );
+		$new_hash = \md5( \Activitypub\normalize_url( 'https://fake.test/object/new' ) );
+
+		$old_date = \gmdate( 'Y-m-d H:i:s', \time() - 200 * DAY_IN_SECONDS );
+		\wp_update_post(
+			array(
+				'ID'            => $old_post->ID,
+				'post_date'     => $old_date,
+				'post_date_gmt' => $old_date,
+			)
+		);
+
+		$deleted = Tombstone::purge();
+
+		$this->assertSame( 1, $deleted );
+		$this->assertNull( \get_page_by_path( $old_hash, OBJECT, Tombstone::POST_TYPE ) );
+		$this->assertNotNull( \get_page_by_path( $new_hash, OBJECT, Tombstone::POST_TYPE ) );
+	}
+
+	/**
+	 * Test purge() is a no-op when the retention filter is 0 or negative.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_disabled_when_retention_zero() {
+		Tombstone::bury( 'https://fake.test/object/keep' );
+
+		$hash = \md5( \Activitypub\normalize_url( 'https://fake.test/object/keep' ) );
+		$post = \get_page_by_path( $hash, OBJECT, Tombstone::POST_TYPE );
+
+		$old_date = \gmdate( 'Y-m-d H:i:s', \time() - 365 * DAY_IN_SECONDS );
+		\wp_update_post(
+			array(
+				'ID'            => $post->ID,
+				'post_date'     => $old_date,
+				'post_date_gmt' => $old_date,
+			)
+		);
+
+		$filter = static function () {
+			return 0;
+		};
+		\add_filter( 'activitypub_tombstone_retention_days', $filter );
+
+		$deleted = Tombstone::purge();
+
+		\remove_filter( 'activitypub_tombstone_retention_days', $filter );
+
+		$this->assertSame( 0, $deleted );
+		$this->assertNotNull( \get_page_by_path( $hash, OBJECT, Tombstone::POST_TYPE ) );
+	}
 }

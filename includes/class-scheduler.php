@@ -39,6 +39,7 @@ class Scheduler {
 		'activitypub_outbox_purge'                 => 'daily',
 		'activitypub_inbox_purge'                  => 'daily',
 		'activitypub_ap_post_purge'                => 'daily',
+		'activitypub_tombstone_purge'              => 'daily',
 		'activitypub_sync_blocklist_subscriptions' => 'weekly',
 	);
 
@@ -83,6 +84,7 @@ class Scheduler {
 		\add_action( 'activitypub_inbox_purge', array( self::class, 'purge_inbox' ) );
 		\add_action( 'activitypub_ap_post_purge', array( self::class, 'purge_ap_posts' ) );
 		\add_action( 'activitypub_tombstone_migrate', array( self::class, 'migrate_tombstones' ) );
+		\add_action( 'activitypub_tombstone_purge', array( self::class, 'purge_tombstones' ) );
 		\add_action( 'activitypub_inbox_create_item', array( self::class, 'process_inbox_activity' ) );
 		\add_action( 'activitypub_sync_blocklist_subscriptions', array( Blocklist_Subscriptions::class, 'sync_all' ) );
 
@@ -416,6 +418,23 @@ class Scheduler {
 	 */
 	public static function purge_ap_posts() {
 		Remote_Posts::purge( \get_option( 'activitypub_ap_post_purge_days', ACTIVITYPUB_AP_POST_PURGE_DAYS ) );
+	}
+
+	/**
+	 * Daily cron handler that purges expired tombstones.
+	 *
+	 * Reschedules itself five minutes out if a full batch was deleted,
+	 * so a backlog drains within the day. The `wp_next_scheduled` guard
+	 * prevents concurrent workers from double-queueing the continuation.
+	 *
+	 * @since unreleased
+	 */
+	public static function purge_tombstones() {
+		$deleted = \Activitypub\Tombstone::purge();
+
+		if ( 200 === $deleted && ! \wp_next_scheduled( 'activitypub_tombstone_purge' ) ) {
+			\wp_schedule_single_event( \time() + 5 * MINUTE_IN_SECONDS, 'activitypub_tombstone_purge' );
+		}
 	}
 
 	/**

@@ -345,4 +345,63 @@ class Tombstone {
 		\delete_option( 'activitypub_tombstone_migrate_lock' );
 		return false;
 	}
+
+	/**
+	 * Delete tombstones older than the retention window.
+	 *
+	 * Processes up to `$batch_size` tombstones per call. The Scheduler handler
+	 * reschedules a single-shot event when a full batch was deleted, so a
+	 * backlog drains across multiple runs within a day.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $batch_size Max number of tombstones to delete per call.
+	 * @return int The number of tombstones deleted.
+	 */
+	public static function purge( $batch_size = 200 ) {
+		/**
+		 * Filters the retention window for local tombstones, in days.
+		 *
+		 * Set to 0 or a negative value to disable automatic purge.
+		 *
+		 * @since unreleased
+		 *
+		 * @param int $days Retention window in days. Default 90.
+		 */
+		$days = (int) \apply_filters( 'activitypub_tombstone_retention_days', 90 );
+
+		if ( $days <= 0 ) {
+			return 0;
+		}
+
+		$cutoff = \gmdate( 'Y-m-d H:i:s', \time() - $days * DAY_IN_SECONDS );
+
+		$ids = \get_posts(
+			array(
+				'post_type'      => self::POST_TYPE,
+				'post_status'    => 'publish',
+				'posts_per_page' => (int) $batch_size,
+				'fields'         => 'ids',
+				'orderby'        => 'date',
+				'order'          => 'ASC',
+				'no_found_rows'  => true,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'date_query'     => array(
+					array(
+						'column' => 'post_date_gmt',
+						'before' => $cutoff,
+					),
+				),
+			)
+		);
+
+		$deleted = 0;
+		foreach ( $ids as $id ) {
+			if ( \wp_delete_post( (int) $id, true ) ) {
+				++$deleted;
+			}
+		}
+
+		return $deleted;
+	}
 }
