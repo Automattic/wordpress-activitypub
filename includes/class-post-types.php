@@ -34,7 +34,7 @@ class Post_Types {
 		\add_action( 'init', array( self::class, 'register_extra_fields_post_types' ), 11 );
 		\add_action( 'init', array( self::class, 'register_activitypub_post_meta' ), 11 );
 		\add_action( 'init', array( self::class, 'register_oauth_post_types' ), 11 );
-		\add_action( 'init', array( self::class, 'register_ap_tombstone_post_type' ), 11 );
+		\add_action( 'init', array( self::class, 'register_tombstone_post_type' ), 11 );
 
 		\add_action( 'rest_api_init', array( self::class, 'register_ap_actor_rest_field' ) );
 		\add_action( 'rest_api_init', array( self::class, 'register_ap_post_actor_rest_field' ) );
@@ -570,7 +570,7 @@ class Post_Types {
 	 *
 	 * @since unreleased
 	 */
-	public static function register_ap_tombstone_post_type() {
+	public static function register_tombstone_post_type() {
 		\register_post_type(
 			'ap_tombstone',
 			array(

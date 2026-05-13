@@ -47,7 +47,7 @@ class Test_Post_Types extends \WP_UnitTestCase {
 	/**
 	 * Test that the ap_tombstone post type is registered and non-public.
 	 *
-	 * @covers \Activitypub\Post_Types::register_ap_tombstone_post_type
+	 * @covers ::register_tombstone_post_type
 	 */
 	public function test_ap_tombstone_post_type_registered() {
 		$this->assertTrue( \post_type_exists( 'ap_tombstone' ) );
@@ -57,6 +57,7 @@ class Test_Post_Types extends \WP_UnitTestCase {
 		$this->assertFalse( $post_type->publicly_queryable );
 		$this->assertFalse( $post_type->show_ui );
 		$this->assertFalse( $post_type->show_in_rest );
+		$this->assertFalse( $post_type->delete_with_user );
 		$this->assertTrue( $post_type->exclude_from_search );
 	}
 }
