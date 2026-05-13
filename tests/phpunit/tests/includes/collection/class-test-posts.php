@@ -339,6 +339,32 @@ class Test_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test creating a post with sensitive=true and a whitespace-only summary.
+	 *
+	 * The whitespace becomes empty after sanitize_text_field, so no CW is set
+	 * and the post_excerpt is also empty (no whitespace pollution).
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_whitespace_summary_with_sensitive_is_ignored() {
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$activity = array(
+			'object' => array(
+				'type'      => 'Note',
+				'content'   => '<p>Content.</p>',
+				'summary'   => '   ',
+				'sensitive' => true,
+			),
+		);
+
+		$post = Posts::create( $activity, $user_id );
+
+		$this->assertInstanceOf( '\WP_Post', $post );
+		$this->assertSame( '', \get_post_meta( $post->ID, 'activitypub_content_warning', true ) );
+		$this->assertSame( '', $post->post_excerpt );
+	}
+
+	/**
 	 * Test updating a post to add a content warning.
 	 *
 	 * @covers ::update
