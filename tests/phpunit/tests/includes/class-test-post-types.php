@@ -43,4 +43,20 @@ class Test_Post_Types extends \WP_UnitTestCase {
 
 		\delete_post_meta( $post_id, 'activitypub_max_image_attachments' );
 	}
+
+	/**
+	 * Test that the ap_tombstone post type is registered and non-public.
+	 *
+	 * @covers \Activitypub\Post_Types::register_ap_tombstone_post_type
+	 */
+	public function test_ap_tombstone_post_type_registered() {
+		$this->assertTrue( \post_type_exists( 'ap_tombstone' ) );
+
+		$post_type = \get_post_type_object( 'ap_tombstone' );
+		$this->assertFalse( $post_type->public );
+		$this->assertFalse( $post_type->publicly_queryable );
+		$this->assertFalse( $post_type->show_ui );
+		$this->assertFalse( $post_type->show_in_rest );
+		$this->assertTrue( $post_type->exclude_from_search );
+	}
 }
