@@ -36,6 +36,7 @@ class Test_Undo extends \WP_UnitTestCase {
 		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
 
 		$this->user_id = self::factory()->user->create();
+		\get_user_by( 'id', $this->user_id )->add_cap( 'activitypub' );
 	}
 
 	/**
@@ -173,6 +174,104 @@ class Test_Undo extends \WP_UnitTestCase {
 
 		$pending = \get_post_meta( $remote_actor->ID, Following::PENDING_META_KEY, false );
 		$this->assertNotContains( (string) $this->user_id, $pending, 'User should be removed from pending.' );
+	}
+
+	/**
+	 * Test that handle_undo for a Follow returns the new Undo outbox item ID.
+	 *
+	 * Regression test: previously returned a WP_Post of the remote actor, which
+	 * caused Outbox_Controller::create_item to look up the wrong outbox entry and
+	 * respond with a 500 error.
+	 *
+	 * @covers ::handle_undo
+	 */
+	public function test_handle_undo_follow_returns_outbox_id() {
+		$actor_url    = 'https://example.com/users/return-id-test';
+		$remote_actor = $this->create_remote_actor( $actor_url );
+		$follow_guid  = $this->create_outbox_follow( $actor_url );
+
+		\add_post_meta( $remote_actor->ID, Following::FOLLOWING_META_KEY, (string) $this->user_id );
+
+		$data = array(
+			'type'   => 'Undo',
+			'object' => $follow_guid,
+		);
+
+		$result = Undo::handle_undo( $data, $this->user_id );
+
+		$this->assertIsInt( $result, 'handle_undo should return an int (the Undo outbox ID).' );
+		$this->assertGreaterThan( 0, $result );
+		$this->assertSame( 'Undo', \get_post_meta( $result, '_activitypub_activity_type', true ) );
+	}
+
+	/**
+	 * Test that handle_undo accepts an id-less embedded Follow.
+	 *
+	 * Spec-valid Undo bodies may inline the Follow without an `id`, identifying
+	 * it by its structural properties (type + actor + object). Mastodon and
+	 * other major implementations match these on the inner Follow's target.
+	 *
+	 * @covers ::handle_undo
+	 */
+	public function test_handle_undo_follow_without_id() {
+		$actor_url    = 'https://example.com/users/idless-follow';
+		$remote_actor = $this->create_remote_actor( $actor_url );
+		$this->create_outbox_follow( $actor_url );
+
+		\add_post_meta( $remote_actor->ID, Following::FOLLOWING_META_KEY, (string) $this->user_id );
+
+		// Inline Follow with no `id` — identified only by type + actor + object.
+		$data = array(
+			'type'   => 'Undo',
+			'object' => array(
+				'type'   => 'Follow',
+				'actor'  => \Activitypub\Collection\Actors::get_by_id( $this->user_id )->get_id(),
+				'object' => $actor_url,
+			),
+		);
+
+		$result = Undo::handle_undo( $data, $this->user_id );
+
+		$this->assertIsInt( $result, 'handle_undo should return the Undo outbox ID even without an embedded Follow id.' );
+		$this->assertGreaterThan( 0, $result );
+		$this->assertSame( 'Undo', \get_post_meta( $result, '_activitypub_activity_type', true ) );
+
+		$following = \get_post_meta( $remote_actor->ID, Following::FOLLOWING_META_KEY, false );
+		$this->assertNotContains( (string) $this->user_id, $following, 'User should be removed from following.' );
+	}
+
+	/**
+	 * Test that handle_undo rejects an id-less Follow with a mismatched actor.
+	 *
+	 * The id-less fallback can only operate on the authenticated user's own
+	 * follow relationship; an embedded `actor` pointing elsewhere must produce
+	 * a 403 rather than silently mutating local state.
+	 *
+	 * @covers ::handle_undo
+	 */
+	public function test_handle_undo_follow_without_id_rejects_mismatched_actor() {
+		$actor_url    = 'https://example.com/users/idless-mismatch';
+		$remote_actor = $this->create_remote_actor( $actor_url );
+		$this->create_outbox_follow( $actor_url );
+
+		\add_post_meta( $remote_actor->ID, Following::FOLLOWING_META_KEY, (string) $this->user_id );
+
+		$data = array(
+			'type'   => 'Undo',
+			'object' => array(
+				'type'   => 'Follow',
+				'actor'  => 'https://elsewhere.example/users/someone-else',
+				'object' => $actor_url,
+			),
+		);
+
+		$result = Undo::handle_undo( $data, $this->user_id );
+
+		$this->assertWPError( $result, 'handle_undo should reject a mismatched embedded actor.' );
+		$this->assertSame( 'activitypub_forbidden', $result->get_error_code() );
+
+		$following = \get_post_meta( $remote_actor->ID, Following::FOLLOWING_META_KEY, false );
+		$this->assertContains( (string) $this->user_id, $following, 'Local following meta should be unchanged after a rejected Undo.' );
 	}
 
 	/**

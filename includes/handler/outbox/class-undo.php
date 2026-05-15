@@ -7,6 +7,7 @@
 
 namespace Activitypub\Handler\Outbox;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox as Outbox_Collection;
 use Activitypub\Moderation;
 
@@ -37,9 +38,36 @@ class Undo {
 	 * @return int|\WP_Error The undo outbox item ID, or WP_Error on failure.
 	 */
 	public static function handle_undo( $data, $user_id = null ) {
-		$id = object_to_uri( $data['object'] ?? '' );
+		$object = $data['object'] ?? '';
+		$id     = object_to_uri( $object );
 
 		if ( empty( $id ) ) {
+			/*
+			 * The embedded object has no `id` — common for clients that
+			 * inline the activity to undo. Mastodon and other major
+			 * implementations match an id-less Undo→Follow on the inner
+			 * Follow's target. Mirror that fallback here so spec-valid
+			 * bodies don't bypass the local unfollow logic.
+			 */
+			if ( \is_array( $object ) && 'Follow' === ( $object['type'] ?? '' ) ) {
+				$embedded_actor = object_to_uri( $object['actor'] ?? '' );
+				$user_actor     = Actors::get_by_id( $user_id );
+
+				if ( \is_wp_error( $user_actor ) || ! $embedded_actor || $embedded_actor !== $user_actor->get_id() ) {
+					return new \WP_Error(
+						'activitypub_forbidden',
+						\__( 'You can only undo your own activities.', 'activitypub' ),
+						array( 'status' => 403 )
+					);
+				}
+
+				$target = object_to_uri( $object['object'] ?? '' );
+
+				if ( $target ) {
+					return unfollow( $target, $user_id );
+				}
+			}
+
 			return $data;
 		}
 

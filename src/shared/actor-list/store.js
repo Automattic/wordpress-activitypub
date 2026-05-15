@@ -2,12 +2,6 @@ import { store, getContext, getConfig } from '@wordpress/interactivity';
 import { withSyncEvent } from '../with-sync-event';
 
 /**
- * @member {Object} window.wp WordPress global object
- * @member {Function} url.addQueryArgs Function to add query arguments to a URL.
- */
-const { apiFetch, url } = window.wp;
-
-/**
  * Creates and registers an Interactivity API store for actor lists.
  *
  * @param {string} storeName The name of the store (e.g., 'activitypub/followers').
@@ -61,6 +55,7 @@ export function createActorListStore( storeName ) {
 			async fetchItems() {
 				const context = getContext();
 				const { userId, page, perPage, order, endpoint } = context;
+				const { apiFetch, url } = window.wp;
 
 				// Set loading state.
 				context.isLoading = true;
