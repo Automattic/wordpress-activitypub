@@ -205,6 +205,42 @@ class Test_Undo extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that handle_undo accepts an id-less embedded Follow.
+	 *
+	 * Spec-valid Undo bodies may inline the Follow without an `id`, identifying
+	 * it by its structural properties (type + actor + object). Mastodon and
+	 * other major implementations match these on the inner Follow's target.
+	 *
+	 * @covers ::handle_undo
+	 */
+	public function test_handle_undo_follow_without_id() {
+		$actor_url    = 'https://example.com/users/idless-follow';
+		$remote_actor = $this->create_remote_actor( $actor_url );
+		$this->create_outbox_follow( $actor_url );
+
+		\add_post_meta( $remote_actor->ID, Following::FOLLOWING_META_KEY, (string) $this->user_id );
+
+		// Inline Follow with no `id` — identified only by type + actor + object.
+		$data = array(
+			'type'   => 'Undo',
+			'object' => array(
+				'type'   => 'Follow',
+				'actor'  => 'https://example.org/?author=' . $this->user_id,
+				'object' => $actor_url,
+			),
+		);
+
+		$result = Undo::handle_undo( $data, $this->user_id );
+
+		$this->assertIsInt( $result, 'handle_undo should return the Undo outbox ID even without an embedded Follow id.' );
+		$this->assertGreaterThan( 0, $result );
+		$this->assertSame( 'Undo', \get_post_meta( $result, '_activitypub_activity_type', true ) );
+
+		$following = \get_post_meta( $remote_actor->ID, Following::FOLLOWING_META_KEY, false );
+		$this->assertNotContains( (string) $this->user_id, $following, 'User should be removed from following.' );
+	}
+
+	/**
 	 * Test that handle_undo returns data for unknown outbox item.
 	 *
 	 * @covers ::handle_undo

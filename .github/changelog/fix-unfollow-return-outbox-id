@@ -1,4 +1,4 @@
 Significance: patch
 Type: fixed
 
-Fix posting an Undo of a Follow through the outbox API failing with a server error.
+Fix posting an Undo of a Follow through the outbox API failing with a server error or silently leaving the follow in place.
