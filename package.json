@@ -63,7 +63,7 @@
 		"@wordpress/e2e-test-utils-playwright": "^1.45.0",
 		"@wordpress/edit-post": "^8.45.0",
 		"@wordpress/editor": "^14.45.0",
-		"@wordpress/element": "^6.43.0",
+		"@wordpress/element": "^6.46.0",
 		"@wordpress/env": "^11.5.0",
 		"@wordpress/html-entities": "^4.36.0",
 		"@wordpress/i18n": "^6.19.0",
