@@ -16,12 +16,11 @@ module.exports = {
 		...defaultConfig.moduleNameMapper,
 		'^@wordpress/interactivity$': '<rootDir>/tests/js/__mocks__/@wordpress/interactivity.js',
 	},
-	/*
-	 * Allow `uuid` to be transformed by Babel. uuid@13+ ships as ESM, and a
-	 * nested copy gets pulled in transitively by @wordpress/components. Jest's
-	 * default `transformIgnorePatterns` skips everything under node_modules,
-	 * which would otherwise leave the bare `export` syntax in place and fail
-	 * any test suite that touches @wordpress/components.
-	 */
-	transformIgnorePatterns: [ 'node_modules/(?!(uuid)/)' ],
+	// Allow `uuid` to be transformed by Babel at any depth in node_modules.
+	// `node_modules/(?!(uuid)/)` only excluded the top-level copy; the nested
+	// `node_modules/@wordpress/components/node_modules/uuid/` still matched
+	// the outer `node_modules/` and stayed in the ignore set. The negative
+	// lookahead with an optional inner path skips the ignore for uuid at any
+	// depth so its ESM `export` syntax reaches Babel.
+	transformIgnorePatterns: [ '/node_modules/(?!(?:.*/)?uuid/)' ],
 };
