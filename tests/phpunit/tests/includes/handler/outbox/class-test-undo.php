@@ -225,7 +225,7 @@ class Test_Undo extends \WP_UnitTestCase {
 			'type'   => 'Undo',
 			'object' => array(
 				'type'   => 'Follow',
-				'actor'  => 'https://example.org/?author=' . $this->user_id,
+				'actor'  => \Activitypub\Collection\Actors::get_by_id( $this->user_id )->get_id(),
 				'object' => $actor_url,
 			),
 		);
@@ -238,6 +238,40 @@ class Test_Undo extends \WP_UnitTestCase {
 
 		$following = \get_post_meta( $remote_actor->ID, Following::FOLLOWING_META_KEY, false );
 		$this->assertNotContains( (string) $this->user_id, $following, 'User should be removed from following.' );
+	}
+
+	/**
+	 * Test that handle_undo rejects an id-less Follow with a mismatched actor.
+	 *
+	 * The id-less fallback can only operate on the authenticated user's own
+	 * follow relationship; an embedded `actor` pointing elsewhere must produce
+	 * a 403 rather than silently mutating local state.
+	 *
+	 * @covers ::handle_undo
+	 */
+	public function test_handle_undo_follow_without_id_rejects_mismatched_actor() {
+		$actor_url    = 'https://example.com/users/idless-mismatch';
+		$remote_actor = $this->create_remote_actor( $actor_url );
+		$this->create_outbox_follow( $actor_url );
+
+		\add_post_meta( $remote_actor->ID, Following::FOLLOWING_META_KEY, (string) $this->user_id );
+
+		$data = array(
+			'type'   => 'Undo',
+			'object' => array(
+				'type'   => 'Follow',
+				'actor'  => 'https://elsewhere.example/users/someone-else',
+				'object' => $actor_url,
+			),
+		);
+
+		$result = Undo::handle_undo( $data, $this->user_id );
+
+		$this->assertWPError( $result, 'handle_undo should reject a mismatched embedded actor.' );
+		$this->assertSame( 'activitypub_forbidden', $result->get_error_code() );
+
+		$following = \get_post_meta( $remote_actor->ID, Following::FOLLOWING_META_KEY, false );
+		$this->assertContains( (string) $this->user_id, $following, 'Local following meta should be unchanged after a rejected Undo.' );
 	}
 
 	/**

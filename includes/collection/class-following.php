@@ -198,10 +198,14 @@ class Following {
 		\delete_post_meta( $post->ID, self::FOLLOWING_META_KEY, $user_id );
 		\delete_post_meta( $post->ID, self::PENDING_META_KEY, $user_id );
 
-		// Get Post-ID of the Follow Outbox Activity.
+		/*
+		 * Get Post-ID of the Follow Outbox Activity. Include `pending` so an
+		 * Undo posted before the remote Accept arrives can still find the Follow.
+		 */
 		$post_id_query = new \WP_Query(
 			array(
 				'post_type'      => Outbox::POST_TYPE,
+				'post_status'    => array( 'publish', 'pending' ),
 				'nopaging'       => true,
 				'posts_per_page' => 1,
 				'author'         => \max( $user_id, 0 ),

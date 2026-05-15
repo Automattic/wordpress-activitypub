@@ -7,6 +7,7 @@
 
 namespace Activitypub\Handler\Outbox;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox as Outbox_Collection;
 use Activitypub\Moderation;
 
@@ -49,6 +50,17 @@ class Undo {
 			 * bodies don't bypass the local unfollow logic.
 			 */
 			if ( \is_array( $object ) && 'Follow' === ( $object['type'] ?? '' ) ) {
+				$embedded_actor = object_to_uri( $object['actor'] ?? '' );
+				$user_actor     = Actors::get_by_id( $user_id );
+
+				if ( \is_wp_error( $user_actor ) || ! $embedded_actor || $embedded_actor !== $user_actor->get_id() ) {
+					return new \WP_Error(
+						'activitypub_forbidden',
+						\__( 'You can only undo your own activities.', 'activitypub' ),
+						array( 'status' => 403 )
+					);
+				}
+
 				$target = object_to_uri( $object['object'] ?? '' );
 
 				if ( $target ) {
