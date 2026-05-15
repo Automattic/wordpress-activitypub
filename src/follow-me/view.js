@@ -3,9 +3,6 @@ import { withSyncEvent } from '../shared/with-sync-event';
 import { getBlockStyles, getPopupStyles } from './button-style';
 import { createModalStore } from '../shared/modal';
 
-/** @member {Object} wp WordPress global. */
-const { apiFetch } = window.wp;
-
 createModalStore( 'activitypub/follow-me' );
 
 /**
@@ -108,6 +105,7 @@ const { actions, callbacks } = store( 'activitypub/follow-me', {
 		*submitRemoteProfile() {
 			const context = getContext();
 			const { namespace, i18n } = getConfig();
+			const { apiFetch } = window.wp;
 			const input = context.remoteProfile.trim();
 
 			// Validate input.
