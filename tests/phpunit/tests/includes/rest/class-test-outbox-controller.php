@@ -1153,6 +1153,79 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 	}
 
 	/**
+	 * Test that posting an Undo of a Follow to the outbox returns 201.
+	 *
+	 * Regression test: previously responded with 500 "Failed to add activity to outbox"
+	 * because Following::unfollow returned a WP_Post of the remote actor, which made
+	 * the controller look up the wrong outbox entry.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_undo_follow_returns_201() {
+		$actor_url = 'https://example.com/users/undo-follow-target';
+
+		// Create a remote actor post so the meta query in Following::unfollow can match.
+		$remote_actor_post_id = self::factory()->post->create(
+			array(
+				'post_type'   => \Activitypub\Collection\Remote_Actors::POST_TYPE,
+				'post_status' => 'publish',
+				'guid'        => $actor_url,
+			)
+		);
+
+		// Create a Follow outbox entry as if the user previously followed this actor.
+		$follow_guid    = 'https://example.org/outbox/follow-' . \wp_generate_password( 8, false );
+		$follow_post_id = \wp_insert_post(
+			array(
+				'post_type'    => Outbox::POST_TYPE,
+				'post_title'   => '[Follow] Test',
+				'post_content' => \wp_json_encode(
+					array(
+						'type'   => 'Follow',
+						'object' => $actor_url,
+					)
+				),
+				'post_author'  => self::$user_id,
+				'post_status'  => 'publish',
+				'guid'         => $follow_guid,
+				'meta_input'   => array(
+					'_activitypub_activity_type'     => 'Follow',
+					'_activitypub_activity_actor'    => 'user',
+					'_activitypub_object_id'         => $actor_url,
+					'activitypub_content_visibility' => \ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+				),
+			)
+		);
+
+		$data = array(
+			'type'   => 'Undo',
+			'actor'  => \Activitypub\Collection\Actors::get_by_id( self::$user_id )->get_id(),
+			'object' => array(
+				'id'     => $follow_guid,
+				'type'   => 'Follow',
+				'actor'  => \Activitypub\Collection\Actors::get_by_id( self::$user_id )->get_id(),
+				'object' => $actor_url,
+			),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 201, $response->get_status(), 'Posting Undo→Follow should succeed.' );
+
+		$response_data = $response->get_data();
+		$this->assertSame( 'Undo', $response_data['type'] );
+
+		\wp_delete_post( $remote_actor_post_id, true );
+		\wp_delete_post( $follow_post_id, true );
+	}
+
+	/**
 	 * Test that totalItems for the blog actor excludes anonymous comments.
 	 *
 	 * @covers ::overload_total_items

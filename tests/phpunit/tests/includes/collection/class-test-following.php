@@ -345,9 +345,10 @@ class Test_Following extends \WP_UnitTestCase {
 
 		\clean_post_cache( $post_id );
 
-		// Should return WP_Post.
-		$this->assertInstanceOf( '\WP_Post', $result );
-		$this->assertEquals( $post_id, $result->ID );
+		// Should return the ID of the newly created Undo outbox item.
+		$this->assertIsInt( $result );
+		$this->assertGreaterThan( 0, $result );
+		$this->assertSame( 'Undo', \get_post_meta( $result, '_activitypub_activity_type', true ) );
 
 		// User should no longer be in following list.
 		$following = \get_post_meta( $post_id, Following::FOLLOWING_META_KEY, false );

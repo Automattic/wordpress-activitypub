@@ -184,7 +184,7 @@ class Following {
 	 * @param \WP_Post|int $post    The ID of the remote Actor.
 	 * @param int          $user_id The ID of the WordPress User.
 	 *
-	 * @return \WP_Post|\WP_Error The Actor post or a WP_Error.
+	 * @return int|\WP_Error The ID of the Undo outbox item, 0 if no matching Follow outbox was found, or WP_Error on failure.
 	 */
 	public static function unfollow( $post, $user_id ) {
 		$post = \get_post( $post );
@@ -225,11 +225,17 @@ class Following {
 			)
 		);
 
-		if ( $post_id_query->posts ) {
-			Outbox::undo( $post_id_query->posts[0] );
+		if ( ! $post_id_query->posts ) {
+			return 0;
 		}
 
-		return $post;
+		$undo_id = Outbox::undo( $post_id_query->posts[0] );
+
+		if ( \is_wp_error( $undo_id ) ) {
+			return $undo_id;
+		}
+
+		return $undo_id ? (int) $undo_id : 0;
 	}
 
 	/**

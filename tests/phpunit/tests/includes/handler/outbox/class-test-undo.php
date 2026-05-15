@@ -176,6 +176,34 @@ class Test_Undo extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that handle_undo for a Follow returns the new Undo outbox item ID.
+	 *
+	 * Regression test: previously returned a WP_Post of the remote actor, which
+	 * caused Outbox_Controller::create_item to look up the wrong outbox entry and
+	 * respond with a 500 error.
+	 *
+	 * @covers ::handle_undo
+	 */
+	public function test_handle_undo_follow_returns_outbox_id() {
+		$actor_url    = 'https://example.com/users/return-id-test';
+		$remote_actor = $this->create_remote_actor( $actor_url );
+		$follow_guid  = $this->create_outbox_follow( $actor_url );
+
+		\add_post_meta( $remote_actor->ID, Following::FOLLOWING_META_KEY, (string) $this->user_id );
+
+		$data = array(
+			'type'   => 'Undo',
+			'object' => $follow_guid,
+		);
+
+		$result = Undo::handle_undo( $data, $this->user_id );
+
+		$this->assertIsInt( $result, 'handle_undo should return an int (the Undo outbox ID).' );
+		$this->assertGreaterThan( 0, $result );
+		$this->assertSame( 'Undo', \get_post_meta( $result, '_activitypub_activity_type', true ) );
+	}
+
+	/**
 	 * Test that handle_undo returns data for unknown outbox item.
 	 *
 	 * @covers ::handle_undo
