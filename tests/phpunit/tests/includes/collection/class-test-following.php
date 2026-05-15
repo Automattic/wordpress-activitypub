@@ -328,7 +328,8 @@ class Test_Following extends \WP_UnitTestCase {
 			)
 		);
 
-		$user_id = 1;
+		$user_id = self::factory()->user->create();
+		\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
 
 		// Use global follow() function to add a follow request.
 		$remote_actor_url = \get_post( $post_id )->guid;

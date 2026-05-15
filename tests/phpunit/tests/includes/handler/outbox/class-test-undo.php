@@ -36,6 +36,7 @@ class Test_Undo extends \WP_UnitTestCase {
 		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
 
 		$this->user_id = self::factory()->user->create();
+		\get_user_by( 'id', $this->user_id )->add_cap( 'activitypub' );
 	}
 
 	/**
