@@ -235,7 +235,15 @@ class Following {
 			return $undo_id;
 		}
 
-		return $undo_id ? (int) $undo_id : 0;
+		if ( ! $undo_id ) {
+			return new \WP_Error(
+				'activitypub_outbox_undo_failed',
+				\__( 'Failed to create Undo activity.', 'activitypub' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		return (int) $undo_id;
 	}
 
 	/**
