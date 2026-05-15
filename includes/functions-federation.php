@@ -233,7 +233,7 @@ function follow( $remote_actor, $user_id ) {
  * @param string|int $remote_actor The Actor URL, WebFinger Resource or Post-ID of the remote Actor.
  * @param int        $user_id      The ID of the WordPress User.
  *
- * @return \WP_Post|\WP_Error The Actor post or a WP_Error.
+ * @return int|\WP_Error The ID of the Undo outbox item, 0 if no matching Follow outbox was found, or WP_Error on failure.
  */
 function unfollow( $remote_actor, $user_id ) {
 	if ( \is_numeric( $remote_actor ) ) {
