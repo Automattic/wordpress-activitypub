@@ -333,7 +333,9 @@ class Test_Following extends \WP_UnitTestCase {
 
 		// Use global follow() function to add a follow request.
 		$remote_actor_url = \get_post( $post_id )->guid;
-		follow( $remote_actor_url, $user_id );
+		$follow_outbox_id = follow( $remote_actor_url, $user_id );
+		// Publish the Follow outbox item so unfollow's meta query (which defaults to publish-only) can find it.
+		\wp_publish_post( $follow_outbox_id );
 		\clean_post_cache( $post_id );
 
 		// Verify user is in following list (pending or following).
