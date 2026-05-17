@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Improve compatibility with newer Fediverse servers by recognizing the standardized FEP-3b86 follow link for remote follows.
