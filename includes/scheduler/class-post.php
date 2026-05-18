@@ -94,20 +94,18 @@ class Post {
 			case 'pending':
 			case 'private':
 			case 'trash':
+			default:
 				/*
 				 * Soft delete for federated posts (FEP-4f05).
 				 *
-				 * A previously-federated post transitioning to a non-public
-				 * status emits a Delete so federated copies are torn down.
-				 * Without this, draft/pending Update would broadcast a
-				 * "(This post is being modified)" placeholder and private/trash
-				 * would silently leave the federated copy stale.
+				 * A previously-federated post transitioning to any non-public
+				 * status (built-in or custom) emits a Delete so federated
+				 * copies are torn down. Without this, draft/pending would
+				 * broadcast a placeholder Update, private/trash would silently
+				 * leave the federated copy stale, and a custom status would
+				 * fall through without notifying followers at all.
 				 */
 				$type = ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status ? 'Delete' : false;
-				break;
-
-			default:
-				$type = false;
 		}
 
 		// Do not send Activities if `$type` is not set or unknown.
