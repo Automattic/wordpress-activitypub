@@ -1173,7 +1173,7 @@ class Migration {
 		 * nothing was already migrated — halt the scheduler so we don't loop
 		 * forever on a persistent failure. The legacy option still backs
 		 * exists_local(), so the data isn't lost; an admin can re-trigger
-		 * the migration via `wp cron event run activitypub_migrate_tombstones`
+		 * the migration via `wp cron event run activitypub_tombstone_migrate`
 		 * after fixing the underlying cause.
 		 */
 		if ( ! $progressed ) {
