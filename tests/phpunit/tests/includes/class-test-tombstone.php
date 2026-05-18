@@ -252,6 +252,147 @@ class Test_Tombstone extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Tests that bury self-heals duplicate CPT rows.
+	 *
+	 * A prior concurrent bury can leave two rows with the same `guid`. The
+	 * next bury() of that URL should detect the duplicates and prune all
+	 * but the oldest.
+	 *
+	 * @covers ::bury
+	 */
+	public function test_bury_self_heals_duplicates() {
+		global $wpdb;
+
+		$url        = 'https://fake.test/object/self-heal';
+		$normalized = \Activitypub\normalize_url( $url );
+		$hash       = \md5( $normalized );
+		$now        = \current_time( 'mysql' );
+		$now_gmt    = \current_time( 'mysql', true );
+
+		foreach ( array( $hash, $hash . '-2' ) as $slug ) {
+			$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->posts,
+				array(
+					'post_author'       => 0,
+					'post_date'         => $now,
+					'post_date_gmt'     => $now_gmt,
+					'post_modified'     => $now,
+					'post_modified_gmt' => $now_gmt,
+					'post_content'      => '',
+					'post_title'        => '',
+					'post_status'       => 'publish',
+					'post_type'         => Tombstone::POST_TYPE,
+					'post_name'         => $slug,
+					'guid'              => $normalized,
+				)
+			);
+		}
+
+		Tombstone::bury( $url );
+
+		$count = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND guid = %s",
+				Tombstone::POST_TYPE,
+				$normalized
+			)
+		);
+		$this->assertSame( 1, $count, 'bury() should keep exactly one row after self-healing.' );
+		$this->assertTrue( Tombstone::exists_local( $url ) );
+	}
+
+	/**
+	 * Tests that remove cleans up duplicate CPT rows.
+	 *
+	 * `bury()` is check-then-insert with no unique constraint on `guid`, so
+	 * a concurrent race lands two rows for the same URL — and
+	 * `wp_unique_post_slug()` renames the runner-up's `post_name` from
+	 * `<hash>` to `<hash>-2`. `remove()` must match by `guid` to wipe both;
+	 * matching by `post_name` would miss the renamed row and leave the URL
+	 * tombstoned.
+	 *
+	 * @covers ::remove
+	 */
+	public function test_remove_cleans_up_duplicates() {
+		global $wpdb;
+
+		$url        = 'https://fake.test/object/duplicate-remove';
+		$normalized = \Activitypub\normalize_url( $url );
+		$hash       = \md5( $normalized );
+		$now        = \current_time( 'mysql' );
+		$now_gmt    = \current_time( 'mysql', true );
+
+		// Simulate the race outcome: two rows with the same guid but
+		// different post_name slugs (the second renamed by wp_unique_post_slug).
+		foreach ( array( $hash, $hash . '-2' ) as $slug ) {
+			$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->posts,
+				array(
+					'post_author'       => 0,
+					'post_date'         => $now,
+					'post_date_gmt'     => $now_gmt,
+					'post_modified'     => $now,
+					'post_modified_gmt' => $now_gmt,
+					'post_content'      => '',
+					'post_title'        => '',
+					'post_status'       => 'publish',
+					'post_type'         => Tombstone::POST_TYPE,
+					'post_name'         => $slug,
+					'guid'              => $normalized,
+				)
+			);
+		}
+
+		$count_before = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND guid = %s",
+				Tombstone::POST_TYPE,
+				$normalized
+			)
+		);
+		$this->assertSame( 2, $count_before, 'Test should set up two duplicate rows.' );
+
+		Tombstone::remove( $url );
+
+		$count_after = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND guid = %s",
+				Tombstone::POST_TYPE,
+				$normalized
+			)
+		);
+		$this->assertSame( 0, $count_after, 'remove() should delete every duplicate row.' );
+		$this->assertFalse( Tombstone::exists_local( $url ) );
+	}
+
+	/**
+	 * Tests that delete_all clears all tombstone posts and the legacy option.
+	 *
+	 * @covers ::delete_all
+	 */
+	public function test_delete_all() {
+		$urls = array(
+			'https://fake.test/object/delete-all-1',
+			'https://fake.test/object/delete-all-2',
+			'https://fake.test/object/delete-all-3',
+		);
+
+		foreach ( $urls as $url ) {
+			Tombstone::bury( $url );
+		}
+		\update_option( 'activitypub_tombstone_urls', array( 'legacy-entry' ) );
+
+		$deleted = Tombstone::delete_all();
+
+		$this->assertSame( 3, $deleted );
+		$this->assertFalse( \get_option( 'activitypub_tombstone_urls', false ) );
+
+		foreach ( $urls as $url ) {
+			$this->assertFalse( Tombstone::exists_local( $url ) );
+		}
+	}
+
+	/**
 	 * Tests that remove handles empty strings gracefully.
 	 *
 	 * @covers ::remove

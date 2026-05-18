@@ -218,11 +218,40 @@ class Tombstone {
 	}
 
 	/**
+	 * Look up tombstone post IDs by canonical URL.
+	 *
+	 * `guid` is preferred over the `post_name` slug because
+	 * `wp_unique_post_slug()` renames the runner-up of a concurrent insert
+	 * from `<hash>` to `<hash>-2`. The `guid` is left untouched, so this
+	 * lookup catches every duplicate row regardless of slug drift.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $normalized The normalized URL.
+	 * @return int[] Post IDs ordered oldest-first.
+	 */
+	private static function find_post_ids_by_url( $normalized ) {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$ids = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT ID FROM {$wpdb->posts} WHERE post_type = %s AND guid = %s ORDER BY ID ASC",
+				self::POST_TYPE,
+				$normalized
+			)
+		);
+
+		return \array_map( 'intval', $ids );
+	}
+
+	/**
 	 * Add one or more URLs to the local tombstone registry.
 	 *
 	 * "Buries" URLs by adding them to the local tombstone URL registry.
-	 * URLs are normalized before storage and duplicates are automatically removed.
-	 * This marks the URLs as tombstoned for future local checks.
+	 * URLs are normalized before storage. If any duplicate rows already
+	 * exist for a URL (from a prior concurrent bury), all but the oldest
+	 * are pruned in the same call so the registry self-heals.
 	 *
 	 * @param string ...$urls The URLs to add to the tombstone registry.
 	 */
@@ -233,9 +262,13 @@ class Tombstone {
 			}
 
 			$normalized = normalize_url( $url );
-			$hash       = \md5( $normalized );
+			$existing   = self::find_post_ids_by_url( $normalized );
 
-			if ( \get_page_by_path( $hash, OBJECT, self::POST_TYPE ) ) {
+			if ( ! empty( $existing ) ) {
+				// Self-heal duplicates from a prior concurrent bury: keep the oldest.
+				foreach ( \array_slice( $existing, 1 ) as $duplicate_id ) {
+					\wp_delete_post( $duplicate_id, true );
+				}
 				continue;
 			}
 
@@ -243,7 +276,7 @@ class Tombstone {
 				array(
 					'post_type'   => self::POST_TYPE,
 					'post_status' => 'publish',
-					'post_name'   => $hash,
+					'post_name'   => \md5( $normalized ),
 					'guid'        => $normalized,
 					'post_author' => 0,
 				),
@@ -262,38 +295,68 @@ class Tombstone {
 	 * @param string ...$urls The URLs to remove from the tombstone registry.
 	 */
 	public static function remove( ...$urls ) {
-		$legacy         = \get_option( 'activitypub_tombstone_urls', false );
-		$legacy_changed = false;
-
+		$normalized_urls = array();
 		foreach ( $urls as $url ) {
-			if ( ! \filter_var( $url, \FILTER_VALIDATE_URL ) ) {
-				continue;
-			}
-
-			$normalized = normalize_url( $url );
-			$hash       = \md5( $normalized );
-
-			$post = \get_page_by_path( $hash, OBJECT, self::POST_TYPE );
-			if ( $post ) {
-				\wp_delete_post( (int) $post->ID, true );
-			}
-
-			if ( \is_array( $legacy ) ) {
-				$index = \array_search( $normalized, $legacy, true );
-				if ( false !== $index ) {
-					unset( $legacy[ $index ] );
-					$legacy_changed = true;
-				}
+			if ( \filter_var( $url, \FILTER_VALIDATE_URL ) ) {
+				$normalized_urls[] = normalize_url( $url );
 			}
 		}
 
-		if ( $legacy_changed ) {
-			if ( empty( $legacy ) ) {
-				\delete_option( 'activitypub_tombstone_urls' );
-			} else {
-				\update_option( 'activitypub_tombstone_urls', \array_values( $legacy ) );
+		if ( empty( $normalized_urls ) ) {
+			return;
+		}
+
+		$normalized_urls = \array_values( \array_unique( $normalized_urls ) );
+
+		foreach ( $normalized_urls as $normalized ) {
+			foreach ( self::find_post_ids_by_url( $normalized ) as $post_id ) {
+				\wp_delete_post( $post_id, true );
 			}
 		}
+
+		$legacy = \get_option( 'activitypub_tombstone_urls', false );
+		if ( ! \is_array( $legacy ) ) {
+			return;
+		}
+
+		$filtered = \array_values( \array_diff( $legacy, $normalized_urls ) );
+		if ( \count( $filtered ) === \count( $legacy ) ) {
+			return;
+		}
+
+		if ( empty( $filtered ) ) {
+			\delete_option( 'activitypub_tombstone_urls' );
+		} else {
+			\update_option( 'activitypub_tombstone_urls', $filtered );
+		}
+	}
+
+	/**
+	 * Delete every tombstone post and the legacy option.
+	 *
+	 * Used during plugin uninstall to clean up all local tombstones.
+	 *
+	 * @since unreleased
+	 *
+	 * @return int The number of tombstone posts deleted.
+	 */
+	public static function delete_all() {
+		$post_ids = \get_posts(
+			array(
+				'post_type'   => self::POST_TYPE,
+				'post_status' => array( 'any', 'trash', 'auto-draft' ),
+				'fields'      => 'ids',
+				'numberposts' => -1,
+			)
+		);
+
+		foreach ( $post_ids as $post_id ) {
+			\wp_delete_post( (int) $post_id, true );
+		}
+
+		\delete_option( 'activitypub_tombstone_urls' );
+
+		return \count( $post_ids );
 	}
 
 	/**

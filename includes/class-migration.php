@@ -1117,20 +1117,24 @@ class Migration {
 			return null;
 		}
 
-		$chunk     = \array_slice( $urls, 0, (int) $batch_size );
-		$remaining = \array_slice( $urls, (int) $batch_size );
+		$chunk      = \array_slice( $urls, 0, (int) $batch_size );
+		$remaining  = \array_slice( $urls, (int) $batch_size );
+		$progressed = false;
 
 		foreach ( $chunk as $normalized ) {
 			if ( ! \is_string( $normalized ) || '' === $normalized ) {
+				// Drop garbage entries — counts as progress.
+				$progressed = true;
 				continue;
 			}
 
 			$hash = \md5( $normalized );
 			if ( \get_page_by_path( $hash, OBJECT, Tombstone::POST_TYPE ) ) {
+				$progressed = true;
 				continue;
 			}
 
-			\wp_insert_post(
+			$result = \wp_insert_post(
 				array(
 					'post_type'   => Tombstone::POST_TYPE,
 					'post_status' => 'publish',
@@ -1140,6 +1144,15 @@ class Migration {
 				),
 				true
 			);
+
+			if ( \is_wp_error( $result ) || ! $result ) {
+				// Keep failed inserts in the legacy option so the next batch
+				// retries them. `Tombstone::exists_local()` still falls back
+				// to the option, so the tombstone remains discoverable.
+				$remaining[] = $normalized;
+			} else {
+				$progressed = true;
+			}
 		}
 
 		if ( empty( $remaining ) ) {
@@ -1148,6 +1161,19 @@ class Migration {
 		}
 
 		\update_option( 'activitypub_tombstone_urls', \array_values( $remaining ) );
+
+		/*
+		 * If nothing in this batch was drained — every insert errored and
+		 * nothing was already migrated — halt the scheduler so we don't loop
+		 * forever on a persistent failure. The legacy option still backs
+		 * exists_local(), so the data isn't lost; an admin can re-trigger
+		 * the migration via `wp cron event run activitypub_migrate_tombstones`
+		 * after fixing the underlying cause.
+		 */
+		if ( ! $progressed ) {
+			return null;
+		}
+
 		return array( 'batch_size' => (int) $batch_size );
 	}
 

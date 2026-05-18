@@ -1543,4 +1543,35 @@ class Test_Migration extends \WP_UnitTestCase {
 		$this->assertNull( Migration::migrate_tombstones_to_cpt( 10 ) );
 		$this->assertNull( Migration::migrate_tombstones_to_cpt( 10 ) );
 	}
+
+	/**
+	 * Test migrate_tombstones_to_cpt() halts when a batch makes no progress.
+	 *
+	 * Prevents an unbounded retry loop when wp_insert_post is consistently
+	 * failing. The legacy option still holds the URLs and exists_local() will
+	 * continue to consult it.
+	 *
+	 * @covers ::migrate_tombstones_to_cpt
+	 */
+	public function test_migrate_tombstones_to_cpt_halts_on_no_progress() {
+		$urls = array(
+			\Activitypub\normalize_url( 'https://fake.test/no-progress-1' ),
+			\Activitypub\normalize_url( 'https://fake.test/no-progress-2' ),
+		);
+		\update_option( 'activitypub_tombstone_urls', $urls );
+
+		// Force every wp_insert_post call to return 0 by short-circuiting
+		// it as empty content.
+		\add_filter( 'wp_insert_post_empty_content', '__return_true' );
+
+		$result = Migration::migrate_tombstones_to_cpt( 10 );
+
+		\remove_filter( 'wp_insert_post_empty_content', '__return_true' );
+
+		$this->assertNull( $result, 'Migration should halt the scheduler when nothing was drained.' );
+
+		$remaining = \get_option( 'activitypub_tombstone_urls', false );
+		$this->assertIsArray( $remaining, 'Legacy option must remain to back exists_local().' );
+		$this->assertEqualsCanonicalizing( $urls, $remaining );
+	}
 }
