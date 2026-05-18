@@ -105,7 +105,9 @@ class Post {
 				 * leave the federated copy stale, and a custom status would
 				 * fall through without notifying followers at all.
 				 */
-				$type = ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status ? 'Delete' : false;
+				$type = ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status && ! is_post_publicly_queryable( $post )
+					? 'Delete'
+					: false;
 		}
 
 		// Do not send Activities if `$type` is not set or unknown.

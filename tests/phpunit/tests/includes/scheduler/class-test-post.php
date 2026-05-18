@@ -40,6 +40,24 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$outbox_item = $this->get_latest_outbox_item( $activitypub_id );
 		$this->assertSame( 'Update', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
 
+		$delete_items = \get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'pending',
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitypub_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Delete',
+					),
+				),
+			)
+		);
+		$this->assertEmpty( $delete_items, 'Public inherit-status attachments must not be soft-deleted by triage().' );
+
 		// Delete.
 		\wp_delete_attachment( $post_id, true );
 
