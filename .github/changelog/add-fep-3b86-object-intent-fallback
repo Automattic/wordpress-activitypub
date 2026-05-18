@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Improve compatibility with newer Fediverse servers by recognizing the FEP-3b86 Object Intent link when resolving remote follow and other intent endpoints.

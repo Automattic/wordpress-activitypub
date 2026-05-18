@@ -363,8 +363,24 @@ class Webfinger {
 			);
 		}
 
+		/*
+		 * OStatus subscribe URL (deprecated but still widely supported)
+		 *
+		 * @see https://ostatus.github.io/spec/OStatus%201.0%20Draft%202.html#anchor10
+		 */
 		if ( isset( $links['http://ostatus.org/schema/1.0/subscribe'] ) ) {
 			return $links['http://ostatus.org/schema/1.0/subscribe'];
+		}
+
+		/*
+		 * FEP-3b86 Object Intent — the generic "open this object on my home
+		 * server" link, equivalent to pasting the URL into the home server's
+		 * search box. Useful when no verb-specific intent is advertised.
+		 *
+		 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/3b86/fep-3b86.md#5-1-object-intent
+		 */
+		if ( isset( $links['https://w3id.org/fep/3b86/object'] ) ) {
+			return $links['https://w3id.org/fep/3b86/object'];
 		}
 
 		// Last-resort: construct a Mastodon-compatible authorize_interaction URL.
