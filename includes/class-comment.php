@@ -784,18 +784,31 @@ class Comment {
 			return;
 		}
 
-		// Do not exclude likes and reposts if the query is for specific types.
-		if ( ! empty( $query->query_vars['type__in'] ) || ! empty( $query->query_vars['type'] ) ) {
-			return;
+		$ap_types = self::get_comment_type_slugs();
+
+		/*
+		 * If the caller is explicitly asking for one of the ActivityPub
+		 * comment types (likes, reposts, …), respect that. Otherwise we
+		 * still merge our slugs into `type__not_in`, so the AP exclusion
+		 * composes with whatever other plugins are filtering on. The
+		 * previous version bailed out as soon as any of `type__in`, `type`
+		 * or `type__not_in` was set — which let AP comments leak through
+		 * on themes that use plugins like GatherPress (which sets
+		 * `type__in` for its own RSVP filtering).
+		 */
+		foreach ( array( 'type__in', 'type' ) as $key ) {
+			if ( empty( $query->query_vars[ $key ] ) ) {
+				continue;
+			}
+
+			$requested = (array) $query->query_vars[ $key ];
+			if ( \array_intersect( $requested, $ap_types ) ) {
+				return;
+			}
 		}
 
-		// Do not exclude likes and reposts if the query is already excluding other comment types.
-		if ( ! empty( $query->query_vars['type__not_in'] ) ) {
-			return;
-		}
-
-		// Exclude likes and reposts by the ActivityPub plugin.
-		$query->query_vars['type__not_in'] = self::get_comment_type_slugs();
+		$existing                          = (array) ( $query->query_vars['type__not_in'] ?? array() );
+		$query->query_vars['type__not_in'] = \array_values( \array_unique( \array_merge( $existing, $ap_types ) ) );
 	}
 
 	/**
