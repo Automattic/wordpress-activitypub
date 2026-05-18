@@ -574,6 +574,10 @@ class Post_Types {
 		\register_post_type(
 			Tombstone::POST_TYPE,
 			array(
+				'labels'              => array(
+					'name'          => \_x( 'Tombstones', 'post_type plural name', 'activitypub' ),
+					'singular_name' => \_x( 'Tombstone', 'post_type single name', 'activitypub' ),
+				),
 				'public'              => false,
 				'publicly_queryable'  => false,
 				'show_ui'             => false,
