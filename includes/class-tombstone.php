@@ -114,10 +114,9 @@ class Tombstone {
 	/**
 	 * Check if a local URL is tombstoned.
 	 *
-	 * Matches by `guid` so that a row whose `post_name` drifted to `<hash>-2`
-	 * from a concurrent insert is still discoverable. Falls back to the
-	 * legacy `activitypub_tombstone_urls` option for tombstones that have not
-	 * yet been migrated.
+	 * Matches by the MD5 hash of the normalized URL stored in `post_name`.
+	 * Falls back to the legacy `activitypub_tombstone_urls` option for
+	 * tombstones that have not yet been migrated.
 	 *
 	 * @param string $url The local URL to check for tombstone status.
 	 *
@@ -267,7 +266,7 @@ class Tombstone {
 				continue;
 			}
 
-			\wp_insert_post(
+			$post_id = \wp_insert_post(
 				array(
 					'post_type'   => self::POST_TYPE,
 					'post_status' => 'publish',
@@ -277,6 +276,22 @@ class Tombstone {
 				),
 				true
 			);
+
+			if ( \is_wp_error( $post_id ) || ! $post_id ) {
+				/**
+				 * Fires when `bury()` fails to write a tombstone row.
+				 *
+				 * The URL is silently not tombstoned in this case — the
+				 * request path will respond as it would for any other
+				 * non-existent post. Useful as a monitoring hook.
+				 *
+				 * @since unreleased
+				 *
+				 * @param string             $normalized The normalized URL that failed to bury.
+				 * @param \WP_Error|int|null $post_id    The `wp_insert_post()` return value.
+				 */
+				\do_action( 'activitypub_tombstone_bury_failed', $normalized, $post_id );
+			}
 		}
 	}
 
@@ -336,17 +351,21 @@ class Tombstone {
 	 * @return int The number of tombstone posts deleted.
 	 */
 	public static function delete_all() {
-		$post_ids = \get_posts(
-			array(
-				'post_type'   => self::POST_TYPE,
-				'post_status' => array( 'any', 'trash', 'auto-draft' ),
-				'fields'      => 'ids',
-				'numberposts' => -1,
+		global $wpdb;
+
+		$post_ids = \array_map(
+			'intval',
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->get_col(
+				$wpdb->prepare(
+					"SELECT ID FROM {$wpdb->posts} WHERE post_type = %s",
+					self::POST_TYPE
+				)
 			)
 		);
 
 		foreach ( $post_ids as $post_id ) {
-			\wp_delete_post( (int) $post_id, true );
+			\wp_delete_post( $post_id, true );
 		}
 
 		\delete_option( 'activitypub_tombstone_urls' );
