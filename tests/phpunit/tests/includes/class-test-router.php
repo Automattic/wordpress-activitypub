@@ -150,6 +150,61 @@ class Test_Router extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A previously-federated post that has been moved to a non-public status
+	 * must not expose its current ActivityPub representation via content
+	 * negotiation, even before the Delete activity has fired.
+	 *
+	 * @dataProvider data_non_public_status_transitions
+	 *
+	 * @covers ::render_activitypub_template
+	 *
+	 * @param string $new_status Target post status.
+	 */
+	public function test_non_public_status_does_not_render_activitypub_template( $new_status ) {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_status'  => 'publish',
+				'post_author'  => self::$user_id,
+				'post_content' => 'PRE-TRANSITION-CONTENT',
+			)
+		);
+
+		// Simulate the post being federated before the status transition.
+		\Activitypub\set_wp_object_state( \get_post( $post_id ), ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => $new_status,
+			)
+		);
+
+		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
+		$this->go_to( '/?p=' . $post_id );
+
+		$template = Router::render_activitypub_template( 'index.php' );
+
+		$this->assertStringNotContainsString(
+			'activitypub-json.php',
+			$template,
+			"publish -> {$new_status} must not render the ActivityPub JSON template."
+		);
+	}
+
+	/**
+	 * Data provider: non-public statuses that should not render AP JSON.
+	 *
+	 * @return array[]
+	 */
+	public function data_non_public_status_transitions() {
+		return array(
+			'draft'   => array( 'draft' ),
+			'pending' => array( 'pending' ),
+			'private' => array( 'private' ),
+		);
+	}
+
+	/**
 	 * Test 406/404 response for non-ActivityPub requests to Outbox post type.
 	 *
 	 * @covers ::render_activitypub_template

@@ -117,6 +117,25 @@ class Router {
 			return ACTIVITYPUB_PLUGIN_DIR . 'templates/tombstone-json.php';
 		}
 
+		/*
+		 * Refuse to expose the content-negotiated representation of a post
+		 * that is no longer publicly queryable (non-public status, AP
+		 * visibility flipped, post-type support removed, etc.). The
+		 * lifecycle gate in `is_post_disabled()` intentionally lets such
+		 * posts through the federation pipeline so a Delete can fire, but
+		 * that escape hatch must not leak into front-end rendering during
+		 * the window between status change and Delete delivery.
+		 */
+		$queried_object = Query::get_instance()->get_queried_object();
+		if (
+			$activitypub_object &&
+			$queried_object instanceof \WP_Post &&
+			'ap_outbox' !== $queried_object->post_type &&
+			! is_post_publicly_queryable( $queried_object )
+		) {
+			return $template;
+		}
+
 		$activitypub_template = false;
 
 		if ( $activitypub_object ) {
