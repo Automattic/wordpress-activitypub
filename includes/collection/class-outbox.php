@@ -197,29 +197,38 @@ class Outbox {
 		);
 
 		/*
-		 * For non-Delete activities, delete same-type pending items AND any
-		 * pending Delete. A re-publish of a soft-deleted post must invalidate
-		 * the pending Delete so we do not send both Delete and Create. Delete
-		 * activities themselves supersede everything for the same object.
+		 * Same-type pending items are always superseded. Create and Update
+		 * additionally invalidate a pending Delete (republish race) so we
+		 * do not send both Delete and Create for the same object. Other
+		 * activity types (Like, Add/Remove, Undo, etc.) are orthogonal to
+		 * the soft-delete lifecycle and must leave the Delete alone.
+		 * Delete itself supersedes everything for the object — no type
+		 * filter needed.
 		 */
 		if ( 'Delete' !== $activity_type ) {
+			$types = in_array( $activity_type, array( 'Create', 'Update' ), true )
+				? array( $activity_type, 'Delete' )
+				: array( $activity_type );
+
 			$meta_query[] = array(
-				'relation' => 'OR',
-				array(
-					'key'   => '_activitypub_activity_type',
-					'value' => $activity_type,
-				),
-				array(
-					'key'   => '_activitypub_activity_type',
-					'value' => 'Delete',
-				),
+				'key'     => '_activitypub_activity_type',
+				'value'   => $types,
+				'compare' => 'IN',
 			);
 		}
+
+		/*
+		 * Delete wipes the entire outbox history for the object — any
+		 * already-sent Create/Update/etc. is now stale and a redelivery
+		 * retry would resurrect content we are tearing down. Other
+		 * activity types only invalidate pending peers.
+		 */
+		$status_filter = 'Delete' === $activity_type ? 'any' : 'pending';
 
 		$existing_items = get_posts(
 			array(
 				'post_type'   => self::POST_TYPE,
-				'post_status' => 'pending',
+				'post_status' => $status_filter,
 				'exclude'     => array( $exclude_id ),
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query'  => $meta_query,

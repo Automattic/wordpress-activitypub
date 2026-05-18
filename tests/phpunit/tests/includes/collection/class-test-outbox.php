@@ -325,6 +325,87 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Test that a Delete also wipes already-sent (non-pending) outbox history for the object.
+	 *
+	 * A sent Create/Update remains in the outbox with post_status='publish' as a record of
+	 * what was federated. When a Delete is then queued, that record is now stale and a
+	 * redelivery retry could resurrect the very content we are tearing down.
+	 *
+	 * @covers ::delete_superseded_items
+	 */
+	public function test_delete_supersedes_already_sent_activities() {
+		$object = $this->get_dummy_activity_object();
+
+		// Simulate a previously-sent Create activity (post_status='publish').
+		$create_id = \Activitypub\add_to_outbox( $object, 'Create', 1 );
+		\wp_update_post(
+			array(
+				'ID'          => $create_id,
+				'post_status' => 'publish',
+			)
+		);
+		$this->assertEquals( 'publish', \get_post_status( $create_id ) );
+
+		// Now queue a Delete.
+		$delete_id = \Activitypub\add_to_outbox( $object, 'Delete', 1 );
+
+		$this->assertFalse(
+			\get_post_status( $create_id ),
+			'Already-sent Create must be wiped when a Delete supersedes the object.'
+		);
+		$this->assertEquals( 'pending', \get_post_status( $delete_id ) );
+	}
+
+	/**
+	 * Test that non-republish activities (Like, Add, Remove, Undo) do NOT cancel a pending Delete.
+	 *
+	 * A soft-deleted post can still have unrelated activities queued (e.g. an Add to the
+	 * featured collection from a sticky transition). Those must not invalidate the Delete,
+	 * otherwise the remote copy would never be torn down.
+	 *
+	 * @dataProvider data_non_republish_activity_types
+	 *
+	 * @covers ::delete_superseded_items
+	 *
+	 * @param string $activity_type Activity type that should NOT cancel a pending Delete.
+	 */
+	public function test_non_republish_activity_does_not_cancel_pending_delete( $activity_type ) {
+		$object = $this->get_dummy_activity_object();
+
+		$delete_id = \Activitypub\add_to_outbox( $object, 'Delete', 1 );
+		$this->assertEquals( 'pending', \get_post_status( $delete_id ) );
+
+		$other_id = \Activitypub\add_to_outbox( $object, $activity_type, 1 );
+
+		$this->assertEquals(
+			'pending',
+			\get_post_status( $delete_id ),
+			"Pending Delete must survive a {$activity_type} for the same object."
+		);
+
+		if ( $other_id && ! \is_wp_error( $other_id ) ) {
+			$this->assertEquals( 'pending', \get_post_status( $other_id ) );
+		}
+	}
+
+	/**
+	 * Data provider: activity types that are orthogonal to the soft-delete lifecycle.
+	 *
+	 * Excludes Follow / Announce / Accept / Reject because delete_superseded_items
+	 * short-circuits on those before the meta_query is built.
+	 *
+	 * @return array[]
+	 */
+	public function data_non_republish_activity_types() {
+		return array(
+			'Like'   => array( 'Like' ),
+			'Add'    => array( 'Add' ),
+			'Remove' => array( 'Remove' ),
+			'Undo'   => array( 'Undo' ),
+		);
+	}
+
+	/**
 	 * Test get_object_id with different nested structures.
 	 *
 	 * @dataProvider data_provider_get_object_id
