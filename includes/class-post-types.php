@@ -568,7 +568,7 @@ class Post_Types {
 	 * Stores local tombstone URLs out of the autoloaded options row.
 	 * The post type is fully internal — never queried publicly, never shown in UI.
 	 *
-	 * @since unreleased
+	 * @since 8.3.0
 	 */
 	public static function register_tombstone_post_type() {
 		\register_post_type(

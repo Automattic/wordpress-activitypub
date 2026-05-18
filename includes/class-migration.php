@@ -213,7 +213,7 @@ class Migration {
 			// Backfill historical statistics data (delay + jitter to avoid load spikes on hosts running many sites).
 			\wp_schedule_single_event( \time() + HOUR_IN_SECONDS + \wp_rand( 0, 6 * HOUR_IN_SECONDS ), 'activitypub_backfill_statistics' );
 		}
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+		if ( \version_compare( $version_from_db, '8.3.0', '<' ) ) {
 			if ( ! \wp_next_scheduled( 'activitypub_tombstone_migrate' ) ) {
 				\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_tombstone_migrate' );
 			}
@@ -1104,7 +1104,7 @@ class Migration {
 	 * Legacy entries are already-normalized strings (no scheme), so we bypass
 	 * URL validation and insert directly via wp_insert_post.
 	 *
-	 * @since unreleased
+	 * @since 8.3.0
 	 *
 	 * @param int $batch_size Optional. Number of URLs to process per call. Default 500.
 	 * @return array|null Args for the next run, or null when migration is complete.

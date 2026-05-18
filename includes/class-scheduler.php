@@ -412,7 +412,7 @@ class Scheduler {
 	 * Retention is non-urgent: large backlogs (e.g. after retention is first enforced)
 	 * drain across multiple daily runs.
 	 *
-	 * @since unreleased
+	 * @since 8.3.0
 	 */
 	public static function purge_tombstones() {
 		\Activitypub\Tombstone::purge();

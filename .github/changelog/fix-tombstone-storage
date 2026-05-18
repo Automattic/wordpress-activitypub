@@ -1,4 +1,0 @@
-Significance: minor
-Type: fixed
-
-Reduce database overhead on sites with many deleted posts by moving the tombstone registry to its own storage.

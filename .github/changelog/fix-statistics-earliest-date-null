@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Prevent a PHP warning during the monthly statistics backfill when an outbox item disappears between lookup steps.

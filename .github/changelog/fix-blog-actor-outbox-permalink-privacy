@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Prevent private outbox items authored by the site account from being visible to logged-out visitors at their permalink URLs.

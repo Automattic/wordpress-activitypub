@@ -204,7 +204,7 @@ class Server {
 	 * defaults: `Accept` for content negotiation and `Last-Event-ID` for
 	 * Server-Sent Events resume.
 	 *
-	 * @since unreleased
+	 * @since 8.3.0
 	 *
 	 * @param string[]         $allow_headers Headers core currently permits in CORS requests.
 	 * @param \WP_REST_Request $request       The current REST request.

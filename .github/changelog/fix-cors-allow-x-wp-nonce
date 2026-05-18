@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix ActivityPub blocks and widgets failing to load on cross-origin embeds (such as WordPress.com sites) due to a missing nonce header in the CORS allow-list.

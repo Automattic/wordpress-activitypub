@@ -1,4 +1,0 @@
-Significance: minor
-Type: added
-
-Store content warnings from posts published through third-party ActivityPub apps so they federate correctly.
