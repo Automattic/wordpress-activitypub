@@ -222,32 +222,23 @@ class Tombstone {
 	/**
 	 * Look up tombstone post IDs by canonical URL.
 	 *
-	 * Matches `post_name` against both the canonical `md5( $normalized )`
-	 * slug and the `<hash>-N` suffixes that `wp_unique_post_slug()` produces
-	 * when concurrent inserts race. MD5 outputs are exactly 32 hex chars, so
-	 * the anchored `-%` wildcard can never match another tombstone's
-	 * canonical hash — only drift runners-up for this URL.
+	 * The MD5 of the normalized URL is unique per URL, so a successful
+	 * `bury()` produces exactly one row and the canonical lookup is enough.
 	 *
 	 * @since unreleased
 	 *
 	 * @param string $normalized The normalized URL (scheme stripped).
-	 * @return int[] Post IDs ordered oldest-first.
+	 * @return int[] Post IDs (zero or one entry under normal operation).
 	 */
 	private static function find_post_ids_by_url( $normalized ) {
 		global $wpdb;
 
-		$hash = \md5( $normalized );
-
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$ids = $wpdb->get_col(
 			$wpdb->prepare(
-				"SELECT ID FROM {$wpdb->posts}
-				 WHERE post_type = %s
-				   AND ( post_name = %s OR post_name LIKE %s )
-				 ORDER BY ID ASC",
+				"SELECT ID FROM {$wpdb->posts} WHERE post_type = %s AND post_name = %s",
 				self::POST_TYPE,
-				$hash,
-				$wpdb->esc_like( $hash ) . '-%'
+				\md5( $normalized )
 			)
 		);
 
@@ -258,9 +249,9 @@ class Tombstone {
 	 * Add one or more URLs to the local tombstone registry.
 	 *
 	 * "Buries" URLs by adding them to the local tombstone URL registry.
-	 * URLs are normalized before storage. If any duplicate rows already
-	 * exist for a URL (from a prior concurrent bury), all but the oldest
-	 * are pruned in the same call so the registry self-heals.
+	 * URLs are normalized before storage; duplicate calls for the same URL
+	 * are a no-op because the `post_name` slug is the MD5 of the
+	 * normalized URL.
 	 *
 	 * @param string ...$urls The URLs to add to the tombstone registry.
 	 */
@@ -271,13 +262,8 @@ class Tombstone {
 			}
 
 			$normalized = normalize_url( $url );
-			$existing   = self::find_post_ids_by_url( $normalized );
 
-			if ( ! empty( $existing ) ) {
-				// Self-heal duplicates from a prior concurrent bury: keep the oldest.
-				foreach ( \array_slice( $existing, 1 ) as $duplicate_id ) {
-					\wp_delete_post( $duplicate_id, true );
-				}
+			if ( ! empty( self::find_post_ids_by_url( $normalized ) ) ) {
 				continue;
 			}
 
