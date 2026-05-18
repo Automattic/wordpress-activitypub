@@ -411,6 +411,78 @@ class Test_Webfinger extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_intent_endpoint falls back to the FEP-3b86 Object Intent link.
+	 *
+	 * The generic Object Intent acts as a "paste the URL into my home server"
+	 * link and is preferred over the last-resort Mastodon-style URL when
+	 * advertised by the remote actor.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_object_intent_fallback() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => array(
+							array(
+								'rel'      => 'https://w3id.org/fep/3b86/Object',
+								'template' => 'https://example.com/intent/object?uri={uri}',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		// No `like` intent advertised, no OStatus subscribe link — should fall
+		// back to the Object Intent rather than the Mastodon-style last-resort URL.
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like', true );
+
+		$this->assertEquals( 'https://example.com/intent/object?uri={uri}', $result );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test get_intent_endpoint prefers OStatus subscribe over the Object Intent.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_ostatus_preferred_over_object_intent() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => array(
+							array(
+								'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+								'template' => 'https://example.com/authorize_interaction?uri={uri}',
+							),
+							array(
+								'rel'      => 'https://w3id.org/fep/3b86/Object',
+								'template' => 'https://example.com/intent/object?uri={uri}',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like', true );
+
+		$this->assertEquals( 'https://example.com/authorize_interaction?uri={uri}', $result );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
 	 * Test get_intent_endpoint last-resort Mastodon-compatible URL for handle.
 	 *
 	 * @covers ::get_intent_endpoint
