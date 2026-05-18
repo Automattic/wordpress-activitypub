@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Prevent the site's follower and following lists from being visible to logged-out visitors when the social graph is set to private.

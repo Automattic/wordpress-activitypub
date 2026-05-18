@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix a JavaScript console error that could appear on pages with the Follow, Reactions, Followers, Following, or Remote Reply blocks.

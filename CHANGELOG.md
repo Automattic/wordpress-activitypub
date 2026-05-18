@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.3.0] - 2026-05-18
+### Security
+- Block a recently compromised JavaScript dependency from being installed during builds. [#3285]
+
+### Added
+- Allow site administrators to post from third-party apps on behalf of the site's blog account. [#3281]
+- Store content warnings from posts published through third-party ActivityPub apps so they federate correctly. [#3292]
+
+### Changed
+- Improve compatibility with newer Fediverse servers by recognizing the FEP-3b86 Object Intent link when resolving remote follow and other intent endpoints. [#3316]
+- Improve compatibility with newer Fediverse servers by recognizing the standardized FEP-3b86 follow link for remote follows. [#3307]
+- Refresh bundled scripts to pick up the latest WordPress component updates. [#3259]
+- Stagger background data processing after plugin updates to reduce server load on hosts running many sites. [#3275]
+
+### Fixed
+- Allow third-party apps connected to your site to look up Fediverse users by their handle (like @user@example.com). [#3289]
+- Fix ActivityPub blocks and widgets failing to load on cross-origin embeds (such as WordPress.com sites) due to a missing nonce header in the CORS allow-list. [#3308]
+- Fix a JavaScript console error that could appear on pages with the Follow, Reactions, Followers, Following, or Remote Reply blocks. [#3302]
+- Fix posting an Undo of a Follow through the outbox API failing with a server error or silently leaving the follow in place. [#3303]
+- Prevent a PHP warning during the monthly statistics backfill when an outbox item disappears between lookup steps. [#3284]
+- Prevent private outbox items authored by the site account from being visible to logged-out visitors at their permalink URLs. [#3281]
+- Prevent the site's follower and following lists from being visible to logged-out visitors when the social graph is set to private. [#3281]
+- Reduce database overhead on sites with many deleted posts by moving the tombstone registry to its own storage. [#3293]
+- Set a real author on posts created via the blog actor outbox so they no longer appear without a byline. [#3283]
+- Silence the upcoming WordPress 7.0 deprecation warning about `data-wp-on-async` by switching the plugin's interactive blocks to the new `withSyncEvent()` helper. [#3220]
+
 ## [8.2.1] - 2026-05-01
 ### Security
 - Hardened how the inbox processes large recipient lists in incoming activities. [#3094]
@@ -1856,6 +1882,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[8.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/8.2.1...8.3.0
 [8.2.1]: https://github.com/Automattic/wordpress-activitypub/compare/8.2.0...8.2.1
 [8.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/8.1.1...8.2.0
 [8.1.1]: https://github.com/Automattic/wordpress-activitypub/compare/8.1.0...8.1.1

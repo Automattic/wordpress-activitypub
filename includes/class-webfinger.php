@@ -30,7 +30,7 @@ class Webfinger {
 	 *
 	 * The host/local-part pattern follows `ACTIVITYPUB_USERNAME_REGEXP`.
 	 *
-	 * @since unreleased
+	 * @since 8.3.0
 	 *
 	 * @param mixed $value The candidate value.
 	 * @return bool True if the value matches the acct identifier pattern.

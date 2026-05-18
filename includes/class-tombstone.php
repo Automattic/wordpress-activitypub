@@ -224,7 +224,7 @@ class Tombstone {
 	 * The MD5 of the normalized URL is unique per URL, so a successful
 	 * `bury()` produces exactly one row and the canonical lookup is enough.
 	 *
-	 * @since unreleased
+	 * @since 8.3.0
 	 *
 	 * @param string $normalized The normalized URL (scheme stripped).
 	 * @return int[] Post IDs (zero or one entry under normal operation).
@@ -295,7 +295,7 @@ class Tombstone {
 				 * request path will respond as it would for any other
 				 * non-existent post. Useful as a monitoring hook.
 				 *
-				 * @since unreleased
+				 * @since 8.3.0
 				 *
 				 * @param string             $normalized The normalized URL that failed to bury.
 				 * @param \WP_Error|int|null $post_id    The `wp_insert_post()` return value.
@@ -356,7 +356,7 @@ class Tombstone {
 	 *
 	 * Used during plugin uninstall to clean up all local tombstones.
 	 *
-	 * @since unreleased
+	 * @since 8.3.0
 	 *
 	 * @return int The number of tombstone posts deleted.
 	 */
@@ -393,7 +393,7 @@ class Tombstone {
 	 * non-urgent: large backlogs drain across multiple daily runs of the
 	 * `activitypub_tombstone_purge` cron event.
 	 *
-	 * @since unreleased
+	 * @since 8.3.0
 	 *
 	 * @param int $batch_size Max number of tombstones to delete per call.
 	 * @return int The number of tombstones deleted.
@@ -404,7 +404,7 @@ class Tombstone {
 		 *
 		 * Set to 0 or a negative value to disable automatic purge.
 		 *
-		 * @since unreleased
+		 * @since 8.3.0
 		 *
 		 * @param int $days Retention window in days. Default 90.
 		 */
