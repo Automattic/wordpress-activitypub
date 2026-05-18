@@ -197,17 +197,24 @@ class Outbox {
 		);
 
 		/*
-		 * Same-type pending items are always superseded. Create and Update
-		 * additionally invalidate a pending Delete (republish race) so we
-		 * do not send both Delete and Create for the same object. Other
-		 * activity types (Like, Add/Remove, Undo, etc.) are orthogonal to
-		 * the soft-delete lifecycle and must leave the Delete alone.
-		 * Delete itself supersedes everything for the object — no type
-		 * filter needed.
+		 * Same-type pending items are always superseded. A confirmed
+		 * re-publish (Create) additionally invalidates a pending Delete so
+		 * we do not send both Delete and Create for the same object.
+		 *
+		 * Update is intentionally NOT in this list: external callers
+		 * (the `wp activitypub post update` CLI command, third-party
+		 * plugins, filter hooks) can queue an Update for an object that
+		 * is still hidden — `is_post_disabled()` allows soft-deleted
+		 * posts through so they can transform. Cancelling a Delete on
+		 * every Update would let an unrelated edit flip the object back
+		 * to federated while the post remains draft/private/locked. The
+		 * scheduler's own resurrection branch already rewrites Update to
+		 * Create when a soft-deleted post returns to a publicly queryable
+		 * state, so the legitimate re-publish path still cancels Delete.
 		 */
 		if ( 'Delete' !== $activity_type ) {
-			$types = in_array( $activity_type, array( 'Create', 'Update' ), true )
-				? array( $activity_type, 'Delete' )
+			$types = 'Create' === $activity_type
+				? array( 'Create', 'Delete' )
 				: array( $activity_type );
 
 			$meta_query[] = array(

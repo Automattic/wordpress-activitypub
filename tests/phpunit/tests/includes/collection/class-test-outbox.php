@@ -308,11 +308,17 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
-	 * Test that an Update activity also invalidates a pending Delete for the same object.
+	 * Test that an Update activity does NOT cancel a pending Delete for the same object.
+	 *
+	 * External callers (CLI commands, third-party plugins, filters) can queue an Update
+	 * for a soft-deleted object that is still hidden. Cancelling the Delete on every
+	 * Update would silently resurrect federation while the post remains draft/private/
+	 * password-protected. Only a confirmed Create (the scheduler's resurrection path)
+	 * should cancel the Delete.
 	 *
 	 * @covers ::delete_superseded_items
 	 */
-	public function test_update_supersedes_pending_delete() {
+	public function test_update_does_not_supersede_pending_delete() {
 		$object = $this->get_dummy_activity_object();
 
 		$delete_id = \Activitypub\add_to_outbox( $object, 'Delete', 1 );
@@ -320,7 +326,7 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		$update_id = \Activitypub\add_to_outbox( $object, 'Update', 1 );
 
-		$this->assertFalse( \get_post_status( $delete_id ), 'Pending Delete should be invalidated by an Update.' );
+		$this->assertEquals( 'pending', \get_post_status( $delete_id ), 'Pending Delete must survive a manual Update for the same object.' );
 		$this->assertEquals( 'pending', \get_post_status( $update_id ) );
 	}
 
