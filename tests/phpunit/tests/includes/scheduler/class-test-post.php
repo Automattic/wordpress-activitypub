@@ -563,6 +563,79 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Test that a legacy permalink-as-ID post's Delete targets the pre-transition URL.
+	 *
+	 * Posts created before the activitypub_last_post_with_permalink_as_id migration
+	 * still use their permalink as the ActivityPub ID. If a slug change accompanies
+	 * the soft-delete transition, the Delete must still target the originally-federated
+	 * URL — otherwise remote servers keep the cached object under the old URL.
+	 *
+	 * @covers ::triage
+	 */
+	public function test_legacy_post_soft_delete_preserves_original_url() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => self::$user_id,
+				'post_name'   => 'original-slug',
+				'post_title'  => 'Original Title',
+			)
+		);
+
+		// Mark this post as a legacy permalink-as-ID post.
+		\update_option( 'activitypub_last_post_with_permalink_as_id', $post_id );
+
+		$original_permalink = \get_permalink( $post_id );
+		$activitypub_id     = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		// Slug AND status change in the same update.
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_name'   => 'new-slug',
+				'post_status' => 'draft',
+			)
+		);
+
+		$delete_items = \get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'pending',
+				'numberposts' => -1,
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitypub_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Delete',
+					),
+				),
+			)
+		);
+
+		$this->assertCount( 1, $delete_items, 'A federated legacy post moving to draft must emit a Delete.' );
+
+		$activity = \json_decode( $delete_items[0]->post_content, true );
+		$this->assertNotEmpty( $activity['object'], 'Delete activity must carry an object.' );
+
+		// For legacy posts the AP ID resolves to the permalink; assert the cached
+		// pre-transition URL was used, not the new-slug permalink.
+		$delete_target = is_array( $activity['object'] ) ? $activity['object']['id'] : $activity['object'];
+
+		$this->assertSame(
+			\esc_url( $original_permalink ),
+			$delete_target,
+			'Delete must target the originally-federated URL, not the new-slug permalink.'
+		);
+
+		// Clean up.
+		\delete_option( 'activitypub_last_post_with_permalink_as_id' );
+	}
+
+	/**
 	 * Helper: count pending outbox items of a given activity type for an object.
 	 *
 	 * @param string $activitypub_id The ActivityPub object ID (URL).

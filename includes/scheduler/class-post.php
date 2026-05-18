@@ -145,6 +145,37 @@ class Post {
 			$type = 'Delete';
 		}
 
+		/*
+		 * Legacy permalink-as-ID compatibility.
+		 *
+		 * Posts created before activitypub_last_post_with_permalink_as_id
+		 * still use their permalink as the ActivityPub ID. A soft-delete
+		 * transition that also changes the slug (or any field the
+		 * permalink derives from) would otherwise emit a Delete targeting
+		 * the new URL, leaving the originally-federated object stranded
+		 * on remote servers. Cache the pre-transition permalink on the
+		 * canonical-url meta so the transformer can read it back on the
+		 * way out. Trash already uses this meta via the wp_trash_post
+		 * hook; we extend the same mechanism to draft/pending/private
+		 * and any custom non-public status.
+		 */
+		if ( 'Delete' === $type && $post_before instanceof \WP_Post ) {
+			$existing_canonical = \get_post_meta( $post->ID, '_activitypub_canonical_url', true );
+			if ( empty( $existing_canonical ) ) {
+				\update_post_meta( $post->ID, '_activitypub_canonical_url', \get_permalink( $post_before ) );
+			}
+		}
+
+		/*
+		 * Resurrection: when a soft-deleted post comes back to a publicly
+		 * queryable state, drop the cached canonical URL. The post is back
+		 * under its current permalink and any future operation should
+		 * compute from current state.
+		 */
+		if ( 'Create' === $type && ACTIVITYPUB_OBJECT_STATE_DELETED === $object_status ) {
+			\delete_post_meta( $post->ID, '_activitypub_canonical_url' );
+		}
+
 		add_to_outbox( $post, $type, $post->post_author );
 	}
 

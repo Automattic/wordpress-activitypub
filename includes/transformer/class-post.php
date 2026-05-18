@@ -206,23 +206,33 @@ class Post extends Base {
 	 * @return string The Posts URL.
 	 */
 	public function get_url() {
-		$post = $this->item;
+		$post   = $this->item;
+		$status = \get_post_status( $post );
 
-		switch ( \get_post_status( $post ) ) {
-			case 'trash':
-				$permalink = \get_post_meta( $post->ID, '_activitypub_canonical_url', true );
-				break;
-			case 'draft':
-				// Get_sample_permalink is in wp-admin, not always loaded.
-				if ( ! \function_exists( '\get_sample_permalink' ) ) {
-					require_once ABSPATH . 'wp-admin/includes/post.php';
-				}
-				$sample    = \get_sample_permalink( $post->ID );
-				$permalink = \str_replace( array( '%pagename%', '%postname%' ), $sample[1], $sample[0] );
-				break;
-			default:
-				$permalink = \get_permalink( $post );
-				break;
+		/*
+		 * Soft-delete fan-out (legacy permalink-as-ID compatibility):
+		 * for any non-publish post, prefer the canonical URL cached
+		 * before the transition. The scheduler populates this on the
+		 * Delete path so a slug change during publish→draft/pending/
+		 * private/trash doesn't cause the Delete to target the wrong
+		 * URL on remote servers.
+		 */
+		if ( 'publish' !== $status ) {
+			$cached = \get_post_meta( $post->ID, '_activitypub_canonical_url', true );
+			if ( $cached ) {
+				return \esc_url( $cached );
+			}
+		}
+
+		if ( 'draft' === $status ) {
+			// Get_sample_permalink is in wp-admin, not always loaded.
+			if ( ! \function_exists( '\get_sample_permalink' ) ) {
+				require_once ABSPATH . 'wp-admin/includes/post.php';
+			}
+			$sample    = \get_sample_permalink( $post->ID );
+			$permalink = \str_replace( array( '%pagename%', '%postname%' ), $sample[1], $sample[0] );
+		} else {
+			$permalink = \get_permalink( $post );
 		}
 
 		return \esc_url( $permalink );
