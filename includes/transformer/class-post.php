@@ -354,17 +354,11 @@ class Post extends Base {
 	 * @return array The Attachments.
 	 */
 	protected function get_attachment() {
-		if ( false !== $this->attachment ) {
-			return $this->attachment;
+		if ( $this->is_redacted() ) {
+			return null;
 		}
 
-		/*
-		 * Remove attachments from the Fediverse if a post was federated and then unpublished.
-		 * Except in preview mode, where we want to show attachments.
-		 */
-		if ( ! $this->is_preview() && 'publish' !== \get_post_status( $this->item ) ) {
-			$this->attachment = array();
-
+		if ( false !== $this->attachment ) {
 			return $this->attachment;
 		}
 
@@ -543,26 +537,15 @@ class Post extends Base {
 	 * @return string|null The summary or null if the object type is `note`.
 	 */
 	protected function get_summary() {
+		if ( $this->is_redacted() ) {
+			return null;
+		}
+
 		if ( 'Note' === $this->get_type() ) {
 			return null;
 		}
 
 		if ( false !== $this->summary ) {
-			return $this->summary;
-		}
-
-		/*
-		 * Placeholder for non-publish statuses.
-		 *
-		 * @deprecated unreleased Federated posts moved to draft/pending/private
-		 *                       now emit Delete via the scheduler instead of an
-		 *                       Update carrying this placeholder. The branch is
-		 *                       kept for the preview path and any direct
-		 *                       transformer callers that still expect it.
-		 */
-		if ( ! $this->is_preview() && 'publish' !== \get_post_status( $this->item ) ) {
-			$this->summary = \__( '(This post is being modified)', 'activitypub' );
-
 			return $this->summary;
 		}
 
@@ -605,22 +588,11 @@ class Post extends Base {
 	 * @return string The content.
 	 */
 	protected function get_content() {
-		if ( false !== $this->content ) {
-			return $this->content;
+		if ( $this->is_redacted() ) {
+			return null;
 		}
 
-		/*
-		 * Placeholder for non-publish statuses.
-		 *
-		 * @deprecated unreleased Federated posts moved to draft/pending/private
-		 *                       now emit Delete via the scheduler instead of an
-		 *                       Update carrying this placeholder. The branch is
-		 *                       kept for the preview path and any direct
-		 *                       transformer callers that still expect it.
-		 */
-		if ( ! $this->is_preview() && 'publish' !== \get_post_status( $this->item ) ) {
-			$this->content = \__( '(This post is being modified)', 'activitypub' );
-
+		if ( false !== $this->content ) {
 			return $this->content;
 		}
 
@@ -863,6 +835,42 @@ class Post extends Base {
 	 */
 	private function is_preview() {
 		return defined( 'ACTIVITYPUB_PREVIEW' ) && ACTIVITYPUB_PREVIEW;
+	}
+
+	/**
+	 * Whether the post should be redacted from ActivityPub representations.
+	 *
+	 * Single gate used by every transformer method that derives content,
+	 * summary, preview, attachments, or other potentially-sensitive
+	 * fields. Fires when:
+	 *
+	 *  - the post is password-protected. Federation output is per-instance,
+	 *    never per-request, so we must NOT use `post_password_required()`
+	 *    here — that helper returns false when a valid `wp-postpass` cookie
+	 *    is on the current request (e.g. an editor who unlocked the post
+	 *    in their browser), and the protected body would then get serialized
+	 *    into an outbox snapshot served to every follower;
+	 *  - the post is not currently in `publish` status, outside of preview
+	 *    mode. Federated posts moved to draft/pending/private now emit
+	 *    Delete via the scheduler, but a direct transformer call (debug
+	 *    tools, REST endpoints) must not synthesize a representation for
+	 *    an unpublished post.
+	 *
+	 * Extend here as new redaction triggers are added so each call site
+	 * stays a one-liner.
+	 *
+	 * @return boolean True if the post must be redacted, false otherwise.
+	 */
+	private function is_redacted() {
+		if ( ! empty( $this->item->post_password ) ) {
+			return true;
+		}
+
+		if ( ! $this->is_preview() && 'publish' !== \get_post_status( $this->item ) ) {
+			return true;
+		}
+
+		return false;
 	}
 
 	/**
@@ -1161,6 +1169,10 @@ class Post extends Base {
 	 * @return array|null The preview of the post or null if the post is not an Article.
 	 */
 	public function get_preview() {
+		if ( $this->is_redacted() ) {
+			return null;
+		}
+
 		if ( 'Article' !== $this->get_type() ) {
 			return null;
 		}
