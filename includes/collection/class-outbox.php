@@ -230,6 +230,7 @@ class Outbox {
 				'post_type'   => self::POST_TYPE,
 				'post_status' => $status_filter,
 				'exclude'     => array( $exclude_id ),
+				'numberposts' => -1,
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query'  => $meta_query,
 				'fields'      => 'ids',

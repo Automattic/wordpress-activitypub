@@ -357,6 +357,39 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Test that Delete wipes more than get_posts()' default five matching outbox items.
+	 *
+	 * @covers ::delete_superseded_items
+	 */
+	public function test_delete_supersedes_all_matching_outbox_history() {
+		$object = $this->get_dummy_activity_object();
+		$ids    = array();
+
+		for ( $i = 0; $i < 7; $i++ ) {
+			$id = \Activitypub\add_to_outbox( $object, 'Create', 1 );
+			\wp_update_post(
+				array(
+					'ID'          => $id,
+					'post_status' => 'publish',
+				)
+			);
+
+			$ids[] = $id;
+		}
+
+		$delete_id = \Activitypub\add_to_outbox( $object, 'Delete', 1 );
+
+		foreach ( $ids as $id ) {
+			$this->assertFalse(
+				\get_post_status( $id ),
+				'Delete must wipe every stale outbox snapshot for the object, not only the first five.'
+			);
+		}
+
+		$this->assertEquals( 'pending', \get_post_status( $delete_id ) );
+	}
+
+	/**
 	 * Test that non-republish activities (Like, Add, Remove, Undo) do NOT cancel a pending Delete.
 	 *
 	 * A soft-deleted post can still have unrelated activities queued (e.g. an Add to the
