@@ -92,10 +92,17 @@ class Post {
 
 			case 'draft':
 			case 'pending':
-				$type = ( 'publish' === $old_status ) ? 'Update' : false;
-				break;
-
+			case 'private':
 			case 'trash':
+				/*
+				 * Soft delete for federated posts (FEP-4f05).
+				 *
+				 * A previously-federated post transitioning to a non-public
+				 * status emits a Delete so federated copies are torn down.
+				 * Without this, draft/pending Update would broadcast a
+				 * "(This post is being modified)" placeholder and private/trash
+				 * would silently leave the federated copy stale.
+				 */
 				$type = ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status ? 'Delete' : false;
 				break;
 

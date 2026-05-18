@@ -551,7 +551,15 @@ class Post extends Base {
 			return $this->summary;
 		}
 
-		// Remove Teaser from unpublished posts.
+		/*
+		 * Placeholder for non-publish statuses.
+		 *
+		 * @deprecated unreleased Federated posts moved to draft/pending/private
+		 *                       now emit Delete via the scheduler instead of an
+		 *                       Update carrying this placeholder. The branch is
+		 *                       kept for the preview path and any direct
+		 *                       transformer callers that still expect it.
+		 */
 		if ( ! $this->is_preview() && 'publish' !== \get_post_status( $this->item ) ) {
 			$this->summary = \__( '(This post is being modified)', 'activitypub' );
 
@@ -601,7 +609,15 @@ class Post extends Base {
 			return $this->content;
 		}
 
-		// Remove Content from unpublished posts.
+		/*
+		 * Placeholder for non-publish statuses.
+		 *
+		 * @deprecated unreleased Federated posts moved to draft/pending/private
+		 *                       now emit Delete via the scheduler instead of an
+		 *                       Update carrying this placeholder. The branch is
+		 *                       kept for the preview path and any direct
+		 *                       transformer callers that still expect it.
+		 */
 		if ( ! $this->is_preview() && 'publish' !== \get_post_status( $this->item ) ) {
 			$this->content = \__( '(This post is being modified)', 'activitypub' );
 

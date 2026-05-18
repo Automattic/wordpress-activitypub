@@ -371,6 +371,61 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Test that moving a federated post to a non-public status emits Delete.
+	 *
+	 * @dataProvider data_non_public_status_transitions
+	 *
+	 * @covers ::triage
+	 *
+	 * @param string $new_status Target post status (draft, pending, or private).
+	 */
+	public function test_status_change_creates_delete_activity_for_federated_post( $new_status ) {
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => $new_status,
+			)
+		);
+
+		$delete_items = \get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'pending',
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitypub_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Delete',
+					),
+				),
+			)
+		);
+
+		$this->assertCount( 1, $delete_items, "publish -> {$new_status} should emit Delete for a federated post." );
+	}
+
+	/**
+	 * Data provider: non-public post statuses that should emit Delete on transition.
+	 *
+	 * @return array[]
+	 */
+	public function data_non_public_status_transitions() {
+		return array(
+			'draft'   => array( 'draft' ),
+			'pending' => array( 'pending' ),
+			'private' => array( 'private' ),
+		);
+	}
+
+	/**
 	 * Test that changing visibility does not create Delete activity for unfederated posts.
 	 *
 	 * @covers ::triage

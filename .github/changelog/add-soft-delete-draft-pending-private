@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Extend soft delete to draft, pending, and private status changes for federated posts.
