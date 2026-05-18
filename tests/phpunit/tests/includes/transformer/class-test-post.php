@@ -305,6 +305,80 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that to_object() omits derived fields for redacted posts.
+	 *
+	 * The is_redacted() gate fires for password-protected posts (regardless
+	 * of any per-request cookie) and for non-publish posts outside preview
+	 * mode. In either case content, summary, summaryMap, contentMap,
+	 * preview, and attachments must be absent from the serialized activity.
+	 *
+	 * @dataProvider data_redacted_post_states
+	 *
+	 * @covers ::get_attachment
+	 * @covers ::get_content
+	 * @covers ::get_preview
+	 * @covers ::get_summary
+	 *
+	 * @param array $post_args Post data flagged as redacted (password or non-publish status).
+	 */
+	public function test_redacted_post_omits_derived_fields( $post_args ) {
+		/*
+		 * The non-publish branch of is_redacted() is short-circuited when
+		 * the ACTIVITYPUB_PREVIEW constant is defined (intentional — previews
+		 * of unpublished posts must still synthesize a representation). PHP
+		 * cannot unset a defined constant, so if an earlier test in the
+		 * suite has defined it (e.g. the router preview-template test), this
+		 * data row would assert the wrong thing. The password row is
+		 * unaffected and always exercises the gate.
+		 */
+		if ( ! isset( $post_args['post_password'] ) && defined( 'ACTIVITYPUB_PREVIEW' ) && ACTIVITYPUB_PREVIEW ) {
+			$this->markTestSkipped( 'ACTIVITYPUB_PREVIEW was defined by an earlier test; non-publish gate cannot be exercised here.' );
+		}
+
+		$defaults = array(
+			'post_author'  => 1,
+			'post_title'   => 'Federation_Probe',
+			'post_content' => 'SHOULD-NOT-FEDERATE-BODY',
+			'post_excerpt' => 'SHOULD-NOT-FEDERATE-EXCERPT',
+			'post_status'  => 'publish',
+		);
+
+		$post_id = \wp_insert_post( \array_merge( $defaults, $post_args ) );
+
+		// Simulate the cookie-bypass case for password-protected posts:
+		// `post_password_required()` would return false here, but the
+		// transformer must still refuse.
+		\add_filter( 'post_password_required', '__return_false' );
+
+		try {
+			$object = Post::transform( get_post( $post_id ) )->to_object();
+
+			$this->assertEmpty( $object->get_content(), 'content must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_summary(), 'summary must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_preview(), 'preview must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_content_map(), 'contentMap must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_summary_map(), 'summaryMap must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_attachment(), 'attachment must be omitted for a redacted post.' );
+		} finally {
+			\remove_filter( 'post_password_required', '__return_false' );
+		}
+	}
+
+	/**
+	 * Data provider: post states that should trigger is_redacted().
+	 *
+	 * @return array[]
+	 */
+	public function data_redacted_post_states() {
+		return array(
+			'password protected' => array( array( 'post_password' => 'fed-secret-pass' ) ),
+			'draft'              => array( array( 'post_status' => 'draft' ) ),
+			'pending'            => array( array( 'post_status' => 'pending' ) ),
+			'private'            => array( array( 'post_status' => 'private' ) ),
+		);
+	}
+
+	/**
 	 * Test content visibility.
 	 *
 	 * @covers ::to_object
