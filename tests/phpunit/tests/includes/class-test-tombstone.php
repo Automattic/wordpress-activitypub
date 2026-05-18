@@ -283,7 +283,7 @@ class Test_Tombstone extends \WP_UnitTestCase {
 					'post_status'       => 'publish',
 					'post_type'         => Tombstone::POST_TYPE,
 					'post_name'         => $slug,
-					'guid'              => 'http://' . $normalized,
+					'guid'              => $normalized,
 				)
 			);
 		}
@@ -292,9 +292,9 @@ class Test_Tombstone extends \WP_UnitTestCase {
 
 		$count = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
-				"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND guid = %s",
+				"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND post_name LIKE %s",
 				Tombstone::POST_TYPE,
-				'http://' . $normalized
+				$wpdb->esc_like( $hash ) . '%'
 			)
 		);
 		$this->assertSame( 1, $count, 'bury() should keep exactly one row after self-healing.' );
@@ -338,16 +338,16 @@ class Test_Tombstone extends \WP_UnitTestCase {
 					'post_status'       => 'publish',
 					'post_type'         => Tombstone::POST_TYPE,
 					'post_name'         => $slug,
-					'guid'              => 'http://' . $normalized,
+					'guid'              => $normalized,
 				)
 			);
 		}
 
 		$count_before = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
-				"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND guid = %s",
+				"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND post_name LIKE %s",
 				Tombstone::POST_TYPE,
-				'http://' . $normalized
+				$wpdb->esc_like( $hash ) . '%'
 			)
 		);
 		$this->assertSame( 2, $count_before, 'Test should set up two duplicate rows.' );
@@ -356,9 +356,9 @@ class Test_Tombstone extends \WP_UnitTestCase {
 
 		$count_after = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
-				"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND guid = %s",
+				"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND post_name LIKE %s",
 				Tombstone::POST_TYPE,
-				'http://' . $normalized
+				$wpdb->esc_like( $hash ) . '%'
 			)
 		);
 		$this->assertSame( 0, $count_after, 'remove() should delete every duplicate row.' );

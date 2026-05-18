@@ -222,14 +222,11 @@ class Tombstone {
 	/**
 	 * Look up tombstone post IDs by canonical URL.
 	 *
-	 * `guid` is preferred over the `post_name` slug because
-	 * `wp_unique_post_slug()` renames the runner-up of a concurrent insert
-	 * from `<hash>` to `<hash>-2`. The `guid` is left untouched, so this
-	 * lookup catches every duplicate row regardless of slug drift.
-	 *
-	 * `normalize_url()` strips the URL scheme, but `wp_insert_post()` calls
-	 * `esc_url()` on `guid` and prefixes a schemeless value with `http://`
-	 * before persisting it. Match the stored form here.
+	 * Matches `post_name` against both the canonical `md5( $normalized )`
+	 * slug and the `<hash>-N` suffixes that `wp_unique_post_slug()` produces
+	 * when concurrent inserts race. MD5 outputs are exactly 32 hex chars, so
+	 * the anchored `-%` wildcard can never match another tombstone's
+	 * canonical hash — only drift runners-up for this URL.
 	 *
 	 * @since unreleased
 	 *
@@ -239,14 +236,18 @@ class Tombstone {
 	private static function find_post_ids_by_url( $normalized ) {
 		global $wpdb;
 
-		$stored_guid = \esc_url_raw( 'http://' . $normalized );
+		$hash = \md5( $normalized );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$ids = $wpdb->get_col(
 			$wpdb->prepare(
-				"SELECT ID FROM {$wpdb->posts} WHERE post_type = %s AND guid = %s ORDER BY ID ASC",
+				"SELECT ID FROM {$wpdb->posts}
+				 WHERE post_type = %s
+				   AND ( post_name = %s OR post_name LIKE %s )
+				 ORDER BY ID ASC",
 				self::POST_TYPE,
-				$stored_guid
+				$hash,
+				$wpdb->esc_like( $hash ) . '-%'
 			)
 		);
 
