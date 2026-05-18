@@ -186,6 +186,20 @@ class Post extends Base {
 	/**
 	 * Returns the ID of the Post.
 	 *
+	 * Posts past `activitypub_last_post_with_permalink_as_id` use the post-ID URL
+	 * as their canonical ActivityPub ID — stable across slug changes. Posts at
+	 * or below the threshold are *legacy* and use their permalink as the ID,
+	 * which means a slug change effectively renames the federated object.
+	 *
+	 * Known limitation: a legacy post whose slug changes in the same save as
+	 * a soft-delete transition (e.g. publish → draft + new post_name) will
+	 * emit a Delete targeting the new permalink, while remote servers cached
+	 * the original. The trash case mitigates this via the `wp_trash_post`
+	 * hook caching the pre-transition URL in `_activitypub_canonical_url`,
+	 * but draft / pending / private / password-applied transitions do not.
+	 * If you maintain a site that pre-dates the ID migration, avoid editing
+	 * the slug in the same save as the visibility change.
+	 *
 	 * @return string The Posts ID.
 	 */
 	public function get_id() {
