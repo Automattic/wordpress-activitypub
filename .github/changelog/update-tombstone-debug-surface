@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Add labels to the internal `ap_tombstone` post type so the dev debug surface can list and inspect tombstones alongside the other ActivityPub stores.
