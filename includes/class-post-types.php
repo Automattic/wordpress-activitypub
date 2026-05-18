@@ -572,7 +572,7 @@ class Post_Types {
 	 */
 	public static function register_tombstone_post_type() {
 		\register_post_type(
-			'ap_tombstone',
+			Tombstone::POST_TYPE,
 			array(
 				'public'              => false,
 				'publicly_queryable'  => false,

@@ -266,12 +266,17 @@ class Tombstone {
 				continue;
 			}
 
+			/*
+			 * Store the original URL in `guid` so it is human-readable and
+			 * survives `esc_url()` without scheme mangling. The hash slug
+			 * in `post_name` is what we actually key lookups on.
+			 */
 			$post_id = \wp_insert_post(
 				array(
 					'post_type'   => self::POST_TYPE,
 					'post_status' => 'publish',
 					'post_name'   => \md5( $normalized ),
-					'guid'        => $normalized,
+					'guid'        => $url,
 					'post_author' => 0,
 				),
 				true

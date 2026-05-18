@@ -1134,12 +1134,18 @@ class Migration {
 				continue;
 			}
 
+			/*
+			 * `guid` is intentionally omitted: the legacy option only kept
+			 * the normalized (schemeless) form, so we can't reconstruct the
+			 * original URL. Storing the schemeless string would be mangled
+			 * by `esc_url()`. Leave WordPress to auto-generate the guid
+			 * — it's not used for lookups, only for debugging.
+			 */
 			$result = \wp_insert_post(
 				array(
 					'post_type'   => Tombstone::POST_TYPE,
 					'post_status' => 'publish',
 					'post_name'   => $hash,
-					'guid'        => $normalized,
 					'post_author' => 0,
 				),
 				true
