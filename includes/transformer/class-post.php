@@ -93,6 +93,10 @@ class Post extends Base {
 		$post   = $this->item;
 		$object = parent::to_object();
 
+		if ( $this->is_redacted() ) {
+			return $object;
+		}
+
 		$content_warning = get_content_warning( $post );
 		if ( ! empty( $content_warning ) ) {
 			$object->set_sensitive( true );

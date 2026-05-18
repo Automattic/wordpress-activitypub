@@ -345,6 +345,9 @@ class Test_Post extends \WP_UnitTestCase {
 
 		$post_id = \wp_insert_post( \array_merge( $defaults, $post_args ) );
 
+		// Attach a content warning so the to_object() override path is exercised.
+		\update_post_meta( $post_id, 'activitypub_content_warning', 'SHOULD-NOT-FEDERATE-WARNING' );
+
 		// Simulate the cookie-bypass case for password-protected posts:
 		// `post_password_required()` would return false here, but the
 		// transformer must still refuse.
@@ -363,6 +366,8 @@ class Test_Post extends \WP_UnitTestCase {
 			$this->assertEmpty( $object->get_name_map(), 'nameMap must be omitted for a redacted post.' );
 			$this->assertEmpty( $object->get_image(), 'image must be omitted for a redacted post.' );
 			$this->assertEmpty( $object->get_icon(), 'icon must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_sensitive(), 'sensitive flag must not be set for a redacted post.' );
+			$this->assertEmpty( $object->get_dcterms(), 'dcterms (content warning) must be omitted for a redacted post.' );
 		} finally {
 			\remove_filter( 'post_password_required', '__return_false' );
 		}
