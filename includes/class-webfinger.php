@@ -256,7 +256,7 @@ class Webfinger {
 	 * @return string|\WP_Error Error or the Remote-Follow endpoint URI.
 	 */
 	public static function get_remote_follow_endpoint( $uri ) {
-		return self::get_intent_endpoint( $uri, 'Follow', true );
+		return self::get_intent_endpoint( $uri, 'follow', true );
 	}
 
 	/**
