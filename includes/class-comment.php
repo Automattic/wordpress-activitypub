@@ -788,13 +788,15 @@ class Comment {
 
 		/*
 		 * If the caller is explicitly asking for one of the ActivityPub
-		 * comment types (likes, reposts, …), respect that. Otherwise we
-		 * still merge our slugs into `type__not_in`, so the AP exclusion
-		 * composes with whatever other plugins are filtering on. The
-		 * previous version bailed out as soon as any of `type__in`, `type`
-		 * or `type__not_in` was set — which let AP comments leak through
-		 * on themes that use plugins like GatherPress (which sets
-		 * `type__in` for its own RSVP filtering).
+		 * comment types (likes, reposts, …) — or for `'all'`, which WP
+		 * treats as a sentinel meaning "include everything, even types we
+		 * would normally exclude" — respect that. Otherwise we still merge
+		 * our slugs into `type__not_in`, so the AP exclusion composes with
+		 * whatever other plugins are filtering on. The previous version
+		 * bailed out as soon as any of `type__in`, `type` or `type__not_in`
+		 * was set — which let AP comments leak through on themes that use
+		 * plugins like GatherPress (which sets `type__in` for its own RSVP
+		 * filtering).
 		 */
 		foreach ( array( 'type__in', 'type' ) as $key ) {
 			if ( empty( $query->query_vars[ $key ] ) ) {
@@ -802,7 +804,7 @@ class Comment {
 			}
 
 			$requested = (array) $query->query_vars[ $key ];
-			if ( \array_intersect( $requested, $ap_types ) ) {
+			if ( \in_array( 'all', $requested, true ) || \array_intersect( $requested, $ap_types ) ) {
 				return;
 			}
 		}

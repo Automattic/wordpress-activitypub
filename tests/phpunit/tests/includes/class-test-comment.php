@@ -975,6 +975,43 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that the WordPress `'all'` sentinel disables AP exclusion.
+	 *
+	 * WP_Comment_Query treats `type => 'all'` and `type__in => array('all')`
+	 * as "include everything, even types we'd normally hide" (e.g. the
+	 * built-in `note` exclusion is also disabled in that case). Our filter
+	 * has to honor the same sentinel, otherwise a caller asking for the
+	 * full set still can't see ActivityPub Likes / Reposts / Quotes.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_comment_query_respects_all_sentinel() {
+		$post_id = self::factory()->post->create();
+		$this->go_to( \get_permalink( $post_id ) );
+
+		$query             = new \WP_Comment_Query();
+		$query->query_vars = array( 'type' => 'all' );
+
+		\Activitypub\Comment::comment_query( $query );
+
+		$this->assertTrue(
+			empty( $query->query_vars['type__not_in'] ),
+			"Caller passed `type => 'all'`; AP slugs must not be appended to type__not_in."
+		);
+
+		// Same again via `type__in`.
+		$query             = new \WP_Comment_Query();
+		$query->query_vars = array( 'type__in' => array( 'all' ) );
+
+		\Activitypub\Comment::comment_query( $query );
+
+		$this->assertTrue(
+			empty( $query->query_vars['type__not_in'] ),
+			"Caller passed `type__in => array('all')`; AP slugs must not be appended to type__not_in."
+		);
+	}
+
+	/**
 	 * Test auto-approving comments on ap_post when option is enabled.
 	 *
 	 * @covers ::pre_comment_approved
