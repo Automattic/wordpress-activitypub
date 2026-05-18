@@ -114,9 +114,10 @@ class Tombstone {
 	/**
 	 * Check if a local URL is tombstoned.
 	 *
-	 * Looks up the normalized URL's hash against the `ap_tombstone` custom
-	 * post type. Falls back to the legacy `activitypub_tombstone_urls`
-	 * option for tombstones that have not yet been migrated.
+	 * Matches by `guid` so that a row whose `post_name` drifted to `<hash>-2`
+	 * from a concurrent insert is still discoverable. Falls back to the
+	 * legacy `activitypub_tombstone_urls` option for tombstones that have not
+	 * yet been migrated.
 	 *
 	 * @param string $url The local URL to check for tombstone status.
 	 *
@@ -128,15 +129,16 @@ class Tombstone {
 		}
 
 		$normalized = normalize_url( $url );
-		$hash       = \md5( $normalized );
 
-		if ( \get_page_by_path( $hash, OBJECT, self::POST_TYPE ) ) {
+		if ( ! empty( self::find_post_ids_by_url( $normalized ) ) ) {
 			return true;
 		}
 
-		// Fallback to the legacy option during migration. Once the option is
-		// deleted (migration complete), get_option returns false and the
-		// is_array() guard short-circuits immediately.
+		/*
+		 * Fallback to the legacy option during migration. Once the option is
+		 * deleted (migration complete), get_option returns false and the
+		 * is_array() guard short-circuits immediately.
+		 */
 		$legacy = \get_option( 'activitypub_tombstone_urls', false );
 		if ( \is_array( $legacy ) && \in_array( $normalized, $legacy, true ) ) {
 			return true;

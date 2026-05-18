@@ -1160,7 +1160,13 @@ class Migration {
 			return null;
 		}
 
-		\update_option( 'activitypub_tombstone_urls', \array_values( $remaining ) );
+		/*
+		 * Disable autoload while we drain. The point of the migration is to
+		 * stop this option from contributing to `alloptions` pressure, so
+		 * flip the flag immediately rather than waiting for the option to
+		 * be fully empty before the relief kicks in.
+		 */
+		\update_option( 'activitypub_tombstone_urls', \array_values( $remaining ), false );
 
 		/*
 		 * If nothing in this batch was drained — every insert errored and
