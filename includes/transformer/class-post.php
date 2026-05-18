@@ -259,6 +259,10 @@ class Post extends Base {
 	 * @return array|null The Image or null if no image is available.
 	 */
 	protected function get_image() {
+		if ( $this->is_redacted() ) {
+			return null;
+		}
+
 		$post_id = $this->item->ID;
 
 		// List post thumbnail first if this post has one.
@@ -312,6 +316,10 @@ class Post extends Base {
 	 * @return array|null The Icon or null if no icon is available.
 	 */
 	protected function get_icon() {
+		if ( $this->is_redacted() ) {
+			return null;
+		}
+
 		$post_id = $this->item->ID;
 
 		// List post thumbnail first if this post has one.
@@ -577,6 +585,10 @@ class Post extends Base {
 	 * @return string|null The title or null if the object type is `note`.
 	 */
 	protected function get_name() {
+		if ( $this->is_redacted() ) {
+			return null;
+		}
+
 		if ( 'Note' === $this->get_type() ) {
 			return null;
 		}

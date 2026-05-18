@@ -359,6 +359,10 @@ class Test_Post extends \WP_UnitTestCase {
 			$this->assertEmpty( $object->get_content_map(), 'contentMap must be omitted for a redacted post.' );
 			$this->assertEmpty( $object->get_summary_map(), 'summaryMap must be omitted for a redacted post.' );
 			$this->assertEmpty( $object->get_attachment(), 'attachment must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_name(), 'name must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_name_map(), 'nameMap must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_image(), 'image must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_icon(), 'icon must be omitted for a redacted post.' );
 		} finally {
 			\remove_filter( 'post_password_required', '__return_false' );
 		}
