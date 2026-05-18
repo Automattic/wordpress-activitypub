@@ -232,10 +232,15 @@ class Tombstone {
 	private static function find_post_ids_by_url( $normalized ) {
 		global $wpdb;
 
+		/*
+		 * `bury()` is idempotent on the MD5 slug, so a successful insert
+		 * produces exactly one row per URL. `LIMIT 1` matches that invariant
+		 * and keeps the query cheap on the hot `exists_local()` path.
+		 */
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$ids = $wpdb->get_col(
 			$wpdb->prepare(
-				"SELECT ID FROM {$wpdb->posts} WHERE post_type = %s AND post_name = %s",
+				"SELECT ID FROM {$wpdb->posts} WHERE post_type = %s AND post_name = %s LIMIT 1",
 				self::POST_TYPE,
 				\md5( $normalized )
 			)
@@ -369,13 +374,16 @@ class Tombstone {
 			)
 		);
 
+		$deleted = 0;
 		foreach ( $post_ids as $post_id ) {
-			\wp_delete_post( $post_id, true );
+			if ( \wp_delete_post( $post_id, true ) ) {
+				++$deleted;
+			}
 		}
 
 		\delete_option( 'activitypub_tombstone_urls' );
 
-		return \count( $post_ids );
+		return $deleted;
 	}
 
 	/**

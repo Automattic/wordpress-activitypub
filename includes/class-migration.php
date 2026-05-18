@@ -1110,6 +1110,8 @@ class Migration {
 	 * @return array|null Args for the next run, or null when migration is complete.
 	 */
 	public static function migrate_tombstones_to_cpt( $batch_size = 500 ) {
+		global $wpdb;
+
 		$urls = \get_option( 'activitypub_tombstone_urls', null );
 
 		if ( null === $urls || ! \is_array( $urls ) || empty( $urls ) ) {
@@ -1129,7 +1131,20 @@ class Migration {
 			}
 
 			$hash = \md5( $normalized );
-			if ( \get_page_by_path( $hash, OBJECT, Tombstone::POST_TYPE ) ) {
+
+			/*
+			 * Light existence check. `get_page_by_path()` would hydrate a
+			 * full `WP_Post` per loop iteration; on a large registry that
+			 * adds up fast. We only need a boolean here.
+			 */
+			$exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->prepare(
+					"SELECT 1 FROM {$wpdb->posts} WHERE post_type = %s AND post_name = %s LIMIT 1",
+					Tombstone::POST_TYPE,
+					$hash
+				)
+			);
+			if ( $exists ) {
 				$progressed = true;
 				continue;
 			}
