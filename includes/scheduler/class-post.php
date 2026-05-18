@@ -11,10 +11,10 @@ use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 
 use function Activitypub\add_to_outbox;
-use function Activitypub\get_content_visibility;
 use function Activitypub\get_post_id;
 use function Activitypub\get_wp_object_state;
 use function Activitypub\is_post_disabled;
+use function Activitypub\is_post_publicly_queryable;
 
 /**
  * Post scheduler class.
@@ -65,10 +65,10 @@ class Post {
 
 		$object_status = get_wp_object_state( $post );
 
-		// If the post is already soft-deleted, do not create any more activities.
+		// If the post is already soft-deleted and still non-public, do not create any more activities.
 		if (
 			ACTIVITYPUB_OBJECT_STATE_DELETED === $object_status &&
-			in_array( get_content_visibility( $post ), array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ), true )
+			! is_post_publicly_queryable( $post )
 		) {
 			return;
 		}
@@ -126,8 +126,20 @@ class Post {
 			$type = 'Create';
 		}
 
-		// If the post was federated before but is now local or private, it should be a Delete activity.
-		if ( ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status && in_array( get_content_visibility( $post ), array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ), true ) ) {
+		/*
+		 * Resurrection: a soft-deleted post that is back in a publicly
+		 * queryable state must emit Create, not Update. Remote followers
+		 * either dropped the original Create on the Delete fan-out (so
+		 * they need to learn about the post again) or had it cancelled
+		 * before fanning out (so the supersession logic invalidates the
+		 * pending Delete and Create is the correct re-introduction).
+		 */
+		if ( ACTIVITYPUB_OBJECT_STATE_DELETED === $object_status && 'Update' === $type && is_post_publicly_queryable( $post ) ) {
+			$type = 'Create';
+		}
+
+		// If the post was federated before but is now non-public, it should be a Delete activity.
+		if ( ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status && ! is_post_publicly_queryable( $post ) ) {
 			$type = 'Delete';
 		}
 
