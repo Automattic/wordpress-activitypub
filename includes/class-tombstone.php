@@ -225,20 +225,26 @@ class Tombstone {
 	 * from `<hash>` to `<hash>-2`. The `guid` is left untouched, so this
 	 * lookup catches every duplicate row regardless of slug drift.
 	 *
+	 * `normalize_url()` strips the URL scheme, but `wp_insert_post()` calls
+	 * `esc_url()` on `guid` and prefixes a schemeless value with `http://`
+	 * before persisting it. Match the stored form here.
+	 *
 	 * @since unreleased
 	 *
-	 * @param string $normalized The normalized URL.
+	 * @param string $normalized The normalized URL (scheme stripped).
 	 * @return int[] Post IDs ordered oldest-first.
 	 */
 	private static function find_post_ids_by_url( $normalized ) {
 		global $wpdb;
+
+		$stored_guid = \esc_url_raw( 'http://' . $normalized );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$ids = $wpdb->get_col(
 			$wpdb->prepare(
 				"SELECT ID FROM {$wpdb->posts} WHERE post_type = %s AND guid = %s ORDER BY ID ASC",
 				self::POST_TYPE,
-				$normalized
+				$stored_guid
 			)
 		);
 

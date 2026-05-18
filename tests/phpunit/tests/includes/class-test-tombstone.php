@@ -283,7 +283,7 @@ class Test_Tombstone extends \WP_UnitTestCase {
 					'post_status'       => 'publish',
 					'post_type'         => Tombstone::POST_TYPE,
 					'post_name'         => $slug,
-					'guid'              => $normalized,
+					'guid'              => 'http://' . $normalized,
 				)
 			);
 		}
@@ -294,7 +294,7 @@ class Test_Tombstone extends \WP_UnitTestCase {
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND guid = %s",
 				Tombstone::POST_TYPE,
-				$normalized
+				'http://' . $normalized
 			)
 		);
 		$this->assertSame( 1, $count, 'bury() should keep exactly one row after self-healing.' );
@@ -338,7 +338,7 @@ class Test_Tombstone extends \WP_UnitTestCase {
 					'post_status'       => 'publish',
 					'post_type'         => Tombstone::POST_TYPE,
 					'post_name'         => $slug,
-					'guid'              => $normalized,
+					'guid'              => 'http://' . $normalized,
 				)
 			);
 		}
@@ -347,7 +347,7 @@ class Test_Tombstone extends \WP_UnitTestCase {
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND guid = %s",
 				Tombstone::POST_TYPE,
-				$normalized
+				'http://' . $normalized
 			)
 		);
 		$this->assertSame( 2, $count_before, 'Test should set up two duplicate rows.' );
@@ -358,7 +358,7 @@ class Test_Tombstone extends \WP_UnitTestCase {
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND guid = %s",
 				Tombstone::POST_TYPE,
-				$normalized
+				'http://' . $normalized
 			)
 		);
 		$this->assertSame( 0, $count_after, 'remove() should delete every duplicate row.' );
