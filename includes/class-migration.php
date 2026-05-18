@@ -1167,9 +1167,11 @@ class Migration {
 			);
 
 			if ( \is_wp_error( $result ) || ! $result ) {
-				// Keep failed inserts in the legacy option so the next batch
-				// retries them. `Tombstone::exists_local()` still falls back
-				// to the option, so the tombstone remains discoverable.
+				/*
+				 * Keep failed inserts in the legacy option so the next batch
+				 * retries them. `Tombstone::exists_local()` still falls back
+				 * to the option, so the tombstone remains discoverable.
+				 */
 				$remaining[] = $normalized;
 			} else {
 				$progressed = true;
