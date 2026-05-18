@@ -196,12 +196,23 @@ class Outbox {
 			),
 		);
 
-		// For non-Delete activities, only delete items of the same type.
-		// Delete activities supersede all pending items for the same object.
+		/*
+		 * For non-Delete activities, delete same-type pending items AND any
+		 * pending Delete. A re-publish of a soft-deleted post must invalidate
+		 * the pending Delete so we do not send both Delete and Create. Delete
+		 * activities themselves supersede everything for the same object.
+		 */
 		if ( 'Delete' !== $activity_type ) {
 			$meta_query[] = array(
-				'key'   => '_activitypub_activity_type',
-				'value' => $activity_type,
+				'relation' => 'OR',
+				array(
+					'key'   => '_activitypub_activity_type',
+					'value' => $activity_type,
+				),
+				array(
+					'key'   => '_activitypub_activity_type',
+					'value' => 'Delete',
+				),
 			);
 		}
 

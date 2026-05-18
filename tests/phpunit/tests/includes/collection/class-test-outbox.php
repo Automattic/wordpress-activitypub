@@ -287,6 +287,44 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Test that a fresh Create activity invalidates any pending Delete for the same object.
+	 *
+	 * Covers the soft-delete re-publish race: a post is moved to draft (Delete scheduled),
+	 * then re-published before the Delete has fired. The Delete must be invalidated so we
+	 * do not send both Delete and Create.
+	 *
+	 * @covers ::delete_superseded_items
+	 */
+	public function test_create_supersedes_pending_delete() {
+		$object = $this->get_dummy_activity_object();
+
+		$delete_id = \Activitypub\add_to_outbox( $object, 'Delete', 1 );
+		$this->assertEquals( 'pending', \get_post_status( $delete_id ) );
+
+		$create_id = \Activitypub\add_to_outbox( $object, 'Create', 1 );
+
+		$this->assertFalse( \get_post_status( $delete_id ), 'Pending Delete should be invalidated by a fresh Create.' );
+		$this->assertEquals( 'pending', \get_post_status( $create_id ) );
+	}
+
+	/**
+	 * Test that an Update activity also invalidates a pending Delete for the same object.
+	 *
+	 * @covers ::delete_superseded_items
+	 */
+	public function test_update_supersedes_pending_delete() {
+		$object = $this->get_dummy_activity_object();
+
+		$delete_id = \Activitypub\add_to_outbox( $object, 'Delete', 1 );
+		$this->assertEquals( 'pending', \get_post_status( $delete_id ) );
+
+		$update_id = \Activitypub\add_to_outbox( $object, 'Update', 1 );
+
+		$this->assertFalse( \get_post_status( $delete_id ), 'Pending Delete should be invalidated by an Update.' );
+		$this->assertEquals( 'pending', \get_post_status( $update_id ) );
+	}
+
+	/**
 	 * Test get_object_id with different nested structures.
 	 *
 	 * @dataProvider data_provider_get_object_id
