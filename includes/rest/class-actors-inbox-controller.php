@@ -252,9 +252,13 @@ class Actors_Inbox_Controller extends Actors_Controller {
 	 * @return array Response object on success.
 	 */
 	public function prepare_item_for_response( $item, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		$activity = \json_decode( $item->post_content, true );
+		$activity = Inbox::get_activity( $item );
 
-		return $activity;
+		if ( \is_wp_error( $activity ) ) {
+			return array();
+		}
+
+		return $activity->to_array( true, true );
 	}
 
 	/**
