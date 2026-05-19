@@ -372,8 +372,22 @@ class Outbox {
 			$activity->set_object( $activity_object );
 		}
 
-		if ( 'Update' === $type ) {
-			$activity->set_updated( gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, strtotime( $outbox_item->post_modified ) ) );
+		/*
+		 * Fall back to the outbox row's timestamps when the hydrated activity is
+		 * missing `published`/`updated`. The CPT row is the authoritative record
+		 * of when the activity was emitted, so dropping it on the floor here
+		 * means downstream consumers (federation, REST listings, audit tooling)
+		 * see a date-less activity even though we know exactly when it left.
+		 */
+		if ( ! $activity->get_published() && ! empty( $outbox_item->post_date_gmt ) ) {
+			$activity->set_published( gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, strtotime( $outbox_item->post_date_gmt ) ) );
+		}
+
+		if ( ! $activity->get_updated() && ! empty( $outbox_item->post_modified_gmt ) ) {
+			$needs_updated = ( 'Update' === $type ) || ( $outbox_item->post_modified_gmt > $outbox_item->post_date_gmt );
+			if ( $needs_updated ) {
+				$activity->set_updated( gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, strtotime( $outbox_item->post_modified_gmt ) ) );
+			}
 		}
 
 		/**

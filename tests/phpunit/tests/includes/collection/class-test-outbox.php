@@ -501,8 +501,119 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		// Verify the updated attribute is set and matches the post's modified date.
 		$post             = \get_post( $id );
-		$expected_updated = \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_modified ) );
+		$expected_updated = \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_modified_gmt ) );
 		$this->assertEquals( $expected_updated, $activity->get_updated() );
+	}
+
+	/**
+	 * Stored Create activity without `published` gets it from the outbox row.
+	 *
+	 * @covers ::get_activity
+	 */
+	public function test_get_activity_fills_missing_published_from_post_date_gmt() {
+		$object = $this->get_dummy_activity_object();
+		$id     = \Activitypub\add_to_outbox( $object, 'Create', 1 );
+		$this->assertNotFalse( $id );
+
+		// Strip `published` from the stored JSON to simulate a transformer that omitted it.
+		$post = \get_post( $id );
+		$raw  = \json_decode( $post->post_content, true );
+		unset( $raw['published'] );
+		\wp_update_post(
+			array(
+				'ID'           => $id,
+				'post_content' => \wp_slash( \wp_json_encode( $raw ) ),
+			)
+		);
+
+		$activity = Outbox::get_activity( $id );
+		$this->assertNotInstanceOf( \WP_Error::class, $activity );
+
+		$post     = \get_post( $id );
+		$expected = \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_date_gmt ) );
+		$this->assertEquals( $expected, $activity->get_published() );
+	}
+
+	/**
+	 * Stored activity that already has a `published` value is not overwritten.
+	 *
+	 * @covers ::get_activity
+	 */
+	public function test_get_activity_preserves_existing_published() {
+		$object = $this->get_dummy_activity_object();
+		$id     = \Activitypub\add_to_outbox( $object, 'Create', 1 );
+		$this->assertNotFalse( $id );
+
+		$frozen           = '2020-01-02T03:04:05Z';
+		$post             = \get_post( $id );
+		$raw              = \json_decode( $post->post_content, true );
+		$raw['published'] = $frozen;
+		\wp_update_post(
+			array(
+				'ID'           => $id,
+				'post_content' => \wp_slash( \wp_json_encode( $raw ) ),
+			)
+		);
+
+		$activity = Outbox::get_activity( $id );
+		$this->assertEquals( $frozen, $activity->get_published() );
+	}
+
+	/**
+	 * Non-Update activity whose outbox row was later modified picks up `updated` from `post_modified_gmt`.
+	 *
+	 * @covers ::get_activity
+	 */
+	public function test_get_activity_fills_updated_when_row_modified() {
+		$object = $this->get_dummy_activity_object();
+		$id     = \Activitypub\add_to_outbox( $object, 'Create', 1 );
+		$this->assertNotFalse( $id );
+
+		// Bump post_modified_gmt to be strictly later than post_date_gmt.
+		global $wpdb;
+		$later = \gmdate( 'Y-m-d H:i:s', \strtotime( '+1 hour' ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update(
+			$wpdb->posts,
+			array(
+				'post_modified'     => $later,
+				'post_modified_gmt' => $later,
+			),
+			array( 'ID' => $id )
+		);
+		\clean_post_cache( $id );
+
+		$activity = Outbox::get_activity( $id );
+		$expected = \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $later ) );
+		$this->assertEquals( $expected, $activity->get_updated() );
+	}
+
+	/**
+	 * Non-Update activity that was never modified must not synthesize an `updated` field.
+	 *
+	 * @covers ::get_activity
+	 */
+	public function test_get_activity_leaves_updated_empty_when_not_modified() {
+		$object = $this->get_dummy_activity_object();
+		$id     = \Activitypub\add_to_outbox( $object, 'Create', 1 );
+		$this->assertNotFalse( $id );
+
+		// Force post_modified_gmt == post_date_gmt.
+		$post = \get_post( $id );
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update(
+			$wpdb->posts,
+			array(
+				'post_modified'     => $post->post_date,
+				'post_modified_gmt' => $post->post_date_gmt,
+			),
+			array( 'ID' => $id )
+		);
+		\clean_post_cache( $id );
+
+		$activity = Outbox::get_activity( $id );
+		$this->assertEmpty( $activity->get_updated() );
 	}
 
 	/**
