@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Add the `blurhash` term to the outbound JSON-LD `@context` so attachments that include a `blurhash` property are strictly correct JSON-LD, matching Mastodon's own context shape.
