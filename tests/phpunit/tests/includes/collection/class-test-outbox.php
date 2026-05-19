@@ -632,6 +632,43 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Pending outbox row (sentinel GMT, populated local) — the Dispatcher reads
+	 * the row in this state, so an `Update` activity must still federate with
+	 * `updated` derived from `post_modified` via `get_gmt_from_date()`.
+	 *
+	 * @covers ::get_activity
+	 */
+	public function test_get_activity_derives_gmt_from_local_for_pending_update_row() {
+		$object = $this->get_dummy_activity_object();
+		$id     = \Activitypub\add_to_outbox( $object, 'Update', 1 );
+		$this->assertNotFalse( $id );
+
+		// Reproduce the column state of a freshly-added, still-pending outbox row:
+		// local columns populated, GMT columns left as the zero sentinel.
+		$local = \current_time( 'mysql' );
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update(
+			$wpdb->posts,
+			array(
+				'post_date'         => $local,
+				'post_date_gmt'     => '0000-00-00 00:00:00',
+				'post_modified'     => $local,
+				'post_modified_gmt' => '0000-00-00 00:00:00',
+			),
+			array( 'ID' => $id )
+		);
+		\clean_post_cache( $id );
+
+		$activity = Outbox::get_activity( $id );
+		$this->assertNotInstanceOf( \WP_Error::class, $activity );
+
+		$expected = \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( \get_gmt_from_date( $local ) ) );
+		$this->assertEquals( $expected, $activity->get_updated() );
+		$this->assertEquals( $expected, $activity->get_published() );
+	}
+
+	/**
 	 * Non-Update activity whose outbox row was later modified picks up `updated` from `post_modified_gmt`.
 	 *
 	 * @covers ::get_activity
