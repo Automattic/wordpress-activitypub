@@ -378,15 +378,23 @@ class Outbox {
 		 * of when the activity was emitted, so dropping it on the floor here
 		 * means downstream consumers (federation, REST listings, audit tooling)
 		 * see a date-less activity even though we know exactly when it left.
+		 *
+		 * `post_date_gmt` is left as `0000-00-00 00:00:00` when an outbox row is
+		 * inserted with `post_status = 'pending'`, so the sentinel must be
+		 * rejected explicitly — synthesizing `1970-01-01T00:00:00Z` from it
+		 * would be worse than leaving the field empty.
 		 */
-		if ( ! $activity->get_published() && ! empty( $outbox_item->post_date_gmt ) ) {
-			$activity->set_published( gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, strtotime( $outbox_item->post_date_gmt ) ) );
+		$post_date_gmt     = empty( $outbox_item->post_date_gmt ) || '0000-00-00 00:00:00' === $outbox_item->post_date_gmt ? '' : $outbox_item->post_date_gmt;
+		$post_modified_gmt = empty( $outbox_item->post_modified_gmt ) || '0000-00-00 00:00:00' === $outbox_item->post_modified_gmt ? '' : $outbox_item->post_modified_gmt;
+
+		if ( ! $activity->get_published() && $post_date_gmt ) {
+			$activity->set_published( gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, strtotime( $post_date_gmt ) ) );
 		}
 
-		if ( ! $activity->get_updated() && ! empty( $outbox_item->post_modified_gmt ) ) {
-			$needs_updated = ( 'Update' === $type ) || ( $outbox_item->post_modified_gmt > $outbox_item->post_date_gmt );
+		if ( ! $activity->get_updated() && $post_modified_gmt ) {
+			$needs_updated = ( 'Update' === $type ) || ( $post_modified_gmt > $post_date_gmt );
 			if ( $needs_updated ) {
-				$activity->set_updated( gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, strtotime( $outbox_item->post_modified_gmt ) ) );
+				$activity->set_updated( gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, strtotime( $post_modified_gmt ) ) );
 			}
 		}
 
