@@ -388,13 +388,13 @@ class Outbox {
 		$post_modified_gmt = empty( $outbox_item->post_modified_gmt ) || '0000-00-00 00:00:00' === $outbox_item->post_modified_gmt ? '' : $outbox_item->post_modified_gmt;
 
 		if ( ! $activity->get_published() && $post_date_gmt ) {
-			$activity->set_published( gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, strtotime( $post_date_gmt ) ) );
+			$activity->set_published( \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \strtotime( $post_date_gmt ) ) );
 		}
 
 		if ( ! $activity->get_updated() && $post_modified_gmt ) {
 			$needs_updated = ( 'Update' === $type ) || ( $post_modified_gmt > $post_date_gmt );
 			if ( $needs_updated ) {
-				$activity->set_updated( gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, strtotime( $post_modified_gmt ) ) );
+				$activity->set_updated( \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \strtotime( $post_modified_gmt ) ) );
 			}
 		}
 
