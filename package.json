@@ -37,7 +37,7 @@
 		"@tanstack/history": "1.161.6"
 	},
 	"devDependencies": {
-		"@base-ui/react": "^1.4.1",
+		"@base-ui/react": "^1.5.0",
 		"@playwright/test": "^1.60.0",
 		"@tanstack/react-router": "^1.169.2",
 		"@testing-library/jest-dom": "^6.9.1",
@@ -64,7 +64,7 @@
 		"@wordpress/edit-post": "^8.46.0",
 		"@wordpress/editor": "^14.46.0",
 		"@wordpress/element": "^6.46.0",
-		"@wordpress/env": "^11.5.0",
+		"@wordpress/env": "^11.6.0",
 		"@wordpress/html-entities": "^4.36.0",
 		"@wordpress/i18n": "^6.19.0",
 		"@wordpress/icons": "^13.0.0",
