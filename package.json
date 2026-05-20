@@ -37,7 +37,7 @@
 		"@tanstack/history": "1.161.6"
 	},
 	"devDependencies": {
-		"@base-ui/react": "^1.4.1",
+		"@base-ui/react": "^1.5.0",
 		"@playwright/test": "^1.60.0",
 		"@tanstack/react-router": "^1.169.2",
 		"@testing-library/jest-dom": "^6.9.1",
