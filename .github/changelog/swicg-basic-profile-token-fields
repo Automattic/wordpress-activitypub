@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+C2S token responses now include `activitypub_actor_id` so clients following the SWICG ActivityPub API Basic Profile can discover the authenticated actor.
