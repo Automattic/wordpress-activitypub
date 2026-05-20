@@ -299,4 +299,87 @@ class Test_Scope extends \WP_UnitTestCase {
 		$result = Scope::sanitize( 123 );
 		$this->assertEquals( array(), $result );
 	}
+
+	/**
+	 * Canonical SWICG Basic Profile read scopes collapse to the internal `read` scope.
+	 *
+	 * @covers ::validate
+	 * @covers ::normalize
+	 *
+	 * @dataProvider data_canonical_read_aliases
+	 *
+	 * @param string $canonical Canonical Basic Profile scope identifier.
+	 */
+	public function test_validate_normalizes_canonical_read_aliases( $canonical ) {
+		$this->assertEquals( array( Scope::READ ), Scope::validate( $canonical ) );
+	}
+
+	/**
+	 * Data provider for canonical read aliases.
+	 *
+	 * @return array<string, array{0:string}>
+	 */
+	public function data_canonical_read_aliases() {
+		return array(
+			'umbrella'  => array( 'activitypub:read:all' ),
+			'inbox'     => array( 'activitypub:read:me:inbox' ),
+			'outbox'    => array( 'activitypub:read:me:outbox' ),
+			'followers' => array( 'activitypub:read:me:followers' ),
+		);
+	}
+
+	/**
+	 * Canonical SWICG Basic Profile write scopes collapse to the internal `write` scope.
+	 *
+	 * @covers ::validate
+	 * @covers ::normalize
+	 *
+	 * @dataProvider data_canonical_write_aliases
+	 *
+	 * @param string $canonical Canonical Basic Profile scope identifier.
+	 */
+	public function test_validate_normalizes_canonical_write_aliases( $canonical ) {
+		$this->assertEquals( array( Scope::WRITE ), Scope::validate( $canonical ) );
+	}
+
+	/**
+	 * Data provider for canonical write aliases.
+	 *
+	 * @return array<string, array{0:string}>
+	 */
+	public function data_canonical_write_aliases() {
+		return array(
+			'umbrella' => array( 'activitypub:write:all' ),
+			'create'   => array( 'activitypub:write:create' ),
+			'follow'   => array( 'activitypub:write:follow' ),
+			'like'     => array( 'activitypub:write:like' ),
+		);
+	}
+
+	/**
+	 * Mixed legacy + canonical names dedupe to a single read/write pair.
+	 *
+	 * @covers ::validate
+	 */
+	public function test_validate_dedupes_mixed_canonical_and_legacy_aliases() {
+		$result = Scope::validate( 'read activitypub:read:me:inbox write activitypub:write:all' );
+		$this->assertEquals( array( Scope::READ, Scope::WRITE ), $result );
+	}
+
+	/**
+	 * Supported() advertises both internal scopes and Basic Profile canonical aliases.
+	 *
+	 * @covers ::supported
+	 */
+	public function test_supported_includes_canonical_aliases() {
+		$supported = Scope::supported();
+
+		// Internal scopes still advertised for backwards-compatible clients.
+		$this->assertContains( Scope::READ, $supported );
+		$this->assertContains( Scope::WRITE, $supported );
+
+		// Basic Profile canonical aliases are now discoverable.
+		$this->assertContains( 'activitypub:read:all', $supported );
+		$this->assertContains( 'activitypub:write:all', $supported );
+	}
 }

@@ -148,9 +148,11 @@ class Test_Clients_Controller extends \WP_UnitTestCase {
 
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
+		$headers  = $response->get_headers();
 
 		$this->assertEquals( 429, $response->get_status() );
 		$this->assertEquals( 'activitypub_rate_limited', $data['code'] );
+		$this->assertSame( (string) MINUTE_IN_SECONDS, $headers['Retry-After'] ?? null, 'Rate-limit responses must include Retry-After per RFC 6585 §4.' );
 	}
 
 	/**
@@ -194,9 +196,11 @@ class Test_Clients_Controller extends \WP_UnitTestCase {
 
 			$response = \rest_get_server()->dispatch( $request );
 			$data     = $response->get_data();
+			$headers  = $response->get_headers();
 
 			$this->assertEquals( 429, $response->get_status() );
 			$this->assertEquals( 'activitypub_rate_limited', $data['code'] );
+			$this->assertSame( (string) MINUTE_IN_SECONDS, $headers['Retry-After'] ?? null, 'Rate-limit responses must include Retry-After per RFC 6585 §4.' );
 
 			// Ensure the empty-IP path didn't write a shared transient.
 			$this->assertFalse( \get_transient( $empty_ip_transient ) );
@@ -260,5 +264,9 @@ class Test_Clients_Controller extends \WP_UnitTestCase {
 		$this->assertContains( 'code', $data['response_types_supported'] );
 		$this->assertContains( 'authorization_code', $data['grant_types_supported'] );
 		$this->assertContains( 'refresh_token', $data['grant_types_supported'] );
+
+		// Advertise SWICG ActivityPub API Basic Profile canonical scope aliases.
+		$this->assertContains( 'activitypub:read:all', $data['scopes_supported'] );
+		$this->assertContains( 'activitypub:write:all', $data['scopes_supported'] );
 	}
 }
