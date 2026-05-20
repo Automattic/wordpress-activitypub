@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+C2S clients can now request canonical SWICG ActivityPub API scope names such as `activitypub:read:all` and `activitypub:write:all`, and the OAuth discovery metadata advertises them.

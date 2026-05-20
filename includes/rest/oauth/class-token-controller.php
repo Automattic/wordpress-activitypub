@@ -397,18 +397,25 @@ class Token_Controller extends \WP_REST_Controller {
 	 * @return \WP_REST_Response
 	 */
 	private function token_error( $error, $error_description, $status = 400 ) {
+		$headers = array(
+			'Content-Type'  => 'application/json',
+			// RFC 6749 §5.1 requires the same no-cache headers on error responses as on success responses.
+			'Cache-Control' => 'no-store',
+			'Pragma'        => 'no-cache',
+		);
+
+		// RFC 6585 §4: send Retry-After with rate-limit responses so clients can back off.
+		if ( 429 === $status ) {
+			$headers['Retry-After'] = (string) MINUTE_IN_SECONDS;
+		}
+
 		return new \WP_REST_Response(
 			array(
 				'error'             => $error,
 				'error_description' => $error_description,
 			),
 			$status,
-			array(
-				'Content-Type'  => 'application/json',
-				// RFC 6749 §5.1 requires the same no-cache headers on error responses as on success responses.
-				'Cache-Control' => 'no-store',
-				'Pragma'        => 'no-cache',
-			)
+			$headers
 		);
 	}
 
