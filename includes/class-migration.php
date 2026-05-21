@@ -34,6 +34,7 @@ class Migration {
 		Scheduler::register_async_batch_callback( 'activitypub_migrate_avatar_to_remote_actors', array( self::class, 'migrate_avatar_to_remote_actors' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_migrate_actor_emoji', array( self::class, 'migrate_actor_emoji' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_backfill_statistics', array( Statistics::class, 'backfill_historical_stats' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_tombstone_migrate', array( self::class, 'migrate_tombstones_to_cpt' ) );
 	}
 
 	/**
@@ -211,6 +212,11 @@ class Migration {
 		if ( \version_compare( $version_from_db, '8.1.0', '<' ) && ! \wp_next_scheduled( 'activitypub_backfill_statistics' ) ) {
 			// Backfill historical statistics data (delay + jitter to avoid load spikes on hosts running many sites).
 			\wp_schedule_single_event( \time() + HOUR_IN_SECONDS + \wp_rand( 0, 6 * HOUR_IN_SECONDS ), 'activitypub_backfill_statistics' );
+		}
+		if ( \version_compare( $version_from_db, '8.3.0', '<' ) ) {
+			if ( ! \wp_next_scheduled( 'activitypub_tombstone_migrate' ) ) {
+				\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_tombstone_migrate' );
+			}
 		}
 
 		/*
@@ -1085,6 +1091,119 @@ class Migration {
 		foreach ( $inbox_ids as $post_id ) {
 			\wp_delete_post( $post_id, true );
 		}
+	}
+
+	/**
+	 * Migrate URLs from the legacy `activitypub_tombstone_urls` option into the
+	 * `ap_tombstone` custom post type.
+	 *
+	 * Chunked async migration. Locking and rescheduling is handled by
+	 * Scheduler::async_batch — the callback returns `array( 'batch_size' => N )`
+	 * to request another run, or `null` when the option is fully drained.
+	 *
+	 * Legacy entries are already-normalized strings (no scheme), so we bypass
+	 * URL validation and insert directly via wp_insert_post.
+	 *
+	 * @since 8.3.0
+	 *
+	 * @param int $batch_size Optional. Number of URLs to process per call. Default 500.
+	 * @return array|null Args for the next run, or null when migration is complete.
+	 */
+	public static function migrate_tombstones_to_cpt( $batch_size = 500 ) {
+		global $wpdb;
+
+		$urls = \get_option( 'activitypub_tombstone_urls', null );
+
+		if ( null === $urls || ! \is_array( $urls ) || empty( $urls ) ) {
+			\delete_option( 'activitypub_tombstone_urls' );
+			return null;
+		}
+
+		$chunk      = \array_slice( $urls, 0, (int) $batch_size );
+		$remaining  = \array_slice( $urls, (int) $batch_size );
+		$progressed = false;
+
+		foreach ( $chunk as $normalized ) {
+			if ( ! \is_string( $normalized ) || '' === $normalized ) {
+				// Drop garbage entries — counts as progress.
+				$progressed = true;
+				continue;
+			}
+
+			$hash = \md5( $normalized );
+
+			/*
+			 * Light existence check. `get_page_by_path()` would hydrate a
+			 * full `WP_Post` per loop iteration; on a large registry that
+			 * adds up fast. We only need a boolean here.
+			 */
+			$exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->prepare(
+					"SELECT 1 FROM {$wpdb->posts} WHERE post_type = %s AND post_name = %s LIMIT 1",
+					Tombstone::POST_TYPE,
+					$hash
+				)
+			);
+			if ( $exists ) {
+				$progressed = true;
+				continue;
+			}
+
+			/*
+			 * `guid` is intentionally omitted: the legacy option only kept
+			 * the normalized (schemeless) form, so we can't reconstruct the
+			 * original URL. Storing the schemeless string would be mangled
+			 * by `esc_url()`. Leave WordPress to auto-generate the guid
+			 * — it's not used for lookups, only for debugging.
+			 */
+			$result = \wp_insert_post(
+				array(
+					'post_type'   => Tombstone::POST_TYPE,
+					'post_status' => 'publish',
+					'post_name'   => $hash,
+					'post_author' => 0,
+				),
+				true
+			);
+
+			if ( \is_wp_error( $result ) || ! $result ) {
+				/*
+				 * Keep failed inserts in the legacy option so the next batch
+				 * retries them. `Tombstone::exists_local()` still falls back
+				 * to the option, so the tombstone remains discoverable.
+				 */
+				$remaining[] = $normalized;
+			} else {
+				$progressed = true;
+			}
+		}
+
+		if ( empty( $remaining ) ) {
+			\delete_option( 'activitypub_tombstone_urls' );
+			return null;
+		}
+
+		/*
+		 * Disable autoload while we drain. The point of the migration is to
+		 * stop this option from contributing to `alloptions` pressure, so
+		 * flip the flag immediately rather than waiting for the option to
+		 * be fully empty before the relief kicks in.
+		 */
+		\update_option( 'activitypub_tombstone_urls', \array_values( $remaining ), false );
+
+		/*
+		 * If nothing in this batch was drained — every insert errored and
+		 * nothing was already migrated — halt the scheduler so we don't loop
+		 * forever on a persistent failure. The legacy option still backs
+		 * exists_local(), so the data isn't lost; an admin can re-trigger
+		 * the migration via `wp cron event run activitypub_tombstone_migrate`
+		 * after fixing the underlying cause.
+		 */
+		if ( ! $progressed ) {
+			return null;
+		}
+
+		return array( 'batch_size' => (int) $batch_size );
 	}
 
 	/**

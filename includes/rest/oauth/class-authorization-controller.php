@@ -153,21 +153,13 @@ class Authorization_Controller extends \WP_REST_Controller {
 		// Rate-limit authorization requests to prevent abuse (max 20 per minute per IP).
 		$ip = get_client_ip();
 		if ( '' === $ip ) {
-			return new \WP_Error(
-				'activitypub_rate_limit',
-				\__( 'Too many authorization requests. Please try again later.', 'activitypub' ),
-				array( 'status' => 429 )
-			);
+			return $this->rate_limit_response( \__( 'Too many authorization requests. Please try again later.', 'activitypub' ) );
 		}
 		$transient_key = 'ap_oauth_auth_' . \md5( $ip );
 		$count         = (int) \get_transient( $transient_key );
 
 		if ( $count >= 20 ) {
-			return new \WP_Error(
-				'activitypub_rate_limit',
-				\__( 'Too many authorization requests. Please try again later.', 'activitypub' ),
-				array( 'status' => 429 )
-			);
+			return $this->rate_limit_response( \__( 'Too many authorization requests. Please try again later.', 'activitypub' ) );
 		}
 
 		\set_transient( $transient_key, $count + 1, MINUTE_IN_SECONDS );
@@ -401,6 +393,27 @@ class Authorization_Controller extends \WP_REST_Controller {
 			null,
 			302,
 			array( 'Location' => $redirect_url )
+		);
+	}
+
+	/**
+	 * Build a 429 rate-limit response with a Retry-After header.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $message Translated human-readable error message.
+	 * @return \WP_REST_Response
+	 */
+	private function rate_limit_response( $message ) {
+		return new \WP_REST_Response(
+			array(
+				'code'    => 'activitypub_rate_limit',
+				'message' => $message,
+				'data'    => array( 'status' => 429 ),
+			),
+			429,
+			// RFC 6585 §4: send Retry-After so clients can back off.
+			array( 'Retry-After' => (string) MINUTE_IN_SECONDS )
 		);
 	}
 }

@@ -2,9 +2,6 @@ import { getContext, getElement, store, withScope, getConfig } from '@wordpress/
 import './view-style.scss';
 import { createModalStore } from '../shared/modal';
 
-/** @member {Object} window.wp WordPress global object */
-const { apiFetch } = window.wp;
-
 createModalStore( 'activitypub/reactions' );
 
 /**
@@ -51,6 +48,7 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 			}
 
 			const { namespace } = getConfig();
+			const { apiFetch } = window.wp;
 
 			try {
 				// Update the state with the new Reactions data.
@@ -117,6 +115,7 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 		*submitIntent() {
 			const context = getContext();
 			const { namespace, i18n } = getConfig();
+			const { apiFetch } = window.wp;
 			const profileURL = context.remoteProfile.trim();
 
 			// Validate input.

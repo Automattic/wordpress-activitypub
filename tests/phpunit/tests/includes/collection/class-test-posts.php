@@ -271,6 +271,167 @@ class Test_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test creating a post with a content warning (sensitive=true + summary).
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_with_content_warning() {
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$activity = array(
+			'object' => array(
+				'type'      => 'Note',
+				'content'   => '<p>Spoilery content.</p>',
+				'summary'   => 'Spoilers ahead',
+				'sensitive' => true,
+			),
+		);
+
+		$post = Posts::create( $activity, $user_id );
+
+		$this->assertInstanceOf( '\WP_Post', $post );
+		$this->assertSame( 'Spoilers ahead', \get_post_meta( $post->ID, 'activitypub_content_warning', true ) );
+		$this->assertSame( '', $post->post_excerpt );
+	}
+
+	/**
+	 * Test that a summary without sensitive=true is treated as a regular excerpt.
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_summary_without_sensitive_is_excerpt() {
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$activity = array(
+			'object' => array(
+				'type'    => 'Article',
+				'name'    => 'Title',
+				'content' => '<p>Body.</p>',
+				'summary' => 'A regular abstract.',
+			),
+		);
+
+		$post = Posts::create( $activity, $user_id );
+
+		$this->assertInstanceOf( '\WP_Post', $post );
+		$this->assertSame( 'A regular abstract.', $post->post_excerpt );
+		$this->assertSame( '', \get_post_meta( $post->ID, 'activitypub_content_warning', true ) );
+	}
+
+	/**
+	 * Test that sensitive=true without a summary is ignored.
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_sensitive_without_summary_is_ignored() {
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$activity = array(
+			'object' => array(
+				'type'      => 'Note',
+				'content'   => '<p>No spoilers, just a flag.</p>',
+				'sensitive' => true,
+			),
+		);
+
+		$post = Posts::create( $activity, $user_id );
+
+		$this->assertInstanceOf( '\WP_Post', $post );
+		$this->assertSame( '', \get_post_meta( $post->ID, 'activitypub_content_warning', true ) );
+		$this->assertSame( '', $post->post_excerpt );
+	}
+
+	/**
+	 * Test creating a post with sensitive=true and a whitespace-only summary.
+	 *
+	 * The whitespace becomes empty after sanitize_text_field, so no CW is set
+	 * and the post_excerpt is also empty (no whitespace pollution).
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_whitespace_summary_with_sensitive_is_ignored() {
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$activity = array(
+			'object' => array(
+				'type'      => 'Note',
+				'content'   => '<p>Content.</p>',
+				'summary'   => '   ',
+				'sensitive' => true,
+			),
+		);
+
+		$post = Posts::create( $activity, $user_id );
+
+		$this->assertInstanceOf( '\WP_Post', $post );
+		$this->assertSame( '', \get_post_meta( $post->ID, 'activitypub_content_warning', true ) );
+		$this->assertSame( '', $post->post_excerpt );
+	}
+
+	/**
+	 * Test updating a post to add a content warning.
+	 *
+	 * @covers ::update
+	 */
+	public function test_update_adds_content_warning() {
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$activity = array(
+			'object' => array(
+				'type'    => 'Note',
+				'content' => '<p>Original.</p>',
+				'summary' => 'Plain abstract.',
+			),
+		);
+
+		$post = Posts::create( $activity, $user_id );
+		$this->assertSame( 'Plain abstract.', $post->post_excerpt );
+
+		$update_activity = array(
+			'object' => array(
+				'type'      => 'Note',
+				'content'   => '<p>Now with spoilers.</p>',
+				'summary'   => 'Spoilers',
+				'sensitive' => true,
+			),
+		);
+
+		$updated = Posts::update( $post, $update_activity );
+
+		$this->assertInstanceOf( '\WP_Post', $updated );
+		$this->assertSame( 'Spoilers', \get_post_meta( $updated->ID, 'activitypub_content_warning', true ) );
+		$this->assertSame( '', $updated->post_excerpt );
+	}
+
+	/**
+	 * Test updating a post to remove a previously set content warning.
+	 *
+	 * @covers ::update
+	 */
+	public function test_update_clears_content_warning() {
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$activity = array(
+			'object' => array(
+				'type'      => 'Note',
+				'content'   => '<p>Spoilery.</p>',
+				'summary'   => 'Spoilers',
+				'sensitive' => true,
+			),
+		);
+
+		$post = Posts::create( $activity, $user_id );
+		$this->assertSame( 'Spoilers', \get_post_meta( $post->ID, 'activitypub_content_warning', true ) );
+
+		$update_activity = array(
+			'object' => array(
+				'type'    => 'Note',
+				'content' => '<p>No longer sensitive.</p>',
+			),
+		);
+
+		$updated = Posts::update( $post, $update_activity );
+
+		$this->assertInstanceOf( '\WP_Post', $updated );
+		$this->assertSame( '', \get_post_meta( $updated->ID, 'activitypub_content_warning', true ) );
+		$this->assertSame( '', $updated->post_excerpt );
+	}
+
+	/**
 	 * Test updating a post.
 	 *
 	 * @covers ::update

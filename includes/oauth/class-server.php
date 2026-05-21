@@ -248,7 +248,7 @@ class Server {
 			'revocation_endpoint'                   => $base_url . 'oauth/revoke',
 			'introspection_endpoint'                => $base_url . 'oauth/introspect',
 			'registration_endpoint'                 => $base_url . 'oauth/clients',
-			'scopes_supported'                      => Scope::ALL,
+			'scopes_supported'                      => Scope::supported(),
 			'response_types_supported'              => array( 'code' ),
 			'response_modes_supported'              => array( 'query' ),
 			'grant_types_supported'                 => array( 'authorization_code', 'refresh_token' ),

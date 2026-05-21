@@ -1,4 +1,4 @@
 Significance: minor
 Type: added
 
-Add an opt-in setting to consent to inclusion in featured collections (Mastodon Starter Packs and similar). Off by default. Find it under Settings, ActivityPub, Activities.
+Add an opt-in setting to consent to inclusion in Starter Kits (also called Starter Packs or Featured Collections). Off by default. Find it under Settings, ActivityPub, Activities.
