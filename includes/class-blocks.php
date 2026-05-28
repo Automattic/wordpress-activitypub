@@ -674,6 +674,15 @@ class Blocks {
 			return null;
 		}
 
+		/*
+		 * In feed contexts (RSS, Atom, and anything else WordPress treats as a feed) the styled
+		 * embed card depends on plugin CSS that isn't loaded, so it degrades to an unreadable
+		 * wall of text. Substitute the same simplified mention link the federation path uses.
+		 */
+		if ( \is_feed() ) {
+			return self::generate_reply_link( '', array( 'attrs' => $attrs ) );
+		}
+
 		$show_embed = isset( $attrs['embedPost'] ) && $attrs['embedPost'];
 
 		$wrapper_attrs = get_block_wrapper_attributes(
