@@ -59,7 +59,7 @@ class Test_Nodeinfo extends \WP_UnitTestCase {
 		// Remove filters that may have been added during tests.
 		remove_filter( 'nodeinfo_data', array( Nodeinfo::class, 'add_nodeinfo_data' ) );
 		remove_filter( 'nodeinfo2_data', array( Nodeinfo::class, 'add_nodeinfo2_data' ) );
-		remove_filter( 'wellknown_nodeinfo_data', array( Nodeinfo::class, 'add_wellknown_nodeinfo_data' ) );
+		remove_filter( 'nodeinfo_discovery', array( Nodeinfo::class, 'add_wellknown_nodeinfo_data' ) );
 
 		parent::tear_down();
 	}
@@ -76,7 +76,7 @@ class Test_Nodeinfo extends \WP_UnitTestCase {
 		// Check that hooks are registered.
 		$this->assertTrue( has_filter( 'nodeinfo_data' ) );
 		$this->assertTrue( has_filter( 'nodeinfo2_data' ) );
-		$this->assertTrue( has_filter( 'wellknown_nodeinfo_data' ) );
+		$this->assertTrue( has_filter( 'nodeinfo_discovery' ) );
 	}
 
 	/**
@@ -408,8 +408,8 @@ class Test_Nodeinfo extends \WP_UnitTestCase {
 		$nodeinfo2_data = apply_filters( 'nodeinfo2_data', array( 'protocols' => array() ) );
 		$this->assertContains( 'activitypub', $nodeinfo2_data['protocols'] );
 
-		// Test wellknown_nodeinfo_data filter.
-		$wellknown_data = apply_filters( 'wellknown_nodeinfo_data', array() );
-		$this->assertArrayHasKey( 'links', $wellknown_data );
+		// Test nodeinfo_discovery filter.
+		$discovery_data = apply_filters( 'nodeinfo_discovery', array() );
+		$this->assertArrayHasKey( 'links', $discovery_data );
 	}
 }
