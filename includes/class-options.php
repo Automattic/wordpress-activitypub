@@ -203,6 +203,24 @@ class Options {
 
 		\register_setting(
 			'activitypub',
+			'activitypub_default_feature_policy',
+			array(
+				'type'              => 'string',
+				'description'       => 'Default policy for who can include this site\'s actors in featured collections (FEP-7aa9).',
+				'default'           => ACTIVITYPUB_INTERACTION_POLICY_ME,
+				'sanitize_callback' => static function ( $value ) {
+					$allowed = array(
+						ACTIVITYPUB_INTERACTION_POLICY_ANYONE,
+						ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS,
+						ACTIVITYPUB_INTERACTION_POLICY_ME,
+					);
+					return \in_array( $value, $allowed, true ) ? $value : ACTIVITYPUB_INTERACTION_POLICY_ME;
+				},
+			)
+		);
+
+		\register_setting(
+			'activitypub',
 			'activitypub_relays',
 			array(
 				'type'              => 'array',

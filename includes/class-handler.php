@@ -28,6 +28,7 @@ class Handler {
 		Handler\Collection_Sync::init();
 		Handler\Create::init();
 		Handler\Delete::init();
+		Handler\Feature_Request::init();
 		Handler\Follow::init();
 		Handler\Like::init();
 		Handler\Move::init();
