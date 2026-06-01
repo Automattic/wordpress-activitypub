@@ -46,7 +46,7 @@
 		"@types/jest": "^30.0.0",
 		"@types/react": "^19.2.15",
 		"@types/react-dom": "^19.2.3",
-		"@wordpress/api-fetch": "^7.41.0",
+		"@wordpress/api-fetch": "^7.47.0",
 		"@wordpress/block-editor": "^15.7.0",
 		"@wordpress/blocks": "^15.13.0",
 		"@wordpress/commands": "^1.42.0",
