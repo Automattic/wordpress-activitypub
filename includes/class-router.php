@@ -290,8 +290,16 @@ class Router {
 			exit;
 		}
 
-		$actor = \get_query_var( 'actor', null );
-		if ( $actor ) {
+		/*
+		 * Skip the actor branch when this looks like an actor-scoped FEP-7aa9
+		 * stamp URL: numeric `actor` paired with a `stamp`. Those resolve to a
+		 * FeatureAuthorization via Activitypub\Query, not via the username
+		 * lookup which would 404 the numeric ID. Non-numeric actors fall
+		 * through to the regular Mastodon-style profile lookup.
+		 */
+		$actor        = \get_query_var( 'actor', null );
+		$is_stamp_url = $actor && \get_query_var( 'stamp' ) && \ctype_digit( (string) $actor );
+		if ( $actor && ! $is_stamp_url ) {
 			$actor = Actors::get_by_username( $actor );
 			if ( ! $actor || \is_wp_error( $actor ) ) {
 				$wp_query->set_404();
