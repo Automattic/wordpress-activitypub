@@ -420,7 +420,7 @@ class Settings_Fields {
 			<option value="<?php echo \esc_attr( ACTIVITYPUB_INTERACTION_POLICY_ME ); ?>" <?php \selected( $value, ACTIVITYPUB_INTERACTION_POLICY_ME ); ?>><?php \esc_html_e( 'No one', 'activitypub' ); ?></option>
 		</select>
 		<p class="description">
-			<?php \esc_html_e( 'Starter Kits (also called Starter Packs or Featured Collections) are curated lists of actors others can follow in one click. Choose who can include this site\'s actors in such a list. Defaults to no one. Your consent is required by the protocol.', 'activitypub' ); ?>
+			<?php \esc_html_e( 'Default setting for who can include this site\'s actors in a Starter Kit (also called a Starter Pack or Featured Collection).', 'activitypub' ); ?>
 		</p>
 		<?php
 	}
