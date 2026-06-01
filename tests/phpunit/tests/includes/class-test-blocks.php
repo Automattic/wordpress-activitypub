@@ -247,6 +247,90 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Feed renders of the reply block should produce the simple mention link
+	 * instead of the embed card, which depends on plugin CSS that feeds don't load.
+	 *
+	 * @covers ::render_reply_block
+	 */
+	public function test_feed_renders_reply_block_as_mention_link() {
+		$reply_url = 'https://devs.live/notice/AQ8N0Xl57y8bUQAb6e';
+		$pre_http  = function ( $response, $url ) use ( $reply_url ) {
+			if ( $reply_url === $url ) {
+				return array(
+					'id'           => $reply_url,
+					'type'         => 'Note',
+					'attributedTo' => 'https://devs.live/users/tester',
+					'content'      => 'Cake day it is',
+					'published'    => '2026-01-01T00:00:00Z',
+				);
+			}
+			if ( 'https://devs.live/users/tester' === $url ) {
+				return array(
+					'id'                => 'https://devs.live/users/tester',
+					'type'              => 'Person',
+					'preferredUsername' => 'tester',
+					'url'               => 'https://devs.live/users/tester',
+					'webfinger'         => 'acct:tester@devs.live',
+				);
+			}
+			return $response;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $pre_http, 10, 2 );
+
+		$block_markup = '<!-- wp:activitypub/reply {"url":"' . $reply_url . '","embedPost":true} /-->';
+
+		// Frontend pass: is_feed() is false, so the full embed card is kept.
+		$this->go_to( \home_url( '/' ) );
+		$this->assertFalse( \is_feed(), 'Precondition: home request must not be a feed.' );
+		$front_output = \do_blocks( $block_markup );
+
+		$this->assertStringNotContainsString( 'ap-reply-mention', $front_output, 'Frontend rendering must keep the full embed card.' );
+		$this->assertStringContainsString( 'wp-block-activitypub-reply', $front_output, 'Frontend rendering should still emit the embed wrapper.' );
+
+		// Feed pass: is_feed() is true, so the reply block is swapped for the mention link.
+		$this->go_to( \home_url( '/?feed=rss2' ) );
+		$this->assertTrue( \is_feed(), 'Precondition: feed query.' );
+		$feed_output = \do_blocks( $block_markup );
+
+		$this->assertStringContainsString( 'ap-reply-mention', $feed_output, 'Feed rendering should swap the embed for a mention link.' );
+		$this->assertStringContainsString( '@tester', $feed_output, 'Feed rendering should include the @username mention.' );
+		$this->assertStringNotContainsString( 'wp-block-activitypub-reply', $feed_output, 'Feed rendering should drop the embed card wrapper.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $pre_http );
+	}
+
+	/**
+	 * When the remote lookup powering the mention link fails inside a feed, fall back to
+	 * the plain `u-in-reply-to` link so the item still surfaces that it's a reply rather
+	 * than silently dropping the block.
+	 *
+	 * @covers ::render_reply_block
+	 */
+	public function test_feed_falls_back_to_plain_link_when_remote_lookup_fails() {
+		$reply_url = 'https://example.com/unreachable-note';
+		$pre_http  = function ( $response, $url ) use ( $reply_url ) {
+			if ( $reply_url === $url ) {
+				return new \WP_Error( 'http_request_failed', 'Simulated failure' );
+			}
+			return $response;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $pre_http, 10, 2 );
+
+		$block_markup = '<!-- wp:activitypub/reply {"url":"' . $reply_url . '","embedPost":true} /-->';
+
+		$this->go_to( \home_url( '/?feed=rss2' ) );
+		$this->assertTrue( \is_feed(), 'Precondition: feed query.' );
+
+		$feed_output = \do_blocks( $block_markup );
+
+		$this->assertStringNotContainsString( 'ap-reply-mention', $feed_output, 'No mention link when the remote lookup fails.' );
+		$this->assertStringContainsString( 'u-in-reply-to', $feed_output, 'Feed should fall back to the plain reply link.' );
+		$this->assertStringContainsString( $reply_url, $feed_output, 'Plain reply link should include the original URL.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $pre_http );
+	}
+
+	/**
 	 * Test filter_import_mastodon_post_data with regular paragraphs.
 	 *
 	 * @covers ::filter_import_mastodon_post_data
