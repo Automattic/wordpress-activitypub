@@ -633,4 +633,28 @@ class Test_Router extends \WP_UnitTestCase {
 		\wp_delete_term( $term_id, 'custom_tax' );
 		\unregister_taxonomy( 'custom_tax' );
 	}
+
+	/**
+	 * Test that ?actor=ID&stamp=ID URLs do not 404 in template_redirect.
+	 *
+	 * Stamp URLs use a numeric actor ID that does not match any username,
+	 * so without a guard the router would 404 every FeatureAuthorization
+	 * stamp before content negotiation runs.
+	 *
+	 * @covers ::template_redirect
+	 */
+	public function test_template_redirect_passes_through_stamp_urls() {
+		\set_query_var( 'actor', '2' );
+		\set_query_var( 'stamp', '47' );
+
+		global $wp_query;
+		$wp_query->is_404 = false;
+
+		Router::template_redirect();
+
+		$this->assertFalse( $wp_query->is_404(), 'Stamp URLs must not be 404\'d by the actor branch.' );
+
+		\set_query_var( 'actor', null );
+		\set_query_var( 'stamp', null );
+	}
 }

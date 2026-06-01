@@ -229,6 +229,7 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 			$this->assertEquals( 'rate_limited', $data['error'] );
 			$this->assertSame( 'no-store', $headers['Cache-Control'] ?? null, 'Token error responses must set Cache-Control: no-store per RFC 6749 §5.1.' );
 			$this->assertSame( 'no-cache', $headers['Pragma'] ?? null, 'Token error responses must set Pragma: no-cache per RFC 6749 §5.1.' );
+			$this->assertSame( (string) MINUTE_IN_SECONDS, $headers['Retry-After'] ?? null, 'Rate-limit responses must include Retry-After per RFC 6585 §4.' );
 		} finally {
 			\delete_transient( $transient_key );
 			$this->restore_client_ip_server( $snapshot );
@@ -260,9 +261,11 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 
 			$response = \rest_get_server()->dispatch( $request );
 			$data     = $response->get_data();
+			$headers  = $response->get_headers();
 
 			$this->assertEquals( 429, $response->get_status() );
 			$this->assertEquals( 'rate_limited', $data['error'] );
+			$this->assertSame( (string) MINUTE_IN_SECONDS, $headers['Retry-After'] ?? null, 'Rate-limit responses must include Retry-After per RFC 6585 §4.' );
 			// The fail-closed branch must not write a shared empty-IP transient.
 			$this->assertFalse( \get_transient( $empty_ip_transient ) );
 		} finally {
@@ -348,6 +351,12 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 		$this->assertArrayHasKey( 'expires_in', $data );
 		$this->assertArrayHasKey( 'refresh_token', $data );
 		$this->assertEquals( 'Bearer', $data['token_type'] );
+
+		// IndieAuth `me` and SWICG Basic Profile `activitypub_actor_id` must both be present and equal.
+		$this->assertArrayHasKey( 'me', $data );
+		$this->assertArrayHasKey( 'activitypub_actor_id', $data );
+		$this->assertNotEmpty( $data['me'] );
+		$this->assertSame( $data['me'], $data['activitypub_actor_id'] );
 	}
 
 	/**
@@ -610,6 +619,12 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 		$this->assertTrue( $data['active'] );
 		$this->assertEquals( $this->client_id, $data['client_id'] );
 		$this->assertEquals( 'Bearer', $data['token_type'] );
+
+		// IndieAuth `me` and SWICG Basic Profile `activitypub_actor_id` must both be present and equal.
+		$this->assertArrayHasKey( 'me', $data );
+		$this->assertArrayHasKey( 'activitypub_actor_id', $data );
+		$this->assertNotEmpty( $data['me'] );
+		$this->assertSame( $data['me'], $data['activitypub_actor_id'] );
 	}
 
 	/**
