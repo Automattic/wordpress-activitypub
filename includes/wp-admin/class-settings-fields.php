@@ -122,9 +122,9 @@ class Settings_Fields {
 			array( 'label_for' => 'activitypub_default_quote_policy' )
 		);
 
-		add_settings_field(
+		\add_settings_field(
 			'activitypub_default_feature_policy',
-			__( 'Starter Kit requests', 'activitypub' ),
+			\__( 'Starter Kit requests', 'activitypub' ),
 			array( self::class, 'render_default_feature_policy_field' ),
 			'activitypub_settings',
 			'activitypub_activities',
@@ -412,15 +412,15 @@ class Settings_Fields {
 	 * Render default feature policy field.
 	 */
 	public static function render_default_feature_policy_field() {
-		$value = get_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_ME );
+		$value = \get_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_ME );
 		?>
 		<select id="activitypub_default_feature_policy" name="activitypub_default_feature_policy" class="regular-text">
-			<option value="<?php echo esc_attr( ACTIVITYPUB_INTERACTION_POLICY_ANYONE ); ?>" <?php selected( $value, ACTIVITYPUB_INTERACTION_POLICY_ANYONE ); ?>><?php esc_html_e( 'Anyone', 'activitypub' ); ?></option>
-			<option value="<?php echo esc_attr( ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS ); ?>" <?php selected( $value, ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS ); ?>><?php esc_html_e( 'Followers only', 'activitypub' ); ?></option>
-			<option value="<?php echo esc_attr( ACTIVITYPUB_INTERACTION_POLICY_ME ); ?>" <?php selected( $value, ACTIVITYPUB_INTERACTION_POLICY_ME ); ?>><?php esc_html_e( 'No one', 'activitypub' ); ?></option>
+			<option value="<?php echo \esc_attr( ACTIVITYPUB_INTERACTION_POLICY_ANYONE ); ?>" <?php \selected( $value, ACTIVITYPUB_INTERACTION_POLICY_ANYONE ); ?>><?php \esc_html_e( 'Anyone', 'activitypub' ); ?></option>
+			<option value="<?php echo \esc_attr( ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS ); ?>" <?php \selected( $value, ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS ); ?>><?php \esc_html_e( 'Followers only', 'activitypub' ); ?></option>
+			<option value="<?php echo \esc_attr( ACTIVITYPUB_INTERACTION_POLICY_ME ); ?>" <?php \selected( $value, ACTIVITYPUB_INTERACTION_POLICY_ME ); ?>><?php \esc_html_e( 'No one', 'activitypub' ); ?></option>
 		</select>
 		<p class="description">
-			<?php esc_html_e( 'Starter Kits (also called Starter Packs or Featured Collections) are curated lists of actors others can follow in one click. Choose who can include this site\'s actors in such a list. Defaults to no one. Your consent is required by the protocol.', 'activitypub' ); ?>
+			<?php \esc_html_e( 'Starter Kits (also called Starter Packs or Featured Collections) are curated lists of actors others can follow in one click. Choose who can include this site\'s actors in such a list. Defaults to no one. Your consent is required by the protocol.', 'activitypub' ); ?>
 		</p>
 		<?php
 	}
