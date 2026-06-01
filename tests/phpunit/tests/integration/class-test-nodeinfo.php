@@ -408,8 +408,8 @@ class Test_Nodeinfo extends \WP_UnitTestCase {
 		$nodeinfo2_data = apply_filters( 'nodeinfo2_data', array( 'protocols' => array() ) );
 		$this->assertContains( 'activitypub', $nodeinfo2_data['protocols'] );
 
-		// Test nodeinfo_discovery filter.
-		$discovery_data = apply_filters( 'nodeinfo_discovery', array() );
+		// Test nodeinfo_discovery filter. NodeInfo always passes a document that already contains a links array.
+		$discovery_data = apply_filters( 'nodeinfo_discovery', array( 'links' => array() ) );
 		$this->assertArrayHasKey( 'links', $discovery_data );
 	}
 }
