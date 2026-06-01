@@ -124,7 +124,7 @@ class Settings_Fields {
 
 		\add_settings_field(
 			'activitypub_default_feature_policy',
-			\__( 'Starter Kit requests', 'activitypub' ),
+			\__( 'Default Starter Kit policy', 'activitypub' ),
 			array( self::class, 'render_default_feature_policy_field' ),
 			'activitypub_settings',
 			'activitypub_activities',
