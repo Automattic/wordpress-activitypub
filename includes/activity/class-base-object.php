@@ -162,6 +162,8 @@ class Base_Object extends Generic_Object {
 				'@id'   => 'gts:always',
 				'@type' => '@id',
 			),
+			'toot'              => 'http://joinmastodon.org/ns#',
+			'blurhash'          => 'toot:blurhash',
 		),
 	);
 

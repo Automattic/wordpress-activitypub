@@ -9,6 +9,7 @@ _site
 .claude/**/*.local*
 .claude/summaries/
 .agents/**/*.local*
+docs/superpowers/
 .cursor
 .DS_Store
 .php_cs.cache

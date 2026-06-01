@@ -1,9 +1,7 @@
 import { store, getContext, getConfig } from '@wordpress/interactivity';
+import { withSyncEvent } from '../shared/with-sync-event';
 import { createModalStore } from '../shared/modal';
 import './style.scss';
-
-/** @member {Object} wp WordPress global. */
-const { apiFetch } = window.wp;
 
 createModalStore( 'activitypub/remote-reply' );
 
@@ -53,13 +51,13 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 		 * @param {Event}  event     The event that triggered the modal opening/closing.
 		 * @param {string} event.key The key pressed, if any.
 		 */
-		onReplyLinkKeydown( event ) {
+		onReplyLinkKeydown: withSyncEvent( ( event ) => {
 			// Handle Enter key to open the modal.
 			if ( event.key === 'Enter' || event.key === ' ' ) {
 				event.preventDefault();
 				actions.toggleModal( event );
 			}
-		},
+		} ),
 
 		/**
 		 * Copy the comment URL to the clipboard.
@@ -121,6 +119,7 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 		*submitRemoteProfile() {
 			const context = getContext();
 			const { namespace, i18n } = getConfig();
+			const { apiFetch } = window.wp;
 			const profileURL = context.remoteProfile.trim();
 
 			// Validate input.

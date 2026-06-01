@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 6.9
-Stable tag: 8.2.1
+Stable tag: 8.3.0
 Requires PHP: 7.4
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -110,6 +110,32 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 8.3.0 - 2026-05-18
+#### Security
+- Block a recently compromised JavaScript dependency from being installed during builds.
+
+#### Added
+- Allow site administrators to post from third-party apps on behalf of the site's blog account.
+- Store content warnings from posts published through third-party ActivityPub apps so they federate correctly.
+
+#### Changed
+- Improve compatibility with newer Fediverse servers by recognizing the FEP-3b86 Object Intent link when resolving remote follow and other intent endpoints.
+- Improve compatibility with newer Fediverse servers by recognizing the standardized FEP-3b86 follow link for remote follows.
+- Refresh bundled scripts to pick up the latest WordPress component updates.
+- Stagger background data processing after plugin updates to reduce server load on hosts running many sites.
+
+#### Fixed
+- Allow third-party apps connected to your site to look up Fediverse users by their handle (like @user@example.com).
+- Fix ActivityPub blocks and widgets failing to load on cross-origin embeds (such as WordPress.com sites) due to a missing nonce header in the CORS allow-list.
+- Fix a JavaScript console error that could appear on pages with the Follow, Reactions, Followers, Following, or Remote Reply blocks.
+- Fix posting an Undo of a Follow through the outbox API failing with a server error or silently leaving the follow in place.
+- Prevent a PHP warning during the monthly statistics backfill when an outbox item disappears between lookup steps.
+- Prevent private outbox items authored by the site account from being visible to logged-out visitors at their permalink URLs.
+- Prevent the site's follower and following lists from being visible to logged-out visitors when the social graph is set to private.
+- Reduce database overhead on sites with many deleted posts by moving the tombstone registry to its own storage.
+- Set a real author on posts created via the blog actor outbox so they no longer appear without a byline.
+- Silence the upcoming WordPress 7.0 deprecation warning about `data-wp-on-async` by switching the plugin's interactive blocks to the new `withSyncEvent()` helper.
 
 ### 8.2.1 - 2026-05-01
 #### Security

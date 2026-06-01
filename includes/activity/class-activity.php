@@ -40,6 +40,7 @@ class Activity extends Base_Object {
 		array(
 			'toot'         => 'http://joinmastodon.org/ns#',
 			'QuoteRequest' => 'toot:QuoteRequest',
+			'blurhash'     => 'toot:blurhash',
 		),
 	);
 

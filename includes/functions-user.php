@@ -147,7 +147,7 @@ function user_can_activitypub( $user_id ) {
  * helper centralizes the "can the current user post / read as the blog?"
  * decision: administrators by default, filterable for integrations.
  *
- * @since unreleased
+ * @since 8.3.0
  *
  * @return bool True if the current user can act as the blog actor.
  */
@@ -163,7 +163,7 @@ function user_can_act_as_blog() {
 	 * and view stats for the blog actor. Always inspect the current user inside
 	 * the callback (`current_user_can()`, role, allowlist) before returning `true`.
 	 *
-	 * @since unreleased
+	 * @since 8.3.0
 	 *
 	 * @param bool $can_act_as_blog Whether the current user can act as the blog actor.
 	 */
