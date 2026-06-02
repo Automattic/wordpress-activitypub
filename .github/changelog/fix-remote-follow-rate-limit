@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Rate-limit the remote-follow lookup to prevent it from being abused to trigger outbound requests.

@@ -143,6 +143,54 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	}
 
 	/**
+	 * Test that the unauthenticated remote-follow endpoint is rate limited per IP.
+	 *
+	 * Regression: the endpoint triggers an outbound WebFinger request to a user-supplied
+	 * host, so it must be throttled to limit its use as a blind SSRF / amplification vector.
+	 *
+	 * @covers ::get_remote_follow_item
+	 */
+	public function test_get_remote_follow_item_rate_limited() {
+		$_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+
+		add_filter(
+			'pre_http_request',
+			function () {
+				return array(
+					'response' => array( 'code' => 200 ),
+					'body'     => wp_json_encode(
+						array(
+							'links' => array(
+								array(
+									'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+									'template' => 'https://example.com/follow?uri={uri}',
+								),
+							),
+						)
+					),
+				);
+			}
+		);
+
+		$dispatch = function () {
+			$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/' . self::$user_id . '/remote-follow' );
+			$request->set_param( 'resource', 'https://example.com/user' );
+			return rest_get_server()->dispatch( $request );
+		};
+
+		// The first ten requests from the same IP are allowed.
+		for ( $i = 1; $i <= 10; $i++ ) {
+			$this->assertEquals( 200, $dispatch()->get_status(), "Request {$i} should be allowed." );
+		}
+
+		// The eleventh request is rate limited, with a Retry-After header for back-off.
+		$response = $dispatch();
+		$this->assertEquals( 429, $response->get_status() );
+		$this->assertEquals( 'activitypub_rate_limited', $response->get_data()['code'] );
+		$this->assertSame( (string) MINUTE_IN_SECONDS, $response->get_headers()['Retry-After'] ?? null );
+	}
+
+	/**
 	 * Test schema.
 	 *
 	 * @covers ::get_item_schema
