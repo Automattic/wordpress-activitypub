@@ -637,4 +637,92 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		$this->assertEquals( 'activitypub_signature_verification', $result->get_error_code() );
 		$this->assertEquals( 401, $result->get_error_data()['status'] );
 	}
+
+	/**
+	 * Invoke the private verify_key_id() with a crafted Signature-Input header and actor.
+	 *
+	 * @param string $signature_input The Signature-Input header value.
+	 * @param string $actor           The activity actor URI.
+	 * @return true|\WP_Error
+	 */
+	private function invoke_verify_key_id( $signature_input, $actor ) {
+		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
+		$request->set_header( 'signature-input', $signature_input );
+		$request->set_header( 'content-type', 'application/json' );
+		$request->set_body( \wp_json_encode( array( 'actor' => $actor ) ) );
+
+		$method = new \ReflectionMethod( $this->instance, 'verify_key_id' );
+		$method->setAccessible( true );
+
+		return $method->invoke( $this->instance, $request );
+	}
+
+	/**
+	 * Test that an unquoted RFC 9421 keyid on a different host is rejected.
+	 *
+	 * Regression: the keyid binding previously matched quotes only, so an unquoted
+	 * keyid (which the RFC 9421 verifier accepts) skipped the host-equality check.
+	 *
+	 * @covers ::verify_key_id
+	 */
+	public function test_verify_key_id_unquoted_mismatched_host_is_rejected() {
+		$result = $this->invoke_verify_key_id(
+			'sig1=("@method");keyid=https://evil.example/actor#key;alg="rsa-v1_5-sha256"',
+			'https://victim.example/users/alice'
+		);
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_key_actor_mismatch', $result->get_error_code() );
+		$this->assertEquals( 403, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Test that an unquoted RFC 9421 keyid on the same host passes.
+	 *
+	 * @covers ::verify_key_id
+	 */
+	public function test_verify_key_id_unquoted_same_host_passes() {
+		$result = $this->invoke_verify_key_id(
+			'sig1=("@method");keyid=https://example.org/actor#key;alg="rsa-v1_5-sha256"',
+			'https://example.org/users/bob'
+		);
+
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * Test that a quoted RFC 9421 keyid on a different host is still rejected.
+	 *
+	 * @covers ::verify_key_id
+	 */
+	public function test_verify_key_id_quoted_mismatched_host_is_rejected() {
+		$result = $this->invoke_verify_key_id(
+			'sig1=("@method");keyid="https://evil.example/actor#key";alg="rsa-v1_5-sha256"',
+			'https://victim.example/users/alice'
+		);
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_key_actor_mismatch', $result->get_error_code() );
+		$this->assertEquals( 403, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Test that a keyid injected into another parameter's value does not fool the binding.
+	 *
+	 * The real `keyid` parameter (evil host) is what the RFC 9421 verifier uses; a
+	 * `keyid=<victim host>` string smuggled inside an earlier quoted parameter value must
+	 * not be picked up instead, which would make the host check pass against the wrong host.
+	 *
+	 * @covers ::verify_key_id
+	 */
+	public function test_verify_key_id_ignores_keyid_inside_other_param() {
+		$result = $this->invoke_verify_key_id(
+			'sig1=("@method");tag="keyid=https://victim.example/key";keyid=https://evil.example/key',
+			'https://victim.example/users/alice'
+		);
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_key_actor_mismatch', $result->get_error_code() );
+		$this->assertEquals( 403, $result->get_error_data()['status'] );
+	}
 }
