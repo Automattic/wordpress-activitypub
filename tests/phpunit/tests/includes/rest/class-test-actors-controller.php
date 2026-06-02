@@ -211,6 +211,7 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 
 			$this->assertEquals( 429, $response->get_status(), 'Without a determinable IP the endpoint must fail closed.' );
 			$this->assertEquals( 'activitypub_rate_limited', $response->get_data()['code'] );
+			$this->assertSame( (string) MINUTE_IN_SECONDS, $response->get_headers()['Retry-After'] ?? null, 'The fail-closed response must also carry Retry-After.' );
 		} finally {
 			remove_filter( 'activitypub_client_ip', $no_ip );
 		}
