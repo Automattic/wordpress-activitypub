@@ -31,7 +31,10 @@ class Undo {
 	 */
 	public static function handle_undo( $activity, $user_ids ) {
 		$success = false;
-		$result  = Inbox_Collection::undo( object_to_uri( $activity['object'] ), object_to_uri( $activity['actor'] ) );
+
+		// Pass the sender so Inbox::undo() can verify ownership; null (no actor) skips that check.
+		$actor  = isset( $activity['actor'] ) ? object_to_uri( $activity['actor'] ) : null;
+		$result = Inbox_Collection::undo( object_to_uri( $activity['object'] ), $actor );
 
 		if ( $result && ! \is_wp_error( $result ) ) {
 			$success = true;
