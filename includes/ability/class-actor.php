@@ -128,17 +128,77 @@ class Actor {
 			return $actor;
 		}
 
+		return \array_merge(
+			self::to_array( $actor ),
+			array(
+				'summary' => $actor->get_summary(),
+				'inbox'   => $actor->get_inbox(),
+				'outbox'  => $actor->get_outbox(),
+			)
+		);
+	}
+
+	/**
+	 * Map a remote actor to the common ability response shape.
+	 *
+	 * Shared by the actor, followers, and following abilities so they all
+	 * expose the same actor fields.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \Activitypub\Activity\Actor $actor The actor object.
+	 * @return array
+	 */
+	public static function to_array( $actor ) {
 		return array(
 			'id'                => $actor->get_id(),
 			'type'              => $actor->get_type(),
 			'name'              => $actor->get_name(),
 			'preferredUsername' => $actor->get_preferred_username(),
-			'summary'           => $actor->get_summary(),
-			'inbox'             => $actor->get_inbox(),
-			'outbox'            => $actor->get_outbox(),
 			'followers'         => $actor->get_followers(),
 			'following'         => $actor->get_following(),
 			'icon'              => $actor->get_icon(),
+		);
+	}
+
+	/**
+	 * JSON Schema for a single actor item in ability output.
+	 *
+	 * Shared by abilities that return lists of actors.
+	 *
+	 * @since unreleased
+	 *
+	 * @return array
+	 */
+	public static function item_schema() {
+		return array(
+			'type'       => 'object',
+			'properties' => array(
+				'id'                => array(
+					'type'   => 'string',
+					'format' => 'uri',
+				),
+				'type'              => array(
+					'type' => 'string',
+				),
+				'name'              => array(
+					'type' => 'string',
+				),
+				'preferredUsername' => array(
+					'type' => 'string',
+				),
+				'followers'         => array(
+					'type'   => 'string',
+					'format' => 'uri',
+				),
+				'following'         => array(
+					'type'   => 'string',
+					'format' => 'uri',
+				),
+				'icon'              => array(
+					'type' => 'object',
+				),
+			),
 		);
 	}
 }

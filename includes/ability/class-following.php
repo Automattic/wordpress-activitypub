@@ -72,35 +72,7 @@ class Following {
 					'properties' => array(
 						'following' => array(
 							'type'  => 'array',
-							'items' => array(
-								'type'       => 'object',
-								'properties' => array(
-									'id'                => array(
-										'type'   => 'string',
-										'format' => 'uri',
-									),
-									'type'              => array(
-										'type' => 'string',
-									),
-									'name'              => array(
-										'type' => 'string',
-									),
-									'preferredUsername' => array(
-										'type' => 'string',
-									),
-									'followers'         => array(
-										'type'   => 'string',
-										'format' => 'uri',
-									),
-									'following'         => array(
-										'type'   => 'string',
-										'format' => 'uri',
-									),
-									'icon'              => array(
-										'type' => 'object',
-									),
-								),
-							),
+							'items' => Actor::item_schema(),
 						),
 						'total'     => array(
 							'type' => 'integer',
@@ -255,7 +227,7 @@ class Following {
 		}
 
 		$per_page = isset( $input['per_page'] ) ? \min( \absint( $input['per_page'] ), 100 ) : 20;
-		$page     = isset( $input['page'] ) ? \absint( $input['page'] ) : 1;
+		$page     = isset( $input['page'] ) ? \max( 1, \absint( $input['page'] ) ) : 1;
 
 		$data = Following_Collection::query( $user_id, $per_page, $page );
 
@@ -265,15 +237,7 @@ class Following {
 			if ( \is_wp_error( $actor ) ) {
 				continue;
 			}
-			$following[] = array(
-				'id'                => $actor->get_id(),
-				'type'              => $actor->get_type(),
-				'name'              => $actor->get_name(),
-				'preferredUsername' => $actor->get_preferred_username(),
-				'followers'         => $actor->get_followers(),
-				'following'         => $actor->get_following(),
-				'icon'              => $actor->get_icon(),
-			);
+			$following[] = Actor::to_array( $actor );
 		}
 
 		return array(

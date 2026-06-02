@@ -59,7 +59,7 @@ Every ability requires the current user to have the `activitypub` capability (`c
 
 | Rule | Applies to | Behavior |
 |------|-----------|----------|
-| **Ownership** | `get-following`, `follow`, `unfollow` | Acting on another user's data requires `manage_options`, otherwise returns `403 activitypub_forbidden`. `user_id` defaults to the current user. |
+| **Ownership** | `get-followers`, `get-following`, `follow`, `unfollow` | Acting on another user's data requires `manage_options`, otherwise returns `403 activitypub_forbidden`. `user_id` defaults to the current user. |
 | **Feature flag** | `follow`, `unfollow` | Requires the Following UI to be enabled (`activitypub_following_ui` option). Otherwise returns `403 activitypub_following_disabled`. |
 
 Each ability also declares behavioral annotations (`readonly`, `destructive`, `idempotent`) so clients can reason about side effects before running them.
@@ -130,9 +130,7 @@ List followers for a local actor. *Readonly · idempotent.*
 | `page` | integer | no | `1` | Page number. |
 | `per_page` | integer | no | `20` | Results per page (capped at `100`). |
 
-**Returns:** `{ "followers": Actor[], "total": integer }`, where each follower has `id`, `type`, `name`, `preferredUsername`, `followers`, `following`, `icon`. **Errors:** `400 activitypub_invalid_user_id`.
-
-> **Note:** unlike `get-following`, this ability does not restrict access to the requesting user's own followers.
+**Returns:** `{ "followers": Actor[], "total": integer }`, where each follower has `id`, `type`, `name`, `preferredUsername`, `followers`, `following`, `icon`. **Errors:** `400 activitypub_invalid_user_id`, `403 activitypub_forbidden` (another user's list without `manage_options`).
 
 #### `activitypub/get-following`
 

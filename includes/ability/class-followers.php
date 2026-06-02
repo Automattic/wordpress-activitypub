@@ -58,35 +58,7 @@ class Followers {
 					'properties' => array(
 						'followers' => array(
 							'type'  => 'array',
-							'items' => array(
-								'type'       => 'object',
-								'properties' => array(
-									'id'                => array(
-										'type'   => 'string',
-										'format' => 'uri',
-									),
-									'type'              => array(
-										'type' => 'string',
-									),
-									'name'              => array(
-										'type' => 'string',
-									),
-									'preferredUsername' => array(
-										'type' => 'string',
-									),
-									'followers'         => array(
-										'type'   => 'string',
-										'format' => 'uri',
-									),
-									'following'         => array(
-										'type'   => 'string',
-										'format' => 'uri',
-									),
-									'icon'              => array(
-										'type' => 'object',
-									),
-								),
-							),
+							'items' => Actor::item_schema(),
 						),
 						'total'     => array(
 							'type' => 'integer',
@@ -131,8 +103,16 @@ class Followers {
 			return new \WP_Error( 'activitypub_invalid_user_id', \__( 'Invalid user ID.', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
+		if ( \get_current_user_id() !== $user_id && ! \current_user_can( 'manage_options' ) ) {
+			return new \WP_Error(
+				'activitypub_forbidden',
+				\__( 'You are not allowed to view another user\'s followers list.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
+		}
+
 		$per_page = isset( $input['per_page'] ) ? \min( \absint( $input['per_page'] ), 100 ) : 20;
-		$page     = isset( $input['page'] ) ? \absint( $input['page'] ) : 1;
+		$page     = isset( $input['page'] ) ? \max( 1, \absint( $input['page'] ) ) : 1;
 
 		$data = Followers_Collection::query( $user_id, $per_page, $page );
 
@@ -142,15 +122,7 @@ class Followers {
 			if ( \is_wp_error( $actor ) ) {
 				continue;
 			}
-			$followers[] = array(
-				'id'                => $actor->get_id(),
-				'type'              => $actor->get_type(),
-				'name'              => $actor->get_name(),
-				'preferredUsername' => $actor->get_preferred_username(),
-				'followers'         => $actor->get_followers(),
-				'following'         => $actor->get_following(),
-				'icon'              => $actor->get_icon(),
-			);
+			$followers[] = Actor::to_array( $actor );
 		}
 
 		return array(
