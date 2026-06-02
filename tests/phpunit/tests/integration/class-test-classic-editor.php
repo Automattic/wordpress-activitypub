@@ -480,6 +480,10 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 		$this->assertArrayHasKey( 'activitypub-settings', $wp_meta_boxes['post']['side']['default'] );
 		\remove_filter( 'use_block_editor_for_post', '__return_false' );
 
+		// Remove every hook init() registered so it can't leak into other tests.
 		\remove_action( 'add_meta_boxes', array( Classic_Editor::class, 'add_meta_box' ), 10 );
+		\remove_action( 'save_post', array( Classic_Editor::class, 'save_meta_data' ), 10 );
+		\remove_filter( 'activitypub_attachments_media_markup', array( Classic_Editor::class, 'filter_attachments_media_markup' ), 10 );
+		\remove_filter( 'activitypub_attachment_ids', array( Classic_Editor::class, 'filter_attached_media_ids' ), 10 );
 	}
 }

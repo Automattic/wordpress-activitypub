@@ -117,9 +117,10 @@ class Classic_Editor {
 		 * The block editor ships its own ActivityPub panel, so the classic meta box must not be
 		 * added there. With the Classic Editor plugin in switchable mode a post can still open in
 		 * the block editor, where both would otherwise render and the meta box's save_post handler
-		 * would overwrite the panel's value.
+		 * would overwrite the panel's value. The function_exists() check keeps ClassicPress and
+		 * other block-less setups (where use_block_editor_for_post() is absent) safe.
 		 */
-		if ( $post instanceof \WP_Post && \use_block_editor_for_post( $post ) ) {
+		if ( $post instanceof \WP_Post && \function_exists( 'use_block_editor_for_post' ) && \use_block_editor_for_post( $post ) ) {
 			return;
 		}
 
