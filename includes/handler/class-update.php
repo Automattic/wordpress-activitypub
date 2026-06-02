@@ -158,7 +158,7 @@ class Update {
 		if ( \is_array( $actor ) && isset( $actor['id'] ) && object_to_uri( $actor ) === object_to_uri( $activity['actor'] ) ) {
 			$state = Remote_Actors::upsert( $actor );
 		} else {
-			$state = new \WP_Error( 'activitypub_update_failed', 'Update failed: missing, invalid, or unauthorized actor object in Update activity' );
+			$state = new \WP_Error( 'activitypub_update_failed', \__( 'Update failed: missing, invalid, or unauthorized actor object in Update activity.', 'activitypub' ) );
 			$actor = array();
 		}
 
