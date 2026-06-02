@@ -26,7 +26,7 @@ class Nodeinfo {
 		\add_filter( 'nodeinfo_data', array( self::class, 'add_nodeinfo_data' ), 10, 2 );
 		\add_filter( 'nodeinfo2_data', array( self::class, 'add_nodeinfo2_data' ) );
 
-		\add_filter( 'wellknown_nodeinfo_data', array( self::class, 'add_wellknown_nodeinfo_data' ) );
+		\add_filter( 'nodeinfo_discovery', array( self::class, 'add_wellknown_nodeinfo_data' ) );
 	}
 
 	/**

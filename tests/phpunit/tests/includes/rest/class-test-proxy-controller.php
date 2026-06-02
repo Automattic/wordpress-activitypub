@@ -173,6 +173,269 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that proxy accepts a WebFinger handle (`user@host`) and resolves it.
+	 *
+	 * @covers ::validate_url
+	 * @covers ::sanitize_url
+	 * @covers ::create_item
+	 */
+	public function test_successful_actor_fetch_by_handle() {
+		$this->mock_oauth_auth();
+
+		$actor_data = array(
+			'@context'          => 'https://www.w3.org/ns/activitystreams',
+			'type'              => 'Person',
+			'id'                => 'https://example.com/users/test',
+			'inbox'             => 'https://example.com/users/test/inbox',
+			'preferredUsername' => 'test',
+			'name'              => 'Test User',
+		);
+
+		$filter = function ( $preempt, $args, $url ) use ( $actor_data ) {
+			if ( false !== \strpos( $url, '/.well-known/webfinger' ) ) {
+				return array(
+					'response' => array( 'code' => 200 ),
+					'body'     => \wp_json_encode(
+						array(
+							'subject' => 'acct:test@example.com',
+							'links'   => array(
+								array(
+									'rel'  => 'self',
+									'type' => 'application/activity+json',
+									'href' => $actor_data['id'],
+								),
+							),
+						)
+					),
+					'headers'  => array( 'content-type' => 'application/jrd+json' ),
+				);
+			}
+
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode( $actor_data ),
+				'headers'  => array( 'content-type' => 'application/activity+json' ),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => 'test@example.com' ) );
+
+		$response = $this->server->dispatch( $request );
+
+		\remove_filter( 'pre_http_request', $filter, 10 );
+		$this->unmock_oauth_auth();
+
+		$this->assertEquals( 200, $response->get_status(), \wp_json_encode( $response->get_data() ) );
+		$data = $response->get_data();
+		$this->assertEquals( 'Person', $data['type'] );
+		$this->assertEquals( 'https://example.com/users/test', $data['id'] );
+	}
+
+	/**
+	 * Test that proxy accepts an `acct:` URI and resolves it via WebFinger.
+	 *
+	 * @covers ::validate_url
+	 * @covers ::sanitize_url
+	 * @covers ::create_item
+	 */
+	public function test_successful_actor_fetch_by_acct_uri() {
+		$this->mock_oauth_auth();
+
+		$actor_data = array(
+			'@context'          => 'https://www.w3.org/ns/activitystreams',
+			'type'              => 'Person',
+			'id'                => 'https://example.com/users/test',
+			'inbox'             => 'https://example.com/users/test/inbox',
+			'preferredUsername' => 'test',
+			'name'              => 'Test User',
+		);
+
+		$filter = function ( $preempt, $args, $url ) use ( $actor_data ) {
+			if ( false !== \strpos( $url, '/.well-known/webfinger' ) ) {
+				return array(
+					'response' => array( 'code' => 200 ),
+					'body'     => \wp_json_encode(
+						array(
+							'subject' => 'acct:test@example.com',
+							'links'   => array(
+								array(
+									'rel'  => 'self',
+									'type' => 'application/activity+json',
+									'href' => $actor_data['id'],
+								),
+							),
+						)
+					),
+					'headers'  => array( 'content-type' => 'application/jrd+json' ),
+				);
+			}
+
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode( $actor_data ),
+				'headers'  => array( 'content-type' => 'application/activity+json' ),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => 'acct:test@example.com' ) );
+
+		$response = $this->server->dispatch( $request );
+
+		\remove_filter( 'pre_http_request', $filter, 10 );
+		$this->unmock_oauth_auth();
+
+		$this->assertEquals( 200, $response->get_status(), \wp_json_encode( $response->get_data() ) );
+		$data = $response->get_data();
+		$this->assertEquals( 'Person', $data['type'] );
+		$this->assertEquals( 'https://example.com/users/test', $data['id'] );
+	}
+
+	/**
+	 * Test that proxy accepts a WebFinger handle with leading `@` and resolves it.
+	 *
+	 * @covers ::validate_url
+	 * @covers ::sanitize_url
+	 * @covers ::create_item
+	 */
+	public function test_successful_actor_fetch_by_handle_with_leading_at() {
+		$this->mock_oauth_auth();
+
+		$actor_data = array(
+			'@context'          => 'https://www.w3.org/ns/activitystreams',
+			'type'              => 'Person',
+			'id'                => 'https://example.com/users/test',
+			'inbox'             => 'https://example.com/users/test/inbox',
+			'preferredUsername' => 'test',
+			'name'              => 'Test User',
+		);
+
+		$filter = function ( $preempt, $args, $url ) use ( $actor_data ) {
+			if ( false !== \strpos( $url, '/.well-known/webfinger' ) ) {
+				return array(
+					'response' => array( 'code' => 200 ),
+					'body'     => \wp_json_encode(
+						array(
+							'subject' => 'acct:test@example.com',
+							'links'   => array(
+								array(
+									'rel'  => 'self',
+									'type' => 'application/activity+json',
+									'href' => $actor_data['id'],
+								),
+							),
+						)
+					),
+					'headers'  => array( 'content-type' => 'application/jrd+json' ),
+				);
+			}
+
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode( $actor_data ),
+				'headers'  => array( 'content-type' => 'application/activity+json' ),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => '@test@example.com' ) );
+
+		$response = $this->server->dispatch( $request );
+
+		\remove_filter( 'pre_http_request', $filter, 10 );
+		$this->unmock_oauth_auth();
+
+		$this->assertEquals( 200, $response->get_status(), \wp_json_encode( $response->get_data() ) );
+		$data = $response->get_data();
+		$this->assertEquals( 'Person', $data['type'] );
+		$this->assertEquals( 'https://example.com/users/test', $data['id'] );
+	}
+
+	/**
+	 * Test that the stream sub-route also accepts acct identifiers.
+	 *
+	 * Guards against the `format => 'uri'` schema constraint that previously
+	 * rejected handles before the validate_callback ran.
+	 *
+	 * @covers ::register_routes
+	 * @covers ::get_stream
+	 */
+	public function test_stream_accepts_acct_identifier() {
+		$this->mock_oauth_auth();
+
+		$filter = function ( $preempt, $args, $url ) {
+			if ( false !== \strpos( $url, '/.well-known/webfinger' ) ) {
+				return array(
+					'response' => array( 'code' => 200 ),
+					'body'     => \wp_json_encode(
+						array(
+							'subject' => 'acct:test@example.com',
+							'links'   => array(
+								array(
+									'rel'  => 'self',
+									'type' => 'application/activity+json',
+									'href' => 'https://example.com/users/test',
+								),
+							),
+						)
+					),
+					'headers'  => array( 'content-type' => 'application/jrd+json' ),
+				);
+			}
+
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'type' => 'Person',
+						'id'   => 'https://example.com/users/test',
+					)
+				),
+				'headers'  => array( 'content-type' => 'application/activity+json' ),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy/stream' );
+		$request->set_query_params( array( 'id' => 'test@example.com' ) );
+
+		$response = $this->server->dispatch( $request );
+
+		\remove_filter( 'pre_http_request', $filter, 10 );
+		$this->unmock_oauth_auth();
+
+		// The route accepts the handle, the webfinger lookup resolves, and
+		// get_stream() reaches the "no eventStream" branch — returning 404
+		// rather than the schema-level `rest_invalid_param` 400 it would
+		// have produced with the previous `format => 'uri'` constraint.
+		$this->assertEquals( 404, $response->get_status() );
+		$this->assertEquals( 'activitypub_no_event_stream', $response->get_data()['code'] );
+	}
+
+	/**
+	 * Test that proxy still rejects garbage input that is neither URL nor handle.
+	 *
+	 * @covers ::validate_url
+	 */
+	public function test_malformed_input_rejected() {
+		$this->mock_oauth_auth();
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => 'not-a-url-or-handle' ) );
+
+		$response = $this->server->dispatch( $request );
+
+		$this->unmock_oauth_auth();
+
+		$this->assertEquals( 400, $response->get_status() );
+		$this->assertEquals( 'rest_invalid_param', $response->get_data()['code'] );
+	}
+
+	/**
 	 * Mock OAuth authentication for testing.
 	 */
 	private function mock_oauth_auth() {

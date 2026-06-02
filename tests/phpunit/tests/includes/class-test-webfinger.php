@@ -411,6 +411,78 @@ class Test_Webfinger extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_intent_endpoint falls back to the FEP-3b86 Object Intent link.
+	 *
+	 * The generic Object Intent acts as a "paste the URL into my home server"
+	 * link and is preferred over the last-resort Mastodon-style URL when
+	 * advertised by the remote actor.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_object_intent_fallback() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => array(
+							array(
+								'rel'      => 'https://w3id.org/fep/3b86/Object',
+								'template' => 'https://example.com/intent/object?uri={uri}',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		// No `like` intent advertised, no OStatus subscribe link — should fall
+		// back to the Object Intent rather than the Mastodon-style last-resort URL.
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like', true );
+
+		$this->assertEquals( 'https://example.com/intent/object?uri={uri}', $result );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test get_intent_endpoint prefers OStatus subscribe over the Object Intent.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_ostatus_preferred_over_object_intent() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => array(
+							array(
+								'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+								'template' => 'https://example.com/authorize_interaction?uri={uri}',
+							),
+							array(
+								'rel'      => 'https://w3id.org/fep/3b86/Object',
+								'template' => 'https://example.com/intent/object?uri={uri}',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like', true );
+
+		$this->assertEquals( 'https://example.com/authorize_interaction?uri={uri}', $result );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
 	 * Test get_intent_endpoint last-resort Mastodon-compatible URL for handle.
 	 *
 	 * @covers ::get_intent_endpoint
@@ -668,5 +740,67 @@ class Test_Webfinger extends \WP_UnitTestCase {
 
 		// Clean up.
 		\delete_transient( $transient_key );
+	}
+
+	/**
+	 * Test that valid acct identifiers are recognized.
+	 *
+	 * @covers ::is_acct
+	 * @dataProvider data_valid_accts
+	 *
+	 * @param string $value The value under test.
+	 */
+	public function test_is_acct_valid( $value ) {
+		$this->assertTrue( Webfinger::is_acct( $value ) );
+	}
+
+	/**
+	 * Provider for valid acct identifiers.
+	 *
+	 * @return array
+	 */
+	public function data_valid_accts() {
+		return array(
+			'plain acct'          => array( 'user@example.com' ),
+			'leading at'          => array( '@user@example.com' ),
+			'acct uri'            => array( 'acct:user@example.com' ),
+			'multi-segment host'  => array( 'user@subdomain.example.com' ),
+			'numeric local part'  => array( 'user42@example.com' ),
+			'dots in local part'  => array( 'first.last@example.com' ),
+			'underscore in local' => array( 'first_last@example.com' ),
+			'dash in local'       => array( 'first-last@example.com' ),
+		);
+	}
+
+	/**
+	 * Test that non-acct values are rejected.
+	 *
+	 * @covers ::is_acct
+	 * @dataProvider data_invalid_accts
+	 *
+	 * @param mixed $value The value under test.
+	 */
+	public function test_is_acct_invalid( $value ) {
+		$this->assertFalse( Webfinger::is_acct( $value ) );
+	}
+
+	/**
+	 * Provider for non-acct values.
+	 *
+	 * @return array
+	 */
+	public function data_invalid_accts() {
+		return array(
+			'empty string'   => array( '' ),
+			'plain word'     => array( 'user' ),
+			'url'            => array( 'https://example.com/users/user' ),
+			'mailto uri'     => array( 'mailto:user@example.com' ),
+			'host only'      => array( '@example.com' ),
+			'no tld'         => array( 'user@host' ),
+			'trailing slash' => array( 'user@example.com/' ),
+			'null'           => array( null ),
+			'integer'        => array( 42 ),
+			'array'          => array( array( 'user@example.com' ) ),
+		);
 	}
 }

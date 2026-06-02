@@ -163,8 +163,6 @@ class Test_Tombstone extends \WP_UnitTestCase {
 
 		$response = Tombstone::exists_local( $url );
 		$this->assertTrue( $response );
-
-		\delete_option( 'activitypub_tombstone_urls' );
 	}
 
 	/**
@@ -182,8 +180,6 @@ class Test_Tombstone extends \WP_UnitTestCase {
 
 		$response = Tombstone::exists_local( $url );
 		$this->assertTrue( $response );
-
-		\delete_option( 'activitypub_tombstone_urls' );
 	}
 
 	/**
@@ -212,12 +208,9 @@ class Test_Tombstone extends \WP_UnitTestCase {
 	 * @covers ::bury
 	 */
 	public function test_bury_empty_string() {
-		$urls_before = \get_option( 'activitypub_tombstone_urls', array() );
-
 		Tombstone::bury( '' );
 
-		$urls_after = \get_option( 'activitypub_tombstone_urls', array() );
-		$this->assertEquals( $urls_before, $urls_after );
+		$this->assertFalse( Tombstone::exists_local( '' ) );
 	}
 
 	/**
@@ -226,14 +219,13 @@ class Test_Tombstone extends \WP_UnitTestCase {
 	 * @covers ::bury
 	 */
 	public function test_bury_invalid_url() {
-		$urls_before = \get_option( 'activitypub_tombstone_urls', array() );
-
 		Tombstone::bury( 'not-a-valid-url' );
 		Tombstone::bury( 'also not valid' );
 		Tombstone::bury( '/relative/path' );
 
-		$urls_after = \get_option( 'activitypub_tombstone_urls', array() );
-		$this->assertEquals( $urls_before, $urls_after );
+		$this->assertFalse( Tombstone::exists_local( 'not-a-valid-url' ) );
+		$this->assertFalse( Tombstone::exists_local( 'also not valid' ) );
+		$this->assertFalse( Tombstone::exists_local( '/relative/path' ) );
 	}
 
 	/**
@@ -248,15 +240,42 @@ class Test_Tombstone extends \WP_UnitTestCase {
 		Tombstone::bury( $url );
 		Tombstone::bury( $url );
 
-		$urls = \get_option( 'activitypub_tombstone_urls', array() );
+		$ids = \get_posts(
+			array(
+				'post_type'      => Tombstone::POST_TYPE,
+				'name'           => \md5( \Activitypub\normalize_url( $url ) ),
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+			)
+		);
+		$this->assertCount( 1, $ids );
+	}
 
-		// Count how many times the URL appears.
-		$count          = array_count_values( $urls );
-		$normalized_url = \Activitypub\normalize_url( $url );
+	/**
+	 * Tests that delete_all clears all tombstone posts and the legacy option.
+	 *
+	 * @covers ::delete_all
+	 */
+	public function test_delete_all() {
+		$urls = array(
+			'https://fake.test/object/delete-all-1',
+			'https://fake.test/object/delete-all-2',
+			'https://fake.test/object/delete-all-3',
+		);
 
-		$this->assertEquals( 1, $count[ $normalized_url ] ?? 0 );
+		foreach ( $urls as $url ) {
+			Tombstone::bury( $url );
+		}
+		\update_option( 'activitypub_tombstone_urls', array( 'legacy-entry' ) );
 
-		\delete_option( 'activitypub_tombstone_urls' );
+		$deleted = Tombstone::delete_all();
+
+		$this->assertSame( 3, $deleted );
+		$this->assertFalse( \get_option( 'activitypub_tombstone_urls', false ) );
+
+		foreach ( $urls as $url ) {
+			$this->assertFalse( Tombstone::exists_local( $url ) );
+		}
 	}
 
 	/**
@@ -268,15 +287,9 @@ class Test_Tombstone extends \WP_UnitTestCase {
 		$url = 'https://fake.test/object/remove-test';
 		Tombstone::bury( $url );
 
-		$urls_before = \get_option( 'activitypub_tombstone_urls', array() );
-
-		// This should not cause any errors.
 		Tombstone::remove( '' );
 
-		$urls_after = \get_option( 'activitypub_tombstone_urls', array() );
-		$this->assertEquals( $urls_before, $urls_after );
-
-		\delete_option( 'activitypub_tombstone_urls' );
+		$this->assertTrue( Tombstone::exists_local( $url ) );
 	}
 
 	/**
@@ -288,15 +301,9 @@ class Test_Tombstone extends \WP_UnitTestCase {
 		$url = 'https://fake.test/object/remove-invalid';
 		Tombstone::bury( $url );
 
-		$urls_before = \get_option( 'activitypub_tombstone_urls', array() );
-
-		// This should not cause any errors or modify the list.
 		Tombstone::remove( 'not-a-valid-url' );
 
-		$urls_after = \get_option( 'activitypub_tombstone_urls', array() );
-		$this->assertEquals( $urls_before, $urls_after );
-
-		\delete_option( 'activitypub_tombstone_urls' );
+		$this->assertTrue( Tombstone::exists_local( $url ) );
 	}
 
 	/**
@@ -313,8 +320,6 @@ class Test_Tombstone extends \WP_UnitTestCase {
 
 		// Original URL should still be there.
 		$this->assertTrue( Tombstone::exists_local( $url ) );
-
-		\delete_option( 'activitypub_tombstone_urls' );
 	}
 
 	/**
@@ -330,8 +335,6 @@ class Test_Tombstone extends \WP_UnitTestCase {
 		// Should match even with activitypub query param.
 		$url_with_param = $url . '?activitypub=1';
 		$this->assertTrue( Tombstone::exists_local( $url_with_param ) );
-
-		\delete_option( 'activitypub_tombstone_urls' );
 	}
 
 	/**
@@ -347,8 +350,6 @@ class Test_Tombstone extends \WP_UnitTestCase {
 		// Should match even with preview query param.
 		$url_with_param = $url . '?preview=1';
 		$this->assertTrue( Tombstone::exists_local( $url_with_param ) );
-
-		\delete_option( 'activitypub_tombstone_urls' );
 	}
 
 	/**
@@ -364,8 +365,6 @@ class Test_Tombstone extends \WP_UnitTestCase {
 		// Should match even with both activitypub and preview query params.
 		$url_with_params = $url . '?activitypub=1&preview=1';
 		$this->assertTrue( Tombstone::exists_local( $url_with_params ) );
-
-		\delete_option( 'activitypub_tombstone_urls' );
 	}
 
 	/**
@@ -385,8 +384,6 @@ class Test_Tombstone extends \WP_UnitTestCase {
 		$this->assertTrue( Tombstone::exists_local( $url1 ) );
 		$this->assertTrue( Tombstone::exists_local( $url2 ) );
 		$this->assertTrue( Tombstone::exists_local( $url3 ) );
-
-		\delete_option( 'activitypub_tombstone_urls' );
 	}
 
 	/**
@@ -398,16 +395,10 @@ class Test_Tombstone extends \WP_UnitTestCase {
 		$valid_url   = 'https://fake.test/object/valid';
 		$invalid_url = 'not-a-valid-url';
 
-		// Bury mixed valid and invalid URLs.
 		Tombstone::bury( $valid_url, $invalid_url );
 
-		// Only the valid URL should be buried.
 		$this->assertTrue( Tombstone::exists_local( $valid_url ) );
-
-		$urls = \get_option( 'activitypub_tombstone_urls', array() );
-		$this->assertNotContains( $invalid_url, $urls );
-
-		\delete_option( 'activitypub_tombstone_urls' );
+		$this->assertFalse( Tombstone::exists_local( $invalid_url ) );
 	}
 
 	/**
@@ -435,8 +426,6 @@ class Test_Tombstone extends \WP_UnitTestCase {
 		$this->assertFalse( Tombstone::exists_local( $url1 ) );
 		$this->assertFalse( Tombstone::exists_local( $url2 ) );
 		$this->assertFalse( Tombstone::exists_local( $url3 ) );
-
-		\delete_option( 'activitypub_tombstone_urls' );
 	}
 
 	/**
@@ -457,7 +446,127 @@ class Test_Tombstone extends \WP_UnitTestCase {
 		// Both valid URLs should be removed.
 		$this->assertFalse( Tombstone::exists_local( $url1 ) );
 		$this->assertFalse( Tombstone::exists_local( $url2 ) );
+	}
 
-		\delete_option( 'activitypub_tombstone_urls' );
+	/**
+	 * Test exists_local() falls back to the legacy option when a URL has not yet been migrated.
+	 *
+	 * @covers ::exists_local
+	 */
+	public function test_exists_local_falls_back_to_legacy_option() {
+		$url        = 'https://fake.test/object/legacy';
+		$normalized = \Activitypub\normalize_url( $url );
+
+		\update_option( 'activitypub_tombstone_urls', array( $normalized ) );
+
+		$this->assertTrue( Tombstone::exists_local( $url ) );
+	}
+
+	/**
+	 * Test exists_local() returns false when neither store has the URL.
+	 *
+	 * @covers ::exists_local
+	 */
+	public function test_exists_local_returns_false_when_neither_store_has_url() {
+		$this->assertFalse( Tombstone::exists_local( 'https://fake.test/object/missing' ) );
+	}
+
+	/**
+	 * Test purge() removes tombstones older than the retention window.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_deletes_old_tombstones() {
+		Tombstone::bury( 'https://fake.test/object/old' );
+		Tombstone::bury( 'https://fake.test/object/new' );
+
+		$old_hash = \md5( \Activitypub\normalize_url( 'https://fake.test/object/old' ) );
+		$old_post = \get_page_by_path( $old_hash, OBJECT, Tombstone::POST_TYPE );
+		$new_hash = \md5( \Activitypub\normalize_url( 'https://fake.test/object/new' ) );
+
+		$old_date = \gmdate( 'Y-m-d H:i:s', \time() - 200 * DAY_IN_SECONDS );
+		\wp_update_post(
+			array(
+				'ID'            => $old_post->ID,
+				'post_date'     => $old_date,
+				'post_date_gmt' => $old_date,
+			)
+		);
+
+		$deleted = Tombstone::purge();
+
+		$this->assertSame( 1, $deleted );
+		$this->assertNull( \get_page_by_path( $old_hash, OBJECT, Tombstone::POST_TYPE ) );
+		$this->assertNotNull( \get_page_by_path( $new_hash, OBJECT, Tombstone::POST_TYPE ) );
+	}
+
+	/**
+	 * Test remove() clears a URL from the legacy option when present (mid-migration).
+	 *
+	 * @covers ::remove
+	 */
+	public function test_remove_clears_legacy_option_entry() {
+		$url        = 'https://fake.test/object/legacy-remove';
+		$normalized = \Activitypub\normalize_url( $url );
+
+		\update_option( 'activitypub_tombstone_urls', array( $normalized ) );
+
+		Tombstone::remove( $url );
+
+		$this->assertFalse( Tombstone::exists_local( $url ) );
+		$this->assertFalse( \get_option( 'activitypub_tombstone_urls', false ) );
+	}
+
+	/**
+	 * Test remove() preserves other legacy entries while removing the targeted one.
+	 *
+	 * @covers ::remove
+	 */
+	public function test_remove_preserves_other_legacy_entries() {
+		$keep_url    = 'https://fake.test/object/keep';
+		$remove_url  = 'https://fake.test/object/remove';
+		$keep_norm   = \Activitypub\normalize_url( $keep_url );
+		$remove_norm = \Activitypub\normalize_url( $remove_url );
+
+		\update_option( 'activitypub_tombstone_urls', array( $keep_norm, $remove_norm ) );
+
+		Tombstone::remove( $remove_url );
+
+		$this->assertTrue( Tombstone::exists_local( $keep_url ) );
+		$this->assertFalse( Tombstone::exists_local( $remove_url ) );
+		$this->assertSame( array( $keep_norm ), \get_option( 'activitypub_tombstone_urls' ) );
+	}
+
+	/**
+	 * Test purge() is a no-op when the retention filter is 0 or negative.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_disabled_when_retention_zero() {
+		Tombstone::bury( 'https://fake.test/object/keep' );
+
+		$hash = \md5( \Activitypub\normalize_url( 'https://fake.test/object/keep' ) );
+		$post = \get_page_by_path( $hash, OBJECT, Tombstone::POST_TYPE );
+
+		$old_date = \gmdate( 'Y-m-d H:i:s', \time() - 365 * DAY_IN_SECONDS );
+		\wp_update_post(
+			array(
+				'ID'            => $post->ID,
+				'post_date'     => $old_date,
+				'post_date_gmt' => $old_date,
+			)
+		);
+
+		$filter = static function () {
+			return 0;
+		};
+		\add_filter( 'activitypub_tombstone_retention_days', $filter );
+
+		$deleted = Tombstone::purge();
+
+		\remove_filter( 'activitypub_tombstone_retention_days', $filter );
+
+		$this->assertSame( 0, $deleted );
+		$this->assertNotNull( \get_page_by_path( $hash, OBJECT, Tombstone::POST_TYPE ) );
 	}
 }

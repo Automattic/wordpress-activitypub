@@ -88,6 +88,7 @@ class Activitypub {
 		Migration::update_comment_counts( 2000 );
 
 		Remote_Posts::delete_all();
+		Tombstone::delete_all();
 		Client::delete_all();
 
 		Options::delete();

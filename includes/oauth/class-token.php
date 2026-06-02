@@ -141,7 +141,8 @@ class Token {
 		self::enforce_token_limit( $user_id );
 
 		/*
-		 * Get the actor URI for the 'me' parameter (IndieAuth convention).
+		 * Get the actor URI for the 'me' parameter (IndieAuth convention) and
+		 * `activitypub_actor_id` (SWICG ActivityPub API Basic Profile).
 		 * Fall back to blog actor when user actors are disabled.
 		 */
 		$actor = Actors::get_by_id( $user_id );
@@ -151,12 +152,13 @@ class Token {
 		$me = ! \is_wp_error( $actor ) ? $actor->get_id() : null;
 
 		return array(
-			'access_token'  => $access_token,
-			'token_type'    => 'Bearer',
-			'expires_in'    => $expires,
-			'refresh_token' => $refresh_token,
-			'scope'         => Scope::to_string( $token_data['scopes'] ),
-			'me'            => $me,
+			'access_token'         => $access_token,
+			'token_type'           => 'Bearer',
+			'expires_in'           => $expires,
+			'refresh_token'        => $refresh_token,
+			'scope'                => Scope::to_string( $token_data['scopes'] ),
+			'me'                   => $me,
+			'activitypub_actor_id' => $me,
 		);
 	}
 
@@ -919,15 +921,16 @@ class Token {
 		$me = ! \is_wp_error( $actor ) ? $actor->get_id() : null;
 
 		return array(
-			'active'     => true,
-			'scope'      => Scope::to_string( $validated->get_scopes() ),
-			'client_id'  => $validated->get_client_id(),
-			'username'   => $user ? $user->user_login : null,
-			'token_type' => 'Bearer',
-			'exp'        => $validated->get_expires_at(),
-			'iat'        => $validated->get_created_at(),
-			'sub'        => (string) $user_id,
-			'me'         => $me,
+			'active'               => true,
+			'scope'                => Scope::to_string( $validated->get_scopes() ),
+			'client_id'            => $validated->get_client_id(),
+			'username'             => $user ? $user->user_login : null,
+			'token_type'           => 'Bearer',
+			'exp'                  => $validated->get_expires_at(),
+			'iat'                  => $validated->get_created_at(),
+			'sub'                  => (string) $user_id,
+			'me'                   => $me,
+			'activitypub_actor_id' => $me,
 		);
 	}
 }

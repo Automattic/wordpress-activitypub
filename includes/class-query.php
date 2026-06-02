@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Activity\Extended_Object\Feature_Authorization;
 use Activitypub\Activity\Extended_Object\Quote_Authorization;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
@@ -139,8 +140,14 @@ class Query {
 	private function prepare_activitypub_data() {
 		$queried_object = $this->get_queried_object();
 
-		if ( $queried_object instanceof \WP_Post && \get_query_var( 'stamp' ) ) {
-			return $this->maybe_get_stamp();
+		if ( \get_query_var( 'stamp' ) ) {
+			if ( $queried_object instanceof \WP_Post ) {
+				return $this->maybe_get_stamp();
+			}
+
+			if ( $queried_object instanceof \WP_User || \get_query_var( 'actor' ) ) {
+				return $this->maybe_get_actor_stamp();
+			}
 		}
 
 		// Check for Outbox Activity.
@@ -430,6 +437,65 @@ class Query {
 
 		$this->activitypub_object    = $activitypub_object;
 		$this->activitypub_object_id = $activitypub_object->get_id();
+
+		return true;
+	}
+
+	/**
+	 * Maybe get a FeatureAuthorization object from an actor-scoped stamp.
+	 *
+	 * Resolves URLs of the form `?actor=USER_ID&stamp=UMETA_ID` against the
+	 * `_activitypub_featured_by` user meta. The umeta_id doubles as the stamp
+	 * identifier; ownership is enforced by checking the row's user_id matches
+	 * the queried actor.
+	 *
+	 * @return bool True if a FeatureAuthorization was prepared, false otherwise.
+	 */
+	private function maybe_get_actor_stamp() {
+		$stamp_id = (int) \get_query_var( 'stamp' );
+		$actor_id = (int) \get_query_var( 'actor' );
+
+		if ( ! $stamp_id ) {
+			return false;
+		}
+
+		if ( ! $actor_id ) {
+			$queried = $this->get_queried_object();
+			if ( $queried instanceof \WP_User ) {
+				$actor_id = (int) $queried->ID;
+			}
+		}
+
+		if ( ! $actor_id ) {
+			return false;
+		}
+
+		$meta = \get_metadata_by_mid( 'user', $stamp_id );
+		if ( ! $meta || '_activitypub_featured_by' !== $meta->meta_key || (int) $meta->user_id !== $actor_id ) {
+			return false;
+		}
+
+		$actor = Actors::get_by_id( $actor_id );
+		if ( \is_wp_error( $actor ) ) {
+			return false;
+		}
+
+		$stamp_url = \add_query_arg(
+			array(
+				'actor' => $actor_id,
+				'stamp' => $meta->umeta_id,
+			),
+			\home_url( '/' )
+		);
+
+		$authorization = new Feature_Authorization();
+		$authorization->set_id( $stamp_url );
+		$authorization->set_attributed_to( $actor->get_id() );
+		$authorization->set_interacting_object( $meta->meta_value );
+		$authorization->set_interaction_target( $actor->get_id() );
+
+		$this->activitypub_object    = $authorization;
+		$this->activitypub_object_id = $authorization->get_id();
 
 		return true;
 	}
