@@ -334,6 +334,7 @@ class Test_Trait_Event_Stream extends \WP_UnitTestCase {
 	 */
 	public function test_outbox_stream_is_scoped_to_owner() {
 		$other_user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_user_by( 'ID', $other_user_id )->add_cap( 'activitypub' );
 
 		$own_post   = self::factory()->post->create(
 			array(
