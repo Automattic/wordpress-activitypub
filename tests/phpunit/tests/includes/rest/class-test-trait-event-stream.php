@@ -323,6 +323,44 @@ class Test_Trait_Event_Stream extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that the outbox stream only returns the requested actor's own items.
+	 *
+	 * Regression: the outbox query previously filtered solely by the shared actor
+	 * *type* meta ('user'), so one author's stream emitted every author's outbox
+	 * items. The query must be scoped to the requesting actor.
+	 *
+	 * @covers ::get_new_items
+	 * @covers ::get_latest_item_id
+	 */
+	public function test_outbox_stream_is_scoped_to_owner() {
+		$other_user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		$own_post   = self::factory()->post->create(
+			array(
+				'post_author' => $this->user_id,
+				'post_status' => 'publish',
+			)
+		);
+		$own_outbox = add_to_outbox( \get_post( $own_post ), 'Create', $this->user_id );
+
+		// Created after the owner's item, so it has a higher ID and would be the global "latest".
+		$other_post   = self::factory()->post->create(
+			array(
+				'post_author' => $other_user_id,
+				'post_status' => 'publish',
+			)
+		);
+		$other_outbox = add_to_outbox( \get_post( $other_post ), 'Create', $other_user_id );
+
+		$ids = \wp_list_pluck( $this->instance->test_get_new_items( $this->user_id, 'outbox', 0 ), 'ID' );
+		$this->assertContains( $own_outbox, $ids, 'Owner should see their own outbox item.' );
+		$this->assertNotContains( $other_outbox, $ids, "Owner must not see another user's outbox item." );
+
+		$latest = $this->instance->test_get_latest_item_id( $this->user_id, 'outbox' );
+		$this->assertSame( $own_outbox, $latest, "Latest item must be the owner's, not a newer item from another user." );
+	}
+
+	/**
 	 * Test get_event_type_map returns expected mappings.
 	 *
 	 * @covers ::get_event_type_map
