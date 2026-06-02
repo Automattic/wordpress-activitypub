@@ -410,13 +410,20 @@ class Blurhash {
 	}
 
 	/**
-	 * Whether an attachment is something the encoder will attempt.
+	 * Whether an attachment is something the encoder will attempt on this host.
 	 * True for `wp_attachment_is_image` attachments whose mime is in
-	 * {@see self::ENCODABLE_MIME_TYPES}; false for SVG, non-image
-	 * media, and deleted/nonexistent IDs. Shared gate used by the
-	 * upload-scheduling path, the CLI backfill (to count "we don't
-	 * encode this" as a skip rather than a failure), and the encoder
-	 * itself.
+	 * {@see self::ENCODABLE_MIME_TYPES} AND that this GD build can actually
+	 * decode; false for SVG, non-image media, deleted/nonexistent IDs, and
+	 * formats this GD build lacks support for (e.g. WebP/AVIF/BMP on a
+	 * stripped-down GD). Shared gate used by the upload-scheduling path, the
+	 * CLI backfill (to count "we don't encode this" as a skip rather than a
+	 * failure), and the encoder itself.
+	 *
+	 * The GD-capability check matters because `schedule_encode()` invalidates
+	 * any prior hash before queueing the cron encode: without it, a metadata
+	 * regen on a host that can't decode the format would wipe a previously
+	 * good hash (e.g. migrated from a host with broader GD support) and queue
+	 * a cron event guaranteed to fail.
 	 *
 	 * @param int $attachment_id Attachment post ID.
 	 * @return bool
@@ -426,7 +433,46 @@ class Blurhash {
 			return false;
 		}
 		$mime = \get_post_mime_type( $attachment_id );
-		return \is_string( $mime ) && \in_array( $mime, self::ENCODABLE_MIME_TYPES, true );
+		return \is_string( $mime )
+			&& \in_array( $mime, self::ENCODABLE_MIME_TYPES, true )
+			&& self::host_can_decode( $mime );
+	}
+
+	/**
+	 * Whether this GD build can decode the given image mime type.
+	 *
+	 * GD support for WebP, AVIF, and BMP is build-dependent, so a mime being
+	 * in {@see self::ENCODABLE_MIME_TYPES} is necessary but not sufficient.
+	 * `imagetypes()` reports what the running GD can actually handle. The
+	 * `IMG_*` flags for WebP/AVIF/BMP are not defined on every PHP version
+	 * (`IMG_AVIF` is PHP 8.1+), so guard each with `defined()`.
+	 *
+	 * @param string $mime The attachment mime type.
+	 * @return bool
+	 */
+	private static function host_can_decode( $mime ) {
+		if ( ! \function_exists( 'imagetypes' ) ) {
+			return false;
+		}
+
+		$supported = \imagetypes();
+
+		switch ( $mime ) {
+			case 'image/jpeg':
+				return (bool) ( $supported & IMG_JPG );
+			case 'image/png':
+				return (bool) ( $supported & IMG_PNG );
+			case 'image/gif':
+				return (bool) ( $supported & IMG_GIF );
+			case 'image/webp':
+				return \defined( 'IMG_WEBP' ) && (bool) ( $supported & IMG_WEBP );
+			case 'image/avif':
+				return \defined( 'IMG_AVIF' ) && (bool) ( $supported & IMG_AVIF );
+			case 'image/bmp':
+				return \defined( 'IMG_BMP' ) && (bool) ( $supported & IMG_BMP );
+			default:
+				return false;
+		}
 	}
 
 	/**
