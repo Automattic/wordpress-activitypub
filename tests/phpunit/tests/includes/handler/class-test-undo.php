@@ -296,6 +296,66 @@ class Test_Undo extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that an Undo with a present-but-unparseable actor does not skip the ownership check.
+	 *
+	 * Regression: a malformed actor resolves to null via object_to_uri(), which Inbox::undo()
+	 * would treat as "no actor" and skip ownership — re-opening the undo-by-id attack.
+	 *
+	 * @covers ::handle_undo
+	 */
+	public function test_handle_undo_comment_rejects_unparseable_actor() {
+		$owner_url = 'https://example.com/owner-actor';
+
+		$mock_actor_metadata = function () use ( $owner_url ) {
+			return array(
+				'id'                => $owner_url,
+				'type'              => 'Person',
+				'name'              => 'Owner Actor',
+				'preferredUsername' => 'owner',
+				'inbox'             => $owner_url . '/inbox',
+				'outbox'            => $owner_url . '/outbox',
+				'url'               => $owner_url,
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata );
+
+		$post_id  = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$post_url = \get_permalink( $post_id );
+
+		$activity_id   = $owner_url . '/activities/Like/' . time();
+		$like_activity = array(
+			'@context' => 'https://www.w3.org/ns/activitystreams',
+			'id'       => $activity_id,
+			'type'     => 'Like',
+			'actor'    => $owner_url,
+			'object'   => $post_url,
+		);
+		Inbox_Collection::add( Activity::init_from_array( $like_activity ), self::$user_id );
+		\Activitypub\Handler\Like::handle_like( $like_activity, self::$user_id );
+
+		$found_comment = Comment::object_id_to_comment( $activity_id );
+		$this->assertNotFalse( $found_comment, 'Owner Like should create a comment.' );
+		$comment_id = $found_comment->comment_ID;
+
+		// Undo with an actor object that has no id/url, so object_to_uri() returns null.
+		$undo_activity = array(
+			'@context' => 'https://www.w3.org/ns/activitystreams',
+			'id'       => 'https://attacker.example/undo/' . time(),
+			'type'     => 'Undo',
+			'actor'    => array( 'type' => 'Person' ),
+			'object'   => $like_activity,
+		);
+		Undo::handle_undo( $undo_activity, self::$user_id );
+
+		$this->assertNotNull(
+			\get_comment( $comment_id ),
+			'An unparseable actor must not skip the ownership check.'
+		);
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata );
+	}
+
+	/**
 	 * Data provider for comment-based undo tests.
 	 *
 	 * @return array Test cases with actor URL, activity type, and description.
