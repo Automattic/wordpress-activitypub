@@ -120,6 +120,22 @@ class Interactions {
 			return false;
 		}
 
+		/*
+		 * Only the comment's author may update it. The comment maps to the remote actor that
+		 * created it via _activitypub_remote_actor_id; that actor post's guid is the
+		 * (signature-bound) actor URI. The Update's actor must match it, otherwise a remote
+		 * server could rewrite another actor's comment by sending an Update whose object.id
+		 * points at it.
+		 *
+		 * On mismatch, return the comment unchanged rather than false: false would make the
+		 * Update handler fall back to Create, which re-dispatches to Update for an existing
+		 * comment and recurses.
+		 */
+		$owner = \get_post( (int) \get_comment_meta( $comment_data['comment_ID'], '_activitypub_remote_actor_id', true ) );
+		if ( ! $owner instanceof \WP_Post || object_to_uri( $activity['actor'] ) !== $owner->guid ) {
+			return $comment_data;
+		}
+
 		// Found a local comment id.
 		$comment_data['comment_author'] = \sanitize_text_field( empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'] );
 
