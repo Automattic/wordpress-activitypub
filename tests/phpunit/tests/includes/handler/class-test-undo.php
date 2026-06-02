@@ -232,6 +232,70 @@ class Test_Undo extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that an Undo from a different actor cannot delete another actor's interaction.
+	 *
+	 * Regression: the Undo handler resolved the target purely by the activity id and
+	 * force-deleted the comment behind it, without confirming the Undo sender created
+	 * the original activity.
+	 *
+	 * @covers ::handle_undo
+	 */
+	public function test_handle_undo_comment_rejects_foreign_actor() {
+		$owner_url    = 'https://example.com/owner-actor';
+		$attacker_url = 'https://attacker.example/evil-actor';
+
+		$mock_actor_metadata = function () use ( $owner_url ) {
+			return array(
+				'id'                => $owner_url,
+				'type'              => 'Person',
+				'name'              => 'Owner Actor',
+				'preferredUsername' => 'owner',
+				'inbox'             => $owner_url . '/inbox',
+				'outbox'            => $owner_url . '/outbox',
+				'url'               => $owner_url,
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata );
+
+		$post_id  = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$post_url = \get_permalink( $post_id );
+
+		// The owner Likes the post, which creates a comment.
+		$activity_id   = $owner_url . '/activities/Like/' . time();
+		$like_activity = array(
+			'@context' => 'https://www.w3.org/ns/activitystreams',
+			'id'       => $activity_id,
+			'type'     => 'Like',
+			'actor'    => $owner_url,
+			'object'   => $post_url,
+		);
+		Inbox_Collection::add( Activity::init_from_array( $like_activity ), self::$user_id );
+		\Activitypub\Handler\Like::handle_like( $like_activity, self::$user_id );
+
+		$found_comment = Comment::object_id_to_comment( $activity_id );
+		$this->assertNotFalse( $found_comment, 'Owner Like should create a comment.' );
+		$comment_id = $found_comment->comment_ID;
+
+		// A different actor tries to undo the owner's Like.
+		$undo_activity = array(
+			'@context' => 'https://www.w3.org/ns/activitystreams',
+			'id'       => $attacker_url . '/undo/' . time(),
+			'type'     => 'Undo',
+			'actor'    => $attacker_url,
+			'object'   => $like_activity,
+		);
+		Undo::handle_undo( $undo_activity, self::$user_id );
+
+		// The comment must survive: the attacker does not own the Like.
+		$this->assertNotNull(
+			\get_comment( $comment_id ),
+			'A foreign actor must not be able to undo (delete) another actor\'s interaction.'
+		);
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock_actor_metadata );
+	}
+
+	/**
 	 * Data provider for comment-based undo tests.
 	 *
 	 * @return array Test cases with actor URL, activity type, and description.

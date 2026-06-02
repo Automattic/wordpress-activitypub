@@ -31,7 +31,7 @@ class Undo {
 	 */
 	public static function handle_undo( $activity, $user_ids ) {
 		$success = false;
-		$result  = Inbox_Collection::undo( object_to_uri( $activity['object'] ) );
+		$result  = Inbox_Collection::undo( object_to_uri( $activity['object'] ), object_to_uri( $activity['actor'] ) );
 
 		if ( $result && ! \is_wp_error( $result ) ) {
 			$success = true;

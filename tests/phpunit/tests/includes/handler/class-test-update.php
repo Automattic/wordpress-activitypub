@@ -185,6 +185,53 @@ class Test_Update extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that update_actor refuses to overwrite a different actor than the one sending the activity.
+	 *
+	 * Regression: an Update whose object.id points at another host's cached actor must not
+	 * overwrite it — an actor may only update itself.
+	 *
+	 * @covers ::update_actor
+	 */
+	public function test_update_actor_rejects_cross_actor_overwrite() {
+		$victim_url   = 'https://victim.example/users/alice';
+		$attacker_url = 'https://attacker.example/users/evil';
+
+		$victim_actor = array(
+			'type'              => 'Person',
+			'id'                => $victim_url,
+			'name'              => 'Alice',
+			'preferredUsername' => 'alice',
+			'inbox'             => $victim_url . '/inbox',
+			'outbox'            => $victim_url . '/outbox',
+			'followers'         => $victim_url . '/followers',
+			'following'         => $victim_url . '/following',
+			'publicKey'         => array(
+				'id'           => $victim_url . '#main-key',
+				'owner'        => $victim_url,
+				'publicKeyPem' => "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQE\n-----END PUBLIC KEY-----",
+			),
+		);
+
+		// Cache the victim's actor.
+		Remote_Actors::upsert( $victim_actor );
+		$this->assertNotWPError( Remote_Actors::get_by_uri( $victim_url ), 'Victim actor should be cached.' );
+
+		// Attacker sends an Update whose object points at the victim's actor.
+		$activity = array(
+			'type'   => 'Update',
+			'actor'  => $attacker_url,
+			'object' => \array_merge( $victim_actor, array( 'name' => 'Hacked' ) ),
+		);
+
+		Update::update_actor( $activity, array( $this->user_id ) );
+
+		// The victim's cached actor must be unchanged.
+		$post  = Remote_Actors::get_by_uri( $victim_url );
+		$actor = Remote_Actors::get_actor( $post );
+		$this->assertEquals( 'Alice', $actor->get_name(), 'A remote actor must not be overwritable by a different actor.' );
+	}
+
+	/**
 	 * Test that update_actor falls back to remote fetch when object is a string IRI.
 	 *
 	 * @covers ::update_actor

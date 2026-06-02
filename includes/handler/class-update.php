@@ -13,6 +13,7 @@ use Activitypub\Collection\Remote_Posts;
 use Activitypub\Http;
 
 use function Activitypub\is_activity_reply;
+use function Activitypub\object_to_uri;
 
 /**
  * Handle Update requests.
@@ -148,10 +149,16 @@ class Update {
 			}
 		}
 
-		if ( \is_array( $actor ) && isset( $actor['id'] ) ) {
+		/*
+		 * An actor may only update itself. Bind the updated object to the activity
+		 * actor (the same constraint the Delete handler enforces) so a remote server
+		 * cannot overwrite another host's cached actor by sending an Update whose
+		 * object.id points at a victim actor.
+		 */
+		if ( \is_array( $actor ) && object_to_uri( $actor ) === object_to_uri( $activity['actor'] ) ) {
 			$state = Remote_Actors::upsert( $actor );
 		} else {
-			$state = new \WP_Error( 'activitypub_update_failed', 'Update failed: missing or invalid actor object in Update activity' );
+			$state = new \WP_Error( 'activitypub_update_failed', 'Update failed: missing, invalid, or unauthorized actor object in Update activity' );
 			$actor = array();
 		}
 
