@@ -4,6 +4,7 @@
 - [Introduction](#introduction)
 - [Snippets](#snippets)
 - [Extending the Settings Interface](#extending-the-settings-interface)
+- [Abilities API](#abilities-api)
 
 ## Introduction
 This documentation provides information for developers who want to extend and build upon the ActivityPub plugin. Whether you're developing a complementary plugin or integrating ActivityPub features into your existing WordPress plugin, this guide will help you understand the available hooks and customization options.
@@ -77,3 +78,9 @@ add_action( 'admin_enqueue_scripts', function( $hook ) {
     }
 } );
 ```
+
+## Abilities API
+
+The plugin registers its operations as WordPress Abilities (WP 6.9+), giving other plugins a stable, discoverable way to interact with ActivityPub without depending on internal classes.
+
+See [Abilities API](./abilities-api.md) for the available abilities, their input and output schemas, and usage examples.
