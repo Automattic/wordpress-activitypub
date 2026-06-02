@@ -20,7 +20,7 @@ class Test_Blurhash extends \WP_UnitTestCase {
 	 * Clean up any scheduled cron events after each test.
 	 */
 	public function tear_down() {
-		\wp_clear_scheduled_hook( Blurhash::CRON_HOOK );
+		\wp_unschedule_hook( Blurhash::CRON_HOOK );
 		parent::tear_down();
 	}
 

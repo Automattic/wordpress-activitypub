@@ -62,8 +62,8 @@ class Blurhash_Encoder {
 				for ( $i = 0; $i < $width; $i++ ) {
 					for ( $j = 0; $j < $height; $j++ ) {
 						$basis = $normalisation
-							* \cos( M_PI * $x * $i / $width )
-							* \cos( M_PI * $y * $j / $height );
+							* \cos( \pi() * $x * $i / $width )
+							* \cos( \pi() * $y * $j / $height );
 						$pixel = $pixels[ $j ][ $i ];
 						$r    += $basis * self::srgb_to_linear( (int) $pixel[0] );
 						$g    += $basis * self::srgb_to_linear( (int) $pixel[1] );

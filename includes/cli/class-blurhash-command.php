@@ -8,8 +8,6 @@
 namespace Activitypub\Cli;
 
 use Activitypub\Blurhash;
-use WP_CLI;
-use WP_Query;
 
 /**
  * `wp activitypub blurhash …` command surface for backfilling and managing
@@ -99,13 +97,13 @@ class Blurhash_Command extends \WP_CLI_Command {
 		$limit   = isset( $assoc_args['limit'] ) ? (int) $assoc_args['limit'] : 0;
 
 		// Fail fast when the encoder can't run on this host.
-		// Without this gate, the loop would emit a `WP_CLI::warning`
+		// Without this gate, the loop would emit a `\WP_CLI::warning`
 		// per attachment and exit non-zero — noisy and unactionable.
 		// `--dry-run` still works (no encoding attempted), so
 		// operators can enumerate candidates from a GD-less host
 		// to decide whether to migrate the media.
 		if ( ! $dry_run && ! Blurhash::is_encoder_runnable() ) {
-			WP_CLI::error( 'Blurhash encoder requires GD (imagecreatefromstring/truecolor/scale). Install or enable GD and re-run.' );
+			\WP_CLI::error( 'Blurhash encoder requires GD (imagecreatefromstring/truecolor/scale). Install or enable GD and re-run.' );
 			return;
 		}
 
@@ -166,7 +164,7 @@ class Blurhash_Command extends \WP_CLI_Command {
 				\add_filter( 'posts_where', $where_filter, 10, 1 );
 			}
 
-			$query = new WP_Query( $query_args );
+			$query = new \WP_Query( $query_args );
 
 			if ( null !== $where_filter ) {
 				\remove_filter( 'posts_where', $where_filter, 10 );
@@ -198,14 +196,14 @@ class Blurhash_Command extends \WP_CLI_Command {
 
 				if ( $dry_run ) {
 					++$encoded;
-					WP_CLI::log( "would encode: attachment {$attachment_id}" );
+					\WP_CLI::log( "would encode: attachment {$attachment_id}" );
 					continue;
 				}
 
 				$hash = Blurhash::encode_from_attachment( $attachment_id );
 				if ( null === $hash ) {
 					++$failed;
-					WP_CLI::warning( "encode failed: attachment {$attachment_id}" );
+					\WP_CLI::warning( "encode failed: attachment {$attachment_id}" );
 					continue;
 				}
 
@@ -214,7 +212,7 @@ class Blurhash_Command extends \WP_CLI_Command {
 				// in place rather than wiping it.
 				Blurhash::set( $attachment_id, $hash );
 				++$encoded;
-				WP_CLI::log( "encoded {$attachment_id}: {$hash}" );
+				\WP_CLI::log( "encoded {$attachment_id}: {$hash}" );
 			}
 		}
 
@@ -228,18 +226,18 @@ class Blurhash_Command extends \WP_CLI_Command {
 		);
 
 		if ( $dry_run ) {
-			WP_CLI::success( '[dry-run] ' . $summary );
+			\WP_CLI::success( '[dry-run] ' . $summary );
 			return;
 		}
 
 		// Non-zero exit on any failure so automation can detect
 		// partial-success runs without parsing the summary text.
 		if ( $failed > 0 ) {
-			WP_CLI::error( $summary );
+			\WP_CLI::error( $summary );
 			return;
 		}
 
-		WP_CLI::success( $summary );
+		\WP_CLI::success( $summary );
 	}
 
 	/**
