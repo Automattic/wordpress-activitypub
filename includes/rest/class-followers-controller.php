@@ -191,11 +191,17 @@ class Followers_Controller extends Actors_Controller {
 
 		$data = Followers::query( $user_id, $per_page, $page, array( 'order' => \ucwords( $order ) ) );
 
+		/*
+		 * When the social graph is hidden, expose neither the list nor the count: a
+		 * non-owner would otherwise still learn the follower total via totalItems.
+		 */
+		$show_social_graph = $this->show_social_graph( $request );
+
 		$response = array(
 			'id'         => get_rest_url_by_path( \sprintf( 'actors/%d/followers', $user_id ) ),
 			'generator'  => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'type'       => 'OrderedCollection',
-			'totalItems' => $data['total'],
+			'totalItems' => $show_social_graph ? $data['total'] : 0,
 		);
 
 		if ( 'full' === $context ) {
@@ -203,7 +209,7 @@ class Followers_Controller extends Actors_Controller {
 			$response = array( '@context' => Base_Object::JSON_LD_CONTEXT ) + $response;
 		}
 
-		if ( $this->show_social_graph( $request ) ) {
+		if ( $show_social_graph ) {
 			$response['orderedItems'] = \array_filter(
 				\array_map(
 					static function ( $item ) use ( $context ) {

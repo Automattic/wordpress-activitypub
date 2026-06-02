@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Hide the follower and following counts when the social graph is set to private, not just the lists.

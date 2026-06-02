@@ -103,11 +103,17 @@ class Following_Controller extends Actors_Controller {
 
 		$data = Following::query( $user_id, $per_page, $page, array( 'order' => \ucwords( $order ) ) );
 
+		/*
+		 * When the social graph is hidden, expose neither the list nor the count: a
+		 * non-owner would otherwise still learn the following total via totalItems.
+		 */
+		$show_social_graph = $this->show_social_graph( $request );
+
 		$response = array(
 			'id'         => get_rest_url_by_path( \sprintf( 'actors/%d/following', $user_id ) ),
 			'generator'  => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'type'       => 'OrderedCollection',
-			'totalItems' => $data['total'],
+			'totalItems' => $show_social_graph ? $data['total'] : 0,
 		);
 
 		if ( 'full' === $context ) {
@@ -115,7 +121,7 @@ class Following_Controller extends Actors_Controller {
 			$response = array( '@context' => Base_Object::JSON_LD_CONTEXT ) + $response;
 		}
 
-		if ( $this->show_social_graph( $request ) ) {
+		if ( $show_social_graph ) {
 			$response['orderedItems'] = \array_filter(
 				\array_map(
 					static function ( $item ) use ( $context ) {
@@ -143,7 +149,8 @@ class Following_Controller extends Actors_Controller {
 		 */
 		$items = \apply_filters_deprecated( 'activitypub_rest_following', array( array(), $user ), '7.1.0', 'Please migrate your Followings to the new internal Following structure.' );
 
-		if ( ! empty( $items ) ) {
+		// Honor the hidden social graph here too, or this deprecated path would re-leak the count and list.
+		if ( $show_social_graph && ! empty( $items ) ) {
 			$response['totalItems']   = count( $items );
 			$response['orderedItems'] = $items;
 		}

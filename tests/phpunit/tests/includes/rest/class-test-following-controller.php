@@ -135,6 +135,70 @@ class Test_Following_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	}
 
 	/**
+	 * Test that a hidden social graph does not leak the following count.
+	 *
+	 * Regression: totalItems was emitted unconditionally, so a non-owner could read
+	 * the following total even when the social graph was hidden.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_items_hides_total_when_social_graph_hidden() {
+		$actor_mode = \get_option( 'activitypub_actor_mode' );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		\update_option( 'activitypub_hide_social_graph', '1' );
+		\wp_set_current_user( 0 );
+
+		try {
+			$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/following' );
+			$request->set_param( 'page', 1 );
+			$request->set_param( 'context', 'simple' );
+			$response = rest_get_server()->dispatch( $request );
+
+			$this->assertEquals( 200, $response->get_status() );
+			$data = $response->get_data();
+			$this->assertSame( 0, $data['totalItems'], 'A hidden social graph must not leak the following count.' );
+			$this->assertEmpty( $data['orderedItems'] ?? array(), 'A hidden social graph must not expose the following list.' );
+		} finally {
+			\delete_option( 'activitypub_hide_social_graph' );
+			\update_option( 'activitypub_actor_mode', $actor_mode );
+		}
+	}
+
+	/**
+	 * Test that the deprecated activitypub_rest_following filter cannot re-leak a hidden count.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_items_deprecated_filter_respects_hidden_social_graph() {
+		$this->setExpectedDeprecated( 'activitypub_rest_following' );
+
+		$actor_mode = \get_option( 'activitypub_actor_mode' );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		\update_option( 'activitypub_hide_social_graph', '1' );
+		\wp_set_current_user( 0 );
+
+		$inject = static function () {
+			return array( 'https://example.org/actor/leak' );
+		};
+		\add_filter( 'activitypub_rest_following', $inject );
+
+		try {
+			$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/following' );
+			$request->set_param( 'page', 1 );
+			$request->set_param( 'context', 'simple' );
+			$response = rest_get_server()->dispatch( $request );
+
+			$data = $response->get_data();
+			$this->assertSame( 0, $data['totalItems'], 'The deprecated filter must not re-leak the count when the graph is hidden.' );
+			$this->assertEmpty( $data['orderedItems'] ?? array(), 'The deprecated filter must not re-expose the list when the graph is hidden.' );
+		} finally {
+			\remove_filter( 'activitypub_rest_following', $inject );
+			\delete_option( 'activitypub_hide_social_graph' );
+			\update_option( 'activitypub_actor_mode', $actor_mode );
+		}
+	}
+
+	/**
 	 * Test get_items response with full context.
 	 *
 	 * @covers ::get_items
