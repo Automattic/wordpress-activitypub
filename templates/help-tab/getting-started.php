@@ -11,7 +11,7 @@
 <p><?php esc_html_e( 'The Fediverse is a collection of social networks that talk to each other, similar to how email works between different providers. It allows people on different platforms to follow and interact with each other, regardless of which service they use.', 'activitypub' ); ?></p>
 <p><?php esc_html_e( 'Unlike traditional social media where everyone must use the same service (like Twitter or Facebook), the Fediverse lets you choose where your content lives while still reaching people across many different platforms.', 'activitypub' ); ?></p>
 <p style="position: relative; padding-top: 56.25%;">
-	<iframe title="<?php echo esc_attr__( 'What is the Fediverse?', 'activitypub' ); ?>" width="100%" height="100%" src="https://framatube.org/videos/embed/9dRFC6Ya11NCVeYKn8ZhiD?subtitle=<?php echo esc_attr( substr( get_locale(), 0, 2 ) ); ?>" frameborder="0" allowfullscreen="" sandbox="allow-same-origin allow-scripts allow-popups allow-forms" style="position: absolute; inset: 0;"></iframe>
+	<iframe title="<?php echo esc_attr__( 'What is the Fediverse?', 'activitypub' ); ?>" width="100%" height="100%" data-src="https://framatube.org/videos/embed/9dRFC6Ya11NCVeYKn8ZhiD?subtitle=<?php echo esc_attr( substr( get_locale(), 0, 2 ) ); ?>" frameborder="0" allowfullscreen="" sandbox="allow-same-origin allow-scripts allow-popups allow-forms" style="position: absolute; inset: 0;"></iframe>
 </p>
 
 <h2><?php esc_html_e( 'How WordPress fits into the Fediverse', 'activitypub' ); ?></h2>
