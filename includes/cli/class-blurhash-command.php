@@ -163,13 +163,13 @@ class Blurhash_Command extends \WP_CLI_Command {
 			$where_filter = null;
 			if ( $last_id > 0 ) {
 				$where_filter = self::keyset_where( $last_id );
-				add_filter( 'posts_where', $where_filter, 10, 1 );
+				\add_filter( 'posts_where', $where_filter, 10, 1 );
 			}
 
 			$query = new WP_Query( $query_args );
 
 			if ( null !== $where_filter ) {
-				remove_filter( 'posts_where', $where_filter, 10 );
+				\remove_filter( 'posts_where', $where_filter, 10 );
 			}
 
 			if ( empty( $query->posts ) ) {

@@ -161,10 +161,10 @@ class Blurhash {
 	 */
 	public static function get( int $attachment_id ): ?string {
 		$value = \get_post_meta( $attachment_id, self::META_KEY, true );
-		if ( ! is_string( $value ) ) {
+		if ( ! \is_string( $value ) ) {
 			return null;
 		}
-		$value = trim( $value );
+		$value = \trim( $value );
 		if ( '' === $value ) {
 			return null;
 		}
@@ -225,23 +225,33 @@ class Blurhash {
 		}
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents, WordPress.PHP.NoSilencedErrors.Discouraged -- local absolute path read; corrupt/missing file returns false and we handle.
-		$bytes = @file_get_contents( $path );
+		$bytes = @\file_get_contents( $path );
 		if ( false === $bytes || '' === $bytes ) {
 			return null;
 		}
 
 		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- corrupt image returns false and we handle.
-		$image = @\imagecreatefromstring( $bytes );
-		if ( false === $image ) {
+		$original = @\imagecreatefromstring( $bytes );
+		if ( false === $original ) {
 			return null;
 		}
 
+		// $scaled holds a second GD resource created by imagescale when
+		// the image exceeds MAX_ENCODE_EDGE. It is kept separate from
+		// $original so both can be destroyed in finally regardless of
+		// which code path ran.
+		$scaled = null;
+
 		try {
-			$width  = \imagesx( $image );
-			$height = \imagesy( $image );
+			$width  = \imagesx( $original );
+			$height = \imagesy( $original );
 			if ( $width < 1 || $height < 1 ) {
 				return null;
 			}
+
+			// The image we will actually read pixels from — either the
+			// original or a downscaled copy.
+			$src_image = $original;
 
 			// Defensive downscale before the per-pixel loop. The
 			// nested array grows quadratically with edge length, so
@@ -263,21 +273,21 @@ class Blurhash {
 					$target_height = self::MAX_ENCODE_EDGE;
 					$target_width  = (int) \max( 1, \round( $width * ( self::MAX_ENCODE_EDGE / $height ) ) );
 				}
-				$scaled = \imagescale( $image, $target_width, $target_height );
+				$scaled = \imagescale( $original, $target_width, $target_height );
 				if ( false === $scaled ) {
 					return null;
 				}
-				$image  = $scaled;
-				$width  = $target_width;
-				$height = $target_height;
+				$src_image = $scaled;
+				$width     = $target_width;
+				$height    = $target_height;
 			}
 
 			$pixels = array();
 			for ( $y = 0; $y < $height; $y++ ) {
 				$row = array();
 				for ( $x = 0; $x < $width; $x++ ) {
-					$index  = \imagecolorat( $image, $x, $y );
-					$colors = \imagecolorsforindex( $image, $index );
+					$index  = \imagecolorat( $src_image, $x, $y );
+					$colors = \imagecolorsforindex( $src_image, $index );
 					$row[]  = array( $colors['red'], $colors['green'], $colors['blue'] );
 				}
 				$pixels[] = $row;
@@ -287,6 +297,15 @@ class Blurhash {
 			return \is_string( $hash ) && '' !== $hash ? $hash : null;
 		} catch ( \Throwable $e ) {
 			return null;
+		} finally {
+			// Free GD resources. On PHP 7.4 GD images are plain
+			// resources that persist until script end; the CLI
+			// backfill processes many images in one process and
+			// would leak all of them without explicit cleanup.
+			\imagedestroy( $original );
+			if ( null !== $scaled && false !== $scaled ) {
+				\imagedestroy( $scaled );
+			}
 		}
 	}
 

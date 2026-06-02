@@ -111,4 +111,31 @@ class Test_Blurhash extends \WP_UnitTestCase {
 		\remove_action( Blurhash::CRON_HOOK, array( Blurhash::class, 'run_encode' ), 10 );
 		\remove_filter( 'activitypub_attachment', array( Blurhash::class, 'inject_blurhash' ), 10 );
 	}
+
+	/**
+	 * Test that a real image attachment encodes to a well-formed blurhash.
+	 *
+	 * @covers ::encode_from_attachment
+	 */
+	public function test_encode_from_attachment_produces_hash() {
+		if ( ! Blurhash::is_encoder_runnable() ) {
+			$this->markTestSkipped( 'GD is not available.' );
+		}
+
+		// Build a small solid-color JPEG in the uploads dir and register it as an attachment.
+		$upload = \wp_upload_dir();
+		$file   = \trailingslashit( $upload['path'] ) . 'blurhash-test.jpg';
+		$image  = \imagecreatetruecolor( 64, 64 );
+		\imagefilledrectangle( $image, 0, 0, 63, 63, \imagecolorallocate( $image, 200, 100, 50 ) );
+		\imagejpeg( $image, $file );
+		\imagedestroy( $image );
+
+		$attachment_id = self::factory()->attachment->create_upload_object( $file );
+
+		$hash = Blurhash::encode_from_attachment( $attachment_id );
+
+		$this->assertIsString( $hash );
+		$this->assertNotSame( '', $hash );
+		$this->assertSame( 1, \preg_match( '/\A[0-9A-Za-z#$%*+,\-.:;=?@\[\]\^_{|}~]+\z/', $hash ) );
+	}
 }
