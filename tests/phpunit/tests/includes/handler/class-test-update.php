@@ -9,6 +9,7 @@ namespace Activitypub\Tests\Handler;
 
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Update;
 
@@ -364,6 +365,109 @@ class Test_Update extends \WP_UnitTestCase {
 		\remove_action( 'activitypub_handled_update', $listener );
 
 		$this->assertSame( 1, $fire_count, 'Action should fire exactly once on error.' );
+	}
+
+	/**
+	 * A foreign actor's comment Update is handled but reported as unsuccessful, so relay mode
+	 * does not re-announce it, and it does not fall back to Create.
+	 *
+	 * Regression: update_comment() returned the unchanged comment array on actor mismatch, which
+	 * update_object() read as a successful update — firing activitypub_handled_update with
+	 * $success = true and letting Relay::handle_activity() re-announce the rejected Update.
+	 *
+	 * @covers ::update_object
+	 */
+	public function test_update_object_foreign_actor_is_not_successful() {
+		$owner_uri    = 'https://example.com/users/owner';
+		$attacker_uri = 'https://attacker.example/users/evil';
+
+		$metadata_filter = static function ( $pre, $actor ) use ( $owner_uri, $attacker_uri ) {
+			if ( $owner_uri === $actor ) {
+				return array(
+					'id'                => $owner_uri,
+					'url'               => $owner_uri,
+					'name'              => 'Owner',
+					'preferredUsername' => 'owner',
+				);
+			}
+			if ( $attacker_uri === $actor ) {
+				return array(
+					'id'                => $attacker_uri,
+					'url'               => $attacker_uri,
+					'name'              => 'Evil',
+					'preferredUsername' => 'evil',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter, 10, 2 );
+
+		$post_id   = self::factory()->post->create();
+		$permalink = \get_permalink( $post_id );
+
+		// Cache the owner so the created comment maps to it via _activitypub_remote_actor_id.
+		Remote_Actors::upsert(
+			array(
+				'id'                => $owner_uri,
+				'type'              => 'Person',
+				'preferredUsername' => 'owner',
+				'name'              => 'Owner',
+				'inbox'             => $owner_uri . '/inbox',
+			)
+		);
+
+		$comment_id = Interactions::add_comment(
+			array(
+				'actor'  => $owner_uri,
+				'id'     => 'https://example.com/activities/own-comment',
+				'object' => array(
+					'id'        => 'https://example.com/notes/owned',
+					'content'   => 'Original content',
+					'inReplyTo' => $permalink,
+				),
+			)
+		);
+		$this->assertIsInt( $comment_id );
+
+		// The attacker sends an Update targeting the owner's note.
+		$attack = array(
+			'type'   => 'Update',
+			'actor'  => $attacker_uri,
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'id'        => 'https://example.com/notes/owned',
+				'type'      => 'Note',
+				'content'   => 'HACKED content',
+				'inReplyTo' => $permalink,
+			),
+		);
+
+		$captured        = array();
+		$update_listener = function ( $activity, $user_ids, $success ) use ( &$captured ) {
+			$captured[] = $success;
+		};
+		\add_action( 'activitypub_handled_update', $update_listener, 10, 3 );
+
+		$create_called   = false;
+		$create_listener = function () use ( &$create_called ) {
+			$create_called = true;
+		};
+		\add_action( 'activitypub_handled_create', $create_listener );
+
+		Update::update_object( $attack, null, null );
+
+		\remove_action( 'activitypub_handled_update', $update_listener );
+		\remove_action( 'activitypub_handled_create', $create_listener );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter, 10 );
+
+		$this->assertCount( 1, $captured, 'activitypub_handled_update should fire exactly once.' );
+		$this->assertFalse( $captured[0], 'A rejected foreign-actor Update must not be reported as successful.' );
+		$this->assertFalse( $create_called, 'A rejected Update must not fall back to Create.' );
+		$this->assertStringContainsString(
+			'Original content',
+			\get_comment( $comment_id )->comment_content,
+			'The comment must be left unchanged.'
+		);
 	}
 
 	/**

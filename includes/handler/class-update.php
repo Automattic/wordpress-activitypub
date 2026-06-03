@@ -30,7 +30,7 @@ class Update {
 	 * Handle "Update" requests.
 	 *
 	 * @param array                          $activity        The Activity object.
-	 * @param int[]                          $user_ids        The user IDs. Always null for Update activities.
+	 * @param int[]                          $user_ids        Local recipient user IDs (followers and addressed local actors); may be empty.
 	 * @param \Activitypub\Activity\Activity $activity_object The activity object. Default null.
 	 */
 	public static function handle_update( $activity, $user_ids, $activity_object ) {
@@ -79,7 +79,7 @@ class Update {
 	 * Update an Object.
 	 *
 	 * @param array                          $activity        The Activity object.
-	 * @param int[]|null                     $user_ids        The user IDs. Always null for Update activities.
+	 * @param int[]|null                     $user_ids        Local recipient user IDs (followers and addressed local actors); may be empty.
 	 * @param \Activitypub\Activity\Activity $activity_object The activity object. Default null.
 	 */
 	public static function update_object( $activity, $user_ids, $activity_object ) {
@@ -92,6 +92,10 @@ class Update {
 
 			if ( false === $comment_data ) {
 				$updated = false;
+			} elseif ( \is_wp_error( $comment_data ) ) {
+				// Handled but rejected (e.g. a foreign actor): keep the failure so the
+				// success flag stays false and the Create fallback is not triggered.
+				$result = $comment_data;
 			} elseif ( ! empty( $comment_data['comment_ID'] ) ) {
 				$result = \get_comment( $comment_data['comment_ID'] );
 			}
@@ -125,7 +129,7 @@ class Update {
 	 * Update an Actor.
 	 *
 	 * @param array      $activity The Activity object.
-	 * @param int[]|null $user_ids The user IDs. Always null for Update activities.
+	 * @param int[]|null $user_ids Local recipient user IDs (followers and addressed local actors); may be empty.
 	 */
 	public static function update_actor( $activity, $user_ids ) {
 		/*

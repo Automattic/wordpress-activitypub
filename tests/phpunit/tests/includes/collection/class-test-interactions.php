@@ -1525,7 +1525,9 @@ class Test_Interactions extends \WP_UnitTestCase {
 				'inReplyTo' => self::$post_permalink,
 			),
 		);
-		Interactions::update_comment( $attack_activity );
+		$result          = Interactions::update_comment( $attack_activity );
+		$this->assertWPError( $result, 'A rejected foreign-actor Update must return a WP_Error, not the comment.' );
+		$this->assertEquals( 'activitypub_update_forbidden', $result->get_error_code() );
 
 		$comment = \get_comment( $comment_id );
 		$this->assertStringNotContainsString( 'HACKED', $comment->comment_content, 'A foreign actor must not rewrite the comment.' );

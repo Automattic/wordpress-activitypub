@@ -129,13 +129,18 @@ class Interactions {
 		 *
 		 * Comments created before this mapping existed have no owner recorded; those are let
 		 * through for backward compatibility (matching the Undo path) rather than becoming
-		 * permanently un-editable. On mismatch, return the comment unchanged rather than
-		 * false: false would make the Update handler fall back to Create, which re-dispatches
-		 * to Update for an existing comment and recurses.
+		 * permanently un-editable. On mismatch, return a WP_Error rather than false: false would
+		 * make the Update handler fall back to Create (which re-dispatches to Update for an
+		 * existing comment and recurses), while the unchanged comment array would be read as a
+		 * successful update and relayed onward. A WP_Error is handled but unsuccessful: no Create
+		 * fallback, and the handled-update success flag stays false.
 		 */
 		$owner = \get_post( (int) \get_comment_meta( $comment_data['comment_ID'], '_activitypub_remote_actor_id', true ) );
 		if ( $owner instanceof \WP_Post && object_to_uri( $activity['actor'] ) !== $owner->guid ) {
-			return $comment_data;
+			return new \WP_Error(
+				'activitypub_update_forbidden',
+				\__( 'The Update actor does not own the target comment.', 'activitypub' )
+			);
 		}
 
 		// Found a local comment id.
