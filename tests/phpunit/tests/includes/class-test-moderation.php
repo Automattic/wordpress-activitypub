@@ -1075,4 +1075,144 @@ class Test_Moderation extends \WP_UnitTestCase {
 		Moderation::remove_site_block( 'domain', $domain );
 		Moderation::remove_user_block( $this->test_user_id, 'actor', $actor_uri3 );
 	}
+
+	/**
+	 * Domains are stored normalized so case and trailing-dot variants cannot bypass a block.
+	 *
+	 * @covers ::add_site_block
+	 * @covers ::get_site_blocks
+	 * @covers ::add_user_block
+	 * @covers ::get_user_blocks
+	 * @covers ::add_site_blocks
+	 */
+	public function test_domain_blocks_are_normalized_on_insert() {
+		Moderation::add_site_block( 'domain', 'Example.COM.' );
+		$this->assertSame( array( 'example.com' ), Moderation::get_site_blocks()['domains'] );
+
+		Moderation::add_user_block( $this->test_user_id, 'domain', 'Spam.Example.COM' );
+		$this->assertSame( array( 'spam.example.com' ), Moderation::get_user_blocks( $this->test_user_id )['domains'] );
+
+		Moderation::add_site_blocks( 'domain', array( 'Bulk.Example.COM.', 'OTHER.example.com' ) );
+		$this->assertSame(
+			array( 'example.com', 'bulk.example.com', 'other.example.com' ),
+			Moderation::get_site_blocks()['domains']
+		);
+	}
+
+	/**
+	 * A normalized stored block can be removed regardless of the case/trailing dot supplied.
+	 *
+	 * @covers ::remove_site_block
+	 * @covers ::remove_user_block
+	 */
+	public function test_domain_blocks_are_normalized_on_remove() {
+		Moderation::add_site_block( 'domain', 'example.com' );
+		Moderation::remove_site_block( 'domain', 'Example.COM.' );
+		$this->assertSame( array(), Moderation::get_site_blocks()['domains'] );
+
+		Moderation::add_user_block( $this->test_user_id, 'domain', 'spam.example.com' );
+		Moderation::remove_user_block( $this->test_user_id, 'domain', 'Spam.Example.COM.' );
+		$this->assertSame( array(), Moderation::get_user_blocks( $this->test_user_id )['domains'] );
+	}
+
+	/**
+	 * Case and trailing-dot host variants in an actor URI cannot slip past a domain block.
+	 *
+	 * @covers ::is_actor_blocked
+	 */
+	public function test_is_actor_blocked_normalizes_host() {
+		Moderation::add_site_block( 'domain', 'blocked.example.com' );
+
+		$bypass_uris = array(
+			'https://Blocked.Example.com/@user',  // Upper-case host.
+			'https://BLOCKED.EXAMPLE.COM/@user',  // All caps.
+			'https://blocked.example.com./@user', // Trailing FQDN dot.
+			'https://Blocked.Example.COM./@user', // Mixed case + trailing dot.
+		);
+
+		foreach ( $bypass_uris as $uri ) {
+			$this->assertTrue( Moderation::is_actor_blocked( $uri ), "URI should be blocked: $uri" );
+		}
+
+		// A genuinely different domain still passes.
+		$this->assertFalse( Moderation::is_actor_blocked( 'https://blocked.example.org/@user' ) );
+
+		Moderation::remove_site_block( 'domain', 'blocked.example.com' );
+	}
+
+	/**
+	 * Case and trailing-dot host variants in an activity cannot slip past a domain block.
+	 *
+	 * @covers ::activity_is_blocked
+	 * @covers ::activity_is_blocked_site_wide
+	 * @covers ::check_activity_against_blocks
+	 */
+	public function test_activity_blocking_normalizes_host() {
+		Moderation::add_site_block( 'domain', 'evil.example.com' );
+
+		$bypass_actors = array(
+			'https://Evil.Example.com/@user',
+			'https://EVIL.EXAMPLE.COM/@user',
+			'https://evil.example.com./@user',
+		);
+
+		foreach ( $bypass_actors as $actor ) {
+			/* @var Activity $activity Activity. */
+			$activity = Activity::init_from_array(
+				array(
+					'type'   => 'Create',
+					'actor'  => $actor,
+					'object' => array(
+						'id'      => 'https://example.org/note/1',
+						'type'    => 'Note',
+						'content' => 'Test',
+					),
+				)
+			);
+
+			$this->assertTrue( Moderation::activity_is_blocked( $activity ), "Actor should be blocked: $actor" );
+		}
+
+		Moderation::remove_site_block( 'domain', 'evil.example.com' );
+	}
+
+	/**
+	 * A blocked domain is matched on the activity id and object URI hosts, not just the actor.
+	 *
+	 * @covers ::activity_is_blocked
+	 * @covers ::check_activity_against_blocks
+	 */
+	public function test_activity_blocking_normalizes_id_and_object_hosts() {
+		Moderation::add_site_block( 'domain', 'evil.example.com' );
+
+		// Clean actor, but the activity id is on a blocked domain (case variant).
+		/* @var Activity $by_id Activity. */
+		$by_id = Activity::init_from_array(
+			array(
+				'id'     => 'https://EVIL.example.com/activities/1',
+				'type'   => 'Create',
+				'actor'  => 'https://good.example.org/@user',
+				'object' => array(
+					'id'      => 'https://good.example.org/note/1',
+					'type'    => 'Note',
+					'content' => 'Test',
+				),
+			)
+		);
+		$this->assertTrue( Moderation::activity_is_blocked( $by_id ), 'Blocked id host should block the activity.' );
+
+		// Clean actor and id, but the object URI is on a blocked domain (trailing dot).
+		/* @var Activity $by_object Activity. */
+		$by_object = Activity::init_from_array(
+			array(
+				'id'     => 'https://good.example.org/activities/2',
+				'type'   => 'Announce',
+				'actor'  => 'https://good.example.org/@user',
+				'object' => 'https://evil.example.com./note/2',
+			)
+		);
+		$this->assertTrue( Moderation::activity_is_blocked( $by_object ), 'Blocked object host should block the activity.' );
+
+		Moderation::remove_site_block( 'domain', 'evil.example.com' );
+	}
 }

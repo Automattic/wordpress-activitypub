@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Ensure blocked domains match regardless of letter case or a trailing dot, so they can no longer be bypassed.

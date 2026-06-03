@@ -110,6 +110,10 @@ class Moderation {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function add_user_block( $user_id, $type, $value ) {
+		if ( self::TYPE_DOMAIN === $type ) {
+			$value = self::normalize_host( $value );
+		}
+
 		switch ( $type ) {
 			case self::TYPE_ACTOR:
 				return Blocked_Actors::add( $user_id, $value );
@@ -146,6 +150,10 @@ class Moderation {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function remove_user_block( $user_id, $type, $value ) {
+		if ( self::TYPE_DOMAIN === $type ) {
+			$value = self::normalize_host( $value );
+		}
+
 		switch ( $type ) {
 			case self::TYPE_ACTOR:
 				return Blocked_Actors::remove( $user_id, $value );
@@ -196,6 +204,10 @@ class Moderation {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function add_site_block( $type, $value ) {
+		if ( self::TYPE_DOMAIN === $type ) {
+			$value = self::normalize_host( $value );
+		}
+
 		switch ( $type ) {
 			case self::TYPE_ACTOR:
 				// Site-wide actor blocking uses the BLOG_USER_ID.
@@ -241,6 +253,10 @@ class Moderation {
 			return;
 		}
 
+		if ( self::TYPE_DOMAIN === $type ) {
+			$values = \array_map( array( self::class, 'normalize_host' ), $values );
+		}
+
 		foreach ( $values as $value ) {
 			/**
 			 * Fired when a domain or keyword is blocked site-wide.
@@ -263,6 +279,10 @@ class Moderation {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function remove_site_block( $type, $value ) {
+		if ( self::TYPE_DOMAIN === $type ) {
+			$value = self::normalize_host( $value );
+		}
+
 		switch ( $type ) {
 			case self::TYPE_ACTOR:
 				// Site-wide actor unblocking uses the BLOG_USER_ID.
@@ -322,8 +342,9 @@ class Moderation {
 			return true;
 		}
 
-		// Check site-wide domain blocks.
-		$actor_domain = \wp_parse_url( $actor_uri, PHP_URL_HOST );
+		// Check site-wide domain blocks. Normalize the (attacker-controlled) host so a case
+		// variant or trailing dot cannot slip past a block; stored domains are normalized on insert.
+		$actor_domain = self::normalize_host( \wp_parse_url( $actor_uri, PHP_URL_HOST ) );
 		if ( $actor_domain && \in_array( $actor_domain, $site_blocks['domains'], true ) ) {
 			return true;
 		}
@@ -342,6 +363,23 @@ class Moderation {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Normalize a host for blocklist comparison.
+	 *
+	 * DNS hosts are case-insensitive, a trailing dot denotes the same (absolute) host, and IPv6
+	 * literals may be bracketed, so lower-case, strip IPv6 brackets, and trim a trailing dot.
+	 * Applied to incoming hosts before comparison and to domains on insert, keeping both sides
+	 * canonical.
+	 *
+	 * @param string|null $host The host.
+	 * @return string The normalized host.
+	 */
+	private static function normalize_host( $host ) {
+		$host = \strtolower( (string) $host );
+		$host = \rtrim( $host, '.' );
+		return \trim( $host, '[]' );
 	}
 
 	/**
@@ -374,11 +412,12 @@ class Moderation {
 			}
 		}
 
-		// Check blocked domains.
+		// Check blocked domains. Normalize the (attacker-controlled) hosts so a case variant
+		// or trailing dot cannot slip past a block; stored domains are normalized on insert.
 		$urls = array(
-			\wp_parse_url( $actor_id, PHP_URL_HOST ),
-			\wp_parse_url( $activity->get_id(), PHP_URL_HOST ),
-			\wp_parse_url( object_to_uri( $activity->get_object() ) ?? '', PHP_URL_HOST ),
+			self::normalize_host( \wp_parse_url( $actor_id, PHP_URL_HOST ) ),
+			self::normalize_host( \wp_parse_url( $activity->get_id(), PHP_URL_HOST ) ),
+			self::normalize_host( \wp_parse_url( object_to_uri( $activity->get_object() ) ?? '', PHP_URL_HOST ) ),
 		);
 		foreach ( $blocked_domains as $domain ) {
 			if ( \in_array( $domain, $urls, true ) ) {
