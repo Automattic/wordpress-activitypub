@@ -8,6 +8,7 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Options;
+use Activitypub\Scheduler;
 
 /**
  * Test class for Activitypub Options.
@@ -279,6 +280,19 @@ class Test_Options extends \WP_UnitTestCase {
 		$this->assertEquals( 'default', $params['mode'] );
 		$this->assertEquals( 100, $params['batch_size'] );
 		$this->assertEquals( 15, $params['pause'] );
+	}
+
+	/**
+	 * Test default distribution pause matches the scheduler delay.
+	 *
+	 * @covers \Activitypub\Options::get_distribution_params
+	 */
+	public function test_default_distribution_pause_matches_scheduler_delay() {
+		\update_option( 'activitypub_distribution_mode', 'default' );
+
+		$params = Options::get_distribution_params();
+
+		$this->assertEquals( Scheduler::get_retry_delay(), $params['pause'] );
 	}
 
 	/**

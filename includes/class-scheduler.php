@@ -59,9 +59,9 @@ class Scheduler {
 		/**
 		 * Filters the pause between async batches (in seconds).
 		 *
-		 * @param int $async_batch_pause The pause in seconds. Default 30.
+		 * @param int $async_batch_pause The pause in seconds. Default 15.
 		 */
-		return apply_filters( 'activitypub_scheduler_async_batch_pause', 30 );
+		return apply_filters( 'activitypub_scheduler_async_batch_pause', 15 );
 	}
 
 	/**
