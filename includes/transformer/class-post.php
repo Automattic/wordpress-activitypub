@@ -21,6 +21,7 @@ use function Activitypub\get_content_visibility;
 use function Activitypub\get_content_warning;
 use function Activitypub\get_enclosures;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_post_publicly_queryable;
 use function Activitypub\is_single_user;
 use function Activitypub\site_supports_blocks;
 
@@ -844,51 +845,33 @@ class Post extends Base {
 	}
 
 	/**
-	 * Check if the post is a preview.
-	 *
-	 * @return boolean True if the post is a preview, false otherwise.
-	 */
-	private function is_preview() {
-		return defined( 'ACTIVITYPUB_PREVIEW' ) && ACTIVITYPUB_PREVIEW;
-	}
-
-	/**
 	 * Whether the post should be redacted from ActivityPub representations.
 	 *
 	 * Redaction is fail-closed at a single boundary: `to_object()` returns a
 	 * Tombstone instead of transforming the post, so no body-derived field
-	 * (content, summary, name, preview, attachments, image/icon, tags,
+	 * (content, summary, name, preview, attachments, image/icon, tags, mentions,
+	 * in-reply-to, location) is ever read — not even one added to the transformer
+	 * later. This is the only caller of this gate.
 	 *
-	 * @-mentions, in-reply-to, location) is ever read — not even one added to
-	 * the transformer later. This is the only caller of this gate. Fires when:
+	 * A post is redacted exactly when it is not publicly queryable — the same
+	 * predicate the scheduler uses to decide a federated post should emit a
+	 * Delete (`is_post_publicly_queryable()`), so the two never disagree. That
+	 * covers non-public status, password protection, the `local`/`private`
+	 * content-visibility meta, and a post type that no longer supports
+	 * ActivityPub. The Fediverse Preview keeps working because
+	 * `is_post_publicly_queryable()` itself treats a draft/pending post as
+	 * queryable during a `?preview=true` request from a user who can edit it.
 	 *
-	 *  - the post is password-protected. Federation output is per-instance,
-	 *    never per-request, so we must NOT use `post_password_required()`
-	 *    here — that helper returns false when a valid `wp-postpass` cookie
-	 *    is on the current request (e.g. an editor who unlocked the post
-	 *    in their browser), and the protected body would then get serialized
-	 *    into an outbox snapshot served to every follower;
-	 *  - the post is not currently in `publish` status, outside of preview
-	 *    mode. Federated posts moved to draft/pending/private now emit
-	 *    Delete via the scheduler, but a direct transformer call (debug
-	 *    tools, REST endpoints) must not synthesize a representation for
-	 *    an unpublished post.
-	 *
-	 * Extend here as new redaction triggers are added so each call site
-	 * stays a one-liner.
+	 * Note: we deliberately rely on `is_post_publicly_queryable()` rather than
+	 * `post_password_required()`. Federation output is per-instance, never
+	 * per-request, and `post_password_required()` returns false when a valid
+	 * `wp-postpass` cookie is on the current request (e.g. an editor who unlocked
+	 * the post), which would leak the protected body into an outbox snapshot.
 	 *
 	 * @return boolean True if the post must be redacted, false otherwise.
 	 */
-	private function is_redacted() {
-		if ( ! empty( $this->item->post_password ) ) {
-			return true;
-		}
-
-		if ( ! $this->is_preview() && 'publish' !== \get_post_status( $this->item ) ) {
-			return true;
-		}
-
-		return false;
+	protected function is_redacted() {
+		return ! is_post_publicly_queryable( $this->item );
 	}
 
 	/**

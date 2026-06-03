@@ -388,16 +388,35 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * A redacted post is represented as a content-free Tombstone: no content,
-	 * tags, @-mentions, or location, and no audience at all — so nothing
-	 * body-derived can leak and no actor named only in the now-hidden content
-	 * is ever addressed. The Delete still fans out: that is the dispatcher's
-	 * job (see Test_Dispatcher::test_delete_dispatches_without_audience), not
-	 * something the object's audience has to encode.
+	 * Every way of hiding a post — non-public status, password, or the AP
+	 * content-visibility meta (local/private) — must serialize as a content-free
+	 * Tombstone: no content, tags, @-mentions, or location, and no audience at
+	 * all. Nothing body-derived can leak and no actor named only in the
+	 * now-hidden content is ever addressed. The Delete still fans out: that is
+	 * the dispatcher's job (see Test_Dispatcher::test_delete_dispatches_without_audience),
+	 * not something the object's audience has to encode.
+	 *
+	 * The visibility-meta rows guard the gate alignment: the scheduler emits a
+	 * Delete whenever a post is not `is_post_publicly_queryable()`, so the
+	 * transformer must redact on that same predicate — not just status/password.
+	 *
+	 * @dataProvider data_hidden_post_states
 	 *
 	 * @covers ::to_object
+	 *
+	 * @param array $post_args Post fields that hide the post.
+	 * @param array $meta      Post meta that hides the post.
 	 */
-	public function test_redacted_post_is_content_free_tombstone() {
+	public function test_hidden_post_is_content_free_tombstone( $post_args, $meta ) {
+		/*
+		 * The non-publish branch is short-circuited when ACTIVITYPUB_PREVIEW is
+		 * defined; the password/visibility rows are unaffected and always
+		 * exercise the gate, so only skip the pure status rows in that case.
+		 */
+		if ( empty( $post_args['post_password'] ) && empty( $meta ) && defined( 'ACTIVITYPUB_PREVIEW' ) && ACTIVITYPUB_PREVIEW ) {
+			$this->markTestSkipped( 'ACTIVITYPUB_PREVIEW was defined by an earlier test; status-only gate cannot be exercised here.' );
+		}
+
 		$mention_uri    = 'https://remote.example/users/bob';
 		$mention_filter = static function () use ( $mention_uri ) {
 			return array( '@bob@remote.example' => $mention_uri );
@@ -405,14 +424,20 @@ class Test_Post extends \WP_UnitTestCase {
 		\add_filter( 'activitypub_extract_mentions', $mention_filter );
 
 		$post_id = \wp_insert_post(
-			array(
-				'post_author'   => 1,
-				'post_title'    => 'Hidden mention probe',
-				'post_content'  => 'Hello @bob@remote.example, secret body.',
-				'post_status'   => 'publish',
-				'post_password' => 'fed-secret-pass',
+			\array_merge(
+				array(
+					'post_author'  => 1,
+					'post_title'   => 'Hidden mention probe',
+					'post_content' => 'Hello @bob@remote.example, secret body.',
+					'post_status'  => 'publish',
+				),
+				$post_args
 			)
 		);
+
+		foreach ( $meta as $key => $value ) {
+			\update_post_meta( $post_id, $key, $value );
+		}
 
 		\update_post_meta( $post_id, 'geo_latitude', '52.52' );
 		\update_post_meta( $post_id, 'geo_longitude', '13.405' );
@@ -425,18 +450,34 @@ class Test_Post extends \WP_UnitTestCase {
 			$object = Post::transform( get_post( $post_id ) )->to_object();
 
 			// Content-free by type.
-			$this->assertSame( 'Tombstone', $object->get_type(), 'A redacted post must serialize as a Tombstone.' );
-			$this->assertEmpty( $object->get_content(), 'content must be omitted for a redacted post.' );
-			$this->assertEmpty( $object->get_tag(), 'tags/mentions must be omitted for a redacted post.' );
-			$this->assertEmpty( $object->get_location(), 'location must be omitted for a redacted post.' );
+			$this->assertSame( 'Tombstone', $object->get_type(), 'A hidden post must serialize as a Tombstone.' );
+			$this->assertEmpty( $object->get_content(), 'content must be omitted for a hidden post.' );
+			$this->assertEmpty( $object->get_tag(), 'tags/mentions must be omitted for a hidden post.' );
+			$this->assertEmpty( $object->get_location(), 'location must be omitted for a hidden post.' );
 
-			// No audience at all: nothing derived from the hidden body, in particular no mentioned actor.
+			// No audience derived from the hidden body, in particular no mentioned actor.
 			$audience = \array_merge( (array) $object->get_to(), (array) $object->get_cc() );
-			$this->assertNotContains( $mention_uri, $audience, 'A redacted post must not address actors mentioned only in hidden content.' );
+			$this->assertNotContains( $mention_uri, $audience, 'A hidden post must not address actors mentioned only in hidden content.' );
 		} finally {
 			\remove_filter( 'post_password_required', '__return_false' );
 			\remove_filter( 'activitypub_extract_mentions', $mention_filter );
 		}
+	}
+
+	/**
+	 * Data provider: every way a post can be non-public, as ( post fields, post meta ).
+	 *
+	 * @return array[]
+	 */
+	public function data_hidden_post_states() {
+		return array(
+			'password protected' => array( array( 'post_password' => 'fed-secret-pass' ), array() ),
+			'draft'              => array( array( 'post_status' => 'draft' ), array() ),
+			'pending'            => array( array( 'post_status' => 'pending' ), array() ),
+			'private status'     => array( array( 'post_status' => 'private' ), array() ),
+			'visibility local'   => array( array(), array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ) ),
+			'visibility private' => array( array(), array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ) ),
+		);
 	}
 
 	/**

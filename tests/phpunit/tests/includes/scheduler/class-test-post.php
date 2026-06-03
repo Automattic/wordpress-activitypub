@@ -946,4 +946,192 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		$this->assertSame( $before_count, $after_count, 'Re-saving a soft-deleted post should not create any new outbox activities.' );
 	}
+
+	/**
+	 * Data provider: every way a post can be non-public, with how to hide and unhide it.
+	 *
+	 * Each case is a single array with `hide` and `unhide` specs; each spec may
+	 * carry `post` (fields for wp_insert_post / wp_update_post) and/or `meta`
+	 * (post meta to set). This drives the full transition matrix below.
+	 *
+	 * @return array[]
+	 */
+	public function data_hidden_states() {
+		return array(
+			'draft status'       => array(
+				array(
+					'hide'   => array( 'post' => array( 'post_status' => 'draft' ) ),
+					'unhide' => array( 'post' => array( 'post_status' => 'publish' ) ),
+				),
+			),
+			'pending status'     => array(
+				array(
+					'hide'   => array( 'post' => array( 'post_status' => 'pending' ) ),
+					'unhide' => array( 'post' => array( 'post_status' => 'publish' ) ),
+				),
+			),
+			'private status'     => array(
+				array(
+					'hide'   => array( 'post' => array( 'post_status' => 'private' ) ),
+					'unhide' => array( 'post' => array( 'post_status' => 'publish' ) ),
+				),
+			),
+			'password'           => array(
+				array(
+					'hide'   => array( 'post' => array( 'post_password' => 'fed-secret-pass' ) ),
+					'unhide' => array( 'post' => array( 'post_password' => '' ) ),
+				),
+			),
+			'visibility local'   => array(
+				array(
+					'hide'   => array( 'meta' => array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ) ),
+					'unhide' => array( 'meta' => array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) ),
+				),
+			),
+			'visibility private' => array(
+				array(
+					'hide'   => array( 'meta' => array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ) ),
+					'unhide' => array( 'meta' => array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) ),
+				),
+			),
+		);
+	}
+
+	/**
+	 * A post created directly in a non-public state must never federate.
+	 *
+	 * @dataProvider data_hidden_states
+	 *
+	 * @covers ::triage
+	 *
+	 * @param array $spec A row from data_hidden_states().
+	 */
+	public function test_initial_hidden_post_does_not_federate( $spec ) {
+		$args = \array_merge(
+			array(
+				'post_author'  => self::$user_id,
+				'post_content' => 'Should not federate.',
+				'post_status'  => 'publish',
+			),
+			$spec['hide']['post'] ?? array()
+		);
+
+		if ( ! empty( $spec['hide']['meta'] ) ) {
+			$args['meta_input'] = $spec['hide']['meta'];
+		}
+
+		$post_id        = self::factory()->post->create( $args );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		$this->assertCount( 0, $this->get_outbox_items_for( $activitypub_id ), 'A post created in a non-public state must not federate.' );
+	}
+
+	/**
+	 * Hiding a federated post emits a Delete whose object is a content-free Tombstone.
+	 *
+	 * @dataProvider data_hidden_states
+	 *
+	 * @covers ::triage
+	 *
+	 * @param array $spec A row from data_hidden_states().
+	 */
+	public function test_federated_post_hidden_emits_tombstone_delete( $spec ) {
+		$post_id        = self::factory()->post->create(
+			array(
+				'post_author'  => self::$user_id,
+				'post_content' => 'SECRET-BODY @bob@remote.example',
+			)
+		);
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		$this->assertCount( 1, $this->get_outbox_items_for( $activitypub_id, 'Create' ), 'A public post should federate a Create.' );
+
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		$this->apply_post_state( $post_id, $spec['hide'] );
+
+		$deletes = $this->get_outbox_items_for( $activitypub_id, 'Delete' );
+		$this->assertCount( 1, $deletes, 'Hiding a federated post must emit exactly one Delete.' );
+
+		// The Delete must carry a content-free Tombstone, not the post body.
+		$activity = \json_decode( \get_post( $deletes[0]->ID )->post_content, true );
+		$this->assertSame( 'Tombstone', $activity['object']['type'] ?? null, 'The Delete object must be a Tombstone.' );
+		$this->assertArrayNotHasKey( 'content', (array) ( $activity['object'] ?? array() ), 'The Delete must not serialize post content.' );
+	}
+
+	/**
+	 * Making a soft-deleted post public again emits a fresh Create.
+	 *
+	 * @dataProvider data_hidden_states
+	 *
+	 * @covers ::triage
+	 *
+	 * @param array $spec A row from data_hidden_states().
+	 */
+	public function test_hidden_post_made_public_emits_create( $spec ) {
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		// Hide it: emits a Delete and marks the object deleted.
+		$this->apply_post_state( $post_id, $spec['hide'] );
+		$this->assertCount( 1, $this->get_outbox_items_for( $activitypub_id, 'Delete' ), 'Hiding should emit a Delete.' );
+
+		// Make it public again: must re-introduce the post as a Create.
+		$this->apply_post_state( $post_id, $spec['unhide'] );
+
+		$latest = $this->get_latest_outbox_item();
+		$this->assertSame(
+			'Create',
+			\get_post_meta( $latest->ID, '_activitypub_activity_type', true ),
+			'Making a soft-deleted post public again must emit a Create.'
+		);
+	}
+
+	/**
+	 * Apply a hide/unhide state spec to a post and trigger triage().
+	 *
+	 * @param int   $post_id The post ID.
+	 * @param array $state   A `hide`/`unhide` spec with optional `post` and `meta`.
+	 */
+	private function apply_post_state( $post_id, $state ) {
+		foreach ( $state['meta'] ?? array() as $key => $value ) {
+			\update_post_meta( $post_id, $key, $value );
+		}
+
+		\wp_update_post( \array_merge( array( 'ID' => $post_id ), $state['post'] ?? array() ) );
+	}
+
+	/**
+	 * Get pending outbox items for an object, optionally filtered by activity type.
+	 *
+	 * @param string      $activitypub_id The object ID.
+	 * @param string|null $type           Optional. Activity type to filter by.
+	 * @return \WP_Post[] The matching outbox items.
+	 */
+	private function get_outbox_items_for( $activitypub_id, $type = null ) {
+		$meta_query = array(
+			array(
+				'key'   => '_activitypub_object_id',
+				'value' => $activitypub_id,
+			),
+		);
+
+		if ( $type ) {
+			$meta_query[] = array(
+				'key'   => '_activitypub_activity_type',
+				'value' => $type,
+			);
+		}
+
+		return \get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'pending',
+				'numberposts' => -1,
+				'meta_query'  => $meta_query, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			)
+		);
+	}
 }
