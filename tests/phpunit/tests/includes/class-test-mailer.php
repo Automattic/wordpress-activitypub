@@ -145,6 +145,101 @@ class Test_Mailer extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that quote notifications include a link to the quoting post.
+	 *
+	 * @covers ::comment_notification_text
+	 */
+	public function test_comment_quote_notification_includes_quoting_post_link() {
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID'    => self::$post_id,
+				'comment_type'       => 'quote',
+				'comment_author'     => 'Quote Author',
+				'comment_author_url' => 'https://example.com/author',
+				'comment_author_IP'  => '127.0.0.1',
+			)
+		);
+
+		update_comment_meta( $comment_id, 'protocol', 'activitypub' );
+		update_comment_meta( $comment_id, 'source_url', 'https://example.com/quoting-post' );
+
+		$text = Mailer::comment_notification_text( 'Default Message', $comment_id );
+
+		$this->assertStringContainsString( 'Quoting post: https://example.com/quoting-post', $text );
+	}
+
+	/**
+	 * Test that quote notifications omit the link when no source is stored.
+	 *
+	 * @covers ::comment_notification_text
+	 */
+	public function test_comment_quote_notification_without_source() {
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID'    => self::$post_id,
+				'comment_type'       => 'quote',
+				'comment_author'     => 'Quote Author',
+				'comment_author_url' => 'https://example.com/author',
+				'comment_author_IP'  => '127.0.0.1',
+			)
+		);
+
+		update_comment_meta( $comment_id, 'protocol', 'activitypub' );
+
+		$text = Mailer::comment_notification_text( 'Default Message', $comment_id );
+
+		$this->assertStringNotContainsString( 'Quoting post:', $text );
+	}
+
+	/**
+	 * Test that quote notifications fall back to the source ID when no source URL is stored.
+	 *
+	 * @covers ::comment_notification_text
+	 */
+	public function test_comment_quote_notification_falls_back_to_source_id() {
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID'    => self::$post_id,
+				'comment_type'       => 'quote',
+				'comment_author'     => 'Quote Author',
+				'comment_author_url' => 'https://example.com/author',
+				'comment_author_IP'  => '127.0.0.1',
+			)
+		);
+
+		update_comment_meta( $comment_id, 'protocol', 'activitypub' );
+		update_comment_meta( $comment_id, 'source_id', 'https://example.com/quoting-activity' );
+
+		$text = Mailer::comment_notification_text( 'Default Message', $comment_id );
+
+		$this->assertStringContainsString( 'https://example.com/quoting-activity', $text );
+	}
+
+	/**
+	 * Test that non-quote notifications do not include a quoting-post link.
+	 *
+	 * @covers ::comment_notification_text
+	 */
+	public function test_comment_repost_notification_has_no_quoting_post_link() {
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID'    => self::$post_id,
+				'comment_type'       => 'repost',
+				'comment_author'     => 'Repost Author',
+				'comment_author_url' => 'https://example.com/author',
+				'comment_author_IP'  => '127.0.0.1',
+			)
+		);
+
+		update_comment_meta( $comment_id, 'protocol', 'activitypub' );
+		update_comment_meta( $comment_id, 'source_url', 'https://example.com/reposting-post' );
+
+		$text = Mailer::comment_notification_text( 'Default Message', $comment_id );
+
+		$this->assertStringNotContainsString( 'Quoting post:', $text );
+	}
+
+	/**
 	 * Test new follower notification.
 	 *
 	 * @covers ::new_follower
