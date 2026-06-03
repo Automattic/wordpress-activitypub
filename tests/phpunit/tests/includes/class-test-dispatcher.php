@@ -346,28 +346,21 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
-	 * A Delete fans out even with no addressing.
+	 * A public Delete fans out to followers; a private Delete does not.
 	 *
-	 * Its object is a content-free Tombstone that carries no audience, so
-	 * should_send_to_followers() must not gate it on is_activity_public() or
-	 * follower addressing — a Delete is broadcast to all known remote inboxes
-	 * so the object is torn down everywhere it was federated. Contrast with a
-	 * Create (test_should_not_send_to_followers_when_no_addressing_matches),
-	 * which is gated.
+	 * A soft-deleted post's Tombstone is addressed to the public collection, so
+	 * it broadcasts (get_inboxes_for_activity() then expands it to every known
+	 * remote inbox). A Delete that is only addressed to a mentioned actor — a
+	 * private/direct activity torn down via Outbox::undo() — must NOT enter the
+	 * follower fan-out, or it would leak the object URI to servers that never
+	 * received the original.
 	 *
 	 * @covers ::should_send_to_followers
 	 */
-	public function test_delete_dispatches_without_audience() {
+	public function test_delete_fan_out_respects_audience() {
 		Followers::add( self::$user_id, 'https://example.org/users/username' );
 
-		$actor = Actors::get_by_id( self::$user_id );
-
-		$activity = new Activity();
-		$activity->set_type( 'Delete' );
-		$activity->set_actor( $actor->get_id() );
-		$activity->set_to( array() );
-		$activity->set_cc( array() );
-
+		$actor       = Actors::get_by_id( self::$user_id );
 		$outbox_item = (object) array(
 			'ID'          => 0,
 			'post_author' => self::$user_id,
@@ -378,13 +371,29 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 			$should_send->setAccessible( true );
 		}
 
+		// Public Delete (post Tombstone): broadcasts.
+		$public_delete = new Activity();
+		$public_delete->set_type( 'Delete' );
+		$public_delete->set_actor( $actor->get_id() );
+		$public_delete->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
+		$public_delete->set_cc( array() );
+
+		// Private Delete (e.g. a direct activity undone): addressed only to a mention.
+		$private_delete = new Activity();
+		$private_delete->set_type( 'Delete' );
+		$private_delete->set_actor( $actor->get_id() );
+		$private_delete->set_to( array( 'https://remote.example/users/bob' ) );
+		$private_delete->set_cc( array() );
+
 		try {
-			$result = $should_send->invoke( null, $activity, $actor, $outbox_item );
+			$public_result  = $should_send->invoke( null, $public_delete, $actor, $outbox_item );
+			$private_result = $should_send->invoke( null, $private_delete, $actor, $outbox_item );
 		} catch ( \Exception $e ) {
 			$this->fail( 'Invoke failed: ' . $e->getMessage() );
 		}
 
-		$this->assertTrue( $result, 'A Delete with no audience must still fan out to known remote inboxes.' );
+		$this->assertTrue( $public_result, 'A public Delete must fan out to remote inboxes.' );
+		$this->assertFalse( $private_result, 'A private/direct Delete must not be broadcast to all inboxes.' );
 	}
 
 	/**

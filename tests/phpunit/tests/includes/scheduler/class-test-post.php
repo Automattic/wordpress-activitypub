@@ -1057,6 +1057,9 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$activity = \json_decode( \get_post( $deletes[0]->ID )->post_content, true );
 		$this->assertSame( 'Tombstone', $activity['object']['type'] ?? null, 'The Delete object must be a Tombstone.' );
 		$this->assertArrayNotHasKey( 'content', (array) ( $activity['object'] ?? array() ), 'The Delete must not serialize post content.' );
+
+		// It is addressed publicly so the teardown broadcasts to every server that held the post.
+		$this->assertContains( 'https://www.w3.org/ns/activitystreams#Public', (array) ( $activity['to'] ?? array() ), 'The soft-delete Delete must be public so it fans out.' );
 	}
 
 	/**

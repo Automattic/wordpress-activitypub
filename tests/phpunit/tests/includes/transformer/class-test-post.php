@@ -455,8 +455,13 @@ class Test_Post extends \WP_UnitTestCase {
 			$this->assertEmpty( $object->get_tag(), 'tags/mentions must be omitted for a hidden post.' );
 			$this->assertEmpty( $object->get_location(), 'location must be omitted for a hidden post.' );
 
-			// No audience derived from the hidden body, in particular no mentioned actor.
+			// The permalink is preserved so the tombstone registry can resolve it.
+			$this->assertNotEmpty( $object->get_url(), 'The Tombstone must keep the permalink, not drop it.' );
+
 			$audience = \array_merge( (array) $object->get_to(), (array) $object->get_cc() );
+			// Addressed publicly so the teardown broadcasts...
+			$this->assertContains( 'https://www.w3.org/ns/activitystreams#Public', $audience, 'A hidden federated post is torn down publicly.' );
+			// ...but never to an actor named only in the now-hidden content.
 			$this->assertNotContains( $mention_uri, $audience, 'A hidden post must not address actors mentioned only in hidden content.' );
 		} finally {
 			\remove_filter( 'post_password_required', '__return_false' );
@@ -508,11 +513,12 @@ class Test_Post extends \WP_UnitTestCase {
 
 		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
 
-		// Post was federated on insert, so is_post_disabled returns false
-		// to allow Delete activity. But visibility settings still apply.
+		// The post was federated on insert, so making it local soft-deletes it:
+		// to_object() yields a public Tombstone (the Delete payload that tears the
+		// copy down everywhere), not a content object addressed to its new audience.
 		$object = Post::transform( get_post( $post_id ) )->to_object();
-		$this->assertEmpty( $object->get_to() );
-		$this->assertEmpty( $object->get_cc() );
+		$this->assertSame( 'Tombstone', $object->get_type() );
+		$this->assertContains( 'https://www.w3.org/ns/activitystreams#Public', $object->get_to() );
 	}
 
 	/**

@@ -477,14 +477,7 @@ class Dispatcher {
 
 		$audience = array_merge( $cc, $to, $bcc, $bto );
 
-		/*
-		 * Deletes always fan out. They are broadcast to every known remote inbox
-		 * (see Followers::get_inboxes_for_activity()) so a torn-down object is
-		 * removed everywhere it was federated, and their object is a content-free
-		 * Tombstone that carries no audience to gate on.
-		 */
 		$send = (
-			'Delete' === $activity->get_type() ||
 			// Check if activity is public.
 			is_activity_public( $activity ) ||
 			// ...or check if follower endpoint is set.

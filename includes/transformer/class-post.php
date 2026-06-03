@@ -97,11 +97,20 @@ class Post extends Base {
 		 * emits a Delete. Represent it as a Tombstone: content-free by type, so
 		 * no body-derived field (content, summary, tags, @-mentions, location,
 		 * attachments…) can ever leak, even one added to the transformer later.
-		 * The Tombstone carries no audience; the dispatcher fans Deletes out to
-		 * all known inboxes regardless (see Dispatcher::should_send_to_followers()).
+		 *
+		 * Address the teardown to the public collection. A post only reaches the
+		 * soft-delete path after being federated, and only public / quiet-public
+		 * posts federate (private and local ones never do), so the original
+		 * audience was always public — broadcasting the Delete tears the copy
+		 * down everywhere it may exist. Private/direct activities are deleted via
+		 * their own outbox path and keep their original (non-public) audience, so
+		 * they are not affected by this.
 		 */
 		if ( $this->is_redacted() ) {
-			return $this->to_tombstone();
+			$tombstone = $this->to_tombstone();
+			$tombstone->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
+
+			return $tombstone;
 		}
 
 		$post   = $this->item;
@@ -127,6 +136,9 @@ class Post extends Base {
 		$object = new Base_Object();
 		$object->set_type( 'Tombstone' );
 		$object->set_id( $this->get_id() );
+		// Preserve the permalink so the tombstone registry can resolve a request
+		// to it, even on sites whose ActivityPub ID is the post-ID URL (?p=123).
+		$object->set_url( $this->get_url() );
 		$object->set_former_type( $this->get_type() );
 		$object->set_published( $this->get_published() );
 		$object->set_updated( $this->get_updated() );
