@@ -313,11 +313,22 @@ class Token_Controller extends \WP_REST_Controller {
 		// Introspect the token.
 		$response = Token::introspect( $token );
 
-		// Scope introspection to same client: non-admin users can only
-		// introspect tokens belonging to the same client as their own.
+		/*
+		 * Scope introspection for non-admins. An OAuth-authenticated caller may only
+		 * introspect tokens issued to its own client; a cookie-authenticated caller may
+		 * only introspect its own tokens. Without the cookie branch, any logged-in user
+		 * could read metadata for any token string, because get_current_token() is null
+		 * for cookie sessions and the same-client check was skipped entirely.
+		 */
 		if ( $response['active'] && ! \current_user_can( 'manage_options' ) ) {
 			$current_token = OAuth_Server::get_current_token();
-			if ( $current_token && $current_token->get_client_id() !== $response['client_id'] ) {
+
+			if ( $current_token ) {
+				if ( $current_token->get_client_id() !== $response['client_id'] ) {
+					$response = array( 'active' => false );
+				}
+			} elseif ( \get_current_user_id() !== (int) $response['sub'] ) {
+				// `sub` is stored as a string; cast before comparing with the integer user ID.
 				$response = array( 'active' => false );
 			}
 		}

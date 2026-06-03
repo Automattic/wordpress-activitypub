@@ -18,7 +18,6 @@ use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_object_id;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\object_to_uri;
-use function Activitypub\user_can_act_as_blog;
 
 /**
  * ActivityPub Outbox Controller.
@@ -180,23 +179,16 @@ class Outbox_Controller extends \WP_REST_Controller {
 		);
 
 		/*
-		 * Whether the current user owns the outbox being queried. Owners see private
-		 * and non-public activity types without the visibility filters below.
+		 * Whether the current user owns the outbox being queried. Owners see private and
+		 * non-public activity types; unauthenticated, federation, and non-owner requests are
+		 * limited to the public subset by the visibility filter below.
 		 *
-		 * For the blog actor (user_id = 0) the identity-equality check is wrong on
-		 * two counts — `get_current_user_id()` returns 0 for anonymous visitors (so
-		 * `0 === 0` would leak everything to the public), and AP-capable authors
-		 * would otherwise pass the `current_user_can( 'activitypub' )` arm and read
-		 * the blog's private Accepts. Delegate to the capability helper instead.
+		 * Reuse the canonical ownership gate (the same check the OAuth C2S path applies via
+		 * maybe_verify_owner()) instead of re-deriving it here: it requires an authenticated
+		 * session, matches the requested user by identity, and handles the blog actor via
+		 * user_can_act_as_blog(). A global capability never stands in for ownership.
 		 */
-		if ( Actors::BLOG_USER_ID === (int) $user_id ) {
-			$is_outbox_owner = user_can_act_as_blog();
-		} else {
-			$is_outbox_owner = \is_user_logged_in() && (
-				\get_current_user_id() === (int) $user_id
-				|| \current_user_can( 'activitypub' )
-			);
-		}
+		$is_outbox_owner = true === $this->verify_owner( $request );
 
 		if ( ! $is_outbox_owner ) {
 			$args['meta_query'][] = array(
