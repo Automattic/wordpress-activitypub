@@ -29,7 +29,7 @@ class Options {
 
 		\add_filter( 'pre_option_activitypub_distribution_mode', array( self::class, 'pre_option_activitypub_distribution_mode' ) );
 		\add_filter( 'activitypub_dispatcher_batch_size', array( self::class, 'filter_dispatcher_batch_size' ) );
-		\add_filter( 'activitypub_scheduler_async_batch_pause', array( self::class, 'filter_scheduler_batch_pause' ) );
+		\add_filter( 'activitypub_scheduler_async_batch_pause', array( self::class, 'filter_scheduler_batch_pause' ), 10, 2 );
 
 		\add_filter( 'pre_option_activitypub_allow_likes', array( self::class, 'maybe_disable_interactions' ) );
 		\add_filter( 'pre_option_activitypub_allow_replies', array( self::class, 'maybe_disable_interactions' ) );
@@ -826,7 +826,7 @@ class Options {
 		return array(
 			'default'  => array(
 				'batch_size' => 100,
-				'pause'      => 15,
+				'pause'      => 30,
 			),
 			'balanced' => array(
 				'batch_size' => 50,
@@ -973,11 +973,16 @@ class Options {
 	 *
 	 * @since unreleased
 	 *
-	 * @param int $pause The default pause in seconds.
+	 * @param int               $pause The default pause in seconds.
+	 * @param string|false|null $hook The async batch hook being scheduled.
 	 *
 	 * @return int The pause for the current distribution mode.
 	 */
-	public static function filter_scheduler_batch_pause( $pause ) {
+	public static function filter_scheduler_batch_pause( $pause, $hook = null ) {
+		if ( 'activitypub_send_activity' !== $hook ) {
+			return $pause;
+		}
+
 		return self::resolve_distribution_filter_value( $pause, 'pause' );
 	}
 

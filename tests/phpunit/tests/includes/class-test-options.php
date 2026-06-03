@@ -279,7 +279,7 @@ class Test_Options extends \WP_UnitTestCase {
 
 		$this->assertEquals( 'default', $params['mode'] );
 		$this->assertEquals( 100, $params['batch_size'] );
-		$this->assertEquals( 15, $params['pause'] );
+		$this->assertEquals( 30, $params['pause'] );
 	}
 
 	/**
@@ -293,6 +293,19 @@ class Test_Options extends \WP_UnitTestCase {
 		$params = Options::get_distribution_params();
 
 		$this->assertEquals( Scheduler::get_retry_delay(), $params['pause'] );
+	}
+
+	/**
+	 * Test custom distribution pause only applies to delivery batches.
+	 *
+	 * @covers \Activitypub\Options::filter_scheduler_batch_pause
+	 */
+	public function test_custom_distribution_pause_only_applies_to_delivery_batches() {
+		\update_option( 'activitypub_distribution_mode', 'custom' );
+		\update_option( 'activitypub_custom_batch_pause', 120 );
+
+		$this->assertEquals( 120, Scheduler::get_retry_delay( 'activitypub_send_activity' ) );
+		$this->assertEquals( 30, Scheduler::get_retry_delay( 'activitypub_create_post_outbox_items' ) );
 	}
 
 	/**
