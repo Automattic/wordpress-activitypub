@@ -64,12 +64,10 @@ class Post {
 		}
 
 		$object_status = get_wp_object_state( $post );
+		$is_queryable  = is_post_publicly_queryable( $post );
 
 		// If the post is already soft-deleted and still non-public, do not create any more activities.
-		if (
-			ACTIVITYPUB_OBJECT_STATE_DELETED === $object_status &&
-			! is_post_publicly_queryable( $post )
-		) {
+		if ( ACTIVITYPUB_OBJECT_STATE_DELETED === $object_status && ! $is_queryable ) {
 			return;
 		}
 
@@ -105,7 +103,7 @@ class Post {
 				 * leave the federated copy stale, and a custom status would
 				 * fall through without notifying followers at all.
 				 */
-				$type = ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status && ! is_post_publicly_queryable( $post )
+				$type = ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status && ! $is_queryable
 					? 'Delete'
 					: false;
 		}
@@ -136,12 +134,12 @@ class Post {
 		 * before fanning out (so the supersession logic invalidates the
 		 * pending Delete and Create is the correct re-introduction).
 		 */
-		if ( ACTIVITYPUB_OBJECT_STATE_DELETED === $object_status && 'Update' === $type && is_post_publicly_queryable( $post ) ) {
+		if ( ACTIVITYPUB_OBJECT_STATE_DELETED === $object_status && 'Update' === $type && $is_queryable ) {
 			$type = 'Create';
 		}
 
 		// If the post was federated before but is now non-public, it should be a Delete activity.
-		if ( ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status && ! is_post_publicly_queryable( $post ) ) {
+		if ( ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status && ! $is_queryable ) {
 			$type = 'Delete';
 		}
 
