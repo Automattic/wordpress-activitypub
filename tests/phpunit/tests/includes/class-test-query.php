@@ -513,6 +513,33 @@ class Test_Query extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a stamp cannot reflect a post's non-quote meta.
+	 *
+	 * Regression: the stamp only checked that the meta row belonged to the queried post, so
+	 * an unauthenticated request could read any of the post's meta values (e.g. private
+	 * custom fields) by guessing a meta_id. Only `_activitypub_quoted_by` meta may be exposed.
+	 *
+	 * @covers ::maybe_get_stamp
+	 */
+	public function test_maybe_get_stamp_rejects_non_quote_meta() {
+		// A non-quote meta row on the same public post (e.g. a private custom field).
+		$secret_meta_id = \add_post_meta( self::$post_id, '_secret_private_meta', 'super-secret-value' );
+
+		Query::get_instance()->__destruct();
+		$this->go_to( home_url( '/?p=' . self::$post_id . '&stamp=' . $secret_meta_id ) );
+		\set_query_var( 'stamp', $secret_meta_id );
+
+		$query  = Query::get_instance();
+		$object = $query->get_activitypub_object();
+
+		$this->assertNotNull( $object, 'Should fall back to the post object' );
+		$this->assertNotEquals( 'QuoteAuthorization', $object->get_type(), 'A non-quote meta row must not be reflected as a stamp.' );
+		$this->assertStringNotContainsString( 'super-secret-value', \wp_json_encode( $object->to_array() ), 'The private meta value must not be disclosed.' );
+
+		\delete_post_meta( self::$post_id, '_secret_private_meta' );
+	}
+
+	/**
 	 * Test maybe_get_stamp with non-existent meta ID.
 	 *
 	 * @covers ::maybe_get_stamp

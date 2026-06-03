@@ -410,8 +410,13 @@ class Query {
 
 		$post = $this->get_queried_object();
 
-		// Ensure the meta belongs to the queried post to prevent arbitrary meta disclosure.
-		if ( (int) $meta->post_id !== $post->ID ) {
+		/*
+		 * Only quote-authorization meta may be reflected as a stamp, and only for the queried
+		 * post. Checking the post id alone would still let an unauthenticated request read any
+		 * of that post's meta rows (e.g. _edit_lock or private custom fields) by guessing a
+		 * meta_id, so the meta key is verified too.
+		 */
+		if ( '_activitypub_quoted_by' !== $meta->meta_key || (int) $meta->post_id !== $post->ID ) {
 			return false;
 		}
 
