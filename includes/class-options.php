@@ -826,7 +826,7 @@ class Options {
 		return array(
 			'default'  => array(
 				'batch_size' => 100,
-				'pause'      => 30,
+				'pause'      => 15,
 			),
 			'balanced' => array(
 				'batch_size' => 50,
@@ -936,27 +936,11 @@ class Options {
 	}
 
 	/**
-	 * Resolve a delivery filter value against the active distribution mode.
-	 *
-	 * In `'default'` mode we pass through the upstream filter value so other
-	 * plugins or constants can still override the parameter. In any other
-	 * mode the resolved preset (or custom) value wins.
-	 *
-	 * @since unreleased
-	 *
-	 * @param int    $upstream_value The value passed in by the filter chain.
-	 * @param string $param_key      The key to read from `get_distribution_params()`.
-	 *
-	 * @return int The resolved value.
-	 */
-	private static function resolve_distribution_filter_value( $upstream_value, $param_key ) {
-		$params = self::get_distribution_params();
-
-		return 'default' === $params['mode'] ? $upstream_value : $params[ $param_key ];
-	}
-
-	/**
 	 * Filter the dispatcher batch size based on distribution mode.
+	 *
+	 * In `'default'` mode the upstream value is passed through so the
+	 * `ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE` constant and other filters
+	 * still win; any explicit mode imposes its own batch size.
 	 *
 	 * @since unreleased
 	 *
@@ -965,11 +949,18 @@ class Options {
 	 * @return int The batch size for the current distribution mode.
 	 */
 	public static function filter_dispatcher_batch_size( $batch_size ) {
-		return self::resolve_distribution_filter_value( $batch_size, 'batch_size' );
+		$params = self::get_distribution_params();
+
+		return 'default' === $params['mode'] ? $batch_size : $params['batch_size'];
 	}
 
 	/**
 	 * Filter the scheduler batch pause based on distribution mode.
+	 *
+	 * Only delivery batches (`activitypub_send_activity`) are affected. Every
+	 * mode imposes its own delivery pause: `'default'` is the fast preset, which
+	 * is intentionally shorter than the generic async-batch baseline, so it does
+	 * not pass the upstream value through.
 	 *
 	 * @since unreleased
 	 *
@@ -983,7 +974,7 @@ class Options {
 			return $pause;
 		}
 
-		return self::resolve_distribution_filter_value( $pause, 'pause' );
+		return self::get_distribution_params()['pause'];
 	}
 
 	/**

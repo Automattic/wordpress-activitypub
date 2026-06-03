@@ -279,20 +279,24 @@ class Test_Options extends \WP_UnitTestCase {
 
 		$this->assertEquals( 'default', $params['mode'] );
 		$this->assertEquals( 100, $params['batch_size'] );
-		$this->assertEquals( 30, $params['pause'] );
+		$this->assertEquals( 15, $params['pause'] );
 	}
 
 	/**
-	 * Test default distribution pause matches the scheduler delay.
+	 * Test the default mode delivers faster than the generic async-batch baseline.
 	 *
+	 * Default mode imposes a 15s delivery pause on `activitypub_send_activity`
+	 * while non-delivery batches keep the 30s scheduler baseline.
+	 *
+	 * @covers \Activitypub\Options::filter_scheduler_batch_pause
 	 * @covers \Activitypub\Options::get_distribution_params
 	 */
-	public function test_default_distribution_pause_matches_scheduler_delay() {
+	public function test_default_distribution_pause_applies_to_delivery_only() {
 		\update_option( 'activitypub_distribution_mode', 'default' );
 
-		$params = Options::get_distribution_params();
-
-		$this->assertEquals( Scheduler::get_retry_delay(), $params['pause'] );
+		$this->assertEquals( 15, Options::get_distribution_params()['pause'] );
+		$this->assertEquals( 15, Scheduler::get_retry_delay( 'activitypub_send_activity' ) );
+		$this->assertEquals( 30, Scheduler::get_retry_delay( 'activitypub_create_post_outbox_items' ) );
 	}
 
 	/**
