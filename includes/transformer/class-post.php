@@ -90,12 +90,21 @@ class Post extends Base {
 	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
 	 */
 	public function to_object() {
+		/*
+		 * A redacted (password-protected or non-public) post is, from the
+		 * Fediverse's perspective, gone — the soft-delete path that reaches here
+		 * emits a Delete. Represent it as a Tombstone: content-free by type, so
+		 * no body-derived field (content, summary, tags, @-mentions, location,
+		 * attachments…) can ever leak, even one added to the transformer later.
+		 * The Tombstone carries no audience; the dispatcher fans Deletes out to
+		 * all known inboxes regardless (see Dispatcher::should_send_to_followers()).
+		 */
+		if ( $this->is_redacted() ) {
+			return $this->to_tombstone();
+		}
+
 		$post   = $this->item;
 		$object = parent::to_object();
-
-		if ( $this->is_redacted() ) {
-			return $object;
-		}
 
 		$content_warning = get_content_warning( $post );
 		if ( ! empty( $content_warning ) ) {
@@ -263,10 +272,6 @@ class Post extends Base {
 	 * @return array|null The Image or null if no image is available.
 	 */
 	protected function get_image() {
-		if ( $this->is_redacted() ) {
-			return null;
-		}
-
 		$post_id = $this->item->ID;
 
 		// List post thumbnail first if this post has one.
@@ -320,10 +325,6 @@ class Post extends Base {
 	 * @return array|null The Icon or null if no icon is available.
 	 */
 	protected function get_icon() {
-		if ( $this->is_redacted() ) {
-			return null;
-		}
-
 		$post_id = $this->item->ID;
 
 		// List post thumbnail first if this post has one.
@@ -380,10 +381,6 @@ class Post extends Base {
 	 * @return array The Attachments.
 	 */
 	protected function get_attachment() {
-		if ( $this->is_redacted() ) {
-			return null;
-		}
-
 		if ( false !== $this->attachment ) {
 			return $this->attachment;
 		}
@@ -563,10 +560,6 @@ class Post extends Base {
 	 * @return string|null The summary or null if the object type is `note`.
 	 */
 	protected function get_summary() {
-		if ( $this->is_redacted() ) {
-			return null;
-		}
-
 		if ( 'Note' === $this->get_type() ) {
 			return null;
 		}
@@ -589,10 +582,6 @@ class Post extends Base {
 	 * @return string|null The title or null if the object type is `note`.
 	 */
 	protected function get_name() {
-		if ( $this->is_redacted() ) {
-			return null;
-		}
-
 		if ( 'Note' === $this->get_type() ) {
 			return null;
 		}
@@ -618,10 +607,6 @@ class Post extends Base {
 	 * @return string The content.
 	 */
 	protected function get_content() {
-		if ( $this->is_redacted() ) {
-			return null;
-		}
-
 		if ( false !== $this->content ) {
 			return $this->content;
 		}
@@ -870,9 +855,12 @@ class Post extends Base {
 	/**
 	 * Whether the post should be redacted from ActivityPub representations.
 	 *
-	 * Single gate used by every transformer method that derives content,
-	 * summary, preview, attachments, or other potentially-sensitive
-	 * fields. Fires when:
+	 * Redaction is fail-closed at a single boundary: `to_object()` returns a
+	 * Tombstone instead of transforming the post, so no body-derived field
+	 * (content, summary, name, preview, attachments, image/icon, tags,
+	 *
+	 * @-mentions, in-reply-to, location) is ever read — not even one added to
+	 * the transformer later. This is the only caller of this gate. Fires when:
 	 *
 	 *  - the post is password-protected. Federation output is per-instance,
 	 *    never per-request, so we must NOT use `post_password_required()`
@@ -1199,10 +1187,6 @@ class Post extends Base {
 	 * @return array|null The preview of the post or null if the post is not an Article.
 	 */
 	public function get_preview() {
-		if ( $this->is_redacted() ) {
-			return null;
-		}
-
 		if ( 'Article' !== $this->get_type() ) {
 			return null;
 		}

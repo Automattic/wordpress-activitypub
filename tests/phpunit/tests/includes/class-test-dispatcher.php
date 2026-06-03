@@ -346,6 +346,48 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * A Delete fans out even with no addressing.
+	 *
+	 * Its object is a content-free Tombstone that carries no audience, so
+	 * should_send_to_followers() must not gate it on is_activity_public() or
+	 * follower addressing — a Delete is broadcast to all known remote inboxes
+	 * so the object is torn down everywhere it was federated. Contrast with a
+	 * Create (test_should_not_send_to_followers_when_no_addressing_matches),
+	 * which is gated.
+	 *
+	 * @covers ::should_send_to_followers
+	 */
+	public function test_delete_dispatches_without_audience() {
+		Followers::add( self::$user_id, 'https://example.org/users/username' );
+
+		$actor = Actors::get_by_id( self::$user_id );
+
+		$activity = new Activity();
+		$activity->set_type( 'Delete' );
+		$activity->set_actor( $actor->get_id() );
+		$activity->set_to( array() );
+		$activity->set_cc( array() );
+
+		$outbox_item = (object) array(
+			'ID'          => 0,
+			'post_author' => self::$user_id,
+		);
+
+		$should_send = new \ReflectionMethod( Dispatcher::class, 'should_send_to_followers' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$should_send->setAccessible( true );
+		}
+
+		try {
+			$result = $should_send->invoke( null, $activity, $actor, $outbox_item );
+		} catch ( \Exception $e ) {
+			$this->fail( 'Invoke failed: ' . $e->getMessage() );
+		}
+
+		$this->assertTrue( $result, 'A Delete with no audience must still fan out to known remote inboxes.' );
+	}
+
+	/**
 	 * Returns a mocked Activity object.
 	 *
 	 * @return Activity

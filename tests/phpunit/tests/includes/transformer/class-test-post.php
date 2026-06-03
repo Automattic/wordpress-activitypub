@@ -388,6 +388,58 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A redacted post is represented as a content-free Tombstone: no content,
+	 * tags, @-mentions, or location, and no audience at all — so nothing
+	 * body-derived can leak and no actor named only in the now-hidden content
+	 * is ever addressed. The Delete still fans out: that is the dispatcher's
+	 * job (see Test_Dispatcher::test_delete_dispatches_without_audience), not
+	 * something the object's audience has to encode.
+	 *
+	 * @covers ::to_object
+	 */
+	public function test_redacted_post_is_content_free_tombstone() {
+		$mention_uri    = 'https://remote.example/users/bob';
+		$mention_filter = static function () use ( $mention_uri ) {
+			return array( '@bob@remote.example' => $mention_uri );
+		};
+		\add_filter( 'activitypub_extract_mentions', $mention_filter );
+
+		$post_id = \wp_insert_post(
+			array(
+				'post_author'   => 1,
+				'post_title'    => 'Hidden mention probe',
+				'post_content'  => 'Hello @bob@remote.example, secret body.',
+				'post_status'   => 'publish',
+				'post_password' => 'fed-secret-pass',
+			)
+		);
+
+		\update_post_meta( $post_id, 'geo_latitude', '52.52' );
+		\update_post_meta( $post_id, 'geo_longitude', '13.405' );
+		\update_post_meta( $post_id, 'geo_public', '1' );
+
+		// Cookie-bypass case: the helper would return false, transformer must still redact.
+		\add_filter( 'post_password_required', '__return_false' );
+
+		try {
+			$object = Post::transform( get_post( $post_id ) )->to_object();
+
+			// Content-free by type.
+			$this->assertSame( 'Tombstone', $object->get_type(), 'A redacted post must serialize as a Tombstone.' );
+			$this->assertEmpty( $object->get_content(), 'content must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_tag(), 'tags/mentions must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_location(), 'location must be omitted for a redacted post.' );
+
+			// No audience at all: nothing derived from the hidden body, in particular no mentioned actor.
+			$audience = \array_merge( (array) $object->get_to(), (array) $object->get_cc() );
+			$this->assertNotContains( $mention_uri, $audience, 'A redacted post must not address actors mentioned only in hidden content.' );
+		} finally {
+			\remove_filter( 'post_password_required', '__return_false' );
+			\remove_filter( 'activitypub_extract_mentions', $mention_filter );
+		}
+	}
+
+	/**
 	 * Test content visibility.
 	 *
 	 * @covers ::to_object
