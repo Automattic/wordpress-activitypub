@@ -954,6 +954,25 @@ class Post extends Base {
 						}
 					}
 					break;
+				case 'core/media-text':
+					if ( ! empty( $block['attrs']['mediaId'] ) ) {
+						// Media & Text holds either an image or a video; the default is image.
+						if ( 'video' === ( $block['attrs']['mediaType'] ?? 'image' ) ) {
+							$media['video'][] = array( 'id' => $block['attrs']['mediaId'] );
+						} else {
+							$alt       = '';
+							$processor = new \WP_HTML_Tag_Processor( $block['innerHTML'] );
+							if ( $processor->next_tag( array( 'tag_name' => 'img' ) ) ) {
+								$alt = $processor->get_attribute( 'alt' ) ?? '';
+							}
+
+							$media['image'][] = array(
+								'id'  => $block['attrs']['mediaId'],
+								'alt' => $alt,
+							);
+						}
+					}
+					break;
 				case 'core/audio':
 					if ( ! empty( $block['attrs']['id'] ) ) {
 						$media['audio'][] = array( 'id' => $block['attrs']['id'] );
