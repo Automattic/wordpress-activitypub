@@ -122,15 +122,9 @@ class Test_Blurhash extends \WP_UnitTestCase {
 			$this->markTestSkipped( 'GD is not available.' );
 		}
 
-		// Build a small solid-color JPEG in the uploads dir and register it as an attachment.
-		$upload = \wp_upload_dir();
-		$file   = \trailingslashit( $upload['path'] ) . 'blurhash-test.jpg';
-		$image  = \imagecreatetruecolor( 64, 64 );
-		\imagefilledrectangle( $image, 0, 0, 63, 63, \imagecolorallocate( $image, 200, 100, 50 ) );
-		\imagejpeg( $image, $file );
-		\imagedestroy( $image );
-
-		$attachment_id = self::factory()->attachment->create_upload_object( $file );
+		// Use a committed fixture so the test only depends on GD decode support
+		// (what the encoder needs), not on JPEG write support via imagejpeg().
+		$attachment_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/sample-image.jpg' );
 
 		$hash = Blurhash::encode_from_attachment( $attachment_id );
 

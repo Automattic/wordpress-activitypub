@@ -183,7 +183,8 @@ class Blurhash {
 
 	/**
 	 * Delete any stored blurhash for an attachment. Used by the
-	 * WP-CLI backfill `--force` path.
+	 * upload/regen invalidation path ({@see self::schedule_encode()}) so a
+	 * replaced image re-encodes against its latest bytes.
 	 *
 	 * @param int $attachment_id Attachment post ID.
 	 */
