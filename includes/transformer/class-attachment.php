@@ -7,8 +7,6 @@
 
 namespace Activitypub\Transformer;
 
-use function Activitypub\is_post_publicly_queryable;
-
 /**
  * WordPress Attachment Transformer.
  *
@@ -18,25 +16,12 @@ use function Activitypub\is_post_publicly_queryable;
  * Currently supported are:
  *
  * - Activitypub\Activity\Base_Object
+ *
+ * Redaction is inherited from {@see Post::is_redacted()}: `is_post_publicly_queryable()`
+ * already resolves an attachment's own visibility, password, post-type support, and — for
+ * attached media — its parent's visibility, so no attachment-specific override is needed.
  */
 class Attachment extends Post {
-	/**
-	 * Whether the attachment should be redacted from ActivityPub representations.
-	 *
-	 * An attachment has no public status of its own (`inherit`) and is a media
-	 * object in its own right, so unlike a regular post it is not redacted by
-	 * the parent class's status/visibility rules. Instead it inherits its
-	 * parent's visibility: an attachment of a non-public post is redacted to a
-	 * Tombstone, while a standalone attachment is always rendered.
-	 *
-	 * @return boolean True if the attachment must be redacted, false otherwise.
-	 */
-	protected function is_redacted() {
-		$parent = (int) $this->item->post_parent;
-
-		return $parent > 0 && ! is_post_publicly_queryable( $parent );
-	}
-
 	/**
 	 * Generates all Media Attachments for a Post.
 	 *

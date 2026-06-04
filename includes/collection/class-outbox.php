@@ -201,16 +201,11 @@ class Outbox {
 		 * re-publish (Create) additionally invalidates a pending Delete so
 		 * we do not send both Delete and Create for the same object.
 		 *
-		 * Update is intentionally NOT in this list: external callers
-		 * (the `wp activitypub post update` CLI command, third-party
-		 * plugins, filter hooks) can queue an Update for an object that
-		 * is still hidden — `is_post_disabled()` allows soft-deleted
-		 * posts through so they can transform. Cancelling a Delete on
-		 * every Update would let an unrelated edit flip the object back
-		 * to federated while the post remains draft/private/locked. The
-		 * scheduler's own resurrection branch already rewrites Update to
-		 * Create when a soft-deleted post returns to a publicly queryable
-		 * state, so the legitimate re-publish path still cancels Delete.
+		 * Update is intentionally NOT in this list: it must not cancel a
+		 * pending Delete, or an unrelated edit could flip a hidden object back
+		 * to federated. An Update for an already-deleted object is rejected
+		 * upstream in `add_to_outbox()`, and the scheduler re-publish path emits
+		 * a Create (not an Update), so that legitimate path still cancels Delete.
 		 */
 		if ( 'Delete' !== $activity_type ) {
 			$types = 'Create' === $activity_type
