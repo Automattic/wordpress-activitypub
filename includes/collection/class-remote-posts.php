@@ -152,6 +152,25 @@ class Remote_Posts {
 			return $post;
 		}
 
+		/*
+		 * Only the post's author may update it. When the activity carries an actor (every
+		 * signature-verified inbound activity does), compare it against the remote actor
+		 * stored when the post was first cached (its guid is the actor URI), so a remote
+		 * server cannot overwrite another host's cached post by sending an Update whose
+		 * object.id points at a post it does not own. The actor must be used here, not the
+		 * payload's attributedTo, because only the actor is bound to the HTTP signature.
+		 */
+		if ( isset( $activity['actor'] ) ) {
+			$owner = \get_post( (int) \get_post_meta( $post->ID, '_activitypub_remote_actor_id', true ) );
+			if ( ! $owner instanceof \WP_Post || object_to_uri( $activity['actor'] ) !== $owner->guid ) {
+				return new \WP_Error(
+					'activitypub_update_forbidden',
+					\__( 'Update failed: the actor does not own this post.', 'activitypub' ),
+					array( 'status' => 403 )
+				);
+			}
+		}
+
 		$post_array       = self::activity_to_post( $activity['object'] );
 		$post_array['ID'] = $post->ID;
 		$post_id          = \wp_update_post( $post_array, true );
