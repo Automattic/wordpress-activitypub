@@ -383,6 +383,24 @@ class Test_Router extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The Fediverse Preview template refuses to render for logged-out visitors.
+	 *
+	 * Defense-in-depth backstop independent of how the request routed here: a
+	 * soft-deleted draft's preview must never reach the public, even via a
+	 * direct include. The exception message is pinned to the login guard so the
+	 * assertion can't be satisfied by the template's later transformer 404 if
+	 * the guard were ever removed.
+	 */
+	public function test_preview_template_requires_logged_in_user() {
+		\wp_set_current_user( 0 );
+
+		$this->expectException( \WPDieException::class );
+		$this->expectExceptionMessage( 'You need to be logged in to preview this post.' );
+
+		require ACTIVITYPUB_PLUGIN_DIR . 'templates/post-preview.php';
+	}
+
+	/**
 	 * Test that the activitypub_supported_taxonomies filter has correct defaults.
 	 *
 	 * @covers ::template_redirect

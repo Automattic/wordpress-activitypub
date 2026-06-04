@@ -486,6 +486,49 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The happy path of the Fediverse Preview: an authorized preview of an
+	 * unpublished post must render the real content, NOT a Tombstone.
+	 *
+	 * `is_post_publicly_queryable()` treats a draft/pending post as queryable
+	 * during a `?preview=true` request from a user who can edit it, which flips
+	 * `is_redacted()` to false so `to_object()` transforms the post normally.
+	 * The router test only proves routing into the preview template; this asserts
+	 * the transformer output the template actually renders.
+	 *
+	 * @covers ::to_object
+	 */
+	public function test_authorized_preview_of_unpublished_post_renders_real_content() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author'  => $editor_id,
+				'post_status'  => 'draft',
+				'post_title'   => 'Preview Title',
+				'post_content' => 'PREVIEW-VISIBLE-BODY that is long enough to be a real note.',
+			)
+		);
+
+		// Authorized preview context: the editor previewing their own draft.
+		// `is_post_publicly_queryable()` reads the `preview` query var (gating the
+		// Tombstone), while the content getter reads WordPress's `is_preview()`
+		// flag (gating draft-content rendering) — set both, as the real request does.
+		\wp_set_current_user( $editor_id );
+		$this->go_to( \home_url( '?p=' . $post_id . '&preview=true' ) );
+		\set_query_var( 'preview', true );
+		$GLOBALS['wp_query']->is_preview = true;
+
+		try {
+			$object = Post::transform( get_post( $post_id ) )->to_object();
+
+			$this->assertNotSame( 'Tombstone', $object->get_type(), 'An authorized preview must not be redacted to a Tombstone.' );
+			$this->assertStringContainsString( 'PREVIEW-VISIBLE-BODY', (string) $object->get_content(), 'The preview must render the real post content.' );
+		} finally {
+			\wp_set_current_user( 0 );
+		}
+	}
+
+	/**
 	 * Test content visibility.
 	 *
 	 * @covers ::to_object
