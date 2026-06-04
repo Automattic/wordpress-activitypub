@@ -10,6 +10,7 @@ namespace Activitypub\Tests;
 use Activitypub\Collection\Outbox;
 use Activitypub\Query;
 use Activitypub\Router;
+use Activitypub\Tombstone;
 
 /**
  * Test class for Router.
@@ -302,6 +303,83 @@ class Test_Router extends \WP_UnitTestCase {
 
 		// Clean up.
 		\remove_filter( 'activitypub_preview_template', $preview_template_callback );
+	}
+
+	/**
+	 * A soft-deleted draft is buried in the tombstone registry, but its author
+	 * must still be able to use the Fediverse Preview: the tombstone branch
+	 * defers to is_post_publicly_queryable(), which treats an authorized
+	 * `?preview=true` request on a draft as queryable.
+	 *
+	 * @covers ::render_activitypub_template
+	 */
+	public function test_authorized_preview_of_soft_deleted_draft_is_not_tombstoned() {
+		Query::get_instance()->__destruct();
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'publish',
+				'post_author' => self::$user_id,
+			)
+		);
+		\Activitypub\set_wp_object_state( \get_post( $post_id ), ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		// Soft-delete to a draft and bury it, as the scheduler + Delete::maybe_bury() would.
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'draft',
+			)
+		);
+		Tombstone::bury( \home_url( '?p=' . $post_id ), \get_permalink( $post_id ) );
+
+		// The author previews their own draft.
+		\wp_set_current_user( self::$user_id );
+		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
+		$this->go_to( '/?p=' . $post_id );
+		\set_query_var( 'preview', true );
+
+		$template = Router::render_activitypub_template( 'index.php' );
+
+		$this->assertStringContainsString( 'post-preview.php', $template, 'Author preview of a soft-deleted draft must render the preview.' );
+		$this->assertStringNotContainsString( 'tombstone-json.php', $template, 'Author preview must not be short-circuited by the tombstone registry.' );
+
+		// A public (unauthorized, non-preview) request to the same buried URL still gets the Tombstone.
+		Query::get_instance()->__destruct();
+		\wp_set_current_user( 0 );
+		$this->go_to( '/?p=' . $post_id );
+
+		$template = Router::render_activitypub_template( 'index.php' );
+		$this->assertStringContainsString( 'tombstone-json.php', $template, 'A public request to a soft-deleted post still returns the Tombstone.' );
+	}
+
+	/**
+	 * A normal ActivityPub fetch of a tombstoned URL must keep returning the
+	 * Tombstone even when that URL now resolves to a fresh, publicly queryable
+	 * post (for example, a hard-deleted post's slug was later reused). Remote
+	 * servers were told that id is gone, so only an authorized `?preview=true`
+	 * request may bypass the registry.
+	 *
+	 * @covers ::render_activitypub_template
+	 */
+	public function test_tombstoned_url_reused_by_public_post_still_serves_tombstone() {
+		Query::get_instance()->__destruct();
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'publish',
+				'post_author' => self::$user_id,
+			)
+		);
+
+		// The URL is in the registry, but the post itself is live and public.
+		Tombstone::bury( \home_url( '?p=' . $post_id ), \get_permalink( $post_id ) );
+
+		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
+		$this->go_to( '/?p=' . $post_id );
+
+		$template = Router::render_activitypub_template( 'index.php' );
+		$this->assertStringContainsString( 'tombstone-json.php', $template, 'A publicly queryable post at a tombstoned URL must still serve the Tombstone for a non-preview fetch.' );
 	}
 
 	/**
