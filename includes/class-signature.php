@@ -156,9 +156,9 @@ class Signature {
 		 * percent-encoding or parameter order and break the signature.
 		 */
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		$query = \wp_parse_url( $_SERVER['REQUEST_URI'] ?? '', \PHP_URL_QUERY );
+		$query = (string) \wp_parse_url( $_SERVER['REQUEST_URI'] ?? '', \PHP_URL_QUERY );
 
-		if ( $query ) {
+		if ( '' !== $query ) {
 			$route .= '?' . $query;
 		}
 
