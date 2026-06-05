@@ -138,10 +138,14 @@ Skills are complex procedures loaded on demand. Canonical files live in `.agents
 
 | Skill | Use when… |
 |-------|-----------|
-| **pr** | Creating or reviewing pull requests. MUST invoke before any PR creation. |
-| **release** | Creating releases, bumping versions, managing changelogs. |
+| **code-style** | Writing PHP, creating classes, implementing hooks, or structuring plugin files. |
+| **dev** | Setting up wp-env, running tests, linting, or building assets. |
+| **test** | Writing or debugging PHPUnit and Playwright E2E tests. |
 | **federation** | Working with ActivityPub protocol, federation mechanics, or debugging. |
 | **integrations** | Adding or debugging third-party plugin integrations. |
+| **pr** | Creating or reviewing pull requests. MUST invoke before any PR creation. |
+| **release** | Creating releases, bumping versions, managing changelogs. |
+| **gitattributes** | Auditing `.gitattributes` export-ignore coverage before a release or after adding a top-level file or config. |
 
 | Agent | Trigger |
 |-------|---------|
