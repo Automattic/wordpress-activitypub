@@ -991,6 +991,51 @@ class Post extends Base {
 						}
 					}
 					break;
+				case 'core/media-text':
+					if ( ! empty( $block['attrs']['mediaId'] ) ) {
+						$media_id = $block['attrs']['mediaId'];
+
+						// Media & Text holds either an image or a video; the default is image.
+						if ( 'video' === ( $block['attrs']['mediaType'] ?? 'image' ) ) {
+							$video = array( 'id' => $media_id );
+
+							// The poster is stored as an HTML attribute on the <video> tag, not in block attrs.
+							$processor = new \WP_HTML_Tag_Processor( $block['innerHTML'] );
+							if ( $processor->next_tag( array( 'tag_name' => 'video' ) ) ) {
+								$poster = $processor->get_attribute( 'poster' );
+								if ( ! empty( $poster ) ) {
+									$video['icon'] = \esc_url_raw( $poster );
+								}
+							}
+
+							$media['video'][] = $video;
+						} else {
+							$alt       = '';
+							$processor = new \WP_HTML_Tag_Processor( $block['innerHTML'] );
+							if ( $processor->next_tag( array( 'tag_name' => 'img' ) ) ) {
+								$alt = $processor->get_attribute( 'alt' ) ?? '';
+							}
+
+							// Update alt in place if the image was already collected, so a
+							// duplicate ID does not get dropped (and its alt lost) later.
+							$found = false;
+							foreach ( $media['image'] as $i => $image ) {
+								if ( isset( $image['id'] ) && $image['id'] === $media_id ) {
+									$media['image'][ $i ]['alt'] = $alt;
+									$found                       = true;
+									break;
+								}
+							}
+
+							if ( ! $found ) {
+								$media['image'][] = array(
+									'id'  => $media_id,
+									'alt' => $alt,
+								);
+							}
+						}
+					}
+					break;
 				case 'core/audio':
 					if ( ! empty( $block['attrs']['id'] ) ) {
 						$media['audio'][] = array( 'id' => $block['attrs']['id'] );

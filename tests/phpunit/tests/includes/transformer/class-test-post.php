@@ -839,6 +839,111 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_media_from_blocks extracts the image from a Media & Text block.
+	 *
+	 * @covers ::get_media_from_blocks
+	 */
+	public function test_get_media_from_blocks_extracts_media_text_image() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:media-text {"mediaId":263,"mediaType":"image"} --><div class="wp-block-media-text is-stacked-on-mobile"><figure class="wp-block-media-text__media"><img src="https://example.com/img.png" alt="Media text alt" class="wp-image-263 size-full"/></figure><div class="wp-block-media-text__content"></div></div><!-- /wp:media-text -->',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$transformer = new Post( $post );
+		$media       = array(
+			'image' => array(),
+			'audio' => array(),
+			'video' => array(),
+		);
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_media_from_blocks' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$blocks = parse_blocks( $post->post_content );
+		$result = $method->invoke( $transformer, $blocks, $media );
+
+		$this->assertCount( 1, $result['image'], 'A Media & Text image must be extracted.' );
+		$this->assertSame( 263, $result['image'][0]['id'] );
+		$this->assertSame( 'Media text alt', $result['image'][0]['alt'] );
+	}
+
+	/**
+	 * Test get_media_from_blocks updates alt in place when the Media & Text image
+	 * was already collected, so the duplicate is not dropped and its alt lost.
+	 *
+	 * @covers ::get_media_from_blocks
+	 */
+	public function test_get_media_from_blocks_media_text_updates_existing_image_alt() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:media-text {"mediaId":263,"mediaType":"image"} --><div class="wp-block-media-text"><figure class="wp-block-media-text__media"><img src="https://example.com/img.png" alt="Media text alt" class="wp-image-263"/></figure></div><!-- /wp:media-text -->',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$transformer = new Post( $post );
+		// Seed the same ID without alt, as an earlier featured-image/gallery pass would.
+		$media = array(
+			'image' => array( array( 'id' => 263 ) ),
+			'audio' => array(),
+			'video' => array(),
+		);
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_media_from_blocks' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$blocks = parse_blocks( $post->post_content );
+		$result = $method->invoke( $transformer, $blocks, $media );
+
+		$this->assertCount( 1, $result['image'], 'A duplicate Media & Text image ID must not add a second entry.' );
+		$this->assertSame( 'Media text alt', $result['image'][0]['alt'], 'The existing entry must gain the Media & Text alt text.' );
+	}
+
+	/**
+	 * Test get_media_from_blocks extracts the video (and its poster) from a Media
+	 * & Text block.
+	 *
+	 * @covers ::get_media_from_blocks
+	 */
+	public function test_get_media_from_blocks_extracts_media_text_video() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:media-text {"mediaId":555,"mediaType":"video"} --><div class="wp-block-media-text is-stacked-on-mobile"><figure class="wp-block-media-text__media"><video controls poster="https://example.com/poster.jpg" src="https://example.com/video.mp4"></video></figure><div class="wp-block-media-text__content"></div></div><!-- /wp:media-text -->',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$transformer = new Post( $post );
+		$media       = array(
+			'image' => array(),
+			'audio' => array(),
+			'video' => array(),
+		);
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_media_from_blocks' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$blocks = parse_blocks( $post->post_content );
+		$result = $method->invoke( $transformer, $blocks, $media );
+
+		$this->assertCount( 1, $result['video'], 'A Media & Text video must be extracted.' );
+		$this->assertSame( 555, $result['video'][0]['id'] );
+		$this->assertSame( 'https://example.com/poster.jpg', $result['video'][0]['icon'], 'The video poster must be kept as the icon.' );
+		$this->assertEmpty( $result['image'], 'A Media & Text video must not be added as an image.' );
+	}
+
+	/**
 	 * Test get_icon method.
 	 *
 	 * @covers ::get_icon

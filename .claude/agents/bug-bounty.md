@@ -10,26 +10,23 @@ You are a bug-fix agent for the WordPress ActivityPub plugin. Your job is to pic
 
 ## Step 1 — Find an Issue to Fix
 
-Fetch open bug issues from the repository. **Only consider issues labeled "Bug" or "[Type] Bug"** — skip everything else:
+Fetch open bug issues from the repository. **Only consider issues labeled "Bug"** — skip everything else:
 
 ```bash
 gh issue list --label "Bug" --state open --json number,title,body,labels --limit 20
-gh issue list --label "[Type] Bug" --state open --json number,title,body,labels --limit 20
 ```
-
-Merge and deduplicate the results.
 
 From the results, **skip issues that also have the "Needs triage" label** — these are unverified and waiting for manual review.
 
 Review the remaining issues and pick the one that is most straightforward to fix — look for clear reproduction steps, well-described expected behavior, and a scope that can be addressed with minimal changes.
 
-**Skip issues that already have a linked PR.** For each candidate issue, check:
+**Skip issues that already have a linked PR.** For each candidate issue, check for referencing PRs:
 
 ```bash
-gh pr list --state open --search "#<number>" --json number,title
+gh search prs --repo Automattic/wordpress-activitypub --state open "Fixes #<number> OR Closes #<number> OR #<number>"
 ```
 
-If any open PR already references the issue, move on to the next candidate.
+You can also see linked PRs directly in `gh issue view <number>` (the development/timeline section). If any open PR already references the issue, move on to the next candidate.
 
 ## Step 2 — Analyze the Chosen Issue
 

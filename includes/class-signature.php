@@ -148,6 +148,20 @@ class Signature {
 			$route = '/' . $path . $route;
 		}
 
+		/*
+		 * Append the query string. Peers sign the full request-target including
+		 * the query (see Http_Signature_Draft::sign()), so the reconstructed
+		 * value has to match byte-for-byte. Use the raw REQUEST_URI instead of
+		 * re-encoding the parsed query params, re-encoding could change the
+		 * percent-encoding or parameter order and break the signature.
+		 */
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$query = (string) \wp_parse_url( $_SERVER['REQUEST_URI'] ?? '', \PHP_URL_QUERY );
+
+		if ( '' !== $query ) {
+			$route .= '?' . $query;
+		}
+
 		return $route;
 	}
 

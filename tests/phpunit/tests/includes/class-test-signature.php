@@ -483,6 +483,168 @@ class Test_Signature extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A signed GET request whose URL contains a query string must verify.
+	 *
+	 * Draft Cavage peers (e.g. Mastodon) sign the full request-target
+	 * including the query string. The REST branch of the verifier has to
+	 * reconstruct the same value, otherwise endpoints that require query
+	 * parameters — like FEP-8fcf's `/followers/sync?authority=…` — always
+	 * fail with a 401.
+	 *
+	 * @covers ::verify_http_signature
+	 */
+	public function test_verify_http_signature_get_with_query_string() {
+		$keys = Actors::get_keypair( 1 );
+
+		$mock_remote_key_retrieval = function () use ( $keys ) {
+			return array(
+				'name'      => 'Admin',
+				'url'       => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+
+		/*
+		 * Sign the way Mastodon does: the request-target includes the query
+		 * string. Forcing Cavage mode is not needed here, the verifier picks
+		 * the draft verifier based on the plain `Signature` header.
+		 */
+		$date           = \gmdate( 'D, d M Y H:i:s T' );
+		$target         = '/wp-json/activitypub/1.0/actors/0/followers/sync?authority=https://mastodon.example';
+		$string_to_sign = "(request-target): get {$target}\nhost: example.org\ndate: {$date}";
+
+		$signature = '';
+		\openssl_sign( $string_to_sign, $signature, Actors::get_private_key( 1 ), \OPENSSL_ALGO_SHA256 );
+
+		$_SERVER['REQUEST_URI'] = $target;
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers/sync' );
+		$request->set_query_params( array( 'authority' => 'https://mastodon.example' ) );
+		$request->set_headers(
+			array(
+				'Host'      => 'example.org',
+				'Date'      => $date,
+				'Signature' => \sprintf(
+					'keyId="https://example.org/author/admin#main-key",algorithm="rsa-sha256",headers="(request-target) host date",signature="%s"',
+					\base64_encode( $signature )
+				),
+			)
+		);
+
+		$this->assertTrue( Signature::verify_http_signature( $request ), 'Signed GET requests with a query string must verify.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+	}
+
+	/**
+	 * A signature created by the plugin's own signer for a query-string URL
+	 * must round-trip through the verifier.
+	 *
+	 * @covers ::verify_http_signature
+	 */
+	public function test_verify_http_signature_round_trip_with_query_string() {
+		$keys = Actors::get_keypair( 1 );
+
+		$force_cavage = '__return_zero';
+		\add_filter( 'pre_option_activitypub_rfc9421_signature', $force_cavage );
+
+		$mock_remote_key_retrieval = function () use ( $keys ) {
+			return array(
+				'name'      => 'Admin',
+				'url'       => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+
+		$args = \apply_filters(
+			'http_request_args',
+			array(
+				'method'      => 'GET',
+				'key_id'      => 'https://example.org/author/admin#main-key',
+				'private_key' => Actors::get_private_key( 1 ),
+				'user_id'     => 1,
+				'headers'     => array(
+					'Date' => \gmdate( 'D, d M Y H:i:s T' ),
+					'Host' => 'example.org',
+				),
+			),
+			'https://example.org/wp-json/activitypub/1.0/actors/0/followers/sync?authority=https://mastodon.example'
+		);
+
+		// Only the verifier reads REQUEST_URI; the signer above works off the URL.
+		$_SERVER['REQUEST_URI'] = '/wp-json/activitypub/1.0/actors/0/followers/sync?authority=https://mastodon.example';
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers/sync' );
+		$request->set_query_params( array( 'authority' => 'https://mastodon.example' ) );
+		$request->set_headers( $args['headers'] );
+
+		$this->assertTrue( Signature::verify_http_signature( $request ), 'Signatures created by the plugin for query-string URLs must round-trip.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+		\remove_filter( 'pre_option_activitypub_rfc9421_signature', $force_cavage );
+	}
+
+	/**
+	 * A signed GET request without a query string must still verify.
+	 *
+	 * @covers ::verify_http_signature
+	 */
+	public function test_verify_http_signature_get_without_query_string() {
+		$keys = Actors::get_keypair( 1 );
+
+		$force_cavage = '__return_zero';
+		\add_filter( 'pre_option_activitypub_rfc9421_signature', $force_cavage );
+
+		$mock_remote_key_retrieval = function () use ( $keys ) {
+			return array(
+				'name'      => 'Admin',
+				'url'       => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+
+		$args = \apply_filters(
+			'http_request_args',
+			array(
+				'method'      => 'GET',
+				'key_id'      => 'https://example.org/author/admin#main-key',
+				'private_key' => Actors::get_private_key( 1 ),
+				'user_id'     => 1,
+				'headers'     => array(
+					'Date' => \gmdate( 'D, d M Y H:i:s T' ),
+					'Host' => 'example.org',
+				),
+			),
+			'https://example.org/wp-json/activitypub/1.0/actors/0/outbox'
+		);
+
+		$_SERVER['REQUEST_URI'] = '/wp-json/activitypub/1.0/actors/0/outbox';
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
+		$request->set_headers( $args['headers'] );
+
+		$this->assertTrue( Signature::verify_http_signature( $request ), 'Signed GET requests without a query string must still verify.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+		\remove_filter( 'pre_option_activitypub_rfc9421_signature', $force_cavage );
+	}
+
+	/**
 	 * Signed headers that include neither Date nor (created) must be rejected.
 	 *
 	 * A captured signed request with no time anchor can otherwise be
