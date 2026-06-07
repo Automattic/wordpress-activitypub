@@ -299,6 +299,17 @@ class Comment {
 			return false;
 		}
 
+		/*
+		 * Do not federate brand-new comments on a post that is not federated itself
+		 * (e.g. a private post, a post switched to local visibility, or a non-ActivityPub
+		 * post type). This prevents leaking replies on content the post type's read rules
+		 * would otherwise protect. Comments that were already sent are allowed through so
+		 * their Update and Delete activities can still federate (and tear down remote copies).
+		 */
+		if ( ! self::was_sent( $comment ) && ! is_post_federated( $comment->comment_post_ID ) ) {
+			return false;
+		}
+
 		// It is a comment to the post and can be federated.
 		if ( empty( $comment->comment_parent ) ) {
 			return true;
