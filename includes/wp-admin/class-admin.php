@@ -456,6 +456,33 @@ class Admin {
 				'.column-author img.emoji { float: none; }'
 			);
 		}
+
+		if ( 'edit.php' === $hook_suffix ) {
+			// Confirm the "Soft Delete" row action and drive the select-all checkbox on the
+			// confirmation screen without inline event-handler attributes.
+			\wp_add_inline_script(
+				'common',
+				'( function () {
+	document.addEventListener( "click", function ( event ) {
+		var link = event.target.closest && event.target.closest( ".activitypub-delete-link" );
+		if ( link && link.dataset.activitypubConfirm && ! window.confirm( link.dataset.activitypubConfirm ) ) {
+			event.preventDefault();
+		}
+	} );
+	document.addEventListener( "change", function ( event ) {
+		if ( ! event.target || "cb-select-all" !== event.target.id ) {
+			return;
+		}
+		var table = event.target.closest( "table" );
+		if ( table ) {
+			table.querySelectorAll( "tbody input[type=checkbox]" ).forEach( function ( box ) {
+				box.checked = event.target.checked;
+			} );
+		}
+	} );
+}() );'
+			);
+		}
 	}
 
 	/**
@@ -1016,6 +1043,7 @@ class Admin {
 		$query_args = array(
 			'action'    => 'activitypub_confirm_post_removal',
 			'send_back' => \rawurlencode( $send_back ),
+			'_wpnonce'  => \wp_create_nonce( 'activitypub-confirm-post-removal' ),
 		);
 
 		// Add post IDs as separate parameters.
@@ -1034,15 +1062,19 @@ class Admin {
 	 * Handle the bulk post deletion page request directly.
 	 */
 	public static function handle_bulk_post_delete_page() {
+		// Verify nonce.
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ?? '' ) ), 'activitypub-confirm-post-removal' ) ) {
+			\wp_die( \esc_html__( 'Security check failed.', 'activitypub' ) );
+		}
+
 		// Check permissions.
 		if ( ! \current_user_can( 'edit_posts' ) ) {
 			\wp_die( \esc_html__( 'You do not have sufficient permissions to access this page.', 'activitypub' ) );
 		}
 
 		// Get parameters.
-		// phpcs:ignore WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput
-		$posts = \wp_unslash( $_GET['posts'] ?? array() );
-		// phpcs:ignore WordPress.Security.NonceVerification
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$posts     = \wp_unslash( $_GET['posts'] ?? array() );
 		$send_back = \urldecode( \sanitize_text_field( \wp_unslash( $_GET['send_back'] ?? '' ) ) );
 
 		// Sanitize post IDs.
@@ -1054,7 +1086,7 @@ class Admin {
 			// Try to determine the post type from the first post to preserve context.
 			$first_post = \get_post( $posts[0] );
 			if ( $first_post ) {
-				$send_back = \admin_url( 'edit.php?post_type=' . $first_post->post_type );
+				$send_back = \add_query_arg( 'post_type', $first_post->post_type, \admin_url( 'edit.php' ) );
 			} else {
 				$send_back = \admin_url( 'edit.php' );
 			}
@@ -1124,9 +1156,9 @@ class Admin {
 
 			// Send Delete activity.
 			$result = add_to_outbox( $post, 'Delete', $post->post_author );
-			if ( $result ) {
-				// Set visibility to private to prevent re-federation.
-				\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
+			if ( $result && ! \is_wp_error( $result ) ) {
+				// Mark the post as local-only so it is not re-federated.
+				\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
 				++$deleted_count;
 			}
 		}
@@ -1170,10 +1202,11 @@ class Admin {
 
 		// Send Delete activity.
 		$result = add_to_outbox( $post, 'Delete', $post->post_author );
+		$result = $result && ! \is_wp_error( $result );
 
-		// Set visibility to private to prevent re-federation.
+		// Mark the post as local-only so it is not re-federated.
 		if ( $result ) {
-			\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
+			\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
 		}
 
 		// Build redirect URL.
@@ -1293,10 +1326,10 @@ class Admin {
 			);
 
 			$actions['activitypub_delete'] = sprintf(
-				'<a href="%s" title="%s" onclick="return confirm(\'%s\');">%s</a>',
+				'<a href="%s" title="%s" class="activitypub-delete-link" data-activitypub-confirm="%s">%s</a>',
 				\esc_url( $delete_url ),
 				\esc_attr__( 'Send Delete activity to the Fediverse', 'activitypub' ),
-				\esc_js( __( 'Are you sure you want to delete this post from the Fediverse?', 'activitypub' ) ),
+				\esc_attr__( 'Are you sure you want to delete this post from the Fediverse?', 'activitypub' ),
 				\esc_html__( 'Soft Delete', 'activitypub' )
 			);
 		}

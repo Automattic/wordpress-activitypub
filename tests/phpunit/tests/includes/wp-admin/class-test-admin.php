@@ -427,8 +427,9 @@ class Test_Admin extends \WP_UnitTestCase {
 
 		$result = Admin::row_actions( $actions, $post );
 
-		$this->assertStringContainsString( 'onclick', $result['activitypub_delete'] );
-		$this->assertStringContainsString( 'confirm', $result['activitypub_delete'] );
+		$this->assertStringContainsString( 'class="activitypub-delete-link"', $result['activitypub_delete'] );
+		$this->assertStringContainsString( 'data-activitypub-confirm', $result['activitypub_delete'] );
+		$this->assertStringNotContainsString( 'onclick', $result['activitypub_delete'], 'Row action must not use an inline onclick handler.' );
 	}
 
 	/**
@@ -581,5 +582,75 @@ class Test_Admin extends \WP_UnitTestCase {
 
 		$this->assertStringContainsString( 'title=', $result['activitypub_delete'] );
 		$this->assertStringContainsString( 'Send Delete activity', $result['activitypub_delete'] );
+	}
+
+	/**
+	 * Test that a single soft delete sends a Delete and marks the post local-only.
+	 *
+	 * @covers ::handle_single_post_delete
+	 */
+	public function test_handle_single_post_delete_marks_post_local() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => self::$user_id,
+				'post_status' => 'publish',
+			)
+		);
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		$_GET['post_id']  = $post_id;
+		$_GET['_wpnonce'] = \wp_create_nonce( 'activitypub-delete-post-' . $post_id );
+
+		// Intercept the redirect so the handler does not exit the test run.
+		$redirect = static function () {
+			throw new \Exception( 'redirect' );
+		};
+		\add_filter( 'wp_redirect', $redirect );
+
+		try {
+			Admin::handle_single_post_delete();
+			$this->fail( 'Expected a redirect.' );
+		} catch ( \Exception $e ) {
+			$this->assertSame( 'redirect', $e->getMessage() );
+		} finally {
+			\remove_filter( 'wp_redirect', $redirect );
+			unset( $_GET['post_id'], $_GET['_wpnonce'] );
+		}
+
+		$this->assertSame(
+			ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL,
+			\get_post_meta( $post_id, 'activitypub_content_visibility', true ),
+			'A soft-deleted post must be marked local-only, not private.'
+		);
+		$this->assertSame(
+			ACTIVITYPUB_OBJECT_STATE_DELETED,
+			\get_post_meta( $post_id, 'activitypub_status', true ),
+			'Sending the Delete activity must move the post to the deleted state.'
+		);
+	}
+
+	/**
+	 * Test that a single soft delete with an invalid nonce is rejected.
+	 *
+	 * @covers ::handle_single_post_delete
+	 */
+	public function test_handle_single_post_delete_invalid_nonce() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => self::$user_id,
+				'post_status' => 'publish',
+			)
+		);
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		$_GET['post_id']  = $post_id;
+		$_GET['_wpnonce'] = 'invalid-nonce';
+
+		try {
+			$this->expectException( \WPDieException::class );
+			Admin::handle_single_post_delete();
+		} finally {
+			unset( $_GET['post_id'], $_GET['_wpnonce'] );
+		}
 	}
 }
