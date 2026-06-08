@@ -54,9 +54,13 @@ if ( empty( $items ) ) {
 
 // Set up type-specific variables.
 if ( 'users' === $item_type ) {
-	$page_title   = __( 'Delete Users from Fediverse', 'activitypub' );
-	$description  = __( 'You have removed the capability to publish to the Fediverse for the selected users. Do you also want to send a Delete activity to remove them from the Fediverse?', 'activitypub' );
-	$note         = __( '<strong>Note:</strong> This sends a Delete activity to notify remote servers that these profiles no longer exist.', 'activitypub' );
+	$page_title  = __( 'Delete Users from Fediverse', 'activitypub' );
+	$description = __( 'You have removed the capability to publish to the Fediverse for the selected users. Do you also want to send a Delete activity to remove them from the Fediverse?', 'activitypub' );
+	$note        = sprintf(
+		/* translators: %s: the word "Note:" in bold. */
+		__( '%s This sends a Delete activity to notify remote servers that these profiles no longer exist.', 'activitypub' ),
+		'<strong>' . esc_html__( 'Note:', 'activitypub' ) . '</strong>'
+	);
 	$nonce_action = 'bulk-users';
 	$form_action  = 'delete_actor_confirmed';
 	$input_name   = 'remove_from_fediverse[]';
@@ -65,9 +69,13 @@ if ( 'users' === $item_type ) {
 		'name' => __( 'Name', 'activitypub' ),
 	);
 } else {
-	$page_title   = __( 'Delete Posts from Fediverse', 'activitypub' );
-	$description  = __( 'You are about to send Delete activities for the following posts. This will remove them from the Fediverse while keeping them on your site.', 'activitypub' );
-	$note         = __( '<strong>Note:</strong> This sends a Delete activity to notify remote servers. The posts will remain on your WordPress site.', 'activitypub' );
+	$page_title  = __( 'Delete Posts from Fediverse', 'activitypub' );
+	$description = __( 'You are about to send Delete activities for the following posts. This will remove them from the Fediverse while keeping them on your site.', 'activitypub' );
+	$note        = sprintf(
+		/* translators: %s: the word "Note:" in bold. */
+		__( '%s This sends a Delete activity to notify remote servers. The posts will remain on your WordPress site.', 'activitypub' ),
+		'<strong>' . esc_html__( 'Note:', 'activitypub' ) . '</strong>'
+	);
 	$nonce_action = 'activitypub-bulk-post-delete';
 	$form_action  = 'activitypub_delete_posts_confirmed';
 	$input_name   = 'selected_posts[]';
@@ -97,7 +105,7 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 			<thead>
 				<tr>
 					<td class="manage-column column-cb check-column">
-						<input type="checkbox" id="cb-select-all"<?php echo $checked ? ' checked' : ''; ?> />
+						<input type="checkbox" id="cb-select-all"<?php echo $checked ? ' checked' : ''; ?> aria-label="<?php esc_attr_e( 'Select all', 'activitypub' ); ?>" />
 					</td>
 					<?php foreach ( $columns as $column_key => $column_label ) : ?>
 						<th scope="col" class="manage-column column-<?php echo esc_attr( $column_key ); ?>">
@@ -143,13 +151,5 @@ require_once ABSPATH . 'wp-admin/admin-header.php';
 		</p>
 	</form>
 </div>
-<script>
-document.getElementById('cb-select-all').addEventListener('change', function() {
-	const checkboxes = document.querySelectorAll('input[name="<?php echo esc_js( $input_name ); ?>"]');
-	for (let i = 0; i < checkboxes.length; i++) {
-		checkboxes[i].checked = this.checked;
-	}
-});
-</script>
 <?php
 require_once ABSPATH . 'wp-admin/admin-footer.php';
