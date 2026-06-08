@@ -166,6 +166,42 @@ function is_post_publicly_queryable( $post ) {
 }
 
 /**
+ * Check whether a post is federated.
+ *
+ * A post is federated when it has been sent to the Fediverse (its federation
+ * state is "federated") AND it is still publicly queryable, i.e. its post type
+ * is enabled for ActivityPub, it has a public status, it is not password-
+ * protected, and its content visibility allows it (see `is_post_publicly_queryable()`).
+ *
+ * Re-checking the live queryability alongside the stored state guards against a
+ * stale "federated" status left behind when a post is moved to a private status,
+ * switched to local visibility, or its post type loses ActivityPub support.
+ *
+ * The federation-state check also keeps `is_post_publicly_queryable()`'s
+ * preview allowance inert here: a draft/pending post is never in the federated
+ * state, so the preview branch can never make this return true.
+ *
+ * @since unreleased
+ *
+ * @param mixed $post The post ID or object.
+ *
+ * @return boolean True if the post is federated, false otherwise.
+ */
+function is_post_federated( $post ) {
+	if ( empty( $post ) ) {
+		return false;
+	}
+
+	$post = \get_post( $post );
+
+	if ( ! $post ) {
+		return false;
+	}
+
+	return ACTIVITYPUB_OBJECT_STATE_FEDERATED === get_wp_object_state( $post ) && is_post_publicly_queryable( $post );
+}
+
+/**
  * Check if a post is an ActivityPub post.
  *
  * @param mixed $post The post object or ID.
