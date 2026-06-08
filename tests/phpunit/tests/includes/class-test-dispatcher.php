@@ -346,6 +346,57 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * A public Delete fans out to followers; a private Delete does not.
+	 *
+	 * A soft-deleted post's Tombstone is addressed to the public collection, so
+	 * it broadcasts (get_inboxes_for_activity() then expands it to every known
+	 * remote inbox). A Delete that is only addressed to a mentioned actor — a
+	 * private/direct activity torn down via Outbox::undo() — must NOT enter the
+	 * follower fan-out, or it would leak the object URI to servers that never
+	 * received the original.
+	 *
+	 * @covers ::should_send_to_followers
+	 */
+	public function test_delete_fan_out_respects_audience() {
+		Followers::add( self::$user_id, 'https://example.org/users/username' );
+
+		$actor       = Actors::get_by_id( self::$user_id );
+		$outbox_item = (object) array(
+			'ID'          => 0,
+			'post_author' => self::$user_id,
+		);
+
+		$should_send = new \ReflectionMethod( Dispatcher::class, 'should_send_to_followers' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$should_send->setAccessible( true );
+		}
+
+		// Public Delete (post Tombstone): broadcasts.
+		$public_delete = new Activity();
+		$public_delete->set_type( 'Delete' );
+		$public_delete->set_actor( $actor->get_id() );
+		$public_delete->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
+		$public_delete->set_cc( array() );
+
+		// Private Delete (e.g. a direct activity undone): addressed only to a mention.
+		$private_delete = new Activity();
+		$private_delete->set_type( 'Delete' );
+		$private_delete->set_actor( $actor->get_id() );
+		$private_delete->set_to( array( 'https://remote.example/users/bob' ) );
+		$private_delete->set_cc( array() );
+
+		try {
+			$public_result  = $should_send->invoke( null, $public_delete, $actor, $outbox_item );
+			$private_result = $should_send->invoke( null, $private_delete, $actor, $outbox_item );
+		} catch ( \Exception $e ) {
+			$this->fail( 'Invoke failed: ' . $e->getMessage() );
+		}
+
+		$this->assertTrue( $public_result, 'A public Delete must fan out to remote inboxes.' );
+		$this->assertFalse( $private_result, 'A private/direct Delete must not be broadcast to all inboxes.' );
+	}
+
+	/**
 	 * Returns a mocked Activity object.
 	 *
 	 * @return Activity

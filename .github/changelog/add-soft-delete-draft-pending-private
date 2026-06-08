@@ -1,0 +1,4 @@
+Significance: major
+Type: changed
+
+Federated posts moved to draft, pending, private, trash, or password-protected now send a Delete to followers (previously sent a placeholder "editing" Update or were silent).
