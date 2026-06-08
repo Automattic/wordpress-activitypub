@@ -653,4 +653,108 @@ class Test_Admin extends \WP_UnitTestCase {
 			unset( $_GET['post_id'], $_GET['_wpnonce'] );
 		}
 	}
+
+	/**
+	 * Test the bulk request stores IDs in a transient and redirects with a token (not in the URL).
+	 *
+	 * @covers ::handle_post_bulk_request
+	 */
+	public function test_handle_post_bulk_request_redirects_with_token() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => self::$user_id,
+				'post_status' => 'publish',
+			)
+		);
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		$captured = null;
+		$redirect = static function ( $location ) use ( &$captured ) {
+			$captured = $location;
+			throw new \Exception( 'redirect' );
+		};
+		\add_filter( 'wp_redirect', $redirect );
+
+		try {
+			Admin::handle_post_bulk_request( \admin_url( 'edit.php' ), 'activitypub_delete', array( $post_id ) );
+			$this->fail( 'Expected a redirect.' );
+		} catch ( \Exception $e ) {
+			$this->assertSame( 'redirect', $e->getMessage() );
+		} finally {
+			\remove_filter( 'wp_redirect', $redirect );
+		}
+
+		$this->assertStringContainsString( 'action=activitypub_confirm_post_removal', $captured );
+		$this->assertStringContainsString( 'token=', $captured );
+		$this->assertStringContainsString( '_wpnonce=', $captured );
+		$this->assertStringNotContainsString( 'posts%5B', $captured, 'Post IDs must not be passed in the URL.' );
+
+		// The token resolves to the federated post via the transient.
+		\parse_str( (string) \wp_parse_url( $captured, PHP_URL_QUERY ), $query );
+		$stored = \get_transient( 'activitypub_bulk_delete_' . \get_current_user_id() . '_' . \sanitize_key( $query['token'] ) );
+		$this->assertSame( array( $post_id ), $stored );
+	}
+
+	/**
+	 * Test the bulk confirmation sends a Delete and marks posts local-only.
+	 *
+	 * @covers ::handle_bulk_post_delete_confirmation
+	 */
+	public function test_handle_bulk_post_delete_confirmation_deletes() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => self::$user_id,
+				'post_status' => 'publish',
+			)
+		);
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		$_POST['_wpnonce']       = \wp_create_nonce( 'activitypub-bulk-post-delete' );
+		$_POST['selected_posts'] = array( $post_id );
+		$_POST['send_back']      = \admin_url( 'edit.php' );
+
+		$captured = null;
+		$redirect = static function ( $location ) use ( &$captured ) {
+			$captured = $location;
+			throw new \Exception( 'redirect' );
+		};
+		\add_filter( 'wp_redirect', $redirect );
+
+		try {
+			Admin::handle_bulk_post_delete_confirmation();
+		} catch ( \Exception $e ) {
+			$this->assertSame( 'redirect', $e->getMessage() );
+		} finally {
+			\remove_filter( 'wp_redirect', $redirect );
+			unset( $_POST['_wpnonce'], $_POST['selected_posts'], $_POST['send_back'] );
+		}
+
+		$this->assertSame(
+			ACTIVITYPUB_OBJECT_STATE_DELETED,
+			\get_post_meta( $post_id, 'activitypub_status', true ),
+			'The post must move to the deleted state.'
+		);
+		$this->assertSame(
+			ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL,
+			\get_post_meta( $post_id, 'activitypub_content_visibility', true ),
+			'The post must be marked local-only.'
+		);
+		$this->assertStringContainsString( 'activitypub_deleted=1', $captured );
+	}
+
+	/**
+	 * Test the bulk confirmation rejects an invalid nonce.
+	 *
+	 * @covers ::handle_bulk_post_delete_confirmation
+	 */
+	public function test_handle_bulk_post_delete_confirmation_invalid_nonce() {
+		$_POST['_wpnonce'] = 'invalid-nonce';
+
+		try {
+			$this->expectException( \WPDieException::class );
+			Admin::handle_bulk_post_delete_confirmation();
+		} finally {
+			unset( $_POST['_wpnonce'] );
+		}
+	}
 }

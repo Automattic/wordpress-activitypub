@@ -788,6 +788,47 @@ class Admin {
 	}
 
 	/**
+	 * Store the IDs pending a bulk-delete confirmation and return a one-time token.
+	 *
+	 * The IDs are kept in a short-lived, per-user transient rather than passed
+	 * through the redirect URL, so large selections cannot exceed URL length limits.
+	 *
+	 * @param int[] $ids The IDs to store.
+	 *
+	 * @return string The token to pass to the confirmation page.
+	 */
+	private static function store_bulk_delete_ids( $ids ) {
+		$token = \wp_generate_uuid4();
+		\set_transient(
+			'activitypub_bulk_delete_' . \get_current_user_id() . '_' . $token,
+			\array_values( \array_map( 'absint', (array) $ids ) ),
+			5 * MINUTE_IN_SECONDS
+		);
+
+		return $token;
+	}
+
+	/**
+	 * Retrieve and delete the IDs stored for a bulk-delete confirmation token.
+	 *
+	 * @param string $token The token from the confirmation page request.
+	 *
+	 * @return int[] The stored IDs, or an empty array if none or expired.
+	 */
+	private static function consume_bulk_delete_ids( $token ) {
+		$token = \sanitize_key( $token );
+		if ( '' === $token ) {
+			return array();
+		}
+
+		$key = 'activitypub_bulk_delete_' . \get_current_user_id() . '_' . $token;
+		$ids = \get_transient( $key );
+		\delete_transient( $key );
+
+		return \is_array( $ids ) ? $ids : array();
+	}
+
+	/**
 	 * Handle bulk activitypub requests.
 	 *
 	 * * `add_activitypub_cap` - Add the activitypub capability to the selected users.
@@ -837,18 +878,17 @@ class Admin {
 					++$removed_count;
 				}
 
-				// Build the query args with proper array handling for fediverse deletion confirmation.
-				$query_args = array(
-					'action'    => 'activitypub_confirm_removal',
-					'send_back' => \rawurlencode( $send_back ),
+				// Build the confirmation URL. The user IDs are stored in a transient and
+				// referenced by token to avoid URL length limits on large selections.
+				$confirmation_url = \add_query_arg(
+					array(
+						'action'    => 'activitypub_confirm_removal',
+						'send_back' => \rawurlencode( $send_back ),
+						'token'     => self::store_bulk_delete_ids( $users ),
+						'_wpnonce'  => \wp_create_nonce( 'activitypub-confirm-removal' ),
+					),
+					\admin_url( 'users.php' )
 				);
-
-				// Add user IDs as separate parameters.
-				foreach ( $users as $index => $user_id ) {
-					$query_args[ sprintf( 'users[%d]', $index ) ] = absint( $user_id );
-				}
-
-				$confirmation_url = \add_query_arg( $query_args, \admin_url( 'users.php' ) );
 
 				// Force redirect instead of just returning URL.
 				\wp_safe_redirect( $confirmation_url );
@@ -865,21 +905,22 @@ class Admin {
 	 * Handle the bulk capability removal page request directly.
 	 */
 	public static function handle_bulk_actor_delete_page() {
+		// Verify nonce.
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_GET['_wpnonce'] ?? '' ) ), 'activitypub-confirm-removal' ) ) {
+			\wp_die( \esc_html__( 'Security check failed.', 'activitypub' ) );
+		}
 
 		// Check permissions.
 		if ( ! \current_user_can( 'edit_users' ) ) {
 			\wp_die( \esc_html__( 'You do not have sufficient permissions to access this page.', 'activitypub' ) );
 		}
 
-		// Get parameters.
-		// phpcs:ignore WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput
-		$users = \wp_unslash( $_GET['users'] ?? array() );
+		// Get the pending user IDs from the transient referenced by the token.
+		$users = self::consume_bulk_delete_ids( \sanitize_key( \wp_unslash( $_GET['token'] ?? '' ) ) );
+		$users = \array_filter( $users );
+
 		// phpcs:ignore WordPress.Security.NonceVerification
 		$send_back = \urldecode( \sanitize_text_field( \wp_unslash( $_GET['send_back'] ?? '' ) ) );
-
-		// Sanitize user IDs.
-		$users = \array_map( 'absint', (array) $users );
-		$users = \array_filter( $users );
 
 		// Validate send_back URL.
 		if ( empty( $send_back ) ) {
@@ -1039,19 +1080,17 @@ class Admin {
 			return \add_query_arg( 'activitypub_no_federated', '1', $send_back );
 		}
 
-		// Build the query args for the confirmation page.
-		$query_args = array(
-			'action'    => 'activitypub_confirm_post_removal',
-			'send_back' => \rawurlencode( $send_back ),
-			'_wpnonce'  => \wp_create_nonce( 'activitypub-confirm-post-removal' ),
+		// Build the confirmation URL. The post IDs are stored in a transient and
+		// referenced by token to avoid URL length limits on large selections.
+		$confirmation_url = \add_query_arg(
+			array(
+				'action'    => 'activitypub_confirm_post_removal',
+				'send_back' => \rawurlencode( $send_back ),
+				'token'     => self::store_bulk_delete_ids( $federated_posts ),
+				'_wpnonce'  => \wp_create_nonce( 'activitypub-confirm-post-removal' ),
+			),
+			\admin_url( 'edit.php' )
 		);
-
-		// Add post IDs as separate parameters.
-		foreach ( $federated_posts as $index => $post_id ) {
-			$query_args[ sprintf( 'posts[%d]', $index ) ] = \absint( $post_id );
-		}
-
-		$confirmation_url = \add_query_arg( $query_args, \admin_url( 'edit.php' ) );
 
 		// Force redirect to confirmation page.
 		\wp_safe_redirect( $confirmation_url );
@@ -1072,14 +1111,12 @@ class Admin {
 			\wp_die( \esc_html__( 'You do not have sufficient permissions to access this page.', 'activitypub' ) );
 		}
 
-		// Get parameters.
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		$posts     = \wp_unslash( $_GET['posts'] ?? array() );
-		$send_back = \urldecode( \sanitize_text_field( \wp_unslash( $_GET['send_back'] ?? '' ) ) );
-
-		// Sanitize post IDs.
-		$posts = \array_map( 'absint', (array) $posts );
+		// Get the pending post IDs from the transient referenced by the token.
+		$posts = self::consume_bulk_delete_ids( \sanitize_key( \wp_unslash( $_GET['token'] ?? '' ) ) );
 		$posts = \array_filter( $posts );
+
+		// phpcs:ignore WordPress.Security.NonceVerification
+		$send_back = \urldecode( \sanitize_text_field( \wp_unslash( $_GET['send_back'] ?? '' ) ) );
 
 		// Validate send_back URL.
 		if ( empty( $send_back ) && ! empty( $posts ) ) {
