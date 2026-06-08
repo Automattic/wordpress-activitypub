@@ -15,13 +15,13 @@ use function Activitypub\is_activity_public;
 /**
  * Handle outgoing Arrive activities.
  *
- * @since unreleased
+ * @since 8.1.0
  */
 class Arrive {
 	/**
 	 * Initialize the class, registering WordPress hooks.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_outbox_arrive', array( self::class, 'handle_arrive' ), 10, 3 );
@@ -38,7 +38,7 @@ class Arrive {
 	 * As a local side effect, a WordPress post is created so the
 	 * check-in appears on the blog with location geodata.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param array       $data       The activity data array.
 	 * @param int         $user_id    The user ID.
@@ -80,7 +80,7 @@ class Arrive {
 	 * Creates a blog post with the check-in content and saves
 	 * location geodata so it can be displayed on the site.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param array       $data       The activity data.
 	 * @param int         $user_id    The user ID.
@@ -121,7 +121,7 @@ class Arrive {
 		/**
 		 * Fires after an Arrive activity has created a local blog post.
 		 *
-		 * @since unreleased
+		 * @since 8.1.0
 		 *
 		 * @param int        $post_id  The created post ID.
 		 * @param array|null $location The location data from the activity.
@@ -139,7 +139,7 @@ class Arrive {
 	 * Uses the standard `geo_*` meta keys that the Post transformer
 	 * reads back when converting to ActivityPub Place objects.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param int        $post_id  The post ID.
 	 * @param array|null $location The ActivityPub location data.

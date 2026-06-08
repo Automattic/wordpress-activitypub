@@ -674,6 +674,21 @@ class Blocks {
 			return null;
 		}
 
+		/*
+		 * In feed contexts (RSS, Atom, and anything else WordPress treats as a feed) the styled
+		 * embed card depends on plugin CSS that isn't loaded, so it degrades to an unreadable
+		 * wall of text. Substitute the same simplified mention link the federation path uses,
+		 * and if the remote lookup fails fall through to the plain `<a class="u-in-reply-to">`
+		 * link below so the feed item still surfaces *some* indication that it's a reply.
+		 */
+		if ( \is_feed() ) {
+			$mention = self::generate_reply_link( '', array( 'attrs' => $attrs ) );
+			if ( ! empty( $mention ) ) {
+				return $mention;
+			}
+			$attrs['embedPost'] = false;
+		}
+
 		$show_embed = isset( $attrs['embedPost'] ) && $attrs['embedPost'];
 
 		$wrapper_attrs = get_block_wrapper_attributes(
@@ -870,7 +885,7 @@ class Blocks {
 					href="#"
 					role="button"
 					class="pagination-previous"
-					data-wp-on-async--click="actions.previousPage"
+					data-wp-on--click="actions.previousPage"
 					data-wp-bind--aria-disabled="state.disablePreviousLink"
 					aria-label="<?php \esc_attr_e( 'Previous page', 'activitypub' ); ?>"
 				>
@@ -883,7 +898,7 @@ class Blocks {
 					href="#"
 					role="button"
 					class="pagination-next"
-					data-wp-on-async--click="actions.nextPage"
+					data-wp-on--click="actions.nextPage"
 					data-wp-bind--aria-disabled="state.disableNextLink"
 					aria-label="<?php \esc_attr_e( 'Next page', 'activitypub' ); ?>"
 				>
@@ -1050,7 +1065,7 @@ class Blocks {
 	 * Parses the post content for activitypub/stats blocks and appends each
 	 * as an Image attachment to the ActivityPub object.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param array    $attachments The existing attachments.
 	 * @param \WP_Post $post        The post object.
@@ -1106,7 +1121,7 @@ class Blocks {
 	/**
 	 * Recursively find blocks of a given type in a block tree.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param array  $blocks     The parsed blocks.
 	 * @param string $block_name The block name to search for.
@@ -1155,7 +1170,7 @@ class Blocks {
 	 * Tokenizes the content with wp_html_split(), tracks nesting depth,
 	 * and wraps each top-level element in block comment delimiters.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param string $content The HTML content.
 	 *
@@ -1234,7 +1249,7 @@ class Blocks {
 	/**
 	 * Wrap an HTML element in block comment delimiters.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param string $tag  The uppercase tag name.
 	 * @param string $html The element HTML.
@@ -1259,16 +1274,27 @@ class Blocks {
 	/**
 	 * Filter the main query to exclude replies.
 	 *
-	 * When the "Posts" tab is active (default), adds a WHERE clause to
-	 * exclude posts containing the `activitypub/reply` block. This
-	 * filters the main query so that Query Loop blocks with
-	 * `inherit: true` also pick up the filter.
+	 * Adds a WHERE clause to exclude posts containing the `activitypub/reply`
+	 * block when the visitor has explicitly requested the "Posts" tab via
+	 * `?filter=posts`. This filters the main query so that Query Loop blocks
+	 * with `inherit: true` also pick up the filter.
 	 *
-	 * @since unreleased
+	 * The filter only attaches on that explicit opt-in. Admin, feed, and any
+	 * regular frontend request (front page, archives, search…) are never
+	 * touched, which is why no block-presence probing is needed: the only
+	 * way `?filter=posts` appears in a URL is from a click on the
+	 * `activitypub/posts-and-replies` tab block.
+	 *
+	 * @since 8.1.0
 	 *
 	 * @param WP_Query $query The WP_Query instance.
 	 */
 	public static function filter_query_loop_vars( $query ) {
+		// Never touch admin or feed queries.
+		if ( \is_admin() || $query->is_feed() ) {
+			return;
+		}
+
 		if ( ! $query->is_main_query() || $query->is_singular() ) {
 			return;
 		}
@@ -1283,11 +1309,9 @@ class Blocks {
 			}
 		}
 
+		// Only filter when the "Posts" tab has been explicitly selected.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$active_tab = isset( $_GET['filter'] ) ? \sanitize_key( $_GET['filter'] ) : 'posts';
-
-		// Only filter when the "Posts" tab is active (default).
-		if ( 'posts-and-replies' === $active_tab ) {
+		if ( ! isset( $_GET['filter'] ) || 'posts' !== \sanitize_key( \wp_unslash( $_GET['filter'] ) ) ) {
 			return;
 		}
 
@@ -1300,7 +1324,7 @@ class Blocks {
 	 * Removes itself after the first execution to avoid
 	 * affecting secondary queries on the same page.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param string $where The WHERE clause.
 	 * @return string Modified WHERE clause.

@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+OAuth rate-limit responses now include a `Retry-After` header so clients know how long to wait before retrying.

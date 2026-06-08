@@ -227,7 +227,7 @@ class Move {
 				/**
 				 * Fires when an actor move fails during domain change.
 				 *
-				 * @since unreleased
+				 * @since 8.1.0
 				 *
 				 * @param \WP_Error $result   The error that occurred.
 				 * @param string    $actor_id The actor ID that failed to move.

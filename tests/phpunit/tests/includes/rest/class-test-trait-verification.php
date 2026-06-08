@@ -55,6 +55,8 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		\wp_set_current_user( 0 );
 		\remove_all_filters( 'activitypub_defer_signature_verification' );
 		\remove_all_filters( 'activitypub_oauth_check_permission' );
+		\remove_all_filters( 'activitypub_user_can_act_as_blog' );
+		\delete_option( 'activitypub_actor_mode' );
 
 		// Reset OAuth token state.
 		$reflection = new \ReflectionClass( OAuth_Server::class );
@@ -362,6 +364,107 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test unauthenticated requests cannot satisfy ownership for the blog actor.
+	 *
+	 * Guards against the pre-existing 0 === 0 path where `get_current_user_id()`
+	 * for an anonymous request would equal `BLOG_USER_ID`.
+	 *
+	 * @covers ::verify_owner
+	 */
+	public function test_verify_owner_anonymous_cannot_act_as_blog() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\wp_set_current_user( 0 );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/actors/0/followers' );
+		$request->set_param( 'user_id', 0 );
+
+		$result = $this->instance->verify_owner( $request );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_forbidden', $result->get_error_code() );
+		$this->assertEquals( 403, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Test administrators can act as the blog actor.
+	 *
+	 * @covers ::verify_owner
+	 */
+	public function test_verify_owner_admin_can_act_as_blog() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $admin_id );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/actors/0/outbox' );
+		$request->set_param( 'user_id', 0 );
+
+		$result = $this->instance->verify_owner( $request );
+
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * Test non-administrators cannot act as the blog actor by default.
+	 *
+	 * @covers ::verify_owner
+	 */
+	public function test_verify_owner_non_admin_cannot_act_as_blog() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\wp_set_current_user( $this->user_id );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/actors/0/outbox' );
+		$request->set_param( 'user_id', 0 );
+
+		$result = $this->instance->verify_owner( $request );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_forbidden', $result->get_error_code() );
+		$this->assertEquals( 403, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Test the `activitypub_user_can_act_as_blog` filter can grant access.
+	 *
+	 * @covers ::verify_owner
+	 */
+	public function test_verify_owner_blog_actor_filter_grants_access() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\wp_set_current_user( $this->user_id );
+		\add_filter( 'activitypub_user_can_act_as_blog', '__return_true' );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/actors/0/outbox' );
+		$request->set_param( 'user_id', 0 );
+
+		$result = $this->instance->verify_owner( $request );
+
+		\remove_filter( 'activitypub_user_can_act_as_blog', '__return_true' );
+
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * Test the `activitypub_user_can_act_as_blog` filter can revoke admin access.
+	 *
+	 * @covers ::verify_owner
+	 */
+	public function test_verify_owner_blog_actor_filter_revokes_admin_access() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $admin_id );
+		\add_filter( 'activitypub_user_can_act_as_blog', '__return_false' );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/actors/0/outbox' );
+		$request->set_param( 'user_id', 0 );
+
+		$result = $this->instance->verify_owner( $request );
+
+		\remove_filter( 'activitypub_user_can_act_as_blog', '__return_false' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_forbidden', $result->get_error_code() );
+	}
+
+	/**
 	 * Data provider for verify_key_id tests.
 	 *
 	 * @return array[] Test cases: [ signature_header, actor, expected_pass ].
@@ -515,5 +618,111 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		$property   = $reflection->getProperty( 'current_token' );
 		$property->setAccessible( true );
 		$property->setValue( null, $token );
+	}
+
+	/**
+	 * Test that `$force_signature = true` makes a GET require a signature even
+	 * when Authorized Fetch is disabled.
+	 *
+	 * @covers ::verify_signature
+	 */
+	public function test_verify_signature_force_requires_signature_on_get() {
+		\delete_option( 'activitypub_authorized_fetch' );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/actors/1/followers/sync' );
+
+		$result = $this->instance->verify_signature( $request, true );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_signature_verification', $result->get_error_code() );
+		$this->assertEquals( 401, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Invoke the private verify_key_id() with a crafted Signature-Input header and actor.
+	 *
+	 * @param string $signature_input The Signature-Input header value.
+	 * @param string $actor           The activity actor URI.
+	 * @return true|\WP_Error
+	 */
+	private function invoke_verify_key_id( $signature_input, $actor ) {
+		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
+		$request->set_header( 'signature-input', $signature_input );
+		$request->set_header( 'content-type', 'application/json' );
+		$request->set_body( \wp_json_encode( array( 'actor' => $actor ) ) );
+
+		$method = new \ReflectionMethod( $this->instance, 'verify_key_id' );
+		$method->setAccessible( true );
+
+		return $method->invoke( $this->instance, $request );
+	}
+
+	/**
+	 * Test that an unquoted RFC 9421 keyid on a different host is rejected.
+	 *
+	 * Regression: the keyid binding previously matched quotes only, so an unquoted
+	 * keyid (which the RFC 9421 verifier accepts) skipped the host-equality check.
+	 *
+	 * @covers ::verify_key_id
+	 */
+	public function test_verify_key_id_unquoted_mismatched_host_is_rejected() {
+		$result = $this->invoke_verify_key_id(
+			'sig1=("@method");keyid=https://evil.example/actor#key;alg="rsa-v1_5-sha256"',
+			'https://victim.example/users/alice'
+		);
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_key_actor_mismatch', $result->get_error_code() );
+		$this->assertEquals( 403, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Test that an unquoted RFC 9421 keyid on the same host passes.
+	 *
+	 * @covers ::verify_key_id
+	 */
+	public function test_verify_key_id_unquoted_same_host_passes() {
+		$result = $this->invoke_verify_key_id(
+			'sig1=("@method");keyid=https://example.org/actor#key;alg="rsa-v1_5-sha256"',
+			'https://example.org/users/bob'
+		);
+
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * Test that a quoted RFC 9421 keyid on a different host is still rejected.
+	 *
+	 * @covers ::verify_key_id
+	 */
+	public function test_verify_key_id_quoted_mismatched_host_is_rejected() {
+		$result = $this->invoke_verify_key_id(
+			'sig1=("@method");keyid="https://evil.example/actor#key";alg="rsa-v1_5-sha256"',
+			'https://victim.example/users/alice'
+		);
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_key_actor_mismatch', $result->get_error_code() );
+		$this->assertEquals( 403, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Test that a keyid injected into another parameter's value does not fool the binding.
+	 *
+	 * The real `keyid` parameter (evil host) is what the RFC 9421 verifier uses; a
+	 * `keyid=<victim host>` string smuggled inside an earlier quoted parameter value must
+	 * not be picked up instead, which would make the host check pass against the wrong host.
+	 *
+	 * @covers ::verify_key_id
+	 */
+	public function test_verify_key_id_ignores_keyid_inside_other_param() {
+		$result = $this->invoke_verify_key_id(
+			'sig1=("@method");tag="keyid=https://victim.example/key";keyid=https://evil.example/key',
+			'https://victim.example/users/alice'
+		);
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_key_actor_mismatch', $result->get_error_code() );
+		$this->assertEquals( 403, $result->get_error_data()['status'] );
 	}
 }

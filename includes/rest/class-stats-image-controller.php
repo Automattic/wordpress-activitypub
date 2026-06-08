@@ -3,7 +3,7 @@
  * Stats_Image_Controller file.
  *
  * @package Activitypub
- * @since unreleased
+ * @since 8.1.0
  */
 
 namespace Activitypub\Rest;

@@ -10,13 +10,21 @@ import {
 	SelectControl,
 } from '@wordpress/components';
 import { Icon, globe, people, external } from '@wordpress/icons';
-import { useSelect, select } from '@wordpress/data';
+import { useSelect, useDispatch, select } from '@wordpress/data';
 import { useEntityProp } from '@wordpress/core-data';
 import { useEffect } from '@wordpress/element';
+import { store as noticesStore } from '@wordpress/notices';
 import { addQueryArgs } from '@wordpress/url';
 import { __, sprintf } from '@wordpress/i18n';
 import { SVG, Path } from '@wordpress/primitives';
-import { getDefaultVisibility } from './utils';
+import { getDefaultVisibility, shouldWarnAboutFederatedDeletion } from './utils';
+
+/**
+ * Notice ID for the "removed from the Fediverse" warning, so it can be updated and removed idempotently.
+ *
+ * @member {string} DELETION_NOTICE_ID
+ */
+const DELETION_NOTICE_ID = 'activitypub/federated-deletion-warning';
 
 /**
  * Editor plugin for ActivityPub settings in the block editor.
@@ -28,11 +36,31 @@ const EditorPlugin = () => {
 	const [ meta, setMeta ] = useEntityProp( 'postType', postType, 'meta' );
 	const postDate = useSelect( ( selectFn ) => selectFn( editorStore ).getCurrentPost().date, [] );
 
+	// The edited status and password drive the "removed from the Fediverse" warning.
+	const { editedStatus, editedPassword } = useSelect( ( selectFn ) => {
+		const editor = selectFn( editorStore );
+
+		return {
+			editedStatus: editor.getEditedPostAttribute( 'status' ),
+			editedPassword: editor.getEditedPostAttribute( 'password' ),
+		};
+	}, [] );
+
+	const { createWarningNotice, removeNotice } = useDispatch( noticesStore );
+
 	// Get the computed default visibility.
 	const defaultVisibility = getDefaultVisibility( meta, postDate );
 
 	// Get the default quote policy from settings.
 	const defaultQuotePolicy = window._activityPubOptions?.defaultQuotePolicy || 'anyone';
+
+	// Whether hiding this already-federated post will send a Delete to followers.
+	const warnAboutDeletion = shouldWarnAboutFederatedDeletion( {
+		federationStatus: meta?.activitypub_status,
+		status: editedStatus,
+		password: editedPassword,
+		visibility: defaultVisibility,
+	} );
 
 	// Sync computed default to meta when it differs from stored value.
 	// This ensures the default is persisted even if user doesn't change it.
@@ -46,6 +74,24 @@ const EditorPlugin = () => {
 			setMeta( { ...meta, activitypub_content_visibility: defaultVisibility } );
 		}
 	}, [ defaultVisibility, meta, setMeta ] );
+
+	// Surface the deletion warning as a native editor notice so it can't be missed.
+	useEffect( () => {
+		if ( warnAboutDeletion ) {
+			createWarningNotice(
+				__(
+					"This post has already been shared on the Fediverse. If you make it a draft, private, or password-protected post, other servers will be asked to remove it from your followers' feeds. Not all platforms support restoring removed content, so the post may disappear permanently.",
+					'activitypub'
+				),
+				{ id: DELETION_NOTICE_ID, isDismissible: true }
+			);
+		} else {
+			removeNotice( DELETION_NOTICE_ID );
+		}
+
+		// Clear the notice when the editor unmounts so it doesn't linger.
+		return () => removeNotice( DELETION_NOTICE_ID );
+	}, [ warnAboutDeletion, createWarningNotice, removeNotice ] );
 
 	// Don't show when editing sync blocks.
 	if ( 'wp_block' === postType ) {

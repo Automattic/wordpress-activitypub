@@ -10,6 +10,8 @@ namespace Activitypub\Rest;
 use Activitypub\Comment;
 use Activitypub\Webfinger;
 
+use function Activitypub\is_post_publicly_queryable;
+
 /**
  * Comments_Controller class.
  *
@@ -30,7 +32,7 @@ class Comments_Controller extends \WP_REST_Controller {
 	 *
 	 * @var string
 	 */
-	protected $rest_base = 'comments/(?P<comment_id>[-]?\d+)';
+	protected $rest_base = 'comments/(?P<comment_id>[\d]+)';
 
 	/**
 	 * Register routes.
@@ -44,6 +46,7 @@ class Comments_Controller extends \WP_REST_Controller {
 					'comment_id' => array(
 						'description'       => 'The ID of the comment.',
 						'type'              => 'integer',
+						'minimum'           => 1,
 						'required'          => true,
 						'validate_callback' => array( $this, 'validate_comment' ),
 					),
@@ -79,9 +82,18 @@ class Comments_Controller extends \WP_REST_Controller {
 			return new \WP_Error( 'activitypub_comment_not_found', \__( 'Comment not found', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
-		$is_local = Comment::is_local( $comment );
+		/*
+		 * A comment inherits the visibility of its parent post. Check this
+		 * BEFORE the local-only guard below, so that any comment on a non-
+		 * publicly-queryable parent returns the same "not found" shape — we
+		 * never want an outsider to distinguish "comment exists but is local"
+		 * from "comment missing" when the parent post is private.
+		 */
+		if ( ! is_post_publicly_queryable( $comment->comment_post_ID ) ) {
+			return new \WP_Error( 'activitypub_comment_not_found', \__( 'Comment not found', 'activitypub' ), array( 'status' => 404 ) );
+		}
 
-		if ( $is_local ) {
+		if ( Comment::is_local( $comment ) ) {
 			return new \WP_Error( 'activitypub_local_only_comment', \__( 'Comment is local only', 'activitypub' ), array( 'status' => 403 ) );
 		}
 

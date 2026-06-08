@@ -1,4 +1,5 @@
 import { getContext, store, getElement } from '@wordpress/interactivity';
+import { withSyncEvent } from '../with-sync-event';
 
 /**
  * @typedef {Object} context
@@ -81,9 +82,7 @@ export function createModalStore( namespace ) {
 				} else {
 					const blockWrapper = document.getElementById( context.blockId );
 					if ( blockWrapper ) {
-						const openButton = blockWrapper.querySelector(
-							'[data-wp-on--click="actions.toggleModal"], [data-wp-on-async--click="actions.toggleModal"]'
-						);
+						const openButton = blockWrapper.querySelector( '[data-wp-on--click="actions.toggleModal"]' );
 						if ( openButton ) {
 							openButton.focus();
 						}
@@ -101,7 +100,7 @@ export function createModalStore( namespace ) {
 			 *
 			 * @param {Event} event Click event.
 			 */
-			toggleModal( event ) {
+			toggleModal: withSyncEvent( ( event ) => {
 				event?.preventDefault?.();
 				const { modal } = getContext();
 
@@ -110,7 +109,7 @@ export function createModalStore( namespace ) {
 				} else {
 					actions.openModal( event );
 				}
-			},
+			} ),
 		},
 
 		callbacks: {
@@ -185,9 +184,7 @@ export function createModalStore( namespace ) {
 				}
 
 				// If the click was on any toggle trigger or its children, we should not close the modal.
-				const toggleButtons = blockWrapper.querySelectorAll(
-					'[data-wp-on--click="actions.toggleModal"], [data-wp-on-async--click="actions.toggleModal"]'
-				);
+				const toggleButtons = blockWrapper.querySelectorAll( '[data-wp-on--click="actions.toggleModal"]' );
 				for ( const toggleButton of toggleButtons ) {
 					if ( toggleButton === event.target || toggleButton.contains( event.target ) ) {
 						return;

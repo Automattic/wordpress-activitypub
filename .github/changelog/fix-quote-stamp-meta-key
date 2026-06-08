@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Stop the quote-authorization stamp from exposing a post's other metadata.

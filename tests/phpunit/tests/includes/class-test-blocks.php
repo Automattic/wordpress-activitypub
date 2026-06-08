@@ -247,6 +247,90 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Feed renders of the reply block should produce the simple mention link
+	 * instead of the embed card, which depends on plugin CSS that feeds don't load.
+	 *
+	 * @covers ::render_reply_block
+	 */
+	public function test_feed_renders_reply_block_as_mention_link() {
+		$reply_url = 'https://devs.live/notice/AQ8N0Xl57y8bUQAb6e';
+		$pre_http  = function ( $response, $url ) use ( $reply_url ) {
+			if ( $reply_url === $url ) {
+				return array(
+					'id'           => $reply_url,
+					'type'         => 'Note',
+					'attributedTo' => 'https://devs.live/users/tester',
+					'content'      => 'Cake day it is',
+					'published'    => '2026-01-01T00:00:00Z',
+				);
+			}
+			if ( 'https://devs.live/users/tester' === $url ) {
+				return array(
+					'id'                => 'https://devs.live/users/tester',
+					'type'              => 'Person',
+					'preferredUsername' => 'tester',
+					'url'               => 'https://devs.live/users/tester',
+					'webfinger'         => 'acct:tester@devs.live',
+				);
+			}
+			return $response;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $pre_http, 10, 2 );
+
+		$block_markup = '<!-- wp:activitypub/reply {"url":"' . $reply_url . '","embedPost":true} /-->';
+
+		// Frontend pass: is_feed() is false, so the full embed card is kept.
+		$this->go_to( \home_url( '/' ) );
+		$this->assertFalse( \is_feed(), 'Precondition: home request must not be a feed.' );
+		$front_output = \do_blocks( $block_markup );
+
+		$this->assertStringNotContainsString( 'ap-reply-mention', $front_output, 'Frontend rendering must keep the full embed card.' );
+		$this->assertStringContainsString( 'wp-block-activitypub-reply', $front_output, 'Frontend rendering should still emit the embed wrapper.' );
+
+		// Feed pass: is_feed() is true, so the reply block is swapped for the mention link.
+		$this->go_to( \home_url( '/?feed=rss2' ) );
+		$this->assertTrue( \is_feed(), 'Precondition: feed query.' );
+		$feed_output = \do_blocks( $block_markup );
+
+		$this->assertStringContainsString( 'ap-reply-mention', $feed_output, 'Feed rendering should swap the embed for a mention link.' );
+		$this->assertStringContainsString( '@tester', $feed_output, 'Feed rendering should include the @username mention.' );
+		$this->assertStringNotContainsString( 'wp-block-activitypub-reply', $feed_output, 'Feed rendering should drop the embed card wrapper.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $pre_http );
+	}
+
+	/**
+	 * When the remote lookup powering the mention link fails inside a feed, fall back to
+	 * the plain `u-in-reply-to` link so the item still surfaces that it's a reply rather
+	 * than silently dropping the block.
+	 *
+	 * @covers ::render_reply_block
+	 */
+	public function test_feed_falls_back_to_plain_link_when_remote_lookup_fails() {
+		$reply_url = 'https://example.com/unreachable-note';
+		$pre_http  = function ( $response, $url ) use ( $reply_url ) {
+			if ( $reply_url === $url ) {
+				return new \WP_Error( 'http_request_failed', 'Simulated failure' );
+			}
+			return $response;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $pre_http, 10, 2 );
+
+		$block_markup = '<!-- wp:activitypub/reply {"url":"' . $reply_url . '","embedPost":true} /-->';
+
+		$this->go_to( \home_url( '/?feed=rss2' ) );
+		$this->assertTrue( \is_feed(), 'Precondition: feed query.' );
+
+		$feed_output = \do_blocks( $block_markup );
+
+		$this->assertStringNotContainsString( 'ap-reply-mention', $feed_output, 'No mention link when the remote lookup fails.' );
+		$this->assertStringContainsString( 'u-in-reply-to', $feed_output, 'Feed should fall back to the plain reply link.' );
+		$this->assertStringContainsString( $reply_url, $feed_output, 'Plain reply link should include the original URL.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $pre_http );
+	}
+
+	/**
 	 * Test filter_import_mastodon_post_data with regular paragraphs.
 	 *
 	 * @covers ::filter_import_mastodon_post_data
@@ -1224,5 +1308,118 @@ class Test_Blocks extends \WP_UnitTestCase {
 		$this->assertStringContainsString( '2024', $url );
 
 		\update_option( 'permalink_structure', $original );
+	}
+
+	/**
+	 * Admin main queries must not attach the reply-exclusion filter, even when ?filter=posts is set.
+	 *
+	 * @covers ::filter_query_loop_vars
+	 */
+	public function test_filter_query_loop_vars_does_not_touch_admin_queries() {
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		// Land on the frontend so $GLOBALS['wp_query'] is a real main query.
+		$this->go_to( \home_url( '/' ) );
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		$_GET['filter'] = 'posts';
+		\set_current_screen( 'edit-post' );
+		$this->assertTrue( \is_admin(), 'Precondition: set_current_screen must make is_admin() true.' );
+
+		Blocks::filter_query_loop_vars( $GLOBALS['wp_query'] );
+
+		$attached = false !== \has_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		unset( $_GET['filter'] );
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+		\set_current_screen( 'front' );
+
+		$this->assertFalse( $attached, 'Admin queries must never attach the posts_where exclusion filter.' );
+	}
+
+	/**
+	 * Feed queries must not attach the reply-exclusion filter.
+	 *
+	 * @covers ::filter_query_loop_vars
+	 */
+	public function test_filter_query_loop_vars_does_not_touch_feed_queries() {
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		$this->go_to( \home_url( '/?feed=rss2' ) );
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		$_GET['filter'] = 'posts';
+
+		$this->assertTrue( $GLOBALS['wp_query']->is_feed(), 'Precondition: the main query must be a feed query.' );
+
+		Blocks::filter_query_loop_vars( $GLOBALS['wp_query'] );
+
+		$attached = false !== \has_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		unset( $_GET['filter'] );
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		$this->assertFalse( $attached, 'Feed queries must never attach the posts_where exclusion filter.' );
+	}
+
+	/**
+	 * Frontend main queries must not attach the exclusion filter without an explicit ?filter=posts opt-in.
+	 *
+	 * @covers ::filter_query_loop_vars
+	 */
+	public function test_filter_query_loop_vars_skips_without_explicit_filter_param() {
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		$this->go_to( \home_url( '/' ) );
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		unset( $_GET['filter'] );
+		Blocks::filter_query_loop_vars( $GLOBALS['wp_query'] );
+		$attached_default = false !== \has_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		$_GET['filter'] = 'posts-and-replies';
+		Blocks::filter_query_loop_vars( $GLOBALS['wp_query'] );
+		$attached_all = false !== \has_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		unset( $_GET['filter'] );
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+
+		$this->assertFalse( $attached_default, 'Without ?filter the exclusion filter must not be attached.' );
+		$this->assertFalse( $attached_all, 'With ?filter=posts-and-replies the exclusion filter must not be attached.' );
+	}
+
+	/**
+	 * An explicit ?filter=posts opt-in attaches the filter and hides reply-block posts.
+	 *
+	 * @covers ::filter_query_loop_vars
+	 * @covers ::exclude_replies_where
+	 */
+	public function test_filter_query_loop_vars_applies_on_explicit_posts_filter() {
+		$reply_post = self::factory()->post->create(
+			array(
+				'post_title'   => 'Reply post',
+				'post_content' => '<!-- wp:activitypub/reply {"url":"https://example.com/c"} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+		$plain_post = self::factory()->post->create(
+			array(
+				'post_title'   => 'Plain post',
+				'post_content' => '<!-- wp:paragraph --><p>Hi.</p><!-- /wp:paragraph -->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$this->go_to( \home_url( '/?filter=posts' ) );
+
+		$ids = \wp_list_pluck( $GLOBALS['wp_query']->posts, 'ID' );
+
+		\remove_filter( 'posts_where', array( Blocks::class, 'exclude_replies_where' ) );
+		\wp_delete_post( $reply_post, true );
+		\wp_delete_post( $plain_post, true );
+
+		$this->assertContains( $plain_post, $ids, 'Plain posts must stay visible under ?filter=posts.' );
+		$this->assertNotContains( $reply_post, $ids, 'Reply-block posts must be hidden under ?filter=posts.' );
 	}
 }

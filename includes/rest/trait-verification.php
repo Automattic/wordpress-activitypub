@@ -14,6 +14,7 @@ use Activitypub\Signature;
 
 use function Activitypub\object_to_uri;
 use function Activitypub\use_authorized_fetch;
+use function Activitypub\user_can_act_as_blog;
 
 /**
  * Verification Trait.
@@ -27,16 +28,23 @@ trait Verification {
 	 *
 	 * Verifies the signature of POST, PUT, PATCH, and DELETE requests,
 	 * as well as GET requests when authorized fetch is enabled.
-	 * HEAD requests are always bypassed.
+	 * HEAD requests are bypassed by default so caches and link-checkers
+	 * can probe public endpoints; callers that pass `$force_signature`
+	 * (e.g. FEP-8fcf's `/followers/sync`) require signatures on HEAD too.
 	 *
 	 * @see https://www.w3.org/wiki/SocialCG/ActivityPub/Primer/Authentication_Authorization#Authorized_fetch
 	 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
 	 *
-	 * @param \WP_REST_Request $request The request object.
+	 * @param \WP_REST_Request $request         The request object.
+	 * @param bool             $force_signature Optional. When true, GET and HEAD requests also
+	 *                                          require a valid signature even with Authorized
+	 *                                          Fetch disabled. Use for endpoints that are
+	 *                                          peer-only (e.g. FEP-8fcf's `/followers/sync`).
+	 *                                          Default false.
 	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
 	 */
-	public function verify_signature( $request ) {
-		if ( 'HEAD' === $request->get_method() ) {
+	public function verify_signature( $request, $force_signature = false ) {
+		if ( 'HEAD' === $request->get_method() && ! $force_signature ) {
 			return true;
 		}
 
@@ -44,20 +52,25 @@ trait Verification {
 		 * Filter to defer signature verification.
 		 *
 		 * Skip signature verification for debugging purposes or to reduce load for
-		 * certain Activity-Types, like "Delete".
+		 * certain Activity-Types, like "Delete". Callers that want to preserve
+		 * mandatory signing for endpoints passing `$force_signature = true`
+		 * (e.g. FEP-8fcf's `/followers/sync`) should inspect the third argument
+		 * and return `false` in that case.
 		 *
-		 * @param bool             $defer   Whether to defer signature verification.
-		 * @param \WP_REST_Request $request The request used to generate the response.
+		 * @param bool             $defer           Whether to defer signature verification.
+		 * @param \WP_REST_Request $request         The request used to generate the response.
+		 * @param bool             $force_signature Whether the caller has forced signature
+		 *                                          verification for this endpoint.
 		 * @return bool Whether to defer signature verification.
 		 */
-		$defer = \apply_filters( 'activitypub_defer_signature_verification', false, $request );
+		$defer = \apply_filters( 'activitypub_defer_signature_verification', false, $request, $force_signature );
 
 		if ( $defer ) {
 			return true;
 		}
 
-		// POST-Requests always have to be signed, GET-Requests only require a signature in secure mode.
-		if ( 'GET' !== $request->get_method() || use_authorized_fetch() ) {
+		// POST-Requests always have to be signed, GET-Requests only require a signature in secure mode or when forced.
+		if ( 'GET' !== $request->get_method() || use_authorized_fetch() || $force_signature ) {
 			$verified_request = Signature::verify_http_signature( $request );
 			if ( \is_wp_error( $verified_request ) ) {
 				return new \WP_Error(
@@ -80,7 +93,7 @@ trait Verification {
 	/**
 	 * Check that the signature keyId and activity actor share the same host.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return true|\WP_Error True if valid, WP_Error on mismatch.
@@ -88,9 +101,16 @@ trait Verification {
 	private function verify_key_id( $request ) {
 		$sig = $request->get_header( 'signature' );
 		if ( ! $sig || ! \preg_match( '/keyId="([^"]+)"/i', $sig, $m ) ) {
-			// RFC 9421 Signature-Input.
+			/*
+			 * RFC 9421 Signature-Input. Match the keyid the same way the RFC 9421 verifier
+			 * parses it: as a `;`-delimited parameter whose value may be quoted or unquoted.
+			 * Anchoring on `;` (or string start) is required — a bare `keyid=` search would
+			 * also match a `keyid=` substring inside another parameter's quoted value (or a
+			 * param named `…keyid`), letting an attacker point this binding at a different
+			 * host than the one the verifier actually used.
+			 */
 			$sig = $request->get_header( 'signature-input' );
-			if ( ! $sig || ! \preg_match( '/keyid="([^"]+)"/i', $sig, $m ) ) {
+			if ( ! $sig || ! \preg_match( '/(?:^|;)\s*keyid="?([^";,\s]+)/i', $sig, $m ) ) {
 				return true;
 			}
 		}
@@ -127,6 +147,11 @@ trait Verification {
 	 * authenticated user matches that actor.
 	 *
 	 * Application Passwords are not accepted directly on C2S endpoints.
+	 *
+	 * Security: `check_oauth_permission()` requires a valid Bearer token via
+	 * `is_oauth_request()`. Cookie-authenticated sessions never satisfy that
+	 * check, so a wp-admin session in another browser tab cannot be hijacked
+	 * to drive C2S writes on behalf of the user (no CSRF path on this surface).
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
@@ -179,7 +204,27 @@ trait Verification {
 			return $user;
 		}
 
+		/*
+		 * Require an authenticated session before the identity-equality check below.
+		 * Without this guard, anonymous requests with `user_id = 0` (blog actor)
+		 * would match because `\get_current_user_id()` also returns `0`, exposing
+		 * owner-only behaviors such as the hidden social graph for the blog actor.
+		 */
+		if ( ! \is_user_logged_in() ) {
+			return new \WP_Error(
+				'activitypub_forbidden',
+				\__( 'You can only access your own resources.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
+		}
+
 		if ( \get_current_user_id() === (int) $user_id ) {
+			return true;
+		}
+
+		// The blog actor has no `wp_users` row, so the identity-equality check above
+		// cannot match for a logged-in user. Delegate to the capability helper.
+		if ( Actors::BLOG_USER_ID === (int) $user_id && user_can_act_as_blog() ) {
 			return true;
 		}
 
@@ -196,7 +241,7 @@ trait Verification {
 	 * Returns true if the social graph setting allows public display,
 	 * or if the request is authenticated by the resource owner.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return bool True if the social graph should be shown.

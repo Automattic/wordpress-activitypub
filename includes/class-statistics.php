@@ -927,7 +927,6 @@ class Statistics {
 				'posts_per_page' => 1,
 				'orderby'        => 'date',
 				'order'          => 'ASC',
-				'fields'         => 'ids',
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query'     => array(
 					array(
@@ -943,14 +942,29 @@ class Statistics {
 
 			$earliest_outbox = \get_posts( $outbox_args );
 
-			if ( empty( $earliest_outbox ) ) {
-				return null;
+			/*
+			 * Prefer `post_date_gmt`; fall back to local `post_date` when the GMT field
+			 * is empty or the MySQL zero-date (rare corruption seen on some production
+			 * sites). The zero-date is a truthy string, so it has to be detected
+			 * explicitly rather than via `?:`.
+			 *
+			 * Convert the local `post_date` fallback to GMT first so the later
+			 * `strtotime()` + `gmdate()` flow consistently derives the year in UTC.
+			 */
+			$earliest_date = '';
+			if ( $earliest_outbox ) {
+				$gmt           = $earliest_outbox[0]->post_date_gmt;
+				$earliest_date = ( empty( $gmt ) || '0000-00-00 00:00:00' === $gmt )
+					? \get_gmt_from_date( $earliest_outbox[0]->post_date )
+					: $gmt;
 			}
-
-			$earliest_post = \get_post( $earliest_outbox[0] );
-			$earliest_date = $earliest_post->post_date_gmt;
 		}
 
-		return (int) \gmdate( 'Y', \strtotime( $earliest_date ) );
+		$timestamp = \strtotime( (string) $earliest_date );
+		if ( false === $timestamp ) {
+			return null;
+		}
+
+		return (int) \gmdate( 'Y', $timestamp );
 	}
 }

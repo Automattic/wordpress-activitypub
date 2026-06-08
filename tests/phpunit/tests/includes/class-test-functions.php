@@ -304,13 +304,62 @@ class Test_Functions extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Holds the $_SERVER values captured by snapshot_client_ip_server() so
+	 * each test in this group can restore them in its own try/finally,
+	 * keeping the suite order-independent.
+	 *
+	 * @var array<string, mixed>
+	 */
+	private $client_ip_server_snapshot = array();
+
+	/**
+	 * Capture the values of every $_SERVER key get_client_ip touches before
+	 * each test in this group.
+	 */
+	private function snapshot_client_ip_server() {
+		$keys                            = array(
+			'REMOTE_ADDR',
+			'HTTP_CF_CONNECTING_IP',
+			'HTTP_CLIENT_IP',
+			'HTTP_X_FORWARDED_FOR',
+			'HTTP_X_FORWARDED',
+			'HTTP_X_CLUSTER_CLIENT_IP',
+			'HTTP_FORWARDED_FOR',
+			'HTTP_FORWARDED',
+		);
+		$this->client_ip_server_snapshot = array();
+		foreach ( $keys as $key ) {
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- Capturing existing test fixture values for restore.
+			$this->client_ip_server_snapshot[ $key ] = \array_key_exists( $key, $_SERVER ) ? $_SERVER[ $key ] : null;
+		}
+	}
+
+	/**
+	 * Restore $_SERVER values captured by snapshot_client_ip_server.
+	 */
+	private function restore_client_ip_server() {
+		foreach ( $this->client_ip_server_snapshot as $key => $value ) {
+			if ( null === $value ) {
+				unset( $_SERVER[ $key ] );
+			} else {
+				$_SERVER[ $key ] = $value;
+			}
+		}
+	}
+
+	/**
 	 * Test get_client_ip returns REMOTE_ADDR by default.
 	 *
 	 * @covers \Activitypub\get_client_ip
 	 */
 	public function test_get_client_ip_default() {
-		$_SERVER['REMOTE_ADDR'] = '192.168.1.1';
-		$this->assertSame( '192.168.1.1', \Activitypub\get_client_ip() );
+		$this->snapshot_client_ip_server();
+		try {
+			$_SERVER['REMOTE_ADDR'] = '192.168.1.1';
+			$this->assertSame( '192.168.1.1', \Activitypub\get_client_ip() );
+		} finally {
+			$this->restore_client_ip_server();
+		}
 	}
 
 	/**
@@ -319,25 +368,176 @@ class Test_Functions extends \WP_UnitTestCase {
 	 * @covers \Activitypub\get_client_ip
 	 */
 	public function test_get_client_ip_filter() {
-		$_SERVER['REMOTE_ADDR'] = '10.0.0.1';
-
+		$this->snapshot_client_ip_server();
 		$filter = function () {
 			return '203.0.113.50';
 		};
-
 		\add_filter( 'activitypub_client_ip', $filter );
-		$this->assertSame( '203.0.113.50', \Activitypub\get_client_ip() );
-		\remove_filter( 'activitypub_client_ip', $filter );
+
+		try {
+			$_SERVER['REMOTE_ADDR'] = '10.0.0.1';
+			$this->assertSame( '203.0.113.50', \Activitypub\get_client_ip() );
+		} finally {
+			\remove_filter( 'activitypub_client_ip', $filter );
+			$this->restore_client_ip_server();
+		}
 	}
 
 	/**
-	 * Test get_client_ip returns unknown when REMOTE_ADDR is missing.
+	 * Test get_client_ip returns an empty string when REMOTE_ADDR is missing.
 	 *
 	 * @covers \Activitypub\get_client_ip
 	 */
 	public function test_get_client_ip_missing_remote_addr() {
-		unset( $_SERVER['REMOTE_ADDR'] );
-		$this->assertSame( 'unknown', \Activitypub\get_client_ip() );
+		$this->snapshot_client_ip_server();
+		try {
+			unset( $_SERVER['REMOTE_ADDR'] );
+			$this->assertSame( '', \Activitypub\get_client_ip() );
+		} finally {
+			$this->restore_client_ip_server();
+		}
+	}
+
+	/**
+	 * Test get_client_ip rejects non-IP values from a filter so a misbehaving
+	 * filter can't collapse all callers into one rate-limit bucket.
+	 *
+	 * @covers \Activitypub\get_client_ip
+	 */
+	public function test_get_client_ip_rejects_invalid_filter_output() {
+		$this->snapshot_client_ip_server();
+		$filter = function () {
+			return 'unknown';
+		};
+		\add_filter( 'activitypub_client_ip', $filter );
+
+		try {
+			$_SERVER['REMOTE_ADDR'] = '198.51.100.10';
+			$this->assertSame( '', \Activitypub\get_client_ip() );
+		} finally {
+			\remove_filter( 'activitypub_client_ip', $filter );
+			$this->restore_client_ip_server();
+		}
+	}
+
+	/**
+	 * Proxy headers must NOT be trusted by default. A site that PHP serves
+	 * directly receives X-Forwarded-For / CF-Connecting-IP straight from the
+	 * client, so trusting them by default would let an attacker rotate the
+	 * spoofed value to bypass per-IP rate limits.
+	 *
+	 * @covers \Activitypub\get_client_ip
+	 */
+	public function test_get_client_ip_ignores_proxy_headers_by_default() {
+		$this->snapshot_client_ip_server();
+		try {
+			$_SERVER['REMOTE_ADDR']           = '10.0.0.1';
+			$_SERVER['HTTP_CF_CONNECTING_IP'] = '203.0.113.50';
+			$_SERVER['HTTP_X_FORWARDED_FOR']  = '203.0.113.51';
+
+			$this->assertSame( '10.0.0.1', \Activitypub\get_client_ip() );
+		} finally {
+			$this->restore_client_ip_server();
+		}
+	}
+
+	/**
+	 * Operators behind a trusted reverse proxy can opt the relevant header
+	 * back in via the activitypub_client_ip_sources filter.
+	 *
+	 * @covers \Activitypub\get_client_ip
+	 */
+	public function test_get_client_ip_honors_trusted_proxy_filter() {
+		$this->snapshot_client_ip_server();
+		$filter = function () {
+			return array( 'HTTP_CF_CONNECTING_IP' );
+		};
+		\add_filter( 'activitypub_client_ip_sources', $filter );
+
+		try {
+			$_SERVER['REMOTE_ADDR']           = '10.0.0.1';
+			$_SERVER['HTTP_CF_CONNECTING_IP'] = '203.0.113.50';
+
+			$this->assertSame( '203.0.113.50', \Activitypub\get_client_ip() );
+		} finally {
+			\remove_filter( 'activitypub_client_ip_sources', $filter );
+			$this->restore_client_ip_server();
+		}
+	}
+
+	/**
+	 * When a configured source has a non-IP value, the next source in the
+	 * filter's list is consulted — so a typo'd or temporarily missing proxy
+	 * header doesn't lock all callers out of rate-limited endpoints.
+	 *
+	 * @covers \Activitypub\get_client_ip
+	 */
+	public function test_get_client_ip_falls_back_when_trusted_header_invalid() {
+		$this->snapshot_client_ip_server();
+		$filter = function () {
+			return array( 'HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR' );
+		};
+		\add_filter( 'activitypub_client_ip_sources', $filter );
+
+		try {
+			$_SERVER['REMOTE_ADDR']           = '198.51.100.10';
+			$_SERVER['HTTP_CF_CONNECTING_IP'] = 'unknown';
+			$_SERVER['HTTP_X_FORWARDED_FOR']  = '203.0.113.7';
+
+			$this->assertSame( '203.0.113.7', \Activitypub\get_client_ip() );
+		} finally {
+			\remove_filter( 'activitypub_client_ip_sources', $filter );
+			$this->restore_client_ip_server();
+		}
+	}
+
+	/**
+	 * X-Forwarded-For may carry "client, proxy1, proxy2" — when the operator
+	 * trusts the proxy that overwrites the header, the leftmost entry is the
+	 * client.
+	 *
+	 * @covers \Activitypub\get_client_ip
+	 */
+	public function test_get_client_ip_uses_leftmost_of_xff_list() {
+		$this->snapshot_client_ip_server();
+		$filter = function () {
+			return array( 'HTTP_X_FORWARDED_FOR' );
+		};
+		\add_filter( 'activitypub_client_ip_sources', $filter );
+
+		try {
+			$_SERVER['REMOTE_ADDR']          = '10.0.0.1';
+			$_SERVER['HTTP_X_FORWARDED_FOR'] = '203.0.113.50, 198.51.100.7';
+
+			$this->assertSame( '203.0.113.50', \Activitypub\get_client_ip() );
+		} finally {
+			\remove_filter( 'activitypub_client_ip_sources', $filter );
+			$this->restore_client_ip_server();
+		}
+	}
+
+	/**
+	 * A filter that returns null (or any other non-array) must not blow up;
+	 * the function falls back to its safe default of REMOTE_ADDR only.
+	 *
+	 * @covers \Activitypub\get_client_ip
+	 */
+	public function test_get_client_ip_tolerates_null_filter_return() {
+		$this->snapshot_client_ip_server();
+		$filter = function () {
+			return null;
+		};
+		\add_filter( 'activitypub_client_ip_sources', $filter );
+
+		try {
+			$_SERVER['REMOTE_ADDR']           = '198.51.100.10';
+			$_SERVER['HTTP_CF_CONNECTING_IP'] = '203.0.113.50';
+
+			$this->assertSame( '198.51.100.10', \Activitypub\get_client_ip() );
+		} finally {
+			\remove_filter( 'activitypub_client_ip_sources', $filter );
+			$this->restore_client_ip_server();
+		}
 	}
 
 	/**

@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Fix the real-time activity stream so it only returns the requesting user's own activities.

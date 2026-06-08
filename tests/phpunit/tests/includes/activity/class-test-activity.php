@@ -28,6 +28,7 @@ class Test_Activity extends \WP_UnitTestCase {
 			array(
 				'post_author'  => 1,
 				'post_content' => '@alex hello',
+				'post_status'  => 'publish',
 			)
 		);
 

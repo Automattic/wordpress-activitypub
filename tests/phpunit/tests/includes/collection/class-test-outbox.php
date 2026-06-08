@@ -105,8 +105,8 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	public function activity_object_provider() {
 		$home_url = \addcslashes( \home_url(), '/' );
 
-		$note1_json = '{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive","dcterms":"http:\/\/purl.org\/dc\/terms\/","gts":"https:\/\/gotosocial.org\/ns#","schema":"http:\/\/schema.org\/","exifData":"schema:exifData","PropertyValue":"schema:PropertyValue","interactionPolicy":{"@id":"gts:interactionPolicy","@type":"@id"},"canQuote":{"@id":"gts:canQuote","@type":"@id"},"canReply":{"@id":"gts:canReply","@type":"@id"},"canLike":{"@id":"gts:canLike","@type":"@id"},"canAnnounce":{"@id":"gts:canAnnounce","@type":"@id"},"automaticApproval":{"@id":"gts:automaticApproval","@type":"@id"},"manualApproval":{"@id":"gts:manualApproval","@type":"@id"},"always":{"@id":"gts:always","@type":"@id"}}],"actor":"http:\/\/example.org\/?author=1","id":"http:\/\/example.org\/?post_type=ap_outbox\u0026p=351","type":"Create","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"object":{"id":"https:\/\/example.com\/1","type":"Note","content":"\u003Cp\u003EThis is a note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is a note\u003C\/p\u003E"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html"}}';
-		$note2_json = '{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive","dcterms":"http:\/\/purl.org\/dc\/terms\/","gts":"https:\/\/gotosocial.org\/ns#","schema":"http:\/\/schema.org\/","exifData":"schema:exifData","PropertyValue":"schema:PropertyValue","interactionPolicy":{"@id":"gts:interactionPolicy","@type":"@id"},"canQuote":{"@id":"gts:canQuote","@type":"@id"},"canReply":{"@id":"gts:canReply","@type":"@id"},"canLike":{"@id":"gts:canLike","@type":"@id"},"canAnnounce":{"@id":"gts:canAnnounce","@type":"@id"},"automaticApproval":{"@id":"gts:automaticApproval","@type":"@id"},"manualApproval":{"@id":"gts:manualApproval","@type":"@id"},"always":{"@id":"gts:always","@type":"@id"}}],"actor":"http:\/\/example.org\/?author=0","id":"http:\/\/example.org\/?post_type=ap_outbox\u0026p=352","type":"Create","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"object":{"id":"https:\/\/example.com\/2","type":"Note","content":"\u003Cp\u003EThis is another note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is another note\u003C\/p\u003E"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html"}}';
+		$note1_json = '{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive","dcterms":"http:\/\/purl.org\/dc\/terms\/","gts":"https:\/\/gotosocial.org\/ns#","schema":"http:\/\/schema.org\/","exifData":"schema:exifData","PropertyValue":"schema:PropertyValue","interactionPolicy":{"@id":"gts:interactionPolicy","@type":"@id"},"canQuote":{"@id":"gts:canQuote","@type":"@id"},"canReply":{"@id":"gts:canReply","@type":"@id"},"canLike":{"@id":"gts:canLike","@type":"@id"},"canAnnounce":{"@id":"gts:canAnnounce","@type":"@id"},"automaticApproval":{"@id":"gts:automaticApproval","@type":"@id"},"manualApproval":{"@id":"gts:manualApproval","@type":"@id"},"always":{"@id":"gts:always","@type":"@id"},"toot":"http:\/\/joinmastodon.org\/ns#","blurhash":"toot:blurhash"}],"actor":"http:\/\/example.org\/?author=1","id":"http:\/\/example.org\/?post_type=ap_outbox\u0026p=351","type":"Create","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"object":{"id":"https:\/\/example.com\/1","type":"Note","content":"\u003Cp\u003EThis is a note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is a note\u003C\/p\u003E"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html"}}';
+		$note2_json = '{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive","dcterms":"http:\/\/purl.org\/dc\/terms\/","gts":"https:\/\/gotosocial.org\/ns#","schema":"http:\/\/schema.org\/","exifData":"schema:exifData","PropertyValue":"schema:PropertyValue","interactionPolicy":{"@id":"gts:interactionPolicy","@type":"@id"},"canQuote":{"@id":"gts:canQuote","@type":"@id"},"canReply":{"@id":"gts:canReply","@type":"@id"},"canLike":{"@id":"gts:canLike","@type":"@id"},"canAnnounce":{"@id":"gts:canAnnounce","@type":"@id"},"automaticApproval":{"@id":"gts:automaticApproval","@type":"@id"},"manualApproval":{"@id":"gts:manualApproval","@type":"@id"},"always":{"@id":"gts:always","@type":"@id"},"toot":"http:\/\/joinmastodon.org\/ns#","blurhash":"toot:blurhash"}],"actor":"http:\/\/example.org\/?author=0","id":"http:\/\/example.org\/?post_type=ap_outbox\u0026p=352","type":"Create","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"object":{"id":"https:\/\/example.com\/2","type":"Note","content":"\u003Cp\u003EThis is another note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is another note\u003C\/p\u003E"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html"}}';
 		$event_json = '{"@context":["https:\/\/schema.org\/","https:\/\/www.w3.org\/ns\/activitystreams",{"pt":"https:\/\/joinpeertube.org\/ns#","mz":"https:\/\/joinmobilizon.org\/ns#","status":"http:\/\/www.w3.org\/2002\/12\/cal\/ical#status","commentsEnabled":"pt:commentsEnabled","isOnline":"mz:isOnline","timezone":"mz:timezone","participantCount":"mz:participantCount","anonymousParticipationEnabled":"mz:anonymousParticipationEnabled","joinMode":{"@id":"mz:joinMode","@type":"mz:joinModeType"},"externalParticipationUrl":{"@id":"mz:externalParticipationUrl","@type":"schema:URL"},"repliesModerationOption":{"@id":"mz:repliesModerationOption","@type":"@vocab"},"contacts":{"@id":"mz:contacts","@type":"@id"}}],"actor":"http:\/\/example.org\/?author=1","id":"http:\/\/example.org\/?post_type=ap_outbox\u0026p=353","type":"Create","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"object":{"id":"https:\/\/example.com\/3","type":"Event","content":"\u003Cp\u003EYou should not miss this Event!\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EYou should not miss this Event!\u003C\/p\u003E"},"name":"WP Test Event","nameMap":{"en":"WP Test Event"},"endTime":"2030-02-29T17:00:00+01:00","location":[{"id":"https:\/\/example.com\/place\/1","type":"Place","attributedTo":"https:\/\/wp-test.event-federation.eu\/@test","name":"Fediverse Place","address":{"type":"PostalAddress","addressCountry":"FediCountry","addressLocality":"FediTown","postalCode":"1337","streetAddress":"FediStreet"}},{"type":"VirtualLocation","url":"https:\/\/example.com\/VirtualMeetingRoom"}],"startTime":"2030-02-29T16:00:00+01:00","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html","tag":[],"timezone":"Europe\/Vienna","category":"MOVEMENTS_POLITICS","joinMode":"external"}}';
 		return array(
 			array(
@@ -287,6 +287,164 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Test that a fresh Create activity invalidates any pending Delete for the same object.
+	 *
+	 * Covers the soft-delete re-publish race: a post is moved to draft (Delete scheduled),
+	 * then re-published before the Delete has fired. The Delete must be invalidated so we
+	 * do not send both Delete and Create.
+	 *
+	 * @covers ::delete_superseded_items
+	 */
+	public function test_create_supersedes_pending_delete() {
+		$object = $this->get_dummy_activity_object();
+
+		$delete_id = \Activitypub\add_to_outbox( $object, 'Delete', 1 );
+		$this->assertEquals( 'pending', \get_post_status( $delete_id ) );
+
+		$create_id = \Activitypub\add_to_outbox( $object, 'Create', 1 );
+
+		$this->assertFalse( \get_post_status( $delete_id ), 'Pending Delete should be invalidated by a fresh Create.' );
+		$this->assertEquals( 'pending', \get_post_status( $create_id ) );
+	}
+
+	/**
+	 * Test that an Update activity does NOT cancel a pending Delete for the same object.
+	 *
+	 * External callers (CLI commands, third-party plugins, filters) can queue an Update
+	 * for a soft-deleted object that is still hidden. Cancelling the Delete on every
+	 * Update would silently resurrect federation while the post remains draft/private/
+	 * password-protected. Only a confirmed Create (the scheduler's resurrection path)
+	 * should cancel the Delete.
+	 *
+	 * @covers ::delete_superseded_items
+	 */
+	public function test_update_does_not_supersede_pending_delete() {
+		$object = $this->get_dummy_activity_object();
+
+		$delete_id = \Activitypub\add_to_outbox( $object, 'Delete', 1 );
+		$this->assertEquals( 'pending', \get_post_status( $delete_id ) );
+
+		$update_id = \Activitypub\add_to_outbox( $object, 'Update', 1 );
+
+		$this->assertEquals( 'pending', \get_post_status( $delete_id ), 'Pending Delete must survive a manual Update for the same object.' );
+		$this->assertEquals( 'pending', \get_post_status( $update_id ) );
+	}
+
+	/**
+	 * Test that a Delete also wipes already-sent (non-pending) outbox history for the object.
+	 *
+	 * A sent Create/Update remains in the outbox with post_status='publish' as a record of
+	 * what was federated. When a Delete is then queued, that record is now stale and a
+	 * redelivery retry could resurrect the very content we are tearing down.
+	 *
+	 * @covers ::delete_superseded_items
+	 */
+	public function test_delete_supersedes_already_sent_activities() {
+		$object = $this->get_dummy_activity_object();
+
+		// Simulate a previously-sent Create activity (post_status='publish').
+		$create_id = \Activitypub\add_to_outbox( $object, 'Create', 1 );
+		\wp_update_post(
+			array(
+				'ID'          => $create_id,
+				'post_status' => 'publish',
+			)
+		);
+		$this->assertEquals( 'publish', \get_post_status( $create_id ) );
+
+		// Now queue a Delete.
+		$delete_id = \Activitypub\add_to_outbox( $object, 'Delete', 1 );
+
+		$this->assertFalse(
+			\get_post_status( $create_id ),
+			'Already-sent Create must be wiped when a Delete supersedes the object.'
+		);
+		$this->assertEquals( 'pending', \get_post_status( $delete_id ) );
+	}
+
+	/**
+	 * Test that Delete wipes more than get_posts()' default five matching outbox items.
+	 *
+	 * @covers ::delete_superseded_items
+	 */
+	public function test_delete_supersedes_all_matching_outbox_history() {
+		$object = $this->get_dummy_activity_object();
+		$ids    = array();
+
+		for ( $i = 0; $i < 7; $i++ ) {
+			$id = \Activitypub\add_to_outbox( $object, 'Create', 1 );
+			\wp_update_post(
+				array(
+					'ID'          => $id,
+					'post_status' => 'publish',
+				)
+			);
+
+			$ids[] = $id;
+		}
+
+		$delete_id = \Activitypub\add_to_outbox( $object, 'Delete', 1 );
+
+		foreach ( $ids as $id ) {
+			$this->assertFalse(
+				\get_post_status( $id ),
+				'Delete must wipe every stale outbox snapshot for the object, not only the first five.'
+			);
+		}
+
+		$this->assertEquals( 'pending', \get_post_status( $delete_id ) );
+	}
+
+	/**
+	 * Test that non-republish activities (Like, Add, Remove, Undo) do NOT cancel a pending Delete.
+	 *
+	 * A soft-deleted post can still have unrelated activities queued (e.g. an Add to the
+	 * featured collection from a sticky transition). Those must not invalidate the Delete,
+	 * otherwise the remote copy would never be torn down.
+	 *
+	 * @dataProvider data_non_republish_activity_types
+	 *
+	 * @covers ::delete_superseded_items
+	 *
+	 * @param string $activity_type Activity type that should NOT cancel a pending Delete.
+	 */
+	public function test_non_republish_activity_does_not_cancel_pending_delete( $activity_type ) {
+		$object = $this->get_dummy_activity_object();
+
+		$delete_id = \Activitypub\add_to_outbox( $object, 'Delete', 1 );
+		$this->assertEquals( 'pending', \get_post_status( $delete_id ) );
+
+		$other_id = \Activitypub\add_to_outbox( $object, $activity_type, 1 );
+
+		$this->assertEquals(
+			'pending',
+			\get_post_status( $delete_id ),
+			"Pending Delete must survive a {$activity_type} for the same object."
+		);
+
+		if ( $other_id && ! \is_wp_error( $other_id ) ) {
+			$this->assertEquals( 'pending', \get_post_status( $other_id ) );
+		}
+	}
+
+	/**
+	 * Data provider: activity types that are orthogonal to the soft-delete lifecycle.
+	 *
+	 * Excludes Follow / Announce / Accept / Reject because delete_superseded_items
+	 * short-circuits on those before the meta_query is built.
+	 *
+	 * @return array[]
+	 */
+	public function data_non_republish_activity_types() {
+		return array(
+			'Like'   => array( 'Like' ),
+			'Add'    => array( 'Add' ),
+			'Remove' => array( 'Remove' ),
+			'Undo'   => array( 'Undo' ),
+		);
+	}
+
+	/**
 	 * Test get_object_id with different nested structures.
 	 *
 	 * @dataProvider data_provider_get_object_id
@@ -441,6 +599,45 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$object->set_content( 'Test content' );
 
 		return $object;
+	}
+
+	/**
+	 * Test that the blind audience (`bto`/`bcc`) is persisted to the database and
+	 * survives the `add` → `get_activity` roundtrip.
+	 *
+	 * @covers ::add
+	 * @covers ::get_activity
+	 */
+	public function test_add_persists_blind_audience() {
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://example.com/author/test' );
+		$activity->set_object(
+			array(
+				'id'      => 'https://example.com/note/123',
+				'type'    => 'Note',
+				'content' => 'Hello',
+			)
+		);
+		$activity->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
+		$activity->set_cc( array() );
+		$activity->set_bto( array( 'https://example.com/users/secret' ) );
+		$activity->set_bcc( array( 'https://example.com/users/hidden' ) );
+
+		$id = Outbox::add( $activity, self::$user_id );
+
+		$this->assertIsInt( $id );
+
+		/* Stored JSON in the DB must keep the blind audience. */
+		$stored = \json_decode( \get_post( $id )->post_content, true );
+		$this->assertSame( array( 'https://example.com/users/secret' ), $stored['bto'], 'bto persisted to DB' );
+		$this->assertSame( array( 'https://example.com/users/hidden' ), $stored['bcc'], 'bcc persisted to DB' );
+
+		/* Rehydrated Activity must expose the blind audience via its getters. */
+		$reloaded = Outbox::get_activity( $id );
+		$this->assertInstanceOf( Activity::class, $reloaded );
+		$this->assertSame( array( 'https://example.com/users/secret' ), $reloaded->get_bto(), 'bto exposed after reload' );
+		$this->assertSame( array( 'https://example.com/users/hidden' ), $reloaded->get_bcc(), 'bcc exposed after reload' );
 	}
 
 	/**
@@ -640,5 +837,76 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
 
 		$this->assertEquals( 10, $deleted );
+	}
+
+	/**
+	 * Create a private outbox item authored by the blog actor for the tests below.
+	 *
+	 * @return \WP_Post The created outbox post.
+	 */
+	private function create_private_blog_actor_outbox_item() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author'  => 0,
+				'post_type'    => Outbox::POST_TYPE,
+				'post_status'  => 'pending',
+				'post_content' => \wp_json_encode(
+					array(
+						'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
+						'id'       => 'https://example.org/activity/private-accept',
+						'type'     => 'Accept',
+						'actor'    => 'https://example.org/blog',
+						'object'   => 'https://example.org/follow/1',
+					)
+				),
+				'meta_input'   => array(
+					'_activitypub_activity_type'     => 'Accept',
+					'_activitypub_activity_actor'    => 'blog',
+					'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
+				),
+			)
+		);
+
+		return \get_post( $post_id );
+	}
+
+	/**
+	 * Test that anonymous visitors cannot fetch a private blog-actor outbox item by permalink.
+	 *
+	 * Regression test for the `0 === 0` identity match: when `post_author` is `0`
+	 * (blog actor) and the visitor is unauthenticated, `get_current_user_id()` also
+	 * returns `0`, so the author bypass at the top of `maybe_get_activity()` would
+	 * return private items without an `is_user_logged_in()` guard.
+	 *
+	 * @covers ::maybe_get_activity
+	 */
+	public function test_maybe_get_activity_anonymous_cannot_read_private_blog_actor_item() {
+		$post = $this->create_private_blog_actor_outbox_item();
+
+		\wp_set_current_user( 0 );
+
+		$result = Outbox::maybe_get_activity( $post );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'private_outbox_item', $result->get_error_code() );
+	}
+
+	/**
+	 * Test that administrators can fetch a private blog-actor outbox item by permalink.
+	 *
+	 * Mirrors the `verify_owner` blog-actor capability bypass: a user authorized to
+	 * act as the blog actor reads the same private outbox they can post to.
+	 *
+	 * @covers ::maybe_get_activity
+	 */
+	public function test_maybe_get_activity_admin_can_read_private_blog_actor_item() {
+		$post = $this->create_private_blog_actor_outbox_item();
+
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $admin_id );
+
+		$result = Outbox::maybe_get_activity( $post );
+
+		$this->assertInstanceOf( Activity::class, $result );
 	}
 }

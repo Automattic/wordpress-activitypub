@@ -86,7 +86,7 @@ git push --force-with-lease
 
 ## Special Cases
 
-**Hotfixes:** Branch `fix/critical-issue`, minimal changes, add "Hotfix" label, request expedited review.
+**Hotfixes:** Branch `fix/critical-issue`, minimal changes, add a `[Pri] High` (or `[Pri] BLOCKER`) label, request expedited review.
 
 **Experimental:** Use `try/` prefix, mark as draft, get early feedback, convert to proper branch type once confirmed.
 
@@ -98,12 +98,12 @@ git push --force-with-lease
 |-------|-----|
 | `Bug` | Bug fixes |
 | `Enhancement` | New features |
-| `Documentation` | Doc updates |
+| `Docs` | Documentation updates |
 | `Code Quality` | Refactoring, cleanup, etc. |
 | `Skip Changelog` | No changelog needed |
-| `Needs Review` | Ready for review |
-| `In Progress` | Still working |
-| `Hotfix` | Urgent fix |
+| `[Status] Needs review` | Ready for review |
+| `[Status] In Progress` | Still working |
+| `[Pri] High` / `[Pri] BLOCKER` | Urgent / expedited |
 
 ## Reference
 

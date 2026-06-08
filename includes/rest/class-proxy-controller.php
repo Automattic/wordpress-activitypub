@@ -12,6 +12,7 @@ namespace Activitypub\Rest;
 
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
+use Activitypub\Webfinger;
 
 use function Activitypub\is_actor;
 
@@ -53,7 +54,7 @@ class Proxy_Controller extends \WP_REST_Controller {
 					'permission_callback' => array( $this, 'verify_authentication' ),
 					'args'                => array(
 						'id' => array(
-							'description'       => 'The URI of the remote ActivityPub object to fetch.',
+							'description'       => 'The remote ActivityPub object to fetch: an HTTPS URL or an acct identifier (`user@host`, `@user@host`, or `acct:user@host`).',
 							'type'              => 'string',
 							'required'          => true,
 							'sanitize_callback' => array( $this, 'sanitize_url' ),
@@ -75,9 +76,8 @@ class Proxy_Controller extends \WP_REST_Controller {
 					'permission_callback' => array( $this, 'get_stream_permissions_check' ),
 					'args'                => array(
 						'id' => array(
-							'description'       => 'The remote object ID (URI) whose eventStream to proxy.',
+							'description'       => 'The remote actor identifier (URL or WebFinger acct) whose eventStream to proxy.',
 							'type'              => 'string',
-							'format'            => 'uri',
 							'required'          => true,
 							'sanitize_callback' => array( $this, 'sanitize_url' ),
 							'validate_callback' => array( $this, 'validate_url' ),
@@ -89,30 +89,48 @@ class Proxy_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * Sanitizes the URL parameter.
+	 * Sanitize the `id` parameter.
+	 *
+	 * Accepts either an HTTPS URL or an acct identifier (`user@host`,
+	 * `@user@host`, or `acct:user@host`). Acct identifiers are returned
+	 * as-is; URLs are run through `sanitize_url()`. Matches the dual-shape
+	 * contract of `Remote_Actors::fetch_by_various()`.
 	 *
 	 * @see https://developer.wordpress.org/reference/functions/sanitize_url/
 	 *
-	 * @param string $url The urlencoded URL to sanitize.
-	 * @return string The sanitized URL.
+	 * @param string $url The urlencoded URL or acct identifier to sanitize.
+	 * @return string The sanitized value.
 	 */
 	public function sanitize_url( $url ) {
-		// Decode and sanitize the URL.
-		return sanitize_url( urldecode( $url ) );
+		$decoded = \urldecode( $url );
+
+		if ( Webfinger::is_acct( $decoded ) ) {
+			return $decoded;
+		}
+
+		return \sanitize_url( $decoded );
 	}
+
 	/**
-	 * Validate the URL parameter.
+	 * Validate the `id` parameter.
 	 *
-	 * Uses wp_http_validate_url() which blocks local/private IPs and restricts ports.
+	 * Accepts either an HTTPS URL (validated via `wp_http_validate_url()`,
+	 * which blocks local/private IPs and restricts ports) or an acct
+	 * identifier in any of the forms accepted by `Webfinger::is_acct()`:
+	 * `user@host`, `@user@host`, or `acct:user@host`. Matches the
+	 * dual-shape contract of `Remote_Actors::fetch_by_various()`.
 	 *
 	 * @see https://developer.wordpress.org/reference/functions/wp_http_validate_url/
 	 *
-	 * @param string $url The URL to validate.
+	 * @param string $url The URL or acct identifier to validate.
 	 * @return bool True if valid, false otherwise.
 	 */
 	public function validate_url( $url ) {
-		// Decode the url.
-		$decoded_url = urldecode( $url );
+		$decoded_url = \urldecode( $url );
+
+		if ( Webfinger::is_acct( $decoded_url ) ) {
+			return true;
+		}
 
 		// Must be HTTPS.
 		if ( 'https' !== \wp_parse_url( $decoded_url, PHP_URL_SCHEME ) ) {
