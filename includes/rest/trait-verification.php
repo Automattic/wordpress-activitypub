@@ -101,9 +101,16 @@ trait Verification {
 	private function verify_key_id( $request ) {
 		$sig = $request->get_header( 'signature' );
 		if ( ! $sig || ! \preg_match( '/keyId="([^"]+)"/i', $sig, $m ) ) {
-			// RFC 9421 Signature-Input.
+			/*
+			 * RFC 9421 Signature-Input. Match the keyid the same way the RFC 9421 verifier
+			 * parses it: as a `;`-delimited parameter whose value may be quoted or unquoted.
+			 * Anchoring on `;` (or string start) is required — a bare `keyid=` search would
+			 * also match a `keyid=` substring inside another parameter's quoted value (or a
+			 * param named `…keyid`), letting an attacker point this binding at a different
+			 * host than the one the verifier actually used.
+			 */
 			$sig = $request->get_header( 'signature-input' );
-			if ( ! $sig || ! \preg_match( '/keyid="([^"]+)"/i', $sig, $m ) ) {
+			if ( ! $sig || ! \preg_match( '/(?:^|;)\s*keyid="?([^";,\s]+)/i', $sig, $m ) ) {
 				return true;
 			}
 		}

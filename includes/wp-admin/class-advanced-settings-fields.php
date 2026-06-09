@@ -7,6 +7,8 @@
 
 namespace Activitypub\WP_Admin;
 
+use Activitypub\Options;
+
 /**
  * Advanced Settings Fields class.
  */
@@ -29,6 +31,28 @@ class Advanced_Settings_Fields {
 			array( self::class, 'render_advanced_settings_section' ),
 			'activitypub_advanced_settings'
 		);
+
+		if ( ! Options::is_distribution_mode_locked() ) {
+			\add_settings_field(
+				'activitypub_distribution_mode',
+				\__( 'Distribution Mode', 'activitypub' ),
+				array( self::class, 'render_distribution_mode_field' ),
+				'activitypub_advanced_settings',
+				'activitypub_advanced_settings'
+			);
+
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$current_tab = isset( $_GET['tab'] ) ? \sanitize_key( \wp_unslash( $_GET['tab'] ) ) : '';
+			if ( 'advanced' === $current_tab ) {
+				\wp_enqueue_script(
+					'activitypub-distribution-mode',
+					\plugins_url( 'assets/js/activitypub-distribution-mode.js', ACTIVITYPUB_PLUGIN_FILE ),
+					array(),
+					ACTIVITYPUB_PLUGIN_VERSION,
+					true
+				);
+			}
+		}
 
 		if ( ! defined( 'ACTIVITYPUB_SEND_VARY_HEADER' ) ) {
 			\add_settings_field(
@@ -286,6 +310,73 @@ class Advanced_Settings_Fields {
 		<p class="description">
 			<?php \esc_html_e( 'This is mainly for backwards compatibility. It is not recommended to use the Template Tags, because it might not be supported in future versions.', 'activitypub' ); ?>
 		</p>
+		<?php
+	}
+
+	/**
+	 * Render distribution mode field.
+	 *
+	 * @since unreleased
+	 */
+	public static function render_distribution_mode_field() {
+		$mode = \get_option( 'activitypub_distribution_mode', 'default' );
+
+		// Use centralized presets and add the custom option for the UI.
+		$modes           = Options::get_distribution_modes();
+		$modes['custom'] = array(
+			'label'       => \__( 'Custom', 'activitypub' ),
+			'description' => \__( 'Configure batch size and delay manually.', 'activitypub' ),
+		);
+
+		// Custom fields fall back to the default preset values when unset.
+		$custom_batch = \get_option( 'activitypub_custom_batch_size', $modes['default']['batch_size'] );
+		$custom_pause = \get_option( 'activitypub_custom_batch_pause', $modes['default']['pause'] );
+
+		?>
+		<fieldset>
+			<legend class="screen-reader-text"><span><?php \esc_html_e( 'Distribution Mode', 'activitypub' ); ?></span></legend>
+			<p class="description">
+				<?php \esc_html_e( 'Controls how quickly the plugin sends posts to followers. Slower modes reduce server load but delay delivery.', 'activitypub' ); ?>
+			</p>
+			<?php
+			foreach ( $modes as $key => $data ) {
+				?>
+				<p>
+					<label>
+						<input type="radio" name="activitypub_distribution_mode" value="<?php echo \esc_attr( $key ); ?>" <?php \checked( $key, $mode ); ?> />
+						<strong><?php echo \esc_html( $data['label'] ); ?></strong>
+					</label>
+					<br />
+					<?php echo \wp_kses( $data['description'], array( 'code' => array() ) ); ?>
+				</p>
+				<?php
+			}
+
+			/*
+			 * The custom fields are rendered visible so they remain usable when
+			 * JavaScript is disabled. The accompanying script collapses them on
+			 * page load when the active mode is not "custom" and toggles them
+			 * as the radio changes.
+			 */
+			?>
+			<ul id="activitypub-custom-distribution-fields">
+				<li>
+					<label>
+						<?php \esc_html_e( 'Batch size:', 'activitypub' ); ?>
+						<input type="number" name="activitypub_custom_batch_size" value="<?php echo \esc_attr( $custom_batch ); ?>" min="1" step="1" class="small-text" />
+					</label>
+				</li>
+				<li>
+					<label>
+						<?php \esc_html_e( 'Pause between batches (seconds):', 'activitypub' ); ?>
+						<input type="number" name="activitypub_custom_batch_pause" value="<?php echo \esc_attr( $custom_pause ); ?>" min="0" step="1" class="small-text" />
+					</label>
+				</li>
+			</ul>
+			<p class="description">
+				<?php \esc_html_e( 'With many followers, slower modes may delay delivery. For example, Eco Mode with 1,000 followers takes approximately 25 minutes per post.', 'activitypub' ); ?>
+			</p>
+		</fieldset>
 		<?php
 	}
 }

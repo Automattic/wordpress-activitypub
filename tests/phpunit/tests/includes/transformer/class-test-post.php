@@ -305,6 +305,230 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that to_object() omits derived fields for redacted posts.
+	 *
+	 * The is_redacted() gate fires for password-protected posts (regardless
+	 * of any per-request cookie) and for non-publish posts outside preview
+	 * mode. In either case content, summary, summaryMap, contentMap,
+	 * preview, and attachments must be absent from the serialized activity.
+	 *
+	 * @dataProvider data_redacted_post_states
+	 *
+	 * @covers ::get_attachment
+	 * @covers ::get_content
+	 * @covers ::get_preview
+	 * @covers ::get_summary
+	 *
+	 * @param array $post_args Post data flagged as redacted (password or non-publish status).
+	 */
+	public function test_redacted_post_omits_derived_fields( $post_args ) {
+		/*
+		 * The non-publish branch of is_redacted() is short-circuited when
+		 * the ACTIVITYPUB_PREVIEW constant is defined (intentional — previews
+		 * of unpublished posts must still synthesize a representation). PHP
+		 * cannot unset a defined constant, so if an earlier test in the
+		 * suite has defined it (e.g. the router preview-template test), this
+		 * data row would assert the wrong thing. The password row is
+		 * unaffected and always exercises the gate.
+		 */
+		if ( ! isset( $post_args['post_password'] ) && defined( 'ACTIVITYPUB_PREVIEW' ) && ACTIVITYPUB_PREVIEW ) {
+			$this->markTestSkipped( 'ACTIVITYPUB_PREVIEW was defined by an earlier test; non-publish gate cannot be exercised here.' );
+		}
+
+		$defaults = array(
+			'post_author'  => 1,
+			'post_title'   => 'Federation_Probe',
+			'post_content' => 'SHOULD-NOT-FEDERATE-BODY',
+			'post_excerpt' => 'SHOULD-NOT-FEDERATE-EXCERPT',
+			'post_status'  => 'publish',
+		);
+
+		$post_id = \wp_insert_post( \array_merge( $defaults, $post_args ) );
+
+		// Attach a content warning so the to_object() override path is exercised.
+		\update_post_meta( $post_id, 'activitypub_content_warning', 'SHOULD-NOT-FEDERATE-WARNING' );
+
+		// Simulate the cookie-bypass case for password-protected posts:
+		// `post_password_required()` would return false here, but the
+		// transformer must still refuse.
+		\add_filter( 'post_password_required', '__return_false' );
+
+		try {
+			$object = Post::transform( get_post( $post_id ) )->to_object();
+
+			$this->assertEmpty( $object->get_content(), 'content must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_summary(), 'summary must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_preview(), 'preview must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_content_map(), 'contentMap must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_summary_map(), 'summaryMap must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_attachment(), 'attachment must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_name(), 'name must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_name_map(), 'nameMap must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_image(), 'image must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_icon(), 'icon must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_sensitive(), 'sensitive flag must not be set for a redacted post.' );
+			$this->assertEmpty( $object->get_dcterms(), 'dcterms (content warning) must be omitted for a redacted post.' );
+		} finally {
+			\remove_filter( 'post_password_required', '__return_false' );
+		}
+	}
+
+	/**
+	 * Data provider: post states that should trigger is_redacted().
+	 *
+	 * @return array[]
+	 */
+	public function data_redacted_post_states() {
+		return array(
+			'password protected' => array( array( 'post_password' => 'fed-secret-pass' ) ),
+			'draft'              => array( array( 'post_status' => 'draft' ) ),
+			'pending'            => array( array( 'post_status' => 'pending' ) ),
+			'private'            => array( array( 'post_status' => 'private' ) ),
+		);
+	}
+
+	/**
+	 * Every way of hiding a post — non-public status, password, or the AP
+	 * content-visibility meta (local/private) — must serialize as a content-free
+	 * Tombstone: no content, tags, @-mentions, or location, and no audience at
+	 * all. Nothing body-derived can leak and no actor named only in the
+	 * now-hidden content is ever addressed. The Delete still fans out: that is
+	 * the dispatcher's job (see Test_Dispatcher::test_delete_dispatches_without_audience),
+	 * not something the object's audience has to encode.
+	 *
+	 * The visibility-meta rows guard the gate alignment: the scheduler emits a
+	 * Delete whenever a post is not `is_post_publicly_queryable()`, so the
+	 * transformer must redact on that same predicate — not just status/password.
+	 *
+	 * @dataProvider data_hidden_post_states
+	 *
+	 * @covers ::to_object
+	 *
+	 * @param array $post_args Post fields that hide the post.
+	 * @param array $meta      Post meta that hides the post.
+	 */
+	public function test_hidden_post_is_content_free_tombstone( $post_args, $meta ) {
+		/*
+		 * The non-publish branch is short-circuited when ACTIVITYPUB_PREVIEW is
+		 * defined; the password/visibility rows are unaffected and always
+		 * exercise the gate, so only skip the pure status rows in that case.
+		 */
+		if ( empty( $post_args['post_password'] ) && empty( $meta ) && defined( 'ACTIVITYPUB_PREVIEW' ) && ACTIVITYPUB_PREVIEW ) {
+			$this->markTestSkipped( 'ACTIVITYPUB_PREVIEW was defined by an earlier test; status-only gate cannot be exercised here.' );
+		}
+
+		$mention_uri    = 'https://remote.example/users/bob';
+		$mention_filter = static function () use ( $mention_uri ) {
+			return array( '@bob@remote.example' => $mention_uri );
+		};
+		\add_filter( 'activitypub_extract_mentions', $mention_filter );
+
+		$post_id = \wp_insert_post(
+			\array_merge(
+				array(
+					'post_author'  => 1,
+					'post_title'   => 'Hidden mention probe',
+					'post_content' => 'Hello @bob@remote.example, secret body.',
+					'post_status'  => 'publish',
+				),
+				$post_args
+			)
+		);
+
+		foreach ( $meta as $key => $value ) {
+			\update_post_meta( $post_id, $key, $value );
+		}
+
+		\update_post_meta( $post_id, 'geo_latitude', '52.52' );
+		\update_post_meta( $post_id, 'geo_longitude', '13.405' );
+		\update_post_meta( $post_id, 'geo_public', '1' );
+
+		// Cookie-bypass case: the helper would return false, transformer must still redact.
+		\add_filter( 'post_password_required', '__return_false' );
+
+		try {
+			$object = Post::transform( get_post( $post_id ) )->to_object();
+
+			// Content-free by type.
+			$this->assertSame( 'Tombstone', $object->get_type(), 'A hidden post must serialize as a Tombstone.' );
+			$this->assertEmpty( $object->get_content(), 'content must be omitted for a hidden post.' );
+			$this->assertEmpty( $object->get_tag(), 'tags/mentions must be omitted for a hidden post.' );
+			$this->assertEmpty( $object->get_location(), 'location must be omitted for a hidden post.' );
+
+			// The permalink is preserved so the tombstone registry can resolve it.
+			$this->assertNotEmpty( $object->get_url(), 'The Tombstone must keep the permalink, not drop it.' );
+
+			$audience = \array_merge( (array) $object->get_to(), (array) $object->get_cc() );
+			// Addressed publicly so the teardown broadcasts...
+			$this->assertContains( 'https://www.w3.org/ns/activitystreams#Public', $audience, 'A hidden federated post is torn down publicly.' );
+			// ...but never to an actor named only in the now-hidden content.
+			$this->assertNotContains( $mention_uri, $audience, 'A hidden post must not address actors mentioned only in hidden content.' );
+		} finally {
+			\remove_filter( 'post_password_required', '__return_false' );
+			\remove_filter( 'activitypub_extract_mentions', $mention_filter );
+		}
+	}
+
+	/**
+	 * Data provider: every way a post can be non-public, as ( post fields, post meta ).
+	 *
+	 * @return array[]
+	 */
+	public function data_hidden_post_states() {
+		return array(
+			'password protected' => array( array( 'post_password' => 'fed-secret-pass' ), array() ),
+			'draft'              => array( array( 'post_status' => 'draft' ), array() ),
+			'pending'            => array( array( 'post_status' => 'pending' ), array() ),
+			'private status'     => array( array( 'post_status' => 'private' ), array() ),
+			'visibility local'   => array( array(), array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ) ),
+			'visibility private' => array( array(), array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ) ),
+		);
+	}
+
+	/**
+	 * The happy path of the Fediverse Preview: an authorized preview of an
+	 * unpublished post must render the real content, NOT a Tombstone.
+	 *
+	 * `is_post_publicly_queryable()` treats a draft/pending post as queryable
+	 * during a `?preview=true` request from a user who can edit it, which flips
+	 * `is_redacted()` to false so `to_object()` transforms the post normally.
+	 * The router test only proves routing into the preview template; this asserts
+	 * the transformer output the template actually renders.
+	 *
+	 * @covers ::to_object
+	 */
+	public function test_authorized_preview_of_unpublished_post_renders_real_content() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author'  => $editor_id,
+				'post_status'  => 'draft',
+				'post_title'   => 'Preview Title',
+				'post_content' => 'PREVIEW-VISIBLE-BODY that is long enough to be a real note.',
+			)
+		);
+
+		// Authorized preview context: the editor previewing their own draft.
+		// `is_post_publicly_queryable()` reads the `preview` query var (gating the
+		// Tombstone), while the content getter reads WordPress's `is_preview()`
+		// flag (gating draft-content rendering) — set both, as the real request does.
+		\wp_set_current_user( $editor_id );
+		$this->go_to( \home_url( '?p=' . $post_id . '&preview=true' ) );
+		\set_query_var( 'preview', true );
+		$GLOBALS['wp_query']->is_preview = true;
+
+		try {
+			$object = Post::transform( get_post( $post_id ) )->to_object();
+
+			$this->assertNotSame( 'Tombstone', $object->get_type(), 'An authorized preview must not be redacted to a Tombstone.' );
+			$this->assertStringContainsString( 'PREVIEW-VISIBLE-BODY', (string) $object->get_content(), 'The preview must render the real post content.' );
+		} finally {
+			\wp_set_current_user( 0 );
+		}
+	}
+
+	/**
 	 * Test content visibility.
 	 *
 	 * @covers ::to_object
@@ -332,11 +556,12 @@ class Test_Post extends \WP_UnitTestCase {
 
 		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
 
-		// Post was federated on insert, so is_post_disabled returns false
-		// to allow Delete activity. But visibility settings still apply.
+		// The post was federated on insert, so making it local soft-deletes it:
+		// to_object() yields a public Tombstone (the Delete payload that tears the
+		// copy down everywhere), not a content object addressed to its new audience.
 		$object = Post::transform( get_post( $post_id ) )->to_object();
-		$this->assertEmpty( $object->get_to() );
-		$this->assertEmpty( $object->get_cc() );
+		$this->assertSame( 'Tombstone', $object->get_type() );
+		$this->assertContains( 'https://www.w3.org/ns/activitystreams#Public', $object->get_to() );
 	}
 
 	/**
@@ -611,6 +836,111 @@ class Test_Post extends \WP_UnitTestCase {
 		$this->assertCount( 1, $result['video'] );
 		$this->assertSame( 789, $result['video'][0]['id'] );
 		$this->assertArrayNotHasKey( 'icon', $result['video'][0] );
+	}
+
+	/**
+	 * Test get_media_from_blocks extracts the image from a Media & Text block.
+	 *
+	 * @covers ::get_media_from_blocks
+	 */
+	public function test_get_media_from_blocks_extracts_media_text_image() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:media-text {"mediaId":263,"mediaType":"image"} --><div class="wp-block-media-text is-stacked-on-mobile"><figure class="wp-block-media-text__media"><img src="https://example.com/img.png" alt="Media text alt" class="wp-image-263 size-full"/></figure><div class="wp-block-media-text__content"></div></div><!-- /wp:media-text -->',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$transformer = new Post( $post );
+		$media       = array(
+			'image' => array(),
+			'audio' => array(),
+			'video' => array(),
+		);
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_media_from_blocks' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$blocks = parse_blocks( $post->post_content );
+		$result = $method->invoke( $transformer, $blocks, $media );
+
+		$this->assertCount( 1, $result['image'], 'A Media & Text image must be extracted.' );
+		$this->assertSame( 263, $result['image'][0]['id'] );
+		$this->assertSame( 'Media text alt', $result['image'][0]['alt'] );
+	}
+
+	/**
+	 * Test get_media_from_blocks updates alt in place when the Media & Text image
+	 * was already collected, so the duplicate is not dropped and its alt lost.
+	 *
+	 * @covers ::get_media_from_blocks
+	 */
+	public function test_get_media_from_blocks_media_text_updates_existing_image_alt() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:media-text {"mediaId":263,"mediaType":"image"} --><div class="wp-block-media-text"><figure class="wp-block-media-text__media"><img src="https://example.com/img.png" alt="Media text alt" class="wp-image-263"/></figure></div><!-- /wp:media-text -->',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$transformer = new Post( $post );
+		// Seed the same ID without alt, as an earlier featured-image/gallery pass would.
+		$media = array(
+			'image' => array( array( 'id' => 263 ) ),
+			'audio' => array(),
+			'video' => array(),
+		);
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_media_from_blocks' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$blocks = parse_blocks( $post->post_content );
+		$result = $method->invoke( $transformer, $blocks, $media );
+
+		$this->assertCount( 1, $result['image'], 'A duplicate Media & Text image ID must not add a second entry.' );
+		$this->assertSame( 'Media text alt', $result['image'][0]['alt'], 'The existing entry must gain the Media & Text alt text.' );
+	}
+
+	/**
+	 * Test get_media_from_blocks extracts the video (and its poster) from a Media
+	 * & Text block.
+	 *
+	 * @covers ::get_media_from_blocks
+	 */
+	public function test_get_media_from_blocks_extracts_media_text_video() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:media-text {"mediaId":555,"mediaType":"video"} --><div class="wp-block-media-text is-stacked-on-mobile"><figure class="wp-block-media-text__media"><video controls poster="https://example.com/poster.jpg" src="https://example.com/video.mp4"></video></figure><div class="wp-block-media-text__content"></div></div><!-- /wp:media-text -->',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$transformer = new Post( $post );
+		$media       = array(
+			'image' => array(),
+			'audio' => array(),
+			'video' => array(),
+		);
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_media_from_blocks' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$blocks = parse_blocks( $post->post_content );
+		$result = $method->invoke( $transformer, $blocks, $media );
+
+		$this->assertCount( 1, $result['video'], 'A Media & Text video must be extracted.' );
+		$this->assertSame( 555, $result['video'][0]['id'] );
+		$this->assertSame( 'https://example.com/poster.jpg', $result['video'][0]['icon'], 'The video poster must be kept as the icon.' );
+		$this->assertEmpty( $result['image'], 'A Media & Text video must not be added as an image.' );
 	}
 
 	/**

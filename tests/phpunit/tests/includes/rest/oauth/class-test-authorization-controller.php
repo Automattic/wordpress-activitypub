@@ -170,9 +170,11 @@ class Test_Authorization_Controller extends \WP_UnitTestCase {
 
 			$response = \rest_get_server()->dispatch( $request );
 			$data     = $response->get_data();
+			$headers  = $response->get_headers();
 
 			$this->assertEquals( 429, $response->get_status() );
 			$this->assertEquals( 'activitypub_rate_limit', $data['code'] );
+			$this->assertSame( (string) MINUTE_IN_SECONDS, $headers['Retry-After'] ?? null, 'Rate-limit responses must include Retry-After per RFC 6585 §4.' );
 			$this->assertFalse( \get_transient( $empty_ip_transient ) );
 		} finally {
 			foreach ( $snapshot as $key => $value ) {

@@ -229,6 +229,7 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 			$this->assertEquals( 'rate_limited', $data['error'] );
 			$this->assertSame( 'no-store', $headers['Cache-Control'] ?? null, 'Token error responses must set Cache-Control: no-store per RFC 6749 §5.1.' );
 			$this->assertSame( 'no-cache', $headers['Pragma'] ?? null, 'Token error responses must set Pragma: no-cache per RFC 6749 §5.1.' );
+			$this->assertSame( (string) MINUTE_IN_SECONDS, $headers['Retry-After'] ?? null, 'Rate-limit responses must include Retry-After per RFC 6585 §4.' );
 		} finally {
 			\delete_transient( $transient_key );
 			$this->restore_client_ip_server( $snapshot );
@@ -260,9 +261,11 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 
 			$response = \rest_get_server()->dispatch( $request );
 			$data     = $response->get_data();
+			$headers  = $response->get_headers();
 
 			$this->assertEquals( 429, $response->get_status() );
 			$this->assertEquals( 'rate_limited', $data['error'] );
+			$this->assertSame( (string) MINUTE_IN_SECONDS, $headers['Retry-After'] ?? null, 'Rate-limit responses must include Retry-After per RFC 6585 §4.' );
 			// The fail-closed branch must not write a shared empty-IP transient.
 			$this->assertFalse( \get_transient( $empty_ip_transient ) );
 		} finally {
@@ -348,6 +351,12 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 		$this->assertArrayHasKey( 'expires_in', $data );
 		$this->assertArrayHasKey( 'refresh_token', $data );
 		$this->assertEquals( 'Bearer', $data['token_type'] );
+
+		// IndieAuth `me` and SWICG Basic Profile `activitypub_actor_id` must both be present and equal.
+		$this->assertArrayHasKey( 'me', $data );
+		$this->assertArrayHasKey( 'activitypub_actor_id', $data );
+		$this->assertNotEmpty( $data['me'] );
+		$this->assertSame( $data['me'], $data['activitypub_actor_id'] );
 	}
 
 	/**
@@ -610,6 +619,12 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 		$this->assertTrue( $data['active'] );
 		$this->assertEquals( $this->client_id, $data['client_id'] );
 		$this->assertEquals( 'Bearer', $data['token_type'] );
+
+		// IndieAuth `me` and SWICG Basic Profile `activitypub_actor_id` must both be present and equal.
+		$this->assertArrayHasKey( 'me', $data );
+		$this->assertArrayHasKey( 'activitypub_actor_id', $data );
+		$this->assertNotEmpty( $data['me'] );
+		$this->assertSame( $data['me'], $data['activitypub_actor_id'] );
 	}
 
 	/**
@@ -631,5 +646,74 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertFalse( $data['active'] );
+	}
+
+	/**
+	 * Test that a logged-in user cannot introspect another user's token.
+	 *
+	 * Regression: cookie-authenticated callers bypassed the scoping check (which only ran
+	 * for OAuth-authenticated callers), so any logged-in user could read metadata for any
+	 * token string.
+	 *
+	 * @covers ::introspect
+	 */
+	public function test_introspect_hides_other_users_token_from_cookie_user() {
+		$token_data = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+
+		// A different, non-admin user authenticated via cookie (no OAuth token).
+		$other = $this->factory->user->create( array( 'role' => 'subscriber' ) );
+		\wp_set_current_user( $other );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/introspect' );
+		$request->set_param( 'token', $token_data['access_token'] );
+
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertFalse( $data['active'], 'A logged-in user must not introspect another user\'s token.' );
+		$this->assertArrayNotHasKey( 'username', $data, 'No token metadata should leak to a non-owner.' );
+	}
+
+	/**
+	 * Test that a user can still introspect their own token via a cookie session.
+	 *
+	 * @covers ::introspect
+	 */
+	public function test_introspect_allows_own_token_for_cookie_user() {
+		$token_data = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+
+		\wp_set_current_user( $this->user_id );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/introspect' );
+		$request->set_param( 'token', $token_data['access_token'] );
+
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertTrue( $data['active'], 'A user must be able to introspect their own token.' );
+	}
+
+	/**
+	 * Test that an administrator can introspect any user's token.
+	 *
+	 * @covers ::introspect
+	 */
+	public function test_introspect_allows_admin_to_view_any_token() {
+		$token_data = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+
+		$admin = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $admin );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/introspect' );
+		$request->set_param( 'token', $token_data['access_token'] );
+
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertTrue( $data['active'], 'An administrator must be able to introspect any token.' );
+		$this->assertEquals( $this->client_id, $data['client_id'] );
 	}
 }

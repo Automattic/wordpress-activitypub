@@ -196,20 +196,43 @@ class Outbox {
 			),
 		);
 
-		// For non-Delete activities, only delete items of the same type.
-		// Delete activities supersede all pending items for the same object.
+		/*
+		 * Same-type pending items are always superseded. A confirmed
+		 * re-publish (Create) additionally invalidates a pending Delete so
+		 * we do not send both Delete and Create for the same object.
+		 *
+		 * Update is intentionally NOT in this list: it must not cancel a
+		 * pending Delete, or an unrelated edit could flip a hidden object back
+		 * to federated. An Update for an already-deleted object is rejected
+		 * upstream in `add_to_outbox()`, and the scheduler re-publish path emits
+		 * a Create (not an Update), so that legitimate path still cancels Delete.
+		 */
 		if ( 'Delete' !== $activity_type ) {
+			$types = 'Create' === $activity_type
+				? array( 'Create', 'Delete' )
+				: array( $activity_type );
+
 			$meta_query[] = array(
-				'key'   => '_activitypub_activity_type',
-				'value' => $activity_type,
+				'key'     => '_activitypub_activity_type',
+				'value'   => $types,
+				'compare' => 'IN',
 			);
 		}
+
+		/*
+		 * Delete wipes the entire outbox history for the object — any
+		 * already-sent Create/Update/etc. is now stale and a redelivery
+		 * retry would resurrect content we are tearing down. Other
+		 * activity types only invalidate pending peers.
+		 */
+		$status_filter = 'Delete' === $activity_type ? 'any' : 'pending';
 
 		$existing_items = get_posts(
 			array(
 				'post_type'   => self::POST_TYPE,
-				'post_status' => 'pending',
+				'post_status' => $status_filter,
 				'exclude'     => array( $exclude_id ),
+				'numberposts' => -1,
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query'  => $meta_query,
 				'fields'      => 'ids',
