@@ -107,8 +107,31 @@ class Router {
 		}
 
 		$activitypub_object = Query::get_instance()->get_activitypub_object();
+		$queried_object     = Query::get_instance()->get_queried_object();
 
-		if ( Tombstone::exists_local( Query::get_instance()->get_request_url() ) ) {
+		/*
+		 * Serve the Tombstone for a deleted object — but not while an authorized
+		 * user is previewing it. During an editor `?preview=true` request,
+		 * `is_post_publicly_queryable()` treats a draft or pending post as
+		 * queryable only for a user who can edit it, so the author can still use
+		 * the Fediverse Preview on a post they just soft-deleted (which is
+		 * otherwise already in the tombstone registry).
+		 *
+		 * The bypass is scoped to that preview request on purpose. A normal
+		 * ActivityPub fetch (no `preview`) of a tombstoned URL always gets the
+		 * Tombstone — even if the URL now resolves to a fresh public post because
+		 * its slug was reused — since remote servers were told that id is gone.
+		 * The legitimate restore path clears the registry entry itself, via
+		 * `Create::maybe_unbury()` when the re-publish Create is queued.
+		 */
+		$is_authorized_preview = \get_query_var( 'preview' )
+			&& $queried_object instanceof \WP_Post
+			&& is_post_publicly_queryable( $queried_object );
+
+		if (
+			Tombstone::exists_local( Query::get_instance()->get_request_url() )
+			&& ! $is_authorized_preview
+		) {
 			// Set 410 Gone for permanently deleted posts, 200 OK for soft-deleted.
 			if ( ! $activitypub_object ) {
 				\status_header( 410 );
@@ -117,11 +140,29 @@ class Router {
 			return ACTIVITYPUB_PLUGIN_DIR . 'templates/tombstone-json.php';
 		}
 
+		/*
+		 * Refuse to expose the content-negotiated representation of a post
+		 * that is no longer publicly queryable (non-public status, AP
+		 * visibility flipped, post-type support removed, etc.). The
+		 * lifecycle gate in `is_post_disabled()` intentionally lets such
+		 * posts through the federation pipeline so a Delete can fire, but
+		 * that escape hatch must not leak into front-end rendering during
+		 * the window between status change and Delete delivery.
+		 */
+		if (
+			$activitypub_object &&
+			$queried_object instanceof \WP_Post &&
+			'ap_outbox' !== $queried_object->post_type &&
+			! is_post_publicly_queryable( $queried_object )
+		) {
+			return $template;
+		}
+
 		$activitypub_template = false;
 
 		if ( $activitypub_object ) {
 			if ( \get_query_var( 'preview' ) ) {
-				\define( 'ACTIVITYPUB_PREVIEW', true );
+				\defined( 'ACTIVITYPUB_PREVIEW' ) || \define( 'ACTIVITYPUB_PREVIEW', true );
 
 				/**
 				 * Filter the template used for the ActivityPub preview.
