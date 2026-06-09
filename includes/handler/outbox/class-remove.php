@@ -32,7 +32,7 @@ class Remove {
 	 * post is unstuck. The unstick action triggers the scheduler which
 	 * creates the outbox entry automatically.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param array $data    The activity data array.
 	 * @param int   $user_id The user ID.

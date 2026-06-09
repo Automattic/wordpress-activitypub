@@ -232,6 +232,110 @@ class Test_Client extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test register method allows http for localhost subdomains (RFC 6761).
+	 *
+	 * @covers ::register
+	 */
+	public function test_register_allows_http_localhost_subdomain() {
+		$result = $this->create_client(
+			array(
+				'name'          => 'Localhost Subdomain Client',
+				'redirect_uris' => array( 'http://calypso.localhost:3000/callback' ),
+			)
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertArrayHasKey( 'client_id', $result );
+	}
+
+	/**
+	 * Test register method accepts every legitimate loopback form.
+	 *
+	 * @covers ::register
+	 * @dataProvider loopback_host_provider
+	 *
+	 * @param string $host Host portion of the redirect URI.
+	 */
+	public function test_register_allows_loopback_variants( $host ) {
+		$result = $this->create_client(
+			array(
+				'name'          => 'Loopback Variant Client',
+				'redirect_uris' => array( 'http://' . $host . ':3000/callback' ),
+			)
+		);
+
+		$this->assertIsArray( $result, \sprintf( 'Loopback host %s should be accepted.', $host ) );
+		$this->assertArrayHasKey( 'client_id', $result );
+	}
+
+	/**
+	 * Data provider for loopback hosts that must be treated as loopback.
+	 *
+	 * @return array[]
+	 */
+	public function loopback_host_provider() {
+		return array(
+			'IPv4 loopback literal'       => array( '127.0.0.1' ),
+			'IPv4 loopback upper range'   => array( '127.0.0.2' ),
+			'IPv4 loopback high address'  => array( '127.255.255.254' ),
+			'IPv6 loopback shorthand'     => array( '[::1]' ),
+			'IPv6 loopback full form'     => array( '[0:0:0:0:0:0:0:1]' ),
+			'IPv6 loopback leading zeros' => array( '[::0001]' ),
+			'IPv4-mapped IPv6 loopback'   => array( '[::ffff:127.0.0.1]' ),
+		);
+	}
+
+	/**
+	 * Test register method rejects reserved addresses that are not loopback.
+	 *
+	 * Guards against treating reserved or otherwise non-loopback hosts as
+	 * loopback for the `http://` redirect URI allowance during registration.
+	 *
+	 * @covers ::register
+	 * @dataProvider non_loopback_host_provider
+	 *
+	 * @param string $host Host portion of the redirect URI.
+	 */
+	public function test_register_rejects_non_loopback_reserved_hosts( $host ) {
+		$result = $this->create_client(
+			array(
+				'name'          => 'Non-loopback Reserved Client',
+				'redirect_uris' => array( 'http://' . $host . ':3000/callback' ),
+			)
+		);
+
+		$this->assertInstanceOf(
+			\WP_Error::class,
+			$result,
+			\sprintf( 'Host %s must not be treated as loopback.', $host )
+		);
+	}
+
+	/**
+	 * Data provider for reserved or external hosts that must not be loopback.
+	 *
+	 * @return array[]
+	 */
+	public function non_loopback_host_provider() {
+		return array(
+			'unspecified IPv4'           => array( '0.0.0.0' ),
+			'link-local cloud metadata'  => array( '169.254.169.254' ),
+			'link-local generic'         => array( '169.254.1.1' ),
+			'multicast'                  => array( '224.0.0.1' ),
+			'reserved future use'        => array( '240.0.0.1' ),
+			'TEST-NET-1'                 => array( '192.0.2.1' ),
+			'TEST-NET-2'                 => array( '198.51.100.1' ),
+			'TEST-NET-3'                 => array( '203.0.113.1' ),
+			'private 10/8'               => array( '10.0.0.5' ),
+			'private 172.16/12'          => array( '172.20.0.7' ),
+			'private 192.168/16'         => array( '192.168.1.1' ),
+			'public host'                => array( '8.8.8.8' ),
+			'IPv4-mapped public address' => array( '[::ffff:8.8.8.8]' ),
+			'IPv4-mapped link-local'     => array( '[::ffff:169.254.169.254]' ),
+		);
+	}
+
+	/**
 	 * Test register method allows http for non-loopback when filter permits.
 	 *
 	 * @covers ::register
@@ -269,6 +373,57 @@ class Test_Client extends \WP_UnitTestCase {
 
 		$this->assertInstanceOf( Client::class, $client );
 		$this->assertEquals( 'Test Client', $client->get_name() );
+	}
+
+	/**
+	 * Test that auto-discovery via Client::get() fails closed when no client
+	 * IP can be determined.
+	 *
+	 * The discover_and_register() rate limiter must reject the request
+	 * rather than share a single bucket across every unidentifiable caller.
+	 *
+	 * @covers ::get
+	 */
+	public function test_discovery_fails_closed_without_client_ip() {
+		$server_keys = array(
+			'REMOTE_ADDR',
+			'HTTP_CF_CONNECTING_IP',
+			'HTTP_CLIENT_IP',
+			'HTTP_X_FORWARDED_FOR',
+			'HTTP_X_FORWARDED',
+			'HTTP_X_CLUSTER_CLIENT_IP',
+			'HTTP_FORWARDED_FOR',
+			'HTTP_FORWARDED',
+		);
+		$snapshot    = array();
+		foreach ( $server_keys as $key ) {
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- Capturing existing test fixture values for restore.
+			$snapshot[ $key ] = \array_key_exists( $key, $_SERVER ) ? $_SERVER[ $key ] : null;
+		}
+
+		$empty_ip_transient = 'ap_oauth_disc_' . \md5( '' );
+		\delete_transient( $empty_ip_transient );
+
+		try {
+			foreach ( $server_keys as $key ) {
+				unset( $_SERVER[ $key ] );
+			}
+
+			// URL-form client_id triggers discover_and_register().
+			$result = Client::get( 'https://unidentifiable.example.com/cimd.json' );
+
+			$this->assertInstanceOf( \WP_Error::class, $result );
+			$this->assertEquals( 'activitypub_rate_limited', $result->get_error_code() );
+			$this->assertFalse( \get_transient( $empty_ip_transient ) );
+		} finally {
+			foreach ( $snapshot as $key => $value ) {
+				if ( null === $value ) {
+					unset( $_SERVER[ $key ] );
+				} else {
+					$_SERVER[ $key ] = $value;
+				}
+			}
+		}
 	}
 
 	/**
@@ -664,5 +819,114 @@ class Test_Client extends \WP_UnitTestCase {
 		$client = Client::get( $result['client_id'] );
 
 		$this->assertEquals( $result['client_id'], $client->get_client_id() );
+	}
+
+	/**
+	 * Test normalize_client_metadata with CIMD format.
+	 *
+	 * @covers ::normalize_client_metadata
+	 */
+	public function test_normalize_client_metadata_cimd_format() {
+		$data = array(
+			'client_id'     => 'https://example.com/client',
+			'client_name'   => 'CIMD Client',
+			'redirect_uris' => array( 'https://example.com/callback' ),
+			'logo_uri'      => 'https://example.com/logo.png',
+			'client_uri'    => 'https://example.com/',
+		);
+
+		$metadata = $this->call_normalize_client_metadata( $data );
+
+		$this->assertEquals( 'https://example.com/client', $metadata['client_id'] );
+		$this->assertEquals( 'CIMD Client', $metadata['client_name'] );
+		$this->assertEquals( array( 'https://example.com/callback' ), $metadata['redirect_uris'] );
+		$this->assertEquals( 'https://example.com/logo.png', $metadata['logo_uri'] );
+		$this->assertEquals( 'https://example.com/', $metadata['client_uri'] );
+		$this->assertArrayNotHasKey( 'is_actor', $metadata );
+	}
+
+	/**
+	 * Test normalize_client_metadata with ActivityStreams vocabulary (no type).
+	 *
+	 * Client ID Metadata Documents may use ActivityStreams context with
+	 * fields like "id", "name", and "redirectURI" instead of CIMD fields.
+	 *
+	 * @covers ::normalize_client_metadata
+	 */
+	public function test_normalize_client_metadata_activitystreams_vocabulary() {
+		$data = array(
+			'id'          => 'https://checkin.example.com/client.jsonld',
+			'name'        => 'Checkin Sample App',
+			'summary'     => 'A sample client for geosocial activities',
+			'redirectURI' => 'https://checkin.example.com/',
+		);
+
+		$metadata = $this->call_normalize_client_metadata( $data );
+
+		$this->assertEquals( 'https://checkin.example.com/client.jsonld', $metadata['client_id'] );
+		$this->assertEquals( 'Checkin Sample App', $metadata['client_name'] );
+		$this->assertEquals( array( 'https://checkin.example.com/' ), $metadata['redirect_uris'] );
+		$this->assertArrayNotHasKey( 'is_actor', $metadata );
+	}
+
+	/**
+	 * Test normalize_client_metadata with ActivityPub actor format.
+	 *
+	 * @covers ::normalize_client_metadata
+	 */
+	public function test_normalize_client_metadata_actor_format() {
+		$data = array(
+			'type'              => 'Application',
+			'id'                => 'https://app.example.com/actor',
+			'name'              => 'AP App',
+			'preferredUsername' => 'app',
+			'redirectURI'       => 'https://app.example.com/callback',
+			'icon'              => array( 'url' => 'https://app.example.com/icon.png' ),
+			'url'               => 'https://app.example.com/',
+		);
+
+		$metadata = $this->call_normalize_client_metadata( $data );
+
+		$this->assertEquals( 'https://app.example.com/actor', $metadata['client_id'] );
+		$this->assertEquals( 'AP App', $metadata['client_name'] );
+		$this->assertEquals( array( 'https://app.example.com/callback' ), $metadata['redirect_uris'] );
+		$this->assertEquals( 'https://app.example.com/icon.png', $metadata['logo_uri'] );
+		$this->assertEquals( 'https://app.example.com/', $metadata['client_uri'] );
+		$this->assertTrue( $metadata['is_actor'] );
+	}
+
+	/**
+	 * Test CIMD fields take precedence over ActivityStreams fields.
+	 *
+	 * @covers ::normalize_client_metadata
+	 */
+	public function test_normalize_client_metadata_cimd_takes_precedence() {
+		$data = array(
+			'client_id'     => 'https://example.com/cimd-client',
+			'client_name'   => 'CIMD Name',
+			'redirect_uris' => array( 'https://example.com/cimd-callback' ),
+			'id'            => 'https://example.com/as-id',
+			'name'          => 'AS Name',
+			'redirectURI'   => 'https://example.com/as-callback',
+		);
+
+		$metadata = $this->call_normalize_client_metadata( $data );
+
+		$this->assertEquals( 'https://example.com/cimd-client', $metadata['client_id'] );
+		$this->assertEquals( 'CIMD Name', $metadata['client_name'] );
+		$this->assertEquals( array( 'https://example.com/cimd-callback' ), $metadata['redirect_uris'] );
+	}
+
+	/**
+	 * Helper to call the private normalize_client_metadata method.
+	 *
+	 * @param array $data The raw metadata.
+	 * @return array Normalized metadata.
+	 */
+	private function call_normalize_client_metadata( $data ) {
+		$method = new \ReflectionMethod( Client::class, 'normalize_client_metadata' );
+		$method->setAccessible( true );
+
+		return $method->invoke( null, $data );
 	}
 }

@@ -147,11 +147,15 @@ class Test_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test creating a post with blog actor (user_id = 0) skips permission check.
+	 * Test creating a post with blog actor (user_id = 0) and no current user keeps post_author = 0.
+	 *
+	 * Covers the cron/CLI path where no user is loaded.
 	 *
 	 * @covers ::create
 	 */
-	public function test_create_with_blog_actor() {
+	public function test_create_with_blog_actor_no_current_user() {
+		\wp_set_current_user( 0 );
+
 		$activity = array(
 			'object' => array(
 				'type'    => 'Note',
@@ -163,6 +167,85 @@ class Test_Posts extends \WP_UnitTestCase {
 
 		$this->assertInstanceOf( '\WP_Post', $post );
 		$this->assertEquals( 0, (int) $post->post_author );
+	}
+
+	/**
+	 * Test creating a post with blog actor (user_id = 0) falls back to the current user for the byline.
+	 *
+	 * Administrators pass `user_can_act_as_blog()` by default (`manage_options`).
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_with_blog_actor_uses_current_user() {
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $user_id );
+
+		$activity = array(
+			'object' => array(
+				'type'    => 'Note',
+				'content' => '<p>Blog actor post from authenticated request.</p>',
+			),
+		);
+
+		$post = Posts::create( $activity, 0 );
+
+		$this->assertInstanceOf( '\WP_Post', $post );
+		$this->assertEquals( $user_id, (int) $post->post_author );
+
+		\wp_set_current_user( 0 );
+	}
+
+	/**
+	 * Test the blog actor path rejects users who cannot act as the blog.
+	 *
+	 * Editors do not hold `manage_options`, so `user_can_act_as_blog()` returns
+	 * false for them by default and `Posts::create` must 403.
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_with_blog_actor_forbidden_without_grant() {
+		$user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		\wp_set_current_user( $user_id );
+
+		$activity = array(
+			'object' => array(
+				'type'    => 'Note',
+				'content' => '<p>Should not be created.</p>',
+			),
+		);
+
+		$result = Posts::create( $activity, 0 );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_forbidden', $result->get_error_code() );
+
+		\wp_set_current_user( 0 );
+	}
+
+	/**
+	 * Test the `activitypub_user_can_act_as_blog` filter unlocks the blog actor path.
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_with_blog_actor_filter_grants_access() {
+		$user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		\wp_set_current_user( $user_id );
+		\add_filter( 'activitypub_user_can_act_as_blog', '__return_true' );
+
+		$activity = array(
+			'object' => array(
+				'type'    => 'Note',
+				'content' => '<p>Filter-granted blog actor post.</p>',
+			),
+		);
+
+		$post = Posts::create( $activity, 0 );
+
+		\remove_filter( 'activitypub_user_can_act_as_blog', '__return_true' );
+		\wp_set_current_user( 0 );
+
+		$this->assertInstanceOf( '\WP_Post', $post );
+		$this->assertEquals( $user_id, (int) $post->post_author );
 	}
 
 	/**
@@ -185,6 +268,167 @@ class Test_Posts extends \WP_UnitTestCase {
 		$this->assertInstanceOf( '\WP_Post', $post );
 		// Content should be wrapped in block markup.
 		$this->assertStringContainsString( '<!-- wp:paragraph -->', $post->post_content );
+	}
+
+	/**
+	 * Test creating a post with a content warning (sensitive=true + summary).
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_with_content_warning() {
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$activity = array(
+			'object' => array(
+				'type'      => 'Note',
+				'content'   => '<p>Spoilery content.</p>',
+				'summary'   => 'Spoilers ahead',
+				'sensitive' => true,
+			),
+		);
+
+		$post = Posts::create( $activity, $user_id );
+
+		$this->assertInstanceOf( '\WP_Post', $post );
+		$this->assertSame( 'Spoilers ahead', \get_post_meta( $post->ID, 'activitypub_content_warning', true ) );
+		$this->assertSame( '', $post->post_excerpt );
+	}
+
+	/**
+	 * Test that a summary without sensitive=true is treated as a regular excerpt.
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_summary_without_sensitive_is_excerpt() {
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$activity = array(
+			'object' => array(
+				'type'    => 'Article',
+				'name'    => 'Title',
+				'content' => '<p>Body.</p>',
+				'summary' => 'A regular abstract.',
+			),
+		);
+
+		$post = Posts::create( $activity, $user_id );
+
+		$this->assertInstanceOf( '\WP_Post', $post );
+		$this->assertSame( 'A regular abstract.', $post->post_excerpt );
+		$this->assertSame( '', \get_post_meta( $post->ID, 'activitypub_content_warning', true ) );
+	}
+
+	/**
+	 * Test that sensitive=true without a summary is ignored.
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_sensitive_without_summary_is_ignored() {
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$activity = array(
+			'object' => array(
+				'type'      => 'Note',
+				'content'   => '<p>No spoilers, just a flag.</p>',
+				'sensitive' => true,
+			),
+		);
+
+		$post = Posts::create( $activity, $user_id );
+
+		$this->assertInstanceOf( '\WP_Post', $post );
+		$this->assertSame( '', \get_post_meta( $post->ID, 'activitypub_content_warning', true ) );
+		$this->assertSame( '', $post->post_excerpt );
+	}
+
+	/**
+	 * Test creating a post with sensitive=true and a whitespace-only summary.
+	 *
+	 * The whitespace becomes empty after sanitize_text_field, so no CW is set
+	 * and the post_excerpt is also empty (no whitespace pollution).
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_whitespace_summary_with_sensitive_is_ignored() {
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$activity = array(
+			'object' => array(
+				'type'      => 'Note',
+				'content'   => '<p>Content.</p>',
+				'summary'   => '   ',
+				'sensitive' => true,
+			),
+		);
+
+		$post = Posts::create( $activity, $user_id );
+
+		$this->assertInstanceOf( '\WP_Post', $post );
+		$this->assertSame( '', \get_post_meta( $post->ID, 'activitypub_content_warning', true ) );
+		$this->assertSame( '', $post->post_excerpt );
+	}
+
+	/**
+	 * Test updating a post to add a content warning.
+	 *
+	 * @covers ::update
+	 */
+	public function test_update_adds_content_warning() {
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$activity = array(
+			'object' => array(
+				'type'    => 'Note',
+				'content' => '<p>Original.</p>',
+				'summary' => 'Plain abstract.',
+			),
+		);
+
+		$post = Posts::create( $activity, $user_id );
+		$this->assertSame( 'Plain abstract.', $post->post_excerpt );
+
+		$update_activity = array(
+			'object' => array(
+				'type'      => 'Note',
+				'content'   => '<p>Now with spoilers.</p>',
+				'summary'   => 'Spoilers',
+				'sensitive' => true,
+			),
+		);
+
+		$updated = Posts::update( $post, $update_activity );
+
+		$this->assertInstanceOf( '\WP_Post', $updated );
+		$this->assertSame( 'Spoilers', \get_post_meta( $updated->ID, 'activitypub_content_warning', true ) );
+		$this->assertSame( '', $updated->post_excerpt );
+	}
+
+	/**
+	 * Test updating a post to remove a previously set content warning.
+	 *
+	 * @covers ::update
+	 */
+	public function test_update_clears_content_warning() {
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$activity = array(
+			'object' => array(
+				'type'      => 'Note',
+				'content'   => '<p>Spoilery.</p>',
+				'summary'   => 'Spoilers',
+				'sensitive' => true,
+			),
+		);
+
+		$post = Posts::create( $activity, $user_id );
+		$this->assertSame( 'Spoilers', \get_post_meta( $post->ID, 'activitypub_content_warning', true ) );
+
+		$update_activity = array(
+			'object' => array(
+				'type'    => 'Note',
+				'content' => '<p>No longer sensitive.</p>',
+			),
+		);
+
+		$updated = Posts::update( $post, $update_activity );
+
+		$this->assertInstanceOf( '\WP_Post', $updated );
+		$this->assertSame( '', \get_post_meta( $updated->ID, 'activitypub_content_warning', true ) );
+		$this->assertSame( '', $updated->post_excerpt );
 	}
 
 	/**

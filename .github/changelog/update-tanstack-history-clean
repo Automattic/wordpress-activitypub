@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Updated a build dependency to a clean release now that a fixed version is available.

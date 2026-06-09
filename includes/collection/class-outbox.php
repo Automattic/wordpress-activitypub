@@ -14,6 +14,7 @@ use Activitypub\Webfinger;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\object_to_uri;
+use function Activitypub\user_can_act_as_blog;
 
 /**
  * ActivityPub Outbox Collection
@@ -37,6 +38,14 @@ class Outbox {
 	 * @var int
 	 */
 	const MAX_ITEMS = 5000;
+
+	/**
+	 * Activity types included in the outbox collection listing.
+	 *
+	 * @var string[]
+	 */
+	const ACTIVITY_TYPES = array( 'Announce', 'Arrive', 'Create', 'Like', 'Update' );
+
 
 	/**
 	 * Number of items to process per batch during purge.
@@ -98,7 +107,8 @@ class Outbox {
 				$activity->get_type(),
 				\wp_trim_words( $title, 5 )
 			),
-			'post_content' => wp_slash( $activity->to_json() ),
+			// Persist the blind audience so later dispatch can compute recipients from `bto`/`bcc`.
+			'post_content' => wp_slash( $activity->to_json( true, true ) ),
 			// ensure that user ID is not below 0.
 			'post_author'  => \max( $user_id, 0 ),
 			'post_status'  => 'pending',
@@ -127,7 +137,7 @@ class Outbox {
 			\wp_update_post(
 				array(
 					'ID'           => $id,
-					'post_content' => \wp_slash( $activity->to_json() ),
+					'post_content' => \wp_slash( $activity->to_json( true, true ) ),
 				)
 			);
 		}
@@ -186,20 +196,43 @@ class Outbox {
 			),
 		);
 
-		// For non-Delete activities, only delete items of the same type.
-		// Delete activities supersede all pending items for the same object.
+		/*
+		 * Same-type pending items are always superseded. A confirmed
+		 * re-publish (Create) additionally invalidates a pending Delete so
+		 * we do not send both Delete and Create for the same object.
+		 *
+		 * Update is intentionally NOT in this list: it must not cancel a
+		 * pending Delete, or an unrelated edit could flip a hidden object back
+		 * to federated. An Update for an already-deleted object is rejected
+		 * upstream in `add_to_outbox()`, and the scheduler re-publish path emits
+		 * a Create (not an Update), so that legitimate path still cancels Delete.
+		 */
 		if ( 'Delete' !== $activity_type ) {
+			$types = 'Create' === $activity_type
+				? array( 'Create', 'Delete' )
+				: array( $activity_type );
+
 			$meta_query[] = array(
-				'key'   => '_activitypub_activity_type',
-				'value' => $activity_type,
+				'key'     => '_activitypub_activity_type',
+				'value'   => $types,
+				'compare' => 'IN',
 			);
 		}
+
+		/*
+		 * Delete wipes the entire outbox history for the object — any
+		 * already-sent Create/Update/etc. is now stale and a redelivery
+		 * retry would resurrect content we are tearing down. Other
+		 * activity types only invalidate pending peers.
+		 */
+		$status_filter = 'Delete' === $activity_type ? 'any' : 'pending';
 
 		$existing_items = get_posts(
 			array(
 				'post_type'   => self::POST_TYPE,
-				'post_status' => 'pending',
+				'post_status' => $status_filter,
 				'exclude'     => array( $exclude_id ),
+				'numberposts' => -1,
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query'  => $meta_query,
 				'fields'      => 'ids',
@@ -422,9 +455,25 @@ class Outbox {
 			\Activitypub\OAuth\Server::authenticate_oauth( null );
 		}
 
-		// Allow the author to view their own outbox items regardless of visibility.
-		if ( \get_current_user_id() === (int) $outbox_item->post_author ) {
-			return self::get_activity( $outbox_item );
+		/*
+		 * Allow the author to view their own outbox items regardless of visibility.
+		 * The `is_user_logged_in()` guard prevents anonymous visitors from matching
+		 * the blog actor's items (where both `get_current_user_id()` and `post_author`
+		 * are `0`), which would otherwise expose private activities at their permalink.
+		 *
+		 * Users authorized to act as the blog actor are treated as the author of
+		 * blog-actor items so they can read the same private outbox they can post to.
+		 */
+		if ( \is_user_logged_in() ) {
+			$author = (int) $outbox_item->post_author;
+
+			if ( \get_current_user_id() === $author ) {
+				return self::get_activity( $outbox_item );
+			}
+
+			if ( Actors::BLOG_USER_ID === $author && user_can_act_as_blog() ) {
+				return self::get_activity( $outbox_item );
+			}
 		}
 
 		// Check if Outbox Activity is public.
@@ -434,7 +483,7 @@ class Outbox {
 			return new \WP_Error( 'private_outbox_item', 'Not a public Outbox item.' );
 		}
 
-		$activity_types = \apply_filters( 'rest_activitypub_outbox_activity_types', array( 'Announce', 'Create', 'Like', 'Update' ) );
+		$activity_types = \apply_filters( 'rest_activitypub_outbox_activity_types', self::ACTIVITY_TYPES );
 		$activity_type  = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
 
 		if ( ! in_array( $activity_type, $activity_types, true ) ) {

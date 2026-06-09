@@ -24,6 +24,7 @@ class Server {
 
 		\add_filter( 'rest_post_dispatch', array( self::class, 'filter_output' ), 10, 3 );
 		\add_filter( 'rest_post_dispatch', array( self::class, 'add_cors_headers' ), 10, 3 );
+		\add_filter( 'rest_allowed_cors_headers', array( self::class, 'allow_cors_headers' ), 10, 2 );
 	}
 
 	/**
@@ -173,21 +174,52 @@ class Server {
 		$namespace = '/' . ACTIVITYPUB_REST_NAMESPACE;
 
 		// Only add CORS to ActivityPub endpoints, except the interactive OAuth authorize endpoint.
-		if ( ! \str_starts_with( $route, $namespace ) || \str_contains( $route, $namespace . '/oauth/authorize' ) ) {
+		if ( ! \str_starts_with( $route, $namespace ) || \str_starts_with( $route, $namespace . '/oauth/authorize' ) ) {
 			return $response;
 		}
 
-		$origin = self::get_cors_origin();
-		$response->header( 'Access-Control-Allow-Origin', $origin ? $origin : '*' );
+		/*
+		 * ActivityPub data is meant to be publicly readable by federation peers
+		 * and browser-side clients. We do not enable credentialed cross-origin
+		 * access: cookie auth would still be rejected by WordPress core's
+		 * REST nonce check, and OAuth Bearer tokens travel in the
+		 * Authorization header — which is permitted via Allow-Headers and
+		 * does not require Allow-Credentials.
+		 *
+		 * Allow-Headers is contributed by core (which already lists `X-WP-Nonce`,
+		 * `Authorization`, `Content-Type`, `Content-Disposition`, and `Content-MD5`)
+		 * and extended for ActivityPub via the `rest_allowed_cors_headers` filter
+		 * in self::allow_cors_headers().
+		 */
+		$response->header( 'Access-Control-Allow-Origin', '*' );
 		$response->header( 'Access-Control-Allow-Methods', 'GET, POST, OPTIONS' );
-		$response->header( 'Access-Control-Allow-Headers', 'Accept, Content-Type, Authorization, Last-Event-ID' );
-
-		if ( $origin ) {
-			$response->header( 'Access-Control-Allow-Credentials', 'true' );
-			$response->header( 'Vary', 'Origin' );
-		}
 
 		return $response;
+	}
+
+	/**
+	 * Extend the CORS Allow-Headers list for ActivityPub REST endpoints.
+	 *
+	 * Adds the headers ActivityPub clients need on top of WordPress core's
+	 * defaults: `Accept` for content negotiation and `Last-Event-ID` for
+	 * Server-Sent Events resume.
+	 *
+	 * @since 8.3.0
+	 *
+	 * @param string[]         $allow_headers Headers core currently permits in CORS requests.
+	 * @param \WP_REST_Request $request       The current REST request.
+	 *
+	 * @return string[] The (possibly extended) list of allowed headers.
+	 */
+	public static function allow_cors_headers( $allow_headers, $request ) {
+		$route     = $request->get_route();
+		$namespace = '/' . ACTIVITYPUB_REST_NAMESPACE;
+
+		if ( ! \str_starts_with( $route, $namespace ) || \str_starts_with( $route, $namespace . '/oauth/authorize' ) ) {
+			return $allow_headers;
+		}
+
+		return \array_values( \array_unique( \array_merge( (array) $allow_headers, array( 'Accept', 'Last-Event-ID' ) ) ) );
 	}
 
 	/**
@@ -196,32 +228,11 @@ class Server {
 	 * Use this for endpoints that bypass the REST response flow
 	 * (e.g. SSE streams that call exit() instead of returning a WP_REST_Response).
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 */
 	public static function send_cors_headers() {
-		$origin = self::get_cors_origin();
-
-		\header( 'Access-Control-Allow-Origin: ' . ( $origin ? $origin : '*' ) );
+		\header( 'Access-Control-Allow-Origin: *' );
 		\header( 'Access-Control-Allow-Methods: GET, POST, OPTIONS' );
-		\header( 'Access-Control-Allow-Headers: Accept, Content-Type, Authorization, Last-Event-ID' );
-
-		if ( $origin ) {
-			\header( 'Access-Control-Allow-Credentials: true' );
-			\header( 'Vary: Origin' );
-		}
-	}
-
-	/**
-	 * Get the CORS origin from the request.
-	 *
-	 * Reflects the request Origin instead of using a wildcard to avoid
-	 * leaking private data to arbitrary origins on authenticated endpoints.
-	 *
-	 * @since unreleased
-	 *
-	 * @return string The origin or empty string.
-	 */
-	private static function get_cors_origin() {
-		return isset( $_SERVER['HTTP_ORIGIN'] ) ? \esc_url_raw( \wp_unslash( $_SERVER['HTTP_ORIGIN'] ) ) : '';
+		\header( 'Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Disposition, Content-MD5, Content-Type, Accept, Last-Event-ID' );
 	}
 }

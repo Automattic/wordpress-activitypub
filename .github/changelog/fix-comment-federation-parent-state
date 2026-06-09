@@ -1,0 +1,4 @@
+Significance: minor
+Type: security
+
+Only share comment replies in the Fediverse when the post they belong to is itself federated, so replies on private or non-federated posts stay private.

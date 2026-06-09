@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Stop a deprecation notice from appearing in the error log when the NodeInfo plugin is also active.

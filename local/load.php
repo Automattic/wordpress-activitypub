@@ -10,6 +10,9 @@ namespace Activitypub\Development;
 \Activitypub\Autoloader::register_path( __NAMESPACE__, __DIR__ );
 
 // Initialize local development tools below.
+if ( \defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+	Debug::init();
+}
 
 /*
  * Enables Jetpack development/debug mode.

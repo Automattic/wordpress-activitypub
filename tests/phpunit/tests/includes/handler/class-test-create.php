@@ -685,7 +685,6 @@ class Test_Create extends \WP_UnitTestCase {
 		$this->assertTrue( Tombstone::exists_local( $object_url ) );
 
 		// Clean up.
-		\delete_option( 'activitypub_tombstone_urls' );
 	}
 
 	/**
@@ -786,7 +785,6 @@ class Test_Create extends \WP_UnitTestCase {
 		$this->assertFalse( Tombstone::exists_local( $object_url ), 'URL should not be tombstoned after Create' );
 
 		// Clean up.
-		\delete_option( 'activitypub_tombstone_urls' );
 	}
 
 	/**

@@ -29,7 +29,7 @@ class Block {
 	 * Blocks a remote actor using the Moderation system, then adds
 	 * the activity to the outbox for federation.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param array $data    The activity data array.
 	 * @param int   $user_id The user ID.

@@ -118,6 +118,90 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Comments on a post that was never federated must not be federated.
+	 *
+	 * Regression: an approved reply by an ActivityPub-enabled user on a private or
+	 * non-ActivityPub post (one that was never federated itself) was sent to the public
+	 * outbox, leaking private content (e.g. a private Sensei LMS message reply).
+	 *
+	 * @covers ::should_be_federated
+	 */
+	public function test_does_not_federate_comment_on_non_federated_post() {
+		// A private post that was never federated (no activitypub_status meta).
+		$post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'private',
+				'post_author' => 1,
+			)
+		);
+
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'user_id'          => 1,
+				'comment_approved' => '1',
+				'comment_content'  => 'SECRET private reply',
+			)
+		);
+
+		$this->assertFalse(
+			Comment::should_be_federated( \get_comment( $comment_id ) ),
+			'A comment on a post that was never federated must not be federated.'
+		);
+	}
+
+	/**
+	 * Comments on a federated post are federated.
+	 *
+	 * @covers ::should_be_federated
+	 */
+	public function test_federates_comment_on_federated_post() {
+		$post_id = self::factory()->post->create( array( 'post_author' => 1 ) );
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'user_id'          => 1,
+				'comment_approved' => '1',
+				'comment_content'  => 'A public reply',
+			)
+		);
+
+		$this->assertTrue(
+			Comment::should_be_federated( \get_comment( $comment_id ) ),
+			'A comment on a federated post should be federated.'
+		);
+	}
+
+	/**
+	 * A comment that was already sent still federates even when its parent post
+	 * is no longer federated, so its Update and Delete activities can reach
+	 * remote copies.
+	 *
+	 * @covers ::should_be_federated
+	 */
+	public function test_federates_already_sent_comment_on_non_federated_post() {
+		// A post that is not federated.
+		$post_id = self::factory()->post->create( array( 'post_status' => 'private' ) );
+
+		// A comment that was already sent to the Fediverse.
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'user_id'          => 1,
+				'comment_approved' => '1',
+				'comment_meta'     => array( 'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_FEDERATED ),
+			)
+		);
+
+		$this->assertTrue(
+			Comment::should_be_federated( \get_comment( $comment_id ) ),
+			'An already-sent comment must still federate even when its parent post is not federated.'
+		);
+	}
+
+	/**
 	 * Test pre_comment_approved.
 	 *
 	 * @covers ::pre_comment_approved
@@ -548,6 +632,37 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		// Test that there are no duplicate slugs.
 		$this->assertEquals( count( $slugs ), count( array_unique( $slugs ) ) );
+	}
+
+	/**
+	 * Regression: get_comment_types() must coerce null to an empty array.
+	 *
+	 * $activitypub_comment_types can be null until comment types are registered
+	 * (for example via Comment::register_comment_types()), which isn't
+	 * guaranteed on every request. array_keys( null ) fatals under PHP 8+,
+	 * so callers must see an array either way.
+	 *
+	 * @covers ::get_comment_types
+	 * @covers ::get_comment_type_slugs
+	 */
+	public function test_get_comment_types_returns_array_when_global_is_null() {
+		global $activitypub_comment_types;
+
+		$backup                    = $activitypub_comment_types;
+		$activitypub_comment_types = null;
+
+		try {
+			$result = Comment::get_comment_types();
+			$this->assertIsArray( $result );
+			$this->assertSame( array(), $result );
+
+			// And the downstream call that triggered the original crash.
+			$slugs = Comment::get_comment_type_slugs();
+			$this->assertIsArray( $slugs );
+			$this->assertSame( array(), $slugs );
+		} finally {
+			$activitypub_comment_types = $backup;
+		}
 	}
 
 	/**

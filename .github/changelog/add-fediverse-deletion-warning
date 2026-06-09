@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Warn in the editor before making a post that's already shared on the Fediverse a draft, private, or password-protected, since followers' copies will be removed.

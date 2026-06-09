@@ -31,7 +31,24 @@ class Undo {
 	 */
 	public static function handle_undo( $activity, $user_ids ) {
 		$success = false;
-		$result  = Inbox_Collection::undo( object_to_uri( $activity['object'] ) );
+
+		/*
+		 * Resolve the sender so Inbox::undo() can verify ownership. A genuinely absent actor
+		 * maps to null (no ownership check, for programmatic callers), but an actor that is
+		 * present yet unparseable must be rejected rather than skipping the check — passing
+		 * null there would re-open the undo-by-id attack.
+		 */
+		$actor = isset( $activity['actor'] ) ? object_to_uri( $activity['actor'] ) : null;
+
+		if ( isset( $activity['actor'] ) && empty( $actor ) ) {
+			$result = new \WP_Error(
+				'activitypub_undo_invalid_actor',
+				\__( 'The Undo activity has an invalid actor.', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		} else {
+			$result = Inbox_Collection::undo( object_to_uri( $activity['object'] ), $actor );
+		}
 
 		if ( $result && ! \is_wp_error( $result ) ) {
 			$success = true;

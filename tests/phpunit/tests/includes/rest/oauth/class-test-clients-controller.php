@@ -148,9 +148,71 @@ class Test_Clients_Controller extends \WP_UnitTestCase {
 
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
+		$headers  = $response->get_headers();
 
 		$this->assertEquals( 429, $response->get_status() );
 		$this->assertEquals( 'activitypub_rate_limited', $data['code'] );
+		$this->assertSame( (string) MINUTE_IN_SECONDS, $headers['Retry-After'] ?? null, 'Rate-limit responses must include Retry-After per RFC 6585 §4.' );
+	}
+
+	/**
+	 * Test that registration fails closed when no client IP can be determined.
+	 *
+	 * The endpoint must reject the request rather than share a single
+	 * rate-limit bucket across every unidentifiable caller.
+	 *
+	 * @covers ::register_client
+	 */
+	public function test_register_client_fails_closed_without_client_ip() {
+		// Snapshot every $_SERVER key get_client_ip walks: any leftover proxy header from another
+		// test would otherwise let the endpoint find a valid IP and skip the fail-closed branch.
+		$server_keys = array(
+			'REMOTE_ADDR',
+			'HTTP_CF_CONNECTING_IP',
+			'HTTP_CLIENT_IP',
+			'HTTP_X_FORWARDED_FOR',
+			'HTTP_X_FORWARDED',
+			'HTTP_X_CLUSTER_CLIENT_IP',
+			'HTTP_FORWARDED_FOR',
+			'HTTP_FORWARDED',
+		);
+		$snapshot    = array();
+		foreach ( $server_keys as $key ) {
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- Capturing existing test fixture values for restore.
+			$snapshot[ $key ] = \array_key_exists( $key, $_SERVER ) ? $_SERVER[ $key ] : null;
+		}
+
+		$empty_ip_transient = 'ap_oauth_reg_' . \md5( '' );
+		\delete_transient( $empty_ip_transient );
+
+		try {
+			foreach ( $server_keys as $key ) {
+				unset( $_SERVER[ $key ] );
+			}
+
+			$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/clients' );
+			$request->set_param( 'client_name', 'No-IP App' );
+			$request->set_param( 'redirect_uris', array( 'https://no-ip.example.com/callback' ) );
+
+			$response = \rest_get_server()->dispatch( $request );
+			$data     = $response->get_data();
+			$headers  = $response->get_headers();
+
+			$this->assertEquals( 429, $response->get_status() );
+			$this->assertEquals( 'activitypub_rate_limited', $data['code'] );
+			$this->assertSame( (string) MINUTE_IN_SECONDS, $headers['Retry-After'] ?? null, 'Rate-limit responses must include Retry-After per RFC 6585 §4.' );
+
+			// Ensure the empty-IP path didn't write a shared transient.
+			$this->assertFalse( \get_transient( $empty_ip_transient ) );
+		} finally {
+			foreach ( $snapshot as $key => $value ) {
+				if ( null === $value ) {
+					unset( $_SERVER[ $key ] );
+				} else {
+					$_SERVER[ $key ] = $value;
+				}
+			}
+		}
 	}
 
 	/**
@@ -202,5 +264,9 @@ class Test_Clients_Controller extends \WP_UnitTestCase {
 		$this->assertContains( 'code', $data['response_types_supported'] );
 		$this->assertContains( 'authorization_code', $data['grant_types_supported'] );
 		$this->assertContains( 'refresh_token', $data['grant_types_supported'] );
+
+		// Advertise SWICG ActivityPub API Basic Profile canonical scope aliases.
+		$this->assertContains( 'activitypub:read:all', $data['scopes_supported'] );
+		$this->assertContains( 'activitypub:write:all', $data['scopes_supported'] );
 	}
 }

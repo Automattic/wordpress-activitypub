@@ -24,6 +24,7 @@ class Jetpack {
 	 */
 	public static function init() {
 		if ( ! \defined( 'IS_WPCOM' ) ) {
+			\add_filter( 'jetpack_sync_options_whitelist', array( self::class, 'add_sync_options' ) );
 			\add_filter( 'jetpack_sync_post_meta_whitelist', array( self::class, 'add_sync_meta' ) );
 			\add_filter( 'jetpack_sync_comment_meta_whitelist', array( self::class, 'add_sync_comment_meta' ) );
 			\add_filter( 'jetpack_sync_whitelisted_comment_types', array( self::class, 'add_comment_types' ) );
@@ -40,6 +41,24 @@ class Jetpack {
 		}
 
 		\add_action( 'load-post-new.php', array( self::class, 'adapt_post_share' ) );
+	}
+
+	/**
+	 * Add ActivityPub options to the Jetpack sync allow list.
+	 *
+	 * @since 8.1.0
+	 *
+	 * @param array $allow_list The Jetpack sync options allow list.
+	 *
+	 * @return array The allow list with ActivityPub options.
+	 */
+	public static function add_sync_options( $allow_list ) {
+		$allow_list[] = 'activitypub_blog_identifier';
+		$allow_list[] = 'activitypub_blog_description';
+		$allow_list[] = 'activitypub_header_image';
+		$allow_list[] = 'activitypub_actor_mode';
+
+		return $allow_list;
 	}
 
 	/**

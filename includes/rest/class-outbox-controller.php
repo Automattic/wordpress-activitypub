@@ -29,7 +29,15 @@ use function Activitypub\object_to_uri;
 class Outbox_Controller extends \WP_REST_Controller {
 	use Collection;
 	use Event_Stream;
+	use Language_Map;
 	use Verification;
+
+	/**
+	 * Activity types accessible as individual outbox items via REST.
+	 *
+	 * @var string[]
+	 */
+	const PUBLIC_ACTIVITY_TYPES = array( 'Announce', 'Arrive', 'Create', 'Like', 'Update' );
 
 	/**
 	 * The namespace of this controller's route.
@@ -148,11 +156,11 @@ class Outbox_Controller extends \WP_REST_Controller {
 		\do_action( 'activitypub_rest_outbox_pre', $request );
 
 		/**
-		 * Filters the list of activity types to include in the outbox.
+		 * Filters the activity types included in the outbox collection.
 		 *
-		 * @param string[] $activity_types The list of activity types.
+		 * @param string[] $activity_types The activity types.
 		 */
-		$activity_types = \apply_filters( 'activitypub_outbox_activity_types', array( 'Announce', 'Create', 'Like', 'Update' ) );
+		$activity_types = \apply_filters( 'activitypub_outbox_activity_types', self::PUBLIC_ACTIVITY_TYPES );
 
 		$args = array(
 			'posts_per_page' => $request->get_param( 'per_page' ),
@@ -170,7 +178,19 @@ class Outbox_Controller extends \WP_REST_Controller {
 			),
 		);
 
-		if ( \get_current_user_id() !== (int) $user_id && ! \current_user_can( 'activitypub' ) ) {
+		/*
+		 * Whether the current user owns the outbox being queried. Owners see private and
+		 * non-public activity types; unauthenticated, federation, and non-owner requests are
+		 * limited to the public subset by the visibility filter below.
+		 *
+		 * Reuse the canonical ownership gate (the same check the OAuth C2S path applies via
+		 * maybe_verify_owner()) instead of re-deriving it here: it requires an authenticated
+		 * session, matches the requested user by identity, and handles the blog actor via
+		 * user_can_act_as_blog(). A global capability never stands in for ownership.
+		 */
+		$is_outbox_owner = true === $this->verify_owner( $request );
+
+		if ( ! $is_outbox_owner ) {
 			$args['meta_query'][] = array(
 				'key'     => '_activitypub_activity_type',
 				'value'   => $activity_types,
@@ -355,15 +375,17 @@ class Outbox_Controller extends \WP_REST_Controller {
 			)
 		);
 
+		$user_id  = (int) $request->get_param( 'user_id' );
 		$comments = new \WP_Comment_Query(
 			array(
-				'status'        => 'approve',
-				'user_id'       => $request->get_param( 'user_id' ),
+				'status'         => 'approve',
+				'user_id'        => $user_id,
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'meta_key'      => 'activitypub_status',
-				'fields'        => 'ids',
-				'no_found_rows' => false,
-				'number'        => 1,
+				'meta_key'       => 'activitypub_status',
+				'fields'         => 'ids',
+				'no_found_rows'  => false,
+				'number'         => 1,
+				'author__not_in' => array( 0 ),
 			)
 		);
 
@@ -413,6 +435,9 @@ class Outbox_Controller extends \WP_REST_Controller {
 		if ( ! $is_activity ) {
 			$data = $this->wrap_in_create( $data, $user );
 		}
+
+		// Resolve language maps (summaryMap, contentMap, nameMap) to plain strings.
+		$data = $this->localize_language_maps( $data );
 
 		// Default to public addressing if client omits recipients.
 		$data = $this->ensure_addressing( $data, $user );
@@ -580,7 +605,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * Per the ActivityPub spec, the server adds addressing when the client
 	 * does not provide it. Defaults to public with followers in cc.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param array                       $data The activity data.
 	 * @param \Activitypub\Activity\Actor $user The authenticated user.

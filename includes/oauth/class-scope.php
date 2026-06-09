@@ -52,6 +52,23 @@ class Scope {
 	);
 
 	/**
+	 * SWICG ActivityPub API Basic Profile canonical scope aliases.
+	 *
+	 * Advertised in OAuth metadata so Basic Profile clients can discover them,
+	 * and accepted in scope requests (any `activitypub:read:*` collapses to
+	 * `read`, any `activitypub:write:*` collapses to `write`). Enforcement
+	 * stays coarse: there is no per-activity-type access control yet.
+	 *
+	 * @since unreleased
+	 *
+	 * @var array
+	 */
+	const CANONICAL_ALIASES = array(
+		'activitypub:read:all',
+		'activitypub:write:all',
+	);
+
+	/**
 	 * Human-readable descriptions for each scope.
 	 *
 	 * @var array
@@ -79,6 +96,10 @@ class Scope {
 	/**
 	 * Validate and filter requested scopes.
 	 *
+	 * Canonical SWICG ActivityPub API Basic Profile scope names of the form
+	 * `activitypub:read:*` and `activitypub:write:*` are normalized to the
+	 * plugin's internal `read` and `write` scopes before validation.
+	 *
 	 * @param string|array $scopes The requested scopes (space-separated string or array).
 	 * @return array Valid scopes.
 	 */
@@ -91,13 +112,67 @@ class Scope {
 			return self::DEFAULT_SCOPES;
 		}
 
+		$scopes       = self::normalize( $scopes );
 		$valid_scopes = array_intersect( $scopes, self::ALL );
 
 		if ( empty( $valid_scopes ) ) {
 			return self::DEFAULT_SCOPES;
 		}
 
-		return array_values( $valid_scopes );
+		return array_values( array_unique( $valid_scopes ) );
+	}
+
+	/**
+	 * Normalize canonical Basic Profile scope names to internal scopes.
+	 *
+	 * Maps any `activitypub:read:*` to {@see self::READ} and any
+	 * `activitypub:write:*` to {@see self::WRITE}. Unknown values pass through
+	 * unchanged so they can be filtered out by the caller.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $scopes Requested scope strings.
+	 * @return array Normalized scope strings.
+	 */
+	public static function normalize( $scopes ) {
+		if ( ! is_array( $scopes ) ) {
+			return array();
+		}
+
+		$normalized = array();
+		foreach ( $scopes as $scope ) {
+			if ( ! is_string( $scope ) || '' === $scope ) {
+				continue;
+			}
+
+			if ( 0 === strpos( $scope, 'activitypub:read:' ) ) {
+				$normalized[] = self::READ;
+				continue;
+			}
+
+			if ( 0 === strpos( $scope, 'activitypub:write:' ) ) {
+				$normalized[] = self::WRITE;
+				continue;
+			}
+
+			$normalized[] = $scope;
+		}
+
+		return $normalized;
+	}
+
+	/**
+	 * Return the scope identifiers advertised in OAuth authorization-server metadata.
+	 *
+	 * Includes the plugin's internal scopes plus the SWICG Basic Profile
+	 * canonical aliases so spec-aware clients can discover them.
+	 *
+	 * @since unreleased
+	 *
+	 * @return array Scope identifiers.
+	 */
+	public static function supported() {
+		return array_merge( self::ALL, self::CANONICAL_ALIASES );
 	}
 
 	/**

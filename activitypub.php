@@ -3,7 +3,7 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/Automattic/wordpress-activitypub
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 8.0.2
+ * Version: 8.3.0
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
@@ -17,7 +17,7 @@
 
 namespace Activitypub;
 
-\define( 'ACTIVITYPUB_PLUGIN_VERSION', '8.0.2' );
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '8.3.0' );
 
 // Plugin related constants.
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -55,10 +55,12 @@ function rest_init() {
 	( new Rest\Admin\Actions_Controller() )->register_routes();
 	( new Rest\Admin\Statistics_Controller() )->register_routes();
 	( new Rest\Application_Controller() )->register_routes();
+	( new Rest\Stats_Image_Controller() )->register_routes();
 	( new Rest\Collections_Controller() )->register_routes();
 	( new Rest\Comments_Controller() )->register_routes();
 	( new Rest\Followers_Controller() )->register_routes();
 	( new Rest\Following_Controller() )->register_routes();
+	( new Rest\Liked_Controller() )->register_routes();
 	( new Rest\Inbox_Controller() )->register_routes();
 	( new Rest\Interaction_Controller() )->register_routes();
 	( new Rest\Moderators_Controller() )->register_routes();
@@ -86,6 +88,7 @@ function rest_init() {
 function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Activitypub', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Avatars', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Blurhash', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Cache', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Dispatcher', 'init' ) );
@@ -126,14 +129,6 @@ function plugin_init() {
 		$loader_file = __DIR__ . '/local/load.php';
 		if ( \file_exists( $loader_file ) && \is_readable( $loader_file ) ) {
 			require_once $loader_file;
-		}
-	}
-
-	if ( \defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-		$debug_file = __DIR__ . '/includes/debug.php';
-		if ( \file_exists( $debug_file ) && \is_readable( $debug_file ) ) {
-			require_once $debug_file;
-			Debug::init();
 		}
 	}
 }

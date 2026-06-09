@@ -10,6 +10,7 @@ namespace Activitypub\Tests\Integration;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Integration\Enable_Mastodon_Apps;
+use Enable_Mastodon_Apps\Entity\Status;
 
 /**
  * Test class for Enable Mastodon Apps integration.
@@ -219,6 +220,132 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 			}
 		}
 		return $pre;
+	}
+
+	/**
+	 * Test tag timeline returns early when no hashtag is provided.
+	 *
+	 * @covers ::api_tag_timeline_tags_pub
+	 */
+	public function test_tag_timeline_returns_early_without_hashtag() {
+		$request = new \WP_REST_Request( 'GET', '/api/v1/timelines/tag/' );
+
+		$result = Enable_Mastodon_Apps::api_tag_timeline_tags_pub( null, $request );
+
+		$this->assertNull( $result );
+	}
+
+	/**
+	 * Test tag timeline returns input when statuses is not WP_REST_Response.
+	 *
+	 * @covers ::api_tag_timeline_tags_pub
+	 */
+	public function test_tag_timeline_returns_input_for_non_response() {
+		$request = new \WP_REST_Request( 'GET', '/api/v1/timelines/tag/test' );
+		$request->set_param( 'hashtag', 'test' );
+
+		$input  = array( 'some', 'data' );
+		$result = Enable_Mastodon_Apps::api_tag_timeline_tags_pub( $input, $request );
+
+		$this->assertEquals( $input, $result );
+	}
+
+	/**
+	 * Test tag timeline deduplicates statuses by ID.
+	 *
+	 * @covers ::api_tag_timeline_tags_pub
+	 */
+	public function test_tag_timeline_deduplicates() {
+		$status1             = new Status();
+		$status1->id         = 'unique-1';
+		$status1->created_at = new \DateTime( '2025-01-02' );
+
+		$status2             = new Status();
+		$status2->id         = 'unique-1'; // Duplicate ID.
+		$status2->created_at = new \DateTime( '2025-01-01' );
+
+		$status3             = new Status();
+		$status3->id         = 'unique-2';
+		$status3->created_at = new \DateTime( '2025-01-03' );
+
+		$response       = new \WP_REST_Response();
+		$response->data = array( $status1 );
+
+		// Mock the fetch to return statuses with a duplicate.
+		\set_transient( 'activitypub_tags_pub_' . \md5( 'dedup' ), array(), 60 );
+
+		$request = new \WP_REST_Request( 'GET', '/api/v1/timelines/tag/dedup' );
+		$request->set_param( 'hashtag', 'dedup' );
+
+		$result = Enable_Mastodon_Apps::api_tag_timeline_tags_pub( $response, $request );
+
+		// With empty transient cache, no remote statuses are added.
+		$this->assertCount( 1, $result->data );
+
+		\delete_transient( 'activitypub_tags_pub_' . \md5( 'dedup' ) );
+	}
+
+	/**
+	 * Test tag timeline sorts by created_at descending.
+	 *
+	 * @covers ::api_tag_timeline_tags_pub
+	 */
+	public function test_tag_timeline_sorts_descending() {
+		$older             = new Status();
+		$older->id         = 'old';
+		$older->created_at = new \DateTime( '2025-01-01' );
+
+		$newer             = new Status();
+		$newer->id         = 'new';
+		$newer->created_at = new \DateTime( '2025-06-01' );
+
+		$response       = new \WP_REST_Response();
+		$response->data = array( $older, $newer );
+
+		// Empty cache so no remote items are fetched.
+		\set_transient( 'activitypub_tags_pub_' . \md5( 'sorted' ), array(), 60 );
+
+		$request = new \WP_REST_Request( 'GET', '/api/v1/timelines/tag/sorted' );
+		$request->set_param( 'hashtag', 'sorted' );
+
+		$result = Enable_Mastodon_Apps::api_tag_timeline_tags_pub( $response, $request );
+
+		$this->assertEquals( 'new', $result->data[0]->id );
+		$this->assertEquals( 'old', $result->data[1]->id );
+
+		\delete_transient( 'activitypub_tags_pub_' . \md5( 'sorted' ) );
+	}
+
+	/**
+	 * Test tags.pub base URL is filterable.
+	 *
+	 * @covers ::resolve_tags_pub_items
+	 */
+	public function test_tags_pub_base_url_filterable() {
+		$filter_called = false;
+
+		\add_filter(
+			'activitypub_tags_pub_base_url',
+			function ( $url ) use ( &$filter_called ) {
+				$filter_called = true;
+				return $url;
+			}
+		);
+
+		// Trigger a fetch (will fail since no HTTP mock, but filter should fire).
+		\delete_transient( 'activitypub_tags_pub_' . \md5( 'filtertest' ) );
+
+		$request = new \WP_REST_Request( 'GET', '/api/v1/timelines/tag/filtertest' );
+		$request->set_param( 'hashtag', 'filtertest' );
+
+		$response       = new \WP_REST_Response();
+		$response->data = array();
+
+		Enable_Mastodon_Apps::api_tag_timeline_tags_pub( $response, $request );
+
+		$this->assertTrue( $filter_called, 'activitypub_tags_pub_base_url filter should be called.' );
+
+		\delete_transient( 'activitypub_tags_pub_' . \md5( 'filtertest' ) );
 	}
 
 	/**

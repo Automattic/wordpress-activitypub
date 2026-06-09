@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix a fatal error during activity delivery when the outbox item has been deleted.

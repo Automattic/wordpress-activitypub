@@ -111,12 +111,14 @@ class Connector extends \WP_Stream\Connector {
 	/**
 	 * Callback for activitypub_handled_follow.
 	 *
-	 * @param array         $activity     The ActivityPub activity data.
-	 * @param int|null      $user_id      The local user ID, or null if not applicable.
-	 * @param mixed         $state        Status or WP_Error object indicating the result of the follow handling.
-	 * @param \WP_Post|null $context   The WP_Post object representing the remote actor/follower.
+	 * @param array              $activity The ActivityPub activity data.
+	 * @param int|int[]          $user_ids The local user ID(s) of the followed actor(s).
+	 * @param bool               $success  Whether the follow was handled successfully.
+	 * @param \WP_Post|\WP_Error $context  The remote actor/follower, or WP_Error on failure.
 	 */
-	public function callback_activitypub_handled_follow( $activity, $user_id, $state, $context ) {
+	public function callback_activitypub_handled_follow( $activity, $user_ids, $success, $context ) {
+		// The hook passes an array of user IDs; Stream's log() builds a WP_User from this, so coerce to a single integer.
+		$user_id   = (int) ( \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids );
 		$actor_url = \is_object( $context ) && ! \is_wp_error( $context ) ? $context->guid : $activity['actor'];
 
 		$this->log(

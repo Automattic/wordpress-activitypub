@@ -24,7 +24,7 @@ class Delete {
 	public static function init() {
 		\add_action( 'activitypub_inbox_delete', array( self::class, 'handle_delete' ), 10, 2 );
 		\add_filter( 'activitypub_skip_inbox_storage', array( self::class, 'skip_inbox_storage' ), 10, 2 );
-		\add_filter( 'activitypub_defer_signature_verification', array( self::class, 'defer_signature_verification' ), 10, 2 );
+		\add_filter( 'activitypub_defer_signature_verification', array( self::class, 'defer_signature_verification' ), 10, 3 );
 		\add_action( 'activitypub_delete_remote_actor_interactions', array( self::class, 'delete_interactions' ) );
 		\add_action( 'activitypub_delete_remote_actor_posts', array( self::class, 'delete_posts' ) );
 
@@ -298,12 +298,25 @@ class Delete {
 	/**
 	 * Defer signature verification for `Delete` requests.
 	 *
-	 * @param bool             $defer   Whether to defer signature verification.
-	 * @param \WP_REST_Request $request The request object.
+	 * Endpoints that opt in to mandatory signing by calling
+	 * `verify_signature( $request, true )` must not be overridden — the
+	 * Delete carve-out is only for the default inbox path where the
+	 * remote actor's keys may legitimately be gone before the Delete
+	 * arrives.
+	 *
+	 * @since 8.2.0 The `$force_signature` parameter is now respected.
+	 *
+	 * @param bool             $defer           Whether to defer signature verification.
+	 * @param \WP_REST_Request $request         The request object.
+	 * @param bool             $force_signature Whether the caller has forced signature verification.
 	 *
 	 * @return bool Whether to defer signature verification.
 	 */
-	public static function defer_signature_verification( $defer, $request ) {
+	public static function defer_signature_verification( $defer, $request, $force_signature = false ) {
+		if ( $force_signature ) {
+			return $defer;
+		}
+
 		$json = $request->get_json_params();
 
 		if ( isset( $json['type'] ) && 'Delete' === $json['type'] ) {

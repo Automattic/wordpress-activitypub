@@ -224,8 +224,15 @@ class Move {
 			$result = self::internally( $old_actor_id, $actor_id );
 
 			if ( \is_wp_error( $result ) ) {
-				// Log the error and continue with the next actor.
-				Debug::write_log( 'Error moving actor: ' . $actor_id . ' - ' . $result->get_error_message() );
+				/**
+				 * Fires when an actor move fails during domain change.
+				 *
+				 * @since 8.1.0
+				 *
+				 * @param \WP_Error $result   The error that occurred.
+				 * @param string    $actor_id The actor ID that failed to move.
+				 */
+				\do_action( 'activitypub_move_failed', $result, $actor_id );
 				continue;
 			}
 

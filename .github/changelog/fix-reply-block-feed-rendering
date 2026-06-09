@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+RSS and Atom feeds now show a simple `@username` mention in place of the reply block's full embed card, which only renders properly when the plugin's frontend CSS is loaded.

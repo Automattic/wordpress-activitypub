@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fixed an issue where quote authorization stamps could reference unrelated posts.
