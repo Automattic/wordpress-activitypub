@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix a follow request being marked as accepted when the confirmation came from a different account than the one being followed.
