@@ -757,4 +757,95 @@ class Test_Admin extends \WP_UnitTestCase {
 			unset( $_POST['_wpnonce'] );
 		}
 	}
+
+	/**
+	 * Test that an editor of a custom-capability post type can bulk soft delete its posts.
+	 *
+	 * @covers ::handle_bulk_post_delete_confirmation
+	 */
+	public function test_handle_bulk_post_delete_confirmation_allows_cpt_only_editor() {
+		\register_post_type(
+			'ap_event',
+			array(
+				'public'          => true,
+				'capability_type' => array( 'ap_event', 'ap_events' ),
+				'map_meta_cap'    => true,
+				'supports'        => array( 'title', 'editor', 'activitypub' ),
+			)
+		);
+		\add_role(
+			'ap_event_editor',
+			'AP Event Editor',
+			array(
+				'read'                     => true,
+				'edit_ap_events'           => true,
+				'edit_published_ap_events' => true,
+				'publish_ap_events'        => true,
+			)
+		);
+		$editor_id = self::factory()->user->create( array( 'role' => 'ap_event_editor' ) );
+		\get_user_by( 'id', $editor_id )->add_cap( 'activitypub' );
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'ap_event',
+				'post_status' => 'publish',
+				'post_author' => $editor_id,
+			)
+		);
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		\wp_set_current_user( $editor_id );
+
+		// Precondition: this user cannot edit regular posts but can edit its own CPT post.
+		$this->assertFalse( \current_user_can( 'edit_posts' ), 'Precondition: no edit_posts capability.' );
+		$this->assertTrue( \current_user_can( 'edit_post', $post_id ), 'Precondition: can edit its own CPT post.' );
+
+		$_POST['_wpnonce']       = \wp_create_nonce( 'activitypub-bulk-post-delete' );
+		$_POST['selected_posts'] = array( $post_id );
+		$_POST['send_back']      = \admin_url( 'edit.php' );
+
+		$redirect = static function () {
+			throw new \Exception( 'redirect' );
+		};
+		\add_filter( 'wp_redirect', $redirect );
+
+		try {
+			Admin::handle_bulk_post_delete_confirmation();
+		} catch ( \Exception $e ) {
+			$this->assertSame( 'redirect', $e->getMessage(), 'Handler must not die on the edit_posts gate for a CPT-only editor.' );
+		} finally {
+			\remove_filter( 'wp_redirect', $redirect );
+			unset( $_POST['_wpnonce'], $_POST['selected_posts'], $_POST['send_back'] );
+			\wp_set_current_user( self::$user_id );
+			\remove_role( 'ap_event_editor' );
+			\unregister_post_type( 'ap_event' );
+		}
+
+		$this->assertSame(
+			ACTIVITYPUB_OBJECT_STATE_DELETED,
+			\get_post_meta( $post_id, 'activitypub_status', true ),
+			'A custom-capability editor must be able to bulk soft delete its federated posts.'
+		);
+	}
+
+	/**
+	 * Test the select-all/confirm handler is enqueued on the user confirmation page.
+	 *
+	 * Regression: the handler used to load only on edit.php, leaving the user
+	 * confirmation screen (rendered from users.php) without a working select-all.
+	 *
+	 * @covers ::enqueue_scripts
+	 */
+	public function test_select_all_handler_enqueued_on_users_page() {
+		\wp_enqueue_script( 'common' );
+		Admin::enqueue_scripts( 'users.php' );
+
+		$after = \implode( '', (array) \wp_scripts()->get_data( 'common', 'after' ) );
+		$this->assertStringContainsString(
+			'cb-select-all',
+			$after,
+			'Select-all handler must be enqueued on the user confirmation page.'
+		);
+	}
 }

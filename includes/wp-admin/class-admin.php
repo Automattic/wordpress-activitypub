@@ -457,9 +457,9 @@ class Admin {
 			);
 		}
 
-		if ( 'edit.php' === $hook_suffix ) {
+		if ( 'edit.php' === $hook_suffix || 'users.php' === $hook_suffix ) {
 			// Confirm the "Soft Delete" row action and drive the select-all checkbox on the
-			// confirmation screen without inline event-handler attributes.
+			// post and user confirmation screens without inline event-handler attributes.
 			\wp_add_inline_script(
 				'common',
 				'( function () {
@@ -1106,10 +1106,9 @@ class Admin {
 			\wp_die( \esc_html__( 'Security check failed.', 'activitypub' ) );
 		}
 
-		// Check permissions.
-		if ( ! \current_user_can( 'edit_posts' ) ) {
-			\wp_die( \esc_html__( 'You do not have sufficient permissions to access this page.', 'activitypub' ) );
-		}
+		// Per-post edit permissions are enforced as the confirmation template renders each item
+		// (and again in the submit handler), so post types with custom capabilities are not
+		// blocked by a built-in `edit_posts` gate.
 
 		// Get the pending post IDs from the transient referenced by the token.
 		$posts = self::consume_bulk_delete_ids( \sanitize_key( \wp_unslash( $_GET['token'] ?? '' ) ) );
@@ -1153,10 +1152,8 @@ class Admin {
 			\wp_die( \esc_html__( 'Security check failed.', 'activitypub' ) );
 		}
 
-		// Check permissions.
-		if ( ! \current_user_can( 'edit_posts' ) ) {
-			\wp_die( \esc_html__( 'You do not have sufficient permissions to perform this action.', 'activitypub' ) );
-		}
+		// Per-post edit permissions are enforced in the deletion loop below, so post types with
+		// custom capabilities are handled correctly rather than blocked by `edit_posts`.
 
 		// Get form data.
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
