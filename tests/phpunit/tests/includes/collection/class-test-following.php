@@ -387,30 +387,35 @@ class Test_Following extends \WP_UnitTestCase {
 		\wp_publish_post( $outbox_item_5 );
 
 		$accept_1 = array(
+			'actor'  => 'https://example.com/actor/1',
 			'object' => array(
 				'id'     => $outbox_item_1->guid,
 				'object' => 'https://example.com/actor/1',
 			),
 		);
 		$accept_2 = array(
+			'actor'  => 'https://example.com/actor/1',
 			'object' => array(
 				'id'     => $outbox_item_2->guid,
 				'object' => 'https://example.com/actor/1',
 			),
 		);
 		$accept_3 = array(
+			'actor'  => 'https://example.com/actor/1',
 			'object' => array(
 				'id'     => $outbox_item_3->guid,
 				'object' => 'https://example.com/actor/1',
 			),
 		);
 		$accept_4 = array(
+			'actor'  => 'https://example.com/actor/1',
 			'object' => array(
 				'id'     => $outbox_item_4->guid,
 				'object' => 'https://example.com/actor/1',
 			),
 		);
 		$accept_5 = array(
+			'actor'  => 'https://example.com/actor/1',
 			'object' => array(
 				'id'     => $outbox_item_5->guid,
 				'object' => 'https://example.com/actor/1',
