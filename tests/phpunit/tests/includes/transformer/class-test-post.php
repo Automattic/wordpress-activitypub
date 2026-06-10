@@ -1109,53 +1109,6 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test reply link generation.
-	 *
-	 * Pleroma prepends `acct:` to the webfinger identifier, which we'd want to normalize.
-	 *
-	 * @covers ::generate_reply_link
-	 */
-	public function test_generate_reply_link() {
-		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'filter_pleroma_object' ), 10, 2 );
-
-		$transformer = new Post( self::factory()->post->create_and_get() );
-		$this->setExpectedDeprecated( 'Activitypub\Transformer\Post::generate_reply_link' );
-		$reply_link = $transformer->generate_reply_link( '', array( 'attrs' => array( 'url' => 'https://devs.live/notice/AQ8N0Xl57y8bUQAb6e' ) ) );
-
-		$this->assertSame( '<p class="ap-reply-mention"><a rel="mention ugc" href="https://devs.live/notice/AQ8N0Xl57y8bUQAb6e" title="tester@devs.live">@tester</a></p>', $reply_link );
-
-		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'filter_pleroma_object' ) );
-	}
-
-	/**
-	 * Filter pleroma object.
-	 *
-	 * @param array|string|null $response The response.
-	 * @param array|string|null $url      The Object URL.
-	 * @return string[]
-	 */
-	public function filter_pleroma_object( $response, $url ) {
-		if ( 'https://devs.live/notice/AQ8N0Xl57y8bUQAb6e' === $url ) {
-			$response = array(
-				'type'         => 'Note',
-				'attributedTo' => 'https://devs.live/users/tester',
-				'content'      => 'Cake day it is',
-			);
-		}
-		if ( 'https://devs.live/users/tester' === $url ) {
-			$response = array(
-				'id'                => 'https://devs.live/users/tester',
-				'type'              => 'Person',
-				'preferredUsername' => 'tester',
-				'url'               => 'https://devs.live/users/tester',
-				'webfinger'         => 'acct:tester@devs.live',
-			);
-		}
-
-		return $response;
-	}
-
-	/**
 	 * Test get_content method.
 	 *
 	 * @covers ::get_content

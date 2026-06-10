@@ -8,7 +8,6 @@
 namespace Activitypub\Transformer;
 
 use Activitypub\Activity\Base_Object;
-use Activitypub\Blocks;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Replies;
@@ -666,22 +665,6 @@ class Post extends Base {
 	}
 
 	/**
-	 * Generate HTML @ link for reply block.
-	 *
-	 * @deprecated 7.4.0 Use {@see Blocks::generate_reply_link()}.
-	 *
-	 * @param string $block_content The block content.
-	 * @param array  $block         The block data.
-	 *
-	 * @return string The HTML @ link.
-	 */
-	public function generate_reply_link( $block_content, $block ) {
-		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Blocks::generate_reply_link' );
-
-		return Blocks::generate_reply_link( $block_content, $block );
-	}
-
-	/**
 	 * Returns the in-reply-to URL of the post.
 	 *
 	 * @see https://www.w3.org/TR/activitystreams-vocabulary/#dfn-inreplyto
@@ -833,27 +816,6 @@ class Post extends Base {
 		);
 
 		return $this->mentions;
-	}
-
-	/**
-	 * Transform Embed blocks to block level link.
-	 *
-	 * Remote servers will simply drop iframe elements, rendering incomplete content.
-	 *
-	 * @deprecated 7.4.0 Use {@see Blocks::revert_embed_links()}.
-	 *
-	 * @see https://www.w3.org/TR/activitypub/#security-sanitizing-content
-	 * @see https://www.w3.org/wiki/ActivityPub/Primer/HTML
-	 *
-	 * @param string $block_content The block content (html).
-	 * @param object $block         The block object.
-	 *
-	 * @return string A block level link
-	 */
-	public function revert_embed_links( $block_content, $block ) {
-		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Blocks::revert_embed_links' );
-
-		return Blocks::revert_embed_links( $block_content, $block );
 	}
 
 	/**
@@ -1111,21 +1073,6 @@ class Post extends Base {
 		}
 
 		return array_filter( array_merge( ...array_values( $media ) ) );
-	}
-
-	/**
-	 * Converts a WordPress Attachment to an ActivityPub Attachment.
-	 *
-	 * @deprecated 7.2.0 Use {@see Base::transform_attachment()} instead.
-	 *
-	 * @param array $media The Attachment array.
-	 *
-	 * @return array The ActivityPub Attachment.
-	 */
-	public function wp_attachment_to_activity_attachment( $media ) {
-		_deprecated_function( __METHOD__, '7.2.0', '\Activitypub\Transformer\Base::transform_attachment()' );
-
-		return parent::transform_attachment( $media );
 	}
 
 	/**
