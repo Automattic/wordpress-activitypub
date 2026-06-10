@@ -13,21 +13,6 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 
 /**
- * Returns a users WebFinger "resource".
- *
- * @deprecated 7.1.0 Use {@see \Activitypub\Webfinger::get_user_resource} instead.
- *
- * @param int $user_id The user ID.
- *
- * @return string The User resource.
- */
-function get_webfinger_resource( $user_id ) {
-	\_deprecated_function( __FUNCTION__, '7.1.0', 'Activitypub\Webfinger::get_user_resource' );
-
-	return Webfinger::get_user_resource( $user_id );
-}
-
-/**
  * Returns the followers of a given user.
  *
  * @param int $user_id The user ID.
