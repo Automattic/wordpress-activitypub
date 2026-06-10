@@ -54,22 +54,6 @@ function use_authorized_fetch() {
 }
 
 /**
- * Check for Tombstone Objects.
- *
- * @deprecated 7.3.0 Use {@see Tombstone::exists_in_error()}.
- * @see https://www.w3.org/TR/activitypub/#delete-activity-outbox
- *
- * @param \WP_Error $wp_error A WP_Error-Response of an HTTP-Request.
- *
- * @return boolean True if HTTP-Code is 410 or 404.
- */
-function is_tombstone( $wp_error ) {
-	\_deprecated_function( __FUNCTION__, '7.3.0', 'Activitypub\Tombstone::exists_in_error' );
-
-	return Tombstone::exists_in_error( $wp_error );
-}
-
-/**
  * Check if a request is for an ActivityPub request.
  *
  * @return bool False by default.

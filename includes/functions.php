@@ -103,21 +103,6 @@ function site_supports_blocks() {
 }
 
 /**
- * Check if data is valid JSON.
- *
- * @deprecated 7.1.0 Use {@see \json_decode}.
- *
- * @param string $data The data to check.
- *
- * @return boolean True if the data is JSON, false otherwise.
- */
-function is_json( $data ) {
-	\_deprecated_function( __FUNCTION__, '7.1.0', 'json_decode' );
-
-	return \is_array( \json_decode( $data, true ) );
-}
-
-/**
  * Check whether a blog is public based on the `blog_public` option.
  *
  * @return bool True if public, false if not
