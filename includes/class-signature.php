@@ -56,7 +56,7 @@ class Signature {
 	 * the activity actor without re-parsing headers, which cannot tell which signature label
 	 * actually validated. Pass/fail callers should branch on {@see is_wp_error()} as before.
 	 *
-	 * @since unreleased Returns the verified keyId on success instead of `true`.
+	 * @since 9.0.0 Returns the verified keyId on success instead of `true`.
 	 *
 	 * @param \WP_REST_Request|array $request The request object or $_SERVER array.
 	 *
@@ -93,7 +93,7 @@ class Signature {
 	 *   `Signature` header or, failing that, the `Authorization` header — matching the draft
 	 *   verifier, which reads `signature ?? authorization`.
 	 *
-	 * @since unreleased
+	 * @since 9.0.0
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 *

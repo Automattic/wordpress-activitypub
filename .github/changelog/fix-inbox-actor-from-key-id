@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Requests from other platforms to feature your posts are now handled correctly instead of being ignored.

@@ -127,7 +127,7 @@ class Server {
 	 * the injected actor is derived from the very keyId the signature is checked against, so
 	 * it cannot be used to impersonate another actor.
 	 *
-	 * @since unreleased
+	 * @since 9.0.0
 	 *
 	 * @param mixed            $result  Response to replace the request with, or null to continue.
 	 * @param \WP_REST_Server  $server  Server instance.

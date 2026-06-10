@@ -316,7 +316,7 @@ class Advanced_Settings_Fields {
 	/**
 	 * Render distribution mode field.
 	 *
-	 * @since unreleased
+	 * @since 9.0.0
 	 */
 	public static function render_distribution_mode_field() {
 		$mode = \get_option( 'activitypub_distribution_mode', 'default' );
