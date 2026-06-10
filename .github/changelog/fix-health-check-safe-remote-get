@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Harden the Site Health connectivity check so it cannot be used to reach unsafe network addresses.
