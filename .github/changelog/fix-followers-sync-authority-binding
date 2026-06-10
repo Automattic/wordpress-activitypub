@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Prevent a remote server from discovering which of your followers belong to a third-party server it does not control.
