@@ -133,9 +133,11 @@ class Http_Message_Signature implements Http_Signature {
 	/**
 	 * Verify the HTTP Signature against a request.
 	 *
+	 * @since unreleased Returns the verified keyId on success instead of `true`.
+	 *
 	 * @param array       $headers The HTTP headers.
 	 * @param string|null $body    The request body, if applicable.
-	 * @return bool|\WP_Error True, if the signature is valid, WP_Error on failure.
+	 * @return string|\WP_Error The verified keyId on success, WP_Error on failure.
 	 */
 	public function verify( array $headers, $body = null ) {
 		$parsed = $this->parse_signature_labels( $headers );
@@ -147,7 +149,11 @@ class Http_Message_Signature implements Http_Signature {
 		foreach ( $parsed as $data ) {
 			$result = $this->verify_signature_label( $data, $headers, $body );
 			if ( true === $result ) {
-				return true;
+				/*
+				 * Return the keyId of the label that actually verified, so the caller binds
+				 * against the real signer instead of guessing among several labels.
+				 */
+				return $data['params']['keyid'];
 			}
 
 			if ( \is_wp_error( $result ) ) {
