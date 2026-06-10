@@ -24,10 +24,25 @@ class Test_Blurhash extends \WP_UnitTestCase {
 	private $fixture_files = array();
 
 	/**
-	 * Clean up scheduled cron events and temp fixtures after each test.
+	 * `get_attached_file` callbacks registered during a test, removed in
+	 * tear_down so they don't leak across tests (post IDs can repeat once
+	 * the per-test transaction rolls back, and a stale closure matching a
+	 * reused attachment ID would return the wrong path).
+	 *
+	 * @var array<int, callable>
+	 */
+	private $attached_file_filters = array();
+
+	/**
+	 * Clean up scheduled cron events, fixture filters, and temp fixtures
+	 * after each test.
 	 */
 	public function tear_down() {
 		\wp_unschedule_hook( Blurhash::CRON_HOOK );
+		foreach ( $this->attached_file_filters as $callback ) {
+			\remove_filter( 'get_attached_file', $callback, 10 );
+		}
+		$this->attached_file_filters = array();
 		foreach ( $this->fixture_files as $file ) {
 			if ( \file_exists( $file ) ) {
 				\wp_delete_file( $file );
@@ -54,14 +69,11 @@ class Test_Blurhash extends \WP_UnitTestCase {
 			)
 		);
 
-		\add_filter(
-			'get_attached_file',
-			function ( $file, $id ) use ( $attachment_id, $path ) {
-				return ( (int) $id === $attachment_id ) ? $path : $file;
-			},
-			10,
-			2
-		);
+		$callback = function ( $file, $id ) use ( $attachment_id, $path ) {
+			return ( (int) $id === $attachment_id ) ? $path : $file;
+		};
+		\add_filter( 'get_attached_file', $callback, 10, 2 );
+		$this->attached_file_filters[] = $callback;
 
 		return $attachment_id;
 	}
@@ -89,7 +101,12 @@ class Test_Blurhash extends \WP_UnitTestCase {
 		// header parsers.
 		$iend = \pack( 'N', 0 ) . 'IEND' . \pack( 'N', \crc32( 'IEND' ) );
 
-		$path                  = \tempnam( \sys_get_temp_dir(), 'ap-blurhash-dim-' ) . '.png';
+		// Use the tempnam() path as-is. The encoder reads bytes
+		// (getimagesizefromstring/imagecreatefromstring ignore the
+		// extension) and the mime is set on the attachment, so a `.png`
+		// suffix would only orphan the un-suffixed temp file tempnam()
+		// already created.
+		$path                  = \tempnam( \sys_get_temp_dir(), 'ap-blurhash-dim-' );
 		$this->fixture_files[] = $path;
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- test fixture write to tempdir.
@@ -106,7 +123,10 @@ class Test_Blurhash extends \WP_UnitTestCase {
 	 * @return string Absolute file path.
 	 */
 	private function generate_alpha_fixture_png( $transparent ) {
-		$path                  = \tempnam( \sys_get_temp_dir(), 'ap-blurhash-alpha-' ) . '.png';
+		// tempnam() path used directly — imagepng() writes a PNG stream
+		// regardless of extension, so appending `.png` would only leave
+		// the original temp file orphaned.
+		$path                  = \tempnam( \sys_get_temp_dir(), 'ap-blurhash-alpha-' );
 		$this->fixture_files[] = $path;
 
 		$image = \imagecreatetruecolor( 16, 16 );
@@ -119,6 +139,54 @@ class Test_Blurhash extends \WP_UnitTestCase {
 			$color = \imagecolorallocate( $image, 255, 255, 255 );
 			\imagefilledrectangle( $image, 0, 0, 15, 15, $color );
 		}
+		\imagepng( $image, $path );
+		\imagedestroy( $image );
+		return $path;
+	}
+
+	/**
+	 * Write a 16×16 solid opaque PNG of the given color. Used as a hash
+	 * reference (e.g. all-black) the transparency test asserts against.
+	 *
+	 * @param int $red   Red channel (0-255).
+	 * @param int $green Green channel (0-255).
+	 * @param int $blue  Blue channel (0-255).
+	 * @return string Absolute file path.
+	 */
+	private function generate_solid_color_png( $red, $green, $blue ) {
+		$path                  = \tempnam( \sys_get_temp_dir(), 'ap-blurhash-solid-' );
+		$this->fixture_files[] = $path;
+
+		$image = \imagecreatetruecolor( 16, 16 );
+		$color = \imagecolorallocate( $image, $red, $green, $blue );
+		\imagefilledrectangle( $image, 0, 0, 15, 15, $color );
+		\imagepng( $image, $path );
+		\imagedestroy( $image );
+		return $path;
+	}
+
+	/**
+	 * Write a 16×16 PNG with an opaque saturated-red square on a fully
+	 * transparent background. After the encoder flattens transparency to
+	 * white, both the preserved red and the white background show up in the
+	 * hash — so it matches neither an all-white nor an all-black reference.
+	 *
+	 * @return string Absolute file path.
+	 */
+	private function generate_colored_shape_on_transparent_png() {
+		$path                  = \tempnam( \sys_get_temp_dir(), 'ap-blurhash-shape-' );
+		$this->fixture_files[] = $path;
+
+		$image = \imagecreatetruecolor( 16, 16 );
+		\imagealphablending( $image, false );
+		$transparent = \imagecolorallocatealpha( $image, 0, 0, 0, 127 );
+		\imagefilledrectangle( $image, 0, 0, 15, 15, $transparent );
+
+		\imagealphablending( $image, true );
+		$red = \imagecolorallocate( $image, 255, 0, 0 );
+		\imagefilledrectangle( $image, 4, 4, 11, 11, $red );
+
+		\imagesavealpha( $image, true );
 		\imagepng( $image, $path );
 		\imagedestroy( $image );
 		return $path;
@@ -302,6 +370,37 @@ class Test_Blurhash extends \WP_UnitTestCase {
 
 		$this->assertIsString( $transparent_hash );
 		$this->assertSame( $white_hash, $transparent_hash );
+	}
+
+	/**
+	 * Test that visible color survives the transparency composite. A
+	 * `fully-transparent === solid-white` check alone would also pass an
+	 * implementation that flattened *every* image to white (or dropped
+	 * color); an opaque colored shape on a transparent background pins down
+	 * both halves: transparent regions flatten to white *and* real color is
+	 * preserved, so the hash matches neither an all-white nor an all-black
+	 * reference.
+	 *
+	 * @covers ::encode_from_attachment
+	 */
+	public function test_encode_preserves_color_over_transparency() {
+		if ( ! Blurhash::is_encoder_runnable() || ! \function_exists( 'imagepng' ) || ! \function_exists( 'imagecolorallocatealpha' ) ) {
+			$this->markTestSkipped( 'GD (with PNG write support) is not available.' );
+		}
+
+		$white_hash = Blurhash::encode_from_attachment(
+			$this->create_image_attachment_at( $this->generate_alpha_fixture_png( false ) )
+		);
+		$black_hash = Blurhash::encode_from_attachment(
+			$this->create_image_attachment_at( $this->generate_solid_color_png( 0, 0, 0 ) )
+		);
+		$shape_hash = Blurhash::encode_from_attachment(
+			$this->create_image_attachment_at( $this->generate_colored_shape_on_transparent_png() )
+		);
+
+		$this->assertIsString( $shape_hash );
+		$this->assertNotSame( $white_hash, $shape_hash, 'Visible color must survive the composite, not flatten to white.' );
+		$this->assertNotSame( $black_hash, $shape_hash, 'Transparent regions must flatten to white, not black.' );
 	}
 
 	/**

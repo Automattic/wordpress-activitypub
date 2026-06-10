@@ -202,11 +202,13 @@ class Blurhash_Command extends \WP_CLI_Command {
 
 				$hash = Blurhash::encode_from_attachment( $attachment_id );
 
-				// `false` is a policy skip (e.g. declared dimensions
-				// over the decode-bomb cap) — same bucket as a
-				// non-raster mime, not a failure. Warning on it every
-				// run (and exiting nonzero) would make a permanently
-				// over-cap attachment poison automation forever.
+				/*
+				 * `false` is a policy skip (e.g. declared dimensions
+				 * over the decode-bomb cap) — same bucket as a
+				 * non-raster mime, not a failure. Warning on it every
+				 * run (and exiting nonzero) would make a permanently
+				 * over-cap attachment poison automation forever.
+				 */
 				if ( false === $hash ) {
 					++$skipped;
 					\WP_CLI::log( "skipped (out of encode policy): attachment {$attachment_id}" );

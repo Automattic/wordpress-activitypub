@@ -259,15 +259,17 @@ class Blurhash {
 			return null;
 		}
 
-		// Decode-bomb guard. `imagecreatefromstring()` fully decodes
-		// the compressed bytes into an uncompressed bitmap before we
-		// get a chance to downscale, so a small but highly
-		// compressible source declaring huge dimensions (e.g. a
-		// flat-color 30000×30000 PNG) would force a multi-gigabyte
-		// allocation and OOM the worker — uncatchable, so we can't
-		// recover with the try/catch below. Read the declared
-		// dimensions cheaply first and skip (silent, not an error)
-		// anything past the megapixel cap.
+		/*
+		 * Decode-bomb guard. `imagecreatefromstring()` fully decodes
+		 * the compressed bytes into an uncompressed bitmap before we
+		 * get a chance to downscale, so a small but highly
+		 * compressible source declaring huge dimensions (e.g. a
+		 * flat-color 30000×30000 PNG) would force a multi-gigabyte
+		 * allocation and OOM the worker — uncatchable, so we can't
+		 * recover with the try/catch below. Read the declared
+		 * dimensions cheaply first and skip (silent, not an error)
+		 * anything past the megapixel cap.
+		 */
 		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- malformed header returns false and we handle.
 		$dimensions = @\getimagesizefromstring( $bytes );
 		if ( false === $dimensions || ! isset( $dimensions[0] ) || ! isset( $dimensions[1] ) ) {
@@ -279,11 +281,13 @@ class Blurhash {
 			return null;
 		}
 		if ( $declared_width * $declared_height > self::MAX_ENCODE_PIXELS ) {
-			// Policy skip, not a failure: `false` routes the caller
-			// to the same silent bucket as a non-raster mime, so a
-			// permanently over-cap source doesn't error_log on every
-			// cron run or hold the CLI backfill exit code nonzero
-			// forever.
+			/*
+			 * Policy skip, not a failure: `false` routes the caller
+			 * to the same silent bucket as a non-raster mime, so a
+			 * permanently over-cap source doesn't error_log on every
+			 * cron run or hold the CLI backfill exit code nonzero
+			 * forever.
+			 */
 			return false;
 		}
 
@@ -293,11 +297,13 @@ class Blurhash {
 			return null;
 		}
 
-		// $scaled holds a second GD resource created by imagescale when
-		// the image exceeds MAX_ENCODE_EDGE, $canvas a third one
-		// created for the transparency flattening composite. Both are
-		// kept separate from $original so all of them can be destroyed
-		// in finally regardless of which code path ran.
+		/*
+		 * $scaled holds a second GD resource created by imagescale when
+		 * the image exceeds MAX_ENCODE_EDGE, $canvas a third one
+		 * created for the transparency flattening composite. Both are
+		 * kept separate from $original so all of them can be destroyed
+		 * in finally regardless of which code path ran.
+		 */
 		$scaled = null;
 		$canvas = null;
 
@@ -341,15 +347,17 @@ class Blurhash {
 				$height    = $target_height;
 			}
 
-			// Flatten transparency against a white background before
-			// sampling. `imagecolorsforindex()` reports the raw RGB of
-			// a transparent pixel (usually 0,0,0 → black) while
-			// discarding alpha, so a transparent PNG/GIF/WebP logo or
-			// sticker would otherwise encode to a near-black blurhash.
-			// Compositing onto an opaque white canvas yields the color
-			// a viewer actually sees over a typical light surface.
-			// Best-effort: if any GD call fails we keep sampling the
-			// un-flattened image rather than bail.
+			/*
+			 * Flatten transparency against a white background before
+			 * sampling. `imagecolorsforindex()` reports the raw RGB of
+			 * a transparent pixel (usually 0,0,0 → black) while
+			 * discarding alpha, so a transparent PNG/GIF/WebP logo or
+			 * sticker would otherwise encode to a near-black blurhash.
+			 * Compositing onto an opaque white canvas yields the color
+			 * a viewer actually sees over a typical light surface.
+			 * Best-effort: if any GD call fails we keep sampling the
+			 * un-flattened image rather than bail.
+			 */
 			$canvas = \imagecreatetruecolor( $width, $height );
 			if ( false !== $canvas ) {
 				$white = \imagecolorallocate( $canvas, 255, 255, 255 );
@@ -586,22 +594,25 @@ class Blurhash {
 		if ( $attachment_id < 1 ) {
 			return;
 		}
-		// Rely on WP's own duplicate-event guard inside
-		// `wp_schedule_single_event` (rejects matching args within
-		// the 10-minute window) rather than running an explicit
-		// `wp_next_scheduled` check first. The explicit check did
-		// nothing the underlying scheduler doesn't already do and
-		// added a needless read against the autoloaded cron option
-		// on every attachment metadata regen.
-		//
-		// Defer one minute rather than firing at `time()`. This
-		// callback runs inside the `wp_generate_attachment_metadata`
-		// filter, BEFORE `wp_update_attachment_metadata()` commits the
-		// sizes array. A concurrent wp-cron tick could otherwise run
-		// `run_encode()` before that commit lands, find no thumbnail
-		// intermediate yet, and fall back to encoding the full-size
-		// original. The one-minute delay lets the metadata write
-		// settle first; single-event dedup semantics are unchanged.
+
+		/*
+		 * Rely on WP's own duplicate-event guard inside
+		 * `wp_schedule_single_event` (rejects matching args within
+		 * the 10-minute window) rather than running an explicit
+		 * `wp_next_scheduled` check first. The explicit check did
+		 * nothing the underlying scheduler doesn't already do and
+		 * added a needless read against the autoloaded cron option
+		 * on every attachment metadata regen.
+		 *
+		 * Defer one minute rather than firing at `time()`. This
+		 * callback runs inside the `wp_generate_attachment_metadata`
+		 * filter, BEFORE `wp_update_attachment_metadata()` commits the
+		 * sizes array. A concurrent wp-cron tick could otherwise run
+		 * `run_encode()` before that commit lands, find no thumbnail
+		 * intermediate yet, and fall back to encoding the full-size
+		 * original. The one-minute delay lets the metadata write
+		 * settle first; single-event dedup semantics are unchanged.
+		 */
 		\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, self::CRON_HOOK, array( $attachment_id ) );
 	}
 
@@ -645,11 +656,13 @@ class Blurhash {
 			return;
 		}
 
-		// `false` is a policy skip (source over the decode-bomb
-		// dimension cap): deliberate, deterministic, and global to
-		// the source bytes — logging it would re-introduce the
-		// per-run noise this bucket exists to avoid. Only `null`
-		// (unexpected failure) falls through to diagnostics.
+		/*
+		 * `false` is a policy skip (source over the decode-bomb
+		 * dimension cap): deliberate, deterministic, and global to
+		 * the source bytes — logging it would re-introduce the
+		 * per-run noise this bucket exists to avoid. Only `null`
+		 * (unexpected failure) falls through to diagnostics.
+		 */
 		if ( false === $hash ) {
 			return;
 		}
