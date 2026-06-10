@@ -71,17 +71,17 @@ trait Verification {
 
 		// POST-Requests always have to be signed, GET-Requests only require a signature in secure mode or when forced.
 		if ( 'GET' !== $request->get_method() || use_authorized_fetch() || $force_signature ) {
-			$verified_request = Signature::verify_http_signature( $request );
-			if ( \is_wp_error( $verified_request ) ) {
+			$verified_key_id = Signature::verify_http_signature( $request );
+			if ( \is_wp_error( $verified_key_id ) ) {
 				return new \WP_Error(
 					'activitypub_signature_verification',
-					$verified_request->get_error_message(),
+					$verified_key_id->get_error_message(),
 					array( 'status' => 401 )
 				);
 			}
 
 			// Verify the signing key's host matches the activity actor's host.
-			$key_id_check = $this->verify_key_id( $request );
+			$key_id_check = $this->verify_key_id( $request, $verified_key_id );
 			if ( \is_wp_error( $key_id_check ) ) {
 				return $key_id_check;
 			}
@@ -93,29 +93,24 @@ trait Verification {
 	/**
 	 * Check that the signature keyId and activity actor share the same host.
 	 *
+	 * Binds against the keyId that {@see Signature::verify_http_signature()} actually
+	 * verified, passed in by the caller. Re-parsing the headers here would be unsafe: a
+	 * request can present several signature labels (or a draft and an RFC 9421 header) with
+	 * different keyIds, and only the verifier knows which one validated.
+	 *
 	 * @since 8.1.0
+	 * @since unreleased Added the `$key_id` parameter; binds against the verified keyId.
 	 *
 	 * @param \WP_REST_Request $request The request object.
+	 * @param string|null      $key_id  The keyId that verified the signature.
 	 * @return true|\WP_Error True if valid, WP_Error on mismatch.
 	 */
-	private function verify_key_id( $request ) {
-		$sig = $request->get_header( 'signature' );
-		if ( ! $sig || ! \preg_match( '/keyId="([^"]+)"/i', $sig, $m ) ) {
-			/*
-			 * RFC 9421 Signature-Input. Match the keyid the same way the RFC 9421 verifier
-			 * parses it: as a `;`-delimited parameter whose value may be quoted or unquoted.
-			 * Anchoring on `;` (or string start) is required — a bare `keyid=` search would
-			 * also match a `keyid=` substring inside another parameter's quoted value (or a
-			 * param named `…keyid`), letting an attacker point this binding at a different
-			 * host than the one the verifier actually used.
-			 */
-			$sig = $request->get_header( 'signature-input' );
-			if ( ! $sig || ! \preg_match( '/(?:^|;)\s*keyid="?([^";,\s]+)/i', $sig, $m ) ) {
-				return true;
-			}
+	private function verify_key_id( $request, $key_id ) {
+		if ( ! $key_id ) {
+			return true;
 		}
 
-		$key_host = \strtolower( (string) \wp_parse_url( $m[1], \PHP_URL_HOST ) );
+		$key_host = \strtolower( (string) \wp_parse_url( $key_id, \PHP_URL_HOST ) );
 		$json     = $request->get_json_params();
 		$actor    = isset( $json['actor'] ) ? object_to_uri( $json['actor'] ) : null;
 
