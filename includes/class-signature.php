@@ -74,6 +74,37 @@ class Signature {
 	}
 
 	/**
+	 * Extract the signing keyId from a request's HTTP Signature headers.
+	 *
+	 * Supports both the draft HTTP Signatures `Signature` header and the RFC 9421
+	 * `Signature-Input` header.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 *
+	 * @return string|null The keyId, or null when no signature is present.
+	 */
+	public static function get_key_id( $request ) {
+		$signature = $request->get_header( 'signature' );
+		if ( $signature && \preg_match( '/keyId="([^"]+)"/i', $signature, $matches ) ) {
+			return $matches[1];
+		}
+
+		/*
+		 * RFC 9421 Signature-Input: keyid is a `;`-delimited parameter whose value may be
+		 * quoted or unquoted. Anchoring on `;` (or string start) avoids matching a `keyid=`
+		 * substring inside another parameter's value.
+		 */
+		$signature_input = $request->get_header( 'signature-input' );
+		if ( $signature_input && \preg_match( '/(?:^|;)\s*keyid="?([^";,\s]+)/i', $signature_input, $matches ) ) {
+			return $matches[1];
+		}
+
+		return null;
+	}
+
+	/**
 	 * If a request with RFC-9421 signature fails, we try again with the Draft Cavage signature.
 	 *
 	 * @param array  $response HTTP response.

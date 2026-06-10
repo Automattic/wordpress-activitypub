@@ -7,6 +7,8 @@
 
 namespace Activitypub\Rest;
 
+use Activitypub\Signature;
+
 /**
  * ActivityPub Server REST-Class.
  *
@@ -106,22 +108,24 @@ class Server {
 	}
 
 	/**
-	 * Backfill a missing `actor` on incoming inbox activities from the HTTP signature.
+	 * Backfill a missing `actor` on incoming FeatureRequest activities from the signature.
 	 *
-	 * Some implementations convey the sending actor only through the HTTP signature
-	 * and omit the `actor` property from the activity body. Mastodon does this for
-	 * FeatureRequest activities (FEP-7aa9), for example. Because our inbox routes
-	 * require `actor`, those activities are rejected during parameter validation
-	 * before they can be stored or handed to a handler.
+	 * Mastodon (FEP-7aa9) omits `actor` from the FeatureRequest body and conveys the
+	 * requesting actor only through the HTTP signature keyId. Our inbox routes require
+	 * `actor`, so such a request is rejected during parameter validation before it can
+	 * reach the inbox or its handler, which is why no Accept is ever sent.
 	 *
-	 * The signature is the authoritative sender identity anyway, so derive the actor
-	 * from the keyId and inject it into the request body. Validation, signature
-	 * verification, and the handlers then see a normal `actor`. This is purely
-	 * additive: a well-formed activity already carries an `actor` and is left
-	 * untouched, and the injected value still has to survive signature verification.
+	 * Derive the actor from the keyId and add it as a request parameter. The actor is
+	 * injected with `set_param()` rather than by rewriting the request body, so the raw
+	 * body stays byte-identical and the signed `Digest` still verifies. Inbox POSTs read
+	 * JSON parameters first (see `request_parameter_order()`), so the value is visible to
+	 * both parameter validation and the handler via `get_json_params()`.
 	 *
-	 * Runs on `rest_pre_dispatch` because that is the only hook that fires before
-	 * required-parameter validation.
+	 * Scoped to FeatureRequest, the only activity type known to address this way. Runs on
+	 * `rest_pre_dispatch` because that is the only hook that fires before required-parameter
+	 * validation. Signature verification still runs afterwards and remains authoritative:
+	 * the injected actor is derived from the very keyId the signature is checked against, so
+	 * it cannot be used to impersonate another actor.
 	 *
 	 * @since unreleased
 	 *
@@ -150,47 +154,18 @@ class Server {
 		}
 
 		$json = $request->get_json_params();
-		if ( ! \is_array( $json ) || ! empty( $json['actor'] ) ) {
+		if ( ! \is_array( $json ) || 'FeatureRequest' !== ( $json['type'] ?? '' ) || ! empty( $json['actor'] ) ) {
 			return $result;
 		}
 
-		$key_id = self::get_key_id_from_request( $request );
+		$key_id = Signature::get_key_id( $request );
 		if ( ! $key_id ) {
 			return $result;
 		}
 
-		$json['actor'] = \strip_fragment_from_url( $key_id );
-		$request->set_body( \wp_json_encode( $json ) );
+		$request->set_param( 'actor', \strip_fragment_from_url( $key_id ) );
 
 		return $result;
-	}
-
-	/**
-	 * Extract the signing keyId from a request's HTTP Signature headers.
-	 *
-	 * Supports both the draft HTTP Signatures `Signature` header and the RFC 9421
-	 * `Signature-Input` header, matching the keyId the same way the signature
-	 * verifier does.
-	 *
-	 * @since unreleased
-	 *
-	 * @param \WP_REST_Request $request The request object.
-	 *
-	 * @return string|null The keyId, or null when no signature is present.
-	 */
-	private static function get_key_id_from_request( $request ) {
-		$signature = $request->get_header( 'signature' );
-		if ( $signature && \preg_match( '/keyId="([^"]+)"/i', $signature, $matches ) ) {
-			return $matches[1];
-		}
-
-		// RFC 9421: keyid is a `;`-delimited parameter whose value may be quoted or unquoted.
-		$signature_input = $request->get_header( 'signature-input' );
-		if ( $signature_input && \preg_match( '/(?:^|;)\s*keyid="?([^";,\s]+)/i', $signature_input, $matches ) ) {
-			return $matches[1];
-		}
-
-		return null;
 	}
 
 	/**

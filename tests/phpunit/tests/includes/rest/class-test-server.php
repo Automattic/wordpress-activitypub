@@ -40,40 +40,42 @@ class Test_Server extends \WP_Test_REST_TestCase {
 	}
 
 	/**
-	 * Build an inbox request that omits the actor but carries a signature keyId.
+	 * Build an actor-less, signed inbox request for the actor-backfill tests.
 	 *
-	 * @param array  $body    The activity body.
-	 * @param string $key_id  The keyId to advertise via the HTTP Signature header.
-	 * @param string $route   Optional. The request route. Default the shared inbox.
+	 * @param array  $body   The activity body.
+	 * @param string $key_id The keyId to advertise via the HTTP Signature header.
+	 * @param string $route  Optional. The request route. Default the shared inbox.
 	 * @return \WP_REST_Request The prepared request.
 	 */
 	private function build_signed_inbox_request( $body, $key_id, $route = null ) {
 		$route   = $route ?? '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox';
 		$request = new \WP_REST_Request( 'POST', $route );
 		$request->set_header( 'content-type', 'application/activity+json' );
-		$request->set_header( 'signature', sprintf( 'keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="abc"', $key_id ) );
-		$request->set_body( wp_json_encode( $body ) );
+		$request->set_header( 'signature', \sprintf( 'keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="abc"', $key_id ) );
+		$request->set_body( \wp_json_encode( $body ) );
 
 		return $request;
 	}
 
 	/**
-	 * An actor-less inbox activity gets its actor backfilled from the signature keyId.
+	 * An actor-less FeatureRequest gets its actor backfilled from the signature keyId,
+	 * without altering the raw body (so the signed Digest still verifies).
 	 *
 	 * @covers ::maybe_add_actor_from_signature
 	 */
 	public function test_maybe_add_actor_from_signature_backfills_missing_actor() {
-		$request = $this->build_signed_inbox_request(
-			array(
-				'id'         => 'https://remote.example.com/activities/feat-1',
-				'type'       => 'FeatureRequest',
-				'object'     => 'https://example.org/author/1',
-				'instrument' => 'https://remote.example.com/users/curator/featured',
-			),
-			'https://remote.example.com/users/curator#main-key'
-		);
+		Server::init(); // Inbox POSTs read JSON params first; that order makes set_param() land in JSON.
 
-		$result = Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+		$body    = array(
+			'id'         => 'https://remote.example.com/activities/feat-1',
+			'type'       => 'FeatureRequest',
+			'object'     => 'https://example.org/author/1',
+			'instrument' => 'https://remote.example.com/users/curator/featured',
+		);
+		$request = $this->build_signed_inbox_request( $body, 'https://remote.example.com/users/curator#main-key' );
+
+		$original_body = $request->get_body();
+		$result        = Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
 
 		$this->assertNull( $result, 'The filter must not hijack the request.' );
 		$this->assertSame(
@@ -81,6 +83,7 @@ class Test_Server extends \WP_Test_REST_TestCase {
 			$request->get_json_params()['actor'],
 			'Actor should be derived from the keyId with the fragment stripped.'
 		);
+		$this->assertSame( $original_body, $request->get_body(), 'The raw body must be untouched so the signed Digest still verifies.' );
 	}
 
 	/**
@@ -89,10 +92,12 @@ class Test_Server extends \WP_Test_REST_TestCase {
 	 * @covers ::maybe_add_actor_from_signature
 	 */
 	public function test_maybe_add_actor_from_signature_supports_signature_input() {
+		Server::init();
+
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
 		$request->set_header( 'content-type', 'application/activity+json' );
 		$request->set_header( 'signature-input', 'sig1=("@method" "@target-uri");keyid="https://remote.example.com/users/curator#main-key";created=1700000000' );
-		$request->set_body( wp_json_encode( array( 'type' => 'FeatureRequest' ) ) );
+		$request->set_body( \wp_json_encode( array( 'type' => 'FeatureRequest' ) ) );
 
 		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
 
@@ -107,7 +112,7 @@ class Test_Server extends \WP_Test_REST_TestCase {
 	public function test_maybe_add_actor_from_signature_keeps_existing_actor() {
 		$request = $this->build_signed_inbox_request(
 			array(
-				'type'  => 'Follow',
+				'type'  => 'FeatureRequest',
 				'actor' => 'https://remote.example.com/users/someone-else',
 			),
 			'https://remote.example.com/users/curator#main-key'
@@ -119,7 +124,23 @@ class Test_Server extends \WP_Test_REST_TestCase {
 	}
 
 	/**
-	 * Non-inbox routes must never be rewritten.
+	 * Only FeatureRequest activities are backfilled; other actor-less types are left alone.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_skips_other_activity_types() {
+		$request = $this->build_signed_inbox_request(
+			array( 'type' => 'Follow' ),
+			'https://remote.example.com/users/curator#main-key'
+		);
+
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertArrayNotHasKey( 'actor', $request->get_json_params() );
+	}
+
+	/**
+	 * Non-inbox routes must never be touched.
 	 *
 	 * @covers ::maybe_add_actor_from_signature
 	 */
@@ -143,7 +164,7 @@ class Test_Server extends \WP_Test_REST_TestCase {
 	public function test_maybe_add_actor_from_signature_skips_without_signature() {
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
 		$request->set_header( 'content-type', 'application/activity+json' );
-		$request->set_body( wp_json_encode( array( 'type' => 'FeatureRequest' ) ) );
+		$request->set_body( \wp_json_encode( array( 'type' => 'FeatureRequest' ) ) );
 
 		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
 

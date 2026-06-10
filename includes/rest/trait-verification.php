@@ -99,23 +99,12 @@ trait Verification {
 	 * @return true|\WP_Error True if valid, WP_Error on mismatch.
 	 */
 	private function verify_key_id( $request ) {
-		$sig = $request->get_header( 'signature' );
-		if ( ! $sig || ! \preg_match( '/keyId="([^"]+)"/i', $sig, $m ) ) {
-			/*
-			 * RFC 9421 Signature-Input. Match the keyid the same way the RFC 9421 verifier
-			 * parses it: as a `;`-delimited parameter whose value may be quoted or unquoted.
-			 * Anchoring on `;` (or string start) is required — a bare `keyid=` search would
-			 * also match a `keyid=` substring inside another parameter's quoted value (or a
-			 * param named `…keyid`), letting an attacker point this binding at a different
-			 * host than the one the verifier actually used.
-			 */
-			$sig = $request->get_header( 'signature-input' );
-			if ( ! $sig || ! \preg_match( '/(?:^|;)\s*keyid="?([^";,\s]+)/i', $sig, $m ) ) {
-				return true;
-			}
+		$key_id = Signature::get_key_id( $request );
+		if ( ! $key_id ) {
+			return true;
 		}
 
-		$key_host = \strtolower( (string) \wp_parse_url( $m[1], \PHP_URL_HOST ) );
+		$key_host = \strtolower( (string) \wp_parse_url( $key_id, \PHP_URL_HOST ) );
 		$json     = $request->get_json_params();
 		$actor    = isset( $json['actor'] ) ? object_to_uri( $json['actor'] ) : null;
 

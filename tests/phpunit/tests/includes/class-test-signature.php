@@ -1611,4 +1611,49 @@ class Test_Signature extends \WP_UnitTestCase {
 		\delete_option( 'activitypub_rfc9421_signature' );
 		\remove_filter( 'pre_http_request', $mock_callback );
 	}
+
+	/**
+	 * The keyId is extracted from both the draft Signature header and the RFC 9421
+	 * Signature-Input header, and is null when neither is present.
+	 *
+	 * @covers ::get_key_id
+	 *
+	 * @dataProvider get_key_id_provider
+	 *
+	 * @param string|null $signature       The draft Signature header value, or null.
+	 * @param string|null $signature_input The RFC 9421 Signature-Input header value, or null.
+	 * @param string|null $expected        The expected keyId.
+	 */
+	public function test_get_key_id( $signature, $signature_input, $expected ) {
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		if ( null !== $signature ) {
+			$request->set_header( 'signature', $signature );
+		}
+		if ( null !== $signature_input ) {
+			$request->set_header( 'signature-input', $signature_input );
+		}
+
+		$this->assertSame( $expected, Signature::get_key_id( $request ) );
+	}
+
+	/**
+	 * Data provider for test_get_key_id.
+	 *
+	 * @return array[]
+	 */
+	public function get_key_id_provider() {
+		return array(
+			'draft Signature header'   => array(
+				'keyId="https://remote.example/users/curator#main-key",algorithm="rsa-sha256",signature="abc"',
+				null,
+				'https://remote.example/users/curator#main-key',
+			),
+			'RFC 9421 Signature-Input' => array(
+				null,
+				'sig1=("@method" "@target-uri");keyid="https://remote.example/users/curator#main-key";created=1700000000',
+				'https://remote.example/users/curator#main-key',
+			),
+			'no signature headers'     => array( null, null, null ),
+		);
+	}
 }
