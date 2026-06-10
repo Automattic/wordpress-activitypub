@@ -1643,17 +1643,29 @@ class Test_Signature extends \WP_UnitTestCase {
 	 */
 	public function get_key_id_provider() {
 		return array(
-			'draft Signature header'   => array(
+			'draft Signature header'        => array(
 				'keyId="https://remote.example/users/curator#main-key",algorithm="rsa-sha256",signature="abc"',
 				null,
 				'https://remote.example/users/curator#main-key',
 			),
-			'RFC 9421 Signature-Input' => array(
+			'RFC 9421 Signature-Input'      => array(
 				null,
 				'sig1=("@method" "@target-uri");keyid="https://remote.example/users/curator#main-key";created=1700000000',
 				'https://remote.example/users/curator#main-key',
 			),
-			'no signature headers'     => array( null, null, null ),
+			'no signature headers'          => array( null, null, null ),
+			// Signature-Input wins over a draft Signature header, matching the verifier's choice.
+			'mixed headers prefer RFC 9421' => array(
+				'keyId="https://victim.example/users/victim#main-key",signature="abc"',
+				'sig1=("@method");keyid="https://attacker.example/users/attacker#main-key";created=1700000000',
+				'https://attacker.example/users/attacker#main-key',
+			),
+			// The verifier accepts whichever label validates, so multiple keyIds are ambiguous.
+			'ambiguous multiple keyIds'     => array(
+				null,
+				'sig1=("@method");keyid="https://victim.example/users/victim#main-key", sig2=("@method");keyid="https://attacker.example/users/attacker#main-key";created=1700000000',
+				null,
+			),
 		);
 	}
 }

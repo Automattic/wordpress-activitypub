@@ -74,30 +74,41 @@ class Signature {
 	}
 
 	/**
-	 * Extract the signing keyId from a request's HTTP Signature headers.
+	 * Extract the signing keyId that {@see Signature::verify_http_signature()} would verify against.
 	 *
-	 * Supports both the draft HTTP Signatures `Signature` header and the RFC 9421
-	 * `Signature-Input` header.
+	 * The returned keyId is only trustworthy if it identifies the key the signature is
+	 * actually checked with, so this mirrors the verifier's header choice rather than
+	 * scanning headers in an arbitrary order:
+	 *
+	 * - When a `Signature-Input` header is present the RFC 9421 verifier is used, so the
+	 *   keyId is taken from there and a draft `Signature` header (which the verifier ignores)
+	 *   is not consulted. The RFC 9421 verifier accepts whichever of several signature labels
+	 *   validates, so a `Signature-Input` carrying more than one keyId is ambiguous: we cannot
+	 *   know in advance which key will verify and must not guess, so `null` is returned.
+	 * - Otherwise the draft HTTP Signatures `Signature` header is used, matching the draft
+	 *   verifier, which takes the first `keyId`.
 	 *
 	 * @since unreleased
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 *
-	 * @return string|null The keyId, or null when no signature is present.
+	 * @return string|null The keyId, or null when none is present or the choice is ambiguous.
 	 */
 	public static function get_key_id( $request ) {
-		$signature = $request->get_header( 'signature' );
-		if ( $signature && \preg_match( '/keyId="([^"]+)"/i', $signature, $matches ) ) {
-			return $matches[1];
+		$signature_input = $request->get_header( 'signature-input' );
+		if ( $signature_input ) {
+			/*
+			 * keyid is a `;`-delimited parameter whose value may be quoted or unquoted.
+			 * Anchoring on `;` (or string start) avoids matching a `keyid=` substring inside
+			 * another parameter's value. Count every label's keyId: more than one is ambiguous.
+			 */
+			$count = \preg_match_all( '/(?:^|;)\s*keyid="?([^";,\s]+)/i', $signature_input, $matches );
+
+			return 1 === $count ? $matches[1][0] : null;
 		}
 
-		/*
-		 * RFC 9421 Signature-Input: keyid is a `;`-delimited parameter whose value may be
-		 * quoted or unquoted. Anchoring on `;` (or string start) avoids matching a `keyid=`
-		 * substring inside another parameter's value.
-		 */
-		$signature_input = $request->get_header( 'signature-input' );
-		if ( $signature_input && \preg_match( '/(?:^|;)\s*keyid="?([^";,\s]+)/i', $signature_input, $matches ) ) {
+		$signature = $request->get_header( 'signature' );
+		if ( $signature && \preg_match( '/keyId="([^"]+)"/i', $signature, $matches ) ) {
 			return $matches[1];
 		}
 

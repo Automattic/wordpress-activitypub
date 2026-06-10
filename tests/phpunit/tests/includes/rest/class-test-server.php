@@ -189,6 +189,46 @@ class Test_Server extends \WP_Test_REST_TestCase {
 	}
 
 	/**
+	 * A spoofed draft Signature header must not win over the RFC 9421 keyId the request is
+	 * actually verified with. The verifier uses Signature-Input when present, so the injected
+	 * actor must be derived from there, not from the (ignored) draft Signature header.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_uses_verified_keyid_over_spoofed_header() {
+		Server::init();
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'content-type', 'application/activity+json' );
+		$request->set_header( 'signature', 'keyId="https://victim.example/users/victim#main-key",signature="abc"' );
+		$request->set_header( 'signature-input', 'sig1=("@method");keyid="https://attacker.example/users/attacker#main-key";created=1700000000' );
+		$request->set_body( \wp_json_encode( array( 'type' => 'FeatureRequest' ) ) );
+
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertSame( 'https://attacker.example/users/attacker', $request->get_json_params()['actor'] );
+	}
+
+	/**
+	 * When the signature carries more than one keyId the verifier may validate any label,
+	 * so we cannot know which key will verify. The actor must not be backfilled.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_skips_ambiguous_keyids() {
+		Server::init();
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'content-type', 'application/activity+json' );
+		$request->set_header( 'signature-input', 'sig1=("@method");keyid="https://victim.example/users/victim#main-key", sig2=("@method");keyid="https://attacker.example/users/attacker#main-key";created=1700000000' );
+		$request->set_body( \wp_json_encode( array( 'type' => 'FeatureRequest' ) ) );
+
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertArrayNotHasKey( 'actor', $request->get_json_params() );
+	}
+
+	/**
 	 * A prior short-circuit result must be respected and left intact.
 	 *
 	 * @covers ::maybe_add_actor_from_signature
