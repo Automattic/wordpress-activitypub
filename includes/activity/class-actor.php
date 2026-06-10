@@ -395,7 +395,7 @@ class Actor extends Base_Object {
 	 *
 	 * @see https://w3id.org/fep/7aa9
 	 *
-	 * @since unreleased
+	 * @since 9.0.0
 	 *
 	 * @return array
 	 */

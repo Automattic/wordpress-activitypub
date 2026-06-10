@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Prevent remote servers from modifying or deleting federated profiles, posts, and interactions they do not own.

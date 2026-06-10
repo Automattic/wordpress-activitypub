@@ -181,7 +181,7 @@ function is_post_publicly_queryable( $post ) {
  * preview allowance inert here: a draft/pending post is never in the federated
  * state, so the preview branch can never make this return true.
  *
- * @since unreleased
+ * @since 9.0.0
  *
  * @param mixed $post The post ID or object.
  *
