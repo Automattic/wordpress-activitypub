@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Harden the Blurhash encoder: skip decompression-bomb images before decoding, flatten transparency onto white so transparent logos no longer produce near-black placeholders, and defer the cron encode until attachment metadata is saved.
