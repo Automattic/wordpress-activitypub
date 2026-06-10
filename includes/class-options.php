@@ -805,7 +805,7 @@ class Options {
 				\esc_html__( 'ACTIVITYPUB_DISTRIBUTION_MODE value %s is not a valid preset; falling back to default.', 'activitypub' ),
 				\esc_html( (string) $constant_value )
 			),
-			'unreleased'
+			'9.0.0'
 		);
 
 		return 'default';
