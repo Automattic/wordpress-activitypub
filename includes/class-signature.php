@@ -54,9 +54,15 @@ class Signature {
 	/**
 	 * Verifies the http signatures
 	 *
+	 * On success the verified keyId is returned (a truthy string), so callers can bind it to
+	 * the activity actor without re-parsing headers, which cannot tell which signature label
+	 * actually validated. Pass/fail callers should branch on {@see is_wp_error()} as before.
+	 *
+	 * @since unreleased Returns the verified keyId on success instead of `true`.
+	 *
 	 * @param \WP_REST_Request|array $request The request object or $_SERVER array.
 	 *
-	 * @return bool|\WP_Error A boolean or WP_Error.
+	 * @return string|\WP_Error The verified keyId on success, WP_Error on failure.
 	 */
 	public static function verify_http_signature( $request ) {
 		if ( is_object( $request ) ) { // REST Request object.
@@ -85,8 +91,9 @@ class Signature {
 	 *   is not consulted. The RFC 9421 verifier accepts whichever of several signature labels
 	 *   validates, so a `Signature-Input` carrying more than one keyId is ambiguous: we cannot
 	 *   know in advance which key will verify and must not guess, so `null` is returned.
-	 * - Otherwise the draft HTTP Signatures `Signature` header is used, matching the draft
-	 *   verifier, which takes the first `keyId`.
+	 * - Otherwise the draft HTTP Signatures form is used, taking the first `keyId` from the
+	 *   `Signature` header or, failing that, the `Authorization` header — matching the draft
+	 *   verifier, which reads `signature ?? authorization`.
 	 *
 	 * @since unreleased
 	 *
@@ -107,7 +114,12 @@ class Signature {
 			return 1 === $count ? $matches[1][0] : null;
 		}
 
+		// A draft signature may arrive in the Signature header or, less commonly, Authorization.
 		$signature = $request->get_header( 'signature' );
+		if ( ! $signature ) {
+			$signature = $request->get_header( 'authorization' );
+		}
+
 		if ( $signature && \preg_match( '/keyId="([^"]+)"/i', $signature, $matches ) ) {
 			return $matches[1];
 		}

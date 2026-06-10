@@ -71,17 +71,17 @@ trait Verification {
 
 		// POST-Requests always have to be signed, GET-Requests only require a signature in secure mode or when forced.
 		if ( 'GET' !== $request->get_method() || use_authorized_fetch() || $force_signature ) {
-			$verified_request = Signature::verify_http_signature( $request );
-			if ( \is_wp_error( $verified_request ) ) {
+			$verified_key_id = Signature::verify_http_signature( $request );
+			if ( \is_wp_error( $verified_key_id ) ) {
 				return new \WP_Error(
 					'activitypub_signature_verification',
-					$verified_request->get_error_message(),
+					$verified_key_id->get_error_message(),
 					array( 'status' => 401 )
 				);
 			}
 
 			// Verify the signing key's host matches the activity actor's host.
-			$key_id_check = $this->verify_key_id( $request );
+			$key_id_check = $this->verify_key_id( $request, $verified_key_id );
 			if ( \is_wp_error( $key_id_check ) ) {
 				return $key_id_check;
 			}
@@ -93,13 +93,19 @@ trait Verification {
 	/**
 	 * Check that the signature keyId and activity actor share the same host.
 	 *
+	 * Binds against the keyId that {@see Signature::verify_http_signature()} actually
+	 * verified, passed in by the caller. Re-parsing the headers here would be unsafe: a
+	 * request can present several signature labels (or a draft and an RFC 9421 header) with
+	 * different keyIds, and only the verifier knows which one validated.
+	 *
 	 * @since 8.1.0
+	 * @since unreleased Added the `$key_id` parameter; binds against the verified keyId.
 	 *
 	 * @param \WP_REST_Request $request The request object.
+	 * @param string|null      $key_id  The keyId that verified the signature.
 	 * @return true|\WP_Error True if valid, WP_Error on mismatch.
 	 */
-	private function verify_key_id( $request ) {
-		$key_id = Signature::get_key_id( $request );
+	private function verify_key_id( $request, $key_id ) {
 		if ( ! $key_id ) {
 			return true;
 		}
