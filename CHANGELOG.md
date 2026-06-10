@@ -9,7 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - Enforce the signing-key host check on incoming federated activities regardless of how the key identifier is formatted. [#3357]
 - Fix the real-time activity stream so it only returns the requesting user's own activities. [#3356]
+- Harden the Site Health connectivity check so it cannot be used to reach unsafe network addresses. [#3391]
 - Only share comment replies in the Fediverse when the post they belong to is itself federated, so replies on private or non-federated posts stay private. [#3374]
+- Prevent a remote server from discovering which of your followers belong to a third-party server it does not control. [#3390]
 - Prevent logged-in users from viewing another user's private outbox activities. [#3358]
 - Prevent remote servers from modifying or deleting federated profiles, posts, and interactions they do not own. [#3360]
 - Rate-limit the remote-follow lookup to prevent it from being abused to trigger outbound requests. [#3361]

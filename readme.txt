@@ -115,7 +115,9 @@ For reasons of data protection, it is not possible to see the followers of other
 #### Security
 - Enforce the signing-key host check on incoming federated activities regardless of how the key identifier is formatted.
 - Fix the real-time activity stream so it only returns the requesting user's own activities.
+- Harden the Site Health connectivity check so it cannot be used to reach unsafe network addresses.
 - Only share comment replies in the Fediverse when the post they belong to is itself federated, so replies on private or non-federated posts stay private.
+- Prevent a remote server from discovering which of your followers belong to a third-party server it does not control.
 - Prevent logged-in users from viewing another user's private outbox activities.
 - Prevent remote servers from modifying or deleting federated profiles, posts, and interactions they do not own.
 - Rate-limit the remote-follow lookup to prevent it from being abused to trigger outbound requests.
