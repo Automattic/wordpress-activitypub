@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Stop the OAuth token introspection endpoint from revealing another user's token details to logged-in users.

@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Enforce the signing-key host check on incoming federated activities regardless of how the key identifier is formatted.

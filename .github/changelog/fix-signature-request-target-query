@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Follower synchronization with Mastodon no longer fails, signed requests with query strings now verify correctly.
