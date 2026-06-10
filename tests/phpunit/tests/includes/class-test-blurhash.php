@@ -432,8 +432,8 @@ class Test_Blurhash extends \WP_UnitTestCase {
 	 * @covers ::schedule_encode
 	 */
 	public function test_schedule_encode_defers_cron_event() {
-		if ( ! Blurhash::is_encoder_runnable() ) {
-			$this->markTestSkipped( 'GD is not available.' );
+		if ( ! Blurhash::is_encoder_runnable() || ! \function_exists( 'imagepng' ) ) {
+			$this->markTestSkipped( 'GD (with PNG write support) is not available.' );
 		}
 
 		$path          = $this->generate_alpha_fixture_png( false );
