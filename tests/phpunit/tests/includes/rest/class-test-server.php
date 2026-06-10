@@ -36,6 +36,153 @@ class Test_Server extends \WP_Test_REST_TestCase {
 		$this->assertEquals( 10, \has_filter( 'rest_post_dispatch', array( Server::class, 'filter_output' ) ) );
 		$this->assertEquals( 10, \has_filter( 'rest_post_dispatch', array( Server::class, 'add_cors_headers' ) ) );
 		$this->assertEquals( 10, \has_filter( 'rest_allowed_cors_headers', array( Server::class, 'allow_cors_headers' ) ) );
+		$this->assertEquals( 10, \has_filter( 'rest_pre_dispatch', array( Server::class, 'maybe_add_actor_from_signature' ) ) );
+	}
+
+	/**
+	 * Build an inbox request that omits the actor but carries a signature keyId.
+	 *
+	 * @param array  $body    The activity body.
+	 * @param string $key_id  The keyId to advertise via the HTTP Signature header.
+	 * @param string $route   Optional. The request route. Default the shared inbox.
+	 * @return \WP_REST_Request The prepared request.
+	 */
+	private function build_signed_inbox_request( $body, $key_id, $route = null ) {
+		$route   = $route ?? '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox';
+		$request = new \WP_REST_Request( 'POST', $route );
+		$request->set_header( 'content-type', 'application/activity+json' );
+		$request->set_header( 'signature', sprintf( 'keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="abc"', $key_id ) );
+		$request->set_body( wp_json_encode( $body ) );
+
+		return $request;
+	}
+
+	/**
+	 * An actor-less inbox activity gets its actor backfilled from the signature keyId.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_backfills_missing_actor() {
+		$request = $this->build_signed_inbox_request(
+			array(
+				'id'         => 'https://remote.example.com/activities/feat-1',
+				'type'       => 'FeatureRequest',
+				'object'     => 'https://example.org/author/1',
+				'instrument' => 'https://remote.example.com/users/curator/featured',
+			),
+			'https://remote.example.com/users/curator#main-key'
+		);
+
+		$result = Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertNull( $result, 'The filter must not hijack the request.' );
+		$this->assertSame(
+			'https://remote.example.com/users/curator',
+			$request->get_json_params()['actor'],
+			'Actor should be derived from the keyId with the fragment stripped.'
+		);
+	}
+
+	/**
+	 * The actor is also derived from an RFC 9421 Signature-Input keyid.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_supports_signature_input() {
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'content-type', 'application/activity+json' );
+		$request->set_header( 'signature-input', 'sig1=("@method" "@target-uri");keyid="https://remote.example.com/users/curator#main-key";created=1700000000' );
+		$request->set_body( wp_json_encode( array( 'type' => 'FeatureRequest' ) ) );
+
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertSame( 'https://remote.example.com/users/curator', $request->get_json_params()['actor'] );
+	}
+
+	/**
+	 * An activity that already carries an actor is left untouched.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_keeps_existing_actor() {
+		$request = $this->build_signed_inbox_request(
+			array(
+				'type'  => 'Follow',
+				'actor' => 'https://remote.example.com/users/someone-else',
+			),
+			'https://remote.example.com/users/curator#main-key'
+		);
+
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertSame( 'https://remote.example.com/users/someone-else', $request->get_json_params()['actor'] );
+	}
+
+	/**
+	 * Non-inbox routes must never be rewritten.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_skips_non_inbox_route() {
+		$request = $this->build_signed_inbox_request(
+			array( 'type' => 'FeatureRequest' ),
+			'https://remote.example.com/users/curator#main-key',
+			'/' . ACTIVITYPUB_REST_NAMESPACE . '/outbox'
+		);
+
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertArrayNotHasKey( 'actor', $request->get_json_params() );
+	}
+
+	/**
+	 * Without a signature there is no authoritative actor to derive, so nothing changes.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_skips_without_signature() {
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'content-type', 'application/activity+json' );
+		$request->set_body( wp_json_encode( array( 'type' => 'FeatureRequest' ) ) );
+
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertArrayNotHasKey( 'actor', $request->get_json_params() );
+	}
+
+	/**
+	 * A non-POST request is ignored.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_skips_non_post() {
+		$request = $this->build_signed_inbox_request(
+			array( 'type' => 'FeatureRequest' ),
+			'https://remote.example.com/users/curator#main-key'
+		);
+		$request->set_method( 'GET' );
+
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertArrayNotHasKey( 'actor', $request->get_json_params() );
+	}
+
+	/**
+	 * A prior short-circuit result must be respected and left intact.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_respects_short_circuit() {
+		$request = $this->build_signed_inbox_request(
+			array( 'type' => 'FeatureRequest' ),
+			'https://remote.example.com/users/curator#main-key'
+		);
+
+		$response = new \WP_REST_Response( array( 'handled' => true ) );
+		$result   = Server::maybe_add_actor_from_signature( $response, new \WP_REST_Server(), $request );
+
+		$this->assertSame( $response, $result );
+		$this->assertArrayNotHasKey( 'actor', $request->get_json_params() );
 	}
 
 	/**

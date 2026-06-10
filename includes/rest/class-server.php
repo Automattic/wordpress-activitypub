@@ -19,6 +19,7 @@ class Server {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
+		\add_filter( 'rest_pre_dispatch', array( self::class, 'maybe_add_actor_from_signature' ), 10, 3 );
 		\add_filter( 'rest_request_before_callbacks', array( self::class, 'validate_requests' ), 9, 3 );
 		\add_filter( 'rest_request_parameter_order', array( self::class, 'request_parameter_order' ), 10, 2 );
 
@@ -102,6 +103,94 @@ class Server {
 			'URL',
 			'defaults',
 		);
+	}
+
+	/**
+	 * Backfill a missing `actor` on incoming inbox activities from the HTTP signature.
+	 *
+	 * Some implementations convey the sending actor only through the HTTP signature
+	 * and omit the `actor` property from the activity body. Mastodon does this for
+	 * FeatureRequest activities (FEP-7aa9), for example. Because our inbox routes
+	 * require `actor`, those activities are rejected during parameter validation
+	 * before they can be stored or handed to a handler.
+	 *
+	 * The signature is the authoritative sender identity anyway, so derive the actor
+	 * from the keyId and inject it into the request body. Validation, signature
+	 * verification, and the handlers then see a normal `actor`. This is purely
+	 * additive: a well-formed activity already carries an `actor` and is left
+	 * untouched, and the injected value still has to survive signature verification.
+	 *
+	 * Runs on `rest_pre_dispatch` because that is the only hook that fires before
+	 * required-parameter validation.
+	 *
+	 * @since unreleased
+	 *
+	 * @param mixed            $result  Response to replace the request with, or null to continue.
+	 * @param \WP_REST_Server  $server  Server instance.
+	 * @param \WP_REST_Request $request The request object.
+	 *
+	 * @return mixed The unmodified `$result`.
+	 */
+	public static function maybe_add_actor_from_signature( $result, $server, $request ) {
+		// Respect an earlier short-circuit.
+		if ( null !== $result ) {
+			return $result;
+		}
+
+		if ( \WP_REST_Server::CREATABLE !== $request->get_method() ) {
+			return $result;
+		}
+
+		$route = $request->get_route();
+		if (
+			! \str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE ) ||
+			! \str_ends_with( $route, '/inbox' )
+		) {
+			return $result;
+		}
+
+		$json = $request->get_json_params();
+		if ( ! \is_array( $json ) || ! empty( $json['actor'] ) ) {
+			return $result;
+		}
+
+		$key_id = self::get_key_id_from_request( $request );
+		if ( ! $key_id ) {
+			return $result;
+		}
+
+		$json['actor'] = \strip_fragment_from_url( $key_id );
+		$request->set_body( \wp_json_encode( $json ) );
+
+		return $result;
+	}
+
+	/**
+	 * Extract the signing keyId from a request's HTTP Signature headers.
+	 *
+	 * Supports both the draft HTTP Signatures `Signature` header and the RFC 9421
+	 * `Signature-Input` header, matching the keyId the same way the signature
+	 * verifier does.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 *
+	 * @return string|null The keyId, or null when no signature is present.
+	 */
+	private static function get_key_id_from_request( $request ) {
+		$signature = $request->get_header( 'signature' );
+		if ( $signature && \preg_match( '/keyId="([^"]+)"/i', $signature, $matches ) ) {
+			return $matches[1];
+		}
+
+		// RFC 9421: keyid is a `;`-delimited parameter whose value may be quoted or unquoted.
+		$signature_input = $request->get_header( 'signature-input' );
+		if ( $signature_input && \preg_match( '/(?:^|;)\s*keyid="?([^";,\s]+)/i', $signature_input, $matches ) ) {
+			return $matches[1];
+		}
+
+		return null;
 	}
 
 	/**
