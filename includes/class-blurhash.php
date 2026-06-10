@@ -220,23 +220,30 @@ class Blurhash {
 	 *
 	 * Three-state return so callers can route outcomes to the right
 	 * bucket: a string is success; `false` means the source is
-	 * deliberately outside encode policy (currently: declared pixel
-	 * count over {@see self::MAX_ENCODE_PIXELS}) and must be skipped
-	 * silently, same posture as a non-raster mime; `null` is an
-	 * unexpected failure (missing/corrupt file, GD or encoder error)
-	 * that callers surface for monitoring. No native return type
+	 * deliberately outside encode policy and must be skipped silently —
+	 * a non-encodable attachment (non-raster mime, missing/deleted, or a
+	 * format the host GD build can't decode), an unavailable encoder, or
+	 * a declared pixel count over {@see self::MAX_ENCODE_PIXELS}; `null`
+	 * is an unexpected failure (missing/corrupt file, GD or encoder
+	 * error) that callers surface for monitoring. No native return type
 	 * because union types require PHP 8.0 and the plugin supports 7.4.
 	 *
 	 * @param int $attachment_id Attachment post ID.
 	 * @return string|false|null Hash on success, false on policy skip, null on failure.
 	 */
 	public static function encode_from_attachment( int $attachment_id ) {
+		/*
+		 * Predictable unencodability (non-raster mime, missing/deleted
+		 * attachment, host GD that can't decode the format, or no GD at
+		 * all) is a policy skip, not a failure: `false` routes direct
+		 * callers to the silent bucket instead of the diagnostic one.
+		 */
 		if ( ! self::is_encodable_attachment( $attachment_id ) ) {
-			return null;
+			return false;
 		}
 
 		if ( ! self::is_encoder_runnable() ) {
-			return null;
+			return false;
 		}
 
 		$path = self::resolve_encode_path( $attachment_id );

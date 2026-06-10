@@ -321,6 +321,24 @@ class Test_Blurhash extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a non-encodable attachment (here a PDF) returns the `false`
+	 * policy-skip sentinel rather than the `null` failure sentinel, so direct
+	 * callers can tell a deliberate skip from an unexpected error.
+	 *
+	 * @covers ::encode_from_attachment
+	 */
+	public function test_encode_from_attachment_returns_false_for_non_encodable() {
+		$attachment_id = self::factory()->post->create(
+			array(
+				'post_type'      => 'attachment',
+				'post_mime_type' => 'application/pdf',
+			)
+		);
+
+		$this->assertFalse( Blurhash::encode_from_attachment( $attachment_id ) );
+	}
+
+	/**
 	 * Test that the cron callback routes the decode-bomb policy skip to the
 	 * silent path: no `activitypub_blurhash_encode_failed` action, no meta.
 	 *
@@ -335,14 +353,16 @@ class Test_Blurhash extends \WP_UnitTestCase {
 		$attachment_id = $this->create_image_attachment_at( $path );
 
 		$captured = array();
-		\add_action(
-			'activitypub_blurhash_encode_failed',
-			static function ( $failed_id ) use ( &$captured ) {
-				$captured[] = (int) $failed_id;
-			}
-		);
+		$callback = static function ( $failed_id ) use ( &$captured ) {
+			$captured[] = (int) $failed_id;
+		};
+		\add_action( 'activitypub_blurhash_encode_failed', $callback );
 
-		Blurhash::run_encode( $attachment_id );
+		try {
+			Blurhash::run_encode( $attachment_id );
+		} finally {
+			\remove_action( 'activitypub_blurhash_encode_failed', $callback );
+		}
 
 		$this->assertNull( Blurhash::get( $attachment_id ) );
 		$this->assertSame( array(), $captured, 'Policy skip must not fire the encode-failed action.' );
