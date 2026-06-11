@@ -33,7 +33,7 @@ namespace Activitypub;
  * Called from `activitypub.php` on `init`.
  * Adapted from Automattic/FOSSE (https://github.com/Automattic/fosse).
  *
- * @since unreleased
+ * @since 9.0.0
  */
 class Blurhash {
 

@@ -99,7 +99,7 @@ trait Verification {
 	 * different keyIds, and only the verifier knows which one validated.
 	 *
 	 * @since 8.1.0
-	 * @since unreleased Added the `$key_id` parameter; binds against the verified keyId.
+	 * @since 9.0.0 Added the `$key_id` parameter; binds against the verified keyId.
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @param string|null      $key_id  The keyId that verified the signature.

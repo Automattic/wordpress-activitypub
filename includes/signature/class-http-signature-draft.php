@@ -87,7 +87,7 @@ class Http_Signature_Draft implements Http_Signature {
 	/**
 	 * Verify the HTTP Signature against a request.
 	 *
-	 * @since unreleased Returns the verified keyId on success instead of `true`.
+	 * @since 9.0.0 Returns the verified keyId on success instead of `true`.
 	 *
 	 * @param array       $headers The HTTP headers.
 	 * @param string|null $body    The request body, if applicable.
