@@ -52,7 +52,7 @@
 		"@wordpress/data": "^10.44.0",
 		"@wordpress/data-controls": "^4.48.0",
 		"@wordpress/dataviews": "^14.3.0",
-		"@wordpress/date": "^5.33.0",
+		"@wordpress/date": "^5.48.0",
 		"@wordpress/dependency-extraction-webpack-plugin": "^6.45.0",
 		"@wordpress/dom": "^4.47.0",
 		"@wordpress/dom-ready": "^4.36.0",
