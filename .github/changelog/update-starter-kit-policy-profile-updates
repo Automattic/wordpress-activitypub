@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Notify followers about your new preference when the Starter Kit policy setting changes, so other servers no longer act on an outdated one.
