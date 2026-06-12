@@ -10,6 +10,7 @@ namespace Activitypub\Development;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Posts;
+use Activitypub\Tombstone;
 
 /**
  * Debug Class.
@@ -18,7 +19,7 @@ use Activitypub\Collection\Remote_Posts;
  * in the WordPress admin for easier debugging during
  * local development, and provides logging utilities.
  *
- * @since unreleased
+ * @since 8.1.0
  */
 class Debug {
 	/**
@@ -49,11 +50,12 @@ class Debug {
 	 * @return array The arguments for the post type.
 	 */
 	public static function debug_post_type( $args, $post_type ) {
-		if ( ! \in_array( $post_type, array( Outbox::POST_TYPE, Inbox::POST_TYPE, Remote_Posts::POST_TYPE ), true ) ) {
+		if ( ! \in_array( $post_type, array( Outbox::POST_TYPE, Inbox::POST_TYPE, Remote_Posts::POST_TYPE, Tombstone::POST_TYPE ), true ) ) {
 			return $args;
 		}
 
-		$args['show_ui'] = true;
+		$args['show_ui']      = true;
+		$args['show_in_menu'] = true;
 
 		if ( Outbox::POST_TYPE === $post_type ) {
 			$args['menu_icon'] = 'dashicons-upload';
@@ -61,6 +63,8 @@ class Debug {
 			$args['menu_icon'] = 'dashicons-download';
 		} elseif ( Remote_Posts::POST_TYPE === $post_type ) {
 			$args['menu_icon'] = 'dashicons-media-document';
+		} elseif ( Tombstone::POST_TYPE === $post_type ) {
+			$args['menu_icon'] = 'dashicons-trash';
 		}
 
 		return $args;

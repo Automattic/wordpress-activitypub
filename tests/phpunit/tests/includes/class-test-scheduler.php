@@ -239,6 +239,55 @@ class Test_Scheduler extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test reprocess_outbox detects pending batches scheduled with old batch sizes.
+	 *
+	 * @covers ::reprocess_outbox
+	 */
+	public function test_reprocess_outbox_detects_pending_batch_with_old_batch_size() {
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_id( 'https://example.com/test-old-batch-size' );
+		$activity->set_object(
+			array(
+				'id'      => 'https://example.com/test-old-batch-size',
+				'type'    => 'Note',
+				'content' => 'Test Content',
+			)
+		);
+
+		$pending_id = Outbox::add( $activity, self::$user_id );
+		\update_post_meta( $pending_id, '_activitypub_outbox_offset', 100 );
+
+		\wp_schedule_single_event(
+			\time() + MINUTE_IN_SECONDS,
+			'activitypub_send_activity',
+			array( $pending_id, 50, 100 )
+		);
+
+		$current_batch_size = function () {
+			return 20;
+		};
+		\add_filter( 'activitypub_dispatcher_batch_size', $current_batch_size );
+
+		$scheduled_events        = array();
+		$schedule_event_callback = function ( $event ) use ( &$scheduled_events ) {
+			if ( 'activitypub_process_outbox' === $event->hook ) {
+				$scheduled_events[] = $event->args[0];
+			}
+			return $event;
+		};
+		\add_filter( 'schedule_event', $schedule_event_callback );
+
+		Scheduler::reprocess_outbox();
+
+		$this->assertNotContains( $pending_id, $scheduled_events, 'Should not reschedule an outbox item that has a pending batch with an old batch size.' );
+
+		\remove_filter( 'schedule_event', $schedule_event_callback );
+		\remove_filter( 'activitypub_dispatcher_batch_size', $current_batch_size );
+		\wp_clear_scheduled_hook( 'activitypub_send_activity', array( $pending_id, 50, 100 ) );
+	}
+
+	/**
 	 * Test purge_outbox method with more than 20 posts.
 	 *
 	 * @covers ::purge_outbox

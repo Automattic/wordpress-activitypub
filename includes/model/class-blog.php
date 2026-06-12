@@ -423,6 +423,7 @@ class Blog extends Actor {
 			'sharedInbox'                => get_rest_url_by_path( 'inbox' ),
 			'oauthAuthorizationEndpoint' => get_rest_url_by_path( 'oauth/authorize' ),
 			'oauthTokenEndpoint'         => get_rest_url_by_path( 'oauth/token' ),
+			'oauthRegistrationEndpoint'  => get_rest_url_by_path( 'oauth/clients' ),
 			'proxyUrl'                   => get_rest_url_by_path( 'proxy' ),
 			'proxyEventStream'           => get_rest_url_by_path( 'proxy/stream' ),
 		);
@@ -440,7 +441,7 @@ class Blog extends Actor {
 	/**
 	 * Returns the Liked API endpoint.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @return string The Liked endpoint.
 	 */

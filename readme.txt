@@ -2,8 +2,8 @@
 Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaformat, nuriapena, cavalierlife, andremenrath
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
-Tested up to: 6.9
-Stable tag: 8.0.2
+Tested up to: 7.0
+Stable tag: 9.0.0
 Requires PHP: 7.4
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -111,68 +111,56 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
-### 8.0.2 - 2026-03-17
+### 9.0.0 - 2026-06-10
 #### Security
-- Prevent non-public posts (drafts, scheduled, pending review) from being accessible via ActivityPub.
-
-### 8.0.1 - 2026-03-11
-#### Changed
-- Simplify the follow page block pattern to avoid duplicate headings and improve accessibility.
-
-#### Fixed
-- Fix dark sidebar colors appearing incorrectly with non-default admin color schemes.
-- Fix Fediverse Reactions block not aligning with post content in block themes.
-- Fix new posts being marked as modified on load, which prevented Gutenberg's starter pattern modal from appearing.
-
-### 8.0.0 - 2026-03-04
-#### Security
-- Prevent private recipient lists from being shared when sending activities to other servers.
+- Enforce the signing-key host check on incoming federated activities regardless of how the key identifier is formatted.
+- Fix the real-time activity stream so it only returns the requesting user's own activities.
+- Harden the Site Health connectivity check so it cannot be used to reach unsafe network addresses.
+- Only share comment replies in the Fediverse when the post they belong to is itself federated, so replies on private or non-federated posts stay private.
+- Prevent a remote server from discovering which of your followers belong to a third-party server it does not control.
+- Prevent logged-in users from viewing another user's private outbox activities.
+- Prevent remote servers from modifying or deleting federated profiles, posts, and interactions they do not own.
+- Rate-limit the remote-follow lookup to prevent it from being abused to trigger outbound requests.
+- Stop the OAuth token introspection endpoint from revealing another user's token details to logged-in users.
+- Stop the quote-authorization stamp from exposing a post's other metadata.
 
 #### Added
-- Add a help section to interaction dialogs explaining the Fediverse and why entering a profile is needed.
-- Add a notice on the Settings page to easily switch from legacy template mode to automatic mode.
-- Add a pre-publish suggestion that recommends a post format for better compatibility with media-focused Fediverse platforms.
-- Add a Site Health check that warns when plugins are causing too many federation updates.
-- Add backwards compatibility for the `ACTIVITYPUB_DISABLE_SIDELOADING` constant and `activitypub_sideloading_enabled` filter from version 7.9.1.
-- Add bot account snippet that marks ActivityPub profiles as automated accounts, displaying a "BOT" badge on Mastodon and other Fediverse platforms.
-- Add Cache namespace for remote media caching with CLI commands, improved MIME validation, and filter-based architecture.
-- Add federation of video poster images set in the WordPress video block.
-- Add Locale from Tags community snippet.
-- Add optional Like and Boost action buttons to the Fediverse Reactions block, allowing visitors to interact with posts from their own server.
-- Add pre-built Fediverse block patterns for easy profile, follow page, and sidebar setup.
-- Add snippet for blockless fediverse reactions
-- Add `wp activitypub fetch` CLI command for fetching remote URLs with signed HTTP requests.
+- Add a Distribution Mode setting to control how quickly posts are delivered to followers.
+- Add an opt-in setting to consent to inclusion in Starter Kits (also called Starter Packs or Featured Collections). Off by default. Find it under Settings, ActivityPub, Activities.
+- C2S clients can now request canonical SWICG ActivityPub API scope names such as `activitypub:read:all` and `activitypub:write:all`, and the OAuth discovery metadata advertises them.
+- C2S token responses now include `activitypub_actor_id` so clients following the SWICG ActivityPub API Basic Profile can discover the authenticated actor.
+- Generate a blurred color preview (blurhash) for images so other fediverse apps can show a placeholder while your photos load.
+- Quote notification emails now include a link to the post that quoted you, so you can review and respond more quickly.
+- Warn in the editor before making a post that's already shared on the Fediverse a draft, private, or password-protected, since followers' copies will be removed.
 
 #### Changed
-- Improved active user counting for NodeInfo to include all federated content types and comments.
-- Improve language map resolution to strictly follow the ActivityStreams spec.
-- Superseded outbox activities are now removed instead of kept, reducing clutter in the outbox.
-- The minimum required PHP version is now 7.4.
+- Add the `blurhash` term to the outbound JSON-LD `@context` so attachments that include a `blurhash` property are strictly correct JSON-LD, matching Mastodon's own context shape.
+- Federated posts moved to draft, pending, private, trash, or password-protected now send a Delete to followers (previously sent a placeholder "editing" Update or were silent).
+- OAuth rate-limit responses now include a `Retry-After` header so clients know how long to wait before retrying.
+- Updated a build dependency to a clean release now that a fixed version is available.
+
+#### Removed
+- Removed functions, methods, and the Follower class that were deprecated in versions 7.0 through 7.4.
 
 #### Fixed
-- Accept incoming activities from servers that use standalone key objects for HTTP Signatures.
-- Fix a crash on servers where WordPress uses FTP instead of direct file access for media caching.
-- Fix a crash when receiving posts from certain federated platforms that send multilingual content.
-- Fix automatic cleanup of old activities failing silently on sites with large numbers of outbox, inbox, or remote post items.
-- Fix comment count to properly exclude likes, shares, and notes.
-- Fix follow button redirect from Mastodon not being recognized.
-- Fix modal overlay not covering the full screen on block themes.
-- Fix outbox invalidation canceling pending Accept/Reject responses to QuoteRequests for the same post.
-- Fix QuoteRequest handler to derive responding actor from post author instead of inbox recipient.
-- Fix reactions block buttons inheriting theme background color on classic themes.
-- Fix reactions block layout on small screens and remove unwanted button highlight when clicking action buttons.
-- Fix signature verification rejecting valid requests that use lowercase algorithm names in the Digest header.
-- Fix soft-deleted posts being served instead of a tombstone when the post is re-saved.
-- Improve compatibility with federated services that use a URL reference for the actor's public key.
-- Improve handling of all public audience identifiers when sending activities to followers and relays.
+- Fix a fatal error when receiving a new follower while the Stream plugin is active.
+- Fix a follow request being marked as accepted when the confirmation came from a different account than the one being followed.
+- Fix the Fediverse settings appearing twice and visibility changes not saving in the block editor when the Classic Editor plugin is also active.
+- Fix the introduction video failing to load on the Getting Started help screen.
+- Follower synchronization with Mastodon no longer fails, signed requests with query strings now verify correctly.
+- Harden the Blurhash encoder: skip decompression-bomb images before decoding, flatten transparency onto white so transparent logos no longer produce near-black placeholders, and defer the cron encode until attachment metadata is saved.
+- Images and videos placed in a Media & Text block are now included when a post is shared to the Fediverse.
+- Requests from other platforms to feature your posts are now handled correctly instead of being ignored.
+- RSS and Atom feeds now show a simple `@username` mention in place of the reply block's full embed card, which only renders properly when the plugin's frontend CSS is loaded.
+- Stop a deprecation notice from appearing in the error log when the NodeInfo plugin is also active.
 
 See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/trunk/CHANGELOG.md).
 
 == Upgrade Notice ==
 
-= 7.9.0 =
+= 9.0.0 =
 
-Custom emoji from the fediverse now show up instead of looking like :sad_trombone:.
+Posts you switch to draft, pending, private, or password-protected are now fully removed from the Fediverse, so unpublished content no longer lingers on other servers. Note that re-publishing may not restore them on some platforms.
 
 == Installation ==
 

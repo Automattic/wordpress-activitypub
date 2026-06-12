@@ -13,21 +13,6 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 
 /**
- * Returns a users WebFinger "resource".
- *
- * @deprecated 7.1.0 Use {@see \Activitypub\Webfinger::get_user_resource} instead.
- *
- * @param int $user_id The user ID.
- *
- * @return string The User resource.
- */
-function get_webfinger_resource( $user_id ) {
-	\_deprecated_function( __FUNCTION__, '7.1.0', 'Activitypub\Webfinger::get_user_resource' );
-
-	return Webfinger::get_user_resource( $user_id );
-}
-
-/**
  * Returns the followers of a given user.
  *
  * @param int $user_id The user ID.
@@ -137,6 +122,37 @@ function user_can_activitypub( $user_id ) {
 	 * @param int     $user_id The user ID.
 	 */
 	return apply_filters( 'activitypub_user_can_activitypub', $enabled, $user_id );
+}
+
+/**
+ * Whether the current user is allowed to act on behalf of the blog actor.
+ *
+ * The blog actor is virtual (no `wp_users` row), so ownership and authoring
+ * checks against `BLOG_USER_ID = 0` cannot rely on identity equality. This
+ * helper centralizes the "can the current user post / read as the blog?"
+ * decision: administrators by default, filterable for integrations.
+ *
+ * @since 8.3.0
+ *
+ * @return bool True if the current user can act as the blog actor.
+ */
+function user_can_act_as_blog() {
+	/**
+	 * Filters whether the current user is allowed to act as the blog actor.
+	 *
+	 * Defaults to true for users with the `manage_options` capability (administrators).
+	 * Filter to broaden the allow-list, for example to editors on multi-author sites.
+	 *
+	 * Security note: returning a static `true` (e.g. via `__return_true`) grants
+	 * EVERY authenticated user the right to post as, read private outbox items of,
+	 * and view stats for the blog actor. Always inspect the current user inside
+	 * the callback (`current_user_can()`, role, allowlist) before returning `true`.
+	 *
+	 * @since 8.3.0
+	 *
+	 * @param bool $can_act_as_blog Whether the current user can act as the blog actor.
+	 */
+	return (bool) \apply_filters( 'activitypub_user_can_act_as_blog', \current_user_can( 'manage_options' ) );
 }
 
 /**

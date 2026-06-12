@@ -204,6 +204,8 @@ class Http_Message_Signature implements Http_Signature {
 	/**
 	 * Verify the HTTP Signature against a request.
 	 *
+	 * @since 9.0.0 Returns the verified keyId on success instead of `true`.
+	 *
 	 * @param array       $headers The HTTP headers.
 	 * @param string|null $body    The request body, if applicable.
 	 * @return string|\WP_Error The verified keyId on success, WP_Error on failure.
@@ -218,8 +220,11 @@ class Http_Message_Signature implements Http_Signature {
 		foreach ( $parsed as $data ) {
 			$result = $this->verify_signature_label( $data, $headers, $body );
 			if ( true === $result ) {
-				// Return the keyId that was verified, not just true.
-				return $data['params']['keyid'] ?? '';
+				/*
+				 * Return the keyId of the label that actually verified, so the caller binds
+				 * against the real signer instead of guessing among several labels.
+				 */
+				return $data['params']['keyid'];
 			}
 
 			if ( \is_wp_error( $result ) ) {
@@ -293,12 +298,42 @@ class Http_Message_Signature implements Http_Signature {
 	private function verify_signature_label( $data, $headers, $body ) {
 		$params = $data['params'];
 
-		// Timestamp verification.
-		if ( isset( $params['created'] ) && (int) $params['created'] > \time() + MINUTE_IN_SECONDS ) {
-			return new \WP_Error( 'invalid_created', 'The signature creation time is in the future.' );
+		/*
+		 * Timestamp verification.
+		 *
+		 * Keep the pre-existing one-minute forward bound (tighter than the
+		 * Cavage path's five minutes, appropriate for RFC 9421 where fresh
+		 * peers tend to ship with synced clocks) and add one hour of
+		 * backward drift. Without the past-side bound, peers that omit
+		 * `expires` could present arbitrarily old signatures for replay.
+		 */
+		$now = \time();
+		if ( isset( $params['created'] ) ) {
+			$created = (int) $params['created'];
+			if ( $created > $now + MINUTE_IN_SECONDS ) {
+				return new \WP_Error( 'invalid_created', 'The signature creation time is in the future.' );
+			}
+			if ( $created < $now - HOUR_IN_SECONDS ) {
+				return new \WP_Error( 'expired_created', 'The signature creation time is too far in the past.' );
+			}
 		}
-		if ( isset( $params['expires'] ) && (int) $params['expires'] < \time() ) {
-			return new \WP_Error( 'expired_signature', 'The signature has expired.' );
+		if ( isset( $params['expires'] ) ) {
+			$expires = (int) $params['expires'];
+			if ( $expires < $now ) {
+				return new \WP_Error( 'expired_signature', 'The signature has expired.' );
+			}
+			if ( $expires > $now + DAY_IN_SECONDS ) {
+				return new \WP_Error( 'invalid_expires', 'The signature expiry time is too far in the future.' );
+			}
+		}
+
+		/*
+		 * Require a time anchor. Both `created` and `expires` are optional
+		 * in RFC-9421; a signature without either has no freshness bound
+		 * and could be replayed indefinitely.
+		 */
+		if ( ! isset( $params['created'] ) && ! isset( $params['expires'] ) ) {
+			return new \WP_Error( 'missing_time_anchor', 'The signature is missing a time anchor (created or expires).' );
 		}
 
 		// KeyId verification.

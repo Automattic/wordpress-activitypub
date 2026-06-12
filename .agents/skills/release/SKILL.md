@@ -15,11 +15,13 @@ npm run release              # Create major/minor release PR.
 ```
 
 ### Version File Locations
-When updating versions manually, change these files:
-- `activitypub.php` - Plugin header (`Version: X.Y.Z`).
+When updating versions manually, change these files (these are the files `bin/release.js` touches):
+- `activitypub.php` - Plugin header (`Version: X.Y.Z`) **and** the `ACTIVITYPUB_PLUGIN_VERSION` constant. Both must change.
 - `readme.txt` - WordPress.org readme (`Stable tag: X.Y.Z`).
-- `package.json` - npm version (`"version": "X.Y.Z"`).
+- `includes/class-migration.php` - Version references in the DB-migration `version_compare()` checks.
 - `CHANGELOG.md` - Changelog file (auto-updated by release script).
+
+Note: `package.json` has no `version` field and is not part of the release bump.
 
 ## Comprehensive Release Guide
 

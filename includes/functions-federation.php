@@ -122,6 +122,23 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 		}
 	}
 
+	/*
+	 * Refuse to Update an object that is already deleted from the Fediverse. An
+	 * explicit Update (e.g. `wp activitypub post update` or a third-party caller)
+	 * on a soft-deleted post would only federate a Tombstone, and — worse — would
+	 * reset the object's state to "federated" below, so a later re-publish would
+	 * skip the Create that cancels the still-pending Delete and the post could be
+	 * torn down after it is public again. Re-publishing is the supported way to
+	 * bring a deleted object back, and that emits a Create, not an Update.
+	 */
+	if ( 'Update' === $activity_type && ACTIVITYPUB_OBJECT_STATE_DELETED === get_wp_object_state( $data ) ) {
+		return new \WP_Error(
+			'activitypub_object_deleted',
+			\__( 'Cannot send an Update for an object that has been deleted from the Fediverse. Re-publish it instead.', 'activitypub' ),
+			array( 'status' => 409 )
+		);
+	}
+
 	$transformer = Transformer_Factory::get_transformer( $data );
 
 	if ( ! $transformer || is_wp_error( $transformer ) ) {
@@ -233,7 +250,7 @@ function follow( $remote_actor, $user_id ) {
  * @param string|int $remote_actor The Actor URL, WebFinger Resource or Post-ID of the remote Actor.
  * @param int        $user_id      The ID of the WordPress User.
  *
- * @return \WP_Post|\WP_Error The Actor post or a WP_Error.
+ * @return int|\WP_Error The ID of the Undo outbox item, 0 if no matching Follow outbox was found, or WP_Error on failure.
  */
 function unfollow( $remote_actor, $user_id ) {
 	if ( \is_numeric( $remote_actor ) ) {

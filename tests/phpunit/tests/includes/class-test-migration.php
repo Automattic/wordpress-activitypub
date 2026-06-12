@@ -17,6 +17,7 @@ use Activitypub\Collection\Remote_Actors;
 use Activitypub\Comment;
 use Activitypub\Migration;
 use Activitypub\Scheduler;
+use Activitypub\Tombstone;
 
 /**
  * Test class for Activitypub Migrate.
@@ -1482,5 +1483,95 @@ class Test_Migration extends \WP_UnitTestCase {
 			$emoji_meta = \get_post_meta( $actor_id, '_activitypub_emoji', true );
 			$this->assertNotEmpty( $emoji_meta, "Actor {$actor_id} should have emoji meta" );
 		}
+	}
+
+	/**
+	 * Test migrate_tombstones_to_cpt() moves URLs from the option into the CPT.
+	 *
+	 * @covers ::migrate_tombstones_to_cpt
+	 */
+	public function test_migrate_tombstones_to_cpt_moves_urls() {
+		$urls = array(
+			\Activitypub\normalize_url( 'https://fake.test/a' ),
+			\Activitypub\normalize_url( 'https://fake.test/b' ),
+			\Activitypub\normalize_url( 'https://fake.test/c' ),
+		);
+		\update_option( 'activitypub_tombstone_urls', $urls );
+
+		$result = Migration::migrate_tombstones_to_cpt( 10 );
+
+		$this->assertNull( $result );
+		$this->assertFalse( \get_option( 'activitypub_tombstone_urls', false ) );
+
+		foreach ( $urls as $url ) {
+			$this->assertTrue( Tombstone::exists_local( 'https://' . $url ) );
+		}
+	}
+
+	/**
+	 * Test migrate_tombstones_to_cpt() chunks: returns args while work remains.
+	 *
+	 * @covers ::migrate_tombstones_to_cpt
+	 */
+	public function test_migrate_tombstones_to_cpt_is_chunked() {
+		$urls = array();
+		for ( $i = 0; $i < 5; $i++ ) {
+			$urls[] = \Activitypub\normalize_url( 'https://fake.test/chunked/' . $i );
+		}
+		\update_option( 'activitypub_tombstone_urls', $urls );
+
+		$result = Migration::migrate_tombstones_to_cpt( 2 );
+
+		$this->assertSame( array( 'batch_size' => 2 ), $result );
+
+		$remaining = \get_option( 'activitypub_tombstone_urls', array() );
+		$this->assertCount( 3, $remaining );
+
+		Migration::migrate_tombstones_to_cpt( 2 );
+		$final = Migration::migrate_tombstones_to_cpt( 2 );
+
+		$this->assertNull( $final );
+		$this->assertFalse( \get_option( 'activitypub_tombstone_urls', false ) );
+	}
+
+	/**
+	 * Test migrate_tombstones_to_cpt() is idempotent — re-running after migration is a no-op.
+	 *
+	 * @covers ::migrate_tombstones_to_cpt
+	 */
+	public function test_migrate_tombstones_to_cpt_idempotent() {
+		$this->assertNull( Migration::migrate_tombstones_to_cpt( 10 ) );
+		$this->assertNull( Migration::migrate_tombstones_to_cpt( 10 ) );
+	}
+
+	/**
+	 * Test migrate_tombstones_to_cpt() halts when a batch makes no progress.
+	 *
+	 * Prevents an unbounded retry loop when wp_insert_post is consistently
+	 * failing. The legacy option still holds the URLs and exists_local() will
+	 * continue to consult it.
+	 *
+	 * @covers ::migrate_tombstones_to_cpt
+	 */
+	public function test_migrate_tombstones_to_cpt_halts_on_no_progress() {
+		$urls = array(
+			\Activitypub\normalize_url( 'https://fake.test/no-progress-1' ),
+			\Activitypub\normalize_url( 'https://fake.test/no-progress-2' ),
+		);
+		\update_option( 'activitypub_tombstone_urls', $urls );
+
+		// Force every wp_insert_post call to return 0 by short-circuiting
+		// it as empty content.
+		\add_filter( 'wp_insert_post_empty_content', '__return_true' );
+
+		$result = Migration::migrate_tombstones_to_cpt( 10 );
+
+		\remove_filter( 'wp_insert_post_empty_content', '__return_true' );
+
+		$this->assertNull( $result, 'Migration should halt the scheduler when nothing was drained.' );
+
+		$remaining = \get_option( 'activitypub_tombstone_urls', false );
+		$this->assertIsArray( $remaining, 'Legacy option must remain to back exists_local().' );
+		$this->assertEqualsCanonicalizing( $urls, $remaining );
 	}
 }

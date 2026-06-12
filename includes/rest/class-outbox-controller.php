@@ -178,7 +178,19 @@ class Outbox_Controller extends \WP_REST_Controller {
 			),
 		);
 
-		if ( \get_current_user_id() !== (int) $user_id && ! \current_user_can( 'activitypub' ) ) {
+		/*
+		 * Whether the current user owns the outbox being queried. Owners see private and
+		 * non-public activity types; unauthenticated, federation, and non-owner requests are
+		 * limited to the public subset by the visibility filter below.
+		 *
+		 * Reuse the canonical ownership gate (the same check the OAuth C2S path applies via
+		 * maybe_verify_owner()) instead of re-deriving it here: it requires an authenticated
+		 * session, matches the requested user by identity, and handles the blog actor via
+		 * user_can_act_as_blog(). A global capability never stands in for ownership.
+		 */
+		$is_outbox_owner = true === $this->verify_owner( $request );
+
+		if ( ! $is_outbox_owner ) {
 			$args['meta_query'][] = array(
 				'key'     => '_activitypub_activity_type',
 				'value'   => $activity_types,
@@ -593,7 +605,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * Per the ActivityPub spec, the server adds addressing when the client
 	 * does not provide it. Defaults to public with followers in cc.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param array                       $data The activity data.
 	 * @param \Activitypub\Activity\Actor $user The authenticated user.

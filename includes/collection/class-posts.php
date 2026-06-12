@@ -12,6 +12,7 @@ use Activitypub\Hashtag;
 use Activitypub\Link;
 
 use function Activitypub\get_content_visibility;
+use function Activitypub\user_can_act_as_blog;
 
 /**
  * Posts collection.
@@ -25,7 +26,7 @@ class Posts {
 	/**
 	 * Create a WordPress post from an ActivityPub activity.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param array       $activity   The activity data.
 	 * @param int         $user_id    The local user ID.
@@ -34,21 +35,43 @@ class Posts {
 	 * @return \WP_Post|\WP_Error The created post on success, WP_Error on failure.
 	 */
 	public static function create( $activity, $user_id, $visibility = null ) {
-		// Verify the user has permission to create posts.
-		if ( $user_id > 0 && ! \user_can( $user_id, 'publish_posts' ) ) {
-			return new \WP_Error(
-				'activitypub_forbidden',
-				\__( 'You do not have permission to create posts.', 'activitypub' ),
-				array( 'status' => 403 )
-			);
+		// Resolve the post author. Blog actor falls back to the current user for a real byline.
+		$post_author = $user_id > 0 ? $user_id : \get_current_user_id();
+
+		/*
+		 * Authorize the request:
+		 * - Per-user path: require `publish_posts` on the URL-specified user.
+		 * - Blog actor path (post_author falls back to current user): require
+		 *   the act-as-blog grant. `publish_posts` is implicit because the
+		 *   helper defaults to `manage_options` (administrators).
+		 * - Cron/CLI path keeps `post_author = 0` and bypasses both checks.
+		 */
+		if ( $post_author > 0 ) {
+			$authorized = $post_author === (int) $user_id
+				? \user_can( $user_id, 'publish_posts' )
+				: user_can_act_as_blog();
+
+			if ( ! $authorized ) {
+				return new \WP_Error(
+					'activitypub_forbidden',
+					\__( 'You do not have permission to create posts.', 'activitypub' ),
+					array( 'status' => 403 )
+				);
+			}
 		}
 
 		$object = $activity['object'] ?? array();
 
-		$object_type = $object['type'] ?? '';
-		$content     = \wp_kses_post( $object['content'] ?? '' );
-		$name        = \sanitize_text_field( $object['name'] ?? '' );
-		$summary     = \wp_kses_post( $object['summary'] ?? '' );
+		$object_type   = $object['type'] ?? '';
+		$content       = \wp_kses_post( $object['content'] ?? '' );
+		$name          = \sanitize_text_field( $object['name'] ?? '' );
+		$summary       = \wp_kses_post( $object['summary'] ?? '' );
+		$plain_summary = \sanitize_text_field( $summary );
+
+		// A summary marked sensitive is a content warning (plain text); otherwise it's a regular excerpt.
+		// Route on the sanitized summary so whitespace-only values don't pollute either field.
+		$content_warning = ! empty( $object['sensitive'] ) && '' !== $plain_summary ? $plain_summary : '';
+		$post_excerpt    = '' === $content_warning && '' !== $plain_summary ? $summary : '';
 
 		// Process content: autop, autolink, hashtags, and convert to blocks.
 		$content = self::prepare_content( $content );
@@ -65,14 +88,15 @@ class Posts {
 		}
 
 		$post_data = array(
-			'post_author'  => $user_id > 0 ? $user_id : 0,
+			'post_author'  => $post_author,
 			'post_title'   => $title,
 			'post_content' => $content,
-			'post_excerpt' => $summary,
+			'post_excerpt' => $post_excerpt,
 			'post_status'  => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE === $visibility ? 'private' : 'publish',
 			'post_type'    => 'post',
 			'meta_input'   => array(
 				'activitypub_content_visibility' => $visibility,
+				'activitypub_content_warning'    => $content_warning,
 			),
 		);
 
@@ -93,7 +117,7 @@ class Posts {
 	/**
 	 * Update a WordPress post from an ActivityPub activity.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param \WP_Post    $post       The post to update.
 	 * @param array       $activity   The activity data.
@@ -104,9 +128,15 @@ class Posts {
 	public static function update( $post, $activity, $visibility = null ) {
 		$object = $activity['object'] ?? array();
 
-		$content = \wp_kses_post( $object['content'] ?? '' );
-		$name    = \sanitize_text_field( $object['name'] ?? '' );
-		$summary = \wp_kses_post( $object['summary'] ?? '' );
+		$content       = \wp_kses_post( $object['content'] ?? '' );
+		$name          = \sanitize_text_field( $object['name'] ?? '' );
+		$summary       = \wp_kses_post( $object['summary'] ?? '' );
+		$plain_summary = \sanitize_text_field( $summary );
+
+		// A summary marked sensitive is a content warning (plain text); otherwise it's a regular excerpt.
+		// Route on the sanitized summary so whitespace-only values don't pollute either field.
+		$content_warning = ! empty( $object['sensitive'] ) && '' !== $plain_summary ? $plain_summary : '';
+		$post_excerpt    = '' === $content_warning && '' !== $plain_summary ? $summary : '';
 
 		// Process content: autop, autolink, hashtags, and convert to blocks.
 		$content = self::prepare_content( $content );
@@ -126,9 +156,10 @@ class Posts {
 			'ID'           => $post->ID,
 			'post_title'   => $title,
 			'post_content' => $content,
-			'post_excerpt' => $summary,
+			'post_excerpt' => $post_excerpt,
 			'meta_input'   => array(
 				'activitypub_content_visibility' => $visibility,
+				'activitypub_content_warning'    => $content_warning,
 			),
 		);
 
@@ -144,7 +175,7 @@ class Posts {
 	/**
 	 * Delete (trash) a WordPress post.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param int $post_id The post ID.
 	 *
@@ -160,7 +191,7 @@ class Posts {
 	 * Applies wpautop (for plain text), autolinks bare URLs,
 	 * converts hashtags to links, and wraps in block markup.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param string $content The HTML or plain-text content.
 	 *

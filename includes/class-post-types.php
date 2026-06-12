@@ -34,6 +34,7 @@ class Post_Types {
 		\add_action( 'init', array( self::class, 'register_extra_fields_post_types' ), 11 );
 		\add_action( 'init', array( self::class, 'register_activitypub_post_meta' ), 11 );
 		\add_action( 'init', array( self::class, 'register_oauth_post_types' ), 11 );
+		\add_action( 'init', array( self::class, 'register_tombstone_post_type' ), 11 );
 
 		\add_action( 'rest_api_init', array( self::class, 'register_ap_actor_rest_field' ) );
 		\add_action( 'rest_api_init', array( self::class, 'register_ap_post_actor_rest_field' ) );
@@ -557,6 +558,40 @@ class Post_Types {
 				'single'            => false,
 				'description'       => 'User IDs that have active tokens for this client.',
 				'sanitize_callback' => 'absint',
+			)
+		);
+	}
+
+	/**
+	 * Register the ap_tombstone post type.
+	 *
+	 * Stores local tombstone URLs out of the autoloaded options row.
+	 * The post type is fully internal — never queried publicly, never shown in UI.
+	 *
+	 * @since 8.3.0
+	 */
+	public static function register_tombstone_post_type() {
+		\register_post_type(
+			Tombstone::POST_TYPE,
+			array(
+				'labels'              => array(
+					'name'          => \_x( 'Tombstones', 'post_type plural name', 'activitypub' ),
+					'singular_name' => \_x( 'Tombstone', 'post_type single name', 'activitypub' ),
+				),
+				'public'              => false,
+				'publicly_queryable'  => false,
+				'show_ui'             => false,
+				'show_in_menu'        => false,
+				'show_in_nav_menus'   => false,
+				'show_in_admin_bar'   => false,
+				'show_in_rest'        => false,
+				'exclude_from_search' => true,
+				'has_archive'         => false,
+				'rewrite'             => false,
+				'query_var'           => false,
+				'can_export'          => false,
+				'delete_with_user'    => false,
+				'supports'            => array(),
 			)
 		);
 	}

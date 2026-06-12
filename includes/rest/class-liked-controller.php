@@ -22,7 +22,7 @@ use function Activitypub\get_rest_url_by_path;
  *
  * @see https://www.w3.org/TR/activitypub/#liked
  *
- * @since unreleased
+ * @since 8.1.0
  */
 class Liked_Controller extends Actors_Controller {
 	use Collection;
@@ -75,7 +75,7 @@ class Liked_Controller extends Actors_Controller {
 	 * have been subsequently undone. Handles re-likes correctly by
 	 * checking the most recent activity for each object.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param \WP_REST_Request $request Full details about the request.
 	 * @return \WP_REST_Response|\WP_Error Response object.
@@ -120,7 +120,7 @@ class Liked_Controller extends Actors_Controller {
 	 * newest first. For each unique object ID, the most recent
 	 * activity determines whether the object is still liked.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @param int $user_id The actor user ID.
 	 * @return string[] Array of liked object URLs.
@@ -187,7 +187,7 @@ class Liked_Controller extends Actors_Controller {
 	/**
 	 * Retrieves the schema for the liked endpoint.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 *
 	 * @return array Schema data.
 	 */

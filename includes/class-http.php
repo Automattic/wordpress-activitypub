@@ -38,8 +38,9 @@ class Http {
 		 * Filters the HTTP headers user agent string.
 		 *
 		 * @param string $user_agent The user agent string.
+		 * @param string $url        The request URL.
 		 */
-		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . get_masked_wp_version() . '; ' . \get_bloginfo( 'url' ) );
+		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . get_masked_wp_version() . '; ' . \get_bloginfo( 'url' ), $url );
 
 		/**
 		 * Filters the timeout duration for remote POST requests in ActivityPub.
@@ -142,12 +143,10 @@ class Http {
 		/**
 		 * Filters the HTTP headers user agent string.
 		 *
-		 * This filter allows developers to modify the user agent string that is
-		 * sent with HTTP requests.
-		 *
 		 * @param string $user_agent The user agent string.
+		 * @param string $url        The request URL.
 		 */
-		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . get_masked_wp_version() . '; ' . \get_bloginfo( 'url' ) );
+		$user_agent = \apply_filters( 'http_headers_useragent', 'WordPress/' . get_masked_wp_version() . '; ' . \get_bloginfo( 'url' ), $url );
 
 		/**
 		 * Filters the timeout duration for remote GET requests in ActivityPub.
@@ -262,7 +261,7 @@ class Http {
 
 		$url = object_to_uri( $url_or_object );
 
-		if ( preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $url ) ) {
+		if ( Webfinger::is_acct( $url ) ) {
 			$url = Webfinger::resolve( $url );
 		}
 

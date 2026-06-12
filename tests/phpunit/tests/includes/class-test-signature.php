@@ -101,8 +101,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		};
 		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 
-		$result = Signature::verify_http_signature( $request );
-		$this->assertIsString( $result, "Valid hs2019 signature for curve {$curve} should verify" );
+		$this->assertNotWPError( Signature::verify_http_signature( $request ), "Valid hs2019 signature for curve {$curve} should verify" );
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 	}
 
@@ -200,8 +199,7 @@ class Test_Signature extends \WP_UnitTestCase {
 			);
 		};
 		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
-		$result = Signature::verify_http_signature( $request );
-		$this->assertIsString( $result, "Valid hs2019 signature for RSA {$bits} bits should verify" );
+		$this->assertNotWPError( Signature::verify_http_signature( $request ), "Valid hs2019 signature for RSA {$bits} bits should verify" );
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 	}
 
@@ -332,8 +330,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		$request->set_body( $args['body'] );
 		$request->set_headers( $args['headers'] );
 
-		$result = Signature::verify_http_signature( $request );
-		$this->assertIsString( $result );
+		$this->assertNotWPError( Signature::verify_http_signature( $request ) );
 
 		// Create a request with a modified body but the original digest.
 		$request->set_body( '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Modified content."}}' );
@@ -353,10 +350,612 @@ class Test_Signature extends \WP_UnitTestCase {
 			'HTTP_SIGNATURE' => $args['headers']['Signature'],
 		);
 
-		$result = Signature::verify_http_signature( $request );
-		$this->assertIsString( $result );
+		$this->assertNotWPError( Signature::verify_http_signature( $request ) );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+	}
+
+	/**
+	 * Signatures whose Date is outside the clock-skew tolerance must be rejected.
+	 *
+	 * Asymmetric: up to 5 minutes into the future, up to 1 hour into the past.
+	 * Values comfortably outside the window must fail, values comfortably
+	 * inside it must verify.
+	 *
+	 * @covers ::verify_http_signature
+	 * @covers \Activitypub\Signature\Http_Signature_Draft::get_signed_data
+	 */
+	public function test_verify_http_signature_rejects_out_of_window_date() {
+		$keys = Actors::get_keypair( 1 );
+
+		// Force Cavage signing regardless of any leaked option from an earlier test.
+		$force_cavage = '__return_zero';
+		\add_filter( 'pre_option_activitypub_rfc9421_signature', $force_cavage );
+
+		$mock_remote_key_retrieval = function () use ( $keys ) {
+			return array(
+				'name'      => 'Admin',
+				'url'       => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+
+		$sign = static function ( $date ) {
+			$args = \apply_filters(
+				'http_request_args',
+				array(
+					'method'      => 'POST',
+					'body'        => '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"x"}}',
+					'key_id'      => 'https://example.org/author/admin#main-key',
+					'private_key' => Actors::get_private_key( 1 ),
+					'user_id'     => 1,
+					'headers'     => array(
+						'Content-Type' => 'application/activity+json',
+						'Date'         => $date,
+						'Host'         => 'example.org',
+					),
+				),
+				'https://example.org/wp-json/activitypub/1.0/inbox'
+			);
+
+			$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+			$request->set_body( $args['body'] );
+			$request->set_headers( $args['headers'] );
+
+			return Signature::verify_http_signature( $request );
+		};
+
+		$far_past   = \gmdate( 'D, d M Y H:i:s T', \time() - ( 2 * HOUR_IN_SECONDS ) );
+		$far_future = \gmdate( 'D, d M Y H:i:s T', \time() + ( 10 * MINUTE_IN_SECONDS ) );
+		$within     = \gmdate( 'D, d M Y H:i:s T', \time() - ( 30 * MINUTE_IN_SECONDS ) );
+
+		$this->assertWPError( $sign( $far_past ), 'Signatures more than an hour old must be rejected.' );
+		$this->assertWPError( $sign( $far_future ), 'Signatures more than five minutes in the future must be rejected.' );
+		$this->assertNotWPError( $sign( $within ), 'Signatures within the skew window must verify.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+		\remove_filter( 'pre_option_activitypub_rfc9421_signature', $force_cavage );
+	}
+
+	/**
+	 * A malformed Date header must reject the request gracefully rather than
+	 * fatal on `setTimeZone()` of a `false` date object.
+	 *
+	 * @covers ::verify_http_signature
+	 * @covers \Activitypub\Signature\Http_Signature_Draft::get_signed_data
+	 */
+	public function test_verify_http_signature_rejects_malformed_date() {
+		$keys = Actors::get_keypair( 1 );
+
+		$force_cavage = '__return_zero';
+		\add_filter( 'pre_option_activitypub_rfc9421_signature', $force_cavage );
+
+		$mock_remote_key_retrieval = function () use ( $keys ) {
+			return array(
+				'name'      => 'Admin',
+				'url'       => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+
+		/*
+		 * Sign with an unparseable Date string. The signing helper drops the
+		 * literal value into the signed string without validating it, so the
+		 * signature itself stays valid; the verifier then has to handle
+		 * date_create() returning false on the same value.
+		 */
+		$args = \apply_filters(
+			'http_request_args',
+			array(
+				'method'      => 'POST',
+				'body'        => '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"x"}}',
+				'key_id'      => 'https://example.org/author/admin#main-key',
+				'private_key' => Actors::get_private_key( 1 ),
+				'user_id'     => 1,
+				'headers'     => array(
+					'Content-Type' => 'application/activity+json',
+					'Date'         => 'not a real date',
+					'Host'         => 'example.org',
+				),
+			),
+			'https://example.org/wp-json/activitypub/1.0/inbox'
+		);
+
+		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_body( $args['body'] );
+		$request->set_headers( $args['headers'] );
+
+		$result = Signature::verify_http_signature( $request );
+		$this->assertWPError( $result, 'Malformed Date header must produce a WP_Error, not a fatal.' );
+		$this->assertSame( 'invalid_signed_data', $result->get_error_code() );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+		\remove_filter( 'pre_option_activitypub_rfc9421_signature', $force_cavage );
+	}
+
+	/**
+	 * A signed GET request whose URL contains a query string must verify.
+	 *
+	 * Draft Cavage peers (e.g. Mastodon) sign the full request-target
+	 * including the query string. The REST branch of the verifier has to
+	 * reconstruct the same value, otherwise endpoints that require query
+	 * parameters — like FEP-8fcf's `/followers/sync?authority=…` — always
+	 * fail with a 401.
+	 *
+	 * @covers ::verify_http_signature
+	 */
+	public function test_verify_http_signature_get_with_query_string() {
+		$keys = Actors::get_keypair( 1 );
+
+		$mock_remote_key_retrieval = function () use ( $keys ) {
+			return array(
+				'name'      => 'Admin',
+				'url'       => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+
+		/*
+		 * Sign the way Mastodon does: the request-target includes the query
+		 * string. Forcing Cavage mode is not needed here, the verifier picks
+		 * the draft verifier based on the plain `Signature` header.
+		 */
+		$date           = \gmdate( 'D, d M Y H:i:s T' );
+		$target         = '/wp-json/activitypub/1.0/actors/0/followers/sync?authority=https://mastodon.example';
+		$string_to_sign = "(request-target): get {$target}\nhost: example.org\ndate: {$date}";
+
+		$signature = '';
+		\openssl_sign( $string_to_sign, $signature, Actors::get_private_key( 1 ), \OPENSSL_ALGO_SHA256 );
+
+		$_SERVER['REQUEST_URI'] = $target;
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers/sync' );
+		$request->set_query_params( array( 'authority' => 'https://mastodon.example' ) );
+		$request->set_headers(
+			array(
+				'Host'      => 'example.org',
+				'Date'      => $date,
+				'Signature' => \sprintf(
+					'keyId="https://example.org/author/admin#main-key",algorithm="rsa-sha256",headers="(request-target) host date",signature="%s"',
+					\base64_encode( $signature )
+				),
+			)
+		);
+
+		$this->assertNotWPError( Signature::verify_http_signature( $request ), 'Signed GET requests with a query string must verify.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+	}
+
+	/**
+	 * A signature created by the plugin's own signer for a query-string URL
+	 * must round-trip through the verifier.
+	 *
+	 * @covers ::verify_http_signature
+	 */
+	public function test_verify_http_signature_round_trip_with_query_string() {
+		$keys = Actors::get_keypair( 1 );
+
+		$force_cavage = '__return_zero';
+		\add_filter( 'pre_option_activitypub_rfc9421_signature', $force_cavage );
+
+		$mock_remote_key_retrieval = function () use ( $keys ) {
+			return array(
+				'name'      => 'Admin',
+				'url'       => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+
+		$args = \apply_filters(
+			'http_request_args',
+			array(
+				'method'      => 'GET',
+				'key_id'      => 'https://example.org/author/admin#main-key',
+				'private_key' => Actors::get_private_key( 1 ),
+				'user_id'     => 1,
+				'headers'     => array(
+					'Date' => \gmdate( 'D, d M Y H:i:s T' ),
+					'Host' => 'example.org',
+				),
+			),
+			'https://example.org/wp-json/activitypub/1.0/actors/0/followers/sync?authority=https://mastodon.example'
+		);
+
+		// Only the verifier reads REQUEST_URI; the signer above works off the URL.
+		$_SERVER['REQUEST_URI'] = '/wp-json/activitypub/1.0/actors/0/followers/sync?authority=https://mastodon.example';
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers/sync' );
+		$request->set_query_params( array( 'authority' => 'https://mastodon.example' ) );
+		$request->set_headers( $args['headers'] );
+
+		$this->assertNotWPError( Signature::verify_http_signature( $request ), 'Signatures created by the plugin for query-string URLs must round-trip.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+		\remove_filter( 'pre_option_activitypub_rfc9421_signature', $force_cavage );
+	}
+
+	/**
+	 * A signed GET request without a query string must still verify.
+	 *
+	 * @covers ::verify_http_signature
+	 */
+	public function test_verify_http_signature_get_without_query_string() {
+		$keys = Actors::get_keypair( 1 );
+
+		$force_cavage = '__return_zero';
+		\add_filter( 'pre_option_activitypub_rfc9421_signature', $force_cavage );
+
+		$mock_remote_key_retrieval = function () use ( $keys ) {
+			return array(
+				'name'      => 'Admin',
+				'url'       => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+
+		$args = \apply_filters(
+			'http_request_args',
+			array(
+				'method'      => 'GET',
+				'key_id'      => 'https://example.org/author/admin#main-key',
+				'private_key' => Actors::get_private_key( 1 ),
+				'user_id'     => 1,
+				'headers'     => array(
+					'Date' => \gmdate( 'D, d M Y H:i:s T' ),
+					'Host' => 'example.org',
+				),
+			),
+			'https://example.org/wp-json/activitypub/1.0/actors/0/outbox'
+		);
+
+		$_SERVER['REQUEST_URI'] = '/wp-json/activitypub/1.0/actors/0/outbox';
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
+		$request->set_headers( $args['headers'] );
+
+		$this->assertNotWPError( Signature::verify_http_signature( $request ), 'Signed GET requests without a query string must still verify.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+		\remove_filter( 'pre_option_activitypub_rfc9421_signature', $force_cavage );
+	}
+
+	/**
+	 * Signed headers that include neither Date nor (created) must be rejected.
+	 *
+	 * A captured signed request with no time anchor can otherwise be
+	 * replayed indefinitely because nothing in the signed base string
+	 * bounds its freshness.
+	 *
+	 * @covers \Activitypub\Signature\Http_Signature_Draft::get_signed_data
+	 */
+	public function test_get_signed_data_requires_time_anchor() {
+		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Signature_Draft::class, 'get_signed_data' );
+		$method->setAccessible( true );
+		$instance = new \Activitypub\Signature\Http_Signature_Draft();
+
+		$result = $method->invoke(
+			$instance,
+			array( '(request-target)', 'host', 'digest' ),
+			array(),
+			array(
+				'(request-target)' => array( 'post /inbox' ),
+				'host'             => array( 'example.org' ),
+				'digest'           => array( 'sha-256=abc' ),
+			)
+		);
+
+		$this->assertFalse( $result, 'Signed headers without Date or (created) must fail verification.' );
+	}
+
+	/**
+	 * The (created) pseudo-header must observe the same asymmetric window
+	 * as the Date header: five minutes ahead, one hour behind.
+	 *
+	 * @covers \Activitypub\Signature\Http_Signature_Draft::get_signed_data
+	 */
+	public function test_get_signed_data_enforces_created_window() {
+		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Signature_Draft::class, 'get_signed_data' );
+		$method->setAccessible( true );
+		$instance = new \Activitypub\Signature\Http_Signature_Draft();
+
+		$now        = \time();
+		$far_past   = $now - ( 2 * HOUR_IN_SECONDS );
+		$far_future = $now + ( 10 * MINUTE_IN_SECONDS );
+		$within     = $now - ( 30 * MINUTE_IN_SECONDS );
+
+		$invoke = function ( $created ) use ( $method, $instance ) {
+			return $method->invoke(
+				$instance,
+				array( '(request-target)', '(created)' ),
+				array( '(created)' => (string) $created ),
+				array(
+					'(request-target)' => array( 'post /inbox' ),
+				)
+			);
+		};
+
+		$this->assertFalse( $invoke( $far_past ), '(created) more than an hour old must fail.' );
+		$this->assertFalse( $invoke( $far_future ), '(created) more than five minutes in the future must fail.' );
+		$this->assertNotFalse( $invoke( $within ), '(created) within the window must be accepted.' );
+	}
+
+	/**
+	 * An empty or zero (created) value must not satisfy the time-anchor
+	 * requirement, because the signed base string would then carry no
+	 * freshness information.
+	 *
+	 * @covers \Activitypub\Signature\Http_Signature_Draft::get_signed_data
+	 * @dataProvider empty_created_provider
+	 *
+	 * @param string $created Raw (created) value as it would be parsed from the signature header.
+	 */
+	public function test_get_signed_data_rejects_empty_or_zero_created( $created ) {
+		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Signature_Draft::class, 'get_signed_data' );
+		$method->setAccessible( true );
+		$instance = new \Activitypub\Signature\Http_Signature_Draft();
+
+		$result = $method->invoke(
+			$instance,
+			array( '(request-target)', '(created)' ),
+			array( '(created)' => $created ),
+			array(
+				'(request-target)' => array( 'post /inbox' ),
+			)
+		);
+
+		$this->assertFalse( $result, 'Empty or zero (created) value must not be treated as a valid time anchor.' );
+	}
+
+	/**
+	 * Data provider for empty or zero (created) values.
+	 *
+	 * @return array[]
+	 */
+	public function empty_created_provider() {
+		return array(
+			'empty string' => array( '' ),
+			'zero string'  => array( '0' ),
+			'zero integer' => array( 0 ),
+		);
+	}
+
+	/**
+	 * If (expires) is in the signed headers list but the signature
+	 * omitted the value, fail closed rather than accessing an undefined
+	 * array key.
+	 *
+	 * @covers \Activitypub\Signature\Http_Signature_Draft::get_signed_data
+	 */
+	public function test_get_signed_data_rejects_missing_expires_value() {
+		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Signature_Draft::class, 'get_signed_data' );
+		$method->setAccessible( true );
+		$instance = new \Activitypub\Signature\Http_Signature_Draft();
+
+		$result = $method->invoke(
+			$instance,
+			array( '(request-target)', 'date', '(expires)' ),
+			array(), // Signature header omitted expires=.
+			array(
+				'(request-target)' => array( 'post /inbox' ),
+				'date'             => array( \gmdate( 'D, d M Y H:i:s T' ) ),
+			)
+		);
+
+		$this->assertFalse( $result, '(expires) listed in signed headers without a value must fail.' );
+	}
+
+	/**
+	 * The (expires) pseudo-header must reject already-expired values and
+	 * absurdly-far-future values that neuter replay protection.
+	 *
+	 * @covers \Activitypub\Signature\Http_Signature_Draft::get_signed_data
+	 */
+	public function test_get_signed_data_enforces_expires_window() {
+		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Signature_Draft::class, 'get_signed_data' );
+		$method->setAccessible( true );
+		$instance = new \Activitypub\Signature\Http_Signature_Draft();
+
+		$now = \time();
+
+		$invoke = function ( $expires ) use ( $method, $instance, $now ) {
+			return $method->invoke(
+				$instance,
+				array( '(request-target)', 'date', '(expires)' ),
+				array( '(expires)' => (string) $expires ),
+				array(
+					'(request-target)' => array( 'post /inbox' ),
+					'date'             => array( \gmdate( 'D, d M Y H:i:s T', $now ) ),
+				)
+			);
+		};
+
+		$this->assertFalse( $invoke( $now - MINUTE_IN_SECONDS ), 'Already-expired (expires) must fail.' );
+		$this->assertFalse( $invoke( $now + ( 7 * DAY_IN_SECONDS ) ), '(expires) absurdly far in the future must fail.' );
+		$this->assertNotFalse( $invoke( $now + ( 30 * MINUTE_IN_SECONDS ) ), '(expires) within a day must be accepted.' );
+	}
+
+	/**
+	 * A validated (expires) caps the signature's lifetime on its own, so
+	 * it must satisfy the time-anchor requirement even without Date or
+	 * (created).
+	 *
+	 * @covers \Activitypub\Signature\Http_Signature_Draft::get_signed_data
+	 */
+	public function test_get_signed_data_accepts_expires_as_time_anchor() {
+		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Signature_Draft::class, 'get_signed_data' );
+		$method->setAccessible( true );
+		$instance = new \Activitypub\Signature\Http_Signature_Draft();
+
+		$result = $method->invoke(
+			$instance,
+			array( '(request-target)', '(expires)' ),
+			array( '(expires)' => (string) ( \time() + ( 30 * MINUTE_IN_SECONDS ) ) ),
+			array(
+				'(request-target)' => array( 'post /inbox' ),
+			)
+		);
+
+		$this->assertNotFalse( $result, '(expires) within the cap must satisfy the time-anchor requirement on its own.' );
+	}
+
+	/**
+	 * RFC-9421 signatures must reject `created` more than one hour in the
+	 * past or more than one minute in the future.
+	 *
+	 * @covers ::verify_http_signature
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
+	 */
+	public function test_verify_http_signature_rfc9421_rejects_out_of_window_created() {
+		\update_option( 'activitypub_rfc9421_signature', '1' );
+		$keys = self::$test_keys['rsa']['4096'];
+
+		$mock_remote_key_retrieval = function () use ( $keys ) {
+			return array(
+				'name'      => 'Admin',
+				'url'       => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+
+		$sign = static function ( $date_offset_seconds ) use ( $keys ) {
+			$date = \gmdate( 'D, d M Y H:i:s T', \time() + $date_offset_seconds );
+
+			$args = \apply_filters(
+				'http_request_args',
+				array(
+					'method'      => 'POST',
+					'body'        => '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"x"}}',
+					'headers'     => array(
+						'Date' => $date,
+						'Host' => 'example.org',
+					),
+					'key_id'      => 'https://example.org/author/admin#main-key',
+					'private_key' => \openssl_pkey_get_private( $keys['private_key'] ),
+					'user_id'     => 1,
+				),
+				'https://example.org/wp-json/activitypub/1.0/inbox'
+			);
+
+			$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+			$request->set_body( $args['body'] );
+			$request->set_headers( $args['headers'] );
+
+			return Signature::verify_http_signature( $request );
+		};
+
+		$far_past   = $sign( -2 * HOUR_IN_SECONDS );
+		$far_future = $sign( 5 * MINUTE_IN_SECONDS );
+
+		$this->assertWPError( $far_past, 'RFC-9421 created more than an hour old must be rejected.' );
+		$this->assertSame( 'expired_created', $far_past->get_error_code() );
+
+		$this->assertWPError( $far_future, 'RFC-9421 created more than one minute in the future must be rejected.' );
+		$this->assertSame( 'invalid_created', $far_future->get_error_code() );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+		\delete_option( 'activitypub_rfc9421_signature' );
+	}
+
+	/**
+	 * RFC-9421 signatures without `created` or `expires` must be rejected.
+	 *
+	 * A signature with neither parameter has no freshness bound inside
+	 * the signed base string and could be replayed indefinitely.
+	 *
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
+	 */
+	public function test_verify_rfc9421_rejects_missing_time_anchor() {
+		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Message_Signature::class, 'verify_signature_label' );
+		$method->setAccessible( true );
+		$instance = new \Activitypub\Signature\Http_Message_Signature();
+
+		$data = array(
+			'components' => array( '"@method"', '"@target-uri"' ),
+			'params'     => array(
+				'keyid' => 'https://example.org/author/admin#main-key',
+				'alg'   => 'rsa-v1_5-sha256',
+			),
+			'signature'  => '',
+		);
+
+		$result = $method->invoke( $instance, $data, array(), null );
+
+		$this->assertWPError( $result, 'Signature without created or expires must be rejected.' );
+		$this->assertSame( 'missing_time_anchor', $result->get_error_code() );
+	}
+
+	/**
+	 * RFC-9421 `expires` values outside the accepted window must be rejected
+	 * with distinct error codes.
+	 *
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_signature_label
+	 * @dataProvider rfc9421_expires_provider
+	 *
+	 * @param int    $offset Seconds offset from now for the `expires` value.
+	 * @param string $code   Expected WP_Error code.
+	 */
+	public function test_verify_rfc9421_rejects_out_of_window_expires( $offset, $code ) {
+		$method = new \ReflectionMethod( \Activitypub\Signature\Http_Message_Signature::class, 'verify_signature_label' );
+		$method->setAccessible( true );
+		$instance = new \Activitypub\Signature\Http_Message_Signature();
+
+		$data = array(
+			'components' => array( '"@method"', '"@target-uri"' ),
+			'params'     => array(
+				'expires' => (string) ( \time() + $offset ),
+				'keyid'   => 'https://example.org/author/admin#main-key',
+				'alg'     => 'rsa-v1_5-sha256',
+			),
+			'signature'  => '',
+		);
+
+		$result = $method->invoke( $instance, $data, array(), null );
+
+		$this->assertWPError( $result );
+		$this->assertSame( $code, $result->get_error_code() );
+	}
+
+	/**
+	 * Data provider for out-of-window `expires` values.
+	 *
+	 * @return array[]
+	 */
+	public function rfc9421_expires_provider() {
+		return array(
+			'already expired'            => array( -1 * MINUTE_IN_SECONDS, 'expired_signature' ),
+			'absurdly far in the future' => array( 7 * DAY_IN_SECONDS, 'invalid_expires' ),
+		);
 	}
 
 	/**
@@ -413,8 +1012,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		$request->set_headers( $args['headers'] );
 
 		// The verification should succeed.
-		$result = Signature::verify_http_signature( $request );
-		$this->assertIsString( $result );
+		$this->assertNotWPError( Signature::verify_http_signature( $request ) );
 
 		// Create a request with a modified body but the original digest.
 		$request->set_body( '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Modified content."}}' );
@@ -436,8 +1034,83 @@ class Test_Signature extends \WP_UnitTestCase {
 		);
 
 		// The verification should succeed.
+		$this->assertNotWPError( Signature::verify_http_signature( $request ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+		\delete_option( 'activitypub_rfc9421_signature' );
+	}
+
+	/**
+	 * RFC 9421: the keyId returned is the label that actually verified, not merely the first.
+	 *
+	 * A request can carry several signature labels and the verifier accepts whichever validates.
+	 * An attacker pairing a victim-keyed invalid label with their own valid label must not get
+	 * the victim keyId surfaced, or the actor host-binding could be bypassed.
+	 *
+	 * @covers ::verify_http_signature
+	 * @covers \Activitypub\Signature\Http_Message_Signature::verify
+	 */
+	public function test_verify_http_signature_rfc9421_returns_verifying_label_key_id() {
+		\update_option( 'activitypub_rfc9421_signature', '1' );
+		$keys = self::$test_keys['rsa']['4096'];
+
+		$mock_remote_key_retrieval = function () use ( $keys ) {
+			return array(
+				'name'      => 'Admin',
+				'url'       => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+
+		$args = \apply_filters(
+			'http_request_args',
+			array(
+				'method'      => 'POST',
+				'body'        => '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}',
+				'headers'     => array(
+					'Date' => \gmdate( 'D, d M Y H:i:s T' ),
+					'Host' => 'example.org',
+				),
+				'key_id'      => 'https://example.org/author/admin#main-key',
+				'private_key' => \openssl_pkey_get_private( $keys['private_key'] ),
+				'user_id'     => 1,
+			),
+			'https://example.org/wp-json/activitypub/1.0/inbox'
+		);
+
+		/*
+		 * Prepend a second label naming a different-host keyId but carrying an invalid signature.
+		 * The verifier should skip it and report the keyId of the label that actually validated.
+		 */
+		$created                    = \time();
+		$headers                    = $args['headers'];
+		$headers['Signature-Input'] = \sprintf(
+			'sig0=("@method");created=%d;keyid="https://victim.example/users/victim#main-key";alg="rsa-v1_5-sha256", ',
+			$created
+		) . $headers['Signature-Input'];
+		$headers['Signature']       = 'sig0=:' . \base64_encode( 'not-a-valid-signature' ) . ':, ' . $headers['Signature'];
+
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_URI']    = '/wp-json/activitypub/1.0/inbox';
+		$_SERVER['HTTP_HOST']      = 'example.org';
+		$_SERVER['HTTPS']          = 'on';
+
+		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_body( $args['body'] );
+		$request->set_headers( $headers );
+
 		$result = Signature::verify_http_signature( $request );
-		$this->assertIsString( $result );
+
+		$this->assertSame(
+			'https://example.org/author/admin#main-key',
+			$result,
+			'The keyId of the label that actually verified must be returned, not the first label.'
+		);
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 		\delete_option( 'activitypub_rfc9421_signature' );
@@ -552,8 +1225,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		$request->set_header( 'Signature', $signature_header );
 
 		// The verification should succeed.
-		$result = Signature::verify_http_signature( $request );
-		$this->assertIsString( $result );
+		$this->assertNotWPError( Signature::verify_http_signature( $request ) );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 	}
@@ -658,8 +1330,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		$request->set_header( 'Signature', $signature_header );
 
 		// The verification should succeed.
-		$result = Signature::verify_http_signature( $request );
-		$this->assertIsString( $result );
+		$this->assertNotWPError( Signature::verify_http_signature( $request ) );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 	}
@@ -1220,5 +1891,148 @@ class Test_Signature extends \WP_UnitTestCase {
 			\sodium_crypto_sign_verify_detached( $signature, $signature_base, $public_key ),
 			'Ed25519 response signature should be valid'
 		);
+	}
+
+	/**
+	 * The keyId is extracted from both the draft Signature header and the RFC 9421
+	 * Signature-Input header, and is null when neither is present.
+	 *
+	 * @covers ::get_key_id
+	 *
+	 * @dataProvider get_key_id_provider
+	 *
+	 * @param string|null $signature       The draft Signature header value, or null.
+	 * @param string|null $signature_input The RFC 9421 Signature-Input header value, or null.
+	 * @param string|null $expected        The expected keyId.
+	 */
+	public function test_get_key_id( $signature, $signature_input, $expected ) {
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		if ( null !== $signature ) {
+			$request->set_header( 'signature', $signature );
+		}
+		if ( null !== $signature_input ) {
+			$request->set_header( 'signature-input', $signature_input );
+		}
+
+		$this->assertSame( $expected, Signature::get_key_id( $request ) );
+	}
+
+	/**
+	 * A draft signature carried in the Authorization header is also recognized, matching the
+	 * verifier's `signature ?? authorization` fallback.
+	 *
+	 * @covers ::get_key_id
+	 */
+	public function test_get_key_id_reads_authorization_header() {
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'authorization', 'Signature keyId="https://remote.example/users/curator#main-key",algorithm="rsa-sha256",signature="abc"' );
+
+		$this->assertSame( 'https://remote.example/users/curator#main-key', Signature::get_key_id( $request ) );
+	}
+
+	/**
+	 * An OAuth Bearer token in the Authorization header carries no keyId and must not match.
+	 *
+	 * @covers ::get_key_id
+	 */
+	public function test_get_key_id_ignores_bearer_authorization() {
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'authorization', 'Bearer some-oauth-token' );
+
+		$this->assertNull( Signature::get_key_id( $request ) );
+	}
+
+	/**
+	 * Data provider for test_get_key_id.
+	 *
+	 * @return array[]
+	 */
+	public function get_key_id_provider() {
+		return array(
+			'draft Signature header'           => array(
+				'keyId="https://remote.example/users/curator#main-key",algorithm="rsa-sha256",signature="abc"',
+				null,
+				'https://remote.example/users/curator#main-key',
+			),
+			'RFC 9421 Signature-Input'         => array(
+				null,
+				'sig1=("@method" "@target-uri");keyid="https://remote.example/users/curator#main-key";created=1700000000',
+				'https://remote.example/users/curator#main-key',
+			),
+			'no signature headers'             => array( null, null, null ),
+			// Signature-Input wins over a draft Signature header, matching the verifier's choice.
+			'mixed headers prefer RFC 9421'    => array(
+				'keyId="https://victim.example/users/victim#main-key",signature="abc"',
+				'sig1=("@method");keyid="https://attacker.example/users/attacker#main-key";created=1700000000',
+				'https://attacker.example/users/attacker#main-key',
+			),
+			// The verifier accepts whichever label validates, so multiple keyIds are ambiguous.
+			'ambiguous multiple keyIds'        => array(
+				null,
+				'sig1=("@method");keyid="https://victim.example/users/victim#main-key", sig2=("@method");keyid="https://attacker.example/users/attacker#main-key";created=1700000000',
+				null,
+			),
+			// RFC 9421 allows an unquoted keyid value.
+			'RFC 9421 unquoted keyid'          => array(
+				null,
+				'sig1=("@method");keyid=https://evil.example/actor#key;alg="rsa-v1_5-sha256"',
+				'https://evil.example/actor#key',
+			),
+			// A `keyid=` smuggled inside another parameter's quoted value must not be picked up.
+			'keyid inside other param ignored' => array(
+				null,
+				'sig1=("@method");tag="keyid=https://victim.example/key";keyid=https://evil.example/key',
+				'https://evil.example/key',
+			),
+		);
+	}
+
+	/**
+	 * A successful verification returns the keyId it validated against, so callers can bind it.
+	 *
+	 * @covers ::verify_http_signature
+	 */
+	public function test_verify_http_signature_returns_verified_key_id() {
+		$keys = Actors::get_keypair( 1 );
+
+		$mock_remote_key_retrieval = function () use ( $keys ) {
+			return array(
+				'name'      => 'Admin',
+				'url'       => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
+
+		$args = \apply_filters(
+			'http_request_args',
+			array(
+				'method'      => 'POST',
+				'body'        => '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}',
+				'key_id'      => 'https://example.org/author/admin#main-key',
+				'private_key' => Actors::get_private_key( 1 ),
+				'user_id'     => 1,
+				'headers'     => array(
+					'Content-Type' => 'application/activity+json',
+					'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
+					'Host'         => 'example.org',
+				),
+			),
+			'https://example.org/wp-json/activitypub/1.0/inbox'
+		);
+
+		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_body( $args['body'] );
+		$request->set_headers( $args['headers'] );
+
+		$result = Signature::verify_http_signature( $request );
+
+		$this->assertSame( 'https://example.org/author/admin#main-key', $result, 'The verified keyId is returned on success.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 	}
 }

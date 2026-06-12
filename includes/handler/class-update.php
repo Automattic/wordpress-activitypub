@@ -13,6 +13,7 @@ use Activitypub\Collection\Remote_Posts;
 use Activitypub\Http;
 
 use function Activitypub\is_activity_reply;
+use function Activitypub\object_to_uri;
 
 /**
  * Handle Update requests.
@@ -29,7 +30,7 @@ class Update {
 	 * Handle "Update" requests.
 	 *
 	 * @param array                          $activity        The Activity object.
-	 * @param int[]                          $user_ids        The user IDs. Always null for Update activities.
+	 * @param int[]                          $user_ids        Local recipient user IDs (followers and addressed local actors); may be empty.
 	 * @param \Activitypub\Activity\Activity $activity_object The activity object. Default null.
 	 */
 	public static function handle_update( $activity, $user_ids, $activity_object ) {
@@ -78,7 +79,7 @@ class Update {
 	 * Update an Object.
 	 *
 	 * @param array                          $activity        The Activity object.
-	 * @param int[]|null                     $user_ids        The user IDs. Always null for Update activities.
+	 * @param int[]|null                     $user_ids        Local recipient user IDs (followers and addressed local actors); may be empty.
 	 * @param \Activitypub\Activity\Activity $activity_object The activity object. Default null.
 	 */
 	public static function update_object( $activity, $user_ids, $activity_object ) {
@@ -91,6 +92,10 @@ class Update {
 
 			if ( false === $comment_data ) {
 				$updated = false;
+			} elseif ( \is_wp_error( $comment_data ) ) {
+				// Handled but rejected (e.g. a foreign actor): keep the failure so the
+				// success flag stays false and the Create fallback is not triggered.
+				$result = $comment_data;
 			} elseif ( ! empty( $comment_data['comment_ID'] ) ) {
 				$result = \get_comment( $comment_data['comment_ID'] );
 			}
@@ -124,7 +129,7 @@ class Update {
 	 * Update an Actor.
 	 *
 	 * @param array      $activity The Activity object.
-	 * @param int[]|null $user_ids The user IDs. Always null for Update activities.
+	 * @param int[]|null $user_ids Local recipient user IDs (followers and addressed local actors); may be empty.
 	 */
 	public static function update_actor( $activity, $user_ids ) {
 		/*
@@ -148,10 +153,16 @@ class Update {
 			}
 		}
 
-		if ( \is_array( $actor ) && isset( $actor['id'] ) ) {
+		/*
+		 * An actor may only update itself. Bind the updated object to the activity
+		 * actor (the same constraint the Delete handler enforces) so a remote server
+		 * cannot overwrite another host's cached actor by sending an Update whose
+		 * object.id points at a victim actor.
+		 */
+		if ( \is_array( $actor ) && isset( $actor['id'] ) && object_to_uri( $actor ) === object_to_uri( $activity['actor'] ) ) {
 			$state = Remote_Actors::upsert( $actor );
 		} else {
-			$state = new \WP_Error( 'activitypub_update_failed', 'Update failed: missing or invalid actor object in Update activity' );
+			$state = new \WP_Error( 'activitypub_update_failed', \__( 'Update failed: missing, invalid, or unauthorized actor object in Update activity.', 'activitypub' ) );
 			$actor = array();
 		}
 

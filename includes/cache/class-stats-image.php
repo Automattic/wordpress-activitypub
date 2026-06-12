@@ -3,7 +3,7 @@
  * Stats Image cache class.
  *
  * @package Activitypub
- * @since unreleased
+ * @since 8.1.0
  */
 
 namespace Activitypub\Cache;
@@ -105,7 +105,7 @@ class Stats_Image extends File {
 			 *
 			 * Can be used to route through a CDN or image proxy like Photon.
 			 *
-			 * @since unreleased
+			 * @since 8.1.0
 			 *
 			 * @param string $url     The image URL.
 			 * @param int    $user_id The user ID.

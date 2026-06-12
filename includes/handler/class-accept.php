@@ -42,7 +42,18 @@ class Accept {
 			return;
 		}
 
-		$actor_post = Remote_Actors::get_by_uri( object_to_uri( $accept['object']['object'] ) );
+		/*
+		 * For a Follow Accept, the sender must be the actor that was followed.
+		 * Without this, a signed Accept from one actor could confirm a Follow that
+		 * targeted another actor by referencing that pending Follow's outbox GUID.
+		 */
+		$accept_actor   = object_to_uri( $accept['actor'] ?? '' );
+		$followed_actor = object_to_uri( $accept['object']['object'] ?? '' );
+		if ( ! $accept_actor || ! $followed_actor || $accept_actor !== $followed_actor ) {
+			return;
+		}
+
+		$actor_post = Remote_Actors::get_by_uri( $followed_actor );
 
 		if ( \is_wp_error( $actor_post ) ) {
 			return;

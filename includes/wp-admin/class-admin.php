@@ -449,7 +449,7 @@ class Admin {
 	/**
 	 * Enqueue connected apps admin scripts on the profile page.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 */
 	public static function enqueue_connected_apps_scripts() {
 		\wp_enqueue_script(
@@ -1253,7 +1253,7 @@ class Admin {
 	/**
 	 * AJAX handler for registering a new OAuth client from the user profile.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 */
 	public static function ajax_register_oauth_client() {
 		// Verify nonce.
@@ -1303,7 +1303,7 @@ class Admin {
 	/**
 	 * AJAX handler for deleting a registered OAuth client.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 */
 	public static function ajax_delete_oauth_client() {
 		// Verify nonce.
@@ -1333,7 +1333,7 @@ class Admin {
 	/**
 	 * AJAX handler for deleting all manually registered OAuth clients.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 */
 	public static function ajax_delete_all_oauth_clients() {
 		// Verify nonce.
@@ -1359,7 +1359,7 @@ class Admin {
 	 *
 	 * Follows the WordPress core Application Passwords pattern.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 */
 	public static function ajax_revoke_oauth_token() {
 		// Verify nonce.
@@ -1400,7 +1400,7 @@ class Admin {
 	/**
 	 * AJAX handler for revoking all OAuth tokens for the current user.
 	 *
-	 * @since unreleased
+	 * @since 8.1.0
 	 */
 	public static function ajax_revoke_all_oauth_tokens() {
 		// Verify nonce.

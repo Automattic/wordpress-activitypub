@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Use ap_actor post ID for remote account IDs instead of remapping URI strings.

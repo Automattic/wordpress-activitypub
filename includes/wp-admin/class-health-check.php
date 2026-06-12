@@ -968,8 +968,12 @@ class Health_Check {
 		$actor = Actors::get_by_id( Actors::APPLICATION_USER_ID );
 		$url   = $actor->get_inbox();
 
-		// Make an unauthenticated request.
-		$response = \wp_remote_get(
+		/*
+		 * Make an unauthenticated request. wp_safe_remote_get() guards against
+		 * SSRF should the inbox URL ever resolve off-site; requests to the
+		 * site's own host are still allowed by wp_http_validate_url().
+		 */
+		$response = \wp_safe_remote_get(
 			$url,
 			array(
 				'timeout' => 5,

@@ -20,6 +20,30 @@ use Activitypub\Collection\Remote_Actors;
  */
 class Webfinger {
 	/**
+	 * Check whether a value looks like an `acct` identifier.
+	 *
+	 * Accepts any of:
+	 *
+	 * - `user@host` — bare WebFinger handle.
+	 * - `@user@host` — Mastodon display form with a leading `@`.
+	 * - `acct:user@host` — full RFC 7565 URI form.
+	 *
+	 * The host/local-part pattern follows `ACTIVITYPUB_USERNAME_REGEXP`.
+	 *
+	 * @since 8.3.0
+	 *
+	 * @param mixed $value The candidate value.
+	 * @return bool True if the value matches the acct identifier pattern.
+	 */
+	public static function is_acct( $value ) {
+		if ( ! \is_string( $value ) || '' === $value ) {
+			return false;
+		}
+
+		return (bool) \preg_match( '/^(?:acct:)?@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $value );
+	}
+
+	/**
 	 * Returns a users WebFinger "resource".
 	 *
 	 * @param int $user_id The WordPress user id.
@@ -232,7 +256,7 @@ class Webfinger {
 	 * @return string|\WP_Error Error or the Remote-Follow endpoint URI.
 	 */
 	public static function get_remote_follow_endpoint( $uri ) {
-		return self::get_intent_endpoint( $uri, 'http://ostatus.org/schema/1.0/subscribe' );
+		return self::get_intent_endpoint( $uri, 'follow', true );
 	}
 
 	/**
@@ -339,8 +363,24 @@ class Webfinger {
 			);
 		}
 
+		/*
+		 * OStatus subscribe URL (deprecated but still widely supported)
+		 *
+		 * @see https://ostatus.github.io/spec/OStatus%201.0%20Draft%202.html#anchor10
+		 */
 		if ( isset( $links['http://ostatus.org/schema/1.0/subscribe'] ) ) {
 			return $links['http://ostatus.org/schema/1.0/subscribe'];
+		}
+
+		/*
+		 * FEP-3b86 Object Intent — the generic "open this object on my home
+		 * server" link, equivalent to pasting the URL into the home server's
+		 * search box. Useful when no verb-specific intent is advertised.
+		 *
+		 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/3b86/fep-3b86.md#5-1-object-intent
+		 */
+		if ( isset( $links['https://w3id.org/fep/3b86/object'] ) ) {
+			return $links['https://w3id.org/fep/3b86/object'];
 		}
 
 		// Last-resort: construct a Mastodon-compatible authorize_interaction URL.

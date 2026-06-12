@@ -1452,4 +1452,101 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter, 1 );
 	}
+
+	/**
+	 * Test that only the comment's author can update it.
+	 *
+	 * Regression: update_comment() resolved the comment by object.id and overwrote its
+	 * author/content without confirming the Update actor owns it, letting a remote server
+	 * rewrite another actor's comment.
+	 *
+	 * @covers ::update_comment
+	 */
+	public function test_update_comment_rejects_foreign_actor() {
+		$owner_uri    = 'https://example.com/users/comment-owner';
+		$attacker_uri = 'https://attacker.example/users/evil';
+
+		$metadata_filter = static function ( $pre, $actor ) use ( $owner_uri, $attacker_uri ) {
+			if ( $owner_uri === $actor ) {
+				return array(
+					'id'                => $owner_uri,
+					'url'               => $owner_uri,
+					'name'              => 'Owner',
+					'preferredUsername' => 'owner',
+				);
+			}
+			if ( $attacker_uri === $actor ) {
+				return array(
+					'id'                => $attacker_uri,
+					'url'               => $attacker_uri,
+					'name'              => 'Evil',
+					'preferredUsername' => 'evil',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter, 10, 2 );
+
+		// Cache the owner actor so the comment maps to it, as it would in production.
+		Remote_Actors::upsert(
+			array(
+				'id'                => $owner_uri,
+				'type'              => 'Person',
+				'preferredUsername' => 'owner',
+				'name'              => 'Owner',
+				'inbox'             => $owner_uri . '/inbox',
+			)
+		);
+
+		$create_activity = array(
+			'actor'  => $owner_uri,
+			'id'     => 'https://example.com/activities/own-comment',
+			'object' => array(
+				'id'        => 'https://example.com/notes/owned-note',
+				'content'   => 'Original content',
+				'inReplyTo' => self::$post_permalink,
+			),
+		);
+
+		$comment_id = Interactions::add_comment( $create_activity );
+		$this->assertIsInt( $comment_id );
+		$this->assertNotEmpty(
+			\get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true ),
+			'The comment should map to its remote actor.'
+		);
+
+		// A different actor attempts to rewrite the comment.
+		$attack_activity = array(
+			'actor'  => $attacker_uri,
+			'id'     => 'https://attacker.example/activities/takeover',
+			'object' => array(
+				'id'        => 'https://example.com/notes/owned-note',
+				'content'   => 'HACKED content',
+				'inReplyTo' => self::$post_permalink,
+			),
+		);
+		$result          = Interactions::update_comment( $attack_activity );
+		$this->assertWPError( $result, 'A rejected foreign-actor Update must return a WP_Error, not the comment.' );
+		$this->assertEquals( 'activitypub_update_forbidden', $result->get_error_code() );
+
+		$comment = \get_comment( $comment_id );
+		$this->assertStringNotContainsString( 'HACKED', $comment->comment_content, 'A foreign actor must not rewrite the comment.' );
+		$this->assertStringContainsString( 'Original content', $comment->comment_content );
+
+		// The actual author can still update their own comment.
+		$owner_update = array(
+			'actor'  => $owner_uri,
+			'id'     => 'https://example.com/activities/own-edit',
+			'object' => array(
+				'id'        => 'https://example.com/notes/owned-note',
+				'content'   => 'Edited by owner',
+				'inReplyTo' => self::$post_permalink,
+			),
+		);
+		Interactions::update_comment( $owner_update );
+
+		$this->assertStringContainsString( 'Edited by owner', \get_comment( $comment_id )->comment_content, 'The author must be able to update their own comment.' );
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter, 10 );
+	}
 }

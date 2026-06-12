@@ -64,23 +64,25 @@ class Authorization_Code {
 
 		/*
 		 * PKCE is strongly recommended for public clients (RFC 7636) and
-		 * mandatory in the OAuth 2.1 draft. By default, it is not enforced
-		 * to maintain compatibility with existing C2S clients, but site
-		 * operators can require it via filter.
+		 * mandatory in the OAuth 2.1 draft. It is enforced by default; site
+		 * operators who must support pre-PKCE clients can opt out via the
+		 * `activitypub_oauth_require_pkce` filter.
 		 */
 		if ( empty( $code_challenge ) && $client->is_public() ) {
 			/**
 			 * Filter whether PKCE is required for public OAuth clients.
 			 *
-			 * Return true to enforce PKCE (recommended per OAuth 2.1).
-			 * Default false for backward compatibility with older clients.
+			 * Return false to relax the default and allow public clients to
+			 * complete the authorization code grant without PKCE. This is
+			 * not recommended.
 			 *
-			 * @since unreleased
+			 * @since 8.1.0
+			 * @since 8.2.0 Default changed from false to true.
 			 *
-			 * @param bool   $require    Whether to require PKCE. Default false.
+			 * @param bool   $require    Whether to require PKCE. Default true.
 			 * @param string $client_id  The OAuth client ID.
 			 */
-			if ( \apply_filters( 'activitypub_oauth_require_pkce', false, $client_id ) ) {
+			if ( \apply_filters( 'activitypub_oauth_require_pkce', true, $client_id ) ) {
 				return new \WP_Error(
 					'activitypub_pkce_required',
 					\__( 'PKCE is required for public clients. Please include a code_challenge parameter.', 'activitypub' ),

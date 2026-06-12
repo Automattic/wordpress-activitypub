@@ -184,7 +184,7 @@ class Following {
 	 * @param \WP_Post|int $post    The ID of the remote Actor.
 	 * @param int          $user_id The ID of the WordPress User.
 	 *
-	 * @return \WP_Post|\WP_Error The Actor post or a WP_Error.
+	 * @return int|\WP_Error The ID of the Undo outbox item, 0 if no matching Follow outbox was found, or WP_Error on failure.
 	 */
 	public static function unfollow( $post, $user_id ) {
 		$post = \get_post( $post );
@@ -198,10 +198,14 @@ class Following {
 		\delete_post_meta( $post->ID, self::FOLLOWING_META_KEY, $user_id );
 		\delete_post_meta( $post->ID, self::PENDING_META_KEY, $user_id );
 
-		// Get Post-ID of the Follow Outbox Activity.
+		/*
+		 * Get Post-ID of the Follow Outbox Activity. Include `pending` so an
+		 * Undo posted before the remote Accept arrives can still find the Follow.
+		 */
 		$post_id_query = new \WP_Query(
 			array(
 				'post_type'      => Outbox::POST_TYPE,
+				'post_status'    => array( 'publish', 'pending' ),
 				'nopaging'       => true,
 				'posts_per_page' => 1,
 				'author'         => \max( $user_id, 0 ),
@@ -225,11 +229,25 @@ class Following {
 			)
 		);
 
-		if ( $post_id_query->posts ) {
-			Outbox::undo( $post_id_query->posts[0] );
+		if ( ! $post_id_query->posts ) {
+			return 0;
 		}
 
-		return $post;
+		$undo_id = Outbox::undo( $post_id_query->posts[0] );
+
+		if ( \is_wp_error( $undo_id ) ) {
+			return $undo_id;
+		}
+
+		if ( ! $undo_id ) {
+			return new \WP_Error(
+				'activitypub_outbox_undo_failed',
+				\__( 'Failed to create Undo activity.', 'activitypub' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		return (int) $undo_id;
 	}
 
 	/**
