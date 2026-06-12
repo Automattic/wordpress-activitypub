@@ -146,22 +146,7 @@ class Actor {
 	 * @since unreleased
 	 */
 	public static function schedule_all_profile_updates() {
-		if ( ! is_user_type_disabled( 'blog' ) ) {
-			self::schedule_profile_update( Actors::BLOG_USER_ID );
-		}
-
-		if ( is_user_type_disabled( 'user' ) ) {
-			return;
-		}
-
-		$user_ids = \get_users(
-			array(
-				'capability__in' => array( 'activitypub' ),
-				'fields'         => 'ID',
-			)
-		);
-
-		foreach ( $user_ids as $user_id ) {
+		foreach ( Actors::get_all_ids() as $user_id ) {
 			self::schedule_profile_update( $user_id );
 		}
 	}
