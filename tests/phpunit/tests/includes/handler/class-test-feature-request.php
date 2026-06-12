@@ -376,4 +376,121 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 		);
 		$this->assertNotEmpty( $outbox, 'Unresolvable target should still produce a Reject activity.' );
 	}
+
+	/**
+	 * Test that queue_accept stores a stamp for the blog actor in the option store.
+	 *
+	 * The blog actor has no users-table row, so its stamps cannot live in
+	 * user meta.
+	 *
+	 * @covers ::queue_accept
+	 * @covers ::add_stamp
+	 */
+	public function test_queue_accept_stores_stamp_for_blog_actor() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$blog_actor         = Actors::get_by_id( Actors::BLOG_USER_ID );
+		$activity           = $this->create_feature_request_activity();
+		$activity['object'] = $blog_actor->get_id();
+
+		Feature_Request::queue_accept( $activity, Actors::BLOG_USER_ID );
+
+		// The stamp is stored in the blog stamp option.
+		$stamps = \get_option( Feature_Request::BLOG_STAMPS_OPTION, array() );
+		$this->assertContains( $activity['instrument'], $stamps, 'Instrument URL should be recorded in the blog stamp option.' );
+
+		$stamp_id = \array_search( $activity['instrument'], $stamps, true );
+
+		// The Accept carries a resolvable stamp URL for actor 0.
+		$outbox = get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Accept',
+					),
+				),
+			)
+		);
+		$this->assertNotEmpty( $outbox, 'Accept activity should be queued for the blog actor.' );
+
+		$payload = json_decode( $outbox[0]->post_content, true );
+		$this->assertSame( $blog_actor->get_id(), $payload['actor'], 'The Accept should be sent by the blog actor.' );
+		$this->assertStringContainsString( 'actor=0', $payload['result'] );
+		$this->assertStringContainsString( 'stamp=' . $stamp_id, $payload['result'] );
+	}
+
+	/**
+	 * Test that blog-actor stamps are idempotent: a second FeatureRequest with the
+	 * same instrument reuses the existing stamp.
+	 *
+	 * @covers ::queue_accept
+	 * @covers ::add_stamp
+	 */
+	public function test_queue_accept_idempotent_for_blog_actor() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$activity           = $this->create_feature_request_activity();
+		$activity['object'] = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
+
+		Feature_Request::queue_accept( $activity, Actors::BLOG_USER_ID );
+		Feature_Request::queue_accept( $activity, Actors::BLOG_USER_ID );
+
+		$stamps = \get_option( Feature_Request::BLOG_STAMPS_OPTION, array() );
+		$this->assertCount( 1, $stamps, 'Duplicate FeatureRequests for the same instrument must not produce multiple blog stamps.' );
+	}
+
+	/**
+	 * Test that FeatureRequests targeting the Application actor are rejected
+	 * and never accepted, regardless of the site policy.
+	 *
+	 * @covers ::handle_feature_request
+	 */
+	public function test_handle_feature_request_rejects_application_actor() {
+		update_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
+
+		$application        = Actors::get_by_id( Actors::APPLICATION_USER_ID );
+		$activity           = $this->create_feature_request_activity();
+		$activity['object'] = $application->get_id();
+
+		Feature_Request::handle_feature_request( $activity, self::$user_id );
+
+		/*
+		 * The Application actor is not resolvable as a FeatureRequest target
+		 * (Actors::get_by_resource() has no branch for it), so the request
+		 * takes the unresolvable-target path and is rejected.
+		 */
+		$rejects = get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Reject',
+					),
+				),
+			)
+		);
+		$this->assertNotEmpty( $rejects, 'FeatureRequests targeting the Application actor should be rejected.' );
+
+		$accepts = get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Accept',
+					),
+				),
+			)
+		);
+		$this->assertEmpty( $accepts, 'The Application actor must never accept FeatureRequests, regardless of policy.' );
+	}
 }

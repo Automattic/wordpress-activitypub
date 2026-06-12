@@ -22,6 +22,17 @@ use function Activitypub\user_can_activitypub;
  * @see https://w3id.org/fep/7aa9
  */
 class Feature_Request {
+
+	/**
+	 * Option name for the blog actor's feature stamps.
+	 *
+	 * The blog actor has no users-table row (its ID is 0), so its stamps
+	 * cannot live in user meta like the stamps of regular users do.
+	 *
+	 * @var string
+	 */
+	const BLOG_STAMPS_OPTION = 'activitypub_blog_featured_by';
+
 	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
@@ -105,11 +116,11 @@ class Feature_Request {
 	/**
 	 * Send an Accept activity in response to the FeatureRequest, issuing a stamp.
 	 *
-	 * Idempotent: a second call with the same instrument for the same user reuses
-	 * the existing umeta row instead of minting a duplicate stamp.
+	 * Idempotent: a second call with the same instrument for the same actor reuses
+	 * the existing stamp instead of minting a duplicate, see {@see add_stamp()}.
 	 *
 	 * @param array $activity_object The activity object.
-	 * @param int   $user_id         The local user ID being featured.
+	 * @param int   $user_id         The local user ID being featured (0 for the blog actor).
 	 */
 	public static function queue_accept( $activity_object, $user_id ) {
 		if ( ! user_can_activitypub( $user_id ) ) {
@@ -123,21 +134,10 @@ class Feature_Request {
 
 		$activity_object['instrument'] = object_to_uri( $activity_object['instrument'] );
 
-		// Idempotent stamp creation.
-		$existing = \get_user_meta( $user_id, '_activitypub_featured_by', false );
-		if ( \in_array( $activity_object['instrument'], (array) $existing, true ) ) {
-			global $wpdb;
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$umeta_id = $wpdb->get_var(
-				$wpdb->prepare(
-					"SELECT umeta_id FROM {$wpdb->usermeta} WHERE user_id = %d AND meta_key = %s AND meta_value = %s LIMIT 1",
-					$user_id,
-					'_activitypub_featured_by',
-					$activity_object['instrument']
-				)
-			);
-		} else {
-			$umeta_id = \add_user_meta( $user_id, '_activitypub_featured_by', $activity_object['instrument'] );
+		$stamp_id = self::add_stamp( $user_id, $activity_object['instrument'] );
+		if ( ! $stamp_id ) {
+			// Without a stamp there is nothing to consent with — don't send a dangling Accept.
+			return;
 		}
 
 		// Send minimal activity object back.
@@ -155,7 +155,7 @@ class Feature_Request {
 		$stamp_url = \add_query_arg(
 			array(
 				'actor' => $user_id,
-				'stamp' => $umeta_id,
+				'stamp' => $stamp_id,
 			),
 			\home_url( '/' )
 		);
@@ -168,6 +168,81 @@ class Feature_Request {
 		$activity->add_to( object_to_uri( $activity_object['actor'] ) );
 
 		add_to_outbox( $activity, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
+	}
+
+	/**
+	 * Create (or reuse) a feature stamp for an actor.
+	 *
+	 * Stamps for users live in user meta, with the umeta_id doubling as the
+	 * stamp ID. The blog actor has no users-table row, so its stamps are
+	 * stored in a keyed option array instead.
+	 *
+	 * Idempotent: an existing stamp for the same instrument is reused.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int    $user_id    The local actor ID (0 for the blog actor).
+	 * @param string $instrument The instrument URI being stamped.
+	 * @return int|false The stamp ID, or false on failure.
+	 */
+	public static function add_stamp( $user_id, $instrument ) {
+		if ( Actors::BLOG_USER_ID === $user_id ) {
+			$stamps = \get_option( self::BLOG_STAMPS_OPTION, array() );
+
+			$existing = \array_search( $instrument, $stamps, true );
+			if ( false !== $existing ) {
+				return $existing;
+			}
+
+			$stamp_id = empty( $stamps ) ? 1 : \max( \array_keys( $stamps ) ) + 1;
+
+			$stamps[ $stamp_id ] = $instrument;
+			if ( ! \update_option( self::BLOG_STAMPS_OPTION, $stamps, false ) ) {
+				return false;
+			}
+
+			return $stamp_id;
+		}
+
+		$existing = \get_user_meta( $user_id, '_activitypub_featured_by', false );
+		if ( \in_array( $instrument, (array) $existing, true ) ) {
+			global $wpdb;
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			return (int) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT umeta_id FROM {$wpdb->usermeta} WHERE user_id = %d AND meta_key = %s AND meta_value = %s LIMIT 1",
+					$user_id,
+					'_activitypub_featured_by',
+					$instrument
+				)
+			);
+		}
+
+		return \add_user_meta( $user_id, '_activitypub_featured_by', $instrument );
+	}
+
+	/**
+	 * Resolve a stamp ID for an actor to the stamped instrument URI.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $user_id  The local actor ID (0 for the blog actor).
+	 * @param int $stamp_id The stamp ID.
+	 * @return string|null The instrument URI, or null if the stamp does not exist for this actor.
+	 */
+	public static function get_stamp( $user_id, $stamp_id ) {
+		if ( Actors::BLOG_USER_ID === $user_id ) {
+			$stamps = \get_option( self::BLOG_STAMPS_OPTION, array() );
+
+			return $stamps[ $stamp_id ] ?? null;
+		}
+
+		$meta = \get_metadata_by_mid( 'user', $stamp_id );
+		if ( ! $meta || '_activitypub_featured_by' !== $meta->meta_key || (int) $meta->user_id !== $user_id ) {
+			return null;
+		}
+
+		return $meta->meta_value;
 	}
 
 	/**
