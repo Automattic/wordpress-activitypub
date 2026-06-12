@@ -1622,216 +1622,6 @@ class Test_Signature extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test Ed25519 signature verification via activitypub_pre_get_public_key filter.
-	 *
-	 * @covers ::verify_http_signature
-	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_ed25519_signature
-	 */
-	public function test_ed25519_signature_verification() {
-		// Generate Ed25519 keypair.
-		$keypair     = \sodium_crypto_sign_keypair();
-		$public_key  = \sodium_crypto_sign_publickey( $keypair );
-		$private_key = \sodium_crypto_sign_secretkey( $keypair );
-
-		// Create signature base string.
-		$date            = \gmdate( 'D, d M Y H:i:s T' );
-		$created         = \time();
-		$params_string   = \sprintf(
-			'("@method" "@target-uri" "date");created=%d;keyid="test-fasp-server-id"',
-			$created
-		);
-		$signature_base  = "\"@method\": POST\n";
-		$signature_base .= "\"@target-uri\": https://example.org/wp-json/activitypub/1.0/fasp/capabilities/test/1/activation\n";
-		$signature_base .= "\"date\": $date\n";
-		$signature_base .= "\"@signature-params\": $params_string";
-
-		// Sign with Ed25519.
-		$signature = \sodium_crypto_sign_detached( $signature_base, $private_key );
-
-		// Create signature headers.
-		$signature_input  = "sig=$params_string";
-		$signature_header = 'sig=:' . \base64_encode( $signature ) . ':';
-
-		// Mock the public key retrieval to return Ed25519 key.
-		$mock_ed25519_key = function ( $key, $key_id ) use ( $public_key ) {
-			if ( 'test-fasp-server-id' === $key_id ) {
-				return array(
-					'type' => 'ed25519',
-					'key'  => $public_key,
-				);
-			}
-			return $key;
-		};
-		\add_filter( 'activitypub_pre_get_public_key', $mock_ed25519_key, 10, 2 );
-
-		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$_SERVER['REQUEST_URI']    = '/' . \rest_get_url_prefix() . '/' . ACTIVITYPUB_REST_NAMESPACE . '/fasp/capabilities/test/1/activation';
-		$_SERVER['HTTP_HOST']      = 'example.org';
-		$_SERVER['HTTPS']          = 'on';
-
-		// Create REST request with Ed25519 signature.
-		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/fasp/capabilities/test/1/activation' );
-		$request->set_header( 'Date', $date );
-		$request->set_header( 'Host', 'example.org' );
-		$request->set_header( 'Signature-Input', $signature_input );
-		$request->set_header( 'Signature', $signature_header );
-
-		// Verification should succeed and return the keyId.
-		$result = Signature::verify_http_signature( $request );
-		$this->assertIsString( $result, 'Valid Ed25519 signature should verify' );
-		$this->assertEquals( 'test-fasp-server-id', $result, 'Verified keyId should match' );
-
-		\remove_filter( 'activitypub_pre_get_public_key', $mock_ed25519_key );
-	}
-
-	/**
-	 * Test Ed25519 signature verification fails with invalid signature.
-	 *
-	 * @covers ::verify_http_signature
-	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_ed25519_signature
-	 */
-	public function test_ed25519_invalid_signature_fails() {
-		// Generate Ed25519 keypair.
-		$keypair    = \sodium_crypto_sign_keypair();
-		$public_key = \sodium_crypto_sign_publickey( $keypair );
-
-		// Create a different keypair to sign with (simulates wrong key).
-		$wrong_keypair    = \sodium_crypto_sign_keypair();
-		$wrong_secret_key = \sodium_crypto_sign_secretkey( $wrong_keypair );
-
-		// Create signature base string.
-		$date            = \gmdate( 'D, d M Y H:i:s T' );
-		$created         = \time();
-		$params_string   = \sprintf(
-			'("@method" "@target-uri" "date");created=%d;keyid="test-fasp-server-id"',
-			$created
-		);
-		$signature_base  = "\"@method\": POST\n";
-		$signature_base .= "\"@target-uri\": https://example.org/wp-json/activitypub/1.0/fasp/capabilities/test/1/activation\n";
-		$signature_base .= "\"date\": $date\n";
-		$signature_base .= "\"@signature-params\": $params_string";
-
-		// Sign with WRONG key.
-		$signature = \sodium_crypto_sign_detached( $signature_base, $wrong_secret_key );
-
-		// Create signature headers.
-		$signature_input  = "sig=$params_string";
-		$signature_header = 'sig=:' . \base64_encode( $signature ) . ':';
-
-		// Mock the public key retrieval to return the CORRECT public key.
-		$mock_ed25519_key = function ( $key, $key_id ) use ( $public_key ) {
-			if ( 'test-fasp-server-id' === $key_id ) {
-				return array(
-					'type' => 'ed25519',
-					'key'  => $public_key,
-				);
-			}
-			return $key;
-		};
-		\add_filter( 'activitypub_pre_get_public_key', $mock_ed25519_key, 10, 2 );
-
-		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$_SERVER['REQUEST_URI']    = '/' . \rest_get_url_prefix() . '/' . ACTIVITYPUB_REST_NAMESPACE . '/fasp/capabilities/test/1/activation';
-		$_SERVER['HTTP_HOST']      = 'example.org';
-		$_SERVER['HTTPS']          = 'on';
-
-		// Create REST request with Ed25519 signature (signed with wrong key).
-		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/fasp/capabilities/test/1/activation' );
-		$request->set_header( 'Date', $date );
-		$request->set_header( 'Host', 'example.org' );
-		$request->set_header( 'Signature-Input', $signature_input );
-		$request->set_header( 'Signature', $signature_header );
-
-		// Verification should fail.
-		$result = Signature::verify_http_signature( $request );
-		$this->assertWPError( $result, 'Invalid Ed25519 signature should fail verification' );
-		$this->assertEquals( 'activitypub_signature', $result->get_error_code() );
-
-		\remove_filter( 'activitypub_pre_get_public_key', $mock_ed25519_key );
-	}
-
-	/**
-	 * Test Ed25519 signature verification fails with invalid key length.
-	 *
-	 * @covers ::verify_http_signature
-	 * @covers \Activitypub\Signature\Http_Message_Signature::verify_ed25519_signature
-	 */
-	public function test_ed25519_invalid_key_length_fails() {
-		// Create signature headers with dummy values.
-		$date             = \gmdate( 'D, d M Y H:i:s T' );
-		$created          = \time();
-		$params_string    = \sprintf(
-			'("@method" "@target-uri" "date");created=%d;keyid="test-fasp-server-id"',
-			$created
-		);
-		$signature_input  = "sig=$params_string";
-		$signature_header = 'sig=:' . \base64_encode( \str_repeat( 'x', 64 ) ) . ':'; // 64 bytes for signature.
-
-		// Mock the public key retrieval to return an invalid length key.
-		$mock_invalid_key = function ( $key, $key_id ) {
-			if ( 'test-fasp-server-id' === $key_id ) {
-				return array(
-					'type' => 'ed25519',
-					'key'  => 'too-short', // Invalid key length.
-				);
-			}
-			return $key;
-		};
-		\add_filter( 'activitypub_pre_get_public_key', $mock_invalid_key, 10, 2 );
-
-		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$_SERVER['REQUEST_URI']    = '/' . \rest_get_url_prefix() . '/' . ACTIVITYPUB_REST_NAMESPACE . '/fasp/capabilities/test/1/activation';
-		$_SERVER['HTTP_HOST']      = 'example.org';
-		$_SERVER['HTTPS']          = 'on';
-
-		// Create REST request.
-		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/fasp/capabilities/test/1/activation' );
-		$request->set_header( 'Date', $date );
-		$request->set_header( 'Host', 'example.org' );
-		$request->set_header( 'Signature-Input', $signature_input );
-		$request->set_header( 'Signature', $signature_header );
-
-		// Verification should fail due to invalid key length.
-		$result = Signature::verify_http_signature( $request );
-		$this->assertWPError( $result, 'Invalid Ed25519 key length should fail verification' );
-		$this->assertEquals( 'invalid_key_length', $result->get_error_code() );
-
-		\remove_filter( 'activitypub_pre_get_public_key', $mock_invalid_key );
-	}
-
-	/**
-	 * Test server Ed25519 keypair generation and retrieval.
-	 *
-	 * @covers Activitypub\Signature::get_server_ed25519_keypair
-	 * @covers Activitypub\Signature::get_server_ed25519_public_key
-	 */
-	public function test_server_ed25519_keypair() {
-		// Clear any existing keypair.
-		\delete_option( 'activitypub_server_ed25519_keypair' );
-
-		// Get keypair should generate one.
-		$keypair = Signature::get_server_ed25519_keypair();
-
-		$this->assertIsArray( $keypair );
-		$this->assertArrayHasKey( 'public', $keypair );
-		$this->assertArrayHasKey( 'private', $keypair );
-
-		// Verify key lengths (Ed25519: 32 bytes public, 64 bytes private).
-		$this->assertEquals( SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES, \strlen( $keypair['public'] ) );
-		$this->assertEquals( SODIUM_CRYPTO_SIGN_SECRETKEYBYTES, \strlen( $keypair['private'] ) );
-
-		// Get public key should return base64.
-		$public_key_b64 = Signature::get_server_ed25519_public_key();
-		$this->assertIsString( $public_key_b64 );
-		$this->assertEquals( $keypair['public'], \base64_decode( $public_key_b64 ) );
-
-		// Subsequent calls should return the same keypair.
-		$keypair2 = Signature::get_server_ed25519_keypair();
-		$this->assertEquals( $keypair['public'], $keypair2['public'] );
-		$this->assertEquals( $keypair['private'], $keypair2['private'] );
-	}
-
-	/**
 	 * Test Ed25519 response signing.
 	 *
 	 * @covers Activitypub\Signature\Http_Message_Signature::sign_response_ed25519
@@ -1855,8 +1645,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		$signature_helper->sign_response_ed25519(
 			$response,
 			$private_key,
-			'test-key-id',
-			'sig'
+			'test-key-id'
 		);
 
 		// Verify headers were added.
@@ -1867,7 +1656,6 @@ class Test_Signature extends \WP_UnitTestCase {
 		// Verify signature format.
 		$this->assertStringContainsString( 'sig=', $headers['Signature-Input'] );
 		$this->assertStringContainsString( '"@status"', $headers['Signature-Input'] );
-		$this->assertStringContainsString( 'alg="ed25519"', $headers['Signature-Input'] );
 		$this->assertStringContainsString( 'keyid="test-key-id"', $headers['Signature-Input'] );
 		$this->assertStringStartsWith( 'sig=:', $headers['Signature'] );
 
@@ -1876,20 +1664,98 @@ class Test_Signature extends \WP_UnitTestCase {
 		$signature = \base64_decode( $matches[1] );
 		$this->assertEquals( SODIUM_CRYPTO_SIGN_BYTES, \strlen( $signature ) );
 
-		/*
-		 * Verify the signature is valid by reconstructing the signature base.
-		 * Extract created timestamp from Signature-Input.
-		 */
-		\preg_match( '/created=(\d+)/', $headers['Signature-Input'], $created_matches );
-		$created = $created_matches[1];
+		// Verify the signed response via the response verifier.
+		$verified = $signature_helper->verify_response(
+			200,
+			array(
+				'Content-Digest'  => $digest,
+				'Signature-Input' => $headers['Signature-Input'],
+				'Signature'       => $headers['Signature'],
+			),
+			$content,
+			$public_key
+		);
 
-		$signature_base  = "\"@status\": 200\n";
-		$signature_base .= "\"content-digest\": {$digest}\n";
-		$signature_base .= "\"@signature-params\": (\"@status\" \"content-digest\");created={$created};keyid=\"test-key-id\";alg=\"ed25519\"";
+		$this->assertSame( 'test-key-id', $verified, 'Ed25519 response signature should round-trip.' );
+	}
+
+	/**
+	 * A signed response must not verify when the body, status, or key do not match.
+	 *
+	 * @covers Activitypub\Signature\Http_Message_Signature::verify_response
+	 */
+	public function test_ed25519_response_verification_rejects_tampering() {
+		$keypair     = \sodium_crypto_sign_keypair();
+		$public_key  = \sodium_crypto_sign_publickey( $keypair );
+		$private_key = \sodium_crypto_sign_secretkey( $keypair );
+
+		$content  = \wp_json_encode( array( 'test' => 'data' ) );
+		$response = new \WP_REST_Response( array( 'test' => 'data' ), 200 );
+
+		$signature_helper = new Http_Message_Signature();
+		$digest           = $signature_helper->generate_digest( $content );
+		$response->header( 'Content-Digest', $digest );
+		$signature_helper->sign_response_ed25519( $response, $private_key, 'test-key-id' );
+
+		$headers = array(
+			'Content-Digest'  => $digest,
+			'Signature-Input' => $response->get_headers()['Signature-Input'],
+			'Signature'       => $response->get_headers()['Signature'],
+		);
+
+		// Tampered body fails the digest check.
+		$tampered = $signature_helper->verify_response( 200, $headers, '{"test":"evil"}', $public_key );
+		$this->assertWPError( $tampered, 'A tampered body should not verify.' );
+
+		// A different status changes the signature base.
+		$wrong_status = $signature_helper->verify_response( 201, $headers, $content, $public_key );
+		$this->assertWPError( $wrong_status, 'A different status code should not verify.' );
+
+		// A different key should not verify.
+		$other_key = \sodium_crypto_sign_publickey( \sodium_crypto_sign_keypair() );
+		$wrong_key = $signature_helper->verify_response( 200, $headers, $content, $other_key );
+		$this->assertWPError( $wrong_key, 'A foreign key should not verify.' );
+
+		// A response without signature headers is rejected.
+		$unsigned = $signature_helper->verify_response( 200, array( 'Content-Digest' => $digest ), $content, $public_key );
+		$this->assertWPError( $unsigned, 'An unsigned response should not verify.' );
+	}
+
+	/**
+	 * Signing a request covers @method, @target-uri and content-digest with created and keyid.
+	 *
+	 * @covers Activitypub\Signature\Http_Message_Signature::sign_request_ed25519
+	 */
+	public function test_ed25519_request_signing() {
+		$keypair     = \sodium_crypto_sign_keypair();
+		$public_key  = \sodium_crypto_sign_publickey( $keypair );
+		$private_key = \sodium_crypto_sign_secretkey( $keypair );
+
+		$signature_helper = new Http_Message_Signature();
+		$args             = $signature_helper->sign_request_ed25519(
+			array( 'method' => 'POST' ),
+			'https://fasp.example.com/capabilities/trends/1.0/activation',
+			$private_key,
+			'test-server-id'
+		);
+
+		$this->assertArrayHasKey( 'Content-Digest', $args['headers'], 'Body-less requests still carry a Content-Digest.' );
+		$this->assertStringContainsString( '"@method" "@target-uri" "content-digest"', $args['headers']['Signature-Input'] );
+		$this->assertStringContainsString( 'keyid="test-server-id"', $args['headers']['Signature-Input'] );
+		$this->assertStringContainsString( 'created=', $args['headers']['Signature-Input'] );
+
+		// Reconstruct the signature base and verify the signature.
+		\preg_match( '/created=(\d+)/', $args['headers']['Signature-Input'], $created_matches );
+		\preg_match( '/sig=:([^:]+):/', $args['headers']['Signature'], $sig_matches );
+
+		$signature_base  = "\"@method\": POST\n";
+		$signature_base .= "\"@target-uri\": https://fasp.example.com/capabilities/trends/1.0/activation\n";
+		$signature_base .= '"content-digest": ' . $args['headers']['Content-Digest'] . "\n";
+		$signature_base .= '"@signature-params": ("@method" "@target-uri" "content-digest");created=' . $created_matches[1] . ';keyid="test-server-id"';
 
 		$this->assertTrue(
-			\sodium_crypto_sign_verify_detached( $signature, $signature_base, $public_key ),
-			'Ed25519 response signature should be valid'
+			\sodium_crypto_sign_verify_detached( \base64_decode( $sig_matches[1] ), $signature_base, $public_key ),
+			'Ed25519 request signature should be valid'
 		);
 	}
 

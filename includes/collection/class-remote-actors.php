@@ -671,27 +671,11 @@ class Remote_Actors {
 	/**
 	 * Get public key from key_id.
 	 *
-	 * @param string $key_id The key ID (typically a URL to the public key, but can be any identifier).
+	 * @param string $key_id The URL to the public key.
 	 *
-	 * @return resource|array|\WP_Error The public key resource, Ed25519 key array, or WP_Error.
+	 * @return resource|\WP_Error The public key resource or WP_Error.
 	 */
 	public static function get_public_key( $key_id ) {
-		/**
-		 * Filter to allow custom public key resolution for non-URL key IDs.
-		 *
-		 * This filter allows other protocols (like FASP) to provide public keys
-		 * for key IDs that are not ActivityPub actor URLs. Return null to
-		 * continue with the default ActivityPub lookup.
-		 *
-		 * @param resource|array|\WP_Error|null $public_key The public key or null.
-		 * @param string                        $key_id     The key ID from the signature.
-		 */
-		$public_key = \apply_filters( 'activitypub_pre_get_public_key', null, $key_id );
-
-		if ( null !== $public_key ) {
-			return $public_key;
-		}
-
 		$no_profile_error = new \WP_Error( 'activitypub_no_remote_profile_found', 'No Profile found or Profile not accessible', array( 'status' => 401 ) );
 		$no_key_error     = new \WP_Error( 'activitypub_no_remote_key_found', 'No Public-Key found', array( 'status' => 401 ) );
 

@@ -59,13 +59,6 @@ class Admin {
 		\add_action( 'admin_post_delete_actor_confirmed', array( self::class, 'handle_bulk_actor_delete_confirmation' ) );
 		\add_action( 'admin_action_activitypub_confirm_removal', array( self::class, 'handle_bulk_actor_delete_page' ) );
 
-		// Only register FASP admin actions if FASP is enabled.
-		if ( '1' === \get_option( 'activitypub_enable_fasp', '0' ) ) {
-			\add_action( 'admin_post_approve_fasp_registration', array( self::class, 'approve_fasp_registration' ) );
-			\add_action( 'admin_post_reject_fasp_registration', array( self::class, 'reject_fasp_registration' ) );
-			\add_action( 'admin_post_delete_fasp_registration', array( self::class, 'delete_fasp_registration' ) );
-		}
-
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
 			if ( \get_option( 'activitypub_api', false ) ) {
@@ -131,62 +124,6 @@ class Admin {
 			</div>
 			<?php
 		}
-
-		// Handle FASP admin notices.
-		self::process_fasp_admin_notices();
-	}
-
-	/**
-	 * Process FASP admin action notices.
-	 *
-	 * Registers settings errors based on query parameters from FASP admin actions.
-	 */
-	private static function process_fasp_admin_notices() {
-		// phpcs:disable WordPress.Security.NonceVerification.Recommended
-		$page = isset( $_GET['page'] ) ? \sanitize_text_field( \wp_unslash( $_GET['page'] ) ) : '';
-		$tab  = isset( $_GET['tab'] ) ? \sanitize_text_field( \wp_unslash( $_GET['tab'] ) ) : '';
-
-		// Only process on FASP registrations tab.
-		if ( 'activitypub' !== $page || 'fasp-registrations' !== $tab ) {
-			return;
-		}
-
-		if ( isset( $_GET['approved'] ) && '1' === $_GET['approved'] ) {
-			\add_settings_error(
-				'activitypub_fasp',
-				'fasp_approved',
-				\__( 'Service approved successfully. It can now integrate with your site.', 'activitypub' ),
-				'success'
-			);
-		}
-
-		if ( isset( $_GET['rejected'] ) && '1' === $_GET['rejected'] ) {
-			\add_settings_error(
-				'activitypub_fasp',
-				'fasp_rejected',
-				\__( 'Service request rejected.', 'activitypub' ),
-				'success'
-			);
-		}
-
-		if ( isset( $_GET['deleted'] ) && '1' === $_GET['deleted'] ) {
-			\add_settings_error(
-				'activitypub_fasp',
-				'fasp_deleted',
-				\__( 'Service disconnected successfully.', 'activitypub' ),
-				'success'
-			);
-		}
-
-		if ( isset( $_GET['error'] ) && '1' === $_GET['error'] ) {
-			\add_settings_error(
-				'activitypub_fasp',
-				'fasp_error',
-				\__( 'An error occurred while processing your request. Please try again.', 'activitypub' ),
-				'error'
-			);
-		}
-		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 	}
 
 	/**
@@ -1173,81 +1110,6 @@ class Admin {
 		} else {
 			\wp_send_json_error( array( 'message' => \__( 'Failed to remove subscription.', 'activitypub' ) ) );
 		}
-	}
-
-	/**
-	 * Handle approve FASP registration action.
-	 */
-	public static function approve_fasp_registration() {
-		if ( ! \current_user_can( 'manage_options' ) ) {
-			\wp_die( \esc_html__( 'You do not have permission to perform this action.', 'activitypub' ) );
-		}
-
-		$fasp_id = isset( $_POST['fasp_id'] ) ? \sanitize_text_field( \wp_unslash( $_POST['fasp_id'] ) ) : '';
-		$nonce   = isset( $_POST['_wpnonce'] ) ? \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ) ) : '';
-
-		if ( ! \wp_verify_nonce( $nonce, 'fasp_registration_' . $fasp_id ) ) {
-			\wp_die( \esc_html__( 'Invalid nonce.', 'activitypub' ) );
-		}
-
-		$result = \Activitypub\Fasp::approve_registration( $fasp_id, \get_current_user_id() );
-
-		if ( $result ) {
-			\wp_safe_redirect( \admin_url( 'options-general.php?page=activitypub&tab=fasp-registrations&approved=1' ) );
-		} else {
-			\wp_safe_redirect( \admin_url( 'options-general.php?page=activitypub&tab=fasp-registrations&error=1' ) );
-		}
-		exit;
-	}
-
-	/**
-	 * Handle reject FASP registration action.
-	 */
-	public static function reject_fasp_registration() {
-		if ( ! \current_user_can( 'manage_options' ) ) {
-			\wp_die( \esc_html__( 'You do not have permission to perform this action.', 'activitypub' ) );
-		}
-
-		$fasp_id = isset( $_POST['fasp_id'] ) ? \sanitize_text_field( \wp_unslash( $_POST['fasp_id'] ) ) : '';
-		$nonce   = isset( $_POST['_wpnonce'] ) ? \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ) ) : '';
-
-		if ( ! \wp_verify_nonce( $nonce, 'fasp_registration_' . $fasp_id ) ) {
-			\wp_die( \esc_html__( 'Invalid nonce.', 'activitypub' ) );
-		}
-
-		$result = \Activitypub\Fasp::reject_registration( $fasp_id, \get_current_user_id() );
-
-		if ( $result ) {
-			\wp_safe_redirect( \admin_url( 'options-general.php?page=activitypub&tab=fasp-registrations&rejected=1' ) );
-		} else {
-			\wp_safe_redirect( \admin_url( 'options-general.php?page=activitypub&tab=fasp-registrations&error=1' ) );
-		}
-		exit;
-	}
-
-	/**
-	 * Handle delete FASP registration action.
-	 */
-	public static function delete_fasp_registration() {
-		if ( ! \current_user_can( 'manage_options' ) ) {
-			\wp_die( \esc_html__( 'You do not have permission to perform this action.', 'activitypub' ) );
-		}
-
-		$fasp_id = isset( $_POST['fasp_id'] ) ? \sanitize_text_field( \wp_unslash( $_POST['fasp_id'] ) ) : '';
-		$nonce   = isset( $_POST['_wpnonce'] ) ? \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ) ) : '';
-
-		if ( ! \wp_verify_nonce( $nonce, 'fasp_registration_' . $fasp_id ) ) {
-			\wp_die( \esc_html__( 'Invalid nonce.', 'activitypub' ) );
-		}
-
-		$result = \Activitypub\Fasp::delete_registration( $fasp_id );
-
-		if ( $result ) {
-			\wp_safe_redirect( \admin_url( 'options-general.php?page=activitypub&tab=fasp-registrations&deleted=1' ) );
-		} else {
-			\wp_safe_redirect( \admin_url( 'options-general.php?page=activitypub&tab=fasp-registrations&error=1' ) );
-		}
-		exit;
 	}
 
 	/**

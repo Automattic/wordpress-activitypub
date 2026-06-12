@@ -1,257 +1,172 @@
 <?php
 /**
- * Test file for FASP classes.
+ * Test file for FASP support.
  *
  * @package Activitypub
  */
 
+// phpcs:disable WordPress.PHP.DiscouragedPHPFunctions -- base64 is the FASP wire format, not obfuscation.
+
 namespace Activitypub\Tests;
 
-use Activitypub\Fasp;
-use Activitypub\Rest\Fasp_Controller;
+use Activitypub\Fasp\Client;
+use Activitypub\Fasp\Registrations;
+use Activitypub\Signature\Http_Message_Signature;
 
 /**
- * Test class for FASP.
+ * Test class for FASP support.
+ *
+ * @group fasp
  *
  * @coversDefaultClass \Activitypub\Rest\Fasp_Controller
  */
 class Test_Fasp extends \WP_UnitTestCase {
 
 	/**
-	 * FASP Controller instance.
+	 * The FASP-side Ed25519 keypair used in tests.
 	 *
-	 * @var Fasp_Controller
+	 * @var array
 	 */
-	private $controller;
+	private static $fasp_keys;
 
 	/**
-	 * Set up the test environment.
+	 * Set up test resources.
+	 */
+	public static function set_up_before_class() {
+		parent::set_up_before_class();
+
+		$keypair         = \sodium_crypto_sign_keypair();
+		self::$fasp_keys = array(
+			'public'  => \sodium_crypto_sign_publickey( $keypair ),
+			'private' => \sodium_crypto_sign_secretkey( $keypair ),
+		);
+	}
+
+	/**
+	 * Set up the test.
 	 */
 	public function set_up() {
 		parent::set_up();
 
-		// Enable FASP feature for tests.
-		update_option( 'activitypub_enable_fasp', '1' );
+		\update_option( 'activitypub_enable_fasp', '1' );
 
-		// Initialize REST API.
 		global $wp_rest_server;
-		$wp_rest_server = new \WP_REST_Server();
-		do_action( 'rest_api_init' );
-
-		$this->controller = new Fasp_Controller();
-
-		// Clean up options.
-		delete_option( 'activitypub_fasp_registrations' );
-		delete_option( 'activitypub_fasp_capabilities' );
+		$wp_rest_server = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 	}
 
 	/**
-	 * Clean up after tests.
+	 * Tear down the test.
 	 */
 	public function tear_down() {
-		parent::tear_down();
+		\delete_option( 'activitypub_enable_fasp' );
+		\delete_option( Registrations::OPTION_REGISTRATIONS );
+		\delete_option( Registrations::OPTION_CAPABILITIES );
 
-		// Clean up options.
-		delete_option( 'activitypub_enable_fasp' );
-		delete_option( 'activitypub_fasp_registrations' );
-		delete_option( 'activitypub_fasp_capabilities' );
+		global $wp_rest_server;
+		$wp_rest_server = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+
+		parent::tear_down();
 	}
 
 	/**
-	 * Test provider info endpoint registration.
+	 * Build a valid registration request.
+	 *
+	 * @param array $overrides Parameter overrides.
+	 * @return \WP_REST_Request The request.
+	 */
+	private function build_registration_request( $overrides = array() ) {
+		$params = \array_merge(
+			array(
+				'name'      => 'Test FASP',
+				'baseUrl'   => 'https://fasp.example.com',
+				'serverId'  => 'test-server-id',
+				'publicKey' => \base64_encode( self::$fasp_keys['public'] ),
+			),
+			$overrides
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/fasp/registration' );
+		$request->set_header( 'Content-Type', 'application/json' );
+		$request->set_body( \wp_json_encode( $params ) );
+
+		return $request;
+	}
+
+	/**
+	 * Create an approved registration directly in the store.
+	 *
+	 * @param array $overrides Field overrides.
+	 * @return array The registration record.
+	 */
+	private function create_approved_registration( $overrides = array() ) {
+		$registration = Registrations::create(
+			\array_merge(
+				array(
+					'name'            => 'Test FASP',
+					'base_url'        => 'https://fasp.example.com',
+					'server_id'       => 'test-server-id',
+					'fasp_public_key' => \base64_encode( self::$fasp_keys['public'] ),
+				),
+				$overrides
+			)
+		);
+
+		Registrations::approve( $registration['fasp_id'], 0 );
+
+		return Registrations::get( $registration['fasp_id'] );
+	}
+
+	/**
+	 * Build a signed FASP response for `pre_http_request` mocks.
+	 *
+	 * @param int    $status The response status.
+	 * @param string $body   The response body.
+	 * @return array The HTTP response array.
+	 */
+	private function build_signed_fasp_response( $status, $body ) {
+		$signature_helper = new Http_Message_Signature();
+		$digest           = $signature_helper->generate_digest( $body );
+
+		$response = new \WP_REST_Response( null, $status );
+		$response->header( 'Content-Digest', $digest );
+		$signature_helper->sign_response_ed25519( $response, self::$fasp_keys['private'], 'fasp-id' );
+
+		$headers = $response->get_headers();
+
+		return array(
+			'headers'  => array(
+				'content-digest'  => $digest,
+				'signature-input' => $headers['Signature-Input'],
+				'signature'       => $headers['Signature'],
+			),
+			'body'     => $body,
+			'response' => array(
+				'code'    => $status,
+				'message' => '',
+			),
+		);
+	}
+
+	/**
+	 * Test that only the registration route is registered.
 	 *
 	 * @covers ::register_routes
 	 */
 	public function test_register_routes() {
-		global $wp_rest_server;
+		$routes = \rest_get_server()->get_routes();
 
-		$this->controller->register_routes();
-
-		$routes = $wp_rest_server->get_routes();
-		$this->assertArrayHasKey( '/activitypub/1.0/fasp/provider_info', $routes );
-
-		$route = $routes['/activitypub/1.0/fasp/provider_info'];
-		$this->assertIsArray( $route );
-		$this->assertEquals( 'GET', $route[0]['methods']['GET'] );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/fasp/registration', $routes );
+		$this->assertArrayNotHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/fasp/provider_info', $routes, 'provider_info lives on the FASP, not on this server.' );
 	}
 
 	/**
-	 * Test provider info endpoint response.
-	 *
-	 * @covers ::get_provider_info
-	 */
-	public function test_provider_info() {
-		$request  = new \WP_REST_Request( 'GET', '/activitypub/1.0/fasp/provider_info' );
-		$response = $this->controller->get_provider_info( $request );
-
-		$this->assertInstanceOf( 'WP_REST_Response', $response );
-		$this->assertEquals( 200, $response->get_status() );
-
-		$data = $response->get_data();
-		$this->assertArrayHasKey( 'name', $data );
-		$this->assertArrayHasKey( 'privacyPolicy', $data );
-		$this->assertArrayHasKey( 'capabilities', $data );
-
-		// Test required fields are present and properly typed.
-		$this->assertIsString( $data['name'] );
-		$this->assertIsArray( $data['privacyPolicy'] );
-		$this->assertIsArray( $data['capabilities'] );
-
-		// Test Content-Digest header is present.
-		$headers = $response->get_headers();
-		$this->assertArrayHasKey( 'Content-Digest', $headers );
-		$this->assertStringStartsWith( 'sha-256=:', $headers['Content-Digest'] );
-	}
-
-	/**
-	 * Test provider info with privacy policy.
-	 *
-	 * @covers ::get_provider_info
-	 */
-	public function test_provider_info_with_privacy_policy() {
-		// Create a privacy policy page.
-		$privacy_page_id = self::factory()->post->create(
-			array(
-				'post_type'   => 'page',
-				'post_title'  => 'Privacy Policy',
-				'post_status' => 'publish',
-			)
-		);
-		update_option( 'wp_page_for_privacy_policy', $privacy_page_id );
-
-		$request  = new \WP_REST_Request( 'GET', '/activitypub/1.0/fasp/provider_info' );
-		$response = $this->controller->get_provider_info( $request );
-
-		$data = $response->get_data();
-
-		$this->assertNotEmpty( $data['privacyPolicy'] );
-		$this->assertArrayHasKey( 'url', $data['privacyPolicy'][0] );
-		$this->assertArrayHasKey( 'language', $data['privacyPolicy'][0] );
-
-		// Clean up.
-		wp_delete_post( $privacy_page_id, true );
-		delete_option( 'wp_page_for_privacy_policy' );
-	}
-
-	/**
-	 * Test provider info optional fields.
-	 *
-	 * @covers ::get_provider_info
-	 */
-	public function test_provider_info_optional_fields() {
-		$request  = new \WP_REST_Request( 'GET', '/activitypub/1.0/fasp/provider_info' );
-		$response = $this->controller->get_provider_info( $request );
-
-		$data = $response->get_data();
-
-		// signInUrl should be present (WordPress admin).
-		$this->assertArrayHasKey( 'signInUrl', $data );
-		$this->assertStringContainsString( 'wp-admin', $data['signInUrl'] );
-
-		// contactEmail should be present (admin email).
-		$this->assertArrayHasKey( 'contactEmail', $data );
-		$this->assertIsString( $data['contactEmail'] );
-
-		// fediverseAccount should not be present by default.
-		$this->assertArrayNotHasKey( 'fediverseAccount', $data );
-	}
-
-	/**
-	 * Test capabilities filter.
-	 *
-	 * @covers ::get_provider_info
-	 */
-	public function test_capabilities_filter() {
-		// Add a test capability via filter.
-		add_filter(
-			'activitypub_fasp_capabilities',
-			function ( $capabilities ) {
-				$capabilities[] = array(
-					'id'      => 'test_capability',
-					'version' => '1.0',
-				);
-				return $capabilities;
-			}
-		);
-
-		$request  = new \WP_REST_Request( 'GET', '/activitypub/1.0/fasp/provider_info' );
-		$response = $this->controller->get_provider_info( $request );
-
-		$data = $response->get_data();
-
-		$this->assertCount( 1, $data['capabilities'] );
-		$this->assertEquals( 'test_capability', $data['capabilities'][0]['id'] );
-		$this->assertEquals( '1.0', $data['capabilities'][0]['version'] );
-
-		// Clean up.
-		remove_all_filters( 'activitypub_fasp_capabilities' );
-	}
-
-	/**
-	 * Test provider name generation.
-	 *
-	 * @covers ::get_provider_info
-	 */
-	public function test_provider_name() {
-		// Test with custom site name.
-		update_option( 'blogname', 'Test Site' );
-
-		$request  = new \WP_REST_Request( 'GET', '/activitypub/1.0/fasp/provider_info' );
-		$response = $this->controller->get_provider_info( $request );
-
-		$data = $response->get_data();
-		$this->assertEquals( 'Test Site ActivityPub FASP', $data['name'] );
-
-		// Test with empty site name.
-		update_option( 'blogname', '' );
-
-		$response = $this->controller->get_provider_info( $request );
-		$data     = $response->get_data();
-		$this->assertEquals( 'WordPress ActivityPub FASP', $data['name'] );
-	}
-
-	/**
-	 * Test registration endpoint registration.
-	 *
-	 * @covers ::register_routes
-	 */
-	public function test_registration_route_registered() {
-		global $wp_rest_server;
-
-		$this->controller->register_routes();
-
-		$routes = $wp_rest_server->get_routes();
-
-		$this->assertArrayHasKey( '/activitypub/1.0/fasp/registration', $routes );
-
-		$route = $routes['/activitypub/1.0/fasp/registration'];
-		$this->assertArrayHasKey( 0, $route );
-		$this->assertEquals( 'POST', $route[0]['methods']['POST'] );
-	}
-
-	/**
-	 * Test registration endpoint response.
+	 * Test a successful registration.
 	 *
 	 * @covers ::handle_registration
 	 */
 	public function test_registration() {
-		// Ed25519 public keys must be exactly 32 bytes.
-		$valid_ed25519_key = \base64_encode( \str_repeat( 'x', SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+		$response = \rest_get_server()->dispatch( $this->build_registration_request() );
 
-		$request_data = array(
-			'name'      => 'Test FASP Provider',
-			'baseUrl'   => 'https://fasp.example.com',
-			'serverId'  => 'test-server-123',
-			'publicKey' => $valid_ed25519_key,
-		);
-
-		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/fasp/registration' );
-		$request->set_header( 'Content-Type', 'application/json' );
-		$request->set_body( wp_json_encode( $request_data ) );
-
-		$response = $this->controller->handle_registration( $request );
-
-		$this->assertInstanceOf( 'WP_REST_Response', $response );
 		$this->assertEquals( 201, $response->get_status() );
 
 		$data = $response->get_data();
@@ -259,356 +174,313 @@ class Test_Fasp extends \WP_UnitTestCase {
 		$this->assertArrayHasKey( 'publicKey', $data );
 		$this->assertArrayHasKey( 'registrationCompletionUri', $data );
 
-		// Verify data was stored.
-		$registrations = get_option( 'activitypub_fasp_registrations', array() );
-		$this->assertNotEmpty( $registrations );
-		$this->assertArrayHasKey( $data['faspId'], $registrations );
+		// The returned public key is a valid Ed25519 key.
+		$public_key = \base64_decode( $data['publicKey'] );
+		$this->assertEquals( SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES, \strlen( $public_key ) );
 
-		$stored_registration = $registrations[ $data['faspId'] ];
-		$this->assertEquals( 'Test FASP Provider', $stored_registration['name'] );
-		$this->assertEquals( 'https://fasp.example.com', $stored_registration['base_url'] );
-		$this->assertEquals( 'test-server-123', $stored_registration['server_id'] );
-		$this->assertEquals( 'pending', $stored_registration['status'] );
-		$this->assertArrayHasKey( 'fasp_public_key_fingerprint', $stored_registration );
+		// The registration is stored as pending with a per-registration keypair.
+		$registration = Registrations::get( $data['faspId'] );
+		$this->assertSame( 'pending', $registration['status'] );
+		$this->assertSame( 'test-server-id', $registration['server_id'] );
+		$this->assertSame( $data['publicKey'], $registration['server_public_key'] );
+		$this->assertEquals( SODIUM_CRYPTO_SIGN_SECRETKEYBYTES, \strlen( \base64_decode( $registration['server_private_key'] ) ) );
 	}
 
 	/**
-	 * Test registration with missing fields returns error via REST API.
-	 *
-	 * Validation is handled by REST API args with required => true.
+	 * The registration response is signed over @status and content-digest.
 	 *
 	 * @covers ::handle_registration
 	 */
-	public function test_registration_missing_fields() {
-		$request_data = array(
-			'name'    => 'Test FASP Provider',
-			'baseUrl' => 'https://fasp.example.com',
-			// Missing serverId and publicKey.
+	public function test_registration_response_is_signed() {
+		$response = \rest_get_server()->dispatch( $this->build_registration_request() );
+		$headers  = $response->get_headers();
+
+		$this->assertArrayHasKey( 'Content-Digest', $headers );
+		$this->assertArrayHasKey( 'Signature-Input', $headers );
+		$this->assertArrayHasKey( 'Signature', $headers );
+
+		// The signature verifies against the public key returned in the body, under the serverId.
+		$signature_helper = new Http_Message_Signature();
+		$verified         = $signature_helper->verify_response(
+			201,
+			array(
+				'Content-Digest'  => $headers['Content-Digest'],
+				'Signature-Input' => $headers['Signature-Input'],
+				'Signature'       => $headers['Signature'],
+			),
+			\wp_json_encode( $response->get_data() ),
+			\base64_decode( $response->get_data()['publicKey'] )
 		);
 
-		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/fasp/registration' );
-		$request->set_header( 'Content-Type', 'application/json' );
-		$request->set_body( wp_json_encode( $request_data ) );
+		$this->assertSame( 'test-server-id', $verified );
+	}
 
-		// Dispatch through REST API to trigger validation.
-		$response = rest_do_request( $request );
+	/**
+	 * Registration rejects missing fields, invalid keys, and plain-HTTP base URLs.
+	 *
+	 * @covers ::handle_registration
+	 * @covers ::validate_https_url
+	 *
+	 * @dataProvider invalid_registration_provider
+	 *
+	 * @param array $overrides Parameter overrides.
+	 */
+	public function test_registration_validation( $overrides ) {
+		$response = \rest_get_server()->dispatch( $this->build_registration_request( $overrides ) );
 
 		$this->assertEquals( 400, $response->get_status() );
-		$data = $response->get_data();
-		$this->assertEquals( 'rest_missing_callback_param', $data['code'] );
 	}
 
 	/**
-	 * Test FASP registration management methods.
+	 * Data provider for invalid registrations.
 	 *
-	 * @covers Activitypub\Fasp::get_registrations_by_status
-	 * @covers Activitypub\Fasp::approve_registration
+	 * @return array[]
 	 */
-	public function test_registration_management() {
-		// Create a test registration.
-		$registration_data = array(
-			'fasp_id'                     => 'test-fasp-123',
-			'name'                        => 'Test FASP',
-			'base_url'                    => 'https://fasp.example.com',
-			'server_id'                   => 'test-server-123',
-			'fasp_public_key'             => 'dGVzdC1wdWJsaWMta2V5',
-			'fasp_public_key_fingerprint' => Fasp::get_public_key_fingerprint( 'dGVzdC1wdWJsaWMta2V5' ),
-			'server_public_key'           => 'c2VydmVyLXB1YmxpYy1rZXk=',
-			'status'                      => 'pending',
-			'requested_at'                => current_time( 'mysql', true ),
+	public function invalid_registration_provider() {
+		return array(
+			'missing name'      => array( array( 'name' => null ) ),
+			'plain-http URL'    => array( array( 'baseUrl' => 'http://fasp.example.com' ) ),
+			'invalid base64'    => array( array( 'publicKey' => '!!not-base64!!' ) ),
+			'wrong key length'  => array( array( 'publicKey' => \base64_encode( 'too-short' ) ) ),
+			'missing publicKey' => array( array( 'publicKey' => null ) ),
+		);
+	}
+
+	/**
+	 * Duplicate serverIds are rejected with 409.
+	 *
+	 * @covers ::handle_registration
+	 */
+	public function test_registration_duplicate_server_id() {
+		$response = \rest_get_server()->dispatch( $this->build_registration_request() );
+		$this->assertEquals( 201, $response->get_status() );
+
+		$response = \rest_get_server()->dispatch( $this->build_registration_request() );
+		$this->assertEquals( 409, $response->get_status() );
+	}
+
+	/**
+	 * Registrations are rate limited per IP.
+	 *
+	 * @covers ::handle_registration
+	 */
+	public function test_registration_rate_limit() {
+		$ip = \Activitypub\get_client_ip();
+		\set_transient( 'ap_fasp_reg_' . \md5( $ip ), 10, MINUTE_IN_SECONDS );
+
+		$response = \rest_get_server()->dispatch( $this->build_registration_request() );
+
+		$this->assertEquals( 429, $response->get_status() );
+
+		\delete_transient( 'ap_fasp_reg_' . \md5( $ip ) );
+	}
+
+	/**
+	 * Test the registration lifecycle: pending, approved, rejected, deleted.
+	 *
+	 * @covers \Activitypub\Fasp\Registrations
+	 */
+	public function test_registration_lifecycle() {
+		$registration = Registrations::create(
+			array(
+				'name'            => 'Lifecycle FASP',
+				'base_url'        => 'https://fasp.example.com',
+				'server_id'       => 'lifecycle-server-id',
+				'fasp_public_key' => \base64_encode( self::$fasp_keys['public'] ),
+			)
 		);
 
-		$registrations = array( 'test-fasp-123' => $registration_data );
-		update_option( 'activitypub_fasp_registrations', $registrations );
+		$fasp_id = $registration['fasp_id'];
+		$this->assertNotEmpty( $fasp_id );
+		$this->assertSame( $registration, Registrations::get( $fasp_id ) );
+		$this->assertSame( $fasp_id, Registrations::get_by_server_id( 'lifecycle-server-id' )['fasp_id'] );
+		$this->assertCount( 1, Registrations::get_by_status( 'pending' ) );
 
-		// Test getting pending registrations.
-		$pending = Fasp::get_registrations_by_status( 'pending' );
-		$this->assertCount( 1, $pending );
-		$this->assertEquals( 'Test FASP', $pending[0]['name'] );
-		$this->assertEquals( 'pending', $pending[0]['status'] );
+		$this->assertTrue( Registrations::approve( $fasp_id, 42 ) );
+		$approved = Registrations::get( $fasp_id );
+		$this->assertSame( 'approved', $approved['status'] );
+		$this->assertSame( 42, $approved['approved_by'] );
+		$this->assertCount( 0, Registrations::get_by_status( 'pending' ) );
+		$this->assertCount( 1, Registrations::get_by_status( 'approved' ) );
 
-		// Test approving registration.
-		$result = Fasp::approve_registration( 'test-fasp-123', 1 );
-		$this->assertTrue( $result );
+		$this->assertTrue( Registrations::reject( $fasp_id, 42 ) );
+		$this->assertSame( 'rejected', Registrations::get( $fasp_id )['status'] );
 
-		// Test getting approved registrations.
-		$approved = Fasp::get_registrations_by_status( 'approved' );
-		$this->assertCount( 1, $approved );
-		$this->assertEquals( 'Test FASP', $approved[0]['name'] );
-		$this->assertEquals( 'approved', $approved[0]['status'] );
+		Registrations::enable_capability( $fasp_id, 'trends', '1.0' );
+		$this->assertTrue( Registrations::delete( $fasp_id ) );
+		$this->assertNull( Registrations::get( $fasp_id ) );
+		$this->assertFalse( Registrations::is_capability_enabled( $fasp_id, 'trends', '1.0' ), 'Deleting a registration removes its capability state.' );
 
-		// Test pending registrations is now empty.
-		$pending = Fasp::get_registrations_by_status( 'pending' );
-		$this->assertCount( 0, $pending );
+		$this->assertFalse( Registrations::approve( 'missing-id', 1 ) );
+		$this->assertFalse( Registrations::delete( 'missing-id' ) );
 	}
 
 	/**
-	 * Test public key fingerprint generation.
+	 * Test capability state management.
 	 *
-	 * @covers Activitypub\Fasp::get_public_key_fingerprint
+	 * @covers \Activitypub\Fasp\Registrations
+	 */
+	public function test_capability_state() {
+		$this->assertFalse( Registrations::is_capability_enabled( 'some-fasp', 'trends', '1.0' ) );
+
+		Registrations::enable_capability( 'some-fasp', 'trends', '1.0' );
+		$this->assertTrue( Registrations::is_capability_enabled( 'some-fasp', 'trends', '1.0' ) );
+		$this->assertFalse( Registrations::is_capability_enabled( 'some-fasp', 'trends', '2.0' ), 'Capability state is per version.' );
+
+		$enabled = Registrations::get_enabled_capabilities( 'some-fasp' );
+		$this->assertCount( 1, $enabled );
+		$this->assertSame( 'trends', $enabled[0]['identifier'] );
+
+		Registrations::disable_capability( 'some-fasp', 'trends', '1.0' );
+		$this->assertFalse( Registrations::is_capability_enabled( 'some-fasp', 'trends', '1.0' ) );
+		$this->assertCount( 0, Registrations::get_enabled_capabilities( 'some-fasp' ) );
+	}
+
+	/**
+	 * Test the public key fingerprint.
+	 *
+	 * @covers \Activitypub\Fasp\Registrations::get_public_key_fingerprint
 	 */
 	public function test_public_key_fingerprint() {
-		$public_key  = 'dGVzdC1wdWJsaWMta2V5'; // base64 encoded "test-public-key".
-		$fingerprint = Fasp::get_public_key_fingerprint( $public_key );
+		$public_key  = \base64_encode( self::$fasp_keys['public'] );
+		$fingerprint = Registrations::get_public_key_fingerprint( $public_key );
 
-		$this->assertNotEmpty( $fingerprint );
-		$this->assertIsString( $fingerprint );
-
-		// Fingerprint should be deterministic.
-		$fingerprint2 = Fasp::get_public_key_fingerprint( $public_key );
-		$this->assertEquals( $fingerprint, $fingerprint2 );
+		// The fingerprint is the base64 encoded SHA-256 hash of the raw key.
+		$this->assertSame( \base64_encode( \hash( 'sha256', self::$fasp_keys['public'], true ) ), $fingerprint );
 	}
 
 	/**
-	 * Test capability management.
+	 * The client fetches, verifies and caches provider info.
 	 *
-	 * @covers Activitypub\Fasp::is_capability_enabled
+	 * @covers \Activitypub\Fasp\Client::get_provider_info
 	 */
-	public function test_capability_management() {
-		// Initially no capabilities should be enabled.
-		$enabled = Fasp::is_capability_enabled( 'test-fasp-123', 'trends', 1 );
-		$this->assertFalse( $enabled );
-
-		// Enable a capability manually.
-		$capabilities = array(
-			'test-fasp-123_trends_v1' => array(
-				'fasp_id'    => 'test-fasp-123',
-				'identifier' => 'trends',
-				'version'    => 1,
-				'enabled'    => true,
-				'updated_at' => current_time( 'mysql', true ),
+	public function test_client_get_provider_info() {
+		$registration  = $this->create_approved_registration();
+		$provider_info = array(
+			'name'          => 'Test FASP',
+			'privacyPolicy' => array(),
+			'capabilities'  => array(
+				array(
+					'id'      => 'trends',
+					'version' => '1.0',
+				),
 			),
 		);
-		update_option( 'activitypub_fasp_capabilities', $capabilities );
 
-		// Now it should be enabled.
-		$enabled = Fasp::is_capability_enabled( 'test-fasp-123', 'trends', 1 );
-		$this->assertTrue( $enabled );
-
-		// Different capability should not be enabled.
-		$enabled = Fasp::is_capability_enabled( 'test-fasp-123', 'search', 1 );
-		$this->assertFalse( $enabled );
-	}
-
-	/**
-	 * Test capability activation with valid serverId.
-	 *
-	 * Per FASP spec, keyId MUST be the serverId exchanged during registration.
-	 *
-	 * @covers ::toggle_capability
-	 */
-	public function test_capability_activation_with_valid_server_id() {
-		$key_base64        = 'dGVzdC1wdWJsaWMta2V5';
-		$registration_data = array(
-			'fasp_id'                     => 'test-fasp-123',
-			'name'                        => 'Test FASP',
-			'base_url'                    => 'https://fasp.example.com',
-			'server_id'                   => 'test-server-123',
-			'fasp_public_key'             => $key_base64,
-			'fasp_public_key_fingerprint' => Fasp::get_public_key_fingerprint( $key_base64 ),
-			'server_public_key'           => 'c2VydmVyLXB1YmxpYy1rZXk=',
-			'status'                      => 'approved',
-			'requested_at'                => current_time( 'mysql', true ),
-		);
-
-		update_option( 'activitypub_fasp_registrations', array( 'test-fasp-123' => $registration_data ) );
-
-		add_filter(
-			'activitypub_fasp_capabilities',
-			function ( $capabilities ) {
-				$capabilities[] = array(
-					'id'      => 'trends',
-					'version' => '1.0',
-				);
-				return $capabilities;
+		$http_calls = 0;
+		$mock       = function ( $response, $args, $url ) use ( &$http_calls, $provider_info ) {
+			if ( 'https://fasp.example.com/provider_info' !== $url ) {
+				return $response;
 			}
-		);
 
-		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/fasp/capabilities/trends/1.0/activation' );
-		$request->set_param( 'identifier', 'trends' );
-		$request->set_param( 'version', '1.0' );
+			++$http_calls;
 
-		/*
-		 * Set the verified keyId parameter that would be set by Server::verify_signature().
-		 * Per FASP spec, keyId must be the serverId exchanged during registration.
-		 */
-		$request->set_param( 'activitypub_verified_keyid', 'test-server-123' );
+			$this->assertStringContainsString( 'keyid="test-server-id"', $args['headers']['Signature-Input'], 'Outbound requests sign with the serverId.' );
+			$this->assertArrayHasKey( 'Content-Digest', $args['headers'] );
 
-		$response = $this->controller->toggle_capability( $request );
+			return $this->build_signed_fasp_response( 200, \wp_json_encode( $provider_info ) );
+		};
+		\add_filter( 'pre_http_request', $mock, 10, 3 );
 
-		$this->assertInstanceOf( 'WP_REST_Response', $response );
-		$this->assertEquals( 204, $response->get_status() );
+		$result = Client::get_provider_info( $registration );
+		$this->assertSame( $provider_info, $result );
+		$this->assertSame( 1, $http_calls );
 
-		$stored_capabilities = get_option( 'activitypub_fasp_capabilities', array() );
-		$this->assertArrayHasKey( 'test-fasp-123_trends_v1.0', $stored_capabilities );
+		// A second call is served from the cache.
+		Client::get_provider_info( $registration );
+		$this->assertSame( 1, $http_calls );
 
-		remove_all_filters( 'activitypub_fasp_capabilities' );
+		// A forced refresh bypasses the cache.
+		Client::get_provider_info( $registration, true );
+		$this->assertSame( 2, $http_calls );
+
+		\remove_filter( 'pre_http_request', $mock );
+		\delete_transient( Client::PROVIDER_INFO_TRANSIENT . $registration['fasp_id'] );
 	}
 
 	/**
-	 * Test capability activation rejects requests from unknown FASPs.
+	 * The client rejects unsigned and tampered provider responses.
 	 *
-	 * When a request comes with a serverId that doesn't match any registered FASP,
-	 * it should be rejected.
-	 *
-	 * @covers ::toggle_capability
+	 * @covers \Activitypub\Fasp\Client::get_provider_info
 	 */
-	public function test_capability_activation_rejects_unknown_fasp() {
-		$key_base64        = 'dGVzdC1wdWJsaWMta2V5';
-		$registration_data = array(
-			'fasp_id'                     => 'test-fasp-123',
-			'name'                        => 'Test FASP',
-			'base_url'                    => 'https://fasp.example.com',
-			'server_id'                   => 'test-server-123',
-			'fasp_public_key'             => $key_base64,
-			'fasp_public_key_fingerprint' => Fasp::get_public_key_fingerprint( $key_base64 ),
-			'server_public_key'           => 'c2VydmVyLXB1YmxpYy1rZXk=',
-			'status'                      => 'approved',
-			'requested_at'                => current_time( 'mysql', true ),
-		);
+	public function test_client_rejects_invalid_responses() {
+		$registration = $this->create_approved_registration();
+		$body         = \wp_json_encode( array( 'capabilities' => array( array( 'id' => 'trends', 'version' => '1.0' ) ) ) ); // phpcs:ignore WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
 
-		update_option( 'activitypub_fasp_registrations', array( 'test-fasp-123' => $registration_data ) );
-
-		add_filter(
-			'activitypub_fasp_capabilities',
-			function ( $capabilities ) {
-				$capabilities[] = array(
-					'id'      => 'trends',
-					'version' => '1.0',
-				);
-				return $capabilities;
+		// Unsigned response.
+		$mock_unsigned = function ( $response, $args, $url ) use ( $body ) {
+			if ( 'https://fasp.example.com/provider_info' !== $url ) {
+				return $response;
 			}
-		);
 
-		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/fasp/capabilities/trends/1.0/activation' );
-		$request->set_param( 'identifier', 'trends' );
-		$request->set_param( 'version', '1.0' );
+			return array(
+				'headers'  => array(),
+				'body'     => $body,
+				'response' => array(
+					'code'    => 200,
+					'message' => '',
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $mock_unsigned, 10, 3 );
+		$this->assertWPError( Client::get_provider_info( $registration, true ), 'An unsigned response should be rejected.' );
+		\remove_filter( 'pre_http_request', $mock_unsigned );
 
-		/*
-		 * Set verified keyId to an unknown/unregistered FASP serverId.
-		 * This simulates a request signed by an unknown server.
-		 */
-		$request->set_param( 'activitypub_verified_keyid', 'unknown-server-456' );
+		// Signed response with tampered body.
+		$mock_tampered = function ( $response, $args, $url ) use ( $body ) {
+			if ( 'https://fasp.example.com/provider_info' !== $url ) {
+				return $response;
+			}
 
-		$response = $this->controller->toggle_capability( $request );
+			$signed         = $this->build_signed_fasp_response( 200, $body );
+			$signed['body'] = \wp_json_encode( array( 'capabilities' => array( array( 'id' => 'evil', 'version' => '666' ) ) ) ); // phpcs:ignore WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
 
-		$this->assertInstanceOf( 'WP_Error', $response );
-		$this->assertEquals( 'fasp_not_found', $response->get_error_code() );
-
-		remove_all_filters( 'activitypub_fasp_capabilities' );
+			return $signed;
+		};
+		\add_filter( 'pre_http_request', $mock_tampered, 10, 3 );
+		$this->assertWPError( Client::get_provider_info( $registration, true ), 'A tampered response should be rejected.' );
+		\remove_filter( 'pre_http_request', $mock_tampered );
 	}
 
 	/**
-	 * Test get_registration_by_server_id returns correct registration.
+	 * Capability activation calls the FASP and reports the outcome.
 	 *
-	 * @covers Activitypub\Fasp::get_registration_by_server_id
+	 * @covers \Activitypub\Fasp\Client::activate_capability
+	 * @covers \Activitypub\Fasp\Client::deactivate_capability
 	 */
-	public function test_get_registration_by_server_id() {
-		$registration_data = array(
-			'fasp_id'         => 'test-fasp-456',
-			'name'            => 'Test FASP by Server ID',
-			'base_url'        => 'https://fasp.example.com',
-			'server_id'       => 'unique-server-id-789',
-			'fasp_public_key' => 'dGVzdC1wdWJsaWMta2V5',
-			'status'          => 'approved',
-			'requested_at'    => current_time( 'mysql', true ),
-		);
+	public function test_client_capability_activation() {
+		$registration = $this->create_approved_registration();
 
-		update_option( 'activitypub_fasp_registrations', array( 'test-fasp-456' => $registration_data ) );
+		$requests = array();
+		$mock     = function ( $response, $args, $url ) use ( &$requests ) {
+			if ( 'https://fasp.example.com/capabilities/trends/1.0/activation' !== $url ) {
+				return $response;
+			}
 
-		// Test finding by server_id.
-		$found = Fasp::get_registration_by_server_id( 'unique-server-id-789' );
-		$this->assertNotNull( $found );
-		$this->assertEquals( 'test-fasp-456', $found['fasp_id'] );
-		$this->assertEquals( 'Test FASP by Server ID', $found['name'] );
+			$requests[] = $args['method'];
 
-		// Test not finding unknown server_id.
-		$not_found = Fasp::get_registration_by_server_id( 'unknown-server-id' );
-		$this->assertNull( $not_found );
-	}
+			return $this->build_signed_fasp_response( 204, '' );
+		};
+		\add_filter( 'pre_http_request', $mock, 10, 3 );
 
-	/**
-	 * Test public key filter returns Ed25519 key for approved FASP.
-	 *
-	 * @covers Activitypub\Fasp::get_public_key_for_server_id
-	 */
-	public function test_public_key_filter_returns_ed25519_key() {
-		// Generate a valid Ed25519 keypair for testing.
-		$keypair    = sodium_crypto_sign_keypair();
-		$public_key = sodium_crypto_sign_publickey( $keypair );
-		$key_base64 = base64_encode( $public_key ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+		$this->assertTrue( Client::activate_capability( $registration, 'trends', '1.0' ) );
+		$this->assertTrue( Client::deactivate_capability( $registration, 'trends', '1.0' ) );
+		$this->assertSame( array( 'POST', 'DELETE' ), $requests );
 
-		$registration_data = array(
-			'fasp_id'         => 'ed25519-fasp',
-			'name'            => 'Ed25519 Test FASP',
-			'base_url'        => 'https://fasp.example.com',
-			'server_id'       => 'ed25519-server-id',
-			'fasp_public_key' => $key_base64,
-			'status'          => 'approved',
-			'requested_at'    => current_time( 'mysql', true ),
-		);
+		\remove_filter( 'pre_http_request', $mock );
 
-		update_option( 'activitypub_fasp_registrations', array( 'ed25519-fasp' => $registration_data ) );
+		// A FASP that does not know the capability responds with 404.
+		$mock_404 = function ( $response, $args, $url ) {
+			if ( 'https://fasp.example.com/capabilities/unknown/1.0/activation' !== $url ) {
+				return $response;
+			}
 
-		// Ensure filter is registered.
-		Fasp::init();
+			return $this->build_signed_fasp_response( 404, '' );
+		};
+		\add_filter( 'pre_http_request', $mock_404, 10, 3 );
 
-		// Call the filter directly.
-		$result = Fasp::get_public_key_for_server_id( null, 'ed25519-server-id' );
+		$this->assertWPError( Client::activate_capability( $registration, 'unknown', '1.0' ) );
 
-		$this->assertIsArray( $result );
-		$this->assertEquals( 'ed25519', $result['type'] );
-		$this->assertEquals( $public_key, $result['key'] );
-	}
-
-	/**
-	 * Test public key filter returns error for unapproved FASP.
-	 *
-	 * @covers Activitypub\Fasp::get_public_key_for_server_id
-	 */
-	public function test_public_key_filter_rejects_unapproved_fasp() {
-		$registration_data = array(
-			'fasp_id'         => 'pending-fasp',
-			'name'            => 'Pending FASP',
-			'base_url'        => 'https://fasp.example.com',
-			'server_id'       => 'pending-server-id',
-			'fasp_public_key' => 'dGVzdC1wdWJsaWMta2V5',
-			'status'          => 'pending', // Not approved.
-			'requested_at'    => current_time( 'mysql', true ),
-		);
-
-		update_option( 'activitypub_fasp_registrations', array( 'pending-fasp' => $registration_data ) );
-
-		$result = Fasp::get_public_key_for_server_id( null, 'pending-server-id' );
-
-		$this->assertInstanceOf( 'WP_Error', $result );
-		$this->assertEquals( 'fasp_not_approved', $result->get_error_code() );
-	}
-
-	/**
-	 * Test public key filter returns null for non-FASP keyIds.
-	 *
-	 * @covers Activitypub\Fasp::get_public_key_for_server_id
-	 */
-	public function test_public_key_filter_passes_through_non_fasp_keyids() {
-		// No FASP registrations.
-		delete_option( 'activitypub_fasp_registrations' );
-
-		// Should return null for unknown keyIds, allowing default lookup.
-		$result = Fasp::get_public_key_for_server_id( null, 'https://example.com/users/test#main-key' );
-		$this->assertNull( $result );
-	}
-
-	/**
-	 * Test public key filter doesn't override existing key.
-	 *
-	 * @covers Activitypub\Fasp::get_public_key_for_server_id
-	 */
-	public function test_public_key_filter_respects_existing_key() {
-		$existing_key = 'existing-key-from-another-filter';
-
-		$result = Fasp::get_public_key_for_server_id( $existing_key, 'any-server-id' );
-
-		$this->assertEquals( $existing_key, $result );
+		\remove_filter( 'pre_http_request', $mock_404 );
 	}
 }

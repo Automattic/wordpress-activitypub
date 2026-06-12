@@ -5,13 +5,27 @@
  * @package Activitypub
  */
 
-use Activitypub\Fasp;
+use Activitypub\Fasp\Client;
+use Activitypub\Fasp\Registrations;
 
 // phpcs:disable WordPress.Security.NonceVerification.Recommended
 
-$pending_registrations  = Fasp::get_registrations_by_status( 'pending' );
-$approved_registrations = Fasp::get_registrations_by_status( 'approved' );
+$pending_registrations  = Registrations::get_by_status( 'pending' );
+$approved_registrations = Registrations::get_by_status( 'approved' );
 $highlighted_id         = isset( $_GET['highlight'] ) ? \sanitize_text_field( \wp_unslash( $_GET['highlight'] ) ) : '';
+
+/**
+ * Filters the FASP capability identifiers this site knows how to use.
+ *
+ * Capabilities offered by a provider can only be enabled when the site
+ * implements their server side. Add an identifier (e.g. `data_sharing`)
+ * to make the matching provider capabilities selectable.
+ *
+ * @since unreleased
+ *
+ * @param string[] $supported Supported capability identifiers. Default empty.
+ */
+$supported_capabilities = \apply_filters( 'activitypub_fasp_supported_capabilities', array() );
 ?>
 
 <hr class="wp-header-end">
@@ -31,7 +45,7 @@ $highlighted_id         = isset( $_GET['highlight'] ) ? \sanitize_text_field( \w
 		<div class="fasp-registrations-list">
 			<?php foreach ( $pending_registrations as $registration ) : ?>
 				<?php
-				$fingerprint = Fasp::get_public_key_fingerprint( $registration['fasp_public_key'] );
+				$fingerprint = Registrations::get_public_key_fingerprint( $registration['fasp_public_key'] );
 				$nonce       = \wp_create_nonce( 'fasp_registration_' . $registration['fasp_id'] );
 				$highlighted = $highlighted_id === $registration['fasp_id'];
 				?>
@@ -96,7 +110,7 @@ $highlighted_id         = isset( $_GET['highlight'] ) ? \sanitize_text_field( \w
 		<div class="fasp-registrations-list">
 			<?php foreach ( $approved_registrations as $registration ) : ?>
 				<?php
-				$fingerprint = Fasp::get_public_key_fingerprint( $registration['fasp_public_key'] );
+				$fingerprint = Registrations::get_public_key_fingerprint( $registration['fasp_public_key'] );
 				$nonce       = \wp_create_nonce( 'fasp_registration_' . $registration['fasp_id'] );
 				?>
 				<div class="activitypub-settings-accordion fasp-registration-card">
@@ -121,6 +135,67 @@ $highlighted_id         = isset( $_GET['highlight'] ) ? \sanitize_text_field( \w
 							<strong><?php \esc_html_e( 'Connected Since', 'activitypub' ); ?></strong>
 							<?php echo \esc_html( \wp_date( \get_option( 'date_format' ) . ' ' . \get_option( 'time_format' ), \strtotime( $registration['approved_at'] ) ) ); ?>
 						</div>
+					</div>
+
+					<div class="fasp-registration-capabilities">
+						<strong><?php \esc_html_e( 'Capabilities', 'activitypub' ); ?></strong>
+						<p class="description">
+							<?php \esc_html_e( 'Features this service offers. Enable only the ones you want it to use; the service is notified about every change.', 'activitypub' ); ?>
+						</p>
+						<?php $provider_info = Client::get_provider_info( $registration ); ?>
+						<?php if ( \is_wp_error( $provider_info ) ) : ?>
+							<p class="description fasp-capabilities-error">
+								<?php \esc_html_e( 'The list of capabilities could not be loaded from the service right now.', 'activitypub' ); ?>
+							</p>
+							<form method="post" action="<?php echo \esc_url( \admin_url( 'admin-post.php' ) ); ?>" style="display: inline;">
+								<input type="hidden" name="action" value="refresh_fasp_provider_info">
+								<input type="hidden" name="fasp_id" value="<?php echo \esc_attr( $registration['fasp_id'] ); ?>">
+								<input type="hidden" name="_wpnonce" value="<?php echo \esc_attr( $nonce ); ?>">
+								<input type="submit" class="button" value="<?php \esc_attr_e( 'Try Again', 'activitypub' ); ?>">
+							</form>
+						<?php else : ?>
+							<ul class="fasp-capabilities-list">
+								<?php foreach ( $provider_info['capabilities'] as $capability ) : ?>
+									<?php
+									if ( empty( $capability['id'] ) || ! isset( $capability['version'] ) ) {
+										continue;
+									}
+
+									$capability_id      = $capability['id'];
+									$capability_version = (string) $capability['version'];
+									$is_supported       = \in_array( $capability_id, $supported_capabilities, true );
+									$is_enabled         = Registrations::is_capability_enabled( $registration['fasp_id'], $capability_id, $capability_version );
+									$capability_nonce   = \wp_create_nonce( 'fasp_capability_' . $registration['fasp_id'] );
+									?>
+									<li class="fasp-capability">
+										<code><?php echo \esc_html( $capability_id ); ?></code>
+										<span class="fasp-capability-version">
+											<?php
+											/* translators: %s: version number of a service capability. */
+											echo \esc_html( \sprintf( \__( 'Version %s', 'activitypub' ), $capability_version ) );
+											?>
+										</span>
+										<?php if ( ! $is_supported ) : ?>
+											<em class="description"><?php \esc_html_e( 'Not yet supported by this plugin.', 'activitypub' ); ?></em>
+										<?php else : ?>
+											<form method="post" action="<?php echo \esc_url( \admin_url( 'admin-post.php' ) ); ?>" style="display: inline;">
+												<input type="hidden" name="action" value="toggle_fasp_capability">
+												<input type="hidden" name="fasp_id" value="<?php echo \esc_attr( $registration['fasp_id'] ); ?>">
+												<input type="hidden" name="identifier" value="<?php echo \esc_attr( $capability_id ); ?>">
+												<input type="hidden" name="version" value="<?php echo \esc_attr( $capability_version ); ?>">
+												<input type="hidden" name="enable" value="<?php echo $is_enabled ? '0' : '1'; ?>">
+												<input type="hidden" name="_wpnonce" value="<?php echo \esc_attr( $capability_nonce ); ?>">
+												<?php if ( $is_enabled ) : ?>
+													<input type="submit" class="button" value="<?php \esc_attr_e( 'Disable', 'activitypub' ); ?>">
+												<?php else : ?>
+													<input type="submit" class="button button-primary" value="<?php \esc_attr_e( 'Enable', 'activitypub' ); ?>">
+												<?php endif; ?>
+											</form>
+										<?php endif; ?>
+									</li>
+								<?php endforeach; ?>
+							</ul>
+						<?php endif; ?>
 					</div>
 
 					<details class="fasp-technical-details">

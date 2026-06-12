@@ -80,9 +80,6 @@ trait Verification {
 				);
 			}
 
-			// Store the verified keyId on the request for endpoint callbacks.
-			$request->set_param( 'activitypub_verified_keyid', $verified_request );
-
 			// Verify the signing key's host matches the activity actor's host.
 			$key_id_check = $this->verify_key_id( $request, $verified_key_id );
 			if ( \is_wp_error( $key_id_check ) ) {
