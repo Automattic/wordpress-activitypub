@@ -72,7 +72,7 @@ Put together, ActivityPub is a protocol for publishing and subscribing to activi
 
 = How do I solve… =
 
-We have a **How-To** section in the [docs](https://github.com/Automattic/wordpress-activitypub/tree/trunk/docs/how-to) directory that can help you troubleshoot common issues.
+We have an **FAQ** section in the [docs](https://github.com/Automattic/wordpress-activitypub/tree/trunk/docs/faq) directory with checklists for the most common problems — for example [follow requests stuck on "pending"](https://github.com/Automattic/wordpress-activitypub/blob/trunk/docs/faq/pending-follow-requests.md) and [comments from the Fediverse not showing up](https://github.com/Automattic/wordpress-activitypub/blob/trunk/docs/faq/missing-comments.md) — and a **How-To** section in the [docs](https://github.com/Automattic/wordpress-activitypub/tree/trunk/docs/how-to) directory for configuring specific setups.
 
 = Constants =
 
