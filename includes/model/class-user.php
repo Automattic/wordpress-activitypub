@@ -22,6 +22,8 @@ use function Activitypub\user_can_activitypub;
  * @method int get__id() Gets the WordPress user ID.
  */
 class User extends Actor {
+	use Interaction_Policy;
+
 	/**
 	 * The local User-ID (WP_User).
 	 *

@@ -23,6 +23,8 @@ use function Activitypub\is_single_user;
  * @method int get__id() Gets the internal user ID for the blog (always returns BLOG_USER_ID).
  */
 class Blog extends Actor {
+	use Interaction_Policy;
+
 	/**
 	 * The User-ID
 	 *
