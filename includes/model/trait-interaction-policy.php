@@ -14,9 +14,28 @@ namespace Activitypub\Model;
  * model layer on purpose: the generic Activity classes are vocabulary only
  * and must not contain application logic.
  *
+ * May only be used in classes extending {@see \Activitypub\Activity\Actor}:
+ * it overrides the inherited `get_interaction_policy()` accessor (via
+ * `parent::`) and relies on the abstract methods declared below.
+ *
  * @since unreleased
  */
 trait Interaction_Policy {
+
+	/**
+	 * Get the ID of the actor.
+	 *
+	 * @return string The ID.
+	 */
+	abstract public function get_id();
+
+	/**
+	 * Get the followers collection URL of the actor.
+	 *
+	 * @return string|null The followers collection URL.
+	 */
+	abstract public function get_followers();
+
 	/**
 	 * Get the actor-level interaction policy.
 	 *
