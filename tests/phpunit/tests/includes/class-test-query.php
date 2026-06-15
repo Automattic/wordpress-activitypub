@@ -515,15 +515,16 @@ class Test_Query extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that a non-numeric actor var does not alias the blog actor's stamp.
+	 * Test that a non-integer actor var does not alias the blog/user actor's stamp.
 	 *
-	 * Regression: `(int) 'alice'` casts to 0, so a request like `?actor=alice&stamp=1`
-	 * would resolve against the blog actor's stamp store. Only numeric actor values
-	 * may reach the actor-scoped stamp path.
+	 * Regression: `(int) 'alice'` casts to 0, and values like '0e1' or '1.5' pass
+	 * is_numeric() but cast to 0/1, so requests like `?actor=alice&stamp=1` would
+	 * resolve against an actor's stamp store. Only plain decimal-integer actor
+	 * values may reach the actor-scoped stamp path.
 	 *
 	 * @covers ::maybe_get_actor_stamp
 	 */
-	public function test_actor_stamp_rejects_non_numeric_actor() {
+	public function test_actor_stamp_rejects_non_integer_actor() {
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
 		$instrument = 'https://remote.example.com/users/curator/featured/7';
@@ -539,18 +540,20 @@ class Test_Query extends \WP_UnitTestCase {
 		$this->assertNotNull( $object, 'Numeric blog actor should resolve the stamp.' );
 		$this->assertEquals( 'FeatureAuthorization', $object->get_type(), 'Numeric blog actor should yield a FeatureAuthorization.' );
 
-		// A non-numeric actor must not alias the blog actor.
-		Query::get_instance()->__destruct();
-		$this->go_to( \home_url( '/?actor=alice&stamp=' . $stamp_id ) );
-		\set_query_var( 'actor', 'alice' );
-		\set_query_var( 'stamp', $stamp_id );
+		// Non-integer actor values must not alias an actor (alice → 0, 0e1 → 0, 1.5 → 1).
+		foreach ( array( 'alice', '0e1', '1.5' ) as $bad_actor ) {
+			Query::get_instance()->__destruct();
+			$this->go_to( \home_url( '/?actor=' . $bad_actor . '&stamp=' . $stamp_id ) );
+			\set_query_var( 'actor', $bad_actor );
+			\set_query_var( 'stamp', $stamp_id );
 
-		$object = Query::get_instance()->get_activitypub_object();
-		if ( null !== $object ) {
-			$this->assertNotEquals( 'FeatureAuthorization', $object->get_type(), 'Non-numeric actor must not resolve the blog actor stamp.' );
+			$object = Query::get_instance()->get_activitypub_object();
+			if ( null !== $object ) {
+				$this->assertNotEquals( 'FeatureAuthorization', $object->get_type(), "Actor '{$bad_actor}' must not resolve an actor stamp." );
+			}
 		}
 
-		\delete_option( Feature_Request::BLOG_STAMPS_OPTION );
+		\delete_option( Feature_Request::BLOG_STAMPS_OPTION . '_' . $stamp_id );
 	}
 
 	/**

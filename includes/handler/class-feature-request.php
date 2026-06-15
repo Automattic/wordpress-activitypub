@@ -24,24 +24,16 @@ use function Activitypub\user_can_activitypub;
 class Feature_Request {
 
 	/**
-	 * Option name for the blog actor's feature stamps.
+	 * Option-name prefix for the blog actor's feature stamps.
 	 *
-	 * The blog actor has no users-table row (its ID is 0), so its stamps
-	 * cannot live in user meta like the stamps of regular users do.
+	 * The blog actor has no users-table row (its ID is 0), so its stamps cannot
+	 * live in user meta like the stamps of regular users do. Each stamp is stored
+	 * in its own option row, keyed `{prefix}_{id}`, so a stamp ID can be claimed
+	 * atomically with `add_option()` without a lock.
 	 *
 	 * @var string
 	 */
 	const BLOG_STAMPS_OPTION = 'activitypub_blog_featured_by';
-
-	/**
-	 * Seconds after which a held blog-stamp lock is treated as abandoned.
-	 *
-	 * A request that dies mid-write would otherwise leave the lock row in place
-	 * forever, deadlocking every future blog-actor accept.
-	 *
-	 * @var int
-	 */
-	const BLOG_STAMPS_LOCK_TTL = 10;
 
 	/**
 	 * Initialize the class, registering WordPress hooks.
@@ -184,8 +176,8 @@ class Feature_Request {
 	 * Create (or reuse) a feature stamp for an actor.
 	 *
 	 * Stamps for users live in user meta, with the umeta_id doubling as the
-	 * stamp ID. The blog actor has no users-table row, so its stamps are
-	 * stored in a keyed option array instead.
+	 * stamp ID. The blog actor has no users-table row, so each of its stamps is
+	 * stored in its own option row instead.
 	 *
 	 * Idempotent: an existing stamp for the same instrument is reused.
 	 *
@@ -220,62 +212,48 @@ class Feature_Request {
 	/**
 	 * Create (or reuse) a feature stamp for the blog actor.
 	 *
-	 * The blog actor's stamps share a single option array, so the
-	 * read-modify-write that allocates the next ID is guarded by a lock to keep
-	 * concurrent inbox deliveries from minting the same ID or clobbering each
-	 * other's writes.
+	 * Each blog stamp lives in its own option row (`{prefix}_{id}`), so a slot is
+	 * claimed atomically with `add_option()` — which only inserts when the row is
+	 * absent (see Scheduler\Statistics::send_annual_email()). Concurrent inbox
+	 * deliveries therefore can't mint the same ID or clobber each other's writes,
+	 * and no lock is needed. Stamps are never deleted, so the slots stay gap-free
+	 * and the walk stops at the first empty slot.
 	 *
 	 * @param string $instrument The instrument URI being stamped.
 	 * @return int|false The stamp ID, or false on failure.
 	 */
 	private static function add_blog_stamp( $instrument ) {
-		$lock = self::BLOG_STAMPS_OPTION . '_lock';
+		$stamp_id = 1;
 
 		/*
-		 * Acquire a short-lived lock. add_option only succeeds when the row is
-		 * absent, which makes it a race-safe mutex (see
-		 * Scheduler\Statistics::send_annual_email()).
+		 * Bounded far above any realistic blog stamp count, to guard against a
+		 * pathological object-cache state where a just-claimed slot never becomes
+		 * visible and the re-read would otherwise spin forever.
 		 */
-		$acquired = false;
-		for ( $attempt = 0; $attempt < 50; $attempt++ ) {
-			if ( \add_option( $lock, \time(), '', false ) ) {
-				$acquired = true;
-				break;
+		for ( $attempt = 0; $attempt < 10000; $attempt++ ) {
+			$key     = self::BLOG_STAMPS_OPTION . '_' . $stamp_id;
+			$current = \get_option( $key );
+
+			// Idempotent: an existing stamp for the same instrument is reused.
+			if ( $current === $instrument ) {
+				return $stamp_id;
 			}
 
-			// Recover a lock abandoned by a request that died mid-write.
-			$held = (int) \get_option( $lock );
-			if ( $held && \time() - $held > self::BLOG_STAMPS_LOCK_TTL ) {
-				\delete_option( $lock );
+			if ( false === $current ) {
+				if ( \add_option( $key, $instrument, '', false ) ) {
+					return $stamp_id;
+				}
+
+				// A concurrent accept claimed this slot first; re-read it (no
+				// increment) to see whether it took our instrument or another.
 				continue;
 			}
 
-			\usleep( 10000 ); // 10ms.
+			// Slot holds a different instrument; try the next one.
+			++$stamp_id;
 		}
 
-		if ( ! $acquired ) {
-			return false;
-		}
-
-		try {
-			// Re-read inside the lock so we observe a prior holder's write.
-			$stamps   = \get_option( self::BLOG_STAMPS_OPTION, array() );
-			$existing = \array_search( $instrument, $stamps, true );
-			if ( false !== $existing ) {
-				return $existing;
-			}
-
-			$stamp_id            = empty( $stamps ) ? 1 : \max( \array_keys( $stamps ) ) + 1;
-			$stamps[ $stamp_id ] = $instrument;
-
-			if ( ! \update_option( self::BLOG_STAMPS_OPTION, $stamps, false ) ) {
-				return false;
-			}
-
-			return $stamp_id;
-		} finally {
-			\delete_option( $lock );
-		}
+		return false;
 	}
 
 	/**
@@ -289,9 +267,9 @@ class Feature_Request {
 	 */
 	public static function get_stamp( $user_id, $stamp_id ) {
 		if ( Actors::BLOG_USER_ID === $user_id ) {
-			$stamps = \get_option( self::BLOG_STAMPS_OPTION, array() );
+			$instrument = \get_option( self::BLOG_STAMPS_OPTION . '_' . (int) $stamp_id );
 
-			return $stamps[ $stamp_id ] ?? null;
+			return false === $instrument ? null : $instrument;
 		}
 
 		$meta = \get_metadata_by_mid( 'user', $stamp_id );

@@ -395,11 +395,14 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 
 		Feature_Request::queue_accept( $activity, Actors::BLOG_USER_ID );
 
-		// The stamp is stored in the blog stamp option.
-		$stamps = \get_option( Feature_Request::BLOG_STAMPS_OPTION, array() );
-		$this->assertContains( $activity['instrument'], $stamps, 'Instrument URL should be recorded in the blog stamp option.' );
-
-		$stamp_id = \array_search( $activity['instrument'], $stamps, true );
+		// The stamp is persisted and resolvable for the blog actor. Re-adding the
+		// same instrument is idempotent and returns its existing stamp ID.
+		$stamp_id = Feature_Request::add_stamp( Actors::BLOG_USER_ID, $activity['instrument'] );
+		$this->assertSame(
+			$activity['instrument'],
+			Feature_Request::get_stamp( Actors::BLOG_USER_ID, $stamp_id ),
+			'Instrument URL should be resolvable for the blog actor.'
+		);
 
 		// The Accept carries a resolvable stamp URL for actor 0.
 		$outbox = get_posts(
@@ -439,49 +442,30 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 		Feature_Request::queue_accept( $activity, Actors::BLOG_USER_ID );
 		Feature_Request::queue_accept( $activity, Actors::BLOG_USER_ID );
 
-		$stamps = \get_option( Feature_Request::BLOG_STAMPS_OPTION, array() );
-		$this->assertCount( 1, $stamps, 'Duplicate FeatureRequests for the same instrument must not produce multiple blog stamps.' );
+		// The duplicate reuses the first slot and never allocates a second.
+		$this->assertSame( $activity['instrument'], Feature_Request::get_stamp( Actors::BLOG_USER_ID, 1 ), 'The first blog stamp slot holds the instrument.' );
+		$this->assertNull( Feature_Request::get_stamp( Actors::BLOG_USER_ID, 2 ), 'Duplicate FeatureRequests for the same instrument must not produce a second blog stamp.' );
 	}
 
 	/**
-	 * Test that distinct instruments get distinct blog stamp IDs and that the
-	 * allocation lock is released afterwards.
+	 * Test that distinct instruments get distinct, resolvable blog stamp IDs and
+	 * that re-adding an instrument is idempotent.
 	 *
 	 * @covers ::add_stamp
+	 * @covers ::get_stamp
 	 */
 	public function test_add_stamp_allocates_distinct_ids_for_blog_actor() {
 		$first  = Feature_Request::add_stamp( Actors::BLOG_USER_ID, 'https://remote.example.com/featured/1' );
 		$second = Feature_Request::add_stamp( Actors::BLOG_USER_ID, 'https://remote.example.com/featured/2' );
 
-		$this->assertNotFalse( $first, 'First blog stamp should be created.' );
-		$this->assertNotFalse( $second, 'Second blog stamp should be created.' );
 		$this->assertNotSame( $first, $second, 'Distinct instruments must not reuse the same blog stamp ID.' );
 
-		$stamps = \get_option( Feature_Request::BLOG_STAMPS_OPTION, array() );
-		$this->assertCount( 2, $stamps, 'Both instruments should be recorded.' );
+		// Each ID resolves back to its own instrument.
+		$this->assertSame( 'https://remote.example.com/featured/1', Feature_Request::get_stamp( Actors::BLOG_USER_ID, $first ) );
+		$this->assertSame( 'https://remote.example.com/featured/2', Feature_Request::get_stamp( Actors::BLOG_USER_ID, $second ) );
 
-		$this->assertFalse(
-			\get_option( Feature_Request::BLOG_STAMPS_OPTION . '_lock' ),
-			'The allocation lock must be released after add_stamp() returns.'
-		);
-	}
-
-	/**
-	 * Test that a stale blog-stamp lock is recovered instead of deadlocking.
-	 *
-	 * @covers ::add_stamp
-	 */
-	public function test_add_stamp_recovers_stale_blog_lock() {
-		// Simulate a lock abandoned by a request that died mid-write.
-		\add_option( Feature_Request::BLOG_STAMPS_OPTION . '_lock', \time() - ( Feature_Request::BLOG_STAMPS_LOCK_TTL + 5 ), '', false );
-
-		$stamp_id = Feature_Request::add_stamp( Actors::BLOG_USER_ID, 'https://remote.example.com/featured/stale' );
-
-		$this->assertNotFalse( $stamp_id, 'A stale lock must be recovered so the stamp can still be created.' );
-		$this->assertFalse(
-			\get_option( Feature_Request::BLOG_STAMPS_OPTION . '_lock' ),
-			'The recovered lock must be released after add_stamp() returns.'
-		);
+		// Re-adding the first instrument reuses its slot.
+		$this->assertSame( $first, Feature_Request::add_stamp( Actors::BLOG_USER_ID, 'https://remote.example.com/featured/1' ), 'Re-adding an instrument must reuse its stamp ID.' );
 	}
 
 	/**

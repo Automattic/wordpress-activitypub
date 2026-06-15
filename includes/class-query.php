@@ -474,8 +474,9 @@ class Query {
 
 			$actor_id = (int) $queried->ID;
 		} else {
-			// A non-numeric actor var would cast to 0 and alias the blog actor; reject it.
-			if ( ! \is_numeric( $actor_var ) ) {
+			// Values like '0e1' or '1.5' pass is_numeric() but cast to 0/1 and alias
+			// an actor, so require a plain decimal integer before casting.
+			if ( ! \ctype_digit( (string) $actor_var ) ) {
 				return false;
 			}
 
