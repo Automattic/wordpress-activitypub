@@ -143,7 +143,7 @@ class Actor {
 	 * changes, like the Starter Kit policy (FEP-7aa9 `canFeature`), so
 	 * followers of the blog actor and of every author receive the change.
 	 *
-	 * @since unreleased
+	 * @since 9.0.1
 	 */
 	public static function schedule_all_profile_updates() {
 		foreach ( Actors::get_all_ids() as $user_id ) {
