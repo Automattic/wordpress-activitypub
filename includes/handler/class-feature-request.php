@@ -181,7 +181,7 @@ class Feature_Request {
 	 *
 	 * Idempotent: an existing stamp for the same instrument is reused.
 	 *
-	 * @since unreleased
+	 * @since 9.0.1
 	 *
 	 * @param int    $user_id    The local actor ID (0 for the blog actor).
 	 * @param string $instrument The instrument URI being stamped.
@@ -259,7 +259,7 @@ class Feature_Request {
 	/**
 	 * Resolve a stamp ID for an actor to the stamped instrument URI.
 	 *
-	 * @since unreleased
+	 * @since 9.0.1
 	 *
 	 * @param int $user_id  The local actor ID (0 for the blog actor).
 	 * @param int $stamp_id The stamp ID.
