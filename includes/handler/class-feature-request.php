@@ -34,6 +34,16 @@ class Feature_Request {
 	const BLOG_STAMPS_OPTION = 'activitypub_blog_featured_by';
 
 	/**
+	 * Seconds after which a held blog-stamp lock is treated as abandoned.
+	 *
+	 * A request that dies mid-write would otherwise leave the lock row in place
+	 * forever, deadlocking every future blog-actor accept.
+	 *
+	 * @var int
+	 */
+	const BLOG_STAMPS_LOCK_TTL = 10;
+
+	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
@@ -187,21 +197,7 @@ class Feature_Request {
 	 */
 	public static function add_stamp( $user_id, $instrument ) {
 		if ( Actors::BLOG_USER_ID === $user_id ) {
-			$stamps = \get_option( self::BLOG_STAMPS_OPTION, array() );
-
-			$existing = \array_search( $instrument, $stamps, true );
-			if ( false !== $existing ) {
-				return $existing;
-			}
-
-			$stamp_id = empty( $stamps ) ? 1 : \max( \array_keys( $stamps ) ) + 1;
-
-			$stamps[ $stamp_id ] = $instrument;
-			if ( ! \update_option( self::BLOG_STAMPS_OPTION, $stamps, false ) ) {
-				return false;
-			}
-
-			return $stamp_id;
+			return self::add_blog_stamp( $instrument );
 		}
 
 		$existing = \get_user_meta( $user_id, '_activitypub_featured_by', false );
@@ -219,6 +215,67 @@ class Feature_Request {
 		}
 
 		return \add_user_meta( $user_id, '_activitypub_featured_by', $instrument );
+	}
+
+	/**
+	 * Create (or reuse) a feature stamp for the blog actor.
+	 *
+	 * The blog actor's stamps share a single option array, so the
+	 * read-modify-write that allocates the next ID is guarded by a lock to keep
+	 * concurrent inbox deliveries from minting the same ID or clobbering each
+	 * other's writes.
+	 *
+	 * @param string $instrument The instrument URI being stamped.
+	 * @return int|false The stamp ID, or false on failure.
+	 */
+	private static function add_blog_stamp( $instrument ) {
+		$lock = self::BLOG_STAMPS_OPTION . '_lock';
+
+		/*
+		 * Acquire a short-lived lock. add_option only succeeds when the row is
+		 * absent, which makes it a race-safe mutex (see
+		 * Scheduler\Statistics::send_annual_email()).
+		 */
+		$acquired = false;
+		for ( $attempt = 0; $attempt < 50; $attempt++ ) {
+			if ( \add_option( $lock, \time(), '', false ) ) {
+				$acquired = true;
+				break;
+			}
+
+			// Recover a lock abandoned by a request that died mid-write.
+			$held = (int) \get_option( $lock );
+			if ( $held && \time() - $held > self::BLOG_STAMPS_LOCK_TTL ) {
+				\delete_option( $lock );
+				continue;
+			}
+
+			\usleep( 10000 ); // 10ms.
+		}
+
+		if ( ! $acquired ) {
+			return false;
+		}
+
+		try {
+			// Re-read inside the lock so we observe a prior holder's write.
+			$stamps   = \get_option( self::BLOG_STAMPS_OPTION, array() );
+			$existing = \array_search( $instrument, $stamps, true );
+			if ( false !== $existing ) {
+				return $existing;
+			}
+
+			$stamp_id            = empty( $stamps ) ? 1 : \max( \array_keys( $stamps ) ) + 1;
+			$stamps[ $stamp_id ] = $instrument;
+
+			if ( ! \update_option( self::BLOG_STAMPS_OPTION, $stamps, false ) ) {
+				return false;
+			}
+
+			return $stamp_id;
+		} finally {
+			\delete_option( $lock );
+		}
 	}
 
 	/**

@@ -444,6 +444,47 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Test that distinct instruments get distinct blog stamp IDs and that the
+	 * allocation lock is released afterwards.
+	 *
+	 * @covers ::add_stamp
+	 */
+	public function test_add_stamp_allocates_distinct_ids_for_blog_actor() {
+		$first  = Feature_Request::add_stamp( Actors::BLOG_USER_ID, 'https://remote.example.com/featured/1' );
+		$second = Feature_Request::add_stamp( Actors::BLOG_USER_ID, 'https://remote.example.com/featured/2' );
+
+		$this->assertNotFalse( $first, 'First blog stamp should be created.' );
+		$this->assertNotFalse( $second, 'Second blog stamp should be created.' );
+		$this->assertNotSame( $first, $second, 'Distinct instruments must not reuse the same blog stamp ID.' );
+
+		$stamps = \get_option( Feature_Request::BLOG_STAMPS_OPTION, array() );
+		$this->assertCount( 2, $stamps, 'Both instruments should be recorded.' );
+
+		$this->assertFalse(
+			\get_option( Feature_Request::BLOG_STAMPS_OPTION . '_lock' ),
+			'The allocation lock must be released after add_stamp() returns.'
+		);
+	}
+
+	/**
+	 * Test that a stale blog-stamp lock is recovered instead of deadlocking.
+	 *
+	 * @covers ::add_stamp
+	 */
+	public function test_add_stamp_recovers_stale_blog_lock() {
+		// Simulate a lock abandoned by a request that died mid-write.
+		\add_option( Feature_Request::BLOG_STAMPS_OPTION . '_lock', \time() - ( Feature_Request::BLOG_STAMPS_LOCK_TTL + 5 ), '', false );
+
+		$stamp_id = Feature_Request::add_stamp( Actors::BLOG_USER_ID, 'https://remote.example.com/featured/stale' );
+
+		$this->assertNotFalse( $stamp_id, 'A stale lock must be recovered so the stamp can still be created.' );
+		$this->assertFalse(
+			\get_option( Feature_Request::BLOG_STAMPS_OPTION . '_lock' ),
+			'The recovered lock must be released after add_stamp() returns.'
+		);
+	}
+
+	/**
 	 * Test that FeatureRequests targeting the Application actor are rejected
 	 * and never accepted, regardless of the site policy.
 	 *

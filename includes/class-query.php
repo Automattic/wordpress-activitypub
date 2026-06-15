@@ -474,6 +474,11 @@ class Query {
 
 			$actor_id = (int) $queried->ID;
 		} else {
+			// A non-numeric actor var would cast to 0 and alias the blog actor; reject it.
+			if ( ! \is_numeric( $actor_var ) ) {
+				return false;
+			}
+
 			$actor_id = (int) $actor_var;
 		}
 

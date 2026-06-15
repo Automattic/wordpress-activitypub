@@ -7,7 +7,9 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
+use Activitypub\Handler\Feature_Request;
 use Activitypub\Query;
 use WP_UnitTestCase;
 
@@ -510,6 +512,45 @@ class Test_Query extends \WP_UnitTestCase {
 
 		// Clean up.
 		\delete_post_meta( self::$post_id, '_activitypub_quoted_by' );
+	}
+
+	/**
+	 * Test that a non-numeric actor var does not alias the blog actor's stamp.
+	 *
+	 * Regression: `(int) 'alice'` casts to 0, so a request like `?actor=alice&stamp=1`
+	 * would resolve against the blog actor's stamp store. Only numeric actor values
+	 * may reach the actor-scoped stamp path.
+	 *
+	 * @covers ::maybe_get_actor_stamp
+	 */
+	public function test_actor_stamp_rejects_non_numeric_actor() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$instrument = 'https://remote.example.com/users/curator/featured/7';
+		$stamp_id   = Feature_Request::add_stamp( Actors::BLOG_USER_ID, $instrument );
+
+		// A numeric blog actor resolves the stamp.
+		Query::get_instance()->__destruct();
+		$this->go_to( \home_url( '/?actor=0&stamp=' . $stamp_id ) );
+		\set_query_var( 'actor', '0' );
+		\set_query_var( 'stamp', $stamp_id );
+
+		$object = Query::get_instance()->get_activitypub_object();
+		$this->assertNotNull( $object, 'Numeric blog actor should resolve the stamp.' );
+		$this->assertEquals( 'FeatureAuthorization', $object->get_type(), 'Numeric blog actor should yield a FeatureAuthorization.' );
+
+		// A non-numeric actor must not alias the blog actor.
+		Query::get_instance()->__destruct();
+		$this->go_to( \home_url( '/?actor=alice&stamp=' . $stamp_id ) );
+		\set_query_var( 'actor', 'alice' );
+		\set_query_var( 'stamp', $stamp_id );
+
+		$object = Query::get_instance()->get_activitypub_object();
+		if ( null !== $object ) {
+			$this->assertNotEquals( 'FeatureAuthorization', $object->get_type(), 'Non-numeric actor must not resolve the blog actor stamp.' );
+		}
+
+		\delete_option( Feature_Request::BLOG_STAMPS_OPTION );
 	}
 
 	/**
