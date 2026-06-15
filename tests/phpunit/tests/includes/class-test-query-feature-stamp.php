@@ -106,6 +106,45 @@ class Test_Query_Feature_Stamp extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Numeric-looking but non-integer actor values must not alias an actor.
+	 *
+	 * Regression: `(int) 'alice'` casts to 0, and values like '0e1' or '1.5' pass
+	 * is_numeric() but cast to 0/1, so such actor values could resolve another
+	 * actor's stamp store. Only plain decimal integers may reach the resolver.
+	 *
+	 * @covers ::get_activitypub_object
+	 */
+	public function test_actor_stamp_rejects_non_integer_actor() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$stamp_id = Feature_Request::add_stamp( Actors::BLOG_USER_ID, 'https://other.example.com/users/curator/featured/guard' );
+
+		$reset = function () {
+			$instance_property = new \ReflectionProperty( Query::class, 'instance' );
+			$instance_property->setAccessible( true );
+			$instance_property->setValue( null, null );
+		};
+
+		// Control: the canonical integer actor resolves the stamp.
+		set_query_var( 'actor', '0' );
+		set_query_var( 'stamp', $stamp_id );
+		$this->assertInstanceOf( Feature_Authorization::class, Query::get_instance()->get_activitypub_object(), 'A decimal-integer actor should resolve the stamp.' );
+
+		// alice → 0, 0e1 → 0, 1.5 → 1: none may resolve a stamp.
+		foreach ( array( 'alice', '0e1', '1.5' ) as $bad_actor ) {
+			$reset();
+			set_query_var( 'actor', $bad_actor );
+			set_query_var( 'stamp', $stamp_id );
+
+			$this->assertNotInstanceOf(
+				Feature_Authorization::class,
+				Query::get_instance()->get_activitypub_object(),
+				"Actor '{$bad_actor}' must not resolve an actor stamp."
+			);
+		}
+	}
+
+	/**
 	 * End-to-end: a stamp URL goes through the same lifecycle as a real
 	 * request (go_to → template_redirect → Query) and produces a
 	 * FeatureAuthorization. This guards against the router reverting to
