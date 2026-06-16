@@ -29,8 +29,8 @@ our own.
 
 ## Bootstrap
 
-The PHP side (`includes/wp-admin/class-app.php`) does four things, all behind the
-[WP 7.0 gate](#compatibility-gate):
+In the target architecture the PHP side (`includes/wp-admin/class-app.php`) will
+do four things, all behind the [WP 7.0 gate](#compatibility-gate):
 
 1. **Render one root node.** The page outputs a single container plus the small
    critical-CSS block that hides the legacy admin chrome:
@@ -205,8 +205,8 @@ Every screen is a `route` + `content` module pair under `routes/<screen>/`.
 
 ## Compatibility gate
 
-The boot stack requires WordPress 7.0. `class-app.php` checks the version and
-chooses one of two paths for the same admin page:
+The boot stack requires WordPress 7.0. In the target architecture `class-app.php`
+checks the version and chooses one of two paths for the same admin page:
 
 ```php
 if ( is_wp_version_compatible( '7.0' ) ) {
@@ -219,3 +219,9 @@ if ( is_wp_version_compatible( '7.0' ) ) {
 So users on 6.5–6.x keep the legacy screens, and users on 7.0+ get the app. When
 the plugin's minimum supported version reaches 7.0, the legacy path and its
 templates can be removed.
+
+Today the boot app is still an early opt-in: `includes/wp-admin/class-menu.php`
+gates it behind the `activitypub_reader_ui` option and an interim
+`version_compare( get_bloginfo( 'version' ), '6.9-alpha', '>=' )` check. The 7.0
+version check above is the target; the opt-in gate is the bridge until the stack
+is stable and on by default.
