@@ -14,8 +14,13 @@ architecture we build toward — the final picture, not a migration log.
 
 The app is a WordPress **7.0+ Script-Module** single-page application. It boots
 through core's `@wordpress/boot` package (`initSinglePage`), declares its screens
-in a **route registry**, renders lists with **DataViews** and forms with
-**DataForm**, and reads/writes data through **`@wordpress/core-data`**.
+in a **route registry**, renders lists with **DataViews**, and reads/writes data
+through **`@wordpress/core-data`**.
+
+> **Scope:** this app is the **Social Web** screen only — feeds and actor lists
+> (followers, following, blocked). It does **not** own the plugin's settings.
+> Those remain on the classic `Settings → ActivityPub` pages and are out of scope
+> for this app.
 
 The app is **gated to WordPress 7.0+**. On 7.0 and later the boot app loads; on
 6.5–6.x the same admin page renders the classic server-side screens instead, so
@@ -127,27 +132,6 @@ view state, and actions (including bulk actions) to the data:
 DataViews is the replacement for PHP `WP_List_Table`. No list screen should ship
 a server-rendered table.
 
-### Forms & settings — DataForm + core-data
-
-Settings and edit screens use
-[`DataForm`](https://www.npmjs.com/package/@wordpress/dataviews) (panel/card
-layouts) bound to a `@wordpress/core-data` entity. Site-level options come from
-the site entity; plugin options are exposed through the settings entity or a
-dedicated REST entity:
-
-```jsx
-const { record, edit, save } = useEntityRecord( 'root', 'site' );
-
-<DataForm
-    data={ record }
-    fields={ fields }
-    form={ { layout: { type: 'panel' }, fields: [ /* … */ ] } }
-    onChange={ edit }
-/>;
-```
-
-DataForm is the replacement for `do_settings_sections()` server-rendered forms.
-
 ## Data layer
 
 - **`@wordpress/core-data` is the default.** Read and write entities with
@@ -184,7 +168,7 @@ src/app/
 └── routes/
     └── <screen>/
         ├── route.ts          # route module: title() + loader()
-        └── content.tsx       # content module: the screen component (DataViews / DataForm)
+        └── content.tsx       # content module: the screen component (DataViews)
 ```
 
 Every screen is a `route` + `content` module pair under `routes/<screen>/`.
@@ -194,8 +178,7 @@ Every screen is a `route` + `content` module pair under `routes/<screen>/`.
 1. Create `src/app/routes/<screen>/route.ts` exporting `route = { title, loader }`;
    warm the entities the screen needs in `loader` via `resolveSelect`.
 2. Create `src/app/routes/<screen>/content.tsx` as the default-exported component.
-3. For a list: define fields in `src/app/components/fields/` and render `DataViews`.
-   For a form: render `DataForm` bound to a core-data entity.
+3. Define the list's fields in `src/app/components/fields/` and render `DataViews`.
 4. Read/write data with `useEntityRecord` / `useEntityRecords`; only reach for the
    `activitypub/app` store for state that has no REST representation.
 5. Register the route's `content_module` and `route_module` in the PHP route
@@ -212,7 +195,7 @@ checks the version and chooses one of two paths for the same admin page:
 if ( is_wp_version_compatible( '7.0' ) ) {
     // Render the root node and enqueue the boot Script Modules (above).
 } else {
-    // Render the classic server-side screens (settings, followers, …).
+    // Render the classic server-side Social Web screen instead.
 }
 ```
 
