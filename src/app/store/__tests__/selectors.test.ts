@@ -1,60 +1,53 @@
-// Use the real createRegistrySelector from @wordpress/data, but stub core-data
-// so we don't pull in the full entity layer. The selector reads
-// `select( coreStore ).getCurrentUser()`, so we only need a store handle.
+// Stub core-data so we only need a store handle ('core'); the selector reads
+// `select( coreStore ).getCurrentUser()`.
 jest.mock( '@wordpress/core-data', () => ( {
 	store: 'core',
 } ) );
 
+import { createRegistry } from '@wordpress/data';
 import { selectors } from '../selectors';
-import type { State } from '../types';
-
-const mockGetCurrentUser = jest.fn();
 
 /**
- * Registry selectors created with `createRegistrySelector` resolve their
- * `select` from `selector.registry`. Override it so the inner `select( coreStore )`
- * returns our mocked core-data selectors.
+ * Builds a real, isolated data registry with a stub core store and the app
+ * selectors registered, then resolves `getActiveActorId` through it. This
+ * exercises the registry-selector wiring the way `@wordpress/data` does at
+ * runtime, without coupling to `createRegistrySelector` internals.
  *
- * @param currentUser The value `getCurrentUser()` should return.
+ * @param activeActorId The app store's stored actor id.
+ * @param currentUser   The value the core store's `getCurrentUser` returns.
  */
-function withRegistry( currentUser: unknown ): void {
-	mockGetCurrentUser.mockReturnValue( currentUser );
-	( selectors.getActiveActorId as unknown as { registry: unknown } ).registry = {
-		select: () => ( { getCurrentUser: mockGetCurrentUser } ),
-	};
+function resolveActiveActorId( activeActorId: number | null, currentUser: unknown ): number | null {
+	const registry = createRegistry();
+
+	registry.registerStore( 'core', {
+		reducer: ( state = {} ) => state,
+		selectors: { getCurrentUser: () => currentUser },
+	} );
+
+	registry.registerStore( 'activitypub/app', {
+		reducer: ( state = { activeActorId } ) => state,
+		selectors,
+	} );
+
+	return registry.select( 'activitypub/app' ).getActiveActorId();
 }
 
 describe( 'store selectors', () => {
-	beforeEach( () => {
-		jest.clearAllMocks();
-	} );
-
 	describe( 'getActiveActorId', () => {
 		it( 'should return the stored actor id when set', () => {
-			withRegistry( { id: 99 } );
-			const state: State = { activeActorId: 3 };
-			expect( selectors.getActiveActorId( state ) ).toBe( 3 );
-			// Should not need the current user when state already has a value.
-			expect( mockGetCurrentUser ).not.toHaveBeenCalled();
+			expect( resolveActiveActorId( 3, { id: 99 } ) ).toBe( 3 );
 		} );
 
 		it( 'should fall back to the current user id when not set', () => {
-			withRegistry( { id: 7 } );
-			const state: State = { activeActorId: null };
-			expect( selectors.getActiveActorId( state ) ).toBe( 7 );
+			expect( resolveActiveActorId( null, { id: 7 } ) ).toBe( 7 );
 		} );
 
 		it( 'should return null when not set and there is no current user', () => {
-			withRegistry( undefined );
-			const state: State = { activeActorId: null };
-			expect( selectors.getActiveActorId( state ) ).toBeNull();
+			expect( resolveActiveActorId( null, undefined ) ).toBeNull();
 		} );
 
 		it( 'should return the stored id even when it is 0', () => {
-			withRegistry( { id: 7 } );
-			const state: State = { activeActorId: 0 };
-			expect( selectors.getActiveActorId( state ) ).toBe( 0 );
-			expect( mockGetCurrentUser ).not.toHaveBeenCalled();
+			expect( resolveActiveActorId( 0, { id: 7 } ) ).toBe( 0 );
 		} );
 	} );
 } );

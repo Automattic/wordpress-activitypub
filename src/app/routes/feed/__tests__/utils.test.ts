@@ -1,5 +1,3 @@
-jest.mock( '@wordpress/views', () => ( {} ) );
-
 import { normalizeFieldOrder } from '../utils';
 
 const FIELDS = [ { id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' } ];

@@ -59,6 +59,23 @@ describe( 'useObjectTypeFilter', () => {
 			} );
 		} );
 
+		it( 'should preserve other filters when adding an object type filter', () => {
+			mockView = { filters: [ { field: 'ap_tag', operator: 'isAny', value: [ 1 ] } ] };
+			const { result } = renderHook( () => useObjectTypeFilter() );
+
+			act( () => {
+				result.current.updateObjectTypeFilter( 4 );
+			} );
+
+			expect( mockUpdateView ).toHaveBeenCalledWith( {
+				filters: [
+					{ field: 'ap_tag', operator: 'isAny', value: [ 1 ] },
+					{ field: 'ap_object_type', operator: 'is', value: 4 },
+				],
+				page: 1,
+			} );
+		} );
+
 		it( 'should remove the filter when toggling the same object type', () => {
 			mockView = { filters: [ { field: 'ap_object_type', operator: 'is', value: 4 } ] };
 			const { result } = renderHook( () => useObjectTypeFilter() );

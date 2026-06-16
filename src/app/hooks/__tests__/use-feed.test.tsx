@@ -94,6 +94,21 @@ describe( 'useFeed', () => {
 		expect( query.ap_tag ).toBeUndefined();
 	} );
 
+	it( 'should request a limited set of _fields', () => {
+		renderHook( () => useFeed( { userId: 1 } ) );
+		const fields = lastCall().query._fields as string[];
+		expect( Array.isArray( fields ) ).toBe( true );
+		// A few representative fields the feed list and inspector rely on.
+		expect( fields ).toEqual(
+			expect.arrayContaining( [ 'id', 'title', 'actor_info', 'ap_object_type', 'ap_tag' ] )
+		);
+	} );
+
+	it( 'should pass custom fields through to the query', () => {
+		renderHook( () => useFeed( { userId: 1, fields: [ 'id', 'title' ] } ) );
+		expect( lastCall().query._fields ).toEqual( [ 'id', 'title' ] );
+	} );
+
 	it( 'should return the resolved records when enabled', () => {
 		const records = [ { id: 1 }, { id: 2 } ];
 		mockUseEntityRecords.mockReturnValue( {

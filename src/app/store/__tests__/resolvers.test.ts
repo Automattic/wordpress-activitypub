@@ -1,11 +1,14 @@
 const mockGet = jest.fn();
 const mockSet = jest.fn();
 const mockGetCurrentUser = jest.fn();
+const mockSelect = jest.fn( ( _store: unknown ) => ( { get: mockGet } ) );
+const mockDispatch = jest.fn( ( _store: unknown ) => ( { set: mockSet } ) );
+const mockResolveSelect = jest.fn( ( _store: unknown ) => ( { getCurrentUser: mockGetCurrentUser } ) );
 
 jest.mock( '@wordpress/data', () => ( {
-	select: () => ( { get: mockGet } ),
-	dispatch: () => ( { set: mockSet } ),
-	resolveSelect: () => ( { getCurrentUser: mockGetCurrentUser } ),
+	select: ( store: unknown ) => mockSelect( store ),
+	dispatch: ( store: unknown ) => mockDispatch( store ),
+	resolveSelect: ( store: unknown ) => mockResolveSelect( store ),
 } ) );
 
 jest.mock( '@wordpress/preferences', () => ( { store: 'core/preferences' } ) );
@@ -30,6 +33,8 @@ describe( 'store resolvers', () => {
 			expect( result.value ).toEqual( { type: SET_ACTIVE_ACTOR, actorId: 5 } );
 			expect( mockGetCurrentUser ).not.toHaveBeenCalled();
 			expect( mockSet ).not.toHaveBeenCalled();
+			// The preference is read from the preferences store.
+			expect( mockSelect ).toHaveBeenCalledWith( 'core/preferences' );
 		} );
 
 		it( 'should fall back to the current user and persist it when no preference exists', () => {
@@ -45,6 +50,9 @@ describe( 'store resolvers', () => {
 			expect( second.done ).toBe( true );
 			expect( second.value ).toEqual( { type: SET_ACTIVE_ACTOR, actorId: 7 } );
 			expect( mockSet ).toHaveBeenCalledWith( 'activitypub/app', 'activeActorId', 7 );
+			// The current user comes from core-data and the value is persisted to preferences.
+			expect( mockResolveSelect ).toHaveBeenCalledWith( 'core' );
+			expect( mockDispatch ).toHaveBeenCalledWith( 'core/preferences' );
 		} );
 
 		it( 'should treat null preference the same as undefined', () => {
