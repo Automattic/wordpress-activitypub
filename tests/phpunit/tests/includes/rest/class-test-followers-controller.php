@@ -481,6 +481,73 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	}
 
 	/**
+	 * An RFC 9421 request whose verified key (in Signature-Input) belongs to
+	 * the attacker must not have its authority taken from an unrelated keyId
+	 * padded into the Signature header.
+	 *
+	 * The verifier selects RFC 9421 whenever Signature-Input is present and
+	 * checks the key named there; the lenient structured-field parser ignores
+	 * trailing junk in the Signature header. A handler that re-parsed the raw
+	 * Signature header could be steered to a third-party host, defeating the
+	 * FEP-8fcf authority binding. The signer host must come from the verified
+	 * keyId instead.
+	 *
+	 * @covers ::get_partial_followers
+	 */
+	public function test_sync_ignores_keyid_padded_into_signature_header() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/followers/sync' );
+		$request->set_param( 'user_id', $user_id );
+		$request->set_param( 'page', 1 );
+		// Attacker asks for the victim host they do not control.
+		$request->set_param( 'authority', 'https://victim.example' );
+		// The verified key lives in Signature-Input and points at the attacker.
+		$request->set_header( 'Signature-Input', 'sig1=("@method" "@authority");created=1700000000;keyid="https://attacker.example/key"' );
+		// The Signature header carries the signature bytes plus an unrelated keyId.
+		$request->set_header( 'Signature', 'sig1=:AAAA:, keyId="https://victim.example/key"' );
+
+		$controller = new \Activitypub\Rest\Followers_Controller();
+		$response   = $controller->get_partial_followers( $request );
+
+		\delete_option( 'activitypub_actor_mode' );
+
+		$this->assertWPError( $response );
+		$this->assertSame( 'activitypub_authority_mismatch', $response->get_error_code() );
+		$this->assertSame( 403, $response->get_error_data()['status'] );
+	}
+
+	/**
+	 * A Signature-Input carrying more than one keyId is ambiguous: the handler
+	 * cannot know which label the verifier accepted, so the authority match
+	 * must fail closed rather than trust the first listed keyId.
+	 *
+	 * @covers ::get_partial_followers
+	 */
+	public function test_sync_rejects_ambiguous_multi_label_signature() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/followers/sync' );
+		$request->set_param( 'user_id', $user_id );
+		$request->set_param( 'page', 1 );
+		$request->set_param( 'authority', 'https://victim.example' );
+		// Two labels, two different keyIds: the choice is ambiguous to the handler.
+		$request->set_header( 'Signature-Input', 'sig1=("@method");created=1700000000;keyid="https://victim.example/key", sig2=("@method");created=1700000000;keyid="https://attacker.example/key"' );
+		$request->set_header( 'Signature', 'sig1=:AAAA:, sig2=:BBBB:' );
+
+		$controller = new \Activitypub\Rest\Followers_Controller();
+		$response   = $controller->get_partial_followers( $request );
+
+		\delete_option( 'activitypub_actor_mode' );
+
+		$this->assertWPError( $response );
+		$this->assertSame( 'activitypub_authority_mismatch', $response->get_error_code() );
+		$this->assertSame( 403, $response->get_error_data()['status'] );
+	}
+
+	/**
 	 * The defer-signature filter receives `$force_signature` as a third
 	 * argument so hooks can preserve mandatory signing on peer-only
 	 * endpoints like `/followers/sync` without touching unrelated requests.

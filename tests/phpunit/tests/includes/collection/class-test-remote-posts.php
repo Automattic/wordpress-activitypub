@@ -232,6 +232,62 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that update() refuses an Update from an actor that does not own the post.
+	 *
+	 * Regression: update() resolved the post by object.id and overwrote it without
+	 * confirming the activity actor authored it, letting a remote server overwrite
+	 * another host's cached post.
+	 *
+	 * @covers ::update
+	 */
+	public function test_update_rejects_foreign_actor() {
+		$activity = array(
+			'object' => array(
+				'id'           => 'https://example.com/objects/owned',
+				'type'         => 'Note',
+				'name'         => 'Original Title',
+				'content'      => '<p>Original content</p>',
+				'attributedTo' => 'https://example.com/users/testuser',
+			),
+		);
+
+		$original_post = Remote_Posts::add( $activity, 1 );
+		$this->assertInstanceOf( '\WP_Post', $original_post );
+
+		// A different actor attempts to overwrite the post.
+		$foreign_update = array(
+			'actor'  => 'https://attacker.example/users/evil',
+			'object' => array(
+				'id'      => 'https://example.com/objects/owned',
+				'type'    => 'Note',
+				'name'    => 'Hacked Title',
+				'content' => '<p>Hacked content</p>',
+			),
+		);
+
+		$result = Remote_Posts::update( $foreign_update, 1 );
+
+		$this->assertWPError( $result, 'A foreign actor must not be able to update the post.' );
+		$this->assertEquals( 'activitypub_update_forbidden', $result->get_error_code() );
+		$this->assertEquals( 'Original Title', \get_post( $original_post->ID )->post_title, 'Post must be unchanged.' );
+
+		// The post's own actor can still update it.
+		$owner_update = array(
+			'actor'  => 'https://example.com/users/testuser',
+			'object' => array(
+				'id'      => 'https://example.com/objects/owned',
+				'type'    => 'Note',
+				'name'    => 'Owner Updated Title',
+				'content' => '<p>Owner updated content</p>',
+			),
+		);
+
+		$updated_post = Remote_Posts::update( $owner_update, 1 );
+		$this->assertInstanceOf( '\WP_Post', $updated_post );
+		$this->assertEquals( 'Owner Updated Title', $updated_post->post_title, 'The post author should still be able to update.' );
+	}
+
+	/**
 	 * Test updating a non-existent object.
 	 *
 	 * @covers ::update

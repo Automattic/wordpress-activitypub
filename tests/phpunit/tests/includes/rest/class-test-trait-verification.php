@@ -467,42 +467,42 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	/**
 	 * Data provider for verify_key_id tests.
 	 *
-	 * @return array[] Test cases: [ signature_header, actor, expected_pass ].
+	 * @return array[] Test cases: [ verified_key_id, actor, expected_pass ].
 	 */
 	public function data_verify_key_id() {
 		return array(
 			'matching hosts'          => array(
-				'keyId="https://remote.example/users/alice#main-key",algorithm="rsa-sha256",signature="abc"',
+				'https://remote.example/users/alice#main-key',
 				'https://remote.example/users/alice',
 				true,
 			),
 			'mismatched hosts'        => array(
-				'keyId="https://evil.example/users/alice#main-key",algorithm="rsa-sha256",signature="abc"',
+				'https://evil.example/users/alice#main-key',
 				'https://remote.example/users/alice',
 				false,
 			),
 			'no actor in body'        => array(
-				'keyId="https://remote.example/users/alice#main-key",algorithm="rsa-sha256",signature="abc"',
+				'https://remote.example/users/alice#main-key',
 				null,
 				true,
 			),
-			'no signature header'     => array(
+			'no verified key id'      => array(
 				null,
 				'https://remote.example/users/alice',
 				true,
 			),
 			'actor as object with id' => array(
-				'keyId="https://remote.example/users/alice#main-key",algorithm="rsa-sha256",signature="abc"',
+				'https://remote.example/users/alice#main-key',
 				array( 'id' => 'https://remote.example/users/alice' ),
 				true,
 			),
 			'actor object mismatch'   => array(
-				'keyId="https://evil.example/users/alice#main-key",algorithm="rsa-sha256",signature="abc"',
+				'https://evil.example/users/alice#main-key',
 				array( 'id' => 'https://remote.example/users/alice' ),
 				false,
 			),
 			'case-insensitive hosts'  => array(
-				'keyId="https://Remote.Example/users/alice#main-key",algorithm="rsa-sha256",signature="abc"',
+				'https://Remote.Example/users/alice#main-key',
 				'https://remote.example/users/alice',
 				true,
 			),
@@ -510,21 +510,17 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that verify_key_id checks keyId host against actor host.
+	 * Test that verify_key_id checks the verified keyId's host against the actor host.
 	 *
 	 * @dataProvider data_verify_key_id
 	 * @covers ::verify_key_id
 	 *
-	 * @param string|null       $signature The Signature header value.
-	 * @param string|array|null $actor     The actor value in the JSON body.
+	 * @param string|null       $key_id      The keyId that verified the signature.
+	 * @param string|array|null $actor       The actor value in the JSON body.
 	 * @param bool              $should_pass Whether the check should pass.
 	 */
-	public function test_verify_key_id( $signature, $actor, $should_pass ) {
+	public function test_verify_key_id( $key_id, $actor, $should_pass ) {
 		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
-
-		if ( null !== $signature ) {
-			$request->set_header( 'Signature', $signature );
-		}
 
 		$body = array(
 			'type' => 'Like',
@@ -542,7 +538,7 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		 */
 		$method = new \ReflectionMethod( $this->instance, 'verify_key_id' );
 		$method->setAccessible( true );
-		$result = $method->invoke( $this->instance, $request );
+		$result = $method->invoke( $this->instance, $request, $key_id );
 
 		if ( $should_pass ) {
 			$this->assertTrue( $result );

@@ -531,6 +531,73 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 	}
 
 	/**
+	 * Test that a capable non-owner only sees another user's public outbox items.
+	 *
+	 * Regression: ownership was previously satisfied by the global `activitypub`
+	 * capability (held by every author), so any author could read every other user's
+	 * non-public outbox items. Ownership must be a strict identity check.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_items_hides_non_public_from_capable_non_owner() {
+		$owner = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_user_by( 'ID', $owner )->add_cap( 'activitypub' );
+
+		foreach ( array(
+			array( 'note/pub', \ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ),
+			array( 'note/priv', \ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ),
+		) as $item ) {
+			list( $slug, $visibility ) = $item;
+			self::factory()->post->create(
+				array(
+					'post_author'  => $owner,
+					'post_type'    => Outbox::POST_TYPE,
+					'post_status'  => 'pending',
+					'post_title'   => 'https://example.org/' . $slug,
+					'post_content' => \wp_json_encode(
+						array(
+							'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
+							'id'       => 'https://example.org/' . $slug,
+							'type'     => 'Create',
+							'actor'    => 'https://example.org/user/' . $owner,
+							'object'   => array(
+								'id'      => 'https://example.org/' . $slug,
+								'type'    => 'Note',
+								'content' => 'Test content',
+							),
+						)
+					),
+					'meta_input'   => array(
+						'_activitypub_activity_type'     => 'Create',
+						'_activitypub_activity_actor'    => 'user',
+						'activitypub_content_visibility' => $visibility,
+					),
+				)
+			);
+		}
+
+		// A different user that also holds the activitypub capability.
+		$other = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_user_by( 'ID', $other )->add_cap( 'activitypub' );
+		\wp_set_current_user( $other );
+		$this->assertTrue( \current_user_can( 'activitypub' ) );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $owner . '/outbox' );
+		$request->set_param( 'page', 1 );
+		$request->set_param( 'per_page', 10 );
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertCount(
+			1,
+			$data['orderedItems'],
+			'A capable non-owner must only see the public outbox item, not the private one.'
+		);
+		$this->assertSame( 'https://example.org/note/pub', $data['orderedItems'][0]['id'] );
+	}
+
+	/**
 	 * Test getting items with correct actor type filtering.
 	 *
 	 * @covers ::get_items
@@ -766,7 +833,7 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		);
 
 		// Test as non-privileged user.
-		wp_set_current_user( $viewer_id );
+		\wp_set_current_user( $viewer_id );
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
 		$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
 		$response = \rest_get_server()->dispatch( $request );
@@ -775,12 +842,27 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertCount( 10, $data['orderedItems'] );
 
-		// Test as privileged user.
+		/*
+		 * Test as an administrator who is not the actor owner. Site administration
+		 * does not grant access to another user's non-public outbox items: ownership
+		 * is a strict identity check, so the admin sees the same public subset (10).
+		 */
 		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
-		wp_set_current_user( $admin_id );
+		\wp_set_current_user( $admin_id );
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
 		$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
 		$request->set_param( 'per_page', 20 ); // Need per_page for pagination calculation.
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertCount( 10, $data['orderedItems'] );
+
+		// The actor owner still sees the full set, including the private item.
+		\wp_set_current_user( self::$user_id );
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_param( 'page', 1 );
+		$request->set_param( 'per_page', 20 );
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
@@ -1150,6 +1232,150 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		$this->assertStringContainsString( 'Berlin', $post->post_title );
 		// The summary should be used as content fallback.
 		$this->assertNotEmpty( $post->post_content, 'Post should have content from summary fallback.' );
+	}
+
+	/**
+	 * Test that posting an Undo of a Follow to the outbox returns 201.
+	 *
+	 * Regression test: previously responded with 500 "Failed to add activity to outbox"
+	 * because Following::unfollow returned a WP_Post of the remote actor, which made
+	 * the controller look up the wrong outbox entry.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_undo_follow_returns_201() {
+		$actor_url = 'https://example.com/users/undo-follow-target';
+
+		// Create a remote actor post so the meta query in Following::unfollow can match.
+		$remote_actor_post_id = self::factory()->post->create(
+			array(
+				'post_type'   => \Activitypub\Collection\Remote_Actors::POST_TYPE,
+				'post_status' => 'publish',
+				'guid'        => $actor_url,
+			)
+		);
+
+		// Create a Follow outbox entry as if the user previously followed this actor.
+		$follow_guid    = 'https://example.org/outbox/follow-' . \wp_generate_password( 8, false );
+		$follow_post_id = \wp_insert_post(
+			array(
+				'post_type'    => Outbox::POST_TYPE,
+				'post_title'   => '[Follow] Test',
+				'post_content' => \wp_json_encode(
+					array(
+						'type'   => 'Follow',
+						'object' => $actor_url,
+					)
+				),
+				'post_author'  => self::$user_id,
+				'post_status'  => 'publish',
+				'guid'         => $follow_guid,
+				'meta_input'   => array(
+					'_activitypub_activity_type'     => 'Follow',
+					'_activitypub_activity_actor'    => 'user',
+					'_activitypub_object_id'         => $actor_url,
+					'activitypub_content_visibility' => \ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+				),
+			)
+		);
+
+		$data = array(
+			'type'   => 'Undo',
+			'actor'  => \Activitypub\Collection\Actors::get_by_id( self::$user_id )->get_id(),
+			'object' => array(
+				'id'     => $follow_guid,
+				'type'   => 'Follow',
+				'actor'  => \Activitypub\Collection\Actors::get_by_id( self::$user_id )->get_id(),
+				'object' => $actor_url,
+			),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 201, $response->get_status(), 'Posting Undo→Follow should succeed.' );
+
+		$response_data = $response->get_data();
+		$this->assertSame( 'Undo', $response_data['type'] );
+
+		\wp_delete_post( $remote_actor_post_id, true );
+		\wp_delete_post( $follow_post_id, true );
+	}
+
+	/**
+	 * Test that posting an id-less Undo of a Follow to the outbox returns 201.
+	 *
+	 * Spec-valid Undo bodies may inline the Follow without an `id`. Mastodon and
+	 * other major implementations match these on the inner Follow's target.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_undo_follow_without_id_returns_201() {
+		$actor_url = 'https://example.com/users/undo-idless-target';
+
+		$remote_actor_post_id = self::factory()->post->create(
+			array(
+				'post_type'   => \Activitypub\Collection\Remote_Actors::POST_TYPE,
+				'post_status' => 'publish',
+				'guid'        => $actor_url,
+			)
+		);
+
+		// Create a Follow outbox entry so the unfollow path has something to undo.
+		$follow_post_id = \wp_insert_post(
+			array(
+				'post_type'    => Outbox::POST_TYPE,
+				'post_title'   => '[Follow] Test',
+				'post_content' => \wp_json_encode(
+					array(
+						'type'   => 'Follow',
+						'object' => $actor_url,
+					)
+				),
+				'post_author'  => self::$user_id,
+				'post_status'  => 'publish',
+				'guid'         => 'https://example.org/outbox/follow-' . \wp_generate_password( 8, false ),
+				'meta_input'   => array(
+					'_activitypub_activity_type'     => 'Follow',
+					'_activitypub_activity_actor'    => 'user',
+					'_activitypub_object_id'         => $actor_url,
+					'activitypub_content_visibility' => \ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+				),
+			)
+		);
+
+		$actor_id = \Activitypub\Collection\Actors::get_by_id( self::$user_id )->get_id();
+		$data     = array(
+			'type'   => 'Undo',
+			'actor'  => $actor_id,
+			// Inline Follow without an `id` — identified only by type + actor + object.
+			'object' => array(
+				'type'   => 'Follow',
+				'actor'  => $actor_id,
+				'object' => $actor_url,
+			),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 201, $response->get_status(), 'Posting id-less Undo→Follow should succeed.' );
+
+		$response_data = $response->get_data();
+		$this->assertSame( 'Undo', $response_data['type'] );
+
+		\wp_delete_post( $remote_actor_post_id, true );
+		\wp_delete_post( $follow_post_id, true );
 	}
 
 	/**

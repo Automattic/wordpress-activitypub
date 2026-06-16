@@ -41,6 +41,24 @@ class Test_Attachment extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Set up. The Attachment transformer only federates standalone attachments when
+	 * the attachment post type supports ActivityPub, so enable it for these tests.
+	 */
+	public function set_up() {
+		parent::set_up();
+		\add_post_type_support( 'attachment', 'activitypub' );
+	}
+
+	/**
+	 * Tear down.
+	 */
+	public function tear_down() {
+		\remove_post_type_support( 'attachment', 'activitypub' );
+		\delete_post_meta( self::$attachment_id, 'activitypub_content_visibility' );
+		parent::tear_down();
+	}
+
+	/**
 	 * Test get_type method.
 	 *
 	 * @covers ::get_type
@@ -110,6 +128,21 @@ class Test_Attachment extends WP_UnitTestCase {
 		$this->assertEquals( 'Note', $object->get_type() );
 		$this->assertEquals( home_url( '?p=' . self::$attachment_id ), $object->get_id() );
 		$this->assertNull( $object->get_name() );
+	}
+
+	/**
+	 * A standalone attachment that is itself made non-public must redact to a Tombstone,
+	 * honoring its own visibility — not just an attached parent's.
+	 *
+	 * @covers ::to_object
+	 */
+	public function test_to_object_redacts_non_public_attachment() {
+		\update_post_meta( self::$attachment_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+
+		$object = ( new Attachment( get_post( self::$attachment_id ) ) )->to_object();
+
+		$this->assertEquals( 'Tombstone', $object->get_type(), 'A non-public attachment must serialize as a Tombstone.' );
+		$this->assertEmpty( $object->get_content(), 'A non-public attachment must not expose its media content.' );
 	}
 
 	/**

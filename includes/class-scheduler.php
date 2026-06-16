@@ -39,6 +39,7 @@ class Scheduler {
 		'activitypub_outbox_purge'                 => 'daily',
 		'activitypub_inbox_purge'                  => 'daily',
 		'activitypub_ap_post_purge'                => 'daily',
+		'activitypub_tombstone_purge'              => 'daily',
 		'activitypub_sync_blocklist_subscriptions' => 'weekly',
 	);
 
@@ -52,15 +53,22 @@ class Scheduler {
 	/**
 	 * Get the pause between async batches (in seconds).
 	 *
+	 * @param string|false|null $hook Optional. The async batch hook being scheduled. Default current action.
+	 *
 	 * @return int The pause in seconds.
 	 */
-	public static function get_retry_delay() {
+	public static function get_retry_delay( $hook = null ) {
+		if ( null === $hook ) {
+			$hook = \current_action();
+		}
+
 		/**
 		 * Filters the pause between async batches (in seconds).
 		 *
-		 * @param int $async_batch_pause The pause in seconds. Default 30.
+		 * @param int               $async_batch_pause The pause in seconds. Default 30.
+		 * @param string|false|null $hook The async batch hook being scheduled.
 		 */
-		return apply_filters( 'activitypub_scheduler_async_batch_pause', 30 );
+		return apply_filters( 'activitypub_scheduler_async_batch_pause', 30, $hook );
 	}
 
 	/**
@@ -82,6 +90,7 @@ class Scheduler {
 		\add_action( 'activitypub_outbox_purge', array( self::class, 'purge_outbox' ) );
 		\add_action( 'activitypub_inbox_purge', array( self::class, 'purge_inbox' ) );
 		\add_action( 'activitypub_ap_post_purge', array( self::class, 'purge_ap_posts' ) );
+		\add_action( 'activitypub_tombstone_purge', array( self::class, 'purge_tombstones' ) );
 		\add_action( 'activitypub_inbox_create_item', array( self::class, 'process_inbox_activity' ) );
 		\add_action( 'activitypub_sync_blocklist_subscriptions', array( Blocklist_Subscriptions::class, 'sync_all' ) );
 
@@ -231,22 +240,15 @@ class Scheduler {
 	 * @param int $outbox_item_id The outbox item ID.
 	 */
 	public static function unschedule_events_for_item( $outbox_item_id ) {
-		$event_args = array(
-			$outbox_item_id,
-			Dispatcher::get_batch_size(),
-			\get_post_meta( $outbox_item_id, '_activitypub_outbox_offset', true ) ?: 0, // phpcs:ignore
-		);
-
 		\delete_post_meta( $outbox_item_id, '_activitypub_outbox_offset' );
 
 		$timestamp = \wp_next_scheduled( 'activitypub_process_outbox', array( $outbox_item_id ) );
 		\wp_unschedule_event( $timestamp, 'activitypub_process_outbox', array( $outbox_item_id ) );
 
-		$timestamp = \wp_next_scheduled( 'activitypub_send_activity', $event_args );
-		\wp_unschedule_event( $timestamp, 'activitypub_send_activity', $event_args );
+		self::unschedule_outbox_delivery_batches( $outbox_item_id );
 
 		// Invalidate any retries for this outbox item.
-		foreach ( _get_cron_array() as $timestamp => $cron ) {
+		foreach ( \_get_cron_array() as $timestamp => $cron ) {
 			if ( ! isset( $cron['activitypub_retry_activity'] ) ) {
 				continue;
 			}
@@ -369,7 +371,7 @@ class Scheduler {
 		foreach ( $ids as $id ) {
 			// Bail if there is a pending batch.
 			$offset = \get_post_meta( $id, '_activitypub_outbox_offset', true ) ?: 0; // phpcs:ignore
-			if ( \wp_next_scheduled( 'activitypub_send_activity', array( $id, Dispatcher::get_batch_size(), $offset ) ) ) {
+			if ( self::has_scheduled_outbox_delivery_batch( $id, $offset ) ) {
 				return;
 			}
 
@@ -402,6 +404,18 @@ class Scheduler {
 	 */
 	public static function purge_ap_posts() {
 		Remote_Posts::purge( \get_option( 'activitypub_ap_post_purge_days', ACTIVITYPUB_AP_POST_PURGE_DAYS ) );
+	}
+
+	/**
+	 * Daily cron handler that purges expired tombstones.
+	 *
+	 * Retention is non-urgent: large backlogs (e.g. after retention is first enforced)
+	 * drain across multiple daily runs.
+	 *
+	 * @since 8.3.0
+	 */
+	public static function purge_tombstones() {
+		\Activitypub\Tombstone::purge();
 	}
 
 	/**
@@ -528,8 +542,71 @@ class Scheduler {
 
 		if ( ! empty( $next ) ) {
 			// Schedule the next run, adding the result to the arguments.
-			\wp_schedule_single_event( \time() + self::get_retry_delay(), \current_action(), \array_values( $next ) );
+			\wp_schedule_single_event( \time() + self::get_retry_delay( \current_action() ), \current_action(), \array_values( $next ) );
 		}
+	}
+
+	/**
+	 * Whether an outbox item already has a scheduled delivery batch at an offset.
+	 *
+	 * @param int $outbox_item_id The outbox item ID.
+	 * @param int $offset         The delivery offset.
+	 *
+	 * @return bool True when a matching delivery batch is scheduled.
+	 */
+	private static function has_scheduled_outbox_delivery_batch( $outbox_item_id, $offset ) {
+		return ! empty( self::get_scheduled_outbox_delivery_batches( $outbox_item_id, $offset ) );
+	}
+
+	/**
+	 * Unschedule all pending delivery batches for an outbox item.
+	 *
+	 * @param int $outbox_item_id The outbox item ID.
+	 */
+	private static function unschedule_outbox_delivery_batches( $outbox_item_id ) {
+		foreach ( self::get_scheduled_outbox_delivery_batches( $outbox_item_id ) as $event ) {
+			\wp_unschedule_event( $event['timestamp'], 'activitypub_send_activity', $event['args'] );
+		}
+	}
+
+	/**
+	 * Get scheduled delivery batches for an outbox item.
+	 *
+	 * The batch size is deliberately ignored because scheduled events may
+	 * retain an older value after the admin changes the distribution mode.
+	 *
+	 * @param int      $outbox_item_id The outbox item ID.
+	 * @param int|null $offset         Optional. Restrict results to this delivery offset.
+	 *
+	 * @return array Scheduled events with timestamp and args.
+	 */
+	private static function get_scheduled_outbox_delivery_batches( $outbox_item_id, $offset = null ) {
+		$events = array();
+
+		foreach ( \_get_cron_array() as $timestamp => $cron ) {
+			if ( empty( $cron['activitypub_send_activity'] ) ) {
+				continue;
+			}
+
+			foreach ( $cron['activitypub_send_activity'] as $event ) {
+				$args = $event['args'] ?? array();
+
+				if ( ! isset( $args[0] ) || (int) $outbox_item_id !== (int) $args[0] ) {
+					continue;
+				}
+
+				if ( null !== $offset && (int) ( $args[2] ?? 0 ) !== (int) $offset ) {
+					continue;
+				}
+
+				$events[] = array(
+					'timestamp' => $timestamp,
+					'args'      => $args,
+				);
+			}
+		}
+
+		return $events;
 	}
 
 	/**

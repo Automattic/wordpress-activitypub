@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Silence the upcoming WordPress 7.0 deprecation warning about `data-wp-on-async` by switching the plugin's interactive blocks to the new `withSyncEvent()` helper.

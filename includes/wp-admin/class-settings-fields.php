@@ -122,6 +122,15 @@ class Settings_Fields {
 			array( 'label_for' => 'activitypub_default_quote_policy' )
 		);
 
+		\add_settings_field(
+			'activitypub_default_feature_policy',
+			\__( 'Default Starter Kit policy', 'activitypub' ),
+			array( self::class, 'render_default_feature_policy_field' ),
+			'activitypub_settings',
+			'activitypub_activities',
+			array( 'label_for' => 'activitypub_default_feature_policy' )
+		);
+
 		add_settings_field(
 			'activitypub_use_hashtags',
 			__( 'Hashtags', 'activitypub' ),
@@ -395,6 +404,23 @@ class Settings_Fields {
 		</select>
 		<p class="description">
 			<?php esc_html_e( 'Default setting for who can quote new posts. This can be overridden per post.', 'activitypub' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render default feature policy field.
+	 */
+	public static function render_default_feature_policy_field() {
+		$value = \get_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_ME );
+		?>
+		<select id="activitypub_default_feature_policy" name="activitypub_default_feature_policy" class="regular-text">
+			<option value="<?php echo \esc_attr( ACTIVITYPUB_INTERACTION_POLICY_ANYONE ); ?>" <?php \selected( $value, ACTIVITYPUB_INTERACTION_POLICY_ANYONE ); ?>><?php \esc_html_e( 'Anyone', 'activitypub' ); ?></option>
+			<option value="<?php echo \esc_attr( ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS ); ?>" <?php \selected( $value, ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS ); ?>><?php \esc_html_e( 'Followers only', 'activitypub' ); ?></option>
+			<option value="<?php echo \esc_attr( ACTIVITYPUB_INTERACTION_POLICY_ME ); ?>" <?php \selected( $value, ACTIVITYPUB_INTERACTION_POLICY_ME ); ?>><?php \esc_html_e( 'Just me', 'activitypub' ); ?></option>
+		</select>
+		<p class="description">
+			<?php \esc_html_e( 'Default setting for who can include this site\'s actors in a Starter Kit (also called a Starter Pack or Featured Collection).', 'activitypub' ); ?>
 		</p>
 		<?php
 	}

@@ -541,7 +541,6 @@ class Test_Delete extends \WP_UnitTestCase {
 		$this->assertTrue( Tombstone::exists_local( $object_url ) );
 
 		// Clean up.
-		\delete_option( 'activitypub_tombstone_urls' );
 	}
 
 	/**
@@ -566,7 +565,6 @@ class Test_Delete extends \WP_UnitTestCase {
 		$this->assertTrue( Tombstone::exists_local( $object_url ) );
 
 		// Clean up.
-		\delete_option( 'activitypub_tombstone_urls' );
 	}
 
 	/**
@@ -642,7 +640,6 @@ class Test_Delete extends \WP_UnitTestCase {
 		$this->assertTrue( Tombstone::exists_local( $object_url ) );
 
 		// Clean up.
-		\delete_option( 'activitypub_tombstone_urls' );
 	}
 
 	/**

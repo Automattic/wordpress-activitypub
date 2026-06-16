@@ -5,6 +5,84 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.0.1] - 2026-06-15
+### Added
+- Add FAQ guides that help solve follow requests stuck on "pending" and comments from the Fediverse not showing up. [#3404]
+
+### Fixed
+- Notify followers about your new preference when the Starter Kit policy setting changes, so other servers no longer act on an outdated one. [#3405]
+- Publish the Starter Kit consent policy only on your own blog and author profiles, no longer on system or third-party profiles. [#3406]
+- Starter Kit consent now also works for the blog profile, not just for individual authors. [#3407]
+
+## [9.0.0] - 2026-06-10
+### Security
+- Enforce the signing-key host check on incoming federated activities regardless of how the key identifier is formatted. [#3357]
+- Fix the real-time activity stream so it only returns the requesting user's own activities. [#3356]
+- Harden the Site Health connectivity check so it cannot be used to reach unsafe network addresses. [#3391]
+- Only share comment replies in the Fediverse when the post they belong to is itself federated, so replies on private or non-federated posts stay private. [#3374]
+- Prevent a remote server from discovering which of your followers belong to a third-party server it does not control. [#3390]
+- Prevent logged-in users from viewing another user's private outbox activities. [#3358]
+- Prevent remote servers from modifying or deleting federated profiles, posts, and interactions they do not own. [#3360]
+- Rate-limit the remote-follow lookup to prevent it from being abused to trigger outbound requests. [#3361]
+- Stop the OAuth token introspection endpoint from revealing another user's token details to logged-in users. [#3363]
+- Stop the quote-authorization stamp from exposing a post's other metadata. [#3364]
+
+### Added
+- Add a Distribution Mode setting to control how quickly posts are delivered to followers. [#3044]
+- Add an opt-in setting to consent to inclusion in Starter Kits (also called Starter Packs or Featured Collections). Off by default. Find it under Settings, ActivityPub, Activities. [#3277]
+- C2S clients can now request canonical SWICG ActivityPub API scope names such as `activitypub:read:all` and `activitypub:write:all`, and the OAuth discovery metadata advertises them. [#3328]
+- C2S token responses now include `activitypub_actor_id` so clients following the SWICG ActivityPub API Basic Profile can discover the authenticated actor. [#3328]
+- Generate a blurred color preview (blurhash) for images so other fediverse apps can show a placeholder while your photos load. [#3355]
+- Quote notification emails now include a link to the post that quoted you, so you can review and respond more quickly. [#3351]
+- Warn in the editor before making a post that's already shared on the Fediverse a draft, private, or password-protected, since followers' copies will be removed. [#2860]
+
+### Changed
+- Add the `blurhash` term to the outbound JSON-LD `@context` so attachments that include a `blurhash` property are strictly correct JSON-LD, matching Mastodon's own context shape. [#3327]
+- Federated posts moved to draft, pending, private, trash, or password-protected now send a Delete to followers (previously sent a placeholder "editing" Update or were silent). [#2860]
+- OAuth rate-limit responses now include a `Retry-After` header so clients know how long to wait before retrying. [#3328]
+- Updated a build dependency to a clean release now that a fixed version is available. [#3346]
+
+### Removed
+- Removed functions, methods, and the Follower class that were deprecated in versions 7.0 through 7.4. [#3387]
+
+### Fixed
+- Fix a fatal error when receiving a new follower while the Stream plugin is active. [#3372]
+- Fix a follow request being marked as accepted when the confirmation came from a different account than the one being followed. [#3377]
+- Fix the Fediverse settings appearing twice and visibility changes not saving in the block editor when the Classic Editor plugin is also active. [#3354]
+- Fix the introduction video failing to load on the Getting Started help screen. [#3350]
+- Follower synchronization with Mastodon no longer fails, signed requests with query strings now verify correctly. [#3369]
+- Harden the Blurhash encoder: skip decompression-bomb images before decoding, flatten transparency onto white so transparent logos no longer produce near-black placeholders, and defer the cron encode until attachment metadata is saved. [#3386]
+- Images and videos placed in a Media & Text block are now included when a post is shared to the Fediverse. [#3355]
+- Requests from other platforms to feature your posts are now handled correctly instead of being ignored. [#3385]
+- RSS and Atom feeds now show a simple `@username` mention in place of the reply block's full embed card, which only renders properly when the plugin's frontend CSS is loaded. [#3340]
+- Stop a deprecation notice from appearing in the error log when the NodeInfo plugin is also active. [#3347]
+
+## [8.3.0] - 2026-05-18
+### Security
+- Block a recently compromised JavaScript dependency from being installed during builds. [#3285]
+
+### Added
+- Allow site administrators to post from third-party apps on behalf of the site's blog account. [#3281]
+- Store content warnings from posts published through third-party ActivityPub apps so they federate correctly. [#3292]
+
+### Changed
+- Improve compatibility with newer Fediverse servers by recognizing the FEP-3b86 Object Intent link when resolving remote follow and other intent endpoints. [#3316]
+- Improve compatibility with newer Fediverse servers by recognizing the standardized FEP-3b86 follow link for remote follows. [#3307]
+- Refresh bundled scripts to pick up the latest WordPress component updates. [#3259]
+- Stagger background data processing after plugin updates to reduce server load on hosts running many sites. [#3275]
+
+### Fixed
+- Allow third-party apps connected to your site to look up Fediverse users by their handle (like @user@example.com). [#3289]
+- Fix ActivityPub blocks and widgets failing to load on cross-origin embeds (such as WordPress.com sites) due to a missing nonce header in the CORS allow-list. [#3308]
+- Fix a JavaScript console error that could appear on pages with the Follow, Reactions, Followers, Following, or Remote Reply blocks. [#3302]
+- Fix posting an Undo of a Follow through the outbox API failing with a server error or silently leaving the follow in place. [#3303]
+- Prevent a PHP warning during the monthly statistics backfill when an outbox item disappears between lookup steps. [#3284]
+- Prevent private outbox items authored by the site account from being visible to logged-out visitors at their permalink URLs. [#3281]
+- Prevent the site's follower and following lists from being visible to logged-out visitors when the social graph is set to private. [#3281]
+- Reduce database overhead on sites with many deleted posts by moving the tombstone registry to its own storage. [#3293]
+- Set a real author on posts created via the blog actor outbox so they no longer appear without a byline. [#3283]
+- Silence the upcoming WordPress 7.0 deprecation warning about `data-wp-on-async` by switching the plugin's interactive blocks to the new `withSyncEvent()` helper. [#3220]
+
 ## [8.2.1] - 2026-05-01
 ### Security
 - Hardened how the inbox processes large recipient lists in incoming activities. [#3094]
@@ -1856,6 +1934,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[9.0.1]: https://github.com/Automattic/wordpress-activitypub/compare/9.0.0...9.0.1
+[9.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/8.3.0...9.0.0
+[8.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/8.2.1...8.3.0
 [8.2.1]: https://github.com/Automattic/wordpress-activitypub/compare/8.2.0...8.2.1
 [8.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/8.1.1...8.2.0
 [8.1.1]: https://github.com/Automattic/wordpress-activitypub/compare/8.1.0...8.1.1

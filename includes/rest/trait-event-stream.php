@@ -480,6 +480,7 @@ trait Event_Stream {
 		);
 
 		if ( 'outbox' === $collection ) {
+			$args['author'] = $user_id > 0 ? $user_id : null;
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			$args['meta_query'] = array(
 				array(
@@ -536,6 +537,7 @@ trait Event_Stream {
 		);
 
 		if ( 'outbox' === $collection ) {
+			$args['author'] = $user_id > 0 ? $user_id : null;
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			$args['meta_query'] = array(
 				array(

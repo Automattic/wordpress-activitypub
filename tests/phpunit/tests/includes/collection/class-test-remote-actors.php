@@ -654,6 +654,76 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
+	 * Tests get_outdated.
+	 *
+	 * @covers ::get_outdated
+	 */
+	public function test_get_outdated() {
+		$uris = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
+		$ids  = array();
+
+		foreach ( $uris as $uri ) {
+			$ids[ $uri ] = Remote_Actors::upsert(
+				array(
+					'type'              => 'Person',
+					'id'                => $uri,
+					'inbox'             => $uri . '/inbox',
+					'preferredUsername' => 'user',
+				)
+			);
+		}
+
+		// Age one actor well beyond the default one-day window.
+		global $wpdb;
+		$modified = \gmdate( 'Y-m-d H:i:s', \time() - 9 * DAY_IN_SECONDS );
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"UPDATE $wpdb->posts SET post_modified = %s, post_modified_gmt = %s WHERE ID = %d",
+				array( $modified, $modified, $ids['https://example.com/author/jon'] )
+			)
+		);
+		\clean_post_cache( $ids['https://example.com/author/jon'] );
+
+		$outdated = Remote_Actors::get_outdated();
+		$this->assertCount( 1, $outdated );
+		$this->assertEquals( 'https://example.com/author/jon', $outdated[0]->guid );
+	}
+
+	/**
+	 * Tests get_faulty.
+	 *
+	 * @covers ::get_faulty
+	 */
+	public function test_get_faulty() {
+		$uris = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
+		$ids  = array();
+
+		foreach ( $uris as $uri ) {
+			$ids[ $uri ] = Remote_Actors::upsert(
+				array(
+					'type'              => 'Person',
+					'id'                => $uri,
+					'inbox'             => $uri . '/inbox',
+					'preferredUsername' => 'user',
+				)
+			);
+		}
+
+		$faulty_id = $ids['http://sally.example.org'];
+		for ( $i = 1; $i <= 15; $i++ ) {
+			Remote_Actors::add_error( $faulty_id, 'error ' . $i );
+		}
+
+		$faulty = Remote_Actors::get_faulty();
+		$this->assertCount( 1, $faulty );
+		$this->assertEquals( 'http://sally.example.org', $faulty[0]->guid );
+
+		// Clearing the errors removes it from the faulty set.
+		Remote_Actors::clear_errors( $faulty_id );
+		$this->assertCount( 0, Remote_Actors::get_faulty() );
+	}
+
+	/**
 	 * Test handling of different public key formats.
 	 *
 	 * @covers ::get_public_key

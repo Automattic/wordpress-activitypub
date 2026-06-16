@@ -3,9 +3,6 @@ import { withSyncEvent } from '../shared/with-sync-event';
 import { createModalStore } from '../shared/modal';
 import './style.scss';
 
-/** @member {Object} wp WordPress global. */
-const { apiFetch } = window.wp;
-
 createModalStore( 'activitypub/remote-reply' );
 
 /**
@@ -122,6 +119,7 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 		*submitRemoteProfile() {
 			const context = getContext();
 			const { namespace, i18n } = getConfig();
+			const { apiFetch } = window.wp;
 			const profileURL = context.remoteProfile.trim();
 
 			// Validate input.

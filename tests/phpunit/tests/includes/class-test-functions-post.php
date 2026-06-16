@@ -13,6 +13,68 @@ namespace Activitypub\Tests;
 class Test_Functions_Post extends \WP_UnitTestCase {
 
 	/**
+	 * Test is_post_federated function.
+	 *
+	 * A post counts as federated only when its federation state is "federated"
+	 * AND it currently still meets the public-queryability criteria (post type
+	 * enabled, public status, allowed visibility, no password).
+	 *
+	 * @covers \Activitypub\is_post_federated
+	 */
+	public function test_is_post_federated() {
+		// Federated and still publicly queryable.
+		$federated_post_id = self::factory()->post->create();
+		\update_post_meta( $federated_post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+		$this->assertTrue( \Activitypub\is_post_federated( $federated_post_id ), 'A federated, publicly queryable post is federated.' );
+
+		// Never federated (no status), even though it is publicly queryable.
+		$never_post_id = self::factory()->post->create();
+		$this->assertFalse( \Activitypub\is_post_federated( $never_post_id ), 'A post that was never federated is not federated.' );
+
+		// Federated but soft-deleted (status no longer "federated").
+		$deleted_post_id = self::factory()->post->create();
+		\update_post_meta( $deleted_post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_DELETED );
+		$this->assertFalse( \Activitypub\is_post_federated( $deleted_post_id ), 'A soft-deleted post is not federated.' );
+
+		// Federated status, but visibility later switched to local — must not count as federated.
+		$local_post_id = self::factory()->post->create();
+		\update_post_meta( $local_post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+		\update_post_meta( $local_post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+		$this->assertFalse( \Activitypub\is_post_federated( $local_post_id ), 'A federated post switched to local visibility is no longer federated.' );
+
+		// Federated status, but post moved to a private status — must not count as federated.
+		$private_post_id = self::factory()->post->create( array( 'post_status' => 'private' ) );
+		\update_post_meta( $private_post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+		$this->assertFalse( \Activitypub\is_post_federated( $private_post_id ), 'A federated post moved to private status is no longer federated.' );
+
+		// Federated status, but password-protected — must not count as federated.
+		$password_post_id = self::factory()->post->create( array( 'post_password' => 'secret' ) );
+		\update_post_meta( $password_post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+		$this->assertFalse( \Activitypub\is_post_federated( $password_post_id ), 'A federated but password-protected post is not federated.' );
+
+		// Federated status, but post type no longer supports ActivityPub.
+		\register_post_type( 'unsupported', array() );
+		$unsupported_post_id = self::factory()->post->create( array( 'post_type' => 'unsupported' ) );
+		\update_post_meta( $unsupported_post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+		$this->assertFalse( \Activitypub\is_post_federated( $unsupported_post_id ), 'A federated post on an unsupported post type is not federated.' );
+		\unregister_post_type( 'unsupported' );
+
+		// An integration can veto via the public-queryability filter.
+		$filtered_post_id = self::factory()->post->create();
+		\update_post_meta( $filtered_post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+		$this->assertTrue( \Activitypub\is_post_federated( $filtered_post_id ), 'Federated post is federated before filtering.' );
+		\add_filter( 'activitypub_is_post_publicly_queryable', '__return_false' );
+		try {
+			$this->assertFalse( \Activitypub\is_post_federated( $filtered_post_id ), 'An integration filtering the post non-queryable makes it not federated.' );
+		} finally {
+			\remove_filter( 'activitypub_is_post_publicly_queryable', '__return_false' );
+		}
+
+		// Invalid input.
+		$this->assertFalse( \Activitypub\is_post_federated( 0 ), 'An empty post is not federated.' );
+	}
+
+	/**
 	 * Test is_post_disabled function.
 	 *
 	 * @covers \Activitypub\is_post_disabled

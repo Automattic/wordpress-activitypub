@@ -80,7 +80,12 @@ class Post_Command extends \WP_CLI_Command {
 			\WP_CLI::error( 'Post not found.' );
 		}
 
-		add_to_outbox( $post, 'Update', $post->post_author );
+		$result = add_to_outbox( $post, 'Update', $post->post_author );
+
+		if ( \is_wp_error( $result ) ) {
+			\WP_CLI::error( $result->get_error_message() );
+		}
+
 		\WP_CLI::success( '"Update" activity is queued.' );
 	}
 }

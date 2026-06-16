@@ -7,6 +7,8 @@
 
 namespace Activitypub\Rest;
 
+use Activitypub\Signature;
+
 /**
  * ActivityPub Server REST-Class.
  *
@@ -19,11 +21,13 @@ class Server {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
+		\add_filter( 'rest_pre_dispatch', array( self::class, 'maybe_add_actor_from_signature' ), 10, 3 );
 		\add_filter( 'rest_request_before_callbacks', array( self::class, 'validate_requests' ), 9, 3 );
 		\add_filter( 'rest_request_parameter_order', array( self::class, 'request_parameter_order' ), 10, 2 );
 
 		\add_filter( 'rest_post_dispatch', array( self::class, 'filter_output' ), 10, 3 );
 		\add_filter( 'rest_post_dispatch', array( self::class, 'add_cors_headers' ), 10, 3 );
+		\add_filter( 'rest_allowed_cors_headers', array( self::class, 'allow_cors_headers' ), 10, 2 );
 	}
 
 	/**
@@ -101,6 +105,67 @@ class Server {
 			'URL',
 			'defaults',
 		);
+	}
+
+	/**
+	 * Backfill a missing `actor` on incoming FeatureRequest activities from the signature.
+	 *
+	 * Mastodon (FEP-7aa9) omits `actor` from the FeatureRequest body and conveys the
+	 * requesting actor only through the HTTP signature keyId. Our inbox routes require
+	 * `actor`, so such a request is rejected during parameter validation before it can
+	 * reach the inbox or its handler, which is why no Accept is ever sent.
+	 *
+	 * Derive the actor from the keyId and add it as a request parameter. The actor is
+	 * injected with `set_param()` rather than by rewriting the request body, so the raw
+	 * body stays byte-identical and the signed `Digest` still verifies. Inbox POSTs read
+	 * JSON parameters first (see `request_parameter_order()`), so the value is visible to
+	 * both parameter validation and the handler via `get_json_params()`.
+	 *
+	 * Scoped to FeatureRequest, the only activity type known to address this way. Runs on
+	 * `rest_pre_dispatch` because that is the only hook that fires before required-parameter
+	 * validation. Signature verification still runs afterwards and remains authoritative:
+	 * the injected actor is derived from the very keyId the signature is checked against, so
+	 * it cannot be used to impersonate another actor.
+	 *
+	 * @since 9.0.0
+	 *
+	 * @param mixed            $result  Response to replace the request with, or null to continue.
+	 * @param \WP_REST_Server  $server  Server instance.
+	 * @param \WP_REST_Request $request The request object.
+	 *
+	 * @return mixed The unmodified `$result`.
+	 */
+	public static function maybe_add_actor_from_signature( $result, $server, $request ) {
+		// Respect an earlier short-circuit.
+		if ( null !== $result ) {
+			return $result;
+		}
+
+		if ( \WP_REST_Server::CREATABLE !== $request->get_method() ) {
+			return $result;
+		}
+
+		$route = $request->get_route();
+		if (
+			! \str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE ) ||
+			! \str_ends_with( $route, '/inbox' )
+		) {
+			return $result;
+		}
+
+		$json = $request->get_json_params();
+		if ( ! \is_array( $json ) || 'FeatureRequest' !== ( $json['type'] ?? '' ) || ! empty( $json['actor'] ) ) {
+			return $result;
+		}
+
+		$key_id = Signature::get_key_id( $request );
+		if ( ! $key_id ) {
+			return $result;
+		}
+
+		$request->set_param( 'actor', \strip_fragment_from_url( $key_id ) );
+
+		return $result;
 	}
 
 	/**
@@ -184,12 +249,41 @@ class Server {
 		 * REST nonce check, and OAuth Bearer tokens travel in the
 		 * Authorization header — which is permitted via Allow-Headers and
 		 * does not require Allow-Credentials.
+		 *
+		 * Allow-Headers is contributed by core (which already lists `X-WP-Nonce`,
+		 * `Authorization`, `Content-Type`, `Content-Disposition`, and `Content-MD5`)
+		 * and extended for ActivityPub via the `rest_allowed_cors_headers` filter
+		 * in self::allow_cors_headers().
 		 */
 		$response->header( 'Access-Control-Allow-Origin', '*' );
 		$response->header( 'Access-Control-Allow-Methods', 'GET, POST, OPTIONS' );
-		$response->header( 'Access-Control-Allow-Headers', 'Accept, Content-Type, Authorization, Last-Event-ID' );
 
 		return $response;
+	}
+
+	/**
+	 * Extend the CORS Allow-Headers list for ActivityPub REST endpoints.
+	 *
+	 * Adds the headers ActivityPub clients need on top of WordPress core's
+	 * defaults: `Accept` for content negotiation and `Last-Event-ID` for
+	 * Server-Sent Events resume.
+	 *
+	 * @since 8.3.0
+	 *
+	 * @param string[]         $allow_headers Headers core currently permits in CORS requests.
+	 * @param \WP_REST_Request $request       The current REST request.
+	 *
+	 * @return string[] The (possibly extended) list of allowed headers.
+	 */
+	public static function allow_cors_headers( $allow_headers, $request ) {
+		$route     = $request->get_route();
+		$namespace = '/' . ACTIVITYPUB_REST_NAMESPACE;
+
+		if ( ! \str_starts_with( $route, $namespace ) || \str_starts_with( $route, $namespace . '/oauth/authorize' ) ) {
+			return $allow_headers;
+		}
+
+		return \array_values( \array_unique( \array_merge( (array) $allow_headers, array( 'Accept', 'Last-Event-ID' ) ) ) );
 	}
 
 	/**
@@ -203,6 +297,6 @@ class Server {
 	public static function send_cors_headers() {
 		\header( 'Access-Control-Allow-Origin: *' );
 		\header( 'Access-Control-Allow-Methods: GET, POST, OPTIONS' );
-		\header( 'Access-Control-Allow-Headers: Accept, Content-Type, Authorization, Last-Event-ID' );
+		\header( 'Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Disposition, Content-MD5, Content-Type, Accept, Last-Event-ID' );
 	}
 }

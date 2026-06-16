@@ -63,8 +63,10 @@ if [ -n "$JS_FILES" ]; then
 fi
 
 # Run Stylelint with auto-fix on changed CSS/SCSS files.
+# --allow-empty-input keeps the hook from failing when every staged file is
+# stylelint-ignored (e.g. only generated build/ assets are committed, as during a release).
 if [ -n "$CSS_FILES" ]; then
-  echo "$CSS_FILES" | xargs npx wp-scripts lint-style --fix > /dev/null 2>&1 || { echo "CSS linting failed"; exit 1; }
+  echo "$CSS_FILES" | xargs npx wp-scripts lint-style --fix --allow-empty-input > /dev/null 2>&1 || { echo "CSS linting failed"; exit 1; }
 fi
 
 # Run the WordPress formatter without showing all file output.

@@ -13,21 +13,6 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 
 /**
- * Returns a users WebFinger "resource".
- *
- * @deprecated 7.1.0 Use {@see \Activitypub\Webfinger::get_user_resource} instead.
- *
- * @param int $user_id The user ID.
- *
- * @return string The User resource.
- */
-function get_webfinger_resource( $user_id ) {
-	\_deprecated_function( __FUNCTION__, '7.1.0', 'Activitypub\Webfinger::get_user_resource' );
-
-	return Webfinger::get_user_resource( $user_id );
-}
-
-/**
  * Returns the followers of a given user.
  *
  * @param int $user_id The user ID.
@@ -147,7 +132,7 @@ function user_can_activitypub( $user_id ) {
  * helper centralizes the "can the current user post / read as the blog?"
  * decision: administrators by default, filterable for integrations.
  *
- * @since unreleased
+ * @since 8.3.0
  *
  * @return bool True if the current user can act as the blog actor.
  */
@@ -163,7 +148,7 @@ function user_can_act_as_blog() {
 	 * and view stats for the blog actor. Always inspect the current user inside
 	 * the callback (`current_user_can()`, role, allowlist) before returning `true`.
 	 *
-	 * @since unreleased
+	 * @since 8.3.0
 	 *
 	 * @param bool $can_act_as_blog Whether the current user can act as the blog actor.
 	 */

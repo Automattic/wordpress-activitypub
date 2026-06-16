@@ -283,7 +283,7 @@ class Remote_Actors {
 			return self::fetch_by_uri( $uri_or_acct );
 		}
 
-		if ( preg_match( '/^@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $uri_or_acct ) ) {
+		if ( Webfinger::is_acct( $uri_or_acct ) ) {
 			return self::fetch_by_acct( $uri_or_acct );
 		}
 

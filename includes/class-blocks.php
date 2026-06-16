@@ -674,6 +674,21 @@ class Blocks {
 			return null;
 		}
 
+		/*
+		 * In feed contexts (RSS, Atom, and anything else WordPress treats as a feed) the styled
+		 * embed card depends on plugin CSS that isn't loaded, so it degrades to an unreadable
+		 * wall of text. Substitute the same simplified mention link the federation path uses,
+		 * and if the remote lookup fails fall through to the plain `<a class="u-in-reply-to">`
+		 * link below so the feed item still surfaces *some* indication that it's a reply.
+		 */
+		if ( \is_feed() ) {
+			$mention = self::generate_reply_link( '', array( 'attrs' => $attrs ) );
+			if ( ! empty( $mention ) ) {
+				return $mention;
+			}
+			$attrs['embedPost'] = false;
+		}
+
 		$show_embed = isset( $attrs['embedPost'] ) && $attrs['embedPost'];
 
 		$wrapper_attrs = get_block_wrapper_attributes(
