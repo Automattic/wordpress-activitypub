@@ -7,5 +7,9 @@
   "description": "Manage ActivityPub settings, followers, and federation from the WordPress admin.",
   "icon": "smartphone",
   "textdomain": "activitypub",
-  "editorScript": "file:./index.js"
+  "viewScriptModule": [
+    "file:./loader.js",
+    "file:./routes/feed/content.js",
+    "file:./routes/feed/route.js"
+  ]
 }

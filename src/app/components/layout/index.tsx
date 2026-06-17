@@ -18,55 +18,37 @@
  * External dependencies
  */
 import type { KeyboardEvent, ReactNode } from 'react';
-import { ParsedLocation } from '@tanstack/react-router';
 
 /**
  * WordPress dependencies
  */
-import {
-	SnackbarList,
-	__unstableMotion as motion,
-	__unstableAnimatePresence as AnimatePresence,
-} from '@wordpress/components';
-import { useSelect, useDispatch } from '@wordpress/data';
-import { useState, useEffect, useMemo } from '@wordpress/element';
-import { store as noticesStore } from '@wordpress/notices';
+import { __unstableMotion as motion, __unstableAnimatePresence as AnimatePresence } from '@wordpress/components';
+import { useState, useEffect } from '@wordpress/element';
 import { useViewportMatch, useReducedMotion } from '@wordpress/compose';
 import { __ } from '@wordpress/i18n';
 
 /**
  * Internal dependencies
  */
-import { Outlet, useLocation } from '../../router';
-import Sidebar, { MenuItemConfig, menuItems } from '../sidebar';
+import { Outlet } from '../../router';
+import Sidebar from '../sidebar';
 import { SiteHubMobile } from '../site-hub';
 import './style.scss';
 
-export function Layout(): ReactNode {
+interface LayoutProps {
+	children?: ReactNode;
+}
+
+export function Layout( { children }: LayoutProps ): ReactNode {
 	const isMobileViewport: boolean = useViewportMatch( 'medium', '<' );
-	const location: ParsedLocation< any > = useLocation();
 	const disableMotion: boolean = useReducedMotion();
 	const [ isMobileSidebarOpen, setIsMobileSidebarOpen ] = useState( false );
+	const content: ReactNode = children ?? <Outlet />;
 
-	// Get the current page title from menu items based on route
-	const currentTitle: string = useMemo( (): string => {
-		const menuItem: MenuItemConfig = menuItems.find(
-			( item: MenuItemConfig ): boolean => item.path === location.pathname
-		);
-		return menuItem?.label || __( 'Social Web', 'activitypub' );
-	}, [ location.pathname ] );
-
-	// Auto-close sidebar on navigation or viewport change
+	// Auto-close sidebar on viewport change. Core boot owns route state.
 	useEffect( (): void => {
 		setIsMobileSidebarOpen( false );
-	}, [ location.pathname, isMobileViewport ] );
-
-	// Get notices for the snackbar
-	const notices = useSelect( ( select ) => {
-		const { getNotices } = select( noticesStore );
-		return getNotices().filter( ( notice ): boolean => notice.type === 'snackbar' );
-	}, [] ) as Array< { id: string; content: string } >;
-	const { removeNotice } = useDispatch( noticesStore );
+	}, [ isMobileViewport ] );
 
 	return (
 		<div className="app-layout">
@@ -121,19 +103,20 @@ export function Layout(): ReactNode {
 					<div className="sidebar-region">
 						<Sidebar />
 					</div>
-					<Outlet />
+					{ content }
 				</div>
 			) }
 
 			{ /* Mobile: Header + content */ }
 			{ isMobileViewport && (
 				<div className="app-content is-mobile">
-					<SiteHubMobile title={ currentTitle } onMenuClick={ (): void => setIsMobileSidebarOpen( true ) } />
-					<Outlet />
+					<SiteHubMobile
+						title={ __( 'Feed', 'activitypub' ) }
+						onMenuClick={ (): void => setIsMobileSidebarOpen( true ) }
+					/>
+					{ content }
 				</div>
 			) }
-
-			<SnackbarList notices={ notices } onRemove={ removeNotice } />
 		</div>
 	);
 }
