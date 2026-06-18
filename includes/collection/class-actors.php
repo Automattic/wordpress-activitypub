@@ -32,6 +32,20 @@ class Actors {
 	const BLOG_USER_ID = 0;
 
 	/**
+	 * The ID formerly used for the Application User.
+	 *
+	 * The Application is no longer a member of the Actors collection — it is
+	 * handled by the dedicated {@see \Activitypub\Application} class. This
+	 * constant is retained only for backward compatibility with code that still
+	 * references the historical `-1` identifier.
+	 *
+	 * @deprecated unreleased The Application is no longer an actor; use \Activitypub\Application.
+	 *
+	 * @var int
+	 */
+	const APPLICATION_USER_ID = -1;
+
+	/**
 	 * Get the Actor by ID.
 	 *
 	 * @param int $user_id The user ID.
