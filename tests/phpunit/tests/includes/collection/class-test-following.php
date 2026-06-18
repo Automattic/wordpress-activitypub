@@ -412,14 +412,6 @@ class Test_Following extends \WP_UnitTestCase {
 				'object' => 'https://example.com/actor/1',
 			),
 		);
-		$accept_5 = array(
-			'actor'  => 'https://example.com/actor/1',
-			'object' => array(
-				'id'     => $outbox_item_5->guid,
-				'object' => 'https://example.com/actor/1',
-			),
-		);
-
 		Accept::handle_accept( $accept_1, $user_ids[0] );
 		Accept::handle_accept( $accept_2, $user_ids[1] );
 		Accept::handle_accept( $accept_3, $user_ids[2] );
