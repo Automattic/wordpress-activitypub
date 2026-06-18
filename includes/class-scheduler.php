@@ -12,12 +12,13 @@ use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
-use Activitypub\Collection\Posts;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Collection\Remote_Posts;
 use Activitypub\Scheduler\Actor;
 use Activitypub\Scheduler\Collection_Sync;
 use Activitypub\Scheduler\Comment;
 use Activitypub\Scheduler\Post;
+use Activitypub\Scheduler\Statistics;
 
 /**
  * Scheduler class.
@@ -38,6 +39,7 @@ class Scheduler {
 		'activitypub_outbox_purge'                 => 'daily',
 		'activitypub_inbox_purge'                  => 'daily',
 		'activitypub_ap_post_purge'                => 'daily',
+		'activitypub_tombstone_purge'              => 'daily',
 		'activitypub_sync_blocklist_subscriptions' => 'weekly',
 	);
 
@@ -51,15 +53,22 @@ class Scheduler {
 	/**
 	 * Get the pause between async batches (in seconds).
 	 *
+	 * @param string|false|null $hook Optional. The async batch hook being scheduled. Default current action.
+	 *
 	 * @return int The pause in seconds.
 	 */
-	public static function get_retry_delay() {
+	public static function get_retry_delay( $hook = null ) {
+		if ( null === $hook ) {
+			$hook = \current_action();
+		}
+
 		/**
 		 * Filters the pause between async batches (in seconds).
 		 *
-		 * @param int $async_batch_pause The pause in seconds. Default 30.
+		 * @param int               $async_batch_pause The pause in seconds. Default 30.
+		 * @param string|false|null $hook The async batch hook being scheduled.
 		 */
-		return apply_filters( 'activitypub_scheduler_async_batch_pause', 30 );
+		return apply_filters( 'activitypub_scheduler_async_batch_pause', 30, $hook );
 	}
 
 	/**
@@ -67,6 +76,9 @@ class Scheduler {
 	 */
 	public static function init() {
 		self::register_schedulers();
+
+		// Custom cron schedules.
+		\add_filter( 'cron_schedules', array( self::class, 'add_cron_schedules' ) );
 
 		// Follower Cleanups.
 		\add_action( 'activitypub_update_remote_actors', array( self::class, 'update_remote_actors' ) );
@@ -78,6 +90,7 @@ class Scheduler {
 		\add_action( 'activitypub_outbox_purge', array( self::class, 'purge_outbox' ) );
 		\add_action( 'activitypub_inbox_purge', array( self::class, 'purge_inbox' ) );
 		\add_action( 'activitypub_ap_post_purge', array( self::class, 'purge_ap_posts' ) );
+		\add_action( 'activitypub_tombstone_purge', array( self::class, 'purge_tombstones' ) );
 		\add_action( 'activitypub_inbox_create_item', array( self::class, 'process_inbox_activity' ) );
 		\add_action( 'activitypub_sync_blocklist_subscriptions', array( Blocklist_Subscriptions::class, 'sync_all' ) );
 
@@ -97,6 +110,7 @@ class Scheduler {
 		Actor::init();
 		Collection_Sync::init();
 		Comment::init();
+		Statistics::init();
 
 		/**
 		 * Register additional schedulers.
@@ -104,6 +118,27 @@ class Scheduler {
 		 * @since 5.0.0
 		 */
 		\do_action( 'activitypub_register_schedulers' );
+	}
+
+	/**
+	 * Add custom cron schedules.
+	 *
+	 * @param array $schedules Existing cron schedules.
+	 *
+	 * @return array Modified cron schedules.
+	 */
+	public static function add_cron_schedules( $schedules ) {
+		$schedules['monthly'] = array(
+			'interval' => MONTH_IN_SECONDS,
+			'display'  => \__( 'Once Monthly', 'activitypub' ),
+		);
+
+		$schedules['yearly'] = array(
+			'interval' => YEAR_IN_SECONDS,
+			'display'  => \__( 'Once Yearly', 'activitypub' ),
+		);
+
+		return $schedules;
 	}
 
 	/**
@@ -137,6 +172,19 @@ class Scheduler {
 				\wp_schedule_event( time(), $recurrence, $hook );
 			}
 		}
+
+		// Schedule monthly stats collection for the 1st of each month.
+		if ( ! \wp_next_scheduled( 'activitypub_collect_monthly_stats' ) ) {
+			// Calculate next 1st of month at 2:00 AM.
+			$next_first = self::get_next_first_of_month();
+			\wp_schedule_event( $next_first, 'monthly', 'activitypub_collect_monthly_stats' );
+		}
+
+		// Schedule annual stats compilation for December 1st (wrapped notification).
+		if ( ! \wp_next_scheduled( 'activitypub_compile_annual_stats' ) ) {
+			$next_december = self::get_next_december_first();
+			\wp_schedule_event( $next_december, 'yearly', 'activitypub_compile_annual_stats' );
+		}
 	}
 
 	/**
@@ -148,6 +196,42 @@ class Scheduler {
 		foreach ( array_keys( self::SCHEDULES ) as $hook ) {
 			\wp_unschedule_hook( $hook );
 		}
+
+		// Statistics schedules.
+		\wp_unschedule_hook( 'activitypub_collect_monthly_stats' );
+		\wp_unschedule_hook( 'activitypub_compile_annual_stats' );
+	}
+
+	/**
+	 * Get the next 1st of month timestamp.
+	 *
+	 * @return int Unix timestamp of next 1st of month at 2:00 AM.
+	 */
+	private static function get_next_first_of_month() {
+		$now        = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
+		$next_month = \strtotime( 'first day of next month 02:00:00', $now );
+
+		return $next_month;
+	}
+
+	/**
+	 * Get the next December 1st timestamp for wrapped notification.
+	 *
+	 * @return int Unix timestamp of next December 1st at 3:00 AM.
+	 */
+	private static function get_next_december_first() {
+		$now  = \current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
+		$year = (int) \gmdate( 'Y', $now );
+
+		// Get December 1st 3:00 AM for this year.
+		$this_year_dec_first = \strtotime( sprintf( '%d-12-01 03:00:00', $year ) );
+
+		// If we're already past this year's December 1st, schedule for next year.
+		if ( $now >= $this_year_dec_first ) {
+			return \strtotime( sprintf( '%d-12-01 03:00:00', $year + 1 ) );
+		}
+
+		return $this_year_dec_first;
 	}
 
 	/**
@@ -156,22 +240,15 @@ class Scheduler {
 	 * @param int $outbox_item_id The outbox item ID.
 	 */
 	public static function unschedule_events_for_item( $outbox_item_id ) {
-		$event_args = array(
-			$outbox_item_id,
-			Dispatcher::get_batch_size(),
-			\get_post_meta( $outbox_item_id, '_activitypub_outbox_offset', true ) ?: 0, // phpcs:ignore
-		);
-
 		\delete_post_meta( $outbox_item_id, '_activitypub_outbox_offset' );
 
 		$timestamp = \wp_next_scheduled( 'activitypub_process_outbox', array( $outbox_item_id ) );
 		\wp_unschedule_event( $timestamp, 'activitypub_process_outbox', array( $outbox_item_id ) );
 
-		$timestamp = \wp_next_scheduled( 'activitypub_send_activity', $event_args );
-		\wp_unschedule_event( $timestamp, 'activitypub_send_activity', $event_args );
+		self::unschedule_outbox_delivery_batches( $outbox_item_id );
 
 		// Invalidate any retries for this outbox item.
-		foreach ( _get_cron_array() as $timestamp => $cron ) {
+		foreach ( \_get_cron_array() as $timestamp => $cron ) {
 			if ( ! isset( $cron['activitypub_retry_activity'] ) ) {
 				continue;
 			}
@@ -294,7 +371,7 @@ class Scheduler {
 		foreach ( $ids as $id ) {
 			// Bail if there is a pending batch.
 			$offset = \get_post_meta( $id, '_activitypub_outbox_offset', true ) ?: 0; // phpcs:ignore
-			if ( \wp_next_scheduled( 'activitypub_send_activity', array( $id, Dispatcher::get_batch_size(), $offset ) ) ) {
+			if ( self::has_scheduled_outbox_delivery_batch( $id, $offset ) ) {
 				return;
 			}
 
@@ -312,24 +389,33 @@ class Scheduler {
 	 * Purge outbox items based on a schedule.
 	 */
 	public static function purge_outbox() {
-		$days = (int) \get_option( 'activitypub_outbox_purge_days', 180 );
-		Outbox::purge( $days );
+		Outbox::purge( \get_option( 'activitypub_outbox_purge_days', ACTIVITYPUB_OUTBOX_PURGE_DAYS ) );
 	}
 
 	/**
 	 * Purge inbox items based on a schedule.
 	 */
 	public static function purge_inbox() {
-		$days = (int) \get_option( 'activitypub_inbox_purge_days', 180 );
-		Inbox::purge( $days );
+		Inbox::purge( \get_option( 'activitypub_inbox_purge_days', ACTIVITYPUB_INBOX_PURGE_DAYS ) );
 	}
 
 	/**
 	 * Purge remote posts based on a schedule.
 	 */
 	public static function purge_ap_posts() {
-		$days = (int) \get_option( 'activitypub_ap_post_purge_days', 30 );
-		Posts::purge( $days );
+		Remote_Posts::purge( \get_option( 'activitypub_ap_post_purge_days', ACTIVITYPUB_AP_POST_PURGE_DAYS ) );
+	}
+
+	/**
+	 * Daily cron handler that purges expired tombstones.
+	 *
+	 * Retention is non-urgent: large backlogs (e.g. after retention is first enforced)
+	 * drain across multiple daily runs.
+	 *
+	 * @since 8.3.0
+	 */
+	public static function purge_tombstones() {
+		\Activitypub\Tombstone::purge();
 	}
 
 	/**
@@ -456,8 +542,71 @@ class Scheduler {
 
 		if ( ! empty( $next ) ) {
 			// Schedule the next run, adding the result to the arguments.
-			\wp_schedule_single_event( \time() + self::get_retry_delay(), \current_action(), \array_values( $next ) );
+			\wp_schedule_single_event( \time() + self::get_retry_delay( \current_action() ), \current_action(), \array_values( $next ) );
 		}
+	}
+
+	/**
+	 * Whether an outbox item already has a scheduled delivery batch at an offset.
+	 *
+	 * @param int $outbox_item_id The outbox item ID.
+	 * @param int $offset         The delivery offset.
+	 *
+	 * @return bool True when a matching delivery batch is scheduled.
+	 */
+	private static function has_scheduled_outbox_delivery_batch( $outbox_item_id, $offset ) {
+		return ! empty( self::get_scheduled_outbox_delivery_batches( $outbox_item_id, $offset ) );
+	}
+
+	/**
+	 * Unschedule all pending delivery batches for an outbox item.
+	 *
+	 * @param int $outbox_item_id The outbox item ID.
+	 */
+	private static function unschedule_outbox_delivery_batches( $outbox_item_id ) {
+		foreach ( self::get_scheduled_outbox_delivery_batches( $outbox_item_id ) as $event ) {
+			\wp_unschedule_event( $event['timestamp'], 'activitypub_send_activity', $event['args'] );
+		}
+	}
+
+	/**
+	 * Get scheduled delivery batches for an outbox item.
+	 *
+	 * The batch size is deliberately ignored because scheduled events may
+	 * retain an older value after the admin changes the distribution mode.
+	 *
+	 * @param int      $outbox_item_id The outbox item ID.
+	 * @param int|null $offset         Optional. Restrict results to this delivery offset.
+	 *
+	 * @return array Scheduled events with timestamp and args.
+	 */
+	private static function get_scheduled_outbox_delivery_batches( $outbox_item_id, $offset = null ) {
+		$events = array();
+
+		foreach ( \_get_cron_array() as $timestamp => $cron ) {
+			if ( empty( $cron['activitypub_send_activity'] ) ) {
+				continue;
+			}
+
+			foreach ( $cron['activitypub_send_activity'] as $event ) {
+				$args = $event['args'] ?? array();
+
+				if ( ! isset( $args[0] ) || (int) $outbox_item_id !== (int) $args[0] ) {
+					continue;
+				}
+
+				if ( null !== $offset && (int) ( $args[2] ?? 0 ) !== (int) $offset ) {
+					continue;
+				}
+
+				$events[] = array(
+					'timestamp' => $timestamp,
+					'args'      => $args,
+				);
+			}
+		}
+
+		return $events;
 	}
 
 	/**

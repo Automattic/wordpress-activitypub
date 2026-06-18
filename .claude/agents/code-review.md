@@ -52,9 +52,14 @@ Apply the **code-style** skill standards when reviewing. In addition, check for:
 - Functions/methods have a single responsibility
 
 ### Compatibility
-- PHP 7.2+ compatible syntax
+- PHP 7.4+ compatible syntax
 - No breaking changes to public APIs without deprecation path
 - Integration points with third-party plugins preserved
+
+### Scheduling & Side Effects
+- New or modified WP-Cron callbacks (anything registered via `wp_schedule_event` / `wp_schedule_single_event`) that perform **user-visible side effects** — emails, push notifications, outbound HTTP calls, federated activities — must guard against re-entry. WP-Cron can fire the same callback more than once for the same logical period (concurrent loopback workers, plugin reactivate triggering `register_schedules()`, manual `wp cron event run`, traffic spikes).
+- Look for an **atomic claim before the side effect**: typically `add_option( $key, $value, '', false )` (or another single-shot insert) keyed on whatever uniquely identifies the period/recipient/activity. Bail early if the claim fails. Fixes after the fact (checking-then-sending, time-window checks, transient-based locks) are not race-safe.
+- For senders with a `$force` parameter: the marker must still be written/refreshed on forced runs, otherwise a manual or CLI-driven send leaves the door open for the next scheduled run to deliver the same message again.
 
 ### Tests
 - Apply the **test** skill patterns to evaluate test coverage for new/changed code.

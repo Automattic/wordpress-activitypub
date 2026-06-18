@@ -22,6 +22,7 @@ class Settings {
 		\add_action( 'admin_menu', array( self::class, 'add_settings_page' ) );
 
 		\add_action( 'load-settings_page_activitypub', array( self::class, 'handle_welcome_query_arg' ) );
+		\add_action( 'load-settings_page_activitypub', array( self::class, 'handle_switch_object_type' ) );
 	}
 
 	/**
@@ -286,6 +287,29 @@ class Settings {
 			\wp_safe_redirect( \admin_url( 'options-general.php?page=activitypub&tab=settings' ) );
 			exit;
 		}
+	}
+
+	/**
+	 * Handle switching from legacy template mode to automatic object type.
+	 *
+	 * @since 8.0.0
+	 */
+	public static function handle_switch_object_type() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( ! isset( $_GET['activitypub_update_object_type'] ) ) {
+			return;
+		}
+
+		\check_admin_referer( 'activitypub_switch_object_type' );
+
+		if ( ! \current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		\update_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
+
+		\wp_safe_redirect( \admin_url( 'options-general.php?page=activitypub&tab=settings' ) );
+		exit;
 	}
 
 	/**

@@ -9,8 +9,6 @@ namespace Activitypub\Rest;
 
 use Activitypub\Signature;
 
-use function Activitypub\use_authorized_fetch;
-
 /**
  * ActivityPub Server REST-Class.
  *
@@ -23,63 +21,13 @@ class Server {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
+		\add_filter( 'rest_pre_dispatch', array( self::class, 'maybe_add_actor_from_signature' ), 10, 3 );
 		\add_filter( 'rest_request_before_callbacks', array( self::class, 'validate_requests' ), 9, 3 );
 		\add_filter( 'rest_request_parameter_order', array( self::class, 'request_parameter_order' ), 10, 2 );
 
 		\add_filter( 'rest_post_dispatch', array( self::class, 'filter_output' ), 10, 3 );
-	}
-
-	/**
-	 * Callback function to authorize an api request.
-	 *
-	 * The function is meant to be used as part of permission callbacks for rest api endpoints.
-	 *
-	 * It verifies the signature of POST, PUT, PATCH, and DELETE requests, as well as GET requests in secure mode.
-	 * You can use the filter 'activitypub_defer_signature_verification' to defer the signature verification.
-	 * HEAD requests are always bypassed.
-	 *
-	 * @see https://www.w3.org/wiki/SocialCG/ActivityPub/Primer/Authentication_Authorization#Authorized_fetch
-	 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
-	 *
-	 * @param \WP_REST_Request $request The request object.
-	 *
-	 * @return bool|\WP_Error True if the request is authorized, WP_Error if not.
-	 */
-	public static function verify_signature( $request ) {
-		if ( 'HEAD' === $request->get_method() ) {
-			return true;
-		}
-
-		/**
-		 * Filter to defer signature verification.
-		 *
-		 * Skip signature verification for debugging purposes or to reduce load for
-		 * certain Activity-Types, like "Delete".
-		 *
-		 * @param bool             $defer   Whether to defer signature verification.
-		 * @param \WP_REST_Request $request The request used to generate the response.
-		 *
-		 * @return bool Whether to defer signature verification.
-		 */
-		$defer = \apply_filters( 'activitypub_defer_signature_verification', false, $request );
-
-		if ( $defer ) {
-			return true;
-		}
-
-		// POST-Requests always have to be signed, GET-Requests only require a signature in secure mode.
-		if ( 'GET' !== $request->get_method() || use_authorized_fetch() ) {
-			$verified_request = Signature::verify_http_signature( $request );
-			if ( \is_wp_error( $verified_request ) ) {
-				return new \WP_Error(
-					'activitypub_signature_verification',
-					$verified_request->get_error_message(),
-					array( 'status' => 401 )
-				);
-			}
-		}
-
-		return true;
+		\add_filter( 'rest_post_dispatch', array( self::class, 'add_cors_headers' ), 10, 3 );
+		\add_filter( 'rest_allowed_cors_headers', array( self::class, 'allow_cors_headers' ), 10, 2 );
 	}
 
 	/**
@@ -160,6 +108,67 @@ class Server {
 	}
 
 	/**
+	 * Backfill a missing `actor` on incoming FeatureRequest activities from the signature.
+	 *
+	 * Mastodon (FEP-7aa9) omits `actor` from the FeatureRequest body and conveys the
+	 * requesting actor only through the HTTP signature keyId. Our inbox routes require
+	 * `actor`, so such a request is rejected during parameter validation before it can
+	 * reach the inbox or its handler, which is why no Accept is ever sent.
+	 *
+	 * Derive the actor from the keyId and add it as a request parameter. The actor is
+	 * injected with `set_param()` rather than by rewriting the request body, so the raw
+	 * body stays byte-identical and the signed `Digest` still verifies. Inbox POSTs read
+	 * JSON parameters first (see `request_parameter_order()`), so the value is visible to
+	 * both parameter validation and the handler via `get_json_params()`.
+	 *
+	 * Scoped to FeatureRequest, the only activity type known to address this way. Runs on
+	 * `rest_pre_dispatch` because that is the only hook that fires before required-parameter
+	 * validation. Signature verification still runs afterwards and remains authoritative:
+	 * the injected actor is derived from the very keyId the signature is checked against, so
+	 * it cannot be used to impersonate another actor.
+	 *
+	 * @since 9.0.0
+	 *
+	 * @param mixed            $result  Response to replace the request with, or null to continue.
+	 * @param \WP_REST_Server  $server  Server instance.
+	 * @param \WP_REST_Request $request The request object.
+	 *
+	 * @return mixed The unmodified `$result`.
+	 */
+	public static function maybe_add_actor_from_signature( $result, $server, $request ) {
+		// Respect an earlier short-circuit.
+		if ( null !== $result ) {
+			return $result;
+		}
+
+		if ( \WP_REST_Server::CREATABLE !== $request->get_method() ) {
+			return $result;
+		}
+
+		$route = $request->get_route();
+		if (
+			! \str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE ) ||
+			! \str_ends_with( $route, '/inbox' )
+		) {
+			return $result;
+		}
+
+		$json = $request->get_json_params();
+		if ( ! \is_array( $json ) || 'FeatureRequest' !== ( $json['type'] ?? '' ) || ! empty( $json['actor'] ) ) {
+			return $result;
+		}
+
+		$key_id = Signature::get_key_id( $request );
+		if ( ! $key_id ) {
+			return $result;
+		}
+
+		$request->set_param( 'actor', \strip_fragment_from_url( $key_id ) );
+
+		return $result;
+	}
+
+	/**
 	 * Filters the REST API response to properly handle the ActivityPub error formatting.
 	 *
 	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/c180/fep-c180.md
@@ -175,6 +184,11 @@ class Server {
 
 		// Check if it is an activitypub request and exclude webfinger and nodeinfo endpoints.
 		if ( ! \str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE ) ) {
+			return $response;
+		}
+
+		// Exclude OAuth endpoints - they have their own error format per RFC 6749.
+		if ( \str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth' ) ) {
 			return $response;
 		}
 
@@ -208,5 +222,81 @@ class Server {
 		$response->set_data( $error );
 
 		return $response;
+	}
+
+	/**
+	 * Add CORS headers to ActivityPub REST responses.
+	 *
+	 * @param \WP_REST_Response $response The REST response.
+	 * @param \WP_REST_Server   $server   The REST server instance.
+	 * @param \WP_REST_Request  $request  The request object.
+	 *
+	 * @return \WP_REST_Response The modified response.
+	 */
+	public static function add_cors_headers( $response, $server, $request ) {
+		$route     = $request->get_route();
+		$namespace = '/' . ACTIVITYPUB_REST_NAMESPACE;
+
+		// Only add CORS to ActivityPub endpoints, except the interactive OAuth authorize endpoint.
+		if ( ! \str_starts_with( $route, $namespace ) || \str_starts_with( $route, $namespace . '/oauth/authorize' ) ) {
+			return $response;
+		}
+
+		/*
+		 * ActivityPub data is meant to be publicly readable by federation peers
+		 * and browser-side clients. We do not enable credentialed cross-origin
+		 * access: cookie auth would still be rejected by WordPress core's
+		 * REST nonce check, and OAuth Bearer tokens travel in the
+		 * Authorization header — which is permitted via Allow-Headers and
+		 * does not require Allow-Credentials.
+		 *
+		 * Allow-Headers is contributed by core (which already lists `X-WP-Nonce`,
+		 * `Authorization`, `Content-Type`, `Content-Disposition`, and `Content-MD5`)
+		 * and extended for ActivityPub via the `rest_allowed_cors_headers` filter
+		 * in self::allow_cors_headers().
+		 */
+		$response->header( 'Access-Control-Allow-Origin', '*' );
+		$response->header( 'Access-Control-Allow-Methods', 'GET, POST, OPTIONS' );
+
+		return $response;
+	}
+
+	/**
+	 * Extend the CORS Allow-Headers list for ActivityPub REST endpoints.
+	 *
+	 * Adds the headers ActivityPub clients need on top of WordPress core's
+	 * defaults: `Accept` for content negotiation and `Last-Event-ID` for
+	 * Server-Sent Events resume.
+	 *
+	 * @since 8.3.0
+	 *
+	 * @param string[]         $allow_headers Headers core currently permits in CORS requests.
+	 * @param \WP_REST_Request $request       The current REST request.
+	 *
+	 * @return string[] The (possibly extended) list of allowed headers.
+	 */
+	public static function allow_cors_headers( $allow_headers, $request ) {
+		$route     = $request->get_route();
+		$namespace = '/' . ACTIVITYPUB_REST_NAMESPACE;
+
+		if ( ! \str_starts_with( $route, $namespace ) || \str_starts_with( $route, $namespace . '/oauth/authorize' ) ) {
+			return $allow_headers;
+		}
+
+		return \array_values( \array_unique( \array_merge( (array) $allow_headers, array( 'Accept', 'Last-Event-ID' ) ) ) );
+	}
+
+	/**
+	 * Send CORS headers directly via header().
+	 *
+	 * Use this for endpoints that bypass the REST response flow
+	 * (e.g. SSE streams that call exit() instead of returning a WP_REST_Response).
+	 *
+	 * @since 8.1.0
+	 */
+	public static function send_cors_headers() {
+		\header( 'Access-Control-Allow-Origin: *' );
+		\header( 'Access-Control-Allow-Methods: GET, POST, OPTIONS' );
+		\header( 'Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Disposition, Content-MD5, Content-Type, Accept, Last-Event-ID' );
 	}
 }

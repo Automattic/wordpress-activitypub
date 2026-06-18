@@ -151,7 +151,7 @@ class Test_Accept extends \WP_UnitTestCase {
 		// Prepare accept array as expected by handle_accept, using the real outbox guid.
 		$accept = array(
 			'type'   => 'Accept',
-			'actor'  => 'https://example.net/actor/123',
+			'actor'  => $object_guid,
 			'object' => array(
 				'id'     => $outbox_guid,
 				'actor'  => 'https://example.com/actor/123',
@@ -172,5 +172,104 @@ class Test_Accept extends \WP_UnitTestCase {
 		// Assert: user_id is no longer in _activitypub_followed_by_pending.
 		$pending = \get_post_meta( $post_id, Following::PENDING_META_KEY, false );
 		$this->assertNotContains( (string) $user_id, $pending );
+	}
+
+	/**
+	 * An Accept whose sender is not the followed actor must be ignored.
+	 *
+	 * Guards against a same-instance actor accepting a Follow that targeted a
+	 * different actor by referencing that pending Follow's outbox GUID.
+	 */
+	public function test_handle_accept_rejects_actor_object_mismatch() {
+		$user_id     = self::$user_id;
+		$object_guid = 'https://example.com/actor/123';
+		$outbox_guid = 'https://example.com/outbox/123';
+
+		$outbox_post_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'publish',
+				'guid'        => $outbox_guid,
+			)
+		);
+		\add_post_meta( $outbox_post_id, '_activitypub_activity_type', 'Follow' );
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'post_status' => 'publish',
+				'guid'        => $object_guid,
+			)
+		);
+		\add_post_meta( $post_id, Following::PENDING_META_KEY, (string) $user_id );
+
+		// The Accept is sent by a different actor than the one that was followed.
+		$accept = array(
+			'type'   => 'Accept',
+			'actor'  => 'https://example.com/actor/999',
+			'object' => array(
+				'id'     => $outbox_guid,
+				'actor'  => 'https://example.com/actor/123',
+				'type'   => 'Follow',
+				'object' => $object_guid,
+			),
+		);
+
+		Accept::handle_accept( $accept, $user_id );
+
+		\clean_post_cache( $post_id );
+
+		// The relationship must stay pending and must not be marked as followed.
+		$this->assertNotContains( (string) $user_id, \get_post_meta( $post_id, Following::FOLLOWING_META_KEY, false ) );
+		$this->assertContains( (string) $user_id, \get_post_meta( $post_id, Following::PENDING_META_KEY, false ) );
+	}
+
+	/**
+	 * A non-Follow Accept (e.g. a quote request) is left untouched by the Follow logic.
+	 *
+	 * The sender/followed-actor guard is scoped to the Follow branch, so it must not
+	 * affect other Accept types.
+	 */
+	public function test_handle_accept_ignores_non_follow_activity() {
+		$user_id     = self::$user_id;
+		$object_guid = 'https://example.com/actor/456';
+		$outbox_guid = 'https://example.com/outbox/456';
+
+		// The outbox item is a QuoteRequest, not a Follow.
+		$outbox_post_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'publish',
+				'guid'        => $outbox_guid,
+			)
+		);
+		\add_post_meta( $outbox_post_id, '_activitypub_activity_type', 'QuoteRequest' );
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'post_status' => 'publish',
+				'guid'        => $object_guid,
+			)
+		);
+		\add_post_meta( $post_id, Following::PENDING_META_KEY, (string) $user_id );
+
+		$accept = array(
+			'type'   => 'Accept',
+			'actor'  => $object_guid,
+			'object' => array(
+				'id'     => $outbox_guid,
+				'type'   => 'QuoteRequest',
+				'object' => $object_guid,
+			),
+		);
+
+		Accept::handle_accept( $accept, $user_id );
+
+		\clean_post_cache( $post_id );
+
+		// A non-Follow Accept must not change the following state.
+		$this->assertEmpty( \get_post_meta( $post_id, Following::FOLLOWING_META_KEY, false ) );
+		$this->assertContains( (string) $user_id, \get_post_meta( $post_id, Following::PENDING_META_KEY, false ) );
 	}
 }

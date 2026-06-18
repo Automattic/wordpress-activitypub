@@ -127,7 +127,7 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Invoke the method.
 		try {
-			$retries = $send_to_inboxes->invoke( null, $inboxes, $outbox_item ); // null for static methods.
+			$retries = $send_to_inboxes->invoke( null, $inboxes, $outbox_item->ID ); // null for static methods.
 		} catch ( \Exception $e ) {
 			$this->fail( 'Invoke failed: ' . $e->getMessage() );
 		}
@@ -203,12 +203,10 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		$wp_actions = null;
 
-		$private_activity = Outbox::get_activity( $outbox_item->ID );
-		$private_activity->set_to( null );
-		$private_activity->set_cc( null );
-
-		// Clone object.
-		$private_activity = clone $private_activity;
+		$private_activity = new Activity();
+		$private_activity->set_type( 'Create' );
+		$private_activity->set_to( array() );
+		$private_activity->set_cc( array() );
 
 		try {
 			$send_to_additional_inboxes->invoke( null, $private_activity, Actors::get_by_id( self::$user_id ), $outbox_item );
@@ -259,33 +257,155 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Data provider for `test_should_send_to_followers_with_addressing`.
+	 *
+	 * @return array[]
+	 */
+	public function data_should_send_to_followers_addressing() {
+		return array(
+			'to addresses followers'  => array( 'set_to' ),
+			'cc addresses followers'  => array( 'set_cc' ),
+			'bto addresses followers' => array( 'set_bto' ),
+			'bcc addresses followers' => array( 'set_bcc' ),
+		);
+	}
+
+	/**
+	 * Test that `to`, `cc`, `bto`, and `bcc` all count when addressing followers.
+	 *
+	 * @covers ::should_send_to_followers
+	 *
+	 * @dataProvider data_should_send_to_followers_addressing
+	 *
+	 * @param string $setter The audience setter method to populate with the followers URL.
+	 */
+	public function test_should_send_to_followers_with_addressing( $setter ) {
+		Followers::add( self::$user_id, 'https://example.org/users/username' );
+
+		$actor = Actors::get_by_id( self::$user_id );
+
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_actor( $actor->get_id() );
+		$activity->set_to( array() );
+		$activity->set_cc( array() );
+		$activity->{$setter}( array( $actor->get_followers() ) );
+
+		$outbox_item = (object) array(
+			'ID'          => 0,
+			'post_author' => self::$user_id,
+		);
+
+		$should_send = new \ReflectionMethod( Dispatcher::class, 'should_send_to_followers' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$should_send->setAccessible( true );
+		}
+
+		try {
+			$result = $should_send->invoke( null, $activity, $actor, $outbox_item );
+		} catch ( \Exception $e ) {
+			$this->fail( 'Invoke failed: ' . $e->getMessage() );
+		}
+
+		$this->assertTrue( $result, 'Activity addressed via ' . $setter . ' should be sent to followers.' );
+	}
+
+	/**
+	 * Test that an activity without any follower addressing is not sent to followers.
+	 *
+	 * @covers ::should_send_to_followers
+	 */
+	public function test_should_not_send_to_followers_when_no_addressing_matches() {
+		Followers::add( self::$user_id, 'https://example.org/users/username' );
+
+		$actor = Actors::get_by_id( self::$user_id );
+
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_actor( $actor->get_id() );
+		$activity->set_to( array( 'https://example.com/users/other' ) );
+		$activity->set_cc( array() );
+
+		$outbox_item = (object) array(
+			'ID'          => 0,
+			'post_author' => self::$user_id,
+		);
+
+		$should_send = new \ReflectionMethod( Dispatcher::class, 'should_send_to_followers' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$should_send->setAccessible( true );
+		}
+
+		try {
+			$result = $should_send->invoke( null, $activity, $actor, $outbox_item );
+		} catch ( \Exception $e ) {
+			$this->fail( 'Invoke failed: ' . $e->getMessage() );
+		}
+
+		$this->assertFalse( $result, 'Activity with no matching addressing should not be sent to followers.' );
+	}
+
+	/**
+	 * A public Delete fans out to followers; a private Delete does not.
+	 *
+	 * A soft-deleted post's Tombstone is addressed to the public collection, so
+	 * it broadcasts (get_inboxes_for_activity() then expands it to every known
+	 * remote inbox). A Delete that is only addressed to a mentioned actor — a
+	 * private/direct activity torn down via Outbox::undo() — must NOT enter the
+	 * follower fan-out, or it would leak the object URI to servers that never
+	 * received the original.
+	 *
+	 * @covers ::should_send_to_followers
+	 */
+	public function test_delete_fan_out_respects_audience() {
+		Followers::add( self::$user_id, 'https://example.org/users/username' );
+
+		$actor       = Actors::get_by_id( self::$user_id );
+		$outbox_item = (object) array(
+			'ID'          => 0,
+			'post_author' => self::$user_id,
+		);
+
+		$should_send = new \ReflectionMethod( Dispatcher::class, 'should_send_to_followers' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$should_send->setAccessible( true );
+		}
+
+		// Public Delete (post Tombstone): broadcasts.
+		$public_delete = new Activity();
+		$public_delete->set_type( 'Delete' );
+		$public_delete->set_actor( $actor->get_id() );
+		$public_delete->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
+		$public_delete->set_cc( array() );
+
+		// Private Delete (e.g. a direct activity undone): addressed only to a mention.
+		$private_delete = new Activity();
+		$private_delete->set_type( 'Delete' );
+		$private_delete->set_actor( $actor->get_id() );
+		$private_delete->set_to( array( 'https://remote.example/users/bob' ) );
+		$private_delete->set_cc( array() );
+
+		try {
+			$public_result  = $should_send->invoke( null, $public_delete, $actor, $outbox_item );
+			$private_result = $should_send->invoke( null, $private_delete, $actor, $outbox_item );
+		} catch ( \Exception $e ) {
+			$this->fail( 'Invoke failed: ' . $e->getMessage() );
+		}
+
+		$this->assertTrue( $public_result, 'A public Delete must fan out to remote inboxes.' );
+		$this->assertFalse( $private_result, 'A private/direct Delete must not be broadcast to all inboxes.' );
+	}
+
+	/**
 	 * Returns a mocked Activity object.
 	 *
 	 * @return Activity
 	 */
 	private function get_activity_mock() {
-		$activity = $this->createMock( Activity::class );
-
-		// Mock the static method using reflection.
-		$activity->expects( $this->any() )
-			->method( '__call' )
-			->willReturnCallback(
-				function ( $name ) {
-					if ( 'get_to' === $name ) {
-						return array( 'https://www.w3.org/ns/activitystreams#Public' );
-					}
-
-					if ( 'get_cc' === $name ) {
-						return array();
-					}
-
-					if ( 'get_type' === $name ) {
-						return 'Create';
-					}
-
-					return null;
-				}
-			);
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
+		$activity->set_cc( array() );
 
 		return $activity;
 	}
@@ -639,6 +759,58 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		// Clean up.
 		\remove_filter( 'pre_http_request', $http_callback );
+	}
+
+	/**
+	 * Test that bto and bcc are stripped during actual delivery.
+	 *
+	 * @covers ::send_to_inboxes
+	 */
+	public function test_send_to_inboxes_strips_bto_bcc() {
+		// Create a post and outbox item.
+		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+
+		// Add bto and bcc to the stored activity.
+		$activity_data        = \json_decode( $outbox_item->post_content, true );
+		$activity_data['bto'] = array( 'https://example.com/users/secret' );
+		$activity_data['bcc'] = array( 'https://example.com/users/hidden' );
+		\wp_update_post(
+			array(
+				'ID'           => $outbox_item->ID,
+				'post_content' => \wp_json_encode( $activity_data ),
+			)
+		);
+
+		// Capture the JSON that gets sent.
+		$sent_json = null;
+		$callback  = function ( $preempt, $args ) use ( &$sent_json ) {
+			$sent_json = $args['body'];
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => '',
+			);
+		};
+		\add_filter( 'pre_http_request', $callback, 10, 2 );
+
+		$send_to_inboxes = new \ReflectionMethod( Dispatcher::class, 'send_to_inboxes' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$send_to_inboxes->setAccessible( true );
+		}
+
+		try {
+			$send_to_inboxes->invoke( null, array( 'https://remote.example/inbox' ), $outbox_item->ID );
+		} catch ( \Exception $e ) {
+			$this->fail( 'Invoke failed: ' . $e->getMessage() );
+		}
+
+		$this->assertNotNull( $sent_json, 'JSON should have been sent' );
+
+		$sent_data = \json_decode( $sent_json, true );
+		$this->assertArrayNotHasKey( 'bto', $sent_data, 'bto must be stripped before delivery' );
+		$this->assertArrayNotHasKey( 'bcc', $sent_data, 'bcc must be stripped before delivery' );
+
+		\remove_filter( 'pre_http_request', $callback );
 	}
 
 	/**

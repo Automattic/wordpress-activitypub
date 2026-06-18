@@ -41,7 +41,7 @@ export function useUserOptions( { withInherit = false } ) {
 
 	// Test if current user has activitypub capability by trying to access their actor endpoint.
 	useEffect( () => {
-		if ( fetchedUsers || isLoadingUsers || ! currentUser ) {
+		if ( fetchedUsers || isLoadingUsers || ! currentUser || ! namespace ) {
 			return;
 		}
 

@@ -10,26 +10,14 @@
 namespace Activitypub;
 
 /**
- * Detect a comment request.
+ * Get the ActivityPub ID of a Comment by the WordPress Comment ID.
  *
- * @deprecated 7.1.0
+ * @param int|\WP_Comment $id The WordPress Comment ID or object.
  *
- * @return int|bool Comment ID or false if not found.
+ * @return string The ActivityPub ID (a URL) of the Comment.
  */
-function is_comment() {
-	\_deprecated_function( __FUNCTION__, '7.1.0' );
-
-	$comment_id = get_query_var( 'c', null );
-
-	if ( ! is_null( $comment_id ) ) {
-		$comment = \get_comment( $comment_id );
-
-		if ( $comment ) {
-			return $comment_id;
-		}
-	}
-
-	return false;
+function get_comment_id( $id ) {
+	return Comment::generate_id( $id );
 }
 
 /**

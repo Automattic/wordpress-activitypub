@@ -276,21 +276,44 @@ class Blog extends Actor {
 	 * @return string The published date.
 	 */
 	public function get_published() {
-		$first_post = new \WP_Query(
+		$published = \get_option( 'activitypub_blog_published' );
+
+		if ( $published ) {
+			return $published;
+		}
+
+		// Backfill from the first federated post.
+		$first_federated = new \WP_Query(
 			array(
-				'orderby' => 'date',
-				'order'   => 'ASC',
-				'number'  => 1,
+				'orderby'                => 'date',
+				'order'                  => 'ASC',
+				'posts_per_page'         => 1,
+				'post_status'            => 'publish',
+				'no_found_rows'          => true,
+				'ignore_sticky_posts'    => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'             => array(
+					array(
+						'key'     => 'activitypub_status',
+						'compare' => 'EXISTS',
+					),
+				),
 			)
 		);
 
-		if ( ! empty( $first_post->posts[0] ) ) {
-			$time = \strtotime( $first_post->posts[0]->post_date_gmt );
+		if ( ! empty( $first_federated->posts[0] ) ) {
+			$time = \strtotime( $first_federated->posts[0]->post_date_gmt );
 		} else {
 			$time = \time();
 		}
 
-		return \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $time );
+		$published = \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $time );
+
+		\update_option( 'activitypub_blog_published', $published, false );
+
+		return $published;
 	}
 
 	/**
@@ -397,7 +420,12 @@ class Blog extends Actor {
 	 */
 	public function get_endpoints() {
 		return array(
-			'sharedInbox' => get_rest_url_by_path( 'inbox' ),
+			'sharedInbox'                => get_rest_url_by_path( 'inbox' ),
+			'oauthAuthorizationEndpoint' => get_rest_url_by_path( 'oauth/authorize' ),
+			'oauthTokenEndpoint'         => get_rest_url_by_path( 'oauth/token' ),
+			'oauthRegistrationEndpoint'  => get_rest_url_by_path( 'oauth/clients' ),
+			'proxyUrl'                   => get_rest_url_by_path( 'proxy' ),
+			'proxyEventStream'           => get_rest_url_by_path( 'proxy/stream' ),
 		);
 	}
 
@@ -408,6 +436,17 @@ class Blog extends Actor {
 	 */
 	public function get_webfinger() {
 		return $this->get_preferred_username() . '@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
+	}
+
+	/**
+	 * Returns the Liked API endpoint.
+	 *
+	 * @since 8.1.0
+	 *
+	 * @return string The Liked endpoint.
+	 */
+	public function get_liked() {
+		return get_rest_url_by_path( sprintf( 'actors/%d/liked', $this->get__id() ) );
 	}
 
 	/**
@@ -561,5 +600,51 @@ class Blog extends Actor {
 		$moved_to = \get_option( 'activitypub_blog_user_moved_to' );
 
 		return $moved_to && $moved_to !== $this->get_id() ? $moved_to : null;
+	}
+
+	/**
+	 * Get the actor-level interaction policy.
+	 *
+	 * Overrides the magic property accessor on Base_Object so that we always
+	 * compute the policy from the current site setting rather than returning a
+	 * cached property value. Currently only emits `canFeature` (FEP-7aa9).
+	 * Driven by the site option `activitypub_default_feature_policy` and
+	 * defaults to denying all featured-collection requests, in line with
+	 * FEP-7aa9's "absence of policy = no consent" rule.
+	 *
+	 * @see https://w3id.org/fep/7aa9
+	 *
+	 * @since 9.0.0
+	 *
+	 * @return array
+	 */
+	public function get_interaction_policy() {
+		$policy = array( 'canFeature' => $this->build_can_feature_policy() );
+
+		// Merge with an explicitly set interaction policy, if any.
+		if ( $this->interaction_policy ) {
+			$policy = \array_merge( (array) $this->interaction_policy, $policy );
+		}
+
+		return $policy;
+	}
+
+	/**
+	 * Build the `canFeature` policy array from the site option.
+	 *
+	 * @return array
+	 */
+	protected function build_can_feature_policy() {
+		$policy = \get_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_ME );
+
+		switch ( $policy ) {
+			case ACTIVITYPUB_INTERACTION_POLICY_ANYONE:
+				return array( 'automaticApproval' => array( 'https://www.w3.org/ns/activitystreams#Public' ) );
+			case ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS:
+				return array( 'automaticApproval' => array( $this->get_followers() ) );
+			case ACTIVITYPUB_INTERACTION_POLICY_ME:
+			default:
+				return array( 'automaticApproval' => array( $this->get_id() ) );
+		}
 	}
 }

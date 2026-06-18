@@ -527,6 +527,57 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
+	 * Test get_existing_uris returns the cached subset of input URIs.
+	 *
+	 * @covers ::get_existing_uris
+	 */
+	public function test_get_existing_uris() {
+		$alice = array(
+			'id'                => 'https://remote.example.com/actor/alice-batch',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/alice-batch',
+			'inbox'             => 'https://remote.example.com/actor/alice-batch/inbox',
+			'name'              => 'Alice',
+			'preferredUsername' => 'alice-batch',
+		);
+		$bob   = array(
+			'id'                => 'https://remote.example.com/actor/bob-batch',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/bob-batch',
+			'inbox'             => 'https://remote.example.com/actor/bob-batch/inbox',
+			'name'              => 'Bob',
+			'preferredUsername' => 'bob-batch',
+		);
+		$this->assertNotWPError( Remote_Actors::create( $alice ) );
+		$this->assertNotWPError( Remote_Actors::create( $bob ) );
+
+		$result = Remote_Actors::get_existing_uris(
+			array(
+				$alice['id'],
+				$bob['id'],
+				'https://nowhere.example/never-cached',
+			)
+		);
+
+		$this->assertSame(
+			array(
+				$alice['id'] => true,
+				$bob['id']   => true,
+			),
+			$result
+		);
+	}
+
+	/**
+	 * Test get_existing_uris returns an empty array when given no input.
+	 *
+	 * @covers ::get_existing_uris
+	 */
+	public function test_get_existing_uris_empty_input() {
+		$this->assertSame( array(), Remote_Actors::get_existing_uris( array() ) );
+	}
+
+	/**
 	 * Tests clear_errors.
 	 *
 	 * @covers ::clear_errors
@@ -600,6 +651,76 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		// Try to clear errors for non-existent follower.
 		$cleared = Remote_Actors::clear_errors( 99999 );
 		$this->assertFalse( $cleared );
+	}
+
+	/**
+	 * Tests get_outdated.
+	 *
+	 * @covers ::get_outdated
+	 */
+	public function test_get_outdated() {
+		$uris = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
+		$ids  = array();
+
+		foreach ( $uris as $uri ) {
+			$ids[ $uri ] = Remote_Actors::upsert(
+				array(
+					'type'              => 'Person',
+					'id'                => $uri,
+					'inbox'             => $uri . '/inbox',
+					'preferredUsername' => 'user',
+				)
+			);
+		}
+
+		// Age one actor well beyond the default one-day window.
+		global $wpdb;
+		$modified = \gmdate( 'Y-m-d H:i:s', \time() - 9 * DAY_IN_SECONDS );
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"UPDATE $wpdb->posts SET post_modified = %s, post_modified_gmt = %s WHERE ID = %d",
+				array( $modified, $modified, $ids['https://example.com/author/jon'] )
+			)
+		);
+		\clean_post_cache( $ids['https://example.com/author/jon'] );
+
+		$outdated = Remote_Actors::get_outdated();
+		$this->assertCount( 1, $outdated );
+		$this->assertEquals( 'https://example.com/author/jon', $outdated[0]->guid );
+	}
+
+	/**
+	 * Tests get_faulty.
+	 *
+	 * @covers ::get_faulty
+	 */
+	public function test_get_faulty() {
+		$uris = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
+		$ids  = array();
+
+		foreach ( $uris as $uri ) {
+			$ids[ $uri ] = Remote_Actors::upsert(
+				array(
+					'type'              => 'Person',
+					'id'                => $uri,
+					'inbox'             => $uri . '/inbox',
+					'preferredUsername' => 'user',
+				)
+			);
+		}
+
+		$faulty_id = $ids['http://sally.example.org'];
+		for ( $i = 1; $i <= 15; $i++ ) {
+			Remote_Actors::add_error( $faulty_id, 'error ' . $i );
+		}
+
+		$faulty = Remote_Actors::get_faulty();
+		$this->assertCount( 1, $faulty );
+		$this->assertEquals( 'http://sally.example.org', $faulty[0]->guid );
+
+		// Clearing the errors removes it from the faulty set.
+		Remote_Actors::clear_errors( $faulty_id );
+		$this->assertCount( 0, Remote_Actors::get_faulty() );
 	}
 
 	/**
@@ -1015,6 +1136,217 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
+	 * Test get_public_key with a standalone key object that has an owner.
+	 *
+	 * When key_id URL returns a CryptographicKey object (no publicKey, has owner),
+	 * get_public_key should follow the owner to get the actor.
+	 *
+	 * @covers ::get_public_key
+	 * @group activitypub
+	 */
+	public function test_get_public_key_standalone_key_follows_owner() {
+		$mock = function ( $pre, $url ) {
+			// Standalone key object.
+			if ( 'https://example.com/user/publickey' === $url ) {
+				return array(
+					'id'           => 'https://example.com/user/publickey',
+					'type'         => 'CryptographicKey',
+					'owner'        => 'https://example.com/user',
+					'publicKeyPem' => $this->x509_key,
+				);
+			}
+
+			// Owner actor with nested publicKey.
+			if ( 'https://example.com/user' === $url ) {
+				return array(
+					'id'        => 'https://example.com/user',
+					'type'      => 'Person',
+					'publicKey' => array(
+						'id'           => 'https://example.com/user#main-key',
+						'owner'        => 'https://example.com/user',
+						'publicKeyPem' => $this->x509_key,
+					),
+				);
+			}
+
+			return $pre;
+		};
+
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock, 10, 2 );
+
+		$result = Remote_Actors::get_public_key( 'https://example.com/user/publickey' );
+		$this->assertNotWPError( $result );
+
+		$details = \openssl_pkey_get_details( $result );
+		$this->assertSame( $this->x509_key, $details['key'] );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+	}
+
+	/**
+	 * Test get_public_key rejects standalone key with cross-origin owner.
+	 *
+	 * @covers ::get_public_key
+	 * @group activitypub
+	 */
+	public function test_get_public_key_rejects_standalone_key_cross_origin_owner() {
+		$mock = function ( $pre, $url ) {
+			if ( 'https://evil.example/publickey' === $url ) {
+				return array(
+					'id'           => 'https://evil.example/publickey',
+					'type'         => 'CryptographicKey',
+					'owner'        => 'https://example.com/user',
+					'publicKeyPem' => $this->x509_key,
+				);
+			}
+
+			return $pre;
+		};
+
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock, 10, 2 );
+
+		$result = Remote_Actors::get_public_key( 'https://evil.example/publickey' );
+		$this->assertWPError( $result );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+	}
+
+	/**
+	 * Test get_public_key with actor whose publicKey is a URL reference.
+	 *
+	 * When an actor has publicKey as a URL string (like tags.pub),
+	 * the URL should be dereferenced to get the actual key.
+	 *
+	 * @covers ::get_public_key
+	 * @group activitypub
+	 */
+	public function test_get_public_key_url_reference() {
+		$mock = function ( $pre, $url ) {
+			// Actor with publicKey as URL.
+			if ( 'https://example.com/actor' === $url ) {
+				return array(
+					'id'        => 'https://example.com/actor',
+					'type'      => 'Service',
+					'publicKey' => 'https://example.com/actor/publickey',
+				);
+			}
+
+			// Key object at the referenced URL.
+			if ( 'https://example.com/actor/publickey' === $url ) {
+				return array(
+					'id'           => 'https://example.com/actor/publickey',
+					'type'         => 'CryptographicKey',
+					'owner'        => 'https://example.com/actor',
+					'publicKeyPem' => $this->x509_key,
+				);
+			}
+
+			return $pre;
+		};
+
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock, 10, 2 );
+
+		// Store actor in cache so get_by_uri finds it.
+		$actor_data = array(
+			'id'                => 'https://example.com/actor',
+			'type'              => 'Service',
+			'inbox'             => 'https://example.com/actor/inbox',
+			'preferredUsername' => 'actor',
+			'publicKey'         => 'https://example.com/actor/publickey',
+		);
+		Remote_Actors::upsert( $actor_data );
+
+		$result = Remote_Actors::get_public_key( 'https://example.com/actor#main-key' );
+		$this->assertNotWPError( $result );
+
+		$details = \openssl_pkey_get_details( $result );
+		$this->assertSame( $this->x509_key, $details['key'] );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+	}
+
+	/**
+	 * Test get_public_key rejects publicKey URL on a different host than the actor.
+	 *
+	 * @covers ::get_public_key
+	 * @group activitypub
+	 */
+	public function test_get_public_key_rejects_cross_origin_key_url() {
+		$mock = function ( $pre, $url ) {
+			if ( 'https://example.com/actor' === $url ) {
+				return array(
+					'id'        => 'https://example.com/actor',
+					'type'      => 'Service',
+					'publicKey' => 'https://evil.example/publickey',
+				);
+			}
+
+			return $pre;
+		};
+
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock, 10, 2 );
+
+		$actor_data = array(
+			'id'                => 'https://example.com/actor',
+			'type'              => 'Service',
+			'inbox'             => 'https://example.com/actor/inbox',
+			'preferredUsername' => 'crossorigin',
+			'publicKey'         => 'https://evil.example/publickey',
+		);
+		Remote_Actors::upsert( $actor_data );
+
+		$result = Remote_Actors::get_public_key( 'https://example.com/actor#main-key' );
+		$this->assertWPError( $result );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+	}
+
+	/**
+	 * Test get_public_key rejects when key owner doesn't match actor.
+	 *
+	 * @covers ::get_public_key
+	 * @group activitypub
+	 */
+	public function test_get_public_key_rejects_owner_mismatch() {
+		$mock = function ( $pre, $url ) {
+			if ( 'https://example.com/actor' === $url ) {
+				return array(
+					'id'        => 'https://example.com/actor',
+					'type'      => 'Service',
+					'publicKey' => 'https://example.com/actor/publickey',
+				);
+			}
+
+			if ( 'https://example.com/actor/publickey' === $url ) {
+				return array(
+					'id'           => 'https://example.com/actor/publickey',
+					'type'         => 'CryptographicKey',
+					'owner'        => 'https://example.com/other-actor',
+					'publicKeyPem' => $this->x509_key,
+				);
+			}
+
+			return $pre;
+		};
+
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock, 10, 2 );
+
+		$actor_data = array(
+			'id'                => 'https://example.com/actor',
+			'type'              => 'Service',
+			'inbox'             => 'https://example.com/actor/inbox',
+			'preferredUsername' => 'ownermismatch',
+			'publicKey'         => 'https://example.com/actor/publickey',
+		);
+		Remote_Actors::upsert( $actor_data );
+
+		$result = Remote_Actors::get_public_key( 'https://example.com/actor#main-key' );
+		$this->assertWPError( $result );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+	}
+
+	/**
 	 * Pre http get remote object.
 	 *
 	 * @param mixed  $pre           The preempted value.
@@ -1110,25 +1442,17 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$remote_actor_id = Remote_Actors::upsert( $actor_data );
 		$this->assertIsInt( $remote_actor_id );
 
-		// Avatar is NOT cached eagerly - meta should be empty after upsert.
-		$avatar_url = get_post_meta( $remote_actor_id, '_activitypub_avatar_url', true );
-		$this->assertEmpty( $avatar_url, 'Avatar should not be eagerly cached on upsert' );
-
-		// Calling get_avatar_url() triggers lazy caching.
+		// Calling get_avatar_url() returns the avatar URL from the actor JSON.
 		$retrieved_avatar = Remote_Actors::get_avatar_url( $remote_actor_id );
 		$this->assertEquals( 'https://example.com/avatar-test.jpg', $retrieved_avatar );
-
-		// Now meta should be populated for subsequent calls.
-		$cached_avatar = get_post_meta( $remote_actor_id, '_activitypub_avatar_url', true );
-		$this->assertEquals( 'https://example.com/avatar-test.jpg', $cached_avatar );
 	}
 
 	/**
-	 * Test get_avatar_url fallback to JSON when meta is empty.
+	 * Test get_avatar_url extracts URL from actor JSON.
 	 *
 	 * @covers ::get_avatar_url
 	 */
-	public function test_get_avatar_url_fallback_to_json() {
+	public function test_get_avatar_url_from_json() {
 		// Create a remote actor.
 		$actor_data = array(
 			'id'                => 'https://example.com/users/json-avatar',
@@ -1145,22 +1469,9 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$remote_actor_id = Remote_Actors::upsert( $actor_data );
 		$this->assertIsInt( $remote_actor_id );
 
-		// Delete the avatar meta to simulate old data.
-		delete_post_meta( $remote_actor_id, '_activitypub_avatar_url' );
-
-		// Verify meta is empty.
-		$avatar_meta = get_post_meta( $remote_actor_id, '_activitypub_avatar_url', true );
-		$this->assertEmpty( $avatar_meta );
-
-		// Test get_avatar_url extracts from JSON and caches it.
+		// Test get_avatar_url extracts from JSON.
 		$retrieved_avatar = Remote_Actors::get_avatar_url( $remote_actor_id );
 		$this->assertEquals( 'https://example.com/json-avatar.jpg', $retrieved_avatar );
-
-		// Verify it was cached in meta.
-		$cached_avatar = get_post_meta( $remote_actor_id, '_activitypub_avatar_url', true );
-		$this->assertEquals( 'https://example.com/json-avatar.jpg', $cached_avatar );
-
-		// Clean up.
 	}
 
 	/**

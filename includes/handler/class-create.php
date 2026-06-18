@@ -8,7 +8,7 @@
 namespace Activitypub\Handler;
 
 use Activitypub\Collection\Interactions;
-use Activitypub\Collection\Posts;
+use Activitypub\Collection\Remote_Posts;
 use Activitypub\Tombstone;
 
 use function Activitypub\get_activity_visibility;
@@ -110,7 +110,7 @@ class Create {
 			return false;
 		}
 
-		$existing_post = Posts::get_by_guid( $activity['object']['id'] );
+		$existing_post = Remote_Posts::get_by_guid( $activity['object']['id'] );
 
 		// If post exists, call update action.
 		if ( $existing_post instanceof \WP_Post ) {
@@ -119,7 +119,7 @@ class Create {
 			return false;
 		}
 
-		return Posts::add( $activity, $user_ids );
+		return Remote_Posts::add( $activity, $user_ids );
 	}
 
 	/**

@@ -8,7 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Posts;
+use Activitypub\Collection\Remote_Posts;
 
 /**
  * ActivityPub Comment Class.
@@ -299,6 +299,17 @@ class Comment {
 			return false;
 		}
 
+		/*
+		 * Do not federate brand-new comments on a post that is not federated itself
+		 * (e.g. a private post, a post switched to local visibility, or a non-ActivityPub
+		 * post type). This prevents leaking replies on content the post type's read rules
+		 * would otherwise protect. Comments that were already sent are allowed through so
+		 * their Update and Delete activities can still federate (and tear down remote copies).
+		 */
+		if ( ! self::was_sent( $comment ) && ! is_post_federated( $comment->comment_post_ID ) ) {
+			return false;
+		}
+
 		// It is a comment to the post and can be federated.
 		if ( empty( $comment->comment_parent ) ) {
 			return true;
@@ -581,7 +592,7 @@ class Comment {
 	public static function get_comment_types() {
 		global $activitypub_comment_types;
 
-		return $activitypub_comment_types;
+		return (array) $activitypub_comment_types;
 	}
 
 	/**
@@ -861,6 +872,17 @@ class Comment {
 			return 1;
 		}
 
+		/*
+		 * Always auto-approve comments on remote posts (ap_post) since
+		 * they are not visible in the WP admin comment moderation screen.
+		 */
+		$post_id = $comment_data['comment_post_ID'];
+		$post    = \get_post( $post_id );
+
+		if ( $post && \in_array( $post->post_type, self::hide_for(), true ) ) {
+			return 1;
+		}
+
 		if ( '1' !== \get_option( 'comment_previously_approved' ) ) {
 			return $approved;
 		}
@@ -880,13 +902,6 @@ class Comment {
 		$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author = %s AND comment_author_url = %s and comment_approved = '1' LIMIT 1", $author, $author_url ) );
 
 		if ( 1 === (int) $ok_to_comment ) {
-			return 1;
-		}
-
-		$post_id = $comment_data['comment_post_ID'];
-		$post    = \get_post( $post_id );
-
-		if ( $post && in_array( $post->post_type, self::hide_for(), true ) ) {
 			return 1;
 		}
 
@@ -936,7 +951,7 @@ class Comment {
 				 * a single query can exclude types from multiple plugins. Other
 				 * plugins can hook here to add their own comment types.
 				 *
-				 * @since unreleased
+				 * @since 8.0.0
 				 *
 				 * @param string[] $excluded_types The comment type slugs to exclude.
 				 * @param int      $post_id        The post ID.
@@ -973,7 +988,7 @@ class Comment {
 	 * @return string[] Array of post type names to hide comments for.
 	 */
 	public static function hide_for() {
-		$post_types = array( Posts::POST_TYPE );
+		$post_types = array( Remote_Posts::POST_TYPE );
 
 		/**
 		 * Filters the list of post types to hide comments for.

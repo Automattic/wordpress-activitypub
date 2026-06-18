@@ -197,7 +197,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 								setProfile( ( prevProfile ) => ( { ...prevProfile, followersCount: totalItems } ) );
 							} )
 							.catch( () => {} );
-					} catch ( e ) {
+					} catch ( _ ) {
 						// If URL parsing fails, just continue without fetching followers.
 					}
 				}

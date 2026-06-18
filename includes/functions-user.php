@@ -13,21 +13,6 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 
 /**
- * Returns a users WebFinger "resource".
- *
- * @deprecated 7.1.0 Use {@see \Activitypub\Webfinger::get_user_resource} instead.
- *
- * @param int $user_id The user ID.
- *
- * @return string The User resource.
- */
-function get_webfinger_resource( $user_id ) {
-	\_deprecated_function( __FUNCTION__, '7.1.0', 'Activitypub\Webfinger::get_user_resource' );
-
-	return Webfinger::get_user_resource( $user_id );
-}
-
-/**
  * Returns the followers of a given user.
  *
  * @param int $user_id The user ID.
@@ -136,6 +121,37 @@ function user_can_activitypub( $user_id ) {
 }
 
 /**
+ * Whether the current user is allowed to act on behalf of the blog actor.
+ *
+ * The blog actor is virtual (no `wp_users` row), so ownership and authoring
+ * checks against `BLOG_USER_ID = 0` cannot rely on identity equality. This
+ * helper centralizes the "can the current user post / read as the blog?"
+ * decision: administrators by default, filterable for integrations.
+ *
+ * @since 8.3.0
+ *
+ * @return bool True if the current user can act as the blog actor.
+ */
+function user_can_act_as_blog() {
+	/**
+	 * Filters whether the current user is allowed to act as the blog actor.
+	 *
+	 * Defaults to true for users with the `manage_options` capability (administrators).
+	 * Filter to broaden the allow-list, for example to editors on multi-author sites.
+	 *
+	 * Security note: returning a static `true` (e.g. via `__return_true`) grants
+	 * EVERY authenticated user the right to post as, read private outbox items of,
+	 * and view stats for the blog actor. Always inspect the current user inside
+	 * the callback (`current_user_can()`, role, allowlist) before returning `true`.
+	 *
+	 * @since 8.3.0
+	 *
+	 * @param bool $can_act_as_blog Whether the current user can act as the blog actor.
+	 */
+	return (bool) \apply_filters( 'activitypub_user_can_act_as_blog', \current_user_can( 'manage_options' ) );
+}
+
+/**
  * Checks if a User-Type is disabled for ActivityPub.
  *
  * This function is used to check if the 'blog' or 'user'
@@ -221,31 +237,69 @@ function is_single_user() {
 /**
  * Get active users based on a given duration.
  *
+ * Counts users who published posts (of any ActivityPub-enabled post type)
+ * or approved comments within the given time period.
+ *
  * @param int $duration Optional. The duration to check in month(s). Default 1.
  *
  * @return int The number of active users.
  */
 function get_active_users( $duration = 1 ) {
-	$duration      = intval( $duration );
-	$transient_key = sprintf( 'monthly_active_users_%d', $duration );
-	$count         = get_transient( $transient_key );
+	$duration      = \intval( $duration );
+	$transient_key = \sprintf( 'monthly_active_users_%d', $duration );
+	$count         = \get_transient( $transient_key );
 
 	if ( false === $count ) {
 		global $wpdb;
 
+		$post_types   = \get_post_types_by_support( 'activitypub' );
+		$post_authors = array();
+
+		if ( ! empty( $post_types ) ) {
+			$placeholders = \implode( ', ', \array_fill( 0, \count( $post_types ), '%s' ) );
+
+			// Get distinct user IDs who published posts of AP-enabled post types.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$post_authors = $wpdb->get_col(
+				$wpdb->prepare(
+					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					"SELECT DISTINCT post_author FROM {$wpdb->posts} WHERE post_type IN ( {$placeholders} ) AND post_status = 'publish' AND post_date >= DATE_SUB( NOW(), INTERVAL %d MONTH )",
+					\array_merge( $post_types, array( $duration ) )
+				)
+			);
+		}
+
+		// Get distinct user IDs who made approved comments.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$count = $wpdb->get_var(
+		$comment_authors = $wpdb->get_col(
 			$wpdb->prepare(
-				"SELECT COUNT( DISTINCT post_author ) FROM {$wpdb->posts} WHERE post_type = 'post' AND post_status = 'publish' AND post_modified >= DATE_SUB( NOW(), INTERVAL %d MONTH )",
+				"SELECT DISTINCT user_id FROM {$wpdb->comments} WHERE comment_approved = '1' AND user_id != 0 AND comment_date >= DATE_SUB( NOW(), INTERVAL %d MONTH )",
 				$duration
 			)
 		);
 
-		set_transient( $transient_key, $count, DAY_IN_SECONDS );
+		// Deduplicate and filter out anonymous (0) entries.
+		$active_ids = \array_unique( \array_filter( \array_map( 'absint', \array_merge( $post_authors, $comment_authors ) ) ) );
+
+		if ( empty( $active_ids ) ) {
+			$count = 0;
+		} else {
+			// Count only users who have the activitypub capability.
+			$user_query = new \WP_User_Query(
+				array(
+					'capability__in' => array( 'activitypub' ),
+					'include'        => $active_ids,
+					'number'         => 1, // Minimize memory; get_total() still returns full count.
+				)
+			);
+			$count      = $user_query->get_total();
+		}
+
+		\set_transient( $transient_key, $count, DAY_IN_SECONDS );
 	}
 
 	// If 0 authors were active.
-	if ( 0 === $count ) {
+	if ( 0 === (int) $count ) {
 		return 0;
 	}
 
@@ -263,7 +317,7 @@ function get_active_users( $duration = 1 ) {
 	}
 
 	// Ensure active users doesn't exceed total users.
-	return min( $active, get_total_users() );
+	return \min( $active, get_total_users() );
 }
 
 /**
@@ -277,17 +331,14 @@ function get_total_users() {
 		return 1;
 	}
 
-	$users = \get_users(
+	$user_query = new \WP_User_Query(
 		array(
 			'capability__in' => array( 'activitypub' ),
+			'number'         => 1,
 		)
 	);
 
-	if ( is_array( $users ) ) {
-		$users = count( $users );
-	} else {
-		$users = 1;
-	}
+	$users = $user_query->get_total();
 
 	// If blog user is disabled.
 	if ( ! user_can_activitypub( Actors::BLOG_USER_ID ) ) {

@@ -8,7 +8,6 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Activity\Base_Object;
-use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Remote_Actors;
 
@@ -44,7 +43,7 @@ class Following_Controller extends Actors_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_items' ),
-					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
+					'permission_callback' => array( $this, 'verify_signature' ),
 					'args'                => array(
 						'page'     => array(
 							'description' => 'Current page of the collection.',
@@ -86,10 +85,6 @@ class Following_Controller extends Actors_Controller {
 	 */
 	public function get_items( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = null;
-		if ( \has_filter( 'activitypub_rest_following' ) ) {
-			$user = Actors::get_by_id( $user_id );
-		}
 
 		/**
 		 * Action triggered prior to the ActivityPub profile being created and sent to the client.
@@ -115,7 +110,7 @@ class Following_Controller extends Actors_Controller {
 			$response = array( '@context' => Base_Object::JSON_LD_CONTEXT ) + $response;
 		}
 
-		if ( Actors::show_social_graph( $user_id ) ) {
+		if ( $this->show_social_graph( $request ) ) {
 			$response['orderedItems'] = \array_filter(
 				\array_map(
 					static function ( $item ) use ( $context ) {
@@ -131,21 +126,6 @@ class Following_Controller extends Actors_Controller {
 					$data['following']
 				)
 			);
-		}
-
-		/**
-		 * Filter the list of following urls
-		 *
-		 * @param array                   $items The array of following urls.
-		 * @param \Activitypub\Model\User $user  The user object.
-		 *
-		 * @deprecated 7.1.0 Please migrate your Followings to the new internal Following structure.
-		 */
-		$items = \apply_filters_deprecated( 'activitypub_rest_following', array( array(), $user ), '7.1.0', 'Please migrate your Followings to the new internal Following structure.' );
-
-		if ( ! empty( $items ) ) {
-			$response['totalItems']   = count( $items );
-			$response['orderedItems'] = $items;
 		}
 
 		$response = $this->prepare_collection_response( $response, $request );

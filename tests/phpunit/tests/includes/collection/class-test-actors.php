@@ -254,6 +254,37 @@ class Test_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test activitypub_pre_get_by_id filter.
+	 *
+	 * @covers ::get_by_id
+	 */
+	public function test_pre_get_by_id_filter() {
+		$custom_id = -1000001;
+
+		// Without filter, the custom ID should return a WP_Error.
+		$result = Actors::get_by_id( $custom_id );
+		$this->assertWPError( $result );
+
+		// With filter, we can return a custom actor.
+		$filter = function ( $pre, $user_id ) use ( $custom_id ) {
+			if ( $custom_id === $user_id ) {
+				return new \Activitypub\Model\Blog();
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_get_by_id', $filter, 10, 2 );
+
+		$result = Actors::get_by_id( $custom_id );
+		$this->assertInstanceOf( 'Activitypub\Model\Blog', $result );
+
+		// Ensure non-matching IDs still work normally.
+		$result = Actors::get_by_id( Actors::BLOG_USER_ID );
+		$this->assertInstanceOf( 'Activitypub\Model\Blog', $result );
+
+		\remove_filter( 'activitypub_pre_get_by_id', $filter );
+	}
+
+	/**
 	 * Test show_social_graph for blog user.
 	 *
 	 * @covers ::show_social_graph

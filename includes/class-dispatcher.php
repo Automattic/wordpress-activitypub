@@ -34,6 +34,7 @@ class Dispatcher {
 	public static function init() {
 		\add_action( 'activitypub_process_outbox', array( self::class, 'process_outbox' ) );
 
+		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'fire_outbox_handlers' ), 5, 2 );
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'send_immediate_accept' ), 10, 2 );
 
 		// Default filters to add Inboxes to sent to.
@@ -162,9 +163,20 @@ class Dispatcher {
 		}
 
 		$outbox_item = \get_post( $outbox_item_id );
-		$json        = Outbox::get_activity( $outbox_item_id )->to_json();
-		$inboxes     = Followers::get_inboxes_for_activity( $json, $outbox_item->post_author, $batch_size, $offset );
-		$retries     = self::send_to_inboxes( $inboxes, $outbox_item_id );
+
+		if ( ! $outbox_item ) {
+			return;
+		}
+
+		$activity = Outbox::get_activity( $outbox_item_id );
+
+		if ( \is_wp_error( $activity ) ) {
+			return;
+		}
+
+		$json    = $activity->to_json();
+		$inboxes = Followers::get_inboxes_for_activity( $json, $outbox_item->post_author, $batch_size, $offset );
+		$retries = self::send_to_inboxes( $inboxes, $outbox_item_id );
 
 		// Retry failed inboxes.
 		if ( ! empty( $retries ) ) {
@@ -240,8 +252,16 @@ class Dispatcher {
 	 */
 	private static function send_to_inboxes( $inboxes, $outbox_item_id ) {
 		$outbox_item = \get_post( $outbox_item_id );
-		$json        = Outbox::get_activity( $outbox_item_id )->to_json();
-		$retries     = array();
+
+		$activity = Outbox::get_activity( $outbox_item_id );
+
+		if ( \is_wp_error( $activity ) ) {
+			return array();
+		}
+
+		$json = $activity->to_json();
+
+		$retries = array();
 
 		/**
 		 * Fires before sending an Activity to inboxes.
@@ -376,7 +396,7 @@ class Dispatcher {
 		$audience = array_merge( $cc, $to );
 
 		// Remove "public placeholder" from the audience.
-		$audience = array_diff( $audience, array( 'https://www.w3.org/ns/activitystreams#Public' ) );
+		$audience = array_diff( $audience, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS );
 
 		if ( $audience ) {
 			$mentioned_inboxes = Mention::get_inboxes( $audience );
@@ -441,24 +461,25 @@ class Dispatcher {
 	}
 
 	/**
-	 * Check if passed Activity is public.
+	 * Check if an Activity should be sent to followers.
 	 *
 	 * @param Activity                                        $activity    The Activity object.
 	 * @param \Activitypub\Model\User|\Activitypub\Model\Blog $actor       The Actor object.
 	 * @param \WP_Post                                        $outbox_item The Outbox item.
 	 *
-	 * @return boolean True if public, false if not.
+	 * @return boolean True if the Activity should be sent to followers, false if not.
 	 */
 	protected static function should_send_to_followers( $activity, $actor, $outbox_item ) {
-		// Check if follower endpoint is set.
-		$cc = $activity->get_cc() ?? array();
-		$to = $activity->get_to() ?? array();
+		$cc  = (array) ( $activity->get_cc() ?? array() );
+		$to  = (array) ( $activity->get_to() ?? array() );
+		$bcc = (array) ( $activity->get_bcc() ?? array() );
+		$bto = (array) ( $activity->get_bto() ?? array() );
 
-		$audience = array_merge( $cc, $to );
+		$audience = array_merge( $cc, $to, $bcc, $bto );
 
 		$send = (
 			// Check if activity is public.
-			in_array( 'https://www.w3.org/ns/activitystreams#Public', $audience, true ) ||
+			is_activity_public( $activity ) ||
 			// ...or check if follower endpoint is set.
 			in_array( $actor->get_followers(), $audience, true )
 		);
@@ -491,14 +512,8 @@ class Dispatcher {
 	 * @return array The filtered Inboxes.
 	 */
 	public static function add_inboxes_of_relays( $inboxes, $actor_id, $activity ) {
-		// Check if follower endpoint is set.
-		$cc = $activity->get_cc() ?? array();
-		$to = $activity->get_to() ?? array();
-
-		$audience = array_merge( $cc, $to );
-
 		// Check if activity is public.
-		if ( ! in_array( 'https://www.w3.org/ns/activitystreams#Public', $audience, true ) ) {
+		if ( ! is_activity_public( $activity ) ) {
 			return $inboxes;
 		}
 
@@ -509,6 +524,39 @@ class Dispatcher {
 		}
 
 		return array_merge( $inboxes, $relays );
+	}
+
+	/**
+	 * Fire outbox handlers for activities.
+	 *
+	 * Triggers activity type-specific handlers to process outbox activities,
+	 * allowing handlers to create WordPress posts or perform other side effects.
+	 *
+	 * @param int      $outbox_id The Outbox item ID.
+	 * @param Activity $activity  The Activity that was just added to the Outbox.
+	 */
+	public static function fire_outbox_handlers( $outbox_id, $activity ) {
+		$outbox_item = \get_post( $outbox_id );
+
+		if ( ! $outbox_item ) {
+			return;
+		}
+
+		$type    = $activity->get_type();
+		$user_id = $outbox_item->post_author;
+		$data    = $activity->to_array( false );
+
+		/**
+		 * Fires when an activity has been added to the outbox.
+		 *
+		 * Handlers can implement side effects like creating WordPress posts.
+		 *
+		 * @param array    $data       The activity data array.
+		 * @param int      $user_id    The user ID.
+		 * @param Activity $activity   The Activity object.
+		 * @param int      $outbox_id  The outbox post ID.
+		 */
+		\do_action( 'activitypub_handled_outbox_' . \strtolower( $type ), $data, $user_id, $activity, $outbox_id );
 	}
 
 	/**

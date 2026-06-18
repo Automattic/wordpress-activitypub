@@ -234,6 +234,47 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that the activitypub_post_object_type filter overrides the computed type.
+	 *
+	 * Verifies the filter receives the computed default and the post being
+	 * transformed, and that the return value replaces the computed value
+	 * for downstream callers of get_type().
+	 *
+	 * @covers ::get_type
+	 */
+	public function test_get_type_filter_overrides_computed_value() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'   => 'A Titled Post With No Format',
+				'post_content' => 'Default behavior here would return Article.',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$received_post = null;
+		$received_type = null;
+		$callback      = function ( $object_type, $filter_post ) use ( &$received_type, &$received_post ) {
+			$received_type = $object_type;
+			$received_post = $filter_post;
+			return 'Note';
+		};
+
+		\add_filter( 'activitypub_post_object_type', $callback, 10, 2 );
+
+		try {
+			$transformer = new Post( $post );
+			$type        = $this->reflection_method->invoke( $transformer );
+		} finally {
+			\remove_filter( 'activitypub_post_object_type', $callback, 10 );
+		}
+
+		$this->assertSame( 'Article', $received_type, 'Filter should receive the computed default type.' );
+		$this->assertInstanceOf( '\WP_Post', $received_post );
+		$this->assertSame( $post_id, $received_post->ID, 'Filter should receive the post being transformed.' );
+		$this->assertSame( 'Note', $type, 'Filtered value should replace the computed default.' );
+	}
+
+	/**
 	 * Test the to_array method.
 	 *
 	 * @covers ::to_object
@@ -264,6 +305,230 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that to_object() omits derived fields for redacted posts.
+	 *
+	 * The is_redacted() gate fires for password-protected posts (regardless
+	 * of any per-request cookie) and for non-publish posts outside preview
+	 * mode. In either case content, summary, summaryMap, contentMap,
+	 * preview, and attachments must be absent from the serialized activity.
+	 *
+	 * @dataProvider data_redacted_post_states
+	 *
+	 * @covers ::get_attachment
+	 * @covers ::get_content
+	 * @covers ::get_preview
+	 * @covers ::get_summary
+	 *
+	 * @param array $post_args Post data flagged as redacted (password or non-publish status).
+	 */
+	public function test_redacted_post_omits_derived_fields( $post_args ) {
+		/*
+		 * The non-publish branch of is_redacted() is short-circuited when
+		 * the ACTIVITYPUB_PREVIEW constant is defined (intentional — previews
+		 * of unpublished posts must still synthesize a representation). PHP
+		 * cannot unset a defined constant, so if an earlier test in the
+		 * suite has defined it (e.g. the router preview-template test), this
+		 * data row would assert the wrong thing. The password row is
+		 * unaffected and always exercises the gate.
+		 */
+		if ( ! isset( $post_args['post_password'] ) && defined( 'ACTIVITYPUB_PREVIEW' ) && ACTIVITYPUB_PREVIEW ) {
+			$this->markTestSkipped( 'ACTIVITYPUB_PREVIEW was defined by an earlier test; non-publish gate cannot be exercised here.' );
+		}
+
+		$defaults = array(
+			'post_author'  => 1,
+			'post_title'   => 'Federation_Probe',
+			'post_content' => 'SHOULD-NOT-FEDERATE-BODY',
+			'post_excerpt' => 'SHOULD-NOT-FEDERATE-EXCERPT',
+			'post_status'  => 'publish',
+		);
+
+		$post_id = \wp_insert_post( \array_merge( $defaults, $post_args ) );
+
+		// Attach a content warning so the to_object() override path is exercised.
+		\update_post_meta( $post_id, 'activitypub_content_warning', 'SHOULD-NOT-FEDERATE-WARNING' );
+
+		// Simulate the cookie-bypass case for password-protected posts:
+		// `post_password_required()` would return false here, but the
+		// transformer must still refuse.
+		\add_filter( 'post_password_required', '__return_false' );
+
+		try {
+			$object = Post::transform( get_post( $post_id ) )->to_object();
+
+			$this->assertEmpty( $object->get_content(), 'content must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_summary(), 'summary must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_preview(), 'preview must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_content_map(), 'contentMap must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_summary_map(), 'summaryMap must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_attachment(), 'attachment must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_name(), 'name must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_name_map(), 'nameMap must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_image(), 'image must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_icon(), 'icon must be omitted for a redacted post.' );
+			$this->assertEmpty( $object->get_sensitive(), 'sensitive flag must not be set for a redacted post.' );
+			$this->assertEmpty( $object->get_dcterms(), 'dcterms (content warning) must be omitted for a redacted post.' );
+		} finally {
+			\remove_filter( 'post_password_required', '__return_false' );
+		}
+	}
+
+	/**
+	 * Data provider: post states that should trigger is_redacted().
+	 *
+	 * @return array[]
+	 */
+	public function data_redacted_post_states() {
+		return array(
+			'password protected' => array( array( 'post_password' => 'fed-secret-pass' ) ),
+			'draft'              => array( array( 'post_status' => 'draft' ) ),
+			'pending'            => array( array( 'post_status' => 'pending' ) ),
+			'private'            => array( array( 'post_status' => 'private' ) ),
+		);
+	}
+
+	/**
+	 * Every way of hiding a post — non-public status, password, or the AP
+	 * content-visibility meta (local/private) — must serialize as a content-free
+	 * Tombstone: no content, tags, @-mentions, or location, and no audience at
+	 * all. Nothing body-derived can leak and no actor named only in the
+	 * now-hidden content is ever addressed. The Delete still fans out: that is
+	 * the dispatcher's job (see Test_Dispatcher::test_delete_dispatches_without_audience),
+	 * not something the object's audience has to encode.
+	 *
+	 * The visibility-meta rows guard the gate alignment: the scheduler emits a
+	 * Delete whenever a post is not `is_post_publicly_queryable()`, so the
+	 * transformer must redact on that same predicate — not just status/password.
+	 *
+	 * @dataProvider data_hidden_post_states
+	 *
+	 * @covers ::to_object
+	 *
+	 * @param array $post_args Post fields that hide the post.
+	 * @param array $meta      Post meta that hides the post.
+	 */
+	public function test_hidden_post_is_content_free_tombstone( $post_args, $meta ) {
+		/*
+		 * The non-publish branch is short-circuited when ACTIVITYPUB_PREVIEW is
+		 * defined; the password/visibility rows are unaffected and always
+		 * exercise the gate, so only skip the pure status rows in that case.
+		 */
+		if ( empty( $post_args['post_password'] ) && empty( $meta ) && defined( 'ACTIVITYPUB_PREVIEW' ) && ACTIVITYPUB_PREVIEW ) {
+			$this->markTestSkipped( 'ACTIVITYPUB_PREVIEW was defined by an earlier test; status-only gate cannot be exercised here.' );
+		}
+
+		$mention_uri    = 'https://remote.example/users/bob';
+		$mention_filter = static function () use ( $mention_uri ) {
+			return array( '@bob@remote.example' => $mention_uri );
+		};
+		\add_filter( 'activitypub_extract_mentions', $mention_filter );
+
+		$post_id = \wp_insert_post(
+			\array_merge(
+				array(
+					'post_author'  => 1,
+					'post_title'   => 'Hidden mention probe',
+					'post_content' => 'Hello @bob@remote.example, secret body.',
+					'post_status'  => 'publish',
+				),
+				$post_args
+			)
+		);
+
+		foreach ( $meta as $key => $value ) {
+			\update_post_meta( $post_id, $key, $value );
+		}
+
+		\update_post_meta( $post_id, 'geo_latitude', '52.52' );
+		\update_post_meta( $post_id, 'geo_longitude', '13.405' );
+		\update_post_meta( $post_id, 'geo_public', '1' );
+
+		// Cookie-bypass case: the helper would return false, transformer must still redact.
+		\add_filter( 'post_password_required', '__return_false' );
+
+		try {
+			$object = Post::transform( get_post( $post_id ) )->to_object();
+
+			// Content-free by type.
+			$this->assertSame( 'Tombstone', $object->get_type(), 'A hidden post must serialize as a Tombstone.' );
+			$this->assertEmpty( $object->get_content(), 'content must be omitted for a hidden post.' );
+			$this->assertEmpty( $object->get_tag(), 'tags/mentions must be omitted for a hidden post.' );
+			$this->assertEmpty( $object->get_location(), 'location must be omitted for a hidden post.' );
+
+			// The permalink is preserved so the tombstone registry can resolve it.
+			$this->assertNotEmpty( $object->get_url(), 'The Tombstone must keep the permalink, not drop it.' );
+
+			$audience = \array_merge( (array) $object->get_to(), (array) $object->get_cc() );
+			// Addressed publicly so the teardown broadcasts...
+			$this->assertContains( 'https://www.w3.org/ns/activitystreams#Public', $audience, 'A hidden federated post is torn down publicly.' );
+			// ...but never to an actor named only in the now-hidden content.
+			$this->assertNotContains( $mention_uri, $audience, 'A hidden post must not address actors mentioned only in hidden content.' );
+		} finally {
+			\remove_filter( 'post_password_required', '__return_false' );
+			\remove_filter( 'activitypub_extract_mentions', $mention_filter );
+		}
+	}
+
+	/**
+	 * Data provider: every way a post can be non-public, as ( post fields, post meta ).
+	 *
+	 * @return array[]
+	 */
+	public function data_hidden_post_states() {
+		return array(
+			'password protected' => array( array( 'post_password' => 'fed-secret-pass' ), array() ),
+			'draft'              => array( array( 'post_status' => 'draft' ), array() ),
+			'pending'            => array( array( 'post_status' => 'pending' ), array() ),
+			'private status'     => array( array( 'post_status' => 'private' ), array() ),
+			'visibility local'   => array( array(), array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ) ),
+			'visibility private' => array( array(), array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ) ),
+		);
+	}
+
+	/**
+	 * The happy path of the Fediverse Preview: an authorized preview of an
+	 * unpublished post must render the real content, NOT a Tombstone.
+	 *
+	 * `is_post_publicly_queryable()` treats a draft/pending post as queryable
+	 * during a `?preview=true` request from a user who can edit it, which flips
+	 * `is_redacted()` to false so `to_object()` transforms the post normally.
+	 * The router test only proves routing into the preview template; this asserts
+	 * the transformer output the template actually renders.
+	 *
+	 * @covers ::to_object
+	 */
+	public function test_authorized_preview_of_unpublished_post_renders_real_content() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author'  => $editor_id,
+				'post_status'  => 'draft',
+				'post_title'   => 'Preview Title',
+				'post_content' => 'PREVIEW-VISIBLE-BODY that is long enough to be a real note.',
+			)
+		);
+
+		// Authorized preview context: the editor previewing their own draft.
+		// `is_post_publicly_queryable()` reads the `preview` query var (gating the
+		// Tombstone), while the content getter reads WordPress's `is_preview()`
+		// flag (gating draft-content rendering) — set both, as the real request does.
+		\wp_set_current_user( $editor_id );
+		$this->go_to( \home_url( '?p=' . $post_id . '&preview=true' ) );
+		\set_query_var( 'preview', true );
+		$GLOBALS['wp_query']->is_preview = true;
+
+		try {
+			$object = Post::transform( get_post( $post_id ) )->to_object();
+
+			$this->assertNotSame( 'Tombstone', $object->get_type(), 'An authorized preview must not be redacted to a Tombstone.' );
+			$this->assertStringContainsString( 'PREVIEW-VISIBLE-BODY', (string) $object->get_content(), 'The preview must render the real post content.' );
+		} finally {
+			\wp_set_current_user( 0 );
+		}
+	}
+
+	/**
 	 * Test content visibility.
 	 *
 	 * @covers ::to_object
@@ -273,6 +538,7 @@ class Test_Post extends \WP_UnitTestCase {
 			array(
 				'post_author'  => 1,
 				'post_content' => 'test content visibility',
+				'post_status'  => 'publish',
 			)
 		);
 
@@ -290,10 +556,12 @@ class Test_Post extends \WP_UnitTestCase {
 
 		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
 
-		$this->assertTrue( \Activitypub\is_post_disabled( $post_id ) );
+		// The post was federated on insert, so making it local soft-deletes it:
+		// to_object() yields a public Tombstone (the Delete payload that tears the
+		// copy down everywhere), not a content object addressed to its new audience.
 		$object = Post::transform( get_post( $post_id ) )->to_object();
-		$this->assertEmpty( $object->get_to() );
-		$this->assertEmpty( $object->get_cc() );
+		$this->assertSame( 'Tombstone', $object->get_type() );
+		$this->assertContains( 'https://www.w3.org/ns/activitystreams#Public', $object->get_to() );
 	}
 
 	/**
@@ -503,6 +771,179 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_media_from_blocks extracts poster from video blocks.
+	 *
+	 * @covers ::get_media_from_blocks
+	 */
+	public function test_get_media_from_blocks_extracts_video_poster() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:video {"id":789} --><figure class="wp-block-video"><video controls poster="https://example.com/poster.jpg" src="https://example.com/video.mp4"></video></figure><!-- /wp:video -->',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$transformer = new Post( $post );
+		$media       = array(
+			'image' => array(),
+			'audio' => array(),
+			'video' => array(),
+		);
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_media_from_blocks' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$blocks = parse_blocks( $post->post_content );
+		$result = $method->invoke( $transformer, $blocks, $media );
+
+		$this->assertCount( 1, $result['video'] );
+		$this->assertSame( 789, $result['video'][0]['id'] );
+		$this->assertSame( 'https://example.com/poster.jpg', $result['video'][0]['icon'] );
+	}
+
+	/**
+	 * Test get_media_from_blocks handles video blocks without poster.
+	 *
+	 * @covers ::get_media_from_blocks
+	 */
+	public function test_get_media_from_blocks_video_without_poster() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:video {"id":789} --><figure class="wp-block-video"><video controls src="https://example.com/video.mp4"></video></figure><!-- /wp:video -->',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$transformer = new Post( $post );
+		$media       = array(
+			'image' => array(),
+			'audio' => array(),
+			'video' => array(),
+		);
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_media_from_blocks' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$blocks = parse_blocks( $post->post_content );
+		$result = $method->invoke( $transformer, $blocks, $media );
+
+		$this->assertCount( 1, $result['video'] );
+		$this->assertSame( 789, $result['video'][0]['id'] );
+		$this->assertArrayNotHasKey( 'icon', $result['video'][0] );
+	}
+
+	/**
+	 * Test get_media_from_blocks extracts the image from a Media & Text block.
+	 *
+	 * @covers ::get_media_from_blocks
+	 */
+	public function test_get_media_from_blocks_extracts_media_text_image() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:media-text {"mediaId":263,"mediaType":"image"} --><div class="wp-block-media-text is-stacked-on-mobile"><figure class="wp-block-media-text__media"><img src="https://example.com/img.png" alt="Media text alt" class="wp-image-263 size-full"/></figure><div class="wp-block-media-text__content"></div></div><!-- /wp:media-text -->',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$transformer = new Post( $post );
+		$media       = array(
+			'image' => array(),
+			'audio' => array(),
+			'video' => array(),
+		);
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_media_from_blocks' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$blocks = parse_blocks( $post->post_content );
+		$result = $method->invoke( $transformer, $blocks, $media );
+
+		$this->assertCount( 1, $result['image'], 'A Media & Text image must be extracted.' );
+		$this->assertSame( 263, $result['image'][0]['id'] );
+		$this->assertSame( 'Media text alt', $result['image'][0]['alt'] );
+	}
+
+	/**
+	 * Test get_media_from_blocks updates alt in place when the Media & Text image
+	 * was already collected, so the duplicate is not dropped and its alt lost.
+	 *
+	 * @covers ::get_media_from_blocks
+	 */
+	public function test_get_media_from_blocks_media_text_updates_existing_image_alt() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:media-text {"mediaId":263,"mediaType":"image"} --><div class="wp-block-media-text"><figure class="wp-block-media-text__media"><img src="https://example.com/img.png" alt="Media text alt" class="wp-image-263"/></figure></div><!-- /wp:media-text -->',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$transformer = new Post( $post );
+		// Seed the same ID without alt, as an earlier featured-image/gallery pass would.
+		$media = array(
+			'image' => array( array( 'id' => 263 ) ),
+			'audio' => array(),
+			'video' => array(),
+		);
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_media_from_blocks' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$blocks = parse_blocks( $post->post_content );
+		$result = $method->invoke( $transformer, $blocks, $media );
+
+		$this->assertCount( 1, $result['image'], 'A duplicate Media & Text image ID must not add a second entry.' );
+		$this->assertSame( 'Media text alt', $result['image'][0]['alt'], 'The existing entry must gain the Media & Text alt text.' );
+	}
+
+	/**
+	 * Test get_media_from_blocks extracts the video (and its poster) from a Media
+	 * & Text block.
+	 *
+	 * @covers ::get_media_from_blocks
+	 */
+	public function test_get_media_from_blocks_extracts_media_text_video() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:media-text {"mediaId":555,"mediaType":"video"} --><div class="wp-block-media-text is-stacked-on-mobile"><figure class="wp-block-media-text__media"><video controls poster="https://example.com/poster.jpg" src="https://example.com/video.mp4"></video></figure><div class="wp-block-media-text__content"></div></div><!-- /wp:media-text -->',
+			)
+		);
+		$post    = get_post( $post_id );
+
+		$transformer = new Post( $post );
+		$media       = array(
+			'image' => array(),
+			'audio' => array(),
+			'video' => array(),
+		);
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_media_from_blocks' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$blocks = parse_blocks( $post->post_content );
+		$result = $method->invoke( $transformer, $blocks, $media );
+
+		$this->assertCount( 1, $result['video'], 'A Media & Text video must be extracted.' );
+		$this->assertSame( 555, $result['video'][0]['id'] );
+		$this->assertSame( 'https://example.com/poster.jpg', $result['video'][0]['icon'], 'The video poster must be kept as the icon.' );
+		$this->assertEmpty( $result['image'], 'A Media & Text video must not be added as an image.' );
+	}
+
+	/**
 	 * Test get_icon method.
 	 *
 	 * @covers ::get_icon
@@ -668,53 +1109,6 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test reply link generation.
-	 *
-	 * Pleroma prepends `acct:` to the webfinger identifier, which we'd want to normalize.
-	 *
-	 * @covers ::generate_reply_link
-	 */
-	public function test_generate_reply_link() {
-		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'filter_pleroma_object' ), 10, 2 );
-
-		$transformer = new Post( self::factory()->post->create_and_get() );
-		$this->setExpectedDeprecated( 'Activitypub\Transformer\Post::generate_reply_link' );
-		$reply_link = $transformer->generate_reply_link( '', array( 'attrs' => array( 'url' => 'https://devs.live/notice/AQ8N0Xl57y8bUQAb6e' ) ) );
-
-		$this->assertSame( '<p class="ap-reply-mention"><a rel="mention ugc" href="https://devs.live/notice/AQ8N0Xl57y8bUQAb6e" title="tester@devs.live">@tester</a></p>', $reply_link );
-
-		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'filter_pleroma_object' ) );
-	}
-
-	/**
-	 * Filter pleroma object.
-	 *
-	 * @param array|string|null $response The response.
-	 * @param array|string|null $url      The Object URL.
-	 * @return string[]
-	 */
-	public function filter_pleroma_object( $response, $url ) {
-		if ( 'https://devs.live/notice/AQ8N0Xl57y8bUQAb6e' === $url ) {
-			$response = array(
-				'type'         => 'Note',
-				'attributedTo' => 'https://devs.live/users/tester',
-				'content'      => 'Cake day it is',
-			);
-		}
-		if ( 'https://devs.live/users/tester' === $url ) {
-			$response = array(
-				'id'                => 'https://devs.live/users/tester',
-				'type'              => 'Person',
-				'preferredUsername' => 'tester',
-				'url'               => 'https://devs.live/users/tester',
-				'webfinger'         => 'acct:tester@devs.live',
-			);
-		}
-
-		return $response;
-	}
-
-	/**
 	 * Test get_content method.
 	 *
 	 * @covers ::get_content
@@ -828,8 +1222,8 @@ class Test_Post extends \WP_UnitTestCase {
 		$content = $object->get_content();
 
 		// Assert that the reply block was not transformed into a mention link.
-		// Note: clean_html() strips class/aria-label/data-* from <div> but preserves class/title on <a>.
-		$this->assertStringContainsString( '<div><p><a title="This post is a response to the referenced content." href="https://example.com/posts/123" class="u-in-reply-to" target="_blank">&#8620;example.com/posts/123</a></p></div>', $content );
+		// Note: clean_html() strips target and non-allowed attributes per FEP-b2b8.
+		$this->assertStringContainsString( '<div><p><a title="This post is a response to the referenced content." href="https://example.com/posts/123" class="u-in-reply-to">&#8620;example.com/posts/123</a></p></div>', $content );
 	}
 
 	/**
@@ -888,8 +1282,8 @@ class Test_Post extends \WP_UnitTestCase {
 		$this->assertStringContainsString( '<p><a rel="mention ugc" href="https://example.com/posts/123" title="@author1@example.com">@author1</a></p>', $content );
 
 		// Assert that the second reply block was NOT transformed into a mention link (should remain as regular reply block).
-		// Note: clean_html() strips class/aria-label/data-* from <div> but preserves class/title on <a>.
-		$this->assertStringContainsString( '<div><p><a title="This post is a response to the referenced content." href="https://other.site/posts/456" class="u-in-reply-to" target="_blank">&#8620;other.site/posts/456</a></p></div>', $content );
+		// Note: clean_html() strips target and non-allowed attributes per FEP-b2b8.
+		$this->assertStringContainsString( '<div><p><a title="This post is a response to the referenced content." href="https://other.site/posts/456" class="u-in-reply-to">&#8620;other.site/posts/456</a></p></div>', $content );
 
 		// Clean up.
 		remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );
@@ -1501,6 +1895,235 @@ class Test_Post extends \WP_UnitTestCase {
 		$this->assertSame( 51.5074, $location['latitude'] );
 		$this->assertSame( -0.1278, $location['longitude'] );
 		$this->assertSame( 'London, UK', $location['name'] );
+	}
+
+	/**
+	 * Test get_exif_data method returns null when no EXIF data.
+	 *
+	 * @covers \Activitypub\Transformer\Base::get_exif_data
+	 */
+	public function test_get_exif_data_returns_null_when_no_exif() {
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		// Clear image_meta to simulate no EXIF data.
+		$metadata               = \wp_get_attachment_metadata( $attachment_id );
+		$metadata['image_meta'] = array();
+		\wp_update_attachment_metadata( $attachment_id, $metadata );
+
+		$post        = self::factory()->post->create_and_get();
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_exif_data' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$exif = $method->invoke( $transformer, $attachment_id );
+
+		$this->assertNull( $exif, 'Should return null when no EXIF data is available.' );
+
+		\wp_delete_attachment( $attachment_id, true );
+	}
+
+	/**
+	 * Test get_exif_data method returns EXIF data in FEP-ee3a format.
+	 *
+	 * @covers \Activitypub\Transformer\Base::get_exif_data
+	 */
+	public function test_get_exif_data_returns_fep_format() {
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		// Set up mock EXIF data.
+		$metadata               = \wp_get_attachment_metadata( $attachment_id );
+		$metadata['image_meta'] = array(
+			'created_timestamp' => 1704067200, // 2024-01-01 00:00:00 UTC.
+			'shutter_speed'     => 0.01,       // 1/100.
+			'aperture'          => 2.8,
+			'focal_length'      => 50,
+			'iso'               => 400,
+			'camera'            => 'Canon EOS R5',
+		);
+		\wp_update_attachment_metadata( $attachment_id, $metadata );
+
+		$post        = self::factory()->post->create_and_get();
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_exif_data' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$exif_data = $method->invoke( $transformer, $attachment_id );
+
+		$this->assertIsArray( $exif_data, 'Should return an array.' );
+		$this->assertCount( 6, $exif_data, 'Should have 6 PropertyValue objects.' );
+
+		// Convert to associative array for easier testing.
+		$exif_by_name = array();
+		foreach ( $exif_data as $prop ) {
+			$this->assertArrayHasKey( '@type', $prop, 'Each item should have @type.' );
+			$this->assertSame( 'PropertyValue', $prop['@type'], '@type should be PropertyValue.' );
+			$this->assertArrayHasKey( 'name', $prop, 'Each item should have name.' );
+			$this->assertArrayHasKey( 'value', $prop, 'Each item should have value.' );
+			$exif_by_name[ $prop['name'] ] = $prop['value'];
+		}
+
+		// Check FEP-ee3a field names and value formats.
+		$this->assertArrayHasKey( 'DateTime', $exif_by_name, 'Should contain DateTime.' );
+		$this->assertArrayHasKey( 'ExposureTime', $exif_by_name, 'Should contain ExposureTime.' );
+		$this->assertArrayHasKey( 'FNumber', $exif_by_name, 'Should contain FNumber.' );
+		$this->assertArrayHasKey( 'FocalLength', $exif_by_name, 'Should contain FocalLength.' );
+		$this->assertArrayHasKey( 'PhotographicSensitivity', $exif_by_name, 'Should contain PhotographicSensitivity.' );
+		$this->assertArrayHasKey( 'Model', $exif_by_name, 'Should contain Model.' );
+
+		// Check value formats per FEP-ee3a.
+		$this->assertSame( '2024:01:01 00:00:00', $exif_by_name['DateTime'], 'DateTime should be EXIF format.' );
+		$this->assertSame( '1/100', $exif_by_name['ExposureTime'], 'ExposureTime should be fraction format.' );
+		$this->assertSame( 'f/2.8', $exif_by_name['FNumber'], 'FNumber should be f/X.X format.' );
+		$this->assertSame( '50', $exif_by_name['FocalLength'], 'FocalLength should be numeric string.' );
+		$this->assertSame( '400', $exif_by_name['PhotographicSensitivity'], 'PhotographicSensitivity should be string.' );
+		$this->assertSame( 'Canon EOS R5', $exif_by_name['Model'], 'Model should be camera name.' );
+
+		\wp_delete_attachment( $attachment_id, true );
+	}
+
+	/**
+	 * Test get_exif_data with long exposure (>= 1 second).
+	 *
+	 * @covers \Activitypub\Transformer\Base::get_exif_data
+	 */
+	public function test_get_exif_data_long_exposure() {
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		// Set up mock EXIF data with long exposure.
+		$metadata               = \wp_get_attachment_metadata( $attachment_id );
+		$metadata['image_meta'] = array(
+			'shutter_speed' => 2.5, // 2.5 seconds.
+		);
+		\wp_update_attachment_metadata( $attachment_id, $metadata );
+
+		$post        = self::factory()->post->create_and_get();
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_exif_data' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$exif_data = $method->invoke( $transformer, $attachment_id );
+
+		$this->assertCount( 1, $exif_data, 'Should have 1 PropertyValue object.' );
+		$this->assertSame( 'ExposureTime', $exif_data[0]['name'], 'Should be ExposureTime.' );
+		$this->assertSame( '2.5', $exif_data[0]['value'], 'Long exposure should be shown as seconds.' );
+
+		\wp_delete_attachment( $attachment_id, true );
+	}
+
+	/**
+	 * Test that EXIF data is included in image attachments.
+	 *
+	 * @covers \Activitypub\Transformer\Base::transform_attachment
+	 */
+	public function test_transform_attachment_includes_exif() {
+		$attachment_id  = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		$attachment_src = \wp_get_attachment_image_src( $attachment_id );
+
+		// Set up mock EXIF data.
+		$metadata               = \wp_get_attachment_metadata( $attachment_id );
+		$metadata['image_meta'] = array(
+			'iso'    => 800,
+			'camera' => 'Nikon Z6',
+		);
+		\wp_update_attachment_metadata( $attachment_id, $metadata );
+
+		$post_id = \wp_insert_post(
+			array(
+				'post_author'  => 1,
+				'post_content' => sprintf(
+					'<!-- wp:image {"id": %1$d,"sizeSlug":"large"} --><figure class="wp-block-image"><img src="%2$s" alt="" class="wp-image-%1$d"/></figure><!-- /wp:image -->',
+					$attachment_id,
+					$attachment_src[0]
+				),
+				'post_status'  => 'publish',
+			)
+		);
+
+		$object      = Post::transform( get_post( $post_id ) )->to_object();
+		$attachments = $object->get_attachment();
+
+		$this->assertCount( 1, $attachments, 'Should have one attachment.' );
+		$this->assertArrayHasKey( 'exifData', $attachments[0], 'Attachment should include exifData array.' );
+		$this->assertIsArray( $attachments[0]['exifData'], 'exifData should be an array of PropertyValue objects.' );
+		$this->assertCount( 2, $attachments[0]['exifData'], 'Should have 2 PropertyValue objects.' );
+
+		// Convert to associative array for easier testing.
+		$exif_by_name = array();
+		foreach ( $attachments[0]['exifData'] as $prop ) {
+			$exif_by_name[ $prop['name'] ] = $prop['value'];
+		}
+
+		$this->assertArrayHasKey( 'PhotographicSensitivity', $exif_by_name, 'EXIF should include ISO.' );
+		$this->assertArrayHasKey( 'Model', $exif_by_name, 'EXIF should include camera model.' );
+		$this->assertSame( '800', $exif_by_name['PhotographicSensitivity'], 'ISO should be 800.' );
+		$this->assertSame( 'Nikon Z6', $exif_by_name['Model'], 'Camera model should be Nikon Z6.' );
+
+		\wp_delete_attachment( $attachment_id, true );
+	}
+
+	/**
+	 * Test activitypub_image_exif filter.
+	 *
+	 * @covers \Activitypub\Transformer\Base::get_exif_data
+	 */
+	public function test_get_exif_data_filter() {
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		// Set up mock EXIF data.
+		$metadata               = \wp_get_attachment_metadata( $attachment_id );
+		$metadata['image_meta'] = array(
+			'camera' => 'Test Camera',
+		);
+		\wp_update_attachment_metadata( $attachment_id, $metadata );
+
+		// Add filter to extend EXIF data with a Make property.
+		$filter = function ( $exif_data, $image_meta, $id ) use ( $attachment_id ) {
+			$this->assertSame( $attachment_id, $id, 'Filter should receive correct attachment ID.' );
+			$exif_data[] = array(
+				'@type' => 'PropertyValue',
+				'name'  => 'Make',
+				'value' => 'Test Manufacturer',
+			);
+			return $exif_data;
+		};
+		\add_filter( 'activitypub_image_exif', $filter, 10, 3 );
+
+		$post        = self::factory()->post->create_and_get();
+		$transformer = new Post( $post );
+
+		$reflection = new \ReflectionClass( Post::class );
+		$method     = $reflection->getMethod( 'get_exif_data' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$exif_data = $method->invoke( $transformer, $attachment_id );
+
+		$this->assertCount( 2, $exif_data, 'Should have 2 PropertyValue objects (Model + Make).' );
+
+		// Convert to associative array for easier testing.
+		$exif_by_name = array();
+		foreach ( $exif_data as $prop ) {
+			$exif_by_name[ $prop['name'] ] = $prop['value'];
+		}
+
+		$this->assertArrayHasKey( 'Make', $exif_by_name, 'Filter should be able to add Make property.' );
+		$this->assertSame( 'Test Manufacturer', $exif_by_name['Make'], 'Filter should set Make value.' );
+
+		\remove_filter( 'activitypub_image_exif', $filter );
+		\wp_delete_attachment( $attachment_id, true );
 	}
 
 	/**

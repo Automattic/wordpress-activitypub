@@ -31,7 +31,9 @@ class Cli {
 	 * - wp activitypub self-destruct [--status] [--yes]
 	 * - wp activitypub move <from> <to>
 	 * - wp activitypub follow <remote_user>
+	 * - wp activitypub stats <collect|compile|send>
 	 * - wp activitypub fetch <url>
+	 * - wp activitypub blurhash backfill [--dry-run] [--limit=<n>] [--force]
 	 */
 	public static function register() {
 		// Register parent command with version subcommand.
@@ -112,6 +114,22 @@ class Cli {
 			'\Activitypub\Cli\Fetch_Command',
 			array(
 				'shortdesc' => 'Fetch a remote URL with a signed ActivityPub request.',
+			)
+		);
+
+		\WP_CLI::add_command(
+			'activitypub stats',
+			'\Activitypub\Cli\Stats_Command',
+			array(
+				'shortdesc' => 'Manage ActivityPub statistics (collect, compile or send).',
+			)
+		);
+
+		\WP_CLI::add_command(
+			'activitypub blurhash',
+			'\Activitypub\Cli\Blurhash_Command',
+			array(
+				'shortdesc' => 'Backfill Blurhash placeholders for image attachments.',
 			)
 		);
 	}

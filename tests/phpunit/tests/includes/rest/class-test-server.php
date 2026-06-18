@@ -34,168 +34,257 @@ class Test_Server extends \WP_Test_REST_TestCase {
 		$this->assertEquals( 9, \has_filter( 'rest_request_before_callbacks', array( Server::class, 'validate_requests' ) ) );
 		$this->assertEquals( 10, \has_filter( 'rest_request_parameter_order', array( Server::class, 'request_parameter_order' ) ) );
 		$this->assertEquals( 10, \has_filter( 'rest_post_dispatch', array( Server::class, 'filter_output' ) ) );
+		$this->assertEquals( 10, \has_filter( 'rest_post_dispatch', array( Server::class, 'add_cors_headers' ) ) );
+		$this->assertEquals( 10, \has_filter( 'rest_allowed_cors_headers', array( Server::class, 'allow_cors_headers' ) ) );
+		$this->assertEquals( 10, \has_filter( 'rest_pre_dispatch', array( Server::class, 'maybe_add_actor_from_signature' ) ) );
 	}
 
 	/**
-	 * Test verify_signature method with HEAD request.
+	 * Build an actor-less, signed inbox request for the actor-backfill tests.
 	 *
-	 * @covers ::verify_signature
+	 * @param array  $body   The activity body.
+	 * @param string $key_id The keyId to advertise via the HTTP Signature header.
+	 * @param string $route  Optional. The request route. Default the shared inbox.
+	 * @return \WP_REST_Request The prepared request.
 	 */
-	public function test_verify_signature_head_request() {
-		$request = new \WP_REST_Request( 'HEAD', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$this->assertTrue( Server::verify_signature( $request ) );
+	private function build_signed_inbox_request( $body, $key_id, $route = null ) {
+		$route   = $route ?? '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox';
+		$request = new \WP_REST_Request( 'POST', $route );
+		$request->set_header( 'content-type', 'application/activity+json' );
+		$request->set_header( 'signature', \sprintf( 'keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="abc"', $key_id ) );
+		$request->set_body( \wp_json_encode( $body ) );
+
+		return $request;
 	}
 
 	/**
-	 * Test verify_signature method with deferred verification.
+	 * An actor-less FeatureRequest gets its actor backfilled from the signature keyId,
+	 * without altering the raw body (so the signed Digest still verifies).
 	 *
-	 * @covers ::verify_signature
+	 * @covers ::maybe_add_actor_from_signature
 	 */
-	public function test_verify_signature_deferred() {
-		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+	public function test_maybe_add_actor_from_signature_backfills_missing_actor() {
+		Server::init(); // Inbox POSTs read JSON params first; that order makes set_param() land in JSON.
 
-		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$this->assertTrue( Server::verify_signature( $request ) );
-
-		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
-	}
-
-	/**
-	 * Data provider for HTTP methods that require signature verification.
-	 *
-	 * @return array
-	 */
-	public function signature_required_methods_provider() {
-		return array(
-			'POST request'   => array( 'POST', true ),
-			'PUT request'    => array( 'PUT', false ),
-			'PATCH request'  => array( 'PATCH', false ),
-			'DELETE request' => array( 'DELETE', false ),
+		$body    = array(
+			'id'         => 'https://remote.example.com/activities/feat-1',
+			'type'       => 'FeatureRequest',
+			'object'     => 'https://example.org/author/1',
+			'instrument' => 'https://remote.example.com/users/curator/featured',
 		);
+		$request = $this->build_signed_inbox_request( $body, 'https://remote.example.com/users/curator#main-key' );
+
+		$original_body = $request->get_body();
+		$result        = Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertNull( $result, 'The filter must not hijack the request.' );
+		$this->assertSame(
+			'https://remote.example.com/users/curator',
+			$request->get_json_params()['actor'],
+			'Actor should be derived from the keyId with the fragment stripped.'
+		);
+		$this->assertSame( $original_body, $request->get_body(), 'The raw body must be untouched so the signed Digest still verifies.' );
 	}
 
 	/**
-	 * Test verify_signature method with requests requiring signature.
+	 * The actor is also derived from an RFC 9421 Signature-Input keyid.
 	 *
-	 * @dataProvider signature_required_methods_provider
-	 * @covers ::verify_signature
-	 *
-	 * @param string $method HTTP method.
-	 * @param bool   $expect_status Whether to expect status in error data.
+	 * @covers ::maybe_add_actor_from_signature
 	 */
-	public function test_verify_signature_methods_requiring_signature( $method, $expect_status ) {
-		$request = new \WP_REST_Request( $method, '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$result  = Server::verify_signature( $request );
-		$this->assertInstanceOf( '\WP_Error', $result );
-		$this->assertEquals( 'activitypub_signature_verification', $result->get_error_code() );
-
-		if ( $expect_status ) {
-			$this->assertEquals( 401, $result->get_error_data()['status'] );
-		}
-	}
-
-	/**
-	 * Test verify_signature method with GET request and authorized fetch enabled.
-	 *
-	 * @covers ::verify_signature
-	 */
-	public function test_verify_signature_get_request_authorized_fetch() {
-		\add_filter( 'activitypub_use_authorized_fetch', '__return_true' );
-
-		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$result  = Server::verify_signature( $request );
-		$this->assertInstanceOf( '\WP_Error', $result );
-		$this->assertEquals( 'activitypub_signature_verification', $result->get_error_code() );
-
-		\remove_filter( 'activitypub_use_authorized_fetch', '__return_true' );
-	}
-
-	/**
-	 * Test verify_signature method with GET request and authorized fetch disabled.
-	 *
-	 * @covers ::verify_signature
-	 */
-	public function test_verify_signature_get_request_no_authorized_fetch() {
-		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$this->assertTrue( Server::verify_signature( $request ) );
-	}
-
-	/**
-	 * Test verify_signature method with custom filter callback.
-	 *
-	 * @covers ::verify_signature
-	 */
-	public function test_verify_signature_with_custom_filter() {
-		$filter_called = false;
-		$test_filter   = function ( $defer, $request ) use ( &$filter_called ) {
-			$filter_called = true;
-			$this->assertFalse( $defer );
-			$this->assertInstanceOf( '\WP_REST_Request', $request );
-			return false;
-		};
-
-		\add_filter( 'activitypub_defer_signature_verification', $test_filter, 10, 2 );
+	public function test_maybe_add_actor_from_signature_supports_signature_input() {
+		Server::init();
 
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$result  = Server::verify_signature( $request );
+		$request->set_header( 'content-type', 'application/activity+json' );
+		$request->set_header( 'signature-input', 'sig1=("@method" "@target-uri");keyid="https://remote.example.com/users/curator#main-key";created=1700000000' );
+		$request->set_body( \wp_json_encode( array( 'type' => 'FeatureRequest' ) ) );
 
-		$this->assertTrue( $filter_called );
-		$this->assertInstanceOf( '\WP_Error', $result );
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
 
-		\remove_filter( 'activitypub_defer_signature_verification', $test_filter );
+		$this->assertSame( 'https://remote.example.com/users/curator', $request->get_json_params()['actor'] );
 	}
 
 	/**
-	 * Test verify_signature method with filter that returns different values.
+	 * An activity that already carries an actor is left untouched.
 	 *
-	 * @covers ::verify_signature
+	 * @covers ::maybe_add_actor_from_signature
 	 */
-	public function test_verify_signature_filter_context() {
-		$defer_filter = function ( $defer, $request ) {
-			// Test that filter receives correct parameters.
-			if ( $request->get_method() === 'PUT' ) {
-				return true; // Defer for PUT.
-			}
-			return $defer; // Don't defer for others.
-		};
+	public function test_maybe_add_actor_from_signature_keeps_existing_actor() {
+		$request = $this->build_signed_inbox_request(
+			array(
+				'type'  => 'FeatureRequest',
+				'actor' => 'https://remote.example.com/users/someone-else',
+			),
+			'https://remote.example.com/users/curator#main-key'
+		);
 
-		\add_filter( 'activitypub_defer_signature_verification', $defer_filter, 10, 2 );
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
 
-		// Test PUT request (should be deferred).
-		$put_request = new \WP_REST_Request( 'PUT', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$this->assertTrue( Server::verify_signature( $put_request ) );
-
-		// Test POST request (should not be deferred).
-		$post_request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$result       = Server::verify_signature( $post_request );
-		$this->assertInstanceOf( '\WP_Error', $result );
-
-		\remove_filter( 'activitypub_defer_signature_verification', $defer_filter );
+		$this->assertSame( 'https://remote.example.com/users/someone-else', $request->get_json_params()['actor'] );
 	}
 
 	/**
-	 * Test verify_signature method.
+	 * Only FeatureRequest activities are backfilled; other actor-less types are left alone.
 	 *
-	 * @covers ::verify_signature
+	 * @covers ::maybe_add_actor_from_signature
 	 */
-	public function test_verify_signature() {
-		// HEAD requests are always bypassed.
-		$request = new \WP_REST_Request( 'HEAD', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$this->assertTrue( Server::verify_signature( $request ) );
+	public function test_maybe_add_actor_from_signature_skips_other_activity_types() {
+		$request = $this->build_signed_inbox_request(
+			array( 'type' => 'Follow' ),
+			'https://remote.example.com/users/curator#main-key'
+		);
 
-		// POST requests require a signature.
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertArrayNotHasKey( 'actor', $request->get_json_params() );
+	}
+
+	/**
+	 * Non-inbox routes must never be touched.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_skips_non_inbox_route() {
+		$request = $this->build_signed_inbox_request(
+			array( 'type' => 'FeatureRequest' ),
+			'https://remote.example.com/users/curator#main-key',
+			'/' . ACTIVITYPUB_REST_NAMESPACE . '/outbox'
+		);
+
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertArrayNotHasKey( 'actor', $request->get_json_params() );
+	}
+
+	/**
+	 * Without a signature there is no authoritative actor to derive, so nothing changes.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_skips_without_signature() {
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$this->assertErrorResponse( 'activitypub_signature_verification', Server::verify_signature( $request ) );
+		$request->set_header( 'content-type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( array( 'type' => 'FeatureRequest' ) ) );
 
-		// GET requests with secure mode enabled require a signature.
-		\add_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
 
+		$this->assertArrayNotHasKey( 'actor', $request->get_json_params() );
+	}
+
+	/**
+	 * A non-POST request is ignored.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_skips_non_post() {
+		$request = $this->build_signed_inbox_request(
+			array( 'type' => 'FeatureRequest' ),
+			'https://remote.example.com/users/curator#main-key'
+		);
+		$request->set_method( 'GET' );
+
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertArrayNotHasKey( 'actor', $request->get_json_params() );
+	}
+
+	/**
+	 * A spoofed draft Signature header must not win over the RFC 9421 keyId the request is
+	 * actually verified with. The verifier uses Signature-Input when present, so the injected
+	 * actor must be derived from there, not from the (ignored) draft Signature header.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_uses_verified_keyid_over_spoofed_header() {
+		Server::init();
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'content-type', 'application/activity+json' );
+		$request->set_header( 'signature', 'keyId="https://victim.example/users/victim#main-key",signature="abc"' );
+		$request->set_header( 'signature-input', 'sig1=("@method");keyid="https://attacker.example/users/attacker#main-key";created=1700000000' );
+		$request->set_body( \wp_json_encode( array( 'type' => 'FeatureRequest' ) ) );
+
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertSame( 'https://attacker.example/users/attacker', $request->get_json_params()['actor'] );
+	}
+
+	/**
+	 * When the signature carries more than one keyId the verifier may validate any label,
+	 * so we cannot know which key will verify. The actor must not be backfilled.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_skips_ambiguous_keyids() {
+		Server::init();
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'content-type', 'application/activity+json' );
+		$request->set_header( 'signature-input', 'sig1=("@method");keyid="https://victim.example/users/victim#main-key", sig2=("@method");keyid="https://attacker.example/users/attacker#main-key";created=1700000000' );
+		$request->set_body( \wp_json_encode( array( 'type' => 'FeatureRequest' ) ) );
+
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertArrayNotHasKey( 'actor', $request->get_json_params() );
+	}
+
+	/**
+	 * A prior short-circuit result must be respected and left intact.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_respects_short_circuit() {
+		$request = $this->build_signed_inbox_request(
+			array( 'type' => 'FeatureRequest' ),
+			'https://remote.example.com/users/curator#main-key'
+		);
+
+		$response = new \WP_REST_Response( array( 'handled' => true ) );
+		$result   = Server::maybe_add_actor_from_signature( $response, new \WP_REST_Server(), $request );
+
+		$this->assertSame( $response, $result );
+		$this->assertArrayNotHasKey( 'actor', $request->get_json_params() );
+	}
+
+	/**
+	 * The Allow-Headers filter must extend core's defaults with the headers
+	 * ActivityPub clients use, scoped to ActivityPub routes only.
+	 *
+	 * @covers ::allow_cors_headers
+	 */
+	public function test_allow_cors_headers_extends_for_activitypub_routes() {
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
-		$this->assertErrorResponse( 'activitypub_signature_verification', Server::verify_signature( $request ) );
+		$result  = Server::allow_cors_headers( array( 'Authorization', 'X-WP-Nonce', 'Content-Type' ), $request );
 
-		// GET requests with secure mode disabled are bypassed.
-		\remove_filter( 'activitypub_use_authorized_fetch', '__return_true' );
-		$this->assertTrue( Server::verify_signature( $request ) );
+		$this->assertContains( 'X-WP-Nonce', $result );
+		$this->assertContains( 'Accept', $result );
+		$this->assertContains( 'Last-Event-ID', $result );
+	}
+
+	/**
+	 * Non-ActivityPub routes must keep core's Allow-Headers untouched.
+	 *
+	 * @covers ::allow_cors_headers
+	 */
+	public function test_allow_cors_headers_skips_non_activitypub_routes() {
+		$defaults = array( 'Authorization', 'X-WP-Nonce', 'Content-Type' );
+		$request  = new \WP_REST_Request( 'GET', '/wp/v2/posts' );
+		$result   = Server::allow_cors_headers( $defaults, $request );
+
+		$this->assertSame( $defaults, $result );
+	}
+
+	/**
+	 * The interactive OAuth authorize endpoint must not advertise CORS.
+	 *
+	 * @covers ::allow_cors_headers
+	 */
+	public function test_allow_cors_headers_skips_oauth_authorize() {
+		$defaults = array( 'Authorization', 'X-WP-Nonce', 'Content-Type' );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/authorize' );
+		$result   = Server::allow_cors_headers( $defaults, $request );
+
+		$this->assertSame( $defaults, $result );
 	}
 
 	/**
@@ -444,5 +533,72 @@ class Test_Server extends \WP_Test_REST_TestCase {
 		$data = $result->get_data();
 		$this->assertEquals( $expected_title, $data['title'] );
 		$this->assertEquals( $expected_detail, $data['detail'] );
+	}
+
+	/**
+	 * ActivityPub data is publicly readable, so CORS uses a wildcard origin
+	 * with no credentials. Reflecting an arbitrary Origin together with
+	 * Allow-Credentials would let a logged-in user's browser expose
+	 * authenticated responses to a third-party page; we explicitly avoid
+	 * that combination on every ActivityPub REST response.
+	 *
+	 * @covers ::add_cors_headers
+	 */
+	public function test_add_cors_headers_uses_wildcard_without_credentials() {
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Test snapshot of raw global; restored verbatim.
+		$origin_backup = $_SERVER['HTTP_ORIGIN'] ?? null;
+
+		try {
+			$_SERVER['HTTP_ORIGIN'] = 'https://evil.example';
+
+			$response = new \WP_REST_Response( array(), 200 );
+			$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+
+			$result  = Server::add_cors_headers( $response, new \WP_REST_Server(), $request );
+			$headers = $result->get_headers();
+
+			$this->assertSame( '*', $headers['Access-Control-Allow-Origin'] );
+			$this->assertArrayNotHasKey( 'Access-Control-Allow-Credentials', $headers );
+			$this->assertArrayNotHasKey( 'Vary', $headers );
+			// Allow-Headers is contributed via rest_allowed_cors_headers, not set on the response.
+			$this->assertArrayNotHasKey( 'Access-Control-Allow-Headers', $headers );
+		} finally {
+			if ( null === $origin_backup ) {
+				unset( $_SERVER['HTTP_ORIGIN'] );
+			} else {
+				$_SERVER['HTTP_ORIGIN'] = $origin_backup;
+			}
+		}
+	}
+
+	/**
+	 * Non-ActivityPub routes must not receive ActivityPub CORS headers.
+	 *
+	 * @covers ::add_cors_headers
+	 */
+	public function test_add_cors_headers_skips_non_activitypub_routes() {
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/wp/v2/posts' );
+
+		$result  = Server::add_cors_headers( $response, new \WP_REST_Server(), $request );
+		$headers = $result->get_headers();
+
+		$this->assertArrayNotHasKey( 'Access-Control-Allow-Origin', $headers );
+	}
+
+	/**
+	 * The interactive OAuth authorize endpoint must not advertise CORS;
+	 * it relies on top-level navigation, not cross-origin XHR.
+	 *
+	 * @covers ::add_cors_headers
+	 */
+	public function test_add_cors_headers_skips_oauth_authorize() {
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/authorize' );
+
+		$result  = Server::add_cors_headers( $response, new \WP_REST_Server(), $request );
+		$headers = $result->get_headers();
+
+		$this->assertArrayNotHasKey( 'Access-Control-Allow-Origin', $headers );
 	}
 }

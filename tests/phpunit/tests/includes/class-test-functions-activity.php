@@ -93,6 +93,43 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 				),
 				'https://example.com',
 			),
+			array(
+				array(
+					'type'                 => 'FeaturedItem',
+					'featuredObject'       => 'https://example.com/users/alice',
+					'featureAuthorization' => 'https://example.com/users/alice/stamps/1',
+				),
+				'https://example.com/users/alice',
+			),
+			array(
+				array(
+					'type' => 'FeaturedItem',
+				),
+				null,
+			),
+			// Default fallback: object with url but no id.
+			array(
+				array(
+					'type' => 'Unknown',
+					'url'  => 'https://example.com/image.jpg',
+				),
+				'https://example.com/image.jpg',
+			),
+			// Default fallback: object with href but no id or url.
+			array(
+				array(
+					'type' => 'Unknown',
+					'href' => 'https://example.com/link',
+				),
+				'https://example.com/link',
+			),
+			// Default fallback: object with no id, url, or href.
+			array(
+				array(
+					'type' => 'Unknown',
+				),
+				null,
+			),
 		);
 	}
 
@@ -351,7 +388,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 						'monkey' => 'https://www.w3.org/ns/activitystreams#Public',
 					),
 				),
-				true,
+				false,
 			),
 			array(
 				array(
@@ -738,13 +775,13 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 				'expected'    => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
 				'description' => 'Public visibility via as:Public identifier',
 			),
-			// Empty activity - no recipients means public.
+			// Empty activity - no recipients means private per spec Section 7.1.
 			array(
 				'activity'    => array(
 					'type' => 'Create',
 				),
-				'expected'    => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
-				'description' => 'Empty activity (no recipients) is treated as public',
+				'expected'    => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
+				'description' => 'Empty activity (no recipients) is treated as private per spec',
 			),
 		);
 	}

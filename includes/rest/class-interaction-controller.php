@@ -93,6 +93,7 @@ class Interaction_Controller extends \WP_REST_Controller {
 	 */
 	public function get_item( $request ) {
 		$uri          = $request->get_param( 'uri' );
+		$intent       = $request->get_param( 'intent' );
 		$redirect_url = '';
 		$object       = Http::get_remote_object( $uri );
 
@@ -135,8 +136,9 @@ class Interaction_Controller extends \WP_REST_Controller {
 				 * @param string $redirect_url The URL to redirect to.
 				 * @param string $uri          The URI of the actor to follow.
 				 * @param array  $object       The full actor object data.
+				 * @param string $intent       The intent of the interaction.
 				 */
-				$redirect_url = \apply_filters( 'activitypub_interactions_follow_url', $redirect_url, $uri, $object );
+				$redirect_url = \apply_filters( 'activitypub_interactions_follow_url', $redirect_url, $uri, $object, $intent );
 				break;
 			case 'Collection':
 			case 'CollectionPage':
@@ -152,8 +154,9 @@ class Interaction_Controller extends \WP_REST_Controller {
 				 * @param string $redirect_url The URL to redirect to.
 				 * @param string $uri          The URI of the collection to import.
 				 * @param array  $object       The full collection object data.
+				 * @param string $intent       The intent of the interaction.
 				 */
-				$redirect_url = \apply_filters( 'activitypub_interactions_starter_kit_url', $redirect_url, $uri, $object );
+				$redirect_url = \apply_filters( 'activitypub_interactions_starter_kit_url', $redirect_url, $uri, $object, $intent );
 				break;
 			default:
 				$redirect_url = \admin_url( 'post-new.php?in_reply_to=' . $url_param );
@@ -166,8 +169,9 @@ class Interaction_Controller extends \WP_REST_Controller {
 				 * @param string $redirect_url The URL to redirect to.
 				 * @param string $uri          The URI of the object to reply to.
 				 * @param array  $object       The full object data being replied to.
+				 * @param string $intent       The intent of the interaction.
 				 */
-				$redirect_url = \apply_filters( 'activitypub_interactions_reply_url', $redirect_url, $uri, $object );
+				$redirect_url = \apply_filters( 'activitypub_interactions_reply_url', $redirect_url, $uri, $object, $intent );
 		}
 
 		/**
@@ -179,8 +183,9 @@ class Interaction_Controller extends \WP_REST_Controller {
 		 * @param string $redirect_url The URL to redirect to.
 		 * @param string $uri          The URI of the object.
 		 * @param array  $object       The object being interacted with.
+		 * @param string $intent       The intent of the interaction.
 		 */
-		$redirect_url = \apply_filters( 'activitypub_interactions_url', $redirect_url, $uri, $object );
+		$redirect_url = \apply_filters( 'activitypub_interactions_url', $redirect_url, $uri, $object, $intent );
 
 		// Check if hook is implemented.
 		if ( ! $redirect_url ) {

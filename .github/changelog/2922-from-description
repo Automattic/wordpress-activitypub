@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix follow button redirect from Mastodon not being recognized.

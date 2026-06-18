@@ -20,6 +20,7 @@ class Router {
 	public static function init() {
 		\add_action( 'init', array( self::class, 'add_rewrite_rules' ), 11 );
 
+		\add_action( 'send_headers', array( self::class, 'add_headers' ) );
 		\add_filter( 'template_include', array( self::class, 'render_activitypub_template' ), 99 );
 		\add_action( 'template_redirect', array( self::class, 'template_redirect' ) );
 		\add_filter( 'redirect_canonical', array( self::class, 'redirect_canonical' ), 10, 2 );
@@ -63,6 +64,13 @@ class Router {
 			);
 		}
 
+		// Authorization Server Metadata (RFC 8414).
+		\add_rewrite_rule(
+			'^.well-known/oauth-authorization-server',
+			'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/authorization-server-metadata',
+			'top'
+		);
+
 		// Must precede the generic @username rule, which would otherwise match "application" as an actor username.
 		\add_rewrite_rule( '^@application\/?$', 'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/application', 'top' );
 		\add_rewrite_rule( '^@([\w\-\.]+)\/?$', 'index.php?actor=$matches[1]', 'top' );
@@ -81,31 +89,82 @@ class Router {
 			return $template;
 		}
 
-		self::add_headers();
-
 		if ( ! is_activitypub_request() || ! should_negotiate_content() ) {
-			if ( \get_query_var( 'p' ) && Outbox::POST_TYPE === \get_post_type( \get_query_var( 'p' ) ) ) {
+			$is_outbox_item = \get_query_var( 'p' ) && Outbox::POST_TYPE === \get_post_type( \get_query_var( 'p' ) );
+			$is_preflight   = isset( $_SERVER['REQUEST_METHOD'] ) && 'OPTIONS' === $_SERVER['REQUEST_METHOD'];
+
+			if ( $is_outbox_item && $is_preflight ) {
+				/*
+				 * CORS preflight: override WordPress 404 so the browser
+				 * accepts the preflight response (must be 2xx).
+				 */
+				\status_header( 200 );
+			} elseif ( $is_outbox_item ) {
+				// Return 406 for non-ActivityPub requests to outbox items since they only support ActivityPub requests.
 				\set_query_var( 'is_404', true );
 				\status_header( 406 );
 			}
+
 			return $template;
 		}
 
 		$activitypub_object = Query::get_instance()->get_activitypub_object();
+		$queried_object     = Query::get_instance()->get_queried_object();
 
-		if ( Tombstone::exists_local( Query::get_instance()->get_request_url() ) ) {
+		/*
+		 * Serve the Tombstone for a deleted object — but not while an authorized
+		 * user is previewing it. During an editor `?preview=true` request,
+		 * `is_post_publicly_queryable()` treats a draft or pending post as
+		 * queryable only for a user who can edit it, so the author can still use
+		 * the Fediverse Preview on a post they just soft-deleted (which is
+		 * otherwise already in the tombstone registry).
+		 *
+		 * The bypass is scoped to that preview request on purpose. A normal
+		 * ActivityPub fetch (no `preview`) of a tombstoned URL always gets the
+		 * Tombstone — even if the URL now resolves to a fresh public post because
+		 * its slug was reused — since remote servers were told that id is gone.
+		 * The legitimate restore path clears the registry entry itself, via
+		 * `Create::maybe_unbury()` when the re-publish Create is queued.
+		 */
+		$is_authorized_preview = \get_query_var( 'preview' )
+			&& $queried_object instanceof \WP_Post
+			&& is_post_publicly_queryable( $queried_object );
+
+		if (
+			Tombstone::exists_local( Query::get_instance()->get_request_url() )
+			&& ! $is_authorized_preview
+		) {
 			// Set 410 Gone for permanently deleted posts, 200 OK for soft-deleted.
 			if ( ! $activitypub_object ) {
 				\status_header( 410 );
 			}
+
 			return ACTIVITYPUB_PLUGIN_DIR . 'templates/tombstone-json.php';
+		}
+
+		/*
+		 * Refuse to expose the content-negotiated representation of a post
+		 * that is no longer publicly queryable (non-public status, AP
+		 * visibility flipped, post-type support removed, etc.). The
+		 * lifecycle gate in `is_post_disabled()` intentionally lets such
+		 * posts through the federation pipeline so a Delete can fire, but
+		 * that escape hatch must not leak into front-end rendering during
+		 * the window between status change and Delete delivery.
+		 */
+		if (
+			$activitypub_object &&
+			$queried_object instanceof \WP_Post &&
+			'ap_outbox' !== $queried_object->post_type &&
+			! is_post_publicly_queryable( $queried_object )
+		) {
+			return $template;
 		}
 
 		$activitypub_template = false;
 
 		if ( $activitypub_object ) {
 			if ( \get_query_var( 'preview' ) ) {
-				\define( 'ACTIVITYPUB_PREVIEW', true );
+				\defined( 'ACTIVITYPUB_PREVIEW' ) || \define( 'ACTIVITYPUB_PREVIEW', true );
 
 				/**
 				 * Filter the template used for the ActivityPub preview.
@@ -155,11 +214,26 @@ class Router {
 	public static function add_headers() {
 		$id = Query::get_instance()->get_activitypub_object_id();
 
+		/*
+		 * Send CORS headers for resolved ActivityPub objects and outbox
+		 * items. Outbox items need CORS even when the object ID doesn't
+		 * resolve, because browser preflight requests don't carry the
+		 * Authorization header needed to authenticate private items.
+		 */
+		$post_id       = \get_query_var( 'p' );
+		$is_outbox_url = $post_id && Outbox::POST_TYPE === \get_post_type( $post_id );
+
+		if ( ! \headers_sent() && ( $id || $is_outbox_url ) ) {
+			\header( 'Access-Control-Allow-Origin: *' );
+			\header( 'Access-Control-Allow-Methods: GET, OPTIONS' );
+			\header( 'Access-Control-Allow-Headers: Accept, Authorization, Content-Type' );
+		}
+
 		if ( ! $id ) {
 			return;
 		}
 
-		if ( ! headers_sent() ) {
+		if ( ! \headers_sent() ) {
 			\header( 'Link: <' . esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"', false );
 
 			if ( \get_option( 'activitypub_vary_header', '1' ) ) {
@@ -168,7 +242,7 @@ class Router {
 			}
 		}
 
-		add_action(
+		\add_action(
 			'wp_head',
 			static function () use ( $id ) {
 				echo PHP_EOL . '<link rel="alternate" title="ActivityPub (JSON)" type="application/activity+json" href="' . esc_url( $id ) . '" />' . PHP_EOL;
@@ -259,8 +333,16 @@ class Router {
 			exit;
 		}
 
-		$actor = \get_query_var( 'actor', null );
-		if ( $actor ) {
+		/*
+		 * Skip the actor branch when this looks like an actor-scoped FEP-7aa9
+		 * stamp URL: numeric `actor` paired with a `stamp`. Those resolve to a
+		 * FeatureAuthorization via Activitypub\Query, not via the username
+		 * lookup which would 404 the numeric ID. Non-numeric actors fall
+		 * through to the regular Mastodon-style profile lookup.
+		 */
+		$actor        = \get_query_var( 'actor', null );
+		$is_stamp_url = $actor && \get_query_var( 'stamp' ) && \ctype_digit( (string) $actor );
+		if ( $actor && ! $is_stamp_url ) {
 			$actor = Actors::get_by_username( $actor );
 			if ( ! $actor || \is_wp_error( $actor ) ) {
 				$wp_query->set_404();

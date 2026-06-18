@@ -3,12 +3,12 @@
  * Plugin Name: ActivityPub
  * Plugin URI: https://github.com/Automattic/wordpress-activitypub
  * Description: The ActivityPub protocol is a decentralized social networking protocol based upon the ActivityStreams 2.0 data format.
- * Version: 7.9.1
+ * Version: 9.0.1
  * Author: Matthias Pfefferle & Automattic
  * Author URI: https://automattic.com/
  * License: MIT
  * License URI: http://opensource.org/licenses/MIT
- * Requires PHP: 7.2
+ * Requires PHP: 7.4
  * Text Domain: activitypub
  * Domain Path: /languages
  *
@@ -17,7 +17,7 @@
 
 namespace Activitypub;
 
-\define( 'ACTIVITYPUB_PLUGIN_VERSION', '7.9.1' );
+\define( 'ACTIVITYPUB_PLUGIN_VERSION', '9.0.1' );
 
 // Plugin related constants.
 \define( 'ACTIVITYPUB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -53,14 +53,22 @@ function rest_init() {
 	( new Rest\Actors_Controller() )->register_routes();
 	( new Rest\Actors_Inbox_Controller() )->register_routes();
 	( new Rest\Admin\Actions_Controller() )->register_routes();
+	( new Rest\Admin\Statistics_Controller() )->register_routes();
 	( new Rest\Application_Controller() )->register_routes();
+	( new Rest\Stats_Image_Controller() )->register_routes();
 	( new Rest\Collections_Controller() )->register_routes();
 	( new Rest\Comments_Controller() )->register_routes();
 	( new Rest\Followers_Controller() )->register_routes();
 	( new Rest\Following_Controller() )->register_routes();
+	( new Rest\Liked_Controller() )->register_routes();
 	( new Rest\Inbox_Controller() )->register_routes();
 	( new Rest\Interaction_Controller() )->register_routes();
 	( new Rest\Moderators_Controller() )->register_routes();
+	if ( \get_option( 'activitypub_api', false ) ) {
+		( new Rest\OAuth\Authorization_Controller() )->register_routes();
+		( new Rest\OAuth\Clients_Controller() )->register_routes();
+		( new Rest\OAuth\Token_Controller() )->register_routes();
+	}
 	( new Rest\Outbox_Controller() )->register_routes();
 	( new Rest\Post_Controller() )->register_routes();
 	( new Rest\Replies_Controller() )->register_routes();
@@ -70,6 +78,7 @@ function rest_init() {
 	if ( is_blog_public() ) {
 		( new Rest\Nodeinfo_Controller() )->register_routes();
 	}
+	( new Rest\Proxy_Controller() )->register_routes();
 }
 \add_action( 'rest_api_init', __NAMESPACE__ . '\rest_init' );
 
@@ -80,10 +89,14 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Activitypub', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Application', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Avatars', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Blurhash', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Cache', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Dispatcher', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Embed', 'init' ) );
+	if ( \get_option( 'activitypub_api', false ) ) {
+		\add_action( 'init', array( __NAMESPACE__ . '\Event_Stream', 'init' ) );
+	}
 	\add_action( 'init', array( __NAMESPACE__ . '\Handler', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Hashtag', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Link', 'init' ) );
@@ -98,6 +111,10 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ), 0 );
 	\add_action( 'init', array( __NAMESPACE__ . '\Search', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Signature', 'init' ) );
+	// Only load OAuth Server if the ActivityPub API is enabled.
+	if ( \get_option( 'activitypub_api', false ) ) {
+		\add_action( 'init', array( __NAMESPACE__ . '\OAuth\Server', 'init' ) );
+	}
 
 	if ( site_supports_blocks() ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
@@ -113,14 +130,6 @@ function plugin_init() {
 		$loader_file = __DIR__ . '/local/load.php';
 		if ( \file_exists( $loader_file ) && \is_readable( $loader_file ) ) {
 			require_once $loader_file;
-		}
-	}
-
-	if ( \defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-		$debug_file = __DIR__ . '/includes/debug.php';
-		if ( \file_exists( $debug_file ) && \is_readable( $debug_file ) ) {
-			require_once $debug_file;
-			Debug::init();
 		}
 	}
 }
@@ -142,6 +151,7 @@ function plugin_admin_init() {
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Health_Check', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Settings', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Settings_Fields', 'init' ) );
+	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Dashboard', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\User_Settings_Fields', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Welcome_Fields', 'init' ) );
 
@@ -169,3 +179,6 @@ function activation_redirect( $plugin ) {
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	Cli::register();
 }
+
+// Register OAuth login form handler early (before wp-login.php processes).
+\add_action( 'login_form_activitypub_authorize', array( __NAMESPACE__ . '\OAuth\Server', 'login_form_authorize' ) );

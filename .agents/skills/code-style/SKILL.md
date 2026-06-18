@@ -87,7 +87,7 @@ class Custom extends Base {
 **Examples:**
 - `includes/transformer/class-post.php` - Post transformation.
 - `includes/transformer/class-comment.php` - Comment transformation.
-- `includes/transformer/class-event.php` - Event-specific transformation.
+- `includes/transformer/class-user.php` - User/actor transformation.
 
 ### Handlers
 Process incoming ActivityPub activities from remote servers.
@@ -137,11 +137,8 @@ $content = enrich_content_data( $content, $pattern, $callback );
 // Resolve WebFinger handle to actor URL.
 $resource = Webfinger::resolve( $handle );
 
-// Get user's ActivityPub actor URL.
-$actor_url = get_author_posts_url( $user_id );
-
-// Check if a post type is enabled for ActivityPub.
-$enabled = \is_post_type_enabled( $post_type );
+// Check whether a post is disabled for ActivityPub (the federation pipeline gate).
+$disabled = is_post_disabled( $post );
 ```
 
 ## Real Codebase Examples
@@ -153,14 +150,14 @@ $enabled = \is_post_type_enabled( $post_type );
 - `includes/class-signature.php` - HTTP Signatures for federation.
 
 **Activity Types:**
-- `includes/activity/class-activity.php` - Base activity class.
-- `includes/activity/class-follow.php` - Follow activity.
-- `includes/activity/class-undo.php` - Undo activity.
+- `includes/activity/class-activity.php` - Activity class (Create, Follow, Undo, etc. are built from this).
+- `includes/activity/class-base-object.php` - Base object class.
+- `includes/activity/extended-object/` - Extended object types (e.g. Event).
 
 **Integrations (see [Integration Patterns](../integrations/SKILL.md)):**
-- `integration/class-woocommerce.php` - WooCommerce integration.
 - `integration/class-buddypress.php` - BuddyPress integration.
 - `integration/class-jetpack.php` - Jetpack integration.
+- `integration/class-opengraph.php` - OpenGraph integration.
 
 ## Common Initialization Patterns
 
@@ -172,7 +169,7 @@ class Feature {
      */
     public static function init() {
         \add_action( 'init', array( self::class, 'register' ) );
-        \add_filter( 'activitypub_activity_object', array( self::class, 'filter' ) );
+        \add_filter( 'activitypub_the_content', array( self::class, 'filter' ) );
     }
 }
 ```
@@ -199,16 +196,15 @@ class Manager {
 
 **Actions:**
 ```php
-\do_action( 'activitypub_before_send_activity', $activity );
-\do_action( 'activitypub_after_send_activity', $activity, $response );
-\do_action( 'activitypub_inbox_received', $activity );
+\do_action( 'activitypub_handled_create', $activity, $user_ids, $success, $result );
+\do_action( 'activitypub_followers_pre_remove_follower', $follower, $user_id, $actor );
 ```
 
 **Filters:**
 ```php
-$activity = \apply_filters( 'activitypub_activity_object', $activity, $post );
+$array   = \apply_filters( 'activitypub_activity_object_array', $array, $class, $id, $object );
 $content = \apply_filters( 'activitypub_the_content', $content, $post );
-$actor = \apply_filters( 'activitypub_actor_data', $actor, $user_id );
+$types   = \apply_filters( 'activitypub_actor_types', $types );
 ```
 
 ## Version Numbers

@@ -328,11 +328,14 @@ class Test_Following extends \WP_UnitTestCase {
 			)
 		);
 
-		$user_id = 1;
+		$user_id = self::factory()->user->create();
+		\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
 
 		// Use global follow() function to add a follow request.
 		$remote_actor_url = \get_post( $post_id )->guid;
-		follow( $remote_actor_url, $user_id );
+		$follow_outbox_id = follow( $remote_actor_url, $user_id );
+		// Publish the Follow outbox item so unfollow's meta query (which defaults to publish-only) can find it.
+		\wp_publish_post( $follow_outbox_id );
 		\clean_post_cache( $post_id );
 
 		// Verify user is in following list (pending or following).
@@ -345,9 +348,10 @@ class Test_Following extends \WP_UnitTestCase {
 
 		\clean_post_cache( $post_id );
 
-		// Should return WP_Post.
-		$this->assertInstanceOf( '\WP_Post', $result );
-		$this->assertEquals( $post_id, $result->ID );
+		// Should return the ID of the newly created Undo outbox item.
+		$this->assertIsInt( $result );
+		$this->assertGreaterThan( 0, $result );
+		$this->assertSame( 'Undo', \get_post_meta( $result, '_activitypub_activity_type', true ) );
 
 		// User should no longer be in following list.
 		$following = \get_post_meta( $post_id, Following::FOLLOWING_META_KEY, false );
@@ -381,26 +385,37 @@ class Test_Following extends \WP_UnitTestCase {
 		\wp_publish_post( $outbox_item_4 );
 
 		$accept_1 = array(
+			'actor'  => 'https://example.com/actor/1',
 			'object' => array(
 				'id'     => $outbox_item_1->guid,
 				'object' => 'https://example.com/actor/1',
 			),
 		);
 		$accept_2 = array(
+			'actor'  => 'https://example.com/actor/1',
 			'object' => array(
 				'id'     => $outbox_item_2->guid,
 				'object' => 'https://example.com/actor/1',
 			),
 		);
 		$accept_3 = array(
+			'actor'  => 'https://example.com/actor/1',
 			'object' => array(
 				'id'     => $outbox_item_3->guid,
 				'object' => 'https://example.com/actor/1',
 			),
 		);
 		$accept_4 = array(
+			'actor'  => 'https://example.com/actor/1',
 			'object' => array(
 				'id'     => $outbox_item_4->guid,
+				'object' => 'https://example.com/actor/1',
+			),
+		);
+		$accept_5 = array(
+			'actor'  => 'https://example.com/actor/1',
+			'object' => array(
+				'id'     => $outbox_item_5->guid,
 				'object' => 'https://example.com/actor/1',
 			),
 		);

@@ -149,6 +149,11 @@ class Health_Check {
 			'test'  => array( self::class, 'test_outbox_rate' ),
 		);
 
+		$tests['direct']['activitypub_test_filesystem'] = array(
+			'label' => \__( 'Filesystem Access Test', 'activitypub' ),
+			'test'  => array( self::class, 'test_filesystem' ),
+		);
+
 		return $tests;
 	}
 
@@ -297,18 +302,27 @@ class Health_Check {
 					$author_url
 				),
 				'webfinger_url_invalid_response' => \sprintf(
-					// translators: %s: Author URL.
 					$invalid_response,
 					$author_url
 				),
 			);
-			$message         = null;
+
 			if ( isset( $health_messages[ $url->get_error_code() ] ) ) {
 				$message = $health_messages[ $url->get_error_code() ];
+			} else {
+				$message = \sprintf(
+					$not_accessible,
+					$author_url
+				);
+			}
+
+			$error_code = $url->get_error_code();
+			if ( ! $error_code ) {
+				$error_code = 'webfinger_url_not_accessible';
 			}
 
 			return new \WP_Error(
-				$url->get_error_code(),
+				$error_code,
 				$message,
 				$url->get_error_data()
 			);
@@ -372,13 +386,13 @@ class Health_Check {
 
 		$info['activitypub']['fields']['activitypub_outbox_purge_days'] = array(
 			'label'   => \__( 'Outbox Retention Period', 'activitypub' ),
-			'value'   => \esc_attr( (int) \get_option( 'activitypub_outbox_purge_days', 180 ) ),
+			'value'   => \esc_attr( (int) \get_option( 'activitypub_outbox_purge_days', ACTIVITYPUB_OUTBOX_PURGE_DAYS ) ),
 			'private' => false,
 		);
 
 		$info['activitypub']['fields']['activitypub_ap_post_purge_days'] = array(
 			'label'   => \__( 'Remote Posts Retention Period', 'activitypub' ),
-			'value'   => \esc_attr( (int) \get_option( 'activitypub_ap_post_purge_days', 30 ) ),
+			'value'   => \esc_attr( (int) \get_option( 'activitypub_ap_post_purge_days', ACTIVITYPUB_AP_POST_PURGE_DAYS ) ),
 			'private' => false,
 		);
 
@@ -773,7 +787,7 @@ class Health_Check {
 	 * Detects abnormally high outbox creation rates that may indicate
 	 * a third-party plugin is triggering excessive wp_update_post() calls.
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 *
 	 * @return array The test result.
 	 */
@@ -838,9 +852,64 @@ class Health_Check {
 	}
 
 	/**
+	 * Filesystem access test.
+	 *
+	 * Checks whether WordPress can write files directly. When direct filesystem
+	 * access is unavailable (e.g., FTP-only servers), media caching will not work.
+	 *
+	 * @since 8.0.0
+	 *
+	 * @return array The test result.
+	 */
+	public static function test_filesystem() {
+		$result = array(
+			'label'       => \__( 'Uploads directory is writable for media caching', 'activitypub' ),
+			'status'      => 'good',
+			'badge'       => array(
+				'label' => \__( 'ActivityPub', 'activitypub' ),
+				'color' => 'green',
+			),
+			'description' => \sprintf(
+				'<p>%s</p>',
+				\__( 'The uploads directory is writable, so remote media caching (avatars, emoji, images) works correctly.', 'activitypub' )
+			),
+			'actions'     => '',
+			'test'        => 'test_filesystem',
+		);
+
+		// Skip test when remote caching is disabled.
+		if ( ACTIVITYPUB_DISABLE_REMOTE_CACHE ) {
+			$result['description'] = \sprintf(
+				'<p>%s</p>',
+				\__( 'Remote media caching is disabled, so uploads directory write access is not required.', 'activitypub' )
+			);
+			return $result;
+		}
+
+		$upload_dir = \wp_upload_dir();
+
+		if ( ! \wp_is_writable( $upload_dir['basedir'] ) ) {
+			$result['status']         = 'recommended';
+			$result['label']          = \__( 'Uploads directory is not writable for media caching', 'activitypub' );
+			$result['badge']['color'] = 'orange';
+			$result['description']    = \sprintf(
+				'<p>%s</p><p>%s</p>',
+				\__( 'The uploads directory is not writable by the web server. Remote avatars, emoji, and images will be served from their original URLs instead of being cached locally.', 'activitypub' ),
+				\__( 'To fix this, ask your hosting provider to ensure the uploads directory is writable by the web server.', 'activitypub' )
+			);
+			$result['actions']        = \sprintf(
+				'<p>%s</p>',
+				\__( 'If you cannot make the directory writable, you can disable media caching by adding <code>define( \'ACTIVITYPUB_DISABLE_REMOTE_CACHE\', true );</code> to your <code>wp-config.php</code>. Remote media will then be served from its original URL.', 'activitypub' )
+			);
+		}
+
+		return $result;
+	}
+
+	/**
 	 * Count outbox items created in the last hour.
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 *
 	 * @return int Total items created in the last hour.
 	 */
@@ -865,7 +934,7 @@ class Health_Check {
 	/**
 	 * Get the count of outbox items.
 	 *
-	 * @since unreleased
+	 * @since 8.0.0
 	 *
 	 * @param string $status Optional. Post status to count. Default 'any' for all statuses.
 	 *
@@ -898,8 +967,12 @@ class Health_Check {
 		// Test the Application endpoint (always available, publicly readable via GET).
 		$url = \Activitypub\get_rest_url_by_path( 'application' );
 
-		// Make an unauthenticated request.
-		$response = \wp_remote_get(
+		/*
+		 * Make an unauthenticated request. wp_safe_remote_get() guards against
+		 * SSRF should the inbox URL ever resolve off-site; requests to the
+		 * site's own host are still allowed by wp_http_validate_url().
+		 */
+		$response = \wp_safe_remote_get(
 			$url,
 			array(
 				'timeout' => 5,

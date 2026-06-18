@@ -33,6 +33,8 @@ class Migration {
 		Scheduler::register_async_batch_callback( 'activitypub_create_comment_outbox_items', array( self::class, 'create_comment_outbox_items' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_migrate_avatar_to_remote_actors', array( self::class, 'migrate_avatar_to_remote_actors' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_migrate_actor_emoji', array( self::class, 'migrate_actor_emoji' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_backfill_statistics', array( Statistics::class, 'backfill_historical_stats' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_tombstone_migrate', array( self::class, 'migrate_tombstones_to_cpt' ) );
 	}
 
 	/**
@@ -159,19 +161,14 @@ class Migration {
 		if ( \version_compare( $version_from_db, '4.7.2', '<' ) ) {
 			self::migrate_to_4_7_2();
 		}
-		if ( \version_compare( $version_from_db, '4.7.3', '<' ) ) {
-			add_action( 'init', 'flush_rewrite_rules', 20 );
-		}
 		if ( \version_compare( $version_from_db, '5.0.0', '<' ) ) {
 			Scheduler::register_schedules();
 			\wp_schedule_single_event( \time(), 'activitypub_create_post_outbox_items' );
 			\wp_schedule_single_event( \time() + 15, 'activitypub_create_comment_outbox_items' );
-			add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
 		if ( \version_compare( $version_from_db, '5.4.0', '<' ) ) {
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_slashing' ) );
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_comment_author_emails' ) );
-			\add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
 		if ( \version_compare( $version_from_db, '5.7.0', '<' ) ) {
 			self::delete_mastodon_api_orphaned_extra_fields();
@@ -179,17 +176,14 @@ class Migration {
 		if ( \version_compare( $version_from_db, '5.8.0', '<' ) ) {
 			self::update_notification_options();
 		}
-
 		if ( \version_compare( $version_from_db, '6.0.0', '<' ) ) {
 			self::migrate_followers_to_ap_actor_cpt();
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_storage' ) );
 		}
-
 		if ( \version_compare( $version_from_db, '6.0.1', '<' ) ) {
 			self::migrate_followers_to_ap_actor_cpt();
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_storage' ) );
 		}
-
 		if ( \version_compare( $version_from_db, '7.0.0', '<' ) ) {
 			wp_unschedule_hook( 'activitypub_update_followers' );
 			wp_unschedule_hook( 'activitypub_cleanup_followers' );
@@ -202,28 +196,41 @@ class Migration {
 				\wp_schedule_event( time(), 'daily', 'activitypub_cleanup_remote_actors' );
 			}
 		}
-
 		if ( \version_compare( $version_from_db, '7.3.0', '<' ) ) {
 			self::remove_pending_application_user_follow_requests();
 		}
-
 		if ( \version_compare( $version_from_db, '7.5.0', '<' ) ) {
 			self::sync_jetpack_following_meta();
 		}
-
 		if ( \version_compare( $version_from_db, '7.6.0', '<' ) ) {
 			self::clean_up_inbox();
 			\wp_schedule_single_event( \time(), 'activitypub_migrate_avatar_to_remote_actors' );
 		}
-
 		if ( \version_compare( $version_from_db, '7.9.0', '<' ) ) {
 			\wp_schedule_single_event( \time(), 'activitypub_migrate_actor_emoji' );
+		}
+		if ( \version_compare( $version_from_db, '8.1.0', '<' ) && ! \wp_next_scheduled( 'activitypub_backfill_statistics' ) ) {
+			// Backfill historical statistics data (delay + jitter to avoid load spikes on hosts running many sites).
+			\wp_schedule_single_event( \time() + HOUR_IN_SECONDS + \wp_rand( 0, 6 * HOUR_IN_SECONDS ), 'activitypub_backfill_statistics' );
 		}
 
 		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
 			self::migrate_application_keypair_option();
 			Activitypub::flush_rewrite_rules();
 		}
+		if ( \version_compare( $version_from_db, '8.3.0', '<' ) ) {
+			if ( ! \wp_next_scheduled( 'activitypub_tombstone_migrate' ) ) {
+				\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_tombstone_migrate' );
+			}
+		}
+
+		/*
+		 * Defer the flush to late in the `init` cycle (priority 20). Migration::init
+		 * runs at priority 1, which is earlier than most plugins register their
+		 * rewrite rules. Flushing synchronously here would persist a truncated
+		 * ruleset that omits third-party rules added on `init` at priority 10.
+		 */
+		\add_action( 'init', array( Activitypub::class, 'flush_rewrite_rules' ), 20 );
 
 		// Ensure all required cron schedules are registered.
 		Scheduler::register_schedules();
@@ -304,8 +311,6 @@ class Migration {
 				}
 			}
 		}
-
-		Activitypub::flush_rewrite_rules();
 	}
 
 	/**
@@ -1091,6 +1096,119 @@ class Migration {
 		foreach ( $inbox_ids as $post_id ) {
 			\wp_delete_post( $post_id, true );
 		}
+	}
+
+	/**
+	 * Migrate URLs from the legacy `activitypub_tombstone_urls` option into the
+	 * `ap_tombstone` custom post type.
+	 *
+	 * Chunked async migration. Locking and rescheduling is handled by
+	 * Scheduler::async_batch — the callback returns `array( 'batch_size' => N )`
+	 * to request another run, or `null` when the option is fully drained.
+	 *
+	 * Legacy entries are already-normalized strings (no scheme), so we bypass
+	 * URL validation and insert directly via wp_insert_post.
+	 *
+	 * @since 8.3.0
+	 *
+	 * @param int $batch_size Optional. Number of URLs to process per call. Default 500.
+	 * @return array|null Args for the next run, or null when migration is complete.
+	 */
+	public static function migrate_tombstones_to_cpt( $batch_size = 500 ) {
+		global $wpdb;
+
+		$urls = \get_option( 'activitypub_tombstone_urls', null );
+
+		if ( null === $urls || ! \is_array( $urls ) || empty( $urls ) ) {
+			\delete_option( 'activitypub_tombstone_urls' );
+			return null;
+		}
+
+		$chunk      = \array_slice( $urls, 0, (int) $batch_size );
+		$remaining  = \array_slice( $urls, (int) $batch_size );
+		$progressed = false;
+
+		foreach ( $chunk as $normalized ) {
+			if ( ! \is_string( $normalized ) || '' === $normalized ) {
+				// Drop garbage entries — counts as progress.
+				$progressed = true;
+				continue;
+			}
+
+			$hash = \md5( $normalized );
+
+			/*
+			 * Light existence check. `get_page_by_path()` would hydrate a
+			 * full `WP_Post` per loop iteration; on a large registry that
+			 * adds up fast. We only need a boolean here.
+			 */
+			$exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->prepare(
+					"SELECT 1 FROM {$wpdb->posts} WHERE post_type = %s AND post_name = %s LIMIT 1",
+					Tombstone::POST_TYPE,
+					$hash
+				)
+			);
+			if ( $exists ) {
+				$progressed = true;
+				continue;
+			}
+
+			/*
+			 * `guid` is intentionally omitted: the legacy option only kept
+			 * the normalized (schemeless) form, so we can't reconstruct the
+			 * original URL. Storing the schemeless string would be mangled
+			 * by `esc_url()`. Leave WordPress to auto-generate the guid
+			 * — it's not used for lookups, only for debugging.
+			 */
+			$result = \wp_insert_post(
+				array(
+					'post_type'   => Tombstone::POST_TYPE,
+					'post_status' => 'publish',
+					'post_name'   => $hash,
+					'post_author' => 0,
+				),
+				true
+			);
+
+			if ( \is_wp_error( $result ) || ! $result ) {
+				/*
+				 * Keep failed inserts in the legacy option so the next batch
+				 * retries them. `Tombstone::exists_local()` still falls back
+				 * to the option, so the tombstone remains discoverable.
+				 */
+				$remaining[] = $normalized;
+			} else {
+				$progressed = true;
+			}
+		}
+
+		if ( empty( $remaining ) ) {
+			\delete_option( 'activitypub_tombstone_urls' );
+			return null;
+		}
+
+		/*
+		 * Disable autoload while we drain. The point of the migration is to
+		 * stop this option from contributing to `alloptions` pressure, so
+		 * flip the flag immediately rather than waiting for the option to
+		 * be fully empty before the relief kicks in.
+		 */
+		\update_option( 'activitypub_tombstone_urls', \array_values( $remaining ), false );
+
+		/*
+		 * If nothing in this batch was drained — every insert errored and
+		 * nothing was already migrated — halt the scheduler so we don't loop
+		 * forever on a persistent failure. The legacy option still backs
+		 * exists_local(), so the data isn't lost; an admin can re-trigger
+		 * the migration via `wp cron event run activitypub_tombstone_migrate`
+		 * after fixing the underlying cause.
+		 */
+		if ( ! $progressed ) {
+			return null;
+		}
+
+		return array( 'batch_size' => (int) $batch_size );
 	}
 
 	/**

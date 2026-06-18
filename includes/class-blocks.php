@@ -7,12 +7,60 @@
 
 namespace Activitypub;
 
+use Activitypub\Cache\Stats_Image;
 use Activitypub\Collection\Actors;
 
 /**
  * Block class.
  */
 class Blocks {
+
+	/**
+	 * HTML tags to skip during block conversion.
+	 *
+	 * @var array<string>
+	 */
+	const SKIP_TAGS = array( 'BR', 'CITE', 'SOURCE' );
+
+	/**
+	 * HTML void elements that have no closing tag.
+	 *
+	 * @var array<string>
+	 */
+	const VOID_TAGS = array( 'AREA', 'BASE', 'BR', 'COL', 'EMBED', 'HR', 'IMG', 'INPUT', 'LINK', 'META', 'SOURCE', 'TRACK', 'WBR' );
+
+	/**
+	 * Map of HTML tag names to WordPress block types.
+	 *
+	 * @var array<string, string>
+	 */
+	const BLOCK_MAP = array(
+		'UL'         => 'list',
+		'OL'         => 'list',
+		'IMG'        => 'image',
+		'BLOCKQUOTE' => 'quote',
+		'H1'         => 'heading',
+		'H2'         => 'heading',
+		'H3'         => 'heading',
+		'H4'         => 'heading',
+		'H5'         => 'heading',
+		'H6'         => 'heading',
+		'P'          => 'paragraph',
+		'A'          => 'paragraph',
+		'ABBR'       => 'paragraph',
+		'B'          => 'paragraph',
+		'CODE'       => 'paragraph',
+		'EM'         => 'paragraph',
+		'I'          => 'paragraph',
+		'STRONG'     => 'paragraph',
+		'SUB'        => 'paragraph',
+		'SUP'        => 'paragraph',
+		'SPAN'       => 'paragraph',
+		'U'          => 'paragraph',
+		'FIGURE'     => 'image',
+		'HR'         => 'separator',
+	);
+
 	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
@@ -22,12 +70,15 @@ class Blocks {
 		self::register_patterns();
 		self::register_templates();
 
+		\add_action( 'pre_get_posts', array( self::class, 'filter_query_loop_vars' ) );
+
 		\add_action( 'load-post-new.php', array( self::class, 'handle_in_reply_to_get_param' ) );
 		// Add editor plugin.
 		\add_action( 'enqueue_block_editor_assets', array( self::class, 'enqueue_editor_assets' ) );
 		\add_action( 'rest_api_init', array( self::class, 'register_rest_fields' ) );
 
 		\add_filter( 'activitypub_import_mastodon_post_data', array( self::class, 'filter_import_mastodon_post_data' ), 10, 2 );
+		\add_filter( 'activitypub_attachments', array( self::class, 'add_stats_image_attachment' ), 10, 2 );
 
 		\add_action( 'activitypub_before_get_content', array( self::class, 'add_post_transformation_callbacks' ) );
 		\add_filter( 'activitypub_the_content', array( self::class, 'remove_post_transformation_callbacks' ) );
@@ -38,18 +89,21 @@ class Blocks {
 	 */
 	public static function enqueue_editor_assets() {
 		$data = array(
-			'namespace'          => ACTIVITYPUB_REST_NAMESPACE,
-			'defaultAvatarUrl'   => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
-			'enabled'            => array(
+			'namespace'             => ACTIVITYPUB_REST_NAMESPACE,
+			'defaultAvatarUrl'      => ACTIVITYPUB_PLUGIN_URL . 'assets/img/mp.jpg',
+			'enabled'               => array(
 				'blog'  => ! is_user_type_disabled( 'blog' ),
 				'users' => ! is_user_type_disabled( 'user' ),
 			),
-			'profileUrls'        => array(
+			'profileUrls'           => array(
 				'user' => \admin_url( 'profile.php#activitypub' ),
 				'blog' => \admin_url( 'options-general.php?page=activitypub&tab=blog-profile' ),
 			),
-			'showAvatars'        => (bool) \get_option( 'show_avatars' ),
-			'defaultQuotePolicy' => \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE ),
+			'showAvatars'           => (bool) \get_option( 'show_avatars' ),
+			'defaultQuotePolicy'    => \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE ),
+			'objectType'            => \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ),
+			'noteLength'            => ACTIVITYPUB_NOTE_LENGTH,
+			'statsImageUrlEndpoint' => Stats_Image::is_available() ? \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image-url/{user_id}/{year}' ) : '',
 		);
 		wp_localize_script( 'wp-editor', '_activityPubOptions', $data );
 
@@ -63,6 +117,10 @@ class Blocks {
 		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/editor-plugin/plugin.asset.php';
 		$plugin_url = plugins_url( 'build/editor-plugin/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
 		wp_enqueue_script( 'activitypub-block-editor', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
+
+		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/pre-publish-panel/plugin.asset.php';
+		$plugin_url = plugins_url( 'build/pre-publish-panel/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
+		wp_enqueue_script( 'activitypub-pre-publish-panel', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
 	}
 
 	/**
@@ -87,6 +145,8 @@ class Blocks {
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/extra-fields' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/follow-me' );
 		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/followers' );
+		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/posts-and-replies' );
+		\register_block_type_from_metadata( ACTIVITYPUB_PLUGIN_DIR . '/build/stats' );
 
 		// Only register the Following block if the Following feature is enabled.
 		if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
@@ -165,7 +225,19 @@ class Blocks {
 		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/author-header.php';
 		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/author-profile.php';
 		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/follow-page.php';
+		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/profile-page.php';
 		require ACTIVITYPUB_PLUGIN_DIR . '/patterns/social-sidebar.php';
+
+		// Only register the Following page pattern if the Following feature is enabled.
+		if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
+			require ACTIVITYPUB_PLUGIN_DIR . '/patterns/following-page.php';
+		}
+
+		// Only register the Stats post starter pattern in December and January.
+		$month = (int) \gmdate( 'n' );
+		if ( 12 === $month || 1 === $month ) {
+			require ACTIVITYPUB_PLUGIN_DIR . '/patterns/stats-post.php';
+		}
 	}
 
 	/**
@@ -190,6 +262,7 @@ class Blocks {
 	<!-- wp:spacer {"height":"32px"} -->
 	<div style="height:32px" aria-hidden="true" class="wp-block-spacer"></div>
 	<!-- /wp:spacer -->
+	<!-- wp:activitypub/posts-and-replies /-->
 	<!-- wp:query {"queryId":0,"query":{"perPage":10,"pages":0,"offset":0,"postType":"post","order":"desc","orderBy":"date","author":"","search":"","exclude":[],"sticky":"","inherit":true}} -->
 	<div class="wp-block-query">
 		<!-- wp:post-template -->
@@ -601,6 +674,21 @@ class Blocks {
 			return null;
 		}
 
+		/*
+		 * In feed contexts (RSS, Atom, and anything else WordPress treats as a feed) the styled
+		 * embed card depends on plugin CSS that isn't loaded, so it degrades to an unreadable
+		 * wall of text. Substitute the same simplified mention link the federation path uses,
+		 * and if the remote lookup fails fall through to the plain `<a class="u-in-reply-to">`
+		 * link below so the feed item still surfaces *some* indication that it's a reply.
+		 */
+		if ( \is_feed() ) {
+			$mention = self::generate_reply_link( '', array( 'attrs' => $attrs ) );
+			if ( ! empty( $mention ) ) {
+				return $mention;
+			}
+			$attrs['embedPost'] = false;
+		}
+
 		$show_embed = isset( $attrs['embedPost'] ) && $attrs['embedPost'];
 
 		$wrapper_attrs = get_block_wrapper_attributes(
@@ -644,14 +732,25 @@ class Blocks {
 	/**
 	 * Renders a modal component that can be used by different blocks.
 	 *
-	 * @param array $args Arguments for the modal.
+	 * @param array $args {
+	 *     Arguments for the modal.
+	 *
+	 *     @type string $content       The modal content HTML.
+	 *     @type string $id            Optional ID prefix for the modal elements.
+	 *     @type bool   $is_compact    Whether the modal is compact (popover-style). Default false.
+	 *     @type string $title         Static title text for the modal header.
+	 *     @type string $title_binding Optional Interactivity API binding for a dynamic title
+	 *                                 (e.g. 'context.modal.title'). When set, uses data-wp-text
+	 *                                 on the title element and enables dynamic compact toggling.
+	 * }
 	 */
 	public static function render_modal( $args = array() ) {
 		$defaults = array(
-			'content'    => '',
-			'id'         => '',
-			'is_compact' => false,
-			'title'      => '',
+			'content'       => '',
+			'id'            => '',
+			'is_compact'    => false,
+			'title'         => '',
+			'title_binding' => '',
 		);
 
 		$args = \wp_parse_args( $args, $defaults );
@@ -661,22 +760,28 @@ class Blocks {
 			class="activitypub-modal__overlay<?php echo \esc_attr( $args['is_compact'] ? ' compact' : '' ); ?>"
 			data-wp-bind--hidden="!context.modal.isOpen"
 			data-wp-watch="callbacks.handleModalEffects"
+			<?php if ( ! empty( $args['title_binding'] ) ) : ?>
+				data-wp-class--compact="context.modal.isCompact"
+			<?php endif; ?>
 			role="dialog"
 			aria-modal="true"
 			hidden
 		>
 			<div class="activitypub-modal__frame">
-				<?php if ( ! $args['is_compact'] || ! empty( $args['title'] ) ) : ?>
+				<?php if ( ! $args['is_compact'] || ! empty( $args['title'] ) || ! empty( $args['title_binding'] ) ) : ?>
 					<div class="activitypub-modal__header">
 						<h2
 							class="activitypub-modal__title"
 							<?php if ( ! empty( $args['id'] ) ) : ?>
 								id="<?php echo \esc_attr( $args['id'] . '-title' ); ?>"
 							<?php endif; ?>
+							<?php if ( ! empty( $args['title_binding'] ) ) : ?>
+								data-wp-text="<?php echo \esc_attr( $args['title_binding'] ); ?>"
+							<?php endif; ?>
 						><?php echo \esc_html( $args['title'] ); ?></h2>
 						<button
 							type="button"
-							class="activitypub-modal__close wp-element-button wp-block-button__link"
+							class="activitypub-modal__close wp-element-button"
 							data-wp-on--click="actions.closeModal"
 							aria-label="<?php echo \esc_attr__( 'Close dialog', 'activitypub' ); ?>"
 						>
@@ -691,6 +796,28 @@ class Blocks {
 				</div>
 			</div>
 		</div>
+		<?php
+	}
+
+	/**
+	 * Renders a help section explaining the Fediverse inside modal dialogs.
+	 *
+	 * Outputs a collapsible `<details>` element that explains decentralized
+	 * interactions to users unfamiliar with the Fediverse.
+	 *
+	 * @since 8.0.0
+	 */
+	public static function render_modal_help() {
+		?>
+		<details class="activitypub-dialog__help">
+			<summary><?php \esc_html_e( 'Why do I need to enter my profile?', 'activitypub' ); ?></summary>
+			<p>
+				<?php \esc_html_e( 'This site is part of the ⁂ open social web, a network of interconnected social platforms (like Mastodon, Pixelfed, Friendica, and others). Unlike centralized social media, your account lives on a platform of your choice, and you can interact with people across different platforms.', 'activitypub' ); ?>
+			</p>
+			<p>
+				<?php \esc_html_e( 'By entering your profile, we can send you to your account where you can complete this action.', 'activitypub' ); ?>
+			</p>
+		</details>
 		<?php
 	}
 
@@ -758,7 +885,7 @@ class Blocks {
 					href="#"
 					role="button"
 					class="pagination-previous"
-					data-wp-on-async--click="actions.previousPage"
+					data-wp-on--click="actions.previousPage"
 					data-wp-bind--aria-disabled="state.disablePreviousLink"
 					aria-label="<?php \esc_attr_e( 'Previous page', 'activitypub' ); ?>"
 				>
@@ -771,7 +898,7 @@ class Blocks {
 					href="#"
 					role="button"
 					class="pagination-next"
-					data-wp-on-async--click="actions.nextPage"
+					data-wp-on--click="actions.nextPage"
 					data-wp-bind--aria-disabled="state.disableNextLink"
 					aria-label="<?php \esc_attr_e( 'Next page', 'activitypub' ); ?>"
 				>
@@ -849,6 +976,7 @@ class Blocks {
 	 */
 	public static function add_post_transformation_callbacks( $post ) {
 		\add_filter( 'render_block_core/embed', array( self::class, 'revert_embed_links' ), 10, 2 );
+		\add_filter( 'render_block_activitypub/stats', '__return_empty_string' );
 
 		// Only transform reply link if it's the first block in the post.
 		$blocks = \parse_blocks( $post->post_content );
@@ -867,6 +995,7 @@ class Blocks {
 	public static function remove_post_transformation_callbacks( $content ) {
 		\remove_filter( 'render_block_core/embed', array( self::class, 'revert_embed_links' ) );
 		\remove_filter( 'render_block_activitypub/reply', array( self::class, 'generate_reply_link' ) );
+		\remove_filter( 'render_block_activitypub/stats', '__return_empty_string' );
 
 		return $content;
 	}
@@ -931,6 +1060,91 @@ class Blocks {
 	}
 
 	/**
+	 * Add the stats image as an attachment when a post contains the stats block.
+	 *
+	 * Parses the post content for activitypub/stats blocks and appends each
+	 * as an Image attachment to the ActivityPub object.
+	 *
+	 * @since 8.1.0
+	 *
+	 * @param array    $attachments The existing attachments.
+	 * @param \WP_Post $post        The post object.
+	 *
+	 * @return array The attachments with stats images appended.
+	 */
+	public static function add_stats_image_attachment( $attachments, $post ) {
+		if ( ! Stats_Image::is_available() ) {
+			return $attachments;
+		}
+
+		/*
+		 * The stats image intentionally bypasses the `activitypub_max_image_attachments`
+		 * limit because it replaces the block content rather than being an inline image
+		 * extracted from the post. It is always appended so that the share-pic is
+		 * included in the federated activity regardless of the attachment cap.
+		 */
+		$blocks       = \parse_blocks( $post->post_content );
+		$stats_blocks = self::find_blocks_recursive( $blocks, 'activitypub/stats' );
+
+		foreach ( $stats_blocks as $block ) {
+			$user_id = self::get_user_id( $block['attrs']['selectedUser'] ?? 'blog' );
+
+			if ( null === $user_id ) {
+				continue;
+			}
+
+			$year = (int) ( $block['attrs']['year'] ?? (int) \gmdate( 'Y' ) - 1 );
+			$url  = Stats_Image::get_url( $user_id, $year );
+
+			if ( \is_wp_error( $url ) ) {
+				continue;
+			}
+
+			// Determine mime type from URL extension.
+			$mime_type = \str_ends_with( $url, '.webp' ) ? 'image/webp' : 'image/png';
+
+			$attachments[] = array(
+				'type'      => 'Image',
+				'mediaType' => $mime_type,
+				'url'       => $url,
+				'name'      => \sprintf(
+					/* translators: %d: The year */
+					\__( 'Fediverse Stats %d', 'activitypub' ),
+					$year
+				),
+			);
+		}
+
+		return $attachments;
+	}
+
+	/**
+	 * Recursively find blocks of a given type in a block tree.
+	 *
+	 * @since 8.1.0
+	 *
+	 * @param array  $blocks     The parsed blocks.
+	 * @param string $block_name The block name to search for.
+	 *
+	 * @return array The matching blocks.
+	 */
+	private static function find_blocks_recursive( $blocks, $block_name ) {
+		$found = array();
+
+		foreach ( $blocks as $block ) {
+			if ( $block_name === $block['blockName'] ) {
+				$found[] = $block;
+			}
+
+			if ( ! empty( $block['innerBlocks'] ) ) {
+				$found = \array_merge( $found, self::find_blocks_recursive( $block['innerBlocks'], $block_name ) );
+			}
+		}
+
+		return $found;
+	}
+
+	/**
 	 * Transform Embed blocks to block level link.
 	 *
 	 * Remote servers will simply drop iframe elements, rendering incomplete content.
@@ -948,5 +1162,183 @@ class Blocks {
 			return $block_content;
 		}
 		return '<p><a href="' . esc_url( $block['attrs']['url'] ) . '">' . $block['attrs']['url'] . '</a></p>';
+	}
+
+	/**
+	 * Convert HTML content to blocks.
+	 *
+	 * Tokenizes the content with wp_html_split(), tracks nesting depth,
+	 * and wraps each top-level element in block comment delimiters.
+	 *
+	 * @since 8.1.0
+	 *
+	 * @param string $content The HTML content.
+	 *
+	 * @return string The content converted to blocks.
+	 */
+	public static function convert_from_html( $content ) {
+		if ( empty( $content ) ) {
+			return '';
+		}
+
+		$tokens       = \wp_html_split( $content );
+		$_content     = '';
+		$depth        = 0;
+		$current_tag  = '';
+		$current_html = '';
+
+		foreach ( $tokens as $token ) {
+			if ( '' === $token ) {
+				continue;
+			}
+
+			// Text content — accumulate only inside a top-level element.
+			if ( '<' !== $token[0] ) {
+				if ( $depth > 0 ) {
+					$current_html .= $token;
+				}
+				continue;
+			}
+
+			// Closing tag.
+			if ( '/' === $token[1] ) {
+				$current_html .= $token;
+				--$depth;
+
+				if ( 0 === $depth && '' !== $current_tag ) {
+					$_content    .= self::to_block( $current_tag, $current_html );
+					$current_tag  = '';
+					$current_html = '';
+				}
+				continue;
+			}
+
+			// Extract the tag name from the opening tag.
+			if ( ! \preg_match( '/^<([a-zA-Z][a-zA-Z0-9]*)/', $token, $m ) ) {
+				if ( $depth > 0 ) {
+					$current_html .= $token;
+				}
+				continue;
+			}
+
+			$tag = \strtoupper( $m[1] );
+
+			// Start of a new top-level element.
+			if ( 0 === $depth ) {
+				$current_tag  = $tag;
+				$current_html = $token;
+			} else {
+				$current_html .= $token;
+			}
+
+			// Void elements don't increase depth — flush immediately at top level.
+			if ( \in_array( $tag, self::VOID_TAGS, true ) ) {
+				if ( 0 === $depth && '' !== $current_tag ) {
+					$_content    .= self::to_block( $current_tag, $current_html );
+					$current_tag  = '';
+					$current_html = '';
+				}
+			} else {
+				++$depth;
+			}
+		}
+
+		return $_content;
+	}
+
+	/**
+	 * Wrap an HTML element in block comment delimiters.
+	 *
+	 * @since 8.1.0
+	 *
+	 * @param string $tag  The uppercase tag name.
+	 * @param string $html The element HTML.
+	 *
+	 * @return string The block-wrapped HTML, or empty string for skipped tags.
+	 */
+	private static function to_block( $tag, $html ) {
+		if ( \in_array( $tag, self::SKIP_TAGS, true ) ) {
+			return '';
+		}
+
+		$block_type  = self::BLOCK_MAP[ $tag ] ?? 'html';
+		$block_attrs = array();
+
+		if ( 'OL' === $tag ) {
+			$block_attrs['ordered'] = true;
+		}
+
+		return \get_comment_delimited_block_content( $block_type, $block_attrs, \trim( $html ) );
+	}
+
+	/**
+	 * Filter the main query to exclude replies.
+	 *
+	 * Adds a WHERE clause to exclude posts containing the `activitypub/reply`
+	 * block when the visitor has explicitly requested the "Posts" tab via
+	 * `?filter=posts`. This filters the main query so that Query Loop blocks
+	 * with `inherit: true` also pick up the filter.
+	 *
+	 * The filter only attaches on that explicit opt-in. Admin, feed, and any
+	 * regular frontend request (front page, archives, search…) are never
+	 * touched, which is why no block-presence probing is needed: the only
+	 * way `?filter=posts` appears in a URL is from a click on the
+	 * `activitypub/posts-and-replies` tab block.
+	 *
+	 * @since 8.1.0
+	 *
+	 * @param WP_Query $query The WP_Query instance.
+	 */
+	public static function filter_query_loop_vars( $query ) {
+		// Never touch admin or feed queries.
+		if ( \is_admin() || $query->is_feed() ) {
+			return;
+		}
+
+		if ( ! $query->is_main_query() || $query->is_singular() ) {
+			return;
+		}
+
+		// Skip the reply-exclusion filter for queries that only target
+		// non-ActivityPub post types to avoid a full table scan.
+		$query_post_type = $query->get( 'post_type' );
+		if ( ! empty( $query_post_type ) && 'any' !== $query_post_type ) {
+			$query_post_types = (array) $query_post_type;
+			if ( ! array_intersect( $query_post_types, \get_post_types_by_support( 'activitypub' ) ) ) {
+				return;
+			}
+		}
+
+		// Only filter when the "Posts" tab has been explicitly selected.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( ! isset( $_GET['filter'] ) || 'posts' !== \sanitize_key( \wp_unslash( $_GET['filter'] ) ) ) {
+			return;
+		}
+
+		\add_filter( 'posts_where', array( self::class, 'exclude_replies_where' ) );
+	}
+
+	/**
+	 * Exclude posts containing the activitypub/reply block.
+	 *
+	 * Removes itself after the first execution to avoid
+	 * affecting secondary queries on the same page.
+	 *
+	 * @since 8.1.0
+	 *
+	 * @param string $where The WHERE clause.
+	 * @return string Modified WHERE clause.
+	 */
+	public static function exclude_replies_where( $where ) {
+		\remove_filter( 'posts_where', array( self::class, 'exclude_replies_where' ) );
+
+		global $wpdb;
+
+		$where .= $wpdb->prepare(
+			" AND {$wpdb->posts}.post_content NOT LIKE %s",
+			'%<!-- wp:activitypub/reply%'
+		);
+
+		return $where;
 	}
 }

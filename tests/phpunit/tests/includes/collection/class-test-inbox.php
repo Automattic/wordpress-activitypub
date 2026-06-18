@@ -75,9 +75,40 @@ class Test_Inbox extends \WP_UnitTestCase {
 		$remote_actor_meta = \get_post_meta( $inbox_id, '_activitypub_activity_remote_actor', true );
 		$this->assertEquals( 'https://remote.example.com/users/testuser', $remote_actor_meta );
 
-		// Activities with no recipients are treated as public.
+		// Activities with no recipients are treated as private per spec.
 		$visibility_meta = \get_post_meta( $inbox_id, 'activitypub_content_visibility', true );
-		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, $visibility_meta );
+		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, $visibility_meta );
+	}
+
+	/**
+	 * Test that the blind audience (`bto`/`bcc`) is persisted to the database when
+	 * a remote activity is stored in the inbox.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_persists_blind_audience() {
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/blind' );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+		$activity->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
+		$activity->set_bto( array( 'https://remote.example.com/users/secret' ) );
+		$activity->set_bcc( array( 'https://remote.example.com/users/hidden' ) );
+
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/blind' );
+		$object->set_type( 'Note' );
+		$object->set_content( 'Blind-addressed note' );
+		$activity->set_object( $object );
+
+		$inbox_id = Inbox::add( $activity, 1 );
+
+		$this->assertIsInt( $inbox_id );
+
+		$stored = \json_decode( \get_post( $inbox_id )->post_content, true );
+
+		$this->assertSame( array( 'https://remote.example.com/users/secret' ), $stored['bto'], 'bto persisted to DB' );
+		$this->assertSame( array( 'https://remote.example.com/users/hidden' ), $stored['bcc'], 'bcc persisted to DB' );
 	}
 
 	/**

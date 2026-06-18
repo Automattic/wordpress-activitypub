@@ -95,17 +95,14 @@ test.describe( 'ActivityPub Following Collection REST API', () => {
 	} );
 
 	test( 'should handle page parameter', async ( { requestUtils } ) => {
-		try {
-			const data = await requestUtils.rest( {
-				path: `${ followingEndpoint }?page=1&per_page=10`,
-			} );
+		const data = await requestUtils.rest( {
+			path: followingEndpoint,
+			params: { page: 1, per_page: 10 },
+		} );
 
-			// If successful, verify the response structure
-			expect( data.type ).toBe( 'OrderedCollectionPage' );
-		} catch ( error ) {
-			// Skip this test if pagination isn't available yet
-			expect( error.status || error.code ).toBeGreaterThanOrEqual( 400 );
-		}
+		// With no following the response is a plain OrderedCollection;
+		// with following it becomes an OrderedCollectionPage.
+		expect( [ 'OrderedCollection', 'OrderedCollectionPage' ] ).toContain( data.type );
 	} );
 
 	test( 'should validate collection structure matches ActivityStreams spec', async ( { requestUtils } ) => {

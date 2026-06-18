@@ -507,23 +507,8 @@ class Test_Moderation extends \WP_UnitTestCase {
 			)
 		);
 
-		// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler
-		\set_error_handler(
-			static function ( $errno, $errstr ) {
-				throw new \Exception( \esc_html( $errstr ), \esc_html( $errno ) );
-			},
-			E_NOTICE | E_WARNING
-		);
-
-		// PHP 7.2 uses "Undefined index", PHP 8+ uses "Undefined array key".
-		if ( version_compare( PHP_VERSION, '8.0.0', '>=' ) ) {
-			$this->expectExceptionMessage( 'Undefined array key &quot;id&quot;' );
-		} else {
-			$this->expectExceptionMessage( 'Undefined index: id' );
-		}
+		// A malformed actor with no 'id' should gracefully return false, not trigger a PHP notice.
 		$this->assertFalse( Moderation::activity_is_blocked( $activity ) );
-
-		\restore_error_handler();
 	}
 
 	/**

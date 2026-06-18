@@ -9,7 +9,7 @@ namespace Activitypub\Tests\Handler;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
-use Activitypub\Collection\Posts;
+use Activitypub\Collection\Remote_Posts;
 use Activitypub\Handler\Create;
 use Activitypub\Post_Types;
 use Activitypub\Tombstone;
@@ -67,6 +67,7 @@ class Test_Create extends \WP_UnitTestCase {
 			array(
 				'post_author'  => $this->user_id,
 				'post_content' => 'test',
+				'post_status'  => 'publish',
 			)
 		);
 		$this->post_permalink = \get_permalink( $this->post_id );
@@ -343,7 +344,7 @@ class Test_Create extends \WP_UnitTestCase {
 		Create::handle_create( $activity, $this->user_id );
 
 		// Verify the object was created with sanitized content.
-		$created_object = Posts::get_by_guid( 'https://example.com/objects/note_sanitize' );
+		$created_object = Remote_Posts::get_by_guid( 'https://example.com/objects/note_sanitize' );
 
 		$this->assertNotNull( $created_object );
 
@@ -378,7 +379,7 @@ class Test_Create extends \WP_UnitTestCase {
 		// Count objects before.
 		$objects_before = get_posts(
 			array(
-				'post_type'      => Posts::POST_TYPE,
+				'post_type'      => Remote_Posts::POST_TYPE,
 				'post_status'    => 'any',
 				'posts_per_page' => -1,
 			)
@@ -389,7 +390,7 @@ class Test_Create extends \WP_UnitTestCase {
 		// Count objects after.
 		$objects_after = get_posts(
 			array(
-				'post_type'      => Posts::POST_TYPE,
+				'post_type'      => Remote_Posts::POST_TYPE,
 				'post_status'    => 'any',
 				'posts_per_page' => -1,
 			)
@@ -419,7 +420,7 @@ class Test_Create extends \WP_UnitTestCase {
 		// Count objects before.
 		$objects_before = get_posts(
 			array(
-				'post_type'      => Posts::POST_TYPE,
+				'post_type'      => Remote_Posts::POST_TYPE,
 				'post_status'    => 'any',
 				'posts_per_page' => -1,
 			)
@@ -430,7 +431,7 @@ class Test_Create extends \WP_UnitTestCase {
 		// Count objects after.
 		$objects_after = get_posts(
 			array(
-				'post_type'      => Posts::POST_TYPE,
+				'post_type'      => Remote_Posts::POST_TYPE,
 				'post_status'    => 'any',
 				'posts_per_page' => -1,
 			)
@@ -486,7 +487,7 @@ class Test_Create extends \WP_UnitTestCase {
 		$this->assertFalse( $result );
 
 		// Verify no post was created.
-		$created_object = Posts::get_by_guid( 'https://example.com/objects/note_disabled' );
+		$created_object = Remote_Posts::get_by_guid( 'https://example.com/objects/note_disabled' );
 		$this->assertTrue( \is_wp_error( $created_object ) );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_callback );
@@ -538,7 +539,7 @@ class Test_Create extends \WP_UnitTestCase {
 		$this->assertInstanceOf( 'WP_Post', $result );
 
 		// Verify post was created.
-		$created_object = Posts::get_by_guid( 'https://example.com/objects/note_enabled' );
+		$created_object = Remote_Posts::get_by_guid( 'https://example.com/objects/note_enabled' );
 		$this->assertNotNull( $created_object );
 		$this->assertStringContainsString( 'This should be created', $created_object->post_content );
 
@@ -684,7 +685,6 @@ class Test_Create extends \WP_UnitTestCase {
 		$this->assertTrue( Tombstone::exists_local( $object_url ) );
 
 		// Clean up.
-		\delete_option( 'activitypub_tombstone_urls' );
 	}
 
 	/**
@@ -785,7 +785,6 @@ class Test_Create extends \WP_UnitTestCase {
 		$this->assertFalse( Tombstone::exists_local( $object_url ), 'URL should not be tombstoned after Create' );
 
 		// Clean up.
-		\delete_option( 'activitypub_tombstone_urls' );
 	}
 
 	/**

@@ -12,8 +12,8 @@ use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
-use Activitypub\Collection\Posts;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Collection\Remote_Posts;
 use Activitypub\Comment;
 use Activitypub\Dispatcher;
 use Activitypub\Migration;
@@ -236,6 +236,55 @@ class Test_Scheduler extends \WP_UnitTestCase {
 
 		// Clean up.
 		\remove_filter( 'schedule_event', $schedule_event_callback );
+	}
+
+	/**
+	 * Test reprocess_outbox detects pending batches scheduled with old batch sizes.
+	 *
+	 * @covers ::reprocess_outbox
+	 */
+	public function test_reprocess_outbox_detects_pending_batch_with_old_batch_size() {
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_id( 'https://example.com/test-old-batch-size' );
+		$activity->set_object(
+			array(
+				'id'      => 'https://example.com/test-old-batch-size',
+				'type'    => 'Note',
+				'content' => 'Test Content',
+			)
+		);
+
+		$pending_id = Outbox::add( $activity, self::$user_id );
+		\update_post_meta( $pending_id, '_activitypub_outbox_offset', 100 );
+
+		\wp_schedule_single_event(
+			\time() + MINUTE_IN_SECONDS,
+			'activitypub_send_activity',
+			array( $pending_id, 50, 100 )
+		);
+
+		$current_batch_size = function () {
+			return 20;
+		};
+		\add_filter( 'activitypub_dispatcher_batch_size', $current_batch_size );
+
+		$scheduled_events        = array();
+		$schedule_event_callback = function ( $event ) use ( &$scheduled_events ) {
+			if ( 'activitypub_process_outbox' === $event->hook ) {
+				$scheduled_events[] = $event->args[0];
+			}
+			return $event;
+		};
+		\add_filter( 'schedule_event', $schedule_event_callback );
+
+		Scheduler::reprocess_outbox();
+
+		$this->assertNotContains( $pending_id, $scheduled_events, 'Should not reschedule an outbox item that has a pending batch with an old batch size.' );
+
+		\remove_filter( 'schedule_event', $schedule_event_callback );
+		\remove_filter( 'activitypub_dispatcher_batch_size', $current_batch_size );
+		\wp_clear_scheduled_hook( 'activitypub_send_activity', array( $pending_id, 50, 100 ) );
 	}
 
 	/**
@@ -707,7 +756,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		self::factory()->post->create_many(
 			20,
 			array(
-				'post_type'   => Posts::POST_TYPE,
+				'post_type'   => Remote_Posts::POST_TYPE,
 				'post_status' => 'publish',
 				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-7 months' ) ),
 			)
@@ -717,7 +766,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		self::factory()->post->create_many(
 			5,
 			array(
-				'post_type'   => Posts::POST_TYPE,
+				'post_type'   => Remote_Posts::POST_TYPE,
 				'post_status' => 'publish',
 				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 week' ) ),
 			)
@@ -725,7 +774,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 
 		// Mock the count to exceed the 200-post threshold.
 		$wp_count_posts_callback = function ( $counts, $type ) {
-			if ( Posts::POST_TYPE === $type ) {
+			if ( Remote_Posts::POST_TYPE === $type ) {
 				$counts->publish = 225;
 			}
 			return $counts;
@@ -733,7 +782,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
 
 		Scheduler::purge_ap_posts();
-		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+		\wp_cache_delete( \_count_posts_cache_key( Remote_Posts::POST_TYPE ), 'counts' );
 
 		// Remove filter before checking actual count.
 		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
@@ -741,7 +790,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		// Assert that 20 old posts were deleted, leaving 5.
 		$actual_count = \get_posts(
 			array(
-				'post_type'   => Posts::POST_TYPE,
+				'post_type'   => Remote_Posts::POST_TYPE,
 				'post_status' => 'publish',
 				'numberposts' => -1,
 				'fields'      => 'ids',
@@ -760,17 +809,17 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		self::factory()->post->create_many(
 			20,
 			array(
-				'post_type'   => Posts::POST_TYPE,
+				'post_type'   => Remote_Posts::POST_TYPE,
 				'post_status' => 'publish',
 				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-13 months' ) ),
 			)
 		);
 
 		Scheduler::purge_ap_posts();
-		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+		\wp_cache_delete( \_count_posts_cache_key( Remote_Posts::POST_TYPE ), 'counts' );
 
 		// Assert that no posts were deleted (below threshold).
-		$this->assertEquals( 20, \wp_count_posts( Posts::POST_TYPE )->publish );
+		$this->assertEquals( 20, \wp_count_posts( Remote_Posts::POST_TYPE )->publish );
 	}
 
 	/**
@@ -782,7 +831,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		// Create an old post without comments (will be deleted).
 		$post_without_comments = self::factory()->post->create(
 			array(
-				'post_type'   => Posts::POST_TYPE,
+				'post_type'   => Remote_Posts::POST_TYPE,
 				'post_status' => 'publish',
 				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-7 months' ) ),
 			)
@@ -791,7 +840,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		// Create an old post with a comment (will be preserved).
 		$post_with_comment = self::factory()->post->create(
 			array(
-				'post_type'   => Posts::POST_TYPE,
+				'post_type'   => Remote_Posts::POST_TYPE,
 				'post_status' => 'publish',
 				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-7 months' ) ),
 			)
@@ -809,7 +858,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 
 		// Mock the count to exceed the 200-post threshold.
 		$wp_count_posts_callback = function ( $counts, $type ) {
-			if ( Posts::POST_TYPE === $type ) {
+			if ( Remote_Posts::POST_TYPE === $type ) {
 				$counts->publish = 225;
 			}
 			return $counts;
@@ -817,7 +866,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
 
 		Scheduler::purge_ap_posts();
-		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+		\wp_cache_delete( \_count_posts_cache_key( Remote_Posts::POST_TYPE ), 'counts' );
 
 		// Remove filter.
 		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
@@ -839,7 +888,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		self::factory()->post->create_many(
 			25,
 			array(
-				'post_type'   => Posts::POST_TYPE,
+				'post_type'   => Remote_Posts::POST_TYPE,
 				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-2 months' ) ),
 				'post_status' => 'publish',
 			)
@@ -850,7 +899,7 @@ class Test_Scheduler extends \WP_UnitTestCase {
 
 		// Mock the count to exceed the 200-post threshold.
 		$wp_count_posts_callback = function ( $counts, $type ) {
-			if ( Posts::POST_TYPE === $type ) {
+			if ( Remote_Posts::POST_TYPE === $type ) {
 				$counts->publish = 225;
 			}
 			return $counts;
@@ -859,13 +908,13 @@ class Test_Scheduler extends \WP_UnitTestCase {
 
 		// Run purge_ap_posts with 180 days retention.
 		Scheduler::purge_ap_posts();
-		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+		\wp_cache_delete( \_count_posts_cache_key( Remote_Posts::POST_TYPE ), 'counts' );
 
 		// Remove filter before checking actual count.
 		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
 
 		// Verify posts are not deleted (2 months < 180 days).
-		$this->assertEquals( 25, \wp_count_posts( Posts::POST_TYPE )->publish );
+		$this->assertEquals( 25, \wp_count_posts( Remote_Posts::POST_TYPE )->publish );
 
 		// Change the purge days option to 30 days.
 		\update_option( 'activitypub_ap_post_purge_days', 30 );
@@ -875,12 +924,12 @@ class Test_Scheduler extends \WP_UnitTestCase {
 
 		// Run purge_ap_posts with changed days.
 		Scheduler::purge_ap_posts();
-		\wp_cache_delete( \_count_posts_cache_key( Posts::POST_TYPE ), 'counts' );
+		\wp_cache_delete( \_count_posts_cache_key( Remote_Posts::POST_TYPE ), 'counts' );
 
 		// Remove filter before checking actual count.
 		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
 
 		// Verify posts are deleted (2 months > 30 days).
-		$this->assertEquals( 0, \wp_count_posts( Posts::POST_TYPE )->publish );
+		$this->assertEquals( 0, \wp_count_posts( Remote_Posts::POST_TYPE )->publish );
 	}
 }

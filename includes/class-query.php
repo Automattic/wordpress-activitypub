@@ -7,9 +7,11 @@
 
 namespace Activitypub;
 
+use Activitypub\Activity\Extended_Object\Feature_Authorization;
 use Activitypub\Activity\Extended_Object\Quote_Authorization;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
+use Activitypub\Handler\Feature_Request;
 use Activitypub\Transformer\Factory;
 
 /**
@@ -139,8 +141,15 @@ class Query {
 	private function prepare_activitypub_data() {
 		$queried_object = $this->get_queried_object();
 
-		if ( $queried_object instanceof \WP_Post && \get_query_var( 'stamp' ) ) {
-			return $this->maybe_get_stamp();
+		if ( \get_query_var( 'stamp' ) ) {
+			if ( $queried_object instanceof \WP_Post ) {
+				return $this->maybe_get_stamp();
+			}
+
+			// Note: the blog actor's `actor` query var is '0', which is falsy but valid.
+			if ( $queried_object instanceof \WP_User || '' !== \get_query_var( 'actor' ) ) {
+				return $this->maybe_get_actor_stamp();
+			}
 		}
 
 		// Check for Outbox Activity.
@@ -400,7 +409,18 @@ class Query {
 			return false;
 		}
 
-		$post     = $this->get_queried_object();
+		$post = $this->get_queried_object();
+
+		/*
+		 * Only quote-authorization meta may be reflected as a stamp, and only for the queried
+		 * post. Checking the post id alone would still let an unauthenticated request read any
+		 * of that post's meta rows (e.g. _edit_lock or private custom fields) by guessing a
+		 * meta_id, so the meta key is verified too.
+		 */
+		if ( '_activitypub_quoted_by' !== $meta->meta_key || (int) $meta->post_id !== $post->ID ) {
+			return false;
+		}
+
 		$user_uri = get_user_id( $post->post_author );
 
 		if ( ! $user_uri ) {
@@ -423,6 +443,71 @@ class Query {
 
 		$this->activitypub_object    = $activitypub_object;
 		$this->activitypub_object_id = $activitypub_object->get_id();
+
+		return true;
+	}
+
+	/**
+	 * Maybe get a FeatureAuthorization object from an actor-scoped stamp.
+	 *
+	 * Resolves URLs of the form `?actor=USER_ID&stamp=STAMP_ID` against the
+	 * actor's stamp store, see {@see Feature_Request::get_stamp()}. Ownership
+	 * is enforced by resolving the stamp scoped to the queried actor, which
+	 * includes the blog actor (`actor=0`).
+	 *
+	 * @return bool True if a FeatureAuthorization was prepared, false otherwise.
+	 */
+	private function maybe_get_actor_stamp() {
+		$stamp_id  = (int) \get_query_var( 'stamp' );
+		$actor_var = \get_query_var( 'actor' );
+
+		if ( ! $stamp_id ) {
+			return false;
+		}
+
+		if ( '' === $actor_var ) {
+			$queried = $this->get_queried_object();
+			if ( ! $queried instanceof \WP_User ) {
+				return false;
+			}
+
+			$actor_id = (int) $queried->ID;
+		} else {
+			// Values like '0e1' or '1.5' pass is_numeric() but cast to 0/1 and alias
+			// an actor, so require a plain decimal integer before casting.
+			if ( ! \ctype_digit( (string) $actor_var ) ) {
+				return false;
+			}
+
+			$actor_id = (int) $actor_var;
+		}
+
+		$instrument = Feature_Request::get_stamp( $actor_id, $stamp_id );
+		if ( null === $instrument ) {
+			return false;
+		}
+
+		$actor = Actors::get_by_id( $actor_id );
+		if ( \is_wp_error( $actor ) ) {
+			return false;
+		}
+
+		$stamp_url = \add_query_arg(
+			array(
+				'actor' => $actor_id,
+				'stamp' => $stamp_id,
+			),
+			\home_url( '/' )
+		);
+
+		$authorization = new Feature_Authorization();
+		$authorization->set_id( $stamp_url );
+		$authorization->set_attributed_to( $actor->get_id() );
+		$authorization->set_interacting_object( $instrument );
+		$authorization->set_interaction_target( $actor->get_id() );
+
+		$this->activitypub_object    = $authorization;
+		$this->activitypub_object_id = $authorization->get_id();
 
 		return true;
 	}

@@ -82,6 +82,8 @@ export interface CoreDataStore {
 
 /**
  * Type declarations for @wordpress/data with commands store.
+ *
+ * @param storeKey Store key.
  */
 declare module '@wordpress/data' {
 	export function dispatch( storeKey: 'core/commands' ): CommandsStoreActions;

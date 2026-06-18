@@ -9,6 +9,7 @@ namespace Activitypub\Tests\Handler;
 
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Update;
 
@@ -34,6 +35,7 @@ class Test_Update extends \WP_UnitTestCase {
 			'id'     => 'https://example.com/activities/12345',
 			'type'   => 'Update',
 			'actor'  => $test_actor,
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
 			'object' => array(
 				'id'           => 'https://example.com/objects/12345',
 				'type'         => 'Note',
@@ -123,6 +125,349 @@ class Test_Update extends \WP_UnitTestCase {
 		}
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $fake_request );
+	}
+
+	/**
+	 * Test that update_actor uses embedded object data instead of stale cached data.
+	 *
+	 * @covers ::update_actor
+	 */
+	public function test_update_actor_uses_embedded_object_data() {
+		$actor_url = 'https://example.com/users/embedded';
+
+		$original_actor = array(
+			'type'              => 'Person',
+			'id'                => $actor_url,
+			'name'              => 'Original Name',
+			'preferredUsername' => 'embedded',
+			'inbox'             => $actor_url . '/inbox',
+			'outbox'            => $actor_url . '/outbox',
+			'followers'         => $actor_url . '/followers',
+			'following'         => $actor_url . '/following',
+			'publicKey'         => array(
+				'id'           => $actor_url . '#main-key',
+				'owner'        => $actor_url,
+				'publicKeyPem' => "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQE\n-----END PUBLIC KEY-----",
+			),
+		);
+
+		// Store the actor locally first, simulating a cached copy.
+		Remote_Actors::upsert( $original_actor );
+
+		$post = Remote_Actors::get_by_uri( $actor_url );
+		$this->assertNotWPError( $post, 'Actor should be stored locally.' );
+
+		// Build an Update activity with fresh embedded data.
+		$updated_actor = array_merge( $original_actor, array( 'name' => 'Updated Name' ) );
+
+		$activity = array(
+			'type'   => 'Update',
+			'actor'  => $actor_url,
+			'object' => $updated_actor,
+		);
+
+		/*
+		 * Mock HTTP to return stale data — if the handler incorrectly
+		 * fetches remotely, we'll catch it.
+		 */
+		$stale_response = function () use ( $original_actor ) {
+			return $original_actor;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $stale_response );
+
+		Update::update_actor( $activity, array( $this->user_id ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $stale_response );
+
+		// Verify the embedded (fresh) data was used.
+		$post  = Remote_Actors::get_by_uri( $actor_url );
+		$actor = Remote_Actors::get_actor( $post );
+		$this->assertEquals( 'Updated Name', $actor->get_name(), 'Should use embedded object data, not stale cached data.' );
+	}
+
+	/**
+	 * Test that update_actor refuses to overwrite a different actor than the one sending the activity.
+	 *
+	 * Regression: an Update whose object.id points at another host's cached actor must not
+	 * overwrite it — an actor may only update itself.
+	 *
+	 * @covers ::update_actor
+	 */
+	public function test_update_actor_rejects_cross_actor_overwrite() {
+		$victim_url   = 'https://victim.example/users/alice';
+		$attacker_url = 'https://attacker.example/users/evil';
+
+		$victim_actor = array(
+			'type'              => 'Person',
+			'id'                => $victim_url,
+			'name'              => 'Alice',
+			'preferredUsername' => 'alice',
+			'inbox'             => $victim_url . '/inbox',
+			'outbox'            => $victim_url . '/outbox',
+			'followers'         => $victim_url . '/followers',
+			'following'         => $victim_url . '/following',
+			'publicKey'         => array(
+				'id'           => $victim_url . '#main-key',
+				'owner'        => $victim_url,
+				'publicKeyPem' => "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQE\n-----END PUBLIC KEY-----",
+			),
+		);
+
+		// Cache the victim's actor.
+		Remote_Actors::upsert( $victim_actor );
+		$this->assertNotWPError( Remote_Actors::get_by_uri( $victim_url ), 'Victim actor should be cached.' );
+
+		// Attacker sends an Update whose object points at the victim's actor.
+		$activity = array(
+			'type'   => 'Update',
+			'actor'  => $attacker_url,
+			'object' => \array_merge( $victim_actor, array( 'name' => 'Hacked' ) ),
+		);
+
+		Update::update_actor( $activity, array( $this->user_id ) );
+
+		// The victim's cached actor must be unchanged.
+		$post  = Remote_Actors::get_by_uri( $victim_url );
+		$actor = Remote_Actors::get_actor( $post );
+		$this->assertEquals( 'Alice', $actor->get_name(), 'A remote actor must not be overwritable by a different actor.' );
+	}
+
+	/**
+	 * Test that update_actor falls back to remote fetch when object is a string IRI.
+	 *
+	 * @covers ::update_actor
+	 */
+	public function test_update_actor_fetches_remotely_for_string_iri() {
+		$actor_url = 'https://example.com/users/iri-test';
+
+		$remote_actor = array(
+			'type'              => 'Person',
+			'id'                => $actor_url,
+			'name'              => 'Fetched Remotely',
+			'preferredUsername' => 'iritest',
+			'inbox'             => $actor_url . '/inbox',
+			'outbox'            => $actor_url . '/outbox',
+			'followers'         => $actor_url . '/followers',
+			'following'         => $actor_url . '/following',
+			'publicKey'         => array(
+				'id'           => $actor_url . '#main-key',
+				'owner'        => $actor_url,
+				'publicKeyPem' => "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQE\n-----END PUBLIC KEY-----",
+			),
+		);
+
+		// Activity with string IRI instead of embedded object.
+		$activity = array(
+			'type'   => 'Update',
+			'actor'  => $actor_url,
+			'object' => $actor_url,
+		);
+
+		// Mock HTTP to return valid actor data.
+		$mock_response = function () use ( $remote_actor ) {
+			return $remote_actor;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_response );
+
+		Update::update_actor( $activity, array( $this->user_id ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_response );
+
+		$post  = Remote_Actors::get_by_uri( $actor_url );
+		$actor = Remote_Actors::get_actor( $post );
+		$this->assertEquals( 'Fetched Remotely', $actor->get_name(), 'Should fetch remotely when object is a string IRI.' );
+	}
+
+	/**
+	 * Test that update_actor fires activitypub_handled_update with WP_Error when fetch fails.
+	 *
+	 * @covers ::update_actor
+	 */
+	public function test_update_actor_fires_error_on_failed_fetch() {
+		$activity = array(
+			'type'   => 'Update',
+			'actor'  => 'https://example.com/users/missing',
+			'object' => 'https://example.com/users/missing',
+		);
+
+		// Mock HTTP to return an error.
+		$mock_error = function () {
+			return new \WP_Error( 'http_error', 'Could not fetch' );
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_error );
+
+		$state    = null;
+		$listener = function ( $act, $uids, $s ) use ( &$state ) {
+			$state = $s;
+		};
+		\add_action( 'activitypub_handled_update', $listener, 10, 3 );
+
+		Update::update_actor( $activity, array( $this->user_id ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_error );
+		\remove_action( 'activitypub_handled_update', $listener );
+
+		$this->assertWPError( $state, 'Should fire activitypub_handled_update with WP_Error when remote fetch fails.' );
+		$this->assertEquals( 'activitypub_update_failed', $state->get_error_code() );
+	}
+
+	/**
+	 * Test that update_actor always fires activitypub_handled_update exactly once.
+	 *
+	 * @covers ::update_actor
+	 */
+	public function test_update_actor_fires_action_exactly_once() {
+		$actor_url = 'https://example.com/users/action-count';
+
+		$actor_data = array(
+			'type'              => 'Person',
+			'id'                => $actor_url,
+			'name'              => 'Action Counter',
+			'preferredUsername' => 'actioncount',
+			'inbox'             => $actor_url . '/inbox',
+			'outbox'            => $actor_url . '/outbox',
+			'followers'         => $actor_url . '/followers',
+			'following'         => $actor_url . '/following',
+			'publicKey'         => array(
+				'id'           => $actor_url . '#main-key',
+				'owner'        => $actor_url,
+				'publicKeyPem' => "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQE\n-----END PUBLIC KEY-----",
+			),
+		);
+
+		$fire_count = 0;
+		$listener   = function () use ( &$fire_count ) {
+			++$fire_count;
+		};
+		\add_action( 'activitypub_handled_update', $listener );
+
+		// Test with embedded object (success path).
+		$activity = array(
+			'type'   => 'Update',
+			'actor'  => $actor_url,
+			'object' => $actor_data,
+		);
+
+		Update::update_actor( $activity, array( $this->user_id ) );
+		$this->assertSame( 1, $fire_count, 'Action should fire exactly once on success.' );
+
+		// Test with failed fetch (error path).
+		$fire_count = 0;
+		$mock_error = function () {
+			return new \WP_Error( 'http_error', 'fail' );
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_error );
+
+		$activity['object'] = 'https://example.com/users/nonexistent';
+		Update::update_actor( $activity, array( $this->user_id ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_error );
+		\remove_action( 'activitypub_handled_update', $listener );
+
+		$this->assertSame( 1, $fire_count, 'Action should fire exactly once on error.' );
+	}
+
+	/**
+	 * A foreign actor's comment Update is handled but reported as unsuccessful, so relay mode
+	 * does not re-announce it, and it does not fall back to Create.
+	 *
+	 * Regression: update_comment() returned the unchanged comment array on actor mismatch, which
+	 * update_object() read as a successful update — firing activitypub_handled_update with
+	 * $success = true and letting Relay::handle_activity() re-announce the rejected Update.
+	 *
+	 * @covers ::update_object
+	 */
+	public function test_update_object_foreign_actor_is_not_successful() {
+		$owner_uri    = 'https://example.com/users/owner';
+		$attacker_uri = 'https://attacker.example/users/evil';
+
+		$metadata_filter = static function ( $pre, $actor ) use ( $owner_uri, $attacker_uri ) {
+			if ( $owner_uri === $actor ) {
+				return array(
+					'id'                => $owner_uri,
+					'url'               => $owner_uri,
+					'name'              => 'Owner',
+					'preferredUsername' => 'owner',
+				);
+			}
+			if ( $attacker_uri === $actor ) {
+				return array(
+					'id'                => $attacker_uri,
+					'url'               => $attacker_uri,
+					'name'              => 'Evil',
+					'preferredUsername' => 'evil',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter, 10, 2 );
+
+		$post_id   = self::factory()->post->create();
+		$permalink = \get_permalink( $post_id );
+
+		// Cache the owner so the created comment maps to it via _activitypub_remote_actor_id.
+		Remote_Actors::upsert(
+			array(
+				'id'                => $owner_uri,
+				'type'              => 'Person',
+				'preferredUsername' => 'owner',
+				'name'              => 'Owner',
+				'inbox'             => $owner_uri . '/inbox',
+			)
+		);
+
+		$comment_id = Interactions::add_comment(
+			array(
+				'actor'  => $owner_uri,
+				'id'     => 'https://example.com/activities/own-comment',
+				'object' => array(
+					'id'        => 'https://example.com/notes/owned',
+					'content'   => 'Original content',
+					'inReplyTo' => $permalink,
+				),
+			)
+		);
+		$this->assertIsInt( $comment_id );
+
+		// The attacker sends an Update targeting the owner's note.
+		$attack = array(
+			'type'   => 'Update',
+			'actor'  => $attacker_uri,
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'id'        => 'https://example.com/notes/owned',
+				'type'      => 'Note',
+				'content'   => 'HACKED content',
+				'inReplyTo' => $permalink,
+			),
+		);
+
+		$captured        = array();
+		$update_listener = function ( $activity, $user_ids, $success ) use ( &$captured ) {
+			$captured[] = $success;
+		};
+		\add_action( 'activitypub_handled_update', $update_listener, 10, 3 );
+
+		$create_called   = false;
+		$create_listener = function () use ( &$create_called ) {
+			$create_called = true;
+		};
+		\add_action( 'activitypub_handled_create', $create_listener );
+
+		Update::update_object( $attack, null, null );
+
+		\remove_action( 'activitypub_handled_update', $update_listener );
+		\remove_action( 'activitypub_handled_create', $create_listener );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter, 10 );
+
+		$this->assertCount( 1, $captured, 'activitypub_handled_update should fire exactly once.' );
+		$this->assertFalse( $captured[0], 'A rejected foreign-actor Update must not be reported as successful.' );
+		$this->assertFalse( $create_called, 'A rejected Update must not fall back to Create.' );
+		$this->assertStringContainsString(
+			'Original content',
+			\get_comment( $comment_id )->comment_content,
+			'The comment must be left unchanged.'
+		);
 	}
 
 	/**

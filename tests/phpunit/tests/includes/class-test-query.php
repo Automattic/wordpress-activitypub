@@ -513,6 +513,33 @@ class Test_Query extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a stamp cannot reflect a post's non-quote meta.
+	 *
+	 * Regression: the stamp only checked that the meta row belonged to the queried post, so
+	 * an unauthenticated request could read any of the post's meta values (e.g. private
+	 * custom fields) by guessing a meta_id. Only `_activitypub_quoted_by` meta may be exposed.
+	 *
+	 * @covers ::maybe_get_stamp
+	 */
+	public function test_maybe_get_stamp_rejects_non_quote_meta() {
+		// A non-quote meta row on the same public post (e.g. a private custom field).
+		$secret_meta_id = \add_post_meta( self::$post_id, '_secret_private_meta', 'super-secret-value' );
+
+		Query::get_instance()->__destruct();
+		$this->go_to( home_url( '/?p=' . self::$post_id . '&stamp=' . $secret_meta_id ) );
+		\set_query_var( 'stamp', $secret_meta_id );
+
+		$query  = Query::get_instance();
+		$object = $query->get_activitypub_object();
+
+		$this->assertNotNull( $object, 'Should fall back to the post object' );
+		$this->assertNotEquals( 'QuoteAuthorization', $object->get_type(), 'A non-quote meta row must not be reflected as a stamp.' );
+		$this->assertStringNotContainsString( 'super-secret-value', \wp_json_encode( $object->to_array() ), 'The private meta value must not be disclosed.' );
+
+		\delete_post_meta( self::$post_id, '_secret_private_meta' );
+	}
+
+	/**
 	 * Test maybe_get_stamp with non-existent meta ID.
 	 *
 	 * @covers ::maybe_get_stamp
@@ -567,6 +594,64 @@ class Test_Query extends \WP_UnitTestCase {
 		$result = $method->invoke( $query );
 
 		$this->assertFalse( $result, 'Should return false for invalid post author' );
+	}
+
+	/**
+	 * Test maybe_get_stamp rejects a stamp belonging to a different post.
+	 *
+	 * @covers ::maybe_get_stamp
+	 */
+	public function test_maybe_get_stamp_wrong_post() {
+		// Create two posts.
+		$post_a = self::factory()->post->create(
+			array(
+				'post_author'  => self::$user_id,
+				'post_title'   => 'Post A',
+				'post_content' => 'Content A',
+				'post_status'  => 'publish',
+			)
+		);
+		$post_b = self::factory()->post->create(
+			array(
+				'post_author'  => self::$user_id,
+				'post_title'   => 'Post B',
+				'post_content' => 'Content B',
+				'post_status'  => 'publish',
+			)
+		);
+
+		// Add stamp meta to post A.
+		$meta_id = \add_post_meta( $post_a, '_activitypub_quoted_by', 'https://remote.example.com/posts/789' );
+
+		// Request post B with post A's stamp — should be rejected.
+		Query::get_instance()->__destruct();
+		$this->go_to( home_url( '/?p=' . $post_b . '&stamp=' . $meta_id ) );
+		\set_query_var( 'stamp', $meta_id );
+
+		$reflection = new \ReflectionClass( Query::class );
+		$method     = $reflection->getMethod( 'maybe_get_stamp' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$query  = Query::get_instance();
+		$result = $method->invoke( $query );
+
+		$this->assertFalse( $result, 'Should return false when stamp meta belongs to a different post' );
+
+		// Verify the same stamp works when queried with the correct post.
+		Query::get_instance()->__destruct();
+		$this->go_to( home_url( '/?p=' . $post_a . '&stamp=' . $meta_id ) );
+		\set_query_var( 'stamp', $meta_id );
+
+		$query  = Query::get_instance();
+		$object = $query->get_activitypub_object();
+
+		$this->assertNotNull( $object, 'Should create QuoteAuthorization when stamp matches the queried post' );
+		$this->assertEquals( 'QuoteAuthorization', $object->get_type(), 'Should be QuoteAuthorization type' );
+
+		// Clean up.
+		\delete_post_meta( $post_a, '_activitypub_quoted_by' );
 	}
 
 	/**

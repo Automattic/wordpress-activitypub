@@ -20,6 +20,30 @@ use Activitypub\Collection\Remote_Actors;
  */
 class Webfinger {
 	/**
+	 * Check whether a value looks like an `acct` identifier.
+	 *
+	 * Accepts any of:
+	 *
+	 * - `user@host` — bare WebFinger handle.
+	 * - `@user@host` — Mastodon display form with a leading `@`.
+	 * - `acct:user@host` — full RFC 7565 URI form.
+	 *
+	 * The host/local-part pattern follows `ACTIVITYPUB_USERNAME_REGEXP`.
+	 *
+	 * @since 8.3.0
+	 *
+	 * @param mixed $value The candidate value.
+	 * @return bool True if the value matches the acct identifier pattern.
+	 */
+	public static function is_acct( $value ) {
+		if ( ! \is_string( $value ) || '' === $value ) {
+			return false;
+		}
+
+		return (bool) \preg_match( '/^(?:acct:)?@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $value );
+	}
+
+	/**
 	 * Returns a users WebFinger "resource".
 	 *
 	 * @param int $user_id The WordPress user id.
@@ -232,37 +256,7 @@ class Webfinger {
 	 * @return string|\WP_Error Error or the Remote-Follow endpoint URI.
 	 */
 	public static function get_remote_follow_endpoint( $uri ) {
-		$data = self::get_data( $uri );
-
-		if ( is_wp_error( $data ) ) {
-			return $data;
-		}
-
-		if ( empty( $data['links'] ) ) {
-			return new \WP_Error(
-				'webfinger_missing_links',
-				__( 'No valid Link elements found.', 'activitypub' ),
-				array(
-					'status' => 400,
-					'data'   => $data,
-				)
-			);
-		}
-
-		foreach ( $data['links'] as $link ) {
-			if ( 'http://ostatus.org/schema/1.0/subscribe' === $link['rel'] ) {
-				return $link['template'];
-			}
-		}
-
-		return new \WP_Error(
-			'webfinger_missing_remote_follow_endpoint',
-			__( 'No valid Remote-Follow endpoint found.', 'activitypub' ),
-			array(
-				'status' => 400,
-				'data'   => $data,
-			)
-		);
+		return self::get_intent_endpoint( $uri, 'follow', true );
 	}
 
 	/**
@@ -305,5 +299,104 @@ class Webfinger {
 		}
 
 		return extract_name_from_uri( $actor_or_uri->get_id() ) . '@' . \wp_parse_url( $actor_or_uri->get_id(), PHP_URL_HOST );
+	}
+
+	/**
+	 * Get the Intent endpoint for a given URI and intent.
+	 *
+	 * @since 8.0.0
+	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/3b86/fep-3b86.md
+	 *
+	 * @param string $uri      The WebFinger Resource URI.
+	 * @param string $intent   The intent to look for.
+	 * @param bool   $fallback Whether to fallback to the Remote-Follow endpoint.
+	 *
+	 * @return string|\WP_Error Error or the Intent endpoint URI (may contain `{uri}` placeholder).
+	 */
+	public static function get_intent_endpoint( $uri, $intent, $fallback = false ) {
+		$data = self::get_data( $uri );
+
+		if ( \is_wp_error( $data ) ) {
+			return $data;
+		}
+
+		if ( empty( $data['links'] ) ) {
+			return new \WP_Error(
+				'webfinger_missing_links',
+				\__( 'No valid Link elements found.', 'activitypub' ),
+				array(
+					'status' => 400,
+					'data'   => $data,
+				)
+			);
+		}
+
+		// Normalize the links with $rel as key.
+		$links = array();
+
+		foreach ( $data['links'] as $link ) {
+			if ( isset( $link['rel'] ) && isset( $link['template'] ) ) {
+				$links[ \strtolower( $link['rel'] ) ] = $link['template'];
+			}
+		}
+
+		$intent = \sanitize_text_field( $intent );
+		$intent = \strtolower( $intent );
+
+		if ( ! \filter_var( $intent, FILTER_VALIDATE_URL ) ) {
+			$intent = 'https://w3id.org/fep/3b86/' . $intent;
+		}
+
+		if ( isset( $links[ $intent ] ) ) {
+			return $links[ $intent ];
+		}
+
+		if ( ! $fallback ) {
+			return new \WP_Error(
+				'webfinger_missing_intent_endpoint',
+				\__( 'No valid Intent endpoint found.', 'activitypub' ),
+				array(
+					'status' => 400,
+					'data'   => $data,
+				)
+			);
+		}
+
+		/*
+		 * OStatus subscribe URL (deprecated but still widely supported)
+		 *
+		 * @see https://ostatus.github.io/spec/OStatus%201.0%20Draft%202.html#anchor10
+		 */
+		if ( isset( $links['http://ostatus.org/schema/1.0/subscribe'] ) ) {
+			return $links['http://ostatus.org/schema/1.0/subscribe'];
+		}
+
+		/*
+		 * FEP-3b86 Object Intent — the generic "open this object on my home
+		 * server" link, equivalent to pasting the URL into the home server's
+		 * search box. Useful when no verb-specific intent is advertised.
+		 *
+		 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/3b86/fep-3b86.md#5-1-object-intent
+		 */
+		if ( isset( $links['https://w3id.org/fep/3b86/object'] ) ) {
+			return $links['https://w3id.org/fep/3b86/object'];
+		}
+
+		// Last-resort: construct a Mastodon-compatible authorize_interaction URL.
+		$identifier_and_host = self::get_identifier_and_host( $uri );
+
+		if ( \is_wp_error( $identifier_and_host ) ) {
+			return new \WP_Error(
+				'webfinger_missing_intent_endpoint',
+				\__( 'No valid Intent endpoint found.', 'activitypub' ),
+				array(
+					'status' => 400,
+					'data'   => $data,
+				)
+			);
+		}
+
+		return 'https://' . $identifier_and_host[1] . '/authorize_interaction?uri={uri}';
 	}
 }

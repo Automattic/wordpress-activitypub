@@ -9,7 +9,7 @@
 
 defined( 'ACTIVITYPUB_REST_NAMESPACE' ) || define( 'ACTIVITYPUB_REST_NAMESPACE', 'activitypub/1.0' );
 defined( 'ACTIVITYPUB_EXCERPT_LENGTH' ) || define( 'ACTIVITYPUB_EXCERPT_LENGTH', 400 );
-defined( 'ACTIVITYPUB_NOTE_LENGTH' ) || define( 'ACTIVITYPUB_NOTE_LENGTH', 400 );
+defined( 'ACTIVITYPUB_NOTE_LENGTH' ) || define( 'ACTIVITYPUB_NOTE_LENGTH', 500 );
 defined( 'ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS' ) || define( 'ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS', 4 );
 defined( 'ACTIVITYPUB_HASHTAGS_REGEXP' ) || define( 'ACTIVITYPUB_HASHTAGS_REGEXP', '(?:(?<=\s)|(?<=<p>)|(?<=<br>)|^)#([A-Za-z0-9_]+)(?:(?=\s|[[:punct:]]|$))' );
 defined( 'ACTIVITYPUB_USERNAME_REGEXP' ) || define( 'ACTIVITYPUB_USERNAME_REGEXP', '(?:([A-Za-z0-9\._-]+)@((?:[A-Za-z0-9_-]+\.)+[A-Za-z]+))' );
@@ -20,7 +20,12 @@ defined( 'ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS' ) || define( 'ACTIVITYPUB_D
 defined( 'ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS' ) || define( 'ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS', false );
 defined( 'ACTIVITYPUB_DEFAULT_OBJECT_TYPE' ) || define( 'ACTIVITYPUB_DEFAULT_OBJECT_TYPE', 'wordpress-post-format' );
 defined( 'ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE' ) || define( 'ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE', 100 );
-defined( 'ACTIVITYPUB_DISABLE_MEDIA_CACHE' ) || define( 'ACTIVITYPUB_DISABLE_MEDIA_CACHE', false );
+defined( 'ACTIVITYPUB_DISTRIBUTION_MODE' ) || define( 'ACTIVITYPUB_DISTRIBUTION_MODE', false );
+// Backwards compatibility: map old ACTIVITYPUB_DISABLE_SIDELOADING to ACTIVITYPUB_DISABLE_REMOTE_CACHE.
+if ( ! defined( 'ACTIVITYPUB_DISABLE_REMOTE_CACHE' ) && defined( 'ACTIVITYPUB_DISABLE_SIDELOADING' ) ) {
+	define( 'ACTIVITYPUB_DISABLE_REMOTE_CACHE', ACTIVITYPUB_DISABLE_SIDELOADING );
+}
+defined( 'ACTIVITYPUB_DISABLE_REMOTE_CACHE' ) || define( 'ACTIVITYPUB_DISABLE_REMOTE_CACHE', false );
 
 // The following constants are invariable and define values used throughout the plugin.
 
@@ -105,3 +110,8 @@ define(
  * @see https://github.com/tfredrich/RestApiTutorial.com/blob/master/content/advanced/responses/retries.md
  */
 define( 'ACTIVITYPUB_RETRY_ERROR_CODES', array( 408, 429, 500, 502, 503, 504 ) );
+
+// Default purge retention periods (in days).
+define( 'ACTIVITYPUB_OUTBOX_PURGE_DAYS', 180 );
+define( 'ACTIVITYPUB_INBOX_PURGE_DAYS', 180 );
+define( 'ACTIVITYPUB_AP_POST_PURGE_DAYS', 30 );

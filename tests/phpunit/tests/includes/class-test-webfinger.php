@@ -317,6 +317,262 @@ class Test_Webfinger extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_intent_endpoint with FEP-3b86 link.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_fep3b86() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => array(
+							array(
+								'rel'      => 'https://w3id.org/fep/3b86/like',
+								'template' => 'https://example.com/intent/like?object={object}',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like' );
+
+		$this->assertEquals( 'https://example.com/intent/like?object={object}', $result );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test get_intent_endpoint falls back to OStatus subscribe.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_ostatus_fallback() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => array(
+							array(
+								'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+								'template' => 'https://example.com/authorize_interaction?uri={uri}',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like', true );
+
+		$this->assertEquals( 'https://example.com/authorize_interaction?uri={uri}', $result );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test get_intent_endpoint without fallback returns error.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_no_fallback_returns_error() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => array(
+							array(
+								'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+								'template' => 'https://example.com/authorize_interaction?uri={uri}',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like', false );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'webfinger_missing_intent_endpoint', $result->get_error_code() );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test get_intent_endpoint falls back to the FEP-3b86 Object Intent link.
+	 *
+	 * The generic Object Intent acts as a "paste the URL into my home server"
+	 * link and is preferred over the last-resort Mastodon-style URL when
+	 * advertised by the remote actor.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_object_intent_fallback() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => array(
+							array(
+								'rel'      => 'https://w3id.org/fep/3b86/Object',
+								'template' => 'https://example.com/intent/object?uri={uri}',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		// No `like` intent advertised, no OStatus subscribe link — should fall
+		// back to the Object Intent rather than the Mastodon-style last-resort URL.
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like', true );
+
+		$this->assertEquals( 'https://example.com/intent/object?uri={uri}', $result );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test get_intent_endpoint prefers OStatus subscribe over the Object Intent.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_ostatus_preferred_over_object_intent() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => array(
+							array(
+								'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+								'template' => 'https://example.com/authorize_interaction?uri={uri}',
+							),
+							array(
+								'rel'      => 'https://w3id.org/fep/3b86/Object',
+								'template' => 'https://example.com/intent/object?uri={uri}',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like', true );
+
+		$this->assertEquals( 'https://example.com/authorize_interaction?uri={uri}', $result );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test get_intent_endpoint last-resort Mastodon-compatible URL for handle.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_mastodon_fallback_from_handle() {
+		// Provide links that don't match any intent or OStatus template.
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@mastodon.social',
+						'links'   => array(
+							array(
+								'rel'  => 'self',
+								'type' => 'application/activity+json',
+								'href' => 'https://mastodon.social/users/user',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@mastodon.social', 'like', true );
+
+		$this->assertEquals( 'https://mastodon.social/authorize_interaction?uri={uri}', $result );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test get_intent_endpoint with missing links returns error.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_missing_links() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'webfinger_missing_links', $result->get_error_code() );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
+	 * Test get_intent_endpoint with a full URL intent.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_full_url_intent() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => array(
+							array(
+								'rel'      => 'https://custom.example/intent/share',
+								'template' => 'https://example.com/share?url={uri}',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'https://custom.example/intent/share' );
+
+		$this->assertEquals( 'https://example.com/share?url={uri}', $result );
+
+		\remove_filter( 'pre_http_request', $filter );
+	}
+
+	/**
 	 * Test that WebFinger 4xx failures are cached (longer duration).
 	 *
 	 * @covers ::get_data
@@ -484,5 +740,67 @@ class Test_Webfinger extends \WP_UnitTestCase {
 
 		// Clean up.
 		\delete_transient( $transient_key );
+	}
+
+	/**
+	 * Test that valid acct identifiers are recognized.
+	 *
+	 * @covers ::is_acct
+	 * @dataProvider data_valid_accts
+	 *
+	 * @param string $value The value under test.
+	 */
+	public function test_is_acct_valid( $value ) {
+		$this->assertTrue( Webfinger::is_acct( $value ) );
+	}
+
+	/**
+	 * Provider for valid acct identifiers.
+	 *
+	 * @return array
+	 */
+	public function data_valid_accts() {
+		return array(
+			'plain acct'          => array( 'user@example.com' ),
+			'leading at'          => array( '@user@example.com' ),
+			'acct uri'            => array( 'acct:user@example.com' ),
+			'multi-segment host'  => array( 'user@subdomain.example.com' ),
+			'numeric local part'  => array( 'user42@example.com' ),
+			'dots in local part'  => array( 'first.last@example.com' ),
+			'underscore in local' => array( 'first_last@example.com' ),
+			'dash in local'       => array( 'first-last@example.com' ),
+		);
+	}
+
+	/**
+	 * Test that non-acct values are rejected.
+	 *
+	 * @covers ::is_acct
+	 * @dataProvider data_invalid_accts
+	 *
+	 * @param mixed $value The value under test.
+	 */
+	public function test_is_acct_invalid( $value ) {
+		$this->assertFalse( Webfinger::is_acct( $value ) );
+	}
+
+	/**
+	 * Provider for non-acct values.
+	 *
+	 * @return array
+	 */
+	public function data_invalid_accts() {
+		return array(
+			'empty string'   => array( '' ),
+			'plain word'     => array( 'user' ),
+			'url'            => array( 'https://example.com/users/user' ),
+			'mailto uri'     => array( 'mailto:user@example.com' ),
+			'host only'      => array( '@example.com' ),
+			'no tld'         => array( 'user@host' ),
+			'trailing slash' => array( 'user@example.com/' ),
+			'null'           => array( null ),
+			'integer'        => array( 42 ),
+			'array'          => array( array( 'user@example.com' ) ),
+		);
 	}
 }
