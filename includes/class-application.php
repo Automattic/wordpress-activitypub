@@ -22,6 +22,20 @@ namespace Activitypub;
  */
 class Application {
 	/**
+	 * The option key for the Application key pair.
+	 *
+	 * @var string
+	 */
+	const KEYPAIR_OPTION_KEY = 'activitypub_application_keypair';
+
+	/**
+	 * The preferred username for the Application actor.
+	 *
+	 * @var string
+	 */
+	const USERNAME = 'application';
+
+	/**
 	 * Initialize the class, registering WordPress hooks.
 	 *
 	 * @since unreleased
@@ -53,20 +67,6 @@ class Application {
 
 		return $jrd;
 	}
-
-	/**
-	 * The option key for the Application key pair.
-	 *
-	 * @var string
-	 */
-	const KEYPAIR_OPTION_KEY = 'activitypub_application_keypair';
-
-	/**
-	 * The preferred username for the Application actor.
-	 *
-	 * @var string
-	 */
-	const USERNAME = 'application';
 
 	/**
 	 * Returns the Application actor ID (URL).

@@ -1348,5 +1348,14 @@ class Migration {
 	public static function migrate_application_keypair_option() {
 		\wp_cache_flush();
 		self::update_options_key( 'activitypub_keypair_for_-1', Application::KEYPAIR_OPTION_KEY );
+
+		/*
+		 * If an early Application::get_keypair() read already created the destination
+		 * option, the rename above is a no-op blocked by the unique `option_name`,
+		 * leaving the legacy row behind. Drop it once the destination is in place.
+		 */
+		if ( false !== \get_option( Application::KEYPAIR_OPTION_KEY, false ) ) {
+			\delete_option( 'activitypub_keypair_for_-1' );
+		}
 	}
 }
