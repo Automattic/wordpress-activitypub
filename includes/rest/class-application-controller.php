@@ -112,6 +112,20 @@ class Application_Controller extends \WP_REST_Controller {
 			),
 		);
 
+		/*
+		 * Run the same serialization filters the object-based path used, so
+		 * integrations that add actor fields via these hooks still apply to the
+		 * Application actor. The object argument is null because the Application is
+		 * served without a model instance.
+		 */
+		$class = 'application';
+
+		/** This filter is documented in includes/activity/class-generic-object.php */
+		$json = \apply_filters( 'activitypub_activity_object_array', $json, $class, $id, null );
+
+		/** This filter is documented in includes/activity/class-generic-object.php */
+		$json = \apply_filters( "activitypub_activity_{$class}_object_array", $json, $id, null );
+
 		$rest_response = new \WP_REST_Response( $json, 200 );
 		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 

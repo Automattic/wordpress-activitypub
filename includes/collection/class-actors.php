@@ -8,6 +8,7 @@
 namespace Activitypub\Collection;
 
 use Activitypub\Activity\Actor;
+use Activitypub\Application;
 use Activitypub\Model\Blog;
 use Activitypub\Model\User;
 
@@ -139,6 +140,17 @@ class Actors {
 			}
 
 			return self::BLOG_USER_ID;
+		}
+
+		// The 'application' identifier is reserved for the signing-only Application actor,
+		// which is served only through the dedicated /application endpoint. Never resolve it
+		// to a regular user, even on sites that happen to have a user named "application".
+		if ( Application::USERNAME === $username ) {
+			return new \WP_Error(
+				'activitypub_user_not_found',
+				\__( 'Actor not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
 		}
 
 		// Check for 'activitypub_username' meta.
