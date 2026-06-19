@@ -26,6 +26,7 @@ class Test_Followers extends \WP_UnitTestCase {
 	public static $actors = array(
 		'username@example.org' => array(
 			'id'                => 'https://example.org/users/username',
+			'type'              => 'Person',
 			'url'               => 'https://example.org/users/username',
 			'inbox'             => 'https://example.org/users/username/inbox',
 			'name'              => 'username',
@@ -34,6 +35,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		),
 		'jon@example.com'      => array(
 			'id'                => 'https://example.com/author/jon',
+			'type'              => 'Person',
 			'url'               => 'https://example.com/author/jon',
 			'inbox'             => 'https://example.com/author/jon/inbox',
 			'name'              => 'jon',
@@ -42,6 +44,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		),
 		'doe@example.org'      => array(
 			'id'                => 'https://example.org/author/doe',
+			'type'              => 'Person',
 			'url'               => 'https://example.org/author/doe',
 			'inbox'             => 'https://example.org/author/doe/inbox',
 			'name'              => 'doe',
@@ -49,6 +52,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		),
 		'sally@example.org'    => array(
 			'id'                => 'http://sally.example.org',
+			'type'              => 'Person',
 			'url'               => 'http://sally.example.org',
 			'inbox'             => 'http://sally.example.org/inbox',
 			'name'              => 'jon',
@@ -56,6 +60,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		),
 		'12345@example.com'    => array(
 			'id'                => 'https://12345.example.com',
+			'type'              => 'Person',
 			'url'               => 'https://12345.example.com',
 			'inbox'             => 'https://12345.example.com/inbox',
 			'name'              => '12345',
@@ -388,6 +393,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		for ( $i = 0; $i < 30; $i++ ) {
 			$meta = array(
 				'id'                => 'https://example.org/users/' . $i,
+				'type'              => 'Person',
 				'url'               => 'https://example.org/users/' . $i,
 				'inbox'             => 'https://example.org/users/' . $i . '/inbox',
 				'name'              => 'user' . $i,
@@ -412,6 +418,7 @@ class Test_Followers extends \WP_UnitTestCase {
 			$k    = $j + 100;
 			$meta = array(
 				'id'                => 'https://example.org/users/' . $k,
+				'type'              => 'Person',
 				'url'               => 'https://example.org/users/' . $k,
 				'inbox'             => 'https://example.org/users/' . $j . '/inbox',
 				'name'              => 'user' . $k,
