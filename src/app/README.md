@@ -58,17 +58,18 @@ do four things, all behind the [WP 7.0 gate](#compatibility-gate):
 
 3. **Boot the app.** Load core's boot prerequisites
    (`wp-includes/js/dist/script-modules/boot/index.min.asset.php`) as a classic
-   script so all module globals are present, then start the app from the route
-   registry:
+   script so all module globals are present, then pass the mount ID and route
+   registry to the loader module through script-module data:
 
    ```php
-   wp_add_inline_script(
-       'activitypub-app-prerequisites',
-       sprintf(
-           'import("@wordpress/boot").then( mod => mod.initSinglePage( { mountId: "%s", routes: %s } ) );',
-           'activitypub-app-root',
-           wp_json_encode( $routes, JSON_HEX_TAG | JSON_UNESCAPED_SLASHES )
-       )
+   add_filter(
+       'script_module_data_@activitypub/app',
+       static function ( $data ) use ( $routes ) {
+           $data['mountId'] = 'activitypub-app-root';
+           $data['routes']  = $routes;
+
+           return $data;
+       }
    );
    ```
 
@@ -76,7 +77,9 @@ do four things, all behind the [WP 7.0 gate](#compatibility-gate):
    `content` and `route` script modules, then register the app loader module with
    static dependencies on `@wordpress/boot` plus every `route_module`, and dynamic
    dependencies on every `content_module`. Enqueue it with
-   `wp_enqueue_script_module()`.
+   `wp_enqueue_script_module()`. The loader statically imports
+   `@wordpress/boot`, reads its script-module data from
+   `wp-script-module-data-@activitypub/app`, and calls `initSinglePage()`.
 
 `initSinglePage` owns the React root, routing, and rendering. The app does **not**
 call `createRoot` itself and does **not** bundle a router — those concerns belong
@@ -188,23 +191,31 @@ Every screen is a `route` + `content` module pair under `routes/<screen>/`.
 
 ## Compatibility gate
 
-The boot stack requires WordPress 7.0. In the target architecture `class-app.php`
-checks the version and chooses one of two paths for the same admin page:
+The boot stack requires WordPress 7.0. `class-app.php` exposes a single
+`App::is_supported()` gate that the menu and admin bar consult: the Social Web
+page is only registered (and the app booted) when it returns `true`, so on
+WordPress < 7.0 the page is not added at all — there is no broken or empty
+screen. The classic actor lists (followers, following, blocked) remain available
+under **Users** independently of this gate.
+
+`is_supported()` detects the boot stack by **capability**, not by
+`version_compare()`:
 
 ```php
-if ( is_wp_version_compatible( '7.0' ) ) {
-    // Render the root node and enqueue the boot Script Modules (above).
-} else {
-    // Render the classic server-side Social Web screen instead.
+public static function is_supported() {
+    return function_exists( 'wp_register_script_module' ) && is_array( self::get_boot_asset() );
 }
 ```
 
-So users on 6.5–6.x keep the legacy screens, and users on 7.0+ get the app. When
-the plugin's minimum supported version reaches 7.0, the legacy path and its
-templates can be removed.
+It checks for the Script Modules API plus core's `@wordpress/boot` module asset
+(`wp-includes/js/dist/script-modules/boot/index.min.asset.php`), which ships in
+7.0. This is deliberate: a `is_wp_version_compatible( '7.0' )` check would lock
+out pre-release builds — `7.0-alpha`/`7.0-RC1` fail `version_compare( …, '7.0',
+'>=' )` yet already ship the boot module — so early adopters would wrongly lose
+the app.
 
-Today the boot app is still an early opt-in: `includes/wp-admin/class-menu.php`
-gates it behind the `activitypub_reader_ui` option and an interim
-`version_compare( get_bloginfo( 'version' ), '6.9-alpha', '>=' )` check. The 7.0
-version check above is the target; the opt-in gate is the bridge until the stack
-is stable and on by default.
+The boot app is still an early opt-in: `includes/wp-admin/class-menu.php` gates
+it behind the `activitypub_reader_ui` option **and** `App::is_supported()`. The
+opt-in is the bridge until the stack is stable and on by default; when the
+plugin's minimum supported version reaches 7.0 the gate (and the opt-in) can be
+removed entirely.
