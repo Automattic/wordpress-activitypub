@@ -986,21 +986,22 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		};
 		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
 
+		$query_args   = array(
+			'post_type'   => Remote_Actors::POST_TYPE,
+			'post_status' => 'any',
+			'numberposts' => -1,
+			'fields'      => 'ids',
+		);
+		$count_before = \count( \get_posts( $query_args ) );
+
 		Scheduler::update_remote_actors();
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter, 10 );
 
-		$actors = \get_posts(
-			array(
-				'post_type'   => Remote_Actors::POST_TYPE,
-				'post_status' => 'any',
-				'numberposts' => -1,
-				'fields'      => 'ids',
-			)
-		);
+		$actors = \get_posts( $query_args );
 
-		$this->assertCount( 1, $actors, 'Refreshing an outdated actor must update it in place, not create a duplicate.' );
-		$this->assertSame( $id, $actors[0], 'The existing actor post must be the one refreshed.' );
-		$this->assertSame( 'New Name', \get_post( $id )->post_title, 'The cached actor must be refreshed with the fetched metadata.' );
+		$this->assertCount( $count_before, $actors, 'Refreshing an outdated actor must not create a duplicate.' );
+		$this->assertContains( $id, $actors, 'The original actor post must still exist after the refresh.' );
+		$this->assertSame( 'New Name', \get_post( $id )->post_title, 'The cached actor must be refreshed in place with the fetched metadata.' );
 	}
 }
