@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Prevent caching non-actor objects (such as notes) as remote profiles.
