@@ -22,9 +22,15 @@ import type { KeyboardEvent, ReactNode } from 'react';
 /**
  * WordPress dependencies
  */
-import { __unstableMotion as motion, __unstableAnimatePresence as AnimatePresence } from '@wordpress/components';
+import {
+	SnackbarList,
+	__unstableMotion as motion,
+	__unstableAnimatePresence as AnimatePresence,
+} from '@wordpress/components';
+import { useSelect, useDispatch } from '@wordpress/data';
 import { useState, useEffect } from '@wordpress/element';
 import { useViewportMatch, useReducedMotion } from '@wordpress/compose';
+import { store as noticesStore } from '@wordpress/notices';
 import { __ } from '@wordpress/i18n';
 
 /**
@@ -44,6 +50,13 @@ export function Layout( { children }: LayoutProps ): ReactNode {
 	const disableMotion: boolean = useReducedMotion();
 	const [ isMobileSidebarOpen, setIsMobileSidebarOpen ] = useState( false );
 	const content: ReactNode = children ?? <Outlet />;
+
+	// Snackbar notices dispatched by route actions (e.g. follow/block) render here.
+	const notices = useSelect( ( select ) => {
+		const { getNotices } = select( noticesStore );
+		return getNotices().filter( ( notice ): boolean => notice.type === 'snackbar' );
+	}, [] ) as Array< { id: string; content: string } >;
+	const { removeNotice } = useDispatch( noticesStore );
 
 	// Auto-close sidebar on viewport change. Core boot owns route state.
 	useEffect( (): void => {
@@ -117,6 +130,8 @@ export function Layout( { children }: LayoutProps ): ReactNode {
 					{ content }
 				</div>
 			) }
+
+			<SnackbarList notices={ notices } onRemove={ removeNotice } />
 		</div>
 	);
 }
