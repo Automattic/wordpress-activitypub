@@ -1,1 +1,1 @@
-<?php return array('dependencies' => array(), 'version' => '31d6cfe0d16ae931b73c', 'type' => 'module');
+<?php return array('dependencies' => array('@wordpress/boot'), 'version' => '628716c963d567f5237c', 'type' => 'module');

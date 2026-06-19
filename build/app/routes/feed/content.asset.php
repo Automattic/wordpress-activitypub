@@ -1,1 +1,1 @@
-<?php return array('dependencies' => array('@wordpress/route'), 'version' => '0cc48a530c24369470f6', 'type' => 'module');
+<?php return array('dependencies' => array('@wordpress/route'), 'version' => 'f168e71738437aafcf75', 'type' => 'module');

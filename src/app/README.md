@@ -58,17 +58,18 @@ do four things, all behind the [WP 7.0 gate](#compatibility-gate):
 
 3. **Boot the app.** Load core's boot prerequisites
    (`wp-includes/js/dist/script-modules/boot/index.min.asset.php`) as a classic
-   script so all module globals are present, then start the app from the route
-   registry:
+   script so all module globals are present, then pass the mount ID and route
+   registry to the loader module through script-module data:
 
    ```php
-   wp_add_inline_script(
-       'activitypub-app-prerequisites',
-       sprintf(
-           'import("@wordpress/boot").then( mod => mod.initSinglePage( { mountId: "%s", routes: %s } ) );',
-           'activitypub-app-root',
-           wp_json_encode( $routes, JSON_HEX_TAG | JSON_UNESCAPED_SLASHES )
-       )
+   add_filter(
+       'script_module_data_@activitypub/app',
+       static function ( $data ) use ( $routes ) {
+           $data['mountId'] = 'activitypub-app-root';
+           $data['routes']  = $routes;
+
+           return $data;
+       }
    );
    ```
 
@@ -76,7 +77,9 @@ do four things, all behind the [WP 7.0 gate](#compatibility-gate):
    `content` and `route` script modules, then register the app loader module with
    static dependencies on `@wordpress/boot` plus every `route_module`, and dynamic
    dependencies on every `content_module`. Enqueue it with
-   `wp_enqueue_script_module()`.
+   `wp_enqueue_script_module()`. The loader statically imports
+   `@wordpress/boot`, reads its script-module data from
+   `wp-script-module-data-@activitypub/app`, and calls `initSinglePage()`.
 
 `initSinglePage` owns the React root, routing, and rendering. The app does **not**
 call `createRoot` itself and does **not** bundle a router — those concerns belong

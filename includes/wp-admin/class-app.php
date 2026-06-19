@@ -75,6 +75,7 @@ class App {
 		self::preload_rest_data();
 
 		$routes = self::get_routes();
+		self::add_loader_data( $routes );
 
 		\wp_register_script(
 			'activitypub-app-prerequisites',
@@ -82,30 +83,6 @@ class App {
 			self::get_script_dependencies( $boot_asset ),
 			$boot_asset['version'],
 			true
-		);
-
-		$init_js_function = <<<'JS'
-		( mountId, routes ) => {
-			const run = async () => {
-				const mod = await import( "@wordpress/boot" );
-				mod.initSinglePage( { mountId, routes } );
-			};
-			if ( document.readyState === "loading" ) {
-				document.addEventListener( "DOMContentLoaded", run );
-			} else {
-				run();
-			}
-		}
-		JS;
-
-		\wp_add_inline_script(
-			'activitypub-app-prerequisites',
-			\sprintf(
-				'( %s )( %s, %s );',
-				$init_js_function,
-				\wp_json_encode( self::MOUNT_ID, JSON_HEX_TAG | JSON_UNESCAPED_SLASHES ),
-				\wp_json_encode( $routes, JSON_HEX_TAG | JSON_UNESCAPED_SLASHES )
-			)
 		);
 
 		$style_dependencies = \array_filter(
@@ -156,6 +133,7 @@ class App {
 				'wp-dom',
 				'wp-element',
 				'wp-html-entities',
+				'wp-hooks',
 				'wp-i18n',
 				'wp-keyboard-shortcuts',
 				'wp-keycodes',
@@ -187,6 +165,25 @@ class App {
 					return \wp_script_is( $handle, 'registered' );
 				}
 			)
+		);
+	}
+
+	/**
+	 * Add boot configuration for the app loader module.
+	 *
+	 * @param array $routes Route definitions.
+	 */
+	private static function add_loader_data( $routes ) {
+		$mount_id = self::MOUNT_ID;
+
+		\add_filter(
+			'script_module_data_' . self::LOADER_MODULE,
+			static function ( $data ) use ( $mount_id, $routes ) {
+				$data['mountId'] = $mount_id;
+				$data['routes']  = $routes;
+
+				return $data;
+			}
 		);
 	}
 
