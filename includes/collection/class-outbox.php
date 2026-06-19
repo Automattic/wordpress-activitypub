@@ -246,52 +246,6 @@ class Outbox {
 	}
 
 	/**
-	 * Cancel all pending (not yet dispatched) outbox items for an object.
-	 *
-	 * Unschedules and deletes every queued-but-undelivered activity for the
-	 * given object, leaving already-dispatched items untouched. Used when a
-	 * post leaves a publicly queryable state for one it will return from
-	 * (e.g. a post rescheduled to `future`), so an undelivered Create/Update
-	 * is not sent after the post is no longer public.
-	 *
-	 * Accepts more than one object ID so callers can pass both the current
-	 * (`?p=`) and legacy (permalink) ID a post may have federated under.
-	 *
-	 * @param string|string[] $object_id One or more ActivityPub object IDs (URLs).
-	 *
-	 * @return void
-	 */
-	public static function invalidate_pending( $object_id ) {
-		$object_ids = \array_values( \array_unique( \array_filter( (array) $object_id ) ) );
-
-		if ( empty( $object_ids ) ) {
-			return;
-		}
-
-		$pending_items = \get_posts(
-			array(
-				'post_type'   => self::POST_TYPE,
-				'post_status' => 'pending',
-				'numberposts' => -1,
-				'fields'      => 'ids',
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query'  => array(
-					array(
-						'key'     => '_activitypub_object_id',
-						'value'   => $object_ids,
-						'compare' => 'IN',
-					),
-				),
-			)
-		);
-
-		foreach ( $pending_items as $pending_item_id ) {
-			Scheduler::unschedule_events_for_item( $pending_item_id );
-			\wp_delete_post( $pending_item_id, true );
-		}
-	}
-
-	/**
 	 * Creates an Undo activity.
 	 *
 	 * @param int|\WP_Post $outbox_item The Outbox post or post ID.

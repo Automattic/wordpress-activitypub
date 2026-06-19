@@ -9,7 +9,6 @@ namespace Activitypub\Scheduler;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
-use Activitypub\Collection\Outbox;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\get_post_id;
@@ -82,19 +81,8 @@ class Post {
 
 		switch ( $new_status ) {
 			case 'publish':
-				if ( ! $update ) {
-					$type = 'Create';
-				} elseif ( 'publish' === $old_status ) {
-					$type = 'Update';
-				} elseif ( 'future' === $old_status && ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status ) {
-					/*
-					 * A re-scheduled, already-federated post returning to `publish`:
-					 * its content may have changed while it was scheduled and the
-					 * remote copy still exists, so send an Update. Without this the
-					 * `Create` would be dropped by the "already federated" guard
-					 * below and followers would never see the edits.
-					 */
-					$type = 'Update';
+				if ( $update ) {
+					$type = ( 'publish' === $old_status ) ? 'Update' : 'Create';
 				} else {
 					$type = 'Create';
 				}
@@ -102,28 +90,13 @@ class Post {
 
 			case 'future':
 				/*
-				 * A (re-)scheduled post is not a deletion: it will become public
-				 * again when it publishes, at which point the publish transition
-				 * emits the appropriate Create/Update. Treating `future` as a soft
-				 * delete would fan out a Delete that remotely tombstones the object
-				 * id — e.g. when a content edit reverts a future-dated published
-				 * post back to `future` — after which the republish Create is
-				 * ignored and the post can never re-federate. Emit nothing instead.
-				 *
-				 * If the post was already federated, cancel any still-pending
-				 * Create/Update for it so an undelivered activity is not
-				 * dispatched after the post is scheduled again, which would
-				 * federate it before its publish date. Already delivered
-				 * activities are left in place; the publish transition sends an
-				 * Update once the post is public again. A post that was never
-				 * federated has nothing queued, so the lookup is skipped.
-				 *
-				 * Pass both the current (`?p=`) and legacy (permalink) IDs so a
-				 * post that federated under the pre-migration ID is matched too.
+				 * A (re-)scheduled post is not a deletion: it becomes public again
+				 * when it publishes, at which point the publish transition federates
+				 * it. Treating `future` as a soft delete would fan out a Delete that
+				 * remotely tombstones the object id — e.g. when a content edit reverts
+				 * a future-dated published post back to `future` — after which the
+				 * post can never re-federate. Emit nothing instead.
 				 */
-				if ( ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status ) {
-					Outbox::invalidate_pending( array( get_post_id( $post->ID ), \get_permalink( $post->ID ) ) );
-				}
 				$type = false;
 				break;
 
