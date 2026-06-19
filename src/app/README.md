@@ -191,23 +191,31 @@ Every screen is a `route` + `content` module pair under `routes/<screen>/`.
 
 ## Compatibility gate
 
-The boot stack requires WordPress 7.0. In the target architecture `class-app.php`
-checks the version and chooses one of two paths for the same admin page:
+The boot stack requires WordPress 7.0. `class-app.php` exposes a single
+`App::is_supported()` gate that the menu and admin bar consult: the Social Web
+page is only registered (and the app booted) when it returns `true`, so on
+WordPress < 7.0 the page is not added at all — there is no broken or empty
+screen. The classic actor lists (followers, following, blocked) remain available
+under **Users** independently of this gate.
+
+`is_supported()` detects the boot stack by **capability**, not by
+`version_compare()`:
 
 ```php
-if ( is_wp_version_compatible( '7.0' ) ) {
-    // Render the root node and enqueue the boot Script Modules (above).
-} else {
-    // Render the classic server-side Social Web screen instead.
+public static function is_supported() {
+    return function_exists( 'wp_register_script_module' ) && is_array( self::get_boot_asset() );
 }
 ```
 
-So users on 6.5–6.x keep the legacy screens, and users on 7.0+ get the app. When
-the plugin's minimum supported version reaches 7.0, the legacy path and its
-templates can be removed.
+It checks for the Script Modules API plus core's `@wordpress/boot` module asset
+(`wp-includes/js/dist/script-modules/boot/index.min.asset.php`), which ships in
+7.0. This is deliberate: a `is_wp_version_compatible( '7.0' )` check would lock
+out pre-release builds — `7.0-alpha`/`7.0-RC1` fail `version_compare( …, '7.0',
+'>=' )` yet already ship the boot module — so early adopters would wrongly lose
+the app.
 
-Today the boot app is still an early opt-in: `includes/wp-admin/class-menu.php`
-gates it behind the `activitypub_reader_ui` option and an interim
-`version_compare( get_bloginfo( 'version' ), '6.9-alpha', '>=' )` check. The 7.0
-version check above is the target; the opt-in gate is the bridge until the stack
-is stable and on by default.
+The boot app is still an early opt-in: `includes/wp-admin/class-menu.php` gates
+it behind the `activitypub_reader_ui` option **and** `App::is_supported()`. The
+opt-in is the bridge until the stack is stable and on by default; when the
+plugin's minimum supported version reaches 7.0 the gate (and the opt-in) can be
+removed entirely.

@@ -20,7 +20,15 @@ class App {
 	/**
 	 * Whether the WordPress admin app boot stack is available.
 	 *
-	 * @return bool True when the Social Web app can be booted.
+	 * This is the WordPress 7.0+ gate for the Social Web app. Instead of a
+	 * `version_compare()` against `7.0`, it detects the boot stack by capability:
+	 * the Script Modules API plus core's `@wordpress/boot` module asset, which
+	 * ships in 7.0. Capability detection is deliberate, because a `version_compare`
+	 * would lock out pre-release builds — `7.0-alpha`/`7.0-RC1` fail
+	 * `version_compare( …, '7.0', '>=' )` yet already ship the boot module — so
+	 * early-adopter installs would wrongly fall back to no app.
+	 *
+	 * @return bool True when the Social Web app can be booted (WordPress 7.0+).
 	 */
 	public static function is_supported() {
 		return \function_exists( 'wp_register_script_module' ) && \is_array( self::get_boot_asset() );
