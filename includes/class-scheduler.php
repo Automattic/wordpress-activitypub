@@ -294,11 +294,18 @@ class Scheduler {
 				Remote_Actors::add_error( $actor->ID, 'Failed to fetch or parse metadata' );
 			} else {
 				/*
-				 * Update the known-outdated actor in place by its post ID. The
-				 * actor came from get_outdated(), so it always exists; upsert()
-				 * would re-resolve it via get_by_uri() (a redundant lookup) and
-				 * could create() a duplicate if the remote id has since changed.
+				 * Only refresh when the remote still reports the same identity. A
+				 * different (or missing) id means a Move or a malformed response;
+				 * applying it would rewrite the cached guid in place and could
+				 * collide with another cached actor, so leave the record alone.
+				 * Updating by the known post ID otherwise refreshes it without the
+				 * redundant get_by_uri() lookup upsert() would do.
 				 */
+				$fetched_id = isset( $meta['id'] ) && \is_string( $meta['id'] ) ? \esc_url_raw( $meta['id'] ) : '';
+				if ( $fetched_id !== $actor->guid ) {
+					continue;
+				}
+
 				$id = Remote_Actors::update( $actor->ID, $meta );
 				if ( \is_wp_error( $id ) ) {
 					continue;
