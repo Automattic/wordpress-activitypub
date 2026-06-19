@@ -932,4 +932,75 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		// Verify posts are deleted (2 months > 30 days).
 		$this->assertEquals( 0, \wp_count_posts( Remote_Posts::POST_TYPE )->publish );
 	}
+
+	/**
+	 * Refreshing outdated remote actors must update the cached record in place,
+	 * never insert a duplicate — even when the remote now reports a different id.
+	 *
+	 * @covers ::update_remote_actors
+	 */
+	public function test_update_remote_actors_refreshes_in_place() {
+		$uri = 'https://example.com/author/refresh-me';
+
+		// Cache an actor.
+		$id = Remote_Actors::upsert(
+			array(
+				'type'              => 'Person',
+				'id'                => $uri,
+				'inbox'             => $uri . '/inbox',
+				'preferredUsername' => 'refreshme',
+				'name'              => 'Old Name',
+			)
+		);
+		$this->assertNotWPError( $id );
+
+		// Age it past the refresh window so get_outdated() returns it.
+		global $wpdb;
+		$modified = \gmdate( 'Y-m-d H:i:s', \time() - 9 * DAY_IN_SECONDS );
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"UPDATE $wpdb->posts SET post_modified = %s, post_modified_gmt = %s WHERE ID = %d",
+				array( $modified, $modified, $id )
+			)
+		);
+		\clean_post_cache( $id );
+
+		/*
+		 * Stub the remote fetch with refreshed metadata that reports a *new* id.
+		 * An upsert would resolve that id via get_by_uri(), miss, and create a
+		 * second actor; updating by post ID must refresh the existing one.
+		 */
+		$new_id = 'https://example.com/author/refresh-me-v2';
+		$filter = static function ( $pre, $url_or_object ) use ( $uri, $new_id ) {
+			if ( $uri !== $url_or_object ) {
+				return $pre;
+			}
+
+			return array(
+				'type'              => 'Person',
+				'id'                => $new_id,
+				'inbox'             => $new_id . '/inbox',
+				'preferredUsername' => 'refreshme',
+				'name'              => 'New Name',
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
+
+		Scheduler::update_remote_actors();
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter, 10 );
+
+		$actors = \get_posts(
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'post_status' => 'any',
+				'numberposts' => -1,
+				'fields'      => 'ids',
+			)
+		);
+
+		$this->assertCount( 1, $actors, 'Refreshing an outdated actor must update it in place, not create a duplicate.' );
+		$this->assertSame( $id, $actors[0], 'The existing actor post must be the one refreshed.' );
+		$this->assertSame( 'New Name', \get_post( $id )->post_title, 'The cached actor must be refreshed with the fetched metadata.' );
+	}
 }

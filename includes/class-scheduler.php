@@ -293,7 +293,13 @@ class Scheduler {
 			if ( empty( $meta ) || ! \is_array( $meta ) || \is_wp_error( $meta ) ) {
 				Remote_Actors::add_error( $actor->ID, 'Failed to fetch or parse metadata' );
 			} else {
-				$id = Remote_Actors::upsert( $meta );
+				/*
+				 * Update the known-outdated actor in place by its post ID. The
+				 * actor came from get_outdated(), so it always exists; upsert()
+				 * would re-resolve it via get_by_uri() (a redundant lookup) and
+				 * could create() a duplicate if the remote id has since changed.
+				 */
+				$id = Remote_Actors::update( $actor->ID, $meta );
 				if ( \is_wp_error( $id ) ) {
 					continue;
 				}
