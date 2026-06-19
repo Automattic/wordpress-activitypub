@@ -100,6 +100,49 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
+	 * Non-actor objects must never be cached, even when they carry the fields the
+	 * cache otherwise needs. The type guard lives at the persistence chokepoint so
+	 * every caller is covered without its own check.
+	 *
+	 * @covers ::create
+	 * @covers ::upsert
+	 */
+	public function test_does_not_cache_non_actor_objects() {
+		$before = ( new \WP_Query() )->query(
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'post_status' => 'any',
+				'fields'      => 'ids',
+				'nopaging'    => true,
+			)
+		);
+
+		// A Note with an inbox: passes every other check, only the type guard rejects it.
+		$note = array(
+			'id'    => 'https://remote.example.com/objects/note-1',
+			'type'  => 'Note',
+			'inbox' => 'https://remote.example.com/inbox',
+		);
+
+		$created  = Remote_Actors::create( $note );
+		$upserted = Remote_Actors::upsert( $note );
+
+		$this->assertWPError( $created, 'create() must reject a non-actor object.' );
+		$this->assertSame( 'activitypub_invalid_actor_data', $created->get_error_code() );
+		$this->assertWPError( $upserted, 'upsert() must reject a non-actor object.' );
+
+		$after = ( new \WP_Query() )->query(
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'post_status' => 'any',
+				'fields'      => 'ids',
+				'nopaging'    => true,
+			)
+		);
+		$this->assertCount( \count( $before ), $after, 'A non-actor object must not be cached.' );
+	}
+
+	/**
 	 * Test the update() method for remote actors.
 	 *
 	 * @covers ::update
