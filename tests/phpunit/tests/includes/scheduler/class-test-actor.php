@@ -9,6 +9,7 @@ namespace Activitypub\Tests\Scheduler;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
+use Activitypub\Collection\Outbox;
 use Activitypub\Scheduler\Actor;
 
 /**
@@ -131,6 +132,62 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$id            = \get_post_meta( $post->ID, '_activitypub_object_id', true );
 		$this->assertSame( $activitpub_id, $id );
 		$this->assertSame( $test_value, $result );
+	}
+
+	/**
+	 * Test that changing the Starter Kit policy schedules profile updates for all actors.
+	 *
+	 * @covers ::schedule_all_profile_updates
+	 */
+	public function test_feature_policy_update_schedules_all_profile_updates() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		// Reset outbox state before testing the feature-policy hook in isolation.
+		_delete_all_posts();
+
+		\update_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
+
+		$outbox_items = \get_posts(
+			array(
+				'post_type'      => Outbox::POST_TYPE,
+				'posts_per_page' => -1,
+				'post_status'    => 'pending',
+			)
+		);
+
+		$object_ids = array();
+		foreach ( $outbox_items as $outbox_item ) {
+			$object_ids[] = \get_post_meta( $outbox_item->ID, '_activitypub_object_id', true );
+		}
+
+		$this->assertContains( Actors::get_by_id( Actors::BLOG_USER_ID )->get_id(), $object_ids, 'The blog actor should receive a profile update.' );
+		$this->assertContains( Actors::get_by_id( self::$user_id )->get_id(), $object_ids, 'User actors should receive a profile update.' );
+	}
+
+	/**
+	 * Test that disabled actor types are skipped when the Starter Kit policy changes.
+	 *
+	 * @covers ::schedule_all_profile_updates
+	 */
+	public function test_feature_policy_update_respects_disabled_user_actors() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+
+		// Reset outbox state before testing the feature-policy hook in isolation.
+		_delete_all_posts();
+
+		\update_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS );
+
+		$outbox_items = \get_posts(
+			array(
+				'post_type'      => Outbox::POST_TYPE,
+				'posts_per_page' => -1,
+				'post_status'    => 'pending',
+			)
+		);
+
+		$blog_actor_id = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
+		$this->assertCount( 1, $outbox_items, 'Only the blog actor should receive a profile update when user actors are disabled.' );
+		$this->assertSame( $blog_actor_id, \get_post_meta( $outbox_items[0]->ID, '_activitypub_object_id', true ) );
 	}
 
 	/**

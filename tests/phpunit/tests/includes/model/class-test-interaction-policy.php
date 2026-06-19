@@ -98,4 +98,35 @@ class Test_Interaction_Policy extends \WP_UnitTestCase {
 			'Blog actor must default to explicit denial (its own id as the only approved target).'
 		);
 	}
+
+	/**
+	 * The generic Activity\Actor carries no application logic: it must not
+	 * compute a canFeature policy from the local site option, since it also
+	 * represents remote actors.
+	 */
+	public function test_generic_actor_does_not_emit_local_canfeature() {
+		\update_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
+
+		$actor = \Activitypub\Activity\Actor::init_from_array(
+			array(
+				'id'   => 'https://remote.example/users/jane',
+				'type' => 'Person',
+			)
+		);
+
+		$this->assertNull( $actor->get_interaction_policy(), 'A generic actor must not inherit the local canFeature policy.' );
+	}
+
+	/**
+	 * The Application actor advertises no canFeature policy (absence of
+	 * policy means no consent per FEP-7aa9).
+	 */
+	public function test_application_actor_emits_no_interaction_policy() {
+		\update_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
+
+		$application = new \Activitypub\Model\Application();
+
+		$this->assertNull( $application->get_interaction_policy() );
+		$this->assertArrayNotHasKey( 'interactionPolicy', $application->to_array( false ) );
+	}
 }

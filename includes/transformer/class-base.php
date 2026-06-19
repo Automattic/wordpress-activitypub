@@ -40,8 +40,6 @@ abstract class Base {
 	/**
 	 * The WP_Post or WP_Comment object.
 	 *
-	 * @deprecated version 5.0.0
-	 *
 	 * @var \WP_Post|\WP_Comment
 	 */
 	protected $wp_object;

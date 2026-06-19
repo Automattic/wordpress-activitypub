@@ -88,6 +88,18 @@ class Post {
 				}
 				break;
 
+			case 'future':
+				/*
+				 * A (re-)scheduled post is not a deletion: it becomes public again
+				 * when it publishes, at which point the publish transition federates
+				 * it. Treating `future` as a soft delete would fan out a Delete that
+				 * remotely tombstones the object id — e.g. when a content edit reverts
+				 * a future-dated published post back to `future` — after which the
+				 * post can never re-federate. Emit nothing instead.
+				 */
+				$type = false;
+				break;
+
 			case 'draft':
 			case 'pending':
 			case 'private':

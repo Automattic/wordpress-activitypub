@@ -39,7 +39,7 @@ class Menu {
 		\add_action( 'load-' . $settings_page, array( Admin::class, 'add_settings_list_tables' ) );
 		\add_action( 'load-' . $settings_page, array( Screen_Options::class, 'add_settings_list_options' ) );
 
-		if ( \get_option( 'activitypub_reader_ui', '0' ) && \version_compare( \get_bloginfo( 'version' ), '6.9-alpha', '>=' ) ) {
+		if ( \get_option( 'activitypub_reader_ui', '0' ) && App::is_supported() ) {
 			$app_hook = \add_dashboard_page(
 				\__( 'Social Web', 'activitypub' ),
 				\__( 'Social Web', 'activitypub' ),
@@ -106,8 +106,8 @@ class Menu {
 	 * @param \WP_Admin_Bar $wp_admin_bar The WP_Admin_Bar instance.
 	 */
 	public static function admin_bar_menu( $wp_admin_bar ) {
-		// Only show if reader UI is enabled and WordPress version supports it.
-		if ( ! \get_option( 'activitypub_reader_ui', '0' ) || \version_compare( \get_bloginfo( 'version' ), '6.9-alpha', '<' ) ) {
+		// Only show if reader UI is enabled and the WordPress app boot stack is available.
+		if ( ! \get_option( 'activitypub_reader_ui', '0' ) || ! App::is_supported() ) {
 			return;
 		}
 

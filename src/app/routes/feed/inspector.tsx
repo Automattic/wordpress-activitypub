@@ -8,7 +8,7 @@
  * External dependencies
  */
 import type { ReactNode } from 'react';
-import { UseNavigateResult } from '@tanstack/react-router';
+import type { UseNavigateResult } from '@wordpress/route';
 
 /**
  * WordPress dependencies
