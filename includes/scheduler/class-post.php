@@ -9,6 +9,7 @@ namespace Activitypub\Scheduler;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Outbox;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\get_post_id;
@@ -81,8 +82,19 @@ class Post {
 
 		switch ( $new_status ) {
 			case 'publish':
-				if ( $update ) {
-					$type = ( 'publish' === $old_status ) ? 'Update' : 'Create';
+				if ( ! $update ) {
+					$type = 'Create';
+				} elseif ( 'publish' === $old_status ) {
+					$type = 'Update';
+				} elseif ( 'future' === $old_status && ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status ) {
+					/*
+					 * A re-scheduled, already-federated post returning to `publish`:
+					 * its content may have changed while it was scheduled and the
+					 * remote copy still exists, so send an Update. Without this the
+					 * `Create` would be dropped by the "already federated" guard
+					 * below and followers would never see the edits.
+					 */
+					$type = 'Update';
 				} else {
 					$type = 'Create';
 				}
@@ -97,7 +109,21 @@ class Post {
 				 * id — e.g. when a content edit reverts a future-dated published
 				 * post back to `future` — after which the republish Create is
 				 * ignored and the post can never re-federate. Emit nothing instead.
+				 *
+				 * If the post was already federated, cancel any still-pending
+				 * Create/Update for it so an undelivered activity is not
+				 * dispatched after the post is scheduled again, which would
+				 * federate it before its publish date. Already delivered
+				 * activities are left in place; the publish transition sends an
+				 * Update once the post is public again. A post that was never
+				 * federated has nothing queued, so the lookup is skipped.
+				 *
+				 * Pass both the current (`?p=`) and legacy (permalink) IDs so a
+				 * post that federated under the pre-migration ID is matched too.
 				 */
+				if ( ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status ) {
+					Outbox::invalidate_pending( array( get_post_id( $post->ID ), \get_permalink( $post->ID ) ) );
+				}
 				$type = false;
 				break;
 
