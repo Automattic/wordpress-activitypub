@@ -139,10 +139,9 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 			)
 		);
 		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
-		$this->assertSame(
-			'Create',
-			\get_post_meta( $this->get_latest_outbox_item( $activitypub_id )->ID, '_activitypub_activity_type', true )
-		);
+		$create_item    = $this->get_latest_outbox_item( $activitypub_id );
+		$this->assertNotNull( $create_item, 'Publishing should queue a Create.' );
+		$this->assertSame( 'Create', \get_post_meta( $create_item->ID, '_activitypub_activity_type', true ) );
 
 		// Re-schedule it to the future (the state WordPress reverts to when a
 		// future-dated published post is edited without resetting its date).
@@ -195,10 +194,9 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 			)
 		);
 		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
-		$this->assertSame(
-			'Create',
-			\get_post_meta( $this->get_latest_outbox_item( $activitypub_id )->ID, '_activitypub_activity_type', true )
-		);
+		$create_item    = $this->get_latest_outbox_item( $activitypub_id );
+		$this->assertNotNull( $create_item, 'Publishing should queue a Create.' );
+		$this->assertSame( 'Create', \get_post_meta( $create_item->ID, '_activitypub_activity_type', true ) );
 
 		// Re-schedule it to the future, then publish it again.
 		\wp_update_post(
