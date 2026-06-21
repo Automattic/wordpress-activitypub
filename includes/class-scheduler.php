@@ -303,6 +303,20 @@ class Scheduler {
 				 */
 				$fetched_id = isset( $meta['id'] ) && \is_string( $meta['id'] ) ? \esc_url_raw( $meta['id'] ) : '';
 				if ( $fetched_id !== $actor->guid ) {
+					/*
+					 * Touch the modified date so the skipped actor drops out of the
+					 * outdated queue and is not re-fetched on every run. Hooks are
+					 * not fired: this only bumps the timestamp, it is not an edit.
+					 */
+					\wp_update_post(
+						array(
+							'ID'                => $actor->ID,
+							'post_modified'     => \current_time( 'mysql' ),
+							'post_modified_gmt' => \current_time( 'mysql', true ),
+						),
+						false,
+						false
+					);
 					continue;
 				}
 

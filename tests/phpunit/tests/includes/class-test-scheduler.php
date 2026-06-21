@@ -1051,5 +1051,6 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		$this->assertCount( $count_before, \get_posts( $query_args ), 'An identity change must not create a duplicate actor.' );
 		$this->assertSame( $uri, \get_post( $id )->guid, 'The cached actor guid must be left unchanged.' );
 		$this->assertSame( 'Old Name', \get_post( $id )->post_title, 'A changed remote identity must not be applied to the cached actor.' );
+		$this->assertEmpty( Remote_Actors::get_outdated(), 'A skipped actor must be touched so it is not re-fetched on the next run.' );
 	}
 }
