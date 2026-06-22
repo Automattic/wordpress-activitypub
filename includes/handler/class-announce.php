@@ -53,25 +53,16 @@ class Announce {
 
 		self::maybe_save_announce( $announcement, $user_ids );
 
-		/*
-		 * Resolve the announced object from its own origin instead of trusting the
-		 * value carried in the Announce. An Announce only relays a reference: the
-		 * embedded (or even URL-named) inner activity is supplied by the announcer,
-		 * who is not necessarily its author, so dispatching it as-is would let it
-		 * act on behalf of an actor the announcer does not control.
-		 *
-		 * Always fetch the object by its id, then require it to originate from its
-		 * actor's host: only an actor's own server may vouch for an activity
-		 * attributed to it. This mirrors the inbox's signed key-host == actor-host
-		 * binding, generalised to every relayed activity type.
-		 *
-		 * Redirects are disabled for the fetch (`redirection => 0`) so the requested
-		 * host is the authoritative origin. Otherwise an open redirect on the named
-		 * host could bounce the request to attacker-controlled JSON while the
-		 * host-equality check below still saw the original (trusted) host.
-		 */
 		$object_url = object_to_uri( $announcement['object'] );
-		$object     = Http::get_remote_object( $object_url, true, array( 'redirection' => 0 ) );
+
+		/*
+		 * Fetch the activity from its own id rather than the inline copy the Announce
+		 * carries: that copy is the announcer's, who is not necessarily the activity's
+		 * author. Redirects are disabled so the requested host is the authoritative
+		 * origin — otherwise an open redirect on the named host could bounce to
+		 * attacker-controlled JSON while the host check below still saw the trusted host.
+		 */
+		$object = Http::get_remote_object( $object_url, true, array( 'redirection' => 0 ) );
 
 		if ( ! $object || is_wp_error( $object ) || ! is_array( $object ) ) {
 			return;
@@ -84,6 +75,12 @@ class Announce {
 		$origin_host = \strtolower( (string) \wp_parse_url( (string) $object_url, \PHP_URL_HOST ) );
 		$actor_host  = \strtolower( (string) \wp_parse_url( (string) object_to_uri( $object['actor'] ?? '' ), \PHP_URL_HOST ) );
 
+		/*
+		 * Only an actor's own server may vouch for an activity attributed to it, so the
+		 * host it was fetched from must equal its actor's host — the same key-host ==
+		 * actor-host binding verify_key_id() enforces for signed requests, generalised
+		 * to every relayed activity type.
+		 */
 		if ( '' === $origin_host || '' === $actor_host || $origin_host !== $actor_host ) {
 			return;
 		}

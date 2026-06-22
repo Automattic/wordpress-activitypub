@@ -70,12 +70,7 @@ class Remote_Posts {
 			return self::update( $activity, $recipients );
 		}
 
-		/*
-		 * An actor may only create a post attributed to itself. Only the actor is
-		 * bound to the HTTP signature, not the object's attributedTo (the same
-		 * constraint update() enforces), so without this a signed Create could
-		 * store a post attributed to a victim actor.
-		 */
+		// An actor may only create posts attributed to itself; only the actor is signature-bound, not attributedTo.
 		if ( object_to_uri( $activity['actor'] ?? '' ) !== object_to_uri( $activity_object['attributedTo'] ?? '' ) ) {
 			return new \WP_Error(
 				'activitypub_create_unauthorized',
