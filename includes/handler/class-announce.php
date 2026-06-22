@@ -58,11 +58,12 @@ class Announce {
 		/*
 		 * Fetch the activity from its own id rather than the inline copy the Announce
 		 * carries: that copy is the announcer's, who is not necessarily the activity's
-		 * author. Redirects are disabled so the requested host is the authoritative
-		 * origin — otherwise an open redirect on the named host could bounce to
-		 * attacker-controlled JSON while the host check below still saw the trusted host.
+		 * author. Redirects are disabled and the cache is bypassed so the requested
+		 * host is the authoritative origin — otherwise a redirect (or a response cached
+		 * from an earlier redirect-following fetch) could resolve to attacker content
+		 * while the host check below still saw the trusted host.
 		 */
-		$object = Http::get_remote_object( $object_url, true, array( 'redirection' => 0 ) );
+		$object = Http::get_remote_object( $object_url, false, array( 'redirection' => 0 ) );
 
 		if ( ! $object || is_wp_error( $object ) || ! is_array( $object ) ) {
 			return;
