@@ -244,10 +244,13 @@ class Http {
 	 *
 	 * @param array|string $url_or_object The Object or the Object URL.
 	 * @param bool         $cached        Optional. Whether the result should be cached. Default true.
+	 * @param array        $args          Optional. Request arguments passed through to `get()`
+	 *                                    (e.g. `array( 'redirection' => 0 )` to forbid redirects
+	 *                                    so the requested host is the authoritative origin). Default empty.
 	 *
 	 * @return array|\WP_Error The Object data as array or WP_Error on failure.
 	 */
-	public static function get_remote_object( $url_or_object, $cached = true ) {
+	public static function get_remote_object( $url_or_object, $cached = true, $args = array() ) {
 		/**
 		 * Filters the preemptive return value of a remote object request.
 		 *
@@ -291,7 +294,7 @@ class Http {
 			);
 		}
 
-		$response = self::get( $url, array(), $cached );
+		$response = self::get( $url, $args, $cached );
 
 		if ( \is_wp_error( $response ) ) {
 			return $response;

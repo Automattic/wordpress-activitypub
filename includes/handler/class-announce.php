@@ -64,9 +64,14 @@ class Announce {
 		 * actor's host: only an actor's own server may vouch for an activity
 		 * attributed to it. This mirrors the inbox's signed key-host == actor-host
 		 * binding, generalised to every relayed activity type.
+		 *
+		 * Redirects are disabled for the fetch (`redirection => 0`) so the requested
+		 * host is the authoritative origin. Otherwise an open redirect on the named
+		 * host could bounce the request to attacker-controlled JSON while the
+		 * host-equality check below still saw the original (trusted) host.
 		 */
 		$object_url = object_to_uri( $announcement['object'] );
-		$object     = Http::get_remote_object( $object_url );
+		$object     = Http::get_remote_object( $object_url, true, array( 'redirection' => 0 ) );
 
 		if ( ! $object || is_wp_error( $object ) || ! is_array( $object ) ) {
 			return;
