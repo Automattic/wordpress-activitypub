@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Verify that boosted activities originate from their author before processing them.

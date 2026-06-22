@@ -53,17 +53,33 @@ class Announce {
 
 		self::maybe_save_announce( $announcement, $user_ids );
 
-		if ( is_string( $announcement['object'] ) ) {
-			$object = Http::get_remote_object( $announcement['object'] );
-		} else {
-			$object = $announcement['object'];
-		}
+		/*
+		 * Resolve the announced object from its own origin instead of trusting the
+		 * value carried in the Announce. An Announce only relays a reference: the
+		 * embedded (or even URL-named) inner activity is supplied by the announcer,
+		 * who is not necessarily its author, so dispatching it as-is would let it
+		 * act on behalf of an actor the announcer does not control.
+		 *
+		 * Always fetch the object by its id, then require it to originate from its
+		 * actor's host: only an actor's own server may vouch for an activity
+		 * attributed to it. This mirrors the inbox's signed key-host == actor-host
+		 * binding, generalised to every relayed activity type.
+		 */
+		$object_url = object_to_uri( $announcement['object'] );
+		$object     = Http::get_remote_object( $object_url );
 
-		if ( ! $object || is_wp_error( $object ) ) {
+		if ( ! $object || is_wp_error( $object ) || ! is_array( $object ) ) {
 			return;
 		}
 
 		if ( ! is_activity( $object ) ) {
+			return;
+		}
+
+		$origin_host = \strtolower( (string) \wp_parse_url( (string) $object_url, \PHP_URL_HOST ) );
+		$actor_host  = \strtolower( (string) \wp_parse_url( (string) object_to_uri( $object['actor'] ?? '' ), \PHP_URL_HOST ) );
+
+		if ( '' === $origin_host || '' === $actor_host || $origin_host !== $actor_host ) {
 			return;
 		}
 
