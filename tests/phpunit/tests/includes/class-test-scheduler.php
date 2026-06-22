@@ -953,12 +953,13 @@ class Test_Scheduler extends \WP_UnitTestCase {
 
 		global $wpdb;
 		$modified = \gmdate( 'Y-m-d H:i:s', \time() - 9 * DAY_IN_SECONDS );
-		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$updated = $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"UPDATE $wpdb->posts SET post_modified = %s, post_modified_gmt = %s WHERE ID = %d",
 				array( $modified, $modified, $id )
 			)
 		);
+		$this->assertSame( 1, $updated, 'Failed to age the cached actor so it becomes outdated.' );
 		\clean_post_cache( $id );
 
 		return $id;
