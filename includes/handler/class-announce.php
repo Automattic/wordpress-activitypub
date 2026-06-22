@@ -55,15 +55,25 @@ class Announce {
 
 		$object_url = object_to_uri( $announcement['object'] );
 
+		// Force no redirects for this object's request only, so the requested host stays the authoritative origin.
+		$no_redirects = static function ( $args, $url ) use ( $object_url ) {
+			if ( $url === $object_url ) {
+				$args['redirection'] = 0;
+			}
+			return $args;
+		};
+
 		/*
 		 * Fetch the activity from its own id rather than the inline copy the Announce
 		 * carries: that copy is the announcer's, who is not necessarily the activity's
-		 * author. Redirects are disabled and the cache is bypassed so the requested
-		 * host is the authoritative origin — otherwise a redirect (or a response cached
-		 * from an earlier redirect-following fetch) could resolve to attacker content
-		 * while the host check below still saw the trusted host.
+		 * author. Redirects are forbidden (above) and the cache is bypassed so the
+		 * requested host is the authoritative origin — otherwise a redirect, or a
+		 * response cached from an earlier redirect-following fetch, could resolve to
+		 * attacker content while the host check below still saw the trusted host.
 		 */
-		$object = Http::get_remote_object( $object_url, false, array( 'redirection' => 0 ) );
+		\add_filter( 'http_request_args', $no_redirects, 10, 2 );
+		$object = Http::get_remote_object( $object_url, false );
+		\remove_filter( 'http_request_args', $no_redirects, 10 );
 
 		if ( ! $object || is_wp_error( $object ) || ! is_array( $object ) ) {
 			return;
