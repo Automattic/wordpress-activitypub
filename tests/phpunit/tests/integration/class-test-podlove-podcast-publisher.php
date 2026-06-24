@@ -16,6 +16,24 @@ namespace Activitypub\Tests\Integration;
 class Test_Podlove_Podcast_Publisher extends \WP_UnitTestCase {
 
 	/**
+	 * Load the Podlove Episode stub before each test.
+	 */
+	public function set_up() {
+		parent::set_up();
+		require_once AP_TESTS_DIR . '/includes/class-episode.php';
+	}
+
+	/**
+	 * Reset the mocked episode after each test.
+	 */
+	public function tear_down() {
+		if ( class_exists( '\Podlove\Model\Episode' ) ) {
+			\Podlove\Model\Episode::$mock = null;
+		}
+		parent::tear_down();
+	}
+
+	/**
 	 * Test that the transformer respects the configured object type setting.
 	 */
 	public function test_get_type_respects_setting() {
@@ -130,5 +148,68 @@ class Test_Podlove_Podcast_Publisher extends \WP_UnitTestCase {
 	public function test_class_exists_and_extends_post() {
 		$this->assertTrue( class_exists( '\Activitypub\Integration\Podlove_Podcast_Publisher' ) );
 		$this->assertTrue( is_subclass_of( '\Activitypub\Integration\Podlove_Podcast_Publisher', '\Activitypub\Transformer\Post' ) );
+	}
+
+	/**
+	 * Test that the episode summary is federated as the object summary.
+	 *
+	 * @covers ::get_summary
+	 */
+	public function test_get_summary_uses_episode_summary() {
+		\update_option( 'activitypub_object_type', 'wordpress-post-format' );
+
+		$post = \get_post(
+			\wp_insert_post(
+				array(
+					'post_author'  => 1,
+					'post_title'   => 'Episode title',
+					'post_content' => 'Episode content.',
+					'post_status'  => 'publish',
+					'post_type'    => 'post',
+				)
+			)
+		);
+
+		$episode                      = new \Podlove\Model\Episode();
+		$episode->summary             = 'The episode summary that should be federated.';
+		\Podlove\Model\Episode::$mock = $episode;
+
+		$object = ( new \Activitypub\Integration\Podlove_Podcast_Publisher( $post ) )->to_object();
+
+		$this->assertSame( 'The episode summary that should be federated.', $object->get_summary() );
+
+		\wp_delete_post( $post->ID, true );
+	}
+
+	/**
+	 * Test that the transformer falls back to the default summary without an episode summary.
+	 *
+	 * @covers ::get_summary
+	 */
+	public function test_get_summary_falls_back_without_episode_summary() {
+		\update_option( 'activitypub_object_type', 'wordpress-post-format' );
+
+		$post = \get_post(
+			\wp_insert_post(
+				array(
+					'post_author'  => 1,
+					'post_title'   => 'Episode title',
+					'post_content' => 'Episode content that should be summarized.',
+					'post_status'  => 'publish',
+					'post_type'    => 'post',
+				)
+			)
+		);
+
+		$episode                      = new \Podlove\Model\Episode();
+		$episode->summary             = '';
+		\Podlove\Model\Episode::$mock = $episode;
+
+		$podlove = ( new \Activitypub\Integration\Podlove_Podcast_Publisher( $post ) )->to_object();
+		$default = ( new \Activitypub\Transformer\Post( $post ) )->to_object();
+
+		$this->assertSame( $default->get_summary(), $podlove->get_summary() );
+
+		\wp_delete_post( $post->ID, true );
 	}
 }
