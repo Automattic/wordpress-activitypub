@@ -170,19 +170,21 @@ class Test_Podlove_Podcast_Publisher extends \WP_UnitTestCase {
 			)
 		);
 
+		// Raw user input: tags and HTML entities should be sanitized like the default summary.
 		$episode                      = new \Podlove\Model\Episode();
-		$episode->summary             = 'The episode summary that should be federated.';
+		$episode->summary             = '<p>Episode summary &amp; more</p>';
 		\Podlove\Model\Episode::$mock = $episode;
 
 		$object = ( new \Activitypub\Integration\Podlove_Podcast_Publisher( $post ) )->to_object();
 
-		$this->assertSame( 'The episode summary that should be federated.', $object->get_summary() );
+		$this->assertSame( 'Episode summary & more', $object->get_summary() );
 
 		\wp_delete_post( $post->ID, true );
 	}
 
 	/**
-	 * Test that the transformer falls back to the default summary without an episode summary.
+	 * Test that the transformer falls back to the default summary when the episode
+	 * summary is empty (including markup/whitespace that sanitizes to nothing).
 	 *
 	 * @covers ::get_summary
 	 */
@@ -201,8 +203,9 @@ class Test_Podlove_Podcast_Publisher extends \WP_UnitTestCase {
 			)
 		);
 
+		// Markup/whitespace only: sanitizes to an empty string, so the default summary is used.
 		$episode                      = new \Podlove\Model\Episode();
-		$episode->summary             = '';
+		$episode->summary             = '<p>  </p>';
 		\Podlove\Model\Episode::$mock = $episode;
 
 		$podlove = ( new \Activitypub\Integration\Podlove_Podcast_Publisher( $post ) )->to_object();

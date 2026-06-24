@@ -48,9 +48,17 @@ class Podlove_Podcast_Publisher extends Post {
 	protected function get_summary() {
 		$episode = $this->get_episode();
 
-		// Podlove keeps the episode summary out of post_content, so federate it explicitly (Notes carry no summary).
-		if ( $episode && ! empty( $episode->summary ) && 'Note' !== $this->get_type() ) {
-			return \wp_strip_all_tags( $episode->summary );
+		// Notes carry no summary, so there is nothing to override for them.
+		if ( $episode && 'Note' !== $this->get_type() ) {
+			// Sanitize like generate_post_summary() does, since Podlove stores the summary as raw user input.
+			$summary = \strip_shortcodes( (string) $episode->summary );
+			$summary = \wp_strip_all_tags( $summary );
+			$summary = \trim( \html_entity_decode( $summary, ENT_QUOTES, 'UTF-8' ) );
+
+			// Federate the episode summary explicitly; Podlove keeps it out of post_content.
+			if ( '' !== $summary ) {
+				return $summary;
+			}
 		}
 
 		return parent::get_summary();
