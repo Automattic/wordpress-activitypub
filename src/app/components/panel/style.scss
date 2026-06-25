@@ -13,4 +13,8 @@
 	@include mixins.break-medium() {
 		margin: var(--wpds-spacing-40, 16px) var(--wpds-spacing-40, 16px) var(--wpds-spacing-40, 16px) 0;
 	}
+
+	&.panel--inspector {
+		margin: 0;
+	}
 }

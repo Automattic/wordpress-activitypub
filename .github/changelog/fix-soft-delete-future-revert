@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix posts being removed from the Fediverse when edited while scheduled for a future publish date.
