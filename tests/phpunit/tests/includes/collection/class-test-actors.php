@@ -55,6 +55,15 @@ class Test_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The former Application id (-1) is no longer an actor and must not resolve.
+	 *
+	 * @covers ::get_by_id
+	 */
+	public function test_get_by_id_application_id_is_not_resolved() {
+		$this->assertWPError( Actors::get_by_id( -1 ), 'The former Application id (-1) must not resolve to an actor.' );
+	}
+
+	/**
 	 * Test get_by_various.
 	 *
 	 * @dataProvider the_resource_provider
