@@ -1346,8 +1346,12 @@ class Migration {
 	 * @since unreleased
 	 */
 	public static function migrate_application_keypair_option() {
-		\wp_cache_flush();
 		self::update_options_key( 'activitypub_keypair_for_-1', Application::KEYPAIR_OPTION_KEY );
+
+		// The raw rename bypasses the options API, so drop only the two stale option caches (plus the autoload bucket) instead of flushing everything.
+		\wp_cache_delete( 'activitypub_keypair_for_-1', 'options' );
+		\wp_cache_delete( Application::KEYPAIR_OPTION_KEY, 'options' );
+		\wp_cache_delete( 'alloptions', 'options' );
 
 		/*
 		 * If an early Application::get_keypair() read already created the destination

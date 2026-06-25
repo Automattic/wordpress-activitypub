@@ -84,10 +84,10 @@ class Application {
 	 *
 	 * @since unreleased
 	 *
-	 * @return string The Application URL (e.g. https://example.com/@application).
+	 * @return string The Application URL.
 	 */
 	public static function get_url() {
-		return \esc_url( \trailingslashit( \get_home_url() ) . '@' . self::USERNAME );
+		return self::get_id();
 	}
 
 	/**
