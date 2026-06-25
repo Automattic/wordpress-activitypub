@@ -8,7 +8,6 @@
 
 namespace Activitypub\Cache;
 
-use Activitypub\Application;
 use Activitypub\Collection\Actors;
 use Activitypub\Model\Blog;
 use Activitypub\Statistics;
@@ -214,8 +213,6 @@ class Stats_Image extends File {
 
 		if ( ! \is_wp_error( $actor ) ) {
 			$actor_webfinger = $actor->get_webfinger();
-		} elseif ( Actors::APPLICATION_USER_ID === $user_id ) {
-			$actor_webfinger = Application::get_webfinger();
 		} else {
 			$actor_webfinger = '';
 		}
