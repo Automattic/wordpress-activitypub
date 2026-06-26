@@ -28,7 +28,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * These collections are normally hidden (`show_ui` is false). The slugs are the
  * plugin's Inbox (received activities), Outbox (sent activities), and remote
- * post / `ap_post` (cached remote objects) storage.
+ * post / `ap_post` (cached remote objects) storage. The `ap_tombstone` type is
+ * intentionally left out; add it here if you also need to inspect tombstones.
  *
  * @return array<string, string> Post type slug => dashicon class.
  */
