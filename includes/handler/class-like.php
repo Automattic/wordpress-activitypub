@@ -41,7 +41,11 @@ class Like {
 			return;
 		}
 
-		// Dedupe on the Like activity ID (its source_id), not the liked object, so repeat deliveries stay idempotent even when a mangled author name defeats WordPress's own duplicate check. See https://github.com/Automattic/wordpress-activitypub/issues/3215.
+		/*
+		 * Dedupe on the Like activity ID (its source_id), not the liked object, so repeat
+		 * deliveries stay idempotent even when a mangled author name defeats WordPress's own
+		 * duplicate check. See https://github.com/Automattic/wordpress-activitypub/issues/3215.
+		 */
 		$exists = Comment::object_id_to_comment( esc_url_raw( object_to_uri( $like ) ) );
 		if ( $exists ) {
 			return;
