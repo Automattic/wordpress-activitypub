@@ -53,17 +53,46 @@ class Announce {
 
 		self::maybe_save_announce( $announcement, $user_ids );
 
-		if ( is_string( $announcement['object'] ) ) {
-			$object = Http::get_remote_object( $announcement['object'] );
-		} else {
-			$object = $announcement['object'];
-		}
+		$object_url = object_to_uri( $announcement['object'] );
 
-		if ( ! $object || is_wp_error( $object ) ) {
+		// Force no redirects for this object's request only, so the requested host stays the authoritative origin.
+		$no_redirects = static function ( $args, $url ) use ( $object_url ) {
+			if ( $url === $object_url ) {
+				$args['redirection'] = 0;
+			}
+			return $args;
+		};
+
+		/*
+		 * Fetch the activity from its own id rather than the inline copy the Announce
+		 * carries: that copy is the announcer's, who is not necessarily the activity's
+		 * author. Redirects are forbidden (above) and the cache is bypassed so the
+		 * requested host is the authoritative origin — otherwise a redirect, or a
+		 * response cached from an earlier redirect-following fetch, could resolve to
+		 * attacker content while the host check below still saw the trusted host.
+		 */
+		\add_filter( 'http_request_args', $no_redirects, 10, 2 );
+		$object = Http::get_remote_object( $object_url, false );
+		\remove_filter( 'http_request_args', $no_redirects, 10 );
+
+		if ( ! $object || is_wp_error( $object ) || ! is_array( $object ) ) {
 			return;
 		}
 
 		if ( ! is_activity( $object ) ) {
+			return;
+		}
+
+		$origin_host = \strtolower( (string) \wp_parse_url( (string) $object_url, \PHP_URL_HOST ) );
+		$actor_host  = \strtolower( (string) \wp_parse_url( (string) object_to_uri( $object['actor'] ?? '' ), \PHP_URL_HOST ) );
+
+		/*
+		 * Only an actor's own server may vouch for an activity attributed to it, so the
+		 * host it was fetched from must equal its actor's host — the same key-host ==
+		 * actor-host binding verify_key_id() enforces for signed requests, generalised
+		 * to every relayed activity type.
+		 */
+		if ( '' === $origin_host || '' === $actor_host || $origin_host !== $actor_host ) {
 			return;
 		}
 
