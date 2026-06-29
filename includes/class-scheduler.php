@@ -293,7 +293,37 @@ class Scheduler {
 			if ( empty( $meta ) || ! \is_array( $meta ) || \is_wp_error( $meta ) ) {
 				Remote_Actors::add_error( $actor->ID, 'Failed to fetch or parse metadata' );
 			} else {
-				$id = Remote_Actors::upsert( $meta );
+				/*
+				 * Only refresh when the remote still reports the same identity. A
+				 * different (or missing) id means a Move or a malformed response;
+				 * applying it would rewrite the cached guid in place and could
+				 * collide with another cached actor, so leave the record alone.
+				 * Updating by the known post ID otherwise refreshes it without the
+				 * redundant get_by_uri() lookup upsert() would do.
+				 */
+				$fetched_id = isset( $meta['id'] ) && \is_string( $meta['id'] ) ? \esc_url_raw( $meta['id'] ) : '';
+				if ( $fetched_id !== $actor->guid ) {
+					/*
+					 * Bump only the modified date, directly, so the skipped actor
+					 * drops out of the outdated queue and is not re-fetched every
+					 * run. A direct write avoids the save_post hooks wp_update_post()
+					 * fires (which would needlessly clear the cached avatar); the
+					 * record is intentionally left unchanged otherwise.
+					 */
+					global $wpdb;
+					$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+						$wpdb->posts,
+						array(
+							'post_modified'     => \current_time( 'mysql' ),
+							'post_modified_gmt' => \current_time( 'mysql', true ),
+						),
+						array( 'ID' => $actor->ID )
+					);
+					\clean_post_cache( $actor->ID );
+					continue;
+				}
+
+				$id = Remote_Actors::update( $actor->ID, $meta );
 				if ( \is_wp_error( $id ) ) {
 					continue;
 				}
