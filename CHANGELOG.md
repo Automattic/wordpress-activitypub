@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.0.2] - 2026-06-29
+### Fixed
+- Improve handling of content received from other servers.
+
 ## [9.0.1] - 2026-06-15
 ### Added
 - Add FAQ guides that help solve follow requests stuck on "pending" and comments from the Fediverse not showing up. [#3404]
@@ -1934,6 +1938,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[9.0.2]: https://github.com/Automattic/wordpress-activitypub/compare/9.0.1...9.0.2
 [9.0.1]: https://github.com/Automattic/wordpress-activitypub/compare/9.0.0...9.0.1
 [9.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/8.3.0...9.0.0
 [8.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/8.2.1...8.3.0
