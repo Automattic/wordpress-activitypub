@@ -66,7 +66,7 @@
 		"@wordpress/interactivity": "^6.49.0",
 		"@wordpress/interface": "^9.33.0",
 		"@wordpress/keyboard-shortcuts": "^5.48.0",
-		"@wordpress/keycodes": "^4.48.1",
+		"@wordpress/keycodes": "^4.49.0",
 		"@wordpress/notices": "^5.48.0",
 		"@wordpress/plugins": "^7.48.0",
 		"@wordpress/preferences": "^4.48.0",
