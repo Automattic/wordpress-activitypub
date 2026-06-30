@@ -61,6 +61,12 @@ This plugin connects your WordPress blog to popular social platforms like Mastod
 
 *ActivityPub for WordPress* adds Fediverse features to WordPress, but it is not a replacement for platforms like Friendica or Mastodon. If you're looking to host a decentralized social network, consider using [Mastodon](https://joinmastodon.org/) or [Friendica](https://friendi.ca/).
 
+= Is this a Mastodon crossposter? Can it post to my existing Mastodon account? =
+
+No. A crossposter pushes copies of your posts to a *separate* account you already have on someone else's server. *ActivityPub for WordPress* does the opposite: it makes your own site a first-class Fediverse account (`@you@example.com`), so people follow your site directly and replies come back as WordPress comments, with no second account required.
+
+The plugin will not add crossposting to an existing account; that is a deliberate choice, not a missing feature. If you would rather mirror articles to an established Mastodon account, that is a job for a dedicated crossposter plugin.
+
 = Why "ActivityPub"? =
 
 The name ActivityPub comes from the two core ideas behind the protocol:
