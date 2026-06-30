@@ -45,7 +45,7 @@ If you want to keep your established account but still surface new articles to i
 If your established Mastodon account is where you want your audience to live, that is a crossposting job. Use a [dedicated crossposter plugin](https://wordpress.org/plugins/search/mastodon/) built for exactly this. They work happily alongside this plugin or entirely on their own.
 
 > [!TIP]
-> You can run both plugins at once: *ActivityPub for WordPress* to give your site its own Fediverse presence, and a crossposter to also announce new posts from a separate Mastodon account. They do not conflict, because they operate on different accounts.
+> These options are not either/or. Keep *ActivityPub for WordPress* running so your site has its own Fediverse presence, then layer FediBoost or a crossposter on top to also reach your existing Mastodon audience. They coexist without conflict.
 
 ## Related
 
