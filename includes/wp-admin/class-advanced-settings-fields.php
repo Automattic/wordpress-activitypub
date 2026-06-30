@@ -103,7 +103,8 @@ class Advanced_Settings_Fields {
 			array( 'label_for' => 'activitypub_following_ui' )
 		);
 
-		if ( \version_compare( \get_bloginfo( 'version' ), '6.9-alpha', '>=' ) ) {
+		// Only offer the Reader opt-in where the app can actually boot (WordPress 7.0+).
+		if ( App::is_supported() ) {
 			\add_settings_field(
 				'activitypub_reader_ui',
 				\__( 'Reader', 'activitypub' ),
@@ -316,7 +317,7 @@ class Advanced_Settings_Fields {
 	/**
 	 * Render distribution mode field.
 	 *
-	 * @since unreleased
+	 * @since 9.0.0
 	 */
 	public static function render_distribution_mode_field() {
 		$mode = \get_option( 'activitypub_distribution_mode', 'default' );

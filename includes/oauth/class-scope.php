@@ -59,7 +59,7 @@ class Scope {
 	 * `read`, any `activitypub:write:*` collapses to `write`). Enforcement
 	 * stays coarse: there is no per-activity-type access control yet.
 	 *
-	 * @since unreleased
+	 * @since 9.0.0
 	 *
 	 * @var array
 	 */
@@ -129,7 +129,7 @@ class Scope {
 	 * `activitypub:write:*` to {@see self::WRITE}. Unknown values pass through
 	 * unchanged so they can be filtered out by the caller.
 	 *
-	 * @since unreleased
+	 * @since 9.0.0
 	 *
 	 * @param array $scopes Requested scope strings.
 	 * @return array Normalized scope strings.
@@ -167,7 +167,7 @@ class Scope {
 	 * Includes the plugin's internal scopes plus the SWICG Basic Profile
 	 * canonical aliases so spec-aware clients can discover them.
 	 *
-	 * @since unreleased
+	 * @since 9.0.0
 	 *
 	 * @return array Scope identifiers.
 	 */

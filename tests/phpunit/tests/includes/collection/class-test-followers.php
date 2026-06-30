@@ -26,6 +26,7 @@ class Test_Followers extends \WP_UnitTestCase {
 	public static $actors = array(
 		'username@example.org' => array(
 			'id'                => 'https://example.org/users/username',
+			'type'              => 'Person',
 			'url'               => 'https://example.org/users/username',
 			'inbox'             => 'https://example.org/users/username/inbox',
 			'name'              => 'username',
@@ -34,6 +35,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		),
 		'jon@example.com'      => array(
 			'id'                => 'https://example.com/author/jon',
+			'type'              => 'Person',
 			'url'               => 'https://example.com/author/jon',
 			'inbox'             => 'https://example.com/author/jon/inbox',
 			'name'              => 'jon',
@@ -42,6 +44,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		),
 		'doe@example.org'      => array(
 			'id'                => 'https://example.org/author/doe',
+			'type'              => 'Person',
 			'url'               => 'https://example.org/author/doe',
 			'inbox'             => 'https://example.org/author/doe/inbox',
 			'name'              => 'doe',
@@ -49,6 +52,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		),
 		'sally@example.org'    => array(
 			'id'                => 'http://sally.example.org',
+			'type'              => 'Person',
 			'url'               => 'http://sally.example.org',
 			'inbox'             => 'http://sally.example.org/inbox',
 			'name'              => 'jon',
@@ -56,6 +60,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		),
 		'12345@example.com'    => array(
 			'id'                => 'https://12345.example.com',
+			'type'              => 'Person',
 			'url'               => 'https://12345.example.com',
 			'inbox'             => 'https://12345.example.com/inbox',
 			'name'              => '12345',
@@ -197,9 +202,9 @@ class Test_Followers extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Tests delete_follower.
+	 * Tests that removing a follower for one user does not affect another user.
 	 *
-	 * @covers ::remove_follower
+	 * @covers ::remove
 	 */
 	public function test_delete_follower() {
 		$followers  = array(
@@ -228,8 +233,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		$follower2 = Followers::get_by_uri( 2, 'https://example.com/author/jon' );
 		$this->assertEquals( 'https://example.com/author/jon', $follower2->guid );
 
-		$this->setExpectedDeprecated( 'Activitypub\Collection\Followers::remove_follower' );
-		Followers::remove_follower( 1, 'https://example.com/author/jon' );
+		Followers::remove( $follower->ID, 1 );
 
 		$follower = Followers::get_by_uri( 1, 'https://example.com/author/jon' );
 		$this->assertWPError( $follower );
@@ -242,7 +246,7 @@ class Test_Followers extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Tests remove_follower.
+	 * Tests remove.
 	 *
 	 * @covers ::remove
 	 */
@@ -269,79 +273,6 @@ class Test_Followers extends \WP_UnitTestCase {
 
 		$followers = Followers::get_many( 1 );
 		$this->assertEquals( 1, count( $followers ) );
-	}
-
-	/**
-	 * Tests get_outdated_followers.
-	 *
-	 * @covers ::get_outdated_followers
-	 */
-	public function test_get_outdated_followers() {
-		$followers = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
-
-		foreach ( $followers as $follower ) {
-			Followers::add( 1, $follower );
-		}
-
-		$follower = Followers::get_by_uri( 1, 'https://example.com/author/jon' );
-
-		global $wpdb;
-
-		// E.g. time one year ago.
-		$time              = time() - 804800;
-		$mysql_time_format = 'Y-m-d H:i:s';
-
-		$post_modified     = gmdate( $mysql_time_format, $time );
-		$post_modified_gmt = gmdate( $mysql_time_format, ( $time + get_option( 'gmt_offset' ) * HOUR_IN_SECONDS ) );
-
-		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$wpdb->prepare(
-				"UPDATE $wpdb->posts SET post_modified = %s, post_modified_gmt = %s WHERE ID = %s",
-				array(
-					$post_modified,
-					$post_modified_gmt,
-					$follower->ID,
-				)
-			)
-		);
-
-		clean_post_cache( $follower->ID );
-
-		$actors = Remote_Actors::get_outdated();
-		$this->assertEquals( 1, \count( $actors ) );
-		$this->assertEquals( 'https://example.com/author/jon', $actors[0]->guid );
-	}
-
-	/**
-	 * Tests get_faulty_followers.
-	 *
-	 * @covers ::get_faulty_followers
-	 */
-	public function test_get_faulty_followers() {
-		$followers = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
-
-		foreach ( $followers as $follower ) {
-			Followers::add( 1, $follower );
-		}
-
-		$follower = Followers::get_by_uri( 1, 'http://sally.example.org' );
-
-		for ( $i = 1; $i <= 15; $i++ ) {
-			\add_post_meta( $follower->ID, '_activitypub_errors', 'error ' . $i );
-		}
-
-		$follower = Followers::get_by_uri( 1, 'http://sally.example.org' );
-		$actors   = Remote_Actors::get_faulty();
-
-		$this->assertEquals( 1, \count( $actors ) );
-		$this->assertEquals( 'http://sally.example.org', $actors[0]->guid );
-
-		Remote_Actors::clear_errors( $follower->ID );
-
-		$follower = Followers::get_by_uri( 1, 'http://sally.example.org' );
-		$actors   = Remote_Actors::get_faulty();
-
-		$this->assertEquals( 0, \count( $actors ) );
 	}
 
 	/**
@@ -462,6 +393,7 @@ class Test_Followers extends \WP_UnitTestCase {
 		for ( $i = 0; $i < 30; $i++ ) {
 			$meta = array(
 				'id'                => 'https://example.org/users/' . $i,
+				'type'              => 'Person',
 				'url'               => 'https://example.org/users/' . $i,
 				'inbox'             => 'https://example.org/users/' . $i . '/inbox',
 				'name'              => 'user' . $i,
@@ -486,6 +418,7 @@ class Test_Followers extends \WP_UnitTestCase {
 			$k    = $j + 100;
 			$meta = array(
 				'id'                => 'https://example.org/users/' . $k,
+				'type'              => 'Person',
 				'url'               => 'https://example.org/users/' . $k,
 				'inbox'             => 'https://example.org/users/' . $j . '/inbox',
 				'name'              => 'user' . $k,
@@ -502,110 +435,6 @@ class Test_Followers extends \WP_UnitTestCase {
 		$inboxes2 = Followers::get_inboxes( 1 );
 
 		$this->assertCount( 30, $inboxes2 );
-	}
-
-	/**
-	 * Tests get_all_followers.
-	 *
-	 * @covers ::get_all_followers
-	 *
-	 * @expectedDeprecated Activitypub\Collection\Followers::get_all_followers
-	 */
-	public function test_get_all_followers() {
-		for ( $i = 0; $i < 30; $i++ ) {
-			$meta = array(
-				'id'                => 'https://example.org/users/' . $i,
-				'url'               => 'https://example.org/users/' . $i,
-				'inbox'             => 'https://example.org/users/' . $i . '/inbox',
-				'name'              => 'user' . $i,
-				'preferredUsername' => 'user' . $i,
-				'publicKey'         => 'https://example.org/users/' . $i . '#main-key',
-				'publicKeyPem'      => $i,
-			);
-
-			$id = Remote_Actors::upsert( $meta );
-
-			\add_post_meta( $id, Followers::FOLLOWER_META_KEY, 1 );
-		}
-
-		$followers = Followers::get_all_followers();
-
-		$this->assertCount( 30, $followers );
-	}
-
-	/**
-	 * Data provider for test_maybe_add_inboxes_of_blog_user.
-	 *
-	 * @return array[] Test data.
-	 */
-	public function data_maybe_add_inboxes_of_blog_user() {
-		return array(
-			'actor mode'      => array(
-				'actor_mode' => ACTIVITYPUB_ACTOR_MODE,
-				'json'       => '{"type":"Update","id":"test"}',
-				'actor_id'   => 123,
-				'expected'   => false,
-				'message'    => 'Should return false when not in blog and user mode.',
-			),
-			'blog actor'      => array(
-				'actor_mode' => ACTIVITYPUB_ACTOR_AND_BLOG_MODE,
-				'json'       => '{"type":"Update","id":"test"}',
-				'actor_id'   => Actors::BLOG_USER_ID,
-				'expected'   => false,
-				'message'    => 'Should return false when using blog actor.',
-			),
-			'create activity' => array(
-				'actor_mode' => ACTIVITYPUB_ACTOR_AND_BLOG_MODE,
-				'json'       => '{"type":"Create","id":"test"}',
-				'actor_id'   => 123,
-				'expected'   => false,
-				'message'    => 'Should return false for non-Update/Delete activity types.',
-			),
-			'update activity' => array(
-				'actor_mode' => ACTIVITYPUB_ACTOR_AND_BLOG_MODE,
-				'json'       => '{"type":"Update","id":"test"}',
-				'actor_id'   => 123,
-				'expected'   => true,
-				'message'    => 'Should return true for Update activity in dual mode.',
-			),
-			'delete activity' => array(
-				'actor_mode' => ACTIVITYPUB_ACTOR_AND_BLOG_MODE,
-				'json'       => '{"type":"Delete","id":"test"}',
-				'actor_id'   => 123,
-				'expected'   => true,
-				'message'    => 'Should return true for Delete activity in dual mode.',
-			),
-			'invalid json'    => array(
-				'actor_mode' => ACTIVITYPUB_ACTOR_AND_BLOG_MODE,
-				'json'       => 'invalid json',
-				'actor_id'   => 123,
-				'expected'   => false,
-				'message'    => 'Should return false for invalid JSON.',
-			),
-		);
-	}
-
-	/**
-	 * Test maybe_add_inboxes_of_blog_user method.
-	 *
-	 * @covers ::maybe_add_inboxes_of_blog_user
-	 * @dataProvider data_maybe_add_inboxes_of_blog_user
-	 *
-	 * @expectedDeprecated Activitypub\Collection\Followers::maybe_add_inboxes_of_blog_user
-	 *
-	 * @param string  $actor_mode The actor mode to test with.
-	 * @param string  $json       The JSON to test with.
-	 * @param int     $actor_id   The actor ID to test with.
-	 * @param boolean $expected   The expected result.
-	 * @param string  $message    The assertion message.
-	 */
-	public function test_maybe_add_inboxes_of_blog_user( $actor_mode, $json, $actor_id, $expected, $message ) {
-		update_option( 'activitypub_actor_mode', $actor_mode );
-		$this->assertSame(
-			$expected,
-			Followers::maybe_add_inboxes_of_blog_user( $json, $actor_id ),
-			$message
-		);
 	}
 
 	/**

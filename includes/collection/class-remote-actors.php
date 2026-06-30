@@ -556,7 +556,12 @@ class Remote_Actors {
 	 * @return array|\WP_Error Array of post arguments or WP_Error on failure.
 	 */
 	private static function prepare_custom_post_type( $actor ) {
-		if ( ! $actor instanceof Actor ) {
+		/*
+		 * Reject non-actor objects here, the single chokepoint every
+		 * create/update/upsert funnels through, so callers do not each have to
+		 * guard against accidentally caching a Note or other non-actor object.
+		 */
+		if ( ! $actor instanceof Actor || ! is_actor( $actor ) ) {
 			return new \WP_Error(
 				'activitypub_invalid_actor_data',
 				\__( 'Invalid actor data', 'activitypub' ),

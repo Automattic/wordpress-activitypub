@@ -2,7 +2,7 @@
   "$schema": "https://schemas.wp.org/trunk/block.json",
   "name": "activitypub/stats",
   "apiVersion": 3,
-  "version": "unreleased",
+  "version": "9.0.1",
   "title": "ActivityPub Stats",
   "category": "widgets",
   "description": "Display your annual Fediverse stats as a shareable card.",

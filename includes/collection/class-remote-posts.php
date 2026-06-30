@@ -70,6 +70,15 @@ class Remote_Posts {
 			return self::update( $activity, $recipients );
 		}
 
+		// An actor may only create posts attributed to itself; only the actor is signature-bound, not attributedTo.
+		if ( object_to_uri( $activity['actor'] ?? '' ) !== object_to_uri( $activity_object['attributedTo'] ?? '' ) ) {
+			return new \WP_Error(
+				'activitypub_create_unauthorized',
+				\__( 'The Create actor does not match the object attributedTo.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
+		}
+
 		// Post doesn't exist, create new post.
 		$actor = Remote_Actors::fetch_by_uri( object_to_uri( $activity_object['attributedTo'] ) );
 

@@ -17,7 +17,7 @@ use Activitypub\Activity\Base_Object;
  *
  * @see https://w3id.org/fep/7aa9
  *
- * @since unreleased
+ * @since 9.0.0
  *
  * @method Base_Object|string|array|null get_interacting_object() Gets the interacting object property of the object.
  * @method Base_Object|string|array|null get_interaction_target() Gets the interaction target property of the object.

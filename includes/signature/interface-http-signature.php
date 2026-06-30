@@ -28,9 +28,11 @@ interface Http_Signature {
 	/**
 	 * Verify the HTTP Signature against a request.
 	 *
+	 * @since 9.0.0 Returns the verified keyId on success instead of `true`.
+	 *
 	 * @param array       $headers The HTTP headers.
 	 * @param string|null $body    The request body, if applicable.
-	 * @return bool|\WP_Error
+	 * @return string|\WP_Error The verified keyId on success, WP_Error on failure.
 	 */
 	public function verify( array $headers, $body = null );
 

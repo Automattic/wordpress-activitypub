@@ -56,6 +56,7 @@ class Test_Followers extends \WP_UnitTestCase {
 				'type' => 'Image',
 				'url'  => 'https://secure.gravatar.com/avatar/example?s=120&d=mm&r=g',
 			),
+			'type'              => 'Person',
 			'url'               => $actor_url,
 			'id'                => 'https://example.com/users/testuser',
 			'preferredUsername' => 'testuser',
