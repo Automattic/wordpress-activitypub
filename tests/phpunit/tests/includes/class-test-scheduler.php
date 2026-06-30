@@ -239,6 +239,55 @@ class Test_Scheduler extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test reprocess_outbox detects pending batches scheduled with old batch sizes.
+	 *
+	 * @covers ::reprocess_outbox
+	 */
+	public function test_reprocess_outbox_detects_pending_batch_with_old_batch_size() {
+		$activity = new Activity();
+		$activity->set_type( 'Create' );
+		$activity->set_id( 'https://example.com/test-old-batch-size' );
+		$activity->set_object(
+			array(
+				'id'      => 'https://example.com/test-old-batch-size',
+				'type'    => 'Note',
+				'content' => 'Test Content',
+			)
+		);
+
+		$pending_id = Outbox::add( $activity, self::$user_id );
+		\update_post_meta( $pending_id, '_activitypub_outbox_offset', 100 );
+
+		\wp_schedule_single_event(
+			\time() + MINUTE_IN_SECONDS,
+			'activitypub_send_activity',
+			array( $pending_id, 50, 100 )
+		);
+
+		$current_batch_size = function () {
+			return 20;
+		};
+		\add_filter( 'activitypub_dispatcher_batch_size', $current_batch_size );
+
+		$scheduled_events        = array();
+		$schedule_event_callback = function ( $event ) use ( &$scheduled_events ) {
+			if ( 'activitypub_process_outbox' === $event->hook ) {
+				$scheduled_events[] = $event->args[0];
+			}
+			return $event;
+		};
+		\add_filter( 'schedule_event', $schedule_event_callback );
+
+		Scheduler::reprocess_outbox();
+
+		$this->assertNotContains( $pending_id, $scheduled_events, 'Should not reschedule an outbox item that has a pending batch with an old batch size.' );
+
+		\remove_filter( 'schedule_event', $schedule_event_callback );
+		\remove_filter( 'activitypub_dispatcher_batch_size', $current_batch_size );
+		\wp_clear_scheduled_hook( 'activitypub_send_activity', array( $pending_id, 50, 100 ) );
+	}
+
+	/**
 	 * Test purge_outbox method with more than 20 posts.
 	 *
 	 * @covers ::purge_outbox
@@ -882,5 +931,127 @@ class Test_Scheduler extends \WP_UnitTestCase {
 
 		// Verify posts are deleted (2 months > 30 days).
 		$this->assertEquals( 0, \wp_count_posts( Remote_Posts::POST_TYPE )->publish );
+	}
+
+	/**
+	 * Cache an actor and age it past the refresh window so get_outdated() returns it.
+	 *
+	 * @param string $uri The actor URI.
+	 * @return int The cached actor post ID.
+	 */
+	private function create_outdated_actor( $uri ) {
+		$id = Remote_Actors::upsert(
+			array(
+				'type'              => 'Person',
+				'id'                => $uri,
+				'inbox'             => $uri . '/inbox',
+				'preferredUsername' => 'refreshme',
+				'name'              => 'Old Name',
+			)
+		);
+		$this->assertNotWPError( $id );
+
+		global $wpdb;
+		$modified = \gmdate( 'Y-m-d H:i:s', \time() - 9 * DAY_IN_SECONDS );
+		$updated  = $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"UPDATE $wpdb->posts SET post_modified = %s, post_modified_gmt = %s WHERE ID = %d",
+				array( $modified, $modified, $id )
+			)
+		);
+		$this->assertSame( 1, $updated, 'Failed to age the cached actor so it becomes outdated.' );
+		\clean_post_cache( $id );
+
+		return $id;
+	}
+
+	/**
+	 * Refreshing an outdated actor updates the cached record in place by its
+	 * post ID, without re-resolving it or creating a duplicate.
+	 *
+	 * @covers ::update_remote_actors
+	 */
+	public function test_update_remote_actors_refreshes_in_place() {
+		$uri = 'https://example.com/author/refresh-me';
+		$id  = $this->create_outdated_actor( $uri );
+
+		// The remote reports the same identity with refreshed metadata.
+		$filter = static function ( $pre, $url_or_object ) use ( $uri ) {
+			if ( $uri !== $url_or_object ) {
+				return $pre;
+			}
+
+			return array(
+				'type'              => 'Person',
+				'id'                => $uri,
+				'inbox'             => $uri . '/inbox',
+				'preferredUsername' => 'refreshme',
+				'name'              => 'New Name',
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
+
+		$query_args   = array(
+			'post_type'   => Remote_Actors::POST_TYPE,
+			'post_status' => 'any',
+			'numberposts' => -1,
+			'fields'      => 'ids',
+		);
+		$count_before = \count( \get_posts( $query_args ) );
+
+		Scheduler::update_remote_actors();
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter, 10 );
+
+		$actors = \get_posts( $query_args );
+
+		$this->assertCount( $count_before, $actors, 'Refreshing an outdated actor must not create a duplicate.' );
+		$this->assertContains( $id, $actors, 'The original actor post must still exist after the refresh.' );
+		$this->assertSame( 'New Name', \get_post( $id )->post_title, 'The cached actor must be refreshed in place with the fetched metadata.' );
+	}
+
+	/**
+	 * If the remote reports a different identity (a possible Move), the refresh
+	 * leaves the cached record untouched rather than rewriting its guid or
+	 * creating a duplicate.
+	 *
+	 * @covers ::update_remote_actors
+	 */
+	public function test_update_remote_actors_skips_identity_change() {
+		$uri = 'https://example.com/author/refresh-me';
+		$id  = $this->create_outdated_actor( $uri );
+
+		// The remote now reports a *different* id than the one we have cached.
+		$filter = static function ( $pre, $url_or_object ) use ( $uri ) {
+			if ( $uri !== $url_or_object ) {
+				return $pre;
+			}
+
+			return array(
+				'type'              => 'Person',
+				'id'                => 'https://example.com/author/refresh-me-v2',
+				'inbox'             => 'https://example.com/author/refresh-me-v2/inbox',
+				'preferredUsername' => 'refreshme',
+				'name'              => 'New Name',
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
+
+		$query_args   = array(
+			'post_type'   => Remote_Actors::POST_TYPE,
+			'post_status' => 'any',
+			'numberposts' => -1,
+			'fields'      => 'ids',
+		);
+		$count_before = \count( \get_posts( $query_args ) );
+
+		Scheduler::update_remote_actors();
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter, 10 );
+
+		$this->assertCount( $count_before, \get_posts( $query_args ), 'An identity change must not create a duplicate actor.' );
+		$this->assertSame( $uri, \get_post( $id )->guid, 'The cached actor guid must be left unchanged.' );
+		$this->assertSame( 'Old Name', \get_post( $id )->post_title, 'A changed remote identity must not be applied to the cached actor.' );
+		$this->assertEmpty( Remote_Actors::get_outdated(), 'A skipped actor must be touched so it is not re-fetched on the next run.' );
 	}
 }

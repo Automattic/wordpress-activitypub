@@ -27,6 +27,10 @@ class Options {
 		\add_filter( 'pre_option_activitypub_following_ui', array( self::class, 'pre_option_activitypub_following_ui' ) );
 		\add_filter( 'pre_option_activitypub_create_posts', array( self::class, 'pre_option_activitypub_create_posts' ) );
 
+		\add_filter( 'pre_option_activitypub_distribution_mode', array( self::class, 'pre_option_activitypub_distribution_mode' ) );
+		\add_filter( 'activitypub_dispatcher_batch_size', array( self::class, 'filter_dispatcher_batch_size' ) );
+		\add_filter( 'activitypub_scheduler_async_batch_pause', array( self::class, 'filter_scheduler_batch_pause' ), 10, 2 );
+
 		\add_filter( 'pre_option_activitypub_allow_likes', array( self::class, 'maybe_disable_interactions' ) );
 		\add_filter( 'pre_option_activitypub_allow_replies', array( self::class, 'maybe_disable_interactions' ) );
 
@@ -389,6 +393,45 @@ class Options {
 			)
 		);
 
+		$default_distribution = self::get_distribution_preset_values()['default'];
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_distribution_mode',
+			array(
+				'type'              => 'string',
+				'description'       => \__( 'Distribution mode for federation delivery.', 'activitypub' ),
+				'default'           => 'default',
+				'sanitize_callback' => array( self::class, 'sanitize_distribution_mode' ),
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_custom_batch_size',
+			array(
+				'type'              => 'integer',
+				'description'       => \__( 'Custom batch size for federation delivery.', 'activitypub' ),
+				'default'           => $default_distribution['batch_size'],
+				'sanitize_callback' => static function ( $value ) {
+					return \min( 500, \max( 1, \absint( $value ) ) );
+				},
+			)
+		);
+
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_custom_batch_pause',
+			array(
+				'type'              => 'integer',
+				'description'       => \__( 'Custom pause in seconds between batches.', 'activitypub' ),
+				'default'           => $default_distribution['pause'],
+				'sanitize_callback' => static function ( $value ) {
+					return \min( 3600, \absint( $value ) );
+				},
+			)
+		);
+
 		/*
 		 * Options Group: activitypub_blog
 		 */
@@ -689,6 +732,249 @@ class Options {
 		}
 
 		return $value;
+	}
+
+	/**
+	 * Pre-get option filter for the Distribution Mode.
+	 *
+	 * @since 9.0.0
+	 *
+	 * @param string|false $pre The pre-get option value.
+	 *
+	 * @return string|false The distribution mode or false if it should not be filtered.
+	 */
+	public static function pre_option_activitypub_distribution_mode( $pre ) {
+		return self::resolve_distribution_mode( $pre, ACTIVITYPUB_DISTRIBUTION_MODE );
+	}
+
+	/**
+	 * Whether the distribution mode is locked to a valid preset by the
+	 * `ACTIVITYPUB_DISTRIBUTION_MODE` constant.
+	 *
+	 * Returns true only when the constant is set to a key recognized by
+	 * `get_distribution_preset_values()`. Invalid constant values fall back
+	 * to `'default'` at runtime (see `resolve_distribution_mode()`) but the
+	 * UI stays visible so admins can spot the misconfiguration.
+	 *
+	 * @since 9.0.0
+	 *
+	 * @return bool True when the constant pins the mode to a valid preset.
+	 */
+	public static function is_distribution_mode_locked() {
+		if ( false === ACTIVITYPUB_DISTRIBUTION_MODE ) {
+			return false;
+		}
+
+		return \in_array( ACTIVITYPUB_DISTRIBUTION_MODE, \array_keys( self::get_distribution_preset_values() ), true );
+	}
+
+	/**
+	 * Resolve the distribution mode against the wp-config constant.
+	 *
+	 * Extracted from `pre_option_activitypub_distribution_mode()` so the
+	 * constant-lock path can be exercised from tests without redefining
+	 * the real constant.
+	 *
+	 * Only preset modes are honored via the constant. The 'custom' mode
+	 * is excluded because its batch size and pause values are still read
+	 * from the database, which would defeat the purpose of locking the
+	 * mode via wp-config.php.
+	 *
+	 * @since 9.0.0
+	 *
+	 * @param string|false $pre            The pre-get option value.
+	 * @param mixed        $constant_value The value of `ACTIVITYPUB_DISTRIBUTION_MODE`.
+	 *
+	 * @return string|false Mode if locked, `$pre` otherwise.
+	 */
+	public static function resolve_distribution_mode( $pre, $constant_value ) {
+		if ( false === $constant_value ) {
+			return $pre;
+		}
+
+		$allowed = \array_keys( self::get_distribution_preset_values() );
+
+		if ( \in_array( $constant_value, $allowed, true ) ) {
+			return $constant_value;
+		}
+
+		\_doing_it_wrong(
+			__METHOD__,
+			\sprintf(
+				/* translators: %s: invalid constant value */
+				\esc_html__( 'ACTIVITYPUB_DISTRIBUTION_MODE value %s is not a valid preset; falling back to default.', 'activitypub' ),
+				\esc_html( (string) $constant_value )
+			),
+			'9.0.0'
+		);
+
+		return 'default';
+	}
+
+	/**
+	 * Get the raw batch_size/pause values for each distribution preset.
+	 *
+	 * Single source of truth for the preset values, used in the hot path
+	 * (get_distribution_params, sanitize_distribution_mode, resolve_distribution_mode)
+	 * to avoid running translation calls just to check keys or numbers.
+	 *
+	 * @since 9.0.0
+	 *
+	 * @return array Associative array of mode => { batch_size, pause }.
+	 */
+	private static function get_distribution_preset_values() {
+		return array(
+			'default'  => array(
+				'batch_size' => 100,
+				'pause'      => 15,
+			),
+			'balanced' => array(
+				'batch_size' => 50,
+				'pause'      => 30,
+			),
+			'eco'      => array(
+				'batch_size' => 20,
+				'pause'      => 30,
+			),
+		);
+	}
+
+	/**
+	 * Get the available distribution mode presets with UI labels.
+	 *
+	 * Decorates `get_distribution_preset_values()` with translated labels
+	 * and descriptions for use in the admin settings page.
+	 *
+	 * @since 9.0.0
+	 *
+	 * @return array Associative array of mode => { batch_size, pause, label, description }.
+	 */
+	public static function get_distribution_modes() {
+		$modes = self::get_distribution_preset_values();
+
+		$modes['default']['label']       = \__( 'Default', 'activitypub' );
+		$modes['default']['description'] = \sprintf(
+			/* translators: 1: batch size, 2: pause in seconds */
+			\__( 'Deliver activities as fast as possible (<code>%1$d</code> per batch, <code>%2$ds</code> pause).', 'activitypub' ),
+			$modes['default']['batch_size'],
+			$modes['default']['pause']
+		);
+		$modes['balanced']['label']       = \__( 'Balanced', 'activitypub' );
+		$modes['balanced']['description'] = \sprintf(
+			/* translators: 1: batch size, 2: pause in seconds */
+			\__( 'Moderate pace with reasonable pauses between batches (<code>%1$d</code> per batch, <code>%2$ds</code> pause).', 'activitypub' ),
+			$modes['balanced']['batch_size'],
+			$modes['balanced']['pause']
+		);
+		$modes['eco']['label']       = \__( 'Eco Mode', 'activitypub' );
+		$modes['eco']['description'] = \sprintf(
+			/* translators: 1: batch size, 2: pause in seconds */
+			\__( 'Gentle on server resources, ideal for shared hosting (<code>%1$d</code> per batch, <code>%2$ds</code> pause).', 'activitypub' ),
+			$modes['eco']['batch_size'],
+			$modes['eco']['pause']
+		);
+
+		return $modes;
+	}
+
+	/**
+	 * Sanitize the distribution mode option.
+	 *
+	 * Restricts the stored value to a known preset (from
+	 * `get_distribution_modes()`) or `'custom'`. Anything else
+	 * falls back to `'default'`.
+	 *
+	 * @since 9.0.0
+	 *
+	 * @param string $value The submitted option value.
+	 *
+	 * @return string A valid distribution mode key.
+	 */
+	public static function sanitize_distribution_mode( $value ) {
+		$allowed = \array_merge( \array_keys( self::get_distribution_preset_values() ), array( 'custom' ) );
+
+		return \in_array( $value, $allowed, true ) ? $value : 'default';
+	}
+
+	/**
+	 * Get distribution parameters for the current mode.
+	 *
+	 * @since 9.0.0
+	 *
+	 * @return array { mode: string, batch_size: int, pause: int }
+	 */
+	public static function get_distribution_params() {
+		$mode  = \get_option( 'activitypub_distribution_mode', 'default' );
+		$modes = self::get_distribution_preset_values();
+
+		if ( isset( $modes[ $mode ] ) ) {
+			return array(
+				'mode'       => $mode,
+				'batch_size' => $modes[ $mode ]['batch_size'],
+				'pause'      => $modes[ $mode ]['pause'],
+			);
+		}
+
+		// Custom mode reads its values from dedicated options; any other
+		// unrecognized mode falls back to the default preset so callers
+		// always receive a valid configuration.
+		if ( 'custom' !== $mode ) {
+			return array(
+				'mode'       => 'default',
+				'batch_size' => $modes['default']['batch_size'],
+				'pause'      => $modes['default']['pause'],
+			);
+		}
+
+		$default_params = $modes['default'];
+
+		return array(
+			'mode'       => 'custom',
+			'batch_size' => \max( 1, \absint( \get_option( 'activitypub_custom_batch_size', $default_params['batch_size'] ) ) ),
+			'pause'      => \absint( \get_option( 'activitypub_custom_batch_pause', $default_params['pause'] ) ),
+		);
+	}
+
+	/**
+	 * Filter the dispatcher batch size based on distribution mode.
+	 *
+	 * In `'default'` mode the upstream value is passed through so the
+	 * `ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE` constant and other filters
+	 * still win; any explicit mode imposes its own batch size.
+	 *
+	 * @since 9.0.0
+	 *
+	 * @param int $batch_size The default batch size.
+	 *
+	 * @return int The batch size for the current distribution mode.
+	 */
+	public static function filter_dispatcher_batch_size( $batch_size ) {
+		$params = self::get_distribution_params();
+
+		return 'default' === $params['mode'] ? $batch_size : $params['batch_size'];
+	}
+
+	/**
+	 * Filter the scheduler batch pause based on distribution mode.
+	 *
+	 * Only delivery batches (`activitypub_send_activity`) are affected. Every
+	 * mode imposes its own delivery pause: `'default'` is the fast preset, which
+	 * is intentionally shorter than the generic async-batch baseline, so it does
+	 * not pass the upstream value through.
+	 *
+	 * @since 9.0.0
+	 *
+	 * @param int               $pause The default pause in seconds.
+	 * @param string|false|null $hook The async batch hook being scheduled.
+	 *
+	 * @return int The pause for the current distribution mode.
+	 */
+	public static function filter_scheduler_batch_pause( $pause, $hook = null ) {
+		if ( 'activitypub_send_activity' !== $hook ) {
+			return $pause;
+		}
+
+		return self::get_distribution_params()['pause'];
 	}
 
 	/**

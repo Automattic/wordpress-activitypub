@@ -10,6 +10,7 @@ namespace Activitypub\Rest;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Signature;
 
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
@@ -259,8 +260,17 @@ class Followers_Controller extends Actors_Controller {
 		 * FEP-8fcf: the responding server MUST ensure the requested authority
 		 * matches the signing peer, so that instances cannot "get tricked
 		 * into requesting the followers list of a third-party individual".
+		 *
+		 * Derive the signer host from the keyId that the verifier actually
+		 * checked (Signature::get_key_id() mirrors the verifier's header
+		 * choice and returns null when several labels make the choice
+		 * ambiguous). Re-parsing the raw headers here would diverge from the
+		 * verified key: a request can carry an RFC 9421 Signature-Input plus a
+		 * Signature header padded with an unrelated keyId, letting an attacker
+		 * sign with their own key yet steer a naive parser at a third-party host.
 		 */
-		$signer_host = self::normalize_host( self::get_signer_host( $request ) );
+		$key_id      = Signature::get_key_id( $request );
+		$signer_host = $key_id ? self::normalize_host( (string) \wp_parse_url( $key_id, \PHP_URL_HOST ) ) : '';
 		$asked_host  = self::normalize_host( (string) \wp_parse_url( $authority, \PHP_URL_HOST ) );
 
 		if ( ! $signer_host || ! $asked_host || $signer_host !== $asked_host ) {
@@ -314,38 +324,6 @@ class Followers_Controller extends Actors_Controller {
 		$host = \strtolower( (string) $host );
 		$host = \trim( $host, '[]' );
 		return \rtrim( $host, '.' );
-	}
-
-	/**
-	 * Resolve the signing peer's host from the request's HTTP Signature header.
-	 *
-	 * Supports both Cavage-style `Signature: keyId="…"` and RFC 9421's
-	 * `Signature-Input: …keyid="…"`. Returns the host component of the key
-	 * ID URI, lowercased, or an empty string when none is present.
-	 *
-	 * @since 8.1.0
-	 *
-	 * @param \WP_REST_Request $request The request object.
-	 * @return string The signer's host, or an empty string.
-	 */
-	private static function get_signer_host( $request ) {
-		$signature = $request->get_header( 'signature' );
-		$key_id    = null;
-
-		if ( $signature && \preg_match( '/keyId="([^"]+)"/i', $signature, $matches ) ) {
-			$key_id = $matches[1];
-		} else {
-			$signature_input = $request->get_header( 'signature-input' );
-			if ( $signature_input && \preg_match( '/keyid="([^"]+)"/i', $signature_input, $matches ) ) {
-				$key_id = $matches[1];
-			}
-		}
-
-		if ( ! $key_id ) {
-			return '';
-		}
-
-		return \strtolower( (string) \wp_parse_url( $key_id, \PHP_URL_HOST ) );
 	}
 
 	/**

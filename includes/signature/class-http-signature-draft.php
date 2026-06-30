@@ -87,9 +87,11 @@ class Http_Signature_Draft implements Http_Signature {
 	/**
 	 * Verify the HTTP Signature against a request.
 	 *
+	 * @since 9.0.0 Returns the verified keyId on success instead of `true`.
+	 *
 	 * @param array       $headers The HTTP headers.
 	 * @param string|null $body    The request body, if applicable.
-	 * @return bool|\WP_Error True, if the signature is valid, WP_Error on failure.
+	 * @return string|\WP_Error The verified keyId on success, WP_Error on failure.
 	 */
 	public function verify( array $headers, $body = null ) {
 		if ( ! isset( $headers['signature'] ) && ! isset( $headers['authorization'] ) ) {
@@ -129,7 +131,8 @@ class Http_Signature_Draft implements Http_Signature {
 			return new \WP_Error( 'activitypub_signature', 'Invalid signature', array( 'status' => 401 ) );
 		}
 
-		return true;
+		// Return the verified keyId so the caller can bind it to the activity actor.
+		return $parsed['keyId'];
 	}
 
 	/**

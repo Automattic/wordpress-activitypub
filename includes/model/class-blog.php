@@ -601,4 +601,50 @@ class Blog extends Actor {
 
 		return $moved_to && $moved_to !== $this->get_id() ? $moved_to : null;
 	}
+
+	/**
+	 * Get the actor-level interaction policy.
+	 *
+	 * Overrides the magic property accessor on Base_Object so that we always
+	 * compute the policy from the current site setting rather than returning a
+	 * cached property value. Currently only emits `canFeature` (FEP-7aa9).
+	 * Driven by the site option `activitypub_default_feature_policy` and
+	 * defaults to denying all featured-collection requests, in line with
+	 * FEP-7aa9's "absence of policy = no consent" rule.
+	 *
+	 * @see https://w3id.org/fep/7aa9
+	 *
+	 * @since 9.0.0
+	 *
+	 * @return array
+	 */
+	public function get_interaction_policy() {
+		$policy = array( 'canFeature' => $this->build_can_feature_policy() );
+
+		// Merge with an explicitly set interaction policy, if any.
+		if ( $this->interaction_policy ) {
+			$policy = \array_merge( (array) $this->interaction_policy, $policy );
+		}
+
+		return $policy;
+	}
+
+	/**
+	 * Build the `canFeature` policy array from the site option.
+	 *
+	 * @return array
+	 */
+	protected function build_can_feature_policy() {
+		$policy = \get_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_ME );
+
+		switch ( $policy ) {
+			case ACTIVITYPUB_INTERACTION_POLICY_ANYONE:
+				return array( 'automaticApproval' => array( 'https://www.w3.org/ns/activitystreams#Public' ) );
+			case ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS:
+				return array( 'automaticApproval' => array( $this->get_followers() ) );
+			case ACTIVITYPUB_INTERACTION_POLICY_ME:
+			default:
+				return array( 'automaticApproval' => array( $this->get_id() ) );
+		}
+	}
 }

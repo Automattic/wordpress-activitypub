@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Refresh cached remote profiles in place during scheduled updates to avoid creating duplicate copies.

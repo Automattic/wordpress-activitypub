@@ -95,9 +95,9 @@ git log --oneline -3
 
 Follow the **release** skill's patch release process:
 
-1. Run `composer changelog:write` — use the patch version when prompted.
+1. Run `composer changelog:write -- --use-version=<patch-version> --no-interaction` to force the patch version non-interactively (it otherwise derives the version from change-file significance and may prompt).
 2. Copy new entries from `CHANGELOG.md` into the `== Changelog ==` section of `readme.txt`.
-3. Update version numbers in all version file locations (per the release skill).
+3. Update version numbers in all version file locations (per the release skill). In `activitypub.php` this means **both** the `Version:` header **and** the `ACTIVITYPUB_PLUGIN_VERSION` constant, plus `includes/class-migration.php`.
 4. Replace any `unreleased` annotations in cherry-picked files with the patch version.
 
 ## Step 6 — Review Changes

@@ -10,6 +10,7 @@ namespace Activitypub\Tests;
 use Activitypub\Collection\Outbox;
 use Activitypub\Query;
 use Activitypub\Router;
+use Activitypub\Tombstone;
 
 /**
  * Test class for Router.
@@ -150,6 +151,61 @@ class Test_Router extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A previously-federated post that has been moved to a non-public status
+	 * must not expose its current ActivityPub representation via content
+	 * negotiation, even before the Delete activity has fired.
+	 *
+	 * @dataProvider data_non_public_status_transitions
+	 *
+	 * @covers ::render_activitypub_template
+	 *
+	 * @param string $new_status Target post status.
+	 */
+	public function test_non_public_status_does_not_render_activitypub_template( $new_status ) {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_status'  => 'publish',
+				'post_author'  => self::$user_id,
+				'post_content' => 'PRE-TRANSITION-CONTENT',
+			)
+		);
+
+		// Simulate the post being federated before the status transition.
+		\Activitypub\set_wp_object_state( \get_post( $post_id ), ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => $new_status,
+			)
+		);
+
+		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
+		$this->go_to( '/?p=' . $post_id );
+
+		$template = Router::render_activitypub_template( 'index.php' );
+
+		$this->assertStringNotContainsString(
+			'activitypub-json.php',
+			$template,
+			"publish -> {$new_status} must not render the ActivityPub JSON template."
+		);
+	}
+
+	/**
+	 * Data provider: non-public statuses that should not render AP JSON.
+	 *
+	 * @return array[]
+	 */
+	public function data_non_public_status_transitions() {
+		return array(
+			'draft'   => array( 'draft' ),
+			'pending' => array( 'pending' ),
+			'private' => array( 'private' ),
+		);
+	}
+
+	/**
 	 * Test 406/404 response for non-ActivityPub requests to Outbox post type.
 	 *
 	 * @covers ::render_activitypub_template
@@ -247,6 +303,101 @@ class Test_Router extends \WP_UnitTestCase {
 
 		// Clean up.
 		\remove_filter( 'activitypub_preview_template', $preview_template_callback );
+	}
+
+	/**
+	 * A soft-deleted draft is buried in the tombstone registry, but its author
+	 * must still be able to use the Fediverse Preview: the tombstone branch
+	 * defers to is_post_publicly_queryable(), which treats an authorized
+	 * `?preview=true` request on a draft as queryable.
+	 *
+	 * @covers ::render_activitypub_template
+	 */
+	public function test_authorized_preview_of_soft_deleted_draft_is_not_tombstoned() {
+		Query::get_instance()->__destruct();
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'publish',
+				'post_author' => self::$user_id,
+			)
+		);
+		\Activitypub\set_wp_object_state( \get_post( $post_id ), ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		// Soft-delete to a draft and bury it, as the scheduler + Delete::maybe_bury() would.
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'draft',
+			)
+		);
+		Tombstone::bury( \home_url( '?p=' . $post_id ), \get_permalink( $post_id ) );
+
+		// The author previews their own draft.
+		\wp_set_current_user( self::$user_id );
+		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
+		$this->go_to( '/?p=' . $post_id );
+		\set_query_var( 'preview', true );
+
+		$template = Router::render_activitypub_template( 'index.php' );
+
+		$this->assertStringContainsString( 'post-preview.php', $template, 'Author preview of a soft-deleted draft must render the preview.' );
+		$this->assertStringNotContainsString( 'tombstone-json.php', $template, 'Author preview must not be short-circuited by the tombstone registry.' );
+
+		// A public (unauthorized, non-preview) request to the same buried URL still gets the Tombstone.
+		Query::get_instance()->__destruct();
+		\wp_set_current_user( 0 );
+		$this->go_to( '/?p=' . $post_id );
+
+		$template = Router::render_activitypub_template( 'index.php' );
+		$this->assertStringContainsString( 'tombstone-json.php', $template, 'A public request to a soft-deleted post still returns the Tombstone.' );
+	}
+
+	/**
+	 * A normal ActivityPub fetch of a tombstoned URL must keep returning the
+	 * Tombstone even when that URL now resolves to a fresh, publicly queryable
+	 * post (for example, a hard-deleted post's slug was later reused). Remote
+	 * servers were told that id is gone, so only an authorized `?preview=true`
+	 * request may bypass the registry.
+	 *
+	 * @covers ::render_activitypub_template
+	 */
+	public function test_tombstoned_url_reused_by_public_post_still_serves_tombstone() {
+		Query::get_instance()->__destruct();
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'publish',
+				'post_author' => self::$user_id,
+			)
+		);
+
+		// The URL is in the registry, but the post itself is live and public.
+		Tombstone::bury( \home_url( '?p=' . $post_id ), \get_permalink( $post_id ) );
+
+		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
+		$this->go_to( '/?p=' . $post_id );
+
+		$template = Router::render_activitypub_template( 'index.php' );
+		$this->assertStringContainsString( 'tombstone-json.php', $template, 'A publicly queryable post at a tombstoned URL must still serve the Tombstone for a non-preview fetch.' );
+	}
+
+	/**
+	 * The Fediverse Preview template refuses to render for logged-out visitors.
+	 *
+	 * Defense-in-depth backstop independent of how the request routed here: a
+	 * soft-deleted draft's preview must never reach the public, even via a
+	 * direct include. The exception message is pinned to the login guard so the
+	 * assertion can't be satisfied by the template's later transformer 404 if
+	 * the guard were ever removed.
+	 */
+	public function test_preview_template_requires_logged_in_user() {
+		\wp_set_current_user( 0 );
+
+		$this->expectException( \WPDieException::class );
+		$this->expectExceptionMessage( 'You need to be logged in to preview this post.' );
+
+		require ACTIVITYPUB_PLUGIN_DIR . 'templates/post-preview.php';
 	}
 
 	/**

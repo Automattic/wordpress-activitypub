@@ -36,6 +36,11 @@ export interface RouteConfig {
 	loader?: ( context: RouteLoaderContext ) => Promise< unknown >;
 
 	/**
+	 * Function that returns the document title for the route.
+	 */
+	title?: ( context: RouteLoaderContext ) => string | Promise< string >;
+
+	/**
 	 * Function that determines whether to show the inspector panel.
 	 * When not defined, defaults to true (always show inspector if component exists).
 	 * When it returns false, the inspector is hidden even if an inspector component is exported.
@@ -61,7 +66,7 @@ export interface RouteModule {
 
 /**
  * Route configuration interface.
- * Routes specify lazy loaders for content and route modules to enable code splitting.
+ * Routes specify script module IDs for content and route modules.
  */
 export interface Route {
 	/**
@@ -70,19 +75,12 @@ export interface Route {
 	path: string;
 
 	/**
-	 * Lazy loader for the route's surfaces.
-	 * Should return a module with:
-	 * - stage?: Main content component (ComponentType)
-	 * - inspector?: Sidebar component (ComponentType)
-	 * Use dynamic import for code splitting: () => import('./routes/feed/content')
+	 * Script module ID for route surfaces.
 	 */
-	contentLoader?: () => Promise< RouteSurfaces >;
+	content_module?: string;
 
 	/**
-	 * Lazy loader for route lifecycle functions.
-	 * Should return a module with a `route` object implementing RouteConfig.
-	 * Use dynamic import for code splitting: () => import('./routes/feed/route')
-	 * @see RouteConfig for available lifecycle functions.
+	 * Script module ID for route lifecycle functions.
 	 */
-	routeLoader?: () => Promise< RouteModule >;
+	route_module?: string;
 }

@@ -100,6 +100,49 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
+	 * Non-actor objects must never be cached, even when they carry the fields the
+	 * cache otherwise needs. The type guard lives at the persistence chokepoint so
+	 * every caller is covered without its own check.
+	 *
+	 * @covers ::create
+	 * @covers ::upsert
+	 */
+	public function test_does_not_cache_non_actor_objects() {
+		$before = ( new \WP_Query() )->query(
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'post_status' => 'any',
+				'fields'      => 'ids',
+				'nopaging'    => true,
+			)
+		);
+
+		// A Note with an inbox: passes every other check, only the type guard rejects it.
+		$note = array(
+			'id'    => 'https://remote.example.com/objects/note-1',
+			'type'  => 'Note',
+			'inbox' => 'https://remote.example.com/inbox',
+		);
+
+		$created  = Remote_Actors::create( $note );
+		$upserted = Remote_Actors::upsert( $note );
+
+		$this->assertWPError( $created, 'create() must reject a non-actor object.' );
+		$this->assertSame( 'activitypub_invalid_actor_data', $created->get_error_code() );
+		$this->assertWPError( $upserted, 'upsert() must reject a non-actor object.' );
+
+		$after = ( new \WP_Query() )->query(
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'post_status' => 'any',
+				'fields'      => 'ids',
+				'nopaging'    => true,
+			)
+		);
+		$this->assertCount( \count( $before ), $after, 'A non-actor object must not be cached.' );
+	}
+
+	/**
 	 * Test the update() method for remote actors.
 	 *
 	 * @covers ::update
@@ -651,6 +694,76 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		// Try to clear errors for non-existent follower.
 		$cleared = Remote_Actors::clear_errors( 99999 );
 		$this->assertFalse( $cleared );
+	}
+
+	/**
+	 * Tests get_outdated.
+	 *
+	 * @covers ::get_outdated
+	 */
+	public function test_get_outdated() {
+		$uris = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
+		$ids  = array();
+
+		foreach ( $uris as $uri ) {
+			$ids[ $uri ] = Remote_Actors::upsert(
+				array(
+					'type'              => 'Person',
+					'id'                => $uri,
+					'inbox'             => $uri . '/inbox',
+					'preferredUsername' => 'user',
+				)
+			);
+		}
+
+		// Age one actor well beyond the default one-day window.
+		global $wpdb;
+		$modified = \gmdate( 'Y-m-d H:i:s', \time() - 9 * DAY_IN_SECONDS );
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"UPDATE $wpdb->posts SET post_modified = %s, post_modified_gmt = %s WHERE ID = %d",
+				array( $modified, $modified, $ids['https://example.com/author/jon'] )
+			)
+		);
+		\clean_post_cache( $ids['https://example.com/author/jon'] );
+
+		$outdated = Remote_Actors::get_outdated();
+		$this->assertCount( 1, $outdated );
+		$this->assertEquals( 'https://example.com/author/jon', $outdated[0]->guid );
+	}
+
+	/**
+	 * Tests get_faulty.
+	 *
+	 * @covers ::get_faulty
+	 */
+	public function test_get_faulty() {
+		$uris = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
+		$ids  = array();
+
+		foreach ( $uris as $uri ) {
+			$ids[ $uri ] = Remote_Actors::upsert(
+				array(
+					'type'              => 'Person',
+					'id'                => $uri,
+					'inbox'             => $uri . '/inbox',
+					'preferredUsername' => 'user',
+				)
+			);
+		}
+
+		$faulty_id = $ids['http://sally.example.org'];
+		for ( $i = 1; $i <= 15; $i++ ) {
+			Remote_Actors::add_error( $faulty_id, 'error ' . $i );
+		}
+
+		$faulty = Remote_Actors::get_faulty();
+		$this->assertCount( 1, $faulty );
+		$this->assertEquals( 'http://sally.example.org', $faulty[0]->guid );
+
+		// Clearing the errors removes it from the faulty set.
+		Remote_Actors::clear_errors( $faulty_id );
+		$this->assertCount( 0, Remote_Actors::get_faulty() );
 	}
 
 	/**

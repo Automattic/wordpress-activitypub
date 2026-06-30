@@ -399,7 +399,7 @@ class Authorization_Controller extends \WP_REST_Controller {
 	/**
 	 * Build a 429 rate-limit response with a Retry-After header.
 	 *
-	 * @since unreleased
+	 * @since 9.0.0
 	 *
 	 * @param string $message Translated human-readable error message.
 	 * @return \WP_REST_Response

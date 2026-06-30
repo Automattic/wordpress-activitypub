@@ -1,5 +1,4 @@
 @use "@wordpress/base-styles/mixins";
-@use "@wordpress/base-styles/breakpoints";
 @use "@wordpress/base-styles/colors";
 
 /* Ensure provider wrappers (SlotFillProvider, ShortcutProvider) fill height */
@@ -107,23 +106,5 @@
 	@include mixins.break-medium() {
 		z-index: auto;
 		flex: 0 0 var(--sw-inspector-width, 380px);
-	}
-}
-
-// Position the SnackbarList at the bottom left of the viewport
-.components-snackbar-list {
-	position: fixed;
-	bottom: 20px;
-	left: 20px;
-	z-index: 100000; // High z-index to ensure it appears above other content
-}
-
-// Mobile snackbar adjustments
-@media (max-width: #{breakpoints.$break-medium}) {
-
-	.components-snackbar-list {
-		left: 10px;
-		right: 10px;
-		bottom: 10px;
 	}
 }

@@ -8,7 +8,6 @@
 namespace Activitypub\Transformer;
 
 use Activitypub\Activity\Base_Object;
-use Activitypub\Blocks;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Replies;
@@ -21,6 +20,7 @@ use function Activitypub\get_content_visibility;
 use function Activitypub\get_content_warning;
 use function Activitypub\get_enclosures;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_post_publicly_queryable;
 use function Activitypub\is_single_user;
 use function Activitypub\site_supports_blocks;
 
@@ -90,6 +90,28 @@ class Post extends Base {
 	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
 	 */
 	public function to_object() {
+		/*
+		 * A redacted (password-protected or non-public) post is, from the
+		 * Fediverse's perspective, gone — the soft-delete path that reaches here
+		 * emits a Delete. Represent it as a Tombstone: content-free by type, so
+		 * no body-derived field (content, summary, tags, @-mentions, location,
+		 * attachments…) can ever leak, even one added to the transformer later.
+		 *
+		 * Address the teardown to the public collection. A post only reaches the
+		 * soft-delete path after being federated, and only public / quiet-public
+		 * posts federate (private and local ones never do), so the original
+		 * audience was always public — broadcasting the Delete tears the copy
+		 * down everywhere it may exist. Private/direct activities are deleted via
+		 * their own outbox path and keep their original (non-public) audience, so
+		 * they are not affected by this.
+		 */
+		if ( $this->is_redacted() ) {
+			$tombstone = $this->to_tombstone();
+			$tombstone->set_to( array( 'https://www.w3.org/ns/activitystreams#Public' ) );
+
+			return $tombstone;
+		}
+
 		$post   = $this->item;
 		$object = parent::to_object();
 
@@ -113,6 +135,9 @@ class Post extends Base {
 		$object = new Base_Object();
 		$object->set_type( 'Tombstone' );
 		$object->set_id( $this->get_id() );
+		// Preserve the permalink so the tombstone registry can resolve a request
+		// to it, even on sites whose ActivityPub ID is the post-ID URL (?p=123).
+		$object->set_url( $this->get_url() );
 		$object->set_former_type( $this->get_type() );
 		$object->set_published( $this->get_published() );
 		$object->set_updated( $this->get_updated() );
@@ -185,6 +210,20 @@ class Post extends Base {
 
 	/**
 	 * Returns the ID of the Post.
+	 *
+	 * Posts past `activitypub_last_post_with_permalink_as_id` use the post-ID URL
+	 * as their canonical ActivityPub ID — stable across slug changes. Posts at
+	 * or below the threshold are *legacy* and use their permalink as the ID,
+	 * which means a slug change effectively renames the federated object.
+	 *
+	 * Known limitation: a legacy post whose slug changes in the same save as
+	 * a soft-delete transition (e.g. publish → draft + new post_name) will
+	 * emit a Delete targeting the new permalink, while remote servers cached
+	 * the original. The trash case mitigates this via the `wp_trash_post`
+	 * hook caching the pre-transition URL in `_activitypub_canonical_url`,
+	 * but draft / pending / private / password-applied transitions do not.
+	 * If you maintain a site that pre-dates the ID migration, avoid editing
+	 * the slug in the same save as the visibility change.
 	 *
 	 * @return string The Posts ID.
 	 */
@@ -355,16 +394,6 @@ class Post extends Base {
 	 */
 	protected function get_attachment() {
 		if ( false !== $this->attachment ) {
-			return $this->attachment;
-		}
-
-		/*
-		 * Remove attachments from the Fediverse if a post was federated and then unpublished.
-		 * Except in preview mode, where we want to show attachments.
-		 */
-		if ( ! $this->is_preview() && 'publish' !== \get_post_status( $this->item ) ) {
-			$this->attachment = array();
-
 			return $this->attachment;
 		}
 
@@ -551,13 +580,6 @@ class Post extends Base {
 			return $this->summary;
 		}
 
-		// Remove Teaser from unpublished posts.
-		if ( ! $this->is_preview() && 'publish' !== \get_post_status( $this->item ) ) {
-			$this->summary = \__( '(This post is being modified)', 'activitypub' );
-
-			return $this->summary;
-		}
-
 		$this->summary = generate_post_summary( $this->item );
 
 		return $this->summary;
@@ -601,13 +623,6 @@ class Post extends Base {
 			return $this->content;
 		}
 
-		// Remove Content from unpublished posts.
-		if ( ! $this->is_preview() && 'publish' !== \get_post_status( $this->item ) ) {
-			$this->content = \__( '(This post is being modified)', 'activitypub' );
-
-			return $this->content;
-		}
-
 		global $post;
 
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
@@ -647,22 +662,6 @@ class Post extends Base {
 		$this->content = \apply_filters( 'activitypub_the_content', $content, $post );
 
 		return $this->content;
-	}
-
-	/**
-	 * Generate HTML @ link for reply block.
-	 *
-	 * @deprecated 7.4.0 Use {@see Blocks::generate_reply_link()}.
-	 *
-	 * @param string $block_content The block content.
-	 * @param array  $block         The block data.
-	 *
-	 * @return string The HTML @ link.
-	 */
-	public function generate_reply_link( $block_content, $block ) {
-		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Blocks::generate_reply_link' );
-
-		return Blocks::generate_reply_link( $block_content, $block );
 	}
 
 	/**
@@ -820,33 +819,33 @@ class Post extends Base {
 	}
 
 	/**
-	 * Transform Embed blocks to block level link.
+	 * Whether the post should be redacted from ActivityPub representations.
 	 *
-	 * Remote servers will simply drop iframe elements, rendering incomplete content.
+	 * Redaction is fail-closed at a single boundary: `to_object()` returns a
+	 * Tombstone instead of transforming the post, so no body-derived field
+	 * (content, summary, name, preview, attachments, image/icon, tags, mentions,
+	 * in-reply-to, location) is ever read — not even one added to the transformer
+	 * later. This is the only caller of this gate.
 	 *
-	 * @deprecated 7.4.0 Use {@see Blocks::revert_embed_links()}.
+	 * A post is redacted exactly when it is not publicly queryable — the same
+	 * predicate the scheduler uses to decide a federated post should emit a
+	 * Delete (`is_post_publicly_queryable()`), so the two never disagree. That
+	 * covers non-public status, password protection, the `local`/`private`
+	 * content-visibility meta, and a post type that no longer supports
+	 * ActivityPub. The Fediverse Preview keeps working because
+	 * `is_post_publicly_queryable()` itself treats a draft/pending post as
+	 * queryable during a `?preview=true` request from a user who can edit it.
 	 *
-	 * @see https://www.w3.org/TR/activitypub/#security-sanitizing-content
-	 * @see https://www.w3.org/wiki/ActivityPub/Primer/HTML
+	 * Note: we deliberately rely on `is_post_publicly_queryable()` rather than
+	 * `post_password_required()`. Federation output is per-instance, never
+	 * per-request, and `post_password_required()` returns false when a valid
+	 * `wp-postpass` cookie is on the current request (e.g. an editor who unlocked
+	 * the post), which would leak the protected body into an outbox snapshot.
 	 *
-	 * @param string $block_content The block content (html).
-	 * @param object $block         The block object.
-	 *
-	 * @return string A block level link
+	 * @return boolean True if the post must be redacted, false otherwise.
 	 */
-	public function revert_embed_links( $block_content, $block ) {
-		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Blocks::revert_embed_links' );
-
-		return Blocks::revert_embed_links( $block_content, $block );
-	}
-
-	/**
-	 * Check if the post is a preview.
-	 *
-	 * @return boolean True if the post is a preview, false otherwise.
-	 */
-	private function is_preview() {
-		return defined( 'ACTIVITYPUB_PREVIEW' ) && ACTIVITYPUB_PREVIEW;
+	protected function is_redacted() {
+		return ! is_post_publicly_queryable( $this->item );
 	}
 
 	/**
@@ -954,6 +953,51 @@ class Post extends Base {
 						}
 					}
 					break;
+				case 'core/media-text':
+					if ( ! empty( $block['attrs']['mediaId'] ) ) {
+						$media_id = $block['attrs']['mediaId'];
+
+						// Media & Text holds either an image or a video; the default is image.
+						if ( 'video' === ( $block['attrs']['mediaType'] ?? 'image' ) ) {
+							$video = array( 'id' => $media_id );
+
+							// The poster is stored as an HTML attribute on the <video> tag, not in block attrs.
+							$processor = new \WP_HTML_Tag_Processor( $block['innerHTML'] );
+							if ( $processor->next_tag( array( 'tag_name' => 'video' ) ) ) {
+								$poster = $processor->get_attribute( 'poster' );
+								if ( ! empty( $poster ) ) {
+									$video['icon'] = \esc_url_raw( $poster );
+								}
+							}
+
+							$media['video'][] = $video;
+						} else {
+							$alt       = '';
+							$processor = new \WP_HTML_Tag_Processor( $block['innerHTML'] );
+							if ( $processor->next_tag( array( 'tag_name' => 'img' ) ) ) {
+								$alt = $processor->get_attribute( 'alt' ) ?? '';
+							}
+
+							// Update alt in place if the image was already collected, so a
+							// duplicate ID does not get dropped (and its alt lost) later.
+							$found = false;
+							foreach ( $media['image'] as $i => $image ) {
+								if ( isset( $image['id'] ) && $image['id'] === $media_id ) {
+									$media['image'][ $i ]['alt'] = $alt;
+									$found                       = true;
+									break;
+								}
+							}
+
+							if ( ! $found ) {
+								$media['image'][] = array(
+									'id'  => $media_id,
+									'alt' => $alt,
+								);
+							}
+						}
+					}
+					break;
 				case 'core/audio':
 					if ( ! empty( $block['attrs']['id'] ) ) {
 						$media['audio'][] = array( 'id' => $block['attrs']['id'] );
@@ -1029,21 +1073,6 @@ class Post extends Base {
 		}
 
 		return array_filter( array_merge( ...array_values( $media ) ) );
-	}
-
-	/**
-	 * Converts a WordPress Attachment to an ActivityPub Attachment.
-	 *
-	 * @deprecated 7.2.0 Use {@see Base::transform_attachment()} instead.
-	 *
-	 * @param array $media The Attachment array.
-	 *
-	 * @return array The ActivityPub Attachment.
-	 */
-	public function wp_attachment_to_activity_attachment( $media ) {
-		_deprecated_function( __METHOD__, '7.2.0', '\Activitypub\Transformer\Base::transform_attachment()' );
-
-		return parent::transform_attachment( $media );
 	}
 
 	/**

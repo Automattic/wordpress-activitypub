@@ -647,4 +647,73 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertFalse( $data['active'] );
 	}
+
+	/**
+	 * Test that a logged-in user cannot introspect another user's token.
+	 *
+	 * Regression: cookie-authenticated callers bypassed the scoping check (which only ran
+	 * for OAuth-authenticated callers), so any logged-in user could read metadata for any
+	 * token string.
+	 *
+	 * @covers ::introspect
+	 */
+	public function test_introspect_hides_other_users_token_from_cookie_user() {
+		$token_data = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+
+		// A different, non-admin user authenticated via cookie (no OAuth token).
+		$other = $this->factory->user->create( array( 'role' => 'subscriber' ) );
+		\wp_set_current_user( $other );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/introspect' );
+		$request->set_param( 'token', $token_data['access_token'] );
+
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertFalse( $data['active'], 'A logged-in user must not introspect another user\'s token.' );
+		$this->assertArrayNotHasKey( 'username', $data, 'No token metadata should leak to a non-owner.' );
+	}
+
+	/**
+	 * Test that a user can still introspect their own token via a cookie session.
+	 *
+	 * @covers ::introspect
+	 */
+	public function test_introspect_allows_own_token_for_cookie_user() {
+		$token_data = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+
+		\wp_set_current_user( $this->user_id );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/introspect' );
+		$request->set_param( 'token', $token_data['access_token'] );
+
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertTrue( $data['active'], 'A user must be able to introspect their own token.' );
+	}
+
+	/**
+	 * Test that an administrator can introspect any user's token.
+	 *
+	 * @covers ::introspect
+	 */
+	public function test_introspect_allows_admin_to_view_any_token() {
+		$token_data = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+
+		$admin = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $admin );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/introspect' );
+		$request->set_param( 'token', $token_data['access_token'] );
+
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertTrue( $data['active'], 'An administrator must be able to introspect any token.' );
+		$this->assertEquals( $this->client_id, $data['client_id'] );
+	}
 }

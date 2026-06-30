@@ -89,6 +89,8 @@ Text domain: always `'activitypub'`.
 
 **MUST** backslash-prefix all WordPress functions in namespaced code: `\get_option()`, `\add_action()`, `\apply_filters()`, `\__()`, `\_e()`, etc. PHP falls back to global scope, but backslashes are a project standard for consistency and to avoid accidentally shadowing globals.
 
+**No inline namespaces.** Use `use` statements at the top of the file instead of inline fully-qualified class names (e.g., `use Activitypub\Options;` then `Options::method()`, not `\Activitypub\Options::method()`).
+
 **For new or modified code**, MUST use `'unreleased'` for all `@since`, `@deprecated`, and deprecation function version strings so the release script can replace them. Do not introduce new hardcoded version numbers like `'5.1.0'`; existing versioned tags in the codebase are fine.
 
 ## Testing Conventions
@@ -125,6 +127,7 @@ docs/code-linting.md             — linting configuration and rules
 docs/pull-request.md             — PR workflow details
 docs/release-process.md          — release workflow and versioning
 tests/README.md                  — test utilities, data factories, writing patterns
+src/app/README.md                — admin React app: target architecture for new screens
 FEDERATION.md                    — implemented FEPs, supported standards, compatibility
 ```
 
@@ -136,10 +139,14 @@ Skills are complex procedures loaded on demand. Canonical files live in `.agents
 
 | Skill | Use when… |
 |-------|-----------|
-| **pr** | Creating or reviewing pull requests. MUST invoke before any PR creation. |
-| **release** | Creating releases, bumping versions, managing changelogs. |
+| **code-style** | Writing PHP, creating classes, implementing hooks, or structuring plugin files. |
+| **dev** | Setting up wp-env, running tests, linting, or building assets. |
+| **test** | Writing or debugging PHPUnit and Playwright E2E tests. |
 | **federation** | Working with ActivityPub protocol, federation mechanics, or debugging. |
 | **integrations** | Adding or debugging third-party plugin integrations. |
+| **pr** | Creating or reviewing pull requests. MUST invoke before any PR creation. |
+| **release** | Creating releases, bumping versions, managing changelogs. |
+| **gitattributes** | Auditing `.gitattributes` export-ignore coverage before a release or after adding a top-level file or config. |
 
 | Agent | Trigger |
 |-------|---------|

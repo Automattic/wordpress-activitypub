@@ -228,16 +228,36 @@ class Inbox {
 	/**
 	 * Undo a received activity.
 	 *
-	 * @param string $id The ID of the inbox item to be removed.
+	 * @param string      $id    The ID of the inbox item to be removed.
+	 * @param string|null $actor Optional. The actor URI of the Undo sender. When provided, the
+	 *                           activity is only undone if this actor created the original
+	 *                           activity. Default null.
 	 *
 	 * @return bool|\WP_Error True on success, WP_Error on failure.
 	 */
-	public static function undo( $id ) {
+	public static function undo( $id, $actor = null ) {
 		$inbox_item = self::get_by_guid( $id );
 
 		if ( \is_wp_error( $inbox_item ) ) {
 			// If inbox entry not found, return the error.
 			return $inbox_item;
+		}
+
+		/*
+		 * Only the actor that created the original activity may undo it. Without this
+		 * binding a remote server could undo (and, for interactions, force-delete the
+		 * comment behind) any activity whose public id it knows but does not own.
+		 *
+		 * Items stored before this meta existed have no actor recorded; those are let
+		 * through for backward compatibility rather than becoming permanently un-undoable.
+		 */
+		$stored_actor = \get_post_meta( $inbox_item->ID, '_activitypub_activity_remote_actor', true );
+		if ( null !== $actor && $stored_actor && object_to_uri( $actor ) !== $stored_actor ) {
+			return new \WP_Error(
+				'activitypub_inbox_undo_forbidden',
+				\__( 'Undo is not possible because the actor does not own the activity.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
 		}
 
 		$type = \get_post_meta( $inbox_item->ID, '_activitypub_activity_type', true );
