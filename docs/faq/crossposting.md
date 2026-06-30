@@ -33,13 +33,16 @@ Crossposting and native federation pull in opposite directions, and bolting one 
 
 ## "But I already have a big Mastodon account"
 
-This is the most understandable reason people ask, and there are two legitimate paths depending on what you want your main presence to be.
+This is the most understandable reason people ask, and there are a few legitimate paths depending on what you want your main presence to be.
 
 **Option 1: Make your WordPress site your primary Fediverse identity.**
 If you would rather consolidate around your own domain, you can bring your existing Mastodon followers with you. Mastodon's account-migration tool can move your followers to `@you@example.com`, after which new posts reach them natively, with replies arriving as comments. See the [Account Migration guide](../how-to/account-migration.md).
 
-**Option 2: Keep your Mastodon account as your main presence and mirror articles to it.**
-If your established Mastodon account is where you want your audience, that is a crossposting job. Use a [dedicated crossposter plugin](https://wordpress.org/plugins/search/mastodon/) built for exactly this. They work happily alongside this plugin or entirely on their own.
+**Option 2: Keep your big Mastodon account and have it boost your posts.**
+If you want to keep your established account but still surface new articles to its followers, [FediBoost](https://github.com/kraftbj/fediboost) is a good middle ground. Instead of copying your post, it has your connected Mastodon account automatically *boost* (reblog) the original post that this plugin already federated from your site. The post stays the single canonical version, replies still come back to your site as comments, and your Mastodon followers see it through the boost.
+
+**Option 3: Keep your Mastodon account as your main presence and mirror articles to it.**
+If your established Mastodon account is where you want your audience to live, that is a crossposting job. Use a [dedicated crossposter plugin](https://wordpress.org/plugins/search/mastodon/) built for exactly this. They work happily alongside this plugin or entirely on their own.
 
 > [!TIP]
 > You can run both plugins at once: *ActivityPub for WordPress* to give your site its own Fediverse presence, and a crossposter to also announce new posts from a separate Mastodon account. They do not conflict, because they operate on different accounts.
