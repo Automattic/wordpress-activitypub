@@ -1539,6 +1539,62 @@ class Test_Migration extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test migrate_legacy_application_keys folds the even older separate key options.
+	 *
+	 * @covers ::migrate_legacy_application_keys
+	 */
+	public function test_migrate_legacy_application_keys() {
+		\delete_option( Application::KEYPAIR_OPTION_KEY );
+		\add_option( 'activitypub_application_user_public_key', 'legacy-public-key' );
+		\add_option( 'activitypub_application_user_private_key', 'legacy-private-key' );
+
+		// Run the migration.
+		Migration::migrate_legacy_application_keys();
+
+		// Separate options should be folded into the array option and removed.
+		$this->assertEquals(
+			array(
+				'private_key' => 'legacy-private-key',
+				'public_key'  => 'legacy-public-key',
+			),
+			\get_option( Application::KEYPAIR_OPTION_KEY )
+		);
+		$this->assertFalse( \get_option( 'activitypub_application_user_public_key' ) );
+		$this->assertFalse( \get_option( 'activitypub_application_user_private_key' ) );
+
+		// Clean up.
+		\delete_option( Application::KEYPAIR_OPTION_KEY );
+	}
+
+	/**
+	 * Test migrate_legacy_application_keys leaves a current key pair untouched.
+	 *
+	 * @covers ::migrate_legacy_application_keys
+	 */
+	public function test_migrate_legacy_application_keys_keeps_current() {
+		$current = array(
+			'private_key' => 'current-private-key',
+			'public_key'  => 'current-public-key',
+		);
+
+		\delete_option( Application::KEYPAIR_OPTION_KEY );
+		\add_option( Application::KEYPAIR_OPTION_KEY, $current );
+		\add_option( 'activitypub_application_user_public_key', 'legacy-public-key' );
+		\add_option( 'activitypub_application_user_private_key', 'legacy-private-key' );
+
+		// Run the migration.
+		Migration::migrate_legacy_application_keys();
+
+		// The current key pair wins; it must be left untouched.
+		$this->assertEquals( $current, \get_option( Application::KEYPAIR_OPTION_KEY ) );
+
+		// Clean up.
+		\delete_option( Application::KEYPAIR_OPTION_KEY );
+		\delete_option( 'activitypub_application_user_public_key' );
+		\delete_option( 'activitypub_application_user_private_key' );
+	}
+
+	/**
 	 * Test migrate_application_keypair_option when new option already exists.
 	 *
 	 * @covers ::migrate_application_keypair_option

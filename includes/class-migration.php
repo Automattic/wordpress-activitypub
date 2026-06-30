@@ -216,6 +216,7 @@ class Migration {
 
 		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
 			self::migrate_application_keypair_option();
+			self::migrate_legacy_application_keys();
 			Activitypub::flush_rewrite_rules();
 		}
 		if ( \version_compare( $version_from_db, '8.3.0', '<' ) ) {
@@ -1339,9 +1340,9 @@ class Migration {
 	/**
 	 * Migrate the Application key pair option from the old name to the new name.
 	 *
-	 * Renames `activitypub_keypair_for_-1` to `activitypub_application_keypair`.
-	 * Older separate key options (activitypub_application_user_public_key /
-	 * activitypub_application_user_private_key) are migrated lazily on first read.
+	 * Renames `activitypub_keypair_for_-1` (array form, former application user ID -1)
+	 * to `activitypub_application_keypair`. The even older separate key options are
+	 * handled by {@see self::migrate_legacy_application_keys()}.
 	 *
 	 * @since unreleased
 	 */
@@ -1361,5 +1362,39 @@ class Migration {
 		if ( false !== \get_option( Application::KEYPAIR_OPTION_KEY, false ) ) {
 			\delete_option( 'activitypub_keypair_for_-1' );
 		}
+	}
+
+	/**
+	 * Migrate the even older separate Application key options into the current option.
+	 *
+	 * Folds `activitypub_application_user_public_key` and
+	 * `activitypub_application_user_private_key` (the pre-array key storage) into the
+	 * `activitypub_application_keypair` array option, then removes them.
+	 *
+	 * @since unreleased
+	 */
+	public static function migrate_legacy_application_keys() {
+		// A key pair in the current format always wins; nothing to migrate.
+		if ( false !== \get_option( Application::KEYPAIR_OPTION_KEY, false ) ) {
+			return;
+		}
+
+		$public_key  = \get_option( 'activitypub_application_user_public_key' );
+		$private_key = \get_option( 'activitypub_application_user_private_key' );
+
+		if ( empty( $public_key ) || ! \is_string( $public_key ) || empty( $private_key ) || ! \is_string( $private_key ) ) {
+			return;
+		}
+
+		\add_option(
+			Application::KEYPAIR_OPTION_KEY,
+			array(
+				'private_key' => $private_key,
+				'public_key'  => $public_key,
+			)
+		);
+
+		\delete_option( 'activitypub_application_user_public_key' );
+		\delete_option( 'activitypub_application_user_private_key' );
 	}
 }

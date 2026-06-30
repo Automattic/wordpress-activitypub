@@ -147,13 +147,6 @@ class Application {
 		$key_pair = \get_option( self::KEYPAIR_OPTION_KEY );
 
 		if ( ! $key_pair ) {
-			$key_pair = self::check_legacy_key_pair();
-
-			if ( $key_pair ) {
-				\add_option( self::KEYPAIR_OPTION_KEY, $key_pair );
-				return $key_pair;
-			}
-
 			$key_pair = self::generate_key_pair();
 		}
 
@@ -250,97 +243,31 @@ class Application {
 	 * @return bool True if the URI refers to the Application.
 	 */
 	public static function is_application_resource( $uri ) {
-		$scheme = 'acct';
-		$match  = array();
+		$identifier_and_host = Webfinger::get_identifier_and_host( $uri );
 
-		if ( \preg_match( '/^([a-zA-Z][a-zA-Z0-9+\-.]*):(.*)$/i', $uri, $match ) ) {
-			$scheme = \strtolower( $match[1] );
+		if ( \is_wp_error( $identifier_and_host ) ) {
+			return false;
 		}
 
-		switch ( $scheme ) {
-			case 'http':
-			case 'https':
-				// Check for http(s)://example.com/@application.
-				$resource_path = \wp_parse_url( $uri, PHP_URL_PATH );
+		list( $identifier, $host ) = $identifier_and_host;
 
-				if ( $resource_path ) {
-					$blog_path = \wp_parse_url( \home_url(), PHP_URL_PATH );
-
-					if ( $blog_path ) {
-						$resource_path = \str_replace( $blog_path, '', $resource_path );
-					}
-
-					$resource_path = \trim( $resource_path, '/' );
-
-					if ( '@' . self::USERNAME === $resource_path ) {
-						return true;
-					}
-				}
-
-				// Check for the REST API URL.
-				if ( normalize_url( $uri ) === normalize_url( self::get_id() ) ) {
-					return true;
-				}
-
-				return false;
-
-			case 'acct':
-			default:
-				$uri_clean = \str_replace( 'acct:', '', $uri );
-				$host      = home_host();
-
-				if ( self::USERNAME . '@' . $host === $uri_clean ) {
-					return true;
-				}
-
-				// Also check normalized host.
-				$normalized_host = normalize_host( $host );
-				$uri_host        = \strrchr( $uri_clean, '@' );
-				$uri_host        = false !== $uri_host ? \substr( $uri_host, 1 ) : false;
-
-				if ( ! $uri_host || normalize_host( $uri_host ) !== $normalized_host ) {
-					return false;
-				}
-
-				$identifier = \substr( $uri_clean, 0, \strrpos( $uri_clean, '@' ) );
-
-				return self::USERNAME === $identifier;
-		}
-	}
-
-	/**
-	 * Checks for legacy key pair options.
-	 *
-	 * @since unreleased
-	 *
-	 * @return array|false The key pair or false.
-	 */
-	private static function check_legacy_key_pair() {
-		/*
-		 * Generic actor key pair option (array form) used for the former application
-		 * user (ID -1). Checked here so the key survives even if get_keypair() runs
-		 * before migrate_application_keypair_option() has had a chance to rename it.
-		 */
-		$key_pair = \get_option( 'activitypub_keypair_for_-1' );
-
-		if ( \is_array( $key_pair ) && ! empty( $key_pair['public_key'] ) && ! empty( $key_pair['private_key'] ) ) {
-			return array(
-				'private_key' => $key_pair['private_key'],
-				'public_key'  => $key_pair['public_key'],
-			);
+		// The resource must point at this site.
+		if ( normalize_host( $host ) !== normalize_host( home_host() ) ) {
+			return false;
 		}
 
-		// Even older separate key options.
-		$public_key  = \get_option( 'activitypub_application_user_public_key' );
-		$private_key = \get_option( 'activitypub_application_user_private_key' );
+		// URL forms: the REST actor ID or the pretty /@application profile path.
+		if ( false !== \strpos( $identifier, '://' ) ) {
+			$identifier = normalize_url( $identifier );
 
-		if ( ! empty( $public_key ) && \is_string( $public_key ) && ! empty( $private_key ) && \is_string( $private_key ) ) {
-			return array(
-				'private_key' => $private_key,
-				'public_key'  => $public_key,
-			);
+			return normalize_url( self::get_id() ) === $identifier
+				|| normalize_url( \home_url( '/@' . self::USERNAME ) ) === $identifier;
 		}
 
-		return false;
+		// acct form: application@host.
+		$identifier = \str_replace( 'acct:', '', $identifier );
+		$username   = \substr( $identifier, 0, \strrpos( $identifier, '@' ) );
+
+		return self::USERNAME === $username;
 	}
 }
