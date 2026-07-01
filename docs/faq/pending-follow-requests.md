@@ -117,6 +117,6 @@ If outbound requests fail, contact your host.
 
 Update the plugin first — several historic causes (subdirectory signatures, the 4.0.0 inbox regression, Pixelfed follows without addressing) were plugin bugs that are long fixed.
 
-To pinpoint which half of the round-trip broke, the [Inspect Internal Storage snippet](https://github.com/Automattic/wordpress-activitypub/tree/trunk/snippets/inspect-internal-storage) exposes the plugin's Inbox and Outbox in the WordPress admin: a missing `Follow` in the Inbox points to the [Inbound checks](#inbound-checks), while a stuck `Accept` in the Outbox points to the [Outbound checks](#outbound-checks).
+To pinpoint which half of the round-trip broke, the [Inspect Internal Storage snippet](../../snippets/inspect-internal-storage) exposes the plugin's Inbox and Outbox in the WordPress admin: a missing `Follow` in the Inbox points to the [Inbound checks](#inbound-checks), while a stuck `Accept` in the Outbox points to the [Outbound checks](#outbound-checks).
 
 If none of this helps, open a thread in the [support forum](https://wordpress.org/support/plugin/activitypub/) and include: your hosting provider, active security/caching/antispam plugins, whether the follower appears in WordPress, and the status code your server log shows for inbox POSTs.
