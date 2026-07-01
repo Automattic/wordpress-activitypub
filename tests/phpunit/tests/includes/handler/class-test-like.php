@@ -267,6 +267,38 @@ class Test_Like extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a re-delivered Like is short-circuited by the plugin's own guard.
+	 *
+	 * Regression test for #3215: the dedupe must match on the Like activity ID, not
+	 * the liked object. Otherwise repeat deliveries fall through to WordPress's native
+	 * author/content duplicate check, which a mangled (e.g. emoji) author name defeats
+	 * on non-utf8mb4 sites, piling up duplicate "Like" comments. The guard returns
+	 * before the handled hook, so the hook must fire exactly once across two deliveries.
+	 *
+	 * @covers ::handle_like
+	 */
+	public function test_handle_like_duplicate_short_circuits_before_processing() {
+		$activity = array_merge(
+			$this->create_test_object(),
+			array( 'id' => 'https://example.com/like/3215' )
+		);
+
+		$hook_count = 0;
+		$callback   = function () use ( &$hook_count ) {
+			++$hook_count;
+		};
+		\add_action( 'activitypub_handled_like', $callback );
+
+		// Deliver the same Like twice, as a retrying remote server would.
+		Like::handle_like( $activity, $this->user_id );
+		Like::handle_like( $activity, $this->user_id );
+
+		\remove_action( 'activitypub_handled_like', $callback );
+
+		$this->assertSame( 1, $hook_count, 'A re-delivered Like must be skipped before processing, firing the handled hook only once.' );
+	}
+
+	/**
 	 * Test handle_like action hook fires.
 	 *
 	 * @covers ::handle_like

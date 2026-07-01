@@ -153,6 +153,127 @@ class Test_Announce extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An announced activity that is fetchable from its id and attributed to an
+	 * actor on that same host is relayed to the inbox handlers.
+	 *
+	 * @covers ::handle_announce
+	 */
+	public function test_handle_announce_relays_origin_authentic_activity() {
+		$activity_url = 'https://example.com/activities/like-1';
+		$fetch        = function ( $pre, $url_or_object ) use ( $activity_url ) {
+			if ( $activity_url !== $url_or_object ) {
+				return $pre;
+			}
+
+			return array(
+				'id'     => $activity_url,
+				'type'   => 'Like',
+				'actor'  => 'https://example.com/user',
+				'object' => $this->post_permalink,
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10, 2 );
+
+		$inbox = new \MockAction();
+		\add_action( 'activitypub_inbox', array( $inbox, 'action' ) );
+
+		$announce = array(
+			'actor'  => 'https://booster.example/user',
+			'type'   => 'Announce',
+			'id'     => 'https://booster.example/a/1',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => $activity_url,
+		);
+		Announce::handle_announce( $announce, $this->user_id, Activity::init_from_array( $announce ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10 );
+
+		$this->assertSame( 1, $inbox->get_call_count(), 'An origin-authentic announced activity must be relayed.' );
+	}
+
+	/**
+	 * An announced activity whose actor is on a different host than the origin it
+	 * was fetched from is a forgery and must not be relayed, regardless of type.
+	 * This is the core fix for the nested Announce -> Undo/Delete authority bypass.
+	 *
+	 * @covers ::handle_announce
+	 */
+	public function test_handle_announce_rejects_cross_origin_activity() {
+		$activity_url = 'https://attacker.test/activities/undo-1';
+		$fetch        = function ( $pre, $url_or_object ) use ( $activity_url ) {
+			if ( $activity_url !== $url_or_object ) {
+				return $pre;
+			}
+
+			// Served by attacker.test but claims a victim actor on another host.
+			return array(
+				'id'     => $activity_url,
+				'type'   => 'Undo',
+				'actor'  => 'https://victim.test/users/carol',
+				'object' => 'https://victim.test/acts/reply-1',
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10, 2 );
+
+		$inbox = new \MockAction();
+		\add_action( 'activitypub_inbox', array( $inbox, 'action' ) );
+
+		$announce = array(
+			'actor'  => 'https://attacker.test/users/mallory',
+			'type'   => 'Announce',
+			'id'     => 'https://attacker.test/a/1',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => $activity_url,
+		);
+		Announce::handle_announce( $announce, $this->user_id, Activity::init_from_array( $announce ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10 );
+
+		$this->assertSame( 0, $inbox->get_call_count(), 'A cross-origin (forged) announced activity must not be relayed.' );
+	}
+
+	/**
+	 * The reported PoC shape: an Undo naming a victim actor, embedded inline in the
+	 * Announce, must never be dispatched from that inline copy. It is resolved from
+	 * its id, and an unfetchable / unverifiable activity is dropped.
+	 *
+	 * @covers ::handle_announce
+	 */
+	public function test_handle_announce_does_not_relay_embedded_activity() {
+		$undo_id = 'https://attacker.test/acts/undo-2';
+		$fetch   = function ( $pre, $url_or_object ) use ( $undo_id ) {
+			if ( $undo_id !== $url_or_object ) {
+				return $pre;
+			}
+
+			// The inline Undo is not served at its id (transient activity).
+			return new \WP_Error( 'http_request_failed', 'not found' );
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10, 2 );
+
+		$inbox = new \MockAction();
+		\add_action( 'activitypub_inbox_undo', array( $inbox, 'action' ) );
+
+		$announce = array(
+			'actor'  => 'https://attacker.test/users/mallory',
+			'type'   => 'Announce',
+			'id'     => 'https://attacker.test/a/2',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'type'   => 'Undo',
+				'id'     => $undo_id,
+				'actor'  => 'https://victim.test/users/carol',
+				'object' => 'https://victim.test/acts/reply-2',
+			),
+		);
+		Announce::handle_announce( $announce, $this->user_id, Activity::init_from_array( $announce ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10 );
+
+		$this->assertSame( 0, $inbox->get_call_count(), 'An embedded inner activity must not be dispatched from its inline copy.' );
+	}
+
+	/**
 	 * Test maybe save announce.
 	 *
 	 * @covers ::maybe_save_announce
@@ -218,8 +339,8 @@ class Test_Announce extends \WP_UnitTestCase {
 					'to'     => array( 'https://example.com/user' ),
 					'object' => self::create_test_object(),
 				),
-				'recursion' => 1,
-				'message'   => 'Announce of an Announce-Object.',
+				'recursion' => 0,
+				'message'   => 'Embedded inner activity is not relayed without an origin-authenticated fetch.',
 			),
 		);
 	}
