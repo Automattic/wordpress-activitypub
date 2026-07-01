@@ -13,14 +13,18 @@ Work through this checklist in order:
 The most common "missing" comment is sitting in a queue:
 
 - **Comments → Spam**: Akismet and friends regularly misclassify federated comments (see below).
-- **Comments → Pending**: **Settings → Discussion → "Comment must be manually approved"** or **"must have a previously approved comment"** holds federated replies like any other comment. If you want Fediverse interactions to skip moderation, use the official [auto-approve-reactions snippet](https://github.com/Automattic/wordpress-activitypub/tree/trunk/snippets/auto-approve-reactions).
+- **Comments → Pending**: **Settings → Discussion → "Comment must be manually approved"** or **"must have a previously approved comment"** holds federated replies like any other comment. If you want Fediverse interactions to skip moderation, use the official [auto-approve-reactions snippet](../../snippets/auto-approve-reactions).
 - **Comments → Trash**: entries on the Disallowed Comment Keys list land here (see below).
 
-⚠ **Beware of "silently discard" options.** Akismet's "Silently discard the worst and most pervasive spam" and similar auto-delete settings (e.g. Antispam Bee's honeypot delete) remove comments without a trace — it looks exactly like they never arrived. Switch such options to "mark as spam" at least while debugging.
+> [!WARNING]
+> **Beware of "silently discard" options.** Akismet's "Silently discard the worst and most pervasive spam" and similar auto-delete settings (e.g. Antispam Bee's honeypot delete) remove comments without a trace — it looks exactly like they never arrived. Switch such options to "mark as spam" at least while debugging.
 
 ### 2. Captcha and honeypot plugins
 
-**The headline cause.** Captcha plugins usually do not distinguish between a comment submitted via the form and one created via an API — and a federated reply can never pass a captcha. Confirmed examples from support threads and issues:
+> [!IMPORTANT]
+> Captcha plugins are the single most common cause. They usually do not distinguish between a comment submitted via the form and one created via an API, and a federated reply can never pass a captcha.
+
+Confirmed examples from support threads and issues:
 
 - **hCaptcha**: the comment-form integration blocks all federated replies. Disable hCaptcha for the comment form (keep it for login etc.).
 - **Advanced Google reCAPTCHA**: blocked all incoming replies; a telltale sign was that comment **notification emails still arrived** while the comments themselves never materialized.
@@ -62,6 +66,7 @@ If a caching layer serves cached HTML where the remote server expects JSON ([con
 Some "missing comments" are protocol semantics, not bugs:
 
 - **Only actual replies become comments.** A post that merely @-mentions you — written from scratch instead of using the Reply button — has no `inReplyTo` and cannot be matched to a post.
+- **Quotes are not replies.** A post that *quotes* yours is shown as a reaction (in the facepile), not as a comment. If you would rather see quotes in the comments, use the [Quotes as Comments snippet](../../snippets/quotes-as-comments).
 - **Visibility matters.** Replies with "mentioned people only" visibility are treated as private messages, not public comments.
 - **Deep threads:** replies to *other people's* replies arrive via the thread; in some setups replies addressed to a local WordPress comment rather than the post are still not imported — a known limitation under investigation.
 - **Companion plugins:** if you run the [Friends plugin](https://wordpress.org/plugins/friends/), mention-only posts appear there as feed items rather than as comments — that is intentional routing.
@@ -69,5 +74,7 @@ Some "missing comments" are protocol semantics, not bugs:
 ## Still stuck?
 
 Update the plugin first to rule out long-fixed bugs. Then test with all antispam/captcha/security plugins temporarily disabled — if the reply arrives, re-enable them one at a time to find the culprit.
+
+To see whether the reply even reached your site, the [Inspect Internal Storage snippet](../../snippets/inspect-internal-storage) exposes the plugin's Inbox and Outbox in the WordPress admin: if the activity is there, the problem is local filtering (steps 1-4); if it is not, it was blocked before processing (steps 5-6).
 
 If none of this helps, open a thread in the [support forum](https://wordpress.org/support/plugin/activitypub/) and include: which antispam/captcha/caching/security plugins you run, whether comment notification emails arrive, and the status code your server log shows for the inbox POST.
