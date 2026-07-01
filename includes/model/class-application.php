@@ -202,11 +202,13 @@ class Application extends Actor {
 			)
 		);
 
+		$time = false;
+
 		if ( ! empty( $first_post->posts[0] ) ) {
 			$time = \strtotime( $first_post->posts[0]->post_date_gmt );
 		}
 
-		if ( empty( $time ) ) {
+		if ( false === $time ) {
 			$time = \time();
 		}
 
