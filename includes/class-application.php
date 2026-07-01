@@ -147,10 +147,53 @@ class Application {
 		$key_pair = \get_option( self::KEYPAIR_OPTION_KEY );
 
 		if ( ! $key_pair ) {
+			$key_pair = self::check_legacy_key_pair();
+
+			if ( $key_pair ) {
+				\add_option( self::KEYPAIR_OPTION_KEY, $key_pair );
+				return $key_pair;
+			}
+
 			$key_pair = self::generate_key_pair();
 		}
 
 		return $key_pair;
+	}
+
+	/**
+	 * Checks for legacy key pair options.
+	 *
+	 * @since unreleased
+	 *
+	 * @return array|false The key pair or false.
+	 */
+	private static function check_legacy_key_pair() {
+		/*
+		 * Generic actor key pair option (array form) used for the former application
+		 * user (ID -1). Checked here so the key survives even if get_keypair() runs
+		 * before migrate_application_keypair_option() has had a chance to rename it.
+		 */
+		$key_pair = \get_option( 'activitypub_keypair_for_-1' );
+
+		if ( \is_array( $key_pair ) && ! empty( $key_pair['public_key'] ) && ! empty( $key_pair['private_key'] ) ) {
+			return array(
+				'private_key' => $key_pair['private_key'],
+				'public_key'  => $key_pair['public_key'],
+			);
+		}
+
+		// Even older separate key options.
+		$public_key  = \get_option( 'activitypub_application_user_public_key' );
+		$private_key = \get_option( 'activitypub_application_user_private_key' );
+
+		if ( ! empty( $public_key ) && \is_string( $public_key ) && ! empty( $private_key ) && \is_string( $private_key ) ) {
+			return array(
+				'private_key' => $private_key,
+				'public_key'  => $public_key,
+			);
+		}
+
+		return false;
 	}
 
 	/**

@@ -8,7 +8,6 @@
 namespace Activitypub\Tests\Rest;
 
 use Activitypub\Application;
-use Activitypub\Migration;
 use Activitypub\Rest\Application_Controller;
 
 /**
@@ -147,7 +146,7 @@ class Test_Application_Controller extends \Activitypub\Tests\Test_REST_Controlle
 	}
 
 	/**
-	 * Test that legacy key pairs are readable after migration.
+	 * Test that legacy key pairs are readable via the runtime fallback.
 	 *
 	 * @covers \Activitypub\Application::get_public_key
 	 * @covers \Activitypub\Application::get_private_key
@@ -160,8 +159,6 @@ class Test_Application_Controller extends \Activitypub\Tests\Test_REST_Controlle
 
 		\add_option( 'activitypub_application_user_public_key', $public_key );
 		\add_option( 'activitypub_application_user_private_key', $private_key );
-
-		Migration::migrate_legacy_application_keys();
 
 		$this->assertEquals( $public_key, Application::get_public_key() );
 		$this->assertEquals( $private_key, Application::get_private_key() );
