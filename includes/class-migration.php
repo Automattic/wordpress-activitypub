@@ -216,7 +216,6 @@ class Migration {
 
 		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
 			self::migrate_application_keypair_option();
-			Activitypub::flush_rewrite_rules();
 		}
 		if ( \version_compare( $version_from_db, '8.3.0', '<' ) ) {
 			if ( ! \wp_next_scheduled( 'activitypub_tombstone_migrate' ) ) {
