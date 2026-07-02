@@ -165,6 +165,17 @@ class Sanitize {
 			return Blog::get_default_username();
 		}
 
+		// The 'application' identifier is reserved for the Application actor.
+		if ( Application::USERNAME === $sanitized ) {
+			\add_settings_error(
+				'activitypub_blog_identifier',
+				'activitypub_blog_identifier',
+				\esc_html__( 'This name is reserved and cannot be used for the blog profile ID.', 'activitypub' )
+			);
+
+			return Blog::get_default_username();
+		}
+
 		// Check for login or nicename.
 		$user = new \WP_User_Query(
 			array(

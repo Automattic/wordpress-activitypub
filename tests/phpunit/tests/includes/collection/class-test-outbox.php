@@ -909,4 +909,29 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		$this->assertInstanceOf( Activity::class, $result );
 	}
+
+	/**
+	 * Test that legacy Application-actor outbox items are retired, not attributed to the Blog actor.
+	 *
+	 * Before the Application was extracted from the actor pipeline, its outbox items
+	 * were stored with `post_author` 0 — the same value the Blog actor uses.
+	 *
+	 * @covers ::get_actor
+	 */
+	public function test_get_actor_retires_legacy_application_items() {
+		$outbox_id = self::factory()->post->create(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_author' => 0,
+				'meta_input'  => array(
+					'_activitypub_activity_actor' => 'application',
+				),
+			)
+		);
+
+		$actor = Outbox::get_actor( \get_post( $outbox_id ) );
+
+		$this->assertWPError( $actor );
+		$this->assertSame( 'activitypub_application_actor_retired', $actor->get_error_code() );
+	}
 }

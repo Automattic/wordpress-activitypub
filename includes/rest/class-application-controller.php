@@ -14,6 +14,7 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Activity\Actor;
+use Activitypub\Activity\Generic_Object;
 use Activitypub\Application;
 
 use function Activitypub\get_rest_url_by_path;
@@ -90,15 +91,15 @@ class Application_Controller extends \WP_REST_Controller {
 				home_host()
 			),
 			'url'                       => Application::get_url(),
-			'icon'                      => self::get_icon(),
-			'published'                 => self::get_published(),
+			'icon'                      => Application::get_icon(),
+			'published'                 => Application::get_published(),
 			'inbox'                     => get_rest_url_by_path( 'inbox' ),
 			'outbox'                    => get_rest_url_by_path( 'application/outbox' ),
 			'manuallyApprovesFollowers' => true,
 			'discoverable'              => false,
 			'indexable'                 => false,
 			'invisible'                 => true,
-			'webfinger'                 => Application::USERNAME . '@' . home_host(),
+			'webfinger'                 => Application::get_webfinger(),
 			'publicKey'                 => array(
 				'id'           => Application::get_key_id(),
 				'owner'        => $id,
@@ -115,16 +116,17 @@ class Application_Controller extends \WP_REST_Controller {
 		/*
 		 * Run the same serialization filters the object-based path used, so
 		 * integrations that add actor fields via these hooks still apply to the
-		 * Application actor. The object argument is null because the Application is
-		 * served without a model instance.
+		 * Application actor. The filters document a Generic_Object argument, so
+		 * hydrate one from the array to keep that contract.
 		 */
-		$class = 'application';
+		$class  = 'application';
+		$object = Generic_Object::init_from_array( $json );
 
 		/** This filter is documented in includes/activity/class-generic-object.php */
-		$json = \apply_filters( 'activitypub_activity_object_array', $json, $class, $id, null );
+		$json = \apply_filters( 'activitypub_activity_object_array', $json, $class, $id, $object );
 
 		/** This filter is documented in includes/activity/class-generic-object.php */
-		$json = \apply_filters( "activitypub_activity_{$class}_object_array", $json, $id, null );
+		$json = \apply_filters( "activitypub_activity_{$class}_object_array", $json, $id, $object );
 
 		$rest_response = new \WP_REST_Response( $json, 200 );
 		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
@@ -156,67 +158,6 @@ class Application_Controller extends \WP_REST_Controller {
 		$rest_response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 
 		return $rest_response;
-	}
-
-	/**
-	 * Returns the icon for the Application.
-	 *
-	 * @return string[] The icon array with 'type' and 'url'.
-	 */
-	private static function get_icon() {
-		// Try site icon first.
-		$icon_id = \get_option( 'site_icon' );
-
-		// Try custom logo second.
-		if ( ! $icon_id ) {
-			$icon_id = \get_theme_mod( 'custom_logo' );
-		}
-
-		$icon_url = false;
-
-		if ( $icon_id ) {
-			$icon = \wp_get_attachment_image_src( $icon_id, 'full' );
-			if ( $icon ) {
-				$icon_url = $icon[0];
-			}
-		}
-
-		if ( ! $icon_url ) {
-			// Fallback to default icon.
-			$icon_url = \plugins_url( '/assets/img/wp-logo.png', ACTIVITYPUB_PLUGIN_FILE );
-		}
-
-		return array(
-			'type' => 'Image',
-			'url'  => \esc_url( $icon_url ),
-		);
-	}
-
-	/**
-	 * Returns the published date.
-	 *
-	 * @return string The published date in RFC3339 format.
-	 */
-	private static function get_published() {
-		$first_post = new \WP_Query(
-			array(
-				'orderby'        => 'date',
-				'order'          => 'ASC',
-				'posts_per_page' => 1,
-			)
-		);
-
-		$time = false;
-
-		if ( ! empty( $first_post->posts[0] ) ) {
-			$time = \strtotime( $first_post->posts[0]->post_date_gmt );
-		}
-
-		if ( false === $time ) {
-			$time = \time();
-		}
-
-		return \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $time );
 	}
 
 	/**

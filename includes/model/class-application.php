@@ -144,32 +144,7 @@ class Application extends Actor {
 	 * @return string[] The User-Icon.
 	 */
 	public function get_icon() {
-		// Try site icon first.
-		$icon_id = get_option( 'site_icon' );
-
-		// Try custom logo second.
-		if ( ! $icon_id ) {
-			$icon_id = get_theme_mod( 'custom_logo' );
-		}
-
-		$icon_url = false;
-
-		if ( $icon_id ) {
-			$icon = wp_get_attachment_image_src( $icon_id, 'full' );
-			if ( $icon ) {
-				$icon_url = $icon[0];
-			}
-		}
-
-		if ( ! $icon_url ) {
-			// Fallback to default icon.
-			$icon_url = plugins_url( '/assets/img/wp-logo.png', ACTIVITYPUB_PLUGIN_FILE );
-		}
-
-		return array(
-			'type' => 'Image',
-			'url'  => esc_url( $icon_url ),
-		);
+		return Application_Utility::get_icon();
 	}
 
 	/**
@@ -194,25 +169,7 @@ class Application extends Actor {
 	 * @return string The published date.
 	 */
 	public function get_published() {
-		$first_post = new \WP_Query(
-			array(
-				'orderby'        => 'date',
-				'order'          => 'ASC',
-				'posts_per_page' => 1,
-			)
-		);
-
-		$time = false;
-
-		if ( ! empty( $first_post->posts[0] ) ) {
-			$time = \strtotime( $first_post->posts[0]->post_date_gmt );
-		}
-
-		if ( false === $time ) {
-			$time = \time();
-		}
-
-		return \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $time );
+		return Application_Utility::get_published();
 	}
 
 	/**

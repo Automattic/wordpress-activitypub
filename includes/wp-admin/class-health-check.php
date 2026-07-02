@@ -965,7 +965,7 @@ class Health_Check {
 	 */
 	public static function is_rest_api_accessible() {
 		// Test the Application endpoint (always available, publicly readable via GET).
-		$url = \Activitypub\get_rest_url_by_path( 'application' );
+		$url = Application::get_id();
 
 		/*
 		 * Make an unauthenticated request. wp_safe_remote_get() guards against

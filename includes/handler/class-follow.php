@@ -8,11 +8,14 @@
 namespace Activitypub\Handler;
 
 use Activitypub\Activity\Activity;
+use Activitypub\Application;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Http;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\object_to_uri;
 
 /**
  * Handle Follow requests.
@@ -24,6 +27,9 @@ class Follow {
 	public static function init() {
 		\add_action( 'activitypub_inbox_follow', array( self::class, 'handle_follow' ), 10, 2 );
 		\add_action( 'activitypub_handled_follow', array( self::class, 'queue_accept' ), 10, 4 );
+
+		// The Application actor cannot be followed; explicitly reject such Follows so they don't sit "pending" on the remote instance forever.
+		\add_action( 'activitypub_inbox_shared_follow', array( self::class, 'reject_application_follow' ), 10, 2 );
 	}
 
 	/**
@@ -142,5 +148,62 @@ class Follow {
 		$activity->set_to( array( $origin_activity['actor'] ) );
 
 		add_to_outbox( $activity, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
+	}
+
+	/**
+	 * Reject Follow requests aimed at the Application actor.
+	 *
+	 * The Application advertises `manuallyApprovesFollowers` but is not followable,
+	 * so an explicit Reject is the only way a remote follow request gets resolved.
+	 * The Reject is sent directly instead of through the Outbox, which only
+	 * dispatches for real actors, and is signed with the Application key.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $activity The Follow activity data.
+	 * @param int[] $user_ids The local recipient IDs the inbox resolved.
+	 */
+	public static function reject_application_follow( $activity, $user_ids ) {
+		// A resolved recipient means the Follow targets a real actor, not the Application.
+		if ( ! empty( $user_ids ) ) {
+			return;
+		}
+
+		if ( empty( $activity['object'] ) || ! Application::is_application_resource( object_to_uri( $activity['object'] ) ) ) {
+			return;
+		}
+
+		$actor        = object_to_uri( $activity['actor'] );
+		$remote_actor = Remote_Actors::fetch_by_uri( $actor );
+
+		if ( \is_wp_error( $remote_actor ) ) {
+			return;
+		}
+
+		$inbox = \get_post_meta( $remote_actor->ID, '_activitypub_inbox', true );
+
+		if ( ! $inbox ) {
+			return;
+		}
+
+		// Only send minimal data.
+		$origin_activity = \array_intersect_key(
+			$activity,
+			array(
+				'id'     => 1,
+				'type'   => 1,
+				'actor'  => 1,
+				'object' => 1,
+			)
+		);
+
+		$reject = new Activity();
+		$reject->set_type( 'Reject' );
+		$reject->set_id( Application::get_id() . '#reject-' . \md5( \wp_json_encode( $origin_activity ) ) );
+		$reject->set_actor( Application::get_id() );
+		$reject->set_object( $origin_activity );
+		$reject->set_to( array( $actor ) );
+
+		Http::post( $inbox, $reject->to_json(), null );
 	}
 }

@@ -102,6 +102,75 @@ class Application {
 	}
 
 	/**
+	 * Returns the icon for the Application.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string[] The icon array with 'type' and 'url'.
+	 */
+	public static function get_icon() {
+		// Try site icon first.
+		$icon_id = \get_option( 'site_icon' );
+
+		// Try custom logo second.
+		if ( ! $icon_id ) {
+			$icon_id = \get_theme_mod( 'custom_logo' );
+		}
+
+		$icon_url = false;
+
+		if ( $icon_id ) {
+			$icon = \wp_get_attachment_image_src( $icon_id, 'full' );
+			if ( $icon ) {
+				$icon_url = $icon[0];
+			}
+		}
+
+		if ( ! $icon_url ) {
+			// Fallback to default icon.
+			$icon_url = \plugins_url( '/assets/img/wp-logo.png', ACTIVITYPUB_PLUGIN_FILE );
+		}
+
+		return array(
+			'type' => 'Image',
+			'url'  => \esc_url( $icon_url ),
+		);
+	}
+
+	/**
+	 * Returns the published date of the Application.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string The published date in RFC3339 format.
+	 */
+	public static function get_published() {
+		$first_post = new \WP_Query(
+			array(
+				'orderby'                => 'date',
+				'order'                  => 'ASC',
+				'posts_per_page'         => 1,
+				'no_found_rows'          => true,
+				'ignore_sticky_posts'    => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+			)
+		);
+
+		$time = false;
+
+		if ( ! empty( $first_post->posts[0] ) ) {
+			$time = \strtotime( $first_post->posts[0]->post_date_gmt );
+		}
+
+		if ( false === $time ) {
+			$time = \time();
+		}
+
+		return \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $time );
+	}
+
+	/**
 	 * Returns the key ID for HTTP signatures.
 	 *
 	 * @since unreleased

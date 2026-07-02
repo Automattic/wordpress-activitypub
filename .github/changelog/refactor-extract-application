@@ -1,4 +1,4 @@
-Significance: patch
+Significance: major
 Type: changed
 
 Improve the internal handling of the Application actor used for server-to-server requests.
