@@ -108,21 +108,16 @@ class Fasp_Settings {
 			self::redirect( array( 'error' => '1' ) );
 		}
 
-		if ( $enable ) {
-			$result = Client::activate_capability( $registration, $identifier, $version );
-		} else {
-			$result = Client::deactivate_capability( $registration, $identifier, $version );
-		}
+		// Notify the provider first; only record local state once it acknowledges.
+		$result = $enable
+			? Client::activate_capability( $registration, $identifier, $version )
+			: Client::deactivate_capability( $registration, $identifier, $version );
 
 		if ( \is_wp_error( $result ) ) {
 			self::redirect( array( 'error' => '1' ) );
 		}
 
-		if ( $enable ) {
-			Registrations::enable_capability( $fasp_id, $identifier, $version );
-		} else {
-			Registrations::disable_capability( $fasp_id, $identifier, $version );
-		}
+		Registrations::set_capability_enabled( $fasp_id, $identifier, $version, $enable );
 
 		self::redirect( array( 'capability_updated' => '1' ) );
 	}
@@ -166,49 +161,19 @@ class Fasp_Settings {
 			return;
 		}
 
-		if ( isset( $_GET['approved'] ) && '1' === $_GET['approved'] ) {
-			\add_settings_error(
-				'activitypub_fasp',
-				'fasp_approved',
-				\__( 'Service approved successfully. You can now choose which features it may use.', 'activitypub' ),
-				'success'
-			);
-		}
+		// Map each result query flag to the notice it shows.
+		$notices = array(
+			'approved'           => array( 'fasp_approved', \__( 'Service approved successfully. You can now choose which features it may use.', 'activitypub' ), 'success' ),
+			'rejected'           => array( 'fasp_rejected', \__( 'Service request rejected.', 'activitypub' ), 'success' ),
+			'deleted'            => array( 'fasp_deleted', \__( 'Service disconnected successfully.', 'activitypub' ), 'success' ),
+			'capability_updated' => array( 'fasp_capability_updated', \__( 'Service capabilities updated.', 'activitypub' ), 'success' ),
+			'error'              => array( 'fasp_error', \__( 'An error occurred while processing your request. Please try again.', 'activitypub' ), 'error' ),
+		);
 
-		if ( isset( $_GET['rejected'] ) && '1' === $_GET['rejected'] ) {
-			\add_settings_error(
-				'activitypub_fasp',
-				'fasp_rejected',
-				\__( 'Service request rejected.', 'activitypub' ),
-				'success'
-			);
-		}
-
-		if ( isset( $_GET['deleted'] ) && '1' === $_GET['deleted'] ) {
-			\add_settings_error(
-				'activitypub_fasp',
-				'fasp_deleted',
-				\__( 'Service disconnected successfully.', 'activitypub' ),
-				'success'
-			);
-		}
-
-		if ( isset( $_GET['capability_updated'] ) && '1' === $_GET['capability_updated'] ) {
-			\add_settings_error(
-				'activitypub_fasp',
-				'fasp_capability_updated',
-				\__( 'Service capabilities updated.', 'activitypub' ),
-				'success'
-			);
-		}
-
-		if ( isset( $_GET['error'] ) && '1' === $_GET['error'] ) {
-			\add_settings_error(
-				'activitypub_fasp',
-				'fasp_error',
-				\__( 'An error occurred while processing your request. Please try again.', 'activitypub' ),
-				'error'
-			);
+		foreach ( $notices as $flag => $notice ) {
+			if ( isset( $_GET[ $flag ] ) && '1' === $_GET[ $flag ] ) {
+				\add_settings_error( 'activitypub_fasp', $notice[0], $notice[1], $notice[2] );
+			}
 		}
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 	}

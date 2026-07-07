@@ -47,7 +47,6 @@ abstract class Fasp_TestCase extends \WP_UnitTestCase {
 	public function tear_down() {
 		\delete_option( 'activitypub_enable_fasp' );
 		\delete_option( Registrations::OPTION_REGISTRATIONS );
-		\delete_option( Registrations::OPTION_CAPABILITIES );
 
 		parent::tear_down();
 	}

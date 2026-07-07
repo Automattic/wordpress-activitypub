@@ -44,7 +44,7 @@ $supported_capabilities = \apply_filters( 'activitypub_fasp_supported_capabiliti
 		<div class="fasp-registrations-list">
 			<?php foreach ( $pending_registrations as $registration ) : ?>
 				<?php
-				$fingerprint = Registrations::get_public_key_fingerprint( $registration['fasp_public_key'] );
+				$fingerprint = $registration['fasp_public_key_fingerprint'] ?? Registrations::get_public_key_fingerprint( $registration['fasp_public_key'] );
 				$nonce       = \wp_create_nonce( 'fasp_registration_' . $registration['fasp_id'] );
 				$highlighted = $highlighted_id === $registration['fasp_id'];
 				?>
@@ -109,7 +109,7 @@ $supported_capabilities = \apply_filters( 'activitypub_fasp_supported_capabiliti
 		<div class="fasp-registrations-list">
 			<?php foreach ( $approved_registrations as $registration ) : ?>
 				<?php
-				$fingerprint = Registrations::get_public_key_fingerprint( $registration['fasp_public_key'] );
+				$fingerprint = $registration['fasp_public_key_fingerprint'] ?? Registrations::get_public_key_fingerprint( $registration['fasp_public_key'] );
 				$nonce       = \wp_create_nonce( 'fasp_registration_' . $registration['fasp_id'] );
 				?>
 				<div class="activitypub-settings-accordion fasp-registration-card">

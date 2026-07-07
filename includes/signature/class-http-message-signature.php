@@ -101,13 +101,9 @@ class Http_Message_Signature implements Http_Signature {
 			$components['"collection-synchronization"'] = $args['headers']['Collection-Synchronization'];
 		}
 
-		$identifiers = \array_keys( $components );
-
 		// Add digest if provided.
 		if ( isset( $args['body'] ) ) {
-			$components['"content-digest"'] = $this->generate_digest( $args['body'] );
-			$identifiers                    = \array_keys( $components );
-
+			$components['"content-digest"']    = $this->generate_digest( $args['body'] );
 			$args['headers']['Content-Digest'] = $components['"content-digest"'];
 		}
 
@@ -122,10 +118,11 @@ class Http_Message_Signature implements Http_Signature {
 
 		$signature = null;
 		\openssl_sign( $signature_base, $signature, $args['private_key'], \OPENSSL_ALGO_SHA256 );
-		$signature = \base64_encode( $signature );
 
-		$args['headers']['Signature-Input'] = 'wp=(' . \implode( ' ', $identifiers ) . ')' . $this->get_params_string( $params );
-		$args['headers']['Signature']       = 'wp=:' . $signature . ':';
+		$args['headers'] = \array_merge(
+			$args['headers'],
+			$this->format_signature_headers( 'wp', $components, $params, \base64_encode( $signature ) )
+		);
 
 		return $args;
 	}
@@ -163,13 +160,8 @@ class Http_Message_Signature implements Http_Signature {
 			'keyid'   => $key_id,
 		);
 
-		$signature_base = $this->get_signature_base_string( $components, $params );
-		$signature      = \sodium_crypto_sign_detached( $signature_base, $private_key );
-		$signature      = \base64_encode( $signature );
-
-		$args['headers']['Content-Digest']  = $digest;
-		$args['headers']['Signature-Input'] = 'sig=(' . \implode( ' ', \array_keys( $components ) ) . ')' . $this->get_params_string( $params );
-		$args['headers']['Signature']       = 'sig=:' . $signature . ':';
+		$args['headers']['Content-Digest'] = $digest;
+		$args['headers']                   = \array_merge( $args['headers'], $this->ed25519_signature_headers( $components, $params, $private_key ) );
 
 		return $args;
 	}
@@ -200,12 +192,9 @@ class Http_Message_Signature implements Http_Signature {
 			'keyid'   => $key_id,
 		);
 
-		$signature_base = $this->get_signature_base_string( $components, $params );
-		$signature      = \sodium_crypto_sign_detached( $signature_base, $private_key );
-		$signature      = \base64_encode( $signature );
-
-		$response->header( 'Signature-Input', 'sig=(' . \implode( ' ', \array_keys( $components ) ) . ')' . $this->get_params_string( $params ) );
-		$response->header( 'Signature', 'sig=:' . $signature . ':' );
+		foreach ( $this->ed25519_signature_headers( $components, $params, $private_key ) as $header => $value ) {
+			$response->header( $header, $value );
+		}
 
 		return $response;
 	}
@@ -663,6 +652,36 @@ class Http_Message_Signature implements Http_Signature {
 		}
 
 		return $signature_params;
+	}
+
+	/**
+	 * Sign a component set with Ed25519 and return the wire-format headers.
+	 *
+	 * @param array  $components   The covered components, keyed by their quoted identifier.
+	 * @param array  $params       The signature parameters (created, keyid, …).
+	 * @param string $private_key  The Ed25519 private key (raw binary, 64 bytes).
+	 * @return array The `Signature-Input` and `Signature` headers.
+	 */
+	private function ed25519_signature_headers( $components, $params, $private_key ) {
+		$signature = \sodium_crypto_sign_detached( $this->get_signature_base_string( $components, $params ), $private_key );
+
+		return $this->format_signature_headers( 'sig', $components, $params, \base64_encode( $signature ) );
+	}
+
+	/**
+	 * Assemble the RFC-9421 `Signature-Input` and `Signature` header values.
+	 *
+	 * @param string $label      The signature label (e.g. `wp` or `sig`).
+	 * @param array  $components  The covered components, keyed by their quoted identifier.
+	 * @param array  $params      The signature parameters.
+	 * @param string $signature   The base64-encoded raw signature.
+	 * @return array The `Signature-Input` and `Signature` headers.
+	 */
+	private function format_signature_headers( $label, $components, $params, $signature ) {
+		return array(
+			'Signature-Input' => $label . '=(' . \implode( ' ', \array_keys( $components ) ) . ')' . $this->get_params_string( $params ),
+			'Signature'       => $label . '=:' . $signature . ':',
+		);
 	}
 
 	/**

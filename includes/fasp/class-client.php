@@ -198,10 +198,7 @@ class Client {
 			$public_key
 		);
 
-		if ( \is_wp_error( $verified ) ) {
-			return $verified;
-		}
-
-		return true;
+		// verify_response() returns the keyId on success; we only need pass/fail here.
+		return \is_wp_error( $verified ) ? $verified : true;
 	}
 }

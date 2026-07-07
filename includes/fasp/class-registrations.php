@@ -29,13 +29,6 @@ class Registrations {
 	const OPTION_REGISTRATIONS = 'activitypub_fasp_registrations';
 
 	/**
-	 * Option name for the capabilities store.
-	 *
-	 * @var string
-	 */
-	const OPTION_CAPABILITIES = 'activitypub_fasp_capabilities';
-
-	/**
 	 * Maximum number of pending registrations kept at a time.
 	 *
 	 * The registration endpoint is unauthenticated by design, so the pending
@@ -161,17 +154,7 @@ class Registrations {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function approve( $fasp_id, $user_id ) {
-		$registrations = self::get_registrations_store();
-
-		if ( ! isset( $registrations[ $fasp_id ] ) ) {
-			return false;
-		}
-
-		$registrations[ $fasp_id ]['status']      = 'approved';
-		$registrations[ $fasp_id ]['approved_at'] = \current_time( 'mysql', true );
-		$registrations[ $fasp_id ]['approved_by'] = $user_id;
-
-		return \update_option( self::OPTION_REGISTRATIONS, $registrations, false );
+		return self::set_status( $fasp_id, 'approved', $user_id );
 	}
 
 	/**
@@ -182,21 +165,36 @@ class Registrations {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function reject( $fasp_id, $user_id ) {
+		return self::set_status( $fasp_id, 'rejected', $user_id );
+	}
+
+	/**
+	 * Transition a registration to a new status, recording who did it and when.
+	 *
+	 * @param string $fasp_id FASP ID.
+	 * @param string $status  The new status ('approved' or 'rejected').
+	 * @param int    $user_id User ID who performed the transition.
+	 * @return bool True on success, false on failure.
+	 */
+	private static function set_status( $fasp_id, $status, $user_id ) {
 		$registrations = self::get_registrations_store();
 
 		if ( ! isset( $registrations[ $fasp_id ] ) ) {
 			return false;
 		}
 
-		$registrations[ $fasp_id ]['status']      = 'rejected';
-		$registrations[ $fasp_id ]['rejected_at'] = \current_time( 'mysql', true );
-		$registrations[ $fasp_id ]['rejected_by'] = $user_id;
+		$registrations[ $fasp_id ]['status']          = $status;
+		$registrations[ $fasp_id ][ $status . '_at' ] = \current_time( 'mysql', true );
+		$registrations[ $fasp_id ][ $status . '_by' ] = $user_id;
 
 		return \update_option( self::OPTION_REGISTRATIONS, $registrations, false );
 	}
 
 	/**
-	 * Delete a registration and its capability state.
+	 * Delete a registration and everything it owns.
+	 *
+	 * Capability state lives inside the registration record, so removing the
+	 * record removes its capabilities too.
 	 *
 	 * @param string $fasp_id FASP ID.
 	 * @return bool True on success, false on failure.
@@ -209,14 +207,6 @@ class Registrations {
 		}
 
 		unset( $registrations[ $fasp_id ] );
-
-		$capabilities = self::get_capabilities_store();
-		foreach ( \array_keys( $capabilities ) as $key ) {
-			if ( ( $capabilities[ $key ]['fasp_id'] ?? null ) === $fasp_id ) {
-				unset( $capabilities[ $key ] );
-			}
-		}
-		\update_option( self::OPTION_CAPABILITIES, $capabilities, false );
 
 		return \update_option( self::OPTION_REGISTRATIONS, $registrations, false );
 	}
@@ -324,24 +314,6 @@ class Registrations {
 	}
 
 	/**
-	 * Get enabled capabilities for a FASP.
-	 *
-	 * @param string $fasp_id FASP ID.
-	 * @return array Array of enabled capabilities.
-	 */
-	public static function get_enabled_capabilities( $fasp_id ) {
-		$enabled = array();
-
-		foreach ( self::get_capabilities_store() as $capability ) {
-			if ( $capability['fasp_id'] === $fasp_id && $capability['enabled'] ) {
-				$enabled[] = $capability;
-			}
-		}
-
-		return $enabled;
-	}
-
-	/**
 	 * Check if a FASP has a specific capability enabled.
 	 *
 	 * @param string $fasp_id    FASP ID.
@@ -350,63 +322,54 @@ class Registrations {
 	 * @return bool True if capability is enabled, false otherwise.
 	 */
 	public static function is_capability_enabled( $fasp_id, $identifier, $version ) {
-		$capabilities   = self::get_capabilities_store();
-		$capability_key = $fasp_id . '_' . $identifier . '_v' . $version;
+		$registration = self::get( $fasp_id );
+		$key          = self::capability_key( $identifier, $version );
 
-		return isset( $capabilities[ $capability_key ] ) && $capabilities[ $capability_key ]['enabled'];
+		return ! empty( $registration['capabilities'][ $key ]['enabled'] );
 	}
 
 	/**
-	 * Mark a capability as enabled for a FASP.
+	 * Record whether a capability is enabled for a FASP.
 	 *
-	 * This only records local state. Callers are responsible for notifying
-	 * the FASP first, see {@see Client::activate_capability()}.
+	 * This only records local state inside the registration record. Callers are
+	 * responsible for notifying the FASP first, see {@see Client::activate_capability()}.
 	 *
 	 * @param string $fasp_id    FASP ID.
 	 * @param string $identifier Capability identifier.
 	 * @param string $version    Capability version.
+	 * @param bool   $enabled    Whether the capability is enabled.
 	 * @return bool True on success, false on failure.
 	 */
-	public static function enable_capability( $fasp_id, $identifier, $version ) {
-		$capabilities   = self::get_capabilities_store();
-		$capability_key = $fasp_id . '_' . $identifier . '_v' . $version;
+	public static function set_capability_enabled( $fasp_id, $identifier, $version, $enabled ) {
+		$registrations = self::get_registrations_store();
 
-		$capabilities[ $capability_key ] = array(
-			'fasp_id'    => $fasp_id,
+		if ( ! isset( $registrations[ $fasp_id ] ) ) {
+			return false;
+		}
+
+		$registrations[ $fasp_id ]['capabilities'][ self::capability_key( $identifier, $version ) ] = array(
 			'identifier' => $identifier,
 			'version'    => $version,
-			'enabled'    => true,
+			'enabled'    => (bool) $enabled,
 			'updated_at' => \current_time( 'mysql', true ),
 		);
 
-		return \update_option( self::OPTION_CAPABILITIES, $capabilities, false );
+		return \update_option( self::OPTION_REGISTRATIONS, $registrations, false );
 	}
 
 	/**
-	 * Mark a capability as disabled for a FASP.
+	 * Build the per-record key for a capability.
 	 *
-	 * This only records local state. Callers are responsible for notifying
-	 * the FASP first, see {@see Client::deactivate_capability()}.
-	 *
-	 * @param string $fasp_id    FASP ID.
 	 * @param string $identifier Capability identifier.
 	 * @param string $version    Capability version.
-	 * @return bool True on success, false on failure.
+	 * @return string The capability key.
 	 */
-	public static function disable_capability( $fasp_id, $identifier, $version ) {
-		$capabilities   = self::get_capabilities_store();
-		$capability_key = $fasp_id . '_' . $identifier . '_v' . $version;
-
-		if ( isset( $capabilities[ $capability_key ] ) ) {
-			$capabilities[ $capability_key ]['enabled']    = false;
-			$capabilities[ $capability_key ]['updated_at'] = \current_time( 'mysql', true );
-		}
-
-		return \update_option( self::OPTION_CAPABILITIES, $capabilities, false );
+	private static function capability_key( $identifier, $version ) {
+		return $identifier . '@v' . $version;
 	}
 
 	/**
-	 * Retrieve registrations, ensuring the option exists and is non-autoloaded.
+	 * Retrieve the registrations store, ensuring the option exists and is non-autoloaded.
 	 *
 	 * @return array
 	 */
@@ -419,21 +382,5 @@ class Registrations {
 		}
 
 		return \is_array( $registrations ) ? $registrations : array();
-	}
-
-	/**
-	 * Retrieve capabilities store ensuring the option exists and is non-autoloaded.
-	 *
-	 * @return array
-	 */
-	private static function get_capabilities_store() {
-		$capabilities = \get_option( self::OPTION_CAPABILITIES, null );
-
-		if ( null === $capabilities ) {
-			\add_option( self::OPTION_CAPABILITIES, array(), '', false );
-			return array();
-		}
-
-		return \is_array( $capabilities ) ? $capabilities : array();
 	}
 }

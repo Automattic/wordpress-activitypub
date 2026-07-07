@@ -119,11 +119,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 		 * match), so it is deliberately not locked.
 		 */
 		if ( Registrations::get_by_server_id( $server_id ) ) {
-			return new \WP_Error(
-				'server_id_exists',
-				'A FASP with this serverId is already registered',
-				array( 'status' => 409 )
-			);
+			return $this->error( 'server_id_exists', 'A FASP with this serverId is already registered', 409 );
 		}
 
 		$registration = Registrations::create(
@@ -136,11 +132,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 		);
 
 		if ( ! $registration ) {
-			return new \WP_Error(
-				'storage_failed',
-				'Failed to store registration request',
-				array( 'status' => 500 )
-			);
+			return $this->error( 'storage_failed', 'Failed to store registration request', 500 );
 		}
 
 		$response_data = array(
@@ -196,11 +188,23 @@ class Fasp_Controller extends \WP_REST_Controller {
 	 * @return \WP_Error The 429 error.
 	 */
 	private function rate_limit_error() {
-		return new \WP_Error(
+		return $this->error(
 			'activitypub_rate_limited',
 			\__( 'Too many registration requests. Please try again later.', 'activitypub' ),
-			array( 'status' => 429 )
+			429
 		);
+	}
+
+	/**
+	 * Build a REST error carrying an HTTP status.
+	 *
+	 * @param string $code    The error code.
+	 * @param string $message The error message.
+	 * @param int    $status  The HTTP status code.
+	 * @return \WP_Error The error.
+	 */
+	private function error( $code, $message, $status ) {
+		return new \WP_Error( $code, $message, array( 'status' => $status ) );
 	}
 
 	/**
@@ -246,23 +250,15 @@ class Fasp_Controller extends \WP_REST_Controller {
 		// Check if valid base64.
 		$decoded = \base64_decode( $public_key, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
 		if ( false === $decoded ) {
-			return new \WP_Error(
-				'invalid_public_key',
-				'Public key is not valid base64',
-				array( 'status' => 400 )
-			);
+			return $this->error( 'invalid_public_key', 'Public key is not valid base64', 400 );
 		}
 
 		// Ed25519 public keys must be exactly 32 bytes.
 		if ( \strlen( $decoded ) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES ) {
-			return new \WP_Error(
+			return $this->error(
 				'invalid_public_key_length',
-				\sprintf(
-					'Invalid Ed25519 public key length: expected %d bytes, got %d',
-					SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES,
-					\strlen( $decoded )
-				),
-				array( 'status' => 400 )
+				\sprintf( 'Invalid Ed25519 public key length: expected %d bytes, got %d', SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES, \strlen( $decoded ) ),
+				400
 			);
 		}
 
@@ -279,11 +275,7 @@ class Fasp_Controller extends \WP_REST_Controller {
 		$scheme = \wp_parse_url( $url, \PHP_URL_SCHEME );
 
 		if ( 'https' !== $scheme ) {
-			return new \WP_Error(
-				'invalid_url_scheme',
-				\__( 'The base URL must use HTTPS.', 'activitypub' ),
-				array( 'status' => 400 )
-			);
+			return $this->error( 'invalid_url_scheme', \__( 'The base URL must use HTTPS.', 'activitypub' ), 400 );
 		}
 
 		return true;

@@ -227,7 +227,7 @@ class Test_Fasp extends Fasp_TestCase {
 		$this->assertTrue( Registrations::reject( $fasp_id, 42 ) );
 		$this->assertSame( 'rejected', Registrations::get( $fasp_id )['status'] );
 
-		Registrations::enable_capability( $fasp_id, 'trends', '1.0' );
+		Registrations::set_capability_enabled( $fasp_id, 'trends', '1.0', true );
 		$this->assertTrue( Registrations::delete( $fasp_id ) );
 		$this->assertNull( Registrations::get( $fasp_id ) );
 		$this->assertFalse( Registrations::is_capability_enabled( $fasp_id, 'trends', '1.0' ), 'Deleting a registration removes its capability state.' );
@@ -242,19 +242,20 @@ class Test_Fasp extends Fasp_TestCase {
 	 * @covers \Activitypub\Fasp\Registrations
 	 */
 	public function test_capability_state() {
-		$this->assertFalse( Registrations::is_capability_enabled( 'some-fasp', 'trends', '1.0' ) );
+		$fasp_id = $this->create_fasp_registration( 'approved' )['fasp_id'];
 
-		Registrations::enable_capability( 'some-fasp', 'trends', '1.0' );
-		$this->assertTrue( Registrations::is_capability_enabled( 'some-fasp', 'trends', '1.0' ) );
-		$this->assertFalse( Registrations::is_capability_enabled( 'some-fasp', 'trends', '2.0' ), 'Capability state is per version.' );
+		// Capability state only exists for a real registration.
+		$this->assertFalse( Registrations::set_capability_enabled( 'missing-id', 'trends', '1.0', true ) );
+		$this->assertFalse( Registrations::is_capability_enabled( 'missing-id', 'trends', '1.0' ) );
 
-		$enabled = Registrations::get_enabled_capabilities( 'some-fasp' );
-		$this->assertCount( 1, $enabled );
-		$this->assertSame( 'trends', $enabled[0]['identifier'] );
+		$this->assertFalse( Registrations::is_capability_enabled( $fasp_id, 'trends', '1.0' ) );
 
-		Registrations::disable_capability( 'some-fasp', 'trends', '1.0' );
-		$this->assertFalse( Registrations::is_capability_enabled( 'some-fasp', 'trends', '1.0' ) );
-		$this->assertCount( 0, Registrations::get_enabled_capabilities( 'some-fasp' ) );
+		Registrations::set_capability_enabled( $fasp_id, 'trends', '1.0', true );
+		$this->assertTrue( Registrations::is_capability_enabled( $fasp_id, 'trends', '1.0' ) );
+		$this->assertFalse( Registrations::is_capability_enabled( $fasp_id, 'trends', '2.0' ), 'Capability state is per version.' );
+
+		Registrations::set_capability_enabled( $fasp_id, 'trends', '1.0', false );
+		$this->assertFalse( Registrations::is_capability_enabled( $fasp_id, 'trends', '1.0' ) );
 	}
 
 	/**
