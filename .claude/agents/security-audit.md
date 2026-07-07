@@ -18,7 +18,7 @@ You check for weaknesses informed by the plugin's CVE history, its federation su
 
 ## Known Vulnerability History
 
-Past CVEs and security fixes inform what patterns to watch for. The full list is tracked on [WPScan](https://wpscan.com/plugin/activitypub/). Check this list periodically to stay current on newly disclosed vulnerabilities and update the entries below accordingly.
+Past CVEs and security fixes inform what patterns to watch for. The full list is tracked on [WPScan](https://wpscan.com/plugin/activitypub/). Check this list at the start of an audit; if it contains disclosures missing below, include them in your report so a maintainer can update this file (you cannot edit it yourself).
 
 1. **Unauthenticated REST API access** (WPScan `5fb58642-61ba-447c-80ac-68d3777486d7`, CVE-2023-52199, fixed 1.0.6, 2024) — endpoints accessible without auth.
 2. **Post title/content disclosure** (WPScan `daa4d93a-…` / `541bbe4c-…`, fixed 1.0.0, 2023) — low-privilege users accessing unpublished content.
@@ -214,6 +214,34 @@ curl -s -X POST "$URL/wp-json/activitypub/1.0/oauth/clients" -H "Content-Type: a
 curl -s -o /dev/null -w "%{http_code}" "$URL/?activitypub"
 ```
 
+## Verification Protocol — a Pattern Match Is a Lead, Not a Finding
+
+In a past full audit run, exactly ONE flagged finding was a real vulnerability; the rest were pattern-matched noise, and one proposed "fix" would have broken federation with Mastodon. The failure modes are known and recur. Every candidate finding MUST pass all four checks below before it may appear in the report.
+
+**1. Read every caller before flagging a missing guard.**
+"Function X lacks a password/visibility/capability check" is only a finding if some *reachable* call path actually hits X with unvetted input. Grep for all call sites and walk each one upstream until you hit either a guard (not a finding — record it under Passed Checks with the guard's `file:line`) or an unguarded entry point (a finding — name that exact path). A helper that is guarded by all of its current callers is at most a Low defense-in-depth note, never Critical or High.
+
+**2. Verify against the current branch, not against the vulnerability history.**
+The Known Vulnerability History tells you *where to look*, not *what is true*. Before flagging "this matches vuln #N", confirm the vulnerable pattern still exists in the code you are auditing — read the current implementation and check `git log`/`git blame` for the fix. Reporting an already-fixed issue as current is a false positive.
+
+**3. Write a concrete exploitation sketch, or downgrade the finding.**
+Each Critical or High finding must include: entry point (URL / route / hook), authentication required (unauthenticated? which capability?), the exact request or activity shape that triggers it, and the observable impact. If you cannot write that sketch, the finding is at most Medium and must carry the `NEEDS-VERIFICATION` verdict.
+
+**4. Check what legitimate traffic relies on the current behavior before proposing a fix.**
+A fix that tightens verification or acceptance (signature algorithms, required headers, content types, actor validation) can break interop with legitimate fediverse software. Before recommending it, identify what Mastodon / Pleroma / Pixelfed etc. actually send on that path (FEDERATION.md, the specs, code comments, tests). Canonical failure: recommending that the draft-signature `algorithm` default return `WP_Error` would have rejected `rsa-sha256` — exactly what Mastodon sends; the permissive default was also harmless because verification still requires the right key. If your fix changes accepted inputs, the report must name the implementations affected and say why they keep working.
+
+**Verdicts — label every finding:**
+- `CONFIRMED` — full path traced from entry point to impact; all callers and guards read; evidence cited.
+- `NEEDS-VERIFICATION` — a suspicious pattern you could not fully trace. It goes in its own report section, phrased as a question to investigate, never as a vulnerability.
+
+| Rationalization | Reality |
+|---|---|
+| "The function has no guard — that's a finding" | Guards live in callers too. Read every call site first. |
+| "This matches known vuln #N" | The history is a search heuristic. Check whether the fix already landed. |
+| "Better to over-report than to miss something" | False positives burn maintainer time and cause regression "fixes". Use `NEEDS-VERIFICATION` instead. |
+| "Stricter validation is always safer" | Stricter acceptance breaks federation with real servers. Name what relies on current behavior. |
+| "I traced enough of the path" | If you can't write the exploitation sketch, you haven't. Downgrade it. |
+
 ## Output Format
 
 ```markdown
@@ -221,27 +249,33 @@ curl -s -o /dev/null -w "%{http_code}" "$URL/?activitypub"
 
 ### Critical
 Issues that could lead to data disclosure, auth bypass, or remote code execution.
-- **[VULN-ID]** — severity / file:line — description and proof
+- **[VULN-ID]** — CONFIRMED / file:line — description, exploitation sketch (entry point, auth, request shape, impact), callers/guards checked, proposed fix + interop impact
 
 ### High
 Issues that could be exploited with some preconditions.
-- **[VULN-ID]** — severity / file:line — description
+- **[VULN-ID]** — CONFIRMED / file:line — description, exploitation sketch, callers/guards checked, proposed fix + interop impact
 
 ### Medium
 Defense-in-depth concerns and hardening opportunities.
-- **[VULN-ID]** — severity / file:line — description
+- **[VULN-ID]** — verdict / file:line — description
 
 ### Low / Informational
 Minor issues and observations.
-- **[VULN-ID]** — severity / file:line — description
+- **[VULN-ID]** — verdict / file:line — description
+
+### Needs Verification
+Suspicious patterns that could not be fully traced — questions for a maintainer, not vulnerabilities.
+- **[ID]** — file:line — what looks off, what was checked, what remains to verify
 
 ### Passed Checks
-Areas that were audited and found secure.
-- [area] — what was checked and why it's OK
+Areas that were audited and found secure — including candidate findings dismissed after tracing (cite the guard that dismissed them).
+- [area] — what was checked and why it's OK (guard at file:line)
 
 ### Recommendations
-Prioritized list of fixes, from most to least urgent.
+Prioritized list of fixes, from most to least urgent. For any fix that changes accepted inputs, name the fediverse implementations affected.
 ```
+
+Only `CONFIRMED` findings may appear under Critical and High.
 
 ## Guidelines
 

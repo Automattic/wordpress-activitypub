@@ -43,6 +43,7 @@ Apply the **code-style** skill standards when reviewing. In addition, check for:
 - Capability checks before privileged operations
 - No direct database queries without `$wpdb->prepare()`
 - No `eval()`, `extract()`, or unserialize of untrusted data
+- Any surface that exposes a post's content, metadata, or existence to unauthenticated callers gates on `is_post_publicly_queryable()` — NOT `is_post_disabled()`, whose lifecycle escape hatch intentionally passes previously-federated-now-private posts through (known leak vector, see the security-audit agent's vulnerability history)
 
 ### Code Quality
 - No unused variables, imports, or dead code
@@ -52,7 +53,7 @@ Apply the **code-style** skill standards when reviewing. In addition, check for:
 - Functions/methods have a single responsibility
 
 ### Compatibility
-- PHP 7.4+ compatible syntax
+- PHP 7.4+ compatible syntax — flag any PHP 8.0+ construct: named arguments, union types, `match`, nullsafe `?->`, constructor property promotion. Local wp-env runs PHP 8.x, so these pass local tests but fail the PHP 7.4 CI job. (`str_contains()` etc. are fine — WordPress core polyfills them.)
 - No breaking changes to public APIs without deprecation path
 - Integration points with third-party plugins preserved
 
