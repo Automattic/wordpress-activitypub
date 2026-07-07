@@ -225,7 +225,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 
 		$response = array(
 			'@context'     => Base_Object::JSON_LD_CONTEXT,
-			'id'           => get_rest_url_by_path( sprintf( 'actors/%d/outbox', $user_id ) ),
+			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/outbox', $user_id ) ),
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'actor'        => $user->get_id(),
 			'type'         => 'OrderedCollection',
@@ -429,7 +429,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 
 		// Determine if this is an Activity or a bare Object.
 		$type        = $data['type'] ?? '';
-		$is_activity = in_array( $type, Activity::TYPES, true );
+		$is_activity = \in_array( $type, Activity::TYPES, true );
 
 		// If it's a bare object, wrap it in a Create activity.
 		if ( ! $is_activity ) {
@@ -540,7 +540,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 			}
 		}
 
-		return array_merge(
+		return \array_merge(
 			array(
 				'@context' => Base_Object::JSON_LD_CONTEXT,
 				'type'     => 'Create',
@@ -585,7 +585,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 
 		// Check object.attributedTo if present.
 		$object = $data['object'] ?? $data;
-		if ( is_array( $object ) && ! empty( $object['attributedTo'] ) ) {
+		if ( \is_array( $object ) && ! empty( $object['attributedTo'] ) ) {
 			$attributed_to = object_to_uri( $object['attributedTo'] );
 			if ( $attributed_to && $attributed_to !== $user_actor_id ) {
 				return new \WP_Error(
@@ -636,12 +636,12 @@ class Outbox_Controller extends \WP_REST_Controller {
 		$cc     = (array) ( $activity['cc'] ?? array() );
 
 		// Check if public.
-		if ( in_array( $public, $to, true ) ) {
+		if ( \in_array( $public, $to, true ) ) {
 			return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
 		}
 
 		// Check if unlisted (public in cc).
-		if ( in_array( $public, $cc, true ) ) {
+		if ( \in_array( $public, $cc, true ) ) {
 			return ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC;
 		}
 
@@ -662,7 +662,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 */
 	private function ensure_object_id( $data, $user ) {
 		// Check if there's an embedded object that needs fields.
-		if ( ! isset( $data['object'] ) || ! is_array( $data['object'] ) ) {
+		if ( ! isset( $data['object'] ) || ! \is_array( $data['object'] ) ) {
 			return $data;
 		}
 

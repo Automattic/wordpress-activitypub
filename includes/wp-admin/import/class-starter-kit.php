@@ -97,8 +97,8 @@ class Starter_Kit {
 				self::$import_id  = \absint( $_POST['import_id'] ?? 0 );
 				self::$author     = \absint( $_POST['author'] ?? \get_current_user_id() );
 				self::$actor_list = \array_values(
-					array_filter(
-						array_map(
+					\array_filter(
+						\array_map(
 							static function ( $actor ) {
 								$actor = \sanitize_text_field( $actor );
 								$actor = \wp_unslash( $actor );
@@ -171,7 +171,7 @@ class Starter_Kit {
 		self::$import_id = \wp_insert_attachment( $attachment, $upload['file'] );
 
 		// Schedule a cleanup for one day from now in case of failed import or missing wp_import_cleanup() call.
-		\wp_schedule_single_event( time() + DAY_IN_SECONDS, 'importer_scheduled_cleanup', array( self::$import_id ) );
+		\wp_schedule_single_event( \time() + DAY_IN_SECONDS, 'importer_scheduled_cleanup', array( self::$import_id ) );
 
 		return true;
 	}
@@ -250,7 +250,7 @@ class Starter_Kit {
 
 		global $wp_filesystem;
 
-		if ( ! $wp_filesystem || ! is_a( $wp_filesystem, 'WP_Filesystem_Base' ) ) {
+		if ( ! $wp_filesystem || ! \is_a( $wp_filesystem, 'WP_Filesystem_Base' ) ) {
 			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'Failed to initialize the WordPress filesystem.', 'activitypub' ) );
 			return false;
 		}
@@ -355,7 +355,7 @@ class Starter_Kit {
 		?>
 		<form action="<?php echo \esc_url( \admin_url( 'admin.php?import=starter-kit&amp;step=3' ) ); ?>" method="post">
 			<?php \wp_nonce_field( 'import-starter-kit' ); ?>
-			<input type="hidden" name="import_id" value="<?php echo esc_attr( self::$import_id ); ?>" />
+			<input type="hidden" name="import_id" value="<?php echo \esc_attr( self::$import_id ); ?>" />
 
 			<?php self::render_starter_kit_info(); ?>
 			<?php self::render_author_selection(); ?>
@@ -520,7 +520,7 @@ class Starter_Kit {
 			$actor_id = object_to_uri( $actor_id );
 			$actor_id = \ltrim( $actor_id, '@' );
 
-			if ( ! filter_var( $actor_id, FILTER_VALIDATE_URL ) && ! filter_var( $actor_id, FILTER_VALIDATE_EMAIL ) ) {
+			if ( ! \filter_var( $actor_id, FILTER_VALIDATE_URL ) && ! \filter_var( $actor_id, FILTER_VALIDATE_EMAIL ) ) {
 				++$skipped;
 				continue;
 			}

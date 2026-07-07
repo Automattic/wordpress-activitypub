@@ -38,7 +38,7 @@ class Collection_Sync {
 	public static function schedule_reconciliation( $type, $user_id, $actor_url, $params ) {
 		// Schedule async processing to avoid blocking the inbox.
 		\wp_schedule_single_event(
-			time() + MINUTE_IN_SECONDS,
+			\time() + MINUTE_IN_SECONDS,
 			"activitypub_{$type}_sync_reconcile",
 			array( $user_id, $actor_url, $params )
 		);
@@ -70,7 +70,7 @@ class Collection_Sync {
 
 		$accepted = Following::get_by_authority( $user_id, $home_authority );
 		foreach ( $accepted as $following ) {
-			$key = array_search( $following->guid, $remote_followers, true );
+			$key = \array_search( $following->guid, $remote_followers, true );
 			if ( false === $key ) {
 				Following::reject( $following, $user_id );
 			} else {
@@ -78,11 +78,11 @@ class Collection_Sync {
 			}
 		}
 
-		$remote_followers = array_values( $remote_followers ); // Reindex.
+		$remote_followers = \array_values( $remote_followers ); // Reindex.
 
 		$pending = Following::get_by_authority( $user_id, $home_authority, Following::PENDING_META_KEY );
 		foreach ( $pending as $following ) {
-			$key = array_search( $following->guid, $remote_followers, true );
+			$key = \array_search( $following->guid, $remote_followers, true );
 			if ( false === $key ) {
 				Following::reject( $following, $user_id );
 			} else {

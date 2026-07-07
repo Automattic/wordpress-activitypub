@@ -229,7 +229,7 @@ class Query {
 		 *
 		 * @param \WP_Term|\WP_Post_Type|\WP_Post|\WP_User|\WP_Comment|null $queried_object The queried object.
 		 */
-		return apply_filters( 'activitypub_queried_object', $queried_object );
+		return \apply_filters( 'activitypub_queried_object', $queried_object );
 	}
 
 	/**
@@ -252,7 +252,7 @@ class Query {
 
 		$author_id = url_to_authorid( $url );
 
-		if ( ! is_numeric( $author_id ) ) {
+		if ( ! \is_numeric( $author_id ) ) {
 			$author_id = $url;
 		}
 

@@ -107,7 +107,7 @@ class Client {
 				return new \WP_Error(
 					'activitypub_invalid_redirect_uri',
 					/* translators: %s: The invalid redirect URI */
-					sprintf( \__( 'Invalid redirect URI: %s', 'activitypub' ), $uri ),
+					\sprintf( \__( 'Invalid redirect URI: %s', 'activitypub' ), $uri ),
 					array( 'status' => 400 )
 				);
 			}
@@ -131,7 +131,7 @@ class Client {
 				'meta_input'   => array(
 					'_activitypub_client_id'          => $client_id,
 					'_activitypub_client_secret_hash' => $client_secret ? \wp_hash_password( $client_secret ) : '',
-					'_activitypub_redirect_uris'      => array_map( array( Sanitize::class, 'redirect_uri' ), $redirect_uris ),
+					'_activitypub_redirect_uris'      => \array_map( array( Sanitize::class, 'redirect_uri' ), $redirect_uris ),
 					'_activitypub_allowed_scopes'     => Scope::validate( $scopes ),
 					'_activitypub_is_public'          => (bool) $is_public,
 				),
@@ -281,7 +281,7 @@ class Client {
 
 		// Get redirect URIs from metadata or derive from client_id origin.
 		$redirect_uris = array();
-		if ( ! empty( $metadata['redirect_uris'] ) && is_array( $metadata['redirect_uris'] ) ) {
+		if ( ! empty( $metadata['redirect_uris'] ) && \is_array( $metadata['redirect_uris'] ) ) {
 			foreach ( $metadata['redirect_uris'] as $uri ) {
 				if ( ! self::validate_uri_format( $uri ) ) {
 					return new \WP_Error(
@@ -307,7 +307,7 @@ class Client {
 				'meta_input'   => array(
 					'_activitypub_client_id'          => $client_id,
 					'_activitypub_client_secret_hash' => '', // Public client.
-					'_activitypub_redirect_uris'      => array_map( array( Sanitize::class, 'redirect_uri' ), $redirect_uris ),
+					'_activitypub_redirect_uris'      => \array_map( array( Sanitize::class, 'redirect_uri' ), $redirect_uris ),
 					'_activitypub_allowed_scopes'     => Scope::ALL,
 					'_activitypub_is_public'          => true,
 					'_activitypub_discovered'         => true,
@@ -396,7 +396,7 @@ class Client {
 		$body = \wp_remote_retrieve_body( $response );
 		$data = \json_decode( $body, true );
 
-		if ( ! is_array( $data ) ) {
+		if ( ! \is_array( $data ) ) {
 			return new \WP_Error(
 				'activitypub_client_invalid_metadata',
 				\__( 'Invalid client metadata format.', 'activitypub' ),
@@ -465,19 +465,19 @@ class Client {
 			$metadata['redirect_uris'] = (array) $data['redirectURI'];
 		}
 		if ( empty( $metadata['logo_uri'] ) && ! empty( $data['icon'] ) ) {
-			if ( is_string( $data['icon'] ) ) {
+			if ( \is_string( $data['icon'] ) ) {
 				$metadata['logo_uri'] = $data['icon'];
-			} elseif ( is_array( $data['icon'] ) && ! empty( $data['icon']['url'] ) ) {
+			} elseif ( \is_array( $data['icon'] ) && ! empty( $data['icon']['url'] ) ) {
 				$metadata['logo_uri'] = $data['icon']['url'];
 			}
 		}
 		if ( empty( $metadata['client_uri'] ) && ! empty( $data['url'] ) ) {
-			$metadata['client_uri'] = is_array( $data['url'] ) ? $data['url'][0] : $data['url'];
+			$metadata['client_uri'] = \is_array( $data['url'] ) ? $data['url'][0] : $data['url'];
 		}
 
 		// Mark ActivityPub actor-typed clients for lenient redirect validation.
 		$actor_types = array( 'Application', 'Person', 'Service', 'Group', 'Organization' );
-		if ( ! empty( $data['type'] ) && in_array( $data['type'], $actor_types, true ) ) {
+		if ( ! empty( $data['type'] ) && \in_array( $data['type'], $actor_types, true ) ) {
 			$metadata['is_actor'] = true;
 		}
 
@@ -534,7 +534,7 @@ class Client {
 		}
 
 		// Exact match first.
-		if ( in_array( $redirect_uri, $allowed_uris, true ) ) {
+		if ( \in_array( $redirect_uri, $allowed_uris, true ) ) {
 			return true;
 		}
 
@@ -668,7 +668,7 @@ class Client {
 		);
 		// phpcs:enable WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 
-		return array_map(
+		return \array_map(
 			function ( $post ) {
 				return new self( $post->ID );
 			},
@@ -734,7 +734,7 @@ class Client {
 	 */
 	public function get_redirect_uris() {
 		$uris = \get_post_meta( $this->post_id, '_activitypub_redirect_uris', true );
-		return is_array( $uris ) ? $uris : array();
+		return \is_array( $uris ) ? $uris : array();
 	}
 
 	/**
@@ -744,7 +744,7 @@ class Client {
 	 */
 	public function get_allowed_scopes() {
 		$scopes = \get_post_meta( $this->post_id, '_activitypub_allowed_scopes', true );
-		return is_array( $scopes ) ? $scopes : Scope::DEFAULT_SCOPES;
+		return \is_array( $scopes ) ? $scopes : Scope::DEFAULT_SCOPES;
 	}
 
 	/**
@@ -790,7 +790,7 @@ class Client {
 			$host   = \wp_parse_url( $redirect_uris[0], PHP_URL_HOST );
 
 			if ( $scheme && $host ) {
-				return \trailingslashit( sprintf( '%s://%s', $scheme, $host ) );
+				return \trailingslashit( \sprintf( '%s://%s', $scheme, $host ) );
 			}
 		}
 
@@ -823,7 +823,7 @@ class Client {
 	 */
 	public function filter_scopes( $requested_scopes ) {
 		$allowed = $this->get_allowed_scopes();
-		return array_values( array_intersect( $requested_scopes, $allowed ) );
+		return \array_values( \array_intersect( $requested_scopes, $allowed ) );
 	}
 
 	/**
@@ -833,11 +833,11 @@ class Client {
 	 */
 	public static function generate_client_id() {
 		// Generate UUID v4.
-		$data    = random_bytes( 16 );
-		$data[6] = chr( ord( $data[6] ) & 0x0f | 0x40 ); // Version 4.
-		$data[8] = chr( ord( $data[8] ) & 0x3f | 0x80 ); // Variant.
+		$data    = \random_bytes( 16 );
+		$data[6] = \chr( \ord( $data[6] ) & 0x0f | 0x40 ); // Version 4.
+		$data[8] = \chr( \ord( $data[8] ) & 0x3f | 0x80 ); // Variant.
 
-		return vsprintf( '%s%s-%s-%s-%s-%s%s%s', str_split( bin2hex( $data ), 4 ) );
+		return \vsprintf( '%s%s-%s-%s-%s-%s%s%s', \str_split( \bin2hex( $data ), 4 ) );
 	}
 
 	/**
@@ -869,7 +869,7 @@ class Client {
 		 * but double-slash forms ("myapp://host") are common in practice, so both
 		 * are accepted.
 		 */
-		if ( ! preg_match( '/^([a-zA-Z][a-zA-Z0-9+.\-]*):/', $uri, $matches ) ) {
+		if ( ! \preg_match( '/^([a-zA-Z][a-zA-Z0-9+.\-]*):/', $uri, $matches ) ) {
 			return false;
 		}
 
@@ -883,7 +883,7 @@ class Client {
 
 		// Block dangerous schemes (see OWASP XSS prevention).
 		$blocked_schemes = array( 'javascript', 'data', 'vbscript', 'blob', 'file', 'mhtml', 'cid', 'jar', 'view-source' );
-		if ( in_array( $scheme, $blocked_schemes, true ) ) {
+		if ( \in_array( $scheme, $blocked_schemes, true ) ) {
 			return false;
 		}
 
@@ -922,7 +922,7 @@ class Client {
 		 * Custom schemes must be at least 2 characters to avoid matching
 		 * Windows drive letters (e.g., "C:").
 		 */
-		return strlen( $scheme ) >= 2;
+		return \strlen( $scheme ) >= 2;
 	}
 
 	/**
@@ -949,7 +949,7 @@ class Client {
 		// Also revoke all tokens stored in user meta.
 		Token::revoke_all();
 
-		return count( $post_ids );
+		return \count( $post_ids );
 	}
 
 	/**

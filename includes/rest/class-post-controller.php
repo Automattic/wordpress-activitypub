@@ -197,7 +197,7 @@ class Post_Controller extends \WP_REST_Controller {
 			return new \WP_Error( 'activitypub_post_not_found', \__( 'Post not found', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
-		$response = array_merge(
+		$response = \array_merge(
 			array(
 				'@context' => Base_Object::JSON_LD_CONTEXT,
 				'id'       => get_rest_url_by_path( \sprintf( 'posts/%d/context', $post_id ) ),

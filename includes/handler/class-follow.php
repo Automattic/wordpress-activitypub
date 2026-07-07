@@ -103,7 +103,7 @@ class Follow {
 		$actor = $activity_object['actor'];
 
 		// Only send minimal data.
-		$activity_object = array_intersect_key(
+		$activity_object = \array_intersect_key(
 			$activity_object,
 			array(
 				'id'     => 1,
@@ -130,7 +130,7 @@ class Follow {
 	 */
 	public static function queue_reject( $activity, $user_id ) {
 		// Only send minimal data.
-		$origin_activity = array_intersect_key(
+		$origin_activity = \array_intersect_key(
 			$activity,
 			array(
 				'id'     => 1,

@@ -75,7 +75,7 @@ class Announce {
 		$object = Http::get_remote_object( $object_url, false );
 		\remove_filter( 'http_request_args', $no_redirects, 10 );
 
-		if ( ! $object || is_wp_error( $object ) || ! is_array( $object ) ) {
+		if ( ! $object || \is_wp_error( $object ) || ! \is_array( $object ) ) {
 			return;
 		}
 
@@ -131,7 +131,7 @@ class Announce {
 			return;
 		}
 
-		$exists = Comment::object_id_to_comment( esc_url_raw( $url ) );
+		$exists = Comment::object_id_to_comment( \esc_url_raw( $url ) );
 		if ( $exists ) {
 			return;
 		}
@@ -144,9 +144,9 @@ class Announce {
 		$success = false;
 		$result  = Interactions::add_reaction( $activity );
 
-		if ( $result && ! is_wp_error( $result ) ) {
+		if ( $result && ! \is_wp_error( $result ) ) {
 			$success = true;
-			$result  = get_comment( $result );
+			$result  = \get_comment( $result );
 		}
 
 		/**

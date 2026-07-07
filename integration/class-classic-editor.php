@@ -41,11 +41,11 @@ class Classic_Editor {
 			return $markup;
 		}
 
-		$type = strtok( \get_post_mime_type( $attachment_ids[0] ), '/' );
+		$type = \strtok( \get_post_mime_type( $attachment_ids[0] ), '/' );
 
 		// Single video or audio file: use media shortcode.
 		if ( 1 === \count( $attachment_ids ) && ( 'video' === $type || 'audio' === $type ) ) {
-			return sprintf(
+			return \sprintf(
 				'[%1$s src="%2$s"]',
 				\esc_attr( $type ),
 				\esc_url( \wp_get_attachment_url( $attachment_ids[0] ) )
@@ -53,7 +53,7 @@ class Classic_Editor {
 		}
 
 		// Multiple attachments or images: use gallery shortcode.
-		return '[gallery ids="' . implode( ',', $attachment_ids ) . '" link="none"]';
+		return '[gallery ids="' . \implode( ',', $attachment_ids ) . '" link="none"]';
 	}
 
 	/**
@@ -196,7 +196,7 @@ class Classic_Editor {
 			<span class="howto">
 				<?php \esc_html_e( 'Quoting allows others to cite your post while adding their own commentary.', 'activitypub' ); ?>
 				<?php
-				printf(
+				\printf(
 					/* translators: %s: The current site default quote policy. Note the leading space. */
 					\esc_html__( ' Site default: %s', 'activitypub' ),
 					\esc_html( self::get_quote_policy_label( $default_quote_policy ) )

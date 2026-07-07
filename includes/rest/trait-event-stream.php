@@ -126,10 +126,10 @@ trait Event_Stream {
 	 */
 	protected function stream_collection( $user_id, $collection ) {
 		// Allow PHP to detect client disconnects instead of auto-terminating.
-		ignore_user_abort( true );
+		\ignore_user_abort( true );
 
 		// Extend PHP execution time for long-lived SSE connections.
-		set_time_limit( 0 );
+		\set_time_limit( 0 );
 
 		$this->send_sse_headers();
 
@@ -140,17 +140,17 @@ trait Event_Stream {
 
 		// Use Last-Event-ID if provided, otherwise start from the latest item.
 		$since_id = $last_event_id ? $last_event_id : $this->get_latest_item_id( $user_id, $collection );
-		$start    = time();
+		$start    = \time();
 
 		$this->send_sse_comment( 'connected' );
 
-		while ( ( time() - $start ) < 300 ) {
+		while ( ( \time() - $start ) < 300 ) {
 			if ( \connection_aborted() ) {
 				break;
 			}
 
 			// Check for signal transient before querying the DB.
-			$signal_key = sprintf( 'activitypub_sse_signal_%s_%s', $user_id, $collection );
+			$signal_key = \sprintf( 'activitypub_sse_signal_%s_%s', $user_id, $collection );
 			$signal     = \get_transient( $signal_key );
 
 			if ( $signal ) {
@@ -167,8 +167,8 @@ trait Event_Stream {
 				}
 
 				// Re-set signal if we hit the limit, so remaining items are fetched next iteration.
-				if ( count( $new_items ) >= 20 ) {
-					\set_transient( $signal_key, time(), 5 * MINUTE_IN_SECONDS );
+				if ( \count( $new_items ) >= 20 ) {
+					\set_transient( $signal_key, \time(), 5 * MINUTE_IN_SECONDS );
 				}
 			}
 
@@ -176,7 +176,7 @@ trait Event_Stream {
 			$this->flush_output();
 
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.sleep_sleep -- SSE long-polling requires blocking sleep.
-			sleep( 5 );
+			\sleep( 5 );
 		}
 
 		$this->send_sse_comment( 'timeout' );
@@ -194,10 +194,10 @@ trait Event_Stream {
 	 * @param string $stream_url The remote eventStream URL.
 	 */
 	protected function relay_remote_stream( $stream_url ) {
-		ignore_user_abort( true );
+		\ignore_user_abort( true );
 
 		// Extend PHP execution time for long-lived SSE connections.
-		set_time_limit( 0 );
+		\set_time_limit( 0 );
 
 		$parsed = \wp_parse_url( $stream_url );
 		$host   = $parsed['host'];
@@ -227,7 +227,7 @@ trait Event_Stream {
 			exit;
 		}
 
-		$context = stream_context_create(
+		$context = \stream_context_create(
 			array(
 				'ssl' => array(
 					'verify_peer'      => true,
@@ -238,10 +238,10 @@ trait Event_Stream {
 			)
 		);
 
-		$target = ( false !== strpos( $ip, ':' ) ? '[' . $ip . ']' : $ip ) . ':' . $port;
+		$target = ( false !== \strpos( $ip, ':' ) ? '[' . $ip . ']' : $ip ) . ':' . $port;
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_stream_socket_client -- SSE proxy requires raw streaming.
-		$stream = stream_socket_client(
+		$stream = \stream_socket_client(
 			'ssl://' . $target,
 			$errno,
 			$errstr,
@@ -272,20 +272,20 @@ trait Event_Stream {
 		$request_headers .= "\r\n";
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Raw stream operation.
-		fwrite( $stream, $request_headers );
+		\fwrite( $stream, $request_headers );
 
 		// Read and skip the HTTP response headers.
 		$header_complete = false;
 		$status_code     = 0;
 
-		while ( ! feof( $stream ) ) {
-			$line = fgets( $stream, 8192 );
+		while ( ! \feof( $stream ) ) {
+			$line = \fgets( $stream, 8192 );
 
 			if ( false === $line ) {
 				break;
 			}
 
-			if ( ! $status_code && preg_match( '/^HTTP\/\d\.\d (\d{3})/', $line, $matches ) ) {
+			if ( ! $status_code && \preg_match( '/^HTTP\/\d\.\d (\d{3})/', $line, $matches ) ) {
 				$status_code = (int) $matches[1];
 			}
 
@@ -298,7 +298,7 @@ trait Event_Stream {
 
 		if ( ! $header_complete || 200 !== $status_code ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Raw stream operation.
-			fclose( $stream );
+			\fclose( $stream );
 			\status_header( 502 );
 			\header( 'Content-Type: application/json' );
 			Server::send_cors_headers();
@@ -315,19 +315,19 @@ trait Event_Stream {
 		$this->send_sse_headers();
 		$this->send_sse_comment( 'proxying ' . $host );
 
-		$start = time();
+		$start = \time();
 
-		stream_set_timeout( $stream, 10 );
+		\stream_set_timeout( $stream, 10 );
 
-		while ( ! feof( $stream ) && ( time() - $start ) < 300 ) {
+		while ( ! \feof( $stream ) && ( \time() - $start ) < 300 ) {
 			if ( \connection_aborted() ) {
 				break;
 			}
 
-			$line = fgets( $stream, 8192 );
+			$line = \fgets( $stream, 8192 );
 
 			if ( false === $line ) {
-				$meta = stream_get_meta_data( $stream );
+				$meta = \stream_get_meta_data( $stream );
 
 				if ( ! empty( $meta['timed_out'] ) ) {
 					$this->send_sse_comment( 'keepalive ' . \gmdate( 'c' ) );
@@ -344,7 +344,7 @@ trait Event_Stream {
 		}
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Raw stream operation.
-		fclose( $stream );
+		\fclose( $stream );
 
 		$this->send_sse_comment( 'proxy timeout' );
 		$this->flush_output();
@@ -356,8 +356,8 @@ trait Event_Stream {
 	 * Send SSE-specific HTTP headers.
 	 */
 	protected function send_sse_headers() {
-		while ( ob_get_level() > 0 ) {
-			ob_end_clean();
+		while ( \ob_get_level() > 0 ) {
+			\ob_end_clean();
 		}
 
 		\status_header( 200 );
@@ -405,10 +405,10 @@ trait Event_Stream {
 	 * Flush all output buffers.
 	 */
 	protected function flush_output() {
-		if ( ob_get_level() > 0 ) {
-			ob_flush();
+		if ( \ob_get_level() > 0 ) {
+			\ob_flush();
 		}
-		flush();
+		\flush();
 	}
 
 	/**
@@ -512,7 +512,7 @@ trait Event_Stream {
 	 * @return string The eventStream URL.
 	 */
 	public function get_stream_url( $user_id, $collection ) {
-		return \rest_url( sprintf( '%s/actors/%d/%s/stream', $this->namespace, $user_id, $collection ) );
+		return \rest_url( \sprintf( '%s/actors/%d/%s/stream', $this->namespace, $user_id, $collection ) );
 	}
 
 	/**

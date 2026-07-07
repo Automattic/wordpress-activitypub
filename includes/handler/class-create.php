@@ -164,7 +164,7 @@ class Create {
 	 * @param \Activitypub\Activity\Activity $activity  The Activity object.
 	 */
 	public static function maybe_unbury( $outbox_id, $activity ) {
-		if ( ! in_array( $activity->get_type(), array( 'Create', 'Update' ), true ) ) {
+		if ( ! \in_array( $activity->get_type(), array( 'Create', 'Update' ), true ) ) {
 			return;
 		}
 

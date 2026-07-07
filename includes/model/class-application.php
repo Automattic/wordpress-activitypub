@@ -135,17 +135,17 @@ class Application extends Actor {
 	 */
 	public function get_icon() {
 		// Try site icon first.
-		$icon_id = get_option( 'site_icon' );
+		$icon_id = \get_option( 'site_icon' );
 
 		// Try custom logo second.
 		if ( ! $icon_id ) {
-			$icon_id = get_theme_mod( 'custom_logo' );
+			$icon_id = \get_theme_mod( 'custom_logo' );
 		}
 
 		$icon_url = false;
 
 		if ( $icon_id ) {
-			$icon = wp_get_attachment_image_src( $icon_id, 'full' );
+			$icon = \wp_get_attachment_image_src( $icon_id, 'full' );
 			if ( $icon ) {
 				$icon_url = $icon[0];
 			}
@@ -153,12 +153,12 @@ class Application extends Actor {
 
 		if ( ! $icon_url ) {
 			// Fallback to default icon.
-			$icon_url = plugins_url( '/assets/img/wp-logo.png', ACTIVITYPUB_PLUGIN_FILE );
+			$icon_url = \plugins_url( '/assets/img/wp-logo.png', ACTIVITYPUB_PLUGIN_FILE );
 		}
 
 		return array(
 			'type' => 'Image',
-			'url'  => esc_url( $icon_url ),
+			'url'  => \esc_url( $icon_url ),
 		);
 	}
 
@@ -171,7 +171,7 @@ class Application extends Actor {
 		if ( \has_header_image() ) {
 			return array(
 				'type' => 'Image',
-				'url'  => esc_url( \get_header_image() ),
+				'url'  => \esc_url( \get_header_image() ),
 			);
 		}
 
@@ -207,7 +207,7 @@ class Application extends Actor {
 	 * @return string The Inbox-Endpoint.
 	 */
 	public function get_inbox() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/inbox', $this->get__id() ) );
+		return get_rest_url_by_path( \sprintf( 'actors/%d/inbox', $this->get__id() ) );
 	}
 
 	/**
@@ -216,7 +216,7 @@ class Application extends Actor {
 	 * @return string The Outbox-Endpoint.
 	 */
 	public function get_outbox() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/outbox', $this->get__id() ) );
+		return get_rest_url_by_path( \sprintf( 'actors/%d/outbox', $this->get__id() ) );
 	}
 
 	/**
@@ -247,9 +247,9 @@ class Application extends Actor {
 	 * @return string The User description.
 	 */
 	public function get_summary() {
-		return sprintf(
+		return \sprintf(
 			/* translators: %s: Domain of the site */
-			__( 'This is the Application Actor for %s.', 'activitypub' ),
+			\__( 'This is the Application Actor for %s.', 'activitypub' ),
 			home_host()
 		);
 	}

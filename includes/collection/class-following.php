@@ -69,7 +69,7 @@ class Following {
 			return new \WP_Error( 'activitypub_remote_actor_not_found', 'Remote actor not found' );
 		}
 
-		$all_meta  = get_post_meta( $post->ID );
+		$all_meta  = \get_post_meta( $post->ID );
 		$following = $all_meta[ self::FOLLOWING_META_KEY ] ?? array();
 		$pending   = $all_meta[ self::PENDING_META_KEY ] ?? array();
 
@@ -190,7 +190,7 @@ class Following {
 		$post = \get_post( $post );
 
 		if ( ! $post ) {
-			return new \WP_Error( 'activitypub_remote_actor_not_found', __( 'Remote actor not found', 'activitypub' ) );
+			return new \WP_Error( 'activitypub_remote_actor_not_found', \__( 'Remote actor not found', 'activitypub' ) );
 		}
 
 		$actor_type = Actors::get_type_by_id( $user_id );
@@ -492,7 +492,7 @@ class Following {
 	 * @return string|false The status of the following.
 	 */
 	public static function check_status( $user_id, $post_id ) {
-		$all_meta  = get_post_meta( $post_id );
+		$all_meta  = \get_post_meta( $post_id );
 		$following = $all_meta[ self::FOLLOWING_META_KEY ] ?? array();
 		$pending   = $all_meta[ self::PENDING_META_KEY ] ?? array();
 
@@ -521,11 +521,11 @@ class Following {
 		}
 
 		$user_ids = \get_post_meta( $actor->ID, self::FOLLOWING_META_KEY, false );
-		if ( ! is_array( $user_ids ) || empty( $user_ids ) ) {
+		if ( ! \is_array( $user_ids ) || empty( $user_ids ) ) {
 			return array();
 		}
 
-		return array_map( 'intval', $user_ids );
+		return \array_map( 'intval', $user_ids );
 	}
 
 	/**

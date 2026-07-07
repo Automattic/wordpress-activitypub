@@ -33,13 +33,13 @@ class Settings {
 		$show_advanced_tab = \get_user_meta( \get_current_user_id(), 'activitypub_show_advanced_tab', true );
 		$settings_tabs     = array();
 		$settings_tab      = array(
-			'label'    => __( 'Settings', 'activitypub' ),
+			'label'    => \__( 'Settings', 'activitypub' ),
 			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php',
 		);
 
 		if ( $show_welcome_tab ) {
 			$settings_tabs['welcome'] = array(
-				'label'    => __( 'Welcome', 'activitypub' ),
+				'label'    => \__( 'Welcome', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/welcome.php',
 			);
 		}
@@ -62,17 +62,17 @@ class Settings {
 
 		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 			$settings_tabs['blog-profile'] = array(
-				'label'    => __( 'Blog Profile', 'activitypub' ),
+				'label'    => \__( 'Blog Profile', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-settings.php',
 			);
 			$settings_tabs['followers']    = array(
-				'label'    => __( 'Followers', 'activitypub' ),
+				'label'    => \__( 'Followers', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/followers-list.php',
 			);
 
 			if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
 				$settings_tabs['following'] = array(
-					'label'    => __( 'Following', 'activitypub' ),
+					'label'    => \__( 'Following', 'activitypub' ),
 					'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/following-list.php',
 				);
 			}
@@ -86,12 +86,12 @@ class Settings {
 		$settings_tabs = \apply_filters( 'activitypub_admin_settings_tabs', $settings_tabs );
 
 		if ( empty( $settings_tabs ) ) {
-			_doing_it_wrong( __FUNCTION__, 'No settings tabs found. There should be at least one tab to show a settings page.', '7.0.0' );
+			\_doing_it_wrong( __FUNCTION__, 'No settings tabs found. There should be at least one tab to show a settings page.', '7.0.0' );
 			$settings_tabs['settings'] = $settings_tab;
 		}
 
-		$tab_keys    = array_keys( $settings_tabs );
-		$default_tab = reset( $tab_keys );
+		$tab_keys    = \array_keys( $settings_tabs );
+		$default_tab = \reset( $tab_keys );
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$tab = isset( $_GET['tab'] ) ? \sanitize_key( $_GET['tab'] ) : $default_tab;
 
@@ -193,10 +193,10 @@ class Settings {
 			\get_current_screen()->add_help_tab(
 				array(
 					'id'      => 'recommended-plugins',
-					'title'   => __( 'Recommended Plugins', 'activitypub' ),
+					'title'   => \__( 'Recommended Plugins', 'activitypub' ),
 					'content' =>
-						'<h2>' . esc_html__( 'Supercharge Your Fediverse Experience', 'activitypub' ) . '</h2>' .
-						'<p>' . esc_html__( 'Enhance your WordPress ActivityPub setup with these hand-picked plugins, each adding unique capabilities for a richer Fediverse experience.', 'activitypub' ) . '</p>' .
+						'<h2>' . \esc_html__( 'Supercharge Your Fediverse Experience', 'activitypub' ) . '</h2>' .
+						'<p>' . \esc_html__( 'Enhance your WordPress ActivityPub setup with these hand-picked plugins, each adding unique capabilities for a richer Fediverse experience.', 'activitypub' ) . '</p>' .
 						self::render_recommended_plugins_list(),
 				)
 			);
@@ -444,12 +444,12 @@ class Settings {
 	 */
 	private static function get_help_tab_template( $template_name ) {
 		$template_path = ACTIVITYPUB_PLUGIN_DIR . 'templates/help-tab/' . $template_name . '.php';
-		if ( ! file_exists( $template_path ) ) {
+		if ( ! \file_exists( $template_path ) ) {
 			return '';
 		}
 
-		ob_start();
-		load_template( $template_path, false );
-		return ob_get_clean();
+		\ob_start();
+		\load_template( $template_path, false );
+		return \ob_get_clean();
 	}
 }
