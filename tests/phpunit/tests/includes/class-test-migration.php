@@ -1023,6 +1023,38 @@ class Test_Migration extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that legacy Application outbox items are deleted, leaving other actors' items intact.
+	 *
+	 * @covers ::delete_application_outbox_items
+	 */
+	public function test_delete_application_outbox_items() {
+		$application_item = self::factory()->post->create(
+			array(
+				'post_type'  => Outbox::POST_TYPE,
+				'meta_input' => array( '_activitypub_activity_actor' => 'application' ),
+			)
+		);
+		$blog_item        = self::factory()->post->create(
+			array(
+				'post_type'  => Outbox::POST_TYPE,
+				'meta_input' => array( '_activitypub_activity_actor' => 'blog' ),
+			)
+		);
+		$user_item        = self::factory()->post->create(
+			array(
+				'post_type'  => Outbox::POST_TYPE,
+				'meta_input' => array( '_activitypub_activity_actor' => 'user' ),
+			)
+		);
+
+		Migration::delete_application_outbox_items();
+
+		$this->assertNull( \get_post( $application_item ), 'The Application outbox item should be deleted.' );
+		$this->assertInstanceOf( \WP_Post::class, \get_post( $blog_item ), 'The Blog outbox item should remain.' );
+		$this->assertInstanceOf( \WP_Post::class, \get_post( $user_item ), 'The User outbox item should remain.' );
+	}
+
+	/**
 	 * Test remove_pending_application_user_follow_requests with multiple APPLICATION_USER_ID entries on same post.
 	 *
 	 * @covers ::remove_pending_application_user_follow_requests

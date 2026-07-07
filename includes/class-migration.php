@@ -214,13 +214,14 @@ class Migration {
 			\wp_schedule_single_event( \time() + HOUR_IN_SECONDS + \wp_rand( 0, 6 * HOUR_IN_SECONDS ), 'activitypub_backfill_statistics' );
 		}
 
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
-			self::migrate_application_keypair_option();
-		}
 		if ( \version_compare( $version_from_db, '8.3.0', '<' ) ) {
 			if ( ! \wp_next_scheduled( 'activitypub_tombstone_migrate' ) ) {
 				\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_tombstone_migrate' );
 			}
+		}
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			self::migrate_application_keypair_option();
+			self::delete_application_outbox_items();
 		}
 
 		/*
@@ -1359,6 +1360,37 @@ class Migration {
 		 */
 		if ( false !== \get_option( Application::KEYPAIR_OPTION_KEY, false ) ) {
 			\delete_option( 'activitypub_keypair_for_-1' );
+		}
+	}
+
+	/**
+	 * Delete outbox items that belonged to the Application actor.
+	 *
+	 * The Application used to queue Reject activities through the Outbox as user
+	 * ID -1. It no longer dispatches activities, so any pending items are
+	 * undeliverable and are removed.
+	 *
+	 * @since unreleased
+	 */
+	public static function delete_application_outbox_items() {
+		$items = \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'any',
+				'nopaging'    => true,
+				'fields'      => 'ids',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'   => '_activitypub_activity_actor',
+						'value' => 'application',
+					),
+				),
+			)
+		);
+
+		foreach ( $items as $item_id ) {
+			\wp_delete_post( $item_id, true );
 		}
 	}
 }

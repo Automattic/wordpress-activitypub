@@ -302,53 +302,6 @@ class Test_Follow extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test queue_reject method.
-	 *
-	 * @covers ::queue_reject
-	 */
-	public function test_queue_reject() {
-		$actor_url       = 'https://example.com/reject-actor';
-		$activity_object = array(
-			'id'     => $actor_url . '/activity/456',
-			'type'   => 'Follow',
-			'actor'  => $actor_url,
-			'object' => Actors::get_by_id( self::$user_id )->get_id(),
-		);
-
-		Follow::queue_reject( $activity_object, self::$user_id );
-
-		// Check that a Reject activity was queued.
-		$outbox_posts = \get_posts(
-			array(
-				'post_type'   => Outbox::POST_TYPE,
-				'author'      => self::$user_id,
-				'post_status' => 'pending',
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query'  => array(
-					array(
-						'key'   => '_activitypub_activity_type',
-						'value' => 'Reject',
-					),
-				),
-			)
-		);
-
-		$this->assertCount( 1, $outbox_posts, 'One Reject outbox entry should be created' );
-
-		$outbox_post   = $outbox_posts[0];
-		$activity_type = \get_post_meta( $outbox_post->ID, '_activitypub_activity_type', true );
-		$activity_json = \json_decode( $outbox_post->post_content, true );
-		$visibility    = \get_post_meta( $outbox_post->ID, 'activitypub_content_visibility', true );
-
-		// Verify outbox entry.
-		$this->assertEquals( 'Reject', $activity_type );
-		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, $visibility );
-		$this->assertEquals( 'Follow', $activity_json['object']['type'] );
-		$this->assertEquals( array( $actor_url ), $activity_json['to'] );
-		$this->assertEquals( $actor_url, $activity_json['object']['actor'] );
-	}
-
-	/**
 	 * Test that a Follow aimed at the Application actor gets an explicit Reject.
 	 *
 	 * @covers ::reject_application_follow

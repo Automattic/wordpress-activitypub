@@ -27,6 +27,47 @@ class Signature {
 	}
 
 	/**
+	 * Generate a new RSA key pair for signing HTTP requests.
+	 *
+	 * Does not persist anything — callers are responsible for storing the keys.
+	 *
+	 * @since unreleased
+	 *
+	 * @return array The key pair with 'private_key' and 'public_key', both null on failure.
+	 */
+	public static function generate_key_pair() {
+		$config = array(
+			'digest_alg'       => 'sha512',
+			'private_key_bits' => 2048,
+			'private_key_type' => \OPENSSL_KEYTYPE_RSA,
+		);
+
+		$key         = \openssl_pkey_new( $config );
+		$private_key = null;
+		$detail      = array();
+		if ( $key ) {
+			\openssl_pkey_export( $key, $private_key );
+			$detail = \openssl_pkey_get_details( $key );
+		}
+
+		// Check if keys are valid.
+		if (
+			empty( $private_key ) || ! \is_string( $private_key ) ||
+			! isset( $detail['key'] ) || ! \is_string( $detail['key'] )
+		) {
+			return array(
+				'private_key' => null,
+				'public_key'  => null,
+			);
+		}
+
+		return array(
+			'private_key' => $private_key,
+			'public_key'  => $detail['key'],
+		);
+	}
+
+	/**
 	 * Sign an HTTP Request.
 	 *
 	 * @param array  $args An array of HTTP request arguments.

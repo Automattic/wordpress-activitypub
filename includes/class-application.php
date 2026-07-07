@@ -59,6 +59,15 @@ class Application {
 	 * @return array The jrd array or Application WebFinger data.
 	 */
 	public static function add_webfinger_discovery( $jrd, $uri ) {
+		/*
+		 * Respect a profile already resolved at an earlier priority — for example
+		 * on sites whose blog identifier was set to "application" before the name
+		 * was reserved for the Application actor.
+		 */
+		if ( $jrd && ! \is_wp_error( $jrd ) ) {
+			return $jrd;
+		}
+
 		$data = self::get_webfinger_data( $uri );
 
 		if ( $data ) {
@@ -109,32 +118,7 @@ class Application {
 	 * @return string[] The icon array with 'type' and 'url'.
 	 */
 	public static function get_icon() {
-		// Try site icon first.
-		$icon_id = \get_option( 'site_icon' );
-
-		// Try custom logo second.
-		if ( ! $icon_id ) {
-			$icon_id = \get_theme_mod( 'custom_logo' );
-		}
-
-		$icon_url = false;
-
-		if ( $icon_id ) {
-			$icon = \wp_get_attachment_image_src( $icon_id, 'full' );
-			if ( $icon ) {
-				$icon_url = $icon[0];
-			}
-		}
-
-		if ( ! $icon_url ) {
-			// Fallback to default icon.
-			$icon_url = \plugins_url( '/assets/img/wp-logo.png', ACTIVITYPUB_PLUGIN_FILE );
-		}
-
-		return array(
-			'type' => 'Image',
-			'url'  => \esc_url( $icon_url ),
-		);
+		return site_icon();
 	}
 
 	/**
@@ -273,35 +257,12 @@ class Application {
 	 * @return array The key pair with 'public_key' and 'private_key'.
 	 */
 	private static function generate_key_pair() {
-		$config = array(
-			'digest_alg'       => 'sha512',
-			'private_key_bits' => 2048,
-			'private_key_type' => \OPENSSL_KEYTYPE_RSA,
-		);
+		$key_pair = Signature::generate_key_pair();
 
-		$key         = \openssl_pkey_new( $config );
-		$private_key = null;
-		$detail      = array();
-		if ( $key ) {
-			\openssl_pkey_export( $key, $private_key );
-			$detail = \openssl_pkey_get_details( $key );
+		// Only persist valid keys.
+		if ( empty( $key_pair['private_key'] ) ) {
+			return $key_pair;
 		}
-
-		// Check if keys are valid.
-		if (
-			empty( $private_key ) || ! \is_string( $private_key ) ||
-			! isset( $detail['key'] ) || ! \is_string( $detail['key'] )
-		) {
-			return array(
-				'private_key' => null,
-				'public_key'  => null,
-			);
-		}
-
-		$key_pair = array(
-			'private_key' => $private_key,
-			'public_key'  => $detail['key'],
-		);
 
 		\update_option( self::KEYPAIR_OPTION_KEY, $key_pair );
 
@@ -363,8 +324,9 @@ class Application {
 
 		list( $identifier, $host ) = $identifier_and_host;
 
-		// The resource must point at this site.
-		if ( normalize_host( $host ) !== normalize_host( home_host() ) ) {
+		// The resource must point at this site, or at its pre-migration host.
+		$host = normalize_host( $host );
+		if ( normalize_host( home_host() ) !== $host && normalize_host( \get_option( 'activitypub_old_host' ) ) !== $host ) {
 			return false;
 		}
 
@@ -377,8 +339,7 @@ class Application {
 		}
 
 		// acct form: application@host.
-		$identifier = \str_replace( 'acct:', '', $identifier );
-		$username   = \substr( $identifier, 0, \strrpos( $identifier, '@' ) );
+		$username = \strstr( \str_replace( 'acct:', '', $identifier ), '@', true );
 
 		return self::USERNAME === $username;
 	}

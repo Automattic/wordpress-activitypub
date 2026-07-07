@@ -64,6 +64,23 @@ class Test_Actors extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The 'application' reservation must hold regardless of casing.
+	 *
+	 * The user lookups in get_id_by_username are case-insensitive, so a cased
+	 * variant must not slip past the reservation and resolve to a real user.
+	 *
+	 * @covers ::get_id_by_username
+	 */
+	public function test_application_username_reservation_is_case_insensitive() {
+		$user_id = self::factory()->user->create( array( 'user_login' => 'application' ) );
+
+		$this->assertWPError( Actors::get_id_by_username( 'application' ) );
+		$this->assertWPError( Actors::get_id_by_username( 'Application' ), 'Cased variants must not resolve to a real user named "application".' );
+
+		\wp_delete_user( $user_id );
+	}
+
+	/**
 	 * Test get_by_various.
 	 *
 	 * @dataProvider the_resource_provider

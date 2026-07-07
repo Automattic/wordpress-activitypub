@@ -103,6 +103,45 @@ function site_supports_blocks() {
 }
 
 /**
+ * Get the icon Image object for site-wide ActivityPub actors.
+ *
+ * Tries the site icon first, then the custom logo, and falls back to the
+ * bundled WordPress logo.
+ *
+ * @since unreleased
+ *
+ * @return array The icon array with 'type' and 'url'.
+ */
+function site_icon() {
+	// Try site icon first.
+	$icon_id = \get_option( 'site_icon' );
+
+	// Try custom logo second.
+	if ( ! $icon_id ) {
+		$icon_id = \get_theme_mod( 'custom_logo' );
+	}
+
+	$icon_url = false;
+
+	if ( $icon_id ) {
+		$icon = \wp_get_attachment_image_src( $icon_id, 'full' );
+		if ( $icon ) {
+			$icon_url = $icon[0];
+		}
+	}
+
+	if ( ! $icon_url ) {
+		// Fallback to default icon.
+		$icon_url = \plugins_url( '/assets/img/wp-logo.png', ACTIVITYPUB_PLUGIN_FILE );
+	}
+
+	return array(
+		'type' => 'Image',
+		'url'  => \esc_url( $icon_url ),
+	);
+}
+
+/**
  * Check whether a blog is public based on the `blog_public` option.
  *
  * @return bool True if public, false if not

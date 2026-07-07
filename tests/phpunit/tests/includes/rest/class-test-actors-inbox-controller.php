@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Rest;
 
+use Activitypub\Application;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Inbox as Inbox_Collection;
 use Activitypub\Collection\Outbox;
@@ -210,6 +211,69 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$this->assertEquals( 202, $response->get_status() );
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+	}
+
+	/**
+	 * Test that deliveries to the retired Application actor's inbox are handled by the shared inbox.
+	 *
+	 * Remote servers that cached the pre-extraction Application actor document still
+	 * deliver to /actors/-1/inbox; those requests must not 404.
+	 *
+	 * @covers ::create_item
+	 * @covers ::validate_inbox_user_id
+	 */
+	public function test_legacy_application_inbox_delegates_to_shared_inbox() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\add_filter( 'pre_http_request', array( $this, 'mock_remote_404' ) );
+
+		$shared_follows = \did_action( 'activitypub_inbox_shared_follow' );
+
+		$json = array(
+			'id'     => 'https://remote.example/activities/follow-app',
+			'type'   => 'Follow',
+			'actor'  => 'https://remote.example/users/alice',
+			'object' => Application::get_id(),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/-1/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $json ) );
+
+		$response = \rest_do_request( $request );
+
+		$this->assertEquals( 202, $response->get_status(), 'The retired Application inbox should still accept deliveries.' );
+		$this->assertSame( $shared_follows + 1, \did_action( 'activitypub_inbox_shared_follow' ), 'The delivery should be handled by the shared inbox, which rejects Follows aimed at the Application.' );
+
+		\remove_filter( 'pre_http_request', array( $this, 'mock_remote_404' ) );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+	}
+
+	/**
+	 * Short-circuit remote requests with a 404 response.
+	 *
+	 * @return array A mocked 404 response.
+	 */
+	public function mock_remote_404() {
+		return array(
+			'headers'  => array(),
+			'body'     => '',
+			'response' => array(
+				'code'    => 404,
+				'message' => 'Not Found',
+			),
+		);
+	}
+
+	/**
+	 * Test that the legacy Application inbox is write-only.
+	 *
+	 * @covers ::validate_inbox_user_id
+	 */
+	public function test_legacy_application_inbox_is_not_readable() {
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/-1/inbox' );
+		$response = \rest_do_request( $request );
+
+		$this->assertGreaterThanOrEqual( 400, $response->get_status(), 'The retired Application inbox should not be readable.' );
 	}
 
 	/**

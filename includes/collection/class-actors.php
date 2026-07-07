@@ -11,6 +11,7 @@ use Activitypub\Activity\Actor;
 use Activitypub\Application;
 use Activitypub\Model\Blog;
 use Activitypub\Model\User;
+use Activitypub\Signature;
 
 use function Activitypub\is_user_type_disabled;
 use function Activitypub\normalize_host;
@@ -31,6 +32,15 @@ class Actors {
 	 * @var int
 	 */
 	const BLOG_USER_ID = 0;
+
+	/**
+	 * The ID of the former Application user.
+	 *
+	 * @deprecated unreleased The Application is no longer a user-like actor, see {@see \Activitypub\Application}. Retained for backward compatibility and legacy data handling.
+	 *
+	 * @var int
+	 */
+	const APPLICATION_USER_ID = -1;
 
 	/**
 	 * Get the Actor by ID.
@@ -128,10 +138,14 @@ class Actors {
 			return self::BLOG_USER_ID;
 		}
 
-		// The 'application' identifier is reserved for the signing-only Application actor,
-		// which is served only through the dedicated /application endpoint. Never resolve it
-		// to a regular user, even on sites that happen to have a user named "application".
-		if ( Application::USERNAME === $username ) {
+		/*
+		 * The 'application' identifier is reserved for the signing-only Application
+		 * actor, which is served only through the dedicated /application endpoint.
+		 * Never resolve it to a regular user, even on sites that happen to have a
+		 * user named "application". Compare lowercased: the user lookups below are
+		 * case-insensitive, so the reservation has to be too.
+		 */
+		if ( Application::USERNAME === \strtolower( $username ) ) {
 			return new \WP_Error(
 				'activitypub_user_not_found',
 				\__( 'Actor not found', 'activitypub' ),
@@ -285,7 +299,7 @@ class Actors {
 				$host       = normalize_host( \substr( \strrchr( $uri, '@' ), 1 ) );
 				$blog_host  = normalize_host( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) );
 
-				if ( $blog_host !== $host && get_option( 'activitypub_old_host' ) !== $host ) {
+				if ( $blog_host !== $host && normalize_host( get_option( 'activitypub_old_host' ) ) !== $host ) {
 					return new \WP_Error(
 						'activitypub_wrong_host',
 						\__( 'Resource host does not match blog host', 'activitypub' ),
@@ -430,7 +444,7 @@ class Actors {
 	 *
 	 * @param int $user_id The user ID to check.
 	 *
-	 * @return string Actor type: 'user', 'blog', or 'application'.
+	 * @return string Actor type: 'user' or 'blog'.
 	 */
 	public static function get_type_by_id( $user_id ) {
 		$user_id = (int) $user_id;
@@ -513,38 +527,13 @@ class Actors {
 			return $key_pair;
 		}
 
-		$config = array(
-			'digest_alg'       => 'sha512',
-			'private_key_bits' => 2048,
-			'private_key_type' => \OPENSSL_KEYTYPE_RSA,
-		);
+		$key_pair = Signature::generate_key_pair();
 
-		$key         = \openssl_pkey_new( $config );
-		$private_key = null;
-		$detail      = array();
-		if ( $key ) {
-			\openssl_pkey_export( $key, $private_key );
-
-			$detail = \openssl_pkey_get_details( $key );
+		// Only persist valid keys.
+		if ( empty( $key_pair['private_key'] ) ) {
+			return $key_pair;
 		}
 
-		// Check if keys are valid.
-		if (
-			empty( $private_key ) || ! is_string( $private_key ) ||
-			! isset( $detail['key'] ) || ! is_string( $detail['key'] )
-		) {
-			return array(
-				'private_key' => null,
-				'public_key'  => null,
-			);
-		}
-
-		$key_pair = array(
-			'private_key' => $private_key,
-			'public_key'  => $detail['key'],
-		);
-
-		// Persist keys.
 		\add_option( $option_key, $key_pair );
 
 		return $key_pair;

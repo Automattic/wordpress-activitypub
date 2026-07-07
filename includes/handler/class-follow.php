@@ -124,33 +124,6 @@ class Follow {
 	}
 
 	/**
-	 * Send Reject response.
-	 *
-	 * @param array $activity The Activity array.
-	 * @param int   $user_id  The ID of the WordPress User.
-	 */
-	public static function queue_reject( $activity, $user_id ) {
-		// Only send minimal data.
-		$origin_activity = array_intersect_key(
-			$activity,
-			array(
-				'id'     => 1,
-				'type'   => 1,
-				'actor'  => 1,
-				'object' => 1,
-			)
-		);
-
-		$activity = new Activity();
-		$activity->set_type( 'Reject' );
-		$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
-		$activity->set_object( $origin_activity );
-		$activity->set_to( array( $origin_activity['actor'] ) );
-
-		add_to_outbox( $activity, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
-	}
-
-	/**
 	 * Reject Follow requests aimed at the Application actor.
 	 *
 	 * The Application advertises `manuallyApprovesFollowers` but is not followable,

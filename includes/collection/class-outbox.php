@@ -422,9 +422,6 @@ class Outbox {
 			case 'blog':
 				$actor_id = Actors::BLOG_USER_ID;
 				break;
-			case 'application':
-				// Legacy items from when the Application was a full actor (formerly user ID -1); it no longer dispatches activities, so let the Dispatcher retire them instead of misattributing them to the Blog actor (they share `post_author` 0).
-				return new \WP_Error( 'activitypub_application_actor_retired', 'The Application actor no longer dispatches activities.' );
 			case 'user':
 			default:
 				$actor_id = $outbox_item->post_author;

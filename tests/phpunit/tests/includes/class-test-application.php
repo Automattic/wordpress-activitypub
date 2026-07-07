@@ -69,4 +69,44 @@ class Test_Application extends \WP_UnitTestCase {
 	public function test_is_application_resource_rejects( $uri ) {
 		$this->assertFalse( Application::is_application_resource( $uri ), $uri );
 	}
+
+	/**
+	 * Test that the Application resolves at the pre-migration host after a site move.
+	 *
+	 * @covers ::is_application_resource
+	 */
+	public function test_is_application_resource_matches_old_host() {
+		\update_option( 'activitypub_old_host', 'old-domain.example' );
+		$this->assertTrue( Application::is_application_resource( 'acct:application@old-domain.example' ) );
+
+		// A www-prefixed old host is stored raw but must still match after normalization.
+		\update_option( 'activitypub_old_host', 'www.old-domain.example' );
+		$this->assertTrue( Application::is_application_resource( 'acct:application@old-domain.example' ) );
+
+		\delete_option( 'activitypub_old_host' );
+	}
+
+	/**
+	 * Test that an already resolved WebFinger profile is not overwritten.
+	 *
+	 * @covers ::add_webfinger_discovery
+	 */
+	public function test_add_webfinger_discovery_respects_resolved_profiles() {
+		$jrd = array( 'subject' => 'acct:blog@' . home_host() );
+
+		$this->assertSame( $jrd, Application::add_webfinger_discovery( $jrd, 'acct:application@' . home_host() ) );
+	}
+
+	/**
+	 * Test that unresolved lookups get the Application profile.
+	 *
+	 * @covers ::add_webfinger_discovery
+	 */
+	public function test_add_webfinger_discovery_resolves_application() {
+		$error = new \WP_Error( 'activitypub_user_not_found', 'Actor not found' );
+		$data  = Application::add_webfinger_discovery( $error, 'acct:application@' . home_host() );
+
+		$this->assertIsArray( $data );
+		$this->assertSame( 'acct:' . Application::get_webfinger(), $data['subject'] );
+	}
 }
