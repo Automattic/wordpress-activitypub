@@ -207,7 +207,13 @@ class Actors_Inbox_Controller extends Actors_Controller {
 				continue;
 			}
 
-			$response['orderedItems'][] = $this->prepare_item_for_response( $inbox_item, $request );
+			$item = $this->prepare_item_for_response( $inbox_item, $request );
+
+			if ( \is_wp_error( $item ) ) {
+				continue;
+			}
+
+			$response['orderedItems'][] = $item;
 		}
 
 		$response = $this->prepare_collection_response( $response, $request );
@@ -249,12 +255,16 @@ class Actors_Inbox_Controller extends Actors_Controller {
 	 *
 	 * @param mixed            $item    WordPress representation of the item.
 	 * @param \WP_REST_Request $request Request object.
-	 * @return array Response object on success.
+	 * @return array|\WP_Error Response object on success, or WP_Error object on failure.
 	 */
 	public function prepare_item_for_response( $item, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		$activity = \json_decode( $item->post_content, true );
+		$activity = Inbox::get_activity( $item->ID );
 
-		return $activity;
+		if ( \is_wp_error( $activity ) ) {
+			return $activity;
+		}
+
+		return $activity->to_array( false );
 	}
 
 	/**

@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Activities read from the inbox and outbox C2S endpoints now use the local record date as a fallback when no publish date is set, so client apps show consistent timestamps.

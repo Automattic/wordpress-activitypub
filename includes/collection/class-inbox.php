@@ -226,6 +226,60 @@ class Inbox {
 	}
 
 	/**
+	 * Reconstruct the Activity stored in an inbox item.
+	 *
+	 * Hydrates the JSON from `post_content` into an Activity object and, when
+	 * the activity is missing `published`/`updated`, falls back to the inbox
+	 * row's `post_date_gmt`/`post_modified_gmt`. The CPT timestamps record when
+	 * we received the activity, which is the natural fallback when the remote
+	 * sender omitted those fields.
+	 *
+	 * @param int|\WP_Post $inbox_item The inbox post or post ID.
+	 *
+	 * @return Activity|\WP_Error The Activity object or WP_Error.
+	 */
+	public static function get_activity( $inbox_item ) {
+		$inbox_item = \get_post( $inbox_item );
+
+		if ( ! $inbox_item || self::POST_TYPE !== $inbox_item->post_type ) {
+			return new \WP_Error(
+				'activitypub_inbox_item_not_found',
+				\__( 'Inbox item not found.', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		$data = \json_decode( $inbox_item->post_content, true );
+
+		if ( ! \is_array( $data ) ) {
+			return new \WP_Error(
+				'activitypub_inbox_item_invalid',
+				\__( 'Inbox item is not a valid activity.', 'activitypub' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		$activity = Activity::init_from_array( $data );
+
+		if ( \is_wp_error( $activity ) ) {
+			return $activity;
+		}
+
+		$post_date_gmt     = empty( $inbox_item->post_date_gmt ) || '0000-00-00 00:00:00' === $inbox_item->post_date_gmt ? '' : $inbox_item->post_date_gmt;
+		$post_modified_gmt = empty( $inbox_item->post_modified_gmt ) || '0000-00-00 00:00:00' === $inbox_item->post_modified_gmt ? '' : $inbox_item->post_modified_gmt;
+
+		if ( ! $activity->get_published() && $post_date_gmt ) {
+			$activity->set_published( \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \strtotime( $post_date_gmt ) ) );
+		}
+
+		if ( ! $activity->get_updated() && $post_modified_gmt && $post_modified_gmt > $post_date_gmt ) {
+			$activity->set_updated( \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \strtotime( $post_modified_gmt ) ) );
+		}
+
+		return $activity;
+	}
+
+	/**
 	 * Undo a received activity.
 	 *
 	 * @param string      $id    The ID of the inbox item to be removed.

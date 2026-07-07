@@ -1283,4 +1283,119 @@ class Test_Inbox extends \WP_UnitTestCase {
 		// Should return exact count of deleted posts.
 		$this->assertEquals( 15, $deleted );
 	}
+
+	/**
+	 * Helper: build a Create activity and store it in the inbox.
+	 *
+	 * @return int Inbox post ID.
+	 */
+	private function add_test_activity_to_inbox() {
+		$object = new Base_Object();
+		$object->set_id( 'https://remote.example.com/objects/' . \wp_generate_uuid4() );
+		$object->set_type( 'Note' );
+		$object->set_content( 'fallback-published-test' );
+
+		$activity = new Activity();
+		$activity->set_id( 'https://remote.example.com/activities/' . \wp_generate_uuid4() );
+		$activity->set_type( 'Create' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+		$activity->set_object( $object );
+
+		$id = Inbox::add( $activity, 1 );
+		$this->assertIsInt( $id );
+
+		return $id;
+	}
+
+	/**
+	 * `Inbox::get_activity` fills `published` from `post_date_gmt` when the stored JSON has none.
+	 *
+	 * @covers ::get_activity
+	 */
+	public function test_get_activity_fills_missing_published_from_post_date_gmt() {
+		$id = $this->add_test_activity_to_inbox();
+
+		$post = \get_post( $id );
+		$raw  = \json_decode( $post->post_content, true );
+		unset( $raw['published'] );
+		\wp_update_post(
+			array(
+				'ID'           => $id,
+				'post_content' => \wp_slash( \wp_json_encode( $raw ) ),
+			)
+		);
+
+		$activity = Inbox::get_activity( $id );
+		$this->assertInstanceOf( Activity::class, $activity );
+
+		$post     = \get_post( $id );
+		$expected = \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_date_gmt ) );
+		$this->assertEquals( $expected, $activity->get_published() );
+	}
+
+	/**
+	 * `Inbox::get_activity` preserves a `published` value that was present in the stored JSON.
+	 *
+	 * @covers ::get_activity
+	 */
+	public function test_get_activity_preserves_existing_published() {
+		$id = $this->add_test_activity_to_inbox();
+
+		$frozen           = '2019-06-07T08:09:10Z';
+		$post             = \get_post( $id );
+		$raw              = \json_decode( $post->post_content, true );
+		$raw['published'] = $frozen;
+		\wp_update_post(
+			array(
+				'ID'           => $id,
+				'post_content' => \wp_slash( \wp_json_encode( $raw ) ),
+			)
+		);
+
+		$activity = Inbox::get_activity( $id );
+		$this->assertEquals( $frozen, $activity->get_published() );
+	}
+
+	/**
+	 * Invalid post ID returns WP_Error.
+	 *
+	 * @covers ::get_activity
+	 */
+	public function test_get_activity_invalid_post_id_returns_error() {
+		$result = Inbox::get_activity( 999999999 );
+		$this->assertInstanceOf( \WP_Error::class, $result );
+		$this->assertEquals( 'activitypub_inbox_item_not_found', $result->get_error_code() );
+	}
+
+	/**
+	 * A non-inbox post (wrong post_type) returns WP_Error.
+	 *
+	 * @covers ::get_activity
+	 */
+	public function test_get_activity_wrong_post_type_returns_error() {
+		$regular_post_id = self::factory()->post->create();
+		$result          = Inbox::get_activity( $regular_post_id );
+		$this->assertInstanceOf( \WP_Error::class, $result );
+		$this->assertEquals( 'activitypub_inbox_item_not_found', $result->get_error_code() );
+	}
+
+	/**
+	 * Corrupt post_content returns WP_Error.
+	 *
+	 * @covers ::get_activity
+	 */
+	public function test_get_activity_corrupt_json_returns_error() {
+		$id = $this->add_test_activity_to_inbox();
+
+		\wp_update_post(
+			array(
+				'ID'           => $id,
+				'post_content' => '{not valid json',
+			)
+		);
+
+		$result = Inbox::get_activity( $id );
+		$this->assertInstanceOf( \WP_Error::class, $result );
+		$this->assertEquals( 'activitypub_inbox_item_invalid', $result->get_error_code() );
+	}
 }
