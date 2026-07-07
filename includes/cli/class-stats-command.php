@@ -147,7 +147,7 @@ class Stats_Command extends \WP_CLI_Command {
 			Statistics::compile_annual_summary( $uid, $year );
 		}
 
-		$count = count( $user_ids );
+		$count = \count( $user_ids );
 		\WP_CLI::success( "Annual stats compiled for {$count} user(s) ({$year})." );
 	}
 

@@ -63,7 +63,7 @@ class Server {
 
 		if (
 			ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS &&
-			in_array( $params['type'], array( 'Create', 'Like', 'Announce' ), true )
+			\in_array( $params['type'], array( 'Create', 'Like', 'Announce' ), true )
 		) {
 			return new \WP_Error(
 				'activitypub_server_does_not_accept_incoming_interactions',

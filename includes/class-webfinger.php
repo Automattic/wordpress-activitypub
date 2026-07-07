@@ -52,7 +52,7 @@ class Webfinger {
 	 */
 	public static function get_user_resource( $user_id ) {
 		$user = Actors::get_by_id( $user_id );
-		if ( ! $user || is_wp_error( $user ) ) {
+		if ( ! $user || \is_wp_error( $user ) ) {
 			return '';
 		}
 
@@ -73,10 +73,10 @@ class Webfinger {
 			return $data;
 		}
 
-		if ( ! is_array( $data ) || empty( $data['links'] ) ) {
+		if ( ! \is_array( $data ) || empty( $data['links'] ) ) {
 			return new \WP_Error(
 				'webfinger_missing_links',
-				__( 'No valid Link elements found.', 'activitypub' ),
+				\__( 'No valid Link elements found.', 'activitypub' ),
 				array(
 					'status' => 400,
 					'data'   => $data,
@@ -99,7 +99,7 @@ class Webfinger {
 
 		return new \WP_Error(
 			'webfinger_url_no_activitypub',
-			__( 'The Site supports WebFinger but not ActivityPub', 'activitypub' ),
+			\__( 'The Site supports WebFinger but not ActivityPub', 'activitypub' ),
 			array(
 				'status' => 400,
 				'data'   => $data,
@@ -119,7 +119,7 @@ class Webfinger {
 	public static function uri_to_acct( $uri ) {
 		$data = self::get_data( $uri );
 
-		if ( is_wp_error( $data ) ) {
+		if ( \is_wp_error( $data ) ) {
 			return $data;
 		}
 
@@ -142,7 +142,7 @@ class Webfinger {
 
 		return new \WP_Error(
 			'webfinger_url_no_acct',
-			__( 'No acct URI found.', 'activitypub' ),
+			\__( 'No acct URI found.', 'activitypub' ),
 			array(
 				'status' => 400,
 				'data'   => $data,
@@ -162,7 +162,7 @@ class Webfinger {
 		if ( ! $url ) {
 			return new \WP_Error(
 				'webfinger_invalid_identifier',
-				__( 'Invalid Identifier', 'activitypub' ),
+				\__( 'Invalid Identifier', 'activitypub' ),
 				array(
 					'status' => 400,
 					'data'   => $url,
@@ -171,9 +171,9 @@ class Webfinger {
 		}
 
 		// Remove leading @.
-		$url = ltrim( $url, '@' );
+		$url = \ltrim( $url, '@' );
 
-		if ( ! preg_match( '/^([a-zA-Z+]+):/', $url, $match ) ) {
+		if ( ! \preg_match( '/^([a-zA-Z+]+):/', $url, $match ) ) {
 			$identifier = 'acct:' . $url;
 			$scheme     = 'acct';
 		} else {
@@ -187,19 +187,19 @@ class Webfinger {
 			case 'acct':
 			case 'mailto':
 			case 'xmpp':
-				if ( strpos( $identifier, '@' ) !== false ) {
-					$host = substr( $identifier, strpos( $identifier, '@' ) + 1 );
+				if ( \strpos( $identifier, '@' ) !== false ) {
+					$host = \substr( $identifier, \strpos( $identifier, '@' ) + 1 );
 				}
 				break;
 			default:
-				$host = wp_parse_url( $identifier, PHP_URL_HOST );
+				$host = \wp_parse_url( $identifier, PHP_URL_HOST );
 				break;
 		}
 
 		if ( empty( $host ) ) {
 			return new \WP_Error(
 				'webfinger_invalid_identifier',
-				__( 'Invalid Identifier', 'activitypub' ),
+				\__( 'Invalid Identifier', 'activitypub' ),
 				array(
 					'status' => 400,
 					'data'   => $url,
@@ -220,13 +220,13 @@ class Webfinger {
 	public static function get_data( $uri ) {
 		$identifier_and_host = self::get_identifier_and_host( $uri );
 
-		if ( is_wp_error( $identifier_and_host ) ) {
+		if ( \is_wp_error( $identifier_and_host ) ) {
 			return $identifier_and_host;
 		}
 
 		list( $identifier, $host ) = $identifier_and_host;
 
-		$webfinger_url = sprintf(
+		$webfinger_url = \sprintf(
 			'https://%s/.well-known/webfinger?resource=%s',
 			$host,
 			\rawurlencode( $identifier )
@@ -267,13 +267,13 @@ class Webfinger {
 	 * @return string The cache key.
 	 */
 	public static function generate_cache_key( $uri ) {
-		$uri = ltrim( $uri, '@' );
+		$uri = \ltrim( $uri, '@' );
 
-		if ( filter_var( $uri, FILTER_VALIDATE_EMAIL ) ) {
+		if ( \filter_var( $uri, FILTER_VALIDATE_EMAIL ) ) {
 			$uri = 'acct:' . $uri;
 		}
 
-		return 'webfinger_' . md5( $uri );
+		return 'webfinger_' . \md5( $uri );
 	}
 
 	/**

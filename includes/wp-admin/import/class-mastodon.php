@@ -109,7 +109,7 @@ class Mastodon {
 			return false;
 		}
 
-		$file_info = \wp_check_filetype( sanitize_file_name( $_FILES['import']['name'] ), array( 'zip' => 'application/zip' ) );
+		$file_info = \wp_check_filetype( \sanitize_file_name( $_FILES['import']['name'] ), array( 'zip' => 'application/zip' ) );
 		if ( 'application/zip' !== $file_info['type'] ) {
 			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
 			\esc_html_e( 'The uploaded file must be a ZIP archive. Please try again with the correct file format.', 'activitypub' );
@@ -122,7 +122,7 @@ class Mastodon {
 			'test_type' => false,
 		);
 
-		$upload = wp_handle_upload( $_FILES['import'], $overrides );
+		$upload = \wp_handle_upload( $_FILES['import'], $overrides );
 
 		if ( isset( $upload['error'] ) ) {
 			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';
@@ -132,7 +132,7 @@ class Mastodon {
 
 		// Construct the attachment array.
 		$attachment = array(
-			'post_title'     => wp_basename( $upload['file'] ),
+			'post_title'     => \wp_basename( $upload['file'] ),
 			'post_content'   => $upload['url'],
 			'post_mime_type' => $upload['type'],
 			'guid'           => $upload['url'],
@@ -141,10 +141,10 @@ class Mastodon {
 		);
 
 		// Save the data.
-		self::$import_id = wp_insert_attachment( $attachment, $upload['file'] );
+		self::$import_id = \wp_insert_attachment( $attachment, $upload['file'] );
 
 		// Schedule a cleanup for one day from now in case of failed import or missing wp_import_cleanup() call.
-		wp_schedule_single_event( time() + DAY_IN_SECONDS, 'importer_scheduled_cleanup', array( self::$import_id ) );
+		\wp_schedule_single_event( \time() + DAY_IN_SECONDS, 'importer_scheduled_cleanup', array( self::$import_id ) );
 
 		return true;
 	}
@@ -177,7 +177,7 @@ class Mastodon {
 		?>
 		<form action="<?php echo \esc_url( \admin_url( 'admin.php?import=mastodon&amp;step=2' ) ); ?>" method="post">
 			<?php \wp_nonce_field( 'import-mastodon' ); ?>
-			<input type="hidden" name="import_id" value="<?php echo esc_attr( self::$import_id ); ?>" />
+			<input type="hidden" name="import_id" value="<?php echo \esc_attr( self::$import_id ); ?>" />
 			<h3><?php \esc_html_e( 'Assign Author', 'activitypub' ); ?></h3>
 			<p>
 				<label for="author"><?php \esc_html_e( 'Author:', 'activitypub' ); ?></label>
@@ -595,7 +595,7 @@ class Mastodon {
 	 * @return array The attachment array with updated URL.
 	 */
 	private static function prepend_archive_path( $attachment ) {
-		if ( ! empty( $attachment['url'] ) && ! preg_match( '#^https?://#i', $attachment['url'] ) ) {
+		if ( ! empty( $attachment['url'] ) && ! \preg_match( '#^https?://#i', $attachment['url'] ) ) {
 			$attachment['url'] = self::$archive . $attachment['url'];
 		}
 
@@ -614,11 +614,11 @@ class Mastodon {
 		$files = $wp_filesystem->dirlist( self::$archive );
 
 		// Check if there's exactly one directory at root level.
-		if ( count( $files ) !== 1 ) {
+		if ( \count( $files ) !== 1 ) {
 			return;
 		}
 
-		$first = reset( $files );
+		$first = \reset( $files );
 		if ( 'd' !== $first['type'] ) {
 			return;
 		}

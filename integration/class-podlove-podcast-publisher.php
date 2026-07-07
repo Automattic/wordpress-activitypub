@@ -101,7 +101,7 @@ class Podlove_Podcast_Publisher extends Post {
 			}
 
 			// Only include audio and video files.
-			if ( ! in_array( $file_type->type, array( 'audio', 'video' ), true ) ) {
+			if ( ! \in_array( $file_type->type, array( 'audio', 'video' ), true ) ) {
 				continue;
 			}
 
@@ -113,7 +113,7 @@ class Podlove_Podcast_Publisher extends Post {
 			}
 
 			$attachment = array(
-				'type'      => \esc_attr( ucfirst( $file_type->type ) ),
+				'type'      => \esc_attr( \ucfirst( $file_type->type ) ),
 				'url'       => \esc_url( $file_url ),
 				'mediaType' => \esc_attr( $file_type->mime_type ),
 				'name'      => \esc_attr( $episode->title() ?? '' ),
@@ -121,7 +121,7 @@ class Podlove_Podcast_Publisher extends Post {
 
 			// Add duration if available (in ISO 8601 format).
 			$duration = $episode->get_duration( 'seconds' );
-			if ( $duration && is_numeric( $duration ) && (int) $duration > 0 ) {
+			if ( $duration && \is_numeric( $duration ) && (int) $duration > 0 ) {
 				$attachment['duration'] = seconds_to_iso8601( (int) $duration );
 			}
 
@@ -161,7 +161,7 @@ class Podlove_Podcast_Publisher extends Post {
 
 		$image = $episode->cover_art_with_fallback();
 
-		if ( $image && method_exists( $image, 'url' ) ) {
+		if ( $image && \method_exists( $image, 'url' ) ) {
 			return $image->url();
 		}
 
@@ -189,7 +189,7 @@ class Podlove_Podcast_Publisher extends Post {
 		$duration_seconds = $episode->get_duration( 'seconds' );
 
 		// Ensure we have a valid numeric duration.
-		if ( ! $duration_seconds || ! is_numeric( $duration_seconds ) ) {
+		if ( ! $duration_seconds || ! \is_numeric( $duration_seconds ) ) {
 			return null;
 		}
 

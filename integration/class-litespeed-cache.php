@@ -181,11 +181,11 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 		$htaccess = $wp_filesystem->get_contents( $htaccess_file );
 
 		// If marker exists, remove the old block first.
-		if ( strpos( $htaccess, $marker ) !== false ) {
+		if ( \strpos( $htaccess, $marker ) !== false ) {
 			// Remove existing marker block.
-			$pattern  = '/# BEGIN ' . preg_quote( $marker, '/' ) . '.*?# END ' . preg_quote( $marker, '/' ) . '\r?\n?/s';
-			$htaccess = preg_replace( $pattern, '', $htaccess );
-			$htaccess = trim( $htaccess );
+			$pattern  = '/# BEGIN ' . \preg_quote( $marker, '/' ) . '.*?# END ' . \preg_quote( $marker, '/' ) . '\r?\n?/s';
+			$htaccess = \preg_replace( $pattern, '', $htaccess );
+			$htaccess = \trim( $htaccess );
 		}
 
 		// If rules are empty, just return (for removal case).
@@ -215,7 +215,7 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 
 		// phpcs:ignore WordPress.PHP.NoSilencedErrors
-		if ( @file_exists( \get_home_path() . '.htaccess' ) ) {
+		if ( @\file_exists( \get_home_path() . '.htaccess' ) ) {
 			/** The htaccess file resides in ABSPATH */
 			$htaccess_file = \get_home_path() . '.htaccess';
 		}

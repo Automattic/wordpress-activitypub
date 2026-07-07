@@ -31,7 +31,7 @@ class Server {
 
 		// Schedule cleanup cron.
 		if ( ! \wp_next_scheduled( 'activitypub_oauth_cleanup' ) ) {
-			\wp_schedule_event( time(), 'daily', 'activitypub_oauth_cleanup' );
+			\wp_schedule_event( \time(), 'daily', 'activitypub_oauth_cleanup' );
 		}
 		\add_action( 'activitypub_oauth_cleanup', array( self::class, 'cleanup' ) );
 	}
@@ -113,11 +113,11 @@ class Server {
 		}
 
 		// Check for Bearer token.
-		if ( 0 !== strpos( $auth_header, 'Bearer ' ) ) {
+		if ( 0 !== \strpos( $auth_header, 'Bearer ' ) ) {
 			return null;
 		}
 
-		return substr( $auth_header, 7 );
+		return \substr( $auth_header, 7 );
 	}
 
 	/**
@@ -142,14 +142,14 @@ class Server {
 		// phpcs:enable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
 		// Fallback: read from Apache's own header API (case-insensitive).
-		if ( ! function_exists( 'apache_request_headers' ) ) {
+		if ( ! \function_exists( 'apache_request_headers' ) ) {
 			return null;
 		}
 
-		$headers = apache_request_headers();
+		$headers = \apache_request_headers();
 
 		foreach ( $headers as $key => $value ) {
-			if ( 'authorization' === strtolower( $key ) ) {
+			if ( 'authorization' === \strtolower( $key ) ) {
 				return $value;
 			}
 		}
@@ -214,7 +214,7 @@ class Server {
 			return new \WP_Error(
 				'activitypub_insufficient_scope',
 				/* translators: %s: The required scope */
-				sprintf( \__( 'This action requires the "%s" scope.', 'activitypub' ), $scope ),
+				\sprintf( \__( 'This action requires the "%s" scope.', 'activitypub' ), $scope ),
 				array( 'status' => 403 )
 			);
 		}
@@ -337,7 +337,7 @@ class Server {
 		// Build form action URL.
 		// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$form_url = \add_query_arg(
-			array_merge( array( 'action' => 'activitypub_authorize' ), $authorize_params ),
+			\array_merge( array( 'action' => 'activitypub_authorize' ), $authorize_params ),
 			\wp_login_url()
 		);
 
@@ -448,7 +448,7 @@ class Server {
 		$url = Sanitize::redirect_uri( \add_query_arg( $params, $redirect_uri ) );
 
 		\nocache_headers();
-		header( 'Location: ' . $url, true, 303 );
+		\header( 'Location: ' . $url, true, 303 );
 		exit;
 	}
 }

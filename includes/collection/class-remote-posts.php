@@ -540,7 +540,7 @@ class Remote_Posts {
 			\wp_delete_post( $post_id, true );
 		}
 
-		return count( $post_ids );
+		return \count( $post_ids );
 	}
 
 	/**
