@@ -223,19 +223,42 @@ function is_user_type_disabled( $type ) {
 }
 
 /**
+ * Get the actor types that are visible (enabled) on this site.
+ *
+ * This is the single seam for "which actor types does this site expose":
+ * it folds the actor-mode option and the legacy override constants into a
+ * plain list, so callers do not need to re-derive mode semantics.
+ *
+ * @since unreleased
+ *
+ * @return string[] Subset of array( 'user', 'blog' ).
+ */
+function get_visible_actor_types() {
+	$types = array();
+
+	foreach ( array( 'user', 'blog' ) as $type ) {
+		if ( ! is_user_type_disabled( $type ) ) {
+			$types[] = $type;
+		}
+	}
+
+	/**
+	 * Filters the actor types that are visible on this site.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string[] $types Visible actor types, subset of array( 'user', 'blog' ).
+	 */
+	return \apply_filters( 'activitypub_visible_actor_types', $types );
+}
+
+/**
  * Check if the blog is in single-user mode.
  *
  * @return boolean True if the blog is in single-user mode, false otherwise.
  */
 function is_single_user() {
-	if (
-		false === is_user_type_disabled( 'blog' ) &&
-		true === is_user_type_disabled( 'user' )
-	) {
-		return true;
-	}
-
-	return false;
+	return array( 'blog' ) === get_visible_actor_types();
 }
 
 /**

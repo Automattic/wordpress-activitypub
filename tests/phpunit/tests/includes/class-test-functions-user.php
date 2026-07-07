@@ -181,4 +181,119 @@ class Test_Functions_User extends \WP_UnitTestCase {
 			$cleanup();
 		}
 	}
+
+	/**
+	 * The visible actor types follow the actor mode.
+	 *
+	 * @covers \Activitypub\get_visible_actor_types
+	 *
+	 * @dataProvider actor_mode_provider
+	 *
+	 * @param string   $mode     The actor mode option value.
+	 * @param string[] $expected The expected visible actor types.
+	 */
+	public function test_get_visible_actor_types( $mode, $expected ) {
+		\update_option( 'activitypub_actor_mode', $mode );
+
+		$this->assertSame( $expected, \Activitypub\get_visible_actor_types() );
+
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * Data provider mapping actor modes to visible types.
+	 *
+	 * @return array[]
+	 */
+	public function actor_mode_provider() {
+		return array(
+			'actor and blog mode' => array( ACTIVITYPUB_ACTOR_AND_BLOG_MODE, array( 'user', 'blog' ) ),
+			'actor mode'          => array( ACTIVITYPUB_ACTOR_MODE, array( 'user' ) ),
+			'blog mode'           => array( ACTIVITYPUB_BLOG_MODE, array( 'blog' ) ),
+		);
+	}
+
+	/**
+	 * The accessor agrees with is_user_type_disabled() in every mode, including
+	 * when the legacy per-type filter changes the answer.
+	 *
+	 * @covers \Activitypub\get_visible_actor_types
+	 *
+	 * @dataProvider actor_mode_provider
+	 *
+	 * @param string $mode The actor mode option value.
+	 */
+	public function test_get_visible_actor_types_parity( $mode ) {
+		\update_option( 'activitypub_actor_mode', $mode );
+
+		foreach ( array( 'user', 'blog' ) as $type ) {
+			$this->assertSame(
+				! \Activitypub\is_user_type_disabled( $type ),
+				\in_array( $type, \Activitypub\get_visible_actor_types(), true ),
+				"Accessor and is_user_type_disabled() must agree on '{$type}' in mode '{$mode}'."
+			);
+		}
+
+		// The legacy per-type filter is reflected by the accessor.
+		$disable_blog = function ( $disabled, $type ) {
+			return 'blog' === $type ? true : $disabled;
+		};
+		\add_filter( 'activitypub_is_user_type_disabled', $disable_blog, 10, 2 );
+
+		$this->assertNotContains( 'blog', \Activitypub\get_visible_actor_types(), 'A type disabled via the legacy filter must not be visible.' );
+
+		\remove_filter( 'activitypub_is_user_type_disabled', $disable_blog );
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * The single-user check is true only in blog mode.
+	 *
+	 * @covers \Activitypub\is_single_user
+	 *
+	 * @dataProvider single_user_provider
+	 *
+	 * @param string $mode     The actor mode option value.
+	 * @param bool   $expected Whether the site is in single-user (blog-only) mode.
+	 */
+	public function test_is_single_user( $mode, $expected ) {
+		\update_option( 'activitypub_actor_mode', $mode );
+
+		$this->assertSame( $expected, \Activitypub\is_single_user() );
+
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * Data provider mapping actor modes to single-user expectation.
+	 *
+	 * @return array[]
+	 */
+	public function single_user_provider() {
+		return array(
+			'actor and blog mode' => array( ACTIVITYPUB_ACTOR_AND_BLOG_MODE, false ),
+			'actor mode'          => array( ACTIVITYPUB_ACTOR_MODE, false ),
+			'blog mode'           => array( ACTIVITYPUB_BLOG_MODE, true ),
+		);
+	}
+
+	/**
+	 * The visible types can be filtered.
+	 *
+	 * @covers \Activitypub\get_visible_actor_types
+	 */
+	public function test_get_visible_actor_types_filter() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		$add_blog = function ( $types ) {
+			$types[] = 'blog';
+			return $types;
+		};
+		\add_filter( 'activitypub_visible_actor_types', $add_blog );
+
+		$this->assertSame( array( 'user', 'blog' ), \Activitypub\get_visible_actor_types() );
+
+		\remove_filter( 'activitypub_visible_actor_types', $add_blog );
+		\delete_option( 'activitypub_actor_mode' );
+	}
 }
