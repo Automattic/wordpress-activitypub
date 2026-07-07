@@ -29,34 +29,20 @@ use Activitypub\Signature\Http_Message_Signature;
 class Client {
 
 	/**
-	 * Transient prefix for cached provider info.
+	 * Fetch and verify the provider info of a FASP.
 	 *
-	 * @var string
-	 */
-	const PROVIDER_INFO_TRANSIENT = 'activitypub_fasp_provider_info_';
-
-	/**
-	 * Fetch the provider info of a FASP.
-	 *
-	 * Called after a registration has been approved, to display the
-	 * capabilities the provider supports.
+	 * This makes a blocking signed request, so callers must run it in a
+	 * request context that can afford to wait (e.g. the approve and refresh
+	 * admin-post handlers), never during a page render. The result is
+	 * persisted into the registration record by the caller so render paths
+	 * can read it without fetching.
 	 *
 	 * @see https://github.com/mastodon/fediverse_auxiliary_service_provider_specifications/blob/main/general/v0.1/provider_info.md
 	 *
-	 * @param array $registration  The registration record.
-	 * @param bool  $force_refresh Optional. Bypass the cached copy. Default false.
+	 * @param array $registration The registration record.
 	 * @return array|\WP_Error The decoded provider info, or WP_Error on failure.
 	 */
-	public static function get_provider_info( $registration, $force_refresh = false ) {
-		$transient = self::PROVIDER_INFO_TRANSIENT . $registration['fasp_id'];
-
-		if ( ! $force_refresh ) {
-			$cached = \get_transient( $transient );
-			if ( false !== $cached ) {
-				return $cached;
-			}
-		}
-
+	public static function fetch_provider_info( $registration ) {
 		$response = self::request( $registration, 'GET', '/provider_info' );
 		if ( \is_wp_error( $response ) ) {
 			return $response;
@@ -76,8 +62,6 @@ class Client {
 				\__( 'The auxiliary service returned invalid provider information.', 'activitypub' )
 			);
 		}
-
-		\set_transient( $transient, $provider_info, HOUR_IN_SECONDS );
 
 		return $provider_info;
 	}

@@ -20,27 +20,7 @@ use Activitypub\Signature\Http_Message_Signature;
  *
  * @coversDefaultClass \Activitypub\Rest\Fasp_Controller
  */
-class Test_Fasp extends \WP_UnitTestCase {
-
-	/**
-	 * The FASP-side Ed25519 keypair used in tests.
-	 *
-	 * @var array
-	 */
-	private static $fasp_keys;
-
-	/**
-	 * Set up test resources.
-	 */
-	public static function set_up_before_class() {
-		parent::set_up_before_class();
-
-		$keypair         = \sodium_crypto_sign_keypair();
-		self::$fasp_keys = array(
-			'public'  => \sodium_crypto_sign_publickey( $keypair ),
-			'private' => \sodium_crypto_sign_secretkey( $keypair ),
-		);
-	}
+class Test_Fasp extends Fasp_TestCase {
 
 	/**
 	 * Set up the test.
@@ -58,10 +38,6 @@ class Test_Fasp extends \WP_UnitTestCase {
 	 * Tear down the test.
 	 */
 	public function tear_down() {
-		\delete_option( 'activitypub_enable_fasp' );
-		\delete_option( Registrations::OPTION_REGISTRATIONS );
-		\delete_option( Registrations::OPTION_CAPABILITIES );
-
 		global $wp_rest_server;
 		$wp_rest_server = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 
@@ -80,7 +56,7 @@ class Test_Fasp extends \WP_UnitTestCase {
 				'name'      => 'Test FASP',
 				'baseUrl'   => 'https://fasp.example.com',
 				'serverId'  => 'test-server-id',
-				'publicKey' => \base64_encode( self::$fasp_keys['public'] ),
+				'publicKey' => $this->fasp_public_key_base64(),
 			),
 			$overrides
 		);
@@ -90,61 +66,6 @@ class Test_Fasp extends \WP_UnitTestCase {
 		$request->set_body( \wp_json_encode( $params ) );
 
 		return $request;
-	}
-
-	/**
-	 * Create an approved registration directly in the store.
-	 *
-	 * @param array $overrides Field overrides.
-	 * @return array The registration record.
-	 */
-	private function create_approved_registration( $overrides = array() ) {
-		$registration = Registrations::create(
-			\array_merge(
-				array(
-					'name'            => 'Test FASP',
-					'base_url'        => 'https://fasp.example.com',
-					'server_id'       => 'test-server-id',
-					'fasp_public_key' => \base64_encode( self::$fasp_keys['public'] ),
-				),
-				$overrides
-			)
-		);
-
-		Registrations::approve( $registration['fasp_id'], 0 );
-
-		return Registrations::get( $registration['fasp_id'] );
-	}
-
-	/**
-	 * Build a signed FASP response for `pre_http_request` mocks.
-	 *
-	 * @param int    $status The response status.
-	 * @param string $body   The response body.
-	 * @return array The HTTP response array.
-	 */
-	private function build_signed_fasp_response( $status, $body ) {
-		$signature_helper = new Http_Message_Signature();
-		$digest           = $signature_helper->generate_digest( $body );
-
-		$response = new \WP_REST_Response( null, $status );
-		$response->header( 'Content-Digest', $digest );
-		$signature_helper->sign_response_ed25519( $response, self::$fasp_keys['private'], 'fasp-id' );
-
-		$headers = $response->get_headers();
-
-		return array(
-			'headers'  => array(
-				'content-digest'  => $digest,
-				'signature-input' => $headers['Signature-Input'],
-				'signature'       => $headers['Signature'],
-			),
-			'body'     => $body,
-			'response' => array(
-				'code'    => $status,
-				'message' => '',
-			),
-		);
 	}
 
 	/**
@@ -286,7 +207,7 @@ class Test_Fasp extends \WP_UnitTestCase {
 				'name'            => 'Lifecycle FASP',
 				'base_url'        => 'https://fasp.example.com',
 				'server_id'       => 'lifecycle-server-id',
-				'fasp_public_key' => \base64_encode( self::$fasp_keys['public'] ),
+				'fasp_public_key' => $this->fasp_public_key_base64(),
 			)
 		);
 
@@ -342,7 +263,7 @@ class Test_Fasp extends \WP_UnitTestCase {
 	 * @covers \Activitypub\Fasp\Registrations::get_public_key_fingerprint
 	 */
 	public function test_public_key_fingerprint() {
-		$public_key  = \base64_encode( self::$fasp_keys['public'] );
+		$public_key  = $this->fasp_public_key_base64();
 		$fingerprint = Registrations::get_public_key_fingerprint( $public_key );
 
 		// The fingerprint is the base64 encoded SHA-256 hash of the raw key.
@@ -350,12 +271,12 @@ class Test_Fasp extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * The client fetches, verifies and caches provider info.
+	 * The client fetches and verifies provider info on every call.
 	 *
-	 * @covers \Activitypub\Fasp\Client::get_provider_info
+	 * @covers \Activitypub\Fasp\Client::fetch_provider_info
 	 */
-	public function test_client_get_provider_info() {
-		$registration  = $this->create_approved_registration();
+	public function test_client_fetch_provider_info() {
+		$registration  = $this->create_fasp_registration();
 		$provider_info = array(
 			'name'          => 'Test FASP',
 			'privacyPolicy' => array(),
@@ -382,29 +303,24 @@ class Test_Fasp extends \WP_UnitTestCase {
 		};
 		\add_filter( 'pre_http_request', $mock, 10, 3 );
 
-		$result = Client::get_provider_info( $registration );
+		$result = Client::fetch_provider_info( $registration );
 		$this->assertSame( $provider_info, $result );
 		$this->assertSame( 1, $http_calls );
 
-		// A second call is served from the cache.
-		Client::get_provider_info( $registration );
-		$this->assertSame( 1, $http_calls );
-
-		// A forced refresh bypasses the cache.
-		Client::get_provider_info( $registration, true );
+		// Each call fetches fresh; there is no request-level cache to serve a stale copy.
+		Client::fetch_provider_info( $registration );
 		$this->assertSame( 2, $http_calls );
 
 		\remove_filter( 'pre_http_request', $mock );
-		\delete_transient( Client::PROVIDER_INFO_TRANSIENT . $registration['fasp_id'] );
 	}
 
 	/**
 	 * The client rejects unsigned and tampered provider responses.
 	 *
-	 * @covers \Activitypub\Fasp\Client::get_provider_info
+	 * @covers \Activitypub\Fasp\Client::fetch_provider_info
 	 */
 	public function test_client_rejects_invalid_responses() {
-		$registration = $this->create_approved_registration();
+		$registration = $this->create_fasp_registration();
 		$body         = \wp_json_encode( array( 'capabilities' => array( array( 'id' => 'trends', 'version' => '1.0' ) ) ) ); // phpcs:ignore WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
 
 		// Unsigned response.
@@ -423,7 +339,7 @@ class Test_Fasp extends \WP_UnitTestCase {
 			);
 		};
 		\add_filter( 'pre_http_request', $mock_unsigned, 10, 3 );
-		$this->assertWPError( Client::get_provider_info( $registration, true ), 'An unsigned response should be rejected.' );
+		$this->assertWPError( Client::fetch_provider_info( $registration ), 'An unsigned response should be rejected.' );
 		\remove_filter( 'pre_http_request', $mock_unsigned );
 
 		// Signed response with tampered body.
@@ -438,7 +354,7 @@ class Test_Fasp extends \WP_UnitTestCase {
 			return $signed;
 		};
 		\add_filter( 'pre_http_request', $mock_tampered, 10, 3 );
-		$this->assertWPError( Client::get_provider_info( $registration, true ), 'A tampered response should be rejected.' );
+		$this->assertWPError( Client::fetch_provider_info( $registration ), 'A tampered response should be rejected.' );
 		\remove_filter( 'pre_http_request', $mock_tampered );
 	}
 
@@ -449,7 +365,7 @@ class Test_Fasp extends \WP_UnitTestCase {
 	 * @covers \Activitypub\Fasp\Client::deactivate_capability
 	 */
 	public function test_client_capability_activation() {
-		$registration = $this->create_approved_registration();
+		$registration = $this->create_fasp_registration();
 
 		$requests = array();
 		$mock     = function ( $response, $args, $url ) use ( &$requests ) {
@@ -482,5 +398,121 @@ class Test_Fasp extends \WP_UnitTestCase {
 		$this->assertWPError( Client::activate_capability( $registration, 'unknown', '1.0' ) );
 
 		\remove_filter( 'pre_http_request', $mock_404 );
+	}
+
+	/**
+	 * Fill the pending queue to the cap with backdated entries.
+	 *
+	 * @param string $prefix    A server-id prefix that makes each entry unique.
+	 * @param int    $age       How far in the past to backdate `requested_at`, in seconds.
+	 * @return string[] The created FASP IDs, oldest first.
+	 */
+	private function fill_pending_queue( $prefix, $age = 0 ) {
+		$ids = array();
+		for ( $i = 0; $i < Registrations::MAX_PENDING; $i++ ) {
+			$registration = Registrations::create(
+				array(
+					'name'            => 'Pending FASP ' . $i,
+					'base_url'        => 'https://fasp.example.com',
+					'server_id'       => $prefix . '-' . $i,
+					'fasp_public_key' => $this->fasp_public_key_base64(),
+				)
+			);
+			$ids[]        = $registration['fasp_id'];
+		}
+
+		if ( $age ) {
+			$date          = \gmdate( 'Y-m-d H:i:s', \time() - $age );
+			$registrations = \get_option( Registrations::OPTION_REGISTRATIONS );
+			foreach ( $ids as $fasp_id ) {
+				$registrations[ $fasp_id ]['requested_at'] = $date;
+			}
+			\update_option( Registrations::OPTION_REGISTRATIONS, $registrations, false );
+		}
+
+		return $ids;
+	}
+
+	/**
+	 * A full pending queue evicts its oldest entry rather than locking out new registrations.
+	 *
+	 * @covers ::handle_registration
+	 */
+	public function test_registration_full_queue_evicts_oldest() {
+		$ids = $this->fill_pending_queue( 'pending-server' );
+
+		// Stagger the timestamps so the oldest entry is unambiguous (in production
+		// requests arrive seconds apart; the test loop creates them in one second).
+		$registrations = \get_option( Registrations::OPTION_REGISTRATIONS );
+		foreach ( $ids as $index => $fasp_id ) {
+			$registrations[ $fasp_id ]['requested_at'] = \gmdate( 'Y-m-d H:i:s', \time() - ( \count( $ids ) - $index ) * MINUTE_IN_SECONDS );
+		}
+		\update_option( Registrations::OPTION_REGISTRATIONS, $registrations, false );
+
+		$response = \rest_get_server()->dispatch( $this->build_registration_request() );
+
+		$this->assertEquals( 201, $response->get_status(), 'A full queue must never lock out a legitimate registration.' );
+		$this->assertCount( Registrations::MAX_PENDING, Registrations::get_by_status( 'pending' ), 'The queue stays bounded at the cap.' );
+		$this->assertNull( Registrations::get( $ids[0] ), 'The oldest pending entry is evicted to make room.' );
+		$this->assertNotNull( Registrations::get( $ids[1] ), 'Newer pending entries are retained.' );
+	}
+
+	/**
+	 * Stale pending and rejected registrations are pruned; approved ones survive.
+	 *
+	 * @covers \Activitypub\Fasp\Registrations::prune_stale
+	 */
+	public function test_prune_stale() {
+		$stale_pending  = $this->create_fasp_registration( 'pending', array( 'server_id' => 'stale-pending' ) );
+		$stale_rejected = $this->create_fasp_registration( 'pending', array( 'server_id' => 'stale-rejected' ) );
+		Registrations::reject( $stale_rejected['fasp_id'], 0 );
+		$stale_approved = $this->create_fasp_registration( 'approved', array( 'server_id' => 'stale-approved' ) );
+		$fresh_pending  = $this->create_fasp_registration( 'pending', array( 'server_id' => 'fresh-pending' ) );
+
+		// Backdate everything except the fresh pending entry past the TTL.
+		$stale_date    = \gmdate( 'Y-m-d H:i:s', \time() - Registrations::PENDING_TTL - DAY_IN_SECONDS );
+		$registrations = \get_option( Registrations::OPTION_REGISTRATIONS );
+		foreach ( array( $stale_pending, $stale_rejected, $stale_approved ) as $registration ) {
+			$registrations[ $registration['fasp_id'] ]['requested_at'] = $stale_date;
+		}
+		\update_option( Registrations::OPTION_REGISTRATIONS, $registrations, false );
+
+		Registrations::prune_stale();
+
+		$this->assertNull( Registrations::get( $stale_pending['fasp_id'] ), 'A stale pending registration is pruned.' );
+		$this->assertNull( Registrations::get( $stale_rejected['fasp_id'] ), 'A stale rejected registration is pruned.' );
+		$this->assertNotNull( Registrations::get( $stale_approved['fasp_id'] ), 'An approved registration is never pruned.' );
+		$this->assertNotNull( Registrations::get( $fresh_pending['fasp_id'] ), 'A fresh pending registration is not pruned.' );
+	}
+
+	/**
+	 * A pending record with a missing timestamp is pruned rather than occupying a slot forever.
+	 *
+	 * @covers \Activitypub\Fasp\Registrations::prune_stale
+	 */
+	public function test_prune_stale_removes_records_without_timestamp() {
+		$registration = $this->create_fasp_registration( 'pending' );
+
+		$registrations = \get_option( Registrations::OPTION_REGISTRATIONS );
+		$registrations[ $registration['fasp_id'] ]['requested_at'] = '';
+		\update_option( Registrations::OPTION_REGISTRATIONS, $registrations, false );
+
+		Registrations::prune_stale();
+
+		$this->assertNull( Registrations::get( $registration['fasp_id'] ), 'A pending record with no timestamp must be pruned.' );
+	}
+
+	/**
+	 * The registration endpoint prunes stale entries, so they never count toward the cap.
+	 *
+	 * @covers ::handle_registration
+	 */
+	public function test_registration_prunes_stale_before_cap() {
+		$this->fill_pending_queue( 'stale-server', Registrations::PENDING_TTL + DAY_IN_SECONDS );
+
+		$response = \rest_get_server()->dispatch( $this->build_registration_request() );
+
+		$this->assertEquals( 201, $response->get_status(), 'Stale pending entries are pruned before the cap is measured.' );
+		$this->assertCount( 1, Registrations::get_by_status( 'pending' ), 'Only the new registration remains.' );
 	}
 }

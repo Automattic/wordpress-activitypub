@@ -410,6 +410,8 @@ input.blog-user-identifier {
 	margin: 10px 0;
 	padding: 15px;
 	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 3px;
 }
 
 .fasp-registration-card.highlighted {

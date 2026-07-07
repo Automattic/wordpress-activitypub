@@ -36,6 +36,25 @@ class Registrations {
 	const OPTION_CAPABILITIES = 'activitypub_fasp_capabilities';
 
 	/**
+	 * Maximum number of pending registrations kept at a time.
+	 *
+	 * The registration endpoint is unauthenticated by design, so the pending
+	 * queue must be bounded. When it is full, the oldest pending entry is
+	 * evicted to make room rather than rejecting new requests, so junk can
+	 * never lock a legitimate provider out.
+	 *
+	 * @var int
+	 */
+	const MAX_PENDING = 25;
+
+	/**
+	 * How long an unactioned pending or rejected registration is kept, in seconds.
+	 *
+	 * @var int
+	 */
+	const PENDING_TTL = MONTH_IN_SECONDS;
+
+	/**
 	 * Create a new (pending) registration.
 	 *
 	 * Generates the unique FASP ID and the Ed25519 keypair this site uses to
@@ -199,9 +218,93 @@ class Registrations {
 		}
 		\update_option( self::OPTION_CAPABILITIES, $capabilities, false );
 
-		\delete_transient( 'activitypub_fasp_provider_info_' . $fasp_id );
+		return \update_option( self::OPTION_REGISTRATIONS, $registrations, false );
+	}
+
+	/**
+	 * Store the provider info of a FASP in its registration record.
+	 *
+	 * Render paths read this persisted copy instead of fetching, so a slow or
+	 * unreachable provider never blocks a page load and the capability list
+	 * never disappears from the settings tab.
+	 *
+	 * @param string $fasp_id       FASP ID.
+	 * @param array  $provider_info The decoded provider info.
+	 * @return bool True on success, false on failure.
+	 */
+	public static function set_provider_info( $fasp_id, $provider_info ) {
+		$registrations = self::get_registrations_store();
+
+		if ( ! isset( $registrations[ $fasp_id ] ) ) {
+			return false;
+		}
+
+		$registrations[ $fasp_id ]['provider_info'] = $provider_info;
 
 		return \update_option( self::OPTION_REGISTRATIONS, $registrations, false );
+	}
+
+	/**
+	 * Prune stale pending and rejected registrations older than the TTL.
+	 *
+	 * Approved registrations are never pruned. A pending or rejected record
+	 * whose timestamp is missing or unparseable is also pruned, so a corrupt
+	 * entry cannot occupy a queue slot indefinitely.
+	 *
+	 * @return int The number of pruned registrations.
+	 */
+	public static function prune_stale() {
+		$registrations = self::get_registrations_store();
+		$cutoff        = \time() - self::PENDING_TTL;
+		$pruned        = 0;
+
+		foreach ( $registrations as $fasp_id => $registration ) {
+			$status = $registration['status'] ?? '';
+			if ( 'pending' !== $status && 'rejected' !== $status ) {
+				continue;
+			}
+
+			$requested_at = $registration['requested_at'] ?? '';
+			// `requested_at` is stored as GMT, so pin the parse to UTC.
+			$timestamp = '' === $requested_at ? false : \strtotime( $requested_at . ' +0000' );
+
+			if ( false === $timestamp || $timestamp < $cutoff ) {
+				unset( $registrations[ $fasp_id ] );
+				++$pruned;
+			}
+		}
+
+		if ( $pruned ) {
+			\update_option( self::OPTION_REGISTRATIONS, $registrations, false );
+		}
+
+		return $pruned;
+	}
+
+	/**
+	 * Evict the oldest pending registrations until the queue is below the cap.
+	 *
+	 * Keeps the unauthenticated queue bounded without ever rejecting a new
+	 * request: at worst an attacker's junk evicts other junk. Approved and
+	 * rejected records are never evicted.
+	 *
+	 * @param int $limit The maximum number of pending records to keep.
+	 * @return int The number of evicted registrations.
+	 */
+	public static function evict_oldest_pending( $limit ) {
+		// get_by_status() sorts newest first, so the oldest are at the end.
+		$pending = self::get_by_status( 'pending' );
+		$evicted = 0;
+		$count   = \count( $pending );
+
+		while ( $count >= $limit ) {
+			$oldest = \array_pop( $pending );
+			self::delete( $oldest['fasp_id'] );
+			++$evicted;
+			--$count;
+		}
+
+		return $evicted;
 	}
 
 	/**

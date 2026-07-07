@@ -5,7 +5,6 @@
  * @package Activitypub
  */
 
-use Activitypub\Fasp\Client;
 use Activitypub\Fasp\Registrations;
 
 // phpcs:disable WordPress.Security.NonceVerification.Recommended
@@ -142,16 +141,19 @@ $supported_capabilities = \apply_filters( 'activitypub_fasp_supported_capabiliti
 						<p class="description">
 							<?php \esc_html_e( 'Features this service offers. Enable only the ones you want it to use; the service is notified about every change.', 'activitypub' ); ?>
 						</p>
-						<?php $provider_info = Client::get_provider_info( $registration ); ?>
-						<?php if ( \is_wp_error( $provider_info ) ) : ?>
+						<?php
+						// Read the persisted copy on render: a slow or unreachable provider must never block the page.
+						$provider_info = ( isset( $registration['provider_info'] ) && \is_array( $registration['provider_info'] ) ) ? $registration['provider_info'] : null;
+						?>
+						<?php if ( null === $provider_info ) : ?>
 							<p class="description fasp-capabilities-error">
-								<?php \esc_html_e( 'The list of capabilities could not be loaded from the service right now.', 'activitypub' ); ?>
+								<?php \esc_html_e( 'The list of capabilities has not been loaded from the service yet.', 'activitypub' ); ?>
 							</p>
 							<form method="post" action="<?php echo \esc_url( \admin_url( 'admin-post.php' ) ); ?>" style="display: inline;">
 								<input type="hidden" name="action" value="refresh_fasp_provider_info">
 								<input type="hidden" name="fasp_id" value="<?php echo \esc_attr( $registration['fasp_id'] ); ?>">
 								<input type="hidden" name="_wpnonce" value="<?php echo \esc_attr( $nonce ); ?>">
-								<input type="submit" class="button" value="<?php \esc_attr_e( 'Try Again', 'activitypub' ); ?>">
+								<input type="submit" class="button" value="<?php \esc_attr_e( 'Load Capabilities', 'activitypub' ); ?>">
 							</form>
 						<?php else : ?>
 							<ul class="fasp-capabilities-list">

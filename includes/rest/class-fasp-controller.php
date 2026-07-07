@@ -106,7 +106,18 @@ class Fasp_Controller extends \WP_REST_Controller {
 			return $validation;
 		}
 
-		// Enforce serverId uniqueness.
+		// Bound the pending queue: expire stale requests, then evict the oldest to
+		// stay within the cap. Eviction (rather than rejection) keeps unsolicited
+		// junk from locking a legitimate provider out of the queue.
+		Registrations::prune_stale();
+		Registrations::evict_oldest_pending( Registrations::MAX_PENDING );
+
+		/*
+		 * Enforce serverId uniqueness. This check-then-create is not atomic, so two
+		 * concurrent requests with the same serverId can both persist; that is benign
+		 * (records are keyed by their UUID and get_by_server_id() returns the first
+		 * match), so it is deliberately not locked.
+		 */
 		if ( Registrations::get_by_server_id( $server_id ) ) {
 			return new \WP_Error(
 				'server_id_exists',

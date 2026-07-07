@@ -49,6 +49,19 @@ class Fasp_Settings {
 
 		$result = Registrations::approve( $fasp_id, \get_current_user_id() );
 
+		if ( $result ) {
+			/*
+			 * Fetch and persist the provider info while we are already in a POST
+			 * handler, so the settings page itself never has to make a blocking
+			 * outbound request. A failure here is fine: the page offers a load
+			 * button, and approval still succeeds.
+			 */
+			$provider_info = Client::fetch_provider_info( Registrations::get( $fasp_id ) );
+			if ( \is_array( $provider_info ) ) {
+				Registrations::set_provider_info( $fasp_id, $provider_info );
+			}
+		}
+
 		self::redirect( $result ? array( 'approved' => '1' ) : array( 'error' => '1' ) );
 	}
 
@@ -116,11 +129,27 @@ class Fasp_Settings {
 
 	/**
 	 * Handle refreshing the cached provider info of a FASP.
+	 *
+	 * Fetches a fresh copy into the cache here in the POST handler, so the
+	 * settings page render path never makes an outbound request itself.
 	 */
 	public static function refresh_provider_info() {
 		$fasp_id = self::verify_action_request( 'fasp_registration_' );
 
-		\delete_transient( Client::PROVIDER_INFO_TRANSIENT . $fasp_id );
+		$registration  = Registrations::get( $fasp_id );
+		$provider_info = $registration ? Client::fetch_provider_info( $registration ) : null;
+
+		if ( ! \is_array( $provider_info ) ) {
+			// Keep the last-known-good copy, but surface the failure and keep the card in focus.
+			self::redirect(
+				array(
+					'highlight' => $fasp_id,
+					'error'     => '1',
+				)
+			);
+		}
+
+		Registrations::set_provider_info( $fasp_id, $provider_info );
 
 		self::redirect( array( 'highlight' => $fasp_id ) );
 	}
