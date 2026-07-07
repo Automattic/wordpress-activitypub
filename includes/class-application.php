@@ -197,20 +197,12 @@ class Application {
 	 * @return array The key pair with 'public_key' and 'private_key'.
 	 */
 	public static function get_keypair() {
-		$key_pair = \get_option( self::KEYPAIR_OPTION_KEY );
-
-		if ( ! $key_pair ) {
-			$key_pair = self::check_legacy_key_pair();
-
-			if ( $key_pair ) {
-				\add_option( self::KEYPAIR_OPTION_KEY, $key_pair );
-				return $key_pair;
+		return Signature::get_key_pair(
+			self::KEYPAIR_OPTION_KEY,
+			function () {
+				return self::check_legacy_key_pair();
 			}
-
-			$key_pair = self::generate_key_pair();
-		}
-
-		return $key_pair;
+		);
 	}
 
 	/**
@@ -247,26 +239,6 @@ class Application {
 		}
 
 		return false;
-	}
-
-	/**
-	 * Generates a new key pair for the Application.
-	 *
-	 * @since unreleased
-	 *
-	 * @return array The key pair with 'public_key' and 'private_key'.
-	 */
-	private static function generate_key_pair() {
-		$key_pair = Signature::generate_key_pair();
-
-		// Only persist valid keys.
-		if ( empty( $key_pair['private_key'] ) ) {
-			return $key_pair;
-		}
-
-		\update_option( self::KEYPAIR_OPTION_KEY, $key_pair );
-
-		return $key_pair;
 	}
 
 	/**

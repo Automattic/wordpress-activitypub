@@ -68,6 +68,40 @@ class Signature {
 	}
 
 	/**
+	 * Get the key pair stored in an option, migrating a legacy pair or generating a new one on first use.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string        $option_key      The option name the key pair is stored in.
+	 * @param callable|null $legacy_callback Optional. Callback that returns a legacy key pair to migrate, or false. Default null.
+	 *
+	 * @return array The key pair with 'private_key' and 'public_key'.
+	 */
+	public static function get_key_pair( $option_key, $legacy_callback = null ) {
+		$key_pair = \get_option( $option_key );
+
+		if ( $key_pair ) {
+			return $key_pair;
+		}
+
+		$key_pair = $legacy_callback ? $legacy_callback() : false;
+
+		if ( ! $key_pair ) {
+			$key_pair = self::generate_key_pair();
+
+			// Only persist valid keys.
+			if ( empty( $key_pair['private_key'] ) ) {
+				return $key_pair;
+			}
+		}
+
+		// `update_option()` also overwrites a corrupted-but-present row, which `add_option()` would silently skip.
+		\update_option( $option_key, $key_pair );
+
+		return $key_pair;
+	}
+
+	/**
 	 * Sign an HTTP Request.
 	 *
 	 * @param array  $args An array of HTTP request arguments.

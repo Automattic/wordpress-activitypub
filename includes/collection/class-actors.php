@@ -460,13 +460,13 @@ class Actors {
 	 * Return the public key for a given actor.
 	 *
 	 * @param int  $user_id The WordPress User ID.
-	 * @param bool $force   Optional. Force the generation of a new key pair. Default false.
+	 * @param bool $force   Deprecated. Keys are never rotated; new pairs are only generated when none is stored.
 	 *
 	 * @return string The public key.
 	 */
 	public static function get_public_key( $user_id, $force = false ) {
 		if ( $force ) {
-			self::generate_key_pair( $user_id );
+			\_deprecated_argument( __METHOD__, 'unreleased', \esc_html__( 'Keys are never rotated; new pairs are only generated when none is stored.', 'activitypub' ) );
 		}
 
 		$key_pair = self::get_keypair( $user_id );
@@ -478,13 +478,13 @@ class Actors {
 	 * Return the private key for a given actor.
 	 *
 	 * @param int  $user_id The WordPress User ID.
-	 * @param bool $force   Optional. Force the generation of a new key pair. Default false.
+	 * @param bool $force   Deprecated. Keys are never rotated; new pairs are only generated when none is stored.
 	 *
 	 * @return string The private key.
 	 */
 	public static function get_private_key( $user_id, $force = false ) {
 		if ( $force ) {
-			self::generate_key_pair( $user_id );
+			\_deprecated_argument( __METHOD__, 'unreleased', \esc_html__( 'Keys are never rotated; new pairs are only generated when none is stored.', 'activitypub' ) );
 		}
 
 		$key_pair = self::get_keypair( $user_id );
@@ -500,43 +500,12 @@ class Actors {
 	 * @return array The key pair.
 	 */
 	public static function get_keypair( $user_id ) {
-		$option_key = self::get_signature_options_key( $user_id );
-		$key_pair   = \get_option( $option_key );
-
-		if ( ! $key_pair ) {
-			$key_pair = self::generate_key_pair( $user_id );
-		}
-
-		return $key_pair;
-	}
-
-	/**
-	 * Generates the pair of keys.
-	 *
-	 * @param int $user_id The WordPress User ID.
-	 *
-	 * @return array The key pair.
-	 */
-	protected static function generate_key_pair( $user_id ) {
-		$option_key = self::get_signature_options_key( $user_id );
-		$key_pair   = self::check_legacy_key_pair( $user_id );
-
-		if ( $key_pair ) {
-			\add_option( $option_key, $key_pair );
-
-			return $key_pair;
-		}
-
-		$key_pair = Signature::generate_key_pair();
-
-		// Only persist valid keys.
-		if ( empty( $key_pair['private_key'] ) ) {
-			return $key_pair;
-		}
-
-		\add_option( $option_key, $key_pair );
-
-		return $key_pair;
+		return Signature::get_key_pair(
+			self::get_signature_options_key( $user_id ),
+			function () use ( $user_id ) {
+				return self::check_legacy_key_pair( $user_id );
+			}
+		);
 	}
 
 	/**
