@@ -127,6 +127,7 @@ docs/code-linting.md             — linting configuration and rules
 docs/pull-request.md             — PR workflow details
 docs/release-process.md          — release workflow and versioning
 tests/README.md                  — test utilities, data factories, writing patterns
+src/app/README.md                — admin React app: target architecture for new screens
 FEDERATION.md                    — implemented FEPs, supported standards, compatibility
 ```
 

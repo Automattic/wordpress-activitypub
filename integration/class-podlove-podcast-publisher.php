@@ -41,6 +41,30 @@ class Podlove_Podcast_Publisher extends Post {
 	}
 
 	/**
+	 * Returns the summary for the ActivityPub Item.
+	 *
+	 * @return string|null The summary or null.
+	 */
+	protected function get_summary() {
+		$episode = $this->get_episode();
+
+		// Notes carry no summary, so there is nothing to override for them.
+		if ( $episode && 'Note' !== $this->get_type() ) {
+			// Sanitize like generate_post_summary() does, since Podlove stores the summary as raw user input.
+			$summary = \strip_shortcodes( (string) $episode->summary );
+			$summary = \wp_strip_all_tags( $summary );
+			$summary = \trim( \html_entity_decode( $summary, ENT_QUOTES, 'UTF-8' ) );
+
+			// Federate the episode summary explicitly; Podlove keeps it out of post_content.
+			if ( '' !== $summary ) {
+				return $summary;
+			}
+		}
+
+		return parent::get_summary();
+	}
+
+	/**
 	 * Gets the attachment for a podcast episode.
 	 *
 	 * This method is overridden to add the audio/video files as attachments.

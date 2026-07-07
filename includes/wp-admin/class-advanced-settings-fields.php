@@ -103,7 +103,8 @@ class Advanced_Settings_Fields {
 			array( 'label_for' => 'activitypub_following_ui' )
 		);
 
-		if ( \version_compare( \get_bloginfo( 'version' ), '6.9-alpha', '>=' ) ) {
+		// Only offer the Reader opt-in where the app can actually boot (WordPress 7.0+).
+		if ( App::is_supported() ) {
 			\add_settings_field(
 				'activitypub_reader_ui',
 				\__( 'Reader', 'activitypub' ),

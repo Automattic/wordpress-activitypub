@@ -12,6 +12,38 @@ import { useView } from '@wordpress/views';
 type ViewType = ReturnType< typeof useView >[ 'view' ];
 
 /**
+ * Gets the next feed view state after a DataViews update.
+ *
+ * @param currentView The current view configuration.
+ * @param updatedView The requested view update.
+ * @return The normalized view update.
+ */
+export function getFeedViewUpdate( currentView: ViewType, updatedView: ViewType ): ViewType {
+	const filtersChanged: boolean = JSON.stringify( currentView.filters ) !== JSON.stringify( updatedView.filters );
+	const searchChanged: boolean = currentView.search !== updatedView.search;
+	const perPage: number = updatedView.perPage || 20;
+	let page: number = updatedView.page ?? 1;
+
+	if ( filtersChanged || searchChanged ) {
+		page = 1;
+	} else if (
+		typeof updatedView.startPosition === 'number' &&
+		updatedView.startPosition !== currentView.startPosition
+	) {
+		// DataViews 14 advances startPosition as the user scrolls;
+		// map it to the next page we need to fetch.
+		const targetPage: number = Math.max( 1, Math.ceil( updatedView.startPosition / perPage ) );
+		page = Math.max( page, targetPage );
+	}
+
+	return {
+		...updatedView,
+		page,
+		startPosition: page === 1 ? 1 : updatedView.startPosition,
+	};
+}
+
+/**
  * Normalizes view fields to maintain canonical order.
  * Sorts the visible fields according to the order defined in the fields array.
  *
