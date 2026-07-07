@@ -38,7 +38,7 @@ function get_object_id( $wp_object ) {
  * @return string The converted string.
  */
 function camel_to_snake_case( $input ) {
-	return strtolower( preg_replace( '/(?<!^)[A-Z]/', '_$0', $input ) );
+	return \strtolower( \preg_replace( '/(?<!^)[A-Z]/', '_$0', $input ) );
 }
 
 /**
@@ -49,7 +49,7 @@ function camel_to_snake_case( $input ) {
  * @return string The converted string.
  */
 function snake_to_camel_case( $input ) {
-	return lcfirst( str_replace( '_', '', ucwords( $input, '_' ) ) );
+	return \lcfirst( \str_replace( '_', '', \ucwords( $input, '_' ) ) );
 }
 
 /**
@@ -66,8 +66,8 @@ function seconds_to_iso8601( $seconds ) {
 		return 'PT0S';
 	}
 
-	$hours   = floor( $seconds / 3600 );
-	$minutes = floor( ( $seconds % 3600 ) / 60 );
+	$hours   = \floor( $seconds / 3600 );
+	$minutes = \floor( ( $seconds % 3600 ) / 60 );
 	$secs    = $seconds % 60;
 
 	$duration = 'PT';
@@ -99,7 +99,7 @@ function site_supports_blocks() {
 	 *
 	 * @param boolean $supports_blocks True if the site supports the block editor, false otherwise.
 	 */
-	return apply_filters( 'activitypub_site_supports_blocks', true );
+	return \apply_filters( 'activitypub_site_supports_blocks', true );
 }
 
 /**
@@ -113,7 +113,7 @@ function is_blog_public() {
 	 *
 	 * @param bool $public Whether the blog is public.
 	 */
-	return (bool) apply_filters( 'activitypub_is_blog_public', \get_option( 'blog_public', 1 ) );
+	return (bool) \apply_filters( 'activitypub_is_blog_public', \get_option( 'blog_public', 1 ) );
 }
 
 /**
@@ -123,13 +123,13 @@ function is_blog_public() {
  */
 function get_masked_wp_version() {
 	// Only show the major and minor version.
-	$version = get_bloginfo( 'version' );
+	$version = \get_bloginfo( 'version' );
 	// Strip the RC or beta part.
-	$version = preg_replace( '/-.*$/', '', $version );
-	$version = explode( '.', $version );
-	$version = array_slice( $version, 0, 2 );
+	$version = \preg_replace( '/-.*$/', '', $version );
+	$version = \explode( '.', $version );
+	$version = \array_slice( $version, 0, 2 );
 
-	return implode( '.', $version );
+	return \implode( '.', $version );
 }
 
 /**
@@ -163,7 +163,7 @@ function get_attribution_domains() {
 	}
 
 	$domains = \get_option( 'activitypub_attribution_domains', home_host() );
-	$domains = explode( PHP_EOL, $domains );
+	$domains = \explode( PHP_EOL, $domains );
 
 	if ( ! $domains ) {
 		$domains = null;
@@ -221,17 +221,17 @@ function esc_hashtag( $input ) {
 	$hashtag = \preg_replace( '/[^\p{L}\p{Nd}-]+/u', '-', $hashtag );
 
 	// Capitalize every letter that is preceded by a hyphen.
-	$hashtag = preg_replace_callback(
+	$hashtag = \preg_replace_callback(
 		'/-+(.)/',
 		static function ( $matches ) {
-			return strtoupper( $matches[1] );
+			return \strtoupper( $matches[1] );
 		},
 		$hashtag
 	);
 
 	// Add a hashtag to the beginning of the string.
-	$hashtag = ltrim( $hashtag, '#' );
-	$hashtag = trim( $hashtag, '-' );
+	$hashtag = \ltrim( $hashtag, '#' );
+	$hashtag = \trim( $hashtag, '-' );
 	$hashtag = '#' . $hashtag;
 
 	/**
@@ -240,9 +240,9 @@ function esc_hashtag( $input ) {
 	 * @param string $hashtag The hashtag to be returned.
 	 * @param string $input   The original string.
 	 */
-	$hashtag = apply_filters( 'activitypub_esc_hashtag', $hashtag, $input );
+	$hashtag = \apply_filters( 'activitypub_esc_hashtag', $hashtag, $input );
 
-	return esc_html( $hashtag );
+	return \esc_html( $hashtag );
 }
 
 /**
@@ -256,7 +256,7 @@ function esc_hashtag( $input ) {
  */
 function enrich_content_data( $content, $regex, $regex_callback ) {
 	// Small protection against execution timeouts: limit to 1 MB.
-	if ( mb_strlen( $content ) > MB_IN_BYTES ) {
+	if ( \mb_strlen( $content ) > MB_IN_BYTES ) {
 		return $content;
 	}
 	$tag_stack          = array();
@@ -269,20 +269,20 @@ function enrich_content_data( $content, $regex, $regex_callback ) {
 	);
 	$content_with_links = '';
 	$in_protected_tag   = false;
-	foreach ( wp_html_split( $content ) as $chunk ) {
-		if ( preg_match( '#^<!--[\s\S]*-->$#i', $chunk, $m ) ) {
+	foreach ( \wp_html_split( $content ) as $chunk ) {
+		if ( \preg_match( '#^<!--[\s\S]*-->$#i', $chunk, $m ) ) {
 			$content_with_links .= $chunk;
 			continue;
 		}
 
-		if ( preg_match( '#^<(/)?([a-z-]+)\b[^>]*>$#i', $chunk, $m ) ) {
-			$tag = strtolower( $m[2] );
+		if ( \preg_match( '#^<(/)?([a-z-]+)\b[^>]*>$#i', $chunk, $m ) ) {
+			$tag = \strtolower( $m[2] );
 			if ( '/' === $m[1] ) {
 				// Closing tag.
-				$i = array_search( $tag, $tag_stack, true );
+				$i = \array_search( $tag, $tag_stack, true );
 				// We can only remove the tag from the stack if it is in the stack.
 				if ( false !== $i ) {
-					$tag_stack = array_slice( $tag_stack, 0, $i );
+					$tag_stack = \array_slice( $tag_stack, 0, $i );
 				}
 			} else {
 				// Opening tag, add it to the stack.
@@ -291,7 +291,7 @@ function enrich_content_data( $content, $regex, $regex_callback ) {
 
 			// If we're in a protected tag, the tag_stack contains at least one protected tag string.
 			// The protected tag state can only change when we encounter a start or end tag.
-			$in_protected_tag = array_intersect( $tag_stack, $protected_tags );
+			$in_protected_tag = \array_intersect( $tag_stack, $protected_tags );
 
 			// Never inspect tags.
 			$content_with_links .= $chunk;

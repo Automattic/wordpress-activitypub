@@ -132,7 +132,7 @@ function get_comment_ancestors( $comment ) {
 		$parent_id = (int) $ancestor->comment_parent;
 
 		// Loop detection: If the ancestor has been seen before, break.
-		if ( empty( $parent_id ) || ( $parent_id === (int) $comment->comment_ID ) || in_array( $parent_id, $ancestors, true ) ) {
+		if ( empty( $parent_id ) || ( $parent_id === (int) $comment->comment_ID ) || \in_array( $parent_id, $ancestors, true ) ) {
 			break;
 		}
 
@@ -154,12 +154,12 @@ function get_comment_ancestors( $comment ) {
 function register_comment_type( $comment_type, $args = array() ) {
 	global $activitypub_comment_types;
 
-	if ( ! is_array( $activitypub_comment_types ) ) {
+	if ( ! \is_array( $activitypub_comment_types ) ) {
 		$activitypub_comment_types = array();
 	}
 
 	// Sanitize comment type name.
-	$comment_type = sanitize_key( $comment_type );
+	$comment_type = \sanitize_key( $comment_type );
 
 	$activitypub_comment_types[ $comment_type ] = $args;
 
@@ -169,7 +169,7 @@ function register_comment_type( $comment_type, $args = array() ) {
 	 * @param string $comment_type Comment type.
 	 * @param array  $args         Arguments used to register the comment type.
 	 */
-	do_action( 'activitypub_registered_comment_type', $comment_type, $args );
+	\do_action( 'activitypub_registered_comment_type', $comment_type, $args );
 
 	return $args;
 }
@@ -180,7 +180,7 @@ function register_comment_type( $comment_type, $args = array() ) {
  * @return string The reply intent URI.
  */
 function get_reply_intent_js() {
-	return sprintf(
+	return \sprintf(
 		'javascript:(()=>{window.open(\'%s\'+encodeURIComponent(window.location.href));})();',
 		get_reply_intent_url()
 	);
@@ -211,5 +211,5 @@ function get_reply_intent_url() {
 	 */
 	$url = \apply_filters( 'activitypub_reply_intent_url', $url );
 
-	return esc_url_raw( $url );
+	return \esc_url_raw( $url );
 }

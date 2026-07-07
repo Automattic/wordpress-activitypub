@@ -568,7 +568,7 @@ abstract class File {
 		// Method 4: Ensure file extension matches MIME type.
 		$ext = \pathinfo( $file_path, PATHINFO_EXTENSION );
 
-		if ( strtolower( $ext ) !== $expected_ext ) {
+		if ( \strtolower( $ext ) !== $expected_ext ) {
 			$new_path = \preg_replace( '/\.[^.]+$/', '.' . $expected_ext, $file_path );
 			if ( empty( $new_path ) || $new_path === $file_path ) {
 				$new_path = $file_path . '.' . $expected_ext;

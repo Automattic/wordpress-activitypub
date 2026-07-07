@@ -49,7 +49,7 @@ class Attachments {
 		// First, import inline images from the post content.
 		$inline_mappings = self::import_inline_images( $post_id, $author_id );
 
-		if ( empty( $attachments ) || ! is_array( $attachments ) ) {
+		if ( empty( $attachments ) || ! \is_array( $attachments ) ) {
 			return array();
 		}
 
@@ -114,7 +114,7 @@ class Attachments {
 		}
 
 		// Find all img tags in the content.
-		preg_match_all( '/<img[^>]+src=["\']([^"\']+)["\'][^>]*>/i', $post->post_content, $matches );
+		\preg_match_all( '/<img[^>]+src=["\']([^"\']+)["\'][^>]*>/i', $post->post_content, $matches );
 
 		if ( empty( $matches[1] ) ) {
 			return array();
@@ -172,7 +172,7 @@ class Attachments {
 			$attachment = \get_object_vars( $attachment );
 		}
 
-		if ( ! is_array( $attachment ) || empty( $attachment['url'] ) ) {
+		if ( ! \is_array( $attachment ) || empty( $attachment['url'] ) ) {
 			return false;
 		}
 
@@ -207,7 +207,7 @@ class Attachments {
 
 		$filesystem = new \WP_Filesystem_Direct( null );
 
-		$is_local = ! preg_match( '#^https?://#i', $attachment_data['url'] );
+		$is_local = ! \preg_match( '#^https?://#i', $attachment_data['url'] );
 
 		if ( $is_local ) {
 			// Validate local path is within allowed directories to prevent file disclosure.
@@ -219,7 +219,7 @@ class Attachments {
 			// Read local file from disk.
 			if ( ! $filesystem->exists( $attachment_data['url'] ) ) {
 				/* translators: %s: file path */
-				return new \WP_Error( 'file_not_found', sprintf( \__( 'File not found: %s', 'activitypub' ), $attachment_data['url'] ) );
+				return new \WP_Error( 'file_not_found', \sprintf( \__( 'File not found: %s', 'activitypub' ), $attachment_data['url'] ) );
 			}
 
 			// Copy to temp file so media_handle_sideload doesn't move the original.
@@ -279,7 +279,7 @@ class Attachments {
 		// Add alt text for images.
 		if ( ! empty( $attachment_data['name'] ) ) {
 			$original_mime = $attachment_data['mediaType'] ?? '';
-			if ( 'image' === strtok( $original_mime, '/' ) ) {
+			if ( 'image' === \strtok( $original_mime, '/' ) ) {
 				$post_data['meta_input']['_wp_attachment_image_alt'] = $attachment_data['name'];
 			}
 		}
@@ -459,7 +459,7 @@ class Attachments {
 		}
 
 		$media     = self::generate_media_markup( $attachment_ids );
-		$separator = empty( trim( $post->post_content ) ) ? '' : "\n\n";
+		$separator = empty( \trim( $post->post_content ) ) ? '' : "\n\n";
 
 		\wp_update_post(
 			array(
@@ -498,11 +498,11 @@ class Attachments {
 		}
 
 		// Default to block markup.
-		$type = strtok( \get_post_mime_type( $attachment_ids[0] ), '/' );
+		$type = \strtok( \get_post_mime_type( $attachment_ids[0] ), '/' );
 
 		// Single video or audio file.
 		if ( 1 === \count( $attachment_ids ) && ( 'video' === $type || 'audio' === $type ) ) {
-			return sprintf(
+			return \sprintf(
 				'<!-- wp:%1$s {"id":"%2$s"} --><figure class="wp-block-%1$s"><%1$s controls src="%3$s"></%1$s></figure><!-- /wp:%1$s -->',
 				\esc_attr( $type ),
 				\esc_attr( $attachment_ids[0] ),
@@ -640,7 +640,7 @@ class Attachments {
 		}
 
 		$media     = self::generate_files_markup( $files );
-		$separator = empty( trim( $content ) ) ? '' : "\n\n";
+		$separator = empty( \trim( $content ) ) ? '' : "\n\n";
 
 		self::update_object_content( $object_id, $object_type, $content . $separator . $media );
 	}
@@ -683,11 +683,11 @@ class Attachments {
 		}
 
 		// Default to block markup.
-		$type = strtok( $files[0]['mime_type'], '/' );
+		$type = \strtok( $files[0]['mime_type'], '/' );
 
 		// Single video or audio file.
 		if ( 1 === \count( $files ) && ( 'video' === $type || 'audio' === $type ) ) {
-			return sprintf(
+			return \sprintf(
 				'<!-- wp:%1$s --><figure class="wp-block-%1$s"><%1$s controls src="%2$s"></%1$s></figure><!-- /wp:%1$s -->',
 				\esc_attr( $type ),
 				\esc_url( $files[0]['url'] )

@@ -137,7 +137,7 @@ class Replies_Controller extends \WP_REST_Controller {
 		}
 
 		// Prepend ActivityPub Context.
-		$response = array_merge( array( '@context' => Base_Object::JSON_LD_CONTEXT ), $response );
+		$response = \array_merge( array( '@context' => Base_Object::JSON_LD_CONTEXT ), $response );
 		$response = \rest_ensure_response( $response );
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 
@@ -181,7 +181,7 @@ class Replies_Controller extends \WP_REST_Controller {
 		}
 
 		return array(
-			'id'         => get_rest_url_by_path( sprintf( 'posts/%d/likes', $wp_object->ID ) ),
+			'id'         => get_rest_url_by_path( \sprintf( 'posts/%d/likes', $wp_object->ID ) ),
 			'type'       => 'Collection',
 			'totalItems' => $likes,
 		);
@@ -203,7 +203,7 @@ class Replies_Controller extends \WP_REST_Controller {
 		}
 
 		return array(
-			'id'         => get_rest_url_by_path( sprintf( 'posts/%d/shares', $wp_object->ID ) ),
+			'id'         => get_rest_url_by_path( \sprintf( 'posts/%d/shares', $wp_object->ID ) ),
 			'type'       => 'Collection',
 			'totalItems' => $shares,
 		);

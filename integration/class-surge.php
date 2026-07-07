@@ -114,15 +114,15 @@ class Surge {
 		$config_file = false;
 
 		// phpcs:ignore WordPress.PHP.NoSilencedErrors
-		if ( @file_exists( ABSPATH . 'wp-config.php' ) ) {
+		if ( @\file_exists( ABSPATH . 'wp-config.php' ) ) {
 
 			/** The config file resides in ABSPATH */
 			$config_file = ABSPATH . 'wp-config.php';
 		// phpcs:ignore WordPress.PHP.NoSilencedErrors
-		} elseif ( @file_exists( dirname( ABSPATH ) . '/wp-config.php' ) && ! @file_exists( dirname( ABSPATH ) . '/wp-settings.php' ) ) {
+		} elseif ( @\file_exists( \dirname( ABSPATH ) . '/wp-config.php' ) && ! @\file_exists( \dirname( ABSPATH ) . '/wp-settings.php' ) ) {
 
 			/** The config file resides one level above ABSPATH but is not part of another installation */
-			$config_file = dirname( ABSPATH ) . '/wp-config.php';
+			$config_file = \dirname( ABSPATH ) . '/wp-config.php';
 		}
 
 		/**

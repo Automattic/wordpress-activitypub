@@ -55,7 +55,7 @@ class Post {
 	 * @param \WP_Post $post_before Post object before the update.
 	 */
 	public static function triage( $post_id, $post, $update, $post_before ) {
-		if ( defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
 			return;
 		}
 
@@ -76,8 +76,8 @@ class Post {
 			return;
 		}
 
-		$new_status = get_post_status( $post );
-		$old_status = $post_before ? get_post_status( $post_before ) : null;
+		$new_status = \get_post_status( $post );
+		$old_status = $post_before ? \get_post_status( $post_before ) : null;
 
 		switch ( $new_status ) {
 			case 'publish':

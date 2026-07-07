@@ -7,6 +7,8 @@
 
 namespace Activitypub\Transformer;
 
+use Activitypub\Activity\Base_Object;
+
 /**
  * Term Transformer Class.
  */
@@ -19,7 +21,7 @@ class Term extends Base {
 	 * @return \Activitypub\Activity\Base_Object|\WP_Error The OrderedCollection or WP_Error on failure.
 	 */
 	public function to_object() {
-		$base_object               = new \Activitypub\Activity\Base_Object();
+		$base_object               = new Base_Object();
 		$base_object->{'@context'} = 'https://www.w3.org/ns/activitystreams';
 		$base_object->set_type( 'OrderedCollection' );
 		$base_object->set_id( $this->get_id() );

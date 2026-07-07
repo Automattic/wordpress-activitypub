@@ -99,7 +99,7 @@ class Quote_Request {
 	 * @param string         $type     The type of the activity.
 	 */
 	public static function handle_blocked_request( $activity, $user_ids, $type ) {
-		if ( ! in_array( strtolower( $type ), array( 'quoterequest', 'quote_request' ), true ) ) {
+		if ( ! \in_array( \strtolower( $type ), array( 'quoterequest', 'quote_request' ), true ) ) {
 			return;
 		}
 
@@ -218,7 +218,7 @@ class Quote_Request {
 		$activity_object['instrument'] = object_to_uri( $activity_object['instrument'] );
 
 		$post_meta = \get_post_meta( $post_id, '_activitypub_quoted_by', false );
-		if ( in_array( $activity_object['instrument'], $post_meta, true ) ) {
+		if ( \in_array( $activity_object['instrument'], $post_meta, true ) ) {
 			global $wpdb;
 
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -235,7 +235,7 @@ class Quote_Request {
 		}
 
 		// Only send minimal data.
-		$activity_object = array_intersect_key(
+		$activity_object = \array_intersect_key(
 			$activity_object,
 			array(
 				'id'         => 1,
@@ -287,7 +287,7 @@ class Quote_Request {
 		$activity_object['instrument'] = object_to_uri( $activity_object['instrument'] );
 
 		// Only send minimal data.
-		$activity_object = array_intersect_key(
+		$activity_object = \array_intersect_key(
 			$activity_object,
 			array(
 				'id'         => 1,

@@ -140,9 +140,9 @@ class User extends Actor {
 	 * @return string The User description.
 	 */
 	public function get_summary() {
-		$description = get_user_option( 'activitypub_description', $this->_id );
+		$description = \get_user_option( 'activitypub_description', $this->_id );
 		if ( empty( $description ) ) {
-			$description = get_user_meta( $this->_id, 'description', true );
+			$description = \get_user_meta( $this->_id, 'description', true );
 		}
 		return \wpautop( \wp_kses( $description, 'default' ) );
 	}
@@ -162,7 +162,7 @@ class User extends Actor {
 	 * @return string The User URL with @-Prefix for the username.
 	 */
 	public function get_alternate_url() {
-		return \esc_url( \trailingslashit( get_home_url() ) . '@' . $this->get_preferred_username() );
+		return \esc_url( \trailingslashit( \get_home_url() ) . '@' . $this->get_preferred_username() );
 	}
 
 	/**
@@ -188,10 +188,10 @@ class User extends Actor {
 	 */
 	public function get_icon() {
 		$icon = \get_user_option( 'activitypub_icon', $this->_id );
-		if ( false !== $icon && wp_attachment_is_image( $icon ) ) {
+		if ( false !== $icon && \wp_attachment_is_image( $icon ) ) {
 			return array(
 				'type' => 'Image',
-				'url'  => esc_url( wp_get_attachment_url( $icon ) ),
+				'url'  => \esc_url( \wp_get_attachment_url( $icon ) ),
 			);
 		}
 
@@ -214,7 +214,7 @@ class User extends Actor {
 	 * @return string[]|null The header image.
 	 */
 	public function get_image() {
-		$header_image = get_user_option( 'activitypub_header_image', $this->_id );
+		$header_image = \get_user_option( 'activitypub_header_image', $this->_id );
 		$image_url    = null;
 
 		if ( ! $header_image && \has_header_image() ) {
@@ -228,7 +228,7 @@ class User extends Actor {
 		if ( $image_url ) {
 			return array(
 				'type' => 'Image',
-				'url'  => esc_url( $image_url ),
+				'url'  => \esc_url( $image_url ),
 			);
 		}
 
@@ -263,7 +263,7 @@ class User extends Actor {
 	 * @return string The Inbox-Endpoint.
 	 */
 	public function get_inbox() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/inbox', $this->get__id() ) );
+		return get_rest_url_by_path( \sprintf( 'actors/%d/inbox', $this->get__id() ) );
 	}
 
 	/**
@@ -272,7 +272,7 @@ class User extends Actor {
 	 * @return string The Outbox-Endpoint.
 	 */
 	public function get_outbox() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/outbox', $this->get__id() ) );
+		return get_rest_url_by_path( \sprintf( 'actors/%d/outbox', $this->get__id() ) );
 	}
 
 	/**
@@ -281,7 +281,7 @@ class User extends Actor {
 	 * @return string The Followers-Endpoint.
 	 */
 	public function get_followers() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/followers', $this->get__id() ) );
+		return get_rest_url_by_path( \sprintf( 'actors/%d/followers', $this->get__id() ) );
 	}
 
 	/**
@@ -290,7 +290,7 @@ class User extends Actor {
 	 * @return string The Following-Endpoint.
 	 */
 	public function get_following() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/following', $this->get__id() ) );
+		return get_rest_url_by_path( \sprintf( 'actors/%d/following', $this->get__id() ) );
 	}
 
 	/**
@@ -301,7 +301,7 @@ class User extends Actor {
 	 * @return string The Liked endpoint.
 	 */
 	public function get_liked() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/liked', $this->get__id() ) );
+		return get_rest_url_by_path( \sprintf( 'actors/%d/liked', $this->get__id() ) );
 	}
 
 	/**
@@ -310,7 +310,7 @@ class User extends Actor {
 	 * @return string The Featured-Endpoint.
 	 */
 	public function get_featured() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/collections/featured', $this->get__id() ) );
+		return get_rest_url_by_path( \sprintf( 'actors/%d/collections/featured', $this->get__id() ) );
 	}
 
 	/**
@@ -319,7 +319,7 @@ class User extends Actor {
 	 * @return string The Featured-Tags-Endpoint.
 	 */
 	public function get_featured_tags() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/collections/tags', $this->get__id() ) );
+		return get_rest_url_by_path( \sprintf( 'actors/%d/collections/tags', $this->get__id() ) );
 	}
 
 	/**
@@ -428,10 +428,10 @@ class User extends Actor {
 	 * @return bool True if the attribute was updated, false otherwise.
 	 */
 	public function update_icon( $value ) {
-		if ( ! wp_attachment_is_image( $value ) ) {
+		if ( ! \wp_attachment_is_image( $value ) ) {
 			return false;
 		}
-		return update_user_option( $this->_id, 'activitypub_icon', $value );
+		return \update_user_option( $this->_id, 'activitypub_icon', $value );
 	}
 
 	/**
@@ -441,7 +441,7 @@ class User extends Actor {
 	 * @return bool True if the attribute was updated, false otherwise.
 	 */
 	public function update_header( $value ) {
-		if ( ! wp_attachment_is_image( $value ) ) {
+		if ( ! \wp_attachment_is_image( $value ) ) {
 			return false;
 		}
 		return \update_user_option( $this->_id, 'activitypub_header_image', $value );
@@ -468,9 +468,9 @@ class User extends Actor {
 			$this->get_alternate_url(),
 		);
 
-		$also_known_as = array_merge( $also_known_as, \get_user_option( 'activitypub_also_known_as', $this->_id ) ?: array() );
+		$also_known_as = \array_merge( $also_known_as, \get_user_option( 'activitypub_also_known_as', $this->_id ) ?: array() );
 
-		return array_unique( $also_known_as );
+		return \array_unique( $also_known_as );
 	}
 
 	/**

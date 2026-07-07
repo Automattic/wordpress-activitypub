@@ -46,7 +46,7 @@ class Attachment extends Post {
 
 		$attachment = array(
 			'type'      => $type,
-			'url'       => wp_get_attachment_url( $this->item->ID ),
+			'url'       => \wp_get_attachment_url( $this->item->ID ),
 			'mediaType' => $mime_type,
 		);
 

@@ -48,7 +48,7 @@ function url_to_authorid( $url ) {
 
 	// Check if url has the same host.
 	$request_host = \wp_parse_url( $url, \PHP_URL_HOST );
-	if ( \wp_parse_url( \home_url(), \PHP_URL_HOST ) !== $request_host && get_option( 'activitypub_old_host' ) !== $request_host ) {
+	if ( \wp_parse_url( \home_url(), \PHP_URL_HOST ) !== $request_host && \get_option( 'activitypub_old_host' ) !== $request_host ) {
 		return null;
 	}
 
@@ -88,7 +88,7 @@ function url_to_authorid( $url ) {
  * @return boolean True if the user is enabled, false otherwise.
  */
 function user_can_activitypub( $user_id ) {
-	if ( ! is_numeric( $user_id ) ) {
+	if ( ! \is_numeric( $user_id ) ) {
 		return false;
 	}
 
@@ -121,7 +121,7 @@ function user_can_activitypub( $user_id ) {
 	 * @param boolean $enabled True if the user is enabled, false otherwise.
 	 * @param int     $user_id The user ID.
 	 */
-	return apply_filters( 'activitypub_user_can_activitypub', $enabled, $user_id );
+	return \apply_filters( 'activitypub_user_can_activitypub', $enabled, $user_id );
 }
 
 /**
@@ -219,7 +219,7 @@ function is_user_type_disabled( $type ) {
 	 * @param boolean $disabled True if the user type is disabled, false otherwise.
 	 * @param string  $type     The User-Type.
 	 */
-	return apply_filters( 'activitypub_is_user_type_disabled', $disabled, $type );
+	return \apply_filters( 'activitypub_is_user_type_disabled', $disabled, $type );
 }
 
 /**

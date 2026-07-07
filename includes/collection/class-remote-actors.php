@@ -203,8 +203,8 @@ class Remote_Actors {
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
-				esc_sql( $actor_uri ),
-				esc_sql( self::POST_TYPE )
+				\esc_sql( $actor_uri ),
+				\esc_sql( self::POST_TYPE )
 			)
 		);
 
@@ -629,7 +629,7 @@ class Remote_Actors {
 
 		// Add emoji meta if actor has emoji in tags.
 		$emoji_meta = Emoji::prepare_actor_meta( $actor_array );
-		$meta_input = array_merge( $meta_input, $emoji_meta );
+		$meta_input = \array_merge( $meta_input, $emoji_meta );
 
 		return array(
 			'guid'         => \esc_url_raw( $actor->get_id() ),
@@ -653,7 +653,7 @@ class Remote_Actors {
 	 */
 	public static function normalize_identifier( $actor ) {
 		$actor = object_to_uri( $actor );
-		if ( ! is_string( $actor ) ) {
+		if ( ! \is_string( $actor ) ) {
 			return null;
 		}
 

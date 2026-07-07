@@ -93,7 +93,7 @@ class Arrive {
 		$location_name = self::get_location_name( $location );
 
 		$title = $location_name
-			? sprintf(
+			? \sprintf(
 				/* translators: %s: location name */
 				\__( 'Checked in at %s', 'activitypub' ),
 				$location_name

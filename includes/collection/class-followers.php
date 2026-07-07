@@ -50,7 +50,7 @@ class Followers {
 		}
 
 		if ( empty( $meta ) || ! \is_array( $meta ) || \is_wp_error( $meta ) ) {
-			return new \WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ), array( 'status' => 400 ) );
+			return new \WP_Error( 'activitypub_invalid_follower', \__( 'Invalid Follower', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
 		$post_id = Remote_Actors::upsert( $meta );
@@ -160,7 +160,7 @@ class Followers {
 	 * @return \WP_Post|\WP_Error The Follower object or WP_Error on failure.
 	 */
 	public static function get_follower( $user_id, $actor ) {
-		_deprecated_function( __METHOD__, '7.6.0', 'Activitypub\Collection\Followers::get_by_uri' );
+		\_deprecated_function( __METHOD__, '7.6.0', 'Activitypub\Collection\Followers::get_by_uri' );
 		return self::get_by_uri( $user_id, $actor );
 	}
 
@@ -193,7 +193,7 @@ class Followers {
 	 * @return \WP_Post[] List of `Follower` objects.
 	 */
 	public static function get_followers( $user_id, $number = -1, $page = null, $args = array() ) {
-		_deprecated_function( __METHOD__, '7.6.0', 'Activitypub\Collection\Followers::get_many' );
+		\_deprecated_function( __METHOD__, '7.6.0', 'Activitypub\Collection\Followers::get_many' );
 		return self::get_many( $user_id, $number, $page, $args );
 	}
 
@@ -525,19 +525,19 @@ class Followers {
 		}
 
 		// Build the collection ID (followers collection URL).
-		$collection_id = get_rest_url_by_path( sprintf( 'actors/%d/followers', $user_id ) );
+		$collection_id = get_rest_url_by_path( \sprintf( 'actors/%d/followers', $user_id ) );
 
 		// Build the partial followers URL.
 		$url = get_rest_url_by_path(
-			sprintf(
+			\sprintf(
 				'actors/%d/followers/sync?authority=%s',
 				$user_id,
-				rawurlencode( $authority )
+				\rawurlencode( $authority )
 			)
 		);
 
 		// Format as per FEP-8fcf (similar to HTTP Signatures format).
-		return sprintf(
+		return \sprintf(
 			'collectionId="%s", url="%s", digest="%s"',
 			$collection_id,
 			$url,
