@@ -597,7 +597,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Mock remote metadata.
 		$remote_metadata_callback = function () {
 			return array(
-				'type' => 'Create',
+				'type' => 'Person',
 				'name' => 'Test Sender',
 				'url'  => 'https://example.com/author',
 			);
@@ -883,7 +883,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Mock remote metadata.
 		$remote_metadata_callback = function () {
 			return array(
-				'type' => 'Create',
+				'type' => 'Person',
 				'name' => 'Test Sender',
 				'url'  => 'https://example.com/author',
 			);
@@ -942,7 +942,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Mock remote metadata.
 		$remote_metadata_callback = function () {
 			return array(
-				'type' => 'Create',
+				'type' => 'Person',
 				'name' => 'Test Sender',
 				'url'  => 'https://example.com/author',
 			);
