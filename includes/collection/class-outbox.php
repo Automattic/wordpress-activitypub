@@ -23,6 +23,11 @@ use function Activitypub\user_can_act_as_blog;
  * @link https://www.w3.org/TR/activitypub/#outbox
  */
 class Outbox {
+	use With_Guid_Lookup;
+	use With_Kses_Safe_Insert;
+	use With_Object_Title;
+	use With_Purge;
+
 	/**
 	 * The post type for the objects.
 	 *
@@ -123,29 +128,25 @@ class Outbox {
 
 		\remove_filter( 'activitypub_is_activitypub_request', '__return_true' );
 
-		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
-		if ( $has_kses ) {
-			// Prevent KSES from corrupting JSON in post_content.
-			\kses_remove_filters();
-		}
+		$id = self::without_kses(
+			static function () use ( $outbox_item, $activity ) {
+				$id = \wp_insert_post( $outbox_item, true );
 
-		$id = \wp_insert_post( $outbox_item, true );
+				// Update the activity ID if the post was inserted successfully.
+				if ( $id && ! \is_wp_error( $id ) ) {
+					$activity->set_id( \get_the_guid( $id ) );
 
-		// Update the activity ID if the post was inserted successfully.
-		if ( $id && ! \is_wp_error( $id ) ) {
-			$activity->set_id( \get_the_guid( $id ) );
+					\wp_update_post(
+						array(
+							'ID'           => $id,
+							'post_content' => \wp_slash( $activity->to_json( true, true ) ),
+						)
+					);
+				}
 
-			\wp_update_post(
-				array(
-					'ID'           => $id,
-					'post_content' => \wp_slash( $activity->to_json( true, true ) ),
-				)
-			);
-		}
-
-		if ( $has_kses ) {
-			\kses_init_filters();
-		}
+				return $id;
+			}
+		);
 
 		if ( \is_wp_error( $id ) ) {
 			return $id;
@@ -312,15 +313,7 @@ class Outbox {
 	 * @return \WP_Post|\WP_Error The outbox item or WP_Error.
 	 */
 	public static function get_by_guid( $guid ) {
-		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$post_id = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
-				\esc_url( $guid ),
-				self::POST_TYPE
-			)
-		);
+		$post_id = self::get_id_by_guid( $guid );
 
 		if ( ! $post_id ) {
 			return new \WP_Error(
@@ -520,33 +513,6 @@ class Outbox {
 	}
 
 	/**
-	 * Get the title of an activity recursively.
-	 *
-	 * @param Activity|Base_Object $activity_object The activity object.
-	 *
-	 * @return string The title.
-	 */
-	private static function get_object_title( $activity_object ) {
-		if ( ! $activity_object ) {
-			return '';
-		}
-
-		if ( \is_string( $activity_object ) ) {
-			$post_id = \url_to_postid( $activity_object );
-
-			return $post_id ? \get_the_title( $post_id ) : '';
-		}
-
-		$title = $activity_object->get_name() ?: $activity_object->get_content();
-
-		if ( ! $title && $activity_object->get_object() instanceof Base_Object ) {
-			$title = $activity_object->get_object()->get_name() ?: $activity_object->get_object()->get_content();
-		}
-
-		return $title;
-	}
-
-	/**
 	 * Purge old outbox items.
 	 *
 	 * Deletes outbox items older than the specified number of days,
@@ -558,68 +524,22 @@ class Outbox {
 	 * @return int The number of items deleted.
 	 */
 	public static function purge( $days ) {
-		if ( $days <= 0 ) {
-			return 0;
-		}
-
-		$counts = \wp_count_posts( self::POST_TYPE );
-		$total  = 0;
-		foreach ( $counts as $count ) {
-			$total += (int) $count;
-		}
-
-		if ( $total <= 20 ) {
-			return 0;
-		}
-
-		$deleted    = 0;
-		$cutoff     = \gmdate( 'Y-m-d', \time() - ( $days * DAY_IN_SECONDS ) );
-		$start_time = \time();
-
-		// If total exceeds the hard cap, drop the date filter to purge oldest items first.
-		$overflow   = $total > self::MAX_ITEMS;
-		$date_query = array(
+		return self::run_purge(
+			$days,
 			array(
-				'before' => $cutoff,
-			),
-		);
-
-		$query_args = array(
-			'post_type'   => self::POST_TYPE,
-			'post_status' => 'any',
-			'fields'      => 'ids',
-			'numberposts' => self::PURGE_BATCH_SIZE,
-			'orderby'     => 'date',
-			'order'       => 'ASC',
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query'  => array(
-				array(
-					'key'     => '_activitypub_activity_type',
-					'value'   => 'Follow',
-					'compare' => '!=',
+				'min_total'  => 20,
+				// Never purge Follow activities from the outbox.
+				'query_args' => array(
+					// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					'meta_query' => array(
+						array(
+							'key'     => '_activitypub_activity_type',
+							'value'   => 'Follow',
+							'compare' => '!=',
+						),
+					),
 				),
-			),
+			)
 		);
-
-		if ( ! $overflow ) {
-			$query_args['date_query'] = $date_query;
-		}
-
-		do {
-			$post_ids = \get_posts( $query_args );
-
-			foreach ( $post_ids as $post_id ) {
-				\wp_delete_post( $post_id, true );
-				++$deleted;
-			}
-
-			// Once we're back under the cap, re-apply the date filter.
-			if ( $overflow && ( $total - $deleted ) <= self::MAX_ITEMS ) {
-				$overflow                 = false;
-				$query_args['date_query'] = $date_query;
-			}
-		} while ( ! empty( $post_ids ) && ( \time() - $start_time ) < self::PURGE_TIMEOUT );
-
-		return $deleted;
 	}
 }

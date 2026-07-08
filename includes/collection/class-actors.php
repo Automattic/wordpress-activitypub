@@ -224,13 +224,8 @@ class Actors {
 			);
 		}
 
-		$scheme = 'acct';
-		$match  = array();
-		// Try to extract the scheme and the host.
-		if ( \preg_match( '/^([a-zA-Z^:]+):(.*)$/i', $uri, $match ) ) {
-			// Extract the scheme.
-			$scheme = \esc_attr( $match[1] );
-		}
+		// Extract the scheme, defaulting to `acct` for bare `user@host` handles.
+		$scheme = \wp_parse_url( $uri, PHP_URL_SCHEME ) ?: 'acct';
 
 		// @todo: handle old domain URIs here before we serve a new domain below when we shouldn't.
 		// Although maybe passing through to ::get_by_username() is enough?
