@@ -13,6 +13,7 @@ use Activitypub\Moderation;
  * ActivityPub Blocked Actors Collection.
  */
 class Blocked_Actors {
+	use With_Query_Pagination;
 
 	/**
 	 * Add an actor block for a user.
@@ -99,25 +100,20 @@ class Blocked_Actors {
 	 *  }
 	 */
 	public static function query( $user_id, $number = -1, $page = null, $args = array() ) {
-		$defaults = array(
-			'post_type'      => Remote_Actors::POST_TYPE,
-			'posts_per_page' => $number,
-			'paged'          => $page,
-			'orderby'        => 'ID',
-			'order'          => 'DESC',
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query'     => array(
+		$result = self::query_posts(
+			$number,
+			$page,
+			$args,
+			array(
 				array(
 					'key'   => Moderation::BLOCKED_ACTORS_META_KEY,
 					'value' => $user_id,
 				),
-			),
+			)
 		);
 
-		$args           = \wp_parse_args( $args, $defaults );
-		$query          = new \WP_Query( $args );
-		$total          = $query->found_posts;
-		$blocked_actors = \array_filter( $query->posts );
+		$blocked_actors = $result['posts'];
+		$total          = $result['total'];
 
 		return \compact( 'blocked_actors', 'total' );
 	}

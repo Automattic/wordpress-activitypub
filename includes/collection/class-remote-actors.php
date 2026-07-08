@@ -20,6 +20,9 @@ use function Activitypub\object_to_uri;
  * Remote Actors collection class.
  */
 class Remote_Actors {
+	use With_Guid_Lookup;
+	use With_Kses_Safe_Insert;
+
 	/**
 	 * Post type for storing remote actors.
 	 *
@@ -116,18 +119,11 @@ class Remote_Actors {
 			return $args;
 		}
 
-		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
-		if ( $has_kses ) {
-			// Prevent KSES from corrupting JSON in post_content.
-			\kses_remove_filters();
-		}
-
-		$post_id = \wp_insert_post( $args );
-
-		if ( $has_kses ) {
-			// Restore KSES filters.
-			\kses_init_filters();
-		}
+		$post_id = self::without_kses(
+			static function () use ( $args ) {
+				return \wp_insert_post( $args );
+			}
+		);
 
 		return $post_id;
 	}
@@ -163,18 +159,11 @@ class Remote_Actors {
 
 		$args = \wp_parse_args( $args, $post );
 
-		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
-		if ( $has_kses ) {
-			// Prevent KSES from corrupting JSON in post_content.
-			\kses_remove_filters();
-		}
-
-		$post_id = \wp_update_post( $args );
-
-		if ( $has_kses ) {
-			// Restore KSES filters.
-			\kses_init_filters();
-		}
+		$post_id = self::without_kses(
+			static function () use ( $args ) {
+				return \wp_update_post( $args );
+			}
+		);
 
 		return $post_id;
 	}
@@ -198,15 +187,7 @@ class Remote_Actors {
 	 * @return \WP_Post|\WP_Error Post object or WP_Error if not found.
 	 */
 	public static function get_by_uri( $actor_uri ) {
-		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$post_id = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
-				\esc_sql( $actor_uri ),
-				\esc_sql( self::POST_TYPE )
-			)
-		);
+		$post_id = self::get_id_by_guid( $actor_uri );
 
 		if ( ! $post_id ) {
 			return new \WP_Error(
@@ -588,39 +569,12 @@ class Remote_Actors {
 			$webfinger = \is_wp_error( $webfinger ) ? Webfinger::guess( $actor ) : Sanitize::webfinger( $webfinger );
 		}
 
-		/*
-		 * Temporarily remove mention/hashtag/link filters to prevent infinite recursion when
-		 * storing remote actors with mentions/hashtags in their bios.
-		 *
-		 * PROBLEM: These filters are globally registered on 'init' for all to_json() calls,
-		 * but they're designed for OUTGOING content (federation). When processing mentions in
-		 * an actor's bio during storage, the Mention filter fetches the mentioned actor, which
-		 * then processes mentions in THEIR bio, creating infinite recursion.
-		 *
-		 * SHORTCOMINGS:
-		 * - Fragile: Easy to forget when adding new storage locations (e.g., Inbox storage).
-		 * - Scattered: Same pattern would need to be repeated anywhere we store remote content.
-		 * - Race conditions: If filters are re-added/removed elsewhere, this could break.
-		 * - Not semantic: We're working around a design issue rather than fixing it.
-		 *
-		 * BETTER LONG-TERM SOLUTION:
-		 * Distinguish between "incoming" (storage) and "outgoing" (federation) contexts:
-		 * - INCOMING: Store received ActivityPub data as-is, don't process mentions/hashtags.
-		 *   (Remote_Actors::prepare_custom_post_type, Inbox storage)
-		 * - OUTGOING: Process mentions/hashtags when serving our content to other servers.
-		 *   (Dispatcher, REST API controllers, Transformers)
-		 */
-		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Mention', 'filter_activity_object' ), 99 );
-		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Hashtag', 'filter_activity_object' ), 99 );
-		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Link', 'filter_activity_object' ), 99 );
-
-		$actor_json  = $actor->to_json();
-		$actor_array = $actor->to_array();
-
-		// Re-add the filters.
-		\add_filter( 'activitypub_activity_object_array', array( 'Activitypub\Mention', 'filter_activity_object' ), 99 );
-		\add_filter( 'activitypub_activity_object_array', array( 'Activitypub\Hashtag', 'filter_activity_object' ), 99 );
-		\add_filter( 'activitypub_activity_object_array', array( 'Activitypub\Link', 'filter_activity_object' ), 99 );
+		// Serialize the actor with the outgoing mention/hashtag/link filters suspended.
+		list( $actor_json, $actor_array ) = self::without_federation_object_filters(
+			static function () use ( $actor ) {
+				return array( $actor->to_json(), $actor->to_array() );
+			}
+		);
 
 		$meta_input = array(
 			'_activitypub_inbox' => $inbox,
@@ -641,6 +595,51 @@ class Remote_Actors {
 			'post_status'  => 'publish',
 			'meta_input'   => $meta_input,
 		);
+	}
+
+	/**
+	 * Run a callback with the outgoing mention/hashtag/link filters suspended.
+	 *
+	 * Those filters are globally registered on `init` for every `to_json()`/`to_array()`
+	 * call, but they are meant for OUTGOING (federation) content. When we serialize a
+	 * remote actor for storage, the Mention filter would fetch the mentioned actor, whose
+	 * own bio mentions would be fetched in turn — an infinite recursion. So they are
+	 * removed around the storage serialization and restored afterwards.
+	 *
+	 * Only the filters that were actually registered are restored (and at their original
+	 * priority), so this never accidentally *adds* a filter that a peer had removed. The
+	 * longer-term fix is to distinguish incoming (store as-is) from outgoing (process)
+	 * contexts rather than toggling globals here.
+	 *
+	 * @param callable $callback The serialization to run without the filters.
+	 *
+	 * @return mixed Whatever the callback returns.
+	 */
+	private static function without_federation_object_filters( $callback ) {
+		$callbacks  = array(
+			array( 'Activitypub\Mention', 'filter_activity_object' ),
+			array( 'Activitypub\Hashtag', 'filter_activity_object' ),
+			array( 'Activitypub\Link', 'filter_activity_object' ),
+		);
+		$registered = array();
+
+		foreach ( $callbacks as $callback_ref ) {
+			$priority = \has_filter( 'activitypub_activity_object_array', $callback_ref );
+			if ( false !== $priority ) {
+				$registered[] = array( $callback_ref, $priority );
+				\remove_filter( 'activitypub_activity_object_array', $callback_ref, $priority );
+			}
+		}
+
+		try {
+			return $callback();
+		} finally {
+			// Restore only the filters that were present, even if the callback threw.
+			foreach ( $registered as $entry ) {
+				list( $callback_ref, $priority ) = $entry;
+				\add_filter( 'activitypub_activity_object_array', $callback_ref, $priority );
+			}
+		}
 	}
 
 	/**
