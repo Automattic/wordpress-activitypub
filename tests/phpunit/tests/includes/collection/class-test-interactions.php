@@ -1549,4 +1549,22 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter, 10 );
 	}
+
+	/**
+	 * Persisting a comment must not leave global comment filters attached.
+	 *
+	 * The Akismet nonce override and the other guards are only meant to apply to the
+	 * inbound activity being stored; if they linger they change how every later comment
+	 * in the request is handled.
+	 *
+	 * @covers ::persist
+	 */
+	public function test_persist_restores_global_filters() {
+		Interactions::add_comment( $this->create_test_object( 'https://example.com/persist-cleanup' ) );
+
+		$this->assertFalse( \has_filter( 'akismet_comment_nonce', array( Interactions::class, 'akismet_comment_nonce_inactive' ) ), 'The Akismet nonce override must be removed after persisting.' );
+		$this->assertFalse( \has_filter( 'pre_option_require_name_email', '__return_false' ), 'The require-name-email override must be removed after persisting.' );
+		$this->assertFalse( \has_filter( 'wp_kses_allowed_html', array( Interactions::class, 'allowed_comment_html' ) ), 'The KSES override must be removed after persisting.' );
+		$this->assertNotFalse( \has_action( 'check_comment_flood', 'check_comment_flood_db' ), 'Flood control must be restored after persisting.' );
+	}
 }
