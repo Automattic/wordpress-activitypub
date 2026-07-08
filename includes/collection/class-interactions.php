@@ -363,6 +363,19 @@ class Interactions {
 	}
 
 	/**
+	 * Force Akismet's comment nonce check to `inactive` while persisting.
+	 *
+	 * Inbound activities have no browser-issued nonce, so Akismet's nonce
+	 * verification cannot apply to this submission route. A named method (rather
+	 * than an anonymous closure) is used so it can be removed by reference again.
+	 *
+	 * @return string Always `inactive`.
+	 */
+	public static function akismet_comment_nonce_inactive() {
+		return 'inactive';
+	}
+
+	/**
 	 * Convert an Activity to a WP_Comment.
 	 *
 	 * When $user_id is provided, comment author data is built from the
@@ -486,24 +499,23 @@ class Interactions {
 		// Do not require email for AP entries.
 		\add_filter( 'pre_option_require_name_email', '__return_false' );
 		// No nonce possible for this submission route.
-		\add_filter(
-			'akismet_comment_nonce',
-			static function () {
-				return 'inactive';
-			}
-		);
+		\add_filter( 'akismet_comment_nonce', array( self::class, 'akismet_comment_nonce_inactive' ) );
 		\add_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10, 2 );
 
-		if ( self::INSERT === $action ) {
-			$state = \wp_new_comment( $comment_data, true );
-		} else {
-			$state = \wp_update_comment( $comment_data, true );
+		try {
+			if ( self::INSERT === $action ) {
+				$state = \wp_new_comment( $comment_data, true );
+			} else {
+				$state = \wp_update_comment( $comment_data, true );
+			}
+		} finally {
+			// Restore every global filter/action this method changed, even if the insert threw.
+			\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ) );
+			\remove_filter( 'akismet_comment_nonce', array( self::class, 'akismet_comment_nonce_inactive' ) );
+			\remove_filter( 'pre_option_require_name_email', '__return_false' );
+			// Restore flood control.
+			\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 		}
-
-		\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ) );
-		\remove_filter( 'pre_option_require_name_email', '__return_false' );
-		// Restore flood control.
-		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 
 		if ( 1 === $state ) {
 			return $comment_data;
