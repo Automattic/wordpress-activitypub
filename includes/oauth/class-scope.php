@@ -104,22 +104,22 @@ class Scope {
 	 * @return array Valid scopes.
 	 */
 	public static function validate( $scopes ) {
-		if ( is_string( $scopes ) ) {
+		if ( \is_string( $scopes ) ) {
 			$scopes = self::parse( $scopes );
 		}
 
-		if ( ! is_array( $scopes ) ) {
+		if ( ! \is_array( $scopes ) ) {
 			return self::DEFAULT_SCOPES;
 		}
 
 		$scopes       = self::normalize( $scopes );
-		$valid_scopes = array_intersect( $scopes, self::ALL );
+		$valid_scopes = \array_intersect( $scopes, self::ALL );
 
 		if ( empty( $valid_scopes ) ) {
 			return self::DEFAULT_SCOPES;
 		}
 
-		return array_values( array_unique( $valid_scopes ) );
+		return \array_values( \array_unique( $valid_scopes ) );
 	}
 
 	/**
@@ -135,22 +135,22 @@ class Scope {
 	 * @return array Normalized scope strings.
 	 */
 	public static function normalize( $scopes ) {
-		if ( ! is_array( $scopes ) ) {
+		if ( ! \is_array( $scopes ) ) {
 			return array();
 		}
 
 		$normalized = array();
 		foreach ( $scopes as $scope ) {
-			if ( ! is_string( $scope ) || '' === $scope ) {
+			if ( ! \is_string( $scope ) || '' === $scope ) {
 				continue;
 			}
 
-			if ( 0 === strpos( $scope, 'activitypub:read:' ) ) {
+			if ( 0 === \strpos( $scope, 'activitypub:read:' ) ) {
 				$normalized[] = self::READ;
 				continue;
 			}
 
-			if ( 0 === strpos( $scope, 'activitypub:write:' ) ) {
+			if ( 0 === \strpos( $scope, 'activitypub:write:' ) ) {
 				$normalized[] = self::WRITE;
 				continue;
 			}
@@ -172,7 +172,7 @@ class Scope {
 	 * @return array Scope identifiers.
 	 */
 	public static function supported() {
-		return array_merge( self::ALL, self::CANONICAL_ALIASES );
+		return \array_merge( self::ALL, self::CANONICAL_ALIASES );
 	}
 
 	/**
@@ -182,13 +182,13 @@ class Scope {
 	 * @return array Scope array.
 	 */
 	public static function parse( $scope_string ) {
-		if ( empty( $scope_string ) || ! is_string( $scope_string ) ) {
+		if ( empty( $scope_string ) || ! \is_string( $scope_string ) ) {
 			return array();
 		}
 
-		$scopes = preg_split( '/\s+/', trim( $scope_string ) );
+		$scopes = \preg_split( '/\s+/', \trim( $scope_string ) );
 
-		return array_filter( array_map( 'trim', $scopes ) );
+		return \array_filter( \array_map( 'trim', $scopes ) );
 	}
 
 	/**
@@ -198,11 +198,11 @@ class Scope {
 	 * @return string Space-separated scope string.
 	 */
 	public static function to_string( $scopes ) {
-		if ( ! is_array( $scopes ) ) {
+		if ( ! \is_array( $scopes ) ) {
 			return '';
 		}
 
-		return implode( ' ', $scopes );
+		return \implode( ' ', $scopes );
 	}
 
 	/**
@@ -212,7 +212,7 @@ class Scope {
 	 * @return bool True if valid, false otherwise.
 	 */
 	public static function is_valid( $scope ) {
-		return in_array( $scope, self::ALL, true );
+		return \in_array( $scope, self::ALL, true );
 	}
 
 	/**
@@ -242,7 +242,7 @@ class Scope {
 	 * @return bool True if the scope is present.
 	 */
 	public static function contains( $scopes, $scope ) {
-		return is_array( $scopes ) && in_array( $scope, $scopes, true );
+		return \is_array( $scopes ) && \in_array( $scope, $scopes, true );
 	}
 
 	/**
@@ -252,11 +252,11 @@ class Scope {
 	 * @return array Sanitized scopes array.
 	 */
 	public static function sanitize( $value ) {
-		if ( is_string( $value ) ) {
+		if ( \is_string( $value ) ) {
 			$value = self::parse( $value );
 		}
 
-		if ( ! is_array( $value ) ) {
+		if ( ! \is_array( $value ) ) {
 			return array();
 		}
 

@@ -203,8 +203,8 @@ class Remote_Actors {
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
-				esc_sql( $actor_uri ),
-				esc_sql( self::POST_TYPE )
+				\esc_sql( $actor_uri ),
+				\esc_sql( self::POST_TYPE )
 			)
 		);
 
@@ -556,7 +556,12 @@ class Remote_Actors {
 	 * @return array|\WP_Error Array of post arguments or WP_Error on failure.
 	 */
 	private static function prepare_custom_post_type( $actor ) {
-		if ( ! $actor instanceof Actor ) {
+		/*
+		 * Reject non-actor objects here, the single chokepoint every
+		 * create/update/upsert funnels through, so callers do not each have to
+		 * guard against accidentally caching a Note or other non-actor object.
+		 */
+		if ( ! $actor instanceof Actor || ! is_actor( $actor ) ) {
 			return new \WP_Error(
 				'activitypub_invalid_actor_data',
 				\__( 'Invalid actor data', 'activitypub' ),
@@ -624,7 +629,7 @@ class Remote_Actors {
 
 		// Add emoji meta if actor has emoji in tags.
 		$emoji_meta = Emoji::prepare_actor_meta( $actor_array );
-		$meta_input = array_merge( $meta_input, $emoji_meta );
+		$meta_input = \array_merge( $meta_input, $emoji_meta );
 
 		return array(
 			'guid'         => \esc_url_raw( $actor->get_id() ),
@@ -648,7 +653,7 @@ class Remote_Actors {
 	 */
 	public static function normalize_identifier( $actor ) {
 		$actor = object_to_uri( $actor );
-		if ( ! is_string( $actor ) ) {
+		if ( ! \is_string( $actor ) ) {
 			return null;
 		}
 

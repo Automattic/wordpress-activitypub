@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 7.0
-Stable tag: 9.0.0
+Stable tag: 9.0.2
 Requires PHP: 7.4
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -61,6 +61,12 @@ This plugin connects your WordPress blog to popular social platforms like Mastod
 
 *ActivityPub for WordPress* adds Fediverse features to WordPress, but it is not a replacement for platforms like Friendica or Mastodon. If you're looking to host a decentralized social network, consider using [Mastodon](https://joinmastodon.org/) or [Friendica](https://friendi.ca/).
 
+= Is this a Mastodon crossposter? Can it post to my existing Mastodon account? =
+
+No. A crossposter pushes copies of your posts to a *separate* account you already have on someone else's server. *ActivityPub for WordPress* does the opposite: it makes your own site a first-class Fediverse account (`@you@example.com`), so people follow your site directly and replies come back as WordPress comments, with no second account required.
+
+The plugin will not add crossposting to an existing account; that is a deliberate choice, not a missing feature. If you would rather mirror articles to an established Mastodon account, that is a job for a dedicated crossposter plugin.
+
 = Why "ActivityPub"? =
 
 The name ActivityPub comes from the two core ideas behind the protocol:
@@ -110,6 +116,19 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 9.0.2 - 2026-06-29
+#### Fixed
+- Improve handling of content received from other servers.
+
+### 9.0.1 - 2026-06-15
+#### Added
+- Add FAQ guides that help solve follow requests stuck on "pending" and comments from the Fediverse not showing up.
+
+#### Fixed
+- Notify followers about your new preference when the Starter Kit policy setting changes, so other servers no longer act on an outdated one.
+- Publish the Starter Kit consent policy only on your own blog and author profiles, no longer on system or third-party profiles.
+- Starter Kit consent now also works for the blog profile, not just for individual authors.
 
 ### 9.0.0 - 2026-06-10
 #### Security

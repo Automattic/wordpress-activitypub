@@ -169,7 +169,7 @@ class Router {
 				 *
 				 * @param string $activitypub_template Absolute path to the template file.
 				 */
-				$activitypub_template = apply_filters( 'activitypub_preview_template', ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php' );
+				$activitypub_template = \apply_filters( 'activitypub_preview_template', ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php' );
 			} else {
 				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . 'templates/activitypub-json.php';
 			}
@@ -232,7 +232,7 @@ class Router {
 		}
 
 		if ( ! \headers_sent() ) {
-			\header( 'Link: <' . esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"', false );
+			\header( 'Link: <' . \esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"', false );
 
 			if ( \get_option( 'activitypub_vary_header', '1' ) ) {
 				// Send Vary header for Accept header.
@@ -243,7 +243,7 @@ class Router {
 		\add_action(
 			'wp_head',
 			static function () use ( $id ) {
-				echo PHP_EOL . '<link rel="alternate" title="ActivityPub (JSON)" type="application/activity+json" href="' . esc_url( $id ) . '" />' . PHP_EOL;
+				echo PHP_EOL . '<link rel="alternate" title="ActivityPub (JSON)" type="application/activity+json" href="' . \esc_url( $id ) . '" />' . PHP_EOL;
 			}
 		);
 	}
@@ -257,7 +257,7 @@ class Router {
 	 * @return string $redirect_url The possibly-unslashed redirect URL.
 	 */
 	public static function no_trailing_redirect( $redirect_url, $requested_url ) {
-		if ( get_query_var( 'actor' ) ) {
+		if ( \get_query_var( 'actor' ) ) {
 			return $requested_url;
 		}
 
@@ -287,7 +287,7 @@ class Router {
 		unset( $query_params['activitypub'] );
 		unset( $query_params['stamp'] );
 
-		if ( 1 !== count( $query_params ) ) {
+		if ( 1 !== \count( $query_params ) ) {
 			return $redirect_url;
 		}
 
@@ -327,7 +327,7 @@ class Router {
 				return;
 			}
 
-			\wp_safe_redirect( get_comment_link( $comment ) );
+			\wp_safe_redirect( \get_comment_link( $comment ) );
 			exit;
 		}
 
@@ -374,7 +374,7 @@ class Router {
 			 */
 			$supported_taxonomies = \apply_filters( 'activitypub_supported_taxonomies', array( 'category', 'post_tag' ) );
 
-			if ( ! in_array( $term->taxonomy, $supported_taxonomies, true ) ) {
+			if ( ! \in_array( $term->taxonomy, $supported_taxonomies, true ) ) {
 				return;
 			}
 

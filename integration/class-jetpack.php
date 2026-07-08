@@ -100,7 +100,7 @@ class Jetpack {
 		$comment_types[] = 'quote';
 		$comment_types[] = 'repost';
 
-		return array_unique( $comment_types );
+		return \array_unique( $comment_types );
 	}
 
 	/**
@@ -124,19 +124,19 @@ class Jetpack {
 			if ( empty( $feed['feed_id'] ) ) {
 				return $actions; // No feed_id available on WPCOM.
 			}
-			$url = sprintf( 'https://wordpress.com/reader/feeds/%d', (int) $feed['feed_id'] );
+			$url = \sprintf( 'https://wordpress.com/reader/feeds/%d', (int) $feed['feed_id'] );
 		} else {
-			$url = sprintf( 'https://wordpress.com/reader/feeds/lookup/%s', rawurlencode( $item['identifier'] ) );
+			$url = \sprintf( 'https://wordpress.com/reader/feeds/lookup/%s', \rawurlencode( $item['identifier'] ) );
 		}
 
-		return array_merge(
+		return \array_merge(
 			array(
-				'reader' => sprintf(
+				'reader' => \sprintf(
 					'<a href="%1$s" target="_blank">%2$s<span class="screen-reader-text"> %3$s</span><span aria-hidden="true" class="dashicons dashicons-external"></span></a>',
-					esc_url( $url ),
-					esc_html__( 'View Feed', 'activitypub' ),
+					\esc_url( $url ),
+					\esc_html__( 'View Feed', 'activitypub' ),
 					/* translators: Hidden accessibility text. */
-					esc_html__( '(opens in a new tab)', 'activitypub' )
+					\esc_html__( '(opens in a new tab)', 'activitypub' )
 				),
 			),
 			$actions

@@ -30,7 +30,7 @@ class Seriously_Simple_Podcasting extends Post {
 	public function get_attachment() {
 		$post       = $this->item;
 		$attachment = array(
-			'type' => \esc_attr( ucfirst( \get_post_meta( $post->ID, 'episode_type', true ) ?? 'Audio' ) ),
+			'type' => \esc_attr( \ucfirst( \get_post_meta( $post->ID, 'episode_type', true ) ?? 'Audio' ) ),
 			'url'  => \esc_url( \get_post_meta( $post->ID, 'audio_file', true ) ),
 			'name' => \esc_attr( \get_the_title( $post->ID ) ?? '' ),
 		);

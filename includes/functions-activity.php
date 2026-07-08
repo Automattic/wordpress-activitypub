@@ -101,19 +101,19 @@ function extract_recipients_from_activity_property( $property, $data ) {
  */
 function get_activity_visibility( $activity ) {
 	// Set default visibility for specific activity types.
-	if ( ! empty( $activity['type'] ) && in_array( $activity['type'], array( 'Accept', 'Delete', 'Follow', 'Reject', 'Undo' ), true ) ) {
+	if ( ! empty( $activity['type'] ) && \in_array( $activity['type'], array( 'Accept', 'Delete', 'Follow', 'Reject', 'Undo' ), true ) ) {
 		return ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
 	}
 
 	// Check 'to' field for public visibility.
 	$to = extract_recipients_from_activity_property( 'to', $activity );
-	if ( ! empty( array_intersect( $to, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) ) ) {
+	if ( ! empty( \array_intersect( $to, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) ) ) {
 		return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
 	}
 
 	// Check 'cc' field for quiet public visibility.
 	$cc = extract_recipients_from_activity_property( 'cc', $activity );
-	if ( ! empty( array_intersect( $cc, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) ) ) {
+	if ( ! empty( \array_intersect( $cc, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) ) ) {
 		return ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC;
 	}
 
@@ -141,7 +141,7 @@ function is_activity_public( $data ) {
 		return false;
 	}
 
-	return ! empty( array_intersect( $recipients, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) );
+	return ! empty( \array_intersect( $recipients, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) );
 }
 
 /**
@@ -180,11 +180,11 @@ function is_quote_activity( $data ) {
  */
 function object_to_uri( $data ) {
 	// Check whether it is already simple.
-	if ( ! $data || is_string( $data ) ) {
+	if ( ! $data || \is_string( $data ) ) {
 		return $data;
 	}
 
-	if ( is_object( $data ) ) {
+	if ( \is_object( $data ) ) {
 		$data = $data->to_array();
 	}
 
@@ -192,12 +192,12 @@ function object_to_uri( $data ) {
 	 * Check if it is a list, then take first item.
 	 * This plugin does not support collections.
 	 */
-	if ( array_is_list( $data ) ) {
+	if ( \array_is_list( $data ) ) {
 		$data = $data[0];
 	}
 
 	// Check if it is simplified now.
-	if ( is_string( $data ) ) {
+	if ( \is_string( $data ) ) {
 		return $data;
 	}
 
@@ -255,7 +255,7 @@ function is_activity( $data ) {
 	 *
 	 * @param array $types The activity types.
 	 */
-	$types = apply_filters( 'activitypub_activity_types', Activity::TYPES );
+	$types = \apply_filters( 'activitypub_activity_types', Activity::TYPES );
 
 	return _is_type_of( $data, $types );
 }
@@ -295,7 +295,7 @@ function is_actor( $data ) {
 	 *
 	 * @param array $types The actor types.
 	 */
-	$types = apply_filters( 'activitypub_actor_types', Actor::TYPES );
+	$types = \apply_filters( 'activitypub_actor_types', Actor::TYPES );
 
 	return _is_type_of( $data, $types );
 }
@@ -315,7 +315,7 @@ function is_collection( $data ) {
 	 *
 	 * @param array $types The collection types.
 	 */
-	$types = apply_filters( 'activitypub_collection_types', array( 'Collection', 'OrderedCollection', 'CollectionPage', 'OrderedCollectionPage' ) );
+	$types = \apply_filters( 'activitypub_collection_types', array( 'Collection', 'OrderedCollection', 'CollectionPage', 'OrderedCollectionPage' ) );
 
 	return _is_type_of( $data, $types );
 }
@@ -329,16 +329,16 @@ function is_collection( $data ) {
  * @return boolean True if $data is of one of the types, false otherwise.
  */
 function _is_type_of( $data, $types ) {
-	if ( is_string( $data ) ) {
-		return in_array( $data, $types, true );
+	if ( \is_string( $data ) ) {
+		return \in_array( $data, $types, true );
 	}
 
-	if ( is_array( $data ) && isset( $data['type'] ) ) {
-		return in_array( $data['type'], $types, true );
+	if ( \is_array( $data ) && isset( $data['type'] ) ) {
+		return \in_array( $data['type'], $types, true );
 	}
 
 	if ( $data instanceof Base_Object ) {
-		return in_array( $data->get_type(), $types, true );
+		return \in_array( $data->get_type(), $types, true );
 	}
 
 	return false;

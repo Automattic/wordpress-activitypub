@@ -46,7 +46,7 @@ class Factory {
 		} elseif ( \is_object( $data ) ) {
 			$class = \get_class( $data );
 		} else {
-			return new \WP_Error( 'invalid_object', __( 'Invalid object', 'activitypub' ) );
+			return new \WP_Error( 'invalid_object', \__( 'Invalid object', 'activitypub' ) );
 		}
 
 		/**
@@ -85,7 +85,7 @@ class Factory {
 				! \is_object( $transformer ) ||
 				! $transformer instanceof Base
 			) {
-				return new \WP_Error( 'invalid_transformer', __( 'Invalid transformer', 'activitypub' ) );
+				return new \WP_Error( 'invalid_transformer', \__( 'Invalid transformer', 'activitypub' ) );
 			}
 
 			return $transformer;
@@ -120,6 +120,6 @@ class Factory {
 			return new Activity_Object( $data );
 		}
 
-		return new \WP_Error( 'invalid_object', __( 'Invalid object', 'activitypub' ) );
+		return new \WP_Error( 'invalid_object', \__( 'Invalid object', 'activitypub' ) );
 	}
 }

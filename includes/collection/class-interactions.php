@@ -10,7 +10,6 @@ namespace Activitypub\Collection;
 use Activitypub\Comment;
 use Activitypub\Emoji;
 use Activitypub\Webfinger;
-use WP_Comment_Query;
 
 use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\is_ap_post;
@@ -237,7 +236,7 @@ class Interactions {
 			),
 		);
 
-		$query = new WP_Comment_Query( $args );
+		$query = new \WP_Comment_Query( $args );
 		return $query->comments;
 	}
 
@@ -267,7 +266,7 @@ class Interactions {
 		$meta = get_remote_metadata_by_actor( $actor );
 
 		// Get URL, because $actor seems to be the ID.
-		if ( $meta && ! is_wp_error( $meta ) && isset( $meta['url'] ) ) {
+		if ( $meta && ! \is_wp_error( $meta ) && isset( $meta['url'] ) ) {
 			$actor = object_to_uri( $meta['url'] );
 		}
 
@@ -346,17 +345,17 @@ class Interactions {
 		}
 
 		// Add `p` and `br` to the list of allowed tags.
-		if ( ! array_key_exists( 'br', $allowed_tags ) ) {
+		if ( ! \array_key_exists( 'br', $allowed_tags ) ) {
 			$allowed_tags['br'] = array();
 		}
 
-		if ( ! array_key_exists( 'p', $allowed_tags ) ) {
+		if ( ! \array_key_exists( 'p', $allowed_tags ) ) {
 			$allowed_tags['p'] = array();
 		}
 
 		// Add `img` for custom emoji support with strict validation.
 		$emoji_html = Emoji::get_kses_allowed_html();
-		if ( ! array_key_exists( 'img', $allowed_tags ) ) {
+		if ( ! \array_key_exists( 'img', $allowed_tags ) ) {
 			$allowed_tags['img'] = $emoji_html['img'];
 		}
 
@@ -394,7 +393,7 @@ class Interactions {
 			$actor = object_to_uri( $activity['actor'] ?? null );
 			$actor = get_remote_metadata_by_actor( $actor );
 
-			if ( ! $actor || is_wp_error( $actor ) ) {
+			if ( ! $actor || \is_wp_error( $actor ) ) {
 				return false;
 			}
 
@@ -409,14 +408,14 @@ class Interactions {
 				return false;
 			}
 
-			$comment_author     = $comment_author ?? __( 'Anonymous', 'activitypub' );
+			$comment_author     = $comment_author ?? \__( 'Anonymous', 'activitypub' );
 			$comment_author_url = \esc_url_raw( object_to_uri( $actor['url'] ?? $actor['id'] ) );
 
 			$webfinger = Webfinger::uri_to_acct( $comment_author_url );
-			if ( is_wp_error( $webfinger ) ) {
+			if ( \is_wp_error( $webfinger ) ) {
 				$comment_author_email = '';
 			} else {
-				$comment_author_email = str_replace( 'acct:', '', $webfinger );
+				$comment_author_email = \str_replace( 'acct:', '', $webfinger );
 			}
 
 			if ( isset( $activity['object']['content'] ) ) {

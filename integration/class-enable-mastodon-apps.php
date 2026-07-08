@@ -72,7 +72,7 @@ class Enable_Mastodon_Apps {
 			is_user_type_disabled( 'user' ) &&
 			! is_user_type_disabled( 'blog' ) &&
 			// Check if the blog user is permissible for this user.
-			user_can( $user_id, 'activitypub' )
+			\user_can( $user_id, 'activitypub' )
 		) {
 			return Actors::BLOG_USER_ID;
 		}
@@ -94,7 +94,7 @@ class Enable_Mastodon_Apps {
 
 		$user_id = self::maybe_map_user_to_blog( $user_id );
 		$user    = Actors::get_by_id( $user_id );
-		if ( ! $user || is_wp_error( $user ) ) {
+		if ( ! $user || \is_wp_error( $user ) ) {
 			return $data;
 		}
 
@@ -154,7 +154,7 @@ class Enable_Mastodon_Apps {
 	private static function set_extra_fields( $user_id, $fields ) {
 		// The Mastodon API submits a simple hash for every field.
 		// We can reasonably assume a similar order for our operations below.
-		$ids       = wp_list_pluck( Extra_Fields::get_actor_fields( $user_id ), 'ID' );
+		$ids       = \wp_list_pluck( Extra_Fields::get_actor_fields( $user_id ), 'ID' );
 		$is_blog   = Actors::BLOG_USER_ID === $user_id;
 		$post_type = $is_blog ? Extra_Fields::BLOG_POST_TYPE : Extra_Fields::USER_POST_TYPE;
 
@@ -243,7 +243,7 @@ class Enable_Mastodon_Apps {
 			$mastodon_followers[] = $account;
 		}
 
-		return array_merge( $mastodon_followers, $followers );
+		return \array_merge( $mastodon_followers, $followers );
 	}
 
 	/**
@@ -262,20 +262,20 @@ class Enable_Mastodon_Apps {
 			}
 		}
 
-		if ( $user_data || ( is_numeric( $user_id ) && $user_id ) ) {
+		if ( $user_data || ( \is_numeric( $user_id ) && $user_id ) ) {
 			// Only augment.
 			return $user_data;
 		}
 
 		$user = Actors::get_by_various( $user_id );
 
-		if ( $user && ! is_wp_error( $user ) ) {
+		if ( $user && ! \is_wp_error( $user ) ) {
 			return $user_data;
 		}
 
 		$uri = Webfinger_Util::resolve( $user_id );
 
-		if ( ! $uri || is_wp_error( $uri ) ) {
+		if ( ! $uri || \is_wp_error( $uri ) ) {
 			return $user_data;
 		}
 
@@ -299,7 +299,7 @@ class Enable_Mastodon_Apps {
 		$user_id_to_use = self::maybe_map_user_to_blog( $user_id );
 		$user           = Actors::get_by_id( $user_id_to_use );
 
-		if ( ! $user || is_wp_error( $user ) ) {
+		if ( ! $user || \is_wp_error( $user ) ) {
 			return $user_data;
 		}
 
@@ -311,7 +311,7 @@ class Enable_Mastodon_Apps {
 		$account->acct           = $account->username;
 		$account->display_name   = $user->get_name();
 		$account->note           = $user->get_summary();
-		$account->source['note'] = wp_strip_all_tags( $account->note, true );
+		$account->source['note'] = \wp_strip_all_tags( $account->note, true );
 		$account->url            = $user->get_url();
 
 		$icon                   = $user->get_icon();
@@ -379,13 +379,13 @@ class Enable_Mastodon_Apps {
 	 * @return Status|null The Mastodon API status object, or null if the post is not found
 	 */
 	private static function api_post_status( $post_id ) {
-		$post = Factory::get_transformer( get_post( $post_id ) );
-		if ( is_wp_error( $post ) ) {
+		$post = Factory::get_transformer( \get_post( $post_id ) );
+		if ( \is_wp_error( $post ) ) {
 			return null;
 		}
 
 		$data    = $post->to_object()->to_array();
-		$account = self::api_account_internal( null, get_post_field( 'post_author', $post_id ) );
+		$account = self::api_account_internal( null, \get_post_field( 'post_author', $post_id ) );
 
 		return self::activity_to_status( $data, $account, $post_id );
 	}
@@ -551,7 +551,7 @@ class Enable_Mastodon_Apps {
 		if ( ! $q ) {
 			return $search_data;
 		}
-		$q = sanitize_text_field( wp_unslash( $q ) );
+		$q = \sanitize_text_field( \wp_unslash( $q ) );
 
 		$followers = Followers::get_many( $user_id, 40, null, array( 's' => $q ) );
 		if ( ! $followers ) {
@@ -582,9 +582,9 @@ class Enable_Mastodon_Apps {
 	 * @return array The filtered args.
 	 */
 	public static function api_get_posts_query_args( $args ) {
-		if ( isset( $args['author'] ) && is_string( $args['author'] ) ) {
+		if ( isset( $args['author'] ) && \is_string( $args['author'] ) ) {
 			$uri = Webfinger_Util::resolve( $args['author'] );
-			if ( $uri && ! is_wp_error( $uri ) ) {
+			if ( $uri && ! \is_wp_error( $uri ) ) {
 				$args['activitypub'] = $uri;
 				unset( $args['author'] );
 			}
@@ -609,7 +609,7 @@ class Enable_Mastodon_Apps {
 			$object = $item;
 		}
 
-		if ( ! isset( $object['type'] ) || ! in_array( $object['type'], array( 'Article', 'Note' ), true ) || ! $account ) {
+		if ( ! isset( $object['type'] ) || ! \in_array( $object['type'], array( 'Article', 'Note' ), true ) || ! $account ) {
 			return null;
 		}
 
@@ -634,7 +634,7 @@ class Enable_Mastodon_Apps {
 		}
 
 		if ( ! empty( $object['attachment'] ) ) {
-			$status->media_attachments = array_map(
+			$status->media_attachments = \array_map(
 				static function ( $attachment ) {
 					$default_attachment = array(
 						'url'       => null,
@@ -645,11 +645,11 @@ class Enable_Mastodon_Apps {
 						'blurhash'  => null,
 					);
 
-					$attachment = array_merge( $default_attachment, $attachment );
+					$attachment = \array_merge( $default_attachment, $attachment );
 
 					$media_attachment              = new Media_Attachment();
 					$media_attachment->id          = $attachment['url'];
-					$media_attachment->type        = strtok( $attachment['mediaType'], '/' );
+					$media_attachment->type        = \strtok( $attachment['mediaType'], '/' );
 					$media_attachment->url         = $attachment['url'];
 					$media_attachment->preview_url = $attachment['url'];
 					$media_attachment->description = $attachment['name'];
@@ -689,12 +689,12 @@ class Enable_Mastodon_Apps {
 
 		$data = get_remote_metadata_by_actor( $args['activitypub'] );
 
-		if ( ! $data || is_wp_error( $data ) || ! isset( $data['outbox'] ) ) {
+		if ( ! $data || \is_wp_error( $data ) || ! isset( $data['outbox'] ) ) {
 			return $statuses;
 		}
 
 		$outbox = Http::get_remote_object( $data['outbox'], true );
-		if ( is_wp_error( $outbox ) || ! isset( $outbox['first'] ) ) {
+		if ( \is_wp_error( $outbox ) || ! isset( $outbox['first'] ) ) {
 			return $statuses;
 		}
 
@@ -718,11 +718,11 @@ class Enable_Mastodon_Apps {
 			}
 
 			$posts = Http::get_remote_object( $url, true );
-			if ( is_wp_error( $posts ) ) {
+			if ( \is_wp_error( $posts ) ) {
 				return $statuses;
 			}
 
-			$new_statuses         = array_map(
+			$new_statuses         = \array_map(
 				static function ( $item ) use ( $account, $args ) {
 					if ( $args['exclude_replies'] ) {
 						if ( isset( $item['object']['inReplyTo'] ) && $item['object']['inReplyTo'] ) {
@@ -733,15 +733,15 @@ class Enable_Mastodon_Apps {
 				},
 				$posts['orderedItems']
 			);
-			$activitypub_statuses = array_merge( $activitypub_statuses, array_filter( $new_statuses ) );
+			$activitypub_statuses = \array_merge( $activitypub_statuses, \array_filter( $new_statuses ) );
 			$url                  = $posts['next'] ?? null;
 
-			if ( count( $activitypub_statuses ) >= $limit ) {
+			if ( \count( $activitypub_statuses ) >= $limit ) {
 				break;
 			}
 		}
 
-		return array_slice( $activitypub_statuses, 0, $limit );
+		return \array_slice( $activitypub_statuses, 0, $limit );
 	}
 
 	/**
@@ -957,7 +957,7 @@ class Enable_Mastodon_Apps {
 	 */
 	public static function api_get_replies( $context, $post_id, $url ) {
 		$meta = Http::get_remote_object( $url, true );
-		if ( is_wp_error( $meta ) || ! isset( $meta['replies']['first']['next'] ) ) {
+		if ( \is_wp_error( $meta ) || ! isset( $meta['replies']['first']['next'] ) ) {
 			return $context;
 		}
 
@@ -966,7 +966,7 @@ class Enable_Mastodon_Apps {
 		} elseif ( isset( $meta['replies']['first']['next'] ) ) {
 			$replies_url = $meta['replies']['first']['next'];
 			$replies     = Http::get_remote_object( $replies_url, true );
-			if ( is_wp_error( $replies ) || ! isset( $replies['items'] ) ) {
+			if ( \is_wp_error( $replies ) || ! isset( $replies['items'] ) ) {
 				return $context;
 			}
 		} else {
@@ -974,22 +974,22 @@ class Enable_Mastodon_Apps {
 		}
 
 		foreach ( $replies['items'] as $reply ) {
-			if ( isset( $reply['id'] ) && is_string( $reply['id'] ) && isset( $reply['content'] ) && is_string( $reply['content'] ) ) {
+			if ( isset( $reply['id'] ) && \is_string( $reply['id'] ) && isset( $reply['content'] ) && \is_string( $reply['content'] ) ) {
 				$status = $reply;
 			} else {
-				if ( is_string( $reply ) ) {
+				if ( \is_string( $reply ) ) {
 					$url = $reply;
-				} elseif ( isset( $reply['url'] ) && is_string( $reply['url'] ) ) {
+				} elseif ( isset( $reply['url'] ) && \is_string( $reply['url'] ) ) {
 					$url = $reply['url'];
 				} else {
 					continue;
 				}
 				$response = Http::get( $url, array(), true );
-				if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
+				if ( \is_wp_error( $response ) || \wp_remote_retrieve_response_code( $response ) !== 200 ) {
 					continue;
 				}
-				$status = json_decode( wp_remote_retrieve_body( $response ), true );
-				if ( ! $status || is_wp_error( $status ) ) {
+				$status = \json_decode( \wp_remote_retrieve_body( $response ), true );
+				if ( ! $status || \is_wp_error( $status ) ) {
 					continue;
 				}
 			}

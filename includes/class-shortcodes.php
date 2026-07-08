@@ -15,9 +15,9 @@ class Shortcodes {
 	 * Register the shortcodes.
 	 */
 	public static function register() {
-		foreach ( get_class_methods( self::class ) as $shortcode ) {
+		foreach ( \get_class_methods( self::class ) as $shortcode ) {
 			if ( 'init' !== $shortcode ) {
-				add_shortcode( 'ap_' . $shortcode, array( self::class, $shortcode ) );
+				\add_shortcode( 'ap_' . $shortcode, array( self::class, $shortcode ) );
 			}
 		}
 	}
@@ -26,9 +26,9 @@ class Shortcodes {
 	 * Unregister the shortcodes.
 	 */
 	public static function unregister() {
-		foreach ( get_class_methods( self::class ) as $shortcode ) {
+		foreach ( \get_class_methods( self::class ) as $shortcode ) {
 			if ( 'init' !== $shortcode ) {
-				remove_shortcode( 'ap_' . $shortcode );
+				\remove_shortcode( 'ap_' . $shortcode );
 			}
 		}
 	}
@@ -91,7 +91,7 @@ class Shortcodes {
 			return '';
 		}
 
-		$attributes = shortcode_atts(
+		$attributes = \shortcode_atts(
 			array( 'type' => 'plain' ),
 			$attributes,
 			$tag
@@ -101,7 +101,7 @@ class Shortcodes {
 			return $title;
 		}
 
-		return sprintf( '<h2>%s</h2>', $title );
+		return \sprintf( '<h2>%s</h2>', $title );
 	}
 
 	/**
@@ -120,13 +120,13 @@ class Shortcodes {
 			return '';
 		}
 
-		$attributes = shortcode_atts(
+		$attributes = \shortcode_atts(
 			array( 'length' => ACTIVITYPUB_EXCERPT_LENGTH ),
 			$attributes,
 			$tag
 		);
 
-		$excerpt_length = intval( $attributes['length'] );
+		$excerpt_length = \intval( $attributes['length'] );
 
 		if ( 0 === $excerpt_length ) {
 			$excerpt_length = ACTIVITYPUB_EXCERPT_LENGTH;
@@ -155,9 +155,9 @@ class Shortcodes {
 		}
 
 		// Prevent inception.
-		remove_shortcode( 'ap_content' );
+		\remove_shortcode( 'ap_content' );
 
-		$attributes = shortcode_atts(
+		$attributes = \shortcode_atts(
 			array( 'apply_filters' => 'yes' ),
 			$attributes,
 			$tag
@@ -167,9 +167,9 @@ class Shortcodes {
 
 		if ( 'attachment' === $item->post_type ) {
 			// Get title of attachment with fallback to alt text.
-			$content = wp_get_attachment_caption( $item->ID );
+			$content = \wp_get_attachment_caption( $item->ID );
 			if ( empty( $content ) ) {
-				$content = get_post_meta( $item->ID, '_wp_attachment_image_alt', true );
+				$content = \get_post_meta( $item->ID, '_wp_attachment_image_alt', true );
 			}
 		}
 
@@ -192,7 +192,7 @@ class Shortcodes {
 		$content = Sanitize::clean_html( $content );
 		$content = Sanitize::strip_whitespace( $content );
 
-		add_shortcode( 'ap_content', array( 'Activitypub\Shortcodes', 'content' ) );
+		\add_shortcode( 'ap_content', array( 'Activitypub\Shortcodes', 'content' ) );
 
 		return $content;
 	}
@@ -213,7 +213,7 @@ class Shortcodes {
 			return '';
 		}
 
-		$attributes = shortcode_atts(
+		$attributes = \shortcode_atts(
 			array(
 				'type' => 'url',
 			),
@@ -247,7 +247,7 @@ class Shortcodes {
 			return '';
 		}
 
-		$attributes = shortcode_atts(
+		$attributes = \shortcode_atts(
 			array(
 				'type' => 'url',
 			),
@@ -281,7 +281,7 @@ class Shortcodes {
 			return '';
 		}
 
-		$attributes = shortcode_atts(
+		$attributes = \shortcode_atts(
 			array(
 				'type' => 'full',
 			),
@@ -291,7 +291,7 @@ class Shortcodes {
 
 		$size = 'full';
 
-		if ( in_array(
+		if ( \in_array(
 			$attributes['type'],
 			array( 'thumbnail', 'medium', 'large', 'full' ),
 			true
@@ -338,7 +338,7 @@ class Shortcodes {
 			return '';
 		}
 
-		return wp_strip_all_tags( $name );
+		return \wp_strip_all_tags( $name );
 	}
 
 	/**

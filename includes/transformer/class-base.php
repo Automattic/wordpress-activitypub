@@ -185,7 +185,7 @@ abstract class Base {
 			$followers = $actor->get_followers();
 		}
 
-		$mentions = array_values( $this->get_mentions() );
+		$mentions = \array_values( $this->get_mentions() );
 
 		if ( $this->get_in_reply_to() ) {
 			$object = Http::get_remote_object( $this->get_in_reply_to() );
@@ -278,7 +278,7 @@ abstract class Base {
 		 *
 		 * @return string The filtered locale of the post.
 		 */
-		return apply_filters( 'activitypub_locale', $lang, $this->item );
+		return \apply_filters( 'activitypub_locale', $lang, $this->item );
 	}
 
 	/**
@@ -372,11 +372,11 @@ abstract class Base {
 	protected function get_mentions() {
 		$content = '';
 
-		if ( method_exists( $this, 'get_content' ) ) {
+		if ( \method_exists( $this, 'get_content' ) ) {
 			$content = $content . ' ' . $this->get_content();
 		}
 
-		if ( method_exists( $this, 'get_summary' ) ) {
+		if ( \method_exists( $this, 'get_summary' ) ) {
 			$content = $content . ' ' . $this->get_summary();
 		}
 
@@ -389,7 +389,7 @@ abstract class Base {
 		 *
 		 * @return array The filtered mentions.
 		 */
-		return apply_filters(
+		return \apply_filters(
 			'activitypub_extract_mentions',
 			array(),
 			$content,
@@ -723,7 +723,7 @@ abstract class Base {
 		return \array_filter(
 			$attachments,
 			static function ( $attachment ) use ( &$seen_ids ) {
-				if ( isset( $attachment['id'] ) && ! in_array( $attachment['id'], $seen_ids, true ) ) {
+				if ( isset( $attachment['id'] ) && ! \in_array( $attachment['id'], $seen_ids, true ) ) {
 					$seen_ids[] = $attachment['id'];
 					return true;
 				}

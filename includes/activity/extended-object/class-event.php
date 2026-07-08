@@ -301,10 +301,10 @@ class Event extends Base_Object {
 	 * @return Event
 	 */
 	public function set_timezone( $timezone ) {
-		if ( in_array( $timezone, timezone_identifiers_list(), true ) ) {
+		if ( \in_array( $timezone, \timezone_identifiers_list(), true ) ) {
 			$this->timezone = $timezone;
 		} else {
-			$this->timezone = wp_timezone_string();
+			$this->timezone = \wp_timezone_string();
 		}
 
 		return $this;
@@ -318,11 +318,11 @@ class Event extends Base_Object {
 	 * @return Event
 	 */
 	public function set_replies_moderation_option( $type ) {
-		if ( in_array( $type, self::REPLIES_MODERATION_OPTION_TYPES, true ) ) {
+		if ( \in_array( $type, self::REPLIES_MODERATION_OPTION_TYPES, true ) ) {
 			$this->replies_moderation_option = $type;
 			$this->comments_enabled          = ( 'allow_all' === $type ) ? true : false;
 		} else {
-			_doing_it_wrong(
+			\_doing_it_wrong(
 				__METHOD__,
 				'The replies moderation option must be either allow_all or closed.',
 				'<version_placeholder>'
@@ -340,11 +340,11 @@ class Event extends Base_Object {
 	 * @return Event
 	 */
 	public function set_comments_enabled( $comments_enabled ) {
-		if ( is_bool( $comments_enabled ) ) {
+		if ( \is_bool( $comments_enabled ) ) {
 			$this->comments_enabled          = $comments_enabled;
 			$this->replies_moderation_option = $comments_enabled ? 'allow_all' : 'closed';
 		} else {
-			_doing_it_wrong(
+			\_doing_it_wrong(
 				__METHOD__,
 				'The commentsEnabled must be boolean.',
 				'<version_placeholder>'
@@ -362,10 +362,10 @@ class Event extends Base_Object {
 	 * @return Event
 	 */
 	public function set_status( $status ) {
-		if ( in_array( $status, self::ICAL_EVENT_STATUS_TYPES, true ) ) {
+		if ( \in_array( $status, self::ICAL_EVENT_STATUS_TYPES, true ) ) {
 			$this->status = $status;
 		} else {
-			_doing_it_wrong(
+			\_doing_it_wrong(
 				__METHOD__,
 				'The status of the event must be a VEVENT iCal status.',
 				'<version_placeholder>'
@@ -387,7 +387,7 @@ class Event extends Base_Object {
 	 */
 	public function set_category( $category, $mobilizon_compatibility = true ) {
 		if ( $mobilizon_compatibility ) {
-			$this->category = in_array( $category, self::DEFAULT_EVENT_CATEGORIES, true ) ? $category : 'MEETING';
+			$this->category = \in_array( $category, self::DEFAULT_EVENT_CATEGORIES, true ) ? $category : 'MEETING';
 		} else {
 			$this->category = $category;
 		}
@@ -405,7 +405,7 @@ class Event extends Base_Object {
 	 * @return Event
 	 */
 	public function set_external_participation_url( $url ) {
-		if ( preg_match( '/^https?:\/\/.*/i', $url ) ) {
+		if ( \preg_match( '/^https?:\/\/.*/i', $url ) ) {
 			$this->external_participation_url = $url;
 			$this->join_mode                  = 'external';
 		}

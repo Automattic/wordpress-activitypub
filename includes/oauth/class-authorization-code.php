@@ -97,7 +97,7 @@ class Authorization_Code {
 		// Generate the code.
 		$code       = self::generate_code();
 		$code_hash  = self::hash_code( $code );
-		$expires_at = time() + self::EXPIRATION;
+		$expires_at = \time() + self::EXPIRATION;
 
 		// Store code data in transient.
 		$code_data = array(
@@ -108,7 +108,7 @@ class Authorization_Code {
 			'code_challenge'        => $code_challenge,
 			'code_challenge_method' => $code_challenge_method,
 			'expires_at'            => $expires_at,
-			'created_at'            => time(),
+			'created_at'            => \time(),
 		);
 
 		$stored = \set_transient(
@@ -155,7 +155,7 @@ class Authorization_Code {
 		\delete_transient( $transient );
 
 		// Check expiration (belt and suspenders - transient should auto-expire).
-		if ( isset( $code_data['expires_at'] ) && $code_data['expires_at'] < time() ) {
+		if ( isset( $code_data['expires_at'] ) && $code_data['expires_at'] < \time() ) {
 			return new \WP_Error(
 				'activitypub_code_expired',
 				\__( 'Authorization code has expired.', 'activitypub' ),
@@ -228,7 +228,7 @@ class Authorization_Code {
 		// S256: BASE64URL(SHA256(code_verifier)) == code_challenge.
 		$computed = self::compute_code_challenge( $code_verifier );
 
-		return hash_equals( $code_challenge, $computed );
+		return \hash_equals( $code_challenge, $computed );
 	}
 
 	/**
@@ -238,9 +238,9 @@ class Authorization_Code {
 	 * @return string The code challenge (BASE64URL encoded SHA256 hash).
 	 */
 	public static function compute_code_challenge( $code_verifier ) {
-		$hash = hash( 'sha256', $code_verifier, true );
+		$hash = \hash( 'sha256', $code_verifier, true );
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Required for PKCE BASE64URL encoding per RFC 7636.
-		return rtrim( strtr( base64_encode( $hash ), '+/', '-_' ), '=' );
+		return \rtrim( \strtr( \base64_encode( $hash ), '+/', '-_' ), '=' );
 	}
 
 	/**
@@ -249,7 +249,7 @@ class Authorization_Code {
 	 * @return string The authorization code.
 	 */
 	public static function generate_code() {
-		return bin2hex( random_bytes( 32 ) );
+		return \bin2hex( \random_bytes( 32 ) );
 	}
 
 	/**
@@ -259,7 +259,7 @@ class Authorization_Code {
 	 * @return string The SHA-256 hash.
 	 */
 	public static function hash_code( $code ) {
-		return hash( 'sha256', $code );
+		return \hash( 'sha256', $code );
 	}
 
 	/**
@@ -286,7 +286,7 @@ class Authorization_Code {
 		}
 
 		$timeout_prefix = '_transient_timeout_' . self::TRANSIENT_PREFIX;
-		$now            = time();
+		$now            = \time();
 
 		// Find expired timeout rows for this prefix.
 		$timeout_option_names = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
@@ -307,10 +307,10 @@ class Authorization_Code {
 		$option_names_to_delete = array();
 		foreach ( $timeout_option_names as $timeout_name ) {
 			$option_names_to_delete[] = $timeout_name;
-			$option_names_to_delete[] = str_replace( '_transient_timeout_', '_transient_', $timeout_name );
+			$option_names_to_delete[] = \str_replace( '_transient_timeout_', '_transient_', $timeout_name );
 		}
 
-		$placeholders = implode( ', ', array_fill( 0, count( $option_names_to_delete ), '%s' ) );
+		$placeholders = \implode( ', ', \array_fill( 0, \count( $option_names_to_delete ), '%s' ) );
 
 		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.DirectDatabaseQuery
 		$count = $wpdb->query(

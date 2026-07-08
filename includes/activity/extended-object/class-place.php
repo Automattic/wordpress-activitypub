@@ -106,10 +106,10 @@ class Place extends Base_Object {
 	 * @param array|string $address The address of the place.
 	 */
 	public function set_address( $address ) {
-		if ( is_string( $address ) || is_array( $address ) ) {
+		if ( \is_string( $address ) || \is_array( $address ) ) {
 			$this->address = $address;
 		} else {
-			_doing_it_wrong(
+			\_doing_it_wrong(
 				__METHOD__,
 				'The address must be either a string or an array like schema.org/PostalAddress.',
 				'<version_placeholder>'

@@ -38,8 +38,8 @@ class Event_Stream {
 	 * @param int                            $user_id            The user ID.
 	 */
 	public static function signal_outbox( $outbox_activity_id, $activity, $user_id ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		$signal_key = sprintf( 'activitypub_sse_signal_%s_outbox', $user_id );
-		\set_transient( $signal_key, time(), HOUR_IN_SECONDS );
+		$signal_key = \sprintf( 'activitypub_sse_signal_%s_outbox', $user_id );
+		\set_transient( $signal_key, \time(), HOUR_IN_SECONDS );
 	}
 
 	/**
@@ -54,8 +54,8 @@ class Event_Stream {
 		}
 
 		foreach ( $user_ids as $user_id ) {
-			$signal_key = sprintf( 'activitypub_sse_signal_%s_inbox', $user_id );
-			\set_transient( $signal_key, time(), HOUR_IN_SECONDS );
+			$signal_key = \sprintf( 'activitypub_sse_signal_%s_inbox', $user_id );
+			\set_transient( $signal_key, \time(), HOUR_IN_SECONDS );
 		}
 	}
 }

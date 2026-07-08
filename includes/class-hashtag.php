@@ -57,7 +57,7 @@ class Hashtag {
 
 		// Check if the (custom) post supports tags.
 		$taxonomies = \get_object_taxonomies( $post );
-		if ( ! in_array( 'post_tag', $taxonomies, true ) ) {
+		if ( ! \in_array( 'post_tag', $taxonomies, true ) ) {
 			return;
 		}
 
@@ -150,7 +150,7 @@ class Hashtag {
 
 		if ( $tag_object ) {
 			$link = \get_term_link( $tag_object, 'post_tag' );
-			return \sprintf( '<a rel="tag" class="hashtag u-tag u-category" href="%s">#%s</a>', esc_url( $link ), $tag );
+			return \sprintf( '<a rel="tag" class="hashtag u-tag u-category" href="%s">#%s</a>', \esc_url( $link ), $tag );
 		}
 
 		return '#' . $tag;

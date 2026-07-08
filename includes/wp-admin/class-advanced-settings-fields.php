@@ -54,7 +54,7 @@ class Advanced_Settings_Fields {
 			}
 		}
 
-		if ( ! defined( 'ACTIVITYPUB_SEND_VARY_HEADER' ) ) {
+		if ( ! \defined( 'ACTIVITYPUB_SEND_VARY_HEADER' ) ) {
 			\add_settings_field(
 				'activitypub_vary_header',
 				\__( 'Vary Header', 'activitypub' ),
@@ -74,7 +74,7 @@ class Advanced_Settings_Fields {
 			array( 'label_for' => 'activitypub_content_negotiation' )
 		);
 
-		if ( ! defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
+		if ( ! \defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
 			\add_settings_field(
 				'activitypub_authorized_fetch',
 				\__( 'Authorized Fetch', 'activitypub' ),
@@ -103,7 +103,8 @@ class Advanced_Settings_Fields {
 			array( 'label_for' => 'activitypub_following_ui' )
 		);
 
-		if ( \version_compare( \get_bloginfo( 'version' ), '6.9-alpha', '>=' ) ) {
+		// Only offer the Reader opt-in where the app can actually boot (WordPress 7.0+).
+		if ( App::is_supported() ) {
 			\add_settings_field(
 				'activitypub_reader_ui',
 				\__( 'Reader', 'activitypub' ),
@@ -160,7 +161,7 @@ class Advanced_Settings_Fields {
 		?>
 		<p>
 			<label>
-				<input type="checkbox" id="activitypub_vary_header" name="activitypub_vary_header" value="1" <?php checked( '1', $value ); ?> />
+				<input type="checkbox" id="activitypub_vary_header" name="activitypub_vary_header" value="1" <?php \checked( '1', $value ); ?> />
 				<?php echo \wp_kses( \__( 'Help prevent incorrect caching of ActivityPub responses.', 'activitypub' ), array( 'code' => array() ) ); ?>
 			</label>
 		</p>
@@ -178,7 +179,7 @@ class Advanced_Settings_Fields {
 		?>
 		<p>
 			<label>
-				<input type="checkbox" id="activitypub_content_negotiation" name="activitypub_content_negotiation" value="1" <?php checked( '1', $value ); ?> />
+				<input type="checkbox" id="activitypub_content_negotiation" name="activitypub_content_negotiation" value="1" <?php \checked( '1', $value ); ?> />
 				<?php \esc_html_e( 'Enable content negotiation for browsers and Fediverse services.', 'activitypub' ); ?>
 			</label>
 		</p>
@@ -196,7 +197,7 @@ class Advanced_Settings_Fields {
 		?>
 		<p>
 			<label>
-				<input type="checkbox" id="activitypub_authorized_fetch" name="activitypub_authorized_fetch" value="1" <?php checked( '1', $value ); ?> />
+				<input type="checkbox" id="activitypub_authorized_fetch" name="activitypub_authorized_fetch" value="1" <?php \checked( '1', $value ); ?> />
 				<?php \esc_html_e( 'Require HTTP signature authentication on ActivityPub representations of public posts and profiles.', 'activitypub' ); ?>
 			</label>
 		</p>
@@ -217,7 +218,7 @@ class Advanced_Settings_Fields {
 		?>
 		<p>
 			<label>
-				<input type="checkbox" id="activitypub_rfc9421_signature" name="activitypub_rfc9421_signature" value="1" <?php checked( '1', $value ); ?> />
+				<input type="checkbox" id="activitypub_rfc9421_signature" name="activitypub_rfc9421_signature" value="1" <?php \checked( '1', $value ); ?> />
 				<?php \esc_html_e( 'Use modern signature format for Fediverse communications.', 'activitypub' ); ?>
 			</label>
 		</p>
@@ -235,7 +236,7 @@ class Advanced_Settings_Fields {
 		?>
 		<p>
 			<label>
-				<input type="checkbox" id="activitypub_following_ui" name="activitypub_following_ui" value="1" <?php checked( '1', $value ); ?> />
+				<input type="checkbox" id="activitypub_following_ui" name="activitypub_following_ui" value="1" <?php \checked( '1', $value ); ?> />
 				Display the "Following" interface in the admin menus and settings.
 			</label>
 		</p>
@@ -256,7 +257,7 @@ class Advanced_Settings_Fields {
 		?>
 		<p>
 			<label>
-				<input type="checkbox" id="activitypub_reader_ui" name="activitypub_reader_ui" value="1" <?php checked( '1', $value ); ?> />
+				<input type="checkbox" id="activitypub_reader_ui" name="activitypub_reader_ui" value="1" <?php \checked( '1', $value ); ?> />
 				Enable the Reader to view posts from accounts you follow.
 			</label>
 		</p>

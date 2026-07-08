@@ -7,6 +7,10 @@
 
 namespace Activitypub\Transformer;
 
+use Activitypub\Activity\Activity;
+use Activitypub\Activity\Actor;
+use Activitypub\Activity\Base_Object;
+
 use function Activitypub\is_activity;
 use function Activitypub\is_actor;
 
@@ -27,11 +31,11 @@ class Json extends Activity_Object {
 
 		// Check if the item is an Activity or an Object.
 		if ( is_activity( $item ) ) {
-			$class = '\Activitypub\Activity\Activity';
+			$class = Activity::class;
 		} elseif ( is_actor( $item ) ) {
-			$class = '\Activitypub\Activity\Actor';
+			$class = Actor::class;
 		} else {
-			$class = '\Activitypub\Activity\Base_Object';
+			$class = Base_Object::class;
 		}
 
 		$object = $class::init_from_array( $item );
