@@ -51,7 +51,15 @@ function extract_recipients_from_activity( $data ) {
 		$recipient_items = \array_merge( $recipient_items, extract_recipients_from_activity_property( $i, $data ) );
 	}
 
-	return \array_unique( $recipient_items );
+	// An Accept/Reject that wraps a Follow is addressed only through the embedded Follow's actor.
+	if (
+		\in_array( $data['type'], array( 'Accept', 'Reject' ), true ) &&
+		! empty( $data['object']['actor'] )
+	) {
+		$recipient_items[] = object_to_uri( $data['object']['actor'] );
+	}
+
+	return \array_unique( \array_filter( $recipient_items ) );
 }
 
 /**

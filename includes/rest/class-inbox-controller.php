@@ -403,17 +403,6 @@ class Inbox_Controller extends \WP_REST_Controller {
 
 		$recipients = extract_recipients_from_activity( $activity );
 
-		if (
-			! empty( $activity['type'] ) &&
-			\in_array( camel_to_snake_case( $activity['type'] ), array( 'accept', 'reject' ), true ) &&
-			! empty( $activity['object'] ) &&
-			\is_array( $activity['object'] ) &&
-			! empty( $activity['object']['actor'] )
-		) {
-			$recipients[] = object_to_uri( $activity['object']['actor'] );
-			$recipients   = \array_unique( \array_filter( $recipients ) );
-		}
-
 		/*
 		 * Pre-compute which recipients are already known remote actors so the
 		 * cached-actor short-circuit becomes an O(1) array lookup rather than

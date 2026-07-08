@@ -341,6 +341,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			'to'               => array(
 				true,
 				array(
+					'type'   => 'Create',
 					'actor'  => 'https://example.com/author',
 					'object' => array(
 						'id'      => 'https://example.com/post/1',
@@ -352,6 +353,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			'none'             => array(
 				false,
 				array(
+					'type'   => 'Create',
 					'actor'  => 'https://example.com/author',
 					'object' => array(
 						'id'      => 'https://example.com/post/1',
@@ -362,6 +364,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			'public+reply'     => array(
 				false,
 				array(
+					'type'   => 'Create',
 					'actor'  => 'https://example.com/author',
 					'object' => array(
 						'id'        => 'https://example.com/post/1',
@@ -374,6 +377,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			'public+reply+cc'  => array(
 				false,
 				array(
+					'type'   => 'Create',
 					'actor'  => 'https://example.com/author',
 					'object' => array(
 						'id'        => 'https://example.com/post/1',
@@ -387,6 +391,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			'public+followers' => array(
 				false,
 				array(
+					'type'   => 'Create',
 					'actor'  => 'https://example.com/author',
 					'object' => array(
 						'id'        => 'https://example.com/post/1',
@@ -400,6 +405,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			'followers'        => array(
 				false,
 				array(
+					'type'   => 'Create',
 					'actor'  => 'https://example.com/author',
 					'object' => array(
 						'id'        => 'https://example.com/post/1',
@@ -412,6 +418,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			'reply+cc'         => array(
 				false,
 				array(
+					'type'   => 'Create',
 					'actor'  => 'https://example.com/author',
 					'object' => array(
 						'id'        => 'https://example.com/post/1',
@@ -457,6 +464,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Mock remote metadata.
 		$remote_metadata_callback = function () {
 			return array(
+				'type' => 'Create',
 				'name' => 'Test Sender',
 				'url'  => 'https://example.com/author',
 			);
@@ -504,6 +512,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	 */
 	public function test_direct_message_from_bridgy() {
 		$activity = array(
+			'type'   => 'Create',
 			'actor'  => 'https://example.com/author',
 			'object' => array(
 				'id'      => 'https://example.com/post/1',
@@ -515,6 +524,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Mock remote metadata.
 		$remote_metadata_callback = function () {
 			return array(
+				'type' => 'Create',
 				'name' => 'Test Sender',
 				'url'  => array(
 					'https://fed.brid.gy/r/https://example.com/author',
@@ -574,6 +584,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		$user_id = self::$user_id;
 
 		$activity = array(
+			'type'   => 'Create',
 			'actor'  => 'https://example.com/author',
 			'object' => array(
 				'id'      => 'https://example.com/post/1',
@@ -586,6 +597,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Mock remote metadata.
 		$remote_metadata_callback = function () {
 			return array(
+				'type' => 'Create',
 				'name' => 'Test Sender',
 				'url'  => 'https://example.com/author',
 			);
@@ -645,6 +657,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	 */
 	public function test_direct_message_with_disabled_option() {
 		$activity = array(
+			'type'   => 'Create',
 			'actor'  => 'https://example.com/author',
 			'object' => array(
 				'id'      => 'https://example.com/post/1',
@@ -678,6 +691,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	 */
 	public function test_mention_with_disabled_option() {
 		$activity = array(
+			'type'   => 'Create',
 			'actor'  => 'https://example.com/author',
 			'object' => array(
 				'id'      => 'https://example.com/post/1',
@@ -747,6 +761,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
 		$activity = array(
+			'type'   => 'Create',
 			'actor'  => 'https://example.com/author',
 			'object' => array(
 				'id'      => 'https://example.com/post/1',
@@ -782,6 +797,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
 		$activity = array(
+			'type'   => 'Create',
 			'actor'  => 'https://example.com/author',
 			'object' => array(
 				'id'      => 'https://example.com/post/1',
@@ -855,6 +871,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		$user_id = self::$user_id;
 
 		$activity = array(
+			'type'   => 'Create',
 			'actor'  => 'https://example.com/author',
 			'object' => array(
 				'id'      => 'https://example.com/post/1',
@@ -866,6 +883,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Mock remote metadata.
 		$remote_metadata_callback = function () {
 			return array(
+				'type' => 'Create',
 				'name' => 'Test Sender',
 				'url'  => 'https://example.com/author',
 			);
@@ -905,6 +923,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		$user_id = self::$user_id;
 
 		$activity = array(
+			'type'   => 'Create',
 			'actor'  => 'https://example.com/author',
 			'object' => array(
 				'id'      => 'https://example.com/post/1',
@@ -923,6 +942,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Mock remote metadata.
 		$remote_metadata_callback = function () {
 			return array(
+				'type' => 'Create',
 				'name' => 'Test Sender',
 				'url'  => 'https://example.com/author',
 			);
@@ -972,6 +992,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		);
 
 		$activity = array(
+			'type'   => 'Create',
 			'actor'  => 'https://example.com/author',
 			'object' => array(
 				'id'      => 'https://example.com/post/1',
