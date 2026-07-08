@@ -524,7 +524,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Mock remote metadata.
 		$remote_metadata_callback = function () {
 			return array(
-				'type' => 'Create',
+				'type' => 'Person',
 				'name' => 'Test Sender',
 				'url'  => array(
 					'https://fed.brid.gy/r/https://example.com/author',
