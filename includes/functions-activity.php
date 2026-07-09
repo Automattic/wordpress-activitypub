@@ -54,6 +54,8 @@ function extract_recipients_from_activity( $data ) {
 	// An Accept/Reject that wraps a Follow is addressed only through the embedded Follow's actor.
 	if (
 		\in_array( $data['type'], array( 'Accept', 'Reject' ), true ) &&
+		! empty( $data['object'] ) &&
+		\is_array( $data['object'] ) &&
 		! empty( $data['object']['actor'] )
 	) {
 		$recipient_items[] = object_to_uri( $data['object']['actor'] );
