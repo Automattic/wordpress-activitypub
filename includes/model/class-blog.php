@@ -419,7 +419,7 @@ class Blog extends Actor {
 	 * @return string[]|null The endpoints.
 	 */
 	public function get_endpoints() {
-		return array(
+		$endpoints = array(
 			'sharedInbox'                => get_rest_url_by_path( 'inbox' ),
 			'oauthAuthorizationEndpoint' => get_rest_url_by_path( 'oauth/authorize' ),
 			'oauthTokenEndpoint'         => get_rest_url_by_path( 'oauth/token' ),
@@ -427,6 +427,12 @@ class Blog extends Actor {
 			'proxyUrl'                   => get_rest_url_by_path( 'proxy' ),
 			'proxyEventStream'           => get_rest_url_by_path( 'proxy/stream' ),
 		);
+
+		if ( \get_option( 'activitypub_api', false ) ) {
+			$endpoints['uploadMedia'] = get_rest_url_by_path( sprintf( 'actors/%d/uploadMedia', $this->get__id() ) );
+		}
+
+		return $endpoints;
 	}
 
 	/**

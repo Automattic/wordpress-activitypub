@@ -28,6 +28,7 @@ class Test_Scope extends \WP_UnitTestCase {
 		$this->assertEquals( 'follow', Scope::FOLLOW );
 		$this->assertEquals( 'push', Scope::PUSH );
 		$this->assertEquals( 'profile', Scope::PROFILE );
+		$this->assertEquals( 'upload', Scope::UPLOAD );
 	}
 
 	/**
@@ -39,7 +40,8 @@ class Test_Scope extends \WP_UnitTestCase {
 		$this->assertContains( Scope::FOLLOW, Scope::ALL );
 		$this->assertContains( Scope::PUSH, Scope::ALL );
 		$this->assertContains( Scope::PROFILE, Scope::ALL );
-		$this->assertCount( 5, Scope::ALL );
+		$this->assertContains( Scope::UPLOAD, Scope::ALL );
+		$this->assertCount( 6, Scope::ALL );
 	}
 
 	/**
@@ -193,6 +195,7 @@ class Test_Scope extends \WP_UnitTestCase {
 		$this->assertTrue( Scope::is_valid( 'follow' ) );
 		$this->assertTrue( Scope::is_valid( 'push' ) );
 		$this->assertTrue( Scope::is_valid( 'profile' ) );
+		$this->assertTrue( Scope::is_valid( 'upload' ) );
 	}
 
 	/**
@@ -238,6 +241,7 @@ class Test_Scope extends \WP_UnitTestCase {
 		$this->assertArrayHasKey( 'follow', $result );
 		$this->assertArrayHasKey( 'push', $result );
 		$this->assertArrayHasKey( 'profile', $result );
+		$this->assertArrayHasKey( 'upload', $result );
 	}
 
 	/**

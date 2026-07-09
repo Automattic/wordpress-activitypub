@@ -239,6 +239,12 @@ When the ActivityPub API option is enabled, the plugin exposes OAuth 2.0 endpoin
 
 The loopback allowance from RFC 8252 applies *only* to redirect URI matching. Reserved-but-not-loopback addresses (`0.0.0.0`, link-local `169.254.0.0/16`, RFC1918 private ranges, etc.) are not treated as loopback. CIMD metadata URLs must use `https://`, and the metadata host is resolved and validated against private/reserved ranges before any fetch. Loopback CIMD origins are not supported, even on dev installs.
 
+### Media Upload
+
+Implements the W3C SocialCG `uploadMedia` endpoint at `POST /actors/{user_id}/uploadMedia`. Accepts `multipart/form-data` with a required `file` part and an optional `object` JSON-LD shell, plus a Pleroma-compatible `description` form field as a synonym for `object.name` (alt text). Returns `201 Created` with a `Location` header pointing at the new attachment's AP id and the bare `Image`/`Audio`/`Video` object as the body. Requires the `upload` OAuth scope. The endpoint is advertised on `User` and `Blog` actors via `endpoints.uploadMedia` and is gated behind the "ActivityPub API" site setting.
+
+References: [W3C SocialCG wiki — MediaUpload](https://www.w3.org/wiki/SocialCG/ActivityPub/MediaUpload), [Pleroma `uploadMedia` extension](https://docs-develop.pleroma.social/backend/development/ap_extensions/#uploadmedia).
+
 ## Additional documentation
 
 - Plugin Documentation: [docs/readme.md](docs/readme.md)

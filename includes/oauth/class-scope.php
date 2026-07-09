@@ -39,6 +39,13 @@ class Scope {
 	const PROFILE = 'profile';
 
 	/**
+	 * Upload access scope - upload media via the uploadMedia endpoint.
+	 *
+	 * @since unreleased
+	 */
+	const UPLOAD = 'upload';
+
+	/**
 	 * All available scopes.
 	 *
 	 * @var array
@@ -49,6 +56,7 @@ class Scope {
 		self::FOLLOW,
 		self::PUSH,
 		self::PROFILE,
+		self::UPLOAD,
 	);
 
 	/**
@@ -79,6 +87,7 @@ class Scope {
 		self::FOLLOW  => 'Manage following relationships',
 		self::PUSH    => 'Subscribe to real-time event streams',
 		self::PROFILE => 'Edit actor profile',
+		self::UPLOAD  => 'Upload media files',
 	);
 
 	/**

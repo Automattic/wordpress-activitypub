@@ -380,12 +380,16 @@ class Attachments {
 	 * Uses WordPress image editor to resize large images and convert them
 	 * to WebP format for better compression while maintaining quality.
 	 *
+	 * @since 1.0.0
+	 *
 	 * @param string $file_path     Path to the image file.
 	 * @param int    $max_dimension Maximum width/height in pixels.
 	 *
-	 * @return string The optimized file path.
+	 * @return string The optimized file path. If the source was already an
+	 *                optimal image (or not an image at all), the original
+	 *                path is returned unchanged.
 	 */
-	private static function optimize_image( $file_path, $max_dimension ) {
+	public static function optimize_image( $file_path, $max_dimension ) {
 		// Check if it's an image.
 		$mime_type = \wp_check_filetype( $file_path )['type'] ?? '';
 		if ( ! $mime_type || ! \str_starts_with( $mime_type, 'image/' ) ) {
