@@ -403,14 +403,24 @@ class Inbox_Controller extends \WP_REST_Controller {
 
 		$recipients = extract_recipients_from_activity( $activity );
 
+		$type        = null;
+		$object      = ! empty( $activity['object'] ) && \is_array( $activity['object'] ) ? $activity['object'] : array();
+		$object_type = null;
+
+		if ( ! empty( $activity['type'] ) && \is_string( $activity['type'] ) ) {
+			$type = camel_to_snake_case( $activity['type'] );
+		}
+
+		if ( ! empty( $object['type'] ) && \is_string( $object['type'] ) ) {
+			$object_type = camel_to_snake_case( $object['type'] );
+		}
+
 		if (
-			! empty( $activity['type'] ) &&
-			\in_array( camel_to_snake_case( $activity['type'] ), array( 'accept', 'reject' ), true ) &&
-			! empty( $activity['object'] ) &&
-			\is_array( $activity['object'] ) &&
-			! empty( $activity['object']['actor'] )
+			\in_array( $type, array( 'accept', 'reject' ), true ) &&
+			'follow' === $object_type &&
+			! empty( $object['actor'] )
 		) {
-			$recipients[] = object_to_uri( $activity['object']['actor'] );
+			$recipients[] = object_to_uri( $object['actor'] );
 			$recipients   = \array_unique( \array_filter( $recipients ) );
 		}
 

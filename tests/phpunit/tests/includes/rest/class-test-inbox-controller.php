@@ -1315,7 +1315,6 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 				'type'   => 'Follow',
 				'actor'  => $user_actor_id,
 				'object' => 'https://remote.example/users/news',
-				'to'     => 'https://remote.example/users/news',
 			),
 		);
 
@@ -1331,7 +1330,7 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
 
 		$this->assertContains( self::$user_id, $result, 'Should contain user referenced as embedded Follow actor' );
-		$this->assertContains( 'https://remote.example/users/news', $fetched_urls );
+		$this->assertEmpty( $fetched_urls, 'Should not fetch remote recipients to resolve the embedded Follow actor' );
 	}
 
 	/**
