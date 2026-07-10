@@ -50,7 +50,7 @@ class Actors {
 	 * @return Actor|User|Blog|Application|\WP_Error Actor object or WP_Error if not found or not permitted.
 	 */
 	public static function get_by_id( $user_id ) {
-		if ( is_numeric( $user_id ) ) {
+		if ( \is_numeric( $user_id ) ) {
 			$user_id = (int) $user_id;
 		}
 
@@ -101,7 +101,7 @@ class Actors {
 		 * @param null   $pre      The pre-existing value.
 		 * @param string $username The username.
 		 */
-		$pre = apply_filters( 'activitypub_pre_get_by_username', null, $username );
+		$pre = \apply_filters( 'activitypub_pre_get_by_username', null, $username );
 		if ( null !== $pre ) {
 			return $pre;
 		}
@@ -176,7 +176,7 @@ class Actors {
 			return \current( $user->get_results() );
 		}
 
-		$username = str_replace( array( '*', '%' ), '', $username );
+		$username = \str_replace( array( '*', '%' ), '', $username );
 
 		// Check for login or nicename.
 		$user = new \WP_User_Query(
@@ -238,7 +238,7 @@ class Actors {
 		$scheme = 'acct';
 		$match  = array();
 		// Try to extract the scheme and the host.
-		if ( preg_match( '/^([a-zA-Z^:]+):(.*)$/i', $uri, $match ) ) {
+		if ( \preg_match( '/^([a-zA-Z^:]+):(.*)$/i', $uri, $match ) ) {
 			// Extract the scheme.
 			$scheme = \esc_attr( $match[1] );
 		}
@@ -262,7 +262,7 @@ class Actors {
 
 					$resource_path = \trim( $resource_path, '/' );
 
-					if ( str_starts_with( $resource_path, '@' ) ) {
+					if ( \str_starts_with( $resource_path, '@' ) ) {
 						$identifier = \str_replace( '@', '', $resource_path );
 						$identifier = \trim( $identifier, '/' );
 
@@ -281,8 +281,8 @@ class Actors {
 				$normalized_uri = normalize_url( $uri );
 
 				if (
-					normalize_url( site_url() ) === $normalized_uri ||
-					normalize_url( home_url() ) === $normalized_uri
+					normalize_url( \site_url() ) === $normalized_uri ||
+					normalize_url( \home_url() ) === $normalized_uri
 				) {
 					return self::BLOG_USER_ID;
 				}
@@ -299,7 +299,7 @@ class Actors {
 				$host       = normalize_host( \substr( \strrchr( $uri, '@' ), 1 ) );
 				$blog_host  = normalize_host( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) );
 
-				if ( $blog_host !== $host && normalize_host( get_option( 'activitypub_old_host' ) ) !== $host ) {
+				if ( $blog_host !== $host && normalize_host( \get_option( 'activitypub_old_host' ) ) !== $host ) {
 					return new \WP_Error(
 						'activitypub_wrong_host',
 						\__( 'Resource host does not match blog host', 'activitypub' ),
@@ -308,7 +308,7 @@ class Actors {
 				}
 
 				// Prepare wildcards https://github.com/mastodon/mastodon/issues/22213.
-				if ( in_array( $identifier, array( '_', '*', '' ), true ) ) {
+				if ( \in_array( $identifier, array( '_', '*', '' ), true ) ) {
 					return self::BLOG_USER_ID;
 				}
 
@@ -346,15 +346,15 @@ class Actors {
 	 * @return int|\WP_Error Actor id or WP_Error if not found.
 	 */
 	public static function get_id_by_various( $id ) {
-		if ( is_numeric( $id ) ) {
+		if ( \is_numeric( $id ) ) {
 			$id = (int) $id;
 		} elseif (
 			// Is URL.
-			filter_var( $id, FILTER_VALIDATE_URL ) ||
+			\filter_var( $id, FILTER_VALIDATE_URL ) ||
 			// Is acct.
-			str_starts_with( $id, 'acct:' ) ||
+			\str_starts_with( $id, 'acct:' ) ||
 			// Is email.
-			filter_var( $id, FILTER_VALIDATE_EMAIL )
+			\filter_var( $id, FILTER_VALIDATE_EMAIL )
 		) {
 			$id = self::get_id_by_resource( $id );
 		} else {
@@ -417,7 +417,7 @@ class Actors {
 			$user_ids[] = self::BLOG_USER_ID;
 		}
 
-		return array_map( 'intval', $user_ids );
+		return \array_map( 'intval', $user_ids );
 	}
 
 	/**
@@ -428,10 +428,10 @@ class Actors {
 	public static function get_all() {
 		$user_ids = self::get_all_ids();
 
-		$actors = array_map( array( self::class, 'get_by_id' ), $user_ids );
+		$actors = \array_map( array( self::class, 'get_by_id' ), $user_ids );
 
 		// Filter out any WP_Error instances.
-		return array_filter(
+		return \array_filter(
 			$actors,
 			static function ( $actor ) {
 				return ! \is_wp_error( $actor );
@@ -544,7 +544,7 @@ class Actors {
 				break;
 		}
 
-		if ( ! empty( $public_key ) && is_string( $public_key ) && ! empty( $private_key ) && is_string( $private_key ) ) {
+		if ( ! empty( $public_key ) && \is_string( $public_key ) && ! empty( $private_key ) && \is_string( $private_key ) ) {
 			return array(
 				'private_key' => $private_key,
 				'public_key'  => $public_key,

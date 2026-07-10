@@ -156,7 +156,7 @@ class Application extends Actor {
 		if ( \has_header_image() ) {
 			return array(
 				'type' => 'Image',
-				'url'  => esc_url( \get_header_image() ),
+				'url'  => \esc_url( \get_header_image() ),
 			);
 		}
 
@@ -218,9 +218,9 @@ class Application extends Actor {
 	 * @return string The User description.
 	 */
 	public function get_summary() {
-		return sprintf(
+		return \sprintf(
 			/* translators: %s: Domain of the site */
-			__( 'This is the Application Actor for %s.', 'activitypub' ),
+			\__( 'This is the Application Actor for %s.', 'activitypub' ),
 			home_host()
 		);
 	}

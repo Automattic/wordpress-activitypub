@@ -66,7 +66,7 @@ class Activity_Object extends Base {
 		 *
 		 * @return array The filtered mentions.
 		 */
-		return apply_filters(
+		return \apply_filters(
 			'activitypub_extract_mentions',
 			array(),
 			$this->item->get_content() . ' ' . $this->item->get_summary(),

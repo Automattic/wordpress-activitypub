@@ -18,8 +18,8 @@ namespace Activitypub;
  */
 function get_rest_url_by_path( $path = '' ) {
 	// We'll handle the leading slash.
-	$path            = ltrim( $path, '/' );
-	$namespaced_path = sprintf( '/%s/%s', ACTIVITYPUB_REST_NAMESPACE, $path );
+	$path            = \ltrim( $path, '/' );
+	$namespaced_path = \sprintf( '/%s/%s', ACTIVITYPUB_REST_NAMESPACE, $path );
 	return \get_rest_url( null, $namespaced_path );
 }
 
@@ -90,7 +90,7 @@ function get_upload_baseurl() {
 	 *
 	 * @param string|false $maybe_upload_dir The upload base URL or false if not set.
 	 */
-	$maybe_upload_dir = apply_filters( 'pre_activitypub_get_upload_baseurl', false );
+	$maybe_upload_dir = \apply_filters( 'pre_activitypub_get_upload_baseurl', false );
 	if ( false !== $maybe_upload_dir ) {
 		return $maybe_upload_dir;
 	}
@@ -102,7 +102,7 @@ function get_upload_baseurl() {
 	 *
 	 * @param string $upload_dir The upload base URL. Default \wp_get_upload_dir()['baseurl']
 	 */
-	return apply_filters( 'activitypub_get_upload_baseurl', $upload_dir['baseurl'] );
+	return \apply_filters( 'activitypub_get_upload_baseurl', $upload_dir['baseurl'] );
 }
 
 /**
@@ -113,7 +113,7 @@ function get_upload_baseurl() {
  * @return string|false The authority, or false on failure.
  */
 function get_url_authority( $url ) {
-	$parsed = wp_parse_url( $url );
+	$parsed = \wp_parse_url( $url );
 
 	if ( ! $parsed || empty( $parsed['scheme'] ) || empty( $parsed['host'] ) ) {
 		return false;
@@ -156,7 +156,7 @@ function extract_name_from_uri( $uri ) {
 	) {
 		// Expected: user@example.com or acct:user@example (WebFinger).
 		$name = \ltrim( $name, '@' );
-		if ( str_starts_with( $name, 'acct:' ) ) {
+		if ( \str_starts_with( $name, 'acct:' ) ) {
 			$name = \substr( $name, 5 );
 		}
 		$parts = \explode( '@', $name );

@@ -63,7 +63,7 @@ class Reject {
 			return;
 		}
 
-		$user_id = is_array( $user_ids ) ? reset( $user_ids ) : $user_ids;
+		$user_id = \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids;
 		$result  = Following::reject( $actor_post, $user_id );
 		$success = ! \is_wp_error( $result );
 

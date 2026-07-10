@@ -11,6 +11,7 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
+use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Transformer\Factory;
@@ -43,7 +44,7 @@ class Migration {
 	 * @return string The current version.
 	 */
 	public static function get_version() {
-		return get_option( 'activitypub_db_version', 0 );
+		return \get_option( 'activitypub_db_version', 0 );
 	}
 
 	/**
@@ -185,15 +186,15 @@ class Migration {
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_storage' ) );
 		}
 		if ( \version_compare( $version_from_db, '7.0.0', '<' ) ) {
-			wp_unschedule_hook( 'activitypub_update_followers' );
-			wp_unschedule_hook( 'activitypub_cleanup_followers' );
+			\wp_unschedule_hook( 'activitypub_update_followers' );
+			\wp_unschedule_hook( 'activitypub_cleanup_followers' );
 
 			if ( ! \wp_next_scheduled( 'activitypub_update_remote_actors' ) ) {
-				\wp_schedule_event( time(), 'hourly', 'activitypub_update_remote_actors' );
+				\wp_schedule_event( \time(), 'hourly', 'activitypub_update_remote_actors' );
 			}
 
 			if ( ! \wp_next_scheduled( 'activitypub_cleanup_remote_actors' ) ) {
-				\wp_schedule_event( time(), 'daily', 'activitypub_cleanup_remote_actors' );
+				\wp_schedule_event( \time(), 'daily', 'activitypub_cleanup_remote_actors' );
 			}
 		}
 		if ( \version_compare( $version_from_db, '7.3.0', '<' ) ) {
@@ -302,8 +303,8 @@ class Migration {
 	 */
 	public static function migrate_from_0_17() {
 		// Migrate followers.
-		foreach ( get_users( array( 'fields' => 'ID' ) ) as $user_id ) {
-			$followers = get_user_meta( $user_id, 'activitypub_followers', true );
+		foreach ( \get_users( array( 'fields' => 'ID' ) ) as $user_id ) {
+			$followers = \get_user_meta( $user_id, 'activitypub_followers', true );
 
 			if ( $followers ) {
 				foreach ( $followers as $actor ) {
@@ -325,7 +326,7 @@ class Migration {
 		);
 
 		foreach ( $user_ids as $user_id ) {
-			wp_cache_delete( sprintf( Followers::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
+			\wp_cache_delete( \sprintf( Followers::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 		}
 	}
 
@@ -333,13 +334,13 @@ class Migration {
 	 * Unschedule Hooks after updating to 2.0.0.
 	 */
 	private static function migrate_from_2_0_0() {
-		wp_clear_scheduled_hook( 'activitypub_send_post_activity' );
-		wp_clear_scheduled_hook( 'activitypub_send_update_activity' );
-		wp_clear_scheduled_hook( 'activitypub_send_delete_activity' );
+		\wp_clear_scheduled_hook( 'activitypub_send_post_activity' );
+		\wp_clear_scheduled_hook( 'activitypub_send_update_activity' );
+		\wp_clear_scheduled_hook( 'activitypub_send_delete_activity' );
 
-		wp_unschedule_hook( 'activitypub_send_post_activity' );
-		wp_unschedule_hook( 'activitypub_send_update_activity' );
-		wp_unschedule_hook( 'activitypub_send_delete_activity' );
+		\wp_unschedule_hook( 'activitypub_send_post_activity' );
+		\wp_unschedule_hook( 'activitypub_send_update_activity' );
+		\wp_unschedule_hook( 'activitypub_send_delete_activity' );
 
 		$object_type = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
 		if ( 'article' === $object_type ) {
@@ -360,7 +361,7 @@ class Migration {
 	 * Rename DB fields.
 	 */
 	private static function migrate_from_2_6_0() {
-		wp_cache_flush();
+		\wp_cache_flush();
 
 		self::update_usermeta_key( 'activitypub_user_description', 'activitypub_description' );
 
@@ -376,7 +377,7 @@ class Migration {
 		$latest_post_id = 0;
 
 		// Get the ID of the latest blog post and save it to the options table.
-		$latest_post = get_posts(
+		$latest_post = \get_posts(
 			array(
 				'numberposts' => 1,
 				'orderby'     => 'ID',
@@ -489,7 +490,7 @@ class Migration {
 			$wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type = %s", Remote_Actors::POST_TYPE )
 		);
 		foreach ( $followers as $id ) {
-			clean_post_cache( $id );
+			\clean_post_cache( $id );
 		}
 	}
 
@@ -507,7 +508,7 @@ class Migration {
 
 		Comment::register_comment_types();
 		$comment_types  = Comment::get_comment_type_slugs();
-		$type_inclusion = "AND comment_type IN ('" . implode( "','", $comment_types ) . "')";
+		$type_inclusion = "AND comment_type IN ('" . \implode( "','", $comment_types ) . "')";
 
 		// Get and process this batch.
 		$post_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB
@@ -523,7 +524,7 @@ class Migration {
 			\wp_update_comment_count_now( $post_id );
 		}
 
-		if ( count( $post_ids ) === $batch_size ) {
+		if ( \count( $post_ids ) === $batch_size ) {
 			// Schedule next batch.
 			return array( $batch_size, $offset + $batch_size );
 		}
@@ -567,7 +568,7 @@ class Migration {
 			}
 		}
 
-		if ( count( $posts ) === $batch_size ) {
+		if ( \count( $posts ) === $batch_size ) {
 			return array(
 				'batch_size' => $batch_size,
 				'offset'     => $offset + $batch_size,
@@ -604,7 +605,7 @@ class Migration {
 			self::add_to_outbox( $comment, 'Create', $comment->user_id );
 		}
 
-		if ( count( $comments ) === $batch_size ) {
+		if ( \count( $comments ) === $batch_size ) {
 			return array(
 				'batch_size' => $batch_size,
 				'offset'     => $offset + $batch_size,
@@ -700,7 +701,7 @@ class Migration {
 			);
 		}
 
-		if ( count( $comments ) === $batch_size ) {
+		if ( \count( $comments ) === $batch_size ) {
 			return array(
 				'batch_size' => $batch_size,
 				'offset'     => $offset + $batch_size,
@@ -1088,7 +1089,7 @@ class Migration {
 		$inbox_ids = $wpdb->get_col(
 			$wpdb->prepare(
 				"SELECT ID FROM {$wpdb->posts} WHERE post_type = %s",
-				\Activitypub\Collection\Inbox::POST_TYPE
+				Inbox::POST_TYPE
 			)
 		);
 
@@ -1276,7 +1277,7 @@ class Migration {
 		}
 
 		// Return batch info if there are more comments to process.
-		if ( count( $comments ) === $batch_size ) {
+		if ( \count( $comments ) === $batch_size ) {
 			return array(
 				'batch_size' => $batch_size,
 			);
@@ -1326,7 +1327,7 @@ class Migration {
 		}
 
 		// Return batch info if there are more actors to process.
-		if ( count( $actors ) === $batch_size ) {
+		if ( \count( $actors ) === $batch_size ) {
 			return array(
 				'batch_size' => $batch_size,
 				'offset'     => $offset + $batch_size,

@@ -275,7 +275,7 @@ class Self_Destruct_Command extends \WP_CLI_Command {
 		);
 
 		// Get count of pending Delete activities.
-		$pending_count = count( $pending_deletes );
+		$pending_count = \count( $pending_deletes );
 
 		// If no more pending Delete activities, self-destruct is complete.
 		if ( 0 === $pending_count ) {

@@ -77,7 +77,7 @@ class Http {
 		if ( $code >= 400 ) {
 			$response = new \WP_Error(
 				$code,
-				__( 'Failed HTTP Request', 'activitypub' ),
+				\__( 'Failed HTTP Request', 'activitypub' ),
 				array(
 					'status'   => $code,
 					'response' => $response,
@@ -185,7 +185,7 @@ class Http {
 			if ( ! $code ) {
 				$code = 0;
 			}
-			$response = new \WP_Error( $code, __( 'Failed HTTP Request', 'activitypub' ), array( 'status' => $code ) );
+			$response = new \WP_Error( $code, \__( 'Failed HTTP Request', 'activitypub' ), array( 'status' => $code ) );
 
 			/*
 			 * Always cache errors to prevent repeated timeout waits.
@@ -213,7 +213,7 @@ class Http {
 
 		// Always cache successful responses.
 		$cache_duration = $cached;
-		if ( ! is_int( $cache_duration ) ) {
+		if ( ! \is_int( $cache_duration ) ) {
 			$cache_duration = HOUR_IN_SECONDS;
 		}
 		\set_transient( $transient_key, $response, $cache_duration );
@@ -229,7 +229,7 @@ class Http {
 	 * @return bool True if the URL is a tombstone.
 	 */
 	public static function is_tombstone( $url ) {
-		_deprecated_function( __METHOD__, '7.3.0', 'Activitypub\Tombstone::exists_remote' );
+		\_deprecated_function( __METHOD__, '7.3.0', 'Activitypub\Tombstone::exists_remote' );
 
 		return Tombstone::exists_remote( $url );
 	}
@@ -260,7 +260,7 @@ class Http {
 		 * @param array|string|null $response      The response.
 		 * @param array|string|null $url_or_object The Object or the Object URL.
 		 */
-		$response = apply_filters( 'activitypub_pre_http_get_remote_object', null, $url_or_object );
+		$response = \apply_filters( 'activitypub_pre_http_get_remote_object', null, $url_or_object );
 		if ( null !== $response ) {
 			return $response;
 		}

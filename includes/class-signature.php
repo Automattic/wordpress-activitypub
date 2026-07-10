@@ -138,13 +138,13 @@ class Signature {
 	 * @return string|\WP_Error The verified keyId on success, WP_Error on failure.
 	 */
 	public static function verify_http_signature( $request ) {
-		if ( is_object( $request ) ) { // REST Request object.
+		if ( \is_object( $request ) ) { // REST Request object.
 			$body                           = $request->get_body();
 			$headers                        = $request->get_headers();
-			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' ' . self::get_route( $request );
+			$headers['(request-target)'][0] = \strtolower( $request->get_method() ) . ' ' . self::get_route( $request );
 		} else {
 			$headers                        = self::format_server_request( $request );
-			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
+			$headers['(request-target)'][0] = \strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
 		}
 
 		$signature = isset( $headers['signature_input'] ) ? new Http_Message_Signature() : new Http_Signature_Draft();
@@ -258,17 +258,17 @@ class Signature {
 	 */
 	private static function get_route( $request ) {
 		// Check if the route starts with "index.php".
-		if ( str_starts_with( $request->get_route(), '/index.php' ) || ! rest_get_url_prefix() ) {
+		if ( \str_starts_with( $request->get_route(), '/index.php' ) || ! \rest_get_url_prefix() ) {
 			$route = $request->get_route();
 		} else {
-			$route = '/' . rest_get_url_prefix() . '/' . ltrim( $request->get_route(), '/' );
+			$route = '/' . \rest_get_url_prefix() . '/' . \ltrim( $request->get_route(), '/' );
 		}
 
 		// Fix route for subdirectory installations.
 		$path = \wp_parse_url( \get_home_url(), PHP_URL_PATH );
 
 		if ( \is_string( $path ) ) {
-			$path = trim( $path, '/' );
+			$path = \trim( $path, '/' );
 		}
 
 		if ( $path ) {
@@ -342,16 +342,16 @@ class Signature {
 	 * @return string|false The hex-encoded digest, or false if no followers.
 	 */
 	public static function get_collection_digest( $collection ) {
-		if ( empty( $collection ) || ! is_array( $collection ) ) {
+		if ( empty( $collection ) || ! \is_array( $collection ) ) {
 			return false;
 		}
 
 		// Initialize with zeros (64 hex chars = 32 bytes = 256 bits).
-		$digest = str_repeat( '0', 64 );
+		$digest = \str_repeat( '0', 64 );
 
 		foreach ( $collection as $item ) {
 			// Compute SHA256 hash of the follower ID.
-			$hash = hash( 'sha256', $item );
+			$hash = \hash( 'sha256', $item );
 
 			// XOR the hash with the running digest.
 			$digest = self::xor_hex_strings( $digest, $hash );

@@ -289,11 +289,11 @@ class Followers_Controller extends Actors_Controller {
 				\sprintf(
 					'actors/%d/followers/sync?authority=%s',
 					$user_id,
-					rawurlencode( $authority )
+					\rawurlencode( $authority )
 				)
 			),
 			'type'         => 'OrderedCollection',
-			'totalItems'   => count( $followers ),
+			'totalItems'   => \count( $followers ),
 			'orderedItems' => $followers,
 		);
 

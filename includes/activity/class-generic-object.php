@@ -99,7 +99,7 @@ class Generic_Object {
 	 * @return mixed The value.
 	 */
 	public function get( $key ) {
-		return call_user_func( array( $this, 'get_' . $key ) );
+		return \call_user_func( array( $this, 'get_' . $key ) );
 	}
 
 	/**
@@ -133,19 +133,19 @@ class Generic_Object {
 			$this->$key = array();
 		}
 
-		if ( is_string( $this->$key ) ) {
+		if ( \is_string( $this->$key ) ) {
 			$this->$key = array( $this->$key );
 		}
 
 		$attributes = $this->$key;
 
-		if ( is_array( $value ) ) {
-			$attributes = array_merge( $attributes, $value );
+		if ( \is_array( $value ) ) {
+			$attributes = \array_merge( $attributes, $value );
 		} else {
 			$attributes[] = $value;
 		}
 
-		$this->$key = array_unique( $attributes );
+		$this->$key = \array_unique( $attributes );
 
 		return $this->$key;
 	}
@@ -158,7 +158,7 @@ class Generic_Object {
 	 * @return boolean True if the object has the key.
 	 */
 	public function has( $key ) {
-		return property_exists( $this, $key );
+		return \property_exists( $this, $key );
 	}
 
 	/**
@@ -171,8 +171,8 @@ class Generic_Object {
 	public static function init_from_json( $json ) {
 		$array = \json_decode( $json, true );
 
-		if ( ! is_array( $array ) ) {
-			return new \WP_Error( 'invalid_json', __( 'Invalid JSON', 'activitypub' ), array( 'status' => 400 ) );
+		if ( ! \is_array( $array ) ) {
+			return new \WP_Error( 'invalid_json', \__( 'Invalid JSON', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
 		return self::init_from_array( $array );
@@ -186,8 +186,8 @@ class Generic_Object {
 	 * @return static|\WP_Error An Object built from the input array or WP_Error when it's not an array.
 	 */
 	public static function init_from_array( $data ) {
-		if ( ! is_array( $data ) ) {
-			return new \WP_Error( 'invalid_array', __( 'Invalid array', 'activitypub' ), array( 'status' => 400 ) );
+		if ( ! \is_array( $data ) ) {
+			return new \WP_Error( 'invalid_array', \__( 'Invalid array', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
 		$object = new static();
@@ -209,7 +209,7 @@ class Generic_Object {
 					$key = camel_to_snake_case( $key );
 				}
 
-				call_user_func( array( $this, 'set_' . $key ), $value );
+				\call_user_func( array( $this, 'set_' . $key ), $value );
 			}
 		}
 	}
@@ -244,7 +244,7 @@ class Generic_Object {
 	 */
 	public function to_array( $include_json_ld_context = true, $include_blind_audience = false ) {
 		$array = array();
-		$vars  = get_object_vars( $this );
+		$vars  = \get_object_vars( $this );
 
 		foreach ( $vars as $key => $value ) {
 			if ( \is_wp_error( $value ) ) {
@@ -252,20 +252,20 @@ class Generic_Object {
 			}
 
 			// Ignore all _prefixed keys.
-			if ( '_' === substr( $key, 0, 1 ) ) {
+			if ( '_' === \substr( $key, 0, 1 ) ) {
 				continue;
 			}
 
 			// If value is empty, try to get it from a getter.
 			if ( ! $value ) {
-				$value = call_user_func( array( $this, 'get_' . $key ) );
+				$value = \call_user_func( array( $this, 'get_' . $key ) );
 			}
 
-			if ( is_object( $value ) ) {
+			if ( \is_object( $value ) ) {
 				$value = $value->to_array( false, $include_blind_audience );
 			}
 
-			if ( is_array( $value ) && $this->is_namespaced( $key ) ) {
+			if ( \is_array( $value ) && $this->is_namespaced( $key ) ) {
 				foreach ( $value as $sub_key => $sub_value ) {
 					$array[ snake_to_camel_case( $key ) . ':' . snake_to_camel_case( $sub_key ) ] = $sub_value;
 				}
@@ -276,11 +276,11 @@ class Generic_Object {
 
 		if ( $include_json_ld_context ) {
 			// Get JsonLD context and move it to '@context' at the top.
-			$array = array_merge( array( '@context' => $this->get_json_ld_context() ), $array );
+			$array = \array_merge( array( '@context' => $this->get_json_ld_context() ), $array );
 		}
 
 		$class = new \ReflectionClass( $this );
-		$class = strtolower( $class->getShortName() );
+		$class = \strtolower( $class->getShortName() );
 
 		/**
 		 * Filter the array of the ActivityPub object.
@@ -371,7 +371,7 @@ class Generic_Object {
 		$namespaces = array();
 
 		foreach ( static::JSON_LD_CONTEXT as $context ) {
-			if ( is_array( $context ) ) {
+			if ( \is_array( $context ) ) {
 				$namespaces = \array_merge( $namespaces, $context );
 			}
 		}

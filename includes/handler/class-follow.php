@@ -104,7 +104,7 @@ class Follow {
 		$actor = $activity_object['actor'];
 
 		// Only send minimal data.
-		$activity_object = array_intersect_key(
+		$activity_object = \array_intersect_key(
 			$activity_object,
 			array(
 				'id'     => 1,

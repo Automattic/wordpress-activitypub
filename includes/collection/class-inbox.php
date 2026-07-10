@@ -117,14 +117,14 @@ class Inbox {
 
 		$inbox_item = array(
 			'post_type'    => self::POST_TYPE,
-			'post_title'   => sprintf(
+			'post_title'   => \sprintf(
 				/* translators: 1. Activity type, 2. Object Title or Excerpt */
 				\__( '[%1$s] %2$s', 'activitypub' ),
 				$activity->get_type(),
 				\wp_trim_words( $title, 5 )
 			),
 			// Persist the blind audience so we keep the full addressing the sender used.
-			'post_content' => wp_slash( $activity->to_json( true, true ) ),
+			'post_content' => \wp_slash( $activity->to_json( true, true ) ),
 			'post_author'  => 0, // No specific author, recipients stored in meta.
 			'post_status'  => 'publish',
 			'guid'         => $activity->get_id(),
@@ -166,7 +166,7 @@ class Inbox {
 	 * @return string The title.
 	 */
 	private static function get_object_title( $activity_object ) {
-		if ( ! $activity_object || is_array( $activity_object ) ) {
+		if ( ! $activity_object || \is_array( $activity_object ) ) {
 			return '';
 		}
 
@@ -286,7 +286,7 @@ class Inbox {
 					);
 				}
 
-				$result = Comment::object_id_to_comment( esc_url_raw( $inbox_item->guid ) );
+				$result = Comment::object_id_to_comment( \esc_url_raw( $inbox_item->guid ) );
 
 				if ( empty( $result ) ) {
 					return new \WP_Error(
@@ -494,7 +494,7 @@ class Inbox {
 		}
 
 		// Keep the first (oldest) post as primary.
-		$primary_id = array_shift( $post_ids );
+		$primary_id = \array_shift( $post_ids );
 		$primary    = \get_post( $primary_id );
 
 		// Merge recipients from duplicates into primary and delete duplicates.

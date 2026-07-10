@@ -170,7 +170,7 @@ class Blog extends Actor {
 	 * @return string The User-Url.
 	 */
 	public function get_alternate_url() {
-		return \esc_url( \trailingslashit( get_home_url() ) );
+		return \esc_url( \trailingslashit( \get_home_url() ) );
 	}
 
 	/**
@@ -192,7 +192,7 @@ class Blog extends Actor {
 		 *
 		 * @param string $host The default username (site's host name).
 		 */
-		return apply_filters( 'activitypub_default_blog_username', $host );
+		return \apply_filters( 'activitypub_default_blog_username', $host );
 	}
 
 	/**
@@ -225,7 +225,7 @@ class Blog extends Actor {
 	 * @return string[]|null The User-Header-Image.
 	 */
 	public function get_image() {
-		$header_image = get_option( 'activitypub_header_image' );
+		$header_image = \get_option( 'activitypub_header_image' );
 		$image_url    = null;
 
 		if ( $header_image ) {
@@ -239,7 +239,7 @@ class Blog extends Actor {
 		if ( $image_url ) {
 			return array(
 				'type' => 'Image',
-				'url'  => esc_url( $image_url ),
+				'url'  => \esc_url( $image_url ),
 			);
 		}
 
@@ -359,7 +359,7 @@ class Blog extends Actor {
 	 * @return string The Inbox-Endpoint.
 	 */
 	public function get_inbox() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/inbox', $this->get__id() ) );
+		return get_rest_url_by_path( \sprintf( 'actors/%d/inbox', $this->get__id() ) );
 	}
 
 	/**
@@ -368,7 +368,7 @@ class Blog extends Actor {
 	 * @return string The Outbox-Endpoint.
 	 */
 	public function get_outbox() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/outbox', $this->get__id() ) );
+		return get_rest_url_by_path( \sprintf( 'actors/%d/outbox', $this->get__id() ) );
 	}
 
 	/**
@@ -377,7 +377,7 @@ class Blog extends Actor {
 	 * @return string The Followers-Endpoint.
 	 */
 	public function get_followers() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/followers', $this->get__id() ) );
+		return get_rest_url_by_path( \sprintf( 'actors/%d/followers', $this->get__id() ) );
 	}
 
 	/**
@@ -386,7 +386,7 @@ class Blog extends Actor {
 	 * @return string The Following-Endpoint.
 	 */
 	public function get_following() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/following', $this->get__id() ) );
+		return get_rest_url_by_path( \sprintf( 'actors/%d/following', $this->get__id() ) );
 	}
 
 	/**
@@ -422,7 +422,7 @@ class Blog extends Actor {
 	 * @return string The Liked endpoint.
 	 */
 	public function get_liked() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/liked', $this->get__id() ) );
+		return get_rest_url_by_path( \sprintf( 'actors/%d/liked', $this->get__id() ) );
 	}
 
 	/**
@@ -431,7 +431,7 @@ class Blog extends Actor {
 	 * @return string The Featured-Endpoint.
 	 */
 	public function get_featured() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/collections/featured', $this->get__id() ) );
+		return get_rest_url_by_path( \sprintf( 'actors/%d/collections/featured', $this->get__id() ) );
 	}
 
 	/**
@@ -440,7 +440,7 @@ class Blog extends Actor {
 	 * @return string The Featured-Tags-Endpoint.
 	 */
 	public function get_featured_tags() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/collections/tags', $this->get__id() ) );
+		return get_rest_url_by_path( \sprintf( 'actors/%d/collections/tags', $this->get__id() ) );
 	}
 
 	/**
@@ -483,7 +483,7 @@ class Blog extends Actor {
 	 * @return bool True if the attribute was updated, false otherwise.
 	 */
 	public function update_icon( $value ) {
-		if ( ! wp_attachment_is_image( $value ) ) {
+		if ( ! \wp_attachment_is_image( $value ) ) {
 			return false;
 		}
 		return \update_option( 'site_icon', $value );
@@ -496,7 +496,7 @@ class Blog extends Actor {
 	 * @return bool True if the attribute was updated, false otherwise.
 	 */
 	public function update_header( $value ) {
-		if ( ! wp_attachment_is_image( $value ) ) {
+		if ( ! \wp_attachment_is_image( $value ) ) {
 			return false;
 		}
 		return \update_option( 'activitypub_header_image', $value );
@@ -518,7 +518,7 @@ class Blog extends Actor {
 			'number'  => 10,
 		);
 
-		$tags = get_tags( $args );
+		$tags = \get_tags( $args );
 
 		foreach ( $tags as $tag ) {
 			$hashtags[] = array(
@@ -562,9 +562,9 @@ class Blog extends Actor {
 			$this->get_alternate_url(),
 		);
 
-		$also_known_as = array_merge( $also_known_as, \get_option( 'activitypub_blog_user_also_known_as', array() ) );
+		$also_known_as = \array_merge( $also_known_as, \get_option( 'activitypub_blog_user_also_known_as', array() ) );
 
-		return array_unique( $also_known_as );
+		return \array_unique( $also_known_as );
 	}
 
 	/**

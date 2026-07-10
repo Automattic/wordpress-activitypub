@@ -131,7 +131,7 @@ class Activitypub {
 	 * @deprecated 7.5.0 Use {@see Router::add_rewrite_rules()}.
 	 */
 	public static function add_rewrite_rules() {
-		_deprecated_function( __FUNCTION__, '7.5.0', '\Activitypub\Router::add_rewrite_rules()' );
+		\_deprecated_function( __FUNCTION__, '7.5.0', '\Activitypub\Router::add_rewrite_rules()' );
 
 		Router::add_rewrite_rules();
 	}
@@ -142,9 +142,9 @@ class Activitypub {
 	public static function theme_compat() {
 		// We assume that you want to use Post-Formats when enabling the setting.
 		if ( 'wordpress-post-format' === \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ) ) {
-			if ( ! get_theme_support( 'post-formats' ) ) {
+			if ( ! \get_theme_support( 'post-formats' ) ) {
 				// Add support for the Aside, Gallery Post Formats...
-				add_theme_support(
+				\add_theme_support(
 					'post-formats',
 					array(
 						'gallery',
@@ -230,7 +230,7 @@ class Activitypub {
 				'single'            => true,
 				'default'           => '',
 				'sanitize_callback' => static function ( $value ) {
-					return wp_kses( $value, 'user_description' );
+					return \wp_kses( $value, 'user_description' );
 				},
 			)
 		);

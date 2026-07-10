@@ -41,7 +41,7 @@ class Relay {
 		// Only relay if: successfully handled, Blog actor is recipient, activity is public, and in single-user mode.
 		if (
 			! $success ||
-			! in_array( Actors::BLOG_USER_ID, (array) $user_ids, true ) ||
+			! \in_array( Actors::BLOG_USER_ID, (array) $user_ids, true ) ||
 			! is_activity_public( $activity ) ||
 			! is_single_user()
 		) {
@@ -53,7 +53,7 @@ class Relay {
 		$announce->set_type( 'Announce' );
 		$announce->set_actor( Actors::BLOG_USER_ID );
 		$announce->set_object( $activity );
-		$announce->set_published( gmdate( ACTIVITYPUB_DATE_TIME_RFC3339 ) );
+		$announce->set_published( \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339 ) );
 
 		// Add to outbox for distribution. The outbox will generate the ID.
 		Outbox::add( $announce, Actors::BLOG_USER_ID );

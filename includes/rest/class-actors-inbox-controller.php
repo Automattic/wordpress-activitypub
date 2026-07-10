@@ -220,7 +220,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 
 		$response = array(
 			'@context'     => Base_Object::JSON_LD_CONTEXT,
-			'id'           => get_rest_url_by_path( sprintf( 'actors/%d/inbox', $user_id ) ),
+			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/inbox', $user_id ) ),
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'actor'        => $user->get_id(),
 			'type'         => 'OrderedCollection',
@@ -323,7 +323,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			 * @param string             $type     The type of the activity.
 			 * @param Activity|\WP_Error $activity The Activity object.
 			 */
-			do_action( 'activitypub_rest_inbox_disallowed', $data, $user_id, $type, $activity );
+			\do_action( 'activitypub_rest_inbox_disallowed', $data, $user_id, $type, $activity );
 		} else {
 			/**
 			 * ActivityPub inbox action.
@@ -365,7 +365,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 				Inbox::add( $activity, (array) $user_id );
 
 				\wp_clear_scheduled_hook( 'activitypub_inbox_create_item', array( $activity_id ) );
-				\wp_schedule_single_event( time() + 15, 'activitypub_inbox_create_item', array( $activity_id ) );
+				\wp_schedule_single_event( \time() + 15, 'activitypub_inbox_create_item', array( $activity_id ) );
 			}
 		}
 

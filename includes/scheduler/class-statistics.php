@@ -9,6 +9,7 @@
 
 namespace Activitypub\Scheduler;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Mailer;
 use Activitypub\Statistics as Statistics_Collector;
 
@@ -320,7 +321,7 @@ class Statistics {
 		}
 
 		// Check user preference.
-		if ( $user_id > \Activitypub\Collection\Actors::BLOG_USER_ID ) {
+		if ( $user_id > Actors::BLOG_USER_ID ) {
 			if ( ! \get_user_option( $option_name, $user_id ) ) {
 				return false;
 			}

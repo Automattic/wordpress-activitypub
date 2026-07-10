@@ -208,17 +208,17 @@ class Sanitize {
 	 * @return string The sanitized value.
 	 */
 	public static function constant_value( $value ) {
-		if ( is_bool( $value ) ) {
+		if ( \is_bool( $value ) ) {
 			return $value ? 'true' : 'false';
 		}
 
-		if ( is_string( $value ) ) {
-			return esc_attr( $value );
+		if ( \is_string( $value ) ) {
+			return \esc_attr( $value );
 		}
 
-		if ( is_array( $value ) ) {
+		if ( \is_array( $value ) ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
-			return print_r( $value, true );
+			return \print_r( $value, true );
 		}
 
 		return $value;
@@ -288,19 +288,19 @@ class Sanitize {
 		 * Extract scheme manually because wp_parse_url() returns false
 		 * for URIs like "myapp://" (scheme + empty authority, no path).
 		 */
-		if ( ! preg_match( '/^([a-zA-Z][a-zA-Z0-9+.\-]*):/', $uri, $matches ) ) {
+		if ( ! \preg_match( '/^([a-zA-Z][a-zA-Z0-9+.\-]*):/', $uri, $matches ) ) {
 			return '';
 		}
 
 		$scheme = \strtolower( $matches[1] );
 
 		// For standard schemes, use default sanitization.
-		if ( in_array( $scheme, array( 'http', 'https' ), true ) ) {
+		if ( \in_array( $scheme, array( 'http', 'https' ), true ) ) {
 			return \sanitize_url( $uri );
 		}
 
 		// For custom schemes, include the scheme in allowed protocols.
-		return \sanitize_url( $uri, array_merge( \wp_allowed_protocols(), array( $scheme ) ) );
+		return \sanitize_url( $uri, \array_merge( \wp_allowed_protocols(), array( $scheme ) ) );
 	}
 
 	/**

@@ -42,7 +42,7 @@ class Outbox_Command extends \WP_CLI_Command {
 	 */
 	public function undo( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$outbox_item_id = $args[0];
-		if ( ! is_numeric( $outbox_item_id ) ) {
+		if ( ! \is_numeric( $outbox_item_id ) ) {
 			$outbox_item_id = \url_to_postid( $outbox_item_id );
 		}
 
@@ -84,7 +84,7 @@ class Outbox_Command extends \WP_CLI_Command {
 	 */
 	public function reschedule( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$outbox_item_id = $args[0];
-		if ( ! is_numeric( $outbox_item_id ) ) {
+		if ( ! \is_numeric( $outbox_item_id ) ) {
 			$outbox_item_id = \url_to_postid( $outbox_item_id );
 		}
 

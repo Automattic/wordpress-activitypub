@@ -99,7 +99,7 @@ class Yoast_Seo {
 		// Get Yoast SEO options.
 		$yoast_options = \get_option( 'wpseo_titles' );
 
-		if ( ! is_array( $yoast_options ) ) {
+		if ( ! \is_array( $yoast_options ) ) {
 			return false;
 		}
 
@@ -114,7 +114,7 @@ class Yoast_Seo {
 	 */
 	private static function is_attachment_supported() {
 		$supported_post_types = \get_option( 'activitypub_support_post_types', array( 'post' ) );
-		return in_array( 'attachment', $supported_post_types, true );
+		return \in_array( 'attachment', $supported_post_types, true );
 	}
 
 	/**
@@ -168,7 +168,7 @@ class Yoast_Seo {
 		// Get Yoast SEO options.
 		$yoast_options = \get_option( 'wpseo_titles' );
 
-		if ( ! is_array( $yoast_options ) ) {
+		if ( ! \is_array( $yoast_options ) ) {
 			return false;
 		}
 
