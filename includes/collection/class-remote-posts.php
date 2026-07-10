@@ -24,10 +24,6 @@ use function Activitypub\process_remote_media;
  * @see Posts for local posts created via Client-to-Server (C2S) outbox.
  */
 class Remote_Posts {
-	use With_Guid_Lookup;
-	use With_Purge;
-	use With_Recipients;
-
 	/**
 	 * The post type for the posts.
 	 *
@@ -128,7 +124,17 @@ class Remote_Posts {
 	 * @return \WP_Post|\WP_Error The object post or WP_Error on failure.
 	 */
 	public static function get_by_guid( $guid ) {
-		$post_id = self::get_id_by_guid( $guid );
+		global $wpdb;
+		$guid = \sanitize_post_field( 'guid', \esc_url_raw( $guid ), 0, 'db' );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$post_id = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
+				$guid,
+				self::POST_TYPE
+			)
+		);
 
 		if ( ! $post_id ) {
 			return new \WP_Error(
@@ -420,17 +426,99 @@ class Remote_Posts {
 			array(
 				'post_type'      => self::POST_TYPE,
 				'posts_per_page' => -1,
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query'     => array(
-					array(
-						'key'   => '_activitypub_remote_actor_id',
-						'value' => $actor_id,
-					),
-				),
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_key'       => '_activitypub_remote_actor_id',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+				'meta_value'     => $actor_id,
 			)
 		);
 
 		return $query->posts;
+	}
+
+	/**
+	 * Get all recipients for a post.
+	 *
+	 * @param int $post_id The post ID.
+	 *
+	 * @return int[] Array of user IDs who are recipients.
+	 */
+	public static function get_recipients( $post_id ) {
+		// Get all meta values with key '_activitypub_user_id' (single => false).
+		$recipients = \get_post_meta( $post_id, '_activitypub_user_id', false );
+		$recipients = \array_map( 'intval', $recipients );
+
+		return $recipients;
+	}
+
+	/**
+	 * Check if a user is a recipient of a post.
+	 *
+	 * @param int $post_id The post ID.
+	 * @param int $user_id The user ID to check.
+	 *
+	 * @return bool True if user is a recipient, false otherwise.
+	 */
+	public static function has_recipient( $post_id, $user_id ) {
+		$recipients = self::get_recipients( $post_id );
+
+		return \in_array( (int) $user_id, $recipients, true );
+	}
+
+	/**
+	 * Add a recipient to an existing post.
+	 *
+	 * @param int $post_id The post ID.
+	 * @param int $user_id The user ID to add.
+	 *
+	 * @return bool True on success, false on failure.
+	 */
+	public static function add_recipient( $post_id, $user_id ) {
+		$user_id = (int) $user_id;
+		// Allow 0 for blog user, but reject negative values.
+		if ( $user_id < 0 ) {
+			return false;
+		}
+
+		// Check if already a recipient.
+		if ( self::has_recipient( $post_id, $user_id ) ) {
+			return true;
+		}
+
+		// Add new recipient as separate meta entry.
+		return (bool) \add_post_meta( $post_id, '_activitypub_user_id', $user_id, false );
+	}
+
+	/**
+	 * Add multiple recipients to an existing post.
+	 *
+	 * @param int   $post_id  The post ID.
+	 * @param int[] $user_ids The user ID or array of user IDs to add.
+	 */
+	public static function add_recipients( $post_id, $user_ids ) {
+		foreach ( $user_ids as $user_id ) {
+			self::add_recipient( $post_id, $user_id );
+		}
+	}
+
+	/**
+	 * Remove a recipient from a post.
+	 *
+	 * @param int $post_id The post ID.
+	 * @param int $user_id The user ID to remove.
+	 *
+	 * @return bool True on success, false on failure.
+	 */
+	public static function remove_recipient( $post_id, $user_id ) {
+		$user_id = (int) $user_id;
+
+		// Allow 0 for blog user, but reject negative values.
+		if ( $user_id < 0 ) {
+			return false;
+		}
+
+		// Delete the specific meta entry with this value.
+		return \delete_post_meta( $post_id, '_activitypub_user_id', $user_id );
 	}
 
 	/**
@@ -469,59 +557,97 @@ class Remote_Posts {
 	 * @return int The number of items deleted.
 	 */
 	public static function purge( $days ) {
-		return self::run_purge(
-			$days,
-			array(
-				'min_total' => 200,
-				'preserve'  => array( self::class, 'preserve_from_purge' ),
-			)
-		);
-	}
-
-	/**
-	 * Determine which remote posts in a purge batch must be kept.
-	 *
-	 * Posts with comments from local users represent meaningful local interactions and
-	 * are preserved, as are any posts an integration flags via `activitypub_preserve_ap_post`.
-	 *
-	 * @param int[] $post_ids The post IDs in the current purge batch.
-	 *
-	 * @return int[] The subset of post IDs to keep.
-	 */
-	private static function preserve_from_purge( $post_ids ) {
-		global $wpdb;
-
-		// Batch-fetch post IDs that have local user comments (single query per batch).
-		$placeholders = \implode( ',', \array_fill( 0, \count( $post_ids ), '%d' ) );
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$commented_post_ids = $wpdb->get_col(
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders
-			$wpdb->prepare( "SELECT DISTINCT comment_post_ID FROM $wpdb->comments WHERE comment_post_ID IN ($placeholders) AND user_id > 0", $post_ids )
-		);
-		$commented_post_ids = \array_flip( $commented_post_ids );
-
-		$keep = array();
-		foreach ( $post_ids as $post_id ) {
-			/**
-			 * Filter whether to preserve a specific ap_post from being purged.
-			 *
-			 * @param bool $preserve Whether to preserve this post. Default false.
-			 * @param int  $post_id  The ap_post ID being considered for deletion.
-			 *
-			 * @return bool Whether to preserve this post from deletion.
-			 */
-			if ( \apply_filters( 'activitypub_preserve_ap_post', false, $post_id ) ) {
-				$keep[] = $post_id;
-				continue;
-			}
-
-			// Preserve posts with comments from local users.
-			if ( isset( $commented_post_ids[ $post_id ] ) ) {
-				$keep[] = $post_id;
-			}
+		if ( $days <= 0 ) {
+			return 0;
 		}
 
-		return $keep;
+		$counts = \wp_count_posts( self::POST_TYPE );
+		$total  = 0;
+		foreach ( $counts as $count ) {
+			$total += (int) $count;
+		}
+
+		if ( $total <= 200 ) {
+			return 0;
+		}
+
+		global $wpdb;
+
+		$deleted    = 0;
+		$cutoff     = \gmdate( 'Y-m-d', \time() - ( $days * DAY_IN_SECONDS ) );
+		$start_time = \time();
+		$exclude    = array();
+
+		// If total exceeds the hard cap, drop the date filter to purge oldest items first.
+		$overflow   = $total > self::MAX_ITEMS;
+		$date_query = array(
+			array(
+				'before' => $cutoff,
+			),
+		);
+
+		$query_args = array(
+			'post_type'   => self::POST_TYPE,
+			'post_status' => 'any',
+			'fields'      => 'ids',
+			'numberposts' => self::PURGE_BATCH_SIZE,
+			'orderby'     => 'date',
+			'order'       => 'ASC',
+		);
+
+		if ( ! $overflow ) {
+			$query_args['date_query'] = $date_query;
+		}
+
+		do {
+			$query_args['exclude'] = $exclude;
+			$post_ids              = \get_posts( $query_args );
+
+			if ( empty( $post_ids ) ) {
+				break;
+			}
+
+			// Batch-fetch post IDs that have local user comments (single query per batch).
+			$placeholders = \implode( ',', \array_fill( 0, \count( $post_ids ), '%d' ) );
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$commented_post_ids = $wpdb->get_col(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders
+				$wpdb->prepare( "SELECT DISTINCT comment_post_ID FROM $wpdb->comments WHERE comment_post_ID IN ($placeholders) AND user_id > 0", $post_ids )
+			);
+			$commented_post_ids = \array_flip( $commented_post_ids );
+
+			foreach ( $post_ids as $post_id ) {
+				/**
+				 * Filter whether to preserve a specific ap_post from being purged.
+				 *
+				 * @param bool $preserve Whether to preserve this post. Default false.
+				 * @param int  $post_id  The ap_post ID being considered for deletion.
+				 *
+				 * @return bool Whether to preserve this post from deletion.
+				 */
+				if ( \apply_filters( 'activitypub_preserve_ap_post', false, $post_id ) ) {
+					$exclude[] = $post_id;
+					continue;
+				}
+
+				// Preserve posts with comments from local users.
+				if ( isset( $commented_post_ids[ $post_id ] ) ) {
+					$exclude[] = $post_id;
+					continue;
+				}
+
+				\wp_delete_post( $post_id, true );
+				++$deleted;
+			}
+
+			// Once we're back under the cap, re-apply the date filter.
+			if ( $overflow && ( $total - $deleted ) <= self::MAX_ITEMS ) {
+				$overflow                 = false;
+				$query_args['date_query'] = $date_query;
+			}
+		} while ( ! empty( $post_ids ) && ( \time() - $start_time ) < self::PURGE_TIMEOUT );
+
+		return $deleted;
 	}
 }

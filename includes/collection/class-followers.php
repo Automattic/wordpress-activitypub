@@ -20,8 +20,6 @@ use function Activitypub\get_rest_url_by_path;
  * @author Matthias Pfefferle
  */
 class Followers {
-	use With_Query_Pagination;
-
 	/**
 	 * Cache key for the followers inbox.
 	 *
@@ -238,11 +236,14 @@ class Followers {
 	 *  }
 	 */
 	public static function query( $user_id, $number = -1, $page = null, $args = array() ) {
-		$result = self::query_posts(
-			$number,
-			$page,
-			$args,
-			array(
+		$defaults = array(
+			'post_type'      => Remote_Actors::POST_TYPE,
+			'posts_per_page' => $number,
+			'paged'          => $page,
+			'orderby'        => 'ID',
+			'order'          => 'DESC',
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query'     => array(
 				'relation' => 'OR',
 				array(
 					'key'   => self::FOLLOWER_META_KEY,
@@ -253,11 +254,13 @@ class Followers {
 					'key'   => '_activitypub_user_id',
 					'value' => $user_id,
 				),
-			)
+			),
 		);
 
-		$followers = $result['posts'];
-		$total     = $result['total'];
+		$args      = \wp_parse_args( $args, $defaults );
+		$query     = new \WP_Query( $args );
+		$total     = $query->found_posts;
+		$followers = \array_filter( $query->posts );
 
 		return \compact( 'followers', 'total' );
 	}
@@ -333,10 +336,6 @@ class Followers {
 
 		global $wpdb;
 
-		/*
-		 * Pull every non-empty follower inbox in one JOIN: match the follower meta to the
-		 * user, join the inbox meta on the same actor post, and constrain to actor posts.
-		 */
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$results = $wpdb->get_col(
 			$wpdb->prepare(
@@ -345,11 +344,13 @@ class Followers {
 				INNER JOIN {$wpdb->postmeta} follower ON follower.post_id = inbox.post_id
 				INNER JOIN {$wpdb->posts} actor ON actor.ID = inbox.post_id
 				WHERE actor.post_type = %s
+				AND actor.post_status = %s
 				AND inbox.meta_key = '_activitypub_inbox'
 				AND inbox.meta_value <> ''
 				AND follower.meta_key = %s
 				AND follower.meta_value = %d",
 				Remote_Actors::POST_TYPE,
+				'publish',
 				self::FOLLOWER_META_KEY,
 				$user_id
 			)
@@ -459,7 +460,29 @@ class Followers {
 	 * @return \WP_Post[] Array of WP_Post objects.
 	 */
 	public static function get_by_authority( $user_id, $authority ) {
-		return self::query_by_authority( $user_id, $authority, self::FOLLOWER_META_KEY );
+		$posts = new \WP_Query(
+			array(
+				'post_type'      => Remote_Actors::POST_TYPE,
+				'posts_per_page' => -1,
+				'orderby'        => 'ID',
+				'order'          => 'DESC',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'     => array(
+					'relation' => 'AND',
+					array(
+						'key'   => self::FOLLOWER_META_KEY,
+						'value' => $user_id,
+					),
+					array(
+						'key'     => '_activitypub_inbox',
+						'compare' => 'LIKE',
+						'value'   => $authority,
+					),
+				),
+			)
+		);
+
+		return $posts->posts ?? array();
 	}
 
 	/**
