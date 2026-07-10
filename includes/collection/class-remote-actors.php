@@ -199,14 +199,12 @@ class Remote_Actors {
 	 */
 	public static function get_by_uri( $actor_uri ) {
 		global $wpdb;
-		$actor_uri = \sanitize_post_field( 'guid', \esc_url_raw( $actor_uri ), 0, 'db' );
-
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
-				$actor_uri,
-				self::POST_TYPE
+				\esc_sql( $actor_uri ),
+				\esc_sql( self::POST_TYPE )
 			)
 		);
 

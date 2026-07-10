@@ -205,13 +205,11 @@ class Inbox {
 	 */
 	public static function get_by_guid( $guid ) {
 		global $wpdb;
-		$guid = \sanitize_post_field( 'guid', \esc_url_raw( $guid ), 0, 'db' );
-
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
-				$guid,
+				\esc_url( $guid ),
 				self::POST_TYPE
 			)
 		);
@@ -481,13 +479,12 @@ class Inbox {
 	 */
 	public static function deduplicate( $guid ) {
 		global $wpdb;
-		$guid = \sanitize_post_field( 'guid', \esc_url_raw( $guid ), 0, 'db' );
 
 		// Query for all posts with this GUID directly (get_posts doesn't supports guid parameter).
 		$post_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT ID FROM {$wpdb->posts} WHERE guid=%s AND post_type=%s ORDER BY ID ASC",
-				$guid,
+				\esc_url( $guid ),
 				self::POST_TYPE
 			)
 		);

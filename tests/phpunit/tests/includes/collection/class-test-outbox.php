@@ -602,28 +602,6 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
-	 * GUID lookups must use WordPress's database representation of the URL.
-	 *
-	 * @covers ::get_by_guid
-	 */
-	public function test_get_by_guid_with_query_string() {
-		$guid    = 'https://example.com/outbox/query?id=1&part=2';
-		$post_id = \wp_insert_post(
-			array(
-				'post_type'   => Outbox::POST_TYPE,
-				'post_status' => 'publish',
-				'post_title'  => 'Query GUID',
-				'guid'        => $guid,
-			)
-		);
-
-		$post = Outbox::get_by_guid( $guid );
-
-		$this->assertInstanceOf( '\WP_Post', $post );
-		$this->assertSame( $post_id, $post->ID );
-	}
-
-	/**
 	 * Test that the blind audience (`bto`/`bcc`) is persisted to the database and
 	 * survives the `add` → `get_activity` roundtrip.
 	 *

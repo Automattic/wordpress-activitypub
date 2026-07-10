@@ -1222,7 +1222,8 @@ class Test_Interactions extends \WP_UnitTestCase {
 	 * @covers ::add_comment
 	 */
 	public function test_add_comment_returns_false_when_no_post_id() {
-		$activity = array(
+		$metadata_requests = 0;
+		$activity          = array(
 			'actor'  => 'https://example.com/users/someone',
 			'id'     => 'https://example.com/activities/orphan',
 			'object' => array(
@@ -1232,22 +1233,18 @@ class Test_Interactions extends \WP_UnitTestCase {
 			),
 		);
 
-		// Mock actor metadata.
-		$metadata_filter = static function () {
-			return array(
-				'name'              => 'Someone',
-				'preferredUsername' => 'someone',
-				'id'                => 'https://example.com/users/someone',
-				'url'               => 'https://example.com/@someone',
-			);
+		$metadata_filter = static function ( $pre ) use ( &$metadata_requests ) {
+			++$metadata_requests;
+			return $pre;
 		};
-		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter, 99 );
 
 		$result = Interactions::add_comment( $activity );
 
 		$this->assertFalse( $result, 'Should return false when inReplyTo does not resolve to a post or comment' );
+		$this->assertSame( 0, $metadata_requests, 'Unknown targets should be rejected before actor metadata is loaded.' );
 
-		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter, 99 );
 	}
 
 	/**
@@ -1566,5 +1563,133 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertFalse( \has_filter( 'pre_option_require_name_email', '__return_false' ), 'The require-name-email override must be removed after persisting.' );
 		$this->assertFalse( \has_filter( 'wp_kses_allowed_html', array( Interactions::class, 'allowed_comment_html' ) ), 'The KSES override must be removed after persisting.' );
 		$this->assertNotFalse( \has_action( 'check_comment_flood', 'check_comment_flood_db' ), 'Flood control must be restored after persisting.' );
+	}
+
+	/**
+	 * Interaction counts should share one cached grouped query per post.
+	 *
+	 * @covers ::count_by_type
+	 * @covers ::get_counts
+	 */
+	public function test_interaction_counts_use_one_cached_query() {
+		$post_id = self::factory()->post->create();
+
+		foreach ( array( 'like', 'like', 'repost', 'quote' ) as $type ) {
+			\wp_insert_comment(
+				array(
+					'comment_post_ID'  => $post_id,
+					'comment_content'  => $type,
+					'comment_type'     => $type,
+					'comment_approved' => 1,
+				)
+			);
+		}
+
+		\wp_insert_comment(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_content'  => 'Pending like',
+				'comment_type'     => 'like',
+				'comment_approved' => 0,
+			)
+		);
+
+		global $wpdb;
+		$query_count = $wpdb->num_queries;
+
+		$this->assertSame( 2, Interactions::count_by_type( $post_id, 'like' ) );
+		$this->assertSame( 1, Interactions::count_by_type( $post_id, 'repost' ) );
+		$this->assertSame( 1, Interactions::count_by_type( $post_id, 'quote' ) );
+		$this->assertSame( 0, Interactions::count_by_type( $post_id, 'unknown' ) );
+		$this->assertSame( 1, $wpdb->num_queries - $query_count, 'All interaction types should be counted by one query.' );
+
+		\wp_insert_comment(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_content'  => 'Another like',
+				'comment_type'     => 'like',
+				'comment_approved' => 1,
+			)
+		);
+
+		$query_count = $wpdb->num_queries;
+		$this->assertSame( 3, Interactions::count_by_type( $post_id, 'like' ) );
+		$this->assertSame( 1, $wpdb->num_queries - $query_count, 'Inserting a comment should invalidate the grouped count cache.' );
+	}
+
+	/**
+	 * Persist must distinguish insert IDs from update status values.
+	 *
+	 * @covers ::persist
+	 */
+	public function test_persist_returns_insert_id_and_updated_comment_data() {
+		$comment_data = array(
+			'comment_post_ID'      => self::$post_id,
+			'comment_author'       => 'Persistence Test',
+			'comment_author_email' => 'persist@example.com',
+			'comment_author_url'   => 'https://example.com/persist',
+			'comment_content'      => 'Initial content',
+			'comment_type'         => 'comment',
+		);
+
+		$comment_id = Interactions::persist( $comment_data );
+		$this->assertIsInt( $comment_id );
+
+		$updated_comment                    = \get_comment( $comment_id, ARRAY_A );
+		$updated_comment['comment_content'] = 'Updated content';
+		$result                             = Interactions::persist( $updated_comment, Interactions::UPDATE );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( $comment_id, (int) $result['comment_ID'] );
+	}
+
+	/**
+	 * Persist must not remove or relocate hooks registered by another component.
+	 *
+	 * @covers ::persist
+	 */
+	public function test_persist_preserves_existing_hook_state() {
+		$callbacks           = array(
+			array( 'pre_option_require_name_email', '__return_false', 1 ),
+			array( 'akismet_comment_nonce', array( Interactions::class, 'akismet_comment_nonce_inactive' ), 1 ),
+			array( 'wp_kses_allowed_html', array( Interactions::class, 'allowed_comment_html' ), 2 ),
+		);
+		$original_priorities = array();
+		$flood_priority      = \has_action( 'check_comment_flood', 'check_comment_flood_db' );
+
+		foreach ( $callbacks as $callback ) {
+			$priority              = \has_filter( $callback[0], $callback[1] );
+			$original_priorities[] = $priority;
+			if ( false !== $priority ) {
+				\remove_filter( $callback[0], $callback[1], $priority );
+			}
+			\add_filter( $callback[0], $callback[1], 42, $callback[2] );
+		}
+
+		if ( false !== $flood_priority ) {
+			\remove_action( 'check_comment_flood', 'check_comment_flood_db', $flood_priority );
+		}
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 42, 4 );
+
+		try {
+			Interactions::add_comment( $this->create_test_object( 'https://example.com/persist-existing-hooks' ) );
+
+			foreach ( $callbacks as $callback ) {
+				$this->assertSame( 42, \has_filter( $callback[0], $callback[1] ) );
+			}
+			$this->assertSame( 42, \has_action( 'check_comment_flood', 'check_comment_flood_db' ) );
+		} finally {
+			foreach ( $callbacks as $index => $callback ) {
+				\remove_filter( $callback[0], $callback[1], 42 );
+				if ( false !== $original_priorities[ $index ] ) {
+					\add_filter( $callback[0], $callback[1], $original_priorities[ $index ], $callback[2] );
+				}
+			}
+
+			\remove_action( 'check_comment_flood', 'check_comment_flood_db', 42 );
+			if ( false !== $flood_priority ) {
+				\add_action( 'check_comment_flood', 'check_comment_flood_db', $flood_priority, 4 );
+			}
+		}
 	}
 }
