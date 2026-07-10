@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Collection;
 
+use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Mention;
 
@@ -219,6 +220,77 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$this->assertInstanceOf( '\WP_Post', $updated_post );
 		$actor_obj = Remote_Actors::get_actor( $updated_post );
 		$this->assertEquals( 'Jane Doe', $actor_obj->get_name() );
+	}
+
+	/**
+	 * Actor persistence invalidates global and follower-specific inbox caches.
+	 *
+	 * @covers ::create
+	 * @covers ::update
+	 * @covers ::delete
+	 * @covers ::get_inboxes
+	 * @covers ::clear_inbox_caches
+	 */
+	public function test_actor_changes_invalidate_inbox_caches() {
+		$actor = array(
+			'id'                => 'https://remote.example.com/actor/cache-invalidation',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/cache-invalidation',
+			'inbox'             => 'https://remote.example.com/actor/cache-invalidation/inbox',
+			'name'              => 'Cache Invalidation',
+			'preferredUsername' => 'cache-invalidation',
+		);
+
+		\wp_cache_delete( Remote_Actors::CACHE_KEY_INBOXES, 'activitypub' );
+		$this->assertSame( array(), Remote_Actors::get_inboxes() );
+
+		$post_id = Remote_Actors::create( $actor );
+		$this->assertIsInt( $post_id );
+		$this->assertSame( array( $actor['inbox'] ), Remote_Actors::get_inboxes() );
+
+		$user_id = 42;
+		\add_post_meta( $post_id, Followers::FOLLOWER_META_KEY, $user_id );
+		$this->assertSame( array( $actor['inbox'] ), Followers::get_inboxes( $user_id ) );
+
+		$actor['inbox'] = 'https://remote.example.com/actor/cache-invalidation/new-inbox';
+		$this->assertSame( $post_id, Remote_Actors::update( $post_id, $actor ) );
+		$this->assertSame( array( $actor['inbox'] ), Remote_Actors::get_inboxes() );
+		$this->assertSame( array( $actor['inbox'] ), Followers::get_inboxes( $user_id ) );
+
+		$this->assertInstanceOf( '\WP_Post', Remote_Actors::delete( $post_id ) );
+		$this->assertSame( array(), Remote_Actors::get_inboxes() );
+		$this->assertSame( array(), Followers::get_inboxes( $user_id ) );
+	}
+
+	/**
+	 * The global inbox cache excludes unrelated and unpublished posts and caches an empty result.
+	 *
+	 * @covers ::get_inboxes
+	 */
+	public function test_get_inboxes_caches_empty_published_actor_query() {
+		$non_actor = self::factory()->post->create();
+		\add_post_meta( $non_actor, '_activitypub_inbox', 'https://remote.example.com/non-actor/inbox' );
+
+		$draft_actor = self::factory()->post->create(
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'post_status' => 'draft',
+			)
+		);
+		\add_post_meta( $draft_actor, '_activitypub_inbox', 'https://remote.example.com/draft/inbox' );
+
+		\wp_cache_delete( Remote_Actors::CACHE_KEY_INBOXES, 'activitypub' );
+
+		global $wpdb;
+		$query_count = $wpdb->num_queries;
+
+		$this->assertSame( array(), Remote_Actors::get_inboxes() );
+		$this->assertSame( 1, $wpdb->num_queries - $query_count );
+
+		$query_count = $wpdb->num_queries;
+
+		$this->assertSame( array(), Remote_Actors::get_inboxes() );
+		$this->assertSame( 0, $wpdb->num_queries - $query_count );
 	}
 
 	/**

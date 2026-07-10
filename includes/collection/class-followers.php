@@ -62,7 +62,6 @@ class Followers {
 		if ( \is_array( $post_meta ) && ! \in_array( (string) $user_id, $post_meta, true ) ) {
 			\add_post_meta( $post_id, self::FOLLOWER_META_KEY, $user_id );
 			\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
-			\wp_cache_delete( Remote_Actors::CACHE_KEY_INBOXES, 'activitypub' );
 		}
 
 		return $post_id;
@@ -100,7 +99,6 @@ class Followers {
 		}
 
 		\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
-		\wp_cache_delete( Remote_Actors::CACHE_KEY_INBOXES, 'activitypub' );
 
 		/**
 		 * Fires before a Follower is removed.
@@ -330,7 +328,7 @@ class Followers {
 		$cache_key = \sprintf( self::CACHE_KEY_INBOXES, $user_id );
 		$inboxes   = \wp_cache_get( $cache_key, 'activitypub' );
 
-		if ( $inboxes ) {
+		if ( false !== $inboxes ) {
 			return $inboxes;
 		}
 
