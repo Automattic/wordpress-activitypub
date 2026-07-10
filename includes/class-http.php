@@ -18,9 +18,9 @@ class Http {
 	/**
 	 * Send a POST Request with the needed HTTP Headers
 	 *
-	 * @param string $url     The URL endpoint.
-	 * @param string $body    The Post Body.
-	 * @param int    $user_id The WordPress User-ID.
+	 * @param string   $url     The URL endpoint.
+	 * @param string   $body    The Post Body.
+	 * @param int|null $user_id The WordPress User-ID, or null to sign with the Application key.
 	 *
 	 * @return array|\WP_Error The POST Response or an WP_Error.
 	 */
@@ -28,9 +28,9 @@ class Http {
 		/**
 		 * Fires before an HTTP POST request is made.
 		 *
-		 * @param string $url     The URL endpoint.
-		 * @param string $body    The POST body.
-		 * @param int    $user_id The WordPress User ID.
+		 * @param string   $url     The URL endpoint.
+		 * @param string   $body    The POST body.
+		 * @param int|null $user_id The WordPress User ID, or null when signing with the Application key.
 		 */
 		\do_action( 'activitypub_pre_http_post', $url, $body, $user_id );
 
@@ -49,6 +49,12 @@ class Http {
 		 */
 		$timeout = \apply_filters( 'activitypub_remote_post_timeout', 10 );
 
+		/*
+		 * Get the private key for signing the request. If a user ID is provided,
+		 * get the user's private key; otherwise, use the application's private key.
+		 */
+		$private_key = null === $user_id ? Application::get_private_key() : Actors::get_private_key( $user_id );
+
 		$args = array(
 			'timeout'             => $timeout,
 			'limit_response_size' => 1048576,
@@ -61,7 +67,7 @@ class Http {
 			),
 			'body'                => $body,
 			'key_id'              => \json_decode( $body )->actor . '#main-key',
-			'private_key'         => Actors::get_private_key( $user_id ),
+			'private_key'         => $private_key,
 			'user_id'             => $user_id,
 		);
 
@@ -85,7 +91,7 @@ class Http {
 		 * @param array|\WP_Error $response The response of the remote POST request.
 		 * @param string          $url      The URL endpoint.
 		 * @param string          $body     The Post Body.
-		 * @param int             $user_id  The WordPress User-ID.
+		 * @param int|null        $user_id  The WordPress User-ID, or null when signing with the Application key.
 		 */
 		\do_action( 'activitypub_safe_remote_post_response', $response, $url, $body, $user_id );
 
@@ -165,8 +171,8 @@ class Http {
 				'Content-Type' => 'application/activity+json',
 				'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
 			),
-			'key_id'              => Actors::get_by_id( Actors::APPLICATION_USER_ID )->get_id() . '#main-key',
-			'private_key'         => Actors::get_private_key( Actors::APPLICATION_USER_ID ),
+			'key_id'              => Application::get_key_id(),
+			'private_key'         => Application::get_private_key(),
 		);
 
 		$args            = \wp_parse_args( $args, $defaults );

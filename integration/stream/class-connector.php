@@ -240,8 +240,6 @@ class Connector extends \WP_Stream\Connector {
 						$object_title = \get_userdata( $author_id )->display_name;
 					} elseif ( Actors::BLOG_USER_ID === $author_id ) {
 						$object_title = \__( 'Blog User', 'activitypub' );
-					} elseif ( Actors::APPLICATION_USER_ID === $author_id ) {
-						$object_title = \__( 'Application User', 'activitypub' );
 					}
 				}
 			}
