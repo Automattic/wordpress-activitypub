@@ -390,6 +390,8 @@ class Test_Followers extends \WP_UnitTestCase {
 	 * @covers ::get_inboxes
 	 */
 	public function test_get_inboxes() {
+		\wp_cache_delete( \sprintf( Followers::CACHE_KEY_INBOXES, 1 ), 'activitypub' );
+
 		for ( $i = 0; $i < 30; $i++ ) {
 			$meta = array(
 				'id'                => 'https://example.org/users/' . $i,
@@ -407,8 +409,42 @@ class Test_Followers extends \WP_UnitTestCase {
 			\add_post_meta( $id, Followers::FOLLOWER_META_KEY, 1 );
 		}
 
-		$inboxes = Followers::get_inboxes( 1 );
+		$other_actor = Remote_Actors::upsert(
+			array(
+				'id'                => 'https://example.org/users/other',
+				'type'              => 'Person',
+				'inbox'             => 'https://example.org/users/other/inbox',
+				'name'              => 'other',
+				'preferredUsername' => 'other',
+			)
+		);
+		\add_post_meta( $other_actor, Followers::FOLLOWER_META_KEY, 2 );
 
+		$non_actor = \wp_insert_post(
+			array(
+				'post_type'   => 'post',
+				'post_status' => 'publish',
+				'post_title'  => 'Not an actor',
+			)
+		);
+		\add_post_meta( $non_actor, '_activitypub_inbox', 'https://example.org/not-an-actor/inbox' );
+		\add_post_meta( $non_actor, Followers::FOLLOWER_META_KEY, 1 );
+
+		$draft_actor = \wp_insert_post(
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'post_status' => 'draft',
+				'post_title'  => 'Draft actor',
+			)
+		);
+		\add_post_meta( $draft_actor, '_activitypub_inbox', 'https://example.org/draft/inbox' );
+		\add_post_meta( $draft_actor, Followers::FOLLOWER_META_KEY, 1 );
+
+		global $wpdb;
+		$query_count = $wpdb->num_queries;
+		$inboxes     = Followers::get_inboxes( 1 );
+
+		$this->assertSame( 1, $wpdb->num_queries - $query_count, 'Follower inboxes should be loaded with one query.' );
 		$this->assertCount( 30, $inboxes );
 
 		wp_cache_delete( sprintf( Followers::CACHE_KEY_INBOXES, 1 ), 'activitypub' );

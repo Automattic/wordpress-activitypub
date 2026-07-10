@@ -15,8 +15,6 @@ use function Activitypub\add_to_outbox;
  * ActivityPub Following Collection.
  */
 class Following {
-	use With_Query_Pagination;
-
 	/**
 	 * Meta key for the following user ID.
 	 *
@@ -268,20 +266,25 @@ class Following {
 	 *  }
 	 */
 	public static function query( $user_id, $number = -1, $page = null, $args = array() ) {
-		$result = self::query_posts(
-			$number,
-			$page,
-			$args,
-			array(
+		$defaults = array(
+			'post_type'      => Remote_Actors::POST_TYPE,
+			'posts_per_page' => $number,
+			'paged'          => $page,
+			'orderby'        => 'ID',
+			'order'          => 'DESC',
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query'     => array(
 				array(
 					'key'   => self::FOLLOWING_META_KEY,
 					'value' => $user_id,
 				),
-			)
+			),
 		);
 
-		$following = $result['posts'];
-		$total     = $result['total'];
+		$args      = \wp_parse_args( $args, $defaults );
+		$query     = new \WP_Query( $args );
+		$total     = $query->found_posts;
+		$following = \array_filter( $query->posts );
 
 		return \compact( 'following', 'total' );
 	}
@@ -407,7 +410,29 @@ class Following {
 	 * @return array Array of follower URLs.
 	 */
 	public static function get_by_authority( $user_id, $authority, $state = self::FOLLOWING_META_KEY ) {
-		return self::query_by_authority( $user_id, $authority, $state );
+		$posts = new \WP_Query(
+			array(
+				'post_type'      => Remote_Actors::POST_TYPE,
+				'posts_per_page' => -1,
+				'orderby'        => 'ID',
+				'order'          => 'DESC',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'     => array(
+					'relation' => 'AND',
+					array(
+						'key'   => $state,
+						'value' => $user_id,
+					),
+					array(
+						'key'     => '_activitypub_inbox',
+						'compare' => 'LIKE',
+						'value'   => $authority,
+					),
+				),
+			)
+		);
+
+		return $posts->posts ?? array();
 	}
 
 	/**

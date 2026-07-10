@@ -8,6 +8,7 @@
 namespace Activitypub\Collection;
 
 use Activitypub\Activity\Activity;
+use Activitypub\Activity\Base_Object;
 use Activitypub\Comment;
 
 use function Activitypub\is_activity_public;
@@ -19,12 +20,6 @@ use function Activitypub\object_to_uri;
  * @link https://www.w3.org/TR/activitypub/#inbox
  */
 class Inbox {
-	use With_Guid_Lookup;
-	use With_Kses_Safe_Insert;
-	use With_Object_Title;
-	use With_Purge;
-	use With_Recipients;
-
 	/**
 	 * The post type for the objects.
 	 *
@@ -141,11 +136,19 @@ class Inbox {
 			),
 		);
 
-		$id = self::without_kses(
-			static function () use ( $inbox_item ) {
-				return \wp_insert_post( $inbox_item, true );
+		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
+		if ( $has_kses ) {
+			// Prevent KSES from corrupting JSON in post_content.
+			\kses_remove_filters();
+		}
+
+		try {
+			$id = \wp_insert_post( $inbox_item, true );
+		} finally {
+			if ( $has_kses ) {
+				\kses_init_filters();
 			}
-		);
+		}
 
 		// Add recipients as separate meta entries after post is created.
 		if ( ! \is_wp_error( $id ) ) {
@@ -155,6 +158,33 @@ class Inbox {
 		}
 
 		return $id;
+	}
+
+	/**
+	 * Get the title of an activity recursively.
+	 *
+	 * @param Activity|Base_Object|array $activity_object The activity object.
+	 *
+	 * @return string The title.
+	 */
+	private static function get_object_title( $activity_object ) {
+		if ( ! $activity_object || \is_array( $activity_object ) ) {
+			return '';
+		}
+
+		if ( \is_string( $activity_object ) ) {
+			$post_id = \url_to_postid( $activity_object );
+
+			return $post_id ? \get_the_title( $post_id ) : '';
+		}
+
+		$title = $activity_object->get_name() ?: $activity_object->get_content();
+
+		if ( ! $title && $activity_object->get_object() instanceof Base_Object ) {
+			$title = $activity_object->get_object()->get_name() ?: $activity_object->get_object()->get_content();
+		}
+
+		return $title;
 	}
 
 	/**
@@ -176,7 +206,17 @@ class Inbox {
 	 * @return \WP_Post|\WP_Error The inbox item or WP_Error.
 	 */
 	public static function get_by_guid( $guid ) {
-		$post_id = self::get_id_by_guid( $guid );
+		global $wpdb;
+		$guid = \sanitize_post_field( 'guid', \esc_url_raw( $guid ), 0, 'db' );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$post_id = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
+				$guid,
+				self::POST_TYPE
+			)
+		);
 
 		if ( ! $post_id ) {
 			return new \WP_Error(
@@ -273,6 +313,91 @@ class Inbox {
 	}
 
 	/**
+	 * Get all recipients for an inbox activity.
+	 *
+	 * @param int $post_id The inbox post ID.
+	 *
+	 * @return array Array of user IDs who are recipients.
+	 */
+	public static function get_recipients( $post_id ) {
+		// Get all meta values with key '_activitypub_user_id' (single => false).
+		$recipients = \get_post_meta( $post_id, '_activitypub_user_id', false );
+		$recipients = \array_map( 'intval', $recipients );
+
+		return $recipients;
+	}
+
+	/**
+	 * Check if a user is a recipient of an inbox activity.
+	 *
+	 * @param int $post_id The inbox post ID.
+	 * @param int $user_id The user ID to check.
+	 *
+	 * @return bool True if user is a recipient, false otherwise.
+	 */
+	public static function has_recipient( $post_id, $user_id ) {
+		$recipients = self::get_recipients( $post_id );
+
+		return \in_array( (int) $user_id, $recipients, true );
+	}
+
+	/**
+	 * Add a recipient to an existing inbox activity.
+	 *
+	 * @param int $post_id The inbox post ID.
+	 * @param int $user_id The user ID to add.
+	 *
+	 * @return bool True on success, false on failure.
+	 */
+	public static function add_recipient( $post_id, $user_id ) {
+		$user_id = (int) $user_id;
+		// Allow 0 for blog user, but reject negative values.
+		if ( $user_id < 0 ) {
+			return false;
+		}
+
+		// Check if already a recipient.
+		if ( self::has_recipient( $post_id, $user_id ) ) {
+			return true;
+		}
+
+		// Add new recipient as separate meta entry.
+		return (bool) \add_post_meta( $post_id, '_activitypub_user_id', $user_id, false );
+	}
+
+	/**
+	 * Remove a recipient from an inbox activity.
+	 *
+	 * @param int $post_id The inbox post ID.
+	 * @param int $user_id The user ID to remove.
+	 *
+	 * @return bool True on success, false on failure.
+	 */
+	public static function remove_recipient( $post_id, $user_id ) {
+		$user_id = (int) $user_id;
+
+		// Allow 0 for blog user, but reject negative values.
+		if ( $user_id < 0 ) {
+			return false;
+		}
+
+		// Delete the specific meta entry with this value.
+		return \delete_post_meta( $post_id, '_activitypub_user_id', $user_id );
+	}
+
+	/**
+	 * Add multiple recipients to an existing inbox activity.
+	 *
+	 * @param int   $post_id  The inbox post ID.
+	 * @param int[] $user_ids The user ID or array of user IDs to add.
+	 */
+	public static function add_recipients( $post_id, $user_ids ) {
+		foreach ( $user_ids as $user_id ) {
+			self::add_recipient( $post_id, $user_id );
+		}
+	}
+
+	/**
 	 * Get an inbox item by GUID for a specific recipient.
 	 *
 	 * This checks both that the activity exists and that the user is a valid recipient.
@@ -357,8 +482,17 @@ class Inbox {
 	 * @return \WP_Post|false The primary inbox post, or false if no posts found.
 	 */
 	public static function deduplicate( $guid ) {
+		global $wpdb;
+		$guid = \sanitize_post_field( 'guid', \esc_url_raw( $guid ), 0, 'db' );
+
 		// Query for all posts with this GUID directly (get_posts doesn't supports guid parameter).
-		$post_ids = self::get_ids_by_guid( $guid );
+		$post_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"SELECT ID FROM {$wpdb->posts} WHERE guid=%s AND post_type=%s ORDER BY ID ASC",
+				$guid,
+				self::POST_TYPE
+			)
+		);
 
 		if ( empty( $post_ids ) ) {
 			return false;
@@ -388,6 +522,60 @@ class Inbox {
 	 * @return int The number of items deleted.
 	 */
 	public static function purge( $days ) {
-		return self::run_purge( $days, array( 'min_total' => 200 ) );
+		if ( $days <= 0 ) {
+			return 0;
+		}
+
+		$counts = \wp_count_posts( self::POST_TYPE );
+		$total  = 0;
+		foreach ( $counts as $count ) {
+			$total += (int) $count;
+		}
+
+		if ( $total <= 200 ) {
+			return 0;
+		}
+
+		$deleted    = 0;
+		$cutoff     = \gmdate( 'Y-m-d', \time() - ( $days * DAY_IN_SECONDS ) );
+		$start_time = \time();
+
+		// If total exceeds the hard cap, drop the date filter to purge oldest items first.
+		$overflow   = $total > self::MAX_ITEMS;
+		$date_query = array(
+			array(
+				'before' => $cutoff,
+			),
+		);
+
+		$query_args = array(
+			'post_type'   => self::POST_TYPE,
+			'post_status' => 'any',
+			'fields'      => 'ids',
+			'numberposts' => self::PURGE_BATCH_SIZE,
+			'orderby'     => 'date',
+			'order'       => 'ASC',
+		);
+
+		if ( ! $overflow ) {
+			$query_args['date_query'] = $date_query;
+		}
+
+		do {
+			$post_ids = \get_posts( $query_args );
+
+			foreach ( $post_ids as $post_id ) {
+				\wp_delete_post( $post_id, true );
+				++$deleted;
+			}
+
+			// Once we're back under the cap, re-apply the date filter.
+			if ( $overflow && ( $total - $deleted ) <= self::MAX_ITEMS ) {
+				$overflow                 = false;
+				$query_args['date_query'] = $date_query;
+			}
+		} while ( ! empty( $post_ids ) && ( \time() - $start_time ) < self::PURGE_TIMEOUT );
+
+		return $deleted;
 	}
 }

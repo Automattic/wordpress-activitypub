@@ -20,9 +20,6 @@ use function Activitypub\object_to_uri;
  * Remote Actors collection class.
  */
 class Remote_Actors {
-	use With_Guid_Lookup;
-	use With_Kses_Safe_Insert;
-
 	/**
 	 * Post type for storing remote actors.
 	 *
@@ -119,11 +116,20 @@ class Remote_Actors {
 			return $args;
 		}
 
-		$post_id = self::without_kses(
-			static function () use ( $args ) {
-				return \wp_insert_post( $args );
+		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
+		if ( $has_kses ) {
+			// Prevent KSES from corrupting JSON in post_content.
+			\kses_remove_filters();
+		}
+
+		try {
+			$post_id = \wp_insert_post( $args );
+		} finally {
+			if ( $has_kses ) {
+				// Restore KSES filters.
+				\kses_init_filters();
 			}
-		);
+		}
 
 		return $post_id;
 	}
@@ -159,11 +165,20 @@ class Remote_Actors {
 
 		$args = \wp_parse_args( $args, $post );
 
-		$post_id = self::without_kses(
-			static function () use ( $args ) {
-				return \wp_update_post( $args );
+		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
+		if ( $has_kses ) {
+			// Prevent KSES from corrupting JSON in post_content.
+			\kses_remove_filters();
+		}
+
+		try {
+			$post_id = \wp_update_post( $args );
+		} finally {
+			if ( $has_kses ) {
+				// Restore KSES filters.
+				\kses_init_filters();
 			}
-		);
+		}
 
 		return $post_id;
 	}
@@ -187,7 +202,17 @@ class Remote_Actors {
 	 * @return \WP_Post|\WP_Error Post object or WP_Error if not found.
 	 */
 	public static function get_by_uri( $actor_uri ) {
-		$post_id = self::get_id_by_guid( $actor_uri );
+		global $wpdb;
+		$actor_uri = \sanitize_post_field( 'guid', \esc_url_raw( $actor_uri ), 0, 'db' );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$post_id = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
+				$actor_uri,
+				self::POST_TYPE
+			)
+		);
 
 		if ( ! $post_id ) {
 			return new \WP_Error(
@@ -569,12 +594,7 @@ class Remote_Actors {
 			$webfinger = \is_wp_error( $webfinger ) ? Webfinger::guess( $actor ) : Sanitize::webfinger( $webfinger );
 		}
 
-		// Serialize the actor with the outgoing mention/hashtag/link filters suspended.
-		list( $actor_json, $actor_array ) = self::without_federation_object_filters(
-			static function () use ( $actor ) {
-				return array( $actor->to_json(), $actor->to_array() );
-			}
-		);
+		list( $actor_json, $actor_array ) = self::serialize_for_storage( $actor );
 
 		$meta_input = array(
 			'_activitypub_inbox' => $inbox,
@@ -598,24 +618,15 @@ class Remote_Actors {
 	}
 
 	/**
-	 * Run a callback with the outgoing mention/hashtag/link filters suspended.
+	 * Serialize a remote actor without outbound content filters.
 	 *
-	 * Those filters are globally registered on `init` for every `to_json()`/`to_array()`
-	 * call, but they are meant for OUTGOING (federation) content. When we serialize a
-	 * remote actor for storage, the Mention filter would fetch the mentioned actor, whose
-	 * own bio mentions would be fetched in turn — an infinite recursion. So they are
-	 * removed around the storage serialization and restored afterwards.
+	 * @since unreleased
 	 *
-	 * Only the filters that were actually registered are restored (and at their original
-	 * priority), so this never accidentally *adds* a filter that a peer had removed. The
-	 * longer-term fix is to distinguish incoming (store as-is) from outgoing (process)
-	 * contexts rather than toggling globals here.
+	 * @param Actor $actor The actor to serialize.
 	 *
-	 * @param callable $callback The serialization to run without the filters.
-	 *
-	 * @return mixed Whatever the callback returns.
+	 * @return array The actor JSON and array representations.
 	 */
-	private static function without_federation_object_filters( $callback ) {
+	private static function serialize_for_storage( $actor ) {
 		$callbacks  = array(
 			array( 'Activitypub\Mention', 'filter_activity_object' ),
 			array( 'Activitypub\Hashtag', 'filter_activity_object' ),
@@ -623,21 +634,19 @@ class Remote_Actors {
 		);
 		$registered = array();
 
-		foreach ( $callbacks as $callback_ref ) {
-			$priority = \has_filter( 'activitypub_activity_object_array', $callback_ref );
+		foreach ( $callbacks as $callback ) {
+			$priority = \has_filter( 'activitypub_activity_object_array', $callback );
 			if ( false !== $priority ) {
-				$registered[] = array( $callback_ref, $priority );
-				\remove_filter( 'activitypub_activity_object_array', $callback_ref, $priority );
+				$registered[] = array( $callback, $priority );
+				\remove_filter( 'activitypub_activity_object_array', $callback, $priority );
 			}
 		}
 
 		try {
-			return $callback();
+			return array( $actor->to_json(), $actor->to_array() );
 		} finally {
-			// Restore only the filters that were present, even if the callback threw.
-			foreach ( $registered as $entry ) {
-				list( $callback_ref, $priority ) = $entry;
-				\add_filter( 'activitypub_activity_object_array', $callback_ref, $priority );
+			foreach ( $registered as $filter ) {
+				\add_filter( 'activitypub_activity_object_array', $filter[0], $filter[1] );
 			}
 		}
 	}
