@@ -182,6 +182,21 @@ class Test_Sanitize extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that the 'application' identifier is reserved for the Application actor.
+	 *
+	 * @covers ::blog_identifier
+	 */
+	public function test_blog_identifier_reserves_application() {
+		$result = Sanitize::blog_identifier( 'application' );
+
+		$this->assertEquals( \Activitypub\Model\Blog::get_default_username(), $result );
+		$this->assertNotEmpty( get_settings_errors( 'activitypub_blog_identifier' ) );
+
+		// Reset.
+		$GLOBALS['wp_settings_errors'] = array();
+	}
+
+	/**
 	 * Test content sanitization without blocks support.
 	 *
 	 * @covers ::content

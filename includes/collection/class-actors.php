@@ -8,9 +8,10 @@
 namespace Activitypub\Collection;
 
 use Activitypub\Activity\Actor;
-use Activitypub\Model\Application;
+use Activitypub\Application;
 use Activitypub\Model\Blog;
 use Activitypub\Model\User;
+use Activitypub\Signature;
 
 use function Activitypub\is_user_type_disabled;
 use function Activitypub\normalize_host;
@@ -33,7 +34,9 @@ class Actors {
 	const BLOG_USER_ID = 0;
 
 	/**
-	 * The ID of the Application User.
+	 * The ID of the former Application user.
+	 *
+	 * @deprecated unreleased The Application is no longer a user-like actor, see {@see \Activitypub\Application}. Retained for backward compatibility and legacy data handling.
 	 *
 	 * @var int
 	 */
@@ -79,8 +82,6 @@ class Actors {
 		switch ( $user_id ) {
 			case self::BLOG_USER_ID:
 				return new Blog();
-			case self::APPLICATION_USER_ID:
-				return new Application();
 			default:
 				return User::from_wp_user( $user_id );
 		}
@@ -137,9 +138,19 @@ class Actors {
 			return self::BLOG_USER_ID;
 		}
 
-		// Check for application user.
-		if ( 'application' === $username ) {
-			return self::APPLICATION_USER_ID;
+		/*
+		 * The 'application' identifier is reserved for the signing-only Application
+		 * actor, which is served only through the dedicated /application endpoint.
+		 * Never resolve it to a regular user, even on sites that happen to have a
+		 * user named "application". Compare lowercased: the user lookups below are
+		 * case-insensitive, so the reservation has to be too.
+		 */
+		if ( Application::USERNAME === \strtolower( $username ) ) {
+			return new \WP_Error(
+				'activitypub_user_not_found',
+				\__( 'Actor not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
 		}
 
 		// Check for 'activitypub_username' meta.
@@ -283,7 +294,7 @@ class Actors {
 				$host       = normalize_host( \substr( \strrchr( $uri, '@' ), 1 ) );
 				$blog_host  = normalize_host( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) );
 
-				if ( $blog_host !== $host && \get_option( 'activitypub_old_host' ) !== $host ) {
+				if ( $blog_host !== $host && normalize_host( \get_option( 'activitypub_old_host' ) ) !== $host ) {
 					return new \WP_Error(
 						'activitypub_wrong_host',
 						\__( 'Resource host does not match blog host', 'activitypub' ),
@@ -428,14 +439,10 @@ class Actors {
 	 *
 	 * @param int $user_id The user ID to check.
 	 *
-	 * @return string Actor type: 'user', 'blog', or 'application'.
+	 * @return string Actor type: 'user' or 'blog'.
 	 */
 	public static function get_type_by_id( $user_id ) {
 		$user_id = (int) $user_id;
-
-		if ( self::APPLICATION_USER_ID === $user_id ) {
-			return 'application';
-		}
 
 		if ( self::BLOG_USER_ID === $user_id ) {
 			return 'blog';
@@ -448,13 +455,13 @@ class Actors {
 	 * Return the public key for a given actor.
 	 *
 	 * @param int  $user_id The WordPress User ID.
-	 * @param bool $force   Optional. Force the generation of a new key pair. Default false.
+	 * @param bool $force   Deprecated. Keys are never rotated; new pairs are only generated when none is stored.
 	 *
 	 * @return string The public key.
 	 */
 	public static function get_public_key( $user_id, $force = false ) {
 		if ( $force ) {
-			self::generate_key_pair( $user_id );
+			\_deprecated_argument( __METHOD__, 'unreleased', \esc_html__( 'Keys are never rotated; new pairs are only generated when none is stored.', 'activitypub' ) );
 		}
 
 		$key_pair = self::get_keypair( $user_id );
@@ -466,13 +473,13 @@ class Actors {
 	 * Return the private key for a given actor.
 	 *
 	 * @param int  $user_id The WordPress User ID.
-	 * @param bool $force   Optional. Force the generation of a new key pair. Default false.
+	 * @param bool $force   Deprecated. Keys are never rotated; new pairs are only generated when none is stored.
 	 *
 	 * @return string The private key.
 	 */
 	public static function get_private_key( $user_id, $force = false ) {
 		if ( $force ) {
-			self::generate_key_pair( $user_id );
+			\_deprecated_argument( __METHOD__, 'unreleased', \esc_html__( 'Keys are never rotated; new pairs are only generated when none is stored.', 'activitypub' ) );
 		}
 
 		$key_pair = self::get_keypair( $user_id );
@@ -488,68 +495,12 @@ class Actors {
 	 * @return array The key pair.
 	 */
 	public static function get_keypair( $user_id ) {
-		$option_key = self::get_signature_options_key( $user_id );
-		$key_pair   = \get_option( $option_key );
-
-		if ( ! $key_pair ) {
-			$key_pair = self::generate_key_pair( $user_id );
-		}
-
-		return $key_pair;
-	}
-
-	/**
-	 * Generates the pair of keys.
-	 *
-	 * @param int $user_id The WordPress User ID.
-	 *
-	 * @return array The key pair.
-	 */
-	protected static function generate_key_pair( $user_id ) {
-		$option_key = self::get_signature_options_key( $user_id );
-		$key_pair   = self::check_legacy_key_pair( $user_id );
-
-		if ( $key_pair ) {
-			\add_option( $option_key, $key_pair );
-
-			return $key_pair;
-		}
-
-		$config = array(
-			'digest_alg'       => 'sha512',
-			'private_key_bits' => 2048,
-			'private_key_type' => \OPENSSL_KEYTYPE_RSA,
+		return Signature::get_key_pair(
+			self::get_signature_options_key( $user_id ),
+			function () use ( $user_id ) {
+				return self::check_legacy_key_pair( $user_id );
+			}
 		);
-
-		$key         = \openssl_pkey_new( $config );
-		$private_key = null;
-		$detail      = array();
-		if ( $key ) {
-			\openssl_pkey_export( $key, $private_key );
-
-			$detail = \openssl_pkey_get_details( $key );
-		}
-
-		// Check if keys are valid.
-		if (
-			empty( $private_key ) || ! \is_string( $private_key ) ||
-			! isset( $detail['key'] ) || ! \is_string( $detail['key'] )
-		) {
-			return array(
-				'private_key' => null,
-				'public_key'  => null,
-			);
-		}
-
-		$key_pair = array(
-			'private_key' => $private_key,
-			'public_key'  => $detail['key'],
-		);
-
-		// Persist keys.
-		\add_option( $option_key, $key_pair );
-
-		return $key_pair;
 	}
 
 	/**
@@ -581,10 +532,6 @@ class Actors {
 			case 0:
 				$public_key  = \get_option( 'activitypub_blog_user_public_key' );
 				$private_key = \get_option( 'activitypub_blog_user_private_key' );
-				break;
-			case -1:
-				$public_key  = \get_option( 'activitypub_application_user_public_key' );
-				$private_key = \get_option( 'activitypub_application_user_private_key' );
 				break;
 			default:
 				$public_key  = \get_user_meta( $user_id, 'magic_sig_public_key', true );
