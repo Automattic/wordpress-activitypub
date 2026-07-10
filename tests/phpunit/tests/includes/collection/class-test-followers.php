@@ -276,6 +276,32 @@ class Test_Followers extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Blocking a remote actor removes it from the follower collection.
+	 *
+	 * @covers ::remove_blocked_actors
+	 */
+	public function test_remove_blocked_actor_removes_remote_follower() {
+		$actor_uri       = 'https://remote.example/@admin';
+		$remote_actor_id = Remote_Actors::upsert(
+			array(
+				'id'                => $actor_uri,
+				'type'              => 'Person',
+				'inbox'             => 'https://remote.example/inbox',
+				'name'              => 'Remote Admin',
+				'preferredUsername' => 'admin',
+			)
+		);
+
+		$this->assertIsInt( $remote_actor_id );
+		\add_post_meta( $remote_actor_id, Followers::FOLLOWER_META_KEY, 1 );
+		$this->assertTrue( Followers::follows( $remote_actor_id, 1 ) );
+
+		Followers::remove_blocked_actors( $actor_uri, 'actor', 1 );
+
+		$this->assertFalse( Followers::follows( $remote_actor_id, 1 ) );
+	}
+
+	/**
 	 * Tests add_duplicate_follower.
 	 *
 	 * @covers ::add_follower
