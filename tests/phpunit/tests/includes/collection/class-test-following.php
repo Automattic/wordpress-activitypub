@@ -362,6 +362,32 @@ class Test_Following extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Blocking a remote actor removes it from the following collection.
+	 *
+	 * @covers ::remove_blocked_actors
+	 */
+	public function test_remove_blocked_actor_removes_remote_following() {
+		$actor_uri       = 'https://remote.example/@admin';
+		$remote_actor_id = Remote_Actors::upsert(
+			array(
+				'id'                => $actor_uri,
+				'type'              => 'Person',
+				'inbox'             => 'https://remote.example/inbox',
+				'name'              => 'Remote Admin',
+				'preferredUsername' => 'admin',
+			)
+		);
+
+		$this->assertIsInt( $remote_actor_id );
+		\add_post_meta( $remote_actor_id, Following::FOLLOWING_META_KEY, 1 );
+		$this->assertSame( Following::ACCEPTED, Following::check_status( 1, $remote_actor_id ) );
+
+		Following::remove_blocked_actors( $actor_uri, 'actor', 1 );
+
+		$this->assertFalse( Following::check_status( 1, $remote_actor_id ) );
+	}
+
+	/**
 	 * Tests unfollow method.
 	 *
 	 * @covers ::unfollow

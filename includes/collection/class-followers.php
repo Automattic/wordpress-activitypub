@@ -413,12 +413,12 @@ class Followers {
 			return;
 		}
 
-		$actor_id = Actors::get_id_by_various( $value );
-		if ( \is_wp_error( $actor_id ) ) {
+		$remote_actor = Remote_Actors::get_by_uri( $value );
+		if ( \is_wp_error( $remote_actor ) ) {
 			return;
 		}
 
-		self::remove( $actor_id, $user_id );
+		self::remove( $remote_actor, $user_id );
 	}
 
 	/**
