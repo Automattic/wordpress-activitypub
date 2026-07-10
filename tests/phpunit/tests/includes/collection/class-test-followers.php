@@ -500,6 +500,29 @@ class Test_Followers extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Empty follower inbox results are served from cache.
+	 *
+	 * @covers ::get_inboxes
+	 */
+	public function test_get_inboxes_caches_empty_results() {
+		$user_id   = 999;
+		$cache_key = \sprintf( Followers::CACHE_KEY_INBOXES, $user_id );
+
+		\wp_cache_delete( $cache_key, 'activitypub' );
+
+		global $wpdb;
+		$query_count = $wpdb->num_queries;
+
+		$this->assertSame( array(), Followers::get_inboxes( $user_id ) );
+		$this->assertSame( 1, $wpdb->num_queries - $query_count );
+
+		$query_count = $wpdb->num_queries;
+
+		$this->assertSame( array(), Followers::get_inboxes( $user_id ) );
+		$this->assertSame( 0, $wpdb->num_queries - $query_count );
+	}
+
+	/**
 	 * Tests get_inboxes_for_activity method.
 	 *
 	 * @covers ::get_inboxes_for_activity

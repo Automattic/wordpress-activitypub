@@ -42,16 +42,25 @@ class Remote_Actors {
 	public static function get_inboxes() {
 		$inboxes = \wp_cache_get( self::CACHE_KEY_INBOXES, 'activitypub' );
 
-		if ( $inboxes ) {
+		if ( false !== $inboxes ) {
 			return $inboxes;
 		}
 
 		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$results = $wpdb->get_col(
-			"SELECT DISTINCT meta_value FROM {$wpdb->postmeta}
-			WHERE meta_key = '_activitypub_inbox'
-			AND meta_value IS NOT NULL"
+			$wpdb->prepare(
+				"SELECT DISTINCT inbox.meta_value
+				FROM {$wpdb->postmeta} inbox
+				INNER JOIN {$wpdb->posts} actor ON actor.ID = inbox.post_id
+				WHERE actor.post_type = %s
+				AND actor.post_status = %s
+				AND inbox.meta_key = '_activitypub_inbox'
+				AND inbox.meta_value <> ''",
+				self::POST_TYPE,
+				'publish'
+			)
 		);
 
 		$inboxes = \array_filter( $results );
@@ -129,6 +138,10 @@ class Remote_Actors {
 			\kses_init_filters();
 		}
 
+		if ( $post_id && ! \is_wp_error( $post_id ) ) {
+			self::clear_inbox_caches( $post_id );
+		}
+
 		return $post_id;
 	}
 
@@ -176,6 +189,10 @@ class Remote_Actors {
 			\kses_init_filters();
 		}
 
+		if ( $post_id && ! \is_wp_error( $post_id ) ) {
+			self::clear_inbox_caches( $post_id );
+		}
+
 		return $post_id;
 	}
 
@@ -187,7 +204,27 @@ class Remote_Actors {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function delete( $post_id ) {
+		self::clear_inbox_caches( $post_id );
+
 		return \wp_delete_post( $post_id );
+	}
+
+	/**
+	 * Clear cached inbox lists affected by a remote actor change.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $post_id The remote actor post ID.
+	 */
+	private static function clear_inbox_caches( $post_id ) {
+		\wp_cache_delete( self::CACHE_KEY_INBOXES, 'activitypub' );
+
+		$user_ids = \get_post_meta( $post_id, Followers::FOLLOWER_META_KEY, false );
+		$user_ids = \array_unique( \array_map( 'intval', $user_ids ) );
+
+		foreach ( $user_ids as $user_id ) {
+			\wp_cache_delete( \sprintf( Followers::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
+		}
 	}
 
 	/**
