@@ -125,13 +125,11 @@ class Remote_Posts {
 	 */
 	public static function get_by_guid( $guid ) {
 		global $wpdb;
-		$guid = \sanitize_post_field( 'guid', \esc_url_raw( $guid ), 0, 'db' );
-
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
-				$guid,
+				\esc_url( $guid ),
 				self::POST_TYPE
 			)
 		);

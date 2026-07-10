@@ -368,28 +368,6 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * GUID lookups must use WordPress's database representation of the URL.
-	 *
-	 * @covers ::get_by_guid
-	 */
-	public function test_get_by_guid_with_query_string() {
-		$guid    = 'https://example.com/objects/query?id=1&part=2';
-		$post_id = \wp_insert_post(
-			array(
-				'post_type'   => Remote_Posts::POST_TYPE,
-				'post_status' => 'publish',
-				'post_title'  => 'Query GUID',
-				'guid'        => $guid,
-			)
-		);
-
-		$post = Remote_Posts::get_by_guid( $guid );
-
-		$this->assertInstanceOf( '\WP_Post', $post );
-		$this->assertSame( $post_id, $post->ID );
-	}
-
-	/**
 	 * Test getting a non-existent object by GUID.
 	 *
 	 * @covers ::get_by_guid

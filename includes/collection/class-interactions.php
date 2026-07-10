@@ -37,14 +37,9 @@ class Interactions {
 	 * @return int|false|\WP_Error The comment ID or false or WP_Error on failure.
 	 */
 	public static function add_comment( $activity, $user_id = null ) {
-		$comment_data = self::activity_to_comment( $activity, $user_id );
-
-		if ( ! $comment_data ) {
-			return false;
-		}
-
 		// Determine target URL from reply or quote.
 		$parent_comment_id = 0;
+		$is_quote          = false;
 
 		if ( ! empty( $activity['object']['inReplyTo'] ) ) {
 			// Regular reply.
@@ -58,7 +53,23 @@ class Interactions {
 				return false;
 			}
 
-			// Mark as quote and clean content.
+			$is_quote = true;
+		}
+
+		$comment_post_id = self::resolve_post_id( $target_url, $parent_comment_id );
+
+		if ( ! $comment_post_id ) {
+			// Not a reply to a post or comment.
+			return false;
+		}
+
+		$comment_data = self::activity_to_comment( $activity, $user_id );
+
+		if ( ! $comment_data ) {
+			return false;
+		}
+
+		if ( $is_quote ) {
 			$comment_data['comment_type'] = 'quote';
 
 			if ( ! empty( $activity['object']['content'] ) ) {
@@ -66,29 +77,6 @@ class Interactions {
 				$cleaned_content                 = \preg_replace( $pattern, '', $activity['object']['content'], 1 );
 				$comment_data['comment_content'] = \wp_kses_post( $cleaned_content );
 			}
-		}
-
-		// Get post ID from target URL.
-		$target_url      = \esc_url_raw( $target_url );
-		$comment_post_id = \url_to_postid( $target_url );
-
-		if ( ! $comment_post_id ) {
-			// Check for `ap_post`.
-			$comment_post = Remote_Posts::get_by_guid( $target_url );
-			if ( $comment_post instanceof \WP_Post ) {
-				$comment_post_id = $comment_post->ID;
-			}
-		}
-
-		// Handle nested replies (replies to comments).
-		if ( ! $comment_post_id && $parent_comment_id ) {
-			$parent_comment  = \get_comment( $parent_comment_id );
-			$comment_post_id = $parent_comment->comment_post_ID;
-		}
-
-		if ( ! $comment_post_id ) {
-			// Not a reply to a post or comment.
-			return false;
 		}
 
 		$comment_data['comment_post_ID'] = $comment_post_id;
@@ -164,21 +152,8 @@ class Interactions {
 	 */
 	public static function add_reaction( $activity ) {
 		$url               = object_to_uri( $activity['object'] );
-		$comment_post_id   = \url_to_postid( $url );
 		$parent_comment_id = url_to_commentid( $url );
-
-		if ( ! $comment_post_id ) {
-			// Check for `ap_post`.
-			$comment_post = Remote_Posts::get_by_guid( $url );
-			if ( $comment_post instanceof \WP_Post ) {
-				$comment_post_id = $comment_post->ID;
-			}
-		}
-
-		if ( ! $comment_post_id && $parent_comment_id ) {
-			$parent_comment  = \get_comment( $parent_comment_id );
-			$comment_post_id = $parent_comment->comment_post_ID;
-		}
+		$comment_post_id   = self::resolve_post_id( $url, $parent_comment_id );
 
 		if ( ! $comment_post_id ) {
 			// Not a reply to a post or comment.
@@ -203,6 +178,41 @@ class Interactions {
 		$comment_data['comment_meta']['source_id'] = \esc_url_raw( $activity['id'] );
 
 		return self::persist( $comment_data );
+	}
+
+	/**
+	 * Resolve an interaction target to its WordPress post ID.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $url               The target URL.
+	 * @param int    $parent_comment_id Optional. The resolved parent comment ID.
+	 *
+	 * @return int The post ID, or 0 when the target is unknown.
+	 */
+	private static function resolve_post_id( $url, $parent_comment_id = 0 ) {
+		if ( ! $url ) {
+			return 0;
+		}
+
+		$url     = \esc_url_raw( $url );
+		$post_id = \url_to_postid( $url );
+
+		if ( ! $post_id ) {
+			$remote_post = Remote_Posts::get_by_guid( $url );
+			if ( $remote_post instanceof \WP_Post ) {
+				$post_id = $remote_post->ID;
+			}
+		}
+
+		if ( ! $post_id && $parent_comment_id ) {
+			$parent_comment = \get_comment( $parent_comment_id );
+			if ( $parent_comment instanceof \WP_Comment ) {
+				$post_id = $parent_comment->comment_post_ID;
+			}
+		}
+
+		return (int) $post_id;
 	}
 
 	/**
@@ -494,31 +504,108 @@ class Interactions {
 			return false;
 		}
 
-		// Disable flood control.
-		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
-		// Do not require email for AP entries.
-		\add_filter( 'pre_option_require_name_email', '__return_false' );
-		// No nonce possible for this submission route.
-		\add_filter( 'akismet_comment_nonce', array( self::class, 'akismet_comment_nonce_inactive' ) );
-		\add_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10, 2 );
+		$is_insert          = self::INSERT === $action;
+		$flood_priority     = \has_action( 'check_comment_flood', 'check_comment_flood_db' );
+		$had_name_filter    = false !== \has_filter( 'pre_option_require_name_email', '__return_false' );
+		$akismet_callback   = array( self::class, 'akismet_comment_nonce_inactive' );
+		$had_akismet_filter = false !== \has_filter( 'akismet_comment_nonce', $akismet_callback );
+		$kses_callback      = array( self::class, 'allowed_comment_html' );
+		$had_allowed_html   = false !== \has_filter( 'wp_kses_allowed_html', $kses_callback );
 
-		if ( self::INSERT === $action ) {
+		// Disable flood control.
+		if ( false !== $flood_priority ) {
+			\remove_action( 'check_comment_flood', 'check_comment_flood_db', $flood_priority );
+		}
+
+		// Do not require email for AP entries.
+		if ( ! $had_name_filter ) {
+			\add_filter( 'pre_option_require_name_email', '__return_false' );
+		}
+
+		// No nonce possible for this submission route.
+		if ( ! $had_akismet_filter ) {
+			\add_filter( 'akismet_comment_nonce', $akismet_callback );
+		}
+
+		if ( ! $had_allowed_html ) {
+			\add_filter( 'wp_kses_allowed_html', $kses_callback, 10, 2 );
+		}
+
+		if ( $is_insert ) {
 			$state = \wp_new_comment( $comment_data, true );
 		} else {
 			$state = \wp_update_comment( $comment_data, true );
 		}
 
-		\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ) );
-		\remove_filter( 'akismet_comment_nonce', array( self::class, 'akismet_comment_nonce_inactive' ) );
-		\remove_filter( 'pre_option_require_name_email', '__return_false' );
-		// Restore flood control.
-		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
-
-		if ( 1 === $state ) {
-			return $comment_data;
-		} else {
-			return $state; // Either WP_Comment, false, a WP_Error, 0, or 1!
+		if ( ! $had_allowed_html ) {
+			\remove_filter( 'wp_kses_allowed_html', $kses_callback );
 		}
+
+		if ( ! $had_akismet_filter ) {
+			\remove_filter( 'akismet_comment_nonce', $akismet_callback );
+		}
+
+		if ( ! $had_name_filter ) {
+			\remove_filter( 'pre_option_require_name_email', '__return_false' );
+		}
+
+		// Restore flood control.
+		if ( false !== $flood_priority ) {
+			\add_action( 'check_comment_flood', 'check_comment_flood_db', $flood_priority, 4 );
+		}
+
+		if ( ! $is_insert && 1 === $state ) {
+			return $comment_data;
+		}
+
+		return $state; // Either a comment ID, false, a WP_Error, or 0.
+	}
+
+	/**
+	 * Get interaction counts grouped by comment type.
+	 *
+	 * Results are cached against WordPress's comment cache generation so inserts,
+	 * updates, deletions, and comment meta changes invalidate them automatically.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $post_id The post ID.
+	 *
+	 * @return array<string, int> Counts keyed by comment type.
+	 */
+	public static function get_counts( $post_id ) {
+		$post_id      = \absint( $post_id );
+		$last_changed = \wp_cache_get_last_changed( 'comment' );
+		$cache_key    = 'interaction_counts_' . \md5( $post_id . ':' . $last_changed );
+		$counts       = \wp_cache_get( $cache_key, 'activitypub' );
+
+		if ( false !== $counts ) {
+			return $counts;
+		}
+
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached against the core comment cache generation.
+		$results = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT comment_type, COUNT(*) AS total
+				FROM {$wpdb->comments}
+				WHERE comment_post_ID = %d
+				AND comment_approved = '1'
+				GROUP BY comment_type",
+				$post_id
+			),
+			ARRAY_A
+		);
+
+		$counts = array();
+		foreach ( $results as $result ) {
+			$counts[ $result['comment_type'] ] = (int) $result['total'];
+		}
+
+		\wp_cache_set( $cache_key, $counts, 'activitypub' );
+
+		return $counts;
 	}
 
 	/**
@@ -530,16 +617,10 @@ class Interactions {
 	 * @return int The total number of interactions.
 	 */
 	public static function count_by_type( $post_id, $type ) {
-		return \get_comments(
-			array(
-				'post_id' => $post_id,
-				'status'  => 'approve',
-				'type'    => $type,
-				'count'   => true,
-				'paging'  => false,
-				'fields'  => 'ids',
-			)
-		);
+		$counts = self::get_counts( $post_id );
+		$type   = \sanitize_key( $type );
+
+		return $counts[ $type ] ?? 0;
 	}
 
 	/**
