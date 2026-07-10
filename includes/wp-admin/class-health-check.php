@@ -7,6 +7,7 @@
 
 namespace Activitypub\WP_Admin;
 
+use Activitypub\Application;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
 use Activitypub\Http;
@@ -266,8 +267,7 @@ class Health_Check {
 	 * @return boolean|\WP_Error
 	 */
 	public static function is_webfinger_endpoint_accessible() {
-		$user     = Actors::get_by_id( Actors::APPLICATION_USER_ID );
-		$resource = $user->get_webfinger();
+		$resource = Application::get_webfinger();
 
 		$url = Webfinger::resolve( $resource );
 		if ( \is_wp_error( $url ) ) {
@@ -964,9 +964,8 @@ class Health_Check {
 	 * @return bool|\WP_Error True if accessible, WP_Error otherwise.
 	 */
 	public static function is_rest_api_accessible() {
-		// Test the application actor's inbox endpoint (always available).
-		$actor = Actors::get_by_id( Actors::APPLICATION_USER_ID );
-		$url   = $actor->get_inbox();
+		// Test the Application endpoint (always available, publicly readable via GET).
+		$url = Application::get_id();
 
 		/*
 		 * Make an unauthenticated request. wp_safe_remote_get() guards against

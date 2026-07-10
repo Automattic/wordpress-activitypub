@@ -1286,6 +1286,55 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	}
 
 	/**
+	 * Test get_local_recipients for Accept activity wrapping a Follow.
+	 *
+	 * Some servers address Accept activities only through the embedded Follow
+	 * object. In that case, the local recipient is the Follow actor.
+	 *
+	 * @covers ::get_local_recipients
+	 */
+	public function test_get_local_recipients_accept_follow_uses_object_actor() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		$user_actor    = Actors::get_by_id( self::$user_id );
+		$user_actor_id = $user_actor->get_id();
+		$fetched_urls  = array();
+
+		$remote_object_filter = function ( $pre, $url ) use ( &$fetched_urls ) {
+			$fetched_urls[] = $url;
+			return new \WP_Error( 'test', 'Simulated error' );
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter, 10, 2 );
+
+		$activity = array(
+			'id'     => 'https://remote.example/users/news#accepts/follows/',
+			'type'   => 'Accept',
+			'actor'  => 'https://remote.example/users/news',
+			'object' => array(
+				'id'     => 'https://local.example/?post_type=ap_outbox&p=123',
+				'type'   => 'Follow',
+				'actor'  => $user_actor_id,
+				'object' => 'https://remote.example/users/news',
+				'to'     => 'https://remote.example/users/news',
+			),
+		);
+
+		$reflection = new \ReflectionClass( $this->inbox_controller );
+		$method     = $reflection->getMethod( 'get_local_recipients' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$result = $method->invoke( $this->inbox_controller, $activity );
+
+		\delete_option( 'activitypub_actor_mode' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
+
+		$this->assertContains( self::$user_id, $result, 'Should contain user referenced as embedded Follow actor' );
+		$this->assertContains( 'https://remote.example/users/news', $fetched_urls );
+	}
+
+	/**
 	 * Test get_local_recipients skips public audience identifiers without fetching them.
 	 *
 	 * This tests the fix for issue #2793 where public audience identifiers like

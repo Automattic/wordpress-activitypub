@@ -214,10 +214,15 @@ class Migration {
 			// Backfill historical statistics data (delay + jitter to avoid load spikes on hosts running many sites).
 			\wp_schedule_single_event( \time() + HOUR_IN_SECONDS + \wp_rand( 0, 6 * HOUR_IN_SECONDS ), 'activitypub_backfill_statistics' );
 		}
+
 		if ( \version_compare( $version_from_db, '8.3.0', '<' ) ) {
 			if ( ! \wp_next_scheduled( 'activitypub_tombstone_migrate' ) ) {
 				\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_tombstone_migrate' );
 			}
+		}
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			self::migrate_application_keypair_option();
+			self::delete_application_outbox_items();
 		}
 
 		/*
@@ -1030,7 +1035,7 @@ class Migration {
 			$wpdb->postmeta,
 			array(
 				'meta_key'   => '_activitypub_following', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'meta_value' => Actors::APPLICATION_USER_ID, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+				'meta_value' => -1, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 			)
 		);
 	}
@@ -1330,5 +1335,63 @@ class Migration {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Migrate the Application key pair option from the old name to the new name.
+	 *
+	 * Renames `activitypub_keypair_for_-1` to `activitypub_application_keypair`.
+	 * Older separate key options (activitypub_application_user_public_key /
+	 * activitypub_application_user_private_key) are migrated lazily on first read.
+	 *
+	 * @since unreleased
+	 */
+	public static function migrate_application_keypair_option() {
+		self::update_options_key( 'activitypub_keypair_for_-1', Application::KEYPAIR_OPTION_KEY );
+
+		// The raw rename bypasses the options API, so drop only the two stale option caches (plus the autoload bucket) instead of flushing everything.
+		\wp_cache_delete( 'activitypub_keypair_for_-1', 'options' );
+		\wp_cache_delete( Application::KEYPAIR_OPTION_KEY, 'options' );
+		\wp_cache_delete( 'alloptions', 'options' );
+
+		/*
+		 * If an early Application::get_keypair() read already created the destination
+		 * option, the rename above is a no-op blocked by the unique `option_name`,
+		 * leaving the legacy row behind. Drop it once the destination is in place.
+		 */
+		if ( false !== \get_option( Application::KEYPAIR_OPTION_KEY, false ) ) {
+			\delete_option( 'activitypub_keypair_for_-1' );
+		}
+	}
+
+	/**
+	 * Delete outbox items that belonged to the Application actor.
+	 *
+	 * The Application used to queue Reject activities through the Outbox as user
+	 * ID -1. It no longer dispatches activities, so any pending items are
+	 * undeliverable and are removed.
+	 *
+	 * @since unreleased
+	 */
+	public static function delete_application_outbox_items() {
+		$items = \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'any',
+				'nopaging'    => true,
+				'fields'      => 'ids',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'   => '_activitypub_activity_actor',
+						'value' => 'application',
+					),
+				),
+			)
+		);
+
+		foreach ( $items as $item_id ) {
+			\wp_delete_post( $item_id, true );
+		}
 	}
 }

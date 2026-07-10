@@ -27,6 +27,81 @@ class Signature {
 	}
 
 	/**
+	 * Generate a new RSA key pair for signing HTTP requests.
+	 *
+	 * Does not persist anything — callers are responsible for storing the keys.
+	 *
+	 * @since unreleased
+	 *
+	 * @return array The key pair with 'private_key' and 'public_key', both null on failure.
+	 */
+	public static function generate_key_pair() {
+		$config = array(
+			'digest_alg'       => 'sha512',
+			'private_key_bits' => 2048,
+			'private_key_type' => \OPENSSL_KEYTYPE_RSA,
+		);
+
+		$key         = \openssl_pkey_new( $config );
+		$private_key = null;
+		$detail      = array();
+		if ( $key ) {
+			\openssl_pkey_export( $key, $private_key );
+			$detail = \openssl_pkey_get_details( $key );
+		}
+
+		// Check if keys are valid.
+		if (
+			empty( $private_key ) || ! \is_string( $private_key ) ||
+			! isset( $detail['key'] ) || ! \is_string( $detail['key'] )
+		) {
+			return array(
+				'private_key' => null,
+				'public_key'  => null,
+			);
+		}
+
+		return array(
+			'private_key' => $private_key,
+			'public_key'  => $detail['key'],
+		);
+	}
+
+	/**
+	 * Get the key pair stored in an option, migrating a legacy pair or generating a new one on first use.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string        $option_key      The option name the key pair is stored in.
+	 * @param callable|null $legacy_callback Optional. Callback that returns a legacy key pair to migrate, or false. Default null.
+	 *
+	 * @return array The key pair with 'private_key' and 'public_key'.
+	 */
+	public static function get_key_pair( $option_key, $legacy_callback = null ) {
+		$key_pair = \get_option( $option_key );
+
+		if ( $key_pair ) {
+			return $key_pair;
+		}
+
+		$key_pair = $legacy_callback ? $legacy_callback() : false;
+
+		if ( ! $key_pair ) {
+			$key_pair = self::generate_key_pair();
+
+			// Only persist valid keys.
+			if ( empty( $key_pair['private_key'] ) ) {
+				return $key_pair;
+			}
+		}
+
+		// `update_option()` also overwrites a corrupted-but-present row, which `add_option()` would silently skip.
+		\update_option( $option_key, $key_pair );
+
+		return $key_pair;
+	}
+
+	/**
 	 * Sign an HTTP Request.
 	 *
 	 * @param array  $args An array of HTTP request arguments.
