@@ -115,34 +115,13 @@ class Remote_Actors {
 	 * @return int|\WP_Error Post ID on success, WP_Error on failure.
 	 */
 	public static function create( $actor ) {
-		if ( \is_array( $actor ) ) {
-			$actor = Actor::init_from_array( $actor );
-		}
-
 		$args = self::prepare_custom_post_type( $actor );
 
 		if ( \is_wp_error( $args ) ) {
 			return $args;
 		}
 
-		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
-		if ( $has_kses ) {
-			// Prevent KSES from corrupting JSON in post_content.
-			\kses_remove_filters();
-		}
-
-		$post_id = \wp_insert_post( $args );
-
-		if ( $has_kses ) {
-			// Restore KSES filters.
-			\kses_init_filters();
-		}
-
-		if ( $post_id && ! \is_wp_error( $post_id ) ) {
-			self::clear_inbox_caches( $post_id );
-		}
-
-		return $post_id;
+		return self::persist( $args );
 	}
 
 	/**
@@ -154,10 +133,6 @@ class Remote_Actors {
 	 * @return int|\WP_Error The post ID or WP_Error.
 	 */
 	public static function update( $post, $actor ) {
-		if ( \is_array( $actor ) ) {
-			$actor = Actor::init_from_array( $actor );
-		}
-
 		$post = \get_post( $post, ARRAY_A );
 
 		if ( ! $post ) {
@@ -174,7 +149,20 @@ class Remote_Actors {
 			return $args;
 		}
 
-		$args = \wp_parse_args( $args, $post );
+		return self::persist( \wp_parse_args( $args, $post ) );
+	}
+
+	/**
+	 * Persist prepared remote actor post data.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $args Prepared post data. An ID indicates an update.
+	 *
+	 * @return int|\WP_Error Post ID on success, WP_Error on failure.
+	 */
+	private static function persist( $args ) {
+		$is_update = ! empty( $args['ID'] );
 
 		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
 		if ( $has_kses ) {
@@ -182,7 +170,7 @@ class Remote_Actors {
 			\kses_remove_filters();
 		}
 
-		$post_id = \wp_update_post( $args );
+		$post_id = $is_update ? \wp_update_post( $args ) : \wp_insert_post( $args );
 
 		if ( $has_kses ) {
 			// Restore KSES filters.
@@ -588,11 +576,15 @@ class Remote_Actors {
 	/**
 	 * Prepare actor object for insert or update as a custom post type.
 	 *
-	 * @param Actor $actor The actor data.
+	 * @param array|Actor $actor The actor data.
 	 *
 	 * @return array|\WP_Error Array of post arguments or WP_Error on failure.
 	 */
 	private static function prepare_custom_post_type( $actor ) {
+		if ( \is_array( $actor ) ) {
+			$actor = Actor::init_from_array( $actor );
+		}
+
 		/*
 		 * Reject non-actor objects here, the single chokepoint every
 		 * create/update/upsert funnels through, so callers do not each have to

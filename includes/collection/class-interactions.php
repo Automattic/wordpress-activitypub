@@ -397,69 +397,25 @@ class Interactions {
 	 * @return array|false The comment data or false on failure.
 	 */
 	public static function activity_to_comment( $activity, $user_id = null ) {
-		$comment_content = null;
-
 		if ( $user_id ) {
-			// Outbox: resolve author from the local WordPress user.
-			$user = \get_userdata( $user_id );
-
-			if ( ! $user ) {
-				return false;
-			}
-
-			$comment_author       = $user->display_name;
-			$comment_author_url   = $user->user_url;
-			$comment_author_email = $user->user_email;
-			$comment_content      = \wp_kses_post( $activity['object']['content'] ?? '' );
+			$comment = self::prepare_local_comment_data( $activity, $user_id );
 		} else {
-			// S2S: resolve author from remote actor metadata.
-			$actor = object_to_uri( $activity['actor'] ?? null );
-			$actor = get_remote_metadata_by_actor( $actor );
+			$comment = self::prepare_remote_comment_data( $activity );
+		}
 
-			if ( ! $actor || \is_wp_error( $actor ) ) {
-				return false;
-			}
-
-			$comment_author = null;
-			if ( ! empty( $actor['name'] ) ) {
-				$comment_author = $actor['name'];
-			} elseif ( ! empty( $actor['preferredUsername'] ) ) {
-				$comment_author = $actor['preferredUsername'];
-			}
-
-			if ( empty( $comment_author ) && \get_option( 'require_name_email' ) ) {
-				return false;
-			}
-
-			$comment_author     = $comment_author ?? \__( 'Anonymous', 'activitypub' );
-			$comment_author_url = \esc_url_raw( object_to_uri( $actor['url'] ?? $actor['id'] ) );
-
-			$webfinger = Webfinger::uri_to_acct( $comment_author_url );
-			if ( \is_wp_error( $webfinger ) ) {
-				$comment_author_email = '';
-			} else {
-				$comment_author_email = \str_replace( 'acct:', '', $webfinger );
-			}
-
-			if ( isset( $activity['object']['content'] ) ) {
-				/*
-				 * Wrap emoji in content with blocks for runtime replacement.
-				 * Note: Remote images in comments are stripped for security (only emoji allowed).
-				 */
-				$content         = Emoji::wrap_in_content( $activity['object']['content'], $activity['object'] );
-				$comment_content = \addslashes( $content );
-			}
+		if ( ! $comment ) {
+			return false;
 		}
 
 		$published = $activity['object']['published'] ?? $activity['published'] ?? 'now';
 		$gm_date   = \gmdate( 'Y-m-d H:i:s', \strtotime( $published ) );
 
 		$comment_data = array(
-			'comment_author'       => $comment_author,
-			'comment_author_url'   => $comment_author_url,
-			'comment_content'      => $comment_content,
+			'comment_author'       => $comment['comment_author'],
+			'comment_author_url'   => $comment['comment_author_url'],
+			'comment_content'      => $comment['comment_content'],
 			'comment_type'         => 'comment',
-			'comment_author_email' => $comment_author_email,
+			'comment_author_email' => $comment['comment_author_email'],
 			'comment_date'         => \get_date_from_gmt( $gm_date ),
 			'comment_date_gmt'     => $gm_date,
 			'comment_meta'         => array(),
@@ -468,24 +424,121 @@ class Interactions {
 		if ( $user_id ) {
 			$comment_data['user_id'] = $user_id;
 		} else {
-			$comment_data['comment_meta']['protocol']  = 'activitypub';
-			$comment_data['comment_meta']['source_id'] = \esc_url_raw( object_to_uri( $activity['object'] ) );
-
-			// Store reference to remote actor post.
-			$actor_uri = object_to_uri( $activity['actor'] ?? null );
-			if ( $actor_uri ) {
-				$remote_actor = Remote_Actors::get_by_uri( $actor_uri );
-				if ( ! \is_wp_error( $remote_actor ) ) {
-					$comment_data['comment_meta']['_activitypub_remote_actor_id'] = $remote_actor->ID;
-				}
-			}
-
-			if ( isset( $activity['object']['url'] ) ) {
-				$comment_data['comment_meta']['source_url'] = \esc_url_raw( object_to_uri( $activity['object']['url'] ) );
-			}
+			$comment_data['comment_meta'] = self::prepare_remote_comment_meta( $activity );
 		}
 
 		return $comment_data;
+	}
+
+	/**
+	 * Prepare comment fields for a local author.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $activity The Activity array.
+	 * @param int   $user_id  The local WordPress user ID.
+	 *
+	 * @return array|false The prepared fields, or false when the user is unavailable.
+	 */
+	private static function prepare_local_comment_data( $activity, $user_id ) {
+		$user = \get_userdata( $user_id );
+
+		if ( ! $user ) {
+			return false;
+		}
+
+		return array(
+			'comment_author'       => $user->display_name,
+			'comment_author_url'   => $user->user_url,
+			'comment_content'      => \wp_kses_post( $activity['object']['content'] ?? '' ),
+			'comment_author_email' => $user->user_email,
+		);
+	}
+
+	/**
+	 * Prepare comment fields for a remote author.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $activity The Activity array.
+	 *
+	 * @return array|false The prepared fields, or false when actor data is unavailable.
+	 */
+	private static function prepare_remote_comment_data( $activity ) {
+		$actor = object_to_uri( $activity['actor'] ?? null );
+		$actor = get_remote_metadata_by_actor( $actor );
+
+		if ( ! $actor || \is_wp_error( $actor ) ) {
+			return false;
+		}
+
+		$comment_author = null;
+		if ( ! empty( $actor['name'] ) ) {
+			$comment_author = $actor['name'];
+		} elseif ( ! empty( $actor['preferredUsername'] ) ) {
+			$comment_author = $actor['preferredUsername'];
+		}
+
+		if ( empty( $comment_author ) && \get_option( 'require_name_email' ) ) {
+			return false;
+		}
+
+		$comment_author     = $comment_author ?? \__( 'Anonymous', 'activitypub' );
+		$comment_author_url = \esc_url_raw( object_to_uri( $actor['url'] ?? $actor['id'] ) );
+		$comment_content    = null;
+		$webfinger          = Webfinger::uri_to_acct( $comment_author_url );
+
+		if ( \is_wp_error( $webfinger ) ) {
+			$comment_author_email = '';
+		} else {
+			$comment_author_email = \str_replace( 'acct:', '', $webfinger );
+		}
+
+		if ( isset( $activity['object']['content'] ) ) {
+			/*
+			 * Wrap emoji in content with blocks for runtime replacement.
+			 * Note: Remote images in comments are stripped for security (only emoji allowed).
+			 */
+			$content         = Emoji::wrap_in_content( $activity['object']['content'], $activity['object'] );
+			$comment_content = \addslashes( $content );
+		}
+
+		return array(
+			'comment_author'       => $comment_author,
+			'comment_author_url'   => $comment_author_url,
+			'comment_content'      => $comment_content,
+			'comment_author_email' => $comment_author_email,
+		);
+	}
+
+	/**
+	 * Prepare ActivityPub-specific comment metadata.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $activity The Activity array.
+	 *
+	 * @return array The comment metadata.
+	 */
+	private static function prepare_remote_comment_meta( $activity ) {
+		$comment_meta = array(
+			'protocol'  => 'activitypub',
+			'source_id' => \esc_url_raw( object_to_uri( $activity['object'] ) ),
+		);
+
+		$actor_uri = object_to_uri( $activity['actor'] ?? null );
+		if ( $actor_uri ) {
+			$remote_actor = Remote_Actors::get_by_uri( $actor_uri );
+			if ( ! \is_wp_error( $remote_actor ) ) {
+				$comment_meta['_activitypub_remote_actor_id'] = $remote_actor->ID;
+			}
+		}
+
+		if ( isset( $activity['object']['url'] ) ) {
+			$comment_meta['source_url'] = \esc_url_raw( object_to_uri( $activity['object']['url'] ) );
+		}
+
+		return $comment_meta;
 	}
 
 	/**
