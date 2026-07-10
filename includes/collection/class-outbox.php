@@ -129,24 +129,22 @@ class Outbox {
 			\kses_remove_filters();
 		}
 
-		try {
-			$id = \wp_insert_post( $outbox_item, true );
+		$id = \wp_insert_post( $outbox_item, true );
 
-			// Update the activity ID if the post was inserted successfully.
-			if ( $id && ! \is_wp_error( $id ) ) {
-				$activity->set_id( \get_the_guid( $id ) );
+		// Update the activity ID if the post was inserted successfully.
+		if ( $id && ! \is_wp_error( $id ) ) {
+			$activity->set_id( \get_the_guid( $id ) );
 
-				\wp_update_post(
-					array(
-						'ID'           => $id,
-						'post_content' => \wp_slash( $activity->to_json( true, true ) ),
-					)
-				);
-			}
-		} finally {
-			if ( $has_kses ) {
-				\kses_init_filters();
-			}
+			\wp_update_post(
+				array(
+					'ID'           => $id,
+					'post_content' => \wp_slash( $activity->to_json( true, true ) ),
+				)
+			);
+		}
+
+		if ( $has_kses ) {
+			\kses_init_filters();
 		}
 
 		if ( \is_wp_error( $id ) ) {

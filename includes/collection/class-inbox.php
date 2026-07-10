@@ -142,12 +142,10 @@ class Inbox {
 			\kses_remove_filters();
 		}
 
-		try {
-			$id = \wp_insert_post( $inbox_item, true );
-		} finally {
-			if ( $has_kses ) {
-				\kses_init_filters();
-			}
+		$id = \wp_insert_post( $inbox_item, true );
+
+		if ( $has_kses ) {
+			\kses_init_filters();
 		}
 
 		// Add recipients as separate meta entries after post is created.

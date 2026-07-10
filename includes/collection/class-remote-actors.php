@@ -122,13 +122,11 @@ class Remote_Actors {
 			\kses_remove_filters();
 		}
 
-		try {
-			$post_id = \wp_insert_post( $args );
-		} finally {
-			if ( $has_kses ) {
-				// Restore KSES filters.
-				\kses_init_filters();
-			}
+		$post_id = \wp_insert_post( $args );
+
+		if ( $has_kses ) {
+			// Restore KSES filters.
+			\kses_init_filters();
 		}
 
 		return $post_id;
@@ -171,13 +169,11 @@ class Remote_Actors {
 			\kses_remove_filters();
 		}
 
-		try {
-			$post_id = \wp_update_post( $args );
-		} finally {
-			if ( $has_kses ) {
-				// Restore KSES filters.
-				\kses_init_filters();
-			}
+		$post_id = \wp_update_post( $args );
+
+		if ( $has_kses ) {
+			// Restore KSES filters.
+			\kses_init_filters();
 		}
 
 		return $post_id;
@@ -642,13 +638,13 @@ class Remote_Actors {
 			}
 		}
 
-		try {
-			return array( $actor->to_json(), $actor->to_array() );
-		} finally {
-			foreach ( $registered as $filter ) {
-				\add_filter( 'activitypub_activity_object_array', $filter[0], $filter[1] );
-			}
+		$serialized = array( $actor->to_json(), $actor->to_array() );
+
+		foreach ( $registered as $filter ) {
+			\add_filter( 'activitypub_activity_object_array', $filter[0], $filter[1] );
 		}
+
+		return $serialized;
 	}
 
 	/**

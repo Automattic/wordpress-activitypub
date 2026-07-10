@@ -502,20 +502,17 @@ class Interactions {
 		\add_filter( 'akismet_comment_nonce', array( self::class, 'akismet_comment_nonce_inactive' ) );
 		\add_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ), 10, 2 );
 
-		try {
-			if ( self::INSERT === $action ) {
-				$state = \wp_new_comment( $comment_data, true );
-			} else {
-				$state = \wp_update_comment( $comment_data, true );
-			}
-		} finally {
-			// Restore every global filter/action this method changed, even if the insert threw.
-			\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ) );
-			\remove_filter( 'akismet_comment_nonce', array( self::class, 'akismet_comment_nonce_inactive' ) );
-			\remove_filter( 'pre_option_require_name_email', '__return_false' );
-			// Restore flood control.
-			\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+		if ( self::INSERT === $action ) {
+			$state = \wp_new_comment( $comment_data, true );
+		} else {
+			$state = \wp_update_comment( $comment_data, true );
 		}
+
+		\remove_filter( 'wp_kses_allowed_html', array( self::class, 'allowed_comment_html' ) );
+		\remove_filter( 'akismet_comment_nonce', array( self::class, 'akismet_comment_nonce_inactive' ) );
+		\remove_filter( 'pre_option_require_name_email', '__return_false' );
+		// Restore flood control.
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
 
 		if ( 1 === $state ) {
 			return $comment_data;
