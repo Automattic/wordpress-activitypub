@@ -643,6 +643,11 @@ class Remote_Actors {
 	/**
 	 * Serialize a remote actor without outbound content filters.
 	 *
+	 * Workaround: the Mention/Hashtag/Link filters process content for the *outgoing* (federation)
+	 * context and must not run when storing *incoming* remote data. Suspending them here is the
+	 * stopgap for a missing incoming/outgoing serialization-context split; until that exists, every
+	 * storage path (see also Inbox storage) needs the same treatment.
+	 *
 	 * @since unreleased
 	 *
 	 * @param Actor $actor The actor to serialize.
