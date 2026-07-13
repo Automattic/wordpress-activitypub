@@ -9,6 +9,7 @@ namespace Activitypub\Collection;
 
 use Activitypub\Comment;
 use Activitypub\Emoji;
+use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
 use function Activitypub\get_remote_metadata_by_actor;
@@ -397,11 +398,9 @@ class Interactions {
 	 * @return array|false The comment data or false on failure.
 	 */
 	public static function activity_to_comment( $activity, $user_id = null ) {
-		if ( $user_id ) {
-			$comment = self::prepare_local_comment_data( $activity, $user_id );
-		} else {
-			$comment = self::prepare_remote_comment_data( $activity );
-		}
+		$comment = $user_id
+			? self::prepare_local_comment_data( $activity, $user_id )
+			: self::prepare_remote_comment_data( $activity );
 
 		if ( ! $comment ) {
 			return false;
@@ -410,24 +409,14 @@ class Interactions {
 		$published = $activity['object']['published'] ?? $activity['published'] ?? 'now';
 		$gm_date   = \gmdate( 'Y-m-d H:i:s', \strtotime( $published ) );
 
-		$comment_data = array(
-			'comment_author'       => $comment['comment_author'],
-			'comment_author_url'   => $comment['comment_author_url'],
-			'comment_content'      => $comment['comment_content'],
-			'comment_type'         => 'comment',
-			'comment_author_email' => $comment['comment_author_email'],
-			'comment_date'         => \get_date_from_gmt( $gm_date ),
-			'comment_date_gmt'     => $gm_date,
-			'comment_meta'         => array(),
+		return \array_merge(
+			$comment,
+			array(
+				'comment_type'     => 'comment',
+				'comment_date'     => \get_date_from_gmt( $gm_date ),
+				'comment_date_gmt' => $gm_date,
+			)
 		);
-
-		if ( $user_id ) {
-			$comment_data['user_id'] = $user_id;
-		} else {
-			$comment_data['comment_meta'] = self::prepare_remote_comment_meta( $activity );
-		}
-
-		return $comment_data;
 	}
 
 	/**
@@ -452,6 +441,8 @@ class Interactions {
 			'comment_author_url'   => $user->user_url,
 			'comment_content'      => \wp_kses_post( $activity['object']['content'] ?? '' ),
 			'comment_author_email' => $user->user_email,
+			'comment_meta'         => array(),
+			'user_id'              => $user_id,
 		);
 	}
 
@@ -491,7 +482,7 @@ class Interactions {
 		if ( \is_wp_error( $webfinger ) ) {
 			$comment_author_email = '';
 		} else {
-			$comment_author_email = \str_replace( 'acct:', '', $webfinger );
+			$comment_author_email = Sanitize::webfinger( $webfinger );
 		}
 
 		if ( isset( $activity['object']['content'] ) ) {
@@ -508,6 +499,7 @@ class Interactions {
 			'comment_author_url'   => $comment_author_url,
 			'comment_content'      => $comment_content,
 			'comment_author_email' => $comment_author_email,
+			'comment_meta'         => self::prepare_remote_comment_meta( $activity ),
 		);
 	}
 
@@ -629,7 +621,7 @@ class Interactions {
 	public static function get_counts( $post_id ) {
 		$post_id      = \absint( $post_id );
 		$last_changed = \wp_cache_get_last_changed( 'comment' );
-		$cache_key    = 'interaction_counts_' . \md5( $post_id . ':' . $last_changed );
+		$cache_key    = "interaction_counts_{$post_id}:{$last_changed}";
 		$counts       = \wp_cache_get( $cache_key, 'activitypub' );
 
 		if ( false !== $counts ) {
