@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix Starter Kit imports failing on Fediverse servers that require signed requests.
