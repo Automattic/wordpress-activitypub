@@ -314,6 +314,20 @@ class Test_Like extends \WP_UnitTestCase {
 			array( 'id' => 'https://example.com/like/3215-spam' )
 		);
 
+		/*
+		 * Vary the author name between the two deliveries, like a mangled emoji name that differs
+		 * per attempt. WordPress' native duplicate check matches spam comments by author and
+		 * content, so with an identical name it would mask a dedupe regression here — only the
+		 * plugin's source_id lookup can catch the varied retry.
+		 */
+		$author_name = 'Emoji User ???';
+		$vary_author = static function ( $value ) use ( &$author_name ) {
+			$value['name'] = $author_name;
+
+			return $value;
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $vary_author );
+
 		Like::handle_like( $activity, $this->user_id );
 
 		$comment = Comment::object_id_to_comment( $activity['id'], array( 'status' => 'any' ) );
@@ -321,8 +335,11 @@ class Test_Like extends \WP_UnitTestCase {
 
 		\wp_spam_comment( $comment );
 
-		// Deliver the same Like again, as a retrying remote server would.
+		// Deliver the same Like again, as a retrying remote server would, with a differently mangled name.
+		$author_name = 'Emoji User ?!?';
 		Like::handle_like( $activity, $this->user_id );
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $vary_author );
 
 		$comments = \get_comments(
 			array(
