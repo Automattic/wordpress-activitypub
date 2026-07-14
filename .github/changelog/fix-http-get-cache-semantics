@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Stop storing responses from remote servers in the database when they were requested uncached.
