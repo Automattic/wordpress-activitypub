@@ -104,7 +104,8 @@ class Http {
 	 * @param string   $url    The URL endpoint.
 	 * @param array    $args   Optional. Additional arguments to customize the request.
 	 *                         - 'headers': Array of headers to override defaults.
-	 * @param bool|int $cached Optional. Whether to cache the response, or the cache duration in seconds. Default false.
+	 * @param bool|int $cached Optional. Whether to cache the response, or the cache duration in seconds for
+	 *                         successful responses. Failed responses use a fixed short backoff duration. Default false.
 	 *
 	 * @return array|\WP_Error The GET Response or a WP_Error.
 	 */
