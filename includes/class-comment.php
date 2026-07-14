@@ -336,11 +336,14 @@ class Comment {
 		$args = \wp_parse_args(
 			$args,
 			array(
+				'number'  => 1,
 				'orderby' => 'comment_date',
 				'order'   => 'DESC',
 			)
 		);
 
+		// Force the lookup key and full comment objects, so callers cannot break the return contract.
+		$args['fields']     = 'all';
 		$args['meta_key']   = 'source_id'; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 		$args['meta_value'] = $id;         // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 
