@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Handler;
 
+use Activitypub\Comment;
 use Activitypub\Handler\Like;
 
 /**
@@ -296,6 +297,78 @@ class Test_Like extends \WP_UnitTestCase {
 		\remove_action( 'activitypub_handled_like', $callback );
 
 		$this->assertSame( 1, $hook_count, 'A re-delivered Like must be skipped before processing, firing the handled hook only once.' );
+	}
+
+	/**
+	 * Test that a re-delivered Like is skipped even when the original comment was marked as spam.
+	 *
+	 * Regression test for #3215: the dedupe lookup must match comments of any status. With the
+	 * default status, WP_Comment_Query only returns pending and approved comments, so a like
+	 * that was spammed or trashed became invisible and every retried delivery created a new one.
+	 *
+	 * @covers ::handle_like
+	 */
+	public function test_handle_like_duplicate_skipped_when_original_is_spam() {
+		$activity = array_merge(
+			$this->create_test_object(),
+			array( 'id' => 'https://example.com/like/3215-spam' )
+		);
+
+		Like::handle_like( $activity, $this->user_id );
+
+		$comment = Comment::object_id_to_comment( $activity['id'], array( 'status' => 'any' ) );
+		$this->assertInstanceOf( \WP_Comment::class, $comment, 'The first delivery must create the like comment.' );
+
+		\wp_spam_comment( $comment );
+
+		// Deliver the same Like again, as a retrying remote server would.
+		Like::handle_like( $activity, $this->user_id );
+
+		$comments = \get_comments(
+			array(
+				'type'    => 'like',
+				'post_id' => $this->post_id,
+				'status'  => 'any',
+			)
+		);
+
+		$this->assertCount( 1, $comments, 'A re-delivered Like must not create a new comment when the original was marked as spam.' );
+
+		\wp_delete_comment( $comment->comment_ID, true );
+	}
+
+	/**
+	 * Test that a re-delivered Like is skipped even when the original comment was trashed.
+	 *
+	 * @covers ::handle_like
+	 */
+	public function test_handle_like_duplicate_skipped_when_original_is_trashed() {
+		$activity = array_merge(
+			$this->create_test_object(),
+			array( 'id' => 'https://example.com/like/3215-trash' )
+		);
+
+		Like::handle_like( $activity, $this->user_id );
+
+		$comment = Comment::object_id_to_comment( $activity['id'], array( 'status' => 'any' ) );
+		$this->assertInstanceOf( \WP_Comment::class, $comment, 'The first delivery must create the like comment.' );
+
+		\wp_trash_comment( $comment );
+
+		// Deliver the same Like again, as a retrying remote server would.
+		Like::handle_like( $activity, $this->user_id );
+
+		$comments = \get_comments(
+			array(
+				'type'    => 'like',
+				'post_id' => $this->post_id,
+				'status'  => 'any',
+			)
+		);
+
+		$this->assertCount( 1, $comments, 'A re-delivered Like must not create a new comment when the original was trashed.' );
+
+		\wp_delete_comment( $comment->comment_ID, true );
 	}
 
 	/**
