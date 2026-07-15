@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Add an opt-in external Activity delivery spool for companion plugins with URI-keyed domain stores.

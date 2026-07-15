@@ -94,6 +94,7 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Dispatcher', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Embed', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\External_Delivery', 'init' ) );
 	if ( \get_option( 'activitypub_api', false ) ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Event_Stream', 'init' ) );
 	}

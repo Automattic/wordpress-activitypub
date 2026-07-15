@@ -17,6 +17,25 @@ use Activitypub\Collection\Remote_Actors;
 use Activitypub\Transformer\Factory as Transformer_Factory;
 
 /**
+ * Queue a complete Activity payload for delivery by an external domain owner.
+ *
+ * The caller remains authoritative for Activity and relationship state. The
+ * official plugin owns only the transport spool, signatures, retries, and HTTP
+ * delivery. Private key material is never accepted or persisted.
+ *
+ * @since unreleased
+ *
+ * @param array $activity_payload  Complete ActivityStreams Activity.
+ * @param array $sender            actor_uri, key_id, and private_key_ref.
+ * @param array $recipient_inboxes Explicit recipient Inbox URLs.
+ * @param array $options           Optional transport settings.
+ * @return int|\WP_Error Transport spool post ID or an error.
+ */
+function deliver_activity( $activity_payload, $sender, $recipient_inboxes, $options = array() ) {
+	return External_Delivery::enqueue( $activity_payload, $sender, $recipient_inboxes, $options );
+}
+
+/**
  * Set the federation state of a WordPress object.
  *
  * @param \WP_Comment|\WP_Post $wp_object The WordPress object.
