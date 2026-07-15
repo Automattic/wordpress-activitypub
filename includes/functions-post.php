@@ -142,8 +142,8 @@ function is_post_publicly_queryable( $post ) {
 		'attachment' === $post->post_type &&
 		( ! $post->post_parent || is_post_publicly_queryable( $post->post_parent ) );
 
-	// Drafts and pending posts are allowed during preview requests so the Fediverse Preview works.
-	$is_preview = \in_array( $post->post_status, array( 'draft', 'pending' ), true ) &&
+	// Draft, pending, and scheduled posts are allowed during preview requests so the Fediverse Preview works.
+	$is_preview = \in_array( $post->post_status, array( 'draft', 'pending', 'future' ), true ) &&
 		\get_query_var( 'preview' ) &&
 		\current_user_can( 'edit_post', $post->ID );
 
@@ -178,8 +178,8 @@ function is_post_publicly_queryable( $post ) {
  * switched to local visibility, or its post type loses ActivityPub support.
  *
  * The federation-state check also keeps `is_post_publicly_queryable()`'s
- * preview allowance inert here: a draft/pending post is never in the federated
- * state, so the preview branch can never make this return true.
+ * preview allowance inert here: a draft/pending/scheduled post is never in the
+ * federated state, so the preview branch can never make this return true.
  *
  * @since 9.0.0
  *
