@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Add a module initialization filter for companion plugins that replace selected domain surfaces.

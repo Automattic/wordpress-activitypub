@@ -17,6 +17,33 @@ use Activitypub\Collection\Outbox;
  */
 class Test_Activitypub extends \WP_UnitTestCase {
 	/**
+	 * Test the default module gate.
+	 *
+	 * @covers \Activitypub\is_module_enabled
+	 */
+	public function test_modules_are_enabled_by_default() {
+		$this->assertTrue( \Activitypub\is_module_enabled( 'runtime.router' ) );
+		$this->assertTrue( \Activitypub\is_module_enabled( 'rest.inbox' ) );
+	}
+
+	/**
+	 * Test selective module replacement.
+	 *
+	 * @covers \Activitypub\is_module_enabled
+	 */
+	public function test_module_gate_is_selective() {
+		$filter = static function ( $enabled, $module ) {
+			return 'runtime.router' === $module ? false : $enabled;
+		};
+		\add_filter( 'activitypub_module_enabled', $filter, 10, 2 );
+
+		$this->assertFalse( \Activitypub\is_module_enabled( 'runtime.router' ) );
+		$this->assertTrue( \Activitypub\is_module_enabled( 'runtime.signature' ) );
+
+		\remove_filter( 'activitypub_module_enabled', $filter, 10 );
+	}
+
+	/**
 	 * Test environment.
 	 */
 	public function test_test_env() {

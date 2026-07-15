@@ -46,39 +46,99 @@ Autoloader::register_path( __NAMESPACE__, __DIR__ . '/includes' );
 \register_uninstall_hook( __FILE__, array( Activitypub::class, 'uninstall' ) );
 
 /**
+ * Check whether one independently initialized plugin module is enabled.
+ *
+ * Companion plugins may use this gate to replace a domain surface while retaining
+ * the official plugin's protocol implementation. Modules default to enabled so the
+ * filter is fully backwards compatible.
+ *
+ * @param string $module Stable module identifier.
+ * @return bool Whether the module may initialize.
+ */
+function is_module_enabled( $module ) {
+	/**
+	 * Filters whether an ActivityPub module may initialize.
+	 *
+	 * @param bool   $enabled Whether the module is enabled. Default true.
+	 * @param string $module  Module identifier such as `runtime.router` or `rest.inbox`.
+	 */
+	return (bool) \apply_filters( 'activitypub_module_enabled', true, (string) $module );
+}
+
+/**
  * Initialize REST routes.
  */
 function rest_init() {
-	Rest\Server::init();
-	( new Rest\Actors_Controller() )->register_routes();
-	( new Rest\Actors_Inbox_Controller() )->register_routes();
-	( new Rest\Admin\Actions_Controller() )->register_routes();
-	( new Rest\Admin\Statistics_Controller() )->register_routes();
-	( new Rest\Application_Controller() )->register_routes();
-	( new Rest\Stats_Image_Controller() )->register_routes();
-	( new Rest\Collections_Controller() )->register_routes();
-	( new Rest\Comments_Controller() )->register_routes();
-	( new Rest\Followers_Controller() )->register_routes();
-	( new Rest\Following_Controller() )->register_routes();
-	( new Rest\Liked_Controller() )->register_routes();
-	( new Rest\Inbox_Controller() )->register_routes();
-	( new Rest\Interaction_Controller() )->register_routes();
-	( new Rest\Moderators_Controller() )->register_routes();
-	if ( \get_option( 'activitypub_api', false ) ) {
+	if ( is_module_enabled( 'rest.server' ) ) {
+		Rest\Server::init();
+	}
+	if ( is_module_enabled( 'rest.actors' ) ) {
+		( new Rest\Actors_Controller() )->register_routes();
+	}
+	if ( is_module_enabled( 'rest.actors_inbox' ) ) {
+		( new Rest\Actors_Inbox_Controller() )->register_routes();
+	}
+	if ( is_module_enabled( 'rest.admin_actions' ) ) {
+		( new Rest\Admin\Actions_Controller() )->register_routes();
+	}
+	if ( is_module_enabled( 'rest.admin_statistics' ) ) {
+		( new Rest\Admin\Statistics_Controller() )->register_routes();
+	}
+	if ( is_module_enabled( 'rest.application' ) ) {
+		( new Rest\Application_Controller() )->register_routes();
+	}
+	if ( is_module_enabled( 'rest.stats_image' ) ) {
+		( new Rest\Stats_Image_Controller() )->register_routes();
+	}
+	if ( is_module_enabled( 'rest.collections' ) ) {
+		( new Rest\Collections_Controller() )->register_routes();
+	}
+	if ( is_module_enabled( 'rest.comments' ) ) {
+		( new Rest\Comments_Controller() )->register_routes();
+	}
+	if ( is_module_enabled( 'rest.followers' ) ) {
+		( new Rest\Followers_Controller() )->register_routes();
+	}
+	if ( is_module_enabled( 'rest.following' ) ) {
+		( new Rest\Following_Controller() )->register_routes();
+	}
+	if ( is_module_enabled( 'rest.liked' ) ) {
+		( new Rest\Liked_Controller() )->register_routes();
+	}
+	if ( is_module_enabled( 'rest.inbox' ) ) {
+		( new Rest\Inbox_Controller() )->register_routes();
+	}
+	if ( is_module_enabled( 'rest.interaction' ) ) {
+		( new Rest\Interaction_Controller() )->register_routes();
+	}
+	if ( is_module_enabled( 'rest.moderators' ) ) {
+		( new Rest\Moderators_Controller() )->register_routes();
+	}
+	if ( \get_option( 'activitypub_api', false ) && is_module_enabled( 'rest.oauth' ) ) {
 		( new Rest\OAuth\Authorization_Controller() )->register_routes();
 		( new Rest\OAuth\Clients_Controller() )->register_routes();
 		( new Rest\OAuth\Token_Controller() )->register_routes();
 	}
-	( new Rest\Outbox_Controller() )->register_routes();
-	( new Rest\Post_Controller() )->register_routes();
-	( new Rest\Replies_Controller() )->register_routes();
-	( new Rest\Webfinger_Controller() )->register_routes();
+	if ( is_module_enabled( 'rest.outbox' ) ) {
+		( new Rest\Outbox_Controller() )->register_routes();
+	}
+	if ( is_module_enabled( 'rest.post' ) ) {
+		( new Rest\Post_Controller() )->register_routes();
+	}
+	if ( is_module_enabled( 'rest.replies' ) ) {
+		( new Rest\Replies_Controller() )->register_routes();
+	}
+	if ( is_module_enabled( 'rest.webfinger' ) ) {
+		( new Rest\Webfinger_Controller() )->register_routes();
+	}
 
 	// Load NodeInfo endpoints only if blog is public.
-	if ( is_blog_public() ) {
+	if ( is_blog_public() && is_module_enabled( 'rest.nodeinfo' ) ) {
 		( new Rest\Nodeinfo_Controller() )->register_routes();
 	}
-	( new Rest\Proxy_Controller() )->register_routes();
+	if ( is_module_enabled( 'rest.proxy' ) ) {
+		( new Rest\Proxy_Controller() )->register_routes();
+	}
 }
 \add_action( 'rest_api_init', __NAMESPACE__ . '\rest_init' );
 
@@ -86,42 +146,55 @@ function rest_init() {
  * Initialize plugin.
  */
 function plugin_init() {
-	\add_action( 'init', array( __NAMESPACE__ . '\Activitypub', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Application', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Avatars', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Blurhash', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Cache', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Dispatcher', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Embed', 'init' ) );
-	if ( \get_option( 'activitypub_api', false ) ) {
+	$modules = array(
+		'runtime.activitypub' => array( __NAMESPACE__ . '\Activitypub', 'init' ),
+		'runtime.application' => array( __NAMESPACE__ . '\Application', 'init' ),
+		'runtime.avatars'     => array( __NAMESPACE__ . '\Avatars', 'init' ),
+		'runtime.blurhash'    => array( __NAMESPACE__ . '\Blurhash', 'init' ),
+		'runtime.cache'       => array( __NAMESPACE__ . '\Cache', 'init' ),
+		'runtime.comment'     => array( __NAMESPACE__ . '\Comment', 'init' ),
+		'runtime.dispatcher'  => array( __NAMESPACE__ . '\Dispatcher', 'init' ),
+		'runtime.embed'       => array( __NAMESPACE__ . '\Embed', 'init' ),
+		'runtime.handler'     => array( __NAMESPACE__ . '\Handler', 'init' ),
+		'runtime.hashtag'     => array( __NAMESPACE__ . '\Hashtag', 'init' ),
+		'runtime.link'        => array( __NAMESPACE__ . '\Link', 'init' ),
+		'runtime.mailer'      => array( __NAMESPACE__ . '\Mailer', 'init' ),
+		'runtime.mention'     => array( __NAMESPACE__ . '\Mention', 'init' ),
+		'runtime.move'        => array( __NAMESPACE__ . '\Move', 'init' ),
+		'runtime.options'     => array( __NAMESPACE__ . '\Options', 'init' ),
+		'runtime.post_types'  => array( __NAMESPACE__ . '\Post_Types', 'init' ),
+		'runtime.router'      => array( __NAMESPACE__ . '\Router', 'init' ),
+		'runtime.search'      => array( __NAMESPACE__ . '\Search', 'init' ),
+		'runtime.signature'   => array( __NAMESPACE__ . '\Signature', 'init' ),
+	);
+
+	foreach ( $modules as $module => $callback ) {
+		if ( is_module_enabled( $module ) ) {
+			\add_action( 'init', $callback );
+		}
+	}
+
+	if ( \get_option( 'activitypub_api', false ) && is_module_enabled( 'runtime.event_stream' ) ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Event_Stream', 'init' ) );
 	}
-	\add_action( 'init', array( __NAMESPACE__ . '\Handler', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Hashtag', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Link', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Mailer', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Mention', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Migration', 'init' ), 1 );
-	\add_action( 'init', array( __NAMESPACE__ . '\Move', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Options', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Post_Types', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Router', 'init' ) );
+	if ( is_module_enabled( 'runtime.migration' ) ) {
+		\add_action( 'init', array( __NAMESPACE__ . '\Migration', 'init' ), 1 );
+	}
 	// Priority 0 ensures Scheduler hooks are registered before Migration (priority 1) runs.
-	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ), 0 );
-	\add_action( 'init', array( __NAMESPACE__ . '\Search', 'init' ) );
-	\add_action( 'init', array( __NAMESPACE__ . '\Signature', 'init' ) );
+	if ( is_module_enabled( 'runtime.scheduler' ) ) {
+		\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ), 0 );
+	}
 	// Only load OAuth Server if the ActivityPub API is enabled.
-	if ( \get_option( 'activitypub_api', false ) ) {
+	if ( \get_option( 'activitypub_api', false ) && is_module_enabled( 'runtime.oauth' ) ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\OAuth\Server', 'init' ) );
 	}
 
-	if ( site_supports_blocks() ) {
+	if ( site_supports_blocks() && is_module_enabled( 'runtime.blocks' ) ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
 	}
 
 	// Only load relay if relay mode is enabled.
-	if ( \get_option( 'activitypub_relay_mode', false ) ) {
+	if ( \get_option( 'activitypub_relay_mode', false ) && is_module_enabled( 'runtime.relay' ) ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Relay', 'init' ) );
 	}
 
@@ -139,6 +212,10 @@ function plugin_init() {
  * Initialize plugin admin.
  */
 function plugin_admin_init() {
+	if ( ! is_module_enabled( 'admin' ) ) {
+		return;
+	}
+
 	// Screen Options and Menus are set before `admin_init`.
 	\add_action( 'init', array( __NAMESPACE__ . '\WP_Admin\Heartbeat', 'init' ), 9 ); // Before script loader.
 	\add_filter( 'init', array( __NAMESPACE__ . '\WP_Admin\Screen_Options', 'init' ) );
