@@ -59,7 +59,7 @@
 		"@wordpress/edit-post": "^8.50.0",
 		"@wordpress/editor": "^14.48.1",
 		"@wordpress/element": "^8.1.0",
-		"@wordpress/env": "^11.10.0",
+		"@wordpress/env": "^11.11.0",
 		"@wordpress/html-entities": "^4.48.0",
 		"@wordpress/i18n": "^6.21.0",
 		"@wordpress/icons": "^15.1.0",
