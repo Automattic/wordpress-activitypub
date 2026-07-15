@@ -178,8 +178,8 @@ function is_post_publicly_queryable( $post ) {
  * switched to local visibility, or its post type loses ActivityPub support.
  *
  * The federation-state check also keeps `is_post_publicly_queryable()`'s
- * preview allowance inert here: a draft/pending post is never in the federated
- * state, so the preview branch can never make this return true.
+ * preview allowance inert here: a draft/pending/scheduled post is never in the
+ * federated state, so the preview branch can never make this return true.
  *
  * @since 9.0.0
  *
