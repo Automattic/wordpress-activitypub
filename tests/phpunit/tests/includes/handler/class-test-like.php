@@ -350,8 +350,6 @@ class Test_Like extends \WP_UnitTestCase {
 		);
 
 		$this->assertCount( 1, $comments, 'A re-delivered Like must not create a new comment when the original was marked as spam.' );
-
-		\wp_delete_comment( $comment->comment_ID, true );
 	}
 
 	/**
@@ -384,8 +382,6 @@ class Test_Like extends \WP_UnitTestCase {
 		);
 
 		$this->assertCount( 1, $comments, 'A re-delivered Like must not create a new comment when the original was trashed.' );
-
-		\wp_delete_comment( $comment->comment_ID, true );
 	}
 
 	/**
