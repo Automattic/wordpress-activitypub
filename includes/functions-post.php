@@ -142,8 +142,8 @@ function is_post_publicly_queryable( $post ) {
 		'attachment' === $post->post_type &&
 		( ! $post->post_parent || is_post_publicly_queryable( $post->post_parent ) );
 
-	// Drafts and pending posts are allowed during preview requests so the Fediverse Preview works.
-	$is_preview = \in_array( $post->post_status, array( 'draft', 'pending' ), true ) &&
+	// Draft, pending, and scheduled posts are allowed during preview requests so the Fediverse Preview works.
+	$is_preview = \in_array( $post->post_status, array( 'draft', 'pending', 'future' ), true ) &&
 		\get_query_var( 'preview' ) &&
 		\current_user_can( 'edit_post', $post->ID );
 
