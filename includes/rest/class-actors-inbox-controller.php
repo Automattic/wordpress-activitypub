@@ -299,6 +299,9 @@ class Actors_Inbox_Controller extends Actors_Controller {
 	/**
 	 * Get the position of an activity in the inbox, under the collection's own query rules.
 	 *
+	 * The inbox route is owner-only (it requires authentication), so unlike the outbox this method
+	 * needs no seek gate of its own: a non-owner is already refused before it runs.
+	 *
 	 * @since unreleased
 	 *
 	 * @param string           $item    The ActivityPub activity ID.
