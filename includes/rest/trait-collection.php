@@ -147,8 +147,9 @@ trait Collection {
 	 * visibility rules of the collection, and the response is a temporary redirect whose
 	 * Location is the id of the CollectionPage containing the item. A temporary redirect is
 	 * used because the collections are ordered newest-first, so items drift across pages as
-	 * new items arrive. Unknown, invisible, and unauthorized items all produce the same 404,
-	 * so collection membership is not leaked.
+	 * new items arrive. Unknown and invisible items both produce the same 404, so collection
+	 * membership is not leaked; an authentication or authorization failure is surfaced as is,
+	 * because it describes the request rather than any item and discloses no membership.
 	 *
 	 * @see https://swicg.github.io/activitypub-api/seekitem
 	 *
@@ -157,7 +158,7 @@ trait Collection {
 	 * @param \WP_REST_Request $request       The request object.
 	 * @param string           $collection_id The plain collection ID (URL without query arguments).
 	 *
-	 * @return \WP_REST_Response|\WP_Error|null Redirect response, 404 error, or null when this is not a seek request.
+	 * @return \WP_REST_Response|\WP_Error|null Redirect response, 401/403/404 error, or null when this is not a seek request.
 	 */
 	public function maybe_seek_item( $request, $collection_id ) {
 		$item = $request->get_param( 'item' );

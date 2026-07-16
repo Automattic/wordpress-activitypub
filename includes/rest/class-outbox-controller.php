@@ -232,11 +232,13 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * Shared by get_items() and get_item_index(), so the seek index is computed under the
 	 * exact same visibility rules as the collection itself.
 	 *
-	 * @param \WP_REST_Request $request Full details about the request.
+	 * @param \WP_REST_Request $request  Full details about the request.
+	 * @param bool|null        $is_owner Optional. Whether the requester owns the outbox, when the
+	 *                                   caller already knows. Default null, which re-derives it.
 	 *
 	 * @return array The WP_Query arguments.
 	 */
-	private function get_query_args( $request ) {
+	private function get_query_args( $request, $is_owner = null ) {
 		$user_id = $request->get_param( 'user_id' );
 
 		/**
@@ -277,7 +279,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 		 * session, matches the requested user by identity, and handles the blog actor via
 		 * user_can_act_as_blog(). A global capability never stands in for ownership.
 		 */
-		$is_outbox_owner = true === $this->verify_owner( $request );
+		$is_outbox_owner = null === $is_owner ? true === $this->verify_owner( $request ) : $is_owner;
 
 		if ( ! $is_outbox_owner ) {
 			$args['meta_query'][] = array(
@@ -335,7 +337,8 @@ class Outbox_Controller extends \WP_REST_Controller {
 			return $outbox_item;
 		}
 
-		$args                   = $this->get_query_args( $request );
+		// Ownership is already established above, so the shared query builder need not re-derive it.
+		$args                   = $this->get_query_args( $request, true );
 		$args['fields']         = 'ids';
 		$args['posts_per_page'] = 1;
 		unset( $args['paged'] );
