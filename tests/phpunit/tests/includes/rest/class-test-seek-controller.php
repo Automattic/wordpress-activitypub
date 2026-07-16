@@ -325,13 +325,13 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 	}
 
 	/**
-	 * Seeking the outbox is owner-only: a non-owner gets the same 403 for a public activity, a
-	 * private-visibility activity, and an unknown one, so the seek discloses nothing about the
-	 * outbox regardless of an activity's visibility.
+	 * Seeking the outbox is owner-only. An unauthenticated request is asked to authenticate (401),
+	 * identically for a public activity, a private one, and an unknown one — so the 401 discloses
+	 * nothing about the outbox.
 	 *
 	 * @covers \Activitypub\Rest\Outbox_Controller::get_item_index
 	 */
-	public function test_outbox_seek_is_owner_only() {
+	public function test_outbox_seek_unauthenticated_returns_401() {
 		$public_id = 'https://example.org/outbox/public-activity';
 		$hidden_id = 'https://example.org/outbox/hidden-activity';
 
@@ -351,21 +351,62 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 		$hidden['meta_input']['activitypub_content_visibility'] = ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
 		self::factory()->post->create( \array_merge( $hidden, array( 'guid' => $hidden_id ) ) );
 
-		// A public activity, a private one, and an unknown one all return an identical 403 to a non-owner.
 		foreach ( array( $public_id, $hidden_id, 'https://example.org/outbox/does-not-exist' ) as $item ) {
 			$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
 			$request->set_param( 'item', $item );
 
 			$response = rest_get_server()->dispatch( $request );
-			$this->assertEquals( 403, $response->get_status(), "Non-owner seek of {$item} must be refused with 403." );
+			$this->assertEquals( 401, $response->get_status(), "Unauthenticated seek of {$item} must ask to authenticate with 401." );
 		}
 
 		\wp_delete_post( $public_post, true );
 	}
 
 	/**
+	 * An authenticated non-owner is refused with the uniform 404 — the same status as a missing
+	 * item — for a public activity, a private one, and an unknown one, so it can infer nothing about
+	 * another actor's outbox.
+	 *
+	 * @covers \Activitypub\Rest\Outbox_Controller::get_item_index
+	 */
+	public function test_outbox_seek_authenticated_non_owner_returns_404() {
+		$public_id = 'https://example.org/outbox/other-public-activity';
+		$hidden_id = 'https://example.org/outbox/other-hidden-activity';
+
+		$create = array(
+			'post_type'    => Outbox::POST_TYPE,
+			'post_status'  => 'publish',
+			'post_content' => \wp_slash( \wp_json_encode( array( 'type' => 'Create' ) ) ),
+			'meta_input'   => array(
+				'_activitypub_activity_actor' => 'blog',
+				'_activitypub_activity_type'  => 'Create',
+			),
+		);
+
+		$public_post = self::factory()->post->create( \array_merge( $create, array( 'guid' => $public_id ) ) );
+
+		$hidden = $create;
+		$hidden['meta_input']['activitypub_content_visibility'] = ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
+		self::factory()->post->create( \array_merge( $hidden, array( 'guid' => $hidden_id ) ) );
+
+		// A regular author cannot act as the blog actor, so seeking the blog outbox makes them a non-owner.
+		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'author' ) ) );
+
+		foreach ( array( $public_id, $hidden_id, 'https://example.org/outbox/does-not-exist' ) as $item ) {
+			$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
+			$request->set_param( 'item', $item );
+
+			$response = rest_get_server()->dispatch( $request );
+			$this->assertEquals( 404, $response->get_status(), "Authenticated non-owner seek of {$item} must return the uniform 404." );
+		}
+
+		\wp_set_current_user( 0 );
+		\wp_delete_post( $public_post, true );
+	}
+
+	/**
 	 * The outbox owner can seek their own activities, including a private-visibility one, confirming
-	 * the non-owner 403 is an access gate and not a broken lookup.
+	 * the non-owner refusal is an access gate and not a broken lookup.
 	 *
 	 * @covers \Activitypub\Rest\Outbox_Controller::get_item_index
 	 */

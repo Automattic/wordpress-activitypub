@@ -135,11 +135,12 @@ class Seek_Controller extends \WP_REST_Controller {
 		\remove_filter( 'activitypub_defer_signature_verification', $defer, 10 );
 
 		/*
-		 * A redirect is the sought page. An authentication or authorization failure is a property of
-		 * the request, not the item, so it is surfaced as is (it discloses no membership). Everything
-		 * else, including the collection's own item-not-found, collapses to a single 404.
+		 * A redirect is the sought page. A missing-authentication failure (401) is a property of the
+		 * request, not the item, so it is surfaced as is (it discloses no membership) to tell the
+		 * client to authenticate. Everything else — an authenticated-but-not-authorized request, or
+		 * the collection's own item-not-found — collapses to a single 404, per the seekItem spec.
 		 */
-		if ( \in_array( $response->get_status(), array( 307, 308, 401, 403 ), true ) ) {
+		if ( \in_array( $response->get_status(), array( 307, 308, 401 ), true ) ) {
 			return $response;
 		}
 

@@ -170,15 +170,16 @@ trait Collection {
 
 		if ( \is_wp_error( $index ) ) {
 			/*
-			 * Surface an authentication or authorization failure as is: it is a property of the
-			 * request, not the item, so it discloses no collection membership. Everything else
-			 * (item absent, or hidden by the collection's visibility rules) collapses to a single
-			 * 404 so the presence of a specific item can never be inferred.
+			 * Surface a missing-authentication failure (401) as is: it is a property of the request,
+			 * not the item, so it discloses no membership while telling the client to authenticate.
+			 * Everything else — an authenticated-but-not-authorized request, an absent item, or one
+			 * hidden by the collection's visibility rules — collapses to a single 404 so the presence
+			 * of a specific item can never be inferred, per the seekItem spec.
 			 */
 			$data   = $index->get_error_data();
 			$status = \is_array( $data ) && isset( $data['status'] ) ? (int) $data['status'] : 0;
 
-			if ( \in_array( $status, array( 401, 403 ), true ) ) {
+			if ( 401 === $status ) {
 				return $index;
 			}
 

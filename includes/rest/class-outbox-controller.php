@@ -318,18 +318,28 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * Seeking the outbox is owner-only. The collection mixes public and private activities, so
 	 * rather than rely on the per-item visibility filter, non-owners are refused before any item
 	 * is resolved. That way the seek discloses nothing about a specific activity, public or private.
+	 * A request without credentials is asked to authenticate (401); an authenticated non-owner is
+	 * refused with the same 404 as a missing item, so it can infer nothing about the outbox.
 	 *
 	 * @since unreleased
 	 *
 	 * @param string           $item    The ActivityPub activity ID.
 	 * @param \WP_REST_Request $request Full details about the request.
 	 *
-	 * @return int|false|\WP_Error Zero-based index of the item, false or WP_Error when not found or not permitted.
+	 * @return int|false|\WP_Error Zero-based index of the item, false when not found or a non-owner, or WP_Error when unauthenticated.
 	 */
 	public function get_item_index( $item, $request ) {
-		$owner = $this->verify_owner( $request );
-		if ( true !== $owner ) {
-			return $owner;
+		if ( true !== $this->verify_owner( $request ) ) {
+			if ( ! \is_user_logged_in() ) {
+				return new \WP_Error(
+					'activitypub_unauthorized',
+					\__( 'You need to authenticate to seek this collection.', 'activitypub' ),
+					array( 'status' => 401 )
+				);
+			}
+
+			// An authenticated non-owner is refused with the uniform 404, disclosing no membership.
+			return false;
 		}
 
 		$outbox_item = Outbox::get_by_guid( $item );
