@@ -7,6 +7,8 @@
 
 namespace Activitypub\Rest;
 
+use function Activitypub\get_rest_url_by_path;
+
 /**
  * Collection Trait.
  *
@@ -14,6 +16,15 @@ namespace Activitypub\Rest;
  * and type transitions between Collection and CollectionPage.
  */
 trait Collection {
+	/**
+	 * The JSON-LD context for the seekItem collection extension.
+	 *
+	 * @see https://swicg.github.io/activitypub-api/seekitem
+	 *
+	 * @var string
+	 */
+	private $seek_item_context = 'https://purl.archive.org/socialweb/seekitem/1.0';
+
 	/**
 	 * The JSON-LD context for ActivityPub collections.
 	 *
@@ -54,12 +65,27 @@ trait Collection {
 			$response = array( '@context' => $this->json_ld_context ) + $response;
 		}
 
+		// Advertise the seek endpoint on Collections whose controller can resolve an item to a page.
+		if ( null === $page && \method_exists( $this, 'get_item_index' ) ) {
+			$response['seekItem'] = \add_query_arg( 'collection', \rawurlencode( $response['id'] ), get_rest_url_by_path( 'seek' ) );
+
+			if ( \is_array( $response['@context'] ) && ! \in_array( $this->seek_item_context, $response['@context'], true ) ) {
+				$response['@context'][] = $this->seek_item_context;
+			} elseif ( \is_string( $response['@context'] ) ) {
+				$response['@context'] = array( $response['@context'], $this->seek_item_context );
+			}
+		}
+
 		if ( empty( $response['items'] ) && empty( $response['orderedItems'] ) ) {
 			// Skip pagination metadata when items are intentionally hidden or collection is empty.
 			return $response;
 		}
 
-		$response['id']    = \add_query_arg( $request->get_query_params(), $response['id'] );
+		// The `item` seek parameter is handled before the collection is built and must not leak into navigation links.
+		$query_params = $request->get_query_params();
+		unset( $query_params['item'] );
+
+		$response['id']    = \add_query_arg( $query_params, $response['id'] );
 		$response['first'] = \add_query_arg( 'page', 1, $response['id'] );
 		$response['last']  = \add_query_arg( 'page', $max_pages, $response['id'] );
 
@@ -84,6 +110,91 @@ trait Collection {
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Argument definition for the seek `item` parameter.
+	 *
+	 * @see https://swicg.github.io/activitypub-api/seekitem
+	 *
+	 * @return array The argument definition.
+	 */
+	public function get_seek_item_arg() {
+		return array(
+			'description' => 'The ActivityPub object ID of an item to seek. The response redirects to the collection page containing the item.',
+			'type'        => 'string',
+			'format'      => 'uri',
+		);
+	}
+
+	/**
+	 * Handle a seek request by redirecting to the collection page that contains the sought item.
+	 *
+	 * Implements the seekItem collection extension: when the `item` parameter is present, the
+	 * controller's get_item_index() resolves the item's position under the exact query and
+	 * visibility rules of the collection, and the response is a temporary redirect whose
+	 * Location is the id of the CollectionPage containing the item. A temporary redirect is
+	 * used because the collections are ordered newest-first, so items drift across pages as
+	 * new items arrive. Unknown, invisible, and unauthorized items all produce the same 404,
+	 * so collection membership is not leaked.
+	 *
+	 * @see https://swicg.github.io/activitypub-api/seekitem
+	 *
+	 * @param \WP_REST_Request $request       The request object.
+	 * @param string           $collection_id The plain collection ID (URL without query arguments).
+	 *
+	 * @return \WP_REST_Response|\WP_Error|null Redirect response, 404 error, or null when this is not a seek request.
+	 */
+	public function maybe_seek_item( $request, $collection_id ) {
+		$item = $request->get_param( 'item' );
+		if ( empty( $item ) ) {
+			return null;
+		}
+
+		$index = $this->get_item_index( $item, $request );
+
+		if ( \is_wp_error( $index ) || false === $index ) {
+			return new \WP_Error(
+				'activitypub_item_not_found',
+				\__( 'The requested item could not be found in this collection.', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		$per_page = \max( 1, \absint( $request->get_param( 'per_page' ) ) );
+		$page     = (int) \floor( $index / $per_page ) + 1;
+
+		$query_params = $request->get_query_params();
+		unset( $query_params['item'] );
+		$query_params['page'] = $page;
+
+		$response = new \WP_REST_Response( null, 307 );
+		$response->header( 'Location', \add_query_arg( $query_params, $collection_id ) );
+
+		return $response;
+	}
+
+	/**
+	 * Run a callback with an additional WHERE clause appended to WP_Query's SQL.
+	 *
+	 * Used by get_item_index() implementations to count the items that sort before the sought
+	 * item, reusing the collection's own query (and thereby its visibility rules) unchanged.
+	 *
+	 * @param string   $where    Prepared SQL to append to the WHERE clause.
+	 * @param callable $callback Callback executing the query.
+	 *
+	 * @return mixed The callback return value.
+	 */
+	private function with_posts_where( $where, $callback ) {
+		$filter = static function ( $sql ) use ( $where ) {
+			return $sql . $where;
+		};
+
+		\add_filter( 'posts_where', $filter );
+		$result = $callback();
+		\remove_filter( 'posts_where', $filter );
+
+		return $result;
 	}
 
 	/**
@@ -147,6 +258,11 @@ trait Collection {
 				),
 				'partOf'       => array(
 					'description' => 'The OrderedCollection to which this OrderedCollectionPage belongs.',
+					'type'        => 'string',
+					'format'      => 'uri',
+				),
+				'seekItem'     => array(
+					'description' => 'Endpoint to resolve the collection page containing a given item.',
 					'type'        => 'string',
 					'format'      => 'uri',
 				),
