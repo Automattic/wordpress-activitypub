@@ -104,7 +104,8 @@ class Http {
 	 * @param string   $url    The URL endpoint.
 	 * @param array    $args   Optional. Additional arguments to customize the request.
 	 *                         - 'headers': Array of headers to override defaults.
-	 * @param bool|int $cached Optional. Whether to return cached results, or cache duration. Default false.
+	 * @param bool|int $cached Optional. Whether to cache the response, or the cache duration in seconds for
+	 *                         successful responses. Failed responses use a fixed short backoff duration. Default false.
 	 *
 	 * @return array|\WP_Error The GET Response or a WP_Error.
 	 */
@@ -188,17 +189,19 @@ class Http {
 			$response = new \WP_Error( $code, \__( 'Failed HTTP Request', 'activitypub' ), array( 'status' => $code ) );
 
 			/*
-			 * Always cache errors to prevent repeated timeout waits.
+			 * Cache errors to prevent repeated timeout waits.
 			 * - Retriable errors (timeouts, 5xx): 1 minute (server may recover quickly).
 			 * - Other errors (4xx): 15 minutes (client errors are more permanent).
 			 */
-			if ( \in_array( $code, ACTIVITYPUB_RETRY_ERROR_CODES, true ) || 0 === $code ) {
-				$cache_duration = MINUTE_IN_SECONDS;
-			} else {
-				$cache_duration = 15 * MINUTE_IN_SECONDS;
-			}
+			if ( $cached ) {
+				if ( \in_array( $code, ACTIVITYPUB_RETRY_ERROR_CODES, true ) || 0 === $code ) {
+					$cache_duration = MINUTE_IN_SECONDS;
+				} else {
+					$cache_duration = 15 * MINUTE_IN_SECONDS;
+				}
 
-			\set_transient( $transient_key, $response, $cache_duration );
+				\set_transient( $transient_key, $response, $cache_duration );
+			}
 
 			return $response;
 		}
@@ -211,12 +214,14 @@ class Http {
 		 */
 		\do_action( 'activitypub_safe_remote_get_response', $response, $url );
 
-		// Always cache successful responses.
-		$cache_duration = $cached;
-		if ( ! \is_int( $cache_duration ) ) {
-			$cache_duration = HOUR_IN_SECONDS;
+		// Cache successful responses when caching is requested.
+		if ( $cached ) {
+			$cache_duration = $cached;
+			if ( ! \is_int( $cache_duration ) ) {
+				$cache_duration = HOUR_IN_SECONDS;
+			}
+			\set_transient( $transient_key, $response, $cache_duration );
 		}
-		\set_transient( $transient_key, $response, $cache_duration );
 
 		return $response;
 	}
