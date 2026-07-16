@@ -549,32 +549,19 @@ class Interactions {
 			return false;
 		}
 
-		$is_insert          = self::INSERT === $action;
-		$flood_priority     = \has_action( 'check_comment_flood', 'check_comment_flood_db' );
-		$had_name_filter    = false !== \has_filter( 'pre_option_require_name_email', '__return_false' );
-		$akismet_callback   = array( self::class, 'akismet_comment_nonce_inactive' );
-		$had_akismet_filter = false !== \has_filter( 'akismet_comment_nonce', $akismet_callback );
-		$kses_callback      = array( self::class, 'allowed_comment_html' );
-		$had_allowed_html   = false !== \has_filter( 'wp_kses_allowed_html', $kses_callback );
+		$is_insert        = self::INSERT === $action;
+		$flood_priority   = \has_action( 'check_comment_flood', 'check_comment_flood_db' );
+		$akismet_callback = array( self::class, 'akismet_comment_nonce_inactive' );
+		$kses_callback    = array( self::class, 'allowed_comment_html' );
 
-		// Disable flood control.
+		// Disable flood control, restoring it at its original priority afterwards.
 		if ( false !== $flood_priority ) {
 			\remove_action( 'check_comment_flood', 'check_comment_flood_db', $flood_priority );
 		}
 
-		// Do not require email for AP entries.
-		if ( ! $had_name_filter ) {
-			\add_filter( 'pre_option_require_name_email', '__return_false' );
-		}
-
-		// No nonce possible for this submission route.
-		if ( ! $had_akismet_filter ) {
-			\add_filter( 'akismet_comment_nonce', $akismet_callback );
-		}
-
-		if ( ! $had_allowed_html ) {
-			\add_filter( 'wp_kses_allowed_html', $kses_callback, 10, 2 );
-		}
+		\add_filter( 'pre_option_require_name_email', '__return_false' ); // Do not require email for AP entries.
+		\add_filter( 'akismet_comment_nonce', $akismet_callback );        // No nonce possible for this submission route.
+		\add_filter( 'wp_kses_allowed_html', $kses_callback, 10, 2 );
 
 		if ( $is_insert ) {
 			$state = \wp_new_comment( $comment_data, true );
@@ -582,19 +569,10 @@ class Interactions {
 			$state = \wp_update_comment( $comment_data, true );
 		}
 
-		if ( ! $had_allowed_html ) {
-			\remove_filter( 'wp_kses_allowed_html', $kses_callback );
-		}
+		\remove_filter( 'wp_kses_allowed_html', $kses_callback );
+		\remove_filter( 'akismet_comment_nonce', $akismet_callback );
+		\remove_filter( 'pre_option_require_name_email', '__return_false' );
 
-		if ( ! $had_akismet_filter ) {
-			\remove_filter( 'akismet_comment_nonce', $akismet_callback );
-		}
-
-		if ( ! $had_name_filter ) {
-			\remove_filter( 'pre_option_require_name_email', '__return_false' );
-		}
-
-		// Restore flood control.
 		if ( false !== $flood_priority ) {
 			\add_action( 'check_comment_flood', 'check_comment_flood_db', $flood_priority, 4 );
 		}
