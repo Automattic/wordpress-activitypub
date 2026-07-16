@@ -348,6 +348,12 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 		$follow['meta_input']['_activitypub_activity_type'] = 'Follow';
 		self::factory()->post->create( \array_merge( $follow, array( 'guid' => $private_id ) ) );
 
+		// A public activity type that the author marked private: a public type, but hidden by visibility.
+		$hidden_id = 'https://example.org/outbox/hidden-activity';
+		$hidden    = $create;
+		$hidden['meta_input']['activitypub_content_visibility'] = ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
+		self::factory()->post->create( \array_merge( $hidden, array( 'guid' => $hidden_id ) ) );
+
 		// The public activity is seekable anonymously.
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
 		$request->set_param( 'item', $public_id );
@@ -362,6 +368,50 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 		$response = rest_get_server()->dispatch( $request );
 		$this->assertEquals( 404, $response->get_status() );
 
+		// A private-visibility activity is not disclosed by the seek oracle to an anonymous request.
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
+		$request->set_param( 'item', $hidden_id );
+
+		$response = rest_get_server()->dispatch( $request );
+		$this->assertEquals( 404, $response->get_status() );
+
 		\wp_delete_post( $public_post, true );
+	}
+
+	/**
+	 * The outbox owner can seek their own private-visibility activity, confirming the 404 above is a
+	 * visibility gate and not a broken lookup.
+	 *
+	 * @covers \Activitypub\Rest\Outbox_Controller::get_item_index
+	 */
+	public function test_outbox_owner_can_seek_private_activity() {
+		$hidden_id = 'https://example.org/outbox/owner-hidden-activity';
+		$user_id   = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		self::factory()->post->create(
+			array(
+				'post_type'    => Outbox::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_author'  => $user_id,
+				'guid'         => $hidden_id,
+				'post_content' => \wp_slash( \wp_json_encode( array( 'type' => 'Create' ) ) ),
+				'meta_input'   => array(
+					'_activitypub_activity_actor'    => 'user',
+					'_activitypub_activity_type'     => 'Create',
+					'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
+				),
+			)
+		);
+
+		\wp_set_current_user( $user_id );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
+		$request->set_param( 'item', $hidden_id );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		\wp_set_current_user( 0 );
+
+		$this->assertEquals( 307, $response->get_status() );
 	}
 }
