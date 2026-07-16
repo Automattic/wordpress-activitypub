@@ -329,16 +329,17 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * @return int|false|\WP_Error Zero-based index of the item, false when not found or a non-owner, or WP_Error when unauthenticated.
 	 */
 	public function get_item_index( $item, $request ) {
-		if ( true !== $this->verify_owner( $request ) ) {
-			if ( ! \is_user_logged_in() ) {
-				return new \WP_Error(
-					'activitypub_unauthorized',
-					\__( 'You need to authenticate to seek this collection.', 'activitypub' ),
-					array( 'status' => 401 )
-				);
-			}
+		// Ask an unauthenticated request to authenticate; the seek is owner-only.
+		if ( ! \is_user_logged_in() ) {
+			return new \WP_Error(
+				'activitypub_unauthorized',
+				\__( 'You need to authenticate to seek this collection.', 'activitypub' ),
+				array( 'status' => 401 )
+			);
+		}
 
-			// An authenticated non-owner is refused with the uniform 404, disclosing no membership.
+		// An authenticated non-owner is refused with the uniform 404, disclosing no membership.
+		if ( true !== $this->verify_owner( $request ) ) {
 			return false;
 		}
 

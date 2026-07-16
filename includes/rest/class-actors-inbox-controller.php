@@ -299,8 +299,10 @@ class Actors_Inbox_Controller extends Actors_Controller {
 	/**
 	 * Get the position of an activity in the inbox, under the collection's own query rules.
 	 *
-	 * The inbox route is owner-only (it requires authentication), so unlike the outbox this method
-	 * needs no seek gate of its own: a non-owner is already refused before it runs.
+	 * The inbox route requires authentication, so unlike the outbox this method needs no seek gate
+	 * of its own: a non-owner is already refused before it runs — unauthenticated with 401, and an
+	 * authenticated non-owner with a 403 that Seek_Controller collapses to the uniform 404 so the
+	 * seek discloses no membership. Any new seek surface must preserve that 403 → 404 collapse.
 	 *
 	 * @since unreleased
 	 *
