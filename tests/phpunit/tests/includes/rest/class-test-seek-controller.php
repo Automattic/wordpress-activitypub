@@ -181,7 +181,7 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 
 		\parse_str( (string) \wp_parse_url( $response['seekItem'], PHP_URL_QUERY ), $params );
 		$this->assertStringContainsString( 'activitypub/1.0/seek', \rawurldecode( $response['seekItem'] ) );
-		$this->assertSame( get_rest_url_by_path( 'actors/0/followers' ), $params['collection'] );
+		$this->assertSame( get_rest_url_by_path( 'actors/0/followers' ), \rawurldecode( $params['collection'] ) );
 		$this->assertContains( 'https://purl.archive.org/socialweb/seekitem/1.0', $response['@context'] );
 	}
 
@@ -276,6 +276,51 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 		$response = rest_get_server()->dispatch( $request );
 
 		$this->assertEquals( 404, $response->get_status() );
+	}
+
+	/**
+	 * Seeking into a forced-signature route does not bypass its mandatory signature verification.
+	 *
+	 * FEP-8fcf's /followers/sync forces signatures even when Authorized Fetch is off. A seek defers
+	 * signature verification for the internal dispatch, but must leave forced routes verifying, so an
+	 * unsigned seek into /followers/sync fails verification and collapses to the uniform 404.
+	 *
+	 * @covers ::get_item
+	 */
+	public function test_seek_endpoint_does_not_bypass_forced_signature() {
+		$sync_url = \add_query_arg( 'authority', 'https://example.org', get_rest_url_by_path( 'actors/0/followers/sync' ) );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/seek' );
+		$request->set_param( 'collection', $sync_url );
+		$request->set_param( 'item', 'https://example.org/actor/13' );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 404, $response->get_status() );
+	}
+
+	/**
+	 * The advertised seekItem preserves the collection's filtering arguments.
+	 *
+	 * @covers \Activitypub\Rest\Collection::prepare_collection_response
+	 */
+	public function test_seek_item_preserves_query_arguments() {
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
+		$request->set_query_params(
+			array(
+				'order'    => 'asc',
+				'per_page' => '5',
+			)
+		);
+
+		$response = rest_get_server()->dispatch( $request )->get_data();
+
+		\parse_str( (string) \wp_parse_url( $response['seekItem'], PHP_URL_QUERY ), $params );
+		\parse_str( (string) \wp_parse_url( \rawurldecode( $params['collection'] ), PHP_URL_QUERY ), $collection_params );
+
+		$this->assertSame( 'asc', $collection_params['order'] );
+		$this->assertSame( '5', $collection_params['per_page'] );
+		$this->assertArrayNotHasKey( 'page', $collection_params );
 	}
 
 	/**

@@ -122,6 +122,8 @@ class Liked_Controller extends Actors_Controller {
 	/**
 	 * Get the position of an object in the liked collection.
 	 *
+	 * @since unreleased
+	 *
 	 * @param string           $item    The ActivityPub object ID of the liked object.
 	 * @param \WP_REST_Request $request Full details about the request.
 	 *

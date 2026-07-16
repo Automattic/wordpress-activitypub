@@ -18,6 +18,8 @@ use Activitypub\OAuth\Server as OAuth_Server;
  * collection and every current and future collection is reachable through one endpoint.
  *
  * @see https://swicg.github.io/activitypub-api/seekitem
+ *
+ * @since unreleased
  */
 class Seek_Controller extends \WP_REST_Controller {
 	use Verification;
@@ -117,10 +119,20 @@ class Seek_Controller extends \WP_REST_Controller {
 		// Carry the original headers over, so a Bearer token reaches the collection's own permission check.
 		$collection_request->set_headers( $request->get_headers() );
 
-		// The signature was verified for this request; the internal dispatch cannot carry it over.
-		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		/*
+		 * The outer request's signature was verified for the /seek route and cannot be replayed
+		 * against the inner route, so defer signature verification for the dispatch. Endpoints that
+		 * force signatures (FEP-8fcf's /followers/sync) are deliberately not deferred: their
+		 * mandatory verification must still run, and it will fail for a seek since the signature was
+		 * never computed over their route. get_item() maps that failure to the same 404 as any other
+		 * non-seekable collection, so no membership is leaked.
+		 */
+		$defer = static function ( $deferred, $inner_request, $force_signature ) {
+			return $force_signature ? $deferred : true;
+		};
+		\add_filter( 'activitypub_defer_signature_verification', $defer, 10, 3 );
 		$response = \rest_do_request( $collection_request );
-		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\remove_filter( 'activitypub_defer_signature_verification', $defer, 10 );
 
 		if ( \in_array( $response->get_status(), array( 307, 308 ), true ) ) {
 			return $response;

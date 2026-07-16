@@ -299,6 +299,8 @@ class Actors_Inbox_Controller extends Actors_Controller {
 	/**
 	 * Get the position of an activity in the inbox, under the collection's own query rules.
 	 *
+	 * @since unreleased
+	 *
 	 * @param string           $item    The ActivityPub activity ID.
 	 * @param \WP_REST_Request $request Full details about the request.
 	 *

@@ -65,9 +65,22 @@ trait Collection {
 			$response = array( '@context' => $this->json_ld_context ) + $response;
 		}
 
-		// Advertise the seek endpoint on Collections whose controller can resolve an item to a page.
-		if ( null === $page && \method_exists( $this, 'get_item_index' ) ) {
-			$response['seekItem'] = \add_query_arg( 'collection', \rawurlencode( $response['id'] ), get_rest_url_by_path( 'seek' ) );
+		// The `item` seek parameter is handled before the collection is built and must not leak into navigation links.
+		$query_params = $request->get_query_params();
+		unset( $query_params['item'] );
+
+		/*
+		 * Advertise the seek endpoint on the Collection when the request offered an `item` argument,
+		 * which is how a controller opts a route in. The seek endpoint receives the collection with
+		 * its filtering arguments (order, per_page, context) but without page, so it resolves the item
+		 * against the same ordering the client is traversing.
+		 */
+		$attributes = $request->get_attributes();
+		if ( null === $page && isset( $attributes['args']['item'] ) ) {
+			$collection_id = \add_query_arg( \array_diff_key( $query_params, array( 'page' => '' ) ), $response['id'] );
+
+			// add_query_arg() does not encode values, so encode the nested collection URL to keep its query string intact.
+			$response['seekItem'] = \add_query_arg( 'collection', \rawurlencode( $collection_id ), get_rest_url_by_path( 'seek' ) );
 
 			if ( \is_array( $response['@context'] ) && ! \in_array( $this->seek_item_context, $response['@context'], true ) ) {
 				$response['@context'][] = $this->seek_item_context;
@@ -80,10 +93,6 @@ trait Collection {
 			// Skip pagination metadata when items are intentionally hidden or collection is empty.
 			return $response;
 		}
-
-		// The `item` seek parameter is handled before the collection is built and must not leak into navigation links.
-		$query_params = $request->get_query_params();
-		unset( $query_params['item'] );
 
 		$response['id']    = \add_query_arg( $query_params, $response['id'] );
 		$response['first'] = \add_query_arg( 'page', 1, $response['id'] );
@@ -117,6 +126,8 @@ trait Collection {
 	 *
 	 * @see https://swicg.github.io/activitypub-api/seekitem
 	 *
+	 * @since unreleased
+	 *
 	 * @return array The argument definition.
 	 */
 	public function get_seek_item_arg() {
@@ -139,6 +150,8 @@ trait Collection {
 	 * so collection membership is not leaked.
 	 *
 	 * @see https://swicg.github.io/activitypub-api/seekitem
+	 *
+	 * @since unreleased
 	 *
 	 * @param \WP_REST_Request $request       The request object.
 	 * @param string           $collection_id The plain collection ID (URL without query arguments).

@@ -313,6 +313,8 @@ class Outbox_Controller extends \WP_REST_Controller {
 	/**
 	 * Get the position of an activity in the outbox, under the collection's own query rules.
 	 *
+	 * @since unreleased
+	 *
 	 * @param string           $item    The ActivityPub activity ID.
 	 * @param \WP_REST_Request $request Full details about the request.
 	 *
