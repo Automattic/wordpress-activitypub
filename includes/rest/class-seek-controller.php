@@ -134,7 +134,12 @@ class Seek_Controller extends \WP_REST_Controller {
 		$response = \rest_do_request( $collection_request );
 		\remove_filter( 'activitypub_defer_signature_verification', $defer, 10 );
 
-		if ( \in_array( $response->get_status(), array( 307, 308 ), true ) ) {
+		/*
+		 * A redirect is the sought page. An authentication or authorization failure is a property of
+		 * the request, not the item, so it is surfaced as is (it discloses no membership). Everything
+		 * else, including the collection's own item-not-found, collapses to a single 404.
+		 */
+		if ( \in_array( $response->get_status(), array( 307, 308, 401, 403 ), true ) ) {
 			return $response;
 		}
 

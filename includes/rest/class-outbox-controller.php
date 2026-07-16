@@ -311,16 +311,25 @@ class Outbox_Controller extends \WP_REST_Controller {
 	}
 
 	/**
-	 * Get the position of an activity in the outbox, under the collection's own query rules.
+	 * Get the position of an activity in the outbox.
+	 *
+	 * Seeking the outbox is owner-only. The collection mixes public and private activities, so
+	 * rather than rely on the per-item visibility filter, non-owners are refused before any item
+	 * is resolved. That way the seek discloses nothing about a specific activity, public or private.
 	 *
 	 * @since unreleased
 	 *
 	 * @param string           $item    The ActivityPub activity ID.
 	 * @param \WP_REST_Request $request Full details about the request.
 	 *
-	 * @return int|false|\WP_Error Zero-based index of the item, false or WP_Error when not found.
+	 * @return int|false|\WP_Error Zero-based index of the item, false or WP_Error when not found or not permitted.
 	 */
 	public function get_item_index( $item, $request ) {
+		$owner = $this->verify_owner( $request );
+		if ( true !== $owner ) {
+			return $owner;
+		}
+
 		$outbox_item = Outbox::get_by_guid( $item );
 		if ( \is_wp_error( $outbox_item ) ) {
 			return $outbox_item;

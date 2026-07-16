@@ -167,7 +167,24 @@ trait Collection {
 
 		$index = $this->get_item_index( $item, $request );
 
-		if ( \is_wp_error( $index ) || false === $index ) {
+		if ( \is_wp_error( $index ) ) {
+			/*
+			 * Surface an authentication or authorization failure as is: it is a property of the
+			 * request, not the item, so it discloses no collection membership. Everything else
+			 * (item absent, or hidden by the collection's visibility rules) collapses to a single
+			 * 404 so the presence of a specific item can never be inferred.
+			 */
+			$data   = $index->get_error_data();
+			$status = \is_array( $data ) && isset( $data['status'] ) ? (int) $data['status'] : 0;
+
+			if ( \in_array( $status, array( 401, 403 ), true ) ) {
+				return $index;
+			}
+
+			$index = false;
+		}
+
+		if ( false === $index ) {
 			return new \WP_Error(
 				'activitypub_item_not_found',
 				\__( 'The requested item could not be found in this collection.', 'activitypub' ),

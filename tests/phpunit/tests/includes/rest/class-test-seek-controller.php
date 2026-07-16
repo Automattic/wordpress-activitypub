@@ -283,7 +283,8 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 	 *
 	 * FEP-8fcf's /followers/sync forces signatures even when Authorized Fetch is off. A seek defers
 	 * signature verification for the internal dispatch, but must leave forced routes verifying, so an
-	 * unsigned seek into /followers/sync fails verification and collapses to the uniform 404.
+	 * unsigned seek into /followers/sync still fails verification. That failure is a property of the
+	 * request, not any follower, so it surfaces as 401 and discloses no membership.
 	 *
 	 * @covers ::get_item
 	 */
@@ -296,7 +297,7 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 
 		$response = rest_get_server()->dispatch( $request );
 
-		$this->assertEquals( 404, $response->get_status() );
+		$this->assertEquals( 401, $response->get_status() );
 	}
 
 	/**
@@ -324,13 +325,15 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 	}
 
 	/**
-	 * The seek of an outbox activity respects the visibility rules for unauthenticated requests.
+	 * Seeking the outbox is owner-only: a non-owner gets the same 403 for a public activity, a
+	 * private-visibility activity, and an unknown one, so the seek discloses nothing about the
+	 * outbox regardless of an activity's visibility.
 	 *
 	 * @covers \Activitypub\Rest\Outbox_Controller::get_item_index
 	 */
-	public function test_outbox_collection_seek_respects_visibility() {
-		$public_id  = 'https://example.org/outbox/public-activity';
-		$private_id = 'https://example.org/outbox/private-activity';
+	public function test_outbox_seek_is_owner_only() {
+		$public_id = 'https://example.org/outbox/public-activity';
+		$hidden_id = 'https://example.org/outbox/hidden-activity';
 
 		$create = array(
 			'post_type'    => Outbox::POST_TYPE,
@@ -344,74 +347,84 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 
 		$public_post = self::factory()->post->create( \array_merge( $create, array( 'guid' => $public_id ) ) );
 
-		$follow = $create;
-		$follow['meta_input']['_activitypub_activity_type'] = 'Follow';
-		self::factory()->post->create( \array_merge( $follow, array( 'guid' => $private_id ) ) );
-
-		// A public activity type that the author marked private: a public type, but hidden by visibility.
-		$hidden_id = 'https://example.org/outbox/hidden-activity';
-		$hidden    = $create;
+		$hidden = $create;
 		$hidden['meta_input']['activitypub_content_visibility'] = ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
 		self::factory()->post->create( \array_merge( $hidden, array( 'guid' => $hidden_id ) ) );
 
-		// The public activity is seekable anonymously.
-		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
-		$request->set_param( 'item', $public_id );
+		// A public activity, a private one, and an unknown one all return an identical 403 to a non-owner.
+		foreach ( array( $public_id, $hidden_id, 'https://example.org/outbox/does-not-exist' ) as $item ) {
+			$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
+			$request->set_param( 'item', $item );
 
-		$response = rest_get_server()->dispatch( $request );
-		$this->assertEquals( 307, $response->get_status() );
-
-		// The non-public activity type is invisible to anonymous seeks.
-		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
-		$request->set_param( 'item', $private_id );
-
-		$response = rest_get_server()->dispatch( $request );
-		$this->assertEquals( 404, $response->get_status() );
-
-		// A private-visibility activity is not disclosed by the seek oracle to an anonymous request.
-		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
-		$request->set_param( 'item', $hidden_id );
-
-		$response = rest_get_server()->dispatch( $request );
-		$this->assertEquals( 404, $response->get_status() );
+			$response = rest_get_server()->dispatch( $request );
+			$this->assertEquals( 403, $response->get_status(), "Non-owner seek of {$item} must be refused with 403." );
+		}
 
 		\wp_delete_post( $public_post, true );
 	}
 
 	/**
-	 * The outbox owner can seek their own private-visibility activity, confirming the 404 above is a
-	 * visibility gate and not a broken lookup.
+	 * The outbox owner can seek their own activities, including a private-visibility one, confirming
+	 * the non-owner 403 is an access gate and not a broken lookup.
 	 *
 	 * @covers \Activitypub\Rest\Outbox_Controller::get_item_index
 	 */
-	public function test_outbox_owner_can_seek_private_activity() {
+	public function test_outbox_owner_can_seek_own_activities() {
+		$public_id = 'https://example.org/outbox/owner-public-activity';
 		$hidden_id = 'https://example.org/outbox/owner-hidden-activity';
 		$user_id   = self::factory()->user->create( array( 'role' => 'author' ) );
 
-		self::factory()->post->create(
-			array(
-				'post_type'    => Outbox::POST_TYPE,
-				'post_status'  => 'publish',
-				'post_author'  => $user_id,
-				'guid'         => $hidden_id,
-				'post_content' => \wp_slash( \wp_json_encode( array( 'type' => 'Create' ) ) ),
-				'meta_input'   => array(
-					'_activitypub_activity_actor'    => 'user',
-					'_activitypub_activity_type'     => 'Create',
-					'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
-				),
-			)
+		$create = array(
+			'post_type'    => Outbox::POST_TYPE,
+			'post_status'  => 'publish',
+			'post_author'  => $user_id,
+			'post_content' => \wp_slash( \wp_json_encode( array( 'type' => 'Create' ) ) ),
+			'meta_input'   => array(
+				'_activitypub_activity_actor' => 'user',
+				'_activitypub_activity_type'  => 'Create',
+			),
 		);
+
+		self::factory()->post->create( \array_merge( $create, array( 'guid' => $public_id ) ) );
+
+		$hidden = $create;
+		$hidden['meta_input']['activitypub_content_visibility'] = ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
+		self::factory()->post->create( \array_merge( $hidden, array( 'guid' => $hidden_id ) ) );
 
 		\wp_set_current_user( $user_id );
 
+		foreach ( array( $public_id, $hidden_id ) as $item ) {
+			$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
+			$request->set_param( 'item', $item );
+
+			$response = rest_get_server()->dispatch( $request );
+			$this->assertEquals( 307, $response->get_status(), "Owner seek of {$item} must resolve to a page." );
+		}
+
+		// The owner still gets a 404 for an activity that is genuinely not in their outbox.
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
-		$request->set_param( 'item', $hidden_id );
+		$request->set_param( 'item', 'https://example.org/outbox/never-existed' );
 
 		$response = rest_get_server()->dispatch( $request );
 
 		\wp_set_current_user( 0 );
 
-		$this->assertEquals( 307, $response->get_status() );
+		$this->assertEquals( 404, $response->get_status() );
+	}
+
+	/**
+	 * An anonymous seek into the owner-only inbox returns 401, not a misleading 404: the failure is a
+	 * property of the request, not of any item, so surfacing it discloses no membership.
+	 *
+	 * @covers ::get_item
+	 * @covers \Activitypub\Rest\Collection::maybe_seek_item
+	 */
+	public function test_inbox_seek_requires_authentication() {
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/inbox' );
+		$request->set_param( 'item', 'https://example.org/activity/1' );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 401, $response->get_status() );
 	}
 }
