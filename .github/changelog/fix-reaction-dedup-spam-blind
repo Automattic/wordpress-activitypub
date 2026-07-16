@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix repeated deliveries of a like or repost creating new comments after the original was marked as spam or moved to the trash.

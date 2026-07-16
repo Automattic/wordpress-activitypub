@@ -135,8 +135,29 @@ function resolve_public_host( $host ) {
 	// Normalise bracketed IPv6 literals (parse_url returns "[::1]").
 	$host = \trim( $host, '[]' );
 
+	/**
+	 * Filters whether a non-public host may be used.
+	 *
+	 * Returning true skips this function's private/reserved-range validation and returns the resolved
+	 * address as is, for sites that federate over a private network or intranet. A host that does not
+	 * resolve at all is still rejected.
+	 *
+	 * Note: Callers that fetch through WordPress' safe HTTP APIs (wp_safe_remote_get()/post())
+	 * are still subject to core's own loopback/RFC1918 rejection outside its same-host exception.
+	 * Re-enabling those ranges additionally requires filtering WordPress core (e.g.
+	 * http_request_reject_unsafe_urls).
+	 *
+	 * @param bool   $allow Whether to allow the non-public host. Default false.
+	 * @param string $host  The host being resolved.
+	 */
+	$allow_non_public = \apply_filters( 'activitypub_allow_non_public_host', false, $host );
+
 	// Already an IP literal — validate directly. Accepts IPv4 and IPv6.
 	if ( \filter_var( $host, FILTER_VALIDATE_IP ) ) {
+		if ( $allow_non_public ) {
+			return $host;
+		}
+
 		if ( is_unsafe_ipv6_literal( $host ) ) {
 			return false;
 		}
@@ -180,6 +201,11 @@ function resolve_public_host( $host ) {
 
 	if ( ! $ipv4 && ! $ipv6 ) {
 		return false;
+	}
+
+	// A host that resolves may be used as is when non-public hosts are explicitly allowed.
+	if ( $allow_non_public ) {
+		return $ipv4[0] ?? $ipv6[0];
 	}
 
 	foreach ( $ipv4 as $ip ) {

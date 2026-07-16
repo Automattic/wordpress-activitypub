@@ -833,8 +833,9 @@ class Post extends Base {
 	 * covers non-public status, password protection, the `local`/`private`
 	 * content-visibility meta, and a post type that no longer supports
 	 * ActivityPub. The Fediverse Preview keeps working because
-	 * `is_post_publicly_queryable()` itself treats a draft/pending post as
-	 * queryable during a `?preview=true` request from a user who can edit it.
+	 * `is_post_publicly_queryable()` itself treats a draft/pending/scheduled
+	 * post as queryable during a `?preview=true` request from a user who can
+	 * edit it.
 	 *
 	 * Note: we deliberately rely on `is_post_publicly_queryable()` rather than
 	 * `post_password_required()`. Federation output is per-instance, never

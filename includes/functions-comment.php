@@ -23,12 +23,15 @@ function get_comment_id( $id ) {
 /**
  * Get the comment from an ActivityPub Object ID.
  *
- * @param string $id ActivityPub object ID (usually a URL) to check.
+ * @since unreleased Added the `$args` parameter.
+ *
+ * @param string $id   ActivityPub object ID (usually a URL) to check.
+ * @param array  $args Optional. Additional WP_Comment_Query arguments.
  *
  * @return \WP_Comment|boolean Comment, or false on failure.
  */
-function object_id_to_comment( $id ) {
-	return Comment::object_id_to_comment( $id );
+function object_id_to_comment( $id, $args = array() ) {
+	return Comment::object_id_to_comment( $id, $args );
 }
 
 /**

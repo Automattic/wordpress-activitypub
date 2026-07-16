@@ -104,6 +104,29 @@ class Test_Functions_Request extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	/**
+	 * The activitypub_allow_non_public_host filter opts a private-network deployment back in: a
+	 * private address is returned as is instead of being rejected, but a host that does not resolve
+	 * is still rejected.
+	 *
+	 * @covers \Activitypub\resolve_public_host
+	 */
+	public function test_resolve_public_host_allow_filter() {
+		// Blocked by default.
+		$this->assertFalse( \Activitypub\resolve_public_host( '10.0.0.1' ) );
+
+		\add_filter( 'activitypub_allow_non_public_host', '__return_true' );
+
+		// A private IP literal is now returned as is.
+		$this->assertSame( '10.0.0.1', \Activitypub\resolve_public_host( '10.0.0.1' ) );
+
+		// A private hostname resolves and is returned as is.
+		$this->stub_resolved_addresses( array( 'ipv4' => array( '10.0.0.5' ) ) );
+		$this->assertSame( '10.0.0.5', \Activitypub\resolve_public_host( 'intranet.example' ) );
+
+		\remove_filter( 'activitypub_allow_non_public_host', '__return_true' );
+	}
+
+	/**
 	 * Data provider for is_ipv4_mapped_ipv6.
 	 *
 	 * @return array<string, array{0: string, 1: bool}>
