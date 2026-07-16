@@ -307,8 +307,6 @@ class Actors_Inbox_Controller extends Actors_Controller {
 	 * @return int|false|\WP_Error Zero-based index of the item, false or WP_Error when not found.
 	 */
 	public function get_item_index( $item, $request ) {
-		global $wpdb;
-
 		$inbox_item = Inbox::get_by_guid( $item );
 		if ( \is_wp_error( $inbox_item ) ) {
 			return $inbox_item;
@@ -325,16 +323,9 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			return false;
 		}
 
-		$where = $wpdb->prepare(
-			" AND ( {$wpdb->posts}.post_date > %s OR ( {$wpdb->posts}.post_date = %s AND {$wpdb->posts}.ID > %d ) )",
-			$inbox_item->post_date,
-			$inbox_item->post_date,
-			$inbox_item->ID
-		);
-
 		// Count the activities that sort before the item; that count is the item's zero-based index.
 		$preceding = $this->with_posts_where(
-			$where,
+			$this->get_preceding_by_date_where( $inbox_item->post_date, $inbox_item->ID ),
 			static function () use ( $args ) {
 				return new \WP_Query( $args );
 			}

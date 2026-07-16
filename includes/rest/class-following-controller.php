@@ -180,6 +180,7 @@ class Following_Controller extends Actors_Controller {
 			return false;
 		}
 
+		// Posts sorting before the item: lower IDs for ascending order, higher IDs for descending.
 		if ( 'asc' === $order ) {
 			$where = $wpdb->prepare( " AND {$wpdb->posts}.ID < %d", $actor->ID );
 		} else {

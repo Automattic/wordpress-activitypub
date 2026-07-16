@@ -77,15 +77,16 @@ trait Collection {
 		 */
 		$attributes = $request->get_attributes();
 		if ( null === $page && isset( $attributes['args']['item'] ) ) {
-			$collection_id = \add_query_arg( \array_diff_key( $query_params, array( 'page' => '' ) ), $response['id'] );
+			// A Collection request never carries a page, so the query params already describe the base collection.
+			$collection_id = \add_query_arg( $query_params, $response['id'] );
 
 			// add_query_arg() does not encode values, so encode the nested collection URL to keep its query string intact.
 			$response['seekItem'] = \add_query_arg( 'collection', \rawurlencode( $collection_id ), get_rest_url_by_path( 'seek' ) );
 
-			if ( \is_array( $response['@context'] ) && ! \in_array( $this->seek_item_context, $response['@context'], true ) ) {
-				$response['@context'][] = $this->seek_item_context;
-			} elseif ( \is_string( $response['@context'] ) ) {
-				$response['@context'] = array( $response['@context'], $this->seek_item_context );
+			$context = (array) $response['@context'];
+			if ( ! \in_array( $this->seek_item_context, $context, true ) ) {
+				$context[]            = $this->seek_item_context;
+				$response['@context'] = $context;
 			}
 		}
 
@@ -208,6 +209,28 @@ trait Collection {
 		\remove_filter( 'posts_where', $filter );
 
 		return $result;
+	}
+
+	/**
+	 * Build a WHERE clause matching the posts that sort before a cursor in newest-first order.
+	 *
+	 * Mirrors an `orderby` of post_date then ID, both descending, so the count of matching posts is
+	 * the cursor's zero-based index. Shared by the date-ordered collections (outbox, inbox).
+	 *
+	 * @param string $post_date The cursor post's post_date.
+	 * @param int    $id        The cursor post's ID.
+	 *
+	 * @return string Prepared SQL to append to the WHERE clause.
+	 */
+	private function get_preceding_by_date_where( $post_date, $id ) {
+		global $wpdb;
+
+		return $wpdb->prepare(
+			" AND ( {$wpdb->posts}.post_date > %s OR ( {$wpdb->posts}.post_date = %s AND {$wpdb->posts}.ID > %d ) )",
+			$post_date,
+			$post_date,
+			$id
+		);
 	}
 
 	/**
