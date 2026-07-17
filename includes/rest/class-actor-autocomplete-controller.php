@@ -61,9 +61,10 @@ class Actor_Autocomplete_Controller extends \WP_REST_Controller {
 					'permission_callback' => array( $this, 'verify_authentication' ),
 					'args'                => array(
 						'q' => array(
-							'description' => 'The text typed so far.',
-							'type'        => 'string',
-							'required'    => true,
+							'description'       => 'The text typed so far.',
+							'type'              => 'string',
+							'required'          => true,
+							'sanitize_callback' => 'sanitize_text_field',
 						),
 					),
 				),
@@ -111,12 +112,14 @@ class Actor_Autocomplete_Controller extends \WP_REST_Controller {
 		$seen  = array();
 
 		foreach ( Actors::search( $query, $number ) as $actor ) {
-			$item                     = $actor->to_array( false );
-			$items[]                  = $item;
+			$items[]                  = $actor->to_array( false );
 			$seen[ $actor->get_id() ] = true;
 		}
 
-		foreach ( Remote_Actors::search( $query, $number ) as $post ) {
+		// Only look up as many remote actors as are still needed to fill the result set.
+		$remaining = $number - \count( $items );
+
+		foreach ( $remaining > 0 ? Remote_Actors::search( $query, $remaining ) : array() as $post ) {
 			$actor = Remote_Actors::get_actor( $post );
 			if ( \is_wp_error( $actor ) || isset( $seen[ $actor->get_id() ] ) ) {
 				continue;
@@ -124,8 +127,6 @@ class Actor_Autocomplete_Controller extends \WP_REST_Controller {
 			$items[]                  = $actor->to_array( false );
 			$seen[ $actor->get_id() ] = true;
 		}
-
-		$items = \array_slice( $items, 0, $number );
 
 		$response = array(
 			'@context'   => array( Base_Object::JSON_LD_CONTEXT, self::CONTEXT ),
