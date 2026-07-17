@@ -175,6 +175,23 @@ class Test_Actor_Autocomplete_Controller extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A URL-like query matches a cached actor by its actor URI (guid).
+	 *
+	 * @covers \Activitypub\Collection\Remote_Actors::search
+	 */
+	public function test_matches_remote_actor_by_uri() {
+		$this->authenticate();
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/autocomplete' );
+		$request->set_param( 'q', 'https://remote.example.com/actor/alice' );
+
+		$data = rest_get_server()->dispatch( $request )->get_data();
+
+		$ids = \wp_list_pluck( $data['items'], 'id' );
+		$this->assertContains( 'https://remote.example.com/actor/alice', $ids );
+	}
+
+	/**
 	 * A short query does not flood results by matching the actor URI scheme.
 	 *
 	 * @covers \Activitypub\Collection\Remote_Actors::search

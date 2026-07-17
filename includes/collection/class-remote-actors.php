@@ -229,12 +229,13 @@ class Remote_Actors {
 	}
 
 	/**
-	 * Search cached remote actors by name or handle.
+	 * Search cached remote actors by name, handle, or actor URI.
 	 *
 	 * Backs the actor autocomplete endpoint. Matches the search term against the stored post title
 	 * (the actor's name or preferred username) and the webfinger handle (user@host), newest first.
-	 * The actor URI is intentionally not matched: as every URI shares the https scheme and host
-	 * shape, a short query would match nearly every cached actor.
+	 * The actor URI (guid) is matched only when the query itself looks like a URL: every URI shares
+	 * the same scheme and host shape, so matching it for a short term would return nearly every
+	 * cached actor.
 	 *
 	 * @since unreleased
 	 *
@@ -246,22 +247,32 @@ class Remote_Actors {
 	public static function search( $query, $number = 10 ) {
 		global $wpdb;
 
-		$like = '%' . $wpdb->esc_like( $query ) . '%';
+		$like       = '%' . $wpdb->esc_like( $query ) . '%';
+		$conditions = 'p.post_title LIKE %s OR acct.meta_value LIKE %s';
+		$params     = array( self::POST_TYPE, $like, $like );
 
-		// Select full rows so get_post() hydrates each in place instead of re-querying per ID.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// Match the actor URI only for URL-like queries, so short terms don't match every https:// guid.
+		if ( \str_contains( $query, '://' ) ) {
+			$conditions .= ' OR p.guid LIKE %s';
+			$params[]    = $like;
+		}
+
+		$params[] = $number;
+
+		// Select full rows so get_post() hydrates each in place instead of re-querying per ID. The
+		// interpolated $conditions is built from the literal fragments above, not from user input,
+		// and the placeholder count is dynamic because the guid clause is optional.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 		$posts = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT DISTINCT p.* FROM $wpdb->posts p
 				LEFT JOIN $wpdb->postmeta acct ON acct.post_id = p.ID AND acct.meta_key = '_activitypub_acct'
-				WHERE p.post_type = %s AND p.post_status = 'publish' AND ( p.post_title LIKE %s OR acct.meta_value LIKE %s )
+				WHERE p.post_type = %s AND p.post_status = 'publish' AND ( $conditions )
 				ORDER BY p.ID DESC LIMIT %d",
-				self::POST_TYPE,
-				$like,
-				$like,
-				$number
+				$params
 			)
 		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 
 		return \array_map( '\get_post', $posts );
 	}
