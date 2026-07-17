@@ -396,6 +396,54 @@ class Actors {
 	}
 
 	/**
+	 * Search local actors by name or username.
+	 *
+	 * Backs the actor autocomplete endpoint. Matches the search term against the WordPress user's
+	 * login, nicename, and display name; the Blog actor is included when its name or identifier
+	 * matches. Disabled actor types are excluded, mirroring get_collection()/get_all().
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $query  The search term.
+	 * @param int    $number Optional. Maximum number of actors to return. Default 10.
+	 *
+	 * @return Actor[] The matching local actor objects.
+	 */
+	public static function search( $query, $number = 10 ) {
+		$actors = array();
+
+		if ( ! is_user_type_disabled( 'blog' ) ) {
+			$blog = new Blog();
+			if ( false !== \stripos( $blog->get_name(), $query ) || false !== \stripos( (string) $blog->get_preferred_username(), $query ) ) {
+				$actors[] = $blog;
+			}
+		}
+
+		// Only query as many users as the Blog actor left room for, so a match is never fetched then trimmed.
+		$remaining = $number - \count( $actors );
+
+		if ( $remaining > 0 && ! is_user_type_disabled( 'user' ) ) {
+			$users = \get_users(
+				array(
+					'capability__in' => array( 'activitypub' ),
+					'search'         => '*' . $query . '*',
+					'search_columns' => array( 'user_login', 'user_nicename', 'display_name' ),
+					'number'         => $remaining,
+				)
+			);
+
+			foreach ( $users as $user ) {
+				$actor = User::from_wp_user( $user->ID );
+				if ( ! \is_wp_error( $actor ) ) {
+					$actors[] = $actor;
+				}
+			}
+		}
+
+		return $actors;
+	}
+
+	/**
 	 * Get all active actors, including the Blog actor if enabled.
 	 *
 	 * @return int[] Array of User and Blog actor IDs.

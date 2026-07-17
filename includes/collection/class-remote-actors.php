@@ -229,6 +229,57 @@ class Remote_Actors {
 	}
 
 	/**
+	 * Search cached remote actors by name, handle, or actor URI.
+	 *
+	 * Backs the actor autocomplete endpoint. Matches the search term against the stored post title
+	 * (the actor's name or preferred username) and the webfinger handle (user@host), newest first.
+	 * The actor URI (guid) is matched only when the query itself looks like a URL: every URI shares
+	 * the same scheme and host shape, so matching it for a short term would return nearly every
+	 * cached actor.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $query  The search term.
+	 * @param int    $number Optional. Maximum number of actors to return. Default 10.
+	 *
+	 * @return \WP_Post[] The matching remote actor posts.
+	 */
+	public static function search( $query, $number = 10 ) {
+		global $wpdb;
+
+		$like       = '%' . $wpdb->esc_like( $query ) . '%';
+		$conditions = 'p.post_title LIKE %s OR acct.meta_value LIKE %s';
+		$params     = array( self::POST_TYPE, $like, $like );
+
+		// Match the actor URI only for URL-like queries, so short terms don't match every https:// guid.
+		if ( \str_contains( $query, '://' ) ) {
+			$conditions .= ' OR p.guid LIKE %s';
+			$params[]    = $like;
+		}
+
+		$params[] = $number;
+
+		/*
+		 * Select full rows so get_post() hydrates each in place instead of re-querying per ID. The
+		 * interpolated $conditions is built from the literal fragments above, not from user input,
+		 * and the placeholder count is dynamic because the guid clause is optional.
+		 */
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+		$posts = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT DISTINCT p.* FROM $wpdb->posts p
+				LEFT JOIN $wpdb->postmeta acct ON acct.post_id = p.ID AND acct.meta_key = '_activitypub_acct'
+				WHERE p.post_type = %s AND p.post_status = 'publish' AND ( $conditions )
+				ORDER BY p.ID DESC LIMIT %d",
+				$params
+			)
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+
+		return \array_map( '\get_post', $posts );
+	}
+
+	/**
 	 * Look up which of the given URIs already exist as cached remote actors.
 	 *
 	 * Single batched query (chunked at 200 placeholders to stay well within
