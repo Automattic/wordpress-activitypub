@@ -131,7 +131,8 @@ class Announce {
 			return;
 		}
 
-		$exists = Comment::object_id_to_comment( \esc_url_raw( $url ) );
+		// Match any status, so a repost that was marked as spam or trashed still counts as seen.
+		$exists = Comment::object_id_to_comment( \esc_url_raw( $url ), array( 'status' => 'any' ) );
 		if ( $exists ) {
 			return;
 		}

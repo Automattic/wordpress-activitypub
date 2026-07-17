@@ -324,19 +324,30 @@ class Comment {
 	/**
 	 * Examine a comment ID and look up an existing comment it represents.
 	 *
-	 * @param string $id ActivityPub object ID (usually a URL) to check.
+	 * @since unreleased Added the `$args` parameter.
+	 *
+	 * @param string $id   ActivityPub object ID (usually a URL) to check.
+	 * @param array  $args Optional. Additional WP_Comment_Query arguments. Pass `array( 'status' => 'any' )`
+	 *                     to also match comments in spam or trash, which the default status excludes.
 	 *
 	 * @return \WP_Comment|false Comment object, or false on failure.
 	 */
-	public static function object_id_to_comment( $id ) {
-		$comment_query = new \WP_Comment_Query(
+	public static function object_id_to_comment( $id, $args = array() ) {
+		$args = \wp_parse_args(
+			$args,
 			array(
-				'meta_key'   => 'source_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'meta_value' => $id,         // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-				'orderby'    => 'comment_date',
-				'order'      => 'DESC',
+				'number'  => 1,
+				'orderby' => 'comment_date',
+				'order'   => 'DESC',
 			)
 		);
+
+		// Force the lookup key and full comment objects, so callers cannot break the return contract.
+		$args['fields']     = 'all';
+		$args['meta_key']   = 'source_id'; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+		$args['meta_value'] = $id;         // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+
+		$comment_query = new \WP_Comment_Query( $args );
 
 		if ( ! $comment_query->comments ) {
 			return false;
