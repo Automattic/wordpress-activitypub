@@ -524,7 +524,7 @@ class Outbox {
 	 * @return string The title.
 	 */
 	private static function get_object_title( $activity_object ) {
-		if ( ! $activity_object ) {
+		if ( ! $activity_object || \is_array( $activity_object ) ) {
 			return '';
 		}
 

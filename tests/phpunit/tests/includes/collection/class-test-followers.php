@@ -276,6 +276,32 @@ class Test_Followers extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Blocking a remote actor removes it from the follower collection.
+	 *
+	 * @covers ::remove_blocked_actors
+	 */
+	public function test_remove_blocked_actor_removes_remote_follower() {
+		$actor_uri       = 'https://remote.example/@admin';
+		$remote_actor_id = Remote_Actors::upsert(
+			array(
+				'id'                => $actor_uri,
+				'type'              => 'Person',
+				'inbox'             => 'https://remote.example/inbox',
+				'name'              => 'Remote Admin',
+				'preferredUsername' => 'admin',
+			)
+		);
+
+		$this->assertIsInt( $remote_actor_id );
+		\add_post_meta( $remote_actor_id, Followers::FOLLOWER_META_KEY, 1 );
+		$this->assertTrue( Followers::follows( $remote_actor_id, 1 ) );
+
+		Followers::remove_blocked_actors( $actor_uri, 'actor', 1 );
+
+		$this->assertFalse( Followers::follows( $remote_actor_id, 1 ) );
+	}
+
+	/**
 	 * Tests add_duplicate_follower.
 	 *
 	 * @covers ::add_follower
@@ -390,6 +416,8 @@ class Test_Followers extends \WP_UnitTestCase {
 	 * @covers ::get_inboxes
 	 */
 	public function test_get_inboxes() {
+		\wp_cache_delete( \sprintf( Followers::CACHE_KEY_INBOXES, 1 ), 'activitypub' );
+
 		for ( $i = 0; $i < 30; $i++ ) {
 			$meta = array(
 				'id'                => 'https://example.org/users/' . $i,
@@ -407,8 +435,42 @@ class Test_Followers extends \WP_UnitTestCase {
 			\add_post_meta( $id, Followers::FOLLOWER_META_KEY, 1 );
 		}
 
-		$inboxes = Followers::get_inboxes( 1 );
+		$other_actor = Remote_Actors::upsert(
+			array(
+				'id'                => 'https://example.org/users/other',
+				'type'              => 'Person',
+				'inbox'             => 'https://example.org/users/other/inbox',
+				'name'              => 'other',
+				'preferredUsername' => 'other',
+			)
+		);
+		\add_post_meta( $other_actor, Followers::FOLLOWER_META_KEY, 2 );
 
+		$non_actor = \wp_insert_post(
+			array(
+				'post_type'   => 'post',
+				'post_status' => 'publish',
+				'post_title'  => 'Not an actor',
+			)
+		);
+		\add_post_meta( $non_actor, '_activitypub_inbox', 'https://example.org/not-an-actor/inbox' );
+		\add_post_meta( $non_actor, Followers::FOLLOWER_META_KEY, 1 );
+
+		$draft_actor = \wp_insert_post(
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'post_status' => 'draft',
+				'post_title'  => 'Draft actor',
+			)
+		);
+		\add_post_meta( $draft_actor, '_activitypub_inbox', 'https://example.org/draft/inbox' );
+		\add_post_meta( $draft_actor, Followers::FOLLOWER_META_KEY, 1 );
+
+		global $wpdb;
+		$query_count = $wpdb->num_queries;
+		$inboxes     = Followers::get_inboxes( 1 );
+
+		$this->assertSame( 1, $wpdb->num_queries - $query_count, 'Follower inboxes should be loaded with one query.' );
 		$this->assertCount( 30, $inboxes );
 
 		wp_cache_delete( sprintf( Followers::CACHE_KEY_INBOXES, 1 ), 'activitypub' );
@@ -435,6 +497,29 @@ class Test_Followers extends \WP_UnitTestCase {
 		$inboxes2 = Followers::get_inboxes( 1 );
 
 		$this->assertCount( 30, $inboxes2 );
+	}
+
+	/**
+	 * Empty follower inbox results are served from cache.
+	 *
+	 * @covers ::get_inboxes
+	 */
+	public function test_get_inboxes_caches_empty_results() {
+		$user_id   = 999;
+		$cache_key = \sprintf( Followers::CACHE_KEY_INBOXES, $user_id );
+
+		\wp_cache_delete( $cache_key, 'activitypub' );
+
+		global $wpdb;
+		$query_count = $wpdb->num_queries;
+
+		$this->assertSame( array(), Followers::get_inboxes( $user_id ) );
+		$this->assertSame( 1, $wpdb->num_queries - $query_count );
+
+		$query_count = $wpdb->num_queries;
+
+		$this->assertSame( array(), Followers::get_inboxes( $user_id ) );
+		$this->assertSame( 0, $wpdb->num_queries - $query_count );
 	}
 
 	/**

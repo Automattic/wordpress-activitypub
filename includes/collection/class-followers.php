@@ -62,7 +62,6 @@ class Followers {
 		if ( \is_array( $post_meta ) && ! \in_array( (string) $user_id, $post_meta, true ) ) {
 			\add_post_meta( $post_id, self::FOLLOWER_META_KEY, $user_id );
 			\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
-			\wp_cache_delete( Remote_Actors::CACHE_KEY_INBOXES, 'activitypub' );
 		}
 
 		return $post_id;
@@ -100,7 +99,6 @@ class Followers {
 		}
 
 		\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
-		\wp_cache_delete( Remote_Actors::CACHE_KEY_INBOXES, 'activitypub' );
 
 		/**
 		 * Fires before a Follower is removed.
@@ -330,49 +328,29 @@ class Followers {
 		$cache_key = \sprintf( self::CACHE_KEY_INBOXES, $user_id );
 		$inboxes   = \wp_cache_get( $cache_key, 'activitypub' );
 
-		if ( $inboxes ) {
+		if ( false !== $inboxes ) {
 			return $inboxes;
 		}
 
-		// Get all Followers of an ID of the WordPress User.
-		$posts = new \WP_Query(
-			array(
-				'nopaging'   => true,
-				'post_type'  => Remote_Actors::POST_TYPE,
-				'fields'     => 'ids',
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query' => array(
-					'relation' => 'AND',
-					array(
-						'key'     => '_activitypub_inbox',
-						'compare' => 'EXISTS',
-					),
-					array(
-						'key'   => self::FOLLOWER_META_KEY,
-						'value' => $user_id,
-					),
-					array(
-						'key'     => '_activitypub_inbox',
-						'value'   => '',
-						'compare' => '!=',
-					),
-				),
-			)
-		);
-
-		if ( ! $posts->posts ) {
-			return array();
-		}
-
 		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$results = $wpdb->get_col(
 			$wpdb->prepare(
-				"SELECT DISTINCT meta_value FROM {$wpdb->postmeta}
-				WHERE post_id IN (" . \implode( ', ', \array_fill( 0, \absint( $posts->post_count ), '%d' ) ) . ")
-				AND meta_key = '_activitypub_inbox'
-				AND meta_value IS NOT NULL",
-				$posts->posts
+				"SELECT DISTINCT inbox.meta_value
+				FROM {$wpdb->postmeta} inbox
+				INNER JOIN {$wpdb->postmeta} follower ON follower.post_id = inbox.post_id
+				INNER JOIN {$wpdb->posts} actor ON actor.ID = inbox.post_id
+				WHERE actor.post_type = %s
+				AND actor.post_status = %s
+				AND inbox.meta_key = '_activitypub_inbox'
+				AND inbox.meta_value <> ''
+				AND follower.meta_key = %s
+				AND follower.meta_value = %d",
+				Remote_Actors::POST_TYPE,
+				'publish',
+				self::FOLLOWER_META_KEY,
+				$user_id
 			)
 		);
 
@@ -433,12 +411,12 @@ class Followers {
 			return;
 		}
 
-		$actor_id = Actors::get_id_by_various( $value );
-		if ( \is_wp_error( $actor_id ) ) {
+		$remote_actor = Remote_Actors::get_by_uri( $value );
+		if ( \is_wp_error( $remote_actor ) ) {
 			return;
 		}
 
-		self::remove( $actor_id, $user_id );
+		self::remove( $remote_actor, $user_id );
 	}
 
 	/**
