@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Document how companion plugins can reuse the existing outbound HTTP signing extension point.
