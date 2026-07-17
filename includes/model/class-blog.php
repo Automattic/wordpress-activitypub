@@ -16,6 +16,7 @@ use function Activitypub\get_attribution_domains;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\is_blog_public;
 use function Activitypub\is_single_user;
+use function Activitypub\site_icon;
 
 /**
  * Blog class.
@@ -215,32 +216,7 @@ class Blog extends Actor {
 	 * @return string[] The User icon.
 	 */
 	public function get_icon() {
-		// Try site_logo, falling back to site_icon, first.
-		$icon_id = \get_option( 'site_icon' );
-
-		// Try custom logo second.
-		if ( ! $icon_id ) {
-			$icon_id = \get_theme_mod( 'custom_logo' );
-		}
-
-		$icon_url = false;
-
-		if ( $icon_id ) {
-			$icon = \wp_get_attachment_image_src( $icon_id, 'full' );
-			if ( $icon ) {
-				$icon_url = $icon[0];
-			}
-		}
-
-		if ( ! $icon_url ) {
-			// Fallback to default icon.
-			$icon_url = \plugins_url( '/assets/img/wp-logo.png', ACTIVITYPUB_PLUGIN_FILE );
-		}
-
-		return array(
-			'type' => 'Image',
-			'url'  => \esc_url( $icon_url ),
-		);
+		return site_icon();
 	}
 
 	/**
@@ -419,7 +395,7 @@ class Blog extends Actor {
 	 * @return string[]|null The endpoints.
 	 */
 	public function get_endpoints() {
-		return array(
+		$endpoints = array(
 			'sharedInbox'                => get_rest_url_by_path( 'inbox' ),
 			'oauthAuthorizationEndpoint' => get_rest_url_by_path( 'oauth/authorize' ),
 			'oauthTokenEndpoint'         => get_rest_url_by_path( 'oauth/token' ),
@@ -427,6 +403,16 @@ class Blog extends Actor {
 			'proxyUrl'                   => get_rest_url_by_path( 'proxy' ),
 			'proxyEventStream'           => get_rest_url_by_path( 'proxy/stream' ),
 		);
+
+		if ( \get_option( 'activitypub_api', false ) ) {
+			/*
+			 * RFC 6570 template. add_query_arg() picks the ?/& separator (plain permalinks already
+			 * carry a query string) and does not encode values, so the {q} placeholder stays intact.
+			 */
+			$endpoints['actorAutocomplete'] = \add_query_arg( 'q', '{q}', get_rest_url_by_path( 'actors/autocomplete' ) );
+		}
+
+		return $endpoints;
 	}
 
 	/**

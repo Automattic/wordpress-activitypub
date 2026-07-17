@@ -65,6 +65,7 @@ function rest_init() {
 	( new Rest\Interaction_Controller() )->register_routes();
 	( new Rest\Moderators_Controller() )->register_routes();
 	if ( \get_option( 'activitypub_api', false ) ) {
+		( new Rest\Actor_Autocomplete_Controller() )->register_routes();
 		( new Rest\OAuth\Authorization_Controller() )->register_routes();
 		( new Rest\OAuth\Clients_Controller() )->register_routes();
 		( new Rest\OAuth\Token_Controller() )->register_routes();
@@ -92,6 +93,7 @@ function rest_init() {
  */
 function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Activitypub', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Application', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Avatars', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Blurhash', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Cache', 'init' ) );

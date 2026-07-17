@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Add a filter that allows federating with servers on private or internal networks.

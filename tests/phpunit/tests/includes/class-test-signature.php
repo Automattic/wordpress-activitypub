@@ -1901,4 +1901,50 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_key_retrieval );
 	}
+
+	/**
+	 * Test that get_key_pair generates, persists and then reuses a key pair.
+	 *
+	 * @covers ::get_key_pair
+	 */
+	public function test_get_key_pair() {
+		$option_key = 'activitypub_test_keypair';
+
+		// First call generates and persists a new pair.
+		$key_pair = Signature::get_key_pair( $option_key );
+
+		$this->assertNotEmpty( $key_pair['private_key'] );
+		$this->assertNotEmpty( $key_pair['public_key'] );
+		$this->assertSame( $key_pair, \get_option( $option_key ), 'The generated pair should be persisted.' );
+
+		// Subsequent calls return the stored pair without regenerating.
+		$this->assertSame( $key_pair, Signature::get_key_pair( $option_key ) );
+
+		\delete_option( $option_key );
+	}
+
+	/**
+	 * Test that get_key_pair migrates a legacy key pair instead of generating a new one.
+	 *
+	 * @covers ::get_key_pair
+	 */
+	public function test_get_key_pair_migrates_legacy_keys() {
+		$option_key = 'activitypub_test_keypair';
+		$legacy     = array(
+			'private_key' => 'legacy private key',
+			'public_key'  => 'legacy public key',
+		);
+
+		$key_pair = Signature::get_key_pair(
+			$option_key,
+			function () use ( $legacy ) {
+				return $legacy;
+			}
+		);
+
+		$this->assertSame( $legacy, $key_pair, 'The legacy pair should be returned as-is.' );
+		$this->assertSame( $legacy, \get_option( $option_key ), 'The legacy pair should be persisted under the new option.' );
+
+		\delete_option( $option_key );
+	}
 }
