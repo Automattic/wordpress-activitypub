@@ -229,6 +229,40 @@ class Remote_Actors {
 	}
 
 	/**
+	 * Search cached remote actors by name, username, or actor URI.
+	 *
+	 * Backs the actor autocomplete endpoint. Matches the search term against the stored post title
+	 * (the actor's name or preferred username) and the guid (the actor URI), newest first.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $query  The search term.
+	 * @param int    $number Optional. Maximum number of actors to return. Default 10.
+	 *
+	 * @return \WP_Post[] The matching remote actor posts.
+	 */
+	public static function search( $query, $number = 10 ) {
+		global $wpdb;
+
+		$like = '%' . $wpdb->esc_like( $query ) . '%';
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$post_ids = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT ID FROM $wpdb->posts
+				WHERE post_type = %s AND post_status = 'publish' AND ( post_title LIKE %s OR guid LIKE %s )
+				ORDER BY ID DESC LIMIT %d",
+				self::POST_TYPE,
+				$like,
+				$like,
+				$number
+			)
+		);
+
+		return \array_filter( \array_map( '\get_post', $post_ids ) );
+	}
+
+	/**
 	 * Look up which of the given URIs already exist as cached remote actors.
 	 *
 	 * Single batched query (chunked at 200 placeholders to stay well within
