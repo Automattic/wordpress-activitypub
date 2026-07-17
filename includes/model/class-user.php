@@ -338,8 +338,11 @@ class User extends Actor {
 		);
 
 		if ( \get_option( 'activitypub_api', false ) ) {
-			// RFC 6570 template; the {q} placeholder must stay unencoded.
-			$endpoints['actorAutocomplete'] = get_rest_url_by_path( 'actors/autocomplete' ) . '?q={q}';
+			// RFC 6570 template; the {q} placeholder must stay unencoded. Pick the separator by hand
+			// because plain-permalink sites already return a URL with a query string (?rest_route=…).
+			$autocomplete                   = get_rest_url_by_path( 'actors/autocomplete' );
+			$autocomplete                  .= ( \str_contains( $autocomplete, '?' ) ? '&' : '?' ) . 'q={q}';
+			$endpoints['actorAutocomplete'] = $autocomplete;
 		}
 
 		return $endpoints;

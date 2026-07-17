@@ -147,6 +147,52 @@ class Test_Actor_Autocomplete_Controller extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A cached remote actor is findable by its handle even when it differs from the display name.
+	 *
+	 * @covers ::get_items
+	 * @covers \Activitypub\Collection\Remote_Actors::search
+	 */
+	public function test_matches_remote_actor_by_handle() {
+		$this->authenticate();
+
+		Remote_Actors::create(
+			array(
+				'id'                => 'https://remote.example.com/users/42',
+				'type'              => 'Person',
+				'inbox'             => 'https://remote.example.com/users/42/inbox',
+				'name'              => 'Bob Smith',
+				'preferredUsername' => 'bob123',
+			)
+		);
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/autocomplete' );
+		$request->set_param( 'q', 'bob123' );
+
+		$data = rest_get_server()->dispatch( $request )->get_data();
+
+		$ids = \wp_list_pluck( $data['items'], 'id' );
+		$this->assertContains( 'https://remote.example.com/users/42', $ids );
+	}
+
+	/**
+	 * A short query does not flood results by matching the actor URI scheme.
+	 *
+	 * @covers \Activitypub\Collection\Remote_Actors::search
+	 */
+	public function test_short_query_does_not_match_uri_scheme() {
+		$this->authenticate();
+
+		// 'ht' appears in every actor's https:// URI but not in the Alice fixture's name/handle.
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/autocomplete' );
+		$request->set_param( 'q', 'ht' );
+
+		$data = rest_get_server()->dispatch( $request )->get_data();
+
+		$ids = \wp_list_pluck( $data['items'], 'id' );
+		$this->assertNotContains( 'https://remote.example.com/actor/alice', $ids );
+	}
+
+	/**
 	 * A local user is returned as an actor object.
 	 *
 	 * @covers ::get_items
@@ -189,6 +235,8 @@ class Test_Actor_Autocomplete_Controller extends \WP_UnitTestCase {
 		$data = rest_get_server()->dispatch( $request )->get_data();
 
 		$this->assertContains( 'https://swicg.github.io/activitypub-api/autocomplete', $data['@context'] );
+		// The ActivityStreams context must be merged in, not nested as an array element.
+		$this->assertSame( 'https://www.w3.org/ns/activitystreams', $data['@context'][0] );
 	}
 
 	/**
@@ -204,10 +252,12 @@ class Test_Actor_Autocomplete_Controller extends \WP_UnitTestCase {
 		$blog_endpoints = ( new Blog() )->get_endpoints();
 		$user_endpoints = User::from_wp_user( $user_id )->get_endpoints();
 
-		$this->assertArrayHasKey( 'actorAutocomplete', $blog_endpoints );
-		$this->assertStringEndsWith( '?q={q}', $blog_endpoints['actorAutocomplete'] );
-		$this->assertArrayHasKey( 'actorAutocomplete', $user_endpoints );
-		$this->assertStringEndsWith( '?q={q}', $user_endpoints['actorAutocomplete'] );
+		foreach ( array( $blog_endpoints, $user_endpoints ) as $endpoints ) {
+			$this->assertArrayHasKey( 'actorAutocomplete', $endpoints );
+			$this->assertStringEndsWith( 'q={q}', $endpoints['actorAutocomplete'] );
+			// The template must be a well-formed URL with a single query string, even on plain permalinks.
+			$this->assertSame( 1, \substr_count( $endpoints['actorAutocomplete'], '?' ) );
+		}
 	}
 
 	/**

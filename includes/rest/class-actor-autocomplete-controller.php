@@ -129,7 +129,8 @@ class Actor_Autocomplete_Controller extends \WP_REST_Controller {
 		}
 
 		$response = array(
-			'@context'   => array( Base_Object::JSON_LD_CONTEXT, self::CONTEXT ),
+			// JSON_LD_CONTEXT is already a context array, so merge the extension IRI in rather than nesting it.
+			'@context'   => \array_merge( (array) Base_Object::JSON_LD_CONTEXT, array( self::CONTEXT ) ),
 			'id'         => \add_query_arg( 'q', $query, get_rest_url_by_path( $this->rest_base ) ),
 			'generator'  => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'type'       => 'Collection',

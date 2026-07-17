@@ -229,10 +229,12 @@ class Remote_Actors {
 	}
 
 	/**
-	 * Search cached remote actors by name, username, or actor URI.
+	 * Search cached remote actors by name or handle.
 	 *
 	 * Backs the actor autocomplete endpoint. Matches the search term against the stored post title
-	 * (the actor's name or preferred username) and the guid (the actor URI), newest first.
+	 * (the actor's name or preferred username) and the webfinger handle (user@host), newest first.
+	 * The actor URI is intentionally not matched: as every URI shares the https scheme and host
+	 * shape, a short query would match nearly every cached actor.
 	 *
 	 * @since unreleased
 	 *
@@ -249,9 +251,10 @@ class Remote_Actors {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_ids = $wpdb->get_col(
 			$wpdb->prepare(
-				"SELECT ID FROM $wpdb->posts
-				WHERE post_type = %s AND post_status = 'publish' AND ( post_title LIKE %s OR guid LIKE %s )
-				ORDER BY ID DESC LIMIT %d",
+				"SELECT DISTINCT p.ID FROM $wpdb->posts p
+				LEFT JOIN $wpdb->postmeta acct ON acct.post_id = p.ID AND acct.meta_key = '_activitypub_acct'
+				WHERE p.post_type = %s AND p.post_status = 'publish' AND ( p.post_title LIKE %s OR acct.meta_value LIKE %s )
+				ORDER BY p.ID DESC LIMIT %d",
 				self::POST_TYPE,
 				$like,
 				$like,
