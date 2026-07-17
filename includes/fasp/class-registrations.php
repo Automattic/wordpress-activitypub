@@ -374,12 +374,9 @@ class Registrations {
 	 * @return array
 	 */
 	private static function get_registrations_store() {
-		$registrations = \get_option( self::OPTION_REGISTRATIONS, null );
-
-		if ( null === $registrations ) {
-			\add_option( self::OPTION_REGISTRATIONS, array(), '', false );
-			return array();
-		}
+		// Every mutator writes with autoload disabled, so the option is created non-autoloaded on
+		// first write; a read before any write simply falls back to the empty default.
+		$registrations = \get_option( self::OPTION_REGISTRATIONS, array() );
 
 		return \is_array( $registrations ) ? $registrations : array();
 	}

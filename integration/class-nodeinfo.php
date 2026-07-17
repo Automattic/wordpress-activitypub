@@ -12,6 +12,7 @@ use Activitypub\Webfinger;
 use function Activitypub\get_active_users;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\get_total_users;
+use function Activitypub\is_fasp_enabled;
 
 /**
  * Compatibility with the NodeInfo plugin.
@@ -85,7 +86,7 @@ class Nodeinfo {
 		$nodeinfo['metadata']['staffAccounts'] = self::get_staff();
 
 		// Only expose FASP base URL when the feature is enabled.
-		if ( '1' === \get_option( 'activitypub_enable_fasp', '0' ) ) {
+		if ( is_fasp_enabled() ) {
 			$nodeinfo['metadata']['faspBaseUrl'] = get_rest_url_by_path( 'fasp' );
 		}
 
@@ -109,7 +110,7 @@ class Nodeinfo {
 		);
 
 		// Only expose FASP base URL when the feature is enabled.
-		if ( '1' === \get_option( 'activitypub_enable_fasp', '0' ) ) {
+		if ( is_fasp_enabled() ) {
 			$nodeinfo['metadata']['faspBaseUrl'] = get_rest_url_by_path( 'fasp' );
 		}
 

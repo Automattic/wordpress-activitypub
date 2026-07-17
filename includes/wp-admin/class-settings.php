@@ -9,6 +9,7 @@ namespace Activitypub\WP_Admin;
 
 use Activitypub\Collection\Actors;
 
+use function Activitypub\is_fasp_enabled;
 use function Activitypub\user_can_activitypub;
 
 /**
@@ -61,7 +62,7 @@ class Settings {
 		);
 
 		// Add FASP registrations tab for managing auxiliary service providers (only if enabled).
-		if ( '1' === \get_option( 'activitypub_enable_fasp', '0' ) ) {
+		if ( is_fasp_enabled() ) {
 			$settings_tabs['fasp-registrations'] = array(
 				'label'    => \__( 'Auxiliary Services', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/fasp-registrations.php',

@@ -82,7 +82,7 @@ function rest_init() {
 	( new Rest\Proxy_Controller() )->register_routes();
 
 	// Load FASP endpoints only if enabled.
-	if ( '1' === \get_option( 'activitypub_enable_fasp', '0' ) ) {
+	if ( is_fasp_enabled() ) {
 		( new Rest\Fasp_Controller() )->register_routes();
 	}
 }
@@ -162,7 +162,7 @@ function plugin_admin_init() {
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Welcome_Fields', 'init' ) );
 
 	// Only load FASP admin actions if enabled.
-	if ( '1' === \get_option( 'activitypub_enable_fasp', '0' ) ) {
+	if ( is_fasp_enabled() ) {
 		\add_action( 'admin_init', array( WP_Admin\Fasp_Settings::class, 'init' ) );
 	}
 

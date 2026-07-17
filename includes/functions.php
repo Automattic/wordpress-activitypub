@@ -156,6 +156,17 @@ function is_blog_public() {
 }
 
 /**
+ * Check whether FASP (Fediverse Auxiliary Service Provider) support is enabled.
+ *
+ * @since unreleased
+ *
+ * @return bool True if FASP support is enabled.
+ */
+function is_fasp_enabled() {
+	return '1' === \get_option( 'activitypub_enable_fasp', '0' );
+}
+
+/**
  * Get the masked WordPress version to only show the major and minor version.
  *
  * @return string The masked version.

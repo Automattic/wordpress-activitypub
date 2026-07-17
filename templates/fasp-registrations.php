@@ -109,8 +109,9 @@ $supported_capabilities = \apply_filters( 'activitypub_fasp_supported_capabiliti
 		<div class="fasp-registrations-list">
 			<?php foreach ( $approved_registrations as $registration ) : ?>
 				<?php
-				$fingerprint = $registration['fasp_public_key_fingerprint'] ?? Registrations::get_public_key_fingerprint( $registration['fasp_public_key'] );
-				$nonce       = \wp_create_nonce( 'fasp_registration_' . $registration['fasp_id'] );
+				$fingerprint      = $registration['fasp_public_key_fingerprint'] ?? Registrations::get_public_key_fingerprint( $registration['fasp_public_key'] );
+				$nonce            = \wp_create_nonce( 'fasp_registration_' . $registration['fasp_id'] );
+				$capability_nonce = \wp_create_nonce( 'fasp_capability_' . $registration['fasp_id'] );
 				?>
 				<div class="activitypub-settings-accordion fasp-registration-card">
 					<div class="fasp-registration-header">
@@ -167,7 +168,6 @@ $supported_capabilities = \apply_filters( 'activitypub_fasp_supported_capabiliti
 									$capability_version = (string) $capability['version'];
 									$is_supported       = \in_array( $capability_id, $supported_capabilities, true );
 									$is_enabled         = Registrations::is_capability_enabled( $registration['fasp_id'], $capability_id, $capability_version );
-									$capability_nonce   = \wp_create_nonce( 'fasp_capability_' . $registration['fasp_id'] );
 									?>
 									<li class="fasp-capability">
 										<code><?php echo \esc_html( $capability_id ); ?></code>
