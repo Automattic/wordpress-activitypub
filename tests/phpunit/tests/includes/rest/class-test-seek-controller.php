@@ -301,6 +301,30 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 	}
 
 	/**
+	 * A global signature-defer filter cannot reopen a forced-signature route through a seek.
+	 *
+	 * The seek registers its own defer decision at the latest priority, so a broad defer filter (as a
+	 * local-dev setup might install) still leaves /followers/sync verifying and the unsigned seek fails.
+	 *
+	 * @covers ::get_item
+	 */
+	public function test_global_defer_filter_does_not_reopen_forced_signature() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true', 20 );
+
+		$sync_url = \add_query_arg( 'authority', 'https://example.org', get_rest_url_by_path( 'actors/0/followers/sync' ) );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/seek' );
+		$request->set_param( 'collection', $sync_url );
+		$request->set_param( 'item', 'https://example.org/actor/13' );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true', 20 );
+
+		$this->assertEquals( 401, $response->get_status() );
+	}
+
+	/**
 	 * The advertised seekItem preserves the collection's filtering arguments.
 	 *
 	 * @covers \Activitypub\Rest\Collection::prepare_collection_response

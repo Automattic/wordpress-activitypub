@@ -94,12 +94,13 @@ class Seek_Controller extends \WP_REST_Controller {
 	 * Seek an item in a collection.
 	 *
 	 * Dispatches an internal request to the collection endpoint with the `item` parameter and
-	 * passes its redirect through. Unknown collections, foreign URLs, items that are not part
-	 * of the collection, and unauthorized requests all produce the same 404, so collection
-	 * membership is not leaked.
+	 * passes its redirect through. A missing-authentication failure surfaces as 401 to tell the
+	 * client to authenticate. Unknown collections, foreign URLs, items that are not part of the
+	 * collection, and authenticated-but-not-authorized requests all produce the same 404, so
+	 * collection membership is not leaked.
 	 *
 	 * @param \WP_REST_Request $request Full details about the request.
-	 * @return \WP_REST_Response|\WP_Error Redirect response on success, or WP_Error object on failure.
+	 * @return \WP_REST_Response|\WP_Error Redirect on success, or 401/404 WP_Error on failure.
 	 */
 	public function get_item( $request ) {
 		$not_found = new \WP_Error(
@@ -128,11 +129,13 @@ class Seek_Controller extends \WP_REST_Controller {
 		 * non-seekable collection, so no membership is leaked.
 		 */
 		$defer = static function ( $deferred, $inner_request, $force_signature ) {
-			return $force_signature ? $deferred : true;
+			// Decide deterministically: defer for the dispatch, except on forced-signature routes.
+			return ! $force_signature;
 		};
-		\add_filter( 'activitypub_defer_signature_verification', $defer, 10, 3 );
+		// Latest priority, so a global defer filter (e.g. a local-dev __return_true) cannot reopen a forced route.
+		\add_filter( 'activitypub_defer_signature_verification', $defer, \PHP_INT_MAX, 3 );
 		$response = \rest_do_request( $collection_request );
-		\remove_filter( 'activitypub_defer_signature_verification', $defer, 10 );
+		\remove_filter( 'activitypub_defer_signature_verification', $defer, \PHP_INT_MAX );
 
 		/*
 		 * A redirect is the sought page. A missing-authentication failure (401) is a property of the
