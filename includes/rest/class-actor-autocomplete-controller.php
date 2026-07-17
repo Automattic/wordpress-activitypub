@@ -119,13 +119,15 @@ class Actor_Autocomplete_Controller extends \WP_REST_Controller {
 		// Only look up as many remote actors as are still needed to fill the result set.
 		$remaining = $number - \count( $items );
 
-		foreach ( $remaining > 0 ? Remote_Actors::search( $query, $remaining ) : array() as $post ) {
-			$actor = Remote_Actors::get_actor( $post );
-			if ( \is_wp_error( $actor ) || isset( $seen[ $actor->get_id() ] ) ) {
-				continue;
+		if ( $remaining > 0 ) {
+			foreach ( Remote_Actors::search( $query, $remaining ) as $post ) {
+				$actor = Remote_Actors::get_actor( $post );
+				if ( \is_wp_error( $actor ) || isset( $seen[ $actor->get_id() ] ) ) {
+					continue;
+				}
+				$items[]                  = $actor->to_array( false );
+				$seen[ $actor->get_id() ] = true;
 			}
-			$items[]                  = $actor->to_array( false );
-			$seen[ $actor->get_id() ] = true;
 		}
 
 		$response = array(

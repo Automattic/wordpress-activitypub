@@ -248,10 +248,11 @@ class Remote_Actors {
 
 		$like = '%' . $wpdb->esc_like( $query ) . '%';
 
+		// Select full rows so get_post() hydrates each in place instead of re-querying per ID.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$post_ids = $wpdb->get_col(
+		$posts = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT DISTINCT p.ID FROM $wpdb->posts p
+				"SELECT DISTINCT p.* FROM $wpdb->posts p
 				LEFT JOIN $wpdb->postmeta acct ON acct.post_id = p.ID AND acct.meta_key = '_activitypub_acct'
 				WHERE p.post_type = %s AND p.post_status = 'publish' AND ( p.post_title LIKE %s OR acct.meta_value LIKE %s )
 				ORDER BY p.ID DESC LIMIT %d",
@@ -262,7 +263,7 @@ class Remote_Actors {
 			)
 		);
 
-		return \array_filter( \array_map( '\get_post', $post_ids ) );
+		return \array_map( '\get_post', $posts );
 	}
 
 	/**
