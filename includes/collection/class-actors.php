@@ -419,13 +419,16 @@ class Actors {
 			}
 		}
 
-		if ( ! is_user_type_disabled( 'user' ) ) {
+		// Only query as many users as the Blog actor left room for, so a match is never fetched then trimmed.
+		$remaining = $number - \count( $actors );
+
+		if ( $remaining > 0 && ! is_user_type_disabled( 'user' ) ) {
 			$users = \get_users(
 				array(
 					'capability__in' => array( 'activitypub' ),
 					'search'         => '*' . $query . '*',
 					'search_columns' => array( 'user_login', 'user_nicename', 'display_name' ),
-					'number'         => $number,
+					'number'         => $remaining,
 				)
 			);
 
@@ -437,7 +440,7 @@ class Actors {
 			}
 		}
 
-		return \array_slice( $actors, 0, $number );
+		return $actors;
 	}
 
 	/**
