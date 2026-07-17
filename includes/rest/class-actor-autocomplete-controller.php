@@ -106,7 +106,7 @@ class Actor_Autocomplete_Controller extends \WP_REST_Controller {
 		 * @param int              $number  The maximum number of actors. Default 10.
 		 * @param \WP_REST_Request $request The request object.
 		 */
-		$number = (int) \apply_filters( 'activitypub_actor_autocomplete_number', 10, $request );
+		$number = \max( 1, (int) \apply_filters( 'activitypub_actor_autocomplete_number', 10, $request ) );
 
 		$items = array();
 		$seen  = array();
@@ -130,7 +130,7 @@ class Actor_Autocomplete_Controller extends \WP_REST_Controller {
 
 		$response = array(
 			'@context'   => array( Base_Object::JSON_LD_CONTEXT, self::CONTEXT ),
-			'id'         => \add_query_arg( 'q', \rawurlencode( $query ), get_rest_url_by_path( $this->rest_base ) ),
+			'id'         => \add_query_arg( 'q', $query, get_rest_url_by_path( $this->rest_base ) ),
 			'generator'  => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'type'       => 'Collection',
 			'totalItems' => \count( $items ),
