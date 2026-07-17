@@ -68,6 +68,7 @@ function rest_init() {
 		( new Rest\OAuth\Authorization_Controller() )->register_routes();
 		( new Rest\OAuth\Clients_Controller() )->register_routes();
 		( new Rest\OAuth\Token_Controller() )->register_routes();
+		( new Rest\Actor_Autocomplete_Controller() )->register_routes();
 	}
 	( new Rest\Outbox_Controller() )->register_routes();
 	( new Rest\Post_Controller() )->register_routes();
