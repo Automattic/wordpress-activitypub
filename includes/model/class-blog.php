@@ -405,11 +405,9 @@ class Blog extends Actor {
 		);
 
 		if ( \get_option( 'activitypub_api', false ) ) {
-			// RFC 6570 template; the {q} placeholder must stay unencoded. Pick the separator by hand
-			// because plain-permalink sites already return a URL with a query string (?rest_route=…).
-			$autocomplete                   = get_rest_url_by_path( 'actors/autocomplete' );
-			$autocomplete                  .= ( \str_contains( $autocomplete, '?' ) ? '&' : '?' ) . 'q={q}';
-			$endpoints['actorAutocomplete'] = $autocomplete;
+			// RFC 6570 template. add_query_arg() picks the ?/& separator (plain permalinks already carry
+			// a query string) and does not encode values, so the {q} placeholder stays intact.
+			$endpoints['actorAutocomplete'] = \add_query_arg( 'q', '{q}', get_rest_url_by_path( 'actors/autocomplete' ) );
 		}
 
 		return $endpoints;
