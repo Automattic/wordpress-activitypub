@@ -259,9 +259,11 @@ class Remote_Actors {
 
 		$params[] = $number;
 
-		// Select full rows so get_post() hydrates each in place instead of re-querying per ID. The
-		// interpolated $conditions is built from the literal fragments above, not from user input,
-		// and the placeholder count is dynamic because the guid clause is optional.
+		/*
+		 * Select full rows so get_post() hydrates each in place instead of re-querying per ID. The
+		 * interpolated $conditions is built from the literal fragments above, not from user input,
+		 * and the placeholder count is dynamic because the guid clause is optional.
+		 */
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 		$posts = $wpdb->get_results(
 			$wpdb->prepare(

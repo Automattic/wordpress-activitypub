@@ -405,8 +405,10 @@ class Blog extends Actor {
 		);
 
 		if ( \get_option( 'activitypub_api', false ) ) {
-			// RFC 6570 template. add_query_arg() picks the ?/& separator (plain permalinks already carry
-			// a query string) and does not encode values, so the {q} placeholder stays intact.
+			/*
+			 * RFC 6570 template. add_query_arg() picks the ?/& separator (plain permalinks already
+			 * carry a query string) and does not encode values, so the {q} placeholder stays intact.
+			 */
 			$endpoints['actorAutocomplete'] = \add_query_arg( 'q', '{q}', get_rest_url_by_path( 'actors/autocomplete' ) );
 		}
 
