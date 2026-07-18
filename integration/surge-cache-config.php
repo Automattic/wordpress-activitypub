@@ -13,9 +13,7 @@ if ( isset( $_SERVER['HTTP_ACCEPT'] ) ) {
 	// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 	$accept = strtolower( $_SERVER['HTTP_ACCEPT'] );
 
-	if ( str_contains( $accept, 'text/html' ) ) {
-		$representation = 'html';
-	} elseif (
+	if (
 		str_contains( $accept, 'application/json' ) ||
 		str_contains( $accept, 'application/activity+json' ) ||
 		str_contains( $accept, 'application/ld+json' )
