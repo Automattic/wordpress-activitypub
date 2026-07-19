@@ -223,7 +223,7 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 										'activitypub'
 									),
 									{
-										a: <ExternalLink href={ settingsUrl } />,
+										a: <ExternalLink href={ settingsUrl } rel="external noreferrer noopener" />,
 									}
 							  )
 							: __(
