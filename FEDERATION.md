@@ -91,28 +91,6 @@ Two signature methods are supported for maximum compatibility:
 - **RFC-9421** (modern standard) - Used by default
 - **Draft Cavage** (legacy) - Automatic fallback for older implementations
 
-Companion plugins can reuse the same signing implementation for their own WordPress HTTP
-requests. Pass the sender's public key identifier and private key as the `key_id` and
-`private_key` request arguments. The plugin's `http_request_args` filter adds the appropriate
-signature headers before WordPress sends the request:
-
-```php
-$response = wp_safe_remote_post(
-	$recipient_inbox,
-	array(
-		'body'        => wp_json_encode( $activity ),
-		'headers'     => array( 'Content-Type' => 'application/activity+json' ),
-		'data_format' => 'body',
-		'key_id'      => $sender_key_id,
-		'private_key' => $sender_private_key,
-	)
-);
-```
-
-The caller remains responsible for validating recipient URLs, selecting recipients, and owning
-its delivery queue and retry policy. Resolve private key material only while sending; do not
-persist it in transport rows or logs.
-
 More information on HTTP Signatures: <https://swicg.github.io/activitypub-http-signature/>
 
 ### Relays
