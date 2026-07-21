@@ -116,6 +116,32 @@ class Server {
 	}
 
 	/**
+	 * Reject requests that authenticated with an OAuth bearer token.
+	 *
+	 * OAuth bearer tokens are scoped ActivityPub C2S grants and must not reach
+	 * the plugin's admin and management endpoints, which authorize by WordPress
+	 * capability rather than by OAuth scope. Without this guard a token consented
+	 * to for a narrow scope (e.g. read) could drive privileged, capability-gated
+	 * actions such as moderation. Cookie-authenticated admin-UI requests do not
+	 * establish an OAuth session and are unaffected.
+	 *
+	 * @since unreleased
+	 *
+	 * @return \WP_Error|null WP_Error when the request is OAuth-authenticated, null otherwise.
+	 */
+	public static function deny_if_oauth() {
+		if ( ! self::is_oauth_request() ) {
+			return null;
+		}
+
+		return new \WP_Error(
+			'activitypub_oauth_not_allowed',
+			\__( 'OAuth authentication is not allowed for this endpoint.', 'activitypub' ),
+			array( 'status' => 403 )
+		);
+	}
+
+	/**
 	 * Get the current OAuth token from the request.
 	 *
 	 * @return Token|null The validated token or null.

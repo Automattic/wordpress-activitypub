@@ -89,6 +89,9 @@ class Test_Server extends \WP_UnitTestCase {
 			$wp->query_vars['rest_route'] = $this->original_rest_route;
 		}
 
+		// Reset the static OAuth session so it does not leak into later tests.
+		Server::authenticate_oauth( null );
+
 		\wp_set_current_user( 0 );
 
 		if ( $this->client_id ) {
@@ -200,5 +203,33 @@ class Test_Server extends \WP_UnitTestCase {
 		$this->assertTrue( $result, 'Direct (non-REST) callers must still authenticate.' );
 		$this->assertTrue( Server::is_oauth_request() );
 		$this->assertSame( $this->user_id, \get_current_user_id() );
+	}
+
+	/**
+	 * The guard lets non-OAuth requests through.
+	 *
+	 * @covers ::deny_if_oauth
+	 */
+	public function test_deny_if_oauth_allows_non_oauth_request() {
+		$this->assertNull( Server::deny_if_oauth() );
+	}
+
+	/**
+	 * The guard blocks requests authenticated with a bearer token.
+	 *
+	 * Protects the plugin's capability-gated admin endpoints from scoped C2S tokens.
+	 *
+	 * @covers ::deny_if_oauth
+	 */
+	public function test_deny_if_oauth_blocks_oauth_request() {
+		$this->set_bearer_header();
+		$this->set_rest_route( '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $this->user_id . '/outbox' );
+		Server::authenticate_oauth( null );
+
+		$result = Server::deny_if_oauth();
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'activitypub_oauth_not_allowed', $result->get_error_code() );
+		$this->assertSame( 403, $result->get_error_data()['status'] );
 	}
 }
