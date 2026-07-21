@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Ensure apps you connect can only act within the access you granted them, and not make wider changes to your site.
