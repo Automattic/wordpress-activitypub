@@ -137,7 +137,7 @@ function site_icon() {
 
 	return array(
 		'type' => 'Image',
-		'url'  => \esc_url( $icon_url ),
+		'url'  => \esc_url_raw( $icon_url ),
 	);
 }
 
