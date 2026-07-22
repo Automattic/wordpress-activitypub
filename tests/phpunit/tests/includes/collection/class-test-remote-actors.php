@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Http;
 use Activitypub\Mention;
 
 /**
@@ -271,6 +272,257 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$this->assertEquals( 'activitypub_no_actor', $not_actor->get_error_code() );
 
 		remove_filter( 'activitypub_pre_http_get_remote_object', $actor_callback_test5 );
+	}
+
+	/**
+	 * Mock the HTTP layer to serve JSON documents per requested URL.
+	 *
+	 * Unlike the `activitypub_pre_http_get_remote_object` filter (a trusted
+	 * in-process override), this mocks the actual network fetch, so the self-
+	 * confirmation in Http::get_remote_object() runs. Pass $effective_url to
+	 * simulate a redirect: every response then reports it as the URL it was
+	 * served from.
+	 *
+	 * @param array  $documents     Map of requested URL => document array.
+	 * @param string $effective_url Optional. URL every response was "served from".
+	 * @return callable The registered filter callback (pass to remove_filter).
+	 */
+	private function mock_remote_documents( $documents, $effective_url = '' ) {
+		$callback = function ( $pre, $args, $url ) use ( $documents, $effective_url ) {
+			if ( ! \array_key_exists( $url, $documents ) ) {
+				return $pre;
+			}
+
+			$response = array(
+				'headers'  => array(),
+				'body'     => \wp_json_encode( $documents[ $url ] ),
+				'response' => array(
+					'code'    => 200,
+					'message' => 'OK',
+				),
+				'cookies'  => array(),
+			);
+
+			if ( $effective_url ) {
+				$requests_response         = new \WpOrg\Requests\Response();
+				$requests_response->url    = $effective_url;
+				$response['http_response'] = new \WP_HTTP_Requests_Response( $requests_response );
+			}
+
+			return $response;
+		};
+
+		\add_filter( 'pre_http_request', $callback, 10, 3 );
+
+		return $callback;
+	}
+
+	/**
+	 * A document that claims another host's id must not overwrite that host's actor.
+	 *
+	 * Following Mastodon's `fetch_resource` pattern, when a fetched document declares
+	 * a different id it is re-fetched from its own host and only that self-confirmed
+	 * copy is trusted. So a document served elsewhere that claims the canonical id
+	 * causes the canonical actor's genuine document to be re-fetched from its own
+	 * server — the other document's key is discarded.
+	 *
+	 * @covers ::fetch_by_uri
+	 */
+	public function test_fetch_by_uri_cross_host_id_refetches_canonical_actor() {
+		$canonical_id   = 'https://example.com/users/alice';
+		$mismatched_url = 'https://example.org/mismatched';
+
+		$remove = $this->mock_remote_documents(
+			array(
+				// The other host: claims the canonical id, serves a different key.
+				$mismatched_url => array(
+					'id'                => $canonical_id,
+					'type'              => 'Person',
+					'preferredUsername' => 'alice',
+					'inbox'             => 'https://example.org/inbox',
+					'publicKey'         => array( 'id' => $canonical_id . '#main-key', 'owner' => $canonical_id, 'publicKeyPem' => 'OTHER-KEY' ), // phpcs:ignore WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
+				),
+				// The canonical host: serves the genuine key.
+				$canonical_id   => array(
+					'id'                => $canonical_id,
+					'type'              => 'Person',
+					'preferredUsername' => 'alice',
+					'inbox'             => $canonical_id . '/inbox',
+					'publicKey'         => array( 'id' => $canonical_id . '#main-key', 'owner' => $canonical_id, 'publicKeyPem' => 'CANONICAL-KEY' ), // phpcs:ignore WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
+				),
+			)
+		);
+
+		$result = Remote_Actors::fetch_by_uri( $mismatched_url );
+
+		remove_filter( 'pre_http_request', $remove );
+
+		// The declared id was re-fetched from its own host; the genuine actor wins.
+		$this->assertInstanceOf( 'WP_Post', $result );
+		$this->assertEquals( $canonical_id, $result->guid );
+		$data = \json_decode( $result->post_content, true );
+		$this->assertSame( 'CANONICAL-KEY', $data['publicKey']['publicKeyPem'], 'The re-fetched canonical actor must win; the other key must be discarded.' );
+	}
+
+	/**
+	 * An error reached via a cross-host redirect must not be cached under the
+	 * requested URL's key: otherwise an open redirect could turn a transient failure
+	 * into a repeatable federation outage (every later key/actor fetch
+	 * would read back the cached error).
+	 *
+	 * @covers \Activitypub\Http::get
+	 */
+	public function test_get_does_not_cache_cross_host_redirected_error() {
+		$canonical_url = 'https://example.com/users/alice';
+		$other_host    = 'https://example.org/404';
+
+		$filter = function ( $pre, $args, $url ) use ( $canonical_url, $other_host ) {
+			if ( $url !== $canonical_url ) {
+				return $pre;
+			}
+
+			$requests_response      = new \WpOrg\Requests\Response();
+			$requests_response->url = $other_host;
+
+			return array(
+				'headers'       => array(),
+				'body'          => 'Not Found',
+				'response'      => array(
+					'code'    => 404,
+					'message' => 'Not Found',
+				),
+				'cookies'       => array(),
+				'http_response' => new \WP_HTTP_Requests_Response( $requests_response ),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		$result = Http::get( $canonical_url );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertWPError( $result );
+		$this->assertFalse(
+			\get_transient( Http::generate_cache_key( $canonical_url ) ),
+			'A cross-host-redirected error must not be cached under the requested URL.'
+		);
+	}
+
+	/**
+	 * An open redirect on the requested host must not let a document from another
+	 * host overwrite the actor cache. Self-confirmation compares the declared id
+	 * against the URL the document was actually served from (post-redirect), so a
+	 * bounce to JSON declaring the canonical id is rejected.
+	 *
+	 * @covers ::fetch_by_uri
+	 */
+	public function test_fetch_by_uri_rejects_redirected_document() {
+		$canonical_id = 'https://example.com/users/alice';
+		$other_host   = 'https://example.org/mismatched';
+
+		// Every fetch is redirected to another host, which serves the canonical id.
+		$remove = $this->mock_remote_documents(
+			array(
+				$canonical_id => array(
+					'id'                => $canonical_id,
+					'type'              => 'Person',
+					'preferredUsername' => 'alice',
+					'inbox'             => 'https://example.org/inbox',
+					'publicKey'         => array( 'id' => $canonical_id . '#main-key', 'owner' => $canonical_id, 'publicKeyPem' => 'OTHER-KEY' ), // phpcs:ignore WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
+				),
+			),
+			$other_host
+		);
+
+		$result = Remote_Actors::fetch_by_uri( $canonical_id );
+
+		remove_filter( 'pre_http_request', $remove );
+
+		$this->assertWPError( $result, 'A redirected document declaring the requested id must be rejected.' );
+		$this->assertWPError( Remote_Actors::get_by_uri( $canonical_id ), 'The canonical actor must not be cached from a redirected response.' );
+	}
+
+	/**
+	 * A non-canonical URL (e.g. a WebFinger self-link) resolves to the actor's
+	 * canonical id via a re-fetch and is cached under that id.
+	 *
+	 * @covers ::fetch_by_uri
+	 */
+	public function test_fetch_by_uri_resolves_non_canonical_url() {
+		$fetch_url = 'https://example.com/@carol';
+		$canonical = 'https://example.com/users/carol';
+
+		$actor  = array(
+			'id'                => $canonical,
+			'type'              => 'Person',
+			'preferredUsername' => 'carol',
+			'inbox'             => $canonical . '/inbox',
+		);
+		$remove = $this->mock_remote_documents(
+			array(
+				$fetch_url => $actor,
+				$canonical => $actor,
+			)
+		);
+
+		$post = Remote_Actors::fetch_by_uri( $fetch_url );
+
+		remove_filter( 'pre_http_request', $remove );
+
+		$this->assertInstanceOf( 'WP_Post', $post, 'A non-canonical URL must resolve via re-fetch of the declared id.' );
+		$this->assertEquals( $canonical, $post->guid, 'The actor is cached under its canonical id.' );
+	}
+
+	/**
+	 * A declared id that does not self-confirm when re-fetched is rejected — the
+	 * re-fetch happens once, with no further chasing (mirrors Mastodon's terminal).
+	 *
+	 * @covers ::fetch_by_uri
+	 */
+	public function test_fetch_by_uri_rejects_unconfirmed_id() {
+		$fetch_url = 'https://example.org/a';
+		$declared  = 'https://example.org/b';
+
+		$remove = $this->mock_remote_documents(
+			array(
+				$fetch_url => array( 'id' => $declared, 'type' => 'Person', 'preferredUsername' => 'x', 'inbox' => $declared . '/inbox' ), // phpcs:ignore WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
+				// The re-fetch declares yet another id — it does not self-confirm.
+				$declared  => array( 'id' => 'https://example.org/c', 'type' => 'Person', 'preferredUsername' => 'x', 'inbox' => 'https://example.org/c/inbox' ), // phpcs:ignore WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
+			)
+		);
+
+		$result = Remote_Actors::fetch_by_uri( $fetch_url );
+
+		remove_filter( 'pre_http_request', $remove );
+
+		$this->assertWPError( $result, 'A declared id that does not self-confirm on re-fetch must be rejected.' );
+	}
+
+	/**
+	 * An actor fetched from its own canonical id is cached normally.
+	 *
+	 * @covers ::fetch_by_uri
+	 */
+	public function test_fetch_by_uri_accepts_canonical_id() {
+		$actor_id = 'https://example.com/users/dave';
+
+		$remove = $this->mock_remote_documents(
+			array(
+				$actor_id => array(
+					'id'                => $actor_id,
+					'type'              => 'Person',
+					'preferredUsername' => 'dave',
+					'inbox'             => $actor_id . '/inbox',
+				),
+			)
+		);
+
+		$post = Remote_Actors::fetch_by_uri( $actor_id );
+
+		remove_filter( 'pre_http_request', $remove );
+
+		$this->assertInstanceOf( 'WP_Post', $post, 'An actor fetched from its own id must resolve.' );
+		$this->assertEquals( $actor_id, $post->guid );
 	}
 
 	/**

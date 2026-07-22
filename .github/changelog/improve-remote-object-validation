@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Ensure remote profiles and content are served from the address they claim before storing them.
