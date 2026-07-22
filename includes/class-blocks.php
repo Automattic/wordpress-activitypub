@@ -394,6 +394,10 @@ class Blocks {
 			unset( $attributes['title'], $attributes['className'] );
 		} else {
 			$content = \implode( PHP_EOL, \wp_list_pluck( $block->parsed_block['innerBlocks'], 'innerHTML' ) );
+			// Hide empty headings.
+			if ( empty( \wp_strip_all_tags( $content ) ) ) {
+				$content = '';
+			}
 		}
 
 		$user_id = self::get_user_id( $attributes['selectedUser'] );
