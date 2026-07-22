@@ -13,6 +13,7 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Moderation;
+use Activitypub\OAuth\Server as OAuth_Server;
 
 use function Activitypub\user_can_activitypub;
 
@@ -118,6 +119,12 @@ class Actions_Controller extends \WP_REST_Controller {
 	 * @return bool|\WP_Error True if the request has permission, WP_Error object otherwise.
 	 */
 	public function check_permission() {
+		// This is an admin endpoint; scoped OAuth C2S tokens must not drive it.
+		$denied = OAuth_Server::deny_if_oauth();
+		if ( null !== $denied ) {
+			return $denied;
+		}
+
 		if ( ! user_can_activitypub( \get_current_user_id() ) ) {
 			return new \WP_Error(
 				'rest_forbidden',
