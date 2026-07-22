@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Hide the heading on the Followers and Following blocks when its text is cleared, matching the Reactions block.
