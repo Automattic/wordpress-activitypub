@@ -1,4 +1,4 @@
 Significance: patch
 Type: fixed
 
-Fix URLs with multiple query parameters (such as avatars, images, and profile links) being corrupted in content sent to the Fediverse.
+Fix URLs with multiple query parameters (such as avatars, images, profile links, and podcast media) being corrupted in content sent to the Fediverse.
