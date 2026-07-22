@@ -11,6 +11,8 @@ use Activitypub\Emoji;
 use Activitypub\Sanitize;
 
 use function Activitypub\generate_post_summary;
+use function Activitypub\is_same_actor;
+use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 use function Activitypub\process_remote_media;
 
@@ -71,10 +73,25 @@ class Remote_Posts {
 		}
 
 		// An actor may only create posts attributed to itself; only the actor is signature-bound, not attributedTo.
-		if ( object_to_uri( $activity['actor'] ?? '' ) !== object_to_uri( $activity_object['attributedTo'] ?? '' ) ) {
+		if ( ! is_same_actor( $activity['actor'] ?? '', $activity_object['attributedTo'] ?? '' ) ) {
 			return new \WP_Error(
 				'activitypub_create_unauthorized',
 				\__( 'The Create actor does not match the object attributedTo.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		/*
+		 * A post is cached under its own id (guid), so that id must live on the same host
+		 * as its author. Otherwise a signed Create could cache a post under a different
+		 * host's object id, mis-recording its origin and taking over that id, so the
+		 * genuine post can no longer overwrite the cached copy (the update owner-check
+		 * would then reject the real author).
+		 */
+		if ( ! is_same_host( $activity_object['id'] ?? '', $activity['actor'] ?? '' ) ) {
+			return new \WP_Error(
+				'activitypub_create_host_mismatch',
+				\__( 'The object id must be on the same host as the actor.', 'activitypub' ),
 				array( 'status' => 403 )
 			);
 		}

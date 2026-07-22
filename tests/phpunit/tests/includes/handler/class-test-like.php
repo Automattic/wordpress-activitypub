@@ -99,7 +99,7 @@ class Test_Like extends \WP_UnitTestCase {
 	 */
 	public function create_test_object() {
 		return array(
-			'actor'  => $this->user_url,
+			'actor'  => 'https://example.com/users/test',
 			'type'   => 'Like',
 			'id'     => 'https://example.com/id/' . microtime( true ),
 			'to'     => array( $this->user_url ),
@@ -202,7 +202,7 @@ class Test_Like extends \WP_UnitTestCase {
 			'@context' => 'https://www.w3.org/ns/activitystreams',
 			'id'       => 'https://pixelfed.social/users/pfefferle#likes/30434186',
 			'type'     => 'Like',
-			'actor'    => $this->user_url,
+			'actor'    => 'https://pixelfed.social/users/pfefferle',
 			'object'   => $this->post_permalink . '/', // Add trailing slash.
 		);
 

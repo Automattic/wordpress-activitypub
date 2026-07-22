@@ -14,6 +14,7 @@ use Activitypub\Webfinger;
 use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\is_ap_post;
 use function Activitypub\is_post_disabled;
+use function Activitypub\is_same_host;
 use function Activitypub\object_id_to_comment;
 use function Activitypub\object_to_uri;
 use function Activitypub\url_to_commentid;
@@ -37,6 +38,17 @@ class Interactions {
 	 * @return int|false|\WP_Error The comment ID or false or WP_Error on failure.
 	 */
 	public static function add_comment( $activity, $user_id = null ) {
+		/*
+		 * A remote comment is stored under its object id (source_id); that id must be on
+		 * the signature-verified actor's host. Otherwise a remote server could file a
+		 * comment whose recorded id points at a different host, mis-recording its
+		 * provenance and taking over that id (the update owner-check would then reject the
+		 * genuine author). Local outbox replies ($user_id set) are trusted.
+		 */
+		if ( null === $user_id && ! is_same_host( $activity['actor'] ?? '', $activity['object'] ?? '' ) ) {
+			return false;
+		}
+
 		$comment_data = self::activity_to_comment( $activity, $user_id );
 
 		if ( ! $comment_data ) {
@@ -163,6 +175,15 @@ class Interactions {
 	 * @return array|string|int|\WP_Error|false Comment data or `false` on failure.
 	 */
 	public static function add_reaction( $activity ) {
+		/*
+		 * The reaction is stored under its own id (source_id); that id must be on the
+		 * signature-verified actor's host, so a remote server cannot file a reaction
+		 * whose recorded id points at a different host and take over that id.
+		 */
+		if ( ! is_same_host( $activity['actor'] ?? '', $activity['id'] ?? '' ) ) {
+			return false;
+		}
+
 		$url               = object_to_uri( $activity['object'] );
 		$comment_post_id   = \url_to_postid( $url );
 		$parent_comment_id = url_to_commentid( $url );

@@ -1106,4 +1106,38 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			'QuoteRequest should be detected as public when instrument.to contains public identifier'
 		);
 	}
+
+	/**
+	 * The canonical id-vs-url guard used before every remote-object cache write.
+	 *
+	 * @dataProvider id_matches_url_provider
+	 * @covers \Activitypub\id_matches_url
+	 *
+	 * @param array|string $item     The fetched object or its id.
+	 * @param string       $url      The URL it was served from.
+	 * @param bool         $expected Whether the id equals the URL.
+	 */
+	public function test_id_matches_url( $item, $url, $expected ) {
+		$this->assertSame( $expected, \Activitypub\id_matches_url( $item, $url ) );
+	}
+
+	/**
+	 * Data provider for the id-vs-url guard.
+	 *
+	 * @return array[]
+	 */
+	public function id_matches_url_provider() {
+		return array(
+			'exact match'            => array( 'https://good.example.com/users/alice', 'https://good.example.com/users/alice', true ),
+			'fragment ignored'       => array( 'https://good.example.com/users/alice#main-key', 'https://good.example.com/users/alice', true ),
+			'trailing slash ignored' => array( 'https://good.example.com/users/alice/', 'https://good.example.com/users/alice', true ),
+			'object array id'        => array( array( 'id' => 'https://good.example.com/users/alice', 'type' => 'Person' ), 'https://good.example.com/users/alice', true ), // phpcs:ignore WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
+			'no id, matching url'    => array( array( 'url' => 'https://good.example.com/users/alice', 'type' => 'Person' ), 'https://good.example.com/users/alice', false ), // phpcs:ignore WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
+			'same host, diff path'   => array( 'https://good.example.com/@alice', 'https://good.example.com/users/alice', false ),
+			'cross host'             => array( 'https://good.example.com/users/alice', 'https://other.example.com/mismatched', false ),
+			'scheme mismatch'        => array( 'http://good.example.com/users/alice', 'https://good.example.com/users/alice', false ),
+			'empty id'               => array( '', 'https://good.example.com/x', false ),
+			'empty source'           => array( 'https://good.example.com/users/alice', '', false ),
+		);
+	}
 }

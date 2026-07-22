@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Rest;
 
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Rest\Proxy_Controller;
 
 /**
@@ -168,6 +169,66 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 		$data = $response->get_data();
 		$this->assertEquals( 'Person', $data['type'] );
 		$this->assertEquals( 'https://example.com/users/test', $data['id'] );
+
+		// The canonical actor was cached under its own id.
+		$this->assertInstanceOf( 'WP_Post', Remote_Actors::get_by_uri( 'https://example.com/users/test' ) );
+
+		$this->unmock_oauth_auth();
+	}
+
+	/**
+	 * A proxied actor whose declared id is not the fetched URL must not be cached
+	 * under that id, even though the object is still returned to the caller.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_proxy_does_not_cache_cross_host_actor_id() {
+		$this->mock_oauth_auth();
+
+		$fetched_url   = 'https://example.com/proxy-me';
+		$mismatched_id = 'https://example.org/users/alice';
+
+		$documents = array(
+			// Served at $fetched_url, claims the canonical actor's id on another host.
+			$fetched_url   => array(
+				'@context'          => 'https://www.w3.org/ns/activitystreams',
+				'type'              => 'Person',
+				'id'                => $mismatched_id,
+				'inbox'             => 'https://example.com/inbox',
+				'preferredUsername' => 'alice',
+			),
+			// The other host's real server does not confirm the mismatched id.
+			$mismatched_id => array(
+				'@context' => 'https://www.w3.org/ns/activitystreams',
+				'type'     => 'Person',
+				'id'       => 'https://example.net/someone-else',
+				'inbox'    => 'https://example.net/someone-else/inbox',
+			),
+		);
+
+		$filter = function ( $pre, $args, $url ) use ( $documents ) {
+			if ( ! \array_key_exists( $url, $documents ) ) {
+				return $pre;
+			}
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode( $documents[ $url ] ),
+				'headers'  => array( 'content-type' => 'application/activity+json' ),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => $fetched_url ) );
+
+		$response = $this->server->dispatch( $request );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		// A document served under a mismatched cross-host id is rejected, not proxied...
+		$this->assertEquals( 502, $response->get_status() );
+		// ...and the mismatched id must NOT have been written to the actor cache.
+		$this->assertWPError( Remote_Actors::get_by_uri( $mismatched_id ), 'A cross-host proxied actor id must not be cached.' );
 
 		$this->unmock_oauth_auth();
 	}
