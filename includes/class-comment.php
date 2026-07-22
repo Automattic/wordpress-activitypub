@@ -324,7 +324,7 @@ class Comment {
 	/**
 	 * Examine a comment ID and look up an existing comment it represents.
 	 *
-	 * @since unreleased Added the `$args` parameter.
+	 * @since 9.1.0 Added the `$args` parameter.
 	 *
 	 * @param string $id   ActivityPub object ID (usually a URL) to check.
 	 * @param array  $args Optional. Additional WP_Comment_Query arguments. Pass `array( 'status' => 'any' )`

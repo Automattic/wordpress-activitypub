@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Fix a security issue where a remote actor's profile link could run scripts in the admin area.

@@ -95,7 +95,7 @@ class Server {
 	 * that authenticate explicitly) there is no route to scope against, so the
 	 * request is allowed through to the caller's own checks.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * @return bool True if the request may be OAuth-authenticated.
 	 */
@@ -125,7 +125,7 @@ class Server {
 	 * actions such as moderation. Cookie-authenticated admin-UI requests do not
 	 * establish an OAuth session and are unaffected.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * @return \WP_Error|null WP_Error when the request is OAuth-authenticated, null otherwise.
 	 */
