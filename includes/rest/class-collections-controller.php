@@ -139,7 +139,7 @@ class Collections_Controller extends Actors_Controller {
 		foreach ( $tags as $tag ) {
 			$response['items'][] = array(
 				'type' => 'Hashtag',
-				'href' => \esc_url( \get_tag_link( $tag ) ),
+				'href' => \esc_url_raw( \get_tag_link( $tag ) ),
 				'name' => esc_hashtag( $tag->name ),
 			);
 		}

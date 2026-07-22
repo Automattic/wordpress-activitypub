@@ -114,7 +114,7 @@ class Podlove_Podcast_Publisher extends Post {
 
 			$attachment = array(
 				'type'      => \esc_attr( \ucfirst( $file_type->type ) ),
-				'url'       => \esc_url( $file_url ),
+				'url'       => \esc_url_raw( $file_url ),
 				'mediaType' => \esc_attr( $file_type->mime_type ),
 				'name'      => \esc_attr( $episode->title() ?? '' ),
 			);
@@ -134,7 +134,7 @@ class Podlove_Podcast_Publisher extends Post {
 
 			if ( $icon ) {
 				foreach ( $attachments as $key => $attachment ) {
-					$attachments[ $key ]['icon'] = \esc_url( $icon );
+					$attachments[ $key ]['icon'] = \esc_url_raw( $icon );
 				}
 			}
 		}

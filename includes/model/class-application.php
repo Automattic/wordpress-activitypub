@@ -156,7 +156,7 @@ class Application extends Actor {
 		if ( \has_header_image() ) {
 			return array(
 				'type' => 'Image',
-				'url'  => \esc_url( \get_header_image() ),
+				'url'  => \esc_url_raw( \get_header_image() ),
 			);
 		}
 

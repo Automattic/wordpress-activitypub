@@ -264,7 +264,7 @@ class Post extends Base {
 				break;
 		}
 
-		return \esc_url( $permalink );
+		return \esc_url_raw( $permalink );
 	}
 
 	/**
@@ -319,7 +319,7 @@ class Post extends Base {
 
 		$image = array(
 			'type'      => 'Image',
-			'url'       => \esc_url( $thumbnail[0] ),
+			'url'       => \esc_url_raw( $thumbnail[0] ),
 			'mediaType' => \esc_attr( $mime_type ),
 		);
 
@@ -375,7 +375,7 @@ class Post extends Base {
 
 		$image = array(
 			'type'      => 'Image',
-			'url'       => \esc_url( $thumbnail[0] ),
+			'url'       => \esc_url_raw( $thumbnail[0] ),
 			'mediaType' => \esc_attr( $mime_type ),
 		);
 
@@ -552,7 +552,7 @@ class Post extends Base {
 
 				$tags[] = array(
 					'type' => 'Hashtag',
-					'href' => \esc_url( \get_tag_link( $post_tag->term_id ) ),
+					'href' => \esc_url_raw( \get_tag_link( $post_tag->term_id ) ),
 					'name' => esc_hashtag( $post_tag->name ),
 				);
 			}
