@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Ignore an incoming follow request whose actor resolves to a different account than the one that sent it.

@@ -108,7 +108,7 @@ class Application extends Actor {
 	 * Constructor.
 	 */
 	public function __construct() {
-		\_deprecated_class( __CLASS__, 'unreleased', 'Activitypub\Application' );
+		\_deprecated_class( __CLASS__, '9.1.0', 'Activitypub\Application' );
 	}
 
 	/**

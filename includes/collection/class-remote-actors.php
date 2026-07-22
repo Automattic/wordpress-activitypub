@@ -243,7 +243,7 @@ class Remote_Actors {
 	 * the same scheme and host shape, so matching it for a short term would return nearly every
 	 * cached actor.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * @param string $query  The search term.
 	 * @param int    $number Optional. Maximum number of actors to return. Default 10.

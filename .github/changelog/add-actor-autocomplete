@@ -1,4 +1,0 @@
-Significance: minor
-Type: added
-
-Add an actor autocomplete endpoint so Fediverse apps can offer typeahead search when mentioning people.

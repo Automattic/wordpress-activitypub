@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 7.0
-Stable tag: 9.0.2
+Stable tag: 9.1.0
 Requires PHP: 7.4
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -116,6 +116,37 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 9.1.0 - 2026-07-22
+#### Security
+- Ensure apps you connect can only act within the access you granted them, and not make wider changes to your site.
+- Ensure remote profiles and content are served from the address they claim before storing them.
+- Fix a security issue where a remote actor's profile link could run scripts in the admin area.
+- Ignore an incoming follow request whose actor resolves to a different account than the one that sent it.
+
+#### Added
+- Add a filter that allows federating with servers on private or internal networks.
+- Add an actor autocomplete endpoint so Fediverse apps can offer typeahead search when mentioning people.
+- Federate the episode summary for Podlove Podcast Publisher episodes.
+
+#### Changed
+- Improve reliability of the Social Web admin screen loading.
+- Improve the internal handling of the Application actor used for server-to-server requests.
+
+#### Fixed
+- Ensure a follow can only be declined by the account you followed.
+- Fixed using the correct cache representation in Surge config
+- Fix follow requests from some fediverse services staying pending after they are accepted.
+- Fix likes from some accounts being recorded as multiple duplicate comments.
+- Fix posts being removed from the Fediverse when edited while scheduled for a future publish date.
+- Fix repeated deliveries of a like or repost creating new comments after the original was marked as spam or moved to the trash.
+- Fix Starter Kit imports failing on Fediverse servers that require signed requests.
+- Fix the scheduled refresh of remote profiles so it actually re-fetches from the remote server. Previously, stale avatars and bios for commenters never updated until they sent a new activity to your site.
+- Fix URLs with multiple query parameters (such as avatars, images, profile links, and podcast media) being corrupted in content sent to the Fediverse.
+- Prevent caching non-actor objects (such as notes) as remote profiles.
+- Refresh cached remote profiles in place during scheduled updates to avoid creating duplicate copies.
+- Show the Fediverse Preview for scheduled posts instead of the regular post preview.
+- Stop storing responses from remote servers in the database when they were requested uncached.
 
 ### 9.0.2 - 2026-06-29
 #### Fixed

@@ -220,7 +220,7 @@ class Migration {
 				\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_tombstone_migrate' );
 			}
 		}
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+		if ( \version_compare( $version_from_db, '9.1.0', '<' ) ) {
 			self::migrate_application_keypair_option();
 			self::delete_application_outbox_items();
 		}
@@ -1344,7 +1344,7 @@ class Migration {
 	 * Older separate key options (activitypub_application_user_public_key /
 	 * activitypub_application_user_private_key) are migrated lazily on first read.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 */
 	public static function migrate_application_keypair_option() {
 		self::update_options_key( 'activitypub_keypair_for_-1', Application::KEYPAIR_OPTION_KEY );
@@ -1371,7 +1371,7 @@ class Migration {
 	 * ID -1. It no longer dispatches activities, so any pending items are
 	 * undeliverable and are removed.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 */
 	public static function delete_application_outbox_items() {
 		$items = \get_posts(
