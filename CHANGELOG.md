@@ -1938,6 +1938,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[9.0.2]: https://github.com/Automattic/wordpress-activitypub/compare/9.0.1...9.0.2
 [9.0.1]: https://github.com/Automattic/wordpress-activitypub/compare/9.0.0...9.0.1
 [9.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/8.3.0...9.0.0
 [8.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/8.2.1...8.3.0
