@@ -347,7 +347,7 @@ abstract class Base {
 		foreach ( $mentions as $mention => $url ) {
 			$tags[] = array(
 				'type' => 'Mention',
-				'href' => \esc_url( $url ),
+				'href' => \esc_url_raw( $url ),
 				'name' => \esc_html( $mention ),
 			);
 		}
@@ -528,7 +528,7 @@ abstract class Base {
 				if ( $thumbnail ) {
 					$image = array(
 						'type'      => 'Image',
-						'url'       => \esc_url( $thumbnail[0] ),
+						'url'       => \esc_url_raw( $thumbnail[0] ),
 						'mediaType' => \esc_attr( $mime_type ),
 					);
 
@@ -557,7 +557,7 @@ abstract class Base {
 				$attachment = array(
 					'type'      => \ucfirst( $media_type ),
 					'mediaType' => \esc_attr( $mime_type ),
-					'url'       => \esc_url( \wp_get_attachment_url( $id ) ),
+					'url'       => \esc_url_raw( \wp_get_attachment_url( $id ) ),
 					'name'      => \esc_attr( \get_the_title( $id ) ),
 				);
 

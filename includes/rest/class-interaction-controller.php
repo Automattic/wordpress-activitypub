@@ -110,7 +110,7 @@ class Interaction_Controller extends \WP_REST_Controller {
 		}
 
 		if ( ! empty( $object['id'] ) ) {
-			$uri = \esc_url( $object['id'] );
+			$uri = \esc_url_raw( $object['id'] );
 		}
 
 		// Prepare URL parameter.
