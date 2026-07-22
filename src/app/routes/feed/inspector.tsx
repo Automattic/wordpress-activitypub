@@ -25,7 +25,7 @@ import { close } from '@wordpress/icons';
  * Internal dependencies
  */
 import Avatar from '../../components/avatar';
-import { getRelativeTime } from '../../utils';
+import { getRelativeTime, safeUrl } from '../../utils';
 import { useTagFilter } from '../../hooks/use-tag-filter';
 import { useSearch, useNavigate } from '../../router';
 import type { ActorInfo, Comment, FeedPost } from '../../types';
@@ -104,7 +104,7 @@ export default function FeedInspector(): ReactNode {
 	const actor: ActorInfo = post.actor_info;
 	const author: string = decodeEntities( actor?.name || __( 'Unknown author', 'activitypub' ) );
 	const webfinger: string = actor?.webfinger || '';
-	const profileUrl: string = actor?.url || '';
+	const profileUrl: string = safeUrl( actor?.url || '', '' );
 	const postLink: string = post.link || '';
 	const relativeTime: string = post.date ? getRelativeTime( post.date ) : '';
 
