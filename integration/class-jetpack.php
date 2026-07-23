@@ -41,6 +41,10 @@ class Jetpack {
 		}
 
 		\add_action( 'load-post-new.php', array( self::class, 'adapt_post_share' ) );
+
+		// A Jetpack episode is an ordinary post, so its audio is enriched onto the already-assembled
+		// attachments here, rather than through a dedicated transformer subclass like Podlove/SSP.
+		\add_filter( 'activitypub_attachments', array( self::class, 'add_podcast_attachment' ), 10, 2 );
 	}
 
 	/**
@@ -171,5 +175,59 @@ class Jetpack {
 			\wp_safe_redirect( \add_query_arg( $args, \admin_url( 'post-new.php' ) ) );
 			exit;
 		}
+	}
+
+	/**
+	 * Federate a Jetpack podcast episode's audio as an ActivityPub attachment.
+	 *
+	 * A Jetpack episode stores its audio in the `jetpack/podcast-episode` block, read back through
+	 * the podcast package's own {@see \Automattic\Jetpack\Podcast\Feed\Episode_Block_Tags}. Reading it
+	 * there (rather than relying on WordPress core's asynchronous `enclosure` meta) makes the audio,
+	 * its cover art, and its mime type available on every transform. When the core-enclosure path has
+	 * already added the same audio, the existing attachment is enriched with the episode cover art
+	 * instead of being duplicated.
+	 *
+	 * @param array    $attachments The ActivityPub attachments.
+	 * @param \WP_Post $post        The post being transformed.
+	 *
+	 * @return array The attachments, with the podcast episode audio added or enriched.
+	 */
+	public static function add_podcast_attachment( $attachments, $post ) {
+		if ( ! \class_exists( '\Automattic\Jetpack\Podcast\Feed\Episode_Block_Tags' ) ) {
+			return $attachments;
+		}
+
+		$attrs = \Automattic\Jetpack\Podcast\Feed\Episode_Block_Tags::get_block_attrs( $post );
+		if ( empty( $attrs['mediaUrl'] ) ) {
+			return $attachments;
+		}
+
+		$url  = \esc_url_raw( $attrs['mediaUrl'] );
+		$icon = empty( $attrs['coverArt']['url'] ) ? '' : \esc_url_raw( $attrs['coverArt']['url'] );
+
+		// The core-enclosure path may already have added this audio: enrich it with the cover art rather than duplicate it.
+		foreach ( $attachments as $index => $attachment ) {
+			if ( isset( $attachment['url'] ) && $attachment['url'] === $url ) {
+				if ( $icon && empty( $attachment['icon'] ) ) {
+					$attachments[ $index ]['icon'] = $icon;
+				}
+				return $attachments;
+			}
+		}
+
+		$podcast = array(
+			'type'      => \ucfirst( $attrs['mediaType'] ?? 'Audio' ),
+			'url'       => $url,
+			'mediaType' => \esc_attr( $attrs['mediaMimeType'] ?? '' ),
+			'name'      => \esc_attr( \get_the_title( $post ) ),
+		);
+
+		if ( $icon ) {
+			$podcast['icon'] = $icon;
+		}
+
+		\array_unshift( $attachments, $podcast );
+
+		return $attachments;
 	}
 }

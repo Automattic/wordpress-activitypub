@@ -64,6 +64,18 @@ class Test_Jetpack extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Load the mock Episode_Block_Tags and set the block attributes it returns.
+	 *
+	 * @param array $attrs The block attributes the mock should return.
+	 */
+	private function load_mock_episode_block_tags( $attrs = array() ) {
+		if ( ! class_exists( '\Automattic\Jetpack\Podcast\Feed\Episode_Block_Tags' ) ) {
+			require_once AP_TESTS_DIR . '/data/mocks/class-episode-block-tags.php';
+		}
+		\Automattic\Jetpack\Podcast\Feed\Episode_Block_Tags::$attrs = $attrs;
+	}
+
+	/**
 	 * Clean up after tests.
 	 */
 	public function tear_down() {
@@ -75,6 +87,11 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		\remove_filter( 'jetpack_api_include_comment_types_count', array( 'Activitypub\Integration\Jetpack', 'add_comment_types' ) );
 		\remove_filter( 'activitypub_following_row_actions', array( 'Activitypub\Integration\Jetpack', 'add_reader_link' ), 20 );
 		\remove_filter( 'pre_option_activitypub_following_ui', array( 'Activitypub\Integration\Jetpack', 'pre_option_activitypub_following_ui' ) );
+
+		// Clear the podcast mock so it cannot leak an attachment into other tests through the filter.
+		if ( class_exists( '\Automattic\Jetpack\Podcast\Feed\Episode_Block_Tags' ) ) {
+			\Automattic\Jetpack\Podcast\Feed\Episode_Block_Tags::$attrs = array();
+		}
 
 		parent::tear_down();
 	}
@@ -370,5 +387,69 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		if ( null !== $metadata_filter ) {
 			\remove_filter( 'get_post_metadata', $metadata_filter );
 		}
+	}
+
+	/**
+	 * A Jetpack podcast episode adds its audio and cover art as an attachment.
+	 *
+	 * @covers ::add_podcast_attachment
+	 */
+	public function test_add_podcast_attachment_adds_audio() {
+		$this->load_mock_episode_block_tags(
+			array(
+				'mediaUrl'      => 'https://example.com/episode.mp3',
+				'mediaType'     => 'audio',
+				'mediaMimeType' => 'audio/mpeg',
+				'coverArt'      => array( 'url' => 'https://example.com/cover.jpg' ),
+			)
+		);
+
+		$attachments = Jetpack::add_podcast_attachment( array(), \get_post( self::$post_id ) );
+
+		$this->assertCount( 1, $attachments );
+		$this->assertSame( 'https://example.com/episode.mp3', $attachments[0]['url'] );
+		$this->assertSame( 'Audio', $attachments[0]['type'] );
+		$this->assertSame( 'audio/mpeg', $attachments[0]['mediaType'] );
+		$this->assertSame( 'Test Post', $attachments[0]['name'] );
+		$this->assertSame( 'https://example.com/cover.jpg', $attachments[0]['icon'] );
+	}
+
+	/**
+	 * When the audio is already attached (via the core enclosure), only the cover art is added.
+	 *
+	 * @covers ::add_podcast_attachment
+	 */
+	public function test_add_podcast_attachment_enriches_existing() {
+		$this->load_mock_episode_block_tags(
+			array(
+				'mediaUrl' => 'https://example.com/episode.mp3',
+				'coverArt' => array( 'url' => 'https://example.com/cover.jpg' ),
+			)
+		);
+
+		$existing = array(
+			array(
+				'type' => 'Audio',
+				'url'  => 'https://example.com/episode.mp3',
+			),
+		);
+
+		$attachments = Jetpack::add_podcast_attachment( $existing, \get_post( self::$post_id ) );
+
+		$this->assertCount( 1, $attachments, 'The audio must not be duplicated.' );
+		$this->assertSame( 'https://example.com/cover.jpg', $attachments[0]['icon'] );
+	}
+
+	/**
+	 * A post without a podcast episode is left unchanged.
+	 *
+	 * @covers ::add_podcast_attachment
+	 */
+	public function test_add_podcast_attachment_without_media_is_noop() {
+		$this->load_mock_episode_block_tags( array() );
+
+		$attachments = Jetpack::add_podcast_attachment( array( 'existing' ), \get_post( self::$post_id ) );
+
+		$this->assertSame( array( 'existing' ), $attachments );
 	}
 }
