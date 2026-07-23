@@ -219,7 +219,7 @@ trait Collection {
 	 *
 	 * @return bool True to advertise seekItem, false to omit it.
 	 */
-	protected function can_advertise_seek( $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+	protected function can_advertise_seek( $request ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found, VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		return true;
 	}
 
