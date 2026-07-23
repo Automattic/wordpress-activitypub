@@ -116,6 +116,16 @@ class Seek_Controller extends \WP_REST_Controller {
 			return $not_found;
 		}
 
+		/*
+		 * Only dispatch to routes that actually implement seek (they declare an `item` argument, the
+		 * same opt-in prepare_collection_response() checks). Without this, the signature-deferred
+		 * dispatch below could be pointed at any ActivityPub GET route rather than a real collection.
+		 */
+		$handler = \rest_get_server()->match_request_to_handler( $collection_request );
+		if ( \is_wp_error( $handler ) || ! isset( $handler[1]['args']['item'] ) ) {
+			return $not_found;
+		}
+
 		$collection_request->set_param( 'item', $request->get_param( 'item' ) );
 		// Carry the original headers over, so a Bearer token reaches the collection's own permission check.
 		$collection_request->set_headers( $request->get_headers() );

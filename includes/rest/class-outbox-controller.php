@@ -372,6 +372,17 @@ class Outbox_Controller extends \WP_REST_Controller {
 	}
 
 	/**
+	 * The outbox seek is owner-only, so only advertise seekItem to the authenticated owner.
+	 *
+	 * @param \WP_REST_Request $request The collection request.
+	 *
+	 * @return bool
+	 */
+	protected function can_advertise_seek( $request ) {
+		return \is_user_logged_in() && true === $this->verify_owner( $request );
+	}
+
+	/**
 	 * Prepares the item for the REST response.
 	 *
 	 * @param mixed            $item    WordPress representation of the item.

@@ -76,7 +76,7 @@ trait Collection {
 		 * against the same ordering the client is traversing.
 		 */
 		$attributes = $request->get_attributes();
-		if ( null === $page && isset( $attributes['args']['item'] ) ) {
+		if ( null === $page && isset( $attributes['args']['item'] ) && $this->can_advertise_seek( $request ) ) {
 			// A Collection request never carries a page, so the query params already describe the base collection.
 			$collection_id = \add_query_arg( $query_params, $response['id'] );
 
@@ -209,6 +209,21 @@ trait Collection {
 	}
 
 	/**
+	 * Whether the seekItem endpoint should be advertised to this request.
+	 *
+	 * Defaults to true for any route that opts in via an `item` argument. Collections whose seek is
+	 * restricted to a specific audience (e.g. the owner-only outbox) override this so the capability
+	 * is not advertised to clients that would only ever receive a 401 or 404 from it.
+	 *
+	 * @param \WP_REST_Request $request The collection request.
+	 *
+	 * @return bool True to advertise seekItem, false to omit it.
+	 */
+	protected function can_advertise_seek( $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		return true;
+	}
+
+	/**
 	 * Run a callback with an additional WHERE clause appended to WP_Query's SQL.
 	 *
 	 * Used by get_item_index() implementations to count the items that sort before the sought
@@ -236,6 +251,11 @@ trait Collection {
 	 *
 	 * Mirrors an `orderby` of post_date then ID, both descending, so the count of matching posts is
 	 * the cursor's zero-based index. Shared by the date-ordered collections (outbox, inbox).
+	 *
+	 * This assumes the collection's default newest-first date ordering. A site that reorders the
+	 * outbox/inbox through the `activitypub_rest_outbox_query` / `activitypub_rest_inbox_query`
+	 * filter makes this index disagree with the paginated order, so seek only resolves correctly
+	 * under the default ordering.
 	 *
 	 * @param string $post_date The cursor post's post_date.
 	 * @param int    $id        The cursor post's ID.

@@ -29,6 +29,22 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 	public static $follower_ids = array();
 
 	/**
+	 * Assert that a Location header points at a specific collection page.
+	 *
+	 * Parses the `page` query argument so the check cannot be satisfied by the `per_page`
+	 * substring — `per_page=10` contains the literal text `page=1`.
+	 *
+	 * @param int    $expected The expected page number.
+	 * @param string $location The Location header value.
+	 */
+	private function assert_location_page( $expected, $location ) {
+		$params = array();
+		\wp_parse_str( (string) \wp_parse_url( $location, PHP_URL_QUERY ), $params );
+		$this->assertArrayHasKey( 'page', $params, 'Location must carry a page argument.' );
+		$this->assertSame( (string) $expected, (string) $params['page'] );
+	}
+
+	/**
 	 * Set up before class.
 	 */
 	public static function set_up_before_class() {
@@ -92,7 +108,7 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 		$this->assertEquals( 307, $response->get_status() );
 
 		$location = $response->get_headers()['Location'];
-		$this->assertStringContainsString( 'page=2', $location );
+		$this->assert_location_page( 2, $location );
 		$this->assertStringContainsString( 'per_page=10', $location );
 		$this->assertStringNotContainsString( 'item=', $location );
 	}
@@ -109,7 +125,7 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 
 		$response = rest_get_server()->dispatch( $request );
 		$this->assertEquals( 307, $response->get_status() );
-		$this->assertStringContainsString( 'page=1', $response->get_headers()['Location'] );
+		$this->assert_location_page( 1, $response->get_headers()['Location'] );
 
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
 		$request->set_param( 'item', 'https://example.org/actor/1' );
@@ -117,7 +133,7 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 
 		$response = rest_get_server()->dispatch( $request );
 		$this->assertEquals( 307, $response->get_status() );
-		$this->assertStringContainsString( 'page=3', $response->get_headers()['Location'] );
+		$this->assert_location_page( 3, $response->get_headers()['Location'] );
 	}
 
 	/**
@@ -133,7 +149,7 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 
 		$response = rest_get_server()->dispatch( $request );
 		$this->assertEquals( 307, $response->get_status() );
-		$this->assertStringContainsString( 'page=1', $response->get_headers()['Location'] );
+		$this->assert_location_page( 1, $response->get_headers()['Location'] );
 	}
 
 	/**
@@ -215,7 +231,8 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 		$response = rest_get_server()->dispatch( $request );
 
 		$this->assertEquals( 307, $response->get_status() );
-		$this->assertStringContainsString( 'page=1', $response->get_headers()['Location'] );
+		// No per_page is set, so the collection default applies and actor/13 (index 12) is on page one.
+		$this->assert_location_page( 1, $response->get_headers()['Location'] );
 	}
 
 	/**
@@ -281,10 +298,10 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 	/**
 	 * Seeking into a forced-signature route does not bypass its mandatory signature verification.
 	 *
-	 * FEP-8fcf's /followers/sync forces signatures even when Authorized Fetch is off. A seek defers
-	 * signature verification for the internal dispatch, but must leave forced routes verifying, so an
-	 * unsigned seek into /followers/sync still fails verification. That failure is a property of the
-	 * request, not any follower, so it surfaces as 401 and discloses no membership.
+	 * FEP-8fcf's /followers/sync is not a seekable collection: it does not declare an `item`
+	 * argument, so the seek endpoint refuses to dispatch to it and returns the uniform 404. The
+	 * forced-signature route is therefore never reached through a seek at all — a stronger guarantee
+	 * than relying on its own 401 — and no membership is disclosed.
 	 *
 	 * @covers ::get_item
 	 */
@@ -297,14 +314,15 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 
 		$response = rest_get_server()->dispatch( $request );
 
-		$this->assertEquals( 401, $response->get_status() );
+		$this->assertEquals( 404, $response->get_status() );
 	}
 
 	/**
 	 * A global signature-defer filter cannot reopen a forced-signature route through a seek.
 	 *
-	 * The seek registers its own defer decision at the latest priority, so a broad defer filter (as a
-	 * local-dev setup might install) still leaves /followers/sync verifying and the unsigned seek fails.
+	 * Even with a broad defer filter installed (as a local-dev setup might), /followers/sync is not
+	 * a seekable collection, so the seek endpoint rejects it with 404 before any dispatch — the
+	 * forced route is never reached and the defer filter never runs against it.
 	 *
 	 * @covers ::get_item
 	 */
@@ -321,7 +339,29 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true', 20 );
 
-		$this->assertEquals( 401, $response->get_status() );
+		$this->assertEquals( 404, $response->get_status() );
+	}
+
+	/**
+	 * A HEAD seek must not bypass Authorized-Fetch signature verification.
+	 *
+	 * The HEAD short-circuit in verify_signature() lets caches probe public endpoints unsigned, but a
+	 * seek carries an `item` whose 307/Location leaks a per-actor membership and position. Under
+	 * Authorized Fetch an anonymous HEAD seek must be challenged (401), never answered with a redirect.
+	 *
+	 * @covers \Activitypub\Rest\Followers_Controller::verify_signature
+	 */
+	public function test_head_seek_does_not_bypass_authorized_fetch() {
+		\update_option( 'activitypub_authorized_fetch', '1' );
+
+		$request = new \WP_REST_Request( 'HEAD', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
+		$request->set_param( 'item', 'https://example.org/actor/13' );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		\delete_option( 'activitypub_authorized_fetch' );
+
+		$this->assertEquals( 401, $response->get_status(), 'A HEAD seek under Authorized Fetch must be challenged, not redirected.' );
 	}
 
 	/**
