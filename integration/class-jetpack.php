@@ -202,7 +202,12 @@ class Jetpack {
 			return $attachments;
 		}
 
-		$url  = \esc_url_raw( $attrs['mediaUrl'] );
+		$url = \esc_url_raw( $attrs['mediaUrl'] );
+		if ( empty( $url ) ) {
+			// Sanitizing dropped the URL (e.g. an unsafe scheme); an attachment without a url is invalid.
+			return $attachments;
+		}
+
 		$icon = empty( $attrs['coverArt']['url'] ) ? '' : \esc_url_raw( $attrs['coverArt']['url'] );
 
 		// The core-enclosure path may already have added this audio: enrich it with the cover art rather than duplicate it.

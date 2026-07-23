@@ -87,6 +87,7 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		\remove_filter( 'jetpack_api_include_comment_types_count', array( 'Activitypub\Integration\Jetpack', 'add_comment_types' ) );
 		\remove_filter( 'activitypub_following_row_actions', array( 'Activitypub\Integration\Jetpack', 'add_reader_link' ), 20 );
 		\remove_filter( 'pre_option_activitypub_following_ui', array( 'Activitypub\Integration\Jetpack', 'pre_option_activitypub_following_ui' ) );
+		\remove_filter( 'activitypub_attachments', array( 'Activitypub\Integration\Jetpack', 'add_podcast_attachment' ), 10 );
 
 		// Clear the podcast mock so it cannot leak an attachment into other tests through the filter.
 		if ( class_exists( '\Automattic\Jetpack\Podcast\Feed\Episode_Block_Tags' ) ) {
@@ -451,5 +452,18 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		$attachments = Jetpack::add_podcast_attachment( array( 'existing' ), \get_post( self::$post_id ) );
 
 		$this->assertSame( array( 'existing' ), $attachments );
+	}
+
+	/**
+	 * A media URL that sanitizes to empty (e.g. an unsafe scheme) adds no attachment.
+	 *
+	 * @covers ::add_podcast_attachment
+	 */
+	public function test_add_podcast_attachment_rejects_unsafe_url() {
+		$this->load_mock_episode_block_tags( array( 'mediaUrl' => 'javascript:alert(1)' ) );
+
+		$attachments = Jetpack::add_podcast_attachment( array(), \get_post( self::$post_id ) );
+
+		$this->assertSame( array(), $attachments );
 	}
 }
