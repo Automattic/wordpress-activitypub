@@ -91,6 +91,42 @@ class Seek_Controller extends \WP_REST_Controller {
 	}
 
 	/**
+	 * Whether a route implements the seek extension.
+	 *
+	 * A route opts in by declaring an `item` argument on its readable handler, the same signal
+	 * prepare_collection_response() uses to advertise `seekItem`. Route patterns are matched the way
+	 * WP_REST_Server::match_request_to_handler() matches them, which cannot be called directly
+	 * because it is protected. The seek route itself is excluded: it declares an `item` argument of
+	 * its own, and dispatching a seek to a seek would only burn a request.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $route The route of the request about to be dispatched.
+	 *
+	 * @return bool True if the route declares a seek `item` argument.
+	 */
+	private function is_seekable_route( $route ) {
+		if ( '/' . $this->namespace . '/' . $this->rest_base === $route ) {
+			return false;
+		}
+
+		foreach ( \rest_get_server()->get_routes( $this->namespace ) as $pattern => $handlers ) {
+			if ( ! \preg_match( '@^' . $pattern . '$@i', $route ) ) {
+				continue;
+			}
+
+			foreach ( $handlers as $handler ) {
+				// Only a readable handler can serve a seek; the same route may also register writable ones.
+				if ( ! empty( $handler['methods']['GET'] ) && isset( $handler['args']['item'] ) ) {
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * Seek an item in a collection.
 	 *
 	 * Dispatches an internal request to the collection endpoint with the `item` parameter and
@@ -121,8 +157,7 @@ class Seek_Controller extends \WP_REST_Controller {
 		 * same opt-in prepare_collection_response() checks). Without this, the signature-deferred
 		 * dispatch below could be pointed at any ActivityPub GET route rather than a real collection.
 		 */
-		$handler = \rest_get_server()->match_request_to_handler( $collection_request );
-		if ( \is_wp_error( $handler ) || ! isset( $handler[1]['args']['item'] ) ) {
+		if ( ! $this->is_seekable_route( $collection_request->get_route() ) ) {
 			return $not_found;
 		}
 
