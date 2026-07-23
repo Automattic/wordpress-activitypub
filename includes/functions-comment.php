@@ -23,7 +23,7 @@ function get_comment_id( $id ) {
 /**
  * Get the comment from an ActivityPub Object ID.
  *
- * @since unreleased Added the `$args` parameter.
+ * @since 9.1.0 Added the `$args` parameter.
  *
  * @param string $id   ActivityPub object ID (usually a URL) to check.
  * @param array  $args Optional. Additional WP_Comment_Query arguments.

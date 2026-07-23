@@ -399,8 +399,8 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 				'to'     => array( $user_actor->get_id() ),
 			);
 
-			// `Accept` needs an `object` with `actor` and `object`.
-			if ( 'Accept' === $type ) {
+			// `Accept` and `Reject` need an `object` with `actor` and `object`.
+			if ( 'Accept' === $type || 'Reject' === $type ) {
 				$json['object']['actor']  = 'https://remote.example/@test';
 				$json['object']['object'] = 'https://remote.example/post/test';
 			}

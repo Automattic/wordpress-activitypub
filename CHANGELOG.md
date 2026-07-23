@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.1.0] - 2026-07-22
+### Security
+- Ensure apps you connect can only act within the access you granted them, and not make wider changes to your site. [#3569]
+- Ensure remote profiles and content are served from the address they claim before storing them. [#3570]
+- Fix a security issue where a remote actor's profile link could run scripts in the admin area. [#3568]
+- Ignore an incoming follow request whose actor resolves to a different account than the one that sent it. [#3570]
+
+### Added
+- Add a filter that allows federating with servers on private or internal networks. [#3531]
+- Add an actor autocomplete endpoint so Fediverse apps can offer typeahead search when mentioning people. [#3555]
+- Federate the episode summary for Podlove Podcast Publisher episodes. [#3457]
+
+### Changed
+- Improve reliability of the Social Web admin screen loading. [#3436]
+- Improve the internal handling of the Application actor used for server-to-server requests.
+
+### Fixed
+- Ensure a follow can only be declined by the account you followed. [#3561]
+- Fixed using the correct cache representation in Surge config [#3558]
+- Fix follow requests from some fediverse services staying pending after they are accepted. [#3526]
+- Fix likes from some accounts being recorded as multiple duplicate comments. [#3468]
+- Fix posts being removed from the Fediverse when edited while scheduled for a future publish date. [#3443]
+- Fix repeated deliveries of a like or repost creating new comments after the original was marked as spam or moved to the trash. [#3532]
+- Fix Starter Kit imports failing on Fediverse servers that require signed requests. [#3531]
+- Fix the scheduled refresh of remote profiles so it actually re-fetches from the remote server. Previously, stale avatars and bios for commenters never updated until they sent a new activity to your site. [#3450]
+- Fix URLs with multiple query parameters (such as avatars, images, profile links, and podcast media) being corrupted in content sent to the Fediverse. [#3567]
+- Prevent caching non-actor objects (such as notes) as remote profiles. [#3452]
+- Refresh cached remote profiles in place during scheduled updates to avoid creating duplicate copies. [#3451]
+- Show the Fediverse Preview for scheduled posts instead of the regular post preview. [#3540]
+- Stop storing responses from remote servers in the database when they were requested uncached. [#3531]
+
 ## [9.0.2] - 2026-06-29
 ### Fixed
 - Improve handling of content received from other servers. [#3475]
@@ -1938,6 +1969,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[9.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/9.0.2...9.1.0
+[9.0.2]: https://github.com/Automattic/wordpress-activitypub/compare/9.0.1...9.0.2
 [9.0.1]: https://github.com/Automattic/wordpress-activitypub/compare/9.0.0...9.0.1
 [9.0.0]: https://github.com/Automattic/wordpress-activitypub/compare/8.3.0...9.0.0
 [8.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/8.2.1...8.3.0

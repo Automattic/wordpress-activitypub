@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fixed using the correct cache representation in Surge config

@@ -108,7 +108,7 @@ function site_supports_blocks() {
  * Tries the site icon first, then the custom logo, and falls back to the
  * bundled WordPress logo.
  *
- * @since unreleased
+ * @since 9.1.0
  *
  * @return array The icon array with 'type' and 'url'.
  */
@@ -137,7 +137,7 @@ function site_icon() {
 
 	return array(
 		'type' => 'Image',
-		'url'  => \esc_url( $icon_url ),
+		'url'  => \esc_url_raw( $icon_url ),
 	);
 }
 

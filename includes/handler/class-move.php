@@ -70,7 +70,9 @@ class Move {
 			\wp_cache_delete( $origin_object->ID, 'posts' );
 
 			$success = true;
-			$result  = Remote_Actors::upsert( $target_json );
+
+			// get_remote_object() already self-confirmed the target, so it is safe to cache.
+			$result = Remote_Actors::upsert( $target_json );
 		}
 
 		// If both the target and origin are followed, merge them.

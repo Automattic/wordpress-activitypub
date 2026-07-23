@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix likes from some accounts being recorded as multiple duplicate comments.

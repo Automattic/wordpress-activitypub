@@ -108,7 +108,7 @@ class Application extends Actor {
 	 * Constructor.
 	 */
 	public function __construct() {
-		\_deprecated_class( __CLASS__, 'unreleased', 'Activitypub\Application' );
+		\_deprecated_class( __CLASS__, '9.1.0', 'Activitypub\Application' );
 	}
 
 	/**
@@ -156,7 +156,7 @@ class Application extends Actor {
 		if ( \has_header_image() ) {
 			return array(
 				'type' => 'Image',
-				'url'  => \esc_url( \get_header_image() ),
+				'url'  => \esc_url_raw( \get_header_image() ),
 			);
 		}
 

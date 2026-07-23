@@ -221,6 +221,34 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that add() refuses a Create whose object id is on a different host than
+	 * the actor. The post is cached under its own id, so an unbound id would let a
+	 * signed Create cache a post under another host's object URL.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_rejects_cross_host_object_id() {
+		$canonical_object_id = 'https://canonical.example/objects/123';
+
+		$activity = array(
+			'actor'  => 'https://other.example/users/other',
+			'object' => array(
+				'id'           => $canonical_object_id,
+				'type'         => 'Note',
+				'name'         => 'Fake',
+				'content'      => '<p>fabricated</p>',
+				'attributedTo' => 'https://other.example/users/other',
+			),
+		);
+
+		$result = Remote_Posts::add( $activity, 1 );
+
+		$this->assertWPError( $result, 'A Create whose object id host differs from the actor host must be rejected.' );
+		$this->assertEquals( 'activitypub_create_host_mismatch', $result->get_error_code() );
+		$this->assertWPError( Remote_Posts::get_by_guid( $canonical_object_id ), 'No post must be cached under another host object id.' );
+	}
+
+	/**
 	 * Test updating an existing object.
 	 *
 	 * @covers ::update

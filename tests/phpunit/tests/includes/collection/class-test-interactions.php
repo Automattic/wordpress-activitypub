@@ -91,7 +91,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		self::$post_permalink = get_permalink( self::$post_id );
 
-		self::$user_url = get_author_posts_url( self::$user_id );
+		self::$user_url = 'https://example.com/users/test';
 	}
 
 	/**
@@ -741,7 +741,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 	 * @covers \Activitypub\Emoji::wrap_in_content
 	 */
 	public function test_activity_to_comment_with_emoji() {
-		$actor_uri = 'http://example.org/users/emoji-user';
+		$actor_uri = 'https://example.com/users/emoji-user';
 
 		// Create remote actor with emoji data.
 		$actor_data    = array(

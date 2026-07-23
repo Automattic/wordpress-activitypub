@@ -145,7 +145,7 @@ class Activity_Object extends Base {
 			foreach ( $mentions as $mention => $url ) {
 				$tag    = array(
 					'type' => 'Mention',
-					'href' => \esc_url( $url ),
+					'href' => \esc_url_raw( $url ),
 					'name' => \esc_html( $mention ),
 				);
 				$tags[] = $tag;
