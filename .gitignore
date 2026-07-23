@@ -22,3 +22,4 @@ docs/superpowers/
 .windsurfrules
 .wp-env.override.json
 composer.lock
+/security-scan
