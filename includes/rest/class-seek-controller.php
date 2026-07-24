@@ -39,6 +39,15 @@ class Seek_Controller extends \WP_REST_Controller {
 	protected $rest_base = 'seek';
 
 	/**
+	 * Whether a seek dispatch is currently in flight.
+	 *
+	 * @since unreleased
+	 *
+	 * @var bool
+	 */
+	private static $is_dispatching = false;
+
+	/**
 	 * Register routes.
 	 */
 	public function register_routes() {
@@ -96,8 +105,14 @@ class Seek_Controller extends \WP_REST_Controller {
 	 * A route opts in by declaring an `item` argument on its readable handler, the same signal
 	 * prepare_collection_response() uses to advertise `seekItem`. Route patterns are matched the way
 	 * WP_REST_Server::match_request_to_handler() matches them, which cannot be called directly
-	 * because it is protected. The seek route itself is excluded: it declares an `item` argument of
-	 * its own, and dispatching a seek to a seek would only burn a request.
+	 * because it is protected: the dispatch lands on the first registered pattern that matches, and
+	 * on that pattern's first handler serving GET, so only that one handler decides the answer. A
+	 * later pattern that happens to match too says nothing about where the dispatch actually goes.
+	 *
+	 * The seek route itself is excluded — it declares an `item` argument of its own, and a seek
+	 * dispatched to a seek would recurse — and the exclusion compares the registered pattern rather
+	 * than the requested route, because patterns match case-insensitively: a route of `/…/Seek`
+	 * resolves back to this endpoint and would slip past a comparison against the requested route.
 	 *
 	 * @since unreleased
 	 *
@@ -106,10 +121,6 @@ class Seek_Controller extends \WP_REST_Controller {
 	 * @return bool True if the route declares a seek `item` argument.
 	 */
 	private function is_seekable_route( $route ) {
-		if ( '/' . $this->namespace . '/' . $this->rest_base === $route ) {
-			return false;
-		}
-
 		foreach ( \rest_get_server()->get_routes( $this->namespace ) as $pattern => $handlers ) {
 			if ( ! \preg_match( '@^' . $pattern . '$@i', $route ) ) {
 				continue;
@@ -117,9 +128,16 @@ class Seek_Controller extends \WP_REST_Controller {
 
 			foreach ( $handlers as $handler ) {
 				// Only a readable handler can serve a seek; the same route may also register writable ones.
-				if ( ! empty( $handler['methods']['GET'] ) && isset( $handler['args']['item'] ) ) {
-					return true;
+				if ( empty( $handler['methods']['GET'] ) ) {
+					continue;
 				}
+
+				// This is the handler the dispatch resolves to, so the seek route is where it stops.
+				if ( '/' . $this->namespace . '/' . $this->rest_base === $pattern ) {
+					return false;
+				}
+
+				return isset( $handler['args']['item'] );
 			}
 		}
 
@@ -144,6 +162,11 @@ class Seek_Controller extends \WP_REST_Controller {
 			\__( 'The requested item could not be found in this collection.', 'activitypub' ),
 			array( 'status' => 404 )
 		);
+
+		// A collection never dispatches a seek, so a seek reached from inside a seek can only be recursion.
+		if ( self::$is_dispatching ) {
+			return $not_found;
+		}
 
 		// Resolves only URLs served by this site's REST API, so no remote request is ever made.
 		$collection_request = \WP_REST_Request::from_url( $request->get_param( 'collection' ) );
@@ -179,7 +202,10 @@ class Seek_Controller extends \WP_REST_Controller {
 		};
 		// Latest priority, so a global defer filter (e.g. a local-dev __return_true) cannot reopen a forced route.
 		\add_filter( 'activitypub_defer_signature_verification', $defer, \PHP_INT_MAX, 3 );
-		$response = \rest_do_request( $collection_request );
+		// In flight for the dispatch below, so any seek reached from within it is refused instead of recursing.
+		self::$is_dispatching = true;
+		$response             = \rest_do_request( $collection_request );
+		self::$is_dispatching = false;
 		\remove_filter( 'activitypub_defer_signature_verification', $defer, \PHP_INT_MAX );
 
 		/*

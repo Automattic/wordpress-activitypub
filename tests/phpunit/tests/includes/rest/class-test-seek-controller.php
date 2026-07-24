@@ -281,6 +281,33 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 	}
 
 	/**
+	 * A seek pointed at the seek endpoint itself produces a 404, whatever the letter case.
+	 *
+	 * REST routes are matched case-insensitively, so a collection of `…/Seek` resolves back to this
+	 * endpoint. Dispatching it would let a single request drive an arbitrarily deep chain of nested
+	 * seeks, each one re-running the route matching for the whole site.
+	 *
+	 * @covers ::get_item
+	 */
+	public function test_seek_endpoint_rejects_seeking_itself() {
+		foreach ( array( 'seek', 'Seek', 'SEEK' ) as $variant ) {
+			$nested = \add_query_arg(
+				'collection',
+				\rawurlencode( get_rest_url_by_path( 'actors/0/followers' ) ),
+				get_rest_url_by_path( $variant )
+			);
+
+			$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/seek' );
+			$request->set_param( 'collection', $nested );
+			$request->set_param( 'item', 'https://example.org/actor/13' );
+
+			$response = rest_get_server()->dispatch( $request );
+
+			$this->assertEquals( 404, $response->get_status(), "A seek pointed at /{$variant} must not dispatch to the seek endpoint." );
+		}
+	}
+
+	/**
 	 * A collection without seek support produces a 404 instead of the collection body.
 	 *
 	 * @covers ::get_item
