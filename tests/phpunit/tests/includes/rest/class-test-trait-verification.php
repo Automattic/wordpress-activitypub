@@ -140,6 +140,68 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test a `Delete` body cannot waive Authorized Fetch on a read request.
+	 *
+	 * The Delete carve-out is meant for inbox deliveries whose signing key may already
+	 * be gone. Its trigger is the caller-controlled `type` in the body, so on a read it
+	 * would hand anonymous callers the gated collections and the seek oracle.
+	 *
+	 * @covers ::verify_signature
+	 */
+	public function test_verify_signature_delete_body_does_not_defer_read() {
+		\update_option( 'activitypub_authorized_fetch', '1' );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/actors/1/followers' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( array( 'type' => 'Delete' ) ) );
+		$request->set_param( 'item', 'https://remote.example/users/alice' );
+
+		$result = $this->instance->verify_signature( $request );
+
+		\delete_option( 'activitypub_authorized_fetch' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_signature_verification', $result->get_error_code() );
+		$this->assertEquals( 401, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Test a `Delete` body cannot put a seek request back on the HEAD bypass.
+	 *
+	 * @covers ::verify_signature
+	 */
+	public function test_verify_signature_delete_body_does_not_defer_head_seek() {
+		\delete_option( 'activitypub_authorized_fetch' );
+
+		$request = new \WP_REST_Request( 'HEAD', '/activitypub/1.0/actors/1/followers' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( array( 'type' => 'Delete' ) ) );
+		$request->set_param( 'item', 'https://remote.example/users/alice' );
+
+		$result = $this->instance->verify_signature( $request );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_signature_verification', $result->get_error_code() );
+		$this->assertEquals( 401, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Test a `Delete` delivered to the inbox still skips signature verification.
+	 *
+	 * A remote actor's deletion arrives after its keys are gone, so Mastodon's actor
+	 * deletion only federates as long as this path stays deferred.
+	 *
+	 * @covers ::verify_signature
+	 */
+	public function test_verify_signature_delete_delivery_to_inbox_defers() {
+		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/actors/1/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( array( 'type' => 'Delete' ) ) );
+
+		$this->assertTrue( $this->instance->verify_signature( $request ) );
+	}
+
+	/**
 	 * Test GET request uses read scope.
 	 *
 	 * @covers ::verify_authentication
