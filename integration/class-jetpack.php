@@ -11,8 +11,14 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Http;
 use Automattic\Jetpack\Connection\Manager;
+use Automattic\Jetpack\Podcast\Feed\Customize_Feed;
+use Automattic\Jetpack\Podcast\Feed\Episode_Block_Tags;
+use Automattic\Jetpack\Podcast\Settings as Podcast_Settings;
 
+use function Activitypub\get_enclosures;
+use function Activitypub\get_max_attachments;
 use function Activitypub\is_activity_object;
+use function Activitypub\normalize_url;
 
 /**
  * Jetpack integration class.
@@ -42,9 +48,10 @@ class Jetpack {
 
 		\add_action( 'load-post-new.php', array( self::class, 'adapt_post_share' ) );
 
-		// A Jetpack episode is an ordinary post, so its audio is enriched onto the already-assembled
-		// attachments here, rather than through a dedicated transformer subclass like Podlove/SSP.
-		\add_filter( 'activitypub_attachments', array( self::class, 'add_podcast_attachment' ), 10, 2 );
+		// Enriched onto the already-assembled attachments rather than through a transformer subclass
+		// like Podlove/SSP: a subclass is winner-take-all, so a site running one of those alongside a
+		// Jetpack podcast would get one behaviour instead of both.
+		\add_filter( 'activitypub_attachments', array( self::class, 'add_podcast_attachments' ), 10, 2 );
 	}
 
 	/**
@@ -177,62 +184,221 @@ class Jetpack {
 		}
 	}
 
+
 	/**
-	 * Federate a Jetpack podcast episode's audio as an ActivityPub attachment.
+	 * Federate a podcast episode's audio as an ActivityPub attachment.
 	 *
-	 * A Jetpack episode stores its audio in the `jetpack/podcast-episode` block, read back through
-	 * the podcast package's own {@see \Automattic\Jetpack\Podcast\Feed\Episode_Block_Tags}. Reading it
-	 * there (rather than relying on WordPress core's asynchronous `enclosure` meta) makes the audio,
-	 * its cover art, and its mime type available on every transform. When the core-enclosure path has
-	 * already added the same audio, the existing attachment is enriched with the episode cover art
-	 * instead of being duplicated.
+	 * Jetpack has two podcast surfaces, developed separately, and an episode can come from either:
+	 *
+	 * - Posts to Podcast writes a `jetpack/podcast-episode` block carrying the audio it produced.
+	 * - Jetpack Podcast treats every post in the configured podcast category as an episode, whose
+	 *   audio is an ordinary WordPress enclosure.
+	 *
+	 * Neither survives the transformer on its own. Episode audio is usually hosted off-site, so it
+	 * has no attachment ID, and {@see \Activitypub\Transformer\Base::filter_unique_attachments()}
+	 * drops every media entry without one, meaning that audio never reaches this filter. It is
+	 * resolved here instead, and either added or, when the media library already contributed it,
+	 * given the artwork the podcast feed shows for the same episode.
 	 *
 	 * @param array    $attachments The ActivityPub attachments.
 	 * @param \WP_Post $post        The post being transformed.
 	 *
-	 * @return array The attachments, with the podcast episode audio added or enriched.
+	 * @return array The attachments, with the episode audio added or enriched.
 	 */
-	public static function add_podcast_attachment( $attachments, $post ) {
-		if ( ! \class_exists( '\Automattic\Jetpack\Podcast\Feed\Episode_Block_Tags' ) ) {
+	public static function add_podcast_attachments( $attachments, $post ) {
+		$is_show_episode = self::is_show_episode( $post );
+		$episode         = self::get_episode_audio( $post, $is_show_episode );
+
+		if ( ! $episode ) {
 			return $attachments;
 		}
 
-		$attrs = \Automattic\Jetpack\Podcast\Feed\Episode_Block_Tags::get_block_attrs( $post );
-		if ( empty( $attrs['mediaUrl'] ) ) {
+		$icon  = self::get_cover_art( $post, $episode['coverArt'] ?? '', $is_show_episode );
+		$index = self::find_attachment_by_url( $attachments, $episode['url'] );
+
+		if ( null !== $index ) {
+			/*
+			 * The audio is already attached, so only the artwork is missing. It is replaced rather
+			 * than filled in: the transformer falls back to the site icon for any audio without a
+			 * poster, and the show's own cover is the better answer for an episode.
+			 */
+			if ( $icon ) {
+				$attachments[ $index ]['icon'] = $icon;
+			}
+
 			return $attachments;
 		}
 
-		$url = \esc_url_raw( $attrs['mediaUrl'] );
-		if ( empty( $url ) ) {
-			// Sanitizing dropped the URL (e.g. an unsafe scheme); an attachment without a url is invalid.
-			return $attachments;
+		$audio = array(
+			'type' => $episode['type'],
+			'url'  => $episode['url'],
+			'name' => \esc_attr( \get_the_title( $post ) ),
+		);
+
+		// An episode attached by URL carries no mime type, and omitting the property beats sending
+		// an empty one, which stops a receiver classifying the attachment at all.
+		if ( $episode['mediaType'] ) {
+			$audio['mediaType'] = $episode['mediaType'];
 		}
 
-		$icon = empty( $attrs['coverArt']['url'] ) ? '' : \esc_url_raw( $attrs['coverArt']['url'] );
+		if ( $icon ) {
+			$audio['icon'] = $icon;
+		}
 
-		// The core-enclosure path may already have added this audio: enrich it with the cover art rather than duplicate it.
-		foreach ( $attachments as $index => $attachment ) {
-			if ( isset( $attachment['url'] ) && $attachment['url'] === $url ) {
-				if ( $icon && empty( $attachment['icon'] ) ) {
-					$attachments[ $index ]['icon'] = $icon;
-				}
-				return $attachments;
+		\array_unshift( $attachments, $audio );
+
+		// The transformer trimmed to the configured maximum before this filter ran, so prepending
+		// the audio would otherwise put the post one attachment over a limit the site chose. An
+		// episode that arrived alone cannot exceed it, and the maximum is never 0 here because the
+		// transformer returns before this filter in that case.
+		if ( \count( $attachments ) > 1 ) {
+			$attachments = \array_slice( $attachments, 0, get_max_attachments( $post->ID ) );
+		}
+
+		return $attachments;
+	}
+
+	/**
+	 * Resolve the audio of a podcast episode.
+	 *
+	 * A Posts to Podcast episode keeps its generated audio in the `jetpack/podcast-episode` block.
+	 * A Jetpack Podcast episode instead carries an ordinary enclosure, which only counts as an
+	 * episode when the post is filed in the configured podcast category, since any post may have an
+	 * enclosure without being part of the show.
+	 *
+	 * @param \WP_Post $post            The post being transformed.
+	 * @param bool     $is_show_episode Whether the post is filed in the configured podcast category.
+	 *
+	 * @return array|null The episode `type`, `url`, `mediaType` and `coverArt`, or null when the post is not an episode.
+	 */
+	private static function get_episode_audio( $post, $is_show_episode ) {
+		$attrs = self::get_episode_block_attrs( $post );
+
+		if ( ! empty( $attrs['mediaUrl'] ) ) {
+			// Sanitizing drops an unsafe scheme, and an attachment without a URL is invalid.
+			$url = \esc_url_raw( $attrs['mediaUrl'] );
+
+			if ( $url ) {
+				return array(
+					'type'      => \ucfirst( $attrs['mediaType'] ?? 'audio' ),
+					'url'       => $url,
+					'mediaType' => \esc_attr( $attrs['mediaMimeType'] ?? '' ),
+					'coverArt'  => empty( $attrs['coverArt']['url'] ) ? '' : \esc_url_raw( $attrs['coverArt']['url'] ),
+				);
 			}
 		}
 
-		$podcast = array(
-			'type'      => \ucfirst( $attrs['mediaType'] ?? 'Audio' ),
-			'url'       => $url,
-			'mediaType' => \esc_attr( $attrs['mediaMimeType'] ?? '' ),
-			'name'      => \esc_attr( \get_the_title( $post ) ),
-		);
-
-		if ( $icon ) {
-			$podcast['icon'] = $icon;
+		if ( ! $is_show_episode ) {
+			return null;
 		}
 
-		\array_unshift( $attachments, $podcast );
+		foreach ( get_enclosures( $post->ID ) as $enclosure ) {
+			$mime_type = $enclosure['mediaType'] ?? '';
 
-		return $attachments;
+			if ( ! \str_starts_with( $mime_type, 'audio/' ) ) {
+				continue;
+			}
+
+			$url = \esc_url_raw( $enclosure['url'] );
+
+			if ( $url ) {
+				return array(
+					'type'      => 'Audio',
+					'url'       => $url,
+					'mediaType' => \esc_attr( $mime_type ),
+				);
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Resolve the cover art for a podcast episode.
+	 *
+	 * The episode's own artwork wins, then the post's featured image, then the show image. That is
+	 * the order the podcast feed covers an item with, so a federated episode carries the artwork
+	 * subscribers already see. The show image applies only to an episode of the show itself, so a
+	 * generated episode on an unrelated post does not advertise the podcast's cover.
+	 *
+	 * @param \WP_Post $post            The post being transformed.
+	 * @param string   $cover_art       The episode's own artwork, when it has any.
+	 * @param bool     $is_show_episode Whether the post is filed in the configured podcast category.
+	 *
+	 * @return string The cover art URL, or an empty string when none is set.
+	 */
+	private static function get_cover_art( $post, $cover_art, $is_show_episode ) {
+		if ( $cover_art ) {
+			return $cover_art;
+		}
+
+		$thumbnail = \get_the_post_thumbnail_url( $post, 'full' );
+
+		if ( $thumbnail ) {
+			return \esc_url_raw( $thumbnail );
+		}
+
+		if ( ! $is_show_episode || ! \method_exists( Podcast_Settings::class, 'raw_show_image_url' ) ) {
+			return '';
+		}
+
+		return \esc_url_raw( (string) Podcast_Settings::raw_show_image_url() );
+	}
+
+	/**
+	 * Test whether a post is an episode of the site's own podcast.
+	 *
+	 * @param \WP_Post $post The post being transformed.
+	 *
+	 * @return bool Whether the post is in the configured podcast category.
+	 */
+	private static function is_show_episode( $post ) {
+		if ( ! \method_exists( Customize_Feed::class, 'resolve_category_id' ) ) {
+			return false;
+		}
+
+		// The category can be stored as an ID or as an archive slug, and only Jetpack knows which applies.
+		$category_id = (int) Customize_Feed::resolve_category_id();
+
+		return $category_id && \in_category( $category_id, $post );
+	}
+
+	/**
+	 * Read the attributes of the post's `jetpack/podcast-episode` block.
+	 *
+	 * @param \WP_Post $post The post being transformed.
+	 *
+	 * @return array The block attributes, empty when the post has no episode block.
+	 */
+	private static function get_episode_block_attrs( $post ) {
+		if ( ! \method_exists( Episode_Block_Tags::class, 'get_block_attrs' ) ) {
+			return array();
+		}
+
+		return (array) Episode_Block_Tags::get_block_attrs( $post );
+	}
+
+	/**
+	 * Find the attachment carrying a given media URL.
+	 *
+	 * Matched on host and path so the same file is still recognised when the stored enclosure and
+	 * the episode block disagree on the scheme, which is the case on every site that moved to HTTPS
+	 * after publishing.
+	 *
+	 * @param array  $attachments The ActivityPub attachments.
+	 * @param string $url         The media URL to look for.
+	 *
+	 * @return int|string|null The attachment key, or null when the media is not in the list.
+	 */
+	private static function find_attachment_by_url( $attachments, $url ) {
+		$needle = normalize_url( $url );
+
+		foreach ( $attachments as $index => $attachment ) {
+			if ( isset( $attachment['url'] ) && normalize_url( $attachment['url'] ) === $needle ) {
+				return $index;
+			}
+		}
+
+		return null;
 	}
 }
