@@ -1,6 +1,6 @@
 ---
 name: security-audit
-description: Defensive first-party security review of the plugin's own code to detect and help fix weaknesses (SSRF, content disclosure, auth bypass, XSS, content negotiation) before release. Use when asked to check security, harden the plugin, or review the code for vulnerabilities to fix.
+description: Defensive first-party security review of the plugin's own code, including its third-party integrations, to detect and help fix weaknesses (SSRF, content disclosure, auth bypass, XSS, content negotiation) before release. Use when asked to check security, harden the plugin, or review the code for vulnerabilities to fix.
 tools: Bash, Read, Glob, Grep, WebFetch
 model: opus
 skills: federation, code-style
@@ -92,6 +92,7 @@ Files: `includes/rest/`, `includes/rest/trait-verification.php`
 - Check that HEAD requests bypass is intentional and safe
 - Verify `verify_authentication()` (OAuth) is applied to all C2S endpoints
 - Check the `activitypub_defer_signature_verification` filter — what hooks it, can third parties disable all auth?
+- For every route whose response depends on *who* is asking, check whether an integration hands its prefix to a third-party system (§11). A permission callback protects the route; it does not travel with the response once another plugin stores or republishes it.
 
 **Signing on GETs — especially with Authorized Fetch off:**
 
@@ -219,6 +220,28 @@ Files: `includes/collection/class-remote-actors.php`, `includes/collection/class
 - A fetched document cached under its **self-declared** id/host rather than the URL requested.
 
 **Reachability reminder:** actor/object resolution is triggered by *almost any* inbound activity via `get_remote_metadata_by_actor()` → `Remote_Actors::fetch_by_uri()`, and Follow/Create/Like/Announce are enabled by default — so these writes are reachable **unauthenticated** by any fediverse server, not just via a niche endpoint. Confirm the binding on the passive resolution path, not only on obvious write endpoints.
+
+### 11. Third-Party Integrations
+
+Files: `integration/`, `integration/load.php`, plus the third-party plugin's own source when it is installed.
+
+**An integration hands part of the plugin's behavior to code we do not control.** Each file in `integration/` opts our routes, content, or data into another plugin's system, and that system has its own trust model, its own matching rules, and its own load order. A guarantee that holds inside the plugin does not automatically survive the handoff, so audit the handoff itself, not just our side of it.
+
+Go through every file in `integration/`:
+
+- **Enumerate what each integration opts in, and on whose terms.** For each `add_filter` / `add_action` into a third-party API, state what is being handed over and what the other plugin then does with it. Read that plugin's own implementation of the hook. Do not infer behavior from the hook name or its docblock. Where the plugin is not installed, confirm the guard in `integration/load.php` (`class_exists` / `function_exists`) and that both states are safe.
+
+- **A route may only be opted into a shared store if every caller gets the same response.** Stores keyed on the URL alone cannot tell callers apart, so anything that varies by identity, capability, credential, or signature must stay out. Check the matching rule the other plugin actually uses: a list that names a prefix usually pulls in everything beneath it, which is more than the integration appears to opt in.
+
+- **The dangerous drift is on our side, not theirs.** A route list that is correct when written stays in the integration file untouched while routes are added elsewhere. A new route under an already-listed prefix joins the handoff silently, with no edit to the integration and nothing to review. Always re-derive the list from the current route table rather than trusting that it was right once.
+
+- **Pin route lists with a test, not a comment.** Where an integration names routes or prefixes, add a test that walks the live route table and fails when a route whose response depends on the caller falls under a listed prefix. "Keep this in sync" in a docblock is documentation, not a control.
+
+- **Confirm the hook we depend on actually runs.** Check the other plugin's load order. A filter applied from a must-use loader, or at plugin-load time rather than on an action, may be evaluated before our plugin is loaded at all, in which case registering a callback does nothing. Verify empirically rather than assuming registration is sufficient.
+
+- **Data leaving the plugin inherits the recipient's access model.** Anything written into a third-party cache, index, feed, search document, or export is readable under that system's rules, not ours. Trace how long it lives and who can read it back.
+
+- **Integrations are on the other surfaces too.** §6's outbound-fetch enumeration and §7's escaping rules apply to `integration/` exactly as they do to `includes/`.
 
 ## Confirming a Fix Against the User's Own Instance
 
