@@ -601,4 +601,82 @@ class Test_Server extends \WP_Test_REST_TestCase {
 
 		$this->assertArrayNotHasKey( 'Access-Control-Allow-Origin', $headers );
 	}
+
+	/**
+	 * Test that ActivityPub responses tell shared caches what they vary by.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_sets_vary() {
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		$this->assertSame( 'Authorization, Signature', $headers['Vary'] );
+		$this->assertArrayNotHasKey( 'Cache-Control', $headers );
+	}
+
+	/**
+	 * Test that a Vary header already on the response is kept.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_preserves_existing_vary() {
+		$response = new \WP_REST_Response( array(), 200 );
+		$response->header( 'Vary', 'Accept' );
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		$this->assertSame( 'Accept, Authorization, Signature', $headers['Vary'] );
+	}
+
+	/**
+	 * Test that a response built for a credentialed caller is marked private.
+	 *
+	 * @dataProvider credential_header_provider
+	 * @covers ::add_cache_headers
+	 *
+	 * @param string $header The credential header name.
+	 * @param string $value  The credential header value.
+	 */
+	public function test_add_cache_headers_marks_credentialed_responses_private( $header, $value ) {
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1/inbox' );
+		$request->set_header( $header, $value );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		$this->assertSame( 'private, no-store, max-age=0', $headers['Cache-Control'] );
+	}
+
+	/**
+	 * Data provider for credential headers.
+	 *
+	 * @return array[] Test parameters.
+	 */
+	public function credential_header_provider() {
+		return array(
+			'bearer token'   => array( 'Authorization', 'Bearer abc123' ),
+			'draft envelope' => array( 'Signature', 'keyId="https://remote.example/users/alice#main-key"' ),
+			'rfc 9421'       => array( 'Signature-Input', 'sig1=("@method");keyid="https://remote.example/users/alice#main-key"' ),
+		);
+	}
+
+	/**
+	 * Test that non-ActivityPub routes are left alone.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_skips_other_namespaces() {
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/wp/v2/posts' );
+		$request->set_header( 'Authorization', 'Bearer abc123' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		$this->assertArrayNotHasKey( 'Vary', $headers );
+		$this->assertArrayNotHasKey( 'Cache-Control', $headers );
+	}
 }

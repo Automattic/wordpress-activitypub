@@ -26,6 +26,7 @@ class Server {
 		\add_filter( 'rest_request_parameter_order', array( self::class, 'request_parameter_order' ), 10, 2 );
 
 		\add_filter( 'rest_post_dispatch', array( self::class, 'filter_output' ), 10, 3 );
+		\add_filter( 'rest_post_dispatch', array( self::class, 'add_cache_headers' ), 10, 3 );
 		\add_filter( 'rest_post_dispatch', array( self::class, 'add_cors_headers' ), 10, 3 );
 		\add_filter( 'rest_allowed_cors_headers', array( self::class, 'allow_cors_headers' ), 10, 2 );
 	}
@@ -220,6 +221,42 @@ class Server {
 		);
 
 		$response->set_data( $error );
+
+		return $response;
+	}
+
+	/**
+	 * Add cache headers to ActivityPub responses.
+	 *
+	 * Responses on these routes are not the same for every caller: Authorized Fetch
+	 * varies them by signing key, and the ActivityPub API varies them by access token.
+	 * Shared caches are told to key on those headers, and a response produced for a
+	 * caller that presented credentials is marked as belonging to that caller alone.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_REST_Response $response Result to send to the client.
+	 * @param \WP_REST_Server   $server   Server instance.
+	 * @param \WP_REST_Request  $request  Request used to generate the response.
+	 *
+	 * @return \WP_REST_Response The response object.
+	 */
+	public static function add_cache_headers( $response, $server, $request ) {
+		if ( ! \str_starts_with( $request->get_route(), '/' . ACTIVITYPUB_REST_NAMESPACE ) ) {
+			return $response;
+		}
+
+		// Appended, so the CORS handler's own `Vary: Origin` survives.
+		$response->header( 'Vary', 'Authorization, Signature', false );
+
+		$credentials = array( 'authorization', 'signature', 'signature_input' );
+
+		foreach ( $credentials as $header ) {
+			if ( $request->get_header( $header ) ) {
+				$response->header( 'Cache-Control', 'private, no-store, max-age=0' );
+				break;
+			}
+		}
 
 		return $response;
 	}

@@ -42,12 +42,23 @@ class WP_Rest_Cache {
 	/**
 	 * Add ActivityPub endpoints to the list of allowed endpoints.
 	 *
+	 * Only routes that answer every caller identically belong here. Cache entries are
+	 * keyed by request URI alone, and an entry is matched as a plain substring of that
+	 * URI, so listing a prefix opts in every route below it.
+	 *
+	 * The actor tree is deliberately absent. It carries owner-only reads, such as the
+	 * inbox collection, under the same prefix as its public routes, and the actor ID
+	 * sits between the prefix and the route, so no entry can name the public routes
+	 * without also naming the private ones.
+	 *
+	 * @since unreleased Actor routes are no longer cached.
+	 *
 	 * @param array $endpoints List of allowed endpoints.
 	 *
 	 * @return array Filtered list of allowed endpoints.
 	 */
 	public static function add_activitypub_endpoints( $endpoints ) {
-		$endpoints[ ACTIVITYPUB_REST_NAMESPACE ] = array( 'actors', 'collections', 'comments', 'interactions', 'nodeinfo', 'posts', 'users' );
+		$endpoints[ ACTIVITYPUB_REST_NAMESPACE ] = array( 'comments', 'interactions', 'nodeinfo', 'posts' );
 
 		return $endpoints;
 	}
