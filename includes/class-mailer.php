@@ -552,6 +552,12 @@ class Mailer {
 			return false;
 		}
 
+		// Anything that is not a plain reply (a like, repost, or quote) follows the recipient's own
+		// notification preference. get_comment_type() reports an empty legacy type as a plain comment.
+		if ( 'comment' !== \get_comment_type( $comment ) ) {
+			return (bool) \get_user_option( 'activitypub_mailer_new_reaction', $post->post_author );
+		}
+
 		return $maybe_notify;
 	}
 }
