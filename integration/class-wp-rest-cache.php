@@ -33,6 +33,7 @@ class WP_Rest_Cache {
 	 */
 	public static function init() {
 		\add_filter( 'wp_rest_cache/allowed_endpoints', array( self::class, 'add_activitypub_endpoints' ) );
+		\add_filter( 'wp_rest_cache/disallowed_endpoints', array( self::class, 'add_disallowed_endpoints' ) );
 		\add_filter( 'wp_rest_cache/determine_object_type', array( self::class, 'set_object_type' ), 10, 4 );
 		\add_filter( 'wp_rest_cache/is_single_item', array( self::class, 'set_is_single_item' ), 10, 3 );
 		\add_action( 'transition_post_status', array( self::class, 'transition_post_status' ), 10, 3 );
@@ -59,6 +60,32 @@ class WP_Rest_Cache {
 	 */
 	public static function add_activitypub_endpoints( $endpoints ) {
 		$endpoints[ ACTIVITYPUB_REST_NAMESPACE ] = array( 'comments', 'interactions', 'nodeinfo', 'posts' );
+
+		return $endpoints;
+	}
+
+	/**
+	 * Never cache routes whose response depends on the caller or must not be stored at all.
+	 *
+	 * The cache keys entries by request URI, so a response produced for one caller can be served
+	 * to another. These routes must never be cached regardless of any allowed-endpoint entry, so
+	 * they are blocked here as well: the inbox is owner-only, the event streams are long-lived
+	 * per-connection responses, and FEP-8fcf's `followers/sync` is disclosed only to a signed peer.
+	 * Entries are matched as regular expressions against the full route, so the actor ID between the
+	 * prefix and the sub-route is covered without naming it.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $endpoints List of disallowed endpoints.
+	 *
+	 * @return array Filtered list of disallowed endpoints.
+	 */
+	public static function add_disallowed_endpoints( $endpoints ) {
+		$endpoints[ ACTIVITYPUB_REST_NAMESPACE ] = array(
+			'(?:users|actors)/[0-9]+/inbox',
+			'(?:users|actors)/[0-9]+/outbox/stream',
+			'(?:users|actors)/[0-9]+/followers/sync',
+		);
 
 		return $endpoints;
 	}
