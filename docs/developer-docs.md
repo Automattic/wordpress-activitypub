@@ -2,11 +2,53 @@
 
 ## Table of Contents
 - [Introduction](#introduction)
+- [Signing Outbound Requests](#signing-outbound-requests)
 - [Snippets](#snippets)
 - [Extending the Settings Interface](#extending-the-settings-interface)
 
 ## Introduction
 This documentation provides information for developers who want to extend and build upon the ActivityPub plugin. Whether you're developing a complementary plugin or integrating ActivityPub features into your existing WordPress plugin, this guide will help you understand the available hooks and customization options.
+
+## Signing Outbound Requests
+
+A companion plugin that constructs and delivers its own Activities can reuse the
+plugin's HTTP-signing implementation without adopting the Outbox model. Pass the
+sender's public key identifier and private key as the `key_id` and `private_key`
+request arguments, and the plugin's `http_request_args` filter adds signature
+headers before WordPress sends the request:
+
+```php
+$response = wp_safe_remote_post(
+	$recipient_inbox,
+	array(
+		'body'        => wp_json_encode( $activity ),
+		'headers'     => array( 'Content-Type' => 'application/activity+json' ),
+		'data_format' => 'body',
+		'key_id'      => $sender_key_id,
+		'private_key' => $sender_private_key,
+	)
+);
+```
+
+The plugin chooses the signature format based on the site's RFC 9421 setting and
+the recipient's known support. If an RFC 9421-signed request receives a 4xx
+response, the plugin re-signs it with the older Draft Cavage format and retries
+once. Callers do not choose the format and should not depend on the format a
+given request uses.
+
+Both arguments remain in the request arguments after signing because that retry
+needs them once the response returns. They are therefore visible to other
+callbacks on `http_request_args` and `http_response`, and to anything that logs
+request arguments. Resolve key material only for the duration of the send, and
+treat the request arguments as readable by other plugins.
+
+The companion remains responsible for:
+
+- validating recipient URLs;
+- selecting recipients;
+- owning its delivery queue and retry policy; and
+- resolving private key material only while sending, without persisting it in
+  transport rows or logs.
 
 ## Snippets
 

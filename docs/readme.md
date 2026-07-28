@@ -2,10 +2,6 @@
 
 In this directory you will find the documentation for the ActivityPub plugin.
 
-## Extension points
-
-- [External Activity delivery](./external-activity-delivery.md) documents the supported HTTP-signing seam for companion plugins that own their outbound delivery flow.
-
 ## FAQ
 
 If something is not working — follow requests stuck on "pending", missing comments — check the [FAQ section](./faq) for checklists covering the most common causes.
