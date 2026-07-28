@@ -9,6 +9,8 @@ namespace Activitypub\Rest;
 
 use Activitypub\Signature;
 
+use function Activitypub\use_authorized_fetch;
+
 /**
  * ActivityPub Server REST-Class.
  *
@@ -247,14 +249,22 @@ class Server {
 		}
 
 		// Appended, so the CORS handler's own `Vary: Origin` survives.
-		$response->header( 'Vary', 'Authorization, Signature', false );
+		$response->header( 'Vary', 'Authorization, Signature, Signature-Input', false );
 
-		$credentials = array( 'authorization', 'signature', 'signature_input' );
+		/*
+		 * Only mark a credentialed response private when Authorized Fetch actually varies it. With
+		 * Authorized Fetch off, a signed request gets the same public response as everyone else
+		 * (Mastodon signs its GETs by default), so `no-store` would needlessly drop it from every
+		 * CDN. The `Vary` header above still keeps a credentialed response from being reused.
+		 */
+		if ( use_authorized_fetch() ) {
+			$credentials = array( 'authorization', 'signature', 'signature_input' );
 
-		foreach ( $credentials as $header ) {
-			if ( $request->get_header( $header ) ) {
-				$response->header( 'Cache-Control', 'private, no-store, max-age=0' );
-				break;
+			foreach ( $credentials as $header ) {
+				if ( $request->get_header( $header ) ) {
+					$response->header( 'Cache-Control', 'private, no-store, max-age=0' );
+					break;
+				}
 			}
 		}
 

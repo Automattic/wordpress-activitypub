@@ -613,7 +613,7 @@ class Test_Server extends \WP_Test_REST_TestCase {
 
 		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
 
-		$this->assertSame( 'Authorization, Signature', $headers['Vary'] );
+		$this->assertSame( 'Authorization, Signature, Signature-Input', $headers['Vary'] );
 		$this->assertArrayNotHasKey( 'Cache-Control', $headers );
 	}
 
@@ -629,7 +629,7 @@ class Test_Server extends \WP_Test_REST_TestCase {
 
 		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
 
-		$this->assertSame( 'Accept, Authorization, Signature', $headers['Vary'] );
+		$this->assertSame( 'Accept, Authorization, Signature, Signature-Input', $headers['Vary'] );
 	}
 
 	/**
@@ -642,13 +642,37 @@ class Test_Server extends \WP_Test_REST_TestCase {
 	 * @param string $value  The credential header value.
 	 */
 	public function test_add_cache_headers_marks_credentialed_responses_private( $header, $value ) {
+		\add_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
 		$response = new \WP_REST_Response( array(), 200 );
 		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1/inbox' );
 		$request->set_header( $header, $value );
 
 		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
 
+		\remove_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
 		$this->assertSame( 'private, no-store, max-age=0', $headers['Cache-Control'] );
+	}
+
+	/**
+	 * With Authorized Fetch off, a signed request gets the same public response as everyone else,
+	 * so it must not be marked no-store, or it would needlessly drop from every CDN.
+	 *
+	 * @dataProvider credential_header_provider
+	 * @covers ::add_cache_headers
+	 *
+	 * @param string $header The credential header name.
+	 * @param string $value  The credential header value.
+	 */
+	public function test_add_cache_headers_keeps_credentialed_responses_cacheable_without_authorized_fetch( $header, $value ) {
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1/followers' );
+		$request->set_header( $header, $value );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		$this->assertArrayNotHasKey( 'Cache-Control', $headers );
 	}
 
 	/**

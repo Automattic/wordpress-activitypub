@@ -38,6 +38,15 @@ class WP_Rest_Cache {
 		\add_filter( 'wp_rest_cache/is_single_item', array( self::class, 'set_is_single_item' ), 10, 3 );
 		\add_action( 'transition_post_status', array( self::class, 'transition_post_status' ), 10, 3 );
 		\add_action( 'transition_comment_status', array( self::class, 'transition_comment_status' ), 10, 3 );
+
+		/*
+		 * Actor pages cached before caching was restricted to public routes may still be served from
+		 * the store. Purge the ActivityPub object type once so those stale entries cannot leak. The
+		 * add_option() sentinel only succeeds on the first run, so the purge happens exactly once.
+		 */
+		if ( \add_option( 'activitypub_rest_cache_actor_purge_done', '1', '', false ) ) {
+			Caching::get_instance()->delete_object_type_caches( 'ActivityPub' );
+		}
 	}
 
 	/**
@@ -59,7 +68,7 @@ class WP_Rest_Cache {
 	 * @return array Filtered list of allowed endpoints.
 	 */
 	public static function add_activitypub_endpoints( $endpoints ) {
-		$endpoints[ ACTIVITYPUB_REST_NAMESPACE ] = array( 'comments', 'interactions', 'nodeinfo', 'posts' );
+		$endpoints[ ACTIVITYPUB_REST_NAMESPACE ] = array( 'collections/moderators', 'comments', 'interactions', 'nodeinfo', 'posts' );
 
 		return $endpoints;
 	}

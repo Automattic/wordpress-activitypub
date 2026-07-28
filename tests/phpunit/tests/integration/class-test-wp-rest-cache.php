@@ -17,12 +17,6 @@ use Activitypub\Integration\WP_Rest_Cache;
  */
 class Test_WP_Rest_Cache extends \WP_UnitTestCase {
 	/**
-	 * Permission callbacks that make a response specific to its caller.
-	 *
-	 * @var string[]
-	 */
-	const AUTHENTICATED_CALLBACKS = array( 'verify_authentication', 'get_stream_permissions_check' );
-
 	/**
 	 * Test that the actor tree is not offered for caching.
 	 *
@@ -136,13 +130,8 @@ class Test_WP_Rest_Cache extends \WP_UnitTestCase {
 	 * @return bool Whether the handler requires authentication.
 	 */
 	private function is_authenticated( $handler ) {
-		$callback = $handler['permission_callback'] ?? null;
-
-		if ( ! \is_array( $callback ) || ! isset( $callback[1] ) ) {
-			return false;
-		}
-
-		return \in_array( $callback[1], self::AUTHENTICATED_CALLBACKS, true );
+		// Any gate other than the public `__return_true` makes the response caller-specific.
+		return '__return_true' !== ( $handler['permission_callback'] ?? null );
 	}
 
 	/**
