@@ -81,13 +81,6 @@ class Move {
 			return $user;
 		}
 
-		// Update the movedTo property.
-		if ( $user->get__id() > 0 ) {
-			\update_user_option( $user->get__id(), 'activitypub_moved_to', $to );
-		} else {
-			\update_option( 'activitypub_blog_user_moved_to', $to );
-		}
-
 		$response = Http::get_remote_object( $to );
 
 		if ( \is_wp_error( $response ) ) {
@@ -97,10 +90,21 @@ class Move {
 		$target_actor = new Actor();
 		$target_actor->from_array( $response );
 
-		// Check if the `Move` Activity is valid.
+		/*
+		 * The move is only valid if the target links back. Receiving servers accept it only when the
+		 * id we send as the Move's `object` is listed in the target's `alsoKnownAs`, so verify that
+		 * exact id, not the (possibly non-canonical) input URL.
+		 */
 		$also_known_as = $target_actor->get_also_known_as() ?? array();
-		if ( ! \in_array( $from, $also_known_as, true ) ) {
+		if ( ! \in_array( $user->get_id(), $also_known_as, true ) ) {
 			return new \WP_Error( 'invalid_target', \__( 'Invalid target', 'activitypub' ) );
+		}
+
+		// Advertise the move only after the target is verified, so a failed attempt never leaves the actor pointing at an unverified target.
+		if ( $user->get__id() > 0 ) {
+			\update_user_option( $user->get__id(), 'activitypub_moved_to', $to );
+		} else {
+			\update_option( 'activitypub_blog_user_moved_to', $to );
 		}
 
 		$activity = new Activity();
@@ -139,13 +143,25 @@ class Move {
 			return $user;
 		}
 
-		// Add the old account URL to alsoKnownAs.
+		// Point the old actor at the new one.
 		if ( $user->get__id() > 0 ) {
-			self::update_user_also_known_as( $user->get__id(), $from );
 			\update_user_option( $user->get__id(), 'activitypub_moved_to', $to );
 		} else {
-			self::update_blog_also_known_as( $from );
 			\update_option( 'activitypub_blog_user_moved_to', $to );
+		}
+
+		/*
+		 * The old account URL belongs in the *target's* alsoKnownAs, not the source's: receiving
+		 * servers accept the Move only when the new actor links back to the old one. For a domain
+		 * change the source and target resolve to the same actor, so it is still recorded there.
+		 */
+		$target = Actors::get_by_various( $to );
+		if ( ! \is_wp_error( $target ) ) {
+			if ( $target->get__id() > 0 ) {
+				self::update_user_also_known_as( $target->get__id(), $from );
+			} else {
+				self::update_blog_also_known_as( $from );
+			}
 		}
 
 		// check if `$from` is a URL or an ID.

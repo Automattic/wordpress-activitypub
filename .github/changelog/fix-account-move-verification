@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix Fediverse account migration so a move only takes effect once the destination is verified, and so other servers accept it.
