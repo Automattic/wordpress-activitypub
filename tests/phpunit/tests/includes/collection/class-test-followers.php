@@ -523,6 +523,32 @@ class Test_Followers extends \WP_UnitTestCase {
 		);
 		$this->assertCount( 3, $inboxes, 'Should include blog user followers in dual mode.' );
 		$this->assertContains( self::$actors['sally@example.org']['inbox'], $inboxes, 'Should contain blog user inbox.' );
+
+		// A Move that re-identifies a local actor (same-domain target) broadcasts to all inboxes, like a Delete.
+		$local_move = wp_json_encode(
+			array(
+				'type'   => 'Move',
+				'target' => \home_url( '/?author=1' ),
+			)
+		);
+		$this->assertEquals(
+			Followers::get_inboxes_for_activity( '{"type":"Delete"}', $actor_id, 50, 0 ),
+			Followers::get_inboxes_for_activity( $local_move, $actor_id, 50, 0 ),
+			'A same-domain Move should broadcast to all inboxes like a Delete.'
+		);
+
+		// A Move to a remote account reaches only the followers, like a Create.
+		$remote_move = wp_json_encode(
+			array(
+				'type'   => 'Move',
+				'target' => 'https://remote.example/users/foo',
+			)
+		);
+		$this->assertEquals(
+			Followers::get_inboxes_for_activity( '{"type":"Create"}', $actor_id, 50, 0 ),
+			Followers::get_inboxes_for_activity( $remote_move, $actor_id, 50, 0 ),
+			'A remote Move should reach only followers like a Create.'
+		);
 	}
 
 	/**
