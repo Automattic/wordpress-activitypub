@@ -68,7 +68,7 @@ class WP_Rest_Cache {
 	 * @return array Filtered list of allowed endpoints.
 	 */
 	public static function add_activitypub_endpoints( $endpoints ) {
-		$endpoints[ ACTIVITYPUB_REST_NAMESPACE ] = array( 'collections/moderators', 'comments', 'interactions', 'nodeinfo', 'posts' );
+		$endpoints[ ACTIVITYPUB_REST_NAMESPACE ] = array( 'collections/moderators', 'comments', 'nodeinfo', 'posts' );
 
 		return $endpoints;
 	}

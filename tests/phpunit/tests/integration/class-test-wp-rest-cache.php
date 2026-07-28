@@ -17,7 +17,6 @@ use Activitypub\Integration\WP_Rest_Cache;
  */
 class Test_WP_Rest_Cache extends \WP_UnitTestCase {
 	/**
-	/**
 	 * Test that the actor tree is not offered for caching.
 	 *
 	 * @covers ::add_activitypub_endpoints
