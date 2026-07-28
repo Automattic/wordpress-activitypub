@@ -40,11 +40,20 @@ class Test_Move extends \WP_UnitTestCase {
 		$from = Actors::get_by_id( self::$user_id )->get_id();
 		$to   = 'https://newsite.com/user/1';
 
-		add_filter( 'pre_http_request', '__return_false' );
+		$filter = function () use ( $from ) {
+			return array(
+				'body'     => wp_json_encode( array( 'alsoKnownAs' => array( $from ) ) ),
+				'response' => array( 'code' => 200 ),
+			);
+		};
+		add_filter( 'pre_http_request', $filter );
+
 		Move::externally( $from, $to );
 
 		$moved_to = Actors::get_by_id( self::$user_id )->get_moved_to();
 		$this->assertEquals( $to, $moved_to );
+
+		remove_filter( 'pre_http_request', $filter );
 	}
 
 	/**
@@ -81,7 +90,37 @@ class Test_Move extends \WP_UnitTestCase {
 		$this->assertWPError( $result );
 		$this->assertEquals( 'http_request_failed', $result->get_error_code() );
 
+		// A move that never verified must not leave the actor pointing at the target.
+		$this->assertNull( Actors::get_by_id( self::$user_id )->get_moved_to() );
+
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+	}
+
+	/**
+	 * A target that does not link back is rejected and the actor is not moved.
+	 *
+	 * @covers ::externally
+	 */
+	public function test_account_rejects_unlinked_target() {
+		$from = Actors::get_by_id( self::$user_id )->get_id();
+		$to   = 'https://newsite.com/user/1';
+
+		// Target resolves, but its alsoKnownAs does not list this actor.
+		$filter = function () {
+			return array(
+				'body'     => wp_json_encode( array( 'alsoKnownAs' => array( 'https://newsite.com/user/999' ) ) ),
+				'response' => array( 'code' => 200 ),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Move::externally( $from, $to );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'invalid_target', $result->get_error_code() );
+		$this->assertNull( Actors::get_by_id( self::$user_id )->get_moved_to() );
+
+		\remove_filter( 'pre_http_request', $filter );
 	}
 
 	/**
@@ -123,11 +162,20 @@ class Test_Move extends \WP_UnitTestCase {
 		$from = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
 		$to   = 'https://newsite.com/user/0';
 
+		$filter = function () use ( $from ) {
+			return array(
+				'body'     => wp_json_encode( array( 'alsoKnownAs' => array( $from ) ) ),
+				'response' => array( 'code' => 200 ),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter );
+
 		Move::externally( $from, $to );
 
 		$moved_to = Actors::get_by_id( Actors::BLOG_USER_ID )->get_moved_to();
 		$this->assertEquals( $to, $moved_to );
 
+		\remove_filter( 'pre_http_request', $filter );
 		\delete_option( 'activitypub_actor_mode' );
 	}
 
@@ -151,6 +199,29 @@ class Test_Move extends \WP_UnitTestCase {
 
 		$also_known_as = Actors::get_by_id( self::$user_id )->get_also_known_as();
 		$this->assertContains( $from, $also_known_as );
+	}
+
+	/**
+	 * An internal move between two different local users links the target back to the source.
+	 *
+	 * @covers ::internally
+	 */
+	public function test_internally_between_distinct_users() {
+		$target_id = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		$from = Actors::get_by_id( self::$user_id )->get_id();
+		$to   = Actors::get_by_id( $target_id )->get_id();
+
+		Move::internally( $from, $to );
+
+		wp_cache_delete( self::$user_id, 'users' );
+		wp_cache_delete( $target_id, 'users' );
+
+		// The source points at the target.
+		$this->assertEquals( $to, Actors::get_by_id( self::$user_id )->get_moved_to() );
+
+		// The target links back to the source via alsoKnownAs, so receiving servers accept the move.
+		$this->assertContains( $from, Actors::get_by_id( $target_id )->get_also_known_as() );
 	}
 
 	/**
