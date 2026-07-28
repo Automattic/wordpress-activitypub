@@ -8,6 +8,7 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Outbox;
 use Activitypub\Move;
 
 /**
@@ -94,6 +95,45 @@ class Test_Move extends \WP_UnitTestCase {
 		$this->assertNull( Actors::get_by_id( self::$user_id )->get_moved_to() );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+	}
+
+	/**
+	 * A verified move federates a profile Update so followers refresh the actor (FEP-7628).
+	 *
+	 * @covers ::externally
+	 */
+	public function test_move_federates_profile_update() {
+		$from = Actors::get_by_id( self::$user_id )->get_id();
+		$to   = 'https://newsite.com/user/1';
+
+		$filter = function () use ( $from ) {
+			return array(
+				'body'     => wp_json_encode( array( 'alsoKnownAs' => array( $from ) ) ),
+				'response' => array( 'code' => 200 ),
+			);
+		};
+		add_filter( 'pre_http_request', $filter );
+
+		Move::externally( $from, $to );
+
+		remove_filter( 'pre_http_request', $filter );
+
+		$updates = get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'any',
+				'author'      => self::$user_id,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Update',
+					),
+				),
+			)
+		);
+
+		$this->assertNotEmpty( $updates, 'A move should federate a profile Update.' );
 	}
 
 	/**

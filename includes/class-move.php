@@ -12,6 +12,7 @@ use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Model\Blog;
 use Activitypub\Model\User;
+use Activitypub\Scheduler\Actor as Actor_Scheduler;
 
 /**
  * ActivityPub (Account) Move Class
@@ -114,8 +115,15 @@ class Move {
 		$activity->set_object( $user->get_id() );
 		$activity->set_target( $target_actor->get_id() );
 
-		// Add to outbox.
-		return add_to_outbox( $activity, null, $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
+		$outbox_id = add_to_outbox( $activity, null, $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
+
+		/*
+		 * Notify followers of the new movedTo by federating a profile Update (FEP-7628). Queue it
+		 * after the Move so a follower that reacts to `movedTo` still processes the migration first.
+		 */
+		Actor_Scheduler::schedule_profile_update( $user->get__id() );
+
+		return $outbox_id;
 	}
 
 	/**
@@ -178,7 +186,18 @@ class Move {
 		$activity->set_object( $actor );
 		$activity->set_target( $to );
 
-		return add_to_outbox( $activity, null, $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC );
+		$outbox_id = add_to_outbox( $activity, null, $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC );
+
+		/*
+		 * Notify followers of the changed profile on both actors by federating an Update (FEP-7628).
+		 * Queued after the Move so a follower that reacts to `movedTo` still processes the migration first.
+		 */
+		Actor_Scheduler::schedule_profile_update( $user->get__id() );
+		if ( ! \is_wp_error( $target ) && $target->get__id() !== $user->get__id() ) {
+			Actor_Scheduler::schedule_profile_update( $target->get__id() );
+		}
+
+		return $outbox_id;
 	}
 
 	/**
