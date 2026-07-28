@@ -14,6 +14,8 @@ use Activitypub\Collection\Following;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Model\Blog;
+use Activitypub\Model\User;
 use Activitypub\Transformer\Factory;
 
 /**
@@ -223,6 +225,9 @@ class Migration {
 		if ( \version_compare( $version_from_db, '9.1.0', '<' ) ) {
 			self::migrate_application_keypair_option();
 			self::delete_application_outbox_items();
+		}
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			self::migrate_permalink_ids_to_query_param();
 		}
 
 		/*
@@ -1392,6 +1397,47 @@ class Migration {
 
 		foreach ( $items as $item_id ) {
 			\wp_delete_post( $item_id, true );
+		}
+	}
+
+	/**
+	 * Migrate actors from a permalink-based id to the stable query-param id.
+	 *
+	 * A permalink id (`/@handle` for the blog, the author archive URL for a user) changes whenever
+	 * the handle changes, which strands followers. This moves every actor that used one to the
+	 * stable `?author=ID` form: it federates a Move to the old id's audience and keeps the old id
+	 * resolving with a `movedTo`. Actors whose old id already matched the query-param form are
+	 * skipped.
+	 *
+	 * @since unreleased
+	 */
+	public static function migrate_permalink_ids_to_query_param() {
+		if ( \get_option( 'activitypub_use_permalink_as_id_for_blog', false ) ) {
+			$blog   = new Blog();
+			$old_id = \esc_url_raw( \home_url( '/@' . $blog->get_preferred_username() ) );
+
+			if ( $old_id !== $blog->get_id() ) {
+				Move::internally_by_actor( $blog, $blog, $old_id, $blog->get_id() );
+				Move::store_retired_permalink( $blog, $old_id );
+			}
+		}
+
+		$users = \get_users( array( 'capability__in' => array( 'activitypub' ) ) );
+
+		foreach ( $users as $wp_user ) {
+			if ( '1' !== \get_user_option( 'activitypub_use_permalink_as_id', $wp_user->ID ) ) {
+				continue;
+			}
+
+			$user   = new User( $wp_user->ID );
+			$old_id = \esc_url_raw( \get_author_posts_url( $wp_user->ID ) );
+
+			if ( $old_id === $user->get_id() ) {
+				continue;
+			}
+
+			Move::internally_by_actor( $user, $user, $old_id, $user->get_id() );
+			Move::store_retired_permalink( $user, $old_id );
 		}
 	}
 }

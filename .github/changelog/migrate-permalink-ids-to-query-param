@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Use a stable Fediverse profile ID that no longer breaks your followers when you change your handle, and migrate existing profiles to it automatically.

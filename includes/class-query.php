@@ -359,6 +359,23 @@ class Query {
 	}
 
 	/**
+	 * Check if the current request is for an actor's retired permalink id.
+	 *
+	 * After an actor migrates from a permalink-based id to the query-param id, the old URL must
+	 * keep resolving with a `movedTo`. Those URLs carry a distinct query var: the blog `/@handle`
+	 * form sets `actor`, and the pretty author-archive `/author/handle` form sets `author_name`,
+	 * whereas the canonical `?author=ID` sets neither. This lets the model serve the retired
+	 * representation without inspecting the raw request itself.
+	 *
+	 * @since unreleased
+	 *
+	 * @return bool True if the request targets a retired permalink id.
+	 */
+	public function is_permalink_actor_request() {
+		return (bool) \get_query_var( 'actor' ) || (bool) \get_query_var( 'author_name' );
+	}
+
+	/**
 	 * Check if the current request is from the old host.
 	 *
 	 * @return bool True if the request is from the old host, false otherwise.
