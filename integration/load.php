@@ -184,17 +184,6 @@ function plugin_init() {
 	Webfinger::init();
 
 	/**
-	 * Adds WP REST Cache support.
-	 *
-	 * This class handles the compatibility with the WP REST Cache plugin.
-	 *
-	 * @see https://wordpress.org/plugins/wp-rest-cache/
-	 */
-	if ( \class_exists( 'WP_Rest_Cache_Plugin\Includes\Plugin' ) ) {
-		WP_Rest_Cache::init();
-	}
-
-	/**
 	 * Adds WPML Multilingual CMS (plugin) support.
 	 *
 	 * This class handles the compatibility with the WPML plugin.

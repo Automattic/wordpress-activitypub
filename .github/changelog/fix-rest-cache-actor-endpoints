@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Stop caching actor pages when a REST caching plugin is active, so pages only you should see are never served to visitors.
