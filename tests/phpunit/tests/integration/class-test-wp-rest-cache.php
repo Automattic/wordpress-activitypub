@@ -59,6 +59,34 @@ class Test_WP_Rest_Cache extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that the cache purge runs on the migration event, not on every request, and only when
+	 * upgrading from a version that predates the caching restriction.
+	 *
+	 * @covers ::init
+	 * @covers ::purge_on_migrate
+	 */
+	public function test_purge_runs_on_migration_not_per_request() {
+		WP_Rest_Cache::init();
+
+		$has_hook = \has_action( 'activitypub_migrate', array( WP_Rest_Cache::class, 'purge_on_migrate' ) );
+
+		// Detach the cache-plugin-dependent hooks init() registered, so they cannot fire from unrelated
+		// tests (the cache plugin class is unavailable in the test environment).
+		\remove_action( 'activitypub_migrate', array( WP_Rest_Cache::class, 'purge_on_migrate' ) );
+		\remove_action( 'transition_post_status', array( WP_Rest_Cache::class, 'transition_post_status' ), 10 );
+		\remove_action( 'transition_comment_status', array( WP_Rest_Cache::class, 'transition_comment_status' ), 10 );
+
+		$this->assertNotFalse( $has_hook, 'The purge must run on upgrade, not on every request.' );
+
+		// The former per-request sentinel option must no longer be created by init().
+		$this->assertFalse( \get_option( 'activitypub_rest_cache_actor_purge_done' ), 'The per-request sentinel option must be gone.' );
+
+		// An upgrade from the current version is a no-op: the version gate short-circuits before touching
+		// the cache plugin, so this runs cleanly even though that plugin is absent here.
+		WP_Rest_Cache::purge_on_migrate( ACTIVITYPUB_PLUGIN_VERSION );
+	}
+
+	/**
 	 * Test that the owner-only and per-peer routes are always disallowed.
 	 *
 	 * @covers ::add_disallowed_endpoints

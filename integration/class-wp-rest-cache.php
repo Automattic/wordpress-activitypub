@@ -38,13 +38,23 @@ class WP_Rest_Cache {
 		\add_filter( 'wp_rest_cache/is_single_item', array( self::class, 'set_is_single_item' ), 10, 3 );
 		\add_action( 'transition_post_status', array( self::class, 'transition_post_status' ), 10, 3 );
 		\add_action( 'transition_comment_status', array( self::class, 'transition_comment_status' ), 10, 3 );
+		\add_action( 'activitypub_migrate', array( self::class, 'purge_on_migrate' ) );
+	}
 
-		/*
-		 * Actor pages cached before caching was restricted to public routes may still be served from
-		 * the store. Purge the ActivityPub object type once so those stale entries cannot leak. The
-		 * add_option() sentinel only succeeds on the first run, so the purge happens exactly once.
-		 */
-		if ( \add_option( 'activitypub_rest_cache_actor_purge_done', '1', '', false ) ) {
+	/**
+	 * Purge actor pages cached before caching was restricted to public routes.
+	 *
+	 * Runs on the migration event, which fires once per upgrade, rather than on every request. Purges
+	 * only when upgrading from a version that predates the restriction, so a routine update does not
+	 * needlessly cold-start the cache this integration exists to keep warm. Entries stored under the
+	 * old rules could otherwise be served from the store and leak an owner-only response.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $version_from_db The version being upgraded from.
+	 */
+	public static function purge_on_migrate( $version_from_db ) {
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
 			Caching::get_instance()->delete_object_type_caches( 'ActivityPub' );
 		}
 	}
@@ -62,9 +72,9 @@ class WP_Rest_Cache {
 	 * without also naming the private ones.
 	 *
 	 * This replaces any existing entries under the ActivityPub namespace rather than merging: a
-	 * caller-varying actor prefix added by another filter would otherwise let WP REST Cache store an
-	 * owner-only response and replay it by URL. Owning this list outright keeps the actor tree out of
-	 * the cache no matter what else is registered.
+	 * caller-varying actor prefix added by another filter at this or an earlier priority would
+	 * otherwise let WP REST Cache store an owner-only response and replay it by URL. A filter running
+	 * at a later priority can still re-add the actor tree; the disallowed list is the backstop for that.
 	 *
 	 * @since unreleased Actor routes are no longer cached.
 	 *
