@@ -603,7 +603,9 @@ class Test_Server extends \WP_Test_REST_TestCase {
 	}
 
 	/**
-	 * Test that ActivityPub responses tell shared caches what they vary by.
+	 * With Authorized Fetch off the response is the same for every caller, so it varies only by
+	 * Authorization (the ActivityPub API token). Varying on the per-request signature headers would
+	 * mint a unique cache variant for every signed Mastodon fetch and defeat shared caching.
 	 *
 	 * @covers ::add_cache_headers
 	 */
@@ -613,8 +615,27 @@ class Test_Server extends \WP_Test_REST_TestCase {
 
 		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
 
-		$this->assertSame( 'Authorization, Signature, Signature-Input', $headers['Vary'] );
+		$this->assertSame( 'Authorization', $headers['Vary'] );
 		$this->assertArrayNotHasKey( 'Cache-Control', $headers );
+	}
+
+	/**
+	 * With Authorized Fetch on the response depends on the signing key, so the signature headers
+	 * join the Vary list.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_varies_on_signature_with_authorized_fetch() {
+		\add_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		\remove_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$this->assertSame( 'Authorization, Signature, Signature-Input', $headers['Vary'] );
 	}
 
 	/**
@@ -629,7 +650,7 @@ class Test_Server extends \WP_Test_REST_TestCase {
 
 		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
 
-		$this->assertSame( 'Accept, Authorization, Signature, Signature-Input', $headers['Vary'] );
+		$this->assertSame( 'Accept, Authorization', $headers['Vary'] );
 	}
 
 	/**

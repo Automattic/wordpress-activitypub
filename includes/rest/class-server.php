@@ -248,16 +248,31 @@ class Server {
 			return $response;
 		}
 
+		$authorized_fetch = use_authorized_fetch();
+
+		/*
+		 * Authorization always affects the response: the ActivityPub API varies it by access token.
+		 * The HTTP-signature headers only affect it under Authorized Fetch; with it off the response
+		 * is identical for every caller, and Mastodon sends a fresh Signature-Input on each GET, so
+		 * varying on them would mint a unique cache variant per request and defeat shared caching.
+		 */
+		$vary = array( 'Authorization' );
+
+		if ( $authorized_fetch ) {
+			$vary[] = 'Signature';
+			$vary[] = 'Signature-Input';
+		}
+
 		// Appended, so the CORS handler's own `Vary: Origin` survives.
-		$response->header( 'Vary', 'Authorization, Signature, Signature-Input', false );
+		$response->header( 'Vary', \implode( ', ', $vary ), false );
 
 		/*
 		 * Only mark a credentialed response private when Authorized Fetch actually varies it. With
 		 * Authorized Fetch off, a signed request gets the same public response as everyone else
 		 * (Mastodon signs its GETs by default), so `no-store` would needlessly drop it from every
-		 * CDN. The `Vary` header above still keeps a credentialed response from being reused.
+		 * CDN. The `Vary: Authorization` above still keeps a token-credentialed response from being reused.
 		 */
-		if ( use_authorized_fetch() ) {
+		if ( $authorized_fetch ) {
 			$credentials = array( 'authorization', 'signature', 'signature_input' );
 
 			foreach ( $credentials as $header ) {

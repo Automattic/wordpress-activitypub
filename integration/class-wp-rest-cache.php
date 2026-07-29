@@ -68,7 +68,10 @@ class WP_Rest_Cache {
 	 * @return array Filtered list of allowed endpoints.
 	 */
 	public static function add_activitypub_endpoints( $endpoints ) {
-		$endpoints[ ACTIVITYPUB_REST_NAMESPACE ] = array( 'collections/moderators', 'comments', 'nodeinfo', 'posts' );
+		$existing = isset( $endpoints[ ACTIVITYPUB_REST_NAMESPACE ] ) ? (array) $endpoints[ ACTIVITYPUB_REST_NAMESPACE ] : array();
+
+		// Merge, so allow entries added by other filters under this namespace are not dropped.
+		$endpoints[ ACTIVITYPUB_REST_NAMESPACE ] = \array_merge( $existing, array( 'collections/moderators', 'comments', 'nodeinfo', 'posts' ) );
 
 		return $endpoints;
 	}
@@ -90,10 +93,16 @@ class WP_Rest_Cache {
 	 * @return array Filtered list of disallowed endpoints.
 	 */
 	public static function add_disallowed_endpoints( $endpoints ) {
-		$endpoints[ ACTIVITYPUB_REST_NAMESPACE ] = array(
-			'(?:users|actors)/[0-9]+/inbox',
-			'(?:users|actors)/[0-9]+/outbox/stream',
-			'(?:users|actors)/[0-9]+/followers/sync',
+		$existing = isset( $endpoints[ ACTIVITYPUB_REST_NAMESPACE ] ) ? (array) $endpoints[ ACTIVITYPUB_REST_NAMESPACE ] : array();
+
+		// Merge, so deny rules added by an administrator or another filter are preserved, not overwritten.
+		$endpoints[ ACTIVITYPUB_REST_NAMESPACE ] = \array_merge(
+			$existing,
+			array(
+				'(?:users|actors)/[0-9]+/inbox',
+				'(?:users|actors)/[0-9]+/outbox/stream',
+				'(?:users|actors)/[0-9]+/followers/sync',
+			)
 		);
 
 		return $endpoints;

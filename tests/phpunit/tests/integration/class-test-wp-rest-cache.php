@@ -40,6 +40,49 @@ class Test_WP_Rest_Cache extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that allow entries another filter added under the ActivityPub namespace are preserved.
+	 *
+	 * @covers ::add_activitypub_endpoints
+	 */
+	public function test_existing_allowed_entries_are_preserved() {
+		$endpoints = WP_Rest_Cache::add_activitypub_endpoints(
+			array( ACTIVITYPUB_REST_NAMESPACE => array( 'custom/public' ) )
+		);
+
+		$this->assertContains( 'custom/public', $endpoints[ ACTIVITYPUB_REST_NAMESPACE ] );
+		$this->assertContains( 'nodeinfo', $endpoints[ ACTIVITYPUB_REST_NAMESPACE ] );
+	}
+
+	/**
+	 * Test that the owner-only and per-peer routes are always disallowed.
+	 *
+	 * @covers ::add_disallowed_endpoints
+	 */
+	public function test_disallowed_endpoints_cover_sensitive_routes() {
+		$disallowed = WP_Rest_Cache::add_disallowed_endpoints( array() )[ ACTIVITYPUB_REST_NAMESPACE ];
+
+		$this->assertContains( '(?:users|actors)/[0-9]+/inbox', $disallowed );
+		$this->assertContains( '(?:users|actors)/[0-9]+/followers/sync', $disallowed );
+	}
+
+	/**
+	 * Test that a deny rule another filter added under the ActivityPub namespace is not overwritten.
+	 *
+	 * An administrator excluding a custom authenticated route under an otherwise allowed prefix must
+	 * keep that protection, or the route becomes URL-cached and can leak caller-specific data.
+	 *
+	 * @covers ::add_disallowed_endpoints
+	 */
+	public function test_existing_disallowed_entries_are_preserved() {
+		$disallowed = WP_Rest_Cache::add_disallowed_endpoints(
+			array( ACTIVITYPUB_REST_NAMESPACE => array( 'posts/[0-9]+/private' ) )
+		)[ ACTIVITYPUB_REST_NAMESPACE ];
+
+		$this->assertContains( 'posts/[0-9]+/private', $disallowed );
+		$this->assertContains( '(?:users|actors)/[0-9]+/inbox', $disallowed );
+	}
+
+	/**
 	 * Test that every allowed endpoint matches at least one registered route.
 	 *
 	 * An entry that matches nothing is not harmful, but it reads as coverage the cache
