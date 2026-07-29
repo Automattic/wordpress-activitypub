@@ -9,3 +9,4 @@ If something is not working — follow requests stuck on "pending", missing comm
 ## How-To
 
 For guides on configuring specific setups (caching, reverse proxies, subdirectory installs), check out the [How-To section](./how-to) or use [the support forums on WordPress.org](https://wordpress.org/support/plugin/activitypub/).
+
