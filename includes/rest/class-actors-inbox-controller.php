@@ -155,7 +155,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 	 * can still deliver to it. Those requests are handed to the shared inbox in
 	 * `create_item()`.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * @param int $user_id The user ID.
 	 *

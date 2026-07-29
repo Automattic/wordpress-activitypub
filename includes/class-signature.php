@@ -31,7 +31,7 @@ class Signature {
 	 *
 	 * Does not persist anything — callers are responsible for storing the keys.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * @return array The key pair with 'private_key' and 'public_key', both null on failure.
 	 */
@@ -70,7 +70,7 @@ class Signature {
 	/**
 	 * Get the key pair stored in an option, migrating a legacy pair or generating a new one on first use.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * @param string        $option_key      The option name the key pair is stored in.
 	 * @param callable|null $legacy_callback Optional. Callback that returns a legacy key pair to migrate, or false. Default null.

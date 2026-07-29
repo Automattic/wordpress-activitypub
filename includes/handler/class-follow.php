@@ -131,7 +131,7 @@ class Follow {
 	 * The Reject is sent directly instead of through the Outbox, which only
 	 * dispatches for real actors, and is signed with the Application key.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * @param array $activity The Follow activity data.
 	 * @param int[] $user_ids The local recipient IDs the inbox resolved.

@@ -56,6 +56,22 @@ class Server {
 			return $result;
 		}
 
+		/*
+		 * Only honor OAuth bearer tokens on the plugin's own REST API.
+		 *
+		 * These are scoped ActivityPub C2S grants. Honoring them on core routes
+		 * (e.g. POST /wp/v2/posts) would establish a full-capability session that
+		 * ignores the token's granted scope, since scope is only enforced where
+		 * the plugin opts in via check_oauth_permission() (CWE-863). Every C2S
+		 * endpoint lives under ACTIVITYPUB_REST_NAMESPACE, so restricting here
+		 * does not affect legitimate clients. Direct callers (outbox permalinks,
+		 * SSE query-param auth) invoke this method outside REST dispatch and are
+		 * trusted to have scoped the context themselves.
+		 */
+		if ( ! self::is_authenticatable_request() ) {
+			return $result;
+		}
+
 		$validated = Token::validate( $token );
 
 		if ( \is_wp_error( $validated ) ) {
@@ -66,6 +82,63 @@ class Server {
 		\wp_set_current_user( $validated->get_user_id() );
 
 		return true;
+	}
+
+	/**
+	 * Whether the current request may be authenticated with an OAuth bearer token.
+	 *
+	 * Bearer tokens are scoped ActivityPub C2S grants and must only authenticate
+	 * the plugin's own REST API. During REST dispatch we therefore require the
+	 * requested route to live under {@see ACTIVITYPUB_REST_NAMESPACE}; a token
+	 * presented to a core route such as `/wp/v2/posts` is ignored so its granted
+	 * scope cannot be bypassed. Outside REST dispatch (e.g. outbox permalinks
+	 * that authenticate explicitly) there is no route to scope against, so the
+	 * request is allowed through to the caller's own checks.
+	 *
+	 * @since 9.1.0
+	 *
+	 * @return bool True if the request may be OAuth-authenticated.
+	 */
+	private static function is_authenticatable_request() {
+		global $wp;
+
+		$route = isset( $wp->query_vars['rest_route'] ) ? (string) $wp->query_vars['rest_route'] : '';
+
+		if ( '' === $route ) {
+			// No REST route in context: only trust non-REST (direct/permalink) callers.
+			return ! \wp_is_serving_rest_request();
+		}
+
+		$route     = '/' . \ltrim( $route, '/' );
+		$namespace = '/' . \trim( ACTIVITYPUB_REST_NAMESPACE, '/' );
+
+		return $route === $namespace || 0 === \strpos( $route, $namespace . '/' );
+	}
+
+	/**
+	 * Reject requests that authenticated with an OAuth bearer token.
+	 *
+	 * OAuth bearer tokens are scoped ActivityPub C2S grants and must not reach
+	 * the plugin's admin and management endpoints, which authorize by WordPress
+	 * capability rather than by OAuth scope. Without this guard a token consented
+	 * to for a narrow scope (e.g. read) could drive privileged, capability-gated
+	 * actions such as moderation. Cookie-authenticated admin-UI requests do not
+	 * establish an OAuth session and are unaffected.
+	 *
+	 * @since 9.1.0
+	 *
+	 * @return \WP_Error|null WP_Error when the request is OAuth-authenticated, null otherwise.
+	 */
+	public static function deny_if_oauth() {
+		if ( ! self::is_oauth_request() ) {
+			return null;
+		}
+
+		return new \WP_Error(
+			'activitypub_oauth_not_allowed',
+			\__( 'OAuth authentication is not allowed for this endpoint.', 'activitypub' ),
+			array( 'status' => 403 )
+		);
 	}
 
 	/**

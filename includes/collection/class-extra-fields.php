@@ -132,7 +132,7 @@ class Extra_Fields {
 					$attachment = array(
 						'type' => 'Link',
 						'name' => $title,
-						'href' => \esc_url( $tags->get_attribute( 'href' ) ),
+						'href' => \esc_url_raw( $tags->get_attribute( 'href' ) ),
 					);
 
 					$rel = $tags->get_attribute( 'rel' );

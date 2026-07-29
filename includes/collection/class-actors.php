@@ -36,7 +36,7 @@ class Actors {
 	/**
 	 * The ID of the former Application user.
 	 *
-	 * @deprecated unreleased The Application is no longer a user-like actor, see {@see \Activitypub\Application}. Retained for backward compatibility and legacy data handling.
+	 * @deprecated 9.1.0 The Application is no longer a user-like actor, see {@see \Activitypub\Application}. Retained for backward compatibility and legacy data handling.
 	 *
 	 * @var int
 	 */
@@ -402,7 +402,7 @@ class Actors {
 	 * login, nicename, and display name; the Blog actor is included when its name or identifier
 	 * matches. Disabled actor types are excluded, mirroring get_collection()/get_all().
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * @param string $query  The search term.
 	 * @param int    $number Optional. Maximum number of actors to return. Default 10.
@@ -514,7 +514,7 @@ class Actors {
 	 */
 	public static function get_public_key( $user_id, $force = false ) {
 		if ( $force ) {
-			\_deprecated_argument( __METHOD__, 'unreleased', \esc_html__( 'Keys are never rotated; new pairs are only generated when none is stored.', 'activitypub' ) );
+			\_deprecated_argument( __METHOD__, '9.1.0', \esc_html__( 'Keys are never rotated; new pairs are only generated when none is stored.', 'activitypub' ) );
 		}
 
 		$key_pair = self::get_keypair( $user_id );
@@ -532,7 +532,7 @@ class Actors {
 	 */
 	public static function get_private_key( $user_id, $force = false ) {
 		if ( $force ) {
-			\_deprecated_argument( __METHOD__, 'unreleased', \esc_html__( 'Keys are never rotated; new pairs are only generated when none is stored.', 'activitypub' ) );
+			\_deprecated_argument( __METHOD__, '9.1.0', \esc_html__( 'Keys are never rotated; new pairs are only generated when none is stored.', 'activitypub' ) );
 		}
 
 		$key_pair = self::get_keypair( $user_id );

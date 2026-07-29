@@ -14,6 +14,7 @@ use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
 use function Activitypub\is_actor;
+use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 
 /**
@@ -79,6 +80,11 @@ class Remote_Actors {
 
 	/**
 	 * Upsert (insert or update) a remote actor as a custom post type.
+	 *
+	 * The actor is looked up and stored under its own `id`. Callers that obtain
+	 * the actor from an untrusted fetch MUST fetch it via {@see Http::get_remote_object()},
+	 * which self-confirms the document is served under its own id, so a document
+	 * claiming another actor's id can never reach this method.
 	 *
 	 * @param array|Actor $actor ActivityPub actor object (array or actor, must include 'id').
 	 *
@@ -237,7 +243,7 @@ class Remote_Actors {
 	 * the same scheme and host shape, so matching it for a short term would return nearly every
 	 * cached actor.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * @param string $query  The search term.
 	 * @param int    $number Optional. Maximum number of actors to return. Default 10.
@@ -359,6 +365,7 @@ class Remote_Actors {
 			return $post;
 		}
 
+		// get_remote_object() self-confirms the actor is served under its own id, so it is safe to cache.
 		$object = Http::get_remote_object( $actor_uri, false );
 
 		if ( \is_wp_error( $object ) ) {
@@ -748,11 +755,8 @@ class Remote_Actors {
 
 			// If we fetched a standalone key object, follow the owner to get the actor.
 			if ( isset( $data['owner'] ) && ! isset( $data['publicKey'] ) ) {
-				// Verify the owner is on the same host as the key to prevent cross-origin spoofing.
-				$key_host   = \wp_parse_url( $key_id, \PHP_URL_HOST );
-				$owner_host = \wp_parse_url( $data['owner'], \PHP_URL_HOST );
-
-				if ( ! $key_host || ! $owner_host || $key_host !== $owner_host ) {
+				// Verify the owner is on the same host as the key, so a key on one host cannot be claimed for an actor on another.
+				if ( ! is_same_host( $key_id, $data['owner'] ) ) {
 					return $no_key_error;
 				}
 
@@ -806,11 +810,8 @@ class Remote_Actors {
 			return false;
 		}
 
-		$actor_host   = isset( $data['id'] ) ? \wp_parse_url( $data['id'], \PHP_URL_HOST ) : null;
-		$key_url_host = \wp_parse_url( $data['publicKey'], \PHP_URL_HOST );
-
 		// Verify the key URL is on the same host as the actor.
-		if ( ! $actor_host || ! $key_url_host || $actor_host !== $key_url_host ) {
+		if ( ! is_same_host( $data['id'] ?? '', $data['publicKey'] ) ) {
 			return false;
 		}
 
