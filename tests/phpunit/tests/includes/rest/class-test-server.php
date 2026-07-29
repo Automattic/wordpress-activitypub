@@ -720,6 +720,27 @@ class Test_Server extends \WP_Test_REST_TestCase {
 	}
 
 	/**
+	 * An owner authenticated by WP session (verify_owner) can receive private items in an otherwise
+	 * public collection, and the session cookie is not in Vary, so a logged-in response must never be
+	 * shared, whatever the Authorized Fetch setting.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_marks_session_authenticated_responses_private() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\wp_set_current_user( $user_id );
+
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/followers' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		\wp_set_current_user( 0 );
+
+		$this->assertSame( 'private, no-store, max-age=0', $headers['Cache-Control'] );
+	}
+
+	/**
 	 * Data provider for credential headers.
 	 *
 	 * @return array[] Test parameters.

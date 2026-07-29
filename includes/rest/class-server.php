@@ -278,6 +278,18 @@ class Server {
 		$response->header( 'Vary', \implode( ', ', $vary ), false );
 
 		/*
+		 * An owner authenticated by WP session (verify_owner()) can receive private items in an
+		 * otherwise public collection such as the outbox or followers. That request carries a session
+		 * cookie, not a header in Vary, so the response must never be shared. Mark it private regardless
+		 * of Authorized Fetch.
+		 */
+		if ( \is_user_logged_in() ) {
+			$response->header( 'Cache-Control', 'private, no-store, max-age=0' );
+
+			return $response;
+		}
+
+		/*
 		 * Only mark a credentialed response private when Authorized Fetch actually varies it. With
 		 * Authorized Fetch off, a signed request gets the same public response as everyone else
 		 * (Mastodon signs its GETs by default), so `no-store` would needlessly drop it from every
