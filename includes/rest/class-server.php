@@ -249,6 +249,18 @@ class Server {
 		}
 
 		/*
+		 * A request authenticated by WP session can get a personalized response even on a route whose
+		 * permission callback is `__return_true`: `/interactions` redirects by the current user, and
+		 * verify_owner() surfaces private items in otherwise public collections. The session cookie is
+		 * not part of Vary, so mark any logged-in response private before the public shortcut below.
+		 */
+		if ( \is_user_logged_in() ) {
+			$response->header( 'Cache-Control', 'private, no-store, max-age=0' );
+
+			return $response;
+		}
+
+		/*
 		 * A route that authorizes every caller identically (permission_callback `__return_true`) returns
 		 * a public response, even under Authorized Fetch, where Mastodon still signs its GETs. Leave it
 		 * without caller-varying cache directives so public collections such as thread replies and
@@ -276,18 +288,6 @@ class Server {
 
 		// Appended, so the CORS handler's own `Vary: Origin` survives.
 		$response->header( 'Vary', \implode( ', ', $vary ), false );
-
-		/*
-		 * An owner authenticated by WP session (verify_owner()) can receive private items in an
-		 * otherwise public collection such as the outbox or followers. That request carries a session
-		 * cookie, not a header in Vary, so the response must never be shared. Mark it private regardless
-		 * of Authorized Fetch.
-		 */
-		if ( \is_user_logged_in() ) {
-			$response->header( 'Cache-Control', 'private, no-store, max-age=0' );
-
-			return $response;
-		}
 
 		/*
 		 * Only mark a credentialed response private when Authorized Fetch actually varies it. With

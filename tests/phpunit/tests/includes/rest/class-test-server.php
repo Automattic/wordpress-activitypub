@@ -741,6 +741,28 @@ class Test_Server extends \WP_Test_REST_TestCase {
 	}
 
 	/**
+	 * A route whose permission callback is __return_true can still be personalized for a logged-in
+	 * user (e.g. /interactions redirects by the current user), so a logged-in request must be marked
+	 * private even there. The session check has to run before the public shortcut.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_marks_logged_in_public_route_private() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\wp_set_current_user( $user_id );
+
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
+		$request->set_attributes( array( 'permission_callback' => '__return_true' ) );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		\wp_set_current_user( 0 );
+
+		$this->assertSame( 'private, no-store, max-age=0', $headers['Cache-Control'] );
+	}
+
+	/**
 	 * Data provider for credential headers.
 	 *
 	 * @return array[] Test parameters.
