@@ -83,6 +83,113 @@ class Test_WP_Rest_Cache extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that the skip_caching guard blocks owner-only routes on both permalink styles.
+	 *
+	 * On plain-permalink sites the route arrives percent-encoded, which the disallowed-endpoints
+	 * regex list cannot match; this guard decodes it and skips caching regardless of permalink style.
+	 *
+	 * @covers ::skip_owner_only_routes
+	 *
+	 * @dataProvider owner_only_request_provider
+	 *
+	 * @param string $request_uri The incoming request URI.
+	 */
+	public function test_skip_owner_only_routes_blocks_sensitive_routes( $request_uri ) {
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Test snapshot of raw global; restored verbatim.
+		$request_uri_backup     = $_SERVER['REQUEST_URI'] ?? null;
+		$_SERVER['REQUEST_URI'] = $request_uri;
+
+		$skip = WP_Rest_Cache::skip_owner_only_routes( false );
+
+		if ( null === $request_uri_backup ) {
+			unset( $_SERVER['REQUEST_URI'] );
+		} else {
+			$_SERVER['REQUEST_URI'] = $request_uri_backup;
+		}
+
+		$this->assertTrue( $skip );
+	}
+
+	/**
+	 * Data provider for owner-only requests across permalink styles.
+	 *
+	 * @return array[] Test parameters.
+	 */
+	public function owner_only_request_provider() {
+		$namespace = ACTIVITYPUB_REST_NAMESPACE;
+
+		return array(
+			'pretty permalink, inbox'                 => array( '/wp-json/' . $namespace . '/actors/1/inbox' ),
+			'pretty permalink, followers/sync'        => array( '/wp-json/' . $namespace . '/actors/1/followers/sync' ),
+			'plain permalink, inbox'                  => array( '/?rest_route=/' . $namespace . '/actors/1/inbox' ),
+			'plain permalink encoded, followers/sync' => array( '/?rest_route=' . \rawurlencode( '/' . $namespace . '/actors/1/followers/sync' ) ),
+			'legacy users prefix, outbox/stream'      => array( '/wp-json/' . $namespace . '/users/1/outbox/stream' ),
+		);
+	}
+
+	/**
+	 * Test that the skip_caching guard leaves public and non-ActivityPub routes untouched.
+	 *
+	 * @covers ::skip_owner_only_routes
+	 *
+	 * @dataProvider public_request_provider
+	 *
+	 * @param string $request_uri The incoming request URI.
+	 */
+	public function test_skip_owner_only_routes_ignores_public_routes( $request_uri ) {
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Test snapshot of raw global; restored verbatim.
+		$request_uri_backup     = $_SERVER['REQUEST_URI'] ?? null;
+		$_SERVER['REQUEST_URI'] = $request_uri;
+
+		$skip = WP_Rest_Cache::skip_owner_only_routes( false );
+
+		if ( null === $request_uri_backup ) {
+			unset( $_SERVER['REQUEST_URI'] );
+		} else {
+			$_SERVER['REQUEST_URI'] = $request_uri_backup;
+		}
+
+		$this->assertFalse( $skip );
+	}
+
+	/**
+	 * Data provider for public and unrelated requests.
+	 *
+	 * @return array[] Test parameters.
+	 */
+	public function public_request_provider() {
+		$namespace = ACTIVITYPUB_REST_NAMESPACE;
+
+		return array(
+			'public outbox'         => array( '/wp-json/' . $namespace . '/actors/1/outbox' ),
+			'public posts'          => array( '/wp-json/' . $namespace . '/posts' ),
+			'plain permalink posts' => array( '/?rest_route=/' . $namespace . '/posts' ),
+			'non-activitypub route' => array( '/wp-json/wp/v2/posts' ),
+		);
+	}
+
+	/**
+	 * Test that the guard respects an earlier decision to skip caching.
+	 *
+	 * @covers ::skip_owner_only_routes
+	 */
+	public function test_skip_owner_only_routes_preserves_earlier_skip() {
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Test snapshot of raw global; restored verbatim.
+		$request_uri_backup     = $_SERVER['REQUEST_URI'] ?? null;
+		$_SERVER['REQUEST_URI'] = '/wp-json/' . ACTIVITYPUB_REST_NAMESPACE . '/posts';
+
+		$skip = WP_Rest_Cache::skip_owner_only_routes( true );
+
+		if ( null === $request_uri_backup ) {
+			unset( $_SERVER['REQUEST_URI'] );
+		} else {
+			$_SERVER['REQUEST_URI'] = $request_uri_backup;
+		}
+
+		$this->assertTrue( $skip );
+	}
+
+	/**
 	 * Test that every allowed endpoint matches at least one registered route.
 	 *
 	 * An entry that matches nothing is not harmful, but it reads as coverage the cache
