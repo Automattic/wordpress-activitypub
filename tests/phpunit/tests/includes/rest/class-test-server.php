@@ -620,6 +620,29 @@ class Test_Server extends \WP_Test_REST_TestCase {
 	}
 
 	/**
+	 * A public route (permission_callback __return_true) returns the same response for every caller,
+	 * so even under Authorized Fetch with a signed request it must stay cacheable: no no-store, and no
+	 * caller-varying Vary. This keeps public thread-resolution reads (replies, context) edge-cacheable.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_leaves_public_routes_cacheable_under_authorized_fetch() {
+		\add_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/1/replies' );
+		$request->set_attributes( array( 'permission_callback' => '__return_true' ) );
+		$request->set_header( 'Signature', 'keyId="https://remote.example/users/alice#main-key"' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		\remove_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$this->assertArrayNotHasKey( 'Cache-Control', $headers );
+		$this->assertArrayNotHasKey( 'Vary', $headers );
+	}
+
+	/**
 	 * With Authorized Fetch on the response depends on the signing key, so the signature headers
 	 * join the Vary list.
 	 *

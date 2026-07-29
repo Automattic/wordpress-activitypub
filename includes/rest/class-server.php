@@ -248,6 +248,17 @@ class Server {
 			return $response;
 		}
 
+		/*
+		 * A route that authorizes every caller identically (permission_callback `__return_true`) returns
+		 * a public response, even under Authorized Fetch, where Mastodon still signs its GETs. Leave it
+		 * without caller-varying cache directives so public collections such as thread replies and
+		 * context stay cacheable at the edge. Routes that gate on the caller fall through below.
+		 */
+		$attributes = $request->get_attributes();
+		if ( isset( $attributes['permission_callback'] ) && '__return_true' === $attributes['permission_callback'] ) {
+			return $response;
+		}
+
 		$authorized_fetch = use_authorized_fetch();
 
 		/*
