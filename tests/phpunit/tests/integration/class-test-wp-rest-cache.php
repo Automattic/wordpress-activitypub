@@ -87,15 +87,54 @@ class Test_WP_Rest_Cache extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that the owner-only and per-peer routes are always disallowed.
+	 * Test that the whole actor tree is denied with literal prefixes.
 	 *
 	 * @covers ::add_disallowed_endpoints
 	 */
-	public function test_disallowed_endpoints_cover_sensitive_routes() {
+	public function test_disallowed_endpoints_cover_the_actor_tree() {
 		$disallowed = WP_Rest_Cache::add_disallowed_endpoints( array() )[ ACTIVITYPUB_REST_NAMESPACE ];
 
-		$this->assertContains( '(?:users|actors)/[0-9]+/inbox', $disallowed );
-		$this->assertContains( '(?:users|actors)/[0-9]+/followers/sync', $disallowed );
+		$this->assertContains( 'users', $disallowed );
+		$this->assertContains( 'actors', $disallowed );
+	}
+
+	/**
+	 * Test that a deny prefix matches every caller-varying actor route the way WP REST Cache matches
+	 * it, on both permalink styles, including the percent-encoded rest_route form the per-route regexes
+	 * could not match. Pins the list against the live route table rather than trusting a comment.
+	 *
+	 * @covers ::add_disallowed_endpoints
+	 */
+	public function test_disallowed_prefixes_match_every_actor_route() {
+		$disallowed = WP_Rest_Cache::add_disallowed_endpoints( array() )[ ACTIVITYPUB_REST_NAMESPACE ];
+		$routes     = $this->get_example_uris( true );
+
+		$this->assertNotEmpty( $routes, 'Expected at least one authenticated actor route to guard.' );
+
+		foreach ( $routes as $uri ) {
+			// get_example_uris() returns the full path, e.g. /activitypub/1.0/actors/1/inbox. Only the
+			// actor tree is covered by these prefixes; other authenticated routes, if any, are out of scope.
+			if ( ! \str_contains( $uri, '/actors/' ) && ! \str_contains( $uri, '/users/' ) ) {
+				continue;
+			}
+
+			// The pretty URI carries real slashes; the plain-permalink form is percent-encoded, which is
+			// where the old per-route regexes stopped matching.
+			$encoded = 'rest_route=' . \rawurlencode( $uri );
+
+			$covered = false;
+			foreach ( $disallowed as $prefix ) {
+				$needle_pretty  = ACTIVITYPUB_REST_NAMESPACE . '/' . $prefix;
+				$needle_encoded = 'rest_route=' . \rawurlencode( '/' . ACTIVITYPUB_REST_NAMESPACE . '/' . $prefix );
+
+				if ( \str_contains( $uri, $needle_pretty ) && \str_contains( $encoded, $needle_encoded ) ) {
+					$covered = true;
+					break;
+				}
+			}
+
+			$this->assertTrue( $covered, \sprintf( 'Actor route %s is not denied on both permalink styles.', $uri ) );
+		}
 	}
 
 	/**
@@ -112,7 +151,7 @@ class Test_WP_Rest_Cache extends \WP_UnitTestCase {
 		)[ ACTIVITYPUB_REST_NAMESPACE ];
 
 		$this->assertContains( 'posts/[0-9]+/private', $disallowed );
-		$this->assertContains( '(?:users|actors)/[0-9]+/inbox', $disallowed );
+		$this->assertContains( 'actors', $disallowed );
 	}
 
 	/**

@@ -32,8 +32,10 @@ class WP_Rest_Cache {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_filter( 'wp_rest_cache/allowed_endpoints', array( self::class, 'add_activitypub_endpoints' ) );
-		\add_filter( 'wp_rest_cache/disallowed_endpoints', array( self::class, 'add_disallowed_endpoints' ) );
+		// Late priority so this owns the final endpoint lists: a filter that re-adds the actor tree
+		// earlier is overridden, and our deny rules are not dropped by another filter's list.
+		\add_filter( 'wp_rest_cache/allowed_endpoints', array( self::class, 'add_activitypub_endpoints' ), \PHP_INT_MAX );
+		\add_filter( 'wp_rest_cache/disallowed_endpoints', array( self::class, 'add_disallowed_endpoints' ), \PHP_INT_MAX );
 		\add_filter( 'wp_rest_cache/determine_object_type', array( self::class, 'set_object_type' ), 10, 4 );
 		\add_filter( 'wp_rest_cache/is_single_item', array( self::class, 'set_is_single_item' ), 10, 3 );
 		\add_action( 'transition_post_status', array( self::class, 'transition_post_status' ), 10, 3 );
@@ -71,10 +73,10 @@ class WP_Rest_Cache {
 	 * sits between the prefix and the route, so no entry can name the public routes
 	 * without also naming the private ones.
 	 *
-	 * This replaces any existing entries under the ActivityPub namespace rather than merging: a
-	 * caller-varying actor prefix added by another filter at this or an earlier priority would
-	 * otherwise let WP REST Cache store an owner-only response and replay it by URL. A filter running
-	 * at a later priority can still re-add the actor tree; the disallowed list is the backstop for that.
+	 * This replaces any existing entries under the ActivityPub namespace rather than merging, and runs
+	 * at a late priority (see init()), so a caller-varying actor prefix added by another filter is
+	 * overridden rather than left to let WP REST Cache store an owner-only response and replay it by
+	 * URL. The disallowed list denies the whole actor tree as a further backstop.
 	 *
 	 * @since unreleased Actor routes are no longer cached.
 	 *
@@ -89,18 +91,20 @@ class WP_Rest_Cache {
 	}
 
 	/**
-	 * Never cache routes whose response depends on the caller or must not be stored at all.
+	 * Never cache any actor-tree route, whose response can depend on the caller.
 	 *
-	 * The cache keys entries by request URI, so a response produced for one caller can be served
-	 * to another. These routes must never be cached regardless of any allowed-endpoint entry, so
-	 * they are blocked here as well: the inbox is owner-only, the event streams are long-lived
-	 * per-connection responses, and FEP-8fcf's `followers/sync` is disclosed only to a signed peer.
-	 * Entries are matched as regular expressions against the full route, so the actor ID between the
-	 * prefix and the sub-route is covered without naming it.
+	 * The cache keys entries by request URI, so a response produced for one caller can be served to
+	 * another. The actor tree is already kept out of the allowed list, so this is defence in depth for
+	 * the case where another filter re-adds the `actors`/`users` prefix: the whole tree, owner-only
+	 * inbox, event stream, peer-only `followers/sync`, and the caller-varying followers/following/
+	 * outbox collections alike, stays uncacheable.
 	 *
-	 * This is defence in depth: the actor tree is already kept out of the allowed list, so these
-	 * routes are not cached in the first place. The list still guards the case where an administrator
-	 * denies a sub-route beneath an allowed prefix, whose rules must survive alongside these.
+	 * The entries are literal prefixes, not per-route regexes, on purpose. WP REST Cache matches this
+	 * list with a substring check against a percent-encoded URI for plain-permalink (`rest_route`)
+	 * requests, and its regex fallback did not exist before v2026.3.0. A literal `users`/`actors`
+	 * prefix matches the whole tree on both permalink styles and every supported cache-plugin version;
+	 * a per-route regex matches neither the encoded form nor older versions. Verified against
+	 * WP REST Cache 2026.3.1.
 	 *
 	 * @since unreleased
 	 *
@@ -111,19 +115,13 @@ class WP_Rest_Cache {
 	public static function add_disallowed_endpoints( $endpoints ) {
 		$existing = isset( $endpoints[ ACTIVITYPUB_REST_NAMESPACE ] ) ? (array) $endpoints[ ACTIVITYPUB_REST_NAMESPACE ] : array();
 
-		$patterns = array(
-			'(?:users|actors)/[0-9]+/inbox',
-			'(?:users|actors)/[0-9]+/outbox/stream',
-			'(?:users|actors)/[0-9]+/followers/sync',
-		);
-
 		/*
 		 * Merge so deny rules added by an administrator or another filter are preserved, and
 		 * deduplicate: WP REST Cache passes the persisted option back through this filter on every
 		 * request, so a plain merge would append another copy each time and grow the option without
 		 * bound.
 		 */
-		$endpoints[ ACTIVITYPUB_REST_NAMESPACE ] = \array_values( \array_unique( \array_merge( $existing, $patterns ) ) );
+		$endpoints[ ACTIVITYPUB_REST_NAMESPACE ] = \array_values( \array_unique( \array_merge( $existing, array( 'users', 'actors' ) ) ) );
 
 		return $endpoints;
 	}
