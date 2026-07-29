@@ -29,27 +29,11 @@ use WP_Rest_Cache_Plugin\Includes\Caching\Caching;
  */
 class WP_Rest_Cache {
 	/**
-	 * Regex fragments for routes whose response depends on the caller or must never be stored.
-	 *
-	 * Matched against the route below the namespace, so the actor ID between the prefix and the
-	 * sub-route is covered without naming it. Shared by the disallowed-endpoints filter and the
-	 * `skip_caching` guard so the two cannot drift apart.
-	 *
-	 * @var string[]
-	 */
-	const OWNER_ONLY_ROUTE_PATTERNS = array(
-		'(?:users|actors)/[0-9]+/inbox',
-		'(?:users|actors)/[0-9]+/outbox/stream',
-		'(?:users|actors)/[0-9]+/followers/sync',
-	);
-
-	/**
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
 		\add_filter( 'wp_rest_cache/allowed_endpoints', array( self::class, 'add_activitypub_endpoints' ) );
 		\add_filter( 'wp_rest_cache/disallowed_endpoints', array( self::class, 'add_disallowed_endpoints' ) );
-		\add_filter( 'wp_rest_cache/skip_caching', array( self::class, 'skip_owner_only_routes' ) );
 		\add_filter( 'wp_rest_cache/determine_object_type', array( self::class, 'set_object_type' ), 10, 4 );
 		\add_filter( 'wp_rest_cache/is_single_item', array( self::class, 'set_is_single_item' ), 10, 3 );
 		\add_action( 'transition_post_status', array( self::class, 'transition_post_status' ), 10, 3 );
@@ -77,6 +61,11 @@ class WP_Rest_Cache {
 	 * sits between the prefix and the route, so no entry can name the public routes
 	 * without also naming the private ones.
 	 *
+	 * This replaces any existing entries under the ActivityPub namespace rather than merging: a
+	 * caller-varying actor prefix added by another filter would otherwise let WP REST Cache store an
+	 * owner-only response and replay it by URL. Owning this list outright keeps the actor tree out of
+	 * the cache no matter what else is registered.
+	 *
 	 * @since unreleased Actor routes are no longer cached.
 	 *
 	 * @param array $endpoints List of allowed endpoints.
@@ -84,10 +73,7 @@ class WP_Rest_Cache {
 	 * @return array Filtered list of allowed endpoints.
 	 */
 	public static function add_activitypub_endpoints( $endpoints ) {
-		$existing = isset( $endpoints[ ACTIVITYPUB_REST_NAMESPACE ] ) ? (array) $endpoints[ ACTIVITYPUB_REST_NAMESPACE ] : array();
-
-		// Merge, so allow entries added by other filters under this namespace are not dropped.
-		$endpoints[ ACTIVITYPUB_REST_NAMESPACE ] = \array_merge( $existing, array( 'collections/moderators', 'comments', 'nodeinfo', 'posts' ) );
+		$endpoints[ ACTIVITYPUB_REST_NAMESPACE ] = array( 'collections/moderators', 'comments', 'nodeinfo', 'posts' );
 
 		return $endpoints;
 	}
@@ -102,9 +88,9 @@ class WP_Rest_Cache {
 	 * Entries are matched as regular expressions against the full route, so the actor ID between the
 	 * prefix and the sub-route is covered without naming it.
 	 *
-	 * This list is honoured on pretty-permalink sites, where WP REST Cache matches it against a route
-	 * with real slashes. On plain-permalink sites the route arrives percent-encoded, which this list
-	 * cannot match; `skip_owner_only_routes()` covers that form.
+	 * This is defence in depth: the actor tree is already kept out of the allowed list, so these
+	 * routes are not cached in the first place. The list still guards the case where an administrator
+	 * denies a sub-route beneath an allowed prefix, whose rules must survive alongside these.
 	 *
 	 * @since unreleased
 	 *
@@ -115,50 +101,21 @@ class WP_Rest_Cache {
 	public static function add_disallowed_endpoints( $endpoints ) {
 		$existing = isset( $endpoints[ ACTIVITYPUB_REST_NAMESPACE ] ) ? (array) $endpoints[ ACTIVITYPUB_REST_NAMESPACE ] : array();
 
-		// Merge, so deny rules added by an administrator or another filter are preserved, not overwritten.
-		$endpoints[ ACTIVITYPUB_REST_NAMESPACE ] = \array_merge( $existing, self::OWNER_ONLY_ROUTE_PATTERNS );
+		$patterns = array(
+			'(?:users|actors)/[0-9]+/inbox',
+			'(?:users|actors)/[0-9]+/outbox/stream',
+			'(?:users|actors)/[0-9]+/followers/sync',
+		);
+
+		/*
+		 * Merge so deny rules added by an administrator or another filter are preserved, and
+		 * deduplicate: WP REST Cache passes the persisted option back through this filter on every
+		 * request, so a plain merge would append another copy each time and grow the option without
+		 * bound.
+		 */
+		$endpoints[ ACTIVITYPUB_REST_NAMESPACE ] = \array_values( \array_unique( \array_merge( $existing, $patterns ) ) );
 
 		return $endpoints;
-	}
-
-	/**
-	 * Force WP REST Cache to skip caching for owner-only and per-peer routes.
-	 *
-	 * WP REST Cache matches its disallowed-endpoints list against a re-encoded request URI. On
-	 * plain-permalink sites a request arrives as `?rest_route=%2Factivitypub%2F1.0%2F…`, and the
-	 * percent-encoded slashes stop the route regexes from matching, so a route another filter allowed
-	 * could still be cached and replayed to the wrong caller. This guard decodes the request URI
-	 * itself and skips caching when the route is one that must never be stored, which covers both
-	 * permalink styles regardless of what the allowed list contains.
-	 *
-	 * @since unreleased
-	 *
-	 * @param bool $skip Whether WP REST Cache should skip caching for this request.
-	 *
-	 * @return bool Whether to skip caching.
-	 */
-	public static function skip_owner_only_routes( $skip ) {
-		if ( $skip || ! isset( $_SERVER['REQUEST_URI'] ) ) {
-			return $skip;
-		}
-
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-		$request_uri = \sanitize_url( \wp_unslash( $_SERVER['REQUEST_URI'] ) );
-
-		// Decode so the percent-encoded rest_route form matches the same patterns as a real route.
-		$request_uri = \rawurldecode( $request_uri );
-
-		if ( ! self::is_activitypub_endpoint( $request_uri ) ) {
-			return $skip;
-		}
-
-		foreach ( self::OWNER_ONLY_ROUTE_PATTERNS as $pattern ) {
-			if ( \preg_match( '#' . ACTIVITYPUB_REST_NAMESPACE . '/' . $pattern . '#', $request_uri ) ) {
-				return true;
-			}
-		}
-
-		return $skip;
 	}
 
 	/**

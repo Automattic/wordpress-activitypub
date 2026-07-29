@@ -40,17 +40,22 @@ class Test_WP_Rest_Cache extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that allow entries another filter added under the ActivityPub namespace are preserved.
+	 * Test that a caller-varying actor allow contributed by another filter is dropped.
+	 *
+	 * The allowed list is owned outright rather than merged: an `actors`/`users` prefix added
+	 * elsewhere would otherwise let WP REST Cache store an owner-only response and replay it by URL.
 	 *
 	 * @covers ::add_activitypub_endpoints
 	 */
-	public function test_existing_allowed_entries_are_preserved() {
-		$endpoints = WP_Rest_Cache::add_activitypub_endpoints(
-			array( ACTIVITYPUB_REST_NAMESPACE => array( 'custom/public' ) )
-		);
+	public function test_external_actor_allow_is_dropped() {
+		$allowed = WP_Rest_Cache::add_activitypub_endpoints(
+			array( ACTIVITYPUB_REST_NAMESPACE => array( 'actors', 'users', 'custom/public' ) )
+		)[ ACTIVITYPUB_REST_NAMESPACE ];
 
-		$this->assertContains( 'custom/public', $endpoints[ ACTIVITYPUB_REST_NAMESPACE ] );
-		$this->assertContains( 'nodeinfo', $endpoints[ ACTIVITYPUB_REST_NAMESPACE ] );
+		$this->assertNotContains( 'actors', $allowed );
+		$this->assertNotContains( 'users', $allowed );
+		$this->assertNotContains( 'custom/public', $allowed );
+		$this->assertContains( 'nodeinfo', $allowed );
 	}
 
 	/**
@@ -83,110 +88,22 @@ class Test_WP_Rest_Cache extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that the skip_caching guard blocks owner-only routes on both permalink styles.
+	 * Test that the deny list does not grow when its own output is fed back through the filter.
 	 *
-	 * On plain-permalink sites the route arrives percent-encoded, which the disallowed-endpoints
-	 * regex list cannot match; this guard decodes it and skips caching regardless of permalink style.
+	 * WP REST Cache passes the persisted option back through this filter on every request, so a
+	 * plain merge would append a duplicate set each time.
 	 *
-	 * @covers ::skip_owner_only_routes
-	 *
-	 * @dataProvider owner_only_request_provider
-	 *
-	 * @param string $request_uri The incoming request URI.
+	 * @covers ::add_disallowed_endpoints
 	 */
-	public function test_skip_owner_only_routes_blocks_sensitive_routes( $request_uri ) {
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Test snapshot of raw global; restored verbatim.
-		$request_uri_backup     = $_SERVER['REQUEST_URI'] ?? null;
-		$_SERVER['REQUEST_URI'] = $request_uri;
+	public function test_disallowed_endpoints_do_not_duplicate() {
+		$once  = WP_Rest_Cache::add_disallowed_endpoints( array() );
+		$twice = WP_Rest_Cache::add_disallowed_endpoints( $once );
 
-		$skip = WP_Rest_Cache::skip_owner_only_routes( false );
-
-		if ( null === $request_uri_backup ) {
-			unset( $_SERVER['REQUEST_URI'] );
-		} else {
-			$_SERVER['REQUEST_URI'] = $request_uri_backup;
-		}
-
-		$this->assertTrue( $skip );
-	}
-
-	/**
-	 * Data provider for owner-only requests across permalink styles.
-	 *
-	 * @return array[] Test parameters.
-	 */
-	public function owner_only_request_provider() {
-		$namespace = ACTIVITYPUB_REST_NAMESPACE;
-
-		return array(
-			'pretty permalink, inbox'                 => array( '/wp-json/' . $namespace . '/actors/1/inbox' ),
-			'pretty permalink, followers/sync'        => array( '/wp-json/' . $namespace . '/actors/1/followers/sync' ),
-			'plain permalink, inbox'                  => array( '/?rest_route=/' . $namespace . '/actors/1/inbox' ),
-			'plain permalink encoded, followers/sync' => array( '/?rest_route=' . \rawurlencode( '/' . $namespace . '/actors/1/followers/sync' ) ),
-			'legacy users prefix, outbox/stream'      => array( '/wp-json/' . $namespace . '/users/1/outbox/stream' ),
+		$this->assertSame(
+			$once[ ACTIVITYPUB_REST_NAMESPACE ],
+			$twice[ ACTIVITYPUB_REST_NAMESPACE ],
+			'Feeding the deny list back through the filter must be idempotent.'
 		);
-	}
-
-	/**
-	 * Test that the skip_caching guard leaves public and non-ActivityPub routes untouched.
-	 *
-	 * @covers ::skip_owner_only_routes
-	 *
-	 * @dataProvider public_request_provider
-	 *
-	 * @param string $request_uri The incoming request URI.
-	 */
-	public function test_skip_owner_only_routes_ignores_public_routes( $request_uri ) {
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Test snapshot of raw global; restored verbatim.
-		$request_uri_backup     = $_SERVER['REQUEST_URI'] ?? null;
-		$_SERVER['REQUEST_URI'] = $request_uri;
-
-		$skip = WP_Rest_Cache::skip_owner_only_routes( false );
-
-		if ( null === $request_uri_backup ) {
-			unset( $_SERVER['REQUEST_URI'] );
-		} else {
-			$_SERVER['REQUEST_URI'] = $request_uri_backup;
-		}
-
-		$this->assertFalse( $skip );
-	}
-
-	/**
-	 * Data provider for public and unrelated requests.
-	 *
-	 * @return array[] Test parameters.
-	 */
-	public function public_request_provider() {
-		$namespace = ACTIVITYPUB_REST_NAMESPACE;
-
-		return array(
-			'public outbox'         => array( '/wp-json/' . $namespace . '/actors/1/outbox' ),
-			'public posts'          => array( '/wp-json/' . $namespace . '/posts' ),
-			'plain permalink posts' => array( '/?rest_route=/' . $namespace . '/posts' ),
-			'non-activitypub route' => array( '/wp-json/wp/v2/posts' ),
-		);
-	}
-
-	/**
-	 * Test that the guard respects an earlier decision to skip caching.
-	 *
-	 * @covers ::skip_owner_only_routes
-	 */
-	public function test_skip_owner_only_routes_preserves_earlier_skip() {
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Test snapshot of raw global; restored verbatim.
-		$request_uri_backup     = $_SERVER['REQUEST_URI'] ?? null;
-		$_SERVER['REQUEST_URI'] = '/wp-json/' . ACTIVITYPUB_REST_NAMESPACE . '/posts';
-
-		$skip = WP_Rest_Cache::skip_owner_only_routes( true );
-
-		if ( null === $request_uri_backup ) {
-			unset( $_SERVER['REQUEST_URI'] );
-		} else {
-			$_SERVER['REQUEST_URI'] = $request_uri_backup;
-		}
-
-		$this->assertTrue( $skip );
 	}
 
 	/**

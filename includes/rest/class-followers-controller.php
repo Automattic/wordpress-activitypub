@@ -306,6 +306,12 @@ class Followers_Controller extends Actors_Controller {
 		$response = \rest_ensure_response( $response );
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 
+		/*
+		 * This partial collection is disclosed only to the signing peer, whatever the global Authorized
+		 * Fetch setting, so it must never be stored by a shared cache and served to another caller.
+		 */
+		$response->header( 'Cache-Control', 'private, no-store, max-age=0' );
+
 		return $response;
 	}
 
