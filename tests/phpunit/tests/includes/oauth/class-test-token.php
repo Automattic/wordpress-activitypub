@@ -155,11 +155,12 @@ class Test_Token extends \WP_UnitTestCase {
 	 * @covers ::create
 	 */
 	public function test_create_allows_capable_user_in_blog_only_mode() {
+		$actor_mode = \get_option( 'activitypub_actor_mode' );
 		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
 
 		$result = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
 
-		\delete_option( 'activitypub_actor_mode' );
+		\update_option( 'activitypub_actor_mode', $actor_mode );
 
 		$this->assertNotWPError( $result );
 		$this->assertArrayHasKey( 'access_token', $result );
@@ -328,6 +329,11 @@ class Test_Token extends \WP_UnitTestCase {
 		$this->assertWPError( $result );
 		$this->assertSame( 'activitypub_user_not_enabled', $result->get_error_code() );
 		$this->assertSame( 403, $result->get_error_data()['status'] );
+
+		// The rejected refresh must not tear down the existing grant: once the user is enabled again,
+		// the original access token still validates.
+		\get_user_by( 'id', $this->user_id )->add_cap( 'activitypub' );
+		$this->assertNotWPError( Token::validate( $original['access_token'] ) );
 	}
 
 	/**
