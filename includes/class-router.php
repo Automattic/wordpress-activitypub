@@ -166,6 +166,18 @@ class Router {
 			if ( \get_query_var( 'preview' ) ) {
 				\defined( 'ACTIVITYPUB_PREVIEW' ) || \define( 'ACTIVITYPUB_PREVIEW', true );
 
+				/*
+				 * A preview is only ever reached by someone allowed to see the unpublished post:
+				 * is_post_publicly_queryable() gates draft/pending/future on current_user_can('edit_post'),
+				 * and everyone else has already fallen through to the normal template above. The response
+				 * therefore varies by caller no matter the Authorized Fetch setting, so it must never be
+				 * stored by a shared cache and replayed to someone who cannot edit the post. Independent of
+				 * the Authorized Fetch block below, which only guards the signed-fetch path.
+				 */
+				if ( ! \headers_sent() ) {
+					\header( 'Cache-Control: private, no-store, max-age=0' );
+				}
+
 				/**
 				 * Filter the template used for the ActivityPub preview.
 				 *
