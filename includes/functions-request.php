@@ -138,6 +138,24 @@ function is_json_only_accept( $accept ) {
 }
 
 /**
+ * Mark a REST response non-shareable, on the response object and as a raw HTTP header.
+ *
+ * The raw header matters because the REST `_envelope=1` parameter makes WordPress move the response
+ * headers into the JSON body and serve an outer response without them, so the response-object
+ * Cache-Control would not reach a page cache or CDN. WordPress core sends its own CORS `Vary: Origin`
+ * the same raw way for the same reason. The raw header is skipped once the headers are already sent.
+ *
+ * @param \WP_REST_Response $response The response to mark.
+ */
+function maybe_set_no_store( $response ) {
+	$response->header( 'Cache-Control', 'private, no-store, max-age=0' );
+
+	if ( ! \headers_sent() ) {
+		\header( 'Cache-Control: private, no-store, max-age=0' );
+	}
+}
+
+/**
  * Requests the Meta-Data from the Actors profile.
  *
  * @param array|string $actor  The Actor array or URL.
