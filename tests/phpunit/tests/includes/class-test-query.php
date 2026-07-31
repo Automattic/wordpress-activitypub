@@ -229,12 +229,32 @@ class Test_Query extends \WP_UnitTestCase {
 		$this->assertTrue( Query::get_instance()->is_activitypub_request() );
 
 		Query::get_instance()->__destruct();
+		$_SERVER['HTTP_ACCEPT'] = 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"';
+		$this->go_to( get_permalink( self::$post_id ) );
+		$this->assertTrue( Query::get_instance()->is_activitypub_request() );
+
+		Query::get_instance()->__destruct();
+		$_SERVER['HTTP_ACCEPT'] = 'application/ld+json; profile="https://www.w3.org/ns/activitystreams", application/activity+json';
+		$this->go_to( get_permalink( self::$post_id ) );
+		$this->assertTrue( Query::get_instance()->is_activitypub_request() );
+
+		Query::get_instance()->__destruct();
+		$_SERVER['HTTP_ACCEPT'] = 'application/ld+json; profile="https://www.w3.org/ns/activitystreams", application/activity+json; q=0.9';
+		$this->go_to( get_permalink( self::$post_id ) );
+		$this->assertTrue( Query::get_instance()->is_activitypub_request() );
+
+		Query::get_instance()->__destruct();
 		$_SERVER['HTTP_ACCEPT'] = 'application/json';
 		$this->go_to( get_permalink( self::$post_id ) );
 		$this->assertTrue( Query::get_instance()->is_activitypub_request() );
 
 		Query::get_instance()->__destruct();
 		$_SERVER['HTTP_ACCEPT'] = 'text/html';
+		$this->go_to( get_permalink( self::$post_id ) );
+		$this->assertFalse( Query::get_instance()->is_activitypub_request() );
+
+		Query::get_instance()->__destruct();
+		$_SERVER['HTTP_ACCEPT'] = 'application/json, text/html';
 		$this->go_to( get_permalink( self::$post_id ) );
 		$this->assertFalse( Query::get_instance()->is_activitypub_request() );
 

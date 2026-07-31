@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+ActivityPub responses are now served only to clients that ask for ActivityPub data and nothing else, which keeps that data out of page caches meant for regular web pages.

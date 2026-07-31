@@ -303,14 +303,13 @@ class Query {
 				$accept = \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_ACCEPT'] ) );
 
 				/*
-				 * $accept can be a single value, or a comma separated list of values.
-				 * We want to support both scenarios,
-				 * and return true when the header includes at least one of the following:
-				 * - application/activity+json
-				 * - application/ld+json
-				 * - application/json
+				 * The Accept-header decision is delegated to is_json_only_accept() on purpose: the Surge
+				 * cache drop-in shares that exact function, so what the plugin serves and what the cache
+				 * keys on can never drift apart. The request is ActivityPub only when *every* media type
+				 * is JSON; a client that also accepts HTML (e.g. a browser sending
+				 * `text/html, application/activity+json`) gets the normal HTML page.
 				 */
-				if ( \preg_match( '/(application\/(ld\+json|activity\+json|json))/i', $accept ) ) {
+				if ( is_json_only_accept( $accept ) ) {
 					\defined( 'ACTIVITYPUB_REQUEST' ) || \define( 'ACTIVITYPUB_REQUEST', true );
 					$this->is_activitypub_request = true;
 				}

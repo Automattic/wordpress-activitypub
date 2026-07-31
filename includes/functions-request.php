@@ -54,7 +54,16 @@ function use_authorized_fetch() {
 }
 
 /**
- * Check if a request is for an ActivityPub request.
+ * Check whether the current request should be answered with ActivityPub (JSON).
+ *
+ * This is the full, plugin-facing check and the one normal plugin code should use. It honors the
+ * `?activitypub` query var, a JSON-only Accept header (via is_json_only_accept()), and the
+ * `activitypub_is_activitypub_request` filter.
+ *
+ * It depends on Activitypub\Query, the main `$wp_query`, and the plugin being fully loaded, so it
+ * must NOT be called from code that runs earlier than that, e.g. a page-cache drop-in deciding a
+ * cache key on the serve path. Such code has only the Accept header to go on and must call
+ * is_json_only_accept() directly instead.
  *
  * @return bool False by default.
  */
@@ -69,6 +78,53 @@ function is_activitypub_request() {
  */
 function should_negotiate_content() {
 	return Query::get_instance()->should_negotiate_content();
+}
+
+/**
+ * Whether every media type in an Accept header is a JSON type.
+ *
+ * This is only the Accept-header half of content negotiation. Normal plugin code wants
+ * is_activitypub_request() instead, which also honors the `?activitypub` query var and the
+ * `activitypub_is_activitypub_request` filter; this function ignores both. Its narrow job is to be
+ * the single, dependency-free definition of a "JSON-only request" that is_activitypub_request() and
+ * the Surge cache drop-in (integration/surge-cache-config.php) both use, so the representation the
+ * plugin serves and the representation the cache keys on can never disagree. The drop-in runs before
+ * the plugin loads and cannot call is_activitypub_request(), which is why this half lives on its own.
+ *
+ * A request counts as JSON only when *every* listed media type is JSON (`application/json`,
+ * `application/ld+json`, `application/activity+json`, or any other `*+json`). A client that also
+ * accepts HTML, such as a browser sending `text/html, application/activity+json`, is not a JSON
+ * request. Keep this free of side effects and WordPress/plugin dependencies so the drop-in can
+ * include this file and call it on its pre-plugin serve path.
+ *
+ * @param string $accept The Accept header value.
+ *
+ * @return bool True when the header lists at least one media type and all of them are JSON.
+ */
+function is_json_only_accept( $accept ) {
+	$has_json = false;
+
+	foreach ( \explode( ',', $accept ) as $mime_type ) {
+		// Drop any parameters such as `;q=0.9`.
+		$pos = \strpos( $mime_type, ';' );
+		if ( false !== $pos ) {
+			$mime_type = \substr( $mime_type, 0, $pos );
+		}
+
+		$mime_type = \strtolower( \trim( $mime_type ) );
+
+		if ( '' === $mime_type ) {
+			continue;
+		}
+
+		if ( '/json' !== \substr( $mime_type, -5 ) && '+json' !== \substr( $mime_type, -5 ) ) {
+			return false;
+		}
+
+		$has_json = true;
+	}
+
+	return $has_json;
 }
 
 /**
