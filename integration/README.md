@@ -50,8 +50,8 @@ A few integrations are always initialized (`Nodeinfo`, `Webfinger`, `Surge`, `Li
 
 | Integration | What it does |
 |---|---|
-| **LiteSpeed Cache** | Keeps LiteSpeed from caching ActivityPub responses, with a Site Health check. |
-| **Surge** | Keeps the Surge page cache from caching ActivityPub responses, with a Site Health check. |
+| **LiteSpeed Cache** | Keeps the html and ActivityPub (JSON) responses in separate cache buckets, with a Site Health check. |
+| **Surge** | Keeps the html and ActivityPub (JSON) responses in separate cache buckets, with a Site Health check. |
 
 ### Internationalization
 

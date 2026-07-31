@@ -184,6 +184,17 @@ class Router {
 		 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
 		 */
 		if ( $activitypub_template && use_authorized_fetch() ) {
+			/*
+			 * Under Authorized Fetch the response depends on the caller's signature: an unsigned request
+			 * is refused, a signed one gets the document. A shared cache (page cache or CDN) keys the
+			 * activity+json variant on the representation, not the signature, so it must store neither
+			 * outcome and replay it to the wrong caller. Send this before verifying so it covers the 401
+			 * and the 200 alike; `max-age=0` is what page caches such as Surge key on to skip storing.
+			 */
+			if ( ! \headers_sent() ) {
+				\header( 'Cache-Control: private, no-store, max-age=0' );
+			}
+
 			$verification = Signature::verify_http_signature( $_SERVER );
 			if ( \is_wp_error( $verification ) ) {
 				\status_header( 401 );
