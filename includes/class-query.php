@@ -300,16 +300,21 @@ class Query {
 
 				// The other (more common) option to make an ActivityPub request  is to send an Accept header.
 			} elseif ( isset( $_SERVER['HTTP_ACCEPT'] ) ) {
-				$accept = \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_ACCEPT'] ) );
-
 				/*
 				 * The Accept-header decision is delegated to is_json_only_accept() on purpose: the Surge
 				 * cache drop-in shares that exact function, so what the plugin serves and what the cache
-				 * keys on can never drift apart. The request is ActivityPub only when *every* media type
-				 * is JSON; a client that also accepts HTML (e.g. a browser sending
-				 * `text/html, application/activity+json`) gets the normal HTML page.
+				 * keys on can never drift apart. That only holds if both classify the same bytes, so the
+				 * header is unslashed here but never sanitized. The drop-in runs before WordPress' own
+				 * sanitizers are loaded and cannot match sanitize_text_field(), which would, for example,
+				 * strip a `%00` and flip the result, so a response served as JSON could be cached under
+				 * the html variant. The value is only used to pick a content type, never stored or echoed.
+				 *
+				 * The request is ActivityPub only when *every* media type is JSON; a client that also
+				 * accepts HTML (e.g. a browser sending `text/html, application/activity+json`) gets the
+				 * normal HTML page.
 				 */
-				if ( is_json_only_accept( $accept ) ) {
+				// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Classified only; must match the raw header the pre-plugin Surge cache path sees.
+				if ( is_json_only_accept( \wp_unslash( $_SERVER['HTTP_ACCEPT'] ) ) ) {
 					\defined( 'ACTIVITYPUB_REQUEST' ) || \define( 'ACTIVITYPUB_REQUEST', true );
 					$this->is_activitypub_request = true;
 				}

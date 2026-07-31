@@ -11,18 +11,21 @@ $representation = 'html';
 
 if ( isset( $_SERVER['HTTP_ACCEPT'] ) ) {
 	/*
-	 * The html and JSON representations of a URL must land in different cache buckets, and this
-	 * bucket boundary must match exactly what the plugin decides to serve, or a page that was served
-	 * as one representation could be replayed as the other.
+	 * For a given URL, the html and JSON representations must land in different cache buckets, and
+	 * this boundary must match how the plugin negotiates that same URL, or one representation could be
+	 * replayed for the other. Reuse the plugin's single source of truth: Activitypub\is_json_only_accept().
 	 *
-	 * Reuse the plugin's single source of truth for that boundary: Activitypub\is_json_only_accept().
+	 * This mirrors only the Accept-header branch of Query::is_activitypub_request(), which is the sole
+	 * branch that varies a single URL. The `?activitypub` override also forces JSON, but it changes
+	 * the URL and Surge already keys on the full URL, so those requests are segregated on their own and
+	 * never share a bucket with the negotiated ones.
+	 *
 	 * Do NOT call Activitypub\is_activitypub_request() here. Surge runs this config from its
 	 * advanced-cache.php drop-in, on the cache-serve path, before the plugin, the main $wp_query, and
 	 * the plugin's autoloader exist, so that function (which needs all three) would fatal. Only the
-	 * dependency-free is_json_only_accept() is safe on this path.
-	 *
-	 * functions-request.php is side-effect-free and the plugin loads it with require_once, so
-	 * including it here neither runs code nor risks a redeclare.
+	 * dependency-free is_json_only_accept() is safe on this path. functions-request.php is
+	 * side-effect-free and the plugin loads it with require_once, so including it here neither runs
+	 * code nor risks a redeclare.
 	 */
 	require_once __DIR__ . '/../includes/functions-request.php';
 

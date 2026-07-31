@@ -184,6 +184,9 @@ class Test_Functions_Request extends ActivityPub_TestCase_Cache_HTTP {
 			'wildcard'             => array( '*/*', false ),
 			'plain_html'           => array( 'text/html', false ),
 			'empty'                => array( '', false ),
+			// Must classify the raw header, not a sanitized one, so it agrees with the pre-plugin cache
+			// path: `%00` keeps this out of JSON where sanitize_text_field() would have stripped it.
+			'percent_octet'        => array( 'application/activity+json%00', false ),
 		);
 	}
 

@@ -97,7 +97,12 @@ function should_negotiate_content() {
  * request. Keep this free of side effects and WordPress/plugin dependencies so the drop-in can
  * include this file and call it on its pre-plugin serve path.
  *
- * @param string $accept The Accept header value.
+ * Pass the raw (only unslashed) header. Callers must NOT run it through sanitize_text_field() or
+ * similar first: the drop-in cannot, because WordPress' sanitizers are not loaded when it runs, and
+ * both paths have to classify identical bytes or a JSON response could be cached under the html
+ * variant (e.g. `application/activity+json%00` is not JSON, but sanitizing would turn it into JSON).
+ *
+ * @param string $accept The raw (unslashed) Accept header value.
  *
  * @return bool True when the header lists at least one media type and all of them are JSON.
  */
