@@ -1,4 +1,0 @@
-Significance: minor
-Type: changed
-
-Only users enabled for ActivityPub can obtain and use OAuth access tokens.

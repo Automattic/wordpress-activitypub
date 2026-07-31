@@ -346,7 +346,7 @@ class Token {
 	 * short-circuits on the site actor mode: a capable user must keep their token even when the site
 	 * runs in blog-only or single-user mode, where per-user actors are not exposed.
 	 *
-	 * @since unreleased
+	 * @since 9.2.0
 	 *
 	 * @param int $user_id WordPress user ID.
 	 * @return true|\WP_Error True when the user has the capability, WP_Error otherwise.

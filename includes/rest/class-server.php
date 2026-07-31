@@ -236,7 +236,7 @@ class Server {
 	 * Shared caches are told to key on those headers, and a response produced for a
 	 * caller that presented credentials is marked as belonging to that caller alone.
 	 *
-	 * @since unreleased
+	 * @since 9.2.0
 	 *
 	 * @param \WP_REST_Response $response Result to send to the client.
 	 * @param \WP_REST_Server   $server   Server instance.

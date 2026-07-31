@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Under Authorized Fetch, ActivityPub responses are no longer stored by page caches such as LiteSpeed or Surge.
