@@ -297,7 +297,7 @@ class Server {
 		 * CDN. The `Vary: Authorization` above still keeps a token-credentialed response from being reused.
 		 */
 		if ( $authorized_fetch ) {
-			$credentials = array( 'authorization', 'signature', 'signature_input' );
+			$credentials = array( 'authorization', 'signature', 'signature-input' );
 
 			foreach ( $credentials as $header ) {
 				if ( $request->get_header( $header ) ) {
