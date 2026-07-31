@@ -302,19 +302,18 @@ class Query {
 			} elseif ( isset( $_SERVER['HTTP_ACCEPT'] ) ) {
 				/*
 				 * The Accept-header decision is delegated to is_json_only_accept() on purpose: the Surge
-				 * cache drop-in shares that exact function, so what the plugin serves and what the cache
-				 * keys on can never drift apart. That only holds if both classify the same bytes, so the
-				 * header is unslashed here but never sanitized. The drop-in runs before WordPress' own
-				 * sanitizers are loaded and cannot match sanitize_text_field(), which would, for example,
-				 * strip a `%00` and flip the result, so a response served as JSON could be cached under
-				 * the html variant. The value is only used to pick a content type, never stored or echoed.
+				 * cache drop-in calls the exact same function on the exact same raw superglobal, so what
+				 * the plugin serves and what the cache keys on can never drift apart. The function does
+				 * its own unslashing; do not sanitize the value here (the drop-in can't reproduce that,
+				 * its sanitizers aren't loaded yet, and a mismatch could cache JSON under the html
+				 * variant). It is only used to pick a content type, never stored or echoed.
 				 *
 				 * The request is ActivityPub only when *every* media type is JSON; a client that also
 				 * accepts HTML (e.g. a browser sending `text/html, application/activity+json`) gets the
 				 * normal HTML page.
 				 */
-				// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Classified only; must match the raw header the pre-plugin Surge cache path sees.
-				if ( is_json_only_accept( \wp_unslash( $_SERVER['HTTP_ACCEPT'] ) ) ) {
+				// phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- Classified only; is_json_only_accept() unslashes it and must see the same raw header as the pre-plugin cache path.
+				if ( is_json_only_accept( $_SERVER['HTTP_ACCEPT'] ) ) {
 					\defined( 'ACTIVITYPUB_REQUEST' ) || \define( 'ACTIVITYPUB_REQUEST', true );
 					$this->is_activitypub_request = true;
 				}

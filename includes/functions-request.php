@@ -97,16 +97,20 @@ function should_negotiate_content() {
  * request. Keep this free of side effects and WordPress/plugin dependencies so the drop-in can
  * include this file and call it on its pre-plugin serve path.
  *
- * Pass the raw (only unslashed) header. Callers must NOT run it through sanitize_text_field() or
- * similar first: the drop-in cannot, because WordPress' sanitizers are not loaded when it runs, and
- * both paths have to classify identical bytes or a JSON response could be cached under the html
- * variant (e.g. `application/activity+json%00` is not JSON, but sanitizing would turn it into JSON).
+ * Pass the raw superglobal from either caller. The function unslashes it itself with stripslashes()
+ * (the scalar equivalent of wp_unslash()), so the plugin's magic-quoted `$_SERVER` and the drop-in's
+ * raw one classify identical bytes; the drop-in cannot call wp_unslash(), since WordPress' functions
+ * are not loaded when it runs. Callers must NOT run it through sanitize_text_field() or similar
+ * first: the drop-in cannot reproduce that, and any mismatch could cache a JSON response under the
+ * html variant (e.g. `application/activity+json%00` is not JSON, but sanitizing would turn it into JSON).
  *
- * @param string $accept The raw (unslashed) Accept header value.
+ * @param string $accept The raw Accept header value (slashed or not; unslashed internally).
  *
  * @return bool True when the header lists at least one media type and all of them are JSON.
  */
 function is_json_only_accept( $accept ) {
+	// Unslash so a magic-quoted superglobal (plugin) and a raw one (drop-in) classify identically.
+	$accept   = \stripslashes( (string) $accept );
 	$has_json = false;
 
 	foreach ( \explode( ',', $accept ) as $mime_type ) {
