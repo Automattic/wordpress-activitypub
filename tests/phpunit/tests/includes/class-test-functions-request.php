@@ -177,8 +177,6 @@ class Test_Functions_Request extends ActivityPub_TestCase_Cache_HTTP {
 			'json_with_q'          => array( 'application/activity+json;q=0.9', true ),
 			'uppercase_json'       => array( 'Application/Activity+JSON', true ),
 			'trailing_comma'       => array( 'application/activity+json,', true ),
-			// Slashed like a magic-quoted superglobal; the function unslashes internally.
-			'slashed_profile'      => array( 'application/ld+json; profile=\\"https://www.w3.org/ns/activitystreams\\"', true ),
 			// At least one non-JSON media type -> false.
 			'html_then_json'       => array( 'text/html, application/activity+json', false ),
 			'json_then_html'       => array( 'application/activity+json, text/html', false ),

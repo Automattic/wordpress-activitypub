@@ -301,19 +301,21 @@ class Query {
 				// The other (more common) option to make an ActivityPub request  is to send an Accept header.
 			} elseif ( isset( $_SERVER['HTTP_ACCEPT'] ) ) {
 				/*
-				 * The Accept-header decision is delegated to is_json_only_accept() on purpose: the Surge
-				 * cache drop-in calls the exact same function on the exact same raw superglobal, so what
-				 * the plugin serves and what the cache keys on can never drift apart. The function does
-				 * its own unslashing; do not sanitize the value here (the drop-in can't reproduce that,
-				 * its sanitizers aren't loaded yet, and a mismatch could cache JSON under the html
-				 * variant). It is only used to pick a content type, never stored or echoed.
+				 * The Accept-header decision is delegated to is_json_only_accept() so the plugin and the
+				 * Surge cache drop-in classify byte-for-byte identically. Both must hand it the same raw
+				 * header, and they reach that raw form differently on purpose: this runs after
+				 * wp_magic_quotes() has addslashed $_SERVER, so it wp_unslash()es to recover the original
+				 * bytes; the drop-in runs before wp_magic_quotes() and passes its already-raw value
+				 * untouched. Do NOT sanitize it (the drop-in can't, its sanitizers aren't loaded yet) and
+				 * the helper must not stripslashes() either (that would corrupt the drop-in's genuine
+				 * bytes). It is only used to pick a content type, never stored or echoed.
 				 *
 				 * The request is ActivityPub only when *every* media type is JSON; a client that also
 				 * accepts HTML (e.g. a browser sending `text/html, application/activity+json`) gets the
 				 * normal HTML page.
 				 */
-				// phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- Classified only; is_json_only_accept() unslashes it and must see the same raw header as the pre-plugin cache path.
-				if ( is_json_only_accept( $_SERVER['HTTP_ACCEPT'] ) ) {
+				// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Classified only; wp_unslash() recovers the raw bytes the pre-plugin cache path sees, and it must not be sanitized.
+				if ( is_json_only_accept( \wp_unslash( $_SERVER['HTTP_ACCEPT'] ) ) ) {
 					\defined( 'ACTIVITYPUB_REQUEST' ) || \define( 'ACTIVITYPUB_REQUEST', true );
 					$this->is_activitypub_request = true;
 				}

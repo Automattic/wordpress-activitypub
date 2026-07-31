@@ -97,23 +97,24 @@ function should_negotiate_content() {
  * request. Keep this free of side effects and WordPress/plugin dependencies so the drop-in can
  * include this file and call it on its pre-plugin serve path.
  *
- * Pass the raw superglobal from either caller. The function unslashes it itself with stripslashes()
- * (the scalar equivalent of wp_unslash()), so the plugin's magic-quoted `$_SERVER` and the drop-in's
- * raw one classify identical bytes; the drop-in cannot call wp_unslash(), since WordPress' functions
- * are not loaded when it runs. Callers must NOT run it through sanitize_text_field() or similar
- * first: the drop-in cannot reproduce that, and any mismatch could cache a JSON response under the
- * html variant (e.g. `application/activity+json%00` is not JSON, but sanitizing would turn it into JSON).
+ * Pass the RAW, unslashed header; both callers must hand it identical bytes but reach that raw form
+ * differently. The plugin runs after wp_magic_quotes() has addslashed $_SERVER, so it wp_unslash()es
+ * before calling; the Surge drop-in runs before wp_magic_quotes() and passes its already-raw value as
+ * is. This function deliberately does NOT unslash or sanitize: stripslashes() here would strip the
+ * drop-in's genuine backslashes (which the plugin's wp_unslash() preserves), and sanitize_text_field()
+ * (which the drop-in can't call anyway) would drop bytes such as a `%00`; either would let the two
+ * paths disagree and cache a JSON response under the html variant. Only `\substr()` (never a PHP 8
+ * polyfill like str_ends_with()) is used for the suffix test, since the drop-in runs before the
+ * polyfills may be loaded.
  *
- * @param string $accept The raw Accept header value (slashed or not; unslashed internally).
+ * @param string $accept The raw (unslashed) Accept header value.
  *
  * @return bool True when the header lists at least one media type and all of them are JSON.
  */
 function is_json_only_accept( $accept ) {
-	// Unslash so a magic-quoted superglobal (plugin) and a raw one (drop-in) classify identically.
-	$accept   = \stripslashes( (string) $accept );
 	$has_json = false;
 
-	foreach ( \explode( ',', $accept ) as $mime_type ) {
+	foreach ( \explode( ',', (string) $accept ) as $mime_type ) {
 		// Drop any parameters such as `;q=0.9`.
 		$pos = \strpos( $mime_type, ';' );
 		if ( false !== $pos ) {
