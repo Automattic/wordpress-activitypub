@@ -117,7 +117,38 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 	public function test_option_updated_on_add() {
 		Litespeed_Cache::add_htaccess_rules();
 		$option = \get_option( Litespeed_Cache::$option_name );
-		$this->assertEquals( '1', $option, 'Option should be set to 1 after adding rules' );
+		$this->assertEquals( \md5( Litespeed_Cache::$rules ), $option, 'Option should store the current rules fingerprint after adding rules' );
+	}
+
+	/**
+	 * The htaccess Accept condition must classify a request exactly like the plugin's own
+	 * is_json_only_accept(), or a page served as one representation could be cached as the other.
+	 */
+	public function test_rewrite_condition_matches_is_json_only_accept() {
+		\preg_match( '/RewriteCond %\{HTTP:Accept\} (\S+) \[NC\]/', Litespeed_Cache::$rules, $matches );
+		$this->assertNotEmpty( $matches[1] ?? '', 'Could not find the Accept RewriteCond pattern in the rules.' );
+		$pattern = '#' . $matches[1] . '#i';
+
+		$cases = array(
+			'application/activity+json'            => true,
+			'application/ld+json'                  => true,
+			'application/json'                     => true,
+			'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' => true,
+			'application/activity+json, application/ld+json' => true,
+			'application/activity+json;q=0.9'      => true,
+			'application/activity+json,'           => true,
+			'text/html'                            => false,
+			'text/html, application/activity+json' => false,
+			'application/activity+json, text/html' => false,
+			'*/*'                                  => false,
+			'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' => false,
+			''                                     => false,
+		);
+
+		foreach ( $cases as $accept => $expected ) {
+			$this->assertSame( $expected, (bool) \preg_match( $pattern, $accept ), "htaccess regex disagrees for: $accept" );
+			$this->assertSame( $expected, \Activitypub\is_json_only_accept( $accept ), "is_json_only_accept disagrees for: $accept" );
+		}
 	}
 
 	/**
@@ -205,7 +236,7 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 	public function test_cleanup_when_litespeed_deactivated() {
 		// Simulate rules being previously added.
 		Litespeed_Cache::add_htaccess_rules();
-		$this->assertEquals( '1', \get_option( Litespeed_Cache::$option_name ) );
+		$this->assertEquals( \md5( Litespeed_Cache::$rules ), \get_option( Litespeed_Cache::$option_name ) );
 
 		// Mock that LiteSpeed is NOT active.
 		$plugin_active_filter = function ( $is_active, $plugin ) {
@@ -237,7 +268,7 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 	public function test_cleanup_on_activitypub_deactivation() {
 		// Add rules first.
 		Litespeed_Cache::add_htaccess_rules();
-		$this->assertEquals( '1', \get_option( Litespeed_Cache::$option_name ) );
+		$this->assertEquals( \md5( Litespeed_Cache::$rules ), \get_option( Litespeed_Cache::$option_name ) );
 
 		// phpcs:ignore
 		$contents_before = \file_get_contents( $this->htaccess_file );
@@ -263,7 +294,7 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 	public function test_cleanup_when_litespeed_deleted() {
 		// Add rules first.
 		Litespeed_Cache::add_htaccess_rules();
-		$this->assertEquals( '1', \get_option( Litespeed_Cache::$option_name ) );
+		$this->assertEquals( \md5( Litespeed_Cache::$rules ), \get_option( Litespeed_Cache::$option_name ) );
 
 		// phpcs:ignore
 		$contents_before = \file_get_contents( $this->htaccess_file );
@@ -288,13 +319,13 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 	public function test_no_cleanup_when_other_plugin_deleted() {
 		// Add rules first.
 		Litespeed_Cache::add_htaccess_rules();
-		$this->assertEquals( '1', \get_option( Litespeed_Cache::$option_name ) );
+		$this->assertEquals( \md5( Litespeed_Cache::$rules ), \get_option( Litespeed_Cache::$option_name ) );
 
 		// Simulate a different plugin deletion.
 		\do_action( 'deleted_plugin', 'some-other-plugin/plugin.php', false );
 
 		// Verify rules still exist.
-		$this->assertEquals( '1', \get_option( Litespeed_Cache::$option_name ), 'Option should remain when other plugin is deleted' );
+		$this->assertEquals( \md5( Litespeed_Cache::$rules ), \get_option( Litespeed_Cache::$option_name ), 'Option should remain when other plugin is deleted' );
 
 		// phpcs:ignore
 		$contents = \file_get_contents( $this->htaccess_file );
