@@ -257,7 +257,7 @@ class Server {
 		if ( \is_user_logged_in() ) {
 			$response->header( 'Cache-Control', 'private, no-store, max-age=0' );
 
-			return $response;
+			return self::mirror_no_store( $response );
 		}
 
 		/*
@@ -268,7 +268,7 @@ class Server {
 		 */
 		$attributes = $request->get_attributes();
 		if ( isset( $attributes['permission_callback'] ) && '__return_true' === $attributes['permission_callback'] ) {
-			return $response;
+			return self::mirror_no_store( $response );
 		}
 
 		$authorized_fetch = use_authorized_fetch();
@@ -304,6 +304,29 @@ class Server {
 					break;
 				}
 			}
+		}
+
+		return self::mirror_no_store( $response );
+	}
+
+	/**
+	 * Mirror a `no-store` Cache-Control onto a raw HTTP header so it survives the REST envelope.
+	 *
+	 * The `_envelope=1` parameter makes WordPress replace the response with envelope_response(), which
+	 * moves the response headers into the JSON body and leaves the outer HTTP response without them, so
+	 * a signed Authorized Fetch or peer-only response could otherwise be stored by a page cache. A raw
+	 * header (like WP core's own CORS `Vary: Origin`) is not moved by the envelope. Also catches a
+	 * no-store set by a handler such as followers/sync, since it reads the response's current header.
+	 *
+	 * @param \WP_REST_Response $response The response.
+	 *
+	 * @return \WP_REST_Response The unchanged response.
+	 */
+	private static function mirror_no_store( $response ) {
+		$headers = $response->get_headers();
+
+		if ( isset( $headers['Cache-Control'] ) && \str_contains( $headers['Cache-Control'], 'no-store' ) && ! \headers_sent() ) {
+			\header( 'Cache-Control: ' . $headers['Cache-Control'] );
 		}
 
 		return $response;
