@@ -52,7 +52,6 @@ A few integrations are always initialized (`Nodeinfo`, `Webfinger`, `Surge`, `Li
 |---|---|
 | **LiteSpeed Cache** | Keeps LiteSpeed from caching ActivityPub responses, with a Site Health check. |
 | **Surge** | Keeps the Surge page cache from caching ActivityPub responses, with a Site Health check. |
-| **WP REST Cache** | Excludes ActivityPub REST endpoints from WP REST Cache and invalidates cached responses when content changes. |
 
 ### Internationalization
 
