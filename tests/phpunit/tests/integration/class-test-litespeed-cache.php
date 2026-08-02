@@ -122,27 +122,29 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 
 	/**
 	 * The htaccess Accept condition must classify a request the same way the plugin's own
-	 * accept_prefers_json() does, or a page served as one representation could be cached as the other.
+	 * accept_prefers_activitypub() does, or a page served as one representation could be cached as the other.
 	 *
 	 * Since mod_rewrite can't compare quality values, the rule approximates by matching when the
-	 * *first* media type is JSON. For every real client that equals the q-value result (the highest-`q`
-	 * type is the one listed first), so this covers only order-based cases, where the two agree exactly.
+	 * *first* media type is ActivityPub. For every real client that equals the q-value result (the
+	 * highest-`q` type is the one listed first), so this covers only order-based cases, where the two
+	 * agree exactly.
 	 */
-	public function test_rewrite_condition_matches_accept_prefers_json() {
+	public function test_rewrite_condition_matches_accept_prefers_activitypub() {
 		\preg_match( '/RewriteCond %\{HTTP:Accept\} (\S+) \[NC\]/', Litespeed_Cache::$rules, $matches );
 		$this->assertNotEmpty( $matches[1] ?? '', 'Could not find the Accept RewriteCond pattern in the rules.' );
 		$pattern = '#' . $matches[1] . '#i';
 
 		$cases = array(
 			'application/activity+json'            => true,
-			'application/ld+json'                  => true,
-			'application/json'                     => true,
 			'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' => true,
-			'application/activity+json, application/ld+json' => true,
+			'application/ld+json; profile="http://www.w3.org/ns/activitystreams"' => true,
 			'application/activity+json;q=0.9'      => true,
 			'application/activity+json,'           => true,
 			'application/ld+json; profile="https://www.w3.org/ns/activitystreams", application/activity+json, text/html;q=0.1' => true,
 			'application/activity+json, text/html' => true,
+			'application/json'                     => false,
+			'application/ld+json'                  => false,
+			'application/ld+json; profile="https://example.com/ns"' => false,
 			'text/html'                            => false,
 			'text/html, application/activity+json' => false,
 			'*/*'                                  => false,
@@ -152,7 +154,7 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 
 		foreach ( $cases as $accept => $expected ) {
 			$this->assertSame( $expected, (bool) \preg_match( $pattern, $accept ), "htaccess regex disagrees for: $accept" );
-			$this->assertSame( $expected, \Activitypub\accept_prefers_json( $accept ), "accept_prefers_json disagrees for: $accept" );
+			$this->assertSame( $expected, \Activitypub\accept_prefers_activitypub( $accept ), "accept_prefers_activitypub disagrees for: $accept" );
 		}
 	}
 

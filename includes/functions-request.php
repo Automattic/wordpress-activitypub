@@ -57,13 +57,13 @@ function use_authorized_fetch() {
  * Check whether the current request should be answered with ActivityPub (JSON).
  *
  * This is the full, plugin-facing check and the one normal plugin code should use. It honors the
- * `?activitypub` query var, an Accept header that prefers JSON (via accept_prefers_json()), and the
+ * `?activitypub` query var, an Accept header that prefers ActivityPub (via accept_prefers_activitypub()), and the
  * `activitypub_is_activitypub_request` filter.
  *
  * It depends on Activitypub\Query, the main `$wp_query`, and the plugin being fully loaded, so it
  * must NOT be called from code that runs earlier than that, e.g. a page-cache drop-in deciding a
  * cache key on the serve path. Such code has only the Accept header to go on and must call
- * accept_prefers_json() directly instead.
+ * accept_prefers_activitypub() directly instead.
  *
  * @return bool False by default.
  */
@@ -81,23 +81,26 @@ function should_negotiate_content() {
 }
 
 /**
- * Whether the client's most-preferred acceptable media type is a JSON type.
+ * Whether the client's most-preferred acceptable media type is ActivityPub.
  *
  * This is only the Accept-header half of content negotiation. Normal plugin code wants
  * is_activitypub_request() instead, which also honors the `?activitypub` query var and the
  * `activitypub_is_activitypub_request` filter; this function ignores both. Its narrow job is to be
- * the single, dependency-free definition of "does this request prefer JSON" that
+ * the single, dependency-free definition of "does this request prefer ActivityPub" that
  * is_activitypub_request() and the Surge cache drop-in (integration/surge-cache-config.php) both
  * use, so the representation the plugin serves and the one the cache keys on can never disagree. The
  * drop-in runs before the plugin loads and cannot call is_activitypub_request(), which is why this
  * half lives on its own.
  *
  * It ranks the listed media types by quality (`;q=`), highest first, breaking ties by the order they
- * appear, and reports whether the winner is a JSON type (a `/json` or `+json` suffix). This respects the
- * client's preference rather than demanding a JSON-only header: Mastodon sends
- * `application/ld+json;profile="…", application/activity+json, text/html;q=0.1`, prefers JSON 10:1,
- * and must get JSON; a browser lists `text/html` at q=1 and gets HTML. A media type with no `q`
- * defaults to 1.0.
+ * appear, and reports whether the winner is an ActivityPub type. That is `application/activity+json`,
+ * or `application/ld+json` carrying the ActivityStreams 2.0 profile
+ * (`profile="https://www.w3.org/ns/activitystreams"`); plain `application/json` and bare
+ * `application/ld+json` are not ActivityPub. This respects the client's preference rather than
+ * demanding an ActivityPub-only header: Mastodon sends
+ * `application/ld+json;profile="…activitystreams", application/activity+json, text/html;q=0.1`,
+ * prefers ActivityPub 10:1, and must get it; a browser lists `text/html` at q=1 and gets HTML. A
+ * media type with no `q` defaults to 1.0; a `q=0` refuses the type and is ignored.
  *
  * Pass the RAW, unslashed header; both callers must hand it identical bytes but reach that raw form
  * differently. The plugin runs after wp_magic_quotes() has addslashed $_SERVER, so it wp_unslash()es
@@ -110,11 +113,11 @@ function should_negotiate_content() {
  *
  * @param string $accept The raw (unslashed) Accept header value.
  *
- * @return bool True when the highest-priority acceptable media type is JSON.
+ * @return bool True when the highest-priority acceptable media type is ActivityPub.
  */
-function accept_prefers_json( $accept ) {
+function accept_prefers_activitypub( $accept ) {
 	$winner_quality = 0.0;
-	$winner_is_json = false;
+	$winner_is_ap   = false;
 
 	foreach ( \explode( ',', (string) $accept ) as $part ) {
 		$segments   = \explode( ';', $part );
@@ -124,12 +127,15 @@ function accept_prefers_json( $accept ) {
 			continue;
 		}
 
-		// Quality value: default 1.0, overridden by a `q=` parameter.
+		// Read the quality (default 1.0) and profile parameters, in any order.
 		$quality = 1.0;
+		$profile = '';
 		foreach ( $segments as $param ) {
 			$param = \trim( $param );
 			if ( 0 === \stripos( $param, 'q=' ) ) {
 				$quality = (float) \substr( $param, 2 );
+			} elseif ( 0 === \stripos( $param, 'profile=' ) ) {
+				$profile = \strtolower( \trim( \substr( $param, 8 ), '"' ) );
 			}
 		}
 
@@ -138,14 +144,19 @@ function accept_prefers_json( $accept ) {
 			continue;
 		}
 
+		// ActivityPub is `application/activity+json`, or `application/ld+json` with the AS2 profile
+		// (matched without the scheme so both the http and https profile URIs are accepted).
+		$is_activitypub = 'application/activity+json' === $media_type
+			|| ( 'application/ld+json' === $media_type && false !== \strpos( $profile, '://www.w3.org/ns/activitystreams' ) );
+
 		// Highest quality wins; on a tie the earlier type in the header keeps the lead.
 		if ( $quality > $winner_quality ) {
 			$winner_quality = $quality;
-			$winner_is_json = '/json' === \substr( $media_type, -5 ) || '+json' === \substr( $media_type, -5 );
+			$winner_is_ap   = $is_activitypub;
 		}
 	}
 
-	return $winner_is_json;
+	return $winner_is_ap;
 }
 
 /**
