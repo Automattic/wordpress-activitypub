@@ -117,4 +117,21 @@ class Test_Actions_Controller extends \WP_UnitTestCase {
 		$this->assertEquals( 'activitypub_oauth_not_allowed', $result->get_error_code() );
 		$this->assertEquals( 403, $result->get_error_data()['status'] );
 	}
+
+	/**
+	 * A logged-out request must be denied even when the blog actor is enabled, whose ID (0)
+	 * collides with the anonymous user ID.
+	 *
+	 * @covers ::check_permission
+	 */
+	public function test_anonymous_request_is_denied_with_blog_actor_enabled() {
+		\update_option( 'activitypub_actor_mode', 'actor_blog' );
+		\wp_set_current_user( 0 );
+
+		$result = $this->controller->check_permission();
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'rest_forbidden', $result->get_error_code() );
+		$this->assertEquals( 403, $result->get_error_data()['status'] );
+	}
 }
