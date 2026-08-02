@@ -127,7 +127,9 @@ class Test_Litespeed_Cache extends \WP_UnitTestCase {
 	 * Since mod_rewrite can't compare quality values, the rule approximates by matching when the
 	 * *first* media type is ActivityPub. For every real client that equals the q-value result (the
 	 * highest-`q` type is the one listed first), so this covers only order-based cases, where the two
-	 * agree exactly.
+	 * agree exactly. It also can't see a `q=0` that refuses that first type (e.g.
+	 * `application/activity+json;q=0, text/html`), which accept_prefers_activitypub() would treat as
+	 * HTML; no real client sends that, so those cases are left out of the shared assertion below.
 	 */
 	public function test_rewrite_condition_matches_accept_prefers_activitypub() {
 		\preg_match( '/RewriteCond %\{HTTP:Accept\} (\S+) \[NC\]/', Litespeed_Cache::$rules, $matches );
