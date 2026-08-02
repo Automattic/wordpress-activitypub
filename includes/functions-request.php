@@ -133,7 +133,11 @@ function accept_prefers_activitypub( $accept ) {
 		foreach ( $segments as $param ) {
 			$param = \trim( $param );
 			if ( 0 === \stripos( $param, 'q=' ) ) {
-				$quality = (float) \substr( $param, 2 );
+				// Only a valid number sets the quality; a malformed `q=` keeps the 1.0 default.
+				$q_value = \trim( \substr( $param, 2 ) );
+				if ( \is_numeric( $q_value ) ) {
+					$quality = (float) $q_value;
+				}
 			} elseif ( 0 === \stripos( $param, 'profile=' ) ) {
 				$profile = \strtolower( \trim( \substr( $param, 8 ), '"' ) );
 			}
@@ -144,15 +148,14 @@ function accept_prefers_activitypub( $accept ) {
 			continue;
 		}
 
-		// ActivityPub is `application/activity+json`, or `application/ld+json` with the AS2 profile
-		// (matched without the scheme so both the http and https profile URIs are accepted).
-		$is_activitypub = 'application/activity+json' === $media_type
-			|| ( 'application/ld+json' === $media_type && false !== \strpos( $profile, '://www.w3.org/ns/activitystreams' ) );
-
 		// Highest quality wins; on a tie the earlier type in the header keeps the lead.
 		if ( $quality > $winner_quality ) {
 			$winner_quality = $quality;
-			$winner_is_ap   = $is_activitypub;
+
+			// ActivityPub is `application/activity+json`, or `application/ld+json` with the AS2 profile
+			// (matched without the scheme so both the http and https profile URIs are accepted).
+			$winner_is_ap = 'application/activity+json' === $media_type
+				|| ( 'application/ld+json' === $media_type && false !== \strpos( $profile, '://www.w3.org/ns/activitystreams' ) );
 		}
 	}
 

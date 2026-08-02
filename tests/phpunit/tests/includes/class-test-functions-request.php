@@ -182,6 +182,11 @@ class Test_Functions_Request extends ActivityPub_TestCase_Cache_HTTP {
 			'ap_first_on_tie'       => array( 'application/activity+json, text/html', true ),
 			'ap_higher_q'           => array( 'text/html;q=0.5, application/activity+json;q=0.8', true ),
 			'html_refused_q0'       => array( 'application/activity+json;q=0.5, text/html;q=0', true ),
+			// A malformed q (empty or non-numeric) keeps the 1.0 default rather than refusing the type.
+			'malformed_q_empty'     => array( 'application/activity+json;q=', true ),
+			'malformed_q_text'      => array( 'application/activity+json;q=high', true ),
+			// An out-of-range q>1.0 must not let an earlier q=1.0 non-AP type win the whole header.
+			'html_then_ap_q_over_1' => array( 'text/html, application/activity+json;q=1.5', true ),
 			// Not ActivityPub: plain JSON, bare or wrongly-profiled ld+json, other +json -> false.
 			'plain_json'            => array( 'application/json', false ),
 			'ld_json_no_profile'    => array( 'application/ld+json', false ),
