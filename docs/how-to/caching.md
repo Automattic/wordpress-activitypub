@@ -55,13 +55,13 @@ Varnish does not pass through `Vary: Accept` by default. You need to configure i
 
 ```vcl
 sub vcl_hash {
-    if (req.http.Accept ~ "(?i)^[\s,]*[^\s,;]*(/json|\+json)\s*(;[^,]*)?([\s,]+[^\s,;]*(/json|\+json)\s*(;[^,]*)?)*[\s,]*$") {
+    if (req.http.Accept ~ "(?i)^[\s,]*(application/activity\+json|application/ld\+json[^,]*activitystreams)") {
         hash_data("activitypub");
     }
 }
 ```
 
-The pattern matches only requests whose `Accept` header is *entirely* JSON, so a browser (which also accepts HTML) shares the HTML cache, not the JSON one. It mirrors how the plugin itself decides.
+The pattern matches when the *first* media type is an ActivityPub type (`application/activity+json`, or `application/ld+json` with the ActivityStreams profile). A browser lists `text/html` first and shares the HTML cache; Mastodon lists ActivityPub first (even though it also accepts `text/html;q=0.1`) and gets the JSON cache. It can't compare `q` values like the plugin does, but for every real client the highest-`q` type is the one listed first, so it matches.
 
 Alternatively, add `Vary: Accept` in your Apache or Nginx config so Varnish sees it from the backend.
 
@@ -72,13 +72,13 @@ Use a map to distinguish JSON from HTML and add it to your cache key. Avoid usin
 ```nginx
 map $http_accept $activitypub_suffix {
     default   "html";
-    "~*^[\s,]*[^\s,;]*(/json|\+json)\s*(;[^,]*)?([\s,]+[^\s,;]*(/json|\+json)\s*(;[^,]*)?)*[\s,]*$"   "json";
+    "~*^[\s,]*(application/activity\+json|application/ld\+json[^,]*activitystreams)"   "json";
 }
 
 fastcgi_cache_key "$scheme$request_method$host$request_uri$activitypub_suffix";
 ```
 
-The regex only matches an `Accept` header that is entirely JSON, so a browser request (which also accepts HTML) maps to `html`, not `json`. A looser match like `~application/` would also catch a browser's `application/xhtml+xml` and mix HTML into the JSON bucket.
+The regex maps to `json` only when the first media type is an ActivityPub type, so a browser request (which lists `text/html` first) maps to `html`. A looser match like `~application/` would also catch a browser's `application/xhtml+xml` and mix HTML into the JSON bucket.
 
 ### Cloudflare
 
@@ -92,7 +92,7 @@ The plugin automatically adds `.htaccess` rules when it detects the LiteSpeed Ca
 # BEGIN ActivityPub LiteSpeed Cache
 <IfModule LiteSpeed>
 RewriteEngine On
-RewriteCond %{HTTP:Accept} ^[\s,]*[^\s,;]*(/json|\+json)\s*(;[^,]*)?([\s,]+[^\s,;]*(/json|\+json)\s*(;[^,]*)?)*[\s,]*$ [NC]
+RewriteCond %{HTTP:Accept} ^[\s,]*(application/activity\+json|application/ld\+json[^,]*activitystreams) [NC]
 RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 </IfModule>
 # END ActivityPub LiteSpeed Cache
