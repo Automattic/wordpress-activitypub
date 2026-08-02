@@ -23,7 +23,7 @@ class Litespeed_Cache {
 	 */
 	public static $rules = '<IfModule LiteSpeed>
 RewriteEngine On
-RewriteCond %{HTTP:Accept} ^[\s,]*[^\s,;]*(/json|\+json)\s*(;[^,]*)?([\s,]+[^\s,;]*(/json|\+json)\s*(;[^,]*)?)*[\s,]*$ [NC]
+RewriteCond %{HTTP:Accept} ^[\s,]*[^\s,;]*(/json|\+json) [NC]
 RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 </IfModule>';
 

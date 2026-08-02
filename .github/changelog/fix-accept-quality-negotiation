@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed posts and profiles not being found on Mastodon and other Fediverse software, which happened when a request asked for ActivityPub data but also accepted HTML as a low-priority fallback.

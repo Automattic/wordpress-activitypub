@@ -162,13 +162,13 @@ class Test_Functions_Request extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	/**
-	 * Data provider for is_json_only_accept.
+	 * Data provider for accept_prefers_json.
 	 *
 	 * @return array<string, array{0: string, 1: bool}>
 	 */
-	public function is_json_only_accept_provider() {
+	public function accept_prefers_json_provider() {
 		return array(
-			// Every media type is JSON -> true.
+			// JSON is the highest-priority acceptable type -> true.
 			'activity_json'        => array( 'application/activity+json', true ),
 			'ld_json'              => array( 'application/ld+json', true ),
 			'plain_json'           => array( 'application/json', true ),
@@ -177,31 +177,38 @@ class Test_Functions_Request extends ActivityPub_TestCase_Cache_HTTP {
 			'json_with_q'          => array( 'application/activity+json;q=0.9', true ),
 			'uppercase_json'       => array( 'Application/Activity+JSON', true ),
 			'trailing_comma'       => array( 'application/activity+json,', true ),
-			// At least one non-JSON media type -> false.
-			'html_then_json'       => array( 'text/html, application/activity+json', false ),
-			'json_then_html'       => array( 'application/activity+json, text/html', false ),
+			// Mastodon: JSON at q=1, text/html as a q=0.1 fallback -> prefers JSON.
+			'mastodon'             => array( 'application/ld+json; profile="https://www.w3.org/ns/activitystreams", application/activity+json, text/html;q=0.1', true ),
+			// Ties are broken by order: JSON listed first wins.
+			'json_first_on_tie'    => array( 'application/activity+json, text/html', true ),
+			'json_higher_q'        => array( 'text/html;q=0.5, application/activity+json;q=0.8', true ),
+			// HTML (or other) is the highest-priority type -> false.
+			'html_first_on_tie'    => array( 'text/html, application/activity+json', false ),
+			'html_higher_q'        => array( 'application/activity+json;q=0.5, text/html;q=0.8', false ),
+			// `q=0` refuses a type entirely, so it is ignored.
+			'json_refused_q0'      => array( 'application/activity+json;q=0, text/html', false ),
+			'html_refused_q0'      => array( 'application/activity+json;q=0.5, text/html;q=0', true ),
 			'browser'              => array( 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', false ),
 			'wildcard'             => array( '*/*', false ),
 			'plain_html'           => array( 'text/html', false ),
 			'empty'                => array( '', false ),
-			// Must classify the raw header, not a sanitized one, so it agrees with the pre-plugin cache
-			// path: `%00` keeps this out of JSON where sanitize_text_field() would have stripped it.
+			// Classifies the raw header (a `%00` keeps it out of JSON), matching the pre-plugin cache path.
 			'percent_octet'        => array( 'application/activity+json%00', false ),
 		);
 	}
 
 	/**
-	 * Test the JSON-only Accept-header check.
+	 * Test the JSON-preference Accept-header check.
 	 *
-	 * @dataProvider is_json_only_accept_provider
+	 * @dataProvider accept_prefers_json_provider
 	 *
-	 * @covers \Activitypub\is_json_only_accept
+	 * @covers \Activitypub\accept_prefers_json
 	 *
 	 * @param string $accept   The Accept header value.
-	 * @param bool   $expected Whether every listed media type is JSON.
+	 * @param bool   $expected Whether the highest-priority acceptable media type is JSON.
 	 */
-	public function test_is_json_only_accept( $accept, $expected ) {
-		$this->assertSame( $expected, \Activitypub\is_json_only_accept( $accept ) );
+	public function test_accept_prefers_json( $accept, $expected ) {
+		$this->assertSame( $expected, \Activitypub\accept_prefers_json( $accept ) );
 	}
 
 	/**
