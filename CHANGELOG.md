@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.2.1] - 2026-08-03
+### Fixed
+- Fixed duplicate entries and failed undo actions for activities received from other WordPress sites. [#3612]
+- Fixed posts and profiles not being found on Mastodon and other Fediverse software, which happened when a request asked for ActivityPub data but also accepted HTML as a low-priority fallback. [#3601]
+- Fixed remote profiles and followers not being found when their address contains unusual characters. [#3613]
+- Improved checks on boosted content so it is only accepted from the server that published it. [#3613]
+- Improve escaping of embedded link URLs in federated content. [#3599]
+- Improve permission checks for admin-only actions. [#3609]
+- Improve validation of incoming federated activities so the signing key and referenced objects are bound to the sender. [#3610]
+
 ## [9.2.0] - 2026-07-31
 ### Changed
 - ActivityPub responses are now served only to clients that ask for ActivityPub data and nothing else, which keeps that data out of page caches meant for regular web pages. [#3596]
@@ -1981,6 +1991,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[9.2.1]: https://github.com/Automattic/wordpress-activitypub/compare/9.2.0...9.2.1
 [9.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/9.1.0...9.2.0
 [9.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/9.0.2...9.1.0
 [9.0.2]: https://github.com/Automattic/wordpress-activitypub/compare/9.0.1...9.0.2

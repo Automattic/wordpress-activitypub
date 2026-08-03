@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Improve validation of incoming federated activities so the signing key and referenced objects are bound to the sender.
