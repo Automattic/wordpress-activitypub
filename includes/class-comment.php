@@ -452,8 +452,7 @@ class Comment {
 		if ( \in_array( $comment_type, $comment_types, true ) ) {
 			$where .= $wpdb->prepare( ' AND comment_type = %s', $comment_type );
 		} else {
-			$comment_types = \array_map( 'esc_sql', $comment_types );
-			$placeholders  = \implode( ', ', \array_fill( 0, \count( $comment_types ), '%s' ) );
+			$placeholders = \implode( ', ', \array_fill( 0, \count( $comment_types ), '%s' ) );
 			// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.NotPrepared
 			$where .= $wpdb->prepare( \sprintf( ' AND comment_type NOT IN (%s)', $placeholders ), ...$comment_types );
 		}

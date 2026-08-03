@@ -1,8 +1,8 @@
 ---
 name: security-audit
-description: Defensive first-party security review of the plugin's own code to detect and help fix weaknesses (SSRF, content disclosure, auth bypass, XSS, content negotiation) before release. Use when asked to check security, harden the plugin, or review the code for vulnerabilities to fix.
+description: Defensive first-party security review of the plugin's own code, including its third-party integrations, to detect and help fix weaknesses (SSRF, content disclosure, auth bypass, XSS, content negotiation) before release. Use when asked to check security, harden the plugin, or review the code for vulnerabilities to fix.
 tools: Bash, Read, Glob, Grep, WebFetch
-model: opus
+model: claude-opus-5
 skills: federation, code-style
 ---
 
@@ -32,6 +32,8 @@ Past CVEs and security fixes inform what patterns to watch for. The full list is
 10. **Wrapped/relayed activity not re-authenticated** (2026) — `Announce::handle_announce()` re-dispatched the inner activity to its inbox handler without re-establishing the inner activity's authenticity. A verified signature binds only the *outer* actor to the key; the inner activity is supplied by the announcer, not necessarily its author, so destructive inner types (`Undo`/`Delete`/…) could name a third-party actor. **Pattern:** any path that lifts an activity from inside another and feeds it to a handler must independently re-authenticate the inner activity — dereference it from its own `id`, then require `host(id) === host(actor)` — before dispatch. See Audit Scope §4.
 11. **Remote object cached under a self-declared id** (2026) — remote actors (profile + public key) and embedded objects were cached keyed on the object's own `id`, with no check that the `id` matched the host the document was fetched from, so one host could write a record under another host's identifier. Root cause: `Http::get_remote_object()` did not confirm the returned `id` matched the fetched URL, and cache writes keyed on `$object['id']` with no origin binding. **Pattern / fix:** a dereferenced object (fetched by URL) is trusted only when served under its own `id` — otherwise re-fetch that `id` from its own host and accept only the self-confirmed copy (one hop, loop-guarded); an embedded object inside a signed activity instead binds `host(object.id) === host(actor)`. Trace fetch → cache-write → cache-read as one chain. See Audit Scope §10.
 12. **Link-local / CGNAT gap in core URL validation — known, upstream fix pending (do NOT re-report)** (2026) — `wp_safe_remote_*` routes through core's `wp_http_validate_url()`, which blocks loopback and RFC1918 but permits link-local `169.254.0.0/16` (cloud-metadata `169.254.169.254`) and CGNAT `100.64.0.0/10`. The residual exposure is blind (reachability/timing oracle, no body). Tracked for an upstream core fix; CGNAT is deliberately left unblocked (overlay VPNs assign from it). The plugin's own stricter `resolve_public_host()` guard and the `activitypub_allow_non_public_host` opt-out cover bespoke connection paths. See Audit Scope §6 before reporting this as new.
+13. **Host-comparison gates must fail closed on a hostless identifier; every inbound reference must be bound to the actor** (2026) — patterns to enforce, stated generally so the audit finds the whole class rather than one instance. (a) An authorization gate that compares the *hosts* of two identifiers must **reject** when either side has no parsable host. Not every value the plugin accepts is an `http(s)` URL (handles and other schemes parse to a `null` host), so a gate that reads "no host" as "nothing to compare, allow" fails open. Prefer the shared `is_same_host()` helper — it normalizes via `object_to_uri()` and already fails closed — over a hand-rolled `wp_parse_url` comparison that passes when a side is empty. (b) The HTTP signature binds only the top-level `actor`; every *other* remote-supplied reference a handler reads, stores, or acts on (`object`, `attributedTo`, and any activity-specific reference field) must be origin-bound to that actor (`host(ref) === host(actor)`). This is the #7/#10 binding class — apply it to every handler and every reference field, not just the ones already fixed. (c) Watch for a **tautological** binding: if one side of an authorization comparison is derived from the other (for example an `actor` auto-populated from the signing key), the check proves nothing, and any field the handler still trusts must be pinned on its own. See Audit Scope §4.
+14. **User ID 0 is both "no user" and the blog actor — capability checks must confirm login first** (2026) — `Actors::BLOG_USER_ID` is `0`, and a logged-out request's `get_current_user_id()` is also `0`. So a capability or ownership check shaped like `user_can_activitypub( get_current_user_id() )` or `get_current_user_id() === $user_id`, with no preceding login check, can resolve an anonymous caller to the blog actor whenever the blog actor is enabled. **Pattern:** every capability/ownership gate keyed on a user ID that can be `0` must confirm `is_user_logged_in()` first; the canonical guard is `verify_owner()`. Flag any controller or callback that re-implements the check without it (an instance of the #6 ownership-divergence class). **Scope it to real access/data decisions:** the collision only matters where the result grants access, ownership, or exposes data. The same `user_can_activitypub( get_current_user_id() )` used purely to pick a redirect target or a UX branch on a deliberately-public (`__return_true`) endpoint — where every branch self-gates downstream (e.g. bounces to `wp-login`) — is a syntactic match, not a finding. See Audit Scope §8.
 
 ## Audit Scope
 
@@ -92,6 +94,7 @@ Files: `includes/rest/`, `includes/rest/trait-verification.php`
 - Check that HEAD requests bypass is intentional and safe
 - Verify `verify_authentication()` (OAuth) is applied to all C2S endpoints
 - Check the `activitypub_defer_signature_verification` filter — what hooks it, can third parties disable all auth?
+- For every route whose response depends on *who* is asking, check whether an integration hands its prefix to a third-party system (§11). A permission callback protects the route; it does not travel with the response once another plugin stores or republishes it.
 
 **Signing on GETs — especially with Authorized Fetch off:**
 
@@ -122,6 +125,7 @@ Files: `includes/class-signature.php`, `includes/signature/class-http-signature-
 Files: `includes/rest/class-inbox-controller.php`, `includes/rest/class-actors-inbox-controller.php`, `includes/handler/`
 
 - Check that `actor` field is validated against the signature's `keyId` origin
+- Every host-equality check on this surface (keyId ↔ actor, and any `host(ref) === host(actor)` binding) must fail **closed** when a side has no parsable host — non-`http(s)` identifiers parse to a `null` host. Use `is_same_host()` (fails closed); flag any bespoke `wp_parse_url` comparison that passes when a side is empty. Bind **every** remote-supplied reference a handler acts on to the actor's host, including activity-specific reference fields, not only `object` / `attributedTo`. Beware a binding made meaningless because the compared value was auto-derived from the signing key (see history #13).
 - Verify `type` field sanitization — it's used in dynamic action names (`do_action('activitypub_inbox_' . $type)`)
 - Check `to`/`cc`/`bcc` fields for SSRF via `get_local_recipients()` fetching arbitrary URLs
 - Verify `object` field validation — can malicious payloads inject stored content?
@@ -184,6 +188,7 @@ Files: `includes/wp-admin/`, `includes/transformer/`
 Files: `includes/wp-admin/`, `includes/rest/`
 
 - Verify admin pages check `manage_options` or appropriate capabilities
+- Any capability/ownership check keyed on a user ID that can be `0` must confirm `is_user_logged_in()` first — `0` is both the anonymous user and `Actors::BLOG_USER_ID`, so `user_can_activitypub( get_current_user_id() )` / `get_current_user_id() === $user_id` can resolve an anonymous caller to the blog actor. Canonical guard: `verify_owner()`. Flag any controller or callback that re-implements the check without it (see history #14) — but only where the outcome grants access, ownership, or exposes data, not where it merely selects a redirect target / UX branch on a public endpoint whose branches all self-gate.
 - Check that per-user settings (e.g., profile ActivityPub toggle) verify the correct user
 - Verify nonce checks on all form submissions
 - Flag any `phpcs:ignore WordPress.Security.NonceVerification` with an explanation of why it's safe
@@ -219,6 +224,28 @@ Files: `includes/collection/class-remote-actors.php`, `includes/collection/class
 - A fetched document cached under its **self-declared** id/host rather than the URL requested.
 
 **Reachability reminder:** actor/object resolution is triggered by *almost any* inbound activity via `get_remote_metadata_by_actor()` → `Remote_Actors::fetch_by_uri()`, and Follow/Create/Like/Announce are enabled by default — so these writes are reachable **unauthenticated** by any fediverse server, not just via a niche endpoint. Confirm the binding on the passive resolution path, not only on obvious write endpoints.
+
+### 11. Third-Party Integrations
+
+Files: `integration/`, `integration/load.php`, plus the third-party plugin's own source when it is installed.
+
+**An integration hands part of the plugin's behavior to code we do not control.** Each file in `integration/` opts our routes, content, or data into another plugin's system, and that system has its own trust model, its own matching rules, and its own load order. A guarantee that holds inside the plugin does not automatically survive the handoff, so audit the handoff itself, not just our side of it.
+
+Go through every file in `integration/`:
+
+- **Enumerate what each integration opts in, and on whose terms.** For each `add_filter` / `add_action` into a third-party API, state what is being handed over and what the other plugin then does with it. Read that plugin's own implementation of the hook. Do not infer behavior from the hook name or its docblock. Where the plugin is not installed, confirm the guard in `integration/load.php` (`class_exists` / `function_exists`) and that both states are safe.
+
+- **Only hand a route or object to a shared system if every caller gets the same result.** A system keyed on a partial identifier — a URL, a post ID — cannot tell callers apart, so anything that varies by identity, capability, credential, or signature must stay out. This holds for any shared destination: a cache, a search index, a feed, an export, a CDN. Check the matching rule the other system actually uses: a rule that names a prefix usually pulls in everything beneath it, which is more than the integration appears to opt in.
+
+- **The dangerous drift is on our side, not theirs.** A list that is correct when written stays in the integration file untouched while the surface it names — routes, fields, post types — grows elsewhere. A new entry under an already-listed prefix joins the handoff silently, with no edit to the integration and nothing to review. Always re-derive the list from the current source of truth rather than trusting that it was right once.
+
+- **Pin these lists with a test, not a comment.** Where an integration names routes, prefixes, or fields, add a test that walks the live source and fails when something whose value depends on the caller falls under a listed entry. "Keep this in sync" in a docblock is documentation, not a control.
+
+- **Confirm the hook we depend on actually runs.** Check the other plugin's load order. A filter applied from a must-use loader, or at plugin-load time rather than on an action, may be evaluated before our plugin is loaded at all, in which case registering a callback does nothing. Verify empirically rather than assuming registration is sufficient.
+
+- **Data leaving the plugin inherits the recipient's access model.** Anything written into a third-party cache, index, feed, search document, or export is readable under that system's rules, not ours. Trace how long it lives and who can read it back.
+
+- **Integrations are on the other surfaces too.** §6's outbound-fetch enumeration and §7's escaping rules apply to `integration/` exactly as they do to `includes/`.
 
 ## Confirming a Fix Against the User's Own Instance
 
