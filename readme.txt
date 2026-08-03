@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 7.0
-Stable tag: 9.2.0
+Stable tag: 9.2.1
 Requires PHP: 7.4
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -116,6 +116,16 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 9.2.1 - 2026-08-03
+#### Fixed
+- Fixed duplicate entries and failed undo actions for activities received from other WordPress sites.
+- Fixed posts and profiles not being found on Mastodon and other Fediverse software, which happened when a request asked for ActivityPub data but also accepted HTML as a low-priority fallback.
+- Fixed remote profiles and followers not being found when their address contains unusual characters.
+- Improved checks on boosted content so it is only accepted from the server that published it.
+- Improve escaping of embedded link URLs in federated content.
+- Improve permission checks for admin-only actions.
+- Improve validation of incoming federated activities so the signing key and referenced objects are bound to the sender.
 
 ### 9.2.0 - 2026-07-31
 #### Changed

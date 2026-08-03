@@ -106,7 +106,7 @@ trait Verification {
 	 *
 	 * @since 8.1.0
 	 * @since 9.0.0 Added the `$key_id` parameter; binds against the verified keyId.
-	 * @since unreleased Reject a keyId or actor with no parsable host instead of allowing it.
+	 * @since 9.2.1 Reject a keyId or actor with no parsable host instead of allowing it.
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @param string|null      $key_id  The keyId that verified the signature.
