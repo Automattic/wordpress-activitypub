@@ -486,10 +486,36 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 				null,
 				true,
 			),
+			// A missing keyId cannot be bound to the actor, so it must fail closed.
 			'no verified key id'      => array(
 				null,
 				'https://remote.example/users/alice',
-				true,
+				false,
+			),
+			// A non-URL `acct:` keyId resolves to a real key but yields no host: the bypass this guards.
+			'acct key id cannot bind' => array(
+				'acct:mallory@attacker.example',
+				'https://victim.example/users/alice',
+				false,
+			),
+			// An `acct:` actor likewise has no host and cannot be bound.
+			'acct actor cannot bind'  => array(
+				'https://remote.example/users/alice#main-key',
+				'acct:alice@remote.example',
+				false,
+			),
+			// The FeatureRequest fill sets actor = strip_fragment( keyId ); a hostless `acct:`
+			// keyId makes both sides hostless, which must still fail closed rather than self-match.
+			'acct key id and actor'   => array(
+				'acct:mallory@attacker.example',
+				'acct:mallory@attacker.example',
+				false,
+			),
+			// An empty keyId string has no host and cannot be bound.
+			'empty key id'            => array(
+				'',
+				'https://remote.example/users/alice',
+				false,
 			),
 			'actor as object with id' => array(
 				'https://remote.example/users/alice#main-key',
