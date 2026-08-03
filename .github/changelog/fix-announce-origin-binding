@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Improved checks on boosted content so it is only accepted from the server that published it.
