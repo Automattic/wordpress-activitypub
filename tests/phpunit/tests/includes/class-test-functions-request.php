@@ -162,46 +162,60 @@ class Test_Functions_Request extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	/**
-	 * Data provider for is_json_only_accept.
+	 * Data provider for accept_prefers_activitypub.
 	 *
 	 * @return array<string, array{0: string, 1: bool}>
 	 */
-	public function is_json_only_accept_provider() {
+	public function accept_prefers_activitypub_provider() {
 		return array(
-			// Every media type is JSON -> true.
-			'activity_json'        => array( 'application/activity+json', true ),
-			'ld_json'              => array( 'application/ld+json', true ),
-			'plain_json'           => array( 'application/json', true ),
-			'ld_json_with_profile' => array( 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"', true ),
-			'multiple_json'        => array( 'application/activity+json, application/ld+json', true ),
-			'json_with_q'          => array( 'application/activity+json;q=0.9', true ),
-			'uppercase_json'       => array( 'Application/Activity+JSON', true ),
-			'trailing_comma'       => array( 'application/activity+json,', true ),
-			// At least one non-JSON media type -> false.
-			'html_then_json'       => array( 'text/html, application/activity+json', false ),
-			'json_then_html'       => array( 'application/activity+json, text/html', false ),
-			'browser'              => array( 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', false ),
-			'wildcard'             => array( '*/*', false ),
-			'plain_html'           => array( 'text/html', false ),
-			'empty'                => array( '', false ),
-			// Must classify the raw header, not a sanitized one, so it agrees with the pre-plugin cache
-			// path: `%00` keeps this out of JSON where sanitize_text_field() would have stripped it.
-			'percent_octet'        => array( 'application/activity+json%00', false ),
+			// ActivityPub is the highest-priority acceptable type -> true.
+			'activity_json'         => array( 'application/activity+json', true ),
+			'ld_json_https_profile' => array( 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"', true ),
+			'ld_json_http_profile'  => array( 'application/ld+json; profile="http://www.w3.org/ns/activitystreams"', true ),
+			'activity_json_with_q'  => array( 'application/activity+json;q=0.9', true ),
+			'uppercase'             => array( 'Application/Activity+JSON', true ),
+			'trailing_comma'        => array( 'application/activity+json,', true ),
+			'activity_then_ld'      => array( 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"', true ),
+			// Mastodon: ActivityPub at q=1, text/html as a q=0.1 fallback.
+			'mastodon'              => array( 'application/ld+json; profile="https://www.w3.org/ns/activitystreams", application/activity+json, text/html;q=0.1', true ),
+			// Ties broken by order; higher q wins; a refused (q=0) type is ignored.
+			'ap_first_on_tie'       => array( 'application/activity+json, text/html', true ),
+			'ap_higher_q'           => array( 'text/html;q=0.5, application/activity+json;q=0.8', true ),
+			'html_refused_q0'       => array( 'application/activity+json;q=0.5, text/html;q=0', true ),
+			// A malformed q (empty or non-numeric) keeps the 1.0 default rather than refusing the type.
+			'malformed_q_empty'     => array( 'application/activity+json;q=', true ),
+			'malformed_q_text'      => array( 'application/activity+json;q=high', true ),
+			// An out-of-range q>1.0 must not let an earlier q=1.0 non-AP type win the whole header.
+			'html_then_ap_q_over_1' => array( 'text/html, application/activity+json;q=1.5', true ),
+			// Not ActivityPub: plain JSON, bare or wrongly-profiled ld+json, other +json -> false.
+			'plain_json'            => array( 'application/json', false ),
+			'ld_json_no_profile'    => array( 'application/ld+json', false ),
+			'ld_json_wrong_profile' => array( 'application/ld+json; profile="https://example.com/ns"', false ),
+			'other_plus_json'       => array( 'application/geo+json', false ),
+			'html_first_on_tie'     => array( 'text/html, application/activity+json', false ),
+			'html_higher_q'         => array( 'application/activity+json;q=0.5, text/html;q=0.8', false ),
+			'ap_refused_q0'         => array( 'application/activity+json;q=0, text/html', false ),
+			'browser'               => array( 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', false ),
+			'wildcard'              => array( '*/*', false ),
+			'plain_html'            => array( 'text/html', false ),
+			'empty'                 => array( '', false ),
+			// Classifies the raw header: a `%00` breaks the exact match, matching the pre-plugin cache path.
+			'percent_octet'         => array( 'application/activity+json%00', false ),
 		);
 	}
 
 	/**
-	 * Test the JSON-only Accept-header check.
+	 * Test the ActivityPub-preference Accept-header check.
 	 *
-	 * @dataProvider is_json_only_accept_provider
+	 * @dataProvider accept_prefers_activitypub_provider
 	 *
-	 * @covers \Activitypub\is_json_only_accept
+	 * @covers \Activitypub\accept_prefers_activitypub
 	 *
 	 * @param string $accept   The Accept header value.
-	 * @param bool   $expected Whether every listed media type is JSON.
+	 * @param bool   $expected Whether the highest-priority acceptable media type is ActivityPub.
 	 */
-	public function test_is_json_only_accept( $accept, $expected ) {
-		$this->assertSame( $expected, \Activitypub\is_json_only_accept( $accept ) );
+	public function test_accept_prefers_activitypub( $accept, $expected ) {
+		$this->assertSame( $expected, \Activitypub\accept_prefers_activitypub( $accept ) );
 	}
 
 	/**
