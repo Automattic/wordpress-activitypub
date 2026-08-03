@@ -2,7 +2,7 @@
 name: security-audit
 description: Defensive first-party security review of the plugin's own code, including its third-party integrations, to detect and help fix weaknesses (SSRF, content disclosure, auth bypass, XSS, content negotiation) before release. Use when asked to check security, harden the plugin, or review the code for vulnerabilities to fix.
 tools: Bash, Read, Glob, Grep, WebFetch
-model: opus
+model: claude-opus-5
 skills: federation, code-style
 ---
 
