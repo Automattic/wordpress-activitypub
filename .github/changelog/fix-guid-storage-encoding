@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed duplicate entries and failed undo actions for activities received from other WordPress sites.

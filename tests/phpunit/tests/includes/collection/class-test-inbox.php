@@ -28,6 +28,34 @@ class Test_Inbox extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An activity whose ID contains an ampersand must be found again by that ID.
+	 *
+	 * Every WordPress peer federates activity IDs of the form `?post_type=ap_outbox&p=123`,
+	 * so the round trip has to survive the escaping WordPress applies to the GUID column.
+	 * Without it, redelivered activities are stored twice and an Undo cannot find its target.
+	 *
+	 * @covers ::add
+	 * @covers ::get_by_guid
+	 */
+	public function test_get_by_guid_with_ampersand() {
+		$activity_id = 'https://remote.example.com/?post_type=ap_outbox&p=123';
+
+		$activity = new Activity();
+		$activity->set_id( $activity_id );
+		$activity->set_type( 'Like' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+		$activity->set_object( 'https://remote.example.com/objects/456' );
+
+		$inbox_id = Inbox::add( $activity, 1 );
+		$this->assertIsInt( $inbox_id );
+
+		$found = Inbox::get_by_guid( $activity_id );
+
+		$this->assertInstanceOf( 'WP_Post', $found, 'An activity ID containing an ampersand must be found again.' );
+		$this->assertSame( $inbox_id, $found->ID );
+	}
+
+	/**
 	 * Test adding an activity to the inbox and verify post meta is set correctly.
 	 *
 	 * @covers ::add

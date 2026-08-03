@@ -127,7 +127,9 @@ class Inbox {
 			'post_content' => \wp_slash( $activity->to_json( true, true ) ),
 			'post_author'  => 0, // No specific author, recipients stored in meta.
 			'post_status'  => 'publish',
-			'guid'         => $activity->get_id(),
+			// Store the GUID the way get_by_guid() looks it up: WordPress escapes an explicitly
+			// passed GUID as `&amp;`, which no lookup form matches.
+			'guid'         => \esc_url( $activity->get_id() ),
 			'meta_input'   => array(
 				'_activitypub_object_id'             => $object_id,
 				'_activitypub_activity_type'         => $activity->get_type(),

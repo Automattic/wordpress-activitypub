@@ -348,7 +348,9 @@ class Remote_Posts {
 			'post_type'     => self::POST_TYPE,
 			'post_date_gmt' => $gm_date,
 			'post_date'     => \get_date_from_gmt( $gm_date ),
-			'guid'          => isset( $activity['id'] ) ? \esc_url_raw( $activity['id'] ) : '',
+			// Store the GUID the way get_by_guid() looks it up: WordPress escapes an explicitly
+			// passed GUID as `&amp;`, which no lookup form matches.
+			'guid'          => isset( $activity['id'] ) ? \esc_url( $activity['id'] ) : '',
 		);
 	}
 
