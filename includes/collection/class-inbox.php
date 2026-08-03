@@ -289,9 +289,15 @@ class Inbox {
 					);
 				}
 
-				// The comment stores the activity ID as it arrived, so decode the escaping
-				// WordPress applied to the GUID before comparing the two.
-				$result = Comment::object_id_to_comment( \esc_url_raw( \wp_specialchars_decode( $inbox_item->guid, ENT_QUOTES ) ) );
+				/*
+				 * The comment stores the activity ID as it arrived, so undo the escaping applied
+				 * to the GUID before comparing the two. Only the sequences that escaping can
+				 * produce are reversed, plus the `&amp;` that rows written before it carry:
+				 * decoding the full entity set would also rewrite a `&lt;` or `&quot;` that an ID
+				 * happens to contain as literal text, which escaping never put there.
+				 */
+				$decoded = \str_replace( array( '&#038;', '&amp;', '&#039;' ), array( '&', '&', "'" ), $inbox_item->guid );
+				$result  = Comment::object_id_to_comment( \esc_url_raw( $decoded ) );
 
 				if ( empty( $result ) ) {
 					return new \WP_Error(
