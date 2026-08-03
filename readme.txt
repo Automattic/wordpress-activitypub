@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 7.0
-Stable tag: 9.1.0
+Stable tag: 9.2.1
 Requires PHP: 7.4
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -117,6 +117,28 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+### 9.2.1 - 2026-08-03
+#### Fixed
+- Fixed duplicate entries and failed undo actions for activities received from other WordPress sites.
+- Fixed posts and profiles not being found on Mastodon and other Fediverse software, which happened when a request asked for ActivityPub data but also accepted HTML as a low-priority fallback.
+- Fixed remote profiles and followers not being found when their address contains unusual characters.
+- Improved checks on boosted content so it is only accepted from the server that published it.
+- Improve escaping of embedded link URLs in federated content.
+- Improve permission checks for admin-only actions.
+- Improve validation of incoming federated activities so the signing key and referenced objects are bound to the sender.
+
+### 9.2.0 - 2026-07-31
+#### Changed
+- ActivityPub responses are now served only to clients that ask for ActivityPub data and nothing else, which keeps that data out of page caches meant for regular web pages.
+- Only users enabled for ActivityPub can obtain and use OAuth access tokens.
+
+#### Removed
+- Remove support for the WP REST Cache plugin.
+
+#### Fixed
+- Hide the heading on the Followers and Following blocks when its text is cleared, matching the Reactions block.
+- Under Authorized Fetch, ActivityPub responses are no longer stored by page caches such as LiteSpeed or Surge.
+
 ### 9.1.0 - 2026-07-22
 #### Security
 - Ensure apps you connect can only act within the access you granted them, and not make wider changes to your site.
@@ -208,9 +230,9 @@ See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activityp
 
 == Upgrade Notice ==
 
-= 9.0.0 =
+= 9.2.0 =
 
-Posts you switch to draft, pending, private, or password-protected are now fully removed from the Fediverse, so unpublished content no longer lingers on other servers. Note that re-publishing may not restore them on some platforms.
+Support for the WP REST Cache plugin has been removed. If you use it, ActivityPub pages are no longer cached by it, but everything else works as before.
 
 == Installation ==
 

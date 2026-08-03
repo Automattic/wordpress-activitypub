@@ -348,7 +348,10 @@ class Remote_Posts {
 			'post_type'     => self::POST_TYPE,
 			'post_date_gmt' => $gm_date,
 			'post_date'     => \get_date_from_gmt( $gm_date ),
-			'guid'          => isset( $activity['id'] ) ? \esc_url_raw( $activity['id'] ) : '',
+			// Store the GUID the way get_by_guid() looks it up, which is with esc_url(): an
+			// ampersand becomes `&#038;`. Passing it unescaped instead lets `pre_post_guid`
+			// store it as `&amp;`, and the two spellings never match.
+			'guid'          => isset( $activity['id'] ) ? \esc_url( $activity['id'] ) : '',
 		);
 	}
 

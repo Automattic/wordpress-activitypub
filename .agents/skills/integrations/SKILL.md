@@ -32,13 +32,13 @@ The real integrations shipped today (see `integration/`):
 `akismet`, `buddypress`, `classic-editor`, `enable-mastodon-apps`, `jetpack`,
 `litespeed-cache`, `multisite-language-switcher`, `nodeinfo`, `opengraph`,
 `podlove-podcast-publisher`, `seriously-simple-podcasting`, `surge`, `webfinger`,
-`wp-rest-cache`, `wpml`, `yoast-seo`.
+`wpml`, `yoast-seo`.
 
 A few examples:
 - **Akismet** — runs inbound comments/interactions through Akismet spam checks.
 - **OpenGraph** — adds `fediverse:creator` and related metadata via the OpenGraph plugin.
 - **Enable Mastodon Apps** — lets Mastodon client apps talk to the site.
-- **Caches (LiteSpeed Cache, Surge, WP REST Cache)** — keep ActivityPub responses cacheable/uncached correctly.
+- **Caches (LiteSpeed Cache, Surge)** — keep ActivityPub responses cacheable/uncached correctly.
 - **Multilingual (WPML, Multisite Language Switcher)** — language-aware actor and content handling.
 
 For complete directory structure and naming conventions, see `docs/php-class-structure.md`.
