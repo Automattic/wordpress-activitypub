@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Improve lookups for remote profiles and tighten checks on boosted content from other servers.

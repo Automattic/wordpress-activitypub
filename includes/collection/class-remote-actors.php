@@ -209,8 +209,8 @@ class Remote_Actors {
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
-				\esc_sql( $actor_uri ),
-				\esc_sql( self::POST_TYPE )
+				$actor_uri,
+				self::POST_TYPE
 			)
 		);
 

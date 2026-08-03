@@ -192,6 +192,49 @@ class Test_Announce extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An announced activity whose own id is on a different host than the actor is not relayed.
+	 *
+	 * `Http::get_remote_object()` may return a document re-fetched from the id it declares, so the
+	 * URL that was requested is not always the host that served the answer. The document's own id
+	 * is, and an authentic activity always shares a host with its actor.
+	 *
+	 * @covers ::handle_announce
+	 */
+	public function test_handle_announce_rejects_activity_whose_id_host_differs_from_actor() {
+		$activity_url = 'https://example.com/activities/like-2';
+		$fetch        = function ( $pre, $url_or_object ) use ( $activity_url ) {
+			if ( $activity_url !== $url_or_object ) {
+				return $pre;
+			}
+
+			// Requested from example.com, but the document belongs to attacker.test.
+			return array(
+				'id'     => 'https://attacker.test/activities/like-2',
+				'type'   => 'Like',
+				'actor'  => 'https://example.com/user',
+				'object' => $this->post_permalink,
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10, 2 );
+
+		$inbox = new \MockAction();
+		\add_action( 'activitypub_inbox', array( $inbox, 'action' ) );
+
+		$announce = array(
+			'actor'  => 'https://booster.example/user',
+			'type'   => 'Announce',
+			'id'     => 'https://booster.example/a/2',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => $activity_url,
+		);
+		Announce::handle_announce( $announce, $this->user_id, Activity::init_from_array( $announce ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10 );
+
+		$this->assertSame( 0, $inbox->get_call_count(), 'An activity whose id host differs from its actor must not be relayed.' );
+	}
+
+	/**
 	 * An announced activity whose actor is on a different host than the origin it
 	 * was fetched from is a forgery and must not be relayed, regardless of type.
 	 * This is the core fix for the nested Announce -> Undo/Delete authority bypass.

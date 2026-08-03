@@ -14,6 +14,7 @@ use Activitypub\Http;
 
 use function Activitypub\is_activity;
 use function Activitypub\is_activity_public;
+use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 
 /**
@@ -93,6 +94,15 @@ class Announce {
 		 * to every relayed activity type.
 		 */
 		if ( '' === $origin_host || '' === $actor_host || $origin_host !== $actor_host ) {
+			return;
+		}
+
+		/*
+		 * The requested URL is not always the host that answered: get_remote_object() re-fetches a
+		 * document from the id it declares when the two disagree. Bind the actor to that id as
+		 * well, which an authentic activity always shares a host with.
+		 */
+		if ( ! is_same_host( $object['id'] ?? '', $object['actor'] ?? '' ) ) {
 			return;
 		}
 
