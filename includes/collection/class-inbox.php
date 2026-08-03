@@ -288,7 +288,9 @@ class Inbox {
 					);
 				}
 
-				$result = Comment::object_id_to_comment( \esc_url_raw( $inbox_item->guid ) );
+				// The comment stores the activity ID as it arrived, so decode the escaping
+				// WordPress applied to the GUID before comparing the two.
+				$result = Comment::object_id_to_comment( \esc_url_raw( \wp_specialchars_decode( $inbox_item->guid, ENT_QUOTES ) ) );
 
 				if ( empty( $result ) ) {
 					return new \WP_Error(
