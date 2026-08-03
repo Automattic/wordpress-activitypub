@@ -301,7 +301,7 @@ class Query {
 				// The other (more common) option to make an ActivityPub request  is to send an Accept header.
 			} elseif ( isset( $_SERVER['HTTP_ACCEPT'] ) ) {
 				/*
-				 * The Accept-header decision is delegated to is_json_only_accept() so the plugin and the
+				 * The Accept-header decision is delegated to accept_prefers_activitypub() so the plugin and the
 				 * Surge cache drop-in classify byte-for-byte identically. Both must hand it the same raw
 				 * header, and they reach that raw form differently on purpose: this runs after
 				 * wp_magic_quotes() has addslashed $_SERVER, so it wp_unslash()es to recover the original
@@ -310,12 +310,13 @@ class Query {
 				 * the helper must not stripslashes() either (that would corrupt the drop-in's genuine
 				 * bytes). It is only used to pick a content type, never stored or echoed.
 				 *
-				 * The request is ActivityPub only when *every* media type is JSON; a client that also
-				 * accepts HTML (e.g. a browser sending `text/html, application/activity+json`) gets the
-				 * normal HTML page.
+				 * The request is ActivityPub when the highest-priority (by `q`, then order) media type is
+				 * an ActivityPub type (`application/activity+json`, or `application/ld+json` with the AS2
+				 * profile). A browser (`text/html` at q=1) gets the normal page; a client that prefers
+				 * ActivityPub but also accepts HTML as a low-`q` fallback (Mastodon) gets ActivityPub.
 				 */
 				// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Classified only; wp_unslash() recovers the raw bytes the pre-plugin cache path sees, and it must not be sanitized.
-				if ( is_json_only_accept( \wp_unslash( $_SERVER['HTTP_ACCEPT'] ) ) ) {
+				if ( accept_prefers_activitypub( \wp_unslash( $_SERVER['HTTP_ACCEPT'] ) ) ) {
 					\defined( 'ACTIVITYPUB_REQUEST' ) || \define( 'ACTIVITYPUB_REQUEST', true );
 					$this->is_activitypub_request = true;
 				}
