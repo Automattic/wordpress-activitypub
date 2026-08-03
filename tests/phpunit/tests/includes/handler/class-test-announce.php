@@ -192,6 +192,46 @@ class Test_Announce extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An announced activity that declares no id is still relayed.
+	 *
+	 * `Http::get_remote_object()` returns an id-less document as served, so it was never re-fetched
+	 * and the origin check already covers it. Requiring an id would drop legitimate relayed traffic.
+	 *
+	 * @covers ::handle_announce
+	 */
+	public function test_handle_announce_relays_activity_without_id() {
+		$activity_url = 'https://example.com/activities/idless-1';
+		$fetch        = function ( $pre, $url_or_object ) use ( $activity_url ) {
+			if ( $activity_url !== $url_or_object ) {
+				return $pre;
+			}
+
+			return array(
+				'type'   => 'Like',
+				'actor'  => 'https://example.com/user',
+				'object' => $this->post_permalink,
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10, 2 );
+
+		$inbox = new \MockAction();
+		\add_action( 'activitypub_inbox', array( $inbox, 'action' ) );
+
+		$announce = array(
+			'actor'  => 'https://booster.example/user',
+			'type'   => 'Announce',
+			'id'     => 'https://booster.example/a/idless',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => $activity_url,
+		);
+		Announce::handle_announce( $announce, $this->user_id, Activity::init_from_array( $announce ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10 );
+
+		$this->assertSame( 1, $inbox->get_call_count(), 'An announced activity without an id must still be relayed.' );
+	}
+
+	/**
 	 * An announced activity whose own id is on a different host than the actor is not relayed.
 	 *
 	 * `Http::get_remote_object()` may return a document re-fetched from the id it declares, so the

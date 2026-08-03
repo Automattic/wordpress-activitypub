@@ -794,21 +794,28 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	 * @covers ::get_by_uri
 	 */
 	public function test_get_by_uri_with_quote() {
-		$actor_uri = "https://remote.example.com/actor/o'brien";
-
-		$post_id = \wp_insert_post(
-			array(
-				'post_type'   => \Activitypub\Collection\Remote_Actors::POST_TYPE,
-				'post_status' => 'publish',
-				'post_title'  => "O'Brien",
-				'guid'        => $actor_uri,
-			)
+		$uris = array(
+			"https://remote.example.com/actor/o'brien",
+			'https://remote.example.com/actor/say"hi',
+			'https://remote.example.com/actor/a b',
 		);
 
-		$found = \Activitypub\Collection\Remote_Actors::get_by_uri( $actor_uri );
+		foreach ( $uris as $actor_uri ) {
+			$actor = array(
+				'id'                => $actor_uri,
+				'type'              => 'Person',
+				'inbox'             => 'https://remote.example.com/inbox',
+				'preferredUsername' => 'quoted',
+			);
 
-		$this->assertInstanceOf( 'WP_Post', $found, 'An actor URI containing a quote must be found.' );
-		$this->assertSame( $post_id, $found->ID );
+			$post_id = \Activitypub\Collection\Remote_Actors::upsert( $actor );
+			$this->assertIsInt( $post_id );
+
+			$found = \Activitypub\Collection\Remote_Actors::get_by_uri( $actor_uri );
+
+			$this->assertInstanceOf( 'WP_Post', $found, "An actor URI must be found: $actor_uri" );
+			$this->assertSame( $post_id, $found->ID );
+		}
 	}
 
 	/**

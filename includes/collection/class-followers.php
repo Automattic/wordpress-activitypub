@@ -148,7 +148,8 @@ class Followers {
 					Remote_Actors::POST_TYPE,
 					self::FOLLOWER_META_KEY,
 					$user_id,
-					$actor,
+					// Normalize the way the actor's GUID was stored; prepare() handles the escaping.
+					\esc_url_raw( $actor ),
 				)
 			)
 		);

@@ -99,10 +99,14 @@ class Announce {
 
 		/*
 		 * The requested URL is not always the host that answered: get_remote_object() re-fetches a
-		 * document from the id it declares when the two disagree. Bind the actor to that id as
-		 * well, which an authentic activity always shares a host with.
+		 * document from the id it declares when the two disagree, and returns the re-fetched copy.
+		 * Bind the actor to that id as well, which an authentic activity shares a host with.
+		 *
+		 * Only when the document declares one: get_remote_object() returns an id-less document as
+		 * served, so it was never re-fetched and the origin check above is already authoritative.
+		 * Requiring an id here would drop relayed activities that legitimately omit it.
 		 */
-		if ( ! is_same_host( $object['id'] ?? '', $object['actor'] ?? '' ) ) {
+		if ( isset( $object['id'] ) && \is_string( $object['id'] ) && ! is_same_host( $object['id'], $object['actor'] ?? '' ) ) {
 			return;
 		}
 

@@ -1,4 +1,4 @@
 Significance: patch
 Type: fixed
 
-Fixed remote profiles and followers not being found when their address contains a quote.
+Fixed remote profiles and followers not being found when their address contains unusual characters.
