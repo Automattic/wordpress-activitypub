@@ -102,11 +102,15 @@ class Announce {
 		 * document from the id it declares when the two disagree, and returns the re-fetched copy.
 		 * Bind the actor to that id as well, which an authentic activity shares a host with.
 		 *
-		 * Only when the document declares one: get_remote_object() returns an id-less document as
-		 * served, so it was never re-fetched and the origin check above is already authoritative.
-		 * Requiring an id here would drop relayed activities that legitimately omit it.
+		 * Only when the document declares one. The id is derived exactly as get_remote_object()
+		 * derives it, so the two cannot disagree about what counts as declared: whatever it treats
+		 * as id-less it returns as served, without re-fetching, and the origin check above is
+		 * already authoritative for those. Binding them here would drop relayed activities that
+		 * legitimately omit an id.
 		 */
-		if ( isset( $object['id'] ) && \is_string( $object['id'] ) && ! is_same_host( $object['id'], $object['actor'] ?? '' ) ) {
+		$declared_id = isset( $object['id'] ) && \is_string( $object['id'] ) ? $object['id'] : '';
+
+		if ( '' !== $declared_id && ! is_same_host( $declared_id, $object['actor'] ?? '' ) ) {
 			return;
 		}
 

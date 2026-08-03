@@ -212,6 +212,41 @@ class Test_Announce extends \WP_UnitTestCase {
 				'object' => $this->post_permalink,
 			);
 		};
+		$this->assert_announced_activity_is_relayed( $activity_url, $fetch );
+	}
+
+	/**
+	 * An announced activity whose id is an empty string is still relayed.
+	 *
+	 * `Http::get_remote_object()` treats an empty id exactly like a missing one, so it is returned
+	 * as served and was never re-fetched.
+	 *
+	 * @covers ::handle_announce
+	 */
+	public function test_handle_announce_relays_activity_with_empty_id() {
+		$activity_url = 'https://example.com/activities/emptyid-1';
+		$fetch        = function ( $pre, $url_or_object ) use ( $activity_url ) {
+			if ( $activity_url !== $url_or_object ) {
+				return $pre;
+			}
+
+			return array(
+				'id'     => '',
+				'type'   => 'Like',
+				'actor'  => 'https://example.com/user',
+				'object' => $this->post_permalink,
+			);
+		};
+		$this->assert_announced_activity_is_relayed( $activity_url, $fetch );
+	}
+
+	/**
+	 * Announce the activity at the given URL and assert it reached the inbox handlers.
+	 *
+	 * @param string   $activity_url The URL the announced activity is served from.
+	 * @param callable $fetch        Filter callback returning the fetched document.
+	 */
+	private function assert_announced_activity_is_relayed( $activity_url, $fetch ) {
 		\add_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10, 2 );
 
 		$inbox = new \MockAction();
