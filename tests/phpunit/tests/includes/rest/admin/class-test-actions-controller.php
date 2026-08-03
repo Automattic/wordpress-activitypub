@@ -50,6 +50,7 @@ class Test_Actions_Controller extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		\wp_set_current_user( 0 );
+		\delete_option( 'activitypub_actor_mode' );
 
 		// Clear any OAuth session established during the test.
 		unset( $_SERVER['HTTP_AUTHORIZATION'] );
