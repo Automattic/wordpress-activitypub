@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Improve permission checks for admin-only actions.
