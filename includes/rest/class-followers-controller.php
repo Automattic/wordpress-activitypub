@@ -15,6 +15,7 @@ use Activitypub\Signature;
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\is_unsafe_ipv6_literal;
+use function Activitypub\maybe_set_no_store;
 
 /**
  * Followers_Controller class.
@@ -305,6 +306,12 @@ class Followers_Controller extends Actors_Controller {
 
 		$response = \rest_ensure_response( $response );
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
+
+		/*
+		 * This partial collection is disclosed only to the signing peer, whatever the global Authorized
+		 * Fetch setting, so it must never be stored by a shared cache and served to another caller.
+		 */
+		maybe_set_no_store( $response );
 
 		return $response;
 	}

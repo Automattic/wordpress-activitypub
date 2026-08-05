@@ -14,6 +14,7 @@ use Activitypub\Http;
 
 use function Activitypub\is_activity;
 use function Activitypub\is_activity_public;
+use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 
 /**
@@ -93,6 +94,23 @@ class Announce {
 		 * to every relayed activity type.
 		 */
 		if ( '' === $origin_host || '' === $actor_host || $origin_host !== $actor_host ) {
+			return;
+		}
+
+		/*
+		 * The requested URL is not always the host that answered: get_remote_object() re-fetches a
+		 * document from the id it declares when the two disagree, and returns the re-fetched copy.
+		 * Bind the actor to that id as well, which an authentic activity shares a host with.
+		 *
+		 * Only when the document declares one. The id is derived exactly as get_remote_object()
+		 * derives it, so the two cannot disagree about what counts as declared: whatever it treats
+		 * as id-less it returns as served, without re-fetching, and the origin check above is
+		 * already authoritative for those. Binding them here would drop relayed activities that
+		 * legitimately omit an id.
+		 */
+		$declared_id = isset( $object['id'] ) && \is_string( $object['id'] ) ? $object['id'] : '';
+
+		if ( '' !== $declared_id && ! is_same_host( $declared_id, $object['actor'] ?? '' ) ) {
 			return;
 		}
 
