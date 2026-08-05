@@ -7,6 +7,7 @@
 
 namespace Activitypub\Handler;
 
+use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
@@ -22,7 +23,8 @@ class Delete {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action( 'activitypub_inbox_delete', array( self::class, 'handle_delete' ), 10, 2 );
+		\add_action( 'activitypub_inbox_delete', array( self::class, 'handle_delete' ), 10, 4 );
+		\add_action( 'activitypub_inbox_shared_delete', array( self::class, 'handle_delete' ), 10, 4 );
 		\add_filter( 'activitypub_skip_inbox_storage', array( self::class, 'skip_inbox_storage' ), 10, 2 );
 		\add_filter( 'activitypub_defer_signature_verification', array( self::class, 'defer_signature_verification' ), 10, 3 );
 		\add_action( 'activitypub_delete_remote_actor_interactions', array( self::class, 'delete_interactions' ) );
@@ -35,10 +37,18 @@ class Delete {
 	/**
 	 * Handles "Delete" requests.
 	 *
-	 * @param array     $activity The delete activity.
-	 * @param int|int[] $user_ids The local user ID(s).
+	 * @param array                               $activity        The delete activity.
+	 * @param int|int[]                           $user_ids        The local user ID(s).
+	 * @param \Activitypub\Activity\Activity|null $activity_object Optional. The activity object. Default null.
+	 * @param string|null                         $context         Optional. The inbox context. Default null.
 	 */
-	public static function handle_delete( $activity, $user_ids ) {
+	public static function handle_delete( $activity, $user_ids, $activity_object = null, $context = null ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		// The shared inbox invokes this once per resolved recipient and once on the shared hook;
+		// handle that path only on the shared hook, so it runs once with the full recipient list.
+		if ( Inbox::CONTEXT_SHARED_INBOX === $context && 'activitypub_inbox_shared_delete' !== \current_filter() ) {
+			return;
+		}
+
 		$object_type = $activity['object']['type'] ?? '';
 
 		switch ( $object_type ) {
