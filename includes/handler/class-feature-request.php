@@ -13,6 +13,7 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 use function Activitypub\user_can_activitypub;
 
@@ -342,6 +343,12 @@ class Feature_Request {
 		}
 
 		if ( ! isset( $activity['actor'], $activity['object'], $activity['instrument'] ) ) {
+			return false;
+		}
+
+		// The instrument is the requester's own object, so it must live on the actor's host.
+		// Otherwise a remote server could stamp a local actor with a third-party reference.
+		if ( ! is_same_host( $activity['actor'], $activity['instrument'] ) ) {
 			return false;
 		}
 

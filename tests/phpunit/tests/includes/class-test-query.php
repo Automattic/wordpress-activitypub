@@ -223,10 +223,11 @@ class Test_Query extends \WP_UnitTestCase {
 		$this->go_to( get_permalink( self::$post_id ) );
 		$this->assertTrue( Query::get_instance()->is_activitypub_request() );
 
+		// Bare `application/ld+json` (no ActivityStreams profile) is not an ActivityPub request.
 		Query::get_instance()->__destruct();
 		$_SERVER['HTTP_ACCEPT'] = 'application/ld+json';
 		$this->go_to( get_permalink( self::$post_id ) );
-		$this->assertTrue( Query::get_instance()->is_activitypub_request() );
+		$this->assertFalse( Query::get_instance()->is_activitypub_request() );
 
 		Query::get_instance()->__destruct();
 		$_SERVER['HTTP_ACCEPT'] = 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"';
@@ -243,10 +244,17 @@ class Test_Query extends \WP_UnitTestCase {
 		$this->go_to( get_permalink( self::$post_id ) );
 		$this->assertTrue( Query::get_instance()->is_activitypub_request() );
 
+		// Mastodon's real header: ActivityPub at q=1 with a low-priority text/html fallback.
+		Query::get_instance()->__destruct();
+		$_SERVER['HTTP_ACCEPT'] = 'application/ld+json; profile="https://www.w3.org/ns/activitystreams", application/activity+json, text/html;q=0.1';
+		$this->go_to( get_permalink( self::$post_id ) );
+		$this->assertTrue( Query::get_instance()->is_activitypub_request() );
+
+		// Plain `application/json` is not an ActivityPub request.
 		Query::get_instance()->__destruct();
 		$_SERVER['HTTP_ACCEPT'] = 'application/json';
 		$this->go_to( get_permalink( self::$post_id ) );
-		$this->assertTrue( Query::get_instance()->is_activitypub_request() );
+		$this->assertFalse( Query::get_instance()->is_activitypub_request() );
 
 		Query::get_instance()->__destruct();
 		$_SERVER['HTTP_ACCEPT'] = 'text/html';

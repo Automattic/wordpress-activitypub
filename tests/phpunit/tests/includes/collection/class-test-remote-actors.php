@@ -786,6 +786,39 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
+	 * An actor URI containing a quote must still be found.
+	 *
+	 * `$wpdb->prepare()` escapes the values it is given, so escaping them beforehand as well
+	 * leaves the lookup key no longer matching what was stored.
+	 *
+	 * @covers ::get_by_uri
+	 */
+	public function test_get_by_uri_with_quote() {
+		$uris = array(
+			"https://remote.example.com/actor/o'brien",
+			'https://remote.example.com/actor/say"hi',
+			'https://remote.example.com/actor/a b',
+		);
+
+		foreach ( $uris as $actor_uri ) {
+			$actor = array(
+				'id'                => $actor_uri,
+				'type'              => 'Person',
+				'inbox'             => 'https://remote.example.com/inbox',
+				'preferredUsername' => 'quoted',
+			);
+
+			$post_id = \Activitypub\Collection\Remote_Actors::upsert( $actor );
+			$this->assertIsInt( $post_id );
+
+			$found = \Activitypub\Collection\Remote_Actors::get_by_uri( $actor_uri );
+
+			$this->assertInstanceOf( 'WP_Post', $found, "An actor URI must be found: $actor_uri" );
+			$this->assertSame( $post_id, $found->ID );
+		}
+	}
+
+	/**
 	 * Test get_by_uri.
 	 *
 	 * @covers ::get_by_uri

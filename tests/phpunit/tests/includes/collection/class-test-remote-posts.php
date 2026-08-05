@@ -396,6 +396,38 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An object whose ID contains an ampersand must be found again by that ID.
+	 *
+	 * WordPress peers publish object IDs like `?p=123&foo=bar`, and WordPress escapes an
+	 * explicitly passed GUID, so the round trip has to survive that escaping.
+	 *
+	 * @covers ::add
+	 * @covers ::get_by_guid
+	 */
+	public function test_get_by_guid_with_ampersand() {
+		$object_id = 'https://example.com/?post_type=post&p=789';
+
+		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
+			'object' => array(
+				'id'           => $object_id,
+				'type'         => 'Note',
+				'name'         => 'Ampersand Object',
+				'content'      => '<p>Test content</p>',
+				'attributedTo' => 'https://example.com/users/testuser',
+			),
+		);
+
+		$post = Remote_Posts::add( $activity, 1 );
+		$this->assertInstanceOf( '\WP_Post', $post );
+
+		$retrieved_post = Remote_Posts::get_by_guid( $object_id );
+
+		$this->assertInstanceOf( '\WP_Post', $retrieved_post, 'An object ID containing an ampersand must be found again.' );
+		$this->assertEquals( $post->ID, $retrieved_post->ID );
+	}
+
+	/**
 	 * Test getting a non-existent object by GUID.
 	 *
 	 * @covers ::get_by_guid
