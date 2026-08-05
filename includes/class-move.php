@@ -91,6 +91,12 @@ class Move {
 		$target_actor = new Actor();
 		$target_actor->from_array( $response );
 
+		// The canonical id is both federated and advertised, so a target that declares none cannot be moved to.
+		$target_id = $target_actor->get_id();
+		if ( ! $target_id ) {
+			return new \WP_Error( 'invalid_target', \__( 'Invalid target', 'activitypub' ) );
+		}
+
 		/*
 		 * The move is only valid if the target links back. Receiving servers accept it only when the
 		 * id we send as the Move's `object` is listed in the target's `alsoKnownAs`, so verify that
@@ -101,11 +107,15 @@ class Move {
 			return new \WP_Error( 'invalid_target', \__( 'Invalid target', 'activitypub' ) );
 		}
 
-		// Advertise the move only after the target is verified, so a failed attempt never leaves the actor pointing at an unverified target.
+		/*
+		 * Advertise the move only after the target is verified, so a failed attempt never leaves the
+		 * actor pointing at an unverified target. Store the canonical id, not the input URL: receivers
+		 * match the advertised `movedTo` against the Move's `target` and skip the move when they differ.
+		 */
 		if ( $user->get__id() > 0 ) {
-			\update_user_option( $user->get__id(), 'activitypub_moved_to', $to );
+			\update_user_option( $user->get__id(), 'activitypub_moved_to', $target_id );
 		} else {
-			\update_option( 'activitypub_blog_user_moved_to', $to );
+			\update_option( 'activitypub_blog_user_moved_to', $target_id );
 		}
 
 		$activity = new Activity();
@@ -113,7 +123,7 @@ class Move {
 		$activity->set_actor( $user->get_id() );
 		$activity->set_origin( $user->get_id() );
 		$activity->set_object( $user->get_id() );
-		$activity->set_target( $target_actor->get_id() );
+		$activity->set_target( $target_id );
 
 		$outbox_id = add_to_outbox( $activity, null, $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
 

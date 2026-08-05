@@ -41,9 +41,15 @@ class Test_Move extends \WP_UnitTestCase {
 		$from = Actors::get_by_id( self::$user_id )->get_id();
 		$to   = 'https://newsite.com/user/1';
 
-		$filter = function () use ( $from ) {
+		$filter = function () use ( $from, $to ) {
 			return array(
-				'body'     => wp_json_encode( array( 'alsoKnownAs' => array( $from ) ) ),
+				'body'     => wp_json_encode(
+					array(
+						'id'          => $to,
+						'type'        => 'Person',
+						'alsoKnownAs' => array( $from ),
+					)
+				),
 				'response' => array( 'code' => 200 ),
 			);
 		};
@@ -106,9 +112,15 @@ class Test_Move extends \WP_UnitTestCase {
 		$from = Actors::get_by_id( self::$user_id )->get_id();
 		$to   = 'https://newsite.com/user/1';
 
-		$filter = function () use ( $from ) {
+		$filter = function () use ( $from, $to ) {
 			return array(
-				'body'     => wp_json_encode( array( 'alsoKnownAs' => array( $from ) ) ),
+				'body'     => wp_json_encode(
+					array(
+						'id'          => $to,
+						'type'        => 'Person',
+						'alsoKnownAs' => array( $from ),
+					)
+				),
 				'response' => array( 'code' => 200 ),
 			);
 		};
@@ -146,9 +158,15 @@ class Test_Move extends \WP_UnitTestCase {
 		$to   = 'https://newsite.com/user/1';
 
 		// Target links back, so verification passes.
-		$http = function () use ( $from ) {
+		$http = function () use ( $from, $to ) {
 			return array(
-				'body'     => wp_json_encode( array( 'alsoKnownAs' => array( $from ) ) ),
+				'body'     => wp_json_encode(
+					array(
+						'id'          => $to,
+						'type'        => 'Person',
+						'alsoKnownAs' => array( $from ),
+					)
+				),
 				'response' => array( 'code' => 200 ),
 			);
 		};
@@ -197,9 +215,15 @@ class Test_Move extends \WP_UnitTestCase {
 		$to   = 'https://newsite.com/user/1';
 
 		// Target resolves, but its alsoKnownAs does not list this actor.
-		$filter = function () {
+		$filter = function () use ( $to ) {
 			return array(
-				'body'     => wp_json_encode( array( 'alsoKnownAs' => array( 'https://newsite.com/user/999' ) ) ),
+				'body'     => wp_json_encode(
+					array(
+						'id'          => $to,
+						'type'        => 'Person',
+						'alsoKnownAs' => array( 'https://newsite.com/user/999' ),
+					)
+				),
 				'response' => array( 'code' => 200 ),
 			);
 		};
@@ -215,6 +239,64 @@ class Test_Move extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The advertised `movedTo` is the target's canonical id, not the URL the move was requested with.
+	 *
+	 * Receiving servers match the advertised `movedTo` against the Move's `target` and skip the move
+	 * when the two differ, so an alias or redirecting input URL must not end up as the stored value.
+	 *
+	 * @covers ::externally
+	 */
+	public function test_account_stores_canonical_target_id() {
+		$from      = Actors::get_by_id( self::$user_id )->get_id();
+		$alias     = 'https://newsite.com/alias/1';
+		$canonical = 'https://newsite.com/user/1';
+
+		$filter = function () use ( $from, $canonical ) {
+			return array(
+				'id'          => $canonical,
+				'type'        => 'Person',
+				'alsoKnownAs' => array( $from ),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$outbox_id = Move::externally( $from, $alias );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertEquals( $canonical, Actors::get_by_id( self::$user_id )->get_moved_to() );
+
+		$activity = \json_decode( \get_post_field( 'post_content', $outbox_id ) );
+		$this->assertEquals( $canonical, $activity->target, 'The federated target must match the advertised movedTo.' );
+	}
+
+	/**
+	 * A target document that declares no id cannot be federated, so the move is rejected.
+	 *
+	 * @covers ::externally
+	 */
+	public function test_account_rejects_target_without_id() {
+		$from = Actors::get_by_id( self::$user_id )->get_id();
+		$to   = 'https://newsite.com/user/1';
+
+		$filter = function () use ( $from ) {
+			return array(
+				'type'        => 'Person',
+				'alsoKnownAs' => array( $from ),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$result = Move::externally( $from, $to );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'invalid_target', $result->get_error_code() );
+		$this->assertNull( Actors::get_by_id( self::$user_id )->get_moved_to() );
+	}
+
+	/**
 	 * Test the account() method with duplicate moves.
 	 *
 	 * @covers ::account
@@ -225,9 +307,15 @@ class Test_Move extends \WP_UnitTestCase {
 
 		\update_user_option( self::$user_id, 'activitypub_also_known_as', array( 'https://old.example.com/user/1' ) );
 
-		$filter = function () use ( $from ) {
+		$filter = function () use ( $from, $to ) {
 			return array(
-				'body'     => wp_json_encode( array( 'alsoKnownAs' => array( $from ) ) ),
+				'body'     => wp_json_encode(
+					array(
+						'id'          => $to,
+						'type'        => 'Person',
+						'alsoKnownAs' => array( $from ),
+					)
+				),
 				'response' => array( 'code' => 200 ),
 			);
 		};
@@ -253,9 +341,15 @@ class Test_Move extends \WP_UnitTestCase {
 		$from = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
 		$to   = 'https://newsite.com/user/0';
 
-		$filter = function () use ( $from ) {
+		$filter = function () use ( $from, $to ) {
 			return array(
-				'body'     => wp_json_encode( array( 'alsoKnownAs' => array( $from ) ) ),
+				'body'     => wp_json_encode(
+					array(
+						'id'          => $to,
+						'type'        => 'Person',
+						'alsoKnownAs' => array( $from ),
+					)
+				),
 				'response' => array( 'code' => 200 ),
 			);
 		};
