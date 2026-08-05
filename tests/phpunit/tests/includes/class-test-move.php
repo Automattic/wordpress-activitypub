@@ -133,7 +133,58 @@ class Test_Move extends \WP_UnitTestCase {
 			)
 		);
 
-		$this->assertNotEmpty( $updates, 'A move should federate a profile Update.' );
+		$this->assertCount( 1, $updates, 'A move should federate exactly one profile Update.' );
+	}
+
+	/**
+	 * When the Move itself is not federated, no follower notification is sent.
+	 *
+	 * @covers ::externally
+	 */
+	public function test_move_does_not_notify_followers_when_move_fails() {
+		$from = Actors::get_by_id( self::$user_id )->get_id();
+		$to   = 'https://newsite.com/user/1';
+
+		// Target links back, so verification passes.
+		$http = function () use ( $from ) {
+			return array(
+				'body'     => wp_json_encode( array( 'alsoKnownAs' => array( $from ) ) ),
+				'response' => array( 'code' => 200 ),
+			);
+		};
+		add_filter( 'pre_http_request', $http );
+
+		// Fail only the Move's outbox insert; a follow-up profile Update would still succeed.
+		$fail_move = function ( $maybe_empty, $postarr ) {
+			$data = json_decode( stripslashes( (string) ( $postarr['post_content'] ?? '' ) ), true );
+
+			return ( is_array( $data ) && isset( $data['type'] ) && 'Move' === $data['type'] ) ? true : $maybe_empty;
+		};
+		add_filter( 'wp_insert_post_empty_content', $fail_move, 10, 2 );
+
+		$result = Move::externally( $from, $to );
+
+		remove_filter( 'wp_insert_post_empty_content', $fail_move, 10 );
+		remove_filter( 'pre_http_request', $http );
+
+		$this->assertTrue( empty( $result ) || \is_wp_error( $result ), 'A Move that could not be federated must not return a success id.' );
+
+		$updates = get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'any',
+				'author'      => self::$user_id,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Update',
+					),
+				),
+			)
+		);
+
+		$this->assertEmpty( $updates, 'No profile Update should be federated when the Move was not.' );
 	}
 
 	/**
