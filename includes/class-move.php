@@ -117,6 +117,10 @@ class Move {
 
 		$outbox_id = add_to_outbox( $activity, null, $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
 
+		if ( ! $outbox_id || \is_wp_error( $outbox_id ) ) {
+			return $outbox_id;
+		}
+
 		/*
 		 * Notify followers of the new movedTo by federating a profile Update (FEP-7628). Queue it
 		 * after the Move so a follower that reacts to `movedTo` still processes the migration first.
@@ -187,6 +191,10 @@ class Move {
 		$activity->set_target( $to );
 
 		$outbox_id = add_to_outbox( $activity, null, $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC );
+
+		if ( ! $outbox_id || \is_wp_error( $outbox_id ) ) {
+			return $outbox_id;
+		}
 
 		/*
 		 * Notify followers of the changed profile on both actors by federating an Update (FEP-7628).
