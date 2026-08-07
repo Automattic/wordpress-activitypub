@@ -116,12 +116,6 @@ class User extends Actor {
 			return $id;
 		}
 
-		$permalink = \get_user_option( 'activitypub_use_permalink_as_id', $this->_id );
-
-		if ( '1' === $permalink ) {
-			return $this->get_url();
-		}
-
 		return \add_query_arg( 'author', $this->_id, \home_url( '/' ) );
 	}
 

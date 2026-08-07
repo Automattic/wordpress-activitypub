@@ -12,6 +12,7 @@ use Activitypub\Tombstone;
 
 use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_same_domain;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 
@@ -410,8 +411,15 @@ class Followers {
 	 */
 	public static function get_inboxes_for_activity( $json, $actor_id, $batch_size = 50, $offset = 0 ) {
 		$activity = \json_decode( $json, true );
-		// Only if this is a Delete. Create handles its own "Announce" in dual user mode.
-		if ( 'Delete' === ( $activity['type'] ?? null ) ) {
+		$type     = $activity['type'] ?? null;
+
+		/*
+		 * A Delete, and a Move that re-identifies a local actor (an id-format, host, or handle
+		 * change, whose target is on this site), must reach every server that cached the actor, not
+		 * just its followers. A Move to a remote account only needs the followers, who re-follow the
+		 * target per FEP-7628. Create handles its own "Announce" in dual user mode.
+		 */
+		if ( 'Delete' === $type || ( 'Move' === $type && is_same_domain( $activity['target'] ?? '' ) ) ) {
 			$inboxes = Remote_Actors::get_inboxes();
 		} else {
 			$inboxes = self::get_inboxes( $actor_id );

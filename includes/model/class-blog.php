@@ -91,12 +91,6 @@ class Blog extends Actor {
 			return $id;
 		}
 
-		$permalink = \get_option( 'activitypub_use_permalink_as_id_for_blog', false );
-
-		if ( $permalink ) {
-			return \esc_url_raw( \home_url( '/@' . $this->get_preferred_username() ) );
-		}
-
 		return \add_query_arg( 'author', $this->_id, \home_url( '/' ) );
 	}
 

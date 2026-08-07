@@ -45,6 +45,10 @@ class Move {
 				}
 			}
 		}
+
+		// Serve the retired representation (with movedTo) when an actor is fetched via its old
+		// permalink id. Always registered, since the id migration is not gated by domain moves.
+		\add_action( 'activitypub_construct_model_actor', array( self::class, 'maybe_initiate_retired_actor' ) );
 	}
 
 	/**
@@ -165,42 +169,57 @@ class Move {
 			return $user;
 		}
 
+		// The old id is the input when it is a URL, otherwise the source's canonical id.
+		$old_id = \filter_var( $from, FILTER_VALIDATE_URL ) ? $from : $user->get_id();
+
+		return self::internally_by_actor( $user, Actors::get_by_various( $to ), $old_id, $to );
+	}
+
+	/**
+	 * Perform an internal Move for already-resolved actors.
+	 *
+	 * Used when the caller already holds the source and target actors and the exact old/new ids,
+	 * rather than a URL that still resolves. The id migration relies on this because the old
+	 * permalink URL no longer resolves once `get_id()` stops emitting it.
+	 *
+	 * @since unreleased
+	 *
+	 * @param User|Blog           $source The actor being moved (the old identity).
+	 * @param User|Blog|\WP_Error $target The actor the move points to; may equal the source for a self re-identification.
+	 * @param string              $old_id The old actor id (the Move's `object`).
+	 * @param string              $new_id The new actor id (the Move's `target`).
+	 *
+	 * @return int|bool|\WP_Error The ID of the outbox item or false or WP_Error on failure.
+	 */
+	public static function internally_by_actor( $source, $target, $old_id, $new_id ) {
 		// Point the old actor at the new one.
-		if ( $user->get__id() > 0 ) {
-			\update_user_option( $user->get__id(), 'activitypub_moved_to', $to );
+		if ( $source->get__id() > 0 ) {
+			\update_user_option( $source->get__id(), 'activitypub_moved_to', $new_id );
 		} else {
-			\update_option( 'activitypub_blog_user_moved_to', $to );
+			\update_option( 'activitypub_blog_user_moved_to', $new_id );
 		}
 
 		/*
-		 * The old account URL belongs in the *target's* alsoKnownAs, not the source's: receiving
-		 * servers accept the Move only when the new actor links back to the old one. For a domain
-		 * change the source and target resolve to the same actor, so it is still recorded there.
+		 * The old id belongs in the *target's* alsoKnownAs, not the source's: receiving servers
+		 * accept the Move only when the new actor links back to the old one. For a self
+		 * re-identification the source and target are the same actor, so it is recorded there.
 		 */
-		$target = Actors::get_by_various( $to );
 		if ( ! \is_wp_error( $target ) ) {
 			if ( $target->get__id() > 0 ) {
-				self::update_user_also_known_as( $target->get__id(), $from );
+				self::update_user_also_known_as( $target->get__id(), $old_id );
 			} else {
-				self::update_blog_also_known_as( $from );
+				self::update_blog_also_known_as( $old_id );
 			}
-		}
-
-		// check if `$from` is a URL or an ID.
-		if ( \filter_var( $from, FILTER_VALIDATE_URL ) ) {
-			$actor = $from;
-		} else {
-			$actor = $user->get_id();
 		}
 
 		$activity = new Activity();
 		$activity->set_type( 'Move' );
-		$activity->set_actor( $actor );
-		$activity->set_origin( $actor );
-		$activity->set_object( $actor );
-		$activity->set_target( $to );
+		$activity->set_actor( $old_id );
+		$activity->set_origin( $old_id );
+		$activity->set_object( $old_id );
+		$activity->set_target( $new_id );
 
-		$outbox_id = add_to_outbox( $activity, null, $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC );
+		$outbox_id = add_to_outbox( $activity, null, $source->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC );
 
 		if ( ! $outbox_id || \is_wp_error( $outbox_id ) ) {
 			return $outbox_id;
@@ -210,8 +229,8 @@ class Move {
 		 * Notify followers of the changed profile on both actors by federating an Update (FEP-7628).
 		 * Queued after the Move so a follower that reacts to `movedTo` still processes the migration first.
 		 */
-		Actor_Scheduler::schedule_profile_update( $user->get__id() );
-		if ( ! \is_wp_error( $target ) && $target->get__id() !== $user->get__id() ) {
+		Actor_Scheduler::schedule_profile_update( $source->get__id() );
+		if ( ! \is_wp_error( $target ) && $target->get__id() !== $source->get__id() ) {
 			Actor_Scheduler::schedule_profile_update( $target->get__id() );
 		}
 
@@ -328,6 +347,64 @@ class Move {
 
 		if ( ! empty( $cached_data ) ) {
 			$instance->from_json( $cached_data );
+		}
+	}
+
+	/**
+	 * Store the retired representation of an actor's old permalink id.
+	 *
+	 * Snapshots the actor document with its id set to the old permalink URL, so a later request to
+	 * that URL can serve it. The `movedTo` is not stored here: it is derived at read time from the
+	 * `activitypub_moved_to` option (set by the move) against this old id, exactly as the domain
+	 * move does.
+	 *
+	 * @since unreleased
+	 *
+	 * @param User|Blog $actor  The migrated actor (already resolved to its new id).
+	 * @param string    $old_id The old permalink id to keep serving.
+	 */
+	public static function store_retired_permalink( $actor, $old_id ) {
+		$data = \json_decode( $actor->to_json(), true );
+
+		if ( ! \is_array( $data ) ) {
+			return;
+		}
+
+		$data['id'] = $old_id;
+		$json       = \wp_json_encode( $data );
+
+		if ( $actor->get__id() > 0 ) {
+			\update_user_option( $actor->get__id(), 'activitypub_retired_permalink_data', $json );
+		} else {
+			\update_option( 'activitypub_blog_user_retired_permalink_data', $json );
+		}
+	}
+
+	/**
+	 * Serve the retired permalink representation when the actor is fetched via its old id.
+	 *
+	 * Mirrors {@see self::maybe_initiate_old_user()}: the model stays unaware of the request, and
+	 * this loads the stored snapshot only when {@see Query::is_permalink_actor_request()} matches.
+	 *
+	 * @since unreleased
+	 *
+	 * @param Blog|User $instance The Blog or User instance to populate.
+	 */
+	public static function maybe_initiate_retired_actor( $instance ) {
+		if ( ! Query::get_instance()->is_permalink_actor_request() ) {
+			return;
+		}
+
+		if ( $instance instanceof Blog ) {
+			$data = \get_option( 'activitypub_blog_user_retired_permalink_data' );
+		} elseif ( $instance instanceof User ) {
+			$data = \get_user_option( 'activitypub_retired_permalink_data', $instance->get__id() );
+		} else {
+			return;
+		}
+
+		if ( ! empty( $data ) ) {
+			$instance->from_json( $data );
 		}
 	}
 

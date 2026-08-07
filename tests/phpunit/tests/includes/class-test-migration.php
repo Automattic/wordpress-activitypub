@@ -16,6 +16,8 @@ use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Comment;
 use Activitypub\Migration;
+use Activitypub\Model\Blog;
+use Activitypub\Move;
 use Activitypub\Scheduler;
 use Activitypub\Tombstone;
 
@@ -1684,5 +1686,54 @@ class Test_Migration extends \WP_UnitTestCase {
 		$remaining = \get_option( 'activitypub_tombstone_urls', false );
 		$this->assertIsArray( $remaining, 'Legacy option must remain to back exists_local().' );
 		$this->assertEqualsCanonicalizing( $urls, $remaining );
+	}
+
+	/**
+	 * Migrating a permalink-id blog actor moves it to the query-param id and keeps the old id resolving.
+	 *
+	 * @covers ::migrate_permalink_ids_to_query_param
+	 */
+	public function test_migrate_permalink_ids_to_query_param() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_option( 'activitypub_use_permalink_as_id_for_blog', '1' );
+
+		$blog      = new Blog();
+		$canonical = $blog->get_id();
+		$old_id    = \esc_url_raw( \home_url( '/@' . $blog->get_preferred_username() ) );
+
+		$this->assertNotEquals( $old_id, $canonical, 'Precondition: the old permalink id differs from the query-param id.' );
+
+		Migration::migrate_permalink_ids_to_query_param();
+
+		// The blog now points at the query-param id, and a Move was queued for the old id.
+		$this->assertEquals( $canonical, \get_option( 'activitypub_blog_user_moved_to' ) );
+		$moves = \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'any',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Move',
+					),
+				),
+			)
+		);
+		$this->assertNotEmpty( $moves, 'A Move should be queued for the migrated blog actor.' );
+
+		// Fetched via its old permalink URL, the actor serves the old id with a movedTo, and the
+		// model never inspects the request to do it.
+		\set_query_var( 'actor', $blog->get_preferred_username() );
+		$retired = new Blog();
+		$this->assertEquals( $old_id, $retired->get_id(), 'The old permalink URL serves the old id.' );
+		$this->assertEquals( $canonical, $retired->get_moved_to(), 'The old id advertises movedTo to the query-param id.' );
+
+		\set_query_var( 'actor', '' );
+		\delete_option( 'activitypub_actor_mode' );
+		\delete_option( 'activitypub_use_permalink_as_id_for_blog' );
+		\delete_option( 'activitypub_blog_user_moved_to' );
+		\delete_option( 'activitypub_blog_user_retired_permalink_data' );
+		\delete_option( 'activitypub_blog_user_also_known_as' );
 	}
 }
