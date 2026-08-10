@@ -31,7 +31,7 @@ $args = wp_parse_args(
 <div class="activitypub-embed u-in-reply-to h-cite">
 	<div class="activitypub-embed-header p-author h-card">
 		<?php if ( $args['avatar_url'] ) : ?>
-			<img class="u-photo" src="<?php echo \esc_url( $args['avatar_url'] ); ?>" alt="" />
+			<img class="u-photo" src="<?php echo \esc_url( $args['avatar_url'] ); ?>" alt="" width="48" height="48" />
 		<?php endif; ?>
 		<div class="activitypub-embed-header-text">
 			<h2 class="p-name"><?php echo \esc_html( $args['author_name'] ); ?></h2>

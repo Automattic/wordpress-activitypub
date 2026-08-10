@@ -81,7 +81,7 @@ require __DIR__ . '/parts/header.php';
 
 	<div class="card-body">
 		<?php if ( ! empty( $args['icon']['url'] ) ) : ?>
-			<img src="<?php echo esc_url( $args['icon']['url'] ); ?>" alt="<?php echo esc_attr( $args['name'] ); ?>">
+			<img src="<?php echo esc_url( $args['icon']['url'] ); ?>" alt="<?php echo esc_attr( $args['name'] ); ?>" width="64" height="64">
 		<?php endif; ?>
 		<div class="card-content">
 			<h2><?php echo esc_html( $args['name'] ); ?> <small style="font-size: 14px; color: #666;"><?php echo esc_html( $args['webfinger'] ); ?></small></h2>
