@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Cache;
 
 use Activitypub\Cache\Avatar;
+use Activitypub\Collection\Remote_Actors;
 use WP_UnitTestCase;
 
 /**
@@ -227,5 +228,222 @@ class Test_Avatar extends WP_UnitTestCase {
 		$this->assertNotFalse(
 			has_action( 'before_delete_post', array( Avatar::class, 'maybe_cleanup' ) )
 		);
+	}
+
+	/**
+	 * Test that get_actor_avatar_hash resolves the current icon without caching.
+	 */
+	public function test_get_actor_avatar_hash() {
+		$icon_url = 'https://example.com/avatar.jpg';
+		$post_id  = self::factory()->post->create(
+			array(
+				'post_type'    => Remote_Actors::POST_TYPE,
+				'post_content' => wp_json_encode( array( 'icon' => array( 'url' => $icon_url ) ) ),
+			)
+		);
+
+		$fired   = false;
+		$capture = function ( $value ) use ( &$fired ) {
+			$fired = true;
+			return $value;
+		};
+		\add_filter( 'activitypub_remote_media_url', $capture );
+
+		$this->assertEquals( md5( $icon_url ), Avatar::get_actor_avatar_hash( $post_id ) );
+		$this->assertFalse( $fired, 'The cache filter should not fire when resolving the hash' );
+
+		\remove_filter( 'activitypub_remote_media_url', $capture );
+	}
+
+	/**
+	 * Test that get_actor_avatar_hash returns false when the actor has no icon.
+	 */
+	public function test_get_actor_avatar_hash_no_icon() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'    => Remote_Actors::POST_TYPE,
+				'post_content' => wp_json_encode( array( 'name' => 'Test' ) ),
+			)
+		);
+
+		$this->assertFalse( Avatar::get_actor_avatar_hash( $post_id ) );
+	}
+
+	/**
+	 * Test that get_actor_avatar_hash returns false for a missing post.
+	 */
+	public function test_get_actor_avatar_hash_missing_post() {
+		$this->assertFalse( Avatar::get_actor_avatar_hash( 999999 ) );
+	}
+
+	/**
+	 * Test that prune_stale_files keeps the current hash and deletes others.
+	 */
+	public function test_prune_stale_files_keeps_current() {
+		$post_id     = self::factory()->post->create();
+		$current     = md5( 'https://example.com/current.jpg' );
+		$stale       = md5( 'https://example.com/stale.jpg' );
+		$paths       = Avatar::get_storage_paths( $post_id );
+		$current_ext = 'webp';
+		$stale_ext   = 'jpg';
+		wp_mkdir_p( $paths['basedir'] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( $paths['basedir'] . "/{$current}.{$current_ext}", 'current' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( $paths['basedir'] . "/{$stale}.{$stale_ext}", 'stale' );
+
+		Avatar::prune_stale_files( $post_id, $current );
+
+		$this->assertTrue( file_exists( $paths['basedir'] . "/{$current}.{$current_ext}" ) );
+		$this->assertFalse( file_exists( $paths['basedir'] . "/{$stale}.{$stale_ext}" ) );
+
+		Avatar::invalidate_entity( $post_id );
+	}
+
+	/**
+	 * Test that prune_stale_files deletes everything when nothing matches.
+	 */
+	public function test_prune_stale_files_no_match() {
+		$post_id = self::factory()->post->create();
+		$hash    = md5( 'https://example.com/some.jpg' );
+		$paths   = Avatar::get_storage_paths( $post_id );
+		wp_mkdir_p( $paths['basedir'] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( $paths['basedir'] . "/{$hash}.jpg", 'x' );
+
+		Avatar::prune_stale_files( $post_id, md5( 'https://example.com/other.jpg' ) );
+
+		$this->assertFalse( file_exists( $paths['basedir'] . "/{$hash}.jpg" ) );
+
+		Avatar::invalidate_entity( $post_id );
+	}
+
+	/**
+	 * Test that cleanup_actors removes orphaned actor directories.
+	 */
+	public function test_cleanup_actors_removes_orphan_dir() {
+		$post_id = self::factory()->post->create();
+		$paths   = Avatar::get_storage_paths( $post_id );
+		wp_mkdir_p( $paths['basedir'] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( $paths['basedir'] . '/abc.jpg', 'x' );
+
+		Avatar::cleanup_actors();
+
+		$this->assertFalse( file_exists( $paths['basedir'] ) );
+		\delete_option( 'activitypub_avatar_cache_cleanup_lock' );
+		\delete_option( 'activitypub_avatar_cache_cursor' );
+	}
+
+	/**
+	 * Test that cleanup_actors leaves non-numeric directories alone.
+	 */
+	public function test_cleanup_actors_leaves_non_numeric_dir() {
+		$root  = wp_upload_dir()['basedir'] . Avatar::get_base_dir();
+		$junk  = $root . '/not-a-number';
+		wp_mkdir_p( $junk );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( $junk . '/a.jpg', 'x' );
+
+		Avatar::cleanup_actors();
+
+		$this->assertTrue( file_exists( $junk . '/a.jpg' ) );
+
+		wp_delete_file( $junk . '/a.jpg' );
+		rmdir( $junk ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir
+		\delete_option( 'activitypub_avatar_cache_cleanup_lock' );
+		\delete_option( 'activitypub_avatar_cache_cursor' );
+	}
+
+	/**
+	 * Test that cleanup_actors prunes stale files for a surviving actor.
+	 */
+	public function test_cleanup_actors_prunes_surviving_actor() {
+		$icon_url = 'https://example.com/current.png';
+		$post_id  = self::factory()->post->create(
+			array(
+				'post_type'    => Remote_Actors::POST_TYPE,
+				'post_content' => wp_json_encode( array( 'icon' => array( 'url' => $icon_url ) ) ),
+			)
+		);
+
+		$current = md5( $icon_url );
+		$stale   = md5( 'https://example.com/stale.png' );
+		$paths   = Avatar::get_storage_paths( $post_id );
+		wp_mkdir_p( $paths['basedir'] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( $paths['basedir'] . "/{$current}.png", 'current' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( $paths['basedir'] . "/{$stale}.png", 'stale' );
+
+		Avatar::cleanup_actors();
+
+		$this->assertTrue( file_exists( $paths['basedir'] . "/{$current}.png" ) );
+		$this->assertFalse( file_exists( $paths['basedir'] . "/{$stale}.png" ) );
+
+		Avatar::invalidate_entity( $post_id );
+		\delete_option( 'activitypub_avatar_cache_cleanup_lock' );
+		\delete_option( 'activitypub_avatar_cache_cursor' );
+	}
+
+	/**
+	 * Test that a second cleanup run while locked returns early.
+	 */
+	public function test_cleanup_actors_reentrant_lock() {
+		$post_id = self::factory()->post->create();
+		$paths   = Avatar::get_storage_paths( $post_id );
+		wp_mkdir_p( $paths['basedir'] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( $paths['basedir'] . '/abc.jpg', 'x' );
+
+		\add_option( 'activitypub_avatar_cache_cleanup_lock', time(), '', false );
+
+		Avatar::cleanup_actors();
+
+		$this->assertTrue( file_exists( $paths['basedir'] . '/abc.jpg' ), 'Orphan dir should not be removed while locked' );
+
+		Avatar::invalidate_entity( $post_id );
+		\delete_option( 'activitypub_avatar_cache_cleanup_lock' );
+		\delete_option( 'activitypub_avatar_cache_cursor' );
+	}
+
+	/**
+	 * Test that a cleanup run advances past the batch so the backlog drains.
+	 *
+	 * With more actor directories than the per-run limit, the second run
+	 * should pick up where the first left off rather than revisiting the
+	 * same directories.
+	 */
+	public function test_cleanup_actors_advances_batch_cursor() {
+		// Limit the batch to one directory per run.
+		$limit_one = static function () {
+			return 1;
+		};
+		\add_filter( 'activitypub_cleanup_actor_cache_limit', $limit_one );
+
+		$root = wp_upload_dir()['basedir'] . Avatar::get_base_dir();
+
+		// Two orphan actor directories, sorted so 1 comes before 2.
+		$first  = $root . '/1';
+		$second = $root . '/2';
+		wp_mkdir_p( $first );
+		wp_mkdir_p( $second );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( $first . '/a.jpg', 'x' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( $second . '/b.jpg', 'x' );
+
+		// First run should process only the first directory.
+		Avatar::cleanup_actors();
+		$this->assertFalse( file_exists( $first . '/a.jpg' ), 'First run should clean the first batch' );
+		$this->assertTrue( file_exists( $second . '/b.jpg' ), 'First run should stop after the batch limit' );
+
+		// Second run should advance and clean the next directory.
+		Avatar::cleanup_actors();
+		$this->assertFalse( file_exists( $second . '/b.jpg' ), 'Second run should clean the next batch' );
+
+		\remove_filter( 'activitypub_cleanup_actor_cache_limit', $limit_one );
+		\delete_option( 'activitypub_avatar_cache_cleanup_lock' );
+		\delete_option( 'activitypub_avatar_cache_cursor' );
 	}
 }
