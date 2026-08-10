@@ -9,6 +9,7 @@ namespace Activitypub\Tests;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
+use Activitypub\Cache\Avatar;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
@@ -1053,5 +1054,24 @@ class Test_Scheduler extends \WP_UnitTestCase {
 		$this->assertSame( $uri, \get_post( $id )->guid, 'The cached actor guid must be left unchanged.' );
 		$this->assertSame( 'Old Name', \get_post( $id )->post_title, 'A changed remote identity must not be applied to the cached actor.' );
 		$this->assertEmpty( Remote_Actors::get_outdated(), 'A skipped actor must be touched so it is not re-fetched on the next run.' );
+	}
+
+	/**
+	 * Test that the avatar cache cleanup schedule is registered.
+	 */
+	public function test_cleanup_actor_cache_schedule_registered() {
+		$this->assertArrayHasKey( 'activitypub_cleanup_actor_cache', Scheduler::SCHEDULES );
+		$this->assertEquals( 'daily', Scheduler::SCHEDULES['activitypub_cleanup_actor_cache'] );
+	}
+
+	/**
+	 * Test that the avatar cache cleanup action is registered on init.
+	 */
+	public function test_cleanup_actor_cache_action_registered() {
+		Scheduler::init();
+
+		$this->assertNotFalse(
+			\has_action( 'activitypub_cleanup_actor_cache', array( Avatar::class, 'cleanup_actors' ) )
+		);
 	}
 }
