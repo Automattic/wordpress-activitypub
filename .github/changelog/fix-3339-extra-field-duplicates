@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed the "Powered by WordPress" profile field being added multiple times, and cleaned up any existing duplicates on update.

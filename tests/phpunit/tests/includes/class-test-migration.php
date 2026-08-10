@@ -653,9 +653,10 @@ class Test_Migration extends \WP_UnitTestCase {
 		// Check the extra field for the user.
 		$user_fields = get_posts(
 			array(
-				'post_type'      => Extra_Fields::USER_POST_TYPE,
-				'author'         => $user_id,
-				'posts_per_page' => -1,
+				'post_type'        => Extra_Fields::USER_POST_TYPE,
+				'author'           => $user_id,
+				'posts_per_page'   => -1,
+				'suppress_filters' => true,
 			)
 		);
 
@@ -666,15 +667,111 @@ class Test_Migration extends \WP_UnitTestCase {
 		// Check the extra field for the blog user.
 		$blog_fields = get_posts(
 			array(
-				'post_type'      => Extra_Fields::BLOG_POST_TYPE,
-				'author'         => 0,
-				'posts_per_page' => -1,
+				'post_type'        => Extra_Fields::BLOG_POST_TYPE,
+				'author'           => 0,
+				'posts_per_page'   => -1,
+				'suppress_filters' => true,
 			)
 		);
 
 		$this->assertCount( 1, $blog_fields, 'There should be one extra field for the blog user' );
 		$this->assertEquals( 'Powered by', $blog_fields[0]->post_title, 'The title should be "Powered by"' );
 		$this->assertEquals( 'WordPress', $blog_fields[0]->post_content, 'The content should be "WordPress"' );
+
+		$method->invoke( null );
+
+		$user_fields = get_posts(
+			array(
+				'post_type'        => Extra_Fields::USER_POST_TYPE,
+				'author'           => $user_id,
+				'posts_per_page'   => -1,
+				'suppress_filters' => true,
+			)
+		);
+		$blog_fields = get_posts(
+			array(
+				'post_type'        => Extra_Fields::BLOG_POST_TYPE,
+				'author'           => 0,
+				'posts_per_page'   => -1,
+				'suppress_filters' => true,
+			)
+		);
+
+		$this->assertCount( 1, $user_fields, 'Running the seeder again should not duplicate the user field' );
+		$this->assertCount( 1, $blog_fields, 'Running the seeder again should not duplicate the blog field' );
+
+		_delete_all_data();
+	}
+
+	/**
+	 * Test duplicate default extra fields are removed.
+	 */
+	public function test_deduplicate_default_extra_fields() {
+		$user_id = self::factory()->user->create();
+		$user    = get_user_by( 'id', $user_id );
+		$user->add_cap( 'activitypub' );
+
+		for ( $i = 0; $i < 3; $i++ ) {
+			wp_insert_post(
+				array(
+					'post_type'    => Extra_Fields::USER_POST_TYPE,
+					'post_author'  => $user_id,
+					'post_status'  => 'publish',
+					'post_title'   => 'Powered by',
+					'post_content' => 'WordPress',
+				)
+			);
+		}
+
+		wp_insert_post(
+			array(
+				'post_type'    => Extra_Fields::USER_POST_TYPE,
+				'post_author'  => $user_id,
+				'post_status'  => 'publish',
+				'post_title'   => 'Custom field',
+				'post_content' => 'Custom value',
+			)
+		);
+
+		for ( $i = 0; $i < 2; $i++ ) {
+			wp_insert_post(
+				array(
+					'post_type'    => Extra_Fields::BLOG_POST_TYPE,
+					'post_status'  => 'publish',
+					'post_title'   => 'Powered by',
+					'post_content' => 'WordPress',
+				)
+			);
+		}
+
+		$reflection = new \ReflectionClass( Migration::class );
+		$method     = $reflection->getMethod( 'deduplicate_default_extra_fields' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+		$method->invoke( null );
+
+		$user_fields = get_posts(
+			array(
+				'post_type'        => Extra_Fields::USER_POST_TYPE,
+				'author'           => $user_id,
+				'posts_per_page'   => -1,
+				'suppress_filters' => true,
+			)
+		);
+		$blog_fields = get_posts(
+			array(
+				'post_type'        => Extra_Fields::BLOG_POST_TYPE,
+				'posts_per_page'   => -1,
+				'suppress_filters' => true,
+			)
+		);
+
+		$this->assertCount( 2, $user_fields, 'Only one default user field should remain' );
+		$this->assertCount( 1, $blog_fields, 'Only one default blog field should remain' );
+
+		$user_titles = wp_list_pluck( $user_fields, 'post_title' );
+		$this->assertContains( 'Custom field', $user_titles, 'Custom user fields should be preserved' );
 
 		_delete_all_data();
 	}

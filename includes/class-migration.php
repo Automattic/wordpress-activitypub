@@ -224,6 +224,9 @@ class Migration {
 			self::migrate_application_keypair_option();
 			self::delete_application_outbox_items();
 		}
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			self::deduplicate_default_extra_fields();
+		}
 
 		/*
 		 * Defer the flush to late in the `init` cycle (priority 20). Migration::init
@@ -787,6 +790,10 @@ class Migration {
 
 		// Add a default extra field for each user.
 		foreach ( $users as $user ) {
+			if ( self::has_default_extra_field( Extra_Fields::USER_POST_TYPE, $title, $user->ID ) ) {
+				continue;
+			}
+
 			\wp_insert_post(
 				array(
 					'post_type'    => Extra_Fields::USER_POST_TYPE,
@@ -798,15 +805,109 @@ class Migration {
 			);
 		}
 
-		\wp_insert_post(
+		if ( ! self::has_default_extra_field( Extra_Fields::BLOG_POST_TYPE, $title ) ) {
+			\wp_insert_post(
+				array(
+					'post_type'    => Extra_Fields::BLOG_POST_TYPE,
+					'post_author'  => 0,
+					'post_status'  => 'publish',
+					'post_title'   => $title,
+					'post_content' => $content,
+				)
+			);
+		}
+	}
+
+	/**
+	 * Check whether a "Powered by" extra field already exists for an actor.
+	 *
+	 * Queries the custom post type directly with suppress_filters to avoid
+	 * triggering WordPress SQL filters. Note: suppress_filters does not
+	 * block arbitrary filters such as `activitypub_get_actor_extra_fields`,
+	 * so this method avoids calling Extra_Fields::get_actor_fields().
+	 *
+	 * @param string $post_type The extra fields post type.
+	 * @param string $title     The extra field title to look for.
+	 * @param int    $user_id   Optional. The user ID. Default 0 (blog actor).
+	 *
+	 * @return bool Whether a matching extra field exists.
+	 */
+	private static function has_default_extra_field( $post_type, $title, $user_id = 0 ) {
+		$args = array(
+			'post_type'        => $post_type,
+			'post_status'      => 'publish',
+			'title'            => $title,
+			'posts_per_page'   => 1,
+			'fields'           => 'ids',
+			'suppress_filters' => true,
+		);
+
+		if ( Extra_Fields::USER_POST_TYPE === $post_type && $user_id ) {
+			$args['author'] = $user_id;
+		}
+
+		$query = new \WP_Query( $args );
+
+		return $query->found_posts > 0;
+	}
+
+	/**
+	 * Remove duplicate default extra fields.
+	 */
+	private static function deduplicate_default_extra_fields() {
+		$title = \__( 'Powered by', 'activitypub' );
+
+		self::delete_duplicate_extra_fields( Extra_Fields::BLOG_POST_TYPE, $title );
+
+		$users = \get_users(
 			array(
-				'post_type'    => Extra_Fields::BLOG_POST_TYPE,
-				'post_author'  => 0,
-				'post_status'  => 'publish',
-				'post_title'   => $title,
-				'post_content' => $content,
+				'capability__in' => array( 'activitypub' ),
 			)
 		);
+
+		foreach ( $users as $user ) {
+			self::delete_duplicate_extra_fields( Extra_Fields::USER_POST_TYPE, $title, $user->ID );
+		}
+	}
+
+	/**
+	 * Remove duplicate extra fields with the same title.
+	 *
+	 * Queries the custom post type directly with suppress_filters to avoid
+	 * triggering WordPress SQL filters. Avoids Extra_Fields::get_actor_fields()
+	 * to prevent the `activitypub_get_actor_extra_fields` filter from seeding
+	 * default fields as a side effect.
+	 *
+	 * @param string $post_type The extra fields post type.
+	 * @param string $title     The extra field title to deduplicate.
+	 * @param int    $user_id   Optional. The user ID. Default 0 (blog actor).
+	 */
+	private static function delete_duplicate_extra_fields( $post_type, $title, $user_id = 0 ) {
+		$args = array(
+			'post_type'        => $post_type,
+			'post_status'      => 'publish',
+			'title'            => $title,
+			'orderby'          => array( 'date' => 'ASC', 'ID' => 'ASC' ),
+			'posts_per_page'   => -1,
+			'suppress_filters' => true,
+		);
+
+		if ( Extra_Fields::USER_POST_TYPE === $post_type && $user_id ) {
+			$args['author'] = $user_id;
+		}
+
+		$query = new \WP_Query( $args );
+
+		if ( $query->found_posts < 2 ) {
+			return;
+		}
+
+		// Keep the oldest field, delete the rest.
+		$posts = $query->posts;
+		array_shift( $posts );
+		foreach ( $posts as $post ) {
+			\wp_delete_post( $post->ID, true );
+		}
 	}
 
 	/**
