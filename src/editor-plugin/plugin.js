@@ -35,13 +35,7 @@ const EditorPlugin = () => {
 	const postType = useSelect( ( selectFn ) => selectFn( editorStore ).getCurrentPostType(), [] );
 	const [ meta, setMeta ] = useEntityProp( 'postType', postType, 'meta' );
 
-	// The edited date, status and password drive the computed visibility and the
-	// "removed from the Fediverse" warning.
-	//
-	// The date has to come from the *edited* post rather than `getCurrentPost()`,
-	// which only updates once a post is saved. Reading the saved date would let the
-	// computed default change as a result of saving, dirtying the editor immediately
-	// after the user saved it.
+	// The edited date, status and password drive the visibility and the "removed from the Fediverse" warning.
 	const { editedDate, editedStatus, editedPassword } = useSelect( ( selectFn ) => {
 		const editor = selectFn( editorStore );
 
