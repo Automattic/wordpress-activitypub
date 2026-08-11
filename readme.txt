@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 7.0
-Stable tag: 9.2.1
+Stable tag: 9.2.2
 Requires PHP: 7.4
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -116,6 +116,13 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 9.2.2 - 2026-08-11
+#### Fixed
+- Fixed avatars and emoji occasionally failing to cache, and the file warnings that came with it.
+- Fixed deletions from Mastodon and other servers not removing the corresponding comment on your site.
+- Fixed some styles not loading on the Fediverse admin screens and in the Followers and Following blocks.
+- Fixed the editor warning about unsaved changes right after saving a post with an older date.
 
 ### 9.2.1 - 2026-08-03
 #### Fixed

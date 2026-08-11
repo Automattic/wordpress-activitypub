@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.2.2] - 2026-08-11
+### Fixed
+- Fixed avatars and emoji occasionally failing to cache, and the file warnings that came with it. [#3618]
+- Fixed deletions from Mastodon and other servers not removing the corresponding comment on your site. [#3621]
+- Fixed some styles not loading on the Fediverse admin screens and in the Followers and Following blocks. [#3644]
+- Fixed the editor warning about unsaved changes right after saving a post with an older date. [#3643]
+
 ## [9.2.1] - 2026-08-03
 ### Fixed
 - Fixed duplicate entries and failed undo actions for activities received from other WordPress sites. [#3612]
@@ -1991,6 +1998,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[9.2.2]: https://github.com/Automattic/wordpress-activitypub/compare/9.2.1...9.2.2
 [9.2.1]: https://github.com/Automattic/wordpress-activitypub/compare/9.2.0...9.2.1
 [9.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/9.1.0...9.2.0
 [9.1.0]: https://github.com/Automattic/wordpress-activitypub/compare/9.0.2...9.1.0
