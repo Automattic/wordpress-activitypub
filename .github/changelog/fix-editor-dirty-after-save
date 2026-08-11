@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fixed the editor warning about unsaved changes right after saving a post with an older date.

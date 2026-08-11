@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fixed avatars and emoji occasionally failing to cache, and the file warnings that came with it.
