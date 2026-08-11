@@ -122,21 +122,33 @@ class Avatar extends File {
 			return $url;
 		}
 
-		// A pure cache hit leaves no new files behind, so skip the stale-file
-		// sweep to keep the hot render path cheap. Only a fresh download can
-		// orphan an older avatar version.
-		if ( static::get( $url, $entity_id ) ) {
-			return self::get_or_cache( $url, $entity_id, array( 'max_dimension' => self::MAX_DIMENSION ) );
-		}
-
 		$cached_url = self::get_or_cache( $url, $entity_id, array( 'max_dimension' => self::MAX_DIMENSION ) );
 
+		return $cached_url ?: $url;
+	}
+
+	/**
+	 * Cache a remote avatar locally, then drop older versions of it.
+	 *
+	 * Overrides the shared write path so that any avatar hash it leaves behind
+	 * for the same actor is removed in the same call. Remote actors change
+	 * their icon URL frequently, and each change would otherwise pile up an
+	 * orphaned copy of the previous image.
+	 *
+	 * @param string     $url       The remote URL.
+	 * @param string|int $entity_id The entity identifier (actor post ID).
+	 * @param array      $options   Optional. Additional options.
+	 *
+	 * @return string|false The local URL on success, false on failure.
+	 */
+	public static function cache( $url, $entity_id, $options = array() ) {
+		$cached_url = parent::cache( $url, $entity_id, $options );
+
 		if ( $cached_url ) {
-			// Remove older avatar versions that no longer match the current icon.
 			self::prune_stale_files( $entity_id, self::generate_hash( $url ) );
 		}
 
-		return $cached_url ?: $url;
+		return $cached_url;
 	}
 
 	/**

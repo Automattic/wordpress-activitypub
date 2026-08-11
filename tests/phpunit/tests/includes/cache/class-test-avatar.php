@@ -134,6 +134,60 @@ class Test_Avatar extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that caching a new avatar URL drops the previous version.
+	 *
+	 * This is the root cause of #3583: when an actor changes their icon URL,
+	 * the old hash file must not linger next to the new one.
+	 */
+	public function test_new_avatar_url_prunes_previous_version() {
+		$post_id     = self::factory()->post->create();
+		$old_url     = 'https://example.com/old-avatar.jpg';
+		$new_url     = 'https://example.com/new-avatar.jpg';
+		$old_hash    = md5( $old_url );
+		$new_hash    = md5( $new_url );
+		$paths       = Avatar::get_storage_paths( $post_id );
+		$mock_prefix = '/test-avatar-';
+
+		$mock_download = function ( $result, $download_url ) use ( $old_url, $new_url, $mock_prefix ) {
+			if ( $download_url === $old_url || $download_url === $new_url ) {
+				$tmp_file = \wp_tempnam( $mock_prefix . md5( $download_url ) . '.jpg' );
+				copy( AP_TESTS_DIR . '/data/assets/test.jpg', $tmp_file );
+
+				return array(
+					'file'      => $tmp_file,
+					'mime_type' => 'image/jpeg',
+				);
+			}
+
+			return $result;
+		};
+
+		\add_filter( 'activitypub_pre_download_url', $mock_download, 10, 2 );
+
+		// Cache the first avatar.
+		Avatar::maybe_cache( $old_url, 'avatar', $post_id );
+		$this->assertTrue(
+			\file_exists( $paths['basedir'] . '/' . $old_hash . '.webp' ) || (bool) \glob( $paths['basedir'] . '/' . $old_hash . '.*' ),
+			'Old avatar should be cached after the first download'
+		);
+
+		// Cache a new avatar; the old one should be gone in the same call.
+		Avatar::maybe_cache( $new_url, 'avatar', $post_id );
+		$this->assertEmpty(
+			\glob( $paths['basedir'] . '/' . $old_hash . '.*' ),
+			'The previous avatar hash should be pruned when the new one is cached'
+		);
+		$this->assertNotEmpty(
+			\glob( $paths['basedir'] . '/' . $new_hash . '.*' ),
+			'The new avatar hash should be cached'
+		);
+
+		// Clean up.
+		\remove_filter( 'activitypub_pre_download_url', $mock_download );
+		Avatar::invalidate_entity( $post_id );
+	}
+
+	/**
 	 * Test maybe_cache returns original URL when download fails.
 	 */
 	public function test_maybe_cache_returns_original_url_on_failure() {
