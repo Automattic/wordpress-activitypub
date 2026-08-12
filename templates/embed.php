@@ -31,7 +31,7 @@ $args = wp_parse_args(
 <div class="activitypub-embed u-in-reply-to h-cite">
 	<div class="activitypub-embed-header p-author h-card">
 		<?php if ( $args['avatar_url'] ) : ?>
-			<img class="u-photo" src="<?php echo \esc_url( $args['avatar_url'] ); ?>" alt="" width="48" height="48" />
+			<img class="u-photo" src="<?php echo \esc_url( $args['avatar_url'] ); ?>" alt="" width="48" height="48" style="max-width:48px; border-radius:50%;" />
 		<?php endif; ?>
 		<div class="activitypub-embed-header-text">
 			<h2 class="p-name"><?php echo \esc_html( $args['author_name'] ); ?></h2>
@@ -53,7 +53,7 @@ $args = wp_parse_args(
 		<?php if ( $args['images'] ) : ?>
 			<div class="ap-preview <?php echo \esc_attr( 'layout-' . count( $args['images'] ) ); ?>">
 				<?php foreach ( $args['images'] as $image ) : ?>
-				<img class="u-photo u-featured" src="<?php echo \esc_url( $image['url'] ); ?>" alt="<?php echo \esc_attr( $image['name'] ?? '' ); ?>" />
+				<img class="u-photo u-featured" src="<?php echo \esc_url( $image['url'] ); ?>" alt="<?php echo \esc_attr( $image['name'] ?? '' ); ?>" width="600" height="338" style="max-width:100%;" />
 				<?php endforeach; ?>
 			</div>
 		<?php elseif ( $args['video'] ) : ?>
