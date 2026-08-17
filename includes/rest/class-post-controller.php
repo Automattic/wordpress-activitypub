@@ -165,13 +165,14 @@ class Post_Controller extends \WP_REST_Controller {
 						 * Decode entities first so a stored pseudo-tag like
 						 * `&lt;img&gt;` becomes a real `<img>` for the next
 						 * step to remove, then strip any tags so the JSON
-						 * response contains only plain text. `esc_url()`
-						 * rejects `javascript:` and other unsafe schemes.
+						 * response contains only plain text. `esc_url_raw()`
+						 * rejects `javascript:` and other unsafe schemes without
+						 * HTML-encoding ampersands (this is JSON, not markup).
 						 */
 						return array(
 							'name'   => \wp_strip_all_tags( \html_entity_decode( $comment->comment_author, ENT_QUOTES ) ),
-							'url'    => \esc_url( $comment->comment_author_url ),
-							'avatar' => \esc_url( \get_avatar_url( $comment ) ),
+							'url'    => \esc_url_raw( $comment->comment_author_url ),
+							'avatar' => \esc_url_raw( \get_avatar_url( $comment ) ),
 						);
 					},
 					$comments
@@ -197,7 +198,7 @@ class Post_Controller extends \WP_REST_Controller {
 			return new \WP_Error( 'activitypub_post_not_found', \__( 'Post not found', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
-		$response = array_merge(
+		$response = \array_merge(
 			array(
 				'@context' => Base_Object::JSON_LD_CONTEXT,
 				'id'       => get_rest_url_by_path( \sprintf( 'posts/%d/context', $post_id ) ),

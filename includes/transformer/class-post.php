@@ -8,7 +8,6 @@
 namespace Activitypub\Transformer;
 
 use Activitypub\Activity\Base_Object;
-use Activitypub\Blocks;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Replies;
@@ -201,7 +200,7 @@ class Post extends Base {
 
 		$user = Actors::get_by_id( $this->item->post_author );
 
-		if ( $user && ! is_wp_error( $user ) ) {
+		if ( $user && ! \is_wp_error( $user ) ) {
 			$this->actor_object = $user;
 			return $user;
 		}
@@ -265,7 +264,7 @@ class Post extends Base {
 				break;
 		}
 
-		return \esc_url( $permalink );
+		return \esc_url_raw( $permalink );
 	}
 
 	/**
@@ -305,7 +304,7 @@ class Post extends Base {
 		 * @param int         $id         The attachment ID.
 		 * @param string      $image_size The image size to retrieve. Set to 'large' by default.
 		 */
-		$thumbnail = apply_filters(
+		$thumbnail = \apply_filters(
 			'activitypub_get_image',
 			$this->get_attachment_image_src( $id, $image_size ),
 			$id,
@@ -320,7 +319,7 @@ class Post extends Base {
 
 		$image = array(
 			'type'      => 'Image',
-			'url'       => \esc_url( $thumbnail[0] ),
+			'url'       => \esc_url_raw( $thumbnail[0] ),
 			'mediaType' => \esc_attr( $mime_type ),
 		);
 
@@ -345,7 +344,7 @@ class Post extends Base {
 			$id = \get_post_thumbnail_id( $post_id );
 		} else {
 			// Try site_logo, falling back to site_icon, first.
-			$id = get_option( 'site_icon' );
+			$id = \get_option( 'site_icon' );
 		}
 
 		if ( ! $id ) {
@@ -361,7 +360,7 @@ class Post extends Base {
 		 * @param int         $id         The attachment ID.
 		 * @param string      $image_size The image size to retrieve. Set to 'large' by default.
 		 */
-		$thumbnail = apply_filters(
+		$thumbnail = \apply_filters(
 			'activitypub_get_image',
 			$this->get_attachment_image_src( $id, $image_size ),
 			$id,
@@ -376,7 +375,7 @@ class Post extends Base {
 
 		$image = array(
 			'type'      => 'Image',
-			'url'       => \esc_url( $thumbnail[0] ),
+			'url'       => \esc_url_raw( $thumbnail[0] ),
 			'mediaType' => \esc_attr( $mime_type ),
 		);
 
@@ -400,7 +399,7 @@ class Post extends Base {
 
 		$max_media = \get_post_meta( $this->item->ID, 'activitypub_max_image_attachments', true );
 
-		if ( ! is_numeric( $max_media ) ) {
+		if ( ! \is_numeric( $max_media ) ) {
 			$max_media = \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
 		}
 
@@ -553,7 +552,7 @@ class Post extends Base {
 
 				$tags[] = array(
 					'type' => 'Hashtag',
-					'href' => \esc_url( \get_tag_link( $post_tag->term_id ) ),
+					'href' => \esc_url_raw( \get_tag_link( $post_tag->term_id ) ),
 					'name' => esc_hashtag( $post_tag->name ),
 				);
 			}
@@ -640,7 +639,7 @@ class Post extends Base {
 		\do_action( 'activitypub_before_get_content', $post );
 
 		// It seems that shortcodes are only applied to published posts.
-		if ( is_preview() ) {
+		if ( \is_preview() ) {
 			$post->post_status = 'publish';
 		}
 
@@ -663,22 +662,6 @@ class Post extends Base {
 		$this->content = \apply_filters( 'activitypub_the_content', $content, $post );
 
 		return $this->content;
-	}
-
-	/**
-	 * Generate HTML @ link for reply block.
-	 *
-	 * @deprecated 7.4.0 Use {@see Blocks::generate_reply_link()}.
-	 *
-	 * @param string $block_content The block content.
-	 * @param array  $block         The block data.
-	 *
-	 * @return string The HTML @ link.
-	 */
-	public function generate_reply_link( $block_content, $block ) {
-		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Blocks::generate_reply_link' );
-
-		return Blocks::generate_reply_link( $block_content, $block );
 	}
 
 	/**
@@ -717,7 +700,7 @@ class Post extends Base {
 			return $this->in_reply_to;
 		}
 
-		if ( 1 === count( $reply_urls ) ) {
+		if ( 1 === \count( $reply_urls ) ) {
 			$this->in_reply_to = \current( $reply_urls );
 
 			return $this->in_reply_to;
@@ -776,8 +759,8 @@ class Post extends Base {
 
 		// Both latitude and longitude are required for a valid location.
 		// Use is_numeric() instead of empty() since 0 is a valid coordinate (Equator/Prime Meridian).
-		$has_latitude  = isset( $meta['geo_latitude'][0] ) && is_numeric( $meta['geo_latitude'][0] );
-		$has_longitude = isset( $meta['geo_longitude'][0] ) && is_numeric( $meta['geo_longitude'][0] );
+		$has_latitude  = isset( $meta['geo_latitude'][0] ) && \is_numeric( $meta['geo_latitude'][0] );
+		$has_longitude = isset( $meta['geo_longitude'][0] ) && \is_numeric( $meta['geo_longitude'][0] );
 
 		if ( ! $has_latitude || ! $has_longitude ) {
 			return null;
@@ -825,7 +808,7 @@ class Post extends Base {
 		 *
 		 * @return array The filtered mentions.
 		 */
-		$this->mentions = apply_filters(
+		$this->mentions = \apply_filters(
 			'activitypub_extract_mentions',
 			array(),
 			$this->item->post_content . ' ' . $this->item->post_excerpt,
@@ -833,27 +816,6 @@ class Post extends Base {
 		);
 
 		return $this->mentions;
-	}
-
-	/**
-	 * Transform Embed blocks to block level link.
-	 *
-	 * Remote servers will simply drop iframe elements, rendering incomplete content.
-	 *
-	 * @deprecated 7.4.0 Use {@see Blocks::revert_embed_links()}.
-	 *
-	 * @see https://www.w3.org/TR/activitypub/#security-sanitizing-content
-	 * @see https://www.w3.org/wiki/ActivityPub/Primer/HTML
-	 *
-	 * @param string $block_content The block content (html).
-	 * @param object $block         The block object.
-	 *
-	 * @return string A block level link
-	 */
-	public function revert_embed_links( $block_content, $block ) {
-		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Blocks::revert_embed_links' );
-
-		return Blocks::revert_embed_links( $block_content, $block );
 	}
 
 	/**
@@ -871,8 +833,9 @@ class Post extends Base {
 	 * covers non-public status, password protection, the `local`/`private`
 	 * content-visibility meta, and a post type that no longer supports
 	 * ActivityPub. The Fediverse Preview keeps working because
-	 * `is_post_publicly_queryable()` itself treats a draft/pending post as
-	 * queryable during a `?preview=true` request from a user who can edit it.
+	 * `is_post_publicly_queryable()` itself treats a draft/pending/scheduled
+	 * post as queryable during a `?preview=true` request from a user who can
+	 * edit it.
 	 *
 	 * Note: we deliberately rely on `is_post_publicly_queryable()` rather than
 	 * `post_password_required()`. Federation output is per-instance, never
@@ -1061,9 +1024,9 @@ class Post extends Base {
 				case 'jetpack/slideshow':
 				case 'jetpack/tiled-gallery':
 					if ( ! empty( $block['attrs']['ids'] ) ) {
-						$media['image'] = array_merge(
+						$media['image'] = \array_merge(
 							$media['image'],
-							array_map(
+							\array_map(
 								static function ( $id ) {
 									return array( 'id' => $id );
 								},
@@ -1110,22 +1073,7 @@ class Post extends Base {
 			return $media[ $type ];
 		}
 
-		return array_filter( array_merge( ...array_values( $media ) ) );
-	}
-
-	/**
-	 * Converts a WordPress Attachment to an ActivityPub Attachment.
-	 *
-	 * @deprecated 7.2.0 Use {@see Base::transform_attachment()} instead.
-	 *
-	 * @param array $media The Attachment array.
-	 *
-	 * @return array The ActivityPub Attachment.
-	 */
-	public function wp_attachment_to_activity_attachment( $media ) {
-		_deprecated_function( __METHOD__, '7.2.0', '\Activitypub\Transformer\Base::transform_attachment()' );
-
-		return parent::transform_attachment( $media );
+		return \array_filter( \array_merge( ...\array_values( $media ) ) );
 	}
 
 	/**
@@ -1136,7 +1084,7 @@ class Post extends Base {
 	 * @return string The context of the post.
 	 */
 	protected function get_context() {
-		return get_rest_url_by_path( sprintf( 'posts/%d/context', $this->item->ID ) );
+		return get_rest_url_by_path( \sprintf( 'posts/%d/context', $this->item->ID ) );
 	}
 
 	/**
@@ -1183,7 +1131,7 @@ class Post extends Base {
 		 * @param \WP_Post $item The WordPress post object being transformed.
 		 * @param string   $type ActivityStreams 2.0 Object-Type for the post.
 		 */
-		return apply_filters( 'activitypub_object_content_template', $template, $this->item, $type );
+		return \apply_filters( 'activitypub_object_content_template', $template, $this->item, $type );
 	}
 
 	/**
@@ -1202,7 +1150,7 @@ class Post extends Base {
 	 */
 	public function get_likes() {
 		return array(
-			'id'         => get_rest_url_by_path( sprintf( 'posts/%d/likes', $this->item->ID ) ),
+			'id'         => get_rest_url_by_path( \sprintf( 'posts/%d/likes', $this->item->ID ) ),
 			'type'       => 'Collection',
 			'totalItems' => Interactions::count_by_type( $this->item->ID, 'like' ),
 		);
@@ -1215,7 +1163,7 @@ class Post extends Base {
 	 */
 	public function get_shares() {
 		return array(
-			'id'         => get_rest_url_by_path( sprintf( 'posts/%d/shares', $this->item->ID ) ),
+			'id'         => get_rest_url_by_path( \sprintf( 'posts/%d/shares', $this->item->ID ) ),
 			'type'       => 'Collection',
 			'totalItems' => Interactions::count_by_type( $this->item->ID, 'repost' ) + Interactions::count_by_type( $this->item->ID, 'quote' ),
 		);
@@ -1252,7 +1200,7 @@ class Post extends Base {
 
 		switch ( $policy ) {
 			case ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS:
-				return array( 'automaticApproval' => get_rest_url_by_path( sprintf( 'actors/%d/followers', $this->item->post_author ) ) );
+				return array( 'automaticApproval' => get_rest_url_by_path( \sprintf( 'actors/%d/followers', $this->item->post_author ) ) );
 
 			case ACTIVITYPUB_INTERACTION_POLICY_ME:
 				return array( 'automaticApproval' => $this->get_self_interaction_policy() );

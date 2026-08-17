@@ -2,13 +2,16 @@
 /**
  * Application model file.
  *
+ * @deprecated Use {@see \Activitypub\Application} for key management
+ *             and {@see \Activitypub\Rest\Application_Controller} for the REST endpoint.
+ *
  * @package Activitypub
  */
 
 namespace Activitypub\Model;
 
 use Activitypub\Activity\Actor;
-use Activitypub\Collection\Actors;
+use Activitypub\Application as Application_Utility;
 
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\home_host;
@@ -16,7 +19,7 @@ use function Activitypub\home_host;
 /**
  * Application class.
  *
- * @method int get__id() Gets the internal user ID for the application (always returns APPLICATION_USER_ID).
+ * @deprecated Use {@see \Activitypub\Application} instead.
  */
 class Application extends Actor {
 	/**
@@ -24,7 +27,7 @@ class Application extends Actor {
 	 *
 	 * @var int
 	 */
-	protected $_id = Actors::APPLICATION_USER_ID; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
+	protected $_id = -1; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
 
 	/**
 	 * Whether the Application is discoverable.
@@ -102,12 +105,19 @@ class Application extends Actor {
 	protected $preferred_username = 'application';
 
 	/**
+	 * Constructor.
+	 */
+	public function __construct() {
+		\_deprecated_class( __CLASS__, '9.1.0', 'Activitypub\Application' );
+	}
+
+	/**
 	 * Returns the ID of the Application.
 	 *
 	 * @return string The ID of the Application.
 	 */
 	public function get_id() {
-		return get_rest_url_by_path( 'application' );
+		return Application_Utility::get_id();
 	}
 
 	/**
@@ -134,32 +144,7 @@ class Application extends Actor {
 	 * @return string[] The User-Icon.
 	 */
 	public function get_icon() {
-		// Try site icon first.
-		$icon_id = get_option( 'site_icon' );
-
-		// Try custom logo second.
-		if ( ! $icon_id ) {
-			$icon_id = get_theme_mod( 'custom_logo' );
-		}
-
-		$icon_url = false;
-
-		if ( $icon_id ) {
-			$icon = wp_get_attachment_image_src( $icon_id, 'full' );
-			if ( $icon ) {
-				$icon_url = $icon[0];
-			}
-		}
-
-		if ( ! $icon_url ) {
-			// Fallback to default icon.
-			$icon_url = plugins_url( '/assets/img/wp-logo.png', ACTIVITYPUB_PLUGIN_FILE );
-		}
-
-		return array(
-			'type' => 'Image',
-			'url'  => esc_url( $icon_url ),
-		);
+		return Application_Utility::get_icon();
 	}
 
 	/**
@@ -171,7 +156,7 @@ class Application extends Actor {
 		if ( \has_header_image() ) {
 			return array(
 				'type' => 'Image',
-				'url'  => esc_url( \get_header_image() ),
+				'url'  => \esc_url_raw( \get_header_image() ),
 			);
 		}
 
@@ -184,21 +169,7 @@ class Application extends Actor {
 	 * @return string The published date.
 	 */
 	public function get_published() {
-		$first_post = new \WP_Query(
-			array(
-				'orderby' => 'date',
-				'order'   => 'ASC',
-				'number'  => 1,
-			)
-		);
-
-		if ( ! empty( $first_post->posts[0] ) ) {
-			$time = \strtotime( $first_post->posts[0]->post_date_gmt );
-		} else {
-			$time = \time();
-		}
-
-		return \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, $time );
+		return Application_Utility::get_published();
 	}
 
 	/**
@@ -207,7 +178,7 @@ class Application extends Actor {
 	 * @return string The Inbox-Endpoint.
 	 */
 	public function get_inbox() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/inbox', $this->get__id() ) );
+		return get_rest_url_by_path( 'inbox' );
 	}
 
 	/**
@@ -216,7 +187,7 @@ class Application extends Actor {
 	 * @return string The Outbox-Endpoint.
 	 */
 	public function get_outbox() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/outbox', $this->get__id() ) );
+		return get_rest_url_by_path( 'application/outbox' );
 	}
 
 	/**
@@ -235,9 +206,9 @@ class Application extends Actor {
 	 */
 	public function get_public_key() {
 		return array(
-			'id'           => $this->get_id() . '#main-key',
+			'id'           => Application_Utility::get_key_id(),
 			'owner'        => $this->get_id(),
-			'publicKeyPem' => Actors::get_public_key( Actors::APPLICATION_USER_ID ),
+			'publicKeyPem' => Application_Utility::get_public_key(),
 		);
 	}
 
@@ -247,9 +218,9 @@ class Application extends Actor {
 	 * @return string The User description.
 	 */
 	public function get_summary() {
-		return sprintf(
+		return \sprintf(
 			/* translators: %s: Domain of the site */
-			__( 'This is the Application Actor for %s.', 'activitypub' ),
+			\__( 'This is the Application Actor for %s.', 'activitypub' ),
 			home_host()
 		);
 	}

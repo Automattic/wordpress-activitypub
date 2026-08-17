@@ -7,9 +7,11 @@
 
 namespace Activitypub\Integration;
 
+use Activitypub\Autoloader;
+
 use function Activitypub\site_supports_blocks;
 
-\Activitypub\Autoloader::register_path( __NAMESPACE__, __DIR__ );
+Autoloader::register_path( __NAMESPACE__, __DIR__ );
 
 /**
  * Initialize the ActivityPub integrations.
@@ -137,7 +139,7 @@ function plugin_init() {
 	 * @see https://wordpress.org/plugins/seriously-simple-podcasting/
 	 */
 	if ( \defined( 'SSP_VERSION' ) ) {
-		add_filter(
+		\add_filter(
 			'activitypub_transformer',
 			static function ( $transformer, $data, $object_class ) {
 				if (
@@ -180,17 +182,6 @@ function plugin_init() {
 	 * @see https://wordpress.org/plugins/webfinger/
 	 */
 	Webfinger::init();
-
-	/**
-	 * Adds WP REST Cache support.
-	 *
-	 * This class handles the compatibility with the WP REST Cache plugin.
-	 *
-	 * @see https://wordpress.org/plugins/wp-rest-cache/
-	 */
-	if ( \class_exists( 'WP_Rest_Cache_Plugin\Includes\Plugin' ) ) {
-		WP_Rest_Cache::init();
-	}
 
 	/**
 	 * Adds WPML Multilingual CMS (plugin) support.

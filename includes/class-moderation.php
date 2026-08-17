@@ -233,7 +233,7 @@ class Moderation {
 	 * @param array  $values Array of values to block.
 	 */
 	public static function add_site_blocks( $type, $values ) {
-		if ( ! in_array( $type, array( self::TYPE_DOMAIN, self::TYPE_KEYWORD ), true ) ) {
+		if ( ! \in_array( $type, array( self::TYPE_DOMAIN, self::TYPE_KEYWORD ), true ) ) {
 			return;
 		}
 
@@ -252,7 +252,7 @@ class Moderation {
 		}
 
 		$existing = \get_option( self::OPTION_KEYS[ $type ], array() );
-		\update_option( self::OPTION_KEYS[ $type ], array_unique( array_merge( $existing, $values ) ) );
+		\update_option( self::OPTION_KEYS[ $type ], \array_unique( \array_merge( $existing, $values ) ) );
 	}
 
 	/**

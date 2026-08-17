@@ -118,6 +118,99 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	}
 
 	/**
+	 * A Public-only Delete on the shared inbox reaches the Delete handler even when no local
+	 * recipient can be resolved from its addressing.
+	 *
+	 * This is the shape of a real Mastodon reply-delete: addressed only to Public, from an actor
+	 * the site does not follow. Nothing in `to`/`cc`/followers names a local user, so the shared
+	 * inbox's per-recipient loop never runs — the handler has to fire on the shared hook instead.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_shared_inbox_handles_public_only_delete() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		// Keep the Tombstone existence re-fetch off the network.
+		$no_http = static function () {
+			return new \WP_Error( 'no_http', 'blocked in test' );
+		};
+		\add_filter( 'pre_http_request', $no_http );
+
+		$handled = new \MockAction();
+		\add_action( 'activitypub_handled_delete', array( $handled, 'action' ) );
+
+		$json = array(
+			'id'     => 'https://remote.example/users/alice/statuses/9#delete',
+			'type'   => 'Delete',
+			'actor'  => 'https://remote.example/users/alice',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'id'   => 'https://remote.example/users/alice/statuses/9',
+				'type' => 'Tombstone',
+			),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $json ) );
+
+		$response = \rest_do_request( $request );
+
+		\remove_action( 'activitypub_handled_delete', array( $handled, 'action' ) );
+		\remove_filter( 'pre_http_request', $no_http );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$this->assertSame( 202, $response->get_status() );
+		$this->assertSame( 1, $handled->get_call_count(), 'The Delete handler must run for a Public-only delete on the shared inbox.' );
+	}
+
+	/**
+	 * The Delete handler runs exactly once when a local recipient resolves.
+	 *
+	 * With a resolvable recipient the shared inbox fires both the per-recipient hook and the
+	 * shared hook, so without a guard the handler would run twice.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_shared_inbox_handles_delete_once_when_recipient_resolves() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		$no_http = static function () {
+			return new \WP_Error( 'no_http', 'blocked in test' );
+		};
+		\add_filter( 'pre_http_request', $no_http );
+
+		$user_id = self::factory()->user->create();
+		\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
+		$actor_uri = Actors::get_by_id( $user_id )->get_id();
+
+		$handled = new \MockAction();
+		\add_action( 'activitypub_handled_delete', array( $handled, 'action' ) );
+
+		$json = array(
+			'id'     => 'https://remote.example/users/bob/statuses/7#delete',
+			'type'   => 'Delete',
+			'actor'  => 'https://remote.example/users/bob',
+			'to'     => array( $actor_uri ),
+			'object' => array(
+				'id'   => 'https://remote.example/users/bob/statuses/7',
+				'type' => 'Tombstone',
+			),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $json ) );
+
+		$response = \rest_do_request( $request );
+
+		\remove_action( 'activitypub_handled_delete', array( $handled, 'action' ) );
+		\remove_filter( 'pre_http_request', $no_http );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$this->assertSame( 202, $response->get_status() );
+		$this->assertSame( 1, $handled->get_call_count(), 'The Delete handler must run exactly once even when a recipient resolves.' );
+	}
+
+	/**
 	 * Test disallow list block.
 	 *
 	 * @covers ::create_item
@@ -399,8 +492,8 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 				'to'     => array( $user_actor->get_id() ),
 			);
 
-			// `Accept` needs an `object` with `actor` and `object`.
-			if ( 'Accept' === $type ) {
+			// `Accept` and `Reject` need an `object` with `actor` and `object`.
+			if ( 'Accept' === $type || 'Reject' === $type ) {
 				$json['object']['actor']  = 'https://remote.example/@test';
 				$json['object']['object'] = 'https://remote.example/post/test';
 			}
@@ -1283,6 +1376,55 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 
 		// Clean up.
 		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * Test get_local_recipients for Accept activity wrapping a Follow.
+	 *
+	 * Some servers address Accept activities only through the embedded Follow
+	 * object. In that case, the local recipient is the Follow actor.
+	 *
+	 * @covers ::get_local_recipients
+	 */
+	public function test_get_local_recipients_accept_follow_uses_object_actor() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_MODE );
+
+		$user_actor    = Actors::get_by_id( self::$user_id );
+		$user_actor_id = $user_actor->get_id();
+		$fetched_urls  = array();
+
+		$remote_object_filter = function ( $pre, $url ) use ( &$fetched_urls ) {
+			$fetched_urls[] = $url;
+			return new \WP_Error( 'test', 'Simulated error' );
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter, 10, 2 );
+
+		$activity = array(
+			'id'     => 'https://remote.example/users/news#accepts/follows/',
+			'type'   => 'Accept',
+			'actor'  => 'https://remote.example/users/news',
+			'object' => array(
+				'id'     => 'https://local.example/?post_type=ap_outbox&p=123',
+				'type'   => 'Follow',
+				'actor'  => $user_actor_id,
+				'object' => 'https://remote.example/users/news',
+				'to'     => 'https://remote.example/users/news',
+			),
+		);
+
+		$reflection = new \ReflectionClass( $this->inbox_controller );
+		$method     = $reflection->getMethod( 'get_local_recipients' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$result = $method->invoke( $this->inbox_controller, $activity );
+
+		\delete_option( 'activitypub_actor_mode' );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
+
+		$this->assertContains( self::$user_id, $result, 'Should contain user referenced as embedded Follow actor' );
+		$this->assertContains( 'https://remote.example/users/news', $fetched_urls );
 	}
 
 	/**

@@ -12,6 +12,7 @@ use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Server as OAuth_Server;
 use Activitypub\Signature;
 
+use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 use function Activitypub\use_authorized_fetch;
 use function Activitypub\user_can_act_as_blog;
@@ -71,17 +72,17 @@ trait Verification {
 
 		// POST-Requests always have to be signed, GET-Requests only require a signature in secure mode or when forced.
 		if ( 'GET' !== $request->get_method() || use_authorized_fetch() || $force_signature ) {
-			$verified_request = Signature::verify_http_signature( $request );
-			if ( \is_wp_error( $verified_request ) ) {
+			$verified_key_id = Signature::verify_http_signature( $request );
+			if ( \is_wp_error( $verified_key_id ) ) {
 				return new \WP_Error(
 					'activitypub_signature_verification',
-					$verified_request->get_error_message(),
+					$verified_key_id->get_error_message(),
 					array( 'status' => 401 )
 				);
 			}
 
 			// Verify the signing key's host matches the activity actor's host.
-			$key_id_check = $this->verify_key_id( $request );
+			$key_id_check = $this->verify_key_id( $request, $verified_key_id );
 			if ( \is_wp_error( $key_id_check ) ) {
 				return $key_id_check;
 			}
@@ -93,39 +94,36 @@ trait Verification {
 	/**
 	 * Check that the signature keyId and activity actor share the same host.
 	 *
+	 * Binds against the keyId that {@see Signature::verify_http_signature()} actually
+	 * verified, passed in by the caller. Re-parsing the headers here would be unsafe: a
+	 * request can present several signature labels (or a draft and an RFC 9421 header) with
+	 * different keyIds, and only the verifier knows which one validated.
+	 *
+	 * Fails closed when either side has no parsable host. A non-URL keyId such as
+	 * `acct:mallory@attacker.example` resolves to a real key through WebFinger yet yields no host,
+	 * so treating "no host" as "nothing to check" would drop the only tie between the signing key
+	 * and the claimed actor. Both hosts must be present and equal.
+	 *
 	 * @since 8.1.0
+	 * @since 9.0.0 Added the `$key_id` parameter; binds against the verified keyId.
+	 * @since 9.2.1 Reject a keyId or actor with no parsable host instead of allowing it.
 	 *
 	 * @param \WP_REST_Request $request The request object.
+	 * @param string|null      $key_id  The keyId that verified the signature.
 	 * @return true|\WP_Error True if valid, WP_Error on mismatch.
 	 */
-	private function verify_key_id( $request ) {
-		$sig = $request->get_header( 'signature' );
-		if ( ! $sig || ! \preg_match( '/keyId="([^"]+)"/i', $sig, $m ) ) {
-			/*
-			 * RFC 9421 Signature-Input. Match the keyid the same way the RFC 9421 verifier
-			 * parses it: as a `;`-delimited parameter whose value may be quoted or unquoted.
-			 * Anchoring on `;` (or string start) is required — a bare `keyid=` search would
-			 * also match a `keyid=` substring inside another parameter's quoted value (or a
-			 * param named `…keyid`), letting an attacker point this binding at a different
-			 * host than the one the verifier actually used.
-			 */
-			$sig = $request->get_header( 'signature-input' );
-			if ( ! $sig || ! \preg_match( '/(?:^|;)\s*keyid="?([^";,\s]+)/i', $sig, $m ) ) {
-				return true;
-			}
-		}
+	private function verify_key_id( $request, $key_id ) {
+		$json  = $request->get_json_params();
+		$actor = isset( $json['actor'] ) ? object_to_uri( $json['actor'] ) : null;
 
-		$key_host = \strtolower( (string) \wp_parse_url( $m[1], \PHP_URL_HOST ) );
-		$json     = $request->get_json_params();
-		$actor    = isset( $json['actor'] ) ? object_to_uri( $json['actor'] ) : null;
-
-		if ( ! $actor || ! $key_host ) {
+		// A signed request without a body actor (e.g. an authorized-fetch GET) has nothing to bind.
+		if ( ! $actor ) {
 			return true;
 		}
 
-		$actor_host = \strtolower( (string) \wp_parse_url( $actor, \PHP_URL_HOST ) );
-
-		if ( ! $actor_host || $key_host !== $actor_host ) {
+		// The keyId and the actor must resolve to the same host; an identifier with no parsable
+		// host (e.g. an `acct:` keyId) is unbindable and therefore not an authorized one.
+		if ( ! is_same_host( $key_id, $actor ) ) {
 			return new \WP_Error(
 				'activitypub_key_actor_mismatch',
 				\__( 'Signing key and activity actor must be on the same host.', 'activitypub' ),

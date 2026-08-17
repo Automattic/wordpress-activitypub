@@ -33,9 +33,9 @@ class WPML {
 			return $lang;
 		}
 
-		$language_details = apply_filters( 'wpml_post_language_details', null, $post->ID );
+		$language_details = \apply_filters( 'wpml_post_language_details', null, $post->ID );
 
-		if ( is_array( $language_details ) && isset( $language_details['language_code'] ) ) {
+		if ( \is_array( $language_details ) && isset( $language_details['language_code'] ) ) {
 			$lang = $language_details['language_code'];
 		}
 

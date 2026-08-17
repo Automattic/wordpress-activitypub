@@ -7,6 +7,11 @@
 
 namespace Activitypub\Rest;
 
+use Activitypub\Signature;
+
+use function Activitypub\maybe_set_no_store;
+use function Activitypub\use_authorized_fetch;
+
 /**
  * ActivityPub Server REST-Class.
  *
@@ -19,10 +24,12 @@ class Server {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
+		\add_filter( 'rest_pre_dispatch', array( self::class, 'maybe_add_actor_from_signature' ), 10, 3 );
 		\add_filter( 'rest_request_before_callbacks', array( self::class, 'validate_requests' ), 9, 3 );
 		\add_filter( 'rest_request_parameter_order', array( self::class, 'request_parameter_order' ), 10, 2 );
 
 		\add_filter( 'rest_post_dispatch', array( self::class, 'filter_output' ), 10, 3 );
+		\add_filter( 'rest_post_dispatch', array( self::class, 'add_cache_headers' ), 10, 3 );
 		\add_filter( 'rest_post_dispatch', array( self::class, 'add_cors_headers' ), 10, 3 );
 		\add_filter( 'rest_allowed_cors_headers', array( self::class, 'allow_cors_headers' ), 10, 2 );
 	}
@@ -60,7 +67,7 @@ class Server {
 
 		if (
 			ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS &&
-			in_array( $params['type'], array( 'Create', 'Like', 'Announce' ), true )
+			\in_array( $params['type'], array( 'Create', 'Like', 'Announce' ), true )
 		) {
 			return new \WP_Error(
 				'activitypub_server_does_not_accept_incoming_interactions',
@@ -102,6 +109,67 @@ class Server {
 			'URL',
 			'defaults',
 		);
+	}
+
+	/**
+	 * Backfill a missing `actor` on incoming FeatureRequest activities from the signature.
+	 *
+	 * Mastodon (FEP-7aa9) omits `actor` from the FeatureRequest body and conveys the
+	 * requesting actor only through the HTTP signature keyId. Our inbox routes require
+	 * `actor`, so such a request is rejected during parameter validation before it can
+	 * reach the inbox or its handler, which is why no Accept is ever sent.
+	 *
+	 * Derive the actor from the keyId and add it as a request parameter. The actor is
+	 * injected with `set_param()` rather than by rewriting the request body, so the raw
+	 * body stays byte-identical and the signed `Digest` still verifies. Inbox POSTs read
+	 * JSON parameters first (see `request_parameter_order()`), so the value is visible to
+	 * both parameter validation and the handler via `get_json_params()`.
+	 *
+	 * Scoped to FeatureRequest, the only activity type known to address this way. Runs on
+	 * `rest_pre_dispatch` because that is the only hook that fires before required-parameter
+	 * validation. Signature verification still runs afterwards and remains authoritative:
+	 * the injected actor is derived from the very keyId the signature is checked against, so
+	 * it cannot be used to impersonate another actor.
+	 *
+	 * @since 9.0.0
+	 *
+	 * @param mixed            $result  Response to replace the request with, or null to continue.
+	 * @param \WP_REST_Server  $server  Server instance.
+	 * @param \WP_REST_Request $request The request object.
+	 *
+	 * @return mixed The unmodified `$result`.
+	 */
+	public static function maybe_add_actor_from_signature( $result, $server, $request ) {
+		// Respect an earlier short-circuit.
+		if ( null !== $result ) {
+			return $result;
+		}
+
+		if ( \WP_REST_Server::CREATABLE !== $request->get_method() ) {
+			return $result;
+		}
+
+		$route = $request->get_route();
+		if (
+			! \str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE ) ||
+			! \str_ends_with( $route, '/inbox' )
+		) {
+			return $result;
+		}
+
+		$json = $request->get_json_params();
+		if ( ! \is_array( $json ) || 'FeatureRequest' !== ( $json['type'] ?? '' ) || ! empty( $json['actor'] ) ) {
+			return $result;
+		}
+
+		$key_id = Signature::get_key_id( $request );
+		if ( ! $key_id ) {
+			return $result;
+		}
+
+		$request->set_param( 'actor', \strip_fragment_from_url( $key_id ) );
+
+		return $result;
 	}
 
 	/**
@@ -156,6 +224,88 @@ class Server {
 		);
 
 		$response->set_data( $error );
+
+		return $response;
+	}
+
+	/**
+	 * Add cache headers to ActivityPub responses.
+	 *
+	 * Responses on these routes are not the same for every caller: Authorized Fetch
+	 * varies them by signing key, and the ActivityPub API varies them by access token.
+	 * Shared caches are told to key on those headers, and a response produced for a
+	 * caller that presented credentials is marked as belonging to that caller alone.
+	 *
+	 * @since 9.2.0
+	 *
+	 * @param \WP_REST_Response $response Result to send to the client.
+	 * @param \WP_REST_Server   $server   Server instance.
+	 * @param \WP_REST_Request  $request  Request used to generate the response.
+	 *
+	 * @return \WP_REST_Response The response object.
+	 */
+	public static function add_cache_headers( $response, $server, $request ) {
+		if ( ! \str_starts_with( $request->get_route(), '/' . ACTIVITYPUB_REST_NAMESPACE ) ) {
+			return $response;
+		}
+
+		/*
+		 * A request authenticated by WP session can get a personalized response even on a route whose
+		 * permission callback is `__return_true`: `/interactions` redirects by the current user, and
+		 * verify_owner() surfaces private items in otherwise public collections. The session cookie is
+		 * not part of Vary, so mark any logged-in response private before the public shortcut below.
+		 */
+		if ( \is_user_logged_in() ) {
+			maybe_set_no_store( $response );
+
+			return $response;
+		}
+
+		/*
+		 * A route that authorizes every caller identically (permission_callback `__return_true`) returns
+		 * a public response, even under Authorized Fetch, where Mastodon still signs its GETs. Leave it
+		 * without caller-varying cache directives so public collections such as thread replies and
+		 * context stay cacheable at the edge. Routes that gate on the caller fall through below.
+		 */
+		$attributes = $request->get_attributes();
+		if ( isset( $attributes['permission_callback'] ) && '__return_true' === $attributes['permission_callback'] ) {
+			return $response;
+		}
+
+		$authorized_fetch = use_authorized_fetch();
+
+		/*
+		 * Authorization always affects the response: the ActivityPub API varies it by access token.
+		 * The HTTP-signature headers only affect it under Authorized Fetch; with it off the response
+		 * is identical for every caller, and Mastodon sends a fresh Signature-Input on each GET, so
+		 * varying on them would mint a unique cache variant per request and defeat shared caching.
+		 */
+		$vary = array( 'Authorization' );
+
+		if ( $authorized_fetch ) {
+			$vary[] = 'Signature';
+			$vary[] = 'Signature-Input';
+		}
+
+		// Appended, so the CORS handler's own `Vary: Origin` survives.
+		$response->header( 'Vary', \implode( ', ', $vary ), false );
+
+		/*
+		 * Only mark a credentialed response private when Authorized Fetch actually varies it. With
+		 * Authorized Fetch off, a signed request gets the same public response as everyone else
+		 * (Mastodon signs its GETs by default), so `no-store` would needlessly drop it from every
+		 * CDN. The `Vary: Authorization` above still keeps a token-credentialed response from being reused.
+		 */
+		if ( $authorized_fetch ) {
+			$credentials = array( 'authorization', 'signature', 'signature-input' );
+
+			foreach ( $credentials as $header ) {
+				if ( $request->get_header( $header ) ) {
+					maybe_set_no_store( $response );
+					break;
+				}
+			}
+		}
 
 		return $response;
 	}

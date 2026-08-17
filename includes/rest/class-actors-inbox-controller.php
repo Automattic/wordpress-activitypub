@@ -72,19 +72,25 @@ class Actors_Inbox_Controller extends Actors_Controller {
 					'callback'            => array( $this, 'create_item' ),
 					'permission_callback' => array( $this, 'verify_signature' ),
 					'args'                => array(
-						'id'     => array(
+						'user_id' => array(
+							'description'       => 'The ID of the actor.',
+							'type'              => 'integer',
+							'required'          => true,
+							'validate_callback' => array( $this, 'validate_inbox_user_id' ),
+						),
+						'id'      => array(
 							'description' => 'The unique identifier for the activity.',
 							'type'        => 'string',
 							'format'      => 'uri',
 							'required'    => true,
 						),
-						'actor'  => array(
+						'actor'   => array(
 							'description'       => 'The actor performing the activity.',
 							'type'              => 'string',
 							'required'          => true,
 							'sanitize_callback' => '\Activitypub\object_to_uri',
 						),
-						'type'   => array(
+						'type'    => array(
 							'description'       => 'The type of the activity.',
 							'type'              => 'string',
 							'required'          => true,
@@ -94,7 +100,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 								return '' !== \sanitize_html_class( (string) $param );
 							},
 						),
-						'object' => array(
+						'object'  => array(
 							'description'       => 'The object of the activity.',
 							'required'          => true,
 							'sanitize_callback' => array( $this, 'localize_language_maps' ),
@@ -139,6 +145,28 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		);
 
 		\add_action( 'activitypub_inbox_create_item', array( self::class, 'process_create_item' ) );
+	}
+
+	/**
+	 * Validate the user ID for inbox deliveries.
+	 *
+	 * Also accepts the retired Application ID so remote servers that cached the
+	 * old Application actor document, which advertised this route as its inbox,
+	 * can still deliver to it. Those requests are handed to the shared inbox in
+	 * `create_item()`.
+	 *
+	 * @since 9.1.0
+	 *
+	 * @param int $user_id The user ID.
+	 *
+	 * @return true|\WP_Error True if the user ID is valid, WP_Error otherwise.
+	 */
+	public function validate_inbox_user_id( $user_id ) {
+		if ( Actors::APPLICATION_USER_ID === (int) $user_id ) {
+			return true;
+		}
+
+		return $this->validate_user_id( $user_id );
 	}
 
 	/**
@@ -192,7 +220,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 
 		$response = array(
 			'@context'     => Base_Object::JSON_LD_CONTEXT,
-			'id'           => get_rest_url_by_path( sprintf( 'actors/%d/inbox', $user_id ) ),
+			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/inbox', $user_id ) ),
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'actor'        => $user->get_id(),
 			'type'         => 'OrderedCollection',
@@ -266,8 +294,21 @@ class Actors_Inbox_Controller extends Actors_Controller {
 	 */
 	public function create_item( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$data    = $request->get_json_params();
-		$type    = camel_to_snake_case( $request->get_param( 'type' ) );
+
+		/*
+		 * Deliveries to the retired Application actor's inbox come from remote
+		 * servers that cached its actor document from before the Application was
+		 * extracted from the actor system. Hand them to the shared inbox, which
+		 * also rejects Follows aimed at the Application.
+		 */
+		if ( Actors::APPLICATION_USER_ID === (int) $user_id ) {
+			$shared_inbox = new Inbox_Controller();
+
+			return $shared_inbox->create_item( $request );
+		}
+
+		$data = $request->get_json_params();
+		$type = camel_to_snake_case( $request->get_param( 'type' ) );
 
 		/* @var Activity $activity Activity object.*/
 		$activity = Activity::init_from_array( $data );
@@ -282,7 +323,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 			 * @param string             $type     The type of the activity.
 			 * @param Activity|\WP_Error $activity The Activity object.
 			 */
-			do_action( 'activitypub_rest_inbox_disallowed', $data, $user_id, $type, $activity );
+			\do_action( 'activitypub_rest_inbox_disallowed', $data, $user_id, $type, $activity );
 		} else {
 			/**
 			 * ActivityPub inbox action.
@@ -324,7 +365,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 				Inbox::add( $activity, (array) $user_id );
 
 				\wp_clear_scheduled_hook( 'activitypub_inbox_create_item', array( $activity_id ) );
-				\wp_schedule_single_event( time() + 15, 'activitypub_inbox_create_item', array( $activity_id ) );
+				\wp_schedule_single_event( \time() + 15, 'activitypub_inbox_create_item', array( $activity_id ) );
 			}
 		}
 

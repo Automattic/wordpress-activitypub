@@ -36,6 +36,214 @@ class Test_Server extends \WP_Test_REST_TestCase {
 		$this->assertEquals( 10, \has_filter( 'rest_post_dispatch', array( Server::class, 'filter_output' ) ) );
 		$this->assertEquals( 10, \has_filter( 'rest_post_dispatch', array( Server::class, 'add_cors_headers' ) ) );
 		$this->assertEquals( 10, \has_filter( 'rest_allowed_cors_headers', array( Server::class, 'allow_cors_headers' ) ) );
+		$this->assertEquals( 10, \has_filter( 'rest_pre_dispatch', array( Server::class, 'maybe_add_actor_from_signature' ) ) );
+	}
+
+	/**
+	 * Build an actor-less, signed inbox request for the actor-backfill tests.
+	 *
+	 * @param array  $body   The activity body.
+	 * @param string $key_id The keyId to advertise via the HTTP Signature header.
+	 * @param string $route  Optional. The request route. Default the shared inbox.
+	 * @return \WP_REST_Request The prepared request.
+	 */
+	private function build_signed_inbox_request( $body, $key_id, $route = null ) {
+		$route   = $route ?? '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox';
+		$request = new \WP_REST_Request( 'POST', $route );
+		$request->set_header( 'content-type', 'application/activity+json' );
+		$request->set_header( 'signature', \sprintf( 'keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="abc"', $key_id ) );
+		$request->set_body( \wp_json_encode( $body ) );
+
+		return $request;
+	}
+
+	/**
+	 * An actor-less FeatureRequest gets its actor backfilled from the signature keyId,
+	 * without altering the raw body (so the signed Digest still verifies).
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_backfills_missing_actor() {
+		Server::init(); // Inbox POSTs read JSON params first; that order makes set_param() land in JSON.
+
+		$body    = array(
+			'id'         => 'https://remote.example.com/activities/feat-1',
+			'type'       => 'FeatureRequest',
+			'object'     => 'https://example.org/author/1',
+			'instrument' => 'https://remote.example.com/users/curator/featured',
+		);
+		$request = $this->build_signed_inbox_request( $body, 'https://remote.example.com/users/curator#main-key' );
+
+		$original_body = $request->get_body();
+		$result        = Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertNull( $result, 'The filter must not hijack the request.' );
+		$this->assertSame(
+			'https://remote.example.com/users/curator',
+			$request->get_json_params()['actor'],
+			'Actor should be derived from the keyId with the fragment stripped.'
+		);
+		$this->assertSame( $original_body, $request->get_body(), 'The raw body must be untouched so the signed Digest still verifies.' );
+	}
+
+	/**
+	 * The actor is also derived from an RFC 9421 Signature-Input keyid.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_supports_signature_input() {
+		Server::init();
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'content-type', 'application/activity+json' );
+		$request->set_header( 'signature-input', 'sig1=("@method" "@target-uri");keyid="https://remote.example.com/users/curator#main-key";created=1700000000' );
+		$request->set_body( \wp_json_encode( array( 'type' => 'FeatureRequest' ) ) );
+
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertSame( 'https://remote.example.com/users/curator', $request->get_json_params()['actor'] );
+	}
+
+	/**
+	 * An activity that already carries an actor is left untouched.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_keeps_existing_actor() {
+		$request = $this->build_signed_inbox_request(
+			array(
+				'type'  => 'FeatureRequest',
+				'actor' => 'https://remote.example.com/users/someone-else',
+			),
+			'https://remote.example.com/users/curator#main-key'
+		);
+
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertSame( 'https://remote.example.com/users/someone-else', $request->get_json_params()['actor'] );
+	}
+
+	/**
+	 * Only FeatureRequest activities are backfilled; other actor-less types are left alone.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_skips_other_activity_types() {
+		$request = $this->build_signed_inbox_request(
+			array( 'type' => 'Follow' ),
+			'https://remote.example.com/users/curator#main-key'
+		);
+
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertArrayNotHasKey( 'actor', $request->get_json_params() );
+	}
+
+	/**
+	 * Non-inbox routes must never be touched.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_skips_non_inbox_route() {
+		$request = $this->build_signed_inbox_request(
+			array( 'type' => 'FeatureRequest' ),
+			'https://remote.example.com/users/curator#main-key',
+			'/' . ACTIVITYPUB_REST_NAMESPACE . '/outbox'
+		);
+
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertArrayNotHasKey( 'actor', $request->get_json_params() );
+	}
+
+	/**
+	 * Without a signature there is no authoritative actor to derive, so nothing changes.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_skips_without_signature() {
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'content-type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( array( 'type' => 'FeatureRequest' ) ) );
+
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertArrayNotHasKey( 'actor', $request->get_json_params() );
+	}
+
+	/**
+	 * A non-POST request is ignored.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_skips_non_post() {
+		$request = $this->build_signed_inbox_request(
+			array( 'type' => 'FeatureRequest' ),
+			'https://remote.example.com/users/curator#main-key'
+		);
+		$request->set_method( 'GET' );
+
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertArrayNotHasKey( 'actor', $request->get_json_params() );
+	}
+
+	/**
+	 * A spoofed draft Signature header must not win over the RFC 9421 keyId the request is
+	 * actually verified with. The verifier uses Signature-Input when present, so the injected
+	 * actor must be derived from there, not from the (ignored) draft Signature header.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_uses_verified_keyid_over_spoofed_header() {
+		Server::init();
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'content-type', 'application/activity+json' );
+		$request->set_header( 'signature', 'keyId="https://victim.example/users/victim#main-key",signature="abc"' );
+		$request->set_header( 'signature-input', 'sig1=("@method");keyid="https://attacker.example/users/attacker#main-key";created=1700000000' );
+		$request->set_body( \wp_json_encode( array( 'type' => 'FeatureRequest' ) ) );
+
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertSame( 'https://attacker.example/users/attacker', $request->get_json_params()['actor'] );
+	}
+
+	/**
+	 * When the signature carries more than one keyId the verifier may validate any label,
+	 * so we cannot know which key will verify. The actor must not be backfilled.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_skips_ambiguous_keyids() {
+		Server::init();
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'content-type', 'application/activity+json' );
+		$request->set_header( 'signature-input', 'sig1=("@method");keyid="https://victim.example/users/victim#main-key", sig2=("@method");keyid="https://attacker.example/users/attacker#main-key";created=1700000000' );
+		$request->set_body( \wp_json_encode( array( 'type' => 'FeatureRequest' ) ) );
+
+		Server::maybe_add_actor_from_signature( null, new \WP_REST_Server(), $request );
+
+		$this->assertArrayNotHasKey( 'actor', $request->get_json_params() );
+	}
+
+	/**
+	 * A prior short-circuit result must be respected and left intact.
+	 *
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_maybe_add_actor_from_signature_respects_short_circuit() {
+		$request = $this->build_signed_inbox_request(
+			array( 'type' => 'FeatureRequest' ),
+			'https://remote.example.com/users/curator#main-key'
+		);
+
+		$response = new \WP_REST_Response( array( 'handled' => true ) );
+		$result   = Server::maybe_add_actor_from_signature( $response, new \WP_REST_Server(), $request );
+
+		$this->assertSame( $response, $result );
+		$this->assertArrayNotHasKey( 'actor', $request->get_json_params() );
 	}
 
 	/**
@@ -392,5 +600,194 @@ class Test_Server extends \WP_Test_REST_TestCase {
 		$headers = $result->get_headers();
 
 		$this->assertArrayNotHasKey( 'Access-Control-Allow-Origin', $headers );
+	}
+
+	/**
+	 * With Authorized Fetch off the response is the same for every caller, so it varies only by
+	 * Authorization (the ActivityPub API token). Varying on the per-request signature headers would
+	 * mint a unique cache variant for every signed Mastodon fetch and defeat shared caching.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_sets_vary() {
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		$this->assertSame( 'Authorization', $headers['Vary'] );
+		$this->assertArrayNotHasKey( 'Cache-Control', $headers );
+	}
+
+	/**
+	 * A public route (permission_callback __return_true) returns the same response for every caller,
+	 * so even under Authorized Fetch with a signed request it must stay cacheable: no no-store, and no
+	 * caller-varying Vary. This keeps public thread-resolution reads (replies, context) edge-cacheable.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_leaves_public_routes_cacheable_under_authorized_fetch() {
+		\add_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/1/replies' );
+		$request->set_attributes( array( 'permission_callback' => '__return_true' ) );
+		$request->set_header( 'Signature', 'keyId="https://remote.example/users/alice#main-key"' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		\remove_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$this->assertArrayNotHasKey( 'Cache-Control', $headers );
+		$this->assertArrayNotHasKey( 'Vary', $headers );
+	}
+
+	/**
+	 * With Authorized Fetch on the response depends on the signing key, so the signature headers
+	 * join the Vary list.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_varies_on_signature_with_authorized_fetch() {
+		\add_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		\remove_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$this->assertSame( 'Authorization, Signature, Signature-Input', $headers['Vary'] );
+	}
+
+	/**
+	 * Test that a Vary header already on the response is kept.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_preserves_existing_vary() {
+		$response = new \WP_REST_Response( array(), 200 );
+		$response->header( 'Vary', 'Accept' );
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		$this->assertSame( 'Accept, Authorization', $headers['Vary'] );
+	}
+
+	/**
+	 * Test that a response built for a credentialed caller is marked private.
+	 *
+	 * @dataProvider credential_header_provider
+	 * @covers ::add_cache_headers
+	 *
+	 * @param string $header The credential header name.
+	 * @param string $value  The credential header value.
+	 */
+	public function test_add_cache_headers_marks_credentialed_responses_private( $header, $value ) {
+		\add_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1/inbox' );
+		$request->set_header( $header, $value );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		\remove_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$this->assertSame( 'private, no-store, max-age=0', $headers['Cache-Control'] );
+	}
+
+	/**
+	 * With Authorized Fetch off, a signed request gets the same public response as everyone else,
+	 * so it must not be marked no-store, or it would needlessly drop from every CDN.
+	 *
+	 * @dataProvider credential_header_provider
+	 * @covers ::add_cache_headers
+	 *
+	 * @param string $header The credential header name.
+	 * @param string $value  The credential header value.
+	 */
+	public function test_add_cache_headers_keeps_credentialed_responses_cacheable_without_authorized_fetch( $header, $value ) {
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1/followers' );
+		$request->set_header( $header, $value );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		$this->assertArrayNotHasKey( 'Cache-Control', $headers );
+	}
+
+	/**
+	 * An owner authenticated by WP session (verify_owner) can receive private items in an otherwise
+	 * public collection, and the session cookie is not in Vary, so a logged-in response must never be
+	 * shared, whatever the Authorized Fetch setting.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_marks_session_authenticated_responses_private() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\wp_set_current_user( $user_id );
+
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/followers' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		\wp_set_current_user( 0 );
+
+		$this->assertSame( 'private, no-store, max-age=0', $headers['Cache-Control'] );
+	}
+
+	/**
+	 * A route whose permission callback is __return_true can still be personalized for a logged-in
+	 * user (e.g. /interactions redirects by the current user), so a logged-in request must be marked
+	 * private even there. The session check has to run before the public shortcut.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_marks_logged_in_public_route_private() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\wp_set_current_user( $user_id );
+
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
+		$request->set_attributes( array( 'permission_callback' => '__return_true' ) );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		\wp_set_current_user( 0 );
+
+		$this->assertSame( 'private, no-store, max-age=0', $headers['Cache-Control'] );
+	}
+
+	/**
+	 * Data provider for credential headers.
+	 *
+	 * @return array[] Test parameters.
+	 */
+	public function credential_header_provider() {
+		return array(
+			'bearer token'   => array( 'Authorization', 'Bearer abc123' ),
+			'draft envelope' => array( 'Signature', 'keyId="https://remote.example/users/alice#main-key"' ),
+			'rfc 9421'       => array( 'Signature-Input', 'sig1=("@method");keyid="https://remote.example/users/alice#main-key"' ),
+		);
+	}
+
+	/**
+	 * Test that non-ActivityPub routes are left alone.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_skips_other_namespaces() {
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/wp/v2/posts' );
+		$request->set_header( 'Authorization', 'Bearer abc123' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		$this->assertArrayNotHasKey( 'Vary', $headers );
+		$this->assertArrayNotHasKey( 'Cache-Control', $headers );
 	}
 }

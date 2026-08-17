@@ -14,6 +14,7 @@ use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
 use function Activitypub\is_actor;
+use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 
 /**
@@ -79,6 +80,11 @@ class Remote_Actors {
 
 	/**
 	 * Upsert (insert or update) a remote actor as a custom post type.
+	 *
+	 * The actor is looked up and stored under its own `id`. Callers that obtain
+	 * the actor from an untrusted fetch MUST fetch it via {@see Http::get_remote_object()},
+	 * which self-confirms the document is served under its own id, so a document
+	 * claiming another actor's id can never reach this method.
 	 *
 	 * @param array|Actor $actor ActivityPub actor object (array or actor, must include 'id').
 	 *
@@ -203,8 +209,9 @@ class Remote_Actors {
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
-				esc_sql( $actor_uri ),
-				esc_sql( self::POST_TYPE )
+				// Normalize the way upsert() stores the GUID; prepare() handles the SQL escaping.
+				\esc_url_raw( $actor_uri ),
+				self::POST_TYPE
 			)
 		);
 
@@ -226,6 +233,57 @@ class Remote_Actors {
 		}
 
 		return $post;
+	}
+
+	/**
+	 * Search cached remote actors by name, handle, or actor URI.
+	 *
+	 * Backs the actor autocomplete endpoint. Matches the search term against the stored post title
+	 * (the actor's name or preferred username) and the webfinger handle (user@host), newest first.
+	 * The actor URI (guid) is matched only when the query itself looks like a URL: every URI shares
+	 * the same scheme and host shape, so matching it for a short term would return nearly every
+	 * cached actor.
+	 *
+	 * @since 9.1.0
+	 *
+	 * @param string $query  The search term.
+	 * @param int    $number Optional. Maximum number of actors to return. Default 10.
+	 *
+	 * @return \WP_Post[] The matching remote actor posts.
+	 */
+	public static function search( $query, $number = 10 ) {
+		global $wpdb;
+
+		$like       = '%' . $wpdb->esc_like( $query ) . '%';
+		$conditions = 'p.post_title LIKE %s OR acct.meta_value LIKE %s';
+		$params     = array( self::POST_TYPE, $like, $like );
+
+		// Match the actor URI only for URL-like queries, so short terms don't match every https:// guid.
+		if ( \str_contains( $query, '://' ) ) {
+			$conditions .= ' OR p.guid LIKE %s';
+			$params[]    = $like;
+		}
+
+		$params[] = $number;
+
+		/*
+		 * Select full rows so get_post() hydrates each in place instead of re-querying per ID. The
+		 * interpolated $conditions is built from the literal fragments above, not from user input,
+		 * and the placeholder count is dynamic because the guid clause is optional.
+		 */
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+		$posts = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT DISTINCT p.* FROM $wpdb->posts p
+				LEFT JOIN $wpdb->postmeta acct ON acct.post_id = p.ID AND acct.meta_key = '_activitypub_acct'
+				WHERE p.post_type = %s AND p.post_status = 'publish' AND ( $conditions )
+				ORDER BY p.ID DESC LIMIT %d",
+				$params
+			)
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+
+		return \array_map( '\get_post', $posts );
 	}
 
 	/**
@@ -308,6 +366,7 @@ class Remote_Actors {
 			return $post;
 		}
 
+		// get_remote_object() self-confirms the actor is served under its own id, so it is safe to cache.
 		$object = Http::get_remote_object( $actor_uri, false );
 
 		if ( \is_wp_error( $object ) ) {
@@ -556,7 +615,12 @@ class Remote_Actors {
 	 * @return array|\WP_Error Array of post arguments or WP_Error on failure.
 	 */
 	private static function prepare_custom_post_type( $actor ) {
-		if ( ! $actor instanceof Actor ) {
+		/*
+		 * Reject non-actor objects here, the single chokepoint every
+		 * create/update/upsert funnels through, so callers do not each have to
+		 * guard against accidentally caching a Note or other non-actor object.
+		 */
+		if ( ! $actor instanceof Actor || ! is_actor( $actor ) ) {
 			return new \WP_Error(
 				'activitypub_invalid_actor_data',
 				\__( 'Invalid actor data', 'activitypub' ),
@@ -624,7 +688,7 @@ class Remote_Actors {
 
 		// Add emoji meta if actor has emoji in tags.
 		$emoji_meta = Emoji::prepare_actor_meta( $actor_array );
-		$meta_input = array_merge( $meta_input, $emoji_meta );
+		$meta_input = \array_merge( $meta_input, $emoji_meta );
 
 		return array(
 			'guid'         => \esc_url_raw( $actor->get_id() ),
@@ -648,7 +712,7 @@ class Remote_Actors {
 	 */
 	public static function normalize_identifier( $actor ) {
 		$actor = object_to_uri( $actor );
-		if ( ! is_string( $actor ) ) {
+		if ( ! \is_string( $actor ) ) {
 			return null;
 		}
 
@@ -692,11 +756,8 @@ class Remote_Actors {
 
 			// If we fetched a standalone key object, follow the owner to get the actor.
 			if ( isset( $data['owner'] ) && ! isset( $data['publicKey'] ) ) {
-				// Verify the owner is on the same host as the key to prevent cross-origin spoofing.
-				$key_host   = \wp_parse_url( $key_id, \PHP_URL_HOST );
-				$owner_host = \wp_parse_url( $data['owner'], \PHP_URL_HOST );
-
-				if ( ! $key_host || ! $owner_host || $key_host !== $owner_host ) {
+				// Verify the owner is on the same host as the key, so a key on one host cannot be claimed for an actor on another.
+				if ( ! is_same_host( $key_id, $data['owner'] ) ) {
 					return $no_key_error;
 				}
 
@@ -750,11 +811,8 @@ class Remote_Actors {
 			return false;
 		}
 
-		$actor_host   = isset( $data['id'] ) ? \wp_parse_url( $data['id'], \PHP_URL_HOST ) : null;
-		$key_url_host = \wp_parse_url( $data['publicKey'], \PHP_URL_HOST );
-
 		// Verify the key URL is on the same host as the actor.
-		if ( ! $actor_host || ! $key_url_host || $actor_host !== $key_url_host ) {
+		if ( ! is_same_host( $data['id'] ?? '', $data['publicKey'] ) ) {
 			return false;
 		}
 

@@ -130,7 +130,7 @@ function is_post_publicly_queryable( $post ) {
 	}
 
 	$visibility          = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
-	$is_local_or_private = in_array( $visibility, array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ), true );
+	$is_local_or_private = \in_array( $visibility, array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ), true );
 
 	/*
 	 * An attachment (`inherit` status) inherits its parent's visibility.
@@ -142,8 +142,8 @@ function is_post_publicly_queryable( $post ) {
 		'attachment' === $post->post_type &&
 		( ! $post->post_parent || is_post_publicly_queryable( $post->post_parent ) );
 
-	// Drafts and pending posts are allowed during preview requests so the Fediverse Preview works.
-	$is_preview = in_array( $post->post_status, array( 'draft', 'pending' ), true ) &&
+	// Draft, pending, and scheduled posts are allowed during preview requests so the Fediverse Preview works.
+	$is_preview = \in_array( $post->post_status, array( 'draft', 'pending', 'future' ), true ) &&
 		\get_query_var( 'preview' ) &&
 		\current_user_can( 'edit_post', $post->ID );
 
@@ -178,10 +178,10 @@ function is_post_publicly_queryable( $post ) {
  * switched to local visibility, or its post type loses ActivityPub support.
  *
  * The federation-state check also keeps `is_post_publicly_queryable()`'s
- * preview allowance inert here: a draft/pending post is never in the federated
- * state, so the preview branch can never make this return true.
+ * preview allowance inert here: a draft/pending/scheduled post is never in the
+ * federated state, so the preview branch can never make this return true.
  *
- * @since unreleased
+ * @since 9.0.0
  *
  * @param mixed $post The post ID or object.
  *
@@ -235,7 +235,7 @@ function get_post_type_description( $post_type ) {
 			$description = '';
 			break;
 		case 'attachment':
-			$description = ' - ' . __( 'Files uploaded to the media library (such as images, videos, documents, or other attachments). Note: This federates every file upload, not just published content.', 'activitypub' );
+			$description = ' - ' . \__( 'Files uploaded to the media library (such as images, videos, documents, or other attachments). Note: This federates every file upload, not just published content.', 'activitypub' );
 			break;
 		default:
 			$description = '';
@@ -251,7 +251,7 @@ function get_post_type_description( $post_type ) {
 	 * @param string        $post_type_name The post type name.
 	 * @param \WP_Post_Type $post_type      The post type object.
 	 */
-	return apply_filters( 'activitypub_post_type_description', $description, $post_type->name, $post_type );
+	return \apply_filters( 'activitypub_post_type_description', $description, $post_type->name, $post_type );
 }
 
 /**
@@ -262,20 +262,20 @@ function get_post_type_description( $post_type ) {
  * @return array The enclosures.
  */
 function get_enclosures( $post_id ) {
-	$enclosures = get_post_meta( $post_id, 'enclosure', false );
+	$enclosures = \get_post_meta( $post_id, 'enclosure', false );
 
 	if ( ! $enclosures ) {
 		return array();
 	}
 
-	$enclosures = array_map(
+	$enclosures = \array_map(
 		static function ( $enclosure ) {
 			// Check if the enclosure is a string.
-			if ( ! $enclosure || ! is_string( $enclosure ) ) {
+			if ( ! $enclosure || ! \is_string( $enclosure ) ) {
 				return false;
 			}
 
-			$attributes = explode( "\n", $enclosure );
+			$attributes = \explode( "\n", $enclosure );
 
 			if ( ! isset( $attributes[0] ) || ! \wp_http_validate_url( $attributes[0] ) ) {
 				return false;
@@ -290,7 +290,7 @@ function get_enclosures( $post_id ) {
 		$enclosures
 	);
 
-	return array_filter( $enclosures );
+	return \array_filter( $enclosures );
 }
 
 /**
@@ -306,7 +306,7 @@ function get_enclosures( $post_id ) {
  * @return string The generated post summary.
  */
 function generate_post_summary( $post, $length = 500 ) {
-	$post = get_post( $post );
+	$post = \get_post( $post );
 
 	if ( ! $post ) {
 		return '';
@@ -368,12 +368,12 @@ function generate_post_summary( $post, $length = 500 ) {
  * @return string|false The content warning or false if not found.
  */
 function get_content_warning( $post_id ) {
-	$post = get_post( $post_id );
+	$post = \get_post( $post_id );
 	if ( ! $post ) {
 		return false;
 	}
 
-	$warning = get_post_meta( $post->ID, 'activitypub_content_warning', true );
+	$warning = \get_post_meta( $post->ID, 'activitypub_content_warning', true );
 	if ( empty( $warning ) ) {
 		return false;
 	}
@@ -408,7 +408,7 @@ function get_post_id( $id ) {
  * @return string|false The visibility of the post or false if not found.
  */
 function get_content_visibility( $post_id ) {
-	$post = get_post( $post_id );
+	$post = \get_post( $post_id );
 	if ( ! $post ) {
 		return false;
 	}
@@ -421,7 +421,7 @@ function get_content_visibility( $post_id ) {
 		ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL,
 	);
 
-	if ( in_array( $visibility, $options, true ) ) {
+	if ( \in_array( $visibility, $options, true ) ) {
 		$_visibility = $visibility;
 	}
 

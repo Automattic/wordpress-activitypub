@@ -9,7 +9,7 @@
  * External dependencies
  */
 import type { ReactNode, SyntheticEvent } from 'react';
-import { UseNavigateResult } from '@tanstack/react-router';
+import type { UseNavigateResult } from '@wordpress/route';
 
 /**
  * WordPress dependencies

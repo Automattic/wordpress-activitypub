@@ -7,8 +7,6 @@
 
 namespace Activitypub;
 
-use Activitypub\Collection\Actors;
-use Activitypub\Collection\Remote_Actors;
 use Activitypub\Signature\Http_Message_Signature;
 use Activitypub\Signature\Http_Signature_Draft;
 
@@ -26,6 +24,81 @@ class Signature {
 	public static function init() {
 		\add_filter( 'http_request_args', array( self::class, 'sign_request' ), 0, 2 ); // Ahead of all other filters, so signature is set.
 		\add_filter( 'http_response', array( self::class, 'maybe_double_knock' ), 10, 3 );
+	}
+
+	/**
+	 * Generate a new RSA key pair for signing HTTP requests.
+	 *
+	 * Does not persist anything — callers are responsible for storing the keys.
+	 *
+	 * @since 9.1.0
+	 *
+	 * @return array The key pair with 'private_key' and 'public_key', both null on failure.
+	 */
+	public static function generate_key_pair() {
+		$config = array(
+			'digest_alg'       => 'sha512',
+			'private_key_bits' => 2048,
+			'private_key_type' => \OPENSSL_KEYTYPE_RSA,
+		);
+
+		$key         = \openssl_pkey_new( $config );
+		$private_key = null;
+		$detail      = array();
+		if ( $key ) {
+			\openssl_pkey_export( $key, $private_key );
+			$detail = \openssl_pkey_get_details( $key );
+		}
+
+		// Check if keys are valid.
+		if (
+			empty( $private_key ) || ! \is_string( $private_key ) ||
+			! isset( $detail['key'] ) || ! \is_string( $detail['key'] )
+		) {
+			return array(
+				'private_key' => null,
+				'public_key'  => null,
+			);
+		}
+
+		return array(
+			'private_key' => $private_key,
+			'public_key'  => $detail['key'],
+		);
+	}
+
+	/**
+	 * Get the key pair stored in an option, migrating a legacy pair or generating a new one on first use.
+	 *
+	 * @since 9.1.0
+	 *
+	 * @param string        $option_key      The option name the key pair is stored in.
+	 * @param callable|null $legacy_callback Optional. Callback that returns a legacy key pair to migrate, or false. Default null.
+	 *
+	 * @return array The key pair with 'private_key' and 'public_key'.
+	 */
+	public static function get_key_pair( $option_key, $legacy_callback = null ) {
+		$key_pair = \get_option( $option_key );
+
+		if ( $key_pair ) {
+			return $key_pair;
+		}
+
+		$key_pair = $legacy_callback ? $legacy_callback() : false;
+
+		if ( ! $key_pair ) {
+			$key_pair = self::generate_key_pair();
+
+			// Only persist valid keys.
+			if ( empty( $key_pair['private_key'] ) ) {
+				return $key_pair;
+			}
+		}
+
+		// `update_option()` also overwrites a corrupted-but-present row, which `add_option()` would silently skip.
+		\update_option( $option_key, $key_pair );
+
+		return $key_pair;
 	}
 
 	/**
@@ -54,23 +127,77 @@ class Signature {
 	/**
 	 * Verifies the http signatures
 	 *
+	 * On success the verified keyId is returned (a truthy string), so callers can bind it to
+	 * the activity actor without re-parsing headers, which cannot tell which signature label
+	 * actually validated. Pass/fail callers should branch on {@see is_wp_error()} as before.
+	 *
+	 * @since 9.0.0 Returns the verified keyId on success instead of `true`.
+	 *
 	 * @param \WP_REST_Request|array $request The request object or $_SERVER array.
 	 *
-	 * @return bool|\WP_Error A boolean or WP_Error.
+	 * @return string|\WP_Error The verified keyId on success, WP_Error on failure.
 	 */
 	public static function verify_http_signature( $request ) {
-		if ( is_object( $request ) ) { // REST Request object.
+		if ( \is_object( $request ) ) { // REST Request object.
 			$body                           = $request->get_body();
 			$headers                        = $request->get_headers();
-			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' ' . self::get_route( $request );
+			$headers['(request-target)'][0] = \strtolower( $request->get_method() ) . ' ' . self::get_route( $request );
 		} else {
 			$headers                        = self::format_server_request( $request );
-			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
+			$headers['(request-target)'][0] = \strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
 		}
 
 		$signature = isset( $headers['signature_input'] ) ? new Http_Message_Signature() : new Http_Signature_Draft();
 
 		return $signature->verify( $headers, $body ?? null );
+	}
+
+	/**
+	 * Extract the signing keyId that {@see Signature::verify_http_signature()} would verify against.
+	 *
+	 * The returned keyId is only trustworthy if it identifies the key the signature is
+	 * actually checked with, so this mirrors the verifier's header choice rather than
+	 * scanning headers in an arbitrary order:
+	 *
+	 * - When a `Signature-Input` header is present the RFC 9421 verifier is used, so the
+	 *   keyId is taken from there and a draft `Signature` header (which the verifier ignores)
+	 *   is not consulted. The RFC 9421 verifier accepts whichever of several signature labels
+	 *   validates, so a `Signature-Input` carrying more than one keyId is ambiguous: we cannot
+	 *   know in advance which key will verify and must not guess, so `null` is returned.
+	 * - Otherwise the draft HTTP Signatures form is used, taking the first `keyId` from the
+	 *   `Signature` header or, failing that, the `Authorization` header — matching the draft
+	 *   verifier, which reads `signature ?? authorization`.
+	 *
+	 * @since 9.0.0
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 *
+	 * @return string|null The keyId, or null when none is present or the choice is ambiguous.
+	 */
+	public static function get_key_id( $request ) {
+		$signature_input = $request->get_header( 'signature-input' );
+		if ( $signature_input ) {
+			/*
+			 * keyid is a `;`-delimited parameter whose value may be quoted or unquoted.
+			 * Anchoring on `;` (or string start) avoids matching a `keyid=` substring inside
+			 * another parameter's value. Count every label's keyId: more than one is ambiguous.
+			 */
+			$count = \preg_match_all( '/(?:^|;)\s*keyid="?([^";,\s]+)/i', $signature_input, $matches );
+
+			return 1 === $count ? $matches[1][0] : null;
+		}
+
+		// A draft signature may arrive in the Signature header or, less commonly, Authorization.
+		$signature = $request->get_header( 'signature' );
+		if ( ! $signature ) {
+			$signature = $request->get_header( 'authorization' );
+		}
+
+		if ( $signature && \preg_match( '/keyId="([^"]+)"/i', $signature, $matches ) ) {
+			return $matches[1];
+		}
+
+		return null;
 	}
 
 	/**
@@ -131,17 +258,17 @@ class Signature {
 	 */
 	private static function get_route( $request ) {
 		// Check if the route starts with "index.php".
-		if ( str_starts_with( $request->get_route(), '/index.php' ) || ! rest_get_url_prefix() ) {
+		if ( \str_starts_with( $request->get_route(), '/index.php' ) || ! \rest_get_url_prefix() ) {
 			$route = $request->get_route();
 		} else {
-			$route = '/' . rest_get_url_prefix() . '/' . ltrim( $request->get_route(), '/' );
+			$route = '/' . \rest_get_url_prefix() . '/' . \ltrim( $request->get_route(), '/' );
 		}
 
 		// Fix route for subdirectory installations.
 		$path = \wp_parse_url( \get_home_url(), PHP_URL_PATH );
 
 		if ( \is_string( $path ) ) {
-			$path = trim( $path, '/' );
+			$path = \trim( $path, '/' );
 		}
 
 		if ( $path ) {
@@ -202,291 +329,6 @@ class Signature {
 	}
 
 	/**
-	 * Return the public key for a given user.
-	 *
-	 * @deprecated 7.0.0 Use {@see Actors::get_public_key()}.
-	 *
-	 * @param int  $user_id The WordPress User ID.
-	 * @param bool $force   Optional. Force the generation of a new key pair. Default false.
-	 *
-	 * @return string The public key.
-	 */
-	public static function get_public_key_for( $user_id, $force = false ) {
-		\_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_public_key' );
-
-		return Actors::get_public_key( $user_id, $force );
-	}
-
-	/**
-	 * Return the private key for a given user.
-	 *
-	 * @deprecated 7.0.0 Use {@see Actors::get_private_key()}.
-	 *
-	 * @param int  $user_id The WordPress User ID.
-	 * @param bool $force   Optional. Force the generation of a new key pair. Default false.
-	 *
-	 * @return string The private key.
-	 */
-	public static function get_private_key_for( $user_id, $force = false ) {
-		\_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_private_key' );
-
-		return Actors::get_private_key( $user_id, $force );
-	}
-
-	/**
-	 * Return the key pair for a given user.
-	 *
-	 * @deprecated 7.0.0 Use {@see Actors::get_keypair()}.
-	 *
-	 * @param int $user_id The WordPress User ID.
-	 *
-	 * @return array The key pair.
-	 */
-	public static function get_keypair_for( $user_id ) {
-		\_deprecated_function( __METHOD__, '7.0.0', 'Activitypub\Collection\Actors::get_keypair' );
-
-		return Actors::get_keypair( $user_id );
-	}
-
-	/**
-	 * Get public key from key_id.
-	 *
-	 * @deprecated 7.4.0 Use {@see Remote_Actors::get_public_key()}.
-	 *
-	 * @param string $key_id The URL to the public key.
-	 *
-	 * @return resource|\WP_Error The public key resource or WP_Error.
-	 */
-	public static function get_remote_key( $key_id ) {
-		\_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::get_public_key()' );
-
-		return Remote_Actors::get_public_key( $key_id );
-	}
-
-	/**
-	 * Generates the Signature for an HTTP Request.
-	 *
-	 * @deprecated 7.0.0 Use {@see Signature::sign_request()}.
-	 *
-	 * @param int    $user_id     The WordPress User ID.
-	 * @param string $http_method The HTTP method.
-	 * @param string $url         The URL to send the request to.
-	 * @param string $date        The date the request is sent.
-	 * @param string $digest      Optional. The digest of the request body. Default null.
-	 *
-	 * @return string The signature.
-	 */
-	public static function generate_signature( $user_id, $http_method, $url, $date, $digest = null ) {
-		\_deprecated_function( __METHOD__, '7.0.0', self::class . '::sign_request()' );
-
-		$user = Actors::get_by_id( $user_id );
-		$key  = Actors::get_private_key( $user_id );
-
-		$url_parts = \wp_parse_url( $url );
-
-		$host = $url_parts['host'];
-		$path = '/';
-
-		// Add path.
-		if ( ! empty( $url_parts['path'] ) ) {
-			$path = $url_parts['path'];
-		}
-
-		// Add query.
-		if ( ! empty( $url_parts['query'] ) ) {
-			$path .= '?' . $url_parts['query'];
-		}
-
-		$http_method = \strtolower( $http_method );
-
-		if ( ! empty( $digest ) ) {
-			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date\ndigest: $digest";
-		} else {
-			$signed_string = "(request-target): $http_method $path\nhost: $host\ndate: $date";
-		}
-
-		$signature = null;
-		\openssl_sign( $signed_string, $signature, $key, \OPENSSL_ALGO_SHA256 );
-		$signature = \base64_encode( $signature ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
-
-		$key_id = $user->get_id() . '#main-key';
-
-		if ( ! empty( $digest ) ) {
-			return \sprintf( 'keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="%s"', $key_id, $signature );
-		} else {
-			return \sprintf( 'keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date",signature="%s"', $key_id, $signature );
-		}
-	}
-
-	/**
-	 * Gets the signature algorithm from the signature header.
-	 *
-	 * @deprecated 7.0.0 Use {@see Signature::verify()}.
-	 *
-	 * @param array $signature_block The signature block.
-	 *
-	 * @return string|bool The signature algorithm or false if not found.
-	 */
-	public static function get_signature_algorithm( $signature_block ) { // phpcs:ignore
-		\_deprecated_function( __METHOD__, '7.0.0', self::class . '::verify' );
-
-		if ( ! empty( $signature_block['algorithm'] ) ) {
-			switch ( $signature_block['algorithm'] ) {
-				case 'rsa-sha-512':
-					return 'sha512'; // hs2019 https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12.
-				default:
-					return 'sha256';
-			}
-		}
-
-		return false;
-	}
-
-	/**
-	 * Parses the Signature header.
-	 *
-	 * @deprecated 7.0.0 Use {@see Signature::verify()}.
-	 *
-	 * @param string $signature The signature header.
-	 *
-	 * @return array Signature parts.
-	 */
-	public static function parse_signature_header( $signature ) { // phpcs:ignore
-		\_deprecated_function( __METHOD__, '7.0.0', self::class . '::verify' );
-
-		$parsed_header = array();
-		$matches       = array();
-
-		if ( \preg_match( '/keyId="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['keyId'] = trim( $matches[1] );
-		}
-		if ( \preg_match( '/created=["|\']*([0-9]*)["|\']*/ism', $signature, $matches ) ) {
-			$parsed_header['(created)'] = trim( $matches[1] );
-		}
-		if ( \preg_match( '/expires=["|\']*([0-9]*)["|\']*/ism', $signature, $matches ) ) {
-			$parsed_header['(expires)'] = trim( $matches[1] );
-		}
-		if ( \preg_match( '/algorithm="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['algorithm'] = trim( $matches[1] );
-		}
-		if ( \preg_match( '/headers="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['headers'] = \explode( ' ', trim( $matches[1] ) );
-		}
-		if ( \preg_match( '/signature="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['signature'] = \base64_decode( preg_replace( '/\s+/', '', trim( $matches[1] ) ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
-		}
-
-		if ( empty( $parsed_header['headers'] ) ) {
-			$parsed_header['headers'] = array( 'date' );
-		}
-
-		return $parsed_header;
-	}
-
-	/**
-	 * Gets the header data from the included pseudo headers.
-	 *
-	 * @deprecated 7.0.0 Use {@see Signature::verify()}.
-	 *
-	 * @param array $signed_headers  The signed headers.
-	 * @param array $signature_block The signature block.
-	 * @param array $headers         The HTTP headers.
-	 *
-	 * @return string signed headers for comparison
-	 */
-	public static function get_signed_data( $signed_headers, $signature_block, $headers ) { // phpcs:ignore
-		\_deprecated_function( __METHOD__, '7.0.0', self::class . '::verify' );
-
-		$signed_data = '';
-
-		// This also verifies time-based values by returning false if any of these are out of range.
-		foreach ( $signed_headers as $header ) {
-			if ( 'host' === $header ) {
-				if ( isset( $headers['x_original_host'] ) ) {
-					$signed_data .= $header . ': ' . $headers['x_original_host'][0] . "\n";
-					continue;
-				}
-			}
-			if ( '(request-target)' === $header ) {
-				$signed_data .= $header . ': ' . $headers[ $header ][0] . "\n";
-				continue;
-			}
-			if ( str_contains( $header, '-' ) ) {
-				$signed_data .= $header . ': ' . $headers[ str_replace( '-', '_', $header ) ][0] . "\n";
-				continue;
-			}
-			if ( '(created)' === $header ) {
-				if ( ! empty( $signature_block['(created)'] ) && \intval( $signature_block['(created)'] ) > \time() ) {
-					// Created in the future.
-					return false;
-				}
-
-				if ( ! array_key_exists( '(created)', $headers ) ) {
-					$signed_data .= $header . ': ' . $signature_block['(created)'] . "\n";
-					continue;
-				}
-			}
-			if ( '(expires)' === $header ) {
-				if ( ! empty( $signature_block['(expires)'] ) && \intval( $signature_block['(expires)'] ) < \time() ) {
-					// Expired in the past.
-					return false;
-				}
-
-				if ( ! array_key_exists( '(expires)', $headers ) ) {
-					$signed_data .= $header . ': ' . $signature_block['(expires)'] . "\n";
-					continue;
-				}
-			}
-			if ( 'date' === $header ) {
-				// A signed `date` header with no value must fail closed, otherwise the time-window check is skipped.
-				if ( empty( $headers[ $header ][0] ) ) {
-					return false;
-				}
-
-				// date_create() returns false on malformed input; new DateTime() would instead throw.
-				$d = \date_create( $headers[ $header ][0], new \DateTimeZone( 'UTC' ) );
-				if ( false === $d ) {
-					return false;
-				}
-				$d->setTimeZone( new \DateTimeZone( 'UTC' ) );
-				$c = (int) $d->format( 'U' );
-
-				// Match the past-skew of the maintained Http_Signature_Draft verifier (1 hour); use its 5-minute future allowance.
-				$now     = \time();
-				$d_plus  = $now + ( 5 * MINUTE_IN_SECONDS );
-				$d_minus = $now - HOUR_IN_SECONDS;
-
-				if ( $c > $d_plus || $c < $d_minus ) {
-					// Time out of range.
-					return false;
-				}
-			}
-
-			if ( ! empty( $headers[ $header ][0] ) ) {
-				$signed_data .= $header . ': ' . $headers[ $header ][0] . "\n";
-			}
-		}
-
-		return \rtrim( $signed_data, "\n" );
-	}
-
-	/**
-	 * Generates the digest for an HTTP Request.
-	 *
-	 * @deprecated 7.0.0 Use {@see Signature::sign_request()}.
-	 *
-	 * @param string $body The body of the request.
-	 *
-	 * @return string The digest.
-	 */
-	public static function generate_digest( $body ) {
-		\_deprecated_function( __METHOD__, '7.0.0', self::class . '::sign_request' );
-
-		$digest = \base64_encode( \hash( 'sha256', $body, true ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
-		return "SHA-256=$digest";
-	}
-
-	/**
 	 * Compute the collection digest for a specific instance.
 	 *
 	 * Implements FEP-8fcf: Followers collection synchronization.
@@ -500,16 +342,16 @@ class Signature {
 	 * @return string|false The hex-encoded digest, or false if no followers.
 	 */
 	public static function get_collection_digest( $collection ) {
-		if ( empty( $collection ) || ! is_array( $collection ) ) {
+		if ( empty( $collection ) || ! \is_array( $collection ) ) {
 			return false;
 		}
 
 		// Initialize with zeros (64 hex chars = 32 bytes = 256 bits).
-		$digest = str_repeat( '0', 64 );
+		$digest = \str_repeat( '0', 64 );
 
 		foreach ( $collection as $item ) {
 			// Compute SHA256 hash of the follower ID.
-			$hash = hash( 'sha256', $item );
+			$hash = \hash( 'sha256', $item );
 
 			// XOR the hash with the running digest.
 			$digest = self::xor_hex_strings( $digest, $hash );

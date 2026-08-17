@@ -71,6 +71,8 @@ class Router {
 			'top'
 		);
 
+		// Must precede the generic @username rule, which would otherwise match "application" as an actor username.
+		\add_rewrite_rule( '^@application\/?$', 'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/application', 'top' );
 		\add_rewrite_rule( '^@([\w\-\.]+)\/?$', 'index.php?actor=$matches[1]', 'top' );
 		\add_rewrite_endpoint( 'activitypub', EP_AUTHORS | EP_PERMALINK | EP_PAGES );
 	}
@@ -164,12 +166,24 @@ class Router {
 			if ( \get_query_var( 'preview' ) ) {
 				\defined( 'ACTIVITYPUB_PREVIEW' ) || \define( 'ACTIVITYPUB_PREVIEW', true );
 
+				/*
+				 * A preview is only ever reached by someone allowed to see the unpublished post:
+				 * is_post_publicly_queryable() gates draft/pending/future on current_user_can('edit_post'),
+				 * and everyone else has already fallen through to the normal template above. The response
+				 * therefore varies by caller no matter the Authorized Fetch setting, so it must never be
+				 * stored by a shared cache and replayed to someone who cannot edit the post. Independent of
+				 * the Authorized Fetch block below, which only guards the signed-fetch path.
+				 */
+				if ( ! \headers_sent() ) {
+					\header( 'Cache-Control: private, no-store, max-age=0' );
+				}
+
 				/**
 				 * Filter the template used for the ActivityPub preview.
 				 *
 				 * @param string $activitypub_template Absolute path to the template file.
 				 */
-				$activitypub_template = apply_filters( 'activitypub_preview_template', ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php' );
+				$activitypub_template = \apply_filters( 'activitypub_preview_template', ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php' );
 			} else {
 				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . 'templates/activitypub-json.php';
 			}
@@ -182,6 +196,17 @@ class Router {
 		 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
 		 */
 		if ( $activitypub_template && use_authorized_fetch() ) {
+			/*
+			 * Under Authorized Fetch the response depends on the caller's signature: an unsigned request
+			 * is refused, a signed one gets the document. A shared cache (page cache or CDN) keys the
+			 * activity+json variant on the representation, not the signature, so it must store neither
+			 * outcome and replay it to the wrong caller. Send this before verifying so it covers the 401
+			 * and the 200 alike; `max-age=0` is what page caches such as Surge key on to skip storing.
+			 */
+			if ( ! \headers_sent() ) {
+				\header( 'Cache-Control: private, no-store, max-age=0' );
+			}
+
 			$verification = Signature::verify_http_signature( $_SERVER );
 			if ( \is_wp_error( $verification ) ) {
 				\status_header( 401 );
@@ -232,7 +257,7 @@ class Router {
 		}
 
 		if ( ! \headers_sent() ) {
-			\header( 'Link: <' . esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"', false );
+			\header( 'Link: <' . \esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"', false );
 
 			if ( \get_option( 'activitypub_vary_header', '1' ) ) {
 				// Send Vary header for Accept header.
@@ -243,7 +268,7 @@ class Router {
 		\add_action(
 			'wp_head',
 			static function () use ( $id ) {
-				echo PHP_EOL . '<link rel="alternate" title="ActivityPub (JSON)" type="application/activity+json" href="' . esc_url( $id ) . '" />' . PHP_EOL;
+				echo PHP_EOL . '<link rel="alternate" title="ActivityPub (JSON)" type="application/activity+json" href="' . \esc_url( $id ) . '" />' . PHP_EOL;
 			}
 		);
 	}
@@ -257,7 +282,7 @@ class Router {
 	 * @return string $redirect_url The possibly-unslashed redirect URL.
 	 */
 	public static function no_trailing_redirect( $redirect_url, $requested_url ) {
-		if ( get_query_var( 'actor' ) ) {
+		if ( \get_query_var( 'actor' ) ) {
 			return $requested_url;
 		}
 
@@ -287,7 +312,7 @@ class Router {
 		unset( $query_params['activitypub'] );
 		unset( $query_params['stamp'] );
 
-		if ( 1 !== count( $query_params ) ) {
+		if ( 1 !== \count( $query_params ) ) {
 			return $redirect_url;
 		}
 
@@ -327,7 +352,7 @@ class Router {
 				return;
 			}
 
-			\wp_safe_redirect( get_comment_link( $comment ) );
+			\wp_safe_redirect( \get_comment_link( $comment ) );
 			exit;
 		}
 
@@ -374,7 +399,7 @@ class Router {
 			 */
 			$supported_taxonomies = \apply_filters( 'activitypub_supported_taxonomies', array( 'category', 'post_tag' ) );
 
-			if ( ! in_array( $term->taxonomy, $supported_taxonomies, true ) ) {
+			if ( ! \in_array( $term->taxonomy, $supported_taxonomies, true ) ) {
 				return;
 			}
 

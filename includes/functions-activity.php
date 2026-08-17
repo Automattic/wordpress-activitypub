@@ -51,7 +51,17 @@ function extract_recipients_from_activity( $data ) {
 		$recipient_items = \array_merge( $recipient_items, extract_recipients_from_activity_property( $i, $data ) );
 	}
 
-	return \array_unique( $recipient_items );
+	// An Accept/Reject that wraps a Follow is addressed only through the embedded Follow's actor.
+	if (
+		\in_array( $data['type'], array( 'Accept', 'Reject' ), true ) &&
+		! empty( $data['object'] ) &&
+		\is_array( $data['object'] ) &&
+		! empty( $data['object']['actor'] )
+	) {
+		$recipient_items[] = object_to_uri( $data['object']['actor'] );
+	}
+
+	return \array_unique( \array_filter( $recipient_items ) );
 }
 
 /**
@@ -93,19 +103,19 @@ function extract_recipients_from_activity_property( $property, $data ) {
  */
 function get_activity_visibility( $activity ) {
 	// Set default visibility for specific activity types.
-	if ( ! empty( $activity['type'] ) && in_array( $activity['type'], array( 'Accept', 'Delete', 'Follow', 'Reject', 'Undo' ), true ) ) {
+	if ( ! empty( $activity['type'] ) && \in_array( $activity['type'], array( 'Accept', 'Delete', 'Follow', 'Reject', 'Undo' ), true ) ) {
 		return ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
 	}
 
 	// Check 'to' field for public visibility.
 	$to = extract_recipients_from_activity_property( 'to', $activity );
-	if ( ! empty( array_intersect( $to, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) ) ) {
+	if ( ! empty( \array_intersect( $to, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) ) ) {
 		return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
 	}
 
 	// Check 'cc' field for quiet public visibility.
 	$cc = extract_recipients_from_activity_property( 'cc', $activity );
-	if ( ! empty( array_intersect( $cc, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) ) ) {
+	if ( ! empty( \array_intersect( $cc, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) ) ) {
 		return ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC;
 	}
 
@@ -133,7 +143,7 @@ function is_activity_public( $data ) {
 		return false;
 	}
 
-	return ! empty( array_intersect( $recipients, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) );
+	return ! empty( \array_intersect( $recipients, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS ) );
 }
 
 /**
@@ -172,11 +182,11 @@ function is_quote_activity( $data ) {
  */
 function object_to_uri( $data ) {
 	// Check whether it is already simple.
-	if ( ! $data || is_string( $data ) ) {
+	if ( ! $data || \is_string( $data ) ) {
 		return $data;
 	}
 
-	if ( is_object( $data ) ) {
+	if ( \is_object( $data ) ) {
 		$data = $data->to_array();
 	}
 
@@ -184,12 +194,12 @@ function object_to_uri( $data ) {
 	 * Check if it is a list, then take first item.
 	 * This plugin does not support collections.
 	 */
-	if ( array_is_list( $data ) ) {
+	if ( \array_is_list( $data ) ) {
 		$data = $data[0];
 	}
 
 	// Check if it is simplified now.
-	if ( is_string( $data ) ) {
+	if ( \is_string( $data ) ) {
 		return $data;
 	}
 
@@ -233,6 +243,81 @@ function object_to_uri( $data ) {
 }
 
 /**
+ * Check whether two references point at the same actor.
+ *
+ * Both values are resolved to their canonical URI via object_to_uri() before
+ * comparison. Empty references never match, so a missing actor can never be
+ * mistaken for a match.
+ *
+ * @param array|object|string $a The first actor reference.
+ * @param array|object|string $b The second actor reference.
+ *
+ * @return bool True when both resolve to the same non-empty URI.
+ */
+function is_same_actor( $a, $b ) {
+	$a = object_to_uri( $a );
+	$b = object_to_uri( $b );
+
+	return ! empty( $a ) && ! empty( $b ) && $a === $b;
+}
+
+/**
+ * Check whether two references live on the same host.
+ *
+ * Both values are resolved to their canonical URI via object_to_uri(), then
+ * their hosts are compared case-insensitively. Empty references, or references
+ * without a host, never match.
+ *
+ * @param array|object|string $a The first reference.
+ * @param array|object|string $b The second reference.
+ *
+ * @return bool True when both resolve to a URI on the same host.
+ */
+function is_same_host( $a, $b ) {
+	$host_a = \wp_parse_url( (string) object_to_uri( $a ), PHP_URL_HOST );
+	$host_b = \wp_parse_url( (string) object_to_uri( $b ), PHP_URL_HOST );
+
+	return ! empty( $host_a ) && ! empty( $host_b ) && \strtolower( $host_a ) === \strtolower( $host_b );
+}
+
+/**
+ * Whether an object is served under its own canonical id.
+ *
+ * An object is only trustworthy to cache when its own `id` is the URL it was
+ * actually served from: otherwise one host could serve a document — and its
+ * public key — under another host's id. Reads the raw `id` attribute only
+ * (never the `url`/`href` fallback that object_to_uri() applies), because the
+ * cache is keyed on `id`, so "is this canonical?" must ask the same field the
+ * write uses. The comparison ignores the URL fragment and a trailing slash;
+ * everything else (scheme, host, port, path, query) must match exactly.
+ * Host-level equality is deliberately NOT enough — any different id on the same
+ * host is still a distinct cache entry that a document served elsewhere must not write.
+ *
+ * @param array|string $item The fetched object, or its id.
+ * @param string       $url  The URL the object was served from.
+ *
+ * @return bool True when the object's id is the canonical URL it was served from.
+ */
+function id_matches_url( $item, $url ) {
+	if ( \is_array( $item ) ) {
+		$id = isset( $item['id'] ) && \is_string( $item['id'] ) ? $item['id'] : '';
+	} elseif ( \is_string( $item ) ) {
+		$id = $item;
+	} else {
+		$id = '';
+	}
+
+	$id  = \strip_fragment_from_url( $id );
+	$url = \strip_fragment_from_url( (string) $url );
+
+	if ( '' === $id || '' === $url ) {
+		return false;
+	}
+
+	return \untrailingslashit( $id ) === \untrailingslashit( $url );
+}
+
+/**
  * Check if an `$data` is an Activity.
  *
  * @see https://www.w3.org/ns/activitystreams#activities
@@ -247,7 +332,7 @@ function is_activity( $data ) {
 	 *
 	 * @param array $types The activity types.
 	 */
-	$types = apply_filters( 'activitypub_activity_types', Activity::TYPES );
+	$types = \apply_filters( 'activitypub_activity_types', Activity::TYPES );
 
 	return _is_type_of( $data, $types );
 }
@@ -287,7 +372,7 @@ function is_actor( $data ) {
 	 *
 	 * @param array $types The actor types.
 	 */
-	$types = apply_filters( 'activitypub_actor_types', Actor::TYPES );
+	$types = \apply_filters( 'activitypub_actor_types', Actor::TYPES );
 
 	return _is_type_of( $data, $types );
 }
@@ -307,7 +392,7 @@ function is_collection( $data ) {
 	 *
 	 * @param array $types The collection types.
 	 */
-	$types = apply_filters( 'activitypub_collection_types', array( 'Collection', 'OrderedCollection', 'CollectionPage', 'OrderedCollectionPage' ) );
+	$types = \apply_filters( 'activitypub_collection_types', array( 'Collection', 'OrderedCollection', 'CollectionPage', 'OrderedCollectionPage' ) );
 
 	return _is_type_of( $data, $types );
 }
@@ -321,16 +406,16 @@ function is_collection( $data ) {
  * @return boolean True if $data is of one of the types, false otherwise.
  */
 function _is_type_of( $data, $types ) {
-	if ( is_string( $data ) ) {
-		return in_array( $data, $types, true );
+	if ( \is_string( $data ) ) {
+		return \in_array( $data, $types, true );
 	}
 
-	if ( is_array( $data ) && isset( $data['type'] ) ) {
-		return in_array( $data['type'], $types, true );
+	if ( \is_array( $data ) && isset( $data['type'] ) ) {
+		return \in_array( $data['type'], $types, true );
 	}
 
 	if ( $data instanceof Base_Object ) {
-		return in_array( $data->get_type(), $types, true );
+		return \in_array( $data->get_type(), $types, true );
 	}
 
 	return false;

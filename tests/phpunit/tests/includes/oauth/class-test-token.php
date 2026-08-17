@@ -51,6 +51,7 @@ class Test_Token extends \WP_UnitTestCase {
 				'role' => 'editor',
 			)
 		);
+		\get_user_by( 'id', $this->user_id )->add_cap( 'activitypub' );
 
 		// Create a test client.
 		$client_result   = Client::register(
@@ -133,6 +134,39 @@ class Test_Token extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test create rejects users who are not enabled for ActivityPub.
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_rejects_user_without_activitypub_capability() {
+		\get_user_by( 'id', $this->user_id )->remove_cap( 'activitypub' );
+
+		$result = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'activitypub_user_not_enabled', $result->get_error_code() );
+		$this->assertSame( 403, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * A user who holds the activitypub capability keeps token access in blog-only mode, where
+	 * user_can_activitypub() would short-circuit to false but the capability is unchanged.
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_allows_capable_user_in_blog_only_mode() {
+		$actor_mode = \get_option( 'activitypub_actor_mode' );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+
+		$result = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+
+		\update_option( 'activitypub_actor_mode', $actor_mode );
+
+		$this->assertNotWPError( $result );
+		$this->assertArrayHasKey( 'access_token', $result );
+	}
+
+	/**
 	 * Test validate method with valid token.
 	 *
 	 * @covers ::validate
@@ -144,6 +178,36 @@ class Test_Token extends \WP_UnitTestCase {
 		$this->assertInstanceOf( Token::class, $token );
 		$this->assertEquals( $this->user_id, $token->get_user_id() );
 		$this->assertEquals( $this->client_id, $token->get_client_id() );
+	}
+
+	/**
+	 * Test validate rejects tokens after their user is disabled for ActivityPub.
+	 *
+	 * @covers ::validate
+	 */
+	public function test_validate_rejects_user_without_activitypub_capability() {
+		$result = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+		\get_user_by( 'id', $this->user_id )->remove_cap( 'activitypub' );
+
+		$validation = Token::validate( $result['access_token'] );
+
+		$this->assertWPError( $validation );
+		$this->assertSame( 'activitypub_user_not_enabled', $validation->get_error_code() );
+		$this->assertSame( 403, $validation->get_error_data()['status'] );
+	}
+
+	/**
+	 * Test introspection marks a disabled user's token as inactive.
+	 *
+	 * @covers ::introspect
+	 */
+	public function test_introspect_marks_disabled_user_token_inactive() {
+		$result = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+		\get_user_by( 'id', $this->user_id )->remove_cap( 'activitypub' );
+
+		$introspection = Token::introspect( $result['access_token'] );
+
+		$this->assertFalse( $introspection['active'] );
 	}
 
 	/**
@@ -249,6 +313,27 @@ class Test_Token extends \WP_UnitTestCase {
 		// Old token should be revoked.
 		$old_validation = Token::validate( $original['access_token'] );
 		$this->assertInstanceOf( \WP_Error::class, $old_validation );
+	}
+
+	/**
+	 * Test refresh rejects tokens after their user is disabled for ActivityPub.
+	 *
+	 * @covers ::refresh
+	 */
+	public function test_refresh_rejects_user_without_activitypub_capability() {
+		$original = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+		\get_user_by( 'id', $this->user_id )->remove_cap( 'activitypub' );
+
+		$result = Token::refresh( $original['refresh_token'], $this->client_id );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'activitypub_user_not_enabled', $result->get_error_code() );
+		$this->assertSame( 403, $result->get_error_data()['status'] );
+
+		// The rejected refresh must not tear down the existing grant: once the user is enabled again,
+		// the original access token still validates.
+		\get_user_by( 'id', $this->user_id )->add_cap( 'activitypub' );
+		$this->assertNotWPError( Token::validate( $original['access_token'] ) );
 	}
 
 	/**

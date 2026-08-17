@@ -32,7 +32,9 @@ export default function TopSupporter( { multiplicator }: Props ): ReactNode {
 		<div className="activitypub-stats-multiplicator">
 			<h3>{ __( 'Top Supporter', 'activitypub' ) }</h3>
 			<p>
-				<ExternalLink href={ multiplicator.url }>{ multiplicator.name }</ExternalLink>{ ' ' }
+				<ExternalLink href={ multiplicator.url } rel="external noreferrer noopener">
+					{ multiplicator.name }
+				</ExternalLink>{ ' ' }
 				{ sprintf(
 					/* translators: %s: number of boosts */
 					_n( '(%s boost)', '(%s boosts)', multiplicator.count, 'activitypub' ),

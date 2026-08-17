@@ -41,6 +41,30 @@ class Podlove_Podcast_Publisher extends Post {
 	}
 
 	/**
+	 * Returns the summary for the ActivityPub Item.
+	 *
+	 * @return string|null The summary or null.
+	 */
+	protected function get_summary() {
+		$episode = $this->get_episode();
+
+		// Notes carry no summary, so there is nothing to override for them.
+		if ( $episode && 'Note' !== $this->get_type() ) {
+			// Sanitize like generate_post_summary() does, since Podlove stores the summary as raw user input.
+			$summary = \strip_shortcodes( (string) $episode->summary );
+			$summary = \wp_strip_all_tags( $summary );
+			$summary = \trim( \html_entity_decode( $summary, ENT_QUOTES, 'UTF-8' ) );
+
+			// Federate the episode summary explicitly; Podlove keeps it out of post_content.
+			if ( '' !== $summary ) {
+				return $summary;
+			}
+		}
+
+		return parent::get_summary();
+	}
+
+	/**
 	 * Gets the attachment for a podcast episode.
 	 *
 	 * This method is overridden to add the audio/video files as attachments.
@@ -77,7 +101,7 @@ class Podlove_Podcast_Publisher extends Post {
 			}
 
 			// Only include audio and video files.
-			if ( ! in_array( $file_type->type, array( 'audio', 'video' ), true ) ) {
+			if ( ! \in_array( $file_type->type, array( 'audio', 'video' ), true ) ) {
 				continue;
 			}
 
@@ -89,15 +113,15 @@ class Podlove_Podcast_Publisher extends Post {
 			}
 
 			$attachment = array(
-				'type'      => \esc_attr( ucfirst( $file_type->type ) ),
-				'url'       => \esc_url( $file_url ),
+				'type'      => \esc_attr( \ucfirst( $file_type->type ) ),
+				'url'       => \esc_url_raw( $file_url ),
 				'mediaType' => \esc_attr( $file_type->mime_type ),
 				'name'      => \esc_attr( $episode->title() ?? '' ),
 			);
 
 			// Add duration if available (in ISO 8601 format).
 			$duration = $episode->get_duration( 'seconds' );
-			if ( $duration && is_numeric( $duration ) && (int) $duration > 0 ) {
+			if ( $duration && \is_numeric( $duration ) && (int) $duration > 0 ) {
 				$attachment['duration'] = seconds_to_iso8601( (int) $duration );
 			}
 
@@ -110,7 +134,7 @@ class Podlove_Podcast_Publisher extends Post {
 
 			if ( $icon ) {
 				foreach ( $attachments as $key => $attachment ) {
-					$attachments[ $key ]['icon'] = \esc_url( $icon );
+					$attachments[ $key ]['icon'] = \esc_url_raw( $icon );
 				}
 			}
 		}
@@ -137,7 +161,7 @@ class Podlove_Podcast_Publisher extends Post {
 
 		$image = $episode->cover_art_with_fallback();
 
-		if ( $image && method_exists( $image, 'url' ) ) {
+		if ( $image && \method_exists( $image, 'url' ) ) {
 			return $image->url();
 		}
 
@@ -165,7 +189,7 @@ class Podlove_Podcast_Publisher extends Post {
 		$duration_seconds = $episode->get_duration( 'seconds' );
 
 		// Ensure we have a valid numeric duration.
-		if ( ! $duration_seconds || ! is_numeric( $duration_seconds ) ) {
+		if ( ! $duration_seconds || ! \is_numeric( $duration_seconds ) ) {
 			return null;
 		}
 

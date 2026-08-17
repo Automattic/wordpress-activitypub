@@ -50,25 +50,25 @@ class Http_Signature_Draft implements Http_Signature {
 		$date        = $args['headers']['Date'];
 
 		$signed_parts = array(
-			sprintf( '(request-target): %s %s', $http_method, $path ),
-			sprintf( 'host: %s', $host ),
-			sprintf( 'date: %s', $date ),
+			\sprintf( '(request-target): %s %s', $http_method, $path ),
+			\sprintf( 'host: %s', $host ),
+			\sprintf( 'date: %s', $date ),
 		);
 		$headers_list = array( '(request-target)', 'host', 'date' );
 
 		if ( isset( $args['body'] ) ) {
 			$args['headers']['Digest'] = $this->generate_digest( $args['body'] );
-			$signed_parts[]            = sprintf( 'digest: %s', $args['headers']['Digest'] );
+			$signed_parts[]            = \sprintf( 'digest: %s', $args['headers']['Digest'] );
 			$headers_list[]            = 'digest';
 		}
 
 		if ( isset( $args['headers']['Collection-Synchronization'] ) ) {
-			$signed_parts[] = sprintf( 'collection-synchronization: %s', $args['headers']['Collection-Synchronization'] );
+			$signed_parts[] = \sprintf( 'collection-synchronization: %s', $args['headers']['Collection-Synchronization'] );
 			$headers_list[] = 'collection-synchronization';
 		}
 
-		$signed_string = implode( "\n", $signed_parts );
-		$headers_list  = implode( ' ', $headers_list );
+		$signed_string = \implode( "\n", $signed_parts );
+		$headers_list  = \implode( ' ', $headers_list );
 
 		$signature = null;
 		\openssl_sign( $signed_string, $signature, $args['private_key'], \OPENSSL_ALGO_SHA256 );
@@ -87,9 +87,11 @@ class Http_Signature_Draft implements Http_Signature {
 	/**
 	 * Verify the HTTP Signature against a request.
 	 *
+	 * @since 9.0.0 Returns the verified keyId on success instead of `true`.
+	 *
 	 * @param array       $headers The HTTP headers.
 	 * @param string|null $body    The request body, if applicable.
-	 * @return bool|\WP_Error True, if the signature is valid, WP_Error on failure.
+	 * @return string|\WP_Error The verified keyId on success, WP_Error on failure.
 	 */
 	public function verify( array $headers, $body = null ) {
 		if ( ! isset( $headers['signature'] ) && ! isset( $headers['authorization'] ) ) {
@@ -129,7 +131,8 @@ class Http_Signature_Draft implements Http_Signature {
 			return new \WP_Error( 'activitypub_signature', 'Invalid signature', array( 'status' => 401 ) );
 		}
 
-		return true;
+		// Return the verified keyId so the caller can bind it to the activity actor.
+		return $parsed['keyId'];
 	}
 
 	/**
@@ -238,19 +241,19 @@ class Http_Signature_Draft implements Http_Signature {
 		$matches       = array();
 
 		if ( \preg_match( '/keyId="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['keyId'] = trim( $matches[1] );
+			$parsed_header['keyId'] = \trim( $matches[1] );
 		}
 		if ( \preg_match( '/created=["|\']*([0-9]*)["|\']*/im', $signature, $matches ) ) {
-			$parsed_header['(created)'] = trim( $matches[1] );
+			$parsed_header['(created)'] = \trim( $matches[1] );
 		}
 		if ( \preg_match( '/expires=["|\']*([0-9]*)["|\']*/im', $signature, $matches ) ) {
-			$parsed_header['(expires)'] = trim( $matches[1] );
+			$parsed_header['(expires)'] = \trim( $matches[1] );
 		}
 		if ( \preg_match( '/algorithm="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['algorithm'] = trim( $matches[1] );
+			$parsed_header['algorithm'] = \trim( $matches[1] );
 		}
 		if ( \preg_match( '/headers="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['headers'] = \explode( ' ', trim( $matches[1] ) );
+			$parsed_header['headers'] = \explode( ' ', \trim( $matches[1] ) );
 		}
 		if ( \preg_match( '/signature="(.*?)"/ism', $signature, $matches ) ) {
 			$parsed_header['signature'] = \base64_decode( \preg_replace( '/\s+/', '', \trim( $matches[1] ) ) );

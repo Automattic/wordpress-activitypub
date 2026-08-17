@@ -40,8 +40,6 @@ abstract class Base {
 	/**
 	 * The WP_Post or WP_Comment object.
 	 *
-	 * @deprecated version 5.0.0
-	 *
 	 * @var \WP_Post|\WP_Comment
 	 */
 	protected $wp_object;
@@ -187,7 +185,7 @@ abstract class Base {
 			$followers = $actor->get_followers();
 		}
 
-		$mentions = array_values( $this->get_mentions() );
+		$mentions = \array_values( $this->get_mentions() );
 
 		if ( $this->get_in_reply_to() ) {
 			$object = Http::get_remote_object( $this->get_in_reply_to() );
@@ -280,7 +278,7 @@ abstract class Base {
 		 *
 		 * @return string The filtered locale of the post.
 		 */
-		return apply_filters( 'activitypub_locale', $lang, $this->item );
+		return \apply_filters( 'activitypub_locale', $lang, $this->item );
 	}
 
 	/**
@@ -349,7 +347,7 @@ abstract class Base {
 		foreach ( $mentions as $mention => $url ) {
 			$tags[] = array(
 				'type' => 'Mention',
-				'href' => \esc_url( $url ),
+				'href' => \esc_url_raw( $url ),
 				'name' => \esc_html( $mention ),
 			);
 		}
@@ -374,11 +372,11 @@ abstract class Base {
 	protected function get_mentions() {
 		$content = '';
 
-		if ( method_exists( $this, 'get_content' ) ) {
+		if ( \method_exists( $this, 'get_content' ) ) {
 			$content = $content . ' ' . $this->get_content();
 		}
 
-		if ( method_exists( $this, 'get_summary' ) ) {
+		if ( \method_exists( $this, 'get_summary' ) ) {
 			$content = $content . ' ' . $this->get_summary();
 		}
 
@@ -391,7 +389,7 @@ abstract class Base {
 		 *
 		 * @return array The filtered mentions.
 		 */
-		return apply_filters(
+		return \apply_filters(
 			'activitypub_extract_mentions',
 			array(),
 			$content,
@@ -530,7 +528,7 @@ abstract class Base {
 				if ( $thumbnail ) {
 					$image = array(
 						'type'      => 'Image',
-						'url'       => \esc_url( $thumbnail[0] ),
+						'url'       => \esc_url_raw( $thumbnail[0] ),
 						'mediaType' => \esc_attr( $mime_type ),
 					);
 
@@ -559,7 +557,7 @@ abstract class Base {
 				$attachment = array(
 					'type'      => \ucfirst( $media_type ),
 					'mediaType' => \esc_attr( $mime_type ),
-					'url'       => \esc_url( \wp_get_attachment_url( $id ) ),
+					'url'       => \esc_url_raw( \wp_get_attachment_url( $id ) ),
 					'name'      => \esc_attr( \get_the_title( $id ) ),
 				);
 
@@ -725,7 +723,7 @@ abstract class Base {
 		return \array_filter(
 			$attachments,
 			static function ( $attachment ) use ( &$seen_ids ) {
-				if ( isset( $attachment['id'] ) && ! in_array( $attachment['id'], $seen_ids, true ) ) {
+				if ( isset( $attachment['id'] ) && ! \in_array( $attachment['id'], $seen_ids, true ) ) {
 					$seen_ids[] = $attachment['id'];
 					return true;
 				}

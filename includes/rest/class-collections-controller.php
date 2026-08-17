@@ -130,7 +130,7 @@ class Collections_Controller extends Actors_Controller {
 
 		$response = array(
 			'@context'   => Base_Object::JSON_LD_CONTEXT,
-			'id'         => get_rest_url_by_path( sprintf( 'actors/%d/collections/tags', $user_id ) ),
+			'id'         => get_rest_url_by_path( \sprintf( 'actors/%d/collections/tags', $user_id ) ),
 			'type'       => 'Collection',
 			'totalItems' => \is_countable( $tags ) ? \count( $tags ) : 0,
 			'items'      => array(),
@@ -139,7 +139,7 @@ class Collections_Controller extends Actors_Controller {
 		foreach ( $tags as $tag ) {
 			$response['items'][] = array(
 				'type' => 'Hashtag',
-				'href' => \esc_url( \get_tag_link( $tag ) ),
+				'href' => \esc_url_raw( \get_tag_link( $tag ) ),
 				'name' => esc_hashtag( $tag->name ),
 			);
 		}
@@ -161,7 +161,7 @@ class Collections_Controller extends Actors_Controller {
 		if ( is_single_user() || Actors::BLOG_USER_ID !== $user_id ) {
 			$sticky_posts = \get_option( 'sticky_posts' );
 
-			if ( $sticky_posts && is_array( $sticky_posts ) ) {
+			if ( $sticky_posts && \is_array( $sticky_posts ) ) {
 				// Only show public posts.
 				$args = array(
 					'post__in'            => $sticky_posts,
@@ -187,7 +187,7 @@ class Collections_Controller extends Actors_Controller {
 
 		$response = array(
 			'@context'     => Base_Object::JSON_LD_CONTEXT,
-			'id'           => get_rest_url_by_path( sprintf( 'actors/%d/collections/featured', $user_id ) ),
+			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/collections/featured', $user_id ) ),
 			'type'         => 'OrderedCollection',
 			'totalItems'   => \is_countable( $posts ) ? \count( $posts ) : 0,
 			'orderedItems' => array(),

@@ -59,7 +59,7 @@ class Mailer {
 		$post = \get_post( $comment->comment_post_ID );
 
 		/* translators: 1: Blog name, 2: Like or Repost, 3: Post title */
-		return \sprintf( \esc_html__( '[%1$s] %2$s: %3$s', 'activitypub' ), \esc_html( get_option( 'blogname' ) ), \esc_html( $singular ), \esc_html( $post->post_title ) );
+		return \sprintf( \esc_html__( '[%1$s] %2$s: %3$s', 'activitypub' ), \esc_html( \get_option( 'blogname' ) ), \esc_html( $singular ), \esc_html( $post->post_title ) );
 	}
 
 	/**
@@ -101,7 +101,7 @@ class Mailer {
 		if ( 0 === (int) $comment->comment_parent ) {
 			$notify_message = \sprintf(
 				/* translators: 1: Comment type, 2: Post title */
-				\html_entity_decode( esc_html__( 'New %1$s on your post &#8220;%2$s&#8221;.', 'activitypub' ) ),
+				\html_entity_decode( \esc_html__( 'New %1$s on your post &#8220;%2$s&#8221;.', 'activitypub' ) ),
 				\esc_html( $comment_type['singular'] ),
 				\esc_html( $post->post_title )
 			) . PHP_EOL . PHP_EOL;
@@ -110,7 +110,7 @@ class Mailer {
 			$parent_comment = \get_comment( $comment->comment_parent );
 			$notify_message = \sprintf(
 				/* translators: 1: Comment type, 2: Post title, 3: Parent comment author */
-				\html_entity_decode( esc_html__( 'New %1$s on your post &#8220;%2$s&#8221; in reply to %3$s&#8217;s comment.', 'activitypub' ) ),
+				\html_entity_decode( \esc_html__( 'New %1$s on your post &#8220;%2$s&#8221; in reply to %3$s&#8217;s comment.', 'activitypub' ) ),
 				\esc_html( $comment_type['singular'] ),
 				\esc_html( $post->post_title ),
 				\esc_html( $parent_comment->comment_author )
@@ -156,11 +156,6 @@ class Mailer {
 		// Extract the user ID (follows are always for a single user).
 		$user_id = \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids;
 
-		// Do not send notifications to the Application user.
-		if ( Actors::APPLICATION_USER_ID === $user_id ) {
-			return;
-		}
-
 		if ( $user_id > Actors::BLOG_USER_ID ) {
 			if ( ! \get_user_option( 'activitypub_mailer_new_follower', $user_id ) ) {
 				return;
@@ -192,7 +187,7 @@ class Mailer {
 			$actor['summary'] = Emoji::replace_for_actor( $actor['summary'], $actor['url'] );
 		}
 
-		$template_args = array_merge(
+		$template_args = \array_merge(
 			$actor,
 			array(
 				'admin_url' => $admin_url,
@@ -317,7 +312,7 @@ class Mailer {
 			$alt_function = static function ( $mailer ) use ( $actor, $activity ) {
 				$content = \html_entity_decode(
 					\wp_strip_all_tags(
-						str_replace( '</p>', PHP_EOL . PHP_EOL, $activity['object']['content'] )
+						\str_replace( '</p>', PHP_EOL . PHP_EOL, $activity['object']['content'] )
 					),
 					ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML401
 				);
@@ -357,8 +352,8 @@ class Mailer {
 		}
 
 		$recipients = array();
-		$mentions   = wp_list_filter( (array) $activity['object']['tag'], array( 'type' => 'Mention' ) );
-		$mentions   = array_map( '\Activitypub\object_to_uri', $mentions );
+		$mentions   = \wp_list_filter( (array) $activity['object']['tag'], array( 'type' => 'Mention' ) );
+		$mentions   = \array_map( '\Activitypub\object_to_uri', $mentions );
 		foreach ( (array) $user_ids as $user_id ) {
 			$actor = Actors::get_by_id( $user_id );
 			if ( \is_wp_error( $actor ) ) {
@@ -417,7 +412,7 @@ class Mailer {
 			$alt_function = static function ( $mailer ) use ( $actor, $activity ) {
 				$content = \html_entity_decode(
 					\wp_strip_all_tags(
-						str_replace( '</p>', PHP_EOL . PHP_EOL, $activity['object']['content'] )
+						\str_replace( '</p>', PHP_EOL . PHP_EOL, $activity['object']['content'] )
 					),
 					ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML401
 				);

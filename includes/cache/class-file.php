@@ -237,10 +237,17 @@ abstract class File {
 		$file_name = $hash . '.' . $ext;
 		$file_path = $paths['basedir'] . '/' . $file_name;
 
-		// Move file to destination.
+		/*
+		 * Move the file to its destination, once more after re-creating the directory if that
+		 * fails. Caching an entity's file races with invalidating that same entity, which deletes
+		 * the whole directory: when the delete lands between the two, the move has nowhere to put
+		 * the file and the download is lost for no reason.
+		 */
 		if ( ! static::get_filesystem()->move( $tmp_file, $file_path, true ) ) {
-			\wp_delete_file( $tmp_file );
-			return false;
+			if ( ! \wp_mkdir_p( $paths['basedir'] ) || ! static::get_filesystem()->move( $tmp_file, $file_path, true ) ) {
+				\wp_delete_file( $tmp_file );
+				return false;
+			}
 		}
 
 		// Optimize image if applicable.
@@ -568,7 +575,7 @@ abstract class File {
 		// Method 4: Ensure file extension matches MIME type.
 		$ext = \pathinfo( $file_path, PATHINFO_EXTENSION );
 
-		if ( strtolower( $ext ) !== $expected_ext ) {
+		if ( \strtolower( $ext ) !== $expected_ext ) {
 			$new_path = \preg_replace( '/\.[^.]+$/', '.' . $expected_ext, $file_path );
 			if ( empty( $new_path ) || $new_path === $file_path ) {
 				$new_path = $file_path . '.' . $expected_ext;
@@ -661,8 +668,12 @@ abstract class File {
 		// Handle result.
 		$result_path = $result['path'] ?? $file_path;
 
-		// If path changed (format conversion), delete the original file.
-		if ( $result_path !== $file_path ) {
+		/*
+		 * If the path changed (format conversion), delete the original file. It may already be
+		 * gone: invalidating the entity deletes its whole directory, and that can land while this
+		 * file is being converted. Deleting it again is not an error worth a diagnostic.
+		 */
+		if ( $result_path !== $file_path && \file_exists( $file_path ) ) {
 			\wp_delete_file( $file_path );
 		}
 

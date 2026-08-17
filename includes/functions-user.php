@@ -13,21 +13,6 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 
 /**
- * Returns a users WebFinger "resource".
- *
- * @deprecated 7.1.0 Use {@see \Activitypub\Webfinger::get_user_resource} instead.
- *
- * @param int $user_id The user ID.
- *
- * @return string The User resource.
- */
-function get_webfinger_resource( $user_id ) {
-	\_deprecated_function( __FUNCTION__, '7.1.0', 'Activitypub\Webfinger::get_user_resource' );
-
-	return Webfinger::get_user_resource( $user_id );
-}
-
-/**
  * Returns the followers of a given user.
  *
  * @param int $user_id The user ID.
@@ -63,7 +48,7 @@ function url_to_authorid( $url ) {
 
 	// Check if url has the same host.
 	$request_host = \wp_parse_url( $url, \PHP_URL_HOST );
-	if ( \wp_parse_url( \home_url(), \PHP_URL_HOST ) !== $request_host && get_option( 'activitypub_old_host' ) !== $request_host ) {
+	if ( \wp_parse_url( \home_url(), \PHP_URL_HOST ) !== $request_host && \get_option( 'activitypub_old_host' ) !== $request_host ) {
 		return null;
 	}
 
@@ -103,15 +88,11 @@ function url_to_authorid( $url ) {
  * @return boolean True if the user is enabled, false otherwise.
  */
 function user_can_activitypub( $user_id ) {
-	if ( ! is_numeric( $user_id ) ) {
+	if ( ! \is_numeric( $user_id ) ) {
 		return false;
 	}
 
 	switch ( $user_id ) {
-		case Actors::APPLICATION_USER_ID:
-			$enabled = true; // Application user is always enabled.
-			break;
-
 		case Actors::BLOG_USER_ID:
 			$enabled = ! is_user_type_disabled( 'blog' );
 			break;
@@ -136,7 +117,7 @@ function user_can_activitypub( $user_id ) {
 	 * @param boolean $enabled True if the user is enabled, false otherwise.
 	 * @param int     $user_id The user ID.
 	 */
-	return apply_filters( 'activitypub_user_can_activitypub', $enabled, $user_id );
+	return \apply_filters( 'activitypub_user_can_activitypub', $enabled, $user_id );
 }
 
 /**
@@ -234,7 +215,7 @@ function is_user_type_disabled( $type ) {
 	 * @param boolean $disabled True if the user type is disabled, false otherwise.
 	 * @param string  $type     The User-Type.
 	 */
-	return apply_filters( 'activitypub_is_user_type_disabled', $disabled, $type );
+	return \apply_filters( 'activitypub_is_user_type_disabled', $disabled, $type );
 }
 
 /**

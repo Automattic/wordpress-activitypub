@@ -2,6 +2,8 @@
 
 This folder contains How-To guides for common problems or edge cases. If you miss a guide, please [open an issue](https://github.com/Automattic/wordpress-activitypub/issues/new/choose) or [submit a pull request](https://github.com/Automattic/wordpress-activitypub/pulls).
 
+Troubleshooting something that is broken rather than configuring a setup? Check the [FAQ section](../faq/readme.md) first.
+
 ## Table of Contents
 
 - [Account Migration](account-migration.md) — Moving between Mastodon, WordPress, and other Fediverse platforms.

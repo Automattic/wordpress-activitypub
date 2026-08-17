@@ -519,10 +519,10 @@ class Post_Types {
 				'single'            => true,
 				'description'       => 'Allowed redirect URIs for this client.',
 				'sanitize_callback' => static function ( $value ) {
-					if ( ! is_array( $value ) ) {
+					if ( ! \is_array( $value ) ) {
 						return array();
 					}
-					return array_map( array( Sanitize::class, 'redirect_uri' ), $value );
+					return \array_map( array( Sanitize::class, 'redirect_uri' ), $value );
 				},
 			)
 		);
@@ -745,8 +745,8 @@ class Post_Types {
 					return array(
 						'username'   => $actor->get_preferred_username(),
 						'name'       => $actor->get_name() ?? $actor->get_preferred_username(),
-						'icon'       => object_to_uri( $actor->get_icon() ),
-						'url'        => object_to_uri( $actor->get_url() ?? $actor->get_id() ),
+						'icon'       => \sanitize_url( object_to_uri( $actor->get_icon() ) ?? '' ),
+						'url'        => \sanitize_url( object_to_uri( $actor->get_url() ?? $actor->get_id() ) ?? '' ),
 						'webfinger'  => Remote_Actors::get_acct( $response['id'] ),
 						'identifier' => $actor->get_id(),
 					);
@@ -833,8 +833,8 @@ class Post_Types {
 					return array(
 						'username'   => $actor->get_preferred_username(),
 						'name'       => $actor->get_name() ?? $actor->get_preferred_username(),
-						'icon'       => object_to_uri( $actor->get_icon() ),
-						'url'        => object_to_uri( $actor->get_url() ?? $actor->get_id() ),
+						'icon'       => \sanitize_url( object_to_uri( $actor->get_icon() ) ?? '' ),
+						'url'        => \sanitize_url( object_to_uri( $actor->get_url() ?? $actor->get_id() ) ?? '' ),
 						'webfinger'  => Remote_Actors::get_acct( $id ),
 						'identifier' => $actor->get_id(),
 					);
@@ -856,7 +856,7 @@ class Post_Types {
 			'rest_' . Remote_Posts::POST_TYPE . '_collection_params',
 			function ( $params ) {
 				$params['user_id'] = array(
-					'description'       => __( 'Filter posts by user ID (0 for site/blog actor).', 'activitypub' ),
+					'description'       => \__( 'Filter posts by user ID (0 for site/blog actor).', 'activitypub' ),
 					'type'              => 'integer',
 					'sanitize_callback' => 'absint',
 				);
@@ -946,7 +946,7 @@ class Post_Types {
 	 */
 	public static function register_object_type_user_param( $params ) {
 		$params['user_id'] = array(
-			'description'       => __( 'Filter terms to those with posts from this user ID.', 'activitypub' ),
+			'description'       => \__( 'Filter terms to those with posts from this user ID.', 'activitypub' ),
 			'type'              => 'integer',
 			'sanitize_callback' => 'absint',
 		);
@@ -1014,7 +1014,7 @@ class Post_Types {
 		);
 
 		if ( isset( $post_metas[ $meta_key ] ) && $post_metas[ $meta_key ] === (string) $meta_value ) {
-			if ( 'update_post_metadata' === current_action() ) {
+			if ( 'update_post_metadata' === \current_action() ) {
 				\delete_post_meta( $object_id, $meta_key );
 			}
 

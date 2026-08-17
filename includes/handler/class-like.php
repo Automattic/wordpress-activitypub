@@ -41,7 +41,13 @@ class Like {
 			return;
 		}
 
-		$exists = Comment::object_id_to_comment( esc_url_raw( $url ) );
+		/*
+		 * Dedupe on the Like activity ID (its source_id), not the liked object, so repeat
+		 * deliveries stay idempotent even when a mangled author name defeats WordPress's own
+		 * duplicate check. Match any status, so a like that was marked as spam or trashed
+		 * still counts as seen. See https://github.com/Automattic/wordpress-activitypub/issues/3215.
+		 */
+		$exists = Comment::object_id_to_comment( \esc_url_raw( object_to_uri( $like ) ), array( 'status' => 'any' ) );
 		if ( $exists ) {
 			return;
 		}
@@ -49,9 +55,9 @@ class Like {
 		$success = false;
 		$result  = Interactions::add_reaction( $like );
 
-		if ( $result && ! is_wp_error( $result ) ) {
+		if ( $result && ! \is_wp_error( $result ) ) {
 			$success = true;
-			$result  = get_comment( $result );
+			$result  = \get_comment( $result );
 		}
 
 		/**

@@ -23,7 +23,7 @@ class Litespeed_Cache {
 	 */
 	public static $rules = '<IfModule LiteSpeed>
 RewriteEngine On
-RewriteCond %{HTTP:Accept} application
+RewriteCond %{HTTP:Accept} ^[\s,]*(application/activity\+json|application/ld\+json[^,]*activitystreams) [NC]
 RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 </IfModule>';
 
@@ -54,7 +54,9 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	public static function init() {
 		// Add rules if LiteSpeed Cache is active and rules aren't set.
 		if ( is_plugin_active( self::$plugin_slug ) ) {
-			if ( ! \get_option( self::$option_name ) ) {
+			// (Re)write when the installed rules differ from the current ones: first setup, or a rules
+			// update that must replace a previously written (looser) block on existing installs.
+			if ( \get_option( self::$option_name ) !== \md5( self::$rules ) ) {
 				self::add_htaccess_rules();
 			}
 
@@ -86,8 +88,9 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 	public static function add_htaccess_rules() {
 		$added_rules = self::append_with_markers( self::$marker, self::$rules );
 
+		// Store a fingerprint of the written rules so a later change re-applies them (see init()).
 		if ( $added_rules ) {
-			\update_option( self::$option_name, '1' );
+			\update_option( self::$option_name, \md5( self::$rules ) );
 		} else {
 			\update_option( self::$option_name, '0' );
 		}
@@ -181,11 +184,11 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 		$htaccess = $wp_filesystem->get_contents( $htaccess_file );
 
 		// If marker exists, remove the old block first.
-		if ( strpos( $htaccess, $marker ) !== false ) {
+		if ( \strpos( $htaccess, $marker ) !== false ) {
 			// Remove existing marker block.
-			$pattern  = '/# BEGIN ' . preg_quote( $marker, '/' ) . '.*?# END ' . preg_quote( $marker, '/' ) . '\r?\n?/s';
-			$htaccess = preg_replace( $pattern, '', $htaccess );
-			$htaccess = trim( $htaccess );
+			$pattern  = '/# BEGIN ' . \preg_quote( $marker, '/' ) . '.*?# END ' . \preg_quote( $marker, '/' ) . '\r?\n?/s';
+			$htaccess = \preg_replace( $pattern, '', $htaccess );
+			$htaccess = \trim( $htaccess );
 		}
 
 		// If rules are empty, just return (for removal case).
@@ -215,7 +218,7 @@ RewriteRule ^ - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+isjson]
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 
 		// phpcs:ignore WordPress.PHP.NoSilencedErrors
-		if ( @file_exists( \get_home_path() . '.htaccess' ) ) {
+		if ( @\file_exists( \get_home_path() . '.htaccess' ) ) {
 			/** The htaccess file resides in ABSPATH */
 			$htaccess_file = \get_home_path() . '.htaccess';
 		}

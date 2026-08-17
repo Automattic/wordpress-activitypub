@@ -41,13 +41,13 @@ class Extra_Fields {
 		}
 
 		// Limit to 20 fields to prevent response size issues.
-		if ( ! is_admin() ) {
+		if ( ! \is_admin() ) {
 			/**
 			 * Filters the number of extra fields to retrieve for an ActivityPub actor.
 			 *
 			 * @param int $limit The number of extra fields to retrieve. Default 20.
 			 */
-			$args['posts_per_page'] = apply_filters( 'activitypub_actor_extra_fields_limit', 20 );
+			$args['posts_per_page'] = \apply_filters( 'activitypub_actor_extra_fields_limit', 20 );
 			$args['nopaging']       = false;
 		}
 
@@ -63,7 +63,7 @@ class Extra_Fields {
 		 * @param \WP_Post[] $fields   Array of WP_Post objects representing the extra fields.
 		 * @param int        $user_id  The ID of the user whose fields are being retrieved.
 		 */
-		return apply_filters( 'activitypub_get_actor_extra_fields', $fields, $user_id );
+		return \apply_filters( 'activitypub_get_actor_extra_fields', $fields, $user_id );
 	}
 
 	/**
@@ -132,7 +132,7 @@ class Extra_Fields {
 					$attachment = array(
 						'type' => 'Link',
 						'name' => $title,
-						'href' => \esc_url( $tags->get_attribute( 'href' ) ),
+						'href' => \esc_url_raw( $tags->get_attribute( 'href' ) ),
 					);
 
 					$rel = $tags->get_attribute( 'rel' );
@@ -257,8 +257,8 @@ class Extra_Fields {
 			);
 
 			$menu_order    += 10;
-			$extra_field_id = wp_insert_post( $extra_field );
-			$extra_fields[] = get_post( $extra_field_id );
+			$extra_field_id = \wp_insert_post( $extra_field );
+			$extra_fields[] = \get_post( $extra_field_id );
 		}
 
 		$is_blog

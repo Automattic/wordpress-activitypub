@@ -10,29 +10,6 @@
 namespace Activitypub;
 
 /**
- * Detect a comment request.
- *
- * @deprecated 7.1.0
- *
- * @return int|bool Comment ID or false if not found.
- */
-function is_comment() {
-	\_deprecated_function( __FUNCTION__, '7.1.0' );
-
-	$comment_id = get_query_var( 'c', null );
-
-	if ( ! is_null( $comment_id ) ) {
-		$comment = \get_comment( $comment_id );
-
-		if ( $comment ) {
-			return $comment_id;
-		}
-	}
-
-	return false;
-}
-
-/**
  * Get the ActivityPub ID of a Comment by the WordPress Comment ID.
  *
  * @param int|\WP_Comment $id The WordPress Comment ID or object.
@@ -46,12 +23,15 @@ function get_comment_id( $id ) {
 /**
  * Get the comment from an ActivityPub Object ID.
  *
- * @param string $id ActivityPub object ID (usually a URL) to check.
+ * @since 9.1.0 Added the `$args` parameter.
+ *
+ * @param string $id   ActivityPub object ID (usually a URL) to check.
+ * @param array  $args Optional. Additional WP_Comment_Query arguments.
  *
  * @return \WP_Comment|boolean Comment, or false on failure.
  */
-function object_id_to_comment( $id ) {
-	return Comment::object_id_to_comment( $id );
+function object_id_to_comment( $id, $args = array() ) {
+	return Comment::object_id_to_comment( $id, $args );
 }
 
 /**
@@ -155,7 +135,7 @@ function get_comment_ancestors( $comment ) {
 		$parent_id = (int) $ancestor->comment_parent;
 
 		// Loop detection: If the ancestor has been seen before, break.
-		if ( empty( $parent_id ) || ( $parent_id === (int) $comment->comment_ID ) || in_array( $parent_id, $ancestors, true ) ) {
+		if ( empty( $parent_id ) || ( $parent_id === (int) $comment->comment_ID ) || \in_array( $parent_id, $ancestors, true ) ) {
 			break;
 		}
 
@@ -177,12 +157,12 @@ function get_comment_ancestors( $comment ) {
 function register_comment_type( $comment_type, $args = array() ) {
 	global $activitypub_comment_types;
 
-	if ( ! is_array( $activitypub_comment_types ) ) {
+	if ( ! \is_array( $activitypub_comment_types ) ) {
 		$activitypub_comment_types = array();
 	}
 
 	// Sanitize comment type name.
-	$comment_type = sanitize_key( $comment_type );
+	$comment_type = \sanitize_key( $comment_type );
 
 	$activitypub_comment_types[ $comment_type ] = $args;
 
@@ -192,7 +172,7 @@ function register_comment_type( $comment_type, $args = array() ) {
 	 * @param string $comment_type Comment type.
 	 * @param array  $args         Arguments used to register the comment type.
 	 */
-	do_action( 'activitypub_registered_comment_type', $comment_type, $args );
+	\do_action( 'activitypub_registered_comment_type', $comment_type, $args );
 
 	return $args;
 }
@@ -203,7 +183,7 @@ function register_comment_type( $comment_type, $args = array() ) {
  * @return string The reply intent URI.
  */
 function get_reply_intent_js() {
-	return sprintf(
+	return \sprintf(
 		'javascript:(()=>{window.open(\'%s\'+encodeURIComponent(window.location.href));})();',
 		get_reply_intent_url()
 	);
@@ -234,5 +214,5 @@ function get_reply_intent_url() {
 	 */
 	$url = \apply_filters( 'activitypub_reply_intent_url', $url );
 
-	return esc_url_raw( $url );
+	return \esc_url_raw( $url );
 }

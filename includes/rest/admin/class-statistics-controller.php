@@ -8,6 +8,7 @@
 namespace Activitypub\Rest\Admin;
 
 use Activitypub\Collection\Actors;
+use Activitypub\OAuth\Server as OAuth_Server;
 use Activitypub\Statistics;
 
 use function Activitypub\user_can_act_as_blog;
@@ -65,6 +66,12 @@ class Statistics_Controller extends \WP_REST_Controller {
 	 * @return true|\WP_Error True if the request has access, WP_Error otherwise.
 	 */
 	public function get_item_permissions_check( $request ) {
+		// This is an admin endpoint; scoped OAuth C2S tokens must not drive it.
+		$denied = OAuth_Server::deny_if_oauth();
+		if ( null !== $denied ) {
+			return $denied;
+		}
+
 		$user_id = (int) $request->get_param( 'user_id' );
 
 		// Check if user can access stats for this actor.

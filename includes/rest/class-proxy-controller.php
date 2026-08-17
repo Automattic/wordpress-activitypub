@@ -14,8 +14,6 @@ use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
 use Activitypub\Webfinger;
 
-use function Activitypub\is_actor;
-
 /**
  * Proxy Controller.
  *
@@ -181,7 +179,10 @@ class Proxy_Controller extends \WP_REST_Controller {
 			}
 		}
 
-		// Fall back to fetching as a generic object.
+		/*
+		 * Fall back to fetching as a generic object. Actors are already resolved and
+		 * cached above via fetch_by_various(), so this path only proxies the object.
+		 */
 		$object = Http::get_remote_object( $url );
 
 		if ( \is_wp_error( $object ) ) {
@@ -190,11 +191,6 @@ class Proxy_Controller extends \WP_REST_Controller {
 				\__( 'Failed to fetch the remote object.', 'activitypub' ),
 				array( 'status' => 502 )
 			);
-		}
-
-		// If it's an actor, store it for future use.
-		if ( is_actor( $object ) ) {
-			Remote_Actors::upsert( $object );
 		}
 
 		$response = new \WP_REST_Response( $object, 200 );

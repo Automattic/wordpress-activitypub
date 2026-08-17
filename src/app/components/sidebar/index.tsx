@@ -8,7 +8,7 @@
  * External dependencies
  */
 import type { ComponentType, ReactNode } from 'react';
-import { ParsedLocation, UseNavigateResult } from '@tanstack/react-router';
+import type { UseNavigateResult } from '@wordpress/route';
 
 /**
  * WordPress dependencies
@@ -30,7 +30,7 @@ import { addQueryArgs } from '@wordpress/url';
  * Internal dependencies
  */
 import { useFeedFilters } from '../../hooks/use-feed-filters';
-import { useLocation, useNavigate } from '../../router';
+import { useNavigate } from '../../router';
 import SiteHub from '../site-hub';
 import ActorSwitcher from '../actor-switcher';
 import { ObjectTypes } from '../object-types';
@@ -62,15 +62,11 @@ export const menuItems: MenuItemConfig[] = [
 ];
 
 export default function Sidebar(): ReactNode {
-	const location: ParsedLocation< any > = useLocation();
 	const navigate: UseNavigateResult< string > = useNavigate();
 	const { hasActiveFilters, clearAllFilters } = useFeedFilters();
 
-	// Check if a route is currently active
-	const isRouteActive = ( path: string ): boolean => location.pathname === path;
-
 	// For feed route, also consider filters for "selected" state
-	const isFeedFullySelected: boolean = isRouteActive( '/' ) && ! hasActiveFilters;
+	const isFeedFullySelected: boolean = ! hasActiveFilters;
 
 	// Handle menu item click - navigate and clear filters if going to feed
 	const handleMenuItemClick = ( path: string ): void => {
@@ -80,9 +76,7 @@ export default function Sidebar(): ReactNode {
 		void navigate( { to: path } );
 	};
 
-	const activeItem: MenuItemConfig = menuItems.find( ( item: MenuItemConfig ): boolean =>
-		isRouteActive( item.path )
-	);
+	const activeItem: MenuItemConfig = menuItems[ 0 ];
 
 	return (
 		<div className="sidebar">
@@ -110,7 +104,7 @@ export default function Sidebar(): ReactNode {
 							( item: MenuItemConfig ): ReactNode => (
 								<MenuItem
 									key={ item.id }
-									isSelected={ item.path === '/' ? isFeedFullySelected : isRouteActive( item.path ) }
+									isSelected={ item.path === '/' && isFeedFullySelected }
 									onClick={ () => handleMenuItemClick( item.path ) }
 									className="menu-item"
 								>
@@ -123,11 +117,11 @@ export default function Sidebar(): ReactNode {
 				</NavigableMenu>
 
 				{ /* Route-specific sidebar content */ }
-				{ isRouteActive( '/' ) && <ObjectTypes /> }
+				<ObjectTypes />
 			</nav>
 
 			{ /* Route-specific sidebar content */ }
-			{ isRouteActive( '/' ) && <PopularTags /> }
+			<PopularTags />
 
 			{ /* Footer */ }
 			<div className="footer">

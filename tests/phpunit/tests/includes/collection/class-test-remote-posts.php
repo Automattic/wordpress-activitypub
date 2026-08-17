@@ -173,6 +173,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	 */
 	public function test_add() {
 		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'           => 'https://example.com/objects/123',
 				'type'         => 'Note',
@@ -194,6 +195,60 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that add() refuses a Create whose actor does not match the object's
+	 * attributedTo. Only the actor is bound to the HTTP signature, so without this
+	 * a signed Create could store a post attributed to a victim actor.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_rejects_actor_attribution_mismatch() {
+		$activity = array(
+			'actor'  => 'https://attacker.example/users/evil',
+			'object' => array(
+				'id'           => 'https://example.com/objects/spoofed',
+				'type'         => 'Note',
+				'name'         => 'Spoofed',
+				'content'      => '<p>spoofed</p>',
+				'attributedTo' => 'https://example.com/users/testuser',
+			),
+		);
+
+		$result = Remote_Posts::add( $activity, 1 );
+
+		$this->assertWPError( $result, 'A Create whose actor does not match attributedTo must be rejected.' );
+		$this->assertEquals( 'activitypub_create_unauthorized', $result->get_error_code() );
+		$this->assertWPError( Remote_Posts::get_by_guid( 'https://example.com/objects/spoofed' ), 'No post must be created for a mismatched attribution.' );
+	}
+
+	/**
+	 * Test that add() refuses a Create whose object id is on a different host than
+	 * the actor. The post is cached under its own id, so an unbound id would let a
+	 * signed Create cache a post under another host's object URL.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_rejects_cross_host_object_id() {
+		$canonical_object_id = 'https://canonical.example/objects/123';
+
+		$activity = array(
+			'actor'  => 'https://other.example/users/other',
+			'object' => array(
+				'id'           => $canonical_object_id,
+				'type'         => 'Note',
+				'name'         => 'Fake',
+				'content'      => '<p>fabricated</p>',
+				'attributedTo' => 'https://other.example/users/other',
+			),
+		);
+
+		$result = Remote_Posts::add( $activity, 1 );
+
+		$this->assertWPError( $result, 'A Create whose object id host differs from the actor host must be rejected.' );
+		$this->assertEquals( 'activitypub_create_host_mismatch', $result->get_error_code() );
+		$this->assertWPError( Remote_Posts::get_by_guid( $canonical_object_id ), 'No post must be cached under another host object id.' );
+	}
+
+	/**
 	 * Test updating an existing object.
 	 *
 	 * @covers ::update
@@ -201,6 +256,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	public function test_update() {
 		// First, create an object.
 		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'           => 'https://example.com/objects/456',
 				'type'         => 'Note',
@@ -215,6 +271,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 
 		// Now update it.
 		$update_activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'      => 'https://example.com/objects/456',
 				'type'    => 'Note',
@@ -242,6 +299,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	 */
 	public function test_update_rejects_foreign_actor() {
 		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'           => 'https://example.com/objects/owned',
 				'type'         => 'Note',
@@ -294,6 +352,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	 */
 	public function test_update_nonexistent() {
 		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'      => 'https://example.com/objects/nonexistent',
 				'type'    => 'Note',
@@ -315,6 +374,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	public function test_get_by_guid() {
 		// Create an object.
 		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'           => 'https://example.com/objects/789',
 				'type'         => 'Note',
@@ -333,6 +393,38 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 		$this->assertInstanceOf( '\WP_Post', $retrieved_post );
 		$this->assertEquals( $post->ID, $retrieved_post->ID );
 		$this->assertEquals( 'Test Object', $retrieved_post->post_title );
+	}
+
+	/**
+	 * An object whose ID contains an ampersand must be found again by that ID.
+	 *
+	 * WordPress peers publish object IDs like `?p=123&foo=bar`, and WordPress escapes an
+	 * explicitly passed GUID, so the round trip has to survive that escaping.
+	 *
+	 * @covers ::add
+	 * @covers ::get_by_guid
+	 */
+	public function test_get_by_guid_with_ampersand() {
+		$object_id = 'https://example.com/?post_type=post&p=789';
+
+		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
+			'object' => array(
+				'id'           => $object_id,
+				'type'         => 'Note',
+				'name'         => 'Ampersand Object',
+				'content'      => '<p>Test content</p>',
+				'attributedTo' => 'https://example.com/users/testuser',
+			),
+		);
+
+		$post = Remote_Posts::add( $activity, 1 );
+		$this->assertInstanceOf( '\WP_Post', $post );
+
+		$retrieved_post = Remote_Posts::get_by_guid( $object_id );
+
+		$this->assertInstanceOf( '\WP_Post', $retrieved_post, 'An object ID containing an ampersand must be found again.' );
+		$this->assertEquals( $post->ID, $retrieved_post->ID );
 	}
 
 	/**
@@ -447,6 +539,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	 */
 	public function test_preserves_published_timestamp() {
 		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'           => 'https://example.com/objects/timestamp-test',
 				'type'         => 'Note',
@@ -503,6 +596,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	 */
 	public function test_add_with_multiple_recipients() {
 		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'           => 'https://example.com/objects/multi-user',
 				'type'         => 'Note',
@@ -532,6 +626,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	 */
 	public function test_add_with_attachments() {
 		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'           => 'https://example.com/objects/with-attachment',
 				'type'         => 'Note',
@@ -579,6 +674,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	 */
 	public function test_add_appends_attachment_not_in_content() {
 		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'           => 'https://example.com/objects/attachment-appended',
 				'type'         => 'Note',
@@ -616,6 +712,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	 */
 	public function test_add_does_not_duplicate_attachment_in_content() {
 		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'           => 'https://example.com/objects/no-duplicate',
 				'type'         => 'Note',
@@ -652,6 +749,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	public function test_update_with_new_attachments() {
 		// Create initial post without attachments.
 		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'           => 'https://example.com/objects/update-test',
 				'type'         => 'Note',
@@ -671,6 +769,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 
 		// Now update it with multiple new recipients.
 		$update_activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'      => 'https://example.com/objects/update-test',
 				'type'    => 'Note',
@@ -703,6 +802,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	public function test_update_prevents_duplicate_recipients() {
 		// Create an object.
 		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'           => 'https://example.com/objects/no-duplicates',
 				'type'         => 'Note',
@@ -717,6 +817,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 
 		// Update with overlapping recipients.
 		$update_activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'      => 'https://example.com/objects/no-duplicates',
 				'type'    => 'Note',
@@ -751,6 +852,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	 */
 	public function test_add_with_single_recipient_backward_compatibility() {
 		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'           => 'https://example.com/objects/single-user',
 				'type'         => 'Note',
@@ -779,6 +881,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	public function test_update_with_single_recipient_backward_compatibility() {
 		// Create an object.
 		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'           => 'https://example.com/objects/single-update',
 				'type'         => 'Note',
@@ -792,6 +895,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 
 		// Update with single recipient.
 		$update_activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'      => 'https://example.com/objects/single-update',
 				'type'    => 'Note',
@@ -820,6 +924,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	 */
 	public function test_add_recipient() {
 		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'           => 'https://example.com/objects/add-recipient',
 				'type'         => 'Note',
@@ -855,6 +960,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	 */
 	public function test_add_recipients() {
 		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'           => 'https://example.com/objects/add-recipients',
 				'type'         => 'Note',
@@ -887,6 +993,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	 */
 	public function test_remove_recipient() {
 		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'           => 'https://example.com/objects/remove-recipient',
 				'type'         => 'Note',
@@ -920,6 +1027,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	 */
 	public function test_add_existing_post_adds_recipients() {
 		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'           => 'https://example.com/objects/existing-post',
 				'type'         => 'Note',
@@ -961,6 +1069,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 
 		// Update with attachments.
 		$update_activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'         => 'https://example.com/objects/existing-post',
 				'type'       => 'Note',
@@ -1004,6 +1113,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	public function test_update_with_changed_attachments() {
 		// Create post with attachment.
 		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'           => 'https://example.com/objects/change-test',
 				'type'         => 'Note',
@@ -1035,6 +1145,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 
 		// Update with different attachment URL.
 		$update_activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'         => 'https://example.com/objects/change-test',
 				'type'       => 'Note',
@@ -1100,6 +1211,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	public function test_update_keeps_same_attachments() {
 		// Create post with attachment.
 		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'           => 'https://example.com/objects/keep-test',
 				'type'         => 'Note',
@@ -1131,6 +1243,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 
 		// Update with same attachment URL (just change content).
 		$update_activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'         => 'https://example.com/objects/keep-test',
 				'type'       => 'Note',
@@ -1878,6 +1991,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	 */
 	public function test_activity_to_post_with_video_attachment() {
 		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'           => 'https://example.com/objects/video-post',
 				'type'         => 'Note',
@@ -1910,6 +2024,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	 */
 	public function test_activity_to_post_with_audio_attachment() {
 		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
 			'object' => array(
 				'id'           => 'https://example.com/objects/audio-post',
 				'type'         => 'Note',

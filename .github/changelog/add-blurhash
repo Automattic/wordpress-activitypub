@@ -1,4 +1,0 @@
-Significance: minor
-Type: added
-
-Generate a blurred color preview (blurhash) for images so other fediverse apps can show a placeholder while your photos load.

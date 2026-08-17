@@ -11,6 +11,8 @@ use Activitypub\Emoji;
 use Activitypub\Sanitize;
 
 use function Activitypub\generate_post_summary;
+use function Activitypub\is_same_actor;
+use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 use function Activitypub\process_remote_media;
 
@@ -68,6 +70,30 @@ class Remote_Posts {
 		// If post exists, call update instead.
 		if ( ! \is_wp_error( $existing ) ) {
 			return self::update( $activity, $recipients );
+		}
+
+		// An actor may only create posts attributed to itself; only the actor is signature-bound, not attributedTo.
+		if ( ! is_same_actor( $activity['actor'] ?? '', $activity_object['attributedTo'] ?? '' ) ) {
+			return new \WP_Error(
+				'activitypub_create_unauthorized',
+				\__( 'The Create actor does not match the object attributedTo.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		/*
+		 * A post is cached under its own id (guid), so that id must live on the same host
+		 * as its author. Otherwise a signed Create could cache a post under a different
+		 * host's object id, mis-recording its origin and taking over that id, so the
+		 * genuine post can no longer overwrite the cached copy (the update owner-check
+		 * would then reject the real author).
+		 */
+		if ( ! is_same_host( $activity_object['id'] ?? '', $activity['actor'] ?? '' ) ) {
+			return new \WP_Error(
+				'activitypub_create_host_mismatch',
+				\__( 'The object id must be on the same host as the actor.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
 		}
 
 		// Post doesn't exist, create new post.
@@ -322,7 +348,10 @@ class Remote_Posts {
 			'post_type'     => self::POST_TYPE,
 			'post_date_gmt' => $gm_date,
 			'post_date'     => \get_date_from_gmt( $gm_date ),
-			'guid'          => isset( $activity['id'] ) ? \esc_url_raw( $activity['id'] ) : '',
+			// Store the GUID the way get_by_guid() looks it up, which is with esc_url(): an
+			// ampersand becomes `&#038;`. Passing it unescaped instead lets `pre_post_guid`
+			// store it as `&amp;`, and the two spellings never match.
+			'guid'          => isset( $activity['id'] ) ? \esc_url( $activity['id'] ) : '',
 		);
 	}
 
@@ -531,7 +560,7 @@ class Remote_Posts {
 			\wp_delete_post( $post_id, true );
 		}
 
-		return count( $post_ids );
+		return \count( $post_ids );
 	}
 
 	/**
