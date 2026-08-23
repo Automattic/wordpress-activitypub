@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fixed deletions from Mastodon and other servers not removing the corresponding comment on your site.

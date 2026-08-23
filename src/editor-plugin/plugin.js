@@ -34,13 +34,13 @@ const DELETION_NOTICE_ID = 'activitypub/federated-deletion-warning';
 const EditorPlugin = () => {
 	const postType = useSelect( ( selectFn ) => selectFn( editorStore ).getCurrentPostType(), [] );
 	const [ meta, setMeta ] = useEntityProp( 'postType', postType, 'meta' );
-	const postDate = useSelect( ( selectFn ) => selectFn( editorStore ).getCurrentPost().date, [] );
 
-	// The edited status and password drive the "removed from the Fediverse" warning.
-	const { editedStatus, editedPassword } = useSelect( ( selectFn ) => {
+	// The edited date, status and password drive the visibility and the "removed from the Fediverse" warning.
+	const { editedDate, editedStatus, editedPassword } = useSelect( ( selectFn ) => {
 		const editor = selectFn( editorStore );
 
 		return {
+			editedDate: editor.getEditedPostAttribute( 'date' ),
 			editedStatus: editor.getEditedPostAttribute( 'status' ),
 			editedPassword: editor.getEditedPostAttribute( 'password' ),
 		};
@@ -49,7 +49,7 @@ const EditorPlugin = () => {
 	const { createWarningNotice, removeNotice } = useDispatch( noticesStore );
 
 	// Get the computed default visibility.
-	const defaultVisibility = getDefaultVisibility( meta, postDate );
+	const defaultVisibility = getDefaultVisibility( meta, editedDate );
 
 	// Get the default quote policy from settings.
 	const defaultQuotePolicy = window._activityPubOptions?.defaultQuotePolicy || 'anyone';
