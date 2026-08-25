@@ -843,7 +843,8 @@ class Migration {
 		global $wpdb;
 
 		// One DISTINCT lookup instead of a query per actor, which matters on sites with many authors.
-		$user_ids = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT post_author FROM $wpdb->posts WHERE post_type = %s", Extra_Fields::USER_POST_TYPE ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// Trashed fields count as provisioned, an auto-draft does not: opening the "Add new" screen creates one without the actor ever having a field.
+		$user_ids = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT post_author FROM $wpdb->posts WHERE post_type = %s AND post_status != 'auto-draft'", Extra_Fields::USER_POST_TYPE ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 
 		foreach ( $user_ids as $user_id ) {
 			// Orphaned fields can carry a zero author, which is not an actor we can flag.
@@ -854,7 +855,7 @@ class Migration {
 			\update_user_option( (int) $user_id, 'activitypub_default_extra_fields', true );
 		}
 
-		$blog_fields = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $wpdb->posts WHERE post_type = %s", Extra_Fields::BLOG_POST_TYPE ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$blog_fields = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $wpdb->posts WHERE post_type = %s AND post_status != 'auto-draft'", Extra_Fields::BLOG_POST_TYPE ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 
 		if ( $blog_fields ) {
 			\update_option( 'activitypub_default_extra_fields', true );

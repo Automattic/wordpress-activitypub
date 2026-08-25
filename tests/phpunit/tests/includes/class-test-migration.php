@@ -771,9 +771,30 @@ class Test_Migration extends \WP_UnitTestCase {
 		$newcomer    = \get_user_by( 'id', $newcomer_id );
 		$newcomer->add_cap( 'activitypub' );
 
+		$drafter_id = self::factory()->user->create();
+		$drafter    = \get_user_by( 'id', $drafter_id );
+		$drafter->add_cap( 'activitypub' );
+
 		\delete_user_option( $provisioned_id, 'activitypub_default_extra_fields' );
 		\delete_user_option( $newcomer_id, 'activitypub_default_extra_fields' );
+		\delete_user_option( $drafter_id, 'activitypub_default_extra_fields' );
 		\delete_option( 'activitypub_default_extra_fields' );
+
+		/*
+		 * Opening the "Add new extra field" screen leaves an auto-draft behind, which is not a field the actor ever had.
+		 * Inserted directly, because wp_insert_post() would fire transition_post_status and make
+		 * Extra_Fields::default_actor_extra_fields() provision real fields for this actor.
+		 */
+		global $wpdb;
+		$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->posts,
+			array(
+				'post_type'   => Extra_Fields::USER_POST_TYPE,
+				'post_author' => $drafter_id,
+				'post_status' => 'auto-draft',
+				'post_title'  => 'Auto Draft',
+			)
+		);
 
 		\wp_insert_post(
 			array(
@@ -804,6 +825,7 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		$this->assertSame( '1', \get_user_option( 'activitypub_default_extra_fields', $provisioned_id ), 'An actor that already holds an extra field is marked as provisioned.' );
 		$this->assertFalse( \get_user_option( 'activitypub_default_extra_fields', $newcomer_id ), 'An actor without extra fields is left alone and keeps its defaults.' );
+		$this->assertFalse( \get_user_option( 'activitypub_default_extra_fields', $drafter_id ), 'An actor with only an auto-draft is not treated as provisioned.' );
 		$this->assertTrue( (bool) \get_option( 'activitypub_default_extra_fields' ), 'The blog actor is marked as provisioned.' );
 
 		_delete_all_data();
