@@ -314,7 +314,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		/* @var Activity $activity Activity object.*/
 		$activity = Activity::init_from_array( $data );
 
-		// The identity that signed, which the blocklist prefers over the `actor` the body claims.
+		// Read from the header, not verified: the blocklist uses it to add a match, never to skip one.
 		$key_id = Signature::get_key_id( $request );
 
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput

@@ -195,8 +195,9 @@ class Webfinger {
 			case 'acct':
 			case 'mailto':
 			case 'xmpp':
-				if ( \strpos( $identifier, '@' ) !== false ) {
-					$host = \substr( $identifier, \strpos( $identifier, '@' ) + 1 );
+				// Split on the last `@`: a local part may contain one, the host may not.
+				if ( \strrpos( $identifier, '@' ) !== false ) {
+					$host = \substr( $identifier, \strrpos( $identifier, '@' ) + 1 );
 				}
 				break;
 			default:

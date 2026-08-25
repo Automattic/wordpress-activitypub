@@ -808,15 +808,15 @@ class Test_Moderation extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that a blocked signer is caught without resolving the claim.
+	 * Test that a blocked key id is caught without resolving the claim.
 	 *
-	 * The signature already resolved and self-confirmed the signer, so a respelled `actor` should
-	 * be caught from that identity rather than by going back to the network for the claim.
+	 * The key id names its actor, so a respelled `actor` is caught from it rather than by going
+	 * back to the network for the claim.
 	 *
 	 * @covers ::activity_is_blocked
 	 * @covers ::actor_matches_blocklist
 	 */
-	public function test_verified_signer_is_matched_without_a_request() {
+	public function test_key_id_is_matched_without_a_request() {
 		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_aliased_actor' ), 20, 2 );
 
 		Moderation::add_site_block( 'actor', 'https://blocked.example.com/users/evil' );
@@ -875,6 +875,32 @@ class Test_Moderation extends \WP_UnitTestCase {
 			Moderation::activity_is_blocked( $this->follow_from( 'https://blocked.example.com/@evil' ) ),
 			'Without a key id the claim should still be resolved.'
 		);
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_aliased_actor' ), 20 );
+	}
+
+	/**
+	 * Test that a forged key id cannot skip the resolution.
+	 *
+	 * `Signature::get_key_id()` only reads the header and `Delete` defers verification, so the
+	 * value is attacker controlled. Claiming the key id matches the actor must not be a way to
+	 * avoid resolving an alias.
+	 *
+	 * @covers ::activity_is_blocked
+	 * @covers ::actor_matches_blocklist
+	 */
+	public function test_forged_key_id_cannot_skip_resolution() {
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_aliased_actor' ), 20, 2 );
+
+		Moderation::add_site_block( 'actor', 'https://blocked.example.com/users/evil' );
+
+		$blocked = Moderation::activity_is_blocked(
+			$this->follow_from( 'https://blocked.example.com/@evil' ),
+			null,
+			'https://blocked.example.com/@evil#main-key'
+		);
+
+		$this->assertTrue( $blocked, 'An alias must still be resolved when the key id mirrors it.' );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_aliased_actor' ), 20 );
 	}

@@ -352,8 +352,13 @@ function normalize_actor_uri( $uri ) {
 	 * without one is malformed and is compared as it came in.
 	 */
 	if ( empty( $parts['host'] ) ) {
-		if ( \preg_match( '/^(.*@)([^@]+)$/', $uri, $handle ) ) {
-			return $handle[1] . fold_host( $handle[2] );
+		// `acct:` and a leading `@` are spellings of the same handle, so they are dropped before
+		// comparing. The local part keeps its case; only the host half is folded.
+		$handle = \preg_replace( '/^acct:/i', '', $uri );
+		$handle = \ltrim( $handle, '@' );
+
+		if ( \preg_match( '/^(.*@)([^@]+)$/', $handle, $parsed ) ) {
+			return $parsed[1] . fold_host( $parsed[2] );
 		}
 
 		return \untrailingslashit( $uri );
