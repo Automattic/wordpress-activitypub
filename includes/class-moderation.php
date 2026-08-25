@@ -421,24 +421,10 @@ class Moderation {
 	/**
 	 * Check a delivered actor URI against the blocked actors.
 	 *
-	 * The delivered `actor` is an untrusted string, and the signature only binds it to a host:
-	 * `Verification::verify_key_id()` requires the keyId and the actor to share a host, not to be
-	 * the same string. A blocked actor can therefore keep their real account and key and vary only
-	 * the spelling of the URI they send, which `Http::get_remote_object()` then resolves back to the
-	 * blocked identity when a handler stores it.
-	 *
-	 * Matching happens in two steps. Normalized comparison catches the spellings that are the same
-	 * URI, and costs nothing. Anything else is only a match if it resolves to a blocked id, which
-	 * takes a fetch, so it is limited to deliveries from a host that has a blocked actor on it:
-	 * no other host can produce a match, and the signature check has already contacted this one.
-	 * Responses are cached per URL, so ordinary repeat traffic does not repeat the request. A
-	 * sender that varies the URI on every delivery does pay a fresh one each time, which is the
-	 * price of catching an alias at all: it is bounded to hosts that already have a block, and to
-	 * activities the sender has to sign and deliver anyway.
-	 *
-	 * A fetch that fails leaves the delivery unblocked, which is what an alias did before this
-	 * check existed, so nothing regresses. It does mean a host that blackholes our requests keeps
-	 * its aliases working, and `Http::get()` caches the error, so the next few are not retried.
+	 * The delivered `actor` is only bound to a host by the signature, not to an exact string, so a
+	 * spelling that normalizes differently still has to be resolved to be ruled out. That costs a
+	 * fetch, so it is limited to hosts that have a blocked actor on them: no other host can match.
+	 * A failed fetch leaves the delivery unblocked, the same as before this check existed.
 	 *
 	 * @param string   $actor_id       The actor URI from the delivered activity.
 	 * @param string[] $blocked_actors The blocked actor URIs.

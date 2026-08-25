@@ -320,25 +320,13 @@ function id_matches_url( $item, $url ) {
 /**
  * Normalize an actor URI so two spellings of the same identity compare equal.
  *
- * For comparing an incoming URI against one we already hold, such as the moderation
- * blocklist. `id_matches_url()` already ignores the fragment and a trailing slash, so
- * a comparison against raw strings would treat as two identities what the rest of the
- * plugin resolves to one.
+ * Folds only what RFC 3986 calls case-insensitive, the scheme and host, plus a default port
+ * and a trailing slash. Path and query keep their case, and `http` stays distinct from
+ * `https`. Userinfo is dropped, so a few technically distinct URIs compare equal, which errs
+ * towards matching a block rather than missing one.
  *
- * Only the case-insensitive parts of a URI are folded: the scheme and host per
- * RFC 3986, and a port that is the default for the scheme. Path and query keep
- * their case, because they are case-sensitive and a different path is a
- * different actor. The scheme's value is not folded, `http` and `https` stay distinct.
- *
- * Userinfo is dropped and repeated trailing slashes collapse, so a handful of URIs that
- * are technically distinct compare equal. Actor ids do not carry userinfo in practice, and
- * erring towards a match keeps a block from being talked out of, which is the direction
- * this comparison should fail in.
- *
- * Deliberately not used by `id_matches_url()`, which stays stricter. That one guards a
- * cache write keyed on the exact id: accepting a variant there would confirm a document
- * under one spelling and then store it under another. This one only compares, so it can
- * fold without writing anything.
+ * Deliberately not used by `id_matches_url()`, which guards a cache write keyed on the exact
+ * id: folding there would confirm a document under one spelling and store it under another.
  *
  * @since unreleased
  *

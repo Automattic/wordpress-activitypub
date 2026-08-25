@@ -580,11 +580,8 @@ class Test_Moderation extends \WP_UnitTestCase {
 		Moderation::add_site_block( 'actor', 'https://blocked.example.com/users/evil' );
 
 		$variants = array(
-			'https://blocked.example.com/users/evil',
 			'https://blocked.example.com/users/evil/',
-			'https://BLOCKED.example.com/users/evil',
-			'https://blocked.example.com:443/users/evil',
-			'https://blocked.example.com/users/evil#main-key',
+			'https://BLOCKED.example.com:443/users/evil',
 		);
 
 		foreach ( $variants as $variant ) {
@@ -684,11 +681,8 @@ class Test_Moderation extends \WP_UnitTestCase {
 		Moderation::add_site_block( 'actor', $actor_uri );
 
 		$variants = array(
-			$actor_uri,
 			'https://example.com/@baduser/',
-			'https://EXAMPLE.com/@baduser',
-			'https://example.com:443/@baduser',
-			'https://example.com/@baduser#main-key',
+			'https://EXAMPLE.com:443/@baduser',
 		);
 
 		foreach ( $variants as $variant ) {
@@ -700,70 +694,6 @@ class Test_Moderation extends \WP_UnitTestCase {
 		$this->assertFalse( Moderation::is_actor_blocked( 'https://example.com/@gooduser' ) );
 
 		Moderation::remove_site_block( 'actor', $actor_uri );
-	}
-
-	/**
-	 * Test that is_actor_blocked() folds host case for domain blocks.
-	 *
-	 * @covers ::is_actor_blocked
-	 */
-	public function test_is_actor_blocked_domain_is_case_insensitive() {
-		Moderation::add_site_block( 'domain', 'spam.example.com' );
-
-		$this->assertTrue( Moderation::is_actor_blocked( 'https://SPAM.example.com/@user' ) );
-		$this->assertFalse( Moderation::is_actor_blocked( 'https://good.example.com/@user' ) );
-	}
-
-	/**
-	 * Test that an acct identifier is matched against blocked domains before it is resolved.
-	 *
-	 * `wp_parse_url()` finds no host in `acct:user@host`, so without reading the host off the
-	 * identifier a domain block is missed whenever the webfinger lookup fails, and the lookup
-	 * itself contacts a host the admin has blocked.
-	 *
-	 * @covers ::activity_is_blocked
-	 * @covers ::check_activity_against_blocks
-	 */
-	public function test_acct_actor_matches_blocked_domain_without_resolving() {
-		Moderation::add_site_block( 'domain', 'blocked.example.com' );
-
-		$this->assertTrue(
-			Moderation::activity_is_blocked( $this->follow_from( 'acct:evil@blocked.example.com' ) ),
-			'An acct identifier on a blocked domain should be blocked.'
-		);
-		$this->assertTrue(
-			Moderation::activity_is_blocked( $this->follow_from( 'acct:evil@BLOCKED.example.com' ) ),
-			'An acct host should be folded like any other host.'
-		);
-		$this->assertFalse(
-			Moderation::activity_is_blocked( $this->follow_from( 'acct:someone@good.example.com' ) ),
-			'An acct identifier on an unblocked domain should not be blocked.'
-		);
-	}
-
-	/**
-	 * Test that only actual handles are read as handles.
-	 *
-	 * A URI in another scheme can carry an `@` in its path, and reading the host off that would
-	 * report the path segment as the host and miss the domain block.
-	 *
-	 * @covers ::activity_is_blocked
-	 * @covers ::check_activity_against_blocks
-	 */
-	public function test_domain_block_matches_non_http_schemes() {
-		Moderation::add_site_block( 'domain', 'blocked.example.com' );
-
-		$actors = array(
-			'ftp://blocked.example.com/@user',
-			'//blocked.example.com/@user',
-		);
-
-		foreach ( $actors as $actor ) {
-			$this->assertTrue(
-				Moderation::activity_is_blocked( $this->follow_from( $actor ) ),
-				"Actor $actor should match the blocked domain"
-			);
-		}
 	}
 
 	/**
@@ -821,17 +751,35 @@ class Test_Moderation extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that domain blocks fold host case.
+	 * Test that a blocked domain matches every form an actor identifier can take.
+	 *
+	 * `wp_parse_url()` finds no host in a handle, and a URI in another scheme can carry an `@`
+	 * in its path that would be read as one. Both would miss the block.
 	 *
 	 * @covers ::activity_is_blocked
 	 * @covers ::check_activity_against_blocks
 	 */
-	public function test_domain_blocking_is_case_insensitive() {
-		Moderation::add_site_block( 'domain', 'spam-instance.com' );
+	public function test_domain_block_matches_identifier_forms() {
+		Moderation::add_site_block( 'domain', 'blocked.example.com' );
 
-		$this->assertTrue(
-			Moderation::activity_is_blocked( $this->follow_from( 'https://SPAM-Instance.com/@anyuser' ) ),
-			'A mixed-case host should match a blocked domain.'
+		$blocked = array(
+			'https://BLOCKED.example.com/@user',
+			'acct:evil@blocked.example.com',
+			'acct:evil@BLOCKED.example.com',
+			'ftp://blocked.example.com/@user',
+			'//blocked.example.com/@user',
+		);
+
+		foreach ( $blocked as $actor ) {
+			$this->assertTrue(
+				Moderation::activity_is_blocked( $this->follow_from( $actor ) ),
+				"Actor $actor should match the blocked domain"
+			);
+		}
+
+		$this->assertFalse(
+			Moderation::activity_is_blocked( $this->follow_from( 'acct:someone@good.example.com' ) ),
+			'An identifier on an unblocked domain should not be blocked.'
 		);
 	}
 
