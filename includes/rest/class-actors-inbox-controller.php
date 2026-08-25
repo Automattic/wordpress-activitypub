@@ -12,7 +12,6 @@ use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Inbox;
 use Activitypub\Moderation;
-use Activitypub\Signature;
 
 use function Activitypub\camel_to_snake_case;
 use function Activitypub\get_masked_wp_version;
@@ -314,11 +313,8 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		/* @var Activity $activity Activity object.*/
 		$activity = Activity::init_from_array( $data );
 
-		// Read from the header, not verified: the blocklist uses it to add a match, never to skip one.
-		$key_id = Signature::get_key_id( $request );
-
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		if ( Moderation::activity_is_blocked( $activity, $user_id, $key_id ) ) {
+		if ( Moderation::activity_is_blocked( $activity, $user_id ) ) {
 			/**
 			 * ActivityPub inbox disallowed activity.
 			 *

@@ -52,21 +52,20 @@ class Moderation {
 	 *
 	 * @param Activity $activity The activity.
 	 * @param int|null $user_id  The user ID to check blocks for.
-	 * @param string   $key_id   Optional. The verified signing key id of the sender. Default ''.
 	 * @return bool True if blocked, false otherwise.
 	 */
-	public static function activity_is_blocked( $activity, $user_id = null, $key_id = '' ) {
+	public static function activity_is_blocked( $activity, $user_id = null ) {
 		if ( ! $activity instanceof Activity ) {
 			return false;
 		}
 
 		// First check site-wide blocks (admin moderation).
-		if ( self::activity_is_blocked_site_wide( $activity, $key_id ) ) {
+		if ( self::activity_is_blocked_site_wide( $activity ) ) {
 			return true;
 		}
 
 		// Then check user-specific blocks.
-		if ( $user_id && self::activity_is_blocked_for_user( $activity, $user_id, $key_id ) ) {
+		if ( $user_id && self::activity_is_blocked_for_user( $activity, $user_id ) ) {
 			return true;
 		}
 
@@ -81,17 +80,16 @@ class Moderation {
 	 * Check if an activity is blocked site-wide.
 	 *
 	 * @param Activity $activity The activity.
-	 * @param string   $key_id   Optional. The verified signing key id of the sender. Default ''.
 	 * @return bool True if blocked, false otherwise.
 	 */
-	public static function activity_is_blocked_site_wide( $activity, $key_id = '' ) {
+	public static function activity_is_blocked_site_wide( $activity ) {
 		$blocks = self::get_site_blocks();
 
 		if ( ! self::has_blocks( $blocks ) ) {
 			return false;
 		}
 
-		return self::check_activity_against_blocks( $activity, $blocks, $key_id );
+		return self::check_activity_against_blocks( $activity, $blocks );
 	}
 
 	/**
@@ -99,17 +97,16 @@ class Moderation {
 	 *
 	 * @param Activity $activity The activity.
 	 * @param int      $user_id  The user ID.
-	 * @param string   $key_id   Optional. The verified signing key id of the sender. Default ''.
 	 * @return bool True if blocked, false otherwise.
 	 */
-	public static function activity_is_blocked_for_user( $activity, $user_id, $key_id = '' ) {
+	public static function activity_is_blocked_for_user( $activity, $user_id ) {
 		$blocks = self::get_user_blocks( $user_id );
 
 		if ( ! self::has_blocks( $blocks ) ) {
 			return false;
 		}
 
-		return self::check_activity_against_blocks( $activity, $blocks, $key_id );
+		return self::check_activity_against_blocks( $activity, $blocks );
 	}
 
 	/**
@@ -470,11 +467,10 @@ class Moderation {
 	 *
 	 * @param string   $actor_id       The actor URI from the delivered activity.
 	 * @param string[] $blocked_actors The blocked actor URIs.
-	 * @param string   $key_id         Optional. The verified signing key id of the sender. Default ''.
 	 *
 	 * @return bool True if the actor is blocked, false otherwise.
 	 */
-	private static function actor_matches_blocklist( $actor_id, $blocked_actors, $key_id = '' ) {
+	private static function actor_matches_blocklist( $actor_id, $blocked_actors ) {
 		if ( empty( $blocked_actors ) ) {
 			return false;
 		}
@@ -502,13 +498,7 @@ class Moderation {
 			return false;
 		}
 
-		/*
-		 * The key id is compared as well as the claim. `Signature::get_key_id()` only reads the
-		 * header, and `Delete` defers verification entirely, so this value is not trusted: it is
-		 * used only to add a match, never to skip one. Forging it can block the sender's own
-		 * delivery and nothing else.
-		 */
-		if ( self::uri_matches_actors( $actor_id, $on_host ) || self::uri_matches_actors( $key_id, $on_host ) ) {
+		if ( self::uri_matches_actors( $actor_id, $on_host ) ) {
 			return true;
 		}
 
@@ -535,10 +525,9 @@ class Moderation {
 	 *
 	 * @param Activity $activity The activity.
 	 * @param array    $blocks   Blocks organized by type, as returned by get_site_blocks().
-	 * @param string   $key_id   Optional. The verified signing key id of the sender. Default ''.
 	 * @return bool True if blocked, false otherwise.
 	 */
-	private static function check_activity_against_blocks( $activity, $blocks, $key_id = '' ) {
+	private static function check_activity_against_blocks( $activity, $blocks ) {
 		// Extract actor information.
 		$actor_id = object_to_uri( $activity->get_actor() );
 
@@ -578,7 +567,7 @@ class Moderation {
 		}
 
 		// Check blocked actors.
-		if ( self::actor_matches_blocklist( $actor_id, $blocks['actors'], $key_id ) ) {
+		if ( self::actor_matches_blocklist( $actor_id, $blocks['actors'] ) ) {
 			return true;
 		}
 
