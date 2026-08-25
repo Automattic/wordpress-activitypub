@@ -11,6 +11,7 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Interactions;
 use Activitypub\Comment;
 use Activitypub\Http;
+use Activitypub\Webfinger;
 
 use function Activitypub\is_activity;
 use function Activitypub\is_activity_public;
@@ -84,8 +85,8 @@ class Announce {
 			return;
 		}
 
-		$origin_host = \strtolower( (string) \wp_parse_url( (string) $object_url, \PHP_URL_HOST ) );
-		$actor_host  = \strtolower( (string) \wp_parse_url( (string) object_to_uri( $object['actor'] ?? '' ), \PHP_URL_HOST ) );
+		$origin_host = Webfinger::get_host( $object_url );
+		$actor_host  = Webfinger::get_host( object_to_uri( $object['actor'] ?? '' ) );
 
 		/*
 		 * Only an actor's own server may vouch for an activity attributed to it, so the

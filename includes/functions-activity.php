@@ -347,29 +347,19 @@ function normalize_actor_uri( $uri ) {
 		return \untrailingslashit( $uri );
 	}
 
-	$scheme = isset( $parts['scheme'] ) ? \strtolower( $parts['scheme'] ) : '';
-	$host   = \strtolower( $parts['host'] );
-	$port   = '';
+	$scheme  = \strtolower( $parts['scheme'] ?? '' );
+	$default = array(
+		'http'  => 80,
+		'https' => 443,
+	);
 
-	// Keep the port only when it is not the default for the scheme, so both spellings match.
-	if ( isset( $parts['port'] ) ) {
-		$is_default = ( 'http' === $scheme && 80 === (int) $parts['port'] ) || ( 'https' === $scheme && 443 === (int) $parts['port'] );
+	// A port that is the scheme's default is the same address written two ways.
+	$port = isset( $parts['port'] ) && ( $default[ $scheme ] ?? 0 ) !== (int) $parts['port'] ? ':' . (int) $parts['port'] : '';
 
-		if ( ! $is_default ) {
-			$port = ':' . (int) $parts['port'];
-		}
-	}
+	// The trailing slash is folded on the path rather than the whole URI so a query cannot hide it.
+	$normalized = $scheme . '://' . \strtolower( $parts['host'] ) . $port . \untrailingslashit( $parts['path'] ?? '' );
 
-	$normalized = ( '' === $scheme ? '//' : $scheme . '://' ) . $host . $port;
-
-	// Fold the trailing slash on the path itself, so a query string cannot hide it.
-	$normalized .= \untrailingslashit( $parts['path'] ?? '' );
-
-	if ( isset( $parts['query'] ) ) {
-		$normalized .= '?' . $parts['query'];
-	}
-
-	return $normalized;
+	return isset( $parts['query'] ) ? $normalized . '?' . $parts['query'] : $normalized;
 }
 
 /**

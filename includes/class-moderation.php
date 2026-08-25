@@ -317,7 +317,7 @@ class Moderation {
 		}
 
 		$normalized = normalize_actor_uri( $actor_uri );
-		$hosts      = array( self::uri_host( $actor_uri ) );
+		$hosts      = array( Webfinger::get_host( $actor_uri ) );
 
 		// Check site-wide blocks.
 		$site_blocks = self::get_site_blocks();
@@ -344,27 +344,6 @@ class Moderation {
 		}
 
 		return false;
-	}
-
-	/**
-	 * Get the folded host of an actor identifier.
-	 *
-	 * `wp_parse_url()` finds no host in a handle, so identifiers go through Webfinger, which
-	 * knows both forms. Without that a domain block would be missed whenever the lookup that
-	 * turns a handle into a URL is skipped or fails.
-	 *
-	 * @param string $value The actor identifier, a URL or a handle.
-	 *
-	 * @return string The folded host, or an empty string when there is none.
-	 */
-	private static function uri_host( $value ) {
-		$identifier_and_host = Webfinger::get_identifier_and_host( (string) $value );
-
-		if ( \is_wp_error( $identifier_and_host ) ) {
-			return '';
-		}
-
-		return \strtolower( $identifier_and_host[1] );
 	}
 
 	/**
@@ -440,36 +419,27 @@ class Moderation {
 			return true;
 		}
 
-		$host = self::uri_host( $actor_id );
-		if ( '' === $host ) {
-			return false;
-		}
+		$host = Webfinger::get_host( $actor_id );
 
-		$host_is_blocked = false;
 		foreach ( $blocked_actors as $blocked ) {
-			if ( self::uri_host( $blocked ) === $host ) {
-				$host_is_blocked = true;
-				break;
+			if ( '' === $host || Webfinger::get_host( $blocked ) !== $host ) {
+				continue;
 			}
+
+			/*
+			 * Resolved rather than read from a locally stored actor: a `guid` is the id the actor
+			 * declared, and `Update` stores an embedded actor object bound only to the sender's
+			 * host, so a remote server can store itself under any same-host id it likes.
+			 */
+			$object = Http::get_remote_object( $actor_id );
+
+			return ! \is_wp_error( $object )
+				&& isset( $object['id'] )
+				&& \is_string( $object['id'] )
+				&& self::uri_matches_actors( normalize_actor_uri( $object['id'] ), $blocked_actors );
 		}
 
-		if ( ! $host_is_blocked ) {
-			return false;
-		}
-
-		/*
-		 * Resolved rather than read from a locally stored actor: a `guid` is the id the actor
-		 * declared, and `Update` accepts an embedded actor object bound only to the sender's host,
-		 * so a remote server can store itself under any same-host id it likes. Trusting that here
-		 * would let it clear itself. `Http::get_remote_object()` self-confirms, and caches, so a
-		 * repeat delivery from the same actor does not repeat the request.
-		 */
-		$object = Http::get_remote_object( $actor_id );
-		if ( \is_wp_error( $object ) || ! isset( $object['id'] ) || ! \is_string( $object['id'] ) ) {
-			return false;
-		}
-
-		return self::uri_matches_actors( normalize_actor_uri( $object['id'] ), $blocked_actors );
+		return false;
 	}
 
 	/**
@@ -493,9 +463,9 @@ class Moderation {
 		 * contacted to find out that it is blocked.
 		 */
 		$hosts = array(
-			self::uri_host( $actor_id ),
-			self::uri_host( $activity->get_id() ),
-			self::uri_host( object_to_uri( $activity->get_object() ) ?? '' ),
+			Webfinger::get_host( $actor_id ),
+			Webfinger::get_host( $activity->get_id() ),
+			Webfinger::get_host( object_to_uri( $activity->get_object() ) ?? '' ),
 		);
 
 		if ( self::hosts_are_blocked( $hosts, $blocked_domains ) ) {
@@ -514,7 +484,7 @@ class Moderation {
 				 * Checked again: webfinger returns whatever `href` the remote document names, and
 				 * that can be on a different host than the handle it was looked up under.
 				 */
-				if ( self::hosts_are_blocked( array( self::uri_host( $actor_id ) ), $blocked_domains ) ) {
+				if ( self::hosts_are_blocked( array( Webfinger::get_host( $actor_id ) ), $blocked_domains ) ) {
 					return true;
 				}
 			}

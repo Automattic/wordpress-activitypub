@@ -212,7 +212,30 @@ class Webfinger {
 			);
 		}
 
-		return array( $identifier, $host );
+		return array( $identifier, \strtolower( $host ) );
+	}
+
+	/**
+	 * Get the host of an identifier.
+	 *
+	 * The host half of {@see self::get_identifier_and_host()}, for callers that only need that.
+	 * Prefer this over parsing a host out directly: a handle has none to parse, and a URI in a
+	 * scheme other than `http` can carry an `@` in its path that would be read as one.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $uri The identifier, a URL or a handle.
+	 *
+	 * @return string The host, lowercased, or an empty string when there is none.
+	 */
+	public static function get_host( $uri ) {
+		$identifier_and_host = self::get_identifier_and_host( (string) $uri );
+
+		if ( \is_wp_error( $identifier_and_host ) ) {
+			return '';
+		}
+
+		return $identifier_and_host[1];
 	}
 
 	/**
