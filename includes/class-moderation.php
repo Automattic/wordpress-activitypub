@@ -316,12 +316,11 @@ class Moderation {
 			return false;
 		}
 
-		$normalized = normalize_actor_uri( $actor_uri );
-		$hosts      = array( Webfinger::get_host( $actor_uri ) );
+		$hosts = array( Webfinger::get_host( $actor_uri ) );
 
 		// Check site-wide blocks.
 		$site_blocks = self::get_site_blocks();
-		if ( self::uri_matches_actors( $normalized, $site_blocks['actors'] ) ) {
+		if ( self::uri_matches_actors( $actor_uri, $site_blocks['actors'] ) ) {
 			return true;
 		}
 
@@ -333,7 +332,7 @@ class Moderation {
 		// Check user-specific blocks if user_id is provided.
 		if ( $user_id > 0 ) {
 			$user_blocks = self::get_user_blocks( $user_id );
-			if ( self::uri_matches_actors( $normalized, $user_blocks['actors'] ) ) {
+			if ( self::uri_matches_actors( $actor_uri, $user_blocks['actors'] ) ) {
 				return true;
 			}
 
@@ -355,35 +354,25 @@ class Moderation {
 	 * @return bool True if any host is blocked, false otherwise.
 	 */
 	private static function hosts_are_blocked( $hosts, $blocked_domains ) {
-		foreach ( $blocked_domains as $domain ) {
-			$domain = \strtolower( (string) $domain );
-
-			// An empty entry has no host to match and would otherwise match every hostless value.
-			if ( '' === $domain ) {
-				continue;
-			}
-
-			if ( \in_array( $domain, $hosts, true ) ) {
-				return true;
-			}
-		}
-
-		return false;
+		// array_filter drops the empty hosts, so an empty stored entry can never match one.
+		return (bool) \array_intersect( \array_filter( $hosts ), \array_map( __NAMESPACE__ . '\\fold_host', $blocked_domains ) );
 	}
 
 	/**
-	 * Check a normalized actor URI against a list of blocked actors.
+	 * Check an actor URI against a list of blocked actors.
 	 *
 	 * Compared entry by entry rather than by normalizing the whole list first, so a match
 	 * returns without touching the rest of it. This runs on every delivery, and a site can
 	 * block a lot of accounts.
 	 *
-	 * @param string   $normalized     The normalized actor URI to look for.
+	 * @param string   $uri            The actor URI to look for, in any spelling.
 	 * @param string[] $blocked_actors The blocked actor URIs.
 	 *
 	 * @return bool True if the URI is blocked, false otherwise.
 	 */
-	private static function uri_matches_actors( $normalized, $blocked_actors ) {
+	private static function uri_matches_actors( $uri, $blocked_actors ) {
+		$normalized = normalize_actor_uri( $uri );
+
 		if ( '' === $normalized ) {
 			return false;
 		}
@@ -415,14 +404,18 @@ class Moderation {
 			return false;
 		}
 
-		if ( self::uri_matches_actors( normalize_actor_uri( $actor_id ), $blocked_actors ) ) {
+		if ( self::uri_matches_actors( $actor_id, $blocked_actors ) ) {
 			return true;
 		}
 
 		$host = Webfinger::get_host( $actor_id );
 
+		if ( '' === $host ) {
+			return false;
+		}
+
 		foreach ( $blocked_actors as $blocked ) {
-			if ( '' === $host || Webfinger::get_host( $blocked ) !== $host ) {
+			if ( Webfinger::get_host( $blocked ) !== $host ) {
 				continue;
 			}
 
@@ -436,7 +429,7 @@ class Moderation {
 			return ! \is_wp_error( $object )
 				&& isset( $object['id'] )
 				&& \is_string( $object['id'] )
-				&& self::uri_matches_actors( normalize_actor_uri( $object['id'] ), $blocked_actors );
+				&& self::uri_matches_actors( $object['id'], $blocked_actors );
 		}
 
 		return false;
@@ -465,28 +458,24 @@ class Moderation {
 		$hosts = array(
 			Webfinger::get_host( $actor_id ),
 			Webfinger::get_host( $activity->get_id() ),
-			Webfinger::get_host( object_to_uri( $activity->get_object() ) ?? '' ),
+			Webfinger::get_host( object_to_uri( $activity->get_object() ) ),
 		);
 
 		if ( self::hosts_are_blocked( $hosts, $blocked_domains ) ) {
 			return true;
 		}
 
-		// If actor_id is not a URL, resolve it via webfinger. Its own host is not blocked, or we
-		// would have returned above.
-		if ( $actor_id && ! \str_starts_with( $actor_id, 'http' ) ) {
+		// Resolve a handle to its URL. Its own host is not blocked, or we would have returned above.
+		if ( Webfinger::is_acct( $actor_id ) ) {
 			$resolved_url = Webfinger::resolve( $actor_id );
+			$actor_id     = \is_wp_error( $resolved_url ) ? $actor_id : $resolved_url;
 
-			if ( ! \is_wp_error( $resolved_url ) ) {
-				$actor_id = $resolved_url;
-
-				/*
-				 * Checked again: webfinger returns whatever `href` the remote document names, and
-				 * that can be on a different host than the handle it was looked up under.
-				 */
-				if ( self::hosts_are_blocked( array( Webfinger::get_host( $actor_id ) ), $blocked_domains ) ) {
-					return true;
-				}
+			/*
+			 * Checked again: webfinger returns whatever `href` the remote document names, and
+			 * that can be on a different host than the handle it was looked up under.
+			 */
+			if ( self::hosts_are_blocked( array( Webfinger::get_host( $actor_id ) ), $blocked_domains ) ) {
+				return true;
 			}
 		}
 

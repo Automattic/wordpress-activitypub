@@ -51,6 +51,26 @@ function normalize_host( $host ) {
 }
 
 /**
+ * Fold a host to its canonical spelling for comparison.
+ *
+ * Hosts are case-insensitive, IPv6 literals are bracketed in a URI but not in a stored host,
+ * and a trailing dot is the same fully qualified name. Two spellings that differ only in those
+ * ways address the same host, so anything comparing hosts has to fold them first.
+ *
+ * Unlike {@see normalize_host()} this is lossless: it does not strip `www.`, which is a
+ * different host rather than a different spelling of one.
+ *
+ * @since unreleased
+ *
+ * @param string $host The host.
+ *
+ * @return string The folded host.
+ */
+function fold_host( $host ) {
+	return \rtrim( \trim( \strtolower( (string) $host ), '[]' ), '.' );
+}
+
+/**
  * Check if a URL is from the same domain as the site.
  *
  * @param string $url The URL to check.

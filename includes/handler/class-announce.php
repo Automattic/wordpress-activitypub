@@ -11,7 +11,6 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Interactions;
 use Activitypub\Comment;
 use Activitypub\Http;
-use Activitypub\Webfinger;
 
 use function Activitypub\is_activity;
 use function Activitypub\is_activity_public;
@@ -85,16 +84,13 @@ class Announce {
 			return;
 		}
 
-		$origin_host = Webfinger::get_host( $object_url );
-		$actor_host  = Webfinger::get_host( object_to_uri( $object['actor'] ?? '' ) );
-
 		/*
 		 * Only an actor's own server may vouch for an activity attributed to it, so the
 		 * host it was fetched from must equal its actor's host — the same key-host ==
 		 * actor-host binding verify_key_id() enforces for signed requests, generalised
 		 * to every relayed activity type.
 		 */
-		if ( '' === $origin_host || '' === $actor_host || $origin_host !== $actor_host ) {
+		if ( ! is_same_host( $object_url, $object['actor'] ?? '' ) ) {
 			return;
 		}
 

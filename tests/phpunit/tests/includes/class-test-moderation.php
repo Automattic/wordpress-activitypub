@@ -768,6 +768,8 @@ class Test_Moderation extends \WP_UnitTestCase {
 			'acct:evil@BLOCKED.example.com',
 			'ftp://blocked.example.com/@user',
 			'//blocked.example.com/@user',
+			'https://blocked.example.com./@user',
+			'acct:evil@blocked.example.com.',
 		);
 
 		foreach ( $blocked as $actor ) {

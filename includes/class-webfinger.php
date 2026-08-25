@@ -212,15 +212,19 @@ class Webfinger {
 			);
 		}
 
-		return array( $identifier, \strtolower( $host ) );
+		return array( $identifier, fold_host( $host ) );
 	}
 
 	/**
 	 * Get the host of an identifier.
 	 *
 	 * The host half of {@see self::get_identifier_and_host()}, for callers that only need that.
-	 * Prefer this over parsing a host out directly: a handle has none to parse, and a URI in a
-	 * scheme other than `http` can carry an `@` in its path that would be read as one.
+	 * Prefer this over parsing a host out directly when you need an identifier's host: a handle
+	 * has none to parse, and a URI in a scheme other than `http` can carry an `@` in its path
+	 * that would be read as one.
+	 *
+	 * Not a drop-in for `is_same_host()`, which deliberately fails closed on an identifier with
+	 * no parsable host. Giving an `acct:` keyId a host there would re-admit what 9.2.1 rejected.
 	 *
 	 * @since unreleased
 	 *

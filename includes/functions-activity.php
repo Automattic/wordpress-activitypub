@@ -335,11 +335,16 @@ function id_matches_url( $item, $url ) {
  * @return string The normalized URI, or an empty string when there is nothing to compare.
  */
 function normalize_actor_uri( $uri ) {
-	if ( ! \is_string( $uri ) || '' === \trim( $uri ) ) {
+	$uri = \is_string( $uri ) ? \trim( $uri ) : '';
+
+	if ( '' === $uri ) {
 		return '';
 	}
 
-	$uri   = \strip_fragment_from_url( \trim( $uri ) );
+	/*
+	 * The fragment needs no stripping: the host branch rebuilds from the parsed parts and never
+	 * re-appends it, and the hostless branch has nothing to strip.
+	 */
 	$parts = \wp_parse_url( $uri );
 
 	// Anything without a host (an `acct:` identifier, a malformed value) has no parts to fold.
@@ -347,17 +352,18 @@ function normalize_actor_uri( $uri ) {
 		return \untrailingslashit( $uri );
 	}
 
-	$scheme  = \strtolower( $parts['scheme'] ?? '' );
-	$default = array(
+	static $default = array(
 		'http'  => 80,
 		'https' => 443,
 	);
+
+	$scheme = \strtolower( $parts['scheme'] ?? '' );
 
 	// A port that is the scheme's default is the same address written two ways.
 	$port = isset( $parts['port'] ) && ( $default[ $scheme ] ?? 0 ) !== (int) $parts['port'] ? ':' . (int) $parts['port'] : '';
 
 	// The trailing slash is folded on the path rather than the whole URI so a query cannot hide it.
-	$normalized = $scheme . '://' . \strtolower( $parts['host'] ) . $port . \untrailingslashit( $parts['path'] ?? '' );
+	$normalized = $scheme . '://' . fold_host( $parts['host'] ) . $port . \untrailingslashit( $parts['path'] ?? '' );
 
 	return isset( $parts['query'] ) ? $normalized . '?' . $parts['query'] : $normalized;
 }
