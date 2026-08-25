@@ -77,8 +77,23 @@ class Test_Webfinger extends \WP_UnitTestCase {
 			array( 'mailto:pfefferle@example.org', 'mailto:pfefferle@example.org', 'example.org' ),
 			array( 'xmpp:pfefferle@example.com', 'xmpp:pfefferle@example.com', 'example.com' ),
 			array( '//example.org/@pfefferle', '//example.org/@pfefferle', 'example.org' ),
+			// Brackets are kept: this host is also used to build WebFinger and intent URLs.
+			array( 'https://[2001:db8::1]/@pfefferle', 'https://[2001:db8::1]/@pfefferle', '[2001:db8::1]' ),
 			array( 'ftp://example.org/@pfefferle', 'ftp://example.org/@pfefferle', 'example.org' ),
 		);
+	}
+
+	/**
+	 * Test that get_host() folds a host for comparison.
+	 *
+	 * @covers ::get_host
+	 */
+	public function test_get_host_folds_for_comparison() {
+		$this->assertSame( 'example.org', Webfinger::get_host( 'https://EXAMPLE.org/@pfefferle' ) );
+		$this->assertSame( 'example.org', Webfinger::get_host( 'https://example.org./@pfefferle' ) );
+		$this->assertSame( 'example.org', Webfinger::get_host( 'acct:pfefferle@Example.org.' ) );
+		$this->assertSame( '2001:db8::1', Webfinger::get_host( 'https://[2001:db8::1]/@pfefferle' ) );
+		$this->assertSame( '', Webfinger::get_host( '' ) );
 	}
 
 	/**
