@@ -89,7 +89,7 @@ class Moderation {
 			return false;
 		}
 
-		return self::check_activity_against_blocks( $activity, $blocks['actors'], $blocks['domains'], $blocks['keywords'] );
+		return self::check_activity_against_blocks( $activity, $blocks );
 	}
 
 	/**
@@ -106,7 +106,7 @@ class Moderation {
 			return false;
 		}
 
-		return self::check_activity_against_blocks( $activity, $blocks['actors'], $blocks['domains'], $blocks['keywords'] );
+		return self::check_activity_against_blocks( $activity, $blocks );
 	}
 
 	/**
@@ -120,7 +120,40 @@ class Moderation {
 	 * @return bool True if any list has an entry, false otherwise.
 	 */
 	private static function has_blocks( $blocks ) {
-		return ! empty( $blocks['actors'] ) || ! empty( $blocks['domains'] ) || ! empty( $blocks['keywords'] );
+		return self::has_actor_blocks( $blocks ) || self::has_domain_blocks( $blocks ) || self::has_keyword_blocks( $blocks );
+	}
+
+	/**
+	 * Check whether a set of blocks names any actor.
+	 *
+	 * @param array $blocks Blocks organized by type.
+	 *
+	 * @return bool True if an actor is blocked, false otherwise.
+	 */
+	private static function has_actor_blocks( $blocks ) {
+		return ! empty( $blocks['actors'] );
+	}
+
+	/**
+	 * Check whether a set of blocks names any domain.
+	 *
+	 * @param array $blocks Blocks organized by type.
+	 *
+	 * @return bool True if a domain is blocked, false otherwise.
+	 */
+	private static function has_domain_blocks( $blocks ) {
+		return ! empty( $blocks['domains'] );
+	}
+
+	/**
+	 * Check whether a set of blocks names any keyword.
+	 *
+	 * @param array $blocks Blocks organized by type.
+	 *
+	 * @return bool True if a keyword is blocked, false otherwise.
+	 */
+	private static function has_keyword_blocks( $blocks ) {
+		return ! empty( $blocks['keywords'] );
 	}
 
 	/**
@@ -464,15 +497,11 @@ class Moderation {
 	/**
 	 * Check activity against blocklists.
 	 *
-	 * @param Activity $activity         The activity.
-	 * @param array    $blocked_actors   List of blocked actors.
-	 * @param array    $blocked_domains  List of blocked domains.
-	 * @param array    $blocked_keywords List of blocked keywords.
+	 * @param Activity $activity The activity.
+	 * @param array    $blocks   Blocks organized by type, as returned by get_site_blocks().
 	 * @return bool True if blocked, false otherwise.
 	 */
-	private static function check_activity_against_blocks( $activity, $blocked_actors, $blocked_domains, $blocked_keywords ) {
-		$has_object = \is_object( $activity->get_object() );
-
+	private static function check_activity_against_blocks( $activity, $blocks ) {
 		// Extract actor information.
 		$actor_id = object_to_uri( $activity->get_actor() );
 
@@ -481,14 +510,14 @@ class Moderation {
 		 * below and the actor check both issue requests, and a blocked domain must not be
 		 * contacted to find out that it is blocked.
 		 */
-		if ( ! empty( $blocked_domains ) ) {
+		if ( self::has_domain_blocks( $blocks ) ) {
 			$hosts = array(
 				Webfinger::get_host( $actor_id ),
 				Webfinger::get_host( $activity->get_id() ),
 				Webfinger::get_host( object_to_uri( $activity->get_object() ) ),
 			);
 
-			if ( self::hosts_are_blocked( $hosts, $blocked_domains ) ) {
+			if ( self::hosts_are_blocked( $hosts, $blocks['domains'] ) ) {
 				return true;
 			}
 		}
@@ -498,7 +527,7 @@ class Moderation {
 		 * blocklist has no use for the actor's URL and should not pay a lookup for one. Its own
 		 * host is not blocked, or we would have returned above.
 		 */
-		if ( ( ! empty( $blocked_domains ) || ! empty( $blocked_actors ) ) && Webfinger::is_acct( $actor_id ) ) {
+		if ( ( self::has_domain_blocks( $blocks ) || self::has_actor_blocks( $blocks ) ) && Webfinger::is_acct( $actor_id ) ) {
 			$resolved_url = Webfinger::resolve( $actor_id );
 			$actor_id     = \is_wp_error( $resolved_url ) ? $actor_id : $resolved_url;
 
@@ -506,18 +535,18 @@ class Moderation {
 			 * Checked again: webfinger returns whatever `href` the remote document names, and
 			 * that can be on a different host than the handle it was looked up under.
 			 */
-			if ( self::hosts_are_blocked( array( Webfinger::get_host( $actor_id ) ), $blocked_domains ) ) {
+			if ( self::hosts_are_blocked( array( Webfinger::get_host( $actor_id ) ), $blocks['domains'] ) ) {
 				return true;
 			}
 		}
 
 		// Check blocked actors.
-		if ( $actor_id && self::actor_matches_blocklist( $actor_id, $blocked_actors ) ) {
+		if ( $actor_id && self::actor_matches_blocklist( $actor_id, $blocks['actors'] ) ) {
 			return true;
 		}
 
 		// Check blocked keywords in activity content.
-		if ( $has_object ) {
+		if ( self::has_keyword_blocks( $blocks ) && \is_object( $activity->get_object() ) ) {
 			$object        = $activity->get_object();
 			$content_map   = array();
 			$content_map[] = $object->get_content();
@@ -544,7 +573,7 @@ class Moderation {
 			$content_map = \array_filter( $content_map );
 			$content     = \implode( ' ', $content_map );
 
-			foreach ( $blocked_keywords as $keyword ) {
+			foreach ( $blocks['keywords'] as $keyword ) {
 				if ( \stripos( $content, $keyword ) !== false ) {
 					return true;
 				}
