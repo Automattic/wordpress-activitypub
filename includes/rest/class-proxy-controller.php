@@ -50,7 +50,13 @@ class Proxy_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'create_item' ),
-					// Fetching a remote object is a read; the POST only carries the target URL.
+
+					/*
+					 * The Basic Profile puts `proxyUrl` under a read scope. The POST carries the
+					 * target URL, and what this persists is a local cache of the remote object
+					 * plus a rate-limit transient, not content attributed to the actor, so it is
+					 * not a write in the sense `write` grants.
+					 */
 					'permission_callback' => function ( $request ) {
 						return $this->verify_authentication( $request, Scope::READ );
 					},
