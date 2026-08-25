@@ -186,10 +186,19 @@ class Proxy_Controller extends \WP_REST_Controller {
 		$object = Http::get_remote_object( $url );
 
 		if ( \is_wp_error( $object ) ) {
+			/*
+			 * Pass on a status the remote actually returned, so a caller can tell a missing object
+			 * from an unreachable host. `Http::get()` uses the response code as the error code;
+			 * this method's own rejections use a string code and stay a 502, because a document we
+			 * refused is not the caller's request being wrong.
+			 */
+			$code   = $object->get_error_code();
+			$status = \is_numeric( $code ) ? (int) $code : 0;
+
 			return new \WP_Error(
 				'activitypub_fetch_failed',
 				\__( 'Failed to fetch the remote object.', 'activitypub' ),
-				array( 'status' => 502 )
+				array( 'status' => $status ?: 502 )
 			);
 		}
 

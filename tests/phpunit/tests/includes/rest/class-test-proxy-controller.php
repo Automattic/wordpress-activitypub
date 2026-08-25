@@ -504,6 +504,57 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that the remote status reaches the client.
+	 *
+	 * A missing object and an unreachable host used to be indistinguishable, so a client could
+	 * not tell whether to drop the request or replay it later.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_remote_status_is_passed_on() {
+		$this->mock_oauth_auth();
+
+		$respond = function () {
+			return array(
+				'response' => array( 'code' => 404 ),
+				'body'     => '',
+				'headers'  => array(),
+			);
+		};
+		\add_filter( 'pre_http_request', $respond );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => 'https://example.com/gone-forever' ) );
+
+		$this->assertEquals( 404, $this->server->dispatch( $request )->get_status() );
+
+		\remove_filter( 'pre_http_request', $respond );
+		$this->unmock_oauth_auth();
+	}
+
+	/**
+	 * Test that a failure with no response at all is still a gateway error.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_unreachable_host_is_a_gateway_error() {
+		$this->mock_oauth_auth();
+
+		$respond = function () {
+			return new \WP_Error( 'http_request_failed', 'Connection timed out' );
+		};
+		\add_filter( 'pre_http_request', $respond );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => 'https://example.com/unreachable' ) );
+
+		$this->assertEquals( 502, $this->server->dispatch( $request )->get_status() );
+
+		\remove_filter( 'pre_http_request', $respond );
+		$this->unmock_oauth_auth();
+	}
+
+	/**
 	 * Remove OAuth mock.
 	 */
 	private function unmock_oauth_auth() {
