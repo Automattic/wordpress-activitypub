@@ -173,7 +173,12 @@ class Webfinger {
 		// Remove leading @.
 		$url = \ltrim( $url, '@' );
 
-		if ( ! \preg_match( '/^([a-zA-Z+]+):/', $url, $match ) ) {
+		if ( \str_starts_with( $url, '//' ) ) {
+			// A scheme-relative URL is a URL reference, not a handle: treating it as one would
+			// read the host off the first `@` in its path.
+			$identifier = $url;
+			$scheme     = '';
+		} elseif ( ! \preg_match( '/^([a-zA-Z+]+):/', $url, $match ) ) {
 			$identifier = 'acct:' . $url;
 			$scheme     = 'acct';
 		} else {

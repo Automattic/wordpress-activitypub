@@ -349,22 +349,47 @@ class Moderation {
 	/**
 	 * Get the folded host of an actor identifier.
 	 *
-	 * `wp_parse_url()` returns nothing for an `acct:` identifier, so its host is read off the
-	 * identifier itself. Without that a domain block would be missed whenever the webfinger
-	 * lookup that turns it into a URL is skipped or fails.
+	 * `wp_parse_url()` finds no host in a handle, so identifiers go through Webfinger, which
+	 * knows both forms. Without that a domain block would be missed whenever the lookup that
+	 * turns a handle into a URL is skipped or fails.
 	 *
-	 * @param string $value The actor identifier, a URL or an `acct:` handle.
+	 * @param string $value The actor identifier, a URL or a handle.
 	 *
 	 * @return string The folded host, or an empty string when there is none.
 	 */
 	private static function uri_host( $value ) {
-		$value = (string) $value;
+		$identifier_and_host = Webfinger::get_identifier_and_host( (string) $value );
 
-		if ( '' !== $value && ! \str_starts_with( $value, 'http' ) && \str_contains( $value, '@' ) ) {
-			return \strtolower( \substr( \strrchr( $value, '@' ), 1 ) );
+		if ( \is_wp_error( $identifier_and_host ) ) {
+			return '';
 		}
 
-		return \strtolower( (string) \wp_parse_url( $value, PHP_URL_HOST ) );
+		return \strtolower( $identifier_and_host[1] );
+	}
+
+	/**
+	 * Check a set of hosts against the blocked domains.
+	 *
+	 * @param string[] $hosts           The folded hosts to check.
+	 * @param array    $blocked_domains The blocked domains.
+	 *
+	 * @return bool True if any host is blocked, false otherwise.
+	 */
+	private static function hosts_are_blocked( $hosts, $blocked_domains ) {
+		foreach ( $blocked_domains as $domain ) {
+			$domain = \strtolower( (string) $domain );
+
+			// An empty entry has no host to match and would otherwise match every hostless value.
+			if ( '' === $domain ) {
+				continue;
+			}
+
+			if ( \in_array( $domain, $hosts, true ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
@@ -475,25 +500,26 @@ class Moderation {
 			self::uri_host( $activity->get_id() ),
 			self::uri_host( object_to_uri( $activity->get_object() ) ?? '' ),
 		);
-		foreach ( $blocked_domains as $domain ) {
-			$domain = \strtolower( (string) $domain );
 
-			// An empty entry has no host to match and would otherwise match every hostless value.
-			if ( '' === $domain ) {
-				continue;
-			}
-
-			if ( \in_array( $domain, $urls, true ) ) {
-				return true;
-			}
+		if ( self::hosts_are_blocked( $urls, $blocked_domains ) ) {
+			return true;
 		}
 
-		// If actor_id is not a URL, resolve it via webfinger. Its host is not blocked, or we
+		// If actor_id is not a URL, resolve it via webfinger. Its own host is not blocked, or we
 		// would have returned above.
 		if ( $actor_id && ! \str_starts_with( $actor_id, 'http' ) ) {
 			$resolved_url = Webfinger::resolve( $actor_id );
+
 			if ( ! \is_wp_error( $resolved_url ) ) {
 				$actor_id = $resolved_url;
+
+				/*
+				 * Checked again: webfinger returns whatever `href` the remote document names, and
+				 * that can be on a different host than the handle it was looked up under.
+				 */
+				if ( self::hosts_are_blocked( array( self::uri_host( $actor_id ) ), $blocked_domains ) ) {
+					return true;
+				}
 			}
 		}
 

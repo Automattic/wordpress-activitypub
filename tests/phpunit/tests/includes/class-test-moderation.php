@@ -742,6 +742,85 @@ class Test_Moderation extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that only actual handles are read as handles.
+	 *
+	 * A URI in another scheme can carry an `@` in its path, and reading the host off that would
+	 * report the path segment as the host and miss the domain block.
+	 *
+	 * @covers ::activity_is_blocked
+	 * @covers ::check_activity_against_blocks
+	 */
+	public function test_domain_block_matches_non_http_schemes() {
+		Moderation::add_site_block( 'domain', 'blocked.example.com' );
+
+		$actors = array(
+			'ftp://blocked.example.com/@user',
+			'//blocked.example.com/@user',
+		);
+
+		foreach ( $actors as $actor ) {
+			$this->assertTrue(
+				Moderation::activity_is_blocked( $this->follow_from( $actor ) ),
+				"Actor $actor should match the blocked domain"
+			);
+		}
+	}
+
+	/**
+	 * Test that a handle resolving to a blocked host is blocked.
+	 *
+	 * WebFinger returns whatever `href` the remote document names, so a handle on an allowed
+	 * host can point at an actor on a blocked one.
+	 *
+	 * @covers ::activity_is_blocked
+	 * @covers ::check_activity_against_blocks
+	 */
+	public function test_webfinger_resolving_to_blocked_host_is_blocked() {
+		\add_filter( 'pre_http_request', array( $this, 'mock_webfinger_to_blocked_host' ), 10, 3 );
+
+		Moderation::add_site_block( 'domain', 'blocked.example.com' );
+
+		$this->assertTrue(
+			Moderation::activity_is_blocked( $this->follow_from( 'acct:evil@good.example.com' ) ),
+			'A handle resolving to a blocked host should be blocked.'
+		);
+
+		\remove_filter( 'pre_http_request', array( $this, 'mock_webfinger_to_blocked_host' ), 10 );
+	}
+
+	/**
+	 * Serve a WebFinger document whose self link points at another host.
+	 *
+	 * @param mixed  $response The pre-empted response.
+	 * @param array  $args     The request arguments.
+	 * @param string $url      The request URL.
+	 *
+	 * @return mixed The mocked response or the original value.
+	 */
+	public function mock_webfinger_to_blocked_host( $response, $args, $url ) {
+		if ( ! \str_contains( (string) $url, '/.well-known/webfinger' ) ) {
+			return $response;
+		}
+
+		return array(
+			'headers'  => array(),
+			'response' => array( 'code' => 200 ),
+			'body'     => \wp_json_encode(
+				array(
+					'subject' => 'acct:evil@good.example.com',
+					'links'   => array(
+						array(
+							'rel'  => 'self',
+							'type' => 'application/activity+json',
+							'href' => 'https://blocked.example.com/users/evil',
+						),
+					),
+				)
+			),
+		);
+	}
+
+	/**
 	 * Test that domain blocks fold host case.
 	 *
 	 * @covers ::activity_is_blocked

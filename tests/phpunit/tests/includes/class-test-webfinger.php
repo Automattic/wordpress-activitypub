@@ -76,6 +76,8 @@ class Test_Webfinger extends \WP_UnitTestCase {
 			array( 'https://example.org/@pfefferle', 'https://example.org/@pfefferle', 'example.org' ),
 			array( 'mailto:pfefferle@example.org', 'mailto:pfefferle@example.org', 'example.org' ),
 			array( 'xmpp:pfefferle@example.com', 'xmpp:pfefferle@example.com', 'example.com' ),
+			array( '//example.org/@pfefferle', '//example.org/@pfefferle', 'example.org' ),
+			array( 'ftp://example.org/@pfefferle', 'ftp://example.org/@pfefferle', 'example.org' ),
 		);
 	}
 
