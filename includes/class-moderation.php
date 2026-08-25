@@ -11,7 +11,6 @@ use Activitypub\Activity\Activity;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Blocked_Actors;
-use Activitypub\Collection\Remote_Actors;
 
 /**
  * ActivityPub Moderation class.
@@ -378,6 +377,7 @@ class Moderation {
 	 * URI, and costs nothing. Anything else is only a match if it resolves to a blocked id, which
 	 * takes a fetch, so it is limited to deliveries from a host that has a blocked actor on it:
 	 * no other host can produce a match, and the signature check has already contacted this one.
+	 * Responses are cached, so a repeat delivery from the same actor does not repeat the request.
 	 *
 	 * @param string   $actor_id       The actor URI from the delivered activity.
 	 * @param string[] $blocked_actors The blocked actor URIs.
@@ -412,15 +412,12 @@ class Moderation {
 		}
 
 		/*
-		 * An actor we already know is answered from its stored guid. Without this every delivery
-		 * from a large instance would be resolved over the network as soon as one account on it
-		 * is blocked, because the host gate cannot tell the blocked account from its neighbours.
+		 * Resolved rather than read from a locally stored actor: a `guid` is the id the actor
+		 * declared, and `Update` accepts an embedded actor object bound only to the sender's host,
+		 * so a remote server can store itself under any same-host id it likes. Trusting that here
+		 * would let it clear itself. `Http::get_remote_object()` self-confirms, and caches, so a
+		 * repeat delivery from the same actor does not repeat the request.
 		 */
-		$known = Remote_Actors::get_by_uri( $actor_id );
-		if ( ! \is_wp_error( $known ) ) {
-			return \in_array( normalize_actor_uri( $known->guid ), $normalized_blocks, true );
-		}
-
 		$object = Http::get_remote_object( $actor_id );
 		if ( \is_wp_error( $object ) || ! isset( $object['id'] ) || ! \is_string( $object['id'] ) ) {
 			return false;
