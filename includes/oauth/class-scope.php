@@ -7,6 +7,8 @@
 
 namespace Activitypub\OAuth;
 
+use function Activitypub\is_actor;
+
 /**
  * Scope class for OAuth 2.0 scope management.
  *
@@ -354,7 +356,7 @@ class Scope {
 		}
 
 		// An Update whose object is an actor is a profile edit, not a content edit.
-		if ( 'Update' === $type && \in_array( $object_type, array( 'Person', 'Service', 'Organization', 'Application', 'Group' ), true ) ) {
+		if ( 'Update' === $type && is_actor( $object ) ) {
 			return self::PROFILE;
 		}
 
@@ -399,7 +401,7 @@ class Scope {
 	 */
 	public static function contains( $scopes, $scope ) {
 		if ( ! \is_array( $scopes ) ) {
-			$scopes = self::parse( $scopes );
+			return false;
 		}
 
 		if ( \in_array( $scope, $scopes, true ) ) {

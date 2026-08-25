@@ -254,7 +254,7 @@ class Test_Token extends \WP_UnitTestCase {
 
 		// `write` is every write the actor can make, so it covers following too.
 		$this->assertTrue( $token->has_scope( Scope::FOLLOW ) );
-		$this->assertTrue( $token->has_scope( Scope::PUSH ) === false );
+		$this->assertFalse( $token->has_scope( Scope::PUSH ) );
 	}
 
 	/**

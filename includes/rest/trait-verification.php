@@ -12,6 +12,7 @@ use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Server as OAuth_Server;
 use Activitypub\Signature;
 
+use function Activitypub\is_activity;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 use function Activitypub\use_authorized_fetch;
@@ -164,12 +165,13 @@ trait Verification {
 		/*
 		 * A write can be narrower than `write`. Following and editing the profile are things a
 		 * client can be granted on their own, so the activity decides which scope is needed.
-		 * Requests with no activity body (and every non-outbox write) keep asking for `write`.
+		 * Anything that is not an activity, which is every write outside the outbox, keeps
+		 * asking for `write`.
 		 */
 		if ( Scope::WRITE === $scope ) {
 			$activity = $request->get_json_params();
 
-			if ( \is_array( $activity ) && isset( $activity['type'] ) ) {
+			if ( is_activity( $activity ) ) {
 				$scope = Scope::for_activity( $activity );
 			}
 		}
