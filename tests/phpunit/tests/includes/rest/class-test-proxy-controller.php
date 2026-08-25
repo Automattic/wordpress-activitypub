@@ -8,6 +8,8 @@
 namespace Activitypub\Tests\Rest;
 
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\OAuth\Scope;
+use Activitypub\OAuth\Server as OAuth_Server;
 use Activitypub\Rest\Proxy_Controller;
 
 /**
@@ -559,5 +561,100 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 	 */
 	private function unmock_oauth_auth() {
 		\remove_filter( 'activitypub_oauth_check_permission', '__return_true' );
+	}
+
+	/**
+	 * Test that the proxy is authorized as a read, not as a write.
+	 *
+	 * The endpoint is a POST because the target URL travels in the body, but it only fetches a
+	 * remote object. Requiring `write` would mean a read-only client could not use it, and would
+	 * make a client that only wants to read ask for permission to post.
+	 *
+	 * @covers ::register_routes
+	 */
+	public function test_proxy_requires_the_read_scope() {
+		$respond = function () {
+			return array(
+				'response' => array( 'code' => 404 ),
+				'body'     => '',
+				'headers'  => array(),
+			);
+		};
+		\add_filter( 'pre_http_request', $respond );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => 'https://example.com/gone-forever' ) );
+
+		// A read-scoped token reaches the handler, which forwards the remote 404.
+		$this->set_oauth_scopes( array( Scope::READ ) );
+		$this->assertEquals( 404, $this->server->dispatch( $request )->get_status(), 'A read token may use the proxy.' );
+
+		// A token without read does not, even though the request is a POST.
+		$this->set_oauth_scopes( array( Scope::WRITE ) );
+		$this->assertEquals( 403, $this->server->dispatch( $request )->get_status(), 'Write is not the authority to read a remote object.' );
+
+		$this->set_oauth_scopes( null );
+		\remove_filter( 'pre_http_request', $respond );
+	}
+
+	/**
+	 * Put the OAuth Server into a state as though a token with these scopes authenticated.
+	 *
+	 * @param array|null $scopes Scopes the token carries, or null for no OAuth session.
+	 */
+	private function set_oauth_scopes( $scopes ) {
+		$token = null;
+
+		if ( null !== $scopes ) {
+			$token = new class( $scopes, self::$user_id ) {
+				/**
+				 * Scopes the token carries.
+				 *
+				 * @var array
+				 */
+				private $scopes;
+
+				/**
+				 * User ID.
+				 *
+				 * @var int
+				 */
+				private $user_id;
+
+				/**
+				 * Constructor.
+				 *
+				 * @param array $scopes  Scopes.
+				 * @param int   $user_id User ID.
+				 */
+				public function __construct( $scopes, $user_id ) {
+					$this->scopes  = $scopes;
+					$this->user_id = $user_id;
+				}
+
+				/**
+				 * Get user ID.
+				 *
+				 * @return int
+				 */
+				public function get_user_id() {
+					return $this->user_id;
+				}
+
+				/**
+				 * Check scope.
+				 *
+				 * @param string $scope Scope to check.
+				 * @return bool
+				 */
+				public function has_scope( $scope ) {
+					return \in_array( $scope, $this->scopes, true );
+				}
+			};
+		}
+
+		$property = ( new \ReflectionClass( OAuth_Server::class ) )->getProperty( 'current_token' );
+		$property->setAccessible( true );
+		$property->setValue( null, $token );
 	}
 }

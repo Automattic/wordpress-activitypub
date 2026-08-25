@@ -120,9 +120,12 @@ class Scope {
 	 * Each identifier maps to a scope the plugin grants, which is coarser than the spec intends:
 	 * the per-collection read identifiers all resolve to `read`, and the per-action write
 	 * identifiers, `follow` and `updateprofile` included, to `write`. Three identifiers are
-	 * deliberately absent: `readown` and `reactown` describe data
-	 * on the client's own server rather than this one, and `uploadfiles` needs a MediaUpload
-	 * endpoint the plugin does not implement.
+	 * deliberately absent, because the plugin has nothing to grant for them: `readown` and
+	 * `reactown` describe data on the client's own server rather than this one, `uploadfiles`
+	 * needs a MediaUpload endpoint the plugin does not implement, and the four `address*`
+	 * identifiers narrow who an activity may be addressed to, which is a restriction on a write
+	 * rather than a permission of its own. Resolving those to `write` would answer a request to
+	 * be limited by handing over the unlimited version.
 	 *
 	 * @since unreleased
 	 */
@@ -146,10 +149,6 @@ class Scope {
 		'flag'              => self::WRITE,
 		'reactlocal'        => self::WRITE,
 		'reactany'          => self::WRITE,
-		'addressall'        => self::WRITE,
-		'addresspublic'     => self::WRITE,
-		'addressactor'      => self::WRITE,
-		'addressfollowers'  => self::WRITE,
 		'follow'            => self::WRITE,
 		'updateprofile'     => self::WRITE,
 	);

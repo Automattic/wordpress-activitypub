@@ -12,6 +12,7 @@ namespace Activitypub\Rest;
 
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
+use Activitypub\OAuth\Scope;
 use Activitypub\Webfinger;
 
 /**
@@ -49,7 +50,10 @@ class Proxy_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'create_item' ),
-					'permission_callback' => array( $this, 'verify_authentication' ),
+					// Fetching a remote object is a read; the POST only carries the target URL.
+					'permission_callback' => function ( $request ) {
+						return $this->verify_authentication( $request, Scope::READ );
+					},
 					'args'                => array(
 						'id' => array(
 							'description'       => 'The remote ActivityPub object to fetch: an HTTPS URL or an acct identifier (`user@host`, `@user@host`, or `acct:user@host`).',
