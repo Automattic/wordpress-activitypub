@@ -84,4 +84,17 @@ trait OAuth_Token_Stub {
 		$property->setAccessible( true );
 		$property->setValue( null, $token );
 	}
+
+	/**
+	 * Clear the token after every test.
+	 *
+	 * The token is a process-wide static, so a test that ends early, on a failed assertion or an
+	 * exception, would otherwise leave the next test looking OAuth-authenticated. A class that
+	 * declares its own `tear_down()` takes precedence over this one and has to clear it itself.
+	 */
+	public function tear_down() {
+		$this->set_oauth_current_token( null );
+
+		parent::tear_down();
+	}
 }

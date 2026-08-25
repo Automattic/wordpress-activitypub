@@ -9,6 +9,7 @@ namespace Activitypub\Tests\Rest;
 
 use Activitypub\OAuth\Scope;
 use Activitypub\Rest\Verification;
+use Activitypub\Tests\OAuth_Token_Stub;
 
 /**
  * Test class for Verification Trait.
@@ -17,7 +18,7 @@ use Activitypub\Rest\Verification;
  * @coversDefaultClass \Activitypub\Rest\Verification
  */
 class Test_Trait_Verification extends \WP_UnitTestCase {
-	use \Activitypub\Tests\OAuth_Token_Stub;
+	use OAuth_Token_Stub;
 
 
 	/**

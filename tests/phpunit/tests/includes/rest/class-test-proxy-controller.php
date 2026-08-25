@@ -595,7 +595,6 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::WRITE ), self::$user_id ) );
 		$this->assertEquals( 403, $this->server->dispatch( $request )->get_status(), 'Write is not the authority to read a remote object.' );
 
-		$this->set_oauth_current_token( null );
 		\remove_filter( 'pre_http_request', $respond );
 	}
 }

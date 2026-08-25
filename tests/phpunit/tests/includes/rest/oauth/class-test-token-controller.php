@@ -12,6 +12,7 @@ use Activitypub\OAuth\Client;
 use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Token;
 use Activitypub\Post_Types;
+use Activitypub\Tests\OAuth_Token_Stub;
 
 /**
  * Test class for the OAuth Token Controller.
@@ -22,7 +23,7 @@ use Activitypub\Post_Types;
  * @group oauth
  */
 class Test_Token_Controller extends \WP_UnitTestCase {
-	use \Activitypub\Tests\OAuth_Token_Stub;
+	use OAuth_Token_Stub;
 
 
 	/**
