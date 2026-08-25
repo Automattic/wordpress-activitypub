@@ -264,10 +264,13 @@ class Scope {
 				continue;
 			}
 
-			$fragment = \substr( $scope, \strlen( self::CANONICAL_SCOPE_PREFIX ) );
-			if ( 0 === \strpos( $scope, self::CANONICAL_SCOPE_PREFIX ) && isset( self::CANONICAL_SCOPES[ $fragment ] ) ) {
-				$normalized[] = self::CANONICAL_SCOPES[ $fragment ];
-				continue;
+			if ( 0 === \strpos( $scope, self::CANONICAL_SCOPE_PREFIX ) ) {
+				$fragment = \substr( $scope, \strlen( self::CANONICAL_SCOPE_PREFIX ) );
+
+				if ( isset( self::CANONICAL_SCOPES[ $fragment ] ) ) {
+					$normalized[] = self::CANONICAL_SCOPES[ $fragment ];
+					continue;
+				}
 			}
 
 			$normalized[] = $scope;
