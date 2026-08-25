@@ -154,16 +154,6 @@ class Scope {
 		'updateprofile'     => self::WRITE,
 	);
 
-	/**
-	 * Human-readable descriptions for each scope.
-	 *
-	 * @var array
-	 */
-	const DESCRIPTIONS = array(
-		self::READ  => 'Read actor profile, collections, and objects',
-		self::WRITE => 'Create activities via POST to outbox',
-		self::PUSH  => 'Subscribe to real-time event streams',
-	);
 
 	/**
 	 * Default scopes when none are requested.
@@ -316,7 +306,9 @@ class Scope {
 	 * @return string The description or empty string if not found.
 	 */
 	public static function get_description( $scope ) {
-		return self::DESCRIPTIONS[ $scope ] ?? '';
+		$descriptions = self::get_all_with_descriptions();
+
+		return $descriptions[ $scope ] ?? '';
 	}
 
 	/**
@@ -325,7 +317,15 @@ class Scope {
 	 * @return array Associative array of scope => description.
 	 */
 	public static function get_all_with_descriptions() {
-		return self::DESCRIPTIONS;
+		/*
+		 * Built here rather than held in a constant: these are shown to the user on the consent
+		 * screen, so they have to be translated, and a constant cannot hold a translated string.
+		 */
+		return array(
+			self::READ  => \__( 'Read actor profile, collections, and objects', 'activitypub' ),
+			self::WRITE => \__( 'Create activities via POST to outbox', 'activitypub' ),
+			self::PUSH  => \__( 'Subscribe to real-time event streams', 'activitypub' ),
+		);
 	}
 
 	/**
