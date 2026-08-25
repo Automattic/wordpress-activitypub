@@ -85,6 +85,10 @@ class Moderation {
 	public static function activity_is_blocked_site_wide( $activity ) {
 		$blocks = self::get_site_blocks();
 
+		if ( ! self::has_blocks( $blocks ) ) {
+			return false;
+		}
+
 		return self::check_activity_against_blocks( $activity, $blocks['actors'], $blocks['domains'], $blocks['keywords'] );
 	}
 
@@ -98,7 +102,25 @@ class Moderation {
 	public static function activity_is_blocked_for_user( $activity, $user_id ) {
 		$blocks = self::get_user_blocks( $user_id );
 
+		if ( ! self::has_blocks( $blocks ) ) {
+			return false;
+		}
+
 		return self::check_activity_against_blocks( $activity, $blocks['actors'], $blocks['domains'], $blocks['keywords'] );
+	}
+
+	/**
+	 * Check whether a set of blocks has anything in it.
+	 *
+	 * Worth asking before the checks run: they parse the activity and can go to the network for a
+	 * handle, and this runs once per local recipient of every delivery. Most sites block nothing.
+	 *
+	 * @param array $blocks Blocks organized by type, as returned by get_site_blocks().
+	 *
+	 * @return bool True if any list has an entry, false otherwise.
+	 */
+	private static function has_blocks( $blocks ) {
+		return ! empty( $blocks['actors'] ) || ! empty( $blocks['domains'] ) || ! empty( $blocks['keywords'] );
 	}
 
 	/**
@@ -459,18 +481,24 @@ class Moderation {
 		 * below and the actor check both issue requests, and a blocked domain must not be
 		 * contacted to find out that it is blocked.
 		 */
-		$hosts = array(
-			Webfinger::get_host( $actor_id ),
-			Webfinger::get_host( $activity->get_id() ),
-			Webfinger::get_host( object_to_uri( $activity->get_object() ) ),
-		);
+		if ( ! empty( $blocked_domains ) ) {
+			$hosts = array(
+				Webfinger::get_host( $actor_id ),
+				Webfinger::get_host( $activity->get_id() ),
+				Webfinger::get_host( object_to_uri( $activity->get_object() ) ),
+			);
 
-		if ( self::hosts_are_blocked( $hosts, $blocked_domains ) ) {
-			return true;
+			if ( self::hosts_are_blocked( $hosts, $blocked_domains ) ) {
+				return true;
+			}
 		}
 
-		// Resolve a handle to its URL. Its own host is not blocked, or we would have returned above.
-		if ( Webfinger::is_acct( $actor_id ) ) {
+		/*
+		 * Resolve a handle to its URL, but only for a list that could match it: a keyword-only
+		 * blocklist has no use for the actor's URL and should not pay a lookup for one. Its own
+		 * host is not blocked, or we would have returned above.
+		 */
+		if ( ( ! empty( $blocked_domains ) || ! empty( $blocked_actors ) ) && Webfinger::is_acct( $actor_id ) ) {
 			$resolved_url = Webfinger::resolve( $actor_id );
 			$actor_id     = \is_wp_error( $resolved_url ) ? $actor_id : $resolved_url;
 
