@@ -343,13 +343,12 @@ function normalize_actor_uri( $uri ) {
 		return '';
 	}
 
-	$uri = \untrailingslashit( \strip_fragment_from_url( \trim( $uri ) ) );
-
+	$uri   = \strip_fragment_from_url( \trim( $uri ) );
 	$parts = \wp_parse_url( $uri );
 
 	// Anything without a host (an `acct:` identifier, a malformed value) has no parts to fold.
 	if ( empty( $parts['host'] ) ) {
-		return $uri;
+		return \untrailingslashit( $uri );
 	}
 
 	$scheme = isset( $parts['scheme'] ) ? \strtolower( $parts['scheme'] ) : '';
@@ -365,14 +364,16 @@ function normalize_actor_uri( $uri ) {
 		}
 	}
 
-	$normalized  = ( '' === $scheme ? '//' : $scheme . '://' ) . $host . $port;
-	$normalized .= $parts['path'] ?? '';
+	$normalized = ( '' === $scheme ? '//' : $scheme . '://' ) . $host . $port;
+
+	// Fold the trailing slash on the path itself, so a query string cannot hide it.
+	$normalized .= \untrailingslashit( $parts['path'] ?? '' );
 
 	if ( isset( $parts['query'] ) ) {
 		$normalized .= '?' . $parts['query'];
 	}
 
-	return \untrailingslashit( $normalized );
+	return $normalized;
 }
 
 /**

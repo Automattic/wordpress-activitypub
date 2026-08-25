@@ -1140,4 +1140,41 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			'empty source'           => array( 'https://good.example.com/users/alice', '', false ),
 		);
 	}
+
+	/**
+	 * Test normalize_actor_uri.
+	 *
+	 * @dataProvider normalize_actor_uri_provider
+	 * @covers \Activitypub\normalize_actor_uri
+	 *
+	 * @param string $uri      The URI to normalize.
+	 * @param string $expected The expected result.
+	 */
+	public function test_normalize_actor_uri( $uri, $expected ) {
+		$this->assertSame( $expected, \Activitypub\normalize_actor_uri( $uri ) );
+	}
+
+	/**
+	 * Data provider for normalize_actor_uri.
+	 *
+	 * @return array[]
+	 */
+	public function normalize_actor_uri_provider() {
+		$canonical = 'https://example.com/users/alice';
+
+		return array(
+			'unchanged'             => array( $canonical, $canonical ),
+			'trailing slash'        => array( 'https://example.com/users/alice/', $canonical ),
+			'fragment'              => array( 'https://example.com/users/alice#main-key', $canonical ),
+			'host case'             => array( 'https://EXAMPLE.com/users/alice', $canonical ),
+			'scheme case'           => array( 'HTTPS://example.com/users/alice', $canonical ),
+			'default port'          => array( 'https://example.com:443/users/alice', $canonical ),
+			'non default port kept' => array( 'https://example.com:8443/users/alice', 'https://example.com:8443/users/alice' ),
+			'path case kept'        => array( 'https://example.com/users/Alice', 'https://example.com/users/Alice' ),
+			'query kept'            => array( 'https://example.com/users/alice?x=1', 'https://example.com/users/alice?x=1' ),
+			'slash before query'    => array( 'https://example.com/users/alice/?x=1', 'https://example.com/users/alice?x=1' ),
+			'acct identifier'       => array( 'acct:alice@example.com', 'acct:alice@example.com' ),
+			'empty'                 => array( '', '' ),
+		);
+	}
 }

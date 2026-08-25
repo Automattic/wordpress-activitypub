@@ -547,9 +547,10 @@ class Test_Moderation extends \WP_UnitTestCase {
 	 * @return mixed The mocked response or the original response.
 	 */
 	public function mock_aliased_actor( $response, $url_or_object ) {
-		if ( \str_starts_with( (string) $url_or_object, 'https://blocked.example.com/' ) ) {
-			++$this->resolve_count;
+		// Counted for every URL, so a test asserting that nothing was resolved can actually fail.
+		++$this->resolve_count;
 
+		if ( \str_starts_with( (string) $url_or_object, 'https://blocked.example.com/' ) ) {
 			return array(
 				'id'                => 'https://blocked.example.com/users/evil',
 				'type'              => 'Person',
@@ -639,6 +640,74 @@ class Test_Moderation extends \WP_UnitTestCase {
 			'An actor on an unblocked host should not be blocked.'
 		);
 		$this->assertSame( 0, $this->resolve_count, 'An unrelated host should not be resolved.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_aliased_actor' ), 20 );
+	}
+
+	/**
+	 * Test that a blocked domain is never contacted to resolve an actor.
+	 *
+	 * The actor check can go to the network, so it has to run after the domain check: a host the
+	 * admin has blocked outright must not receive a request just to decide whether to block it.
+	 *
+	 * @covers ::activity_is_blocked
+	 * @covers ::check_activity_against_blocks
+	 */
+	public function test_blocked_domain_is_not_resolved() {
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_aliased_actor' ), 20, 2 );
+
+		Moderation::add_site_block( 'actor', 'https://blocked.example.com/users/evil' );
+		Moderation::add_site_block( 'domain', 'blocked.example.com' );
+
+		$this->resolve_count = 0;
+
+		$this->assertTrue(
+			Moderation::activity_is_blocked( $this->follow_from( 'https://blocked.example.com/@someone-else' ) ),
+			'An actor on a blocked domain should be blocked.'
+		);
+		$this->assertSame( 0, $this->resolve_count, 'A blocked domain should not be contacted.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_aliased_actor' ), 20 );
+	}
+
+	/**
+	 * Test that a known actor on a blocked host is answered without a network call.
+	 *
+	 * Once one account on a host is blocked, the host gate cannot tell its neighbours apart, so
+	 * actors we have already stored are answered from their guid instead of being resolved.
+	 *
+	 * @covers ::activity_is_blocked
+	 * @covers ::check_activity_against_blocks
+	 */
+	public function test_known_actor_on_blocked_host_is_not_resolved() {
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_aliased_actor' ), 20, 2 );
+
+		Moderation::add_site_block( 'actor', 'https://blocked.example.com/users/evil' );
+
+		// Store a second, unblocked actor on the same host.
+		$neighbour = 'https://blocked.example.com/users/neighbour';
+		\wp_insert_post(
+			array(
+				'post_type'    => 'ap_actor',
+				'post_status'  => 'publish',
+				'post_title'   => 'Neighbour',
+				'guid'         => $neighbour,
+				'post_content' => \wp_json_encode(
+					array(
+						'id'   => $neighbour,
+						'type' => 'Person',
+					)
+				),
+			)
+		);
+
+		$this->resolve_count = 0;
+
+		$this->assertFalse(
+			Moderation::activity_is_blocked( $this->follow_from( $neighbour ) ),
+			'An unblocked actor on the same host should not be blocked.'
+		);
+		$this->assertSame( 0, $this->resolve_count, 'A known actor should not be resolved.' );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_aliased_actor' ), 20 );
 	}

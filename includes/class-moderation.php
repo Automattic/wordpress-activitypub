@@ -11,6 +11,7 @@ use Activitypub\Activity\Activity;
 use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Blocked_Actors;
+use Activitypub\Collection\Remote_Actors;
 
 /**
  * ActivityPub Moderation class.
@@ -326,7 +327,7 @@ class Moderation {
 
 		// Check site-wide domain blocks. Hosts are case-insensitive, so both sides are folded.
 		$actor_domain = \strtolower( (string) \wp_parse_url( $actor_uri, PHP_URL_HOST ) );
-		if ( $actor_domain && \in_array( $actor_domain, \array_map( 'strtolower', $site_blocks['domains'] ), true ) ) {
+		if ( $actor_domain && \in_array( $actor_domain, self::fold_hosts( $site_blocks['domains'] ), true ) ) {
 			return true;
 		}
 
@@ -338,12 +339,30 @@ class Moderation {
 			}
 
 			// Check user-specific domain blocks.
-			if ( $actor_domain && \in_array( $actor_domain, \array_map( 'strtolower', $user_blocks['domains'] ), true ) ) {
+			if ( $actor_domain && \in_array( $actor_domain, self::fold_hosts( $user_blocks['domains'] ), true ) ) {
 				return true;
 			}
 		}
 
 		return false;
+	}
+
+	/**
+	 * Fold a list of blocked domains for comparison.
+	 *
+	 * Hosts are case-insensitive, and a stored entry is not guaranteed to be a string.
+	 *
+	 * @param array $domains The blocked domains.
+	 *
+	 * @return string[] The folded hosts.
+	 */
+	private static function fold_hosts( $domains ) {
+		return \array_map(
+			static function ( $domain ) {
+				return \strtolower( (string) $domain );
+			},
+			(array) $domains
+		);
 	}
 
 	/**
@@ -392,6 +411,16 @@ class Moderation {
 			return false;
 		}
 
+		/*
+		 * An actor we already know is answered from its stored guid. Without this every delivery
+		 * from a large instance would be resolved over the network as soon as one account on it
+		 * is blocked, because the host gate cannot tell the blocked account from its neighbours.
+		 */
+		$known = Remote_Actors::get_by_uri( $actor_id );
+		if ( ! \is_wp_error( $known ) ) {
+			return \in_array( normalize_actor_uri( $known->guid ), $normalized_blocks, true );
+		}
+
 		$object = Http::get_remote_object( $actor_id );
 		if ( \is_wp_error( $object ) || ! isset( $object['id'] ) || ! \is_string( $object['id'] ) ) {
 			return false;
@@ -415,22 +444,19 @@ class Moderation {
 		// Extract actor information.
 		$actor_id = object_to_uri( $activity->get_actor() );
 
-		// Check blocked actors.
-		if ( $actor_id ) {
-			// If actor_id is not a URL, resolve it via webfinger.
-			if ( ! \str_starts_with( $actor_id, 'http' ) ) {
-				$resolved_url = Webfinger::resolve( $actor_id );
-				if ( ! \is_wp_error( $resolved_url ) ) {
-					$actor_id = $resolved_url;
-				}
-			}
-
-			if ( self::actor_matches_blocklist( $actor_id, $blocked_actors ) ) {
-				return true;
+		// If actor_id is not a URL, resolve it via webfinger.
+		if ( $actor_id && ! \str_starts_with( $actor_id, 'http' ) ) {
+			$resolved_url = Webfinger::resolve( $actor_id );
+			if ( ! \is_wp_error( $resolved_url ) ) {
+				$actor_id = $resolved_url;
 			}
 		}
 
-		// Check blocked domains. Hosts are case-insensitive, so both sides are folded.
+		/*
+		 * Domains are checked before actors: the actor check can resolve over the network, and a
+		 * blocked domain must not be contacted to find that out.
+		 * Hosts are case-insensitive, so both sides are folded.
+		 */
 		$urls = \array_map(
 			static function ( $url ) {
 				return \strtolower( (string) \wp_parse_url( (string) $url, PHP_URL_HOST ) );
@@ -438,9 +464,21 @@ class Moderation {
 			array( $actor_id, $activity->get_id(), object_to_uri( $activity->get_object() ) ?? '' )
 		);
 		foreach ( $blocked_domains as $domain ) {
-			if ( \in_array( \strtolower( (string) $domain ), $urls, true ) ) {
+			$domain = \strtolower( (string) $domain );
+
+			// An empty entry has no host to match and would otherwise match every hostless value.
+			if ( '' === $domain ) {
+				continue;
+			}
+
+			if ( \in_array( $domain, $urls, true ) ) {
 				return true;
 			}
+		}
+
+		// Check blocked actors.
+		if ( $actor_id && self::actor_matches_blocklist( $actor_id, $blocked_actors ) ) {
+			return true;
 		}
 
 		// Check blocked keywords in activity content.
