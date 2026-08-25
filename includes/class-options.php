@@ -393,6 +393,16 @@ class Options {
 			)
 		);
 
+		\register_setting(
+			'activitypub_advanced',
+			'activitypub_enable_fasp',
+			array(
+				'type'        => 'boolean',
+				'description' => 'Enable Fediverse Auxiliary Service Providers (FASP) integration.',
+				'default'     => false,
+			)
+		);
+
 		$default_distribution = self::get_distribution_preset_values()['default'];
 
 		\register_setting(

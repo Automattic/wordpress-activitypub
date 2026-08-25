@@ -9,6 +9,7 @@ namespace Activitypub\WP_Admin;
 
 use Activitypub\Collection\Actors;
 
+use function Activitypub\is_fasp_enabled;
 use function Activitypub\user_can_activitypub;
 
 /**
@@ -59,6 +60,14 @@ class Settings {
 			'label'    => \__( 'Blocked Actors', 'activitypub' ),
 			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blocked-actors-list.php',
 		);
+
+		// Add FASP registrations tab for managing auxiliary service providers (only if enabled).
+		if ( is_fasp_enabled() ) {
+			$settings_tabs['fasp-registrations'] = array(
+				'label'    => \__( 'Auxiliary Services', 'activitypub' ),
+				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/fasp-registrations.php',
+			);
+		}
 
 		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 			$settings_tabs['blog-profile'] = array(

@@ -101,13 +101,9 @@ class Http_Message_Signature implements Http_Signature {
 			$components['"collection-synchronization"'] = $args['headers']['Collection-Synchronization'];
 		}
 
-		$identifiers = \array_keys( $components );
-
 		// Add digest if provided.
 		if ( isset( $args['body'] ) ) {
-			$components['"content-digest"'] = $this->generate_digest( $args['body'] );
-			$identifiers                    = \array_keys( $components );
-
+			$components['"content-digest"']    = $this->generate_digest( $args['body'] );
 			$args['headers']['Content-Digest'] = $components['"content-digest"'];
 		}
 
@@ -122,12 +118,273 @@ class Http_Message_Signature implements Http_Signature {
 
 		$signature = null;
 		\openssl_sign( $signature_base, $signature, $args['private_key'], \OPENSSL_ALGO_SHA256 );
-		$signature = \base64_encode( $signature );
 
-		$args['headers']['Signature-Input'] = 'wp=(' . \implode( ' ', $identifiers ) . ')' . $this->get_params_string( $params );
-		$args['headers']['Signature']       = 'wp=:' . $signature . ':';
+		$args['headers'] = \array_merge(
+			$args['headers'],
+			$this->format_signature_headers( 'wp', $components, $params, \base64_encode( $signature ) )
+		);
 
 		return $args;
+	}
+
+	/**
+	 * Sign an outgoing HTTP request with Ed25519 (RFC-9421 HTTP Message Signatures).
+	 *
+	 * Covers the derived components `@method` and `@target-uri` and the
+	 * `content-digest` header with the parameters `created` and `keyid`,
+	 * as required by the FASP specification.
+	 *
+	 * @see https://github.com/mastodon/fediverse_auxiliary_service_provider_specifications/blob/main/general/v0.1/protocol_basics.md
+	 *
+	 * @since unreleased
+	 *
+	 * @param array  $args        The request arguments, as passed to `wp_remote_request()`.
+	 * @param string $url         The request URL.
+	 * @param string $private_key The Ed25519 private key (raw binary, 64 bytes).
+	 * @param string $key_id      The key ID to use in the signature.
+	 *
+	 * @return array Request arguments with `Content-Digest`, `Signature-Input` and `Signature` headers added.
+	 */
+	public function sign_request_ed25519( $args, $url, $private_key, $key_id ) {
+		// The FASP spec requires a Content-Digest on all requests, even body-less ones.
+		$digest = $this->generate_digest( $args['body'] ?? '' );
+
+		$components = array(
+			'"@method"'        => \strtoupper( $args['method'] ?? 'GET' ),
+			'"@target-uri"'    => $url,
+			'"content-digest"' => $digest,
+		);
+
+		$params = array(
+			'created' => \time(),
+			'keyid'   => $key_id,
+		);
+
+		$args['headers']['Content-Digest'] = $digest;
+		$args['headers']                   = \array_merge( $args['headers'], $this->ed25519_signature_headers( $components, $params, $private_key ) );
+
+		return $args;
+	}
+
+	/**
+	 * Sign a WP_REST_Response with Ed25519 (RFC-9421 HTTP Message Signatures).
+	 *
+	 * Response signatures cover the derived component `@status` and the
+	 * `content-digest` header, as required by the FASP specification. The
+	 * response must already carry a `Content-Digest` header.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_REST_Response $response    The response to sign.
+	 * @param string            $private_key The Ed25519 private key (raw binary, 64 bytes).
+	 * @param string            $key_id      The key ID to use in the signature.
+	 *
+	 * @return \WP_REST_Response The response with signature headers added.
+	 */
+	public function sign_response_ed25519( $response, $private_key, $key_id ) {
+		$components = array(
+			'"@status"'        => (string) $response->get_status(),
+			'"content-digest"' => $response->get_headers()['Content-Digest'] ?? '',
+		);
+
+		$params = array(
+			'created' => \time(),
+			'keyid'   => $key_id,
+		);
+
+		foreach ( $this->ed25519_signature_headers( $components, $params, $private_key ) as $header => $value ) {
+			$response->header( $header, $value );
+		}
+
+		return $response;
+	}
+
+	/**
+	 * Verify an Ed25519-signed HTTP response (RFC-9421 HTTP Message Signatures).
+	 *
+	 * Verifies a response signature covering the derived component `@status`
+	 * and the `content-digest` header against a known public key, as used by
+	 * the FASP protocol where the signer's key is exchanged at registration.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int    $status     The HTTP response status code.
+	 * @param array  $headers    The response headers as a flat name => value array.
+	 * @param string $body       The response body.
+	 * @param string $public_key The signer's Ed25519 public key (raw binary, 32 bytes).
+	 *
+	 * @return string|\WP_Error The verified keyId on success, WP_Error on failure.
+	 */
+	public function verify_response( $status, array $headers, $body, $public_key ) {
+		// Normalize headers to the internal `name_with_underscores => array( value )` shape.
+		$normalized = array();
+		foreach ( $headers as $name => $value ) {
+			$normalized[ \str_replace( '-', '_', \strtolower( $name ) ) ] = (array) $value;
+		}
+
+		if ( empty( $normalized['signature_input'][0] ) || empty( $normalized['signature'][0] ) ) {
+			return new \WP_Error( 'missing_signature', 'The response is not signed.', array( 'status' => 401 ) );
+		}
+
+		$parsed = $this->parse_signature_labels( $normalized );
+		if ( \is_wp_error( $parsed ) ) {
+			return $parsed;
+		}
+
+		$digest_check = $this->verify_content_digest( $normalized, $body );
+		if ( \is_wp_error( $digest_check ) ) {
+			return $digest_check;
+		}
+
+		$errors = new \WP_Error();
+		foreach ( $parsed as $data ) {
+			$result = $this->verify_response_label( $data, $status, $normalized, $public_key );
+			if ( true === $result ) {
+				return $data['params']['keyid'];
+			}
+
+			$errors->add( $result->get_error_code(), $result->get_error_message() );
+		}
+
+		$errors->add_data( array( 'status' => 401 ) );
+
+		return $errors;
+	}
+
+	/**
+	 * Verify a single Ed25519 response signature label.
+	 *
+	 * @param array  $data       Parsed signature data.
+	 * @param int    $status     The HTTP response status code.
+	 * @param array  $headers    Normalized response headers.
+	 * @param string $public_key The signer's Ed25519 public key (raw binary, 32 bytes).
+	 *
+	 * @return bool|\WP_Error True if the signature is valid, WP_Error on failure.
+	 */
+	private function verify_response_label( $data, $status, $headers, $public_key ) {
+		$params = $data['params'];
+
+		$result = $this->verify_timestamps( $params );
+		if ( \is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		if ( empty( $params['keyid'] ) ) {
+			return new \WP_Error( 'missing_keyid', 'Missing keyId in signature parameters.' );
+		}
+
+		// Response signatures must cover @status and content-digest.
+		$covered = \array_map(
+			function ( $component ) {
+				return \strtolower( \trim( $component, '"' ) );
+			},
+			$data['components']
+		);
+		if ( ! \in_array( '@status', $covered, true ) || ! \in_array( 'content-digest', $covered, true ) ) {
+			return new \WP_Error( 'invalid_components', 'The response signature does not cover @status and content-digest.' );
+		}
+
+		$components = array();
+		foreach ( $data['components'] as $component ) {
+			$key = \strtolower( \trim( $component, '"' ) );
+
+			if ( '@status' === $key ) {
+				$components[ $component ] = (string) $status;
+			} else {
+				$components[ $component ] = \preg_replace( '/\s+/', ' ', \trim( $headers[ \str_replace( '-', '_', $key ) ][0] ?? '' ) );
+			}
+		}
+
+		$signature_base = $this->get_signature_base_string( $components, $params );
+
+		return $this->verify_ed25519_signature( $signature_base, $data['signature'], $public_key );
+	}
+
+	/**
+	 * Verify an Ed25519 signature.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $message    The message that was signed.
+	 * @param string $signature  The signature to verify.
+	 * @param string $public_key The Ed25519 public key (raw binary, 32 bytes).
+	 *
+	 * @return bool|\WP_Error True if valid, WP_Error on failure.
+	 */
+	private function verify_ed25519_signature( $message, $signature, $public_key ) {
+		if ( \strlen( $signature ) !== SODIUM_CRYPTO_SIGN_BYTES ) {
+			return new \WP_Error(
+				'invalid_signature_length',
+				\sprintf( 'Invalid Ed25519 signature length: expected %d bytes, got %d', SODIUM_CRYPTO_SIGN_BYTES, \strlen( $signature ) )
+			);
+		}
+
+		if ( \strlen( $public_key ) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES ) {
+			return new \WP_Error(
+				'invalid_key_length',
+				\sprintf( 'Invalid Ed25519 public key length: expected %d bytes, got %d', SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES, \strlen( $public_key ) )
+			);
+		}
+
+		try {
+			$verified = \sodium_crypto_sign_verify_detached( $signature, $message, $public_key );
+		} catch ( \Exception $e ) {
+			return new \WP_Error( 'ed25519_verification_failed', 'Ed25519 signature verification failed: ' . $e->getMessage() );
+		}
+
+		if ( ! $verified ) {
+			return new \WP_Error( 'activitypub_signature', 'Invalid Ed25519 signature' );
+		}
+
+		return true;
+	}
+
+	/**
+	 * Verify the `created` and `expires` signature parameters.
+	 *
+	 * Keep the pre-existing one-minute forward bound (tighter than the
+	 * Cavage path's five minutes, appropriate for RFC 9421 where fresh
+	 * peers tend to ship with synced clocks) and add one hour of
+	 * backward drift. Without the past-side bound, peers that omit
+	 * `expires` could present arbitrarily old signatures for replay.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $params Signature parameters.
+	 *
+	 * @return bool|\WP_Error True if the timestamps are acceptable, WP_Error otherwise.
+	 */
+	private function verify_timestamps( $params ) {
+		$now = \time();
+		if ( isset( $params['created'] ) ) {
+			$created = (int) $params['created'];
+			if ( $created > $now + MINUTE_IN_SECONDS ) {
+				return new \WP_Error( 'invalid_created', 'The signature creation time is in the future.' );
+			}
+			if ( $created < $now - HOUR_IN_SECONDS ) {
+				return new \WP_Error( 'expired_created', 'The signature creation time is too far in the past.' );
+			}
+		}
+		if ( isset( $params['expires'] ) ) {
+			$expires = (int) $params['expires'];
+			if ( $expires < $now ) {
+				return new \WP_Error( 'expired_signature', 'The signature has expired.' );
+			}
+			if ( $expires > $now + DAY_IN_SECONDS ) {
+				return new \WP_Error( 'invalid_expires', 'The signature expiry time is too far in the future.' );
+			}
+		}
+
+		/*
+		 * Require a time anchor. Both `created` and `expires` are optional
+		 * in RFC-9421; a signature without either has no freshness bound
+		 * and could be replayed indefinitely.
+		 */
+		if ( ! isset( $params['created'] ) && ! isset( $params['expires'] ) ) {
+			return new \WP_Error( 'missing_time_anchor', 'The signature is missing a time anchor (created or expires).' );
+		}
+
+		return true;
 	}
 
 	/**
@@ -227,42 +484,9 @@ class Http_Message_Signature implements Http_Signature {
 	private function verify_signature_label( $data, $headers, $body ) {
 		$params = $data['params'];
 
-		/*
-		 * Timestamp verification.
-		 *
-		 * Keep the pre-existing one-minute forward bound (tighter than the
-		 * Cavage path's five minutes, appropriate for RFC 9421 where fresh
-		 * peers tend to ship with synced clocks) and add one hour of
-		 * backward drift. Without the past-side bound, peers that omit
-		 * `expires` could present arbitrarily old signatures for replay.
-		 */
-		$now = \time();
-		if ( isset( $params['created'] ) ) {
-			$created = (int) $params['created'];
-			if ( $created > $now + MINUTE_IN_SECONDS ) {
-				return new \WP_Error( 'invalid_created', 'The signature creation time is in the future.' );
-			}
-			if ( $created < $now - HOUR_IN_SECONDS ) {
-				return new \WP_Error( 'expired_created', 'The signature creation time is too far in the past.' );
-			}
-		}
-		if ( isset( $params['expires'] ) ) {
-			$expires = (int) $params['expires'];
-			if ( $expires < $now ) {
-				return new \WP_Error( 'expired_signature', 'The signature has expired.' );
-			}
-			if ( $expires > $now + DAY_IN_SECONDS ) {
-				return new \WP_Error( 'invalid_expires', 'The signature expiry time is too far in the future.' );
-			}
-		}
-
-		/*
-		 * Require a time anchor. Both `created` and `expires` are optional
-		 * in RFC-9421; a signature without either has no freshness bound
-		 * and could be replayed indefinitely.
-		 */
-		if ( ! isset( $params['created'] ) && ! isset( $params['expires'] ) ) {
-			return new \WP_Error( 'missing_time_anchor', 'The signature is missing a time anchor (created or expires).' );
+		$result = $this->verify_timestamps( $params );
+		if ( \is_wp_error( $result ) ) {
+			return $result;
 		}
 
 		// KeyId verification.
@@ -428,6 +652,36 @@ class Http_Message_Signature implements Http_Signature {
 		}
 
 		return $signature_params;
+	}
+
+	/**
+	 * Sign a component set with Ed25519 and return the wire-format headers.
+	 *
+	 * @param array  $components   The covered components, keyed by their quoted identifier.
+	 * @param array  $params       The signature parameters (created, keyid, …).
+	 * @param string $private_key  The Ed25519 private key (raw binary, 64 bytes).
+	 * @return array The `Signature-Input` and `Signature` headers.
+	 */
+	private function ed25519_signature_headers( $components, $params, $private_key ) {
+		$signature = \sodium_crypto_sign_detached( $this->get_signature_base_string( $components, $params ), $private_key );
+
+		return $this->format_signature_headers( 'sig', $components, $params, \base64_encode( $signature ) );
+	}
+
+	/**
+	 * Assemble the RFC-9421 `Signature-Input` and `Signature` header values.
+	 *
+	 * @param string $label      The signature label (e.g. `wp` or `sig`).
+	 * @param array  $components  The covered components, keyed by their quoted identifier.
+	 * @param array  $params      The signature parameters.
+	 * @param string $signature   The base64-encoded raw signature.
+	 * @return array The `Signature-Input` and `Signature` headers.
+	 */
+	private function format_signature_headers( $label, $components, $params, $signature ) {
+		return array(
+			'Signature-Input' => $label . '=(' . \implode( ' ', \array_keys( $components ) ) . ')' . $this->get_params_string( $params ),
+			'Signature'       => $label . '=:' . $signature . ':',
+		);
 	}
 
 	/**

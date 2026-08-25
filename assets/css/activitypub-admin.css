@@ -401,6 +401,114 @@ input.blog-user-identifier {
 	}
 }
 
+/* FASP Registrations */
+.fasp-registrations-list {
+	margin-bottom: 2em;
+}
+
+.fasp-registration-card {
+	margin: 10px 0;
+	padding: 15px;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 3px;
+}
+
+.fasp-registration-card.highlighted {
+	border-color: #3582c4;
+	box-shadow: 0 0 0 1px #3582c4;
+}
+
+.fasp-registration-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 10px;
+}
+
+.fasp-registration-name {
+	font-size: 14px;
+	font-weight: 600;
+	margin: 0;
+}
+
+.fasp-registration-actions {
+	display: flex;
+	gap: 10px;
+}
+
+.fasp-registration-details {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 10px;
+	margin-bottom: 10px;
+}
+
+.fasp-registration-detail {
+	background: #f6f7f7;
+	padding: 10px;
+	border-radius: 3px;
+}
+
+.fasp-registration-detail strong {
+	display: block;
+	margin-bottom: 5px;
+	font-size: 11px;
+	text-transform: uppercase;
+	color: #50575e;
+}
+
+.fasp-registration-detail p.description { /* stylelint-disable-line no-descending-specificity */
+	font-size: 12px;
+	margin: 5px 0;
+}
+
+.fasp-registration-fingerprint {
+	margin-top: 10px;
+}
+
+.fasp-fingerprint {
+	display: block;
+	font-size: 12px;
+	word-break: break-all;
+	background: #f0f0f1;
+	padding: 8px;
+	border-radius: 3px;
+	margin-top: 5px;
+}
+
+.fasp-technical-details {
+	margin-top: 10px;
+	border-top: 1px solid #f0f0f1;
+	padding-top: 10px;
+}
+
+.fasp-technical-details summary {
+	font-size: 13px;
+	padding: 5px 0;
+}
+
+.fasp-technical-details .fasp-registration-details {
+	margin-top: 10px;
+}
+
+/* stylelint-disable no-descending-specificity */
+.fasp-empty-state {
+	text-align: center;
+	padding: 40px 20px;
+	background: #f6f7f7;
+	border-radius: 4px;
+}
+
+.fasp-empty-state p {
+	margin: 0 0 10px;
+}
+
+.fasp-empty-state p.description {
+	margin: 0;
+}
+/* stylelint-enable no-descending-specificity */
+
 @media screen and (max-width: 782px) {
 
 	.activitypub-settings {
@@ -410,5 +518,15 @@ input.blog-user-identifier {
 	.activitypub-settings .row > div {
 		max-width: calc(100% - 36px);
 		width: 100%;
+	}
+
+	.fasp-registration-details {
+		grid-template-columns: 1fr;
+	}
+
+	.fasp-registration-header {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 10px;
 	}
 }

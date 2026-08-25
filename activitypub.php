@@ -80,6 +80,11 @@ function rest_init() {
 		( new Rest\Nodeinfo_Controller() )->register_routes();
 	}
 	( new Rest\Proxy_Controller() )->register_routes();
+
+	// Load FASP endpoints only if enabled.
+	if ( is_fasp_enabled() ) {
+		( new Rest\Fasp_Controller() )->register_routes();
+	}
 }
 \add_action( 'rest_api_init', __NAMESPACE__ . '\rest_init' );
 
@@ -155,6 +160,11 @@ function plugin_admin_init() {
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Dashboard', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\User_Settings_Fields', 'init' ) );
 	\add_action( 'admin_init', array( __NAMESPACE__ . '\WP_Admin\Welcome_Fields', 'init' ) );
+
+	// Only load FASP admin actions if enabled.
+	if ( is_fasp_enabled() ) {
+		\add_action( 'admin_init', array( WP_Admin\Fasp_Settings::class, 'init' ) );
+	}
 
 	if ( defined( 'WP_LOAD_IMPORTERS' ) && WP_LOAD_IMPORTERS ) {
 		require_once __DIR__ . '/includes/wp-admin/import/load.php';
