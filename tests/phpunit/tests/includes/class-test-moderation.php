@@ -715,6 +715,33 @@ class Test_Moderation extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that an acct identifier is matched against blocked domains before it is resolved.
+	 *
+	 * `wp_parse_url()` finds no host in `acct:user@host`, so without reading the host off the
+	 * identifier a domain block is missed whenever the webfinger lookup fails, and the lookup
+	 * itself contacts a host the admin has blocked.
+	 *
+	 * @covers ::activity_is_blocked
+	 * @covers ::check_activity_against_blocks
+	 */
+	public function test_acct_actor_matches_blocked_domain_without_resolving() {
+		Moderation::add_site_block( 'domain', 'blocked.example.com' );
+
+		$this->assertTrue(
+			Moderation::activity_is_blocked( $this->follow_from( 'acct:evil@blocked.example.com' ) ),
+			'An acct identifier on a blocked domain should be blocked.'
+		);
+		$this->assertTrue(
+			Moderation::activity_is_blocked( $this->follow_from( 'acct:evil@BLOCKED.example.com' ) ),
+			'An acct host should be folded like any other host.'
+		);
+		$this->assertFalse(
+			Moderation::activity_is_blocked( $this->follow_from( 'acct:someone@good.example.com' ) ),
+			'An acct identifier on an unblocked domain should not be blocked.'
+		);
+	}
+
+	/**
 	 * Test that domain blocks fold host case.
 	 *
 	 * @covers ::activity_is_blocked

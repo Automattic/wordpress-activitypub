@@ -325,7 +325,7 @@ class Moderation {
 		}
 
 		// Check site-wide domain blocks. Hosts are case-insensitive, so both sides are folded.
-		$actor_domain = \strtolower( (string) \wp_parse_url( $actor_uri, PHP_URL_HOST ) );
+		$actor_domain = self::uri_host( $actor_uri );
 		if ( $actor_domain && \in_array( $actor_domain, self::fold_hosts( $site_blocks['domains'] ), true ) ) {
 			return true;
 		}
@@ -344,6 +344,27 @@ class Moderation {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Get the folded host of an actor identifier.
+	 *
+	 * `wp_parse_url()` returns nothing for an `acct:` identifier, so its host is read off the
+	 * identifier itself. Without that a domain block would be missed whenever the webfinger
+	 * lookup that turns it into a URL is skipped or fails.
+	 *
+	 * @param string $value The actor identifier, a URL or an `acct:` handle.
+	 *
+	 * @return string The folded host, or an empty string when there is none.
+	 */
+	private static function uri_host( $value ) {
+		$value = (string) $value;
+
+		if ( '' !== $value && ! \str_starts_with( $value, 'http' ) && \str_contains( $value, '@' ) ) {
+			return \strtolower( \substr( \strrchr( $value, '@' ), 1 ) );
+		}
+
+		return \strtolower( (string) \wp_parse_url( $value, PHP_URL_HOST ) );
 	}
 
 	/**
@@ -377,7 +398,10 @@ class Moderation {
 	 * URI, and costs nothing. Anything else is only a match if it resolves to a blocked id, which
 	 * takes a fetch, so it is limited to deliveries from a host that has a blocked actor on it:
 	 * no other host can produce a match, and the signature check has already contacted this one.
-	 * Responses are cached, so a repeat delivery from the same actor does not repeat the request.
+	 * Responses are cached per URL, so ordinary repeat traffic does not repeat the request. A
+	 * sender that varies the URI on every delivery does pay a fresh one each time, which is the
+	 * price of catching an alias at all: it is bounded to hosts that already have a block, and to
+	 * activities the sender has to sign and deliver anyway.
 	 *
 	 * @param string   $actor_id       The actor URI from the delivered activity.
 	 * @param string[] $blocked_actors The blocked actor URIs.
@@ -441,24 +465,15 @@ class Moderation {
 		// Extract actor information.
 		$actor_id = object_to_uri( $activity->get_actor() );
 
-		// If actor_id is not a URL, resolve it via webfinger.
-		if ( $actor_id && ! \str_starts_with( $actor_id, 'http' ) ) {
-			$resolved_url = Webfinger::resolve( $actor_id );
-			if ( ! \is_wp_error( $resolved_url ) ) {
-				$actor_id = $resolved_url;
-			}
-		}
-
 		/*
-		 * Domains are checked before actors: the actor check can resolve over the network, and a
-		 * blocked domain must not be contacted to find that out.
-		 * Hosts are case-insensitive, so both sides are folded.
+		 * Domains are checked before anything that goes to the network: the webfinger lookup
+		 * below and the actor check both issue requests, and a blocked domain must not be
+		 * contacted to find out that it is blocked.
 		 */
-		$urls = \array_map(
-			static function ( $url ) {
-				return \strtolower( (string) \wp_parse_url( (string) $url, PHP_URL_HOST ) );
-			},
-			array( $actor_id, $activity->get_id(), object_to_uri( $activity->get_object() ) ?? '' )
+		$urls = array(
+			self::uri_host( $actor_id ),
+			self::uri_host( $activity->get_id() ),
+			self::uri_host( object_to_uri( $activity->get_object() ) ?? '' ),
 		);
 		foreach ( $blocked_domains as $domain ) {
 			$domain = \strtolower( (string) $domain );
@@ -470,6 +485,15 @@ class Moderation {
 
 			if ( \in_array( $domain, $urls, true ) ) {
 				return true;
+			}
+		}
+
+		// If actor_id is not a URL, resolve it via webfinger. Its host is not blocked, or we
+		// would have returned above.
+		if ( $actor_id && ! \str_starts_with( $actor_id, 'http' ) ) {
+			$resolved_url = Webfinger::resolve( $actor_id );
+			if ( ! \is_wp_error( $resolved_url ) ) {
+				$actor_id = $resolved_url;
 			}
 		}
 
