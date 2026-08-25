@@ -330,6 +330,11 @@ function id_matches_url( $item, $url ) {
  * their case, because they are case-sensitive and a different path is a
  * different actor. The scheme's value is not folded, `http` and `https` stay distinct.
  *
+ * Userinfo is dropped and repeated trailing slashes collapse, so a handful of URIs that
+ * are technically distinct compare equal. Actor ids do not carry userinfo in practice, and
+ * erring towards a match keeps a block from being talked out of, which is the direction
+ * this comparison should fail in.
+ *
  * Deliberately not used by `id_matches_url()`, which stays stricter. That one guards a
  * cache write keyed on the exact id: accepting a variant there would confirm a document
  * under one spelling and then store it under another. This one only compares, so it can

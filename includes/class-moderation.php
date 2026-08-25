@@ -317,28 +317,28 @@ class Moderation {
 		}
 
 		$normalized = normalize_actor_uri( $actor_uri );
+		$hosts      = array( self::uri_host( $actor_uri ) );
 
 		// Check site-wide blocks.
 		$site_blocks = self::get_site_blocks();
-		if ( \in_array( $normalized, \array_map( __NAMESPACE__ . '\normalize_actor_uri', $site_blocks['actors'] ), true ) ) {
+		if ( self::uri_matches_actors( $normalized, $site_blocks['actors'] ) ) {
 			return true;
 		}
 
-		// Check site-wide domain blocks. Hosts are case-insensitive, so both sides are folded.
-		$actor_domain = self::uri_host( $actor_uri );
-		if ( $actor_domain && \in_array( $actor_domain, self::fold_hosts( $site_blocks['domains'] ), true ) ) {
+		// Check site-wide domain blocks.
+		if ( self::hosts_are_blocked( $hosts, $site_blocks['domains'] ) ) {
 			return true;
 		}
 
 		// Check user-specific blocks if user_id is provided.
 		if ( $user_id > 0 ) {
 			$user_blocks = self::get_user_blocks( $user_id );
-			if ( \in_array( $normalized, \array_map( __NAMESPACE__ . '\normalize_actor_uri', $user_blocks['actors'] ), true ) ) {
+			if ( self::uri_matches_actors( $normalized, $user_blocks['actors'] ) ) {
 				return true;
 			}
 
 			// Check user-specific domain blocks.
-			if ( $actor_domain && \in_array( $actor_domain, self::fold_hosts( $user_blocks['domains'] ), true ) ) {
+			if ( self::hosts_are_blocked( $hosts, $user_blocks['domains'] ) ) {
 				return true;
 			}
 		}
@@ -393,21 +393,29 @@ class Moderation {
 	}
 
 	/**
-	 * Fold a list of blocked domains for comparison.
+	 * Check a normalized actor URI against a list of blocked actors.
 	 *
-	 * Hosts are case-insensitive, and a stored entry is not guaranteed to be a string.
+	 * Compared entry by entry rather than by normalizing the whole list first, so a match
+	 * returns without touching the rest of it. This runs on every delivery, and a site can
+	 * block a lot of accounts.
 	 *
-	 * @param array $domains The blocked domains.
+	 * @param string   $normalized     The normalized actor URI to look for.
+	 * @param string[] $blocked_actors The blocked actor URIs.
 	 *
-	 * @return string[] The folded hosts.
+	 * @return bool True if the URI is blocked, false otherwise.
 	 */
-	private static function fold_hosts( $domains ) {
-		return \array_map(
-			static function ( $domain ) {
-				return \strtolower( (string) $domain );
-			},
-			(array) $domains
-		);
+	private static function uri_matches_actors( $normalized, $blocked_actors ) {
+		if ( '' === $normalized ) {
+			return false;
+		}
+
+		foreach ( $blocked_actors as $blocked ) {
+			if ( normalize_actor_uri( $blocked ) === $normalized ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
@@ -428,6 +436,10 @@ class Moderation {
 	 * price of catching an alias at all: it is bounded to hosts that already have a block, and to
 	 * activities the sender has to sign and deliver anyway.
 	 *
+	 * A fetch that fails leaves the delivery unblocked, which is what an alias did before this
+	 * check existed, so nothing regresses. It does mean a host that blackholes our requests keeps
+	 * its aliases working, and `Http::get()` caches the error, so the next few are not retried.
+	 *
 	 * @param string   $actor_id       The actor URI from the delivered activity.
 	 * @param string[] $blocked_actors The blocked actor URIs.
 	 *
@@ -438,25 +450,24 @@ class Moderation {
 			return false;
 		}
 
-		$normalized_blocks = \array_map( __NAMESPACE__ . '\normalize_actor_uri', $blocked_actors );
-
-		if ( \in_array( normalize_actor_uri( $actor_id ), $normalized_blocks, true ) ) {
+		if ( self::uri_matches_actors( normalize_actor_uri( $actor_id ), $blocked_actors ) ) {
 			return true;
 		}
 
-		$host = \strtolower( (string) \wp_parse_url( $actor_id, PHP_URL_HOST ) );
+		$host = self::uri_host( $actor_id );
 		if ( '' === $host ) {
 			return false;
 		}
 
-		$blocked_hosts = \array_map(
-			static function ( $blocked ) {
-				return \strtolower( (string) \wp_parse_url( (string) $blocked, PHP_URL_HOST ) );
-			},
-			$blocked_actors
-		);
+		$host_is_blocked = false;
+		foreach ( $blocked_actors as $blocked ) {
+			if ( self::uri_host( $blocked ) === $host ) {
+				$host_is_blocked = true;
+				break;
+			}
+		}
 
-		if ( ! \in_array( $host, $blocked_hosts, true ) ) {
+		if ( ! $host_is_blocked ) {
 			return false;
 		}
 
@@ -472,7 +483,7 @@ class Moderation {
 			return false;
 		}
 
-		return \in_array( normalize_actor_uri( $object['id'] ), $normalized_blocks, true );
+		return self::uri_matches_actors( normalize_actor_uri( $object['id'] ), $blocked_actors );
 	}
 
 	/**
@@ -495,13 +506,13 @@ class Moderation {
 		 * below and the actor check both issue requests, and a blocked domain must not be
 		 * contacted to find out that it is blocked.
 		 */
-		$urls = array(
+		$hosts = array(
 			self::uri_host( $actor_id ),
 			self::uri_host( $activity->get_id() ),
 			self::uri_host( object_to_uri( $activity->get_object() ) ?? '' ),
 		);
 
-		if ( self::hosts_are_blocked( $urls, $blocked_domains ) ) {
+		if ( self::hosts_are_blocked( $hosts, $blocked_domains ) ) {
 			return true;
 		}
 
