@@ -206,10 +206,12 @@ class Extra_Fields {
 			return $extra_fields;
 		}
 
-		$is_blog          = self::is_blog( $user_id );
+		$is_blog = self::is_blog( $user_id );
+
+		// get_user_option() reads the site-prefixed key first and falls back to the unprefixed one, so flags written before multisite support keep working.
 		$already_migrated = $is_blog
 			? \get_option( 'activitypub_default_extra_fields' )
-			: \get_user_meta( $user_id, 'activitypub_default_extra_fields', true );
+			: \get_user_option( 'activitypub_default_extra_fields', $user_id );
 
 		if ( $already_migrated ) {
 			return $extra_fields;
@@ -263,7 +265,7 @@ class Extra_Fields {
 
 		$is_blog
 			? \update_option( 'activitypub_default_extra_fields', true )
-			: \update_user_meta( $user_id, 'activitypub_default_extra_fields', true );
+			: \update_user_option( $user_id, 'activitypub_default_extra_fields', true );
 
 		return $extra_fields;
 	}

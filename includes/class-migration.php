@@ -783,6 +783,8 @@ class Migration {
 	 * `Extra_Fields::default_actor_extra_fields()` does not spawn replacement defaults.
 	 */
 	private static function add_default_extra_field() {
+		global $wpdb;
+
 		$users = \get_users(
 			array(
 				'capability__in' => array( 'activitypub' ),
@@ -792,9 +794,12 @@ class Migration {
 		$title   = \__( 'Powered by', 'activitypub' );
 		$content = 'WordPress';
 
+		// There is no add_user_option(), so the site prefix that update_user_option() applies is added by hand.
+		$flag = $wpdb->get_blog_prefix() . 'activitypub_default_extra_fields';
+
 		foreach ( $users as $user ) {
 			// Passing $unique makes add_user_meta() return false when the actor was provisioned before, which turns a replayed migration into a no-op.
-			if ( ! \add_user_meta( $user->ID, 'activitypub_default_extra_fields', true, true ) ) {
+			if ( ! \add_user_meta( $user->ID, $flag, true, true ) ) {
 				continue;
 			}
 
@@ -847,7 +852,7 @@ class Migration {
 				continue;
 			}
 
-			\update_user_meta( (int) $user_id, 'activitypub_default_extra_fields', true );
+			\update_user_option( (int) $user_id, 'activitypub_default_extra_fields', true );
 		}
 
 		$blog_fields = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $wpdb->posts WHERE post_type = %s", Extra_Fields::BLOG_POST_TYPE ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery

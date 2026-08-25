@@ -697,7 +697,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		$user    = \get_user_by( 'id', $user_id );
 		$user->add_cap( 'activitypub' );
 
-		\delete_user_meta( $user_id, 'activitypub_default_extra_fields' );
+		\delete_user_option( $user_id, 'activitypub_default_extra_fields' );
 
 		$reflection = new \ReflectionClass( Migration::class );
 		$method     = $reflection->getMethod( 'add_default_extra_field' );
@@ -771,8 +771,8 @@ class Test_Migration extends \WP_UnitTestCase {
 		$newcomer    = \get_user_by( 'id', $newcomer_id );
 		$newcomer->add_cap( 'activitypub' );
 
-		\delete_user_meta( $provisioned_id, 'activitypub_default_extra_fields' );
-		\delete_user_meta( $newcomer_id, 'activitypub_default_extra_fields' );
+		\delete_user_option( $provisioned_id, 'activitypub_default_extra_fields' );
+		\delete_user_option( $newcomer_id, 'activitypub_default_extra_fields' );
 		\delete_option( 'activitypub_default_extra_fields' );
 
 		\wp_insert_post(
@@ -802,8 +802,8 @@ class Test_Migration extends \WP_UnitTestCase {
 		}
 		$method->invoke( null );
 
-		$this->assertSame( '1', \get_user_meta( $provisioned_id, 'activitypub_default_extra_fields', true ), 'An actor that already holds an extra field is marked as provisioned.' );
-		$this->assertSame( '', \get_user_meta( $newcomer_id, 'activitypub_default_extra_fields', true ), 'An actor without extra fields is left alone and keeps its defaults.' );
+		$this->assertSame( '1', \get_user_option( 'activitypub_default_extra_fields', $provisioned_id ), 'An actor that already holds an extra field is marked as provisioned.' );
+		$this->assertFalse( \get_user_option( 'activitypub_default_extra_fields', $newcomer_id ), 'An actor without extra fields is left alone and keeps its defaults.' );
 		$this->assertTrue( (bool) \get_option( 'activitypub_default_extra_fields' ), 'The blog actor is marked as provisioned.' );
 
 		_delete_all_data();
@@ -819,7 +819,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		$user    = \get_user_by( 'id', $user_id );
 		$user->add_cap( 'activitypub' );
 
-		\delete_user_meta( $user_id, 'activitypub_default_extra_fields' );
+		\delete_user_option( $user_id, 'activitypub_default_extra_fields' );
 		\delete_option( 'activitypub_default_extra_fields' );
 
 		$reflection = new \ReflectionClass( Migration::class );
