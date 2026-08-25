@@ -214,10 +214,6 @@ class Migration {
 			// Backfill historical statistics data (delay + jitter to avoid load spikes on hosts running many sites).
 			\wp_schedule_single_event( \time() + HOUR_IN_SECONDS + \wp_rand( 0, 6 * HOUR_IN_SECONDS ), 'activitypub_backfill_statistics' );
 		}
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
-			self::backfill_default_extra_fields_flag();
-		}
-
 		if ( \version_compare( $version_from_db, '8.3.0', '<' ) ) {
 			if ( ! \wp_next_scheduled( 'activitypub_tombstone_migrate' ) ) {
 				\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_tombstone_migrate' );
@@ -226,6 +222,9 @@ class Migration {
 		if ( \version_compare( $version_from_db, '9.1.0', '<' ) ) {
 			self::migrate_application_keypair_option();
 			self::delete_application_outbox_items();
+		}
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
+			self::backfill_default_extra_fields_flag();
 		}
 
 		/*
