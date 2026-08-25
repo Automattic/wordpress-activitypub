@@ -1173,6 +1173,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			'path case kept'        => array( 'https://example.com/users/Alice', 'https://example.com/users/Alice' ),
 			'query kept'            => array( 'https://example.com/users/alice?x=1', 'https://example.com/users/alice?x=1' ),
 			'slash before query'    => array( 'https://example.com/users/alice/?x=1', 'https://example.com/users/alice?x=1' ),
+			'slash inside query'    => array( 'https://example.com/users/alice?x=1/', 'https://example.com/users/alice?x=1/' ),
 			'acct identifier'       => array( 'acct:alice@example.com', 'acct:alice@example.com' ),
 			'empty'                 => array( '', '' ),
 		);

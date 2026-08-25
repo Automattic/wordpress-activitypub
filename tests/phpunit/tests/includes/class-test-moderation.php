@@ -671,6 +671,50 @@ class Test_Moderation extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that is_actor_blocked() matches URI variants too.
+	 *
+	 * This is the accessor the admin screens use, and it compares against the same block list,
+	 * so it has to agree with the inbox gate about what counts as the same actor.
+	 *
+	 * @covers ::is_actor_blocked
+	 */
+	public function test_is_actor_blocked_matches_uri_variants() {
+		$actor_uri = 'https://example.com/@baduser';
+
+		Moderation::add_site_block( 'actor', $actor_uri );
+
+		$variants = array(
+			$actor_uri,
+			'https://example.com/@baduser/',
+			'https://EXAMPLE.com/@baduser',
+			'https://example.com:443/@baduser',
+			'https://example.com/@baduser#main-key',
+		);
+
+		foreach ( $variants as $variant ) {
+			$this->assertTrue( Moderation::is_actor_blocked( $variant ), "Actor $variant should be blocked" );
+			$this->assertTrue( Moderation::is_actor_blocked( $variant, $this->test_user_id ), "Actor $variant should be blocked for the user" );
+		}
+
+		// A different path on the same host is a different actor.
+		$this->assertFalse( Moderation::is_actor_blocked( 'https://example.com/@gooduser' ) );
+
+		Moderation::remove_site_block( 'actor', $actor_uri );
+	}
+
+	/**
+	 * Test that is_actor_blocked() folds host case for domain blocks.
+	 *
+	 * @covers ::is_actor_blocked
+	 */
+	public function test_is_actor_blocked_domain_is_case_insensitive() {
+		Moderation::add_site_block( 'domain', 'spam.example.com' );
+
+		$this->assertTrue( Moderation::is_actor_blocked( 'https://SPAM.example.com/@user' ) );
+		$this->assertFalse( Moderation::is_actor_blocked( 'https://good.example.com/@user' ) );
+	}
+
+	/**
 	 * Test that domain blocks fold host case.
 	 *
 	 * @covers ::activity_is_blocked
