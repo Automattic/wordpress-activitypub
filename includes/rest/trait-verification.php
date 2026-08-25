@@ -247,6 +247,11 @@ trait Verification {
 	protected function show_social_graph( $request ) {
 		$user_id = $request->get_param( 'user_id' );
 
-		return Actors::show_social_graph( $user_id ) || true === $this->verify_owner( $request );
+		if ( Actors::show_social_graph( $user_id ) ) {
+			return true;
+		}
+
+		// Ownership answers who the caller is; the scope answers what the caller was allowed to do with that identity.
+		return true === $this->verify_owner( $request ) && OAuth_Server::permits_scope( Scope::READ );
 	}
 }

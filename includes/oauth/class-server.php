@@ -174,6 +174,24 @@ class Server {
 	}
 
 	/**
+	 * Whether the request is permitted to act for a scope.
+	 *
+	 * Only OAuth callers are limited by scope. A cookie-authenticated session carries no
+	 * token and is therefore not scope-limited; it is bounded by WordPress capabilities.
+	 *
+	 * Unlike {@see self::check_oauth_permission()}, this does not require the request to be
+	 * OAuth-authenticated, so it can be combined with checks that also accept a WP session.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $scope The scope to require of an OAuth caller.
+	 * @return bool True if the request may act for the scope.
+	 */
+	public static function permits_scope( $scope ) {
+		return ! self::is_oauth_request() || self::has_scope( $scope );
+	}
+
+	/**
 	 * Extract Bearer token from Authorization header.
 	 *
 	 * @return string|null The token string or null.

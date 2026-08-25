@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Rest;
 
+use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Server as OAuth_Server;
 use Activitypub\Rest\Verification;
 
@@ -40,6 +41,16 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 
 		$this->instance = new class() {
 			use Verification;
+
+			/**
+			 * Expose the protected social-graph gate.
+			 *
+			 * @param \WP_REST_Request $request The request object.
+			 * @return bool
+			 */
+			public function show_social_graph_public( $request ) {
+				return $this->show_social_graph( $request );
+			}
 		};
 		$this->user_id  = self::factory()->user->create(
 			array(
@@ -578,8 +589,8 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	/**
 	 * Create a mock OAuth token object.
 	 *
-	 * @param int  $user_id   The user ID the token belongs to.
-	 * @param bool $has_scope Whether the token has any scope.
+	 * @param int        $user_id   The user ID the token belongs to.
+	 * @param bool|array $has_scope Whether the token has any scope, or the exact list of scopes it carries.
 	 * @return object Mock token with get_user_id() and has_scope() methods.
 	 */
 	private function create_mock_token( $user_id, $has_scope ) {
@@ -624,7 +635,11 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 			 * @param string $scope Scope to check.
 			 * @return bool
 			 */
-			public function has_scope( $scope ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+			public function has_scope( $scope ) {
+				if ( \is_array( $this->has_scope ) ) {
+					return \in_array( $scope, $this->has_scope, true );
+				}
+
 				return $this->has_scope;
 			}
 		};
@@ -658,5 +673,75 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		$this->assertWPError( $result );
 		$this->assertEquals( 'activitypub_signature_verification', $result->get_error_code() );
 		$this->assertEquals( 401, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Test that ownership is decided by identity alone, independent of OAuth scope.
+	 *
+	 * Scope is an authorization question and is checked separately by the callers that
+	 * expose owner-only data. Folding it in here would make an ownership predicate answer
+	 * "not the owner" when the truthful answer is "the owner, but not permitted".
+	 *
+	 * @covers ::verify_owner
+	 */
+	public function test_verify_owner_is_not_scope_sensitive() {
+		$this->set_oauth_token( $this->create_mock_token( $this->user_id, array( Scope::PROFILE ) ) );
+		\wp_set_current_user( $this->user_id );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . $this->user_id . '/outbox' );
+		$request->set_param( 'user_id', $this->user_id );
+
+		$this->assertTrue( $this->instance->verify_owner( $request ), 'verify_owner() answers identity only.' );
+	}
+
+	/**
+	 * Test that a hidden social graph stays hidden from a token without the read scope.
+	 *
+	 * A client consented to `profile` is bound to the right WordPress user, so ownership
+	 * alone would hand it a following collection the owner chose to hide.
+	 *
+	 * @covers ::show_social_graph
+	 */
+	public function test_show_social_graph_requires_read_scope() {
+		\update_user_option( $this->user_id, 'activitypub_hide_social_graph', '1' );
+		$this->set_oauth_token( $this->create_mock_token( $this->user_id, array( Scope::PROFILE ) ) );
+		\wp_set_current_user( $this->user_id );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . $this->user_id . '/following' );
+		$request->set_param( 'user_id', $this->user_id );
+
+		$this->assertFalse( $this->instance->show_social_graph_public( $request ), 'A profile-only token must not reveal a hidden social graph.' );
+	}
+
+	/**
+	 * Test that a read-scoped token still sees the owner's hidden social graph.
+	 *
+	 * @covers ::show_social_graph
+	 */
+	public function test_show_social_graph_allows_read_scope() {
+		\update_user_option( $this->user_id, 'activitypub_hide_social_graph', '1' );
+		$this->set_oauth_token( $this->create_mock_token( $this->user_id, array( Scope::READ ) ) );
+		\wp_set_current_user( $this->user_id );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . $this->user_id . '/following' );
+		$request->set_param( 'user_id', $this->user_id );
+
+		$this->assertTrue( $this->instance->show_social_graph_public( $request ), 'A read-scoped token is the positive control.' );
+	}
+
+	/**
+	 * Test that a cookie session is not scope-limited.
+	 *
+	 * @covers ::show_social_graph
+	 */
+	public function test_show_social_graph_cookie_session_is_not_scope_limited() {
+		\update_user_option( $this->user_id, 'activitypub_hide_social_graph', '1' );
+		$this->set_oauth_token( null );
+		\wp_set_current_user( $this->user_id );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . $this->user_id . '/following' );
+		$request->set_param( 'user_id', $this->user_id );
+
+		$this->assertTrue( $this->instance->show_social_graph_public( $request ), 'A wp-admin session carries no token and is bounded by capabilities, not scope.' );
 	}
 }
