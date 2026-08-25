@@ -354,8 +354,12 @@ class Moderation {
 	 * @return bool True if any host is blocked, false otherwise.
 	 */
 	private static function hosts_are_blocked( $hosts, $blocked_domains ) {
-		// array_filter drops the empty hosts, so an empty stored entry can never match one.
-		return (bool) \array_intersect( \array_filter( $hosts ), \array_map( __NAMESPACE__ . '\\fold_host', $blocked_domains ) );
+		/*
+		 * Cast because a stored list is not guaranteed to be one: array_map() fatals on a scalar
+		 * where the foreach this replaced only warned, and this runs on every delivery.
+		 * array_filter drops the empty hosts, so an empty stored entry can never match one.
+		 */
+		return (bool) \array_intersect( \array_filter( $hosts ), \array_map( __NAMESPACE__ . '\\fold_host', (array) $blocked_domains ) );
 	}
 
 	/**

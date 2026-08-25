@@ -786,6 +786,26 @@ class Test_Moderation extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a malformed blocklist option does not fatal.
+	 *
+	 * The option is stored by users and by other code, so it is not guaranteed to be an array.
+	 * This runs on every delivery, so a type error here is a 500 on the inbox.
+	 *
+	 * @covers ::activity_is_blocked
+	 * @covers ::check_activity_against_blocks
+	 */
+	public function test_scalar_blocklist_option_does_not_fatal() {
+		\update_option( Moderation::OPTION_KEYS['domain'], 'blocked.example.com' );
+
+		$this->assertFalse(
+			Moderation::activity_is_blocked( $this->follow_from( 'https://good.example.com/@user' ) ),
+			'A scalar blocklist should be ignored rather than fatal.'
+		);
+
+		\delete_option( Moderation::OPTION_KEYS['domain'] );
+	}
+
+	/**
 	 * Test domain extraction from various URL formats.
 	 *
 	 * @covers ::activity_is_blocked
