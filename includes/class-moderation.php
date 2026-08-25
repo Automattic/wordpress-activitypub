@@ -316,32 +316,88 @@ class Moderation {
 			return false;
 		}
 
+		$normalized = normalize_actor_uri( $actor_uri );
+
 		// Check site-wide blocks.
 		$site_blocks = self::get_site_blocks();
-		if ( \in_array( $actor_uri, $site_blocks['actors'], true ) ) {
+		if ( \in_array( $normalized, \array_map( __NAMESPACE__ . '\normalize_actor_uri', $site_blocks['actors'] ), true ) ) {
 			return true;
 		}
 
-		// Check site-wide domain blocks.
-		$actor_domain = \wp_parse_url( $actor_uri, PHP_URL_HOST );
-		if ( $actor_domain && \in_array( $actor_domain, $site_blocks['domains'], true ) ) {
+		// Check site-wide domain blocks. Hosts are case-insensitive, so both sides are folded.
+		$actor_domain = \strtolower( (string) \wp_parse_url( $actor_uri, PHP_URL_HOST ) );
+		if ( $actor_domain && \in_array( $actor_domain, \array_map( 'strtolower', $site_blocks['domains'] ), true ) ) {
 			return true;
 		}
 
 		// Check user-specific blocks if user_id is provided.
 		if ( $user_id > 0 ) {
 			$user_blocks = self::get_user_blocks( $user_id );
-			if ( \in_array( $actor_uri, $user_blocks['actors'], true ) ) {
+			if ( \in_array( $normalized, \array_map( __NAMESPACE__ . '\normalize_actor_uri', $user_blocks['actors'] ), true ) ) {
 				return true;
 			}
 
 			// Check user-specific domain blocks.
-			if ( $actor_domain && \in_array( $actor_domain, $user_blocks['domains'], true ) ) {
+			if ( $actor_domain && \in_array( $actor_domain, \array_map( 'strtolower', $user_blocks['domains'] ), true ) ) {
 				return true;
 			}
 		}
 
 		return false;
+	}
+
+	/**
+	 * Check a delivered actor URI against the blocked actors.
+	 *
+	 * The delivered `actor` is an untrusted string, and the signature only binds it to a host:
+	 * `Verification::verify_key_id()` requires the keyId and the actor to share a host, not to be
+	 * the same string. A blocked actor can therefore keep their real account and key and vary only
+	 * the spelling of the URI they send, which `Http::get_remote_object()` then resolves back to the
+	 * blocked identity when a handler stores it.
+	 *
+	 * Matching happens in two steps. Normalized comparison catches the spellings that are the same
+	 * URI, and costs nothing. Anything else is only a match if it resolves to a blocked id, which
+	 * takes a fetch, so it is limited to deliveries from a host that has a blocked actor on it:
+	 * no other host can produce a match, and the signature check has already contacted this one.
+	 *
+	 * @param string   $actor_id       The actor URI from the delivered activity.
+	 * @param string[] $blocked_actors The blocked actor URIs.
+	 *
+	 * @return bool True if the actor is blocked, false otherwise.
+	 */
+	private static function actor_matches_blocklist( $actor_id, $blocked_actors ) {
+		if ( empty( $blocked_actors ) ) {
+			return false;
+		}
+
+		$normalized_blocks = \array_map( __NAMESPACE__ . '\normalize_actor_uri', $blocked_actors );
+
+		if ( \in_array( normalize_actor_uri( $actor_id ), $normalized_blocks, true ) ) {
+			return true;
+		}
+
+		$host = \strtolower( (string) \wp_parse_url( $actor_id, PHP_URL_HOST ) );
+		if ( '' === $host ) {
+			return false;
+		}
+
+		$blocked_hosts = \array_map(
+			static function ( $blocked ) {
+				return \strtolower( (string) \wp_parse_url( (string) $blocked, PHP_URL_HOST ) );
+			},
+			$blocked_actors
+		);
+
+		if ( ! \in_array( $host, $blocked_hosts, true ) ) {
+			return false;
+		}
+
+		$object = Http::get_remote_object( $actor_id );
+		if ( \is_wp_error( $object ) || ! isset( $object['id'] ) || ! \is_string( $object['id'] ) ) {
+			return false;
+		}
+
+		return \in_array( normalize_actor_uri( $object['id'] ), $normalized_blocks, true );
 	}
 
 	/**
@@ -369,19 +425,20 @@ class Moderation {
 				}
 			}
 
-			if ( \in_array( $actor_id, $blocked_actors, true ) ) {
+			if ( self::actor_matches_blocklist( $actor_id, $blocked_actors ) ) {
 				return true;
 			}
 		}
 
-		// Check blocked domains.
-		$urls = array(
-			\wp_parse_url( $actor_id, PHP_URL_HOST ),
-			\wp_parse_url( $activity->get_id(), PHP_URL_HOST ),
-			\wp_parse_url( object_to_uri( $activity->get_object() ) ?? '', PHP_URL_HOST ),
+		// Check blocked domains. Hosts are case-insensitive, so both sides are folded.
+		$urls = \array_map(
+			static function ( $url ) {
+				return \strtolower( (string) \wp_parse_url( (string) $url, PHP_URL_HOST ) );
+			},
+			array( $actor_id, $activity->get_id(), object_to_uri( $activity->get_object() ) ?? '' )
 		);
 		foreach ( $blocked_domains as $domain ) {
-			if ( \in_array( $domain, $urls, true ) ) {
+			if ( \in_array( \strtolower( (string) $domain ), $urls, true ) ) {
 				return true;
 			}
 		}

@@ -25,6 +25,13 @@ class Test_Moderation extends \WP_UnitTestCase {
 	private $test_user_id;
 
 	/**
+	 * Number of remote resolutions performed by the aliased-actor mock.
+	 *
+	 * @var int
+	 */
+	private $resolve_count = 0;
+
+	/**
 	 * Set up test fixtures.
 	 */
 	public function set_up(): void {
@@ -509,6 +516,146 @@ class Test_Moderation extends \WP_UnitTestCase {
 
 		// A malformed actor with no 'id' should gracefully return false, not trigger a PHP notice.
 		$this->assertFalse( Moderation::activity_is_blocked( $activity ) );
+	}
+
+	/**
+	 * Build a Follow activity from a given actor URI.
+	 *
+	 * @param string $actor The actor URI.
+	 *
+	 * @return Activity The activity.
+	 */
+	private function follow_from( $actor ) {
+		return Activity::init_from_array(
+			array(
+				'type'   => 'Follow',
+				'actor'  => $actor,
+				'object' => 'https://example.org/author/1',
+			)
+		);
+	}
+
+	/**
+	 * Serve one actor document under its canonical id, whatever URI it is asked for.
+	 *
+	 * Models `Http::get_remote_object()`, which follows a document's declared id and requires it
+	 * to self-confirm, so any alias on the host resolves to the same canonical actor.
+	 *
+	 * @param mixed  $response      The pre-filtered response.
+	 * @param string $url_or_object The URL being requested.
+	 *
+	 * @return mixed The mocked response or the original response.
+	 */
+	public function mock_aliased_actor( $response, $url_or_object ) {
+		if ( \str_starts_with( (string) $url_or_object, 'https://blocked.example.com/' ) ) {
+			++$this->resolve_count;
+
+			return array(
+				'id'                => 'https://blocked.example.com/users/evil',
+				'type'              => 'Person',
+				'guid'              => 'https://blocked.example.com/users/evil',
+				'preferredUsername' => 'evil',
+				'name'              => 'Blocked Actor',
+				'inbox'             => 'https://blocked.example.com/inbox',
+			);
+		}
+
+		return $response;
+	}
+
+	/**
+	 * Test that a blocked actor cannot get through by respelling their own URI.
+	 *
+	 * The signature only binds the actor to a host, so the delivered `actor` string is under the
+	 * sender's control. Every spelling below is the same URI, and `id_matches_url()` already
+	 * treats them as one identity when confirming an actor document.
+	 *
+	 * @covers ::activity_is_blocked
+	 * @covers ::check_activity_against_blocks
+	 */
+	public function test_actor_block_matches_uri_variants() {
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_aliased_actor' ), 20, 2 );
+
+		Moderation::add_site_block( 'actor', 'https://blocked.example.com/users/evil' );
+
+		$variants = array(
+			'https://blocked.example.com/users/evil',
+			'https://blocked.example.com/users/evil/',
+			'https://BLOCKED.example.com/users/evil',
+			'https://blocked.example.com:443/users/evil',
+			'https://blocked.example.com/users/evil#main-key',
+		);
+
+		foreach ( $variants as $variant ) {
+			$this->assertTrue(
+				Moderation::activity_is_blocked( $this->follow_from( $variant ) ),
+				"Actor $variant should be blocked"
+			);
+		}
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_aliased_actor' ), 20 );
+	}
+
+	/**
+	 * Test that an alias resolving to a blocked actor is blocked.
+	 *
+	 * A different path on the same host is not the same URI, so normalizing the string cannot
+	 * catch it. It is only a match once it resolves to the blocked id.
+	 *
+	 * @covers ::activity_is_blocked
+	 * @covers ::check_activity_against_blocks
+	 */
+	public function test_actor_block_matches_resolved_alias() {
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_aliased_actor' ), 20, 2 );
+
+		Moderation::add_site_block( 'actor', 'https://blocked.example.com/users/evil' );
+
+		$this->assertTrue(
+			Moderation::activity_is_blocked( $this->follow_from( 'https://blocked.example.com/@evil?x=1' ) ),
+			'An alias that resolves to the blocked actor should be blocked.'
+		);
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_aliased_actor' ), 20 );
+	}
+
+	/**
+	 * Test that resolution is limited to hosts that have a blocked actor.
+	 *
+	 * No actor on another host can resolve to a blocked id, so an unrelated delivery must not
+	 * cost an outbound request.
+	 *
+	 * @covers ::activity_is_blocked
+	 * @covers ::check_activity_against_blocks
+	 */
+	public function test_actor_block_does_not_resolve_unrelated_hosts() {
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_aliased_actor' ), 20, 2 );
+
+		Moderation::add_site_block( 'actor', 'https://blocked.example.com/users/evil' );
+
+		$this->resolve_count = 0;
+
+		$this->assertFalse(
+			Moderation::activity_is_blocked( $this->follow_from( 'https://elsewhere.example.com/users/someone' ) ),
+			'An actor on an unblocked host should not be blocked.'
+		);
+		$this->assertSame( 0, $this->resolve_count, 'An unrelated host should not be resolved.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_aliased_actor' ), 20 );
+	}
+
+	/**
+	 * Test that domain blocks fold host case.
+	 *
+	 * @covers ::activity_is_blocked
+	 * @covers ::check_activity_against_blocks
+	 */
+	public function test_domain_blocking_is_case_insensitive() {
+		Moderation::add_site_block( 'domain', 'spam-instance.com' );
+
+		$this->assertTrue(
+			Moderation::activity_is_blocked( $this->follow_from( 'https://SPAM-Instance.com/@anyuser' ) ),
+			'A mixed-case host should match a blocked domain.'
+		);
 	}
 
 	/**

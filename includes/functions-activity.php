@@ -318,6 +318,64 @@ function id_matches_url( $item, $url ) {
 }
 
 /**
+ * Normalize an actor URI so two spellings of the same identity compare equal.
+ *
+ * Actor identity is compared in two places that must agree: `id_matches_url()`
+ * decides whether a fetched document is served under its own id, and the
+ * moderation blocklist decides whether a delivery is from a blocked actor.
+ * `id_matches_url()` already ignores the fragment and a trailing slash, so a
+ * blocklist that compares raw strings would treat as two identities what the
+ * rest of the plugin resolves to one.
+ *
+ * Only the case-insensitive parts of a URI are folded: the scheme and host per
+ * RFC 3986, and a port that is the default for the scheme. Path and query keep
+ * their case, because they are case-sensitive and a different path is a
+ * different actor.
+ *
+ * @since unreleased
+ *
+ * @param string $uri The actor URI.
+ *
+ * @return string The normalized URI, or an empty string when there is nothing to compare.
+ */
+function normalize_actor_uri( $uri ) {
+	if ( ! \is_string( $uri ) || '' === \trim( $uri ) ) {
+		return '';
+	}
+
+	$uri = \untrailingslashit( \strip_fragment_from_url( \trim( $uri ) ) );
+
+	$parts = \wp_parse_url( $uri );
+
+	// Anything without a host (an `acct:` identifier, a malformed value) has no parts to fold.
+	if ( empty( $parts['host'] ) ) {
+		return $uri;
+	}
+
+	$scheme = isset( $parts['scheme'] ) ? \strtolower( $parts['scheme'] ) : '';
+	$host   = \strtolower( $parts['host'] );
+	$port   = '';
+
+	// Keep the port only when it is not the default for the scheme, so both spellings match.
+	if ( isset( $parts['port'] ) ) {
+		$is_default = ( 'http' === $scheme && 80 === (int) $parts['port'] ) || ( 'https' === $scheme && 443 === (int) $parts['port'] );
+
+		if ( ! $is_default ) {
+			$port = ':' . (int) $parts['port'];
+		}
+	}
+
+	$normalized  = ( '' === $scheme ? '//' : $scheme . '://' ) . $host . $port;
+	$normalized .= $parts['path'] ?? '';
+
+	if ( isset( $parts['query'] ) ) {
+		$normalized .= '?' . $parts['query'];
+	}
+
+	return \untrailingslashit( $normalized );
+}
+
+/**
  * Check if an `$data` is an Activity.
  *
  * @see https://www.w3.org/ns/activitystreams#activities
