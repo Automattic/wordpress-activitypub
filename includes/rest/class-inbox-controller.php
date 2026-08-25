@@ -14,6 +14,7 @@ use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
 use Activitypub\Moderation;
+use Activitypub\Signature;
 
 use function Activitypub\camel_to_snake_case;
 use function Activitypub\extract_recipients_from_activity;
@@ -154,8 +155,11 @@ class Inbox_Controller extends \WP_REST_Controller {
 		/* @var Activity $activity Activity object.*/
 		$activity = Activity::init_from_array( $data );
 
+		// The identity that signed, which the blocklist prefers over the `actor` the body claims.
+		$key_id = Signature::get_key_id( $request );
+
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-		if ( Moderation::activity_is_blocked( $activity ) ) {
+		if ( Moderation::activity_is_blocked( $activity, null, $key_id ) ) {
 			/**
 			 * ActivityPub inbox disallowed activity.
 			 *
@@ -171,7 +175,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 			// Filter out blocked recipients.
 			$allowed_recipients = array();
 			foreach ( $recipients as $user_id ) {
-				if ( Moderation::activity_is_blocked_for_user( $activity, $user_id ) ) {
+				if ( Moderation::activity_is_blocked_for_user( $activity, $user_id, $key_id ) ) {
 					/**
 					 * ActivityPub inbox disallowed activity for specific user.
 					 *

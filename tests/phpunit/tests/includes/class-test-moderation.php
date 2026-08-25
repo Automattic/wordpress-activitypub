@@ -806,6 +806,78 @@ class Test_Moderation extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a blocked signer is caught without resolving the claim.
+	 *
+	 * The signature already resolved and self-confirmed the signer, so a respelled `actor` should
+	 * be caught from that identity rather than by going back to the network for the claim.
+	 *
+	 * @covers ::activity_is_blocked
+	 * @covers ::actor_matches_blocklist
+	 */
+	public function test_verified_signer_is_matched_without_a_request() {
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_aliased_actor' ), 20, 2 );
+
+		Moderation::add_site_block( 'actor', 'https://blocked.example.com/users/evil' );
+
+		$this->resolve_count = 0;
+
+		$blocked = Moderation::activity_is_blocked(
+			$this->follow_from( 'https://blocked.example.com/@evil?nonce=1' ),
+			null,
+			'https://blocked.example.com/users/evil#main-key'
+		);
+
+		$this->assertTrue( $blocked, 'A blocked signer should be blocked whatever the actor claims.' );
+		$this->assertSame( 0, $this->resolve_count, 'The signer is already resolved, so nothing should be fetched.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_aliased_actor' ), 20 );
+	}
+
+	/**
+	 * Test that an unblocked signer relaying a blocked claim is still caught.
+	 *
+	 * The signature binds the key to the actor by host only, so a sibling account can deliver an
+	 * activity claiming to be the blocked one. That claim still has to be resolved.
+	 *
+	 * @covers ::activity_is_blocked
+	 * @covers ::actor_matches_blocklist
+	 */
+	public function test_unblocked_signer_relaying_a_blocked_claim_is_matched() {
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_aliased_actor' ), 20, 2 );
+
+		Moderation::add_site_block( 'actor', 'https://blocked.example.com/users/evil' );
+
+		$blocked = Moderation::activity_is_blocked(
+			$this->follow_from( 'https://blocked.example.com/@evil' ),
+			null,
+			'https://blocked.example.com/users/neighbour#main-key'
+		);
+
+		$this->assertTrue( $blocked, 'A blocked claim should still be resolved when the signer is not blocked.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_aliased_actor' ), 20 );
+	}
+
+	/**
+	 * Test that an unsigned delivery falls back to resolving the claim.
+	 *
+	 * @covers ::activity_is_blocked
+	 * @covers ::actor_matches_blocklist
+	 */
+	public function test_missing_key_id_still_matches_the_claim() {
+		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_aliased_actor' ), 20, 2 );
+
+		Moderation::add_site_block( 'actor', 'https://blocked.example.com/users/evil' );
+
+		$this->assertTrue(
+			Moderation::activity_is_blocked( $this->follow_from( 'https://blocked.example.com/@evil' ) ),
+			'Without a key id the claim should still be resolved.'
+		);
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'mock_aliased_actor' ), 20 );
+	}
+
+	/**
 	 * Test domain extraction from various URL formats.
 	 *
 	 * @covers ::activity_is_blocked

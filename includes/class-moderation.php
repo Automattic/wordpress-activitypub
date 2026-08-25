@@ -52,20 +52,21 @@ class Moderation {
 	 *
 	 * @param Activity $activity The activity.
 	 * @param int|null $user_id  The user ID to check blocks for.
+	 * @param string   $key_id   Optional. The verified signing key id of the sender. Default ''.
 	 * @return bool True if blocked, false otherwise.
 	 */
-	public static function activity_is_blocked( $activity, $user_id = null ) {
+	public static function activity_is_blocked( $activity, $user_id = null, $key_id = '' ) {
 		if ( ! $activity instanceof Activity ) {
 			return false;
 		}
 
 		// First check site-wide blocks (admin moderation).
-		if ( self::activity_is_blocked_site_wide( $activity ) ) {
+		if ( self::activity_is_blocked_site_wide( $activity, $key_id ) ) {
 			return true;
 		}
 
 		// Then check user-specific blocks.
-		if ( $user_id && self::activity_is_blocked_for_user( $activity, $user_id ) ) {
+		if ( $user_id && self::activity_is_blocked_for_user( $activity, $user_id, $key_id ) ) {
 			return true;
 		}
 
@@ -80,16 +81,17 @@ class Moderation {
 	 * Check if an activity is blocked site-wide.
 	 *
 	 * @param Activity $activity The activity.
+	 * @param string   $key_id   Optional. The verified signing key id of the sender. Default ''.
 	 * @return bool True if blocked, false otherwise.
 	 */
-	public static function activity_is_blocked_site_wide( $activity ) {
+	public static function activity_is_blocked_site_wide( $activity, $key_id = '' ) {
 		$blocks = self::get_site_blocks();
 
 		if ( ! self::has_blocks( $blocks ) ) {
 			return false;
 		}
 
-		return self::check_activity_against_blocks( $activity, $blocks );
+		return self::check_activity_against_blocks( $activity, $blocks, $key_id );
 	}
 
 	/**
@@ -97,16 +99,17 @@ class Moderation {
 	 *
 	 * @param Activity $activity The activity.
 	 * @param int      $user_id  The user ID.
+	 * @param string   $key_id   Optional. The verified signing key id of the sender. Default ''.
 	 * @return bool True if blocked, false otherwise.
 	 */
-	public static function activity_is_blocked_for_user( $activity, $user_id ) {
+	public static function activity_is_blocked_for_user( $activity, $user_id, $key_id = '' ) {
 		$blocks = self::get_user_blocks( $user_id );
 
 		if ( ! self::has_blocks( $blocks ) ) {
 			return false;
 		}
 
-		return self::check_activity_against_blocks( $activity, $blocks );
+		return self::check_activity_against_blocks( $activity, $blocks, $key_id );
 	}
 
 	/**
@@ -457,49 +460,81 @@ class Moderation {
 	 * Check a delivered actor URI against the blocked actors.
 	 *
 	 * The delivered `actor` is only bound to a host by the signature, not to an exact string, so a
-	 * spelling that normalizes differently still has to be resolved to be ruled out. That costs a
-	 * fetch, so it is limited to hosts that have a blocked actor on them: no other host can match.
-	 * A failed fetch leaves the delivery unblocked, the same as before this check existed.
+	 * spelling that normalizes differently still has to be resolved to be ruled out.
+	 *
+	 * Three steps, cheapest first. The delivered string is compared normalized. Then the identity
+	 * that actually signed, which signature verification has already resolved and self-confirmed,
+	 * so reading it back costs a cache hit rather than a request. Only a claim that is neither of
+	 * those is resolved over the network, which is the case where a host relays for an actor other
+	 * than the one that signed. A failed fetch leaves the delivery unblocked, as before.
 	 *
 	 * @param string   $actor_id       The actor URI from the delivered activity.
 	 * @param string[] $blocked_actors The blocked actor URIs.
+	 * @param string   $key_id         Optional. The verified signing key id of the sender. Default ''.
 	 *
 	 * @return bool True if the actor is blocked, false otherwise.
 	 */
-	private static function actor_matches_blocklist( $actor_id, $blocked_actors ) {
+	private static function actor_matches_blocklist( $actor_id, $blocked_actors, $key_id = '' ) {
 		if ( empty( $blocked_actors ) ) {
 			return false;
 		}
 
-		if ( self::uri_matches_actors( $actor_id, $blocked_actors ) ) {
-			return true;
-		}
-
+		/*
+		 * Narrow by host first. Two URIs that name the same actor share a host, so an entry on
+		 * another host cannot match however either side is spelled, and the delivered actor and
+		 * the signing key are on one host because `Verification::verify_key_id()` requires it.
+		 * Most deliveries reach a list with nothing on their host and leave here.
+		 */
 		$host = Webfinger::get_host( $actor_id );
+
+		if ( '' === $host ) {
+			$host = Webfinger::get_host( $key_id );
+		}
 
 		if ( '' === $host ) {
 			return false;
 		}
 
-		foreach ( $blocked_actors as $blocked ) {
-			if ( Webfinger::get_host( $blocked ) !== $host ) {
-				continue;
+		$on_host = \array_filter(
+			$blocked_actors,
+			static function ( $blocked ) use ( $host ) {
+				return Webfinger::get_host( $blocked ) === $host;
 			}
+		);
 
-			/*
-			 * Resolved rather than read from a locally stored actor: a `guid` is the id the actor
-			 * declared, and `Update` stores an embedded actor object bound only to the sender's
-			 * host, so a remote server can store itself under any same-host id it likes.
-			 */
-			$object = Http::get_remote_object( $actor_id );
-
-			return ! \is_wp_error( $object )
-				&& isset( $object['id'] )
-				&& \is_string( $object['id'] )
-				&& self::uri_matches_actors( $object['id'], $blocked_actors );
+		if ( empty( $on_host ) ) {
+			return false;
 		}
 
-		return false;
+		/*
+		 * A key id names the actor it belongs to, and normalizing drops the fragment, so a blocked
+		 * signer is caught here rather than by resolving what the activity claims.
+		 */
+		if ( self::uri_matches_actors( $actor_id, $on_host ) || self::uri_matches_actors( $key_id, $on_host ) ) {
+			return true;
+		}
+
+		// The claim is the signer, which was just checked, so there is nothing left to resolve.
+		if ( normalize_actor_uri( $actor_id ) === normalize_actor_uri( $key_id ) ) {
+			return false;
+		}
+
+		/*
+		 * Resolved rather than read from a locally stored actor: a `guid` is the id the actor
+		 * declared, and `Update` stores an embedded actor object bound only to the sender's
+		 * host, so a remote server can store itself under any same-host id it likes.
+		 */
+		$object = Http::get_remote_object( $actor_id );
+
+		/*
+		 * Compared against the whole list, not the host-narrowed one: that narrowing decides
+		 * whether resolving is worth a request, but the id it resolves to can be on another host
+		 * and still be blocked.
+		 */
+		return ! \is_wp_error( $object )
+			&& isset( $object['id'] )
+			&& \is_string( $object['id'] )
+			&& self::uri_matches_actors( $object['id'], $blocked_actors );
 	}
 
 	/**
@@ -507,9 +542,10 @@ class Moderation {
 	 *
 	 * @param Activity $activity The activity.
 	 * @param array    $blocks   Blocks organized by type, as returned by get_site_blocks().
+	 * @param string   $key_id   Optional. The verified signing key id of the sender. Default ''.
 	 * @return bool True if blocked, false otherwise.
 	 */
-	private static function check_activity_against_blocks( $activity, $blocks ) {
+	private static function check_activity_against_blocks( $activity, $blocks, $key_id = '' ) {
 		// Extract actor information.
 		$actor_id = object_to_uri( $activity->get_actor() );
 
@@ -549,7 +585,7 @@ class Moderation {
 		}
 
 		// Check blocked actors.
-		if ( $actor_id && self::actor_matches_blocklist( $actor_id, $blocks['actors'] ) ) {
+		if ( self::actor_matches_blocklist( $actor_id, $blocks['actors'], $key_id ) ) {
 			return true;
 		}
 
