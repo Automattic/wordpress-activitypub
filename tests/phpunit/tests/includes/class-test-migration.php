@@ -642,6 +642,9 @@ class Test_Migration extends \WP_UnitTestCase {
 		$user    = get_user_by( 'id', $user_id );
 		$user->add_cap( 'activitypub' );
 
+		// The bootstrap already claimed the blog actor, so release it to exercise a first run.
+		delete_option( 'activitypub_default_extra_fields' );
+
 		// Run the private method over Reflection.
 		$reflection = new \ReflectionClass( Migration::class );
 		$method     = $reflection->getMethod( 'add_default_extra_field' );
@@ -755,20 +758,42 @@ class Test_Migration extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test backfill_default_extra_fields_flag marks existing activitypub users and the blog actor as provisioned.
+	 * Test backfill_default_extra_fields_flag only marks actors that already hold an extra field.
 	 *
 	 * @covers ::backfill_default_extra_fields_flag
 	 */
 	public function test_backfill_default_extra_fields_flag() {
-		$user_id = self::factory()->user->create();
-		$user    = \get_user_by( 'id', $user_id );
-		$user->add_cap( 'activitypub' );
+		$provisioned_id = self::factory()->user->create();
+		$provisioned    = \get_user_by( 'id', $provisioned_id );
+		$provisioned->add_cap( 'activitypub' );
 
-		$other_id = self::factory()->user->create();
+		$newcomer_id = self::factory()->user->create();
+		$newcomer    = \get_user_by( 'id', $newcomer_id );
+		$newcomer->add_cap( 'activitypub' );
 
-		\delete_user_meta( $user_id, 'activitypub_default_extra_fields' );
-		\delete_user_meta( $other_id, 'activitypub_default_extra_fields' );
+		\delete_user_meta( $provisioned_id, 'activitypub_default_extra_fields' );
+		\delete_user_meta( $newcomer_id, 'activitypub_default_extra_fields' );
 		\delete_option( 'activitypub_default_extra_fields' );
+
+		\wp_insert_post(
+			array(
+				'post_type'    => Extra_Fields::USER_POST_TYPE,
+				'post_author'  => $provisioned_id,
+				'post_status'  => 'publish',
+				'post_title'   => 'Powered by',
+				'post_content' => 'WordPress',
+			)
+		);
+
+		\wp_insert_post(
+			array(
+				'post_type'    => Extra_Fields::BLOG_POST_TYPE,
+				'post_author'  => 0,
+				'post_status'  => 'publish',
+				'post_title'   => 'Powered by',
+				'post_content' => 'WordPress',
+			)
+		);
 
 		$reflection = new \ReflectionClass( Migration::class );
 		$method     = $reflection->getMethod( 'backfill_default_extra_fields_flag' );
@@ -777,9 +802,53 @@ class Test_Migration extends \WP_UnitTestCase {
 		}
 		$method->invoke( null );
 
-		$this->assertSame( '1', \get_user_meta( $user_id, 'activitypub_default_extra_fields', true ), 'User with activitypub cap is marked as provisioned.' );
-		$this->assertSame( '', \get_user_meta( $other_id, 'activitypub_default_extra_fields', true ), 'User without activitypub cap is left alone.' );
-		$this->assertTrue( (bool) \get_option( 'activitypub_default_extra_fields' ), 'Blog actor is marked as provisioned.' );
+		$this->assertSame( '1', \get_user_meta( $provisioned_id, 'activitypub_default_extra_fields', true ), 'An actor that already holds an extra field is marked as provisioned.' );
+		$this->assertSame( '', \get_user_meta( $newcomer_id, 'activitypub_default_extra_fields', true ), 'An actor without extra fields is left alone and keeps its defaults.' );
+		$this->assertTrue( (bool) \get_option( 'activitypub_default_extra_fields' ), 'The blog actor is marked as provisioned.' );
+
+		_delete_all_data();
+	}
+
+	/**
+	 * Test that a deleted default extra field is not seeded again by a replayed migration.
+	 *
+	 * @covers ::add_default_extra_field
+	 */
+	public function test_add_default_extra_field_does_not_reseed_after_deletion() {
+		$user_id = self::factory()->user->create();
+		$user    = \get_user_by( 'id', $user_id );
+		$user->add_cap( 'activitypub' );
+
+		\delete_user_meta( $user_id, 'activitypub_default_extra_fields' );
+		\delete_option( 'activitypub_default_extra_fields' );
+
+		$reflection = new \ReflectionClass( Migration::class );
+		$method     = $reflection->getMethod( 'add_default_extra_field' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+		$method->invoke( null );
+
+		$user_args = array(
+			'post_type'      => Extra_Fields::USER_POST_TYPE,
+			'author'         => $user_id,
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+		);
+		$blog_args = array(
+			'post_type'      => Extra_Fields::BLOG_POST_TYPE,
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+		);
+
+		foreach ( \array_merge( \get_posts( $user_args ), \get_posts( $blog_args ) ) as $id ) {
+			\wp_delete_post( $id, true );
+		}
+
+		$method->invoke( null );
+
+		$this->assertCount( 0, \get_posts( $user_args ), 'A deleted user field must not come back on a replayed migration.' );
+		$this->assertCount( 0, \get_posts( $blog_args ), 'A deleted blog field must not come back on a replayed migration.' );
 
 		_delete_all_data();
 	}

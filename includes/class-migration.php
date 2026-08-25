@@ -777,6 +777,10 @@ class Migration {
 
 	/**
 	 * Add a default extra field for the user.
+	 *
+	 * Actors are marked with the `activitypub_default_extra_fields` flag before the field is
+	 * inserted. The flag outlives the post, so a field the user deleted is not seeded again and
+	 * `Extra_Fields::default_actor_extra_fields()` does not spawn replacement defaults.
 	 */
 	private static function add_default_extra_field() {
 		$users = \get_users(
@@ -788,10 +792,12 @@ class Migration {
 		$title   = \__( 'Powered by', 'activitypub' );
 		$content = 'WordPress';
 
-		// Add a default extra field for each user, and mark them as provisioned so
-		// Extra_Fields::default_actor_extra_fields does not spawn Blog/Profile/Homepage
-		// replacements once the user deletes the Powered-by entry.
 		foreach ( $users as $user ) {
+			// Passing $unique makes add_user_meta() return false when the actor was provisioned before, which turns a replayed migration into a no-op.
+			if ( ! \add_user_meta( $user->ID, 'activitypub_default_extra_fields', true, true ) ) {
+				continue;
+			}
+
 			\wp_insert_post(
 				array(
 					'post_type'    => Extra_Fields::USER_POST_TYPE,
@@ -801,48 +807,54 @@ class Migration {
 					'post_content' => $content,
 				)
 			);
-
-			\update_user_meta( $user->ID, 'activitypub_default_extra_fields', true );
 		}
 
-		\wp_insert_post(
-			array(
-				'post_type'    => Extra_Fields::BLOG_POST_TYPE,
-				'post_author'  => 0,
-				'post_status'  => 'publish',
-				'post_title'   => $title,
-				'post_content' => $content,
-			)
-		);
-
-		\update_option( 'activitypub_default_extra_fields', true );
+		// add_option() only writes when the row does not exist yet, which claims the blog actor the same way.
+		if ( \add_option( 'activitypub_default_extra_fields', true, '', false ) ) {
+			\wp_insert_post(
+				array(
+					'post_type'    => Extra_Fields::BLOG_POST_TYPE,
+					'post_author'  => 0,
+					'post_status'  => 'publish',
+					'post_title'   => $title,
+					'post_content' => $content,
+				)
+			);
+		}
 	}
 
 	/**
 	 * Backfill the `activitypub_default_extra_fields` flag for existing installs.
 	 *
-	 * Before this migration, `add_default_extra_field` provisioned a "Powered by"
-	 * entry for each user but did not set the flag that
-	 * `Extra_Fields::default_actor_extra_fields` checks. If a user deleted the
-	 * provisioned field, the filter saw an empty list and no flag and spawned
-	 * Blog/Profile/Homepage replacements (#3280). Marking every user with the
-	 * `activitypub` capability and the blog actor as already-provisioned stops that.
+	 * `add_default_extra_field()` used to provision the default field without setting the flag
+	 * that `Extra_Fields::default_actor_extra_fields()` checks, so deleting the field let the
+	 * filter spawn a fresh set of unrelated defaults. Actors that still hold an extra field were
+	 * provisioned by an earlier run and get the flag here. Actors without one are left alone,
+	 * because they may simply have joined after the initial migration and are still owed their
+	 * defaults.
 	 *
 	 * @since unreleased
 	 */
 	private static function backfill_default_extra_fields_flag() {
-		$user_ids = \get_users(
-			array(
-				'capability__in' => array( 'activitypub' ),
-				'fields'         => 'ID',
-			)
-		);
+		global $wpdb;
+
+		// One DISTINCT lookup instead of a query per actor, which matters on sites with many authors.
+		$user_ids = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT post_author FROM $wpdb->posts WHERE post_type = %s", Extra_Fields::USER_POST_TYPE ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 
 		foreach ( $user_ids as $user_id ) {
-			\update_user_meta( $user_id, 'activitypub_default_extra_fields', true );
+			// Orphaned fields can carry a zero author, which is not an actor we can flag.
+			if ( ! (int) $user_id ) {
+				continue;
+			}
+
+			\update_user_meta( (int) $user_id, 'activitypub_default_extra_fields', true );
 		}
 
-		\update_option( 'activitypub_default_extra_fields', true );
+		$blog_fields = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $wpdb->posts WHERE post_type = %s", Extra_Fields::BLOG_POST_TYPE ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+
+		if ( $blog_fields ) {
+			\update_option( 'activitypub_default_extra_fields', true );
+		}
 	}
 
 	/**
