@@ -178,7 +178,8 @@ class Webfinger {
 			// read the host off the first `@` in its path.
 			$identifier = $url;
 			$scheme     = '';
-		} elseif ( ! \preg_match( '/^([a-zA-Z+]+):/', $url, $match ) ) {
+			// Scheme grammar per RFC 3986: a digit or hyphen in it must not read as a handle.
+		} elseif ( ! \preg_match( '/^([a-zA-Z][a-zA-Z0-9+.\-]*):/', $url, $match ) ) {
 			$identifier = 'acct:' . $url;
 			$scheme     = 'acct';
 		} else {

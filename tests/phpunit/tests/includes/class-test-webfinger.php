@@ -80,6 +80,9 @@ class Test_Webfinger extends \WP_UnitTestCase {
 			// Brackets are kept: this host is also used to build WebFinger and intent URLs.
 			array( 'https://[2001:db8::1]/@pfefferle', 'https://[2001:db8::1]/@pfefferle', '[2001:db8::1]' ),
 			array( 'ftp://example.org/@pfefferle', 'ftp://example.org/@pfefferle', 'example.org' ),
+			// A digit or hyphen in the scheme must not make this read as a handle.
+			array( 'web3://example.org/@pfefferle', 'web3://example.org/@pfefferle', 'example.org' ),
+			array( 'view-source://example.org/x', 'view-source://example.org/x', 'example.org' ),
 		);
 	}
 
