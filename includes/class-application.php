@@ -296,9 +296,10 @@ class Application {
 
 		list( $identifier, $host ) = $identifier_and_host;
 
-		// The resource must point at this site, or at its pre-migration host.
-		$host = normalize_host( $host );
-		if ( normalize_host( home_host() ) !== $host && normalize_host( \get_option( 'activitypub_old_host' ) ) !== $host ) {
+		// The resource must point at this site, or at its pre-migration host. Both sides are folded:
+		// the requested host is whatever the caller typed, and the stored ones are whatever an admin did.
+		$host = normalize_host( fold_host( $host ) );
+		if ( normalize_host( fold_host( home_host() ) ) !== $host && normalize_host( fold_host( \get_option( 'activitypub_old_host' ) ) ) !== $host ) {
 			return false;
 		}
 
