@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Apps connected through the ActivityPub API now receive exactly the permissions you approve on the connection screen.

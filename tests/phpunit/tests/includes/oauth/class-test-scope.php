@@ -257,8 +257,23 @@ class Test_Scope extends \WP_UnitTestCase {
 	 * @covers ::contains
 	 */
 	public function test_contains_false() {
-		$scopes = array( 'read', 'write' );
+		$scopes = array( 'read' );
 		$this->assertFalse( Scope::contains( $scopes, 'follow' ) );
+		$this->assertFalse( Scope::contains( $scopes, 'write' ) );
+	}
+
+	/**
+	 * Test that `write` covers the narrower writes, and that reading is not implied by writing.
+	 *
+	 * @covers ::contains
+	 */
+	public function test_contains_honors_implied_scopes() {
+		$scopes = array( Scope::WRITE );
+
+		$this->assertTrue( Scope::contains( $scopes, Scope::FOLLOW ), 'write covers following.' );
+		$this->assertTrue( Scope::contains( $scopes, Scope::PROFILE ), 'write covers profile edits.' );
+		$this->assertFalse( Scope::contains( $scopes, Scope::READ ), 'write does not imply read.' );
+		$this->assertFalse( Scope::contains( array( Scope::FOLLOW ), Scope::WRITE ), 'follow does not widen to write.' );
 	}
 
 	/**
@@ -349,10 +364,10 @@ class Test_Scope extends \WP_UnitTestCase {
 	 */
 	public function data_canonical_write_aliases() {
 		return array(
-			'umbrella' => array( 'activitypub:write:all' ),
-			'create'   => array( 'activitypub:write:create' ),
-			'follow'   => array( 'activitypub:write:follow' ),
-			'like'     => array( 'activitypub:write:like' ),
+			'umbrella'   => array( 'activitypub:write:all' ),
+			'create'     => array( 'activitypub:write:create' ),
+			'like'       => array( 'activitypub:write:like' ),
+			'sameorigin' => array( 'activitypub:write:like:sameorigin' ),
 		);
 	}
 
@@ -367,7 +382,7 @@ class Test_Scope extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Supported() advertises both internal scopes and Basic Profile canonical aliases.
+	 * Supported() advertises internal scopes and Basic Profile identifiers in both forms.
 	 *
 	 * @covers ::supported
 	 */
@@ -378,8 +393,128 @@ class Test_Scope extends \WP_UnitTestCase {
 		$this->assertContains( Scope::READ, $supported );
 		$this->assertContains( Scope::WRITE, $supported );
 
-		// Basic Profile canonical aliases are now discoverable.
+		// Basic Profile aliases from before 2026-08-04.
 		$this->assertContains( 'activitypub:read:all', $supported );
 		$this->assertContains( 'activitypub:write:all', $supported );
+
+		// The URI-form identifiers that replaced them.
+		$this->assertContains( Scope::CANONICAL_SCOPE_PREFIX . 'readall', $supported );
+		$this->assertContains( Scope::CANONICAL_SCOPE_PREFIX . 'updateprofile', $supported );
+	}
+
+	/**
+	 * Follow and unfollow aliases resolve to the `follow` scope rather than to `write`.
+	 *
+	 * @covers ::validate
+	 * @covers ::normalize
+	 *
+	 * @dataProvider data_follow_aliases
+	 *
+	 * @param string $alias Basic Profile identifier.
+	 */
+	public function test_validate_maps_follow_aliases( $alias ) {
+		$this->assertEquals( array( Scope::FOLLOW ), Scope::validate( $alias ) );
+	}
+
+	/**
+	 * Data provider for follow aliases.
+	 *
+	 * @return array<string, array{0:string}>
+	 */
+	public function data_follow_aliases() {
+		return array(
+			'follow'     => array( 'activitypub:write:follow' ),
+			'unfollow'   => array( 'activitypub:write:undo:follow' ),
+			'sameorigin' => array( 'activitypub:write:follow:sameorigin' ),
+			'uri'        => array( Scope::CANONICAL_SCOPE_PREFIX . 'follow' ),
+		);
+	}
+
+	/**
+	 * URI-form identifiers resolve to the plugin's scopes.
+	 *
+	 * @covers ::validate
+	 * @covers ::normalize
+	 */
+	public function test_validate_normalizes_canonical_scope_uris() {
+		$this->assertEquals( array( Scope::READ ), Scope::validate( Scope::CANONICAL_SCOPE_PREFIX . 'readoutbox' ) );
+		$this->assertEquals( array( Scope::WRITE ), Scope::validate( Scope::CANONICAL_SCOPE_PREFIX . 'createcontent' ) );
+		$this->assertEquals( array( Scope::PROFILE ), Scope::validate( Scope::CANONICAL_SCOPE_PREFIX . 'updateprofile' ) );
+	}
+
+	/**
+	 * The scope required to post an activity narrows below `write` where a scope exists for it.
+	 *
+	 * @covers ::for_activity
+	 *
+	 * @dataProvider data_activity_scopes
+	 *
+	 * @param array  $activity The activity being posted.
+	 * @param string $expected The required scope.
+	 */
+	public function test_for_activity( $activity, $expected ) {
+		$this->assertSame( $expected, Scope::for_activity( $activity ) );
+	}
+
+	/**
+	 * Data provider for activity scopes.
+	 *
+	 * @return array<string, array{0:array, 1:string}>
+	 */
+	public function data_activity_scopes() {
+		return array(
+			'follow'        => array( array( 'type' => 'Follow' ), Scope::FOLLOW ),
+			'unfollow'      => array(
+				array(
+					'type'   => 'Undo',
+					'object' => array( 'type' => 'Follow' ),
+				),
+				Scope::FOLLOW,
+			),
+			'accept follow' => array(
+				array(
+					'type'   => 'Accept',
+					'object' => array( 'type' => 'Follow' ),
+				),
+				Scope::FOLLOW,
+			),
+			'reject follow' => array(
+				array(
+					'type'   => 'Reject',
+					'object' => array( 'type' => 'Follow' ),
+				),
+				Scope::FOLLOW,
+			),
+			'profile edit'  => array(
+				array(
+					'type'   => 'Update',
+					'object' => array( 'type' => 'Person' ),
+				),
+				Scope::PROFILE,
+			),
+			'content edit'  => array(
+				array(
+					'type'   => 'Update',
+					'object' => array( 'type' => 'Note' ),
+				),
+				Scope::WRITE,
+			),
+			'create'        => array(
+				array(
+					'type'   => 'Create',
+					'object' => array( 'type' => 'Note' ),
+				),
+				Scope::WRITE,
+			),
+			'delete'        => array( array( 'type' => 'Delete' ), Scope::WRITE ),
+			'undo like'     => array(
+				array(
+					'type'   => 'Undo',
+					'object' => array( 'type' => 'Like' ),
+				),
+				Scope::WRITE,
+			),
+			'no type'       => array( array(), Scope::WRITE ),
+		);
 	}
 }
