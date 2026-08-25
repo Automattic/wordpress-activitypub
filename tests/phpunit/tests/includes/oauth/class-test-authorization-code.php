@@ -470,7 +470,7 @@ class Test_Authorization_Code extends \WP_UnitTestCase {
 			$this->user_id,
 			$limited_client['client_id'],
 			'https://limited.com/callback',
-			array( Scope::READ, Scope::WRITE, Scope::FOLLOW ),
+			array( Scope::READ, Scope::WRITE, Scope::PUSH ),
 			$challenge,
 			'S256'
 		);

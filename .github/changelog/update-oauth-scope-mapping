@@ -1,4 +1,4 @@
 Significance: minor
 Type: changed
 
-Apps connected through the ActivityPub API now receive exactly the permissions you approve on the connection screen.
+Apps connected through the ActivityPub API can now request permissions using the standard ActivityPub API scope names, and the connection screen only offers permissions the site can actually enforce.

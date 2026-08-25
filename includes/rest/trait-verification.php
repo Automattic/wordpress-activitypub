@@ -12,7 +12,6 @@ use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Server as OAuth_Server;
 use Activitypub\Signature;
 
-use function Activitypub\is_activity;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 use function Activitypub\use_authorized_fetch;
@@ -140,8 +139,7 @@ trait Verification {
 	 *
 	 * Automatically determines the required scope based on the HTTP method:
 	 * - GET, HEAD: read scope
-	 * - POST, PUT, PATCH, DELETE: write scope, narrowed by {@see Scope::for_activity()} when the
-	 *   request carries an activity, so `follow` and `profile` grants are honoured on their own
+	 * - POST, PUT, PATCH, DELETE: write scope
 	 *
 	 * If the request has a user_id parameter, also verifies that the
 	 * authenticated user matches that actor.
@@ -161,20 +159,6 @@ trait Verification {
 		$method       = $request->get_method();
 		$read_methods = array( 'GET', 'HEAD' );
 		$scope        = \in_array( $method, $read_methods, true ) ? Scope::READ : Scope::WRITE;
-
-		/*
-		 * A write can be narrower than `write`. Following and editing the profile are things a
-		 * client can be granted on their own, so the activity decides which scope is needed.
-		 * Anything that is not an activity, which is every write outside the outbox, keeps
-		 * asking for `write`.
-		 */
-		if ( Scope::WRITE === $scope ) {
-			$activity = $request->get_json_params();
-
-			if ( is_activity( $activity ) ) {
-				$scope = Scope::for_activity( $activity );
-			}
-		}
 
 		$result = OAuth_Server::check_oauth_permission( $request, $scope );
 		if ( true === $result ) {

@@ -251,9 +251,6 @@ class Test_Token extends \WP_UnitTestCase {
 
 		$this->assertTrue( $token->has_scope( Scope::READ ) );
 		$this->assertTrue( $token->has_scope( Scope::WRITE ) );
-
-		// `write` is every write the actor can make, so it covers following too.
-		$this->assertTrue( $token->has_scope( Scope::FOLLOW ) );
 		$this->assertFalse( $token->has_scope( Scope::PUSH ) );
 	}
 
@@ -524,7 +521,7 @@ class Test_Token extends \WP_UnitTestCase {
 		// Create multiple tokens.
 		$token1 = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
 		$token2 = Token::create( $this->user_id, $this->client_id, array( Scope::WRITE ) );
-		$token3 = Token::create( $this->user_id, $this->client_id, array( Scope::FOLLOW ) );
+		$token3 = Token::create( $this->user_id, $this->client_id, array( Scope::PUSH ) );
 
 		$count = Token::revoke_all_for_user( $this->user_id );
 		$this->assertEquals( 3, $count );

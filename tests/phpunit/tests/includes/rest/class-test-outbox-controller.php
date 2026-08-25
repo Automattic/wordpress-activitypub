@@ -1472,11 +1472,11 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 			)
 		);
 
-		// The owner is signed in for all three cases; only the token's scope differs.
+		// The owner is signed in throughout; only the token's scope differs.
 		\wp_set_current_user( $user_id );
 
-		$this->set_oauth_scopes( $user_id, array( Scope::PROFILE ) );
-		$this->assertNotContains( $canary, $this->outbox_activity_ids( $user_id ), 'A profile-only token must not see a private activity.' );
+		$this->set_oauth_scopes( $user_id, array( Scope::PUSH ) );
+		$this->assertNotContains( $canary, $this->outbox_activity_ids( $user_id ), 'A token without the read scope must not see a private activity.' );
 
 		$this->set_oauth_scopes( $user_id, array( Scope::READ ) );
 		$this->assertContains( $canary, $this->outbox_activity_ids( $user_id ), 'A read-scoped token is the positive control.' );

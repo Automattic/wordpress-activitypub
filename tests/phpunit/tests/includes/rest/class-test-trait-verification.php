@@ -685,7 +685,7 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	 * @covers ::verify_owner
 	 */
 	public function test_verify_owner_is_not_scope_sensitive() {
-		$this->set_oauth_token( $this->create_mock_token( $this->user_id, array( Scope::PROFILE ) ) );
+		$this->set_oauth_token( $this->create_mock_token( $this->user_id, array( Scope::PUSH ) ) );
 		\wp_set_current_user( $this->user_id );
 
 		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . $this->user_id . '/outbox' );
@@ -704,13 +704,13 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	 */
 	public function test_show_social_graph_requires_read_scope() {
 		\update_user_option( $this->user_id, 'activitypub_hide_social_graph', '1' );
-		$this->set_oauth_token( $this->create_mock_token( $this->user_id, array( Scope::PROFILE ) ) );
+		$this->set_oauth_token( $this->create_mock_token( $this->user_id, array( Scope::PUSH ) ) );
 		\wp_set_current_user( $this->user_id );
 
 		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . $this->user_id . '/following' );
 		$request->set_param( 'user_id', $this->user_id );
 
-		$this->assertFalse( $this->instance->show_social_graph_public( $request ), 'A profile-only token must not reveal a hidden social graph.' );
+		$this->assertFalse( $this->instance->show_social_graph_public( $request ), 'A token without the read scope must not reveal a hidden social graph.' );
 	}
 
 	/**

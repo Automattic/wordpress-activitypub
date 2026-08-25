@@ -7,8 +7,6 @@
 
 namespace Activitypub\OAuth;
 
-use function Activitypub\is_actor;
-
 /**
  * Scope class for OAuth 2.0 scope management.
  *
@@ -26,35 +24,9 @@ class Scope {
 	const WRITE = 'write';
 
 	/**
-	 * Follow access scope - manage following relationships.
-	 */
-	const FOLLOW = 'follow';
-
-	/**
 	 * Push access scope - subscribe to SSE streams.
 	 */
 	const PUSH = 'push';
-
-	/**
-	 * Profile access scope - edit actor profile.
-	 */
-	const PROFILE = 'profile';
-
-	/**
-	 * Scopes that are granted implicitly by holding a broader one.
-	 *
-	 * `write` is every write the actor can make, so it covers following and profile edits too.
-	 * `follow` and `profile` exist as narrower alternatives for a client that only needs one of
-	 * them, which is the point of offering them on the consent screen at all. Reading is not
-	 * implied by writing; a client that wants both asks for both.
-	 *
-	 * @since unreleased
-	 *
-	 * @var array
-	 */
-	const IMPLIES = array(
-		self::WRITE => array( self::FOLLOW, self::PROFILE ),
-	);
 
 	/**
 	 * All available scopes.
@@ -64,19 +36,17 @@ class Scope {
 	const ALL = array(
 		self::READ,
 		self::WRITE,
-		self::FOLLOW,
 		self::PUSH,
-		self::PROFILE,
 	);
 
 	/**
 	 * Scope aliases from the SWICG ActivityPub API Basic Profile, as it stood before 2026-08-04.
 	 *
-	 * Maps every alias the draft defined, including the `:sameorigin` variants, to the nearest
-	 * scope the plugin actually has. That is coarser than the draft intended: the plugin gates a
-	 * write per activity only where it has a scope for it, so `activitypub:write:follow` resolves
-	 * to `follow`, while `activitypub:write:like` resolves to `write`, which also permits deleting,
-	 * blocking and flagging. See {@see self::for_activity()} for what each write actually needs.
+	 * Maps every alias the draft defined, including the `:sameorigin` variants, to a scope the
+	 * plugin grants. That is coarser than the draft intended: there is no per-activity access
+	 * control, so every write alias resolves to `write`, which permits any activity the actor
+	 * can post. A client asking for `activitypub:write:like` is granted deleting and blocking
+	 * along with it.
 	 *
 	 * @since 9.0.0
 	 * @since unreleased Changed from a list to an alias-to-scope map.
@@ -111,8 +81,8 @@ class Scope {
 		'activitypub:write:delete:sameorigin'           => self::WRITE,
 		'activitypub:write:flag'                        => self::WRITE,
 		'activitypub:write:flag:sameorigin'             => self::WRITE,
-		'activitypub:write:follow'                      => self::FOLLOW,
-		'activitypub:write:follow:sameorigin'           => self::FOLLOW,
+		'activitypub:write:follow'                      => self::WRITE,
+		'activitypub:write:follow:sameorigin'           => self::WRITE,
 		'activitypub:write:like'                        => self::WRITE,
 		'activitypub:write:like:sameorigin'             => self::WRITE,
 		'activitypub:write:question'                    => self::WRITE,
@@ -125,8 +95,8 @@ class Scope {
 		'activitypub:write:undo:announce:sameorigin'    => self::WRITE,
 		'activitypub:write:undo:block'                  => self::WRITE,
 		'activitypub:write:undo:block:sameorigin'       => self::WRITE,
-		'activitypub:write:undo:follow'                 => self::FOLLOW,
-		'activitypub:write:undo:follow:sameorigin'      => self::FOLLOW,
+		'activitypub:write:undo:follow'                 => self::WRITE,
+		'activitypub:write:undo:follow:sameorigin'      => self::WRITE,
 		'activitypub:write:undo:like'                   => self::WRITE,
 		'activitypub:write:undo:like:sameorigin'        => self::WRITE,
 		'activitypub:write:update'                      => self::WRITE,
@@ -147,10 +117,10 @@ class Scope {
 	 * The Basic Profile replaced its `activitypub:*` aliases with these URL identifiers on
 	 * 2026-08-04; {@see self::CANONICAL_ALIASES} is kept for clients built before that.
 	 *
-	 * Each identifier maps to the nearest scope the plugin has, which is coarser than the spec
-	 * intends: the per-collection read identifiers all resolve to `read`, and the per-action
-	 * write identifiers to `write`. `follow` and `updateprofile` are the two with a scope of
-	 * their own. Three identifiers are deliberately absent: `readown` and `reactown` describe data
+	 * Each identifier maps to a scope the plugin grants, which is coarser than the spec intends:
+	 * the per-collection read identifiers all resolve to `read`, and the per-action write
+	 * identifiers, `follow` and `updateprofile` included, to `write`. Three identifiers are
+	 * deliberately absent: `readown` and `reactown` describe data
 	 * on the client's own server rather than this one, and `uploadfiles` needs a MediaUpload
 	 * endpoint the plugin does not implement.
 	 *
@@ -180,8 +150,8 @@ class Scope {
 		'addresspublic'     => self::WRITE,
 		'addressactor'      => self::WRITE,
 		'addressfollowers'  => self::WRITE,
-		'follow'            => self::FOLLOW,
-		'updateprofile'     => self::PROFILE,
+		'follow'            => self::WRITE,
+		'updateprofile'     => self::WRITE,
 	);
 
 	/**
@@ -190,11 +160,9 @@ class Scope {
 	 * @var array
 	 */
 	const DESCRIPTIONS = array(
-		self::READ    => 'Read actor profile, collections, and objects',
-		self::WRITE   => 'Create activities via POST to outbox',
-		self::FOLLOW  => 'Manage following relationships',
-		self::PUSH    => 'Subscribe to real-time event streams',
-		self::PROFILE => 'Edit actor profile',
+		self::READ  => 'Read actor profile, collections, and objects',
+		self::WRITE => 'Create activities via POST to outbox',
+		self::PUSH  => 'Subscribe to real-time event streams',
 	);
 
 	/**
@@ -332,41 +300,6 @@ class Scope {
 	}
 
 	/**
-	 * The scope required to post an activity to the outbox.
-	 *
-	 * `write` covers every one of these through {@see self::IMPLIES}; this returns the narrowest
-	 * scope that is enough, so a client granted only `follow` or only `profile` can still do the
-	 * thing it was granted, and nothing else.
-	 *
-	 * @since unreleased
-	 *
-	 * @param array $activity The activity being posted.
-	 * @return string The required scope.
-	 */
-	public static function for_activity( $activity ) {
-		$type = isset( $activity['type'] ) ? $activity['type'] : '';
-
-		if ( 'Follow' === $type ) {
-			return self::FOLLOW;
-		}
-
-		$object      = isset( $activity['object'] ) ? $activity['object'] : null;
-		$object_type = \is_array( $object ) && isset( $object['type'] ) ? $object['type'] : '';
-
-		// Undoing a follow is unfollowing; accepting or rejecting one is answering a follow request.
-		if ( \in_array( $type, array( 'Undo', 'Accept', 'Reject' ), true ) && 'Follow' === $object_type ) {
-			return self::FOLLOW;
-		}
-
-		// An Update whose object is an actor is a profile edit, not a content edit.
-		if ( 'Update' === $type && is_actor( $object ) ) {
-			return self::PROFILE;
-		}
-
-		return self::WRITE;
-	}
-
-	/**
 	 * Check if a scope is valid.
 	 *
 	 * @param string $scope The scope to check.
@@ -403,22 +336,7 @@ class Scope {
 	 * @return bool True if the scope is present.
 	 */
 	public static function contains( $scopes, $scope ) {
-		if ( ! \is_array( $scopes ) ) {
-			return false;
-		}
-
-		if ( \in_array( $scope, $scopes, true ) ) {
-			return true;
-		}
-
-		// A broader scope the client does hold may already cover the one being asked for.
-		foreach ( self::IMPLIES as $granting => $implied ) {
-			if ( \in_array( $granting, $scopes, true ) && \in_array( $scope, $implied, true ) ) {
-				return true;
-			}
-		}
-
-		return false;
+		return \is_array( $scopes ) && \in_array( $scope, $scopes, true );
 	}
 
 	/**
