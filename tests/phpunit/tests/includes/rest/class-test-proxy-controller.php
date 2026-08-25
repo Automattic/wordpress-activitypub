@@ -9,8 +9,8 @@ namespace Activitypub\Tests\Rest;
 
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\OAuth\Scope;
-use Activitypub\OAuth\Server as OAuth_Server;
 use Activitypub\Rest\Proxy_Controller;
+use Activitypub\Tests\OAuth_Token_Stub;
 
 /**
  * Test class for Proxy_Controller.
@@ -18,6 +18,8 @@ use Activitypub\Rest\Proxy_Controller;
  * @coversDefaultClass \Activitypub\Rest\Proxy_Controller
  */
 class Test_Proxy_Controller extends \WP_UnitTestCase {
+	use OAuth_Token_Stub;
+
 
 	/**
 	 * REST Server instance.
@@ -586,75 +588,14 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 		$request->set_body_params( array( 'id' => 'https://example.com/gone-forever' ) );
 
 		// A read-scoped token reaches the handler, which forwards the remote 404.
-		$this->set_oauth_scopes( array( Scope::READ ) );
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::READ ), self::$user_id ) );
 		$this->assertEquals( 404, $this->server->dispatch( $request )->get_status(), 'A read token may use the proxy.' );
 
 		// A token without read does not, even though the request is a POST.
-		$this->set_oauth_scopes( array( Scope::WRITE ) );
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::WRITE ), self::$user_id ) );
 		$this->assertEquals( 403, $this->server->dispatch( $request )->get_status(), 'Write is not the authority to read a remote object.' );
 
-		$this->set_oauth_scopes( null );
+		$this->set_oauth_current_token( null );
 		\remove_filter( 'pre_http_request', $respond );
-	}
-
-	/**
-	 * Put the OAuth Server into a state as though a token with these scopes authenticated.
-	 *
-	 * @param array|null $scopes Scopes the token carries, or null for no OAuth session.
-	 */
-	private function set_oauth_scopes( $scopes ) {
-		$token = null;
-
-		if ( null !== $scopes ) {
-			$token = new class( $scopes, self::$user_id ) {
-				/**
-				 * Scopes the token carries.
-				 *
-				 * @var array
-				 */
-				private $scopes;
-
-				/**
-				 * User ID.
-				 *
-				 * @var int
-				 */
-				private $user_id;
-
-				/**
-				 * Constructor.
-				 *
-				 * @param array $scopes  Scopes.
-				 * @param int   $user_id User ID.
-				 */
-				public function __construct( $scopes, $user_id ) {
-					$this->scopes  = $scopes;
-					$this->user_id = $user_id;
-				}
-
-				/**
-				 * Get user ID.
-				 *
-				 * @return int
-				 */
-				public function get_user_id() {
-					return $this->user_id;
-				}
-
-				/**
-				 * Check scope.
-				 *
-				 * @param string $scope Scope to check.
-				 * @return bool
-				 */
-				public function has_scope( $scope ) {
-					return \in_array( $scope, $this->scopes, true );
-				}
-			};
-		}
-
-		$property = ( new \ReflectionClass( OAuth_Server::class ) )->getProperty( 'current_token' );
-		$property->setAccessible( true );
-		$property->setValue( null, $token );
 	}
 }

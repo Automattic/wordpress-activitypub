@@ -22,6 +22,8 @@ use Activitypub\Post_Types;
  * @group oauth
  */
 class Test_Token_Controller extends \WP_UnitTestCase {
+	use \Activitypub\Tests\OAuth_Token_Stub;
+
 
 	/**
 	 * Test user ID.
@@ -568,20 +570,6 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 		$this->assertInstanceOf( \WP_Error::class, Token::validate( $target_token_data['access_token'] ) );
 	}
 
-	/**
-	 * Inject an OAuth current_token via reflection so tests can simulate
-	 * bearer authentication without relying on the plugin bootstrap hook
-	 * that only fires when the `activitypub_api` option was enabled
-	 * before the plugin loaded.
-	 *
-	 * @param \Activitypub\OAuth\Token|null $token The token to inject, or null to reset.
-	 */
-	protected function set_oauth_current_token( $token ) {
-		$reflection = new \ReflectionClass( \Activitypub\OAuth\Server::class );
-		$property   = $reflection->getProperty( 'current_token' );
-		$property->setAccessible( true );
-		$property->setValue( null, $token );
-	}
 
 	/**
 	 * Test introspect endpoint requires authentication.

@@ -9,9 +9,9 @@ namespace Activitypub\Tests\Rest;
 
 use Activitypub\Collection\Outbox;
 use Activitypub\OAuth\Scope;
-use Activitypub\OAuth\Server as OAuth_Server;
 use Activitypub\Rest\Event_Stream;
 use Activitypub\Rest\Verification;
+use Activitypub\Tests\OAuth_Token_Stub;
 
 use function Activitypub\add_to_outbox;
 
@@ -22,6 +22,8 @@ use function Activitypub\add_to_outbox;
  * @coversDefaultClass \Activitypub\Rest\Event_Stream
  */
 class Test_Trait_Event_Stream extends \WP_UnitTestCase {
+	use OAuth_Token_Stub;
+
 
 	/**
 	 * Test class instance that uses the trait.
@@ -503,73 +505,31 @@ class Test_Trait_Event_Stream extends \WP_UnitTestCase {
 		$outbox_id = add_to_outbox( \get_post( $post_id ), 'Create', $this->user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
 		$this->assertIsInt( $outbox_id );
 
-		$this->set_oauth_scopes( array( Scope::PUSH ) );
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH ) ) );
 		$this->assertEmpty(
 			$this->instance->test_get_new_items( $this->user_id, 'outbox', 0 ),
 			'A push-only token must not receive a private activity.'
 		);
 
-		$this->set_oauth_scopes( array( Scope::PUSH, Scope::READ ) );
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH, Scope::READ ) ) );
 		$this->assertNotEmpty(
 			$this->instance->test_get_new_items( $this->user_id, 'outbox', 0 ),
 			'A token that also holds read is the positive control.'
 		);
 
-		$this->set_oauth_scopes( null );
+		$this->set_oauth_current_token( null );
 		$this->assertNotEmpty(
 			$this->instance->test_get_new_items( $this->user_id, 'outbox', 0 ),
 			'A caller with no token is not scope-limited.'
 		);
 	}
 
-	/**
-	 * Put the OAuth Server into a state as though a token with these scopes authenticated.
-	 *
-	 * @param array|null $scopes Scopes the token carries, or null for no OAuth session.
-	 */
-	private function set_oauth_scopes( $scopes ) {
-		$token = null;
-
-		if ( null !== $scopes ) {
-			$token = new class( $scopes ) {
-				/**
-				 * Scopes the token carries.
-				 *
-				 * @var array
-				 */
-				private $scopes;
-
-				/**
-				 * Constructor.
-				 *
-				 * @param array $scopes Scopes.
-				 */
-				public function __construct( $scopes ) {
-					$this->scopes = $scopes;
-				}
-
-				/**
-				 * Check scope.
-				 *
-				 * @param string $scope Scope to check.
-				 * @return bool
-				 */
-				public function has_scope( $scope ) {
-					return \in_array( $scope, $this->scopes, true );
-				}
-			};
-		}
-
-		$property = ( new \ReflectionClass( OAuth_Server::class ) )->getProperty( 'current_token' );
-		$property->setAccessible( true );
-		$property->setValue( null, $token );
-	}
 
 	/**
 	 * Clear any OAuth session this class established.
 	 */
 	public function tear_down() {
-		$this->set_oauth_scopes( null );
+		$this->set_oauth_current_token( null );
 
 		parent::tear_down();
 	}

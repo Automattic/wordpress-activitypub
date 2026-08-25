@@ -8,7 +8,6 @@
 namespace Activitypub\Tests\Rest;
 
 use Activitypub\OAuth\Scope;
-use Activitypub\OAuth\Server as OAuth_Server;
 use Activitypub\Rest\Verification;
 
 /**
@@ -18,6 +17,8 @@ use Activitypub\Rest\Verification;
  * @coversDefaultClass \Activitypub\Rest\Verification
  */
 class Test_Trait_Verification extends \WP_UnitTestCase {
+	use \Activitypub\Tests\OAuth_Token_Stub;
+
 
 	/**
 	 * The stub instance that uses the Verification trait.
@@ -70,10 +71,7 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		\delete_option( 'activitypub_actor_mode' );
 
 		// Reset OAuth token state.
-		$reflection = new \ReflectionClass( OAuth_Server::class );
-		$property   = $reflection->getProperty( 'current_token' );
-		$property->setAccessible( true );
-		$property->setValue( null, null );
+		$this->set_oauth_current_token( null );
 
 		parent::tear_down();
 	}
@@ -242,7 +240,7 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		\wp_set_current_user( $this->user_id );
 
 		// Simulate an OAuth request by setting a current token via reflection.
-		$this->set_oauth_token( $this->create_mock_token( 0, false ) );
+		$this->set_oauth_current_token( $this->mock_oauth_token( array(), 0 ) );
 
 		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/users/1/outbox' );
 
@@ -362,7 +360,7 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	 * @covers ::verify_owner
 	 */
 	public function test_verify_owner_oauth_token_matches() {
-		$this->set_oauth_token( $this->create_mock_token( $this->user_id, true ) );
+		$this->set_oauth_current_token( $this->mock_oauth_token( Scope::ALL, $this->user_id ) );
 		// OAuth Server sets current user during authentication.
 		\wp_set_current_user( $this->user_id );
 
@@ -586,76 +584,7 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		}
 	}
 
-	/**
-	 * Create a mock OAuth token object.
-	 *
-	 * @param int        $user_id   The user ID the token belongs to.
-	 * @param bool|array $has_scope Whether the token has any scope, or the exact list of scopes it carries.
-	 * @return object Mock token with get_user_id() and has_scope() methods.
-	 */
-	private function create_mock_token( $user_id, $has_scope ) {
-		return new class( $user_id, $has_scope ) {
-			/**
-			 * User ID.
-			 *
-			 * @var int
-			 */
-			private $user_id;
 
-			/**
-			 * Whether the token has scope.
-			 *
-			 * @var bool
-			 */
-			private $has_scope;
-
-			/**
-			 * Constructor.
-			 *
-			 * @param int  $user_id   User ID.
-			 * @param bool $has_scope Has scope.
-			 */
-			public function __construct( $user_id, $has_scope ) {
-				$this->user_id   = $user_id;
-				$this->has_scope = $has_scope;
-			}
-
-			/**
-			 * Get user ID.
-			 *
-			 * @return int
-			 */
-			public function get_user_id() {
-				return $this->user_id;
-			}
-
-			/**
-			 * Check scope.
-			 *
-			 * @param string $scope Scope to check.
-			 * @return bool
-			 */
-			public function has_scope( $scope ) {
-				if ( \is_array( $this->has_scope ) ) {
-					return \in_array( $scope, $this->has_scope, true );
-				}
-
-				return $this->has_scope;
-			}
-		};
-	}
-
-	/**
-	 * Set the OAuth Server's current token via reflection.
-	 *
-	 * @param object|null $token The token to set.
-	 */
-	private function set_oauth_token( $token ) {
-		$reflection = new \ReflectionClass( OAuth_Server::class );
-		$property   = $reflection->getProperty( 'current_token' );
-		$property->setAccessible( true );
-		$property->setValue( null, $token );
-	}
 
 	/**
 	 * Test that `$force_signature = true` makes a GET require a signature even
@@ -685,7 +614,7 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	 * @covers ::verify_owner
 	 */
 	public function test_verify_owner_is_not_scope_sensitive() {
-		$this->set_oauth_token( $this->create_mock_token( $this->user_id, array( Scope::PUSH ) ) );
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH ), $this->user_id ) );
 		\wp_set_current_user( $this->user_id );
 
 		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . $this->user_id . '/outbox' );
@@ -704,7 +633,7 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	 */
 	public function test_show_social_graph_requires_read_scope() {
 		\update_user_option( $this->user_id, 'activitypub_hide_social_graph', '1' );
-		$this->set_oauth_token( $this->create_mock_token( $this->user_id, array( Scope::PUSH ) ) );
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH ), $this->user_id ) );
 		\wp_set_current_user( $this->user_id );
 
 		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . $this->user_id . '/following' );
@@ -720,7 +649,7 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	 */
 	public function test_show_social_graph_allows_read_scope() {
 		\update_user_option( $this->user_id, 'activitypub_hide_social_graph', '1' );
-		$this->set_oauth_token( $this->create_mock_token( $this->user_id, array( Scope::READ ) ) );
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::READ ), $this->user_id ) );
 		\wp_set_current_user( $this->user_id );
 
 		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . $this->user_id . '/following' );
@@ -736,7 +665,7 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	 */
 	public function test_show_social_graph_cookie_session_is_not_scope_limited() {
 		\update_user_option( $this->user_id, 'activitypub_hide_social_graph', '1' );
-		$this->set_oauth_token( null );
+		$this->set_oauth_current_token( null );
 		\wp_set_current_user( $this->user_id );
 
 		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . $this->user_id . '/following' );

@@ -188,7 +188,7 @@ class Test_Scope extends \WP_UnitTestCase {
 		$this->assertTrue( Scope::is_valid( 'write' ) );
 		$this->assertTrue( Scope::is_valid( 'push' ) );
 
-		// is_valid() checks ALL directly; these are only recognised by normalize() as aliases for `write`.
+		// Removed as scope names. Only the spec's URI form is still recognised, via CANONICAL_SCOPE_PREFIX.
 		$this->assertFalse( Scope::is_valid( 'follow' ) );
 		$this->assertFalse( Scope::is_valid( 'profile' ) );
 	}

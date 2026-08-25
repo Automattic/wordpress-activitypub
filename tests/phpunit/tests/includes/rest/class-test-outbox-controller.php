@@ -9,8 +9,8 @@ namespace Activitypub\Tests\Rest;
 
 use Activitypub\Collection\Outbox;
 use Activitypub\OAuth\Scope;
-use Activitypub\OAuth\Server as OAuth_Server;
 use Activitypub\Rest\Outbox_Controller;
+use Activitypub\Tests\OAuth_Token_Stub;
 use Activitypub\Tests\Test_REST_Controller_Testcase;
 
 /**
@@ -20,6 +20,8 @@ use Activitypub\Tests\Test_REST_Controller_Testcase;
  * @coversDefaultClass \Activitypub\Rest\Outbox_Controller
  */
 class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
+	use OAuth_Token_Stub;
+
 
 	/**
 	 * Test user ID.
@@ -1475,14 +1477,14 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		// The owner is signed in throughout; only the token's scope differs.
 		\wp_set_current_user( $user_id );
 
-		$this->set_oauth_scopes( $user_id, array( Scope::PUSH ) );
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH ), $user_id ) );
 		$this->assertNotContains( $canary, $this->outbox_activity_ids( $user_id ), 'A token without the read scope must not see a private activity.' );
 
-		$this->set_oauth_scopes( $user_id, array( Scope::READ ) );
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::READ ), $user_id ) );
 		$this->assertContains( $canary, $this->outbox_activity_ids( $user_id ), 'A read-scoped token is the positive control.' );
 
 		// A wp-admin session carries no token and is bounded by capabilities, not scope.
-		$this->set_oauth_scopes( $user_id, null );
+		$this->set_oauth_current_token( null );
 		$this->assertContains( $canary, $this->outbox_activity_ids( $user_id ), 'A cookie session is not scope-limited.' );
 
 		\wp_set_current_user( 0 );
@@ -1503,67 +1505,5 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		$data = \rest_get_server()->dispatch( $request )->get_data();
 
 		return \wp_list_pluck( $data['orderedItems'], 'id' );
-	}
-
-	/**
-	 * Put the OAuth Server into a state as though a token with these scopes authenticated.
-	 *
-	 * @param int        $user_id The user the token belongs to.
-	 * @param array|null $scopes  Scopes the token carries, or null for no OAuth session.
-	 */
-	private function set_oauth_scopes( $user_id, $scopes ) {
-		$token = null;
-
-		if ( null !== $scopes ) {
-			$token = new class( $user_id, $scopes ) {
-				/**
-				 * User ID.
-				 *
-				 * @var int
-				 */
-				private $user_id;
-
-				/**
-				 * Scopes the token carries.
-				 *
-				 * @var array
-				 */
-				private $scopes;
-
-				/**
-				 * Constructor.
-				 *
-				 * @param int   $user_id User ID.
-				 * @param array $scopes  Scopes.
-				 */
-				public function __construct( $user_id, $scopes ) {
-					$this->user_id = $user_id;
-					$this->scopes  = $scopes;
-				}
-
-				/**
-				 * Get user ID.
-				 *
-				 * @return int
-				 */
-				public function get_user_id() {
-					return $this->user_id;
-				}
-
-				/**
-				 * Check scope.
-				 *
-				 * @param string $scope Scope to check.
-				 * @return bool
-				 */
-				public function has_scope( $scope ) {
-					return Scope::contains( $this->scopes, $scope );
-				}
-			};
-		}
-
-		$property = ( new \ReflectionClass( OAuth_Server::class ) )->getProperty( 'current_token' );
-		$property->setAccessible( true );
-		$property->setValue( null, $token );
 	}
 }
