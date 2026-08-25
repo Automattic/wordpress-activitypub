@@ -617,7 +617,7 @@ class Moderation {
 			$content_map = \array_filter( $content_map );
 			$content     = \implode( ' ', $content_map );
 
-			foreach ( $blocks['keywords'] as $keyword ) {
+			foreach ( (array) $blocks['keywords'] as $keyword ) {
 				if ( \stripos( $content, $keyword ) !== false ) {
 					return true;
 				}

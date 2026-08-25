@@ -1175,6 +1175,10 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			'slash before query'    => array( 'https://example.com/users/alice/?x=1', 'https://example.com/users/alice?x=1' ),
 			'slash inside query'    => array( 'https://example.com/users/alice?x=1/', 'https://example.com/users/alice?x=1/' ),
 			'acct identifier'       => array( 'acct:alice@example.com', 'acct:alice@example.com' ),
+			'acct host case'        => array( 'acct:alice@EXAMPLE.com', 'acct:alice@example.com' ),
+			'acct trailing dot'     => array( 'acct:alice@example.com.', 'acct:alice@example.com' ),
+			'scheme relative'       => array( '//example.com/users/alice', '//example.com/users/alice' ),
+			'unlisted scheme port'  => array( 'web3://example.com:0/x', 'web3://example.com:0/x' ),
 			'empty'                 => array( '', '' ),
 		);
 	}

@@ -347,8 +347,15 @@ function normalize_actor_uri( $uri ) {
 	 */
 	$parts = \wp_parse_url( $uri );
 
-	// Anything without a host (an `acct:` identifier, a malformed value) has no parts to fold.
+	/*
+	 * A handle has no parsable host, so its own host half is folded on its own. Anything else
+	 * without one is malformed and is compared as it came in.
+	 */
 	if ( empty( $parts['host'] ) ) {
+		if ( \preg_match( '/^(.*@)([^@]+)$/', $uri, $handle ) ) {
+			return $handle[1] . fold_host( $handle[2] );
+		}
+
 		return \untrailingslashit( $uri );
 	}
 
@@ -360,10 +367,13 @@ function normalize_actor_uri( $uri ) {
 	$scheme = \strtolower( $parts['scheme'] ?? '' );
 
 	// A port that is the scheme's default is the same address written two ways.
-	$port = isset( $parts['port'] ) && ( $default[ $scheme ] ?? 0 ) !== (int) $parts['port'] ? ':' . (int) $parts['port'] : '';
+	$is_default = isset( $parts['port'] ) && \array_key_exists( $scheme, $default ) && $default[ $scheme ] === (int) $parts['port'];
+	$port       = isset( $parts['port'] ) && ! $is_default ? ':' . (int) $parts['port'] : '';
 
 	// The trailing slash is folded on the path rather than the whole URI so a query cannot hide it.
-	$normalized = $scheme . '://' . fold_host( $parts['host'] ) . $port . \untrailingslashit( $parts['path'] ?? '' );
+	// A scheme-relative reference keeps its `//`; emitting `://` would match nothing.
+	$authority  = ( '' === $scheme ? '//' : $scheme . '://' ) . fold_host( $parts['host'] );
+	$normalized = $authority . $port . \untrailingslashit( $parts['path'] ?? '' );
 
 	return isset( $parts['query'] ) ? $normalized . '?' . $parts['query'] : $normalized;
 }

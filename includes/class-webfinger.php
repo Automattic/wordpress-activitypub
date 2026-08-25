@@ -184,7 +184,9 @@ class Webfinger {
 			$scheme     = 'acct';
 		} else {
 			$identifier = $url;
-			$scheme     = $match[1];
+
+			// Schemes are case-insensitive, and the switch below compares them exactly.
+			$scheme = \strtolower( $match[1] );
 		}
 
 		$host = null;

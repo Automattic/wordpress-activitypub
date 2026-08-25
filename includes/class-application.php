@@ -311,6 +311,19 @@ class Application {
 
 		// URL forms: the REST actor ID or the pretty /@application profile path.
 		if ( false !== \strpos( $identifier, '://' ) ) {
+			/*
+			 * Fold the scheme and authority, which are case-insensitive, before comparing. The path
+			 * keeps its case. Without this the host guard above accepts a spelling that this then
+			 * rejects.
+			 */
+			$identifier = \preg_replace_callback(
+				'#^[a-zA-Z][a-zA-Z0-9+.\-]*://[^/?\#]+#',
+				static function ( $authority ) {
+					return \strtolower( $authority[0] );
+				},
+				$identifier
+			);
+
 			$identifier = normalize_url( $identifier );
 
 			return normalize_url( self::get_id() ) === $identifier

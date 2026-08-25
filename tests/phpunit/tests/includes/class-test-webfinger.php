@@ -73,6 +73,8 @@ class Test_Webfinger extends \WP_UnitTestCase {
 		return array(
 			array( 'author@example.org', 'acct:author@example.org', 'example.org' ),
 			array( 'acct:author@example.org', 'acct:author@example.org', 'example.org' ),
+			// Schemes are case-insensitive, so this must not fall through to URL parsing.
+			array( 'ACCT:author@EXAMPLE.org', 'ACCT:author@EXAMPLE.org', 'example.org' ),
 			array( 'https://example.org/@pfefferle', 'https://example.org/@pfefferle', 'example.org' ),
 			array( 'mailto:pfefferle@example.org', 'mailto:pfefferle@example.org', 'example.org' ),
 			array( 'xmpp:pfefferle@example.com', 'xmpp:pfefferle@example.com', 'example.com' ),

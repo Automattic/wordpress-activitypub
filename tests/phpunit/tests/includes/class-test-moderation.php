@@ -796,6 +796,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 	 */
 	public function test_scalar_blocklist_option_does_not_fatal() {
 		\update_option( Moderation::OPTION_KEYS['domain'], 'blocked.example.com' );
+		\update_option( Moderation::OPTION_KEYS['keyword'], 'spam' );
 
 		$this->assertFalse(
 			Moderation::activity_is_blocked( $this->follow_from( 'https://good.example.com/@user' ) ),
@@ -803,6 +804,7 @@ class Test_Moderation extends \WP_UnitTestCase {
 		);
 
 		\delete_option( Moderation::OPTION_KEYS['domain'] );
+		\delete_option( Moderation::OPTION_KEYS['keyword'] );
 	}
 
 	/**
