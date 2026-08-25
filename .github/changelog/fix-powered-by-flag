@@ -1,4 +1,4 @@
 Significance: patch
 Type: fixed
 
-Deleting the "Powered by WordPress" profile field now sticks, instead of other default fields taking its place.
+The "Powered by WordPress" profile field is now only added once, and stays gone when you delete it.

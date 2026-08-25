@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-On multisite, profile fields are now tracked per site instead of across the whole network.
