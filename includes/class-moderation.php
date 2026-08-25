@@ -115,44 +115,52 @@ class Moderation {
 	 * Worth asking before the checks run: they parse the activity and can go to the network for a
 	 * handle, and this runs once per local recipient of every delivery. Most sites block nothing.
 	 *
+	 * @since unreleased
+	 *
 	 * @param array $blocks Blocks organized by type, as returned by get_site_blocks().
 	 *
 	 * @return bool True if any list has an entry, false otherwise.
 	 */
-	private static function has_blocks( $blocks ) {
+	public static function has_blocks( $blocks ) {
 		return self::has_actor_blocks( $blocks ) || self::has_domain_blocks( $blocks ) || self::has_keyword_blocks( $blocks );
 	}
 
 	/**
 	 * Check whether a set of blocks names any actor.
 	 *
+	 * @since unreleased
+	 *
 	 * @param array $blocks Blocks organized by type.
 	 *
 	 * @return bool True if an actor is blocked, false otherwise.
 	 */
-	private static function has_actor_blocks( $blocks ) {
+	public static function has_actor_blocks( $blocks ) {
 		return ! empty( $blocks['actors'] );
 	}
 
 	/**
 	 * Check whether a set of blocks names any domain.
 	 *
+	 * @since unreleased
+	 *
 	 * @param array $blocks Blocks organized by type.
 	 *
 	 * @return bool True if a domain is blocked, false otherwise.
 	 */
-	private static function has_domain_blocks( $blocks ) {
+	public static function has_domain_blocks( $blocks ) {
 		return ! empty( $blocks['domains'] );
 	}
 
 	/**
 	 * Check whether a set of blocks names any keyword.
 	 *
+	 * @since unreleased
+	 *
 	 * @param array $blocks Blocks organized by type.
 	 *
 	 * @return bool True if a keyword is blocked, false otherwise.
 	 */
-	private static function has_keyword_blocks( $blocks ) {
+	public static function has_keyword_blocks( $blocks ) {
 		return ! empty( $blocks['keywords'] );
 	}
 
