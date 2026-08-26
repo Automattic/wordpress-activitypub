@@ -601,4 +601,193 @@ class Test_Server extends \WP_Test_REST_TestCase {
 
 		$this->assertArrayNotHasKey( 'Access-Control-Allow-Origin', $headers );
 	}
+
+	/**
+	 * With Authorized Fetch off the response is the same for every caller, so it varies only by
+	 * Authorization (the ActivityPub API token). Varying on the per-request signature headers would
+	 * mint a unique cache variant for every signed Mastodon fetch and defeat shared caching.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_sets_vary() {
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		$this->assertSame( 'Authorization', $headers['Vary'] );
+		$this->assertArrayNotHasKey( 'Cache-Control', $headers );
+	}
+
+	/**
+	 * A public route (permission_callback __return_true) returns the same response for every caller,
+	 * so even under Authorized Fetch with a signed request it must stay cacheable: no no-store, and no
+	 * caller-varying Vary. This keeps public thread-resolution reads (replies, context) edge-cacheable.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_leaves_public_routes_cacheable_under_authorized_fetch() {
+		\add_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/1/replies' );
+		$request->set_attributes( array( 'permission_callback' => '__return_true' ) );
+		$request->set_header( 'Signature', 'keyId="https://remote.example/users/alice#main-key"' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		\remove_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$this->assertArrayNotHasKey( 'Cache-Control', $headers );
+		$this->assertArrayNotHasKey( 'Vary', $headers );
+	}
+
+	/**
+	 * With Authorized Fetch on the response depends on the signing key, so the signature headers
+	 * join the Vary list.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_varies_on_signature_with_authorized_fetch() {
+		\add_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		\remove_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$this->assertSame( 'Authorization, Signature, Signature-Input', $headers['Vary'] );
+	}
+
+	/**
+	 * Test that a Vary header already on the response is kept.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_preserves_existing_vary() {
+		$response = new \WP_REST_Response( array(), 200 );
+		$response->header( 'Vary', 'Accept' );
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		$this->assertSame( 'Accept, Authorization', $headers['Vary'] );
+	}
+
+	/**
+	 * Test that a response built for a credentialed caller is marked private.
+	 *
+	 * @dataProvider credential_header_provider
+	 * @covers ::add_cache_headers
+	 *
+	 * @param string $header The credential header name.
+	 * @param string $value  The credential header value.
+	 */
+	public function test_add_cache_headers_marks_credentialed_responses_private( $header, $value ) {
+		\add_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1/inbox' );
+		$request->set_header( $header, $value );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		\remove_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$this->assertSame( 'private, no-store, max-age=0', $headers['Cache-Control'] );
+	}
+
+	/**
+	 * With Authorized Fetch off, a signed request gets the same public response as everyone else,
+	 * so it must not be marked no-store, or it would needlessly drop from every CDN.
+	 *
+	 * @dataProvider credential_header_provider
+	 * @covers ::add_cache_headers
+	 *
+	 * @param string $header The credential header name.
+	 * @param string $value  The credential header value.
+	 */
+	public function test_add_cache_headers_keeps_credentialed_responses_cacheable_without_authorized_fetch( $header, $value ) {
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1/followers' );
+		$request->set_header( $header, $value );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		$this->assertArrayNotHasKey( 'Cache-Control', $headers );
+	}
+
+	/**
+	 * An owner authenticated by WP session (verify_owner) can receive private items in an otherwise
+	 * public collection, and the session cookie is not in Vary, so a logged-in response must never be
+	 * shared, whatever the Authorized Fetch setting.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_marks_session_authenticated_responses_private() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\wp_set_current_user( $user_id );
+
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/followers' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		\wp_set_current_user( 0 );
+
+		$this->assertSame( 'private, no-store, max-age=0', $headers['Cache-Control'] );
+	}
+
+	/**
+	 * A route whose permission callback is __return_true can still be personalized for a logged-in
+	 * user (e.g. /interactions redirects by the current user), so a logged-in request must be marked
+	 * private even there. The session check has to run before the public shortcut.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_marks_logged_in_public_route_private() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\wp_set_current_user( $user_id );
+
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
+		$request->set_attributes( array( 'permission_callback' => '__return_true' ) );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		\wp_set_current_user( 0 );
+
+		$this->assertSame( 'private, no-store, max-age=0', $headers['Cache-Control'] );
+	}
+
+	/**
+	 * Data provider for credential headers.
+	 *
+	 * @return array[] Test parameters.
+	 */
+	public function credential_header_provider() {
+		return array(
+			'bearer token'   => array( 'Authorization', 'Bearer abc123' ),
+			'draft envelope' => array( 'Signature', 'keyId="https://remote.example/users/alice#main-key"' ),
+			'rfc 9421'       => array( 'Signature-Input', 'sig1=("@method");keyid="https://remote.example/users/alice#main-key"' ),
+		);
+	}
+
+	/**
+	 * Test that non-ActivityPub routes are left alone.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_skips_other_namespaces() {
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/wp/v2/posts' );
+		$request->set_header( 'Authorization', 'Bearer abc123' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		$this->assertArrayNotHasKey( 'Vary', $headers );
+		$this->assertArrayNotHasKey( 'Cache-Control', $headers );
+	}
 }

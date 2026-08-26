@@ -545,6 +545,27 @@ trait Event_Stream {
 					'value' => Actors::get_type_by_id( $user_id ),
 				),
 			);
+
+			/*
+			 * The stream is consented to as `push`, which says the client may watch the
+			 * collection, not that it may see everything in it. Reading the owner's private
+			 * activities is the same authority the paged outbox requires `read` for, so a
+			 * client without it watches the public subset, exactly what
+			 * Outbox_Controller::get_items() would serve it.
+			 */
+			if ( ! OAuth_Server::permits_scope( Scope::READ ) ) {
+				$args['meta_query'][] = array(
+					'relation' => 'OR',
+					array(
+						'key'     => 'activitypub_content_visibility',
+						'compare' => 'NOT EXISTS',
+					),
+					array(
+						'key'   => 'activitypub_content_visibility',
+						'value' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+					),
+				);
+			}
 		} else {
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			$args['meta_query'] = array(

@@ -129,6 +129,46 @@ const getProjectSourceDirectory = ( modulePath = '' ) => {
 	return relativePath.split( path.sep )[ 0 ];
 };
 
+/**
+ * Disables Sass's `charset` option on every `sass-loader` rule.
+ *
+ * TEMPORARY WORKAROUND; READ BELOW.
+ *
+ * With `style: 'compressed'`, Sass prepends a UTF-8 BOM (byte order mark) to
+ * any module containing non-ASCII characters. PostCSS 8.5.24+ preserves that
+ * BOM instead of stripping it, so once MiniCssExtractPlugin concatenates the
+ * modules the BOM can land mid-file. Mid-file BOMs can and do break CSS rules.
+ *
+ * @see https://github.com/WordPress/gutenberg/pull/81383
+ * @todo Remove once the fix ships in `@wordpress/scripts` (unreleased as of 34.0.0).
+ *
+ * @param {Array} rules Webpack module rules.
+ * @return {Array} Rules with `sassOptions.charset` forced to `false`.
+ */
+const withoutSassCharset = ( rules ) =>
+	rules.map( ( rule ) => {
+		if ( ! Array.isArray( rule?.use ) ) {
+			return rule;
+		}
+
+		return {
+			...rule,
+			use: rule.use.map( ( item ) => {
+				if ( typeof item !== 'object' || ! item?.loader?.includes( 'sass-loader' ) ) {
+					return item;
+				}
+
+				return {
+					...item,
+					options: {
+						...item.options,
+						sassOptions: { ...item.options?.sassOptions, charset: false },
+					},
+				};
+			} ),
+		};
+	} );
+
 const processConfig = ( config ) => {
 	const isModuleBuild = Boolean( config.output?.module );
 	const splitChunks = isModuleBuild
@@ -152,7 +192,7 @@ const processConfig = ( config ) => {
 				},
 		  };
 	const moduleRules = [
-		...( config.module?.rules || [] ),
+		...withoutSassCharset( config.module?.rules || [] ),
 		{
 			test: /\.m?js$/,
 			resolve: {

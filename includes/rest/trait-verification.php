@@ -12,6 +12,7 @@ use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Server as OAuth_Server;
 use Activitypub\Signature;
 
+use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 use function Activitypub\use_authorized_fetch;
 use function Activitypub\user_can_act_as_blog;
@@ -98,29 +99,31 @@ trait Verification {
 	 * request can present several signature labels (or a draft and an RFC 9421 header) with
 	 * different keyIds, and only the verifier knows which one validated.
 	 *
+	 * Fails closed when either side has no parsable host. A non-URL keyId such as
+	 * `acct:mallory@attacker.example` resolves to a real key through WebFinger yet yields no host,
+	 * so treating "no host" as "nothing to check" would drop the only tie between the signing key
+	 * and the claimed actor. Both hosts must be present and equal.
+	 *
 	 * @since 8.1.0
 	 * @since 9.0.0 Added the `$key_id` parameter; binds against the verified keyId.
+	 * @since 9.2.1 Reject a keyId or actor with no parsable host instead of allowing it.
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @param string|null      $key_id  The keyId that verified the signature.
 	 * @return true|\WP_Error True if valid, WP_Error on mismatch.
 	 */
 	private function verify_key_id( $request, $key_id ) {
-		if ( ! $key_id ) {
+		$json  = $request->get_json_params();
+		$actor = isset( $json['actor'] ) ? object_to_uri( $json['actor'] ) : null;
+
+		// A signed request without a body actor (e.g. an authorized-fetch GET) has nothing to bind.
+		if ( ! $actor ) {
 			return true;
 		}
 
-		$key_host = \strtolower( (string) \wp_parse_url( $key_id, \PHP_URL_HOST ) );
-		$json     = $request->get_json_params();
-		$actor    = isset( $json['actor'] ) ? object_to_uri( $json['actor'] ) : null;
-
-		if ( ! $actor || ! $key_host ) {
-			return true;
-		}
-
-		$actor_host = \strtolower( (string) \wp_parse_url( $actor, \PHP_URL_HOST ) );
-
-		if ( ! $actor_host || $key_host !== $actor_host ) {
+		// The keyId and the actor must resolve to the same host; an identifier with no parsable
+		// host (e.g. an `acct:` keyId) is unbindable and therefore not an authorized one.
+		if ( ! is_same_host( $key_id, $actor ) ) {
 			return new \WP_Error(
 				'activitypub_key_actor_mismatch',
 				\__( 'Signing key and activity actor must be on the same host.', 'activitypub' ),
@@ -134,9 +137,12 @@ trait Verification {
 	/**
 	 * Verify user authentication via OAuth.
 	 *
-	 * Automatically determines the required scope based on the HTTP method:
+	 * Determines the required scope from the HTTP method unless the caller names one:
 	 * - GET, HEAD: read scope
 	 * - POST, PUT, PATCH, DELETE: write scope
+	 *
+	 * A route whose method does not describe what it does passes its own scope. The proxy is a
+	 * POST because the target URL travels in the body, but it only reads.
 	 *
 	 * If the request has a user_id parameter, also verifies that the
 	 * authenticated user matches that actor.
@@ -148,14 +154,19 @@ trait Verification {
 	 * check, so a wp-admin session in another browser tab cannot be hijacked
 	 * to drive C2S writes on behalf of the user (no CSRF path on this surface).
 	 *
+	 * @since unreleased Added the `$scope` parameter.
+	 *
 	 * @param \WP_REST_Request $request The request object.
+	 * @param string|null      $scope   Optional. Scope to require instead of the method default. Default null.
 	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
 	 */
-	public function verify_authentication( $request ) {
-		// Determine scope based on HTTP method.
-		$method       = $request->get_method();
-		$read_methods = array( 'GET', 'HEAD' );
-		$scope        = \in_array( $method, $read_methods, true ) ? Scope::READ : Scope::WRITE;
+	public function verify_authentication( $request, $scope = null ) {
+		if ( null === $scope ) {
+			// Determine scope based on HTTP method.
+			$method       = $request->get_method();
+			$read_methods = array( 'GET', 'HEAD' );
+			$scope        = \in_array( $method, $read_methods, true ) ? Scope::READ : Scope::WRITE;
+		}
 
 		$result = OAuth_Server::check_oauth_permission( $request, $scope );
 		if ( true === $result ) {
@@ -244,6 +255,11 @@ trait Verification {
 	protected function show_social_graph( $request ) {
 		$user_id = $request->get_param( 'user_id' );
 
-		return Actors::show_social_graph( $user_id ) || true === $this->verify_owner( $request );
+		if ( Actors::show_social_graph( $user_id ) ) {
+			return true;
+		}
+
+		// Ownership answers who the caller is; the scope answers what the caller was allowed to do with that identity.
+		return true === $this->verify_owner( $request ) && OAuth_Server::permits_scope( Scope::READ );
 	}
 }
