@@ -288,13 +288,10 @@ function is_same_host( $a, $b ) {
  * public key — under another host's id. Reads the raw `id` attribute only
  * (never the `url`/`href` fallback that object_to_uri() applies), because the
  * cache is keyed on `id`, so "is this canonical?" must ask the same field the
- * write uses. Both sides go through {@see normalize_actor_uri()}, the same folding the block
- * list uses, so the case-insensitive parts of a URI (the scheme, the host, a default port) and
- * a trailing slash do not decide the answer. Two spellings of one address are one identity here
- * as well, or an id could be canonical for the block list and not for the cache.
- * The path and query still have to match exactly, and host-level equality is deliberately NOT
- * enough: any different id on the same host is a distinct cache entry that a document served
- * elsewhere must not write.
+ * write uses. The comparison ignores the URL fragment and a trailing slash;
+ * everything else (scheme, host, port, path, query) must match exactly.
+ * Host-level equality is deliberately NOT enough — any different id on the same
+ * host is still a distinct cache entry that a document served elsewhere must not write.
  *
  * @param array|string $item The fetched object, or its id.
  * @param string       $url  The URL the object was served from.
@@ -317,7 +314,7 @@ function id_matches_url( $item, $url ) {
 		return false;
 	}
 
-	return normalize_actor_uri( $id ) === normalize_actor_uri( $url );
+	return \untrailingslashit( $id ) === \untrailingslashit( $url );
 }
 
 /**
@@ -345,9 +342,18 @@ function normalize_actor_uri( $uri ) {
 	}
 
 	/*
-	 * The fragment needs no stripping: the host branch rebuilds from the parsed parts and never
-	 * re-appends it, and the hostless branch has nothing to strip.
+	 * Cut at the first `#`, which is the only place a fragment can start, rather than through
+	 * `strip_fragment_from_url()`, which rebuilds from parsed parts and so leaves a hostless
+	 * identifier alone. Without this a fragment on a handle survives normalization and
+	 * `acct:user@example.com#x` slips past a block on `acct:user@example.com`. The host branch
+	 * never re-appends one either way.
 	 */
+	$fragment = \strpos( $uri, '#' );
+
+	if ( false !== $fragment ) {
+		$uri = \substr( $uri, 0, $fragment );
+	}
+
 	$parts = \wp_parse_url( $uri );
 
 	/*
