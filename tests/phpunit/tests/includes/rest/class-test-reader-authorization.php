@@ -103,7 +103,7 @@ class Test_Reader_Authorization extends \WP_UnitTestCase {
 
 		global $wp_rest_server;
 		$wp_rest_server = new \WP_REST_Server();
-		\do_action( 'rest_api_init', $wp_rest_server );
+		\do_action( 'rest_api_init' );
 	}
 
 	/**
@@ -239,6 +239,21 @@ class Test_Reader_Authorization extends \WP_UnitTestCase {
 
 		$this->assertSame( 200, $response->get_status() );
 		$this->assertSame( array(), $response->get_data(), 'Another user\'s followers must not be returned.' );
+	}
+
+	/**
+	 * A user cannot read another user's cached post by ID.
+	 *
+	 * The collection filter never runs for a single item, so this is the only gate on that route.
+	 *
+	 * @covers \Activitypub\Rest\Remote_Posts_Controller::get_item_permissions_check
+	 */
+	public function test_unrelated_post_cannot_be_read_by_id() {
+		\wp_set_current_user( self::$other_user_id );
+
+		$response = $this->request( '/wp/v2/ap_post/' . self::$remote_post_id );
+
+		$this->assertSame( 403, $response->get_status() );
 	}
 
 	/**

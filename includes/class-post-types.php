@@ -907,10 +907,10 @@ class Post_Types {
 	 */
 	public static function filter_ap_post_by_user( $args, $request ) {
 		/*
-		 * Filter by user_id (defaults to current user, use 0 for site/blog actor).
-		 *
-		 * This has to run for every request, whatever else is being filtered on, or a
-		 * tag or object type filter would return the whole cache instead of one feed.
+		 * Scope to one actor's feed. `scope_user_id()` pins the value to the current user unless
+		 * the caller can `list_users`, so only a privileged caller can ask for another actor or
+		 * for 0, the site/blog actor. This runs for every request, whatever else is being
+		 * filtered on, or a tag or object type filter would match the whole cache.
 		 */
 		if ( ! isset( $args['meta_query'] ) ) {
 			$args['meta_query'] = array(); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
