@@ -27,8 +27,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Drop the featured image from the attachments of a post.
  *
  * The transformer lists the thumbnail first, before the images found in the content, so with a
- * limit on attachments it is the featured image that takes a slot and the last image in the post
- * that falls off the end.
+ * limit on attachments the featured image takes a slot and the last image in the post falls off
+ * the end.
  *
  * @param array    $media The attachments, each one an array with an `id`.
  * @param \WP_Post $item  The post being transformed.
