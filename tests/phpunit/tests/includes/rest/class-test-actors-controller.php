@@ -220,6 +220,9 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	/**
 	 * Test that a template with a disallowed scheme is not returned by the endpoint.
 	 *
+	 * The gate itself is covered in `Test_Webfinger`; this pins that the controller returns what
+	 * the gate produced instead of re-deriving the URL from the response.
+	 *
 	 * @covers ::get_remote_follow_item
 	 */
 	public function test_get_remote_follow_item_rejects_javascript_template() {

@@ -1110,13 +1110,14 @@ class Test_Webfinger extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that non-string `rel` and `template` values do not fatal.
+	 * Test that a valid link still wins when a sibling has non-string members.
 	 *
-	 * A remote server controls this JSON, and `strtolower()` on an array is a TypeError on PHP 8.
+	 * `test_get_intent_endpoint_ignores_non_string_members()` covers the all-bad case; this one
+	 * pins that skipping a bad entry does not abandon the rest of the list.
 	 *
 	 * @covers ::get_intent_endpoint
 	 */
-	public function test_get_intent_endpoint_ignores_non_string_link_members() {
+	public function test_get_intent_endpoint_returns_valid_sibling_of_non_string_members() {
 		$filter = $this->mock_webfinger_links(
 			array(
 				array(
