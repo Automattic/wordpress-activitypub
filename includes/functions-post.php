@@ -255,6 +255,36 @@ function get_post_type_description( $post_type ) {
 }
 
 /**
+ * Get the maximum number of media attachments a post may federate.
+ *
+ * A per-post limit wins over the site-wide setting, and the filter has the final say.
+ *
+ * @since unreleased
+ *
+ * @param int $post_id The post ID.
+ *
+ * @return int The maximum number of media attachments.
+ */
+function get_max_attachments( $post_id ) {
+	$max_media = \get_post_meta( $post_id, 'activitypub_max_image_attachments', true );
+
+	if ( ! \is_numeric( $max_media ) ) {
+		$max_media = \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
+	}
+
+	/**
+	 * Filters the maximum number of media attachments allowed in a post.
+	 *
+	 * Despite the name suggesting only images, this filter controls the maximum number
+	 * of all media attachments (images, audio, and video) that can be included in an
+	 * ActivityPub post. The name is maintained for backwards compatibility.
+	 *
+	 * @param int $max_media Maximum number of media attachments. Default ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS.
+	 */
+	return (int) \apply_filters( 'activitypub_max_image_attachments', $max_media );
+}
+
+/**
  * Get the enclosures of a post.
  *
  * @param int $post_id The post ID.
