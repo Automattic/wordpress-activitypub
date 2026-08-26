@@ -8,7 +8,9 @@
 namespace Activitypub\Tests\Rest;
 
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\OAuth\Scope;
 use Activitypub\Rest\Proxy_Controller;
+use Activitypub\Tests\OAuth_Token_Stub;
 
 /**
  * Test class for Proxy_Controller.
@@ -16,6 +18,8 @@ use Activitypub\Rest\Proxy_Controller;
  * @coversDefaultClass \Activitypub\Rest\Proxy_Controller
  */
 class Test_Proxy_Controller extends \WP_UnitTestCase {
+	use OAuth_Token_Stub;
+
 
 	/**
 	 * REST Server instance.
@@ -559,5 +563,38 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 	 */
 	private function unmock_oauth_auth() {
 		\remove_filter( 'activitypub_oauth_check_permission', '__return_true' );
+	}
+
+	/**
+	 * Test that the proxy is authorized as a read, not as a write.
+	 *
+	 * The endpoint is a POST because the target URL travels in the body, but it only fetches a
+	 * remote object. Requiring `write` would mean a read-only client could not use it, and would
+	 * make a client that only wants to read ask for permission to post.
+	 *
+	 * @covers ::register_routes
+	 */
+	public function test_proxy_requires_the_read_scope() {
+		$respond = function () {
+			return array(
+				'response' => array( 'code' => 404 ),
+				'body'     => '',
+				'headers'  => array(),
+			);
+		};
+		\add_filter( 'pre_http_request', $respond );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => 'https://example.com/gone-forever' ) );
+
+		// A read-scoped token reaches the handler, which forwards the remote 404.
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::READ ), self::$user_id ) );
+		$this->assertEquals( 404, $this->server->dispatch( $request )->get_status(), 'A read token may use the proxy.' );
+
+		// A token without read does not, even though the request is a POST.
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::WRITE ), self::$user_id ) );
+		$this->assertEquals( 403, $this->server->dispatch( $request )->get_status(), 'Write is not the authority to read a remote object.' );
+
+		\remove_filter( 'pre_http_request', $respond );
 	}
 }
