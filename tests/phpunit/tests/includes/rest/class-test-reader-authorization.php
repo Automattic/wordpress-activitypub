@@ -142,7 +142,7 @@ class Test_Reader_Authorization extends \WP_UnitTestCase {
 	/**
 	 * Logged-out visitors get no reader data at all.
 	 *
-	 * @covers ::get_items_permissions_check
+	 * @covers \Activitypub\Rest\Reader_Permission::get_items_permissions_check
 	 * @dataProvider data_reader_routes
 	 *
 	 * @param string $route  Route to request.
@@ -186,7 +186,7 @@ class Test_Reader_Authorization extends \WP_UnitTestCase {
 	/**
 	 * Users without the ActivityPub capability get nothing.
 	 *
-	 * @covers ::get_items_permissions_check
+	 * @covers \Activitypub\Rest\Reader_Permission::get_items_permissions_check
 	 */
 	public function test_reader_routes_are_closed_to_users_without_the_capability() {
 		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
@@ -257,7 +257,7 @@ class Test_Reader_Authorization extends \WP_UnitTestCase {
 	/**
 	 * The admin screens still get their data.
 	 *
-	 * @covers ::get_items_permissions_check
+	 * @covers \Activitypub\Rest\Reader_Permission::get_items_permissions_check
 	 */
 	public function test_administrators_can_still_read_reader_data() {
 		\wp_set_current_user( self::$admin_id );
@@ -274,7 +274,7 @@ class Test_Reader_Authorization extends \WP_UnitTestCase {
 	/**
 	 * A user still gets their own feed and followers.
 	 *
-	 * @covers ::get_items_permissions_check
+	 * @covers \Activitypub\Rest\Reader_Permission::get_items_permissions_check
 	 */
 	public function test_users_can_still_read_their_own_data() {
 		\wp_set_current_user( self::$user_id );
