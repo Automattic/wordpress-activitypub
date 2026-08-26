@@ -1724,6 +1724,17 @@ class Test_Signature extends \WP_UnitTestCase {
 	 * @covers ::verify_http_signature
 	 */
 	public function test_verify_http_signature_returns_verified_key_id() {
+		/*
+		 * Signing takes the derived components from the URL it is given, verification takes them
+		 * from `$_SERVER`. A real delivery has both describing the same request; a hand-built one
+		 * has to say so. Without this the test only passes under the draft scheme, whose
+		 * `(request-target)` is rebuilt from the request object instead.
+		 */
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['HTTP_HOST']      = 'example.org';
+		$_SERVER['REQUEST_URI']    = '/wp-json/activitypub/1.0/inbox';
+		$_SERVER['HTTPS']          = 'on';
+
 		$keys = Actors::get_keypair( 1 );
 
 		$mock_remote_key_retrieval = function () use ( $keys ) {
