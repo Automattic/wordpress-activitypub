@@ -327,6 +327,9 @@ function id_matches_url( $item, $url ) {
  *
  * Deliberately not used by `id_matches_url()`, which guards a cache write keyed on the exact
  * id: folding there would confirm a document under one spelling and store it under another.
+ * A mismatch there is not a rejection, {@see \Activitypub\Http::get_remote_object()} re-fetches
+ * the declared id and requires that to self-confirm, so the strictness costs one request rather
+ * than refusing a document that spells its own host differently.
  *
  * @since unreleased
  *
