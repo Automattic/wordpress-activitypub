@@ -346,6 +346,54 @@ class Test_Reader_Authorization extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An actor whose post is in your feed is readable, even without a follow relationship.
+	 *
+	 * Boosts and replies cache the author too, and those records carry no follower, following or
+	 * pending meta. The reader already shows that actor beside the post.
+	 *
+	 * @covers \Activitypub\Rest\Remote_Actors_Controller::get_item_permissions_check
+	 */
+	public function test_actor_of_a_post_in_the_feed_can_be_read() {
+		$stranger_id = self::factory()->post->create(
+			array(
+				'post_type'    => Remote_Actors::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => \wp_slash(
+					\wp_json_encode(
+						array(
+							'id'   => 'https://example.org/users/eve',
+							'type' => 'Person',
+						)
+					)
+				),
+			)
+		);
+		$post_id     = self::factory()->post->create(
+			array(
+				'post_type'   => Remote_Posts::POST_TYPE,
+				'post_status' => 'publish',
+				'meta_input'  => array(
+					'_activitypub_user_id'         => (string) self::$user_id,
+					'_activitypub_remote_actor_id' => (string) $stranger_id,
+				),
+			)
+		);
+
+		\wp_set_current_user( self::$user_id );
+		$mine = $this->request( '/wp/v2/ap_actor/' . $stranger_id );
+
+		$this->assertSame( 200, $mine->get_status(), 'The feed owner has to reach the author of a post in their feed.' );
+
+		\wp_set_current_user( self::$other_user_id );
+		$theirs = $this->request( '/wp/v2/ap_actor/' . $stranger_id );
+
+		$this->assertSame( 403, $theirs->get_status(), 'A user with no such post must still be refused.' );
+
+		\wp_delete_post( $post_id, true );
+		\wp_delete_post( $stranger_id, true );
+	}
+
+	/**
 	 * A user cannot read an unrelated actor by ID.
 	 *
 	 * @covers ::get_item_permissions_check

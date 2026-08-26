@@ -9,6 +9,7 @@ namespace Activitypub\Rest;
 
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
+use Activitypub\Collection\Remote_Posts;
 
 /**
  * Remote_Actors_Controller class.
@@ -60,14 +61,62 @@ class Remote_Actors_Controller extends \WP_REST_Posts_Controller {
 			\get_post_meta( $post->ID, Following::PENDING_META_KEY, false )
 		);
 
-		if ( ! $this->can_read_feed_of( $related_user_ids ) ) {
-			return new \WP_Error(
-				'activitypub_rest_forbidden',
-				\__( 'Sorry, you are not allowed to read this actor.', 'activitypub' ),
-				array( 'status' => \rest_authorization_required_code() )
-			);
+		if ( $this->can_read_feed_of( $related_user_ids ) ) {
+			return true;
 		}
 
-		return true;
+		/*
+		 * Following is not the only way an actor gets cached: authoring a post that was boosted
+		 * or replied to into someone's feed does it too, and those records carry no relationship
+		 * meta. The reader already renders that actor's name and avatar next to the post, so the
+		 * record is readable by whoever the feed belongs to.
+		 */
+		if ( self::authored_a_post_in_feed_of( $post->ID, \get_current_user_id() ) ) {
+			return true;
+		}
+
+		return new \WP_Error(
+			'activitypub_rest_forbidden',
+			\__( 'Sorry, you are not allowed to read this actor.', 'activitypub' ),
+			array( 'status' => \rest_authorization_required_code() )
+		);
+	}
+
+	/**
+	 * Check whether an actor authored a cached post in a given user's feed.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $actor_post_id The `ap_actor` post ID.
+	 * @param int $user_id       The local user whose feed to look in.
+	 * @return bool True if the actor authored at least one post in that feed.
+	 */
+	private static function authored_a_post_in_feed_of( $actor_post_id, $user_id ) {
+		if ( ! $user_id ) {
+			return false;
+		}
+
+		$posts = \get_posts(
+			array(
+				'post_type'      => Remote_Posts::POST_TYPE,
+				'post_status'    => 'publish',
+				'posts_per_page' => 1,
+				'fields'         => 'ids',
+				'no_found_rows'  => true,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'     => array(
+					array(
+						'key'   => '_activitypub_remote_actor_id',
+						'value' => $actor_post_id,
+					),
+					array(
+						'key'   => '_activitypub_user_id',
+						'value' => $user_id,
+					),
+				),
+			)
+		);
+
+		return ! empty( $posts );
 	}
 }
