@@ -505,10 +505,17 @@ class Server {
 		);
 
 		if ( \is_wp_error( $code ) ) {
+			/*
+			 * A refused scope is something the client can act on, so it travels as the OAuth
+			 * error RFC 6749 §4.1.2.1 names. Everything else here is an internal failure, and
+			 * those carry an `activitypub_` code the client has no use for.
+			 */
+			$error = 'invalid_scope' === $code->get_error_code() ? 'invalid_scope' : 'server_error';
+
 			self::redirect_to_client(
 				$redirect_uri,
 				array(
-					'error'             => 'server_error',
+					'error'             => $error,
 					'error_description' => $code->get_error_message(),
 					'state'             => $state,
 				)

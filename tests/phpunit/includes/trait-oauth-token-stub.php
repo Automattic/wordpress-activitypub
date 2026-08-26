@@ -11,7 +11,7 @@ use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Server as OAuth_Server;
 
 /**
- * Stands a test in for an OAuth-authenticated request.
+ * Makes a request look OAuth-authenticated to the plugin.
  *
  * `Server::authenticate_oauth()` normally sets the current token during REST authentication.
  * Tests that need a request to look OAuth-authenticated, with particular scopes, set it directly

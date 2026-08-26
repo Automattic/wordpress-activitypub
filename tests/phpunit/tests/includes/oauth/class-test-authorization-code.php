@@ -447,6 +447,38 @@ class Test_Authorization_Code extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that an authorization request the client is allowed none of is refused.
+	 *
+	 * Without this the empty set reaches Token::create(), where Scope::validate() answers with
+	 * the read-only default, and the client ends up holding `read` it was never granted.
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_refuses_when_no_requested_scope_is_allowed() {
+		$limited_client = Client::register(
+			array(
+				'name'          => 'Write Only Client',
+				'redirect_uris' => array( 'https://write-only.com/callback' ),
+				'scopes'        => array( Scope::WRITE ),
+			)
+		);
+
+		$challenge = Authorization_Code::compute_code_challenge( $this->generate_code_verifier() );
+
+		$code = Authorization_Code::create(
+			$this->user_id,
+			$limited_client['client_id'],
+			'https://write-only.com/callback',
+			array( Scope::PUSH ),
+			$challenge,
+			'S256'
+		);
+
+		$this->assertInstanceOf( \WP_Error::class, $code, 'A grant the client is allowed none of is refused.' );
+		$this->assertEquals( 'invalid_scope', $code->get_error_code(), 'The client is told which OAuth error it is, not a generic failure.' );
+	}
+
+	/**
 	 * Test exchange method filters scopes to client allowed scopes.
 	 *
 	 * @covers ::exchange
