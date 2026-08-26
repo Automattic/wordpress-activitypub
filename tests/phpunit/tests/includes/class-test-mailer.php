@@ -102,6 +102,63 @@ class Test_Mailer extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The reaction notification setting silences reaction emails (likes, reposts, quotes) without touching real replies.
+	 *
+	 * @covers ::maybe_prevent_reaction_notification
+	 */
+	public function test_reaction_notification_setting() {
+		$like_id         = wp_insert_comment(
+			array(
+				'comment_post_ID' => self::$post_id,
+				'comment_type'    => 'like',
+			)
+		);
+		$repost_id       = wp_insert_comment(
+			array(
+				'comment_post_ID' => self::$post_id,
+				'comment_type'    => 'repost',
+			)
+		);
+		$quote_id        = wp_insert_comment(
+			array(
+				'comment_post_ID' => self::$post_id,
+				'comment_type'    => 'quote',
+			)
+		);
+		$reply_id        = wp_insert_comment(
+			array(
+				'comment_post_ID' => self::$post_id,
+				'comment_type'    => 'comment',
+			)
+		);
+		$legacy_reply_id = wp_insert_comment(
+			array(
+				'comment_post_ID' => self::$post_id,
+				'comment_type'    => '',
+			)
+		);
+
+		// Default (unset): reactions still notify, so behavior is unchanged for existing users.
+		$this->assertTrue( Mailer::maybe_prevent_reaction_notification( true, $like_id ) );
+
+		update_user_option( self::$user_id, 'activitypub_mailer_new_reaction', '0' );
+
+		// Opt out silences every reaction type: like, repost, and quote.
+		$this->assertFalse( Mailer::maybe_prevent_reaction_notification( true, $like_id ) );
+		$this->assertFalse( Mailer::maybe_prevent_reaction_notification( true, $repost_id ) );
+		$this->assertFalse( Mailer::maybe_prevent_reaction_notification( true, $quote_id ) );
+
+		// Real replies are never affected, including legacy comments stored with an empty type.
+		$this->assertTrue( Mailer::maybe_prevent_reaction_notification( true, $reply_id ) );
+		$this->assertTrue( Mailer::maybe_prevent_reaction_notification( true, $legacy_reply_id ) );
+
+		// The moderator notification is never gated by the author's reaction preference.
+		$this->assertTrue( Mailer::maybe_prevent_comment_notification( true, $like_id ) );
+
+		delete_user_option( self::$user_id, 'activitypub_mailer_new_reaction' );
+	}
+
+	/**
 	 * Test comment notification text for ActivityPub comments.
 	 *
 	 * @covers ::comment_notification_text
