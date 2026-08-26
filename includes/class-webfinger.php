@@ -174,8 +174,10 @@ class Webfinger {
 		$url = \ltrim( $url, '@' );
 
 		if ( \str_starts_with( $url, '//' ) ) {
-			// A scheme-relative URL is a URL reference, not a handle: treating it as one would
-			// read the host off the first `@` in its path.
+			/*
+			 * A scheme-relative URL is a URL reference, not a handle: treating it as one would
+			 * read the host off the first `@` in its path.
+			 */
 			$identifier = $url;
 			$scheme     = '';
 			// Scheme grammar per RFC 3986: a digit or hyphen in it must not read as a handle.
