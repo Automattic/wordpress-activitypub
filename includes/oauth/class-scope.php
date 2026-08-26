@@ -40,6 +40,24 @@ class Scope {
 	);
 
 	/**
+	 * Scope names the plugin used to grant, and what a request for one resolves to now.
+	 *
+	 * `follow` and `profile` were never enforced, so a client holding one could do nothing with
+	 * it. They are no longer granted, but a client that still asks for one must not fall through
+	 * to the read-only default: that would answer a request for a narrow write by handing over
+	 * the ability to read the actor's private posts. They resolve to `write`, the same as every
+	 * other identifier that names a single write action.
+	 *
+	 * @since unreleased
+	 *
+	 * @var array
+	 */
+	const LEGACY_SCOPES = array(
+		'follow'  => self::WRITE,
+		'profile' => self::WRITE,
+	);
+
+	/**
 	 * Scope aliases from the SWICG ActivityPub API Basic Profile, as it stood before 2026-08-04.
 	 *
 	 * Maps every alias the draft defined, including the `:sameorigin` variants, to a scope the
@@ -219,6 +237,11 @@ class Scope {
 
 			if ( isset( self::CANONICAL_ALIASES[ $scope ] ) ) {
 				$normalized[] = self::CANONICAL_ALIASES[ $scope ];
+				continue;
+			}
+
+			if ( isset( self::LEGACY_SCOPES[ $scope ] ) ) {
+				$normalized[] = self::LEGACY_SCOPES[ $scope ];
 				continue;
 			}
 

@@ -179,6 +179,36 @@ class Test_Scope extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that the removed scope names resolve to `write`, not to the read-only default.
+	 *
+	 * A client still asking for `follow` held a token that authorized nothing before. Letting it
+	 * fall through to `Scope::DEFAULT_SCOPES` would answer that request by granting `read`, which
+	 * is the authority to read the actor's private posts.
+	 *
+	 * @covers ::validate
+	 * @covers ::normalize
+	 *
+	 * @dataProvider data_legacy_scopes
+	 *
+	 * @param string $scope The removed scope name.
+	 */
+	public function test_validate_maps_legacy_scope_names( $scope ) {
+		$this->assertEquals( array( Scope::WRITE ), Scope::validate( $scope ) );
+	}
+
+	/**
+	 * Data provider for removed scope names.
+	 *
+	 * @return array<string, array{0:string}>
+	 */
+	public function data_legacy_scopes() {
+		return array(
+			'follow'  => array( 'follow' ),
+			'profile' => array( 'profile' ),
+		);
+	}
+
+	/**
 	 * Test is_valid method with valid scope.
 	 *
 	 * @covers ::is_valid
