@@ -860,4 +860,127 @@ class Test_Webfinger extends \WP_UnitTestCase {
 			'nothing left' => array( 'user@#x', '' ),
 		);
 	}
+
+	/**
+	 * Test that non-string members of a remote document do not fatal.
+	 *
+	 * `str_starts_with()` on an array is a TypeError on PHP 8.
+	 *
+	 * @covers ::uri_to_acct
+	 */
+	public function test_uri_to_acct_ignores_non_string_members() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => array( 'acct:user@example.com' ),
+						'aliases' => array( array( 'acct:user@example.com' ), 'acct:real@example.com' ),
+					)
+				),
+			);
+		};
+
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::uri_to_acct( 'https://example.com/user' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertSame( 'acct:real@example.com', $result );
+	}
+
+	/**
+	 * Test that unexpected `links` shapes do not warn or fatal.
+	 *
+	 * @covers ::resolve
+	 *
+	 * @dataProvider unexpected_links_provider
+	 *
+	 * @param mixed  $links The `links` member the remote server returns.
+	 * @param string $code  The expected error code.
+	 */
+	public function test_resolve_ignores_unexpected_links( $links, $code ) {
+		$filter = function () use ( $links ) {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => $links,
+					)
+				),
+			);
+		};
+
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::resolve( 'user@example.com' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertWPError( $result );
+		$this->assertSame( $code, $result->get_error_code() );
+	}
+
+	/**
+	 * Data provider for unexpected `links` shapes.
+	 *
+	 * @return array[] Test parameters.
+	 */
+	public function unexpected_links_provider() {
+		return array(
+			'not an array'       => array( 'not-an-array', 'webfinger_missing_links' ),
+			// `isset()` on a string offset is false rather than fatal, so each entry is skipped.
+			'list of non-arrays' => array( array( 'x', 5, null ), 'webfinger_url_no_activitypub' ),
+			'self link no href'  => array(
+				array(
+					array(
+						'rel'  => 'self',
+						'type' => 'application/activity+json',
+					),
+				),
+				'webfinger_url_no_activitypub',
+			),
+		);
+	}
+
+	/**
+	 * Test that non-string link members do not fatal.
+	 *
+	 * `strtolower()` on an array is a TypeError on PHP 8, and a non-string template would reach
+	 * `str_replace()` in the REST controllers.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_ignores_non_string_members() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => array(
+							array(
+								'rel'      => array( 'http://ostatus.org/schema/1.0/subscribe' ),
+								'template' => 'https://example.com/a?uri={uri}',
+							),
+							array(
+								'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+								'template' => array( 'https://example.com/b?uri={uri}' ),
+							),
+						),
+					)
+				),
+			);
+		};
+
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertWPError( $result );
+	}
 }
