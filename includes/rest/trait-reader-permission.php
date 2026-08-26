@@ -19,13 +19,16 @@ namespace Activitypub\Rest;
  */
 trait Reader_Permission {
 	/**
-	 * Check whether the current user may read the reader's cached data at all.
+	 * Check whether the current user holds the capability to read the reader's cached data.
+	 *
+	 * Named for the capability rather than the read, so it is not mistaken for core's
+	 * `check_read_permission()`, which answers whether one given post may be read.
 	 *
 	 * @since unreleased
 	 *
 	 * @return true|\WP_Error True if the current user may read, WP_Error otherwise.
 	 */
-	protected function check_reader_permission() {
+	protected function check_reader_capability() {
 		if ( \current_user_can( 'activitypub' ) || \current_user_can( 'manage_options' ) ) {
 			return true;
 		}
@@ -49,7 +52,7 @@ trait Reader_Permission {
 	 * @return true|\WP_Error True if the request has read access, WP_Error otherwise.
 	 */
 	public function get_items_permissions_check( $request ) {
-		$permission = $this->check_reader_permission();
+		$permission = $this->check_reader_capability();
 
 		if ( \is_wp_error( $permission ) ) {
 			return $permission;

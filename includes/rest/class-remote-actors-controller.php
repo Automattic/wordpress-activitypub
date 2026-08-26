@@ -36,7 +36,7 @@ class Remote_Actors_Controller extends \WP_REST_Posts_Controller {
 	 * @return true|\WP_Error True if the request has read access, WP_Error otherwise.
 	 */
 	public function get_item_permissions_check( $request ) {
-		$permission = $this->check_reader_permission();
+		$permission = $this->check_reader_capability();
 
 		if ( \is_wp_error( $permission ) ) {
 			return $permission;
