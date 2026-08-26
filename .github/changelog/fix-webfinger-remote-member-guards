@@ -1,4 +1,4 @@
 Significance: patch
 Type: fixed
 
-Looking up a profile on another Fediverse server no longer fails when that server sends back an unexpected response.
+Fixed an error that could occur when looking up a profile on another Fediverse server that sends back an unexpected response.

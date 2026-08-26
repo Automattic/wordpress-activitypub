@@ -862,42 +862,6 @@ class Test_Webfinger extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that a `self` link without an `href` does not resolve to `null`.
-	 *
-	 * `resolve()` declares `string|WP_Error`, and callers branch on `is_wp_error()`. A remote
-	 * server controls this document, so a matching link with no `href` must not slip past that
-	 * branch as a non-error `null`.
-	 *
-	 * @covers ::resolve
-	 */
-	public function test_resolve_requires_href_on_matching_link() {
-		$filter = function () {
-			return array(
-				'response' => array( 'code' => 200 ),
-				'body'     => \wp_json_encode(
-					array(
-						'subject' => 'acct:user@example.com',
-						'links'   => array(
-							array(
-								'rel'  => 'self',
-								'type' => 'application/activity+json',
-							),
-						),
-					)
-				),
-			);
-		};
-
-		\add_filter( 'pre_http_request', $filter );
-
-		$result = Webfinger::resolve( 'user@example.com' );
-
-		\remove_filter( 'pre_http_request', $filter );
-
-		$this->assertWPError( $result );
-	}
-
-	/**
 	 * Test that non-string members of a remote document do not fatal.
 	 *
 	 * `str_starts_with()` on an array is a TypeError on PHP 8.
@@ -962,17 +926,61 @@ class Test_Webfinger extends \WP_UnitTestCase {
 	/**
 	 * Data provider for unexpected `links` shapes.
 	 *
-	 * A list of non-array entries is the interesting one: `isset()` on a string offset returns
-	 * false rather than raising, so each entry is skipped and the loop falls through to the error.
-	 *
 	 * @return array[] Test parameters.
 	 */
 	public function unexpected_links_provider() {
 		return array(
-			'string'               => array( 'not-an-array', 'webfinger_missing_links' ),
-			'number'               => array( 42, 'webfinger_missing_links' ),
-			'list of non-arrays'   => array( array( 'x', 5, null ), 'webfinger_url_no_activitypub' ),
-			'list of empty arrays' => array( array( array(), array() ), 'webfinger_url_no_activitypub' ),
+			'not an array'       => array( 'not-an-array', 'webfinger_missing_links' ),
+			// `isset()` on a string offset is false rather than fatal, so each entry is skipped.
+			'list of non-arrays' => array( array( 'x', 5, null ), 'webfinger_url_no_activitypub' ),
+			'self link no href'  => array(
+				array(
+					array(
+						'rel'  => 'self',
+						'type' => 'application/activity+json',
+					),
+				),
+				'webfinger_url_no_activitypub',
+			),
 		);
+	}
+
+	/**
+	 * Test that non-string link members do not fatal.
+	 *
+	 * `strtolower()` on an array is a TypeError on PHP 8, and a non-string template would reach
+	 * `str_replace()` in the REST controllers.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_ignores_non_string_members() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => array(
+							array(
+								'rel'      => array( 'http://ostatus.org/schema/1.0/subscribe' ),
+								'template' => 'https://example.com/a?uri={uri}',
+							),
+							array(
+								'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+								'template' => array( 'https://example.com/b?uri={uri}' ),
+							),
+						),
+					)
+				),
+			);
+		};
+
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertWPError( $result );
 	}
 }

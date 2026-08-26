@@ -269,7 +269,7 @@ class Webfinger {
 	 *
 	 * @param string $uri The Identifier: <identifier>@<host> or URI.
 	 *
-	 * @return \WP_Error|array Error reaction or array with identifier and host as values.
+	 * @return \WP_Error|array|null Error reaction, the decoded document, or null if the body is not JSON.
 	 */
 	public static function get_data( $uri ) {
 		$identifier_and_host = self::get_identifier_and_host( $uri );
@@ -390,7 +390,7 @@ class Webfinger {
 		$links = array();
 
 		foreach ( $data['links'] as $link ) {
-			if ( isset( $link['rel'] ) && isset( $link['template'] ) ) {
+			if ( isset( $link['rel'], $link['template'] ) && \is_string( $link['rel'] ) && \is_string( $link['template'] ) ) {
 				$links[ \strtolower( $link['rel'] ) ] = $link['template'];
 			}
 		}
