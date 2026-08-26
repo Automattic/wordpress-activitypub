@@ -45,7 +45,13 @@ trait Verification {
 	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
 	 */
 	public function verify_signature( $request, $force_signature = false ) {
-		if ( 'HEAD' === $request->get_method() && ! $force_signature ) {
+		/*
+		 * The HEAD short-circuit exists so caches and link-checkers can probe public endpoints
+		 * without a signature. A seek request carries an `item` and its 307/Location response leaks
+		 * a per-actor membership/position, so it must NOT ride the bypass: keep it subject to the
+		 * normal Authorized-Fetch signature check.
+		 */
+		if ( 'HEAD' === $request->get_method() && ! $force_signature && null === $request->get_param( 'item' ) ) {
 			return true;
 		}
 

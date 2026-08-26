@@ -5,9 +5,10 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 ## Supported federation protocols and standards
 
 - [ActivityPub](https://www.w3.org/TR/activitypub/) (Server-to-Server)
-- [ActivityPub API: Basic Profile](https://swicg.github.io/activitypub-api/basicprofile) (Client-to-Server, partial; see [OAuth 2.0 for Client-to-Server](#oauth-20-for-client-to-server))
-- [ActivityPub API: Server-Sent Events](https://swicg.github.io/activitypub-api/sse) (partial, see below)
 - [ActivityPub API: Actor Autocomplete](https://swicg.github.io/activitypub-api/autocomplete) (typeahead search over local and cached remote actors; requires the ActivityPub API to be enabled)
+- [ActivityPub API: Basic Profile](https://swicg.github.io/activitypub-api/basicprofile) (Client-to-Server, partial; see [OAuth 2.0 for Client-to-Server](#oauth-20-for-client-to-server))
+- [ActivityPub API: Seek Item](https://swicg.github.io/activitypub-api/seekitem) (followers, following, outbox, inbox, and liked collections)
+- [ActivityPub API: Server-Sent Events](https://swicg.github.io/activitypub-api/sse) (partial, see below)
 - [WebFinger](https://www.w3.org/community/reports/socialcg/CG-FINAL-apwf-20240608/)
 - [HTTP Signatures](https://swicg.github.io/activitypub-http-signature/)
 - [NodeInfo](https://nodeinfo.diaspora.software/)

@@ -72,6 +72,7 @@ function rest_init() {
 	}
 	( new Rest\Outbox_Controller() )->register_routes();
 	( new Rest\Post_Controller() )->register_routes();
+	( new Rest\Seek_Controller() )->register_routes();
 	( new Rest\Replies_Controller() )->register_routes();
 	( new Rest\Webfinger_Controller() )->register_routes();
 
