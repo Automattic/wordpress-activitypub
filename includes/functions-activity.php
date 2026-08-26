@@ -321,9 +321,9 @@ function id_matches_url( $item, $url ) {
  * Normalize an actor URI so two spellings of the same identity compare equal.
  *
  * Folds only what RFC 3986 calls case-insensitive, the scheme and host, plus a default port
- * and a trailing slash. Path and query keep their case, and `http` stays distinct from
- * `https`. Userinfo is dropped, so a few technically distinct URIs compare equal, which errs
- * towards matching a block rather than missing one.
+ * and a trailing slash, and drops the fragment. Path and query keep their case, and `http`
+ * stays distinct from `https`. Userinfo is dropped, so a few technically distinct URIs compare
+ * equal, which errs towards matching a block rather than missing one.
  *
  * Deliberately not used by `id_matches_url()`, which guards a cache write keyed on the exact
  * id: folding there would confirm a document under one spelling and store it under another.
