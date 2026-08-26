@@ -927,18 +927,23 @@ class Test_Webfinger extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that a non-array `links` member does not warn.
+	 * Test that unexpected `links` shapes do not warn or fatal.
 	 *
 	 * @covers ::resolve
+	 *
+	 * @dataProvider unexpected_links_provider
+	 *
+	 * @param mixed  $links The `links` member the remote server returns.
+	 * @param string $code  The expected error code.
 	 */
-	public function test_resolve_ignores_non_array_links() {
-		$filter = function () {
+	public function test_resolve_ignores_unexpected_links( $links, $code ) {
+		$filter = function () use ( $links ) {
 			return array(
 				'response' => array( 'code' => 200 ),
 				'body'     => \wp_json_encode(
 					array(
 						'subject' => 'acct:user@example.com',
-						'links'   => 'not-an-array',
+						'links'   => $links,
 					)
 				),
 			);
@@ -951,6 +956,23 @@ class Test_Webfinger extends \WP_UnitTestCase {
 		\remove_filter( 'pre_http_request', $filter );
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'webfinger_missing_links', $result->get_error_code() );
+		$this->assertSame( $code, $result->get_error_code() );
+	}
+
+	/**
+	 * Data provider for unexpected `links` shapes.
+	 *
+	 * A list of non-array entries is the interesting one: `isset()` on a string offset returns
+	 * false rather than raising, so each entry is skipped and the loop falls through to the error.
+	 *
+	 * @return array[] Test parameters.
+	 */
+	public function unexpected_links_provider() {
+		return array(
+			'string'               => array( 'not-an-array', 'webfinger_missing_links' ),
+			'number'               => array( 42, 'webfinger_missing_links' ),
+			'list of non-arrays'   => array( array( 'x', 5, null ), 'webfinger_url_no_activitypub' ),
+			'list of empty arrays' => array( array( array(), array() ), 'webfinger_url_no_activitypub' ),
+		);
 	}
 }
