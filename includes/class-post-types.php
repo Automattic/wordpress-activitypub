@@ -1064,9 +1064,13 @@ class Post_Types {
 			)
 		);
 
+		/*
+		 * `include => array( 0 )` does not restrict anything: `WP_Term_Query` adds the `IN` clause
+		 * only when the imploded id list is truthy, and the string "0" is not, so the clause is
+		 * dropped and every term comes back. An id that cannot exist forces the empty result.
+		 */
 		if ( empty( $term_ids ) ) {
-			// Force empty result.
-			$term_ids = array( 0 );
+			$term_ids = array( PHP_INT_MAX );
 		}
 
 		$args['include'] = \array_map( 'intval', $term_ids );
