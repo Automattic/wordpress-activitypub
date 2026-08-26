@@ -22,9 +22,6 @@ class Remote_Posts_Controller extends \WP_REST_Posts_Controller {
 	/**
 	 * Check whether a request has read access to a single cached post.
 	 *
-	 * The collection is scoped by a query filter, which single item requests never
-	 * run, so ownership is checked here to keep the feed from being read by ID.
-	 *
 	 * @since unreleased
 	 *
 	 * @param \WP_REST_Request $request Full details about the request.
@@ -37,26 +34,27 @@ class Remote_Posts_Controller extends \WP_REST_Posts_Controller {
 			return $permission;
 		}
 
-		$permission = parent::get_item_permissions_check( $request );
+		return parent::get_item_permissions_check( $request );
+	}
 
-		if ( \is_wp_error( $permission ) || ! $permission ) {
-			return $permission;
+	/**
+	 * Check whether a post can be read.
+	 *
+	 * This is the shared predicate: core's own `get_item_permissions_check()` calls it, and so
+	 * does `WP_REST_Comments_Controller`, which serves the remote replies cached on these posts.
+	 * Scoping here covers both routes; scoping only the route callbacks leaves the comment route
+	 * reading the same records.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_Post $post Post object.
+	 * @return bool True if the post can be read, false otherwise.
+	 */
+	public function check_read_permission( $post ) {
+		if ( ! parent::check_read_permission( $post ) ) {
+			return false;
 		}
 
-		$post = $this->get_post( $request['id'] );
-
-		if ( \is_wp_error( $post ) ) {
-			return $post;
-		}
-
-		if ( ! $this->can_read_feed_of( \get_post_meta( $post->ID, '_activitypub_user_id', false ) ) ) {
-			return new \WP_Error(
-				'activitypub_rest_forbidden',
-				\__( 'Sorry, you are not allowed to read this post.', 'activitypub' ),
-				array( 'status' => \rest_authorization_required_code() )
-			);
-		}
-
-		return true;
+		return $this->can_read_feed_of( \get_post_meta( $post->ID, '_activitypub_user_id', false ) );
 	}
 }

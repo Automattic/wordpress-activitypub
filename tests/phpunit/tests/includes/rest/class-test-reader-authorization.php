@@ -242,6 +242,70 @@ class Test_Reader_Authorization extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Cached replies are not readable through the comments route.
+	 *
+	 * `ap_post` supports comments and remote replies are stored on it, so
+	 * `WP_REST_Comments_Controller` reaches these records through `check_read_permission()`
+	 * rather than through this controller's own permission callbacks.
+	 *
+	 * @covers \Activitypub\Rest\Remote_Posts_Controller::check_read_permission
+	 * @dataProvider data_users_without_access_to_the_feed
+	 *
+	 * @param string $user Property holding the user ID to test with.
+	 */
+	public function test_cached_replies_are_not_readable_through_the_comments_route( $user ) {
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => self::$remote_post_id,
+				'comment_content'  => 'Cached remote reply.',
+				'comment_approved' => '1',
+				'comment_type'     => 'comment',
+			)
+		);
+
+		\wp_set_current_user( 'none' === $user ? 0 : self::${$user} );
+
+		$response = $this->request( '/wp/v2/comments/' . $comment_id );
+
+		$this->assertNotSame( 200, $response->get_status() );
+		$this->assertStringNotContainsString( 'Cached remote reply.', \wp_json_encode( $response->get_data() ) );
+	}
+
+	/**
+	 * Data provider for users that must not reach another user's cached replies.
+	 *
+	 * @return array[] Test parameters.
+	 */
+	public function data_users_without_access_to_the_feed() {
+		return array(
+			'logged out' => array( 'none' ),
+			'other user' => array( 'other_user_id' ),
+		);
+	}
+
+	/**
+	 * The owner still reads the replies cached in their own feed.
+	 *
+	 * @covers \Activitypub\Rest\Remote_Posts_Controller::check_read_permission
+	 */
+	public function test_owner_can_read_cached_replies_through_the_comments_route() {
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => self::$remote_post_id,
+				'comment_content'  => 'Cached remote reply.',
+				'comment_approved' => '1',
+				'comment_type'     => 'comment',
+			)
+		);
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = $this->request( '/wp/v2/comments/' . $comment_id );
+
+		$this->assertSame( 200, $response->get_status(), 'The owner has to keep access, or this test proves nothing.' );
+	}
+
+	/**
 	 * A user cannot read another user's cached post by ID.
 	 *
 	 * The collection filter never runs for a single item, so this is the only gate on that route.
