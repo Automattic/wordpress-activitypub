@@ -642,6 +642,73 @@ class Test_Moderation extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a handle is resolved for an actor block whatever its host spelling.
+	 *
+	 * Deciding this with `Webfinger::is_acct()` skipped resolution for a trailing-dot FQDN and
+	 * for any non-ASCII host, so a delivery escaped an actor block on a spelling alone. Those
+	 * only looked covered because a domain block caught them.
+	 *
+	 * @covers ::check_activity_against_blocks
+	 */
+	public function test_actor_block_resolves_handle_host_spellings() {
+		$resolved = 'https://handle.example.com/users/evil';
+
+		$mock = function ( $response, $args, $url ) use ( $resolved ) {
+			if ( false !== \strpos( $url, '/.well-known/webfinger' ) ) {
+				return array(
+					'response' => array( 'code' => 200 ),
+					'body'     => \wp_json_encode(
+						array(
+							'subject' => 'acct:evil@handle.example.com',
+							'links'   => array(
+								array(
+									'rel'  => 'self',
+									'type' => 'application/activity+json',
+									'href' => $resolved,
+								),
+							),
+						)
+					),
+				);
+			}
+
+			return $response;
+		};
+		\add_filter( 'pre_http_request', $mock, 10, 3 );
+
+		// The block is stored against the actor, so it has to resolve before it can be added.
+		$actor_object = function ( $response, $url_or_object ) use ( $resolved ) {
+			// Only the resolved URL answers, so the handle has to reach it through webfinger.
+			if ( (string) $url_or_object !== $resolved ) {
+				return $response;
+			}
+
+			return array(
+				'id'                => $resolved,
+				'type'              => 'Person',
+				'guid'              => $resolved,
+				'preferredUsername' => 'evil',
+				'inbox'             => 'https://handle.example.com/inbox',
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $actor_object, 20, 2 );
+
+		Moderation::add_site_block( 'actor', $resolved );
+		$this->assertNotEmpty( Moderation::get_site_blocks()['actors'], 'The actor block has to register or this test proves nothing.' );
+
+		foreach ( array( 'acct:evil@handle.example.com.', 'evil@handle.example.com' ) as $actor ) {
+			$this->assertTrue(
+				Moderation::activity_is_blocked( $this->follow_from( $actor ) ),
+				"Handle $actor should resolve to the blocked actor"
+			);
+		}
+
+		Moderation::remove_site_block( 'actor', $resolved );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $actor_object, 20 );
+		\remove_filter( 'pre_http_request', $mock, 10 );
+	}
+
+	/**
 	 * Test that a blocked domain is never contacted to resolve an actor.
 	 *
 	 * The actor check can go to the network, so it has to run after the domain check: a host the

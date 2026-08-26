@@ -459,11 +459,12 @@ class Moderation {
 	 * The delivered `actor` is only bound to a host by the signature, not to an exact string, so a
 	 * spelling that normalizes differently still has to be resolved to be ruled out.
 	 *
-	 * Three steps, cheapest first. The delivered string is compared normalized. Then the identity
-	 * that actually signed, which signature verification has already resolved and self-confirmed,
-	 * so reading it back costs a cache hit rather than a request. Only a claim that is neither of
-	 * those is resolved over the network, which is the case where a host relays for an actor other
-	 * than the one that signed. A failed fetch leaves the delivery unblocked, as before.
+	 * Two steps. The delivered string is compared normalized, which settles the ordinary case
+	 * without leaving the site. A delivery that gets past that is resolved over the network, so a
+	 * spelling the normalizer cannot fold still gets ruled out. A failed fetch leaves the delivery
+	 * unblocked, as before: a host that will not answer cannot be confirmed as blocked, and the
+	 * host owns the actor being claimed, so refusing to answer is a way out of a block. The
+	 * domain list is the tool for a host behaving that way.
 	 *
 	 * @param string   $actor_id       The actor URI from the delivered activity.
 	 * @param string[] $blocked_actors The blocked actor URIs.
@@ -476,10 +477,16 @@ class Moderation {
 		}
 
 		/*
-		 * Narrow by host first. Two URIs that name the same actor share a host, so an entry on
-		 * another host cannot match however either side is spelled. The host comes from the
-		 * delivered actor only: taking it from the key id would let a forged header choose which
-		 * entries get compared. Most deliveries reach a list with nothing on their host and leave.
+		 * Narrow by host first, so only a delivery that could plausibly be blocked pays for a
+		 * resolution. Most deliveries reach a list with nothing on their host and leave here. The
+		 * host comes from the delivered actor only: taking it from the key id would let a forged
+		 * header choose which entries get compared.
+		 *
+		 * This is a cost gate, not a completeness one. An actor whose own host carries no entry is
+		 * never resolved, so a document served elsewhere that declares a blocked id is not caught
+		 * here even though the resolved comparison below would match it. Resolving every delivery
+		 * to close that would mean an outbound request per delivery whenever any actor is blocked.
+		 * Block the host to cover it.
 		 */
 		$host = Webfinger::get_host( $actor_id );
 
@@ -549,11 +556,20 @@ class Moderation {
 		}
 
 		/*
+		 * `is_acct()` is too strict to decide this. Its host grammar rejects a trailing-dot FQDN
+		 * and any non-ASCII host, both of which `Webfinger::resolve()` resolves fine, and a
+		 * delivery that skips resolution over a spelling is a delivery that skips the block. All
+		 * that matters here is whether this is a handle rather than a URL already worth comparing.
+		 */
+		$is_handle = false === \strpos( $actor_id, '://' ) && false !== \strpos( $actor_id, '@' );
+
+		/*
 		 * Resolve a handle to its URL, but only for a list that could match it: a keyword-only
 		 * blocklist has no use for the actor's URL and should not pay a lookup for one. Its own
 		 * host is not blocked, or we would have returned above.
 		 */
-		if ( ( self::has_domain_blocks( $blocks ) || self::has_actor_blocks( $blocks ) ) && Webfinger::is_acct( $actor_id ) ) {
+
+		if ( ( self::has_domain_blocks( $blocks ) || self::has_actor_blocks( $blocks ) ) && $is_handle ) {
 			$resolved_url = Webfinger::resolve( $actor_id );
 			$actor_id     = \is_wp_error( $resolved_url ) ? $actor_id : $resolved_url;
 
