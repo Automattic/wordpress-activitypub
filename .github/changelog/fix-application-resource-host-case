@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed the Application actor not being found when its address was written with different capitalisation.

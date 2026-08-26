@@ -87,6 +87,39 @@ class Test_Application extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that host matching is case-insensitive on both sides.
+	 *
+	 * The requested host is whatever the caller typed and the stored hosts are whatever an admin
+	 * saved, so folding only one side would stop the Application resolving on a mixed-case site.
+	 *
+	 * @covers ::is_application_resource
+	 */
+	public function test_is_application_resource_folds_host_case() {
+		$this->assertTrue( Application::is_application_resource( 'acct:application@' . \strtoupper( home_host() ) ) );
+
+		\update_option( 'activitypub_old_host', 'OLD-Domain.example' );
+		$this->assertTrue( Application::is_application_resource( 'acct:application@old-domain.example' ) );
+		$this->assertTrue( Application::is_application_resource( 'acct:application@OLD-domain.example.' ) );
+
+		\delete_option( 'activitypub_old_host' );
+	}
+
+	/**
+	 * Test that a host which folds away to nothing is rejected.
+	 *
+	 * `.` and `[]` fold to an empty string, and so does an unset `activitypub_old_host`, so
+	 * without an explicit bail the two empties would compare equal and match any site.
+	 *
+	 * @covers ::is_application_resource
+	 */
+	public function test_is_application_resource_rejects_empty_folded_host() {
+		\delete_option( 'activitypub_old_host' );
+
+		$this->assertFalse( Application::is_application_resource( 'application@.' ) );
+		$this->assertFalse( Application::is_application_resource( 'acct:application@[]' ) );
+	}
+
+	/**
 	 * Test that an already resolved WebFinger profile is not overwritten.
 	 *
 	 * @covers ::add_webfinger_discovery

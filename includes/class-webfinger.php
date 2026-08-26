@@ -173,12 +173,24 @@ class Webfinger {
 		// Remove leading @.
 		$url = \ltrim( $url, '@' );
 
-		if ( ! \preg_match( '/^([a-zA-Z+]+):/', $url, $match ) ) {
+		if ( \str_starts_with( $url, '//' ) ) {
+			/*
+			 * A scheme-relative URL is a URL reference, not a handle: treating it as one would
+			 * read the host off the first `@` in its path.
+			 */
+			$identifier = $url;
+			$scheme     = '';
+		} elseif (
+			// Scheme grammar per RFC 3986: a digit or hyphen in it must not read as a handle.
+			! \preg_match( '/^([a-zA-Z][a-zA-Z0-9+.\-]*):/', $url, $match )
+		) {
 			$identifier = 'acct:' . $url;
 			$scheme     = 'acct';
 		} else {
 			$identifier = $url;
-			$scheme     = $match[1];
+
+			// Schemes are case-insensitive, and the switch below compares them exactly.
+			$scheme = \strtolower( $match[1] );
 		}
 
 		$host = null;
@@ -187,8 +199,17 @@ class Webfinger {
 			case 'acct':
 			case 'mailto':
 			case 'xmpp':
-				if ( \strpos( $identifier, '@' ) !== false ) {
-					$host = \substr( $identifier, \strpos( $identifier, '@' ) + 1 );
+				// Split on the last `@`: a local part may contain one, the host may not.
+				if ( \strrpos( $identifier, '@' ) !== false ) {
+					$host = \substr( $identifier, \strrpos( $identifier, '@' ) + 1 );
+
+					/*
+					 * Cut anything a query or fragment starts. `wp_parse_url()` does this for the
+					 * URL forms below, but this branch takes the host off the string itself, so
+					 * `acct:user@example.com#x` would otherwise carry `#x` into the host and miss
+					 * a domain block on `example.com`.
+					 */
+					$host = \substr( $host, 0, \strcspn( $host, '?#' ) );
 				}
 				break;
 			default:
@@ -207,7 +228,38 @@ class Webfinger {
 			);
 		}
 
-		return array( $identifier, $host );
+		return array( $identifier, \strtolower( $host ) );
+	}
+
+	/**
+	 * Get the host of an identifier.
+	 *
+	 * The host half of {@see self::get_identifier_and_host()}, for callers that only need that.
+	 * Prefer this over parsing a host out directly when you need an identifier's host: a handle
+	 * has none to parse, and a URI in a scheme other than `http` can carry an `@` in its path
+	 * that would be read as one.
+	 *
+	 * Not a drop-in for `is_same_host()`, which deliberately fails closed on an identifier with
+	 * no parsable host. Giving an `acct:` keyId a host there would re-admit what 9.2.1 rejected.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $uri The identifier, a URL or a handle.
+	 *
+	 * @return string The host, lowercased, or an empty string when there is none.
+	 */
+	public static function get_host( $uri ) {
+		$identifier_and_host = self::get_identifier_and_host( (string) $uri );
+
+		if ( \is_wp_error( $identifier_and_host ) ) {
+			return '';
+		}
+
+		/*
+		 * Folded here rather than in `get_identifier_and_host()`, whose host is also used to build
+		 * WebFinger and intent URLs: an IPv6 authority needs its brackets to stay a valid URL.
+		 */
+		return fold_host( $identifier_and_host[1] );
 	}
 
 	/**
