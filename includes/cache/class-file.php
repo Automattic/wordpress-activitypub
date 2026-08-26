@@ -255,6 +255,9 @@ abstract class File {
 		$file_path     = static::optimize_image( $file_path, $max_dimension );
 		$file_name     = \basename( $file_path );
 
+		// Allow cache types to remove stale files without deleting this write.
+		static::after_cache( $url, $entity_id, $file_path, $file_name, $options );
+
 		$local_url = $paths['baseurl'] . '/' . $file_name;
 
 		/**
@@ -273,6 +276,21 @@ abstract class File {
 		\do_action( 'activitypub_media_cached', $local_url, $url, $entity_id, static::get_type(), $file_path );
 
 		return $local_url;
+	}
+
+	/**
+	 * Run cache-type-specific cleanup after writing a file.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string     $url       The remote URL.
+	 * @param string|int $entity_id The entity identifier.
+	 * @param string     $file_path The written file path.
+	 * @param string     $file_name The written file basename.
+	 * @param array      $options   Cache options.
+	 */
+	protected static function after_cache( $url, $entity_id, $file_path, $file_name, $options ) {
+		// Cache types with multiple files need no cleanup.
 	}
 
 	/**

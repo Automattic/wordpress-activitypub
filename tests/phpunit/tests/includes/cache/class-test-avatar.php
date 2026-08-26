@@ -188,6 +188,42 @@ class Test_Avatar extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a filename collision keeps the file that was written.
+	 */
+	public function test_cache_collision_keeps_written_file() {
+		$post_id = self::factory()->post->create();
+		$url     = 'https://example.com/collision-avatar.jpg';
+		$hash    = md5( $url );
+		$paths   = Avatar::get_storage_paths( $post_id );
+		wp_mkdir_p( $paths['basedir'] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( $paths['basedir'] . '/' . $hash . '.webp', 'existing' );
+
+		$mock_download = function ( $result, $download_url ) use ( $url ) {
+			if ( $download_url === $url ) {
+				$tmp_file = \wp_tempnam( 'collision-avatar.jpg' );
+				copy( AP_TESTS_DIR . '/data/assets/test.jpg', $tmp_file );
+
+				return array(
+					'file'      => $tmp_file,
+					'mime_type' => 'image/jpeg',
+				);
+			}
+
+			return $result;
+		};
+		\add_filter( 'activitypub_pre_download_url', $mock_download, 10, 2 );
+
+		$result = Avatar::cache( $url, $post_id, array( 'max_dimension' => Avatar::MAX_DIMENSION ) );
+
+		$this->assertStringEndsWith( '/' . $hash . '-1.webp', $result );
+		$this->assertTrue( file_exists( $paths['basedir'] . '/' . $hash . '-1.webp' ) );
+
+		\remove_filter( 'activitypub_pre_download_url', $mock_download );
+		Avatar::invalidate_entity( $post_id );
+	}
+
+	/**
 	 * Test maybe_cache returns original URL when download fails.
 	 */
 	public function test_maybe_cache_returns_original_url_on_failure() {
@@ -310,7 +346,7 @@ class Test_Avatar extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that get_actor_avatar_hash returns false when the actor has no icon.
+	 * Test that get_actor_avatar_hash returns an empty hash when the actor has no icon.
 	 */
 	public function test_get_actor_avatar_hash_no_icon() {
 		$post_id = self::factory()->post->create(
@@ -320,7 +356,7 @@ class Test_Avatar extends WP_UnitTestCase {
 			)
 		);
 
-		$this->assertFalse( Avatar::get_actor_avatar_hash( $post_id ) );
+		$this->assertSame( '', Avatar::get_actor_avatar_hash( $post_id ) );
 	}
 
 	/**
@@ -368,6 +404,7 @@ class Test_Avatar extends WP_UnitTestCase {
 		Avatar::prune_stale_files( $post_id, md5( 'https://example.com/other.jpg' ) );
 
 		$this->assertFalse( file_exists( $paths['basedir'] . "/{$hash}.jpg" ) );
+		$this->assertFalse( file_exists( $paths['basedir'] ), 'Empty actor directory should be removed' );
 
 		Avatar::invalidate_entity( $post_id );
 	}
@@ -476,25 +513,36 @@ class Test_Avatar extends WP_UnitTestCase {
 		\add_filter( 'activitypub_cleanup_actor_cache_limit', $limit_one );
 
 		$root = wp_upload_dir()['basedir'] . Avatar::get_base_dir();
+		$dirs = array();
 
-		// Two orphan actor directories, sorted so 1 comes before 2.
-		$first  = $root . '/1';
-		$second = $root . '/2';
-		wp_mkdir_p( $first );
-		wp_mkdir_p( $second );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-		file_put_contents( $first . '/a.jpg', 'x' );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-		file_put_contents( $second . '/b.jpg', 'x' );
+		// Create unique numeric directories, then use DirectoryIterator order directly.
+		// get_base_dir() ends with a slash, so concatenate names without another one.
+		foreach ( range( 1, 3 ) as $index ) {
+			$directory = $root . ( 900000 + getmypid() + $index );
+			\wp_mkdir_p( $directory );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			file_put_contents( $directory . '/avatar.jpg', 'x' );
+			$dirs[] = $directory;
+		}
 
-		// First run should process only the first directory.
+		$iterator = new \DirectoryIterator( $root );
+		$ordered = array();
+		foreach ( $iterator as $directory ) {
+			if ( ! $directory->isDot() && $directory->isDir() && in_array( $directory->getPathname(), $dirs, true ) ) {
+				$ordered[] = $directory->getPathname();
+			}
+		}
+		$this->assertCount( 3, $ordered );
+		\update_option( 'activitypub_avatar_cache_cursor', basename( $ordered[0] ), false );
+
+		// First run processes directory after cursor, regardless of filesystem order.
 		Avatar::cleanup_actors();
-		$this->assertFalse( file_exists( $first . '/a.jpg' ), 'First run should clean the first batch' );
-		$this->assertTrue( file_exists( $second . '/b.jpg' ), 'First run should stop after the batch limit' );
+		$this->assertFalse( file_exists( $ordered[1] . '/avatar.jpg' ), 'First run should clean the first batch' );
+		$this->assertTrue( file_exists( $ordered[2] . '/avatar.jpg' ), 'First run should stop after the batch limit' );
 
 		// Second run should advance and clean the next directory.
 		Avatar::cleanup_actors();
-		$this->assertFalse( file_exists( $second . '/b.jpg' ), 'Second run should clean the next batch' );
+		$this->assertFalse( file_exists( $ordered[2] . '/avatar.jpg' ), 'Second run should clean the next batch' );
 
 		\remove_filter( 'activitypub_cleanup_actor_cache_limit', $limit_one );
 		\delete_option( 'activitypub_avatar_cache_cleanup_lock' );

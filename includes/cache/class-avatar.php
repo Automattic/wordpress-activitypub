@@ -128,30 +128,6 @@ class Avatar extends File {
 	}
 
 	/**
-	 * Cache a remote avatar locally, then drop older versions of it.
-	 *
-	 * Overrides the shared write path so that any avatar hash it leaves behind
-	 * for the same actor is removed in the same call. Remote actors change
-	 * their icon URL frequently, and each change would otherwise pile up an
-	 * orphaned copy of the previous image.
-	 *
-	 * @param string     $url       The remote URL.
-	 * @param string|int $entity_id The entity identifier (actor post ID).
-	 * @param array      $options   Optional. Additional options.
-	 *
-	 * @return string|false The local URL on success, false on failure.
-	 */
-	public static function cache( $url, $entity_id, $options = array() ) {
-		$cached_url = parent::cache( $url, $entity_id, $options );
-
-		if ( $cached_url ) {
-			self::prune_stale_files( $entity_id, self::generate_hash( $url ) );
-		}
-
-		return $cached_url;
-	}
-
-	/**
 	 * Maybe clean up cached avatar when actor is deleted.
 	 *
 	 * @param int $post_id The post ID being deleted.
@@ -197,6 +173,26 @@ class Avatar extends File {
 	}
 
 	/**
+	 * Drop older cached avatar versions once a new one is written.
+	 *
+	 * Hooked into the shared write path via File::cache(), so every avatar
+	 * write removes the files it replaced. Runs after the final filename is
+	 * known, so the file just written is always kept, even when a collision
+	 * renamed it to hash-1.webp.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string     $url       The remote URL that was cached.
+	 * @param string|int $entity_id The entity identifier (actor post ID).
+	 * @param string     $file_path The path of the file that was written.
+	 * @param string     $file_name The basename of the file that was written.
+	 * @param array      $options   Cache options.
+	 */
+	protected static function after_cache( $url, $entity_id, $file_path, $file_name, $options ) {
+		self::prune_stale_files( $entity_id, self::generate_hash( $url ), $file_name );
+	}
+
+	/**
 	 * Get the hash of the avatar currently referenced by an actor.
 	 *
 	 * Reads the actor's icon directly from post content without running the
@@ -206,22 +202,37 @@ class Avatar extends File {
 	 *
 	 * @param int $post_id The actor post ID.
 	 *
-	 * @return string|false The md5 hash of the current avatar URL, or false if none.
+	 * @return string|false The md5 hash of the current avatar URL, false if the
+	 *                      post is missing or not an actor, empty string when
+	 *                      the actor has no usable icon.
 	 */
 	public static function get_actor_avatar_hash( $post_id ) {
 		$post = \get_post( $post_id );
-		if ( ! $post || empty( $post->post_content ) ) {
+		if ( ! $post || Remote_Actors::POST_TYPE !== $post->post_type ) {
 			return false;
 		}
 
+		return self::get_actor_avatar_hash_from_post( $post );
+	}
+
+	/**
+	 * Get avatar hash from an actor post.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_Post $post Actor post.
+	 *
+	 * @return string The avatar hash, empty string when the actor has no usable icon.
+	 */
+	protected static function get_actor_avatar_hash_from_post( $post ) {
 		$actor_data = \json_decode( $post->post_content, true );
 		if ( empty( $actor_data['icon'] ) ) {
-			return false;
+			return '';
 		}
 
 		$avatar_url = object_to_uri( $actor_data['icon'] );
 		if ( empty( $avatar_url ) || ! \filter_var( $avatar_url, FILTER_VALIDATE_URL ) ) {
-			return false;
+			return '';
 		}
 
 		return self::generate_hash( $avatar_url );
@@ -236,10 +247,11 @@ class Avatar extends File {
 	 *
 	 * @since unreleased
 	 *
-	 * @param int    $entity_id    The actor post ID.
-	 * @param string $current_hash The hash of the current avatar URL.
+	 * @param int         $entity_id      The actor post ID.
+	 * @param string      $current_hash   The hash of the current avatar URL.
+	 * @param string|null $current_file   The basename of the cached file to keep.
 	 */
-	public static function prune_stale_files( $entity_id, $current_hash ) {
+	public static function prune_stale_files( $entity_id, $current_hash, $current_file = null ) {
 		$paths = static::get_storage_paths( $entity_id );
 		if ( ! \is_dir( $paths['basedir'] ) ) {
 			return;
@@ -253,7 +265,8 @@ class Avatar extends File {
 		$prefix = $current_hash . '.';
 
 		foreach ( $files as $file ) {
-			if ( 0 === \strpos( \basename( $file ), $prefix ) ) {
+			$filename = \basename( $file );
+			if ( $filename === $current_file || 0 === \strpos( $filename, $prefix ) ) {
 				continue;
 			}
 
@@ -262,6 +275,12 @@ class Avatar extends File {
 			} else {
 				static::get_filesystem()->delete( $file );
 			}
+		}
+
+		// Drop the entity directory itself when pruning left it empty.
+		$remaining = \glob( $paths['basedir'] . '/*' );
+		if ( empty( $remaining ) ) {
+			static::delete_directory( $paths['basedir'] );
 		}
 	}
 
@@ -277,29 +296,22 @@ class Avatar extends File {
 	public static function cleanup_actors() {
 		// Lock the cleanup with an autoload-disabled option so overlapping
 		// cron workers never run it twice at once.
-		if ( ! \add_option( 'activitypub_avatar_cache_cleanup_lock', time(), '', false ) ) {
+		$now = \time();
+		if ( ! \add_option( 'activitypub_avatar_cache_cleanup_lock', $now, '', false ) ) {
 			$lock_time = (int) \get_option( 'activitypub_avatar_cache_cleanup_lock' );
-			if ( $lock_time && ( time() - $lock_time ) < 30 * MINUTE_IN_SECONDS ) {
+			if ( $lock_time && ( $now - $lock_time ) < 30 * MINUTE_IN_SECONDS ) {
 				return;
 			}
-			\delete_option( 'activitypub_avatar_cache_cleanup_lock' );
-			if ( ! \add_option( 'activitypub_avatar_cache_cleanup_lock', time(), '', false ) ) {
-				return;
-			}
+			\update_option( 'activitypub_avatar_cache_cleanup_lock', $now, false );
 		}
 
 		$upload_dir = \wp_upload_dir();
 		$root       = $upload_dir['basedir'] . static::get_base_dir();
-		$dirs       = \glob( $root . '/*', GLOB_ONLYDIR );
-
-		if ( empty( $dirs ) ) {
+		if ( ! \is_dir( $root ) ) {
 			\delete_option( 'activitypub_avatar_cache_cleanup_lock' );
 			\delete_option( 'activitypub_avatar_cache_cursor' );
 			return;
 		}
-
-		// Sort so the resume position stays stable between runs.
-		\sort( $dirs );
 
 		/**
 		 * Filters how many actor directories are scanned per cleanup run.
@@ -308,38 +320,78 @@ class Avatar extends File {
 		 *
 		 * @param int $limit The maximum number of directories to scan.
 		 */
-		$limit = \apply_filters( 'activitypub_cleanup_actor_cache_limit', 100 );
+		$limit  = \max( 1, (int) \apply_filters( 'activitypub_cleanup_actor_cache_limit', 100 ) );
+		$cursor = (string) \get_option( 'activitypub_avatar_cache_cursor', '' );
+		$dirs   = array();
+		$found  = empty( $cursor );
 
-		// Resume where the previous run stopped so a large backlog drains
-		// over several runs instead of always revisiting the first batch.
-		$total = \count( $dirs );
-		$start = (int) \get_option( 'activitypub_avatar_cache_cursor', 0 ) % $total;
-		$batch = \array_slice( $dirs, $start, \max( 1, (int) $limit ) );
-
-		foreach ( $batch as $dir ) {
-			$dirname = \basename( $dir );
-
-			// Only touch directories with a numeric name, to stay clear of junk.
-			if ( ! \preg_match( '/^\d+$/', $dirname ) ) {
+		$iterator = new \DirectoryIterator( $root );
+		foreach ( $iterator as $directory ) {
+			if ( $directory->isDot() || ! $directory->isDir() ) {
 				continue;
 			}
 
-			$post_id = (int) $dirname;
-			$post    = \get_post( $post_id );
+			$dirname = $directory->getFilename();
+			if ( ! $found ) {
+				if ( $dirname === $cursor ) {
+					$found = true;
+				}
+				continue;
+			}
+			if ( ! \preg_match( '/^\\d+$/', $dirname ) ) {
+				continue;
+			}
 
-			// Remove directories that no longer belong to an actor post.
-			if ( ! $post || Remote_Actors::POST_TYPE !== $post->post_type ) {
+			$dirs[ (int) $dirname ] = $directory->getPathname();
+			if ( \count( $dirs ) >= $limit ) {
+				break;
+			}
+		}
+
+		// Restart from the beginning after reaching the end of the directory tree.
+		if ( empty( $dirs ) && ! empty( $cursor ) ) {
+			\delete_option( 'activitypub_avatar_cache_cursor' );
+			\delete_option( 'activitypub_avatar_cache_cleanup_lock' );
+			return;
+		}
+		if ( empty( $dirs ) ) {
+			\delete_option( 'activitypub_avatar_cache_cleanup_lock' );
+			return;
+		}
+
+		$post_ids = \array_keys( $dirs );
+		$posts    = \get_posts(
+			array(
+				'post__in'       => $post_ids,
+				'post_type'      => Remote_Actors::POST_TYPE,
+				'post_status'    => 'any',
+				'posts_per_page' => \count( $post_ids ),
+				'orderby'        => 'post__in',
+			)
+		);
+		$post_map = array();
+		foreach ( $posts as $post ) {
+			$post_map[ $post->ID ] = $post;
+		}
+
+		$last_dir = null;
+		foreach ( $dirs as $post_id => $dir ) {
+			if ( empty( $post_map[ $post_id ] ) ) {
 				static::delete_directory( $dir );
 				continue;
 			}
 
-			$hash = self::get_actor_avatar_hash( $post_id );
-			if ( $hash ) {
-				self::prune_stale_files( $post_id, $hash );
-			}
+			$hash     = self::get_actor_avatar_hash_from_post( $post_map[ $post_id ] );
+			self::prune_stale_files( $post_id, $hash );
+			$last_dir = (string) $post_id;
 		}
 
-		\update_option( 'activitypub_avatar_cache_cursor', ( $start + \count( $batch ) ) % $total, false );
+		// Resume after the last surviving directory. A directory pruned as an
+		// orphan is gone from disk, so it can never be matched next run; only
+		// anchor the cursor on a directory that still exists.
+		if ( null !== $last_dir ) {
+			\update_option( 'activitypub_avatar_cache_cursor', $last_dir, false );
+		}
 		\delete_option( 'activitypub_avatar_cache_cleanup_lock' );
 	}
 }
