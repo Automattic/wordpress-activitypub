@@ -300,6 +300,7 @@ class Application {
 		 * The resource must point at this site, or at its pre-migration host. Both sides are folded:
 		 * the requested host is whatever the caller typed, and the stored ones are whatever an admin did.
 		 */
+		$host = normalize_host( fold_host( $host ) );
 
 		// A host of `.` or `[]` folds away to nothing, which would otherwise match an unset old host.
 		if ( '' === $host ) {

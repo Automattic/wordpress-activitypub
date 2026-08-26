@@ -1136,6 +1136,12 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			'same host, diff path'   => array( 'https://good.example.com/@alice', 'https://good.example.com/users/alice', false ),
 			'cross host'             => array( 'https://good.example.com/users/alice', 'https://other.example.com/mismatched', false ),
 			'scheme mismatch'        => array( 'http://good.example.com/users/alice', 'https://good.example.com/users/alice', false ),
+			// Folded the same way the block list folds, so one id cannot be canonical there and not here.
+			'host case ignored'      => array( 'https://GOOD.example.com/users/alice', 'https://good.example.com/users/alice', true ),
+			'default port ignored'   => array( 'https://good.example.com:443/users/alice', 'https://good.example.com/users/alice', true ),
+			'scheme case ignored'    => array( 'HTTPS://good.example.com/users/alice', 'https://good.example.com/users/alice', true ),
+			'path case matters'      => array( 'https://good.example.com/users/Alice', 'https://good.example.com/users/alice', false ),
+			'non default port kept'  => array( 'https://good.example.com:8443/users/alice', 'https://good.example.com/users/alice', false ),
 			'empty id'               => array( '', 'https://good.example.com/x', false ),
 			'empty source'           => array( 'https://good.example.com/users/alice', '', false ),
 		);
