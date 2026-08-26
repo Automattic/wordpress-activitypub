@@ -8,7 +8,9 @@
 namespace Activitypub\Tests\Rest;
 
 use Activitypub\Collection\Outbox;
+use Activitypub\OAuth\Scope;
 use Activitypub\Rest\Outbox_Controller;
+use Activitypub\Tests\OAuth_Token_Stub;
 use Activitypub\Tests\Test_REST_Controller_Testcase;
 
 /**
@@ -18,6 +20,8 @@ use Activitypub\Tests\Test_REST_Controller_Testcase;
  * @coversDefaultClass \Activitypub\Rest\Outbox_Controller
  */
 class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
+	use OAuth_Token_Stub;
+
 
 	/**
 	 * Test user ID.
@@ -1428,5 +1432,78 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		$data2     = $response2->get_data();
 
 		$this->assertEquals( $count_before, $data2['totalItems'], 'Remote comment should not inflate totalItems.' );
+	}
+
+	/**
+	 * Test that private outbox items need the `read` scope, not just ownership.
+	 *
+	 * `Server::authenticate_oauth()` establishes the WordPress user for any valid bearer
+	 * whatever it was consented to, so ownership alone would hand a client granted only
+	 * `profile` the owner's private activities.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_items_private_requires_read_scope() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_user_by( 'ID', $user_id )->add_cap( 'activitypub' );
+
+		$canary = 'https://example.org/activity/private-canary';
+		self::factory()->post->create(
+			array(
+				'post_author'  => $user_id,
+				'post_type'    => Outbox::POST_TYPE,
+				'post_status'  => 'pending',
+				'post_title'   => $canary,
+				'post_content' => \wp_json_encode(
+					array(
+						'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
+						'id'       => $canary,
+						'type'     => 'Create',
+						'actor'    => 'https://example.org/user/' . $user_id,
+						'object'   => array(
+							'id'   => $canary . '/object',
+							'type' => 'Note',
+						),
+					)
+				),
+				'meta_input'   => array(
+					'_activitypub_activity_type'     => 'Create',
+					'_activitypub_activity_actor'    => 'user',
+					'activitypub_content_visibility' => \ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
+				),
+			)
+		);
+
+		// The owner is signed in throughout; only the token's scope differs.
+		\wp_set_current_user( $user_id );
+
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH ), $user_id ) );
+		$this->assertNotContains( $canary, $this->outbox_activity_ids( $user_id ), 'A token without the read scope must not see a private activity.' );
+
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::READ ), $user_id ) );
+		$this->assertContains( $canary, $this->outbox_activity_ids( $user_id ), 'A read-scoped token is the positive control.' );
+
+		// A wp-admin session carries no token and is bounded by capabilities, not scope.
+		$this->set_oauth_current_token( null );
+		$this->assertContains( $canary, $this->outbox_activity_ids( $user_id ), 'A cookie session is not scope-limited.' );
+
+		\wp_set_current_user( 0 );
+		$this->assertNotContains( $canary, $this->outbox_activity_ids( $user_id ), 'An anonymous caller never sees a private activity.' );
+	}
+
+	/**
+	 * Return the activity IDs the outbox exposes for an actor.
+	 *
+	 * @param int $user_id The actor to query.
+	 * @return array Activity IDs.
+	 */
+	private function outbox_activity_ids( $user_id ) {
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
+		$request->set_param( 'page', 1 );
+		$request->set_param( 'per_page', 100 );
+
+		$data = \rest_get_server()->dispatch( $request )->get_data();
+
+		return \wp_list_pluck( $data['orderedItems'], 'id' );
 	}
 }
