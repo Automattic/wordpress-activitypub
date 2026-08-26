@@ -1,6 +1,6 @@
 # Keep the Featured Image out of the Fediverse
 
-Stops the featured image being federated, so it does not take a slot from the images that are actually in the post.
+Stops the featured image from being federated, so it does not take a slot from the images that are actually in the post.
 
 The transformer lists the featured image first, ahead of anything found in the content. With a limit on how many attachments a post may carry, that means the featured image takes one of those slots and the last image in the post falls off the end. For a site that gives every post a featured image for search results, that image often carries no meaning in a Fediverse timeline.
 
