@@ -232,7 +232,7 @@ class Jetpack {
 		$audio = array(
 			'type' => $episode['type'],
 			'url'  => $episode['url'],
-			'name' => \esc_attr( \get_the_title( $post ) ),
+			'name' => \html_entity_decode( \wp_strip_all_tags( \get_the_title( $post ) ), ENT_QUOTES, 'UTF-8' ),
 		);
 
 		// An episode attached by URL carries no mime type, and omitting the property beats sending
