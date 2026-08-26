@@ -827,4 +827,37 @@ class Test_Webfinger extends \WP_UnitTestCase {
 			'array'          => array( array( 'user@example.com' ) ),
 		);
 	}
+
+	/**
+	 * Test that a handle's host stops at a query or fragment.
+	 *
+	 * The host is taken off the string itself for `acct:`-style identifiers, so without cutting
+	 * there `acct:user@example.com#x` carries `#x` into the host and misses a domain block on
+	 * `example.com`.
+	 *
+	 * @covers ::get_host
+	 *
+	 * @dataProvider handle_host_suffix_provider
+	 *
+	 * @param string $identifier The identifier.
+	 * @param string $expected   The expected host.
+	 */
+	public function test_get_host_cuts_query_and_fragment( $identifier, $expected ) {
+		$this->assertSame( $expected, Webfinger::get_host( $identifier ) );
+	}
+
+	/**
+	 * Data provider for handle hosts with a query or fragment.
+	 *
+	 * @return array<string, array{0:string, 1:string}>
+	 */
+	public function handle_host_suffix_provider() {
+		return array(
+			'fragment'     => array( 'acct:user@example.com#x', 'example.com' ),
+			'query'        => array( 'user@example.com?a=1', 'example.com' ),
+			'both'         => array( 'acct:user@example.com?a=1#x', 'example.com' ),
+			'plain'        => array( 'acct:user@example.com', 'example.com' ),
+			'nothing left' => array( 'user@#x', '' ),
+		);
+	}
 }

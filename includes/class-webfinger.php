@@ -202,6 +202,14 @@ class Webfinger {
 				// Split on the last `@`: a local part may contain one, the host may not.
 				if ( \strrpos( $identifier, '@' ) !== false ) {
 					$host = \substr( $identifier, \strrpos( $identifier, '@' ) + 1 );
+
+					/*
+					 * Cut anything a query or fragment starts. `wp_parse_url()` does this for the
+					 * URL forms below, but this branch takes the host off the string itself, so
+					 * `acct:user@example.com#x` would otherwise carry `#x` into the host and miss
+					 * a domain block on `example.com`.
+					 */
+					$host = \substr( $host, 0, \strcspn( $host, '?#' ) );
 				}
 				break;
 			default:
