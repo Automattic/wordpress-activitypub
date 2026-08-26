@@ -45,7 +45,9 @@ class Post_Types {
 
 		\add_filter( 'rest_ap_post_query', array( self::class, 'filter_ap_post_by_user' ), 10, 2 );
 		\add_filter( 'rest_ap_object_type_query', array( self::class, 'filter_object_type_by_user' ), 10, 2 );
+		\add_filter( 'rest_ap_tag_query', array( self::class, 'filter_tag_by_user' ), 10, 2 );
 		\add_filter( 'rest_ap_object_type_collection_params', array( self::class, 'register_object_type_user_param' ) );
+		\add_filter( 'rest_ap_tag_collection_params', array( self::class, 'register_object_type_user_param' ) );
 
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
@@ -1006,6 +1008,31 @@ class Post_Types {
 	 * @return array Modified query arguments.
 	 */
 	public static function filter_object_type_by_user( $args, $request ) {
+		return self::filter_terms_by_user( $args, $request, 'ap_object_type' );
+	}
+
+	/**
+	 * Filter the ap_tag REST query to terms that have posts for the given user.
+	 *
+	 * @param array            $args    Query arguments.
+	 * @param \WP_REST_Request $request The REST API request.
+	 *
+	 * @return array Modified query arguments.
+	 */
+	public static function filter_tag_by_user( $args, $request ) {
+		return self::filter_terms_by_user( $args, $request, 'ap_tag' );
+	}
+
+	/**
+	 * Filter a reader taxonomy REST query to terms that have posts for the given user.
+	 *
+	 * @param array            $args     Query arguments.
+	 * @param \WP_REST_Request $request  The REST API request.
+	 * @param string           $taxonomy The taxonomy to scope.
+	 *
+	 * @return array Modified query arguments.
+	 */
+	private static function filter_terms_by_user( $args, $request, $taxonomy ) {
 		$user_id = $request->get_param( 'user_id' );
 
 		// Users who cannot list users may only ever see terms from their own feed.
@@ -1027,10 +1054,12 @@ class Post_Types {
 				INNER JOIN {$wpdb->term_relationships} tr ON tt.term_taxonomy_id = tr.term_taxonomy_id
 				INNER JOIN {$wpdb->posts} p ON tr.object_id = p.ID
 				INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-				WHERE tt.taxonomy = 'ap_object_type'
-				AND p.post_type = 'ap_post'
+				WHERE tt.taxonomy = %s
+				AND p.post_type = %s
 				AND pm.meta_key = '_activitypub_user_id'
 				AND pm.meta_value = %s",
+				$taxonomy,
+				Remote_Posts::POST_TYPE,
 				$user_id
 			)
 		);

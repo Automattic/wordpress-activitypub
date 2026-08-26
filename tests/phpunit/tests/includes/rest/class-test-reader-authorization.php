@@ -394,6 +394,51 @@ class Test_Reader_Authorization extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Hashtags and object types only list terms from the caller's own feed.
+	 *
+	 * @covers \Activitypub\Post_Types::filter_tag_by_user
+	 * @covers \Activitypub\Post_Types::filter_object_type_by_user
+	 * @dataProvider data_reader_taxonomies
+	 *
+	 * @param string $route    Taxonomy route to request.
+	 * @param string $taxonomy Taxonomy to attach the term to.
+	 */
+	public function test_reader_taxonomies_are_scoped_to_the_current_user( $route, $taxonomy ) {
+		$term = \wp_insert_term( 'term-' . $taxonomy, $taxonomy );
+		\wp_set_object_terms( self::$remote_post_id, array( $term['term_id'] ), $taxonomy );
+
+		\wp_set_current_user( self::$user_id );
+		$mine = $this->request( $route );
+
+		$this->assertSame( 200, $mine->get_status() );
+		$this->assertSame(
+			array( $term['term_id'] ),
+			\wp_list_pluck( $mine->get_data(), 'id' ),
+			'The feed owner has to see the term, or this test proves nothing.'
+		);
+
+		\wp_set_current_user( self::$other_user_id );
+		$theirs = $this->request( $route );
+
+		$this->assertSame( 200, $theirs->get_status() );
+		$this->assertSame( array(), $theirs->get_data(), 'Another user\'s terms must not be listed.' );
+
+		\wp_delete_term( $term['term_id'], $taxonomy );
+	}
+
+	/**
+	 * Data provider for the reader taxonomy routes.
+	 *
+	 * @return array[] Test parameters.
+	 */
+	public function data_reader_taxonomies() {
+		return array(
+			'hashtags'     => array( '/wp/v2/ap_tag', 'ap_tag' ),
+			'object types' => array( '/wp/v2/ap_object_type', 'ap_object_type' ),
+		);
+	}
+
+	/**
 	 * A user cannot read an unrelated actor by ID.
 	 *
 	 * @covers ::get_item_permissions_check
