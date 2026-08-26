@@ -94,6 +94,20 @@ class Authorization_Code {
 		// Filter scopes to only allowed ones.
 		$filtered_scopes = $client->filter_scopes( Scope::validate( $scopes ) );
 
+		/*
+		 * Nothing the client asked for is allowed to it. Refusing here is what RFC 6749 §4.1.2.1
+		 * calls for, and it stops an empty grant from being minted: Token::create() would run the
+		 * empty set back through Scope::validate(), which answers with the read-only default, so
+		 * the client would end up holding `read` it was never granted.
+		 */
+		if ( empty( $filtered_scopes ) ) {
+			return new \WP_Error(
+				'invalid_scope',
+				\__( 'The requested scopes are not allowed for this client.', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
+
 		// Generate the code.
 		$code       = self::generate_code();
 		$code_hash  = self::hash_code( $code );

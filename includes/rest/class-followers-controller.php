@@ -12,6 +12,7 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Signature;
 
+use function Activitypub\fold_host;
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\is_unsafe_ipv6_literal;
@@ -116,7 +117,7 @@ class Followers_Controller extends Actors_Controller {
 								 * downstream already enforces authority matching the verified
 								 * peer; this just keeps obviously-internal values from reaching
 								 * that code at all. Both places run the value through
-								 * self::normalize_host() so semantically equivalent hosts always
+								 * fold_host() so semantically equivalent hosts always
 								 * agree.
 								 *
 								 * Percent-decode the input first so encoded forms like
@@ -127,7 +128,7 @@ class Followers_Controller extends Actors_Controller {
 								 * would corrupt otherwise-valid reg-name hosts.
 								 */
 								$decoded = \rawurldecode( (string) $param );
-								$host    = self::normalize_host( (string) \wp_parse_url( $decoded, PHP_URL_HOST ) );
+								$host    = fold_host( (string) \wp_parse_url( $decoded, PHP_URL_HOST ) );
 								if ( '' === $host ) {
 									return false;
 								}
@@ -271,8 +272,8 @@ class Followers_Controller extends Actors_Controller {
 		 * sign with their own key yet steer a naive parser at a third-party host.
 		 */
 		$key_id      = Signature::get_key_id( $request );
-		$signer_host = $key_id ? self::normalize_host( (string) \wp_parse_url( $key_id, \PHP_URL_HOST ) ) : '';
-		$asked_host  = self::normalize_host( (string) \wp_parse_url( $authority, \PHP_URL_HOST ) );
+		$signer_host = $key_id ? fold_host( (string) \wp_parse_url( $key_id, \PHP_URL_HOST ) ) : '';
+		$asked_host  = fold_host( (string) \wp_parse_url( $authority, \PHP_URL_HOST ) );
 
 		if ( ! $signer_host || ! $asked_host || $signer_host !== $asked_host ) {
 			return new \WP_Error(
@@ -316,22 +317,6 @@ class Followers_Controller extends Actors_Controller {
 		return $response;
 	}
 
-	/**
-	 * Normalize a host so comparisons are consistent.
-	 *
-	 * Lowercases, strips IPv6 brackets, and trims a single FQDN trailing
-	 * dot. Used by both the validate_callback for the `authority` arg and
-	 * the signer-host comparison in get_partial_followers() so semantically
-	 * equivalent host strings always match.
-	 *
-	 * @param string $host Raw host string.
-	 * @return string Normalized host.
-	 */
-	private static function normalize_host( $host ) {
-		$host = \strtolower( (string) $host );
-		$host = \trim( $host, '[]' );
-		return \rtrim( $host, '.' );
-	}
 
 	/**
 	 * Retrieves the followers schema, conforming to JSON Schema.
