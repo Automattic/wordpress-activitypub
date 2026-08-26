@@ -73,7 +73,7 @@ class Webfinger {
 			return $data;
 		}
 
-		if ( ! \is_array( $data ) || empty( $data['links'] ) ) {
+		if ( ! \is_array( $data ) || empty( $data['links'] ) || ! \is_array( $data['links'] ) ) {
 			return new \WP_Error(
 				'webfinger_missing_links',
 				\__( 'No valid Link elements found.', 'activitypub' ),
@@ -86,8 +86,9 @@ class Webfinger {
 
 		foreach ( $data['links'] as $link ) {
 			if (
+				isset( $link['rel'], $link['href'], $link['type'] ) &&
 				'self' === $link['rel'] &&
-				isset( $link['type'] ) &&
+				\is_string( $link['href'] ) &&
 				(
 					'application/activity+json' === $link['type'] ||
 					'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' === $link['type']
@@ -126,15 +127,16 @@ class Webfinger {
 		// Check if subject is an acct URI.
 		if (
 			isset( $data['subject'] ) &&
+			\is_string( $data['subject'] ) &&
 			\str_starts_with( $data['subject'], 'acct:' )
 		) {
 			return $data['subject'];
 		}
 
 		// Search for an acct URI in the aliases.
-		if ( isset( $data['aliases'] ) ) {
+		if ( isset( $data['aliases'] ) && \is_array( $data['aliases'] ) ) {
 			foreach ( $data['aliases'] as $alias ) {
-				if ( \str_starts_with( $alias, 'acct:' ) ) {
+				if ( \is_string( $alias ) && \str_starts_with( $alias, 'acct:' ) ) {
 					return $alias;
 				}
 			}
@@ -373,7 +375,7 @@ class Webfinger {
 			return $data;
 		}
 
-		if ( empty( $data['links'] ) ) {
+		if ( empty( $data['links'] ) || ! \is_array( $data['links'] ) ) {
 			return new \WP_Error(
 				'webfinger_missing_links',
 				\__( 'No valid Link elements found.', 'activitypub' ),

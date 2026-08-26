@@ -860,4 +860,97 @@ class Test_Webfinger extends \WP_UnitTestCase {
 			'nothing left' => array( 'user@#x', '' ),
 		);
 	}
+
+	/**
+	 * Test that a `self` link without an `href` does not resolve to `null`.
+	 *
+	 * `resolve()` declares `string|WP_Error`, and callers branch on `is_wp_error()`. A remote
+	 * server controls this document, so a matching link with no `href` must not slip past that
+	 * branch as a non-error `null`.
+	 *
+	 * @covers ::resolve
+	 */
+	public function test_resolve_requires_href_on_matching_link() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => array(
+							array(
+								'rel'  => 'self',
+								'type' => 'application/activity+json',
+							),
+						),
+					)
+				),
+			);
+		};
+
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::resolve( 'user@example.com' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertWPError( $result );
+	}
+
+	/**
+	 * Test that non-string members of a remote document do not fatal.
+	 *
+	 * `str_starts_with()` on an array is a TypeError on PHP 8.
+	 *
+	 * @covers ::uri_to_acct
+	 */
+	public function test_uri_to_acct_ignores_non_string_members() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => array( 'acct:user@example.com' ),
+						'aliases' => array( array( 'acct:user@example.com' ), 'acct:real@example.com' ),
+					)
+				),
+			);
+		};
+
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::uri_to_acct( 'https://example.com/user' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertSame( 'acct:real@example.com', $result );
+	}
+
+	/**
+	 * Test that a non-array `links` member does not warn.
+	 *
+	 * @covers ::resolve
+	 */
+	public function test_resolve_ignores_non_array_links() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => 'not-an-array',
+					)
+				),
+			);
+		};
+
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::resolve( 'user@example.com' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'webfinger_missing_links', $result->get_error_code() );
+	}
 }
