@@ -269,7 +269,8 @@ class Webfinger {
 	 *
 	 * @param string $uri The Identifier: <identifier>@<host> or URI.
 	 *
-	 * @return \WP_Error|array|null Error reaction, the decoded document, or null if the body is not JSON.
+	 * @return \WP_Error|mixed Error reaction, or the decoded document. The remote server picks the
+	 *                         body, so callers check the shape before indexing it.
 	 */
 	public static function get_data( $uri ) {
 		$identifier_and_host = self::get_identifier_and_host( $uri );
