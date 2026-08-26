@@ -1,6 +1,7 @@
 import { getContext, getElement, store, withScope, getConfig } from '@wordpress/interactivity';
 import './view-style.scss';
 import { createModalStore } from '../shared/modal';
+import { isSafeUrl } from '../shared/safe-url';
 
 createModalStore( 'activitypub/reactions' );
 
@@ -145,6 +146,13 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 				const response = yield apiFetch( { path } );
 
 				context.isLoading = false;
+
+				// The URL comes from a template the remote server advertised.
+				if ( ! isSafeUrl( response.url ) ) {
+					context.isError = true;
+					context.errorMessage = i18n.genericError;
+					return;
+				}
 
 				// Open the remote intent URL in a new tab.
 				window.open( response.url, '_blank', 'noopener,noreferrer' );

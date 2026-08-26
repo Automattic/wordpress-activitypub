@@ -152,6 +152,7 @@ ob_start();
 			<?php esc_html_e( 'Your Fediverse profile', 'activitypub' ); ?>
 		</label>
 		<input
+			aria-describedby="<?php echo esc_attr( $block_id . '-remote-profile-error' ); ?>"
 			class="wp-block-search__input"
 			data-wp-bind--aria-invalid="context.isError"
 			data-wp-bind--value="context.remoteProfile"
@@ -176,6 +177,8 @@ ob_start();
 		class="activitypub-dialog__error"
 		data-wp-bind--hidden="!context.isError"
 		data-wp-text="context.errorMessage"
+		id="<?php echo esc_attr( $block_id . '-remote-profile-error' ); ?>"
+		role="alert"
 	></div>
 </div>
 <?php

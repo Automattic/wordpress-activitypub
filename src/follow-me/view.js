@@ -2,6 +2,7 @@ import { store, getContext, getElement, getConfig } from '@wordpress/interactivi
 import { withSyncEvent } from '../shared/with-sync-event';
 import { getBlockStyles, getPopupStyles } from './button-style';
 import { createModalStore } from '../shared/modal';
+import { isSafeUrl } from '../shared/safe-url';
 
 createModalStore( 'activitypub/follow-me' );
 
@@ -137,8 +138,15 @@ const { actions, callbacks } = store( 'activitypub/follow-me', {
 				// Set opening state.
 				context.isLoading = false;
 
+				// The URL comes from a template the remote server advertised.
+				if ( ! isSafeUrl( response.url ) ) {
+					context.isError = true;
+					context.errorMessage = i18n.genericError;
+					return;
+				}
+
 				// Open the remote follow URL in a new tab.
-				window.open( response.url, '_blank' );
+				window.open( response.url, '_blank', 'noopener,noreferrer' );
 
 				// Close the modal after opening the URL.
 				actions.closeModal( new Event( 'click' ) );

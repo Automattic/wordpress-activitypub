@@ -391,9 +391,26 @@ class Webfinger {
 		$links = array();
 
 		foreach ( $data['links'] as $link ) {
-			if ( isset( $link['rel'], $link['template'] ) && \is_string( $link['rel'] ) && \is_string( $link['template'] ) ) {
-				$links[ \strtolower( $link['rel'] ) ] = $link['template'];
+			if ( ! isset( $link['rel'], $link['template'] ) || ! \is_string( $link['rel'] ) || ! \is_string( $link['template'] ) ) {
+				continue;
 			}
+
+			$template = \trim( $link['template'] );
+
+			// A scheme check alone would pass `//host`, `/path` and `https:///path`.
+			if ( ! get_url_authority( $template ) ) {
+				continue;
+			}
+
+			// The list is explicit: the `wp_allowed_protocols()` default is wider and filterable.
+			$allowed = \wp_kses_bad_protocol( $template, array( 'http', 'https' ) );
+
+			// Lowercased both sides like `wp_http_validate_url()`, or `HTTPS://` reads as a rewrite.
+			if ( \strtolower( $allowed ) !== \strtolower( $template ) ) {
+				continue;
+			}
+
+			$links[ \strtolower( $link['rel'] ) ] = $template;
 		}
 
 		$intent = \sanitize_text_field( $intent );

@@ -1,6 +1,7 @@
 import { store, getContext, getConfig } from '@wordpress/interactivity';
 import { withSyncEvent } from '../shared/with-sync-event';
 import { createModalStore } from '../shared/modal';
+import { isSafeUrl } from '../shared/safe-url';
 import './style.scss';
 
 createModalStore( 'activitypub/remote-reply' );
@@ -41,6 +42,8 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 		get remoteProfileUrl() {
 			const { commentURL } = getContext();
 
+			// `state.template` is only ever set from a validated response or by `init()`, which
+			// discards a stored template that is not an http(s) URL.
 			return state.template.replace( '{uri}', encodeURIComponent( commentURL ) );
 		},
 	},
@@ -152,8 +155,15 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 				// Set opening state.
 				context.isLoading = false;
 
+				// `template` is checked too: it is what gets persisted and bound to an `href`.
+				if ( ! isSafeUrl( url ) || ! isSafeUrl( template ) ) {
+					context.isError = true;
+					context.errorMessage = i18n.genericError;
+					return;
+				}
+
 				// Open the remote reply URL in a new tab.
-				window.open( url, '_blank' );
+				window.open( url, '_blank', 'noopener,noreferrer' );
 
 				// Close the modal after opening the URL.
 				actions.closeModal();
@@ -201,6 +211,13 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 		 */
 		init() {
 			const { profileURL, template } = callbacks.getStore();
+
+			// Drop a stored template that is not an http(s) URL, it may predate this check. The
+			// profile is kept: the Reactions block shares this record and reads `profileURL` from it.
+			if ( template && ! isSafeUrl( template ) ) {
+				callbacks.setStore( { profileURL } );
+				return;
+			}
 
 			// Set the remote user data from localStorage if available.
 			if ( profileURL && template ) {

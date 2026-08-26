@@ -983,4 +983,212 @@ class Test_Webfinger extends \WP_UnitTestCase {
 
 		$this->assertWPError( $result );
 	}
+
+	/**
+	 * Mock a WebFinger response carrying the given links.
+	 *
+	 * @param array $links The `links` array the remote server returns.
+	 *
+	 * @return callable The filter callback, for `remove_filter()`.
+	 */
+	private function mock_webfinger_links( $links ) {
+		$filter = function () use ( $links ) {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => $links,
+					)
+				),
+			);
+		};
+
+		\add_filter( 'pre_http_request', $filter );
+
+		return $filter;
+	}
+
+	/**
+	 * Test that intent templates with an unsafe scheme are rejected.
+	 *
+	 * @covers ::get_intent_endpoint
+	 *
+	 * @dataProvider unsafe_intent_template_provider
+	 *
+	 * @param string $template The template returned by the remote WebFinger server.
+	 */
+	public function test_get_intent_endpoint_rejects_unsafe_scheme( $template ) {
+		$filter = $this->mock_webfinger_links(
+			array(
+				array(
+					'rel'      => 'https://w3id.org/fep/3b86/like',
+					'template' => $template,
+				),
+			)
+		);
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'webfinger_missing_intent_endpoint', $result->get_error_code() );
+	}
+
+	/**
+	 * Data provider for unsafe intent templates.
+	 *
+	 * @return array[] Test parameters.
+	 */
+	public function unsafe_intent_template_provider() {
+		return array(
+			'javascript scheme'           => array( 'javascript:alert(1)//{uri}' ),
+			'javascript scheme uppercase' => array( 'JavaScript:alert(1)//{uri}' ),
+			'javascript scheme padded'    => array( "  \tjavascript:alert(1)//{uri}" ),
+			'data scheme'                 => array( 'data:text/html;base64,PHNjcmlwdD48L3NjcmlwdD4=' ),
+			'blob scheme'                 => array( 'blob:https://example.com/1234' ),
+			'vbscript scheme'             => array( 'vbscript:msgbox(1)' ),
+			'entity encoded scheme'       => array( 'java&#115;cript:alert(1)//{uri}' ),
+			'entity encoded first char'   => array( '&#106;avascript:alert(1)//{uri}' ),
+			'entity encoded colon'        => array( 'javascript&colon;alert(1)//{uri}' ),
+			'tab inside scheme'           => array( "jav\tascript:alert(1)//{uri}" ),
+			'null byte inside scheme'     => array( "java\0script:alert(1)//{uri}" ),
+			'file scheme'                 => array( 'file:///etc/passwd' ),
+			'protocol relative'           => array( '//example.com/intent?uri={uri}' ),
+			'relative path'               => array( '/intent/follow?uri={uri}' ),
+			'scheme without host'         => array( 'https:///intent?uri={uri}' ),
+			'bad scheme with authority'   => array( 'javascript://example.com/%0aalert(1)' ),
+			'unsupported scheme'          => array( 'ftp://example.com/intent?uri={uri}' ),
+			'empty template'              => array( '' ),
+			'whitespace only'             => array( '   ' ),
+		);
+	}
+
+	/**
+	 * Test that safe intent templates are returned untouched.
+	 *
+	 * @covers ::get_intent_endpoint
+	 *
+	 * @dataProvider safe_intent_template_provider
+	 *
+	 * @param string $template The template returned by the remote WebFinger server.
+	 */
+	public function test_get_intent_endpoint_accepts_safe_scheme( $template ) {
+		$filter = $this->mock_webfinger_links(
+			array(
+				array(
+					'rel'      => 'https://w3id.org/fep/3b86/like',
+					'template' => $template,
+				),
+			)
+		);
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertSame( $template, $result );
+	}
+
+	/**
+	 * Data provider for safe intent templates.
+	 *
+	 * Schemes are case-insensitive, so an uppercase one must survive the protocol check.
+	 *
+	 * @return array[] Test parameters.
+	 */
+	public function safe_intent_template_provider() {
+		return array(
+			'https scheme'      => array( 'https://example.com/intent/like?object={object}' ),
+			'http scheme'       => array( 'http://example.com/intent/like?object={object}' ),
+			'uppercase scheme'  => array( 'HTTPS://example.com/intent/like?object={object}' ),
+			'mixed case scheme' => array( 'Https://example.com/intent/like?object={object}' ),
+			'non standard port' => array( 'https://example.com:8443/intent?uri={uri}' ),
+			'punycode host'     => array( 'https://xn--80ak6aa92e.com/intent?uri={uri}' ),
+		);
+	}
+
+	/**
+	 * Test that non-string `rel` and `template` values do not fatal.
+	 *
+	 * A remote server controls this JSON, and `strtolower()` on an array is a TypeError on PHP 8.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_ignores_non_string_link_members() {
+		$filter = $this->mock_webfinger_links(
+			array(
+				array(
+					'rel'      => array( 'https://w3id.org/fep/3b86/like' ),
+					'template' => 'https://example.com/nope?uri={uri}',
+				),
+				array(
+					'rel'      => 'https://w3id.org/fep/3b86/like',
+					'template' => array( 'https://example.com/nope?uri={uri}' ),
+				),
+				array(
+					'rel'      => 'https://w3id.org/fep/3b86/like',
+					'template' => 'https://example.com/yes?uri={uri}',
+				),
+			)
+		);
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertSame( 'https://example.com/yes?uri={uri}', $result );
+	}
+
+	/**
+	 * Test that an unsafe OStatus template falls through to the last-resort URL.
+	 *
+	 * A template with a disallowed scheme is dropped, but a broken remote server should not break
+	 * the flow either: the Mastodon-compatible fallback wins.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_unsafe_ostatus_falls_back() {
+		$filter = $this->mock_webfinger_links(
+			array(
+				array(
+					'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+					'template' => 'javascript:alert(1)//{uri}',
+				),
+			)
+		);
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like', true );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertSame( 'https://example.com/authorize_interaction?uri={uri}', $result );
+	}
+
+	/**
+	 * Test that a safe template is still returned when a sibling link is unsafe.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_keeps_safe_sibling_template() {
+		$filter = $this->mock_webfinger_links(
+			array(
+				array(
+					'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+					'template' => 'javascript:alert(1)//{uri}',
+				),
+				array(
+					'rel'      => 'https://w3id.org/fep/3b86/object',
+					'template' => 'https://example.com/intent/object?uri={uri}',
+				),
+			)
+		);
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like', true );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertSame( 'https://example.com/intent/object?uri={uri}', $result );
+	}
 }
