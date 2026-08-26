@@ -108,7 +108,6 @@ class Post_Types {
 			array(
 				'type'              => 'string',
 				'single'            => false,
-				'show_in_rest'      => true,
 				'sanitize_callback' => 'sanitize_text_field',
 			)
 		);

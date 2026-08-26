@@ -321,6 +321,31 @@ class Test_Reader_Authorization extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The follower list of an actor is not disclosed in its REST response.
+	 *
+	 * The collection filter decides which actors a user may list. The record it hands back must
+	 * not then name the other local users who follow that same actor.
+	 *
+	 * @covers \Activitypub\Post_Types::register_post_meta
+	 */
+	public function test_actor_response_does_not_disclose_other_followers() {
+		\add_post_meta( self::$actor_id, Followers::FOLLOWER_META_KEY, (string) self::$other_user_id );
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = $this->request( '/wp/v2/ap_actor/' . self::$actor_id );
+
+		$this->assertSame( 200, $response->get_status(), 'The follower has to reach the actor, or this test proves nothing.' );
+		$this->assertStringNotContainsString(
+			Followers::FOLLOWER_META_KEY,
+			\wp_json_encode( $response->get_data() ),
+			'The follower list must not be serialized into the response.'
+		);
+
+		\delete_post_meta( self::$actor_id, Followers::FOLLOWER_META_KEY, (string) self::$other_user_id );
+	}
+
+	/**
 	 * A user cannot read an unrelated actor by ID.
 	 *
 	 * @covers ::get_item_permissions_check
