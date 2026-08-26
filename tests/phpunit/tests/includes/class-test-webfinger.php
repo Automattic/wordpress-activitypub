@@ -73,10 +73,34 @@ class Test_Webfinger extends \WP_UnitTestCase {
 		return array(
 			array( 'author@example.org', 'acct:author@example.org', 'example.org' ),
 			array( 'acct:author@example.org', 'acct:author@example.org', 'example.org' ),
+			// Schemes are case-insensitive, so this must not fall through to URL parsing.
+			array( 'ACCT:author@EXAMPLE.org', 'ACCT:author@EXAMPLE.org', 'example.org' ),
+			// The host is after the last `@`, not the first.
+			array( 'acct:a@b@example.org', 'acct:a@b@example.org', 'example.org' ),
 			array( 'https://example.org/@pfefferle', 'https://example.org/@pfefferle', 'example.org' ),
 			array( 'mailto:pfefferle@example.org', 'mailto:pfefferle@example.org', 'example.org' ),
 			array( 'xmpp:pfefferle@example.com', 'xmpp:pfefferle@example.com', 'example.com' ),
+			array( '//example.org/@pfefferle', '//example.org/@pfefferle', 'example.org' ),
+			// Brackets are kept: this host is also used to build WebFinger and intent URLs.
+			array( 'https://[2001:db8::1]/@pfefferle', 'https://[2001:db8::1]/@pfefferle', '[2001:db8::1]' ),
+			array( 'ftp://example.org/@pfefferle', 'ftp://example.org/@pfefferle', 'example.org' ),
+			// A digit or hyphen in the scheme must not make this read as a handle.
+			array( 'web3://example.org/@pfefferle', 'web3://example.org/@pfefferle', 'example.org' ),
+			array( 'view-source://example.org/x', 'view-source://example.org/x', 'example.org' ),
 		);
+	}
+
+	/**
+	 * Test that get_host() folds a host for comparison.
+	 *
+	 * @covers ::get_host
+	 */
+	public function test_get_host_folds_for_comparison() {
+		$this->assertSame( 'example.org', Webfinger::get_host( 'https://EXAMPLE.org/@pfefferle' ) );
+		$this->assertSame( 'example.org', Webfinger::get_host( 'https://example.org./@pfefferle' ) );
+		$this->assertSame( 'example.org', Webfinger::get_host( 'acct:pfefferle@Example.org.' ) );
+		$this->assertSame( '2001:db8::1', Webfinger::get_host( 'https://[2001:db8::1]/@pfefferle' ) );
+		$this->assertSame( '', Webfinger::get_host( '' ) );
 	}
 
 	/**
@@ -801,6 +825,39 @@ class Test_Webfinger extends \WP_UnitTestCase {
 			'null'           => array( null ),
 			'integer'        => array( 42 ),
 			'array'          => array( array( 'user@example.com' ) ),
+		);
+	}
+
+	/**
+	 * Test that a handle's host stops at a query or fragment.
+	 *
+	 * The host is taken off the string itself for `acct:`-style identifiers, so without cutting
+	 * there `acct:user@example.com#x` carries `#x` into the host and misses a domain block on
+	 * `example.com`.
+	 *
+	 * @covers ::get_host
+	 *
+	 * @dataProvider handle_host_suffix_provider
+	 *
+	 * @param string $identifier The identifier.
+	 * @param string $expected   The expected host.
+	 */
+	public function test_get_host_cuts_query_and_fragment( $identifier, $expected ) {
+		$this->assertSame( $expected, Webfinger::get_host( $identifier ) );
+	}
+
+	/**
+	 * Data provider for handle hosts with a query or fragment.
+	 *
+	 * @return array<string, array{0:string, 1:string}>
+	 */
+	public function handle_host_suffix_provider() {
+		return array(
+			'fragment'     => array( 'acct:user@example.com#x', 'example.com' ),
+			'query'        => array( 'user@example.com?a=1', 'example.com' ),
+			'both'         => array( 'acct:user@example.com?a=1#x', 'example.com' ),
+			'plain'        => array( 'acct:user@example.com', 'example.com' ),
+			'nothing left' => array( 'user@#x', '' ),
 		);
 	}
 }
