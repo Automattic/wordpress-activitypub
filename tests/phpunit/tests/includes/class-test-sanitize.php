@@ -283,6 +283,178 @@ class Test_Sanitize extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that inline styles are stripped from remote content.
+	 *
+	 * `wp_kses_post()` keeps the global `style` attribute, and core's
+	 * `safecss_filter_attr()` allows `background-image:url()` for https targets.
+	 * That is a way around the media cache, which exists so the browser never
+	 * talks to a remote host while rendering federated content.
+	 *
+	 * @covers ::content
+	 */
+	public function test_content_strips_tracking_background_image() {
+		$content = '<p style="background-image:url(https://remote.example/track?src=wp)">Hello</p>';
+		$result  = Sanitize::content( $content );
+
+		$this->assertStringContainsString( 'Hello', $result );
+		$this->assertStringNotContainsString( 'style=', $result );
+		$this->assertStringNotContainsString( 'remote.example/track', $result );
+	}
+
+	/**
+	 * Test that CSS positioning cannot be used to cover the screen.
+	 *
+	 * A `position:fixed` element with a high `z-index` lets a remote actor put
+	 * their own markup over the Reader in wp-admin.
+	 *
+	 * @covers ::content
+	 */
+	public function test_content_strips_positioning_overlay() {
+		$content = '<div style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background-color:white">Session expired</div>';
+		$result  = Sanitize::content( $content );
+
+		$this->assertStringContainsString( 'Session expired', $result );
+		$this->assertStringNotContainsString( 'position:fixed', $result );
+		$this->assertStringNotContainsString( 'z-index', $result );
+	}
+
+	/**
+	 * Test that dropping `style` does not take legitimate markup with it.
+	 *
+	 * Also pins `srcset`, which core's post allowlist does not carry. Inline images
+	 * are rewrapped as `activitypub/image` blocks and the render callback only swaps
+	 * the cached URL in for `src`, so a `srcset` candidate pointing somewhere else
+	 * would be fetched from the remote host.
+	 *
+	 * @covers ::content
+	 */
+	public function test_content_keeps_formatting_without_style() {
+		$content = '<p>See <a href="https://remote.example/post" rel="nofollow">this</a> and <img src="https://remote.example/a.png" srcset="https://remote.example/track.png 2x" alt="a picture" /></p><blockquote><p>quoted</p></blockquote>';
+		$result  = Sanitize::content( $content );
+
+		$this->assertStringContainsString( 'href="https://remote.example/post"', $result );
+		$this->assertStringContainsString( 'rel="nofollow"', $result );
+		$this->assertStringContainsString( 'src="https://remote.example/a.png"', $result );
+		$this->assertStringContainsString( 'alt="a picture"', $result );
+		$this->assertStringContainsString( '<blockquote>', $result );
+		$this->assertStringNotContainsString( 'srcset', $result );
+	}
+
+	/**
+	 * Test that plain-text cleaning keeps every character that is not markup.
+	 *
+	 * @dataProvider clean_remote_text_provider
+	 * @covers ::clean_remote_text
+	 *
+	 * @param string $input    Input value.
+	 * @param string $expected Expected output.
+	 */
+	public function test_clean_remote_text( $input, $expected ) {
+		$this->assertSame( $expected, Sanitize::clean_remote_text( $input ) );
+	}
+
+	/**
+	 * Test that text encoded past the pass cap still comes back inert.
+	 *
+	 * The loop peels one encoding level per pass. When the cap stops it before the string
+	 * settles, decoding once more would peel the last level and hand back live markup, so
+	 * the escaped form is returned instead.
+	 *
+	 * @covers ::clean_remote_text
+	 */
+	public function test_clean_remote_text_stops_short_without_releasing_markup() {
+		for ( $depth = 1; $depth <= 15; $depth++ ) {
+			$payload = '<img src=x onerror=alert(1)>caption';
+			for ( $i = 0; $i < $depth; $i++ ) {
+				$payload = \htmlspecialchars( $payload, ENT_QUOTES );
+			}
+
+			$result = Sanitize::clean_remote_text( $payload );
+
+			$this->assertStringNotContainsString( '<img', $result, "Depth {$depth} released live markup." );
+			$this->assertStringContainsString( 'caption', $result, "Depth {$depth} lost the caption." );
+		}
+	}
+
+	/**
+	 * Test that a remote block delimiter cannot rebuild the styles kses just dropped.
+	 *
+	 * Block delimiters are HTML comments, which kses leaves alone. `do_blocks()`
+	 * then runs over the stored content and core's block supports regenerate CSS from the
+	 * delimiter's JSON, handing back the `background-image:url()` that dropping the `style`
+	 * attribute was meant to prevent.
+	 *
+	 * @covers ::content
+	 * @covers ::clean_remote_html
+	 */
+	public function test_content_strips_block_delimiters() {
+		$content = '<!-- wp:group {"style":{"background":{"backgroundImage":{"url":"https://remote.example/track","source":"file"}}}} -->'
+			. '<div class="wp-block-group">Session expired</div>'
+			. '<!-- /wp:group -->';
+
+		$sanitized = Sanitize::content( $content );
+
+		$this->assertStringNotContainsString( 'wp:group', $sanitized, 'Block delimiters must not be stored.' );
+		$this->assertStringContainsString( 'Session expired', $sanitized, 'Legitimate content should survive.' );
+
+		// The delimiter is only dangerous once do_blocks() sees it, so check the rendered form.
+		$post_id  = self::factory()->post->create(
+			array(
+				'post_content' => $sanitized,
+				'post_status'  => 'publish',
+			)
+		);
+		$rendered = \apply_filters( 'the_content', \get_post( $post_id )->post_content );
+
+		$this->assertStringNotContainsString( 'remote.example/track', $rendered, 'Block supports must not rebuild a remote background URL.' );
+		$this->assertStringNotContainsString( 'background-image', $rendered, 'No CSS should be regenerated from remote block attributes.' );
+	}
+
+	/**
+	 * Test that a remote comment cannot smuggle a block delimiter either.
+	 *
+	 * `Comment::render_blocks()` runs `do_blocks()` on `comment_text`, and comments render
+	 * on the public front end.
+	 *
+	 * @covers ::clean_remote_comment_html
+	 */
+	public function test_clean_remote_comment_html_strips_block_delimiters() {
+		$content = '<!-- wp:group {"style":{"background":{"backgroundImage":{"url":"https://remote.example/track"}}}} -->'
+			. '<p>Reply</p>'
+			. '<!-- /wp:group -->';
+
+		$result = Sanitize::clean_remote_comment_html( $content );
+
+		$this->assertStringNotContainsString( 'wp:group', $result, 'Block delimiters must not be stored on a comment.' );
+		$this->assertStringNotContainsString( 'remote.example/track', $result, 'The delimiter payload must go with it.' );
+		$this->assertStringContainsString( 'Reply', $result, 'Legitimate content should survive.' );
+	}
+
+	/**
+	 * Data provider for clean_remote_text tests.
+	 *
+	 * The contract is narrow on purpose: no markup out, and no characters lost. Entities
+	 * stay escaped, so nothing here can be decoded back into a tag downstream.
+	 *
+	 * @return array[]
+	 */
+	public function clean_remote_text_provider() {
+		return array(
+			'plain text'          => array( 'Test User', 'Test User' ),
+			// wp_strip_all_tags() would cut this down to "A".
+			'bare less-than'      => array( 'A <3 shape carved in wood', 'A &lt;3 shape carved in wood' ),
+			// sanitize_text_field() would drop the %20.
+			'percent octet'       => array( 'foo%20bar', 'foo%20bar' ),
+			'percent sign'        => array( '50% off', '50% off' ),
+			'real tag'            => array( 'Photo<script>alert(1)</script>', 'Photo' ),
+			'tag with attributes' => array( '<img src=x onerror=alert(1)>caption', 'caption' ),
+			'empty'               => array( '', '' ),
+			'non-string'          => array( array( 'nope' ), '' ),
+		);
+	}
+
+	/**
+	 * Data provider for strip_whitespace tests.    /**
 	 * Data provider for strip_whitespace tests.
 	 *
 	 * @return array Test data with input and expected output.

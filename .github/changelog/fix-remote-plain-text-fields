@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed titles, summaries, captions and display names from remote accounts losing characters such as a less-than sign or a percent sequence.

@@ -27,8 +27,11 @@ export const titleField: Field< FeedPost > = {
 			return null;
 		}
 
-		// Remove backslash escapes and decode entities
-		const unescaped: string = item.title.rendered.replace( /\\(.)/g, '$1' );
-		return <div className="activitypub-feed-post-title">{ decodeEntities( unescaped ) }</div>;
+		/*
+		 * No backslash-unescaping pass here: nothing on the ingest path doubles
+		 * backslashes, so it only ate legitimate ones out of remote titles (paths, code).
+		 * The inspector renders this same value the same way.
+		 */
+		return <div className="activitypub-feed-post-title">{ decodeEntities( item.title.rendered ) }</div>;
 	},
 };

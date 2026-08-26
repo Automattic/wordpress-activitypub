@@ -216,3 +216,34 @@ function get_reply_intent_url() {
 
 	return \esc_url_raw( $url );
 }
+
+/**
+ * Get a reaction author's display name as readable plain text.
+ *
+ * Shared by the reactions REST route and the block's server render so both produce the
+ * same value for the same comment: they feed the same Interactivity template, and
+ * `view.js` swaps the rendered items for the fetched ones wholesale.
+ *
+ * This reads the raw column rather than `get_comment_author()`, so it does not pick up
+ * the emoji rendering that the comment list applies. That is deliberate for a
+ * plain-text field.
+ *
+ * `wp_insert_comment()` callers bypass core's `pre_comment_author_name` chain, so the
+ * column is not guaranteed tag-free, which is why this cleans rather than just reads.
+ *
+ * @since unreleased
+ *
+ * @param \WP_Comment $comment The comment.
+ *
+ * @return string The author name as plain text. May contain `<` or `&` as characters,
+ *                so it is safe for a text sink only, never for HTML.
+ */
+function get_reaction_author_name( $comment ) {
+	/*
+	 * Cleaned first, then decoded for display. Both consumers bind this as text only --
+	 * `data-wp-text` and `data-wp-bind--alt|title` in the block, a React child and `alt`
+	 * in the editor preview -- so a decoded value is escaped by the sink and entities
+	 * would otherwise show up literally. Do not reuse this for an HTML sink.
+	 */
+	return \html_entity_decode( Sanitize::clean_remote_text( $comment->comment_author ), ENT_QUOTES );
+}

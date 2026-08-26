@@ -7,6 +7,7 @@
 
 namespace Activitypub;
 
+use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Model\Blog;
 
@@ -239,6 +240,74 @@ class Sanitize {
 	}
 
 	/**
+	 * Reduce text that a remote server wrote to plain text, without losing any of it.
+	 *
+	 * For the plain-text fields that hold remote data: post titles and summaries,
+	 * attachment captions and alt text, actor and reaction display names. The result
+	 * carries no markup and no HTML entities, so it is safe to escape at the point of
+	 * output and readable wherever it is rendered as text.
+	 *
+	 * kses with an empty allowlist is the tag remover here, because neither of the
+	 * shorter options survives remote input:
+	 *
+	 * - `wp_strip_all_tags()` hands the string to `strip_tags()`, which reads a bare `<`
+	 *   as a tag that never closes and drops the rest with it, so "A <3 shape" became "A".
+	 * - `sanitize_text_field()` keeps that text but strips percent-encoded octets, so
+	 *   "foo%20bar" became "foobar".
+	 *
+	 * kses knows the difference between a tag and a stray `<`, so it removes the first
+	 * and escapes the second.
+	 *
+	 * Nothing is decoded here, deliberately. Decoding after stripping can turn text kses
+	 * left alone back into live markup, and every arrangement of decode-then-strip I tried
+	 * had an encoding depth that slipped through. The output is escaped; decode it at the
+	 * point of display, where the surrounding escaping makes it inert.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $text The remote-authored text.
+	 *
+	 * @return string The text with no markup. Entities are left escaped.
+	 */
+	public static function clean_remote_text( $text ) {
+		// Remote JSON can hand us an array where a string was expected.
+		if ( ! \is_string( $text ) ) {
+			return '';
+		}
+
+		return \wp_kses( self::strip_elements( $text ), array() );
+	}
+
+	/**
+	 * Remove elements whose inner text is noise on its own.
+	 *
+	 * Shared by {@see Sanitize::clean_html()} and {@see Sanitize::clean_remote_text()}:
+	 * kses removes a tag but keeps what is inside it, so a `<script>` body would
+	 * otherwise survive as visible text.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $content The content to strip.
+	 *
+	 * @return string The content without those elements.
+	 */
+	private static function strip_elements( $content ) {
+		/*
+		 * Strip elements whose inner content is noise (scripts, styles, interactive UI, embeds).
+		 * This runs before wp_kses because wp_kses strips tags but keeps inner text,
+		 * and content inside <script>, <style>, <nav>, etc. is meaningless on its own.
+		 */
+		$strip_pattern = \implode( '|', self::STRIP_ELEMENTS );
+		$content       = \preg_replace( '@<(' . $strip_pattern . ')[^>]*?>.*?</\\1>@si', '', $content ) ?? '';
+
+		// Also catch self-closing variants (e.g. <input />, <embed />).
+		$content = \preg_replace( '@<(' . $strip_pattern . ')[^>]*?/?>@si', '', $content );
+
+		// preg_replace() returns null if PCRE bails; an empty string is the safe reading.
+		return $content ?? '';
+	}
+
+	/**
 	 * Sanitize content for ActivityPub.
 	 *
 	 * @param string $content The content to convert.
@@ -252,9 +321,128 @@ class Sanitize {
 		}
 
 		$content = \wpautop( $content );
-		$content = \wp_kses_post( $content );
+		$content = self::clean_remote_html( $content );
 
 		return $content;
+	}
+
+	/**
+	 * Sanitize HTML that was written by a remote server.
+	 *
+	 * Like `wp_kses_post()`, but without the `style` attribute. See
+	 * {@see Sanitize::get_allowed_remote_html()} for why.
+	 *
+	 * Not a mirror of {@see Sanitize::clean_html()}, which cleans what we send out: that
+	 * one also drops {@see Sanitize::STRIP_ELEMENTS} together with their inner text. Here
+	 * kses removes the tag but keeps the text, so the body of a `<style>` or `<script>`
+	 * element survives as inert visible characters, the way `wp_kses_post()` left it.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $content The content to sanitize.
+	 *
+	 * @return string The sanitized content.
+	 */
+	public static function clean_remote_html( $content ) {
+		if ( ! \is_string( $content ) || '' === $content ) {
+			return '';
+		}
+
+		return \wp_kses( self::strip_comments( $content ), self::get_allowed_remote_html(), \wp_allowed_protocols() );
+	}
+
+	/**
+	 * Sanitize comment content that was written by a remote server.
+	 *
+	 * Comments get a much narrower allowlist than posts, so this is not
+	 * {@see Sanitize::clean_remote_html()} with a different name. Core resolves the
+	 * `pre_comment_content` context to the comment allowlist, and
+	 * {@see Interactions::allowed_comment_html()} adds `p`, `br` and the strict emoji
+	 * `img` back on top of it.
+	 *
+	 * Core only applies that allowlist itself when the request installed the
+	 * `pre_comment_content` filter, and `kses_init()` installs nothing for a user with
+	 * `unfiltered_html`. Calling this where the content is known to be remote keeps the
+	 * guarantee from depending on who is logged in.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $content The remote comment content.
+	 *
+	 * @return string The sanitized content.
+	 */
+	public static function clean_remote_comment_html( $content ) {
+		if ( ! \is_string( $content ) || '' === $content ) {
+			return '';
+		}
+
+		$allowed_html = Interactions::allowed_comment_html( \wp_kses_allowed_html( 'pre_comment_content' ), 'pre_comment_content' );
+
+		return \wp_kses( self::strip_comments( $content ), $allowed_html, \wp_allowed_protocols() );
+	}
+
+	/**
+	 * Remove HTML comments from content a remote server wrote.
+	 *
+	 * Block delimiters are HTML comments, and kses has no opinion about those.
+	 * `do_blocks()` then runs over the stored value -- through `the_content` for posts and
+	 * {@see \Activitypub\Comment::render_blocks()} for comments -- and core's block
+	 * supports rebuild CSS from the delimiter's own JSON. A remote
+	 * group delimiter carrying `style.background.backgroundImage.url` comes back out as
+	 * `style="background-image:url(...)"`, which is exactly what
+	 * {@see Sanitize::get_allowed_remote_html()} drops the `style` attribute to prevent.
+	 * Dynamic blocks are the same story with their render callbacks.
+	 *
+	 * Every comment goes, not just `wp:` ones: the block parser tolerates spacing and
+	 * casing a prefix match would have to chase, and a comment carries nothing a reader
+	 * would see anyway. The plugin's own emoji and image delimiters are added after this
+	 * runs, so they are unaffected.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $content The content to strip.
+	 *
+	 * @return string The content without HTML comments.
+	 */
+	private static function strip_comments( $content ) {
+		// preg_replace() returns null if PCRE bails; an empty string is the safe reading.
+		return \preg_replace( '/<!--.*?-->/s', '', $content ) ?? '';
+	}
+
+	/**
+	 * Returns the allowed HTML for content that was written by a remote server.
+	 *
+	 * This is the post allowlist without the `style` attribute, which `wp_kses_post()`
+	 * would keep. Core's `safecss_filter_attr()` then allows `background-image:url()`
+	 * for https targets, plus `position`, `z-index` and the offset properties. That is
+	 * fine for a post written by a trusted local user, but not for a federated one:
+	 *
+	 * - `background-image:url()` gets around the media cache, which is there so the
+	 *   browser never loads anything from a remote host while rendering the content.
+	 * - `position:fixed` with a high `z-index` lets a remote actor cover the screen
+	 *   with their own markup, for example a fake login prompt.
+	 *
+	 * Mastodon strips inline styles on its side too, so there should be nothing real
+	 * to lose here.
+	 *
+	 * Unlike {@see Sanitize::get_allowed_html()} this has no filter on purpose. That
+	 * one is a formatting policy and extending it is reasonable, while this one is a
+	 * trust boundary, and a filter would let any plugin put `style` back.
+	 *
+	 * @since unreleased
+	 *
+	 * @return array The allowed HTML structure for wp_kses.
+	 */
+	public static function get_allowed_remote_html() {
+		$allowed_html = \wp_kses_allowed_html( 'post' );
+
+		foreach ( $allowed_html as $tag => $attributes ) {
+			if ( \is_array( $attributes ) ) {
+				unset( $allowed_html[ $tag ]['style'] );
+			}
+		}
+
+		return $allowed_html;
 	}
 
 	/**
@@ -322,15 +510,7 @@ class Sanitize {
 			return $content;
 		}
 
-		/*
-		 * Strip elements whose inner content is noise (scripts, styles, interactive UI, embeds).
-		 * This runs before wp_kses because wp_kses strips tags but keeps inner text,
-		 * and content inside <script>, <style>, <nav>, etc. is meaningless on its own.
-		 */
-		$strip_pattern = \implode( '|', self::STRIP_ELEMENTS );
-		$content       = \preg_replace( '@<(' . $strip_pattern . ')[^>]*?>.*?</\\1>@si', '', $content );
-		// Also catch self-closing variants (e.g. <input />, <embed />).
-		$content = \preg_replace( '@<(' . $strip_pattern . ')[^>]*?/?>@si', '', $content );
+		$content = self::strip_elements( $content );
 
 		/**
 		 * Fires the deprecated attribute removal filter.

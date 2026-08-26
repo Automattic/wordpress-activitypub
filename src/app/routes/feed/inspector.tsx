@@ -34,15 +34,20 @@ interface RenderHTMLProps {
 	html: string;
 }
 
-// Helper to render HTML content with proper entity decoding, unescape, and sanitization
-const RenderHTML = ( { html }: RenderHTMLProps ): ReactNode => {
-	// Remove backslash escapes (e.g., \! becomes !)
-	const unescaped: string = html.replace( /\\(.)/g, '$1' );
-	const decoded: string = decodeEntities( unescaped );
-	const sanitized: string = safeHTML( decoded );
-
-	return <div dangerouslySetInnerHTML={ { __html: sanitized } } />;
-};
+/*
+ * Helper to render server-rendered HTML fields (`title.rendered`, `content.rendered`,
+ * `comment.content.rendered`).
+ *
+ * These values are already sanitised on the server and must be rendered as-is. Do not
+ * add an entity-decoding or unescaping pass here: decoding turns text that
+ * kses deliberately stored as inert (for example an entity-encoded
+ * `&lt;iframe srcdoc="..."&gt;`) back into live markup, and `safeHTML()` only removes
+ * `<script>` elements and `on*` attributes, so it does not catch the result.
+ * `safeHTML()` is kept purely as defence in depth.
+ */
+const RenderHTML = ( { html }: RenderHTMLProps ): ReactNode => (
+	<div dangerouslySetInnerHTML={ { __html: safeHTML( html ) } } />
+);
 
 interface SearchParams {
 	postId?: number;
@@ -151,7 +156,13 @@ export default function FeedInspector(): ReactNode {
 				<CardBody>
 					{ post.title?.rendered && (
 						<h2>
-							<RenderHTML html={ post.title.rendered } />
+							{ /*
+							 * `post_title` is a plain-text field: remote titles are stored via
+							 * `Sanitize::clean_remote_text()`, so there is no markup to render. Render it as
+							 * a React child, escaped as text, rather than through innerHTML.
+							 * `titleField` renders the same value the same way.
+							 */ }
+							{ decodeEntities( post.title.rendered ) }
 						</h2>
 					) }
 					{ ( post.content?.rendered || post.excerpt?.rendered ) && (

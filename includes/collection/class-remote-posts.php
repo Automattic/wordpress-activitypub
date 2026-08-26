@@ -340,10 +340,16 @@ class Remote_Posts {
 		$attachments = self::extract_attachments( $activity );
 		$content     = process_remote_media( $content, $attachments );
 
+		/*
+		 * Slashed on the way out: wp_insert_post() and wp_update_post() both unslash what
+		 * they are given, so an unslashed remote title like `C:\Users\foo` would be stored
+		 * as `C:Usersfoo`. Remote_Actors::prepare_custom_post_type() slashes for the same
+		 * reason.
+		 */
 		return array(
-			'post_title'    => isset( $activity['name'] ) ? \wp_strip_all_tags( $activity['name'] ) : '',
-			'post_content'  => $content,
-			'post_excerpt'  => isset( $activity['summary'] ) ? \wp_strip_all_tags( $activity['summary'] ) : generate_post_summary( $activity['content'] ?? '' ),
+			'post_title'    => isset( $activity['name'] ) ? \wp_slash( Sanitize::clean_remote_text( $activity['name'] ) ) : '',
+			'post_content'  => \wp_slash( $content ),
+			'post_excerpt'  => isset( $activity['summary'] ) ? \wp_slash( Sanitize::clean_remote_text( $activity['summary'] ) ) : \wp_slash( generate_post_summary( $activity['content'] ?? '' ) ),
 			'post_status'   => 'publish',
 			'post_type'     => self::POST_TYPE,
 			'post_date_gmt' => $gm_date,

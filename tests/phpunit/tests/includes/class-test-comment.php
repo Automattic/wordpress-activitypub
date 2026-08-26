@@ -1748,4 +1748,153 @@ class Test_Comment extends \WP_UnitTestCase {
 		$this->assertContains( (string) $like_comment_id, $comment_ids, 'Like should be included when explicitly requested via type__in' );
 		$this->assertContains( (string) $repost_comment_id, $comment_ids, 'Repost should be included when explicitly requested via type__in' );
 	}
+
+	/**
+	 * Test that unescape_emoji() leaves comments that are not ActivityPub comments alone.
+	 *
+	 * The filter runs on every comment on the site, so it must not decode author names
+	 * written by anything else. The substring check alone is not a reliable signal: an
+	 * author name that merely contains the literal text trips it.
+	 *
+	 * @covers ::unescape_emoji
+	 */
+	public function test_unescape_emoji_ignores_non_activitypub_comments() {
+		$post_id    = self::factory()->post->create();
+		$comment_id = self::factory()->comment->create( array( 'comment_post_ID' => $post_id ) );
+
+		$escaped = \esc_html( 'Bob class="emoji" Smith' );
+
+		$this->assertSame(
+			$escaped,
+			Comment::unescape_emoji( $escaped, $comment_id ),
+			'A comment without a remote actor should be returned untouched.'
+		);
+	}
+
+	/**
+	 * Test that unescape_emoji() does not decode hostile markup on a non-ActivityPub comment.
+	 *
+	 * @covers ::unescape_emoji
+	 */
+	public function test_unescape_emoji_does_not_decode_foreign_author_names() {
+		$post_id    = self::factory()->post->create();
+		$comment_id = self::factory()->comment->create( array( 'comment_post_ID' => $post_id ) );
+
+		$escaped = \esc_html( '<img class="emoji" src="x" onerror="alert(1)">' );
+		$result  = Comment::unescape_emoji( $escaped, $comment_id );
+
+		$this->assertSame( $escaped, $result, 'The value should not be decoded at all.' );
+		$this->assertStringNotContainsString( 'onerror="alert(1)"', $result );
+	}
+
+	/**
+	 * Test that the filter is wired up with the comment ID.
+	 *
+	 * The guard added to unescape_emoji() depends on `comment_author` passing the comment
+	 * ID through. Without the accepted-args bump on the add_filter() call, $comment_id
+	 * silently defaults to 0, the guard swallows every comment, and emoji stop rendering
+	 * everywhere -- with the direct-call tests below still green. Go through the filter.
+	 *
+	 * @covers ::unescape_emoji
+	 */
+	public function test_comment_author_filter_passes_the_comment_id() {
+		list( $comment_id ) = $this->create_activitypub_comment();
+
+		list( , $img ) = $this->emoji_img();
+
+		$result = \apply_filters( 'comment_author', \esc_html( 'Party ' . $img ), $comment_id );
+
+		$this->assertStringContainsString( '<img', $result, 'The filter should receive the comment ID and restore the emoji.' );
+	}
+
+	/**
+	 * Test that hostile markup on an ActivityPub comment is stripped by the allowlist.
+	 *
+	 * On comments carrying a remote actor, `comment_author` comes from the remote actor's name.
+	 * The decode there is deliberate, so the KSES allowlist is the only thing standing behind it.
+	 *
+	 * @covers ::unescape_emoji
+	 */
+	public function test_unescape_emoji_strips_hostile_markup_on_activitypub_comments() {
+		list( $comment_id ) = $this->create_activitypub_comment();
+
+		$hostile = '<img class="emoji" src="https://evil.example/x.png" alt="x" title="x" width="20" height="20" draggable="false" onerror="alert(1)"><script>alert(1)</script>';
+
+		$result = Comment::unescape_emoji( \esc_html( $hostile ), $comment_id );
+
+		$this->assertStringNotContainsString( 'onerror', $result, 'Event handlers must not survive.' );
+		$this->assertStringNotContainsString( '<script', $result, 'Script elements must not survive.' );
+		$this->assertStringNotContainsString( 'evil.example', $result, 'A remote emoji source must not survive the source callback.' );
+	}
+
+	/**
+	 * Test that unescape_emoji() still restores emoji images on ActivityPub comments.
+	 *
+	 * @covers ::unescape_emoji
+	 */
+	public function test_unescape_emoji_restores_emoji_for_activitypub_comments() {
+		list( $comment_id ) = $this->create_activitypub_comment();
+
+		list( $src, $img ) = $this->emoji_img();
+
+		$result = Comment::unescape_emoji( \esc_html( 'Party ' . $img ), $comment_id );
+
+		$this->assertStringContainsString( '<img', $result, 'The emoji image should be restored.' );
+		$this->assertStringContainsString( $src, $result, 'The emoji source should survive KSES.' );
+	}
+
+	/**
+	 * Test that a one-argument caller still gets the emoji restored.
+	 *
+	 * Core always passes the comment ID, but plugins and themes re-apply the
+	 * `comment_author` filter with the name alone. Without a fallback the meta lookup
+	 * runs against comment 0, the guard bails, and the reader is left with the escaped
+	 * `<img>` as literal text.
+	 *
+	 * @covers ::unescape_emoji
+	 */
+	public function test_unescape_emoji_falls_back_to_the_comment_in_scope() {
+		list( $comment_id ) = $this->create_activitypub_comment();
+
+		list( $src, $img ) = $this->emoji_img();
+
+		// Put the comment in scope the way the comment loop does, then call with one argument.
+		$GLOBALS['comment'] = \get_comment( $comment_id );
+		$result             = \apply_filters( 'comment_author', \esc_html( 'Party ' . $img ) );
+		unset( $GLOBALS['comment'] );
+
+		$this->assertStringContainsString( '<img', $result, 'The emoji image should be restored for a one-argument caller.' );
+		$this->assertStringContainsString( $src, $result, 'The emoji source should survive KSES.' );
+	}
+
+	/**
+	 * Create a comment that looks like it came from a remote actor.
+	 *
+	 * @return array The comment ID and the remote actor's post ID.
+	 */
+	protected function create_activitypub_comment() {
+		$post_id       = self::factory()->post->create();
+		$actor_post_id = self::factory()->post->create();
+		$comment_id    = self::factory()->comment->create( array( 'comment_post_ID' => $post_id ) );
+
+		\add_comment_meta( $comment_id, '_activitypub_remote_actor_id', $actor_post_id );
+
+		return array( $comment_id, $actor_post_id );
+	}
+
+	/**
+	 * Build a custom emoji img tag and its source URL.
+	 *
+	 * @return array The source URL and the img tag.
+	 */
+	protected function emoji_img() {
+		$upload_dir = \wp_upload_dir();
+		$src        = $upload_dir['baseurl'] . '/activitypub/emoji/party.png';
+		$img        = \sprintf(
+			'<img src="%s" alt=":party:" title=":party:" class="emoji" width="20" height="20" draggable="false" />',
+			$src
+		);
+
+		return array( $src, $img );
+	}
 }

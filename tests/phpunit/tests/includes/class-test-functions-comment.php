@@ -206,4 +206,24 @@ class Test_Functions_Comment extends \WP_UnitTestCase {
 
 		$this->assertEquals( array( $parent_comment_id ), \Activitypub\get_comment_ancestors( $comment_id ) );
 	}
+
+	/**
+	 * Test that a reaction author name is cleaned even when written past the filters.
+	 *
+	 * `wp_insert_comment()` callers bypass core's `pre_comment_author_name` chain, so the
+	 * column is not guaranteed tag-free: the tag goes, and what is left is decoded for the
+	 * text-only sinks that render it. The cleaning itself is covered by
+	 * Test_Sanitize::test_clean_remote_text().
+	 */
+	public function test_get_reaction_author_name() {
+		$comment_id = self::factory()->comment->create();
+
+		// Write past the filters, the way wp_insert_comment() callers do.
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->update( $wpdb->comments, array( 'comment_author' => '<img src=x onerror=alert(1)>&amp;friends' ), array( 'comment_ID' => $comment_id ) );
+		\clean_comment_cache( $comment_id );
+
+		$this->assertSame( '&friends', \Activitypub\get_reaction_author_name( \get_comment( $comment_id ) ) );
+	}
 }

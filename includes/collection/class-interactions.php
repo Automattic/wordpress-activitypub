@@ -9,6 +9,7 @@ namespace Activitypub\Collection;
 
 use Activitypub\Comment;
 use Activitypub\Emoji;
+use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
 use function Activitypub\get_remote_metadata_by_actor;
@@ -74,9 +75,20 @@ class Interactions {
 			$comment_data['comment_type'] = 'quote';
 
 			if ( ! empty( $activity['object']['content'] ) ) {
-				$pattern                         = '/<p[^>]*class=["\']quote-inline["\'][^>]*>.*?<\/p>/is';
-				$cleaned_content                 = \preg_replace( $pattern, '', $activity['object']['content'], 1 );
-				$comment_data['comment_content'] = \wp_kses_post( $cleaned_content );
+				$pattern         = '/<p[^>]*class=["\']quote-inline["\'][^>]*>.*?<\/p>/is';
+				$cleaned_content = \preg_replace( $pattern, '', $activity['object']['content'], 1 );
+
+				/*
+				 * This replaces what activity_to_comment() already built, so it has to make
+				 * the same local/remote split, and re-wrap emoji afterwards.
+				 */
+				if ( null === $user_id ) {
+					$cleaned_content = Emoji::wrap_in_content( Sanitize::clean_remote_comment_html( $cleaned_content ), $activity['object'] );
+				} else {
+					$cleaned_content = \wp_kses_post( $cleaned_content );
+				}
+
+				$comment_data['comment_content'] = \addslashes( $cleaned_content );
 			}
 		}
 
@@ -155,13 +167,14 @@ class Interactions {
 		}
 
 		// Found a local comment id.
-		$comment_data['comment_author'] = \sanitize_text_field( empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'] );
+		$comment_data['comment_author'] = Sanitize::clean_remote_text( empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'] );
 
 		/*
-		 * Wrap emoji in content with blocks for runtime replacement.
-		 * Note: Remote images in comments are stripped for security (only emoji allowed).
+		 * Sanitize before wrapping: emoji blocks are our own markup, and kses would
+		 * mangle the block comments they are made of.
 		 */
-		$content                         = Emoji::wrap_in_content( $activity['object']['content'], $activity['object'] );
+		$content                         = Sanitize::clean_remote_comment_html( $activity['object']['content'] ?? '' );
+		$content                         = Emoji::wrap_in_content( $content, $activity['object'] );
 		$comment_data['comment_content'] = \addslashes( $content );
 
 		return self::persist( $comment_data, self::UPDATE );
@@ -408,7 +421,8 @@ class Interactions {
 			$comment_author       = $user->display_name;
 			$comment_author_url   = $user->user_url;
 			$comment_author_email = $user->user_email;
-			$comment_content      = \wp_kses_post( $activity['object']['content'] ?? '' );
+			// Slashed like the remote branch: wp_new_comment() unslashes what it is given.
+			$comment_content = \addslashes( \wp_kses_post( $activity['object']['content'] ?? '' ) );
 		} else {
 			// S2S: resolve author from remote actor metadata.
 			$actor = object_to_uri( $activity['actor'] ?? null );
@@ -429,7 +443,8 @@ class Interactions {
 				return false;
 			}
 
-			$comment_author     = $comment_author ?? \__( 'Anonymous', 'activitypub' );
+			// Same treatment the update path gives this column, so the two cannot drift.
+			$comment_author     = Sanitize::clean_remote_text( $comment_author ?? \__( 'Anonymous', 'activitypub' ) );
 			$comment_author_url = \esc_url_raw( object_to_uri( $actor['url'] ?? $actor['id'] ) );
 
 			$webfinger = Webfinger::uri_to_acct( $comment_author_url );
@@ -441,10 +456,11 @@ class Interactions {
 
 			if ( isset( $activity['object']['content'] ) ) {
 				/*
-				 * Wrap emoji in content with blocks for runtime replacement.
-				 * Note: Remote images in comments are stripped for security (only emoji allowed).
+				 * Sanitize before wrapping: emoji blocks are our own markup, and kses would
+				 * mangle the block comments they are made of.
 				 */
-				$content         = Emoji::wrap_in_content( $activity['object']['content'], $activity['object'] );
+				$content         = Sanitize::clean_remote_comment_html( $activity['object']['content'] );
+				$content         = Emoji::wrap_in_content( $content, $activity['object'] );
 				$comment_content = \addslashes( $content );
 			}
 		}

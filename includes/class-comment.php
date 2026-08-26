@@ -35,7 +35,7 @@ class Comment {
 		\add_action( 'update_option_activitypub_allow_reposts', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_filter( 'pre_wp_update_comment_count_now', array( static::class, 'pre_wp_update_comment_count_now' ), 5, 3 );
 		\add_filter( 'get_comment_author', array( static::class, 'render_emoji' ), 10, 2 );
-		\add_filter( 'comment_author', array( static::class, 'unescape_emoji' ), 20 ); // After esc_html().
+		\add_filter( 'comment_author', array( static::class, 'unescape_emoji' ), 20, 2 ); // After esc_html().
 		\add_filter( 'rest_comment_query', array( static::class, 'rest_comment_query' ) );
 		\add_filter( 'comment_text', array( static::class, 'render_blocks' ), 5 ); // Before other filters.
 	}
@@ -1014,12 +1014,19 @@ class Comment {
 	 * Replaces emoji shortcodes with img tags on the get_comment_author filter.
 	 * Emoji data is retrieved from the linked remote actor.
 	 *
-	 * @param string $author     The comment author name.
-	 * @param string $comment_id The comment ID as a numeric string.
+	 * @since unreleased The `$comment_id` parameter is optional.
+	 *
+	 * @param string     $author     The comment author name.
+	 * @param int|string $comment_id Optional. The comment ID, as a numeric string from core. Default 0.
 	 *
 	 * @return string The comment author name with rendered emoji.
 	 */
-	public static function render_emoji( $author, $comment_id ) {
+	public static function render_emoji( $author, $comment_id = 0 ) {
+		// Same fallback as unescape_emoji(), for callers that re-apply the filter with the name alone.
+		if ( ! $comment_id ) {
+			$comment_id = \get_comment_ID();
+		}
+
 		$remote_actor_id = \get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true );
 
 		if ( empty( $remote_actor_id ) ) {
@@ -1040,13 +1047,35 @@ class Comment {
 	 *
 	 * This runs at priority 20 after WordPress's esc_html() filter on comment_author.
 	 *
-	 * @param string $author The comment author name (already escaped by WordPress).
+	 * @since unreleased Added the `$comment_id` parameter.
+	 *
+	 * @param string     $author     The comment author name (already escaped by WordPress).
+	 * @param int|string $comment_id Optional. The comment ID, as a numeric string from core. Default 0.
 	 *
 	 * @return string The comment author name with emoji images unescaped.
 	 */
-	public static function unescape_emoji( $author ) {
-		// Only attempt to unescape if there are emoji images present in the escaped string.
+	public static function unescape_emoji( $author, $comment_id = 0 ) {
+		/*
+		 * Core always passes the comment ID, but plugins and themes re-apply this filter
+		 * with the name alone. Fall back to the comment in scope so a one-argument caller
+		 * does not leave the emoji img sitting there as escaped text.
+		 */
+		if ( ! $comment_id ) {
+			$comment_id = \get_comment_ID();
+		}
+
+		/*
+		 * Only ActivityPub comments can carry emoji, since render_emoji() is what puts the
+		 * img tags there in the first place. Scope this the same way, so an author name
+		 * written by anything else is never decoded -- the substring check below is not a
+		 * reliable signal on its own, and this filter runs on every comment on the site.
+		 */
+		// Cheap necessary condition first: this filter runs on every comment author on the site.
 		if ( false === \strpos( $author, 'class=&quot;emoji&quot;' ) ) {
+			return $author;
+		}
+
+		if ( ! \get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true ) ) {
 			return $author;
 		}
 
