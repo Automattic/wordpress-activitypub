@@ -16,6 +16,7 @@ use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Comment;
 use Activitypub\Migration;
+use Activitypub\Post_Types;
 use Activitypub\Scheduler;
 use Activitypub\Tombstone;
 
@@ -630,6 +631,33 @@ class Test_Migration extends \WP_UnitTestCase {
 		return array(
 			'body'     => wp_json_encode( array( 'subject' => 'acct:test@example.com' ) ),
 			'response' => array( 'code' => 200 ),
+		);
+	}
+
+	/**
+	 * Regression guard: Migration::init() must register maybe_migrate() on
+	 * `init` at a priority strictly greater than the priority used by
+	 * Post_Types::register_extra_fields_post_types() (11), so the
+	 * `ap_extrafield` / `ap_extrafield_blog` post types exist when the
+	 * fresh-install migration inserts the default "Powered by" field (see
+	 * #3332). This pins the hook-ordering contract, it does not by itself
+	 * prove the `map_meta_cap` `_doing_it_wrong` notice is gone.
+	 *
+	 * @covers ::init
+	 */
+	public function test_init_defers_migration_past_post_type_registration() {
+		$migration_priority         = \has_action( 'init', array( Migration::class, 'maybe_migrate' ) );
+		$cpt_registration_callback  = array( Post_Types::class, 'register_extra_fields_post_types' );
+		$cpt_registration_priority  = \has_action( 'init', $cpt_registration_callback );
+
+		$this->assertNotFalse( $migration_priority, 'Migration::init() must register maybe_migrate() on init.' );
+		$this->assertNotFalse( $cpt_registration_priority, 'Extra-fields CPT registration must be hooked on init.' );
+
+		$this->assertIsInt( $migration_priority, 'maybe_migrate() must be registered with a numeric priority.' );
+		$this->assertGreaterThan(
+			(int) $cpt_registration_priority,
+			(int) $migration_priority,
+			'Migration must run after the extra-fields post types are registered.'
 		);
 	}
 

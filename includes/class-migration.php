@@ -26,7 +26,15 @@ class Migration {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		self::maybe_migrate();
+		/*
+		 * Priority 15: after `register_extra_fields_post_types` at 11 (so the
+		 * `ap_extrafield` / `ap_extrafield_blog` post types exist when the
+		 * initial migration inserts the default "Powered by" field) and before
+		 * the rewrite flush below at priority 20. If you renumber one, renumber
+		 * the other, a callback added to the same priority bucket during its
+		 * own dispatch does not run for that dispatch.
+		 */
+		\add_action( 'init', array( self::class, 'maybe_migrate' ), 15 );
 
 		Scheduler::register_async_batch_callback( 'activitypub_migrate_from_0_17', array( self::class, 'migrate_from_0_17' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_update_comment_counts', array( self::class, 'update_comment_counts' ) );
@@ -226,10 +234,10 @@ class Migration {
 		}
 
 		/*
-		 * Defer the flush to late in the `init` cycle (priority 20). Migration::init
-		 * runs at priority 1, which is earlier than most plugins register their
-		 * rewrite rules. Flushing synchronously here would persist a truncated
-		 * ruleset that omits third-party rules added on `init` at priority 10.
+		 * Defer the flush to late in the `init` cycle (priority 20), after the
+		 * priority-10 crowd that registers most plugin rewrite rules. Flushing
+		 * synchronously here would persist a truncated ruleset that omits
+		 * third-party rules added on `init` at priority 10.
 		 */
 		\add_action( 'init', array( Activitypub::class, 'flush_rewrite_rules' ), 20 );
 
