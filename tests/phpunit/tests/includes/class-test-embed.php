@@ -315,7 +315,7 @@ class Test_Embed extends \WP_UnitTestCase {
 		$filter = static function () {
 			return new \WP_Error( 'http_request_failed', 'Connection failed' );
 		};
-		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter );
 
 		$object = array(
 			'id'           => 'https://example.com/post/5',
