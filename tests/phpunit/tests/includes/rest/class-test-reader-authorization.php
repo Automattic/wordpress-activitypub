@@ -326,7 +326,7 @@ class Test_Reader_Authorization extends \WP_UnitTestCase {
 	 * The collection filter decides which actors a user may list. The record it hands back must
 	 * not then name the other local users who follow that same actor.
 	 *
-	 * @covers \Activitypub\Post_Types::register_post_meta
+	 * @covers \Activitypub\Post_Types::register_remote_actors_post_type
 	 */
 	public function test_actor_response_does_not_disclose_other_followers() {
 		\add_post_meta( self::$actor_id, Followers::FOLLOWER_META_KEY, (string) self::$other_user_id );
