@@ -646,9 +646,9 @@ class Test_Migration extends \WP_UnitTestCase {
 	 * @covers ::init
 	 */
 	public function test_init_defers_migration_past_post_type_registration() {
-		$migration_priority         = \has_action( 'init', array( Migration::class, 'maybe_migrate' ) );
-		$cpt_registration_callback  = array( Post_Types::class, 'register_extra_fields_post_types' );
-		$cpt_registration_priority  = \has_action( 'init', $cpt_registration_callback );
+		$migration_priority        = \has_action( 'init', array( Migration::class, 'maybe_migrate' ) );
+		$cpt_registration_callback = array( Post_Types::class, 'register_extra_fields_post_types' );
+		$cpt_registration_priority = \has_action( 'init', $cpt_registration_callback );
 
 		$this->assertNotFalse( $migration_priority, 'Migration::init() must register maybe_migrate() on init.' );
 		$this->assertNotFalse( $cpt_registration_priority, 'Extra-fields CPT registration must be hooked on init.' );
