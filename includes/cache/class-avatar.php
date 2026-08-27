@@ -186,9 +186,8 @@ class Avatar extends File {
 	 * @param string|int $entity_id The entity identifier (actor post ID).
 	 * @param string     $file_path The path of the file that was written.
 	 * @param string     $file_name The basename of the file that was written.
-	 * @param array      $options   Cache options.
 	 */
-	protected static function after_cache( $url, $entity_id, $file_path, $file_name, $options ) {
+	protected static function after_cache( $url, $entity_id, $file_path, $file_name ) {
 		self::prune_stale_files( $entity_id, self::generate_hash( $url ), $file_name );
 	}
 
