@@ -29,6 +29,7 @@ class Comment {
 		\add_filter( 'comment_feed_where', array( static::class, 'comment_feed_where' ) );
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 2 );
 		\add_action( 'pre_get_comments', array( static::class, 'comment_query' ) );
+		\add_filter( 'default_excluded_comment_types', array( static::class, 'default_excluded_comment_types' ) );
 		\add_action( 'registered_comment_type', array( static::class, 'registered_comment_type' ), 10, 2 );
 		\add_filter( 'pre_comment_approved', array( static::class, 'pre_comment_approved' ), 11, 2 );
 		\add_filter( 'get_avatar_comment_types', array( static::class, 'get_avatar_comment_types' ), 99 );
@@ -992,6 +993,21 @@ class Comment {
 		 * @param array  $args         Arguments used to register the comment type.
 		 */
 		\do_action( 'activitypub_registered_comment_type', $comment_type, \get_object_vars( $comment_type_object ) );
+	}
+
+	/**
+	 * Adds the reactions to the comment types core hides from the thread, the count and the feeds.
+	 *
+	 * Core provides `default_excluded_comment_types` for exactly this, so a plugin can keep its
+	 * types out of the comment section without pretending they are internal. A like is a public
+	 * comment type, it is just shown as a reaction rather than in the thread.
+	 *
+	 * @param string[] $excluded_types Comment type names core hides by default.
+	 *
+	 * @return string[] The set with the reactions added.
+	 */
+	public static function default_excluded_comment_types( $excluded_types ) {
+		return \array_values( \array_unique( \array_merge( $excluded_types, \get_comment_types( array( 'reaction' => true ), 'names' ) ) ) );
 	}
 
 	/**

@@ -31,7 +31,7 @@ class Test_Comment_Types extends \WP_UnitTestCase {
 			$object = \get_comment_type_object( $name );
 
 			$this->assertInstanceOf( \WP_Comment_Type::class, $object );
-			$this->assertTrue( $object->internal, "$name is internal, so it stays out of listings by default." );
+			$this->assertFalse( $object->internal, "$name is a reaction, not an internal type." );
 			$this->assertTrue( $object->public, 'A reaction is shown on the page; it is public, just not a comment.' );
 			$this->assertSame( $type, $object, 'The filtered list and the direct lookup are the same object.' );
 		}
@@ -51,7 +51,7 @@ class Test_Comment_Types extends \WP_UnitTestCase {
 
 		$object = \get_comment_type_object( 'probe' );
 
-		$this->assertFalse( $object->internal, 'Not a reaction, so not internal.' );
+		$this->assertFalse( $object->internal );
 		$this->assertTrue( $object->public );
 		$this->assertNotContains( 'probe', \wp_get_default_excluded_comment_types(), 'It stays in the comment list and the count.' );
 		$this->assertContains( 'like', \wp_get_default_excluded_comment_types(), 'A reaction is excluded.' );
@@ -62,7 +62,7 @@ class Test_Comment_Types extends \WP_UnitTestCase {
 	/**
 	 * Internal types feed the default-excluded set that core's consumers will read.
 	 */
-	public function test_internal_types_are_excluded_by_default() {
+	public function test_reactions_are_excluded_through_the_core_filter() {
 		$excluded = \wp_get_default_excluded_comment_types();
 
 		foreach ( array( 'repost', 'like', 'quote', 'note' ) as $name ) {

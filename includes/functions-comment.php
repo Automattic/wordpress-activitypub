@@ -165,16 +165,7 @@ function register_comment_type( $comment_type, $args = array() ) {
 		$args['labels']['singular_name'] = $args['singular'];
 	}
 
-	/*
-	 * A reaction (a like, a repost, a quote) is not a comment in the thread, so it is internal:
-	 * core keeps it out of the comment list, counts and feeds. It is still public, it is shown
-	 * on the page, just not as a comment. A type that is not a reaction stays a regular comment,
-	 * whatever protocol it arrived by.
-	 */
-	if ( $args['reaction'] ) {
-		$args['internal'] = true;
-	}
-
+	// A reaction is a public comment type that is not shown in the thread; see Comment::default_excluded_comment_types().
 	return \register_comment_type( $comment_type, $args );
 }
 
