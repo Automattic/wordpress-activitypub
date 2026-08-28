@@ -1725,6 +1725,53 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test the page count keeps an exclusion another plugin set first.
+	 *
+	 * @covers ::get_page_of_comment_query_args
+	 */
+	public function test_get_page_of_comment_merges_with_existing_type__not_in() {
+		\update_option( 'page_comments', 1 );
+		\update_option( 'comments_per_page', 2 );
+		\update_option( 'default_comments_page', 'oldest' );
+		\update_option( 'comment_order', 'asc' );
+
+		$post_id = self::factory()->post->create();
+		$create  = function ( $type, $offset ) use ( $post_id ) {
+			$date = \gmdate( 'Y-m-d H:i:s', \time() - 1000 + $offset );
+
+			return self::factory()->comment->create(
+				array(
+					'comment_post_ID'      => $post_id,
+					'comment_type'         => $type,
+					'comment_approved'     => '1',
+					'comment_content'      => $type,
+					'comment_author_email' => $type . $offset . '@example.com',
+					'comment_date'         => $date,
+					'comment_date_gmt'     => $date,
+				)
+			);
+		};
+
+		// Two webmentions the other plugin hides, one like we hide, all older than the comment.
+		$create( 'webmention', 1 );
+		$create( 'webmention', 2 );
+		$create( 'like', 3 );
+		$comment_id = $create( 'comment', 10 );
+
+		$other_plugin_filter = function ( $comment_args ) {
+			$comment_args['type__not_in'] = array( 'webmention' );
+			return $comment_args;
+		};
+		\add_filter( 'get_page_of_comment_query_args', $other_plugin_filter, 5 );
+
+		$page = \get_page_of_comment( $comment_id, array( 'per_page' => 2 ) );
+
+		\remove_filter( 'get_page_of_comment_query_args', $other_plugin_filter, 5 );
+
+		$this->assertSame( 1, $page, 'Neither plugin\'s hidden types may count towards the page.' );
+	}
+
+	/**
 	 * Test comment_query does not add type__not_in when type is explicitly set.
 	 *
 	 * @covers ::comment_query

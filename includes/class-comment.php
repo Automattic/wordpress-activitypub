@@ -840,12 +840,20 @@ class Comment {
 		}
 
 		// A caller asking for one type gets a page within that type; only the default is adjusted.
-		if ( empty( $comment_args['type'] ) || 'all' !== $comment_args['type'] ) {
+		if ( empty( $comment_args['type'] ) || 'all' !== $comment_args['type'] || ! empty( $comment_args['type__in'] ) ) {
 			return $comment_args;
 		}
 
+		$excluded_types = self::get_comment_type_slugs();
+
+		// Merge rather than assign, so an exclusion another plugin set earlier survives.
+		if ( ! empty( $comment_args['type__not_in'] ) ) {
+			$existing       = (array) $comment_args['type__not_in'];
+			$excluded_types = \array_values( \array_unique( \array_merge( $existing, $excluded_types ) ) );
+		}
+
 		$comment_args['type']         = '';
-		$comment_args['type__not_in'] = self::get_comment_type_slugs();
+		$comment_args['type__not_in'] = $excluded_types;
 
 		return $comment_args;
 	}
