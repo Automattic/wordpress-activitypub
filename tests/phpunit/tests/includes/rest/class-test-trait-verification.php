@@ -1,0 +1,677 @@
+<?php
+/**
+ * Test file for Verification Trait.
+ *
+ * @package Activitypub
+ */
+
+namespace Activitypub\Tests\Rest;
+
+use Activitypub\OAuth\Scope;
+use Activitypub\Rest\Verification;
+use Activitypub\Tests\OAuth_Token_Stub;
+
+/**
+ * Test class for Verification Trait.
+ *
+ * @group rest
+ * @coversDefaultClass \Activitypub\Rest\Verification
+ */
+class Test_Trait_Verification extends \WP_UnitTestCase {
+	use OAuth_Token_Stub;
+
+
+	/**
+	 * The stub instance that uses the Verification trait.
+	 *
+	 * @var object
+	 */
+	protected $instance;
+
+	/**
+	 * Test user ID.
+	 *
+	 * @var int
+	 */
+	protected $user_id;
+
+	/**
+	 * Set up the test.
+	 */
+	public function set_up() {
+		parent::set_up();
+
+		$this->instance = new class() {
+			use Verification;
+
+			/**
+			 * Expose the protected social-graph gate.
+			 *
+			 * @param \WP_REST_Request $request The request object.
+			 * @return bool
+			 */
+			public function show_social_graph_public( $request ) {
+				return $this->show_social_graph( $request );
+			}
+		};
+		$this->user_id  = self::factory()->user->create(
+			array(
+				'role' => 'author',
+			)
+		);
+	}
+
+	/**
+	 * Tear down the test.
+	 */
+	public function tear_down() {
+		\wp_set_current_user( 0 );
+		\remove_all_filters( 'activitypub_defer_signature_verification' );
+		\remove_all_filters( 'activitypub_oauth_check_permission' );
+		\remove_all_filters( 'activitypub_user_can_act_as_blog' );
+		\delete_option( 'activitypub_actor_mode' );
+
+		// Reset OAuth token state.
+		$this->set_oauth_current_token( null );
+
+		parent::tear_down();
+	}
+
+	/**
+	 * Test HEAD request always returns true.
+	 *
+	 * @covers ::verify_signature
+	 */
+	public function test_verify_signature_head_returns_true() {
+		$request = new \WP_REST_Request( 'HEAD', '/activitypub/1.0/users/1' );
+
+		$this->assertTrue( $this->instance->verify_signature( $request ) );
+	}
+
+	/**
+	 * Test GET request without authorized fetch returns true.
+	 *
+	 * @covers ::verify_signature
+	 */
+	public function test_verify_signature_get_without_authorized_fetch() {
+		\delete_option( 'activitypub_authorized_fetch' );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/1' );
+
+		$this->assertTrue( $this->instance->verify_signature( $request ) );
+	}
+
+	/**
+	 * Test GET request with authorized fetch enabled requires signature.
+	 *
+	 * @covers ::verify_signature
+	 */
+	public function test_verify_signature_get_with_authorized_fetch() {
+		\update_option( 'activitypub_authorized_fetch', '1' );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/1' );
+
+		// Without a valid signature, this should return WP_Error.
+		$result = $this->instance->verify_signature( $request );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_signature_verification', $result->get_error_code() );
+		$this->assertEquals( 401, $result->get_error_data()['status'] );
+
+		\delete_option( 'activitypub_authorized_fetch' );
+	}
+
+	/**
+	 * Test POST request requires signature.
+	 *
+	 * @covers ::verify_signature
+	 */
+	public function test_verify_signature_post_requires_signature() {
+		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/users/1/inbox' );
+
+		$result = $this->instance->verify_signature( $request );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_signature_verification', $result->get_error_code() );
+		$this->assertEquals( 401, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Test defer filter bypasses signature verification.
+	 *
+	 * @covers ::verify_signature
+	 */
+	public function test_verify_signature_defer_filter() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/users/1/inbox' );
+
+		$this->assertTrue( $this->instance->verify_signature( $request ) );
+	}
+
+	/**
+	 * Test GET request uses read scope.
+	 *
+	 * @covers ::verify_authentication
+	 */
+	public function test_verify_authentication_get_uses_read_scope() {
+		$captured_scope = null;
+		\add_filter(
+			'activitypub_oauth_check_permission',
+			function ( $result, $request, $scope ) use ( &$captured_scope ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+				$captured_scope = $scope;
+				return true;
+			},
+			10,
+			3
+		);
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/1/outbox' );
+
+		$this->instance->verify_authentication( $request );
+
+		$this->assertEquals( 'read', $captured_scope );
+	}
+
+	/**
+	 * Test POST request uses write scope.
+	 *
+	 * @covers ::verify_authentication
+	 */
+	public function test_verify_authentication_post_uses_write_scope() {
+		$captured_scope = null;
+		\add_filter(
+			'activitypub_oauth_check_permission',
+			function ( $result, $request, $scope ) use ( &$captured_scope ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+				$captured_scope = $scope;
+				return true;
+			},
+			10,
+			3
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/users/1/outbox' );
+
+		$this->instance->verify_authentication( $request );
+
+		$this->assertEquals( 'write', $captured_scope );
+	}
+
+	/**
+	 * Test OAuth success proceeds to owner verification.
+	 *
+	 * @covers ::verify_authentication
+	 */
+	public function test_verify_authentication_oauth_success_without_user_id() {
+		\add_filter(
+			'activitypub_oauth_check_permission',
+			function () {
+				return true;
+			}
+		);
+
+		// Request without user_id param skips owner verification.
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/outbox' );
+
+		$result = $this->instance->verify_authentication( $request );
+
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * Test OAuth failure with Bearer token does not fall back to App Passwords.
+	 *
+	 * @covers ::verify_authentication
+	 */
+	public function test_verify_authentication_oauth_failure_no_fallback() {
+		// Simulate OAuth returning error (scope check fails).
+		$oauth_error = new \WP_Error(
+			'activitypub_insufficient_scope',
+			'Insufficient scope.',
+			array( 'status' => 403 )
+		);
+		\add_filter(
+			'activitypub_oauth_check_permission',
+			function () use ( $oauth_error ) {
+				return $oauth_error;
+			}
+		);
+
+		// Log in a user (would pass Application Passwords if fallback occurred).
+		\wp_set_current_user( $this->user_id );
+
+		// Simulate an OAuth request by setting a current token via reflection.
+		$this->set_oauth_current_token( $this->mock_oauth_token( array(), 0 ) );
+
+		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/users/1/outbox' );
+
+		$result = $this->instance->verify_authentication( $request );
+
+		// Should return the OAuth error, NOT fall back to Application Passwords.
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_insufficient_scope', $result->get_error_code() );
+	}
+
+	/**
+	 * Test no OAuth token returns error (Application Passwords not accepted directly).
+	 *
+	 * @covers ::verify_authentication
+	 */
+	public function test_verify_authentication_requires_oauth() {
+		// OAuth returns error — no token present.
+		\add_filter(
+			'activitypub_oauth_check_permission',
+			function () {
+				return new \WP_Error( 'activitypub_oauth_required', 'OAuth required.' );
+			}
+		);
+
+		// User is logged in via Application Passwords, but that's not enough.
+		\wp_set_current_user( $this->user_id );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/outbox' );
+
+		$result = $this->instance->verify_authentication( $request );
+
+		// Should NOT fall back — OAuth is required.
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_oauth_required', $result->get_error_code() );
+	}
+
+	/**
+	 * Test request without user_id param skips owner verification.
+	 *
+	 * @covers ::verify_authentication
+	 */
+	public function test_verify_authentication_skips_owner_without_user_id() {
+		\add_filter(
+			'activitypub_oauth_check_permission',
+			function () {
+				return true;
+			}
+		);
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/outbox' );
+		// No user_id param set.
+
+		$result = $this->instance->verify_authentication( $request );
+
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * Test WordPress authenticated user matches user_id.
+	 *
+	 * @covers ::verify_owner
+	 */
+	public function test_verify_owner_wp_user_matches() {
+		\wp_set_current_user( $this->user_id );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . $this->user_id . '/outbox' );
+		$request->set_param( 'user_id', $this->user_id );
+
+		$result = $this->instance->verify_owner( $request );
+
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * Test mismatched user returns WP_Error with 403.
+	 *
+	 * @covers ::verify_owner
+	 */
+	public function test_verify_owner_mismatch() {
+		$other_user = self::factory()->user->create(
+			array(
+				'role' => 'author',
+			)
+		);
+
+		\wp_set_current_user( $other_user );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . $this->user_id . '/outbox' );
+		$request->set_param( 'user_id', $this->user_id );
+
+		$result = $this->instance->verify_owner( $request );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_forbidden', $result->get_error_code() );
+		$this->assertEquals( 403, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Test invalid user_id returns WP_Error.
+	 *
+	 * @covers ::verify_owner
+	 */
+	public function test_verify_owner_invalid_user_id() {
+		\wp_set_current_user( $this->user_id );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/99999/outbox' );
+		$request->set_param( 'user_id', 99999 );
+
+		$result = $this->instance->verify_owner( $request );
+
+		$this->assertWPError( $result );
+	}
+
+	/**
+	 * Test OAuth token user matches user_id.
+	 *
+	 * @covers ::verify_owner
+	 */
+	public function test_verify_owner_oauth_token_matches() {
+		$this->set_oauth_current_token( $this->mock_oauth_token( Scope::ALL, $this->user_id ) );
+		// OAuth Server sets current user during authentication.
+		\wp_set_current_user( $this->user_id );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . $this->user_id . '/outbox' );
+		$request->set_param( 'user_id', $this->user_id );
+
+		$result = $this->instance->verify_owner( $request );
+
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * Test unauthenticated requests cannot satisfy ownership for the blog actor.
+	 *
+	 * Guards against the pre-existing 0 === 0 path where `get_current_user_id()`
+	 * for an anonymous request would equal `BLOG_USER_ID`.
+	 *
+	 * @covers ::verify_owner
+	 */
+	public function test_verify_owner_anonymous_cannot_act_as_blog() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\wp_set_current_user( 0 );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/actors/0/followers' );
+		$request->set_param( 'user_id', 0 );
+
+		$result = $this->instance->verify_owner( $request );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_forbidden', $result->get_error_code() );
+		$this->assertEquals( 403, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Test administrators can act as the blog actor.
+	 *
+	 * @covers ::verify_owner
+	 */
+	public function test_verify_owner_admin_can_act_as_blog() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $admin_id );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/actors/0/outbox' );
+		$request->set_param( 'user_id', 0 );
+
+		$result = $this->instance->verify_owner( $request );
+
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * Test non-administrators cannot act as the blog actor by default.
+	 *
+	 * @covers ::verify_owner
+	 */
+	public function test_verify_owner_non_admin_cannot_act_as_blog() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\wp_set_current_user( $this->user_id );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/actors/0/outbox' );
+		$request->set_param( 'user_id', 0 );
+
+		$result = $this->instance->verify_owner( $request );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_forbidden', $result->get_error_code() );
+		$this->assertEquals( 403, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Test the `activitypub_user_can_act_as_blog` filter can grant access.
+	 *
+	 * @covers ::verify_owner
+	 */
+	public function test_verify_owner_blog_actor_filter_grants_access() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\wp_set_current_user( $this->user_id );
+		\add_filter( 'activitypub_user_can_act_as_blog', '__return_true' );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/actors/0/outbox' );
+		$request->set_param( 'user_id', 0 );
+
+		$result = $this->instance->verify_owner( $request );
+
+		\remove_filter( 'activitypub_user_can_act_as_blog', '__return_true' );
+
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * Test the `activitypub_user_can_act_as_blog` filter can revoke admin access.
+	 *
+	 * @covers ::verify_owner
+	 */
+	public function test_verify_owner_blog_actor_filter_revokes_admin_access() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $admin_id );
+		\add_filter( 'activitypub_user_can_act_as_blog', '__return_false' );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/actors/0/outbox' );
+		$request->set_param( 'user_id', 0 );
+
+		$result = $this->instance->verify_owner( $request );
+
+		\remove_filter( 'activitypub_user_can_act_as_blog', '__return_false' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_forbidden', $result->get_error_code() );
+	}
+
+	/**
+	 * Data provider for verify_key_id tests.
+	 *
+	 * @return array[] Test cases: [ verified_key_id, actor, expected_pass ].
+	 */
+	public function data_verify_key_id() {
+		return array(
+			'matching hosts'          => array(
+				'https://remote.example/users/alice#main-key',
+				'https://remote.example/users/alice',
+				true,
+			),
+			'mismatched hosts'        => array(
+				'https://evil.example/users/alice#main-key',
+				'https://remote.example/users/alice',
+				false,
+			),
+			'no actor in body'        => array(
+				'https://remote.example/users/alice#main-key',
+				null,
+				true,
+			),
+			// A missing keyId cannot be bound to the actor, so it must fail closed.
+			'no verified key id'      => array(
+				null,
+				'https://remote.example/users/alice',
+				false,
+			),
+			// A non-URL `acct:` keyId resolves to a real key but yields no host: the bypass this guards.
+			'acct key id cannot bind' => array(
+				'acct:mallory@attacker.example',
+				'https://victim.example/users/alice',
+				false,
+			),
+			// An `acct:` actor likewise has no host and cannot be bound.
+			'acct actor cannot bind'  => array(
+				'https://remote.example/users/alice#main-key',
+				'acct:alice@remote.example',
+				false,
+			),
+			// The FeatureRequest fill sets actor = strip_fragment( keyId ); a hostless `acct:`
+			// keyId makes both sides hostless, which must still fail closed rather than self-match.
+			'acct key id and actor'   => array(
+				'acct:mallory@attacker.example',
+				'acct:mallory@attacker.example',
+				false,
+			),
+			// An empty keyId string has no host and cannot be bound.
+			'empty key id'            => array(
+				'',
+				'https://remote.example/users/alice',
+				false,
+			),
+			'actor as object with id' => array(
+				'https://remote.example/users/alice#main-key',
+				array( 'id' => 'https://remote.example/users/alice' ),
+				true,
+			),
+			'actor object mismatch'   => array(
+				'https://evil.example/users/alice#main-key',
+				array( 'id' => 'https://remote.example/users/alice' ),
+				false,
+			),
+			'case-insensitive hosts'  => array(
+				'https://Remote.Example/users/alice#main-key',
+				'https://remote.example/users/alice',
+				true,
+			),
+		);
+	}
+
+	/**
+	 * Test that verify_key_id checks the verified keyId's host against the actor host.
+	 *
+	 * @dataProvider data_verify_key_id
+	 * @covers ::verify_key_id
+	 *
+	 * @param string|null       $key_id      The keyId that verified the signature.
+	 * @param string|array|null $actor       The actor value in the JSON body.
+	 * @param bool              $should_pass Whether the check should pass.
+	 */
+	public function test_verify_key_id( $key_id, $actor, $should_pass ) {
+		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
+
+		$body = array(
+			'type' => 'Like',
+			'id'   => 'https://remote.example/activity/1',
+		);
+		if ( null !== $actor ) {
+			$body['actor'] = $actor;
+		}
+		$request->set_header( 'Content-Type', 'application/json' );
+		$request->set_body( \wp_json_encode( $body ) );
+
+		/*
+		 * verify_key_id is private, so call it via reflection.
+		 * This avoids coupling the test to the full verify_signature flow.
+		 */
+		$method = new \ReflectionMethod( $this->instance, 'verify_key_id' );
+		$method->setAccessible( true );
+		$result = $method->invoke( $this->instance, $request, $key_id );
+
+		if ( $should_pass ) {
+			$this->assertTrue( $result );
+		} else {
+			$this->assertWPError( $result );
+			$this->assertEquals( 'activitypub_key_actor_mismatch', $result->get_error_code() );
+			$this->assertEquals( 403, $result->get_error_data()['status'] );
+		}
+	}
+
+
+
+	/**
+	 * Test that `$force_signature = true` makes a GET require a signature even
+	 * when Authorized Fetch is disabled.
+	 *
+	 * @covers ::verify_signature
+	 */
+	public function test_verify_signature_force_requires_signature_on_get() {
+		\delete_option( 'activitypub_authorized_fetch' );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/actors/1/followers/sync' );
+
+		$result = $this->instance->verify_signature( $request, true );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_signature_verification', $result->get_error_code() );
+		$this->assertEquals( 401, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Test that ownership is decided by identity alone, independent of OAuth scope.
+	 *
+	 * Scope is an authorization question and is checked separately by the callers that
+	 * expose owner-only data. Folding it in here would make an ownership predicate answer
+	 * "not the owner" when the truthful answer is "the owner, but not permitted".
+	 *
+	 * @covers ::verify_owner
+	 */
+	public function test_verify_owner_is_not_scope_sensitive() {
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH ), $this->user_id ) );
+		\wp_set_current_user( $this->user_id );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . $this->user_id . '/outbox' );
+		$request->set_param( 'user_id', $this->user_id );
+
+		$this->assertTrue( $this->instance->verify_owner( $request ), 'verify_owner() answers identity only.' );
+	}
+
+	/**
+	 * Test that a hidden social graph stays hidden from a token without the read scope.
+	 *
+	 * A client consented to `profile` is bound to the right WordPress user, so ownership
+	 * alone would hand it a following collection the owner chose to hide.
+	 *
+	 * @covers ::show_social_graph
+	 */
+	public function test_show_social_graph_requires_read_scope() {
+		\update_user_option( $this->user_id, 'activitypub_hide_social_graph', '1' );
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH ), $this->user_id ) );
+		\wp_set_current_user( $this->user_id );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . $this->user_id . '/following' );
+		$request->set_param( 'user_id', $this->user_id );
+
+		$this->assertFalse( $this->instance->show_social_graph_public( $request ), 'A token without the read scope must not reveal a hidden social graph.' );
+	}
+
+	/**
+	 * Test that a read-scoped token still sees the owner's hidden social graph.
+	 *
+	 * @covers ::show_social_graph
+	 */
+	public function test_show_social_graph_allows_read_scope() {
+		\update_user_option( $this->user_id, 'activitypub_hide_social_graph', '1' );
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::READ ), $this->user_id ) );
+		\wp_set_current_user( $this->user_id );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . $this->user_id . '/following' );
+		$request->set_param( 'user_id', $this->user_id );
+
+		$this->assertTrue( $this->instance->show_social_graph_public( $request ), 'A read-scoped token is the positive control.' );
+	}
+
+	/**
+	 * Test that a cookie session is not scope-limited.
+	 *
+	 * @covers ::show_social_graph
+	 */
+	public function test_show_social_graph_cookie_session_is_not_scope_limited() {
+		\update_user_option( $this->user_id, 'activitypub_hide_social_graph', '1' );
+		$this->set_oauth_current_token( null );
+		\wp_set_current_user( $this->user_id );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . $this->user_id . '/following' );
+		$request->set_param( 'user_id', $this->user_id );
+
+		$this->assertTrue( $this->instance->show_social_graph_public( $request ), 'A wp-admin session carries no token and is bounded by capabilities, not scope.' );
+	}
+}

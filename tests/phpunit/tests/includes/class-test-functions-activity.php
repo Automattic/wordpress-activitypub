@@ -93,6 +93,43 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 				),
 				'https://example.com',
 			),
+			array(
+				array(
+					'type'                 => 'FeaturedItem',
+					'featuredObject'       => 'https://example.com/users/alice',
+					'featureAuthorization' => 'https://example.com/users/alice/stamps/1',
+				),
+				'https://example.com/users/alice',
+			),
+			array(
+				array(
+					'type' => 'FeaturedItem',
+				),
+				null,
+			),
+			// Default fallback: object with url but no id.
+			array(
+				array(
+					'type' => 'Unknown',
+					'url'  => 'https://example.com/image.jpg',
+				),
+				'https://example.com/image.jpg',
+			),
+			// Default fallback: object with href but no id or url.
+			array(
+				array(
+					'type' => 'Unknown',
+					'href' => 'https://example.com/link',
+				),
+				'https://example.com/link',
+			),
+			// Default fallback: object with no id, url, or href.
+			array(
+				array(
+					'type' => 'Unknown',
+				),
+				null,
+			),
 		);
 	}
 
@@ -247,6 +284,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 		return array(
 			array(
 				array(
+					'type'   => 'Create',
 					'cc'     => array(
 						'https://example.org/@test',
 						'https://example.com/@test2',
@@ -258,6 +296,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			),
 			array(
 				array(
+					'type'   => 'Create',
 					'cc'     => array(
 						'https://example.org/@test',
 						'https://example.com/@test2',
@@ -271,6 +310,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			),
 			array(
 				array(
+					'type'   => 'Create',
 					'cc'     => array(
 						'https://example.org/@test',
 						'https://example.com/@test2',
@@ -281,6 +321,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			),
 			array(
 				array(
+					'type'   => 'Create',
 					'cc'     => array(
 						'https://example.org/@test',
 						'https://example.com/@test2',
@@ -293,6 +334,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			),
 			array(
 				array(
+					'type'   => 'Create',
 					'cc'     => array(
 						'https://example.org/@test',
 						'https://example.com/@test2',
@@ -307,6 +349,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			),
 			array(
 				array(
+					'type'   => 'Create',
 					'cc'     => array(
 						'https://example.org/@test',
 						'https://example.com/@test2',
@@ -321,6 +364,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			),
 			array(
 				array(
+					'type'   => 'Create',
 					'cc'     => array(
 						'https://example.org/@test',
 						'https://www.w3.org/ns/activitystreams#Public',
@@ -331,6 +375,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			),
 			array(
 				array(
+					'type'   => 'Create',
 					'object' => array(
 						'to' => 'https://www.w3.org/ns/activitystreams#Public',
 					),
@@ -339,6 +384,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			),
 			array(
 				array(
+					'type'   => 'Create',
 					'object' => array(
 						'cc' => 'https://www.w3.org/ns/activitystreams#Public',
 					),
@@ -347,6 +393,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			),
 			array(
 				array(
+					'type'   => 'Create',
 					'object' => array(
 						'monkey' => 'https://www.w3.org/ns/activitystreams#Public',
 					),
@@ -355,6 +402,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			),
 			array(
 				array(
+					'type'   => 'Create',
 					'to'     => 'http://www.w3.org/ns/activitystreams#Public',
 					'cc'     => 'http://www.w3.org/ns/activitystreams#Public',
 					'object' => '',
@@ -363,6 +411,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			),
 			array(
 				array(
+					'type'   => 'Create',
 					'to'     => array( 'http://www.w3.org/ns/activitystreams#Public' ),
 					'cc'     => array( 'http://www.w3.org/ns/activitystreams#Public' ),
 					'object' => '',
@@ -371,6 +420,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			),
 			array(
 				array(
+					'type'   => 'Create',
 					'to'     => 'as:Public',
 					'cc'     => '',
 					'object' => '',
@@ -379,6 +429,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			),
 			array(
 				array(
+					'type'   => 'Create',
 					'to'     => '',
 					'cc'     => 'as:Public',
 					'object' => '',
@@ -387,6 +438,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			),
 			array(
 				array(
+					'type'   => 'Create',
 					'to'     => '',
 					'cc'     => 'Public',
 					'object' => '',
@@ -405,14 +457,16 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 		return array(
 			'simple_string_recipient'                 => array(
 				'data'      => array(
-					'to' => 'https://example.com/users/alice',
+					'type' => 'Create',
+					'to'   => 'https://example.com/users/alice',
 				),
 				'attribute' => 'to',
 				'expected'  => array( 'https://example.com/users/alice' ),
 			),
 			'array_of_recipients'                     => array(
 				'data'      => array(
-					'to' => array(
+					'type' => 'Create',
+					'to'   => array(
 						'https://example.com/users/alice',
 						'https://example.com/users/bob',
 					),
@@ -425,7 +479,8 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			),
 			'object_recipients_with_id'               => array(
 				'data'      => array(
-					'cc' => array(
+					'type' => 'Create',
+					'cc'   => array(
 						array( 'id' => 'https://example.com/users/charlie' ),
 						array( 'id' => 'https://example.com/users/diana' ),
 					),
@@ -438,7 +493,8 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			),
 			'mixed_recipients'                        => array(
 				'data'      => array(
-					'bcc' => array(
+					'type' => 'Create',
+					'bcc'  => array(
 						'https://example.com/users/eve',
 						array( 'id' => 'https://example.com/users/frank' ),
 					),
@@ -451,6 +507,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			),
 			'recipients_in_object'                    => array(
 				'data'      => array(
+					'type'   => 'Create',
 					'object' => array(
 						'to' => 'https://example.com/users/grace',
 					),
@@ -460,6 +517,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			),
 			'recipients_in_both_main_and_object'      => array(
 				'data'      => array(
+					'type'   => 'Create',
 					'to'     => 'https://example.com/users/henry',
 					'object' => array(
 						'to' => 'https://example.com/users/iris',
@@ -472,7 +530,8 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			),
 			'duplicate_recipients'                    => array(
 				'data'      => array(
-					'to' => array(
+					'type' => 'Create',
+					'to'   => array(
 						'https://example.com/users/jack',
 						'https://example.com/users/jack', // Duplicate.
 					),
@@ -482,19 +541,23 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			),
 			'no_recipients'                           => array(
 				'data'      => array(
-					'cc' => array(),
+					'type' => 'Create',
+					'cc'   => array(),
 				),
 				'attribute' => 'to', // Different attribute.
 				'expected'  => array(),
 			),
 			'empty_data'                              => array(
-				'data'      => array(),
+				'data'      => array(
+					'type' => 'Create',
+				),
 				'attribute' => 'to',
 				'expected'  => array(),
 			),
 			'object_with_id'                          => array(
 				'data'      => array(
-					'to' => array(
+					'type' => 'Create',
+					'to'   => array(
 						array(
 							'id'   => 'https://example.com/users/kate',
 							'type' => 'Person',
@@ -509,7 +572,8 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			),
 			'public_recipients'                       => array(
 				'data'      => array(
-					'to' => array(
+					'type' => 'Create',
+					'to'   => array(
 						'https://www.w3.org/ns/activitystreams#Public',
 						'https://example.com/users/liam',
 					),
@@ -522,6 +586,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			),
 			'audience_attribute'                      => array(
 				'data'      => array(
+					'type'     => 'Create',
 					'audience' => 'https://example.com/groups/followers',
 				),
 				'attribute' => 'audience',
@@ -582,6 +647,67 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 				),
 				'attribute' => 'to',
 				'expected'  => array( 'https://example.org/users/charlie' ),
+			),
+		);
+	}
+
+	/**
+	 * An Accept/Reject wrapping a Follow is addressed through the embedded Follow's actor.
+	 *
+	 * @covers \Activitypub\extract_recipients_from_activity
+	 *
+	 * @dataProvider accept_reject_recipient_provider
+	 *
+	 * @param array $data     The activity data.
+	 * @param array $expected The expected recipients.
+	 */
+	public function test_extract_recipients_from_activity_accept_reject( $data, $expected ) {
+		$this->assertSame( $expected, extract_recipients_from_activity( $data ) );
+	}
+
+	/**
+	 * Data provider for test_extract_recipients_from_activity_accept_reject.
+	 *
+	 * @return array[]
+	 */
+	public function accept_reject_recipient_provider() {
+		$wrapped_follow = array(
+			'type'   => 'Follow',
+			'actor'  => 'https://local.example/users/alice',
+			'object' => 'https://remote.example/users/news',
+		);
+
+		return array(
+			'accept uses embedded Follow actor'   => array(
+				array(
+					'type'   => 'Accept',
+					'actor'  => 'https://remote.example/users/news',
+					'object' => $wrapped_follow,
+				),
+				array( 'https://local.example/users/alice' ),
+			),
+			'reject uses embedded Follow actor'   => array(
+				array(
+					'type'   => 'Reject',
+					'actor'  => 'https://remote.example/users/news',
+					'object' => $wrapped_follow,
+				),
+				array( 'https://local.example/users/alice' ),
+			),
+			'string object has no embedded actor' => array(
+				array(
+					'type'   => 'Accept',
+					'actor'  => 'https://remote.example/users/news',
+					'object' => 'https://local.example/?post_type=ap_outbox&p=123',
+				),
+				array(),
+			),
+			'non-response type is unaffected'     => array(
+				array(
+					'type'   => 'Create',
+					'object' => array( 'actor' => 'https://local.example/users/alice' ),
+				),
+				array(),
 			),
 		);
 	}
@@ -648,6 +774,7 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 	 */
 	public function test_unique_recipients_from_activity() {
 		$data   = array(
+			'type'   => 'Create',
 			'to'     => array(
 				'https://example.com/users/alice',
 				'https://example.com/users/alice', // Duplicate.
@@ -977,6 +1104,89 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 		$this->assertTrue(
 			\Activitypub\is_activity_public( $quote_request ),
 			'QuoteRequest should be detected as public when instrument.to contains public identifier'
+		);
+	}
+
+	/**
+	 * The canonical id-vs-url guard used before every remote-object cache write.
+	 *
+	 * @dataProvider id_matches_url_provider
+	 * @covers \Activitypub\id_matches_url
+	 *
+	 * @param array|string $item     The fetched object or its id.
+	 * @param string       $url      The URL it was served from.
+	 * @param bool         $expected Whether the id equals the URL.
+	 */
+	public function test_id_matches_url( $item, $url, $expected ) {
+		$this->assertSame( $expected, \Activitypub\id_matches_url( $item, $url ) );
+	}
+
+	/**
+	 * Data provider for the id-vs-url guard.
+	 *
+	 * @return array[]
+	 */
+	public function id_matches_url_provider() {
+		return array(
+			'exact match'            => array( 'https://good.example.com/users/alice', 'https://good.example.com/users/alice', true ),
+			'fragment ignored'       => array( 'https://good.example.com/users/alice#main-key', 'https://good.example.com/users/alice', true ),
+			'trailing slash ignored' => array( 'https://good.example.com/users/alice/', 'https://good.example.com/users/alice', true ),
+			'object array id'        => array( array( 'id' => 'https://good.example.com/users/alice', 'type' => 'Person' ), 'https://good.example.com/users/alice', true ), // phpcs:ignore WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
+			'no id, matching url'    => array( array( 'url' => 'https://good.example.com/users/alice', 'type' => 'Person' ), 'https://good.example.com/users/alice', false ), // phpcs:ignore WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
+			'same host, diff path'   => array( 'https://good.example.com/@alice', 'https://good.example.com/users/alice', false ),
+			'cross host'             => array( 'https://good.example.com/users/alice', 'https://other.example.com/mismatched', false ),
+			'scheme mismatch'        => array( 'http://good.example.com/users/alice', 'https://good.example.com/users/alice', false ),
+			'empty id'               => array( '', 'https://good.example.com/x', false ),
+			'empty source'           => array( 'https://good.example.com/users/alice', '', false ),
+		);
+	}
+
+	/**
+	 * Test normalize_actor_uri.
+	 *
+	 * @dataProvider normalize_actor_uri_provider
+	 * @covers \Activitypub\normalize_actor_uri
+	 *
+	 * @param string $uri      The URI to normalize.
+	 * @param string $expected The expected result.
+	 */
+	public function test_normalize_actor_uri( $uri, $expected ) {
+		$this->assertSame( $expected, \Activitypub\normalize_actor_uri( $uri ) );
+	}
+
+	/**
+	 * Data provider for normalize_actor_uri.
+	 *
+	 * @return array[]
+	 */
+	public function normalize_actor_uri_provider() {
+		$canonical = 'https://example.com/users/alice';
+
+		return array(
+			// A fragment on a handle would otherwise survive and slip past a block on the handle.
+			'handle fragment stripped' => array( 'acct:user@example.com#x', 'user@example.com' ),
+			'bare handle fragment'     => array( 'user@example.com#x', 'user@example.com' ),
+			'url fragment stripped'    => array( 'https://example.com/users/alice#main-key', 'https://example.com/users/alice' ),
+			'unchanged'                => array( $canonical, $canonical ),
+			'trailing slash'           => array( 'https://example.com/users/alice/', $canonical ),
+			'fragment'                 => array( 'https://example.com/users/alice#main-key', $canonical ),
+			'host case'                => array( 'https://EXAMPLE.com/users/alice', $canonical ),
+			'scheme case'              => array( 'HTTPS://example.com/users/alice', $canonical ),
+			'default port'             => array( 'https://example.com:443/users/alice', $canonical ),
+			'non default port kept'    => array( 'https://example.com:8443/users/alice', 'https://example.com:8443/users/alice' ),
+			'path case kept'           => array( 'https://example.com/users/Alice', 'https://example.com/users/Alice' ),
+			'query kept'               => array( 'https://example.com/users/alice?x=1', 'https://example.com/users/alice?x=1' ),
+			'slash before query'       => array( 'https://example.com/users/alice/?x=1', 'https://example.com/users/alice?x=1' ),
+			'slash inside query'       => array( 'https://example.com/users/alice?x=1/', 'https://example.com/users/alice?x=1/' ),
+			'acct identifier'          => array( 'acct:alice@example.com', 'alice@example.com' ),
+			'acct host case'           => array( 'acct:alice@EXAMPLE.com', 'alice@example.com' ),
+			'bare handle'              => array( 'alice@example.com', 'alice@example.com' ),
+			'mastodon handle'          => array( '@alice@example.com', 'alice@example.com' ),
+			'uppercase acct scheme'    => array( 'ACCT:alice@example.com', 'alice@example.com' ),
+			'acct trailing dot'        => array( 'acct:alice@example.com.', 'alice@example.com' ),
+			'scheme relative'          => array( '//example.com/users/alice', '//example.com/users/alice' ),
+			'unlisted scheme port'     => array( 'web3://example.com:0/x', 'web3://example.com:0/x' ),
+			'empty'                    => array( '', '' ),
 		);
 	}
 }

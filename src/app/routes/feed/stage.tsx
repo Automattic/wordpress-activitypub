@@ -8,7 +8,7 @@
  * External dependencies
  */
 import type { ReactNode } from 'react';
-import { UseNavigateResult } from '@tanstack/react-router';
+import type { UseNavigateResult } from '@wordpress/route';
 
 /**
  * WordPress dependencies
@@ -26,7 +26,7 @@ import { useSelect } from '@wordpress/data';
 import { useFeed } from '../../hooks/use-feed';
 import { titleField, dateField, metadataField, contentField, objectTypeField, tagField } from '../../components/fields';
 import EmptyState from '../../components/empty-state';
-import { normalizeFieldOrder } from './utils';
+import { getFeedViewUpdate, normalizeFieldOrder } from './utils';
 import { STORE_NAME } from '../../store';
 import type { AppSelectors } from '../../store';
 import type { FeedPost } from '../../types';
@@ -48,6 +48,7 @@ const DEFAULT_VIEW: ViewType = {
 	filters: [],
 	fields: [ 'metadata', 'title.rendered', 'content' ],
 	infiniteScrollEnabled: true,
+	startPosition: 1,
 };
 
 const defaultLayouts = {
@@ -142,16 +143,13 @@ export default function FeedStage(): ReactNode {
 		onChangeQueryParams: handleChangeQueryParams,
 	} );
 
-	// Wrap updateView to reset page when filters change
+	// Wrap updateView to reset page when filters change and to translate
+	// dataviews' infinite-scroll `startPosition` into our page-based loader.
 	const updateFeedView = useCallback(
 		( updatedView: ViewType ): void => {
-			// Reset to page 1 when filters change
-			const filtersChanged: boolean = JSON.stringify( view.filters ) !== JSON.stringify( updatedView.filters );
-			const page: number = filtersChanged ? 1 : updatedView.page ?? 1;
-
-			updateView( { ...updatedView, page } );
+			updateView( getFeedViewUpdate( view, updatedView ) );
 		},
-		[ view.filters, updateView ]
+		[ view, updateView ]
 	);
 
 	// Reset view to default state when actor switches
@@ -190,7 +188,6 @@ export default function FeedStage(): ReactNode {
 
 	// State for infinite scroll
 	const [ allLoadedRecords, setAllLoadedRecords ] = useState< FeedPost[] >( [] );
-	const [ isLoadingMore, setIsLoadingMore ] = useState( false );
 	const lastProcessedPage = useRef< number >( 0 );
 
 	const changeSelection = useCallback(
@@ -207,22 +204,6 @@ export default function FeedStage(): ReactNode {
 		[ selectItem ]
 	);
 
-	// Infinite scroll handler
-	const infiniteScrollHandler = useCallback( (): void => {
-		const currentPage: number = view.page || 1;
-
-		// Prevent concurrent requests or loading beyond available pages
-		if ( isLoadingMore || currentPage >= ( totalPages || 1 ) ) {
-			return;
-		}
-
-		setIsLoadingMore( true );
-		updateFeedView( {
-			...view,
-			page: currentPage + 1,
-		} );
-	}, [ isLoadingMore, view, totalPages, updateFeedView ] );
-
 	// Accumulate data across pages for infinite scroll
 	useEffect( (): void => {
 		const currentPage: number = normalizedView.page || 1;
@@ -232,7 +213,6 @@ export default function FeedStage(): ReactNode {
 		if ( feed.length === 0 && currentPage === 1 ) {
 			setAllLoadedRecords( [] );
 			lastProcessedPage.current = currentPage;
-			setIsLoadingMore( false );
 			return;
 		}
 
@@ -250,7 +230,6 @@ export default function FeedStage(): ReactNode {
 		if ( currentPage === 1 || ! infiniteScrollEnabled ) {
 			setAllLoadedRecords( feed );
 			lastProcessedPage.current = currentPage;
-			setIsLoadingMore( false );
 		} else {
 			// Append new records while avoiding duplicates
 			setAllLoadedRecords( ( prev: FeedPost[] ): FeedPost[] => {
@@ -261,7 +240,6 @@ export default function FeedStage(): ReactNode {
 				return newRecords.length > 0 ? [ ...prev, ...newRecords ] : prev;
 			} );
 			lastProcessedPage.current = currentPage;
-			setIsLoadingMore( false );
 		}
 	}, [
 		feed,
@@ -277,7 +255,7 @@ export default function FeedStage(): ReactNode {
 			fields={ fields }
 			view={ normalizedView as DataViewsView }
 			onChangeView={ updateFeedView as ( view: DataViewsView ) => void }
-			isLoading={ isResolving || isLoadingMore }
+			isLoading={ isResolving }
 			onClickItem={ ( item: FeedPost ): void => selectItem( item.id ) }
 			isItemClickable={ (): true => true }
 			getItemId={ ( item: FeedPost ): string => item.id.toString() }
@@ -287,7 +265,6 @@ export default function FeedStage(): ReactNode {
 			paginationInfo={ {
 				totalItems,
 				totalPages,
-				infiniteScrollHandler,
 			} }
 			defaultLayouts={ defaultLayouts }
 		/>

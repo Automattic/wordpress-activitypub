@@ -13,8 +13,11 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
-use Activitypub\Collection\Posts;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Collection\Remote_Posts;
+use Activitypub\OAuth\Client;
+use Activitypub\OAuth\Scope;
+use Activitypub\OAuth\Token;
 
 /**
  * Post Types class.
@@ -30,6 +33,8 @@ class Post_Types {
 		\add_action( 'init', array( self::class, 'register_post_post_type' ), 11 );
 		\add_action( 'init', array( self::class, 'register_extra_fields_post_types' ), 11 );
 		\add_action( 'init', array( self::class, 'register_activitypub_post_meta' ), 11 );
+		\add_action( 'init', array( self::class, 'register_oauth_post_types' ), 11 );
+		\add_action( 'init', array( self::class, 'register_tombstone_post_type' ), 11 );
 
 		\add_action( 'rest_api_init', array( self::class, 'register_ap_actor_rest_field' ) );
 		\add_action( 'rest_api_init', array( self::class, 'register_ap_post_actor_rest_field' ) );
@@ -345,7 +350,7 @@ class Post_Types {
 	 */
 	public static function register_post_post_type() {
 		\register_post_type(
-			Posts::POST_TYPE,
+			Remote_Posts::POST_TYPE,
 			array(
 				'labels'              => array(
 					'name'          => \_x( 'Posts', 'post_type plural name', 'activitypub' ),
@@ -369,7 +374,7 @@ class Post_Types {
 
 		\register_taxonomy(
 			'ap_tag',
-			array( Posts::POST_TYPE ),
+			array( Remote_Posts::POST_TYPE ),
 			array(
 				'public'       => false,
 				'query_var'    => true,
@@ -379,7 +384,7 @@ class Post_Types {
 
 		\register_taxonomy(
 			'ap_object_type',
-			array( Posts::POST_TYPE ),
+			array( Remote_Posts::POST_TYPE ),
 			array(
 				'public'       => false,
 				'query_var'    => true,
@@ -388,7 +393,7 @@ class Post_Types {
 		);
 
 		\register_post_meta(
-			Posts::POST_TYPE,
+			Remote_Posts::POST_TYPE,
 			'_activitypub_remote_actor_id',
 			array(
 				'type'              => 'integer',
@@ -399,7 +404,7 @@ class Post_Types {
 		);
 
 		\register_post_meta(
-			Posts::POST_TYPE,
+			Remote_Posts::POST_TYPE,
 			'_activitypub_user_id',
 			array(
 				'type'              => 'integer',
@@ -454,6 +459,141 @@ class Post_Types {
 		 * Fires after ActivityPub custom post types have been registered.
 		 */
 		\do_action( 'activitypub_after_register_post_type' );
+	}
+
+	/**
+	 * Register OAuth 2.0 post types for C2S support.
+	 *
+	 * Registers post type for OAuth clients.
+	 * Note: Tokens are stored in user meta and authorization codes in transients.
+	 */
+	public static function register_oauth_post_types() {
+		// OAuth Clients post type.
+		\register_post_type(
+			Client::POST_TYPE,
+			array(
+				'labels'              => array(
+					'name'          => \_x( 'OAuth Clients', 'post_type plural name', 'activitypub' ),
+					'singular_name' => \_x( 'OAuth Client', 'post_type single name', 'activitypub' ),
+				),
+				'public'              => false,
+				'show_in_rest'        => false,
+				'hierarchical'        => false,
+				'rewrite'             => false,
+				'query_var'           => false,
+				'delete_with_user'    => false,
+				'can_export'          => true,
+				'supports'            => array( 'title', 'editor', 'custom-fields' ),
+				'exclude_from_search' => true,
+			)
+		);
+
+		// OAuth Client meta.
+		\register_post_meta(
+			Client::POST_TYPE,
+			'_activitypub_client_id',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'Unique OAuth client identifier (UUID).',
+				'sanitize_callback' => 'sanitize_text_field',
+			)
+		);
+
+		\register_post_meta(
+			Client::POST_TYPE,
+			'_activitypub_client_secret_hash',
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'description'       => 'SHA-256 hash of the client secret (null for public clients).',
+				'sanitize_callback' => 'sanitize_text_field',
+			)
+		);
+
+		\register_post_meta(
+			Client::POST_TYPE,
+			'_activitypub_redirect_uris',
+			array(
+				'type'              => 'array',
+				'single'            => true,
+				'description'       => 'Allowed redirect URIs for this client.',
+				'sanitize_callback' => static function ( $value ) {
+					if ( ! \is_array( $value ) ) {
+						return array();
+					}
+					return \array_map( array( Sanitize::class, 'redirect_uri' ), $value );
+				},
+			)
+		);
+
+		\register_post_meta(
+			Client::POST_TYPE,
+			'_activitypub_allowed_scopes',
+			array(
+				'type'              => 'array',
+				'single'            => true,
+				'description'       => 'Allowed OAuth scopes for this client.',
+				'sanitize_callback' => array( Scope::class, 'sanitize' ),
+			)
+		);
+
+		\register_post_meta(
+			Client::POST_TYPE,
+			'_activitypub_is_public',
+			array(
+				'type'              => 'boolean',
+				'single'            => true,
+				'description'       => 'Whether this is a public client (PKCE-only, no secret).',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'default'           => true,
+			)
+		);
+
+		\register_post_meta(
+			Client::POST_TYPE,
+			Token::USER_META_KEY,
+			array(
+				'type'              => 'integer',
+				'single'            => false,
+				'description'       => 'User IDs that have active tokens for this client.',
+				'sanitize_callback' => 'absint',
+			)
+		);
+	}
+
+	/**
+	 * Register the ap_tombstone post type.
+	 *
+	 * Stores local tombstone URLs out of the autoloaded options row.
+	 * The post type is fully internal — never queried publicly, never shown in UI.
+	 *
+	 * @since 8.3.0
+	 */
+	public static function register_tombstone_post_type() {
+		\register_post_type(
+			Tombstone::POST_TYPE,
+			array(
+				'labels'              => array(
+					'name'          => \_x( 'Tombstones', 'post_type plural name', 'activitypub' ),
+					'singular_name' => \_x( 'Tombstone', 'post_type single name', 'activitypub' ),
+				),
+				'public'              => false,
+				'publicly_queryable'  => false,
+				'show_ui'             => false,
+				'show_in_menu'        => false,
+				'show_in_nav_menus'   => false,
+				'show_in_admin_bar'   => false,
+				'show_in_rest'        => false,
+				'exclude_from_search' => true,
+				'has_archive'         => false,
+				'rewrite'             => false,
+				'query_var'           => false,
+				'can_export'          => false,
+				'delete_with_user'    => false,
+				'supports'            => array(),
+			)
+		);
 	}
 
 	/**
@@ -515,6 +655,7 @@ class Post_Types {
 					'type'              => 'string',
 					'single'            => true,
 					'show_in_rest'      => true,
+					'default'           => \get_option( 'activitypub_default_quote_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE ),
 					'sanitize_callback' => static function ( $value ) {
 						$schema = array(
 							'type'    => 'string',
@@ -604,8 +745,8 @@ class Post_Types {
 					return array(
 						'username'   => $actor->get_preferred_username(),
 						'name'       => $actor->get_name() ?? $actor->get_preferred_username(),
-						'icon'       => object_to_uri( $actor->get_icon() ),
-						'url'        => object_to_uri( $actor->get_url() ?? $actor->get_id() ),
+						'icon'       => \sanitize_url( object_to_uri( $actor->get_icon() ) ?? '' ),
+						'url'        => \sanitize_url( object_to_uri( $actor->get_url() ?? $actor->get_id() ) ?? '' ),
 						'webfinger'  => Remote_Actors::get_acct( $response['id'] ),
 						'identifier' => $actor->get_id(),
 					);
@@ -672,7 +813,7 @@ class Post_Types {
 	 */
 	public static function register_ap_post_actor_rest_field() {
 		\register_rest_field(
-			Posts::POST_TYPE,
+			Remote_Posts::POST_TYPE,
 			'actor_info',
 			array(
 				/**
@@ -692,8 +833,8 @@ class Post_Types {
 					return array(
 						'username'   => $actor->get_preferred_username(),
 						'name'       => $actor->get_name() ?? $actor->get_preferred_username(),
-						'icon'       => object_to_uri( $actor->get_icon() ),
-						'url'        => object_to_uri( $actor->get_url() ?? $actor->get_id() ),
+						'icon'       => \sanitize_url( object_to_uri( $actor->get_icon() ) ?? '' ),
+						'url'        => \sanitize_url( object_to_uri( $actor->get_url() ?? $actor->get_id() ) ?? '' ),
 						'webfinger'  => Remote_Actors::get_acct( $id ),
 						'identifier' => $actor->get_id(),
 					);
@@ -712,10 +853,10 @@ class Post_Types {
 	 */
 	public static function register_ap_post_rest_params() {
 		\add_filter(
-			'rest_' . Posts::POST_TYPE . '_collection_params',
+			'rest_' . Remote_Posts::POST_TYPE . '_collection_params',
 			function ( $params ) {
 				$params['user_id'] = array(
-					'description'       => __( 'Filter posts by user ID (0 for site/blog actor).', 'activitypub' ),
+					'description'       => \__( 'Filter posts by user ID (0 for site/blog actor).', 'activitypub' ),
 					'type'              => 'integer',
 					'sanitize_callback' => 'absint',
 				);
@@ -805,7 +946,7 @@ class Post_Types {
 	 */
 	public static function register_object_type_user_param( $params ) {
 		$params['user_id'] = array(
-			'description'       => __( 'Filter terms to those with posts from this user ID.', 'activitypub' ),
+			'description'       => \__( 'Filter terms to those with posts from this user ID.', 'activitypub' ),
 			'type'              => 'integer',
 			'sanitize_callback' => 'absint',
 		);
@@ -873,7 +1014,7 @@ class Post_Types {
 		);
 
 		if ( isset( $post_metas[ $meta_key ] ) && $post_metas[ $meta_key ] === (string) $meta_value ) {
-			if ( 'update_post_metadata' === current_action() ) {
+			if ( 'update_post_metadata' === \current_action() ) {
 				\delete_post_meta( $object_id, $meta_key );
 			}
 

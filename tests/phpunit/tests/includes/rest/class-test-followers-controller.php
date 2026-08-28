@@ -205,4 +205,404 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	public function test_get_item() {
 		// Controller does not implement get_item().
 	}
+
+	/**
+	 * Seed one follower from a given authority against the blog actor.
+	 *
+	 * @param string $host Remote actor host (bare hostname).
+	 * @return int The remote_actors post ID.
+	 */
+	private function seed_follower_on_host( $host ) {
+		$actor_id = 'https://' . $host . '/users/alice';
+		$post_id  = self::factory()->post->create(
+			array(
+				'post_type'    => Remote_Actors::POST_TYPE,
+				'guid'         => $actor_id,
+				'post_content' => \wp_slash(
+					\wp_json_encode(
+						array(
+							'id'                => $actor_id,
+							'type'              => 'Person',
+							'preferredUsername' => 'alice',
+							'name'              => 'Alice',
+							'inbox'             => $actor_id . '/inbox',
+						)
+					)
+				),
+				'meta_input'   => array( Followers::FOLLOWER_META_KEY => '0' ),
+			)
+		);
+
+		return $post_id;
+	}
+
+	/**
+	 * Data provider for authority values that must be rejected by route validation
+	 * before any handler logic runs.
+	 *
+	 * @return array<string, array{0: string}>
+	 */
+	public function rejected_authority_provider() {
+		return array(
+			'loopback_ipv4'              => array( 'https://127.0.0.1' ),
+			'rfc1918'                    => array( 'https://10.0.0.1' ),
+			'link_local_metadata'        => array( 'https://169.254.169.254' ),
+			'unspecified'                => array( 'https://0.0.0.0' ),
+			'ipv6_loopback'              => array( 'https://[::1]' ),
+			'localhost_name'             => array( 'https://localhost' ),
+			'localhost_subdomain'        => array( 'https://api.localhost' ),
+			'mdns_local'                 => array( 'https://printer.local' ),
+			// FQDN trailing dot is the same host as without the dot.
+			'localhost_trailing_dot'     => array( 'https://localhost.' ),
+			'mdns_local_trailing_dot'    => array( 'https://printer.local.' ),
+			'sub_localhost_trailing_dot' => array( 'https://api.localhost.' ),
+			// IPv4-mapped IPv6 literals are accepted by FILTER_FLAG_NO_RES_RANGE on some PHP builds; reject them explicitly.
+			'ipv4_mapped_loopback'       => array( 'https://[::ffff:127.0.0.1]' ),
+			'ipv4_mapped_rfc1918'        => array( 'https://[::ffff:10.0.0.1]' ),
+			// IPv6 transitional / reserved ranges PHP filter doesn't catch.
+			'sixtofour_loopback'         => array( 'https://[2002:7f00:1::1]' ),
+			'sixtofour_rfc1918'          => array( 'https://[2002:0a00:0001::1]' ),
+			'teredo'                     => array( 'https://[2001:0:53aa:64c:18:7d:11ee:c4]' ),
+			'documentation'              => array( 'https://[2001:db8::1]' ),
+			'nat64_well_known'           => array( 'https://[64:ff9b::8.8.8.8]' ),
+			'discard_prefix'             => array( 'https://[100::1]' ),
+			// Percent-encoded forms must be decoded before the blocklist check.
+			'pctenc_localhost'           => array( 'https://%6Cocalhost' ),
+			'pctenc_v6_brackets_lo'      => array( 'https://%5B::1%5D' ),
+			'pctenc_v6_brackets_rfc1918' => array( 'https://%5B::ffff:10.0.0.1%5D' ),
+		);
+	}
+
+	/**
+	 * Sync requests with an internal-address authority must be rejected at the
+	 * route validation stage, before signature verification or handler logic.
+	 *
+	 * @dataProvider rejected_authority_provider
+	 *
+	 * @param string $authority The authority value under test.
+	 */
+	public function test_sync_rejects_internal_authority( $authority ) {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/followers/sync' );
+		$request->set_param( 'authority', $authority );
+		$request->set_param( 'page', 1 );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		\delete_option( 'activitypub_actor_mode' );
+
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( 'rest_invalid_param', $response->get_data()['code'] );
+	}
+
+	/**
+	 * HEAD requests to the FEP-8fcf endpoint must require a signature too.
+	 *
+	 * The default verify_signature() bypasses HEAD so caches/link-checkers
+	 * can probe public endpoints, but a peer-only route (`$force_signature`
+	 * = true) must not leak existence to unauthenticated callers via HEAD.
+	 *
+	 * @covers \Activitypub\Rest\Verification::verify_signature
+	 */
+	public function test_sync_rejects_unsigned_head_request() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		try {
+			$request = new \WP_REST_Request( 'HEAD', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/followers/sync' );
+			$request->set_param( 'authority', 'https://evil.example' );
+			$request->set_param( 'page', 1 );
+
+			$response = rest_get_server()->dispatch( $request );
+
+			$this->assertErrorResponse( 'activitypub_signature_verification', $response, 401 );
+		} finally {
+			\delete_option( 'activitypub_actor_mode' );
+		}
+	}
+
+	/**
+	 * Unsigned anonymous requests to the sync endpoint must be rejected
+	 * because the route is not on the unsigned-GET allowlist.
+	 *
+	 * @covers \Activitypub\Rest\Verification::verify_signature
+	 */
+	public function test_sync_rejects_unsigned_request() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/followers/sync' );
+		$request->set_param( 'authority', 'https://evil.example' );
+		$request->set_param( 'page', 1 );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		\delete_option( 'activitypub_actor_mode' );
+
+		$this->assertErrorResponse( 'activitypub_signature_verification', $response, 401 );
+	}
+
+	/**
+	 * Build a request ready for direct dispatch to `get_partial_followers`.
+	 *
+	 * The permission_callback on `/followers/sync` forces signature
+	 * verification, so these handler-level tests bypass the callback and
+	 * call the method directly to cover the authority-match logic without
+	 * generating real HTTP signatures.
+	 *
+	 * @param int    $user_id    The user ID.
+	 * @param string $authority  The authority query parameter value.
+	 * @param string $signer_url The URI used in the fake Signature keyId.
+	 * @return \WP_REST_Request Prepared request.
+	 */
+	private function build_sync_request( $user_id, $authority, $signer_url ) {
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/followers/sync' );
+		$request->set_param( 'user_id', $user_id );
+		$request->set_param( 'authority', $authority );
+		$request->set_param( 'page', 1 );
+		$request->set_header( 'Signature', 'keyId="' . $signer_url . '#main-key",algorithm="rsa-sha256",headers="(request-target) host date",signature="x"' );
+
+		return $request;
+	}
+
+	/**
+	 * A signed peer requesting an authority it does not own must be rejected.
+	 *
+	 * @covers ::get_partial_followers
+	 */
+	public function test_sync_rejects_authority_mismatch() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$request    = $this->build_sync_request( $user_id, 'https://evil.example', 'https://other.example/users/bob' );
+		$controller = new \Activitypub\Rest\Followers_Controller();
+		$response   = $controller->get_partial_followers( $request );
+
+		\delete_option( 'activitypub_actor_mode' );
+
+		$this->assertWPError( $response );
+		$this->assertSame( 'activitypub_authority_mismatch', $response->get_error_code() );
+		$this->assertSame( 403, $response->get_error_data()['status'] );
+	}
+
+	/**
+	 * The hide-social-graph setting governs public disclosure, not peer
+	 * reconciliation. A properly signed peer whose authority matches still
+	 * receives the partial collection even when the owner has hidden the
+	 * graph — the peer already has the relationship on its own side.
+	 *
+	 * @covers ::get_partial_followers
+	 */
+	public function test_sync_still_syncs_when_social_graph_is_hidden() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\update_user_option( $user_id, 'activitypub_hide_social_graph', '1' );
+
+		$post_id = $this->seed_follower_on_host( 'peer.example' );
+		Followers::add( $user_id, 'https://peer.example/users/alice' );
+
+		$request    = $this->build_sync_request( $user_id, 'https://peer.example', 'https://peer.example/users/peer' );
+		$controller = new \Activitypub\Rest\Followers_Controller();
+		$response   = $controller->get_partial_followers( $request );
+
+		\wp_delete_post( $post_id, true );
+		\delete_user_option( $user_id, 'activitypub_hide_social_graph' );
+		\delete_option( 'activitypub_actor_mode' );
+
+		$this->assertNotWPError( $response );
+		$data = $response->get_data();
+		$this->assertArrayHasKey( 'orderedItems', $data );
+		$this->assertContains( 'https://peer.example/users/alice', $data['orderedItems'] );
+	}
+
+	/**
+	 * A signed peer whose authority matches and whose target has a public
+	 * social graph receives the partial follower collection.
+	 *
+	 * @covers ::get_partial_followers
+	 */
+	public function test_sync_returns_items_for_matching_authority() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\delete_user_option( $user_id, 'activitypub_hide_social_graph' );
+
+		$post_id = $this->seed_follower_on_host( 'peer.example' );
+		Followers::add( $user_id, 'https://peer.example/users/alice' );
+
+		$request    = $this->build_sync_request( $user_id, 'https://peer.example', 'https://peer.example/users/peer' );
+		$controller = new \Activitypub\Rest\Followers_Controller();
+		$response   = $controller->get_partial_followers( $request );
+
+		\wp_delete_post( $post_id, true );
+		\delete_option( 'activitypub_actor_mode' );
+
+		$this->assertNotWPError( $response );
+		$data = $response->get_data();
+		$this->assertArrayHasKey( 'orderedItems', $data );
+		$this->assertContains( 'https://peer.example/users/alice', $data['orderedItems'] );
+	}
+
+	/**
+	 * The sync response is disclosed only to the signing peer, so it must carry no-store and never be
+	 * stored by a shared cache, regardless of the global Authorized Fetch setting.
+	 *
+	 * @covers ::get_partial_followers
+	 */
+	public function test_sync_response_is_never_shared_cached() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$post_id = $this->seed_follower_on_host( 'peer.example' );
+		Followers::add( $user_id, 'https://peer.example/users/alice' );
+
+		$request    = $this->build_sync_request( $user_id, 'https://peer.example', 'https://peer.example/users/peer' );
+		$controller = new \Activitypub\Rest\Followers_Controller();
+		$response   = $controller->get_partial_followers( $request );
+
+		\wp_delete_post( $post_id, true );
+		\delete_option( 'activitypub_actor_mode' );
+
+		$this->assertNotWPError( $response );
+		$this->assertSame( 'private, no-store, max-age=0', $response->get_headers()['Cache-Control'] );
+	}
+
+	/**
+	 * A percent-encoded authority that decodes to a registered peer host must
+	 * pass the signer-host match AND return the matching follower set. The
+	 * route accepts percent-encoded reg-names, so the handler has to canonicalise
+	 * the value once and use that canonical form for both the authority match
+	 * and the inbox LIKE query — otherwise the request would pass the match
+	 * but fall through to an empty result because stored inbox URLs are
+	 * unencoded.
+	 *
+	 * @covers ::get_partial_followers
+	 */
+	public function test_sync_decodes_percent_encoded_authority_for_query() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\delete_user_option( $user_id, 'activitypub_hide_social_graph' );
+
+		$post_id = $this->seed_follower_on_host( 'peer.example' );
+		Followers::add( $user_id, 'https://peer.example/users/alice' );
+
+		// "%70" decodes to "p"; "%65" decodes to "e". Decoded authority is "https://peer.example".
+		$request    = $this->build_sync_request( $user_id, 'https://%70eer.example', 'https://peer.example/users/peer' );
+		$controller = new \Activitypub\Rest\Followers_Controller();
+
+		try {
+			$response = $controller->get_partial_followers( $request );
+
+			$this->assertNotWPError( $response );
+			$data = $response->get_data();
+			$this->assertArrayHasKey( 'orderedItems', $data );
+			$this->assertContains( 'https://peer.example/users/alice', $data['orderedItems'] );
+		} finally {
+			\wp_delete_post( $post_id, true );
+			\delete_option( 'activitypub_actor_mode' );
+		}
+	}
+
+	/**
+	 * An RFC 9421 request whose verified key (in Signature-Input) belongs to
+	 * the attacker must not have its authority taken from an unrelated keyId
+	 * padded into the Signature header.
+	 *
+	 * The verifier selects RFC 9421 whenever Signature-Input is present and
+	 * checks the key named there; the lenient structured-field parser ignores
+	 * trailing junk in the Signature header. A handler that re-parsed the raw
+	 * Signature header could be steered to a third-party host, defeating the
+	 * FEP-8fcf authority binding. The signer host must come from the verified
+	 * keyId instead.
+	 *
+	 * @covers ::get_partial_followers
+	 */
+	public function test_sync_ignores_keyid_padded_into_signature_header() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/followers/sync' );
+		$request->set_param( 'user_id', $user_id );
+		$request->set_param( 'page', 1 );
+		// Attacker asks for the victim host they do not control.
+		$request->set_param( 'authority', 'https://victim.example' );
+		// The verified key lives in Signature-Input and points at the attacker.
+		$request->set_header( 'Signature-Input', 'sig1=("@method" "@authority");created=1700000000;keyid="https://attacker.example/key"' );
+		// The Signature header carries the signature bytes plus an unrelated keyId.
+		$request->set_header( 'Signature', 'sig1=:AAAA:, keyId="https://victim.example/key"' );
+
+		$controller = new \Activitypub\Rest\Followers_Controller();
+		$response   = $controller->get_partial_followers( $request );
+
+		\delete_option( 'activitypub_actor_mode' );
+
+		$this->assertWPError( $response );
+		$this->assertSame( 'activitypub_authority_mismatch', $response->get_error_code() );
+		$this->assertSame( 403, $response->get_error_data()['status'] );
+	}
+
+	/**
+	 * A Signature-Input carrying more than one keyId is ambiguous: the handler
+	 * cannot know which label the verifier accepted, so the authority match
+	 * must fail closed rather than trust the first listed keyId.
+	 *
+	 * @covers ::get_partial_followers
+	 */
+	public function test_sync_rejects_ambiguous_multi_label_signature() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/followers/sync' );
+		$request->set_param( 'user_id', $user_id );
+		$request->set_param( 'page', 1 );
+		$request->set_param( 'authority', 'https://victim.example' );
+		// Two labels, two different keyIds: the choice is ambiguous to the handler.
+		$request->set_header( 'Signature-Input', 'sig1=("@method");created=1700000000;keyid="https://victim.example/key", sig2=("@method");created=1700000000;keyid="https://attacker.example/key"' );
+		$request->set_header( 'Signature', 'sig1=:AAAA:, sig2=:BBBB:' );
+
+		$controller = new \Activitypub\Rest\Followers_Controller();
+		$response   = $controller->get_partial_followers( $request );
+
+		\delete_option( 'activitypub_actor_mode' );
+
+		$this->assertWPError( $response );
+		$this->assertSame( 'activitypub_authority_mismatch', $response->get_error_code() );
+		$this->assertSame( 403, $response->get_error_data()['status'] );
+	}
+
+	/**
+	 * The defer-signature filter receives `$force_signature` as a third
+	 * argument so hooks can preserve mandatory signing on peer-only
+	 * endpoints like `/followers/sync` without touching unrelated requests.
+	 *
+	 * @covers \Activitypub\Rest\Verification::verify_signature
+	 */
+	public function test_sync_defer_filter_receives_force_signature_flag() {
+		$captured_force = null;
+		\add_filter(
+			'activitypub_defer_signature_verification',
+			static function ( $defer, $request, $force = false ) use ( &$captured_force ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+				$captured_force = $force;
+				return $force ? false : true;
+			},
+			10,
+			3
+		);
+
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/followers/sync' );
+		$request->set_param( 'authority', 'https://peer.example' );
+		$request->set_param( 'page', 1 );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		\remove_all_filters( 'activitypub_defer_signature_verification' );
+		\delete_option( 'activitypub_actor_mode' );
+
+		$this->assertTrue( $captured_force, 'Filter must receive $force_signature = true for /followers/sync.' );
+		$this->assertErrorResponse( 'activitypub_signature_verification', $response, 401 );
+	}
 }

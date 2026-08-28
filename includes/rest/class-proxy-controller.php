@@ -1,0 +1,285 @@
+<?php
+/**
+ * Proxy Controller file.
+ *
+ * Implements the proxyUrl endpoint for C2S clients to fetch remote ActivityPub objects.
+ *
+ * @package Activitypub
+ * @see https://www.w3.org/wiki/ActivityPub/Primer/proxyUrl_endpoint
+ */
+
+namespace Activitypub\Rest;
+
+use Activitypub\Collection\Remote_Actors;
+use Activitypub\Http;
+use Activitypub\OAuth\Scope;
+use Activitypub\Webfinger;
+
+/**
+ * Proxy Controller.
+ *
+ * Provides a bridge between C2S OAuth authentication and S2S HTTP Signature authentication.
+ * Allows C2S clients to fetch remote ActivityPub objects through their home server.
+ */
+class Proxy_Controller extends \WP_REST_Controller {
+	use Event_Stream;
+	use Verification;
+
+	/**
+	 * The namespace of this controller's route.
+	 *
+	 * @var string
+	 */
+	protected $namespace = ACTIVITYPUB_REST_NAMESPACE;
+
+	/**
+	 * The base of this controller's route.
+	 *
+	 * @var string
+	 */
+	protected $rest_base = 'proxy';
+
+	/**
+	 * Register routes.
+	 */
+	public function register_routes() {
+		\register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base,
+			array(
+				array(
+					'methods'             => \WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'create_item' ),
+
+					/*
+					 * The Basic Profile puts `proxyUrl` under a read scope. The POST carries the
+					 * target URL, and what this persists is a local cache of the remote object
+					 * plus a rate-limit transient, not content attributed to the actor, so it is
+					 * not a write in the sense `write` grants.
+					 */
+					'permission_callback' => function ( $request ) {
+						return $this->verify_authentication( $request, Scope::READ );
+					},
+					'args'                => array(
+						'id' => array(
+							'description'       => 'The remote ActivityPub object to fetch: an HTTPS URL or an acct identifier (`user@host`, `@user@host`, or `acct:user@host`).',
+							'type'              => 'string',
+							'required'          => true,
+							'sanitize_callback' => array( $this, 'sanitize_url' ),
+							'validate_callback' => array( $this, 'validate_url' ),
+						),
+					),
+				),
+				'schema' => array( $this, 'get_item_schema' ),
+			)
+		);
+
+		\register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/stream',
+			array(
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_stream' ),
+					'permission_callback' => array( $this, 'get_stream_permissions_check' ),
+					'args'                => array(
+						'id' => array(
+							'description'       => 'The remote actor identifier (URL or WebFinger acct) whose eventStream to proxy.',
+							'type'              => 'string',
+							'required'          => true,
+							'sanitize_callback' => array( $this, 'sanitize_url' ),
+							'validate_callback' => array( $this, 'validate_url' ),
+						),
+					),
+				),
+			)
+		);
+	}
+
+	/**
+	 * Sanitize the `id` parameter.
+	 *
+	 * Accepts either an HTTPS URL or an acct identifier (`user@host`,
+	 * `@user@host`, or `acct:user@host`). Acct identifiers are returned
+	 * as-is; URLs are run through `sanitize_url()`. Matches the dual-shape
+	 * contract of `Remote_Actors::fetch_by_various()`.
+	 *
+	 * @see https://developer.wordpress.org/reference/functions/sanitize_url/
+	 *
+	 * @param string $url The urlencoded URL or acct identifier to sanitize.
+	 * @return string The sanitized value.
+	 */
+	public function sanitize_url( $url ) {
+		$decoded = \urldecode( $url );
+
+		if ( Webfinger::is_acct( $decoded ) ) {
+			return $decoded;
+		}
+
+		return \sanitize_url( $decoded );
+	}
+
+	/**
+	 * Validate the `id` parameter.
+	 *
+	 * Accepts either an HTTPS URL (validated via `wp_http_validate_url()`,
+	 * which blocks local/private IPs and restricts ports) or an acct
+	 * identifier in any of the forms accepted by `Webfinger::is_acct()`:
+	 * `user@host`, `@user@host`, or `acct:user@host`. Matches the
+	 * dual-shape contract of `Remote_Actors::fetch_by_various()`.
+	 *
+	 * @see https://developer.wordpress.org/reference/functions/wp_http_validate_url/
+	 *
+	 * @param string $url The URL or acct identifier to validate.
+	 * @return bool True if valid, false otherwise.
+	 */
+	public function validate_url( $url ) {
+		$decoded_url = \urldecode( $url );
+
+		if ( Webfinger::is_acct( $decoded_url ) ) {
+			return true;
+		}
+
+		// Must be HTTPS.
+		if ( 'https' !== \wp_parse_url( $decoded_url, PHP_URL_SCHEME ) ) {
+			return false;
+		}
+
+		// Use WordPress built-in validation (blocks local IPs, restricts ports).
+		return (bool) \wp_http_validate_url( $decoded_url );
+	}
+
+	/**
+	 * Fetch a remote ActivityPub object via the proxy.
+	 *
+	 * @see https://www.w3.org/wiki/ActivityPub/Primer/proxyUrl_endpoint
+	 *
+	 * @param \WP_REST_Request $request Full details about the request.
+	 * @return \WP_REST_Response|\WP_Error Response object on success, WP_Error on failure.
+	 */
+	public function create_item( $request ) {
+		// Rate-limit proxy requests (max 30 per minute per user).
+		$user_id       = \get_current_user_id();
+		$transient_key = 'ap_proxy_' . $user_id;
+		$count         = (int) \get_transient( $transient_key );
+
+		if ( $count >= 30 ) {
+			return new \WP_Error(
+				'activitypub_rate_limit',
+				\__( 'Too many proxy requests. Please try again later.', 'activitypub' ),
+				array( 'status' => 429 )
+			);
+		}
+
+		\set_transient( $transient_key, $count + 1, MINUTE_IN_SECONDS );
+
+		$url = $request->get_param( 'id' );
+
+		// Try to fetch as an actor first using Remote_Actors which handles caching.
+		$post = Remote_Actors::fetch_by_various( $url );
+
+		if ( ! \is_wp_error( $post ) ) {
+			$actor = Remote_Actors::get_actor( $post );
+
+			if ( ! \is_wp_error( $actor ) ) {
+				$response = new \WP_REST_Response( $actor->to_array(), 200 );
+				$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
+
+				return $response;
+			}
+		}
+
+		/*
+		 * Fall back to fetching as a generic object. Actors are already resolved and
+		 * cached above via fetch_by_various(), so this path only proxies the object.
+		 */
+		$object = Http::get_remote_object( $url );
+
+		if ( \is_wp_error( $object ) ) {
+			/*
+			 * Pass on a status the remote actually returned, so a caller can tell a missing object
+			 * from an unreachable host. `Http::get()` uses the response code as the error code;
+			 * this method's own rejections use a string code and stay a 502, because a document we
+			 * refused is not the caller's request being wrong.
+			 */
+			$code   = $object->get_error_code();
+			$status = \is_numeric( $code ) ? (int) $code : 0;
+
+			return new \WP_Error(
+				'activitypub_fetch_failed',
+				\__( 'Failed to fetch the remote object.', 'activitypub' ),
+				array( 'status' => $status ?: 502 )
+			);
+		}
+
+		$response = new \WP_REST_Response( $object, 200 );
+		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
+
+		return $response;
+	}
+
+	/**
+	 * Get the schema for the proxy endpoint.
+	 *
+	 * @return array Schema array.
+	 */
+	public function get_item_schema() {
+		return array(
+			'$schema'    => 'http://json-schema.org/draft-04/schema#',
+			'title'      => 'proxy',
+			'type'       => 'object',
+			'properties' => array(
+				'id' => array(
+					'description' => \__( 'The URI of the remote ActivityPub object.', 'activitypub' ),
+					'type'        => 'string',
+					'format'      => 'uri',
+					'context'     => array( 'view' ),
+				),
+			),
+		);
+	}
+
+	/**
+	 * Proxy a remote eventStream.
+	 *
+	 * Fetches the remote object to discover its eventStream URL,
+	 * then opens a streaming connection and relays SSE events.
+	 *
+	 * @param \WP_REST_Request $request Full details about the request.
+	 *
+	 * @return \WP_Error|void WP_Error on failure, exits on success.
+	 */
+	public function get_stream( $request ) {
+		$remote_id = $request->get_param( 'id' );
+
+		$object = Http::get_remote_object( $remote_id );
+
+		if ( \is_wp_error( $object ) ) {
+			return new \WP_Error(
+				'activitypub_proxy_fetch_failed',
+				\__( 'Failed to fetch the remote object.', 'activitypub' ),
+				array( 'status' => 502 )
+			);
+		}
+
+		$stream_url = isset( $object['eventStream'] ) ? $object['eventStream'] : null;
+
+		if ( ! $stream_url ) {
+			return new \WP_Error(
+				'activitypub_no_event_stream',
+				\__( 'The remote object does not advertise an eventStream.', 'activitypub' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		if ( ! $this->validate_url( $stream_url ) ) {
+			return new \WP_Error(
+				'activitypub_invalid_event_stream',
+				\__( 'The remote eventStream URL is not valid.', 'activitypub' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$this->relay_remote_stream( $stream_url );
+	}
+}

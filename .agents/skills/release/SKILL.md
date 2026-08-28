@@ -15,11 +15,13 @@ npm run release              # Create major/minor release PR.
 ```
 
 ### Version File Locations
-When updating versions manually, change these files:
-- `activitypub.php` - Plugin header (`Version: X.Y.Z`).
+When updating versions manually, change these files (these are the files `bin/release.js` touches):
+- `activitypub.php` - Plugin header (`Version: X.Y.Z`) **and** the `ACTIVITYPUB_PLUGIN_VERSION` constant. Both must change.
 - `readme.txt` - WordPress.org readme (`Stable tag: X.Y.Z`).
-- `package.json` - npm version (`"version": "X.Y.Z"`).
+- `includes/class-migration.php` - Version references in the DB-migration `version_compare()` checks.
 - `CHANGELOG.md` - Changelog file (auto-updated by release script).
+
+Note: `package.json` has no `version` field and is not part of the release bump.
 
 ## Comprehensive Release Guide
 
@@ -61,10 +63,10 @@ git cherry-pick -m 1 <commit-hash>
 # 3. Update changelog and versions.
 composer changelog:write
 
-# Manually update versions in:
-# - activitypub.php
+# Manually update versions in (see Version File Locations above):
+# - activitypub.php (Version header AND ACTIVITYPUB_PLUGIN_VERSION constant)
 # - readme.txt
-# - package.json
+# - includes/class-migration.php
 
 # 4. Push branch and create GitHub release.
 git push -u origin tags/5.3.1

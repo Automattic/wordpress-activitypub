@@ -38,7 +38,7 @@ class Following extends \WP_List_Table {
 	 * Constructor.
 	 */
 	public function __construct() {
-		if ( get_current_screen()->id === 'settings_page_activitypub' ) {
+		if ( \get_current_screen()->id === 'settings_page_activitypub' ) {
 			$this->user_id = Actors::BLOG_USER_ID;
 		} else {
 			$this->user_id = \get_current_user_id();
@@ -54,7 +54,7 @@ class Following extends \WP_List_Table {
 			)
 		);
 
-		\add_action( 'load-' . get_current_screen()->id, array( $this, 'process_action' ), 20 );
+		\add_action( 'load-' . \get_current_screen()->id, array( $this, 'process_action' ), 20 );
 	}
 
 	/**
@@ -97,7 +97,7 @@ class Following extends \WP_List_Table {
 					$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_wpnonce'] ) );
 
 					if ( \wp_verify_nonce( $nonce, 'bulk-' . $this->_args['plural'] ) ) {
-						$following = array_map( 'absint', \wp_unslash( $_REQUEST['following'] ) );
+						$following = \array_map( 'absint', \wp_unslash( $_REQUEST['following'] ) );
 
 						foreach ( $following as $post_id ) {
 							Following_Collection::unfollow( $post_id, $this->user_id );
@@ -171,7 +171,7 @@ class Following extends \WP_List_Table {
 				break;
 		}
 
-		\set_transient( 'settings_errors', get_settings_errors(), 30 ); // 30 seconds.
+		\set_transient( 'settings_errors', \get_settings_errors(), 30 ); // 30 seconds.
 
 		\wp_safe_redirect( $redirect_to );
 		exit;
@@ -225,7 +225,7 @@ class Following extends \WP_List_Table {
 		$this->set_pagination_args(
 			array(
 				'total_items' => $counter,
-				'total_pages' => ceil( $counter / $per_page ),
+				'total_pages' => \ceil( $counter / $per_page ),
 				'per_page'    => $per_page,
 			)
 		);
@@ -270,8 +270,8 @@ class Following extends \WP_List_Table {
 
 		$links = array(
 			'all'      => array(
-				'url'     => admin_url( $path ),
-				'label'   => sprintf(
+				'url'     => \admin_url( $path ),
+				'label'   => \sprintf(
 					/* translators: %s: Number of users. */
 					\_nx(
 						'All <span class="count">(%s)</span>',
@@ -285,8 +285,8 @@ class Following extends \WP_List_Table {
 				'current' => Following_Collection::ALL === $status,
 			),
 			'accepted' => array(
-				'url'     => admin_url( $path . '&status=' . Following_Collection::ACCEPTED ),
-				'label'   => sprintf(
+				'url'     => \admin_url( $path . '&status=' . Following_Collection::ACCEPTED ),
+				'label'   => \sprintf(
 					/* translators: %s: Number of users. */
 					\_nx(
 						'Accepted <span class="count">(%s)</span>',
@@ -300,8 +300,8 @@ class Following extends \WP_List_Table {
 				'current' => Following_Collection::ACCEPTED === $status,
 			),
 			'pending'  => array(
-				'url'     => admin_url( $path . '&status=' . Following_Collection::PENDING ),
-				'label'   => sprintf(
+				'url'     => \admin_url( $path . '&status=' . Following_Collection::PENDING ),
+				'label'   => \sprintf(
 					/* translators: %s: Number of users. */
 					\_nx(
 						'Pending <span class="count">(%s)</span>',
@@ -356,7 +356,7 @@ class Following extends \WP_List_Table {
 			$status = \sprintf( '<strong class="pending"> — %s</strong>', \esc_html__( 'Pending', 'activitypub' ) );
 		}
 
-		return sprintf(
+		return \sprintf(
 			'<img src="%1$s" width="32" height="32" alt="%2$s" loading="lazy"/> <strong><a href="%3$s" target="_blank">%4$s</a></strong>%5$s<br />',
 			\esc_url( $item['icon'] ),
 			\esc_attr( $item['post_title'] ),
@@ -411,15 +411,15 @@ class Following extends \WP_List_Table {
 		}
 
 		$search = Sanitize::webfinger( $search );
-		if ( filter_var( $search, FILTER_VALIDATE_EMAIL ) ) {
+		if ( \filter_var( $search, FILTER_VALIDATE_EMAIL ) ) {
 			return;
 		}
 
 		$search = Webfinger::resolve( $search );
 
-		if ( ! is_wp_error( $search ) && filter_var( $search, FILTER_VALIDATE_URL ) ) {
+		if ( ! \is_wp_error( $search ) && \filter_var( $search, FILTER_VALIDATE_URL ) ) {
 			$actor = Remote_Actors::fetch_by_uri( $search );
-			if ( ! is_wp_error( $actor ) ) {
+			if ( ! \is_wp_error( $actor ) ) {
 				echo ' ';
 				\printf(
 					/* translators: %s: Actor name. */
@@ -464,7 +464,7 @@ class Following extends \WP_List_Table {
 		}
 
 		$actions = array(
-			'unfollow' => sprintf(
+			'unfollow' => \sprintf(
 				'<a href="%s" aria-label="%s">%s</a>',
 				$this->get_action_url( 'delete', $item['id'] ),
 				/* translators: %s: username. */
@@ -483,7 +483,7 @@ class Following extends \WP_List_Table {
 		 * @param string[] $actions An array of row action links. Defaults include 'Unfollow'.
 		 * @param array    $item    The current following item.
 		 */
-		$actions = apply_filters( 'activitypub_following_row_actions', $actions, $item );
+		$actions = \apply_filters( 'activitypub_following_row_actions', $actions, $item );
 
 		return $this->row_actions( $actions );
 	}

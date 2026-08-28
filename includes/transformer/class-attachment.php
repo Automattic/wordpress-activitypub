@@ -16,6 +16,10 @@ namespace Activitypub\Transformer;
  * Currently supported are:
  *
  * - Activitypub\Activity\Base_Object
+ *
+ * Redaction is inherited from {@see Post::is_redacted()}: `is_post_publicly_queryable()`
+ * already resolves an attachment's own visibility, password, post-type support, and — for
+ * attached media — its parent's visibility, so no attachment-specific override is needed.
  */
 class Attachment extends Post {
 	/**
@@ -42,7 +46,7 @@ class Attachment extends Post {
 
 		$attachment = array(
 			'type'      => $type,
-			'url'       => wp_get_attachment_url( $this->item->ID ),
+			'url'       => \wp_get_attachment_url( $this->item->ID ),
 			'mediaType' => $mime_type,
 		);
 

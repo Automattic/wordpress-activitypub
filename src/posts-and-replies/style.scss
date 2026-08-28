@@ -1,0 +1,34 @@
+.wp-block-activitypub-posts-and-replies {
+
+	.ap-tabs {
+		display: flex;
+		gap: 0;
+		border-bottom: 1px solid currentcolor;
+		margin-bottom: 1.5em;
+	}
+
+	.ap-tabs__tab {
+		padding: 0.5em 1em;
+		border: none;
+		background: none;
+		cursor: pointer;
+		font-size: inherit;
+		font-family: inherit;
+		color: inherit;
+		text-decoration: none;
+		opacity: 0.6;
+		border-bottom: 2px solid transparent;
+		margin-bottom: -1px;
+		transition: opacity 0.2s, border-color 0.2s;
+
+		&:hover,
+		&:focus-visible {
+			opacity: 1;
+		}
+
+		&.is-active {
+			opacity: 1;
+			border-bottom-color: currentcolor;
+		}
+	}
+}

@@ -200,13 +200,13 @@ class Test_Delete extends \WP_UnitTestCase {
 		for ( $i = 0; $i < 3; $i++ ) {
 			$post_id = self::factory()->post->create(
 				array(
-					'post_type'   => \Activitypub\Collection\Posts::POST_TYPE,
+					'post_type'   => \Activitypub\Collection\Remote_Posts::POST_TYPE,
 					'post_author' => $actor->ID,
 					'post_title'  => "Test Post $i",
 					'post_status' => 'publish',
 				)
 			);
-			// Add the remote actor ID meta that Posts::get_by_remote_actor() looks for.
+			// Add the remote actor ID meta that Remote_Posts::get_by_remote_actor() looks for.
 			\add_post_meta( $post_id, '_activitypub_remote_actor_id', $actor->ID );
 			$post_ids[] = $post_id;
 		}
@@ -334,7 +334,7 @@ class Test_Delete extends \WP_UnitTestCase {
 		// Create a post in the Posts collection.
 		$post_id = \wp_insert_post(
 			array(
-				'post_type'    => \Activitypub\Collection\Posts::POST_TYPE,
+				'post_type'    => \Activitypub\Collection\Remote_Posts::POST_TYPE,
 				'post_title'   => 'Test Note',
 				'post_content' => 'Test content',
 				'post_status'  => 'publish',
@@ -541,7 +541,6 @@ class Test_Delete extends \WP_UnitTestCase {
 		$this->assertTrue( Tombstone::exists_local( $object_url ) );
 
 		// Clean up.
-		\delete_option( 'activitypub_tombstone_urls' );
 	}
 
 	/**
@@ -566,7 +565,6 @@ class Test_Delete extends \WP_UnitTestCase {
 		$this->assertTrue( Tombstone::exists_local( $object_url ) );
 
 		// Clean up.
-		\delete_option( 'activitypub_tombstone_urls' );
 	}
 
 	/**
@@ -642,6 +640,42 @@ class Test_Delete extends \WP_UnitTestCase {
 		$this->assertTrue( Tombstone::exists_local( $object_url ) );
 
 		// Clean up.
-		\delete_option( 'activitypub_tombstone_urls' );
+	}
+
+	/**
+	 * When a caller forces signature verification, the Delete carve-out
+	 * must not override it. The default inbox path (force_signature=false)
+	 * continues to defer for Delete activities.
+	 *
+	 * @covers ::defer_signature_verification
+	 */
+	public function test_defer_signature_verification_respects_force_signature() {
+		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( array( 'type' => 'Delete' ) ) );
+		$request->get_json_params();
+
+		// Default path: Delete activity on the inbox defers signature verification.
+		$this->assertTrue( Delete::defer_signature_verification( false, $request, false ) );
+
+		// Forced-signature path (e.g. FEP-8fcf /followers/sync) must not be overridden.
+		$this->assertFalse( Delete::defer_signature_verification( false, $request, true ) );
+	}
+
+	/**
+	 * Non-Delete activities pass through the filter unchanged regardless
+	 * of force_signature, preserving whatever the incoming $defer value was.
+	 *
+	 * @covers ::defer_signature_verification
+	 */
+	public function test_defer_signature_verification_passthrough_for_non_delete() {
+		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( array( 'type' => 'Create' ) ) );
+		$request->get_json_params();
+
+		$this->assertFalse( Delete::defer_signature_verification( false, $request, false ) );
+		$this->assertTrue( Delete::defer_signature_verification( true, $request, false ) );
+		$this->assertFalse( Delete::defer_signature_verification( false, $request, true ) );
 	}
 }

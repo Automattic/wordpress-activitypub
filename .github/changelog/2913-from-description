@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix comment count to properly exclude likes, shares, and notes.

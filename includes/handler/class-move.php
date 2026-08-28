@@ -26,7 +26,6 @@ class Move {
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_move', array( self::class, 'handle_move' ), 10, 2 );
-		\add_filter( 'activitypub_get_outbox_activity', array( self::class, 'outbox_activity' ) );
 	}
 
 	/**
@@ -63,15 +62,17 @@ class Move {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 			$wpdb->update(
 				$wpdb->posts,
-				array( 'guid' => sanitize_url( $target_uri ) ),
-				array( 'ID' => sanitize_key( $origin_object->ID ) )
+				array( 'guid' => \sanitize_url( $target_uri ) ),
+				array( 'ID' => \sanitize_key( $origin_object->ID ) )
 			);
 
 			// Clear the cache.
 			\wp_cache_delete( $origin_object->ID, 'posts' );
 
 			$success = true;
-			$result  = Remote_Actors::upsert( $target_json );
+
+			// get_remote_object() already self-confirmed the target, so it is safe to cache.
+			$result = Remote_Actors::upsert( $target_json );
 		}
 
 		// If both the target and origin are followed, merge them.
@@ -99,22 +100,6 @@ class Move {
 		 * @param mixed $result   The result of the operation (e.g., post ID, WP_Error, or status).
 		 */
 		\do_action( 'activitypub_handled_move', $activity, (array) $user_ids, $success, $result );
-	}
-
-	/**
-	 * Convert the object and origin to the correct format.
-	 *
-	 * @param \Activitypub\Activity\Activity $activity The Activity object.
-	 * @return \Activitypub\Activity\Activity The filtered Activity object.
-	 */
-	public static function outbox_activity( $activity ) {
-		if ( 'Move' === $activity->get_type() ) {
-			$activity->set_object( object_to_uri( $activity->get_object() ) );
-			$activity->set_origin( $activity->get_actor() );
-			$activity->set_target( $activity->get_object() );
-		}
-
-		return $activity;
 	}
 
 	/**
@@ -187,13 +172,23 @@ class Move {
 			return false;
 		}
 
-		// Check if the target has an alsoKnownAs property.
-		if ( empty( $target_object['also_known_as'] ) ) {
+		// Normalize alsoKnownAs to an array (some JSON-LD payloads may use a string).
+		$also_known_as = (array) ( $target_object['alsoKnownAs'] ?? array() );
+		if ( empty( $also_known_as ) ) {
 			return false;
 		}
 
-		// Check if the origin is in the alsoKnownAs property of the target.
-		if ( ! in_array( $origin_object['id'], $target_object['also_known_as'], true ) ) {
+		// Collect all possible origin identifiers (id, url, webfinger).
+		$origin_ids = \array_filter(
+			array(
+				$origin_object['id'] ?? null,
+				$origin_object['url'] ?? null,
+				$origin_object['webfinger'] ?? null,
+			)
+		);
+
+		// Check if any origin identifier is in the alsoKnownAs property of the target.
+		if ( ! \array_intersect( $origin_ids, $also_known_as ) ) {
 			return false;
 		}
 

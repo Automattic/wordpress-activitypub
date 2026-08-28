@@ -80,7 +80,7 @@ class Mention {
 		$username = $actor->get_preferred_username() ?: $actor->get_name() ?: Sanitize::webfinger( $result[0] );
 		$url      = object_to_uri( $actor->get_url() ?: $actor->get_id() );
 
-		return \sprintf( '<a rel="mention" class="u-url mention" href="%1$s">@%2$s</a>', esc_url( $url ), esc_html( $username ) );
+		return \sprintf( '<a rel="mention" class="u-url mention" href="%1$s">@%2$s</a>', \esc_url( $url ), \esc_html( $username ) );
 	}
 
 	/**
@@ -96,7 +96,7 @@ class Mention {
 		foreach ( $mentioned as $actor ) {
 			$inbox = self::get_inbox_by_mentioned_actor( $actor );
 
-			if ( ! is_wp_error( $inbox ) && $inbox ) {
+			if ( ! \is_wp_error( $inbox ) && $inbox ) {
 				$inboxes[] = $inbox;
 			}
 		}
@@ -141,7 +141,7 @@ class Mention {
 		\preg_match_all( '/@' . ACTIVITYPUB_USERNAME_REGEXP . '/i', $post_content, $matches );
 		foreach ( $matches[0] as $match ) {
 			$link = Webfinger::resolve( $match );
-			if ( ! is_wp_error( $link ) ) {
+			if ( ! \is_wp_error( $link ) ) {
 				$mentions[ $match ] = $link;
 			}
 		}

@@ -8,12 +8,15 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Activity\Base_Object;
-use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Signature;
 
+use function Activitypub\fold_host;
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_unsafe_ipv6_literal;
+use function Activitypub\maybe_set_no_store;
 
 /**
  * Followers_Controller class.
@@ -44,7 +47,7 @@ class Followers_Controller extends Actors_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_items' ),
-					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
+					'permission_callback' => array( $this, 'verify_signature' ),
 					'args'                => array(
 						'page'     => array(
 							'description' => 'Current page of the collection.',
@@ -92,14 +95,59 @@ class Followers_Controller extends Actors_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_partial_followers' ),
-					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
+
+					/*
+					 * FEP-8fcf requires that the partial followers collection only be
+					 * disclosed to an authenticated peer. Force signature verification
+					 * even when Authorized Fetch is globally disabled.
+					 */
+					'permission_callback' => function ( $request ) {
+						return $this->verify_signature( $request, true );
+					},
 					'args'                => array(
 						'authority' => array(
-							'description' => 'The host to filter followers by.',
-							'type'        => 'string',
-							'format'      => 'uri',
-							'pattern'     => '^https?://[^/]+$',
-							'required'    => true,
+							'description'       => 'The host to filter followers by.',
+							'type'              => 'string',
+							'format'            => 'uri',
+							'pattern'           => '^https?://[^/]+$',
+							'required'          => true,
+							'validate_callback' => static function ( $param ) {
+								/*
+								 * Reject internal-address shapes early. The signer-host check
+								 * downstream already enforces authority matching the verified
+								 * peer; this just keeps obviously-internal values from reaching
+								 * that code at all. Both places run the value through
+								 * fold_host() so semantically equivalent hosts always
+								 * agree.
+								 *
+								 * Percent-decode the input first so encoded forms like
+								 * `https://%5B::1%5D` (bracketed IPv6 literal hidden inside
+								 * %5B/%5D) get checked against the same blocklist as the
+								 * unencoded equivalent. Use rawurldecode() rather than
+								 * urldecode() — the latter also turns `+` into a space, which
+								 * would corrupt otherwise-valid reg-name hosts.
+								 */
+								$decoded = \rawurldecode( (string) $param );
+								$host    = fold_host( (string) \wp_parse_url( $decoded, PHP_URL_HOST ) );
+								if ( '' === $host ) {
+									return false;
+								}
+
+								if ( \filter_var( $host, FILTER_VALIDATE_IP ) ) {
+									if ( is_unsafe_ipv6_literal( $host ) ) {
+										return false;
+									}
+
+									return (bool) \filter_var( $host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE );
+								}
+
+								if ( 'localhost' === $host ) {
+									return false;
+								}
+
+								return ! \str_ends_with( $host, '.localhost' )
+									&& ! \str_ends_with( $host, '.local' );
+							},
 						),
 						'page'      => array(
 							'description' => 'Current page of the collection.',
@@ -158,7 +206,7 @@ class Followers_Controller extends Actors_Controller {
 			$response = array( '@context' => Base_Object::JSON_LD_CONTEXT ) + $response;
 		}
 
-		if ( Actors::show_social_graph( $user_id ) ) {
+		if ( $this->show_social_graph( $request ) ) {
 			$response['orderedItems'] = \array_filter(
 				\array_map(
 					static function ( $item ) use ( $context ) {
@@ -196,10 +244,45 @@ class Followers_Controller extends Actors_Controller {
 	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error object on failure.
 	 */
 	public function get_partial_followers( $request ) {
-		$user_id   = $request->get_param( 'user_id' );
-		$authority = $request->get_param( 'authority' );
+		$user_id = $request->get_param( 'user_id' );
 
-		// Get partial followers filtered by authority.
+		/*
+		 * Decode the percent-encoded authority once and use the canonical form
+		 * everywhere downstream. The route accepts authorities whose host has
+		 * percent-encoded octets (RFC 3986 reg-name), so the signer-host
+		 * check, the inbox LIKE query in Followers::get_by_authority(), and
+		 * the response `id` all need to agree on one canonical string. Mixing
+		 * raw and decoded forms would let a request pass the authority match
+		 * yet return an empty follower set, because stored inbox URLs are
+		 * unencoded.
+		 */
+		$authority = \rawurldecode( (string) $request->get_param( 'authority' ) );
+
+		/*
+		 * FEP-8fcf: the responding server MUST ensure the requested authority
+		 * matches the signing peer, so that instances cannot "get tricked
+		 * into requesting the followers list of a third-party individual".
+		 *
+		 * Derive the signer host from the keyId that the verifier actually
+		 * checked (Signature::get_key_id() mirrors the verifier's header
+		 * choice and returns null when several labels make the choice
+		 * ambiguous). Re-parsing the raw headers here would diverge from the
+		 * verified key: a request can carry an RFC 9421 Signature-Input plus a
+		 * Signature header padded with an unrelated keyId, letting an attacker
+		 * sign with their own key yet steer a naive parser at a third-party host.
+		 */
+		$key_id      = Signature::get_key_id( $request );
+		$signer_host = $key_id ? fold_host( (string) \wp_parse_url( $key_id, \PHP_URL_HOST ) ) : '';
+		$asked_host  = fold_host( (string) \wp_parse_url( $authority, \PHP_URL_HOST ) );
+
+		if ( ! $signer_host || ! $asked_host || $signer_host !== $asked_host ) {
+			return new \WP_Error(
+				'activitypub_authority_mismatch',
+				\__( 'The authority parameter must match the signing peer.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
+		}
+
 		$followers = Followers::get_by_authority( $user_id, $authority );
 		$followers = \wp_list_pluck( $followers, 'guid' );
 
@@ -208,11 +291,11 @@ class Followers_Controller extends Actors_Controller {
 				\sprintf(
 					'actors/%d/followers/sync?authority=%s',
 					$user_id,
-					rawurlencode( $authority )
+					\rawurlencode( $authority )
 				)
 			),
 			'type'         => 'OrderedCollection',
-			'totalItems'   => count( $followers ),
+			'totalItems'   => \count( $followers ),
 			'orderedItems' => $followers,
 		);
 
@@ -225,8 +308,15 @@ class Followers_Controller extends Actors_Controller {
 		$response = \rest_ensure_response( $response );
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 
+		/*
+		 * This partial collection is disclosed only to the signing peer, whatever the global Authorized
+		 * Fetch setting, so it must never be stored by a shared cache and served to another caller.
+		 */
+		maybe_set_no_store( $response );
+
 		return $response;
 	}
+
 
 	/**
 	 * Retrieves the followers schema, conforming to JSON Schema.

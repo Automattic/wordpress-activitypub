@@ -43,6 +43,7 @@ Apply the **code-style** skill standards when reviewing. In addition, check for:
 - Capability checks before privileged operations
 - No direct database queries without `$wpdb->prepare()`
 - No `eval()`, `extract()`, or unserialize of untrusted data
+- Any surface that exposes a post's content, metadata, or existence to unauthenticated callers gates on `is_post_publicly_queryable()` — NOT `is_post_disabled()`, whose lifecycle escape hatch intentionally passes previously-federated-now-private posts through (known leak vector, see the security-audit agent's vulnerability history)
 
 ### Code Quality
 - No unused variables, imports, or dead code
@@ -52,9 +53,14 @@ Apply the **code-style** skill standards when reviewing. In addition, check for:
 - Functions/methods have a single responsibility
 
 ### Compatibility
-- PHP 7.4+ compatible syntax
+- PHP 7.4+ compatible syntax — flag any PHP 8.0+ construct: named arguments, union types, `match`, nullsafe `?->`, constructor property promotion. Local wp-env runs PHP 8.x, so these pass local tests but fail the PHP 7.4 CI job. (`str_contains()` etc. are fine — WordPress core polyfills them.)
 - No breaking changes to public APIs without deprecation path
 - Integration points with third-party plugins preserved
+
+### Scheduling & Side Effects
+- New or modified WP-Cron callbacks (anything registered via `wp_schedule_event` / `wp_schedule_single_event`) that perform **user-visible side effects** — emails, push notifications, outbound HTTP calls, federated activities — must guard against re-entry. WP-Cron can fire the same callback more than once for the same logical period (concurrent loopback workers, plugin reactivate triggering `register_schedules()`, manual `wp cron event run`, traffic spikes).
+- Look for an **atomic claim before the side effect**: typically `add_option( $key, $value, '', false )` (or another single-shot insert) keyed on whatever uniquely identifies the period/recipient/activity. Bail early if the claim fails. Fixes after the fact (checking-then-sending, time-window checks, transient-based locks) are not race-safe.
+- For senders with a `$force` parameter: the marker must still be written/refreshed on forced runs, otherwise a manual or CLI-driven send leaves the door open for the next scheduled run to deliver the same message again.
 
 ### Tests
 - Apply the **test** skill patterns to evaluate test coverage for new/changed code.

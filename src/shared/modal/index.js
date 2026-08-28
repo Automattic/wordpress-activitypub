@@ -1,4 +1,5 @@
 import { getContext, store, getElement } from '@wordpress/interactivity';
+import { withSyncEvent } from '../with-sync-event';
 
 /**
  * @typedef {Object} context
@@ -34,10 +35,19 @@ export function createModalStore( namespace ) {
 					// Position the compact modal relative to the button.
 					setTimeout( callbacks.positionModal, 0 );
 				} else {
+					// Clear any inline positioning left over from compact mode.
+					const blockWrapper = document.getElementById( context.blockId );
+					if ( blockWrapper ) {
+						const modalOverlay = blockWrapper.querySelector( '.activitypub-modal__overlay' );
+						if ( modalOverlay ) {
+							[ 'top', 'left', 'right', 'bottom' ].forEach( ( prop ) => {
+								modalOverlay.style.removeProperty( prop );
+							} );
+						}
+					}
+
 					// Set up the focus trap after modal is open.
 					setTimeout( () => {
-						// Use the blockId to find the specific modal frame for this block
-						const blockWrapper = document.getElementById( context.blockId );
 						if ( blockWrapper ) {
 							const modalFrame = blockWrapper.querySelector( '.activitypub-modal__frame' );
 							if ( modalFrame ) {
@@ -72,9 +82,7 @@ export function createModalStore( namespace ) {
 				} else {
 					const blockWrapper = document.getElementById( context.blockId );
 					if ( blockWrapper ) {
-						const openButton = blockWrapper.querySelector(
-							'[data-wp-on--click="actions.toggleModal"], [data-wp-on-async--click="actions.toggleModal"]'
-						);
+						const openButton = blockWrapper.querySelector( '[data-wp-on--click="actions.toggleModal"]' );
 						if ( openButton ) {
 							openButton.focus();
 						}
@@ -92,7 +100,8 @@ export function createModalStore( namespace ) {
 			 *
 			 * @param {Event} event Click event.
 			 */
-			toggleModal( event ) {
+			toggleModal: withSyncEvent( ( event ) => {
+				event?.preventDefault?.();
 				const { modal } = getContext();
 
 				if ( modal.isOpen ) {
@@ -100,7 +109,7 @@ export function createModalStore( namespace ) {
 				} else {
 					actions.openModal( event );
 				}
-			},
+			} ),
 		},
 
 		callbacks: {
@@ -174,12 +183,12 @@ export function createModalStore( namespace ) {
 					return;
 				}
 
-				// If the click was on the button or its children, we should not close the modal.
-				const toggleButton = blockWrapper.querySelector(
-					'.wp-element-button[data-wp-on--click="actions.toggleModal"]'
-				);
-				if ( toggleButton && ( toggleButton === event.target || toggleButton.contains( event.target ) ) ) {
-					return;
+				// If the click was on any toggle trigger or its children, we should not close the modal.
+				const toggleButtons = blockWrapper.querySelectorAll( '[data-wp-on--click="actions.toggleModal"]' );
+				for ( const toggleButton of toggleButtons ) {
+					if ( toggleButton === event.target || toggleButton.contains( event.target ) ) {
+						return;
+					}
 				}
 
 				// Check if the click was inside the modal frame.

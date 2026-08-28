@@ -11,6 +11,7 @@ use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Inbox;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
 use Activitypub\Moderation;
 
@@ -19,6 +20,7 @@ use function Activitypub\extract_recipients_from_activity;
 use function Activitypub\is_activity_public;
 use function Activitypub\is_collection;
 use function Activitypub\is_same_domain;
+use function Activitypub\object_to_uri;
 use function Activitypub\user_can_activitypub;
 
 /**
@@ -29,6 +31,7 @@ use function Activitypub\user_can_activitypub;
  * @see https://www.w3.org/TR/activitypub/#inbox
  */
 class Inbox_Controller extends \WP_REST_Controller {
+	use Verification;
 	use Language_Map;
 
 	/**
@@ -56,7 +59,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'create_item' ),
-					'permission_callback' => array( 'Activitypub\Rest\Server', 'verify_signature' ),
+					'permission_callback' => array( $this, 'verify_signature' ),
 					'args'                => array(
 						'id'     => array(
 							'description' => 'The unique identifier for the activity.',
@@ -71,9 +74,14 @@ class Inbox_Controller extends \WP_REST_Controller {
 							'sanitize_callback' => '\Activitypub\object_to_uri',
 						),
 						'type'   => array(
-							'description' => 'The type of the activity.',
-							'type'        => 'string',
-							'required'    => true,
+							'description'       => 'The type of the activity.',
+							'type'              => 'string',
+							'required'          => true,
+							'sanitize_callback' => 'sanitize_html_class',
+							'validate_callback' => static function ( $param ) {
+								// Reject values that sanitize to empty so dynamic hook names always have a suffix.
+								return '' !== \sanitize_html_class( (string) $param );
+							},
 						),
 						'object' => array(
 							'description'       => 'The object of the activity.',
@@ -156,7 +164,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 			 * @param string             $type     The type of the activity.
 			 * @param Activity|\WP_Error $activity The Activity object.
 			 */
-			do_action( 'activitypub_rest_inbox_disallowed', $data, null, $type, $activity );
+			\do_action( 'activitypub_rest_inbox_disallowed', $data, null, $type, $activity );
 		} else {
 			$recipients = $this->get_local_recipients( $data );
 
@@ -371,13 +379,50 @@ class Inbox_Controller extends \WP_REST_Controller {
 	 * @return array An array of user IDs who are the recipients of the activity.
 	 */
 	private function get_local_recipients( $activity ) {
-		$user_ids = array();
+		$user_ids       = array();
+		$remote_fetches = 0;
+		$cap_notified   = false;
+
+		/**
+		 * Filters the maximum number of remote recipient URLs that can be
+		 * fetched per incoming activity.
+		 *
+		 * @since 8.2.1
+		 *
+		 * @param int $max_remote_fetches Maximum number of remote fetches. Default 10.
+		 */
+		$max_remote_fetches = (int) \apply_filters( 'activitypub_max_remote_recipient_fetches', 10 );
+
+		// AS2 allows actor and followers to be either an IRI string or an inline object; normalize to a URI.
+		$actor_uri           = ! empty( $activity['actor'] ) ? object_to_uri( $activity['actor'] ) : null;
+		$actor_followers_url = $this->get_cached_followers_url( $actor_uri );
 
 		if ( is_activity_public( $activity ) ) {
-			$user_ids = Following::get_follower_ids( $activity['actor'] );
+			$user_ids = Following::get_follower_ids( $actor_uri );
 		}
 
 		$recipients = extract_recipients_from_activity( $activity );
+
+		/*
+		 * Pre-compute which recipients are already known remote actors so the
+		 * cached-actor short-circuit becomes an O(1) array lookup rather than
+		 * one DB query per recipient. This bounds the DB cost of a flood of
+		 * unknown recipient URIs to one batched SELECT (chunked) regardless
+		 * of how many were sent.
+		 */
+		$candidate_uris = array();
+		foreach ( $recipients as $recipient ) {
+			if (
+				! \is_string( $recipient )
+				|| \in_array( $recipient, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS, true )
+				|| is_same_domain( $recipient )
+				|| $recipient === $actor_followers_url
+			) {
+				continue;
+			}
+			$candidate_uris[] = $recipient;
+		}
+		$cached_uris = $candidate_uris ? Remote_Actors::get_existing_uris( $candidate_uris ) : array();
 
 		foreach ( $recipients as $recipient ) {
 			// Skip public audience identifiers - they're not actual recipients to fetch.
@@ -386,16 +431,49 @@ class Inbox_Controller extends \WP_REST_Controller {
 			}
 
 			if ( ! is_same_domain( $recipient ) ) {
+				// Known followers collection: resolve from local DB, no fetch needed.
+				if ( $recipient === $actor_followers_url ) {
+					$user_ids = \array_merge( $user_ids, Following::get_follower_ids( $actor_uri ) );
+					continue;
+				}
+
+				// Already cached as a remote actor: not a collection, so no local recipients to add.
+				if ( isset( $cached_uris[ $recipient ] ) ) {
+					continue;
+				}
+
+				// Unknown URL: cap remote fetches to prevent abuse via large audience/recipient fields.
+				if ( $remote_fetches >= $max_remote_fetches ) {
+					if ( ! $cap_notified ) {
+						$cap_notified = true;
+
+						/**
+						 * Fires when an incoming activity hits the remote recipient fetch cap.
+						 *
+						 * Fires once per activity on the first recipient that exceeds the cap,
+						 * not for each subsequent skipped recipient. Hook this to surface
+						 * cap hits in your logging system of choice (Jetpack, Sentry, syslog, etc.).
+						 *
+						 * @since 8.2.1
+						 *
+						 * @param array  $activity  The incoming activity data.
+						 * @param string $recipient The recipient URI that was skipped.
+						 * @param int    $cap       The configured cap.
+						 */
+						\do_action( 'activitypub_remote_recipient_fetch_cap_reached', $activity, $recipient, $max_remote_fetches );
+					}
+					continue;
+				}
+				++$remote_fetches;
+
 				$collection = Http::get_remote_object( $recipient );
 
-				// If it is a remote actor we can skip it.
 				if ( \is_wp_error( $collection ) ) {
 					continue;
 				}
 
 				if ( is_collection( $collection ) ) {
-					$_user_ids = Following::get_follower_ids( $activity['actor'] );
-					$user_ids  = array_merge( $user_ids, $_user_ids );
+					$user_ids = \array_merge( $user_ids, Following::get_follower_ids( $actor_uri ) );
 					continue;
 				}
 			}
@@ -422,6 +500,39 @@ class Inbox_Controller extends \WP_REST_Controller {
 			}
 		}
 
-		return array_unique( array_map( 'intval', $user_ids ) );
+		return \array_unique( \array_map( 'intval', $user_ids ) );
+	}
+
+	/**
+	 * Look up an actor's followers collection URL from the cached profile.
+	 *
+	 * Used to detect followers-addressed recipients without an outbound fetch.
+	 *
+	 * @param string|null $actor_uri Normalized actor URI.
+	 *
+	 * @return string|null The followers collection URL, or null if not cached/available.
+	 */
+	private function get_cached_followers_url( $actor_uri ) {
+		if ( empty( $actor_uri ) ) {
+			return null;
+		}
+
+		$actor_post = Remote_Actors::get_by_uri( $actor_uri );
+		if ( \is_wp_error( $actor_post ) ) {
+			return null;
+		}
+
+		// Match Remote_Actors::get_actor()'s storage fallback: legacy actor JSON lives in postmeta when post_content is empty.
+		$json = $actor_post->post_content;
+		if ( empty( $json ) ) {
+			$json = \get_post_meta( $actor_post->ID, '_activitypub_actor_json', true );
+		}
+
+		$actor_data = \json_decode( $json, true );
+		if ( empty( $actor_data['followers'] ) ) {
+			return null;
+		}
+
+		return object_to_uri( $actor_data['followers'] );
 	}
 }

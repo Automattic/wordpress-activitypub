@@ -18,6 +18,36 @@ class Buddypress {
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_json_author_array', array( self::class, 'add_user_metadata' ), 11, 2 );
+		\add_filter( 'render_block_activitypub/followers', array( self::class, 'escape_at_signs' ) );
+		\add_filter( 'render_block_activitypub/following', array( self::class, 'escape_at_signs' ) );
+	}
+
+	/**
+	 * Escape `@` signs in block output to prevent BuddyPress mention linking.
+	 *
+	 * BuddyPress hooks `bp_activity_at_name_filter` into `the_content` to convert
+	 * `@username` mentions into profile links. This corrupts the JSON in the
+	 * `data-wp-context` attribute of Followers/Following blocks because the handles
+	 * contain `@username` patterns that match BuddyPress's regex.
+	 *
+	 * Encoding `@` as `&#x40;` in the HTML attribute makes it invisible to
+	 * BuddyPress's regex. The browser decodes the HTML entity before JavaScript
+	 * reads the attribute, so the Interactivity API receives the original `@`.
+	 *
+	 * @since 8.1.0
+	 *
+	 * @param string $block_content The block content.
+	 *
+	 * @return string The block content with `@` signs escaped in data attributes.
+	 */
+	public static function escape_at_signs( $block_content ) {
+		return \preg_replace_callback(
+			'/data-wp-context="([^"]*)"/',
+			static function ( $matches ) {
+				return 'data-wp-context="' . \str_replace( '@', '&#x40;', $matches[1] ) . '"';
+			},
+			$block_content
+		);
 	}
 
 	/**
@@ -30,13 +60,13 @@ class Buddypress {
 	 */
 	public static function add_user_metadata( $author, $author_id ) {
 		if ( \function_exists( 'bp_members_get_user_url' ) ) {
-			$author->url = bp_members_get_user_url( $author_id );
+			$author->url = \bp_members_get_user_url( $author_id );
 		} else {
-			$author->url = bp_core_get_user_domain( $author_id );
+			$author->url = \bp_core_get_user_domain( $author_id );
 		}
 
 		// Add BuddyPress' cover_image instead of WordPress' header_image.
-		$cover_image_url = bp_attachments_get_attachment( 'url', array( 'item_id' => $author_id ) );
+		$cover_image_url = \bp_attachments_get_attachment( 'url', array( 'item_id' => $author_id ) );
 
 		if ( $cover_image_url ) {
 			$author->image = array(
@@ -50,7 +80,7 @@ class Buddypress {
 			'type'  => 'PropertyValue',
 			'name'  => \__( 'Profile', 'activitypub' ),
 			'value' => \html_entity_decode(
-				sprintf(
+				\sprintf(
 					'<a rel="me" title="%s" target="_blank" href="%s">%s</a>',
 					\esc_attr( $author->url ),
 					\esc_url( $author->url ),
@@ -62,8 +92,8 @@ class Buddypress {
 		);
 
 		// Replace blog URL on multisite.
-		if ( is_multisite() ) {
-			$user_blogs = get_blogs_of_user( $author_id ); // Get sites of user to send as AP metadata.
+		if ( \is_multisite() ) {
+			$user_blogs = \get_blogs_of_user( $author_id ); // Get sites of user to send as AP metadata.
 
 			if ( ! empty( $user_blogs ) ) {
 				unset( $author->attachment['blog_url'] );
@@ -74,7 +104,7 @@ class Buddypress {
 							'type'  => 'PropertyValue',
 							'name'  => $blog->blogname,
 							'value' => \html_entity_decode(
-								sprintf(
+								\sprintf(
 									'<a rel="me" title="%s" target="_blank" href="%s">%s</a>',
 									\esc_attr( $blog->siteurl ),
 									$blog->siteurl,

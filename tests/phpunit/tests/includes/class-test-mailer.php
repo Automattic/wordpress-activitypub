@@ -102,6 +102,63 @@ class Test_Mailer extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The reaction notification setting silences reaction emails (likes, reposts, quotes) without touching real replies.
+	 *
+	 * @covers ::maybe_prevent_reaction_notification
+	 */
+	public function test_reaction_notification_setting() {
+		$like_id         = wp_insert_comment(
+			array(
+				'comment_post_ID' => self::$post_id,
+				'comment_type'    => 'like',
+			)
+		);
+		$repost_id       = wp_insert_comment(
+			array(
+				'comment_post_ID' => self::$post_id,
+				'comment_type'    => 'repost',
+			)
+		);
+		$quote_id        = wp_insert_comment(
+			array(
+				'comment_post_ID' => self::$post_id,
+				'comment_type'    => 'quote',
+			)
+		);
+		$reply_id        = wp_insert_comment(
+			array(
+				'comment_post_ID' => self::$post_id,
+				'comment_type'    => 'comment',
+			)
+		);
+		$legacy_reply_id = wp_insert_comment(
+			array(
+				'comment_post_ID' => self::$post_id,
+				'comment_type'    => '',
+			)
+		);
+
+		// Default (unset): reactions still notify, so behavior is unchanged for existing users.
+		$this->assertTrue( Mailer::maybe_prevent_reaction_notification( true, $like_id ) );
+
+		update_user_option( self::$user_id, 'activitypub_mailer_new_reaction', '0' );
+
+		// Opt out silences every reaction type: like, repost, and quote.
+		$this->assertFalse( Mailer::maybe_prevent_reaction_notification( true, $like_id ) );
+		$this->assertFalse( Mailer::maybe_prevent_reaction_notification( true, $repost_id ) );
+		$this->assertFalse( Mailer::maybe_prevent_reaction_notification( true, $quote_id ) );
+
+		// Real replies are never affected, including legacy comments stored with an empty type.
+		$this->assertTrue( Mailer::maybe_prevent_reaction_notification( true, $reply_id ) );
+		$this->assertTrue( Mailer::maybe_prevent_reaction_notification( true, $legacy_reply_id ) );
+
+		// The moderator notification is never gated by the author's reaction preference.
+		$this->assertTrue( Mailer::maybe_prevent_comment_notification( true, $like_id ) );
+
+		delete_user_option( self::$user_id, 'activitypub_mailer_new_reaction' );
+	}
+
+	/**
 	 * Test comment notification text for ActivityPub comments.
 	 *
 	 * @covers ::comment_notification_text
@@ -142,6 +199,101 @@ class Test_Mailer extends WP_UnitTestCase {
 
 		$text = Mailer::comment_notification_text( 'Default Message', $regular_comment_id );
 		$this->assertEquals( 'Default Message', $text );
+	}
+
+	/**
+	 * Test that quote notifications include a link to the quoting post.
+	 *
+	 * @covers ::comment_notification_text
+	 */
+	public function test_comment_quote_notification_includes_quoting_post_link() {
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID'    => self::$post_id,
+				'comment_type'       => 'quote',
+				'comment_author'     => 'Quote Author',
+				'comment_author_url' => 'https://example.com/author',
+				'comment_author_IP'  => '127.0.0.1',
+			)
+		);
+
+		update_comment_meta( $comment_id, 'protocol', 'activitypub' );
+		update_comment_meta( $comment_id, 'source_url', 'https://example.com/quoting-post' );
+
+		$text = Mailer::comment_notification_text( 'Default Message', $comment_id );
+
+		$this->assertStringContainsString( 'Quoting post: https://example.com/quoting-post', $text );
+	}
+
+	/**
+	 * Test that quote notifications omit the link when no source is stored.
+	 *
+	 * @covers ::comment_notification_text
+	 */
+	public function test_comment_quote_notification_without_source() {
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID'    => self::$post_id,
+				'comment_type'       => 'quote',
+				'comment_author'     => 'Quote Author',
+				'comment_author_url' => 'https://example.com/author',
+				'comment_author_IP'  => '127.0.0.1',
+			)
+		);
+
+		update_comment_meta( $comment_id, 'protocol', 'activitypub' );
+
+		$text = Mailer::comment_notification_text( 'Default Message', $comment_id );
+
+		$this->assertStringNotContainsString( 'Quoting post:', $text );
+	}
+
+	/**
+	 * Test that quote notifications fall back to the source ID when no source URL is stored.
+	 *
+	 * @covers ::comment_notification_text
+	 */
+	public function test_comment_quote_notification_falls_back_to_source_id() {
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID'    => self::$post_id,
+				'comment_type'       => 'quote',
+				'comment_author'     => 'Quote Author',
+				'comment_author_url' => 'https://example.com/author',
+				'comment_author_IP'  => '127.0.0.1',
+			)
+		);
+
+		update_comment_meta( $comment_id, 'protocol', 'activitypub' );
+		update_comment_meta( $comment_id, 'source_id', 'https://example.com/quoting-activity' );
+
+		$text = Mailer::comment_notification_text( 'Default Message', $comment_id );
+
+		$this->assertStringContainsString( 'https://example.com/quoting-activity', $text );
+	}
+
+	/**
+	 * Test that non-quote notifications do not include a quoting-post link.
+	 *
+	 * @covers ::comment_notification_text
+	 */
+	public function test_comment_repost_notification_has_no_quoting_post_link() {
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID'    => self::$post_id,
+				'comment_type'       => 'repost',
+				'comment_author'     => 'Repost Author',
+				'comment_author_url' => 'https://example.com/author',
+				'comment_author_IP'  => '127.0.0.1',
+			)
+		);
+
+		update_comment_meta( $comment_id, 'protocol', 'activitypub' );
+		update_comment_meta( $comment_id, 'source_url', 'https://example.com/reposting-post' );
+
+		$text = Mailer::comment_notification_text( 'Default Message', $comment_id );
+
+		$this->assertStringNotContainsString( 'Quoting post:', $text );
 	}
 
 	/**
@@ -246,6 +398,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			'to'               => array(
 				true,
 				array(
+					'type'   => 'Create',
 					'actor'  => 'https://example.com/author',
 					'object' => array(
 						'id'      => 'https://example.com/post/1',
@@ -257,6 +410,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			'none'             => array(
 				false,
 				array(
+					'type'   => 'Create',
 					'actor'  => 'https://example.com/author',
 					'object' => array(
 						'id'      => 'https://example.com/post/1',
@@ -267,6 +421,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			'public+reply'     => array(
 				false,
 				array(
+					'type'   => 'Create',
 					'actor'  => 'https://example.com/author',
 					'object' => array(
 						'id'        => 'https://example.com/post/1',
@@ -279,6 +434,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			'public+reply+cc'  => array(
 				false,
 				array(
+					'type'   => 'Create',
 					'actor'  => 'https://example.com/author',
 					'object' => array(
 						'id'        => 'https://example.com/post/1',
@@ -292,6 +448,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			'public+followers' => array(
 				false,
 				array(
+					'type'   => 'Create',
 					'actor'  => 'https://example.com/author',
 					'object' => array(
 						'id'        => 'https://example.com/post/1',
@@ -305,6 +462,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			'followers'        => array(
 				false,
 				array(
+					'type'   => 'Create',
 					'actor'  => 'https://example.com/author',
 					'object' => array(
 						'id'        => 'https://example.com/post/1',
@@ -317,6 +475,7 @@ class Test_Mailer extends WP_UnitTestCase {
 			'reply+cc'         => array(
 				false,
 				array(
+					'type'   => 'Create',
 					'actor'  => 'https://example.com/author',
 					'object' => array(
 						'id'        => 'https://example.com/post/1',
@@ -362,6 +521,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Mock remote metadata.
 		$remote_metadata_callback = function () {
 			return array(
+				'type' => 'Person',
 				'name' => 'Test Sender',
 				'url'  => 'https://example.com/author',
 			);
@@ -409,6 +569,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	 */
 	public function test_direct_message_from_bridgy() {
 		$activity = array(
+			'type'   => 'Create',
 			'actor'  => 'https://example.com/author',
 			'object' => array(
 				'id'      => 'https://example.com/post/1',
@@ -420,6 +581,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Mock remote metadata.
 		$remote_metadata_callback = function () {
 			return array(
+				'type' => 'Person',
 				'name' => 'Test Sender',
 				'url'  => array(
 					'https://fed.brid.gy/r/https://example.com/author',
@@ -479,6 +641,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		$user_id = self::$user_id;
 
 		$activity = array(
+			'type'   => 'Create',
 			'actor'  => 'https://example.com/author',
 			'object' => array(
 				'id'      => 'https://example.com/post/1',
@@ -491,6 +654,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Mock remote metadata.
 		$remote_metadata_callback = function () {
 			return array(
+				'type' => 'Person',
 				'name' => 'Test Sender',
 				'url'  => 'https://example.com/author',
 			);
@@ -550,6 +714,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	 */
 	public function test_direct_message_with_disabled_option() {
 		$activity = array(
+			'type'   => 'Create',
 			'actor'  => 'https://example.com/author',
 			'object' => array(
 				'id'      => 'https://example.com/post/1',
@@ -583,6 +748,7 @@ class Test_Mailer extends WP_UnitTestCase {
 	 */
 	public function test_mention_with_disabled_option() {
 		$activity = array(
+			'type'   => 'Create',
 			'actor'  => 'https://example.com/author',
 			'object' => array(
 				'id'      => 'https://example.com/post/1',
@@ -652,6 +818,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
 		$activity = array(
+			'type'   => 'Create',
 			'actor'  => 'https://example.com/author',
 			'object' => array(
 				'id'      => 'https://example.com/post/1',
@@ -687,6 +854,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
 
 		$activity = array(
+			'type'   => 'Create',
 			'actor'  => 'https://example.com/author',
 			'object' => array(
 				'id'      => 'https://example.com/post/1',
@@ -760,6 +928,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		$user_id = self::$user_id;
 
 		$activity = array(
+			'type'   => 'Create',
 			'actor'  => 'https://example.com/author',
 			'object' => array(
 				'id'      => 'https://example.com/post/1',
@@ -771,6 +940,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Mock remote metadata.
 		$remote_metadata_callback = function () {
 			return array(
+				'type' => 'Person',
 				'name' => 'Test Sender',
 				'url'  => 'https://example.com/author',
 			);
@@ -810,6 +980,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		$user_id = self::$user_id;
 
 		$activity = array(
+			'type'   => 'Create',
 			'actor'  => 'https://example.com/author',
 			'object' => array(
 				'id'      => 'https://example.com/post/1',
@@ -828,6 +999,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		// Mock remote metadata.
 		$remote_metadata_callback = function () {
 			return array(
+				'type' => 'Person',
 				'name' => 'Test Sender',
 				'url'  => 'https://example.com/author',
 			);
@@ -877,6 +1049,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		);
 
 		$activity = array(
+			'type'   => 'Create',
 			'actor'  => 'https://example.com/author',
 			'object' => array(
 				'id'      => 'https://example.com/post/1',

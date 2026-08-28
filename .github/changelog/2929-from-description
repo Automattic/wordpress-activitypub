@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix automatic cleanup of old activities failing silently on sites with large numbers of outbox, inbox, or remote post items.

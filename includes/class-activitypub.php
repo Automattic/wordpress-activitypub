@@ -9,7 +9,8 @@ namespace Activitypub;
 
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
-use Activitypub\Collection\Posts;
+use Activitypub\Collection\Remote_Posts;
+use Activitypub\OAuth\Client;
 
 /**
  * ActivityPub Class.
@@ -86,7 +87,9 @@ class Activitypub {
 		\remove_filter( 'pre_wp_update_comment_count_now', array( Comment::class, 'pre_wp_update_comment_count_now' ), 5 );
 		Migration::update_comment_counts( 2000 );
 
-		Posts::delete_all();
+		Remote_Posts::delete_all();
+		Tombstone::delete_all();
+		Client::delete_all();
 
 		Options::delete();
 	}
@@ -128,7 +131,7 @@ class Activitypub {
 	 * @deprecated 7.5.0 Use {@see Router::add_rewrite_rules()}.
 	 */
 	public static function add_rewrite_rules() {
-		_deprecated_function( __FUNCTION__, '7.5.0', '\Activitypub\Router::add_rewrite_rules()' );
+		\_deprecated_function( __FUNCTION__, '7.5.0', '\Activitypub\Router::add_rewrite_rules()' );
 
 		Router::add_rewrite_rules();
 	}
@@ -139,9 +142,9 @@ class Activitypub {
 	public static function theme_compat() {
 		// We assume that you want to use Post-Formats when enabling the setting.
 		if ( 'wordpress-post-format' === \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE ) ) {
-			if ( ! get_theme_support( 'post-formats' ) ) {
+			if ( ! \get_theme_support( 'post-formats' ) ) {
 				// Add support for the Aside, Gallery Post Formats...
-				add_theme_support(
+				\add_theme_support(
 					'post-formats',
 					array(
 						'gallery',
@@ -227,7 +230,7 @@ class Activitypub {
 				'single'            => true,
 				'default'           => '',
 				'sanitize_callback' => static function ( $value ) {
-					return wp_kses( $value, 'user_description' );
+					return \wp_kses( $value, 'user_description' );
 				},
 			)
 		);
@@ -291,6 +294,41 @@ class Activitypub {
 			)
 		);
 		\add_filter( 'get_user_option_activitypub_mailer_new_mention', array( self::class, 'user_options_default' ) );
+
+		\register_meta(
+			'user',
+			$blog_prefix . 'activitypub_mailer_new_reaction',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Send a notification when someone likes, reposts, or quotes this user\'s post.',
+				'single'            => true,
+				'sanitize_callback' => 'absint',
+			)
+		);
+		\add_filter( 'get_user_option_activitypub_mailer_new_reaction', array( self::class, 'user_options_default' ) );
+
+		\register_meta(
+			'user',
+			$blog_prefix . 'activitypub_mailer_annual_report',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Send the annual Fediverse Year in Review email.',
+				'single'            => true,
+				'sanitize_callback' => 'absint',
+			)
+		);
+		\add_filter( 'get_user_option_activitypub_mailer_annual_report', array( self::class, 'user_options_default' ) );
+
+		\register_meta(
+			'user',
+			$blog_prefix . 'activitypub_mailer_monthly_report',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Send a monthly Fediverse stats report email.',
+				'single'            => true,
+				'sanitize_callback' => 'absint',
+			)
+		);
 
 		\register_meta(
 			'user',

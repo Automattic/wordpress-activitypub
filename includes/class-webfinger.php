@@ -20,6 +20,30 @@ use Activitypub\Collection\Remote_Actors;
  */
 class Webfinger {
 	/**
+	 * Check whether a value looks like an `acct` identifier.
+	 *
+	 * Accepts any of:
+	 *
+	 * - `user@host` — bare WebFinger handle.
+	 * - `@user@host` — Mastodon display form with a leading `@`.
+	 * - `acct:user@host` — full RFC 7565 URI form.
+	 *
+	 * The host/local-part pattern follows `ACTIVITYPUB_USERNAME_REGEXP`.
+	 *
+	 * @since 8.3.0
+	 *
+	 * @param mixed $value The candidate value.
+	 * @return bool True if the value matches the acct identifier pattern.
+	 */
+	public static function is_acct( $value ) {
+		if ( ! \is_string( $value ) || '' === $value ) {
+			return false;
+		}
+
+		return (bool) \preg_match( '/^(?:acct:)?@?' . ACTIVITYPUB_USERNAME_REGEXP . '$/i', $value );
+	}
+
+	/**
 	 * Returns a users WebFinger "resource".
 	 *
 	 * @param int $user_id The WordPress user id.
@@ -28,7 +52,7 @@ class Webfinger {
 	 */
 	public static function get_user_resource( $user_id ) {
 		$user = Actors::get_by_id( $user_id );
-		if ( ! $user || is_wp_error( $user ) ) {
+		if ( ! $user || \is_wp_error( $user ) ) {
 			return '';
 		}
 
@@ -49,10 +73,10 @@ class Webfinger {
 			return $data;
 		}
 
-		if ( ! is_array( $data ) || empty( $data['links'] ) ) {
+		if ( ! \is_array( $data ) || empty( $data['links'] ) || ! \is_array( $data['links'] ) ) {
 			return new \WP_Error(
 				'webfinger_missing_links',
-				__( 'No valid Link elements found.', 'activitypub' ),
+				\__( 'No valid Link elements found.', 'activitypub' ),
 				array(
 					'status' => 400,
 					'data'   => $data,
@@ -62,8 +86,9 @@ class Webfinger {
 
 		foreach ( $data['links'] as $link ) {
 			if (
+				isset( $link['rel'], $link['href'], $link['type'] ) &&
 				'self' === $link['rel'] &&
-				isset( $link['type'] ) &&
+				\is_string( $link['href'] ) &&
 				(
 					'application/activity+json' === $link['type'] ||
 					'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' === $link['type']
@@ -75,7 +100,7 @@ class Webfinger {
 
 		return new \WP_Error(
 			'webfinger_url_no_activitypub',
-			__( 'The Site supports WebFinger but not ActivityPub', 'activitypub' ),
+			\__( 'The Site supports WebFinger but not ActivityPub', 'activitypub' ),
 			array(
 				'status' => 400,
 				'data'   => $data,
@@ -95,22 +120,23 @@ class Webfinger {
 	public static function uri_to_acct( $uri ) {
 		$data = self::get_data( $uri );
 
-		if ( is_wp_error( $data ) ) {
+		if ( \is_wp_error( $data ) ) {
 			return $data;
 		}
 
 		// Check if subject is an acct URI.
 		if (
 			isset( $data['subject'] ) &&
+			\is_string( $data['subject'] ) &&
 			\str_starts_with( $data['subject'], 'acct:' )
 		) {
 			return $data['subject'];
 		}
 
 		// Search for an acct URI in the aliases.
-		if ( isset( $data['aliases'] ) ) {
+		if ( isset( $data['aliases'] ) && \is_array( $data['aliases'] ) ) {
 			foreach ( $data['aliases'] as $alias ) {
-				if ( \str_starts_with( $alias, 'acct:' ) ) {
+				if ( \is_string( $alias ) && \str_starts_with( $alias, 'acct:' ) ) {
 					return $alias;
 				}
 			}
@@ -118,7 +144,7 @@ class Webfinger {
 
 		return new \WP_Error(
 			'webfinger_url_no_acct',
-			__( 'No acct URI found.', 'activitypub' ),
+			\__( 'No acct URI found.', 'activitypub' ),
 			array(
 				'status' => 400,
 				'data'   => $data,
@@ -138,7 +164,7 @@ class Webfinger {
 		if ( ! $url ) {
 			return new \WP_Error(
 				'webfinger_invalid_identifier',
-				__( 'Invalid Identifier', 'activitypub' ),
+				\__( 'Invalid Identifier', 'activitypub' ),
 				array(
 					'status' => 400,
 					'data'   => $url,
@@ -147,14 +173,26 @@ class Webfinger {
 		}
 
 		// Remove leading @.
-		$url = ltrim( $url, '@' );
+		$url = \ltrim( $url, '@' );
 
-		if ( ! preg_match( '/^([a-zA-Z+]+):/', $url, $match ) ) {
+		if ( \str_starts_with( $url, '//' ) ) {
+			/*
+			 * A scheme-relative URL is a URL reference, not a handle: treating it as one would
+			 * read the host off the first `@` in its path.
+			 */
+			$identifier = $url;
+			$scheme     = '';
+		} elseif (
+			// Scheme grammar per RFC 3986: a digit or hyphen in it must not read as a handle.
+			! \preg_match( '/^([a-zA-Z][a-zA-Z0-9+.\-]*):/', $url, $match )
+		) {
 			$identifier = 'acct:' . $url;
 			$scheme     = 'acct';
 		} else {
 			$identifier = $url;
-			$scheme     = $match[1];
+
+			// Schemes are case-insensitive, and the switch below compares them exactly.
+			$scheme = \strtolower( $match[1] );
 		}
 
 		$host = null;
@@ -163,19 +201,28 @@ class Webfinger {
 			case 'acct':
 			case 'mailto':
 			case 'xmpp':
-				if ( strpos( $identifier, '@' ) !== false ) {
-					$host = substr( $identifier, strpos( $identifier, '@' ) + 1 );
+				// Split on the last `@`: a local part may contain one, the host may not.
+				if ( \strrpos( $identifier, '@' ) !== false ) {
+					$host = \substr( $identifier, \strrpos( $identifier, '@' ) + 1 );
+
+					/*
+					 * Cut anything a query or fragment starts. `wp_parse_url()` does this for the
+					 * URL forms below, but this branch takes the host off the string itself, so
+					 * `acct:user@example.com#x` would otherwise carry `#x` into the host and miss
+					 * a domain block on `example.com`.
+					 */
+					$host = \substr( $host, 0, \strcspn( $host, '?#' ) );
 				}
 				break;
 			default:
-				$host = wp_parse_url( $identifier, PHP_URL_HOST );
+				$host = \wp_parse_url( $identifier, PHP_URL_HOST );
 				break;
 		}
 
 		if ( empty( $host ) ) {
 			return new \WP_Error(
 				'webfinger_invalid_identifier',
-				__( 'Invalid Identifier', 'activitypub' ),
+				\__( 'Invalid Identifier', 'activitypub' ),
 				array(
 					'status' => 400,
 					'data'   => $url,
@@ -183,7 +230,38 @@ class Webfinger {
 			);
 		}
 
-		return array( $identifier, $host );
+		return array( $identifier, \strtolower( $host ) );
+	}
+
+	/**
+	 * Get the host of an identifier.
+	 *
+	 * The host half of {@see self::get_identifier_and_host()}, for callers that only need that.
+	 * Prefer this over parsing a host out directly when you need an identifier's host: a handle
+	 * has none to parse, and a URI in a scheme other than `http` can carry an `@` in its path
+	 * that would be read as one.
+	 *
+	 * Not a drop-in for `is_same_host()`, which deliberately fails closed on an identifier with
+	 * no parsable host. Giving an `acct:` keyId a host there would re-admit what 9.2.1 rejected.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $uri The identifier, a URL or a handle.
+	 *
+	 * @return string The host, lowercased, or an empty string when there is none.
+	 */
+	public static function get_host( $uri ) {
+		$identifier_and_host = self::get_identifier_and_host( (string) $uri );
+
+		if ( \is_wp_error( $identifier_and_host ) ) {
+			return '';
+		}
+
+		/*
+		 * Folded here rather than in `get_identifier_and_host()`, whose host is also used to build
+		 * WebFinger and intent URLs: an IPv6 authority needs its brackets to stay a valid URL.
+		 */
+		return fold_host( $identifier_and_host[1] );
 	}
 
 	/**
@@ -191,18 +269,19 @@ class Webfinger {
 	 *
 	 * @param string $uri The Identifier: <identifier>@<host> or URI.
 	 *
-	 * @return \WP_Error|array Error reaction or array with identifier and host as values.
+	 * @return \WP_Error|mixed Error reaction, or the decoded document. The remote server picks the
+	 *                         body, so callers check the shape before indexing it.
 	 */
 	public static function get_data( $uri ) {
 		$identifier_and_host = self::get_identifier_and_host( $uri );
 
-		if ( is_wp_error( $identifier_and_host ) ) {
+		if ( \is_wp_error( $identifier_and_host ) ) {
 			return $identifier_and_host;
 		}
 
 		list( $identifier, $host ) = $identifier_and_host;
 
-		$webfinger_url = sprintf(
+		$webfinger_url = \sprintf(
 			'https://%s/.well-known/webfinger?resource=%s',
 			$host,
 			\rawurlencode( $identifier )
@@ -232,37 +311,7 @@ class Webfinger {
 	 * @return string|\WP_Error Error or the Remote-Follow endpoint URI.
 	 */
 	public static function get_remote_follow_endpoint( $uri ) {
-		$data = self::get_data( $uri );
-
-		if ( is_wp_error( $data ) ) {
-			return $data;
-		}
-
-		if ( empty( $data['links'] ) ) {
-			return new \WP_Error(
-				'webfinger_missing_links',
-				__( 'No valid Link elements found.', 'activitypub' ),
-				array(
-					'status' => 400,
-					'data'   => $data,
-				)
-			);
-		}
-
-		foreach ( $data['links'] as $link ) {
-			if ( 'http://ostatus.org/schema/1.0/subscribe' === $link['rel'] ) {
-				return $link['template'];
-			}
-		}
-
-		return new \WP_Error(
-			'webfinger_missing_remote_follow_endpoint',
-			__( 'No valid Remote-Follow endpoint found.', 'activitypub' ),
-			array(
-				'status' => 400,
-				'data'   => $data,
-			)
-		);
+		return self::get_intent_endpoint( $uri, 'follow', true );
 	}
 
 	/**
@@ -273,13 +322,13 @@ class Webfinger {
 	 * @return string The cache key.
 	 */
 	public static function generate_cache_key( $uri ) {
-		$uri = ltrim( $uri, '@' );
+		$uri = \ltrim( $uri, '@' );
 
-		if ( filter_var( $uri, FILTER_VALIDATE_EMAIL ) ) {
+		if ( \filter_var( $uri, FILTER_VALIDATE_EMAIL ) ) {
 			$uri = 'acct:' . $uri;
 		}
 
-		return 'webfinger_' . md5( $uri );
+		return 'webfinger_' . \md5( $uri );
 	}
 
 	/**
@@ -305,5 +354,104 @@ class Webfinger {
 		}
 
 		return extract_name_from_uri( $actor_or_uri->get_id() ) . '@' . \wp_parse_url( $actor_or_uri->get_id(), PHP_URL_HOST );
+	}
+
+	/**
+	 * Get the Intent endpoint for a given URI and intent.
+	 *
+	 * @since 8.0.0
+	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/3b86/fep-3b86.md
+	 *
+	 * @param string $uri      The WebFinger Resource URI.
+	 * @param string $intent   The intent to look for.
+	 * @param bool   $fallback Whether to fallback to the Remote-Follow endpoint.
+	 *
+	 * @return string|\WP_Error Error or the Intent endpoint URI (may contain `{uri}` placeholder).
+	 */
+	public static function get_intent_endpoint( $uri, $intent, $fallback = false ) {
+		$data = self::get_data( $uri );
+
+		if ( \is_wp_error( $data ) ) {
+			return $data;
+		}
+
+		if ( empty( $data['links'] ) || ! \is_array( $data['links'] ) ) {
+			return new \WP_Error(
+				'webfinger_missing_links',
+				\__( 'No valid Link elements found.', 'activitypub' ),
+				array(
+					'status' => 400,
+					'data'   => $data,
+				)
+			);
+		}
+
+		// Normalize the links with $rel as key.
+		$links = array();
+
+		foreach ( $data['links'] as $link ) {
+			if ( isset( $link['rel'], $link['template'] ) && \is_string( $link['rel'] ) && \is_string( $link['template'] ) ) {
+				$links[ \strtolower( $link['rel'] ) ] = $link['template'];
+			}
+		}
+
+		$intent = \sanitize_text_field( $intent );
+		$intent = \strtolower( $intent );
+
+		if ( ! \filter_var( $intent, FILTER_VALIDATE_URL ) ) {
+			$intent = 'https://w3id.org/fep/3b86/' . $intent;
+		}
+
+		if ( isset( $links[ $intent ] ) ) {
+			return $links[ $intent ];
+		}
+
+		if ( ! $fallback ) {
+			return new \WP_Error(
+				'webfinger_missing_intent_endpoint',
+				\__( 'No valid Intent endpoint found.', 'activitypub' ),
+				array(
+					'status' => 400,
+					'data'   => $data,
+				)
+			);
+		}
+
+		/*
+		 * OStatus subscribe URL (deprecated but still widely supported)
+		 *
+		 * @see https://ostatus.github.io/spec/OStatus%201.0%20Draft%202.html#anchor10
+		 */
+		if ( isset( $links['http://ostatus.org/schema/1.0/subscribe'] ) ) {
+			return $links['http://ostatus.org/schema/1.0/subscribe'];
+		}
+
+		/*
+		 * FEP-3b86 Object Intent — the generic "open this object on my home
+		 * server" link, equivalent to pasting the URL into the home server's
+		 * search box. Useful when no verb-specific intent is advertised.
+		 *
+		 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/3b86/fep-3b86.md#5-1-object-intent
+		 */
+		if ( isset( $links['https://w3id.org/fep/3b86/object'] ) ) {
+			return $links['https://w3id.org/fep/3b86/object'];
+		}
+
+		// Last-resort: construct a Mastodon-compatible authorize_interaction URL.
+		$identifier_and_host = self::get_identifier_and_host( $uri );
+
+		if ( \is_wp_error( $identifier_and_host ) ) {
+			return new \WP_Error(
+				'webfinger_missing_intent_endpoint',
+				\__( 'No valid Intent endpoint found.', 'activitypub' ),
+				array(
+					'status' => 400,
+					'data'   => $data,
+				)
+			);
+		}
+
+		return 'https://' . $identifier_and_host[1] . '/authorize_interaction?uri={uri}';
 	}
 }

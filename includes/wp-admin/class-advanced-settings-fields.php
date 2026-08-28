@@ -7,6 +7,8 @@
 
 namespace Activitypub\WP_Admin;
 
+use Activitypub\Options;
+
 /**
  * Advanced Settings Fields class.
  */
@@ -30,7 +32,29 @@ class Advanced_Settings_Fields {
 			'activitypub_advanced_settings'
 		);
 
-		if ( ! defined( 'ACTIVITYPUB_SEND_VARY_HEADER' ) ) {
+		if ( ! Options::is_distribution_mode_locked() ) {
+			\add_settings_field(
+				'activitypub_distribution_mode',
+				\__( 'Distribution Mode', 'activitypub' ),
+				array( self::class, 'render_distribution_mode_field' ),
+				'activitypub_advanced_settings',
+				'activitypub_advanced_settings'
+			);
+
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$current_tab = isset( $_GET['tab'] ) ? \sanitize_key( \wp_unslash( $_GET['tab'] ) ) : '';
+			if ( 'advanced' === $current_tab ) {
+				\wp_enqueue_script(
+					'activitypub-distribution-mode',
+					\plugins_url( 'assets/js/activitypub-distribution-mode.js', ACTIVITYPUB_PLUGIN_FILE ),
+					array(),
+					ACTIVITYPUB_PLUGIN_VERSION,
+					true
+				);
+			}
+		}
+
+		if ( ! \defined( 'ACTIVITYPUB_SEND_VARY_HEADER' ) ) {
 			\add_settings_field(
 				'activitypub_vary_header',
 				\__( 'Vary Header', 'activitypub' ),
@@ -50,7 +74,7 @@ class Advanced_Settings_Fields {
 			array( 'label_for' => 'activitypub_content_negotiation' )
 		);
 
-		if ( ! defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
+		if ( ! \defined( 'ACTIVITYPUB_AUTHORIZED_FETCH' ) ) {
 			\add_settings_field(
 				'activitypub_authorized_fetch',
 				\__( 'Authorized Fetch', 'activitypub' ),
@@ -79,7 +103,8 @@ class Advanced_Settings_Fields {
 			array( 'label_for' => 'activitypub_following_ui' )
 		);
 
-		if ( \version_compare( \get_bloginfo( 'version' ), '6.9-alpha', '>=' ) ) {
+		// Only offer the Reader opt-in where the app can actually boot (WordPress 7.0+).
+		if ( App::is_supported() ) {
 			\add_settings_field(
 				'activitypub_reader_ui',
 				\__( 'Reader', 'activitypub' ),
@@ -89,6 +114,15 @@ class Advanced_Settings_Fields {
 				array( 'label_for' => 'activitypub_reader_ui' )
 			);
 		}
+
+		\add_settings_field(
+			'activitypub_api',
+			\__( 'ActivityPub API', 'activitypub' ),
+			array( self::class, 'render_api_field' ),
+			'activitypub_advanced_settings',
+			'activitypub_advanced_settings',
+			array( 'label_for' => 'activitypub_api' )
+		);
 
 		\add_settings_field(
 			'activitypub_object_type',
@@ -127,7 +161,7 @@ class Advanced_Settings_Fields {
 		?>
 		<p>
 			<label>
-				<input type="checkbox" id="activitypub_vary_header" name="activitypub_vary_header" value="1" <?php checked( '1', $value ); ?> />
+				<input type="checkbox" id="activitypub_vary_header" name="activitypub_vary_header" value="1" <?php \checked( '1', $value ); ?> />
 				<?php echo \wp_kses( \__( 'Help prevent incorrect caching of ActivityPub responses.', 'activitypub' ), array( 'code' => array() ) ); ?>
 			</label>
 		</p>
@@ -145,7 +179,7 @@ class Advanced_Settings_Fields {
 		?>
 		<p>
 			<label>
-				<input type="checkbox" id="activitypub_content_negotiation" name="activitypub_content_negotiation" value="1" <?php checked( '1', $value ); ?> />
+				<input type="checkbox" id="activitypub_content_negotiation" name="activitypub_content_negotiation" value="1" <?php \checked( '1', $value ); ?> />
 				<?php \esc_html_e( 'Enable content negotiation for browsers and Fediverse services.', 'activitypub' ); ?>
 			</label>
 		</p>
@@ -163,7 +197,7 @@ class Advanced_Settings_Fields {
 		?>
 		<p>
 			<label>
-				<input type="checkbox" id="activitypub_authorized_fetch" name="activitypub_authorized_fetch" value="1" <?php checked( '1', $value ); ?> />
+				<input type="checkbox" id="activitypub_authorized_fetch" name="activitypub_authorized_fetch" value="1" <?php \checked( '1', $value ); ?> />
 				<?php \esc_html_e( 'Require HTTP signature authentication on ActivityPub representations of public posts and profiles.', 'activitypub' ); ?>
 			</label>
 		</p>
@@ -180,11 +214,11 @@ class Advanced_Settings_Fields {
 	 * Render RFC-9421 signature field.
 	 */
 	public static function render_rfc9421_signature_field() {
-		$value = \get_option( 'activitypub_rfc9421_signature', '0' );
+		$value = \get_option( 'activitypub_rfc9421_signature', '1' );
 		?>
 		<p>
 			<label>
-				<input type="checkbox" id="activitypub_rfc9421_signature" name="activitypub_rfc9421_signature" value="1" <?php checked( '1', $value ); ?> />
+				<input type="checkbox" id="activitypub_rfc9421_signature" name="activitypub_rfc9421_signature" value="1" <?php \checked( '1', $value ); ?> />
 				<?php \esc_html_e( 'Use modern signature format for Fediverse communications.', 'activitypub' ); ?>
 			</label>
 		</p>
@@ -202,7 +236,7 @@ class Advanced_Settings_Fields {
 		?>
 		<p>
 			<label>
-				<input type="checkbox" id="activitypub_following_ui" name="activitypub_following_ui" value="1" <?php checked( '1', $value ); ?> />
+				<input type="checkbox" id="activitypub_following_ui" name="activitypub_following_ui" value="1" <?php \checked( '1', $value ); ?> />
 				Display the "Following" interface in the admin menus and settings.
 			</label>
 		</p>
@@ -223,7 +257,7 @@ class Advanced_Settings_Fields {
 		?>
 		<p>
 			<label>
-				<input type="checkbox" id="activitypub_reader_ui" name="activitypub_reader_ui" value="1" <?php checked( '1', $value ); ?> />
+				<input type="checkbox" id="activitypub_reader_ui" name="activitypub_reader_ui" value="1" <?php \checked( '1', $value ); ?> />
 				Enable the Reader to view posts from accounts you follow.
 			</label>
 		</p>
@@ -232,6 +266,32 @@ class Advanced_Settings_Fields {
 		</p>
 		<p class="description">
 			⚠ This feature is experimental and may change significantly in future updates.
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render ActivityPub API field.
+	 */
+	public static function render_api_field() {
+		$value = \get_option( 'activitypub_api', '0' );
+		?>
+		<p>
+			<label>
+				<input type="checkbox" id="activitypub_api" name="activitypub_api" value="1" <?php \checked( '1', $value ); ?> />
+				<?php \esc_html_e( 'Enable the ActivityPub API to connect third-party clients.', 'activitypub' ); ?>
+			</label>
+		</p>
+		<p class="description">
+			<?php \esc_html_e( 'Enables OAuth 2.0 authentication so third-party ActivityPub clients (like Mastodon apps) can post, follow, and interact on your behalf. You can manage connected apps from your profile page.', 'activitypub' ); ?>
+		</p>
+		<p class="description">
+			<?php
+			echo \wp_kses(
+				\__( '⚠ This feature is experimental and may change significantly in future updates.', 'activitypub' ),
+				'data'
+			);
+			?>
 		</p>
 		<?php
 	}
@@ -251,6 +311,73 @@ class Advanced_Settings_Fields {
 		<p class="description">
 			<?php \esc_html_e( 'This is mainly for backwards compatibility. It is not recommended to use the Template Tags, because it might not be supported in future versions.', 'activitypub' ); ?>
 		</p>
+		<?php
+	}
+
+	/**
+	 * Render distribution mode field.
+	 *
+	 * @since 9.0.0
+	 */
+	public static function render_distribution_mode_field() {
+		$mode = \get_option( 'activitypub_distribution_mode', 'default' );
+
+		// Use centralized presets and add the custom option for the UI.
+		$modes           = Options::get_distribution_modes();
+		$modes['custom'] = array(
+			'label'       => \__( 'Custom', 'activitypub' ),
+			'description' => \__( 'Configure batch size and delay manually.', 'activitypub' ),
+		);
+
+		// Custom fields fall back to the default preset values when unset.
+		$custom_batch = \get_option( 'activitypub_custom_batch_size', $modes['default']['batch_size'] );
+		$custom_pause = \get_option( 'activitypub_custom_batch_pause', $modes['default']['pause'] );
+
+		?>
+		<fieldset>
+			<legend class="screen-reader-text"><span><?php \esc_html_e( 'Distribution Mode', 'activitypub' ); ?></span></legend>
+			<p class="description">
+				<?php \esc_html_e( 'Controls how quickly the plugin sends posts to followers. Slower modes reduce server load but delay delivery.', 'activitypub' ); ?>
+			</p>
+			<?php
+			foreach ( $modes as $key => $data ) {
+				?>
+				<p>
+					<label>
+						<input type="radio" name="activitypub_distribution_mode" value="<?php echo \esc_attr( $key ); ?>" <?php \checked( $key, $mode ); ?> />
+						<strong><?php echo \esc_html( $data['label'] ); ?></strong>
+					</label>
+					<br />
+					<?php echo \wp_kses( $data['description'], array( 'code' => array() ) ); ?>
+				</p>
+				<?php
+			}
+
+			/*
+			 * The custom fields are rendered visible so they remain usable when
+			 * JavaScript is disabled. The accompanying script collapses them on
+			 * page load when the active mode is not "custom" and toggles them
+			 * as the radio changes.
+			 */
+			?>
+			<ul id="activitypub-custom-distribution-fields">
+				<li>
+					<label>
+						<?php \esc_html_e( 'Batch size:', 'activitypub' ); ?>
+						<input type="number" name="activitypub_custom_batch_size" value="<?php echo \esc_attr( $custom_batch ); ?>" min="1" step="1" class="small-text" />
+					</label>
+				</li>
+				<li>
+					<label>
+						<?php \esc_html_e( 'Pause between batches (seconds):', 'activitypub' ); ?>
+						<input type="number" name="activitypub_custom_batch_pause" value="<?php echo \esc_attr( $custom_pause ); ?>" min="0" step="1" class="small-text" />
+					</label>
+				</li>
+			</ul>
+			<p class="description">
+				<?php \esc_html_e( 'With many followers, slower modes may delay delivery. For example, Eco Mode with 1,000 followers takes approximately 25 minutes per post.', 'activitypub' ); ?>
+			</p>
+		</fieldset>
 		<?php
 	}
 }

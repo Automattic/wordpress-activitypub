@@ -117,16 +117,20 @@ class Inbox {
 
 		$inbox_item = array(
 			'post_type'    => self::POST_TYPE,
-			'post_title'   => sprintf(
+			'post_title'   => \sprintf(
 				/* translators: 1. Activity type, 2. Object Title or Excerpt */
 				\__( '[%1$s] %2$s', 'activitypub' ),
 				$activity->get_type(),
 				\wp_trim_words( $title, 5 )
 			),
-			'post_content' => wp_slash( $activity->to_json() ),
+			// Persist the blind audience so we keep the full addressing the sender used.
+			'post_content' => \wp_slash( $activity->to_json( true, true ) ),
 			'post_author'  => 0, // No specific author, recipients stored in meta.
 			'post_status'  => 'publish',
-			'guid'         => $activity->get_id(),
+			// Store the GUID the way get_by_guid() looks it up, which is with esc_url(): an
+			// ampersand becomes `&#038;`. Passing it unescaped instead lets `pre_post_guid`
+			// store it as `&amp;`, and the two spellings never match.
+			'guid'         => \esc_url( $activity->get_id() ),
 			'meta_input'   => array(
 				'_activitypub_object_id'             => $object_id,
 				'_activitypub_activity_type'         => $activity->get_type(),
@@ -165,7 +169,7 @@ class Inbox {
 	 * @return string The title.
 	 */
 	private static function get_object_title( $activity_object ) {
-		if ( ! $activity_object || is_array( $activity_object ) ) {
+		if ( ! $activity_object || \is_array( $activity_object ) ) {
 			return '';
 		}
 
@@ -227,16 +231,36 @@ class Inbox {
 	/**
 	 * Undo a received activity.
 	 *
-	 * @param string $id The ID of the inbox item to be removed.
+	 * @param string      $id    The ID of the inbox item to be removed.
+	 * @param string|null $actor Optional. The actor URI of the Undo sender. When provided, the
+	 *                           activity is only undone if this actor created the original
+	 *                           activity. Default null.
 	 *
 	 * @return bool|\WP_Error True on success, WP_Error on failure.
 	 */
-	public static function undo( $id ) {
+	public static function undo( $id, $actor = null ) {
 		$inbox_item = self::get_by_guid( $id );
 
 		if ( \is_wp_error( $inbox_item ) ) {
 			// If inbox entry not found, return the error.
 			return $inbox_item;
+		}
+
+		/*
+		 * Only the actor that created the original activity may undo it. Without this
+		 * binding a remote server could undo (and, for interactions, force-delete the
+		 * comment behind) any activity whose public id it knows but does not own.
+		 *
+		 * Items stored before this meta existed have no actor recorded; those are let
+		 * through for backward compatibility rather than becoming permanently un-undoable.
+		 */
+		$stored_actor = \get_post_meta( $inbox_item->ID, '_activitypub_activity_remote_actor', true );
+		if ( null !== $actor && $stored_actor && object_to_uri( $actor ) !== $stored_actor ) {
+			return new \WP_Error(
+				'activitypub_inbox_undo_forbidden',
+				\__( 'Undo is not possible because the actor does not own the activity.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
 		}
 
 		$type = \get_post_meta( $inbox_item->ID, '_activitypub_activity_type', true );
@@ -265,7 +289,15 @@ class Inbox {
 					);
 				}
 
-				$result = Comment::object_id_to_comment( esc_url_raw( $inbox_item->guid ) );
+				/*
+				 * The comment stores the activity ID as it arrived, so undo the escaping applied
+				 * to the GUID before comparing the two. Only the sequences that escaping can
+				 * produce are reversed, plus the `&amp;` that rows written before it carry:
+				 * decoding the full entity set would also rewrite a `&lt;` or `&quot;` that an ID
+				 * happens to contain as literal text, which escaping never put there.
+				 */
+				$decoded = \str_replace( array( '&#038;', '&amp;', '&#039;' ), array( '&', '&', "'" ), $inbox_item->guid );
+				$result  = Comment::object_id_to_comment( \esc_url_raw( $decoded ) );
 
 				if ( empty( $result ) ) {
 					return new \WP_Error(
@@ -473,7 +505,7 @@ class Inbox {
 		}
 
 		// Keep the first (oldest) post as primary.
-		$primary_id = array_shift( $post_ids );
+		$primary_id = \array_shift( $post_ids );
 		$primary    = \get_post( $primary_id );
 
 		// Merge recipients from duplicates into primary and delete duplicates.

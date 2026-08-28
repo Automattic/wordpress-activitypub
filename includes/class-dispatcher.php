@@ -34,6 +34,7 @@ class Dispatcher {
 	public static function init() {
 		\add_action( 'activitypub_process_outbox', array( self::class, 'process_outbox' ) );
 
+		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'fire_outbox_handlers' ), 5, 2 );
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'send_immediate_accept' ), 10, 2 );
 
 		// Default filters to add Inboxes to sent to.
@@ -56,7 +57,7 @@ class Dispatcher {
 		 *
 		 * @param int $batch_size The batch size. Default ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE.
 		 */
-		return apply_filters( 'activitypub_dispatcher_batch_size', ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE );
+		return \apply_filters( 'activitypub_dispatcher_batch_size', ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE );
 	}
 
 	/**
@@ -70,7 +71,7 @@ class Dispatcher {
 		 *
 		 * @param int $retry_max_attempts The maximum number of retry attempts. Default ACTIVITYPUB_OUTBOX_RETRY_MAX_ATTEMPTS.
 		 */
-		return apply_filters( 'activitypub_dispatcher_retry_max_attempts', 3 );
+		return \apply_filters( 'activitypub_dispatcher_retry_max_attempts', 3 );
 	}
 
 	/**
@@ -88,7 +89,7 @@ class Dispatcher {
 		 *
 		 * @param int $retry_delay_unit The retry delay unit in seconds. Default ACTIVITYPUB_OUTBOX_RETRY_DELAY_UNIT.
 		 */
-		return apply_filters( 'activitypub_dispatcher_retry_delay', HOUR_IN_SECONDS );
+		return \apply_filters( 'activitypub_dispatcher_retry_delay', HOUR_IN_SECONDS );
 	}
 
 	/**
@@ -104,7 +105,7 @@ class Dispatcher {
 		 *
 		 * @param int[] $retry_error_codes The error codes. Default array( 408, 429, 500, 502, 503, 504 ).
 		 */
-		return apply_filters( 'activitypub_dispatcher_retry_error_codes', ACTIVITYPUB_RETRY_ERROR_CODES );
+		return \apply_filters( 'activitypub_dispatcher_retry_error_codes', ACTIVITYPUB_RETRY_ERROR_CODES );
 	}
 
 	/**
@@ -162,16 +163,27 @@ class Dispatcher {
 		}
 
 		$outbox_item = \get_post( $outbox_item_id );
-		$json        = Outbox::get_activity( $outbox_item_id )->to_json();
-		$inboxes     = Followers::get_inboxes_for_activity( $json, $outbox_item->post_author, $batch_size, $offset );
-		$retries     = self::send_to_inboxes( $inboxes, $outbox_item_id );
+
+		if ( ! $outbox_item ) {
+			return;
+		}
+
+		$activity = Outbox::get_activity( $outbox_item_id );
+
+		if ( \is_wp_error( $activity ) ) {
+			return;
+		}
+
+		$json    = $activity->to_json();
+		$inboxes = Followers::get_inboxes_for_activity( $json, $outbox_item->post_author, $batch_size, $offset );
+		$retries = self::send_to_inboxes( $inboxes, $outbox_item_id );
 
 		// Retry failed inboxes.
 		if ( ! empty( $retries ) ) {
 			self::schedule_retry( $retries, $outbox_item_id );
 		}
 
-		if ( is_countable( $inboxes ) && count( $inboxes ) < $batch_size ) {
+		if ( \is_countable( $inboxes ) && \count( $inboxes ) < $batch_size ) {
 			\delete_post_meta( $outbox_item_id, '_activitypub_outbox_offset' );
 
 			/**
@@ -241,10 +253,13 @@ class Dispatcher {
 	private static function send_to_inboxes( $inboxes, $outbox_item_id ) {
 		$outbox_item = \get_post( $outbox_item_id );
 
-		// Strip bto and bcc before delivery per ActivityPub spec Section 6.2.
-		\add_filter( 'activitypub_activity_object_array', array( self::class, 'strip_private_addressing' ) );
-		$json = Outbox::get_activity( $outbox_item_id )->to_json();
-		\remove_filter( 'activitypub_activity_object_array', array( self::class, 'strip_private_addressing' ) );
+		$activity = Outbox::get_activity( $outbox_item_id );
+
+		if ( \is_wp_error( $activity ) ) {
+			return array();
+		}
+
+		$json = $activity->to_json();
 
 		$retries = array();
 
@@ -265,7 +280,7 @@ class Dispatcher {
 				$result = safe_remote_post( $inbox, $json, $outbox_item->post_author );
 			}
 
-			if ( \is_wp_error( $result ) && in_array( $result->get_error_code(), self::get_retry_error_codes(), true ) ) {
+			if ( \is_wp_error( $result ) && \in_array( $result->get_error_code(), self::get_retry_error_codes(), true ) ) {
 				$retries[] = $inbox;
 			}
 
@@ -294,7 +309,7 @@ class Dispatcher {
 	private static function send_to_local_inbox( $inbox_url, $json ) {
 		// Parse the inbox URL to extract the REST route.
 		$path       = \wp_parse_url( $inbox_url, PHP_URL_PATH ) ?? '';
-		$rest_route = \preg_replace( '#^/' . preg_quote( \rest_get_url_prefix(), '#' ) . '#', '', $path );
+		$rest_route = \preg_replace( '#^/' . \preg_quote( \rest_get_url_prefix(), '#' ) . '#', '', $path );
 
 		// Create a REST request.
 		$request = new \WP_REST_Request( 'POST', $rest_route );
@@ -317,34 +332,6 @@ class Dispatcher {
 			),
 			'body'     => \wp_json_encode( $response->get_data() ),
 		);
-	}
-
-	/**
-	 * Strip bto and bcc fields from an Activity array before delivery.
-	 *
-	 * The ActivityPub spec (Section 6.2) requires servers to remove bto and bcc
-	 * from Activities and their embedded objects before delivery to prevent
-	 * revealing private recipient lists.
-	 *
-	 * Used as a temporary filter on `activitypub_activity_object_array` so that
-	 * `to_json()` handles encoding consistently.
-	 *
-	 * @since unreleased
-	 *
-	 * @see https://www.w3.org/TR/activitypub/#delivery
-	 *
-	 * @param array $data The Activity array.
-	 * @return array The sanitized array with bto and bcc removed.
-	 */
-	public static function strip_private_addressing( $data ) {
-		unset( $data['bto'], $data['bcc'] );
-
-		// Also strip from the embedded object, if present.
-		if ( isset( $data['object'] ) && \is_array( $data['object'] ) ) {
-			unset( $data['object']['bto'], $data['object']['bcc'] );
-		}
-
-		return $data;
 	}
 
 	/**
@@ -382,8 +369,8 @@ class Dispatcher {
 		 * @param int      $actor_id The actor ID.
 		 * @param Activity $activity The ActivityPub Activity.
 		 */
-		$inboxes = apply_filters( 'activitypub_additional_inboxes', array(), $actor_id, $activity );
-		$inboxes = array_unique( $inboxes );
+		$inboxes = \apply_filters( 'activitypub_additional_inboxes', array(), $actor_id, $activity );
+		$inboxes = \array_unique( $inboxes );
 
 		$retries = self::send_to_inboxes( $inboxes, $outbox_item->ID );
 
@@ -406,15 +393,15 @@ class Dispatcher {
 		$cc = $activity->get_cc() ?? array();
 		$to = $activity->get_to() ?? array();
 
-		$audience = array_merge( $cc, $to );
+		$audience = \array_merge( $cc, $to );
 
 		// Remove "public placeholder" from the audience.
-		$audience = array_diff( $audience, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS );
+		$audience = \array_diff( $audience, ACTIVITYPUB_PUBLIC_AUDIENCE_IDENTIFIERS );
 
 		if ( $audience ) {
 			$mentioned_inboxes = Mention::get_inboxes( $audience );
 
-			return array_merge( $inboxes, $mentioned_inboxes );
+			return \array_merge( $inboxes, $mentioned_inboxes );
 		}
 
 		return $inboxes;
@@ -436,7 +423,7 @@ class Dispatcher {
 			return $inboxes;
 		}
 
-		if ( ! is_array( $in_reply_to ) ) {
+		if ( ! \is_array( $in_reply_to ) ) {
 			$in_reply_to = array( $in_reply_to );
 		}
 
@@ -483,23 +470,25 @@ class Dispatcher {
 	 * @return boolean True if the Activity should be sent to followers, false if not.
 	 */
 	protected static function should_send_to_followers( $activity, $actor, $outbox_item ) {
-		$cc = $activity->get_cc() ?? array();
-		$to = $activity->get_to() ?? array();
+		$cc  = (array) ( $activity->get_cc() ?? array() );
+		$to  = (array) ( $activity->get_to() ?? array() );
+		$bcc = (array) ( $activity->get_bcc() ?? array() );
+		$bto = (array) ( $activity->get_bto() ?? array() );
 
-		$audience = array_merge( $cc, $to );
+		$audience = \array_merge( $cc, $to, $bcc, $bto );
 
 		$send = (
 			// Check if activity is public.
 			is_activity_public( $activity ) ||
 			// ...or check if follower endpoint is set.
-			in_array( $actor->get_followers(), $audience, true )
+			\in_array( $actor->get_followers(), $audience, true )
 		);
 
 		if ( $send ) {
 			$followers = Followers::get_inboxes_for_activity( $activity->to_json(), $outbox_item->post_author );
 
 			// Only send if there are followers to send to.
-			$send = ! is_countable( $followers ) || 0 < count( $followers );
+			$send = ! \is_countable( $followers ) || 0 < \count( $followers );
 		}
 
 		/**
@@ -510,7 +499,7 @@ class Dispatcher {
 		 * @param int      $actor_id                   The actor ID.
 		 * @param \WP_Post $outbox_item                The WordPress object.
 		 */
-		return apply_filters( 'activitypub_send_activity_to_followers', $send, $activity, $outbox_item->post_author, $outbox_item );
+		return \apply_filters( 'activitypub_send_activity_to_followers', $send, $activity, $outbox_item->post_author, $outbox_item );
 	}
 
 	/**
@@ -534,7 +523,40 @@ class Dispatcher {
 			return $inboxes;
 		}
 
-		return array_merge( $inboxes, $relays );
+		return \array_merge( $inboxes, $relays );
+	}
+
+	/**
+	 * Fire outbox handlers for activities.
+	 *
+	 * Triggers activity type-specific handlers to process outbox activities,
+	 * allowing handlers to create WordPress posts or perform other side effects.
+	 *
+	 * @param int      $outbox_id The Outbox item ID.
+	 * @param Activity $activity  The Activity that was just added to the Outbox.
+	 */
+	public static function fire_outbox_handlers( $outbox_id, $activity ) {
+		$outbox_item = \get_post( $outbox_id );
+
+		if ( ! $outbox_item ) {
+			return;
+		}
+
+		$type    = $activity->get_type();
+		$user_id = $outbox_item->post_author;
+		$data    = $activity->to_array( false );
+
+		/**
+		 * Fires when an activity has been added to the outbox.
+		 *
+		 * Handlers can implement side effects like creating WordPress posts.
+		 *
+		 * @param array    $data       The activity data array.
+		 * @param int      $user_id    The user ID.
+		 * @param Activity $activity   The Activity object.
+		 * @param int      $outbox_id  The outbox post ID.
+		 */
+		\do_action( 'activitypub_handled_outbox_' . \strtolower( $type ), $data, $user_id, $activity, $outbox_id );
 	}
 
 	/**

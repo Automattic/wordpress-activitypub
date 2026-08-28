@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Accept incoming activities from servers that use standalone key objects for HTTP Signatures.

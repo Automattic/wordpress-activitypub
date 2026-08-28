@@ -14,6 +14,7 @@ use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Remote_Actors;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 use function Activitypub\user_can_activitypub;
 
@@ -99,7 +100,7 @@ class Quote_Request {
 	 * @param string         $type     The type of the activity.
 	 */
 	public static function handle_blocked_request( $activity, $user_ids, $type ) {
-		if ( ! in_array( strtolower( $type ), array( 'quoterequest', 'quote_request' ), true ) ) {
+		if ( ! \in_array( \strtolower( $type ), array( 'quoterequest', 'quote_request' ), true ) ) {
 			return;
 		}
 
@@ -218,7 +219,7 @@ class Quote_Request {
 		$activity_object['instrument'] = object_to_uri( $activity_object['instrument'] );
 
 		$post_meta = \get_post_meta( $post_id, '_activitypub_quoted_by', false );
-		if ( in_array( $activity_object['instrument'], $post_meta, true ) ) {
+		if ( \in_array( $activity_object['instrument'], $post_meta, true ) ) {
 			global $wpdb;
 
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -235,7 +236,7 @@ class Quote_Request {
 		}
 
 		// Only send minimal data.
-		$activity_object = array_intersect_key(
+		$activity_object = \array_intersect_key(
 			$activity_object,
 			array(
 				'id'         => 1,
@@ -287,7 +288,7 @@ class Quote_Request {
 		$activity_object['instrument'] = object_to_uri( $activity_object['instrument'] );
 
 		// Only send minimal data.
-		$activity_object = array_intersect_key(
+		$activity_object = \array_intersect_key(
 			$activity_object,
 			array(
 				'id'         => 1,
@@ -328,6 +329,12 @@ class Quote_Request {
 		}
 
 		if ( ! isset( $activity['actor'], $activity['object'], $activity['instrument'] ) ) {
+			return false;
+		}
+
+		// The instrument is the quoting object, authored by the actor, so it must live on the
+		// actor's host. Otherwise a remote server could bind a third-party reference to a local post.
+		if ( ! is_same_host( $activity['actor'], $activity['instrument'] ) ) {
 			return false;
 		}
 

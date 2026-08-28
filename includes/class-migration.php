@@ -11,6 +11,7 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
+use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Transformer\Factory;
@@ -33,6 +34,8 @@ class Migration {
 		Scheduler::register_async_batch_callback( 'activitypub_create_comment_outbox_items', array( self::class, 'create_comment_outbox_items' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_migrate_avatar_to_remote_actors', array( self::class, 'migrate_avatar_to_remote_actors' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_migrate_actor_emoji', array( self::class, 'migrate_actor_emoji' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_backfill_statistics', array( Statistics::class, 'backfill_historical_stats' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_tombstone_migrate', array( self::class, 'migrate_tombstones_to_cpt' ) );
 	}
 
 	/**
@@ -41,7 +44,7 @@ class Migration {
 	 * @return string The current version.
 	 */
 	public static function get_version() {
-		return get_option( 'activitypub_db_version', 0 );
+		return \get_option( 'activitypub_db_version', 0 );
 	}
 
 	/**
@@ -159,19 +162,14 @@ class Migration {
 		if ( \version_compare( $version_from_db, '4.7.2', '<' ) ) {
 			self::migrate_to_4_7_2();
 		}
-		if ( \version_compare( $version_from_db, '4.7.3', '<' ) ) {
-			add_action( 'init', 'flush_rewrite_rules', 20 );
-		}
 		if ( \version_compare( $version_from_db, '5.0.0', '<' ) ) {
 			Scheduler::register_schedules();
 			\wp_schedule_single_event( \time(), 'activitypub_create_post_outbox_items' );
 			\wp_schedule_single_event( \time() + 15, 'activitypub_create_comment_outbox_items' );
-			add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
 		if ( \version_compare( $version_from_db, '5.4.0', '<' ) ) {
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_slashing' ) );
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_comment_author_emails' ) );
-			\add_action( 'init', 'flush_rewrite_rules', 20 );
 		}
 		if ( \version_compare( $version_from_db, '5.7.0', '<' ) ) {
 			self::delete_mastodon_api_orphaned_extra_fields();
@@ -179,50 +177,61 @@ class Migration {
 		if ( \version_compare( $version_from_db, '5.8.0', '<' ) ) {
 			self::update_notification_options();
 		}
-
 		if ( \version_compare( $version_from_db, '6.0.0', '<' ) ) {
 			self::migrate_followers_to_ap_actor_cpt();
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_storage' ) );
 		}
-
 		if ( \version_compare( $version_from_db, '6.0.1', '<' ) ) {
 			self::migrate_followers_to_ap_actor_cpt();
 			\wp_schedule_single_event( \time(), 'activitypub_upgrade', array( 'update_actor_json_storage' ) );
 		}
-
 		if ( \version_compare( $version_from_db, '7.0.0', '<' ) ) {
-			wp_unschedule_hook( 'activitypub_update_followers' );
-			wp_unschedule_hook( 'activitypub_cleanup_followers' );
+			\wp_unschedule_hook( 'activitypub_update_followers' );
+			\wp_unschedule_hook( 'activitypub_cleanup_followers' );
 
 			if ( ! \wp_next_scheduled( 'activitypub_update_remote_actors' ) ) {
-				\wp_schedule_event( time(), 'hourly', 'activitypub_update_remote_actors' );
+				\wp_schedule_event( \time(), 'hourly', 'activitypub_update_remote_actors' );
 			}
 
 			if ( ! \wp_next_scheduled( 'activitypub_cleanup_remote_actors' ) ) {
-				\wp_schedule_event( time(), 'daily', 'activitypub_cleanup_remote_actors' );
+				\wp_schedule_event( \time(), 'daily', 'activitypub_cleanup_remote_actors' );
 			}
 		}
-
 		if ( \version_compare( $version_from_db, '7.3.0', '<' ) ) {
 			self::remove_pending_application_user_follow_requests();
 		}
-
 		if ( \version_compare( $version_from_db, '7.5.0', '<' ) ) {
 			self::sync_jetpack_following_meta();
 		}
-
 		if ( \version_compare( $version_from_db, '7.6.0', '<' ) ) {
 			self::clean_up_inbox();
 			\wp_schedule_single_event( \time(), 'activitypub_migrate_avatar_to_remote_actors' );
 		}
-
 		if ( \version_compare( $version_from_db, '7.9.0', '<' ) ) {
 			\wp_schedule_single_event( \time(), 'activitypub_migrate_actor_emoji' );
 		}
-
-		if ( \version_compare( $version_from_db, 'unreleased', '<' ) ) {
-			Activitypub::flush_rewrite_rules();
+		if ( \version_compare( $version_from_db, '8.1.0', '<' ) && ! \wp_next_scheduled( 'activitypub_backfill_statistics' ) ) {
+			// Backfill historical statistics data (delay + jitter to avoid load spikes on hosts running many sites).
+			\wp_schedule_single_event( \time() + HOUR_IN_SECONDS + \wp_rand( 0, 6 * HOUR_IN_SECONDS ), 'activitypub_backfill_statistics' );
 		}
+
+		if ( \version_compare( $version_from_db, '8.3.0', '<' ) ) {
+			if ( ! \wp_next_scheduled( 'activitypub_tombstone_migrate' ) ) {
+				\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_tombstone_migrate' );
+			}
+		}
+		if ( \version_compare( $version_from_db, '9.1.0', '<' ) ) {
+			self::migrate_application_keypair_option();
+			self::delete_application_outbox_items();
+		}
+
+		/*
+		 * Defer the flush to late in the `init` cycle (priority 20). Migration::init
+		 * runs at priority 1, which is earlier than most plugins register their
+		 * rewrite rules. Flushing synchronously here would persist a truncated
+		 * ruleset that omits third-party rules added on `init` at priority 10.
+		 */
+		\add_action( 'init', array( Activitypub::class, 'flush_rewrite_rules' ), 20 );
 
 		// Ensure all required cron schedules are registered.
 		Scheduler::register_schedules();
@@ -294,8 +303,8 @@ class Migration {
 	 */
 	public static function migrate_from_0_17() {
 		// Migrate followers.
-		foreach ( get_users( array( 'fields' => 'ID' ) ) as $user_id ) {
-			$followers = get_user_meta( $user_id, 'activitypub_followers', true );
+		foreach ( \get_users( array( 'fields' => 'ID' ) ) as $user_id ) {
+			$followers = \get_user_meta( $user_id, 'activitypub_followers', true );
 
 			if ( $followers ) {
 				foreach ( $followers as $actor ) {
@@ -303,8 +312,6 @@ class Migration {
 				}
 			}
 		}
-
-		Activitypub::flush_rewrite_rules();
 	}
 
 	/**
@@ -319,7 +326,7 @@ class Migration {
 		);
 
 		foreach ( $user_ids as $user_id ) {
-			wp_cache_delete( sprintf( Followers::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
+			\wp_cache_delete( \sprintf( Followers::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
 		}
 	}
 
@@ -327,13 +334,13 @@ class Migration {
 	 * Unschedule Hooks after updating to 2.0.0.
 	 */
 	private static function migrate_from_2_0_0() {
-		wp_clear_scheduled_hook( 'activitypub_send_post_activity' );
-		wp_clear_scheduled_hook( 'activitypub_send_update_activity' );
-		wp_clear_scheduled_hook( 'activitypub_send_delete_activity' );
+		\wp_clear_scheduled_hook( 'activitypub_send_post_activity' );
+		\wp_clear_scheduled_hook( 'activitypub_send_update_activity' );
+		\wp_clear_scheduled_hook( 'activitypub_send_delete_activity' );
 
-		wp_unschedule_hook( 'activitypub_send_post_activity' );
-		wp_unschedule_hook( 'activitypub_send_update_activity' );
-		wp_unschedule_hook( 'activitypub_send_delete_activity' );
+		\wp_unschedule_hook( 'activitypub_send_post_activity' );
+		\wp_unschedule_hook( 'activitypub_send_update_activity' );
+		\wp_unschedule_hook( 'activitypub_send_delete_activity' );
 
 		$object_type = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
 		if ( 'article' === $object_type ) {
@@ -354,7 +361,7 @@ class Migration {
 	 * Rename DB fields.
 	 */
 	private static function migrate_from_2_6_0() {
-		wp_cache_flush();
+		\wp_cache_flush();
 
 		self::update_usermeta_key( 'activitypub_user_description', 'activitypub_description' );
 
@@ -370,7 +377,7 @@ class Migration {
 		$latest_post_id = 0;
 
 		// Get the ID of the latest blog post and save it to the options table.
-		$latest_post = get_posts(
+		$latest_post = \get_posts(
 			array(
 				'numberposts' => 1,
 				'orderby'     => 'ID',
@@ -483,7 +490,7 @@ class Migration {
 			$wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type = %s", Remote_Actors::POST_TYPE )
 		);
 		foreach ( $followers as $id ) {
-			clean_post_cache( $id );
+			\clean_post_cache( $id );
 		}
 	}
 
@@ -501,7 +508,7 @@ class Migration {
 
 		Comment::register_comment_types();
 		$comment_types  = Comment::get_comment_type_slugs();
-		$type_inclusion = "AND comment_type IN ('" . implode( "','", $comment_types ) . "')";
+		$type_inclusion = "AND comment_type IN ('" . \implode( "','", $comment_types ) . "')";
 
 		// Get and process this batch.
 		$post_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB
@@ -517,7 +524,7 @@ class Migration {
 			\wp_update_comment_count_now( $post_id );
 		}
 
-		if ( count( $post_ids ) === $batch_size ) {
+		if ( \count( $post_ids ) === $batch_size ) {
 			// Schedule next batch.
 			return array( $batch_size, $offset + $batch_size );
 		}
@@ -561,7 +568,7 @@ class Migration {
 			}
 		}
 
-		if ( count( $posts ) === $batch_size ) {
+		if ( \count( $posts ) === $batch_size ) {
 			return array(
 				'batch_size' => $batch_size,
 				'offset'     => $offset + $batch_size,
@@ -598,7 +605,7 @@ class Migration {
 			self::add_to_outbox( $comment, 'Create', $comment->user_id );
 		}
 
-		if ( count( $comments ) === $batch_size ) {
+		if ( \count( $comments ) === $batch_size ) {
 			return array(
 				'batch_size' => $batch_size,
 				'offset'     => $offset + $batch_size,
@@ -694,7 +701,7 @@ class Migration {
 			);
 		}
 
-		if ( count( $comments ) === $batch_size ) {
+		if ( \count( $comments ) === $batch_size ) {
 			return array(
 				'batch_size' => $batch_size,
 				'offset'     => $offset + $batch_size,
@@ -1028,7 +1035,7 @@ class Migration {
 			$wpdb->postmeta,
 			array(
 				'meta_key'   => '_activitypub_following', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'meta_value' => Actors::APPLICATION_USER_ID, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+				'meta_value' => -1, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 			)
 		);
 	}
@@ -1082,7 +1089,7 @@ class Migration {
 		$inbox_ids = $wpdb->get_col(
 			$wpdb->prepare(
 				"SELECT ID FROM {$wpdb->posts} WHERE post_type = %s",
-				\Activitypub\Collection\Inbox::POST_TYPE
+				Inbox::POST_TYPE
 			)
 		);
 
@@ -1090,6 +1097,119 @@ class Migration {
 		foreach ( $inbox_ids as $post_id ) {
 			\wp_delete_post( $post_id, true );
 		}
+	}
+
+	/**
+	 * Migrate URLs from the legacy `activitypub_tombstone_urls` option into the
+	 * `ap_tombstone` custom post type.
+	 *
+	 * Chunked async migration. Locking and rescheduling is handled by
+	 * Scheduler::async_batch — the callback returns `array( 'batch_size' => N )`
+	 * to request another run, or `null` when the option is fully drained.
+	 *
+	 * Legacy entries are already-normalized strings (no scheme), so we bypass
+	 * URL validation and insert directly via wp_insert_post.
+	 *
+	 * @since 8.3.0
+	 *
+	 * @param int $batch_size Optional. Number of URLs to process per call. Default 500.
+	 * @return array|null Args for the next run, or null when migration is complete.
+	 */
+	public static function migrate_tombstones_to_cpt( $batch_size = 500 ) {
+		global $wpdb;
+
+		$urls = \get_option( 'activitypub_tombstone_urls', null );
+
+		if ( null === $urls || ! \is_array( $urls ) || empty( $urls ) ) {
+			\delete_option( 'activitypub_tombstone_urls' );
+			return null;
+		}
+
+		$chunk      = \array_slice( $urls, 0, (int) $batch_size );
+		$remaining  = \array_slice( $urls, (int) $batch_size );
+		$progressed = false;
+
+		foreach ( $chunk as $normalized ) {
+			if ( ! \is_string( $normalized ) || '' === $normalized ) {
+				// Drop garbage entries — counts as progress.
+				$progressed = true;
+				continue;
+			}
+
+			$hash = \md5( $normalized );
+
+			/*
+			 * Light existence check. `get_page_by_path()` would hydrate a
+			 * full `WP_Post` per loop iteration; on a large registry that
+			 * adds up fast. We only need a boolean here.
+			 */
+			$exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->prepare(
+					"SELECT 1 FROM {$wpdb->posts} WHERE post_type = %s AND post_name = %s LIMIT 1",
+					Tombstone::POST_TYPE,
+					$hash
+				)
+			);
+			if ( $exists ) {
+				$progressed = true;
+				continue;
+			}
+
+			/*
+			 * `guid` is intentionally omitted: the legacy option only kept
+			 * the normalized (schemeless) form, so we can't reconstruct the
+			 * original URL. Storing the schemeless string would be mangled
+			 * by `esc_url()`. Leave WordPress to auto-generate the guid
+			 * — it's not used for lookups, only for debugging.
+			 */
+			$result = \wp_insert_post(
+				array(
+					'post_type'   => Tombstone::POST_TYPE,
+					'post_status' => 'publish',
+					'post_name'   => $hash,
+					'post_author' => 0,
+				),
+				true
+			);
+
+			if ( \is_wp_error( $result ) || ! $result ) {
+				/*
+				 * Keep failed inserts in the legacy option so the next batch
+				 * retries them. `Tombstone::exists_local()` still falls back
+				 * to the option, so the tombstone remains discoverable.
+				 */
+				$remaining[] = $normalized;
+			} else {
+				$progressed = true;
+			}
+		}
+
+		if ( empty( $remaining ) ) {
+			\delete_option( 'activitypub_tombstone_urls' );
+			return null;
+		}
+
+		/*
+		 * Disable autoload while we drain. The point of the migration is to
+		 * stop this option from contributing to `alloptions` pressure, so
+		 * flip the flag immediately rather than waiting for the option to
+		 * be fully empty before the relief kicks in.
+		 */
+		\update_option( 'activitypub_tombstone_urls', \array_values( $remaining ), false );
+
+		/*
+		 * If nothing in this batch was drained — every insert errored and
+		 * nothing was already migrated — halt the scheduler so we don't loop
+		 * forever on a persistent failure. The legacy option still backs
+		 * exists_local(), so the data isn't lost; an admin can re-trigger
+		 * the migration via `wp cron event run activitypub_tombstone_migrate`
+		 * after fixing the underlying cause.
+		 */
+		if ( ! $progressed ) {
+			return null;
+		}
+
+		return array( 'batch_size' => (int) $batch_size );
 	}
 
 	/**
@@ -1157,7 +1277,7 @@ class Migration {
 		}
 
 		// Return batch info if there are more comments to process.
-		if ( count( $comments ) === $batch_size ) {
+		if ( \count( $comments ) === $batch_size ) {
 			return array(
 				'batch_size' => $batch_size,
 			);
@@ -1207,7 +1327,7 @@ class Migration {
 		}
 
 		// Return batch info if there are more actors to process.
-		if ( count( $actors ) === $batch_size ) {
+		if ( \count( $actors ) === $batch_size ) {
 			return array(
 				'batch_size' => $batch_size,
 				'offset'     => $offset + $batch_size,
@@ -1215,5 +1335,63 @@ class Migration {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Migrate the Application key pair option from the old name to the new name.
+	 *
+	 * Renames `activitypub_keypair_for_-1` to `activitypub_application_keypair`.
+	 * Older separate key options (activitypub_application_user_public_key /
+	 * activitypub_application_user_private_key) are migrated lazily on first read.
+	 *
+	 * @since 9.1.0
+	 */
+	public static function migrate_application_keypair_option() {
+		self::update_options_key( 'activitypub_keypair_for_-1', Application::KEYPAIR_OPTION_KEY );
+
+		// The raw rename bypasses the options API, so drop only the two stale option caches (plus the autoload bucket) instead of flushing everything.
+		\wp_cache_delete( 'activitypub_keypair_for_-1', 'options' );
+		\wp_cache_delete( Application::KEYPAIR_OPTION_KEY, 'options' );
+		\wp_cache_delete( 'alloptions', 'options' );
+
+		/*
+		 * If an early Application::get_keypair() read already created the destination
+		 * option, the rename above is a no-op blocked by the unique `option_name`,
+		 * leaving the legacy row behind. Drop it once the destination is in place.
+		 */
+		if ( false !== \get_option( Application::KEYPAIR_OPTION_KEY, false ) ) {
+			\delete_option( 'activitypub_keypair_for_-1' );
+		}
+	}
+
+	/**
+	 * Delete outbox items that belonged to the Application actor.
+	 *
+	 * The Application used to queue Reject activities through the Outbox as user
+	 * ID -1. It no longer dispatches activities, so any pending items are
+	 * undeliverable and are removed.
+	 *
+	 * @since 9.1.0
+	 */
+	public static function delete_application_outbox_items() {
+		$items = \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'any',
+				'nopaging'    => true,
+				'fields'      => 'ids',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'   => '_activitypub_activity_actor',
+						'value' => 'application',
+					),
+				),
+			)
+		);
+
+		foreach ( $items as $item_id ) {
+			\wp_delete_post( $item_id, true );
+		}
 	}
 }

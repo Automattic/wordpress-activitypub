@@ -1,4 +1,0 @@
-Significance: minor
-Type: added
-
-Add `wp activitypub fetch` CLI command for fetching remote URLs with signed HTTP requests.

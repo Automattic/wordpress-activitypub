@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Integration;
 
+use Activitypub\Application;
 use Activitypub\Collection\Actors;
 use Activitypub\Integration\Webfinger;
 
@@ -59,10 +60,11 @@ class Test_Webfinger extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		// Remove filters that may have been added during tests.
-		remove_filter( 'webfinger_user_data', array( Webfinger::class, 'add_user_discovery' ), 1 );
-		remove_filter( 'webfinger_data', array( Webfinger::class, 'add_pseudo_user_discovery' ), 1 );
-		remove_filter( 'webfinger_user_data', array( Webfinger::class, 'add_interaction_links' ), 1 );
-		remove_filter( 'webfinger_data', array( Webfinger::class, 'add_interaction_links' ), 1 );
+		\remove_filter( 'webfinger_user_data', array( Webfinger::class, 'add_user_discovery' ), 1 );
+		\remove_filter( 'webfinger_data', array( Webfinger::class, 'add_pseudo_user_discovery' ), 1 );
+		\remove_filter( 'webfinger_user_data', array( Webfinger::class, 'add_interaction_links' ), 1 );
+		\remove_filter( 'webfinger_data', array( Webfinger::class, 'add_interaction_links' ), 1 );
+		\remove_filter( 'webfinger_data', array( Application::class, 'add_webfinger_discovery' ), 2 );
 
 		parent::tear_down();
 	}
@@ -295,6 +297,48 @@ class Test_Webfinger extends \WP_UnitTestCase {
 				$this->assertStringContainsString( 'intent=follow', $link['template'] );
 			}
 		}
+	}
+
+	/**
+	 * Test that Application WebFinger filter overrides the WP_Error from
+	 * add_pseudo_user_discovery for the application resource.
+	 *
+	 * Integration\Webfinger::add_pseudo_user_discovery (priority 1) returns
+	 * WP_Error for 'application' because it is not in the Actors collection.
+	 * Application::add_webfinger_discovery (priority 2) must run afterward
+	 * and replace the error with valid JRD data.
+	 *
+	 * @covers \Activitypub\Application::add_webfinger_discovery
+	 */
+	public function test_application_webfinger_overrides_pseudo_user_error() {
+		// Register both filters as they would be in production.
+		Webfinger::init();
+		Application::init();
+
+		$uri = 'acct:' . Application::USERNAME . '@' . \wp_parse_url( \home_url(), PHP_URL_HOST );
+		$jrd = array(
+			'subject' => $uri,
+			'aliases' => array(),
+			'links'   => array(),
+		);
+
+		$result = \apply_filters( 'webfinger_data', $jrd, $uri );
+
+		// Must be an array (not WP_Error) with the correct subject.
+		$this->assertIsArray( $result, 'Application WebFinger should return valid JRD, not WP_Error.' );
+		$this->assertArrayHasKey( 'subject', $result );
+		$this->assertStringContainsString( Application::USERNAME, $result['subject'] );
+
+		// Must have an ActivityPub self link pointing to the Application ID.
+		$self_link = null;
+		foreach ( $result['links'] as $link ) {
+			if ( 'self' === $link['rel'] && 'application/activity+json' === $link['type'] ) {
+				$self_link = $link;
+				break;
+			}
+		}
+		$this->assertNotNull( $self_link, 'Should have ActivityPub self link.' );
+		$this->assertEquals( Application::get_id(), $self_link['href'] );
 	}
 
 	/**

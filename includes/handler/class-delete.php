@@ -7,9 +7,10 @@
 
 namespace Activitypub\Handler;
 
+use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Interactions;
-use Activitypub\Collection\Posts;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Collection\Remote_Posts;
 use Activitypub\Tombstone;
 
 use function Activitypub\object_to_uri;
@@ -22,9 +23,10 @@ class Delete {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
-		\add_action( 'activitypub_inbox_delete', array( self::class, 'handle_delete' ), 10, 2 );
+		\add_action( 'activitypub_inbox_delete', array( self::class, 'handle_delete' ), 10, 4 );
+		\add_action( 'activitypub_inbox_shared_delete', array( self::class, 'handle_delete' ), 10, 4 );
 		\add_filter( 'activitypub_skip_inbox_storage', array( self::class, 'skip_inbox_storage' ), 10, 2 );
-		\add_filter( 'activitypub_defer_signature_verification', array( self::class, 'defer_signature_verification' ), 10, 2 );
+		\add_filter( 'activitypub_defer_signature_verification', array( self::class, 'defer_signature_verification' ), 10, 3 );
 		\add_action( 'activitypub_delete_remote_actor_interactions', array( self::class, 'delete_interactions' ) );
 		\add_action( 'activitypub_delete_remote_actor_posts', array( self::class, 'delete_posts' ) );
 
@@ -35,10 +37,18 @@ class Delete {
 	/**
 	 * Handles "Delete" requests.
 	 *
-	 * @param array     $activity The delete activity.
-	 * @param int|int[] $user_ids The local user ID(s).
+	 * @param array                               $activity        The delete activity.
+	 * @param int|int[]                           $user_ids        The local user ID(s).
+	 * @param \Activitypub\Activity\Activity|null $activity_object Optional. The activity object. Default null.
+	 * @param string|null                         $context         Optional. The inbox context. Default null.
 	 */
-	public static function handle_delete( $activity, $user_ids ) {
+	public static function handle_delete( $activity, $user_ids, $activity_object = null, $context = null ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		// The shared inbox invokes this once per resolved recipient and once on the shared hook;
+		// handle that path only on the shared hook, so it runs once with the full recipient list.
+		if ( Inbox::CONTEXT_SHARED_INBOX === $context && 'activitypub_inbox_shared_delete' !== \current_filter() ) {
+			return;
+		}
+
 		$object_type = $activity['object']['type'] ?? '';
 
 		switch ( $object_type ) {
@@ -156,7 +166,7 @@ class Delete {
 		$follower = Remote_Actors::get_by_uri( $activity['actor'] );
 
 		// Verify that Actor is deleted.
-		if ( ! is_wp_error( $follower ) && Tombstone::exists( $activity['actor'] ) ) {
+		if ( ! \is_wp_error( $follower ) && Tombstone::exists( $activity['actor'] ) ) {
 			self::maybe_delete_interactions( $follower->ID );
 			self::maybe_delete_posts( $follower->ID );
 			$state = Remote_Actors::delete( $follower->ID );
@@ -220,10 +230,10 @@ class Delete {
 	 * @return bool True on success, false otherwise.
 	 */
 	public static function delete_posts( $id ) {
-		$posts = Posts::get_by_remote_actor_id( $id );
+		$posts = Remote_Posts::get_by_remote_actor_id( $id );
 
 		foreach ( $posts as $post ) {
-			Posts::delete( $post->ID );
+			Remote_Posts::delete( $post->ID );
 		}
 
 		if ( $posts ) {
@@ -252,7 +262,7 @@ class Delete {
 		if ( $comments && Tombstone::exists( $id ) ) {
 			foreach ( $comments as $comment ) {
 				// WordPress will automatically delete all comment meta including _activitypub_remote_actor_id.
-				wp_delete_comment( $comment->comment_ID, true );
+				\wp_delete_comment( $comment->comment_ID, true );
 			}
 
 			return true;
@@ -273,7 +283,7 @@ class Delete {
 
 		// Check if the object exists and is a tombstone.
 		if ( Tombstone::exists( $id ) ) {
-			return Posts::delete_by_guid( $id );
+			return Remote_Posts::delete_by_guid( $id );
 		}
 
 		return false;
@@ -298,12 +308,25 @@ class Delete {
 	/**
 	 * Defer signature verification for `Delete` requests.
 	 *
-	 * @param bool             $defer   Whether to defer signature verification.
-	 * @param \WP_REST_Request $request The request object.
+	 * Endpoints that opt in to mandatory signing by calling
+	 * `verify_signature( $request, true )` must not be overridden — the
+	 * Delete carve-out is only for the default inbox path where the
+	 * remote actor's keys may legitimately be gone before the Delete
+	 * arrives.
+	 *
+	 * @since 8.2.0 The `$force_signature` parameter is now respected.
+	 *
+	 * @param bool             $defer           Whether to defer signature verification.
+	 * @param \WP_REST_Request $request         The request object.
+	 * @param bool             $force_signature Whether the caller has forced signature verification.
 	 *
 	 * @return bool Whether to defer signature verification.
 	 */
-	public static function defer_signature_verification( $defer, $request ) {
+	public static function defer_signature_verification( $defer, $request, $force_signature = false ) {
+		if ( $force_signature ) {
+			return $defer;
+		}
+
 		$json = $request->get_json_params();
 
 		if ( isset( $json['type'] ) && 'Delete' === $json['type'] ) {

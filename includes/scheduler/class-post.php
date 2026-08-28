@@ -11,10 +11,10 @@ use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 
 use function Activitypub\add_to_outbox;
-use function Activitypub\get_content_visibility;
 use function Activitypub\get_post_id;
 use function Activitypub\get_wp_object_state;
 use function Activitypub\is_post_disabled;
+use function Activitypub\is_post_publicly_queryable;
 
 /**
  * Post scheduler class.
@@ -55,11 +55,19 @@ class Post {
 	 * @param \WP_Post $post_before Post object before the update.
 	 */
 	public static function triage( $post_id, $post, $update, $post_before ) {
-		if ( defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
 			return;
 		}
 
 		if ( is_post_disabled( $post ) ) {
+			return;
+		}
+
+		$object_status = get_wp_object_state( $post );
+		$is_queryable  = is_post_publicly_queryable( $post );
+
+		// If the post is already soft-deleted and still non-public, do not create any more activities.
+		if ( ACTIVITYPUB_OBJECT_STATE_DELETED === $object_status && ! $is_queryable ) {
 			return;
 		}
 
@@ -68,9 +76,8 @@ class Post {
 			return;
 		}
 
-		$new_status    = get_post_status( $post );
-		$old_status    = $post_before ? get_post_status( $post_before ) : null;
-		$object_status = get_wp_object_state( $post );
+		$new_status = \get_post_status( $post );
+		$old_status = $post_before ? \get_post_status( $post_before ) : null;
 
 		switch ( $new_status ) {
 			case 'publish':
@@ -81,20 +88,48 @@ class Post {
 				}
 				break;
 
-			case 'draft':
-				$type = ( 'publish' === $old_status ) ? 'Update' : false;
-				break;
-
-			case 'trash':
-				$type = ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status ? 'Delete' : false;
-				break;
-
-			default:
+			case 'future':
+				/*
+				 * A (re-)scheduled post is not a deletion: it becomes public again
+				 * when it publishes, at which point the publish transition federates
+				 * it. Treating `future` as a soft delete would fan out a Delete that
+				 * remotely tombstones the object id — e.g. when a content edit reverts
+				 * a future-dated published post back to `future` — after which the
+				 * post can never re-federate. Emit nothing instead.
+				 */
 				$type = false;
+				break;
+
+			case 'draft':
+			case 'pending':
+			case 'private':
+			case 'trash':
+			default:
+				/*
+				 * Soft delete for federated posts (FEP-4f05).
+				 *
+				 * A previously-federated post transitioning to any non-public
+				 * status (built-in or custom) emits a Delete so federated
+				 * copies are torn down. Without this, draft/pending would
+				 * broadcast a placeholder Update, private/trash would silently
+				 * leave the federated copy stale, and a custom status would
+				 * fall through without notifying followers at all.
+				 */
+				$type = ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status && ! $is_queryable
+					? 'Delete'
+					: false;
 		}
 
 		// Do not send Activities if `$type` is not set or unknown.
 		if ( empty( $type ) ) {
+			return;
+		}
+
+		/*
+		 * If the post was already federated and this is a Create, skip.
+		 * The outbox controller already added it to the outbox.
+		 */
+		if ( ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status && 'Create' === $type ) {
 			return;
 		}
 
@@ -103,8 +138,20 @@ class Post {
 			$type = 'Create';
 		}
 
-		// If the post was federated before but is now local or private, it should be a Delete activity.
-		if ( ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status && in_array( get_content_visibility( $post ), array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ), true ) ) {
+		/*
+		 * Resurrection: a soft-deleted post that is back in a publicly
+		 * queryable state must emit Create, not Update. Remote followers
+		 * either dropped the original Create on the Delete fan-out (so
+		 * they need to learn about the post again) or had it cancelled
+		 * before fanning out (so the supersession logic invalidates the
+		 * pending Delete and Create is the correct re-introduction).
+		 */
+		if ( ACTIVITYPUB_OBJECT_STATE_DELETED === $object_status && 'Update' === $type && $is_queryable ) {
+			$type = 'Create';
+		}
+
+		// If the post was federated before but is now non-public, it should be a Delete activity.
+		if ( ACTIVITYPUB_OBJECT_STATE_FEDERATED === $object_status && ! $is_queryable ) {
 			$type = 'Delete';
 		}
 

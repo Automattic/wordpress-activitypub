@@ -23,15 +23,15 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: lts/*
 
       - name: Wait for prior instances of the workflow to finish
-        uses: softprops/turnstyle@v3
+        uses: softprops/turnstyle@afaccda0f3c0136fb7cb4a734b9b96be03599948 # v3.3.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -41,9 +41,8 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           slack_token: ${{ secrets.SLACK_TOKEN }}
           slack_team_channel: ${{ secrets.SLACK_TEAM_CHANNEL }}
-          slack_he_triage_channel: ${{ secrets.SLACK_HE_TRIAGE_CHANNEL }}
           slack_quality_channel: ${{ secrets.SLACK_QUALITY_CHANNEL }}
-          tasks: 'addLabels,cleanLabels,assignIssues,flagOss,gatherSupportReferences,replyToCustomersReminder,triageIssues'
+          tasks: 'addLabels,cleanLabels,assignIssues,flagOss'
           add_labels: '[
             {"path": "src/followers", "label": "[Block] Followers"},
             {"path": "src/follow-me", "label": "[Block] Follow Me"},

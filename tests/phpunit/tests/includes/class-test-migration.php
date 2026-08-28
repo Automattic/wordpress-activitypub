@@ -8,7 +8,7 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Activity\Actor;
-use Activitypub\Collection\Actors;
+use Activitypub\Application;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
@@ -17,6 +17,7 @@ use Activitypub\Collection\Remote_Actors;
 use Activitypub\Comment;
 use Activitypub\Migration;
 use Activitypub\Scheduler;
+use Activitypub\Tombstone;
 
 /**
  * Test class for Activitypub Migrate.
@@ -97,6 +98,17 @@ class Test_Migration extends \WP_UnitTestCase {
 			)
 		);
 		\add_comment_meta( self::$fixtures['comment'], 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+	}
+
+	/**
+	 * Restore hooks removed in set_up_before_class.
+	 */
+	public static function tear_down_after_class() {
+		\add_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ), 33, 4 );
+		\add_action( 'transition_comment_status', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity' ), 20, 3 );
+		\add_action( 'wp_insert_comment', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity_on_insert' ), 10, 2 );
+
+		parent::tear_down_after_class();
 	}
 
 	/**
@@ -907,22 +919,22 @@ class Test_Migration extends \WP_UnitTestCase {
 		$post3 = self::factory()->post->create();
 
 		// Add _activitypub_following meta with APPLICATION_USER_ID value.
-		\add_post_meta( $post1, '_activitypub_following', Actors::APPLICATION_USER_ID );
-		\add_post_meta( $post2, '_activitypub_following', Actors::APPLICATION_USER_ID );
+		\add_post_meta( $post1, '_activitypub_following', -1 );
+		\add_post_meta( $post2, '_activitypub_following', -1 );
 
 		// Add _activitypub_following meta with different values (should not be removed).
 		\add_post_meta( $post3, '_activitypub_following', '123' );
 		\add_post_meta( $post1, '_activitypub_following', '456' );
 
 		// Add other meta keys (should not be affected).
-		\add_post_meta( $post1, '_activitypub_other_meta', Actors::APPLICATION_USER_ID );
-		\add_post_meta( $post2, 'some_other_meta', Actors::APPLICATION_USER_ID );
+		\add_post_meta( $post1, '_activitypub_other_meta', -1 );
+		\add_post_meta( $post2, 'some_other_meta', -1 );
 
 		// Verify initial state.
 		$initial_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value = %s",
-				Actors::APPLICATION_USER_ID
+				-1
 			)
 		);
 		$this->assertEquals( 2, $initial_count, 'Should have 2 _activitypub_following entries with APPLICATION_USER_ID' );
@@ -930,7 +942,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		$other_following_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value != %s",
-				Actors::APPLICATION_USER_ID
+				-1
 			)
 		);
 		$this->assertEquals( 2, $other_following_count, 'Should have 2 _activitypub_following entries with other values' );
@@ -942,7 +954,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		$remaining_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value = %s",
-				Actors::APPLICATION_USER_ID
+				-1
 			)
 		);
 		$this->assertEquals( 0, $remaining_count, 'All _activitypub_following entries with APPLICATION_USER_ID should be removed' );
@@ -951,14 +963,14 @@ class Test_Migration extends \WP_UnitTestCase {
 		$remaining_other_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value != %s",
-				Actors::APPLICATION_USER_ID
+				-1
 			)
 		);
 		$this->assertEquals( 2, $remaining_other_count, 'Other _activitypub_following entries should remain' );
 
 		// Verify other meta keys are unaffected.
-		$this->assertEquals( Actors::APPLICATION_USER_ID, \get_post_meta( $post1, '_activitypub_other_meta', true ), 'Other meta keys should not be affected' );
-		$this->assertEquals( Actors::APPLICATION_USER_ID, \get_post_meta( $post2, 'some_other_meta', true ), 'Other meta keys should not be affected' );
+		$this->assertEquals( -1, \get_post_meta( $post1, '_activitypub_other_meta', true ), 'Other meta keys should not be affected' );
+		$this->assertEquals( -1, \get_post_meta( $post2, 'some_other_meta', true ), 'Other meta keys should not be affected' );
 	}
 
 	/**
@@ -978,8 +990,8 @@ class Test_Migration extends \WP_UnitTestCase {
 		\add_post_meta( $post2, '_activitypub_following', '456' );
 
 		// Add other meta keys with APPLICATION_USER_ID.
-		\add_post_meta( $post1, '_activitypub_other_meta', Actors::APPLICATION_USER_ID );
-		\add_post_meta( $post2, 'different_meta', Actors::APPLICATION_USER_ID );
+		\add_post_meta( $post1, '_activitypub_other_meta', -1 );
+		\add_post_meta( $post2, 'different_meta', -1 );
 
 		// Get initial counts.
 		$initial_following_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
@@ -1006,8 +1018,40 @@ class Test_Migration extends \WP_UnitTestCase {
 		// Verify specific entries remain.
 		$this->assertEquals( '123', \get_post_meta( $post1, '_activitypub_following', true ), '_activitypub_following with different value should remain' );
 		$this->assertEquals( '456', \get_post_meta( $post2, '_activitypub_following', true ), '_activitypub_following with different value should remain' );
-		$this->assertEquals( Actors::APPLICATION_USER_ID, \get_post_meta( $post1, '_activitypub_other_meta', true ), 'Other meta keys should not be affected' );
-		$this->assertEquals( Actors::APPLICATION_USER_ID, \get_post_meta( $post2, 'different_meta', true ), 'Other meta keys should not be affected' );
+		$this->assertEquals( -1, \get_post_meta( $post1, '_activitypub_other_meta', true ), 'Other meta keys should not be affected' );
+		$this->assertEquals( -1, \get_post_meta( $post2, 'different_meta', true ), 'Other meta keys should not be affected' );
+	}
+
+	/**
+	 * Test that legacy Application outbox items are deleted, leaving other actors' items intact.
+	 *
+	 * @covers ::delete_application_outbox_items
+	 */
+	public function test_delete_application_outbox_items() {
+		$application_item = self::factory()->post->create(
+			array(
+				'post_type'  => Outbox::POST_TYPE,
+				'meta_input' => array( '_activitypub_activity_actor' => 'application' ),
+			)
+		);
+		$blog_item        = self::factory()->post->create(
+			array(
+				'post_type'  => Outbox::POST_TYPE,
+				'meta_input' => array( '_activitypub_activity_actor' => 'blog' ),
+			)
+		);
+		$user_item        = self::factory()->post->create(
+			array(
+				'post_type'  => Outbox::POST_TYPE,
+				'meta_input' => array( '_activitypub_activity_actor' => 'user' ),
+			)
+		);
+
+		Migration::delete_application_outbox_items();
+
+		$this->assertNull( \get_post( $application_item ), 'The Application outbox item should be deleted.' );
+		$this->assertInstanceOf( \WP_Post::class, \get_post( $blog_item ), 'The Blog outbox item should remain.' );
+		$this->assertInstanceOf( \WP_Post::class, \get_post( $user_item ), 'The User outbox item should remain.' );
 	}
 
 	/**
@@ -1022,9 +1066,9 @@ class Test_Migration extends \WP_UnitTestCase {
 		$post_id = self::factory()->post->create();
 
 		// Add multiple _activitypub_following meta entries with APPLICATION_USER_ID.
-		\add_post_meta( $post_id, '_activitypub_following', Actors::APPLICATION_USER_ID );
-		\add_post_meta( $post_id, '_activitypub_following', Actors::APPLICATION_USER_ID );
-		\add_post_meta( $post_id, '_activitypub_following', Actors::APPLICATION_USER_ID );
+		\add_post_meta( $post_id, '_activitypub_following', -1 );
+		\add_post_meta( $post_id, '_activitypub_following', -1 );
+		\add_post_meta( $post_id, '_activitypub_following', -1 );
 
 		// Add one with different value.
 		\add_post_meta( $post_id, '_activitypub_following', '789' );
@@ -1033,7 +1077,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		$initial_app_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value = %s",
-				Actors::APPLICATION_USER_ID
+				-1
 			)
 		);
 		$this->assertEquals( 3, $initial_app_count, 'Should have 3 APPLICATION_USER_ID entries' );
@@ -1045,7 +1089,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		$remaining_app_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value = %s",
-				Actors::APPLICATION_USER_ID
+				-1
 			)
 		);
 		$this->assertEquals( 0, $remaining_app_count, 'All APPLICATION_USER_ID entries should be removed' );
@@ -1471,5 +1515,174 @@ class Test_Migration extends \WP_UnitTestCase {
 			$emoji_meta = \get_post_meta( $actor_id, '_activitypub_emoji', true );
 			$this->assertNotEmpty( $emoji_meta, "Actor {$actor_id} should have emoji meta" );
 		}
+	}
+
+	/**
+	 * Test migrate_application_keypair_option renames the old option.
+	 *
+	 * @covers ::migrate_application_keypair_option
+	 */
+	public function test_migrate_application_keypair_option() {
+		$key_pair = array(
+			'public_key'  => 'test-public-key',
+			'private_key' => 'test-private-key',
+		);
+
+		// Set up the old option name.
+		\delete_option( Application::KEYPAIR_OPTION_KEY );
+		\delete_option( 'activitypub_keypair_for_-1' );
+		\add_option( 'activitypub_keypair_for_-1', $key_pair );
+
+		// Verify old option exists.
+		$this->assertEquals( $key_pair, \get_option( 'activitypub_keypair_for_-1' ) );
+		$this->assertFalse( \get_option( Application::KEYPAIR_OPTION_KEY ) );
+
+		// Run the migration.
+		Migration::migrate_application_keypair_option();
+
+		// Verify option was renamed.
+		$this->assertFalse( \get_option( 'activitypub_keypair_for_-1' ) );
+		$this->assertEquals( $key_pair, \get_option( Application::KEYPAIR_OPTION_KEY ) );
+
+		// Verify Application class can read the keys.
+		$this->assertEquals( 'test-public-key', Application::get_public_key() );
+		$this->assertEquals( 'test-private-key', Application::get_private_key() );
+
+		// Clean up.
+		\delete_option( Application::KEYPAIR_OPTION_KEY );
+	}
+
+	/**
+	 * Test migrate_application_keypair_option when old option doesn't exist.
+	 *
+	 * @covers ::migrate_application_keypair_option
+	 */
+	public function test_migrate_application_keypair_option_no_old_option() {
+		// Ensure neither option exists.
+		\delete_option( 'activitypub_keypair_for_-1' );
+		\delete_option( Application::KEYPAIR_OPTION_KEY );
+
+		// Run the migration — should not error.
+		Migration::migrate_application_keypair_option();
+
+		// Both should still not exist.
+		$this->assertFalse( \get_option( 'activitypub_keypair_for_-1' ) );
+		$this->assertFalse( \get_option( Application::KEYPAIR_OPTION_KEY ) );
+	}
+
+	/**
+	 * Test migrate_application_keypair_option when new option already exists.
+	 *
+	 * @covers ::migrate_application_keypair_option
+	 */
+	public function test_migrate_application_keypair_option_already_migrated() {
+		$new_key_pair = array(
+			'public_key'  => 'new-public-key',
+			'private_key' => 'new-private-key',
+		);
+
+		// Set up the new option (already migrated).
+		\delete_option( 'activitypub_keypair_for_-1' );
+		\delete_option( Application::KEYPAIR_OPTION_KEY );
+		\add_option( Application::KEYPAIR_OPTION_KEY, $new_key_pair );
+
+		// Run the migration.
+		Migration::migrate_application_keypair_option();
+
+		// New option should be unchanged.
+		$this->assertEquals( $new_key_pair, \get_option( Application::KEYPAIR_OPTION_KEY ) );
+
+		// Clean up.
+		\delete_option( Application::KEYPAIR_OPTION_KEY );
+	}
+
+	/**
+	 * Test migrate_tombstones_to_cpt() moves URLs from the option into the CPT.
+	 *
+	 * @covers ::migrate_tombstones_to_cpt
+	 */
+	public function test_migrate_tombstones_to_cpt_moves_urls() {
+		$urls = array(
+			\Activitypub\normalize_url( 'https://fake.test/a' ),
+			\Activitypub\normalize_url( 'https://fake.test/b' ),
+			\Activitypub\normalize_url( 'https://fake.test/c' ),
+		);
+		\update_option( 'activitypub_tombstone_urls', $urls );
+
+		$result = Migration::migrate_tombstones_to_cpt( 10 );
+
+		$this->assertNull( $result );
+		$this->assertFalse( \get_option( 'activitypub_tombstone_urls', false ) );
+
+		foreach ( $urls as $url ) {
+			$this->assertTrue( Tombstone::exists_local( 'https://' . $url ) );
+		}
+	}
+
+	/**
+	 * Test migrate_tombstones_to_cpt() chunks: returns args while work remains.
+	 *
+	 * @covers ::migrate_tombstones_to_cpt
+	 */
+	public function test_migrate_tombstones_to_cpt_is_chunked() {
+		$urls = array();
+		for ( $i = 0; $i < 5; $i++ ) {
+			$urls[] = \Activitypub\normalize_url( 'https://fake.test/chunked/' . $i );
+		}
+		\update_option( 'activitypub_tombstone_urls', $urls );
+
+		$result = Migration::migrate_tombstones_to_cpt( 2 );
+
+		$this->assertSame( array( 'batch_size' => 2 ), $result );
+
+		$remaining = \get_option( 'activitypub_tombstone_urls', array() );
+		$this->assertCount( 3, $remaining );
+
+		Migration::migrate_tombstones_to_cpt( 2 );
+		$final = Migration::migrate_tombstones_to_cpt( 2 );
+
+		$this->assertNull( $final );
+		$this->assertFalse( \get_option( 'activitypub_tombstone_urls', false ) );
+	}
+
+	/**
+	 * Test migrate_tombstones_to_cpt() is idempotent — re-running after migration is a no-op.
+	 *
+	 * @covers ::migrate_tombstones_to_cpt
+	 */
+	public function test_migrate_tombstones_to_cpt_idempotent() {
+		$this->assertNull( Migration::migrate_tombstones_to_cpt( 10 ) );
+		$this->assertNull( Migration::migrate_tombstones_to_cpt( 10 ) );
+	}
+
+	/**
+	 * Test migrate_tombstones_to_cpt() halts when a batch makes no progress.
+	 *
+	 * Prevents an unbounded retry loop when wp_insert_post is consistently
+	 * failing. The legacy option still holds the URLs and exists_local() will
+	 * continue to consult it.
+	 *
+	 * @covers ::migrate_tombstones_to_cpt
+	 */
+	public function test_migrate_tombstones_to_cpt_halts_on_no_progress() {
+		$urls = array(
+			\Activitypub\normalize_url( 'https://fake.test/no-progress-1' ),
+			\Activitypub\normalize_url( 'https://fake.test/no-progress-2' ),
+		);
+		\update_option( 'activitypub_tombstone_urls', $urls );
+
+		// Force every wp_insert_post call to return 0 by short-circuiting
+		// it as empty content.
+		\add_filter( 'wp_insert_post_empty_content', '__return_true' );
+
+		$result = Migration::migrate_tombstones_to_cpt( 10 );
+
+		\remove_filter( 'wp_insert_post_empty_content', '__return_true' );
+
+		$this->assertNull( $result, 'Migration should halt the scheduler when nothing was drained.' );
+
+		$remaining = \get_option( 'activitypub_tombstone_urls', false );
+		$this->assertIsArray( $remaining, 'Legacy option must remain to back exists_local().' );
+		$this->assertEqualsCanonicalizing( $urls, $remaining );
 	}
 }

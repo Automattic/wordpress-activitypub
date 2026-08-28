@@ -7,9 +7,11 @@
 
 namespace Activitypub;
 
+use Activitypub\Activity\Extended_Object\Feature_Authorization;
 use Activitypub\Activity\Extended_Object\Quote_Authorization;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
+use Activitypub\Handler\Feature_Request;
 use Activitypub\Transformer\Factory;
 
 /**
@@ -139,8 +141,15 @@ class Query {
 	private function prepare_activitypub_data() {
 		$queried_object = $this->get_queried_object();
 
-		if ( $queried_object instanceof \WP_Post && \get_query_var( 'stamp' ) ) {
-			return $this->maybe_get_stamp();
+		if ( \get_query_var( 'stamp' ) ) {
+			if ( $queried_object instanceof \WP_Post ) {
+				return $this->maybe_get_stamp();
+			}
+
+			// Note: the blog actor's `actor` query var is '0', which is falsy but valid.
+			if ( $queried_object instanceof \WP_User || '' !== \get_query_var( 'actor' ) ) {
+				return $this->maybe_get_actor_stamp();
+			}
 		}
 
 		// Check for Outbox Activity.
@@ -220,17 +229,16 @@ class Query {
 		 *
 		 * @param \WP_Term|\WP_Post_Type|\WP_Post|\WP_User|\WP_Comment|null $queried_object The queried object.
 		 */
-		return apply_filters( 'activitypub_queried_object', $queried_object );
+		return \apply_filters( 'activitypub_queried_object', $queried_object );
 	}
 
 	/**
 	 * Get the virtual object.
 	 *
 	 * Virtual objects are objects that are not stored in the database, but are created on the fly.
-	 * The plugins currently supports two virtual objects: The Blog-Actor and the Application-Actor.
+	 * The plugin currently supports one virtual object: The Blog-Actor.
 	 *
 	 * @see \Activitypub\Model\Blog
-	 * @see \Activitypub\Model\Application
 	 *
 	 * @return object|null The virtual object.
 	 */
@@ -243,7 +251,7 @@ class Query {
 
 		$author_id = url_to_authorid( $url );
 
-		if ( ! is_numeric( $author_id ) ) {
+		if ( ! \is_numeric( $author_id ) ) {
 			$author_id = $url;
 		}
 
@@ -292,17 +300,23 @@ class Query {
 
 				// The other (more common) option to make an ActivityPub request  is to send an Accept header.
 			} elseif ( isset( $_SERVER['HTTP_ACCEPT'] ) ) {
-				$accept = \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_ACCEPT'] ) );
-
 				/*
-				 * $accept can be a single value, or a comma separated list of values.
-				 * We want to support both scenarios,
-				 * and return true when the header includes at least one of the following:
-				 * - application/activity+json
-				 * - application/ld+json
-				 * - application/json
+				 * The Accept-header decision is delegated to accept_prefers_activitypub() so the plugin and the
+				 * Surge cache drop-in classify byte-for-byte identically. Both must hand it the same raw
+				 * header, and they reach that raw form differently on purpose: this runs after
+				 * wp_magic_quotes() has addslashed $_SERVER, so it wp_unslash()es to recover the original
+				 * bytes; the drop-in runs before wp_magic_quotes() and passes its already-raw value
+				 * untouched. Do NOT sanitize it (the drop-in can't, its sanitizers aren't loaded yet) and
+				 * the helper must not stripslashes() either (that would corrupt the drop-in's genuine
+				 * bytes). It is only used to pick a content type, never stored or echoed.
+				 *
+				 * The request is ActivityPub when the highest-priority (by `q`, then order) media type is
+				 * an ActivityPub type (`application/activity+json`, or `application/ld+json` with the AS2
+				 * profile). A browser (`text/html` at q=1) gets the normal page; a client that prefers
+				 * ActivityPub but also accepts HTML as a low-`q` fallback (Mastodon) gets ActivityPub.
 				 */
-				if ( \preg_match( '/(application\/(ld\+json|activity\+json|json))/i', $accept ) ) {
+				// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Classified only; wp_unslash() recovers the raw bytes the pre-plugin cache path sees, and it must not be sanitized.
+				if ( accept_prefers_activitypub( \wp_unslash( $_SERVER['HTTP_ACCEPT'] ) ) ) {
 					\defined( 'ACTIVITYPUB_REQUEST' ) || \define( 'ACTIVITYPUB_REQUEST', true );
 					$this->is_activitypub_request = true;
 				}
@@ -401,7 +415,18 @@ class Query {
 			return false;
 		}
 
-		$post     = $this->get_queried_object();
+		$post = $this->get_queried_object();
+
+		/*
+		 * Only quote-authorization meta may be reflected as a stamp, and only for the queried
+		 * post. Checking the post id alone would still let an unauthenticated request read any
+		 * of that post's meta rows (e.g. _edit_lock or private custom fields) by guessing a
+		 * meta_id, so the meta key is verified too.
+		 */
+		if ( '_activitypub_quoted_by' !== $meta->meta_key || (int) $meta->post_id !== $post->ID ) {
+			return false;
+		}
+
 		$user_uri = get_user_id( $post->post_author );
 
 		if ( ! $user_uri ) {
@@ -424,6 +449,71 @@ class Query {
 
 		$this->activitypub_object    = $activitypub_object;
 		$this->activitypub_object_id = $activitypub_object->get_id();
+
+		return true;
+	}
+
+	/**
+	 * Maybe get a FeatureAuthorization object from an actor-scoped stamp.
+	 *
+	 * Resolves URLs of the form `?actor=USER_ID&stamp=STAMP_ID` against the
+	 * actor's stamp store, see {@see Feature_Request::get_stamp()}. Ownership
+	 * is enforced by resolving the stamp scoped to the queried actor, which
+	 * includes the blog actor (`actor=0`).
+	 *
+	 * @return bool True if a FeatureAuthorization was prepared, false otherwise.
+	 */
+	private function maybe_get_actor_stamp() {
+		$stamp_id  = (int) \get_query_var( 'stamp' );
+		$actor_var = \get_query_var( 'actor' );
+
+		if ( ! $stamp_id ) {
+			return false;
+		}
+
+		if ( '' === $actor_var ) {
+			$queried = $this->get_queried_object();
+			if ( ! $queried instanceof \WP_User ) {
+				return false;
+			}
+
+			$actor_id = (int) $queried->ID;
+		} else {
+			// Values like '0e1' or '1.5' pass is_numeric() but cast to 0/1 and alias
+			// an actor, so require a plain decimal integer before casting.
+			if ( ! \ctype_digit( (string) $actor_var ) ) {
+				return false;
+			}
+
+			$actor_id = (int) $actor_var;
+		}
+
+		$instrument = Feature_Request::get_stamp( $actor_id, $stamp_id );
+		if ( null === $instrument ) {
+			return false;
+		}
+
+		$actor = Actors::get_by_id( $actor_id );
+		if ( \is_wp_error( $actor ) ) {
+			return false;
+		}
+
+		$stamp_url = \add_query_arg(
+			array(
+				'actor' => $actor_id,
+				'stamp' => $stamp_id,
+			),
+			\home_url( '/' )
+		);
+
+		$authorization = new Feature_Authorization();
+		$authorization->set_id( $stamp_url );
+		$authorization->set_attributed_to( $actor->get_id() );
+		$authorization->set_interacting_object( $instrument );
+		$authorization->set_interaction_target( $actor->get_id() );
+
+		$this->activitypub_object    = $authorization;
+		$this->activitypub_object_id = $authorization->get_id();
 
 		return true;
 	}

@@ -48,8 +48,8 @@ class Emoji {
 			$shortcode   = $tag['name'];
 			$block_attrs = array( 'url' => \esc_url( $url ) );
 
-			if ( ! empty( $tag['updated'] ) ) {
-				$block_attrs['updated'] = $tag['updated'];
+			if ( ! empty( $tag['updated'] ) && \is_string( $tag['updated'] ) && \strtotime( $tag['updated'] ) ) {
+				$block_attrs['updated'] = \sanitize_text_field( $tag['updated'] );
 			}
 
 			$wrapped = \sprintf(
@@ -60,7 +60,13 @@ class Emoji {
 
 			// Case-insensitive replacement, avoid already wrapped shortcodes.
 			$pattern = '/(?<!-->)' . \preg_quote( $shortcode, '/' ) . '(?!<!-- \/wp:activitypub\/emoji -->)/i';
-			$content = \preg_replace( $pattern, $wrapped, $content );
+			$content = \preg_replace_callback(
+				$pattern,
+				function () use ( $wrapped ) {
+					return $wrapped;
+				},
+				$content
+			);
 		}
 
 		return $content;

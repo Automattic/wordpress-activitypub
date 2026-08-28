@@ -11,8 +11,9 @@ use Activitypub\Blocklist_Subscriptions;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Comment;
-use Activitypub\Model\Blog;
 use Activitypub\Moderation;
+use Activitypub\OAuth\Client;
+use Activitypub\OAuth\Token;
 use Activitypub\Scheduler\Actor;
 use Activitypub\Tombstone;
 
@@ -60,6 +61,9 @@ class Admin {
 
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
 			\add_action( 'show_user_profile', array( self::class, 'add_profile' ) );
+			if ( \get_option( 'activitypub_api', false ) ) {
+				\add_action( 'show_user_profile', array( User_Settings_Fields::class, 'connected_apps_section' ) );
+			}
 		}
 
 		\add_filter( 'dashboard_glance_items', array( self::class, 'dashboard_glance_items' ) );
@@ -71,20 +75,24 @@ class Admin {
 		}
 
 		\add_action( 'admin_print_scripts-profile.php', array( self::class, 'enqueue_moderation_scripts' ) );
+		\add_action( 'admin_print_scripts-profile.php', array( self::class, 'enqueue_connected_apps_scripts' ) );
 		\add_action( 'admin_print_scripts-settings_page_activitypub', array( self::class, 'enqueue_moderation_scripts' ) );
 		\add_action( 'admin_print_footer_scripts-settings_page_activitypub', array( self::class, 'open_help_tab' ) );
 
-		\add_action( 'wp_dashboard_setup', array( self::class, 'add_dashboard_widgets' ) );
-
 		\add_action( 'wp_ajax_activitypub_moderation_settings', array( self::class, 'ajax_moderation_settings' ) );
 		\add_action( 'wp_ajax_activitypub_blocklist_subscription', array( self::class, 'ajax_blocklist_subscription' ) );
+		\add_action( 'wp_ajax_activitypub_register_oauth_client', array( self::class, 'ajax_register_oauth_client' ) );
+		\add_action( 'wp_ajax_activitypub_delete_oauth_client', array( self::class, 'ajax_delete_oauth_client' ) );
+		\add_action( 'wp_ajax_activitypub_delete_all_oauth_clients', array( self::class, 'ajax_delete_all_oauth_clients' ) );
+		\add_action( 'wp_ajax_activitypub_revoke_oauth_token', array( self::class, 'ajax_revoke_oauth_token' ) );
+		\add_action( 'wp_ajax_activitypub_revoke_all_oauth_tokens', array( self::class, 'ajax_revoke_all_oauth_tokens' ) );
 	}
 
 	/**
 	 * Display admin menu notices about configuration problems or conflicts.
 	 */
 	public static function admin_notices() {
-		$current_screen = get_current_screen();
+		$current_screen = \get_current_screen();
 
 		if ( ! $current_screen ) {
 			return;
@@ -98,10 +106,10 @@ class Admin {
 			?>
 			<div class="notice notice-success is-dismissible">
 				<p>
-					<strong><?php esc_html_e( 'ActivityPub Self-Destruct Complete!', 'activitypub' ); ?></strong>
+					<strong><?php \esc_html_e( 'ActivityPub Self-Destruct Complete!', 'activitypub' ); ?></strong>
 				</p>
 				<p>
-					<?php esc_html_e( 'All Delete activities have been successfully sent to the Fediverse. Your blog is no longer discoverable via ActivityPub and all followers have been notified of the deletion.', 'activitypub' ); ?>
+					<?php \esc_html_e( 'All Delete activities have been successfully sent to the Fediverse. Your blog is no longer discoverable via ActivityPub and all followers have been notified of the deletion.', 'activitypub' ); ?>
 				</p>
 			</div>
 			<?php
@@ -111,7 +119,7 @@ class Admin {
 			?>
 			<div class="notice" style="margin: 0; background: none; border: none; box-shadow: none; padding: 15px 0 0 0; font-size: 14px;">
 				<?php
-					esc_html_e( 'These are extra fields that are used for your ActivityPub profile. You can use your homepage, social profiles, pronouns, age, anything you want.', 'activitypub' );
+					\esc_html_e( 'These are extra fields that are used for your ActivityPub profile. You can use your homepage, social profiles, pronouns, age, anything you want.', 'activitypub' );
 				?>
 			</div>
 			<?php
@@ -192,11 +200,11 @@ class Admin {
 	 * Render user settings.
 	 */
 	public static function add_profile() {
-		wp_enqueue_media();
-		wp_enqueue_script( 'activitypub-header-image' );
+		\wp_enqueue_media();
+		\wp_enqueue_script( 'activitypub-header-image' );
 
-		wp_nonce_field( 'activitypub-user-settings', '_apnonce' );
-		do_settings_sections( 'activitypub_user_settings' );
+		\wp_nonce_field( 'activitypub-user-settings', '_apnonce' );
+		\do_settings_sections( 'activitypub_user_settings' );
 	}
 
 	/**
@@ -211,10 +219,10 @@ class Admin {
 			return;
 		}
 
-		$nonce = sanitize_text_field( wp_unslash( $_REQUEST['_apnonce'] ) );
+		$nonce = \sanitize_text_field( \wp_unslash( $_REQUEST['_apnonce'] ) );
 		if (
-			! wp_verify_nonce( $nonce, 'activitypub-user-settings' ) ||
-			! current_user_can( 'edit_user', $user_id )
+			! \wp_verify_nonce( $nonce, 'activitypub-user-settings' ) ||
+			! \current_user_can( 'edit_user', $user_id )
 		) {
 			return;
 		}
@@ -227,7 +235,7 @@ class Admin {
 
 		foreach ( $textarea_field_user_options as $option ) {
 			if ( ! empty( $_POST[ $option ] ) ) {
-				\update_user_option( $user_id, $option, sanitize_textarea_field( wp_unslash( $_POST[ $option ] ) ) );
+				\update_user_option( $user_id, $option, \sanitize_textarea_field( \wp_unslash( $_POST[ $option ] ) ) );
 			} else {
 				\delete_user_option( $user_id, $option );
 			}
@@ -240,7 +248,7 @@ class Admin {
 
 		foreach ( $text_field_user_options as $option ) {
 			if ( ! empty( $_POST[ $option ] ) ) {
-				\update_user_option( $user_id, $option, sanitize_text_field( wp_unslash( $_POST[ $option ] ) ) );
+				\update_user_option( $user_id, $option, \sanitize_text_field( \wp_unslash( $_POST[ $option ] ) ) );
 			} else {
 				\delete_user_option( $user_id, $option );
 			}
@@ -252,10 +260,13 @@ class Admin {
 			'activitypub_mailer_new_dm',
 			'activitypub_mailer_new_follower',
 			'activitypub_mailer_new_mention',
+			'activitypub_mailer_new_reaction',
+			'activitypub_mailer_annual_report',
+			'activitypub_mailer_monthly_report',
 		);
 
 		foreach ( $required_user_options as $option ) {
-			\update_user_option( $user_id, $option, sanitize_text_field( wp_unslash( $_POST[ $option ] ?? 0 ) ) );
+			\update_user_option( $user_id, $option, \sanitize_text_field( \wp_unslash( $_POST[ $option ] ?? 0 ) ) );
 		}
 	}
 
@@ -265,9 +276,9 @@ class Admin {
 	 * @param string $hook_suffix The current page.
 	 */
 	public static function enqueue_scripts( $hook_suffix ) {
-		wp_register_script(
+		\wp_register_script(
 			'activitypub-header-image',
-			plugins_url(
+			\plugins_url(
 				'assets/js/activitypub-header-image.js',
 				ACTIVITYPUB_PLUGIN_FILE
 			),
@@ -279,15 +290,15 @@ class Admin {
 		// Register and enqueue command palette integration.
 		if ( user_can_activitypub( \get_current_user_id() ) || \current_user_can( 'manage_options' ) ) {
 			$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/command-palette/plugin.asset.php';
-			wp_enqueue_script(
+			\wp_enqueue_script(
 				'activitypub-command-palette',
-				plugins_url( 'build/command-palette/plugin.js', ACTIVITYPUB_PLUGIN_FILE ),
+				\plugins_url( 'build/command-palette/plugin.js', ACTIVITYPUB_PLUGIN_FILE ),
 				$asset_data['dependencies'],
 				$asset_data['version'],
 				true
 			);
 
-			wp_localize_script(
+			\wp_localize_script(
 				'activitypub-command-palette',
 				'activitypubCommandPalette',
 				array(
@@ -298,19 +309,19 @@ class Admin {
 			);
 		}
 
-		if ( false !== strpos( $hook_suffix, 'activitypub' ) && 'dashboard_page_activitypub-social-web' !== $hook_suffix ) {
-			wp_enqueue_style(
+		if ( false !== \strpos( $hook_suffix, 'activitypub' ) && 'dashboard_page_activitypub-social-web' !== $hook_suffix ) {
+			\wp_enqueue_style(
 				'activitypub-admin-styles',
-				plugins_url(
+				\plugins_url(
 					'assets/css/activitypub-admin.css',
 					ACTIVITYPUB_PLUGIN_FILE
 				),
 				array(),
 				ACTIVITYPUB_PLUGIN_VERSION
 			);
-			wp_enqueue_script(
+			\wp_enqueue_script(
 				'activitypub-admin-script',
-				plugins_url(
+				\plugins_url(
 					'assets/js/activitypub-admin.js',
 					ACTIVITYPUB_PLUGIN_FILE
 				),
@@ -326,9 +337,9 @@ class Admin {
 		}
 
 		if ( 'index.php' === $hook_suffix ) {
-			wp_enqueue_style(
+			\wp_enqueue_style(
 				'activitypub-admin-styles',
-				plugins_url(
+				\plugins_url(
 					'assets/css/activitypub-admin.css',
 					ACTIVITYPUB_PLUGIN_FILE
 				),
@@ -369,6 +380,46 @@ class Admin {
 			'activitypubModerationL10n',
 			array(
 				'nonce' => \wp_create_nonce( 'activitypub_moderation_settings' ),
+			)
+		);
+	}
+
+	/**
+	 * Enqueue connected apps admin scripts on the profile page.
+	 *
+	 * @since 8.1.0
+	 */
+	public static function enqueue_connected_apps_scripts() {
+		\wp_enqueue_script(
+			'activitypub-connected-apps',
+			ACTIVITYPUB_PLUGIN_URL . 'assets/js/activitypub-connected-apps.js',
+			array( 'jquery' ),
+			ACTIVITYPUB_PLUGIN_VERSION,
+			true
+		);
+
+		\wp_localize_script(
+			'activitypub-connected-apps',
+			'activitypubConnectedApps',
+			array(
+				'ajaxUrl'           => \admin_url( 'admin-ajax.php' ),
+				'nonce'             => \wp_create_nonce( 'activitypub_connected_apps' ),
+				'confirm'           => \__( 'Are you sure you want to revoke this application token? This action cannot be undone.', 'activitypub' ),
+				'confirmAll'        => \__( 'Are you sure you want to revoke all connected applications? This action cannot be undone.', 'activitypub' ),
+				'confirmDelete'     => \__( 'Are you sure you want to delete this application? This action cannot be undone.', 'activitypub' ),
+				'confirmDeleteAll'  => \__( 'Are you sure you want to delete all registered applications? This action cannot be undone.', 'activitypub' ),
+				'registerError'     => \__( 'Failed to register application.', 'activitypub' ),
+				'deleteLabel'       => \__( 'Delete', 'activitypub' ),
+				'dismiss'           => \__( 'Dismiss this notice.', 'activitypub' ),
+				'clientIdLabel'     => \__( 'Your new Client ID:', 'activitypub' ),
+				'clientSecretLabel' => \__( 'Your new Client Secret:', 'activitypub' ),
+				'copy'              => \__( 'Copy', 'activitypub' ),
+				'copied'            => \__( 'Copied!', 'activitypub' ),
+				'saveWarning'       => \__( 'Be sure to save this in a safe location. You will not be able to retrieve it.', 'activitypub' ),
+				'appRevoked'        => \__( 'Application token revoked.', 'activitypub' ),
+				'allAppsRevoked'    => \__( 'All application tokens revoked.', 'activitypub' ),
+				'appDeleted'        => \__( 'Application deleted.', 'activitypub' ),
+				'allAppsDeleted'    => \__( 'All registered applications deleted.', 'activitypub' ),
 			)
 		);
 	}
@@ -418,13 +469,13 @@ class Admin {
 					return $all_caps;
 				}
 
-				$post = get_post( $arg[2] );
+				$post = \get_post( $arg[2] );
 
 				if ( ! Extra_Fields::is_extra_field_post_type( $post->post_type ) ) {
 					return $all_caps;
 				}
 
-				if ( get_current_user_id() !== (int) $post->post_author ) {
+				if ( \get_current_user_id() !== (int) $post->post_author ) {
 					return false;
 				}
 
@@ -440,12 +491,12 @@ class Admin {
 	 */
 	public static function list_posts() {
 		// Remove all views for the extra fields.
-		$screen_id = get_current_screen()->id;
+		$screen_id = \get_current_screen()->id;
 
-		add_filter(
+		\add_filter(
 			"views_{$screen_id}",
 			static function ( $views ) {
-				if ( Extra_Fields::is_extra_fields_post_type( get_current_screen()->post_type ) ) {
+				if ( Extra_Fields::is_extra_fields_post_type( \get_current_screen()->post_type ) ) {
 					return array();
 				}
 
@@ -467,7 +518,7 @@ class Admin {
 			unset( $actions['edit'], $actions['quickedit'] );
 		}
 
-		if ( in_array( get_comment_type( $comment ), Comment::get_comment_type_slugs(), true ) ) {
+		if ( \in_array( \get_comment_type( $comment ), Comment::get_comment_type_slugs(), true ) ) {
 			unset( $actions['reply'] );
 		}
 
@@ -484,7 +535,7 @@ class Admin {
 	 * @return array The columns extended by the activitypub.
 	 */
 	public static function manage_users_columns( $columns ) {
-		$columns['activitypub'] = __( 'ActivityPub', 'activitypub' );
+		$columns['activitypub'] = \__( 'ActivityPub', 'activitypub' );
 		return $columns;
 	}
 
@@ -496,8 +547,8 @@ class Admin {
 	 * @return array The extended list of column names.
 	 */
 	public static function manage_comment_columns( $columns ) {
-		$columns['comment_type']     = esc_attr__( 'Comment-Type', 'activitypub' );
-		$columns['comment_protocol'] = esc_attr__( 'Protocol', 'activitypub' );
+		$columns['comment_type']     = \esc_attr__( 'Comment-Type', 'activitypub' );
+		$columns['comment_protocol'] = \esc_attr__( 'Protocol', 'activitypub' );
 
 		return $columns;
 	}
@@ -513,8 +564,8 @@ class Admin {
 	public static function manage_post_columns( $columns, $post_type ) {
 		if ( Extra_Fields::is_extra_fields_post_type( $post_type ) ) {
 			$after_key = 'title';
-			$index     = array_search( $after_key, array_keys( $columns ), true );
-			$columns   = array_slice( $columns, 0, $index + 1 ) + array( 'extra_field_content' => esc_attr__( 'Content', 'activitypub' ) ) + $columns;
+			$index     = \array_search( $after_key, \array_keys( $columns ), true );
+			$columns   = \array_slice( $columns, 0, $index + 1 ) + array( 'extra_field_content' => \esc_attr__( 'Content', 'activitypub' ) ) + $columns;
 		}
 
 		return $columns;
@@ -527,15 +578,15 @@ class Admin {
 	 * @param int   $comment_id The comment id.
 	 */
 	public static function manage_comments_custom_column( $column, $comment_id ) {
-		if ( 'comment_type' === $column && ! defined( 'WEBMENTION_PLUGIN_DIR' ) ) {
-			echo esc_attr( ucfirst( get_comment_type( $comment_id ) ) );
+		if ( 'comment_type' === $column && ! \defined( 'WEBMENTION_PLUGIN_DIR' ) ) {
+			echo \esc_attr( \ucfirst( \get_comment_type( $comment_id ) ) );
 		} elseif ( 'comment_protocol' === $column ) {
-			$protocol = get_comment_meta( $comment_id, 'protocol', true );
+			$protocol = \get_comment_meta( $comment_id, 'protocol', true );
 
 			if ( $protocol ) {
-				echo esc_attr( ucfirst( str_replace( 'activitypub', 'ActivityPub', $protocol ) ) );
+				echo \esc_attr( \ucfirst( \str_replace( 'activitypub', 'ActivityPub', $protocol ) ) );
 			} else {
-				esc_attr_e( 'Local', 'activitypub' );
+				\esc_attr_e( 'Local', 'activitypub' );
 			}
 		}
 	}
@@ -549,7 +600,7 @@ class Admin {
 	 */
 	public static function comment_types_dropdown( $types ) {
 		foreach ( Comment::get_comment_types() as $comment_type ) {
-			$types[ $comment_type['type'] ] = esc_html( $comment_type['label'] );
+			$types[ $comment_type['type'] ] = \esc_html( $comment_type['label'] );
 		}
 
 		return $types;
@@ -570,9 +621,9 @@ class Admin {
 		}
 
 		if ( \user_can( $user_id, 'activitypub' ) ) {
-			return '<span aria-hidden="true">&#x2713;</span><span class="screen-reader-text">' . esc_html__( 'ActivityPub enabled for this author', 'activitypub' ) . '</span>';
+			return '<span aria-hidden="true">&#x2713;</span><span class="screen-reader-text">' . \esc_html__( 'ActivityPub enabled for this author', 'activitypub' ) . '</span>';
 		} else {
-			return '<span aria-hidden="true">&#x2717;</span><span class="screen-reader-text">' . esc_html__( 'ActivityPub disabled for this author', 'activitypub' ) . '</span>';
+			return '<span aria-hidden="true">&#x2717;</span><span class="screen-reader-text">' . \esc_html__( 'ActivityPub disabled for this author', 'activitypub' ) . '</span>';
 		}
 	}
 
@@ -586,9 +637,9 @@ class Admin {
 	 */
 	public static function manage_posts_custom_column( $column_name, $post_id ) {
 		if ( 'extra_field_content' === $column_name ) {
-			$post = get_post( $post_id );
+			$post = \get_post( $post_id );
 			if ( Extra_Fields::is_extra_fields_post_type( $post->post_type ) ) {
-				echo esc_attr( wp_strip_all_tags( $post->post_content ) );
+				echo \esc_attr( \wp_strip_all_tags( $post->post_content ) );
 			}
 		}
 	}
@@ -601,8 +652,8 @@ class Admin {
 	 * @return array The extended bulk options.
 	 */
 	public static function user_bulk_options( $actions ) {
-		$actions['add_activitypub_cap']    = __( 'Enable for ActivityPub', 'activitypub' );
-		$actions['remove_activitypub_cap'] = __( 'Disable for ActivityPub', 'activitypub' );
+		$actions['add_activitypub_cap']    = \__( 'Enable for ActivityPub', 'activitypub' );
+		$actions['remove_activitypub_cap'] = \__( 'Disable for ActivityPub', 'activitypub' );
 
 		return $actions;
 	}
@@ -665,7 +716,7 @@ class Admin {
 
 				// Add user IDs as separate parameters.
 				foreach ( $users as $index => $user_id ) {
-					$query_args[ sprintf( 'users[%d]', $index ) ] = absint( $user_id );
+					$query_args[ \sprintf( 'users[%d]', $index ) ] = \absint( $user_id );
 				}
 
 				$confirmation_url = \add_query_arg( $query_args, \admin_url( 'users.php' ) );
@@ -769,7 +820,7 @@ class Admin {
 	 */
 	public static function process_capability_removal( $users, $remove_from_fediverse, $send_back ) {
 		// Normalize fediverse removal parameter.
-		if ( is_string( $remove_from_fediverse ) ) {
+		if ( \is_string( $remove_from_fediverse ) ) {
 			// Legacy format: 'delete' or 'keep' for all users.
 			$delete_all      = ( 'delete' === $remove_from_fediverse );
 			$users_to_delete = $delete_all ? $users : array();
@@ -809,9 +860,9 @@ class Admin {
 		\add_filter( 'number_format_i18n', '\Activitypub\custom_large_numbers', 10, 2 );
 
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
-			$follower_count = sprintf(
+			$follower_count = \sprintf(
 				// translators: %s: number of followers.
-				_n(
+				\_n(
 					'%s Follower',
 					'%s Followers',
 					count_followers( \get_current_user_id() ),
@@ -819,7 +870,7 @@ class Admin {
 				),
 				\number_format_i18n( count_followers( \get_current_user_id() ) )
 			);
-			$items['activitypub-followers-user'] = sprintf(
+			$items['activitypub-followers-user'] = \sprintf(
 				'<a class="activitypub-followers" href="%1$s" title="%2$s">%3$s</a>',
 				\esc_url( \admin_url( 'users.php?page=activitypub-followers-list' ) ),
 				\esc_attr__( 'Your followers', 'activitypub' ),
@@ -827,10 +878,10 @@ class Admin {
 			);
 		}
 
-		if ( ! is_user_type_disabled( 'blog' ) && current_user_can( 'manage_options' ) ) {
-			$follower_count = sprintf(
+		if ( ! is_user_type_disabled( 'blog' ) && \current_user_can( 'manage_options' ) ) {
+			$follower_count = \sprintf(
 				// translators: %s: number of followers.
-				_n(
+				\_n(
 					'%s Follower (Blog)',
 					'%s Followers (Blog)',
 					count_followers( Actors::BLOG_USER_ID ),
@@ -838,7 +889,7 @@ class Admin {
 				),
 				\number_format_i18n( count_followers( Actors::BLOG_USER_ID ) )
 			);
-			$items['activitypub-followers-blog'] = sprintf(
+			$items['activitypub-followers-blog'] = \sprintf(
 				'<a class="activitypub-followers" href="%1$s" title="%2$s">%3$s</a>',
 				\esc_url( \admin_url( 'options-general.php?page=activitypub&tab=followers' ) ),
 				\esc_attr__( 'The Blog\'s followers', 'activitypub' ),
@@ -863,7 +914,7 @@ class Admin {
 		// check if the post is enabled for ActivityPub.
 		if (
 			! \post_type_supports( \get_post_type( $post ), 'activitypub' ) ||
-			! in_array( $post->post_status, array( 'pending', 'draft', 'future', 'publish' ), true ) ||
+			! \in_array( $post->post_status, array( 'pending', 'draft', 'future', 'publish' ), true ) ||
 			! \current_user_can( 'edit_post', $post->ID ) ||
 			ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL === get_content_visibility( $post->ID ) ||
 			( site_supports_blocks() && \use_block_editor_for_post_type( $post->post_type ) )
@@ -871,9 +922,9 @@ class Admin {
 			return $actions;
 		}
 
-		$preview_url = add_query_arg( 'activitypub', 'true', \get_preview_post_link( $post ) );
+		$preview_url = \add_query_arg( 'activitypub', 'true', \get_preview_post_link( $post ) );
 
-		$actions['activitypub'] = sprintf(
+		$actions['activitypub'] = \sprintf(
 			'<a href="%s" target="_blank">%s</a>',
 			\esc_url( $preview_url ),
 			\esc_html__( 'Fediverse Preview ⁂', 'activitypub' )
@@ -908,7 +959,7 @@ class Admin {
 			return;
 		}
 
-		echo '<br>' . wp_strip_all_tags( $update->upgrade_notice ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '<br>' . \wp_strip_all_tags( $update->upgrade_notice ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	}
 
 	/**
@@ -955,78 +1006,6 @@ class Admin {
 	}
 
 	/**
-	 * Add Dashboard widgets.
-	 */
-	public static function add_dashboard_widgets() {
-		\wp_add_dashboard_widget( 'activitypub_blog', \__( 'ActivityPub Plugin News', 'activitypub' ), array( self::class, 'blog_dashboard_widget' ) );
-		if ( user_can_activitypub( \get_current_user_id() ) && ! is_user_type_disabled( 'user' ) ) {
-			\wp_add_dashboard_widget( 'activitypub_profile', \__( 'ActivityPub Author profile', 'activitypub' ), array( self::class, 'profile_dashboard_widget' ) );
-		}
-		if ( ! is_user_type_disabled( 'blog' ) ) {
-			\wp_add_dashboard_widget( 'activitypub_blog_profile', \__( 'ActivityPub Blog profile', 'activitypub' ), array( self::class, 'blogprofile_dashboard_widget' ) );
-		}
-	}
-
-	/**
-	 * Add the `ActivityPub.blog` feed as a Dashboard widget.
-	 */
-	public static function blog_dashboard_widget() {
-		echo '<div class="rss-widget">';
-		\wp_widget_rss_output(
-			array(
-				'url'          => 'https://activitypub.blog/feed/',
-				'items'        => 3,
-				'show_summary' => 1,
-				'show_author'  => 0,
-				'show_date'    => 1,
-			)
-		);
-		echo '</div>';
-	}
-
-	/**
-	 * Add the ActivityPub Author profile as a Dashboard widget.
-	 */
-	public static function profile_dashboard_widget() {
-		$user = Actors::get_by_id( \get_current_user_id() );
-		?>
-		<p>
-			<?php \esc_html_e( 'People can follow you by using your author name:', 'activitypub' ); ?>
-		</p>
-		<p><label for="activitypub-user-identifier"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-user-identifier" value="<?php echo \esc_attr( $user->get_webfinger() ); ?>" readonly /></p>
-		<p><label for="activitypub-user-url"><?php \esc_html_e( 'Profile URL', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-user-url" value="<?php echo \esc_attr( $user->get_url() ); ?>" readonly /></p>
-		<p>
-			<?php \esc_html_e( 'Authors who can not access this settings page will find their username on the "Edit Profile" page.', 'activitypub' ); ?>
-			<a href="<?php echo \esc_url( \admin_url( '/profile.php#activitypub' ) ); ?>">
-			<?php \esc_html_e( 'Customize username on "Edit Profile" page.', 'activitypub' ); ?>
-			</a>
-		</p>
-		<?php
-	}
-
-	/**
-	 * Add the ActivityPub Blog profile as a Dashboard widget.
-	 */
-	public static function blogprofile_dashboard_widget() {
-		$user = new Blog();
-		?>
-		<p>
-			<?php \esc_html_e( 'People can follow your blog by using:', 'activitypub' ); ?>
-		</p>
-		<p><label for="activitypub-user-identifier"><?php \esc_html_e( 'Username', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-user-identifier" value="<?php echo \esc_attr( $user->get_webfinger() ); ?>" readonly /></p>
-		<p><label for="activitypub-user-url"><?php \esc_html_e( 'Profile URL', 'activitypub' ); ?></label><input type="text" class="large-text code" id="activitypub-user-url" value="<?php echo \esc_attr( $user->get_url() ); ?>" readonly /></p>
-		<p>
-			<?php \esc_html_e( 'This blog profile will federate all posts written on your blog, regardless of the author who posted it.', 'activitypub' ); ?>
-			<?php if ( current_user_can( 'manage_options' ) ) : ?>
-			<a href="<?php echo \esc_url( \admin_url( '/options-general.php?page=activitypub&tab=blog-profile' ) ); ?>">
-				<?php \esc_html_e( 'Customize the blog profile.', 'activitypub' ); ?>
-			</a>
-			<?php endif; ?>
-		</p>
-		<?php
-	}
-
-	/**
 	 * AJAX handler for moderation settings (add/remove blocks).
 	 */
 	public static function ajax_moderation_settings() {
@@ -1036,11 +1015,11 @@ class Admin {
 		$value     = \sanitize_text_field( \wp_unslash( $_POST['value'] ?? '' ) );
 
 		// Validate required parameters.
-		if ( ! in_array( $context, array( 'user', 'site' ), true ) || ! in_array( $operation, array( 'add', 'remove' ), true ) ) {
+		if ( ! \in_array( $context, array( 'user', 'site' ), true ) || ! \in_array( $operation, array( 'add', 'remove' ), true ) ) {
 			\wp_send_json_error( array( 'message' => \__( 'Invalid context or action.', 'activitypub' ) ) );
 		}
 
-		if ( empty( $type ) || empty( $value ) || ! in_array( $type, array( 'domain', 'keyword' ), true ) ) {
+		if ( empty( $type ) || empty( $value ) || ! \in_array( $type, array( 'domain', 'keyword' ), true ) ) {
 			\wp_send_json_error( array( 'message' => \__( 'Invalid parameters.', 'activitypub' ) ) );
 		}
 
@@ -1132,5 +1111,172 @@ class Admin {
 		} else {
 			\wp_send_json_error( array( 'message' => \__( 'Failed to remove subscription.', 'activitypub' ) ) );
 		}
+	}
+
+	/**
+	 * AJAX handler for registering a new OAuth client from the user profile.
+	 *
+	 * @since 8.1.0
+	 */
+	public static function ajax_register_oauth_client() {
+		// Verify nonce.
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_connected_apps' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
+		}
+
+		if ( ! \current_user_can( 'manage_options' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
+		}
+
+		$name         = \sanitize_text_field( \wp_unslash( $_POST['name'] ?? '' ) );
+		$redirect_uri = \sanitize_url( \wp_unslash( $_POST['redirect_uri'] ?? '' ) );
+
+		if ( empty( $name ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Application name is required.', 'activitypub' ) ) );
+		}
+
+		if ( empty( $redirect_uri ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Redirect URI is required.', 'activitypub' ) ) );
+		}
+
+		$result = Client::register(
+			array(
+				'name'          => $name,
+				'redirect_uris' => array( $redirect_uri ),
+				'is_public'     => false,
+			)
+		);
+
+		if ( \is_wp_error( $result ) ) {
+			\wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+		}
+
+		$data = array(
+			'client_id' => $result['client_id'],
+			'created'   => \date_i18n( \get_option( 'date_format' ) ),
+		);
+
+		if ( ! empty( $result['client_secret'] ) ) {
+			$data['client_secret'] = $result['client_secret'];
+		}
+
+		\wp_send_json_success( $data );
+	}
+
+	/**
+	 * AJAX handler for deleting a registered OAuth client.
+	 *
+	 * @since 8.1.0
+	 */
+	public static function ajax_delete_oauth_client() {
+		// Verify nonce.
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_connected_apps' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
+		}
+
+		if ( ! \current_user_can( 'manage_options' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
+		}
+
+		$client_id = \sanitize_text_field( \wp_unslash( $_POST['client_id'] ?? '' ) );
+
+		if ( empty( $client_id ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid client ID.', 'activitypub' ) ) );
+		}
+
+		$deleted = Client::delete( $client_id );
+
+		if ( ! $deleted ) {
+			\wp_send_json_error( array( 'message' => \__( 'Failed to delete application.', 'activitypub' ) ) );
+		}
+
+		\wp_send_json_success( array( 'deleted' => true ) );
+	}
+
+	/**
+	 * AJAX handler for deleting all manually registered OAuth clients.
+	 *
+	 * @since 8.1.0
+	 */
+	public static function ajax_delete_all_oauth_clients() {
+		// Verify nonce.
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_connected_apps' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
+		}
+
+		if ( ! \current_user_can( 'manage_options' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
+		}
+
+		$clients = Client::get_manually_registered();
+
+		foreach ( $clients as $client ) {
+			Client::delete( $client->get_client_id() );
+		}
+
+		\wp_send_json_success( array( 'deleted' => ! empty( $clients ) ) );
+	}
+
+	/**
+	 * AJAX handler for revoking an OAuth token from the user profile.
+	 *
+	 * Follows the WordPress core Application Passwords pattern.
+	 *
+	 * @since 8.1.0
+	 */
+	public static function ajax_revoke_oauth_token() {
+		// Verify nonce.
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_connected_apps' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
+		}
+
+		if ( ! \current_user_can( 'read' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
+		}
+
+		$meta_key = \sanitize_text_field( \wp_unslash( $_POST['meta_key'] ?? '' ) ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Not a DB query parameter.
+
+		// Verify the meta key belongs to our token prefix.
+		if ( 0 !== \strpos( $meta_key, Token::META_PREFIX ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid token.', 'activitypub' ) ) );
+		}
+
+		$user_id    = \get_current_user_id();
+		$token_data = \get_user_meta( $user_id, $meta_key, true );
+
+		// Verify the token belongs to the current user.
+		if ( empty( $token_data ) || ! \is_array( $token_data ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Token not found.', 'activitypub' ) ) );
+		}
+
+		// Delete the token.
+		\delete_user_meta( $user_id, $meta_key );
+
+		// Delete the associated refresh token index.
+		if ( ! empty( $token_data['refresh_token_hash'] ) ) {
+			\delete_user_meta( $user_id, Token::REFRESH_INDEX_PREFIX . $token_data['refresh_token_hash'] );
+		}
+
+		\wp_send_json_success( array( 'deleted' => true ) );
+	}
+
+	/**
+	 * AJAX handler for revoking all OAuth tokens for the current user.
+	 *
+	 * @since 8.1.0
+	 */
+	public static function ajax_revoke_all_oauth_tokens() {
+		// Verify nonce.
+		if ( ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'activitypub_connected_apps' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'Invalid nonce.', 'activitypub' ) ) );
+		}
+
+		if ( ! \current_user_can( 'read' ) ) {
+			\wp_send_json_error( array( 'message' => \__( 'You do not have permission to perform this action.', 'activitypub' ) ) );
+		}
+
+		$count = Token::revoke_all_for_user( \get_current_user_id() );
+
+		\wp_send_json_success( array( 'deleted' => $count > 0 ) );
 	}
 }

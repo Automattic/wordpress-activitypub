@@ -7,7 +7,7 @@
 
 namespace Activitypub\Cache;
 
-use Activitypub\Collection\Posts;
+use Activitypub\Collection\Remote_Posts;
 
 /**
  * Media cache class.
@@ -169,7 +169,7 @@ class Media extends File {
 	 * @param int $post_id The post ID being deleted.
 	 */
 	public static function maybe_cleanup( $post_id ) {
-		if ( Posts::POST_TYPE !== \get_post_type( $post_id ) ) {
+		if ( Remote_Posts::POST_TYPE !== \get_post_type( $post_id ) ) {
 			return;
 		}
 

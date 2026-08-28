@@ -127,6 +127,9 @@ class Base_Object extends Generic_Object {
 			'sensitive'         => 'as:sensitive',
 			'dcterms'           => 'http://purl.org/dc/terms/',
 			'gts'               => 'https://gotosocial.org/ns#',
+			'schema'            => 'http://schema.org/',
+			'exifData'          => 'schema:exifData',
+			'PropertyValue'     => 'schema:PropertyValue',
 			'interactionPolicy' => array(
 				'@id'   => 'gts:interactionPolicy',
 				'@type' => '@id',
@@ -159,6 +162,8 @@ class Base_Object extends Generic_Object {
 				'@id'   => 'gts:always',
 				'@type' => '@id',
 			),
+			'toot'              => 'http://joinmastodon.org/ns#',
+			'blurhash'          => 'toot:blurhash',
 		),
 	);
 
@@ -631,7 +636,7 @@ class Base_Object extends Generic_Object {
 	 */
 	public function get( $key ) {
 		if ( ! $this->has( $key ) ) {
-			return new \WP_Error( 'invalid_key', __( 'Invalid key', 'activitypub' ), array( 'status' => 404 ) );
+			return new \WP_Error( 'invalid_key', \__( 'Invalid key', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
 		return parent::get( $key );
@@ -647,7 +652,7 @@ class Base_Object extends Generic_Object {
 	 */
 	public function set( $key, $value ) {
 		if ( ! $this->has( $key ) ) {
-			return new \WP_Error( 'invalid_key', __( 'Invalid key', 'activitypub' ), array( 'status' => 404 ) );
+			return new \WP_Error( 'invalid_key', \__( 'Invalid key', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
 		return parent::set( $key, $value );
@@ -663,7 +668,7 @@ class Base_Object extends Generic_Object {
 	 */
 	public function add( $key, $value ) {
 		if ( ! $this->has( $key ) ) {
-			return new \WP_Error( 'invalid_key', __( 'Invalid key', 'activitypub' ), array( 'status' => 404 ) );
+			return new \WP_Error( 'invalid_key', \__( 'Invalid key', 'activitypub' ), array( 'status' => 404 ) );
 		}
 
 		return parent::add( $key, $value );

@@ -78,7 +78,7 @@ class Test_Replies_Controller extends \Activitypub\Tests\Test_REST_Controller_Te
 	 */
 	public function test_register_routes() {
 		$routes = rest_get_server()->get_routes();
-		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/(?P<object_type>[\w\-\.]+)s/(?P<id>[\w\-\.]+)/(?P<type>[\w\-\.]+)', $routes );
+		$this->assertArrayHasKey( '/' . ACTIVITYPUB_REST_NAMESPACE . '/(?P<object_type>[\w\-\.]+)s/(?P<id>[\d]+)/(?P<type>[\w\-\.]+)', $routes );
 	}
 
 	/**
@@ -157,6 +157,84 @@ class Test_Replies_Controller extends \Activitypub\Tests\Test_REST_Controller_Te
 	 */
 	public function test_get_replies_non_existent_comment() {
 		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/comments/99999/replies' );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertErrorResponse( 'activitypub_replies_collection_does_not_exist', $response, 404 );
+	}
+
+	/**
+	 * Non-public posts must not expose replies, likes, or shares collections.
+	 *
+	 * @covers ::get_items
+	 * @dataProvider data_private_post_collections
+	 *
+	 * @param string $collection replies, likes, or shares.
+	 */
+	public function test_get_items_hides_private_post_collections( $collection ) {
+		$private_post_id = self::factory()->post->create( array( 'post_status' => 'private' ) );
+
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/' . $private_post_id . '/' . $collection );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertErrorResponse( 'activitypub_replies_collection_does_not_exist', $response, 404 );
+	}
+
+	/**
+	 * Data provider for the private-post collection visibility test.
+	 *
+	 * @return array[] Test cases.
+	 */
+	public function data_private_post_collections() {
+		return array(
+			'replies' => array( 'replies' ),
+			'likes'   => array( 'likes' ),
+			'shares'  => array( 'shares' ),
+		);
+	}
+
+	/**
+	 * A previously-federated post that has since been made non-public must not
+	 * expose reply/like/share collections. Regression test for the
+	 * `is_post_disabled()` escape hatch that kept the gate open for posts in a
+	 * `federated` lifecycle state.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_items_hides_previously_federated_post_made_private() {
+		$post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		$post    = \get_post( $post_id );
+
+		\Activitypub\set_wp_object_state( $post, ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'private',
+			)
+		);
+
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/' . $post_id . '/replies' );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertErrorResponse( 'activitypub_replies_collection_does_not_exist', $response, 404 );
+	}
+
+	/**
+	 * A comment whose parent post is private must not expose its collections.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_items_hides_comment_on_private_post() {
+		$private_post_id = self::factory()->post->create( array( 'post_status' => 'private' ) );
+		$comment_id      = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $private_post_id,
+				'comment_type'     => 'comment',
+				'comment_approved' => 1,
+			)
+		);
+
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/comments/' . $comment_id . '/replies' );
 		$response = rest_get_server()->dispatch( $request );
 
 		$this->assertErrorResponse( 'activitypub_replies_collection_does_not_exist', $response, 404 );

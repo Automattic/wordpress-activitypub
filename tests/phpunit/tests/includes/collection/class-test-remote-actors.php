@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Http;
 use Activitypub\Mention;
 
 /**
@@ -97,6 +98,49 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$post = \get_post( $post_id );
 		$this->assertInstanceOf( '\WP_Post', $post );
 		$this->assertEquals( 'https://remote.example.com/actor/jane-create', $post->guid );
+	}
+
+	/**
+	 * Non-actor objects must never be cached, even when they carry the fields the
+	 * cache otherwise needs. The type guard lives at the persistence chokepoint so
+	 * every caller is covered without its own check.
+	 *
+	 * @covers ::create
+	 * @covers ::upsert
+	 */
+	public function test_does_not_cache_non_actor_objects() {
+		$before = ( new \WP_Query() )->query(
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'post_status' => 'any',
+				'fields'      => 'ids',
+				'nopaging'    => true,
+			)
+		);
+
+		// A Note with an inbox: passes every other check, only the type guard rejects it.
+		$note = array(
+			'id'    => 'https://remote.example.com/objects/note-1',
+			'type'  => 'Note',
+			'inbox' => 'https://remote.example.com/inbox',
+		);
+
+		$created  = Remote_Actors::create( $note );
+		$upserted = Remote_Actors::upsert( $note );
+
+		$this->assertWPError( $created, 'create() must reject a non-actor object.' );
+		$this->assertSame( 'activitypub_invalid_actor_data', $created->get_error_code() );
+		$this->assertWPError( $upserted, 'upsert() must reject a non-actor object.' );
+
+		$after = ( new \WP_Query() )->query(
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'post_status' => 'any',
+				'fields'      => 'ids',
+				'nopaging'    => true,
+			)
+		);
+		$this->assertCount( \count( $before ), $after, 'A non-actor object must not be cached.' );
 	}
 
 	/**
@@ -228,6 +272,257 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$this->assertEquals( 'activitypub_no_actor', $not_actor->get_error_code() );
 
 		remove_filter( 'activitypub_pre_http_get_remote_object', $actor_callback_test5 );
+	}
+
+	/**
+	 * Mock the HTTP layer to serve JSON documents per requested URL.
+	 *
+	 * Unlike the `activitypub_pre_http_get_remote_object` filter (a trusted
+	 * in-process override), this mocks the actual network fetch, so the self-
+	 * confirmation in Http::get_remote_object() runs. Pass $effective_url to
+	 * simulate a redirect: every response then reports it as the URL it was
+	 * served from.
+	 *
+	 * @param array  $documents     Map of requested URL => document array.
+	 * @param string $effective_url Optional. URL every response was "served from".
+	 * @return callable The registered filter callback (pass to remove_filter).
+	 */
+	private function mock_remote_documents( $documents, $effective_url = '' ) {
+		$callback = function ( $pre, $args, $url ) use ( $documents, $effective_url ) {
+			if ( ! \array_key_exists( $url, $documents ) ) {
+				return $pre;
+			}
+
+			$response = array(
+				'headers'  => array(),
+				'body'     => \wp_json_encode( $documents[ $url ] ),
+				'response' => array(
+					'code'    => 200,
+					'message' => 'OK',
+				),
+				'cookies'  => array(),
+			);
+
+			if ( $effective_url ) {
+				$requests_response         = new \WpOrg\Requests\Response();
+				$requests_response->url    = $effective_url;
+				$response['http_response'] = new \WP_HTTP_Requests_Response( $requests_response );
+			}
+
+			return $response;
+		};
+
+		\add_filter( 'pre_http_request', $callback, 10, 3 );
+
+		return $callback;
+	}
+
+	/**
+	 * A document that claims another host's id must not overwrite that host's actor.
+	 *
+	 * Following Mastodon's `fetch_resource` pattern, when a fetched document declares
+	 * a different id it is re-fetched from its own host and only that self-confirmed
+	 * copy is trusted. So a document served elsewhere that claims the canonical id
+	 * causes the canonical actor's genuine document to be re-fetched from its own
+	 * server — the other document's key is discarded.
+	 *
+	 * @covers ::fetch_by_uri
+	 */
+	public function test_fetch_by_uri_cross_host_id_refetches_canonical_actor() {
+		$canonical_id   = 'https://example.com/users/alice';
+		$mismatched_url = 'https://example.org/mismatched';
+
+		$remove = $this->mock_remote_documents(
+			array(
+				// The other host: claims the canonical id, serves a different key.
+				$mismatched_url => array(
+					'id'                => $canonical_id,
+					'type'              => 'Person',
+					'preferredUsername' => 'alice',
+					'inbox'             => 'https://example.org/inbox',
+					'publicKey'         => array( 'id' => $canonical_id . '#main-key', 'owner' => $canonical_id, 'publicKeyPem' => 'OTHER-KEY' ), // phpcs:ignore WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
+				),
+				// The canonical host: serves the genuine key.
+				$canonical_id   => array(
+					'id'                => $canonical_id,
+					'type'              => 'Person',
+					'preferredUsername' => 'alice',
+					'inbox'             => $canonical_id . '/inbox',
+					'publicKey'         => array( 'id' => $canonical_id . '#main-key', 'owner' => $canonical_id, 'publicKeyPem' => 'CANONICAL-KEY' ), // phpcs:ignore WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
+				),
+			)
+		);
+
+		$result = Remote_Actors::fetch_by_uri( $mismatched_url );
+
+		remove_filter( 'pre_http_request', $remove );
+
+		// The declared id was re-fetched from its own host; the genuine actor wins.
+		$this->assertInstanceOf( 'WP_Post', $result );
+		$this->assertEquals( $canonical_id, $result->guid );
+		$data = \json_decode( $result->post_content, true );
+		$this->assertSame( 'CANONICAL-KEY', $data['publicKey']['publicKeyPem'], 'The re-fetched canonical actor must win; the other key must be discarded.' );
+	}
+
+	/**
+	 * An error reached via a cross-host redirect must not be cached under the
+	 * requested URL's key: otherwise an open redirect could turn a transient failure
+	 * into a repeatable federation outage (every later key/actor fetch
+	 * would read back the cached error).
+	 *
+	 * @covers \Activitypub\Http::get
+	 */
+	public function test_get_does_not_cache_cross_host_redirected_error() {
+		$canonical_url = 'https://example.com/users/alice';
+		$other_host    = 'https://example.org/404';
+
+		$filter = function ( $pre, $args, $url ) use ( $canonical_url, $other_host ) {
+			if ( $url !== $canonical_url ) {
+				return $pre;
+			}
+
+			$requests_response      = new \WpOrg\Requests\Response();
+			$requests_response->url = $other_host;
+
+			return array(
+				'headers'       => array(),
+				'body'          => 'Not Found',
+				'response'      => array(
+					'code'    => 404,
+					'message' => 'Not Found',
+				),
+				'cookies'       => array(),
+				'http_response' => new \WP_HTTP_Requests_Response( $requests_response ),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		$result = Http::get( $canonical_url );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertWPError( $result );
+		$this->assertFalse(
+			\get_transient( Http::generate_cache_key( $canonical_url ) ),
+			'A cross-host-redirected error must not be cached under the requested URL.'
+		);
+	}
+
+	/**
+	 * An open redirect on the requested host must not let a document from another
+	 * host overwrite the actor cache. Self-confirmation compares the declared id
+	 * against the URL the document was actually served from (post-redirect), so a
+	 * bounce to JSON declaring the canonical id is rejected.
+	 *
+	 * @covers ::fetch_by_uri
+	 */
+	public function test_fetch_by_uri_rejects_redirected_document() {
+		$canonical_id = 'https://example.com/users/alice';
+		$other_host   = 'https://example.org/mismatched';
+
+		// Every fetch is redirected to another host, which serves the canonical id.
+		$remove = $this->mock_remote_documents(
+			array(
+				$canonical_id => array(
+					'id'                => $canonical_id,
+					'type'              => 'Person',
+					'preferredUsername' => 'alice',
+					'inbox'             => 'https://example.org/inbox',
+					'publicKey'         => array( 'id' => $canonical_id . '#main-key', 'owner' => $canonical_id, 'publicKeyPem' => 'OTHER-KEY' ), // phpcs:ignore WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
+				),
+			),
+			$other_host
+		);
+
+		$result = Remote_Actors::fetch_by_uri( $canonical_id );
+
+		remove_filter( 'pre_http_request', $remove );
+
+		$this->assertWPError( $result, 'A redirected document declaring the requested id must be rejected.' );
+		$this->assertWPError( Remote_Actors::get_by_uri( $canonical_id ), 'The canonical actor must not be cached from a redirected response.' );
+	}
+
+	/**
+	 * A non-canonical URL (e.g. a WebFinger self-link) resolves to the actor's
+	 * canonical id via a re-fetch and is cached under that id.
+	 *
+	 * @covers ::fetch_by_uri
+	 */
+	public function test_fetch_by_uri_resolves_non_canonical_url() {
+		$fetch_url = 'https://example.com/@carol';
+		$canonical = 'https://example.com/users/carol';
+
+		$actor  = array(
+			'id'                => $canonical,
+			'type'              => 'Person',
+			'preferredUsername' => 'carol',
+			'inbox'             => $canonical . '/inbox',
+		);
+		$remove = $this->mock_remote_documents(
+			array(
+				$fetch_url => $actor,
+				$canonical => $actor,
+			)
+		);
+
+		$post = Remote_Actors::fetch_by_uri( $fetch_url );
+
+		remove_filter( 'pre_http_request', $remove );
+
+		$this->assertInstanceOf( 'WP_Post', $post, 'A non-canonical URL must resolve via re-fetch of the declared id.' );
+		$this->assertEquals( $canonical, $post->guid, 'The actor is cached under its canonical id.' );
+	}
+
+	/**
+	 * A declared id that does not self-confirm when re-fetched is rejected — the
+	 * re-fetch happens once, with no further chasing (mirrors Mastodon's terminal).
+	 *
+	 * @covers ::fetch_by_uri
+	 */
+	public function test_fetch_by_uri_rejects_unconfirmed_id() {
+		$fetch_url = 'https://example.org/a';
+		$declared  = 'https://example.org/b';
+
+		$remove = $this->mock_remote_documents(
+			array(
+				$fetch_url => array( 'id' => $declared, 'type' => 'Person', 'preferredUsername' => 'x', 'inbox' => $declared . '/inbox' ), // phpcs:ignore WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
+				// The re-fetch declares yet another id — it does not self-confirm.
+				$declared  => array( 'id' => 'https://example.org/c', 'type' => 'Person', 'preferredUsername' => 'x', 'inbox' => 'https://example.org/c/inbox' ), // phpcs:ignore WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
+			)
+		);
+
+		$result = Remote_Actors::fetch_by_uri( $fetch_url );
+
+		remove_filter( 'pre_http_request', $remove );
+
+		$this->assertWPError( $result, 'A declared id that does not self-confirm on re-fetch must be rejected.' );
+	}
+
+	/**
+	 * An actor fetched from its own canonical id is cached normally.
+	 *
+	 * @covers ::fetch_by_uri
+	 */
+	public function test_fetch_by_uri_accepts_canonical_id() {
+		$actor_id = 'https://example.com/users/dave';
+
+		$remove = $this->mock_remote_documents(
+			array(
+				$actor_id => array(
+					'id'                => $actor_id,
+					'type'              => 'Person',
+					'preferredUsername' => 'dave',
+					'inbox'             => $actor_id . '/inbox',
+				),
+			)
+		);
+
+		$post = Remote_Actors::fetch_by_uri( $actor_id );
+
+		remove_filter( 'pre_http_request', $remove );
+
+		$this->assertInstanceOf( 'WP_Post', $post, 'An actor fetched from its own id must resolve.' );
+		$this->assertEquals( $actor_id, $post->guid );
 	}
 
 	/**
@@ -491,6 +786,39 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
+	 * An actor URI containing a quote must still be found.
+	 *
+	 * `$wpdb->prepare()` escapes the values it is given, so escaping them beforehand as well
+	 * leaves the lookup key no longer matching what was stored.
+	 *
+	 * @covers ::get_by_uri
+	 */
+	public function test_get_by_uri_with_quote() {
+		$uris = array(
+			"https://remote.example.com/actor/o'brien",
+			'https://remote.example.com/actor/say"hi',
+			'https://remote.example.com/actor/a b',
+		);
+
+		foreach ( $uris as $actor_uri ) {
+			$actor = array(
+				'id'                => $actor_uri,
+				'type'              => 'Person',
+				'inbox'             => 'https://remote.example.com/inbox',
+				'preferredUsername' => 'quoted',
+			);
+
+			$post_id = \Activitypub\Collection\Remote_Actors::upsert( $actor );
+			$this->assertIsInt( $post_id );
+
+			$found = \Activitypub\Collection\Remote_Actors::get_by_uri( $actor_uri );
+
+			$this->assertInstanceOf( 'WP_Post', $found, "An actor URI must be found: $actor_uri" );
+			$this->assertSame( $post_id, $found->ID );
+		}
+	}
+
+	/**
 	 * Test get_by_uri.
 	 *
 	 * @covers ::get_by_uri
@@ -524,6 +852,57 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		// Should return WP_Error for empty URI.
 		$empty = Remote_Actors::get_by_uri( '' );
 		$this->assertWPError( $empty );
+	}
+
+	/**
+	 * Test get_existing_uris returns the cached subset of input URIs.
+	 *
+	 * @covers ::get_existing_uris
+	 */
+	public function test_get_existing_uris() {
+		$alice = array(
+			'id'                => 'https://remote.example.com/actor/alice-batch',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/alice-batch',
+			'inbox'             => 'https://remote.example.com/actor/alice-batch/inbox',
+			'name'              => 'Alice',
+			'preferredUsername' => 'alice-batch',
+		);
+		$bob   = array(
+			'id'                => 'https://remote.example.com/actor/bob-batch',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/bob-batch',
+			'inbox'             => 'https://remote.example.com/actor/bob-batch/inbox',
+			'name'              => 'Bob',
+			'preferredUsername' => 'bob-batch',
+		);
+		$this->assertNotWPError( Remote_Actors::create( $alice ) );
+		$this->assertNotWPError( Remote_Actors::create( $bob ) );
+
+		$result = Remote_Actors::get_existing_uris(
+			array(
+				$alice['id'],
+				$bob['id'],
+				'https://nowhere.example/never-cached',
+			)
+		);
+
+		$this->assertSame(
+			array(
+				$alice['id'] => true,
+				$bob['id']   => true,
+			),
+			$result
+		);
+	}
+
+	/**
+	 * Test get_existing_uris returns an empty array when given no input.
+	 *
+	 * @covers ::get_existing_uris
+	 */
+	public function test_get_existing_uris_empty_input() {
+		$this->assertSame( array(), Remote_Actors::get_existing_uris( array() ) );
 	}
 
 	/**
@@ -600,6 +979,76 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		// Try to clear errors for non-existent follower.
 		$cleared = Remote_Actors::clear_errors( 99999 );
 		$this->assertFalse( $cleared );
+	}
+
+	/**
+	 * Tests get_outdated.
+	 *
+	 * @covers ::get_outdated
+	 */
+	public function test_get_outdated() {
+		$uris = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
+		$ids  = array();
+
+		foreach ( $uris as $uri ) {
+			$ids[ $uri ] = Remote_Actors::upsert(
+				array(
+					'type'              => 'Person',
+					'id'                => $uri,
+					'inbox'             => $uri . '/inbox',
+					'preferredUsername' => 'user',
+				)
+			);
+		}
+
+		// Age one actor well beyond the default one-day window.
+		global $wpdb;
+		$modified = \gmdate( 'Y-m-d H:i:s', \time() - 9 * DAY_IN_SECONDS );
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prepare(
+				"UPDATE $wpdb->posts SET post_modified = %s, post_modified_gmt = %s WHERE ID = %d",
+				array( $modified, $modified, $ids['https://example.com/author/jon'] )
+			)
+		);
+		\clean_post_cache( $ids['https://example.com/author/jon'] );
+
+		$outdated = Remote_Actors::get_outdated();
+		$this->assertCount( 1, $outdated );
+		$this->assertEquals( 'https://example.com/author/jon', $outdated[0]->guid );
+	}
+
+	/**
+	 * Tests get_faulty.
+	 *
+	 * @covers ::get_faulty
+	 */
+	public function test_get_faulty() {
+		$uris = array( 'https://example.com/author/jon', 'https://example.org/author/doe', 'http://sally.example.org' );
+		$ids  = array();
+
+		foreach ( $uris as $uri ) {
+			$ids[ $uri ] = Remote_Actors::upsert(
+				array(
+					'type'              => 'Person',
+					'id'                => $uri,
+					'inbox'             => $uri . '/inbox',
+					'preferredUsername' => 'user',
+				)
+			);
+		}
+
+		$faulty_id = $ids['http://sally.example.org'];
+		for ( $i = 1; $i <= 15; $i++ ) {
+			Remote_Actors::add_error( $faulty_id, 'error ' . $i );
+		}
+
+		$faulty = Remote_Actors::get_faulty();
+		$this->assertCount( 1, $faulty );
+		$this->assertEquals( 'http://sally.example.org', $faulty[0]->guid );
+
+		// Clearing the errors removes it from the faulty set.
+		Remote_Actors::clear_errors( $faulty_id );
+		$this->assertCount( 0, Remote_Actors::get_faulty() );
 	}
 
 	/**
@@ -1321,25 +1770,17 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$remote_actor_id = Remote_Actors::upsert( $actor_data );
 		$this->assertIsInt( $remote_actor_id );
 
-		// Avatar is NOT cached eagerly - meta should be empty after upsert.
-		$avatar_url = get_post_meta( $remote_actor_id, '_activitypub_avatar_url', true );
-		$this->assertEmpty( $avatar_url, 'Avatar should not be eagerly cached on upsert' );
-
-		// Calling get_avatar_url() triggers lazy caching.
+		// Calling get_avatar_url() returns the avatar URL from the actor JSON.
 		$retrieved_avatar = Remote_Actors::get_avatar_url( $remote_actor_id );
 		$this->assertEquals( 'https://example.com/avatar-test.jpg', $retrieved_avatar );
-
-		// Now meta should be populated for subsequent calls.
-		$cached_avatar = get_post_meta( $remote_actor_id, '_activitypub_avatar_url', true );
-		$this->assertEquals( 'https://example.com/avatar-test.jpg', $cached_avatar );
 	}
 
 	/**
-	 * Test get_avatar_url fallback to JSON when meta is empty.
+	 * Test get_avatar_url extracts URL from actor JSON.
 	 *
 	 * @covers ::get_avatar_url
 	 */
-	public function test_get_avatar_url_fallback_to_json() {
+	public function test_get_avatar_url_from_json() {
 		// Create a remote actor.
 		$actor_data = array(
 			'id'                => 'https://example.com/users/json-avatar',
@@ -1356,22 +1797,9 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$remote_actor_id = Remote_Actors::upsert( $actor_data );
 		$this->assertIsInt( $remote_actor_id );
 
-		// Delete the avatar meta to simulate old data.
-		delete_post_meta( $remote_actor_id, '_activitypub_avatar_url' );
-
-		// Verify meta is empty.
-		$avatar_meta = get_post_meta( $remote_actor_id, '_activitypub_avatar_url', true );
-		$this->assertEmpty( $avatar_meta );
-
-		// Test get_avatar_url extracts from JSON and caches it.
+		// Test get_avatar_url extracts from JSON.
 		$retrieved_avatar = Remote_Actors::get_avatar_url( $remote_actor_id );
 		$this->assertEquals( 'https://example.com/json-avatar.jpg', $retrieved_avatar );
-
-		// Verify it was cached in meta.
-		$cached_avatar = get_post_meta( $remote_actor_id, '_activitypub_avatar_url', true );
-		$this->assertEquals( 'https://example.com/json-avatar.jpg', $cached_avatar );
-
-		// Clean up.
 	}
 
 	/**

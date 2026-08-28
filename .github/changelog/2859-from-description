@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Enable RFC 9421 HTTP Message Signatures by default.

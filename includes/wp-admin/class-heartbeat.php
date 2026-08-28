@@ -85,8 +85,8 @@ class Heartbeat {
 		// Initialize the response.
 		$response['activitypub_following'] = array(
 			'counts'        => Following::count_by_status( $user_id ),
-			'message'       => __( 'Follow requests updated.', 'activitypub' ),
-			'no_items'      => __( 'No profiles found.', 'activitypub' ),
+			'message'       => \__( 'Follow requests updated.', 'activitypub' ),
+			'no_items'      => \__( 'No profiles found.', 'activitypub' ),
 			'updated_items' => array(),
 		);
 

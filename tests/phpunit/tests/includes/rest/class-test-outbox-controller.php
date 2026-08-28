@@ -8,7 +8,9 @@
 namespace Activitypub\Tests\Rest;
 
 use Activitypub\Collection\Outbox;
+use Activitypub\OAuth\Scope;
 use Activitypub\Rest\Outbox_Controller;
+use Activitypub\Tests\OAuth_Token_Stub;
 use Activitypub\Tests\Test_REST_Controller_Testcase;
 
 /**
@@ -18,6 +20,8 @@ use Activitypub\Tests\Test_REST_Controller_Testcase;
  * @coversDefaultClass \Activitypub\Rest\Outbox_Controller
  */
 class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
+	use OAuth_Token_Stub;
+
 
 	/**
 	 * Test user ID.
@@ -37,6 +41,11 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 	 * Set up class test fixtures.
 	 */
 	public static function set_up_before_class() {
+		// Ensure the post scheduler hook is present (may be removed by other test classes).
+		if ( ! \has_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ) ) ) {
+			\add_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ), 33, 4 );
+		}
+
 		self::$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
 		\get_user_by( 'ID', self::$user_id )->add_cap( 'activitypub' );
 		\wp_set_current_user( self::$user_id );
@@ -59,6 +68,12 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 	public function set_up() {
 		parent::set_up();
 		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\add_filter( 'activitypub_oauth_check_permission', '__return_true' );
+
+		// Ensure the post scheduler hook is present (may be removed by other test classes).
+		if ( ! \has_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ) ) ) {
+			\add_action( 'wp_after_insert_post', array( \Activitypub\Scheduler\Post::class, 'triage' ), 33, 4 );
+		}
 	}
 
 	/**
@@ -142,18 +157,17 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		$this->assertStringContainsString( 'page=3', $data['next'] );
 
 		// Empty collections skip pagination metadata.
-		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1/outbox' );
+		// Use a fresh user with no outbox entries to test empty collection behavior.
+		$empty_user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_user_by( 'ID', $empty_user_id )->add_cap( 'activitypub' );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $empty_user_id . '/outbox' );
 		$request->set_param( 'per_page', 3 );
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
-		if ( empty( $data['orderedItems'] ) && ( ! isset( $data['totalItems'] ) || 0 === $data['totalItems'] ) ) {
-			$this->assertArrayNotHasKey( 'first', $data );
-			$this->assertArrayNotHasKey( 'last', $data );
-		} else {
-			$this->assertArrayHasKey( 'first', $data );
-			$this->assertArrayHasKey( 'last', $data );
-		}
+		$this->assertArrayNotHasKey( 'first', $data );
+		$this->assertArrayNotHasKey( 'last', $data );
 	}
 
 	/**
@@ -521,6 +535,73 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 	}
 
 	/**
+	 * Test that a capable non-owner only sees another user's public outbox items.
+	 *
+	 * Regression: ownership was previously satisfied by the global `activitypub`
+	 * capability (held by every author), so any author could read every other user's
+	 * non-public outbox items. Ownership must be a strict identity check.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_items_hides_non_public_from_capable_non_owner() {
+		$owner = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_user_by( 'ID', $owner )->add_cap( 'activitypub' );
+
+		foreach ( array(
+			array( 'note/pub', \ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ),
+			array( 'note/priv', \ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ),
+		) as $item ) {
+			list( $slug, $visibility ) = $item;
+			self::factory()->post->create(
+				array(
+					'post_author'  => $owner,
+					'post_type'    => Outbox::POST_TYPE,
+					'post_status'  => 'pending',
+					'post_title'   => 'https://example.org/' . $slug,
+					'post_content' => \wp_json_encode(
+						array(
+							'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
+							'id'       => 'https://example.org/' . $slug,
+							'type'     => 'Create',
+							'actor'    => 'https://example.org/user/' . $owner,
+							'object'   => array(
+								'id'      => 'https://example.org/' . $slug,
+								'type'    => 'Note',
+								'content' => 'Test content',
+							),
+						)
+					),
+					'meta_input'   => array(
+						'_activitypub_activity_type'     => 'Create',
+						'_activitypub_activity_actor'    => 'user',
+						'activitypub_content_visibility' => $visibility,
+					),
+				)
+			);
+		}
+
+		// A different user that also holds the activitypub capability.
+		$other = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_user_by( 'ID', $other )->add_cap( 'activitypub' );
+		\wp_set_current_user( $other );
+		$this->assertTrue( \current_user_can( 'activitypub' ) );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $owner . '/outbox' );
+		$request->set_param( 'page', 1 );
+		$request->set_param( 'per_page', 10 );
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertCount(
+			1,
+			$data['orderedItems'],
+			'A capable non-owner must only see the public outbox item, not the private one.'
+		);
+		$this->assertSame( 'https://example.org/note/pub', $data['orderedItems'][0]['id'] );
+	}
+
+	/**
 	 * Test getting items with correct actor type filtering.
 	 *
 	 * @covers ::get_items
@@ -576,6 +657,154 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 	}
 
 	/**
+	 * Test that blog actor outbox filters private activities for unauthenticated users.
+	 *
+	 * Regression test: When user_id=0 (blog actor) and the visitor is unauthenticated
+	 * (get_current_user_id() also returns 0), the visibility filters must still apply.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_blog_actor_outbox_filters_private_activities_for_unauthenticated() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+		\wp_set_current_user( 0 );
+
+		// Create a public Create activity for the blog actor.
+		self::factory()->post->create(
+			array(
+				'post_author'  => 0,
+				'post_type'    => Outbox::POST_TYPE,
+				'post_status'  => 'pending',
+				'post_title'   => 'https://example.org/activity/public-create',
+				'post_content' => \wp_json_encode(
+					array(
+						'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
+						'id'       => 'https://example.org/activity/public-create',
+						'type'     => 'Create',
+						'actor'    => 'https://example.org/blog',
+						'object'   => array(
+							'id'      => 'https://example.org/note/public',
+							'type'    => 'Note',
+							'content' => 'Public note',
+						),
+					)
+				),
+				'meta_input'   => array(
+					'_activitypub_activity_type'     => 'Create',
+					'_activitypub_activity_actor'    => 'blog',
+					'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+				),
+			)
+		);
+
+		// Create a private Accept activity for the blog actor.
+		self::factory()->post->create(
+			array(
+				'post_author'  => 0,
+				'post_type'    => Outbox::POST_TYPE,
+				'post_status'  => 'pending',
+				'post_title'   => 'https://example.org/activity/private-accept',
+				'post_content' => \wp_json_encode(
+					array(
+						'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
+						'id'       => 'https://example.org/activity/private-accept',
+						'type'     => 'Accept',
+						'actor'    => 'https://example.org/blog',
+						'object'   => 'https://example.org/follow/1',
+					)
+				),
+				'meta_input'   => array(
+					'_activitypub_activity_type'     => 'Accept',
+					'_activitypub_activity_actor'    => 'blog',
+					'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
+				),
+			)
+		);
+
+		// Unauthenticated request to blog actor outbox.
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
+		$request->set_param( 'page', 1 );
+		$request->set_param( 'per_page', 10 );
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+
+		// The private Accept should be filtered out, only the public Create should remain.
+		$activity_types = \wp_list_pluck( $data['orderedItems'], 'type' );
+		$this->assertContains( 'Create', $activity_types, 'Public Create should be visible.' );
+		$this->assertNotContains( 'Accept', $activity_types, 'Private Accept should be filtered from unauthenticated blog actor outbox.' );
+
+		// Verify a privileged user CAN see the private Accept activity.
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $admin_id );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
+		$request->set_param( 'page', 1 );
+		$request->set_param( 'per_page', 10 );
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$activity_types = \wp_list_pluck( $data['orderedItems'], 'type' );
+		$this->assertContains( 'Accept', $activity_types, 'Private Accept should be visible to privileged users.' );
+
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * Test that AP-capable non-admin users cannot see private blog-actor activities.
+	 *
+	 * Regression test for the `! current_user_can( 'activitypub' )` branch in
+	 * `get_items()` which previously skipped visibility filters for anyone with the
+	 * `activitypub` capability, allowing every publisher to read the blog actor's
+	 * private Accepts. The blog-actor branch now routes through `user_can_act_as_blog()`.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_blog_actor_outbox_filters_private_activities_for_ap_capable_non_admin() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+
+		$author_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_user_by( 'id', $author_id )->add_cap( 'activitypub' );
+		\wp_set_current_user( $author_id );
+		$this->assertTrue( \current_user_can( 'activitypub' ) );
+
+		self::factory()->post->create(
+			array(
+				'post_author'  => 0,
+				'post_type'    => Outbox::POST_TYPE,
+				'post_status'  => 'pending',
+				'post_title'   => 'https://example.org/activity/private-accept-2',
+				'post_content' => \wp_json_encode(
+					array(
+						'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
+						'id'       => 'https://example.org/activity/private-accept-2',
+						'type'     => 'Accept',
+						'actor'    => 'https://example.org/blog',
+						'object'   => 'https://example.org/follow/2',
+					)
+				),
+				'meta_input'   => array(
+					'_activitypub_activity_type'     => 'Accept',
+					'_activitypub_activity_actor'    => 'blog',
+					'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
+				),
+			)
+		);
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
+		$request->set_param( 'page', 1 );
+		$request->set_param( 'per_page', 10 );
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$activity_types = \wp_list_pluck( $data['orderedItems'], 'type' );
+		$this->assertNotContains( 'Accept', $activity_types, 'Private Accept must not be visible to non-admin AP-capable users on the blog actor outbox.' );
+
+		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
 	 * Test meta query behavior for non-privileged users.
 	 *
 	 * @covers ::get_items
@@ -608,7 +837,7 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		);
 
 		// Test as non-privileged user.
-		wp_set_current_user( $viewer_id );
+		\wp_set_current_user( $viewer_id );
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
 		$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
 		$response = \rest_get_server()->dispatch( $request );
@@ -617,12 +846,27 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertCount( 10, $data['orderedItems'] );
 
-		// Test as privileged user.
+		/*
+		 * Test as an administrator who is not the actor owner. Site administration
+		 * does not grant access to another user's non-public outbox items: ownership
+		 * is a strict identity check, so the admin sees the same public subset (10).
+		 */
 		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
-		wp_set_current_user( $admin_id );
+		\wp_set_current_user( $admin_id );
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
 		$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
 		$request->set_param( 'per_page', 20 ); // Need per_page for pagination calculation.
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertCount( 10, $data['orderedItems'] );
+
+		// The actor owner still sees the full set, including the private item.
+		\wp_set_current_user( self::$user_id );
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_param( 'page', 1 );
+		$request->set_param( 'per_page', 20 );
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
@@ -646,5 +890,620 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 	 */
 	public function test_get_item_schema() {
 		// Controller does not implement get_item_schema().
+	}
+
+	/**
+	 * Test C2S POST creates Note with proper object ID.
+	 *
+	 * When a client submits a Create activity with an object that has no ID,
+	 * the server should create a WordPress post and use its permalink as the
+	 * object ID (not generate a random /objects/uuid URL).
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_create_note_object_id() {
+		$user = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+
+		$data = array(
+			'type'   => 'Create',
+			'actor'  => $user->get_id(),
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'type'    => 'Note',
+				'content' => 'Hello from C2S test!',
+				// No ID provided - server should set it to the post permalink.
+			),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 201, $response->get_status() );
+
+		$response_data = $response->get_data();
+
+		// The object should have an ID that's a post permalink, not /objects/uuid.
+		$this->assertArrayHasKey( 'object', $response_data );
+		$object = $response_data['object'];
+
+		if ( is_array( $object ) ) {
+			$this->assertArrayHasKey( 'id', $object );
+			$this->assertStringNotContainsString( '/objects/', $object['id'], 'Object ID should not be a /objects/uuid URL' );
+			$this->assertStringContainsString( '?p=', $object['id'], 'Object ID should be a post permalink' );
+		}
+	}
+
+	/**
+	 * Test C2S POST creates Note with 'status' post format.
+	 *
+	 * When a client submits a Note via C2S, the created WordPress post
+	 * should have the 'status' post format so that the transformer maps
+	 * it back to a Note type.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_create_note_sets_status_post_format() {
+		$user = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+
+		$data = array(
+			'type'   => 'Create',
+			'actor'  => $user->get_id(),
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'type'    => 'Note',
+				'content' => 'A short status note via C2S.',
+			),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 201, $response->get_status() );
+
+		$response_data = $response->get_data();
+		$object        = $response_data['object'];
+
+		// Find the created post by its permalink.
+		if ( is_array( $object ) && ! empty( $object['id'] ) ) {
+			$post_id = \url_to_postid( $object['id'] );
+			$this->assertGreaterThan( 0, $post_id, 'Should find a post from the object ID.' );
+			$this->assertSame( 'status', \get_post_format( $post_id ), 'Note should have status post format.' );
+		}
+	}
+
+	/**
+	 * Test C2S POST creates Article without post format.
+	 *
+	 * When a client submits an Article via C2S, the created WordPress post
+	 * should not have a post format set (standard format).
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_create_article_has_no_post_format() {
+		$user = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+
+		$data = array(
+			'type'   => 'Create',
+			'actor'  => $user->get_id(),
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'type'    => 'Article',
+				'name'    => 'My Article Title',
+				'content' => '<p>This is a full article with a title.</p>',
+			),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 201, $response->get_status() );
+
+		$response_data = $response->get_data();
+		$object        = $response_data['object'];
+
+		// Find the created post by its permalink.
+		if ( is_array( $object ) && ! empty( $object['id'] ) ) {
+			$post_id = \url_to_postid( $object['id'] );
+			$this->assertGreaterThan( 0, $post_id, 'Should find a post from the object ID.' );
+			$this->assertFalse( \get_post_format( $post_id ), 'Article should have standard (no) post format.' );
+		}
+	}
+
+	/**
+	 * Test C2S POST with an Arrive activity creates a WordPress post.
+	 *
+	 * Ensures the Arrive handler creates a check-in post with location
+	 * geodata and stores the activity in the outbox.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_arrive_creates_post_with_geodata() {
+		$user = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+
+		$data = array(
+			'@context' => 'https://www.w3.org/ns/activitystreams',
+			'type'     => 'Arrive',
+			'actor'    => array(
+				'id'   => $user->get_id(),
+				'name' => $user->get_name(),
+				'url'  => $user->get_url(),
+			),
+			'location' => array(
+				'type'      => 'Place',
+				'id'        => 'https://places.pub/relation/659839',
+				'name'      => 'Ettlingen',
+				'latitude'  => 48.9408,
+				'longitude' => 8.4075,
+			),
+			'content'  => 'Arrived.',
+			'to'       => 'https://www.w3.org/ns/activitystreams#Public',
+			'cc'       => $user->get_followers(),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = \rest_get_server()->dispatch( $request );
+		$this->assertEquals( 201, $response->get_status() );
+
+		$response_data = $response->get_data();
+		$this->assertSame( 'Arrive', $response_data['type'], 'Activity type should be preserved as Arrive.' );
+		$this->assertArrayHasKey( 'url', $response_data, 'Arrive should include a url to the blog post.' );
+
+		// Find the blog post created as a side effect.
+		$post_id = \url_to_postid( $response_data['url'] );
+		$this->assertGreaterThan( 0, $post_id, 'Arrive should create a WordPress post as side effect.' );
+
+		$this->assertSame( 'status', \get_post_format( $post_id ), 'Arrive post should have status format.' );
+		$this->assertStringContainsString( 'Ettlingen', \get_the_title( $post_id ), 'Post title should contain location name.' );
+
+		// Verify geodata meta.
+		$this->assertSame( 'Ettlingen', \get_post_meta( $post_id, 'geo_address', true ) );
+		$this->assertEquals( 48.9408, (float) \get_post_meta( $post_id, 'geo_latitude', true ) );
+		$this->assertEquals( 8.4075, (float) \get_post_meta( $post_id, 'geo_longitude', true ) );
+		$this->assertSame( '1', \get_post_meta( $post_id, 'geo_public', true ) );
+	}
+
+	/**
+	 * Test C2S POST with Arrive activity without coordinates.
+	 *
+	 * Ensures the handler works when the location only has a name
+	 * but no latitude/longitude, as is common with checkin.swf.pub.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_arrive_with_name_only_location() {
+		$user = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+
+		$data = array(
+			'@context'   => 'https://www.w3.org/ns/activitystreams',
+			'type'       => 'Arrive',
+			'actor'      => $user->get_id(),
+			'location'   => array(
+				'id'   => 'https://places.pub/relation/659839',
+				'name' => 'Ettlingen',
+			),
+			'content'    => 'Hello!',
+			'summaryMap' => array(
+				'en' => 'Arrived at Ettlingen',
+			),
+			'to'         => 'https://www.w3.org/ns/activitystreams#Public',
+			'cc'         => $user->get_followers(),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = \rest_get_server()->dispatch( $request );
+		$this->assertEquals( 201, $response->get_status() );
+
+		// Find the blog post created as a side effect.
+		$response_data = $response->get_data();
+		$this->assertSame( 'Arrive', $response_data['type'], 'Activity type should be preserved as Arrive.' );
+
+		$post_id = \url_to_postid( $response_data['url'] );
+		$this->assertGreaterThan( 0, $post_id, 'Arrive should create a WordPress post as side effect.' );
+
+		// Verify geodata - address saved but no coordinates.
+		$this->assertSame( 'Ettlingen', \get_post_meta( $post_id, 'geo_address', true ) );
+		$this->assertEmpty( \get_post_meta( $post_id, 'geo_latitude', true ), 'No latitude when not provided.' );
+		$this->assertEmpty( \get_post_meta( $post_id, 'geo_longitude', true ), 'No longitude when not provided.' );
+		$this->assertSame( '1', \get_post_meta( $post_id, 'geo_public', true ), 'geo_public set when name is present.' );
+	}
+
+	/**
+	 * Test C2S POST with exact checkin.swf.pub payload.
+	 *
+	 * The checkin app sends inline actor objects, string to/cc,
+	 * summaryMap without summary, and content. This test verifies
+	 * that Posts::create receives all required fields after the
+	 * outbox controller transforms the data.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_arrive_with_checkin_app_payload() {
+		$user = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+
+		$data = array(
+			'@context'   => 'https://www.w3.org/ns/activitystreams',
+			'actor'      => array(
+				'id'   => $user->get_id(),
+				'name' => $user->get_name(),
+				'url'  => $user->get_url(),
+			),
+			'type'       => 'Arrive',
+			'location'   => array(
+				'id'   => 'https://places.pub/relation/659839',
+				'name' => 'Ettlingen',
+				'url'  => 'https://places.pub/relation/659839',
+			),
+			'content'    => 'Great coffee here!',
+			'to'         => 'https://www.w3.org/ns/activitystreams#Public',
+			'cc'         => $user->get_followers(),
+			'summaryMap' => array(
+				'en' => $user->get_name() . ' arrived at Ettlingen',
+			),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = \rest_get_server()->dispatch( $request );
+		$this->assertEquals( 201, $response->get_status(), 'Outbox POST should return 201.' );
+
+		$response_data = $response->get_data();
+		$this->assertSame( 'Arrive', $response_data['type'] );
+		$this->assertArrayHasKey( 'url', $response_data, 'Arrive should have a url pointing to the blog post.' );
+
+		// Blog post should exist with correct content.
+		$post_id = \url_to_postid( $response_data['url'] );
+		$this->assertGreaterThan( 0, $post_id, 'Blog post should be created.' );
+
+		$post = \get_post( $post_id );
+		$this->assertStringContainsString( 'Ettlingen', $post->post_title );
+		$this->assertNotEmpty( $post->post_content, 'Post content should not be empty.' );
+		$this->assertSame( 'status', \get_post_format( $post_id ) );
+
+		// Geodata should be saved.
+		$this->assertSame( 'Ettlingen', \get_post_meta( $post_id, 'geo_address', true ) );
+		$this->assertSame( '1', \get_post_meta( $post_id, 'geo_public', true ) );
+	}
+
+	/**
+	 * Test C2S POST with Arrive without content uses summary fallback.
+	 *
+	 * When the checkin app omits content but provides summaryMap,
+	 * the localized summary should be used as post content.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_arrive_without_content_uses_summary() {
+		$user = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+
+		$data = array(
+			'@context'   => 'https://www.w3.org/ns/activitystreams',
+			'type'       => 'Arrive',
+			'actor'      => $user->get_id(),
+			'location'   => array(
+				'id'   => 'https://places.pub/relation/123',
+				'name' => 'Berlin',
+			),
+			'summaryMap' => array(
+				'en' => $user->get_name() . ' arrived at Berlin',
+			),
+			'to'         => 'https://www.w3.org/ns/activitystreams#Public',
+			'cc'         => $user->get_followers(),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = \rest_get_server()->dispatch( $request );
+		$this->assertEquals( 201, $response->get_status() );
+
+		$response_data = $response->get_data();
+		$post_id       = \url_to_postid( $response_data['url'] );
+		$this->assertGreaterThan( 0, $post_id, 'Blog post should be created even without content.' );
+
+		$post = \get_post( $post_id );
+		$this->assertStringContainsString( 'Berlin', $post->post_title );
+		// The summary should be used as content fallback.
+		$this->assertNotEmpty( $post->post_content, 'Post should have content from summary fallback.' );
+	}
+
+	/**
+	 * Test that posting an Undo of a Follow to the outbox returns 201.
+	 *
+	 * Regression test: previously responded with 500 "Failed to add activity to outbox"
+	 * because Following::unfollow returned a WP_Post of the remote actor, which made
+	 * the controller look up the wrong outbox entry.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_undo_follow_returns_201() {
+		$actor_url = 'https://example.com/users/undo-follow-target';
+
+		// Create a remote actor post so the meta query in Following::unfollow can match.
+		$remote_actor_post_id = self::factory()->post->create(
+			array(
+				'post_type'   => \Activitypub\Collection\Remote_Actors::POST_TYPE,
+				'post_status' => 'publish',
+				'guid'        => $actor_url,
+			)
+		);
+
+		// Create a Follow outbox entry as if the user previously followed this actor.
+		$follow_guid    = 'https://example.org/outbox/follow-' . \wp_generate_password( 8, false );
+		$follow_post_id = \wp_insert_post(
+			array(
+				'post_type'    => Outbox::POST_TYPE,
+				'post_title'   => '[Follow] Test',
+				'post_content' => \wp_json_encode(
+					array(
+						'type'   => 'Follow',
+						'object' => $actor_url,
+					)
+				),
+				'post_author'  => self::$user_id,
+				'post_status'  => 'publish',
+				'guid'         => $follow_guid,
+				'meta_input'   => array(
+					'_activitypub_activity_type'     => 'Follow',
+					'_activitypub_activity_actor'    => 'user',
+					'_activitypub_object_id'         => $actor_url,
+					'activitypub_content_visibility' => \ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+				),
+			)
+		);
+
+		$data = array(
+			'type'   => 'Undo',
+			'actor'  => \Activitypub\Collection\Actors::get_by_id( self::$user_id )->get_id(),
+			'object' => array(
+				'id'     => $follow_guid,
+				'type'   => 'Follow',
+				'actor'  => \Activitypub\Collection\Actors::get_by_id( self::$user_id )->get_id(),
+				'object' => $actor_url,
+			),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 201, $response->get_status(), 'Posting Undo→Follow should succeed.' );
+
+		$response_data = $response->get_data();
+		$this->assertSame( 'Undo', $response_data['type'] );
+
+		\wp_delete_post( $remote_actor_post_id, true );
+		\wp_delete_post( $follow_post_id, true );
+	}
+
+	/**
+	 * Test that posting an id-less Undo of a Follow to the outbox returns 201.
+	 *
+	 * Spec-valid Undo bodies may inline the Follow without an `id`. Mastodon and
+	 * other major implementations match these on the inner Follow's target.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_undo_follow_without_id_returns_201() {
+		$actor_url = 'https://example.com/users/undo-idless-target';
+
+		$remote_actor_post_id = self::factory()->post->create(
+			array(
+				'post_type'   => \Activitypub\Collection\Remote_Actors::POST_TYPE,
+				'post_status' => 'publish',
+				'guid'        => $actor_url,
+			)
+		);
+
+		// Create a Follow outbox entry so the unfollow path has something to undo.
+		$follow_post_id = \wp_insert_post(
+			array(
+				'post_type'    => Outbox::POST_TYPE,
+				'post_title'   => '[Follow] Test',
+				'post_content' => \wp_json_encode(
+					array(
+						'type'   => 'Follow',
+						'object' => $actor_url,
+					)
+				),
+				'post_author'  => self::$user_id,
+				'post_status'  => 'publish',
+				'guid'         => 'https://example.org/outbox/follow-' . \wp_generate_password( 8, false ),
+				'meta_input'   => array(
+					'_activitypub_activity_type'     => 'Follow',
+					'_activitypub_activity_actor'    => 'user',
+					'_activitypub_object_id'         => $actor_url,
+					'activitypub_content_visibility' => \ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+				),
+			)
+		);
+
+		$actor_id = \Activitypub\Collection\Actors::get_by_id( self::$user_id )->get_id();
+		$data     = array(
+			'type'   => 'Undo',
+			'actor'  => $actor_id,
+			// Inline Follow without an `id` — identified only by type + actor + object.
+			'object' => array(
+				'type'   => 'Follow',
+				'actor'  => $actor_id,
+				'object' => $actor_url,
+			),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 201, $response->get_status(), 'Posting id-less Undo→Follow should succeed.' );
+
+		$response_data = $response->get_data();
+		$this->assertSame( 'Undo', $response_data['type'] );
+
+		\wp_delete_post( $remote_actor_post_id, true );
+		\wp_delete_post( $follow_post_id, true );
+	}
+
+	/**
+	 * Test that totalItems for the blog actor excludes anonymous comments.
+	 *
+	 * @covers ::overload_total_items
+	 */
+	public function test_blog_actor_total_items_excludes_anonymous_comments() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\wp_set_current_user( 0 );
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => self::$user_id,
+				'post_status' => 'publish',
+			)
+		);
+		\update_post_meta( $post_id, 'activitypub_status', 'federated' );
+
+		// Create a federated comment from a local user (should be counted).
+		$local_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'user_id'         => self::$user_id,
+			)
+		);
+		\update_comment_meta( $local_comment_id, 'activitypub_status', 'federated' );
+
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertArrayHasKey( 'totalItems', $data );
+
+		$count_before = $data['totalItems'];
+
+		// Create a federated comment from an anonymous/remote user (should NOT be counted).
+		$remote_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'    => $post_id,
+				'user_id'            => 0,
+				'comment_author'     => 'Remote User',
+				'comment_author_url' => 'https://remote.example/user',
+			)
+		);
+		\update_comment_meta( $remote_comment_id, 'activitypub_status', 'federated' );
+
+		$response2 = \rest_get_server()->dispatch( $request );
+		$data2     = $response2->get_data();
+
+		$this->assertEquals( $count_before, $data2['totalItems'], 'Remote comment should not inflate totalItems.' );
+	}
+
+	/**
+	 * Test that private outbox items need the `read` scope, not just ownership.
+	 *
+	 * `Server::authenticate_oauth()` establishes the WordPress user for any valid bearer
+	 * whatever it was consented to, so ownership alone would hand a client granted only
+	 * `profile` the owner's private activities.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_items_private_requires_read_scope() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_user_by( 'ID', $user_id )->add_cap( 'activitypub' );
+
+		$canary = 'https://example.org/activity/private-canary';
+		self::factory()->post->create(
+			array(
+				'post_author'  => $user_id,
+				'post_type'    => Outbox::POST_TYPE,
+				'post_status'  => 'pending',
+				'post_title'   => $canary,
+				'post_content' => \wp_json_encode(
+					array(
+						'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
+						'id'       => $canary,
+						'type'     => 'Create',
+						'actor'    => 'https://example.org/user/' . $user_id,
+						'object'   => array(
+							'id'   => $canary . '/object',
+							'type' => 'Note',
+						),
+					)
+				),
+				'meta_input'   => array(
+					'_activitypub_activity_type'     => 'Create',
+					'_activitypub_activity_actor'    => 'user',
+					'activitypub_content_visibility' => \ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
+				),
+			)
+		);
+
+		// The owner is signed in throughout; only the token's scope differs.
+		\wp_set_current_user( $user_id );
+
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH ), $user_id ) );
+		$this->assertNotContains( $canary, $this->outbox_activity_ids( $user_id ), 'A token without the read scope must not see a private activity.' );
+
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::READ ), $user_id ) );
+		$this->assertContains( $canary, $this->outbox_activity_ids( $user_id ), 'A read-scoped token is the positive control.' );
+
+		// A wp-admin session carries no token and is bounded by capabilities, not scope.
+		$this->set_oauth_current_token( null );
+		$this->assertContains( $canary, $this->outbox_activity_ids( $user_id ), 'A cookie session is not scope-limited.' );
+
+		\wp_set_current_user( 0 );
+		$this->assertNotContains( $canary, $this->outbox_activity_ids( $user_id ), 'An anonymous caller never sees a private activity.' );
+	}
+
+	/**
+	 * Return the activity IDs the outbox exposes for an actor.
+	 *
+	 * @param int $user_id The actor to query.
+	 * @return array Activity IDs.
+	 */
+	private function outbox_activity_ids( $user_id ) {
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
+		$request->set_param( 'page', 1 );
+		$request->set_param( 'per_page', 100 );
+
+		$data = \rest_get_server()->dispatch( $request )->get_data();
+
+		return \wp_list_pluck( $data['orderedItems'], 'id' );
 	}
 }

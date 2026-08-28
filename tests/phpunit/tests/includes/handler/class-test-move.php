@@ -62,12 +62,12 @@ class Test_Move extends \WP_UnitTestCase {
 
 		// Mock the HTTP response for the target object.
 		$target_object = array(
-			'type'          => 'Person',
-			'id'            => $target,
-			'url'           => $target,
-			'name'          => 'New Profile',
-			'inbox'         => 'https://example.com/new-profile/inbox',
-			'also_known_as' => array(
+			'type'        => 'Person',
+			'id'          => $target,
+			'url'         => $target,
+			'name'        => 'New Profile',
+			'inbox'       => 'https://example.com/new-profile/inbox',
+			'alsoKnownAs' => array(
 				$origin,
 			),
 		);
@@ -108,6 +108,76 @@ class Test_Move extends \WP_UnitTestCase {
 		$this->assertEquals( $target, $updated_follower->guid );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+	}
+
+	/**
+	 * A Move whose target document is served under a mismatched cross-host id must not
+	 * cache anything under that id. The self-confirming fetch re-fetches the declared
+	 * id from its own host; when that does not confirm, the target cannot be resolved
+	 * and the move does not proceed.
+	 */
+	public function test_handle_move_does_not_cache_cross_host_target_id() {
+		$target_url    = 'https://example.org/target';
+		$origin        = 'https://example.org/origin';
+		$mismatched_id = 'https://example.com/users/alice';
+
+		$documents = array(
+			// The target document (served at $target_url) claims the canonical actor's id.
+			$target_url    => array(
+				'type'        => 'Person',
+				'id'          => $mismatched_id,
+				'url'         => $target_url,
+				'inbox'       => 'https://example.org/target/inbox',
+				'alsoKnownAs' => array( $origin ),
+			),
+			// The canonical actor's real server does not confirm the mismatched id (it serves another id).
+			$mismatched_id => array(
+				'type'  => 'Person',
+				'id'    => 'https://example.net/someone-else',
+				'inbox' => 'https://example.net/someone-else/inbox',
+			),
+		);
+
+		$origin_object        = array(
+			'type'    => 'Person',
+			'id'      => $origin,
+			'url'     => $origin,
+			'inbox'   => 'https://example.org/origin/inbox',
+			'movedTo' => $mismatched_id,
+		);
+		$documents[ $origin ] = $origin_object;
+
+		$id = Remote_Actors::upsert( $origin_object );
+		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
+
+		$filter = function ( $pre, $args, $url ) use ( $documents ) {
+			if ( ! \array_key_exists( $url, $documents ) ) {
+				return $pre;
+			}
+			return array(
+				'headers'  => array(),
+				'body'     => \wp_json_encode( $documents[ $url ] ),
+				'response' => array(
+					'code'    => 200,
+					'message' => 'OK',
+				),
+				'cookies'  => array(),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		Move::handle_move(
+			array(
+				'type'   => 'Move',
+				'actor'  => $origin,
+				'object' => $target_url,
+			),
+			1
+		);
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertWPError( Remote_Actors::get_by_uri( $mismatched_id ), 'The mismatched target id must not be cached.' );
 	}
 
 	/**
@@ -234,12 +304,12 @@ class Test_Move extends \WP_UnitTestCase {
 				return array(
 					'body'     => \wp_json_encode(
 						array(
-							'type'          => 'Person',
-							'id'            => $target,
-							'url'           => $target,
-							'name'          => 'New Profile',
-							'inbox'         => 'https://example.com/new-profile/inbox',
-							'also_known_as' => array( $origin ),
+							'type'        => 'Person',
+							'id'          => $target,
+							'url'         => $target,
+							'name'        => 'New Profile',
+							'inbox'       => 'https://example.com/new-profile/inbox',
+							'alsoKnownAs' => array( $origin ),
 						)
 					),
 					'response' => array( 'code' => 200 ),
@@ -322,12 +392,12 @@ class Test_Move extends \WP_UnitTestCase {
 
 			if ( $url === $target ) {
 				return array(
-					'type'          => 'Person',
-					'id'            => $target,
-					'url'           => $target,
-					'name'          => 'New Profile',
-					'inbox'         => 'https://example.com/new-profile/inbox',
-					'also_known_as' => array(
+					'type'        => 'Person',
+					'id'          => $target,
+					'url'         => $target,
+					'name'        => 'New Profile',
+					'inbox'       => 'https://example.com/new-profile/inbox',
+					'alsoKnownAs' => array(
 						$origin,
 					),
 				);
@@ -366,6 +436,125 @@ class Test_Move extends \WP_UnitTestCase {
 
 		// Check if the origin follower was deleted.
 		$this->assertWPError( Remote_Actors::get_by_uri( $origin ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+	}
+
+	/**
+	 * Test that verify_move matches origin by url when id is not in alsoKnownAs.
+	 */
+	public function test_handle_move_matches_origin_by_url() {
+		$target = 'https://example.com/new-profile';
+		$origin = 'https://example.com/old-profile';
+
+		$origin_object = array(
+			'type'    => 'Person',
+			'id'      => $origin,
+			'url'     => 'https://example.com/@oldprofile',
+			'name'    => 'Old Profile',
+			'inbox'   => 'https://example.com/old-profile/inbox',
+			'movedTo' => $target,
+		);
+
+		// Target's alsoKnownAs contains the origin's url, not its id.
+		$target_object = array(
+			'type'        => 'Person',
+			'id'          => $target,
+			'url'         => $target,
+			'name'        => 'New Profile',
+			'inbox'       => 'https://example.com/new-profile/inbox',
+			'alsoKnownAs' => array(
+				'https://example.com/@oldprofile',
+			),
+		);
+
+		$id = Remote_Actors::upsert( $origin_object );
+		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
+
+		$filter = function ( $pre, $url_or_object ) use ( $target, $target_object, $origin, $origin_object ) {
+			$url = object_to_uri( $url_or_object );
+			if ( $url === $target ) {
+				return $target_object;
+			}
+			if ( $url === $origin ) {
+				return $origin_object;
+			}
+			return $pre;
+		};
+
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
+
+		$activity = array(
+			'type'   => 'Move',
+			'actor'  => $origin,
+			'object' => $target,
+		);
+
+		Move::handle_move( $activity, 1 );
+
+		$updated_follower = Remote_Actors::get_by_uri( $target );
+		$this->assertNotNull( $updated_follower );
+		$this->assertEquals( $target, $updated_follower->guid );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+	}
+
+	/**
+	 * Test that verify_move matches origin by webfinger when id is not in alsoKnownAs.
+	 */
+	public function test_handle_move_matches_origin_by_webfinger() {
+		$target = 'https://example.com/new-profile2';
+		$origin = 'https://example.com/old-profile2';
+
+		$origin_object = array(
+			'type'      => 'Person',
+			'id'        => $origin,
+			'url'       => $origin,
+			'name'      => 'Old Profile',
+			'inbox'     => 'https://example.com/old-profile2/inbox',
+			'movedTo'   => $target,
+			'webfinger' => 'olduser@example.com',
+		);
+
+		// Target's alsoKnownAs contains the origin's webfinger, not its id.
+		$target_object = array(
+			'type'        => 'Person',
+			'id'          => $target,
+			'url'         => $target,
+			'name'        => 'New Profile',
+			'inbox'       => 'https://example.com/new-profile2/inbox',
+			'alsoKnownAs' => array(
+				'olduser@example.com',
+			),
+		);
+
+		$id = Remote_Actors::upsert( $origin_object );
+		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
+
+		$filter = function ( $pre, $url_or_object ) use ( $target, $target_object, $origin, $origin_object ) {
+			$url = object_to_uri( $url_or_object );
+			if ( $url === $target ) {
+				return $target_object;
+			}
+			if ( $url === $origin ) {
+				return $origin_object;
+			}
+			return $pre;
+		};
+
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
+
+		$activity = array(
+			'type'   => 'Move',
+			'actor'  => $origin,
+			'object' => $target,
+		);
+
+		Move::handle_move( $activity, 1 );
+
+		$updated_follower = Remote_Actors::get_by_uri( $target );
+		$this->assertNotNull( $updated_follower );
+		$this->assertEquals( $target, $updated_follower->guid );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 	}

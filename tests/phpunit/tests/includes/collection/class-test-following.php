@@ -328,11 +328,14 @@ class Test_Following extends \WP_UnitTestCase {
 			)
 		);
 
-		$user_id = 1;
+		$user_id = self::factory()->user->create();
+		\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
 
 		// Use global follow() function to add a follow request.
 		$remote_actor_url = \get_post( $post_id )->guid;
-		follow( $remote_actor_url, $user_id );
+		$follow_outbox_id = follow( $remote_actor_url, $user_id );
+		// Publish the Follow outbox item so unfollow's meta query (which defaults to publish-only) can find it.
+		\wp_publish_post( $follow_outbox_id );
 		\clean_post_cache( $post_id );
 
 		// Verify user is in following list (pending or following).
@@ -345,9 +348,10 @@ class Test_Following extends \WP_UnitTestCase {
 
 		\clean_post_cache( $post_id );
 
-		// Should return WP_Post.
-		$this->assertInstanceOf( '\WP_Post', $result );
-		$this->assertEquals( $post_id, $result->ID );
+		// Should return the ID of the newly created Undo outbox item.
+		$this->assertIsInt( $result );
+		$this->assertGreaterThan( 0, $result );
+		$this->assertSame( 'Undo', \get_post_meta( $result, '_activitypub_activity_type', true ) );
 
 		// User should no longer be in following list.
 		$following = \get_post_meta( $post_id, Following::FOLLOWING_META_KEY, false );
@@ -374,57 +378,47 @@ class Test_Following extends \WP_UnitTestCase {
 		$outbox_item_2 = \get_post( follow( 'https://example.com/actor/1', $user_ids[1] ) );
 		$outbox_item_3 = \get_post( follow( 'https://example.com/actor/1', $user_ids[2] ) );
 		$outbox_item_4 = \get_post( follow( 'https://example.com/actor/1', 0 ) );
-		$outbox_item_5 = \get_post( follow( 'https://example.com/actor/1', -1 ) );
 
 		\wp_publish_post( $outbox_item_1 );
 		\wp_publish_post( $outbox_item_2 );
 		\wp_publish_post( $outbox_item_3 );
 		\wp_publish_post( $outbox_item_4 );
-		\wp_publish_post( $outbox_item_5 );
 
 		$accept_1 = array(
+			'actor'  => 'https://example.com/actor/1',
 			'object' => array(
 				'id'     => $outbox_item_1->guid,
 				'object' => 'https://example.com/actor/1',
 			),
 		);
 		$accept_2 = array(
+			'actor'  => 'https://example.com/actor/1',
 			'object' => array(
 				'id'     => $outbox_item_2->guid,
 				'object' => 'https://example.com/actor/1',
 			),
 		);
 		$accept_3 = array(
+			'actor'  => 'https://example.com/actor/1',
 			'object' => array(
 				'id'     => $outbox_item_3->guid,
 				'object' => 'https://example.com/actor/1',
 			),
 		);
 		$accept_4 = array(
+			'actor'  => 'https://example.com/actor/1',
 			'object' => array(
 				'id'     => $outbox_item_4->guid,
 				'object' => 'https://example.com/actor/1',
 			),
 		);
-		$accept_5 = array(
-			'object' => array(
-				'id'     => $outbox_item_5->guid,
-				'object' => 'https://example.com/actor/1',
-			),
-		);
-
 		Accept::handle_accept( $accept_1, $user_ids[0] );
 		Accept::handle_accept( $accept_2, $user_ids[1] );
 		Accept::handle_accept( $accept_3, $user_ids[2] );
 		Accept::handle_accept( $accept_4, 0 );
-		Accept::handle_accept( $accept_5, -1 );
 
 		// User 1 follows https://example.com/actor/1.
 		$following = Following::query( $user_ids[0] );
-		$this->assertCount( 1, $following['following'] );
-		$this->assertSame( 1, $following['total'] );
-
-		$following = Following::query( -1 );
 		$this->assertCount( 1, $following['following'] );
 		$this->assertSame( 1, $following['total'] );
 
@@ -437,10 +431,6 @@ class Test_Following extends \WP_UnitTestCase {
 		$following = Following::query( 0 );
 		$this->assertCount( 0, $following['following'] );
 		$this->assertSame( 0, $following['total'] );
-
-		$following = Following::query( -1 );
-		$this->assertCount( 1, $following['following'] );
-		$this->assertSame( 1, $following['total'] );
 
 		// User 1 still follows https://example.com/actor/1.
 		$posts = get_posts(
