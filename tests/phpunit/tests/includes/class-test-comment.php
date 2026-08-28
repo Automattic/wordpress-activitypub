@@ -315,8 +315,10 @@ class Test_Comment extends \WP_UnitTestCase {
 		$this->assertSame( 10, Comment::pre_wp_update_comment_count_now( 10, 0, $post_id ) );
 
 		// Case 5: Other plugins can exclude additional types via the filter.
+		// `note` is in core's default set already; a type that is not proves the legacy filter still fires.
+		$this->setExpectedDeprecated( 'activitypub_excluded_comment_types' );
 		$add_note = function ( $types ) {
-			$types[] = 'note';
+			$types[] = 'pingback';
 			return $types;
 		};
 		\add_filter( 'activitypub_excluded_comment_types', $add_note );
@@ -326,10 +328,10 @@ class Test_Comment extends \WP_UnitTestCase {
 			2,
 			array(
 				'comment_approved' => '1',
-				'comment_type'     => 'note',
+				'comment_type'     => 'pingback',
 			)
 		);
-		// 5 regular + 2 note + 3 like = 10 total, but like and note excluded = 5.
+		// 5 regular + 2 pingback + 3 like = 10 total, but like and pingback excluded = 5.
 		$this->assertSame( 5, Comment::pre_wp_update_comment_count_now( null, 0, $post_id ) );
 
 		\remove_filter( 'activitypub_excluded_comment_types', $add_note );
@@ -766,14 +768,7 @@ class Test_Comment extends \WP_UnitTestCase {
 			'trackback',
 		);
 
-		$activitypub_comment_types = \array_keys(
-			\array_filter(
-				\get_comment_types( array(), 'objects' ),
-				static function ( $t ) {
-					return ! empty( $t->activity_types );
-				}
-			)
-		);
+		$activitypub_comment_types = \get_comment_types( array( 'reaction' => true ), 'names' );
 
 		$comment_types = \array_merge( $activitypub_comment_types, $core_comment_types );
 

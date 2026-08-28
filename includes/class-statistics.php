@@ -737,12 +737,7 @@ class Statistics {
 	public static function get_comment_types_for_stats() {
 		$comment_types = \array_map(
 			'get_object_vars',
-			\array_filter(
-				\get_comment_types( array(), 'objects' ),
-				static function ( $t ) {
-					return ! empty( $t->activity_types );
-				}
-			)
+			\get_comment_types( array( 'reaction' => true ), 'objects' )
 		);
 		$result        = array();
 

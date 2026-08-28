@@ -155,35 +155,27 @@ function get_comment_ancestors( $comment ) {
  * @return array The registered Activitypub comment type.
  */
 function register_comment_type( $comment_type, $args = array() ) {
-	/*
-	 * One implementation: registration goes through the core API, polyfilled until core ships
-	 * it. Every plugin type is `internal`, so it stays out of comment listings, counts and feeds
-	 * by default through wp_get_default_excluded_comment_types(), which is what the scattered
-	 * `type__not_in` exclusions in Comment used to do by hand.
-	 */
-	$args = \wp_parse_args(
-		$args,
-		array(
-			'internal' => true,
-			'public'   => false,
-		)
-	);
+	$args = \wp_parse_args( $args, array( 'reaction' => false ) );
 
-	$comment_type_object = \register_comment_type( $comment_type, $args );
-
-	if ( \is_wp_error( $comment_type_object ) ) {
-		return $comment_type_object;
+	// Map the plugin's registration format onto core's.
+	if ( isset( $args['label'] ) ) {
+		$args['labels']['name'] = $args['label'];
+	}
+	if ( isset( $args['singular'] ) ) {
+		$args['labels']['singular_name'] = $args['singular'];
 	}
 
-	/**
-	 * Fires after a ActivityPub comment type is registered.
-	 *
-	 * @param string $comment_type Comment type.
-	 * @param array  $args         Arguments used to register the comment type.
+	/*
+	 * A reaction (a like, a repost, a quote) is not a comment in the thread, so it is internal:
+	 * core keeps it out of the comment list, counts and feeds. It is still public, it is shown
+	 * on the page, just not as a comment. A type that is not a reaction stays a regular comment,
+	 * whatever protocol it arrived by.
 	 */
-	\do_action( 'activitypub_registered_comment_type', $comment_type_object->name, $args );
+	if ( $args['reaction'] ) {
+		$args['internal'] = true;
+	}
 
-	return $args;
+	return \register_comment_type( $comment_type, $args );
 }
 
 /**

@@ -23,12 +23,7 @@ class Test_Comment_Types extends \WP_UnitTestCase {
 	 * @covers ::get_comment_types
 	 */
 	public function test_plugin_types_round_trip_through_the_core_registry() {
-		$types = \array_filter(
-			\get_comment_types( array(), 'objects' ),
-			static function ( $t ) {
-				return ! empty( $t->activity_types );
-			}
-		);
+		$types = \get_comment_types( array( 'reaction' => true ), 'objects' );
 
 		$this->assertSame( array( 'repost', 'like', 'quote' ), array_keys( $types ) );
 
@@ -37,9 +32,31 @@ class Test_Comment_Types extends \WP_UnitTestCase {
 
 			$this->assertInstanceOf( \WP_Comment_Type::class, $object );
 			$this->assertTrue( $object->internal, "$name is internal, so it stays out of listings by default." );
-			$this->assertFalse( $object->public );
+			$this->assertTrue( $object->public, 'A reaction is shown on the page; it is public, just not a comment.' );
 			$this->assertSame( $type, $object, 'The filtered list and the direct lookup are the same object.' );
 		}
+	}
+
+	/**
+	 * A type that is not a reaction stays a regular comment.
+	 */
+	public function test_only_reactions_are_excluded() {
+		\Activitypub\register_comment_type(
+			'probe',
+			array(
+				'label'          => 'Probes',
+				'activity_types' => array( 'probe' ),
+			)
+		);
+
+		$object = \get_comment_type_object( 'probe' );
+
+		$this->assertFalse( $object->internal, 'Not a reaction, so not internal.' );
+		$this->assertTrue( $object->public );
+		$this->assertNotContains( 'probe', \wp_get_default_excluded_comment_types(), 'It stays in the comment list and the count.' );
+		$this->assertContains( 'like', \wp_get_default_excluded_comment_types(), 'A reaction is excluded.' );
+
+		\unregister_comment_type( 'probe' );
 	}
 
 	/**

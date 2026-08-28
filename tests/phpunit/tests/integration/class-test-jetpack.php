@@ -263,14 +263,7 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		$this->assertContains( 'trackback', $updated_types );
 
 		// Check that ActivityPub comment types are added.
-		$expected_ap_types = \array_keys(
-			\array_filter(
-				\get_comment_types( array(), 'objects' ),
-				static function ( $t ) {
-					return ! empty( $t->activity_types );
-				}
-			)
-		);
+		$expected_ap_types = \get_comment_types( array( 'reaction' => true ), 'names' );
 		foreach ( $expected_ap_types as $type ) {
 			$this->assertContains( $type, $updated_types );
 		}
@@ -309,14 +302,7 @@ class Test_Jetpack extends \WP_UnitTestCase {
 
 			// Test comment types filter integration.
 			$comment_types     = apply_filters( 'jetpack_sync_whitelisted_comment_types', array() );
-			$expected_ap_types = \array_keys(
-				\array_filter(
-					\get_comment_types( array(), 'objects' ),
-					static function ( $t ) {
-						return ! empty( $t->activity_types );
-					}
-				)
-			);
+			$expected_ap_types = \get_comment_types( array( 'reaction' => true ), 'names' );
 			foreach ( $expected_ap_types as $type ) {
 				$this->assertContains( $type, $comment_types );
 			}
