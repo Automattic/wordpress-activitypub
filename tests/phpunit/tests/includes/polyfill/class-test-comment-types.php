@@ -86,6 +86,38 @@ class Test_Comment_Types extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Every hand-applied exclusion stands down once core reads the set itself.
+	 *
+	 * The signal is `_wp_get_excluded_comment_types_clause()`, private to the core patch and left
+	 * undefined by both the polyfill and the shim. Neither branch of the guard exercises the
+	 * stand-down, so this test defines the sentinel itself and checks each hook returns its input
+	 * untouched. If it ever failed, a hook would be pre-empting core's own query with a copy of it.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_hooks_stand_down_when_core_reads_the_set() {
+		$this->assertFalse( \function_exists( '_wp_get_excluded_comment_types_clause' ), 'Only real core defines the sentinel.' );
+
+		// Pretend core landed: define the private helper the patch routes every consumer through.
+		eval( 'function _wp_get_excluded_comment_types_clause( $column = "comment_type" ) { return ""; }' ); // phpcs:ignore Squiz.PHP.Eval.Discouraged
+
+		$this->go_to( \get_permalink( self::factory()->post->create() ) );
+
+		$query             = new \WP_Comment_Query();
+		$query->query_vars = $query->query_var_defaults;
+		\Activitypub\Comment::comment_query( $query );
+		$this->assertEmpty( $query->query_vars['type__not_in'], 'comment_query() adds nothing when core reads the set.' );
+
+		$this->assertSame( array( 'type' => '' ), \array_intersect_key( \Activitypub\Comment::rest_comment_query( array( 'type' => '' ) ), array( 'type' => 1 ) ), 'rest_comment_query() adds no type__not_in.' );
+		$this->assertArrayNotHasKey( 'type__not_in', \Activitypub\Comment::rest_comment_query( array( 'type' => '' ) ) );
+
+		$this->assertSame( ' WHERE 1=1', \Activitypub\Comment::comment_feed_where( ' WHERE 1=1' ), 'comment_feed_where() leaves the clause alone.' );
+
+		$this->assertNull( \Activitypub\Comment::pre_wp_update_comment_count_now( null, 0, 1 ), 'The count hook returns null so core counts.' );
+	}
+
+	/**
 	 * Which side of the guard is live, so a CI log shows it.
 	 */
 	public function test_reports_which_branch_is_live() {

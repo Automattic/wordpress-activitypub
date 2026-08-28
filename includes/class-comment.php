@@ -443,6 +443,11 @@ class Comment {
 	public static function comment_feed_where( $where ) {
 		global $wpdb;
 
+		// Core reads the set itself; nothing to add.
+		if ( self::core_reads_excluded_comment_types() ) {
+			return $where;
+		}
+
 		$comment_type = \get_query_var( 'type' );
 
 		if ( 'all' === $comment_type ) {
@@ -780,6 +785,11 @@ class Comment {
 			return;
 		}
 
+		// Core reads the set itself; nothing to add.
+		if ( self::core_reads_excluded_comment_types() ) {
+			return;
+		}
+
 		// Do not exclude likes and reposts on ActivityPub requests.
 		if ( \defined( 'ACTIVITYPUB_REQUEST' ) && ACTIVITYPUB_REQUEST ) {
 			return;
@@ -826,7 +836,12 @@ class Comment {
 		// Exclude comments on ActivityPub post types.
 		$prepared_args['post_type'] = self::get_allowed_comment_post_types();
 
-		// Exclude ActivityPub comment types (likes, reposts) unless explicitly requested.
+		// Core reads the set itself; nothing to add.
+		if ( self::core_reads_excluded_comment_types() ) {
+			return $prepared_args;
+		}
+
+		// Exclude the default-excluded set unless a type was explicitly requested.
 		if ( empty( $prepared_args['type'] ) && empty( $prepared_args['type__in'] ) ) {
 			$existing = (array) ( $prepared_args['type__not_in'] ?? array() );
 
@@ -937,21 +952,26 @@ class Comment {
 	 * @return int|null The updated comment count, or null to use the default query.
 	 */
 	public static function pre_wp_update_comment_count_now( $new_count, $old_count, $post_id ) {
+		// Core's own count reads the set; returning null lets it run instead of a copy of it.
+		if ( self::core_reads_excluded_comment_types() ) {
+			return $new_count;
+		}
+
 		if ( null === $new_count ) {
-			// Reactions are registered internal, so the core set already carries them; the per-type opt-out is applied below.
 			$excluded_types = \wp_get_default_excluded_comment_types();
-			$excluded_types = \array_filter(
-				$excluded_types,
-				static function ( $comment_type ) {
-					$is_plugin_type = ! empty( \get_comment_type_object( $comment_type )->reaction );
 
-					return ! $is_plugin_type || self::is_comment_type_enabled( $comment_type );
-				}
-			);
-
-			/*
-			 * The plugin's own filter reached the count only. Core's `default_excluded_comment_types`
-			 * reaches queries, feeds and counts alike, which is where an exclusion belongs now.
+			/**
+			 * Filters the comment types excluded from the comment count.
+			 *
+			 * Runs at priority 5 on `pre_wp_update_comment_count_now` so that a single query can
+			 * exclude types from multiple plugins. Layered on core's `default_excluded_comment_types`,
+			 * which is where new code should hook: a type added there is excluded from queries, feeds
+			 * and counts alike. This filter reaches the count only.
+			 *
+			 * @since 8.0.0
+			 *
+			 * @param string[] $excluded_types The comment type slugs to exclude.
+			 * @param int      $post_id        The post ID.
 			 */
 			$excluded_types = \apply_filters_deprecated(
 				'activitypub_excluded_comment_types',
@@ -1008,6 +1028,23 @@ class Comment {
 	 */
 	public static function default_excluded_comment_types( $excluded_types ) {
 		return \array_values( \array_unique( \array_merge( $excluded_types, \get_comment_types( array( 'reaction' => true ), 'names' ) ) ) );
+	}
+
+	/**
+	 * Whether core reads the default-excluded comment types itself.
+	 *
+	 * After WordPress/wordpress-develop#12310, the stored comment count, both comment feed queries
+	 * in `WP_Query`, the admin pending count and `WP_Comment_Query` all read
+	 * `wp_get_default_excluded_comment_types()` through `_wp_get_excluded_comment_types_clause()`.
+	 * That helper is private to the core patch and the polyfill leaves it undefined on purpose, so
+	 * its presence is the one signal that core does this work now. Every hook below that
+	 * re-implements one of those consumers stands down when it is true, otherwise it would
+	 * pre-empt core's own query with a copy of it.
+	 *
+	 * @return bool True if core reads the set on its own.
+	 */
+	private static function core_reads_excluded_comment_types() {
+		return \function_exists( '_wp_get_excluded_comment_types_clause' );
 	}
 
 	/**
