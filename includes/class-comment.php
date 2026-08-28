@@ -447,7 +447,7 @@ class Comment {
 			return $where;
 		}
 
-		$comment_types = self::get_comment_type_slugs();
+		$comment_types = \array_keys( self::plugin_comment_types() );
 
 		if ( \in_array( $comment_type, $comment_types, true ) ) {
 			$where .= $wpdb->prepare( ' AND comment_type = %s', $comment_type );
@@ -581,17 +581,31 @@ class Comment {
 	 * @return array|null The comment type.
 	 */
 	public static function get_comment_type_by_activity_type( $activity_type ) {
-		$activity_type = \strtolower( $activity_type );
-		$activity_type = \sanitize_key( $activity_type );
-		$comment_types = self::get_comment_types();
+		$activity_type = \sanitize_key( \strtolower( $activity_type ) );
 
-		foreach ( $comment_types as $comment_type ) {
-			if ( \in_array( $activity_type, $comment_type['activity_types'], true ) ) {
-				return $comment_type;
+		foreach ( self::plugin_comment_types() as $comment_type ) {
+			if ( \in_array( $activity_type, $comment_type->activity_types, true ) ) {
+				return \get_object_vars( $comment_type );
 			}
 		}
 
 		return null;
+	}
+
+	/**
+	 * The plugin's own comment types from the core registry, keyed by name.
+	 *
+	 * `activity_types` marks a type as ours; core's built-ins do not carry it.
+	 *
+	 * @return \WP_Comment_Type[] Comment type objects.
+	 */
+	private static function plugin_comment_types() {
+		return \array_filter(
+			\get_comment_types( array(), 'objects' ),
+			static function ( $comment_type ) {
+				return ! empty( $comment_type->activity_types );
+			}
+		);
 	}
 
 	/**
@@ -603,21 +617,9 @@ class Comment {
 	 * @return array The registered custom comment types
 	 */
 	public static function get_comment_types() {
-		$comment_types = array();
+		\_deprecated_function( __METHOD__, 'unreleased', "get_comment_types( array(), 'objects' )" );
 
-		/*
-		 * Read back from the core registry and hand callers the array shape they always got.
-		 * `activity_types` marks a type as one of ours; core's built-ins do not carry it.
-		 */
-		foreach ( \get_comment_types( array(), 'objects' ) as $name => $comment_type ) {
-			if ( empty( $comment_type->activity_types ) ) {
-				continue;
-			}
-
-			$comment_types[ $name ] = \get_object_vars( $comment_type );
-		}
-
-		return $comment_types;
+		return \array_map( 'get_object_vars', self::plugin_comment_types() );
 	}
 
 	/**
@@ -642,13 +644,9 @@ class Comment {
 	 * @return array The registered custom comment type slugs.
 	 */
 	public static function get_comment_type_slugs() {
-		if ( ! \did_action( 'init' ) ) {
-			\_doing_it_wrong( __METHOD__, 'This function should not be called before the init action has run. Comment types are only available after init.', '7.5.0' );
+		\_deprecated_function( __METHOD__, 'unreleased', 'get_comment_types()' );
 
-			return array();
-		}
-
-		return \array_keys( self::get_comment_types() );
+		return \array_keys( self::plugin_comment_types() );
 	}
 
 	/**
@@ -667,22 +665,13 @@ class Comment {
 	 * @return array The comment type.
 	 */
 	public static function get_comment_type( $type ) {
-		$type = \strtolower( $type );
-		$type = \sanitize_key( $type );
+		\_deprecated_function( __METHOD__, 'unreleased', 'get_comment_type_object()' );
 
-		$comment_types = self::get_comment_types();
-		$type_array    = array();
+		$type   = \sanitize_key( \strtolower( $type ) );
+		$object = \get_comment_type_object( $type );
 
-		// Check array keys.
-		if ( \in_array( $type, \array_keys( $comment_types ), true ) ) {
-			$type_array = $comment_types[ $type ];
-		}
+		$type_array = ( $object && ! empty( $object->activity_types ) ) ? \get_object_vars( $object ) : array();
 
-		/**
-		 * Filter the comment type.
-		 *
-		 * @param array $type_array The comment type.
-		 */
 		return \apply_filters( "activitypub_comment_type_{$type}", $type_array );
 	}
 
@@ -695,7 +684,8 @@ class Comment {
 	 * @return mixed The value of the attribute.
 	 */
 	public static function get_comment_type_attr( $type, $attr ) {
-		$type_array = self::get_comment_type( $type );
+		$object     = \get_comment_type_object( \sanitize_key( \strtolower( $type ) ) );
+		$type_array = ( $object && ! empty( $object->activity_types ) ) ? \get_object_vars( $object ) : array();
 
 		if ( $type_array && isset( $type_array[ $attr ] ) ) {
 			$value = $type_array[ $attr ];
@@ -782,8 +772,7 @@ class Comment {
 	 * @return array show avatars on Activities
 	 */
 	public static function get_avatar_comment_types( $types ) {
-		$comment_types = self::get_comment_type_slugs();
-		$types         = \array_merge( $types, $comment_types );
+		$types = \array_merge( $types, \array_keys( self::plugin_comment_types() ) );
 
 		return \array_unique( $types );
 	}
@@ -828,13 +817,10 @@ class Comment {
 			return;
 		}
 
-		// Do not exclude likes and reposts if the query is already excluding other comment types.
-		if ( ! empty( $query->query_vars['type__not_in'] ) ) {
-			return;
-		}
+		// The default-excluded set already holds every internal type; merge so another plugin's exclusions survive.
+		$existing = (array) $query->query_vars['type__not_in'];
 
-		// Exclude likes and reposts by the ActivityPub plugin.
-		$query->query_vars['type__not_in'] = self::get_comment_type_slugs();
+		$query->query_vars['type__not_in'] = \array_values( \array_unique( \array_merge( $existing, \wp_get_default_excluded_comment_types( $query ) ) ) );
 	}
 
 	/**
@@ -853,7 +839,9 @@ class Comment {
 
 		// Exclude ActivityPub comment types (likes, reposts) unless explicitly requested.
 		if ( empty( $prepared_args['type'] ) && empty( $prepared_args['type__in'] ) ) {
-			$prepared_args['type__not_in'] = self::get_comment_type_slugs();
+			$existing = (array) ( $prepared_args['type__not_in'] ?? array() );
+
+			$prepared_args['type__not_in'] = \array_values( \array_unique( \array_merge( $existing, \wp_get_default_excluded_comment_types() ) ) );
 		}
 
 		return $prepared_args;
@@ -894,7 +882,7 @@ class Comment {
 
 		// Maybe auto-approve likes and reposts.
 		if (
-			\in_array( $comment_data['comment_type'], self::get_comment_type_slugs(), true ) &&
+			\in_array( $comment_data['comment_type'], \array_keys( self::plugin_comment_types() ), true ) &&
 			'1' === \get_option( 'activitypub_auto_approve_reactions' )
 		) {
 			return 1;
@@ -961,7 +949,7 @@ class Comment {
 	 */
 	public static function pre_wp_update_comment_count_now( $new_count, $old_count, $post_id ) {
 		if ( null === $new_count ) {
-			$excluded_types = \array_filter( self::get_comment_type_slugs(), array( self::class, 'is_comment_type_enabled' ) );
+			$excluded_types = \array_filter( \array_keys( self::plugin_comment_types() ), array( self::class, 'is_comment_type_enabled' ) );
 
 			if ( ! empty( $excluded_types ) ) {
 				/*

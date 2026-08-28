@@ -74,7 +74,12 @@ $show_avatars = 'facepile' === $attributes['displayStyle'];
 // Fetch reactions.
 $reactions = array();
 
-foreach ( Comment::get_comment_types() as $_type => $type_object ) {
+// The reaction types come from the core registry, the same source the comment list excludes them by.
+foreach ( get_comment_types( array(), 'objects' ) as $_type => $type_object ) {
+	if ( empty( $type_object->activity_types ) ) {
+		continue;
+	}
+
 	$_comments = get_comments(
 		array(
 			'post_id' => $_post_id,
@@ -92,8 +97,8 @@ foreach ( Comment::get_comment_types() as $_type => $type_object ) {
 	// phpcs:disable WordPress.WP.I18n
 	$label = sprintf(
 		_n(
-			$type_object['count_single'],
-			$type_object['count_plural'],
+			$type_object->count_single,
+			$type_object->count_plural,
 			$count,
 			'activitypub'
 		),

@@ -7,8 +7,6 @@
 
 namespace Activitypub\Tests\Polyfill;
 
-use Activitypub\Comment;
-
 /**
  * Test class for the comment type polyfill functions.
  *
@@ -25,7 +23,12 @@ class Test_Comment_Types extends \WP_UnitTestCase {
 	 * @covers ::get_comment_types
 	 */
 	public function test_plugin_types_round_trip_through_the_core_registry() {
-		$types = Comment::get_comment_types();
+		$types = \array_filter(
+			\get_comment_types( array(), 'objects' ),
+			static function ( $t ) {
+				return ! empty( $t->activity_types );
+			}
+		);
 
 		$this->assertSame( array( 'repost', 'like', 'quote' ), array_keys( $types ) );
 
@@ -35,8 +38,7 @@ class Test_Comment_Types extends \WP_UnitTestCase {
 			$this->assertInstanceOf( \WP_Comment_Type::class, $object );
 			$this->assertTrue( $object->internal, "$name is internal, so it stays out of listings by default." );
 			$this->assertFalse( $object->public );
-			$this->assertSame( $type['activity_types'], $object->activity_types, 'Plugin-specific args survive on the object.' );
-			$this->assertSame( $type['label'], $object->label );
+			$this->assertSame( $type, $object, 'The filtered list and the direct lookup are the same object.' );
 		}
 	}
 

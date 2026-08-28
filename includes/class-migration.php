@@ -507,7 +507,14 @@ class Migration {
 		global $wpdb;
 
 		Comment::register_comment_types();
-		$comment_types  = Comment::get_comment_type_slugs();
+		$comment_types  = \array_keys(
+			\array_filter(
+				\get_comment_types( array(), 'objects' ),
+				static function ( $t ) {
+					return ! empty( $t->activity_types );
+				}
+			)
+		);
 		$type_inclusion = "AND comment_type IN ('" . \implode( "','", $comment_types ) . "')";
 
 		// Get and process this batch.

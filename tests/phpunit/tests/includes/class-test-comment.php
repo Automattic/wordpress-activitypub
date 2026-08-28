@@ -619,6 +619,8 @@ class Test_Comment extends \WP_UnitTestCase {
 	 * @covers ::get_comment_type_slugs
 	 */
 	public function test_get_comment_type_slugs() {
+		$this->setExpectedDeprecated( 'Activitypub\\Comment::get_comment_type_slugs' );
+
 		// Get the registered slugs.
 		$slugs = Comment::get_comment_type_slugs();
 
@@ -653,6 +655,9 @@ class Test_Comment extends \WP_UnitTestCase {
 	 * @covers ::get_comment_type_slugs
 	 */
 	public function test_get_comment_types_returns_array_when_global_is_null() {
+		$this->setExpectedDeprecated( 'Activitypub\\Comment::get_comment_types' );
+		$this->setExpectedDeprecated( 'Activitypub\\Comment::get_comment_type_slugs' );
+
 		global $wp_comment_types;
 
 		$backup           = $wp_comment_types;
@@ -761,7 +766,14 @@ class Test_Comment extends \WP_UnitTestCase {
 			'trackback',
 		);
 
-		$activitypub_comment_types = Comment::get_comment_type_slugs();
+		$activitypub_comment_types = \array_keys(
+			\array_filter(
+				\get_comment_types( array(), 'objects' ),
+				static function ( $t ) {
+					return ! empty( $t->activity_types );
+				}
+			)
+		);
 
 		$comment_types = \array_merge( $activitypub_comment_types, $core_comment_types );
 
