@@ -112,14 +112,15 @@ class Test_Comment extends \WP_UnitTestCase {
 	 *
 	 * @dataProvider data_content_with_existing_mention
 	 *
-	 * @param string $content  The comment content as the author wrote it.
-	 * @param string $expected The federated content.
+	 * @param string $content    The comment content as the author wrote it.
+	 * @param string $expected   The federated content.
+	 * @param string $author_url The parent author's stored URL.
 	 */
-	public function test_content_does_not_duplicate_an_existing_mention( $content, $expected ) {
+	public function test_content_does_not_duplicate_an_existing_mention( $content, $expected, $author_url = 'https://remote.example/@author' ) {
 		$parent_comment_id = self::factory()->comment->create(
 			array(
 				'comment_post_ID'    => self::$post_id,
-				'comment_author_url' => 'https://remote.example/@author',
+				'comment_author_url' => $author_url,
 				'comment_meta'       => array(
 					'protocol' => 'activitypub',
 				),
@@ -155,6 +156,11 @@ class Test_Comment extends \WP_UnitTestCase {
 			'mention as a handle' => array(
 				'@author@remote.example thanks',
 				'<p>@author@remote.example thanks</p>',
+			),
+			'stored URL has a trailing slash, link does not' => array(
+				'<a rel="mention" class="u-url mention" href="https://remote.example/@author">@author</a> thanks',
+				'<p><a rel="mention" class="u-url mention" href="https://remote.example/@author">@author</a> thanks</p>',
+				'https://remote.example/@author/',
 			),
 			'no mention'          => array(
 				'thanks',

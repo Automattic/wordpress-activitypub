@@ -179,8 +179,9 @@ class Comment extends Base {
 			return true;
 		}
 
+		// The actor URL and the author's link may differ by a trailing slash in either direction.
 		return (bool) \preg_match(
-			'/<a\b[^>]*\bhref=["\']' . \preg_quote( $url, '/' ) . '\/?["\']/i',
+			'/<a\b[^>]*\bhref=["\']' . \preg_quote( \untrailingslashit( $url ), '/' ) . '\/?["\']/i',
 			$content
 		);
 	}
