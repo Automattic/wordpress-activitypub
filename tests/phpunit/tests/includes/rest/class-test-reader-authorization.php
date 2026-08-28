@@ -500,6 +500,37 @@ class Test_Reader_Authorization extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An administrator can read an actor that has no relationship at all.
+	 *
+	 * Per-target checks have nothing to iterate for such a record, so the blanket capability has
+	 * to answer it.
+	 *
+	 * @covers ::get_item_permissions_check
+	 */
+	public function test_administrators_can_read_an_unrelated_actor() {
+		$orphan = self::factory()->post->create(
+			array(
+				'post_type'    => Remote_Actors::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => \wp_slash(
+					\wp_json_encode(
+						array(
+							'id'   => 'https://example.org/users/orphan',
+							'type' => 'Person',
+						)
+					)
+				),
+			)
+		);
+
+		\wp_set_current_user( self::$admin_id );
+
+		$this->assertSame( 200, $this->request( '/wp/v2/ap_actor/' . $orphan )->get_status() );
+
+		\wp_delete_post( $orphan, true );
+	}
+
+	/**
 	 * A user cannot read an unrelated actor by ID.
 	 *
 	 * @covers ::get_item_permissions_check

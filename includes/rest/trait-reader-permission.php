@@ -82,6 +82,11 @@ trait Reader_Permission {
 	 * @return bool True if the current user may read it, false otherwise.
 	 */
 	protected function can_read_feed_of( $user_ids ) {
+		// Blanket access: an actor with no relationship at all has nothing to check per target.
+		if ( \current_user_can( 'list_users' ) ) {
+			return true;
+		}
+
 		$user_ids = \array_map( 'intval', (array) $user_ids );
 
 		if ( \in_array( \get_current_user_id(), $user_ids, true ) ) {
