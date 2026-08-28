@@ -800,18 +800,21 @@ class Comment {
 			return;
 		}
 
-		// Do not exclude likes and reposts on non-singular pages.
+		// Do not exclude the plugin's comment types on non-singular pages.
 		if ( ! \is_singular() ) {
 			return;
 		}
 
-		// Do not exclude likes and reposts if the query is for specific types.
+		// Do not exclude the plugin's comment types if the query is for specific types.
 		if ( ! empty( $query->query_vars['type__in'] ) || ! empty( $query->query_vars['type'] ) ) {
 			return;
 		}
 
-		// Exclude likes and reposts by the ActivityPub plugin.
-		// Merge with any existing type__not_in values so other plugins' exclusions are preserved.
+		/*
+		 * Exclude every comment type the plugin registers, whatever that set currently is, rather
+		 * than a hardcoded list that drifts as types are added. Merge with any existing
+		 * `type__not_in` so another plugin's exclusions survive.
+		 */
 		$excluded_types = self::get_comment_type_slugs();
 
 		if ( ! empty( $query->query_vars['type__not_in'] ) ) {

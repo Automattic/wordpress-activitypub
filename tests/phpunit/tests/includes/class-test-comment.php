@@ -1783,6 +1783,24 @@ class Test_Comment extends \WP_UnitTestCase {
 				'comment_author_email' => 'like@example.com',
 			)
 		);
+		$repost_comment_id     = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'repost',
+				'comment_content'      => 'Repost',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'repost@example.com',
+			)
+		);
+		$quote_comment_id      = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'quote',
+				'comment_content'      => 'Quote',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'quote@example.com',
+			)
+		);
 		$webmention_comment_id = self::factory()->comment->create(
 			array(
 				'comment_post_ID'      => $post_id,
@@ -1803,8 +1821,8 @@ class Test_Comment extends \WP_UnitTestCase {
 		};
 		\add_action( 'pre_get_comments', $other_plugin_filter, 5 );
 
-		// Query without explicit type restrictions — both the other plugin's type and
-		// ActivityPub's types (like, repost) should be excluded.
+		// Query without explicit type restrictions — both the other plugin's type and every
+		// comment type the plugin registers should be excluded.
 		$query    = new \WP_Comment_Query();
 		$comments = $query->query( array( 'post_id' => $post_id ) );
 
@@ -1814,6 +1832,8 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		$this->assertContains( (string) $regular_comment_id, $comment_ids, 'Regular comment should be included.' );
 		$this->assertNotContains( (string) $like_comment_id, $comment_ids, 'Like should be excluded even when another plugin sets type__not_in first.' );
+		$this->assertNotContains( (string) $repost_comment_id, $comment_ids, 'Repost should be excluded even when another plugin sets type__not_in first.' );
+		$this->assertNotContains( (string) $quote_comment_id, $comment_ids, 'Quote should be excluded even when another plugin sets type__not_in first.' );
 		$this->assertNotContains( (string) $webmention_comment_id, $comment_ids, 'Webmention (excluded by the other plugin) should also be excluded.' );
 	}
 }
