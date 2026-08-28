@@ -475,6 +475,31 @@ class Test_Reader_Authorization extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A site that has switched off user actors does not serve reader data to those users.
+	 *
+	 * The gate goes through `user_can_activitypub()` rather than the raw capability, so it honours
+	 * the same opt-outs the plugin's own admin routes do.
+	 *
+	 * @covers \Activitypub\Rest\Reader_Permission::check_reader_capability
+	 */
+	public function test_disabled_user_actors_are_refused() {
+		\wp_set_current_user( self::$user_id );
+
+		$this->assertSame( 200, $this->request( '/wp/v2/ap_actor' )->get_status(), 'The user has to start with access, or this test proves nothing.' );
+
+		$filter = function ( $enabled, $user_id ) {
+			return self::$user_id === $user_id ? false : $enabled;
+		};
+		\add_filter( 'activitypub_user_can_activitypub', $filter, 10, 2 );
+
+		$response = $this->request( '/wp/v2/ap_actor' );
+
+		\remove_filter( 'activitypub_user_can_activitypub', $filter, 10 );
+
+		$this->assertSame( 403, $response->get_status() );
+	}
+
+	/**
 	 * A user cannot read an unrelated actor by ID.
 	 *
 	 * @covers ::get_item_permissions_check

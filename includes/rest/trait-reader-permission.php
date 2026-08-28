@@ -7,6 +7,9 @@
 
 namespace Activitypub\Rest;
 
+use function Activitypub\user_can_act_as_blog;
+use function Activitypub\user_can_activitypub;
+
 /**
  * Reader_Permission trait.
  *
@@ -29,7 +32,13 @@ trait Reader_Permission {
 	 * @return true|\WP_Error True if the current user may read, WP_Error otherwise.
 	 */
 	protected function check_reader_capability() {
-		if ( \current_user_can( 'activitypub' ) || \current_user_can( 'manage_options' ) ) {
+		/*
+		 * `user_can_activitypub()` rather than the raw capability: it also honours
+		 * `is_user_type_disabled( 'user' )` and the `activitypub_user_can_activitypub` filter, the
+		 * way the plugin's own admin routes do. A logged-out request has user ID 0, which is also
+		 * `Actors::BLOG_USER_ID`, so the login check has to come first.
+		 */
+		if ( \is_user_logged_in() && ( user_can_activitypub( \get_current_user_id() ) || user_can_act_as_blog() ) ) {
 			return true;
 		}
 
@@ -73,10 +82,18 @@ trait Reader_Permission {
 	 * @return bool True if the current user may read it, false otherwise.
 	 */
 	protected function can_read_feed_of( $user_ids ) {
-		if ( \current_user_can( 'list_users' ) ) {
+		$user_ids = \array_map( 'intval', (array) $user_ids );
+
+		if ( \in_array( \get_current_user_id(), $user_ids, true ) ) {
 			return true;
 		}
 
-		return \in_array( \get_current_user_id(), \array_map( 'intval', (array) $user_ids ), true );
+		foreach ( $user_ids as $user_id ) {
+			if ( \current_user_can( 'edit_user', $user_id ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }
