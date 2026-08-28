@@ -448,7 +448,7 @@ class Comment {
 			return $where;
 		}
 
-		$comment_types = \array_keys( self::reaction_comment_types() );
+		$comment_types = \get_comment_types( array( 'reaction' => true ), 'names' );
 
 		if ( \in_array( $comment_type, $comment_types, true ) ) {
 			$where .= $wpdb->prepare( ' AND comment_type = %s', $comment_type );
@@ -584,24 +584,13 @@ class Comment {
 	public static function get_comment_type_by_activity_type( $activity_type ) {
 		$activity_type = \sanitize_key( \strtolower( $activity_type ) );
 
-		foreach ( self::reaction_comment_types() as $comment_type ) {
+		foreach ( \get_comment_types( array( 'reaction' => true ), 'objects' ) as $comment_type ) {
 			if ( \in_array( $activity_type, $comment_type->activity_types, true ) ) {
 				return \get_object_vars( $comment_type );
 			}
 		}
 
 		return null;
-	}
-
-	/**
-	 * The reaction comment types, keyed by name.
-	 *
-	 * A reaction is registered `reaction => true`, which is scalar, so core's own filter finds it.
-	 *
-	 * @return \WP_Comment_Type[] Comment type objects.
-	 */
-	private static function reaction_comment_types() {
-		return \get_comment_types( array( 'reaction' => true ), 'objects' );
 	}
 
 	/**
@@ -615,7 +604,7 @@ class Comment {
 	public static function get_comment_types() {
 		\_deprecated_function( __METHOD__, 'unreleased', "get_comment_types( array(), 'objects' )" );
 
-		return \array_map( 'get_object_vars', self::reaction_comment_types() );
+		return \array_map( 'get_object_vars', \get_comment_types( array( 'reaction' => true ), 'objects' ) );
 	}
 
 	/**
@@ -642,7 +631,7 @@ class Comment {
 	public static function get_comment_type_slugs() {
 		\_deprecated_function( __METHOD__, 'unreleased', 'get_comment_types()' );
 
-		return \array_keys( self::reaction_comment_types() );
+		return \get_comment_types( array( 'reaction' => true ), 'names' );
 	}
 
 	/**
@@ -771,7 +760,7 @@ class Comment {
 	 * @return array show avatars on Activities
 	 */
 	public static function get_avatar_comment_types( $types ) {
-		$types = \array_merge( $types, \array_keys( self::reaction_comment_types() ) );
+		$types = \array_merge( $types, \get_comment_types( array( 'reaction' => true ), 'names' ) );
 
 		return \array_unique( $types );
 	}
@@ -881,7 +870,7 @@ class Comment {
 
 		// Maybe auto-approve likes and reposts.
 		if (
-			\in_array( $comment_data['comment_type'], \array_keys( self::reaction_comment_types() ), true ) &&
+			\in_array( $comment_data['comment_type'], \get_comment_types( array( 'reaction' => true ), 'names' ), true ) &&
 			'1' === \get_option( 'activitypub_auto_approve_reactions' )
 		) {
 			return 1;
