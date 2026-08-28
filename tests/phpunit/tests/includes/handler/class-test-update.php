@@ -368,6 +368,84 @@ class Test_Update extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An Update for a reply whose post is no longer federated must not recurse.
+	 *
+	 * `persist()` refuses to write to a disabled post and returns false. The Update handler
+	 * read that as "no comment to update" and fell back to Create, which found the comment and
+	 * dispatched back to Update, until the stack ran out. Note the handled-update action only
+	 * fires once a handler returns, so on a regression this test times out rather than tripping
+	 * the depth guard; the guard still bounds any re-dispatch shape that does return.
+	 *
+	 * @covers ::update_object
+	 */
+	public function test_update_object_does_not_recurse_when_post_is_disabled() {
+		$post_id = self::factory()->post->create();
+		$id      = 'https://remote.example/notes/1';
+		$actor   = 'https://remote.example/users/bob';
+
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => '1',
+				'comment_content'  => 'original',
+			)
+		);
+		\add_comment_meta( $comment_id, 'source_id', $id );
+		\add_comment_meta( $comment_id, 'protocol', 'activitypub' );
+
+		// The post stops federating after the reply was cached.
+		\update_post_meta( $post_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+
+		$metadata = function () use ( $actor ) {
+			return array(
+				'id'                => $actor,
+				'type'              => 'Person',
+				'name'              => 'bob',
+				'preferredUsername' => 'bob',
+				'inbox'             => $actor . '/inbox',
+				'url'               => $actor,
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata );
+
+		$depth = 0;
+		$guard = function () use ( &$depth ) {
+			if ( ++$depth > 3 ) {
+				throw new \RuntimeException( 'Update and Create are dispatching to each other.' );
+			}
+		};
+		\add_action( 'activitypub_handled_update', $guard );
+
+		$activity = array(
+			'type'   => 'Update',
+			'actor'  => $actor,
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'id'           => $id,
+				'type'         => 'Note',
+				'content'      => 'edited',
+				'inReplyTo'    => \get_permalink( $post_id ),
+				'attributedTo' => $actor,
+				'to'           => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			),
+		);
+
+		$caught = null;
+		try {
+			Update::handle_update( $activity, array( 1 ), null );
+		} catch ( \RuntimeException $e ) {
+			$caught = $e->getMessage();
+		}
+
+		\remove_action( 'activitypub_handled_update', $guard );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata );
+
+		$this->assertNull( $caught );
+		$this->assertSame( 1, $depth, 'The Update has to be handled exactly once.' );
+		$this->assertSame( 'original', \get_comment( $comment_id )->comment_content, 'A disabled post must not be written to.' );
+	}
+
+	/**
 	 * A foreign actor's comment Update is handled but reported as unsuccessful, so relay mode
 	 * does not re-announce it, and it does not fall back to Create.
 	 *

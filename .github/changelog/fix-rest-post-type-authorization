@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Followers, cached remote profiles, and reader posts are no longer readable by logged-out visitors through the WordPress REST API, and the setting that hides your follower list is now honoured everywhere.

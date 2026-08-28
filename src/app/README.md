@@ -141,6 +141,15 @@ a server-rendered table.
   `useEntityRecord` / `useEntityRecords` against the REST API. The plugin's custom
   post types `ap_post` (feed) and `ap_actor` (followers/following) and their
   taxonomies (`ap_object_type`, `ap_tag`) are the entities behind the lists.
+- **Those routes are gated and self-scoping.** They are served by the plugin's own
+  controllers (`includes/rest/`), not core's, so they require the `activitypub`
+  capability and return nothing to logged-out visitors. Collections are scoped to
+  the current user automatically: `user_id` on `ap_post` and `follower_of` on
+  `ap_actor` are clamped unless the caller can `list_users`, so a screen never has
+  to pass the viewer's own ID to stay within its own data. A screen that needs a
+  relationship these routes do not expose yet — the site's *following* list lives
+  in `_activitypub_followed_by`, which is not registered for REST — needs that
+  wired up first.
 - **The `activitypub/app` `@wordpress/data` store is for UI/app state only** —
   things with no REST representation, such as the active actor selection (which is
   persisted through `@wordpress/preferences`). Do not duplicate entity data in it.
