@@ -823,11 +823,12 @@ class Comment {
 	/**
 	 * Keeps comment page math in step with the rendered list.
 	 *
-	 * `get_page_of_comment()` counts the comments older than the given one with `type => 'all'`,
-	 * the one value that makes `WP_Comment_Query` skip every exclusion, while `comments_template()`
-	 * renders the same post with the plugin's types hidden. Counting what the list does not show
-	 * places the comment on a later page than the one it renders on, so `get_comment_link()`
-	 * emits a `cpage` the comment is not on. Counting with the same exclusion fixes the page.
+	 * `get_page_of_comment()` counts the comments older than the given one with `type => 'all'`.
+	 * That is a non-empty type, so `comment_query()` leaves the count alone, and it is the one
+	 * value that makes core skip its own `note` exclusion too. `comments_template()` queries with
+	 * no type and gets both applied. Counting what the list does not show places the comment on
+	 * a later page than the one it renders on, so `get_comment_link()` emits a `cpage` the
+	 * comment is not on. Clearing the type puts the count on the same footing as the render.
 	 *
 	 * @param array $comment_args Arguments for the older-comments count.
 	 *

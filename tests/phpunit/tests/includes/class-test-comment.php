@@ -1752,10 +1752,15 @@ class Test_Comment extends \WP_UnitTestCase {
 			);
 		};
 
-		// Two webmentions the other plugin hides, one like we hide, all older than the comment.
+		/*
+		 * Two webmentions the other plugin hides and two likes this plugin hides, all older than
+		 * the comment. Either set alone fills a page, so the count has to drop both to land on
+		 * page one: trunk drops neither, an assignment drops only the likes.
+		 */
 		$create( 'webmention', 1 );
 		$create( 'webmention', 2 );
 		$create( 'like', 3 );
+		$create( 'like', 4 );
 		$comment_id = $create( 'comment', 10 );
 
 		$other_plugin_filter = function ( $comment_args ) {
