@@ -99,8 +99,6 @@ class Test_Comment_Types extends \WP_UnitTestCase {
 
 		\add_filter( 'activitypub_core_reads_excluded_comment_types', '__return_true' );
 
-		$this->go_to( \get_permalink( self::factory()->post->create() ) );
-
 		$query             = new \WP_Comment_Query();
 		$query->query_vars = $query->query_var_defaults;
 		\Activitypub\Comment::comment_query( $query );
