@@ -1044,7 +1044,15 @@ class Comment {
 	 * @return bool True if core reads the set on its own.
 	 */
 	private static function core_reads_excluded_comment_types() {
-		return \function_exists( '_wp_get_excluded_comment_types_clause' );
+		/**
+		 * Filters whether core reads the default-excluded comment types itself.
+		 *
+		 * Detected from the private helper the core patch routes its consumers through. Filter it
+		 * if that helper is renamed upstream, or to exercise the stand-down in a test.
+		 *
+		 * @param bool $core_reads True if core reads the set on its own.
+		 */
+		return (bool) \apply_filters( 'activitypub_core_reads_excluded_comment_types', \function_exists( '_wp_get_excluded_comment_types_clause' ) );
 	}
 
 	/**
