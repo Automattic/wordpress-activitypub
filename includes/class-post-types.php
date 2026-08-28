@@ -72,6 +72,9 @@ class Post_Types {
 					'singular_name' => \_x( 'Follower', 'post_type single name', 'activitypub' ),
 				),
 				'public'                => false,
+				'capabilities'          => array(
+					'create_posts' => false,
+				),
 				'show_in_rest'          => true,
 				'rest_controller_class' => Remote_Actors_Controller::class,
 				'hierarchical'          => false,
@@ -363,6 +366,9 @@ class Post_Types {
 				),
 				'map_meta_cap'          => true,
 				'public'                => false,
+				'capabilities'          => array(
+					'create_posts' => false,
+				),
 				'show_in_rest'          => true,
 				'rest_controller_class' => Remote_Posts_Controller::class,
 				'rewrite'               => false,

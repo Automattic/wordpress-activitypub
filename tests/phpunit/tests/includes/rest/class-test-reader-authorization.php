@@ -439,6 +439,42 @@ class Test_Reader_Authorization extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The reader routes are read-only.
+	 *
+	 * These records are written by the inbox through `wp_insert_post()`, which does not consult
+	 * capabilities, so refusing `create_posts` closes the REST write path without touching
+	 * federation.
+	 *
+	 * @covers \Activitypub\Post_Types::register_post_post_type
+	 * @covers \Activitypub\Post_Types::register_remote_actors_post_type
+	 * @dataProvider data_reader_post_types
+	 *
+	 * @param string $route Route to post to.
+	 */
+	public function test_reader_routes_refuse_writes( $route ) {
+		\wp_set_current_user( self::$user_id );
+
+		$request = new \WP_REST_Request( 'POST', $route );
+		$request->set_param( 'title', 'injected' );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertSame( 403, $response->get_status() );
+	}
+
+	/**
+	 * Data provider for the reader post type routes.
+	 *
+	 * @return array[] Test parameters.
+	 */
+	public function data_reader_post_types() {
+		return array(
+			'posts'  => array( '/wp/v2/ap_post' ),
+			'actors' => array( '/wp/v2/ap_actor' ),
+		);
+	}
+
+	/**
 	 * A user cannot read an unrelated actor by ID.
 	 *
 	 * @covers ::get_item_permissions_check
