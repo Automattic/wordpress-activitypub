@@ -595,14 +595,29 @@ class Comment {
 	}
 
 	/**
+	 * Shim over the core registry. It keeps the array shape callers were built on; new code
+	 * should call core's `get_comment_types( array(), 'objects' )` and read the object.
+	 *
 	 * Return the registered custom comment types.
 	 *
 	 * @return array The registered custom comment types
 	 */
 	public static function get_comment_types() {
-		global $activitypub_comment_types;
+		$comment_types = array();
 
-		return (array) $activitypub_comment_types;
+		/*
+		 * Read back from the core registry and hand callers the array shape they always got.
+		 * `activity_types` marks a type as one of ours; core's built-ins do not carry it.
+		 */
+		foreach ( \get_comment_types( array(), 'objects' ) as $name => $comment_type ) {
+			if ( empty( $comment_type->activity_types ) ) {
+				continue;
+			}
+
+			$comment_types[ $name ] = \get_object_vars( $comment_type );
+		}
+
+		return $comment_types;
 	}
 
 	/**
@@ -613,15 +628,15 @@ class Comment {
 	 * @return boolean True if registered.
 	 */
 	public static function is_registered_comment_type( $slug ) {
-		$slug = \strtolower( $slug );
-		$slug = \sanitize_key( $slug );
+		\_deprecated_function( __METHOD__, 'unreleased', 'comment_type_exists' );
 
-		$comment_types = self::get_comment_types();
-
-		return isset( $comment_types[ $slug ] );
+		return \comment_type_exists( \sanitize_key( \strtolower( $slug ) ) );
 	}
 
 	/**
+	 * Shim over the core registry. It keeps the array shape callers were built on; new code
+	 * should call core's `get_comment_types()` and read the object.
+	 *
 	 * Return the registered custom comment type slugs.
 	 *
 	 * @return array The registered custom comment type slugs.
@@ -637,6 +652,9 @@ class Comment {
 	}
 
 	/**
+	 * Shim over the core registry. It keeps the array shape callers were built on; new code
+	 * should call core's `get_comment_type_object()` and read the object.
+	 *
 	 * Get the custom comment type.
 	 *
 	 * Check if the type is registered, if not, check if it is a custom type.

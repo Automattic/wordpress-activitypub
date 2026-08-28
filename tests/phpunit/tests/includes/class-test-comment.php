@@ -588,6 +588,8 @@ class Test_Comment extends \WP_UnitTestCase {
 	 * @covers ::is_registered_comment_type
 	 */
 	public function test_is_registered_comment_type() {
+		$this->setExpectedDeprecated( 'Activitypub\\Comment::is_registered_comment_type' );
+
 		// Test registered types (these are registered in Comment::register_comment_types()).
 		$this->assertTrue( Comment::is_registered_comment_type( 'repost' ) );
 		$this->assertTrue( Comment::is_registered_comment_type( 'like' ) );
@@ -603,7 +605,12 @@ class Test_Comment extends \WP_UnitTestCase {
 		// Test unregistered types.
 		$this->assertFalse( Comment::is_registered_comment_type( 'nonexistent' ) );
 		$this->assertFalse( Comment::is_registered_comment_type( '' ) );
-		$this->assertFalse( Comment::is_registered_comment_type( 'comment' ) );
+
+		/*
+		 * `comment` is a plugin-unknown type on the polyfill, but a built-in on core. The method
+		 * now answers from the shared registry, so its answer follows whichever side is live.
+		 */
+		$this->assertSame( (bool) \get_comment_type_object( 'comment' ), Comment::is_registered_comment_type( 'comment' ) );
 	}
 
 	/**
@@ -646,10 +653,10 @@ class Test_Comment extends \WP_UnitTestCase {
 	 * @covers ::get_comment_type_slugs
 	 */
 	public function test_get_comment_types_returns_array_when_global_is_null() {
-		global $activitypub_comment_types;
+		global $wp_comment_types;
 
-		$backup                    = $activitypub_comment_types;
-		$activitypub_comment_types = null;
+		$backup           = $wp_comment_types;
+		$wp_comment_types = null;
 
 		try {
 			$result = Comment::get_comment_types();
@@ -661,7 +668,7 @@ class Test_Comment extends \WP_UnitTestCase {
 			$this->assertIsArray( $slugs );
 			$this->assertSame( array(), $slugs );
 		} finally {
-			$activitypub_comment_types = $backup;
+			$wp_comment_types = $backup;
 		}
 	}
 

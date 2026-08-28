@@ -155,16 +155,25 @@ function get_comment_ancestors( $comment ) {
  * @return array The registered Activitypub comment type.
  */
 function register_comment_type( $comment_type, $args = array() ) {
-	global $activitypub_comment_types;
+	/*
+	 * One implementation: registration goes through the core API, polyfilled until core ships
+	 * it. Every plugin type is `internal`, so it stays out of comment listings, counts and feeds
+	 * by default through wp_get_default_excluded_comment_types(), which is what the scattered
+	 * `type__not_in` exclusions in Comment used to do by hand.
+	 */
+	$args = \wp_parse_args(
+		$args,
+		array(
+			'internal' => true,
+			'public'   => false,
+		)
+	);
 
-	if ( ! \is_array( $activitypub_comment_types ) ) {
-		$activitypub_comment_types = array();
+	$comment_type_object = \register_comment_type( $comment_type, $args );
+
+	if ( \is_wp_error( $comment_type_object ) ) {
+		return $comment_type_object;
 	}
-
-	// Sanitize comment type name.
-	$comment_type = \sanitize_key( $comment_type );
-
-	$activitypub_comment_types[ $comment_type ] = $args;
 
 	/**
 	 * Fires after a ActivityPub comment type is registered.
@@ -172,7 +181,7 @@ function register_comment_type( $comment_type, $args = array() ) {
 	 * @param string $comment_type Comment type.
 	 * @param array  $args         Arguments used to register the comment type.
 	 */
-	\do_action( 'activitypub_registered_comment_type', $comment_type, $args );
+	\do_action( 'activitypub_registered_comment_type', $comment_type_object->name, $args );
 
 	return $args;
 }

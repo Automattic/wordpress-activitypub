@@ -27,6 +27,8 @@ namespace Activitypub;
 
 require_once __DIR__ . '/includes/class-autoloader.php';
 require_once __DIR__ . '/includes/compat.php';
+require_once __DIR__ . '/includes/polyfill/class-wp-comment-type.php';
+require_once __DIR__ . '/includes/polyfill/comment-types.php';
 require_once __DIR__ . '/includes/constants.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/functions-activity.php';

@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Comment types are now registered the way an upcoming WordPress version will, so likes, reposts and quotes keep working unchanged when that update ships.
