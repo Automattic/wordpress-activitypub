@@ -115,6 +115,34 @@ class Test_Query extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a stray `term_id` does not hijack an author request.
+	 *
+	 * Polylang sets its language term on every request. Resolving `?author=0` to that term
+	 * answered the blog actor URL with an OrderedCollection, so Mastodon could not find the
+	 * blog profile.
+	 *
+	 * @covers ::get_queried_object
+	 * @covers ::get_activitypub_object_id
+	 */
+	public function test_author_request_is_not_hijacked_by_term_id() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\register_taxonomy( 'language', 'post', array( 'public' => true ) );
+		$term = \wp_insert_term( 'de', 'language' );
+
+		Query::get_instance()->__destruct();
+		$this->go_to( \home_url( '/?author=0' ) );
+		\set_query_var( 'term_id', $term['term_id'] );
+		$query = Query::get_instance();
+
+		$this->assertNotInstanceOf( \WP_Term::class, $query->get_queried_object(), 'A language term must not answer an author request.' );
+		$this->assertEquals( \home_url( '/?author=0' ), $query->get_activitypub_object_id() );
+		// The blog actor's type depends on the mode (Group, Person, Service), so assert the identity.
+		$this->assertInstanceOf( \Activitypub\Model\Blog::class, $query->get_activitypub_object(), 'The blog actor has to come back, not a collection.' );
+
+		\unregister_taxonomy( 'language' );
+	}
+
+	/**
 	 * Test get_activitypub_object_id doesn't fatal when queried object filter returns WP_Error.
 	 *
 	 * @covers ::get_activitypub_object_id
