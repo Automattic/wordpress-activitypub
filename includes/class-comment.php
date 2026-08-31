@@ -771,7 +771,7 @@ class Comment {
 	}
 
 	/**
-	 * Excludes likes and reposts from comment queries.
+	 * Excludes the plugin's comment types from comment queries.
 	 *
 	 * @author Jan Boddez
 	 *
@@ -784,12 +784,12 @@ class Comment {
 			return;
 		}
 
-		// Do not exclude likes and reposts on ActivityPub requests.
+		// Do not exclude the plugin's comment types on ActivityPub requests.
 		if ( \defined( 'ACTIVITYPUB_REQUEST' ) && ACTIVITYPUB_REQUEST ) {
 			return;
 		}
 
-		// Do not exclude likes and reposts on REST requests (handled by rest_comment_query).
+		// Do not exclude the plugin's comment types on REST requests (handled by rest_comment_query).
 		if ( \wp_is_serving_rest_request() ) {
 			return;
 		}
@@ -800,30 +800,32 @@ class Comment {
 			return;
 		}
 
-		// Do not exclude likes and reposts on non-singular pages.
+		// Do not exclude the plugin's comment types on non-singular pages.
 		if ( ! \is_singular() ) {
 			return;
 		}
 
-		// Do not exclude likes and reposts if the query is for specific types.
+		// Do not exclude the plugin's comment types if the query is for specific types.
 		if ( ! empty( $query->query_vars['type__in'] ) || ! empty( $query->query_vars['type'] ) ) {
 			return;
 		}
 
-		// Do not exclude likes and reposts if the query is already excluding other comment types.
+		// Merge with any existing `type__not_in` rather than assign, so another plugin's exclusions survive.
+		$excluded_types = self::get_comment_type_slugs();
+
 		if ( ! empty( $query->query_vars['type__not_in'] ) ) {
-			return;
+			$existing       = (array) $query->query_vars['type__not_in'];
+			$excluded_types = \array_values( \array_unique( \array_merge( $existing, $excluded_types ) ) );
 		}
 
-		// Exclude likes and reposts by the ActivityPub plugin.
-		$query->query_vars['type__not_in'] = self::get_comment_type_slugs();
+		$query->query_vars['type__not_in'] = $excluded_types;
 	}
 
 	/**
 	 * Filters comments in REST API requests.
 	 *
-	 * Excludes comments on ActivityPub post types and ActivityPub comment
-	 * types (likes, reposts) from the REST API.
+	 * Excludes comments on ActivityPub post types and every comment type the
+	 * plugin registers from the REST API.
 	 *
 	 * @param array $prepared_args Array of arguments for WP_Comment_Query.
 	 *
@@ -833,9 +835,17 @@ class Comment {
 		// Exclude comments on ActivityPub post types.
 		$prepared_args['post_type'] = self::get_allowed_comment_post_types();
 
-		// Exclude ActivityPub comment types (likes, reposts) unless explicitly requested.
+		// Exclude the plugin's comment types unless explicitly requested.
 		if ( empty( $prepared_args['type'] ) && empty( $prepared_args['type__in'] ) ) {
-			$prepared_args['type__not_in'] = self::get_comment_type_slugs();
+			$excluded_types = self::get_comment_type_slugs();
+
+			// Merge rather than assign, so an exclusion another plugin set earlier survives.
+			if ( ! empty( $prepared_args['type__not_in'] ) ) {
+				$existing       = (array) $prepared_args['type__not_in'];
+				$excluded_types = \array_values( \array_unique( \array_merge( $existing, $excluded_types ) ) );
+			}
+
+			$prepared_args['type__not_in'] = $excluded_types;
 		}
 
 		return $prepared_args;

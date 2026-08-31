@@ -1684,6 +1684,72 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test rest_comment_query merges with a type__not_in another plugin set first.
+	 *
+	 * The REST path used to assign the list outright, so an exclusion registered at a lower
+	 * priority was discarded and that plugin's comments reappeared in the collection.
+	 *
+	 * @covers ::rest_comment_query
+	 */
+	public function test_rest_comment_query_merges_with_existing_type__not_in() {
+		$post_id = self::factory()->post->create();
+
+		$regular_comment_id    = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'comment',
+				'comment_content'      => 'Regular comment',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'regular@example.com',
+			)
+		);
+		$like_comment_id       = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'like',
+				'comment_content'      => 'Like',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'like@example.com',
+			)
+		);
+		$webmention_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'webmention',
+				'comment_content'      => 'Webmention',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'webmention@example.com',
+			)
+		);
+
+		/*
+		 * Core defaults `type` to `comment` and protects it, so the merge branch is only reachable
+		 * for a caller allowed to clear it. Another plugin excludes its own type on that path, at
+		 * a lower priority than this plugin's callback.
+		 */
+		$other_plugin_filter = function ( $prepared_args ) {
+			unset( $prepared_args['type'] );
+			$prepared_args['type__not_in'] = array( 'webmention' );
+			return $prepared_args;
+		};
+		\add_filter( 'rest_comment_query', $other_plugin_filter, 5 );
+
+		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$request  = new \WP_REST_Request( 'GET', '/wp/v2/comments' );
+		$response = \rest_get_server()->dispatch( $request );
+
+		\remove_filter( 'rest_comment_query', $other_plugin_filter, 5 );
+		\wp_set_current_user( 0 );
+
+		$comment_ids = \wp_list_pluck( $response->get_data(), 'id' );
+
+		$this->assertContains( $regular_comment_id, $comment_ids, 'Regular comment should be included.' );
+		$this->assertNotContains( $like_comment_id, $comment_ids, 'Like should be excluded even when another plugin sets type__not_in first.' );
+		$this->assertNotContains( $webmention_comment_id, $comment_ids, 'Webmention (excluded by the other plugin) must survive the merge.' );
+	}
+
+	/**
 	 * Test comment_query does not add type__not_in when type is explicitly set.
 	 *
 	 * @covers ::comment_query
@@ -1747,5 +1813,106 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		$this->assertContains( (string) $like_comment_id, $comment_ids, 'Like should be included when explicitly requested via type__in' );
 		$this->assertContains( (string) $repost_comment_id, $comment_ids, 'Repost should be included when explicitly requested via type__in' );
+	}
+
+	/**
+	 * Test that ActivityPub comment types are still excluded when another plugin sets type__not_in.
+	 *
+	 * Simulates a situation where another plugin (e.g. Friends, Webmention) adds its own
+	 * comment types to type__not_in via pre_get_comments. ActivityPub types must also
+	 * be excluded so that likes and reposts do not appear in the standard Comments block.
+	 *
+	 * @covers ::comment_query
+	 *
+	 * @dataProvider data_existing_type__not_in
+	 *
+	 * @param string|string[] $type__not_in The value another plugin set first.
+	 */
+	public function test_comment_query_merges_with_existing_type__not_in( $type__not_in ) {
+		$post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+
+		// Navigate to the single post page so that is_singular() returns true.
+		$this->go_to( \get_permalink( $post_id ) );
+
+		// Create a regular comment, a like, and a "webmention" comment (simulating another plugin's type).
+		$regular_comment_id    = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'comment',
+				'comment_content'      => 'Regular comment',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'regular@example.com',
+			)
+		);
+		$like_comment_id       = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'like',
+				'comment_content'      => 'Like',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'like@example.com',
+			)
+		);
+		$repost_comment_id     = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'repost',
+				'comment_content'      => 'Repost',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'repost@example.com',
+			)
+		);
+		$quote_comment_id      = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'quote',
+				'comment_content'      => 'Quote',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'quote@example.com',
+			)
+		);
+		$webmention_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'      => $post_id,
+				'comment_type'         => 'webmention',
+				'comment_content'      => 'Webmention',
+				'comment_approved'     => '1',
+				'comment_author_email' => 'webmention@example.com',
+			)
+		);
+
+		// Another plugin setting `type__not_in` at an earlier priority. Core accepts a bare string
+		// here as well as an array, so both shapes have to merge.
+		$other_plugin_filter = function ( $query ) use ( $type__not_in ) {
+			$query->query_vars['type__not_in'] = $type__not_in;
+		};
+		\add_action( 'pre_get_comments', $other_plugin_filter, 5 );
+
+		// Query without explicit type restrictions, so both the other plugin's type and every
+		// comment type the plugin registers should be excluded.
+		$query    = new \WP_Comment_Query();
+		$comments = $query->query( array( 'post_id' => $post_id ) );
+
+		\remove_action( 'pre_get_comments', $other_plugin_filter, 5 );
+
+		$comment_ids = \wp_list_pluck( $comments, 'comment_ID' );
+
+		$this->assertContains( (string) $regular_comment_id, $comment_ids, 'Regular comment should be included.' );
+		$this->assertNotContains( (string) $like_comment_id, $comment_ids, 'Like should be excluded even when another plugin sets type__not_in first.' );
+		$this->assertNotContains( (string) $repost_comment_id, $comment_ids, 'Repost should be excluded even when another plugin sets type__not_in first.' );
+		$this->assertNotContains( (string) $quote_comment_id, $comment_ids, 'Quote should be excluded even when another plugin sets type__not_in first.' );
+		$this->assertNotContains( (string) $webmention_comment_id, $comment_ids, 'Webmention (excluded by the other plugin) should also be excluded.' );
+	}
+
+	/**
+	 * Data provider for the shapes `type__not_in` arrives in.
+	 *
+	 * @return array[] Test parameters.
+	 */
+	public function data_existing_type__not_in() {
+		return array(
+			'array'  => array( array( 'webmention' ) ),
+			'string' => array( 'webmention' ),
+		);
 	}
 }
