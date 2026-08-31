@@ -42,6 +42,12 @@ class Icons {
 			)
 		);
 
+		/*
+		 * The proposed Fediverse logo: five connected nodes forming a pentagram.
+		 *
+		 * @see https://commons.wikimedia.org/wiki/File:Fediverse_logo_proposal.svg
+		 * @license CC0-1.0
+		 */
 		\wp_register_icon(
 			'activitypub/fediverse',
 			array(
@@ -50,6 +56,12 @@ class Icons {
 			)
 		);
 
+		/*
+		 * The Fediverse symbol: an asterism (⁂), several stars coming together.
+		 *
+		 * @see https://symbol.fediverse.info/en
+		 * @license CC0-1.0
+		 */
 		\wp_register_icon(
 			'activitypub/fediverse-symbol',
 			array(
@@ -58,6 +70,12 @@ class Icons {
 			)
 		);
 
+		/*
+		 * The official logo of the ActivityPub protocol.
+		 *
+		 * @see https://activitypub.rocks/
+		 * @license CC0-1.0
+		 */
 		\wp_register_icon(
 			'activitypub/activitypub',
 			array(
