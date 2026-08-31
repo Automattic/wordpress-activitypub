@@ -296,14 +296,36 @@ class Application {
 
 		list( $identifier, $host ) = $identifier_and_host;
 
-		// The resource must point at this site, or at its pre-migration host.
-		$host = normalize_host( $host );
-		if ( normalize_host( home_host() ) !== $host && normalize_host( \get_option( 'activitypub_old_host' ) ) !== $host ) {
+		/*
+		 * The resource must point at this site, or at its pre-migration host. Both sides are folded:
+		 * the requested host is whatever the caller typed, and the stored ones are whatever an admin did.
+		 */
+		$host = normalize_host( fold_host( $host ) );
+
+		// A host of `.` or `[]` folds away to nothing, which would otherwise match an unset old host.
+		if ( '' === $host ) {
+			return false;
+		}
+
+		if ( normalize_host( fold_host( home_host() ) ) !== $host && normalize_host( fold_host( \get_option( 'activitypub_old_host' ) ) ) !== $host ) {
 			return false;
 		}
 
 		// URL forms: the REST actor ID or the pretty /@application profile path.
 		if ( false !== \strpos( $identifier, '://' ) ) {
+			/*
+			 * Fold the scheme and authority, which are case-insensitive, before comparing. The path
+			 * keeps its case. Without this the host guard above accepts a spelling that this then
+			 * rejects.
+			 */
+			$identifier = \preg_replace_callback(
+				'#^[a-zA-Z][a-zA-Z0-9+.\-]*://[^/?\#]+#',
+				static function ( $authority ) {
+					return \strtolower( $authority[0] );
+				},
+				$identifier
+			);
+
 			$identifier = normalize_url( $identifier );
 
 			return normalize_url( self::get_id() ) === $identifier

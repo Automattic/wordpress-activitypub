@@ -34,7 +34,7 @@ A few integrations are always initialized (`Nodeinfo`, `Webfinger`, `Surge`, `Li
 
 | Integration | What it does |
 |---|---|
-| **Jetpack** | Syncs ActivityPub options and follower/following meta to WordPress.com, adds a Reader link on the Following screen, enables the Following UI, and adapts the "share to reply" flow. |
+| **Jetpack** | Syncs ActivityPub options and follower/following meta to WordPress.com, adds a Reader link on the Following screen, enables the Following UI, adapts the "share to reply" flow, and federates podcast episodes from both Posts to Podcast and Jetpack Podcast with their audio and cover art. |
 | **Enable Mastodon Apps** | Feeds ActivityPub account, follower, post, and notification data to [Enable Mastodon Apps](https://wordpress.org/plugins/enable-mastodon-apps/) so native Mastodon client apps work against the site. |
 | **BuddyPress** | Maps BuddyPress member profiles into ActivityPub actors and adapts the Followers/Following blocks. |
 

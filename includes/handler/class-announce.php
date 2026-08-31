@@ -84,16 +84,13 @@ class Announce {
 			return;
 		}
 
-		$origin_host = \strtolower( (string) \wp_parse_url( (string) $object_url, \PHP_URL_HOST ) );
-		$actor_host  = \strtolower( (string) \wp_parse_url( (string) object_to_uri( $object['actor'] ?? '' ), \PHP_URL_HOST ) );
-
 		/*
 		 * Only an actor's own server may vouch for an activity attributed to it, so the
 		 * host it was fetched from must equal its actor's host — the same key-host ==
 		 * actor-host binding verify_key_id() enforces for signed requests, generalised
 		 * to every relayed activity type.
 		 */
-		if ( '' === $origin_host || '' === $actor_host || $origin_host !== $actor_host ) {
+		if ( ! is_same_host( $object_url, $object['actor'] ?? '' ) ) {
 			return;
 		}
 

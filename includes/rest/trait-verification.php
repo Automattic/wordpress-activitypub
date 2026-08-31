@@ -137,9 +137,12 @@ trait Verification {
 	/**
 	 * Verify user authentication via OAuth.
 	 *
-	 * Automatically determines the required scope based on the HTTP method:
+	 * Determines the required scope from the HTTP method unless the caller names one:
 	 * - GET, HEAD: read scope
 	 * - POST, PUT, PATCH, DELETE: write scope
+	 *
+	 * A route whose method does not describe what it does passes its own scope. The proxy is a
+	 * POST because the target URL travels in the body, but it only reads.
 	 *
 	 * If the request has a user_id parameter, also verifies that the
 	 * authenticated user matches that actor.
@@ -151,14 +154,19 @@ trait Verification {
 	 * check, so a wp-admin session in another browser tab cannot be hijacked
 	 * to drive C2S writes on behalf of the user (no CSRF path on this surface).
 	 *
+	 * @since unreleased Added the `$scope` parameter.
+	 *
 	 * @param \WP_REST_Request $request The request object.
+	 * @param string|null      $scope   Optional. Scope to require instead of the method default. Default null.
 	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
 	 */
-	public function verify_authentication( $request ) {
-		// Determine scope based on HTTP method.
-		$method       = $request->get_method();
-		$read_methods = array( 'GET', 'HEAD' );
-		$scope        = \in_array( $method, $read_methods, true ) ? Scope::READ : Scope::WRITE;
+	public function verify_authentication( $request, $scope = null ) {
+		if ( null === $scope ) {
+			// Determine scope based on HTTP method.
+			$method       = $request->get_method();
+			$read_methods = array( 'GET', 'HEAD' );
+			$scope        = \in_array( $method, $read_methods, true ) ? Scope::READ : Scope::WRITE;
+		}
 
 		$result = OAuth_Server::check_oauth_permission( $request, $scope );
 		if ( true === $result ) {
@@ -247,6 +255,11 @@ trait Verification {
 	protected function show_social_graph( $request ) {
 		$user_id = $request->get_param( 'user_id' );
 
-		return Actors::show_social_graph( $user_id ) || true === $this->verify_owner( $request );
+		if ( Actors::show_social_graph( $user_id ) ) {
+			return true;
+		}
+
+		// Ownership answers who the caller is; the scope answers what the caller was allowed to do with that identity.
+		return true === $this->verify_owner( $request ) && OAuth_Server::permits_scope( Scope::READ );
 	}
 }

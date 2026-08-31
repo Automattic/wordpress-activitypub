@@ -214,7 +214,7 @@ class Advanced_Settings_Fields {
 	 * Render RFC-9421 signature field.
 	 */
 	public static function render_rfc9421_signature_field() {
-		$value = \get_option( 'activitypub_rfc9421_signature', '0' );
+		$value = \get_option( 'activitypub_rfc9421_signature', '1' );
 		?>
 		<p>
 			<label>

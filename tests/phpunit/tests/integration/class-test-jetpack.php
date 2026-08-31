@@ -19,6 +19,13 @@ use Activitypub\Integration\Jetpack;
  */
 class Test_Jetpack extends \WP_UnitTestCase {
 	/**
+	 * Cover art the mocked podcast show returns.
+	 *
+	 * @var string
+	 */
+	const SHOW_IMAGE_URL = 'https://example.com/show.jpg';
+
+	/**
 	 * Test user ID.
 	 *
 	 * @var int
@@ -64,6 +71,47 @@ class Test_Jetpack extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Load the stand-ins for the Jetpack podcast package.
+	 *
+	 * Loaded together so a test that only configures one of them still leaves the others in a
+	 * known state, and tear_down can reset all three behind a single guard.
+	 */
+	private static function load_podcast_mocks() {
+		require_once AP_TESTS_DIR . '/data/mocks/class-episode-block-tags.php';
+		require_once AP_TESTS_DIR . '/data/mocks/class-customize-feed.php';
+		require_once AP_TESTS_DIR . '/data/mocks/class-settings.php';
+	}
+
+	/**
+	 * Set the block attributes the mocked episode block returns.
+	 *
+	 * @param array $attrs The block attributes.
+	 */
+	private function load_mock_episode_block_tags( $attrs = array() ) {
+		self::load_podcast_mocks();
+
+		\Automattic\Jetpack\Podcast\Feed\Episode_Block_Tags::$attrs = $attrs;
+	}
+
+	/**
+	 * Configure the mocked podcast show and put the test post in its category.
+	 *
+	 * @param bool $in_category Optional. Whether the post is in the podcast category. Default true.
+	 */
+	private function load_mock_podcast_show( $in_category = true ) {
+		self::load_podcast_mocks();
+
+		$category_id = self::factory()->category->create( array( 'name' => 'Podcast' ) );
+
+		\Automattic\Jetpack\Podcast\Feed\Customize_Feed::$category_id = $category_id;
+		\Automattic\Jetpack\Podcast\Settings::$show_image_url         = self::SHOW_IMAGE_URL;
+
+		if ( $in_category ) {
+			\wp_set_post_categories( self::$post_id, array( $category_id ), true );
+		}
+	}
+
+	/**
 	 * Clean up after tests.
 	 */
 	public function tear_down() {
@@ -75,6 +123,14 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		\remove_filter( 'jetpack_api_include_comment_types_count', array( 'Activitypub\Integration\Jetpack', 'add_comment_types' ) );
 		\remove_filter( 'activitypub_following_row_actions', array( 'Activitypub\Integration\Jetpack', 'add_reader_link' ), 20 );
 		\remove_filter( 'pre_option_activitypub_following_ui', array( 'Activitypub\Integration\Jetpack', 'pre_option_activitypub_following_ui' ) );
+		\remove_filter( 'activitypub_attachments', array( 'Activitypub\Integration\Jetpack', 'add_podcast_attachments' ), 10 );
+
+		// Clear the podcast mocks so they cannot leak an attachment into other tests through the filter.
+		if ( class_exists( '\Automattic\Jetpack\Podcast\Feed\Episode_Block_Tags' ) ) {
+			\Automattic\Jetpack\Podcast\Feed\Episode_Block_Tags::$attrs   = array();
+			\Automattic\Jetpack\Podcast\Feed\Customize_Feed::$category_id = 0;
+			\Automattic\Jetpack\Podcast\Settings::$show_image_url         = '';
+		}
 
 		parent::tear_down();
 	}
@@ -370,5 +426,243 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		if ( null !== $metadata_filter ) {
 			\remove_filter( 'get_post_metadata', $metadata_filter );
 		}
+	}
+
+	/**
+	 * Transform a post and return the attachments the transformer produced.
+	 *
+	 * Driving the real transformer is the point: the filter runs on an already-assembled,
+	 * already-capped list, and hand-built fixtures hide whether the code matches what actually
+	 * arrives there.
+	 *
+	 * @param int $post_id The post to transform.
+	 *
+	 * @return array The attachments.
+	 */
+	private function transform_attachments( $post_id ) {
+		\clean_post_cache( $post_id );
+
+		$transformer = \Activitypub\Transformer\Factory::get_transformer( \get_post( $post_id ) );
+
+		return $transformer->to_object()->get_attachment();
+	}
+
+	/**
+	 * Attach an enclosure to a post, the way WordPress records one.
+	 *
+	 * @param int    $post_id The post ID.
+	 * @param string $url     The media URL.
+	 */
+	private function add_enclosure( $post_id, $url ) {
+		\add_post_meta( $post_id, 'enclosure', $url . "\n1234\naudio/mpeg\n" );
+	}
+
+	/**
+	 * The filter is registered so the transformer passes it the post.
+	 *
+	 * Without the second argument the callback receives null and cannot resolve an episode at all,
+	 * which no assertion on the callback itself would catch.
+	 *
+	 * @covers ::init
+	 */
+	public function test_init_registers_the_attachment_filter() {
+		Jetpack::init();
+
+		$this->assertSame( 10, \has_filter( 'activitypub_attachments', array( Jetpack::class, 'add_podcast_attachments' ) ) );
+	}
+
+	/**
+	 * A Posts to Podcast episode federates the audio from its block.
+	 *
+	 * @covers ::add_podcast_attachments
+	 */
+	public function test_episode_block_audio_is_federated() {
+		Jetpack::init();
+		$this->load_mock_episode_block_tags(
+			array(
+				'mediaUrl'      => 'https://example.com/episode.mp3',
+				'mediaType'     => 'audio',
+				'mediaMimeType' => 'audio/mpeg',
+				'coverArt'      => array( 'url' => 'https://example.com/cover.jpg' ),
+			)
+		);
+
+		$attachments = $this->transform_attachments( self::$post_id );
+
+		$this->assertSame( 'https://example.com/episode.mp3', $attachments[0]['url'] );
+		$this->assertSame( 'Audio', $attachments[0]['type'] );
+		$this->assertSame( 'audio/mpeg', $attachments[0]['mediaType'] );
+		$this->assertSame( 'https://example.com/cover.jpg', $attachments[0]['icon'] );
+	}
+
+	/**
+	 * An episode with no mime type omits the property rather than sending an empty one.
+	 *
+	 * @covers ::add_podcast_attachments
+	 */
+	public function test_episode_without_mime_type_omits_media_type() {
+		Jetpack::init();
+		$this->load_mock_episode_block_tags( array( 'mediaUrl' => 'https://example.com/episode.mp3' ) );
+
+		$attachments = $this->transform_attachments( self::$post_id );
+
+		$this->assertArrayNotHasKey( 'mediaType', $attachments[0] );
+	}
+
+	/**
+	 * A media URL that sanitizes to empty (an unsafe scheme) adds no attachment.
+	 *
+	 * @covers ::add_podcast_attachments
+	 */
+	public function test_unsafe_media_url_is_rejected() {
+		Jetpack::init();
+		$this->load_mock_episode_block_tags( array( 'mediaUrl' => 'javascript:alert(1)' ) );
+
+		$this->assertSame( array(), $this->transform_attachments( self::$post_id ) );
+	}
+
+	/**
+	 * The same audio is federated once even when the enclosure and the block disagree on the scheme.
+	 *
+	 * @covers ::add_podcast_attachments
+	 */
+	public function test_audio_is_not_duplicated_across_schemes() {
+		Jetpack::init();
+
+		/*
+		 * The audio has to be in the media library, otherwise the transformer drops it before the
+		 * filter and there is nothing to deduplicate against. The block then points at the same
+		 * file over https, as it does on every site that moved to https after publishing.
+		 */
+		$audio_id      = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/sample-audio.mp3' );
+		$enclosure_url = \wp_get_attachment_url( $audio_id );
+
+		$this->add_enclosure( self::$post_id, $enclosure_url );
+		$this->load_mock_episode_block_tags( array( 'mediaUrl' => \str_replace( 'http://', 'https://', $enclosure_url ) ) );
+
+		$attachments = $this->transform_attachments( self::$post_id );
+
+		$this->assertCount( 1, $attachments, 'The same audio must not be attached twice.' );
+
+		\wp_delete_attachment( $audio_id, true );
+	}
+
+	/**
+	 * Adding the episode audio does not push the post over its attachment limit.
+	 *
+	 * @covers ::add_podcast_attachments
+	 */
+	public function test_episode_audio_respects_the_attachment_limit() {
+		Jetpack::init();
+		$this->load_mock_episode_block_tags( array( 'mediaUrl' => 'https://example.com/episode.mp3' ) );
+
+		$thumbnail_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		\set_post_thumbnail( self::$post_id, $thumbnail_id );
+		\update_post_meta( self::$post_id, 'activitypub_max_image_attachments', 1 );
+
+		$attachments = $this->transform_attachments( self::$post_id );
+
+		$this->assertCount( 1, $attachments );
+		$this->assertSame( 'https://example.com/episode.mp3', $attachments[0]['url'] );
+
+		\delete_post_meta( self::$post_id, 'activitypub_max_image_attachments' );
+		\delete_post_thumbnail( self::$post_id );
+		\wp_delete_attachment( $thumbnail_id, true );
+	}
+
+	/**
+	 * A Jetpack Podcast episode hosted off-site federates its audio.
+	 *
+	 * An external enclosure has no attachment ID, so the transformer drops it before the filter
+	 * runs; the integration has to add it back or the episode federates with no audio at all.
+	 *
+	 * @covers ::add_podcast_attachments
+	 */
+	public function test_external_enclosure_episode_is_federated() {
+		Jetpack::init();
+		$this->load_mock_podcast_show();
+		$episode_url = \home_url( '/podcast/episode.mp3' );
+		$this->add_enclosure( self::$post_id, $episode_url );
+
+		$attachments = $this->transform_attachments( self::$post_id );
+
+		$this->assertCount( 1, $attachments );
+		$this->assertSame( $episode_url, $attachments[0]['url'] );
+		$this->assertSame( 'Audio', $attachments[0]['type'] );
+		$this->assertSame( 'audio/mpeg', $attachments[0]['mediaType'] );
+		$this->assertSame( self::SHOW_IMAGE_URL, $attachments[0]['icon'] );
+	}
+
+	/**
+	 * An episode whose audio lives in the media library gets the show artwork.
+	 *
+	 * The transformer stamps its own icon on every audio attachment, so the show image only lands
+	 * if the integration replaces it.
+	 *
+	 * @covers ::add_podcast_attachments
+	 */
+	public function test_media_library_episode_gets_the_show_cover_art() {
+		Jetpack::init();
+		$this->load_mock_podcast_show();
+
+		$audio_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/sample-audio.mp3' );
+		$this->add_enclosure( self::$post_id, \wp_get_attachment_url( $audio_id ) );
+
+		// The transformer covers any audio without a poster with the site icon, so there is already
+		// an icon on the attachment by the time the integration sees it.
+		$icon_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		\update_option( 'site_icon', $icon_id );
+
+		$attachments = $this->transform_attachments( self::$post_id );
+
+		$this->assertCount( 1, $attachments );
+		$this->assertSame( self::SHOW_IMAGE_URL, $attachments[0]['icon'], 'The show artwork must win over the site icon.' );
+
+		\delete_option( 'site_icon' );
+		\wp_delete_attachment( $icon_id, true );
+		\wp_delete_attachment( $audio_id, true );
+	}
+
+	/**
+	 * An enclosure on a post outside the podcast category is not treated as an episode.
+	 *
+	 * @covers ::add_podcast_attachments
+	 */
+	public function test_enclosure_outside_the_podcast_category_is_not_an_episode() {
+		Jetpack::init();
+		$this->load_mock_podcast_show( false );
+		$this->add_enclosure( self::$post_id, \home_url( '/podcast/episode.mp3' ) );
+
+		$this->assertSame( array(), $this->transform_attachments( self::$post_id ), 'A stray enclosure must not federate as an episode.' );
+	}
+
+	/**
+	 * The show artwork is applied to the episode audio only.
+	 *
+	 * @covers ::add_podcast_attachments
+	 */
+	public function test_other_audio_does_not_get_the_show_cover_art() {
+		Jetpack::init();
+		$this->load_mock_podcast_show();
+		$this->add_enclosure( self::$post_id, \home_url( '/podcast/episode.mp3' ) );
+
+		$other = static function ( $attachments ) {
+			$attachments[] = array(
+				'type'      => 'Audio',
+				'url'       => 'https://example.com/voicemail.mp3',
+				'mediaType' => 'audio/mpeg',
+			);
+
+			return $attachments;
+		};
+
+		// Runs before the integration, so the episode resolution sees it in the list.
+		\add_filter( 'activitypub_attachments', $other, 5 );
+		$attachments = $this->transform_attachments( self::$post_id );
+		\remove_filter( 'activitypub_attachments', $other, 5 );
+
+		$this->assertCount( 2, $attachments );
+		$this->assertSame( 'https://example.com/voicemail.mp3', $attachments[1]['url'] );
+		$this->assertArrayNotHasKey( 'icon', $attachments[1], 'Unrelated audio must not advertise the show artwork.' );
 	}
 }
