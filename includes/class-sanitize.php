@@ -21,23 +21,34 @@ class Sanitize {
 	 * WordPress's wp_kses removes disallowed tags but preserves their inner text.
 	 * These elements contain content that is meaningless or harmful
 	 * without the surrounding tag (scripts, styles, interactive UI,
-	 * embedded objects), so we remove them entirely before wp_kses runs.
+	 * embedded objects) or that browsers hide by default (dialogs,
+	 * templates), so we remove them entirely before wp_kses runs.
 	 *
 	 * @var array<string>
 	 */
 	const STRIP_ELEMENTS = array(
 		'script',
 		'style',
+		'noscript',
+		'template',
 		'button',
 		'nav',
+		'dialog',
 		'form',
 		'textarea',
 		'select',
+		'option',
+		'optgroup',
+		'datalist',
 		'input',
 		'fieldset',
 		'iframe',
 		'embed',
 		'object',
+		'canvas',
+		'applet',
+		'noembed',
+		'noframes',
 	);
 
 	/**
@@ -328,9 +339,11 @@ class Sanitize {
 		 * and content inside <script>, <style>, <nav>, etc. is meaningless on its own.
 		 */
 		$strip_pattern = \implode( '|', self::STRIP_ELEMENTS );
-		$content       = \preg_replace( '@<(' . $strip_pattern . ')[^>]*?>.*?</\\1>@si', '', $content );
+		$content       = \preg_replace( '@<(' . $strip_pattern . ')(?=[\s/>])[^>]*?>.*?</\\1>@si', '', $content );
+		// <option> and <optgroup> may omit their end tags, so also strip the text that follows an unclosed one.
+		$content = \preg_replace( '@<(option|optgroup)(?=[\s/>])[^>]*?>[^<]*@si', '', $content );
 		// Also catch self-closing variants (e.g. <input />, <embed />).
-		$content = \preg_replace( '@<(' . $strip_pattern . ')[^>]*?/?>@si', '', $content );
+		$content = \preg_replace( '@<(' . $strip_pattern . ')(?=[\s/>])[^>]*?/?>@si', '', $content );
 
 		/**
 		 * Fires the deprecated attribute removal filter.
