@@ -53,7 +53,7 @@
 		"@wordpress/dataviews": "^18.1.0",
 		"@wordpress/date": "^5.49.0",
 		"@wordpress/dependency-extraction-webpack-plugin": "^6.52.0",
-		"@wordpress/dom": "^4.48.0",
+		"@wordpress/dom": "^4.54.0",
 		"@wordpress/dom-ready": "^4.48.0",
 		"@wordpress/e2e-test-utils-playwright": "~1.53.0",
 		"@wordpress/edit-post": "^8.53.0",
