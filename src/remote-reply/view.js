@@ -132,7 +132,7 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 				return;
 			}
 
-			if ( ! callbacks.isHandle( profileURL ) && ! callbacks.isUrl( profileURL ) ) {
+			if ( ! callbacks.isHandle( profileURL ) && ! isSafeUrl( profileURL ) ) {
 				context.isError = true;
 				context.errorMessage = i18n.invalidProfileError;
 				return;
@@ -155,14 +155,13 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 				// Set opening state.
 				context.isLoading = false;
 
-				// `template` is checked too: it is what gets persisted and bound to an `href`.
-				if ( ! isSafeUrl( url ) || ! isSafeUrl( template ) ) {
+				// `url` is `template` with `{uri}` filled in, so this one check covers the persisted `template` too.
+				if ( ! isSafeUrl( url ) ) {
 					context.isError = true;
 					context.errorMessage = i18n.genericError;
 					return;
 				}
 
-				// Open the remote reply URL in a new tab.
 				window.open( url, '_blank', 'noopener,noreferrer' );
 
 				// Close the modal after opening the URL.
@@ -262,22 +261,7 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 			// Check if the string starts with '@' and contains a valid URL.
 			const parts = string.replace( /^@/, '' ).split( '@' );
 
-			return parts.length === 2 && callbacks.isUrl( `https://${ parts[ 1 ] }` );
-		},
-
-		/**
-		 * Checks if a string is a valid URL.
-		 *
-		 * @param {string} string String to check.
-		 * @return {boolean} True if string is a valid URL, false otherwise.
-		 */
-		isUrl( string ) {
-			try {
-				new URL( string );
-				return true;
-			} catch ( _ ) {
-				return false;
-			}
+			return parts.length === 2 && isSafeUrl( `https://${ parts[ 1 ] }` );
 		},
 	},
 } );
