@@ -1,12 +1,23 @@
 # PHP Coding Standards Reference
 
 ## Table of Contents
+- [Reuse Core Functionality First](#reuse-core-functionality-first)
 - [WordPress Coding Standards](#wordpress-coding-standards)
 - [File Organization](#file-organization)
 - [Naming Conventions](#naming-conventions)
 - [Documentation Standards](#documentation-standards)
 - [Security Practices](#security-practices)
 - [Performance Considerations](#performance-considerations)
+
+## Reuse Core Functionality First
+
+Always prefer an existing implementation over a new one, in this order:
+
+1. **WordPress core functions** — parsing, validation, escaping, sanitization, and formatting are almost always covered by core (`wp_parse_url()`, `wp_kses_bad_protocol()`, `wp_http_validate_url()`, `sanitize_url()`, `wp_json_encode()`, …). Core primitives are battle-tested against adversarial input; a fresh implementation is not, and it puts the review burden on every future reader.
+2. **Existing plugin helpers** — check `includes/functions*.php`, the `Sanitize` class, and `src/shared/` before adding a new helper. If a check is needed in more than one place, extract it next to the related helpers instead of copying it.
+3. **New code, with a stated reason** — a custom implementation needs a comment or docblock explaining why no existing function fits (a core function stripping required template placeholders is a valid reason; saving a line is not).
+
+This also applies to refactors: do not replace a core-function-based check with bespoke logic, even when the bespoke version looks simpler.
 
 ## WordPress Coding Standards
 
