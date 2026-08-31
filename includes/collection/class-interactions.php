@@ -177,7 +177,23 @@ class Interactions {
 		$content                         = Emoji::wrap_in_content( $content, $activity['object'] );
 		$comment_data['comment_content'] = \addslashes( $content );
 
-		return self::persist( $comment_data, self::UPDATE );
+		$result = self::persist( $comment_data, self::UPDATE );
+
+		/*
+		 * `persist()` returns false when it refuses to write, typically because the post is no
+		 * longer federated. That is not "no comment to update": the comment exists, it was found
+		 * above. The Update handler treats false as not-found and falls back to Create, which
+		 * finds the same comment and dispatches back to Update, without end. A WP_Error is
+		 * handled but unsuccessful, so it stops here.
+		 */
+		if ( false === $result ) {
+			return new \WP_Error(
+				'activitypub_update_refused',
+				\__( 'The comment can no longer be updated.', 'activitypub' )
+			);
+		}
+
+		return $result;
 	}
 
 	/**

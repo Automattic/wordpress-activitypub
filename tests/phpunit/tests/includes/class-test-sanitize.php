@@ -697,6 +697,50 @@ class Test_Sanitize extends \WP_UnitTestCase {
 				'<p>Hello</p><embed src="flash.swf" /><p>World</p>',
 				'<p>Hello</p><p>World</p>',
 			),
+			'strips_dialog_tags'              => array(
+				'<p>Hello</p><dialog id="pop1" popover="hint">Copied HTML to 📋</dialog><p>World</p>',
+				'<p>Hello</p><p>World</p>',
+			),
+			'strips_open_dialog_tags'         => array(
+				'<p>Hello</p><dialog open>Modal text</dialog><p>World</p>',
+				'<p>Hello</p><p>World</p>',
+			),
+			'strips_template_tags'            => array(
+				'<p>Hello</p><template><p>Inert content</p></template><p>World</p>',
+				'<p>Hello</p><p>World</p>',
+			),
+			'strips_datalist_with_options'    => array(
+				'<p>Hello</p><datalist id="browsers"><option value="Firefox">Firefox</option></datalist><p>World</p>',
+				'<p>Hello</p><p>World</p>',
+			),
+			'strips_stray_option_tags'        => array(
+				'<p>Hello</p><option value="a">Choice A</option><optgroup label="Group"></optgroup><p>World</p>',
+				'<p>Hello</p><p>World</p>',
+			),
+			'strips_unclosed_option_tags'     => array(
+				'<p>Hello</p><option value="a">Choice A<option value="b">Choice B<p>World</p>',
+				'<p>Hello</p><p>World</p>',
+			),
+			'strips_unclosed_optgroup_tags'   => array(
+				'<p>Hello</p><optgroup label="Group">Group label<p>World</p>',
+				'<p>Hello</p><p>World</p>',
+			),
+			'preserves_custom_element_text'   => array(
+				'<p>Hello</p><option-picker>Pick one</option-picker><p>World</p>',
+				'<p>Hello</p>Pick one<p>World</p>',
+			),
+			'strips_noscript_tags'            => array(
+				'<p>Hello</p><noscript>Please enable JavaScript</noscript><p>World</p>',
+				'<p>Hello</p><p>World</p>',
+			),
+			'strips_canvas_tags'              => array(
+				'<p>Hello</p><canvas width="300" height="150">Canvas not supported</canvas><p>World</p>',
+				'<p>Hello</p><p>World</p>',
+			),
+			'strips_obsolete_embed_tags'      => array(
+				'<p>Hello</p><applet code="A.class">Applet fallback</applet><noembed>No embed</noembed><noframes>No frames</noframes><p>World</p>',
+				'<p>Hello</p><p>World</p>',
+			),
 			'preserves_mathml'                => array(
 				'<math display="block"><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mn>1</mn></mrow></math>',
 				'<math display="block"><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mn>1</mn></mrow></math>',
