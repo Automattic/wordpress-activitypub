@@ -44,20 +44,12 @@ class Test_Icons extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * The Fediverse logo keeps its brand colors through the sanitizer.
+	 * The icons carry no hardcoded fill, so they inherit the surrounding color.
 	 *
 	 * @covers ::register_icons
 	 */
-	public function test_fediverse_logo_keeps_colors() {
-		$this->assertStringContainsString( 'fill="#a730b8"', \wp_get_icon( 'activitypub/fediverse' ) );
-	}
-
-	/**
-	 * The monochrome icons carry no hardcoded fill, so they inherit the surrounding color.
-	 *
-	 * @covers ::register_icons
-	 */
-	public function test_monochrome_icons_inherit_color() {
+	public function test_icons_inherit_color() {
+		$this->assertStringNotContainsString( 'fill=', \wp_get_icon( 'activitypub/fediverse' ) );
 		$this->assertStringNotContainsString( 'fill=', \wp_get_icon( 'activitypub/fediverse-symbol' ) );
 		$this->assertStringNotContainsString( 'fill=', \wp_get_icon( 'activitypub/activitypub' ) );
 	}
