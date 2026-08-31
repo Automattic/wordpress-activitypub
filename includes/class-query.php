@@ -207,8 +207,15 @@ class Query {
 			}
 		}
 
-		// Check Term by ID.
-		if ( ! $queried_object ) {
+		/*
+		 * Check Term by ID, unless the request names an author. Other plugins set `term_id` on
+		 * requests that are not about a term at all, Polylang puts its language term on every
+		 * request, and a term here would answer `?author=0` with an OrderedCollection where
+		 * Mastodon expected the blog actor. Leaving the object unset lets the author resolution
+		 * below, and the blog-actor handling in get_activitypub_object_id(), run as usual. An
+		 * absent `author` reads as an empty string, and `?author=0` as the string "0".
+		 */
+		if ( ! $queried_object && '' === \get_query_var( 'author', '' ) ) {
 			$term_id = \get_query_var( 'term_id' );
 			if ( $term_id ) {
 				$queried_object = \get_term( $term_id );
