@@ -5,6 +5,7 @@ global.navigator = {};
 
 const fs = require( 'fs' );
 const path = require( 'path' );
+const { phpVersionPatterns } = require( '../version-patterns' );
 
 describe( 'Release script version replacements', () => {
 	const testVersion = '1.2.3';
@@ -123,24 +124,8 @@ if ( version_compare( $version_from_db, 'unreleased', '<' ) ) {
 	} );
 
 	describe( 'PHP DocBlock patterns (all PHP files)', () => {
-		const patterns = [
-			{
-				search: /@since unreleased/gi,
-				replace: `@since ${ testVersion }`,
-			},
-			{
-				search: /@deprecated unreleased/gi,
-				replace: `@deprecated ${ testVersion }`,
-			},
-			{
-				search: /(?<=_deprecated_function\s*\(\s*__METHOD__,\s*')unreleased(?=',\s*['<=>])/gi,
-				replace: testVersion,
-			},
-			{
-				search: /(?<=\bapply_filters_deprecated\s*\(\s*'.*?'\s*,\s*array\s*\(.*?\)\s*,\s*')unreleased(?=',\s*['<=>])/gi,
-				replace: testVersion,
-			},
-		];
+		// The patterns the release actually runs, not a copy that can drift from them.
+		const patterns = phpVersionPatterns( testVersion );
 
 		test( 'replaces @since unreleased tags', () => {
 			const content = `/**
@@ -192,14 +177,7 @@ function old_function() {}`;
 		test( 'replaces unreleased in do_action_deprecated calls with single quotes', () => {
 			const content = `do_action_deprecated( 'old_action', array( $this ), 'unreleased', 'new_action' );`;
 
-			const doActionPatterns = [
-				{
-					search: /(?<=\b(?:apply_filters_deprecated|do_action_deprecated)\s*\(\s*'.*?'\s*,\s*array\s*\(.*?\)\s*,\s*')unreleased(?=['"],\s*['"])/gi,
-					replace: testVersion,
-				},
-			];
-
-			const result = applyVersionReplacements( content, testVersion, doActionPatterns );
+			const result = applyVersionReplacements( content, testVersion, patterns );
 			expect( result ).toContain(
 				`do_action_deprecated( 'old_action', array( $this ), '${ testVersion }', 'new_action' )`
 			);
@@ -209,18 +187,61 @@ function old_function() {}`;
 		test( 'replaces unreleased in do_action_deprecated calls with double quotes', () => {
 			const content = `\\do_action_deprecated( 'activitypub_notification', array( $this ), 'unreleased', "new_action" );`;
 
-			const doActionPatterns = [
-				{
-					search: /(?<=\b(?:apply_filters_deprecated|do_action_deprecated)\s*\(\s*'.*?'\s*,\s*array\s*\(.*?\)\s*,\s*')unreleased(?=['"],\s*['"])/gi,
-					replace: testVersion,
-				},
-			];
-
-			const result = applyVersionReplacements( content, testVersion, doActionPatterns );
+			const result = applyVersionReplacements( content, testVersion, patterns );
 			expect( result ).toContain(
 				`\\do_action_deprecated( 'activitypub_notification', array( $this ), '${ testVersion }', "new_action" )`
 			);
 			expect( result ).not.toContain( `'unreleased'` );
+		} );
+
+		test( 'replaces unreleased in a call wrapped across several lines', () => {
+			const content = `\t\t\t\\_doing_it_wrong(
+\t\t\t\t__METHOD__,
+\t\t\t\t\\esc_html__( 'Option not registered; skipping.', 'activitypub' ),
+\t\t\t\t'unreleased'
+\t\t\t);`;
+
+			const result = applyVersionReplacements( content, testVersion, patterns );
+
+			expect( result ).toContain( `'${ testVersion }'` );
+			expect( result ).not.toContain( `'unreleased'` );
+		} );
+
+		test( 'replaces unreleased in a wrapped call whose message is a variable', () => {
+			const content = `\t\t\t\\_doing_it_wrong(
+\t\t\t\t\\esc_html( $method ),
+\t\t\t\t\\esc_html( $message ),
+\t\t\t\t'unreleased'
+\t\t\t);`;
+
+			const result = applyVersionReplacements( content, testVersion, patterns );
+
+			expect( result ).toContain( `'${ testVersion }'` );
+			expect( result ).not.toContain( `'unreleased'` );
+		} );
+
+		test( 'leaves a documented example in a comment alone', () => {
+			const content = `\t\t/*
+\t\t * Example:
+\t\t *
+\t\t * if ( \\version_compare( $version_from_db, 'unreleased', '<' ) ) {
+\t\t *     // Update routine.
+\t\t * }
+\t\t */`;
+
+			expect( applyVersionReplacements( content, testVersion, patterns ) ).toBe( content );
+		} );
+
+		test( 'leaves a commented-out call alone', () => {
+			const content = `\t\t// \\_deprecated_function( __FUNCTION__, 'unreleased', 'x' );`;
+
+			expect( applyVersionReplacements( content, testVersion, patterns ) ).toBe( content );
+		} );
+
+		test( 'leaves a translated unreleased string alone', () => {
+			const content = `\t\t$label = \\__( 'unreleased', 'activitypub' );`;
+
+			expect( applyVersionReplacements( content, testVersion, patterns ) ).toBe( content );
 		} );
 
 		test( 'handles case insensitive @since and @deprecated', () => {
