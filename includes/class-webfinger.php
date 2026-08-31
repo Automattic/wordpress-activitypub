@@ -397,11 +397,6 @@ class Webfinger {
 
 			$template = \trim( $link['template'] );
 
-			// A scheme check alone would pass `//host`, `/path` and `https:///path`.
-			if ( ! get_url_authority( $template ) ) {
-				continue;
-			}
-
 			// The list is explicit: the `wp_allowed_protocols()` default is wider and filterable.
 			$allowed = \wp_kses_bad_protocol( $template, array( 'http', 'https' ) );
 
