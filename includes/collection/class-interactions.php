@@ -50,14 +50,9 @@ class Interactions {
 			return false;
 		}
 
-		$comment_data = self::activity_to_comment( $activity, $user_id );
-
-		if ( ! $comment_data ) {
-			return false;
-		}
-
 		// Determine target URL from reply or quote.
 		$parent_comment_id = 0;
+		$comment_type      = '';
 
 		if ( ! empty( $activity['object']['inReplyTo'] ) ) {
 			// Regular reply.
@@ -71,25 +66,27 @@ class Interactions {
 				return false;
 			}
 
-			// Mark as quote and clean content.
-			$comment_data['comment_type'] = 'quote';
+			$comment_type = 'quote';
 
 			if ( ! empty( $activity['object']['content'] ) ) {
-				$pattern         = '/<p[^>]*class=["\']quote-inline["\'][^>]*>.*?<\/p>/is';
-				$cleaned_content = \preg_replace( $pattern, '', $activity['object']['content'], 1 );
-
 				/*
-				 * This replaces what activity_to_comment() already built, so it has to make
-				 * the same local/remote split, and re-wrap emoji afterwards.
+				 * Strip the inline quote before activity_to_comment() sanitizes the content:
+				 * the pattern matches the `quote-inline` class attribute, which kses removes.
 				 */
-				if ( null === $user_id ) {
-					$cleaned_content = Emoji::wrap_in_content( Sanitize::clean_remote_comment_html( $cleaned_content ), $activity['object'] );
-				} else {
-					$cleaned_content = \wp_kses_post( $cleaned_content );
-				}
+				$pattern = '/<p[^>]*class=["\']quote-inline["\'][^>]*>.*?<\/p>/is';
 
-				$comment_data['comment_content'] = \addslashes( $cleaned_content );
+				$activity['object']['content'] = \preg_replace( $pattern, '', $activity['object']['content'], 1 );
 			}
+		}
+
+		$comment_data = self::activity_to_comment( $activity, $user_id );
+
+		if ( ! $comment_data ) {
+			return false;
+		}
+
+		if ( $comment_type ) {
+			$comment_data['comment_type'] = $comment_type;
 		}
 
 		// Get post ID from target URL.

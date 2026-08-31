@@ -1014,19 +1014,12 @@ class Comment {
 	 * Replaces emoji shortcodes with img tags on the get_comment_author filter.
 	 * Emoji data is retrieved from the linked remote actor.
 	 *
-	 * @since unreleased The `$comment_id` parameter is optional.
-	 *
-	 * @param string     $author     The comment author name.
-	 * @param int|string $comment_id Optional. The comment ID, as a numeric string from core. Default 0.
+	 * @param string $author     The comment author name.
+	 * @param string $comment_id The comment ID as a numeric string.
 	 *
 	 * @return string The comment author name with rendered emoji.
 	 */
-	public static function render_emoji( $author, $comment_id = 0 ) {
-		// Same fallback as unescape_emoji(), for callers that re-apply the filter with the name alone.
-		if ( ! $comment_id ) {
-			$comment_id = \get_comment_ID();
-		}
-
+	public static function render_emoji( $author, $comment_id ) {
 		$remote_actor_id = \get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true );
 
 		if ( empty( $remote_actor_id ) ) {
@@ -1070,7 +1063,6 @@ class Comment {
 		 * written by anything else is never decoded -- the substring check below is not a
 		 * reliable signal on its own, and this filter runs on every comment on the site.
 		 */
-		// Cheap necessary condition first: this filter runs on every comment author on the site.
 		if ( false === \strpos( $author, 'class=&quot;emoji&quot;' ) ) {
 			return $author;
 		}

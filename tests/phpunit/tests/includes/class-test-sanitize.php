@@ -354,11 +354,10 @@ class Test_Sanitize extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that text encoded past the pass cap still comes back inert.
+	 * Test that deeply encoded text still comes back inert.
 	 *
-	 * The loop peels one encoding level per pass. When the cap stops it before the string
-	 * settles, decoding once more would peel the last level and hand back live markup, so
-	 * the escaped form is returned instead.
+	 * Decoding would peel one entity level at a time and eventually hand back live
+	 * markup, so the escaped form is returned instead.
 	 *
 	 * @covers ::clean_remote_text
 	 */
@@ -454,7 +453,6 @@ class Test_Sanitize extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Data provider for strip_whitespace tests.    /**
 	 * Data provider for strip_whitespace tests.
 	 *
 	 * @return array Test data with input and expected output.

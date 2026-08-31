@@ -174,7 +174,7 @@ class Test_Post_Controller extends WP_UnitTestCase {
 	 * @param string $stored   The stored comment_author.
 	 * @param string $expected The name the response should carry.
 	 */
-	public function test_get_reactions_with_reactions( $stored = 'Test User', $expected = 'Test User' ) {
+	public function test_get_reactions_with_reactions( $stored, $expected ) {
 		$post_id = self::factory()->post->create();
 
 		// Create a "like" reaction.

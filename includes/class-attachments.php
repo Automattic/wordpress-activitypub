@@ -265,14 +265,8 @@ class Attachments {
 			'tmp_name' => $tmp_file,
 		);
 
-		$name = $attachment_data['name'] ?? '';
-
-		// A remote `name` is not guaranteed to be a string; anything else is not a caption.
-		if ( ! \is_string( $name ) ) {
-			$name = '';
-		}
-
-		$plain_name = Sanitize::clean_remote_text( $name );
+		// A non-string remote `name` is not a caption; clean_remote_text() returns '' for it.
+		$plain_name = Sanitize::clean_remote_text( $attachment_data['name'] ?? '' );
 
 		// Prepare attachment post data.
 		// Let WordPress auto-detect the mime type from the file.
@@ -294,7 +288,7 @@ class Attachments {
 		);
 
 		// Add alt text for images.
-		if ( '' !== $name ) {
+		if ( '' !== $plain_name ) {
 			$original_mime = $attachment_data['mediaType'] ?? '';
 			if ( 'image' === \strtok( $original_mime, '/' ) ) {
 				/*

@@ -216,13 +216,8 @@ class Test_Functions_Comment extends \WP_UnitTestCase {
 	 * Test_Sanitize::test_clean_remote_text().
 	 */
 	public function test_get_reaction_author_name() {
-		$comment_id = self::factory()->comment->create();
-
-		// Write past the filters, the way wp_insert_comment() callers do.
-		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$wpdb->update( $wpdb->comments, array( 'comment_author' => '<img src=x onerror=alert(1)>&amp;friends' ), array( 'comment_ID' => $comment_id ) );
-		\clean_comment_cache( $comment_id );
+		// The factory inserts through wp_insert_comment(), which bypasses the `pre_` filter chain.
+		$comment_id = self::factory()->comment->create( array( 'comment_author' => '<img src=x onerror=alert(1)>&amp;friends' ) );
 
 		$this->assertSame( '&friends', \Activitypub\get_reaction_author_name( \get_comment( $comment_id ) ) );
 	}
