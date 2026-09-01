@@ -76,11 +76,6 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 ';
 
 	/**
-	 * Test the create() method for remote actors.
-	 *
-	 * @covers ::create
-	 */
-	/**
 	 * Test that search finds an actor whose stored name is entity-escaped.
 	 *
 	 * @covers ::search
@@ -102,6 +97,11 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 		$this->assertCount( 1, $results );
 	}
 
+	/**
+	 * Test the create() method for remote actors.
+	 *
+	 * @covers ::create
+	 */
 	public function test_create_actor() {
 		$actor   = array(
 			'id'                => 'https://remote.example.com/actor/jane-create',
