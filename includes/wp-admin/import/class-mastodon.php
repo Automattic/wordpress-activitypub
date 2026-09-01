@@ -412,7 +412,7 @@ class Mastodon {
 	private static function import_as_post( $post, &$created ) {
 		/*
 		 * An imported post is handled the same as a federated one: `Sanitize::content()`
-		 * normalizes and sanitizes the content, and `text()` the summary. The
+		 * normalizes and sanitizes the content. The
 		 * import runs as a user with `unfiltered_html`, so kses filters are not installed
 		 * for this request and `wp_insert_post()` would otherwise store whatever the archive
 		 * contained; these posts are published publicly, so they are the wider exposure.
@@ -597,7 +597,7 @@ class Mastodon {
 		$comment_data = array(
 			'comment_post_ID'  => $parent_post_id,
 			'comment_parent'   => $parent_comment_id,
-			'comment_author'   => \get_the_author_meta( 'display_name', self::$author ),
+			'comment_author'   => \wp_slash( \get_the_author_meta( 'display_name', self::$author ) ),
 
 			/*
 			 * Sanitize the archive's content explicitly. The import runs as a user with

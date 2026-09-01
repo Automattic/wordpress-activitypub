@@ -79,16 +79,6 @@ class Interactions {
 			}
 		}
 
-		$comment_data = self::activity_to_comment( $activity, $user_id );
-
-		if ( ! $comment_data ) {
-			return false;
-		}
-
-		if ( $comment_type ) {
-			$comment_data['comment_type'] = $comment_type;
-		}
-
 		// Get post ID from target URL.
 		$target_url      = \esc_url_raw( $target_url );
 		$comment_post_id = \url_to_postid( $target_url );
@@ -110,6 +100,20 @@ class Interactions {
 		if ( ! $comment_post_id ) {
 			// Not a reply to a post or comment.
 			return false;
+		}
+
+		/*
+		 * Built only once the target is known: resolving the author fetches the remote actor and
+		 * its WebFinger, which is wasted on a reply to something that is not here.
+		 */
+		$comment_data = self::activity_to_comment( $activity, $user_id );
+
+		if ( ! $comment_data ) {
+			return false;
+		}
+
+		if ( $comment_type ) {
+			$comment_data['comment_type'] = $comment_type;
 		}
 
 		$comment_data['comment_post_ID'] = $comment_post_id;
@@ -416,7 +420,7 @@ class Interactions {
 				return false;
 			}
 
-			$comment_author       = $user->display_name;
+			$comment_author       = \wp_slash( $user->display_name );
 			$comment_author_url   = $user->user_url;
 			$comment_author_email = $user->user_email;
 			// Same gate and slashing as the remote branch: one policy for the column, whatever wrote it.

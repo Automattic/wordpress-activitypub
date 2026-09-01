@@ -1076,10 +1076,6 @@ class Test_Interactions extends \WP_UnitTestCase {
 	/**
 	 * Test that a remote quote gets the comment allowlist, not the post one.
 	 *
-	 * The quote branch replaces the content activity_to_comment() already sanitized, so
-	 * it has to sanitize again or the wider `wp_kses_post()` allowlist wins and inline
-	 * styles survive on a comment that renders on the public front end.
-	 *
 	 * @covers ::add_comment
 	 */
 	public function test_add_comment_quote_uses_the_comment_allowlist() {

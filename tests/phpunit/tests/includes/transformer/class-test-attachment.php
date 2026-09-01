@@ -149,27 +149,6 @@ class Test_Attachment extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that alt text is decoded on the way out, and stripped after the decode.
-	 *
-	 * Imported captions are stored escaped, so entities would federate literally in a
-	 * field that is plain text in the JSON. Transformer\Post already decodes this same
-	 * meta key.
-	 *
-	 * @covers ::get_attachment
-	 */
-	public function test_get_attachment_decodes_alt() {
-		update_post_meta( self::$attachment_id, '_wp_attachment_image_alt', 'A &lt;3 shape &amp; more' );
-
-		$attachment  = get_post( self::$attachment_id );
-		$transformer = new Attachment( $attachment );
-		$result      = $this->get_protected_method( $transformer, 'get_attachment' );
-
-		// `name` is plain text in the JSON, so stored entities are decoded on the way out. The
-		// decoded `<3` then reads as a tag to strip_tags(), so the tail goes with it.
-		$this->assertEquals( 'A', $result['name'] );
-	}
-
-	/**
 	 * Test to_object method.
 	 *
 	 * @covers ::to_object

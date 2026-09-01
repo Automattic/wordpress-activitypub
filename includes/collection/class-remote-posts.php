@@ -412,7 +412,8 @@ class Remote_Posts {
 
 			$attachments[] = array(
 				'url'  => $attachment['url'],
-				'alt'  => $attachment['name'] ?? '',
+				// Same treatment the import path gives this field: remote JSON can hand us an array.
+				'alt'  => \is_string( $attachment['name'] ?? null ) ? \wp_strip_all_tags( $attachment['name'] ) : '',
 				'type' => $type,
 			);
 		}

@@ -211,8 +211,7 @@ class Test_Functions_Comment extends \WP_UnitTestCase {
 	 * Test that a reaction author name is cleaned even when written past the filters.
 	 *
 	 * `wp_insert_comment()` callers bypass core's `pre_comment_author_name` chain, so the
-	 * column is not guaranteed tag-free. The cleaning itself is covered by
-	 * Test_Sanitize::test_text().
+	 * column is not guaranteed tag-free.
 	 */
 	public function test_get_reaction_author_name() {
 		// The factory inserts through wp_insert_comment(), which bypasses the `pre_` filter chain.

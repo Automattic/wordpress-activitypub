@@ -505,9 +505,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 			'published' => '2023-01-01T12:00:00Z',
 		);
 
-		$method = new \ReflectionMethod( Remote_Posts::class, 'activity_to_post' );
-		$method->setAccessible( true );
-		$result = $method->invoke( null, $activity );
+		$result = $this->invoke_activity_to_post( $activity );
 
 		$this->assertStringContainsString( 'Hello federated world', $result['post_excerpt'] );
 	}
@@ -528,9 +526,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 			'published' => '2023-01-01T12:00:00Z',
 		);
 
-		$method = new \ReflectionMethod( Remote_Posts::class, 'activity_to_post' );
-		$method->setAccessible( true );
-		$result = $method->invoke( null, $activity );
+		$result = $this->invoke_activity_to_post( $activity );
 
 		unset( $GLOBALS['post'] );
 

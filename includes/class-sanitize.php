@@ -263,11 +263,6 @@ class Sanitize {
 	 * @return string The content without those elements.
 	 */
 	private static function strip_elements( $content ) {
-		/*
-		 * Strip elements whose inner content is noise (scripts, styles, interactive UI, embeds).
-		 * This runs before wp_kses because wp_kses strips tags but keeps inner text,
-		 * and content inside <script>, <style>, <nav>, etc. is meaningless on its own.
-		 */
 		$strip_pattern = \implode( '|', self::STRIP_ELEMENTS );
 		$content       = \preg_replace( \sprintf( '@<(%s)(?=[\\s/>])[^>]*?>.*?</\\1>@si', $strip_pattern ), '', $content ) ?? '';
 

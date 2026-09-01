@@ -265,7 +265,6 @@ class Attachments {
 			'tmp_name' => $tmp_file,
 		);
 
-		// A non-string remote `name` is not a caption; text() returns '' for it.
 		// Remote JSON can hand us an array where a string was expected.
 		$name       = $attachment_data['name'] ?? '';
 		$plain_name = \is_string( $name ) ? \wp_strip_all_tags( $name ) : '';
@@ -295,10 +294,8 @@ class Attachments {
 			if ( 'image' === \strtok( $original_mime, '/' ) ) {
 				/*
 				 * The same plain-text value as the title. Core does not sanitize this meta
-				 * on write -- it only strips tags in the media-modal AJAX handler -- so
-				 * `text()` is the only thing standing between a remote caption
-				 * and this field. `Transformer\Attachment` federates it straight back out as
-				 * the ActivityPub `name`, and consumers expect it to be plain text.
+				 * on write -- it only strips tags in the media-modal AJAX handler --. `Transformer\Attachment` federates it straight back
+				 * out as the ActivityPub `name`, and consumers expect it to be plain text.
 				 */
 				// Slashed like the columns above: update_metadata() unslashes what it is given.
 				$post_data['meta_input']['_wp_attachment_image_alt'] = \wp_slash( $plain_name );
