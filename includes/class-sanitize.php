@@ -361,7 +361,7 @@ class Sanitize {
 			return '';
 		}
 
-		return \wp_kses( self::strip_comments( $content ), self::get_allowed_remote_html(), \wp_allowed_protocols() );
+		return \wp_kses( self::strip_html_comments( $content ), self::get_allowed_remote_html(), \wp_allowed_protocols() );
 	}
 
 	/**
@@ -389,7 +389,7 @@ class Sanitize {
 			return '';
 		}
 
-		return \wp_kses( self::strip_comments( $content ), self::get_allowed_remote_comment_html(), \wp_allowed_protocols() );
+		return \wp_kses( self::strip_html_comments( $content ), self::get_allowed_remote_comment_html(), \wp_allowed_protocols() );
 	}
 
 	/**
@@ -452,7 +452,7 @@ class Sanitize {
 	 *
 	 * @return string The content without HTML comments.
 	 */
-	private static function strip_comments( $content ) {
+	private static function strip_html_comments( $content ) {
 		// preg_replace() returns null if PCRE bails; an empty string is the safe reading.
 		return \preg_replace( '/<!--.*?-->/s', '', $content ) ?? '';
 	}
