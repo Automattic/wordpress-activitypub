@@ -308,13 +308,13 @@ class Sanitize {
 		 * and content inside <script>, <style>, <nav>, etc. is meaningless on its own.
 		 */
 		$strip_pattern = \implode( '|', self::STRIP_ELEMENTS );
-		$content       = \preg_replace( '@<(' . $strip_pattern . ')(?=[\\s/>])[^>]*?>.*?</\\1>@si', '', $content ) ?? '';
+		$content       = \preg_replace( \sprintf( '@<(%s)(?=[\\s/>])[^>]*?>.*?</\\1>@si', $strip_pattern ), '', $content ) ?? '';
 
 		// <option> and <optgroup> may omit their end tags, so also strip the text that follows an unclosed one.
 		$content = \preg_replace( '@<(option|optgroup)(?=[\\s/>])[^>]*?>[^<]*@si', '', $content ) ?? '';
 
 		// Also catch self-closing variants (e.g. <input />, <embed />).
-		$content = \preg_replace( '@<(' . $strip_pattern . ')(?=[\\s/>])[^>]*?/?>@si', '', $content );
+		$content = \preg_replace( \sprintf( '@<(%s)(?=[\\s/>])[^>]*?/?>@si', $strip_pattern ), '', $content );
 
 		// preg_replace() returns null if PCRE bails; an empty string is the safe reading.
 		return $content ?? '';
