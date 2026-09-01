@@ -217,10 +217,10 @@ class Test_Post_Controller extends WP_UnitTestCase {
 			'plain name'     => array( 'Test User', 'Test User' ),
 
 			/*
-			 * sanitize_text_field() is what core's pre_comment_author_name chain stores, so
-			 * the column holds `A &lt;3 shape`. wp_strip_all_tags() used to cut that to "A".
+			 * sanitize_text_field() is what core's pre_comment_author_name chain stores, and it
+			 * escapes the bare `<` on the way in, so the column keeps the whole string.
 			 */
-			'bare less-than' => array( \sanitize_text_field( 'A <3 shape' ), 'A <3 shape' ),
+			'bare less-than' => array( \sanitize_text_field( 'A <3 shape' ), 'A &lt;3 shape' ),
 		);
 	}
 

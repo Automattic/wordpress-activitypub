@@ -258,17 +258,6 @@ class Remote_Actors {
 		$conditions = 'p.post_title LIKE %s OR acct.meta_value LIKE %s';
 		$params     = array( self::POST_TYPE, $like, $like );
 
-		/*
-		 * Names are stored through Sanitize::text() since the remote-content sanitization, and rows
-		 * cached before it keep the raw spelling. Match the stored spelling by running the query
-		 * through the same function, rather than an escaper that would disagree about quotes.
-		 */
-		$stored_spelling = Sanitize::text( $query );
-		if ( $stored_spelling !== $query ) {
-			$conditions .= ' OR p.post_title LIKE %s';
-			$params[]    = '%' . $wpdb->esc_like( $stored_spelling ) . '%';
-		}
-
 		// Match the actor URI only for URL-like queries, so short terms don't match every https:// guid.
 		if ( \str_contains( $query, '://' ) ) {
 			$conditions .= ' OR p.guid LIKE %s';

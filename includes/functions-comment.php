@@ -230,14 +230,15 @@ function get_reply_intent_url() {
  *
  * `wp_insert_comment()` callers bypass core's `pre_comment_author_name` chain, so the
  * column is not guaranteed tag-free, which is why this cleans rather than just reads.
+ * Nothing is decoded: an escaped tag stays escaped.
  *
  * @since unreleased
  *
  * @param \WP_Comment $comment The comment.
  *
- * @return string The author name as plain text. May contain `<` or `&` as characters,
+ * @return string The author name as plain text. May contain `&` as a character,
  *                so it is safe for a text sink only, never for HTML.
  */
 function get_reaction_author_name( $comment ) {
-	return Sanitize::decoded_text( $comment->comment_author );
+	return Sanitize::text( $comment->comment_author );
 }

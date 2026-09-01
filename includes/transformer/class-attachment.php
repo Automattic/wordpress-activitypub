@@ -54,8 +54,8 @@ class Attachment extends Post {
 
 		$alt = \get_post_meta( $this->item->ID, '_wp_attachment_image_alt', true );
 		if ( $alt ) {
-			// `name` is plain text in the JSON, and a stored alt may already be escaped, so decode before stripping.
-			$attachment['name'] = Sanitize::decoded_text( $alt );
+			// `name` is plain text in the JSON.
+			$attachment['name'] = Sanitize::text( $alt );
 		}
 
 		return $attachment;

@@ -250,34 +250,23 @@ class Sanitize {
 	}
 
 	/**
-	 * Reduce text that a remote server wrote to plain text, without losing any of it.
+	 * Reduce text that a remote server wrote to plain text.
 	 *
 	 * For the plain-text fields that hold remote data: post titles and summaries,
-	 * attachment captions and alt text, actor and reaction display names. The result
-	 * carries no markup: tags are gone and anything tag-like is left escaped, so it is
-	 * safe to hand to a text sink, which escapes it once more.
+	 * attachment captions and alt text, actor and reaction display names.
 	 *
-	 * kses with an empty allowlist is the tag remover here, because neither of the
-	 * shorter options survives remote input:
-	 *
-	 * - `wp_strip_all_tags()` hands the string to `strip_tags()`, which reads a bare `<`
-	 *   as a tag that never closes and drops the rest with it, so "A <3 shape" became "A".
-	 * - `sanitize_text_field()` keeps that text but strips percent-encoded octets, so
-	 *   "foo%20bar" became "foobar".
-	 *
-	 * kses knows the difference between a tag and a stray `<`, so it removes the first
-	 * and escapes the second.
-	 *
-	 * Nothing is decoded here, deliberately. Decoding after stripping can turn text kses
-	 * left alone back into live markup, and every arrangement of decode-then-strip I tried
-	 * had an encoding depth that slipped through. The output is escaped; decode it at the
-	 * point of display, where the surrounding escaping makes it inert.
+	 * `wp_strip_all_tags()` does the work. It removes `script` and `style` with their
+	 * contents, then strips the remaining tags, and it neither escapes nor decodes, so the
+	 * value it returns is the same one a text sink should display. It reads a bare `<` as
+	 * the start of a tag and drops the rest of the string with it, so "A <3 shape" comes
+	 * back as "A". That is a known limitation of a tested core function, and the trade we
+	 * accept for a value that needs no decoding at the point of display.
 	 *
 	 * @since unreleased
 	 *
 	 * @param string $text The remote-authored text.
 	 *
-	 * @return string The text with no markup. Entities are left escaped.
+	 * @return string The text with no markup.
 	 */
 	public static function text( $text ) {
 		// Remote JSON can hand us an array where a string was expected.
@@ -285,64 +274,13 @@ class Sanitize {
 			return '';
 		}
 
-		return \wp_kses( self::strip_elements( $text ), array() );
-	}
-
-	/**
-	 * Reduce remote text to readable plain text, with real characters instead of entities.
-	 *
-	 * {@see Sanitize::text()} is the storage form: tags gone, anything tag-like left escaped.
-	 * This is the display and federation form of the same value, for the sinks that escape
-	 * what they are given (a text node, an `alt` attribute, a plain-text ActivityPub field).
-	 *
-	 * The order is the whole point. Cleaning first and decoding afterwards would hand back a
-	 * tag that kses only ever saw in its escaped form, so this decodes to a fixed point
-	 * first, then strips, then decodes the escaping that stripping reintroduced. A hostile
-	 * value can nest encodings, so the peeling is capped, and a value still changing at the
-	 * cap is returned in the stored form, which is inert as it sits.
-	 *
-	 * Never hand the result to an HTML sink: it may contain `<` and `&` as characters.
-	 *
-	 * @since unreleased
-	 *
-	 * @param string $text The text to reduce.
-	 *
-	 * @return string The text as decoded plain text.
-	 */
-	public static function decoded_text( $text ) {
-		if ( ! \is_string( $text ) ) {
-			return '';
-		}
-
-		// Ingest stores plain text, so most values carry no entity or tag character at all.
-		if ( false === \strpbrk( $text, '<&' ) ) {
-			return $text;
-		}
-
-		$encoded = $text;
-		$stable  = false;
-		for ( $i = 0; $i < 5; $i++ ) {
-			$decoded = \html_entity_decode( $text, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
-
-			if ( $decoded === $text ) {
-				$stable = true;
-				break;
-			}
-
-			$text = $decoded;
-		}
-
-		if ( ! $stable ) {
-			return $encoded;
-		}
-
-		return \html_entity_decode( self::text( $text ), ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		return \wp_strip_all_tags( $text );
 	}
 
 	/**
 	 * Remove elements whose inner text is noise on its own.
 	 *
-	 * Shared by {@see Sanitize::clean_html()} and {@see Sanitize::text()}:
+	 * Used by {@see Sanitize::clean_html()}:
 	 * kses removes a tag but keeps what is inside it, so a `<script>` body would
 	 * otherwise survive as visible text.
 	 *

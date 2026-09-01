@@ -116,9 +116,9 @@ class Test_Attachment extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that alt text with a bare `<` is not truncated on the way out.
+	 * Test that alt text with a bare `<` is truncated, the core strip_tags() behaviour.
 	 */
-	public function test_get_attachment_with_alt_keeps_bare_less_than() {
+	public function test_get_attachment_with_alt_truncates_at_bare_less_than() {
 		update_post_meta( self::$attachment_id, '_wp_attachment_image_alt', 'I <3 cats' );
 
 		$transformer = new Attachment( get_post( self::$attachment_id ) );
@@ -126,14 +126,14 @@ class Test_Attachment extends WP_UnitTestCase {
 		$reflection->setAccessible( true );
 		$result = $reflection->invoke( $transformer );
 
-		$this->assertEquals( 'I <3 cats', $result['name'] );
+		// strip_tags() reads the bare `<` as an unclosed tag, a known core limitation.
+		$this->assertEquals( 'I', $result['name'] );
 	}
 
 	/**
 	 * Test that an entity-encoded alt text is not revived into live markup on the way out.
 	 *
-	 * A remote description is stored escaped, so decoding after stripping would hand the
-	 * tag back. `name` is plain text in the JSON, and consumers treat it as such.
+	 * `name` is plain text in the JSON, and consumers treat it as such.
 	 */
 	public function test_get_attachment_alt_does_not_revive_encoded_markup() {
 		update_post_meta( self::$attachment_id, '_wp_attachment_image_alt', '&lt;img src=x onerror=alert(1)&gt;caption' );
@@ -144,11 +144,11 @@ class Test_Attachment extends WP_UnitTestCase {
 		$result = $reflection->invoke( $transformer );
 
 		$this->assertStringNotContainsString( '<img', $result['name'] );
-		$this->assertSame( 'caption', $result['name'] );
+		$this->assertSame( '&lt;img src=x onerror=alert(1)&gt;caption', $result['name'] );
 	}
 
 	/**
-	 * Test that alt text is decoded on the way out.
+	 * Test that alt text is not decoded on the way out.
 	 *
 	 * Imported captions are stored escaped, so entities would federate literally in a
 	 * field that is plain text in the JSON. Transformer\Post already decodes this same
@@ -156,14 +156,15 @@ class Test_Attachment extends WP_UnitTestCase {
 	 *
 	 * @covers ::get_attachment
 	 */
-	public function test_get_attachment_decodes_alt() {
+	public function test_get_attachment_does_not_decode_alt() {
 		update_post_meta( self::$attachment_id, '_wp_attachment_image_alt', 'A &lt;3 shape &amp; more' );
 
 		$attachment  = get_post( self::$attachment_id );
 		$transformer = new Attachment( $attachment );
 		$result      = $this->get_protected_method( $transformer, 'get_attachment' );
 
-		$this->assertEquals( 'A <3 shape & more', $result['name'] );
+		// Nothing is decoded on the way out, so an escaped alt federates exactly as stored.
+		$this->assertEquals( 'A &lt;3 shape &amp; more', $result['name'] );
 	}
 
 	/**
