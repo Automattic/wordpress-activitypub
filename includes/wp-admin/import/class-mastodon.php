@@ -420,8 +420,9 @@ class Mastodon {
 		$post_data = array(
 			'post_author'  => self::$author,
 			'post_date'    => $post['published'],
-			'post_excerpt' => Sanitize::text( $post['object']['summary'] ?? '' ),
-			'post_content' => Sanitize::content( $post['object']['content'] ),
+			// Slashed like the federated path: wp_insert_post() unslashes what it is given.
+			'post_excerpt' => \wp_slash( Sanitize::text( $post['object']['summary'] ?? '' ) ),
+			'post_content' => \wp_slash( Sanitize::content( $post['object']['content'] ) ),
 			'post_status'  => 'publish',
 			'post_type'    => 'post',
 			'meta_input'   => array( '_source_id' => $post['object']['id'] ),
@@ -608,7 +609,8 @@ class Mastodon {
 			 * The comment allowlist, not the post one, so this field is cleaned the same
 			 * way Collection\Interactions cleans a live-federated reply.
 			 */
-			'comment_content'  => Sanitize::comment_content( $post['object']['content'] ),
+			// Slashed like the federated path: wp_insert_comment() unslashes what it is given.
+			'comment_content'  => \wp_slash( Sanitize::comment_content( $post['object']['content'] ) ),
 			'comment_date'     => $post['published'],
 			'user_id'          => self::$author,
 			'comment_approved' => 1,
