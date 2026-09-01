@@ -164,7 +164,7 @@ class Interactions {
 		}
 
 		// Found a local comment id.
-		$comment_data['comment_author'] = Sanitize::text( empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'] );
+		$comment_data['comment_author'] = \addslashes( Sanitize::text( empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'] ) );
 
 		/*
 		 * Sanitize before wrapping: emoji blocks are our own markup, and kses would
@@ -441,8 +441,9 @@ class Interactions {
 				return false;
 			}
 
-			// Same treatment the update path gives this column, so the two cannot drift.
-			$comment_author     = Sanitize::text( $comment_author ?? \__( 'Anonymous', 'activitypub' ) );
+			// Same treatment the update path gives this column, so the two cannot drift. Slashed
+			// like comment_content: wp_new_comment() unslashes the whole array.
+			$comment_author     = \addslashes( Sanitize::text( $comment_author ?? \__( 'Anonymous', 'activitypub' ) ) );
 			$comment_author_url = \esc_url_raw( object_to_uri( $actor['url'] ?? $actor['id'] ) );
 
 			$webfinger = Webfinger::uri_to_acct( $comment_author_url );
