@@ -268,6 +268,10 @@ class Attachments {
 		// A non-string remote `name` is not a caption; text() returns '' for it.
 		$plain_name = Sanitize::text( $attachment_data['name'] ?? '' );
 
+		// The title and the alt text are text sinks that core escapes again at display, so they
+		// hold the decoded form. `post_content` is an HTML sink and keeps the escaped one.
+		$display_name = Sanitize::decoded_text( $attachment_data['name'] ?? '' );
+
 		// Prepare attachment post data.
 		// Let WordPress auto-detect the mime type from the file.
 		$post_data = array(
@@ -279,8 +283,8 @@ class Attachments {
 			 * are public, and `post_content` renders through `the_content` there, so it gets
 			 * the same treatment as remote post content.
 			 */
-			'post_title'   => $plain_name,
-			'post_content' => $plain_name,
+			'post_title'   => \wp_slash( $display_name ),
+			'post_content' => \wp_slash( $plain_name ),
 			'post_author'  => $author_id,
 			'meta_input'   => array(
 				'_source_url' => $attachment_data['url'],
@@ -298,7 +302,7 @@ class Attachments {
 				 * and this field. `Transformer\Attachment` federates it straight back out as
 				 * the ActivityPub `name`, and consumers expect it to be plain text.
 				 */
-				$post_data['meta_input']['_wp_attachment_image_alt'] = $plain_name;
+				$post_data['meta_input']['_wp_attachment_image_alt'] = $display_name;
 			}
 		}
 
