@@ -422,7 +422,7 @@ class Mastodon {
 			'post_date'    => $post['published'],
 			// Slashed like the federated path: wp_insert_post() unslashes what it is given.
 			'post_excerpt' => \wp_slash( \is_string( $post['object']['summary'] ?? null ) ? \wp_strip_all_tags( $post['object']['summary'] ) : '' ),
-			'post_content' => \wp_slash( Sanitize::content( $post['object']['content'] ) ),
+			'post_content' => \wp_slash( Sanitize::content( $post['object']['content'] ?? '' ) ),
 			'post_status'  => 'publish',
 			'post_type'    => 'post',
 			'meta_input'   => array( '_source_id' => $post['object']['id'] ),
@@ -610,7 +610,7 @@ class Mastodon {
 			 * way Collection\Interactions cleans a live-federated reply.
 			 */
 			// Slashed like the federated path: wp_insert_comment() unslashes what it is given.
-			'comment_content'  => \wp_slash( Sanitize::comment_content( $post['object']['content'] ) ),
+			'comment_content'  => \wp_slash( Sanitize::comment_content( $post['object']['content'] ?? '' ) ),
 			'comment_date'     => $post['published'],
 			'user_id'          => self::$author,
 			'comment_approved' => 1,
