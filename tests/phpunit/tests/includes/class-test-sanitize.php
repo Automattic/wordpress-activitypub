@@ -341,16 +341,34 @@ class Test_Sanitize extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that remote content is held to the same interactive-element policy as outgoing content.
+	 *
+	 * @covers ::content
+	 * @covers ::content
+	 */
+	public function test_content_strips_interactive_elements() {
+		$content = '<p>Hello</p><button onclick="steal()">Press</button><dialog open>Modal</dialog><p>World</p>';
+		$result  = Sanitize::content( $content );
+
+		$this->assertStringNotContainsString( '<button', $result );
+		$this->assertStringNotContainsString( 'Press', $result );
+		$this->assertStringNotContainsString( '<dialog', $result );
+		$this->assertStringNotContainsString( 'Modal', $result );
+		$this->assertStringContainsString( 'Hello', $result );
+		$this->assertStringContainsString( 'World', $result );
+	}
+
+	/**
 	 * Test that plain-text cleaning keeps every character that is not markup.
 	 *
-	 * @dataProvider clean_remote_text_provider
-	 * @covers ::clean_remote_text
+	 * @dataProvider text_provider
+	 * @covers ::text
 	 *
 	 * @param string $input    Input value.
 	 * @param string $expected Expected output.
 	 */
-	public function test_clean_remote_text( $input, $expected ) {
-		$this->assertSame( $expected, Sanitize::clean_remote_text( $input ) );
+	public function test_text( $input, $expected ) {
+		$this->assertSame( $expected, Sanitize::text( $input ) );
 	}
 
 	/**
@@ -359,16 +377,16 @@ class Test_Sanitize extends \WP_UnitTestCase {
 	 * Decoding would peel one entity level at a time and eventually hand back live
 	 * markup, so the escaped form is returned instead.
 	 *
-	 * @covers ::clean_remote_text
+	 * @covers ::text
 	 */
-	public function test_clean_remote_text_stops_short_without_releasing_markup() {
+	public function test_text_stops_short_without_releasing_markup() {
 		for ( $depth = 1; $depth <= 15; $depth++ ) {
 			$payload = '<img src=x onerror=alert(1)>caption';
 			for ( $i = 0; $i < $depth; $i++ ) {
 				$payload = \htmlspecialchars( $payload, ENT_QUOTES );
 			}
 
-			$result = Sanitize::clean_remote_text( $payload );
+			$result = Sanitize::text( $payload );
 
 			$this->assertStringNotContainsString( '<img', $result, "Depth {$depth} released live markup." );
 			$this->assertStringContainsString( 'caption', $result, "Depth {$depth} lost the caption." );
@@ -384,7 +402,7 @@ class Test_Sanitize extends \WP_UnitTestCase {
 	 * attribute was meant to prevent.
 	 *
 	 * @covers ::content
-	 * @covers ::clean_remote_html
+	 * @covers ::content
 	 */
 	public function test_content_strips_block_delimiters() {
 		$content = '<!-- wp:group {"style":{"background":{"backgroundImage":{"url":"https://remote.example/track","source":"file"}}}} -->'
@@ -415,14 +433,14 @@ class Test_Sanitize extends \WP_UnitTestCase {
 	 * `Comment::render_blocks()` runs `do_blocks()` on `comment_text`, and comments render
 	 * on the public front end.
 	 *
-	 * @covers ::clean_remote_comment_html
+	 * @covers ::comment_content
 	 */
-	public function test_clean_remote_comment_html_strips_block_delimiters() {
+	public function test_comment_content_strips_block_delimiters() {
 		$content = '<!-- wp:group {"style":{"background":{"backgroundImage":{"url":"https://remote.example/track"}}}} -->'
 			. '<p>Reply</p>'
 			. '<!-- /wp:group -->';
 
-		$result = Sanitize::clean_remote_comment_html( $content );
+		$result = Sanitize::comment_content( $content );
 
 		$this->assertStringNotContainsString( 'wp:group', $result, 'Block delimiters must not be stored on a comment.' );
 		$this->assertStringNotContainsString( 'remote.example/track', $result, 'The delimiter payload must go with it.' );
@@ -430,14 +448,14 @@ class Test_Sanitize extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Data provider for clean_remote_text tests.
+	 * Data provider for text tests.
 	 *
 	 * The contract is narrow on purpose: no markup out, and no characters lost. Entities
 	 * stay escaped, so nothing here can be decoded back into a tag downstream.
 	 *
 	 * @return array[]
 	 */
-	public function clean_remote_text_provider() {
+	public function text_provider() {
 		return array(
 			'plain text'          => array( 'Test User', 'Test User' ),
 			// wp_strip_all_tags() would cut this down to "A".

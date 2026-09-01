@@ -346,9 +346,9 @@ class Remote_Posts {
 		 * reason.
 		 */
 		return array(
-			'post_title'    => isset( $activity['name'] ) ? \wp_slash( Sanitize::clean_remote_text( $activity['name'] ) ) : '',
+			'post_title'    => isset( $activity['name'] ) ? \wp_slash( Sanitize::text( $activity['name'] ) ) : '',
 			'post_content'  => \wp_slash( $content ),
-			'post_excerpt'  => \wp_slash( isset( $activity['summary'] ) ? Sanitize::clean_remote_text( $activity['summary'] ) : \wp_trim_words( Sanitize::clean_remote_text( $activity['content'] ?? '' ), 55 ) ),
+			'post_excerpt'  => \wp_slash( isset( $activity['summary'] ) ? Sanitize::text( $activity['summary'] ) : \wp_trim_words( Sanitize::text( $activity['content'] ?? '' ), 55 ) ),
 			'post_status'   => 'publish',
 			'post_type'     => self::POST_TYPE,
 			'post_date_gmt' => $gm_date,

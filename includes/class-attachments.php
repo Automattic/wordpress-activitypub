@@ -265,8 +265,8 @@ class Attachments {
 			'tmp_name' => $tmp_file,
 		);
 
-		// A non-string remote `name` is not a caption; clean_remote_text() returns '' for it.
-		$plain_name = Sanitize::clean_remote_text( $attachment_data['name'] ?? '' );
+		// A non-string remote `name` is not a caption; text() returns '' for it.
+		$plain_name = Sanitize::text( $attachment_data['name'] ?? '' );
 
 		// Prepare attachment post data.
 		// Let WordPress auto-detect the mime type from the file.
@@ -294,7 +294,7 @@ class Attachments {
 				/*
 				 * The same plain-text value as the title. Core does not sanitize this meta
 				 * on write -- it only strips tags in the media-modal AJAX handler -- so
-				 * `clean_remote_text()` is the only thing standing between a remote caption
+				 * `text()` is the only thing standing between a remote caption
 				 * and this field. `Transformer\Attachment` federates it straight back out as
 				 * the ActivityPub `name`, and consumers expect it to be plain text.
 				 */

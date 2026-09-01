@@ -279,7 +279,7 @@ class Sanitize {
 	 *
 	 * @return string The text with no markup. Entities are left escaped.
 	 */
-	public static function clean_remote_text( $text ) {
+	public static function text( $text ) {
 		// Remote JSON can hand us an array where a string was expected.
 		if ( ! \is_string( $text ) ) {
 			return '';
@@ -291,7 +291,7 @@ class Sanitize {
 	/**
 	 * Remove elements whose inner text is noise on its own.
 	 *
-	 * Shared by {@see Sanitize::clean_html()} and {@see Sanitize::clean_remote_text()}:
+	 * Shared by {@see Sanitize::clean_html()} and {@see Sanitize::text()}:
 	 * kses removes a tag but keeps what is inside it, so a `<script>` body would
 	 * otherwise survive as visible text.
 	 *
@@ -321,54 +321,40 @@ class Sanitize {
 	}
 
 	/**
-	 * Sanitize content for ActivityPub.
+	 * Sanitize HTML content that was written by a remote server.
 	 *
-	 * @param string $content The content to convert.
+	 * Normalizes formatting (bare URLs to links, loose lines to paragraphs) and then holds
+	 * the content to the same gate we apply to what we send out ({@see Sanitize::clean_html()}):
+	 * the FEP-b2b8 allowlist, which carries no `style` attribute and no interactive, scripting
+	 * or embed elements. Remote content is held to the FEP its own author federates under.
 	 *
-	 * @return string The converted content.
+	 * HTML comments are stripped first, because this content is stored and later runs
+	 * through `do_blocks()`, which would otherwise reconstitute a remote block delimiter.
+	 *
+	 * @param string $content The content to sanitize.
+	 *
+	 * @return string The sanitized content.
 	 */
 	public static function content( $content ) {
+		if ( ! \is_string( $content ) || '' === $content ) {
+			return '';
+		}
+
 		// Only make URLs clickable if no anchor tags exist, to avoid corrupting existing links.
 		if ( false === \strpos( $content, '<a ' ) ) {
 			$content = \make_clickable( $content );
 		}
 
 		$content = \wpautop( $content );
-		$content = self::clean_remote_html( $content );
 
-		return $content;
-	}
-
-	/**
-	 * Sanitize HTML that was written by a remote server.
-	 *
-	 * Like `wp_kses_post()`, but without the `style` attribute. See
-	 * {@see Sanitize::get_allowed_remote_html()} for why.
-	 *
-	 * Not a mirror of {@see Sanitize::clean_html()}, which cleans what we send out: that
-	 * one also drops {@see Sanitize::STRIP_ELEMENTS} together with their inner text. Here
-	 * kses removes the tag but keeps the text, so the body of a `<style>` or `<script>`
-	 * element survives as inert visible characters, the way `wp_kses_post()` left it.
-	 *
-	 * @since unreleased
-	 *
-	 * @param string $content The content to sanitize.
-	 *
-	 * @return string The sanitized content.
-	 */
-	public static function clean_remote_html( $content ) {
-		if ( ! \is_string( $content ) || '' === $content ) {
-			return '';
-		}
-
-		return \wp_kses( self::strip_html_comments( $content ), self::get_allowed_remote_html(), \wp_allowed_protocols() );
+		return self::clean_html( self::strip_html_comments( $content ) );
 	}
 
 	/**
 	 * Sanitize comment content that was written by a remote server.
 	 *
 	 * Comments get a much narrower allowlist than posts, so this is not
-	 * {@see Sanitize::clean_remote_html()} with a different name. Core resolves the
+	 * the post cleaner {@see Sanitize::content()} with a different name. Core resolves the
 	 * `pre_comment_content` context to the comment allowlist, and
 	 * {@see Interactions::allowed_comment_html()} adds `p`, `br` and the strict emoji
 	 * `img` back on top of it.
@@ -384,12 +370,12 @@ class Sanitize {
 	 *
 	 * @return string The sanitized content.
 	 */
-	public static function clean_remote_comment_html( $content ) {
+	public static function comment_content( $content ) {
 		if ( ! \is_string( $content ) || '' === $content ) {
 			return '';
 		}
 
-		return \wp_kses( self::strip_html_comments( $content ), self::get_allowed_remote_comment_html(), \wp_allowed_protocols() );
+		return \wp_kses( self::strip_html_comments( $content ), self::get_allowed_comment_html(), \wp_allowed_protocols() );
 	}
 
 	/**
@@ -406,7 +392,7 @@ class Sanitize {
 	 *
 	 * @return array The allowed HTML structure for wp_kses.
 	 */
-	public static function get_allowed_remote_comment_html( $allowed_tags = null ) {
+	public static function get_allowed_comment_html( $allowed_tags = null ) {
 		if ( null === $allowed_tags ) {
 			$allowed_tags = \wp_kses_allowed_html( 'pre_comment_content' );
 		}
@@ -437,8 +423,8 @@ class Sanitize {
 	 * {@see \Activitypub\Comment::render_blocks()} for comments -- and core's block
 	 * supports rebuild CSS from the delimiter's own JSON. A remote
 	 * group delimiter carrying `style.background.backgroundImage.url` comes back out as
-	 * `style="background-image:url(...)"`, which is exactly what
-	 * {@see Sanitize::get_allowed_remote_html()} drops the `style` attribute to prevent.
+	 * `style="background-image:url(...)"`, which is exactly what the FEP-b2b8 allowlist in
+	 * {@see Sanitize::clean_html()} drops the `style` attribute to prevent.
 	 * Dynamic blocks are the same story with their render callbacks.
 	 *
 	 * Every comment goes, not just `wp:` ones: the block parser tolerates spacing and
@@ -455,42 +441,6 @@ class Sanitize {
 	private static function strip_html_comments( $content ) {
 		// preg_replace() returns null if PCRE bails; an empty string is the safe reading.
 		return \preg_replace( '/<!--.*?-->/s', '', $content ) ?? '';
-	}
-
-	/**
-	 * Returns the allowed HTML for content that was written by a remote server.
-	 *
-	 * This is the post allowlist without the `style` attribute, which `wp_kses_post()`
-	 * would keep. Core's `safecss_filter_attr()` then allows `background-image:url()`
-	 * for https targets, plus `position`, `z-index` and the offset properties. That is
-	 * fine for a post written by a trusted local user, but not for a federated one:
-	 *
-	 * - `background-image:url()` gets around the media cache, which is there so the
-	 *   browser never loads anything from a remote host while rendering the content.
-	 * - `position:fixed` with a high `z-index` lets a remote actor cover the screen
-	 *   with their own markup, for example a fake login prompt.
-	 *
-	 * Mastodon strips inline styles on its side too, so there should be nothing real
-	 * to lose here.
-	 *
-	 * Unlike {@see Sanitize::get_allowed_html()} this has no filter on purpose. That
-	 * one is a formatting policy and extending it is reasonable, while this one is a
-	 * trust boundary, and a filter would let any plugin put `style` back.
-	 *
-	 * @since unreleased
-	 *
-	 * @return array The allowed HTML structure for wp_kses.
-	 */
-	public static function get_allowed_remote_html() {
-		$allowed_html = \wp_kses_allowed_html( 'post' );
-
-		foreach ( $allowed_html as $tag => $attributes ) {
-			if ( \is_array( $attributes ) ) {
-				unset( $allowed_html[ $tag ]['style'] );
-			}
-		}
-
-		return $allowed_html;
 	}
 
 	/**

@@ -211,13 +211,13 @@ is not a promise that kses vetted every byte.
 **Never run `decodeEntities()` (or any other unescaping pass) on a value that
 ends up in `dangerouslySetInnerHTML`.** An entity-encoded REST field is
 *already* the safe representation: remote content is stored through
-`Sanitize::content()` → `Sanitize::clean_remote_html()`, which deliberately leaves a
-payload like `&lt;iframe srcdoc="…"&gt;` as inert text. Decoding it on the client
-turns it back into live markup and undoes every server-side escaping decision at
-once.
+`Sanitize::content()`, which deliberately leaves a payload like
+`&lt;iframe srcdoc="…"&gt;` as inert text. Decoding it on the client turns it back
+into live markup and undoes every server-side escaping decision at once.
 
-`Sanitize::clean_remote_html()` is `wp_kses_post()` minus the `style` attribute.
-See `includes/class-sanitize.php` for why.
+`Sanitize::content()` holds remote HTML to the FEP-b2b8 allowlist, which carries no
+`style` attribute and no interactive, scripting, or embed elements. See
+`includes/class-sanitize.php` for why.
 
 `safeHTML()` from `@wordpress/dom` will not save you: it removes `<script>`
 elements and `on*` attributes and nothing else, so `<iframe srcdoc>`, `<object>`,

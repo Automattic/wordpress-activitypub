@@ -61,7 +61,7 @@ describe( 'contentField', () => {
 
 	describe( 'security', () => {
 		/*
-		 * A remote actor controls `content`. `Sanitize::content()` runs `Sanitize::clean_remote_html()`
+		 * A remote actor controls `content`. `Sanitize::content()` sanitizes it
 		 * on it server-side, which leaves valid entities untouched, so markup the server rejected
 		 * is stored as inert text. Decoding client-side would turn that text back into markup, and
 		 * `safeHTML()` is not a substitute: it strips `<script>` elements and `on*` attributes and

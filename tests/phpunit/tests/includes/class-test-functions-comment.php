@@ -213,7 +213,7 @@ class Test_Functions_Comment extends \WP_UnitTestCase {
 	 * `wp_insert_comment()` callers bypass core's `pre_comment_author_name` chain, so the
 	 * column is not guaranteed tag-free: the tag goes, and what is left is decoded for the
 	 * text-only sinks that render it. The cleaning itself is covered by
-	 * Test_Sanitize::test_clean_remote_text().
+	 * Test_Sanitize::test_text().
 	 */
 	public function test_get_reaction_author_name() {
 		// The factory inserts through wp_insert_comment(), which bypasses the `pre_` filter chain.

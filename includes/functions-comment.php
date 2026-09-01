@@ -275,7 +275,7 @@ function get_reaction_author_name( $comment ) {
 	 * in the editor preview -- so the sink escapes it and entities would otherwise show
 	 * up literally. Do not reuse this for an HTML sink.
 	 */
-	$author = Sanitize::clean_remote_text( $author );
+	$author = Sanitize::text( $author );
 
 	return \html_entity_decode( $author, ENT_QUOTES );
 }

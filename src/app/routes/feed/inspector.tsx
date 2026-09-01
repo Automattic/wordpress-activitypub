@@ -158,7 +158,7 @@ export default function FeedInspector(): ReactNode {
 						<h2>
 							{ /*
 							 * `post_title` is a plain-text field: remote titles are stored via
-							 * `Sanitize::clean_remote_text()`, so there is no markup to render. Render it as
+							 * `Sanitize::text()`, so there is no markup to render. Render it as
 							 * a React child, escaped as text, rather than through innerHTML.
 							 * `titleField` renders the same value the same way.
 							 */ }

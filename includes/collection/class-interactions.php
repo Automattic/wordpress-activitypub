@@ -164,13 +164,13 @@ class Interactions {
 		}
 
 		// Found a local comment id.
-		$comment_data['comment_author'] = Sanitize::clean_remote_text( empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'] );
+		$comment_data['comment_author'] = Sanitize::text( empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'] );
 
 		/*
 		 * Sanitize before wrapping: emoji blocks are our own markup, and kses would
 		 * mangle the block comments they are made of.
 		 */
-		$content                         = Sanitize::clean_remote_comment_html( $activity['object']['content'] ?? '' );
+		$content                         = Sanitize::comment_content( $activity['object']['content'] ?? '' );
 		$content                         = Emoji::wrap_in_content( $content, $activity['object'] );
 		$comment_data['comment_content'] = \addslashes( $content );
 
@@ -391,7 +391,7 @@ class Interactions {
 			return $allowed_tags;
 		}
 
-		return Sanitize::get_allowed_remote_comment_html( $allowed_tags );
+		return Sanitize::get_allowed_comment_html( $allowed_tags );
 	}
 
 	/**
@@ -442,7 +442,7 @@ class Interactions {
 			}
 
 			// Same treatment the update path gives this column, so the two cannot drift.
-			$comment_author     = Sanitize::clean_remote_text( $comment_author ?? \__( 'Anonymous', 'activitypub' ) );
+			$comment_author     = Sanitize::text( $comment_author ?? \__( 'Anonymous', 'activitypub' ) );
 			$comment_author_url = \esc_url_raw( object_to_uri( $actor['url'] ?? $actor['id'] ) );
 
 			$webfinger = Webfinger::uri_to_acct( $comment_author_url );
@@ -457,7 +457,7 @@ class Interactions {
 				 * Sanitize before wrapping: emoji blocks are our own markup, and kses would
 				 * mangle the block comments they are made of.
 				 */
-				$content         = Sanitize::clean_remote_comment_html( $activity['object']['content'] );
+				$content         = Sanitize::comment_content( $activity['object']['content'] );
 				$content         = Emoji::wrap_in_content( $content, $activity['object'] );
 				$comment_content = \addslashes( $content );
 			}

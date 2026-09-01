@@ -411,18 +411,17 @@ class Mastodon {
 	 */
 	private static function import_as_post( $post, &$created ) {
 		/*
-		 * Sanitize the archive's content and summary for the same reason as the comment
-		 * path below: the import runs as a user with `unfiltered_html`, so kses filters
-		 * are not installed for this request and `wp_insert_post()` stores whatever the
-		 * archive contained. These posts are published publicly, so they are the wider
-		 * exposure of the two. `Sanitize::clean_remote_html()` rather than `wp_kses_post()`,
-		 * so inline styles cannot ride along either.
+		 * An imported post is handled the same as a federated one: `Sanitize::content()`
+		 * normalizes and sanitizes the content, and `text()` the summary. The
+		 * import runs as a user with `unfiltered_html`, so kses filters are not installed
+		 * for this request and `wp_insert_post()` would otherwise store whatever the archive
+		 * contained; these posts are published publicly, so they are the wider exposure.
 		 */
 		$post_data = array(
 			'post_author'  => self::$author,
 			'post_date'    => $post['published'],
-			'post_excerpt' => Sanitize::clean_remote_text( $post['object']['summary'] ?? '' ),
-			'post_content' => Sanitize::clean_remote_html( $post['object']['content'] ),
+			'post_excerpt' => Sanitize::text( $post['object']['summary'] ?? '' ),
+			'post_content' => Sanitize::content( $post['object']['content'] ),
 			'post_status'  => 'publish',
 			'post_type'    => 'post',
 			'meta_input'   => array( '_source_id' => $post['object']['id'] ),
@@ -609,7 +608,7 @@ class Mastodon {
 			 * The comment allowlist, not the post one, so this field is cleaned the same
 			 * way Collection\Interactions cleans a live-federated reply.
 			 */
-			'comment_content'  => Sanitize::clean_remote_comment_html( $post['object']['content'] ),
+			'comment_content'  => Sanitize::comment_content( $post['object']['content'] ),
 			'comment_date'     => $post['published'],
 			'user_id'          => self::$author,
 			'comment_approved' => 1,

@@ -54,7 +54,7 @@ function ContentRenderer( { item }: { item: FeedPost } ): ReactNode {
 	if ( isNote ) {
 		/*
 		 * `content.rendered` is already server-sanitised HTML: remote content is run
-		 * through `Sanitize::content()` (`Sanitize::clean_remote_html()`) before it is stored,
+		 * through `Sanitize::content()` before it is stored,
 		 * and the REST render filters do not decode entities. Decoding here would undo that --
 		 * an entity-encoded `&lt;iframe srcdoc="..."&gt;` that kses deliberately stored as
 		 * inert text would become a live element again, and `safeHTML()` only strips
