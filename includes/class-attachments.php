@@ -266,7 +266,9 @@ class Attachments {
 		);
 
 		// A non-string remote `name` is not a caption; text() returns '' for it.
-		$plain_name = Sanitize::text( $attachment_data['name'] ?? '' );
+		// Remote JSON can hand us an array where a string was expected.
+		$name       = $attachment_data['name'] ?? '';
+		$plain_name = \is_string( $name ) ? \wp_strip_all_tags( $name ) : '';
 
 		// Prepare attachment post data.
 		// Let WordPress auto-detect the mime type from the file.

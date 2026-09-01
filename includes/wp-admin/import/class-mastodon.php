@@ -421,7 +421,7 @@ class Mastodon {
 			'post_author'  => self::$author,
 			'post_date'    => $post['published'],
 			// Slashed like the federated path: wp_insert_post() unslashes what it is given.
-			'post_excerpt' => \wp_slash( Sanitize::text( $post['object']['summary'] ?? '' ) ),
+			'post_excerpt' => \wp_slash( \is_string( $post['object']['summary'] ?? null ) ? \wp_strip_all_tags( $post['object']['summary'] ) : '' ),
 			'post_content' => \wp_slash( Sanitize::content( $post['object']['content'] ) ),
 			'post_status'  => 'publish',
 			'post_type'    => 'post',

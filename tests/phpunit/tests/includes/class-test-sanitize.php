@@ -359,46 +359,6 @@ class Test_Sanitize extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that plain-text cleaning keeps every character that is not markup.
-	 *
-	 * @dataProvider text_provider
-	 * @covers ::text
-	 *
-	 * @param string $input    Input value.
-	 * @param string $expected Expected output.
-	 */
-	public function test_text( $input, $expected ) {
-		$this->assertSame( $expected, Sanitize::text( $input ) );
-	}
-
-	/**
-	 * Data provider for text tests.
-	 *
-	 * The contract is narrow on purpose: no markup out, nothing escaped or decoded.
-	 * Decoding belongs at the point of display, never here.
-	 *
-	 * @return array Test data with input and expected output.
-	 */
-	public function text_provider() {
-		return array(
-			'plain text'          => array( 'Test User', 'Test User' ),
-			// strip_tags() reads a bare `<` as a tag opener and drops the rest.
-			'bare less-than'      => array( 'A <3 shape carved in wood', 'A' ),
-			// Left as characters, not entities, so a text sink can show them as typed.
-			'ampersand'           => array( "Ben & Jerry's", "Ben & Jerry's" ),
-			// Already-escaped markup stays inert, nothing decodes it back.
-			'encoded markup'      => array( '&lt;script&gt;alert(1)&lt;/script&gt;x', '&lt;script&gt;alert(1)&lt;/script&gt;x' ),
-			// Kept, unlike sanitize_text_field() which would drop the octet.
-			'percent octet'       => array( 'foo%20bar', 'foo%20bar' ),
-			'percent sign'        => array( '50% off', '50% off' ),
-			'real tag'            => array( 'Photo<script>alert(1)</script>', 'Photo' ),
-			'tag with attributes' => array( '<img src=x onerror=alert(1)>caption', 'caption' ),
-			'empty'               => array( '', '' ),
-			'non-string'          => array( array( 'nope' ), '' ),
-		);
-	}
-
-	/**
 	 * Data provider for clean_html tests.
 	 *
 	 * @return array Test data with input and expected output.

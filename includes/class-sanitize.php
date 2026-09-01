@@ -250,36 +250,6 @@ class Sanitize {
 	}
 
 	/**
-	 * Reduce text that a remote server wrote to plain text.
-	 *
-	 * For the plain-text fields that hold remote data: post titles and summaries,
-	 * attachment captions and alt text, actor and reaction display names.
-	 *
-	 * `wp_strip_all_tags()` does the work. It removes `script` and `style` with their
-	 * contents, strips the remaining tags, and neither escapes nor decodes, so what it
-	 * returns is what a text sink should display and what core stores in the same fields.
-	 *
-	 * It reads a bare `<` as the start of a tag and drops the rest of the string with it,
-	 * so "A <3 shape" comes back as "A". That is a known limitation of a tested core
-	 * function. Escaping instead would push the escape onto every consumer, which then has
-	 * to decode, and decoding after stripping revives markup that was only ever escaped.
-	 *
-	 * @since unreleased
-	 *
-	 * @param string $text The remote-authored text.
-	 *
-	 * @return string The text with no markup.
-	 */
-	public static function text( $text ) {
-		// Remote JSON can hand us an array where a string was expected.
-		if ( ! \is_string( $text ) ) {
-			return '';
-		}
-
-		return \wp_strip_all_tags( $text );
-	}
-
-	/**
 	 * Remove elements whose inner text is noise on its own.
 	 *
 	 * Used by {@see Sanitize::clean_html()}:
