@@ -265,11 +265,23 @@ class Attachments {
 			'tmp_name' => $tmp_file,
 		);
 
+		// Remote JSON can hand us an array where a string was expected.
+		$name       = $attachment_data['name'] ?? '';
+		$plain_name = \is_string( $name ) ? \wp_strip_all_tags( $name ) : '';
+
 		// Prepare attachment post data.
 		// Let WordPress auto-detect the mime type from the file.
 		$post_data = array(
-			'post_title'   => $attachment_data['name'] ?? '',
-			'post_content' => $attachment_data['name'] ?? '',
+
+			/*
+			 * `name` comes from the remote object or an uploaded archive, and callers can run
+			 * as a user with `unfiltered_html`, for which `kses_init()` installs no filters:
+			 * `media_handle_sideload()` would store whatever it was given. Attachment pages
+			 * are public, and `post_content` renders through `the_content` there, so it gets
+			 * the same treatment as remote post content.
+			 */
+			'post_title'   => \wp_slash( $plain_name ),
+			'post_content' => \wp_slash( $plain_name ),
 			'post_author'  => $author_id,
 			'meta_input'   => array(
 				'_source_url' => $attachment_data['url'],
@@ -277,10 +289,16 @@ class Attachments {
 		);
 
 		// Add alt text for images.
-		if ( ! empty( $attachment_data['name'] ) ) {
+		if ( '' !== $plain_name ) {
 			$original_mime = $attachment_data['mediaType'] ?? '';
 			if ( 'image' === \strtok( $original_mime, '/' ) ) {
-				$post_data['meta_input']['_wp_attachment_image_alt'] = $attachment_data['name'];
+				/*
+				 * The same plain-text value as the title. Core does not sanitize this meta
+				 * on write -- it only strips tags in the media-modal AJAX handler --. `Transformer\Attachment` federates it straight back
+				 * out as the ActivityPub `name`, and consumers expect it to be plain text.
+				 */
+				// Slashed like the columns above: update_metadata() unslashes what it is given.
+				$post_data['meta_input']['_wp_attachment_image_alt'] = \wp_slash( $plain_name );
 			}
 		}
 

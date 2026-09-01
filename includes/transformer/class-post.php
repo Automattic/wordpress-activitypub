@@ -326,7 +326,7 @@ class Post extends Base {
 
 		$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
 		if ( $alt ) {
-			$image['name'] = \html_entity_decode( \wp_strip_all_tags( $alt ), ENT_QUOTES, 'UTF-8' );
+			$image['name'] = \wp_strip_all_tags( \html_entity_decode( $alt, ENT_QUOTES, 'UTF-8' ) );
 		}
 
 		return $image;
@@ -382,7 +382,7 @@ class Post extends Base {
 
 		$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
 		if ( $alt ) {
-			$image['name'] = \html_entity_decode( \wp_strip_all_tags( $alt ), ENT_QUOTES, 'UTF-8' );
+			$image['name'] = \wp_strip_all_tags( \html_entity_decode( $alt, ENT_QUOTES, 'UTF-8' ) );
 		}
 
 		return $image;

@@ -250,22 +250,160 @@ class Sanitize {
 	}
 
 	/**
-	 * Sanitize content for ActivityPub.
+	 * Remove elements whose inner text is noise on its own.
 	 *
-	 * @param string $content The content to convert.
+	 * Used by {@see Sanitize::clean_html()}:
+	 * kses removes a tag but keeps what is inside it, so a `<script>` body would
+	 * otherwise survive as visible text.
 	 *
-	 * @return string The converted content.
+	 * @since unreleased
+	 *
+	 * @param string $content The content to strip.
+	 *
+	 * @return string The content without those elements.
+	 */
+	private static function strip_elements( $content ) {
+		$strip_pattern = \implode( '|', self::STRIP_ELEMENTS );
+		$content       = \preg_replace( \sprintf( '@<(%s)(?=[\\s/>])[^>]*?>.*?</\\1>@si', $strip_pattern ), '', $content ) ?? '';
+
+		// <option> and <optgroup> may omit their end tags, so also strip the text that follows an unclosed one.
+		$content = \preg_replace( '@<(option|optgroup)(?=[\\s/>])[^>]*?>[^<]*@si', '', $content ) ?? '';
+
+		// Also catch self-closing variants (e.g. <input />, <embed />).
+		$content = \preg_replace( \sprintf( '@<(%s)(?=[\\s/>])[^>]*?/?>@si', $strip_pattern ), '', $content );
+
+		// preg_replace() returns null if PCRE bails; an empty string is the safe reading.
+		return $content ?? '';
+	}
+
+	/**
+	 * Sanitize HTML content that was written by a remote server.
+	 *
+	 * Normalizes formatting (bare URLs to links, loose lines to paragraphs) and then holds
+	 * the content to the same gate we apply to what we send out ({@see Sanitize::clean_html()}):
+	 * the FEP-b2b8 allowlist, which carries no `style` attribute and no interactive, scripting
+	 * or embed elements. Remote content is held to the FEP its own author federates under.
+	 *
+	 * HTML comments are stripped first, because this content is stored and later runs
+	 * through `do_blocks()`, which would otherwise reconstitute a remote block delimiter.
+	 *
+	 * @param string $content The content to sanitize.
+	 *
+	 * @return string The sanitized content.
 	 */
 	public static function content( $content ) {
+		if ( ! \is_string( $content ) || '' === $content ) {
+			return '';
+		}
+
 		// Only make URLs clickable if no anchor tags exist, to avoid corrupting existing links.
 		if ( false === \strpos( $content, '<a ' ) ) {
 			$content = \make_clickable( $content );
 		}
 
 		$content = \wpautop( $content );
-		$content = \wp_kses_post( $content );
+		$content = self::clean_html( self::strip_html_comments( $content ) );
 
-		return $content;
+		/*
+		 * `do_shortcode()` runs on `the_content` right after `do_blocks()`, so a remote
+		 * `[gallery]` would reach a local shortcode's render callback the same way a block
+		 * delimiter would reach the block parser. Encoding the opening bracket leaves the
+		 * text looking identical to a reader and unparseable to the shortcode regex.
+		 */
+		return \str_replace( '[', '&#91;', $content );
+	}
+
+	/**
+	 * Sanitize comment content that was written by a remote server.
+	 *
+	 * Comments get a much narrower allowlist than posts, so this is not
+	 * the post cleaner {@see Sanitize::content()} with a different name. Core resolves the
+	 * `pre_comment_content` context to the comment allowlist, and
+	 * {@see Interactions::allowed_comment_html()} adds `p`, `br` and the strict emoji
+	 * `img` back on top of it.
+	 *
+	 * Core only applies that allowlist itself when the request installed the
+	 * `pre_comment_content` filter, and `kses_init()` installs nothing for a user with
+	 * `unfiltered_html`. Calling this where the content is known to be remote keeps the
+	 * guarantee from depending on who is logged in.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $content The remote comment content.
+	 *
+	 * @return string The sanitized content.
+	 */
+	public static function comment_content( $content ) {
+		if ( ! \is_string( $content ) || '' === $content ) {
+			return '';
+		}
+
+		return \wp_kses( self::strip_html_comments( $content ), self::get_allowed_comment_html(), \wp_allowed_protocols() );
+	}
+
+	/**
+	 * Returns the allowed HTML for remote comment content.
+	 *
+	 * The `pre_comment_content` allowlist plus `p`, `br` and the strict emoji `img`.
+	 * {@see \Activitypub\Collection\Interactions::allowed_comment_html()} applies the
+	 * same additions on the `wp_kses_allowed_html` filter and delegates here, so the
+	 * filter and the direct call cannot drift.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array|null $allowed_tags Optional. Allowlist to extend. Default the `pre_comment_content` context.
+	 *
+	 * @return array The allowed HTML structure for wp_kses.
+	 */
+	public static function get_allowed_comment_html( $allowed_tags = null ) {
+		if ( null === $allowed_tags ) {
+			$allowed_tags = \wp_kses_allowed_html( 'pre_comment_content' );
+		}
+
+		// Add `p` and `br` to the list of allowed tags.
+		if ( ! \array_key_exists( 'br', $allowed_tags ) ) {
+			$allowed_tags['br'] = array();
+		}
+
+		if ( ! \array_key_exists( 'p', $allowed_tags ) ) {
+			$allowed_tags['p'] = array();
+		}
+
+		// Add `img` for custom emoji support with strict validation.
+		$emoji_html = Emoji::get_kses_allowed_html();
+		if ( ! \array_key_exists( 'img', $allowed_tags ) ) {
+			$allowed_tags['img'] = $emoji_html['img'];
+		}
+
+		return $allowed_tags;
+	}
+
+	/**
+	 * Remove HTML comments from content a remote server wrote.
+	 *
+	 * Block delimiters are HTML comments, and kses has no opinion about those.
+	 * `do_blocks()` then runs over the stored value -- through `the_content` for posts and
+	 * {@see \Activitypub\Comment::render_blocks()} for comments -- and core's block
+	 * supports rebuild CSS from the delimiter's own JSON. A remote
+	 * group delimiter carrying `style.background.backgroundImage.url` comes back out as
+	 * `style="background-image:url(...)"`, which is exactly what the FEP-b2b8 allowlist in
+	 * {@see Sanitize::clean_html()} drops the `style` attribute to prevent.
+	 * Dynamic blocks are the same story with their render callbacks.
+	 *
+	 * Every comment goes, not just `wp:` ones: the block parser tolerates spacing and
+	 * casing a prefix match would have to chase, and a comment carries nothing a reader
+	 * would see anyway. The plugin's own emoji and image delimiters are added after this
+	 * runs, so they are unaffected.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $content The content to strip.
+	 *
+	 * @return string The content without HTML comments.
+	 */
+	private static function strip_html_comments( $content ) {
+		// preg_replace() returns null if PCRE bails; an empty string is the safe reading.
+		return \preg_replace( '/<!--.*?-->/s', '', $content ) ?? '';
 	}
 
 	/**
@@ -333,17 +471,7 @@ class Sanitize {
 			return $content;
 		}
 
-		/*
-		 * Strip elements whose inner content is noise (scripts, styles, interactive UI, embeds).
-		 * This runs before wp_kses because wp_kses strips tags but keeps inner text,
-		 * and content inside <script>, <style>, <nav>, etc. is meaningless on its own.
-		 */
-		$strip_pattern = \implode( '|', self::STRIP_ELEMENTS );
-		$content       = \preg_replace( '@<(' . $strip_pattern . ')(?=[\s/>])[^>]*?>.*?</\\1>@si', '', $content );
-		// <option> and <optgroup> may omit their end tags, so also strip the text that follows an unclosed one.
-		$content = \preg_replace( '@<(option|optgroup)(?=[\s/>])[^>]*?>[^<]*@si', '', $content );
-		// Also catch self-closing variants (e.g. <input />, <embed />).
-		$content = \preg_replace( '@<(' . $strip_pattern . ')(?=[\s/>])[^>]*?/?>@si', '', $content );
+		$content = self::strip_elements( $content );
 
 		/**
 		 * Fires the deprecated attribute removal filter.

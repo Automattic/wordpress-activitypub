@@ -283,6 +283,81 @@ class Test_Sanitize extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that inline styles are stripped from remote content.
+	 *
+	 * `wp_kses_post()` keeps the global `style` attribute, and core's
+	 * `safecss_filter_attr()` allows `background-image:url()` for https targets.
+	 * That is a way around the media cache, which exists so the browser never
+	 * talks to a remote host while rendering federated content.
+	 *
+	 * @covers ::content
+	 */
+	public function test_content_strips_tracking_background_image() {
+		$content = '<p style="background-image:url(https://remote.example/track?src=wp)">Hello</p>';
+		$result  = Sanitize::content( $content );
+
+		$this->assertStringContainsString( 'Hello', $result );
+		$this->assertStringNotContainsString( 'style=', $result );
+		$this->assertStringNotContainsString( 'remote.example/track', $result );
+	}
+
+	/**
+	 * Test that CSS positioning cannot be used to cover the screen.
+	 *
+	 * A `position:fixed` element with a high `z-index` lets a remote actor put
+	 * their own markup over the Reader in wp-admin.
+	 *
+	 * @covers ::content
+	 */
+	public function test_content_strips_positioning_overlay() {
+		$content = '<div style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background-color:white">Session expired</div>';
+		$result  = Sanitize::content( $content );
+
+		$this->assertStringContainsString( 'Session expired', $result );
+		$this->assertStringNotContainsString( 'position:fixed', $result );
+		$this->assertStringNotContainsString( 'z-index', $result );
+	}
+
+	/**
+	 * Test that dropping `style` does not take legitimate markup with it.
+	 *
+	 * Also pins `srcset`, which core's post allowlist does not carry. Inline images
+	 * are rewrapped as `activitypub/image` blocks and the render callback only swaps
+	 * the cached URL in for `src`, so a `srcset` candidate pointing somewhere else
+	 * would be fetched from the remote host.
+	 *
+	 * @covers ::content
+	 */
+	public function test_content_keeps_formatting_without_style() {
+		$content = '<p>See <a href="https://remote.example/post" rel="nofollow">this</a> and <img src="https://remote.example/a.png" srcset="https://remote.example/track.png 2x" alt="a picture" /></p><blockquote><p>quoted</p></blockquote>';
+		$result  = Sanitize::content( $content );
+
+		$this->assertStringContainsString( 'href="https://remote.example/post"', $result );
+		$this->assertStringContainsString( 'rel="nofollow"', $result );
+		$this->assertStringContainsString( 'src="https://remote.example/a.png"', $result );
+		$this->assertStringContainsString( 'alt="a picture"', $result );
+		$this->assertStringContainsString( '<blockquote>', $result );
+		$this->assertStringNotContainsString( 'srcset', $result );
+	}
+
+	/**
+	 * Test that remote content is held to the same interactive-element policy as outgoing content.
+	 *
+	 * @covers ::content
+	 */
+	public function test_content_strips_interactive_elements() {
+		$content = '<p>Hello</p><button onclick="steal()">Press</button><dialog open>Modal</dialog><p>World</p>';
+		$result  = Sanitize::content( $content );
+
+		$this->assertStringNotContainsString( '<button', $result );
+		$this->assertStringNotContainsString( 'Press', $result );
+		$this->assertStringNotContainsString( '<dialog', $result );
+		$this->assertStringNotContainsString( 'Modal', $result );
+		$this->assertStringContainsString( 'Hello', $result );
+		$this->assertStringContainsString( 'World', $result );
+	}
+
+	/**
 	 * Data provider for strip_whitespace tests.
 	 *
 	 * @return array Test data with input and expected output.
