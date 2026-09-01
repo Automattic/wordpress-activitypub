@@ -289,6 +289,57 @@ class Sanitize {
 	}
 
 	/**
+	 * Reduce remote text to readable plain text, with real characters instead of entities.
+	 *
+	 * {@see Sanitize::text()} is the storage form: tags gone, anything tag-like left escaped.
+	 * This is the display and federation form of the same value, for the sinks that escape
+	 * what they are given (a text node, an `alt` attribute, a plain-text ActivityPub field).
+	 *
+	 * The order is the whole point. Cleaning first and decoding afterwards would hand back a
+	 * tag that kses only ever saw in its escaped form, so this decodes to a fixed point
+	 * first, then strips, then decodes the escaping that stripping reintroduced. A hostile
+	 * value can nest encodings, so the peeling is capped, and a value still changing at the
+	 * cap is returned in the stored form, which is inert as it sits.
+	 *
+	 * Never hand the result to an HTML sink: it may contain `<` and `&` as characters.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $text The text to reduce.
+	 *
+	 * @return string The text as decoded plain text.
+	 */
+	public static function decoded_text( $text ) {
+		if ( ! \is_string( $text ) ) {
+			return '';
+		}
+
+		// Ingest stores plain text, so most values carry no entity or tag character at all.
+		if ( false === \strpbrk( $text, '<&' ) ) {
+			return $text;
+		}
+
+		$encoded = $text;
+		$stable  = false;
+		for ( $i = 0; $i < 5; $i++ ) {
+			$decoded = \html_entity_decode( $text, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+
+			if ( $decoded === $text ) {
+				$stable = true;
+				break;
+			}
+
+			$text = $decoded;
+		}
+
+		if ( ! $stable ) {
+			return $encoded;
+		}
+
+		return \html_entity_decode( self::text( $text ), ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+	}
+
+	/**
 	 * Remove elements whose inner text is noise on its own.
 	 *
 	 * Shared by {@see Sanitize::clean_html()} and {@see Sanitize::text()}:

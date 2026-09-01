@@ -130,6 +130,24 @@ class Test_Attachment extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that an entity-encoded alt text is not revived into live markup on the way out.
+	 *
+	 * A remote description is stored escaped, so decoding after stripping would hand the
+	 * tag back. `name` is plain text in the JSON, and consumers treat it as such.
+	 */
+	public function test_get_attachment_alt_does_not_revive_encoded_markup() {
+		update_post_meta( self::$attachment_id, '_wp_attachment_image_alt', '&lt;img src=x onerror=alert(1)&gt;caption' );
+
+		$transformer = new Attachment( get_post( self::$attachment_id ) );
+		$reflection  = new \ReflectionMethod( Attachment::class, 'get_attachment' );
+		$reflection->setAccessible( true );
+		$result = $reflection->invoke( $transformer );
+
+		$this->assertStringNotContainsString( '<img', $result['name'] );
+		$this->assertSame( 'caption', $result['name'] );
+	}
+
+	/**
 	 * Test that alt text is decoded on the way out.
 	 *
 	 * Imported captions are stored escaped, so entities would federate literally in a

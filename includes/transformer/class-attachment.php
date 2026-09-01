@@ -7,6 +7,8 @@
 
 namespace Activitypub\Transformer;
 
+use Activitypub\Sanitize;
+
 /**
  * WordPress Attachment Transformer.
  *
@@ -52,9 +54,8 @@ class Attachment extends Post {
 
 		$alt = \get_post_meta( $this->item->ID, '_wp_attachment_image_alt', true );
 		if ( $alt ) {
-			// kses rather than strip_tags, which reads a bare `<` as an unclosed tag and drops the rest.
-			// Decoded on the way out: `name` is plain text in the JSON, so entities would federate literally.
-			$attachment['name'] = \html_entity_decode( \wp_kses( $alt, array() ), ENT_QUOTES, 'UTF-8' );
+			// `name` is plain text in the JSON, and a stored alt may already be escaped, so decode before stripping.
+			$attachment['name'] = Sanitize::decoded_text( $alt );
 		}
 
 		return $attachment;
