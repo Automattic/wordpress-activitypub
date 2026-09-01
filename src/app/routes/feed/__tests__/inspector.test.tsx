@@ -31,9 +31,9 @@ jest.mock( '@wordpress/i18n', () => ( {
 
 /*
  * `@wordpress/html-entities` and `@wordpress/dom` are deliberately NOT mocked. These tests
- * exercise the interaction between the real `decodeEntities()` and the real `safeHTML()`;
- * stubbing `decodeEntities` to the identity function, as this file used to, makes them pass
- * whether or not the behaviour is correct.
+ * pin that `rendered` fields reach `innerHTML` through the real `safeHTML()` and are never
+ * decoded on the way; stubbing either one, as this file used to, makes them pass whether or
+ * not the behaviour is correct.
  */
 
 jest.mock( '@wordpress/components', () => ( {

@@ -252,9 +252,10 @@ function get_reaction_author_name( $comment ) {
 	 * so peel one level per pass and return the inert encoded form when the cap stops
 	 * the string from settling.
 	 */
-	$stable = false;
+	$encoded = $author;
+	$stable  = false;
 	for ( $i = 0; $i < 5; $i++ ) {
-		$decoded = \html_entity_decode( $author, ENT_QUOTES );
+		$decoded = \html_entity_decode( $author, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 
 		if ( $decoded === $author ) {
 			$stable = true;
@@ -264,8 +265,12 @@ function get_reaction_author_name( $comment ) {
 		$author = $decoded;
 	}
 
+	/*
+	 * Still peeling at the cap: the last pass may have just produced live markup that
+	 * nothing has stripped yet, so hand back the stored form, which is inert as it sits.
+	 */
 	if ( ! $stable ) {
-		return $author;
+		return $encoded;
 	}
 
 	/*
@@ -277,5 +282,5 @@ function get_reaction_author_name( $comment ) {
 	 */
 	$author = Sanitize::text( $author );
 
-	return \html_entity_decode( $author, ENT_QUOTES );
+	return \html_entity_decode( $author, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 }

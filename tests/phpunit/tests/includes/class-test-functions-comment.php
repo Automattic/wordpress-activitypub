@@ -236,4 +236,25 @@ class Test_Functions_Comment extends \WP_UnitTestCase {
 		$this->assertStringNotContainsString( '<img', $name );
 		$this->assertSame( 'friends', $name );
 	}
+
+	/**
+	 * Test that nesting encodings past the decode cap never yields live markup.
+	 *
+	 * The loop peels one level per pass. A payload encoded exactly as deep as the cap
+	 * finishes decoding on the last pass, so the value must not be handed back before
+	 * it has been stripped.
+	 */
+	public function test_get_reaction_author_name_deeply_encoded_stays_inert() {
+		for ( $depth = 1; $depth <= 8; $depth++ ) {
+			$payload = '<img src=x onerror=alert(1)>friends';
+			for ( $i = 0; $i < $depth; $i++ ) {
+				$payload = \htmlspecialchars( $payload, ENT_QUOTES );
+			}
+
+			$comment_id = self::factory()->comment->create( array( 'comment_author' => $payload ) );
+			$name       = \Activitypub\get_reaction_author_name( \get_comment( $comment_id ) );
+
+			$this->assertStringNotContainsString( '<img', $name, "Depth {$depth} released live markup." );
+		}
+	}
 }

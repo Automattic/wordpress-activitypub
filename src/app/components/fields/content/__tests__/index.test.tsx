@@ -14,9 +14,9 @@ jest.mock( '@wordpress/i18n', () => ( {
 } ) );
 
 /*
- * `@wordpress/html-entities` and `@wordpress/dom` are deliberately NOT mocked. These tests
- * exercise the interaction between the real `decodeEntities()` and the real `safeHTML()`, so a
- * stubbed `decodeEntities` would make them pass whether or not the behaviour is correct.
+ * `@wordpress/dom` is deliberately NOT mocked. These tests pin that the content field renders
+ * `content.rendered` through the real `safeHTML()` without decoding it first, so a stubbed
+ * implementation would make them pass whether or not the behaviour is correct.
  */
 
 let mockObjectTypeName: string | null = 'Note';

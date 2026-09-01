@@ -254,8 +254,8 @@ class Sanitize {
 	 *
 	 * For the plain-text fields that hold remote data: post titles and summaries,
 	 * attachment captions and alt text, actor and reaction display names. The result
-	 * carries no markup and no HTML entities, so it is safe to escape at the point of
-	 * output and readable wherever it is rendered as text.
+	 * carries no markup: tags are gone and anything tag-like is left escaped, so it is
+	 * safe to hand to a text sink, which escapes it once more.
 	 *
 	 * kses with an empty allowlist is the tag remover here, because neither of the
 	 * shorter options survives remote input:

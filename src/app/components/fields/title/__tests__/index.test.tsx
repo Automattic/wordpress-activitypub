@@ -33,10 +33,10 @@ describe( 'titleField', () => {
 	} );
 
 	/*
-	 * This component decodes entities and unescapes backslashes, which would both be
-	 * unsafe if the result were ever handed to `dangerouslySetInnerHTML`. It is safe
-	 * only because React escapes children as text. Pin that invariant so a refactor to
-	 * innerHTML breaks CI instead of shipping.
+	 * This component decodes entities, which would be unsafe if the result were ever
+	 * handed to `dangerouslySetInnerHTML`. It is safe only because React escapes
+	 * children as text. Pin that invariant so a refactor to innerHTML breaks CI
+	 * instead of shipping. Backslashes are left untouched, asserted below.
 	 */
 	it( 'escapes markup rather than rendering it', () => {
 		const container = renderTitle(
