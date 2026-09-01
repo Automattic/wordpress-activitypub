@@ -10,7 +10,6 @@ namespace Activitypub\Collection;
 use Activitypub\Emoji;
 use Activitypub\Sanitize;
 
-use function Activitypub\generate_post_summary;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
@@ -340,10 +339,16 @@ class Remote_Posts {
 		$attachments = self::extract_attachments( $activity );
 		$content     = process_remote_media( $content, $attachments );
 
+		/*
+		 * Slashed on the way out: wp_insert_post() and wp_update_post() both unslash what
+		 * they are given, so an unslashed remote title like `C:\Users\foo` would be stored
+		 * as `C:Usersfoo`. Remote_Actors::prepare_custom_post_type() slashes for the same
+		 * reason.
+		 */
 		return array(
-			'post_title'    => isset( $activity['name'] ) ? \wp_strip_all_tags( $activity['name'] ) : '',
-			'post_content'  => $content,
-			'post_excerpt'  => isset( $activity['summary'] ) ? \wp_strip_all_tags( $activity['summary'] ) : generate_post_summary( $activity['content'] ?? '' ),
+			'post_title'    => \is_string( $activity['name'] ?? null ) ? \wp_slash( \wp_strip_all_tags( $activity['name'] ) ) : '',
+			'post_content'  => \wp_slash( $content ),
+			'post_excerpt'  => \wp_slash( \is_string( $activity['summary'] ?? null ) ? \wp_strip_all_tags( $activity['summary'] ) : \wp_trim_words( $content, 55 ) ),
 			'post_status'   => 'publish',
 			'post_type'     => self::POST_TYPE,
 			'post_date_gmt' => $gm_date,
@@ -407,7 +412,8 @@ class Remote_Posts {
 
 			$attachments[] = array(
 				'url'  => $attachment['url'],
-				'alt'  => $attachment['name'] ?? '',
+				// Same treatment the import path gives this field: remote JSON can hand us an array.
+				'alt'  => \is_string( $attachment['name'] ?? null ) ? \wp_strip_all_tags( $attachment['name'] ) : '',
 				'type' => $type,
 			);
 		}

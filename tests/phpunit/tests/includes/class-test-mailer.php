@@ -619,7 +619,7 @@ class Test_Mailer extends WP_UnitTestCase {
 		return array(
 			'HTML entities' => array(
 				json_decode( '"<p>Interesting story from <span class=\"h-card\" translate=\"no\"><a href=\"https:\/\/example.com\/@test\" class=\"u-url mention\">@<span>test<\/span><\/a><\/span> about people who don&#39;t own their own domain.<\/p><p>&quot;This is not a new issue, of course, but Service\u2019s implementation shows limitations.&quot;<\/p>"' ),
-				'<p>Interesting story from <span class="h-card"><a href="https://example.com/@test" class="u-url mention">@<span>test</span></a></span> about people who don&#039;t own their own domain.</p><p>&quot;This is not a new issue, of course, but Service’s implementation shows limitations.&quot;</p>',
+				'<p>Interesting story from <span class="h-card"><a href="https://example.com/@test" class="u-url mention">@<span>test</span></a></span> about people who don&#039;t own their own domain.</p> <p>&quot;This is not a new issue, of course, but Service’s implementation shows limitations.&quot;</p>',
 			),
 			'invalid HTML'  => array(
 				json_decode( '"<ptest"' ),

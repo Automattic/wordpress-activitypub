@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Imported Mastodon replies now have unsafe HTML removed before they are saved as comments.
