@@ -403,7 +403,7 @@ class Test_Attachments extends \WP_UnitTestCase {
 		$attachment = \get_post( $result[0] );
 		$alt        = \get_post_meta( $result[0], '_wp_attachment_image_alt', true );
 
-		// strip_tags() reads the bare `<` as an unclosed tag, a known core limitation we accept.
+		// strip_tags() reads the bare `<` as a tag opener, a known core limitation we accept.
 		$this->assertSame( 'A', $attachment->post_title );
 		$this->assertSame( 'A', $alt );
 	}

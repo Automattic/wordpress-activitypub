@@ -12,7 +12,6 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Replies;
 use Activitypub\Model\Blog;
-use Activitypub\Sanitize;
 use Activitypub\Shortcodes;
 
 use function Activitypub\esc_hashtag;
@@ -327,7 +326,7 @@ class Post extends Base {
 
 		$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
 		if ( $alt ) {
-			$image['name'] = Sanitize::text( $alt );
+			$image['name'] = \wp_strip_all_tags( \html_entity_decode( $alt, ENT_QUOTES, 'UTF-8' ) );
 		}
 
 		return $image;
@@ -383,7 +382,7 @@ class Post extends Base {
 
 		$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
 		if ( $alt ) {
-			$image['name'] = Sanitize::text( $alt );
+			$image['name'] = \wp_strip_all_tags( \html_entity_decode( $alt, ENT_QUOTES, 'UTF-8' ) );
 		}
 
 		return $image;

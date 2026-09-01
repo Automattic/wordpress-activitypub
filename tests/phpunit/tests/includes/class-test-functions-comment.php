@@ -218,8 +218,8 @@ class Test_Functions_Comment extends \WP_UnitTestCase {
 		// The factory inserts through wp_insert_comment(), which bypasses the `pre_` filter chain.
 		$comment_id = self::factory()->comment->create( array( 'comment_author' => '<img src=x onerror=alert(1)>&amp;friends' ) );
 
-		// The tag goes; the entity is left exactly as stored, for the sink to render.
-		$this->assertSame( '&amp;friends', \Activitypub\get_reaction_author_name( \get_comment( $comment_id ) ) );
+		// The tag goes and the entity is decoded, because the sinks that render this escape it again.
+		$this->assertSame( '&friends', \Activitypub\get_reaction_author_name( \get_comment( $comment_id ) ) );
 	}
 
 	/**
@@ -233,8 +233,8 @@ class Test_Functions_Comment extends \WP_UnitTestCase {
 
 		$name = \Activitypub\get_reaction_author_name( \get_comment( $comment_id ) );
 
-		// Nothing decodes, so the escaped tag stays escaped instead of coming back to life.
+		// Decoding happens first and stripping second, so the revived tag is removed, not returned.
 		$this->assertStringNotContainsString( '<img', $name );
-		$this->assertSame( '&lt;img src=x onerror=alert(1)&gt;friends', $name );
+		$this->assertSame( 'friends', $name );
 	}
 }

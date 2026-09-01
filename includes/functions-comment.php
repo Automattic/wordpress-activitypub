@@ -230,7 +230,6 @@ function get_reply_intent_url() {
  *
  * `wp_insert_comment()` callers bypass core's `pre_comment_author_name` chain, so the
  * column is not guaranteed tag-free, which is why this cleans rather than just reads.
- * Nothing is decoded: an escaped tag stays escaped.
  *
  * @since unreleased
  *
@@ -240,5 +239,7 @@ function get_reply_intent_url() {
  *                so it is safe for a text sink only, never for HTML.
  */
 function get_reaction_author_name( $comment ) {
-	return Sanitize::text( $comment->comment_author );
+	// Core stores this column entity-escaped, so decode for the text sinks; stripping after the
+	// decode is what keeps an encoded tag from coming back to life.
+	return \wp_strip_all_tags( \html_entity_decode( $comment->comment_author, ENT_QUOTES, 'UTF-8' ) );
 }

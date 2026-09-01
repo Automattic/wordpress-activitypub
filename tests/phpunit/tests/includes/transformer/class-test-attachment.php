@@ -143,12 +143,13 @@ class Test_Attachment extends WP_UnitTestCase {
 		$reflection->setAccessible( true );
 		$result = $reflection->invoke( $transformer );
 
+		// Decode first, strip second: the revived tag is removed rather than federated.
 		$this->assertStringNotContainsString( '<img', $result['name'] );
-		$this->assertSame( '&lt;img src=x onerror=alert(1)&gt;caption', $result['name'] );
+		$this->assertSame( 'caption', $result['name'] );
 	}
 
 	/**
-	 * Test that alt text is not decoded on the way out.
+	 * Test that alt text is decoded on the way out, and stripped after the decode.
 	 *
 	 * Imported captions are stored escaped, so entities would federate literally in a
 	 * field that is plain text in the JSON. Transformer\Post already decodes this same
@@ -156,15 +157,16 @@ class Test_Attachment extends WP_UnitTestCase {
 	 *
 	 * @covers ::get_attachment
 	 */
-	public function test_get_attachment_does_not_decode_alt() {
+	public function test_get_attachment_decodes_alt() {
 		update_post_meta( self::$attachment_id, '_wp_attachment_image_alt', 'A &lt;3 shape &amp; more' );
 
 		$attachment  = get_post( self::$attachment_id );
 		$transformer = new Attachment( $attachment );
 		$result      = $this->get_protected_method( $transformer, 'get_attachment' );
 
-		// Nothing is decoded on the way out, so an escaped alt federates exactly as stored.
-		$this->assertEquals( 'A &lt;3 shape &amp; more', $result['name'] );
+		// `name` is plain text in the JSON, so stored entities are decoded on the way out. The
+		// decoded `<3` then reads as a tag to strip_tags(), so the tail goes with it.
+		$this->assertEquals( 'A', $result['name'] );
 	}
 
 	/**

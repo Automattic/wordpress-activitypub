@@ -11,7 +11,6 @@ use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Http;
-use Activitypub\Sanitize;
 
 use function Activitypub\get_upload_baseurl;
 use function Activitypub\object_to_uri;
@@ -534,11 +533,11 @@ abstract class Base {
 					);
 
 					if ( ! empty( $media['alt'] ) ) {
-						$image['name'] = Sanitize::text( $media['alt'] );
+						$image['name'] = \wp_strip_all_tags( $media['alt'] );
 					} else {
 						$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
 						if ( $alt ) {
-							$image['name'] = Sanitize::text( $alt );
+							$image['name'] = \wp_strip_all_tags( \html_entity_decode( $alt, ENT_QUOTES, 'UTF-8' ) );
 						}
 					}
 

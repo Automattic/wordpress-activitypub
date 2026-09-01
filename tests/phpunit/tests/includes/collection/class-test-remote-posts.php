@@ -540,9 +540,8 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	/**
 	 * Test that a title or summary containing a bare `<` is truncated there.
 	 *
-	 * `wp_strip_all_tags()` hands the string to PHP's `strip_tags()`, which reads a bare
-	 * `<` as the start of a tag that never closes and drops the rest with it, so
-	 * "A <3 shape" becomes "A". A known limitation of the core function we rely on.
+	 * `wp_strip_all_tags()` reads the bare `<` as a tag opener and drops the rest of the
+	 * string with it. A known limitation of the core function we rely on.
 	 *
 	 * @covers ::activity_to_post
 	 */
@@ -558,7 +557,6 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 
 		$result = $this->invoke_activity_to_post( $activity );
 
-		// strip_tags() reads the bare `<` as an unclosed tag, a known core limitation we accept.
 		$this->assertSame( 'A', $result['post_title'] );
 		$this->assertSame( 'Rated', $result['post_excerpt'] );
 	}
