@@ -116,6 +116,20 @@ class Test_Attachment extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that alt text with a bare `<` is not truncated on the way out.
+	 */
+	public function test_get_attachment_with_alt_keeps_bare_less_than() {
+		update_post_meta( self::$attachment_id, '_wp_attachment_image_alt', 'I <3 cats' );
+
+		$transformer = new Attachment( get_post( self::$attachment_id ) );
+		$reflection  = new \ReflectionMethod( Attachment::class, 'get_attachment' );
+		$reflection->setAccessible( true );
+		$result = $reflection->invoke( $transformer );
+
+		$this->assertEquals( 'I <3 cats', $result['name'] );
+	}
+
+	/**
 	 * Test that alt text is decoded on the way out.
 	 *
 	 * Imported captions are stored escaped, so entities would federate literally in a

@@ -239,11 +239,43 @@ function get_reply_intent_url() {
  *                so it is safe for a text sink only, never for HTML.
  */
 function get_reaction_author_name( $comment ) {
+	$author = $comment->comment_author;
+
+	// Fast path: ingest stores plain text now, so most names carry no entity or tag character.
+	if ( false === \strpbrk( $author, '<&' ) ) {
+		return $author;
+	}
+
 	/*
-	 * Cleaned first, then decoded for display. Both consumers bind this as text only --
-	 * `data-wp-text` and `data-wp-bind--alt|title` in the block, a React child and `alt`
-	 * in the editor preview -- so a decoded value is escaped by the sink and entities
-	 * would otherwise show up literally. Do not reuse this for an HTML sink.
+	 * Fully decode before stripping: cleaning alone keeps valid entities, so decoding
+	 * afterwards would revive an entity-encoded tag. A hostile name can nest encodings,
+	 * so peel one level per pass and return the inert encoded form when the cap stops
+	 * the string from settling.
 	 */
-	return \html_entity_decode( Sanitize::clean_remote_text( $comment->comment_author ), ENT_QUOTES );
+	$stable = false;
+	for ( $i = 0; $i < 5; $i++ ) {
+		$decoded = \html_entity_decode( $author, ENT_QUOTES );
+
+		if ( $decoded === $author ) {
+			$stable = true;
+			break;
+		}
+
+		$author = $decoded;
+	}
+
+	if ( ! $stable ) {
+		return $author;
+	}
+
+	/*
+	 * Cleaning removes the now-literal tags (and noise-element content) and re-encodes a stray `<` or `&`; decode that
+	 * re-encoding once more, because both consumers bind this as text only --
+	 * `data-wp-text` and `data-wp-bind--alt|title` in the block, a React child and `alt`
+	 * in the editor preview -- so the sink escapes it and entities would otherwise show
+	 * up literally. Do not reuse this for an HTML sink.
+	 */
+	$author = Sanitize::clean_remote_text( $author );
+
+	return \html_entity_decode( $author, ENT_QUOTES );
 }

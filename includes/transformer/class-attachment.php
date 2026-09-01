@@ -52,9 +52,9 @@ class Attachment extends Post {
 
 		$alt = \get_post_meta( $this->item->ID, '_wp_attachment_image_alt', true );
 		if ( $alt ) {
-			// Decoded on the way out, the same as Transformer\Post does for this field:
-			// `name` is plain text in the JSON, so entities would federate literally.
-			$attachment['name'] = \html_entity_decode( \wp_strip_all_tags( $alt ), ENT_QUOTES, 'UTF-8' );
+			// kses rather than strip_tags, which reads a bare `<` as an unclosed tag and drops the rest.
+			// Decoded on the way out: `name` is plain text in the JSON, so entities would federate literally.
+			$attachment['name'] = \html_entity_decode( \wp_kses( $alt, array() ), ENT_QUOTES, 'UTF-8' );
 		}
 
 		return $attachment;

@@ -10,7 +10,6 @@ namespace Activitypub\Collection;
 use Activitypub\Emoji;
 use Activitypub\Sanitize;
 
-use function Activitypub\generate_post_summary;
 use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
@@ -349,7 +348,7 @@ class Remote_Posts {
 		return array(
 			'post_title'    => isset( $activity['name'] ) ? \wp_slash( Sanitize::clean_remote_text( $activity['name'] ) ) : '',
 			'post_content'  => \wp_slash( $content ),
-			'post_excerpt'  => \wp_slash( isset( $activity['summary'] ) ? Sanitize::clean_remote_text( $activity['summary'] ) : generate_post_summary( $activity['content'] ?? '' ) ),
+			'post_excerpt'  => \wp_slash( isset( $activity['summary'] ) ? Sanitize::clean_remote_text( $activity['summary'] ) : \wp_trim_words( Sanitize::clean_remote_text( $activity['content'] ?? '' ), 55 ) ),
 			'post_status'   => 'publish',
 			'post_type'     => self::POST_TYPE,
 			'post_date_gmt' => $gm_date,

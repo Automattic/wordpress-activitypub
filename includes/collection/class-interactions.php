@@ -391,22 +391,7 @@ class Interactions {
 			return $allowed_tags;
 		}
 
-		// Add `p` and `br` to the list of allowed tags.
-		if ( ! \array_key_exists( 'br', $allowed_tags ) ) {
-			$allowed_tags['br'] = array();
-		}
-
-		if ( ! \array_key_exists( 'p', $allowed_tags ) ) {
-			$allowed_tags['p'] = array();
-		}
-
-		// Add `img` for custom emoji support with strict validation.
-		$emoji_html = Emoji::get_kses_allowed_html();
-		if ( ! \array_key_exists( 'img', $allowed_tags ) ) {
-			$allowed_tags['img'] = $emoji_html['img'];
-		}
-
-		return $allowed_tags;
+		return Sanitize::get_allowed_remote_comment_html( $allowed_tags );
 	}
 
 	/**

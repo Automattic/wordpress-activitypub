@@ -221,4 +221,19 @@ class Test_Functions_Comment extends \WP_UnitTestCase {
 
 		$this->assertSame( '&friends', \Activitypub\get_reaction_author_name( \get_comment( $comment_id ) ) );
 	}
+
+	/**
+	 * Test that an entity-encoded pseudo-tag is not revived into a live tag string.
+	 *
+	 * The name reaches REST consumers and the block's Interactivity state, so decoding
+	 * must never hand back a tag that cleaning saw only in its escaped form.
+	 */
+	public function test_get_reaction_author_name_strips_revived_tags() {
+		$comment_id = self::factory()->comment->create( array( 'comment_author' => '&lt;img src=x onerror=alert(1)&gt;friends' ) );
+
+		$name = \Activitypub\get_reaction_author_name( \get_comment( $comment_id ) );
+
+		$this->assertStringNotContainsString( '<img', $name );
+		$this->assertSame( 'friends', $name );
+	}
 }

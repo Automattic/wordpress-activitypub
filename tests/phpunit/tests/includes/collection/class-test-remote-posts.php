@@ -493,6 +493,51 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a missing summary falls back to an excerpt built from the content.
+	 *
+	 * @covers ::activity_to_post
+	 */
+	public function test_activity_to_post_builds_excerpt_from_content() {
+		$activity = array(
+			'id'        => 'https://example.com/objects/no-summary',
+			'type'      => 'Note',
+			'content'   => '<p>Hello federated world</p>',
+			'published' => '2023-01-01T12:00:00Z',
+		);
+
+		$method = new \ReflectionMethod( Remote_Posts::class, 'activity_to_post' );
+		$method->setAccessible( true );
+		$result = $method->invoke( null, $activity );
+
+		$this->assertStringContainsString( 'Hello federated world', $result['post_excerpt'] );
+	}
+
+	/**
+	 * Test that an empty content fallback does not read the global post's excerpt.
+	 *
+	 * @covers ::activity_to_post
+	 */
+	public function test_activity_to_post_does_not_leak_global_post_excerpt() {
+		$local_post      = self::factory()->post->create_and_get( array( 'post_excerpt' => 'LOCAL EXCERPT' ) );
+		$GLOBALS['post'] = $local_post;
+
+		$activity = array(
+			'id'        => 'https://example.com/objects/empty-content',
+			'type'      => 'Note',
+			'content'   => '',
+			'published' => '2023-01-01T12:00:00Z',
+		);
+
+		$method = new \ReflectionMethod( Remote_Posts::class, 'activity_to_post' );
+		$method->setAccessible( true );
+		$result = $method->invoke( null, $activity );
+
+		unset( $GLOBALS['post'] );
+
+		$this->assertStringNotContainsString( 'LOCAL EXCERPT', $result['post_excerpt'] );
+	}
+
+	/**
 	 * Test that a title or summary containing a bare `<` keeps its text.
 	 *
 	 * `wp_strip_all_tags()` hands the string to PHP's `strip_tags()`, which reads a bare
@@ -620,9 +665,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 		$this->assertIsArray( $result );
 		$this->assertEquals( '', $result['post_title'] );
 		$this->assertStringContainsString( 'Minimal content', $result['post_content'] );
-		// Note: generate_post_summary() expects a WP_Post object, so passing $activity['content']
-		// returns empty. WordPress will auto-generate the excerpt from content after post creation.
-		$this->assertEquals( '', $result['post_excerpt'] );
+		$this->assertStringContainsString( 'Minimal content', $result['post_excerpt'] );
 		$this->assertEquals( Remote_Posts::POST_TYPE, $result['post_type'] );
 		$this->assertEquals( 'publish', $result['post_status'] );
 	}

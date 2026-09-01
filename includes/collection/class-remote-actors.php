@@ -258,6 +258,12 @@ class Remote_Actors {
 		$conditions = 'p.post_title LIKE %s OR acct.meta_value LIKE %s';
 		$params     = array( self::POST_TYPE, $like, $like );
 
+		// Names are stored entity-escaped since the remote-content sanitization; rows cached earlier keep the raw spelling, so match both.
+		if ( \esc_html( $query ) !== $query ) {
+			$conditions .= ' OR p.post_title LIKE %s';
+			$params[]    = '%' . $wpdb->esc_like( \esc_html( $query ) ) . '%';
+		}
+
 		// Match the actor URI only for URL-like queries, so short terms don't match every https:// guid.
 		if ( \str_contains( $query, '://' ) ) {
 			$conditions .= ' OR p.guid LIKE %s';

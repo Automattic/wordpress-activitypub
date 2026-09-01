@@ -47,7 +47,7 @@ $args = wp_parse_args(
 		<?php endif; ?>
 
 		<?php if ( $args['content'] ) : ?>
-			<div class="ap-subtitle p-summary e-content"><?php echo \wp_kses_post( $args['content'] ); ?></div>
+			<div class="ap-subtitle p-summary e-content"><?php echo \Activitypub\Sanitize::clean_remote_html( $args['content'] ); ?></div>
 		<?php endif; ?>
 
 		<?php if ( $args['images'] ) : ?>

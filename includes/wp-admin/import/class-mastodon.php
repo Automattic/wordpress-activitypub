@@ -421,7 +421,7 @@ class Mastodon {
 		$post_data = array(
 			'post_author'  => self::$author,
 			'post_date'    => $post['published'],
-			'post_excerpt' => Sanitize::clean_remote_html( $post['object']['summary'] ?? '' ),
+			'post_excerpt' => Sanitize::clean_remote_text( $post['object']['summary'] ?? '' ),
 			'post_content' => Sanitize::clean_remote_html( $post['object']['content'] ),
 			'post_status'  => 'publish',
 			'post_type'    => 'post',

@@ -87,7 +87,7 @@ require __DIR__ . '/parts/header.php';
 			<h2><?php echo esc_html( $args['name'] ); ?> <small style="font-size: 14px; color: #666;"><?php echo esc_html( $args['webfinger'] ); ?></small></h2>
 
 			<?php if ( ! empty( $args['summary'] ) ) : ?>
-				<p><?php echo wp_kses_post( nl2br( $args['summary'] ) ); ?></p>
+				<p><?php echo wp_kses( nl2br( $args['summary'] ), array_merge( wp_kses_allowed_html( 'user_description' ), array( 'br' => array() ) ) ); ?></p>
 			<?php endif; ?>
 
 			<?php if ( isset( $args['stats']['outbox'] ) || isset( $args['stats']['followers'] ) || isset( $args['stats']['following'] ) ) : ?>

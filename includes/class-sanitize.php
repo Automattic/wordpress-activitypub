@@ -7,7 +7,6 @@
 
 namespace Activitypub;
 
-use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Model\Blog;
 
@@ -390,9 +389,44 @@ class Sanitize {
 			return '';
 		}
 
-		$allowed_html = Interactions::allowed_comment_html( \wp_kses_allowed_html( 'pre_comment_content' ), 'pre_comment_content' );
+		return \wp_kses( self::strip_comments( $content ), self::get_allowed_remote_comment_html(), \wp_allowed_protocols() );
+	}
 
-		return \wp_kses( self::strip_comments( $content ), $allowed_html, \wp_allowed_protocols() );
+	/**
+	 * Returns the allowed HTML for remote comment content.
+	 *
+	 * The `pre_comment_content` allowlist plus `p`, `br` and the strict emoji `img`.
+	 * {@see \Activitypub\Collection\Interactions::allowed_comment_html()} applies the
+	 * same additions on the `wp_kses_allowed_html` filter and delegates here, so the
+	 * filter and the direct call cannot drift.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array|null $allowed_tags Optional. Allowlist to extend. Default the `pre_comment_content` context.
+	 *
+	 * @return array The allowed HTML structure for wp_kses.
+	 */
+	public static function get_allowed_remote_comment_html( $allowed_tags = null ) {
+		if ( null === $allowed_tags ) {
+			$allowed_tags = \wp_kses_allowed_html( 'pre_comment_content' );
+		}
+
+		// Add `p` and `br` to the list of allowed tags.
+		if ( ! \array_key_exists( 'br', $allowed_tags ) ) {
+			$allowed_tags['br'] = array();
+		}
+
+		if ( ! \array_key_exists( 'p', $allowed_tags ) ) {
+			$allowed_tags['p'] = array();
+		}
+
+		// Add `img` for custom emoji support with strict validation.
+		$emoji_html = Emoji::get_kses_allowed_html();
+		if ( ! \array_key_exists( 'img', $allowed_tags ) ) {
+			$allowed_tags['img'] = $emoji_html['img'];
+		}
+
+		return $allowed_tags;
 	}
 
 	/**
