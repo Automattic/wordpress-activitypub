@@ -397,6 +397,16 @@ class Webfinger {
 
 			$template = \trim( $link['template'] );
 
+			/*
+			 * A scheme check alone would pass `//host`, `/path`, `https:///path` and the empty
+			 * string: with no colon there is nothing for `wp_kses_bad_protocol()` to strip, so the
+			 * comparison below always matches. An accepted junk template is also stored under its
+			 * rel, which stops the OStatus and FEP-3b86 fallbacks from ever being reached.
+			 */
+			if ( ! get_url_authority( $template ) ) {
+				continue;
+			}
+
 			// The list is explicit: the `wp_allowed_protocols()` default is wider and filterable.
 			$allowed = \wp_kses_bad_protocol( $template, array( 'http', 'https' ) );
 

@@ -155,8 +155,12 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 				// Set opening state.
 				context.isLoading = false;
 
-				// `url` is `template` with `{uri}` filled in, so this one check covers the persisted `template` too.
-				if ( ! isSafeUrl( url ) ) {
+				/*
+				 * `template` is checked separately: `{uri}` may sit at the start, so a safe `url`
+				 * does not imply a safe `template`, and `template` is what gets persisted and
+				 * bound to an href.
+				 */
+				if ( ! isSafeUrl( url ) || ! isSafeUrl( template ) ) {
 					context.isError = true;
 					context.errorMessage = i18n.genericError;
 					return;

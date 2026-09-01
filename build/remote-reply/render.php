@@ -137,7 +137,6 @@ ob_start();
 	</div>
 	<div
 		class="activitypub-dialog__error"
-		data-wp-bind--hidden="!context.isError"
 		data-wp-text="context.errorMessage"
 		id="<?php echo esc_attr( $error_id ); ?>"
 		role="alert"
