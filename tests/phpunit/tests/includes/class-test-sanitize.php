@@ -428,6 +428,31 @@ class Test_Sanitize extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a remote shortcode does not execute when the stored content renders.
+	 *
+	 * `do_shortcode()` runs on `the_content` after kses, the same way `do_blocks()` does,
+	 * so a shortcode left intact would be expanded by whatever the reader renders.
+	 *
+	 * @covers ::content
+	 */
+	public function test_content_defuses_shortcodes() {
+		\add_shortcode(
+			'activitypub_test_sc',
+			static function () {
+				return 'SHORTCODE_EXECUTED';
+			}
+		);
+
+		$sanitized = Sanitize::content( '<p>hello [activitypub_test_sc] world</p>' );
+		$rendered  = \apply_filters( 'the_content', $sanitized );
+
+		\remove_shortcode( 'activitypub_test_sc' );
+
+		$this->assertStringNotContainsString( 'SHORTCODE_EXECUTED', $rendered );
+		$this->assertStringContainsString( 'hello', $rendered );
+	}
+
+	/**
 	 * Test that a remote comment cannot smuggle a block delimiter either.
 	 *
 	 * `Comment::render_blocks()` runs `do_blocks()` on `comment_text`, and comments render

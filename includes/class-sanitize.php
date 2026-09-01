@@ -397,8 +397,15 @@ class Sanitize {
 		}
 
 		$content = \wpautop( $content );
+		$content = self::clean_html( self::strip_html_comments( $content ) );
 
-		return self::clean_html( self::strip_html_comments( $content ) );
+		/*
+		 * `do_shortcode()` runs on `the_content` right after `do_blocks()`, so a remote
+		 * `[gallery]` would reach a local shortcode's render callback the same way a block
+		 * delimiter would reach the block parser. Encoding the opening bracket leaves the
+		 * text looking identical to a reader and unparseable to the shortcode regex.
+		 */
+		return \str_replace( '[', '&#91;', $content );
 	}
 
 	/**
