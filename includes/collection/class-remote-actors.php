@@ -254,14 +254,14 @@ class Remote_Actors {
 	public static function search( $query, $number = 10 ) {
 		global $wpdb;
 
-		$like       = \sprintf( '%%%s%%', $wpdb->esc_like( $query ) );
+		$like       = '%' . $wpdb->esc_like( $query ) . '%';
 		$conditions = 'p.post_title LIKE %s OR acct.meta_value LIKE %s';
 		$params     = array( self::POST_TYPE, $like, $like );
 
 		// Names are stored entity-escaped since the remote-content sanitization; rows cached earlier keep the raw spelling, so match both.
 		if ( \esc_html( $query ) !== $query ) {
 			$conditions .= ' OR p.post_title LIKE %s';
-			$params[]    = \sprintf( '%%%s%%', $wpdb->esc_like( \esc_html( $query ) ) );
+			$params[]    = '%' . $wpdb->esc_like( \esc_html( $query ) ) . '%';
 		}
 
 		// Match the actor URI only for URL-like queries, so short terms don't match every https:// guid.
