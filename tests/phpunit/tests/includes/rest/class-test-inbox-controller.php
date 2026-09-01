@@ -2132,4 +2132,51 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 			\wp_delete_post( $post_id, true );
 		}
 	}
+
+	/**
+	 * The shared inbox must guard the activity id the same way the per-actor inbox does.
+	 *
+	 * Deliveries here name their own recipients in the addressing, so an activity filed under
+	 * another host's id would be the cheapest way to reach many local actors at once.
+	 *
+	 * @covers ::verify_activity_id
+	 */
+	public function test_shared_inbox_rejects_activity_id_on_a_foreign_host() {
+		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'id'    => 'https://victim.example/activities/known-id',
+					'type'  => 'Create',
+					'actor' => 'https://attacker.example/users/mallory',
+					'to'    => array( Actors::get_by_id( self::$user_id )->get_id() ),
+				)
+			)
+		);
+
+		$method = new \ReflectionMethod( $this->inbox_controller, 'verify_activity_id' );
+		$method->setAccessible( true );
+		$result = $method->invoke( $this->inbox_controller, $request );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_activity_id_mismatch', $result->get_error_code() );
+	}
+
+	/**
+	 * The shared inbox POST route must run the signature checks that carry the id guard.
+	 */
+	public function test_shared_inbox_post_route_verifies_signature() {
+		$routes    = \rest_get_server()->get_routes();
+		$callbacks = array();
+
+		foreach ( $routes['/activitypub/1.0/inbox'] as $handler ) {
+			if ( empty( $handler['methods']['POST'] ) ) {
+				continue;
+			}
+			$callbacks[] = $handler['permission_callback'][1];
+		}
+
+		$this->assertSame( array( 'verify_signature' ), $callbacks );
+	}
 }

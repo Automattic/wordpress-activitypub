@@ -86,6 +86,55 @@ trait Verification {
 			if ( \is_wp_error( $key_id_check ) ) {
 				return $key_id_check;
 			}
+
+			// Verify the activity is filed under an id its actor's host owns.
+			$activity_id_check = $this->verify_activity_id( $request );
+			if ( \is_wp_error( $activity_id_check ) ) {
+				return $activity_id_check;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Check that the activity id and the activity actor share the same host.
+	 *
+	 * Incoming activities are stored and looked up under their own `id`, so an activity whose id
+	 * points at another host can claim an entry that host owns: a later delivery of the genuine
+	 * activity is then folded into the impostor's entry instead of creating its own, and the
+	 * recipients of either one end up attached to the wrong actor's payload.
+	 *
+	 * The HTTP signature binds the signing key to the `actor`, never to the `id`, so a valid
+	 * signer can otherwise put any host's id in the body. This is the only place the two are tied
+	 * together. {@see \Activitypub\Collection\Interactions::add_reaction()} and
+	 * {@see \Activitypub\Collection\Remote_Posts::add()} apply the same rule further in, to the
+	 * reaction id and the object id.
+	 *
+	 * Passes when the body carries no id or no actor. An authorized-fetch GET has neither, and a
+	 * body missing either field is rejected by the route's own argument validation, which runs
+	 * after the permission callback.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 * @return true|\WP_Error True if valid, WP_Error on mismatch.
+	 */
+	private function verify_activity_id( $request ) {
+		$json  = $request->get_json_params();
+		$id    = isset( $json['id'] ) ? object_to_uri( $json['id'] ) : null;
+		$actor = isset( $json['actor'] ) ? object_to_uri( $json['actor'] ) : null;
+
+		if ( ! $id || ! $actor ) {
+			return true;
+		}
+
+		if ( ! is_same_host( $id, $actor ) ) {
+			return new \WP_Error(
+				'activitypub_activity_id_mismatch',
+				\__( 'Activity id and activity actor must be on the same host.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
 		}
 
 		return true;

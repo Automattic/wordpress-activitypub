@@ -12,6 +12,7 @@ use Activitypub\Activity\Base_Object;
 use Activitypub\Comment;
 
 use function Activitypub\is_activity_public;
+use function Activitypub\is_same_actor;
 use function Activitypub\object_to_uri;
 
 /**
@@ -93,6 +94,21 @@ class Inbox {
 
 		// If activity exists, add new recipients to it.
 		if ( $existing instanceof \WP_Post ) {
+			$stored_actor = \get_post_meta( $existing->ID, '_activitypub_activity_remote_actor', true );
+
+			/*
+			 * An id identifies one actor's activity. Merging a delivery from a different actor
+			 * into it would hand that actor's recipients the stored payload, which is not the one
+			 * they were sent. Items stored before this meta existed have nothing to compare.
+			 */
+			if ( $stored_actor && ! is_same_actor( $stored_actor, $activity->get_actor() ) ) {
+				return new \WP_Error(
+					'activitypub_inbox_actor_mismatch',
+					'Activity id already belongs to another actor',
+					array( 'status' => 403 )
+				);
+			}
+
 			foreach ( $recipients as $user_id ) {
 				self::add_recipient( $existing->ID, $user_id );
 			}
@@ -505,11 +521,23 @@ class Inbox {
 		}
 
 		// Keep the first (oldest) post as primary.
-		$primary_id = \array_shift( $post_ids );
-		$primary    = \get_post( $primary_id );
+		$primary_id    = \array_shift( $post_ids );
+		$primary       = \get_post( $primary_id );
+		$primary_actor = \get_post_meta( $primary_id, '_activitypub_activity_remote_actor', true );
 
 		// Merge recipients from duplicates into primary and delete duplicates.
 		foreach ( $post_ids as $duplicate_id ) {
+			$duplicate_actor = \get_post_meta( $duplicate_id, '_activitypub_activity_remote_actor', true );
+
+			/*
+			 * Rows sharing an id but not an actor are not the race this resolves. Left in place
+			 * rather than deleted: whichever one is the impostor, deleting it here would let the
+			 * other actor decide, and the purge clears both in time anyway.
+			 */
+			if ( $primary_actor && $duplicate_actor && ! is_same_actor( $primary_actor, $duplicate_actor ) ) {
+				continue;
+			}
+
 			$recipients = \get_post_meta( $duplicate_id, '_activitypub_user_id', false );
 			self::add_recipients( $primary_id, $recipients );
 			\wp_delete_post( $duplicate_id, true );
