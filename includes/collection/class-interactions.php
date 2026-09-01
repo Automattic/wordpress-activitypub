@@ -419,8 +419,8 @@ class Interactions {
 			$comment_author       = $user->display_name;
 			$comment_author_url   = $user->user_url;
 			$comment_author_email = $user->user_email;
-			// Slashed like the remote branch: wp_new_comment() unslashes what it is given.
-			$comment_content = \addslashes( \wp_kses_post( $activity['object']['content'] ?? '' ) );
+			// Same gate and slashing as the remote branch: one policy for the column, whatever wrote it.
+			$comment_content = \addslashes( Sanitize::comment_content( $activity['object']['content'] ?? '' ) );
 		} else {
 			// S2S: resolve author from remote actor metadata.
 			$actor = object_to_uri( $activity['actor'] ?? null );
