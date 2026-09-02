@@ -13,7 +13,7 @@ namespace Activitypub\Signature;
 
 use Activitypub\Collection\Remote_Actors;
 
-use function Activitypub\fold_host;
+use function Activitypub\fold_authority;
 use function Activitypub\home_host;
 
 /**
@@ -298,7 +298,7 @@ class Http_Signature_Draft implements Http_Signature {
 				 * to the same path, so only a host this site answers on is honoured. Anything
 				 * else falls through to the `Host` the request actually arrived with.
 				 */
-				$original = fold_host( $headers['x_original_host'][0] );
+				$original = fold_authority( $headers['x_original_host'][0] );
 
 				/**
 				 * Filters the hosts a signature may legitimately have been made out to.
@@ -322,14 +322,18 @@ class Http_Signature_Draft implements Http_Signature {
 				/*
 				 * Folded after the filter, not before, so a callback can return a host written
 				 * any way a URL might spell it. Cast because a callback returning one host
-				 * outside an array would otherwise be a fatal rather than a non-match.
+				 * outside an array would otherwise be a fatal rather than a non-match. Empty
+				 * results are dropped, or an unparseable entry would match an empty header.
 				 */
 				$allowed = array();
 				foreach ( (array) $hosts as $host ) {
-					$allowed[] = fold_host( $host );
+					$folded = fold_authority( $host );
+					if ( '' !== $folded ) {
+						$allowed[] = $folded;
+					}
 				}
 
-				if ( \in_array( $original, $allowed, true ) ) {
+				if ( '' !== $original && \in_array( $original, $allowed, true ) ) {
 					$signed_data .= $header . ': ' . $headers['x_original_host'][0] . "\n";
 					continue;
 				}

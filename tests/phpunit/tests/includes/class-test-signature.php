@@ -1908,6 +1908,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		$result  = Signature::verify_http_signature( $request );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+		\delete_option( 'activitypub_rfc9421_signature' );
 
 		$this->assertWPError(
 			$result,
@@ -1931,6 +1932,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		$result  = Signature::verify_http_signature( $request );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+		\delete_option( 'activitypub_rfc9421_signature' );
 
 		$this->assertNotWPError(
 			$result,
@@ -1957,7 +1959,67 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		\remove_filter( 'activitypub_signature_original_hosts', $allow );
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+		\delete_option( 'activitypub_rfc9421_signature' );
 
 		$this->assertNotWPError( $result, 'A host named by the filter has to be accepted.' );
+	}
+
+	/**
+	 * An authority carrying a port still matches the host this site answers on.
+	 *
+	 * `Host` and `X-Original-Host` carry an authority, so a peer addressing a site on a
+	 * non-default port signs `example.org:8080` while `home_url()` yields the bare host.
+	 * Comparing those two spellings directly would turn the proxy case this header exists
+	 * for into a rejection. Signed by hand because this class's own `sign()` derives the
+	 * host with `wp_parse_url()`, which drops the port.
+	 *
+	 * @covers ::verify_http_signature
+	 */
+	public function test_verify_http_signature_accepts_our_own_host_with_a_port() {
+		\update_option( 'activitypub_rfc9421_signature', '0' );
+		$mock = $this->mock_remote_key();
+
+		$authority = \wp_parse_url( \home_url(), \PHP_URL_HOST ) . ':8080';
+		$body      = '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}';
+		$date      = \gmdate( 'D, d M Y H:i:s T' );
+		$digest    = 'SHA-256=' . \base64_encode( \hash( 'sha256', $body, true ) );
+
+		$signed_string = \implode(
+			"\n",
+			array(
+				'(request-target): post /wp-json/activitypub/1.0/inbox',
+				'host: ' . $authority,
+				'date: ' . $date,
+				'digest: ' . $digest,
+			)
+		);
+
+		$signature = null;
+		\openssl_sign( $signed_string, $signature, Actors::get_private_key( 1 ), \OPENSSL_ALGO_SHA256 );
+
+		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_body( $body );
+		$request->set_headers(
+			array(
+				'Content-Type'    => 'application/activity+json',
+				'Date'            => $date,
+				'Digest'          => $digest,
+				// A proxy rewrote `Host`; the authority the peer signed survives only here.
+				'Host'            => 'internal.local',
+				'X-Original-Host' => $authority,
+				'Signature'       => \sprintf(
+					'keyId="%s",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="%s"',
+					'https://example.org/author/admin#main-key',
+					\base64_encode( $signature )
+				),
+			)
+		);
+
+		$result = Signature::verify_http_signature( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+		\delete_option( 'activitypub_rfc9421_signature' );
+
+		$this->assertNotWPError( $result, 'Our own host with a port has to be accepted.' );
 	}
 }

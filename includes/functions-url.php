@@ -71,6 +71,28 @@ function fold_host( $host ) {
 }
 
 /**
+ * Fold an authority to the host it names.
+ *
+ * An authority is what a `Host` header carries: a host, plus a port whenever it is not the
+ * default one, with an IPv6 literal in brackets. {@see fold_host()} expects a bare host and
+ * strips brackets without understanding a port, so `[::1]:443` would fold to `::1]:443` and
+ * `example.org:8080` would never match the `example.org` that {@see home_host()} returns.
+ * Use this wherever an authority has to be compared against a host.
+ *
+ * @since unreleased
+ *
+ * @param string $authority A host, optionally bracketed and optionally with a port.
+ *
+ * @return string The folded host, or an empty string when the value names none.
+ */
+function fold_authority( $authority ) {
+	// Parsed as a scheme-relative URL, which is the shape an authority already has.
+	$host = \wp_parse_url( '//' . \ltrim( (string) $authority, '/' ), \PHP_URL_HOST );
+
+	return fold_host( (string) $host );
+}
+
+/**
  * Check if a URL is from the same domain as the site.
  *
  * @param string $url The URL to check.
