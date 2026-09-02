@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Links to a comment now open the page it is actually on, instead of a later page, on posts with many likes or reposts.

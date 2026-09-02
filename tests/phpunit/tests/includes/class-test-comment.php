@@ -1684,6 +1684,99 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test the page a comment is reported on matches the page it renders on.
+	 *
+	 * Reactions the list hides must not be counted when working out the page, or the
+	 * `#comment-` permalink points at a page the comment is not on.
+	 *
+	 * @covers ::get_page_of_comment_query_args
+	 */
+	public function test_get_page_of_comment_ignores_hidden_reactions() {
+		\update_option( 'page_comments', 1 );
+		\update_option( 'comments_per_page', 2 );
+		\update_option( 'default_comments_page', 'oldest' );
+		\update_option( 'comment_order', 'asc' );
+
+		$post_id = self::factory()->post->create();
+		$create  = function ( $type, $offset ) use ( $post_id ) {
+			$date = \gmdate( 'Y-m-d H:i:s', \time() - 1000 + $offset );
+
+			return self::factory()->comment->create(
+				array(
+					'comment_post_ID'      => $post_id,
+					'comment_type'         => $type,
+					'comment_approved'     => '1',
+					'comment_content'      => $type,
+					'comment_author_email' => $type . $offset . '@example.com',
+					'comment_date'         => $date,
+					'comment_date_gmt'     => $date,
+				)
+			);
+		};
+
+		// Three hidden reactions older than the one comment the list shows.
+		$create( 'like', 1 );
+		$create( 'repost', 2 );
+		$create( 'quote', 3 );
+		$comment_id = $create( 'comment', 10 );
+
+		$this->assertSame( 1, \get_page_of_comment( $comment_id, array( 'per_page' => 2 ) ) );
+		$this->assertStringNotContainsString( 'cpage=', \get_comment_link( $comment_id ), 'A page-one comment must not carry a cpage.' );
+	}
+
+	/**
+	 * Test the page count keeps an exclusion another plugin set first.
+	 *
+	 * @covers ::get_page_of_comment_query_args
+	 */
+	public function test_get_page_of_comment_merges_with_existing_type__not_in() {
+		\update_option( 'page_comments', 1 );
+		\update_option( 'comments_per_page', 2 );
+		\update_option( 'default_comments_page', 'oldest' );
+		\update_option( 'comment_order', 'asc' );
+
+		$post_id = self::factory()->post->create();
+		$create  = function ( $type, $offset ) use ( $post_id ) {
+			$date = \gmdate( 'Y-m-d H:i:s', \time() - 1000 + $offset );
+
+			return self::factory()->comment->create(
+				array(
+					'comment_post_ID'      => $post_id,
+					'comment_type'         => $type,
+					'comment_approved'     => '1',
+					'comment_content'      => $type,
+					'comment_author_email' => $type . $offset . '@example.com',
+					'comment_date'         => $date,
+					'comment_date_gmt'     => $date,
+				)
+			);
+		};
+
+		/*
+		 * Two webmentions the other plugin hides and two likes this plugin hides, all older than
+		 * the comment. Either set alone fills a page, so the count has to drop both to land on
+		 * page one: trunk drops neither, an assignment drops only the likes.
+		 */
+		$create( 'webmention', 1 );
+		$create( 'webmention', 2 );
+		$create( 'like', 3 );
+		$create( 'like', 4 );
+		$comment_id = $create( 'comment', 10 );
+
+		$other_plugin_filter = function ( $comment_args ) {
+			$comment_args['type__not_in'] = array( 'webmention' );
+			return $comment_args;
+		};
+		\add_filter( 'get_page_of_comment_query_args', $other_plugin_filter, 5 );
+
+		$page = \get_page_of_comment( $comment_id, array( 'per_page' => 2 ) );
+
+		\remove_filter( 'get_page_of_comment_query_args', $other_plugin_filter, 5 );
+
+		$this->assertSame( 1, $page, 'Neither plugin\'s hidden types may count towards the page.' );
+	}
+
+	/**
 	 * Test comment_query does not add type__not_in when type is explicitly set.
 	 *
 	 * @covers ::comment_query
