@@ -9,6 +9,7 @@ use Activitypub\Blocks;
 use Activitypub\Comment;
 
 use function Activitypub\get_post_id;
+use function Activitypub\get_reaction_author_name;
 use function Activitypub\is_activitypub_request;
 use function Activitypub\is_post_publicly_queryable;
 
@@ -107,7 +108,7 @@ foreach ( Comment::get_comment_types() as $_type => $type_object ) {
 		'items' => array_map(
 			static function ( $comment ) {
 				return array(
-					'name'   => html_entity_decode( $comment->comment_author ),
+					'name'   => get_reaction_author_name( $comment ),
 					'url'    => $comment->comment_author_url,
 					'avatar' => get_avatar_url( $comment ),
 				);

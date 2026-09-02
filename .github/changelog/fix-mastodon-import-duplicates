@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed the Mastodon importer creating duplicate posts when an archive was imported a second time.

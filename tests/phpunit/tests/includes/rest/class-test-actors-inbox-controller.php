@@ -828,4 +828,51 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
 		\remove_filter( 'activitypub_skip_inbox_storage', '__return_true' );
 	}
+
+	/**
+	 * One activity delivered to several per-actor inboxes must collect every recipient.
+	 *
+	 * Senders that do not use the shared inbox POST the same activity once per actor, so the
+	 * second and third delivery land on the entry the first one created.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_same_activity_delivered_to_each_actor_inbox_collects_recipients() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$activity_id = 'https://remote.example/activities/fanned-out';
+		$activity    = array(
+			'id'     => $activity_id,
+			'type'   => 'Create',
+			'actor'  => 'https://remote.example/users/alice',
+			'object' => array(
+				'id'      => 'https://remote.example/objects/fanned-out',
+				'type'    => 'Note',
+				'content' => 'Hello you three',
+			),
+		);
+
+		$recipients = array( 1, self::$user_id, self::$editor_id );
+
+		foreach ( $recipients as $user_id ) {
+			$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/' . $user_id . '/inbox' );
+			$request->set_header( 'Content-Type', 'application/activity+json' );
+			$request->set_body( \wp_json_encode( $activity ) );
+
+			$response = \rest_do_request( $request );
+
+			$this->assertSame( 202, $response->get_status() );
+		}
+
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$inbox_item = Inbox_Collection::get_by_guid( $activity_id );
+		$this->assertInstanceOf( 'WP_Post', $inbox_item );
+
+		$stored = Inbox_Collection::get_recipients( $inbox_item->ID );
+		$this->assertCount( 3, $stored, 'Every actor the sender delivered to must be a recipient.' );
+		foreach ( $recipients as $user_id ) {
+			$this->assertContains( $user_id, $stored );
+		}
+	}
 }
