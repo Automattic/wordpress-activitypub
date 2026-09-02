@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Signatures on incoming requests are now checked against the address the request was actually sent to.

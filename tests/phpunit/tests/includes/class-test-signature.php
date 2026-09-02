@@ -1823,4 +1823,131 @@ class Test_Signature extends \WP_UnitTestCase {
 
 		\delete_option( $option_key );
 	}
+
+	/**
+	 * Build a draft-signed request made out to one host, then present it as arriving at another.
+	 *
+	 * @param string      $signed_for    Host the signature is made out to.
+	 * @param string      $arrived_at    Host the request actually arrives with.
+	 * @param string|null $original_host Value for the `X-Original-Host` header, or null to omit it.
+	 * @return \WP_REST_Request The request to verify.
+	 */
+	private function build_replayed_request( $signed_for, $arrived_at, $original_host = null ) {
+		$body = '{"type":"Create","actor":"https://example.org/author/admin","object":{"type":"Note","content":"Test content."}}';
+
+		$args = \apply_filters(
+			'http_request_args',
+			array(
+				'method'      => 'POST',
+				'body'        => $body,
+				'key_id'      => 'https://example.org/author/admin#main-key',
+				'private_key' => Actors::get_private_key( 1 ),
+				'user_id'     => 1,
+				'headers'     => array(
+					'Content-Type' => 'application/activity+json',
+					'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
+					'Host'         => $signed_for,
+				),
+			),
+			'https://' . $signed_for . '/wp-json/activitypub/1.0/inbox'
+		);
+
+		$headers         = $args['headers'];
+		$headers['Host'] = $arrived_at;
+		if ( null !== $original_host ) {
+			$headers['X-Original-Host'] = $original_host;
+		}
+
+		$request = new \WP_REST_Request( 'POST', ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_body( $body );
+		$request->set_headers( $headers );
+
+		return $request;
+	}
+
+	/**
+	 * Serve the signing user's public key for the remote actor lookup.
+	 */
+	private function mock_remote_key() {
+		$keys = Actors::get_keypair( 1 );
+
+		\add_filter(
+			'activitypub_pre_http_get_remote_object',
+			function () use ( $keys ) {
+				return array(
+					'name'      => 'Admin',
+					'url'       => 'https://example.org/author/admin',
+					'publicKey' => array(
+						'id'           => 'https://example.org/author/admin#main-key',
+						'owner'        => 'https://example.org/author/admin',
+						'publicKeyPem' => $keys['public_key'],
+					),
+				);
+			}
+		);
+	}
+
+	/**
+	 * A signature made out to another host must not verify here.
+	 *
+	 * `host` is the only part of a Draft Cavage signature base that names this server, since
+	 * `(request-target)` carries no scheme or host. `X-Original-Host` is client-supplied, so
+	 * honouring an arbitrary value would let a signature issued for delivery elsewhere verify
+	 * here whenever the path matches.
+	 *
+	 * @covers ::verify_http_signature
+	 */
+	public function test_verify_http_signature_rejects_a_foreign_original_host() {
+		\update_option( 'activitypub_rfc9421_signature', '0' );
+		$this->mock_remote_key();
+
+		$request = $this->build_replayed_request( 'evil.example', 'example.org', 'evil.example' );
+
+		$this->assertWPError(
+			Signature::verify_http_signature( $request ),
+			'A signature made out to another host must not verify, whatever X-Original-Host claims.'
+		);
+	}
+
+	/**
+	 * The reverse-proxy case the header exists for keeps working.
+	 *
+	 * @covers ::verify_http_signature
+	 */
+	public function test_verify_http_signature_accepts_our_own_original_host() {
+		\update_option( 'activitypub_rfc9421_signature', '0' );
+		$this->mock_remote_key();
+
+		$own = \wp_parse_url( \home_url(), \PHP_URL_HOST );
+
+		// The peer signed our public host; a proxy then rewrote `Host` to an internal name.
+		$request = $this->build_replayed_request( $own, 'internal.local', $own );
+
+		$this->assertNotWPError(
+			Signature::verify_http_signature( $request ),
+			'A signature made out to this site must still verify when a proxy rewrote Host.'
+		);
+	}
+
+	/**
+	 * A host added through the filter is honoured, for proxies terminating on another name.
+	 *
+	 * @covers ::verify_http_signature
+	 */
+	public function test_verify_http_signature_honours_the_original_hosts_filter() {
+		\update_option( 'activitypub_rfc9421_signature', '0' );
+		$this->mock_remote_key();
+
+		$allow = function () {
+			return array( 'edge.example' );
+		};
+		\add_filter( 'activitypub_signature_original_hosts', $allow );
+
+		$request = $this->build_replayed_request( 'edge.example', 'internal.local', 'edge.example' );
+		$result  = Signature::verify_http_signature( $request );
+
+		\remove_filter( 'activitypub_signature_original_hosts', $allow );
+
+		$this->assertNotWPError( $result, 'A host named by the filter has to be accepted.' );
+	}
 }

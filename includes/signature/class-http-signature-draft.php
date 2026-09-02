@@ -13,6 +13,9 @@ namespace Activitypub\Signature;
 
 use Activitypub\Collection\Remote_Actors;
 
+use function Activitypub\fold_host;
+use function Activitypub\home_host;
+
 /**
  * Class Http_Signature_Draft.
  *
@@ -285,8 +288,39 @@ class Http_Signature_Draft implements Http_Signature {
 
 		// This also verifies time-based values by returning false if any of these are out of range.
 		foreach ( $signed_headers as $header ) {
-			if ( 'host' === $header ) {
-				if ( isset( $headers['x_original_host'] ) ) {
+			if ( 'host' === $header && isset( $headers['x_original_host'][0] ) ) {
+				/*
+				 * A proxy that rewrites `Host` leaves the value the peer signed only in this
+				 * header, so it has to be readable. It is also client-supplied, and `host` is
+				 * the one component tying a draft signature to this server: `(request-target)`
+				 * carries the method and path but no scheme or host. Taking any value on trust
+				 * lets a signature made out to another server verify here when it is replayed
+				 * to the same path, so only a host this site answers on is honoured. Anything
+				 * else falls through to the `Host` the request actually arrived with.
+				 */
+				$original = fold_host( $headers['x_original_host'][0] );
+
+				/**
+				 * Filters the hosts a signature may legitimately have been made out to.
+				 *
+				 * Sites whose proxy terminates on a name that is neither `home_url()` nor
+				 * `site_url()` add it here.
+				 *
+				 * @since unreleased
+				 *
+				 * @param string[] $hosts Folded hosts this site answers on.
+				 */
+				$hosts = \apply_filters(
+					'activitypub_signature_original_hosts',
+					\array_unique(
+						array(
+							fold_host( home_host() ),
+							fold_host( \wp_parse_url( \site_url(), \PHP_URL_HOST ) ),
+						)
+					)
+				);
+
+				if ( \in_array( $original, $hosts, true ) ) {
 					$signed_data .= $header . ': ' . $headers['x_original_host'][0] . "\n";
 					continue;
 				}
