@@ -677,6 +677,63 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A deferred request must still be turned away when its id names another host.
+	 *
+	 * Deferring skips the signature, not the body checks. `Delete` is the type we defer, and it
+	 * reaches a tombstone lookup that fetches the named object, so the cheap check has to come
+	 * first or a made-up activity buys an outbound request.
+	 *
+	 * @covers ::verify_signature
+	 */
+	public function test_verify_signature_checks_activity_id_before_deferring() {
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'id'     => 'https://victim.example/activities/known-id',
+					'type'   => 'Delete',
+					'actor'  => 'https://attacker.example/users/mallory',
+					'object' => 'https://victim.example/objects/note',
+				)
+			)
+		);
+
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		$result = $this->instance->verify_signature( $request );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_activity_id_mismatch', $result->get_error_code() );
+	}
+
+	/**
+	 * Deferring must still work for a body whose id and actor agree.
+	 *
+	 * @covers ::verify_signature
+	 */
+	public function test_verify_signature_still_defers_for_a_consistent_body() {
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'id'     => 'https://remote.example/activities/1#delete',
+					'type'   => 'Delete',
+					'actor'  => 'https://remote.example/users/alice',
+					'object' => 'https://remote.example/objects/note',
+				)
+			)
+		);
+
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		$result = $this->instance->verify_signature( $request );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$this->assertTrue( $result );
+	}
+
+	/**
 	 * Test that `$force_signature = true` makes a GET require a signature even
 	 * when Authorized Fetch is disabled.
 	 *

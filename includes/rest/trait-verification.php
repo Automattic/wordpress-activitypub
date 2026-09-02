@@ -49,6 +49,16 @@ trait Verification {
 			return true;
 		}
 
+		/*
+		 * Runs before the deferral and before any key work: it costs a URL parse, while everything
+		 * below it can go to the network, either to fetch the signing key or, on the deferred
+		 * Delete path, to check the named object for a tombstone.
+		 */
+		$activity_id_check = $this->verify_activity_id( $request );
+		if ( \is_wp_error( $activity_id_check ) ) {
+			return $activity_id_check;
+		}
+
 		/**
 		 * Filter to defer signature verification.
 		 *
@@ -86,12 +96,6 @@ trait Verification {
 			if ( \is_wp_error( $key_id_check ) ) {
 				return $key_id_check;
 			}
-
-			// Verify the activity is filed under an id its actor's host owns.
-			$activity_id_check = $this->verify_activity_id( $request );
-			if ( \is_wp_error( $activity_id_check ) ) {
-				return $activity_id_check;
-			}
 		}
 
 		return true;
@@ -110,6 +114,12 @@ trait Verification {
 	 * together. {@see \Activitypub\Collection\Interactions::add_reaction()} and
 	 * {@see \Activitypub\Collection\Remote_Posts::add()} apply the same rule further in, to the
 	 * reaction id and the object id.
+	 *
+	 * Deliberately runs ahead of `activitypub_defer_signature_verification` rather than beside the
+	 * key binding. It needs nothing from the signature, so there is no reason to pay for one first,
+	 * and the deferred `Delete` path reaches {@see \Activitypub\Tombstone::exists()}, which fetches
+	 * the named object. A body that cannot even name itself consistently should not buy a request
+	 * to another host.
 	 *
 	 * Passes when the body carries no id or no actor. An authorized-fetch GET has neither, and a
 	 * body missing either field is rejected by the route's own argument validation, which runs
