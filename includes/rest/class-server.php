@@ -48,6 +48,10 @@ class Server {
 	 * Routes outside the ActivityPub namespace are left alone: their segments belong to other endpoints,
 	 * which may well treat them as case-sensitive.
 	 *
+	 * The route is rewritten before it is matched, so a path segment captured by a route pattern is
+	 * captured from the lowercased route. Every segment we capture today is either numeric or a
+	 * lowercase name, but a route registered with a case-bearing segment would need a second look.
+	 *
 	 * @since unreleased
 	 *
 	 * @param mixed            $result  Response to replace the request with, or null to continue.
