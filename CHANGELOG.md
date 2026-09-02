@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.3.1] - 2026-09-02
+### Security
+- Links to remote profiles in the Followers and Following blocks are now limited to regular web addresses when paging through the list. [#3718]
+- Replies cached on posts in the blog profile's reader feed are no longer readable by logged-out visitors through the WordPress REST API. [#3717]
+- Signatures on incoming requests are now checked against the address the request was actually sent to. [#3719]
+
 ## [9.3.0] - 2026-09-02
 ### Security
 - Block markup in posts from remote accounts is now removed before the post is saved. [#3703]
@@ -2036,6 +2042,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[9.3.1]: https://github.com/Automattic/wordpress-activitypub/compare/9.3.0...9.3.1
 [9.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/9.2.2...9.3.0
 [9.2.2]: https://github.com/Automattic/wordpress-activitypub/compare/9.2.1...9.2.2
 [9.2.1]: https://github.com/Automattic/wordpress-activitypub/compare/9.2.0...9.2.1

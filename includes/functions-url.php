@@ -79,7 +79,7 @@ function fold_host( $host ) {
  * `example.org:8080` would never match the `example.org` that {@see home_host()} returns.
  * Use this wherever an authority has to be compared against a host.
  *
- * @since unreleased
+ * @since 9.3.1
  *
  * @param string $authority A host, optionally bracketed and optionally with a port.
  *
