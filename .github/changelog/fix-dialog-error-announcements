@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Screen readers now announce errors in the follow, reply and reaction dialogs.

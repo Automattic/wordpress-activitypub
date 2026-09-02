@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Follow, reply and reaction links advertised by other Fediverse servers now have to be regular web addresses.
