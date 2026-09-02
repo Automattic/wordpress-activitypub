@@ -82,6 +82,16 @@ trait Reader_Permission {
 	 * @return bool True if the current user may read it, false otherwise.
 	 */
 	protected function can_read_feed_of( $user_ids ) {
+		/*
+		 * Same reason the login check leads in `check_reader_capability()`: a logged-out request
+		 * has user ID 0, and so does the blog actor, so the identity match below would hand the
+		 * blog actor's feed to anybody. This predicate is also reached from callers that never
+		 * pass through that gate, such as core's comments controller.
+		 */
+		if ( ! \is_user_logged_in() ) {
+			return false;
+		}
+
 		// Blanket access: an actor with no relationship at all has nothing to check per target.
 		if ( \current_user_can( 'list_users' ) ) {
 			return true;
