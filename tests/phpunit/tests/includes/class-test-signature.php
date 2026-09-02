@@ -1867,24 +1867,27 @@ class Test_Signature extends \WP_UnitTestCase {
 
 	/**
 	 * Serve the signing user's public key for the remote actor lookup.
+	 *
+	 * @return callable The filter callback, so the caller can remove it again.
 	 */
 	private function mock_remote_key() {
 		$keys = Actors::get_keypair( 1 );
 
-		\add_filter(
-			'activitypub_pre_http_get_remote_object',
-			function () use ( $keys ) {
-				return array(
-					'name'      => 'Admin',
-					'url'       => 'https://example.org/author/admin',
-					'publicKey' => array(
-						'id'           => 'https://example.org/author/admin#main-key',
-						'owner'        => 'https://example.org/author/admin',
-						'publicKeyPem' => $keys['public_key'],
-					),
-				);
-			}
-		);
+		$callback = function () use ( $keys ) {
+			return array(
+				'name'      => 'Admin',
+				'url'       => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+
+		\add_filter( 'activitypub_pre_http_get_remote_object', $callback );
+
+		return $callback;
 	}
 
 	/**
@@ -1899,12 +1902,15 @@ class Test_Signature extends \WP_UnitTestCase {
 	 */
 	public function test_verify_http_signature_rejects_a_foreign_original_host() {
 		\update_option( 'activitypub_rfc9421_signature', '0' );
-		$this->mock_remote_key();
+		$mock = $this->mock_remote_key();
 
 		$request = $this->build_replayed_request( 'evil.example', 'example.org', 'evil.example' );
+		$result  = Signature::verify_http_signature( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
 
 		$this->assertWPError(
-			Signature::verify_http_signature( $request ),
+			$result,
 			'A signature made out to another host must not verify, whatever X-Original-Host claims.'
 		);
 	}
@@ -1916,15 +1922,18 @@ class Test_Signature extends \WP_UnitTestCase {
 	 */
 	public function test_verify_http_signature_accepts_our_own_original_host() {
 		\update_option( 'activitypub_rfc9421_signature', '0' );
-		$this->mock_remote_key();
+		$mock = $this->mock_remote_key();
 
 		$own = \wp_parse_url( \home_url(), \PHP_URL_HOST );
 
 		// The peer signed our public host; a proxy then rewrote `Host` to an internal name.
 		$request = $this->build_replayed_request( $own, 'internal.local', $own );
+		$result  = Signature::verify_http_signature( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
 
 		$this->assertNotWPError(
-			Signature::verify_http_signature( $request ),
+			$result,
 			'A signature made out to this site must still verify when a proxy rewrote Host.'
 		);
 	}
@@ -1936,7 +1945,7 @@ class Test_Signature extends \WP_UnitTestCase {
 	 */
 	public function test_verify_http_signature_honours_the_original_hosts_filter() {
 		\update_option( 'activitypub_rfc9421_signature', '0' );
-		$this->mock_remote_key();
+		$mock = $this->mock_remote_key();
 
 		$allow = function () {
 			return array( 'edge.example' );
@@ -1947,6 +1956,7 @@ class Test_Signature extends \WP_UnitTestCase {
 		$result  = Signature::verify_http_signature( $request );
 
 		\remove_filter( 'activitypub_signature_original_hosts', $allow );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
 
 		$this->assertNotWPError( $result, 'A host named by the filter has to be accepted.' );
 	}

@@ -304,23 +304,32 @@ class Http_Signature_Draft implements Http_Signature {
 				 * Filters the hosts a signature may legitimately have been made out to.
 				 *
 				 * Sites whose proxy terminates on a name that is neither `home_url()` nor
-				 * `site_url()` add it here.
+				 * `site_url()` add it here. Write them the way they appear in a URL; they are
+				 * folded before they are compared.
 				 *
 				 * @since unreleased
 				 *
-				 * @param string[] $hosts Folded hosts this site answers on.
+				 * @param string[] $hosts Hosts this site answers on.
 				 */
 				$hosts = \apply_filters(
 					'activitypub_signature_original_hosts',
-					\array_unique(
-						array(
-							fold_host( home_host() ),
-							fold_host( \wp_parse_url( \site_url(), \PHP_URL_HOST ) ),
-						)
+					array(
+						home_host(),
+						\wp_parse_url( \site_url(), \PHP_URL_HOST ),
 					)
 				);
 
-				if ( \in_array( $original, $hosts, true ) ) {
+				/*
+				 * Folded after the filter, not before, so a callback can return a host written
+				 * any way a URL might spell it. Cast because a callback returning one host
+				 * outside an array would otherwise be a fatal rather than a non-match.
+				 */
+				$allowed = array();
+				foreach ( (array) $hosts as $host ) {
+					$allowed[] = fold_host( $host );
+				}
+
+				if ( \in_array( $original, $allowed, true ) ) {
 					$signed_data .= $header . ': ' . $headers['x_original_host'][0] . "\n";
 					continue;
 				}
