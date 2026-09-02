@@ -565,7 +565,7 @@ class Mailer {
 	 * the moderator notification, and it targets the plugin's own reaction comment types so pingbacks,
 	 * trackbacks, and plain replies keep notifying as usual. The preference defaults to on.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param bool $maybe_notify Whether to send the notification.
 	 * @param int  $comment_id   The comment ID.

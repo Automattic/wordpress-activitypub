@@ -259,7 +259,7 @@ function get_post_type_description( $post_type ) {
  *
  * A per-post limit wins over the site-wide setting, and the filter has the final say.
  *
- * @since unreleased
+ * @since 9.3.0
  *
  * @param int $post_id The post ID.
  *

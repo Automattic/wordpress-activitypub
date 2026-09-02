@@ -231,7 +231,7 @@ function get_reply_intent_url() {
  * `wp_insert_comment()` callers bypass core's `pre_comment_author_name` chain, so the
  * column is not guaranteed tag-free, which is why this cleans rather than just reads.
  *
- * @since unreleased
+ * @since 9.3.0
  *
  * @param \WP_Comment $comment The comment.
  *

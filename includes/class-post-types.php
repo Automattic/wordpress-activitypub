@@ -965,7 +965,7 @@ class Post_Types {
 	 * Users who can list users may read any actor's reader data, everybody else is
 	 * limited to their own.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param int|null $requested_user_id The requested user ID, or null when none was given.
 	 * @return int The user ID to scope the query to.

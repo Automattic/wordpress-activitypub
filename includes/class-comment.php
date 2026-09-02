@@ -1040,7 +1040,7 @@ class Comment {
 	 *
 	 * This runs at priority 20 after WordPress's esc_html() filter on comment_author.
 	 *
-	 * @since unreleased Added the `$comment_id` parameter.
+	 * @since 9.3.0 Added the `$comment_id` parameter.
 	 *
 	 * @param string     $author     The comment author name (already escaped by WordPress).
 	 * @param int|string $comment_id Optional. The comment ID, as a numeric string from core. Default 0.

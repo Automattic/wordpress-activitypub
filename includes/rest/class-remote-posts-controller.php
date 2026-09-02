@@ -14,7 +14,7 @@ namespace Activitypub\Rest;
  * type. The route holds remote posts cached for a specific local user, so it is
  * limited to users who can use ActivityPub, and to their own feed.
  *
- * @since unreleased
+ * @since 9.3.0
  */
 class Remote_Posts_Controller extends \WP_REST_Posts_Controller {
 	use Reader_Permission;
@@ -22,7 +22,7 @@ class Remote_Posts_Controller extends \WP_REST_Posts_Controller {
 	/**
 	 * Check whether a request has read access to a single cached post.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param \WP_REST_Request $request Full details about the request.
 	 * @return true|\WP_Error True if the request has read access, WP_Error otherwise.
@@ -45,7 +45,7 @@ class Remote_Posts_Controller extends \WP_REST_Posts_Controller {
 	 * Scoping here covers both routes; scoping only the route callbacks leaves the comment route
 	 * reading the same records.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param \WP_Post $post Post object.
 	 * @return bool True if the post can be read, false otherwise.

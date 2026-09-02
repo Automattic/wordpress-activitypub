@@ -60,7 +60,7 @@ function normalize_host( $host ) {
  * Unlike {@see normalize_host()} this is lossless: it does not strip `www.`, which is a
  * different host rather than a different spelling of one.
  *
- * @since unreleased
+ * @since 9.3.0
  *
  * @param string $host The host.
  *
