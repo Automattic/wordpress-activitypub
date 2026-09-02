@@ -37,6 +37,7 @@ class Test_Server extends \WP_Test_REST_TestCase {
 		$this->assertEquals( 10, \has_filter( 'rest_post_dispatch', array( Server::class, 'add_cors_headers' ) ) );
 		$this->assertEquals( 10, \has_filter( 'rest_allowed_cors_headers', array( Server::class, 'allow_cors_headers' ) ) );
 		$this->assertEquals( 10, \has_filter( 'rest_pre_dispatch', array( Server::class, 'maybe_add_actor_from_signature' ) ) );
+		$this->assertEquals( 1, \has_filter( 'rest_pre_dispatch', array( Server::class, 'normalize_route' ) ), 'The route has to be normalized before any other callback reads it.' );
 	}
 
 	/**
@@ -789,5 +790,172 @@ class Test_Server extends \WP_Test_REST_TestCase {
 
 		$this->assertArrayNotHasKey( 'Vary', $headers );
 		$this->assertArrayNotHasKey( 'Cache-Control', $headers );
+	}
+
+	/*
+	 * WordPress dispatches REST routes with a case-insensitive pattern and leaves
+	 * `WP_REST_Request::get_route()` spelled the way the caller sent it, so `/ActivityPub/1.0/inbox`
+	 * reaches the same handler as `/activitypub/1.0/inbox`. The route is normalized once before
+	 * dispatch so that every route check downstream engages on both spellings.
+	 */
+
+	/**
+	 * Run the pre-dispatch filters over a request, the way the REST server does before matching it.
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 * @return \WP_REST_Request The same request, after the pre-dispatch filters have seen it.
+	 */
+	private function pre_dispatch( $request ) {
+		Server::init();
+		\apply_filters( 'rest_pre_dispatch', null, \rest_get_server(), $request );
+
+		return $request;
+	}
+
+	/**
+	 * A case-varied ActivityPub route is normalized before it is matched to a handler.
+	 *
+	 * @covers ::normalize_route
+	 */
+	public function test_normalize_route_lowercases_activitypub_routes() {
+		$request = $this->pre_dispatch( new \WP_REST_Request( 'GET', '/' . \strtoupper( ACTIVITYPUB_REST_NAMESPACE ) . '/Inbox' ) );
+
+		$this->assertSame( '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox', $request->get_route() );
+	}
+
+	/**
+	 * Routes outside the ActivityPub namespace belong to other endpoints, which may well treat their
+	 * own path segments as case-sensitive, so they are left exactly as they arrived.
+	 *
+	 * @covers ::normalize_route
+	 */
+	public function test_normalize_route_leaves_other_namespaces_alone() {
+		$request = $this->pre_dispatch( new \WP_REST_Request( 'GET', '/wp/v2/Posts' ) );
+
+		$this->assertSame( '/wp/v2/Posts', $request->get_route() );
+	}
+
+	/**
+	 * An earlier callback that hijacked the request keeps its result, and the route is left alone.
+	 *
+	 * @covers ::normalize_route
+	 */
+	public function test_normalize_route_respects_short_circuit() {
+		$request  = new \WP_REST_Request( 'GET', '/' . \strtoupper( ACTIVITYPUB_REST_NAMESPACE ) . '/inbox' );
+		$response = new \WP_REST_Response( array( 'hijacked' => true ), 200 );
+
+		$result = Server::normalize_route( $response, new \WP_REST_Server(), $request );
+
+		$this->assertSame( $response, $result );
+		$this->assertSame( '/' . \strtoupper( ACTIVITYPUB_REST_NAMESPACE ) . '/inbox', $request->get_route() );
+	}
+
+	/**
+	 * The filter only normalizes; it must never stand in for the response.
+	 *
+	 * @covers ::normalize_route
+	 */
+	public function test_normalize_route_does_not_hijack_the_request() {
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+
+		$this->assertNull( Server::normalize_route( null, new \WP_REST_Server(), $request ) );
+	}
+
+	/**
+	 * A case-varied authorize route is the same interactive endpoint, so the CORS exclusion applies.
+	 *
+	 * @covers ::normalize_route
+	 * @covers ::add_cors_headers
+	 */
+	public function test_case_varied_oauth_authorize_gets_no_cors() {
+		$request  = $this->pre_dispatch( new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/Authorize' ) );
+		$response = new \WP_REST_Response( array(), 200 );
+
+		$headers = Server::add_cors_headers( $response, \rest_get_server(), $request )->get_headers();
+
+		$this->assertArrayNotHasKey( 'Access-Control-Allow-Origin', $headers );
+		$this->assertSame( array( 'Authorization' ), Server::allow_cors_headers( array( 'Authorization' ), $request ) );
+	}
+
+	/**
+	 * A case-varied namespace still reaches an ActivityPub handler, so it still gets CORS.
+	 *
+	 * @covers ::normalize_route
+	 * @covers ::add_cors_headers
+	 */
+	public function test_case_varied_namespace_gets_cors() {
+		$request  = $this->pre_dispatch( new \WP_REST_Request( 'GET', '/' . \strtoupper( ACTIVITYPUB_REST_NAMESPACE ) . '/inbox' ) );
+		$response = new \WP_REST_Response( array(), 200 );
+
+		$headers = Server::add_cors_headers( $response, \rest_get_server(), $request )->get_headers();
+
+		$this->assertSame( '*', $headers['Access-Control-Allow-Origin'] );
+		$this->assertContains( 'Accept', Server::allow_cors_headers( array( 'Authorization' ), $request ) );
+	}
+
+	/**
+	 * A token-gated response served under a case-varied namespace must still be marked as varying by
+	 * Authorization, or a shared cache could hand one caller's response to the next.
+	 *
+	 * @covers ::normalize_route
+	 * @covers ::add_cache_headers
+	 */
+	public function test_case_varied_namespace_still_varies_on_authorization() {
+		$request  = $this->pre_dispatch( new \WP_REST_Request( 'GET', '/' . \strtoupper( ACTIVITYPUB_REST_NAMESPACE ) . '/actors/1' ) );
+		$response = new \WP_REST_Response( array(), 200 );
+
+		$headers = Server::add_cache_headers( $response, \rest_get_server(), $request )->get_headers();
+
+		$this->assertSame( 'Authorization', $headers['Vary'] );
+	}
+
+	/**
+	 * Inbox POSTs must read their JSON body first whatever the spelling of the route, because
+	 * `application/activity+json` is not in core's default parameter order.
+	 *
+	 * @covers ::normalize_route
+	 * @covers ::request_parameter_order
+	 */
+	public function test_case_varied_namespace_keeps_json_parameter_order() {
+		$request = $this->pre_dispatch( new \WP_REST_Request( 'POST', '/' . \strtoupper( ACTIVITYPUB_REST_NAMESPACE ) . '/inbox' ) );
+		$result  = Server::request_parameter_order( array( 'URL', 'JSON', 'POST', 'defaults' ), $request );
+
+		$this->assertSame( array( 'JSON', 'POST', 'URL', 'defaults' ), $result );
+	}
+
+	/**
+	 * Errors from a case-varied ActivityPub route still get the FEP-c180 error shape, and case-varied
+	 * OAuth routes still keep the RFC 6749 one.
+	 *
+	 * @covers ::normalize_route
+	 * @covers ::filter_output
+	 */
+	public function test_case_varied_namespace_keeps_error_formats() {
+		$activitypub = $this->pre_dispatch( new \WP_REST_Request( 'POST', '/' . \strtoupper( ACTIVITYPUB_REST_NAMESPACE ) . '/inbox' ) );
+		$oauth       = $this->pre_dispatch( new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/OAuth/token' ) );
+
+		$formatted = Server::filter_output( new \WP_REST_Response( array( 'code' => 'test_error' ), 400 ), \rest_get_server(), $activitypub );
+		$untouched = Server::filter_output( new \WP_REST_Response( array( 'error' => 'invalid_grant' ), 400 ), \rest_get_server(), $oauth );
+
+		$this->assertSame( 'about:blank', $formatted->get_data()['type'] );
+		$this->assertSame( array( 'error' => 'invalid_grant' ), $untouched->get_data() );
+	}
+
+	/**
+	 * The actor backfill keys off an `/inbox` suffix, which is just as case-varied as the namespace.
+	 *
+	 * @covers ::normalize_route
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_case_varied_route_still_backfills_actor() {
+		$request = $this->pre_dispatch(
+			$this->build_signed_inbox_request(
+				array( 'type' => 'FeatureRequest' ),
+				'https://remote.example.com/users/curator#main-key',
+				'/' . \strtoupper( ACTIVITYPUB_REST_NAMESPACE ) . '/Inbox'
+			)
+		);
+
+		$this->assertSame( 'https://remote.example.com/users/curator', $request->get_json_params()['actor'] );
 	}
 }
