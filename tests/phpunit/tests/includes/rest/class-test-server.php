@@ -7,7 +7,9 @@
 
 namespace Activitypub\Tests\Rest;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Rest\Server;
+use Activitypub\Signature;
 
 /**
  * Test class for Server.
@@ -957,5 +959,61 @@ class Test_Server extends \WP_Test_REST_TestCase {
 		);
 
 		$this->assertSame( 'https://remote.example.com/users/curator', $request->get_json_params()['actor'] );
+	}
+
+	/**
+	 * Draft Cavage rebuilds its `(request-target)` from the route, so a request signed over a
+	 * case-varied path no longer verifies once the route is normalized. That is the trade-off of
+	 * normalizing in one place: peers sign the lowercase paths we publish, and RFC 9421 signatures
+	 * take their components from `REQUEST_URI`, so they are not affected either way.
+	 *
+	 * @covers ::normalize_route
+	 */
+	public function test_normalize_route_rejects_draft_signature_over_case_varied_path() {
+		\update_option( 'activitypub_rfc9421_signature', '0' );
+
+		$keys              = Actors::get_keypair( 1 );
+		$mock_remote_actor = function () use ( $keys ) {
+			return array(
+				'name'      => 'Admin',
+				'url'       => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_actor );
+
+		$route = '/' . \strtoupper( ACTIVITYPUB_REST_NAMESPACE ) . '/Inbox';
+		$args  = \apply_filters(
+			'http_request_args',
+			array(
+				'method'      => 'POST',
+				'body'        => '{"type":"Follow","actor":"https://example.org/author/admin"}',
+				'key_id'      => 'https://example.org/author/admin#main-key',
+				'private_key' => Actors::get_private_key( 1 ),
+				'user_id'     => 1,
+				'headers'     => array(
+					'Content-Type' => 'application/activity+json',
+					'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
+					'Host'         => 'example.org',
+				),
+			),
+			'https://example.org/wp-json' . $route
+		);
+
+		$request = new \WP_REST_Request( 'POST', $route );
+		$request->set_body( $args['body'] );
+		$request->set_headers( $args['headers'] );
+
+		$this->assertNotWPError( Signature::verify_http_signature( $request ), 'A signature over the path as it was sent verifies.' );
+
+		Server::normalize_route( null, \rest_get_server(), $request );
+
+		$this->assertWPError( Signature::verify_http_signature( $request ), 'Once the route is normalized, the rebuilt request-target no longer matches what was signed.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_actor );
 	}
 }
