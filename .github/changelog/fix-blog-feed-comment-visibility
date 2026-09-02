@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Replies cached on posts in the blog profile's reader feed are no longer readable by logged-out visitors through the WordPress REST API.

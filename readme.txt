@@ -3,7 +3,7 @@ Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaf
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
 Tested up to: 7.1
-Stable tag: 9.3.0
+Stable tag: 9.3.1
 Requires PHP: 7.4
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -116,6 +116,12 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 9.3.1 - 2026-09-02
+#### Security
+- Links to remote profiles in the Followers and Following blocks are now limited to regular web addresses when paging through the list.
+- Replies cached on posts in the blog profile's reader feed are no longer readable by logged-out visitors through the WordPress REST API.
+- Signatures on incoming requests are now checked against the address the request was actually sent to.
 
 ### 9.3.0 - 2026-09-02
 #### Security

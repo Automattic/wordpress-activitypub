@@ -307,7 +307,7 @@ class Http_Signature_Draft implements Http_Signature {
 				 * `site_url()` add it here. Write them the way they appear in a URL; they are
 				 * folded before they are compared.
 				 *
-				 * @since unreleased
+				 * @since 9.3.1
 				 *
 				 * @param string[] $hosts Hosts this site answers on.
 				 */
