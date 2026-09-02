@@ -2170,11 +2170,14 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 		$routes    = \rest_get_server()->get_routes();
 		$callbacks = array();
 
-		foreach ( $routes['/activitypub/1.0/inbox'] as $handler ) {
+		foreach ( $routes[ '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' ] as $handler ) {
 			if ( empty( $handler['methods']['POST'] ) ) {
 				continue;
 			}
-			$callbacks[] = $handler['permission_callback'][1];
+
+			// A closure would carry no method name to compare, so record it as-is rather than indexing into it.
+			$callback    = $handler['permission_callback'];
+			$callbacks[] = \is_array( $callback ) ? $callback[1] : $callback;
 		}
 
 		$this->assertSame( array( 'verify_signature' ), $callbacks );
