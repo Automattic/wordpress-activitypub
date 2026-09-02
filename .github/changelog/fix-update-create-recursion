@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fixed a crash that could fill the error log when another server edited a reply to a post that is no longer shared to the Fediverse.

@@ -506,7 +506,7 @@ class Mastodon {
 	/**
 	 * Find a post already imported under an archive object id.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param string $source_id The archive object id.
 	 * @param string $post_type The post type to look in.

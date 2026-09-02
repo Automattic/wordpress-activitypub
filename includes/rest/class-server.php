@@ -52,7 +52,7 @@ class Server {
 	 * captured from the lowercased route. Every segment we capture today is either numeric or a
 	 * lowercase name, but a route registered with a case-bearing segment would need a second look.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param mixed            $result  Response to replace the request with, or null to continue.
 	 * @param \WP_REST_Server  $server  Server instance.

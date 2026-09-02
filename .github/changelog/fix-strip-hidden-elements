@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Text inside hidden page elements, like invisible dialog pop-ups, no longer shows up in posts shared to the Fediverse.

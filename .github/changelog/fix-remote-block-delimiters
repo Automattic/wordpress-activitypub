@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Block markup in posts from remote accounts is now removed before the post is saved.

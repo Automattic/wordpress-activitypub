@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.3.0] - 2026-09-02
+### Security
+- Block markup in posts from remote accounts is now removed before the post is saved. [#3703]
+- Follow, reply and reaction links advertised by other Fediverse servers now have to be regular web addresses. [#3715]
+- Followers, cached remote profiles, and reader posts are no longer readable by logged-out visitors through the WordPress REST API, and the setting that hides your follower list is now honoured everywhere. [#3674]
+- Inline styles are now removed from posts and profiles that come from remote accounts. [#3703]
+- Posts from remote accounts are now shown in the Social Web reader exactly as the site stored them. [#3703]
+- Replies from remote accounts are now filtered before they are saved when an administrator imports them through search. [#3703]
+
+### Added
+- Add a notification setting to turn off emails about likes, reposts, and quotes without silencing real comments and replies. [#3582]
+- Add the Fediverse and ActivityPub logos to the block editor's icon library on WordPress 7.1 and newer. [#3694]
+- Federate podcast episodes published with Jetpack, including their audio file and cover art. [#3575]
+
+### Changed
+- Enable RFC 9421 HTTP Message Signatures by default. [#2859]
+
+### Fixed
+- Apps connected through the ActivityPub API now use the standard ActivityPub API permission names. Fetching remote content through your site is treated as reading rather than posting, so an app needs read permission for it. [#3670]
+- Apps now see the real error when a post they open through your site is missing, instead of a generic failure. [#3665]
+- Comment author names are no longer altered on comments that did not come from the fediverse. [#3703]
+- Fixed a crash that could fill the error log when another server edited a reply to a post that is no longer shared to the Fediverse. [#3679]
+- Fixed an error that could break embeds of Fediverse posts whose author was sent in an unexpected format. [#3677]
+- Fixed an error that could occur when looking up a profile on another Fediverse server that sends back an unexpected response. [#3673]
+- Fixed backslashes disappearing from titles and content in posts from remote accounts. [#3703]
+- Fixed responses to ActivityPub addresses written with different capitalisation not being cached correctly. [#3713]
+- Fixed the Application actor not being found when its address was written with different capitalisation. [#3664]
+- Fixed the Mastodon importer creating duplicate posts when an archive was imported a second time. [#3703]
+- Fixed titles, summaries, captions and display names from remote accounts being stored with stray markup. [#3703]
+- Imported Mastodon media descriptions now have unsafe HTML removed before they are saved. [#3703]
+- Imported Mastodon replies now have unsafe HTML removed before they are saved as comments. [#3703]
+- Improve how blocked accounts are matched. [#3664]
+- Improve permission checks for third-party apps connected through the ActivityPub API. [#3670]
+- Improve validation of incoming activities from other servers. [#3711]
+- Screen readers now announce errors in the follow, reply and reaction dialogs. [#3715]
+- Text inside hidden page elements, like invisible dialog pop-ups, no longer shows up in posts shared to the Fediverse. [#3693]
+- The blog profile can be found again from other Fediverse servers on sites that also run Polylang. [#3681]
+
 ## [9.2.2] - 2026-08-11
 ### Fixed
 - Fixed avatars and emoji occasionally failing to cache, and the file warnings that came with it. [#3618]
@@ -1998,6 +2036,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - initial
 
+[9.3.0]: https://github.com/Automattic/wordpress-activitypub/compare/9.2.2...9.3.0
 [9.2.2]: https://github.com/Automattic/wordpress-activitypub/compare/9.2.1...9.2.2
 [9.2.1]: https://github.com/Automattic/wordpress-activitypub/compare/9.2.0...9.2.1
 [9.2.0]: https://github.com/Automattic/wordpress-activitypub/compare/9.1.0...9.2.0

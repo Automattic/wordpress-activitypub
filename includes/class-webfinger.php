@@ -244,7 +244,7 @@ class Webfinger {
 	 * Not a drop-in for `is_same_host()`, which deliberately fails closed on an identifier with
 	 * no parsable host. Giving an `acct:` keyId a host there would re-admit what 9.2.1 rejected.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param string $uri The identifier, a URL or a handle.
 	 *
