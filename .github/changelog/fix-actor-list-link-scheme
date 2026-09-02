@@ -1,0 +1,4 @@
+Significance: patch
+Type: security
+
+Links to remote profiles in the Followers and Following blocks are now limited to regular web addresses when paging through the list.
