@@ -275,6 +275,10 @@ See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activityp
 
 == Upgrade Notice ==
 
+= 9.3.0 =
+
+Posts sent to other servers are now signed with the newer RFC 9421 standard by default, so if deliveries to one server stop arriving, turn it off again in the Advanced tab of the ActivityPub settings, which you can show from Screen Options.
+
 = 9.2.0 =
 
 Support for the WP REST Cache plugin has been removed. If you use it, ActivityPub pages are no longer cached by it, but everything else works as before.
