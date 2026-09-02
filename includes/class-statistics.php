@@ -12,7 +12,6 @@ namespace Activitypub;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
-use Activitypub\Comment;
 
 /**
  * Statistics class.
@@ -736,7 +735,10 @@ class Statistics {
 	 * @return array Array of comment type data with slug, label, and singular.
 	 */
 	public static function get_comment_types_for_stats() {
-		$comment_types = Comment::get_comment_types();
+		$comment_types = \array_map(
+			'get_object_vars',
+			\get_comment_types( array( 'reaction' => true ), 'objects' )
+		);
 		$result        = array();
 
 		foreach ( $comment_types as $slug => $type ) {

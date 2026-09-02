@@ -85,7 +85,8 @@ class Mailer {
 			return $message;
 		}
 
-		$comment_type = Comment::get_comment_type( $comment->comment_type );
+		$comment_type = \get_comment_type_object( $comment->comment_type );
+		$comment_type = ( $comment_type && ! empty( $comment_type->activity_types ) ) ? \get_object_vars( $comment_type ) : array();
 
 		if ( ! $comment_type ) {
 			return $message;
@@ -578,8 +579,9 @@ class Mailer {
 			return $maybe_notify;
 		}
 
-		$comment = \get_comment( $comment_id );
-		if ( ! $comment || ! \in_array( \get_comment_type( $comment ), Comment::get_comment_type_slugs(), true ) ) {
+		$comment      = \get_comment( $comment_id );
+		$comment_type = $comment ? \get_comment_type_object( \get_comment_type( $comment ) ) : null;
+		if ( ! $comment_type || empty( $comment_type->activity_types ) ) {
 			return $maybe_notify;
 		}
 

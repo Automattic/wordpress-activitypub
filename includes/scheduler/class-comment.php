@@ -61,7 +61,7 @@ class Comment {
 			$comment_type = 'comment';
 		}
 
-		$allowed_types   = Comment_Utils::get_comment_type_slugs();
+		$allowed_types   = \get_comment_types( array( 'reaction' => true ), 'names' );
 		$allowed_types[] = 'comment'; // Add core WordPress comment types.
 
 		// Check if comment type is in allowed list.

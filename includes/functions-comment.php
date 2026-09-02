@@ -155,26 +155,18 @@ function get_comment_ancestors( $comment ) {
  * @return array The registered Activitypub comment type.
  */
 function register_comment_type( $comment_type, $args = array() ) {
-	global $activitypub_comment_types;
+	$args = \wp_parse_args( $args, array( 'reaction' => false ) );
 
-	if ( ! \is_array( $activitypub_comment_types ) ) {
-		$activitypub_comment_types = array();
+	// Map the plugin's registration format onto core's.
+	if ( isset( $args['label'] ) ) {
+		$args['labels']['name'] = $args['label'];
+	}
+	if ( isset( $args['singular'] ) ) {
+		$args['labels']['singular_name'] = $args['singular'];
 	}
 
-	// Sanitize comment type name.
-	$comment_type = \sanitize_key( $comment_type );
-
-	$activitypub_comment_types[ $comment_type ] = $args;
-
-	/**
-	 * Fires after a ActivityPub comment type is registered.
-	 *
-	 * @param string $comment_type Comment type.
-	 * @param array  $args         Arguments used to register the comment type.
-	 */
-	\do_action( 'activitypub_registered_comment_type', $comment_type, $args );
-
-	return $args;
+	// A reaction is a public comment type that is not shown in the thread; see Comment::default_excluded_comment_types().
+	return \register_comment_type( $comment_type, $args );
 }
 
 /**

@@ -315,8 +315,10 @@ class Test_Comment extends \WP_UnitTestCase {
 		$this->assertSame( 10, Comment::pre_wp_update_comment_count_now( 10, 0, $post_id ) );
 
 		// Case 5: Other plugins can exclude additional types via the filter.
+		// `note` is in core's default set already; a type that is not proves the legacy filter still fires.
+		$this->setExpectedDeprecated( 'activitypub_excluded_comment_types' );
 		$add_note = function ( $types ) {
-			$types[] = 'note';
+			$types[] = 'pingback';
 			return $types;
 		};
 		\add_filter( 'activitypub_excluded_comment_types', $add_note );
@@ -326,10 +328,10 @@ class Test_Comment extends \WP_UnitTestCase {
 			2,
 			array(
 				'comment_approved' => '1',
-				'comment_type'     => 'note',
+				'comment_type'     => 'pingback',
 			)
 		);
-		// 5 regular + 2 note + 3 like = 10 total, but like and note excluded = 5.
+		// 5 regular + 2 pingback + 3 like = 10 total, but like and pingback excluded = 5.
 		$this->assertSame( 5, Comment::pre_wp_update_comment_count_now( null, 0, $post_id ) );
 
 		\remove_filter( 'activitypub_excluded_comment_types', $add_note );
@@ -588,6 +590,8 @@ class Test_Comment extends \WP_UnitTestCase {
 	 * @covers ::is_registered_comment_type
 	 */
 	public function test_is_registered_comment_type() {
+		$this->setExpectedDeprecated( 'Activitypub\\Comment::is_registered_comment_type' );
+
 		// Test registered types (these are registered in Comment::register_comment_types()).
 		$this->assertTrue( Comment::is_registered_comment_type( 'repost' ) );
 		$this->assertTrue( Comment::is_registered_comment_type( 'like' ) );
@@ -603,7 +607,12 @@ class Test_Comment extends \WP_UnitTestCase {
 		// Test unregistered types.
 		$this->assertFalse( Comment::is_registered_comment_type( 'nonexistent' ) );
 		$this->assertFalse( Comment::is_registered_comment_type( '' ) );
-		$this->assertFalse( Comment::is_registered_comment_type( 'comment' ) );
+
+		/*
+		 * `comment` is a plugin-unknown type on the polyfill, but a built-in on core. The method
+		 * now answers from the shared registry, so its answer follows whichever side is live.
+		 */
+		$this->assertSame( (bool) \get_comment_type_object( 'comment' ), Comment::is_registered_comment_type( 'comment' ) );
 	}
 
 	/**
@@ -612,6 +621,8 @@ class Test_Comment extends \WP_UnitTestCase {
 	 * @covers ::get_comment_type_slugs
 	 */
 	public function test_get_comment_type_slugs() {
+		$this->setExpectedDeprecated( 'Activitypub\\Comment::get_comment_type_slugs' );
+
 		// Get the registered slugs.
 		$slugs = Comment::get_comment_type_slugs();
 
@@ -646,10 +657,13 @@ class Test_Comment extends \WP_UnitTestCase {
 	 * @covers ::get_comment_type_slugs
 	 */
 	public function test_get_comment_types_returns_array_when_global_is_null() {
-		global $activitypub_comment_types;
+		$this->setExpectedDeprecated( 'Activitypub\\Comment::get_comment_types' );
+		$this->setExpectedDeprecated( 'Activitypub\\Comment::get_comment_type_slugs' );
 
-		$backup                    = $activitypub_comment_types;
-		$activitypub_comment_types = null;
+		global $wp_comment_types;
+
+		$backup           = $wp_comment_types;
+		$wp_comment_types = null;
 
 		try {
 			$result = Comment::get_comment_types();
@@ -661,7 +675,7 @@ class Test_Comment extends \WP_UnitTestCase {
 			$this->assertIsArray( $slugs );
 			$this->assertSame( array(), $slugs );
 		} finally {
-			$activitypub_comment_types = $backup;
+			$wp_comment_types = $backup;
 		}
 	}
 
@@ -754,7 +768,7 @@ class Test_Comment extends \WP_UnitTestCase {
 			'trackback',
 		);
 
-		$activitypub_comment_types = Comment::get_comment_type_slugs();
+		$activitypub_comment_types = \get_comment_types( array( 'reaction' => true ), 'names' );
 
 		$comment_types = \array_merge( $activitypub_comment_types, $core_comment_types );
 

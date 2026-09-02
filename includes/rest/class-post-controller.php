@@ -9,7 +9,6 @@ namespace Activitypub\Rest;
 
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Replies;
-use Activitypub\Comment;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
@@ -131,11 +130,15 @@ class Post_Controller extends \WP_REST_Controller {
 
 		$reactions = array();
 
-		foreach ( Comment::get_comment_types() as $type_object ) {
+		foreach ( \get_comment_types( array(), 'objects' ) as $type_object ) {
+			if ( empty( $type_object->activity_types ) ) {
+				continue;
+			}
+
 			$comments = \get_comments(
 				array(
 					'post_id' => $post_id,
-					'type'    => $type_object['type'],
+					'type'    => $type_object->name,
 					'status'  => 'approve',
 					'parent'  => 0,
 				)
@@ -149,8 +152,8 @@ class Post_Controller extends \WP_REST_Controller {
 			// phpcs:disable WordPress.WP.I18n
 			$label = \sprintf(
 				\_n(
-					$type_object['count_single'],
-					$type_object['count_plural'],
+					$type_object->count_single,
+					$type_object->count_plural,
 					$count,
 					'activitypub'
 				),
@@ -158,7 +161,7 @@ class Post_Controller extends \WP_REST_Controller {
 			);
 			// phpcs:enable WordPress.WP.I18n
 
-			$reactions[ $type_object['collection'] ] = array(
+			$reactions[ $type_object->collection ] = array(
 				'label' => $label,
 				'items' => \array_map(
 					static function ( $comment ) {
