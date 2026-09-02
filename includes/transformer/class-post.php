@@ -333,11 +333,25 @@ class Post extends Base {
 	}
 
 	/**
-	 * Returns an Icon, based on the Featured Image with a fallback to the site-icon.
+	 * Returns a poster image for a media attachment, based on the Featured Image with a
+	 * fallback to the site-icon.
 	 *
-	 * @return array|null The Icon or null if no icon is available.
+	 * Stays `protected` rather than `private`: the podcast integrations extend this class and
+	 * call it, and {@see Base::wp_attachment_to_activity_attachment()} calls it from the parent.
+	 *
+	 * Deliberately not called `get_icon()`. {@see Base::transform_object_properties()} maps each
+	 * getter onto the property of the same name, so that name put an `icon` on every post. Added
+	 * in #1053 for audio and video posters, the object property came along by accident. Nothing
+	 * wants it: FEP-b2b8 gives a representative image as `image`, which a Featured Image already
+	 * populates, further media as `attachment`, and uses `icon` only for the author's avatar.
+	 *
+	 * @since unreleased Renamed from `get_icon()`, so it no longer maps onto the object.
+	 *
+	 * @see https://fediverse.codeberg.page/fep/fep/b2b8/
+	 *
+	 * @return array|null The poster image or null if none is available.
 	 */
-	protected function get_icon() {
+	protected function get_media_icon() {
 		$post_id = $this->item->ID;
 
 		// List post thumbnail first if this post has one.
