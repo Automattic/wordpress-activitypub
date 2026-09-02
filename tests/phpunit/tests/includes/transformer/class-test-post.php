@@ -983,6 +983,51 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A long-form post carries its Featured Image as `image` and not as an attachment.
+	 *
+	 * FEP-b2b8 reserves `attachment` for media that is part of the text, and a Featured Image is
+	 * not in the content, so sending both put the same picture out twice.
+	 *
+	 * @covers ::get_image
+	 * @covers ::get_attachment
+	 */
+	public function test_article_sends_the_featured_image_as_image_only() {
+		$post_id       = self::factory()->post->create( array( 'post_title' => 'A titled post is an Article' ) );
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		set_post_thumbnail( $post_id, $attachment_id );
+
+		$object = ( new Post( get_post( $post_id ) ) )->to_object();
+
+		$this->assertSame( 'Article', $object->get_type(), 'The fixture has to be long-form, or this proves nothing.' );
+		$this->assertNotEmpty( $object->get_image(), 'A long-form post keeps its representative image.' );
+		$this->assertEmpty( $object->get_attachment(), 'The Featured Image must not also be an attachment.' );
+	}
+
+	/**
+	 * A short-form post keeps its Featured Image as an attachment and sends no `image`.
+	 *
+	 * @covers ::get_image
+	 * @covers ::get_attachment
+	 */
+	public function test_note_sends_the_featured_image_as_an_attachment_only() {
+		update_option( 'activitypub_object_type', 'note' );
+
+		$post_id       = self::factory()->post->create( array( 'post_title' => 'Forced to a Note' ) );
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		set_post_thumbnail( $post_id, $attachment_id );
+
+		$object = ( new Post( get_post( $post_id ) ) )->to_object();
+
+		delete_option( 'activitypub_object_type' );
+
+		$this->assertSame( 'Note', $object->get_type() );
+		$this->assertNull( $object->get_image(), 'A short-form post has no representative image.' );
+		$this->assertCount( 1, $object->get_attachment(), 'The Featured Image still has to be federated.' );
+	}
+
+	/**
 	 * Test get_media_icon method.
 	 *
 	 * @covers ::get_media_icon
