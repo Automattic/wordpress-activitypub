@@ -229,4 +229,48 @@ class Test_Replies extends \WP_UnitTestCase {
 
 		$this->assertLessThanOrEqual( Replies::MAX_DEPTH, \count( $items ), 'One object per level, so the count is the depth reached.' );
 	}
+
+	/**
+	 * A wide thread does not cost an unbounded number of requests.
+	 *
+	 * Depth alone does not bound the walk: one level of a thread can name any number of replies,
+	 * each with a collection of its own. Without a budget across the whole walk a remote server
+	 * chooses how many requests we make.
+	 *
+	 * @covers ::parse
+	 */
+	public function test_does_not_fetch_more_collections_than_its_budget() {
+		$children = array();
+		for ( $i = 2; $i < 60; $i++ ) {
+			$children[] = array(
+				'id'      => "https://remote.example/notes/$i",
+				'replies' => "https://remote.example/notes/$i/replies",
+			);
+			$this->documents[ "https://remote.example/notes/$i/replies" ] = array(
+				'id'           => "https://remote.example/notes/$i/replies",
+				'type'         => 'OrderedCollection',
+				'orderedItems' => array( array( 'id' => "https://remote.example/notes/$i/child" ) ),
+			);
+		}
+
+		$this->documents['https://remote.example/notes/1/replies'] = array(
+			'id'           => 'https://remote.example/notes/1/replies',
+			'type'         => 'OrderedCollection',
+			'orderedItems' => $children,
+		);
+
+		$source = new Replies();
+		$source->parse(
+			array(
+				'id'      => 'https://remote.example/notes/1',
+				'replies' => 'https://remote.example/notes/1/replies',
+			)
+		);
+
+		$this->assertLessThanOrEqual(
+			Replies::MAX_COLLECTIONS,
+			\count( $this->requested ),
+			'The number of requests must be ours to decide, not the remote server\'s.'
+		);
+	}
 }

@@ -295,4 +295,27 @@ class Test_Builder extends \WP_UnitTestCase {
 	public function test_returns_nothing_when_the_starting_object_is_unreachable() {
 		$this->assertSame( array(), ( new Builder( 'https://remote.example/missing' ) )->build() );
 	}
+
+	/**
+	 * An object naming no author is dropped.
+	 *
+	 * The id binding is the only thing standing between us and a context owner listing whatever
+	 * it likes. An object with no `attributedTo` cannot be bound at all, so keeping it would make
+	 * omitting the property the way around the check.
+	 *
+	 * @covers ::build
+	 */
+	public function test_drops_an_object_with_no_author() {
+		$this->documents['https://remote.example/notes/1'] = array(
+			'id'           => 'https://remote.example/notes/1',
+			'attributedTo' => 'https://remote.example/users/alice',
+		);
+
+		$this->register_source( array( array( 'id' => 'https://victim.example/notes/9' ) ) );
+
+		$objects = ( new Builder( 'https://remote.example/notes/1' ) )->build();
+		$ids     = \wp_list_pluck( $objects, 'id' );
+
+		$this->assertNotContains( 'https://victim.example/notes/9', $ids );
+	}
 }

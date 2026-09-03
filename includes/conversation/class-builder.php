@@ -150,14 +150,9 @@ class Builder {
 	 * @return bool True when the object may be kept.
 	 */
 	private function is_trustworthy( $activity_object ) {
-		$author = $activity_object['attributedTo'] ?? '';
-
-		// Nothing to bind against; the caller decides what an unattributed object is worth.
-		if ( ! $author ) {
-			return true;
-		}
-
-		return is_same_host( $activity_object['id'], $author );
+		// An object naming no author cannot be bound at all, which would make omitting the
+		// property the way around this check.
+		return is_same_host( $activity_object['id'], $activity_object['attributedTo'] ?? '' );
 	}
 
 	/**

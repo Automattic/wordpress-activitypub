@@ -243,4 +243,27 @@ class Test_Collection_Reader extends \WP_UnitTestCase {
 
 		$this->assertSame( array(), Collection_Reader::read( 'https://remote.example/empty' ) );
 	}
+
+	/**
+	 * A page listing more items than the cap does not hand all of them back.
+	 *
+	 * Page size is the remote server's choice, so a single response can be arbitrarily large.
+	 * Without a ceiling the whole list is materialised in memory before any caller sees it.
+	 *
+	 * @covers ::read
+	 */
+	public function test_stops_collecting_at_the_item_cap() {
+		$items = array();
+		for ( $i = 0; $i < Collection_Reader::MAX_ITEMS + 50; $i++ ) {
+			$items[] = array( 'id' => "https://remote.example/notes/$i" );
+		}
+
+		$this->documents['https://remote.example/huge'] = array(
+			'id'           => 'https://remote.example/huge',
+			'type'         => 'OrderedCollection',
+			'orderedItems' => $items,
+		);
+
+		$this->assertCount( Collection_Reader::MAX_ITEMS, Collection_Reader::read( 'https://remote.example/huge' ) );
+	}
 }

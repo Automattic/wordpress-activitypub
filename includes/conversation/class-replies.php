@@ -37,6 +37,17 @@ class Replies implements Source {
 	const MAX_DEPTH = 5;
 
 	/**
+	 * How many reply collections one walk may read.
+	 *
+	 * Depth alone does not bound the work: a single level can name any number of replies, each
+	 * with a collection of its own, so without this the remote server decides how many requests
+	 * we make.
+	 *
+	 * @var int
+	 */
+	const MAX_COLLECTIONS = 20;
+
+	/**
 	 * Whether the object names a replies collection.
 	 *
 	 * @param array $activity_object The ActivityPub object.
@@ -65,6 +76,17 @@ class Replies implements Source {
 	}
 
 	/**
+	 * Whether the walk has spent its budget.
+	 *
+	 * @param array $seen Collection URIs already read.
+	 *
+	 * @return bool True when no further collection may be read.
+	 */
+	private function is_spent( $seen ) {
+		return \count( $seen ) >= self::MAX_COLLECTIONS;
+	}
+
+	/**
 	 * Read one object's replies, then those of each reply.
 	 *
 	 * @param array $activity_object The object whose replies to read.
@@ -74,7 +96,7 @@ class Replies implements Source {
 	 * @return array The ActivityPub objects found.
 	 */
 	private function descend( $activity_object, $depth, &$seen ) {
-		if ( $depth >= self::MAX_DEPTH || ! $this->supports( $activity_object ) ) {
+		if ( $depth >= self::MAX_DEPTH || $this->is_spent( $seen ) || ! $this->supports( $activity_object ) ) {
 			return array();
 		}
 
@@ -94,7 +116,12 @@ class Replies implements Source {
 			}
 
 			$found[] = $reply;
-			$found   = \array_merge( $found, $this->descend( $reply, $depth + 1, $seen ) );
+
+			if ( $this->is_spent( $seen ) ) {
+				continue;
+			}
+
+			$found = \array_merge( $found, $this->descend( $reply, $depth + 1, $seen ) );
 		}
 
 		return $found;
