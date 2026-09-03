@@ -992,6 +992,110 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that AP exclusion composes with a caller's existing `type__in`.
+	 *
+	 * Regression for #3306: GatherPress sets `type__in` for its own RSVP
+	 * filtering, which previously caused `comment_query` to bail out, and
+	 * AP comment types leaked into the front-end comment list. The new
+	 * behavior merges AP slugs into `type__not_in` whenever `type__in`
+	 * does not request an AP type.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_comment_query_merges_ap_exclusion_with_existing_type_in() {
+		$post_id = self::factory()->post->create();
+		$this->go_to( \get_permalink( $post_id ) );
+
+		$this->assertTrue( \is_singular(), 'Sanity: test setup must reach the singular branch.' );
+
+		$query             = new \WP_Comment_Query();
+		$query->query_vars = array( 'type__in' => array( 'gatherpress_rsvp' ) );
+
+		\Activitypub\Comment::comment_query( $query );
+
+		$this->assertSame( array( 'gatherpress_rsvp' ), $query->query_vars['type__in'] );
+		$this->assertArrayHasKey( 'type__not_in', $query->query_vars );
+		$this->assertContains( 'like', $query->query_vars['type__not_in'] );
+		$this->assertContains( 'repost', $query->query_vars['type__not_in'] );
+	}
+
+	/**
+	 * Test that AP exclusion composes with a caller's existing `type__not_in`.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_comment_query_merges_ap_exclusion_with_existing_type_not_in() {
+		$post_id = self::factory()->post->create();
+		$this->go_to( \get_permalink( $post_id ) );
+
+		$query             = new \WP_Comment_Query();
+		$query->query_vars = array( 'type__not_in' => array( 'pingback' ) );
+
+		\Activitypub\Comment::comment_query( $query );
+
+		$this->assertContains( 'pingback', $query->query_vars['type__not_in'] );
+		$this->assertContains( 'like', $query->query_vars['type__not_in'] );
+		$this->assertContains( 'repost', $query->query_vars['type__not_in'] );
+	}
+
+	/**
+	 * Test that an explicit request for an AP comment type is respected.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_comment_query_respects_explicit_ap_type_request() {
+		$post_id = self::factory()->post->create();
+		$this->go_to( \get_permalink( $post_id ) );
+
+		$query             = new \WP_Comment_Query();
+		$query->query_vars = array( 'type__in' => array( 'like' ) );
+
+		\Activitypub\Comment::comment_query( $query );
+
+		$this->assertTrue(
+			empty( $query->query_vars['type__not_in'] ),
+			'Caller is explicitly asking for AP likes; we must not add likes to type__not_in.'
+		);
+	}
+
+	/**
+	 * Test that the WordPress `'all'` sentinel disables AP exclusion.
+	 *
+	 * WP_Comment_Query treats `type => 'all'` and `type__in => array('all')`
+	 * as "include everything, even types we'd normally hide" (e.g. the
+	 * built-in `note` exclusion is also disabled in that case). Our filter
+	 * has to honor the same sentinel, otherwise a caller asking for the
+	 * full set still can't see ActivityPub Likes / Reposts / Quotes.
+	 *
+	 * @covers ::comment_query
+	 */
+	public function test_comment_query_respects_all_sentinel() {
+		$post_id = self::factory()->post->create();
+		$this->go_to( \get_permalink( $post_id ) );
+
+		$query             = new \WP_Comment_Query();
+		$query->query_vars = array( 'type' => 'all' );
+
+		\Activitypub\Comment::comment_query( $query );
+
+		$this->assertTrue(
+			empty( $query->query_vars['type__not_in'] ),
+			"Caller passed `type => 'all'`; AP slugs must not be appended to type__not_in."
+		);
+
+		// Same again via `type__in`.
+		$query             = new \WP_Comment_Query();
+		$query->query_vars = array( 'type__in' => array( 'all' ) );
+
+		\Activitypub\Comment::comment_query( $query );
+
+		$this->assertTrue(
+			empty( $query->query_vars['type__not_in'] ),
+			"Caller passed `type__in => array('all')`; AP slugs must not be appended to type__not_in."
+		);
+	}
+
+	/**
 	 * Test auto-approving comments on ap_post when option is enabled.
 	 *
 	 * @covers ::pre_comment_approved
