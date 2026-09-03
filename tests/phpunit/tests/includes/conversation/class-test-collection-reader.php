@@ -220,4 +220,24 @@ class Test_Collection_Reader extends \WP_UnitTestCase {
 
 		$this->assertCount( Collection_Reader::MAX_ITEMS, Collection_Reader::read( 'https://remote.example/huge' ) );
 	}
+
+	/**
+	 * A collection listing a single unwrapped value does not bring the request down.
+	 *
+	 * JSON-LD compaction drops the array around a one-element list, so `items` arriving as a bare
+	 * string is conforming, not hostile. Merging it would be a TypeError on PHP 8.
+	 *
+	 * @covers ::read
+	 */
+	public function test_survives_items_that_are_not_a_list() {
+		$this->documents['https://remote.example/unwrapped'] = array(
+			'id'    => 'https://remote.example/unwrapped',
+			'type'  => 'Collection',
+			'items' => 'https://remote.example/notes/1',
+		);
+
+		$items = Collection_Reader::read( 'https://remote.example/unwrapped' );
+
+		$this->assertSame( array( 'https://remote.example/notes/1' ), $items );
+	}
 }

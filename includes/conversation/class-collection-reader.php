@@ -62,7 +62,9 @@ class Collection_Reader {
 		}
 
 		while ( $page ) {
-			$page_items = $page['orderedItems'] ?? $page['items'] ?? array();
+			// Cast because JSON-LD compaction drops the array around a one-element list, so a
+			// conforming server may send a single item unwrapped.
+			$page_items = (array) ( $page['orderedItems'] ?? $page['items'] ?? array() );
 			$items      = \array_merge( $items, $page_items );
 
 			if ( \count( $items ) >= self::MAX_ITEMS ) {

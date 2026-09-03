@@ -295,4 +295,40 @@ class Test_Builder extends \WP_UnitTestCase {
 
 		$this->assertNotContains( 'https://victim.example/notes/9', $ids );
 	}
+
+	/**
+	 * Dates are compared as instants, not as strings.
+	 *
+	 * `published` is RFC3339, so the same instant has several spellings and an offset sorts
+	 * lexically against a `Z` in whichever way the digits happen to fall.
+	 *
+	 * @covers ::build
+	 */
+	public function test_orders_by_instant_rather_than_by_spelling() {
+		// 07:00 UTC, but sorts after the 08:00Z below as a string.
+		$this->documents['https://remote.example/notes/1'] = array(
+			'id'           => 'https://remote.example/notes/1',
+			'attributedTo' => 'https://remote.example/users/alice',
+			'published'    => '2026-01-01T09:00:00+02:00',
+		);
+
+		$this->register_source(
+			array(
+				array(
+					'id'           => 'https://remote.example/notes/2',
+					'attributedTo' => 'https://remote.example/users/alice',
+					'published'    => '2026-01-01T08:00:00Z',
+				),
+			)
+		);
+
+		$objects = ( new Builder( 'https://remote.example/notes/1' ) )->build();
+		$ids     = \wp_list_pluck( $objects, 'id' );
+
+		$this->assertSame(
+			array( 'https://remote.example/notes/1', 'https://remote.example/notes/2' ),
+			$ids,
+			'09:00+02:00 is 07:00 UTC, so it comes before 08:00Z.'
+		);
+	}
 }

@@ -179,7 +179,7 @@ class Builder {
 		\uasort(
 			$objects,
 			function ( $a, $b ) {
-				return \strcmp( $a['published'] ?? '', $b['published'] ?? '' );
+				return self::published_at( $a ) <=> self::published_at( $b );
 			}
 		);
 
@@ -191,6 +191,21 @@ class Builder {
 		}
 
 		return $ordered;
+	}
+
+	/**
+	 * The instant an object was published.
+	 *
+	 * `published` is RFC3339, so one instant has several spellings and an offset sorts against a
+	 * `Z` however the digits happen to fall. Comparing the strings would order `09:00:00+02:00`
+	 * after `08:00:00Z`, though it is an hour earlier.
+	 *
+	 * @param array $activity_object The ActivityPub object.
+	 *
+	 * @return int The Unix timestamp, or zero when there is no usable date.
+	 */
+	private static function published_at( $activity_object ) {
+		return (int) \strtotime( $activity_object['published'] ?? '' );
 	}
 
 	/**
