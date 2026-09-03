@@ -218,6 +218,10 @@ class Test_Avatar extends WP_UnitTestCase {
 
 		$this->assertStringEndsWith( '/' . $hash . '-1.webp', $result );
 		$this->assertTrue( file_exists( $paths['basedir'] . '/' . $hash . '-1.webp' ) );
+		$this->assertFileDoesNotExist(
+			$paths['basedir'] . '/' . $hash . '.webp',
+			'The collision loser must be pruned so later reads resolve to the written file'
+		);
 
 		\remove_filter( 'activitypub_pre_download_url', $mock_download );
 		Avatar::invalidate_entity( $post_id );
