@@ -141,6 +141,7 @@ function tests_disable_add_to_outbox_scheduling( $pre, $event ) {
 require $_tests_dir . '/includes/bootstrap.php';
 require __DIR__ . '/includes/trait-oauth-token-stub.php';
 require __DIR__ . '/includes/class-activitypub-outbox-testcase.php';
+require __DIR__ . '/includes/class-stub-source.php';
 require __DIR__ . '/includes/class-activitypub-testcase-cache-http.php';
 require __DIR__ . '/includes/class-test-rest-controller-testcase.php';
 
