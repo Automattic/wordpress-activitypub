@@ -1059,19 +1059,19 @@ class Test_Scheduler extends \WP_UnitTestCase {
 	/**
 	 * Test that the avatar cache cleanup schedule is registered.
 	 */
-	public function test_cleanup_actor_cache_schedule_registered() {
-		$this->assertArrayHasKey( 'activitypub_cleanup_actor_cache', Scheduler::SCHEDULES );
-		$this->assertEquals( 'daily', Scheduler::SCHEDULES['activitypub_cleanup_actor_cache'] );
+	public function test_cleanup_avatar_cache_schedule_registered() {
+		$this->assertArrayHasKey( 'activitypub_cleanup_avatar_cache', Scheduler::SCHEDULES );
+		$this->assertEquals( 'daily', Scheduler::SCHEDULES['activitypub_cleanup_avatar_cache'] );
 	}
 
 	/**
 	 * Test that the avatar cache cleanup action is registered on init.
 	 */
-	public function test_cleanup_actor_cache_action_registered() {
+	public function test_cleanup_avatar_cache_action_registered() {
 		Scheduler::init();
 
 		$this->assertNotFalse(
-			\has_action( 'activitypub_cleanup_actor_cache', array( Avatar::class, 'cleanup_actors' ) )
+			\has_action( 'activitypub_cleanup_avatar_cache', array( Avatar::class, 'cleanup' ) )
 		);
 	}
 }
