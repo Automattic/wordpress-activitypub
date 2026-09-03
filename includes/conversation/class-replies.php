@@ -66,24 +66,9 @@ class Replies implements Source {
 	 * @return array The ActivityPub objects found below it.
 	 */
 	public function parse( $activity_object ) {
-		if ( ! $this->supports( $activity_object ) ) {
-			return array();
-		}
-
 		$seen = array();
 
 		return $this->descend( $activity_object, 0, $seen );
-	}
-
-	/**
-	 * Whether the walk has spent its budget.
-	 *
-	 * @param array $seen Collection URIs already read.
-	 *
-	 * @return bool True when no further collection may be read.
-	 */
-	private function is_spent( $seen ) {
-		return \count( $seen ) >= self::MAX_COLLECTIONS;
 	}
 
 	/**
@@ -96,7 +81,7 @@ class Replies implements Source {
 	 * @return array The ActivityPub objects found.
 	 */
 	private function descend( $activity_object, $depth, &$seen ) {
-		if ( $depth >= self::MAX_DEPTH || $this->is_spent( $seen ) || ! $this->supports( $activity_object ) ) {
+		if ( $depth >= self::MAX_DEPTH || \count( $seen ) >= self::MAX_COLLECTIONS || ! $this->supports( $activity_object ) ) {
 			return array();
 		}
 
@@ -117,11 +102,10 @@ class Replies implements Source {
 
 			$found[] = $reply;
 
-			if ( $this->is_spent( $seen ) ) {
-				continue;
+			// Appended rather than merged: `array_merge` copies the left side on every item.
+			foreach ( $this->descend( $reply, $depth + 1, $seen ) as $descendant ) {
+				$found[] = $descendant;
 			}
-
-			$found = \array_merge( $found, $this->descend( $reply, $depth + 1, $seen ) );
 		}
 
 		return $found;

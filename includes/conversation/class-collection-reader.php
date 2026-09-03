@@ -49,13 +49,16 @@ class Collection_Reader {
 	 * @return array The items, in the order the collection listed them.
 	 */
 	public static function read( $collection ) {
-		$items    = array();
-		$seen     = array();
-		$requests = 1;
-		$page     = self::fetch( $collection );
+		$items = array();
+		$seen  = array();
+		$page  = self::fetch( $collection );
 
-		if ( \is_string( $collection ) ) {
-			$seen[ $collection ] = true;
+		// Seeded whichever way the collection arrived, or a `next` naming the document we already
+		// hold is fetched once before the cycle guard notices. `Context` hands us a fetched array.
+		$id = \is_string( $collection ) ? $collection : ( $page['id'] ?? '' );
+
+		if ( $id ) {
+			$seen[ $id ] = true;
 		}
 
 		while ( $page ) {
@@ -77,13 +80,12 @@ class Collection_Reader {
 			 * A repeat means a cycle. The request cap alone would stop it, but only after paying
 			 * for the whole budget, and it cannot tell a short loop from a long collection.
 			 */
-			if ( ! \is_string( $next ) || isset( $seen[ $next ] ) || $requests >= self::MAX_REQUESTS ) {
+			if ( ! \is_string( $next ) || isset( $seen[ $next ] ) || \count( $seen ) >= self::MAX_REQUESTS ) {
 				break;
 			}
 
 			$seen[ $next ] = true;
-			++$requests;
-			$page = self::fetch( $next );
+			$page          = self::fetch( $next );
 		}
 
 		return $items;

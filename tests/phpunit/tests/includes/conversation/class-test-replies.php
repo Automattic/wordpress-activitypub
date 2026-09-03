@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Conversation;
 
 use Activitypub\Conversation\Replies;
+use Activitypub\Tests\Remote_Object_Stub;
 
 /**
  * Test class for Replies.
@@ -16,54 +17,7 @@ use Activitypub\Conversation\Replies;
  */
 class Test_Replies extends \WP_UnitTestCase {
 
-	/**
-	 * Documents the fixture server answers with, keyed by URL.
-	 *
-	 * @var array
-	 */
-	protected $documents = array();
-
-	/**
-	 * URLs that were fetched, in order.
-	 *
-	 * @var array
-	 */
-	protected $requested = array();
-
-	/**
-	 * Serve the fixtures instead of the network.
-	 */
-	public function set_up() {
-		parent::set_up();
-
-		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'serve_fixture' ), 10, 2 );
-	}
-
-	/**
-	 * Stop serving fixtures.
-	 */
-	public function tear_down() {
-		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'serve_fixture' ), 10 );
-
-		parent::tear_down();
-	}
-
-	/**
-	 * Answer a remote fetch from the fixture table.
-	 *
-	 * @param mixed $response      The pre-empted response.
-	 * @param mixed $url_or_object The URL or object requested.
-	 * @return array|null The fixture, or null when there is none.
-	 */
-	public function serve_fixture( $response, $url_or_object ) {
-		if ( ! \is_string( $url_or_object ) ) {
-			return $response;
-		}
-
-		$this->requested[] = $url_or_object;
-
-		return $this->documents[ $url_or_object ] ?? $response;
-	}
+	use Remote_Object_Stub;
 
 	/**
 	 * An object with no replies collection is not something this source can use.

@@ -96,12 +96,19 @@ class Builder {
 		$collected = array();
 		$this->collect( $activity_object, $collected );
 
-		foreach ( self::get_sources() as $name => $source ) {
-			if ( \is_array( $names ) && ! \in_array( $name, $names, true ) ) {
-				continue;
+		$sources = self::get_sources();
+
+		if ( \is_array( $names ) ) {
+			$sources = \array_intersect_key( $sources, \array_flip( $names ) );
+		}
+
+		foreach ( $sources as $source ) {
+			// `$collected` only grows, so once it is full no later source can add to it.
+			if ( \count( $collected ) >= self::MAX_OBJECTS ) {
+				break;
 			}
 
-			if ( \count( $collected ) >= self::MAX_OBJECTS || ! $source->supports( $activity_object ) ) {
+			if ( ! $source->supports( $activity_object ) ) {
 				continue;
 			}
 
@@ -114,7 +121,7 @@ class Builder {
 			}
 		}
 
-		return $this->sort( \array_values( $collected ) );
+		return $this->sort( $collected );
 	}
 
 	/**
@@ -163,12 +170,13 @@ class Builder {
 	 * since `Interactions::add_comment()` resolves `inReplyTo` against what already exists, so the
 	 * date sort is followed by a pass that lifts every parent above its replies.
 	 *
-	 * @param array $objects The collected objects.
+	 * @param array $objects The collected objects, keyed by id.
 	 *
 	 * @return array The objects, oldest first.
 	 */
 	private function sort( $objects ) {
-		\usort(
+		// Keys are the ids, and `place()` looks a parent up by one, so they have to survive.
+		\uasort(
 			$objects,
 			function ( $a, $b ) {
 				return \strcmp( $a['published'] ?? '', $b['published'] ?? '' );
@@ -178,8 +186,8 @@ class Builder {
 		$ordered = array();
 		$placed  = array();
 
-		foreach ( $objects as $activity_object ) {
-			$this->place( $activity_object, $objects, $ordered, $placed );
+		foreach ( $objects as $id => $activity_object ) {
+			$this->place( $id, $objects, $ordered, $placed );
 		}
 
 		return $ordered;
@@ -188,32 +196,25 @@ class Builder {
 	/**
 	 * Add one object to the ordered list, after whatever it replies to.
 	 *
-	 * @param array $activity_object The object to place.
-	 * @param array $objects         Every object in the conversation.
-	 * @param array $ordered         The objects placed so far.
-	 * @param array $placed          Ids already placed, keyed by id.
+	 * @param string $id      The id of the object to place.
+	 * @param array  $objects Every object in the conversation, keyed by id.
+	 * @param array  $ordered The objects placed so far.
+	 * @param array  $placed  Ids already placed, keyed by id.
 	 */
-	private function place( $activity_object, $objects, &$ordered, &$placed ) {
-		$id = $activity_object['id'] ?? '';
-
-		if ( ! $id || isset( $placed[ $id ] ) ) {
+	private function place( $id, $objects, &$ordered, &$placed ) {
+		if ( ! isset( $objects[ $id ] ) || isset( $placed[ $id ] ) ) {
 			return;
 		}
 
 		// Marked before the parent is placed, so a cycle cannot recurse forever.
 		$placed[ $id ] = true;
 
-		$parent_id = object_to_uri( $activity_object['inReplyTo'] ?? '' );
+		$parent_id = object_to_uri( $objects[ $id ]['inReplyTo'] ?? '' );
 
 		if ( $parent_id ) {
-			foreach ( $objects as $candidate ) {
-				if ( ( $candidate['id'] ?? '' ) === $parent_id ) {
-					$this->place( $candidate, $objects, $ordered, $placed );
-					break;
-				}
-			}
+			$this->place( $parent_id, $objects, $ordered, $placed );
 		}
 
-		$ordered[] = $activity_object;
+		$ordered[] = $objects[ $id ];
 	}
 }

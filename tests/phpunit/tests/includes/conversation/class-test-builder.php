@@ -8,6 +8,8 @@
 namespace Activitypub\Tests\Conversation;
 
 use Activitypub\Conversation\Builder;
+use Activitypub\Conversation\Source;
+use Activitypub\Tests\Remote_Object_Stub;
 
 /**
  * Test class for Builder.
@@ -16,46 +18,17 @@ use Activitypub\Conversation\Builder;
  */
 class Test_Builder extends \WP_UnitTestCase {
 
-	/**
-	 * Documents the fixture server answers with, keyed by URL.
-	 *
-	 * @var array
-	 */
-	protected $documents = array();
+	use Remote_Object_Stub;
 
 	/**
-	 * Serve the fixtures instead of the network.
-	 */
-	public function set_up() {
-		parent::set_up();
-
-		\add_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'serve_fixture' ), 10, 2 );
-	}
-
-	/**
-	 * Stop serving fixtures.
+	 * Drop any source registered by a test before the next one runs.
 	 */
 	public function tear_down() {
-		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'serve_fixture' ), 10 );
 		\remove_all_filters( 'activitypub_conversation_sources' );
 
 		parent::tear_down();
 	}
 
-	/**
-	 * Answer a remote fetch from the fixture table.
-	 *
-	 * @param mixed $response      The pre-empted response.
-	 * @param mixed $url_or_object The URL or object requested.
-	 * @return array|null The fixture, or null when there is none.
-	 */
-	public function serve_fixture( $response, $url_or_object ) {
-		if ( ! \is_string( $url_or_object ) ) {
-			return $response;
-		}
-
-		return $this->documents[ $url_or_object ] ?? $response;
-	}
 
 	/**
 	 * Register a single stub source that returns the given objects.
@@ -67,7 +40,11 @@ class Test_Builder extends \WP_UnitTestCase {
 		\add_filter(
 			'activitypub_conversation_sources',
 			function ( $sources ) use ( $objects, $name ) {
-				$sources[ $name ] = new Stub_Source( $objects );
+				$source = $this->createMock( Source::class );
+				$source->method( 'supports' )->willReturn( true );
+				$source->method( 'parse' )->willReturn( $objects );
+
+				$sources[ $name ] = $source;
 
 				return $sources;
 			}
