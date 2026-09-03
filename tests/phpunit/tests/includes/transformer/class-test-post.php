@@ -665,6 +665,56 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An enclosure hosted off-site is federated.
+	 *
+	 * Podcast plugins declare episode audio as a standard WordPress enclosure, and the file
+	 * almost always lives on the podcast host rather than in the media library. It therefore has
+	 * no attachment ID, which is exactly the case the deduplication used to discard.
+	 *
+	 * The URL is on the test site's own host only so that `wp_http_validate_url()` inside
+	 * `get_enclosures()` does not need DNS. What this exercises is the missing attachment ID.
+	 *
+	 * @covers ::get_attachment
+	 */
+	public function test_federates_an_enclosure_hosted_off_site() {
+		$post_id = self::factory()->post->create( array( 'post_title' => 'Episode 566' ) );
+
+		// Verbatim from a PowerPress episode: url, length, mime, then its own serialised extras.
+		\add_post_meta(
+			$post_id,
+			'enclosure',
+			"https://example.org/uploads/E566.mp3\n11657768\naudio/mpeg\na:1:{s:8:\"duration\";s:7:\"0:22:46\";}"
+		);
+
+		$attachments = ( new Post( \get_post( $post_id ) ) )->to_object()->get_attachment();
+
+		$this->assertCount( 1, $attachments, 'The episode audio has to survive deduplication.' );
+		$this->assertSame( 'https://example.org/uploads/E566.mp3', $attachments[0]['url'] );
+		$this->assertSame( 'audio/mpeg', $attachments[0]['mediaType'] );
+		$this->assertSame( 'Audio', $attachments[0]['type'] );
+	}
+
+	/**
+	 * The same off-site enclosure declared twice is federated once.
+	 *
+	 * Deduplication is the whole point of the filter these attachments now pass through, so it
+	 * has to keep working for media that has no ID to be keyed on.
+	 *
+	 * @covers ::get_attachment
+	 */
+	public function test_deduplicates_an_off_site_enclosure_by_url() {
+		$post_id   = self::factory()->post->create( array( 'post_title' => 'Episode 566' ) );
+		$enclosure = "https://example.org/uploads/E566.mp3\n11657768\naudio/mpeg";
+
+		\add_post_meta( $post_id, 'enclosure', $enclosure );
+		\add_post_meta( $post_id, 'enclosure', $enclosure );
+
+		$attachments = ( new Post( \get_post( $post_id ) ) )->to_object()->get_attachment();
+
+		$this->assertCount( 1, $attachments );
+	}
+
+	/**
 	 * Test get_attachments with zero max_media_attachments.
 	 *
 	 * @covers ::get_attachment
