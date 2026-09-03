@@ -186,8 +186,9 @@ class Avatar extends File {
 	 * @param string|int $entity_id The entity identifier (actor post ID).
 	 * @param string     $file_path The path of the file that was written.
 	 * @param string     $file_name The basename of the file that was written.
+	 * @param array      $options   Cache options inherited from File::cache().
 	 */
-	protected static function after_cache( $url, $entity_id, $file_path, $file_name ) {
+	protected static function after_cache( $url, $entity_id, $file_path, $file_name, $options ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Required to match File::after_cache() signature.
 		self::prune_stale_files( $entity_id, self::generate_hash( $url ), $file_name );
 	}
 
