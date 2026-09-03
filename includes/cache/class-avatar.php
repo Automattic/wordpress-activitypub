@@ -193,29 +193,6 @@ class Avatar extends File {
 	}
 
 	/**
-	 * Get the hash of the avatar currently referenced by an actor.
-	 *
-	 * Reads the actor's icon directly from post content without running the
-	 * remote media filter, so this never triggers a lazy download.
-	 *
-	 * @since unreleased
-	 *
-	 * @param int $post_id The actor post ID.
-	 *
-	 * @return string|false The md5 hash of the current avatar URL, false if the
-	 *                      post is missing or not an actor, empty string when
-	 *                      the actor has no usable icon.
-	 */
-	public static function get_actor_avatar_hash( $post_id ) {
-		$post = \get_post( $post_id );
-		if ( ! $post || Remote_Actors::POST_TYPE !== $post->post_type ) {
-			return false;
-		}
-
-		return self::get_actor_avatar_hash_from_post( $post );
-	}
-
-	/**
 	 * Get avatar hash from an actor post.
 	 *
 	 * @since unreleased
@@ -293,7 +270,7 @@ class Avatar extends File {
 	 *
 	 * @since unreleased
 	 */
-	public static function cleanup_actors() {
+	public static function cleanup() {
 		// Lock the cleanup with an autoload-disabled option so overlapping
 		// cron workers never run it twice at once.
 		$now = \time();
@@ -302,7 +279,10 @@ class Avatar extends File {
 			if ( $lock_time && ( $now - $lock_time ) < 30 * MINUTE_IN_SECONDS ) {
 				return;
 			}
-			\update_option( 'activitypub_avatar_cache_cleanup_lock', $now, false );
+			\delete_option( 'activitypub_avatar_cache_cleanup_lock' );
+			if ( ! \add_option( 'activitypub_avatar_cache_cleanup_lock', $now, '', false ) ) {
+				return;
+			}
 		}
 
 		$upload_dir = \wp_upload_dir();
@@ -320,46 +300,37 @@ class Avatar extends File {
 		 *
 		 * @param int $limit The maximum number of directories to scan.
 		 */
-		$limit  = \max( 1, (int) \apply_filters( 'activitypub_cleanup_actor_cache_limit', 100 ) );
-		$cursor = (string) \get_option( 'activitypub_avatar_cache_cursor', '' );
-		$dirs   = array();
-		$found  = empty( $cursor );
+		$limit = \max( 1, (int) \apply_filters( 'activitypub_cleanup_avatar_cache_limit', 100 ) );
+		// Cursor is the highest actor post ID already swept; skip IDs at or
+		// below it so resuming stays deterministic across runs.
+		$cursor = (int) \get_option( 'activitypub_avatar_cache_cursor', 0 );
 
-		$iterator = new \DirectoryIterator( $root );
-		foreach ( $iterator as $directory ) {
+		$dirs = array();
+		$it   = new \DirectoryIterator( $root );
+		foreach ( $it as $directory ) {
 			if ( $directory->isDot() || ! $directory->isDir() ) {
 				continue;
 			}
 
 			$dirname = $directory->getFilename();
-			if ( ! $found ) {
-				if ( $dirname === $cursor ) {
-					$found = true;
-				}
-				continue;
-			}
-			if ( ! \preg_match( '/^\\d+$/', $dirname ) ) {
+			if ( ! \ctype_digit( $dirname ) || (int) $dirname <= $cursor ) {
 				continue;
 			}
 
-			$dirs[ (int) $dirname ] = $directory->getPathname();
-			if ( \count( $dirs ) >= $limit ) {
-				break;
-			}
+			$dirs[] = (int) $dirname;
 		}
+		\sort( $dirs, SORT_NUMERIC );
+		$dirs = \array_slice( $dirs, 0, $limit );
 
-		// Restart from the beginning after reaching the end of the directory tree.
-		if ( empty( $dirs ) && ! empty( $cursor ) ) {
+		if ( empty( $dirs ) ) {
 			\delete_option( 'activitypub_avatar_cache_cursor' );
 			\delete_option( 'activitypub_avatar_cache_cleanup_lock' );
 			return;
 		}
-		if ( empty( $dirs ) ) {
-			\delete_option( 'activitypub_avatar_cache_cleanup_lock' );
-			return;
-		}
 
-		$post_ids = \array_keys( $dirs );
+		// 'any' excludes trashed posts, so a trashed actor's cache directory
+		// counts as orphaned here and is deleted below.
+		$post_ids = $dirs;
 		$posts    = \get_posts(
 			array(
 				'post__in'       => $post_ids,
@@ -375,20 +346,18 @@ class Avatar extends File {
 		}
 
 		$last_dir = null;
-		foreach ( $dirs as $post_id => $dir ) {
+		foreach ( $dirs as $post_id ) {
+			$last_dir = (int) $post_id;
 			if ( empty( $post_map[ $post_id ] ) ) {
-				static::delete_directory( $dir );
+				static::delete_directory( $root . '/' . $post_id );
 				continue;
 			}
 
-			$hash     = self::get_actor_avatar_hash_from_post( $post_map[ $post_id ] );
+			$hash = self::get_actor_avatar_hash_from_post( $post_map[ $post_id ] );
 			self::prune_stale_files( $post_id, $hash );
-			$last_dir = (string) $post_id;
 		}
 
-		// Resume after the last surviving directory. A directory pruned as an
-		// orphan is gone from disk, so it can never be matched next run; only
-		// anchor the cursor on a directory that still exists.
+		// Resume after the last processed directory, including orphaned ones.
 		if ( null !== $last_dir ) {
 			\update_option( 'activitypub_avatar_cache_cursor', $last_dir, false );
 		}

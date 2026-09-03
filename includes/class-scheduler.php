@@ -36,7 +36,7 @@ class Scheduler {
 	const SCHEDULES = array(
 		'activitypub_update_remote_actors'         => 'hourly',
 		'activitypub_cleanup_remote_actors'        => 'daily',
-		'activitypub_cleanup_actor_cache'          => 'daily',
+		'activitypub_cleanup_avatar_cache'         => 'daily',
 		'activitypub_reprocess_outbox'             => 'hourly',
 		'activitypub_outbox_purge'                 => 'daily',
 		'activitypub_inbox_purge'                  => 'daily',
@@ -87,7 +87,7 @@ class Scheduler {
 		\add_action( 'activitypub_cleanup_remote_actors', array( self::class, 'cleanup_remote_actors' ) );
 
 		// Cached avatar cleanup.
-		\add_action( 'activitypub_cleanup_actor_cache', array( Avatar::class, 'cleanup_actors' ) );
+		\add_action( 'activitypub_cleanup_avatar_cache', array( Avatar::class, 'cleanup' ) );
 
 		// Event callbacks.
 		\add_action( 'activitypub_async_batch', array( self::class, 'async_batch' ), 10, 99 );
