@@ -203,7 +203,7 @@ class Avatar extends File {
 	 */
 	protected static function get_actor_avatar_hash_from_post( $post ) {
 		$actor_data = \json_decode( $post->post_content, true );
-		if ( empty( $actor_data['icon'] ) ) {
+		if ( ! \is_array( $actor_data ) || empty( $actor_data['icon'] ) ) {
 			return '';
 		}
 
@@ -243,7 +243,10 @@ class Avatar extends File {
 
 		foreach ( $files as $file ) {
 			$filename = \basename( $file );
-			if ( $filename === $current_file || 0 === \strpos( $filename, $prefix ) ) {
+			// The hash-prefix keep applies only when no exact filename is
+			// known (the cron sweep). During a write, the loser of a
+			// collision is pruned so File::get() cannot keep serving it.
+			if ( $filename === $current_file || ( null === $current_file && 0 === \strpos( $filename, $prefix ) ) ) {
 				continue;
 			}
 
@@ -279,7 +282,9 @@ class Avatar extends File {
 			if ( $lock_time && ( $now - $lock_time ) < 30 * MINUTE_IN_SECONDS ) {
 				return;
 			}
-			\delete_option( 'activitypub_avatar_cache_cleanup_lock' );
+			if ( ! self::release_stale_lock( $lock_time ) ) {
+				return;
+			}
 			if ( ! \add_option( 'activitypub_avatar_cache_cleanup_lock', $now, '', false ) ) {
 				return;
 			}
@@ -362,5 +367,34 @@ class Avatar extends File {
 			\update_option( 'activitypub_avatar_cache_cursor', $last_dir, false );
 		}
 		\delete_option( 'activitypub_avatar_cache_cleanup_lock' );
+	}
+
+	/**
+	 * Delete a stale cleanup lock only if its value still matches.
+	 *
+	 * Two workers can both see the same expired lock; deleting it
+	 * unconditionally would let the second worker remove the first
+	 * worker's fresh lock and start a second sweep. Comparing the
+	 * stored value makes the takeover fail for whichever worker lost
+	 * the race.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $lock_time The stale lock timestamp being taken over.
+	 *
+	 * @return bool True when the stale lock was removed by this worker.
+	 */
+	protected static function release_stale_lock( $lock_time ) {
+		global $wpdb;
+
+		$deleted = $wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM $wpdb->options WHERE option_name = %s AND option_value = %s", // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+				'activitypub_avatar_cache_cleanup_lock',
+				(string) $lock_time
+			)
+		);
+
+		return 1 === (int) $deleted;
 	}
 }
