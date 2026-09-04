@@ -1392,7 +1392,6 @@ class Test_Mailer extends WP_UnitTestCase {
 	 * @param int   $user_id The recipient.
 	 */
 	private function deliver_to_inbox( $data, $user_id ) {
-		\add_option( 'permalink_structure', '/%postname%/' );
 		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
 		Server::init();
 
@@ -1402,7 +1401,6 @@ class Test_Mailer extends WP_UnitTestCase {
 		\rest_get_server()->dispatch( $request );
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
-		\delete_option( 'permalink_structure' );
 	}
 
 	/**
