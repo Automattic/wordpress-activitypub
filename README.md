@@ -11,6 +11,18 @@ You can test out the plugin (settings) with [WordPress Playground](https://wordp
 > [!NOTE]
 > [WordPress Playground](https://wordpress.org/playground/) is the platform that lets you run WordPress instantly on any device without a host. It’s your place to build, experiment, test, and grow.
 
+## Sites using the plugin
+
+A few blogs that run the plugin, so you can see how it behaves before installing it. Follow any of them from your Fediverse account:
+
+- [Social Web Foundation](https://socialwebfoundation.org/), `swf@socialwebfoundation.org`
+- [ActivityPub Blog](https://activitypub.blog/), `activitypub.blog@activitypub.blog`
+- [Evan Prodromou](https://evanp.me/), `evanp.me@evanp.me`
+- [IFTAS](https://about.iftas.org/blog/), `about.iftas.org@about.iftas.org`
+- [Kaffeeringe](https://kaffeeringe.de/), `blog@kaffeeringe.de`
+
+If you run the plugin on your own site, add it to [Show and Tell](https://github.com/Automattic/wordpress-activitypub/discussions/categories/show-and-tell). We would like to see it.
+
 ## Documentation
 
 - [Developer Documentation](docs/developer-docs.md) - Guide for developers working with the plugin.
