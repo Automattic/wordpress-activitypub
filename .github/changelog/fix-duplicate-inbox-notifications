@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fewer duplicate email notifications when another server delivers the same message more than once, and a reply that mentions you no longer also sends a separate mention email.
