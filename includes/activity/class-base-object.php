@@ -122,9 +122,8 @@ class Base_Object extends Generic_Object {
 	 */
 	const JSON_LD_CONTEXT = array(
 		'https://www.w3.org/ns/activitystreams',
+		'https://purl.archive.org/miscellany',
 		array(
-			'Hashtag'           => 'as:Hashtag',
-			'sensitive'         => 'as:sensitive',
 			'dcterms'           => 'http://purl.org/dc/terms/',
 			'gts'               => 'https://gotosocial.org/ns#',
 			'schema'            => 'http://schema.org/',
