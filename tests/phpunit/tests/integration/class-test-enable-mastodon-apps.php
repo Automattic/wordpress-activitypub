@@ -700,4 +700,26 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 		$this->assertCount( 1, $followers );
 		$this->assertEquals( 'https://remote.example.com/follower-avatar.png', $followers[0]->avatar );
 	}
+
+	/**
+	 * Test that a status submitted from a Mastodon app keeps its plain mention.
+	 *
+	 * Mentions are turned into links when the content is rendered and when the activity is
+	 * built. Rewriting them while the status is being submitted would store the shortened
+	 * link text instead, and the plain `@user@domain` that decides who gets addressed and
+	 * notified would be gone by the time the post federates.
+	 *
+	 * @covers ::init
+	 */
+	public function test_submitted_status_keeps_mention_for_federation() {
+		$status_text = 'Hello @username@example.org!';
+
+		$submitted = \apply_filters( 'mastodon_api_submit_status_text', $status_text, null, 'public' );
+
+		$this->assertSame( $status_text, $submitted );
+		$this->assertSame(
+			array( '@username@example.org' => 'https://example.org/users/username' ),
+			\apply_filters( 'activitypub_extract_mentions', array(), $submitted, null )
+		);
+	}
 }
