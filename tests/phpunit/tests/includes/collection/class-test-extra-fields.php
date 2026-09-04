@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Collection;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 
 /**
@@ -62,5 +63,64 @@ class Test_Extra_Fields extends \WP_UnitTestCase {
 		$this->assertEquals( $expected_name, $attachments[0]['name'] );
 		$this->assertStringContainsString( '"quotes"', $attachments[0]['value'] );
 		$this->assertStringContainsString( '& ampersands', $attachments[0]['value'] );
+	}
+
+	/**
+	 * The default fields include the "Powered by" entry.
+	 *
+	 * It used to be seeded separately by `Migration::add_default_extra_field()`, which ran before
+	 * the post types were registered and recorded no flag, so it duplicated on a replayed
+	 * migration and reappeared after deletion. Seeding it here instead means it inherits the
+	 * empty-list check, the flag, and the timing that everything else already had.
+	 *
+	 * @covers ::default_actor_extra_fields
+	 */
+	public function test_default_fields_include_powered_by() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		$fields = Extra_Fields::default_actor_extra_fields( array(), $user_id );
+		$titles = \wp_list_pluck( $fields, 'post_title' );
+
+		$this->assertContains( 'Powered by', $titles );
+	}
+
+	/**
+	 * The blog actor gets it too, as it did when migration seeded it.
+	 *
+	 * @covers ::default_actor_extra_fields
+	 */
+	public function test_blog_default_fields_include_powered_by() {
+		$fields = Extra_Fields::default_actor_extra_fields( array(), Actors::BLOG_USER_ID );
+		$titles = \wp_list_pluck( $fields, 'post_title' );
+
+		// Seeding the blog actor records a site option, which would otherwise outlive this test.
+		\delete_option( 'activitypub_default_extra_fields' );
+
+		$this->assertContains( 'Powered by', $titles );
+	}
+
+	/**
+	 * The "Powered by" default keeps the plain text the migration used to write.
+	 *
+	 * Every other default is a bare URL the loop linkifies. This one is not a URL, and its value
+	 * has to stay byte-identical to what `Migration::add_default_extra_field()` produced, so no
+	 * site sees its profile change.
+	 *
+	 * @covers ::default_actor_extra_fields
+	 */
+	public function test_powered_by_keeps_the_plain_text_it_always_had() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		$fields  = Extra_Fields::default_actor_extra_fields( array(), $user_id );
+		$content = '';
+
+		foreach ( $fields as $field ) {
+			if ( 'Powered by' === $field->post_title ) {
+				$content = $field->post_content;
+			}
+		}
+
+		$this->assertStringContainsString( 'WordPress', $content );
+		$this->assertStringNotContainsString( '<a ', $content, 'It was never a link, and must not become one.' );
 	}
 }
