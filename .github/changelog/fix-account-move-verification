@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fix Fediverse account migration so a move is verified before it takes effect and reliably reaches your followers on other servers.
