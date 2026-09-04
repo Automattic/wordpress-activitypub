@@ -9,7 +9,6 @@ namespace Activitypub\Tests;
 
 use Activitypub\Activity\Actor;
 use Activitypub\Application;
-use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
@@ -633,80 +632,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		);
 	}
 
-	/**
-	 * Test add_default_extra_field.
-	 */
-	public function test_add_default_extra_field() {
-		// Create a test user with ActivityPub permission.
-		$user_id = self::factory()->user->create();
-		$user    = get_user_by( 'id', $user_id );
-		$user->add_cap( 'activitypub' );
 
-		// Run the private method over Reflection.
-		$reflection = new \ReflectionClass( Migration::class );
-		$method     = $reflection->getMethod( 'add_default_extra_field' );
-		if ( \PHP_VERSION_ID < 80100 ) {
-			$method->setAccessible( true );
-		}
-		$method->invoke( null );
-
-		// Check the extra field for the user.
-		$user_fields = get_posts(
-			array(
-				'post_type'      => Extra_Fields::USER_POST_TYPE,
-				'author'         => $user_id,
-				'posts_per_page' => -1,
-			)
-		);
-
-		$this->assertCount( 1, $user_fields, 'There should be one extra field for the user' );
-		$this->assertEquals( 'Powered by', $user_fields[0]->post_title, 'The title should be "Powered by"' );
-		$this->assertEquals( 'WordPress', $user_fields[0]->post_content, 'The content should be "WordPress"' );
-
-		// Check the extra field for the blog user.
-		$blog_fields = get_posts(
-			array(
-				'post_type'      => Extra_Fields::BLOG_POST_TYPE,
-				'author'         => 0,
-				'posts_per_page' => -1,
-			)
-		);
-
-		$this->assertCount( 1, $blog_fields, 'There should be one extra field for the blog user' );
-		$this->assertEquals( 'Powered by', $blog_fields[0]->post_title, 'The title should be "Powered by"' );
-		$this->assertEquals( 'WordPress', $blog_fields[0]->post_content, 'The content should be "WordPress"' );
-
-		_delete_all_data();
-	}
-
-	/**
-	 * Test add_default_extra_field with multiple users.
-	 */
-	public function test_add_default_extra_field_multiple_users() {
-		// Create a user without ActivityPub permission.
-		$non_ap_user_id = self::factory()->user->create();
-
-		// Run the private method over Reflection.
-		$reflection = new \ReflectionClass( Migration::class );
-		$method     = $reflection->getMethod( 'add_default_extra_field' );
-		if ( \PHP_VERSION_ID < 80100 ) {
-			$method->setAccessible( true );
-		}
-		$method->invoke( null );
-
-		// Check that the user without ActivityPub permission has no extra field.
-		$non_ap_user_fields = get_posts(
-			array(
-				'post_type'      => Extra_Fields::USER_POST_TYPE,
-				'author'         => $non_ap_user_id,
-				'posts_per_page' => -1,
-			)
-		);
-
-		$this->assertCount( 0, $non_ap_user_fields, 'User without ActivityPub permission should not have an extra field' );
-
-		_delete_all_data();
-	}
 
 	/**
 	 * Test update_notification_options.

@@ -238,20 +238,40 @@ class Extra_Fields {
 			}
 		}
 
+		/*
+		 * Seeded here rather than at install time. `Migration::add_default_extra_field()` used to
+		 * add this one on its own, which ran before `ap_extrafield` was registered and recorded
+		 * none of the flags below, so it duplicated whenever a migration replayed and came back
+		 * after somebody deleted it. Here it inherits the empty-list check, the flag, and the
+		 * timing the other defaults already had.
+		 */
+		$defaults[ \__( 'Powered by', 'activitypub' ) ] = '<a href="https://wordpress.org/">WordPress</a>';
+
 		$post_type  = $is_blog ? self::BLOG_POST_TYPE : self::USER_POST_TYPE;
 		$menu_order = 10;
 
-		foreach ( $defaults as $title => $url ) {
-			if ( ! $url ) {
+		foreach ( $defaults as $title => $value ) {
+			if ( ! $value ) {
 				continue;
 			}
+
+			/*
+			 * Every other default is a bare URL that has to be turned into a link. This one is
+			 * already markup, because the label stays "WordPress" rather than becoming the
+			 * shortened host `Link::the_content()` would render. It has to end up as a single
+			 * anchor either way: `fields_to_attachments()` emits a `Link` for that and a `Note`
+			 * for anything else, and `Note` is not one of the types the actor schema allows.
+			 */
+			$content = \filter_var( $value, FILTER_VALIDATE_URL )
+				? Link::the_content( $value )
+				: $value;
 
 			$extra_field = array(
 				'post_type'      => $post_type,
 				'post_title'     => $title,
 				'post_status'    => 'publish',
 				'post_author'    => $user_id,
-				'post_content'   => self::make_paragraph_block( Link::the_content( $url ) ),
+				'post_content'   => self::make_paragraph_block( $content ),
 				'comment_status' => 'closed',
 				'menu_order'     => $menu_order,
 			);

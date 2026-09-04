@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+The "Powered by WordPress" profile field no longer duplicates itself or reappears after you delete it, and it is now a working link.
