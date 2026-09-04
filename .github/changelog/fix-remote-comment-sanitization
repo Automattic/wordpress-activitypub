@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Replies from remote accounts are now filtered before they are saved when an administrator imports them through search.

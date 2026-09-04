@@ -7,6 +7,8 @@ description: PHP coding standards and WordPress patterns for ActivityPub plugin.
 
 Plugin-specific conventions and architectural patterns for the ActivityPub plugin.
 
+**First rule: reuse before writing.** Prefer WordPress core functions, then existing plugin helpers (`includes/functions*.php`, `Sanitize`, `src/shared/`), over any new implementation — and never swap a core-function-based check for bespoke logic. See "Reuse Core Functionality First" in `docs/php-coding-standards.md`.
+
 ## Quick Reference
 
 ### File Naming

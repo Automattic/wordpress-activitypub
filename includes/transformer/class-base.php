@@ -713,7 +713,12 @@ abstract class Base {
 	/**
 	 * Filter attachments to ensure uniqueness based on their ID.
 	 *
-	 * @param array $attachments Array of attachments with 'id' field.
+	 * Media without an ID is passed through: there is nothing to compare it against, and whether
+	 * it belongs here at all was decided by whichever method added it. An enclosure names a file
+	 * the author declared belongs to the post and carries no ID when it is not in the media
+	 * library, which is the normal case for podcast audio.
+	 *
+	 * @param array $attachments Array of attachments, each optionally carrying an 'id'.
 	 *
 	 * @return array Array with duplicate attachments removed.
 	 */
@@ -723,11 +728,17 @@ abstract class Base {
 		return \array_filter(
 			$attachments,
 			static function ( $attachment ) use ( &$seen_ids ) {
-				if ( isset( $attachment['id'] ) && ! \in_array( $attachment['id'], $seen_ids, true ) ) {
-					$seen_ids[] = $attachment['id'];
+				if ( ! isset( $attachment['id'] ) ) {
 					return true;
 				}
-				return false;
+
+				if ( \in_array( $attachment['id'], $seen_ids, true ) ) {
+					return false;
+				}
+
+				$seen_ids[] = $attachment['id'];
+
+				return true;
 			}
 		);
 	}

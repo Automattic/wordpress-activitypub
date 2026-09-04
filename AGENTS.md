@@ -24,6 +24,8 @@ Prefer reading project files and `docs/` over relying on training data for WordP
 
 ## PHP Conventions
 
+**ALWAYS reuse existing functionality instead of hand-rolling it.** Before writing any parsing, validation, escaping, or formatting logic, check for a WordPress core function that does the job (e.g. `wp_kses_bad_protocol()`, `wp_parse_url()`, `wp_http_validate_url()`), then for an existing plugin helper (`includes/functions*.php`, `Sanitize`, `src/shared/`). Core primitives are battle-tested against adversarial input in ways a fresh implementation is not, and reviewers can trust them on sight. A custom implementation needs a stated reason why no existing function fits — "shorter" is not one. This applies to refactors too: never replace a core-function-based check with bespoke logic just to save a line.
+
 **MUST** backslash-prefix all WordPress functions in namespaced code: `\get_option()`, `\add_action()`, `\apply_filters()`, `\__()`, `\_e()`, etc. PHP falls back to global scope, but backslashes are a project standard for consistency and to avoid accidentally shadowing globals.
 
 **No inline namespaces.** Use `use` statements at the top of the file instead of inline fully-qualified class names (e.g., `use Activitypub\Options;` then `Options::method()`, not `\Activitypub\Options::method()`).

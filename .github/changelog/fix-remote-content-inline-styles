@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Inline styles are now removed from posts and profiles that come from remote accounts.

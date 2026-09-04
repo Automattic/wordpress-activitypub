@@ -125,7 +125,7 @@ trait Verification {
 	 * body missing either field is rejected by the route's own argument validation, which runs
 	 * after the permission callback.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return true|\WP_Error True if valid, WP_Error on mismatch.
@@ -213,7 +213,7 @@ trait Verification {
 	 * check, so a wp-admin session in another browser tab cannot be hijacked
 	 * to drive C2S writes on behalf of the user (no CSRF path on this surface).
 	 *
-	 * @since unreleased Added the `$scope` parameter.
+	 * @since 9.3.0 Added the `$scope` parameter.
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @param string|null      $scope   Optional. Scope to require instead of the method default. Default null.

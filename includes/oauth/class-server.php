@@ -182,7 +182,7 @@ class Server {
 	 * Unlike {@see self::check_oauth_permission()}, this does not require the request to be
 	 * OAuth-authenticated, so it can be combined with checks that also accept a WP session.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param string $scope The scope to require of an OAuth caller.
 	 * @return bool True if the request may act for the scope.

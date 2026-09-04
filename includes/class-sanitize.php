@@ -256,7 +256,7 @@ class Sanitize {
 	 * kses removes a tag but keeps what is inside it, so a `<script>` body would
 	 * otherwise survive as visible text.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param string $content The content to strip.
 	 *
@@ -327,7 +327,7 @@ class Sanitize {
 	 * `unfiltered_html`. Calling this where the content is known to be remote keeps the
 	 * guarantee from depending on who is logged in.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param string $content The remote comment content.
 	 *
@@ -349,7 +349,7 @@ class Sanitize {
 	 * same additions on the `wp_kses_allowed_html` filter and delegates here, so the
 	 * filter and the direct call cannot drift.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param array|null $allowed_tags Optional. Allowlist to extend. Default the `pre_comment_content` context.
 	 *
@@ -395,7 +395,7 @@ class Sanitize {
 	 * would see anyway. The plugin's own emoji and image delimiters are added after this
 	 * runs, so they are unaffected.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param string $content The content to strip.
 	 *

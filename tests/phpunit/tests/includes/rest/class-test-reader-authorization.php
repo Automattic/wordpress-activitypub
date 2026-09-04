@@ -284,6 +284,66 @@ class Test_Reader_Authorization extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The blog actor's cached replies are not readable by a logged-out visitor.
+	 *
+	 * The blog actor is user ID 0, and `get_current_user_id()` also returns 0 when nobody is
+	 * logged in, so matching the request against the feed owner alone lets anyone read the
+	 * blog actor's feed. The fixtures above all belong to a real user, which is why the
+	 * existing coverage passes without catching this.
+	 *
+	 * @covers \Activitypub\Rest\Remote_Posts_Controller::check_read_permission
+	 */
+	public function test_blog_actor_cached_replies_are_not_readable_when_logged_out() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'    => Remote_Posts::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => 'Blog actor content.',
+				'meta_input'   => array( '_activitypub_user_id' => '0' ),
+			)
+		);
+
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_content'  => 'Blog actor reply.',
+				'comment_approved' => '1',
+				'comment_type'     => 'comment',
+			)
+		);
+
+		\wp_set_current_user( 0 );
+
+		$response = $this->request( '/wp/v2/comments/' . $comment_id );
+
+		$this->assertNotSame( 200, $response->get_status() );
+		$this->assertStringNotContainsString( 'Blog actor reply.', \wp_json_encode( $response->get_data() ) );
+	}
+
+	/**
+	 * The blog actor's cached posts are not readable by a logged-out visitor.
+	 *
+	 * @covers \Activitypub\Rest\Remote_Posts_Controller::check_read_permission
+	 */
+	public function test_blog_actor_post_is_not_readable_when_logged_out() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'    => Remote_Posts::POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => 'Blog actor content.',
+				'meta_input'   => array( '_activitypub_user_id' => '0' ),
+			)
+		);
+
+		\wp_set_current_user( 0 );
+
+		$response = $this->request( '/wp/v2/ap_post/' . $post_id );
+
+		$this->assertNotSame( 200, $response->get_status() );
+		$this->assertStringNotContainsString( 'Blog actor content.', \wp_json_encode( $response->get_data() ) );
+	}
+
+	/**
 	 * The owner still reads the replies cached in their own feed.
 	 *
 	 * @covers \Activitypub\Rest\Remote_Posts_Controller::check_read_permission
