@@ -132,12 +132,18 @@ class Test_Sanitize extends \WP_UnitTestCase {
 	 */
 	public function blog_identifier_provider() {
 		return array(
-			'simple_string' => array( 'test-Blog', 'test-blog' ),
-			'with_spaces'   => array( 'test blog', 'test-blog' ),
-			'with_dots'     => array( 'test.blog', 'test.blog' ),
-			'special_chars' => array( 'test@#$%^&*blog', 'testblog' ),
-			'multiple_dots' => array( 'test.blog.name', 'test.blog.name' ),
-			'empty_string'  => array( '', Blog::get_default_username() ),
+			'simple_string'    => array( 'test-Blog', 'test-blog' ),
+			'with_spaces'      => array( 'test blog', 'test-blog' ),
+			'with_dots'        => array( 'test.blog', 'test.blog' ),
+			'special_chars'    => array( 'test@#$%^&*blog', 'testblog' ),
+			'multiple_dots'    => array( 'test.blog.name', 'test.blog.name' ),
+			'empty_string'     => array( '', Blog::get_default_username() ),
+			'emoji'            => array( 'test blog ❤️', 'test-blog' ),
+			'emoji_and_dots'   => array( 'test.blog❤️', 'test.blog' ),
+			'only_emoji'       => array( '❤️', Blog::get_default_username() ),
+			'non_latin_script' => array( 'блог', Blog::get_default_username() ),
+			'accents_kept'     => array( 'Café', 'cafe' ),
+			'percent_encoded'  => array( 'test-blog-%e2%9d%a4%ef%b8%8f', 'test-blog' ),
 		);
 	}
 

@@ -167,8 +167,15 @@ class Sanitize {
 	 * @return string The sanitized blog identifier.
 	 */
 	public static function blog_identifier( $value ) {
+		/*
+		 * `sanitize_title()` hands multibyte characters to `utf8_uri_encode()`, which percent-encodes
+		 * them rather than dropping them, so an emoji survives into the handle as `%e2%9d%a4%ef%b8%8f`.
+		 * Strict `sanitize_user()` reduces to ASCII and kills any octets that are already there.
+		 */
+		$value = \sanitize_user( (string) $value, true );
+
 		// Hack to allow dots in the username.
-		$parts     = \explode( '.', (string) $value );
+		$parts     = \explode( '.', $value );
 		$sanitized = \array_map( 'sanitize_title', $parts );
 		$sanitized = \implode( '.', $sanitized );
 
