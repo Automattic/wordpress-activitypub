@@ -245,7 +245,7 @@ class Extra_Fields {
 		 * after somebody deleted it. Here it inherits the empty-list check, the flag, and the
 		 * timing the other defaults already had.
 		 */
-		$defaults[ \__( 'Powered by', 'activitypub' ) ] = '<a href="https://wordpress.org/">WordPress</a>';
+		$defaults[ \__( 'Powered by', 'activitypub' ) ] = 'WordPress';
 
 		$post_type  = $is_blog ? self::BLOG_POST_TYPE : self::USER_POST_TYPE;
 		$menu_order = 10;
@@ -255,13 +255,7 @@ class Extra_Fields {
 				continue;
 			}
 
-			/*
-			 * Every other default is a bare URL that has to be turned into a link. This one is
-			 * already markup, because the label stays "WordPress" rather than becoming the
-			 * shortened host `Link::the_content()` would render. It has to end up as a single
-			 * anchor either way: `fields_to_attachments()` emits a `Link` for that and a `Note`
-			 * for anything else, and `Note` is not one of the types the actor schema allows.
-			 */
+			// Every other default is a bare URL to linkify; "Powered by" is plain text.
 			$content = \filter_var( $value, FILTER_VALIDATE_URL )
 				? Link::the_content( $value )
 				: $value;

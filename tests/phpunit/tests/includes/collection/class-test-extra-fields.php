@@ -93,19 +93,22 @@ class Test_Extra_Fields extends \WP_UnitTestCase {
 		$fields = Extra_Fields::default_actor_extra_fields( array(), Actors::BLOG_USER_ID );
 		$titles = \wp_list_pluck( $fields, 'post_title' );
 
+		// Seeding the blog actor records a site option, which would otherwise outlive this test.
+		\delete_option( 'activitypub_default_extra_fields' );
+
 		$this->assertContains( 'Powered by', $titles );
 	}
 
 	/**
-	 * The "Powered by" default keeps its label and still resolves to a link.
+	 * The "Powered by" default keeps the plain text the migration used to write.
 	 *
-	 * Every other default is a bare URL the loop linkifies, which would render this one as the
-	 * shortened host. It also has to be a single anchor, or `fields_to_attachments()` emits a
-	 * `Note`, which the actor schema does not allow.
+	 * Every other default is a bare URL the loop linkifies. This one is not a URL, and its value
+	 * has to stay byte-identical to what `Migration::add_default_extra_field()` produced, so no
+	 * site sees its profile change.
 	 *
 	 * @covers ::default_actor_extra_fields
 	 */
-	public function test_a_non_url_default_is_not_turned_into_a_link() {
+	public function test_powered_by_keeps_the_plain_text_it_always_had() {
 		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
 
 		$fields  = Extra_Fields::default_actor_extra_fields( array(), $user_id );
@@ -117,7 +120,7 @@ class Test_Extra_Fields extends \WP_UnitTestCase {
 			}
 		}
 
-		$this->assertStringContainsString( 'WordPress', $content, 'The label stays "WordPress".' );
-		$this->assertStringContainsString( 'wordpress.org', $content, 'And it points at wordpress.org.' );
+		$this->assertStringContainsString( 'WordPress', $content );
+		$this->assertStringNotContainsString( '<a ', $content, 'It was never a link, and must not become one.' );
 	}
 }
