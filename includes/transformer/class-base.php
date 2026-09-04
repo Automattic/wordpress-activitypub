@@ -718,7 +718,7 @@ abstract class Base {
 	 * the author declared belongs to the post and carries no ID when it is not in the media
 	 * library, which is the normal case for podcast audio.
 	 *
-	 * @param array $attachments Array of attachments with 'id' field.
+	 * @param array $attachments Array of attachments, each optionally carrying an 'id'.
 	 *
 	 * @return array Array with duplicate attachments removed.
 	 */
