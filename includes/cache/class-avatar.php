@@ -9,6 +9,8 @@ namespace Activitypub\Cache;
 
 use Activitypub\Collection\Remote_Actors;
 
+use function Activitypub\object_to_uri;
+
 /**
  * Avatar cache class.
  *
@@ -168,5 +170,231 @@ class Avatar extends File {
 			$actor_id,
 			array( 'max_dimension' => self::MAX_DIMENSION )
 		);
+	}
+
+	/**
+	 * Drop older cached avatar versions once a new one is written.
+	 *
+	 * Hooked into the shared write path via File::cache(), so every avatar
+	 * write removes the files it replaced. Runs after the final filename is
+	 * known, so the file just written is always kept, even when a collision
+	 * renamed it to hash-1.webp.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string     $url       The remote URL that was cached.
+	 * @param string|int $entity_id The entity identifier (actor post ID).
+	 * @param string     $file_path The path of the file that was written.
+	 * @param string     $file_name The basename of the file that was written.
+	 * @param array      $options   Cache options inherited from File::cache().
+	 */
+	protected static function after_cache( $url, $entity_id, $file_path, $file_name, $options ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Required to match File::after_cache() signature.
+		self::prune_stale_files( $entity_id, self::generate_hash( $url ), $file_name );
+	}
+
+	/**
+	 * Get avatar hash from an actor post.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_Post $post Actor post.
+	 *
+	 * @return string The avatar hash, empty string when the actor has no usable icon.
+	 */
+	protected static function get_actor_avatar_hash_from_post( $post ) {
+		$actor_data = \json_decode( $post->post_content, true );
+		if ( ! \is_array( $actor_data ) || empty( $actor_data['icon'] ) ) {
+			return '';
+		}
+
+		$avatar_url = object_to_uri( $actor_data['icon'] );
+		if ( empty( $avatar_url ) || ! \filter_var( $avatar_url, FILTER_VALIDATE_URL ) ) {
+			return '';
+		}
+
+		return self::generate_hash( $avatar_url );
+	}
+
+	/**
+	 * Remove cached avatar files that no longer match the current icon.
+	 *
+	 * Keeps any file whose basename starts with the current hash and deletes
+	 * the rest. Runs after the current avatar is written, so the active file
+	 * is never removed.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int         $entity_id      The actor post ID.
+	 * @param string      $current_hash   The hash of the current avatar URL.
+	 * @param string|null $current_file   The basename of the cached file to keep.
+	 */
+	public static function prune_stale_files( $entity_id, $current_hash, $current_file = null ) {
+		$paths = static::get_storage_paths( $entity_id );
+		if ( ! \is_dir( $paths['basedir'] ) ) {
+			return;
+		}
+
+		$files = \glob( $paths['basedir'] . '/*' );
+		if ( empty( $files ) ) {
+			return;
+		}
+
+		$prefix = $current_hash . '.';
+
+		foreach ( $files as $file ) {
+			$filename = \basename( $file );
+			// The hash-prefix keep applies only when no exact filename is
+			// known (the cron sweep). During a write, the loser of a
+			// collision is pruned so File::get() cannot keep serving it.
+			if ( $filename === $current_file || ( null === $current_file && 0 === \strpos( $filename, $prefix ) ) ) {
+				continue;
+			}
+
+			if ( \is_dir( $file ) ) {
+				static::delete_directory( $file );
+			} else {
+				static::get_filesystem()->delete( $file );
+			}
+		}
+
+		// Drop the entity directory itself when pruning left it empty.
+		$remaining = \glob( $paths['basedir'] . '/*' );
+		if ( empty( $remaining ) ) {
+			static::delete_directory( $paths['basedir'] );
+		}
+	}
+
+	/**
+	 * Clean up stale cached avatars.
+	 *
+	 * Run daily by cron. Deletes orphaned actor directories that no longer
+	 * match an actor post and removes older avatar versions for surviving
+	 * actors. Processed in batches so a large backlog drains over several runs.
+	 *
+	 * @since unreleased
+	 */
+	public static function cleanup() {
+		// Lock the cleanup with an autoload-disabled option so overlapping
+		// cron workers never run it twice at once.
+		$now = \time();
+		if ( ! \add_option( 'activitypub_avatar_cache_cleanup_lock', $now, '', false ) ) {
+			$lock_time = (int) \get_option( 'activitypub_avatar_cache_cleanup_lock' );
+			if ( $lock_time && ( $now - $lock_time ) < 30 * MINUTE_IN_SECONDS ) {
+				return;
+			}
+			if ( ! self::release_stale_lock( $lock_time ) ) {
+				return;
+			}
+			if ( ! \add_option( 'activitypub_avatar_cache_cleanup_lock', $now, '', false ) ) {
+				return;
+			}
+		}
+
+		$upload_dir = \wp_upload_dir();
+		$root       = $upload_dir['basedir'] . static::get_base_dir();
+		if ( ! \is_dir( $root ) ) {
+			\delete_option( 'activitypub_avatar_cache_cleanup_lock' );
+			\delete_option( 'activitypub_avatar_cache_cursor' );
+			return;
+		}
+
+		/**
+		 * Filters how many actor directories are scanned per cleanup run.
+		 *
+		 * @since unreleased
+		 *
+		 * @param int $limit The maximum number of directories to scan.
+		 */
+		$limit = \max( 1, (int) \apply_filters( 'activitypub_cleanup_avatar_cache_limit', 100 ) );
+		// Cursor is the highest actor post ID already swept; skip IDs at or
+		// below it so resuming stays deterministic across runs.
+		$cursor = (int) \get_option( 'activitypub_avatar_cache_cursor', 0 );
+
+		$dirs = array();
+		$it   = new \DirectoryIterator( $root );
+		foreach ( $it as $directory ) {
+			if ( $directory->isDot() || ! $directory->isDir() ) {
+				continue;
+			}
+
+			$dirname = $directory->getFilename();
+			if ( ! \ctype_digit( $dirname ) || (int) $dirname <= $cursor ) {
+				continue;
+			}
+
+			$dirs[] = (int) $dirname;
+		}
+		\sort( $dirs, SORT_NUMERIC );
+		$dirs = \array_slice( $dirs, 0, $limit );
+
+		if ( empty( $dirs ) ) {
+			\delete_option( 'activitypub_avatar_cache_cursor' );
+			\delete_option( 'activitypub_avatar_cache_cleanup_lock' );
+			return;
+		}
+
+		// 'any' excludes trashed posts, so a trashed actor's cache directory
+		// counts as orphaned here and is deleted below.
+		$post_ids = $dirs;
+		$posts    = \get_posts(
+			array(
+				'post__in'       => $post_ids,
+				'post_type'      => Remote_Actors::POST_TYPE,
+				'post_status'    => 'any',
+				'posts_per_page' => \count( $post_ids ),
+				'orderby'        => 'post__in',
+			)
+		);
+		$post_map = array();
+		foreach ( $posts as $post ) {
+			$post_map[ $post->ID ] = $post;
+		}
+
+		$last_dir = null;
+		foreach ( $dirs as $post_id ) {
+			$last_dir = (int) $post_id;
+			if ( empty( $post_map[ $post_id ] ) ) {
+				static::delete_directory( $root . '/' . $post_id );
+				continue;
+			}
+
+			$hash = self::get_actor_avatar_hash_from_post( $post_map[ $post_id ] );
+			self::prune_stale_files( $post_id, $hash );
+		}
+
+		// Resume after the last processed directory, including orphaned ones.
+		if ( null !== $last_dir ) {
+			\update_option( 'activitypub_avatar_cache_cursor', $last_dir, false );
+		}
+		\delete_option( 'activitypub_avatar_cache_cleanup_lock' );
+	}
+
+	/**
+	 * Delete a stale cleanup lock only if its value still matches.
+	 *
+	 * Two workers can both see the same expired lock; deleting it
+	 * unconditionally would let the second worker remove the first
+	 * worker's fresh lock and start a second sweep. Comparing the
+	 * stored value makes the takeover fail for whichever worker lost
+	 * the race.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $lock_time The stale lock timestamp being taken over.
+	 *
+	 * @return bool True when the stale lock was removed by this worker.
+	 */
+	protected static function release_stale_lock( $lock_time ) {
+		global $wpdb;
+
+		$deleted = $wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM $wpdb->options WHERE option_name = %s AND option_value = %s", // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+				'activitypub_avatar_cache_cleanup_lock',
+				(string) $lock_time
+			)
+		);
+
+		return 1 === (int) $deleted;
 	}
 }
