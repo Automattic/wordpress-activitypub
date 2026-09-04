@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed normal replies from distant accounts sometimes being auto-approved just because that account had previously liked or reposted a post.
