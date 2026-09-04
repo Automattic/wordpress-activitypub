@@ -144,6 +144,12 @@ class Test_Sanitize extends \WP_UnitTestCase {
 			'non_latin_script' => array( 'блог', Blog::get_default_username() ),
 			'accents_kept'     => array( 'Café', 'cafe' ),
 			'percent_encoded'  => array( 'test-blog-%e2%9d%a4%ef%b8%8f', 'test-blog' ),
+			'emoji_then_dot'   => array( '❤️.blog', 'blog' ),
+			'dot_then_emoji'   => array( 'blog.❤️', 'blog' ),
+			'emoji_and_dot'    => array( '❤️.', Blog::get_default_username() ),
+			'bare_dot'         => array( '.', Blog::get_default_username() ),
+			'empty_segment'    => array( 'test..blog', 'test.blog' ),
+			'zero_segment'     => array( '0.blog', '0.blog' ),
 		);
 	}
 
