@@ -753,6 +753,40 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	}
 
 	/**
+	 * One queued event hands the activity to the handlers exactly once.
+	 *
+	 * The controller used to register a second, near-identical dispatcher on the same event, so
+	 * every handler ran twice in any request where the REST routes had been registered.
+	 *
+	 * @covers \Activitypub\Scheduler::process_inbox_activity
+	 */
+	public function test_a_queued_event_dispatches_once() {
+		$activity_id = 'https://remote.example/@activity-dispatched-once';
+
+		$activity = \Activitypub\Activity\Activity::init_from_array(
+			array(
+				'id'     => $activity_id,
+				'type'   => 'Like',
+				'actor'  => 'https://remote.example/@test',
+				'object' => 'https://example.org/@user/post/1',
+			)
+		);
+		Inbox_Collection::add( $activity, array( self::$user_id ) );
+
+		$dispatches = 0;
+		$counter    = function () use ( &$dispatches ) {
+			++$dispatches;
+		};
+		\add_action( 'activitypub_handled_inbox_like', $counter );
+
+		\do_action( 'activitypub_inbox_create_item', $activity_id );
+
+		\remove_action( 'activitypub_handled_inbox_like', $counter );
+
+		$this->assertEquals( 1, $dispatches, 'The queued event must reach the handlers exactly once.' );
+	}
+
+	/**
 	 * Test inbox request schedules delayed processing.
 	 *
 	 * @covers \Activitypub\Rest\Actors_Inbox_Controller::create_item
