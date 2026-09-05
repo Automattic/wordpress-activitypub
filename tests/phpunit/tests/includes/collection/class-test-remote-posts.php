@@ -456,6 +456,43 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A long-form sender's representative `image` still reaches the post.
+	 *
+	 * FEP-b2b8 puts that picture in `image` rather than `attachment`, so reading only
+	 * `attachment` would drop it for every Article we cache.
+	 *
+	 * @covers ::activity_to_post
+	 */
+	public function test_activity_to_post_reads_the_image_when_there_are_no_attachments() {
+		$activity = array(
+			'id'      => 'https://example.com/objects/long-form',
+			'type'    => 'Article',
+			'name'    => 'Long-form post',
+			'content' => '<p>Body text.</p>',
+			'image'   => array(
+				'type'      => 'Image',
+				'url'       => 'https://example.com/representative.jpg',
+				'mediaType' => 'image/jpeg',
+				'name'      => 'Cover',
+			),
+		);
+
+		$reflection = new \ReflectionClass( Remote_Posts::class );
+		$method     = $reflection->getMethod( 'activity_to_post' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$post = $method->invoke( null, $activity );
+
+		$this->assertStringContainsString(
+			'https://example.com/representative.jpg',
+			$post['post_content'],
+			'The representative image has to survive into the cached post.'
+		);
+	}
+
+	/**
 	 * Test activity to post conversion.
 	 *
 	 * @covers ::activity_to_post

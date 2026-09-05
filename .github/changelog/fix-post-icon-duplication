@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Posts no longer send a second, smaller copy of the featured image, or the site icon when there is no featured image, which some apps showed as an extra image under the post.

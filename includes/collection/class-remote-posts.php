@@ -386,12 +386,28 @@ class Remote_Posts {
 	 * @return array Array of attachments with 'url', 'alt', and 'type' keys.
 	 */
 	private static function extract_attachments( $activity_object ) {
-		if ( empty( $activity_object['attachment'] ) || ! \is_array( $activity_object['attachment'] ) ) {
+		$items = $activity_object['attachment'] ?? array();
+
+		/*
+		 * Long-form senders put the representative picture in `image` rather than in `attachment`,
+		 * where FEP-b2b8 only wants media that is part of the text. Read it as an attachment so it
+		 * still reaches the post, the way `Embed::render()` already falls back for previews.
+		 */
+		if ( empty( $items ) && ! empty( $activity_object['image'] ) ) {
+			$items = $activity_object['image'];
+
+			// A single `Image` object rather than a list of them.
+			if ( isset( $items['url'] ) || isset( $items['type'] ) ) {
+				$items = array( $items );
+			}
+		}
+
+		if ( empty( $items ) || ! \is_array( $items ) ) {
 			return array();
 		}
 
 		$attachments = array();
-		foreach ( $activity_object['attachment'] as $attachment ) {
+		foreach ( $items as $attachment ) {
 			if ( \is_object( $attachment ) ) {
 				$attachment = \get_object_vars( $attachment );
 			}
