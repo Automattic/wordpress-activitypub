@@ -320,7 +320,11 @@ function get_enclosures( $post_id ) {
 		$enclosures
 	);
 
-	return \array_filter( $enclosures );
+	/*
+	 * Re-indexed on the URL to drop duplicates: a file declared twice is still one file, and the
+	 * URL is the only identity an enclosure has unless it happens to be in the media library.
+	 */
+	return \array_values( \array_column( \array_filter( $enclosures ), null, 'url' ) );
 }
 
 /**

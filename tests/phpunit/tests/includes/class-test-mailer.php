@@ -8,7 +8,10 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Handler\Create;
 use Activitypub\Mailer;
+use Activitypub\Rest\Server;
+use Activitypub\Scheduler;
 use WP_UnitTestCase;
 
 /**
@@ -384,8 +387,21 @@ class Test_Mailer extends WP_UnitTestCase {
 		$this->assertEquals( 10, \has_filter( 'comment_notification_subject', array( Mailer::class, 'comment_notification_subject' ) ) );
 		$this->assertEquals( 10, \has_filter( 'comment_notification_text', array( Mailer::class, 'comment_notification_text' ) ) );
 		$this->assertEquals( 10, \has_action( 'activitypub_handled_follow', array( Mailer::class, 'new_follower' ) ) );
-		$this->assertEquals( 10, \has_action( 'activitypub_inbox_create', array( Mailer::class, 'direct_message' ) ) );
-		$this->assertEquals( 20, \has_action( 'activitypub_inbox_create', array( Mailer::class, 'mention' ) ) );
+		$this->assertEquals( 10, \has_action( 'activitypub_handled_inbox_create', array( Mailer::class, 'direct_message' ) ) );
+		$this->assertEquals( 20, \has_action( 'activitypub_handled_inbox_create', array( Mailer::class, 'mention' ) ) );
+
+		// Notifications must not run on the pre-storage hook, which fires again for every redelivery.
+		$this->assertFalse( \has_action( 'activitypub_inbox_create', array( Mailer::class, 'direct_message' ) ) );
+		$this->assertFalse( \has_action( 'activitypub_inbox_create', array( Mailer::class, 'mention' ) ) );
+
+		/*
+		 * The mention reply check reads the comment that Create::handle_create() writes, so it has
+		 * to run after it on the same hook.
+		 */
+		$this->assertGreaterThan(
+			\has_action( 'activitypub_handled_inbox_create', array( Create::class, 'handle_create' ) ),
+			\has_action( 'activitypub_handled_inbox_create', array( Mailer::class, 'mention' ) )
+		);
 	}
 
 	/**
@@ -1367,5 +1383,190 @@ class Test_Mailer extends WP_UnitTestCase {
 		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
 		\remove_filter( 'wp_mail', array( $mock, 'filter' ), 1 );
 		\remove_filter( 'wp_mail', $mail_filter );
+	}
+
+	/**
+	 * Deliver an activity to a user's inbox the way a remote server would.
+	 *
+	 * @param array $data    The activity.
+	 * @param int   $user_id The recipient.
+	 */
+	private function deliver_to_inbox( $data, $user_id ) {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		Server::init();
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/' . $user_id . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+		\rest_get_server()->dispatch( $request );
+
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+	}
+
+	/**
+	 * Run the event the inbox queued, the way WP-Cron would.
+	 *
+	 * Deliveries only store and queue, so nothing is handed to the handlers until this runs.
+	 *
+	 * @param string $activity_id The activity ID.
+	 */
+	private function run_inbox_queue( $activity_id ) {
+		$args      = array( $activity_id );
+		$timestamp = \wp_next_scheduled( 'activitypub_inbox_create_item', $args );
+
+		if ( ! $timestamp ) {
+			return;
+		}
+
+		\wp_unschedule_event( $timestamp, 'activitypub_inbox_create_item', $args );
+		Scheduler::process_inbox_activity( $activity_id );
+	}
+
+	/**
+	 * A redelivered Direct Message only notifies once, all the way through the inbox.
+	 *
+	 * @covers ::direct_message
+	 */
+	public function test_a_redelivered_direct_message_only_notifies_once() {
+		$user_id = self::$user_id;
+		$data    = array(
+			'id'     => 'https://example.com/activity/inbox-dm-1',
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/author',
+			'to'     => array( Actors::get_by_id( $user_id )->get_id() ),
+			'object' => array(
+				'id'      => 'https://example.com/note/inbox-dm-1',
+				'type'    => 'Note',
+				'content' => '<p>Hello there.</p>',
+			),
+		);
+
+		$count = $this->count_mails(
+			function () use ( $data, $user_id ) {
+				$this->deliver_to_inbox( $data, $user_id );
+				$this->deliver_to_inbox( $data, $user_id );
+				$this->run_inbox_queue( $data['id'] );
+			}
+		);
+
+		$this->assertEquals( 1, $count, 'A Direct Message delivered twice should only notify once.' );
+	}
+
+	/**
+	 * A Direct Message delivered to the shared inbox still notifies.
+	 *
+	 * Most servers deliver here rather than to a per-actor inbox, and this path hands the
+	 * notification hook every recipient at once instead of one per call.
+	 *
+	 * @covers ::direct_message
+	 */
+	public function test_a_direct_message_to_the_shared_inbox_still_notifies() {
+		$user_id = self::$user_id;
+		$data    = array(
+			'id'     => 'https://example.com/activity/shared-dm-1',
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/author',
+			'to'     => array( Actors::get_by_id( $user_id )->get_id() ),
+			'object' => array(
+				'id'      => 'https://example.com/note/shared-dm-1',
+				'type'    => 'Note',
+				'content' => '<p>Hello there.</p>',
+			),
+		);
+
+		$count = $this->count_mails(
+			function () use ( $data ) {
+				\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+				Server::init();
+
+				$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+				$request->set_header( 'Content-Type', 'application/activity+json' );
+				$request->set_body( \wp_json_encode( $data ) );
+				\rest_get_server()->dispatch( $request );
+
+				\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+			}
+		);
+
+		$this->assertEquals( 1, $count, 'A Direct Message to the shared inbox should notify.' );
+	}
+
+	/**
+	 * A mention inside a reply does not notify, because the reply becomes a comment instead.
+	 *
+	 * This is what the priority of the `mention` hook is for: it has to run after
+	 * Create::handle_create() has stored the comment, or the reply check never sees it.
+	 *
+	 * @covers ::mention
+	 */
+	public function test_a_mention_in_a_reply_does_not_notify() {
+		$user_id  = self::$user_id;
+		$actor_id = Actors::get_by_id( $user_id )->get_id();
+		$data     = array(
+			'id'     => 'https://example.com/activity/inbox-reply-1',
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/author',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'cc'     => array( $actor_id ),
+			'object' => array(
+				'id'        => 'https://example.com/note/inbox-reply-1',
+				'type'      => 'Note',
+				'url'       => 'https://example.com/note/inbox-reply-1',
+				'inReplyTo' => \get_permalink( self::$post_id ),
+				'content'   => '<p>Hello @testuser.</p>',
+				'tag'       => array(
+					array(
+						'type' => 'Mention',
+						'href' => $actor_id,
+						'name' => '@testuser',
+					),
+				),
+			),
+		);
+
+		$count = $this->count_mails(
+			function () use ( $data, $user_id ) {
+				$this->deliver_to_inbox( $data, $user_id );
+				$this->run_inbox_queue( $data['id'] );
+			},
+			'Mention'
+		);
+
+		$this->assertEquals( 0, $count, 'A reply stored as a comment should not also send a mention email.' );
+	}
+
+
+	/**
+	 * Count the emails sent while running a callback.
+	 *
+	 * @param callable $callback The code to run.
+	 * @param string   $subject  Optional. Only count emails whose subject contains this. Default ''.
+	 * @return int The number of emails sent.
+	 */
+	private function count_mails( $callback, $subject = '' ) {
+		$metadata_filter = function () {
+			return array(
+				'name' => 'Test Author',
+				'url'  => 'https://example.com/author',
+			);
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+
+		$count      = 0;
+		$count_mail = function ( $args ) use ( &$count, $subject ) {
+			if ( '' === $subject || false !== \strpos( $args['subject'], $subject ) ) {
+				++$count;
+			}
+
+			return $args;
+		};
+		\add_filter( 'wp_mail', $count_mail, 1 );
+
+		$callback();
+
+		\remove_filter( 'wp_mail', $count_mail, 1 );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+
+		return $count;
 	}
 }

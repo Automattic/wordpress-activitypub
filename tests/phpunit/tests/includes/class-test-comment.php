@@ -281,6 +281,69 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that an approved like does not count as a previously approved comment.
+	 *
+	 * A previously approved reaction (like, repost, quote) should not cause a
+	 * later normal reply from the same actor to be auto-approved.
+	 *
+	 * @covers ::pre_comment_approved
+	 */
+	public function test_pre_comment_approved_ignores_reactions() {
+		// Disable flood control.
+		\remove_action( 'check_comment_flood', 'check_comment_flood_db' );
+
+		$previous = \get_option( 'comment_previously_approved' );
+		\update_option( 'comment_previously_approved', '1' );
+
+		$post_id = \wp_insert_post(
+			array(
+				'post_title'   => 'Test Post',
+				'post_content' => 'This is a test post.',
+				'post_status'  => 'publish',
+				'post_author'  => 1,
+			)
+		);
+
+		// Approved like from a remote actor. This must not count as a previously approved comment.
+		\wp_insert_comment(
+			array(
+				'comment_type'         => 'like',
+				'comment_approved'     => '1',
+				'comment_content'      => 'Liked this!',
+				'comment_author'       => 'Approved',
+				'comment_author_url'   => 'https://example.com/@approved',
+				'comment_post_ID'      => $post_id,
+				'comment_author_email' => '',
+				'comment_meta'         => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		// A normal reply from the same actor must still be held for moderation.
+		$reply_id = \wp_new_comment(
+			array(
+				'comment_type'         => 'comment',
+				'comment_content'      => 'This reply should not be auto-approved.',
+				'comment_author'       => 'Approved',
+				'comment_author_url'   => 'https://example.com/@approved',
+				'comment_post_ID'      => $post_id,
+				'comment_author_email' => '',
+				'comment_meta'         => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		$reply = \get_comment( $reply_id );
+		$this->assertEquals( '0', $reply->comment_approved );
+
+		// Restore the option and flood control.
+		\update_option( 'comment_previously_approved', $previous );
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 10, 4 );
+	}
+
+	/**
 	 * Test pre_wp_update_comment_count_now.
 	 *
 	 * @covers ::pre_wp_update_comment_count_now
