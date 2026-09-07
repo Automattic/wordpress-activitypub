@@ -55,7 +55,6 @@ class Test_Router extends \WP_UnitTestCase {
 		// Clean up common state that may be left by tests.
 		unset( $_SERVER['HTTP_ACCEPT'] );
 		$_SERVER['REQUEST_URI'] = '/';
-		Query::get_instance()->__destruct();
 		\set_query_var( 'preview', null );
 		\set_query_var( 'term_id', null );
 		Query::get_instance()->__destruct();

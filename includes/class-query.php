@@ -306,9 +306,15 @@ class Query {
 			return 0;
 		}
 
-		$args = \wp_parse_args( $query );
+		$args = array();
+		\wp_parse_str( $query, $args );
 
-		return isset( $args['term_id'] ) ? \absint( $args['term_id'] ) : 0;
+		// `?term_id[]=1` would reach absint() as an array, which casts to 1 rather than to nothing.
+		if ( ! isset( $args['term_id'] ) || ! \is_scalar( $args['term_id'] ) ) {
+			return 0;
+		}
+
+		return \absint( $args['term_id'] );
 	}
 
 	/**
