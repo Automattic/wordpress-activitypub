@@ -72,6 +72,23 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Invoke the private activity_to_post() method.
+	 *
+	 * @param mixed $activity The activity to convert.
+	 *
+	 * @return array|\WP_Error The post array or WP_Error.
+	 */
+	protected function invoke_activity_to_post( $activity ) {
+		$reflection = new \ReflectionClass( Remote_Posts::class );
+		$method     = $reflection->getMethod( 'activity_to_post' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		return $method->invoke( null, $activity );
+	}
+
+	/**
 	 * Mock remote object fetching to bypass URL validation.
 	 *
 	 * @param mixed  $response      The response to return.
@@ -476,6 +493,124 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a missing summary falls back to an excerpt built from the content.
+	 *
+	 * @covers ::activity_to_post
+	 */
+	public function test_activity_to_post_builds_excerpt_from_content() {
+		$activity = array(
+			'id'        => 'https://example.com/objects/no-summary',
+			'type'      => 'Note',
+			'content'   => '<p>Hello federated world</p>',
+			'published' => '2023-01-01T12:00:00Z',
+		);
+
+		$result = $this->invoke_activity_to_post( $activity );
+
+		$this->assertStringContainsString( 'Hello federated world', $result['post_excerpt'] );
+	}
+
+	/**
+	 * Test that an empty content fallback does not read the global post's excerpt.
+	 *
+	 * @covers ::activity_to_post
+	 */
+	public function test_activity_to_post_does_not_leak_global_post_excerpt() {
+		$local_post      = self::factory()->post->create_and_get( array( 'post_excerpt' => 'LOCAL EXCERPT' ) );
+		$GLOBALS['post'] = $local_post;
+
+		$activity = array(
+			'id'        => 'https://example.com/objects/empty-content',
+			'type'      => 'Note',
+			'content'   => '',
+			'published' => '2023-01-01T12:00:00Z',
+		);
+
+		$result = $this->invoke_activity_to_post( $activity );
+
+		unset( $GLOBALS['post'] );
+
+		$this->assertStringNotContainsString( 'LOCAL EXCERPT', $result['post_excerpt'] );
+	}
+
+	/**
+	 * Test that a title or summary containing a bare `<` is truncated there.
+	 *
+	 * `wp_strip_all_tags()` reads the bare `<` as a tag opener and drops the rest of the
+	 * string with it. A known limitation of the core function we rely on.
+	 *
+	 * @covers ::activity_to_post
+	 */
+	public function test_activity_to_post_truncates_text_at_bare_less_than() {
+		$activity = array(
+			'id'        => 'https://example.com/objects/less-than',
+			'type'      => 'Note',
+			'name'      => 'A <3 shape carved in wood',
+			'content'   => '<p>Test content</p>',
+			'summary'   => 'Rated <3 stars by nobody',
+			'published' => '2023-01-01T12:00:00Z',
+		);
+
+		$result = $this->invoke_activity_to_post( $activity );
+
+		$this->assertSame( 'A', $result['post_title'] );
+		$this->assertSame( 'Rated', $result['post_excerpt'] );
+	}
+
+	/**
+	 * Test that backslashes in a remote title or body survive storage.
+	 *
+	 * `wp_insert_post()` and `wp_update_post()` unslash what they are given, so returning
+	 * unslashed data means a title like `C:\Users\foo` is stored as `C:Usersfoo`.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_keeps_backslashes() {
+		$activity = array(
+			'actor'  => 'https://example.com/users/testuser',
+			'object' => array(
+				'id'           => 'https://example.com/objects/backslash',
+				'type'         => 'Note',
+				'name'         => 'C:\\Users\\foo',
+				'content'      => '<p>Path: C:\\Users\\foo</p>',
+				'summary'      => 'About C:\\Users\\foo',
+				'attributedTo' => 'https://example.com/users/testuser',
+				'published'    => '2023-01-01T12:00:00Z',
+			),
+		);
+
+		$post_id = Remote_Posts::add( $activity, 1 );
+		$post    = \get_post( $post_id );
+
+		$this->assertSame( 'C:\\Users\\foo', $post->post_title, 'Backslashes must survive in the title.' );
+		$this->assertStringContainsString( 'C:\\Users\\foo', $post->post_content, 'Backslashes must survive in the content.' );
+		$this->assertSame( 'About C:\\Users\\foo', $post->post_excerpt, 'Backslashes must survive in the excerpt.' );
+	}
+
+	/**
+	 * Test that markup in a title or summary is still removed.
+	 *
+	 * @covers ::activity_to_post
+	 */
+	public function test_activity_to_post_strips_markup_from_plain_text_fields() {
+		$activity = array(
+			'id'        => 'https://example.com/objects/markup',
+			'type'      => 'Note',
+			'name'      => 'Title<script>alert(1)</script>',
+			'content'   => '<p>Test content</p>',
+			'summary'   => 'Summary<img src=x onerror="alert(1)">',
+			'published' => '2023-01-01T12:00:00Z',
+		);
+
+		$result = $this->invoke_activity_to_post( $activity );
+
+		$this->assertStringNotContainsString( '<script', $result['post_title'], 'Script tags must not survive in the title.' );
+		$this->assertStringNotContainsString( 'alert(1)', $result['post_title'], 'Script bodies must not survive in the title.' );
+		$this->assertStringNotContainsString( '<img', $result['post_excerpt'], 'Tags must not survive in the summary.' );
+		$this->assertStringNotContainsString( 'onerror', $result['post_excerpt'], 'Event handlers must not survive in the summary.' );
+	}
+
+	/**
 	 * Test activity to post conversion with invalid data.
 	 *
 	 * @covers ::activity_to_post
@@ -524,9 +659,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 		$this->assertIsArray( $result );
 		$this->assertEquals( '', $result['post_title'] );
 		$this->assertStringContainsString( 'Minimal content', $result['post_content'] );
-		// Note: generate_post_summary() expects a WP_Post object, so passing $activity['content']
-		// returns empty. WordPress will auto-generate the excerpt from content after post creation.
-		$this->assertEquals( '', $result['post_excerpt'] );
+		$this->assertStringContainsString( 'Minimal content', $result['post_excerpt'] );
 		$this->assertEquals( Remote_Posts::POST_TYPE, $result['post_type'] );
 		$this->assertEquals( 'publish', $result['post_status'] );
 	}
@@ -1420,13 +1553,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 		);
 
 		// Use reflection to access the private method.
-		$reflection = new \ReflectionClass( Remote_Posts::class );
-		$method     = $reflection->getMethod( 'activity_to_post' );
-		if ( \PHP_VERSION_ID < 80100 ) {
-			$method->setAccessible( true );
-		}
-
-		$result = $method->invoke( null, $activity );
+		$result = $this->invoke_activity_to_post( $activity );
 
 		$this->assertIsArray( $result );
 		// Content should have hashtags removed.

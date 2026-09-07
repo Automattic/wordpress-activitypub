@@ -23,8 +23,9 @@ class Mailer {
 
 		\add_action( 'activitypub_handled_follow', array( self::class, 'new_follower' ), 10, 3 );
 
-		\add_action( 'activitypub_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
-		\add_action( 'activitypub_inbox_create', array( self::class, 'mention' ), 20, 2 );  /** After @see \Activitypub\Handler\Create::handle_create() */
+		\add_action( 'activitypub_handled_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
+		// Priority 20 keeps this after @see \Activitypub\Handler\Create::handle_create(), whose comment the reply check reads.
+		\add_action( 'activitypub_handled_inbox_create', array( self::class, 'mention' ), 20, 2 );
 
 		\add_filter( 'notify_post_author', array( self::class, 'maybe_prevent_comment_notification' ), 10, 2 );
 		\add_filter( 'notify_post_author', array( self::class, 'maybe_prevent_reaction_notification' ), 10, 2 );
@@ -565,7 +566,7 @@ class Mailer {
 	 * the moderator notification, and it targets the plugin's own reaction comment types so pingbacks,
 	 * trackbacks, and plain replies keep notifying as usual. The preference defaults to on.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param bool $maybe_notify Whether to send the notification.
 	 * @param int  $comment_id   The comment ID.

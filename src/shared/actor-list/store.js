@@ -1,5 +1,6 @@
 import { store, getContext, getConfig } from '@wordpress/interactivity';
 import { withSyncEvent } from '../with-sync-event';
+import { isSafeUrl } from '../safe-url';
 
 /**
  * Creates and registers an Interactivity API store for actor lists.
@@ -74,12 +75,22 @@ export function createActorListStore( storeName ) {
 					const { orderedItems, totalItems } = await apiFetch( { path } );
 
 					// Update the context with the new items.
-					context.items = orderedItems.map( ( actor ) => ( {
-						handle: '@' + actor.webfinger,
-						icon: actor.icon,
-						name: actor.name || actor.preferredUsername,
-						url: actor.url || actor.id,
-					} ) );
+					context.items = orderedItems.map( ( actor ) => {
+						/*
+						 * These come from a remote server and are bound straight into an href,
+						 * so a `javascript:` value would run on click. The server-rendered first
+						 * page passes the same values through `esc_url()` with an http/https
+						 * allow list; this is the same gate for the paginated refresh.
+						 */
+						const actorUrl = actor.url || actor.id;
+
+						return {
+							handle: '@' + actor.webfinger,
+							icon: actor.icon,
+							name: actor.name || actor.preferredUsername,
+							url: isSafeUrl( actorUrl ) ? actorUrl : '',
+						};
+					} );
 
 					context.total = totalItems;
 					context.pages = Math.ceil( totalItems / perPage );

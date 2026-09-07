@@ -9,6 +9,7 @@ use Activitypub\Blocks;
 use Activitypub\Comment;
 
 use function Activitypub\get_post_id;
+use function Activitypub\get_reaction_author_name;
 use function Activitypub\is_activitypub_request;
 use function Activitypub\is_post_publicly_queryable;
 
@@ -58,6 +59,7 @@ if ( ! is_post_publicly_queryable( $_post_id ) ) {
 
 // Generate a unique ID for the block.
 $block_id = 'activitypub-reactions-block-' . wp_unique_id();
+$error_id = $block_id . '-remote-profile-error';
 
 /*
  * Determine display style - compact style hides avatars.
@@ -107,7 +109,7 @@ foreach ( Comment::get_comment_types() as $_type => $type_object ) {
 		'items' => array_map(
 			static function ( $comment ) {
 				return array(
-					'name'   => html_entity_decode( $comment->comment_author ),
+					'name'   => get_reaction_author_name( $comment ),
 					'url'    => $comment->comment_author_url,
 					'avatar' => get_avatar_url( $comment ),
 				);
@@ -344,6 +346,7 @@ ob_start();
 				<?php esc_html_e( 'Your Fediverse profile', 'activitypub' ); ?>
 			</label>
 			<input
+				aria-describedby="<?php echo esc_attr( $error_id ); ?>"
 				class="wp-block-search__input"
 				data-wp-bind--aria-invalid="context.isError"
 				data-wp-bind--value="context.remoteProfile"
@@ -365,8 +368,9 @@ ob_start();
 		</div>
 		<div
 			class="activitypub-dialog__error"
-			data-wp-bind--hidden="!context.isError"
 			data-wp-text="context.errorMessage"
+			id="<?php echo esc_attr( $error_id ); ?>"
+			role="alert"
 		></div>
 		<div class="activitypub-dialog__remember">
 			<label>

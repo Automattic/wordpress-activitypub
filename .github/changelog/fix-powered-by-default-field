@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+The "Powered by WordPress" profile field no longer shows up twice, no longer comes back after you delete it, and no longer triggers a warning when the plugin is first activated.

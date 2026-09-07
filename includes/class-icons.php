@@ -13,7 +13,7 @@ namespace Activitypub;
  * Registers the Fediverse and ActivityPub logos with the Icons API,
  * so they can be used in the block editor's Icon block.
  *
- * @since unreleased
+ * @since 9.3.0
  */
 class Icons {
 	/**
@@ -31,7 +31,7 @@ class Icons {
 	/**
 	 * Register the icon collection and icons.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 */
 	public static function register_icons() {
 		\wp_register_icon_collection(

@@ -19,7 +19,7 @@ use Activitypub\Collection\Remote_Posts;
  * which the plugin's own collection endpoints only expose when the site owner has
  * chosen to publish the social graph.
  *
- * @since unreleased
+ * @since 9.3.0
  */
 class Remote_Actors_Controller extends \WP_REST_Posts_Controller {
 	use Reader_Permission;
@@ -31,7 +31,7 @@ class Remote_Actors_Controller extends \WP_REST_Posts_Controller {
 	 * run, so the relationship is checked here to keep another actor's followers
 	 * from being read by ID.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param \WP_REST_Request $request Full details about the request.
 	 * @return true|\WP_Error True if the request has read access, WP_Error otherwise.
@@ -85,7 +85,7 @@ class Remote_Actors_Controller extends \WP_REST_Posts_Controller {
 	/**
 	 * Check whether an actor authored a cached post in a given user's feed.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param int $actor_post_id The `ap_actor` post ID.
 	 * @param int $user_id       The local user whose feed to look in.

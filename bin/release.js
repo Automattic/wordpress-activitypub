@@ -3,6 +3,7 @@
 const { execSync } = require( 'child_process' );
 const readline = require( 'readline' );
 const fs = require( 'fs' );
+const { phpVersionPatterns } = require( './version-patterns' );
 
 const rl = readline.createInterface( {
 	input: process.stdin,
@@ -253,28 +254,7 @@ async function createRelease() {
 	const phpFiles = execWithOutput( 'find . -name "*.php"' ).split( '\n' );
 
 	phpFiles.forEach( ( filePath ) => {
-		updateVersionInFile( filePath, version, [
-			{
-				search: /@since unreleased/gi,
-				replace: `@since ${ version }`,
-			},
-			{
-				search: /@deprecated unreleased/gi,
-				replace: `@deprecated ${ version }`,
-			},
-			{
-				search: /(?<=_deprecated_(?:function|class|constructor|file|argument|hook)\s*\(\s*.*?,\s*')unreleased(?=')/gi,
-				replace: ( match ) => match.replace( /unreleased/i, version ),
-			},
-			{
-				search: /(?<=_doing_it_wrong\s*\(\s*.*?,\s*'.*?',\s*')unreleased(?=')/gi,
-				replace: ( match ) => match.replace( /unreleased/i, version ),
-			},
-			{
-				search: /(?<=\b(?:apply_filters_deprecated|do_action_deprecated)\s*\(\s*'.*?'\s*,\s*array\s*\(.*?\)\s*,\s*')unreleased(?=['"],\s*['"])/gi,
-				replace: ( match ) => match.replace( /unreleased/i, version ),
-			},
-		] );
+		updateVersionInFile( filePath, version, phpVersionPatterns( version ) );
 	} );
 
 	// Update version in block.json files (src and build directories)

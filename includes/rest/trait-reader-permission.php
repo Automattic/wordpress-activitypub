@@ -18,7 +18,7 @@ use function Activitypub\user_can_activitypub;
  * cached remote content and the social graph, so they are restricted to users
  * who can use ActivityPub rather than being world readable.
  *
- * @since unreleased
+ * @since 9.3.0
  */
 trait Reader_Permission {
 	/**
@@ -27,7 +27,7 @@ trait Reader_Permission {
 	 * Named for the capability rather than the read, so it is not mistaken for core's
 	 * `check_read_permission()`, which answers whether one given post may be read.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @return true|\WP_Error True if the current user may read, WP_Error otherwise.
 	 */
@@ -55,7 +55,7 @@ trait Reader_Permission {
 	 * A trait method wins over an inherited one, so this overrides the core controller's check
 	 * and defers to it once the reader gate has passed.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param \WP_REST_Request $request Full details about the request.
 	 * @return true|\WP_Error True if the request has read access, WP_Error otherwise.
@@ -76,12 +76,22 @@ trait Reader_Permission {
 	 * Users who can list users may read any actor's feed, everybody else is
 	 * limited to their own.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param int|int[] $user_ids One or more local user IDs a record belongs to.
 	 * @return bool True if the current user may read it, false otherwise.
 	 */
 	protected function can_read_feed_of( $user_ids ) {
+		/*
+		 * Same reason the login check leads in `check_reader_capability()`: a logged-out request
+		 * has user ID 0, and so does the blog actor, so the identity match below would hand the
+		 * blog actor's feed to anybody. This predicate is also reached from callers that never
+		 * pass through that gate, such as core's comments controller.
+		 */
+		if ( ! \is_user_logged_in() ) {
+			return false;
+		}
+
 		// Blanket access: an actor with no relationship at all has nothing to check per target.
 		if ( \current_user_can( 'list_users' ) ) {
 			return true;

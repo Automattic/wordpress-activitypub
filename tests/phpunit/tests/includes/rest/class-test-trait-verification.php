@@ -588,6 +588,152 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 
 
 	/**
+	 * Data provider for verify_activity_id tests.
+	 *
+	 * @return array[] Test cases: [ activity_id, actor, expected_pass ].
+	 */
+	public function data_verify_activity_id() {
+		return array(
+			'matching hosts'           => array(
+				'https://remote.example/activity/1',
+				'https://remote.example/users/alice',
+				true,
+			),
+			// The collision this guards: a valid signer filing an activity under another host's id.
+			'id on a foreign host'     => array(
+				'https://victim.example/activity/1',
+				'https://attacker.example/users/mallory',
+				false,
+			),
+			'case-insensitive hosts'   => array(
+				'https://Remote.Example/activity/1',
+				'https://remote.example/users/alice',
+				true,
+			),
+			// An id with no parsable host cannot be tied to the actor, so it must fail closed.
+			'hostless id'              => array(
+				'urn:uuid:8f5d1c2e',
+				'https://remote.example/users/alice',
+				false,
+			),
+			// Nothing to bind: argument validation rejects an id-less inbox delivery later.
+			'no id in body'            => array(
+				null,
+				'https://remote.example/users/alice',
+				true,
+			),
+			// An authorized-fetch GET carries neither field.
+			'no actor in body'         => array(
+				'https://remote.example/activity/1',
+				null,
+				true,
+			),
+			'id as object with nested' => array(
+				array( 'id' => 'https://remote.example/activity/1' ),
+				'https://remote.example/users/alice',
+				true,
+			),
+		);
+	}
+
+	/**
+	 * Test that verify_activity_id ties the activity id to the actor's host.
+	 *
+	 * @dataProvider data_verify_activity_id
+	 * @covers ::verify_activity_id
+	 *
+	 * @param string|array|null $activity_id The id value in the JSON body.
+	 * @param string|null       $actor       The actor value in the JSON body.
+	 * @param bool              $should_pass Whether the check should pass.
+	 */
+	public function test_verify_activity_id( $activity_id, $actor, $should_pass ) {
+		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
+
+		$body = array( 'type' => 'Create' );
+		if ( null !== $activity_id ) {
+			$body['id'] = $activity_id;
+		}
+		if ( null !== $actor ) {
+			$body['actor'] = $actor;
+		}
+		$request->set_header( 'Content-Type', 'application/json' );
+		$request->set_body( \wp_json_encode( $body ) );
+
+		/*
+		 * verify_activity_id is private, so call it via reflection.
+		 * This avoids coupling the test to the full verify_signature flow.
+		 */
+		$method = new \ReflectionMethod( $this->instance, 'verify_activity_id' );
+		$method->setAccessible( true );
+		$result = $method->invoke( $this->instance, $request );
+
+		if ( $should_pass ) {
+			$this->assertTrue( $result );
+		} else {
+			$this->assertWPError( $result );
+			$this->assertEquals( 'activitypub_activity_id_mismatch', $result->get_error_code() );
+			$this->assertEquals( 403, $result->get_error_data()['status'] );
+		}
+	}
+
+	/**
+	 * A deferred request must still be turned away when its id names another host.
+	 *
+	 * Deferring skips the signature, not the body checks. `Delete` is the type we defer, and it
+	 * reaches a tombstone lookup that fetches the named object, so the cheap check has to come
+	 * first or a made-up activity buys an outbound request.
+	 *
+	 * @covers ::verify_signature
+	 */
+	public function test_verify_signature_checks_activity_id_before_deferring() {
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'id'     => 'https://victim.example/activities/known-id',
+					'type'   => 'Delete',
+					'actor'  => 'https://attacker.example/users/mallory',
+					'object' => 'https://victim.example/objects/note',
+				)
+			)
+		);
+
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		$result = $this->instance->verify_signature( $request );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_activity_id_mismatch', $result->get_error_code() );
+	}
+
+	/**
+	 * Deferring must still work for a body whose id and actor agree.
+	 *
+	 * @covers ::verify_signature
+	 */
+	public function test_verify_signature_still_defers_for_a_consistent_body() {
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'id'     => 'https://remote.example/activities/1#delete',
+					'type'   => 'Delete',
+					'actor'  => 'https://remote.example/users/alice',
+					'object' => 'https://remote.example/objects/note',
+				)
+			)
+		);
+
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		$result = $this->instance->verify_signature( $request );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$this->assertTrue( $result );
+	}
+
+	/**
 	 * Test that `$force_signature = true` makes a GET require a signature even
 	 * when Authorized Fetch is disabled.
 	 *
