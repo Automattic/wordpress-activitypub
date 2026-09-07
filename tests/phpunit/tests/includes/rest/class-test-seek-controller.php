@@ -77,6 +77,9 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 	 */
 	public static function tear_down_after_class() {
 		\delete_option( 'activitypub_actor_mode' );
+
+		// The actors above are created before the per-test transaction, so only this clears them.
+		parent::tear_down_after_class();
 	}
 
 	/**
@@ -179,13 +182,24 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 
 		$response = rest_get_server()->dispatch( $request );
 
-		// Nothing should advertise a seek it always refuses.
-		$advertised = rest_get_server()->dispatch( new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' ) )->get_data();
-
 		\delete_option( 'activitypub_hide_social_graph' );
 
 		$this->assertEquals( 404, $response->get_status() );
-		$this->assertArrayNotHasKey( 'seekItem', $advertised, 'A hidden social graph must not advertise seekItem.' );
+	}
+
+	/**
+	 * A collection that refuses every seek does not advertise one.
+	 *
+	 * @covers \Activitypub\Rest\Collection::prepare_collection_response
+	 */
+	public function test_collection_does_not_advertise_unusable_seek() {
+		\update_option( 'activitypub_hide_social_graph', '1' );
+
+		$response = rest_get_server()->dispatch( new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' ) )->get_data();
+
+		\delete_option( 'activitypub_hide_social_graph' );
+
+		$this->assertArrayNotHasKey( 'seekItem', $response, 'A hidden social graph must not advertise seekItem.' );
 	}
 
 	/**
@@ -267,32 +281,20 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 	 * @covers ::get_item
 	 */
 	public function test_seek_endpoint_rejects_unknown_collections() {
-		// A remote URL never dispatches.
-		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/seek' );
-		$request->set_param( 'collection', 'https://remote.example/actors/0/followers' );
-		$request->set_param( 'item', 'https://example.org/actor/13' );
+		$collections = array(
+			'a remote URL'                   => 'https://remote.example/actors/0/followers',
+			// from_url() reads `?rest_route=` without looking at the host, so the host is checked separately.
+			'a remote URL with ?rest_route=' => 'https://remote.example/?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers',
+			'a route outside the namespace'  => \rest_url( 'wp/v2/posts' ),
+		);
 
-		$response = rest_get_server()->dispatch( $request );
-		$this->assertEquals( 404, $response->get_status() );
+		foreach ( $collections as $description => $collection ) {
+			$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/seek' );
+			$request->set_param( 'collection', $collection );
+			$request->set_param( 'item', 'https://example.org/actor/13' );
 
-		/*
-		 * A foreign host carrying a `?rest_route=` never dispatches. Core's from_url() reads that
-		 * parameter without looking at the host, so the host has to be checked separately.
-		 */
-		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/seek' );
-		$request->set_param( 'collection', 'https://remote.example/?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
-		$request->set_param( 'item', 'https://example.org/actor/13' );
-
-		$response = rest_get_server()->dispatch( $request );
-		$this->assertEquals( 404, $response->get_status() );
-
-		// A local REST URL outside the ActivityPub namespace never dispatches.
-		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/seek' );
-		$request->set_param( 'collection', \rest_url( 'wp/v2/posts' ) );
-		$request->set_param( 'item', 'https://example.org/actor/13' );
-
-		$response = rest_get_server()->dispatch( $request );
-		$this->assertEquals( 404, $response->get_status() );
+			$this->assertEquals( 404, rest_get_server()->dispatch( $request )->get_status(), "Seeking $description must not dispatch." );
+		}
 	}
 
 	/**
@@ -385,25 +387,27 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 	}
 
 	/**
-	 * A HEAD seek must not bypass Authorized-Fetch signature verification.
+	 * A HEAD seek is challenged whether or not Authorized Fetch is on.
 	 *
 	 * The HEAD short-circuit in verify_signature() lets caches probe public endpoints unsigned, but a
-	 * seek carries an `item` whose 307/Location leaks a per-actor membership and position. Under
-	 * Authorized Fetch an anonymous HEAD seek must be challenged (401), never answered with a redirect.
+	 * seek carries an `item` whose 307/Location leaks a per-actor membership and position. That leak
+	 * does not depend on the setting, so an anonymous HEAD seek is challenged (401) either way.
 	 *
 	 * @covers \Activitypub\Rest\Followers_Controller::verify_signature
 	 */
-	public function test_head_seek_does_not_bypass_authorized_fetch() {
-		\update_option( 'activitypub_authorized_fetch', '1' );
+	public function test_head_seek_is_always_challenged() {
+		foreach ( array( '1', '0' ) as $authorized_fetch ) {
+			\update_option( 'activitypub_authorized_fetch', $authorized_fetch );
 
-		$request = new \WP_REST_Request( 'HEAD', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
-		$request->set_param( 'item', 'https://example.org/actor/13' );
+			$request = new \WP_REST_Request( 'HEAD', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
+			$request->set_param( 'item', 'https://example.org/actor/13' );
 
-		$response = rest_get_server()->dispatch( $request );
+			$response = rest_get_server()->dispatch( $request );
 
-		\delete_option( 'activitypub_authorized_fetch' );
+			\delete_option( 'activitypub_authorized_fetch' );
 
-		$this->assertEquals( 401, $response->get_status(), 'A HEAD seek under Authorized Fetch must be challenged, not redirected.' );
+			$this->assertEquals( 401, $response->get_status(), "A HEAD seek must be challenged with authorized fetch set to $authorized_fetch." );
+		}
 	}
 
 	/**

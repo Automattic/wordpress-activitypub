@@ -174,8 +174,8 @@ class Seek_Controller extends \WP_REST_Controller {
 
 		/*
 		 * `from_url()` reads a `?rest_route=` value without looking at the host, so a URL on any
-		 * host carrying one would resolve to a local route. Check the host ourselves. This stays
-		 * correct on plain-permalink installs, where our own collection URLs use that same form.
+		 * host carrying one resolves to a local route. Our own collection URLs take that form on
+		 * plain-permalink installs, so match on the host rather than on the URL's shape.
 		 */
 		if ( ! is_same_domain( $collection ) ) {
 			return $not_found;
@@ -224,9 +224,9 @@ class Seek_Controller extends \WP_REST_Controller {
 		\remove_filter( 'activitypub_defer_signature_verification', $defer, \PHP_INT_MAX );
 
 		/*
-		 * Confirm core matched the route the gate approved. get_seekable_pattern() mirrors core's
-		 * matcher, which core has changed before, so compare what was actually dispatched rather
-		 * than trusting a copy of its rules to stay in step.
+		 * get_seekable_pattern() is a pre-filter, because the decision has to be made before the
+		 * signature-deferred dispatch, and core's own matcher is protected. This is the decision:
+		 * core's record of what it actually matched.
 		 */
 		if ( $response->get_matched_route() !== $seekable_pattern ) {
 			return $not_found;

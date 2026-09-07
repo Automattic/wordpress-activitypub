@@ -148,9 +148,6 @@ class Following_Controller extends Actors_Controller {
 	/**
 	 * Whether the seek endpoint should be advertised on this collection.
 	 *
-	 * A hidden social graph refuses every seek, so advertising one would only cost the client a
-	 * round trip to be told 404.
-	 *
 	 * @since unreleased
 	 *
 	 * @param \WP_REST_Request $request The collection request.
