@@ -218,6 +218,41 @@ class Test_Interactions extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that remote comment content is sanitized independently of the current user.
+	 *
+	 * `wp_new_comment()` only applies kses when the request installed the
+	 * `pre_comment_content` filter, and `kses_init()` installs nothing for a user with
+	 * `unfiltered_html`. The inbox runs as user 0 and is safe by accident, but
+	 * `Search::enhance_public_search()` imports a searched URL as a comment while an
+	 * administrator is logged in, and force-approves the result.
+	 *
+	 * @covers ::add_comment
+	 */
+	public function test_add_comment_sanitizes_content_for_unfiltered_html_user() {
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+
+		/*
+		 * Model the Search path: without this the suite runs as user 0, kses is active,
+		 * and the test would pass whether or not add_comment() sanitizes anything.
+		 */
+		\wp_set_current_user( $admin_id );
+		\kses_init();
+
+		$activity                      = $this->create_test_object( 'https://example.com/hostile' );
+		$activity['object']['content'] = '<div style="position:fixed;top:0;left:0;z-index:99999;background-image:url(https://example.com/track)">Reply<script>alert(1)</script><iframe srcdoc="x"></iframe><img src=x onerror="alert(1)"></div>';
+
+		$comment_id = Interactions::add_comment( $activity );
+		$content    = get_comment( $comment_id )->comment_content;
+
+		$this->assertStringNotContainsString( '<script', $content, 'Script tags must not be stored.' );
+		$this->assertStringNotContainsString( '<iframe', $content, 'Iframes must not be stored.' );
+		$this->assertStringNotContainsString( 'onerror', $content, 'Event handlers must not be stored.' );
+		$this->assertStringNotContainsString( 'style=', $content, 'Inline styles must not be stored.' );
+		$this->assertStringNotContainsString( 'position:fixed', $content, 'CSS positioning must not survive.' );
+		$this->assertStringContainsString( 'Reply', $content, 'Legitimate content should survive.' );
+	}
+
+	/**
 	 * Test handle create with remote actor.
 	 *
 	 * @covers ::add_comment
@@ -1036,6 +1071,42 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertEquals( 'quote', $comment->comment_type, 'Comment type should be set to quote' );
 
 		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10 );
+	}
+
+	/**
+	 * Test that a remote quote gets the comment allowlist, not the post one.
+	 *
+	 * @covers ::add_comment
+	 */
+	public function test_add_comment_quote_uses_the_comment_allowlist() {
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+
+		// Model an authenticated import, where core installs no kses filters.
+		\wp_set_current_user( $admin_id );
+		\kses_init();
+
+		$activity = array(
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/users/testuser',
+			'object' => array(
+				'type'     => 'Note',
+				'id'       => 'https://example.com/note/789',
+				'content'  => '<p class="quote-inline">RE: <a href="' . self::$post_permalink . '">Post</a></p><div style="position:fixed;z-index:99999">Great post!<script>alert(1)</script></div>',
+				'quote'    => self::$post_permalink,
+				'quoteUri' => self::$post_permalink,
+			),
+		);
+
+		\add_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10, 2 );
+
+		$comment_id = Interactions::add_comment( $activity );
+		$content    = \get_comment( $comment_id )->comment_content;
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10 );
+
+		$this->assertStringNotContainsString( 'style=', $content, 'Inline styles must not be stored.' );
+		$this->assertStringNotContainsString( '<script', $content, 'Script tags must not be stored.' );
+		$this->assertStringContainsString( 'Great post!', $content, 'Legitimate content should survive.' );
 	}
 
 	/**

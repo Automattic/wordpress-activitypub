@@ -34,7 +34,7 @@ A few integrations are always initialized (`Nodeinfo`, `Webfinger`, `Surge`, `Li
 
 | Integration | What it does |
 |---|---|
-| **Jetpack** | Syncs ActivityPub options and follower/following meta to WordPress.com, adds a Reader link on the Following screen, enables the Following UI, and adapts the "share to reply" flow. |
+| **Jetpack** | Syncs ActivityPub options and follower/following meta to WordPress.com, adds a Reader link on the Following screen, enables the Following UI, adapts the "share to reply" flow, and federates podcast episodes from both Posts to Podcast and Jetpack Podcast with their audio and cover art. |
 | **Enable Mastodon Apps** | Feeds ActivityPub account, follower, post, and notification data to [Enable Mastodon Apps](https://wordpress.org/plugins/enable-mastodon-apps/) so native Mastodon client apps work against the site. |
 | **BuddyPress** | Maps BuddyPress member profiles into ActivityPub actors and adapts the Followers/Following blocks. |
 
@@ -50,9 +50,8 @@ A few integrations are always initialized (`Nodeinfo`, `Webfinger`, `Surge`, `Li
 
 | Integration | What it does |
 |---|---|
-| **LiteSpeed Cache** | Keeps LiteSpeed from caching ActivityPub responses, with a Site Health check. |
-| **Surge** | Keeps the Surge page cache from caching ActivityPub responses, with a Site Health check. |
-| **WP REST Cache** | Excludes ActivityPub REST endpoints from WP REST Cache and invalidates cached responses when content changes. |
+| **LiteSpeed Cache** | Keeps the html and ActivityPub (JSON) responses in separate cache buckets, with a Site Health check. |
+| **Surge** | Keeps the html and ActivityPub (JSON) responses in separate cache buckets, with a Site Health check. |
 
 ### Internationalization
 

@@ -9,6 +9,7 @@ namespace Activitypub\Collection;
 
 use Activitypub\Comment;
 use Activitypub\Emoji;
+use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
 use function Activitypub\get_remote_metadata_by_actor;
@@ -49,14 +50,9 @@ class Interactions {
 			return false;
 		}
 
-		$comment_data = self::activity_to_comment( $activity, $user_id );
-
-		if ( ! $comment_data ) {
-			return false;
-		}
-
 		// Determine target URL from reply or quote.
 		$parent_comment_id = 0;
+		$comment_type      = '';
 
 		if ( ! empty( $activity['object']['inReplyTo'] ) ) {
 			// Regular reply.
@@ -70,13 +66,16 @@ class Interactions {
 				return false;
 			}
 
-			// Mark as quote and clean content.
-			$comment_data['comment_type'] = 'quote';
+			$comment_type = 'quote';
 
 			if ( ! empty( $activity['object']['content'] ) ) {
-				$pattern                         = '/<p[^>]*class=["\']quote-inline["\'][^>]*>.*?<\/p>/is';
-				$cleaned_content                 = \preg_replace( $pattern, '', $activity['object']['content'], 1 );
-				$comment_data['comment_content'] = \wp_kses_post( $cleaned_content );
+				/*
+				 * Strip the inline quote before activity_to_comment() sanitizes the content:
+				 * the pattern matches the `quote-inline` class attribute, which kses removes.
+				 */
+				$pattern = '/<p[^>]*class=["\']quote-inline["\'][^>]*>.*?<\/p>/is';
+
+				$activity['object']['content'] = \preg_replace( $pattern, '', $activity['object']['content'], 1 );
 			}
 		}
 
@@ -101,6 +100,20 @@ class Interactions {
 		if ( ! $comment_post_id ) {
 			// Not a reply to a post or comment.
 			return false;
+		}
+
+		/*
+		 * Built only once the target is known: resolving the author fetches the remote actor and
+		 * its WebFinger, which is wasted on a reply to something that is not here.
+		 */
+		$comment_data = self::activity_to_comment( $activity, $user_id );
+
+		if ( ! $comment_data ) {
+			return false;
+		}
+
+		if ( $comment_type ) {
+			$comment_data['comment_type'] = $comment_type;
 		}
 
 		$comment_data['comment_post_ID'] = $comment_post_id;
@@ -155,16 +168,33 @@ class Interactions {
 		}
 
 		// Found a local comment id.
-		$comment_data['comment_author'] = \sanitize_text_field( empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'] );
+		$comment_data['comment_author'] = \wp_slash( empty( $meta['name'] ) ? $meta['preferredUsername'] : $meta['name'] );
 
 		/*
-		 * Wrap emoji in content with blocks for runtime replacement.
-		 * Note: Remote images in comments are stripped for security (only emoji allowed).
+		 * Sanitize before wrapping: emoji blocks are our own markup, and kses would
+		 * mangle the block comments they are made of.
 		 */
-		$content                         = Emoji::wrap_in_content( $activity['object']['content'], $activity['object'] );
+		$content                         = Sanitize::comment_content( $activity['object']['content'] ?? '' );
+		$content                         = Emoji::wrap_in_content( $content, $activity['object'] );
 		$comment_data['comment_content'] = \addslashes( $content );
 
-		return self::persist( $comment_data, self::UPDATE );
+		$result = self::persist( $comment_data, self::UPDATE );
+
+		/*
+		 * `persist()` returns false when it refuses to write, typically because the post is no
+		 * longer federated. That is not "no comment to update": the comment exists, it was found
+		 * above. The Update handler treats false as not-found and falls back to Create, which
+		 * finds the same comment and dispatches back to Update, without end. A WP_Error is
+		 * handled but unsuccessful, so it stops here.
+		 */
+		if ( false === $result ) {
+			return new \WP_Error(
+				'activitypub_update_refused',
+				\__( 'The comment can no longer be updated.', 'activitypub' )
+			);
+		}
+
+		return $result;
 	}
 
 	/**
@@ -365,22 +395,7 @@ class Interactions {
 			return $allowed_tags;
 		}
 
-		// Add `p` and `br` to the list of allowed tags.
-		if ( ! \array_key_exists( 'br', $allowed_tags ) ) {
-			$allowed_tags['br'] = array();
-		}
-
-		if ( ! \array_key_exists( 'p', $allowed_tags ) ) {
-			$allowed_tags['p'] = array();
-		}
-
-		// Add `img` for custom emoji support with strict validation.
-		$emoji_html = Emoji::get_kses_allowed_html();
-		if ( ! \array_key_exists( 'img', $allowed_tags ) ) {
-			$allowed_tags['img'] = $emoji_html['img'];
-		}
-
-		return $allowed_tags;
+		return Sanitize::get_allowed_comment_html( $allowed_tags );
 	}
 
 	/**
@@ -405,10 +420,11 @@ class Interactions {
 				return false;
 			}
 
-			$comment_author       = $user->display_name;
+			$comment_author       = \wp_slash( $user->display_name );
 			$comment_author_url   = $user->user_url;
 			$comment_author_email = $user->user_email;
-			$comment_content      = \wp_kses_post( $activity['object']['content'] ?? '' );
+			// Same gate and slashing as the remote branch: one policy for the column, whatever wrote it.
+			$comment_content = \addslashes( Sanitize::comment_content( $activity['object']['content'] ?? '' ) );
 		} else {
 			// S2S: resolve author from remote actor metadata.
 			$actor = object_to_uri( $activity['actor'] ?? null );
@@ -429,7 +445,9 @@ class Interactions {
 				return false;
 			}
 
-			$comment_author     = $comment_author ?? \__( 'Anonymous', 'activitypub' );
+			// Core's `pre_comment_author_name` chain sanitizes this column on the way in, so only
+			// the slashing is ours: wp_new_comment() unslashes the whole array.
+			$comment_author     = \wp_slash( $comment_author ?? \__( 'Anonymous', 'activitypub' ) );
 			$comment_author_url = \esc_url_raw( object_to_uri( $actor['url'] ?? $actor['id'] ) );
 
 			$webfinger = Webfinger::uri_to_acct( $comment_author_url );
@@ -441,10 +459,11 @@ class Interactions {
 
 			if ( isset( $activity['object']['content'] ) ) {
 				/*
-				 * Wrap emoji in content with blocks for runtime replacement.
-				 * Note: Remote images in comments are stripped for security (only emoji allowed).
+				 * Sanitize before wrapping: emoji blocks are our own markup, and kses would
+				 * mangle the block comments they are made of.
 				 */
-				$content         = Emoji::wrap_in_content( $activity['object']['content'], $activity['object'] );
+				$content         = Sanitize::comment_content( $activity['object']['content'] );
+				$content         = Emoji::wrap_in_content( $content, $activity['object'] );
 				$comment_content = \addslashes( $content );
 			}
 		}

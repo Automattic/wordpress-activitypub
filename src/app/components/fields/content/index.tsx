@@ -7,7 +7,6 @@ import type { ReactNode } from 'react';
  * WordPress dependencies
  */
 import { __ } from '@wordpress/i18n';
-import { decodeEntities } from '@wordpress/html-entities';
 import { __unstableStripHTML as stripHTML, safeHTML } from '@wordpress/dom';
 import type { Field } from '@wordpress/dataviews/wp';
 
@@ -25,7 +24,9 @@ import './style.scss';
  * @return Plain text content
  */
 function getPlainTextValue( item: FeedPost ): string {
-	return decodeEntities( stripHTML( item.excerpt?.rendered || item.content?.rendered || '' ) );
+	// `stripHTML()` returns `textContent`, which is already decoded -- decoding it again
+	// would collapse a second level of entities and turn a literal `&amp;` into `&`.
+	return stripHTML( item.excerpt?.rendered || item.content?.rendered || '' );
 }
 
 /**
@@ -51,8 +52,16 @@ function ContentRenderer( { item }: { item: FeedPost } ): ReactNode {
 	const isNote: boolean = objectTypeName === 'Note';
 
 	if ( isNote ) {
-		// Show full content for Notes (HTML)
-		const content: string = safeHTML( decodeEntities( item.content?.rendered || '' ) );
+		/*
+		 * `content.rendered` is already server-sanitised HTML: remote content is run
+		 * through `Sanitize::content()` before it is stored,
+		 * and the REST render filters do not decode entities. Decoding here would undo that --
+		 * an entity-encoded `&lt;iframe srcdoc="..."&gt;` that kses deliberately stored as
+		 * inert text would become a live element again, and `safeHTML()` only strips
+		 * `<script>` elements and `on*` attributes, so it would not catch it.
+		 * Entities in the stored value are literal characters and render correctly as-is.
+		 */
+		const content: string = safeHTML( item.content?.rendered || '' );
 
 		return (
 			<div className="activitypub-feed-post">

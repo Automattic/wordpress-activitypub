@@ -97,6 +97,11 @@ class Token {
 	 * @return array|\WP_Error Token data or error.
 	 */
 	public static function create( $user_id, $client_id, $scopes, $expires = self::DEFAULT_EXPIRATION ) {
+		$user_access = self::validate_user_access( $user_id );
+		if ( \is_wp_error( $user_access ) ) {
+			return $user_access;
+		}
+
 		// Generate tokens.
 		$access_token  = self::generate_token();
 		$refresh_token = self::generate_token();
@@ -219,6 +224,11 @@ class Token {
 			);
 		}
 
+		$user_access = self::validate_user_access( $user_id );
+		if ( \is_wp_error( $user_access ) ) {
+			return $user_access;
+		}
+
 		// Throttle last_used_at writes to avoid a DB write on every request.
 		$last_used = $token_data['last_used_at'] ?? 0;
 		if ( empty( $last_used ) || ( \time() - $last_used ) > 5 * MINUTE_IN_SECONDS ) {
@@ -315,12 +325,42 @@ class Token {
 			);
 		}
 
+		// Reject before tearing down the existing token, so a failed refresh does not destroy the grant.
+		$user_access = self::validate_user_access( $user_id );
+		if ( \is_wp_error( $user_access ) ) {
+			return $user_access;
+		}
+
 		// Delete the old token and index.
 		\delete_user_meta( $user_id, $meta_key );
 		\delete_user_meta( $user_id, $refresh_index_key );
 
 		// Create a new token.
 		return self::create( $user_id, $client_id, $token_data['scopes'] );
+	}
+
+	/**
+	 * Validate that a token's user holds the ActivityPub capability.
+	 *
+	 * Checks the `activitypub` capability directly rather than user_can_activitypub(), which also
+	 * short-circuits on the site actor mode: a capable user must keep their token even when the site
+	 * runs in blog-only or single-user mode, where per-user actors are not exposed.
+	 *
+	 * @since 9.2.0
+	 *
+	 * @param int $user_id WordPress user ID.
+	 * @return true|\WP_Error True when the user has the capability, WP_Error otherwise.
+	 */
+	private static function validate_user_access( $user_id ) {
+		if ( \user_can( $user_id, 'activitypub' ) ) {
+			return true;
+		}
+
+		return new \WP_Error(
+			'activitypub_user_not_enabled',
+			\__( 'This user is not enabled for ActivityPub.', 'activitypub' ),
+			array( 'status' => 403 )
+		);
 	}
 
 	/**

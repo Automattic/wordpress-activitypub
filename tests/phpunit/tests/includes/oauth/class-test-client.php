@@ -619,10 +619,10 @@ class Test_Client extends \WP_UnitTestCase {
 
 		$client = Client::get( $result['client_id'] );
 
-		$filtered = $client->filter_scopes( array( Scope::READ, Scope::FOLLOW, Scope::WRITE ) );
+		$filtered = $client->filter_scopes( array( Scope::READ, Scope::PUSH, Scope::WRITE ) );
 		$this->assertEquals( array( Scope::READ, Scope::WRITE ), $filtered );
 
-		$filtered = $client->filter_scopes( array( Scope::FOLLOW, Scope::PUSH ) );
+		$filtered = $client->filter_scopes( array( Scope::PUSH ) );
 		$this->assertEquals( array(), $filtered );
 	}
 

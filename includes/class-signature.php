@@ -115,7 +115,7 @@ class Signature {
 			return $args;
 		}
 
-		if ( '1' === \get_option( 'activitypub_rfc9421_signature' ) && self::could_support_rfc9421( $url ) ) {
+		if ( '1' === \get_option( 'activitypub_rfc9421_signature', '1' ) && self::could_support_rfc9421( $url ) ) {
 			$signature = new Http_Message_Signature();
 		} else {
 			$signature = new Http_Signature_Draft();

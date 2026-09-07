@@ -1422,4 +1422,16 @@ class Test_Blocks extends \WP_UnitTestCase {
 		$this->assertContains( $plain_post, $ids, 'Plain posts must stay visible under ?filter=posts.' );
 		$this->assertNotContains( $reply_post, $ids, 'Reply-block posts must be hidden under ?filter=posts.' );
 	}
+
+	/**
+	 * The embed URL is escaped so it can't inject markup as the link text.
+	 *
+	 * @covers ::revert_embed_links
+	 */
+	public function test_revert_embed_links_escapes_url() {
+		$block  = array( 'attrs' => array( 'url' => 'https://example.com/<script>alert(1)</script>' ) );
+		$output = Blocks::revert_embed_links( '', $block );
+
+		$this->assertStringNotContainsString( '<script>', $output );
+	}
 }

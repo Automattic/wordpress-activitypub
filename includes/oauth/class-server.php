@@ -174,6 +174,24 @@ class Server {
 	}
 
 	/**
+	 * Whether the request is permitted to act for a scope.
+	 *
+	 * Only OAuth callers are limited by scope. A cookie-authenticated session carries no
+	 * token and is therefore not scope-limited; it is bounded by WordPress capabilities.
+	 *
+	 * Unlike {@see self::check_oauth_permission()}, this does not require the request to be
+	 * OAuth-authenticated, so it can be combined with checks that also accept a WP session.
+	 *
+	 * @since 9.3.0
+	 *
+	 * @param string $scope The scope to require of an OAuth caller.
+	 * @return bool True if the request may act for the scope.
+	 */
+	public static function permits_scope( $scope ) {
+		return ! self::is_oauth_request() || self::has_scope( $scope );
+	}
+
+	/**
 	 * Extract Bearer token from Authorization header.
 	 *
 	 * @return string|null The token string or null.
@@ -487,10 +505,17 @@ class Server {
 		);
 
 		if ( \is_wp_error( $code ) ) {
+			/*
+			 * A refused scope is something the client can act on, so it travels as the OAuth
+			 * error RFC 6749 §4.1.2.1 names. Everything else here is an internal failure, and
+			 * those carry an `activitypub_` code the client has no use for.
+			 */
+			$error = 'invalid_scope' === $code->get_error_code() ? 'invalid_scope' : 'server_error';
+
 			self::redirect_to_client(
 				$redirect_uri,
 				array(
-					'error'             => 'server_error',
+					'error'             => $error,
 					'error_description' => $code->get_error_message(),
 					'state'             => $state,
 				)

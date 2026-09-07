@@ -209,8 +209,9 @@ class Remote_Actors {
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
-				\esc_sql( $actor_uri ),
-				\esc_sql( self::POST_TYPE )
+				// Normalize the way upsert() stores the GUID; prepare() handles the SQL escaping.
+				\esc_url_raw( $actor_uri ),
+				self::POST_TYPE
 			)
 		);
 
@@ -691,7 +692,7 @@ class Remote_Actors {
 
 		return array(
 			'guid'         => \esc_url_raw( $actor->get_id() ),
-			'post_title'   => \wp_strip_all_tags( \wp_slash( $actor->get_name() ?: $actor->get_preferred_username() ) ),
+			'post_title'   => \wp_slash( \wp_strip_all_tags( $actor->get_name() ?: $actor->get_preferred_username() ) ),
 			'post_author'  => 0,
 			'post_type'    => self::POST_TYPE,
 			'post_content' => \wp_slash( $actor_json ),

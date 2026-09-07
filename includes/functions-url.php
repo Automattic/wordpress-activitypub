@@ -51,6 +51,48 @@ function normalize_host( $host ) {
 }
 
 /**
+ * Fold a host to its canonical spelling for comparison.
+ *
+ * Hosts are case-insensitive, IPv6 literals are bracketed in a URI but not in a stored host,
+ * and a trailing dot is the same fully qualified name. Two spellings that differ only in those
+ * ways address the same host, so anything comparing hosts has to fold them first.
+ *
+ * Unlike {@see normalize_host()} this is lossless: it does not strip `www.`, which is a
+ * different host rather than a different spelling of one.
+ *
+ * @since 9.3.0
+ *
+ * @param string $host The host.
+ *
+ * @return string The folded host.
+ */
+function fold_host( $host ) {
+	return \rtrim( \trim( \strtolower( (string) $host ), '[]' ), '.' );
+}
+
+/**
+ * Fold an authority to the host it names.
+ *
+ * An authority is what a `Host` header carries: a host, plus a port whenever it is not the
+ * default one, with an IPv6 literal in brackets. {@see fold_host()} expects a bare host and
+ * strips brackets without understanding a port, so `[::1]:443` would fold to `::1]:443` and
+ * `example.org:8080` would never match the `example.org` that {@see home_host()} returns.
+ * Use this wherever an authority has to be compared against a host.
+ *
+ * @since 9.3.1
+ *
+ * @param string $authority A host, optionally bracketed and optionally with a port.
+ *
+ * @return string The folded host, or an empty string when the value names none.
+ */
+function fold_authority( $authority ) {
+	// Parsed as a scheme-relative URL, which is the shape an authority already has.
+	$host = \wp_parse_url( '//' . \ltrim( (string) $authority, '/' ), \PHP_URL_HOST );
+
+	return fold_host( (string) $host );
+}
+
+/**
  * Check if a URL is from the same domain as the site.
  *
  * @param string $url The URL to check.

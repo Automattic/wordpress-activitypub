@@ -125,7 +125,12 @@ class Actions_Controller extends \WP_REST_Controller {
 			return $denied;
 		}
 
-		if ( ! user_can_activitypub( \get_current_user_id() ) ) {
+		/*
+		 * A logged-out request has user ID 0, which is also the blog actor's ID
+		 * (Actors::BLOG_USER_ID). Without the login check, user_can_activitypub( 0 ) reports the
+		 * enabled blog actor, so an anonymous caller would pass and act with the blog's rights.
+		 */
+		if ( ! \is_user_logged_in() || ! user_can_activitypub( \get_current_user_id() ) ) {
 			return new \WP_Error(
 				'rest_forbidden',
 				\__( 'Sorry, you are not allowed to perform this action.', 'activitypub' ),

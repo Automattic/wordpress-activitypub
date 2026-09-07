@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Comment;
 
 /**
  * Mailer Class.
@@ -22,10 +23,12 @@ class Mailer {
 
 		\add_action( 'activitypub_handled_follow', array( self::class, 'new_follower' ), 10, 3 );
 
-		\add_action( 'activitypub_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
-		\add_action( 'activitypub_inbox_create', array( self::class, 'mention' ), 20, 2 );  /** After @see \Activitypub\Handler\Create::handle_create() */
+		\add_action( 'activitypub_handled_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
+		// Priority 20 keeps this after @see \Activitypub\Handler\Create::handle_create(), whose comment the reply check reads.
+		\add_action( 'activitypub_handled_inbox_create', array( self::class, 'mention' ), 20, 2 );
 
 		\add_filter( 'notify_post_author', array( self::class, 'maybe_prevent_comment_notification' ), 10, 2 );
+		\add_filter( 'notify_post_author', array( self::class, 'maybe_prevent_reaction_notification' ), 10, 2 );
 		\add_filter( 'notify_moderator', array( self::class, 'maybe_prevent_comment_notification' ), 10, 2 );
 	}
 
@@ -553,5 +556,39 @@ class Mailer {
 		}
 
 		return $maybe_notify;
+	}
+
+	/**
+	 * Let the post author mute email about reactions to their post.
+	 *
+	 * Likes, reposts, and quotes are stored as comments, so WordPress emails the post author about
+	 * them like any other comment. This is hooked on `notify_post_author` only, so it never affects
+	 * the moderator notification, and it targets the plugin's own reaction comment types so pingbacks,
+	 * trackbacks, and plain replies keep notifying as usual. The preference defaults to on.
+	 *
+	 * @since 9.3.0
+	 *
+	 * @param bool $maybe_notify Whether to send the notification.
+	 * @param int  $comment_id   The comment ID.
+	 *
+	 * @return bool Whether to send the notification.
+	 */
+	public static function maybe_prevent_reaction_notification( $maybe_notify, $comment_id ) {
+		// If already disabled, respect that.
+		if ( ! $maybe_notify ) {
+			return $maybe_notify;
+		}
+
+		$comment = \get_comment( $comment_id );
+		if ( ! $comment || ! \in_array( \get_comment_type( $comment ), Comment::get_comment_type_slugs(), true ) ) {
+			return $maybe_notify;
+		}
+
+		$post = \get_post( $comment->comment_post_ID );
+		if ( ! $post ) {
+			return $maybe_notify;
+		}
+
+		return (bool) \get_user_option( 'activitypub_mailer_new_reaction', $post->post_author );
 	}
 }

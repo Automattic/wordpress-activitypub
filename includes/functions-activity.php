@@ -318,6 +318,84 @@ function id_matches_url( $item, $url ) {
 }
 
 /**
+ * Normalize an actor URI so two spellings of the same identity compare equal.
+ *
+ * Folds only what RFC 3986 calls case-insensitive, the scheme and host, plus a default port
+ * and a trailing slash, and drops the fragment. Path and query keep their case, and `http`
+ * stays distinct from `https`. Userinfo is dropped, so a few technically distinct URIs compare
+ * equal, which errs towards matching a block rather than missing one.
+ *
+ * Deliberately not used by `id_matches_url()`, which guards a cache write keyed on the exact
+ * id: folding there would confirm a document under one spelling and store it under another.
+ * A mismatch there is not a rejection, {@see \Activitypub\Http::get_remote_object()} re-fetches
+ * the declared id and requires that to self-confirm, so the strictness costs one request rather
+ * than refusing a document that spells its own host differently.
+ *
+ * @since 9.3.0
+ *
+ * @param string $uri The actor URI.
+ *
+ * @return string The normalized URI, or an empty string when there is nothing to compare.
+ */
+function normalize_actor_uri( $uri ) {
+	$uri = \is_string( $uri ) ? \trim( $uri ) : '';
+
+	if ( '' === $uri ) {
+		return '';
+	}
+
+	/*
+	 * Cut at the first `#`, which is the only place a fragment can start, rather than through
+	 * `strip_fragment_from_url()`, which rebuilds from parsed parts and so leaves a hostless
+	 * identifier alone. Without this a fragment on a handle survives normalization and
+	 * `acct:user@example.com#x` slips past a block on `acct:user@example.com`. The host branch
+	 * never re-appends one either way.
+	 */
+	$fragment = \strpos( $uri, '#' );
+
+	if ( false !== $fragment ) {
+		$uri = \substr( $uri, 0, $fragment );
+	}
+
+	$parts = \wp_parse_url( $uri );
+
+	/*
+	 * A handle has no parsable host, so its own host half is folded on its own. Anything else
+	 * without one is malformed and is compared as it came in.
+	 */
+	if ( empty( $parts['host'] ) ) {
+		// `acct:` and a leading `@` are spellings of the same handle, so they are dropped before
+		// comparing. The local part keeps its case; only the host half is folded.
+		$handle = \preg_replace( '/^acct:/i', '', $uri );
+		$handle = \ltrim( $handle, '@' );
+
+		if ( \preg_match( '/^(.*@)([^@]+)$/', $handle, $parsed ) ) {
+			return $parsed[1] . fold_host( $parsed[2] );
+		}
+
+		return \untrailingslashit( $uri );
+	}
+
+	static $default = array(
+		'http'  => 80,
+		'https' => 443,
+	);
+
+	$scheme = \strtolower( $parts['scheme'] ?? '' );
+
+	// A port that is the scheme's default is the same address written two ways.
+	$is_default = isset( $parts['port'] ) && \array_key_exists( $scheme, $default ) && $default[ $scheme ] === (int) $parts['port'];
+	$port       = isset( $parts['port'] ) && ! $is_default ? ':' . (int) $parts['port'] : '';
+
+	// The trailing slash is folded on the path rather than the whole URI so a query cannot hide it.
+	// A scheme-relative reference keeps its `//`; emitting `://` would match nothing.
+	$authority  = ( '' === $scheme ? '//' : $scheme . '://' ) . fold_host( $parts['host'] );
+	$normalized = $authority . $port . \untrailingslashit( $parts['path'] ?? '' );
+
+	return isset( $parts['query'] ) ? $normalized . '?' . $parts['query'] : $normalized;
+}
+
+/**
  * Check if an `$data` is an Activity.
  *
  * @see https://www.w3.org/ns/activitystreams#activities

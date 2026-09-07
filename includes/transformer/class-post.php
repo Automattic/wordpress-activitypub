@@ -19,6 +19,7 @@ use function Activitypub\generate_post_summary;
 use function Activitypub\get_content_visibility;
 use function Activitypub\get_content_warning;
 use function Activitypub\get_enclosures;
+use function Activitypub\get_max_attachments;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\is_post_publicly_queryable;
 use function Activitypub\is_single_user;
@@ -325,7 +326,7 @@ class Post extends Base {
 
 		$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
 		if ( $alt ) {
-			$image['name'] = \html_entity_decode( \wp_strip_all_tags( $alt ), ENT_QUOTES, 'UTF-8' );
+			$image['name'] = \wp_strip_all_tags( \html_entity_decode( $alt, ENT_QUOTES, 'UTF-8' ) );
 		}
 
 		return $image;
@@ -381,7 +382,7 @@ class Post extends Base {
 
 		$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
 		if ( $alt ) {
-			$image['name'] = \html_entity_decode( \wp_strip_all_tags( $alt ), ENT_QUOTES, 'UTF-8' );
+			$image['name'] = \wp_strip_all_tags( \html_entity_decode( $alt, ENT_QUOTES, 'UTF-8' ) );
 		}
 
 		return $image;
@@ -397,22 +398,7 @@ class Post extends Base {
 			return $this->attachment;
 		}
 
-		$max_media = \get_post_meta( $this->item->ID, 'activitypub_max_image_attachments', true );
-
-		if ( ! \is_numeric( $max_media ) ) {
-			$max_media = \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
-		}
-
-		/**
-		 * Filters the maximum number of media attachments allowed in a post.
-		 *
-		 * Despite the name suggesting only images, this filter controls the maximum number
-		 * of all media attachments (images, audio, and video) that can be included in an
-		 * ActivityPub post. The name is maintained for backwards compatibility.
-		 *
-		 * @param int $max_media Maximum number of media attachments. Default ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS.
-		 */
-		$max_media = (int) \apply_filters( 'activitypub_max_image_attachments', $max_media );
+		$max_media = get_max_attachments( $this->item->ID );
 
 		if ( 0 === $max_media ) {
 			$this->attachment = array();

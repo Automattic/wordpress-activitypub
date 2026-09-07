@@ -25,9 +25,7 @@ class Test_Scope extends \WP_UnitTestCase {
 	public function test_scope_constants_defined() {
 		$this->assertEquals( 'read', Scope::READ );
 		$this->assertEquals( 'write', Scope::WRITE );
-		$this->assertEquals( 'follow', Scope::FOLLOW );
 		$this->assertEquals( 'push', Scope::PUSH );
-		$this->assertEquals( 'profile', Scope::PROFILE );
 	}
 
 	/**
@@ -36,10 +34,8 @@ class Test_Scope extends \WP_UnitTestCase {
 	public function test_all_scopes_constant() {
 		$this->assertContains( Scope::READ, Scope::ALL );
 		$this->assertContains( Scope::WRITE, Scope::ALL );
-		$this->assertContains( Scope::FOLLOW, Scope::ALL );
 		$this->assertContains( Scope::PUSH, Scope::ALL );
-		$this->assertContains( Scope::PROFILE, Scope::ALL );
-		$this->assertCount( 5, Scope::ALL );
+		$this->assertCount( 3, Scope::ALL );
 	}
 
 	/**
@@ -108,8 +104,8 @@ class Test_Scope extends \WP_UnitTestCase {
 	 * @covers ::validate
 	 */
 	public function test_validate_string_input() {
-		$result = Scope::validate( 'read write follow' );
-		$this->assertEquals( array( 'read', 'write', 'follow' ), $result );
+		$result = Scope::validate( 'read write push' );
+		$this->assertEquals( array( 'read', 'write', 'push' ), $result );
 	}
 
 	/**
@@ -190,9 +186,11 @@ class Test_Scope extends \WP_UnitTestCase {
 	public function test_is_valid_true() {
 		$this->assertTrue( Scope::is_valid( 'read' ) );
 		$this->assertTrue( Scope::is_valid( 'write' ) );
-		$this->assertTrue( Scope::is_valid( 'follow' ) );
 		$this->assertTrue( Scope::is_valid( 'push' ) );
-		$this->assertTrue( Scope::is_valid( 'profile' ) );
+
+		// Removed as scope names. Only the spec's URI form is still recognised, via CANONICAL_SCOPE_PREFIX.
+		$this->assertFalse( Scope::is_valid( 'follow' ) );
+		$this->assertFalse( Scope::is_valid( 'profile' ) );
 	}
 
 	/**
@@ -235,9 +233,9 @@ class Test_Scope extends \WP_UnitTestCase {
 		$this->assertIsArray( $result );
 		$this->assertArrayHasKey( 'read', $result );
 		$this->assertArrayHasKey( 'write', $result );
-		$this->assertArrayHasKey( 'follow', $result );
 		$this->assertArrayHasKey( 'push', $result );
-		$this->assertArrayHasKey( 'profile', $result );
+		$this->assertArrayNotHasKey( 'follow', $result );
+		$this->assertArrayNotHasKey( 'profile', $result );
 	}
 
 	/**
@@ -257,8 +255,9 @@ class Test_Scope extends \WP_UnitTestCase {
 	 * @covers ::contains
 	 */
 	public function test_contains_false() {
-		$scopes = array( 'read', 'write' );
+		$scopes = array( 'read' );
 		$this->assertFalse( Scope::contains( $scopes, 'follow' ) );
+		$this->assertFalse( Scope::contains( $scopes, 'write' ) );
 	}
 
 	/**
@@ -349,10 +348,10 @@ class Test_Scope extends \WP_UnitTestCase {
 	 */
 	public function data_canonical_write_aliases() {
 		return array(
-			'umbrella' => array( 'activitypub:write:all' ),
-			'create'   => array( 'activitypub:write:create' ),
-			'follow'   => array( 'activitypub:write:follow' ),
-			'like'     => array( 'activitypub:write:like' ),
+			'umbrella'   => array( 'activitypub:write:all' ),
+			'create'     => array( 'activitypub:write:create' ),
+			'like'       => array( 'activitypub:write:like' ),
+			'sameorigin' => array( 'activitypub:write:like:sameorigin' ),
 		);
 	}
 
@@ -367,7 +366,7 @@ class Test_Scope extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Supported() advertises both internal scopes and Basic Profile canonical aliases.
+	 * Supported() advertises internal scopes and Basic Profile identifiers in both forms.
 	 *
 	 * @covers ::supported
 	 */
@@ -378,8 +377,24 @@ class Test_Scope extends \WP_UnitTestCase {
 		$this->assertContains( Scope::READ, $supported );
 		$this->assertContains( Scope::WRITE, $supported );
 
-		// Basic Profile canonical aliases are now discoverable.
+		// Basic Profile aliases from before 2026-08-04.
 		$this->assertContains( 'activitypub:read:all', $supported );
 		$this->assertContains( 'activitypub:write:all', $supported );
+
+		// The URI-form identifiers that replaced them.
+		$this->assertContains( Scope::CANONICAL_SCOPE_PREFIX . 'readall', $supported );
+		$this->assertContains( Scope::CANONICAL_SCOPE_PREFIX . 'updateprofile', $supported );
+	}
+
+	/**
+	 * URI-form identifiers resolve to the plugin's scopes.
+	 *
+	 * @covers ::validate
+	 * @covers ::normalize
+	 */
+	public function test_validate_normalizes_canonical_scope_uris() {
+		$this->assertEquals( array( Scope::READ ), Scope::validate( Scope::CANONICAL_SCOPE_PREFIX . 'readoutbox' ) );
+		$this->assertEquals( array( Scope::WRITE ), Scope::validate( Scope::CANONICAL_SCOPE_PREFIX . 'createcontent' ) );
+		$this->assertEquals( array( Scope::WRITE ), Scope::validate( Scope::CANONICAL_SCOPE_PREFIX . 'updateprofile' ) );
 	}
 }

@@ -297,6 +297,18 @@ class Activitypub {
 
 		\register_meta(
 			'user',
+			$blog_prefix . 'activitypub_mailer_new_reaction',
+			array(
+				'type'              => 'integer',
+				'description'       => 'Send a notification when someone likes, reposts, or quotes this user\'s post.',
+				'single'            => true,
+				'sanitize_callback' => 'absint',
+			)
+		);
+		\add_filter( 'get_user_option_activitypub_mailer_new_reaction', array( self::class, 'user_options_default' ) );
+
+		\register_meta(
+			'user',
 			$blog_prefix . 'activitypub_mailer_annual_report',
 			array(
 				'type'              => 'integer',

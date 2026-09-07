@@ -255,6 +255,12 @@ class User_Settings_Fields {
 			</p>
 			<p>
 				<label>
+					<input type="checkbox" name="activitypub_mailer_new_reaction" id="activitypub_mailer_new_reaction" value="1" <?php \checked( 1, \get_user_option( 'activitypub_mailer_new_reaction' ) ); ?> />
+					<?php \esc_html_e( 'Likes, Reposts and Quotes', 'activitypub' ); ?>
+				</label>
+			</p>
+			<p>
+				<label>
 					<input type="checkbox" name="activitypub_mailer_annual_report" id="activitypub_mailer_annual_report" value="1" <?php \checked( 1, \get_user_option( 'activitypub_mailer_annual_report' ) ); ?> />
 					<?php \esc_html_e( 'Annual Report', 'activitypub' ); ?>
 				</label>

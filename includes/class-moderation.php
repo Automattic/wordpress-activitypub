@@ -85,7 +85,11 @@ class Moderation {
 	public static function activity_is_blocked_site_wide( $activity ) {
 		$blocks = self::get_site_blocks();
 
-		return self::check_activity_against_blocks( $activity, $blocks['actors'], $blocks['domains'], $blocks['keywords'] );
+		if ( ! self::has_blocks( $blocks ) ) {
+			return false;
+		}
+
+		return self::check_activity_against_blocks( $activity, $blocks );
 	}
 
 	/**
@@ -98,7 +102,66 @@ class Moderation {
 	public static function activity_is_blocked_for_user( $activity, $user_id ) {
 		$blocks = self::get_user_blocks( $user_id );
 
-		return self::check_activity_against_blocks( $activity, $blocks['actors'], $blocks['domains'], $blocks['keywords'] );
+		if ( ! self::has_blocks( $blocks ) ) {
+			return false;
+		}
+
+		return self::check_activity_against_blocks( $activity, $blocks );
+	}
+
+	/**
+	 * Check whether a set of blocks has anything in it.
+	 *
+	 * Worth asking before the checks run: they parse the activity and can go to the network for a
+	 * handle, and this runs once per local recipient of every delivery. Most sites block nothing.
+	 *
+	 * @since 9.3.0
+	 *
+	 * @param array $blocks Blocks organized by type, as returned by get_site_blocks().
+	 *
+	 * @return bool True if any list has an entry, false otherwise.
+	 */
+	public static function has_blocks( $blocks ) {
+		return self::has_actor_blocks( $blocks ) || self::has_domain_blocks( $blocks ) || self::has_keyword_blocks( $blocks );
+	}
+
+	/**
+	 * Check whether a set of blocks names any actor.
+	 *
+	 * @since 9.3.0
+	 *
+	 * @param array $blocks Blocks organized by type.
+	 *
+	 * @return bool True if an actor is blocked, false otherwise.
+	 */
+	public static function has_actor_blocks( $blocks ) {
+		return ! empty( $blocks['actors'] );
+	}
+
+	/**
+	 * Check whether a set of blocks names any domain.
+	 *
+	 * @since 9.3.0
+	 *
+	 * @param array $blocks Blocks organized by type.
+	 *
+	 * @return bool True if a domain is blocked, false otherwise.
+	 */
+	public static function has_domain_blocks( $blocks ) {
+		return ! empty( $blocks['domains'] );
+	}
+
+	/**
+	 * Check whether a set of blocks names any keyword.
+	 *
+	 * @since 9.3.0
+	 *
+	 * @param array $blocks Blocks organized by type.
+	 *
+	 * @return bool True if a keyword is blocked, false otherwise.
+	 */
+	public static function has_keyword_blocks( $blocks ) {
+		return ! empty( $blocks['keywords'] );
 	}
 
 	/**
@@ -316,27 +379,28 @@ class Moderation {
 			return false;
 		}
 
+		$hosts = array( Webfinger::get_host( $actor_uri ) );
+
 		// Check site-wide blocks.
 		$site_blocks = self::get_site_blocks();
-		if ( \in_array( $actor_uri, $site_blocks['actors'], true ) ) {
+		if ( self::uri_matches_actors( $actor_uri, $site_blocks['actors'] ) ) {
 			return true;
 		}
 
 		// Check site-wide domain blocks.
-		$actor_domain = \wp_parse_url( $actor_uri, PHP_URL_HOST );
-		if ( $actor_domain && \in_array( $actor_domain, $site_blocks['domains'], true ) ) {
+		if ( self::hosts_are_blocked( $hosts, $site_blocks['domains'] ) ) {
 			return true;
 		}
 
 		// Check user-specific blocks if user_id is provided.
 		if ( $user_id > 0 ) {
 			$user_blocks = self::get_user_blocks( $user_id );
-			if ( \in_array( $actor_uri, $user_blocks['actors'], true ) ) {
+			if ( self::uri_matches_actors( $actor_uri, $user_blocks['actors'] ) ) {
 				return true;
 			}
 
 			// Check user-specific domain blocks.
-			if ( $actor_domain && \in_array( $actor_domain, $user_blocks['domains'], true ) ) {
+			if ( self::hosts_are_blocked( $hosts, $user_blocks['domains'] ) ) {
 				return true;
 			}
 		}
@@ -345,49 +409,186 @@ class Moderation {
 	}
 
 	/**
+	 * Check a set of hosts against the blocked domains.
+	 *
+	 * @param string[] $hosts           The folded hosts to check.
+	 * @param array    $blocked_domains The blocked domains.
+	 *
+	 * @return bool True if any host is blocked, false otherwise.
+	 */
+	private static function hosts_are_blocked( $hosts, $blocked_domains ) {
+		/*
+		 * Cast because a stored list is not guaranteed to be one: array_map() fatals on a scalar
+		 * where the foreach this replaced only warned, and this runs on every delivery.
+		 * array_filter drops the empty hosts, so an empty stored entry can never match one.
+		 */
+		return (bool) \array_intersect( \array_filter( $hosts ), \array_map( __NAMESPACE__ . '\\fold_host', (array) $blocked_domains ) );
+	}
+
+	/**
+	 * Check an actor URI against a list of blocked actors.
+	 *
+	 * Compared entry by entry rather than by normalizing the whole list first, so a match
+	 * returns without touching the rest of it. This runs on every delivery, and a site can
+	 * block a lot of accounts.
+	 *
+	 * @param string   $uri            The actor URI to look for, in any spelling.
+	 * @param string[] $blocked_actors The blocked actor URIs.
+	 *
+	 * @return bool True if the URI is blocked, false otherwise.
+	 */
+	private static function uri_matches_actors( $uri, $blocked_actors ) {
+		$normalized = normalize_actor_uri( $uri );
+
+		if ( '' === $normalized ) {
+			return false;
+		}
+
+		foreach ( $blocked_actors as $blocked ) {
+			if ( normalize_actor_uri( $blocked ) === $normalized ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Check a delivered actor URI against the blocked actors.
+	 *
+	 * The delivered `actor` is only bound to a host by the signature, not to an exact string, so a
+	 * spelling that normalizes differently still has to be resolved to be ruled out.
+	 *
+	 * Two steps. The delivered string is compared normalized, which settles the ordinary case
+	 * without leaving the site. A delivery that gets past that is resolved over the network, so a
+	 * spelling the normalizer cannot fold still gets ruled out. A failed fetch leaves the delivery
+	 * unblocked, as before: a host that will not answer cannot be confirmed as blocked, and the
+	 * host owns the actor being claimed, so refusing to answer is a way out of a block. The
+	 * domain list is the tool for a host behaving that way.
+	 *
+	 * @param string   $actor_id       The actor URI from the delivered activity.
+	 * @param string[] $blocked_actors The blocked actor URIs.
+	 *
+	 * @return bool True if the actor is blocked, false otherwise.
+	 */
+	private static function actor_matches_blocklist( $actor_id, $blocked_actors ) {
+		if ( empty( $blocked_actors ) ) {
+			return false;
+		}
+
+		/*
+		 * Narrow by host first, so only a delivery that could plausibly be blocked pays for a
+		 * resolution. Most deliveries reach a list with nothing on their host and leave here. The
+		 * host comes from the delivered actor only: taking it from the key id would let a forged
+		 * header choose which entries get compared.
+		 *
+		 * This is a cost gate, not a completeness one. An actor whose own host carries no entry is
+		 * never resolved, so a document served elsewhere that declares a blocked id is not caught
+		 * here even though the resolved comparison below would match it. Resolving every delivery
+		 * to close that would mean an outbound request per delivery whenever any actor is blocked.
+		 * Block the host to cover it.
+		 */
+		$host = Webfinger::get_host( $actor_id );
+
+		if ( '' === $host ) {
+			return false;
+		}
+
+		$on_host = \array_filter(
+			$blocked_actors,
+			static function ( $blocked ) use ( $host ) {
+				return Webfinger::get_host( $blocked ) === $host;
+			}
+		);
+
+		if ( empty( $on_host ) ) {
+			return false;
+		}
+
+		if ( self::uri_matches_actors( $actor_id, $on_host ) ) {
+			return true;
+		}
+
+		/*
+		 * Resolved rather than read from a locally stored actor: a `guid` is the id the actor
+		 * declared, and `Update` stores an embedded actor object bound only to the sender's
+		 * host, so a remote server can store itself under any same-host id it likes.
+		 */
+		$object = Http::get_remote_object( $actor_id );
+
+		/*
+		 * Compared against the whole list, not the host-narrowed one: that narrowing decides
+		 * whether resolving is worth a request, but the id it resolves to can be on another host
+		 * and still be blocked.
+		 */
+		return ! \is_wp_error( $object )
+			&& isset( $object['id'] )
+			&& \is_string( $object['id'] )
+			&& self::uri_matches_actors( $object['id'], $blocked_actors );
+	}
+
+	/**
 	 * Check activity against blocklists.
 	 *
-	 * @param Activity $activity         The activity.
-	 * @param array    $blocked_actors   List of blocked actors.
-	 * @param array    $blocked_domains  List of blocked domains.
-	 * @param array    $blocked_keywords List of blocked keywords.
+	 * @param Activity $activity The activity.
+	 * @param array    $blocks   Blocks organized by type, as returned by get_site_blocks().
 	 * @return bool True if blocked, false otherwise.
 	 */
-	private static function check_activity_against_blocks( $activity, $blocked_actors, $blocked_domains, $blocked_keywords ) {
-		$has_object = \is_object( $activity->get_object() );
-
+	private static function check_activity_against_blocks( $activity, $blocks ) {
 		// Extract actor information.
 		$actor_id = object_to_uri( $activity->get_actor() );
 
-		// Check blocked actors.
-		if ( $actor_id ) {
-			// If actor_id is not a URL, resolve it via webfinger.
-			if ( ! \str_starts_with( $actor_id, 'http' ) ) {
-				$resolved_url = Webfinger::resolve( $actor_id );
-				if ( ! \is_wp_error( $resolved_url ) ) {
-					$actor_id = $resolved_url;
-				}
-			}
+		/*
+		 * Domains are checked before anything that goes to the network: the webfinger lookup
+		 * below and the actor check both issue requests, and a blocked domain must not be
+		 * contacted to find out that it is blocked.
+		 */
+		if ( self::has_domain_blocks( $blocks ) ) {
+			$hosts = array(
+				Webfinger::get_host( $actor_id ),
+				Webfinger::get_host( $activity->get_id() ),
+				Webfinger::get_host( object_to_uri( $activity->get_object() ) ),
+			);
 
-			if ( \in_array( $actor_id, $blocked_actors, true ) ) {
+			if ( self::hosts_are_blocked( $hosts, $blocks['domains'] ) ) {
 				return true;
 			}
 		}
 
-		// Check blocked domains.
-		$urls = array(
-			\wp_parse_url( $actor_id, PHP_URL_HOST ),
-			\wp_parse_url( $activity->get_id(), PHP_URL_HOST ),
-			\wp_parse_url( object_to_uri( $activity->get_object() ) ?? '', PHP_URL_HOST ),
-		);
-		foreach ( $blocked_domains as $domain ) {
-			if ( \in_array( $domain, $urls, true ) ) {
+		/*
+		 * `is_acct()` is too strict to decide this. Its host grammar rejects a trailing-dot FQDN
+		 * and any non-ASCII host, both of which `Webfinger::resolve()` resolves fine, and a
+		 * delivery that skips resolution over a spelling is a delivery that skips the block. All
+		 * that matters here is whether this is a handle rather than a URL already worth comparing.
+		 */
+		$is_handle = false === \strpos( $actor_id, '://' ) && false !== \strpos( $actor_id, '@' );
+
+		/*
+		 * Resolve a handle to its URL, but only for a list that could match it: a keyword-only
+		 * blocklist has no use for the actor's URL and should not pay a lookup for one. Its own
+		 * host is not blocked, or we would have returned above.
+		 */
+
+		if ( ( self::has_domain_blocks( $blocks ) || self::has_actor_blocks( $blocks ) ) && $is_handle ) {
+			$resolved_url = Webfinger::resolve( $actor_id );
+			$actor_id     = \is_wp_error( $resolved_url ) ? $actor_id : $resolved_url;
+
+			/*
+			 * Checked again: webfinger returns whatever `href` the remote document names, and
+			 * that can be on a different host than the handle it was looked up under.
+			 */
+			if ( self::hosts_are_blocked( array( Webfinger::get_host( $actor_id ) ), $blocks['domains'] ) ) {
 				return true;
 			}
+		}
+
+		// Check blocked actors.
+		if ( self::actor_matches_blocklist( $actor_id, $blocks['actors'] ) ) {
+			return true;
 		}
 
 		// Check blocked keywords in activity content.
-		if ( $has_object ) {
+		if ( self::has_keyword_blocks( $blocks ) && \is_object( $activity->get_object() ) ) {
 			$object        = $activity->get_object();
 			$content_map   = array();
 			$content_map[] = $object->get_content();
@@ -414,7 +615,7 @@ class Moderation {
 			$content_map = \array_filter( $content_map );
 			$content     = \implode( ' ', $content_map );
 
-			foreach ( $blocked_keywords as $keyword ) {
+			foreach ( (array) $blocks['keywords'] as $keyword ) {
 				if ( \stripos( $content, $keyword ) !== false ) {
 					return true;
 				}

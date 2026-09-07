@@ -207,8 +207,15 @@ class Query {
 			}
 		}
 
-		// Check Term by ID.
-		if ( ! $queried_object ) {
+		/*
+		 * Check Term by ID, unless the request names an author. Other plugins set `term_id` on
+		 * requests that are not about a term at all, Polylang puts its language term on every
+		 * request, and a term here would answer `?author=0` with an OrderedCollection where
+		 * Mastodon expected the blog actor. Leaving the object unset lets the author resolution
+		 * below, and the blog-actor handling in get_activitypub_object_id(), run as usual. An
+		 * absent `author` reads as an empty string, and `?author=0` as the string "0".
+		 */
+		if ( ! $queried_object && '' === \get_query_var( 'author', '' ) ) {
 			$term_id = \get_query_var( 'term_id' );
 			if ( $term_id ) {
 				$queried_object = \get_term( $term_id );
@@ -300,17 +307,23 @@ class Query {
 
 				// The other (more common) option to make an ActivityPub request  is to send an Accept header.
 			} elseif ( isset( $_SERVER['HTTP_ACCEPT'] ) ) {
-				$accept = \sanitize_text_field( \wp_unslash( $_SERVER['HTTP_ACCEPT'] ) );
-
 				/*
-				 * $accept can be a single value, or a comma separated list of values.
-				 * We want to support both scenarios,
-				 * and return true when the header includes at least one of the following:
-				 * - application/activity+json
-				 * - application/ld+json
-				 * - application/json
+				 * The Accept-header decision is delegated to accept_prefers_activitypub() so the plugin and the
+				 * Surge cache drop-in classify byte-for-byte identically. Both must hand it the same raw
+				 * header, and they reach that raw form differently on purpose: this runs after
+				 * wp_magic_quotes() has addslashed $_SERVER, so it wp_unslash()es to recover the original
+				 * bytes; the drop-in runs before wp_magic_quotes() and passes its already-raw value
+				 * untouched. Do NOT sanitize it (the drop-in can't, its sanitizers aren't loaded yet) and
+				 * the helper must not stripslashes() either (that would corrupt the drop-in's genuine
+				 * bytes). It is only used to pick a content type, never stored or echoed.
+				 *
+				 * The request is ActivityPub when the highest-priority (by `q`, then order) media type is
+				 * an ActivityPub type (`application/activity+json`, or `application/ld+json` with the AS2
+				 * profile). A browser (`text/html` at q=1) gets the normal page; a client that prefers
+				 * ActivityPub but also accepts HTML as a low-`q` fallback (Mastodon) gets ActivityPub.
 				 */
-				if ( \preg_match( '/(application\/(ld\+json|activity\+json|json))/i', $accept ) ) {
+				// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Classified only; wp_unslash() recovers the raw bytes the pre-plugin cache path sees, and it must not be sanitized.
+				if ( accept_prefers_activitypub( \wp_unslash( $_SERVER['HTTP_ACCEPT'] ) ) ) {
 					\defined( 'ACTIVITYPUB_REQUEST' ) || \define( 'ACTIVITYPUB_REQUEST', true );
 					$this->is_activitypub_request = true;
 				}

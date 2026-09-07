@@ -145,10 +145,11 @@ class Followers {
 			$wpdb->prepare(
 				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = %s AND pm.meta_value = %d AND p.guid = %s",
 				array(
-					\esc_sql( Remote_Actors::POST_TYPE ),
-					\esc_sql( self::FOLLOWER_META_KEY ),
-					\esc_sql( $user_id ),
-					\esc_sql( $actor ),
+					Remote_Actors::POST_TYPE,
+					self::FOLLOWER_META_KEY,
+					$user_id,
+					// Normalize the way the actor's GUID was stored; prepare() handles the escaping.
+					\esc_url_raw( $actor ),
 				)
 			)
 		);

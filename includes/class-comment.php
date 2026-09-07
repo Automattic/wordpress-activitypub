@@ -35,7 +35,7 @@ class Comment {
 		\add_action( 'update_option_activitypub_allow_reposts', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_filter( 'pre_wp_update_comment_count_now', array( static::class, 'pre_wp_update_comment_count_now' ), 5, 3 );
 		\add_filter( 'get_comment_author', array( static::class, 'render_emoji' ), 10, 2 );
-		\add_filter( 'comment_author', array( static::class, 'unescape_emoji' ), 20 ); // After esc_html().
+		\add_filter( 'comment_author', array( static::class, 'unescape_emoji' ), 20, 2 ); // After esc_html().
 		\add_filter( 'rest_comment_query', array( static::class, 'rest_comment_query' ) );
 		\add_filter( 'comment_text', array( static::class, 'render_blocks' ), 5 ); // Before other filters.
 	}
@@ -452,8 +452,7 @@ class Comment {
 		if ( \in_array( $comment_type, $comment_types, true ) ) {
 			$where .= $wpdb->prepare( ' AND comment_type = %s', $comment_type );
 		} else {
-			$comment_types = \array_map( 'esc_sql', $comment_types );
-			$placeholders  = \implode( ', ', \array_fill( 0, \count( $comment_types ), '%s' ) );
+			$placeholders = \implode( ', ', \array_fill( 0, \count( $comment_types ), '%s' ) );
 			// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.NotPrepared
 			$where .= $wpdb->prepare( \sprintf( ' AND comment_type NOT IN (%s)', $placeholders ), ...$comment_types );
 		}
@@ -909,8 +908,9 @@ class Comment {
 
 		$author     = $comment_data['comment_author'];
 		$author_url = $comment_data['comment_author_url'];
+		// Only previously approved normal comments count, not approved likes or reposts.
 		// phpcs:ignore
-		$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author = %s AND comment_author_url = %s and comment_approved = '1' LIMIT 1", $author, $author_url ) );
+		$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author = %s AND comment_author_url = %s AND comment_approved = '1' AND comment_type = 'comment' LIMIT 1", $author, $author_url ) );
 
 		if ( 1 === (int) $ok_to_comment ) {
 			return 1;
@@ -1041,13 +1041,34 @@ class Comment {
 	 *
 	 * This runs at priority 20 after WordPress's esc_html() filter on comment_author.
 	 *
-	 * @param string $author The comment author name (already escaped by WordPress).
+	 * @since 9.3.0 Added the `$comment_id` parameter.
+	 *
+	 * @param string     $author     The comment author name (already escaped by WordPress).
+	 * @param int|string $comment_id Optional. The comment ID, as a numeric string from core. Default 0.
 	 *
 	 * @return string The comment author name with emoji images unescaped.
 	 */
-	public static function unescape_emoji( $author ) {
-		// Only attempt to unescape if there are emoji images present in the escaped string.
+	public static function unescape_emoji( $author, $comment_id = 0 ) {
+		/*
+		 * Core always passes the comment ID, but plugins and themes re-apply this filter
+		 * with the name alone. Fall back to the comment in scope so a one-argument caller
+		 * does not leave the emoji img sitting there as escaped text.
+		 */
+		if ( ! $comment_id ) {
+			$comment_id = \get_comment_ID();
+		}
+
+		/*
+		 * Only ActivityPub comments can carry emoji, since render_emoji() is what puts the
+		 * img tags there in the first place. Scope this the same way, so an author name
+		 * written by anything else is never decoded -- the substring check below is not a
+		 * reliable signal on its own, and this filter runs on every comment on the site.
+		 */
 		if ( false === \strpos( $author, 'class=&quot;emoji&quot;' ) ) {
+			return $author;
+		}
+
+		if ( ! \get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true ) ) {
 			return $author;
 		}
 

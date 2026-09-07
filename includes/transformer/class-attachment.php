@@ -52,7 +52,8 @@ class Attachment extends Post {
 
 		$alt = \get_post_meta( $this->item->ID, '_wp_attachment_image_alt', true );
 		if ( $alt ) {
-			$attachment['name'] = $alt;
+			// `name` is plain text in the JSON.
+			$attachment['name'] = \wp_strip_all_tags( \html_entity_decode( $alt, ENT_QUOTES, 'UTF-8' ) );
 		}
 
 		return $attachment;

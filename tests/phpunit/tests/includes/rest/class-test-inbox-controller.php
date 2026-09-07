@@ -118,6 +118,99 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 	}
 
 	/**
+	 * A Public-only Delete on the shared inbox reaches the Delete handler even when no local
+	 * recipient can be resolved from its addressing.
+	 *
+	 * This is the shape of a real Mastodon reply-delete: addressed only to Public, from an actor
+	 * the site does not follow. Nothing in `to`/`cc`/followers names a local user, so the shared
+	 * inbox's per-recipient loop never runs — the handler has to fire on the shared hook instead.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_shared_inbox_handles_public_only_delete() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		// Keep the Tombstone existence re-fetch off the network.
+		$no_http = static function () {
+			return new \WP_Error( 'no_http', 'blocked in test' );
+		};
+		\add_filter( 'pre_http_request', $no_http );
+
+		$handled = new \MockAction();
+		\add_action( 'activitypub_handled_delete', array( $handled, 'action' ) );
+
+		$json = array(
+			'id'     => 'https://remote.example/users/alice/statuses/9#delete',
+			'type'   => 'Delete',
+			'actor'  => 'https://remote.example/users/alice',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'id'   => 'https://remote.example/users/alice/statuses/9',
+				'type' => 'Tombstone',
+			),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $json ) );
+
+		$response = \rest_do_request( $request );
+
+		\remove_action( 'activitypub_handled_delete', array( $handled, 'action' ) );
+		\remove_filter( 'pre_http_request', $no_http );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$this->assertSame( 202, $response->get_status() );
+		$this->assertSame( 1, $handled->get_call_count(), 'The Delete handler must run for a Public-only delete on the shared inbox.' );
+	}
+
+	/**
+	 * The Delete handler runs exactly once when a local recipient resolves.
+	 *
+	 * With a resolvable recipient the shared inbox fires both the per-recipient hook and the
+	 * shared hook, so without a guard the handler would run twice.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_shared_inbox_handles_delete_once_when_recipient_resolves() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		$no_http = static function () {
+			return new \WP_Error( 'no_http', 'blocked in test' );
+		};
+		\add_filter( 'pre_http_request', $no_http );
+
+		$user_id = self::factory()->user->create();
+		\get_user_by( 'id', $user_id )->add_cap( 'activitypub' );
+		$actor_uri = Actors::get_by_id( $user_id )->get_id();
+
+		$handled = new \MockAction();
+		\add_action( 'activitypub_handled_delete', array( $handled, 'action' ) );
+
+		$json = array(
+			'id'     => 'https://remote.example/users/bob/statuses/7#delete',
+			'type'   => 'Delete',
+			'actor'  => 'https://remote.example/users/bob',
+			'to'     => array( $actor_uri ),
+			'object' => array(
+				'id'   => 'https://remote.example/users/bob/statuses/7',
+				'type' => 'Tombstone',
+			),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $json ) );
+
+		$response = \rest_do_request( $request );
+
+		\remove_action( 'activitypub_handled_delete', array( $handled, 'action' ) );
+		\remove_filter( 'pre_http_request', $no_http );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$this->assertSame( 202, $response->get_status() );
+		$this->assertSame( 1, $handled->get_call_count(), 'The Delete handler must run exactly once even when a recipient resolves.' );
+	}
+
+	/**
 	 * Test disallow list block.
 	 *
 	 * @covers ::create_item
@@ -2038,5 +2131,55 @@ class Test_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Test
 			\remove_filter( 'activitypub_pre_http_get_remote_object', $track_fetches, 5 );
 			\wp_delete_post( $post_id, true );
 		}
+	}
+
+	/**
+	 * The shared inbox must guard the activity id the same way the per-actor inbox does.
+	 *
+	 * Deliveries here name their own recipients in the addressing, so an activity filed under
+	 * another host's id would be the cheapest way to reach many local actors at once.
+	 *
+	 * @covers ::verify_activity_id
+	 */
+	public function test_shared_inbox_rejects_activity_id_on_a_foreign_host() {
+		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'id'    => 'https://victim.example/activities/known-id',
+					'type'  => 'Create',
+					'actor' => 'https://attacker.example/users/mallory',
+					'to'    => array( Actors::get_by_id( self::$user_id )->get_id() ),
+				)
+			)
+		);
+
+		$method = new \ReflectionMethod( $this->inbox_controller, 'verify_activity_id' );
+		$method->setAccessible( true );
+		$result = $method->invoke( $this->inbox_controller, $request );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_activity_id_mismatch', $result->get_error_code() );
+	}
+
+	/**
+	 * The shared inbox POST route must run the signature checks that carry the id guard.
+	 */
+	public function test_shared_inbox_post_route_verifies_signature() {
+		$routes    = \rest_get_server()->get_routes();
+		$callbacks = array();
+
+		foreach ( $routes[ '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' ] as $handler ) {
+			if ( empty( $handler['methods']['POST'] ) ) {
+				continue;
+			}
+
+			// A closure would carry no method name to compare, so record it as-is rather than indexing into it.
+			$callback    = $handler['permission_callback'];
+			$callbacks[] = \is_array( $callback ) ? $callback[1] : $callback;
+		}
+
+		$this->assertSame( array( 'verify_signature' ), $callbacks );
 	}
 }

@@ -1168,7 +1168,11 @@ class Blocks {
 		if ( ! isset( $block['attrs']['url'] ) ) {
 			return $block_content;
 		}
-		return '<p><a href="' . \esc_url( $block['attrs']['url'] ) . '">' . $block['attrs']['url'] . '</a></p>';
+
+		// Escape once and reuse: the URL is also the visible link text, so it must be safe there too.
+		$url = \esc_url( $block['attrs']['url'] );
+
+		return '<p><a href="' . $url . '">' . $url . '</a></p>';
 	}
 
 	/**

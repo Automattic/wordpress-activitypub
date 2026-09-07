@@ -1140,4 +1140,53 @@ class Test_Functions_Activity extends \WP_UnitTestCase {
 			'empty source'           => array( 'https://good.example.com/users/alice', '', false ),
 		);
 	}
+
+	/**
+	 * Test normalize_actor_uri.
+	 *
+	 * @dataProvider normalize_actor_uri_provider
+	 * @covers \Activitypub\normalize_actor_uri
+	 *
+	 * @param string $uri      The URI to normalize.
+	 * @param string $expected The expected result.
+	 */
+	public function test_normalize_actor_uri( $uri, $expected ) {
+		$this->assertSame( $expected, \Activitypub\normalize_actor_uri( $uri ) );
+	}
+
+	/**
+	 * Data provider for normalize_actor_uri.
+	 *
+	 * @return array[]
+	 */
+	public function normalize_actor_uri_provider() {
+		$canonical = 'https://example.com/users/alice';
+
+		return array(
+			// A fragment on a handle would otherwise survive and slip past a block on the handle.
+			'handle fragment stripped' => array( 'acct:user@example.com#x', 'user@example.com' ),
+			'bare handle fragment'     => array( 'user@example.com#x', 'user@example.com' ),
+			'url fragment stripped'    => array( 'https://example.com/users/alice#main-key', 'https://example.com/users/alice' ),
+			'unchanged'                => array( $canonical, $canonical ),
+			'trailing slash'           => array( 'https://example.com/users/alice/', $canonical ),
+			'fragment'                 => array( 'https://example.com/users/alice#main-key', $canonical ),
+			'host case'                => array( 'https://EXAMPLE.com/users/alice', $canonical ),
+			'scheme case'              => array( 'HTTPS://example.com/users/alice', $canonical ),
+			'default port'             => array( 'https://example.com:443/users/alice', $canonical ),
+			'non default port kept'    => array( 'https://example.com:8443/users/alice', 'https://example.com:8443/users/alice' ),
+			'path case kept'           => array( 'https://example.com/users/Alice', 'https://example.com/users/Alice' ),
+			'query kept'               => array( 'https://example.com/users/alice?x=1', 'https://example.com/users/alice?x=1' ),
+			'slash before query'       => array( 'https://example.com/users/alice/?x=1', 'https://example.com/users/alice?x=1' ),
+			'slash inside query'       => array( 'https://example.com/users/alice?x=1/', 'https://example.com/users/alice?x=1/' ),
+			'acct identifier'          => array( 'acct:alice@example.com', 'alice@example.com' ),
+			'acct host case'           => array( 'acct:alice@EXAMPLE.com', 'alice@example.com' ),
+			'bare handle'              => array( 'alice@example.com', 'alice@example.com' ),
+			'mastodon handle'          => array( '@alice@example.com', 'alice@example.com' ),
+			'uppercase acct scheme'    => array( 'ACCT:alice@example.com', 'alice@example.com' ),
+			'acct trailing dot'        => array( 'acct:alice@example.com.', 'alice@example.com' ),
+			'scheme relative'          => array( '//example.com/users/alice', '//example.com/users/alice' ),
+			'unlisted scheme port'     => array( 'web3://example.com:0/x', 'web3://example.com:0/x' ),
+			'empty'                    => array( '', '' ),
+		);
+	}
 }

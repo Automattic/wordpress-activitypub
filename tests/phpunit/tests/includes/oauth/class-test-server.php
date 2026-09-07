@@ -60,6 +60,7 @@ class Test_Server extends \WP_UnitTestCase {
 		Post_Types::register_oauth_post_types();
 
 		$this->user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		\get_user_by( 'id', $this->user_id )->add_cap( 'activitypub' );
 
 		$client          = Client::register(
 			array(
@@ -171,6 +172,25 @@ class Test_Server extends \WP_UnitTestCase {
 		$this->assertTrue( $result, 'OAuth must authenticate ActivityPub routes.' );
 		$this->assertTrue( Server::is_oauth_request() );
 		$this->assertSame( $this->user_id, \get_current_user_id() );
+	}
+
+	/**
+	 * A bearer token must not authenticate a user who is not enabled for ActivityPub.
+	 *
+	 * @covers ::authenticate_oauth
+	 */
+	public function test_bearer_token_rejected_for_user_without_activitypub_capability() {
+		\get_user_by( 'id', $this->user_id )->remove_cap( 'activitypub' );
+		$this->set_bearer_header();
+		$this->set_rest_route( '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+
+		$result = Server::authenticate_oauth( null );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'activitypub_user_not_enabled', $result->get_error_code() );
+		$this->assertSame( 403, $result->get_error_data()['status'] );
+		$this->assertFalse( Server::is_oauth_request() );
+		$this->assertSame( 0, \get_current_user_id() );
 	}
 
 	/**
