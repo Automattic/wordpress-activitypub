@@ -54,6 +54,7 @@ class Test_Router extends \WP_UnitTestCase {
 	public function tear_down(): void {
 		// Clean up common state that may be left by tests.
 		unset( $_SERVER['HTTP_ACCEPT'] );
+		// Tests that build a request leave this behind, and not every test builds one.
 		$_SERVER['REQUEST_URI'] = '/';
 		\set_query_var( 'preview', null );
 		\set_query_var( 'term_id', null );
@@ -404,14 +405,39 @@ class Test_Router extends \WP_UnitTestCase {
 	/**
 	 * Request a term URL, the way the router is reached in production.
 	 *
-	 * The term branch reads the term from the requested URL rather than the query var, so a bare
-	 * set_query_var() no longer stands in for a real request.
+	 * The term branch reads the term from the requested URL, not from the query var.
 	 *
 	 * @param int|string $term_id The term ID to put on the request.
 	 */
 	private function request_term_url( $term_id ) {
-		$_SERVER['REQUEST_URI'] = '/?term_id=' . $term_id;
 		Query::get_instance()->__destruct();
+		$this->go_to( '/?term_id=' . $term_id );
+	}
+
+	/**
+	 * Run the router and return where it tried to redirect, or null.
+	 *
+	 * The router exits after redirecting, so the location is intercepted on the way out.
+	 *
+	 * @return string|null The redirect location, or null when it did not redirect.
+	 */
+	private function capture_redirect() {
+		$callback = function ( $location ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+			throw new \Exception( 'REDIRECT:' . $location );
+		};
+		\add_filter( 'wp_redirect', $callback );
+
+		$location = null;
+		try {
+			Router::template_redirect();
+		} catch ( \Exception $e ) {
+			$location = \substr( $e->getMessage(), \strlen( 'REDIRECT:' ) );
+		}
+
+		\remove_filter( 'wp_redirect', $callback );
+
+		return $location;
 	}
 
 	/**
@@ -613,26 +639,9 @@ class Test_Router extends \WP_UnitTestCase {
 		Query::get_instance()->__destruct();
 		\set_query_var( 'term_id', $term['term_id'] );
 
-		$redirect_callback = function ( $location ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
-			throw new \Exception( 'REDIRECT:' . $location );
-		};
-		\add_filter( 'wp_redirect', $redirect_callback );
-
 		global $wp_query;
-		$redirect_location = null;
+		$redirect_location = $this->capture_redirect();
 
-		try {
-			Router::template_redirect();
-		} catch ( \Exception $e ) {
-			if ( 0 === strpos( $e->getMessage(), 'REDIRECT:' ) ) {
-				$redirect_location = substr( $e->getMessage(), 9 );
-			} else {
-				throw $e;
-			}
-		}
-
-		\remove_filter( 'wp_redirect', $redirect_callback );
 		\set_query_var( 'term_id', null );
 		\wp_delete_term( $term['term_id'], 'category' );
 

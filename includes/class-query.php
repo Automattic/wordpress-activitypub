@@ -229,10 +229,7 @@ class Query {
 			}
 		}
 
-		/*
-		 * A term only represents an ActivityPub object when we federate its taxonomy. Without this
-		 * a language or any other plugin's term would negotiate to an actor of its own.
-		 */
+		// Without this a language term, or any other plugin's, would negotiate to an actor of its own.
 		if ( $queried_object instanceof \WP_Term && ! is_supported_taxonomy( $queried_object->taxonomy ) ) {
 			$queried_object = null;
 		}
@@ -298,31 +295,22 @@ class Query {
 	/**
 	 * Get the term ID that the request itself asked for.
 	 *
-	 * `term_id` is a public query var, so anything can put one on a request that is not about a
-	 * term at all: Polylang adds its language term to every request, which made a search or the
-	 * posts page look like one of our term URLs and get redirected away. Reading it back off the
-	 * requested URL keeps a term we were actually asked for, and drops one somebody else injected.
+	 * Anything can set a query var on a request that is not about a term at all, and Polylang adds
+	 * its language term to every request. Reading it back off the requested URL keeps a term we
+	 * were asked for and drops one somebody else injected.
 	 *
 	 * @since unreleased
 	 *
 	 * @return int The requested term ID, or 0 when the request did not name one.
 	 */
 	public function get_requested_term_id() {
-		$query = \wp_parse_url( (string) $this->get_request_url(), PHP_URL_QUERY );
-
-		if ( ! $query ) {
-			return 0;
-		}
-
 		$args = array();
-		\wp_parse_str( $query, $args );
+		\wp_parse_str( \wp_parse_url( $this->get_request_url(), PHP_URL_QUERY ), $args );
+
+		$term_id = isset( $args['term_id'] ) ? $args['term_id'] : 0;
 
 		// `?term_id[]=1` would reach absint() as an array, which casts to 1 rather than to nothing.
-		if ( ! isset( $args['term_id'] ) || ! \is_scalar( $args['term_id'] ) ) {
-			return 0;
-		}
-
-		return \absint( $args['term_id'] );
+		return \is_scalar( $term_id ) ? \absint( $term_id ) : 0;
 	}
 
 	/**

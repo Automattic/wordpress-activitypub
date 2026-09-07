@@ -467,7 +467,9 @@ function get_client_ip() {
  */
 function is_supported_taxonomy( $taxonomy ) {
 	/**
-	 * Filters the taxonomies supported for term redirects.
+	 * Filters the taxonomies whose terms are federated.
+	 *
+	 * Decides both what a term URL redirects to and what content negotiation answers with.
 	 *
 	 * @since 7.8.3
 	 *
@@ -475,5 +477,5 @@ function is_supported_taxonomy( $taxonomy ) {
 	 */
 	$supported_taxonomies = \apply_filters( 'activitypub_supported_taxonomies', array( 'category', 'post_tag' ) );
 
-	return \in_array( $taxonomy, (array) $supported_taxonomies, true );
+	return \in_array( $taxonomy, $supported_taxonomies, true );
 }

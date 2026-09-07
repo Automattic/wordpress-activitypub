@@ -828,7 +828,6 @@ class Test_Query extends \WP_UnitTestCase {
 	 * @covers ::get_queried_object
 	 */
 	public function test_unsupported_taxonomy_does_not_negotiate() {
-		$this->set_permalink_structure( '/%postname%/' );
 		\register_taxonomy(
 			'language',
 			'post',
@@ -837,6 +836,9 @@ class Test_Query extends \WP_UnitTestCase {
 				'label'  => 'Language',
 			)
 		);
+
+		// After the taxonomy, or the flush leaves no rule for its archive and that case tests nothing.
+		$this->set_permalink_structure( '/%postname%/' );
 
 		$language_id = self::factory()->term->create(
 			array(
@@ -860,24 +862,24 @@ class Test_Query extends \WP_UnitTestCase {
 		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
 
 		// Injected into a search, the way another plugin adds its own term to every request.
+		Query::get_instance()->__destruct();
 		$this->go_to( \home_url( '/?s=hello' ) );
 		\set_query_var( 'term_id', $language_id );
 		$this->assertNotEquals( $language_uri, Query::get_instance()->get_activitypub_object_id(), 'An injected term must not be answered.' );
 		\set_query_var( 'term_id', null );
-		Query::get_instance()->__destruct();
 
 		// Named by the URL, and as its own archive.
 		foreach ( array( $language_uri, \get_term_link( $language_id, 'language' ) ) as $url ) {
-			$this->go_to( $url );
-			$this->assertNotEquals( $language_uri, Query::get_instance()->get_activitypub_object_id(), 'A term of an unfederated taxonomy must not be answered.' );
 			Query::get_instance()->__destruct();
+			$this->go_to( $url );
+			$this->assertNotEquals( $language_uri, Query::get_instance()->get_activitypub_object_id(), "A term of an unfederated taxonomy must not be answered at $url." );
 		}
 
 		// A taxonomy we do federate still answers, both ways in.
 		foreach ( array( $category_uri, \get_term_link( $category_id, 'category' ) ) as $url ) {
-			$this->go_to( $url );
-			$this->assertEquals( $category_uri, Query::get_instance()->get_activitypub_object_id(), 'A federated taxonomy must still be answered.' );
 			Query::get_instance()->__destruct();
+			$this->go_to( $url );
+			$this->assertEquals( $category_uri, Query::get_instance()->get_activitypub_object_id(), "A federated taxonomy must still be answered at $url." );
 		}
 
 		unset( $_SERVER['HTTP_ACCEPT'] );

@@ -423,7 +423,6 @@ class Router {
 		$vars[] = 'type';
 		$vars[] = 'c';
 		$vars[] = 'p';
-		$vars[] = 'term_id';
 
 		return $vars;
 	}
