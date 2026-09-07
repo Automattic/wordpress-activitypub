@@ -390,16 +390,7 @@ class Router {
 				return;
 			}
 
-			/**
-			 * Filters the taxonomies supported for term redirects.
-			 *
-			 * @since 7.8.3
-			 *
-			 * @param array $supported_taxonomies Array of taxonomy names. Default array( 'category', 'post_tag' ).
-			 */
-			$supported_taxonomies = \apply_filters( 'activitypub_supported_taxonomies', array( 'category', 'post_tag' ) );
-
-			if ( ! \in_array( $term->taxonomy, $supported_taxonomies, true ) ) {
+			if ( ! is_supported_taxonomy( $term->taxonomy ) ) {
 				return;
 			}
 

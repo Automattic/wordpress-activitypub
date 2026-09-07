@@ -229,6 +229,14 @@ class Query {
 			}
 		}
 
+		/*
+		 * A term only represents an ActivityPub object when we federate its taxonomy. Without this
+		 * a language or any other plugin's term would negotiate to an actor of its own.
+		 */
+		if ( $queried_object instanceof \WP_Term && ! is_supported_taxonomy( $queried_object->taxonomy ) ) {
+			$queried_object = null;
+		}
+
 		/**
 		 * Filters the queried object.
 		 *

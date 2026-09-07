@@ -818,4 +818,69 @@ class Test_Query extends \WP_UnitTestCase {
 
 		\delete_option( 'activitypub_actor_mode' );
 	}
+	/**
+	 * A term we do not federate never becomes an ActivityPub object.
+	 *
+	 * Polylang's language term reaches us three ways: injected into the query vars of an unrelated
+	 * request, named by a `?term_id=` URL, and as its own archive. None of them is ours to answer.
+	 * What the request falls back to instead depends on the actor mode, so this pins the term.
+	 *
+	 * @covers ::get_queried_object
+	 */
+	public function test_unsupported_taxonomy_does_not_negotiate() {
+		$this->set_permalink_structure( '/%postname%/' );
+		\register_taxonomy(
+			'language',
+			'post',
+			array(
+				'public' => true,
+				'label'  => 'Language',
+			)
+		);
+
+		$language_id = self::factory()->term->create(
+			array(
+				'taxonomy' => 'language',
+				'name'     => 'English',
+			)
+		);
+		$category_id = self::factory()->term->create(
+			array(
+				'taxonomy' => 'category',
+				'name'     => 'Federated Category',
+			)
+		);
+		$post_id     = self::factory()->post->create();
+		\wp_set_object_terms( $post_id, array( $category_id ), 'category' );
+		\wp_set_object_terms( $post_id, array( $language_id ), 'language' );
+
+		$language_uri = \add_query_arg( 'term_id', $language_id, \home_url( '/' ) );
+		$category_uri = \add_query_arg( 'term_id', $category_id, \home_url( '/' ) );
+
+		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
+
+		// Injected into a search, the way another plugin adds its own term to every request.
+		$this->go_to( \home_url( '/?s=hello' ) );
+		\set_query_var( 'term_id', $language_id );
+		$this->assertNotEquals( $language_uri, Query::get_instance()->get_activitypub_object_id(), 'An injected term must not be answered.' );
+		\set_query_var( 'term_id', null );
+		Query::get_instance()->__destruct();
+
+		// Named by the URL, and as its own archive.
+		foreach ( array( $language_uri, \get_term_link( $language_id, 'language' ) ) as $url ) {
+			$this->go_to( $url );
+			$this->assertNotEquals( $language_uri, Query::get_instance()->get_activitypub_object_id(), 'A term of an unfederated taxonomy must not be answered.' );
+			Query::get_instance()->__destruct();
+		}
+
+		// A taxonomy we do federate still answers, both ways in.
+		foreach ( array( $category_uri, \get_term_link( $category_id, 'category' ) ) as $url ) {
+			$this->go_to( $url );
+			$this->assertEquals( $category_uri, Query::get_instance()->get_activitypub_object_id(), 'A federated taxonomy must still be answered.' );
+			Query::get_instance()->__destruct();
+		}
+
+		unset( $_SERVER['HTTP_ACCEPT'] );
+		\unregister_taxonomy( 'language' );
+	}
 }
