@@ -387,7 +387,8 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * @return bool
 	 */
 	protected function can_advertise_seek( $request ) {
-		return \is_user_logged_in() && true === $this->verify_owner( $request );
+		// The same conjunction get_item_index() resolves on, so we never advertise a seek that 404s.
+		return \is_user_logged_in() && true === $this->verify_owner( $request ) && OAuth_Server::permits_scope( Scope::READ );
 	}
 
 	/**

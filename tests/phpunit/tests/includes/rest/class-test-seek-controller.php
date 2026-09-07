@@ -179,9 +179,13 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 
 		$response = rest_get_server()->dispatch( $request );
 
+		// Nothing should advertise a seek it always refuses.
+		$advertised = rest_get_server()->dispatch( new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' ) )->get_data();
+
 		\delete_option( 'activitypub_hide_social_graph' );
 
 		$this->assertEquals( 404, $response->get_status() );
+		$this->assertArrayNotHasKey( 'seekItem', $advertised, 'A hidden social graph must not advertise seekItem.' );
 	}
 
 	/**
@@ -266,6 +270,17 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 		// A remote URL never dispatches.
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/seek' );
 		$request->set_param( 'collection', 'https://remote.example/actors/0/followers' );
+		$request->set_param( 'item', 'https://example.org/actor/13' );
+
+		$response = rest_get_server()->dispatch( $request );
+		$this->assertEquals( 404, $response->get_status() );
+
+		/*
+		 * A foreign host carrying a `?rest_route=` never dispatches. Core's from_url() reads that
+		 * parameter without looking at the host, so the host has to be checked separately.
+		 */
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/seek' );
+		$request->set_param( 'collection', 'https://remote.example/?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
 		$request->set_param( 'item', 'https://example.org/actor/13' );
 
 		$response = rest_get_server()->dispatch( $request );

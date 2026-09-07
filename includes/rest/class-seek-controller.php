@@ -9,6 +9,8 @@ namespace Activitypub\Rest;
 
 use Activitypub\OAuth\Server as OAuth_Server;
 
+use function Activitypub\is_same_domain;
+
 /**
  * ActivityPub Seek_Controller class.
  *
@@ -118,9 +120,9 @@ class Seek_Controller extends \WP_REST_Controller {
 	 *
 	 * @param string $route The route of the request about to be dispatched.
 	 *
-	 * @return bool True if the route declares a seek `item` argument.
+	 * @return string|false The registered pattern that declares a seek `item` argument, false otherwise.
 	 */
-	private function is_seekable_route( $route ) {
+	private function get_seekable_pattern( $route ) {
 		foreach ( \rest_get_server()->get_routes( $this->namespace ) as $pattern => $handlers ) {
 			if ( ! \preg_match( '@^' . $pattern . '$@i', $route ) ) {
 				continue;
@@ -137,7 +139,7 @@ class Seek_Controller extends \WP_REST_Controller {
 					return false;
 				}
 
-				return isset( $handler['args']['item'] );
+				return isset( $handler['args']['item'] ) ? $pattern : false;
 			}
 		}
 
@@ -168,8 +170,19 @@ class Seek_Controller extends \WP_REST_Controller {
 			return $not_found;
 		}
 
+		$collection = $request->get_param( 'collection' );
+
+		/*
+		 * `from_url()` reads a `?rest_route=` value without looking at the host, so a URL on any
+		 * host carrying one would resolve to a local route. Check the host ourselves. This stays
+		 * correct on plain-permalink installs, where our own collection URLs use that same form.
+		 */
+		if ( ! is_same_domain( $collection ) ) {
+			return $not_found;
+		}
+
 		// Resolves only URLs served by this site's REST API, so no remote request is ever made.
-		$collection_request = \WP_REST_Request::from_url( $request->get_param( 'collection' ) );
+		$collection_request = \WP_REST_Request::from_url( $collection );
 
 		if ( ! $collection_request || ! \str_starts_with( $collection_request->get_route(), '/' . ACTIVITYPUB_REST_NAMESPACE . '/' ) ) {
 			return $not_found;
@@ -180,7 +193,9 @@ class Seek_Controller extends \WP_REST_Controller {
 		 * same opt-in prepare_collection_response() checks). Without this, the signature-deferred
 		 * dispatch below could be pointed at any ActivityPub GET route rather than a real collection.
 		 */
-		if ( ! $this->is_seekable_route( $collection_request->get_route() ) ) {
+		$seekable_pattern = $this->get_seekable_pattern( $collection_request->get_route() );
+
+		if ( ! $seekable_pattern ) {
 			return $not_found;
 		}
 
@@ -207,6 +222,15 @@ class Seek_Controller extends \WP_REST_Controller {
 		$response             = \rest_do_request( $collection_request );
 		self::$is_dispatching = false;
 		\remove_filter( 'activitypub_defer_signature_verification', $defer, \PHP_INT_MAX );
+
+		/*
+		 * Confirm core matched the route the gate approved. get_seekable_pattern() mirrors core's
+		 * matcher, which core has changed before, so compare what was actually dispatched rather
+		 * than trusting a copy of its rules to stay in step.
+		 */
+		if ( $response->get_matched_route() !== $seekable_pattern ) {
+			return $not_found;
+		}
 
 		/*
 		 * A redirect is the sought page. A missing-authentication failure (401) is a property of the
