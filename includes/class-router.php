@@ -380,7 +380,7 @@ class Router {
 			exit;
 		}
 
-		$term_id = \get_query_var( 'term_id', null );
+		$term_id = Query::get_instance()->get_requested_term_id();
 		if ( $term_id ) {
 			$term = \get_term( $term_id );
 

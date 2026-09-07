@@ -208,15 +208,13 @@ class Query {
 		}
 
 		/*
-		 * Check Term by ID, unless the request names an author. Other plugins set `term_id` on
-		 * requests that are not about a term at all, Polylang puts its language term on every
-		 * request, and a term here would answer `?author=0` with an OrderedCollection where
-		 * Mastodon expected the blog actor. Leaving the object unset lets the author resolution
-		 * below, and the blog-actor handling in get_activitypub_object_id(), run as usual. An
-		 * absent `author` reads as an empty string, and `?author=0` as the string "0".
+		 * Check Term by ID, unless the request names an author. An author wins over a term the
+		 * same URL also names, so `?author=0` still answers with the blog actor rather than an
+		 * OrderedCollection. An absent `author` reads as an empty string, and `?author=0` as the
+		 * string "0".
 		 */
 		if ( ! $queried_object && '' === \get_query_var( 'author', '' ) ) {
-			$term_id = \get_query_var( 'term_id' );
+			$term_id = $this->get_requested_term_id();
 			if ( $term_id ) {
 				$queried_object = \get_term( $term_id );
 			}
@@ -287,6 +285,30 @@ class Query {
 		$url = \sanitize_url( $url );
 
 		return $url;
+	}
+
+	/**
+	 * Get the term ID that the request itself asked for.
+	 *
+	 * `term_id` is a public query var, so anything can put one on a request that is not about a
+	 * term at all: Polylang adds its language term to every request, which made a search or the
+	 * posts page look like one of our term URLs and get redirected away. Reading it back off the
+	 * requested URL keeps a term we were actually asked for, and drops one somebody else injected.
+	 *
+	 * @since unreleased
+	 *
+	 * @return int The requested term ID, or 0 when the request did not name one.
+	 */
+	public function get_requested_term_id() {
+		$query = \wp_parse_url( (string) $this->get_request_url(), PHP_URL_QUERY );
+
+		if ( ! $query ) {
+			return 0;
+		}
+
+		$args = \wp_parse_args( $query );
+
+		return isset( $args['term_id'] ) ? \absint( $args['term_id'] ) : 0;
 	}
 
 	/**
