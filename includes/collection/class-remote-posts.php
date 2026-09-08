@@ -396,8 +396,17 @@ class Remote_Posts {
 		if ( empty( $items ) && ! empty( $activity_object['image'] ) ) {
 			$items = $activity_object['image'];
 
+			// AS2 allows a bare URL string for `image`.
+			if ( \is_string( $items ) ) {
+				$items = array( 'url' => $items );
+			}
+
+			if ( \is_object( $items ) ) {
+				$items = \get_object_vars( $items );
+			}
+
 			// A single `Image` object rather than a list of them.
-			if ( isset( $items['url'] ) || isset( $items['type'] ) ) {
+			if ( \is_array( $items ) && ! \array_is_list( $items ) ) {
 				$items = array( $items );
 			}
 		}
@@ -412,7 +421,10 @@ class Remote_Posts {
 				$attachment = \get_object_vars( $attachment );
 			}
 
-			if ( empty( $attachment['url'] ) ) {
+			// `url` may be a `Link` object or a list of them.
+			$url = object_to_uri( $attachment['url'] ?? null );
+
+			if ( empty( $url ) || ! \is_string( $url ) ) {
 				continue;
 			}
 
@@ -427,7 +439,7 @@ class Remote_Posts {
 			}
 
 			$attachments[] = array(
-				'url'  => $attachment['url'],
+				'url'  => $url,
 				// Same treatment the import path gives this field: remote JSON can hand us an array.
 				'alt'  => \is_string( $attachment['name'] ?? null ) ? \wp_strip_all_tags( $attachment['name'] ) : '',
 				'type' => $type,
