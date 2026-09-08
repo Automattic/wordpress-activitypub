@@ -820,12 +820,70 @@ class Test_Query extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A `term_id` WP_Query derived from a tax query is not answered as a term.
+	 *
+	 * Polylang filters every request by its language term's term_taxonomy_id, and WP_Query
+	 * copies that number into `term_id` verbatim, so it can be the term ID of a real category
+	 * or tag. What the request falls back to instead depends on the actor mode, so this pins
+	 * the term rather than the fallback.
+	 *
+	 * @covers ::get_queried_object
+	 */
+	public function test_derived_term_id_does_not_negotiate() {
+		\register_taxonomy(
+			'language',
+			'post',
+			array(
+				'public' => true,
+				'label'  => 'Language',
+			)
+		);
+
+		$category_id  = self::factory()->term->create(
+			array(
+				'taxonomy' => 'category',
+				'name'     => 'Colliding Category',
+			)
+		);
+		$category_uri = \add_query_arg( 'term_id', $category_id, \home_url( '/' ) );
+
+		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
+
+		// Polylang's language filter, with a term_taxonomy_id that happens to equal a category's term ID.
+		$language_query = function ( $query ) use ( $category_id ) {
+			if ( $query->is_main_query() ) {
+				$query->set(
+					'tax_query',
+					array(
+						array(
+							'taxonomy' => 'language',
+							'field'    => 'term_taxonomy_id',
+							'terms'    => array( $category_id ),
+						),
+					)
+				);
+			}
+		};
+		\add_action( 'pre_get_posts', $language_query );
+
+		Query::get_instance()->__destruct();
+		$this->go_to( \home_url( '/?s=hello' ) );
+
+		\remove_action( 'pre_get_posts', $language_query );
+
+		$this->assertEquals( $category_id, (int) \get_query_var( 'term_id' ), 'WP_Query should derive the term ID the bug depends on.' );
+		$this->assertNotEquals( $category_uri, Query::get_instance()->get_activitypub_object_id(), 'A derived term must not be answered.' );
+
+		unset( $_SERVER['HTTP_ACCEPT'] );
+		\unregister_taxonomy( 'language' );
+	}
+
+	/**
 	 * A term we do not federate never becomes an ActivityPub object.
 	 *
-	 * A language term reaches us three ways: derived by WP_Query from a language filter's tax query
-	 * on an unrelated request, named by a `?term_id=` URL, and as its own archive. None of them is
-	 * ours to answer. What the request falls back to instead depends on the actor mode, so this
-	 * pins the term rather than the fallback.
+	 * A language term reaches us two ways: named by a `?term_id=` URL, and as its own archive.
+	 * Neither is ours to answer. What the request falls back to instead depends on the actor
+	 * mode, so this pins the term rather than the fallback.
 	 *
 	 * @covers ::get_queried_object
 	 */
@@ -862,34 +920,6 @@ class Test_Query extends \WP_UnitTestCase {
 		$category_uri = \add_query_arg( 'term_id', $category_id, \home_url( '/' ) );
 
 		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
-
-		/*
-		 * A language filter puts a tax query on every request, and WP_Query then derives a `term_id`
-		 * from it for backward compatibility. That is the shape this bug arrives in.
-		 */
-		$language_query = function ( $query ) use ( $language_id ) {
-			if ( $query->is_main_query() ) {
-				$query->set(
-					'tax_query',
-					array(
-						array(
-							'taxonomy' => 'language',
-							'field'    => 'term_id',
-							'terms'    => array( $language_id ),
-						),
-					)
-				);
-			}
-		};
-		\add_action( 'pre_get_posts', $language_query );
-
-		Query::get_instance()->__destruct();
-		$this->go_to( \home_url( '/?s=hello' ) );
-
-		$this->assertEquals( $language_id, (int) \get_query_var( 'term_id' ), 'WP_Query should derive the term the bug depends on.' );
-		$this->assertNotEquals( $language_uri, Query::get_instance()->get_activitypub_object_id(), 'A derived term must not be answered.' );
-
-		\remove_action( 'pre_get_posts', $language_query );
 
 		// Named by the URL, and as its own archive.
 		foreach ( array( $language_uri, \get_term_link( $language_id, 'language' ) ) as $url ) {

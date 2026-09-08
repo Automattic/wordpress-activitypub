@@ -380,7 +380,13 @@ class Router {
 			exit;
 		}
 
-		$term_id = \get_query_var( 'term_id', null );
+		/*
+		 * Read `term_id` off the parsed request, not the query vars. WP_Query derives its own
+		 * `term_id` from any tax query on another taxonomy, and takes the raw value regardless of
+		 * the query's `field`: Polylang filters by `term_taxonomy_id`, so that number can be the
+		 * term ID of an unrelated category or tag.
+		 */
+		$term_id = $wp_query->query['term_id'] ?? null;
 		if ( $term_id ) {
 			$term = \get_term( $term_id );
 
