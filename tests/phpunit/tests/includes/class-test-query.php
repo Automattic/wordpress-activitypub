@@ -818,12 +818,14 @@ class Test_Query extends \WP_UnitTestCase {
 
 		\delete_option( 'activitypub_actor_mode' );
 	}
+
 	/**
 	 * A term we do not federate never becomes an ActivityPub object.
 	 *
-	 * Polylang's language term reaches us three ways: injected into the query vars of an unrelated
-	 * request, named by a `?term_id=` URL, and as its own archive. None of them is ours to answer.
-	 * What the request falls back to instead depends on the actor mode, so this pins the term.
+	 * A language term reaches us three ways: derived by WP_Query from a language filter's tax query
+	 * on an unrelated request, named by a `?term_id=` URL, and as its own archive. None of them is
+	 * ours to answer. What the request falls back to instead depends on the actor mode, so this
+	 * pins the term rather than the fallback.
 	 *
 	 * @covers ::get_queried_object
 	 */
@@ -861,12 +863,33 @@ class Test_Query extends \WP_UnitTestCase {
 
 		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
 
-		// Injected into a search, the way another plugin adds its own term to every request.
+		/*
+		 * A language filter puts a tax query on every request, and WP_Query then derives a `term_id`
+		 * from it for backward compatibility. That is the shape this bug arrives in.
+		 */
+		$language_query = function ( $query ) use ( $language_id ) {
+			if ( $query->is_main_query() ) {
+				$query->set(
+					'tax_query',
+					array(
+						array(
+							'taxonomy' => 'language',
+							'field'    => 'term_id',
+							'terms'    => array( $language_id ),
+						),
+					)
+				);
+			}
+		};
+		\add_action( 'pre_get_posts', $language_query );
+
 		Query::get_instance()->__destruct();
 		$this->go_to( \home_url( '/?s=hello' ) );
-		\set_query_var( 'term_id', $language_id );
-		$this->assertNotEquals( $language_uri, Query::get_instance()->get_activitypub_object_id(), 'An injected term must not be answered.' );
-		\set_query_var( 'term_id', null );
+
+		$this->assertEquals( $language_id, (int) \get_query_var( 'term_id' ), 'WP_Query should derive the term the bug depends on.' );
+		$this->assertNotEquals( $language_uri, Query::get_instance()->get_activitypub_object_id(), 'A derived term must not be answered.' );
+
+		\remove_action( 'pre_get_posts', $language_query );
 
 		// Named by the URL, and as its own archive.
 		foreach ( array( $language_uri, \get_term_link( $language_id, 'language' ) ) as $url ) {

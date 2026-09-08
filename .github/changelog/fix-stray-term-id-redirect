@@ -1,4 +1,4 @@
 Significance: patch
 Type: fixed
 
-Fixed search and other pages redirecting to a category or tag archive on sites running Polylang, and stopped terms from other taxonomies being served as profiles.
+Fixed pages such as search results being served as a category or tag profile on sites that filter content by language, such as Polylang.

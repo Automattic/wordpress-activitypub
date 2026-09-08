@@ -54,8 +54,6 @@ class Test_Router extends \WP_UnitTestCase {
 	public function tear_down(): void {
 		// Clean up common state that may be left by tests.
 		unset( $_SERVER['HTTP_ACCEPT'] );
-		// Tests that build a request leave this behind, and not every test builds one.
-		$_SERVER['REQUEST_URI'] = '/';
 		\set_query_var( 'preview', null );
 		\set_query_var( 'term_id', null );
 		Query::get_instance()->__destruct();
@@ -403,44 +401,6 @@ class Test_Router extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Request a term URL, the way the router is reached in production.
-	 *
-	 * The term branch reads the term from the requested URL, not from the query var.
-	 *
-	 * @param int|string $term_id The term ID to put on the request.
-	 */
-	private function request_term_url( $term_id ) {
-		Query::get_instance()->__destruct();
-		$this->go_to( '/?term_id=' . $term_id );
-	}
-
-	/**
-	 * Run the router and return where it tried to redirect, or null.
-	 *
-	 * The router exits after redirecting, so the location is intercepted on the way out.
-	 *
-	 * @return string|null The redirect location, or null when it did not redirect.
-	 */
-	private function capture_redirect() {
-		$callback = function ( $location ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
-			throw new \Exception( 'REDIRECT:' . $location );
-		};
-		\add_filter( 'wp_redirect', $callback );
-
-		$location = null;
-		try {
-			Router::template_redirect();
-		} catch ( \Exception $e ) {
-			$location = \substr( $e->getMessage(), \strlen( 'REDIRECT:' ) );
-		}
-
-		\remove_filter( 'wp_redirect', $callback );
-
-		return $location;
-	}
-
-	/**
 	 * Test that the activitypub_supported_taxonomies filter has correct defaults.
 	 *
 	 * @covers ::template_redirect
@@ -503,7 +463,8 @@ class Test_Router extends \WP_UnitTestCase {
 
 		$term_id = $term['term_id'];
 
-		$this->request_term_url( $term_id );
+		// Set the term_id query var (simulating what might happen with Polylang).
+		\set_query_var( 'term_id', $term_id );
 
 		global $wp_query;
 
@@ -532,7 +493,8 @@ class Test_Router extends \WP_UnitTestCase {
 
 		$term_id = $term['term_id'];
 
-		$this->request_term_url( $term_id );
+		// Set the term_id query var.
+		\set_query_var( 'term_id', $term_id );
 
 		// Simulate an ActivityPub request - should return early without redirect.
 		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
@@ -557,7 +519,8 @@ class Test_Router extends \WP_UnitTestCase {
 	 * @covers ::template_redirect
 	 */
 	public function test_invalid_term_id_sets_404() {
-		$this->request_term_url( 999999 );
+		// Set an invalid term_id query var.
+		\set_query_var( 'term_id', 999999 );
 
 		global $wp_query;
 
@@ -589,7 +552,8 @@ class Test_Router extends \WP_UnitTestCase {
 		$term_id   = $term['term_id'];
 		$term_link = \get_term_link( $term_id, 'category' );
 
-		$this->request_term_url( $term_id );
+		// Set the term_id query var.
+		\set_query_var( 'term_id', $term_id );
 
 		// Save callback to variable for proper removal.
 		$redirect_callback = function ( $location ) {
@@ -618,35 +582,6 @@ class Test_Router extends \WP_UnitTestCase {
 		// Clean up.
 		\remove_filter( 'wp_redirect', $redirect_callback );
 		\wp_delete_term( $term_id, 'category' );
-	}
-
-	/**
-	 * A term ID another plugin injected does not redirect the request it was injected into.
-	 *
-	 * Polylang adds its language term to every request, which turned a search and the posts page
-	 * into a 301 to a term archive. Only a term the URL itself names is ours to act on.
-	 *
-	 * @covers ::template_redirect
-	 *
-	 * @throws \Exception If a non-redirect exception is caught during template_redirect.
-	 */
-	public function test_injected_term_id_does_not_redirect() {
-		$term = \wp_insert_term( 'Injected Category', 'category' );
-		$this->assertNotWPError( $term, 'Term creation should succeed.' );
-
-		// A search, carrying a term ID the way another plugin injects one.
-		$_SERVER['REQUEST_URI'] = '/?s=hello';
-		Query::get_instance()->__destruct();
-		\set_query_var( 'term_id', $term['term_id'] );
-
-		global $wp_query;
-		$redirect_location = $this->capture_redirect();
-
-		\set_query_var( 'term_id', null );
-		\wp_delete_term( $term['term_id'], 'category' );
-
-		$this->assertNull( $redirect_location, 'A term ID we were not asked for must not redirect the request.' );
-		$this->assertFalse( $wp_query->is_404(), 'A term ID we were not asked for must not 404 the request.' );
 	}
 
 	/**
@@ -754,7 +689,8 @@ class Test_Router extends \WP_UnitTestCase {
 		$term_id   = $term['term_id'];
 		$term_link = \get_term_link( $term_id, 'custom_tax' );
 
-		$this->request_term_url( $term_id );
+		// Set the term_id query var.
+		\set_query_var( 'term_id', $term_id );
 
 		// Save callbacks to variables for proper removal.
 		$taxonomy_callback = function ( $taxonomies ) {

@@ -208,13 +208,15 @@ class Query {
 		}
 
 		/*
-		 * Check Term by ID, unless the request names an author. An author wins over a term the
-		 * same URL also names, so `?author=0` still answers with the blog actor rather than an
-		 * OrderedCollection. An absent `author` reads as an empty string, and `?author=0` as the
-		 * string "0".
+		 * Check Term by ID, unless the request names an author. Other plugins set `term_id` on
+		 * requests that are not about a term at all, Polylang puts its language term on every
+		 * request, and a term here would answer `?author=0` with an OrderedCollection where
+		 * Mastodon expected the blog actor. Leaving the object unset lets the author resolution
+		 * below, and the blog-actor handling in get_activitypub_object_id(), run as usual. An
+		 * absent `author` reads as an empty string, and `?author=0` as the string "0".
 		 */
 		if ( ! $queried_object && '' === \get_query_var( 'author', '' ) ) {
-			$term_id = $this->get_requested_term_id();
+			$term_id = \get_query_var( 'term_id' );
 			if ( $term_id ) {
 				$queried_object = \get_term( $term_id );
 			}
@@ -229,7 +231,11 @@ class Query {
 			}
 		}
 
-		// Without this a language term, or any other plugin's, would negotiate to an actor of its own.
+		/*
+		 * WP_Query sets a `term_id` of its own, for backward compatibility, out of any tax query on
+		 * a taxonomy other than category or post_tag. A language filter puts one on every request,
+		 * so without this a search would negotiate to that term instead of to the page asked for.
+		 */
 		if ( $queried_object instanceof \WP_Term && ! is_supported_taxonomy( $queried_object->taxonomy ) ) {
 			$queried_object = null;
 		}
@@ -290,27 +296,6 @@ class Query {
 		$url = \sanitize_url( $url );
 
 		return $url;
-	}
-
-	/**
-	 * Get the term ID that the request itself asked for.
-	 *
-	 * Anything can set a query var on a request that is not about a term at all, and Polylang adds
-	 * its language term to every request. Reading it back off the requested URL keeps a term we
-	 * were asked for and drops one somebody else injected.
-	 *
-	 * @since unreleased
-	 *
-	 * @return int The requested term ID, or 0 when the request did not name one.
-	 */
-	public function get_requested_term_id() {
-		$args = array();
-		\wp_parse_str( \wp_parse_url( $this->get_request_url(), PHP_URL_QUERY ), $args );
-
-		$term_id = isset( $args['term_id'] ) ? $args['term_id'] : 0;
-
-		// `?term_id[]=1` would reach absint() as an array, which casts to 1 rather than to nothing.
-		return \is_scalar( $term_id ) ? \absint( $term_id ) : 0;
 	}
 
 	/**

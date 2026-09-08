@@ -111,7 +111,6 @@ class Factory {
 				}
 				break;
 			case 'WP_Term':
-				// Unlike the cases around it this gates nothing: Query::get_queried_object() drops terms of taxonomies we do not federate.
 				return new Term( $data );
 			case 'json':
 				return new Json( $data );
