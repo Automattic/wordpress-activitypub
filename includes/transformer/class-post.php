@@ -309,7 +309,7 @@ class Post extends Base {
 	protected function get_image() {
 		$post_id = $this->item->ID;
 
-		// List post thumbnail first if this post has one.
+		// Only a Featured Image on a long-form type goes out as `image`.
 		if (
 			! \function_exists( 'has_post_thumbnail' ) ||
 			! \has_post_thumbnail( $post_id ) ||
@@ -360,13 +360,11 @@ class Post extends Base {
 	 * fallback to the site-icon.
 	 *
 	 * Stays `protected` rather than `private`: the podcast integrations extend this class and
-	 * call it, and {@see Base::wp_attachment_to_activity_attachment()} calls it from the parent.
+	 * call it, and {@see Base::transform_attachment()} calls it from the parent.
 	 *
-	 * Deliberately not called `get_icon()`. {@see Base::transform_object_properties()} maps each
-	 * getter onto the property of the same name, so that name put an `icon` on every post. Added
-	 * in #1053 for audio and video posters, the object property came along by accident. Nothing
-	 * wants it: FEP-b2b8 gives a representative image as `image`, which a Featured Image already
-	 * populates, further media as `attachment`, and uses `icon` only for the author's avatar.
+	 * Deliberately not called `get_icon()`: {@see Base::transform_object_properties()} maps each
+	 * getter onto the property of the same name, and FEP-b2b8 reserves `icon` for the author's
+	 * avatar.
 	 *
 	 * @since unreleased Renamed from `get_icon()`, so it no longer maps onto the object.
 	 *
