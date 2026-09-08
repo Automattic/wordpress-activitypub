@@ -280,6 +280,28 @@ class Post extends Base {
 	}
 
 	/**
+	 * Whether this post federates its Featured Image as the representative `image`.
+	 *
+	 * FEP-b2b8 gives long-form text a representative `image` and reserves `attachment` for media
+	 * that is part of the text. A Featured Image is not in the content, so on a long-form type it
+	 * belongs in `image`. Short-form types have no `image` in that FEP and their clients read
+	 * `attachment`, so there it stays an attachment. Either way the picture goes out once, rather
+	 * than as both properties for something rendering each of them.
+	 *
+	 * Types other than the two named here can arrive through `activitypub_post_object_type`, and
+	 * fall to the attachment side, which every implementation renders.
+	 *
+	 * @since unreleased
+	 *
+	 * @see https://fediverse.codeberg.page/fep/fep/b2b8/
+	 *
+	 * @return bool True when the Featured Image belongs in `image`, false when it is an attachment.
+	 */
+	protected function image_is_representative() {
+		return \in_array( $this->get_type(), array( 'Article', 'Page' ), true );
+	}
+
+	/**
 	 * Returns the featured image as `Image`.
 	 *
 	 * @return array|null The Image or null if no image is available.
@@ -287,10 +309,11 @@ class Post extends Base {
 	protected function get_image() {
 		$post_id = $this->item->ID;
 
-		// List post thumbnail first if this post has one.
+		// Only a Featured Image on a long-form type goes out as `image`.
 		if (
 			! \function_exists( 'has_post_thumbnail' ) ||
-			! \has_post_thumbnail( $post_id )
+			! \has_post_thumbnail( $post_id ) ||
+			! $this->image_is_representative()
 		) {
 			return null;
 		}
@@ -333,11 +356,23 @@ class Post extends Base {
 	}
 
 	/**
-	 * Returns an Icon, based on the Featured Image with a fallback to the site-icon.
+	 * Returns a poster image for a media attachment, based on the Featured Image with a
+	 * fallback to the site-icon.
 	 *
-	 * @return array|null The Icon or null if no icon is available.
+	 * Stays `protected` rather than `private`: the podcast integrations extend this class and
+	 * call it, and {@see Base::transform_attachment()} calls it from the parent.
+	 *
+	 * Deliberately not called `get_icon()`: {@see Base::transform_object_properties()} maps each
+	 * getter onto the property of the same name, and FEP-b2b8 reserves `icon` for the author's
+	 * avatar.
+	 *
+	 * @since unreleased Renamed from `get_icon()`, so it no longer maps onto the object.
+	 *
+	 * @see https://fediverse.codeberg.page/fep/fep/b2b8/
+	 *
+	 * @return array|null The poster image or null if none is available.
 	 */
-	protected function get_icon() {
+	protected function get_media_icon() {
 		$post_id = $this->item->ID;
 
 		// List post thumbnail first if this post has one.
@@ -413,8 +448,8 @@ class Post extends Base {
 		);
 		$id    = $this->item->ID;
 
-		// List post thumbnail first if this post has one.
-		if ( \has_post_thumbnail( $id ) ) {
+		// List post thumbnail first if this post has one, unless it goes out as `image` instead.
+		if ( \has_post_thumbnail( $id ) && ! $this->image_is_representative() ) {
 			$media['image'][] = array( 'id' => \get_post_thumbnail_id( $id ) );
 		}
 

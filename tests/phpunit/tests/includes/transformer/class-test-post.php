@@ -994,11 +994,95 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test get_icon method.
+	 * A post with a Featured Image must not also carry it as an icon.
 	 *
-	 * @covers ::get_icon
+	 * The image is already federated as `image` at `large`. Mapping the same picture onto `icon`
+	 * at `thumbnail` sent it twice, and implementations that render `icon` on a `Note` showed the
+	 * second copy as a low-resolution extra image under the post.
+	 *
+	 * @covers ::to_object
 	 */
-	public function test_get_icon() {
+	public function test_featured_image_is_not_repeated_as_an_icon() {
+		$post_id       = self::factory()->post->create( array( 'post_title' => 'Test Post' ) );
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		set_post_thumbnail( $post_id, $attachment_id );
+
+		$object = ( new Post( get_post( $post_id ) ) )->to_object();
+
+		$this->assertNull( $object->get_icon(), 'A post must not carry an icon.' );
+		$this->assertNotEmpty( $object->get_image(), 'The Featured Image still has to be federated as the image.' );
+	}
+
+	/**
+	 * A post without a Featured Image must not fall back to the site icon.
+	 *
+	 * @covers ::to_object
+	 */
+	public function test_site_icon_is_not_used_as_a_post_icon() {
+		$post_id       = self::factory()->post->create( array( 'post_title' => 'Test Post' ) );
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		update_option( 'site_icon', $attachment_id );
+
+		$object = ( new Post( get_post( $post_id ) ) )->to_object();
+
+		delete_option( 'site_icon' );
+
+		$this->assertNull( $object->get_icon(), 'The site icon must not be attached to a post.' );
+	}
+
+	/**
+	 * A long-form post carries its Featured Image as `image` and not as an attachment.
+	 *
+	 * FEP-b2b8 reserves `attachment` for media that is part of the text, and a Featured Image is
+	 * not in the content, so sending both put the same picture out twice.
+	 *
+	 * @covers ::get_image
+	 * @covers ::get_attachment
+	 */
+	public function test_article_sends_the_featured_image_as_image_only() {
+		$post_id       = self::factory()->post->create( array( 'post_title' => 'A titled post is an Article' ) );
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		set_post_thumbnail( $post_id, $attachment_id );
+
+		$object = ( new Post( get_post( $post_id ) ) )->to_object();
+
+		$this->assertSame( 'Article', $object->get_type(), 'The fixture has to be long-form, or this proves nothing.' );
+		$this->assertNotEmpty( $object->get_image(), 'A long-form post keeps its representative image.' );
+		$this->assertEmpty( $object->get_attachment(), 'The Featured Image must not also be an attachment.' );
+	}
+
+	/**
+	 * A short-form post keeps its Featured Image as an attachment and sends no `image`.
+	 *
+	 * @covers ::get_image
+	 * @covers ::get_attachment
+	 */
+	public function test_note_sends_the_featured_image_as_an_attachment_only() {
+		update_option( 'activitypub_object_type', 'note' );
+
+		$post_id       = self::factory()->post->create( array( 'post_title' => 'Forced to a Note' ) );
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		set_post_thumbnail( $post_id, $attachment_id );
+
+		$object = ( new Post( get_post( $post_id ) ) )->to_object();
+
+		delete_option( 'activitypub_object_type' );
+
+		$this->assertSame( 'Note', $object->get_type() );
+		$this->assertNull( $object->get_image(), 'A short-form post has no representative image.' );
+		$this->assertCount( 1, $object->get_attachment(), 'The Featured Image still has to be federated.' );
+	}
+
+	/**
+	 * Test get_media_icon method.
+	 *
+	 * @covers ::get_media_icon
+	 */
+	public function test_get_media_icon() {
 		$post_id = self::factory()->post->create(
 			array(
 				'post_title'   => 'Test Post',
@@ -1012,7 +1096,7 @@ class Test_Post extends \WP_UnitTestCase {
 
 		// Set up reflection method.
 		$reflection = new \ReflectionClass( Post::class );
-		$method     = $reflection->getMethod( 'get_icon' );
+		$method     = $reflection->getMethod( 'get_media_icon' );
 		if ( \PHP_VERSION_ID < 80100 ) {
 			$method->setAccessible( true );
 		}

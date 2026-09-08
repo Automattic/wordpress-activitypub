@@ -179,6 +179,31 @@ class Test_Attachment extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Cover art of a media file is stored as the attachment's thumbnail and goes out as `image`.
+	 *
+	 * @covers ::image_is_representative
+	 */
+	public function test_to_object_sends_the_cover_art_as_image() {
+		$audio_id = self::factory()->attachment->create_object(
+			array(
+				'post_type'      => 'attachment',
+				'post_mime_type' => 'audio/mpeg',
+				'post_title'     => 'Test Audio',
+			)
+		);
+		$cover_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		\set_post_thumbnail( $audio_id, $cover_id );
+
+		$object = ( new Attachment( \get_post( $audio_id ) ) )->to_object();
+
+		$this->assertSame( 'Note', $object->get_type() );
+		$this->assertNotEmpty( $object->get_image(), 'A media page keeps its cover art as the representative image.' );
+
+		\wp_delete_attachment( $cover_id, true );
+		\wp_delete_attachment( $audio_id, true );
+	}
+
+	/**
 	 * Data provider for mime types.
 	 *
 	 * @return array Test data.

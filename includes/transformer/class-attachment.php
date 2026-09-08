@@ -70,4 +70,16 @@ class Attachment extends Post {
 	protected function get_type() {
 		return 'Note';
 	}
+
+	/**
+	 * A media page has no content its thumbnail could be part of, so the thumbnail
+	 * (embedded cover art for audio and video) is always the representative `image`.
+	 *
+	 * @since unreleased
+	 *
+	 * @return bool Always true.
+	 */
+	protected function image_is_representative() {
+		return true;
+	}
 }
