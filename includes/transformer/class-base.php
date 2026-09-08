@@ -570,8 +570,12 @@ abstract class Base {
 				// Use poster image from the block, or fall back to the transformer icon.
 				if ( ! empty( $media['icon'] ) ) {
 					$attachment['icon'] = \esc_url_raw( $media['icon'] );
-				} elseif ( \method_exists( $this, 'get_media_icon' ) && $this->get_media_icon() ) {
-					$attachment['icon'] = object_to_uri( $this->get_media_icon() );
+				} elseif ( \method_exists( $this, 'get_media_icon' ) ) {
+					$icon = $this->get_media_icon();
+
+					if ( $icon ) {
+						$attachment['icon'] = object_to_uri( $icon );
+					}
 				}
 				break;
 		}
