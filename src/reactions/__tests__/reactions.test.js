@@ -1,8 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import apiFetch from '@wordpress/api-fetch';
 import { FacepileRow, Reactions } from '../reactions';
 
-jest.mock( '@wordpress/api-fetch', () => jest.fn( () => Promise.resolve( {} ) ) );
+jest.mock( '@wordpress/api-fetch', () => jest.fn() );
 
 // Suppress console warnings for testing
 const originalError = console.error;
@@ -108,11 +108,20 @@ describe( 'Reactions', () => {
 		},
 	};
 
+	const fallback = {
+		likes: {
+			label: 'Fallback',
+			items: [ { avatar: '', url: '#', name: 'Fallback User' } ],
+		},
+	};
+
 	beforeEach( () => {
 		window._activityPubOptions = {
 			namespace: 'activitypub/1.0',
 			defaultAvatarUrl: 'default.jpg',
 		};
+		apiFetch.mockReset();
+		apiFetch.mockResolvedValue( reactions );
 	} );
 
 	afterEach( () => {
@@ -120,10 +129,11 @@ describe( 'Reactions', () => {
 		jest.clearAllMocks();
 	} );
 
-	test( 'fetches reactions for a post', () => {
+	test( 'fetches reactions for a post', async () => {
 		render( <Reactions postId={ 42 } /> );
 
 		expect( apiFetch ).toHaveBeenCalledWith( { path: '/activitypub/1.0/posts/42/reactions' } );
+		await waitFor( () => expect( screen.getByRole( 'img' ).src ).toContain( 'user1.jpg' ) );
 	} );
 
 	test( 'does not fetch when reactions are provided', () => {
@@ -131,5 +141,35 @@ describe( 'Reactions', () => {
 
 		expect( apiFetch ).not.toHaveBeenCalled();
 		expect( screen.getByRole( 'img' ).src ).toContain( 'user1.jpg' );
+	} );
+
+	test( 'does not fetch without a numeric post ID and shows the fallback', () => {
+		render( <Reactions postId="wp_template" fallbackReactions={ fallback } /> );
+
+		expect( apiFetch ).not.toHaveBeenCalled();
+		expect( screen.getByText( 'Fallback' ) ).toBeInTheDocument();
+	} );
+
+	test( 'renders nothing without a post ID and without a fallback', () => {
+		const { container } = render( <Reactions /> );
+
+		expect( apiFetch ).not.toHaveBeenCalled();
+		expect( container.firstChild ).toBeNull();
+	} );
+
+	test( 'uses the fallback when the post has no reactions yet', async () => {
+		apiFetch.mockResolvedValue( { likes: { label: '0 likes', items: [] } } );
+
+		render( <Reactions postId={ 42 } fallbackReactions={ fallback } /> );
+
+		await waitFor( () => expect( screen.getByText( 'Fallback' ) ).toBeInTheDocument() );
+	} );
+
+	test( 'uses the fallback when the request fails', async () => {
+		apiFetch.mockRejectedValue( new Error( 'rest_invalid_param' ) );
+
+		render( <Reactions postId={ 42 } fallbackReactions={ fallback } /> );
+
+		await waitFor( () => expect( screen.getByText( 'Fallback' ) ).toBeInTheDocument() );
 	} );
 } );
