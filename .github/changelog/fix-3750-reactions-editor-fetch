@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed the Fediverse Reactions block repeatedly requesting data for pages and non-public posts in the editor, which filled browser logs with errors.

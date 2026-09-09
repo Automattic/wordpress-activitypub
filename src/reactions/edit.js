@@ -2,7 +2,8 @@ import clsx from 'clsx';
 import { useBlockProps, InnerBlocks, InspectorControls } from '@wordpress/block-editor';
 import { PanelBody, ToggleControl } from '@wordpress/components';
 import { __, _x, sprintf } from '@wordpress/i18n';
-import { select } from '@wordpress/data';
+import { useSelect } from '@wordpress/data';
+import { store as coreStore } from '@wordpress/core-data';
 import { useEffect, useRef } from '@wordpress/element';
 import { Reactions } from './reactions';
 import { useOptions } from '../shared/use-options';
@@ -61,8 +62,33 @@ const DUMMY_REACTIONS = {
 export default function Edit( { attributes, setAttributes } ) {
 	const { className = '', displayStyle = 'facepile', showActions = false } = attributes;
 	const blockProps = useBlockProps();
-	const { getCurrentPostId } = select( 'core/editor' );
+	const { postId, postType, postStatus, postPassword, postMeta, supportsActivityPub } = useSelect( ( select ) => {
+		const editor = select( 'core/editor' );
+		const currentPostType = editor.getCurrentPostType();
+		const postTypeRecord = select( coreStore ).getPostType( currentPostType );
+
+		return {
+			postId: editor.getCurrentPostId(),
+			postType: currentPostType,
+			postStatus: editor.getEditedPostAttribute( 'status' ),
+			postPassword: editor.getEditedPostAttribute( 'password' ),
+			postMeta: editor.getEditedPostAttribute( 'meta' ),
+			supportsActivityPub: postTypeRecord?.supports?.activitypub ?? null,
+		};
+	}, [] );
 	const { showAvatars = true } = useOptions();
+
+	// Mirror the server-side is_post_publicly_queryable() gate so the editor
+	// only fetches reactions for posts the REST endpoint would actually serve.
+	const visibility = postMeta?.activitypub_content_visibility;
+	const publiclyQueryable =
+		postType && postStatus && supportsActivityPub !== null
+			? 'publish' === postStatus &&
+			  true === supportsActivityPub &&
+			  ! postPassword &&
+			  'local' !== visibility &&
+			  'private' !== visibility
+			: null;
 	const hasInitialized = useRef( false );
 
 	// On first render, set default style based on avatar setting.
@@ -127,7 +153,8 @@ export default function Edit( { attributes, setAttributes } ) {
 					renderAppender={ false }
 				/>
 				<Reactions
-					postId={ getCurrentPostId() }
+					postId={ postId }
+					publiclyQueryable={ publiclyQueryable }
 					fallbackReactions={ DUMMY_REACTIONS }
 					displayStyle={ displayStyle }
 					showActions={ showActions }

@@ -142,16 +142,18 @@ const ReactionGroup = ( { items, label, displayStyle, showActions, actionLabel }
 /**
  * The Reactions component.
  *
- * @param {Object}  props                   Component props.
- * @param {?number} props.postId            The Post ID.
- * @param {?Object} props.reactions         Optional reactions data.
- * @param {?Object} props.fallbackReactions Optional fallback reactions data to use if no real reactions are found.
- * @param {string}  props.displayStyle      The display style ('facepile' or 'summary').
- * @param {boolean} props.showActions       Whether to show action buttons.
- * @return {?JSX.Element}                  The rendered component.
+ * @param {Object}   props                   Component props.
+ * @param {?number}  props.postId            The Post ID.
+ * @param {?boolean} props.publiclyQueryable Whether the post can be queried publicly.
+ * @param {?Object}  props.reactions         Optional reactions data.
+ * @param {?Object}  props.fallbackReactions Optional fallback reactions data to use if no real reactions are found.
+ * @param {string}   props.displayStyle      The display style ('facepile' or 'summary').
+ * @param {boolean}  props.showActions       Whether to show action buttons.
+ * @return {?JSX.Element}                    The rendered component.
  */
 export function Reactions( {
 	postId = null,
+	publiclyQueryable = null,
 	reactions: providedReactions = null,
 	fallbackReactions = null,
 	displayStyle = 'facepile',
@@ -176,9 +178,14 @@ export function Reactions( {
 			return;
 		}
 
-		// if no postId is provided, or it's not a number (Site Editor), return early.
-		if ( ! postId || typeof postId !== 'number' ) {
+		// No reactions to fetch when the post cannot be queried publicly.
+		if ( false === publiclyQueryable ) {
 			onError();
+			return;
+		}
+
+		// Wait for the post data to load before fetching.
+		if ( null === publiclyQueryable || ! postId || typeof postId !== 'number' ) {
 			return;
 		}
 
@@ -199,7 +206,7 @@ export function Reactions( {
 				setLoading( false );
 			} )
 			.catch( onError );
-	}, [ postId, providedReactions, fallbackReactions, namespace, onError ] );
+	}, [ postId, publiclyQueryable, providedReactions, fallbackReactions, namespace, onError ] );
 
 	if ( loading ) {
 		return null;
