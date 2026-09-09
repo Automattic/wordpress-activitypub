@@ -114,6 +114,62 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The editor learns from the post itself whether the post endpoints will answer for it.
+	 *
+	 * @covers ::register_rest_fields
+	 *
+	 * @dataProvider data_publicly_queryable_field
+	 *
+	 * @param array $post_args Arguments for the post to create.
+	 * @param array $meta      Post meta to set.
+	 * @param bool  $expected  Whether the post is expected to be publicly queryable.
+	 */
+	public function test_publicly_queryable_field( $post_args, $meta, $expected ) {
+		$post_id = self::factory()->post->create( $post_args );
+		foreach ( $meta as $key => $value ) {
+			\update_post_meta( $post_id, $key, $value );
+		}
+
+		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$request = new \WP_REST_Request( 'GET', '/wp/v2/posts/' . $post_id );
+		$request->set_param( 'context', 'edit' );
+		$data = \rest_get_server()->dispatch( $request )->get_data();
+
+		$this->assertArrayHasKey( 'activitypub_publicly_queryable', $data );
+		$this->assertSame( $expected, $data['activitypub_publicly_queryable'] );
+	}
+
+	/**
+	 * Data provider for the publicly queryable field.
+	 *
+	 * @return array[]
+	 */
+	public function data_publicly_queryable_field() {
+		return array(
+			'published post'     => array( array( 'post_status' => 'publish' ), array(), true ),
+			'draft'              => array( array( 'post_status' => 'draft' ), array(), false ),
+			'password protected' => array( array( 'post_password' => 'secret' ), array(), false ),
+			'local visibility'   => array( array(), array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ), false ),
+			'quiet public'       => array( array(), array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC ), true ),
+		);
+	}
+
+	/**
+	 * The field is for the editor only and stays out of public post responses.
+	 *
+	 * @covers ::register_rest_fields
+	 */
+	public function test_publicly_queryable_field_is_edit_context_only() {
+		$post_id = self::factory()->post->create();
+
+		$request = new \WP_REST_Request( 'GET', '/wp/v2/posts/' . $post_id );
+		$data    = \rest_get_server()->dispatch( $request )->get_data();
+
+		$this->assertArrayNotHasKey( 'activitypub_publicly_queryable', $data );
+	}
+
+	/**
 	 * Test the reply block with a valid URL attribute.
 	 *
 	 * @covers ::render_reply_block

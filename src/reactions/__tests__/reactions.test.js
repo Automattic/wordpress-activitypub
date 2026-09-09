@@ -1,5 +1,8 @@
 import { render, screen } from '@testing-library/react';
-import { FacepileRow } from '../reactions';
+import apiFetch from '@wordpress/api-fetch';
+import { FacepileRow, Reactions } from '../reactions';
+
+jest.mock( '@wordpress/api-fetch', () => jest.fn( () => Promise.resolve( {} ) ) );
 
 // Suppress console warnings for testing
 const originalError = console.error;
@@ -94,5 +97,39 @@ describe( 'FacepileRow', () => {
 
 		const avatars = screen.getAllByRole( 'img' );
 		expect( avatars ).toHaveLength( 2 );
+	} );
+} );
+
+describe( 'Reactions', () => {
+	const reactions = {
+		likes: {
+			label: '1 like',
+			items: [ { avatar: 'user1.jpg', url: 'https://example.com/user1', name: 'User One' } ],
+		},
+	};
+
+	beforeEach( () => {
+		window._activityPubOptions = {
+			namespace: 'activitypub/1.0',
+			defaultAvatarUrl: 'default.jpg',
+		};
+	} );
+
+	afterEach( () => {
+		delete window._activityPubOptions;
+		jest.clearAllMocks();
+	} );
+
+	test( 'fetches reactions for a post', () => {
+		render( <Reactions postId={ 42 } /> );
+
+		expect( apiFetch ).toHaveBeenCalledWith( { path: '/activitypub/1.0/posts/42/reactions' } );
+	} );
+
+	test( 'does not fetch when reactions are provided', () => {
+		render( <Reactions postId={ 42 } reactions={ reactions } /> );
+
+		expect( apiFetch ).not.toHaveBeenCalled();
+		expect( screen.getByRole( 'img' ).src ).toContain( 'user1.jpg' );
 	} );
 } );
