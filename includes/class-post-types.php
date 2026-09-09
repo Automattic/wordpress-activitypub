@@ -18,6 +18,9 @@ use Activitypub\Collection\Remote_Posts;
 use Activitypub\OAuth\Client;
 use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Token;
+use Activitypub\Rest\Reader_Terms_Controller;
+use Activitypub\Rest\Remote_Actors_Controller;
+use Activitypub\Rest\Remote_Posts_Controller;
 
 /**
  * Post Types class.
@@ -42,7 +45,9 @@ class Post_Types {
 
 		\add_filter( 'rest_ap_post_query', array( self::class, 'filter_ap_post_by_user' ), 10, 2 );
 		\add_filter( 'rest_ap_object_type_query', array( self::class, 'filter_object_type_by_user' ), 10, 2 );
+		\add_filter( 'rest_ap_tag_query', array( self::class, 'filter_tag_by_user' ), 10, 2 );
 		\add_filter( 'rest_ap_object_type_collection_params', array( self::class, 'register_object_type_user_param' ) );
+		\add_filter( 'rest_ap_tag_collection_params', array( self::class, 'register_object_type_user_param' ) );
 
 		\add_filter( 'activitypub_get_actor_extra_fields', array( Extra_Fields::class, 'default_actor_extra_fields' ), 10, 2 );
 
@@ -62,18 +67,22 @@ class Post_Types {
 		\register_post_type(
 			Remote_Actors::POST_TYPE,
 			array(
-				'labels'           => array(
+				'labels'                => array(
 					'name'          => \_x( 'Followers', 'post_type plural name', 'activitypub' ),
 					'singular_name' => \_x( 'Follower', 'post_type single name', 'activitypub' ),
 				),
-				'public'           => false,
-				'show_in_rest'     => true,
-				'hierarchical'     => false,
-				'rewrite'          => false,
-				'query_var'        => false,
-				'delete_with_user' => false,
-				'can_export'       => true,
-				'supports'         => array( 'custom-fields' ),
+				'public'                => false,
+				'capabilities'          => array(
+					'create_posts' => false,
+				),
+				'show_in_rest'          => true,
+				'rest_controller_class' => Remote_Actors_Controller::class,
+				'hierarchical'          => false,
+				'rewrite'               => false,
+				'query_var'             => false,
+				'delete_with_user'      => false,
+				'can_export'            => true,
+				'supports'              => array( 'custom-fields' ),
 			)
 		);
 
@@ -104,7 +113,6 @@ class Post_Types {
 			array(
 				'type'              => 'string',
 				'single'            => false,
-				'show_in_rest'      => true,
 				'sanitize_callback' => 'sanitize_text_field',
 			)
 		);
@@ -352,23 +360,24 @@ class Post_Types {
 		\register_post_type(
 			Remote_Posts::POST_TYPE,
 			array(
-				'labels'              => array(
+				'labels'                => array(
 					'name'          => \_x( 'Posts', 'post_type plural name', 'activitypub' ),
 					'singular_name' => \_x( 'Post', 'post_type single name', 'activitypub' ),
 				),
-				'capabilities'        => array(
-					'activitypub' => true,
+				'map_meta_cap'          => true,
+				'public'                => false,
+				'capabilities'          => array(
+					'create_posts' => false,
 				),
-				'map_meta_cap'        => true,
-				'public'              => false,
-				'show_in_rest'        => true,
-				'rewrite'             => false,
-				'query_var'           => false,
-				'supports'            => array( 'title', 'editor', 'author', 'custom-fields', 'excerpt', 'comments' ),
-				'delete_with_user'    => true,
-				'can_export'          => true,
-				'exclude_from_search' => true,
-				'taxonomies'          => array( 'ap_tag', 'ap_object_type' ),
+				'show_in_rest'          => true,
+				'rest_controller_class' => Remote_Posts_Controller::class,
+				'rewrite'               => false,
+				'query_var'             => false,
+				'supports'              => array( 'title', 'editor', 'author', 'custom-fields', 'excerpt', 'comments' ),
+				'delete_with_user'      => true,
+				'can_export'            => true,
+				'exclude_from_search'   => true,
+				'taxonomies'            => array( 'ap_tag', 'ap_object_type' ),
 			)
 		);
 
@@ -376,9 +385,10 @@ class Post_Types {
 			'ap_tag',
 			array( Remote_Posts::POST_TYPE ),
 			array(
-				'public'       => false,
-				'query_var'    => true,
-				'show_in_rest' => true,
+				'public'                => false,
+				'query_var'             => true,
+				'show_in_rest'          => true,
+				'rest_controller_class' => Reader_Terms_Controller::class,
 			)
 		);
 
@@ -386,9 +396,10 @@ class Post_Types {
 			'ap_object_type',
 			array( Remote_Posts::POST_TYPE ),
 			array(
-				'public'       => false,
-				'query_var'    => true,
-				'show_in_rest' => true,
+				'public'                => false,
+				'query_var'             => true,
+				'show_in_rest'          => true,
+				'rest_controller_class' => Reader_Terms_Controller::class,
 			)
 		);
 
@@ -793,17 +804,26 @@ class Post_Types {
 	 * @return array Modified query arguments.
 	 */
 	public static function filter_ap_actor_query_by_follower( $args, $request ) {
-		if ( ! empty( $request['follower_of'] ) ) {
-			// Add meta_query to filter by _activitypub_following.
-			if ( ! isset( $args['meta_query'] ) ) {
-				$args['meta_query'] = array(); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			}
+		$follower_of = isset( $request['follower_of'] ) ? (int) $request['follower_of'] : null;
 
-			$args['meta_query'][] = array(
-				'key'   => Followers::FOLLOWER_META_KEY,
-				'value' => $request['follower_of'],
-			);
+		// Users who cannot list users may only ever see their own followers.
+		if ( ! \current_user_can( 'list_users' ) ) {
+			$follower_of = \get_current_user_id();
 		}
+
+		if ( null === $follower_of ) {
+			return $args;
+		}
+
+		// Add meta_query to filter by _activitypub_following.
+		if ( ! isset( $args['meta_query'] ) ) {
+			$args['meta_query'] = array(); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+		}
+
+		$args['meta_query'][] = array(
+			'key'   => Followers::FOLLOWER_META_KEY,
+			'value' => $follower_of,
+		);
 
 		return $args;
 	}
@@ -893,6 +913,23 @@ class Post_Types {
 	 * @return array Modified query arguments.
 	 */
 	public static function filter_ap_post_by_user( $args, $request ) {
+		/*
+		 * Scope to one actor's feed. `scope_user_id()` pins the value to the current user unless
+		 * the caller can `list_users`, so only a privileged caller can ask for another actor or
+		 * for 0, the site/blog actor. This runs for every request, whatever else is being
+		 * filtered on, or a tag or object type filter would match the whole cache.
+		 */
+		if ( ! isset( $args['meta_query'] ) ) {
+			$args['meta_query'] = array(); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+		}
+
+		$args['meta_query'][] = array(
+			'key'     => '_activitypub_user_id',
+			'value'   => self::scope_user_id( isset( $request['user_id'] ) ? $request['user_id'] : null ),
+			'compare' => '=',
+		);
+
+		// Filter by tag if provided.
 		$ap_tag = $request->get_param( 'ap_tag' );
 		if ( ! empty( $ap_tag ) ) {
 			if ( ! isset( $args['tax_query'] ) ) {
@@ -904,22 +941,7 @@ class Post_Types {
 				'field'    => 'term_id',
 				'terms'    => $ap_tag,
 			);
-
-			return $args;
 		}
-
-		// Filter by user_id (defaults to current user, use 0 for site/blog actor).
-		$user_id = isset( $request['user_id'] ) ? (int) $request['user_id'] : \get_current_user_id();
-
-		if ( ! isset( $args['meta_query'] ) ) {
-			$args['meta_query'] = array(); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-		}
-
-		$args['meta_query'][] = array(
-			'key'     => '_activitypub_user_id',
-			'value'   => $user_id,
-			'compare' => '=',
-		);
 
 		// Filter by object type if provided.
 		if ( ! empty( $request['ap_object_type'] ) ) {
@@ -935,6 +957,33 @@ class Post_Types {
 		}
 
 		return $args;
+	}
+
+	/**
+	 * Clamp a requested user ID to a feed the current user is allowed to read.
+	 *
+	 * Users who can list users may read any actor's reader data, everybody else is
+	 * limited to their own.
+	 *
+	 * @since 9.3.0
+	 *
+	 * @param int|null $requested_user_id The requested user ID, or null when none was given.
+	 * @return int The user ID to scope the query to.
+	 */
+	private static function scope_user_id( $requested_user_id ) {
+		$current_user_id = \get_current_user_id();
+
+		if ( null === $requested_user_id ) {
+			return $current_user_id;
+		}
+
+		$requested_user_id = (int) $requested_user_id;
+
+		if ( $requested_user_id !== $current_user_id && ! \current_user_can( 'list_users' ) ) {
+			return $current_user_id;
+		}
+
+		return $requested_user_id;
 	}
 
 	/**
@@ -965,7 +1014,38 @@ class Post_Types {
 	 * @return array Modified query arguments.
 	 */
 	public static function filter_object_type_by_user( $args, $request ) {
+		return self::filter_terms_by_user( $args, $request, 'ap_object_type' );
+	}
+
+	/**
+	 * Filter the ap_tag REST query to terms that have posts for the given user.
+	 *
+	 * @param array            $args    Query arguments.
+	 * @param \WP_REST_Request $request The REST API request.
+	 *
+	 * @return array Modified query arguments.
+	 */
+	public static function filter_tag_by_user( $args, $request ) {
+		return self::filter_terms_by_user( $args, $request, 'ap_tag' );
+	}
+
+	/**
+	 * Filter a reader taxonomy REST query to terms that have posts for the given user.
+	 *
+	 * @param array            $args     Query arguments.
+	 * @param \WP_REST_Request $request  The REST API request.
+	 * @param string           $taxonomy The taxonomy to scope.
+	 *
+	 * @return array Modified query arguments.
+	 */
+	private static function filter_terms_by_user( $args, $request, $taxonomy ) {
 		$user_id = $request->get_param( 'user_id' );
+
+		// Users who cannot list users may only ever see terms from their own feed.
+		if ( ! \current_user_can( 'list_users' ) ) {
+			$user_id = \get_current_user_id();
+		}
+
 		if ( null === $user_id ) {
 			return $args;
 		}
@@ -980,17 +1060,23 @@ class Post_Types {
 				INNER JOIN {$wpdb->term_relationships} tr ON tt.term_taxonomy_id = tr.term_taxonomy_id
 				INNER JOIN {$wpdb->posts} p ON tr.object_id = p.ID
 				INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-				WHERE tt.taxonomy = 'ap_object_type'
-				AND p.post_type = 'ap_post'
+				WHERE tt.taxonomy = %s
+				AND p.post_type = %s
 				AND pm.meta_key = '_activitypub_user_id'
 				AND pm.meta_value = %s",
+				$taxonomy,
+				Remote_Posts::POST_TYPE,
 				$user_id
 			)
 		);
 
+		/*
+		 * `include => array( 0 )` does not restrict anything: `WP_Term_Query` adds the `IN` clause
+		 * only when the imploded id list is truthy, and the string "0" is not, so the clause is
+		 * dropped and every term comes back. An id that cannot exist forces the empty result.
+		 */
 		if ( empty( $term_ids ) ) {
-			// Force empty result.
-			$term_ids = array( 0 );
+			$term_ids = array( PHP_INT_MAX );
 		}
 
 		$args['include'] = \array_map( 'intval', $term_ids );

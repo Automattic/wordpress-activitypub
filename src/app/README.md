@@ -141,6 +141,15 @@ a server-rendered table.
   `useEntityRecord` / `useEntityRecords` against the REST API. The plugin's custom
   post types `ap_post` (feed) and `ap_actor` (followers/following) and their
   taxonomies (`ap_object_type`, `ap_tag`) are the entities behind the lists.
+- **Those routes are gated and self-scoping.** They are served by the plugin's own
+  controllers (`includes/rest/`), not core's, so they require the `activitypub`
+  capability and return nothing to logged-out visitors. Collections are scoped to
+  the current user automatically: `user_id` on `ap_post` and `follower_of` on
+  `ap_actor` are clamped unless the caller can `list_users`, so a screen never has
+  to pass the viewer's own ID to stay within its own data. A screen that needs a
+  relationship these routes do not expose yet — the site's *following* list lives
+  in `_activitypub_followed_by`, which is not registered for REST — needs that
+  wired up first.
 - **The `activitypub/app` `@wordpress/data` store is for UI/app state only** —
   things with no REST representation, such as the active actor selection (which is
   persisted through `@wordpress/preferences`). Do not duplicate entity data in it.
@@ -188,6 +197,49 @@ Every screen is a `route` + `content` module pair under `routes/<screen>/`.
    registry so `initSinglePage` picks it up.
 6. Add user-facing strings through `@wordpress/i18n` with the `activitypub` text
    domain.
+7. Render REST `rendered` fields as-is. Never decode them first — see below.
+
+## Rendering remote content
+
+Everything the reader displays is authored by a remote actor, so treat every
+`rendered` field as hostile input that the server has already made *inert for
+script execution*. That is a narrower guarantee than "safe": `content.rendered`
+is `the_content` output, so `do_shortcode()` and `do_blocks()` have run after
+kses, and kses does not strip HTML comments. It is enough to render as HTML; it
+is not a promise that kses vetted every byte.
+
+**Never run `decodeEntities()` (or any other unescaping pass) on a value that
+ends up in `dangerouslySetInnerHTML`.** An entity-encoded REST field is
+*already* the safe representation: remote content is stored through
+`Sanitize::content()`, which deliberately leaves a payload like
+`&lt;iframe srcdoc="…"&gt;` as inert text. Decoding it on the client turns it back
+into live markup and undoes every server-side escaping decision at once.
+
+`Sanitize::content()` holds remote HTML to the FEP-b2b8 allowlist, which carries no
+`style` attribute and no interactive, scripting, or embed elements. See
+`includes/class-sanitize.php` for why.
+
+`safeHTML()` from `@wordpress/dom` will not save you: it removes `<script>`
+elements and `on*` attributes and nothing else, so `<iframe srcdoc>`, `<object>`,
+`<embed>`, `<form action>` and `javascript:` URLs all pass straight through. It
+is defence in depth, not a sanitiser.
+
+```tsx
+// Wrong: decoding first revives markup kses stored as text.
+const html = safeHTML( decodeEntities( item.content?.rendered || '' ) );
+
+// Right: the stored value is already safe, and entities render as characters.
+const html = safeHTML( item.content?.rendered || '' );
+```
+
+`decodeEntities()` is fine on values rendered as a **React child**, where React
+escapes them as text (`{ decodeEntities( actor.name ) }`) — the rule is about
+values that reach `innerHTML`.
+
+When writing tests that cover an `innerHTML` path, do not mock `decodeEntities`
+or `safeHTML`. Stubbing `decodeEntities` to the identity function makes such a
+test pass whether or not the behaviour is correct. Mocking them in tests for
+React-child rendering is fine.
 
 ## Compatibility gate
 

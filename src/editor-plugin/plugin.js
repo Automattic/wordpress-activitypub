@@ -281,7 +281,7 @@ const EditorPreview = () => {
 		const previewLink = select( editorStore ).getEditedPostPreviewLink();
 		const fediversePreviewLink = addQueryArgs( previewLink, { activitypub: 'true' } );
 
-		window.open( fediversePreviewLink, '_blank' );
+		window.open( fediversePreviewLink, '_blank', 'noopener,noreferrer' );
 	};
 
 	return (

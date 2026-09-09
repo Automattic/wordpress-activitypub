@@ -22,6 +22,7 @@ $selected_comment = $attributes['selectedComment'] ?? '';
 
 // Generate a unique ID for the block.
 $block_id = 'activitypub-remote-reply-block-' . wp_unique_id();
+$error_id = $block_id . '-remote-profile-error';
 
 // Set up the Interactivity API config.
 wp_interactivity_config(
@@ -113,6 +114,7 @@ ob_start();
 			<?php esc_html_e( 'Your Fediverse profile', 'activitypub' ); ?>
 		</label>
 		<input
+			aria-describedby="<?php echo esc_attr( $error_id ); ?>"
 			class="wp-block-search__input"
 			data-wp-bind--aria-invalid="context.isError"
 			data-wp-bind--value="context.remoteProfile"
@@ -135,8 +137,9 @@ ob_start();
 	</div>
 	<div
 		class="activitypub-dialog__error"
-		data-wp-bind--hidden="!context.isError"
 		data-wp-text="context.errorMessage"
+		id="<?php echo esc_attr( $error_id ); ?>"
+		role="alert"
 	></div>
 	<div class="activitypub-dialog__remember">
 		<label>

@@ -206,4 +206,34 @@ class Test_Functions_Comment extends \WP_UnitTestCase {
 
 		$this->assertEquals( array( $parent_comment_id ), \Activitypub\get_comment_ancestors( $comment_id ) );
 	}
+
+	/**
+	 * Test that a reaction author name is cleaned even when written past the filters.
+	 *
+	 * `wp_insert_comment()` callers bypass core's `pre_comment_author_name` chain, so the
+	 * column is not guaranteed tag-free.
+	 */
+	public function test_get_reaction_author_name() {
+		// The factory inserts through wp_insert_comment(), which bypasses the `pre_` filter chain.
+		$comment_id = self::factory()->comment->create( array( 'comment_author' => '<img src=x onerror=alert(1)>&amp;friends' ) );
+
+		// The tag goes and the entity is decoded, because the sinks that render this escape it again.
+		$this->assertSame( '&friends', \Activitypub\get_reaction_author_name( \get_comment( $comment_id ) ) );
+	}
+
+	/**
+	 * Test that an entity-encoded pseudo-tag is not revived into a live tag string.
+	 *
+	 * The name reaches REST consumers and the block's Interactivity state, so an escaped
+	 * tag has to stay escaped.
+	 */
+	public function test_get_reaction_author_name_strips_revived_tags() {
+		$comment_id = self::factory()->comment->create( array( 'comment_author' => '&lt;img src=x onerror=alert(1)&gt;friends' ) );
+
+		$name = \Activitypub\get_reaction_author_name( \get_comment( $comment_id ) );
+
+		// Decoding happens first and stripping second, so the revived tag is removed, not returned.
+		$this->assertStringNotContainsString( '<img', $name );
+		$this->assertSame( 'friends', $name );
+	}
 }

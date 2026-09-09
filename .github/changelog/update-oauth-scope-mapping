@@ -1,4 +1,0 @@
-Significance: minor
-Type: fixed
-
-Apps connected through the ActivityPub API now use the standard ActivityPub API permission names. Fetching remote content through your site is treated as reading rather than posting, so an app needs read permission for it.

@@ -885,6 +885,367 @@ class Test_Mastodon extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that script markup in an archived self-reply is stripped before storage.
+	 *
+	 * Covers scripts and inline styles. Self-replies are committed with
+	 * wp_insert_comment(), which does not run the `pre_comment_*` filter chain, so nothing
+	 * else on this path would filter the content. Core prints `comment_content` unescaped
+	 * on the front end and in the Dashboard "Activity" widget, so a `position:fixed`
+	 * comment would cover the page.
+	 */
+	public function test_import_self_replies_sanitizes_comment_content() {
+		$outbox_json = wp_json_encode(
+			array(
+				'orderedItems' => array(
+					array(
+						'id'        => 'https://mastodon.social/users/example/statuses/1/activity',
+						'type'      => 'Create',
+						'actor'     => 'https://mastodon.social/users/example',
+						'published' => '2024-01-15T10:30:00Z',
+						'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+						'object'    => array(
+							'id'        => 'https://mastodon.social/users/example/statuses/1',
+							'type'      => 'Note',
+							'content'   => '<p>Root post</p>',
+							'published' => '2024-01-15T10:30:00Z',
+							'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+							'tag'       => array(),
+						),
+					),
+					array(
+						'id'        => 'https://mastodon.social/users/example/statuses/2/activity',
+						'type'      => 'Create',
+						'actor'     => 'https://mastodon.social/users/example',
+						'published' => '2024-01-15T10:35:00Z',
+						'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+						'object'    => array(
+							'id'        => 'https://mastodon.social/users/example/statuses/2',
+							'type'      => 'Note',
+							'content'   => '<div style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background-image:url(https://remote.example/track)">Reply<script>alert(1)</script><iframe srcdoc="x"></iframe><img src=x onerror="alert(1)"></div>',
+							'published' => '2024-01-15T10:35:00Z',
+							'inReplyTo' => 'https://mastodon.social/users/example/statuses/1',
+							'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+							'tag'       => array(),
+						),
+					),
+				),
+			)
+		);
+
+		$this->set_up_import( json_decode( $outbox_json, true ) );
+
+		ob_start();
+		Mastodon::import_posts();
+		ob_get_clean();
+
+		$posts    = get_posts(
+			array(
+				'author'      => $this->user_id,
+				'post_status' => 'publish',
+				'numberposts' => 10,
+			)
+		);
+		$comments = get_comments( array( 'post_id' => $posts[0]->ID ) );
+
+		$this->assertCount( 1, $comments, 'Should import 1 self-reply as comment' );
+
+		$content = $comments[0]->comment_content;
+
+		$this->assertStringNotContainsString( '<script', $content, 'Script tags must not be stored.' );
+		$this->assertStringNotContainsString( '<iframe', $content, 'Iframes must not be stored.' );
+		$this->assertStringNotContainsString( 'onerror', $content, 'Event handlers must not be stored.' );
+		$this->assertStringNotContainsString( 'style=', $content, 'Inline styles must not be stored.' );
+		$this->assertStringNotContainsString( 'position:fixed', $content, 'CSS positioning must not survive.' );
+		$this->assertStringNotContainsString( 'remote.example/track', $content, 'A CSS background URL must not be stored.' );
+		$this->assertStringContainsString( 'Reply', $content, 'Legitimate content should survive.' );
+	}
+
+	/**
+	 * Test that script markup in an archived post is stripped before storage.
+	 *
+	 * Covers scripts and inline styles. The import runs as a user with `unfiltered_html`,
+	 * so kses filters are not installed for the request and wp_insert_post() stores the
+	 * archive's content as-is. These posts are published publicly, so nothing else filters
+	 * them before display.
+	 *
+	 * The style assertions are on the excerpt. `post_content` is rebuilt from the bare
+	 * `<p>` matches by {@see \Activitypub\Blocks::filter_import_mastodon_post_data()}, so
+	 * a styled element there is dropped for an unrelated reason and would pass whether or
+	 * not the sanitizer does anything.
+	 */
+	public function test_import_posts_sanitizes_post_content() {
+		$outbox_json = wp_json_encode(
+			array(
+				'orderedItems' => array(
+					array(
+						'id'        => 'https://mastodon.social/users/example/statuses/1/activity',
+						'type'      => 'Create',
+						'actor'     => 'https://mastodon.social/users/example',
+						'published' => '2024-01-15T10:30:00Z',
+						'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+						'object'    => array(
+							'id'        => 'https://mastodon.social/users/example/statuses/1',
+							'type'      => 'Note',
+							'summary'   => '<span style="background-image:url(https://remote.example/track)">Heads up</span><script>alert(1)</script>',
+							'content'   => '<p>Post<script>alert(1)</script><iframe srcdoc="x"></iframe><img src=x onerror="alert(1)"></p>',
+							'published' => '2024-01-15T10:30:00Z',
+							'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+							'tag'       => array(),
+						),
+					),
+				),
+			)
+		);
+
+		$this->set_up_import( json_decode( $outbox_json, true ) );
+
+		ob_start();
+		Mastodon::import_posts();
+		ob_get_clean();
+
+		$posts = get_posts(
+			array(
+				'author'      => $this->user_id,
+				'post_status' => 'publish',
+				'numberposts' => 10,
+			)
+		);
+
+		$this->assertCount( 1, $posts, 'Should import 1 post' );
+
+		$this->assertStringNotContainsString( '<script', $posts[0]->post_content, 'Script tags must not be stored.' );
+		$this->assertStringNotContainsString( '<iframe', $posts[0]->post_content, 'Iframes must not be stored.' );
+		$this->assertStringNotContainsString( 'onerror', $posts[0]->post_content, 'Event handlers must not be stored.' );
+		$this->assertStringContainsString( 'Post', $posts[0]->post_content, 'Legitimate content should survive.' );
+
+		$this->assertStringNotContainsString( '<script', $posts[0]->post_excerpt, 'Script tags must not be stored in the excerpt.' );
+		$this->assertStringNotContainsString( 'style=', $posts[0]->post_excerpt, 'Inline styles must not be stored in the excerpt.' );
+		$this->assertStringNotContainsString( 'remote.example/track', $posts[0]->post_excerpt, 'A CSS background URL must not be stored.' );
+		$this->assertStringContainsString( 'Heads up', $posts[0]->post_excerpt, 'Legitimate excerpt text should survive.' );
+	}
+
+	/**
+	 * Test that re-importing an archive does not duplicate posts whose content changed.
+	 *
+	 * De-duplication used to key on an exact `post_content` match, so any change to what
+	 * the importer stores (a new sanitizer, say) made previously imported posts stop
+	 * matching and come back as duplicates. `_source_id` is the archive's own identifier
+	 * and does not move.
+	 */
+	public function test_import_posts_does_not_duplicate_when_stored_content_differs() {
+		$outbox_json = wp_json_encode(
+			array(
+				'orderedItems' => array(
+					array(
+						'id'        => 'https://mastodon.social/users/example/statuses/1/activity',
+						'type'      => 'Create',
+						'actor'     => 'https://mastodon.social/users/example',
+						'published' => '2024-01-15T10:30:00Z',
+						'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+						'object'    => array(
+							'id'        => 'https://mastodon.social/users/example/statuses/1',
+							'type'      => 'Note',
+							'content'   => '<p>Post</p>',
+							'published' => '2024-01-15T10:30:00Z',
+							'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+							'tag'       => array(),
+						),
+					),
+				),
+			)
+		);
+
+		$outbox = json_decode( $outbox_json, true );
+
+		// Model an older import: same source id, content stored the way a previous version did.
+		$existing_id = self::factory()->post->create(
+			array(
+				'post_author'  => $this->user_id,
+				'post_content' => '<p style="color:red">Post</p>',
+				'post_status'  => 'publish',
+				'post_type'    => 'post',
+			)
+		);
+		\update_post_meta( $existing_id, '_source_id', 'https://mastodon.social/users/example/statuses/1' );
+
+		$this->set_up_import( $outbox );
+
+		ob_start();
+		Mastodon::import_posts();
+		ob_get_clean();
+
+		$posts = get_posts(
+			array(
+				'author'      => $this->user_id,
+				'post_status' => 'publish',
+				'numberposts' => 10,
+			)
+		);
+
+		$this->assertCount( 1, $posts, 'A post already imported under this source id must not be imported again.' );
+		$this->assertSame( $existing_id, $posts[0]->ID, 'The existing post should be the one that is kept.' );
+	}
+
+	/**
+	 * Test that replies to an already-imported post are still threaded onto it.
+	 *
+	 * Pass 3 maps self-replies onto their parent through the id pass 2 returns. A post
+	 * matched by `_source_id` is reported as skipped, but it is still the parent, so
+	 * dropping it from the mapping would silently discard every reply to it.
+	 */
+	public function test_import_posts_threads_replies_onto_an_already_imported_post() {
+		$outbox_json = wp_json_encode(
+			array(
+				'orderedItems' => array(
+					array(
+						'id'        => 'https://mastodon.social/users/example/statuses/1/activity',
+						'type'      => 'Create',
+						'actor'     => 'https://mastodon.social/users/example',
+						'published' => '2024-01-15T10:30:00Z',
+						'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+						'object'    => array(
+							'id'        => 'https://mastodon.social/users/example/statuses/1',
+							'type'      => 'Note',
+							'content'   => '<p>Root post</p>',
+							'published' => '2024-01-15T10:30:00Z',
+							'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+							'tag'       => array(),
+						),
+					),
+					array(
+						'id'        => 'https://mastodon.social/users/example/statuses/2/activity',
+						'type'      => 'Create',
+						'actor'     => 'https://mastodon.social/users/example',
+						'published' => '2024-01-15T10:35:00Z',
+						'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+						'object'    => array(
+							'id'        => 'https://mastodon.social/users/example/statuses/2',
+							'type'      => 'Note',
+							'content'   => '<p>Thread continuation</p>',
+							'published' => '2024-01-15T10:35:00Z',
+							'inReplyTo' => 'https://mastodon.social/users/example/statuses/1',
+							'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+							'tag'       => array(),
+						),
+					),
+				),
+			)
+		);
+
+		// An older import of the root post, with content a previous version stored.
+		$existing_id = self::factory()->post->create(
+			array(
+				'post_author'  => $this->user_id,
+				'post_content' => '<p style="color:red">Root post</p>',
+				'post_status'  => 'publish',
+				'post_type'    => 'post',
+			)
+		);
+		\update_post_meta( $existing_id, '_source_id', 'https://mastodon.social/users/example/statuses/1' );
+
+		$this->set_up_import( json_decode( $outbox_json, true ) );
+
+		ob_start();
+		Mastodon::import_posts();
+		ob_get_clean();
+
+		$comments = get_comments( array( 'post_id' => $existing_id ) );
+
+		$this->assertCount( 1, $comments, 'The reply should be threaded onto the post that was already imported.' );
+		$this->assertStringContainsString( 'Thread continuation', $comments[0]->comment_content );
+	}
+
+	/**
+	 * Test that a trashed import is still matched, rather than re-created.
+	 *
+	 * `post_exists()` takes no status argument here, so before the source-id lookup existed
+	 * it matched a trashed post on content and skipped it. `post_status => 'any'` excludes
+	 * statuses flagged `exclude_from_search`, and trash is one, so the lookup that replaced
+	 * it was narrower on exactly that axis.
+	 */
+	public function test_import_posts_matches_a_trashed_import() {
+		$outbox_json = wp_json_encode(
+			array(
+				'orderedItems' => array(
+					array(
+						'id'        => 'https://mastodon.social/users/example/statuses/1/activity',
+						'type'      => 'Create',
+						'actor'     => 'https://mastodon.social/users/example',
+						'published' => '2024-01-15T10:30:00Z',
+						'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+						'object'    => array(
+							'id'        => 'https://mastodon.social/users/example/statuses/1',
+							'type'      => 'Note',
+							'content'   => '<p>Post</p>',
+							'published' => '2024-01-15T10:30:00Z',
+							'to'        => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+							'tag'       => array(),
+						),
+					),
+				),
+			)
+		);
+
+		// An older import, trashed by the user, whose stored content a newer sanitizer changed.
+		$existing_id = self::factory()->post->create(
+			array(
+				'post_author'  => $this->user_id,
+				'post_content' => '<p style="color:red">Post</p>',
+				'post_status'  => 'trash',
+				'post_type'    => 'post',
+			)
+		);
+		\update_post_meta( $existing_id, '_source_id', 'https://mastodon.social/users/example/statuses/1' );
+
+		$this->set_up_import( json_decode( $outbox_json, true ) );
+
+		ob_start();
+		Mastodon::import_posts();
+		ob_get_clean();
+
+		$posts = get_posts(
+			array(
+				'author'      => $this->user_id,
+				'post_status' => 'publish',
+				'numberposts' => 10,
+			)
+		);
+
+		$this->assertCount( 0, $posts, 'A trashed import must not come back as a fresh published copy.' );
+	}
+
+	/**
+	 * Set up the importer static state for an outbox fixture.
+	 *
+	 * @param array $outbox The decoded outbox.
+	 */
+	private function set_up_import( $outbox ) {
+		/*
+		 * Model the real import: it runs in wp-admin as the importing user, who is an
+		 * administrator. `kses_init()` installs no kses filters for a user with
+		 * `unfiltered_html`, which is the condition the sanitization under test exists
+		 * for. Without this the suite runs as user 0, kses is active, and the tests
+		 * would pass whether or not the importer sanitizes anything.
+		 */
+		\wp_set_current_user( $this->user_id );
+		\kses_init();
+
+		$reflection = new ReflectionClass( Mastodon::class );
+
+		foreach ( array(
+			'outbox'            => $outbox,
+			'author'            => $this->user_id,
+			'fetch_attachments' => false,
+		) as $name => $value ) {
+			$property = $reflection->getProperty( $name );
+			if ( \PHP_VERSION_ID < 80100 ) {
+				$property->setAccessible( true );
+			}
+			$property->setValue( null, $value );
+		}
+	}
+
+	/**
 	 * Test that external replies are imported as posts (not comments).
 	 */
 	public function test_import_external_replies_as_posts() {

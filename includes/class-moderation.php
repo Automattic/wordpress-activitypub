@@ -115,7 +115,7 @@ class Moderation {
 	 * Worth asking before the checks run: they parse the activity and can go to the network for a
 	 * handle, and this runs once per local recipient of every delivery. Most sites block nothing.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param array $blocks Blocks organized by type, as returned by get_site_blocks().
 	 *
@@ -128,7 +128,7 @@ class Moderation {
 	/**
 	 * Check whether a set of blocks names any actor.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param array $blocks Blocks organized by type.
 	 *
@@ -141,7 +141,7 @@ class Moderation {
 	/**
 	 * Check whether a set of blocks names any domain.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param array $blocks Blocks organized by type.
 	 *
@@ -154,7 +154,7 @@ class Moderation {
 	/**
 	 * Check whether a set of blocks names any keyword.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param array $blocks Blocks organized by type.
 	 *

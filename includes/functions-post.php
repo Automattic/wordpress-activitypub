@@ -259,7 +259,7 @@ function get_post_type_description( $post_type ) {
  *
  * A per-post limit wins over the site-wide setting, and the filter has the final say.
  *
- * @since unreleased
+ * @since 9.3.0
  *
  * @param int $post_id The post ID.
  *
@@ -320,7 +320,11 @@ function get_enclosures( $post_id ) {
 		$enclosures
 	);
 
-	return \array_filter( $enclosures );
+	/*
+	 * Re-indexed on the URL to drop duplicates: a file declared twice is still one file, and the
+	 * URL is the only identity an enclosure has unless it happens to be in the media library.
+	 */
+	return \array_values( \array_column( \array_filter( $enclosures ), null, 'url' ) );
 }
 
 /**

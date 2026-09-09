@@ -191,6 +191,13 @@ body.modal-open {
 		color: var(--wp--preset--color--vivid-red, #b32d2e);
 		font-size: 90%;
 		margin-top: 0.5rem;
+
+		// Always in the DOM so screen readers announce into it, so it
+		// is empty most of the time. The padded section around it
+		// stops the margin collapsing away, so zero it out instead.
+		&:empty {
+			margin-top: 0;
+		}
 	}
 
 	&__remember {
