@@ -514,8 +514,24 @@ class Admin {
 	 * @return array The modified actions.
 	 */
 	public static function comment_row_actions( $actions, $comment ) {
+		$comment = \get_comment( $comment );
+
+		if ( ! $comment ) {
+			return $actions;
+		}
+
 		if ( was_comment_received( $comment ) ) {
 			unset( $actions['edit'], $actions['quickedit'] );
+
+			// Only link to an actual URL, not the ActivityPub ID, which is not always a browsable page.
+			$source_url = Comment::get_source_url( $comment->comment_ID, false );
+			if ( $source_url ) {
+				$actions['view_source'] = \sprintf(
+					'<a href="%1$s" target="_blank" rel="noopener">%2$s</a>',
+					\esc_url( $source_url ),
+					\esc_html__( 'View source post', 'activitypub' )
+				);
+			}
 		}
 
 		if ( \in_array( \get_comment_type( $comment ), Comment::get_comment_type_slugs(), true ) ) {
