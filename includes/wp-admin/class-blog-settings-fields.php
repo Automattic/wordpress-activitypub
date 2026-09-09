@@ -11,6 +11,9 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Model\Blog;
 
+use function Activitypub\home_host;
+use function Activitypub\normalize_host;
+
 /**
  * Class to handle all blog settings fields and callbacks.
  */
@@ -182,7 +185,7 @@ class Blog_Settings_Fields {
 		?>
 		<label for="activitypub_blog_identifier">
 			<input id="activitypub_blog_identifier" class="blog-user-identifier" name="activitypub_blog_identifier" type="text" value="<?php echo \esc_attr( \get_option( 'activitypub_blog_identifier', Blog::get_default_username() ) ); ?>" />
-			@<?php echo \esc_html( \wp_parse_url( \home_url(), PHP_URL_HOST ) ); ?>
+			@<?php echo \esc_html( normalize_host( home_host() ) ); ?>
 		</label>
 		<p class="description">
 			<?php \esc_html_e( 'This profile name will federate all posts written on your blog, regardless of the author who posted it.', 'activitypub' ); ?>

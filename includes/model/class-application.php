@@ -15,6 +15,7 @@ use Activitypub\Application as Application_Utility;
 
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\home_host;
+use function Activitypub\normalize_host;
 
 /**
  * Application class.
@@ -196,7 +197,7 @@ class Application extends Actor {
 	 * @return string The Webfinger-Identifier.
 	 */
 	public function get_webfinger() {
-		return $this->get_preferred_username() . '@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
+		return $this->get_preferred_username() . '@' . normalize_host( home_host() );
 	}
 
 	/**
