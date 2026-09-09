@@ -542,12 +542,12 @@ class Following {
 			return;
 		}
 
-		$actor_id = Actors::get_id_by_various( $value );
-		if ( \is_wp_error( $actor_id ) ) {
+		$remote_actor = Remote_Actors::get_by_uri( $value );
+		if ( \is_wp_error( $remote_actor ) ) {
 			return;
 		}
 
-		self::unfollow( $actor_id, $user_id );
+		self::unfollow( $remote_actor, $user_id );
 	}
 
 	/**

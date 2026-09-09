@@ -43,16 +43,25 @@ class Remote_Actors {
 	public static function get_inboxes() {
 		$inboxes = \wp_cache_get( self::CACHE_KEY_INBOXES, 'activitypub' );
 
-		if ( $inboxes ) {
+		if ( false !== $inboxes ) {
 			return $inboxes;
 		}
 
 		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$results = $wpdb->get_col(
-			"SELECT DISTINCT meta_value FROM {$wpdb->postmeta}
-			WHERE meta_key = '_activitypub_inbox'
-			AND meta_value IS NOT NULL"
+			$wpdb->prepare(
+				"SELECT DISTINCT inbox.meta_value
+				FROM {$wpdb->postmeta} inbox
+				INNER JOIN {$wpdb->posts} actor ON actor.ID = inbox.post_id
+				WHERE actor.post_type = %s
+				AND actor.post_status = %s
+				AND inbox.meta_key = '_activitypub_inbox'
+				AND inbox.meta_value <> ''",
+				self::POST_TYPE,
+				'publish'
+			)
 		);
 
 		$inboxes = \array_filter( $results );
@@ -112,30 +121,13 @@ class Remote_Actors {
 	 * @return int|\WP_Error Post ID on success, WP_Error on failure.
 	 */
 	public static function create( $actor ) {
-		if ( \is_array( $actor ) ) {
-			$actor = Actor::init_from_array( $actor );
-		}
-
 		$args = self::prepare_custom_post_type( $actor );
 
 		if ( \is_wp_error( $args ) ) {
 			return $args;
 		}
 
-		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
-		if ( $has_kses ) {
-			// Prevent KSES from corrupting JSON in post_content.
-			\kses_remove_filters();
-		}
-
-		$post_id = \wp_insert_post( $args );
-
-		if ( $has_kses ) {
-			// Restore KSES filters.
-			\kses_init_filters();
-		}
-
-		return $post_id;
+		return self::persist( $args );
 	}
 
 	/**
@@ -147,10 +139,6 @@ class Remote_Actors {
 	 * @return int|\WP_Error The post ID or WP_Error.
 	 */
 	public static function update( $post, $actor ) {
-		if ( \is_array( $actor ) ) {
-			$actor = Actor::init_from_array( $actor );
-		}
-
 		$post = \get_post( $post, ARRAY_A );
 
 		if ( ! $post ) {
@@ -167,7 +155,20 @@ class Remote_Actors {
 			return $args;
 		}
 
-		$args = \wp_parse_args( $args, $post );
+		return self::persist( \wp_parse_args( $args, $post ) );
+	}
+
+	/**
+	 * Persist prepared remote actor post data.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $args Prepared post data. An ID indicates an update.
+	 *
+	 * @return int|\WP_Error Post ID on success, WP_Error on failure.
+	 */
+	private static function persist( $args ) {
+		$is_update = ! empty( $args['ID'] );
 
 		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
 		if ( $has_kses ) {
@@ -175,11 +176,15 @@ class Remote_Actors {
 			\kses_remove_filters();
 		}
 
-		$post_id = \wp_update_post( $args );
+		$post_id = $is_update ? \wp_update_post( $args ) : \wp_insert_post( $args );
 
 		if ( $has_kses ) {
 			// Restore KSES filters.
 			\kses_init_filters();
+		}
+
+		if ( $post_id && ! \is_wp_error( $post_id ) ) {
+			self::clear_inbox_caches( self::get_follower_ids( $post_id ) );
 		}
 
 		return $post_id;
@@ -193,7 +198,51 @@ class Remote_Actors {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function delete( $post_id ) {
-		return \wp_delete_post( $post_id );
+		// Read the followers before the delete takes the meta with it.
+		$user_ids = self::get_follower_ids( $post_id );
+		$result   = \wp_delete_post( $post_id );
+
+		// Clear after the row is gone, so a concurrent read cannot re-cache the deleted inbox.
+		self::clear_inbox_caches( $user_ids );
+
+		return $result;
+	}
+
+	/**
+	 * Get the IDs of the local users a remote actor follows.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $post_id The remote actor post ID.
+	 *
+	 * @return int[] The user IDs.
+	 */
+	private static function get_follower_ids( $post_id ) {
+		$user_ids = \get_post_meta( $post_id, Followers::FOLLOWER_META_KEY, false );
+
+		if ( ! \is_array( $user_ids ) ) {
+			return array();
+		}
+
+		return \array_unique( \array_map( 'intval', $user_ids ) );
+	}
+
+	/**
+	 * Clear cached inbox lists affected by a remote actor change.
+	 *
+	 * Every write to an actor post or its follower meta has to end up here; a bare
+	 * `wp_delete_post()` or `add_post_meta()` elsewhere leaves a stale inbox list behind.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int[] $user_ids The local users whose follower inbox lists include the actor.
+	 */
+	public static function clear_inbox_caches( $user_ids ) {
+		\wp_cache_delete( self::CACHE_KEY_INBOXES, 'activitypub' );
+
+		foreach ( $user_ids as $user_id ) {
+			\wp_cache_delete( \sprintf( Followers::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
+		}
 	}
 
 	/**
@@ -610,11 +659,15 @@ class Remote_Actors {
 	/**
 	 * Prepare actor object for insert or update as a custom post type.
 	 *
-	 * @param Actor $actor The actor data.
+	 * @param array|Actor $actor The actor data.
 	 *
 	 * @return array|\WP_Error Array of post arguments or WP_Error on failure.
 	 */
 	private static function prepare_custom_post_type( $actor ) {
+		if ( \is_array( $actor ) ) {
+			$actor = Actor::init_from_array( $actor );
+		}
+
 		/*
 		 * Reject non-actor objects here, the single chokepoint every
 		 * create/update/upsert funnels through, so callers do not each have to
@@ -647,39 +700,7 @@ class Remote_Actors {
 			$webfinger = \is_wp_error( $webfinger ) ? Webfinger::guess( $actor ) : Sanitize::webfinger( $webfinger );
 		}
 
-		/*
-		 * Temporarily remove mention/hashtag/link filters to prevent infinite recursion when
-		 * storing remote actors with mentions/hashtags in their bios.
-		 *
-		 * PROBLEM: These filters are globally registered on 'init' for all to_json() calls,
-		 * but they're designed for OUTGOING content (federation). When processing mentions in
-		 * an actor's bio during storage, the Mention filter fetches the mentioned actor, which
-		 * then processes mentions in THEIR bio, creating infinite recursion.
-		 *
-		 * SHORTCOMINGS:
-		 * - Fragile: Easy to forget when adding new storage locations (e.g., Inbox storage).
-		 * - Scattered: Same pattern would need to be repeated anywhere we store remote content.
-		 * - Race conditions: If filters are re-added/removed elsewhere, this could break.
-		 * - Not semantic: We're working around a design issue rather than fixing it.
-		 *
-		 * BETTER LONG-TERM SOLUTION:
-		 * Distinguish between "incoming" (storage) and "outgoing" (federation) contexts:
-		 * - INCOMING: Store received ActivityPub data as-is, don't process mentions/hashtags.
-		 *   (Remote_Actors::prepare_custom_post_type, Inbox storage)
-		 * - OUTGOING: Process mentions/hashtags when serving our content to other servers.
-		 *   (Dispatcher, REST API controllers, Transformers)
-		 */
-		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Mention', 'filter_activity_object' ), 99 );
-		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Hashtag', 'filter_activity_object' ), 99 );
-		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Link', 'filter_activity_object' ), 99 );
-
-		$actor_json  = $actor->to_json();
-		$actor_array = $actor->to_array();
-
-		// Re-add the filters.
-		\add_filter( 'activitypub_activity_object_array', array( 'Activitypub\Mention', 'filter_activity_object' ), 99 );
-		\add_filter( 'activitypub_activity_object_array', array( 'Activitypub\Hashtag', 'filter_activity_object' ), 99 );
-		\add_filter( 'activitypub_activity_object_array', array( 'Activitypub\Link', 'filter_activity_object' ), 99 );
+		list( $actor_json, $actor_array ) = self::serialize_for_storage( $actor );
 
 		$meta_input = array(
 			'_activitypub_inbox' => $inbox,
@@ -700,6 +721,45 @@ class Remote_Actors {
 			'post_status'  => 'publish',
 			'meta_input'   => $meta_input,
 		);
+	}
+
+	/**
+	 * Serialize a remote actor without outbound content filters.
+	 *
+	 * Workaround: the Mention/Hashtag/Link filters process content for the *outgoing* (federation)
+	 * context and must not run when storing *incoming* remote data. Suspending them here is the
+	 * stopgap for a missing incoming/outgoing serialization-context split; until that exists, every
+	 * storage path (see also Inbox storage) needs the same treatment.
+	 *
+	 * @since unreleased
+	 *
+	 * @param Actor $actor The actor to serialize.
+	 *
+	 * @return array The actor JSON and array representations.
+	 */
+	private static function serialize_for_storage( $actor ) {
+		$callbacks  = array(
+			array( 'Activitypub\Mention', 'filter_activity_object' ),
+			array( 'Activitypub\Hashtag', 'filter_activity_object' ),
+			array( 'Activitypub\Link', 'filter_activity_object' ),
+		);
+		$registered = array();
+
+		foreach ( $callbacks as $callback ) {
+			$priority = \has_filter( 'activitypub_activity_object_array', $callback );
+			if ( false !== $priority ) {
+				$registered[] = array( $callback, $priority );
+				\remove_filter( 'activitypub_activity_object_array', $callback, $priority );
+			}
+		}
+
+		$serialized = array( $actor->to_json(), $actor->to_array() );
+
+		foreach ( $registered as $filter ) {
+			\add_filter( 'activitypub_activity_object_array', $filter[0], $filter[1] );
+		}
+
+		return $serialized;
 	}
 
 	/**

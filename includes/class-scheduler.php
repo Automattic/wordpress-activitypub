@@ -354,12 +354,12 @@ class Scheduler {
 			$meta = get_remote_metadata_by_actor( $actor->guid, false );
 
 			if ( Tombstone::exists( $meta ) ) {
-				\wp_delete_post( $actor->ID );
+				Remote_Actors::delete( $actor->ID );
 			} elseif ( empty( $meta ) || ! \is_array( $meta ) || \is_wp_error( $meta ) ) {
 				if ( Remote_Actors::count_errors( $actor->ID ) >= 5 ) {
 					\wp_schedule_single_event( \time(), 'activitypub_delete_remote_actor_interactions', array( $actor->guid ) );
 					\wp_schedule_single_event( \time(), 'activitypub_delete_remote_actor_posts', array( $actor->guid ) );
-					\wp_delete_post( $actor->ID );
+					Remote_Actors::delete( $actor->ID );
 				} else {
 					Remote_Actors::add_error( $actor->ID, $meta );
 				}

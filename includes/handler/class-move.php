@@ -87,8 +87,11 @@ class Move {
 				\add_post_meta( $target_object->ID, Followers::FOLLOWER_META_KEY, $follower_user_id );
 			}
 
+			// The target's inbox now belongs in the moved followers' lists.
+			Remote_Actors::clear_inbox_caches( \array_map( 'intval', $users ) );
+
 			$success = true;
-			$result  = \wp_delete_post( $origin_object->ID );
+			$result  = Remote_Actors::delete( $origin_object->ID );
 		}
 
 		/**
