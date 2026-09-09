@@ -38,6 +38,16 @@ class Test_Blog extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Tear down.
+	 */
+	public function tear_down() {
+		\delete_option( 'activitypub_blog_name' );
+		\delete_option( 'activitypub_blog_icon' );
+
+		parent::tear_down();
+	}
+
+	/**
 	 * Test the Blog constructor.
 	 *
 	 * @covers ::__construct

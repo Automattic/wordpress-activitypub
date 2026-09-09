@@ -146,7 +146,7 @@ class Blog_Settings_Fields {
 			$remove_class = 'button button-secondary reset';
 		}
 		?>
-		<div id="activitypub-blog-avatar-preview-wrapper" data-fallback-url="<?php echo \esc_url( \get_site_icon_url() ); ?>">
+		<div id="activitypub-blog-avatar-preview-wrapper">
 			<img id="activitypub-blog-avatar-preview" src="<?php echo \esc_url( $icon['url'] ); ?>" style="max-width: 96px; max-height: 96px;" alt="" />
 		</div>
 		<button

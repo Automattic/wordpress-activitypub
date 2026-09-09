@@ -5,8 +5,8 @@
 /* global jQuery, wp */
 
 ( function ( $ ) {
-	var $chooseButton = $( '#activitypub-choose-blog-avatar-button' ),
-		$previewWrapper = $( '#activitypub-blog-avatar-preview-wrapper' ),
+	var fallbackUrl = window.activitypubBlogAvatar && window.activitypubBlogAvatar.fallbackUrl,
+		$chooseButton = $( '#activitypub-choose-blog-avatar-button' ),
 		$preview = $( '#activitypub-blog-avatar-preview' ),
 		$hiddenDataField = $( '#activitypub_blog_icon' ),
 		$removeButton = $( '#activitypub-remove-blog-avatar' ),
@@ -34,7 +34,6 @@
 
 			$hiddenDataField.val( attachment.id );
 			$preview.attr( 'src', attachment.attributes.url );
-			$previewWrapper.removeClass( 'hidden' );
 			$removeButton.removeClass( 'hidden' );
 
 			$chooseButton
@@ -55,7 +54,7 @@
 	 */
 	$removeButton.on( 'click', function () {
 		$hiddenDataField.val( '' );
-		$preview.attr( 'src', $previewWrapper.attr( 'data-fallback-url' ) );
+		$preview.attr( 'src', fallbackUrl );
 		$( this ).addClass( 'hidden' );
 
 		$chooseButton

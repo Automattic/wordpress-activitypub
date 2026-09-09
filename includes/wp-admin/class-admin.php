@@ -297,6 +297,13 @@ class Admin {
 			ACTIVITYPUB_PLUGIN_VERSION,
 			false
 		);
+		\wp_localize_script(
+			'activitypub-blog-avatar',
+			'activitypubBlogAvatar',
+			array(
+				'fallbackUrl' => \esc_url_raw( \get_site_icon_url() ),
+			)
+		);
 
 		// Register and enqueue command palette integration.
 		if ( user_can_activitypub( \get_current_user_id() ) || \current_user_can( 'manage_options' ) ) {
