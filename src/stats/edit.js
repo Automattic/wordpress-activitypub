@@ -124,7 +124,9 @@ export default function Edit( { attributes, setAttributes } ) {
 							<Button variant="secondary" onClick={ handleCopy }>
 								{ copied ? __( 'Copied!', 'activitypub' ) : __( 'Copy URL', 'activitypub' ) }
 							</Button>
-							<ExternalLink href={ imageUrl }>{ __( 'Preview', 'activitypub' ) }</ExternalLink>
+							<ExternalLink href={ imageUrl } rel="external noreferrer noopener">
+								{ __( 'Preview', 'activitypub' ) }
+							</ExternalLink>
 						</div>
 					</PanelBody>
 				) }

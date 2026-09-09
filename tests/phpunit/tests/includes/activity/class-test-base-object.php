@@ -111,4 +111,23 @@ class Test_Base_Object extends \WP_UnitTestCase {
 		$this->assertEquals( $test_data['attributedTo'], $object->get_attributed_to() );
 		$this->assertNull( $object->get_unsupported() );
 	}
+
+	/**
+	 * Test that the Miscellaneous Terms context supplies the terms instead of inline copies.
+	 *
+	 * `Hashtag` and `sensitive` are defined by the context document, so redeclaring them
+	 * inline would override it and mask any later refinement of those definitions.
+	 *
+	 * @see https://swicg.github.io/miscellany/
+	 */
+	public function test_json_ld_context_includes_miscellany() {
+		$context = Base_Object::JSON_LD_CONTEXT;
+
+		$this->assertContains( 'https://purl.archive.org/miscellany', $context );
+
+		$inline = \end( $context );
+		$this->assertIsArray( $inline );
+		$this->assertArrayNotHasKey( 'Hashtag', $inline );
+		$this->assertArrayNotHasKey( 'sensitive', $inline );
+	}
 }

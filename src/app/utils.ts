@@ -51,3 +51,29 @@ export function getRelativeTime( dateString: string ): string {
 	// Use site's date format for dates older than a week
 	return dateI18n( getSettings().formats.date, dateString );
 }
+
+/**
+ * Return a URL that is safe to use as an `href`/`src` attribute value.
+ *
+ * Remote actor data is stored and served verbatim, so an actor could supply a
+ * `javascript:` (or other script-executing) URL that React would render as-is.
+ * Only http(s) and protocol-relative/relative URLs are allowed through; anything
+ * else is replaced with a harmless fallback.
+ *
+ * @param url      The URL to validate.
+ * @param fallback Value returned when the URL is unsafe. Defaults to '#'.
+ * @return The original URL when safe, otherwise the fallback.
+ */
+export function safeUrl( url: string, fallback: string = '#' ): string {
+	if ( ! url ) {
+		return fallback;
+	}
+
+	try {
+		// Resolve against the current origin so relative/protocol-relative URLs stay valid.
+		const { protocol } = new URL( url, window.location.origin );
+		return 'http:' === protocol || 'https:' === protocol ? url : fallback;
+	} catch {
+		return fallback;
+	}
+}

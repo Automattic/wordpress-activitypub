@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix follow requests from some fediverse services staying pending after they are accepted.

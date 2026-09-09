@@ -63,6 +63,6 @@ class Term extends Base {
 			return '';
 		}
 
-		return \esc_url( $term_link );
+		return \esc_url_raw( $term_link );
 	}
 }

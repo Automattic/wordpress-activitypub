@@ -153,7 +153,7 @@ class User extends Actor {
 	 * @return string The User url.
 	 */
 	public function get_url() {
-		return \esc_url( \get_author_posts_url( $this->_id ) );
+		return \esc_url_raw( \get_author_posts_url( $this->_id ) );
 	}
 
 	/**
@@ -162,7 +162,7 @@ class User extends Actor {
 	 * @return string The User URL with @-Prefix for the username.
 	 */
 	public function get_alternate_url() {
-		return \esc_url( \trailingslashit( \get_home_url() ) . '@' . $this->get_preferred_username() );
+		return \esc_url_raw( \trailingslashit( \get_home_url() ) . '@' . $this->get_preferred_username() );
 	}
 
 	/**
@@ -191,11 +191,11 @@ class User extends Actor {
 		if ( false !== $icon && \wp_attachment_is_image( $icon ) ) {
 			return array(
 				'type' => 'Image',
-				'url'  => \esc_url( \wp_get_attachment_url( $icon ) ),
+				'url'  => \esc_url_raw( \wp_get_attachment_url( $icon ) ),
 			);
 		}
 
-		$icon = \esc_url(
+		$icon = \esc_url_raw(
 			\get_avatar_url(
 				$this->_id,
 				array( 'size' => 120 )
@@ -228,7 +228,7 @@ class User extends Actor {
 		if ( $image_url ) {
 			return array(
 				'type' => 'Image',
-				'url'  => \esc_url( $image_url ),
+				'url'  => \esc_url_raw( $image_url ),
 			);
 		}
 
@@ -328,7 +328,7 @@ class User extends Actor {
 	 * @return string[]|null The endpoints.
 	 */
 	public function get_endpoints() {
-		return array(
+		$endpoints = array(
 			'sharedInbox'                => get_rest_url_by_path( 'inbox' ),
 			'oauthAuthorizationEndpoint' => get_rest_url_by_path( 'oauth/authorize' ),
 			'oauthTokenEndpoint'         => get_rest_url_by_path( 'oauth/token' ),
@@ -336,6 +336,16 @@ class User extends Actor {
 			'proxyUrl'                   => get_rest_url_by_path( 'proxy' ),
 			'proxyEventStream'           => get_rest_url_by_path( 'proxy/stream' ),
 		);
+
+		if ( \get_option( 'activitypub_api', false ) ) {
+			/*
+			 * RFC 6570 template. add_query_arg() picks the ?/& separator (plain permalinks already
+			 * carry a query string) and does not encode values, so the {q} placeholder stays intact.
+			 */
+			$endpoints['actorAutocomplete'] = \add_query_arg( 'q', '{q}', get_rest_url_by_path( 'actors/autocomplete' ) );
+		}
+
+		return $endpoints;
 	}
 
 	/**

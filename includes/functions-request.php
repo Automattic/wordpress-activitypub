@@ -54,7 +54,16 @@ function use_authorized_fetch() {
 }
 
 /**
- * Check if a request is for an ActivityPub request.
+ * Check whether the current request should be answered with ActivityPub (JSON).
+ *
+ * This is the full, plugin-facing check and the one normal plugin code should use. It honors the
+ * `?activitypub` query var, an Accept header that prefers ActivityPub (via accept_prefers_activitypub()), and the
+ * `activitypub_is_activitypub_request` filter.
+ *
+ * It depends on Activitypub\Query, the main `$wp_query`, and the plugin being fully loaded, so it
+ * must NOT be called from code that runs earlier than that, e.g. a page-cache drop-in deciding a
+ * cache key on the serve path. Such code has only the Accept header to go on and must call
+ * accept_prefers_activitypub() directly instead.
  *
  * @return bool False by default.
  */
@@ -69,6 +78,106 @@ function is_activitypub_request() {
  */
 function should_negotiate_content() {
 	return Query::get_instance()->should_negotiate_content();
+}
+
+/**
+ * Whether the client's most-preferred acceptable media type is ActivityPub.
+ *
+ * This is only the Accept-header half of content negotiation. Normal plugin code wants
+ * is_activitypub_request() instead, which also honors the `?activitypub` query var and the
+ * `activitypub_is_activitypub_request` filter; this function ignores both. Its narrow job is to be
+ * the single, dependency-free definition of "does this request prefer ActivityPub" that
+ * is_activitypub_request() and the Surge cache drop-in (integration/surge-cache-config.php) both
+ * use, so the representation the plugin serves and the one the cache keys on can never disagree. The
+ * drop-in runs before the plugin loads and cannot call is_activitypub_request(), which is why this
+ * half lives on its own.
+ *
+ * It ranks the listed media types by quality (`;q=`), highest first, breaking ties by the order they
+ * appear, and reports whether the winner is an ActivityPub type. That is `application/activity+json`,
+ * or `application/ld+json` carrying the ActivityStreams 2.0 profile
+ * (`profile="https://www.w3.org/ns/activitystreams"`); plain `application/json` and bare
+ * `application/ld+json` are not ActivityPub. This respects the client's preference rather than
+ * demanding an ActivityPub-only header: Mastodon sends
+ * `application/ld+json;profile="…activitystreams", application/activity+json, text/html;q=0.1`,
+ * prefers ActivityPub 10:1, and must get it; a browser lists `text/html` at q=1 and gets HTML. A
+ * media type with no `q` defaults to 1.0; a `q=0` refuses the type and is ignored.
+ *
+ * Pass the RAW, unslashed header; both callers must hand it identical bytes but reach that raw form
+ * differently. The plugin runs after wp_magic_quotes() has addslashed $_SERVER, so it wp_unslash()es
+ * before calling; the Surge drop-in runs before wp_magic_quotes() and passes its already-raw value as
+ * is. This function deliberately does NOT unslash or sanitize: stripslashes() here would strip the
+ * drop-in's genuine backslashes (which the plugin's wp_unslash() preserves), and sanitize_text_field()
+ * (which the drop-in can't call anyway) would drop bytes such as a `%00`; either would let the two
+ * paths disagree. Keep it free of side effects and of any PHP 8 polyfill (str_ends_with()), since the
+ * drop-in runs before the polyfills may be loaded.
+ *
+ * @param string $accept The raw (unslashed) Accept header value.
+ *
+ * @return bool True when the highest-priority acceptable media type is ActivityPub.
+ */
+function accept_prefers_activitypub( $accept ) {
+	$winner_quality = 0.0;
+	$winner_is_ap   = false;
+
+	foreach ( \explode( ',', (string) $accept ) as $part ) {
+		$segments   = \explode( ';', $part );
+		$media_type = \strtolower( \trim( (string) \array_shift( $segments ) ) );
+
+		if ( '' === $media_type ) {
+			continue;
+		}
+
+		// Read the quality (default 1.0) and profile parameters, in any order.
+		$quality = 1.0;
+		$profile = '';
+		foreach ( $segments as $param ) {
+			$param = \trim( $param );
+			if ( 0 === \stripos( $param, 'q=' ) ) {
+				// Only a valid number sets the quality; a malformed `q=` keeps the 1.0 default.
+				$q_value = \trim( \substr( $param, 2 ) );
+				if ( \is_numeric( $q_value ) ) {
+					$quality = (float) $q_value;
+				}
+			} elseif ( 0 === \stripos( $param, 'profile=' ) ) {
+				$profile = \strtolower( \trim( \substr( $param, 8 ), '"' ) );
+			}
+		}
+
+		// A `q=0` means the client refuses this type; ignore it entirely.
+		if ( $quality <= 0 ) {
+			continue;
+		}
+
+		// Highest quality wins; on a tie the earlier type in the header keeps the lead.
+		if ( $quality > $winner_quality ) {
+			$winner_quality = $quality;
+
+			// ActivityPub is `application/activity+json`, or `application/ld+json` with the AS2 profile
+			// (matched without the scheme so both the http and https profile URIs are accepted).
+			$winner_is_ap = 'application/activity+json' === $media_type
+				|| ( 'application/ld+json' === $media_type && false !== \strpos( $profile, '://www.w3.org/ns/activitystreams' ) );
+		}
+	}
+
+	return $winner_is_ap;
+}
+
+/**
+ * Mark a REST response non-shareable, on the response object and as a raw HTTP header.
+ *
+ * The raw header matters because the REST `_envelope=1` parameter makes WordPress move the response
+ * headers into the JSON body and serve an outer response without them, so the response-object
+ * Cache-Control would not reach a page cache or CDN. WordPress core sends its own CORS `Vary: Origin`
+ * the same raw way for the same reason. The raw header is skipped once the headers are already sent.
+ *
+ * @param \WP_REST_Response $response The response to mark.
+ */
+function maybe_set_no_store( $response ) {
+	$response->header( 'Cache-Control', 'private, no-store, max-age=0' );
+
+	if ( ! \headers_sent() ) {
+		\header( 'Cache-Control: private, no-store, max-age=0' );
+	}
 }
 
 /**

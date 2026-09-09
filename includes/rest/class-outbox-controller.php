@@ -11,6 +11,8 @@ use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
+use Activitypub\OAuth\Scope;
+use Activitypub\OAuth\Server as OAuth_Server;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\extract_recipients_from_activity;
@@ -179,16 +181,17 @@ class Outbox_Controller extends \WP_REST_Controller {
 		);
 
 		/*
-		 * Whether the current user owns the outbox being queried. Owners see private and
+		 * Whether the current user may see this outbox in full. Owners see private and
 		 * non-public activity types; unauthenticated, federation, and non-owner requests are
 		 * limited to the public subset by the visibility filter below.
 		 *
-		 * Reuse the canonical ownership gate (the same check the OAuth C2S path applies via
-		 * maybe_verify_owner()) instead of re-deriving it here: it requires an authenticated
-		 * session, matches the requested user by identity, and handles the blog actor via
-		 * user_can_act_as_blog(). A global capability never stands in for ownership.
+		 * Two independent conditions. verify_owner() is the canonical ownership check
+		 * (authenticated session, identity match, blog actor via user_can_act_as_blog(), never a
+		 * global capability). permits_scope() is separate: an OAuth caller's identity is
+		 * established from any valid bearer whatever it was consented to, so reading owner-only
+		 * items additionally requires the `read` scope. A WP session is not scope-limited.
 		 */
-		$is_outbox_owner = true === $this->verify_owner( $request );
+		$is_outbox_owner = true === $this->verify_owner( $request ) && OAuth_Server::permits_scope( Scope::READ );
 
 		if ( ! $is_outbox_owner ) {
 			$args['meta_query'][] = array(

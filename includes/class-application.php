@@ -18,7 +18,7 @@ namespace Activitypub;
  * This class provides static utility methods for the Application actor,
  * primarily key management for HTTP Signatures.
  *
- * @since unreleased
+ * @since 9.1.0
  */
 class Application {
 	/**
@@ -38,7 +38,7 @@ class Application {
 	/**
 	 * Initialize the class, registering WordPress hooks.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 */
 	public static function init() {
 		/*
@@ -51,7 +51,7 @@ class Application {
 	/**
 	 * WebFinger discovery filter callback.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * @param array  $jrd The jrd array.
 	 * @param string $uri The WebFinger resource.
@@ -80,7 +80,7 @@ class Application {
 	/**
 	 * Returns the Application actor ID (URL).
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * @return string The Application ID.
 	 */
@@ -91,7 +91,7 @@ class Application {
 	/**
 	 * Returns the pretty URL for the Application actor.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * @return string The Application URL.
 	 */
@@ -102,7 +102,7 @@ class Application {
 	/**
 	 * Returns the WebFinger identifier for the Application.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * @return string The WebFinger identifier (e.g. application@example.com).
 	 */
@@ -113,7 +113,7 @@ class Application {
 	/**
 	 * Returns the icon for the Application.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * @return string[] The icon array with 'type' and 'url'.
 	 */
@@ -124,7 +124,7 @@ class Application {
 	/**
 	 * Returns the published date of the Application.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * @return string The published date in RFC3339 format.
 	 */
@@ -157,7 +157,7 @@ class Application {
 	/**
 	 * Returns the key ID for HTTP signatures.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * @return string The key ID.
 	 */
@@ -168,7 +168,7 @@ class Application {
 	/**
 	 * Returns the public key PEM for the Application.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * @return string|null The public key PEM.
 	 */
@@ -180,7 +180,7 @@ class Application {
 	/**
 	 * Returns the private key for the Application.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * @return string|null The private key.
 	 */
@@ -192,7 +192,7 @@ class Application {
 	/**
 	 * Returns the key pair for the Application.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * @return array The key pair with 'public_key' and 'private_key'.
 	 */
@@ -208,7 +208,7 @@ class Application {
 	/**
 	 * Checks for legacy key pair options.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * @return array|false The key pair or false.
 	 */
@@ -244,7 +244,7 @@ class Application {
 	/**
 	 * Check if the URI matches the Application actor and return WebFinger data.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * Handles the following URI formats:
 	 * - acct:application@example.com / application@example.com
@@ -281,7 +281,7 @@ class Application {
 	/**
 	 * Check if a URI refers to the Application actor.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * @param string $uri The URI to check.
 	 *
@@ -296,14 +296,36 @@ class Application {
 
 		list( $identifier, $host ) = $identifier_and_host;
 
-		// The resource must point at this site, or at its pre-migration host.
-		$host = normalize_host( $host );
-		if ( normalize_host( home_host() ) !== $host && normalize_host( \get_option( 'activitypub_old_host' ) ) !== $host ) {
+		/*
+		 * The resource must point at this site, or at its pre-migration host. Both sides are folded:
+		 * the requested host is whatever the caller typed, and the stored ones are whatever an admin did.
+		 */
+		$host = normalize_host( fold_host( $host ) );
+
+		// A host of `.` or `[]` folds away to nothing, which would otherwise match an unset old host.
+		if ( '' === $host ) {
+			return false;
+		}
+
+		if ( normalize_host( fold_host( home_host() ) ) !== $host && normalize_host( fold_host( \get_option( 'activitypub_old_host' ) ) ) !== $host ) {
 			return false;
 		}
 
 		// URL forms: the REST actor ID or the pretty /@application profile path.
 		if ( false !== \strpos( $identifier, '://' ) ) {
+			/*
+			 * Fold the scheme and authority, which are case-insensitive, before comparing. The path
+			 * keeps its case. Without this the host guard above accepts a spelling that this then
+			 * rejects.
+			 */
+			$identifier = \preg_replace_callback(
+				'#^[a-zA-Z][a-zA-Z0-9+.\-]*://[^/?\#]+#',
+				static function ( $authority ) {
+					return \strtolower( $authority[0] );
+				},
+				$identifier
+			);
+
 			$identifier = normalize_url( $identifier );
 
 			return normalize_url( self::get_id() ) === $identifier

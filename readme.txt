@@ -2,8 +2,8 @@
 Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaformat, nuriapena, cavalierlife, andremenrath
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
-Tested up to: 7.0
-Stable tag: 9.0.2
+Tested up to: 7.1
+Stable tag: 9.3.1
 Requires PHP: 7.4
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -117,6 +117,110 @@ For reasons of data protection, it is not possible to see the followers of other
 
 == Changelog ==
 
+### 9.3.1 - 2026-09-02
+#### Security
+- Links to remote profiles in the Followers and Following blocks are now limited to regular web addresses when paging through the list.
+- Replies cached on posts in the blog profile's reader feed are no longer readable by logged-out visitors through the WordPress REST API.
+- Signatures on incoming requests are now checked against the address the request was actually sent to.
+
+### 9.3.0 - 2026-09-02
+#### Security
+- Block markup in posts from remote accounts is now removed before the post is saved.
+- Follow, reply and reaction links advertised by other Fediverse servers now have to be regular web addresses.
+- Followers, cached remote profiles, and reader posts are no longer readable by logged-out visitors through the WordPress REST API, and the setting that hides your follower list is now honoured everywhere.
+- Inline styles are now removed from posts and profiles that come from remote accounts.
+- Posts from remote accounts are now shown in the Social Web reader exactly as the site stored them.
+- Replies from remote accounts are now filtered before they are saved when an administrator imports them through search.
+
+#### Added
+- Add a notification setting to turn off emails about likes, reposts, and quotes without silencing real comments and replies.
+- Add the Fediverse and ActivityPub logos to the block editor's icon library on WordPress 7.1 and newer.
+- Federate podcast episodes published with Jetpack, including their audio file and cover art.
+
+#### Changed
+- Enable RFC 9421 HTTP Message Signatures by default.
+
+#### Fixed
+- Apps connected through the ActivityPub API now use the standard ActivityPub API permission names. Fetching remote content through your site is treated as reading rather than posting, so an app needs read permission for it.
+- Apps now see the real error when a post they open through your site is missing, instead of a generic failure.
+- Comment author names are no longer altered on comments that did not come from the fediverse.
+- Fixed a crash that could fill the error log when another server edited a reply to a post that is no longer shared to the Fediverse.
+- Fixed an error that could break embeds of Fediverse posts whose author was sent in an unexpected format.
+- Fixed an error that could occur when looking up a profile on another Fediverse server that sends back an unexpected response.
+- Fixed backslashes disappearing from titles and content in posts from remote accounts.
+- Fixed responses to ActivityPub addresses written with different capitalisation not being cached correctly.
+- Fixed the Application actor not being found when its address was written with different capitalisation.
+- Fixed the Mastodon importer creating duplicate posts when an archive was imported a second time.
+- Fixed titles, summaries, captions and display names from remote accounts being stored with stray markup.
+- Imported Mastodon media descriptions now have unsafe HTML removed before they are saved.
+- Imported Mastodon replies now have unsafe HTML removed before they are saved as comments.
+- Improve how blocked accounts are matched.
+- Improve permission checks for third-party apps connected through the ActivityPub API.
+- Improve validation of incoming activities from other servers.
+- Screen readers now announce errors in the follow, reply and reaction dialogs.
+- Text inside hidden page elements, like invisible dialog pop-ups, no longer shows up in posts shared to the Fediverse.
+- The blog profile can be found again from other Fediverse servers on sites that also run Polylang.
+
+### 9.2.2 - 2026-08-11
+#### Fixed
+- Fixed avatars and emoji occasionally failing to cache, and the file warnings that came with it.
+- Fixed deletions from Mastodon and other servers not removing the corresponding comment on your site.
+- Fixed some styles not loading on the Fediverse admin screens and in the Followers and Following blocks.
+- Fixed the editor warning about unsaved changes right after saving a post with an older date.
+
+### 9.2.1 - 2026-08-03
+#### Fixed
+- Fixed duplicate entries and failed undo actions for activities received from other WordPress sites.
+- Fixed posts and profiles not being found on Mastodon and other Fediverse software, which happened when a request asked for ActivityPub data but also accepted HTML as a low-priority fallback.
+- Fixed remote profiles and followers not being found when their address contains unusual characters.
+- Improved checks on boosted content so it is only accepted from the server that published it.
+- Improve escaping of embedded link URLs in federated content.
+- Improve permission checks for admin-only actions.
+- Improve validation of incoming federated activities so the signing key and referenced objects are bound to the sender.
+
+### 9.2.0 - 2026-07-31
+#### Changed
+- ActivityPub responses are now served only to clients that ask for ActivityPub data and nothing else, which keeps that data out of page caches meant for regular web pages.
+- Only users enabled for ActivityPub can obtain and use OAuth access tokens.
+
+#### Removed
+- Remove support for the WP REST Cache plugin.
+
+#### Fixed
+- Hide the heading on the Followers and Following blocks when its text is cleared, matching the Reactions block.
+- Under Authorized Fetch, ActivityPub responses are no longer stored by page caches such as LiteSpeed or Surge.
+
+### 9.1.0 - 2026-07-22
+#### Security
+- Ensure apps you connect can only act within the access you granted them, and not make wider changes to your site.
+- Ensure remote profiles and content are served from the address they claim before storing them.
+- Fix a security issue where a remote actor's profile link could run scripts in the admin area.
+- Ignore an incoming follow request whose actor resolves to a different account than the one that sent it.
+
+#### Added
+- Add a filter that allows federating with servers on private or internal networks.
+- Add an actor autocomplete endpoint so Fediverse apps can offer typeahead search when mentioning people.
+- Federate the episode summary for Podlove Podcast Publisher episodes.
+
+#### Changed
+- Improve reliability of the Social Web admin screen loading.
+- Improve the internal handling of the Application actor used for server-to-server requests.
+
+#### Fixed
+- Ensure a follow can only be declined by the account you followed.
+- Fixed using the correct cache representation in Surge config
+- Fix follow requests from some fediverse services staying pending after they are accepted.
+- Fix likes from some accounts being recorded as multiple duplicate comments.
+- Fix posts being removed from the Fediverse when edited while scheduled for a future publish date.
+- Fix repeated deliveries of a like or repost creating new comments after the original was marked as spam or moved to the trash.
+- Fix Starter Kit imports failing on Fediverse servers that require signed requests.
+- Fix the scheduled refresh of remote profiles so it actually re-fetches from the remote server. Previously, stale avatars and bios for commenters never updated until they sent a new activity to your site.
+- Fix URLs with multiple query parameters (such as avatars, images, profile links, and podcast media) being corrupted in content sent to the Fediverse.
+- Prevent caching non-actor objects (such as notes) as remote profiles.
+- Refresh cached remote profiles in place during scheduled updates to avoid creating duplicate copies.
+- Show the Fediverse Preview for scheduled posts instead of the regular post preview.
+- Stop storing responses from remote servers in the database when they were requested uncached.
+
 ### 9.0.2 - 2026-06-29
 #### Fixed
 - Improve handling of content received from other servers.
@@ -177,9 +281,13 @@ See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activityp
 
 == Upgrade Notice ==
 
-= 9.0.0 =
+= 9.3.0 =
 
-Posts you switch to draft, pending, private, or password-protected are now fully removed from the Fediverse, so unpublished content no longer lingers on other servers. Note that re-publishing may not restore them on some platforms.
+Posts sent to other servers are now signed with the newer RFC 9421 standard by default, so if deliveries to one server stop arriving, turn it off again in the Advanced tab of the ActivityPub settings, which you can show from Screen Options.
+
+= 9.2.0 =
+
+Support for the WP REST Cache plugin has been removed. If you use it, ActivityPub pages are no longer cached by it, but everything else works as before.
 
 == Installation ==
 

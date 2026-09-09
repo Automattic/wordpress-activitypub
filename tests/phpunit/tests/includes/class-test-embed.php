@@ -296,6 +296,112 @@ class Test_Embed extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test get_html_for_object when attributedTo is a non-string value.
+	 *
+	 * Per the ActivityStreams spec, `attributedTo` may be a string, an embedded
+	 * actor object, or a list of references. When it arrives as an array it must
+	 * be normalized to a URI before reaching the template, otherwise esc_url()
+	 * fatals with "Argument #1 ($string) must be of type string, array given".
+	 *
+	 * @covers ::get_html_for_object
+	 *
+	 * @dataProvider data_attributed_to_non_string
+	 *
+	 * @param mixed  $attributed_to The attributedTo value to test.
+	 * @param string $expected_url  The URI the author link should resolve to.
+	 */
+	public function test_get_html_for_object_with_non_string_attributed_to( $attributed_to, $expected_url ) {
+		// Avoid any remote fetch for the author object.
+		$filter = static function () {
+			return new \WP_Error( 'http_request_failed', 'Connection failed' );
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$object = array(
+			'id'           => 'https://example.com/post/5',
+			'url'          => 'https://example.com/post/5',
+			'content'      => 'Test content with non-string attributedTo.',
+			'attributedTo' => $attributed_to,
+		);
+
+		// This should not throw a fatal error in esc_url().
+		$result = Embed::get_html_for_object( $object );
+
+		$this->assertStringContainsString( 'Test content with non-string attributedTo.', $result );
+		$this->assertStringContainsString( $expected_url, $result );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+	}
+
+	/**
+	 * Data provider for test_get_html_for_object_with_non_string_attributed_to.
+	 *
+	 * @return array[]
+	 */
+	public function data_attributed_to_non_string() {
+		return array(
+			'list of URIs'          => array(
+				array( 'https://example.com/author/5' ),
+				'https://example.com/author/5',
+			),
+			'embedded actor object' => array(
+				array(
+					'type' => 'Person',
+					'id'   => 'https://example.com/author/6',
+					'name' => 'Embedded Author',
+				),
+				'https://example.com/author/6',
+			),
+		);
+	}
+
+	/**
+	 * Test get_html_for_object when a fetched author's icon URL is a non-string value.
+	 *
+	 * The remote author object is untrusted input too: its `icon.url` may be a Link
+	 * object or a list. It must be normalized before reaching esc_url() in the template.
+	 *
+	 * @covers ::get_html_for_object
+	 */
+	public function test_get_html_for_object_with_non_string_author_icon_url() {
+		// Mock the author fetch to return an icon whose URL is a Link object rather than a string.
+		$filter = static function ( $pre, $url_or_object ) {
+			$url = \Activitypub\object_to_uri( $url_or_object );
+			if ( 'https://example.com/author/7' === $url ) {
+				return array(
+					'id'   => 'https://example.com/author/7',
+					'type' => 'Person',
+					'name' => 'Author With Link Icon',
+					'icon' => array(
+						'type' => 'Image',
+						'url'  => array(
+							'type' => 'Link',
+							'href' => 'https://example.com/avatar7.png',
+						),
+					),
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
+
+		$object = array(
+			'id'           => 'https://example.com/post/7',
+			'url'          => 'https://example.com/post/7',
+			'content'      => 'Test content with non-string author icon URL.',
+			'attributedTo' => 'https://example.com/author/7',
+		);
+
+		// This should not throw a fatal error in esc_url().
+		$result = Embed::get_html_for_object( $object );
+
+		$this->assertStringContainsString( 'Test content with non-string author icon URL.', $result );
+		$this->assertStringContainsString( 'https://example.com/avatar7.png', $result );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+	}
+
+	/**
 	 * Test get_html_for_object webfinger fallback when author has no preferredUsername.
 	 *
 	 * @covers ::get_html_for_object

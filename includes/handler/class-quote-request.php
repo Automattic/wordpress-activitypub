@@ -14,6 +14,7 @@ use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Remote_Actors;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 use function Activitypub\user_can_activitypub;
 
@@ -328,6 +329,12 @@ class Quote_Request {
 		}
 
 		if ( ! isset( $activity['actor'], $activity['object'], $activity['instrument'] ) ) {
+			return false;
+		}
+
+		// The instrument is the quoting object, authored by the actor, so it must live on the
+		// actor's host. Otherwise a remote server could bind a third-party reference to a local post.
+		if ( ! is_same_host( $activity['actor'], $activity['instrument'] ) ) {
 			return false;
 		}
 

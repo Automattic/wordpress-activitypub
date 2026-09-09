@@ -243,6 +243,159 @@ function object_to_uri( $data ) {
 }
 
 /**
+ * Check whether two references point at the same actor.
+ *
+ * Both values are resolved to their canonical URI via object_to_uri() before
+ * comparison. Empty references never match, so a missing actor can never be
+ * mistaken for a match.
+ *
+ * @param array|object|string $a The first actor reference.
+ * @param array|object|string $b The second actor reference.
+ *
+ * @return bool True when both resolve to the same non-empty URI.
+ */
+function is_same_actor( $a, $b ) {
+	$a = object_to_uri( $a );
+	$b = object_to_uri( $b );
+
+	return ! empty( $a ) && ! empty( $b ) && $a === $b;
+}
+
+/**
+ * Check whether two references live on the same host.
+ *
+ * Both values are resolved to their canonical URI via object_to_uri(), then
+ * their hosts are compared case-insensitively. Empty references, or references
+ * without a host, never match.
+ *
+ * @param array|object|string $a The first reference.
+ * @param array|object|string $b The second reference.
+ *
+ * @return bool True when both resolve to a URI on the same host.
+ */
+function is_same_host( $a, $b ) {
+	$host_a = \wp_parse_url( (string) object_to_uri( $a ), PHP_URL_HOST );
+	$host_b = \wp_parse_url( (string) object_to_uri( $b ), PHP_URL_HOST );
+
+	return ! empty( $host_a ) && ! empty( $host_b ) && \strtolower( $host_a ) === \strtolower( $host_b );
+}
+
+/**
+ * Whether an object is served under its own canonical id.
+ *
+ * An object is only trustworthy to cache when its own `id` is the URL it was
+ * actually served from: otherwise one host could serve a document — and its
+ * public key — under another host's id. Reads the raw `id` attribute only
+ * (never the `url`/`href` fallback that object_to_uri() applies), because the
+ * cache is keyed on `id`, so "is this canonical?" must ask the same field the
+ * write uses. The comparison ignores the URL fragment and a trailing slash;
+ * everything else (scheme, host, port, path, query) must match exactly.
+ * Host-level equality is deliberately NOT enough — any different id on the same
+ * host is still a distinct cache entry that a document served elsewhere must not write.
+ *
+ * @param array|string $item The fetched object, or its id.
+ * @param string       $url  The URL the object was served from.
+ *
+ * @return bool True when the object's id is the canonical URL it was served from.
+ */
+function id_matches_url( $item, $url ) {
+	if ( \is_array( $item ) ) {
+		$id = isset( $item['id'] ) && \is_string( $item['id'] ) ? $item['id'] : '';
+	} elseif ( \is_string( $item ) ) {
+		$id = $item;
+	} else {
+		$id = '';
+	}
+
+	$id  = \strip_fragment_from_url( $id );
+	$url = \strip_fragment_from_url( (string) $url );
+
+	if ( '' === $id || '' === $url ) {
+		return false;
+	}
+
+	return \untrailingslashit( $id ) === \untrailingslashit( $url );
+}
+
+/**
+ * Normalize an actor URI so two spellings of the same identity compare equal.
+ *
+ * Folds only what RFC 3986 calls case-insensitive, the scheme and host, plus a default port
+ * and a trailing slash, and drops the fragment. Path and query keep their case, and `http`
+ * stays distinct from `https`. Userinfo is dropped, so a few technically distinct URIs compare
+ * equal, which errs towards matching a block rather than missing one.
+ *
+ * Deliberately not used by `id_matches_url()`, which guards a cache write keyed on the exact
+ * id: folding there would confirm a document under one spelling and store it under another.
+ * A mismatch there is not a rejection, {@see \Activitypub\Http::get_remote_object()} re-fetches
+ * the declared id and requires that to self-confirm, so the strictness costs one request rather
+ * than refusing a document that spells its own host differently.
+ *
+ * @since 9.3.0
+ *
+ * @param string $uri The actor URI.
+ *
+ * @return string The normalized URI, or an empty string when there is nothing to compare.
+ */
+function normalize_actor_uri( $uri ) {
+	$uri = \is_string( $uri ) ? \trim( $uri ) : '';
+
+	if ( '' === $uri ) {
+		return '';
+	}
+
+	/*
+	 * Cut at the first `#`, which is the only place a fragment can start, rather than through
+	 * `strip_fragment_from_url()`, which rebuilds from parsed parts and so leaves a hostless
+	 * identifier alone. Without this a fragment on a handle survives normalization and
+	 * `acct:user@example.com#x` slips past a block on `acct:user@example.com`. The host branch
+	 * never re-appends one either way.
+	 */
+	$fragment = \strpos( $uri, '#' );
+
+	if ( false !== $fragment ) {
+		$uri = \substr( $uri, 0, $fragment );
+	}
+
+	$parts = \wp_parse_url( $uri );
+
+	/*
+	 * A handle has no parsable host, so its own host half is folded on its own. Anything else
+	 * without one is malformed and is compared as it came in.
+	 */
+	if ( empty( $parts['host'] ) ) {
+		// `acct:` and a leading `@` are spellings of the same handle, so they are dropped before
+		// comparing. The local part keeps its case; only the host half is folded.
+		$handle = \preg_replace( '/^acct:/i', '', $uri );
+		$handle = \ltrim( $handle, '@' );
+
+		if ( \preg_match( '/^(.*@)([^@]+)$/', $handle, $parsed ) ) {
+			return $parsed[1] . fold_host( $parsed[2] );
+		}
+
+		return \untrailingslashit( $uri );
+	}
+
+	static $default = array(
+		'http'  => 80,
+		'https' => 443,
+	);
+
+	$scheme = \strtolower( $parts['scheme'] ?? '' );
+
+	// A port that is the scheme's default is the same address written two ways.
+	$is_default = isset( $parts['port'] ) && \array_key_exists( $scheme, $default ) && $default[ $scheme ] === (int) $parts['port'];
+	$port       = isset( $parts['port'] ) && ! $is_default ? ':' . (int) $parts['port'] : '';
+
+	// The trailing slash is folded on the path rather than the whole URI so a query cannot hide it.
+	// A scheme-relative reference keeps its `//`; emitting `://` would match nothing.
+	$authority  = ( '' === $scheme ? '//' : $scheme . '://' ) . fold_host( $parts['host'] );
+	$normalized = $authority . $port . \untrailingslashit( $parts['path'] ?? '' );
+
+	return isset( $parts['query'] ) ? $normalized . '?' . $parts['query'] : $normalized;
+}
+
+/**
  * Check if an `$data` is an Activity.
  *
  * @see https://www.w3.org/ns/activitystreams#activities

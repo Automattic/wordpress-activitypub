@@ -168,6 +168,39 @@ class Test_Followers extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A Follow whose actor URL resolves to a document on a different host must not
+	 * record that third party — who never sent the Follow — as a follower.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_rejects_cross_host_resolved_actor() {
+		$mismatched_url = 'https://other.example/mismatched';
+		$canonical      = 'https://canonical.example/users/alice';
+
+		$mock = function ( $pre, $actor ) use ( $mismatched_url, $canonical ) {
+			if ( $actor === $mismatched_url ) {
+				return array(
+					'id'                => $canonical,
+					'type'              => 'Person',
+					'inbox'             => 'https://other.example/inbox',
+					'preferredUsername' => 'alice',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $mock, 5, 2 );
+
+		$result = Followers::add( 1, $mismatched_url );
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock, 5 );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'activitypub_follower_host_mismatch', $result->get_error_code() );
+		$this->assertWPError( Remote_Actors::get_by_uri( $canonical ), 'The mismatched follower must not be cached.' );
+		$this->assertEmpty( Followers::get_many( 1 ), 'No follower row must be created.' );
+	}
+
+	/**
 	 * Tests get_follower.
 	 *
 	 * @covers ::get_follower

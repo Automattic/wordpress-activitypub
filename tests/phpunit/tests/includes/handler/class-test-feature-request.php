@@ -80,6 +80,23 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Test that validate_object rejects an instrument hosted off the actor's domain.
+	 *
+	 * @covers ::validate_object
+	 */
+	public function test_validate_object_fails_for_cross_host_instrument() {
+		$activity               = $this->create_feature_request_activity();
+		$activity['instrument'] = 'https://victim.example/users/alice/featured/1';
+
+		$request = new \WP_REST_Request( 'POST', '/inbox' );
+		$request->set_body( wp_json_encode( $activity ) );
+		$request->set_header( 'Content-Type', 'application/json' );
+
+		$valid = Feature_Request::validate_object( true, 'object', $request );
+		$this->assertFalse( $valid );
+	}
+
+	/**
 	 * Test that validate_object passes through unrelated activity types unchanged.
 	 *
 	 * @covers ::validate_object

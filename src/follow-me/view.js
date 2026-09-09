@@ -2,6 +2,7 @@ import { store, getContext, getElement, getConfig } from '@wordpress/interactivi
 import { withSyncEvent } from '../shared/with-sync-event';
 import { getBlockStyles, getPopupStyles } from './button-style';
 import { createModalStore } from '../shared/modal';
+import { isSafeUrl } from '../shared/safe-url';
 
 createModalStore( 'activitypub/follow-me' );
 
@@ -137,8 +138,14 @@ const { actions, callbacks } = store( 'activitypub/follow-me', {
 				// Set opening state.
 				context.isLoading = false;
 
-				// Open the remote follow URL in a new tab.
-				window.open( response.url, '_blank' );
+				// The URL comes from a template the remote server advertised.
+				if ( ! isSafeUrl( response.url ) ) {
+					context.isError = true;
+					context.errorMessage = i18n.genericError;
+					return;
+				}
+
+				window.open( response.url, '_blank', 'noopener,noreferrer' );
 
 				// Close the modal after opening the URL.
 				actions.closeModal( new Event( 'click' ) );
@@ -185,22 +192,7 @@ const { actions, callbacks } = store( 'activitypub/follow-me', {
 			// Check if the string starts with '@' and contains a valid URL.
 			const parts = string.replace( /^@/, '' ).split( '@' );
 
-			return parts.length === 2 && callbacks.isUrl( `https://${ parts[ 1 ] }` );
-		},
-
-		/**
-		 * Checks if a string is a valid URL.
-		 *
-		 * @param {string} string String to check.
-		 * @return {boolean} True if string is a valid URL, false otherwise.
-		 */
-		isUrl( string ) {
-			try {
-				new URL( string );
-				return true;
-			} catch ( _ ) {
-				return false;
-			}
+			return parts.length === 2 && isSafeUrl( `https://${ parts[ 1 ] }` );
 		},
 
 		/**

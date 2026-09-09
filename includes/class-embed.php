@@ -49,9 +49,10 @@ class Embed {
 	 * @return string The embed HTML.
 	 */
 	public static function get_html_for_object( $activity_object, $inline_css = true ) {
-		$author_name = $activity_object['attributedTo'] ?? '';
-		$avatar_url  = $activity_object['icon']['url'] ?? '';
-		$author_url  = $author_name;
+		// `attributedTo` may be a string, an embedded actor object, or a list of references. Normalize it to a URI string before use.
+		$author_url  = object_to_uri( $activity_object['attributedTo'] ?? '' ) ?? '';
+		$avatar_url  = object_to_uri( $activity_object['icon']['url'] ?? '' ) ?? '';
+		$author_name = $author_url;
 
 		// If we don't have an avatar URL, but we have an author URL, try to fetch it.
 		if ( ! $avatar_url && $author_url ) {
@@ -59,7 +60,7 @@ class Embed {
 			if ( \is_wp_error( $author ) ) {
 				$author = array();
 			} else {
-				$avatar_url  = $author['icon']['url'] ?? '';
+				$avatar_url  = object_to_uri( $author['icon']['url'] ?? '' ) ?? '';
 				$author_name = empty( $author['name'] ) ? $author_name : $author['name'];
 			}
 		}

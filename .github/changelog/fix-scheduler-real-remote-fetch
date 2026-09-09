@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fix the scheduled refresh of remote profiles so it actually re-fetches from the remote server. Previously, stale avatars and bios for commenters never updated until they sent a new activity to your site.

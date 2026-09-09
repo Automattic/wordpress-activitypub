@@ -445,6 +445,30 @@ class Test_Followers_Controller extends \Activitypub\Tests\Test_REST_Controller_
 	}
 
 	/**
+	 * The sync response is disclosed only to the signing peer, so it must carry no-store and never be
+	 * stored by a shared cache, regardless of the global Authorized Fetch setting.
+	 *
+	 * @covers ::get_partial_followers
+	 */
+	public function test_sync_response_is_never_shared_cached() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$post_id = $this->seed_follower_on_host( 'peer.example' );
+		Followers::add( $user_id, 'https://peer.example/users/alice' );
+
+		$request    = $this->build_sync_request( $user_id, 'https://peer.example', 'https://peer.example/users/peer' );
+		$controller = new \Activitypub\Rest\Followers_Controller();
+		$response   = $controller->get_partial_followers( $request );
+
+		\wp_delete_post( $post_id, true );
+		\delete_option( 'activitypub_actor_mode' );
+
+		$this->assertNotWPError( $response );
+		$this->assertSame( 'private, no-store, max-age=0', $response->get_headers()['Cache-Control'] );
+	}
+
+	/**
 	 * A percent-encoded authority that decodes to a registered peer host must
 	 * pass the signer-host match AND return the matching follower set. The
 	 * route accepts percent-encoded reg-names, so the handler has to canonicalise

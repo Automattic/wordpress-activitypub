@@ -73,10 +73,34 @@ class Test_Webfinger extends \WP_UnitTestCase {
 		return array(
 			array( 'author@example.org', 'acct:author@example.org', 'example.org' ),
 			array( 'acct:author@example.org', 'acct:author@example.org', 'example.org' ),
+			// Schemes are case-insensitive, so this must not fall through to URL parsing.
+			array( 'ACCT:author@EXAMPLE.org', 'ACCT:author@EXAMPLE.org', 'example.org' ),
+			// The host is after the last `@`, not the first.
+			array( 'acct:a@b@example.org', 'acct:a@b@example.org', 'example.org' ),
 			array( 'https://example.org/@pfefferle', 'https://example.org/@pfefferle', 'example.org' ),
 			array( 'mailto:pfefferle@example.org', 'mailto:pfefferle@example.org', 'example.org' ),
 			array( 'xmpp:pfefferle@example.com', 'xmpp:pfefferle@example.com', 'example.com' ),
+			array( '//example.org/@pfefferle', '//example.org/@pfefferle', 'example.org' ),
+			// Brackets are kept: this host is also used to build WebFinger and intent URLs.
+			array( 'https://[2001:db8::1]/@pfefferle', 'https://[2001:db8::1]/@pfefferle', '[2001:db8::1]' ),
+			array( 'ftp://example.org/@pfefferle', 'ftp://example.org/@pfefferle', 'example.org' ),
+			// A digit or hyphen in the scheme must not make this read as a handle.
+			array( 'web3://example.org/@pfefferle', 'web3://example.org/@pfefferle', 'example.org' ),
+			array( 'view-source://example.org/x', 'view-source://example.org/x', 'example.org' ),
 		);
+	}
+
+	/**
+	 * Test that get_host() folds a host for comparison.
+	 *
+	 * @covers ::get_host
+	 */
+	public function test_get_host_folds_for_comparison() {
+		$this->assertSame( 'example.org', Webfinger::get_host( 'https://EXAMPLE.org/@pfefferle' ) );
+		$this->assertSame( 'example.org', Webfinger::get_host( 'https://example.org./@pfefferle' ) );
+		$this->assertSame( 'example.org', Webfinger::get_host( 'acct:pfefferle@Example.org.' ) );
+		$this->assertSame( '2001:db8::1', Webfinger::get_host( 'https://[2001:db8::1]/@pfefferle' ) );
+		$this->assertSame( '', Webfinger::get_host( '' ) );
 	}
 
 	/**
@@ -802,5 +826,370 @@ class Test_Webfinger extends \WP_UnitTestCase {
 			'integer'        => array( 42 ),
 			'array'          => array( array( 'user@example.com' ) ),
 		);
+	}
+
+	/**
+	 * Test that a handle's host stops at a query or fragment.
+	 *
+	 * The host is taken off the string itself for `acct:`-style identifiers, so without cutting
+	 * there `acct:user@example.com#x` carries `#x` into the host and misses a domain block on
+	 * `example.com`.
+	 *
+	 * @covers ::get_host
+	 *
+	 * @dataProvider handle_host_suffix_provider
+	 *
+	 * @param string $identifier The identifier.
+	 * @param string $expected   The expected host.
+	 */
+	public function test_get_host_cuts_query_and_fragment( $identifier, $expected ) {
+		$this->assertSame( $expected, Webfinger::get_host( $identifier ) );
+	}
+
+	/**
+	 * Data provider for handle hosts with a query or fragment.
+	 *
+	 * @return array<string, array{0:string, 1:string}>
+	 */
+	public function handle_host_suffix_provider() {
+		return array(
+			'fragment'     => array( 'acct:user@example.com#x', 'example.com' ),
+			'query'        => array( 'user@example.com?a=1', 'example.com' ),
+			'both'         => array( 'acct:user@example.com?a=1#x', 'example.com' ),
+			'plain'        => array( 'acct:user@example.com', 'example.com' ),
+			'nothing left' => array( 'user@#x', '' ),
+		);
+	}
+
+	/**
+	 * Test that non-string members of a remote document do not fatal.
+	 *
+	 * `str_starts_with()` on an array is a TypeError on PHP 8.
+	 *
+	 * @covers ::uri_to_acct
+	 */
+	public function test_uri_to_acct_ignores_non_string_members() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => array( 'acct:user@example.com' ),
+						'aliases' => array( array( 'acct:user@example.com' ), 'acct:real@example.com' ),
+					)
+				),
+			);
+		};
+
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::uri_to_acct( 'https://example.com/user' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertSame( 'acct:real@example.com', $result );
+	}
+
+	/**
+	 * Test that unexpected `links` shapes do not warn or fatal.
+	 *
+	 * @covers ::resolve
+	 *
+	 * @dataProvider unexpected_links_provider
+	 *
+	 * @param mixed  $links The `links` member the remote server returns.
+	 * @param string $code  The expected error code.
+	 */
+	public function test_resolve_ignores_unexpected_links( $links, $code ) {
+		$filter = function () use ( $links ) {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => $links,
+					)
+				),
+			);
+		};
+
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::resolve( 'user@example.com' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertWPError( $result );
+		$this->assertSame( $code, $result->get_error_code() );
+	}
+
+	/**
+	 * Data provider for unexpected `links` shapes.
+	 *
+	 * @return array[] Test parameters.
+	 */
+	public function unexpected_links_provider() {
+		return array(
+			'not an array'       => array( 'not-an-array', 'webfinger_missing_links' ),
+			// `isset()` on a string offset is false rather than fatal, so each entry is skipped.
+			'list of non-arrays' => array( array( 'x', 5, null ), 'webfinger_url_no_activitypub' ),
+			'self link no href'  => array(
+				array(
+					array(
+						'rel'  => 'self',
+						'type' => 'application/activity+json',
+					),
+				),
+				'webfinger_url_no_activitypub',
+			),
+		);
+	}
+
+	/**
+	 * Test that non-string link members do not fatal.
+	 *
+	 * `strtolower()` on an array is a TypeError on PHP 8, and a non-string template would reach
+	 * `str_replace()` in the REST controllers.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_ignores_non_string_members() {
+		$filter = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => array(
+							array(
+								'rel'      => array( 'http://ostatus.org/schema/1.0/subscribe' ),
+								'template' => 'https://example.com/a?uri={uri}',
+							),
+							array(
+								'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+								'template' => array( 'https://example.com/b?uri={uri}' ),
+							),
+						),
+					)
+				),
+			);
+		};
+
+		\add_filter( 'pre_http_request', $filter );
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertWPError( $result );
+	}
+
+	/**
+	 * Mock a WebFinger response carrying the given links.
+	 *
+	 * @param array $links The `links` array the remote server returns.
+	 *
+	 * @return callable The filter callback, for `remove_filter()`.
+	 */
+	private function mock_webfinger_links( $links ) {
+		$filter = function () use ( $links ) {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:user@example.com',
+						'links'   => $links,
+					)
+				),
+			);
+		};
+
+		\add_filter( 'pre_http_request', $filter );
+
+		return $filter;
+	}
+
+	/**
+	 * Test that intent templates with an unsafe scheme are rejected.
+	 *
+	 * @covers ::get_intent_endpoint
+	 *
+	 * @dataProvider unsafe_intent_template_provider
+	 *
+	 * @param string $template The template returned by the remote WebFinger server.
+	 */
+	public function test_get_intent_endpoint_rejects_unsafe_scheme( $template ) {
+		$filter = $this->mock_webfinger_links(
+			array(
+				array(
+					'rel'      => 'https://w3id.org/fep/3b86/like',
+					'template' => $template,
+				),
+			)
+		);
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'webfinger_missing_intent_endpoint', $result->get_error_code() );
+	}
+
+	/**
+	 * Data provider for unsafe intent templates.
+	 *
+	 * @return array[] Test parameters.
+	 */
+	public function unsafe_intent_template_provider() {
+		return array(
+			'javascript scheme'           => array( 'javascript:alert(1)//{uri}' ),
+			'javascript scheme uppercase' => array( 'JavaScript:alert(1)//{uri}' ),
+			'javascript scheme padded'    => array( "  \tjavascript:alert(1)//{uri}" ),
+			'data scheme'                 => array( 'data:text/html;base64,PHNjcmlwdD48L3NjcmlwdD4=' ),
+			'blob scheme'                 => array( 'blob:https://example.com/1234' ),
+			'vbscript scheme'             => array( 'vbscript:msgbox(1)' ),
+			'entity encoded scheme'       => array( 'java&#115;cript:alert(1)//{uri}' ),
+			'entity encoded first char'   => array( '&#106;avascript:alert(1)//{uri}' ),
+			'entity encoded colon'        => array( 'javascript&colon;alert(1)//{uri}' ),
+			'tab inside scheme'           => array( "jav\tascript:alert(1)//{uri}" ),
+			'null byte inside scheme'     => array( "java\0script:alert(1)//{uri}" ),
+			'file scheme'                 => array( 'file:///etc/passwd' ),
+			'protocol relative'           => array( '//example.com/intent?uri={uri}' ),
+			'relative path'               => array( '/intent/follow?uri={uri}' ),
+			'scheme without host'         => array( 'https:///intent?uri={uri}' ),
+			'bad scheme with authority'   => array( 'javascript://example.com/%0aalert(1)' ),
+			'unsupported scheme'          => array( 'ftp://example.com/intent?uri={uri}' ),
+			'empty template'              => array( '' ),
+			'whitespace only'             => array( '   ' ),
+		);
+	}
+
+	/**
+	 * Test that safe intent templates are returned untouched.
+	 *
+	 * @covers ::get_intent_endpoint
+	 *
+	 * @dataProvider safe_intent_template_provider
+	 *
+	 * @param string $template The template returned by the remote WebFinger server.
+	 */
+	public function test_get_intent_endpoint_accepts_safe_scheme( $template ) {
+		$filter = $this->mock_webfinger_links(
+			array(
+				array(
+					'rel'      => 'https://w3id.org/fep/3b86/like',
+					'template' => $template,
+				),
+			)
+		);
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertSame( $template, $result );
+	}
+
+	/**
+	 * Data provider for safe intent templates.
+	 *
+	 * Schemes are case-insensitive, so an uppercase one must survive the protocol check.
+	 *
+	 * @return array[] Test parameters.
+	 */
+	public function safe_intent_template_provider() {
+		return array(
+			'https scheme'      => array( 'https://example.com/intent/like?object={object}' ),
+			'http scheme'       => array( 'http://example.com/intent/like?object={object}' ),
+			'uppercase scheme'  => array( 'HTTPS://example.com/intent/like?object={object}' ),
+			'mixed case scheme' => array( 'Https://example.com/intent/like?object={object}' ),
+			'non standard port' => array( 'https://example.com:8443/intent?uri={uri}' ),
+			'punycode host'     => array( 'https://xn--80ak6aa92e.com/intent?uri={uri}' ),
+		);
+	}
+
+	/**
+	 * Test that a valid link still wins when a sibling has non-string members.
+	 *
+	 * `test_get_intent_endpoint_ignores_non_string_members()` covers the all-bad case; this one
+	 * pins that skipping a bad entry does not abandon the rest of the list.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_returns_valid_sibling_of_non_string_members() {
+		$filter = $this->mock_webfinger_links(
+			array(
+				array(
+					'rel'      => array( 'https://w3id.org/fep/3b86/like' ),
+					'template' => 'https://example.com/nope?uri={uri}',
+				),
+				array(
+					'rel'      => 'https://w3id.org/fep/3b86/like',
+					'template' => array( 'https://example.com/nope?uri={uri}' ),
+				),
+				array(
+					'rel'      => 'https://w3id.org/fep/3b86/like',
+					'template' => 'https://example.com/yes?uri={uri}',
+				),
+			)
+		);
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like' );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertSame( 'https://example.com/yes?uri={uri}', $result );
+	}
+
+	/**
+	 * Test that an unsafe OStatus template falls through to the last-resort URL.
+	 *
+	 * A template with a disallowed scheme is dropped, but a broken remote server should not break
+	 * the flow either: the Mastodon-compatible fallback wins.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_unsafe_ostatus_falls_back() {
+		$filter = $this->mock_webfinger_links(
+			array(
+				array(
+					'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+					'template' => 'javascript:alert(1)//{uri}',
+				),
+			)
+		);
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like', true );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertSame( 'https://example.com/authorize_interaction?uri={uri}', $result );
+	}
+
+	/**
+	 * Test that a safe template is still returned when a sibling link is unsafe.
+	 *
+	 * @covers ::get_intent_endpoint
+	 */
+	public function test_get_intent_endpoint_keeps_safe_sibling_template() {
+		$filter = $this->mock_webfinger_links(
+			array(
+				array(
+					'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+					'template' => 'javascript:alert(1)//{uri}',
+				),
+				array(
+					'rel'      => 'https://w3id.org/fep/3b86/object',
+					'template' => 'https://example.com/intent/object?uri={uri}',
+				),
+			)
+		);
+
+		$result = Webfinger::get_intent_endpoint( 'user@example.com', 'like', true );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertSame( 'https://example.com/intent/object?uri={uri}', $result );
 	}
 }

@@ -150,12 +150,13 @@ class Test_Reject extends \WP_UnitTestCase {
 		$this->assertContains( (string) $user_id, $pending );
 
 		// Prepare reject array as expected by handle_reject, using the real outbox guid.
+		// The sender (top-level actor) must be the actor that was followed.
 		$reject = array(
 			'type'   => 'Reject',
-			'actor'  => 'https://example.net/actor/123',
+			'actor'  => $object_guid,
 			'object' => array(
 				'id'     => $outbox_guid,
-				'actor'  => 'https://example.com/actor/123',
+				'actor'  => 'https://example.com/follower/123',
 				'type'   => 'Follow',
 				'object' => $object_guid,
 			),
@@ -173,5 +174,59 @@ class Test_Reject extends \WP_UnitTestCase {
 		// Assert: user_id is STILL in _activitypub_followed_by_pending.
 		$pending = \get_post_meta( $post_id, Following::PENDING_META_KEY, false );
 		$this->assertNotContains( (string) $user_id, $pending );
+	}
+
+	/**
+	 * A Reject whose sender is not the followed actor must be ignored.
+	 *
+	 * Guards against any peer cancelling a user's Follow of an unrelated actor
+	 * by referencing that pending Follow's outbox GUID.
+	 */
+	public function test_handle_reject_rejects_actor_object_mismatch() {
+		$user_id     = self::$user_id;
+		$object_guid = 'https://example.com/actor/123';
+		$outbox_guid = 'https://example.com/outbox/123';
+
+		$outbox_post_id = self::factory()->post->create(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'publish',
+				'guid'        => $outbox_guid,
+			)
+		);
+
+		\add_post_meta( $outbox_post_id, '_activitypub_activity_type', 'Follow' );
+
+		// Create remote actor post the local user is following.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'post_status' => 'publish',
+				'guid'        => $object_guid,
+			)
+		);
+
+		\add_post_meta( $post_id, Following::FOLLOWING_META_KEY, (string) $user_id );
+
+		// Reject signed by an unrelated actor, pointing at the victim's Follow GUID
+		// and naming the followed actor so it would be unfollowed if unguarded.
+		$reject = array(
+			'type'   => 'Reject',
+			'actor'  => 'https://evil.example/actor/999',
+			'object' => array(
+				'id'     => $outbox_guid,
+				'actor'  => $object_guid,
+				'type'   => 'Follow',
+				'object' => $object_guid,
+			),
+		);
+
+		Reject::handle_reject( $reject, $user_id );
+
+		\clean_post_cache( $post_id );
+
+		// Assert: the follow relationship is untouched.
+		$following = \get_post_meta( $post_id, Following::FOLLOWING_META_KEY, false );
+		$this->assertContains( (string) $user_id, $following );
 	}
 }

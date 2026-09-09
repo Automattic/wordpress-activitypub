@@ -71,7 +71,7 @@ class Application_Controller extends \WP_REST_Controller {
 	/**
 	 * Retrieves the application actor profile.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return \WP_REST_Response Response object.
@@ -140,7 +140,7 @@ class Application_Controller extends \WP_REST_Controller {
 	 * The Application is a signing-only identity and does not publish
 	 * activities, so its outbox is always an empty OrderedCollection.
 	 *
-	 * @since unreleased
+	 * @since 9.1.0
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 * @return \WP_REST_Response Response object.

@@ -110,6 +110,35 @@ class Test_User extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Ampersands in avatar URLs must survive actor-JSON serialization intact.
+	 *
+	 * The esc_url() function HTML-encodes `&` to `&#038;`, which corrupts
+	 * multi-parameter URLs (e.g. Photon/Gravatar) in the machine-readable actor
+	 * document. The non-display esc_url_raw() variant keeps the ampersand as-is.
+	 *
+	 * @ticket https://github.com/Automattic/wordpress-activitypub/issues/3566
+	 * @covers ::get_icon
+	 */
+	public function test_get_icon_preserves_ampersands() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$user    = User::from_wp_user( $user_id );
+
+		$avatar_url = 'https://i0.wp.com/example.com/avatar.jpg?resize=215&ssl=1';
+		$filter     = static function ( $args ) use ( $avatar_url ) {
+			$args['url'] = $avatar_url;
+			return $args;
+		};
+		\add_filter( 'get_avatar_data', $filter );
+
+		$icon = $user->get_icon();
+
+		\remove_filter( 'get_avatar_data', $filter );
+
+		$this->assertStringContainsString( 'resize=215&ssl=1', $icon['url'], 'The ampersand must survive as a real separator.' );
+		$this->assertStringNotContainsString( '&#0', $icon['url'], 'The ampersand must not be HTML-entity-encoded in JSON output.' );
+	}
+
+	/**
 	 * Tests the get_moved_to method.
 	 *
 	 * @covers ::get_moved_to

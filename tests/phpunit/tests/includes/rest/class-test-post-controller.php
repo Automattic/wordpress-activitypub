@@ -168,15 +168,19 @@ class Test_Post_Controller extends WP_UnitTestCase {
 	/**
 	 * Test getting reactions for a post with reactions.
 	 *
+	 * @dataProvider reaction_author_provider
 	 * @covers ::get_reactions
+	 *
+	 * @param string $stored   The stored comment_author.
+	 * @param string $expected The name the response should carry.
 	 */
-	public function test_get_reactions_with_reactions() {
+	public function test_get_reactions_with_reactions( $stored, $expected ) {
 		$post_id = self::factory()->post->create();
 
 		// Create a "like" reaction.
 		$comment_data = array(
 			'comment_post_ID'      => $post_id,
-			'comment_author'       => 'Test User',
+			'comment_author'       => $stored,
 			'comment_author_url'   => 'https://example.com/user',
 			'comment_author_email' => '',
 			'comment_content'      => '',
@@ -198,9 +202,28 @@ class Test_Post_Controller extends WP_UnitTestCase {
 		$this->assertCount( 1, $data['likes']['items'] );
 
 		$item = $data['likes']['items'][0];
-		$this->assertEquals( 'Test User', $item['name'] );
+		$this->assertEquals( $expected, $item['name'] );
 		$this->assertEquals( 'https://example.com/user', $item['url'] );
 		$this->assertEquals( 'https://example.com/avatar.jpg', $item['avatar'] );
+	}
+
+	/**
+	 * Data provider for reaction author names.
+	 *
+	 * @return array[]
+	 */
+	public function reaction_author_provider() {
+		return array(
+			'plain name'     => array( 'Test User', 'Test User' ),
+
+			/*
+			 * sanitize_text_field() is what core's pre_comment_author_name chain stores, and it
+			 * escapes the bare `<` on the way in, so the column keeps the whole string.
+			 */
+			// Decoding turns `&lt;3` back into `<3`, which strip_tags() then reads as a tag and
+			// drops. Losing the tail is the price of never handing a consumer a revived tag.
+			'bare less-than' => array( \sanitize_text_field( 'A <3 shape' ), 'A' ),
+		);
 	}
 
 	/**
@@ -316,10 +339,13 @@ class Test_Post_Controller extends WP_UnitTestCase {
 
 		$item = $data['likes']['items'][0];
 
-		/* Author name must have no HTML tags and should have entities decoded. */
+		/*
+		 * The name is escaped text: no tags, and nothing that could be decoded back into
+		 * one. Consumers render it as text content, so the escaping shows through.
+		 */
 		$this->assertStringNotContainsString( '<', $item['name'], 'Tags must be stripped from author name' );
 		$this->assertStringNotContainsString( '>', $item['name'], 'Tags must be stripped from author name' );
-		$this->assertStringContainsString( '&friends', $item['name'], 'Entity-encoded ampersand should be decoded' );
+		$this->assertStringContainsString( 'friends', $item['name'], 'Legitimate text should survive' );
 
 		/* URL must reject non-HTTP(S) schemes — esc_url() returns an empty string. */
 		$this->assertSame( '', $item['url'], 'javascript: scheme must be stripped' );

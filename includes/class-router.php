@@ -166,6 +166,18 @@ class Router {
 			if ( \get_query_var( 'preview' ) ) {
 				\defined( 'ACTIVITYPUB_PREVIEW' ) || \define( 'ACTIVITYPUB_PREVIEW', true );
 
+				/*
+				 * A preview is only ever reached by someone allowed to see the unpublished post:
+				 * is_post_publicly_queryable() gates draft/pending/future on current_user_can('edit_post'),
+				 * and everyone else has already fallen through to the normal template above. The response
+				 * therefore varies by caller no matter the Authorized Fetch setting, so it must never be
+				 * stored by a shared cache and replayed to someone who cannot edit the post. Independent of
+				 * the Authorized Fetch block below, which only guards the signed-fetch path.
+				 */
+				if ( ! \headers_sent() ) {
+					\header( 'Cache-Control: private, no-store, max-age=0' );
+				}
+
 				/**
 				 * Filter the template used for the ActivityPub preview.
 				 *
@@ -184,6 +196,17 @@ class Router {
 		 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
 		 */
 		if ( $activitypub_template && use_authorized_fetch() ) {
+			/*
+			 * Under Authorized Fetch the response depends on the caller's signature: an unsigned request
+			 * is refused, a signed one gets the document. A shared cache (page cache or CDN) keys the
+			 * activity+json variant on the representation, not the signature, so it must store neither
+			 * outcome and replay it to the wrong caller. Send this before verifying so it covers the 401
+			 * and the 200 alike; `max-age=0` is what page caches such as Surge key on to skip storing.
+			 */
+			if ( ! \headers_sent() ) {
+				\header( 'Cache-Control: private, no-store, max-age=0' );
+			}
+
 			$verification = Signature::verify_http_signature( $_SERVER );
 			if ( \is_wp_error( $verification ) ) {
 				\status_header( 401 );
@@ -357,7 +380,13 @@ class Router {
 			exit;
 		}
 
-		$term_id = \get_query_var( 'term_id', null );
+		/*
+		 * Read `term_id` off the parsed request, not the query vars. WP_Query derives its own
+		 * `term_id` from any tax query on another taxonomy, and takes the raw value regardless of
+		 * the query's `field`: Polylang filters by `term_taxonomy_id`, so that number can be the
+		 * term ID of an unrelated category or tag.
+		 */
+		$term_id = $wp_query->query['term_id'] ?? null;
 		if ( $term_id ) {
 			$term = \get_term( $term_id );
 
@@ -367,16 +396,7 @@ class Router {
 				return;
 			}
 
-			/**
-			 * Filters the taxonomies supported for term redirects.
-			 *
-			 * @since 7.8.3
-			 *
-			 * @param array $supported_taxonomies Array of taxonomy names. Default array( 'category', 'post_tag' ).
-			 */
-			$supported_taxonomies = \apply_filters( 'activitypub_supported_taxonomies', array( 'category', 'post_tag' ) );
-
-			if ( ! \in_array( $term->taxonomy, $supported_taxonomies, true ) ) {
+			if ( ! is_supported_taxonomy( $term->taxonomy ) ) {
 				return;
 			}
 

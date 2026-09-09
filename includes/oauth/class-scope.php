@@ -24,19 +24,9 @@ class Scope {
 	const WRITE = 'write';
 
 	/**
-	 * Follow access scope - manage following relationships.
-	 */
-	const FOLLOW = 'follow';
-
-	/**
 	 * Push access scope - subscribe to SSE streams.
 	 */
 	const PUSH = 'push';
-
-	/**
-	 * Profile access scope - edit actor profile.
-	 */
-	const PROFILE = 'profile';
 
 	/**
 	 * All available scopes.
@@ -46,40 +36,124 @@ class Scope {
 	const ALL = array(
 		self::READ,
 		self::WRITE,
-		self::FOLLOW,
 		self::PUSH,
-		self::PROFILE,
 	);
 
 	/**
-	 * SWICG ActivityPub API Basic Profile canonical scope aliases.
+	 * Scope aliases from the SWICG ActivityPub API Basic Profile, as it stood before 2026-08-04.
 	 *
-	 * Advertised in OAuth metadata so Basic Profile clients can discover them,
-	 * and accepted in scope requests (any `activitypub:read:*` collapses to
-	 * `read`, any `activitypub:write:*` collapses to `write`). Enforcement
-	 * stays coarse: there is no per-activity-type access control yet.
+	 * Maps every alias the draft defined, including the `:sameorigin` variants, to a scope the
+	 * plugin grants. That is coarser than the draft intended: there is no per-activity access
+	 * control, so every write alias resolves to `write`, which permits any activity the actor
+	 * can post. A client asking for `activitypub:write:like` is granted deleting and blocking
+	 * along with it.
 	 *
 	 * @since 9.0.0
+	 * @since 9.3.0 Changed from a list to an alias-to-scope map.
 	 *
 	 * @var array
 	 */
 	const CANONICAL_ALIASES = array(
-		'activitypub:read:all',
-		'activitypub:write:all',
+		'activitypub:read:all'                          => self::READ,
+		'activitypub:read:local:all'                    => self::READ,
+		'activitypub:read:me:actor'                     => self::READ,
+		'activitypub:read:me:all'                       => self::READ,
+		'activitypub:read:me:followers'                 => self::READ,
+		'activitypub:read:me:following'                 => self::READ,
+		'activitypub:read:me:inbox'                     => self::READ,
+		'activitypub:read:me:liked'                     => self::READ,
+		'activitypub:read:me:outbox'                    => self::READ,
+		'activitypub:read:remote:all'                   => self::READ,
+		'activitypub:write:accept'                      => self::WRITE,
+		'activitypub:write:add'                         => self::WRITE,
+		'activitypub:write:add:sameorigin'              => self::WRITE,
+		'activitypub:write:all'                         => self::WRITE,
+		'activitypub:write:all:sameorigin'              => self::WRITE,
+		'activitypub:write:announce'                    => self::WRITE,
+		'activitypub:write:announce:sameorigin'         => self::WRITE,
+		'activitypub:write:block'                       => self::WRITE,
+		'activitypub:write:block:sameorigin'            => self::WRITE,
+		'activitypub:write:create'                      => self::WRITE,
+		'activitypub:write:create:inreplyto:sameorigin' => self::WRITE,
+		'activitypub:write:create:sameorigin'           => self::WRITE,
+		'activitypub:write:delete'                      => self::WRITE,
+		'activitypub:write:delete:inreplyto:sameorigin' => self::WRITE,
+		'activitypub:write:delete:sameorigin'           => self::WRITE,
+		'activitypub:write:flag'                        => self::WRITE,
+		'activitypub:write:flag:sameorigin'             => self::WRITE,
+		'activitypub:write:follow'                      => self::WRITE,
+		'activitypub:write:follow:sameorigin'           => self::WRITE,
+		'activitypub:write:like'                        => self::WRITE,
+		'activitypub:write:like:sameorigin'             => self::WRITE,
+		'activitypub:write:question'                    => self::WRITE,
+		'activitypub:write:reject'                      => self::WRITE,
+		'activitypub:write:remove'                      => self::WRITE,
+		'activitypub:write:remove:sameorigin'           => self::WRITE,
+		'activitypub:write:undo:all'                    => self::WRITE,
+		'activitypub:write:undo:all:sameorigin'         => self::WRITE,
+		'activitypub:write:undo:announce'               => self::WRITE,
+		'activitypub:write:undo:announce:sameorigin'    => self::WRITE,
+		'activitypub:write:undo:block'                  => self::WRITE,
+		'activitypub:write:undo:block:sameorigin'       => self::WRITE,
+		'activitypub:write:undo:follow'                 => self::WRITE,
+		'activitypub:write:undo:follow:sameorigin'      => self::WRITE,
+		'activitypub:write:undo:like'                   => self::WRITE,
+		'activitypub:write:undo:like:sameorigin'        => self::WRITE,
+		'activitypub:write:update'                      => self::WRITE,
+		'activitypub:write:update:inreplyto:sameorigin' => self::WRITE,
+		'activitypub:write:update:sameorigin'           => self::WRITE,
 	);
 
 	/**
-	 * Human-readable descriptions for each scope.
+	 * Identifier prefix for the SWICG ActivityPub API Basic Profile scopes.
 	 *
-	 * @var array
+	 * @since 9.3.0
 	 */
-	const DESCRIPTIONS = array(
-		self::READ    => 'Read actor profile, collections, and objects',
-		self::WRITE   => 'Create activities via POST to outbox',
-		self::FOLLOW  => 'Manage following relationships',
-		self::PUSH    => 'Subscribe to real-time event streams',
-		self::PROFILE => 'Edit actor profile',
+	const CANONICAL_SCOPE_PREFIX = 'https://swicg.github.io/activitypub-api/scopes#';
+
+	/**
+	 * Scope identifiers from the SWICG ActivityPub API Basic Profile, keyed by fragment.
+	 *
+	 * The Basic Profile replaced its `activitypub:*` aliases with these URL identifiers on
+	 * 2026-08-04; {@see self::CANONICAL_ALIASES} is kept for clients built before that.
+	 *
+	 * Each identifier maps to a scope the plugin grants, which is coarser than the spec intends:
+	 * the per-collection read identifiers all resolve to `read`, and the per-action write
+	 * identifiers, `follow` and `updateprofile` included, to `write`. Seven identifiers are
+	 * deliberately absent, because the plugin has nothing to grant for them: `readown` and
+	 * `reactown` describe data on the client's own server rather than this one; `uploadfiles`
+	 * needs a MediaUpload endpoint the plugin does not implement; and `addressall`,
+	 * `addresspublic`, `addressactor` and `addressfollowers` narrow who an activity may be
+	 * addressed to, which is a restriction on a write rather than a permission of its own.
+	 * Resolving those to `write` would answer a request to be limited by handing over the
+	 * unlimited version.
+	 *
+	 * @since 9.3.0
+	 */
+	const CANONICAL_SCOPES = array(
+		'readall'           => self::READ,
+		'readany'           => self::READ,
+		'readlocal'         => self::READ,
+		'readinbox'         => self::READ,
+		'readoutbox'        => self::READ,
+		'readfollowers'     => self::READ,
+		'readfollowing'     => self::READ,
+		'readliked'         => self::READ,
+		'createcontent'     => self::WRITE,
+		'updatecontent'     => self::WRITE,
+		'deletecontent'     => self::WRITE,
+		'managefollowers'   => self::WRITE,
+		'managecollections' => self::WRITE,
+		'like'              => self::WRITE,
+		'share'             => self::WRITE,
+		'block'             => self::WRITE,
+		'flag'              => self::WRITE,
+		'reactlocal'        => self::WRITE,
+		'reactany'          => self::WRITE,
+		'follow'            => self::WRITE,
+		'updateprofile'     => self::WRITE,
 	);
+
 
 	/**
 	 * Default scopes when none are requested.
@@ -96,9 +170,7 @@ class Scope {
 	/**
 	 * Validate and filter requested scopes.
 	 *
-	 * Canonical SWICG ActivityPub API Basic Profile scope names of the form
-	 * `activitypub:read:*` and `activitypub:write:*` are normalized to the
-	 * plugin's internal `read` and `write` scopes before validation.
+	 * Basic Profile identifiers are normalized to the plugin's internal scopes before validation.
 	 *
 	 * @param string|array $scopes The requested scopes (space-separated string or array).
 	 * @return array Valid scopes.
@@ -125,8 +197,8 @@ class Scope {
 	/**
 	 * Normalize canonical Basic Profile scope names to internal scopes.
 	 *
-	 * Maps any `activitypub:read:*` to {@see self::READ} and any
-	 * `activitypub:write:*` to {@see self::WRITE}. Unknown values pass through
+	 * Looks each requested scope up in {@see self::CANONICAL_ALIASES}. An exact lookup, so a
+	 * scope means the same thing wherever it appears in the request. Unknown values pass through
 	 * unchanged so they can be filtered out by the caller.
 	 *
 	 * @since 9.0.0
@@ -145,14 +217,18 @@ class Scope {
 				continue;
 			}
 
-			if ( 0 === \strpos( $scope, 'activitypub:read:' ) ) {
-				$normalized[] = self::READ;
+			if ( isset( self::CANONICAL_ALIASES[ $scope ] ) ) {
+				$normalized[] = self::CANONICAL_ALIASES[ $scope ];
 				continue;
 			}
 
-			if ( 0 === \strpos( $scope, 'activitypub:write:' ) ) {
-				$normalized[] = self::WRITE;
-				continue;
+			if ( 0 === \strpos( $scope, self::CANONICAL_SCOPE_PREFIX ) ) {
+				$fragment = \substr( $scope, \strlen( self::CANONICAL_SCOPE_PREFIX ) );
+
+				if ( isset( self::CANONICAL_SCOPES[ $fragment ] ) ) {
+					$normalized[] = self::CANONICAL_SCOPES[ $fragment ];
+					continue;
+				}
 			}
 
 			$normalized[] = $scope;
@@ -164,15 +240,23 @@ class Scope {
 	/**
 	 * Return the scope identifiers advertised in OAuth authorization-server metadata.
 	 *
-	 * Includes the plugin's internal scopes plus the SWICG Basic Profile
-	 * canonical aliases so spec-aware clients can discover them.
+	 * Includes the plugin's internal scopes plus the Basic Profile identifiers, in both the
+	 * pre-2026-08-04 alias form and the URI form that replaced it, so spec-aware clients can
+	 * discover them.
 	 *
 	 * @since 9.0.0
+	 * @since 9.3.0 Also advertises the URI-form identifiers.
 	 *
 	 * @return array Scope identifiers.
 	 */
 	public static function supported() {
-		return \array_merge( self::ALL, self::CANONICAL_ALIASES );
+		$identifiers = \array_keys( self::CANONICAL_ALIASES );
+
+		foreach ( \array_keys( self::CANONICAL_SCOPES ) as $fragment ) {
+			$identifiers[] = self::CANONICAL_SCOPE_PREFIX . $fragment;
+		}
+
+		return \array_merge( self::ALL, $identifiers );
 	}
 
 	/**
@@ -222,7 +306,9 @@ class Scope {
 	 * @return string The description or empty string if not found.
 	 */
 	public static function get_description( $scope ) {
-		return self::DESCRIPTIONS[ $scope ] ?? '';
+		$descriptions = self::get_all_with_descriptions();
+
+		return $descriptions[ $scope ] ?? '';
 	}
 
 	/**
@@ -231,7 +317,15 @@ class Scope {
 	 * @return array Associative array of scope => description.
 	 */
 	public static function get_all_with_descriptions() {
-		return self::DESCRIPTIONS;
+		/*
+		 * Built here rather than held in a constant: these are shown to the user on the consent
+		 * screen, so they have to be translated, and a constant cannot hold a translated string.
+		 */
+		return array(
+			self::READ  => \__( 'Read actor profile, collections, and objects', 'activitypub' ),
+			self::WRITE => \__( 'Create activities via POST to outbox', 'activitypub' ),
+			self::PUSH  => \__( 'Subscribe to real-time event streams', 'activitypub' ),
+		);
 	}
 
 	/**

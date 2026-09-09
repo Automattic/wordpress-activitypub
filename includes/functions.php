@@ -108,7 +108,7 @@ function site_supports_blocks() {
  * Tries the site icon first, then the custom logo, and falls back to the
  * bundled WordPress logo.
  *
- * @since unreleased
+ * @since 9.1.0
  *
  * @return array The icon array with 'type' and 'url'.
  */
@@ -137,7 +137,7 @@ function site_icon() {
 
 	return array(
 		'type' => 'Image',
-		'url'  => \esc_url( $icon_url ),
+		'url'  => \esc_url_raw( $icon_url ),
 	);
 }
 
@@ -454,4 +454,28 @@ function get_client_ip() {
 
 	// Re-validate so a misbehaving filter can't return a sentinel string that would collapse all callers into one bucket.
 	return \is_string( $ip ) && \filter_var( $ip, FILTER_VALIDATE_IP ) ? $ip : '';
+}
+
+/**
+ * Check whether terms of a taxonomy are federated.
+ *
+ * @since unreleased
+ *
+ * @param string $taxonomy The taxonomy name.
+ *
+ * @return bool True if terms of this taxonomy are federated as ActivityPub objects.
+ */
+function is_supported_taxonomy( $taxonomy ) {
+	/**
+	 * Filters the taxonomies whose terms are federated.
+	 *
+	 * Decides both what a term URL redirects to and what content negotiation answers with.
+	 *
+	 * @since 7.8.3
+	 *
+	 * @param array $supported_taxonomies Array of taxonomy names. Default array( 'category', 'post_tag' ).
+	 */
+	$supported_taxonomies = \apply_filters( 'activitypub_supported_taxonomies', array( 'category', 'post_tag' ) );
+
+	return \in_array( $taxonomy, $supported_taxonomies, true );
 }

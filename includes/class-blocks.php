@@ -394,6 +394,10 @@ class Blocks {
 			unset( $attributes['title'], $attributes['className'] );
 		} else {
 			$content = \implode( PHP_EOL, \wp_list_pluck( $block->parsed_block['innerBlocks'], 'innerHTML' ) );
+			// Hide empty headings.
+			if ( empty( \wp_strip_all_tags( $content ) ) ) {
+				$content = '';
+			}
 		}
 
 		$user_id = self::get_user_id( $attributes['selectedUser'] );
@@ -1164,7 +1168,11 @@ class Blocks {
 		if ( ! isset( $block['attrs']['url'] ) ) {
 			return $block_content;
 		}
-		return '<p><a href="' . \esc_url( $block['attrs']['url'] ) . '">' . $block['attrs']['url'] . '</a></p>';
+
+		// Escape once and reuse: the URL is also the visible link text, so it must be safe there too.
+		$url = \esc_url( $block['attrs']['url'] );
+
+		return '<p><a href="' . $url . '">' . $url . '</a></p>';
 	}
 
 	/**

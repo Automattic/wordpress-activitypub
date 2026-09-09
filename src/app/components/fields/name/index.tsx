@@ -17,6 +17,7 @@ import type { Field } from '@wordpress/dataviews/wp';
  * Internal dependencies
  */
 import type { Actor } from '../../../types';
+import { safeUrl } from '../../../utils';
 
 export const nameField: Field< Actor > = {
 	id: 'name',
@@ -26,7 +27,7 @@ export const nameField: Field< Actor > = {
 	getValue: ( { item }: { item: Actor } ): string => item.actor_info?.name || '',
 	render: ( { item }: { item: Actor } ): ReactNode => {
 		const name: string = item.actor_info?.name || '';
-		const url: string = item.actor_info?.url || '#';
+		const url: string = safeUrl( item.actor_info?.url || '' );
 
 		return (
 			<a href={ url } target="_blank" rel="noopener noreferrer" className="activitypub-name-field__link">
