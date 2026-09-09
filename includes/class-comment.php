@@ -29,6 +29,7 @@ class Comment {
 		\add_filter( 'comment_feed_where', array( static::class, 'comment_feed_where' ) );
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 2 );
 		\add_action( 'pre_get_comments', array( static::class, 'comment_query' ) );
+		\add_filter( 'get_page_of_comment_query_args', array( static::class, 'get_page_of_comment_query_args' ) );
 		\add_filter( 'pre_comment_approved', array( static::class, 'pre_comment_approved' ), 11, 2 );
 		\add_filter( 'get_avatar_comment_types', array( static::class, 'get_avatar_comment_types' ), 99 );
 		\add_action( 'update_option_activitypub_allow_likes', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
@@ -817,6 +818,45 @@ class Comment {
 
 		// Exclude likes and reposts by the ActivityPub plugin.
 		$query->query_vars['type__not_in'] = self::get_comment_type_slugs();
+	}
+
+	/**
+	 * Keeps comment page math in step with the rendered list.
+	 *
+	 * `get_page_of_comment()` counts the comments older than the given one with `type => 'all'`.
+	 * That is a non-empty type, so `comment_query()` leaves the count alone, and it is the one
+	 * value that makes core skip its own `note` exclusion too. `comments_template()` queries with
+	 * no type and gets both applied. Counting what the list does not show places the comment on
+	 * a later page than the one it renders on, so `get_comment_link()` emits a `cpage` the
+	 * comment is not on. Clearing the type puts the count on the same footing as the render.
+	 *
+	 * @param array $comment_args Arguments for the older-comments count.
+	 *
+	 * @return array Arguments with the plugin's comment types excluded.
+	 */
+	public static function get_page_of_comment_query_args( $comment_args ) {
+		// The rendered list shows everything on ActivityPub requests, so the count has to as well.
+		if ( \defined( 'ACTIVITYPUB_REQUEST' ) && ACTIVITYPUB_REQUEST ) {
+			return $comment_args;
+		}
+
+		// A caller asking for one type gets a page within that type; only the default is adjusted.
+		if ( empty( $comment_args['type'] ) || 'all' !== $comment_args['type'] || ! empty( $comment_args['type__in'] ) ) {
+			return $comment_args;
+		}
+
+		$excluded_types = self::get_comment_type_slugs();
+
+		// Merge rather than assign, so an exclusion another plugin set earlier survives.
+		if ( ! empty( $comment_args['type__not_in'] ) ) {
+			$existing       = (array) $comment_args['type__not_in'];
+			$excluded_types = \array_values( \array_unique( \array_merge( $existing, $excluded_types ) ) );
+		}
+
+		$comment_args['type']         = '';
+		$comment_args['type__not_in'] = $excluded_types;
+
+		return $comment_args;
 	}
 
 	/**
