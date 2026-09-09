@@ -527,5 +527,4 @@ class Test_Avatar extends WP_UnitTestCase {
 			\delete_option( 'activitypub_avatar_cache_cursor' );
 		}
 	}
-
 }

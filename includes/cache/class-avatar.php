@@ -387,9 +387,9 @@ class Avatar extends File {
 	protected static function release_stale_lock( $lock_time ) {
 		global $wpdb;
 
-		$deleted = $wpdb->query(
+		$deleted = $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->prepare(
-				"DELETE FROM $wpdb->options WHERE option_name = %s AND option_value = %s", // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+				"DELETE FROM $wpdb->options WHERE option_name = %s AND option_value = %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				'activitypub_avatar_cache_cleanup_lock',
 				(string) $lock_time
 			)
