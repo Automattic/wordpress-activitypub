@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Blocked_Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
 
@@ -332,6 +333,39 @@ class Test_Followers extends \WP_UnitTestCase {
 		Followers::remove_blocked_actors( $actor_uri, 'actor', 1 );
 
 		$this->assertFalse( Followers::follows( $remote_actor_id, 1 ) );
+	}
+
+	/**
+	 * Blocking an actor by a URL other than its canonical ID still removes the follower.
+	 *
+	 * The block screen accepts profile URLs, but the actor post is stored under its `id`.
+	 *
+	 * @covers ::remove_blocked_actors
+	 */
+	public function test_blocking_by_profile_url_removes_remote_follower() {
+		$actor = array(
+			'id'                => 'https://remote.example/users/admin',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example/@admin',
+			'inbox'             => 'https://remote.example/inbox',
+			'name'              => 'Remote Admin',
+			'preferredUsername' => 'admin',
+		);
+
+		$remote_actor_id = Remote_Actors::upsert( $actor );
+		$this->assertIsInt( $remote_actor_id );
+		\add_post_meta( $remote_actor_id, Followers::FOLLOWER_META_KEY, 1 );
+
+		$mock = function ( $pre, $url ) use ( $actor ) {
+			return $actor['url'] === $url ? $actor : $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock, 10, 2 );
+
+		Blocked_Actors::add( 1, $actor['url'] );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+
+		$this->assertFalse( Followers::follows( $remote_actor_id, 1 ), 'A block by profile URL must remove the follower.' );
 	}
 
 	/**

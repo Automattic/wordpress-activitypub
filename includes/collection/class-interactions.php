@@ -411,10 +411,26 @@ class Interactions {
 	 * verification cannot apply to this submission route. A named method (rather
 	 * than an anonymous closure) is used so it can be removed by reference again.
 	 *
+	 * @since unreleased
+	 *
 	 * @return string Always `inactive`.
 	 */
 	public static function akismet_comment_nonce_inactive() {
 		return 'inactive';
+	}
+
+	/**
+	 * Do not require a name and email for a federated comment while persisting.
+	 *
+	 * A plugin-owned callback rather than `__return_false`: removing that one afterwards
+	 * would also remove a site's own registration of the same function on the filter.
+	 *
+	 * @since unreleased
+	 *
+	 * @return false
+	 */
+	public static function require_name_email_off() {
+		return false;
 	}
 
 	/**
@@ -584,18 +600,19 @@ class Interactions {
 			return false;
 		}
 
-		$is_insert        = self::INSERT === $action;
-		$flood_priority   = \has_action( 'check_comment_flood', 'check_comment_flood_db' );
-		$akismet_callback = array( self::class, 'akismet_comment_nonce_inactive' );
-		$kses_callback    = array( self::class, 'allowed_comment_html' );
+		$is_insert         = self::INSERT === $action;
+		$flood_priority    = \has_action( 'check_comment_flood', 'check_comment_flood_db' );
+		$akismet_callback  = array( self::class, 'akismet_comment_nonce_inactive' );
+		$kses_callback     = array( self::class, 'allowed_comment_html' );
+		$required_callback = array( self::class, 'require_name_email_off' );
 
 		// Disable flood control, restoring it at its original priority afterwards.
 		if ( false !== $flood_priority ) {
 			\remove_action( 'check_comment_flood', 'check_comment_flood_db', $flood_priority );
 		}
 
-		\add_filter( 'pre_option_require_name_email', '__return_false' ); // Do not require email for AP entries.
-		\add_filter( 'akismet_comment_nonce', $akismet_callback );        // No nonce possible for this submission route.
+		\add_filter( 'pre_option_require_name_email', $required_callback );
+		\add_filter( 'akismet_comment_nonce', $akismet_callback ); // No nonce possible for this submission route.
 		\add_filter( 'wp_kses_allowed_html', $kses_callback, 10, 2 );
 
 		if ( $is_insert ) {
@@ -606,7 +623,7 @@ class Interactions {
 
 		\remove_filter( 'wp_kses_allowed_html', $kses_callback );
 		\remove_filter( 'akismet_comment_nonce', $akismet_callback );
-		\remove_filter( 'pre_option_require_name_email', '__return_false' );
+		\remove_filter( 'pre_option_require_name_email', $required_callback );
 
 		if ( false !== $flood_priority ) {
 			\add_action( 'check_comment_flood', 'check_comment_flood_db', $flood_priority, 4 );

@@ -33,11 +33,11 @@ class Blocked_Actors {
 			/**
 			 * Fired when an actor is blocked.
 			 *
-			 * @param string $value   The blocked actor URI.
+			 * @param string $value   The blocked actor's canonical ID, whatever identifier the block named.
 			 * @param string $type    The block type (actor, domain, keyword).
 			 * @param int    $user_id The user ID.
 			 */
-			\do_action( 'activitypub_add_user_block', $value, Moderation::TYPE_ACTOR, $user_id );
+			\do_action( 'activitypub_add_user_block', $actor_post->guid, Moderation::TYPE_ACTOR, $user_id );
 
 			$result = (bool) \add_post_meta( $actor_post->ID, Moderation::BLOCKED_ACTORS_META_KEY, (string) $user_id );
 			\clean_post_cache( $actor_post->ID );

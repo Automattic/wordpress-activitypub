@@ -1631,7 +1631,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 		Interactions::add_comment( $this->create_test_object( 'https://example.com/persist-cleanup' ) );
 
 		$this->assertFalse( \has_filter( 'akismet_comment_nonce', array( Interactions::class, 'akismet_comment_nonce_inactive' ) ), 'The Akismet nonce override must be removed after persisting.' );
-		$this->assertFalse( \has_filter( 'pre_option_require_name_email', '__return_false' ), 'The require-name-email override must be removed after persisting.' );
+		$this->assertFalse( \has_filter( 'pre_option_require_name_email', array( Interactions::class, 'require_name_email_off' ) ), 'The require-name-email override must be removed after persisting.' );
 		$this->assertFalse( \has_filter( 'wp_kses_allowed_html', array( Interactions::class, 'allowed_comment_html' ) ), 'The KSES override must be removed after persisting.' );
 		$this->assertNotFalse( \has_action( 'check_comment_flood', 'check_comment_flood_db' ), 'Flood control must be restored after persisting.' );
 	}
@@ -1721,7 +1721,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 	 */
 	public function test_persist_preserves_existing_hook_state() {
 		$callbacks           = array(
-			array( 'pre_option_require_name_email', '__return_false', 1 ),
+			array( 'pre_option_require_name_email', array( Interactions::class, 'require_name_email_off' ), 1 ),
 			array( 'akismet_comment_nonce', array( Interactions::class, 'akismet_comment_nonce_inactive' ), 1 ),
 			array( 'wp_kses_allowed_html', array( Interactions::class, 'allowed_comment_html' ), 2 ),
 		);
@@ -1762,5 +1762,23 @@ class Test_Interactions extends \WP_UnitTestCase {
 				\add_action( 'check_comment_flood', 'check_comment_flood_db', $flood_priority, 4 );
 			}
 		}
+	}
+
+	/**
+	 * A site's own `__return_false` on the option filter must survive a persist.
+	 *
+	 * Registering the same callback at the same priority overwrites, so a shared
+	 * function would be removed along with the plugin's own override.
+	 *
+	 * @covers ::persist
+	 */
+	public function test_persist_keeps_a_sites_return_false_on_require_name_email() {
+		\add_filter( 'pre_option_require_name_email', '__return_false' );
+
+		Interactions::add_comment( $this->create_test_object( 'https://example.com/persist-site-filter' ) );
+
+		$this->assertSame( 10, \has_filter( 'pre_option_require_name_email', '__return_false' ), 'The site\'s own filter must not be removed.' );
+
+		\remove_filter( 'pre_option_require_name_email', '__return_false' );
 	}
 }

@@ -184,7 +184,7 @@ class Remote_Actors {
 		}
 
 		if ( $post_id && ! \is_wp_error( $post_id ) ) {
-			self::clear_inbox_caches( $post_id );
+			self::clear_inbox_caches( self::get_follower_ids( $post_id ) );
 		}
 
 		return $post_id;
@@ -198,23 +198,47 @@ class Remote_Actors {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function delete( $post_id ) {
-		self::clear_inbox_caches( $post_id );
+		// Read the followers before the delete takes the meta with it.
+		$user_ids = self::get_follower_ids( $post_id );
+		$result   = \wp_delete_post( $post_id );
 
-		return \wp_delete_post( $post_id );
+		// Clear after the row is gone, so a concurrent read cannot re-cache the deleted inbox.
+		self::clear_inbox_caches( $user_ids );
+
+		return $result;
+	}
+
+	/**
+	 * Get the IDs of the local users a remote actor follows.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $post_id The remote actor post ID.
+	 *
+	 * @return int[] The user IDs.
+	 */
+	private static function get_follower_ids( $post_id ) {
+		$user_ids = \get_post_meta( $post_id, Followers::FOLLOWER_META_KEY, false );
+
+		if ( ! \is_array( $user_ids ) ) {
+			return array();
+		}
+
+		return \array_unique( \array_map( 'intval', $user_ids ) );
 	}
 
 	/**
 	 * Clear cached inbox lists affected by a remote actor change.
 	 *
+	 * Every write to an actor post or its follower meta has to end up here; a bare
+	 * `wp_delete_post()` or `add_post_meta()` elsewhere leaves a stale inbox list behind.
+	 *
 	 * @since unreleased
 	 *
-	 * @param int $post_id The remote actor post ID.
+	 * @param int[] $user_ids The local users whose follower inbox lists include the actor.
 	 */
-	private static function clear_inbox_caches( $post_id ) {
+	public static function clear_inbox_caches( $user_ids ) {
 		\wp_cache_delete( self::CACHE_KEY_INBOXES, 'activitypub' );
-
-		$user_ids = \get_post_meta( $post_id, Followers::FOLLOWER_META_KEY, false );
-		$user_ids = \array_unique( \array_map( 'intval', $user_ids ) );
 
 		foreach ( $user_ids as $user_id ) {
 			\wp_cache_delete( \sprintf( Followers::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
