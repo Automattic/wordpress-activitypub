@@ -71,7 +71,7 @@ export default function Edit( { attributes, setAttributes } ) {
 	 * answer for. The saved post decides, not the edited one: the endpoints check the database,
 	 * and the field is refreshed from every save response.
 	 */
-	const hasRealReactions = useSelect(
+	const isPubliclyQueryable = useSelect(
 		( selectFn ) => !! selectFn( editorStore ).getCurrentPost()?.activitypub_publicly_queryable,
 		[]
 	);
@@ -139,7 +139,7 @@ export default function Edit( { attributes, setAttributes } ) {
 				/>
 				<Reactions
 					postId={ getCurrentPostId() }
-					reactions={ hasRealReactions ? null : DUMMY_REACTIONS }
+					reactions={ isPubliclyQueryable ? null : DUMMY_REACTIONS }
 					fallbackReactions={ DUMMY_REACTIONS }
 					displayStyle={ displayStyle }
 					showActions={ showActions }
