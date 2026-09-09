@@ -287,6 +287,17 @@ class Admin {
 			false
 		);
 
+		\wp_register_script(
+			'activitypub-blog-avatar',
+			\plugins_url(
+				'assets/js/activitypub-blog-avatar.js',
+				ACTIVITYPUB_PLUGIN_FILE
+			),
+			array( 'jquery', 'media-editor' ),
+			ACTIVITYPUB_PLUGIN_VERSION,
+			false
+		);
+
 		// Register and enqueue command palette integration.
 		if ( user_can_activitypub( \get_current_user_id() ) || \current_user_can( 'manage_options' ) ) {
 			$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/command-palette/plugin.asset.php';

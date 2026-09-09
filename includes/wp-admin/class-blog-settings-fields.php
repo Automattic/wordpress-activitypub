@@ -39,6 +39,15 @@ class Blog_Settings_Fields {
 		);
 
 		\add_settings_field(
+			'activitypub_blog_name',
+			\__( 'Change Name', 'activitypub' ),
+			array( self::class, 'name_callback' ),
+			'activitypub_blog_settings',
+			'activitypub_blog_profile',
+			array( 'label_for' => 'activitypub_blog_name' )
+		);
+
+		\add_settings_field(
 			'activitypub_blog_avatar',
 			\__( 'Manage Avatar', 'activitypub' ),
 			array( self::class, 'avatar_callback' ),
@@ -109,25 +118,58 @@ class Blog_Settings_Fields {
 	}
 
 	/**
+	 * Name field callback.
+	 */
+	public static function name_callback() {
+		?>
+		<label for="activitypub_blog_name">
+			<input id="activitypub_blog_name" class="blog-user-name regular-text" name="activitypub_blog_name" type="text" value="<?php echo \esc_attr( \get_option( 'activitypub_blog_name' ) ); ?>" placeholder="<?php echo \esc_attr( \get_bloginfo( 'name' ) ); ?>" />
+		</label>
+		<p class="description">
+			<?php \esc_html_e( 'By default the ActivityPub plugin uses the WordPress site title as the name of the blog profile.', 'activitypub' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
 	 * Avatar field callback.
 	 */
 	public static function avatar_callback() {
+		$blog         = new Blog();
+		$icon         = $blog->get_icon();
+		$custom_icon  = \get_option( 'activitypub_blog_icon', 0 );
+		$classes      = 'button upload-button button-add-media button-add-blog-avatar';
+		$remove_class = 'button button-secondary reset hidden';
+
+		if ( (int) $custom_icon ) {
+			$classes      = 'button';
+			$remove_class = 'button button-secondary reset';
+		}
 		?>
-		<?php if ( \has_site_icon() ) : ?>
-			<p><img src="<?php echo \esc_url( \get_site_icon_url( 50 ) ); ?>" alt="" /></p>
+		<div id="activitypub-blog-avatar-preview-wrapper" data-fallback-url="<?php echo \esc_url( \get_site_icon_url() ); ?>">
+			<img id="activitypub-blog-avatar-preview" src="<?php echo \esc_url( $icon['url'] ); ?>" style="max-width: 96px; max-height: 96px;" alt="" />
+		</div>
+		<button
+			type="button"
+			id="activitypub-choose-blog-avatar-button"
+			class="<?php echo \esc_attr( $classes ); ?>"
+			data-choose-text="<?php \esc_attr_e( 'Choose an Avatar', 'activitypub' ); ?>"
+			data-update-text="<?php \esc_attr_e( 'Change Avatar', 'activitypub' ); ?>"
+			data-state="<?php echo \esc_attr( (int) $custom_icon ? '1' : '' ); ?>">
+			<?php echo (int) $custom_icon ? \esc_html__( 'Change Avatar', 'activitypub' ) : \esc_html__( 'Choose an Avatar', 'activitypub' ); ?>
+		</button>
+		<button
+			id="activitypub-remove-blog-avatar"
+			type="button"
+			class="<?php echo \esc_attr( $remove_class ); ?>">
+			<?php \esc_html_e( 'Remove Custom Avatar', 'activitypub' ); ?>
+		</button>
+		<input type="hidden" name="activitypub_blog_icon" id="activitypub_blog_icon" value="<?php echo \esc_attr( $custom_icon ); ?>">
+		<?php if ( ! (int) $custom_icon ) : ?>
+			<p class="description">
+				<?php \esc_html_e( 'By default the ActivityPub plugin uses the WordPress Site Icon as the avatar for the blog profile.', 'activitypub' ); ?>
+			</p>
 		<?php endif; ?>
-		<p class="description">
-			<?php
-			echo \wp_kses(
-				\sprintf(
-					// translators: %s is a URL.
-					\__( 'The ActivityPub plugin uses the WordPress Site Icon as Avatar for the Blog-Profile, you can change the Site Icon in the "<a href="%s">General Settings</a>" of WordPress.', 'activitypub' ),
-					\esc_url( \admin_url( 'options-general.php' ) )
-				),
-				'default'
-			);
-			?>
-		</p>
 		<?php
 	}
 
