@@ -523,13 +523,15 @@ class Admin {
 		if ( was_comment_received( $comment ) ) {
 			unset( $actions['edit'], $actions['quickedit'] );
 
-			// Only link to an actual URL, not the ActivityPub ID, which is not always a browsable page.
-			$source_url = Comment::get_source_url( $comment->comment_ID, false );
+			// Only link to a browsable URL, not the ActivityPub ID, which is not always a page.
+			// Sanitize first, so a URL with a disallowed protocol does not add a link to nowhere.
+			$source_url = \esc_url( (string) Comment::get_source_url( $comment->comment_ID, false ) );
+
 			if ( $source_url ) {
 				$actions['view_source'] = \sprintf(
-					'<a href="%1$s" target="_blank" rel="noopener">%2$s</a>',
-					\esc_url( $source_url ),
-					\esc_html__( 'View source post', 'activitypub' )
+					'<a href="%1$s" target="_blank" rel="noopener noreferrer">%2$s</a>',
+					$source_url,
+					\esc_html__( 'View on the Fediverse', 'activitypub' )
 				);
 			}
 		}
