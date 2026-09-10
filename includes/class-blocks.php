@@ -314,6 +314,28 @@ class Blocks {
 				),
 			)
 		);
+
+		// Tells the editor whether the post endpoints will answer for this post, so the Reactions block only asks when they do.
+		\register_rest_field(
+			\get_post_types_by_support( 'activitypub' ),
+			'activitypub_publicly_queryable',
+			array(
+				/**
+				 * Whether the post is publicly queryable via ActivityPub.
+				 *
+				 * @param array $response Prepared response array.
+				 * @return bool True if the post is publicly queryable.
+				 */
+				'get_callback' => static function ( $response ) {
+					return is_post_publicly_queryable( $response['id'] );
+				},
+				'schema'       => array(
+					'description' => 'Whether the post is publicly queryable via ActivityPub',
+					'type'        => 'boolean',
+					'context'     => array( 'edit' ),
+				),
+			)
+		);
 	}
 
 	/**
