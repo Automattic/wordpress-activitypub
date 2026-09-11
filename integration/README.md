@@ -58,6 +58,7 @@ A few integrations are always initialized (`Nodeinfo`, `Webfinger`, `Surge`, `Li
 | Integration | What it does |
 |---|---|
 | **WPML** | Supplies the correct per-object locale for federated content under WPML. |
+| **Polylang** | Supplies the correct per-object locale for federated posts and their comments under Polylang. |
 | **Multisite Language Switcher** | Keeps ActivityPub data consistent across MSLS post translations. |
 
 ### Other

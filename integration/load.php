@@ -132,6 +132,17 @@ function plugin_init() {
 	}
 
 	/**
+	 * Adds Polylang support.
+	 *
+	 * This class handles the compatibility with the Polylang plugin.
+	 *
+	 * @see https://wordpress.org/plugins/polylang/
+	 */
+	if ( \defined( 'POLYLANG_VERSION' ) ) {
+		Polylang::init();
+	}
+
+	/**
 	 * Adds Seriously Simple Podcasting support.
 	 *
 	 * This class handles the compatibility with Seriously Simple Podcasting.
