@@ -540,7 +540,7 @@ class Admin {
 	}
 
 	/**
-	 * Add "comment-type" and "protocol" as column in WP-Admin.
+	 * Add "comment-type", "protocol" and "source" as column in WP-Admin.
 	 *
 	 * @param array $columns The list of column names.
 	 *
@@ -549,6 +549,7 @@ class Admin {
 	public static function manage_comment_columns( $columns ) {
 		$columns['comment_type']     = \esc_attr__( 'Comment-Type', 'activitypub' );
 		$columns['comment_protocol'] = \esc_attr__( 'Protocol', 'activitypub' );
+		$columns['comment_source']   = \esc_attr__( 'Source', 'activitypub' );
 
 		return $columns;
 	}
@@ -572,7 +573,7 @@ class Admin {
 	}
 
 	/**
-	 * Add "comment-type" and "protocol" as column in WP-Admin.
+	 * Add "comment-type", "protocol" and "source" as column in WP-Admin.
 	 *
 	 * @param array $column     The column to implement.
 	 * @param int   $comment_id The comment id.
@@ -588,7 +589,41 @@ class Admin {
 			} else {
 				\esc_attr_e( 'Local', 'activitypub' );
 			}
+		} elseif ( 'comment_source' === $column ) {
+			echo self::get_comment_source_link( $comment_id ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in the method.
 		}
+	}
+
+	/**
+	 * Link to the remote post a received comment came from.
+	 *
+	 * Only the browsable `source_url` is linked, not the ActivityPub ID: reactions like Likes
+	 * and Announces store only that, and it is not always a page.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $comment_id The comment id.
+	 *
+	 * @return string The link, or an empty string for a local comment or one without a usable URL.
+	 */
+	public static function get_comment_source_link( $comment_id ) {
+		if ( ! was_comment_received( $comment_id ) ) {
+			return '';
+		}
+
+		// Sanitize before the check, so a URL with a disallowed protocol does not become a link to nowhere.
+		$source_url = \esc_url( (string) Comment::get_source_url( $comment_id, false ) );
+
+		if ( ! $source_url ) {
+			return '';
+		}
+
+		return \sprintf(
+			'<a href="%1$s" title="%1$s" target="_blank" rel="noopener noreferrer">%2$s<span class="screen-reader-text"> %3$s</span><span class="dashicons dashicons-external" aria-hidden="true"></span></a>',
+			$source_url,
+			\esc_html( \wp_parse_url( $source_url, PHP_URL_HOST ) ),
+			\esc_html__( '(opens in a new tab)', 'activitypub' )
+		);
 	}
 
 	/**
