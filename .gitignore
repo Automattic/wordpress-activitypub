@@ -2,6 +2,7 @@
 /build/**/*.map
 /coverage/
 /node_modules/
+/security-scan/
 /vendor/
 _site
 .idea/

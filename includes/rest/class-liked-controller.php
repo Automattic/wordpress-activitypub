@@ -61,6 +61,7 @@ class Liked_Controller extends Actors_Controller {
 							'minimum'     => 1,
 							'maximum'     => 100,
 						),
+						'item'     => $this->get_seek_item_arg(),
 					),
 				),
 				'schema' => array( $this, 'get_item_schema' ),
@@ -84,6 +85,11 @@ class Liked_Controller extends Actors_Controller {
 		$user_id  = $request->get_param( 'user_id' );
 		$page     = $request->get_param( 'page' );
 		$per_page = $request->get_param( 'per_page' );
+
+		$seek = $this->maybe_seek_item( $request, get_rest_url_by_path( \sprintf( 'actors/%d/liked', $user_id ) ) );
+		if ( null !== $seek ) {
+			return $seek;
+		}
 
 		$liked_objects = $this->get_liked_object_ids( $user_id );
 
@@ -111,6 +117,22 @@ class Liked_Controller extends Actors_Controller {
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 
 		return $response;
+	}
+
+	/**
+	 * Get the position of an object in the liked collection.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string           $item    The ActivityPub object ID of the liked object.
+	 * @param \WP_REST_Request $request Full details about the request.
+	 *
+	 * @return int|false Zero-based index of the item, false when not found.
+	 */
+	public function get_item_index( $item, $request ) {
+		$index = \array_search( $item, $this->get_liked_object_ids( $request->get_param( 'user_id' ) ), true );
+
+		return false === $index ? false : (int) $index;
 	}
 
 	/**
