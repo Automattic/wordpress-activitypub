@@ -16,91 +16,81 @@ use Activitypub\WP_Admin\Admin;
  */
 class Test_Admin extends \WP_UnitTestCase {
 	/**
-	 * Test adding a Fediverse link to received comments.
+	 * The Source column is registered next to the other comment columns.
 	 *
-	 * @covers ::comment_row_actions
+	 * @covers ::manage_comment_columns
 	 */
-	public function test_comment_row_actions_adds_source_link() {
-		$comment_id = self::factory()->comment->create();
-		add_comment_meta( $comment_id, 'protocol', 'activitypub' );
-		add_comment_meta( $comment_id, 'source_url', 'https://example.com/posts/123' );
+	public function test_source_column_is_registered() {
+		$columns = Admin::manage_comment_columns( array( 'author' => 'Author' ) );
 
-		$actions = Admin::comment_row_actions( array(), get_comment( $comment_id ) );
-
-		$this->assertArrayHasKey( 'view_source', $actions );
-		$this->assertSame(
-			'<a href="https://example.com/posts/123" target="_blank" rel="noopener noreferrer">View on the Fediverse</a>',
-			$actions['view_source']
-		);
+		$this->assertArrayHasKey( 'comment_source', $columns );
 	}
 
 	/**
-	 * Test that a source URL that is not a usable link does not get a Fediverse link.
+	 * A received comment links to the remote post it came from.
 	 *
-	 * `esc_url()` returns an empty string for a URL with a disallowed protocol,
-	 * so the action must not be added for values like `javascript:`.
-	 *
-	 * @covers ::comment_row_actions
+	 * @covers ::get_comment_source_link
+	 * @covers ::manage_comments_custom_column
 	 */
-	public function test_comment_row_actions_skips_unusable_source_url() {
+	public function test_received_comment_links_to_its_source() {
 		$comment_id = self::factory()->comment->create();
-		add_comment_meta( $comment_id, 'protocol', 'activitypub' );
-		add_comment_meta( $comment_id, 'source_url', 'javascript:alert(1)' );
+		\add_comment_meta( $comment_id, 'protocol', 'activitypub' );
+		\add_comment_meta( $comment_id, 'source_url', 'https://example.com/posts/123' );
 
-		$actions = Admin::comment_row_actions( array(), get_comment( $comment_id ) );
+		$link = Admin::get_comment_source_link( $comment_id );
 
-		$this->assertArrayNotHasKey( 'view_source', $actions );
+		$this->assertStringStartsWith( '<a href="https://example.com/posts/123" title="https://example.com/posts/123" target="_blank" rel="noopener noreferrer">example.com', $link );
+		$this->assertStringContainsString( 'dashicons-external', $link );
+		$this->assertStringContainsString( 'screen-reader-text', $link );
+
+		\ob_start();
+		Admin::manage_comments_custom_column( 'comment_source', $comment_id );
+		$this->assertStringContainsString( 'https://example.com/posts/123', \ob_get_clean() );
 	}
 
 	/**
-	 * Test that comments without a source URL do not get a Fediverse link.
+	 * A source URL that is not a usable link is not linked.
+	 *
+	 * `esc_url()` returns an empty string for a URL with a disallowed protocol.
+	 *
+	 * @covers ::get_comment_source_link
+	 */
+	public function test_unusable_source_url_is_not_linked() {
+		$comment_id = self::factory()->comment->create();
+		\add_comment_meta( $comment_id, 'protocol', 'activitypub' );
+		\add_comment_meta( $comment_id, 'source_url', 'javascript:alert(1)' );
+
+		$this->assertSame( '', Admin::get_comment_source_link( $comment_id ) );
+	}
+
+	/**
+	 * A received comment without a source URL gets no link.
 	 *
 	 * Reactions like Likes or Announces only store an ActivityPub ID as `source_id`,
 	 * which is not always a browsable page.
 	 *
-	 * @covers ::comment_row_actions
+	 * @covers ::get_comment_source_link
 	 */
-	public function test_comment_row_actions_skips_comments_without_source_link() {
+	public function test_comment_without_source_url_is_not_linked() {
 		$comment_id = self::factory()->comment->create();
-		add_comment_meta( $comment_id, 'protocol', 'activitypub' );
+		\add_comment_meta( $comment_id, 'protocol', 'activitypub' );
 
-		$actions = Admin::comment_row_actions( array(), get_comment( $comment_id ) );
+		$this->assertSame( '', Admin::get_comment_source_link( $comment_id ) );
 
-		$this->assertArrayNotHasKey( 'view_source', $actions );
+		\add_comment_meta( $comment_id, 'source_id', 'https://example.com/activity/1' );
 
-		delete_comment_meta( $comment_id, 'source_id' );
-		add_comment_meta( $comment_id, 'source_id', 'https://example.com/activity/1' );
-
-		$actions = Admin::comment_row_actions( array(), get_comment( $comment_id ) );
-
-		$this->assertArrayNotHasKey( 'view_source', $actions );
+		$this->assertSame( '', Admin::get_comment_source_link( $comment_id ) );
 	}
 
 	/**
-	 * Test that local comments do not get a Fediverse link.
+	 * A local comment gets no link, even with a source URL in its meta.
 	 *
-	 * @covers ::comment_row_actions
+	 * @covers ::get_comment_source_link
 	 */
-	public function test_comment_row_actions_skips_local_comments() {
+	public function test_local_comment_is_not_linked() {
 		$comment_id = self::factory()->comment->create();
+		\add_comment_meta( $comment_id, 'source_url', 'https://example.com/posts/123' );
 
-		$actions = Admin::comment_row_actions( array(), get_comment( $comment_id ) );
-
-		$this->assertArrayNotHasKey( 'view_source', $actions );
-	}
-
-	/**
-	 * Test that the method accepts a comment ID as well as a comment object.
-	 *
-	 * @covers ::comment_row_actions
-	 */
-	public function test_comment_row_actions_accepts_comment_id() {
-		$comment_id = self::factory()->comment->create();
-		add_comment_meta( $comment_id, 'protocol', 'activitypub' );
-		add_comment_meta( $comment_id, 'source_url', 'https://example.com/posts/123' );
-
-		$actions = Admin::comment_row_actions( array( 'approve' => 'Approve' ), $comment_id );
-
-		$this->assertArrayHasKey( 'view_source', $actions );
+		$this->assertSame( '', Admin::get_comment_source_link( $comment_id ) );
 	}
 }
