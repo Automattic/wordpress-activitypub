@@ -126,9 +126,15 @@ class Blog extends Actor {
 	 * @return string The Username.
 	 */
 	public function get_name() {
+		$name = \get_option( 'activitypub_blog_name' );
+
+		if ( ! $name ) {
+			$name = \get_bloginfo( 'name' );
+		}
+
 		return \wp_strip_all_tags(
 			\html_entity_decode(
-				\get_bloginfo( 'name' ),
+				$name,
 				\ENT_QUOTES,
 				'UTF-8'
 			)
@@ -216,6 +222,19 @@ class Blog extends Actor {
 	 * @return string[] The User icon.
 	 */
 	public function get_icon() {
+		$icon_id = \get_option( 'activitypub_blog_icon' );
+
+		if ( $icon_id && \wp_attachment_is_image( $icon_id ) ) {
+			$icon = \wp_get_attachment_image_src( $icon_id, 'full' );
+
+			if ( $icon ) {
+				return array(
+					'type' => 'Image',
+					'url'  => \esc_url_raw( $icon[0] ),
+				);
+			}
+		}
+
 		return site_icon();
 	}
 
@@ -473,7 +492,7 @@ class Blog extends Actor {
 	 * @return bool True if the attribute was updated, false otherwise.
 	 */
 	public function update_name( $value ) {
-		return \update_option( 'blogname', $value );
+		return \update_option( 'activitypub_blog_name', \sanitize_text_field( $value ) );
 	}
 
 	/**
@@ -496,7 +515,7 @@ class Blog extends Actor {
 		if ( ! \wp_attachment_is_image( $value ) ) {
 			return false;
 		}
-		return \update_option( 'site_icon', $value );
+		return \update_option( 'activitypub_blog_icon', (int) $value );
 	}
 
 	/**
