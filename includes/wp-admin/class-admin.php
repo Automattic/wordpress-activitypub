@@ -86,6 +86,8 @@ class Admin {
 		\add_action( 'wp_ajax_activitypub_delete_all_oauth_clients', array( self::class, 'ajax_delete_all_oauth_clients' ) );
 		\add_action( 'wp_ajax_activitypub_revoke_oauth_token', array( self::class, 'ajax_revoke_oauth_token' ) );
 		\add_action( 'wp_ajax_activitypub_revoke_all_oauth_tokens', array( self::class, 'ajax_revoke_all_oauth_tokens' ) );
+
+		\add_filter( 'admin_title', array( self::class, 'set_tab_title' ), 10, 1 );
 	}
 
 	/**
@@ -1278,5 +1280,47 @@ class Admin {
 		$count = Token::revoke_all_for_user( \get_current_user_id() );
 
 		\wp_send_json_success( array( 'deleted' => $count > 0 ) );
+	}
+
+	/**
+	 * Update the <title> tag of the settings page with the current tab label.
+	 *
+	 * @param string $admin_title The page title, with extra content added.
+	 *
+	 * @return string The modified title.
+	 */
+	public static function set_tab_title( $admin_title ) {
+		$current_screen = \get_current_screen();
+		if ( 'settings_page_activitypub' !== $current_screen->id ) {
+			return $admin_title;
+		}
+		// phpcs:ignore WordPress.Security.NonceVerification
+		$tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'welcome';
+		if ( $tab ) {
+			switch ( $tab ) {
+				case 'settings':
+					$tab_title = __( 'Settings', 'activitypub' );
+					break;
+				case 'advanced':
+					$tab_title = __( 'Advanced', 'activitypub' );
+					break;
+				case 'blocked-actors':
+					$tab_title = __( 'Blocked Actors', 'activitypub' );
+					break;
+				case 'blog-profile':
+					$tab_title = __( 'Blog Profile', 'activitypub' );
+					break;
+				case 'followers':
+					$tab_title = __( 'Followers', 'activitypub' );
+					break;
+				case 'following':
+					$tab_title = __( 'Following', 'activitypub' );
+					break;
+				default:
+					$tab_title = __( 'Welcome', 'activitypub' );
+			}
+		}
+
+		return 'ActivityPub - ' . $tab_title . ' ‹ ' . get_bloginfo( 'name' ) . '  &#8212; WordPress';
 	}
 }
