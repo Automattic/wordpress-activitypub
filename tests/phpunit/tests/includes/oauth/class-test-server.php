@@ -175,9 +175,11 @@ class Test_Server extends \WP_UnitTestCase {
 		Server::init();
 
 		$this->assertSame( 20, \has_filter( 'rest_authentication_errors', array( Server::class, 'authenticate_oauth' ) ) );
+		$this->assertNotFalse( \has_action( 'activitypub_oauth_cleanup', array( Server::class, 'cleanup' ) ) );
 		$this->assertNotFalse( \wp_next_scheduled( 'activitypub_oauth_cleanup' ) );
 
 		\remove_filter( 'rest_authentication_errors', array( Server::class, 'authenticate_oauth' ), 20 );
+		\remove_action( 'activitypub_oauth_cleanup', array( Server::class, 'cleanup' ) );
 		\wp_clear_scheduled_hook( 'activitypub_oauth_cleanup' );
 	}
 

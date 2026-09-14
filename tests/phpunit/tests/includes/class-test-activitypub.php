@@ -9,6 +9,10 @@ namespace Activitypub\Tests;
 
 use Activitypub\Activitypub;
 use Activitypub\Collection\Outbox;
+use Activitypub\Event_Stream;
+use Activitypub\Integration\Opengraph;
+use Activitypub\OAuth\Server;
+use Activitypub\Relay;
 
 /**
  * Test class for Activitypub.
@@ -21,6 +25,37 @@ class Test_Activitypub extends \WP_UnitTestCase {
 	 */
 	public function test_test_env() {
 		$this->assertEquals( 'production', \wp_get_environment_type() );
+	}
+
+	/**
+	 * Setting-dependent subsystems are registered on `init` whether or not their setting is on.
+	 *
+	 * The bootstrap ran `plugin_init()` with every feature setting at its default, off. A gate
+	 * on the option at `plugins_loaded` would have left these unregistered, and on a multisite
+	 * host that switches to the site afterwards there is no second chance to add them.
+	 *
+	 * @dataProvider setting_dependent_init_provider
+	 *
+	 * @param string $option   The setting the subsystem depends on.
+	 * @param string $subsystem The class whose `init()` has to be registered.
+	 */
+	public function test_setting_dependent_subsystems_are_registered_regardless_of_the_setting( $option, $subsystem ) {
+		$this->assertFalse( \get_option( $option ), 'The setting must be off for this to prove anything.' );
+		$this->assertNotFalse( \has_action( 'init', array( $subsystem, 'init' ) ), "$subsystem::init() must be registered on init." );
+	}
+
+	/**
+	 * Data provider for the setting-dependent subsystems.
+	 *
+	 * @return array[]
+	 */
+	public function setting_dependent_init_provider() {
+		return array(
+			'event stream' => array( 'activitypub_api', Event_Stream::class ),
+			'oauth server' => array( 'activitypub_api', Server::class ),
+			'relay'        => array( 'activitypub_relay_mode', Relay::class ),
+			'opengraph'    => array( 'activitypub_use_opengraph', Opengraph::class ),
+		);
 	}
 
 	/**
