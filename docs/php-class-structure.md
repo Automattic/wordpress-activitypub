@@ -455,8 +455,8 @@ function plugin_init() {
     Litespeed_Cache::init();
 
     // Setting-dependent: defer to `init` and check the setting there. Nothing in
-    // plugin_init() reads an option, it can run before a multisite request has
-    // been switched to its site.
+    // plugin_init() reads an option, because it can run before a multisite
+    // request has been switched to its site.
     \add_action( 'init', array( Opengraph::class, 'init' ) );
 
     // Inline transformer for simple integrations.

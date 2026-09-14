@@ -36,25 +36,31 @@ class Test_Activitypub extends \WP_UnitTestCase {
 	 *
 	 * @dataProvider setting_dependent_init_provider
 	 *
-	 * @param string $option   The setting the subsystem depends on.
-	 * @param string $subsystem The class whose `init()` has to be registered.
+	 * @param string      $subsystem The class whose `init()` has to be registered.
+	 * @param string|null $option    A setting that is off by default, to show the registration does not depend on it.
 	 */
-	public function test_setting_dependent_subsystems_are_registered_regardless_of_the_setting( $option, $subsystem ) {
-		$this->assertFalse( \get_option( $option ), 'The setting must be off for this to prove anything.' );
+	public function test_setting_dependent_subsystems_are_registered_regardless_of_the_setting( $subsystem, $option = null ) {
+		if ( $option ) {
+			$this->assertFalse( \get_option( $option ), 'The setting must be off for this to prove anything.' );
+		}
+
 		$this->assertNotFalse( \has_action( 'init', array( $subsystem, 'init' ) ), "$subsystem::init() must be registered on init." );
 	}
 
 	/**
 	 * Data provider for the setting-dependent subsystems.
 	 *
+	 * OpenGraph is on by default, so its row only proves that the integration is deferred to
+	 * `init` at all instead of being initialized straight from `plugins_loaded`.
+	 *
 	 * @return array[]
 	 */
 	public function setting_dependent_init_provider() {
 		return array(
-			'event stream' => array( 'activitypub_api', Event_Stream::class ),
-			'oauth server' => array( 'activitypub_api', Server::class ),
-			'relay'        => array( 'activitypub_relay_mode', Relay::class ),
-			'opengraph'    => array( 'activitypub_use_opengraph', Opengraph::class ),
+			'event stream' => array( Event_Stream::class, 'activitypub_api' ),
+			'oauth server' => array( Server::class, 'activitypub_api' ),
+			'relay'        => array( Relay::class, 'activitypub_relay_mode' ),
+			'opengraph'    => array( Opengraph::class ),
 		);
 	}
 
