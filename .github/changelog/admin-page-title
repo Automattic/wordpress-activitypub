@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+The <title> tag on the settings page now shows 'ActivityPub' followed by the current tab label, instead of just 'Welcome'
