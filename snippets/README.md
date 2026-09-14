@@ -65,7 +65,7 @@ snippets/
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Requires Plugins:  activitypub
- * Update URI:        false
+ * Update URI:        https://github.com/Automattic/wordpress-activitypub
  */
 
 namespace Activitypub\Snippets;

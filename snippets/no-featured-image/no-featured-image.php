@@ -12,7 +12,7 @@
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       activitypub-no-featured-image
  * Requires Plugins:  activitypub
- * Update URI:        false
+ * Update URI:        https://github.com/Automattic/wordpress-activitypub
  *
  * @package Activitypub
  */

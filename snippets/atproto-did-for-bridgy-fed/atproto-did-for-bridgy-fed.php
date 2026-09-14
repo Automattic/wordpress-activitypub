@@ -10,7 +10,7 @@
  * License: Creative Commons Zero 1.0 Universal
  * License URI: https://creativecommons.org/publicdomain/zero/1.0/
  * Requires Plugins: activitypub
- * Update URI: false
+ * Update URI: https://github.com/Automattic/wordpress-activitypub
  *
  * @package Activitypub
  */
