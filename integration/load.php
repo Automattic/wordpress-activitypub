@@ -99,9 +99,7 @@ function plugin_init() {
 	 *
 	 * @see https://wordpress.org/plugins/opengraph/
 	 */
-	if ( '1' === \get_option( 'activitypub_use_opengraph', '1' ) ) {
-		Opengraph::init();
-	}
+	\add_action( 'init', array( Opengraph::class, 'init' ) );
 
 	/**
 	 * Adds Podlove Podcast Publisher support.

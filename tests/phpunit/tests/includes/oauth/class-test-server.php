@@ -57,6 +57,7 @@ class Test_Server extends \WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
+		\update_option( 'activitypub_api', true );
 		Post_Types::register_oauth_post_types();
 
 		$this->user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
@@ -82,6 +83,7 @@ class Test_Server extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		unset( $_SERVER['HTTP_AUTHORIZATION'] );
+		\delete_option( 'activitypub_api' );
 
 		global $wp;
 		if ( null === $this->original_rest_route ) {
@@ -140,6 +142,43 @@ class Test_Server extends \WP_UnitTestCase {
 		$this->assertNull( $result, 'OAuth must not authenticate core REST routes.' );
 		$this->assertFalse( Server::is_oauth_request(), 'No OAuth session should be established.' );
 		$this->assertSame( 0, \get_current_user_id(), 'The current user must not be set from the token.' );
+	}
+
+	/**
+	 * Nothing is hooked while the API is disabled, and the cleanup job is not scheduled.
+	 *
+	 * The `init` action is registered unconditionally at `plugins_loaded`; the setting is
+	 * read here, once the site context is settled.
+	 *
+	 * @covers ::init
+	 */
+	public function test_init_hooks_nothing_when_api_disabled() {
+		\delete_option( 'activitypub_api' );
+		\remove_filter( 'rest_authentication_errors', array( Server::class, 'authenticate_oauth' ), 20 );
+		\wp_clear_scheduled_hook( 'activitypub_oauth_cleanup' );
+
+		Server::init();
+
+		$this->assertFalse( \has_filter( 'rest_authentication_errors', array( Server::class, 'authenticate_oauth' ) ) );
+		$this->assertFalse( \wp_next_scheduled( 'activitypub_oauth_cleanup' ) );
+	}
+
+	/**
+	 * The authentication filter and the cleanup job are set up while the API is enabled.
+	 *
+	 * @covers ::init
+	 */
+	public function test_init_hooks_authentication_when_api_enabled() {
+		\remove_filter( 'rest_authentication_errors', array( Server::class, 'authenticate_oauth' ), 20 );
+		\wp_clear_scheduled_hook( 'activitypub_oauth_cleanup' );
+
+		Server::init();
+
+		$this->assertSame( 20, \has_filter( 'rest_authentication_errors', array( Server::class, 'authenticate_oauth' ) ) );
+		$this->assertNotFalse( \wp_next_scheduled( 'activitypub_oauth_cleanup' ) );
+
+		\remove_filter( 'rest_authentication_errors', array( Server::class, 'authenticate_oauth' ), 20 );
+		\wp_clear_scheduled_hook( 'activitypub_oauth_cleanup' );
 	}
 
 	/**
