@@ -29,3 +29,15 @@ updates:
       - 'dependencies'
       - 'javascript'
       - 'Skip Changelog'
+    groups:
+      # The two type packages peer on each other, so a bump of one alone cannot resolve.
+      react-types:
+        patterns:
+          - '@types/react'
+          - '@types/react-dom'
+    ignore:
+      # The editor runs on the React that WordPress core ships, still 18. Lift this once core moves to 19.
+      - dependency-name: '@types/react'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@types/react-dom'
+        update-types: ['version-update:semver-major']
