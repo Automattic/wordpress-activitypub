@@ -28,12 +28,18 @@ class WPML {
 	/**
 	 * Fetch the post locale from the WPML post data.
 	 *
+	 * A comment takes the language of the post it belongs to.
+	 *
 	 * @param string $lang The language code.
 	 * @param mixed  $post The post object.
 	 *
 	 * @return string The modified language code.
 	 */
 	public static function get_wpml_post_locale( $lang, $post ) {
+		if ( $post instanceof \WP_Comment ) {
+			$post = \get_post( $post->comment_post_ID );
+		}
+
 		if ( ! $post instanceof \WP_Post ) {
 			return $lang;
 		}

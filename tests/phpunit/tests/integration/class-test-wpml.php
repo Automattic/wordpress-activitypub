@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Integration;
 
 use Activitypub\Integration\WPML;
+use Activitypub\Transformer\Comment;
 
 /**
  * Test the WPML integration.
@@ -77,6 +78,22 @@ class Test_WPML extends \WP_UnitTestCase {
 	 */
 	public function capture_language_details( $args ) {
 		$this->stored_language_details = $args;
+	}
+
+	/**
+	 * A comment takes the language WPML assigned to the post it belongs to.
+	 *
+	 * @covers ::get_wpml_post_locale
+	 */
+	public function test_comment_uses_the_language_of_its_post() {
+		$post_id    = self::factory()->post->create();
+		$comment_id = self::factory()->comment->create( array( 'comment_post_ID' => $post_id ) );
+
+		\add_filter( 'wpml_post_language_details', array( self::class, 'german_post' ) );
+		$object = Comment::transform( \get_comment( $comment_id ) )->to_object();
+		\remove_filter( 'wpml_post_language_details', array( self::class, 'german_post' ) );
+
+		$this->assertSame( array( 'de' ), \array_keys( $object->get_content_map() ) );
 	}
 
 	/**
