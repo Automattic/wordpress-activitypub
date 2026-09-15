@@ -30,7 +30,7 @@ class Test_Activitypub extends \WP_UnitTestCase {
 	/**
 	 * Setting-dependent subsystems are registered on `init` whether or not their setting is on.
 	 *
-	 * The bootstrap ran `plugin_init()` with every feature setting at its default, off. A gate
+	 * The bootstrap ran `plugin_init()` with every feature setting at its default. A gate
 	 * on the option at `plugins_loaded` would have left these unregistered, and on a multisite
 	 * host that switches to the site afterwards there is no second chance to add them.
 	 *
