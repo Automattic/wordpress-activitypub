@@ -14,8 +14,10 @@ use Activitypub\Collection\Extra_Fields;
 use function Activitypub\esc_hashtag;
 use function Activitypub\get_attribution_domains;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\home_host;
 use function Activitypub\is_blog_public;
 use function Activitypub\is_single_user;
+use function Activitypub\normalize_host;
 use function Activitypub\site_icon;
 
 /**
@@ -179,9 +181,7 @@ class Blog extends Actor {
 	 * @return string The auto-generated Username.
 	 */
 	public static function get_default_username() {
-		// Check if domain host has a subdomain.
-		$host = \wp_parse_url( \get_home_url(), \PHP_URL_HOST );
-		$host = \preg_replace( '/^www\./i', '', $host );
+		$host = normalize_host( home_host() );
 
 		/**
 		 * Filters the default blog username.
@@ -421,7 +421,7 @@ class Blog extends Actor {
 	 * @return string The Webfinger-Identifier.
 	 */
 	public function get_webfinger() {
-		return $this->get_preferred_username() . '@' . \wp_parse_url( \home_url(), \PHP_URL_HOST );
+		return $this->get_preferred_username() . '@' . normalize_host( home_host() );
 	}
 
 	/**
