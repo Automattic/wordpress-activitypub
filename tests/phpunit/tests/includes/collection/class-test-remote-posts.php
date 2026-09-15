@@ -456,6 +456,97 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A long-form sender's representative `image` still reaches the post.
+	 *
+	 * FEP-b2b8 puts that picture in `image` rather than `attachment`, so reading only
+	 * `attachment` would drop it for every Article we cache.
+	 *
+	 * @covers ::activity_to_post
+	 * @covers ::extract_attachments
+	 *
+	 * @dataProvider image_shape_provider
+	 *
+	 * @param mixed $image The `image` property as a remote server might send it.
+	 */
+	public function test_activity_to_post_reads_the_image_when_there_are_no_attachments( $image ) {
+		$activity = array(
+			'id'      => 'https://example.com/objects/long-form',
+			'type'    => 'Article',
+			'name'    => 'Long-form post',
+			'content' => '<p>Body text.</p>',
+			'image'   => $image,
+		);
+
+		$reflection = new \ReflectionClass( Remote_Posts::class );
+		$method     = $reflection->getMethod( 'activity_to_post' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$post = $method->invoke( null, $activity );
+
+		$this->assertStringContainsString(
+			'https://example.com/representative.jpg',
+			$post['post_content'],
+			'The representative image has to survive into the cached post.'
+		);
+	}
+
+	/**
+	 * The shapes AS2 allows for `image`, all pointing at the same picture.
+	 *
+	 * @return array[]
+	 */
+	public function image_shape_provider() {
+		$url = 'https://example.com/representative.jpg';
+
+		return array(
+			'Image object'          => array(
+				array(
+					'type'      => 'Image',
+					'url'       => $url,
+					'mediaType' => 'image/jpeg',
+					'name'      => 'Cover',
+				),
+			),
+			'bare URL string'       => array( $url ),
+			'list of Image objects' => array(
+				array(
+					array(
+						'type' => 'Image',
+						'url'  => $url,
+					),
+				),
+			),
+			'Link-valued url'       => array(
+				array(
+					'type' => 'Image',
+					'url'  => array(
+						'type'      => 'Link',
+						'href'      => $url,
+						'mediaType' => 'image/jpeg',
+					),
+				),
+			),
+			'list of Link urls'     => array(
+				array(
+					'type' => 'Image',
+					'url'  => array(
+						array(
+							'type' => 'Link',
+							'href' => $url,
+						),
+						array(
+							'type' => 'Link',
+							'href' => 'https://example.com/representative.webp',
+						),
+					),
+				),
+			),
+		);
+	}
+
+	/**
 	 * Test activity to post conversion.
 	 *
 	 * @covers ::activity_to_post
