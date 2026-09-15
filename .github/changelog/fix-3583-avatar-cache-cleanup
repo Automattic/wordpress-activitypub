@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Prevented unused copies of remote profile pictures from accumulating on your server and added automatic cleanup for leftover cached avatars.
