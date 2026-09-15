@@ -123,6 +123,11 @@ class Comment extends Base {
 		$mentions = '';
 
 		foreach ( $this->extract_reply_context() as $acct => $url ) {
+			// Skip an actor the author already mentioned, as a link to them or as their handle.
+			if ( self::content_mentions( $content, $acct, $url ) ) {
+				continue;
+			}
+
 			$mentions .= \sprintf(
 				'<a rel="mention" class="u-url mention" href="%1$s" title="%2$s">%3$s</a> ',
 				\esc_url( $url ),
@@ -154,6 +159,31 @@ class Comment extends Base {
 		 * @return string The filtered content of the comment.
 		 */
 		return \apply_filters( 'activitypub_the_content', $content, $comment );
+	}
+
+	/**
+	 * Whether the content already mentions an actor.
+	 *
+	 * A client composing a reply usually writes the mention itself, either as a link to the
+	 * actor, the way Mastodon and the plugin's own output do, or as a bare handle. Prepending
+	 * the reply context on top of that federates the mention twice.
+	 *
+	 * @param string $content The comment content.
+	 * @param string $acct    The actor's handle, `@user@host`.
+	 * @param string $url     The actor's URL.
+	 *
+	 * @return bool True if the content already carries the mention.
+	 */
+	private static function content_mentions( $content, $acct, $url ) {
+		if ( false !== \stripos( $content, $acct ) ) {
+			return true;
+		}
+
+		// The actor URL and the author's link may differ by a trailing slash in either direction.
+		return (bool) \preg_match(
+			'/<a\b[^>]*\bhref=["\']' . \preg_quote( \untrailingslashit( $url ), '/' ) . '\/?["\']/i',
+			$content
+		);
 	}
 
 	/**

@@ -29,16 +29,28 @@ class Test_Comment extends \WP_UnitTestCase {
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		self::$post_id = $factory->post->create();
+	}
 
-		// Mock the WebFinger wp_safe_remote_get.
+	/**
+	 * Set up before each test.
+	 *
+	 * The WebFinger mock is added per test rather than once for the class: WP_UnitTestCase
+	 * snapshots the hook table around every test, and a filter added in wpSetUpBeforeClass is
+	 * only as durable as whatever an earlier class left in that table.
+	 */
+	public function set_up() {
+		parent::set_up();
+
 		add_filter( 'pre_http_request', array( self::class, 'pre_http_request' ), 10, 3 );
 	}
 
 	/**
-	 * Clean up after tests.
+	 * Tear down after each test.
 	 */
-	public static function wpTearDownAfterClass() {
+	public function tear_down() {
 		remove_filter( 'pre_http_request', array( self::class, 'pre_http_request' ) );
+
+		parent::tear_down();
 	}
 
 	/**
@@ -89,6 +101,72 @@ class Test_Comment extends \WP_UnitTestCase {
 
 		// Test that reply context is added.
 		$this->assertSame( '<p><a rel="mention" class="u-url mention" href="https://example.net/@remote" title="@remote@example.net">@remote</a> <a rel="mention" class="u-url mention" href="https://remote.example/@author" title="@author@remote.example">@author</a> This is a comment</p>', $content );
+	}
+
+	/**
+	 * Test that a mention the author already wrote is not prepended a second time.
+	 *
+	 * A reply composed through the ActivityPub API arrives with its own mention, as a link to
+	 * the actor the way Mastodon writes it, or as a bare handle. The reply context must not
+	 * repeat it.
+	 *
+	 * @dataProvider data_content_with_existing_mention
+	 *
+	 * @param string $content    The comment content as the author wrote it.
+	 * @param string $expected   The federated content.
+	 * @param string $author_url The parent author's stored URL.
+	 */
+	public function test_content_does_not_duplicate_an_existing_mention( $content, $expected, $author_url = 'https://remote.example/@author' ) {
+		$parent_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'    => self::$post_id,
+				'comment_author_url' => $author_url,
+				'comment_meta'       => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		$test_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'    => self::$post_id,
+				'comment_parent'     => $parent_comment_id,
+				'comment_author_url' => 'https://example.com/@test',
+				'comment_content'    => $content,
+			)
+		);
+
+		$object = ( new Comment( get_comment( $test_comment_id ) ) )->to_object();
+
+		$this->assertSame( $expected, $object->get_content() );
+		$this->assertCount( 1, $object->get_tag(), 'The actor is tagged exactly once.' );
+	}
+
+	/**
+	 * Data provider for content that already mentions the reply target.
+	 *
+	 * @return array[] Test parameters.
+	 */
+	public function data_content_with_existing_mention() {
+		return array(
+			'mention as a link'   => array(
+				'<a rel="mention" class="u-url mention" href="https://remote.example/@author">@author</a> thanks',
+				'<p><a rel="mention" class="u-url mention" href="https://remote.example/@author">@author</a> thanks</p>',
+			),
+			'mention as a handle' => array(
+				'@author@remote.example thanks',
+				'<p>@author@remote.example thanks</p>',
+			),
+			'stored URL has a trailing slash, link does not' => array(
+				'<a rel="mention" class="u-url mention" href="https://remote.example/@author">@author</a> thanks',
+				'<p><a rel="mention" class="u-url mention" href="https://remote.example/@author">@author</a> thanks</p>',
+				'https://remote.example/@author/',
+			),
+			'no mention'          => array(
+				'thanks',
+				'<p><a rel="mention" class="u-url mention" href="https://remote.example/@author" title="@author@remote.example">@author</a> thanks</p>',
+			),
+		);
 	}
 
 	/**
