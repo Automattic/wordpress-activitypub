@@ -18,6 +18,11 @@ class Polylang {
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_locale', array( self::class, 'get_post_locale' ), 10, 2 );
+
+		// Show Mastodon apps the language Polylang assigned to a post.
+		\add_filter( 'mastodon_api_status_language', array( self::class, 'get_post_locale' ), 10, 2 );
+		// Store the language a Mastodon app sets with Polylang.
+		\add_filter( 'mastodon_api_pre_save_status_language', array( self::class, 'save_status_language' ), 10, 3 );
 	}
 
 	/**
@@ -42,5 +47,26 @@ class Polylang {
 		$post_lang = \pll_get_post_language( $item->ID, 'slug' );
 
 		return $post_lang ? $post_lang : $lang;
+	}
+
+	/**
+	 * Store the language a Mastodon app set for a post with Polylang.
+	 *
+	 * A language Polylang does not know is left to Enable Mastodon Apps, which stores it as post meta.
+	 *
+	 * @param bool   $stored   Whether the language has been stored elsewhere.
+	 * @param int    $post_id  The post ID.
+	 * @param string $language The language code the app submitted.
+	 *
+	 * @return bool True when Polylang stored the language.
+	 */
+	public static function save_status_language( $stored, $post_id, $language ) {
+		if ( ! \function_exists( 'pll_set_post_language' ) || ! \in_array( $language, \pll_languages_list(), true ) ) {
+			return $stored;
+		}
+
+		\pll_set_post_language( $post_id, $language );
+
+		return true;
 	}
 }
