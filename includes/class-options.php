@@ -437,6 +437,18 @@ class Options {
 		 */
 		\register_setting(
 			'activitypub_blog',
+			'activitypub_blog_name',
+			array(
+				'type'              => 'string',
+				'description'       => 'The Name of the Blog-User',
+				'show_in_rest'      => true,
+				'default'           => '',
+				'sanitize_callback' => 'sanitize_text_field',
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
 			'activitypub_blog_description',
 			array(
 				'type'         => 'string',
@@ -455,6 +467,17 @@ class Options {
 				'show_in_rest'      => true,
 				'default'           => Blog::get_default_username(),
 				'sanitize_callback' => array( Sanitize::class, 'blog_identifier' ),
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
+			'activitypub_blog_icon',
+			array(
+				'type'              => 'integer',
+				'description'       => 'The Attachment-ID of the Blog-User Avatar',
+				'default'           => 0,
+				'sanitize_callback' => 'absint',
 			)
 		);
 

@@ -287,6 +287,24 @@ class Admin {
 			false
 		);
 
+		\wp_register_script(
+			'activitypub-blog-avatar',
+			\plugins_url(
+				'assets/js/activitypub-blog-avatar.js',
+				ACTIVITYPUB_PLUGIN_FILE
+			),
+			array( 'jquery', 'media-editor' ),
+			ACTIVITYPUB_PLUGIN_VERSION,
+			false
+		);
+		\wp_localize_script(
+			'activitypub-blog-avatar',
+			'activitypubBlogAvatar',
+			array(
+				'fallbackUrl' => \esc_url_raw( \get_site_icon_url() ),
+			)
+		);
+
 		// Register and enqueue command palette integration.
 		if ( user_can_activitypub( \get_current_user_id() ) || \current_user_can( 'manage_options' ) ) {
 			$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/command-palette/plugin.asset.php';
