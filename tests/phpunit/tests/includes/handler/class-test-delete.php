@@ -663,6 +663,45 @@ class Test_Delete extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Data provider for the inbox-only scoping of the Delete carve-out.
+	 *
+	 * @return array[] Test cases: [ method, route, expected ].
+	 */
+	public function data_defer_signature_verification_scope() {
+		return array(
+			'shared inbox delivery'   => array( 'POST', '/activitypub/1.0/inbox', true ),
+			'actor inbox delivery'    => array( 'POST', '/activitypub/1.0/actors/1/inbox', true ),
+			'legacy user inbox'       => array( 'POST', '/activitypub/1.0/users/1/inbox', true ),
+			'read of a collection'    => array( 'GET', '/activitypub/1.0/actors/1/followers', false ),
+			'seek in a collection'    => array( 'GET', '/activitypub/1.0/seek', false ),
+			'probe of a collection'   => array( 'HEAD', '/activitypub/1.0/actors/1/followers', false ),
+			'non-inbox delivery'      => array( 'POST', '/activitypub/1.0/actors/1/outbox', false ),
+			'inbox outside namespace' => array( 'POST', '/wp/v2/inbox', false ),
+			'inbox stream'            => array( 'POST', '/activitypub/1.0/actors/1/inbox/stream', false ),
+		);
+	}
+
+	/**
+	 * The `type` in the body is caller-controlled, so the carve-out must only apply
+	 * to POST deliveries to an inbox. Everywhere else — reads, seeks, HEAD probes,
+	 * other routes — signature verification has to stay in place.
+	 *
+	 * @dataProvider data_defer_signature_verification_scope
+	 * @covers ::defer_signature_verification
+	 *
+	 * @param string $method   The HTTP method of the request.
+	 * @param string $route    The route of the request.
+	 * @param bool   $expected Whether signature verification should be deferred.
+	 */
+	public function test_defer_signature_verification_scope( $method, $route, $expected ) {
+		$request = new \WP_REST_Request( $method, $route );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( array( 'type' => 'Delete' ) ) );
+
+		$this->assertSame( $expected, Delete::defer_signature_verification( false, $request, false ) );
+	}
+
+	/**
 	 * Non-Delete activities pass through the filter unchanged regardless
 	 * of force_signature, preserving whatever the incoming $defer value was.
 	 *

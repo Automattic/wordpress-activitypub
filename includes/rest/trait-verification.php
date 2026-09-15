@@ -45,7 +45,15 @@ trait Verification {
 	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
 	 */
 	public function verify_signature( $request, $force_signature = false ) {
-		if ( 'HEAD' === $request->get_method() && ! $force_signature ) {
+		/*
+		 * The HEAD short-circuit exists so caches and link-checkers can probe public endpoints
+		 * without a signature. A seek request carries an `item` and its 307/Location response leaks
+		 * a per-actor membership/position, so it must not ride the bypass. Falling through means a
+		 * signature is then required whatever Authorized Fetch is set to, because the check below
+		 * only exempts GET: for a HEAD seek that is deliberate, since the leak does not depend on
+		 * the setting.
+		 */
+		if ( 'HEAD' === $request->get_method() && ! $force_signature && null === $request->get_param( 'item' ) ) {
 			return true;
 		}
 
@@ -318,7 +326,24 @@ trait Verification {
 			return true;
 		}
 
-		// Ownership answers who the caller is; the scope answers what the caller was allowed to do with that identity.
-		return true === $this->verify_owner( $request ) && OAuth_Server::permits_scope( Scope::READ );
+		return $this->owner_may_read( $request );
+	}
+
+	/**
+	 * Whether the request comes from the actor's owner with permission to read.
+	 *
+	 * Ownership answers who the caller is; the scope answers what the caller was allowed to do with
+	 * that identity. An OAuth caller's identity is established from any valid bearer whatever it was
+	 * consented to, so reading owner-only material additionally requires the `read` scope. A
+	 * WordPress session is not scope-limited.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 * @return bool True if the owner may read owner-only material.
+	 */
+	protected function owner_may_read( $request ) {
+		// Cheap guard first: verify_owner() resolves the actor before reaching its own login check.
+		return \is_user_logged_in() && true === $this->verify_owner( $request ) && OAuth_Server::permits_scope( Scope::READ );
 	}
 }
