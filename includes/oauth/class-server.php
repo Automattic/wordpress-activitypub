@@ -24,8 +24,14 @@ class Server {
 
 	/**
 	 * Initialize the OAuth server.
+	 *
+	 * Registered on `init`, so the setting is read once the site context is settled.
 	 */
 	public static function init() {
+		if ( ! \get_option( 'activitypub_api', false ) ) {
+			return;
+		}
+
 		// Hook into REST authentication - priority 20 to run after default auth.
 		\add_filter( 'rest_authentication_errors', array( self::class, 'authenticate_oauth' ), 20 );
 
