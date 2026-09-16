@@ -34,6 +34,8 @@ class Test_Polylang extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		\remove_filter( 'activitypub_locale', array( Polylang::class, 'get_post_locale' ) );
+		\remove_filter( 'mastodon_api_status_language', array( Polylang::class, 'get_post_locale' ) );
+		\remove_filter( 'mastodon_api_pre_save_status_language', array( Polylang::class, 'save_status_language' ) );
 
 		parent::tear_down();
 	}
@@ -78,5 +80,56 @@ class Test_Polylang extends \WP_UnitTestCase {
 		$object = Post::transform( \get_post( $post_id ) )->to_object();
 
 		$this->assertSame( array( 'en' ), \array_keys( $object->get_content_map() ) );
+	}
+
+	/**
+	 * A Mastodon app sees the language Polylang assigned to the post.
+	 *
+	 * @covers ::get_post_locale
+	 */
+	public function test_status_uses_the_polylang_language() {
+		$post_id = self::factory()->post->create();
+		\update_post_meta( $post_id, '_test_pll_language', 'de' );
+
+		$this->assertSame( 'de', \apply_filters( 'mastodon_api_status_language', null, \get_post( $post_id ) ) );
+	}
+
+	/**
+	 * A post without a Polylang language keeps the language the app stored.
+	 *
+	 * @covers ::get_post_locale
+	 */
+	public function test_status_without_polylang_language_keeps_the_stored_language() {
+		$post_id = self::factory()->post->create();
+
+		$this->assertSame( 'de', \apply_filters( 'mastodon_api_status_language', 'de', \get_post( $post_id ) ) );
+	}
+
+	/**
+	 * The language a Mastodon app sets is stored with Polylang instead of as post meta.
+	 *
+	 * @covers ::save_status_language
+	 */
+	public function test_app_language_is_stored_with_polylang() {
+		$post_id = self::factory()->post->create();
+
+		$stored = \apply_filters( 'mastodon_api_pre_save_status_language', false, $post_id, 'de' );
+
+		$this->assertTrue( $stored );
+		$this->assertSame( 'de', \pll_get_post_language( $post_id ) );
+	}
+
+	/**
+	 * A language Polylang does not know is left to the post meta fallback.
+	 *
+	 * @covers ::save_status_language
+	 */
+	public function test_unknown_app_language_is_left_to_the_post_meta() {
+		$post_id = self::factory()->post->create();
+
+		$stored = \apply_filters( 'mastodon_api_pre_save_status_language', false, $post_id, 'xx' );
+
+		$this->assertFalse( $stored );
+		$this->assertFalse( \pll_get_post_language( $post_id ) );
 	}
 }
