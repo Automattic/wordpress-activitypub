@@ -100,19 +100,17 @@ export default function Sidebar(): ReactNode {
 					<MenuDescription menuItem={ activeItem } />
 
 					<MenuGroup>
-						{ menuItems.map(
-							( item: MenuItemConfig ): ReactNode => (
-								<MenuItem
-									key={ item.id }
-									isSelected={ item.path === '/' && isFeedFullySelected }
-									onClick={ () => handleMenuItemClick( item.path ) }
-									className="menu-item"
-								>
-									{ item.icon && <Icon icon={ item.icon } size={ 24 } /> }
-									<span>{ item.label }</span>
-								</MenuItem>
-							)
-						) }
+						{ menuItems.map( ( item: MenuItemConfig ): ReactNode => (
+							<MenuItem
+								key={ item.id }
+								isSelected={ item.path === '/' && isFeedFullySelected }
+								onClick={ () => handleMenuItemClick( item.path ) }
+								className="menu-item"
+							>
+								{ item.icon && <Icon icon={ item.icon } size={ 24 } /> }
+								<span>{ item.label }</span>
+							</MenuItem>
+						) ) }
 					</MenuGroup>
 				</NavigableMenu>
 

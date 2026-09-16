@@ -170,23 +170,21 @@ export default function FeedInspector(): ReactNode {
 					) }
 					{ terms && terms.length > 0 && (
 						<div className="activitypub-inspector-tags">
-							{ terms.map(
-								( term: Term ): ReactNode => (
-									<Button
-										key={ term.id }
-										size="small"
-										variant="secondary"
-										onClick={ (): void => handleTagClick( term.id ) }
-										aria-pressed={ selectedTagId === term.id }
-										aria-label={
-											/* translators: %s: tag name */
-											sprintf( __( 'Filter by tag: %s', 'activitypub' ), term.name )
-										}
-									>
-										#{ term.name }
-									</Button>
-								)
-							) }
+							{ terms.map( ( term: Term ): ReactNode => (
+								<Button
+									key={ term.id }
+									size="small"
+									variant="secondary"
+									onClick={ (): void => handleTagClick( term.id ) }
+									aria-pressed={ selectedTagId === term.id }
+									aria-label={
+										/* translators: %s: tag name */
+										sprintf( __( 'Filter by tag: %s', 'activitypub' ), term.name )
+									}
+								>
+									#{ term.name }
+								</Button>
+							) ) }
 						</div>
 					) }
 				</CardBody>
