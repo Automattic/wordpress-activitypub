@@ -75,7 +75,7 @@
 		"@wordpress/route": "^0.20.0",
 		"@wordpress/scripts": "^35.0.0",
 		"@wordpress/url": "^4.51.0",
-		"@wordpress/viewport": "^6.52.0",
+		"@wordpress/viewport": "^6.55.0",
 		"@wordpress/views": "^1.19.0",
 		"classnames": "^2.5.1",
 		"clsx": "^2.1.1",
