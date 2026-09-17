@@ -130,16 +130,14 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	 * @covers ::serialize_for_storage
 	 */
 	public function test_create_restores_registered_object_filters() {
-		$callbacks           = array(
+		$callbacks = array(
 			array( 'Activitypub\Mention', 'filter_activity_object' ),
 			array( 'Activitypub\Hashtag', 'filter_activity_object' ),
 			array( 'Activitypub\Link', 'filter_activity_object' ),
 		);
-		$original_priorities = array();
 
 		foreach ( $callbacks as $callback ) {
-			$priority              = \has_filter( 'activitypub_activity_object_array', $callback );
-			$original_priorities[] = $priority;
+			$priority = \has_filter( 'activitypub_activity_object_array', $callback );
 			if ( false !== $priority ) {
 				\remove_filter( 'activitypub_activity_object_array', $callback, $priority );
 			}
@@ -147,30 +145,20 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 
 		\add_filter( 'activitypub_activity_object_array', $callbacks[0], 42 );
 
-		try {
-			$post_id = Remote_Actors::create(
-				array(
-					'id'                => 'https://remote.example.com/actor/filter-restore',
-					'type'              => 'Person',
-					'inbox'             => 'https://remote.example.com/actor/filter-restore/inbox',
-					'name'              => 'Filter Restore',
-					'preferredUsername' => 'filter-restore',
-				)
-			);
+		$post_id = Remote_Actors::create(
+			array(
+				'id'                => 'https://remote.example.com/actor/filter-restore',
+				'type'              => 'Person',
+				'inbox'             => 'https://remote.example.com/actor/filter-restore/inbox',
+				'name'              => 'Filter Restore',
+				'preferredUsername' => 'filter-restore',
+			)
+		);
 
-			$this->assertIsInt( $post_id );
-			$this->assertSame( 42, \has_filter( 'activitypub_activity_object_array', $callbacks[0] ) );
-			$this->assertFalse( \has_filter( 'activitypub_activity_object_array', $callbacks[1] ) );
-			$this->assertFalse( \has_filter( 'activitypub_activity_object_array', $callbacks[2] ) );
-		} finally {
-			\remove_filter( 'activitypub_activity_object_array', $callbacks[0], 42 );
-
-			foreach ( $callbacks as $index => $callback ) {
-				if ( false !== $original_priorities[ $index ] ) {
-					\add_filter( 'activitypub_activity_object_array', $callback, $original_priorities[ $index ] );
-				}
-			}
-		}
+		$this->assertIsInt( $post_id );
+		$this->assertSame( 42, \has_filter( 'activitypub_activity_object_array', $callbacks[0] ) );
+		$this->assertFalse( \has_filter( 'activitypub_activity_object_array', $callbacks[1] ) );
+		$this->assertFalse( \has_filter( 'activitypub_activity_object_array', $callbacks[2] ) );
 	}
 
 	/**

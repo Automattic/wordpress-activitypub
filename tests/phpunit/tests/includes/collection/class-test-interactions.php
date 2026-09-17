@@ -1720,17 +1720,15 @@ class Test_Interactions extends \WP_UnitTestCase {
 	 * @covers ::persist
 	 */
 	public function test_persist_preserves_existing_hook_state() {
-		$callbacks           = array(
+		$callbacks      = array(
 			array( 'pre_option_require_name_email', array( Interactions::class, 'require_name_email_off' ), 1 ),
 			array( 'akismet_comment_nonce', array( Interactions::class, 'akismet_comment_nonce_inactive' ), 1 ),
 			array( 'wp_kses_allowed_html', array( Interactions::class, 'allowed_comment_html' ), 2 ),
 		);
-		$original_priorities = array();
-		$flood_priority      = \has_action( 'check_comment_flood', 'check_comment_flood_db' );
+		$flood_priority = \has_action( 'check_comment_flood', 'check_comment_flood_db' );
 
 		foreach ( $callbacks as $callback ) {
-			$priority              = \has_filter( $callback[0], $callback[1] );
-			$original_priorities[] = $priority;
+			$priority = \has_filter( $callback[0], $callback[1] );
 			if ( false !== $priority ) {
 				\remove_filter( $callback[0], $callback[1], $priority );
 			}
@@ -1742,26 +1740,12 @@ class Test_Interactions extends \WP_UnitTestCase {
 		}
 		\add_action( 'check_comment_flood', 'check_comment_flood_db', 42, 4 );
 
-		try {
-			Interactions::add_comment( $this->create_test_object( 'https://example.com/persist-existing-hooks' ) );
+		Interactions::add_comment( $this->create_test_object( 'https://example.com/persist-existing-hooks' ) );
 
-			foreach ( $callbacks as $callback ) {
-				$this->assertSame( 42, \has_filter( $callback[0], $callback[1] ) );
-			}
-			$this->assertSame( 42, \has_action( 'check_comment_flood', 'check_comment_flood_db' ) );
-		} finally {
-			foreach ( $callbacks as $index => $callback ) {
-				\remove_filter( $callback[0], $callback[1], 42 );
-				if ( false !== $original_priorities[ $index ] ) {
-					\add_filter( $callback[0], $callback[1], $original_priorities[ $index ], $callback[2] );
-				}
-			}
-
-			\remove_action( 'check_comment_flood', 'check_comment_flood_db', 42 );
-			if ( false !== $flood_priority ) {
-				\add_action( 'check_comment_flood', 'check_comment_flood_db', $flood_priority, 4 );
-			}
+		foreach ( $callbacks as $callback ) {
+			$this->assertSame( 42, \has_filter( $callback[0], $callback[1] ) );
 		}
+		$this->assertSame( 42, \has_action( 'check_comment_flood', 'check_comment_flood_db' ) );
 	}
 
 	/**
