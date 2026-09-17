@@ -20,6 +20,8 @@ on:
       - 'phpstan-baseline.neon'
       - '.github/workflows/phpstan.yml'
       - '!build/**/*.asset.php'
+permissions:
+  contents: read
 jobs:
   phpstan:
     runs-on: ubuntu-latest
