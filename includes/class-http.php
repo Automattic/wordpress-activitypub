@@ -189,15 +189,12 @@ class Http {
 			if ( ! $code ) {
 				$code = 0;
 			}
-			$response = new \WP_Error(
-				$code,
-				\__( 'Failed HTTP Request', 'activitypub' ),
-				array(
-					'status'        => $code,
-					// Lets callers that cache the failure apply the same cross-host guard as below.
-					'effective_url' => $effective_url,
-				)
-			);
+			$error_data = array( 'status' => $code );
+			if ( $effective_url ) {
+				// Lets callers that cache the failure apply the same cross-host guard as below.
+				$error_data['effective_url'] = $effective_url;
+			}
+			$response = new \WP_Error( $code, \__( 'Failed HTTP Request', 'activitypub' ), $error_data );
 
 			/*
 			 * Cache errors to prevent repeated timeout waits, but never one reached via a
