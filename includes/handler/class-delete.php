@@ -50,9 +50,7 @@ class Delete {
 			return;
 		}
 
-		if ( ! empty( $activity['object'] ) ) {
-			Proxy::delete( $activity['object'] );
-		}
+		Proxy::delete( $activity['object'] ?? null );
 
 		$object_type = $activity['object']['type'] ?? '';
 

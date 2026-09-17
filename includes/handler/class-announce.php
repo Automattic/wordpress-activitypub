@@ -95,11 +95,11 @@ class Announce {
 		}
 
 		/*
-		 * The requested URL is not always the host that answered: get_remote_object() re-fetches a
+		 * The requested URL is not always the host that answered: Proxy::get() re-fetches a
 		 * document from the id it declares when the two disagree, and returns the re-fetched copy.
 		 * Bind the actor to that id as well, which an authentic activity shares a host with.
 		 *
-		 * Only when the document declares one. The id is derived exactly as get_remote_object()
+		 * Only when the document declares one. The id is derived exactly as Proxy::get()
 		 * derives it, so the two cannot disagree about what counts as declared: whatever it treats
 		 * as id-less it returns as served, without re-fetching, and the origin check above is
 		 * already authoritative for those. Binding them here would drop relayed activities that

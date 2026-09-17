@@ -71,7 +71,7 @@ class Move {
 
 			$success = true;
 
-			// get_remote_object() already self-confirmed the target, so it is safe to cache.
+			// Proxy::get() already self-confirmed the target, so it is safe to cache.
 			$result = Remote_Actors::upsert( $target_json );
 		}
 

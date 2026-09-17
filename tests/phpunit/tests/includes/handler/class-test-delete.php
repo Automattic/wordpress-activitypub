@@ -11,6 +11,7 @@ use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Handler\Delete;
 use Activitypub\Proxy;
+use Activitypub\Tests\Remote_Request_Stub;
 use Activitypub\Tombstone;
 
 /**
@@ -19,6 +20,8 @@ use Activitypub\Tombstone;
  * @coversDefaultClass \Activitypub\Handler\Delete
  */
 class Test_Delete extends \WP_UnitTestCase {
+	use Remote_Request_Stub;
+
 	/**
 	 * Test user ID.
 	 *
@@ -685,26 +688,15 @@ class Test_Delete extends \WP_UnitTestCase {
 	 *
 	 * @covers ::handle_delete
 	 */
-	public function test_handle_delete_with_a_bare_id_drops_the_cached_object() {
-		$id       = 'https://example.com/notes/1';
-		$requests = 0;
-		$stub     = function () use ( $id, &$requests ) {
-			++$requests;
-			return array(
-				'response' => array( 'code' => 200 ),
-				'body'     => \wp_json_encode(
-					array(
-						'id'   => $id,
-						'type' => 'Note',
-					)
-				),
-				'headers'  => array(),
-			);
-		};
-		\add_filter( 'pre_http_request', $stub );
+	public function test_handle_delete_drops_the_cached_object() {
+		$this->stub_remote_requests();
+		$id                     = 'https://example.com/notes/1';
+		$this->responses[ $id ] = array(
+			'id'   => $id,
+			'type' => 'Note',
+		);
 
 		Proxy::get( $id );
-		$before = $requests;
 		Delete::handle_delete(
 			array(
 				'type'   => 'Delete',
@@ -713,12 +705,10 @@ class Test_Delete extends \WP_UnitTestCase {
 			),
 			array( 1 )
 		);
-		$after = $requests;
+		$before = $this->requests;
 		Proxy::get( $id );
+		$this->unstub_remote_requests();
 
-		\remove_filter( 'pre_http_request', $stub );
-
-		$this->assertGreaterThanOrEqual( $before, $after );
-		$this->assertSame( $after + 1, $requests, 'The object is fetched again after the Delete.' );
+		$this->assertSame( $before + 1, $this->requests, 'The object is fetched again after the Delete.' );
 	}
 }

@@ -13,6 +13,7 @@ use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Update;
 use Activitypub\Proxy;
+use Activitypub\Tests\Remote_Request_Stub;
 
 /**
  * Update Handler Test Class.
@@ -20,6 +21,8 @@ use Activitypub\Proxy;
  * @coversDefaultClass \Activitypub\Handler\Update
  */
 class Test_Update extends \WP_UnitTestCase {
+	use Remote_Request_Stub;
+
 
 	/**
 	 * Test that the activitypub_handled_create fallback is triggered.
@@ -618,62 +621,52 @@ class Test_Update extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * An Update drops the cached copy of its object, whether the object is inlined or a bare id.
+	 * An Update drops the cached copy of its object, however the object is given.
 	 *
+	 * @dataProvider update_object_provider
 	 * @covers ::handle_update
+	 *
+	 * @param string|array $update_object The `object` of the Update.
 	 */
-	public function test_handle_update_drops_the_cached_object() {
-		$id       = 'https://example.com/notes/1';
-		$requests = 0;
-		$stub     = function () use ( $id, &$requests ) {
-			++$requests;
-			return array(
-				'response' => array( 'code' => 200 ),
-				'body'     => \wp_json_encode(
-					array(
-						'id'   => $id,
-						'type' => 'Note',
-					)
-				),
-				'headers'  => array(),
-			);
-		};
-		\add_filter( 'pre_http_request', $stub );
+	public function test_handle_update_drops_the_cached_object( $update_object ) {
+		$this->stub_remote_requests();
+		$id                     = 'https://example.com/notes/1';
+		$this->responses[ $id ] = array(
+			'id'   => $id,
+			'type' => 'Note',
+		);
 
 		Proxy::get( $id );
-		$seeded = $requests;
 		Update::handle_update(
 			array(
 				'type'   => 'Update',
 				'actor'  => 'https://example.com/users/alice',
-				'object' => array(
-					'id'   => $id,
+				'object' => $update_object,
+			),
+			array( 1 ),
+			null
+		);
+		$before = $this->requests;
+		Proxy::get( $id );
+		$this->unstub_remote_requests();
+
+		$this->assertSame( $before + 1, $this->requests, 'The object is fetched again after the Update.' );
+	}
+
+	/**
+	 * The shapes an Update's object arrives in.
+	 *
+	 * @return array[]
+	 */
+	public function update_object_provider() {
+		return array(
+			'bare id' => array( 'https://example.com/notes/1' ),
+			'inlined' => array(
+				array(
+					'id'   => 'https://example.com/notes/1',
 					'type' => 'Note',
 				),
 			),
-			array( 1 ),
-			null
 		);
-		$after_inline = $requests;
-		Proxy::get( $id );
-		$this->assertSame( $after_inline + 1, $requests, 'Fetched again after the inlined Update.' );
-		$after_get = $requests;
-		Update::handle_update(
-			array(
-				'type'   => 'Update',
-				'actor'  => 'https://example.com/users/alice',
-				'object' => $id,
-			),
-			array( 1 ),
-			null
-		);
-		$after_bare = $requests;
-		Proxy::get( $id );
-
-		\remove_filter( 'pre_http_request', $stub );
-
-		$this->assertSame( 1, $seeded );
-		$this->assertGreaterThanOrEqual( $after_get, $after_bare );
-		$this->assertSame( $after_bare + 1, $requests, 'Fetched again after the bare-id Update.' );
 	}
 }

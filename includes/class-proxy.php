@@ -16,6 +16,9 @@ namespace Activitypub;
  * behind it is the object cache, or transients where the site has no persistent one,
  * so a host swaps the backend with its object cache drop-in and nothing else.
  *
+ * An object is stored once, under its declared id. Any other URL it was requested by
+ * gets an alias entry pointing at that id, so dropping the id drops every spelling.
+ *
  * @since unreleased
  */
 class Proxy {
@@ -29,15 +32,15 @@ class Proxy {
 	/**
 	 * Get a remote object.
 	 *
+	 * @since unreleased
+	 *
 	 * @param string|array $id   The ActivityPub id, an acct identifier, or an object with an id.
 	 * @param array        $args {
 	 *     Optional. Arguments.
 	 *
-	 *     @type bool     $cached Whether to read from and write to the cache. Default true.
-	 *     @type int|null $ttl    Seconds to cache a fetched object. Default one hour.
+	 *     @type bool $cached Whether to answer from the cache. A fetched object is stored either way. Default true.
+	 *     @type int  $ttl    Seconds to cache a fetched object. Default one hour.
 	 * }
-	 *
-	 * @since unreleased
 	 *
 	 * @return array|\WP_Error The object, or an error.
 	 */
@@ -46,7 +49,7 @@ class Proxy {
 			$args,
 			array(
 				'cached' => true,
-				'ttl'    => null,
+				'ttl'    => HOUR_IN_SECONDS,
 			)
 		);
 
@@ -84,36 +87,33 @@ class Proxy {
 			return $url;
 		}
 
+		// A fragment never reaches the server, and a key id like `…#main-key` must share the actor's entry.
+		$url = \strip_fragment_from_url( $url );
+
 		if ( $args['cached'] ) {
 			$entry = self::cache_get( self::CACHE_NAMESPACE, $url );
 			if ( null !== $entry ) {
-				return self::unwrap( $entry );
+				return $entry;
 			}
 		}
 
 		$final_url = '';
 		$object    = self::fetch_verified( $url, $final_url );
 
-		if ( ! $args['cached'] ) {
-			return $object;
-		}
-
 		/*
-		 * Never cache under the requested URL what another host served: a one-off open
+		 * Never file under the requested URL what another host served: a one-off open
 		 * redirect on the requested host would otherwise let that host's key carry the
 		 * other host's document, or its outage, for the whole lifetime of the entry.
 		 */
-		$same_host = ! $final_url || is_same_host( $url, $final_url );
+		$same_host = is_same_host( $url, $final_url );
 
 		if ( \is_wp_error( $object ) ) {
 			if ( $same_host ) {
-				self::cache_set( self::CACHE_NAMESPACE, $url, self::wrap_error( $object ), self::failure_ttl( $object ) );
+				self::cache_set( self::CACHE_NAMESPACE, $url, $object, Http::failure_cache_duration( (int) $object->get_error_code() ) );
 			}
 
 			return $object;
 		}
-
-		$ttl = $args['ttl'] ? (int) $args['ttl'] : HOUR_IN_SECONDS;
 
 		/**
 		 * Filters how long a fetched object stays in the cache.
@@ -122,15 +122,14 @@ class Proxy {
 		 * @param string $url    The URL the object was fetched from.
 		 * @param array  $object The object.
 		 */
-		$ttl = (int) \apply_filters( 'activitypub_proxy_cache_ttl', $ttl, $url, $object );
+		$ttl = (int) \apply_filters( 'activitypub_proxy_cache_ttl', (int) $args['ttl'], $url, $object );
 
-		if ( $same_host ) {
-			self::cache_set( self::CACHE_NAMESPACE, $url, $object, $ttl );
-		}
+		// The declared id confirmed itself, so it is the canonical entry.
+		$canonical = ! empty( $object['id'] ) && \is_string( $object['id'] ) ? $object['id'] : $url;
+		self::cache_set( self::CACHE_NAMESPACE, $canonical, $object, $ttl );
 
-		// The declared id confirmed itself, so a request by it must hit the same entry.
-		if ( ! empty( $object['id'] ) && \is_string( $object['id'] ) && $object['id'] !== $url ) {
-			self::cache_set( self::CACHE_NAMESPACE, $object['id'], $object, $ttl );
+		if ( $same_host && $canonical !== $url ) {
+			self::cache_set( self::CACHE_NAMESPACE, $url, array( '__alias' => $canonical ), $ttl );
 		}
 
 		return $object;
@@ -139,24 +138,26 @@ class Proxy {
 	/**
 	 * Remove a remote object from the cache.
 	 *
-	 * @param string|array $id The ActivityPub id, or an object with an id.
+	 * Dropping an id also retires every alias that points at it.
 	 *
 	 * @since unreleased
+	 *
+	 * @param string|array|null $id The ActivityPub id, or an object with an id.
 	 *
 	 * @return bool Whether an entry was removed.
 	 */
 	public static function delete( $id ) {
 		$url = object_to_uri( $id );
 
-		return $url ? self::cache_delete( self::CACHE_NAMESPACE, $url ) : false;
+		return $url ? self::cache_delete( self::CACHE_NAMESPACE, \strip_fragment_from_url( $url ) ) : false;
 	}
 
 	/**
 	 * Fetch a remote object again, replacing the cached one.
 	 *
-	 * @param string|array $id The ActivityPub id, or an object with an id.
-	 *
 	 * @since unreleased
+	 *
+	 * @param string|array $id The ActivityPub id, or an object with an id.
 	 *
 	 * @return array|\WP_Error The object, or an error.
 	 */
@@ -182,16 +183,17 @@ class Proxy {
 	}
 
 	/**
-	 * Get an entry from the cache.
+	 * Get an entry from the cache, following one alias.
 	 *
 	 * The object cache when the site has a persistent one, a transient otherwise.
 	 *
-	 * @param string $kind The kind of thing, for example `object`.
-	 * @param string $id   The ActivityPub id.
+	 * @param string $kind         The kind of thing, for example `object`.
+	 * @param string $id           The ActivityPub id.
+	 * @param bool   $follow_alias Whether an alias entry is resolved. Default true.
 	 *
-	 * @return array|null The entry, or null when there is none.
+	 * @return array|\WP_Error|null The entry, or null when there is none.
 	 */
-	private static function cache_get( $kind, $id ) {
+	private static function cache_get( $kind, $id, $follow_alias = true ) {
 		$key = self::cache_key( $kind, $id );
 
 		if ( \wp_using_ext_object_cache() ) {
@@ -200,7 +202,16 @@ class Proxy {
 			$value = \get_transient( 'activitypub_' . $key );
 		}
 
-		return \is_array( $value ) ? $value : null;
+		if ( false === $value || null === $value ) {
+			return null;
+		}
+
+		if ( \is_array( $value ) && isset( $value['__alias'] ) ) {
+			// A dangling alias, or an alias of an alias, is a miss.
+			return $follow_alias ? self::cache_get( $kind, $value['__alias'], false ) : null;
+		}
+
+		return $value;
 	}
 
 	/**
@@ -209,23 +220,19 @@ class Proxy {
 	 * Always with a lifetime: a persistent object cache evicts entries anyway, and a
 	 * transient without one becomes an autoloaded option.
 	 *
-	 * @param string $kind  The kind of thing, for example `object`.
-	 * @param string $id    The ActivityPub id.
-	 * @param array  $value The entry.
-	 * @param int    $ttl   Seconds to keep it.
-	 *
-	 * @return bool Whether the entry was stored.
+	 * @param string          $kind  The kind of thing, for example `object`.
+	 * @param string          $id    The ActivityPub id.
+	 * @param array|\WP_Error $value The entry.
+	 * @param int             $ttl   Seconds to keep it.
 	 */
 	private static function cache_set( $kind, $id, $value, $ttl ) {
 		$key = self::cache_key( $kind, $id );
 
 		if ( \wp_using_ext_object_cache() ) {
-			$stored = \wp_cache_set( $key, $value, 'activitypub', $ttl );
+			\wp_cache_set( $key, $value, 'activitypub', $ttl );
 		} else {
-			$stored = \set_transient( 'activitypub_' . $key, $value, $ttl );
+			\set_transient( 'activitypub_' . $key, $value, $ttl );
 		}
-
-		return (bool) $stored;
 	}
 
 	/**
@@ -240,12 +247,10 @@ class Proxy {
 		$key = self::cache_key( $kind, $id );
 
 		if ( \wp_using_ext_object_cache() ) {
-			$deleted = \wp_cache_delete( $key, 'activitypub' );
-		} else {
-			$deleted = \delete_transient( 'activitypub_' . $key );
+			return (bool) \wp_cache_delete( $key, 'activitypub' );
 		}
 
-		return (bool) $deleted;
+		return (bool) \delete_transient( 'activitypub_' . $key );
 	}
 
 	/**
@@ -347,56 +352,5 @@ class Proxy {
 		}
 
 		return $data;
-	}
-
-	/**
-	 * How long a failed fetch is remembered.
-	 *
-	 * Short for errors worth retrying and for connection failures, longer for the rest.
-	 *
-	 * @param \WP_Error $error The error.
-	 *
-	 * @return int Seconds.
-	 */
-	private static function failure_ttl( $error ) {
-		$code = (int) $error->get_error_code();
-
-		if ( 0 === $code || \in_array( $code, ACTIVITYPUB_RETRY_ERROR_CODES, true ) ) {
-			return MINUTE_IN_SECONDS;
-		}
-
-		return 15 * MINUTE_IN_SECONDS;
-	}
-
-	/**
-	 * Turn an error into a cacheable entry.
-	 *
-	 * @param \WP_Error $error The error.
-	 *
-	 * @return array The entry.
-	 */
-	private static function wrap_error( $error ) {
-		return array(
-			'__error' => array(
-				'code'    => $error->get_error_code(),
-				'message' => $error->get_error_message(),
-				'data'    => $error->get_error_data(),
-			),
-		);
-	}
-
-	/**
-	 * Turn a cache entry back into an object or the error it stands for.
-	 *
-	 * @param array $entry The entry.
-	 *
-	 * @return array|\WP_Error The object, or the remembered error.
-	 */
-	private static function unwrap( $entry ) {
-		if ( isset( $entry['__error'] ) ) {
-			return new \WP_Error( $entry['__error']['code'], $entry['__error']['message'], $entry['__error']['data'] );
-		}
-
-		return $entry;
 	}
 }

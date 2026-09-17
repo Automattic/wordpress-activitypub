@@ -366,7 +366,7 @@ class Remote_Actors {
 			return $post;
 		}
 
-		// get_remote_object() self-confirms the actor is served under its own id, so it is safe to cache.
+		// Proxy::get() self-confirms the actor is served under its own id, so it is safe to cache.
 		$object = Proxy::get( $actor_uri, array( 'cached' => false ) );
 
 		if ( \is_wp_error( $object ) ) {

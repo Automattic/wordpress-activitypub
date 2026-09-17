@@ -16,19 +16,7 @@ use Activitypub\Proxy;
  * @coversDefaultClass \Activitypub\Proxy
  */
 class Test_Proxy extends \WP_UnitTestCase {
-	/**
-	 * The number of HTTP requests the stub answered.
-	 *
-	 * @var int
-	 */
-	private $requests = 0;
-
-	/**
-	 * What the stub answers, keyed by URL: an array to serve as JSON, or an int status code.
-	 *
-	 * @var array<string, array|int>
-	 */
-	private $responses = array();
+	use Remote_Request_Stub;
 
 	/**
 	 * Set up.
@@ -36,51 +24,34 @@ class Test_Proxy extends \WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
-		$this->requests  = 0;
-		$this->responses = array();
-		\add_filter( 'pre_http_request', array( $this, 'stub_request' ), 10, 3 );
+		$this->stub_remote_requests();
 	}
 
 	/**
 	 * Tear down.
 	 */
 	public function tear_down() {
-		\remove_filter( 'pre_http_request', array( $this, 'stub_request' ) );
+		$this->unstub_remote_requests();
 		\wp_using_ext_object_cache( false );
 
 		parent::tear_down();
 	}
 
 	/**
-	 * Answer requests from the stub table.
+	 * Serve a Note at a URL.
 	 *
-	 * @param false|array $pre  The pre-empted response.
-	 * @param array       $args The request arguments.
-	 * @param string      $url  The URL.
+	 * @param string $id The id, also the URL.
 	 *
-	 * @return array The response.
+	 * @return string The id.
 	 */
-	public function stub_request( $pre, $args, $url ) {
-		++$this->requests;
-		$answer = $this->responses[ $url ] ?? 404;
-
-		if ( \is_array( $answer ) && isset( $answer['http_response'] ) ) {
-			return $answer;
-		}
-
-		if ( \is_int( $answer ) ) {
-			return array(
-				'response' => array( 'code' => $answer ),
-				'body'     => '',
-				'headers'  => array(),
-			);
-		}
-
-		return array(
-			'response' => array( 'code' => 200 ),
-			'body'     => \wp_json_encode( $answer ),
-			'headers'  => array( 'content-type' => 'application/activity+json' ),
+	private function note( $id ) {
+		$this->responses[ $id ] = array(
+			'id'      => $id,
+			'type'    => 'Note',
+			'content' => 'Hi',
 		);
+
+		return $id;
 	}
 
 	/**
@@ -89,12 +60,7 @@ class Test_Proxy extends \WP_UnitTestCase {
 	 * @covers ::get
 	 */
 	public function test_get_fetches_once_and_then_serves_from_cache() {
-		$id                     = 'https://example.com/notes/1';
-		$this->responses[ $id ] = array(
-			'id'      => $id,
-			'type'    => 'Note',
-			'content' => 'Hi',
-		);
+		$id = $this->note( 'https://example.com/notes/1' );
 
 		$first  = Proxy::get( $id );
 		$second = Proxy::get( $id );
@@ -122,19 +88,16 @@ class Test_Proxy extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * The cache can be bypassed per call.
+	 * Bypassing the cache fetches again, and the fresh copy is stored.
 	 *
 	 * @covers ::get
 	 */
-	public function test_get_can_bypass_the_cache() {
-		$id                     = 'https://example.com/notes/1';
-		$this->responses[ $id ] = array(
-			'id'   => $id,
-			'type' => 'Note',
-		);
+	public function test_get_can_bypass_the_cache_and_still_stores() {
+		$id = $this->note( 'https://example.com/notes/1' );
 
 		Proxy::get( $id );
 		Proxy::get( $id, array( 'cached' => false ) );
+		Proxy::get( $id );
 
 		$this->assertSame( 2, $this->requests );
 	}
@@ -146,12 +109,7 @@ class Test_Proxy extends \WP_UnitTestCase {
 	 * @covers ::refresh
 	 */
 	public function test_delete_and_refresh_fetch_again() {
-		$id                     = 'https://example.com/notes/1';
-		$this->responses[ $id ] = array(
-			'id'      => $id,
-			'type'    => 'Note',
-			'content' => 'v1',
-		);
+		$id = $this->note( 'https://example.com/notes/1' );
 
 		Proxy::get( $id );
 		Proxy::delete( $id );
@@ -217,73 +175,47 @@ class Test_Proxy extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * An object served under a different id than requested is stored under its own id too.
+	 * A key id shares the entry of the actor it belongs to.
 	 *
 	 * @covers ::get
 	 */
-	public function test_get_caches_under_the_declared_id() {
-		$requested = 'https://example.com/@alice/1';
-		$declared  = 'https://example.com/users/alice/statuses/1';
+	public function test_get_ignores_the_fragment() {
+		$actor = 'https://example.com/users/alice';
 
-		$this->responses[ $requested ] = array(
-			'id'   => $declared,
-			'type' => 'Note',
-		);
-		$this->responses[ $declared ]  = array(
-			'id'   => $declared,
-			'type' => 'Note',
+		$this->responses[ $actor ] = array(
+			'id'   => $actor,
+			'type' => 'Person',
 		);
 
-		Proxy::get( $requested );
-		Proxy::get( $declared );
-
-		$this->assertSame( 2, $this->requests, 'The re-fetch of the declared id is the only second request.' );
-	}
-
-	/**
-	 * The old entry point goes through the proxy and its cache.
-	 *
-	 * @covers \Activitypub\Http::get_remote_object
-	 */
-	public function test_http_get_remote_object_forwards_to_the_proxy() {
-		$id                     = 'https://example.com/notes/1';
-		$this->responses[ $id ] = array(
-			'id'   => $id,
-			'type' => 'Note',
-		);
-
-		Http::get_remote_object( $id );
-		Proxy::get( $id );
+		Proxy::get( $actor . '#main-key' );
+		Proxy::get( $actor );
 
 		$this->assertSame( 1, $this->requests );
 	}
 
 	/**
-	 * Serve a response that was redirected to another host.
+	 * An object requested by another URL is stored under its declared id, with an alias
+	 * for the requested URL, so dropping the id drops the alias too.
 	 *
-	 * @param string    $served_from The URL the response was served from.
-	 * @param array|int $answer      The object, or a status code.
-	 *
-	 * @return array The response.
+	 * @covers ::get
+	 * @covers ::delete
 	 */
-	private function redirected( $served_from, $answer ) {
-		$requests_response      = new \WpOrg\Requests\Response();
-		$requests_response->url = $served_from;
+	public function test_get_stores_under_the_declared_id_and_aliases_the_requested_url() {
+		$requested = 'https://example.com/@alice/1';
+		$declared  = $this->note( 'https://example.com/users/alice/statuses/1' );
 
-		$response = \is_int( $answer )
-			? array(
-				'response' => array( 'code' => $answer ),
-				'body'     => '',
-			)
-			: array(
-				'response' => array( 'code' => 200 ),
-				'body'     => \wp_json_encode( $answer ),
-			);
+		$this->responses[ $requested ] = $this->responses[ $declared ];
 
-		$response['headers']       = array();
-		$response['http_response'] = new \WP_HTTP_Requests_Response( $requests_response );
+		Proxy::get( $requested );
+		$this->assertSame( 2, $this->requests, 'The declared id confirms itself in a second request.' );
 
-		return $response;
+		Proxy::get( $declared );
+		Proxy::get( $requested );
+		$this->assertSame( 2, $this->requests, 'Both spellings are served from the cache.' );
+
+		Proxy::delete( $declared );
+		Proxy::get( $requested );
+		$this->assertSame( 4, $this->requests, 'Dropping the id retires the alias.' );
 	}
 
 	/**
@@ -291,7 +223,7 @@ class Test_Proxy extends \WP_UnitTestCase {
 	 *
 	 * @covers ::get
 	 */
-	public function test_get_does_not_cache_a_cross_host_redirect_under_the_requested_url() {
+	public function test_get_does_not_alias_a_cross_host_redirect() {
 		$requested = 'https://example.com/redirect';
 		$declared  = 'https://example.org/notes/1';
 
@@ -332,11 +264,7 @@ class Test_Proxy extends \WP_UnitTestCase {
 	 * @covers ::get
 	 */
 	public function test_get_caches_in_a_transient_without_a_persistent_object_cache() {
-		$id                     = 'https://example.com/notes/1';
-		$this->responses[ $id ] = array(
-			'id'   => $id,
-			'type' => 'Note',
-		);
+		$id = $this->note( 'https://example.com/notes/1' );
 
 		Proxy::get( $id );
 
@@ -350,11 +278,7 @@ class Test_Proxy extends \WP_UnitTestCase {
 	 */
 	public function test_get_caches_in_the_object_cache_when_there_is_one() {
 		\wp_using_ext_object_cache( true );
-		$id                     = 'https://example.com/notes/1';
-		$this->responses[ $id ] = array(
-			'id'   => $id,
-			'type' => 'Note',
-		);
+		$id = $this->note( 'https://example.com/notes/1' );
 
 		Proxy::get( $id );
 		Proxy::get( $id );
@@ -362,5 +286,19 @@ class Test_Proxy extends \WP_UnitTestCase {
 		$this->assertSame( 1, $this->requests );
 		$this->assertNotFalse( \wp_cache_get( 'object:' . \hash( 'sha256', $id ), 'activitypub' ) );
 		$this->assertFalse( \get_option( '_transient_activitypub_object:' . \hash( 'sha256', $id ) ) );
+	}
+
+	/**
+	 * The old entry point goes through the proxy and its cache.
+	 *
+	 * @covers \Activitypub\Http::get_remote_object
+	 */
+	public function test_http_get_remote_object_forwards_to_the_proxy() {
+		$id = $this->note( 'https://example.com/notes/1' );
+
+		Http::get_remote_object( $id );
+		Proxy::get( $id );
+
+		$this->assertSame( 1, $this->requests );
 	}
 }

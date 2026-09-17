@@ -207,13 +207,7 @@ class Http {
 			 * - Other errors (4xx): 15 minutes (client errors are more permanent).
 			 */
 			if ( $cached && ( ! $effective_url || is_same_host( $url, $effective_url ) ) ) {
-				if ( \in_array( $code, ACTIVITYPUB_RETRY_ERROR_CODES, true ) || 0 === $code ) {
-					$cache_duration = MINUTE_IN_SECONDS;
-				} else {
-					$cache_duration = 15 * MINUTE_IN_SECONDS;
-				}
-
-				\set_transient( $transient_key, $response, $cache_duration );
+				\set_transient( $transient_key, $response, self::failure_cache_duration( $code ) );
 			}
 
 			return $response;
@@ -281,8 +275,6 @@ class Http {
 	 * Forwards to {@see Proxy::get()}, which owns the cache and the checks that an
 	 * object is served under its own id.
 	 *
-	 * @deprecated unreleased Use {@see Proxy::get()}.
-	 *
 	 * @param array|string $url_or_object The Object or the Object URL.
 	 * @param bool|int     $cached        Optional. Whether to use the cache; an int is a cache lifetime in seconds. Default true.
 	 *
@@ -298,6 +290,24 @@ class Http {
 		return Proxy::get( $url_or_object, $args );
 	}
 
+	/**
+	 * How long a failed request is remembered before it is tried again.
+	 *
+	 * Short for errors worth retrying and for connection failures, longer for the rest.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $code The HTTP status code, 0 for a connection failure.
+	 *
+	 * @return int Seconds.
+	 */
+	public static function failure_cache_duration( $code ) {
+		if ( 0 === $code || \in_array( $code, ACTIVITYPUB_RETRY_ERROR_CODES, true ) ) {
+			return MINUTE_IN_SECONDS;
+		}
+
+		return 15 * MINUTE_IN_SECONDS;
+	}
 
 	/**
 	 * Extract the effective URL a response was served from, after redirects.
