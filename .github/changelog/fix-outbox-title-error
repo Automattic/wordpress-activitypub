@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed a possible error when preparing an activity in the outbox whose object is not a full object.
