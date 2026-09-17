@@ -21,8 +21,14 @@ use Activitypub\Collection\Outbox;
 class Relay {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * Registered on `init`, so the setting is read once the site context is settled.
 	 */
 	public static function init() {
+		if ( ! \get_option( 'activitypub_relay_mode', false ) ) {
+			return;
+		}
+
 		\add_action( 'activitypub_handled_create', array( self::class, 'handle_activity' ), 10, 3 );
 		\add_action( 'activitypub_handled_update', array( self::class, 'handle_activity' ), 10, 3 );
 		\add_action( 'activitypub_handled_delete', array( self::class, 'handle_activity' ), 10, 3 );

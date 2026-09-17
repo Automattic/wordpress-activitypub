@@ -50,8 +50,7 @@ export default function StatsWidget(): ReactNode {
 			actorMode:
 				(
 					select( coreStore ).getEntityRecord( 'root', 'site' ) as
-						| { activitypub_actor_mode?: string }
-						| undefined
+						{ activitypub_actor_mode?: string } | undefined
 				 )?.activitypub_actor_mode ?? ACTOR_AND_BLOG_MODE,
 			// Check if user has the activitypub capability (can create user extra fields).
 			hasUserCap: select( coreStore ).canUser( 'create', {
@@ -100,7 +99,7 @@ export default function StatsWidget(): ReactNode {
 				? apiFetch< StatsResponse >( {
 						url: localized.blogStatsUrl,
 						signal,
-				  } ).catch( () => null )
+					} ).catch( () => null )
 				: Promise.resolve( null );
 
 		// Fetch user-specific stats if user actor is available.
@@ -109,7 +108,7 @@ export default function StatsWidget(): ReactNode {
 				? apiFetch< StatsResponse >( {
 						url: `${ localized.userStatsUrl }${ currentUser.id }`,
 						signal,
-				  } ).catch( () => null )
+					} ).catch( () => null )
 				: Promise.resolve( null );
 
 		Promise.all( [ blogStatsPromise, userStatsPromise ] )
