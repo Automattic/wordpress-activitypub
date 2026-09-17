@@ -46,6 +46,7 @@ class Test_Proxy extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		\remove_filter( 'pre_http_request', array( $this, 'stub_request' ) );
+		\wp_using_ext_object_cache( false );
 
 		parent::tear_down();
 	}
@@ -323,5 +324,43 @@ class Test_Proxy extends \WP_UnitTestCase {
 		$this->assertWPError( Proxy::get( $requested ) );
 		$this->assertWPError( Proxy::get( $requested ) );
 		$this->assertSame( 2, $this->requests );
+	}
+
+	/**
+	 * Without a persistent object cache the entry lives in a transient.
+	 *
+	 * @covers ::get
+	 */
+	public function test_get_caches_in_a_transient_without_a_persistent_object_cache() {
+		$id                     = 'https://example.com/notes/1';
+		$this->responses[ $id ] = array(
+			'id'   => $id,
+			'type' => 'Note',
+		);
+
+		Proxy::get( $id );
+
+		$this->assertNotFalse( \get_transient( 'activitypub_object:' . \hash( 'sha256', $id ) ) );
+	}
+
+	/**
+	 * With a persistent object cache the entry lives there and no transient is written.
+	 *
+	 * @covers ::get
+	 */
+	public function test_get_caches_in_the_object_cache_when_there_is_one() {
+		\wp_using_ext_object_cache( true );
+		$id                     = 'https://example.com/notes/1';
+		$this->responses[ $id ] = array(
+			'id'   => $id,
+			'type' => 'Note',
+		);
+
+		Proxy::get( $id );
+		Proxy::get( $id );
+
+		$this->assertSame( 1, $this->requests );
+		$this->assertNotFalse( \wp_cache_get( 'object:' . \hash( 'sha256', $id ), 'activitypub' ) );
+		$this->assertFalse( \get_option( '_transient_activitypub_object:' . \hash( 'sha256', $id ) ) );
 	}
 }

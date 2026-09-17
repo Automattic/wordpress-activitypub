@@ -12,9 +12,7 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Update;
-
-use function Activitypub\cache_get;
-use function Activitypub\cache_set;
+use Activitypub\Proxy;
 
 /**
  * Update Handler Test Class.
@@ -625,17 +623,25 @@ class Test_Update extends \WP_UnitTestCase {
 	 * @covers ::handle_update
 	 */
 	public function test_handle_update_drops_the_cached_object() {
-		$id = 'https://example.com/notes/1';
+		$id       = 'https://example.com/notes/1';
+		$requests = 0;
+		$stub     = function () use ( $id, &$requests ) {
+			++$requests;
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'id'   => $id,
+						'type' => 'Note',
+					)
+				),
+				'headers'  => array(),
+			);
+		};
+		\add_filter( 'pre_http_request', $stub );
 
-		cache_set(
-			'object',
-			$id,
-			array(
-				'id'   => $id,
-				'type' => 'Note',
-			),
-			HOUR_IN_SECONDS
-		);
+		Proxy::get( $id );
+		$seeded = $requests;
 		Update::handle_update(
 			array(
 				'type'   => 'Update',
@@ -648,17 +654,10 @@ class Test_Update extends \WP_UnitTestCase {
 			array( 1 ),
 			null
 		);
-		$this->assertNull( cache_get( 'object', $id ) );
-
-		cache_set(
-			'object',
-			$id,
-			array(
-				'id'   => $id,
-				'type' => 'Note',
-			),
-			HOUR_IN_SECONDS
-		);
+		$after_inline = $requests;
+		Proxy::get( $id );
+		$this->assertSame( $after_inline + 1, $requests, 'Fetched again after the inlined Update.' );
+		$after_get = $requests;
 		Update::handle_update(
 			array(
 				'type'   => 'Update',
@@ -668,6 +667,13 @@ class Test_Update extends \WP_UnitTestCase {
 			array( 1 ),
 			null
 		);
-		$this->assertNull( cache_get( 'object', $id ) );
+		$after_bare = $requests;
+		Proxy::get( $id );
+
+		\remove_filter( 'pre_http_request', $stub );
+
+		$this->assertSame( 1, $seeded );
+		$this->assertGreaterThanOrEqual( $after_get, $after_bare );
+		$this->assertSame( $after_bare + 1, $requests, 'Fetched again after the bare-id Update.' );
 	}
 }

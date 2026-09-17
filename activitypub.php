@@ -30,7 +30,6 @@ require_once __DIR__ . '/includes/compat.php';
 require_once __DIR__ . '/includes/constants.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/functions-activity.php';
-require_once __DIR__ . '/includes/functions-cache.php';
 require_once __DIR__ . '/includes/functions-comment.php';
 require_once __DIR__ . '/includes/functions-federation.php';
 require_once __DIR__ . '/includes/functions-media.php';

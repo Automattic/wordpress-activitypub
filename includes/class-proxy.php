@@ -12,7 +12,9 @@ namespace Activitypub;
  *
  * Resolves an acct through WebFinger, answers from the cache, and on a miss fetches the
  * object with a signed request, checks that it is served under its own id, and stores it.
- * The REST `proxyUrl` endpoint and the older fetch helpers go through here.
+ * The REST `proxyUrl` endpoint and the older fetch helpers go through here. The cache
+ * behind it is the object cache, or transients where the site has no persistent one,
+ * so a host swaps the backend with its object cache drop-in and nothing else.
  *
  * @since unreleased
  */
@@ -83,7 +85,7 @@ class Proxy {
 		}
 
 		if ( $args['cached'] ) {
-			$entry = cache_get( self::CACHE_NAMESPACE, $url );
+			$entry = self::cache_get( self::CACHE_NAMESPACE, $url );
 			if ( null !== $entry ) {
 				return self::unwrap( $entry );
 			}
@@ -105,7 +107,7 @@ class Proxy {
 
 		if ( \is_wp_error( $object ) ) {
 			if ( $same_host ) {
-				cache_set( self::CACHE_NAMESPACE, $url, self::wrap_error( $object ), self::failure_ttl( $object ) );
+				self::cache_set( self::CACHE_NAMESPACE, $url, self::wrap_error( $object ), self::failure_ttl( $object ) );
 			}
 
 			return $object;
@@ -123,12 +125,12 @@ class Proxy {
 		$ttl = (int) \apply_filters( 'activitypub_proxy_cache_ttl', $ttl, $url, $object );
 
 		if ( $same_host ) {
-			cache_set( self::CACHE_NAMESPACE, $url, $object, $ttl );
+			self::cache_set( self::CACHE_NAMESPACE, $url, $object, $ttl );
 		}
 
 		// The declared id confirmed itself, so a request by it must hit the same entry.
 		if ( ! empty( $object['id'] ) && \is_string( $object['id'] ) && $object['id'] !== $url ) {
-			cache_set( self::CACHE_NAMESPACE, $object['id'], $object, $ttl );
+			self::cache_set( self::CACHE_NAMESPACE, $object['id'], $object, $ttl );
 		}
 
 		return $object;
@@ -146,7 +148,7 @@ class Proxy {
 	public static function delete( $id ) {
 		$url = object_to_uri( $id );
 
-		return $url ? cache_delete( self::CACHE_NAMESPACE, $url ) : false;
+		return $url ? self::cache_delete( self::CACHE_NAMESPACE, $url ) : false;
 	}
 
 	/**
@@ -162,6 +164,88 @@ class Proxy {
 		self::delete( $id );
 
 		return self::get( $id );
+	}
+
+	/**
+	 * Build the cache key for a kind of thing and an identifier.
+	 *
+	 * The identifier is hashed: ActivityPub ids are URLs of any length, and memcached
+	 * limits keys to 250 characters.
+	 *
+	 * @param string $kind The kind of thing, for example `object`.
+	 * @param string $id   The ActivityPub id.
+	 *
+	 * @return string The key.
+	 */
+	private static function cache_key( $kind, $id ) {
+		return $kind . ':' . \hash( 'sha256', $id );
+	}
+
+	/**
+	 * Get an entry from the cache.
+	 *
+	 * The object cache when the site has a persistent one, a transient otherwise.
+	 *
+	 * @param string $kind The kind of thing, for example `object`.
+	 * @param string $id   The ActivityPub id.
+	 *
+	 * @return array|null The entry, or null when there is none.
+	 */
+	private static function cache_get( $kind, $id ) {
+		$key = self::cache_key( $kind, $id );
+
+		if ( \wp_using_ext_object_cache() ) {
+			$value = \wp_cache_get( $key, 'activitypub' );
+		} else {
+			$value = \get_transient( 'activitypub_' . $key );
+		}
+
+		return \is_array( $value ) ? $value : null;
+	}
+
+	/**
+	 * Store an entry in the cache.
+	 *
+	 * Always with a lifetime: a persistent object cache evicts entries anyway, and a
+	 * transient without one becomes an autoloaded option.
+	 *
+	 * @param string $kind  The kind of thing, for example `object`.
+	 * @param string $id    The ActivityPub id.
+	 * @param array  $value The entry.
+	 * @param int    $ttl   Seconds to keep it.
+	 *
+	 * @return bool Whether the entry was stored.
+	 */
+	private static function cache_set( $kind, $id, $value, $ttl ) {
+		$key = self::cache_key( $kind, $id );
+
+		if ( \wp_using_ext_object_cache() ) {
+			$stored = \wp_cache_set( $key, $value, 'activitypub', $ttl );
+		} else {
+			$stored = \set_transient( 'activitypub_' . $key, $value, $ttl );
+		}
+
+		return (bool) $stored;
+	}
+
+	/**
+	 * Remove an entry from the cache.
+	 *
+	 * @param string $kind The kind of thing, for example `object`.
+	 * @param string $id   The ActivityPub id.
+	 *
+	 * @return bool Whether an entry was removed.
+	 */
+	private static function cache_delete( $kind, $id ) {
+		$key = self::cache_key( $kind, $id );
+
+		if ( \wp_using_ext_object_cache() ) {
+			$deleted = \wp_cache_delete( $key, 'activitypub' );
+		} else {
+			$deleted = \delete_transient( 'activitypub_' . $key );
+		}
+
+		return (bool) $deleted;
 	}
 
 	/**
