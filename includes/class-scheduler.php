@@ -281,14 +281,14 @@ class Scheduler {
 
 		foreach ( $actors as $actor ) {
 			/*
-			 * Use Http::get_remote_object() directly here.
+			 * Use Proxy::get() directly here.
 			 * get_remote_metadata_by_actor() short-circuits to the locally
 			 * cached ap_actor CPT via Remote_Actors::fetch_by_uri() and never
 			 * makes an HTTP request when the actor is already cached, so the
 			 * upsert would just rewrite the same stale data and this refresh
 			 * would be a no-op. The Update handler documents the same trap.
 			 */
-			$meta = Http::get_remote_object( $actor->guid, false );
+			$meta = Proxy::get( $actor->guid, array( 'cached' => false ) );
 
 			if ( empty( $meta ) || ! \is_array( $meta ) || \is_wp_error( $meta ) ) {
 				Remote_Actors::add_error( $actor->ID, 'Failed to fetch or parse metadata' );

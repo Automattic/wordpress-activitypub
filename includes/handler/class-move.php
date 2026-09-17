@@ -9,7 +9,7 @@ namespace Activitypub\Handler;
 
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
-use Activitypub\Http;
+use Activitypub\Proxy;
 
 use function Activitypub\object_to_uri;
 
@@ -42,8 +42,8 @@ class Move {
 			return;
 		}
 
-		$target_json = Http::get_remote_object( $target_uri );
-		$origin_json = Http::get_remote_object( $origin_uri );
+		$target_json = Proxy::get( $target_uri );
+		$origin_json = Proxy::get( $origin_uri );
 
 		$verified = self::verify_move( $target_json, $origin_json );
 

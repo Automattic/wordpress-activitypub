@@ -11,7 +11,7 @@
 namespace Activitypub\Scheduler;
 
 use Activitypub\Collection\Following;
-use Activitypub\Http;
+use Activitypub\Proxy;
 
 use function Activitypub\get_url_authority;
 
@@ -57,7 +57,7 @@ class Collection_Sync {
 		}
 
 		// Fetch the authoritative partial followers collection.
-		$data = Http::get_remote_object( $params['url'], 5 * MINUTE_IN_SECONDS );
+		$data = Proxy::get( $params['url'], array( 'ttl' => 5 * MINUTE_IN_SECONDS ) );
 
 		if ( \is_wp_error( $data ) || ! isset( $data['orderedItems'] ) || ! \is_array( $data['orderedItems'] ) ) {
 			return;

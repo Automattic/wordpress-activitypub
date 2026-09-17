@@ -88,7 +88,7 @@ class Move {
 			\update_option( 'activitypub_blog_user_moved_to', $to );
 		}
 
-		$response = Http::get_remote_object( $to );
+		$response = Proxy::get( $to );
 
 		if ( \is_wp_error( $response ) ) {
 			return $response;

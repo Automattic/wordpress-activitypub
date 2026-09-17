@@ -12,8 +12,8 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Remote_Actors;
-use Activitypub\Http;
 use Activitypub\Moderation;
+use Activitypub\Proxy;
 
 use function Activitypub\camel_to_snake_case;
 use function Activitypub\extract_recipients_from_activity;
@@ -466,7 +466,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				}
 				++$remote_fetches;
 
-				$collection = Http::get_remote_object( $recipient );
+				$collection = Proxy::get( $recipient );
 
 				if ( \is_wp_error( $collection ) ) {
 					continue;

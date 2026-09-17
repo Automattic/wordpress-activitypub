@@ -433,7 +433,7 @@ class Dispatcher {
 				continue;
 			}
 
-			$object = Http::get_remote_object( $url );
+			$object = Proxy::get( $url );
 
 			if (
 				! $object ||
@@ -444,7 +444,7 @@ class Dispatcher {
 			}
 
 			$actor = object_to_uri( $object['attributedTo'] );
-			$actor = Http::get_remote_object( $actor );
+			$actor = Proxy::get( $actor );
 
 			if ( ! $actor || \is_wp_error( $actor ) ) {
 				continue;

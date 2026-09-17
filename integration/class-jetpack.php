@@ -9,7 +9,7 @@ namespace Activitypub\Integration;
 
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
-use Activitypub\Http;
+use Activitypub\Proxy;
 use Automattic\Jetpack\Connection\Manager;
 use Automattic\Jetpack\Podcast\Feed\Customize_Feed;
 use Automattic\Jetpack\Podcast\Feed\Episode_Block_Tags;
@@ -173,7 +173,7 @@ class Jetpack {
 
 		$url = \sanitize_url( \wp_unslash( $_GET['url'] ) ); // phpcs:ignore WordPress.Security.NonceVerification
 
-		if ( is_activity_object( Http::get_remote_object( $url ) ) ) {
+		if ( is_activity_object( Proxy::get( $url ) ) ) {
 			$args = array(
 				'post_type'   => 'post',
 				'in_reply_to' => $url,

@@ -956,7 +956,7 @@ class Migration {
 			$post_content = \json_decode( $meta->meta_value, true );
 
 			if ( \json_last_error() !== JSON_ERROR_NONE ) {
-				$post_content = Http::get_remote_object( $post->guid );
+				$post_content = Proxy::get( $post->guid );
 
 				if ( \is_wp_error( $post_content ) ) {
 					\delete_post_meta( $post->ID, '_activitypub_actor_json' );

@@ -253,7 +253,7 @@ class Proxy_Controller extends \WP_REST_Controller {
 	public function get_stream( $request ) {
 		$remote_id = $request->get_param( 'id' );
 
-		$object = Http::get_remote_object( $remote_id );
+		$object = Proxy::get( $remote_id );
 
 		if ( \is_wp_error( $object ) ) {
 			return new \WP_Error(

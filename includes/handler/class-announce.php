@@ -10,7 +10,7 @@ namespace Activitypub\Handler;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Interactions;
 use Activitypub\Comment;
-use Activitypub\Http;
+use Activitypub\Proxy;
 
 use function Activitypub\is_activity;
 use function Activitypub\is_activity_public;
@@ -73,7 +73,7 @@ class Announce {
 		 * attacker content while the host check below still saw the trusted host.
 		 */
 		\add_filter( 'http_request_args', $no_redirects, 10, 2 );
-		$object = Http::get_remote_object( $object_url, false );
+		$object = Proxy::get( $object_url, array( 'cached' => false ) );
 		\remove_filter( 'http_request_args', $no_redirects, 10 );
 
 		if ( ! $object || \is_wp_error( $object ) || ! \is_array( $object ) ) {

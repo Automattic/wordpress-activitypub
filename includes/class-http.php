@@ -281,6 +281,8 @@ class Http {
 	 * Forwards to {@see Proxy::get()}, which owns the cache and the checks that an
 	 * object is served under its own id.
 	 *
+	 * @deprecated unreleased Use {@see Proxy::get()}.
+	 *
 	 * @param array|string $url_or_object The Object or the Object URL.
 	 * @param bool|int     $cached        Optional. Whether to use the cache; an int is a cache lifetime in seconds. Default true.
 	 *
