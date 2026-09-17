@@ -19,7 +19,7 @@ use function Activitypub\object_to_uri;
  *
  * @link https://www.w3.org/TR/activitypub/#inbox
  */
-class Inbox {
+final class Inbox {
 	/**
 	 * The post type for the objects.
 	 *
@@ -66,9 +66,9 @@ class Inbox {
 	 * Add an activity to the inbox.
 	 *
 	 * @param Activity|\WP_Error $activity   The Activity object.
-	 * @param int|array          $recipients The id(s) of the local blog-user(s).
+	 * @param int|int[]          $recipients The id(s) of the local blog-user(s).
 	 *
-	 * @return false|int|\WP_Error The added item or an error.
+	 * @return int|\WP_Error The id of the inbox item, or an error.
 	 */
 	public static function add( $activity, $recipients ) {
 		if ( \is_wp_error( $activity ) ) {
@@ -110,7 +110,7 @@ class Inbox {
 		 * For all other activities, we store the object URL as before.
 		 */
 		if ( 'QuoteRequest' === $activity->get_type() && $activity->get_instrument() ) {
-			$object_id = object_to_uri( $activity->get_instrument() ?? '' );
+			$object_id = object_to_uri( $activity->get_instrument() );
 		} else {
 			$object_id = object_to_uri( $activity->get_object() ?? '' );
 		}
@@ -164,11 +164,11 @@ class Inbox {
 	/**
 	 * Get the title of an activity recursively.
 	 *
-	 * @param Activity|Base_Object|array $activity_object The activity object.
+	 * @param Activity|Base_Object|string|array<string, mixed>|null $activity_object The activity object.
 	 *
 	 * @return string The title.
 	 */
-	private static function get_object_title( $activity_object ) {
+	private static function get_object_title( $activity_object ): string {
 		if ( ! $activity_object || \is_array( $activity_object ) ) {
 			return '';
 		}
@@ -181,11 +181,11 @@ class Inbox {
 
 		$title = $activity_object->get_name() ?: $activity_object->get_content();
 
-		if ( ! $title && $activity_object->get_object() instanceof Base_Object ) {
+		if ( ! $title && $activity_object instanceof Activity && $activity_object->get_object() instanceof Base_Object ) {
 			$title = $activity_object->get_object()->get_name() ?: $activity_object->get_object()->get_content();
 		}
 
-		return $title;
+		return (string) $title;
 	}
 
 	/**
@@ -195,8 +195,10 @@ class Inbox {
 	 *
 	 * @return \WP_Post|null The inbox item or null.
 	 */
-	public static function get( $id ) {
-		return \get_post( $id );
+	public static function get( int $id ): ?\WP_Post {
+		$post = \get_post( $id );
+
+		return $post instanceof \WP_Post ? $post : null;
 	}
 
 	/**
@@ -206,7 +208,7 @@ class Inbox {
 	 *
 	 * @return \WP_Post|\WP_Error The inbox item or WP_Error.
 	 */
-	public static function get_by_guid( $guid ) {
+	public static function get_by_guid( string $guid ) {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$post_id = $wpdb->get_var(
@@ -217,7 +219,9 @@ class Inbox {
 			)
 		);
 
-		if ( ! $post_id ) {
+		$post = $post_id ? \get_post( (int) $post_id ) : null;
+
+		if ( ! $post instanceof \WP_Post ) {
 			return new \WP_Error(
 				'activitypub_inbox_item_not_found',
 				\__( 'Inbox item not found', 'activitypub' ),
@@ -225,7 +229,7 @@ class Inbox {
 			);
 		}
 
-		return \get_post( $post_id );
+		return $post;
 	}
 
 	/**
@@ -238,7 +242,7 @@ class Inbox {
 	 *
 	 * @return bool|\WP_Error True on success, WP_Error on failure.
 	 */
-	public static function undo( $id, $actor = null ) {
+	public static function undo( string $id, ?string $actor = null ) {
 		$inbox_item = self::get_by_guid( $id );
 
 		if ( \is_wp_error( $inbox_item ) ) {
@@ -324,9 +328,9 @@ class Inbox {
 	 *
 	 * @param int $post_id The inbox post ID.
 	 *
-	 * @return array Array of user IDs who are recipients.
+	 * @return int[] The user IDs of the recipients.
 	 */
-	public static function get_recipients( $post_id ) {
+	public static function get_recipients( int $post_id ): array {
 		// Get all meta values with key '_activitypub_user_id' (single => false).
 		$recipients = \get_post_meta( $post_id, '_activitypub_user_id', false );
 		$recipients = \array_map( 'intval', $recipients );
@@ -342,10 +346,8 @@ class Inbox {
 	 *
 	 * @return bool True if user is a recipient, false otherwise.
 	 */
-	public static function has_recipient( $post_id, $user_id ) {
-		$recipients = self::get_recipients( $post_id );
-
-		return \in_array( (int) $user_id, $recipients, true );
+	public static function has_recipient( int $post_id, int $user_id ): bool {
+		return \in_array( $user_id, self::get_recipients( $post_id ), true );
 	}
 
 	/**
@@ -356,8 +358,7 @@ class Inbox {
 	 *
 	 * @return bool True on success, false on failure.
 	 */
-	public static function add_recipient( $post_id, $user_id ) {
-		$user_id = (int) $user_id;
+	public static function add_recipient( int $post_id, int $user_id ): bool {
 		// Allow 0 for blog user, but reject negative values.
 		if ( $user_id < 0 ) {
 			return false;
@@ -380,9 +381,7 @@ class Inbox {
 	 *
 	 * @return bool True on success, false on failure.
 	 */
-	public static function remove_recipient( $post_id, $user_id ) {
-		$user_id = (int) $user_id;
-
+	public static function remove_recipient( int $post_id, int $user_id ): bool {
 		// Allow 0 for blog user, but reject negative values.
 		if ( $user_id < 0 ) {
 			return false;
@@ -395,12 +394,12 @@ class Inbox {
 	/**
 	 * Add multiple recipients to an existing inbox activity.
 	 *
-	 * @param int   $post_id  The inbox post ID.
-	 * @param int[] $user_ids The user ID or array of user IDs to add.
+	 * @param int            $post_id  The inbox post ID.
+	 * @param int[]|string[] $user_ids The user IDs to add.
 	 */
-	public static function add_recipients( $post_id, $user_ids ) {
+	public static function add_recipients( int $post_id, array $user_ids ): void {
 		foreach ( $user_ids as $user_id ) {
-			self::add_recipient( $post_id, $user_id );
+			self::add_recipient( $post_id, (int) $user_id );
 		}
 	}
 
@@ -414,7 +413,7 @@ class Inbox {
 	 *
 	 * @return \WP_Post|\WP_Error The inbox item or WP_Error.
 	 */
-	public static function get_by_guid_and_recipient( $guid, $user_id ) {
+	public static function get_by_guid_and_recipient( string $guid, int $user_id ) {
 		$post = self::get_by_guid( $guid );
 
 		if ( \is_wp_error( $post ) ) {
@@ -445,7 +444,7 @@ class Inbox {
 	 *
 	 * @return \WP_Post|\WP_Error The inbox item or WP_Error if not found.
 	 */
-	public static function get_by_type_and_object( $activity_type, $object_id ) {
+	public static function get_by_type_and_object( string $activity_type, string $object_id ) {
 		$posts = \get_posts(
 			array(
 				'post_type'      => self::POST_TYPE,
@@ -486,9 +485,9 @@ class Inbox {
 	 *
 	 * @param string $guid The activity GUID.
 	 *
-	 * @return \WP_Post|false The primary inbox post, or false if no posts found.
+	 * @return \WP_Post|null The primary inbox post, or null if there is none.
 	 */
-	public static function deduplicate( $guid ) {
+	public static function deduplicate( string $guid ): ?\WP_Post {
 		global $wpdb;
 
 		// Query for all posts with this GUID directly (get_posts doesn't supports guid parameter).
@@ -501,12 +500,16 @@ class Inbox {
 		);
 
 		if ( empty( $post_ids ) ) {
-			return false;
+			return null;
 		}
 
 		// Keep the first (oldest) post as primary.
-		$primary_id = \array_shift( $post_ids );
+		$primary_id = (int) \array_shift( $post_ids );
 		$primary    = \get_post( $primary_id );
+
+		if ( ! $primary instanceof \WP_Post ) {
+			return null;
+		}
 
 		// Merge recipients from duplicates into primary and delete duplicates.
 		foreach ( $post_ids as $duplicate_id ) {
@@ -527,14 +530,14 @@ class Inbox {
 	 *
 	 * @return int The number of items deleted.
 	 */
-	public static function purge( $days ) {
+	public static function purge( int $days ): int {
 		if ( $days <= 0 ) {
 			return 0;
 		}
 
 		$counts = \wp_count_posts( self::POST_TYPE );
 		$total  = 0;
-		foreach ( $counts as $count ) {
+		foreach ( (array) $counts as $count ) {
 			$total += (int) $count;
 		}
 

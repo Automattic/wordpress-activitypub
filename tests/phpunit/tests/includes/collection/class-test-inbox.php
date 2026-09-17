@@ -809,7 +809,7 @@ class Test_Inbox extends \WP_UnitTestCase {
 	 */
 	public function test_deduplicate_non_existent() {
 		$result = Inbox::deduplicate( 'https://remote.example.com/activities/non-existent' );
-		$this->assertFalse( $result );
+		$this->assertNull( $result );
 	}
 
 	/**

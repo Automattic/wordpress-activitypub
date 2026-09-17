@@ -18,6 +18,23 @@ parameters:
 		- tests/phpstan/stubs/wp-cli.php
 		- tests/phpstan/stubs/wp-cli-utils.php
 	treatPhpDocTypesAsCertain: false
+	# Set in constants.php only when wp-config.php did not define them first.
+	dynamicConstantNames:
+		- ACTIVITYPUB_CUSTOM_POST_CONTENT
+		- ACTIVITYPUB_DEFAULT_OBJECT_TYPE
+		- ACTIVITYPUB_DISABLE_INCOMING_INTERACTIONS
+		- ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS
+		- ACTIVITYPUB_DISABLE_REMOTE_CACHE
+		- ACTIVITYPUB_DISABLE_REWRITES
+		- ACTIVITYPUB_DISTRIBUTION_MODE
+		- ACTIVITYPUB_EXCERPT_LENGTH
+		- ACTIVITYPUB_HASHTAGS_REGEXP
+		- ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS
+		- ACTIVITYPUB_NOTE_LENGTH
+		- ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE
+		- ACTIVITYPUB_REST_NAMESPACE
+		- ACTIVITYPUB_URL_REGEXP
+		- ACTIVITYPUB_USERNAME_REGEXP
 	ignoreErrors:
 		# Integrations talk to other plugins that are not installed here.
 		-
