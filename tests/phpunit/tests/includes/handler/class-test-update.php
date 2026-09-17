@@ -13,6 +13,9 @@ use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Update;
 
+use function Activitypub\cache_get;
+use function Activitypub\cache_set;
+
 /**
  * Update Handler Test Class.
  *
@@ -614,5 +617,57 @@ class Test_Update extends \WP_UnitTestCase {
 				'Should handle non-existent actor gracefully',
 			),
 		);
+	}
+
+	/**
+	 * An Update drops the cached copy of its object, whether the object is inlined or a bare id.
+	 *
+	 * @covers ::handle_update
+	 */
+	public function test_handle_update_drops_the_cached_object() {
+		$id = 'https://example.com/notes/1';
+
+		cache_set(
+			'object',
+			$id,
+			array(
+				'id'   => $id,
+				'type' => 'Note',
+			),
+			HOUR_IN_SECONDS
+		);
+		Update::handle_update(
+			array(
+				'type'   => 'Update',
+				'actor'  => 'https://example.com/users/alice',
+				'object' => array(
+					'id'   => $id,
+					'type' => 'Note',
+				),
+			),
+			array( 1 ),
+			null
+		);
+		$this->assertNull( cache_get( 'object', $id ) );
+
+		cache_set(
+			'object',
+			$id,
+			array(
+				'id'   => $id,
+				'type' => 'Note',
+			),
+			HOUR_IN_SECONDS
+		);
+		Update::handle_update(
+			array(
+				'type'   => 'Update',
+				'actor'  => 'https://example.com/users/alice',
+				'object' => $id,
+			),
+			array( 1 ),
+			null
+		);
+		$this->assertNull( cache_get( 'object', $id ) );
 	}
 }

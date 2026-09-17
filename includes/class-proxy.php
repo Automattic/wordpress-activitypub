@@ -35,6 +35,8 @@ class Proxy {
 	 *     @type int|null $ttl    Seconds to cache a fetched object. Default one hour.
 	 * }
 	 *
+	 * @since unreleased
+	 *
 	 * @return array|\WP_Error The object, or an error.
 	 */
 	public static function get( $id, $args = array() ) {
@@ -87,14 +89,24 @@ class Proxy {
 			}
 		}
 
-		$object = self::fetch_verified( $url );
+		$final_url = '';
+		$object    = self::fetch_verified( $url, $final_url );
 
 		if ( ! $args['cached'] ) {
 			return $object;
 		}
 
+		/*
+		 * Never cache under the requested URL what another host served: a one-off open
+		 * redirect on the requested host would otherwise let that host's key carry the
+		 * other host's document, or its outage, for the whole lifetime of the entry.
+		 */
+		$same_host = ! $final_url || is_same_host( $url, $final_url );
+
 		if ( \is_wp_error( $object ) ) {
-			cache_set( self::CACHE_NAMESPACE, $url, self::wrap_error( $object ), self::failure_ttl( $object ) );
+			if ( $same_host ) {
+				cache_set( self::CACHE_NAMESPACE, $url, self::wrap_error( $object ), self::failure_ttl( $object ) );
+			}
 
 			return $object;
 		}
@@ -110,9 +122,11 @@ class Proxy {
 		 */
 		$ttl = (int) \apply_filters( 'activitypub_proxy_cache_ttl', $ttl, $url, $object );
 
-		cache_set( self::CACHE_NAMESPACE, $url, $object, $ttl );
+		if ( $same_host ) {
+			cache_set( self::CACHE_NAMESPACE, $url, $object, $ttl );
+		}
 
-		// A request by the declared id must hit the same entry.
+		// The declared id confirmed itself, so a request by it must hit the same entry.
 		if ( ! empty( $object['id'] ) && \is_string( $object['id'] ) && $object['id'] !== $url ) {
 			cache_set( self::CACHE_NAMESPACE, $object['id'], $object, $ttl );
 		}
@@ -124,6 +138,8 @@ class Proxy {
 	 * Remove a remote object from the cache.
 	 *
 	 * @param string|array $id The ActivityPub id, or an object with an id.
+	 *
+	 * @since unreleased
 	 *
 	 * @return bool Whether an entry was removed.
 	 */
@@ -137,6 +153,8 @@ class Proxy {
 	 * Fetch a remote object again, replacing the cached one.
 	 *
 	 * @param string|array $id The ActivityPub id, or an object with an id.
+	 *
+	 * @since unreleased
 	 *
 	 * @return array|\WP_Error The object, or an error.
 	 */
@@ -152,13 +170,13 @@ class Proxy {
 	 * An object served from a URL other than its id is fetched once more from the id
 	 * it declares, which has to confirm it. One hop only.
 	 *
-	 * @param string $url The URL to fetch.
+	 * @param string $url       The URL to fetch.
+	 * @param string $final_url Set to the URL the object, or the failure, was served from.
 	 *
 	 * @return array|\WP_Error The object, or an error.
 	 */
-	private static function fetch_verified( $url ) {
-		$final_url = '';
-		$object    = self::fetch( $url, $final_url );
+	private static function fetch_verified( $url, &$final_url ) {
+		$object = self::fetch( $url, $final_url );
 
 		if ( \is_wp_error( $object ) ) {
 			return $object;
@@ -218,6 +236,11 @@ class Proxy {
 		$response = Http::get( $url, array(), false );
 
 		if ( \is_wp_error( $response ) ) {
+			$data = $response->get_error_data();
+			if ( ! empty( $data['effective_url'] ) ) {
+				$final_url = $data['effective_url'];
+			}
+
 			return $response;
 		}
 

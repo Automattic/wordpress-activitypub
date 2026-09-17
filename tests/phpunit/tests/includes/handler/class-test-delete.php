@@ -12,6 +12,9 @@ use Activitypub\Activity\Base_Object;
 use Activitypub\Handler\Delete;
 use Activitypub\Tombstone;
 
+use function Activitypub\cache_get;
+use function Activitypub\cache_set;
+
 /**
  * Test class for Delete handler.
  *
@@ -677,5 +680,34 @@ class Test_Delete extends \WP_UnitTestCase {
 		$this->assertFalse( Delete::defer_signature_verification( false, $request, false ) );
 		$this->assertTrue( Delete::defer_signature_verification( true, $request, false ) );
 		$this->assertFalse( Delete::defer_signature_verification( false, $request, true ) );
+	}
+
+	/**
+	 * A Delete whose object is a bare id drops the cached copy of that object.
+	 *
+	 * @covers ::handle_delete
+	 */
+	public function test_handle_delete_with_a_bare_id_drops_the_cached_object() {
+		$id = 'https://example.com/notes/1';
+		cache_set(
+			'object',
+			$id,
+			array(
+				'id'   => $id,
+				'type' => 'Note',
+			),
+			HOUR_IN_SECONDS
+		);
+
+		Delete::handle_delete(
+			array(
+				'type'   => 'Delete',
+				'actor'  => 'https://example.com/users/alice',
+				'object' => $id,
+			),
+			array( 1 )
+		);
+
+		$this->assertNull( cache_get( 'object', $id ) );
 	}
 }

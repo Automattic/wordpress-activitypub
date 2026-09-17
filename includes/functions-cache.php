@@ -20,6 +20,8 @@ namespace Activitypub;
  * limits keys to 250 characters.
  *
  * @param string $kind The kind of thing, for example `actor` or `object`.
+ * @since unreleased
+ *
  * @param string $id        The ActivityPub id.
  *
  * @return string The key.
@@ -32,6 +34,8 @@ function cache_key( $kind, $id ) {
  * Get an entry from the cache.
  *
  * @param string $kind The kind of thing, for example `actor` or `object`.
+ * @since unreleased
+ *
  * @param string $id        The ActivityPub id.
  *
  * @return array|null The entry, or null when there is none.
@@ -66,6 +70,8 @@ function cache_get( $kind, $id ) {
  * Get several entries from the cache at once.
  *
  * @param string   $kind The kind of thing, for example `actor` or `object`.
+ * @since unreleased
+ *
  * @param string[] $ids       The ActivityPub ids.
  *
  * @return array<string, array|null> The entries keyed by id, in the order asked for, null where there is none.
@@ -115,6 +121,8 @@ function cache_get_multiple( $kind, $ids ) {
  * @param string $kind The kind of thing, for example `actor` or `object`.
  * @param string $id        The ActivityPub id.
  * @param array  $value     The entry.
+ * @since unreleased
+ *
  * @param int    $ttl       Seconds to keep it.
  *
  * @return bool Whether the entry was stored.
@@ -145,6 +153,8 @@ function cache_set( $kind, $id, $value, $ttl ) {
  * Remove an entry from the cache.
  *
  * @param string $kind The kind of thing, for example `actor` or `object`.
+ * @since unreleased
+ *
  * @param string $id        The ActivityPub id.
  *
  * @return bool Whether an entry was removed.

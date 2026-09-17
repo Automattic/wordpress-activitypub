@@ -63,6 +63,10 @@ class Test_Proxy extends \WP_UnitTestCase {
 		++$this->requests;
 		$answer = $this->responses[ $url ] ?? 404;
 
+		if ( \is_array( $answer ) && isset( $answer['http_response'] ) ) {
+			return $answer;
+		}
+
 		if ( \is_int( $answer ) ) {
 			return array(
 				'response' => array( 'code' => $answer ),
@@ -251,5 +255,73 @@ class Test_Proxy extends \WP_UnitTestCase {
 		Proxy::get( $id );
 
 		$this->assertSame( 1, $this->requests );
+	}
+
+	/**
+	 * Serve a response that was redirected to another host.
+	 *
+	 * @param string    $served_from The URL the response was served from.
+	 * @param array|int $answer      The object, or a status code.
+	 *
+	 * @return array The response.
+	 */
+	private function redirected( $served_from, $answer ) {
+		$requests_response      = new \WpOrg\Requests\Response();
+		$requests_response->url = $served_from;
+
+		$response = \is_int( $answer )
+			? array(
+				'response' => array( 'code' => $answer ),
+				'body'     => '',
+			)
+			: array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode( $answer ),
+			);
+
+		$response['headers']       = array();
+		$response['http_response'] = new \WP_HTTP_Requests_Response( $requests_response );
+
+		return $response;
+	}
+
+	/**
+	 * An object reached through a cross-host redirect is cached under its own id only.
+	 *
+	 * @covers ::get
+	 */
+	public function test_get_does_not_cache_a_cross_host_redirect_under_the_requested_url() {
+		$requested = 'https://example.com/redirect';
+		$declared  = 'https://example.org/notes/1';
+
+		$this->responses[ $requested ] = $this->redirected(
+			$declared,
+			array(
+				'id'   => $declared,
+				'type' => 'Note',
+			)
+		);
+
+		$this->assertSame( 'Note', Proxy::get( $requested )['type'] );
+		Proxy::get( $requested );
+		$this->assertSame( 2, $this->requests, 'The requested URL is fetched again.' );
+
+		Proxy::get( $declared );
+		$this->assertSame( 2, $this->requests, 'The declared id is served from the cache.' );
+	}
+
+	/**
+	 * A failure reached through a cross-host redirect is not remembered for the requested URL.
+	 *
+	 * @covers ::get
+	 */
+	public function test_get_does_not_cache_a_cross_host_redirected_failure() {
+		$requested = 'https://example.com/redirect';
+
+		$this->responses[ $requested ] = $this->redirected( 'https://example.org/gone', 404 );
+
+		$this->assertWPError( Proxy::get( $requested ) );
+		$this->assertWPError( Proxy::get( $requested ) );
+		$this->assertSame( 2, $this->requests );
 	}
 }

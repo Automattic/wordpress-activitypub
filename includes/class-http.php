@@ -189,7 +189,15 @@ class Http {
 			if ( ! $code ) {
 				$code = 0;
 			}
-			$response = new \WP_Error( $code, \__( 'Failed HTTP Request', 'activitypub' ), array( 'status' => $code ) );
+			$response = new \WP_Error(
+				$code,
+				\__( 'Failed HTTP Request', 'activitypub' ),
+				array(
+					'status'        => $code,
+					// Lets callers that cache the failure apply the same cross-host guard as below.
+					'effective_url' => $effective_url,
+				)
+			);
 
 			/*
 			 * Cache errors to prevent repeated timeout waits, but never one reached via a
@@ -284,7 +292,7 @@ class Http {
 	public static function get_remote_object( $url_or_object, $cached = true ) {
 		$args = array( 'cached' => (bool) $cached );
 
-		if ( \is_int( $cached ) && $cached > 1 ) {
+		if ( \is_int( $cached ) && $cached > 0 ) {
 			$args['ttl'] = $cached;
 		}
 
@@ -299,8 +307,8 @@ class Http {
 	 * the underlying Requests response object. Returns an empty string when the URL
 	 * cannot be determined, so callers fall back to the URL they requested.
 	 *
-	 * SECURITY: the redirect protections that build on this (the self-confirmation in
-	 * get_remote_object() and the cross-host cache skip in get()) fail OPEN when this
+	 * SECURITY: the redirect protections that build on this (the self-confirmation and the
+	 * cross-host cache skip in {@see Proxy::get()}, and the cache skip in get()) fail OPEN when this
 	 * returns an empty string — self-confirmation then compares against the requested
 	 * URL, which a redirect could have bounced away from. This relies on the internal
 	 * `http_response` → Requests response `url` shape; if a future WordPress release

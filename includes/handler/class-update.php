@@ -35,8 +35,8 @@ class Update {
 	 * @param \Activitypub\Activity\Activity $activity_object The activity object. Default null.
 	 */
 	public static function handle_update( $activity, $user_ids, $activity_object ) {
-		if ( ! empty( $activity['object']['id'] ) ) {
-			Proxy::delete( $activity['object']['id'] );
+		if ( ! empty( $activity['object'] ) ) {
+			Proxy::delete( $activity['object'] );
 		}
 
 		$object_type = $activity['object']['type'] ?? '';
