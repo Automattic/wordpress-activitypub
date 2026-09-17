@@ -13,6 +13,7 @@ namespace Activitypub\Rest;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
 use Activitypub\OAuth\Scope;
+use Activitypub\Proxy;
 use Activitypub\Webfinger;
 
 /**
@@ -193,7 +194,7 @@ class Proxy_Controller extends \WP_REST_Controller {
 		 * Fall back to fetching as a generic object. Actors are already resolved and
 		 * cached above via fetch_by_various(), so this path only proxies the object.
 		 */
-		$object = Http::get_remote_object( $url );
+		$object = Proxy::get( $url );
 
 		if ( \is_wp_error( $object ) ) {
 			/*

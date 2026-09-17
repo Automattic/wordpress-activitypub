@@ -1,0 +1,4 @@
+Significance: minor
+Type: changed
+
+Posts and profiles fetched from other servers are now cached through the WordPress object cache when the site has one, and refreshed as soon as an update or deletion for them arrives.

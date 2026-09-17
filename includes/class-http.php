@@ -271,148 +271,26 @@ class Http {
 	}
 
 	/**
-	 * Requests the Data from the Object-URL or Object-Array.
+	 * Get a remote object.
 	 *
-	 * Fetched objects are self-confirmed before they are returned, the same way
-	 * Mastodon's `JsonLdHelper#fetch_resource` works: an object is trusted only when
-	 * its own `id` is the URL it was actually served from (after any redirects). If
-	 * the document served at the requested URL declares a different `id`, that id is
-	 * dereferenced from its own host and accepted only when it self-confirms. This
-	 * makes every caller safe to cache the result under its `id` — one host can never
-	 * serve an object (and its public key) under another host's id — without each
-	 * caller having to re-check the origin itself.
+	 * Forwards to {@see Proxy::get()}, which owns the cache and the checks that an
+	 * object is served under its own id.
 	 *
 	 * @param array|string $url_or_object The Object or the Object URL.
-	 * @param bool         $cached        Optional. Whether the result should be cached. Default true.
+	 * @param bool|int     $cached        Optional. Whether to use the cache; an int is a cache lifetime in seconds. Default true.
 	 *
 	 * @return array|\WP_Error The Object data as array or WP_Error on failure.
 	 */
 	public static function get_remote_object( $url_or_object, $cached = true ) {
-		/**
-		 * Filters the preemptive return value of a remote object request.
-		 *
-		 * This is an explicit in-process override (used for caching and tests), not
-		 * untrusted network data, so it is returned as-is without self-confirmation.
-		 *
-		 * @param array|string|null $response      The response.
-		 * @param array|string|null $url_or_object The Object or the Object URL.
-		 */
-		$response = \apply_filters( 'activitypub_pre_http_get_remote_object', null, $url_or_object );
-		if ( null !== $response ) {
-			return $response;
+		$args = array( 'cached' => (bool) $cached );
+
+		if ( \is_int( $cached ) && $cached > 1 ) {
+			$args['ttl'] = $cached;
 		}
 
-		$url = object_to_uri( $url_or_object );
-
-		if ( Webfinger::is_acct( $url ) ) {
-			$url = Webfinger::resolve( $url );
-		}
-
-		if ( ! $url ) {
-			return new \WP_Error(
-				'activitypub_no_valid_actor_identifier',
-				\__( 'The "actor" identifier is not valid', 'activitypub' ),
-				array(
-					'status' => 404,
-					'object' => $url,
-				)
-			);
-		}
-
-		if ( \is_wp_error( $url ) ) {
-			return $url;
-		}
-
-		$final_url = '';
-		$object    = self::fetch_object( $url, $cached, $final_url );
-
-		if ( \is_wp_error( $object ) ) {
-			return $object;
-		}
-
-		// Trust the document when it is served under its own id (after redirects).
-		if ( id_matches_url( $object, $final_url ) ) {
-			return $object;
-		}
-
-		$declared_id = isset( $object['id'] ) && \is_string( $object['id'] ) ? $object['id'] : '';
-
-		/*
-		 * An id-less object cannot be cached under an id, so it cannot be written
-		 * under another id in an id-keyed cache. Return the document as served.
-		 */
-		if ( '' === $declared_id ) {
-			return $object;
-		}
-
-		// Re-fetch the declared id from its own host and require it to self-confirm. One hop only.
-		$object = self::fetch_object( $declared_id, $cached, $final_url );
-
-		if ( \is_wp_error( $object ) ) {
-			return $object;
-		}
-
-		if ( ! id_matches_url( $object, $final_url ) ) {
-			return new \WP_Error(
-				'activitypub_object_id_mismatch',
-				\__( 'The object id does not match the URL it was served from', 'activitypub' ),
-				array( 'status' => 400 )
-			);
-		}
-
-		return $object;
+		return Proxy::get( $url_or_object, $args );
 	}
 
-	/**
-	 * Fetch and JSON-decode a single remote document.
-	 *
-	 * @param string $url       The URL to fetch. Must already be resolved (not a WebFinger acct).
-	 * @param bool   $cached    Whether the result may be served from and written to cache.
-	 * @param string $final_url Filled by reference with the URL the document was served from,
-	 *                          after following any redirects.
-	 *
-	 * @return array|\WP_Error The decoded document, or WP_Error on failure.
-	 */
-	private static function fetch_object( $url, $cached, &$final_url ) {
-		$final_url = $url;
-
-		if ( ! \wp_http_validate_url( $url ) ) {
-			return new \WP_Error(
-				'activitypub_no_valid_object_url',
-				\__( 'The "object" is/has no valid URL', 'activitypub' ),
-				array(
-					'status' => 400,
-					'object' => $url,
-				)
-			);
-		}
-
-		$response = self::get( $url, array(), $cached );
-
-		if ( \is_wp_error( $response ) ) {
-			return $response;
-		}
-
-		$effective_url = self::effective_url( $response );
-		if ( $effective_url ) {
-			$final_url = $effective_url;
-		}
-
-		$data = \json_decode( \wp_remote_retrieve_body( $response ), true );
-
-		if ( ! $data ) {
-			return new \WP_Error(
-				'activitypub_invalid_json',
-				\__( 'No valid JSON data', 'activitypub' ),
-				array(
-					'status' => 400,
-					'object' => $url,
-				)
-			);
-		}
-
-		return $data;
-	}
 
 	/**
 	 * Extract the effective URL a response was served from, after redirects.
@@ -432,7 +310,7 @@ class Http {
 	 *
 	 * @return string The final URL, or an empty string when unavailable.
 	 */
-	private static function effective_url( $response ) {
+	public static function effective_url( $response ) {
 		if ( empty( $response['http_response'] ) || ! \is_object( $response['http_response'] ) ) {
 			return '';
 		}

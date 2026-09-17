@@ -11,6 +11,7 @@ use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
 use Activitypub\Http;
+use Activitypub\Proxy;
 
 use function Activitypub\is_activity_reply;
 use function Activitypub\object_to_uri;
@@ -34,6 +35,10 @@ class Update {
 	 * @param \Activitypub\Activity\Activity $activity_object The activity object. Default null.
 	 */
 	public static function handle_update( $activity, $user_ids, $activity_object ) {
+		if ( ! empty( $activity['object']['id'] ) ) {
+			Proxy::delete( $activity['object']['id'] );
+		}
+
 		$object_type = $activity['object']['type'] ?? '';
 
 		switch ( $object_type ) {

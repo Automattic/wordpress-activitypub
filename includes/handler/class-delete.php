@@ -11,6 +11,7 @@ use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
+use Activitypub\Proxy;
 use Activitypub\Tombstone;
 
 use function Activitypub\object_to_uri;
@@ -47,6 +48,10 @@ class Delete {
 		// handle that path only on the shared hook, so it runs once with the full recipient list.
 		if ( Inbox::CONTEXT_SHARED_INBOX === $context && 'activitypub_inbox_shared_delete' !== \current_filter() ) {
 			return;
+		}
+
+		if ( ! empty( $activity['object']['id'] ) ) {
+			Proxy::delete( $activity['object']['id'] );
 		}
 
 		$object_type = $activity['object']['type'] ?? '';
