@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Links in replies received from the Fediverse no longer display broken on WordPress 7.1.
