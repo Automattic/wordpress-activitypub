@@ -1065,8 +1065,11 @@ class Admin {
 		$post_types = \get_post_types_by_support( 'activitypub' );
 
 		foreach ( $post_types as $post_type ) {
-			\add_filter( "bulk_actions-edit-{$post_type}", array( self::class, 'post_bulk_options' ) );
-			\add_filter( "handle_bulk_actions-edit-{$post_type}", array( self::class, 'handle_post_bulk_request' ), 10, 3 );
+			// Attachments are listed on the upload screen, not on an edit screen.
+			$screen = 'attachment' === $post_type ? 'upload' : 'edit-' . $post_type;
+
+			\add_filter( "bulk_actions-{$screen}", array( self::class, 'post_bulk_options' ) );
+			\add_filter( "handle_bulk_actions-{$screen}", array( self::class, 'handle_post_bulk_request' ), 10, 3 );
 		}
 	}
 
@@ -1201,7 +1204,7 @@ class Admin {
 		$selected_posts = \array_filter( $selected_posts );
 
 		if ( empty( $selected_posts ) ) {
-			\wp_safe_redirect( $send_back );
+			\wp_safe_redirect( \add_query_arg( 'activitypub_no_posts', '1', $send_back ) );
 			exit;
 		}
 
@@ -1233,10 +1236,12 @@ class Admin {
 			}
 		}
 
-		// Add success count to redirect URL.
-		$send_back = \add_query_arg( 'activitypub_deleted', $deleted_count, $send_back );
+		if ( $deleted_count ) {
+			$send_back = \add_query_arg( 'activitypub_deleted', $deleted_count, $send_back );
+		} else {
+			$send_back = \add_query_arg( 'activitypub_delete_failed', '1', $send_back );
+		}
 
-		// Redirect back.
 		\wp_safe_redirect( $send_back );
 		exit;
 	}
