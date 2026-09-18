@@ -33,7 +33,7 @@ class Search {
 	 */
 	public static function enhance_public_search( $query ) {
 		// Check user capabilities.
-		if ( ! current_user_can( 'activitypub' ) ) {
+		if ( ! \current_user_can( 'activitypub' ) ) {
 			return $query;
 		}
 
@@ -76,7 +76,7 @@ class Search {
 	 */
 	public static function enhance_admin_comment_search() {
 		// Check user capabilities.
-		if ( ! current_user_can( 'activitypub' ) ) {
+		if ( ! \current_user_can( 'activitypub' ) ) {
 			return;
 		}
 

@@ -40,11 +40,11 @@ class Comment {
 	 * @param \WP_Comment $comment    Comment object.
 	 */
 	public static function schedule_comment_activity( $new_status, $old_status, $comment ) {
-		if ( defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
 			return;
 		}
 
-		$comment = get_comment( $comment );
+		$comment = \get_comment( $comment );
 
 		// Federate only comments that are written by a registered user.
 		if ( ! $comment || ! $comment->user_id ) {
@@ -65,7 +65,7 @@ class Comment {
 		$allowed_types[] = 'comment'; // Add core WordPress comment types.
 
 		// Check if comment type is in allowed list.
-		if ( ! in_array( $comment_type, $allowed_types, true ) ) {
+		if ( ! \in_array( $comment_type, $allowed_types, true ) ) {
 			return;
 		}
 
@@ -78,7 +78,7 @@ class Comment {
 			$type = 'Create';
 		} elseif ( 'approved' === $new_status ) {
 			$type = 'Update';
-			\update_comment_meta( $comment->comment_ID, 'activitypub_comment_modified', time(), true );
+			\update_comment_meta( $comment->comment_ID, 'activitypub_comment_modified', \time(), true );
 		} elseif (
 			'trash' === $new_status ||
 			( 'delete' === $new_status && '' === $old_status ) || // Went through schedule_comment_delete_activity().

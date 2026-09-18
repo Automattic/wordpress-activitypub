@@ -44,22 +44,20 @@ export function PopularTags(): ReactNode {
 		<div className="popular-tags">
 			<h3 className="popular-tags__title">{ __( 'Popular Tags', 'activitypub' ) }</h3>
 			<MenuGroup>
-				{ tags.map(
-					( tag: Term ): ReactNode => (
-						<MenuItem
-							key={ tag.id }
-							onClick={ (): void => updateFilter( tag.id ) }
-							className="menu-item"
-							aria-pressed={ selectedTagId === tag.id }
-							aria-label={
-								/* translators: %s: tag name */
-								sprintf( __( 'Filter by tag: %s', 'activitypub' ), tag.name )
-							}
-						>
-							<span>#{ tag.name }</span>
-						</MenuItem>
-					)
-				) }
+				{ tags.map( ( tag: Term ): ReactNode => (
+					<MenuItem
+						key={ tag.id }
+						onClick={ (): void => updateFilter( tag.id ) }
+						className="menu-item"
+						aria-pressed={ selectedTagId === tag.id }
+						aria-label={
+							/* translators: %s: tag name */
+							sprintf( __( 'Filter by tag: %s', 'activitypub' ), tag.name )
+						}
+					>
+						<span>#{ tag.name }</span>
+					</MenuItem>
+				) ) }
 			</MenuGroup>
 		</div>
 	);

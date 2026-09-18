@@ -89,7 +89,12 @@ class Comment_Command extends \WP_CLI_Command {
 			\WP_CLI::error( 'This comment was received via ActivityPub and cannot be deleted or updated.' );
 		}
 
-		add_to_outbox( $comment, 'Update', $comment->user_id );
+		$result = add_to_outbox( $comment, 'Update', $comment->user_id );
+
+		if ( \is_wp_error( $result ) ) {
+			\WP_CLI::error( $result->get_error_message() );
+		}
+
 		\WP_CLI::success( '"Update" activity is queued.' );
 	}
 }

@@ -24,8 +24,14 @@ namespace Activitypub;
 class Event_Stream {
 	/**
 	 * Initialize the event stream signals.
+	 *
+	 * Registered on `init`, so the setting is read once the site context is settled.
 	 */
 	public static function init() {
+		if ( ! \get_option( 'activitypub_api', false ) ) {
+			return;
+		}
+
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'signal_outbox' ), 10, 3 );
 		\add_action( 'activitypub_handled_inbox', array( self::class, 'signal_inbox' ), 10, 2 );
 	}
@@ -38,8 +44,8 @@ class Event_Stream {
 	 * @param int                            $user_id            The user ID.
 	 */
 	public static function signal_outbox( $outbox_activity_id, $activity, $user_id ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		$signal_key = sprintf( 'activitypub_sse_signal_%s_outbox', $user_id );
-		\set_transient( $signal_key, time(), HOUR_IN_SECONDS );
+		$signal_key = \sprintf( 'activitypub_sse_signal_%s_outbox', $user_id );
+		\set_transient( $signal_key, \time(), HOUR_IN_SECONDS );
 	}
 
 	/**
@@ -54,8 +60,8 @@ class Event_Stream {
 		}
 
 		foreach ( $user_ids as $user_id ) {
-			$signal_key = sprintf( 'activitypub_sse_signal_%s_inbox', $user_id );
-			\set_transient( $signal_key, time(), HOUR_IN_SECONDS );
+			$signal_key = \sprintf( 'activitypub_sse_signal_%s_inbox', $user_id );
+			\set_transient( $signal_key, \time(), HOUR_IN_SECONDS );
 		}
 	}
 }

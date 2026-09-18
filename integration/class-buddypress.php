@@ -60,13 +60,13 @@ class Buddypress {
 	 */
 	public static function add_user_metadata( $author, $author_id ) {
 		if ( \function_exists( 'bp_members_get_user_url' ) ) {
-			$author->url = bp_members_get_user_url( $author_id );
+			$author->url = \bp_members_get_user_url( $author_id );
 		} else {
-			$author->url = bp_core_get_user_domain( $author_id );
+			$author->url = \bp_core_get_user_domain( $author_id );
 		}
 
 		// Add BuddyPress' cover_image instead of WordPress' header_image.
-		$cover_image_url = bp_attachments_get_attachment( 'url', array( 'item_id' => $author_id ) );
+		$cover_image_url = \bp_attachments_get_attachment( 'url', array( 'item_id' => $author_id ) );
 
 		if ( $cover_image_url ) {
 			$author->image = array(
@@ -80,7 +80,7 @@ class Buddypress {
 			'type'  => 'PropertyValue',
 			'name'  => \__( 'Profile', 'activitypub' ),
 			'value' => \html_entity_decode(
-				sprintf(
+				\sprintf(
 					'<a rel="me" title="%s" target="_blank" href="%s">%s</a>',
 					\esc_attr( $author->url ),
 					\esc_url( $author->url ),
@@ -92,8 +92,8 @@ class Buddypress {
 		);
 
 		// Replace blog URL on multisite.
-		if ( is_multisite() ) {
-			$user_blogs = get_blogs_of_user( $author_id ); // Get sites of user to send as AP metadata.
+		if ( \is_multisite() ) {
+			$user_blogs = \get_blogs_of_user( $author_id ); // Get sites of user to send as AP metadata.
 
 			if ( ! empty( $user_blogs ) ) {
 				unset( $author->attachment['blog_url'] );
@@ -104,7 +104,7 @@ class Buddypress {
 							'type'  => 'PropertyValue',
 							'name'  => $blog->blogname,
 							'value' => \html_entity_decode(
-								sprintf(
+								\sprintf(
 									'<a rel="me" title="%s" target="_blank" href="%s">%s</a>',
 									\esc_attr( $blog->siteurl ),
 									$blog->siteurl,

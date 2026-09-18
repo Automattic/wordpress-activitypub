@@ -5,6 +5,18 @@
  * @package Activitypub
  */
 
+/*
+ * The Fediverse Preview is an authoring tool, not a public view. Refuse to render
+ * it for logged-out visitors as a backstop, independent of how the request routed
+ * here — so a soft-deleted draft's preview can never be served to the public.
+ */
+if ( ! \is_user_logged_in() ) {
+	\wp_die(
+		\esc_html__( 'You need to be logged in to preview this post.', 'activitypub' ),
+		403
+	);
+}
+
 $post        = \get_post(); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 $transformer = \Activitypub\Transformer\Factory::get_transformer( $post );
 

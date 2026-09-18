@@ -41,6 +41,24 @@ class Test_Attachment extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Set up. The Attachment transformer only federates standalone attachments when
+	 * the attachment post type supports ActivityPub, so enable it for these tests.
+	 */
+	public function set_up() {
+		parent::set_up();
+		\add_post_type_support( 'attachment', 'activitypub' );
+	}
+
+	/**
+	 * Tear down.
+	 */
+	public function tear_down() {
+		\remove_post_type_support( 'attachment', 'activitypub' );
+		\delete_post_meta( self::$attachment_id, 'activitypub_content_visibility' );
+		parent::tear_down();
+	}
+
+	/**
 	 * Test get_type method.
 	 *
 	 * @covers ::get_type
@@ -98,6 +116,39 @@ class Test_Attachment extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that alt text with a bare `<` is truncated, the core strip_tags() behaviour.
+	 */
+	public function test_get_attachment_with_alt_truncates_at_bare_less_than() {
+		update_post_meta( self::$attachment_id, '_wp_attachment_image_alt', 'I <3 cats' );
+
+		$transformer = new Attachment( get_post( self::$attachment_id ) );
+		$reflection  = new \ReflectionMethod( Attachment::class, 'get_attachment' );
+		$reflection->setAccessible( true );
+		$result = $reflection->invoke( $transformer );
+
+		// strip_tags() reads the bare `<` as an unclosed tag, a known core limitation.
+		$this->assertEquals( 'I', $result['name'] );
+	}
+
+	/**
+	 * Test that an entity-encoded alt text is not revived into live markup on the way out.
+	 *
+	 * `name` is plain text in the JSON, and consumers treat it as such.
+	 */
+	public function test_get_attachment_alt_does_not_revive_encoded_markup() {
+		update_post_meta( self::$attachment_id, '_wp_attachment_image_alt', '&lt;img src=x onerror=alert(1)&gt;caption' );
+
+		$transformer = new Attachment( get_post( self::$attachment_id ) );
+		$reflection  = new \ReflectionMethod( Attachment::class, 'get_attachment' );
+		$reflection->setAccessible( true );
+		$result = $reflection->invoke( $transformer );
+
+		// Decode first, strip second: the revived tag is removed rather than federated.
+		$this->assertStringNotContainsString( '<img', $result['name'] );
+		$this->assertSame( 'caption', $result['name'] );
+	}
+
+	/**
 	 * Test to_object method.
 	 *
 	 * @covers ::to_object
@@ -110,6 +161,21 @@ class Test_Attachment extends WP_UnitTestCase {
 		$this->assertEquals( 'Note', $object->get_type() );
 		$this->assertEquals( home_url( '?p=' . self::$attachment_id ), $object->get_id() );
 		$this->assertNull( $object->get_name() );
+	}
+
+	/**
+	 * A standalone attachment that is itself made non-public must redact to a Tombstone,
+	 * honoring its own visibility — not just an attached parent's.
+	 *
+	 * @covers ::to_object
+	 */
+	public function test_to_object_redacts_non_public_attachment() {
+		\update_post_meta( self::$attachment_id, 'activitypub_content_visibility', ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL );
+
+		$object = ( new Attachment( get_post( self::$attachment_id ) ) )->to_object();
+
+		$this->assertEquals( 'Tombstone', $object->get_type(), 'A non-public attachment must serialize as a Tombstone.' );
+		$this->assertEmpty( $object->get_content(), 'A non-public attachment must not expose its media content.' );
 	}
 
 	/**

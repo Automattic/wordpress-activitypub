@@ -71,6 +71,8 @@ class Router {
 			'top'
 		);
 
+		// Must precede the generic @username rule, which would otherwise match "application" as an actor username.
+		\add_rewrite_rule( '^@application\/?$', 'index.php?rest_route=/' . ACTIVITYPUB_REST_NAMESPACE . '/application', 'top' );
 		\add_rewrite_rule( '^@([\w\-\.]+)\/?$', 'index.php?actor=$matches[1]', 'top' );
 		\add_rewrite_endpoint( 'activitypub', EP_AUTHORS | EP_PERMALINK | EP_PAGES );
 	}
@@ -107,8 +109,31 @@ class Router {
 		}
 
 		$activitypub_object = Query::get_instance()->get_activitypub_object();
+		$queried_object     = Query::get_instance()->get_queried_object();
 
-		if ( Tombstone::exists_local( Query::get_instance()->get_request_url() ) ) {
+		/*
+		 * Serve the Tombstone for a deleted object — but not while an authorized
+		 * user is previewing it. During an editor `?preview=true` request,
+		 * `is_post_publicly_queryable()` treats a draft or pending post as
+		 * queryable only for a user who can edit it, so the author can still use
+		 * the Fediverse Preview on a post they just soft-deleted (which is
+		 * otherwise already in the tombstone registry).
+		 *
+		 * The bypass is scoped to that preview request on purpose. A normal
+		 * ActivityPub fetch (no `preview`) of a tombstoned URL always gets the
+		 * Tombstone — even if the URL now resolves to a fresh public post because
+		 * its slug was reused — since remote servers were told that id is gone.
+		 * The legitimate restore path clears the registry entry itself, via
+		 * `Create::maybe_unbury()` when the re-publish Create is queued.
+		 */
+		$is_authorized_preview = \get_query_var( 'preview' )
+			&& $queried_object instanceof \WP_Post
+			&& is_post_publicly_queryable( $queried_object );
+
+		if (
+			Tombstone::exists_local( Query::get_instance()->get_request_url() )
+			&& ! $is_authorized_preview
+		) {
 			// Set 410 Gone for permanently deleted posts, 200 OK for soft-deleted.
 			if ( ! $activitypub_object ) {
 				\status_header( 410 );
@@ -117,18 +142,48 @@ class Router {
 			return ACTIVITYPUB_PLUGIN_DIR . 'templates/tombstone-json.php';
 		}
 
+		/*
+		 * Refuse to expose the content-negotiated representation of a post
+		 * that is no longer publicly queryable (non-public status, AP
+		 * visibility flipped, post-type support removed, etc.). The
+		 * lifecycle gate in `is_post_disabled()` intentionally lets such
+		 * posts through the federation pipeline so a Delete can fire, but
+		 * that escape hatch must not leak into front-end rendering during
+		 * the window between status change and Delete delivery.
+		 */
+		if (
+			$activitypub_object &&
+			$queried_object instanceof \WP_Post &&
+			'ap_outbox' !== $queried_object->post_type &&
+			! is_post_publicly_queryable( $queried_object )
+		) {
+			return $template;
+		}
+
 		$activitypub_template = false;
 
 		if ( $activitypub_object ) {
 			if ( \get_query_var( 'preview' ) ) {
-				\define( 'ACTIVITYPUB_PREVIEW', true );
+				\defined( 'ACTIVITYPUB_PREVIEW' ) || \define( 'ACTIVITYPUB_PREVIEW', true );
+
+				/*
+				 * A preview is only ever reached by someone allowed to see the unpublished post:
+				 * is_post_publicly_queryable() gates draft/pending/future on current_user_can('edit_post'),
+				 * and everyone else has already fallen through to the normal template above. The response
+				 * therefore varies by caller no matter the Authorized Fetch setting, so it must never be
+				 * stored by a shared cache and replayed to someone who cannot edit the post. Independent of
+				 * the Authorized Fetch block below, which only guards the signed-fetch path.
+				 */
+				if ( ! \headers_sent() ) {
+					\header( 'Cache-Control: private, no-store, max-age=0' );
+				}
 
 				/**
 				 * Filter the template used for the ActivityPub preview.
 				 *
 				 * @param string $activitypub_template Absolute path to the template file.
 				 */
-				$activitypub_template = apply_filters( 'activitypub_preview_template', ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php' );
+				$activitypub_template = \apply_filters( 'activitypub_preview_template', ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php' );
 			} else {
 				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . 'templates/activitypub-json.php';
 			}
@@ -141,6 +196,17 @@ class Router {
 		 * @see https://swicg.github.io/activitypub-http-signature/#authorized-fetch
 		 */
 		if ( $activitypub_template && use_authorized_fetch() ) {
+			/*
+			 * Under Authorized Fetch the response depends on the caller's signature: an unsigned request
+			 * is refused, a signed one gets the document. A shared cache (page cache or CDN) keys the
+			 * activity+json variant on the representation, not the signature, so it must store neither
+			 * outcome and replay it to the wrong caller. Send this before verifying so it covers the 401
+			 * and the 200 alike; `max-age=0` is what page caches such as Surge key on to skip storing.
+			 */
+			if ( ! \headers_sent() ) {
+				\header( 'Cache-Control: private, no-store, max-age=0' );
+			}
+
 			$verification = Signature::verify_http_signature( $_SERVER );
 			if ( \is_wp_error( $verification ) ) {
 				\status_header( 401 );
@@ -191,7 +257,7 @@ class Router {
 		}
 
 		if ( ! \headers_sent() ) {
-			\header( 'Link: <' . esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"', false );
+			\header( 'Link: <' . \esc_url( $id ) . '>; title="ActivityPub (JSON)"; rel="alternate"; type="application/activity+json"', false );
 
 			if ( \get_option( 'activitypub_vary_header', '1' ) ) {
 				// Send Vary header for Accept header.
@@ -202,7 +268,7 @@ class Router {
 		\add_action(
 			'wp_head',
 			static function () use ( $id ) {
-				echo PHP_EOL . '<link rel="alternate" title="ActivityPub (JSON)" type="application/activity+json" href="' . esc_url( $id ) . '" />' . PHP_EOL;
+				echo PHP_EOL . '<link rel="alternate" title="ActivityPub (JSON)" type="application/activity+json" href="' . \esc_url( $id ) . '" />' . PHP_EOL;
 			}
 		);
 	}
@@ -216,7 +282,7 @@ class Router {
 	 * @return string $redirect_url The possibly-unslashed redirect URL.
 	 */
 	public static function no_trailing_redirect( $redirect_url, $requested_url ) {
-		if ( get_query_var( 'actor' ) ) {
+		if ( \get_query_var( 'actor' ) ) {
 			return $requested_url;
 		}
 
@@ -246,7 +312,7 @@ class Router {
 		unset( $query_params['activitypub'] );
 		unset( $query_params['stamp'] );
 
-		if ( 1 !== count( $query_params ) ) {
+		if ( 1 !== \count( $query_params ) ) {
 			return $redirect_url;
 		}
 
@@ -286,12 +352,20 @@ class Router {
 				return;
 			}
 
-			\wp_safe_redirect( get_comment_link( $comment ) );
+			\wp_safe_redirect( \get_comment_link( $comment ) );
 			exit;
 		}
 
-		$actor = \get_query_var( 'actor', null );
-		if ( $actor ) {
+		/*
+		 * Skip the actor branch when this looks like an actor-scoped FEP-7aa9
+		 * stamp URL: numeric `actor` paired with a `stamp`. Those resolve to a
+		 * FeatureAuthorization via Activitypub\Query, not via the username
+		 * lookup which would 404 the numeric ID. Non-numeric actors fall
+		 * through to the regular Mastodon-style profile lookup.
+		 */
+		$actor        = \get_query_var( 'actor', null );
+		$is_stamp_url = $actor && \get_query_var( 'stamp' ) && \ctype_digit( (string) $actor );
+		if ( $actor && ! $is_stamp_url ) {
 			$actor = Actors::get_by_username( $actor );
 			if ( ! $actor || \is_wp_error( $actor ) ) {
 				$wp_query->set_404();
@@ -306,7 +380,13 @@ class Router {
 			exit;
 		}
 
-		$term_id = \get_query_var( 'term_id', null );
+		/*
+		 * Read `term_id` off the parsed request, not the query vars. WP_Query derives its own
+		 * `term_id` from any tax query on another taxonomy, and takes the raw value regardless of
+		 * the query's `field`: Polylang filters by `term_taxonomy_id`, so that number can be the
+		 * term ID of an unrelated category or tag.
+		 */
+		$term_id = $wp_query->query['term_id'] ?? null;
 		if ( $term_id ) {
 			$term = \get_term( $term_id );
 
@@ -316,16 +396,7 @@ class Router {
 				return;
 			}
 
-			/**
-			 * Filters the taxonomies supported for term redirects.
-			 *
-			 * @since 7.8.3
-			 *
-			 * @param array $supported_taxonomies Array of taxonomy names. Default array( 'category', 'post_tag' ).
-			 */
-			$supported_taxonomies = \apply_filters( 'activitypub_supported_taxonomies', array( 'category', 'post_tag' ) );
-
-			if ( ! in_array( $term->taxonomy, $supported_taxonomies, true ) ) {
+			if ( ! is_supported_taxonomy( $term->taxonomy ) ) {
 				return;
 			}
 

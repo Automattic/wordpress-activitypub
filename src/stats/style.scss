@@ -3,7 +3,7 @@
 	background-color: var(--wp--preset--color--base, var(--wp--preset--color--white, #fff));
 	color: var(--wp--preset--color--contrast, var(--wp--preset--color--black, inherit));
 
-	// Inner border color: uses block border-color if set, otherwise muted text color.
+	// Inner border: uses block border-color if set, else muted text.
 	--activitypub-stats--border-color: color-mix(in srgb, currentcolor 20%, transparent);
 
 

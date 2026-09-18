@@ -97,13 +97,18 @@ class Token {
 	 * @return array|\WP_Error Token data or error.
 	 */
 	public static function create( $user_id, $client_id, $scopes, $expires = self::DEFAULT_EXPIRATION ) {
+		$user_access = self::validate_user_access( $user_id );
+		if ( \is_wp_error( $user_access ) ) {
+			return $user_access;
+		}
+
 		// Generate tokens.
 		$access_token  = self::generate_token();
 		$refresh_token = self::generate_token();
 
 		// Calculate expirations.
-		$access_expires_at  = time() + $expires;
-		$refresh_expires_at = time() + self::REFRESH_EXPIRATION;
+		$access_expires_at  = \time() + $expires;
+		$refresh_expires_at = \time() + self::REFRESH_EXPIRATION;
 
 		// Create token data.
 		$token_data = array(
@@ -113,7 +118,7 @@ class Token {
 			'scopes'             => Scope::validate( $scopes ),
 			'expires_at'         => $access_expires_at,
 			'refresh_expires_at' => $refresh_expires_at,
-			'created_at'         => time(),
+			'created_at'         => \time(),
 			'last_used_at'       => null,
 		);
 
@@ -141,7 +146,8 @@ class Token {
 		self::enforce_token_limit( $user_id );
 
 		/*
-		 * Get the actor URI for the 'me' parameter (IndieAuth convention).
+		 * Get the actor URI for the 'me' parameter (IndieAuth convention) and
+		 * `activitypub_actor_id` (SWICG ActivityPub API Basic Profile).
 		 * Fall back to blog actor when user actors are disabled.
 		 */
 		$actor = Actors::get_by_id( $user_id );
@@ -151,12 +157,13 @@ class Token {
 		$me = ! \is_wp_error( $actor ) ? $actor->get_id() : null;
 
 		return array(
-			'access_token'  => $access_token,
-			'token_type'    => 'Bearer',
-			'expires_in'    => $expires,
-			'refresh_token' => $refresh_token,
-			'scope'         => Scope::to_string( $token_data['scopes'] ),
-			'me'            => $me,
+			'access_token'         => $access_token,
+			'token_type'           => 'Bearer',
+			'expires_in'           => $expires,
+			'refresh_token'        => $refresh_token,
+			'scope'                => Scope::to_string( $token_data['scopes'] ),
+			'me'                   => $me,
+			'activitypub_actor_id' => $me,
 		);
 	}
 
@@ -190,7 +197,7 @@ class Token {
 
 		$token_data = \get_user_meta( (int) $user_id, $meta_key, true );
 
-		if ( empty( $token_data ) || ! is_array( $token_data ) ) {
+		if ( empty( $token_data ) || ! \is_array( $token_data ) ) {
 			return new \WP_Error(
 				'activitypub_invalid_token',
 				\__( 'Invalid access token.', 'activitypub' ),
@@ -200,7 +207,7 @@ class Token {
 
 		// Verify hash matches.
 		if ( ! isset( $token_data['access_token_hash'] ) ||
-			! hash_equals( $token_data['access_token_hash'], $token_hash ) ) {
+			! \hash_equals( $token_data['access_token_hash'], $token_hash ) ) {
 			return new \WP_Error(
 				'activitypub_invalid_token',
 				\__( 'Invalid access token.', 'activitypub' ),
@@ -209,7 +216,7 @@ class Token {
 		}
 
 		// Check expiration.
-		if ( isset( $token_data['expires_at'] ) && $token_data['expires_at'] < time() ) {
+		if ( isset( $token_data['expires_at'] ) && $token_data['expires_at'] < \time() ) {
 			return new \WP_Error(
 				'activitypub_token_expired',
 				\__( 'Access token has expired.', 'activitypub' ),
@@ -217,10 +224,15 @@ class Token {
 			);
 		}
 
+		$user_access = self::validate_user_access( $user_id );
+		if ( \is_wp_error( $user_access ) ) {
+			return $user_access;
+		}
+
 		// Throttle last_used_at writes to avoid a DB write on every request.
 		$last_used = $token_data['last_used_at'] ?? 0;
-		if ( empty( $last_used ) || ( time() - $last_used ) > 5 * MINUTE_IN_SECONDS ) {
-			$token_data['last_used_at'] = time();
+		if ( empty( $last_used ) || ( \time() - $last_used ) > 5 * MINUTE_IN_SECONDS ) {
+			$token_data['last_used_at'] = \time();
 			\update_user_meta( (int) $user_id, $meta_key, $token_data );
 		}
 
@@ -272,7 +284,7 @@ class Token {
 		$meta_key   = self::META_PREFIX . $access_hash;
 		$token_data = \get_user_meta( $user_id, $meta_key, true );
 
-		if ( empty( $token_data ) || ! is_array( $token_data ) ) {
+		if ( empty( $token_data ) || ! \is_array( $token_data ) ) {
 			return new \WP_Error(
 				'activitypub_invalid_refresh_token',
 				\__( 'Invalid refresh token.', 'activitypub' ),
@@ -282,7 +294,7 @@ class Token {
 
 		// Verify refresh token hash matches.
 		if ( ! isset( $token_data['refresh_token_hash'] ) ||
-			! hash_equals( $token_data['refresh_token_hash'], $refresh_hash ) ) {
+			! \hash_equals( $token_data['refresh_token_hash'], $refresh_hash ) ) {
 			return new \WP_Error(
 				'activitypub_invalid_refresh_token',
 				\__( 'Invalid refresh token.', 'activitypub' ),
@@ -301,7 +313,7 @@ class Token {
 
 		// Check refresh token expiration.
 		if ( isset( $token_data['refresh_expires_at'] ) &&
-			$token_data['refresh_expires_at'] < time() ) {
+			$token_data['refresh_expires_at'] < \time() ) {
 			// Delete the expired token and index.
 			\delete_user_meta( $user_id, $meta_key );
 			\delete_user_meta( $user_id, $refresh_index_key );
@@ -313,12 +325,42 @@ class Token {
 			);
 		}
 
+		// Reject before tearing down the existing token, so a failed refresh does not destroy the grant.
+		$user_access = self::validate_user_access( $user_id );
+		if ( \is_wp_error( $user_access ) ) {
+			return $user_access;
+		}
+
 		// Delete the old token and index.
 		\delete_user_meta( $user_id, $meta_key );
 		\delete_user_meta( $user_id, $refresh_index_key );
 
 		// Create a new token.
 		return self::create( $user_id, $client_id, $token_data['scopes'] );
+	}
+
+	/**
+	 * Validate that a token's user holds the ActivityPub capability.
+	 *
+	 * Checks the `activitypub` capability directly rather than user_can_activitypub(), which also
+	 * short-circuits on the site actor mode: a capable user must keep their token even when the site
+	 * runs in blog-only or single-user mode, where per-user actors are not exposed.
+	 *
+	 * @since 9.2.0
+	 *
+	 * @param int $user_id WordPress user ID.
+	 * @return true|\WP_Error True when the user has the capability, WP_Error otherwise.
+	 */
+	private static function validate_user_access( $user_id ) {
+		if ( \user_can( $user_id, 'activitypub' ) ) {
+			return true;
+		}
+
+		return new \WP_Error(
+			'activitypub_user_not_enabled',
+			\__( 'This user is not enabled for ActivityPub.', 'activitypub' ),
+			array( 'status' => 403 )
+		);
 	}
 
 	/**
@@ -353,7 +395,7 @@ class Token {
 		if ( $user_id ) {
 			$user_id    = (int) $user_id;
 			$token_data = \get_user_meta( $user_id, $access_meta_key, true );
-			$client_id  = is_array( $token_data ) ? ( $token_data['client_id'] ?? '' ) : '';
+			$client_id  = \is_array( $token_data ) ? ( $token_data['client_id'] ?? '' ) : '';
 
 			if ( ! self::caller_owns_token( $user_id, $client_id, $caller_user_id, $caller_client_id ) ) {
 				return true;
@@ -363,7 +405,7 @@ class Token {
 			\delete_user_meta( $user_id, $access_meta_key );
 
 			// Also delete the refresh token index if it exists.
-			if ( is_array( $token_data ) && isset( $token_data['refresh_token_hash'] ) ) {
+			if ( \is_array( $token_data ) && isset( $token_data['refresh_token_hash'] ) ) {
 				$refresh_index_key = self::REFRESH_INDEX_PREFIX . $token_data['refresh_token_hash'];
 				\delete_user_meta( $user_id, $refresh_index_key );
 			}
@@ -388,7 +430,7 @@ class Token {
 
 			if ( $access_hash ) {
 				$token_data = \get_user_meta( $user_id, self::META_PREFIX . $access_hash, true );
-				$client_id  = is_array( $token_data ) ? ( $token_data['client_id'] ?? '' ) : '';
+				$client_id  = \is_array( $token_data ) ? ( $token_data['client_id'] ?? '' ) : '';
 			}
 
 			if ( ! self::caller_owns_token( $user_id, $client_id, $caller_user_id, $caller_client_id ) ) {
@@ -482,22 +524,22 @@ class Token {
 
 		foreach ( $all_meta as $meta_key => $meta_values ) {
 			// Delete token entries and collect client IDs.
-			if ( 0 === strpos( $meta_key, self::META_PREFIX ) ) {
+			if ( 0 === \strpos( $meta_key, self::META_PREFIX ) ) {
 				$token_data = \maybe_unserialize( $meta_values[0] );
-				if ( is_array( $token_data ) && ! empty( $token_data['client_id'] ) ) {
+				if ( \is_array( $token_data ) && ! empty( $token_data['client_id'] ) ) {
 					$client_ids[] = $token_data['client_id'];
 				}
 				\delete_user_meta( $user_id, $meta_key );
 				++$count;
 			}
 			// Delete refresh token indices.
-			if ( 0 === strpos( $meta_key, self::REFRESH_INDEX_PREFIX ) ) {
+			if ( 0 === \strpos( $meta_key, self::REFRESH_INDEX_PREFIX ) ) {
 				\delete_user_meta( $user_id, $meta_key );
 			}
 		}
 
 		// Remove user from all client tracking.
-		foreach ( array_unique( $client_ids ) as $client_id ) {
+		foreach ( \array_unique( $client_ids ) as $client_id ) {
 			self::untrack_user( $user_id, $client_id );
 		}
 
@@ -536,13 +578,13 @@ class Token {
 			$all_meta = \get_user_meta( $user_id );
 
 			foreach ( $all_meta as $meta_key => $meta_values ) {
-				if ( 0 !== strpos( $meta_key, self::META_PREFIX ) ) {
+				if ( 0 !== \strpos( $meta_key, self::META_PREFIX ) ) {
 					continue;
 				}
 
 				$token_data = \maybe_unserialize( $meta_values[0] );
 
-				if ( ! is_array( $token_data ) ) {
+				if ( ! \is_array( $token_data ) ) {
 					continue;
 				}
 
@@ -575,13 +617,13 @@ class Token {
 		$tokens   = array();
 
 		foreach ( $all_meta as $meta_key => $meta_values ) {
-			if ( 0 !== strpos( $meta_key, self::META_PREFIX ) ) {
+			if ( 0 !== \strpos( $meta_key, self::META_PREFIX ) ) {
 				continue;
 			}
 
 			$token_data = \maybe_unserialize( $meta_values[0] );
 
-			if ( is_array( $token_data ) ) {
+			if ( \is_array( $token_data ) ) {
 				// Don't expose hashes.
 				unset( $token_data['access_token_hash'], $token_data['refresh_token_hash'] );
 				$token_data['meta_key'] = $meta_key; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Not a DB query, just array key.
@@ -645,7 +687,7 @@ class Token {
 	 * @return bool True if expired.
 	 */
 	public function is_expired() {
-		return $this->get_expires_at() < time();
+		return $this->get_expires_at() < \time();
 	}
 
 	/**
@@ -673,7 +715,7 @@ class Token {
 	 * @return string The random token as a hex string.
 	 */
 	public static function generate_token( $length = 32 ) {
-		return bin2hex( random_bytes( $length ) );
+		return \bin2hex( \random_bytes( $length ) );
 	}
 
 	/**
@@ -683,7 +725,7 @@ class Token {
 	 * @return string The SHA-256 hash.
 	 */
 	public static function hash_token( $token ) {
-		return hash( 'sha256', $token );
+		return \hash( 'sha256', $token );
 	}
 
 	/**
@@ -705,7 +747,7 @@ class Token {
 		$post_id  = $client->get_post_id();
 		$existing = \get_post_meta( $post_id, self::USER_META_KEY, false );
 
-		if ( ! in_array( $user_id, array_map( 'intval', $existing ), true ) ) {
+		if ( ! \in_array( $user_id, \array_map( 'intval', $existing ), true ) ) {
 			\add_post_meta( $post_id, self::USER_META_KEY, $user_id );
 		}
 	}
@@ -722,30 +764,30 @@ class Token {
 		$tokens   = array();
 
 		foreach ( $all_meta as $meta_key => $meta_values ) {
-			if ( 0 !== strpos( $meta_key, self::META_PREFIX ) ) {
+			if ( 0 !== \strpos( $meta_key, self::META_PREFIX ) ) {
 				continue;
 			}
 
 			$token_data = \maybe_unserialize( $meta_values[0] );
 
-			if ( is_array( $token_data ) ) {
+			if ( \is_array( $token_data ) ) {
 				$tokens[ $meta_key ] = $token_data;
 			}
 		}
 
-		if ( count( $tokens ) <= self::MAX_TOKENS_PER_USER ) {
+		if ( \count( $tokens ) <= self::MAX_TOKENS_PER_USER ) {
 			return;
 		}
 
 		// Sort by created_at ascending (oldest first).
-		uasort(
+		\uasort(
 			$tokens,
 			function ( $a, $b ) {
 				return ( $a['created_at'] ?? 0 ) - ( $b['created_at'] ?? 0 );
 			}
 		);
 
-		$to_remove = count( $tokens ) - self::MAX_TOKENS_PER_USER;
+		$to_remove = \count( $tokens ) - self::MAX_TOKENS_PER_USER;
 
 		foreach ( $tokens as $meta_key => $token_data ) {
 			if ( $to_remove <= 0 ) {
@@ -809,7 +851,7 @@ class Token {
 
 		$user_ids = \get_post_meta( $client->get_post_id(), self::USER_META_KEY, false );
 
-		return array_map( 'intval', $user_ids );
+		return \array_map( 'intval', $user_ids );
 	}
 
 	/**
@@ -831,7 +873,7 @@ class Token {
 			)
 		);
 
-		return array_map( 'intval', $user_ids );
+		return \array_map( 'intval', $user_ids );
 	}
 
 	/**
@@ -850,13 +892,13 @@ class Token {
 			$client_ids = array();
 
 			foreach ( $all_meta as $meta_key => $meta_values ) {
-				if ( 0 !== strpos( $meta_key, self::META_PREFIX ) ) {
+				if ( 0 !== \strpos( $meta_key, self::META_PREFIX ) ) {
 					continue;
 				}
 
 				$token_data = \maybe_unserialize( $meta_values[0] );
 
-				if ( ! is_array( $token_data ) ) {
+				if ( ! \is_array( $token_data ) ) {
 					\delete_user_meta( $user_id, $meta_key );
 					++$count;
 					continue;
@@ -864,9 +906,9 @@ class Token {
 
 				// Check if both access and refresh tokens are expired.
 				$access_expired  = isset( $token_data['expires_at'] ) &&
-					$token_data['expires_at'] < time() - DAY_IN_SECONDS;
+					$token_data['expires_at'] < \time() - DAY_IN_SECONDS;
 				$refresh_expired = isset( $token_data['refresh_expires_at'] ) &&
-					$token_data['refresh_expires_at'] < time();
+					$token_data['refresh_expires_at'] < \time();
 
 				if ( $access_expired && $refresh_expired ) {
 					\delete_user_meta( $user_id, $meta_key );
@@ -883,7 +925,7 @@ class Token {
 			}
 
 			// Untrack user from clients where all tokens were removed.
-			foreach ( array_unique( $client_ids ) as $client_id ) {
+			foreach ( \array_unique( $client_ids ) as $client_id ) {
 				self::maybe_untrack_user( $user_id, $client_id );
 			}
 		}
@@ -919,15 +961,16 @@ class Token {
 		$me = ! \is_wp_error( $actor ) ? $actor->get_id() : null;
 
 		return array(
-			'active'     => true,
-			'scope'      => Scope::to_string( $validated->get_scopes() ),
-			'client_id'  => $validated->get_client_id(),
-			'username'   => $user ? $user->user_login : null,
-			'token_type' => 'Bearer',
-			'exp'        => $validated->get_expires_at(),
-			'iat'        => $validated->get_created_at(),
-			'sub'        => (string) $user_id,
-			'me'         => $me,
+			'active'               => true,
+			'scope'                => Scope::to_string( $validated->get_scopes() ),
+			'client_id'            => $validated->get_client_id(),
+			'username'             => $user ? $user->user_login : null,
+			'token_type'           => 'Bearer',
+			'exp'                  => $validated->get_expires_at(),
+			'iat'                  => $validated->get_created_at(),
+			'sub'                  => (string) $user_id,
+			'me'                   => $me,
+			'activitypub_actor_id' => $me,
 		);
 	}
 }

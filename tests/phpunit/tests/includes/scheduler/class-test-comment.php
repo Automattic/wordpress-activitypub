@@ -20,17 +20,23 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	/**
 	 * Post ID for testing.
 	 *
+	 * Initialized to 0 so data providers (which run before set_up()) emit a
+	 * non-null value and the isset() substitution in test_no_activity_scheduled()
+	 * picks up the real post ID assigned in set_up().
+	 *
 	 * @var int
 	 */
-	protected static $comment_post_ID;
+	protected static $comment_post_ID = 0;
 
 	/**
-	 * Set up test resources.
+	 * Set up each test.
 	 */
-	public static function set_up_before_class() {
-		parent::set_up_before_class();
+	public function set_up() {
+		parent::set_up();
 
+		// Comments only federate on a post that was itself federated.
 		self::$comment_post_ID = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		\update_post_meta( self::$comment_post_ID, 'activitypub_status', \ACTIVITYPUB_OBJECT_STATE_FEDERATED );
 	}
 
 	/**

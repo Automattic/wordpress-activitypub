@@ -1,6 +1,7 @@
 import { store, getContext, getConfig } from '@wordpress/interactivity';
 import { withSyncEvent } from '../shared/with-sync-event';
 import { createModalStore } from '../shared/modal';
+import { isSafeUrl } from '../shared/safe-url';
 import './style.scss';
 
 createModalStore( 'activitypub/remote-reply' );
@@ -41,6 +42,8 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 		get remoteProfileUrl() {
 			const { commentURL } = getContext();
 
+			// `state.template` is only ever set from a validated response or by `init()`, which
+			// discards a stored template that is not an http(s) URL.
 			return state.template.replace( '{uri}', encodeURIComponent( commentURL ) );
 		},
 	},
@@ -129,7 +132,7 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 				return;
 			}
 
-			if ( ! callbacks.isHandle( profileURL ) && ! callbacks.isUrl( profileURL ) ) {
+			if ( ! callbacks.isHandle( profileURL ) && ! isSafeUrl( profileURL ) ) {
 				context.isError = true;
 				context.errorMessage = i18n.invalidProfileError;
 				return;
@@ -152,8 +155,18 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 				// Set opening state.
 				context.isLoading = false;
 
-				// Open the remote reply URL in a new tab.
-				window.open( url, '_blank' );
+				/*
+				 * `template` is checked separately: `{uri}` may sit at the start, so a safe `url`
+				 * does not imply a safe `template`, and `template` is what gets persisted and
+				 * bound to an href.
+				 */
+				if ( ! isSafeUrl( url ) || ! isSafeUrl( template ) ) {
+					context.isError = true;
+					context.errorMessage = i18n.genericError;
+					return;
+				}
+
+				window.open( url, '_blank', 'noopener,noreferrer' );
 
 				// Close the modal after opening the URL.
 				actions.closeModal();
@@ -202,6 +215,13 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 		init() {
 			const { profileURL, template } = callbacks.getStore();
 
+			// Drop a stored template that is not an http(s) URL, it may predate this check. The
+			// profile is kept: the Reactions block shares this record and reads `profileURL` from it.
+			if ( template && ! isSafeUrl( template ) ) {
+				callbacks.setStore( { profileURL } );
+				return;
+			}
+
 			// Set the remote user data from localStorage if available.
 			if ( profileURL && template ) {
 				Object.assign( state, { hasRemoteUser: true, profileURL, template } );
@@ -245,22 +265,7 @@ const { actions, callbacks, state } = store( 'activitypub/remote-reply', {
 			// Check if the string starts with '@' and contains a valid URL.
 			const parts = string.replace( /^@/, '' ).split( '@' );
 
-			return parts.length === 2 && callbacks.isUrl( `https://${ parts[ 1 ] }` );
-		},
-
-		/**
-		 * Checks if a string is a valid URL.
-		 *
-		 * @param {string} string String to check.
-		 * @return {boolean} True if string is a valid URL, false otherwise.
-		 */
-		isUrl( string ) {
-			try {
-				new URL( string );
-				return true;
-			} catch ( _ ) {
-				return false;
-			}
+			return parts.length === 2 && isSafeUrl( `https://${ parts[ 1 ] }` );
 		},
 	},
 } );

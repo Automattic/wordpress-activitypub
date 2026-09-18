@@ -445,4 +445,45 @@ class Test_Classic_Editor extends \WP_UnitTestCase {
 		Classic_Editor::add_meta_box( 'page' );
 		$this->assertArrayNotHasKey( 'page', $wp_meta_boxes );
 	}
+
+	/**
+	 * Test add_meta_box is skipped when the post opens in the block editor.
+	 *
+	 * The block editor provides its own ActivityPub panel, so the classic meta box
+	 * must not also render (e.g. with the Classic Editor plugin in switchable mode).
+	 * Fires the real add_meta_boxes action so the hook's accepted-args wiring (which
+	 * must pass the $post) is exercised, not just the method in isolation.
+	 *
+	 * @covers ::add_meta_box
+	 * @covers ::init
+	 */
+	public function test_add_meta_box_skipped_for_block_editor() {
+		global $wp_meta_boxes;
+
+		// Start from a clean slate, then register the hook exactly as the integration does.
+		\remove_action( 'add_meta_boxes', array( Classic_Editor::class, 'add_meta_box' ), 10 );
+		Classic_Editor::init();
+
+		$post = \get_post( self::factory()->post->create() );
+
+		// Force the block editor for this post: the meta box must not be added.
+		\add_filter( 'use_block_editor_for_post', '__return_true' );
+		$wp_meta_boxes = array();
+		\do_action( 'add_meta_boxes', 'post', $post );
+		$this->assertArrayNotHasKey( 'post', $wp_meta_boxes );
+		\remove_filter( 'use_block_editor_for_post', '__return_true' );
+
+		// Force the classic editor for this post: the meta box is added.
+		\add_filter( 'use_block_editor_for_post', '__return_false' );
+		$wp_meta_boxes = array();
+		\do_action( 'add_meta_boxes', 'post', $post );
+		$this->assertArrayHasKey( 'activitypub-settings', $wp_meta_boxes['post']['side']['default'] );
+		\remove_filter( 'use_block_editor_for_post', '__return_false' );
+
+		// Remove every hook init() registered so it can't leak into other tests.
+		\remove_action( 'add_meta_boxes', array( Classic_Editor::class, 'add_meta_box' ), 10 );
+		\remove_action( 'save_post', array( Classic_Editor::class, 'save_meta_data' ), 10 );
+		\remove_filter( 'activitypub_attachments_media_markup', array( Classic_Editor::class, 'filter_attachments_media_markup' ), 10 );
+		\remove_filter( 'activitypub_attachment_ids', array( Classic_Editor::class, 'filter_attached_media_ids' ), 10 );
+	}
 }

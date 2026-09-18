@@ -12,6 +12,7 @@
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       activitypub-auto-approve-reactions
  * Requires Plugins:  activitypub
+ * Update URI:        https://github.com/Automattic/wordpress-activitypub
  *
  * @package Activitypub
  */

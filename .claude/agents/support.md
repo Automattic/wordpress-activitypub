@@ -90,8 +90,8 @@ curl -sI -o /dev/null -w "%{http_code}" "SITE_URL/?author=1"
 # Check with Accept header for ActivityPub
 curl -s -H "Accept: application/activity+json" "SITE_URL/?author=1" | python3 -m json.tool
 
-# Also try the REST API users endpoint
-curl -s "SITE_URL/wp-json/activitypub/1.0/actors" | python3 -m json.tool
+# Also try the REST API actor endpoint (requires a numeric ID — there is no bare /actors list route)
+curl -s -H "Accept: application/activity+json" "SITE_URL/wp-json/activitypub/1.0/actors/1" | python3 -m json.tool
 ```
 
 - Verify author pages are not blocked (some security plugins block `?author=` enumeration)

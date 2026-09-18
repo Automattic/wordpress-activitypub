@@ -53,15 +53,22 @@ class Scheduler {
 	/**
 	 * Get the pause between async batches (in seconds).
 	 *
+	 * @param string|false|null $hook Optional. The async batch hook being scheduled. Default current action.
+	 *
 	 * @return int The pause in seconds.
 	 */
-	public static function get_retry_delay() {
+	public static function get_retry_delay( $hook = null ) {
+		if ( null === $hook ) {
+			$hook = \current_action();
+		}
+
 		/**
 		 * Filters the pause between async batches (in seconds).
 		 *
-		 * @param int $async_batch_pause The pause in seconds. Default 30.
+		 * @param int               $async_batch_pause The pause in seconds. Default 30.
+		 * @param string|false|null $hook The async batch hook being scheduled.
 		 */
-		return apply_filters( 'activitypub_scheduler_async_batch_pause', 30 );
+		return \apply_filters( 'activitypub_scheduler_async_batch_pause', 30, $hook );
 	}
 
 	/**
@@ -162,7 +169,7 @@ class Scheduler {
 	public static function register_schedules() {
 		foreach ( self::SCHEDULES as $hook => $recurrence ) {
 			if ( ! \wp_next_scheduled( $hook ) ) {
-				\wp_schedule_event( time(), $recurrence, $hook );
+				\wp_schedule_event( \time(), $recurrence, $hook );
 			}
 		}
 
@@ -186,7 +193,7 @@ class Scheduler {
 	 * @return void
 	 */
 	public static function deregister_schedules() {
-		foreach ( array_keys( self::SCHEDULES ) as $hook ) {
+		foreach ( \array_keys( self::SCHEDULES ) as $hook ) {
 			\wp_unschedule_hook( $hook );
 		}
 
@@ -217,11 +224,11 @@ class Scheduler {
 		$year = (int) \gmdate( 'Y', $now );
 
 		// Get December 1st 3:00 AM for this year.
-		$this_year_dec_first = \strtotime( sprintf( '%d-12-01 03:00:00', $year ) );
+		$this_year_dec_first = \strtotime( \sprintf( '%d-12-01 03:00:00', $year ) );
 
 		// If we're already past this year's December 1st, schedule for next year.
 		if ( $now >= $this_year_dec_first ) {
-			return \strtotime( sprintf( '%d-12-01 03:00:00', $year + 1 ) );
+			return \strtotime( \sprintf( '%d-12-01 03:00:00', $year + 1 ) );
 		}
 
 		return $this_year_dec_first;
@@ -233,22 +240,15 @@ class Scheduler {
 	 * @param int $outbox_item_id The outbox item ID.
 	 */
 	public static function unschedule_events_for_item( $outbox_item_id ) {
-		$event_args = array(
-			$outbox_item_id,
-			Dispatcher::get_batch_size(),
-			\get_post_meta( $outbox_item_id, '_activitypub_outbox_offset', true ) ?: 0, // phpcs:ignore
-		);
-
 		\delete_post_meta( $outbox_item_id, '_activitypub_outbox_offset' );
 
 		$timestamp = \wp_next_scheduled( 'activitypub_process_outbox', array( $outbox_item_id ) );
 		\wp_unschedule_event( $timestamp, 'activitypub_process_outbox', array( $outbox_item_id ) );
 
-		$timestamp = \wp_next_scheduled( 'activitypub_send_activity', $event_args );
-		\wp_unschedule_event( $timestamp, 'activitypub_send_activity', $event_args );
+		self::unschedule_outbox_delivery_batches( $outbox_item_id );
 
 		// Invalidate any retries for this outbox item.
-		foreach ( _get_cron_array() as $timestamp => $cron ) {
+		foreach ( \_get_cron_array() as $timestamp => $cron ) {
 			if ( ! isset( $cron['activitypub_retry_activity'] ) ) {
 				continue;
 			}
@@ -267,7 +267,7 @@ class Scheduler {
 	public static function update_remote_actors() {
 		$number = 5;
 
-		if ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) {
+		if ( \defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) {
 			$number = 50;
 		}
 
@@ -276,16 +276,54 @@ class Scheduler {
 		 *
 		 * @param int $number The number of remote Actors to update.
 		 */
-		$number = apply_filters( 'activitypub_update_remote_actors_number', $number );
+		$number = \apply_filters( 'activitypub_update_remote_actors_number', $number );
 		$actors = Remote_Actors::get_outdated( $number );
 
 		foreach ( $actors as $actor ) {
-			$meta = get_remote_metadata_by_actor( $actor->guid, false );
+			/*
+			 * Use Http::get_remote_object() directly here.
+			 * get_remote_metadata_by_actor() short-circuits to the locally
+			 * cached ap_actor CPT via Remote_Actors::fetch_by_uri() and never
+			 * makes an HTTP request when the actor is already cached, so the
+			 * upsert would just rewrite the same stale data and this refresh
+			 * would be a no-op. The Update handler documents the same trap.
+			 */
+			$meta = Http::get_remote_object( $actor->guid, false );
 
-			if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
+			if ( empty( $meta ) || ! \is_array( $meta ) || \is_wp_error( $meta ) ) {
 				Remote_Actors::add_error( $actor->ID, 'Failed to fetch or parse metadata' );
 			} else {
-				$id = Remote_Actors::upsert( $meta );
+				/*
+				 * Only refresh when the remote still reports the same identity. A
+				 * different (or missing) id means a Move or a malformed response;
+				 * applying it would rewrite the cached guid in place and could
+				 * collide with another cached actor, so leave the record alone.
+				 * Updating by the known post ID otherwise refreshes it without the
+				 * redundant get_by_uri() lookup upsert() would do.
+				 */
+				$fetched_id = isset( $meta['id'] ) && \is_string( $meta['id'] ) ? \esc_url_raw( $meta['id'] ) : '';
+				if ( $fetched_id !== $actor->guid ) {
+					/*
+					 * Bump only the modified date, directly, so the skipped actor
+					 * drops out of the outdated queue and is not re-fetched every
+					 * run. A direct write avoids the save_post hooks wp_update_post()
+					 * fires (which would needlessly clear the cached avatar); the
+					 * record is intentionally left unchanged otherwise.
+					 */
+					global $wpdb;
+					$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+						$wpdb->posts,
+						array(
+							'post_modified'     => \current_time( 'mysql' ),
+							'post_modified_gmt' => \current_time( 'mysql', true ),
+						),
+						array( 'ID' => $actor->ID )
+					);
+					\clean_post_cache( $actor->ID );
+					continue;
+				}
+
+				$id = Remote_Actors::update( $actor->ID, $meta );
 				if ( \is_wp_error( $id ) ) {
 					continue;
 				}
@@ -300,7 +338,7 @@ class Scheduler {
 	public static function cleanup_remote_actors() {
 		$number = 5;
 
-		if ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) {
+		if ( \defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) {
 			$number = 50;
 		}
 
@@ -309,7 +347,7 @@ class Scheduler {
 		 *
 		 * @param int $number The number of remote Actors to clean up.
 		 */
-		$number = apply_filters( 'activitypub_cleanup_remote_actors_number', $number );
+		$number = \apply_filters( 'activitypub_cleanup_remote_actors_number', $number );
 		$actors = Remote_Actors::get_faulty( $number );
 
 		foreach ( $actors as $actor ) {
@@ -317,7 +355,7 @@ class Scheduler {
 
 			if ( Tombstone::exists( $meta ) ) {
 				\wp_delete_post( $actor->ID );
-			} elseif ( empty( $meta ) || ! is_array( $meta ) || \is_wp_error( $meta ) ) {
+			} elseif ( empty( $meta ) || ! \is_array( $meta ) || \is_wp_error( $meta ) ) {
 				if ( Remote_Actors::count_errors( $actor->ID ) >= 5 ) {
 					\wp_schedule_single_event( \time(), 'activitypub_delete_remote_actor_interactions', array( $actor->guid ) );
 					\wp_schedule_single_event( \time(), 'activitypub_delete_remote_actor_posts', array( $actor->guid ) );
@@ -346,7 +384,7 @@ class Scheduler {
 		$hook = 'activitypub_process_outbox';
 		$args = array( $id );
 
-		if ( false === wp_next_scheduled( $hook, $args ) ) {
+		if ( false === \wp_next_scheduled( $hook, $args ) ) {
 			\wp_schedule_single_event(
 				\time() + $offset,
 				$hook,
@@ -371,7 +409,7 @@ class Scheduler {
 		foreach ( $ids as $id ) {
 			// Bail if there is a pending batch.
 			$offset = \get_post_meta( $id, '_activitypub_outbox_offset', true ) ?: 0; // phpcs:ignore
-			if ( \wp_next_scheduled( 'activitypub_send_activity', array( $id, Dispatcher::get_batch_size(), $offset ) ) ) {
+			if ( self::has_scheduled_outbox_delivery_batch( $id, $offset ) ) {
 				return;
 			}
 
@@ -415,7 +453,7 @@ class Scheduler {
 	 * @since 8.3.0
 	 */
 	public static function purge_tombstones() {
-		\Activitypub\Tombstone::purge();
+		Tombstone::purge();
 	}
 
 	/**
@@ -435,7 +473,7 @@ class Scheduler {
 		$data = \json_decode( $inbox_item->post_content, true );
 		// Reconstruct activity from inbox post.
 		$activity = Activity::init_from_array( $data );
-		$type     = \Activitypub\camel_to_snake_case( $activity->get_type() );
+		$type     = camel_to_snake_case( $activity->get_type() );
 		$context  = Inbox::CONTEXT_INBOX;
 		$user_ids = Inbox::get_recipients( $inbox_item->ID );
 
@@ -542,8 +580,71 @@ class Scheduler {
 
 		if ( ! empty( $next ) ) {
 			// Schedule the next run, adding the result to the arguments.
-			\wp_schedule_single_event( \time() + self::get_retry_delay(), \current_action(), \array_values( $next ) );
+			\wp_schedule_single_event( \time() + self::get_retry_delay( \current_action() ), \current_action(), \array_values( $next ) );
 		}
+	}
+
+	/**
+	 * Whether an outbox item already has a scheduled delivery batch at an offset.
+	 *
+	 * @param int $outbox_item_id The outbox item ID.
+	 * @param int $offset         The delivery offset.
+	 *
+	 * @return bool True when a matching delivery batch is scheduled.
+	 */
+	private static function has_scheduled_outbox_delivery_batch( $outbox_item_id, $offset ) {
+		return ! empty( self::get_scheduled_outbox_delivery_batches( $outbox_item_id, $offset ) );
+	}
+
+	/**
+	 * Unschedule all pending delivery batches for an outbox item.
+	 *
+	 * @param int $outbox_item_id The outbox item ID.
+	 */
+	private static function unschedule_outbox_delivery_batches( $outbox_item_id ) {
+		foreach ( self::get_scheduled_outbox_delivery_batches( $outbox_item_id ) as $event ) {
+			\wp_unschedule_event( $event['timestamp'], 'activitypub_send_activity', $event['args'] );
+		}
+	}
+
+	/**
+	 * Get scheduled delivery batches for an outbox item.
+	 *
+	 * The batch size is deliberately ignored because scheduled events may
+	 * retain an older value after the admin changes the distribution mode.
+	 *
+	 * @param int      $outbox_item_id The outbox item ID.
+	 * @param int|null $offset         Optional. Restrict results to this delivery offset.
+	 *
+	 * @return array Scheduled events with timestamp and args.
+	 */
+	private static function get_scheduled_outbox_delivery_batches( $outbox_item_id, $offset = null ) {
+		$events = array();
+
+		foreach ( \_get_cron_array() as $timestamp => $cron ) {
+			if ( empty( $cron['activitypub_send_activity'] ) ) {
+				continue;
+			}
+
+			foreach ( $cron['activitypub_send_activity'] as $event ) {
+				$args = $event['args'] ?? array();
+
+				if ( ! isset( $args[0] ) || (int) $outbox_item_id !== (int) $args[0] ) {
+					continue;
+				}
+
+				if ( null !== $offset && (int) ( $args[2] ?? 0 ) !== (int) $offset ) {
+					continue;
+				}
+
+				$events[] = array(
+					'timestamp' => $timestamp,
+					'args'      => $args,
+				);
+			}
+		}
+
+		return $events;
 	}
 
 	/**
@@ -626,12 +727,12 @@ class Scheduler {
 			return;
 		}
 
-		if ( ! is_object( $activity->get_object() ) ) {
+		if ( ! \is_object( $activity->get_object() ) ) {
 			return;
 		}
 
 		// Check if the object is an article, image, audio, video, event, or document and ignore profile updates and other activities.
-		if ( ! in_array( $activity->get_object()->get_type(), Base_Object::TYPES, true ) ) {
+		if ( ! \in_array( $activity->get_object()->get_type(), Base_Object::TYPES, true ) ) {
 			return;
 		}
 

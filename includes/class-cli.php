@@ -7,6 +7,19 @@
 
 namespace Activitypub;
 
+use Activitypub\Cli\Actor_Command;
+use Activitypub\Cli\Blurhash_Command;
+use Activitypub\Cli\Cache_Command;
+use Activitypub\Cli\Command;
+use Activitypub\Cli\Comment_Command;
+use Activitypub\Cli\Fetch_Command;
+use Activitypub\Cli\Follow_Command;
+use Activitypub\Cli\Move_Command;
+use Activitypub\Cli\Outbox_Command;
+use Activitypub\Cli\Post_Command;
+use Activitypub\Cli\Self_Destruct_Command;
+use Activitypub\Cli\Stats_Command;
+
 /**
  * ActivityPub CLI command registry.
  *
@@ -33,12 +46,13 @@ class Cli {
 	 * - wp activitypub follow <remote_user>
 	 * - wp activitypub stats <collect|compile|send>
 	 * - wp activitypub fetch <url>
+	 * - wp activitypub blurhash backfill [--dry-run] [--limit=<n>] [--force]
 	 */
 	public static function register() {
 		// Register parent command with version subcommand.
 		\WP_CLI::add_command(
 			'activitypub',
-			'\Activitypub\Cli\Command',
+			Command::class,
 			array(
 				'shortdesc' => 'Manage ActivityPub plugin functionality and federation.',
 			)
@@ -46,7 +60,7 @@ class Cli {
 
 		\WP_CLI::add_command(
 			'activitypub post',
-			'\Activitypub\Cli\Post_Command',
+			Post_Command::class,
 			array(
 				'shortdesc' => 'Manage ActivityPub posts (delete or update).',
 			)
@@ -54,7 +68,7 @@ class Cli {
 
 		\WP_CLI::add_command(
 			'activitypub comment',
-			'\Activitypub\Cli\Comment_Command',
+			Comment_Command::class,
 			array(
 				'shortdesc' => 'Manage ActivityPub comments (delete or update).',
 			)
@@ -62,7 +76,7 @@ class Cli {
 
 		\WP_CLI::add_command(
 			'activitypub actor',
-			'\Activitypub\Cli\Actor_Command',
+			Actor_Command::class,
 			array(
 				'shortdesc' => 'Manage ActivityPub actors (delete or update).',
 			)
@@ -70,7 +84,7 @@ class Cli {
 
 		\WP_CLI::add_command(
 			'activitypub outbox',
-			'\Activitypub\Cli\Outbox_Command',
+			Outbox_Command::class,
 			array(
 				'shortdesc' => 'Manage ActivityPub outbox items (undo or reschedule).',
 			)
@@ -78,7 +92,7 @@ class Cli {
 
 		\WP_CLI::add_command(
 			'activitypub self-destruct',
-			'\Activitypub\Cli\Self_Destruct_Command',
+			Self_Destruct_Command::class,
 			array(
 				'shortdesc' => 'Remove the entire blog from the Fediverse.',
 			)
@@ -86,7 +100,7 @@ class Cli {
 
 		\WP_CLI::add_command(
 			'activitypub move',
-			'\Activitypub\Cli\Move_Command',
+			Move_Command::class,
 			array(
 				'shortdesc' => 'Move the blog to a new URL.',
 			)
@@ -94,7 +108,7 @@ class Cli {
 
 		\WP_CLI::add_command(
 			'activitypub follow',
-			'\Activitypub\Cli\Follow_Command',
+			Follow_Command::class,
 			array(
 				'shortdesc' => 'Follow a remote ActivityPub user.',
 			)
@@ -102,7 +116,7 @@ class Cli {
 
 		\WP_CLI::add_command(
 			'activitypub cache',
-			'\Activitypub\Cli\Cache_Command',
+			Cache_Command::class,
 			array(
 				'shortdesc' => 'Manage remote media cache (clear or show status).',
 			)
@@ -110,7 +124,7 @@ class Cli {
 
 		\WP_CLI::add_command(
 			'activitypub fetch',
-			'\Activitypub\Cli\Fetch_Command',
+			Fetch_Command::class,
 			array(
 				'shortdesc' => 'Fetch a remote URL with a signed ActivityPub request.',
 			)
@@ -118,9 +132,17 @@ class Cli {
 
 		\WP_CLI::add_command(
 			'activitypub stats',
-			'\Activitypub\Cli\Stats_Command',
+			Stats_Command::class,
 			array(
 				'shortdesc' => 'Manage ActivityPub statistics (collect, compile or send).',
+			)
+		);
+
+		\WP_CLI::add_command(
+			'activitypub blurhash',
+			Blurhash_Command::class,
+			array(
+				'shortdesc' => 'Backfill Blurhash placeholders for image attachments.',
 			)
 		);
 	}

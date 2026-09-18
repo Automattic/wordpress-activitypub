@@ -8,7 +8,6 @@
 namespace Activitypub\Rest;
 
 use Activitypub\Activity\Base_Object;
-use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Remote_Actors;
 
@@ -86,10 +85,6 @@ class Following_Controller extends Actors_Controller {
 	 */
 	public function get_items( $request ) {
 		$user_id = $request->get_param( 'user_id' );
-		$user    = null;
-		if ( \has_filter( 'activitypub_rest_following' ) ) {
-			$user = Actors::get_by_id( $user_id );
-		}
 
 		/**
 		 * Action triggered prior to the ActivityPub profile being created and sent to the client.
@@ -131,21 +126,6 @@ class Following_Controller extends Actors_Controller {
 					$data['following']
 				)
 			);
-		}
-
-		/**
-		 * Filter the list of following urls
-		 *
-		 * @param array                   $items The array of following urls.
-		 * @param \Activitypub\Model\User $user  The user object.
-		 *
-		 * @deprecated 7.1.0 Please migrate your Followings to the new internal Following structure.
-		 */
-		$items = \apply_filters_deprecated( 'activitypub_rest_following', array( array(), $user ), '7.1.0', 'Please migrate your Followings to the new internal Following structure.' );
-
-		if ( ! empty( $items ) ) {
-			$response['totalItems']   = count( $items );
-			$response['orderedItems'] = $items;
 		}
 
 		$response = $this->prepare_collection_response( $response, $request );

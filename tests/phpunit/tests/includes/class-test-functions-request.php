@@ -104,6 +104,29 @@ class Test_Functions_Request extends ActivityPub_TestCase_Cache_HTTP {
 	}
 
 	/**
+	 * The activitypub_allow_non_public_host filter opts a private-network deployment back in: a
+	 * private address is returned as is instead of being rejected, but a host that does not resolve
+	 * is still rejected.
+	 *
+	 * @covers \Activitypub\resolve_public_host
+	 */
+	public function test_resolve_public_host_allow_filter() {
+		// Blocked by default.
+		$this->assertFalse( \Activitypub\resolve_public_host( '10.0.0.1' ) );
+
+		\add_filter( 'activitypub_allow_non_public_host', '__return_true' );
+
+		// A private IP literal is now returned as is.
+		$this->assertSame( '10.0.0.1', \Activitypub\resolve_public_host( '10.0.0.1' ) );
+
+		// A private hostname resolves and is returned as is.
+		$this->stub_resolved_addresses( array( 'ipv4' => array( '10.0.0.5' ) ) );
+		$this->assertSame( '10.0.0.5', \Activitypub\resolve_public_host( 'intranet.example' ) );
+
+		\remove_filter( 'activitypub_allow_non_public_host', '__return_true' );
+	}
+
+	/**
 	 * Data provider for is_ipv4_mapped_ipv6.
 	 *
 	 * @return array<string, array{0: string, 1: bool}>
@@ -136,6 +159,63 @@ class Test_Functions_Request extends ActivityPub_TestCase_Cache_HTTP {
 	 */
 	public function test_is_ipv4_mapped_ipv6( $ip, $expected ) {
 		$this->assertSame( $expected, \Activitypub\is_ipv4_mapped_ipv6( $ip ) );
+	}
+
+	/**
+	 * Data provider for accept_prefers_activitypub.
+	 *
+	 * @return array<string, array{0: string, 1: bool}>
+	 */
+	public function accept_prefers_activitypub_provider() {
+		return array(
+			// ActivityPub is the highest-priority acceptable type -> true.
+			'activity_json'         => array( 'application/activity+json', true ),
+			'ld_json_https_profile' => array( 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"', true ),
+			'ld_json_http_profile'  => array( 'application/ld+json; profile="http://www.w3.org/ns/activitystreams"', true ),
+			'activity_json_with_q'  => array( 'application/activity+json;q=0.9', true ),
+			'uppercase'             => array( 'Application/Activity+JSON', true ),
+			'trailing_comma'        => array( 'application/activity+json,', true ),
+			'activity_then_ld'      => array( 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"', true ),
+			// Mastodon: ActivityPub at q=1, text/html as a q=0.1 fallback.
+			'mastodon'              => array( 'application/ld+json; profile="https://www.w3.org/ns/activitystreams", application/activity+json, text/html;q=0.1', true ),
+			// Ties broken by order; higher q wins; a refused (q=0) type is ignored.
+			'ap_first_on_tie'       => array( 'application/activity+json, text/html', true ),
+			'ap_higher_q'           => array( 'text/html;q=0.5, application/activity+json;q=0.8', true ),
+			'html_refused_q0'       => array( 'application/activity+json;q=0.5, text/html;q=0', true ),
+			// A malformed q (empty or non-numeric) keeps the 1.0 default rather than refusing the type.
+			'malformed_q_empty'     => array( 'application/activity+json;q=', true ),
+			'malformed_q_text'      => array( 'application/activity+json;q=high', true ),
+			// An out-of-range q>1.0 must not let an earlier q=1.0 non-AP type win the whole header.
+			'html_then_ap_q_over_1' => array( 'text/html, application/activity+json;q=1.5', true ),
+			// Not ActivityPub: plain JSON, bare or wrongly-profiled ld+json, other +json -> false.
+			'plain_json'            => array( 'application/json', false ),
+			'ld_json_no_profile'    => array( 'application/ld+json', false ),
+			'ld_json_wrong_profile' => array( 'application/ld+json; profile="https://example.com/ns"', false ),
+			'other_plus_json'       => array( 'application/geo+json', false ),
+			'html_first_on_tie'     => array( 'text/html, application/activity+json', false ),
+			'html_higher_q'         => array( 'application/activity+json;q=0.5, text/html;q=0.8', false ),
+			'ap_refused_q0'         => array( 'application/activity+json;q=0, text/html', false ),
+			'browser'               => array( 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', false ),
+			'wildcard'              => array( '*/*', false ),
+			'plain_html'            => array( 'text/html', false ),
+			'empty'                 => array( '', false ),
+			// Classifies the raw header: a `%00` breaks the exact match, matching the pre-plugin cache path.
+			'percent_octet'         => array( 'application/activity+json%00', false ),
+		);
+	}
+
+	/**
+	 * Test the ActivityPub-preference Accept-header check.
+	 *
+	 * @dataProvider accept_prefers_activitypub_provider
+	 *
+	 * @covers \Activitypub\accept_prefers_activitypub
+	 *
+	 * @param string $accept   The Accept header value.
+	 * @param bool   $expected Whether the highest-priority acceptable media type is ActivityPub.
+	 */
+	public function test_accept_prefers_activitypub( $accept, $expected ) {
+		$this->assertSame( $expected, \Activitypub\accept_prefers_activitypub( $accept ) );
 	}
 
 	/**

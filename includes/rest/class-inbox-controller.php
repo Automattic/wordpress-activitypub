@@ -433,7 +433,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 			if ( ! is_same_domain( $recipient ) ) {
 				// Known followers collection: resolve from local DB, no fetch needed.
 				if ( $recipient === $actor_followers_url ) {
-					$user_ids = array_merge( $user_ids, Following::get_follower_ids( $actor_uri ) );
+					$user_ids = \array_merge( $user_ids, Following::get_follower_ids( $actor_uri ) );
 					continue;
 				}
 
@@ -473,7 +473,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 				}
 
 				if ( is_collection( $collection ) ) {
-					$user_ids = array_merge( $user_ids, Following::get_follower_ids( $actor_uri ) );
+					$user_ids = \array_merge( $user_ids, Following::get_follower_ids( $actor_uri ) );
 					continue;
 				}
 			}
@@ -500,7 +500,7 @@ class Inbox_Controller extends \WP_REST_Controller {
 			}
 		}
 
-		return array_unique( array_map( 'intval', $user_ids ) );
+		return \array_unique( \array_map( 'intval', $user_ids ) );
 	}
 
 	/**

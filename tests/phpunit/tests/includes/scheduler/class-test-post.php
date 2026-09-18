@@ -40,6 +40,24 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$outbox_item = $this->get_latest_outbox_item( $activitypub_id );
 		$this->assertSame( 'Update', \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true ) );
 
+		$delete_items = \get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'pending',
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitypub_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Delete',
+					),
+				),
+			)
+		);
+		$this->assertEmpty( $delete_items, 'Public inherit-status attachments must not be soft-deleted by triage().' );
+
 		// Delete.
 		\wp_delete_attachment( $post_id, true );
 
@@ -100,6 +118,61 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$post = $this->get_latest_outbox_item( $activitypub_id );
 		$type = \get_post_meta( $post->ID, '_activitypub_activity_type', true );
 		$this->assertSame( 'Create', $type );
+	}
+
+	/**
+	 * A federated post reverting to `future` (e.g. a content edit on a
+	 * future-dated published post) must not fan out a soft-delete. The Delete
+	 * would remotely tombstone the object id, after which the republish Create
+	 * is ignored and the post can never re-federate.
+	 *
+	 * @covers ::triage
+	 */
+	public function test_future_transition_does_not_soft_delete_federated_post() {
+		\wp_set_current_user( self::$user_id );
+
+		// Publish and federate the post.
+		$post_id        = self::factory()->post->create(
+			array(
+				'post_author' => self::$user_id,
+				'post_status' => 'publish',
+			)
+		);
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+		$create_item    = $this->get_latest_outbox_item( $activitypub_id );
+		$this->assertNotNull( $create_item, 'Publishing should queue a Create.' );
+		$this->assertSame( 'Create', \get_post_meta( $create_item->ID, '_activitypub_activity_type', true ) );
+
+		// Re-schedule it to the future (the state WordPress reverts to when a
+		// future-dated published post is edited without resetting its date).
+		\wp_update_post(
+			array(
+				'ID'            => $post_id,
+				'post_status'   => 'future',
+				'post_date'     => \gmdate( 'Y-m-d H:i:s', \time() + DAY_IN_SECONDS ),
+				'post_date_gmt' => \gmdate( 'Y-m-d H:i:s', \time() + DAY_IN_SECONDS ),
+			)
+		);
+
+		$deletes = \get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'any',
+				'numberposts' => -1,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitypub_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Delete',
+					),
+				),
+			)
+		);
+		$this->assertEmpty( $deletes, 'A federated post reverting to `future` must not queue a tombstoning Delete.' );
 	}
 
 	/**
@@ -371,6 +444,423 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Test that moving a federated post to a non-public status emits Delete.
+	 *
+	 * @dataProvider data_non_public_status_transitions
+	 *
+	 * @covers ::triage
+	 *
+	 * @param string $new_status Target post status (draft, pending, or private).
+	 */
+	public function test_status_change_creates_delete_activity_for_federated_post( $new_status ) {
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => $new_status,
+			)
+		);
+
+		$delete_items = \get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'pending',
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitypub_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Delete',
+					),
+				),
+			)
+		);
+
+		$this->assertCount( 1, $delete_items, "publish -> {$new_status} should emit Delete for a federated post." );
+	}
+
+	/**
+	 * Data provider: non-public post statuses that should emit Delete on transition.
+	 *
+	 * @return array[]
+	 */
+	public function data_non_public_status_transitions() {
+		return array(
+			'draft'   => array( 'draft' ),
+			'pending' => array( 'pending' ),
+			'private' => array( 'private' ),
+		);
+	}
+
+	/**
+	 * Test that applying a password to a federated post emits a Delete.
+	 *
+	 * The post stays in `publish` status, so the switch arm produces an Update.
+	 * The downgrade check at the bottom of triage() must catch this via
+	 * `is_post_publicly_queryable()` and rewrite it to Delete — otherwise the
+	 * Update broadcasts a (now-redacted) snapshot while remote followers keep
+	 * the previously-federated content.
+	 *
+	 * @covers ::triage
+	 */
+	public function test_password_added_to_federated_post_creates_delete_activity() {
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		// Verify the post was federated.
+		$create_item = $this->get_latest_outbox_item( $activitypub_id );
+		$this->assertNotNull( $create_item );
+		$this->assertSame( 'Create', \get_post_meta( $create_item->ID, '_activitypub_activity_type', true ) );
+
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		\wp_update_post(
+			array(
+				'ID'            => $post_id,
+				'post_password' => 'fed-secret-pass',
+				'post_content'  => 'FEDERATION-SECRET-AFTER-PASSWORD',
+			)
+		);
+
+		$delete_items = \get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'pending',
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitypub_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Delete',
+					),
+				),
+			)
+		);
+
+		$this->assertCount( 1, $delete_items, 'Applying a password to a federated post must emit a Delete, not an Update.' );
+
+		$update_items = \get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'pending',
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitypub_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Update',
+					),
+				),
+			)
+		);
+
+		$this->assertCount( 0, $update_items, 'Must not also emit an Update activity for the password transition.' );
+	}
+
+	/**
+	 * Test that moving a federated post to a CUSTOM non-public status emits a Delete.
+	 *
+	 * The switch's `default` arm catches custom statuses registered with
+	 * `register_post_status()`, so a plugin-defined non-public status follows
+	 * the same soft-delete pattern as draft/pending/private/trash.
+	 *
+	 * @covers ::triage
+	 */
+	public function test_custom_non_public_status_creates_delete_activity_for_federated_post() {
+		\register_post_status(
+			'archived_test',
+			array(
+				'label'  => 'Archived',
+				'public' => false,
+			)
+		);
+
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'archived_test',
+			)
+		);
+
+		$delete_items = \get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'pending',
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitypub_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Delete',
+					),
+				),
+			)
+		);
+
+		$this->assertCount( 1, $delete_items, 'Custom non-public status must hit the default switch arm and emit Delete.' );
+	}
+
+	/**
+	 * Helper: count pending outbox items of a given activity type for an object.
+	 *
+	 * @param string $activitypub_id The ActivityPub object ID (URL).
+	 * @param string $activity_type  The activity type ('Create', 'Update', 'Delete', etc.).
+	 *
+	 * @return int
+	 */
+	private function count_pending_outbox_items( $activitypub_id, $activity_type ) {
+		return count(
+			\get_posts(
+				array(
+					'post_type'   => 'ap_outbox',
+					'post_status' => 'pending',
+					'numberposts' => -1,
+					'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						array(
+							'key'   => '_activitypub_object_id',
+							'value' => $activitypub_id,
+						),
+						array(
+							'key'   => '_activitypub_activity_type',
+							'value' => $activity_type,
+						),
+					),
+				)
+			)
+		);
+	}
+
+	/**
+	 * Test that re-publishing a soft-deleted post before its Delete fires
+	 * invalidates the pending Delete and queues a Create.
+	 *
+	 * @dataProvider data_non_public_status_transitions
+	 *
+	 * @covers ::triage
+	 *
+	 * @param string $hide_status Non-public status to transition through.
+	 */
+	public function test_unpublish_then_republish_cancels_pending_delete( $hide_status ) {
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		// Step 1: hide → Delete queued.
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => $hide_status,
+			)
+		);
+
+		$this->assertSame( 1, $this->count_pending_outbox_items( $activitypub_id, 'Delete' ), "publish -> {$hide_status} must queue a Delete." );
+
+		// Step 2: re-publish before the Delete fires.
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'publish',
+			)
+		);
+
+		$this->assertSame( 0, $this->count_pending_outbox_items( $activitypub_id, 'Delete' ), 'Pending Delete must be invalidated by the re-publish.' );
+		$this->assertGreaterThanOrEqual( 1, $this->count_pending_outbox_items( $activitypub_id, 'Create' ), 'Re-publishing must queue a Create.' );
+	}
+
+	/**
+	 * Test the password lock/unlock cycle on a federated post.
+	 *
+	 * Apply password → Delete queued. Remove password → Delete invalidated,
+	 * Create queued.
+	 *
+	 * @covers ::triage
+	 */
+	public function test_password_lock_then_unlock_cycles_correctly() {
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		// Lock.
+		\wp_update_post(
+			array(
+				'ID'            => $post_id,
+				'post_password' => 'fed-secret-pass',
+			)
+		);
+
+		$this->assertSame( 1, $this->count_pending_outbox_items( $activitypub_id, 'Delete' ), 'Applying a password must queue a Delete.' );
+
+		// Unlock.
+		\wp_update_post(
+			array(
+				'ID'            => $post_id,
+				'post_password' => '',
+			)
+		);
+
+		$this->assertSame( 0, $this->count_pending_outbox_items( $activitypub_id, 'Delete' ), 'Pending Delete must be invalidated when the password is removed.' );
+		$this->assertGreaterThanOrEqual( 1, $this->count_pending_outbox_items( $activitypub_id, 'Create' ), 'Removing the password must queue a Create.' );
+	}
+
+	/**
+	 * Test that re-publishing AFTER the Delete has already been sent emits a
+	 * fresh Create and does not retroactively cancel the sent Delete.
+	 *
+	 * @covers ::triage
+	 */
+	public function test_republish_after_delete_sent_emits_fresh_create() {
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'draft',
+			)
+		);
+
+		$delete_items = \get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'pending',
+				'numberposts' => -1,
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitypub_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Delete',
+					),
+				),
+			)
+		);
+
+		$this->assertCount( 1, $delete_items, 'publish -> draft must queue a Delete.' );
+
+		// Simulate the Delete being sent (status flips to 'publish' for sent outbox items).
+		\wp_update_post(
+			array(
+				'ID'          => $delete_items[0]->ID,
+				'post_status' => 'publish',
+			)
+		);
+
+		// Re-publish.
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'publish',
+			)
+		);
+
+		$this->assertGreaterThanOrEqual( 1, $this->count_pending_outbox_items( $activitypub_id, 'Create' ), 'Re-publishing after the Delete was sent must queue a fresh Create.' );
+
+		// Sent Delete should still exist (we don't retroactively cancel sent activities;
+		// only an explicit new Delete would wipe sent history via the supersession logic).
+		$this->assertEquals( 'publish', \get_post_status( $delete_items[0]->ID ), 'Sent Delete activity must not be retroactively cancelled.' );
+	}
+
+	/**
+	 * Test that re-saving a soft-deleted post in the same non-public state
+	 * does not re-emit activities or flip the object state back to federated.
+	 *
+	 * Guards against the oscillation we saw earlier where every save in the
+	 * locked state queued a new Update and toggled the state.
+	 *
+	 * @dataProvider data_non_public_status_transitions
+	 *
+	 * @covers ::triage
+	 *
+	 * @param string $hide_status Non-public status to dwell in.
+	 */
+	public function test_resave_in_soft_deleted_state_does_not_re_emit( $hide_status ) {
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		// Hide → Delete queued, state flips to DELETED on outbox insert.
+		\wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => $hide_status,
+			)
+		);
+
+		$this->assertSame( 1, $this->count_pending_outbox_items( $activitypub_id, 'Delete' ) );
+		$this->assertSame( ACTIVITYPUB_OBJECT_STATE_DELETED, \get_post_meta( $post_id, 'activitypub_status', true ) );
+
+		// Resave in the same non-public state — should be a no-op.
+		\wp_update_post(
+			array(
+				'ID'           => $post_id,
+				'post_content' => 'EDITED-WHILE-HIDDEN',
+			)
+		);
+
+		$this->assertSame( 1, $this->count_pending_outbox_items( $activitypub_id, 'Delete' ), 'Resave in soft-deleted state must not queue an additional Delete.' );
+		$this->assertSame( 0, $this->count_pending_outbox_items( $activitypub_id, 'Update' ), 'Resave in soft-deleted state must not queue an Update.' );
+		$this->assertSame( ACTIVITYPUB_OBJECT_STATE_DELETED, \get_post_meta( $post_id, 'activitypub_status', true ), 'Object state must remain deleted after resave.' );
+	}
+
+	/**
+	 * Test multiple unpublish/publish cycles on a federated post.
+	 *
+	 * Each transition out emits Delete, each transition back invalidates the
+	 * pending Delete and emits Create. After N cycles the pending queue
+	 * holds exactly one Create.
+	 *
+	 * @covers ::triage
+	 */
+	public function test_multiple_unpublish_republish_cycles_settle_to_single_create() {
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		for ( $i = 0; $i < 3; $i++ ) {
+			\wp_update_post(
+				array(
+					'ID'          => $post_id,
+					'post_status' => 'draft',
+				)
+			);
+			\wp_update_post(
+				array(
+					'ID'          => $post_id,
+					'post_status' => 'publish',
+				)
+			);
+		}
+
+		$this->assertSame( 0, $this->count_pending_outbox_items( $activitypub_id, 'Delete' ), 'No pending Delete should survive three publish/draft/publish cycles.' );
+		$this->assertSame( 1, $this->count_pending_outbox_items( $activitypub_id, 'Create' ), 'Exactly one pending Create should remain after the cycles.' );
+	}
+
+	/**
 	 * Test that changing visibility does not create Delete activity for unfederated posts.
 	 *
 	 * @covers ::triage
@@ -510,5 +1000,196 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		);
 
 		$this->assertSame( $before_count, $after_count, 'Re-saving a soft-deleted post should not create any new outbox activities.' );
+	}
+
+	/**
+	 * Data provider: every way a post can be non-public, with how to hide and unhide it.
+	 *
+	 * Each case is a single array with `hide` and `unhide` specs; each spec may
+	 * carry `post` (fields for wp_insert_post / wp_update_post) and/or `meta`
+	 * (post meta to set). This drives the full transition matrix below.
+	 *
+	 * @return array[]
+	 */
+	public function data_hidden_states() {
+		return array(
+			'draft status'       => array(
+				array(
+					'hide'   => array( 'post' => array( 'post_status' => 'draft' ) ),
+					'unhide' => array( 'post' => array( 'post_status' => 'publish' ) ),
+				),
+			),
+			'pending status'     => array(
+				array(
+					'hide'   => array( 'post' => array( 'post_status' => 'pending' ) ),
+					'unhide' => array( 'post' => array( 'post_status' => 'publish' ) ),
+				),
+			),
+			'private status'     => array(
+				array(
+					'hide'   => array( 'post' => array( 'post_status' => 'private' ) ),
+					'unhide' => array( 'post' => array( 'post_status' => 'publish' ) ),
+				),
+			),
+			'password'           => array(
+				array(
+					'hide'   => array( 'post' => array( 'post_password' => 'fed-secret-pass' ) ),
+					'unhide' => array( 'post' => array( 'post_password' => '' ) ),
+				),
+			),
+			'visibility local'   => array(
+				array(
+					'hide'   => array( 'meta' => array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ) ),
+					'unhide' => array( 'meta' => array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) ),
+				),
+			),
+			'visibility private' => array(
+				array(
+					'hide'   => array( 'meta' => array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ) ),
+					'unhide' => array( 'meta' => array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) ),
+				),
+			),
+		);
+	}
+
+	/**
+	 * A post created directly in a non-public state must never federate.
+	 *
+	 * @dataProvider data_hidden_states
+	 *
+	 * @covers ::triage
+	 *
+	 * @param array $spec A row from data_hidden_states().
+	 */
+	public function test_initial_hidden_post_does_not_federate( $spec ) {
+		$args = \array_merge(
+			array(
+				'post_author'  => self::$user_id,
+				'post_content' => 'Should not federate.',
+				'post_status'  => 'publish',
+			),
+			$spec['hide']['post'] ?? array()
+		);
+
+		if ( ! empty( $spec['hide']['meta'] ) ) {
+			$args['meta_input'] = $spec['hide']['meta'];
+		}
+
+		$post_id        = self::factory()->post->create( $args );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		$this->assertCount( 0, $this->get_outbox_items_for( $activitypub_id ), 'A post created in a non-public state must not federate.' );
+	}
+
+	/**
+	 * Hiding a federated post emits a Delete whose object is a content-free Tombstone.
+	 *
+	 * @dataProvider data_hidden_states
+	 *
+	 * @covers ::triage
+	 *
+	 * @param array $spec A row from data_hidden_states().
+	 */
+	public function test_federated_post_hidden_emits_tombstone_delete( $spec ) {
+		$post_id        = self::factory()->post->create(
+			array(
+				'post_author'  => self::$user_id,
+				'post_content' => 'SECRET-BODY @bob@remote.example',
+			)
+		);
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		$this->assertCount( 1, $this->get_outbox_items_for( $activitypub_id, 'Create' ), 'A public post should federate a Create.' );
+
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		$this->apply_post_state( $post_id, $spec['hide'] );
+
+		$deletes = $this->get_outbox_items_for( $activitypub_id, 'Delete' );
+		$this->assertCount( 1, $deletes, 'Hiding a federated post must emit exactly one Delete.' );
+
+		// The Delete must carry a content-free Tombstone, not the post body.
+		$activity = \json_decode( \get_post( $deletes[0]->ID )->post_content, true );
+		$this->assertSame( 'Tombstone', $activity['object']['type'] ?? null, 'The Delete object must be a Tombstone.' );
+		$this->assertArrayNotHasKey( 'content', (array) ( $activity['object'] ?? array() ), 'The Delete must not serialize post content.' );
+
+		// It is addressed publicly so the teardown broadcasts to every server that held the post.
+		$this->assertContains( 'https://www.w3.org/ns/activitystreams#Public', (array) ( $activity['to'] ?? array() ), 'The soft-delete Delete must be public so it fans out.' );
+	}
+
+	/**
+	 * Making a soft-deleted post public again emits a fresh Create.
+	 *
+	 * @dataProvider data_hidden_states
+	 *
+	 * @covers ::triage
+	 *
+	 * @param array $spec A row from data_hidden_states().
+	 */
+	public function test_hidden_post_made_public_emits_create( $spec ) {
+		$post_id        = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		// Hide it: emits a Delete and marks the object deleted.
+		$this->apply_post_state( $post_id, $spec['hide'] );
+		$this->assertCount( 1, $this->get_outbox_items_for( $activitypub_id, 'Delete' ), 'Hiding should emit a Delete.' );
+
+		// Make it public again: must re-introduce the post as a Create.
+		$this->apply_post_state( $post_id, $spec['unhide'] );
+
+		$latest = $this->get_latest_outbox_item();
+		$this->assertSame(
+			'Create',
+			\get_post_meta( $latest->ID, '_activitypub_activity_type', true ),
+			'Making a soft-deleted post public again must emit a Create.'
+		);
+	}
+
+	/**
+	 * Apply a hide/unhide state spec to a post and trigger triage().
+	 *
+	 * @param int   $post_id The post ID.
+	 * @param array $state   A `hide`/`unhide` spec with optional `post` and `meta`.
+	 */
+	private function apply_post_state( $post_id, $state ) {
+		foreach ( $state['meta'] ?? array() as $key => $value ) {
+			\update_post_meta( $post_id, $key, $value );
+		}
+
+		\wp_update_post( \array_merge( array( 'ID' => $post_id ), $state['post'] ?? array() ) );
+	}
+
+	/**
+	 * Get pending outbox items for an object, optionally filtered by activity type.
+	 *
+	 * @param string      $activitypub_id The object ID.
+	 * @param string|null $type           Optional. Activity type to filter by.
+	 * @return \WP_Post[] The matching outbox items.
+	 */
+	private function get_outbox_items_for( $activitypub_id, $type = null ) {
+		$meta_query = array(
+			array(
+				'key'   => '_activitypub_object_id',
+				'value' => $activitypub_id,
+			),
+		);
+
+		if ( $type ) {
+			$meta_query[] = array(
+				'key'   => '_activitypub_activity_type',
+				'value' => $type,
+			);
+		}
+
+		return \get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'pending',
+				'numberposts' => -1,
+				'meta_query'  => $meta_query, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			)
+		);
 	}
 }

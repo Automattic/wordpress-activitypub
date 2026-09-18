@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed oversized images in email notifications from remote users. Avatars and inline post images now resize to fit the email width instead of overflowing the screen.

@@ -62,15 +62,17 @@ class Move {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 			$wpdb->update(
 				$wpdb->posts,
-				array( 'guid' => sanitize_url( $target_uri ) ),
-				array( 'ID' => sanitize_key( $origin_object->ID ) )
+				array( 'guid' => \sanitize_url( $target_uri ) ),
+				array( 'ID' => \sanitize_key( $origin_object->ID ) )
 			);
 
 			// Clear the cache.
 			\wp_cache_delete( $origin_object->ID, 'posts' );
 
 			$success = true;
-			$result  = Remote_Actors::upsert( $target_json );
+
+			// get_remote_object() already self-confirmed the target, so it is safe to cache.
+			$result = Remote_Actors::upsert( $target_json );
 		}
 
 		// If both the target and origin are followed, merge them.
@@ -177,7 +179,7 @@ class Move {
 		}
 
 		// Collect all possible origin identifiers (id, url, webfinger).
-		$origin_ids = array_filter(
+		$origin_ids = \array_filter(
 			array(
 				$origin_object['id'] ?? null,
 				$origin_object['url'] ?? null,
@@ -186,7 +188,7 @@ class Move {
 		);
 
 		// Check if any origin identifier is in the alsoKnownAs property of the target.
-		if ( ! array_intersect( $origin_ids, $also_known_as ) ) {
+		if ( ! \array_intersect( $origin_ids, $also_known_as ) ) {
 			return false;
 		}
 

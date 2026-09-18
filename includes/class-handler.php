@@ -28,6 +28,7 @@ class Handler {
 		Handler\Collection_Sync::init();
 		Handler\Create::init();
 		Handler\Delete::init();
+		Handler\Feature_Request::init();
 		Handler\Follow::init();
 		Handler\Like::init();
 		Handler\Move::init();
@@ -41,7 +42,7 @@ class Handler {
 		 *
 		 * @since 1.3.0
 		 */
-		do_action( 'activitypub_register_handlers' );
+		\do_action( 'activitypub_register_handlers' );
 	}
 
 	/**
@@ -65,6 +66,6 @@ class Handler {
 		 *
 		 * @since 8.1.0
 		 */
-		do_action( 'activitypub_register_outbox_handlers' );
+		\do_action( 'activitypub_register_outbox_handlers' );
 	}
 }

@@ -7,6 +7,7 @@
 
 namespace Activitypub\Cli;
 
+use Activitypub\Cache;
 use Activitypub\Cache\Avatar;
 use Activitypub\Cache\Emoji;
 use Activitypub\Cache\File;
@@ -264,7 +265,7 @@ class Cache_Command extends \WP_CLI_Command {
 	 */
 	private function is_cache_enabled( $type ) {
 		// Check global cache enablement (includes constant and activitypub_remote_cache_enabled filter).
-		if ( ! \Activitypub\Cache::is_enabled() ) {
+		if ( ! Cache::is_enabled() ) {
 			return false;
 		}
 

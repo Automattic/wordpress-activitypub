@@ -29,13 +29,13 @@ class Move {
 		 *
 		 * @param bool $domain_moves_enabled Whether domain moves are enabled.
 		 */
-		$domain_moves_enabled = apply_filters( 'activitypub_enable_primary_domain_moves', false );
+		$domain_moves_enabled = \apply_filters( 'activitypub_enable_primary_domain_moves', false );
 
 		if ( $domain_moves_enabled ) {
 			// Add the filter to change the domain.
 			\add_filter( 'update_option_home', array( self::class, 'change_domain' ), 10, 2 );
 
-			if ( get_option( 'activitypub_old_host' ) ) {
+			if ( \get_option( 'activitypub_old_host' ) ) {
 				\add_action( 'activitypub_construct_model_actor', array( self::class, 'maybe_initiate_old_user' ) );
 				\add_action( 'activitypub_pre_send_to_inboxes', array( self::class, 'pre_send_to_inboxes' ) );
 
@@ -99,8 +99,8 @@ class Move {
 
 		// Check if the `Move` Activity is valid.
 		$also_known_as = $target_actor->get_also_known_as() ?? array();
-		if ( ! in_array( $from, $also_known_as, true ) ) {
-			return new \WP_Error( 'invalid_target', __( 'Invalid target', 'activitypub' ) );
+		if ( ! \in_array( $from, $also_known_as, true ) ) {
+			return new \WP_Error( 'invalid_target', \__( 'Invalid target', 'activitypub' ) );
 		}
 
 		$activity = new Activity();
@@ -218,7 +218,7 @@ class Move {
 			$actor_id = $actor->get_id();
 
 			// Replace the new host with the old host in the actor ID.
-			$old_actor_id = str_replace( $to_host, $from_host, $actor_id );
+			$old_actor_id = \str_replace( $to_host, $from_host, $actor_id );
 
 			// Call Move::internally for this actor.
 			$result = self::internally( $old_actor_id, $actor_id );
@@ -236,7 +236,7 @@ class Move {
 				continue;
 			}
 
-			$json = str_replace( $to_host, $from_host, $actor->to_json() );
+			$json = \str_replace( $to_host, $from_host, $actor->to_json() );
 
 			// Save the current actor data after migration.
 			if ( $actor instanceof Blog ) {
@@ -284,7 +284,7 @@ class Move {
 	 * @param string $json The ActivityPub Activity JSON.
 	 */
 	public static function pre_send_to_inboxes( $json ) {
-		$json = json_decode( $json, true );
+		$json = \json_decode( $json, true );
 
 		if ( 'Move' !== $json['type'] ) {
 			return;

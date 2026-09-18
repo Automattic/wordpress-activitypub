@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 
-import { getDefaultVisibility } from '../utils';
+import { getDefaultVisibility, shouldWarnAboutFederatedDeletion } from '../utils';
 
 describe( 'EditorPlugin getDefaultVisibility', () => {
 	test( 'returns saved visibility value if already set', () => {
@@ -227,5 +227,78 @@ describe( 'EditorPlugin visibility sync logic', () => {
 			activitypub_max_image_attachments: 5,
 			activitypub_content_visibility: 'local',
 		} );
+	} );
+} );
+
+describe( 'EditorPlugin shouldWarnAboutFederatedDeletion', () => {
+	test( 'does not warn when the post was never federated', () => {
+		expect(
+			shouldWarnAboutFederatedDeletion( {
+				federationStatus: '',
+				status: 'draft',
+				password: 'x',
+				visibility: 'local',
+			} )
+		).toBe( false );
+	} );
+
+	test( 'does not warn when a federated post stays public', () => {
+		expect(
+			shouldWarnAboutFederatedDeletion( {
+				federationStatus: 'federated',
+				status: 'publish',
+				password: '',
+				visibility: 'public',
+			} )
+		).toBe( false );
+		expect(
+			shouldWarnAboutFederatedDeletion( {
+				federationStatus: 'federated',
+				status: 'publish',
+				password: '',
+				visibility: 'quiet_public',
+			} )
+		).toBe( false );
+	} );
+
+	test( 'warns when a federated post is changed to draft, pending, private, or trash', () => {
+		[ 'draft', 'pending', 'private', 'trash' ].forEach( ( status ) => {
+			expect(
+				shouldWarnAboutFederatedDeletion( {
+					federationStatus: 'federated',
+					status,
+					password: '',
+					visibility: 'public',
+				} )
+			).toBe( true );
+		} );
+	} );
+
+	test( 'warns when a federated post gets a password', () => {
+		expect(
+			shouldWarnAboutFederatedDeletion( {
+				federationStatus: 'federated',
+				status: 'publish',
+				password: 'secret',
+				visibility: 'public',
+			} )
+		).toBe( true );
+	} );
+
+	test( 'warns when a federated post is set to a non-public ActivityPub visibility', () => {
+		[ 'local', 'private' ].forEach( ( visibility ) => {
+			expect(
+				shouldWarnAboutFederatedDeletion( {
+					federationStatus: 'federated',
+					status: 'publish',
+					password: '',
+					visibility,
+				} )
+			).toBe( true );
+		} );
+	} );
+
+	test( 'is safe with no arguments', () => {
+		expect( shouldWarnAboutFederatedDeletion() ).toBe( false );
 	} );
 } );

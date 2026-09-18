@@ -40,3 +40,33 @@ export const getDefaultVisibility = ( meta, postDate ) => {
 	// Default to public for new posts.
 	return 'public';
 };
+
+/**
+ * Whether to warn that editing the post will remove it from the Fediverse.
+ *
+ * A post that has been federated is torn down with a Delete activity the moment
+ * it stops being publicly queryable. That happens through several unrelated
+ * controls — the WordPress status (draft, pending, private, trash), a post
+ * password, or the ActivityPub "Do not federate" visibility — so the warning is
+ * keyed on the outcome ("the post is being hidden"), not on any single control.
+ *
+ * @param {Object} args                    Named arguments.
+ * @param {string} [args.federationStatus] The stored `activitypub_status` meta.
+ * @param {string} [args.status]           The edited post status.
+ * @param {string} [args.password]         The edited post password.
+ * @param {string} [args.visibility]       The effective ActivityPub content visibility.
+ *
+ * @return {boolean} True when a deletion warning should be shown.
+ */
+export const shouldWarnAboutFederatedDeletion = ( { federationStatus, status, password, visibility } = {} ) => {
+	// Only a post that is currently federated can be deleted from the Fediverse.
+	if ( 'federated' !== federationStatus ) {
+		return false;
+	}
+
+	const hiddenByStatus = !! status && 'publish' !== status;
+	const hiddenByPassword = !! password;
+	const hiddenByVisibility = 'local' === visibility || 'private' === visibility;
+
+	return hiddenByStatus || hiddenByPassword || hiddenByVisibility;
+};

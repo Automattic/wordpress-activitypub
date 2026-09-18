@@ -284,13 +284,16 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 				}
 			);
 
-		$stream_connector->callback_activitypub_handled_follow( $activity, self::$user_id, true, $context );
+		// The "activitypub_handled_follow" hook fires with an array of user IDs (int[]).
+		$stream_connector->callback_activitypub_handled_follow( $activity, array( self::$user_id ), true, $context );
 
 		$this->assertNotNull( $logged_data, 'Should have logged the follow event' );
 		$this->assertStringContainsString( 'New Follower: https://example.com/actor', $logged_data['message'] );
 		$this->assertEquals( 'notification', $logged_data['context_type'] );
 		$this->assertEquals( 'follow', $logged_data['action'] );
-		$this->assertEquals( self::$user_id, $logged_data['user_id'] );
+		// Stream's log() builds a WP_User from this value, so it must be a single integer, not the array.
+		$this->assertIsInt( $logged_data['user_id'], 'Stream log() must receive a single integer user ID, not an array.' );
+		$this->assertSame( self::$user_id, $logged_data['user_id'] );
 		$this->assertArrayHasKey( 'activity', $logged_data['meta'] );
 		$this->assertArrayHasKey( 'remote_actor', $logged_data['meta'] );
 	}
@@ -327,7 +330,8 @@ class Test_Stream_Connector extends \WP_UnitTestCase {
 				}
 			);
 
-		$stream_connector->callback_activitypub_handled_follow( $activity, self::$user_id, false, $context );
+		// The "activitypub_handled_follow" hook fires with an array of user IDs (int[]).
+		$stream_connector->callback_activitypub_handled_follow( $activity, array( self::$user_id ), false, $context );
 
 		$this->assertStringContainsString( 'New Follower: https://example.com/actor', $logged_data['message'] );
 	}

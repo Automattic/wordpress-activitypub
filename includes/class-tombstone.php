@@ -104,7 +104,7 @@ class Tombstone {
 			return self::check_array( $data );
 		}
 
-		if ( in_array( (int) $response->get_error_code(), self::$codes, true ) ) {
+		if ( \in_array( (int) $response->get_error_code(), self::$codes, true ) ) {
 			return true;
 		}
 
@@ -162,7 +162,7 @@ class Tombstone {
 		}
 
 		$data = $wp_error->get_error_data();
-		if ( isset( $data['status'] ) && in_array( (int) $data['status'], self::$codes, true ) ) {
+		if ( isset( $data['status'] ) && \in_array( (int) $data['status'], self::$codes, true ) ) {
 			return true;
 		}
 

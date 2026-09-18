@@ -18,7 +18,10 @@ description: INVOKE THIS SKILL before creating any PR to ensure compliance with 
 
 ## Pre-PR Review
 
-Before creating a PR, delegate to the **code-review** agent to review all changes on the branch. Address any critical issues before proceeding.
+Scope the review to what changed — don't review every PR:
+
+- **Skip** for docs-only (`*.md`, `docs/`, `README`), tooling/config-only (`.claude/`, `.agents/`, workflow files), and trivial edits (typo, comment, whitespace). Push these straight to PR.
+- **Run** the **code-review** agent only when the branch changes plugin code (PHP/JS/CSS logic). Address any critical issues before proceeding.
 
 ## PR Creation
 
@@ -86,7 +89,7 @@ git push --force-with-lease
 
 ## Special Cases
 
-**Hotfixes:** Branch `fix/critical-issue`, minimal changes, add "Hotfix" label, request expedited review.
+**Hotfixes:** Branch `fix/critical-issue`, minimal changes, add a `[Pri] High` (or `[Pri] BLOCKER`) label, request expedited review.
 
 **Experimental:** Use `try/` prefix, mark as draft, get early feedback, convert to proper branch type once confirmed.
 
@@ -98,12 +101,12 @@ git push --force-with-lease
 |-------|-----|
 | `Bug` | Bug fixes |
 | `Enhancement` | New features |
-| `Documentation` | Doc updates |
+| `Docs` | Documentation updates |
 | `Code Quality` | Refactoring, cleanup, etc. |
 | `Skip Changelog` | No changelog needed |
-| `Needs Review` | Ready for review |
-| `In Progress` | Still working |
-| `Hotfix` | Urgent fix |
+| `[Status] Needs review` | Ready for review |
+| `[Status] In Progress` | Still working |
+| `[Pri] High` / `[Pri] BLOCKER` | Urgent / expedited |
 
 ## Reference
 

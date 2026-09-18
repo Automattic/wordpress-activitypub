@@ -113,7 +113,7 @@ interface SiteHubMobileProps {
 export const SiteHubMobile: ForwardRefExoticComponent< SiteHubMobileProps > = forwardRef<
 	HTMLDivElement,
 	SiteHubMobileProps
->( function SiteHubMobile(
+>( function SiteHubMobileComponent(
 	{ onMenuClick, title }: SiteHubMobileProps,
 	ref: ForwardedRef< HTMLDivElement >
 ): ReactNode {

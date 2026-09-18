@@ -55,7 +55,7 @@ class Statistics {
 	 * @return string The option name.
 	 */
 	public static function get_monthly_option_name( $user_id, $year, $month ) {
-		return sprintf( '%s%d_%d_%02d', self::OPTION_PREFIX, $user_id, $year, $month );
+		return \sprintf( '%s%d_%d_%02d', self::OPTION_PREFIX, $user_id, $year, $month );
 	}
 
 	/**
@@ -67,7 +67,7 @@ class Statistics {
 	 * @return string The option name.
 	 */
 	public static function get_annual_option_name( $user_id, $year ) {
-		return sprintf( '%s%d_%d_annual', self::OPTION_PREFIX, $user_id, $year );
+		return \sprintf( '%s%d_%d_annual', self::OPTION_PREFIX, $user_id, $year );
 	}
 
 	/**

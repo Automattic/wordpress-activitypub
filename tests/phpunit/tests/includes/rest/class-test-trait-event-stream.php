@@ -8,8 +8,10 @@
 namespace Activitypub\Tests\Rest;
 
 use Activitypub\Collection\Outbox;
+use Activitypub\OAuth\Scope;
 use Activitypub\Rest\Event_Stream;
 use Activitypub\Rest\Verification;
+use Activitypub\Tests\OAuth_Token_Stub;
 
 use function Activitypub\add_to_outbox;
 
@@ -20,6 +22,8 @@ use function Activitypub\add_to_outbox;
  * @coversDefaultClass \Activitypub\Rest\Event_Stream
  */
 class Test_Trait_Event_Stream extends \WP_UnitTestCase {
+	use OAuth_Token_Stub;
+
 
 	/**
 	 * Test class instance that uses the trait.
@@ -323,6 +327,45 @@ class Test_Trait_Event_Stream extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that the outbox stream only returns the requested actor's own items.
+	 *
+	 * Regression: the outbox query previously filtered solely by the shared actor
+	 * *type* meta ('user'), so one author's stream emitted every author's outbox
+	 * items. The query must be scoped to the requesting actor.
+	 *
+	 * @covers ::get_new_items
+	 * @covers ::get_latest_item_id
+	 */
+	public function test_outbox_stream_is_scoped_to_owner() {
+		$other_user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_user_by( 'ID', $other_user_id )->add_cap( 'activitypub' );
+
+		$own_post   = self::factory()->post->create(
+			array(
+				'post_author' => $this->user_id,
+				'post_status' => 'publish',
+			)
+		);
+		$own_outbox = add_to_outbox( \get_post( $own_post ), 'Create', $this->user_id );
+
+		// Created after the owner's item, so it has a higher ID and would be the global "latest".
+		$other_post   = self::factory()->post->create(
+			array(
+				'post_author' => $other_user_id,
+				'post_status' => 'publish',
+			)
+		);
+		$other_outbox = add_to_outbox( \get_post( $other_post ), 'Create', $other_user_id );
+
+		$ids = \wp_list_pluck( $this->instance->test_get_new_items( $this->user_id, 'outbox', 0 ), 'ID' );
+		$this->assertContains( $own_outbox, $ids, 'Owner should see their own outbox item.' );
+		$this->assertNotContains( $other_outbox, $ids, "Owner must not see another user's outbox item." );
+
+		$latest = $this->instance->test_get_latest_item_id( $this->user_id, 'outbox' );
+		$this->assertSame( $own_outbox, $latest, "Latest item must be the owner's, not a newer item from another user." );
+	}
+
+	/**
 	 * Test get_event_type_map returns expected mappings.
 	 *
 	 * @covers ::get_event_type_map
@@ -440,5 +483,54 @@ class Test_Trait_Event_Stream extends \WP_UnitTestCase {
 		$this->assertEquals( $original_auth, $current_auth, 'Should not inject Authorization header for array access_token.' );
 
 		unset( $_GET['access_token'] );
+	}
+
+	/**
+	 * Test that the stream hides private activities from a token without the read scope.
+	 *
+	 * The stream is gated on `push`, which lets a client watch the collection. Seeing the
+	 * owner's private activities is the authority the paged outbox requires `read` for, and
+	 * streaming must not be a way around that.
+	 *
+	 * @covers ::get_new_items
+	 */
+	public function test_get_new_items_hides_private_without_read_scope() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => $this->user_id,
+				'post_status' => 'publish',
+			)
+		);
+
+		$outbox_id = add_to_outbox( \get_post( $post_id ), 'Create', $this->user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
+		$this->assertIsInt( $outbox_id );
+
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH ) ) );
+		$this->assertEmpty(
+			$this->instance->test_get_new_items( $this->user_id, 'outbox', 0 ),
+			'A push-only token must not receive a private activity.'
+		);
+
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH, Scope::READ ) ) );
+		$this->assertNotEmpty(
+			$this->instance->test_get_new_items( $this->user_id, 'outbox', 0 ),
+			'A token that also holds read is the positive control.'
+		);
+
+		$this->set_oauth_current_token( null );
+		$this->assertNotEmpty(
+			$this->instance->test_get_new_items( $this->user_id, 'outbox', 0 ),
+			'A caller with no token is not scope-limited.'
+		);
+	}
+
+
+	/**
+	 * Clear any OAuth session this class established.
+	 */
+	public function tear_down() {
+		$this->set_oauth_current_token( null );
+
+		parent::tear_down();
 	}
 }

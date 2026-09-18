@@ -9,6 +9,7 @@ namespace Activitypub\Collection;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
+use Activitypub\OAuth\Server;
 use Activitypub\Scheduler;
 use Activitypub\Webfinger;
 
@@ -101,14 +102,14 @@ class Outbox {
 
 		$outbox_item = array(
 			'post_type'    => self::POST_TYPE,
-			'post_title'   => sprintf(
+			'post_title'   => \sprintf(
 				/* translators: 1. Activity type, 2. Object Title or Excerpt */
-				__( '[%1$s] %2$s', 'activitypub' ),
+				\__( '[%1$s] %2$s', 'activitypub' ),
 				$activity->get_type(),
 				\wp_trim_words( $title, 5 )
 			),
 			// Persist the blind audience so later dispatch can compute recipients from `bto`/`bcc`.
-			'post_content' => wp_slash( $activity->to_json( true, true ) ),
+			'post_content' => \wp_slash( $activity->to_json( true, true ) ),
 			// ensure that user ID is not below 0.
 			'post_author'  => \max( $user_id, 0 ),
 			'post_status'  => 'pending',
@@ -185,7 +186,7 @@ class Outbox {
 		 * QuoteRequests) and must not cancel each other even when they share
 		 * the same object ID.
 		 */
-		if ( in_array( $activity_type, array( 'Follow', 'Announce', 'Accept', 'Reject' ), true ) ) {
+		if ( \in_array( $activity_type, array( 'Follow', 'Announce', 'Accept', 'Reject' ), true ) ) {
 			return;
 		}
 
@@ -196,20 +197,43 @@ class Outbox {
 			),
 		);
 
-		// For non-Delete activities, only delete items of the same type.
-		// Delete activities supersede all pending items for the same object.
+		/*
+		 * Same-type pending items are always superseded. A confirmed
+		 * re-publish (Create) additionally invalidates a pending Delete so
+		 * we do not send both Delete and Create for the same object.
+		 *
+		 * Update is intentionally NOT in this list: it must not cancel a
+		 * pending Delete, or an unrelated edit could flip a hidden object back
+		 * to federated. An Update for an already-deleted object is rejected
+		 * upstream in `add_to_outbox()`, and the scheduler re-publish path emits
+		 * a Create (not an Update), so that legitimate path still cancels Delete.
+		 */
 		if ( 'Delete' !== $activity_type ) {
+			$types = 'Create' === $activity_type
+				? array( 'Create', 'Delete' )
+				: array( $activity_type );
+
 			$meta_query[] = array(
-				'key'   => '_activitypub_activity_type',
-				'value' => $activity_type,
+				'key'     => '_activitypub_activity_type',
+				'value'   => $types,
+				'compare' => 'IN',
 			);
 		}
 
-		$existing_items = get_posts(
+		/*
+		 * Delete wipes the entire outbox history for the object — any
+		 * already-sent Create/Update/etc. is now stale and a redelivery
+		 * retry would resurrect content we are tearing down. Other
+		 * activity types only invalidate pending peers.
+		 */
+		$status_filter = 'Delete' === $activity_type ? 'any' : 'pending';
+
+		$existing_items = \get_posts(
 			array(
 				'post_type'   => self::POST_TYPE,
-				'post_status' => 'pending',
+				'post_status' => $status_filter,
 				'exclude'     => array( $exclude_id ),
+				'numberposts' => -1,
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query'  => $meta_query,
 				'fields'      => 'ids',
@@ -317,12 +341,12 @@ class Outbox {
 	 * @return bool True if the activity was rescheduled, false otherwise.
 	 */
 	public static function reschedule( $outbox_item ) {
-		$outbox_item = get_post( $outbox_item );
+		$outbox_item = \get_post( $outbox_item );
 
 		$outbox_item->post_status = 'pending';
-		$outbox_item->post_date   = current_time( 'mysql' );
+		$outbox_item->post_date   = \current_time( 'mysql' );
 
-		wp_update_post( $outbox_item );
+		\wp_update_post( $outbox_item );
 
 		Scheduler::schedule_outbox_activity_for_federation( $outbox_item->ID );
 
@@ -373,7 +397,7 @@ class Outbox {
 		}
 
 		if ( 'Update' === $type ) {
-			$activity->set_updated( gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, strtotime( $outbox_item->post_modified ) ) );
+			$activity->set_updated( \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \strtotime( $outbox_item->post_modified ) ) );
 		}
 
 		/**
@@ -382,7 +406,7 @@ class Outbox {
 		 * @param Activity $activity    The Activity object.
 		 * @param \WP_Post $outbox_item The outbox item post object.
 		 */
-		return apply_filters( 'activitypub_get_outbox_activity', $activity, $outbox_item );
+		return \apply_filters( 'activitypub_get_outbox_activity', $activity, $outbox_item );
 	}
 
 	/**
@@ -398,9 +422,6 @@ class Outbox {
 		switch ( $actor_type ) {
 			case 'blog':
 				$actor_id = Actors::BLOG_USER_ID;
-				break;
-			case 'application':
-				$actor_id = Actors::APPLICATION_USER_ID;
 				break;
 			case 'user':
 			default:
@@ -429,7 +450,7 @@ class Outbox {
 
 		// Authenticate via Bearer token for non-REST requests (e.g. permalink access).
 		if ( \get_option( 'activitypub_api', false ) && ! \is_user_logged_in() && ! \wp_is_serving_rest_request() ) {
-			\Activitypub\OAuth\Server::authenticate_oauth( null );
+			Server::authenticate_oauth( null );
 		}
 
 		/*
@@ -456,14 +477,14 @@ class Outbox {
 		// Check if Outbox Activity is public.
 		$visibility = \get_post_meta( $outbox_item->ID, 'activitypub_content_visibility', true );
 
-		if ( ! in_array( $visibility, array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC ), true ) ) {
+		if ( ! \in_array( $visibility, array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC ), true ) ) {
 			return new \WP_Error( 'private_outbox_item', 'Not a public Outbox item.' );
 		}
 
 		$activity_types = \apply_filters( 'rest_activitypub_outbox_activity_types', self::ACTIVITY_TYPES );
 		$activity_type  = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
 
-		if ( ! in_array( $activity_type, $activity_types, true ) ) {
+		if ( ! \in_array( $activity_type, $activity_types, true ) ) {
 			return new \WP_Error( 'private_outbox_item', 'Not public Outbox item type.' );
 		}
 
@@ -480,11 +501,11 @@ class Outbox {
 	private static function get_object_id( $data ) {
 		$object = $data->get_object();
 
-		if ( is_object( $object ) ) {
+		if ( \is_object( $object ) ) {
 			return self::get_object_id( $object );
 		}
 
-		if ( is_string( $object ) ) {
+		if ( \is_string( $object ) ) {
 			return $object;
 		}
 
@@ -507,10 +528,10 @@ class Outbox {
 			return '';
 		}
 
-		if ( is_string( $activity_object ) ) {
-			$post_id = url_to_postid( $activity_object );
+		if ( \is_string( $activity_object ) ) {
+			$post_id = \url_to_postid( $activity_object );
 
-			return $post_id ? get_the_title( $post_id ) : '';
+			return $post_id ? \get_the_title( $post_id ) : '';
 		}
 
 		$title = $activity_object->get_name() ?: $activity_object->get_content();

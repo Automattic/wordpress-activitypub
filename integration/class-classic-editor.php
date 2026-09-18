@@ -20,7 +20,7 @@ class Classic_Editor {
 	public static function init() {
 		\add_filter( 'activitypub_attachments_media_markup', array( self::class, 'filter_attachments_media_markup' ), 10, 2 );
 		\add_filter( 'activitypub_attachment_ids', array( self::class, 'filter_attached_media_ids' ), 10, 2 );
-		\add_action( 'add_meta_boxes', array( self::class, 'add_meta_box' ) );
+		\add_action( 'add_meta_boxes', array( self::class, 'add_meta_box' ), 10, 2 );
 		\add_action( 'save_post', array( self::class, 'save_meta_data' ) );
 
 		if ( \function_exists( 'classicpress_version' ) ) {
@@ -41,11 +41,11 @@ class Classic_Editor {
 			return $markup;
 		}
 
-		$type = strtok( \get_post_mime_type( $attachment_ids[0] ), '/' );
+		$type = \strtok( \get_post_mime_type( $attachment_ids[0] ), '/' );
 
 		// Single video or audio file: use media shortcode.
 		if ( 1 === \count( $attachment_ids ) && ( 'video' === $type || 'audio' === $type ) ) {
-			return sprintf(
+			return \sprintf(
 				'[%1$s src="%2$s"]',
 				\esc_attr( $type ),
 				\esc_url( \wp_get_attachment_url( $attachment_ids[0] ) )
@@ -53,7 +53,7 @@ class Classic_Editor {
 		}
 
 		// Multiple attachments or images: use gallery shortcode.
-		return '[gallery ids="' . implode( ',', $attachment_ids ) . '" link="none"]';
+		return '[gallery ids="' . \implode( ',', $attachment_ids ) . '" link="none"]';
 	}
 
 	/**
@@ -104,11 +104,23 @@ class Classic_Editor {
 	/**
 	 * Add ActivityPub meta box to the post editor.
 	 *
-	 * @param string $post_type The post type.
+	 * @param string        $post_type The post type.
+	 * @param \WP_Post|null $post      The post being edited.
 	 */
-	public static function add_meta_box( $post_type ) {
+	public static function add_meta_box( $post_type, $post = null ) {
 		// Only add for post types that support ActivityPub.
 		if ( ! \post_type_supports( $post_type, 'activitypub' ) ) {
+			return;
+		}
+
+		/*
+		 * The block editor ships its own ActivityPub panel, so the classic meta box must not be
+		 * added there. With the Classic Editor plugin in switchable mode a post can still open in
+		 * the block editor, where both would otherwise render and the meta box's save_post handler
+		 * would overwrite the panel's value. The function_exists() check keeps ClassicPress and
+		 * other block-less setups (where use_block_editor_for_post() is absent) safe.
+		 */
+		if ( $post instanceof \WP_Post && \function_exists( 'use_block_editor_for_post' ) && \use_block_editor_for_post( $post ) ) {
 			return;
 		}
 
@@ -184,7 +196,7 @@ class Classic_Editor {
 			<span class="howto">
 				<?php \esc_html_e( 'Quoting allows others to cite your post while adding their own commentary.', 'activitypub' ); ?>
 				<?php
-				printf(
+				\printf(
 					/* translators: %s: The current site default quote policy. Note the leading space. */
 					\esc_html__( ' Site default: %s', 'activitypub' ),
 					\esc_html( self::get_quote_policy_label( $default_quote_policy ) )

@@ -8,7 +8,9 @@
 namespace Activitypub\Tests\Rest;
 
 use Activitypub\Collection\Outbox;
+use Activitypub\OAuth\Scope;
 use Activitypub\Rest\Outbox_Controller;
+use Activitypub\Tests\OAuth_Token_Stub;
 use Activitypub\Tests\Test_REST_Controller_Testcase;
 
 /**
@@ -18,6 +20,8 @@ use Activitypub\Tests\Test_REST_Controller_Testcase;
  * @coversDefaultClass \Activitypub\Rest\Outbox_Controller
  */
 class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
+	use OAuth_Token_Stub;
+
 
 	/**
 	 * Test user ID.
@@ -531,6 +535,73 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 	}
 
 	/**
+	 * Test that a capable non-owner only sees another user's public outbox items.
+	 *
+	 * Regression: ownership was previously satisfied by the global `activitypub`
+	 * capability (held by every author), so any author could read every other user's
+	 * non-public outbox items. Ownership must be a strict identity check.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_items_hides_non_public_from_capable_non_owner() {
+		$owner = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_user_by( 'ID', $owner )->add_cap( 'activitypub' );
+
+		foreach ( array(
+			array( 'note/pub', \ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ),
+			array( 'note/priv', \ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ),
+		) as $item ) {
+			list( $slug, $visibility ) = $item;
+			self::factory()->post->create(
+				array(
+					'post_author'  => $owner,
+					'post_type'    => Outbox::POST_TYPE,
+					'post_status'  => 'pending',
+					'post_title'   => 'https://example.org/' . $slug,
+					'post_content' => \wp_json_encode(
+						array(
+							'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
+							'id'       => 'https://example.org/' . $slug,
+							'type'     => 'Create',
+							'actor'    => 'https://example.org/user/' . $owner,
+							'object'   => array(
+								'id'      => 'https://example.org/' . $slug,
+								'type'    => 'Note',
+								'content' => 'Test content',
+							),
+						)
+					),
+					'meta_input'   => array(
+						'_activitypub_activity_type'     => 'Create',
+						'_activitypub_activity_actor'    => 'user',
+						'activitypub_content_visibility' => $visibility,
+					),
+				)
+			);
+		}
+
+		// A different user that also holds the activitypub capability.
+		$other = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_user_by( 'ID', $other )->add_cap( 'activitypub' );
+		\wp_set_current_user( $other );
+		$this->assertTrue( \current_user_can( 'activitypub' ) );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $owner . '/outbox' );
+		$request->set_param( 'page', 1 );
+		$request->set_param( 'per_page', 10 );
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertCount(
+			1,
+			$data['orderedItems'],
+			'A capable non-owner must only see the public outbox item, not the private one.'
+		);
+		$this->assertSame( 'https://example.org/note/pub', $data['orderedItems'][0]['id'] );
+	}
+
+	/**
 	 * Test getting items with correct actor type filtering.
 	 *
 	 * @covers ::get_items
@@ -766,7 +837,7 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		);
 
 		// Test as non-privileged user.
-		wp_set_current_user( $viewer_id );
+		\wp_set_current_user( $viewer_id );
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
 		$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
 		$response = \rest_get_server()->dispatch( $request );
@@ -775,12 +846,27 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		$this->assertEquals( 200, $response->get_status() );
 		$this->assertCount( 10, $data['orderedItems'] );
 
-		// Test as privileged user.
+		/*
+		 * Test as an administrator who is not the actor owner. Site administration
+		 * does not grant access to another user's non-public outbox items: ownership
+		 * is a strict identity check, so the admin sees the same public subset (10).
+		 */
 		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
-		wp_set_current_user( $admin_id );
+		\wp_set_current_user( $admin_id );
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
 		$request->set_param( 'page', 1 ); // Need to request a page to get orderedItems.
 		$request->set_param( 'per_page', 20 ); // Need per_page for pagination calculation.
+		$response = \rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertCount( 10, $data['orderedItems'] );
+
+		// The actor owner still sees the full set, including the private item.
+		\wp_set_current_user( self::$user_id );
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_param( 'page', 1 );
+		$request->set_param( 'per_page', 20 );
 		$response = \rest_get_server()->dispatch( $request );
 		$data     = $response->get_data();
 
@@ -1346,5 +1432,78 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		$data2     = $response2->get_data();
 
 		$this->assertEquals( $count_before, $data2['totalItems'], 'Remote comment should not inflate totalItems.' );
+	}
+
+	/**
+	 * Test that private outbox items need the `read` scope, not just ownership.
+	 *
+	 * `Server::authenticate_oauth()` establishes the WordPress user for any valid bearer
+	 * whatever it was consented to, so ownership alone would hand a client granted only
+	 * `profile` the owner's private activities.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_items_private_requires_read_scope() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_user_by( 'ID', $user_id )->add_cap( 'activitypub' );
+
+		$canary = 'https://example.org/activity/private-canary';
+		self::factory()->post->create(
+			array(
+				'post_author'  => $user_id,
+				'post_type'    => Outbox::POST_TYPE,
+				'post_status'  => 'pending',
+				'post_title'   => $canary,
+				'post_content' => \wp_json_encode(
+					array(
+						'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
+						'id'       => $canary,
+						'type'     => 'Create',
+						'actor'    => 'https://example.org/user/' . $user_id,
+						'object'   => array(
+							'id'   => $canary . '/object',
+							'type' => 'Note',
+						),
+					)
+				),
+				'meta_input'   => array(
+					'_activitypub_activity_type'     => 'Create',
+					'_activitypub_activity_actor'    => 'user',
+					'activitypub_content_visibility' => \ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
+				),
+			)
+		);
+
+		// The owner is signed in throughout; only the token's scope differs.
+		\wp_set_current_user( $user_id );
+
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH ), $user_id ) );
+		$this->assertNotContains( $canary, $this->outbox_activity_ids( $user_id ), 'A token without the read scope must not see a private activity.' );
+
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::READ ), $user_id ) );
+		$this->assertContains( $canary, $this->outbox_activity_ids( $user_id ), 'A read-scoped token is the positive control.' );
+
+		// A wp-admin session carries no token and is bounded by capabilities, not scope.
+		$this->set_oauth_current_token( null );
+		$this->assertContains( $canary, $this->outbox_activity_ids( $user_id ), 'A cookie session is not scope-limited.' );
+
+		\wp_set_current_user( 0 );
+		$this->assertNotContains( $canary, $this->outbox_activity_ids( $user_id ), 'An anonymous caller never sees a private activity.' );
+	}
+
+	/**
+	 * Return the activity IDs the outbox exposes for an actor.
+	 *
+	 * @param int $user_id The actor to query.
+	 * @return array Activity IDs.
+	 */
+	private function outbox_activity_ids( $user_id ) {
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
+		$request->set_param( 'page', 1 );
+		$request->set_param( 'per_page', 100 );
+
+		$data = \rest_get_server()->dispatch( $request )->get_data();
+
+		return \wp_list_pluck( $data['orderedItems'], 'id' );
 	}
 }

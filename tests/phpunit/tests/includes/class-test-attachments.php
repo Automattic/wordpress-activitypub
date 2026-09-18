@@ -295,6 +295,120 @@ class Test_Attachments extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that script markup in an attachment name is stripped before storage.
+	 *
+	 * Covers scripts and inline styles in `post_content`, and plain text in the title
+	 * and alt. The Mastodon importer runs as a user with
+	 * `unfiltered_html`, so `kses_init()` installs none of the kses filters for that request
+	 * and `media_handle_sideload()` stores whatever the archive contained. Attachment pages
+	 * are public and render `post_content` through `the_content`, so a `position:fixed`
+	 * caption would cover the page.
+	 *
+	 * @covers ::save_attachment
+	 */
+	public function test_save_attachment_sanitizes_name() {
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+
+		/*
+		 * Model the real import: without this the suite runs as user 0, kses is active, and
+		 * the test would pass whether or not `save_attachment()` sanitizes anything.
+		 */
+		\wp_set_current_user( $admin_id );
+		\kses_init();
+
+		$attachments = array(
+			array(
+				'url'       => AP_TESTS_DIR . '/data/assets/test.jpg',
+				'mediaType' => 'image/jpeg',
+				'name'      => 'Photo<script>alert(1)</script><iframe srcdoc="x"></iframe><img src=x onerror="alert(1)"><span style="position:fixed;z-index:99999;background-image:url(https://remote.example/track)">caption</span>',
+				'type'      => 'Image',
+			),
+		);
+
+		$result = Attachments::import( $attachments, self::$post_id, $admin_id );
+
+		$this->assertCount( 1, $result );
+
+		$attachment = \get_post( $result[0] );
+
+		$this->assertStringNotContainsString( '<script', $attachment->post_content, 'Script tags must not be stored.' );
+		$this->assertStringNotContainsString( '<iframe', $attachment->post_content, 'Iframes must not be stored.' );
+		$this->assertStringNotContainsString( 'onerror', $attachment->post_content, 'Event handlers must not be stored.' );
+		$this->assertStringNotContainsString( 'style=', $attachment->post_content, 'Inline styles must not be stored.' );
+		$this->assertStringNotContainsString( 'remote.example/track', $attachment->post_content, 'A CSS background URL must not be stored.' );
+		$this->assertStringContainsString( 'Photo', $attachment->post_content, 'Legitimate content should survive.' );
+
+		$this->assertStringNotContainsString( '<', $attachment->post_title, 'Titles are plain text.' );
+		$this->assertStringContainsString( 'Photo', $attachment->post_title, 'Legitimate title text should survive.' );
+
+		// Alt text is plain text, so the generated block must not carry live markup.
+		$post = \get_post( self::$post_id );
+		$this->assertStringNotContainsString( '<script', $post->post_content, 'Generated markup must not carry live script.' );
+		$this->assertStringContainsString( 'alt="Photo', $post->post_content, 'Alt text should reach the block.' );
+		$this->assertStringNotContainsString( 'alt="Photo&lt;', $post->post_content, 'Alt text should carry no markup at all, escaped or otherwise.' );
+
+		/*
+		 * Core writes this meta through a plain-text sanitizer and Transformer\Attachment
+		 * federates it back out as the ActivityPub `name`, so it must carry no tags.
+		 */
+		$alt = \get_post_meta( $result[0], '_wp_attachment_image_alt', true );
+		$this->assertStringNotContainsString( '<', $alt, 'Alt text is plain text.' );
+		$this->assertStringContainsString( 'Photo', $alt, 'Legitimate caption text should survive.' );
+	}
+
+	/**
+	 * Test that a non-string attachment name is discarded rather than stored.
+	 *
+	 * @covers ::save_attachment
+	 */
+	public function test_save_attachment_ignores_non_string_name() {
+		$attachments = array(
+			array(
+				'url'       => AP_TESTS_DIR . '/data/assets/test.jpg',
+				'mediaType' => 'image/jpeg',
+				'name'      => array( 'unexpected' => 'shape' ),
+				'type'      => 'Image',
+			),
+		);
+
+		$result = Attachments::import( $attachments, self::$post_id, self::$author_id );
+
+		$this->assertCount( 1, $result );
+
+		$attachment = \get_post( $result[0] );
+
+		$this->assertSame( '', $attachment->post_content, 'A non-string name should not be stored.' );
+		$this->assertEmpty( \get_post_meta( $result[0], '_wp_attachment_image_alt', true ), 'A non-string name should not become alt text.' );
+	}
+
+	/**
+	 * Test that a caption containing a bare `<` is truncated there.
+	 *
+	 * @covers ::save_attachment
+	 */
+	public function test_save_attachment_truncates_caption_at_bare_less_than() {
+		$attachments = array(
+			array(
+				'url'       => AP_TESTS_DIR . '/data/assets/test.jpg',
+				'mediaType' => 'image/jpeg',
+				'name'      => 'A <3 shape carved in wood',
+				'type'      => 'Image',
+			),
+		);
+
+		$result = Attachments::import( $attachments, self::$post_id, self::$author_id );
+
+		$this->assertCount( 1, $result );
+
+		$attachment = \get_post( $result[0] );
+		$alt        = \get_post_meta( $result[0], '_wp_attachment_image_alt', true );
+
+		// strip_tags() reads the bare `<` as a tag opener, a known core limitation we accept.
+		$this->assertSame( 'A', $attachment->post_title );
+		$this->assertSame( 'A', $alt );
+	}
+
+	/**
 	 * Test processing multiple local file attachments.
 	 *
 	 * @covers ::import

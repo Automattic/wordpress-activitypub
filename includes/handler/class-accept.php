@@ -11,6 +11,7 @@ use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 
+use function Activitypub\is_same_actor;
 use function Activitypub\object_to_uri;
 
 /**
@@ -42,13 +43,22 @@ class Accept {
 			return;
 		}
 
-		$actor_post = Remote_Actors::get_by_uri( object_to_uri( $accept['object']['object'] ) );
+		/*
+		 * For a Follow Accept, the sender must be the actor that was followed.
+		 * Without this, a signed Accept from one actor could confirm a Follow that
+		 * targeted another actor by referencing that pending Follow's outbox GUID.
+		 */
+		if ( ! is_same_actor( $accept['actor'] ?? '', $accept['object']['object'] ?? '' ) ) {
+			return;
+		}
+
+		$actor_post = Remote_Actors::get_by_uri( object_to_uri( $accept['object']['object'] ?? '' ) );
 
 		if ( \is_wp_error( $actor_post ) ) {
 			return;
 		}
 
-		$user_id = is_array( $user_ids ) ? reset( $user_ids ) : $user_ids;
+		$user_id = \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids;
 		$result  = Following::accept( $actor_post, $user_id );
 		$success = ! \is_wp_error( $result );
 

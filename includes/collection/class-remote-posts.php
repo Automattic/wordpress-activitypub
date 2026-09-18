@@ -10,7 +10,8 @@ namespace Activitypub\Collection;
 use Activitypub\Emoji;
 use Activitypub\Sanitize;
 
-use function Activitypub\generate_post_summary;
+use function Activitypub\is_same_actor;
+use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 use function Activitypub\process_remote_media;
 
@@ -68,6 +69,30 @@ class Remote_Posts {
 		// If post exists, call update instead.
 		if ( ! \is_wp_error( $existing ) ) {
 			return self::update( $activity, $recipients );
+		}
+
+		// An actor may only create posts attributed to itself; only the actor is signature-bound, not attributedTo.
+		if ( ! is_same_actor( $activity['actor'] ?? '', $activity_object['attributedTo'] ?? '' ) ) {
+			return new \WP_Error(
+				'activitypub_create_unauthorized',
+				\__( 'The Create actor does not match the object attributedTo.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		/*
+		 * A post is cached under its own id (guid), so that id must live on the same host
+		 * as its author. Otherwise a signed Create could cache a post under a different
+		 * host's object id, mis-recording its origin and taking over that id, so the
+		 * genuine post can no longer overwrite the cached copy (the update owner-check
+		 * would then reject the real author).
+		 */
+		if ( ! is_same_host( $activity_object['id'] ?? '', $activity['actor'] ?? '' ) ) {
+			return new \WP_Error(
+				'activitypub_create_host_mismatch',
+				\__( 'The object id must be on the same host as the actor.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
 		}
 
 		// Post doesn't exist, create new post.
@@ -150,6 +175,25 @@ class Remote_Posts {
 		$post = self::get_by_guid( $activity['object']['id'] );
 		if ( \is_wp_error( $post ) ) {
 			return $post;
+		}
+
+		/*
+		 * Only the post's author may update it. When the activity carries an actor (every
+		 * signature-verified inbound activity does), compare it against the remote actor
+		 * stored when the post was first cached (its guid is the actor URI), so a remote
+		 * server cannot overwrite another host's cached post by sending an Update whose
+		 * object.id points at a post it does not own. The actor must be used here, not the
+		 * payload's attributedTo, because only the actor is bound to the HTTP signature.
+		 */
+		if ( isset( $activity['actor'] ) ) {
+			$owner = \get_post( (int) \get_post_meta( $post->ID, '_activitypub_remote_actor_id', true ) );
+			if ( ! $owner instanceof \WP_Post || object_to_uri( $activity['actor'] ) !== $owner->guid ) {
+				return new \WP_Error(
+					'activitypub_update_forbidden',
+					\__( 'Update failed: the actor does not own this post.', 'activitypub' ),
+					array( 'status' => 403 )
+				);
+			}
 		}
 
 		$post_array       = self::activity_to_post( $activity['object'] );
@@ -295,15 +339,24 @@ class Remote_Posts {
 		$attachments = self::extract_attachments( $activity );
 		$content     = process_remote_media( $content, $attachments );
 
+		/*
+		 * Slashed on the way out: wp_insert_post() and wp_update_post() both unslash what
+		 * they are given, so an unslashed remote title like `C:\Users\foo` would be stored
+		 * as `C:Usersfoo`. Remote_Actors::prepare_custom_post_type() slashes for the same
+		 * reason.
+		 */
 		return array(
-			'post_title'    => isset( $activity['name'] ) ? \wp_strip_all_tags( $activity['name'] ) : '',
-			'post_content'  => $content,
-			'post_excerpt'  => isset( $activity['summary'] ) ? \wp_strip_all_tags( $activity['summary'] ) : generate_post_summary( $activity['content'] ?? '' ),
+			'post_title'    => \is_string( $activity['name'] ?? null ) ? \wp_slash( \wp_strip_all_tags( $activity['name'] ) ) : '',
+			'post_content'  => \wp_slash( $content ),
+			'post_excerpt'  => \wp_slash( \is_string( $activity['summary'] ?? null ) ? \wp_strip_all_tags( $activity['summary'] ) : \wp_trim_words( $content, 55 ) ),
 			'post_status'   => 'publish',
 			'post_type'     => self::POST_TYPE,
 			'post_date_gmt' => $gm_date,
 			'post_date'     => \get_date_from_gmt( $gm_date ),
-			'guid'          => isset( $activity['id'] ) ? \esc_url_raw( $activity['id'] ) : '',
+			// Store the GUID the way get_by_guid() looks it up, which is with esc_url(): an
+			// ampersand becomes `&#038;`. Passing it unescaped instead lets `pre_post_guid`
+			// store it as `&amp;`, and the two spellings never match.
+			'guid'          => isset( $activity['id'] ) ? \esc_url( $activity['id'] ) : '',
 		);
 	}
 
@@ -359,7 +412,8 @@ class Remote_Posts {
 
 			$attachments[] = array(
 				'url'  => $attachment['url'],
-				'alt'  => $attachment['name'] ?? '',
+				// Same treatment the import path gives this field: remote JSON can hand us an array.
+				'alt'  => \is_string( $attachment['name'] ?? null ) ? \wp_strip_all_tags( $attachment['name'] ) : '',
 				'type' => $type,
 			);
 		}
@@ -512,7 +566,7 @@ class Remote_Posts {
 			\wp_delete_post( $post_id, true );
 		}
 
-		return count( $post_ids );
+		return \count( $post_ids );
 	}
 
 	/**

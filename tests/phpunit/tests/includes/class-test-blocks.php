@@ -114,6 +114,62 @@ class Test_Blocks extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The editor learns from the post itself whether the post endpoints will answer for it.
+	 *
+	 * @covers ::register_rest_fields
+	 *
+	 * @dataProvider data_publicly_queryable_field
+	 *
+	 * @param array $post_args Arguments for the post to create.
+	 * @param array $meta      Post meta to set.
+	 * @param bool  $expected  Whether the post is expected to be publicly queryable.
+	 */
+	public function test_publicly_queryable_field( $post_args, $meta, $expected ) {
+		$post_id = self::factory()->post->create( $post_args );
+		foreach ( $meta as $key => $value ) {
+			\update_post_meta( $post_id, $key, $value );
+		}
+
+		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$request = new \WP_REST_Request( 'GET', '/wp/v2/posts/' . $post_id );
+		$request->set_param( 'context', 'edit' );
+		$data = \rest_get_server()->dispatch( $request )->get_data();
+
+		$this->assertArrayHasKey( 'activitypub_publicly_queryable', $data );
+		$this->assertSame( $expected, $data['activitypub_publicly_queryable'] );
+	}
+
+	/**
+	 * Data provider for the publicly queryable field.
+	 *
+	 * @return array[]
+	 */
+	public function data_publicly_queryable_field() {
+		return array(
+			'published post'     => array( array( 'post_status' => 'publish' ), array(), true ),
+			'draft'              => array( array( 'post_status' => 'draft' ), array(), false ),
+			'password protected' => array( array( 'post_password' => 'secret' ), array(), false ),
+			'local visibility'   => array( array(), array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ), false ),
+			'quiet public'       => array( array(), array( 'activitypub_content_visibility' => ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC ), true ),
+		);
+	}
+
+	/**
+	 * The field is for the editor only and stays out of public post responses.
+	 *
+	 * @covers ::register_rest_fields
+	 */
+	public function test_publicly_queryable_field_is_edit_context_only() {
+		$post_id = self::factory()->post->create();
+
+		$request = new \WP_REST_Request( 'GET', '/wp/v2/posts/' . $post_id );
+		$data    = \rest_get_server()->dispatch( $request )->get_data();
+
+		$this->assertArrayNotHasKey( 'activitypub_publicly_queryable', $data );
+	}
+
+	/**
 	 * Test the reply block with a valid URL attribute.
 	 *
 	 * @covers ::render_reply_block
@@ -244,6 +300,90 @@ class Test_Blocks extends \WP_UnitTestCase {
 		$this->assertSame( '<p class="ap-reply-mention"><a rel="mention ugc" href="https://devs.live/notice/AQ8N0Xl57y8bUQAb6e" title="tester@devs.live">@tester</a></p>', $reply_link );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'filter_pleroma_object' ) );
+	}
+
+	/**
+	 * Feed renders of the reply block should produce the simple mention link
+	 * instead of the embed card, which depends on plugin CSS that feeds don't load.
+	 *
+	 * @covers ::render_reply_block
+	 */
+	public function test_feed_renders_reply_block_as_mention_link() {
+		$reply_url = 'https://devs.live/notice/AQ8N0Xl57y8bUQAb6e';
+		$pre_http  = function ( $response, $url ) use ( $reply_url ) {
+			if ( $reply_url === $url ) {
+				return array(
+					'id'           => $reply_url,
+					'type'         => 'Note',
+					'attributedTo' => 'https://devs.live/users/tester',
+					'content'      => 'Cake day it is',
+					'published'    => '2026-01-01T00:00:00Z',
+				);
+			}
+			if ( 'https://devs.live/users/tester' === $url ) {
+				return array(
+					'id'                => 'https://devs.live/users/tester',
+					'type'              => 'Person',
+					'preferredUsername' => 'tester',
+					'url'               => 'https://devs.live/users/tester',
+					'webfinger'         => 'acct:tester@devs.live',
+				);
+			}
+			return $response;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $pre_http, 10, 2 );
+
+		$block_markup = '<!-- wp:activitypub/reply {"url":"' . $reply_url . '","embedPost":true} /-->';
+
+		// Frontend pass: is_feed() is false, so the full embed card is kept.
+		$this->go_to( \home_url( '/' ) );
+		$this->assertFalse( \is_feed(), 'Precondition: home request must not be a feed.' );
+		$front_output = \do_blocks( $block_markup );
+
+		$this->assertStringNotContainsString( 'ap-reply-mention', $front_output, 'Frontend rendering must keep the full embed card.' );
+		$this->assertStringContainsString( 'wp-block-activitypub-reply', $front_output, 'Frontend rendering should still emit the embed wrapper.' );
+
+		// Feed pass: is_feed() is true, so the reply block is swapped for the mention link.
+		$this->go_to( \home_url( '/?feed=rss2' ) );
+		$this->assertTrue( \is_feed(), 'Precondition: feed query.' );
+		$feed_output = \do_blocks( $block_markup );
+
+		$this->assertStringContainsString( 'ap-reply-mention', $feed_output, 'Feed rendering should swap the embed for a mention link.' );
+		$this->assertStringContainsString( '@tester', $feed_output, 'Feed rendering should include the @username mention.' );
+		$this->assertStringNotContainsString( 'wp-block-activitypub-reply', $feed_output, 'Feed rendering should drop the embed card wrapper.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $pre_http );
+	}
+
+	/**
+	 * When the remote lookup powering the mention link fails inside a feed, fall back to
+	 * the plain `u-in-reply-to` link so the item still surfaces that it's a reply rather
+	 * than silently dropping the block.
+	 *
+	 * @covers ::render_reply_block
+	 */
+	public function test_feed_falls_back_to_plain_link_when_remote_lookup_fails() {
+		$reply_url = 'https://example.com/unreachable-note';
+		$pre_http  = function ( $response, $url ) use ( $reply_url ) {
+			if ( $reply_url === $url ) {
+				return new \WP_Error( 'http_request_failed', 'Simulated failure' );
+			}
+			return $response;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $pre_http, 10, 2 );
+
+		$block_markup = '<!-- wp:activitypub/reply {"url":"' . $reply_url . '","embedPost":true} /-->';
+
+		$this->go_to( \home_url( '/?feed=rss2' ) );
+		$this->assertTrue( \is_feed(), 'Precondition: feed query.' );
+
+		$feed_output = \do_blocks( $block_markup );
+
+		$this->assertStringNotContainsString( 'ap-reply-mention', $feed_output, 'No mention link when the remote lookup fails.' );
+		$this->assertStringContainsString( 'u-in-reply-to', $feed_output, 'Feed should fall back to the plain reply link.' );
+		$this->assertStringContainsString( $reply_url, $feed_output, 'Plain reply link should include the original URL.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $pre_http );
 	}
 
 	/**
@@ -1337,5 +1477,17 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		$this->assertContains( $plain_post, $ids, 'Plain posts must stay visible under ?filter=posts.' );
 		$this->assertNotContains( $reply_post, $ids, 'Reply-block posts must be hidden under ?filter=posts.' );
+	}
+
+	/**
+	 * The embed URL is escaped so it can't inject markup as the link text.
+	 *
+	 * @covers ::revert_embed_links
+	 */
+	public function test_revert_embed_links_escapes_url() {
+		$block  = array( 'attrs' => array( 'url' => 'https://example.com/<script>alert(1)</script>' ) );
+		$output = Blocks::revert_embed_links( '', $block );
+
+		$this->assertStringNotContainsString( '<script>', $output );
 	}
 }

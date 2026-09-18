@@ -121,4 +121,31 @@ class Test_Functions_Federation extends ActivityPub_TestCase_Cache_HTTP {
 		$this->assertEquals( 'Follow', $activity->get_type() );
 		$this->assertEquals( 'https://example.org/?author=1', get_post_meta( $id, '_activitypub_object_id', true ) );
 	}
+
+	/**
+	 * An explicit Update for an already-deleted object is rejected.
+	 *
+	 * Sending an Update for a soft-deleted post would federate a Tombstone and,
+	 * worse, reset the object state to "federated" — which would make a later
+	 * re-publish skip the Create that cancels the still-pending Delete. The state
+	 * must stay "deleted" so the supported re-publish path emits a Create.
+	 *
+	 * @covers \Activitypub\add_to_outbox
+	 */
+	public function test_add_to_outbox_rejects_update_for_deleted_object() {
+		$post_id = self::factory()->post->create( array( 'post_author' => 1 ) );
+		\Activitypub\set_wp_object_state( get_post( $post_id ), ACTIVITYPUB_OBJECT_STATE_DELETED );
+
+		$result = add_to_outbox( get_post( $post_id ), 'Update', 1 );
+
+		$this->assertWPError( $result, 'An Update for a deleted object must be rejected.' );
+		$this->assertSame( 'activitypub_object_deleted', $result->get_error_code() );
+
+		// The deleted state is preserved, so a later re-publish still emits a Create.
+		$this->assertSame(
+			ACTIVITYPUB_OBJECT_STATE_DELETED,
+			\Activitypub\get_wp_object_state( get_post( $post_id ) ),
+			'An Update must not flip a deleted object back to federated.'
+		);
+	}
 }

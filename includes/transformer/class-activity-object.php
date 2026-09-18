@@ -66,7 +66,7 @@ class Activity_Object extends Base {
 		 *
 		 * @return array The filtered mentions.
 		 */
-		return apply_filters(
+		return \apply_filters(
 			'activitypub_extract_mentions',
 			array(),
 			$this->item->get_content() . ' ' . $this->item->get_summary(),
@@ -145,7 +145,7 @@ class Activity_Object extends Base {
 			foreach ( $mentions as $mention => $url ) {
 				$tag    = array(
 					'type' => 'Mention',
-					'href' => \esc_url( $url ),
+					'href' => \esc_url_raw( $url ),
 					'name' => \esc_html( $mention ),
 				);
 				$tags[] = $tag;

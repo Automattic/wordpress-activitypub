@@ -3,6 +3,8 @@
  * This compiles to style-index.css
  */
 
+@use "@wordpress/base-styles/mixins";
+
 // Import global styles (design tokens, body styles, root element)
 @use "./styles/design-tokens";
 
@@ -13,6 +15,14 @@
 	left: 0;
 	right: 0;
 	bottom: 0;
+
+	.boot-layout__inspector {
+
+		@include mixins.break-medium() {
+			margin: var(--wpds-spacing-40, 16px) var(--wpds-spacing-40, 16px) var(--wpds-spacing-40, 16px) 0;
+			border-radius: var(--wpds-border-radius-large, 8px);
+		}
+	}
 }
 
 #wpfooter {

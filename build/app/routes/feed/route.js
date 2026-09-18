@@ -1,0 +1,1 @@
+const t=window.wp.i18n,i={title:()=>(0,t.__)("Social Web","activitypub"),inspector:({search:t})=>!!t.postId};export{i as route};
