@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Webfinger;
 
 /**
  * ActivityPub Mention Class.
@@ -145,6 +146,30 @@ class Mention {
 				$mentions[ $match ] = $link;
 			}
 		}
+
+		/*
+		 * Clients and Mastodon write a mention as a link to the actor with a short label,
+		 * `<a class="u-url mention" href="…">@user</a>`, so the handle is not in the text.
+		 * The link marks itself as a mention through its `rel` or `class`.
+		 */
+		$links = new \WP_HTML_Tag_Processor( $post_content );
+		while ( $links->next_tag( 'A' ) ) {
+			$rel = (string) $links->get_attribute( 'rel' );
+			if ( ! $links->has_class( 'mention' ) && ! \in_array( 'mention', \preg_split( '/\s+/', $rel ), true ) ) {
+				continue;
+			}
+
+			$href = $links->get_attribute( 'href' );
+			if ( ! \is_string( $href ) || \in_array( $href, $mentions, true ) ) {
+				continue;
+			}
+
+			$acct = Webfinger::uri_to_acct( $href );
+			if ( ! \is_wp_error( $acct ) ) {
+				$mentions[ \str_replace( 'acct:', '@', $acct ) ] = $href;
+			}
+		}
+
 		return \array_unique( $mentions );
 	}
 }

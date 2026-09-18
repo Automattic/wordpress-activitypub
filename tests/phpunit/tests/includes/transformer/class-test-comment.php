@@ -41,14 +41,14 @@ class Test_Comment extends \WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
-		add_filter( 'pre_http_request', array( self::class, 'pre_http_request' ), 10, 3 );
+		\add_filter( 'pre_http_request', array( self::class, 'pre_http_request' ), 10, 3 );
 	}
 
 	/**
 	 * Tear down after each test.
 	 */
 	public function tear_down() {
-		remove_filter( 'pre_http_request', array( self::class, 'pre_http_request' ) );
+		\remove_filter( 'pre_http_request', array( self::class, 'pre_http_request' ) );
 
 		parent::tear_down();
 	}
@@ -178,29 +178,37 @@ class Test_Comment extends \WP_UnitTestCase {
 	 * @return mixed The response data.
 	 */
 	public static function pre_http_request( $data, $parsed_args, $url ) {
-		if ( str_starts_with( $url, 'https://remote.example' ) ) {
+		if ( \str_starts_with( $url, 'https://remote.example' ) ) {
 			return self::dummy_response(
-				wp_json_encode(
+				\wp_json_encode(
 					array(
 						'subject' => 'acct:author@remote.example',
 						'links'   => array(
-							'self' => array( 'href' => 'https://remote.example/@author' ),
+							array(
+								'rel'  => 'self',
+								'type' => 'application/activity+json',
+								'href' => 'https://remote.example/@author',
+							),
 						),
 					)
 				)
 			);
 		}
 
-		if ( str_starts_with( $url, 'https://example.net/' ) ) {
+		if ( \str_starts_with( $url, 'https://example.net/' ) ) {
 			return self::dummy_response(
-				wp_json_encode(
+				\wp_json_encode(
 					array(
 						'subject' => 'https://example.net/@remote',
 						'aliases' => array(
 							'acct:remote@example.net',
 						),
 						'links'   => array(
-							'self' => array( 'href' => 'https://example.net/@remote' ),
+							array(
+								'rel'  => 'self',
+								'type' => 'application/activity+json',
+								'href' => 'https://example.net/@remote',
+							),
 						),
 					)
 				)

@@ -184,4 +184,42 @@ ENDPRE;
 
 		return $pre;
 	}
+
+	/**
+	 * A mention written as a link, the way clients and Mastodon do, is extracted like a handle.
+	 *
+	 * @covers ::extract_mentions
+	 */
+	public function test_extract_mentions_finds_mention_links() {
+		$stub = function ( $pre, $args, $url ) {
+			if ( ! \str_starts_with( $url, 'https://mention.example/' ) ) {
+				return $pre;
+			}
+
+			return array(
+				'response' => array( 'code' => 200 ),
+				'headers'  => array(),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:alice@mention.example',
+						'links'   => array(
+							array(
+								'rel'  => 'self',
+								'type' => 'application/activity+json',
+								'href' => 'https://mention.example/users/alice',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $stub, 5, 3 );
+
+		$content  = '<a rel="mention" class="u-url mention" href="https://mention.example/@alice">@alice</a> and <a href="https://mention.example/some/page">a page</a>';
+		$mentions = Mention::extract_mentions( array(), $content );
+
+		\remove_filter( 'pre_http_request', $stub, 5 );
+
+		$this->assertSame( array( '@alice@mention.example' => 'https://mention.example/@alice' ), $mentions );
+	}
 }

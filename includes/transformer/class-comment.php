@@ -10,6 +10,7 @@ namespace Activitypub\Transformer;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Replies;
 use Activitypub\Comment as Comment_Utils;
+use Activitypub\Mention;
 use Activitypub\Model\Blog;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
@@ -122,9 +123,13 @@ class Comment extends Base {
 		$content  = $comment->comment_content;
 		$mentions = '';
 
+		// What the author already mentioned, as a handle or as a link, keyed like the reply context.
+		$written      = \array_change_key_case( Mention::extract_mentions( array(), $content ), CASE_LOWER );
+		$written_urls = \array_map( 'untrailingslashit', $written );
+
 		foreach ( $this->extract_reply_context() as $acct => $url ) {
-			// Skip an actor the author already mentioned, as a link to them or as their handle.
-			if ( self::content_mentions( $content, $acct, $url ) ) {
+			// Skip an actor the author already mentioned, so the mention is not federated twice.
+			if ( isset( $written[ \strtolower( $acct ) ] ) || \in_array( \untrailingslashit( $url ), $written_urls, true ) ) {
 				continue;
 			}
 
@@ -159,31 +164,6 @@ class Comment extends Base {
 		 * @return string The filtered content of the comment.
 		 */
 		return \apply_filters( 'activitypub_the_content', $content, $comment );
-	}
-
-	/**
-	 * Whether the content already mentions an actor.
-	 *
-	 * A client composing a reply usually writes the mention itself, either as a link to the
-	 * actor, the way Mastodon and the plugin's own output do, or as a bare handle. Prepending
-	 * the reply context on top of that federates the mention twice.
-	 *
-	 * @param string $content The comment content.
-	 * @param string $acct    The actor's handle, `@user@host`.
-	 * @param string $url     The actor's URL.
-	 *
-	 * @return bool True if the content already carries the mention.
-	 */
-	private static function content_mentions( $content, $acct, $url ) {
-		if ( false !== \stripos( $content, $acct ) ) {
-			return true;
-		}
-
-		// The actor URL and the author's link may differ by a trailing slash in either direction.
-		return (bool) \preg_match(
-			'/<a\b[^>]*\bhref=["\']' . \preg_quote( \untrailingslashit( $url ), '/' ) . '\/?["\']/i',
-			$content
-		);
 	}
 
 	/**
