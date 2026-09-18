@@ -9,7 +9,7 @@ namespace Activitypub\Collection;
 
 use Activitypub\Activity\Actor;
 use Activitypub\Emoji;
-use Activitypub\Http;
+use Activitypub\Proxy;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
@@ -82,7 +82,7 @@ class Remote_Actors {
 	 * Upsert (insert or update) a remote actor as a custom post type.
 	 *
 	 * The actor is looked up and stored under its own `id`. Callers that obtain
-	 * the actor from an untrusted fetch MUST fetch it via {@see Http::get_remote_object()},
+	 * the actor from an untrusted fetch MUST fetch it via {@see Proxy::get()},
 	 * which self-confirms the document is served under its own id, so a document
 	 * claiming another actor's id can never reach this method.
 	 *
@@ -366,8 +366,8 @@ class Remote_Actors {
 			return $post;
 		}
 
-		// get_remote_object() self-confirms the actor is served under its own id, so it is safe to cache.
-		$object = Http::get_remote_object( $actor_uri, false );
+		// Proxy::get() self-confirms the actor is served under its own id, so it is safe to cache.
+		$object = Proxy::get( $actor_uri, array( 'cached' => false ) );
 
 		if ( \is_wp_error( $object ) ) {
 			return $object;
@@ -748,7 +748,7 @@ class Remote_Actors {
 		if ( ! \is_wp_error( $actor ) ) {
 			$actor = \json_decode( $actor->post_content, true );
 		} else {
-			$data = Http::get_remote_object( $key_id );
+			$data = Proxy::get( $key_id );
 
 			if ( \is_wp_error( $data ) ) {
 				return $no_profile_error;
@@ -761,7 +761,7 @@ class Remote_Actors {
 					return $no_key_error;
 				}
 
-				$data = Http::get_remote_object( $data['owner'] );
+				$data = Proxy::get( $data['owner'] );
 			}
 
 			$actor = $data;
@@ -816,7 +816,7 @@ class Remote_Actors {
 			return false;
 		}
 
-		$key_data = Http::get_remote_object( $data['publicKey'] );
+		$key_data = Proxy::get( $data['publicKey'] );
 
 		if ( \is_wp_error( $key_data ) || ! isset( $key_data['publicKeyPem'] ) ) {
 			return false;

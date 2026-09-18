@@ -13,6 +13,7 @@ use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
+use Activitypub\Proxy;
 use Activitypub\Transformer\Factory;
 use Activitypub\Webfinger as Webfinger_Util;
 use Enable_Mastodon_Apps\Entity\Account;
@@ -523,7 +524,7 @@ class Enable_Mastodon_Apps {
 			return $status;
 		}
 
-		$object = Http::get_remote_object( $url, true );
+		$object = Proxy::get( $url );
 		if ( \is_wp_error( $object ) || ! isset( $object['attributedTo'] ) ) {
 			return null;
 		}
@@ -718,7 +719,7 @@ class Enable_Mastodon_Apps {
 			return $statuses;
 		}
 
-		$outbox = Http::get_remote_object( $data['outbox'], true );
+		$outbox = Proxy::get( $data['outbox'] );
 		if ( \is_wp_error( $outbox ) || ! isset( $outbox['first'] ) ) {
 			return $statuses;
 		}
@@ -742,7 +743,7 @@ class Enable_Mastodon_Apps {
 				break;
 			}
 
-			$posts = Http::get_remote_object( $url, true );
+			$posts = Proxy::get( $url );
 			if ( \is_wp_error( $posts ) ) {
 				return $statuses;
 			}
@@ -896,13 +897,13 @@ class Enable_Mastodon_Apps {
 		 */
 		$base_url   = \apply_filters( 'activitypub_tags_pub_base_url', 'https://tags.pub' );
 		$outbox_url = \trailingslashit( $base_url ) . 'user/' . \rawurlencode( $hashtag ) . '/outbox';
-		$outbox     = Http::get_remote_object( $outbox_url, true );
+		$outbox     = Proxy::get( $outbox_url );
 
 		if ( \is_wp_error( $outbox ) || empty( $outbox['first'] ) ) {
 			return array();
 		}
 
-		$page = Http::get_remote_object( $outbox['first'], true );
+		$page = Proxy::get( $outbox['first'] );
 		if ( \is_wp_error( $page ) ) {
 			return array();
 		}
@@ -934,7 +935,7 @@ class Enable_Mastodon_Apps {
 	private static function resolve_tags_pub_item( $item ) {
 		// Resolve item to an activity object.
 		if ( \is_string( $item ) ) {
-			$activity = Http::get_remote_object( $item, true );
+			$activity = Proxy::get( $item );
 			if ( \is_wp_error( $activity ) ) {
 				return null;
 			}
@@ -955,7 +956,7 @@ class Enable_Mastodon_Apps {
 			return null;
 		}
 
-		$object = Http::get_remote_object( $object_url, true );
+		$object = Proxy::get( $object_url );
 		if ( \is_wp_error( $object ) ) {
 			return null;
 		}
@@ -981,7 +982,7 @@ class Enable_Mastodon_Apps {
 	 * @return array The filtered context.
 	 */
 	public static function api_get_replies( $context, $post_id, $url ) {
-		$meta = Http::get_remote_object( $url, true );
+		$meta = Proxy::get( $url );
 		if ( \is_wp_error( $meta ) || ! isset( $meta['replies']['first']['next'] ) ) {
 			return $context;
 		}
@@ -990,7 +991,7 @@ class Enable_Mastodon_Apps {
 			$replies = $meta['replies']['first'];
 		} elseif ( isset( $meta['replies']['first']['next'] ) ) {
 			$replies_url = $meta['replies']['first']['next'];
-			$replies     = Http::get_remote_object( $replies_url, true );
+			$replies     = Proxy::get( $replies_url );
 			if ( \is_wp_error( $replies ) || ! isset( $replies['items'] ) ) {
 				return $context;
 			}

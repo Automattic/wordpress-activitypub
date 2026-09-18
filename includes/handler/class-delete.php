@@ -11,8 +11,10 @@ use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
+use Activitypub\Proxy;
 use Activitypub\Tombstone;
 
+use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 
 /**
@@ -47,6 +49,11 @@ class Delete {
 		// handle that path only on the shared hook, so it runs once with the full recipient list.
 		if ( Inbox::CONTEXT_SHARED_INBOX === $context && 'activitypub_inbox_shared_delete' !== \current_filter() ) {
 			return;
+		}
+
+		// Only an actor on the object's host may retire the cached copy.
+		if ( is_same_host( $activity['actor'] ?? '', object_to_uri( $activity['object'] ?? null ) ) ) {
+			Proxy::delete( $activity['object'] );
 		}
 
 		$object_type = $activity['object']['type'] ?? '';

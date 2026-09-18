@@ -10,7 +10,7 @@ namespace Activitypub\WP_Admin;
 use Activitypub\Application;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
-use Activitypub\Http;
+use Activitypub\Proxy;
 use Activitypub\Sanitize;
 use Activitypub\Scheduler;
 use Activitypub\Webfinger;
@@ -242,7 +242,7 @@ class Health_Check {
 		$actor = Actors::get_by_id( \get_current_user_id() );
 
 		// Try to access author URL.
-		$response = Http::get_remote_object( $actor->get_id() );
+		$response = Proxy::get( $actor->get_id() );
 
 		if ( \is_wp_error( $response ) ) {
 			return new \WP_Error(

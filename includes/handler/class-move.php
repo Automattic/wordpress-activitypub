@@ -9,7 +9,7 @@ namespace Activitypub\Handler;
 
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
-use Activitypub\Http;
+use Activitypub\Proxy;
 
 use function Activitypub\object_to_uri;
 
@@ -42,8 +42,8 @@ class Move {
 			return;
 		}
 
-		$target_json = Http::get_remote_object( $target_uri );
-		$origin_json = Http::get_remote_object( $origin_uri );
+		$target_json = Proxy::get( $target_uri );
+		$origin_json = Proxy::get( $origin_uri );
 
 		$verified = self::verify_move( $target_json, $origin_json );
 
@@ -71,7 +71,7 @@ class Move {
 
 			$success = true;
 
-			// get_remote_object() already self-confirmed the target, so it is safe to cache.
+			// Proxy::get() already self-confirmed the target, so it is safe to cache.
 			$result = Remote_Actors::upsert( $target_json );
 		}
 

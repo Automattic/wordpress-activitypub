@@ -121,7 +121,7 @@ class Search {
 		}
 
 		// Try to fetch as ActivityPub object.
-		$object = Http::get_remote_object( $url );
+		$object = Proxy::get( $url );
 		if ( \is_wp_error( $object ) ) {
 			return false;
 		}

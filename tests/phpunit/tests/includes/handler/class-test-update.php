@@ -12,6 +12,8 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Update;
+use Activitypub\Proxy;
+use Activitypub\Tests\Remote_Request_Stub;
 
 /**
  * Update Handler Test Class.
@@ -19,6 +21,8 @@ use Activitypub\Handler\Update;
  * @coversDefaultClass \Activitypub\Handler\Update
  */
 class Test_Update extends \WP_UnitTestCase {
+	use Remote_Request_Stub;
+
 
 	/**
 	 * Test that the activitypub_handled_create fallback is triggered.
@@ -614,5 +618,85 @@ class Test_Update extends \WP_UnitTestCase {
 				'Should handle non-existent actor gracefully',
 			),
 		);
+	}
+
+	/**
+	 * An Update drops the cached copy of its object, however the object is given.
+	 *
+	 * @dataProvider update_object_provider
+	 * @covers ::handle_update
+	 *
+	 * @param string|array $update_object The `object` of the Update.
+	 */
+	public function test_handle_update_drops_the_cached_object( $update_object ) {
+		$this->stub_remote_requests();
+		$id                     = 'https://example.com/notes/1';
+		$this->responses[ $id ] = array(
+			'id'   => $id,
+			'type' => 'Note',
+		);
+
+		Proxy::get( $id );
+		Update::handle_update(
+			array(
+				'type'   => 'Update',
+				'actor'  => 'https://example.com/users/alice',
+				'object' => $update_object,
+			),
+			array( 1 ),
+			null
+		);
+		$before = $this->requests;
+		Proxy::get( $id );
+		$this->unstub_remote_requests();
+
+		$this->assertSame( $before + 1, $this->requests, 'The object is fetched again after the Update.' );
+	}
+
+	/**
+	 * The shapes an Update's object arrives in.
+	 *
+	 * @return array[]
+	 */
+	public function update_object_provider() {
+		return array(
+			'bare id' => array( 'https://example.com/notes/1' ),
+			'inlined' => array(
+				array(
+					'id'   => 'https://example.com/notes/1',
+					'type' => 'Note',
+				),
+			),
+		);
+	}
+
+	/**
+	 * An Update from an actor on another host than the object does not touch the cache.
+	 *
+	 * @covers ::handle_update
+	 */
+	public function test_handle_update_from_a_foreign_actor_keeps_the_cached_object() {
+		$this->stub_remote_requests();
+		$id                     = 'https://example.com/notes/1';
+		$this->responses[ $id ] = array(
+			'id'   => $id,
+			'type' => 'Note',
+		);
+
+		Proxy::get( $id );
+		Update::handle_update(
+			array(
+				'type'   => 'Update',
+				'actor'  => 'https://example.org/users/mallory',
+				'object' => $id,
+			),
+			array( 1 ),
+			null
+		);
+		$before = $this->requests;
+		Proxy::get( $id );
+		$this->unstub_remote_requests();
+
+		$this->assertSame( $before, $this->requests, 'The object is still served from the cache.' );
 	}
 }

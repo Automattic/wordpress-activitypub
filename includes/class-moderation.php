@@ -514,7 +514,7 @@ class Moderation {
 		 * declared, and `Update` stores an embedded actor object bound only to the sender's
 		 * host, so a remote server can store itself under any same-host id it likes.
 		 */
-		$object = Http::get_remote_object( $actor_id );
+		$object = Proxy::get( $actor_id );
 
 		/*
 		 * Compared against the whole list, not the host-narrowed one: that narrowing decides

@@ -1049,7 +1049,7 @@ class Blocks {
 		$url = $block['attrs']['url'];
 
 		// Try to get ActivityPub representation. Is likely already cached.
-		$object = Http::get_remote_object( $url );
+		$object = Proxy::get( $url );
 		if ( \is_wp_error( $object ) ) {
 			return '';
 		}
@@ -1060,7 +1060,7 @@ class Blocks {
 		}
 
 		// Fetch author information.
-		$author = Http::get_remote_object( $author_url );
+		$author = Proxy::get( $author_url );
 		if ( \is_wp_error( $author ) ) {
 			return '';
 		}

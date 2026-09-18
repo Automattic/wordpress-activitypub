@@ -10,7 +10,7 @@ namespace Activitypub\Transformer;
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Collection\Actors;
-use Activitypub\Http;
+use Activitypub\Proxy;
 
 use function Activitypub\get_upload_baseurl;
 use function Activitypub\object_to_uri;
@@ -188,7 +188,7 @@ abstract class Base {
 		$mentions = \array_values( $this->get_mentions() );
 
 		if ( $this->get_in_reply_to() ) {
-			$object = Http::get_remote_object( $this->get_in_reply_to() );
+			$object = Proxy::get( $this->get_in_reply_to() );
 			if ( $object && ! \is_wp_error( $object ) && isset( $object['attributedTo'] ) ) {
 				$replied_to = array( object_to_uri( $object['attributedTo'] ) );
 			}

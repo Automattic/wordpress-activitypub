@@ -10,6 +10,8 @@ namespace Activitypub\Tests\Handler;
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Handler\Delete;
+use Activitypub\Proxy;
+use Activitypub\Tests\Remote_Request_Stub;
 use Activitypub\Tombstone;
 
 /**
@@ -18,6 +20,8 @@ use Activitypub\Tombstone;
  * @coversDefaultClass \Activitypub\Handler\Delete
  */
 class Test_Delete extends \WP_UnitTestCase {
+	use Remote_Request_Stub;
+
 	/**
 	 * Test user ID.
 	 *
@@ -677,5 +681,63 @@ class Test_Delete extends \WP_UnitTestCase {
 		$this->assertFalse( Delete::defer_signature_verification( false, $request, false ) );
 		$this->assertTrue( Delete::defer_signature_verification( true, $request, false ) );
 		$this->assertFalse( Delete::defer_signature_verification( false, $request, true ) );
+	}
+
+	/**
+	 * A Delete whose object is a bare id drops the cached copy of that object.
+	 *
+	 * @covers ::handle_delete
+	 */
+	public function test_handle_delete_drops_the_cached_object() {
+		$this->stub_remote_requests();
+		$id                     = 'https://example.com/notes/1';
+		$this->responses[ $id ] = array(
+			'id'   => $id,
+			'type' => 'Note',
+		);
+
+		Proxy::get( $id );
+		Delete::handle_delete(
+			array(
+				'type'   => 'Delete',
+				'actor'  => 'https://example.com/users/alice',
+				'object' => $id,
+			),
+			array( 1 )
+		);
+		$before = $this->requests;
+		Proxy::get( $id );
+		$this->unstub_remote_requests();
+
+		$this->assertSame( $before + 1, $this->requests, 'The object is fetched again after the Delete.' );
+	}
+
+	/**
+	 * A Delete from an actor on another host than the object does not touch the cache.
+	 *
+	 * @covers ::handle_delete
+	 */
+	public function test_handle_delete_from_a_foreign_actor_keeps_the_cached_object() {
+		$this->stub_remote_requests();
+		$id                     = 'https://example.com/notes/1';
+		$this->responses[ $id ] = array(
+			'id'   => $id,
+			'type' => 'Note',
+		);
+
+		Proxy::get( $id );
+		Delete::handle_delete(
+			array(
+				'type'   => 'Delete',
+				'actor'  => 'https://example.org/users/mallory',
+				'object' => $id,
+			),
+			array( 1 )
+		);
+		$before = $this->requests;
+		Proxy::get( $id );
+		$this->unstub_remote_requests();
+
+		$this->assertSame( $before, $this->requests, 'The object is still served from the cache.' );
 	}
 }
