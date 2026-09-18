@@ -101,7 +101,11 @@ class Test_Seriously_Simple_Podcasting extends \WP_UnitTestCase {
 
 		$this->assertCount( 1, $attachments );
 		$this->assertEquals( 'Audio', $attachments[0]['type'] );
-		$this->assertNotEmpty( $attachments[0]['icon'], 'The featured image has to stand in as the cover art.' );
+		$this->assertSame(
+			\wp_get_attachment_image_url( $attachment_id, 'thumbnail' ),
+			$attachments[0]['icon'],
+			'The featured image has to stand in as the cover art.'
+		);
 	}
 
 	/**
