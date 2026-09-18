@@ -12,6 +12,7 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 - [HTTP Signatures](https://swicg.github.io/activitypub-http-signature/)
 - [NodeInfo](https://nodeinfo.diaspora.software/)
 - [Interaction Policy/Interaction Controls](https://docs.gotosocial.org/en/latest/federation/interaction_controls/)
+- [ActivityPub Miscellaneous Terms](https://swicg.github.io/miscellany/) (`Hashtag`, `manuallyApprovesFollowers`, `movedTo`, `sensitive`)
 
 ## Supported FEPs
 
@@ -131,6 +132,13 @@ For compatibility with Mastodon, the plugin supports several extensions from the
 - `toot:attributionDomains` - Domain attribution for verification links
 
 ### Other Extensions
+
+**[ActivityPub Miscellaneous Terms](https://swicg.github.io/miscellany/)**
+
+The context is included as `https://purl.archive.org/miscellany`.
+
+- `Actor` - `manuallyApprovesFollowers`, `movedTo`
+- `Object` - `sensitive`, `Hashtag` tags
 
 **[Dublin Core](http://purl.org/dc/terms/)**
 

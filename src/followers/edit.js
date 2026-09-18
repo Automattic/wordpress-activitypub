@@ -226,11 +226,11 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 										/* eslint-disable-next-line jsx-a11y/anchor-has-content -- Content provided by createInterpolateElement */
 										a: <a href={ settingsUrl } target="_blank" rel="noopener noreferrer" />,
 									}
-							  )
+								)
 							: __(
 									'The selected user has their social graph hidden. This block will not display followers on the frontend.',
 									'activitypub'
-							  ) }
+								) }
 					</Notice>
 				) }
 

@@ -207,9 +207,19 @@ class Query {
 			}
 		}
 
-		// Check Term by ID.
-		if ( ! $queried_object ) {
-			$term_id = \get_query_var( 'term_id' );
+		/*
+		 * Check Term by ID, unless the request names an author. An author wins over a term the
+		 * same URL also names, so `?author=0` still answers with the blog actor rather than an
+		 * OrderedCollection. An absent `author` reads as an empty string, and `?author=0` as the
+		 * string "0".
+		 *
+		 * Read `term_id` off the parsed request, not the query vars. WP_Query derives its own
+		 * `term_id` from any tax query on another taxonomy, and takes the raw value regardless of
+		 * the query's `field`: Polylang filters by `term_taxonomy_id`, so that number can be the
+		 * term ID of an unrelated category or tag.
+		 */
+		if ( ! $queried_object && '' === \get_query_var( 'author', '' ) ) {
+			$term_id = $GLOBALS['wp_query']->query['term_id'] ?? null;
 			if ( $term_id ) {
 				$queried_object = \get_term( $term_id );
 			}
@@ -222,6 +232,11 @@ class Query {
 			if ( $author_id ) {
 				$queried_object = \get_user_by( 'id', $author_id );
 			}
+		}
+
+		// Core resolves archives of every taxonomy; only federated ones have an ActivityPub object.
+		if ( $queried_object instanceof \WP_Term && ! is_supported_taxonomy( $queried_object->taxonomy ) ) {
+			$queried_object = null;
 		}
 
 		/**

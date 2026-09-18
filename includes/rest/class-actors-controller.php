@@ -214,21 +214,26 @@ class Actors_Controller extends \WP_REST_Controller {
 					'items'       => array(
 						'type'       => 'object',
 						'properties' => array(
-							'type'  => array(
+							// FEP-fb2a pairs the `PropertyValue` Mastodon reads with a valid AS2 equivalent, so every field emits both halves: a `Link` when it holds a single link, a `Note` otherwise.
+							'type'    => array(
 								'type' => 'string',
-								'enum' => array( 'PropertyValue', 'Link' ),
+								'enum' => array( 'PropertyValue', 'Link', 'Note' ),
 							),
-							'name'  => array(
-								'type' => 'string',
-							),
-							'value' => array(
+							'name'    => array(
 								'type' => 'string',
 							),
-							'href'  => array(
+							'value'   => array(
+								'type' => 'string',
+							),
+							// The `Note` half carries its text here rather than in `value`.
+							'content' => array(
+								'type' => 'string',
+							),
+							'href'    => array(
 								'type'   => 'string',
 								'format' => 'uri',
 							),
-							'rel'   => array(
+							'rel'     => array(
 								'type'  => 'array',
 								'items' => array(
 									'type' => 'string',

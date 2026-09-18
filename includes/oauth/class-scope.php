@@ -49,7 +49,7 @@ class Scope {
 	 * along with it.
 	 *
 	 * @since 9.0.0
-	 * @since unreleased Changed from a list to an alias-to-scope map.
+	 * @since 9.3.0 Changed from a list to an alias-to-scope map.
 	 *
 	 * @var array
 	 */
@@ -107,7 +107,7 @@ class Scope {
 	/**
 	 * Identifier prefix for the SWICG ActivityPub API Basic Profile scopes.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 */
 	const CANONICAL_SCOPE_PREFIX = 'https://swicg.github.io/activitypub-api/scopes#';
 
@@ -128,7 +128,7 @@ class Scope {
 	 * Resolving those to `write` would answer a request to be limited by handing over the
 	 * unlimited version.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 */
 	const CANONICAL_SCOPES = array(
 		'readall'           => self::READ,
@@ -245,7 +245,7 @@ class Scope {
 	 * discover them.
 	 *
 	 * @since 9.0.0
-	 * @since unreleased Also advertises the URI-form identifiers.
+	 * @since 9.3.0 Also advertises the URI-form identifiers.
 	 *
 	 * @return array Scope identifiers.
 	 */

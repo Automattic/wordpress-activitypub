@@ -2,8 +2,8 @@
 Contributors: automattic, pfefferle, mattwiebe, obenland, akirk, jeherve, mediaformat, nuriapena, cavalierlife, andremenrath
 Tags: fediverse, activitypub, indieweb, activitystream, social web
 Requires at least: 6.5
-Tested up to: 7.0
-Stable tag: 9.2.2
+Tested up to: 7.1
+Stable tag: 9.3.1
 Requires PHP: 7.4
 License: MIT
 License URI: http://opensource.org/licenses/MIT
@@ -116,6 +116,50 @@ For reasons of data protection, it is not possible to see the followers of other
 5. A Blog-Profile on Mastodon
 
 == Changelog ==
+
+### 9.3.1 - 2026-09-02
+#### Security
+- Links to remote profiles in the Followers and Following blocks are now limited to regular web addresses when paging through the list.
+- Replies cached on posts in the blog profile's reader feed are no longer readable by logged-out visitors through the WordPress REST API.
+- Signatures on incoming requests are now checked against the address the request was actually sent to.
+
+### 9.3.0 - 2026-09-02
+#### Security
+- Block markup in posts from remote accounts is now removed before the post is saved.
+- Follow, reply and reaction links advertised by other Fediverse servers now have to be regular web addresses.
+- Followers, cached remote profiles, and reader posts are no longer readable by logged-out visitors through the WordPress REST API, and the setting that hides your follower list is now honoured everywhere.
+- Inline styles are now removed from posts and profiles that come from remote accounts.
+- Posts from remote accounts are now shown in the Social Web reader exactly as the site stored them.
+- Replies from remote accounts are now filtered before they are saved when an administrator imports them through search.
+
+#### Added
+- Add a notification setting to turn off emails about likes, reposts, and quotes without silencing real comments and replies.
+- Add the Fediverse and ActivityPub logos to the block editor's icon library on WordPress 7.1 and newer.
+- Federate podcast episodes published with Jetpack, including their audio file and cover art.
+
+#### Changed
+- Enable RFC 9421 HTTP Message Signatures by default.
+
+#### Fixed
+- Apps connected through the ActivityPub API now use the standard ActivityPub API permission names. Fetching remote content through your site is treated as reading rather than posting, so an app needs read permission for it.
+- Apps now see the real error when a post they open through your site is missing, instead of a generic failure.
+- Comment author names are no longer altered on comments that did not come from the fediverse.
+- Fixed a crash that could fill the error log when another server edited a reply to a post that is no longer shared to the Fediverse.
+- Fixed an error that could break embeds of Fediverse posts whose author was sent in an unexpected format.
+- Fixed an error that could occur when looking up a profile on another Fediverse server that sends back an unexpected response.
+- Fixed backslashes disappearing from titles and content in posts from remote accounts.
+- Fixed responses to ActivityPub addresses written with different capitalisation not being cached correctly.
+- Fixed the Application actor not being found when its address was written with different capitalisation.
+- Fixed the Mastodon importer creating duplicate posts when an archive was imported a second time.
+- Fixed titles, summaries, captions and display names from remote accounts being stored with stray markup.
+- Imported Mastodon media descriptions now have unsafe HTML removed before they are saved.
+- Imported Mastodon replies now have unsafe HTML removed before they are saved as comments.
+- Improve how blocked accounts are matched.
+- Improve permission checks for third-party apps connected through the ActivityPub API.
+- Improve validation of incoming activities from other servers.
+- Screen readers now announce errors in the follow, reply and reaction dialogs.
+- Text inside hidden page elements, like invisible dialog pop-ups, no longer shows up in posts shared to the Fediverse.
+- The blog profile can be found again from other Fediverse servers on sites that also run Polylang.
 
 ### 9.2.2 - 2026-08-11
 #### Fixed
@@ -236,6 +280,10 @@ For reasons of data protection, it is not possible to see the followers of other
 See full Changelog on [GitHub](https://github.com/Automattic/wordpress-activitypub/blob/trunk/CHANGELOG.md).
 
 == Upgrade Notice ==
+
+= 9.3.0 =
+
+Posts sent to other servers are now signed with the newer RFC 9421 standard by default, so if deliveries to one server stop arriving, turn it off again in the Advanced tab of the ActivityPub settings, which you can show from Screen Options.
 
 = 9.2.0 =
 

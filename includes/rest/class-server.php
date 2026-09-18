@@ -24,6 +24,7 @@ class Server {
 	 * Initialize the class, registering WordPress hooks.
 	 */
 	public static function init() {
+		\add_filter( 'rest_pre_dispatch', array( self::class, 'normalize_route' ), 1, 3 );
 		\add_filter( 'rest_pre_dispatch', array( self::class, 'maybe_add_actor_from_signature' ), 10, 3 );
 		\add_filter( 'rest_request_before_callbacks', array( self::class, 'validate_requests' ), 9, 3 );
 		\add_filter( 'rest_request_parameter_order', array( self::class, 'request_parameter_order' ), 10, 2 );
@@ -32,6 +33,46 @@ class Server {
 		\add_filter( 'rest_post_dispatch', array( self::class, 'add_cache_headers' ), 10, 3 );
 		\add_filter( 'rest_post_dispatch', array( self::class, 'add_cors_headers' ), 10, 3 );
 		\add_filter( 'rest_allowed_cors_headers', array( self::class, 'allow_cors_headers' ), 10, 2 );
+	}
+
+	/**
+	 * Normalize the route of an ActivityPub request before it is matched to a handler.
+	 *
+	 * WordPress matches registered routes with a case-insensitive pattern but leaves the route on the
+	 * request spelled the way the caller sent it, so `/ActivityPub/1.0/Inbox` is dispatched to the same
+	 * handler as `/activitypub/1.0/inbox` while reading differently to every route check downstream.
+	 * Lowercasing it once here, before `WP_REST_Server::match_request_to_handler()` runs, keeps a
+	 * case-varied request from being served while slipping past those checks. Every route this plugin
+	 * registers is lowercase ASCII, so this is a no-op for the spelling a caller normally sends.
+	 *
+	 * Routes outside the ActivityPub namespace are left alone: their segments belong to other endpoints,
+	 * which may well treat them as case-sensitive.
+	 *
+	 * The route is rewritten before it is matched, so a path segment captured by a route pattern is
+	 * captured from the lowercased route. Every segment we capture today is either numeric or a
+	 * lowercase name, but a route registered with a case-bearing segment would need a second look.
+	 *
+	 * @since 9.3.0
+	 *
+	 * @param mixed            $result  Response to replace the request with, or null to continue.
+	 * @param \WP_REST_Server  $server  Server instance.
+	 * @param \WP_REST_Request $request The request object.
+	 *
+	 * @return mixed The unmodified `$result`.
+	 */
+	public static function normalize_route( $result, $server, $request ) {
+		// Respect an earlier short-circuit.
+		if ( null !== $result ) {
+			return $result;
+		}
+
+		$route = \strtolower( $request->get_route() );
+
+		if ( \str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE ) ) {
+			$request->set_route( $route );
+		}
+
+		return $result;
 	}
 
 	/**

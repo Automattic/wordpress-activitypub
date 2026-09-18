@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Fixed an error that could break embeds of Fediverse posts whose author was sent in an unexpected format.

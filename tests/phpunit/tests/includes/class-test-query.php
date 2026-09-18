@@ -115,6 +115,34 @@ class Test_Query extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a stray `term_id` does not hijack an author request.
+	 *
+	 * Polylang sets its language term on every request. Resolving `?author=0` to that term
+	 * answered the blog actor URL with an OrderedCollection, so Mastodon could not find the
+	 * blog profile.
+	 *
+	 * @covers ::get_queried_object
+	 * @covers ::get_activitypub_object_id
+	 */
+	public function test_author_request_is_not_hijacked_by_term_id() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\register_taxonomy( 'language', 'post', array( 'public' => true ) );
+		$term = \wp_insert_term( 'de', 'language' );
+
+		Query::get_instance()->__destruct();
+		$this->go_to( \home_url( '/?author=0' ) );
+		\set_query_var( 'term_id', $term['term_id'] );
+		$query = Query::get_instance();
+
+		$this->assertNotInstanceOf( \WP_Term::class, $query->get_queried_object(), 'A language term must not answer an author request.' );
+		$this->assertEquals( \home_url( '/?author=0' ), $query->get_activitypub_object_id() );
+		// The blog actor's type depends on the mode (Group, Person, Service), so assert the identity.
+		$this->assertInstanceOf( \Activitypub\Model\Blog::class, $query->get_activitypub_object(), 'The blog actor has to come back, not a collection.' );
+
+		\unregister_taxonomy( 'language' );
+	}
+
+	/**
 	 * Test get_activitypub_object_id doesn't fatal when queried object filter returns WP_Error.
 	 *
 	 * @covers ::get_activitypub_object_id
@@ -789,5 +817,125 @@ class Test_Query extends \WP_UnitTestCase {
 		$this->assertEmpty( $actor_queries, $message );
 
 		\delete_option( 'activitypub_actor_mode' );
+	}
+
+	/**
+	 * A `term_id` WP_Query derived from a tax query is not answered as a term.
+	 *
+	 * Polylang filters every request by its language term's term_taxonomy_id, and WP_Query
+	 * copies that number into `term_id` verbatim, so it can be the term ID of a real category
+	 * or tag. What the request falls back to instead depends on the actor mode, so this pins
+	 * the term rather than the fallback.
+	 *
+	 * @covers ::get_queried_object
+	 */
+	public function test_derived_term_id_does_not_negotiate() {
+		\register_taxonomy(
+			'language',
+			'post',
+			array(
+				'public' => true,
+				'label'  => 'Language',
+			)
+		);
+
+		$category_id  = self::factory()->term->create(
+			array(
+				'taxonomy' => 'category',
+				'name'     => 'Colliding Category',
+			)
+		);
+		$category_uri = \add_query_arg( 'term_id', $category_id, \home_url( '/' ) );
+
+		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
+
+		// Polylang's language filter, with a term_taxonomy_id that happens to equal a category's term ID.
+		$language_query = function ( $query ) use ( $category_id ) {
+			if ( $query->is_main_query() ) {
+				$query->set(
+					'tax_query',
+					array(
+						array(
+							'taxonomy' => 'language',
+							'field'    => 'term_taxonomy_id',
+							'terms'    => array( $category_id ),
+						),
+					)
+				);
+			}
+		};
+		\add_action( 'pre_get_posts', $language_query );
+
+		Query::get_instance()->__destruct();
+		$this->go_to( \home_url( '/?s=hello' ) );
+
+		\remove_action( 'pre_get_posts', $language_query );
+
+		$this->assertEquals( $category_id, (int) \get_query_var( 'term_id' ), 'WP_Query should derive the term ID the bug depends on.' );
+		$this->assertNotEquals( $category_uri, Query::get_instance()->get_activitypub_object_id(), 'A derived term must not be answered.' );
+
+		unset( $_SERVER['HTTP_ACCEPT'] );
+		\unregister_taxonomy( 'language' );
+	}
+
+	/**
+	 * A term we do not federate never becomes an ActivityPub object.
+	 *
+	 * A language term reaches us two ways: named by a `?term_id=` URL, and as its own archive.
+	 * Neither is ours to answer. What the request falls back to instead depends on the actor
+	 * mode, so this pins the term rather than the fallback.
+	 *
+	 * @covers ::get_queried_object
+	 */
+	public function test_unsupported_taxonomy_does_not_negotiate() {
+		\register_taxonomy(
+			'language',
+			'post',
+			array(
+				'public' => true,
+				'label'  => 'Language',
+			)
+		);
+
+		// After the taxonomy, or the flush leaves no rule for its archive and that case tests nothing.
+		$this->set_permalink_structure( '/%postname%/' );
+
+		$language_id = self::factory()->term->create(
+			array(
+				'taxonomy' => 'language',
+				'name'     => 'English',
+			)
+		);
+		$category_id = self::factory()->term->create(
+			array(
+				'taxonomy' => 'category',
+				'name'     => 'Federated Category',
+			)
+		);
+		$post_id     = self::factory()->post->create();
+		\wp_set_object_terms( $post_id, array( $category_id ), 'category' );
+		\wp_set_object_terms( $post_id, array( $language_id ), 'language' );
+
+		$language_uri = \add_query_arg( 'term_id', $language_id, \home_url( '/' ) );
+		$category_uri = \add_query_arg( 'term_id', $category_id, \home_url( '/' ) );
+
+		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
+
+		// Named by the URL, and as its own archive.
+		foreach ( array( $language_uri, \get_term_link( $language_id, 'language' ) ) as $url ) {
+			Query::get_instance()->__destruct();
+			$this->go_to( $url );
+			$this->assertNotEquals( $language_uri, Query::get_instance()->get_activitypub_object_id(), "A term of an unfederated taxonomy must not be answered at $url." );
+		}
+
+		// A taxonomy we do federate still answers, both ways in.
+		foreach ( array( $category_uri, \get_term_link( $category_id, 'category' ) ) as $url ) {
+			Query::get_instance()->__destruct();
+			$this->go_to( $url );
+			$this->assertEquals( $category_uri, Query::get_instance()->get_activitypub_object_id(), "A federated taxonomy must still be answered at $url." );
+		}
+
+		unset( $_SERVER['HTTP_ACCEPT'] );
+		\unregister_taxonomy( 'language' );
 	}
 }

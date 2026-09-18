@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed the ActivityPub API, relay mode, and OpenGraph metadata silently staying off on some multisite hosts that select the site after plugins have loaded.

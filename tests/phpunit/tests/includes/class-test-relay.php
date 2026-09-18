@@ -29,6 +29,41 @@ class Test_Relay extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Nothing is hooked while relay mode is off.
+	 *
+	 * The `init` action is registered unconditionally at `plugins_loaded`; the setting is
+	 * read here, once the site context is settled.
+	 *
+	 * @covers ::init
+	 */
+	public function test_init_hooks_nothing_when_relay_mode_is_off() {
+		Relay::init();
+
+		$this->assertFalse( \has_action( 'activitypub_handled_create', array( Relay::class, 'handle_activity' ) ) );
+		$this->assertFalse( \has_action( 'load-settings_page_activitypub', array( Relay::class, 'unhook_settings_fields' ) ) );
+	}
+
+	/**
+	 * The relay hooks are registered while relay mode is on.
+	 *
+	 * @covers ::init
+	 */
+	public function test_init_hooks_relay_when_relay_mode_is_on() {
+		\update_option( 'activitypub_relay_mode', true );
+
+		Relay::init();
+
+		$this->assertNotFalse( \has_action( 'activitypub_handled_create', array( Relay::class, 'handle_activity' ) ) );
+		$this->assertNotFalse( \has_action( 'load-settings_page_activitypub', array( Relay::class, 'unhook_settings_fields' ) ) );
+
+		\remove_action( 'activitypub_handled_create', array( Relay::class, 'handle_activity' ) );
+		\remove_action( 'activitypub_handled_update', array( Relay::class, 'handle_activity' ) );
+		\remove_action( 'activitypub_handled_delete', array( Relay::class, 'handle_activity' ) );
+		\remove_action( 'activitypub_handled_announce', array( Relay::class, 'handle_activity' ) );
+		\remove_action( 'load-settings_page_activitypub', array( Relay::class, 'unhook_settings_fields' ), 11 );
+	}
+
+	/**
 	 * Test handle_activity does not relay when relay mode is disabled.
 	 *
 	 * @covers ::handle_activity

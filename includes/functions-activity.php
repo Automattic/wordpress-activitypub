@@ -331,7 +331,7 @@ function id_matches_url( $item, $url ) {
  * the declared id and requires that to self-confirm, so the strictness costs one request rather
  * than refusing a document that spells its own host differently.
  *
- * @since unreleased
+ * @since 9.3.0
  *
  * @param string $uri The actor URI.
  *

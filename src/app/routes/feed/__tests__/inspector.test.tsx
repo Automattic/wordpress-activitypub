@@ -29,9 +29,12 @@ jest.mock( '@wordpress/i18n', () => ( {
 	},
 } ) );
 
-jest.mock( '@wordpress/html-entities', () => ( {
-	decodeEntities: ( text: string ) => text,
-} ) );
+/*
+ * `@wordpress/html-entities` and `@wordpress/dom` are deliberately NOT mocked. These tests
+ * pin that `rendered` fields reach `innerHTML` through the real `safeHTML()` and are never
+ * decoded on the way; stubbing either one, as this file used to, makes them pass whether or
+ * not the behaviour is correct.
+ */
 
 jest.mock( '@wordpress/components', () => ( {
 	Button: ( { children, onClick, href, variant, size, label, ...props }: any ) => (
@@ -335,6 +338,62 @@ describe( 'FeedInspector', () => {
 			expect( screen.getByText( 'Test post content' ) ).toBeInTheDocument();
 		} );
 
+		/*
+		 * `title.rendered`, `content.rendered` and `comment.content.rendered` are all
+		 * server-sanitised. A remote actor can still get an entity-encoded payload past
+		 * kses as inert text, so the inspector must render these values
+		 * without decoding them first.
+		 */
+		it( 'should not revive an entity-encoded iframe srcdoc payload in the content', () => {
+			mockUseEntityRecord.mockReturnValue( {
+				record: {
+					...mockPost,
+					content: {
+						rendered:
+							'<p>&lt;iframe srcdoc="&amp;lt;script&amp;gt;alert(1)&amp;lt;/script&amp;gt;"&gt;&lt;/iframe&gt;</p>',
+					},
+				},
+				isResolving: false,
+			} );
+
+			const { container } = renderInspector();
+
+			expect( container.querySelector( 'iframe' ) ).toBeNull();
+		} );
+
+		it( 'should not revive an entity-encoded payload in the title', () => {
+			mockUseEntityRecord.mockReturnValue( {
+				record: {
+					...mockPost,
+					title: {
+						rendered:
+							'&lt;iframe srcdoc="&amp;lt;script&amp;gt;alert(1)&amp;lt;/script&amp;gt;"&gt;&lt;/iframe&gt;',
+					},
+				},
+				isResolving: false,
+			} );
+
+			const { container } = renderInspector();
+
+			expect( container.querySelector( 'iframe' ) ).toBeNull();
+		} );
+
+		/*
+		 * The renderer used to run `html.replace( /\\(.)/g, '$1' )` before rendering. That
+		 * is a second unescaping pass feeding `dangerouslySetInnerHTML`, so it is gone;
+		 * backslashes now render literally, as they are stored.
+		 */
+		it( 'should not unescape backslash sequences in the content', () => {
+			mockUseEntityRecord.mockReturnValue( {
+				record: { ...mockPost, content: { rendered: '<p>Hello \\! world</p>' } },
+				isResolving: false,
+			} );
+
+			const { container } = renderInspector();
+
+			expect( container.textContent ).toContain( 'Hello \\! world' );
+		} );
+
 		it( 'should display View Original Post button', () => {
 			renderInspector();
 
@@ -393,6 +452,25 @@ describe( 'FeedInspector', () => {
 			expect( screen.getByText( 'First comment' ) ).toBeInTheDocument();
 			expect( screen.getByText( 'Commenter Two' ) ).toBeInTheDocument();
 			expect( screen.getByText( 'Second comment' ) ).toBeInTheDocument();
+		} );
+
+		it( 'should not revive an entity-encoded payload in a comment', () => {
+			mockUseEntityRecords.mockReturnValue( {
+				records: [
+					{
+						...mockComments[ 0 ],
+						content: {
+							rendered:
+								'<p>&lt;iframe srcdoc="&amp;lt;script&amp;gt;alert(1)&amp;lt;/script&amp;gt;"&gt;&lt;/iframe&gt;</p>',
+						},
+					},
+				],
+				isResolving: false,
+			} );
+
+			const { container } = renderInspector();
+
+			expect( container.querySelector( 'iframe' ) ).toBeNull();
 		} );
 
 		it( 'should show no comments message when empty array returned', () => {

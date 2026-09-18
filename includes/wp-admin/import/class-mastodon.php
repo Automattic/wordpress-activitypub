@@ -8,6 +8,7 @@
 namespace Activitypub\WP_Admin\Import;
 
 use Activitypub\Attachments;
+use Activitypub\Sanitize;
 
 use function Activitypub\is_activity_public;
 
@@ -308,14 +309,17 @@ class Mastodon {
 		// Pass 2: Import regular posts as WordPress posts.
 		$source_to_post_id = array();
 		foreach ( $posts_to_import as $post ) {
-			$result = self::import_as_post( $post );
+			$created = false;
+			$result  = self::import_as_post( $post, $created );
 
 			if ( \is_wp_error( $result ) ) {
 				return $result;
 			}
 
-			if ( $result ) {
-				$source_to_post_id[ $post['object']['id'] ] = $result;
+			// Map it either way: an already-imported post is still the parent for its replies.
+			$source_to_post_id[ $post['object']['id'] ] = $result;
+
+			if ( $created ) {
 				++$imported;
 			} else {
 				$skipped[] = $post['object']['id'];
@@ -398,16 +402,27 @@ class Mastodon {
 	/**
 	 * Import a single activity as a WordPress post.
 	 *
-	 * @param array $post The Mastodon activity.
+	 * @param array $post    The Mastodon activity.
+	 * @param bool  $created Set to false when the post was already imported and the
+	 *                       return value is the existing id rather than a new one.
 	 *
-	 * @return int|false|\WP_Error Post ID on success, false if skipped, WP_Error on failure.
+	 * @return int|\WP_Error Post ID, either newly created or the one already imported,
+	 *                       or WP_Error on failure.
 	 */
-	private static function import_as_post( $post ) {
+	private static function import_as_post( $post, &$created ) {
+		/*
+		 * An imported post is handled the same as a federated one: `Sanitize::content()`
+		 * normalizes and sanitizes the content. The
+		 * import runs as a user with `unfiltered_html`, so kses filters are not installed
+		 * for this request and `wp_insert_post()` would otherwise store whatever the archive
+		 * contained; these posts are published publicly, so they are the wider exposure.
+		 */
 		$post_data = array(
 			'post_author'  => self::$author,
 			'post_date'    => $post['published'],
-			'post_excerpt' => $post['object']['summary'] ?? '',
-			'post_content' => $post['object']['content'],
+			// Slashed like the federated path: wp_insert_post() unslashes what it is given.
+			'post_excerpt' => \wp_slash( \is_string( $post['object']['summary'] ?? null ) ? \wp_strip_all_tags( $post['object']['summary'] ) : '' ),
+			'post_content' => \wp_slash( Sanitize::content( $post['object']['content'] ?? '' ) ),
 			'post_status'  => 'publish',
 			'post_type'    => 'post',
 			'meta_input'   => array( '_source_id' => $post['object']['id'] ),
@@ -431,7 +446,17 @@ class Mastodon {
 		 */
 		$post_data = \apply_filters( 'activitypub_import_mastodon_post_data', $post_data, $post );
 
-		$post_exists = \post_exists( '', $post_data['post_content'], $post_data['post_date'], $post_data['post_type'] );
+		/*
+		 * Match on the archive's own id first. Falling back to `post_exists()` alone keys
+		 * de-duplication on an exact `post_content` match, so any change to what we store
+		 * (a new sanitizer, for one) makes everything imported by an older version stop
+		 * matching and come back as a duplicate.
+		 */
+		$post_exists = self::get_post_by_source_id( $post['object']['id'] ?? '', $post_data['post_type'] );
+
+		if ( ! $post_exists ) {
+			$post_exists = \post_exists( '', $post_data['post_content'], $post_data['post_date'], $post_data['post_type'] );
+		}
 
 		/**
 		 * Filter ID of the existing post corresponding to post currently importing.
@@ -447,8 +472,17 @@ class Mastodon {
 		$post_exists = \apply_filters( 'wp_import_existing_post', $post_exists, $post_data );
 
 		if ( $post_exists ) {
-			return false;
+			/*
+			 * Report it as already imported, but hand the id back: pass 3 maps self-replies
+			 * onto their parent through this return value, and a reply whose parent we
+			 * skipped would otherwise find no parent and be dropped.
+			 */
+			$created = false;
+
+			return $post_exists;
 		}
+
+		$created = true;
 
 		$post_id = \wp_insert_post( $post_data, true );
 
@@ -467,6 +501,46 @@ class Mastodon {
 		}
 
 		return $post_id;
+	}
+
+	/**
+	 * Find a post already imported under an archive object id.
+	 *
+	 * @since 9.3.0
+	 *
+	 * @param string $source_id The archive object id.
+	 * @param string $post_type The post type to look in.
+	 *
+	 * @return int The post ID, or 0 when the object has not been imported yet.
+	 */
+	private static function get_post_by_source_id( $source_id, $post_type ) {
+		if ( ! \is_string( $source_id ) || '' === $source_id ) {
+			return 0;
+		}
+
+		/*
+		 * `suppress_filters` is left at the get_posts() default of true on purpose: a
+		 * de-duplication probe is the last query a third-party `posts_where` should be
+		 * able to rewrite, since hiding the existing post brings the duplicates back.
+		 */
+
+		/*
+		 * Every status, trash included. `post_exists()` below takes no status argument, so
+		 * it always matched a trashed import on content; `'any'` would be narrower, because
+		 * it drops the statuses flagged `exclude_from_search`.
+		 */
+		$posts = \get_posts(
+			array(
+				'post_type'   => $post_type,
+				'post_status' => \get_post_stati(),
+				'numberposts' => 1,
+				'fields'      => 'ids',
+				'meta_key'    => '_source_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_value'  => $source_id, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+			)
+		);
+
+		return $posts ? (int) $posts[0] : 0;
 	}
 
 	/**
@@ -523,8 +597,20 @@ class Mastodon {
 		$comment_data = array(
 			'comment_post_ID'  => $parent_post_id,
 			'comment_parent'   => $parent_comment_id,
-			'comment_author'   => \get_the_author_meta( 'display_name', self::$author ),
-			'comment_content'  => $post['object']['content'],
+			'comment_author'   => \wp_slash( \get_the_author_meta( 'display_name', self::$author ) ),
+
+			/*
+			 * Sanitize the archive's content explicitly. The import runs as a user with
+			 * `unfiltered_html`, so `kses_init()` installs none of the kses filters for
+			 * this request: neither `wp_insert_comment()` nor the `pre_comment_*` chain
+			 * would touch this value. Core then prints `comment_content` unescaped, on
+			 * the front end and in the Dashboard "Activity" widget.
+			 *
+			 * The comment allowlist, not the post one, so this field is cleaned the same
+			 * way Collection\Interactions cleans a live-federated reply.
+			 */
+			// Slashed like the federated path: wp_insert_comment() unslashes what it is given.
+			'comment_content'  => \wp_slash( Sanitize::comment_content( $post['object']['content'] ?? '' ) ),
 			'comment_date'     => $post['published'],
 			'user_id'          => self::$author,
 			'comment_approved' => 1,

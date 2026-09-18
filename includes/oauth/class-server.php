@@ -24,8 +24,14 @@ class Server {
 
 	/**
 	 * Initialize the OAuth server.
+	 *
+	 * Registered on `init`, so the setting is read once the site context is settled.
 	 */
 	public static function init() {
+		if ( ! \get_option( 'activitypub_api', false ) ) {
+			return;
+		}
+
 		// Hook into REST authentication - priority 20 to run after default auth.
 		\add_filter( 'rest_authentication_errors', array( self::class, 'authenticate_oauth' ), 20 );
 
@@ -182,7 +188,7 @@ class Server {
 	 * Unlike {@see self::check_oauth_permission()}, this does not require the request to be
 	 * OAuth-authenticated, so it can be combined with checks that also accept a WP session.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param string $scope The scope to require of an OAuth caller.
 	 * @return bool True if the request may act for the scope.

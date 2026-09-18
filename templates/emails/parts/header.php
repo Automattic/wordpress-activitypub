@@ -36,6 +36,10 @@
 			margin: 0 !important;
 		}
 	}
+	img {
+		max-width: 100%;
+		height: auto;
+	}
 	h1 {
 		font-size: 20px;
 		margin-bottom: 16px;

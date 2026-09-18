@@ -76,6 +76,28 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 ';
 
 	/**
+	 * Test that search finds an actor whose stored name is entity-escaped.
+	 *
+	 * @covers ::search
+	 */
+	public function test_search_matches_escaped_name() {
+		Remote_Actors::create(
+			array(
+				'id'                => 'https://remote.example.com/actor/tom',
+				'type'              => 'Person',
+				'name'              => 'Tom & Jerry',
+				'url'               => 'https://remote.example.com/actor/tom',
+				'inbox'             => 'https://remote.example.com/actor/tom/inbox',
+				'preferredUsername' => 'tom',
+			)
+		);
+
+		$results = Remote_Actors::search( 'Tom & Jerry' );
+
+		$this->assertCount( 1, $results );
+	}
+
+	/**
 	 * Test the create() method for remote actors.
 	 *
 	 * @covers ::create

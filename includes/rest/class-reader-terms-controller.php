@@ -14,7 +14,7 @@ namespace Activitypub\Rest;
  * `ap_object_type` taxonomies. Their terms are derived from the cached remote
  * posts, so they are limited to users who can use ActivityPub.
  *
- * @since unreleased
+ * @since 9.3.0
  */
 class Reader_Terms_Controller extends \WP_REST_Terms_Controller {
 	use Reader_Permission;
@@ -22,7 +22,7 @@ class Reader_Terms_Controller extends \WP_REST_Terms_Controller {
 	/**
 	 * Check whether a request has read access to a single term.
 	 *
-	 * @since unreleased
+	 * @since 9.3.0
 	 *
 	 * @param \WP_REST_Request $request Full details about the request.
 	 * @return true|\WP_Error True if the request has read access, WP_Error otherwise.

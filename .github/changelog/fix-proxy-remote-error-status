@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-Apps now see the real error when a post they open through your site is missing, instead of a generic failure.

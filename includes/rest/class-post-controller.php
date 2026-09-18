@@ -14,6 +14,7 @@ use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
 use function Activitypub\get_post_id;
+use function Activitypub\get_reaction_author_name;
 use function Activitypub\get_rest_url_by_path;
 
 /**
@@ -162,15 +163,12 @@ class Post_Controller extends \WP_REST_Controller {
 				'items' => \array_map(
 					static function ( $comment ) {
 						/*
-						 * Decode entities first so a stored pseudo-tag like
-						 * `&lt;img&gt;` becomes a real `<img>` for the next
-						 * step to remove, then strip any tags so the JSON
-						 * response contains only plain text. `esc_url_raw()`
-						 * rejects `javascript:` and other unsafe schemes without
-						 * HTML-encoding ampersands (this is JSON, not markup).
+						 * `esc_url_raw()` rejects `javascript:` and other unsafe
+						 * schemes without HTML-encoding ampersands (this is JSON,
+						 * not markup).
 						 */
 						return array(
-							'name'   => \wp_strip_all_tags( \html_entity_decode( $comment->comment_author, ENT_QUOTES ) ),
+							'name'   => get_reaction_author_name( $comment ),
 							'url'    => \esc_url_raw( $comment->comment_author_url ),
 							'avatar' => \esc_url_raw( \get_avatar_url( $comment ) ),
 						);

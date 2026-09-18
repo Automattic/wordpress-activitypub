@@ -13,7 +13,6 @@ use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
-use Activitypub\Mention;
 use Activitypub\Transformer\Factory;
 use Activitypub\Webfinger as Webfinger_Util;
 use Enable_Mastodon_Apps\Entity\Account;
@@ -55,9 +54,35 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_status_by_url', array( self::class, 'api_status_by_url' ), 10, 2 );
 		\add_filter( 'mastodon_api_status_context', array( self::class, 'api_get_replies' ), 10, 3 );
 		\add_filter( 'mastodon_api_update_credentials', array( self::class, 'api_update_credentials' ), 10, 2 );
-		\add_filter( 'mastodon_api_submit_status_text', array( Mention::class, 'the_content' ) );
 		\add_filter( 'mastodon_api_notifications_get', array( self::class, 'api_notifications_get' ), 10, 5 );
 		\add_filter( 'mastodon_api_tag_timeline', array( self::class, 'api_tag_timeline_tags_pub' ), 20, 2 );
+		\add_filter( 'activitypub_locale', array( self::class, 'get_post_locale' ), 9, 2 );
+	}
+
+	/**
+	 * Use the language a Mastodon app set for a post as the locale of the ActivityPub object.
+	 *
+	 * Enable Mastodon Apps stores the language an app submits with a status as post meta.
+	 * Runs before the multilingual integrations, so a language those know takes precedence.
+	 * A comment takes the language of the post it belongs to.
+	 *
+	 * @param string $lang The language code.
+	 * @param mixed  $item The transformed object.
+	 *
+	 * @return string The language code.
+	 */
+	public static function get_post_locale( $lang, $item ) {
+		if ( $item instanceof \WP_Comment ) {
+			$item = \get_post( $item->comment_post_ID );
+		}
+
+		if ( ! $item instanceof \WP_Post ) {
+			return $lang;
+		}
+
+		$app_lang = \get_post_meta( $item->ID, 'ema_language', true );
+
+		return $app_lang ? $app_lang : $lang;
 	}
 
 	/**

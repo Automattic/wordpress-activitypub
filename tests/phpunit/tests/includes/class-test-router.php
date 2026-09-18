@@ -401,6 +401,19 @@ class Test_Router extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Request a term URL, the way the router is reached in production.
+	 *
+	 * The term branch reads `term_id` off the parsed request, so a bare set_query_var() no
+	 * longer stands in for a request that names one.
+	 *
+	 * @param int|string $term_id The term ID to put on the request.
+	 */
+	private function request_term_url( $term_id ) {
+		$this->go_to( \add_query_arg( 'term_id', $term_id, \home_url( '/' ) ) );
+		Query::get_instance()->__destruct();
+	}
+
+	/**
 	 * Test that the activitypub_supported_taxonomies filter has correct defaults.
 	 *
 	 * @covers ::template_redirect
@@ -463,8 +476,7 @@ class Test_Router extends \WP_UnitTestCase {
 
 		$term_id = $term['term_id'];
 
-		// Set the term_id query var (simulating what might happen with Polylang).
-		\set_query_var( 'term_id', $term_id );
+		$this->request_term_url( $term_id );
 
 		global $wp_query;
 
@@ -493,8 +505,7 @@ class Test_Router extends \WP_UnitTestCase {
 
 		$term_id = $term['term_id'];
 
-		// Set the term_id query var.
-		\set_query_var( 'term_id', $term_id );
+		$this->request_term_url( $term_id );
 
 		// Simulate an ActivityPub request - should return early without redirect.
 		$_SERVER['HTTP_ACCEPT'] = 'application/activity+json';
@@ -519,8 +530,7 @@ class Test_Router extends \WP_UnitTestCase {
 	 * @covers ::template_redirect
 	 */
 	public function test_invalid_term_id_sets_404() {
-		// Set an invalid term_id query var.
-		\set_query_var( 'term_id', 999999 );
+		$this->request_term_url( 999999 );
 
 		global $wp_query;
 
@@ -552,8 +562,7 @@ class Test_Router extends \WP_UnitTestCase {
 		$term_id   = $term['term_id'];
 		$term_link = \get_term_link( $term_id, 'category' );
 
-		// Set the term_id query var.
-		\set_query_var( 'term_id', $term_id );
+		$this->request_term_url( $term_id );
 
 		// Save callback to variable for proper removal.
 		$redirect_callback = function ( $location ) {
@@ -582,6 +591,52 @@ class Test_Router extends \WP_UnitTestCase {
 		// Clean up.
 		\remove_filter( 'wp_redirect', $redirect_callback );
 		\wp_delete_term( $term_id, 'category' );
+	}
+
+	/**
+	 * A `term_id` WP_Query derived from a tax query does not redirect the request.
+	 *
+	 * Polylang filters every request by its language term's term_taxonomy_id, and WP_Query
+	 * copies that number into `term_id` verbatim, so it can be the term ID of a real category
+	 * or tag. Only a term the URL itself names is ours to act on.
+	 *
+	 * @covers ::template_redirect
+	 *
+	 * @throws \Exception If a non-redirect exception is caught during template_redirect.
+	 */
+	public function test_derived_term_id_does_not_redirect() {
+		$term = \wp_insert_term( 'Colliding Category', 'category' );
+		$this->assertNotWPError( $term, 'Term creation should succeed.' );
+
+		// A search, carrying a term ID the way WP_Query derives one from a tax query.
+		$this->go_to( \home_url( '/?s=hello' ) );
+		Query::get_instance()->__destruct();
+		\set_query_var( 'term_id', $term['term_id'] );
+
+		$redirect_callback = function ( $location ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
+			throw new \Exception( 'REDIRECT:' . $location );
+		};
+		\add_filter( 'wp_redirect', $redirect_callback );
+
+		global $wp_query;
+		$redirect_location = null;
+
+		try {
+			Router::template_redirect();
+		} catch ( \Exception $e ) {
+			if ( 0 === strpos( $e->getMessage(), 'REDIRECT:' ) ) {
+				$redirect_location = substr( $e->getMessage(), 9 );
+			} else {
+				throw $e;
+			}
+		}
+
+		\remove_filter( 'wp_redirect', $redirect_callback );
+		\wp_delete_term( $term['term_id'], 'category' );
+
+		$this->assertNull( $redirect_location, 'A term ID the URL did not name must not redirect the request.' );
+		$this->assertFalse( $wp_query->is_404(), 'A term ID the URL did not name must not 404 the request.' );
 	}
 
 	/**
@@ -689,8 +744,7 @@ class Test_Router extends \WP_UnitTestCase {
 		$term_id   = $term['term_id'];
 		$term_link = \get_term_link( $term_id, 'custom_tax' );
 
-		// Set the term_id query var.
-		\set_query_var( 'term_id', $term_id );
+		$this->request_term_url( $term_id );
 
 		// Save callbacks to variables for proper removal.
 		$taxonomy_callback = function ( $taxonomies ) {

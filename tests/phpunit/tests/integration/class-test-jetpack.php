@@ -633,7 +633,14 @@ class Test_Jetpack extends \WP_UnitTestCase {
 		$this->load_mock_podcast_show( false );
 		$this->add_enclosure( self::$post_id, \home_url( '/podcast/episode.mp3' ) );
 
-		$this->assertSame( array(), $this->transform_attachments( self::$post_id ), 'A stray enclosure must not federate as an episode.' );
+		$attachments = $this->transform_attachments( self::$post_id );
+
+		/*
+		 * The enclosure federates, because an enclosure is the author saying this file belongs to
+		 * the post. What it must not gain is the treatment an episode gets, so no show artwork.
+		 */
+		$this->assertCount( 1, $attachments, 'A declared enclosure still federates as ordinary media.' );
+		$this->assertArrayNotHasKey( 'icon', $attachments[0], 'A stray enclosure must not federate as an episode.' );
 	}
 
 	/**
