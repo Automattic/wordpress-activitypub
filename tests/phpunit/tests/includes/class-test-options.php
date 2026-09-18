@@ -48,6 +48,10 @@ class Test_Options extends \WP_UnitTestCase {
 		\delete_option( 'activitypub_custom_batch_size' );
 		\delete_option( 'activitypub_custom_batch_pause' );
 
+		// Clean up blog profile options.
+		\delete_option( 'activitypub_blog_name' );
+		\delete_option( 'activitypub_blog_icon' );
+
 		parent::tear_down();
 	}
 
@@ -512,5 +516,22 @@ class Test_Options extends \WP_UnitTestCase {
 
 		\update_option( 'activitypub_outbox_purge_days', -5 );
 		$this->assertGreaterThanOrEqual( 1, \get_option( 'activitypub_outbox_purge_days' ) );
+	}
+
+	/**
+	 * Test the blog profile name and icon are both exposed to the REST settings API.
+	 *
+	 * The blog name and avatar can be edited through a Mastodon client, so both
+	 * options must be registered consistently.
+	 *
+	 * @covers \Activitypub\Options::register_settings
+	 */
+	public function test_blog_profile_options_are_exposed_in_rest() {
+		Options::register_settings();
+
+		$registered = \get_registered_settings();
+
+		$this->assertTrue( $registered['activitypub_blog_name']['show_in_rest'] );
+		$this->assertTrue( $registered['activitypub_blog_icon']['show_in_rest'] );
 	}
 }

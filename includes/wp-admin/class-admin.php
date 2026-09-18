@@ -20,6 +20,7 @@ use Activitypub\Tombstone;
 use function Activitypub\count_followers;
 use function Activitypub\get_content_visibility;
 use function Activitypub\is_user_type_disabled;
+use function Activitypub\site_icon;
 use function Activitypub\site_supports_blocks;
 use function Activitypub\user_can_activitypub;
 use function Activitypub\was_comment_received;
@@ -201,7 +202,7 @@ class Admin {
 	 */
 	public static function add_profile() {
 		\wp_enqueue_media();
-		\wp_enqueue_script( 'activitypub-header-image' );
+		\wp_enqueue_script( 'activitypub-media-picker' );
 
 		\wp_nonce_field( 'activitypub-user-settings', '_apnonce' );
 		\do_settings_sections( 'activitypub_user_settings' );
@@ -277,32 +278,35 @@ class Admin {
 	 */
 	public static function enqueue_scripts( $hook_suffix ) {
 		\wp_register_script(
-			'activitypub-header-image',
+			'activitypub-media-picker',
 			\plugins_url(
-				'assets/js/activitypub-header-image.js',
+				'assets/js/activitypub-media-picker.js',
 				ACTIVITYPUB_PLUGIN_FILE
 			),
-			array( 'jquery' ),
+			array( 'jquery', 'wp-i18n' ),
 			ACTIVITYPUB_PLUGIN_VERSION,
 			false
 		);
 
-		\wp_register_script(
-			'activitypub-blog-avatar',
-			\plugins_url(
-				'assets/js/activitypub-blog-avatar.js',
-				ACTIVITYPUB_PLUGIN_FILE
-			),
-			array( 'jquery', 'media-editor' ),
-			ACTIVITYPUB_PLUGIN_VERSION,
-			false
-		);
+		/*
+		 * The fallback image shown when a custom avatar is removed. It is passed
+		 * through localized data instead of a data attribute to avoid
+		 * reinterpreting DOM text as a URL.
+		 */
 		\wp_localize_script(
-			'activitypub-blog-avatar',
-			'activitypubBlogAvatar',
+			'activitypub-media-picker',
+			'activitypubMediaPicker',
 			array(
-				'fallbackUrl' => \esc_url_raw( \get_site_icon_url() ),
+				'fallbackUrls' => array(
+					'activitypub-blog-avatar' => \esc_url_raw( site_icon()['url'] ),
+				),
 			)
+		);
+
+		\wp_set_script_translations(
+			'activitypub-media-picker',
+			'activitypub',
+			ACTIVITYPUB_PLUGIN_DIR . 'languages'
 		);
 
 		// Register and enqueue command palette integration.

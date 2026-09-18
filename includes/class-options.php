@@ -476,6 +476,7 @@ class Options {
 			array(
 				'type'              => 'integer',
 				'description'       => 'The Attachment-ID of the Blog-User Avatar',
+				'show_in_rest'      => true,
 				'default'           => 0,
 				'sanitize_callback' => 'absint',
 			)

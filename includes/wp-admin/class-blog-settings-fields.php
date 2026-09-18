@@ -138,11 +138,15 @@ class Blog_Settings_Fields {
 		$blog         = new Blog();
 		$icon         = $blog->get_icon();
 		$custom_icon  = \get_option( 'activitypub_blog_icon', 0 );
-		$classes      = 'button upload-button button-add-media button-add-blog-avatar';
+		$upload_class = 'button upload-button button-add-media button-add-blog-avatar activitypub-media-picker-button';
+		$update_class = 'button activitypub-media-picker-button';
+		$classes      = $upload_class;
+		$alt_classes  = $update_class;
 		$remove_class = 'button button-secondary reset hidden';
 
 		if ( (int) $custom_icon ) {
-			$classes      = 'button';
+			$classes      = $update_class;
+			$alt_classes  = $upload_class;
 			$remove_class = 'button button-secondary reset';
 		}
 		?>
@@ -153,8 +157,17 @@ class Blog_Settings_Fields {
 			type="button"
 			id="activitypub-choose-blog-avatar-button"
 			class="<?php echo \esc_attr( $classes ); ?>"
+			data-alt-classes="<?php echo \esc_attr( $alt_classes ); ?>"
 			data-choose-text="<?php \esc_attr_e( 'Choose an Avatar', 'activitypub' ); ?>"
 			data-update-text="<?php \esc_attr_e( 'Change Avatar', 'activitypub' ); ?>"
+			data-width="512"
+			data-height="512"
+			data-context="activitypub-blog-avatar"
+			data-preview="#activitypub-blog-avatar-preview"
+			data-preview-wrapper="#activitypub-blog-avatar-preview-wrapper"
+			data-input="#activitypub_blog_icon"
+			data-remove="#activitypub-remove-blog-avatar"
+			data-preview-label="<?php \esc_attr_e( 'Blog Avatar', 'activitypub' ); ?>"
 			data-state="<?php echo \esc_attr( (int) $custom_icon ? '1' : '' ); ?>">
 			<?php echo (int) $custom_icon ? \esc_html__( 'Change Avatar', 'activitypub' ) : \esc_html__( 'Choose an Avatar', 'activitypub' ); ?>
 		</button>
@@ -177,14 +190,14 @@ class Blog_Settings_Fields {
 	 * Header image field callback.
 	 */
 	public static function header_image_callback() {
-		$classes_for_button           = 'button upload-button button-add-media button-add-header-image';
-		$classes_for_button_on_change = 'button';
+		$classes_for_button           = 'button upload-button button-add-media button-add-header-image activitypub-media-picker-button';
+		$classes_for_button_on_change = 'button activitypub-media-picker-button';
 		$classes_for_wrapper          = ' hidden';
 
 		if ( (int) \get_option( 'activitypub_header_image', 0 ) ) {
 			$classes_for_wrapper          = ' has-header-image';
 			$classes_for_button_on_change = $classes_for_button;
-			$classes_for_button           = 'button';
+			$classes_for_button           = 'button activitypub-media-picker-button';
 		}
 		?>
 		<div id="activitypub-header-image-preview-wrapper" class="<?php echo \esc_attr( $classes_for_wrapper ); ?>">
@@ -200,6 +213,12 @@ class Blog_Settings_Fields {
 			data-update="<?php \esc_attr_e( 'Set as Header Image', 'activitypub' ); ?>"
 			data-width="1500"
 			data-height="500"
+			data-context="activitypub-header-image"
+			data-preview="#activitypub-header-image-preview"
+			data-preview-wrapper="#activitypub-header-image-preview-wrapper"
+			data-input="#activitypub_header_image"
+			data-remove="#activitypub-remove-header-image"
+			data-preview-label="<?php \esc_attr_e( 'Header Image', 'activitypub' ); ?>"
 			data-state="<?php echo \esc_attr( (int) \get_option( 'activitypub_header_image', 0 ) ); ?>">
 			<?php if ( (int) \get_option( 'activitypub_header_image', 0 ) ) : ?>
 				<?php \esc_html_e( 'Change Header Image', 'activitypub' ); ?>
