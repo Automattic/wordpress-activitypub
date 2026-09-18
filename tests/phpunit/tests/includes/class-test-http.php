@@ -7,7 +7,9 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Application;
 use Activitypub\Http;
+use Activitypub\Signature;
 
 /**
  * Test class for Http.
@@ -95,5 +97,31 @@ class Test_Http extends \WP_UnitTestCase {
 		$this->assertWPError( \get_transient( $transient_key ) );
 
 		\delete_transient( $transient_key );
+	}
+
+	/**
+	 * A GET must not create an Application key pair as a side effect.
+	 *
+	 * @covers ::get
+	 */
+	public function test_get_does_not_create_application_keypair() {
+		$url  = 'https://social.example.com/actor';
+		$mock = static function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => '{"type":"Person"}',
+				'headers'  => array(),
+			);
+		};
+
+		\delete_option( Application::KEYPAIR_OPTION_KEY );
+		Signature::flush_key_pair_cache();
+
+		\add_filter( 'pre_http_request', $mock, 1 );
+		$result = Http::get( $url );
+		\remove_filter( 'pre_http_request', $mock, 1 );
+
+		$this->assertNotWPError( $result );
+		$this->assertFalse( \get_option( Application::KEYPAIR_OPTION_KEY ), 'A GET must not store an Application key pair.' );
 	}
 }

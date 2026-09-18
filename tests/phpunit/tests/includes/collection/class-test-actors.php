@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Signature;
 
 /**
  * Class Test_Actors
@@ -31,6 +32,9 @@ class Test_Actors extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		parent::tear_down();
+
+		// Key pairs are memoized per request, so drop the cache between tests.
+		Signature::flush_key_pair_cache();
 
 		\delete_option( 'activitypub_keypair_for_0' );
 		\delete_option( 'activitypub_keypair_for_admin' );
