@@ -19,6 +19,35 @@ use Activitypub\Signature\Http_Signature_Draft;
 class Signature {
 
 	/**
+	 * Cache group for key pairs.
+	 *
+	 * The group is non-persistent, so private keys never reach a persistent
+	 * object cache, and not global, so the object cache scopes entries to the
+	 * current site.
+	 *
+	 * @var string
+	 */
+	const CACHE_GROUP = 'activitypub_signature';
+
+	/**
+	 * Cache key suffix for read-only lookups.
+	 *
+	 * Kept apart from the persisted pairs because a legacy pair returned from a
+	 * read has not been stored yet, and must not make
+	 * {@see self::get_key_pair()} skip migrating it.
+	 *
+	 * @var string
+	 */
+	const CACHE_KEY_STORED_SUFFIX = ':stored';
+
+	/**
+	 * Cache keys used so far, per site, so {@see self::flush_key_pair_cache()} can drop them.
+	 *
+	 * @var array
+	 */
+	private static $cache_keys = array();
+
+	/**
 	 * Initialize the class.
 	 */
 	public static function init() {
@@ -78,10 +107,16 @@ class Signature {
 	 * @return array The key pair with 'private_key' and 'public_key'.
 	 */
 	public static function get_key_pair( $option_key, $legacy_callback = null ) {
+		$key_pair = self::get_cached_key_pair( $option_key, $found );
+
+		if ( $found ) {
+			return $key_pair;
+		}
+
 		$key_pair = \get_option( $option_key );
 
 		if ( $key_pair ) {
-			return $key_pair;
+			return self::remember_key_pair( $option_key, $key_pair );
 		}
 
 		$key_pair = $legacy_callback ? $legacy_callback() : false;
@@ -91,6 +126,15 @@ class Signature {
 
 			// Only persist valid keys.
 			if ( empty( $key_pair['private_key'] ) ) {
+				// Remember the failure, so a broken keygen is not retried on every call.
+				self::set_cached_key_pair( $option_key, $key_pair );
+
+				/*
+				 * Nothing was stored, so the read-only lookup keeps reporting a miss
+				 * even though the failed generation is cached.
+				 */
+				self::set_cached_key_pair( $option_key, false, self::CACHE_KEY_STORED_SUFFIX );
+
 				return $key_pair;
 			}
 		}
@@ -98,7 +142,157 @@ class Signature {
 		// `update_option()` also overwrites a corrupted-but-present row, which `add_option()` would silently skip.
 		\update_option( $option_key, $key_pair );
 
+		return self::remember_key_pair( $option_key, $key_pair );
+	}
+
+	/**
+	 * Get a stored or legacy key pair without generating or persisting one.
+	 *
+	 * Use this for reads that must not create state. A legacy pair is returned
+	 * from memory only; the migration stays the job of {@see self::get_key_pair()}.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string        $option_key      The option name the key pair is stored in.
+	 * @param callable|null $legacy_callback Optional. Callback that returns a legacy key pair, or false. Default null.
+	 *
+	 * @return array|false The key pair, or false when none is stored.
+	 */
+	public static function get_stored_key_pair( $option_key, $legacy_callback = null ) {
+		$key_pair = self::get_cached_key_pair( $option_key, $found, self::CACHE_KEY_STORED_SUFFIX );
+
+		if ( $found ) {
+			return $key_pair;
+		}
+
+		$stored   = \get_option( $option_key );
+		$key_pair = $stored;
+
+		if ( ! $key_pair && $legacy_callback ) {
+			$key_pair = $legacy_callback();
+		}
+
+		if ( ! $key_pair ) {
+			$key_pair = false;
+		}
+
+		self::set_cached_key_pair( $option_key, $key_pair, self::CACHE_KEY_STORED_SUFFIX );
+
+		/*
+		 * A pair that came straight from the option is also the persisted pair, so
+		 * seed the other cache. A legacy pair is returned from memory only and must
+		 * keep {@see self::get_key_pair()} migrating it.
+		 */
+		if ( $stored ) {
+			self::set_cached_key_pair( $option_key, $stored );
+		}
+
 		return $key_pair;
+	}
+
+	/**
+	 * Drop the cached key pairs.
+	 *
+	 * Needed after the stored options change outside these methods, and in
+	 * tests that delete or replace a key pair. The keys are tracked rather than
+	 * flushed by group, because not every object cache backend supports
+	 * flushing a single group.
+	 *
+	 * @since unreleased
+	 */
+	public static function flush_key_pair_cache() {
+		foreach ( \array_keys( self::$cache_keys ) as $tracked_key ) {
+			// The tracked value carries the site the entry was cached on, so delete under that site.
+			list( $blog_id, $cache_key ) = \explode( ':', $tracked_key, 2 );
+			$switched                     = \get_current_blog_id() !== (int) $blog_id;
+
+			if ( $switched ) {
+				\switch_to_blog( (int) $blog_id );
+			}
+
+			\wp_cache_delete( $cache_key, self::CACHE_GROUP );
+
+			if ( $switched ) {
+				\restore_current_blog();
+			}
+		}
+
+		self::$cache_keys = array();
+	}
+
+	/**
+	 * Read a key pair from the cache.
+	 *
+	 * @param string $option_key The option name the key pair is stored in.
+	 * @param bool   $found      Set to true when the cache holds a value, including a recorded miss.
+	 * @param string $suffix     Optional. Cache key suffix. Default ''.
+	 *
+	 * @return array|false The key pair, or false when none is cached.
+	 */
+	private static function get_cached_key_pair( $option_key, &$found, $suffix = '' ) {
+		$cache_key = $option_key . $suffix;
+
+		$value = \wp_cache_get( $cache_key, self::CACHE_GROUP, false, $found );
+
+		if ( ! $found ) {
+			return false;
+		}
+
+		self::track_cache_key( $cache_key );
+
+		return $value;
+	}
+
+	/**
+	 * Record a key pair in the cache.
+	 *
+	 * @param string     $option_key The option name the key pair is stored in.
+	 * @param array|bool $key_pair   The key pair to remember, or false for a recorded miss.
+	 * @param string     $suffix     Optional. Cache key suffix. Default ''.
+	 *
+	 * @return array|false The key pair, unchanged.
+	 */
+	private static function set_cached_key_pair( $option_key, $key_pair, $suffix = '' ) {
+		$cache_key = $option_key . $suffix;
+
+		/*
+		 * Register the group at the write site rather than in init(), because a
+		 * key pair can be requested before init runs and a private key must never
+		 * be handed to a persistent object cache.
+		 */
+		\wp_cache_add_non_persistent_groups( array( self::CACHE_GROUP ) );
+		\wp_cache_set( $cache_key, $key_pair, self::CACHE_GROUP );
+
+		self::track_cache_key( $cache_key );
+
+		return $key_pair;
+	}
+
+	/**
+	 * Note a cache key and the site it belongs to.
+	 *
+	 * The site is part of the tracked value because the cache prefix the object
+	 * cache applies is not readable from here, and a flush after a site switch
+	 * has to delete under the site that owns the entry.
+	 *
+	 * @param string $cache_key The cache key, without the object cache prefix.
+	 */
+	private static function track_cache_key( $cache_key ) {
+		self::$cache_keys[ \get_current_blog_id() . ':' . $cache_key ] = true;
+	}
+
+	/**
+	 * Record a persisted key pair in both caches.
+	 *
+	 * @param string $option_key The option name the key pair is stored in.
+	 * @param array  $key_pair   The key pair to remember.
+	 *
+	 * @return array The key pair, unchanged.
+	 */
+	private static function remember_key_pair( $option_key, $key_pair ) {
+		self::set_cached_key_pair( $option_key, $key_pair );
+
+		return self::set_cached_key_pair( $option_key, $key_pair, self::CACHE_KEY_STORED_SUFFIX );
 	}
 
 	/**

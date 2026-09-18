@@ -7,6 +7,7 @@
 
 namespace Activitypub\WP_Admin\Import;
 
+use Activitypub\Application;
 use Activitypub\Http;
 
 use function Activitypub\follow;
@@ -200,6 +201,8 @@ class Starter_Kit {
 
 		// Fetch the URL content. Http::get() sends signed requests with the ActivityPub
 		// headers, so starter kits hosted on servers that require Authorized Fetch work too.
+		// The key is resolved here because the import is a deliberate admin action and
+		// may create the Application key pair, which a plain GET no longer does.
 		$response = Http::get(
 			$url,
 			array(
@@ -207,6 +210,8 @@ class Starter_Kit {
 				'redirection'         => 5,
 				// A curated starter-kit collection can exceed Http::get()'s default 1 MiB cap.
 				'limit_response_size' => 25 * MB_IN_BYTES,
+				'key_id'              => Application::get_key_id(),
+				'private_key'         => Application::get_private_key(),
 			)
 		);
 

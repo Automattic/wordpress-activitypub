@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fetching remote content no longer creates a signing key pair on your site. Sites that already have one keep signing their requests, and the key pair is now looked up at most once per request, so pages that contact other servers load faster.

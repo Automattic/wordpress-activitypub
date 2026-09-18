@@ -1324,6 +1324,9 @@ class Migration {
 		if ( false !== \get_option( Application::KEYPAIR_OPTION_KEY, false ) ) {
 			\delete_option( 'activitypub_keypair_for_-1' );
 		}
+
+		// A key pair read earlier in this request is now stale, since the rows just moved.
+		Signature::flush_key_pair_cache();
 	}
 
 	/**

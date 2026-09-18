@@ -172,9 +172,21 @@ class Http {
 				'Content-Type' => 'application/activity+json',
 				'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
 			),
-			'key_id'              => Application::get_key_id(),
-			'private_key'         => Application::get_private_key(),
 		);
+
+		/*
+		 * Sign with the Application key only when the site already has one. A read
+		 * must not create it, so on a site that has never published an actor the
+		 * request goes out unsigned rather than minting a key pair as a side effect.
+		 * Omit both keys when there is none, which is also what `sign_request()`
+		 * checks before signing.
+		 */
+		$key_pair = Application::get_stored_keypair();
+
+		if ( \is_array( $key_pair ) && ! empty( $key_pair['private_key'] ) ) {
+			$defaults['key_id']      = Application::get_key_id();
+			$defaults['private_key'] = $key_pair['private_key'];
+		}
 
 		$args            = \wp_parse_args( $args, $defaults );
 		$args['headers'] = \wp_parse_args( $args['headers'], $defaults['headers'] );

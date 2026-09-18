@@ -42,6 +42,12 @@ class Test_Signature extends \WP_UnitTestCase {
 	public function tear_down() {
 		$this->reset__SERVER();
 
+		/*
+		 * Key pairs are cached per request, so drop them between tests. The
+		 * object cache is flushed for us, the recorded key list is not.
+		 */
+		Signature::flush_key_pair_cache();
+
 		parent::tear_down();
 	}
 
@@ -1822,6 +1828,134 @@ class Test_Signature extends \WP_UnitTestCase {
 		$this->assertSame( $legacy, \get_option( $option_key ), 'The legacy pair should be persisted under the new option.' );
 
 		\delete_option( $option_key );
+	}
+
+	/**
+	 * Test that get_key_pair reuses the in-process memo instead of the option.
+	 *
+	 * @covers ::get_key_pair
+	 */
+	public function test_get_key_pair_is_memoized() {
+		$option_key = 'activitypub_test_keypair_memo';
+
+		$key_pair = Signature::get_key_pair( $option_key );
+
+		// Remove the row behind the memo: a second call must still return the same pair.
+		\delete_option( $option_key );
+
+		$this->assertSame( $key_pair, Signature::get_key_pair( $option_key ), 'The memoized pair should be returned after the option is gone.' );
+
+		Signature::flush_key_pair_cache();
+
+		$this->assertFalse( \get_option( $option_key ), 'The option should stay deleted.' );
+	}
+
+	/**
+	 * Test that a read-only lookup never creates the option.
+	 *
+	 * @covers ::get_stored_key_pair
+	 */
+	public function test_get_stored_key_pair_does_not_create_state() {
+		$option_key = 'activitypub_test_keypair_stored';
+
+		$key_pair = Signature::get_stored_key_pair( $option_key );
+
+		$this->assertFalse( $key_pair, 'A stored read should return false when nothing is stored.' );
+		$this->assertFalse( \get_option( $option_key ), 'A stored read must not create the option.' );
+	}
+
+	/**
+	 * Test that a read-only lookup returns a stored pair without regenerating.
+	 *
+	 * @covers ::get_stored_key_pair
+	 */
+	public function test_get_stored_key_pair_returns_stored_pair() {
+		$option_key = 'activitypub_test_keypair_stored';
+		$stored     = array(
+			'private_key' => 'stored private key',
+			'public_key'  => 'stored public key',
+		);
+
+		\update_option( $option_key, $stored );
+
+		$this->assertSame( $stored, Signature::get_stored_key_pair( $option_key ) );
+
+		\delete_option( $option_key );
+	}
+
+	/**
+	 * Test that a legacy pair read through the read-only lookup is not persisted.
+	 *
+	 * @covers ::get_stored_key_pair
+	 * @covers ::get_key_pair
+	 */
+	public function test_get_stored_key_pair_does_not_persist_legacy_pair() {
+		$option_key = 'activitypub_test_keypair_stored_legacy';
+		$legacy     = array(
+			'private_key' => 'legacy private key',
+			'public_key'  => 'legacy public key',
+		);
+		$callback   = function () use ( $legacy ) {
+			return $legacy;
+		};
+
+		$this->assertSame( $legacy, Signature::get_stored_key_pair( $option_key, $callback ) );
+		$this->assertFalse( \get_option( $option_key ), 'A read-only lookup must not persist a legacy pair.' );
+
+		/*
+		 * The earlier read must not stop get_key_pair() from migrating the legacy
+		 * pair; that is the point of keeping the two caches apart.
+		 */
+		$this->assertSame( $legacy, Signature::get_key_pair( $option_key, $callback ) );
+		$this->assertSame( $legacy, \get_option( $option_key ), 'get_key_pair() should still persist the legacy pair.' );
+
+		\delete_option( $option_key );
+	}
+
+	/**
+	 * Test that the memo does not leak between option keys.
+	 *
+	 * @covers ::get_key_pair
+	 */
+	public function test_get_key_pair_memo_is_keyed_per_option() {
+		$first_key  = 'activitypub_test_keypair_keyed_a';
+		$second_key = 'activitypub_test_keypair_keyed_b';
+
+		\update_option( $first_key, array( 'private_key' => 'a', 'public_key' => 'a' ) );
+		\update_option( $second_key, array( 'private_key' => 'b', 'public_key' => 'b' ) );
+
+		Signature::get_key_pair( $first_key );
+
+		$this->assertSame(
+			array( 'private_key' => 'b', 'public_key' => 'b' ),
+			Signature::get_key_pair( $second_key ),
+			'Each option key should keep its own memo entry.'
+		);
+
+		\delete_option( $first_key );
+		\delete_option( $second_key );
+	}
+
+	/**
+	 * Test that a read-only lookup remembers a miss.
+	 *
+	 * `Http::get()` asks for the stored pair on every request, so the empty case
+	 * is the one that has to stop repeating the option and legacy lookups.
+	 *
+	 * @covers ::get_stored_key_pair
+	 */
+	public function test_get_stored_key_pair_memoizes_a_miss() {
+		$option_key = 'activitypub_test_keypair_stored_miss';
+		$calls      = 0;
+		$callback   = function () use ( &$calls ) {
+			++$calls;
+			return false;
+		};
+
+		$this->assertFalse( Signature::get_stored_key_pair( $option_key, $callback ) );
+		$this->assertFalse( Signature::get_stored_key_pair( $option_key, $callback ) );
+
+		$this->assertSame( 1, $calls, 'A remembered miss must not run the legacy lookup again.' );
 	}
 
 	/**

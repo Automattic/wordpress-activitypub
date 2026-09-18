@@ -16,6 +16,7 @@ use Activitypub\Collection\Remote_Actors;
 use Activitypub\Comment;
 use Activitypub\Migration;
 use Activitypub\Scheduler;
+use Activitypub\Signature;
 use Activitypub\Tombstone;
 
 /**
@@ -1520,6 +1521,50 @@ class Test_Migration extends \WP_UnitTestCase {
 
 		// Clean up.
 		\delete_option( Application::KEYPAIR_OPTION_KEY );
+	}
+
+	/**
+	 * A key pair cached before the rename must not be served afterwards.
+	 *
+	 * The option rows move, so a pair held from an earlier read in the same
+	 * request describes the pre-migration state.
+	 *
+	 * @covers ::migrate_application_keypair_option
+	 */
+	public function test_migrate_application_keypair_option_drops_cached_pair() {
+		$legacy = array(
+			'private_key' => 'legacy-private-key',
+			'public_key'  => 'legacy-public-key',
+		);
+
+		// Start from no cached pair, whatever earlier tests left behind.
+		Signature::flush_key_pair_cache();
+
+		\delete_option( Application::KEYPAIR_OPTION_KEY );
+		\delete_option( 'activitypub_keypair_for_-1' );
+		\add_option( 'activitypub_keypair_for_-1', $legacy );
+
+		// A read before the migration caches the legacy pair.
+		$this->assertSame( $legacy, Application::get_stored_keypair() );
+
+		Migration::migrate_application_keypair_option();
+
+		// Replace the migrated row: a surviving cache entry would still serve the legacy pair.
+		$rotated = array(
+			'private_key' => 'rotated-private-key',
+			'public_key'  => 'rotated-public-key',
+		);
+		\update_option( Application::KEYPAIR_OPTION_KEY, $rotated );
+
+		$this->assertSame(
+			$rotated,
+			Application::get_stored_keypair(),
+			'The cached pair must not outlive the migration.'
+		);
+
+		// Clean up.
+		\delete_option( Application::KEYPAIR_OPTION_KEY );
+		Signature::flush_key_pair_cache();
 	}
 
 	/**

@@ -192,12 +192,34 @@ class Application {
 	/**
 	 * Returns the key pair for the Application.
 	 *
+	 * Generates and stores a pair when none exists yet. Use this only where
+	 * creating a signing identity is intended; for a plain read, use
+	 * {@see self::get_stored_keypair()}.
+	 *
 	 * @since 9.1.0
 	 *
 	 * @return array The key pair with 'public_key' and 'private_key'.
 	 */
 	public static function get_keypair() {
 		return Signature::get_key_pair(
+			self::KEYPAIR_OPTION_KEY,
+			function () {
+				return self::check_legacy_key_pair();
+			}
+		);
+	}
+
+	/**
+	 * Returns a stored or legacy key pair for the Application, without creating one.
+	 *
+	 * Reads only: it never generates a key pair and never writes an option.
+	 *
+	 * @since unreleased
+	 *
+	 * @return array|false The key pair with 'public_key' and 'private_key', or false when none is stored.
+	 */
+	public static function get_stored_keypair() {
+		return Signature::get_stored_key_pair(
 			self::KEYPAIR_OPTION_KEY,
 			function () {
 				return self::check_legacy_key_pair();
