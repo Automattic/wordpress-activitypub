@@ -510,6 +510,7 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 				),
 			),
 			'bare URL string'       => array( $url ),
+			'list of URL strings'   => array( array( $url ) ),
 			'list of Image objects' => array(
 				array(
 					array(

@@ -420,6 +420,11 @@ class Remote_Posts {
 				$attachment = \get_object_vars( $attachment );
 			}
 
+			// A list of bare URL strings.
+			if ( \is_string( $attachment ) ) {
+				$attachment = array( 'url' => $attachment );
+			}
+
 			// `url` may be a `Link` object or a list of them.
 			$url = object_to_uri( $attachment['url'] ?? null );
 
