@@ -190,7 +190,7 @@ const processConfig = ( config ) => {
 					default: false,
 					defaultVendors: false,
 				},
-		  };
+			};
 	const moduleRules = [
 		...withoutSassCharset( config.module?.rules || [] ),
 		{
@@ -211,7 +211,7 @@ const processConfig = ( config ) => {
 						test: /node_modules[\\/]@wordpress[\\/]views[\\/]/,
 						sideEffects: false,
 					},
-			  ]
+				]
 			: [] ),
 	];
 
