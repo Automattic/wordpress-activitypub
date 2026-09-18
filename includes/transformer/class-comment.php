@@ -123,9 +123,9 @@ class Comment extends Base {
 		$content  = $comment->comment_content;
 		$mentions = '';
 
-		// What the author already mentioned, as a handle or as a link, keyed like the reply context.
+		// What the author already mentioned: handles keyed like the reply context, and link targets as they are.
 		$written      = \array_change_key_case( Mention::extract_mentions( array(), $content ), CASE_LOWER );
-		$written_urls = \array_map( 'untrailingslashit', $written );
+		$written_urls = \array_map( 'untrailingslashit', \array_merge( \array_values( $written ), Mention::extract_mention_links( $content ) ) );
 
 		foreach ( $this->extract_reply_context() as $acct => $url ) {
 			// Skip an actor the author already mentioned, so the mention is not federated twice.

@@ -143,6 +143,68 @@ class Test_Comment extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A mention link whose URL cannot be resolved still suppresses the prefix, by URL alone.
+	 *
+	 * @covers ::get_content
+	 */
+	public function test_content_does_not_duplicate_a_mention_link_that_does_not_resolve() {
+		// The stored author URL resolves, the authored link (no trailing slash) does not.
+		$stub = function ( $pre, $args, $url ) {
+			if ( ! \str_starts_with( $url, 'https://silent.example/' ) ) {
+				return $pre;
+			}
+			if ( false === \strpos( $url, 'resource=https%3A%2F%2Fsilent.example%2F%40author%2F' ) ) {
+				return array(
+					'response' => array( 'code' => 404 ),
+					'headers'  => array(),
+					'body'     => '',
+				);
+			}
+
+			return array(
+				'response' => array( 'code' => 200 ),
+				'headers'  => array(),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:author@silent.example',
+						'links'   => array(
+							array(
+								'rel'  => 'self',
+								'type' => 'application/activity+json',
+								'href' => 'https://silent.example/@author/',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $stub, 5, 3 );
+
+		$post_id   = self::factory()->post->create();
+		$parent_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'    => $post_id,
+				'comment_author_url' => 'https://silent.example/@author/',
+				'comment_meta'       => array( 'protocol' => 'activitypub' ),
+			)
+		);
+		$reply_id  = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'comment_parent'  => $parent_id,
+				'user_id'         => 1,
+				'comment_content' => '<a rel="mention" class="u-url mention" href="https://silent.example/@author">@author</a> thanks',
+			)
+		);
+
+		$content = Comment::transform( \get_comment( $reply_id ) )->to_object()->get_content();
+
+		\remove_filter( 'pre_http_request', $stub, 5 );
+
+		$this->assertSame( 1, \substr_count( $content, 'https://silent.example/@author' ), 'The author is linked once.' );
+	}
+
+	/**
 	 * Data provider for content that already mentions the reply target.
 	 *
 	 * @return array[] Test parameters.

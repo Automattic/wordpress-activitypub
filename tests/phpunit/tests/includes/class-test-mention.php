@@ -222,4 +222,31 @@ ENDPRE;
 
 		$this->assertSame( array( '@alice@mention.example' => 'https://mention.example/@alice' ), $mentions );
 	}
+
+	/**
+	 * Only a link marked with the `mention` class counts: the plugin's own reply block links to
+	 * the replied-to post with `rel="mention ugc"` and must not be looked up.
+	 *
+	 * @covers ::extract_mentions
+	 * @covers ::extract_mention_links
+	 */
+	public function test_extract_mentions_ignores_links_without_the_mention_class() {
+		$requests = 0;
+		$stub     = function ( $pre, $args, $url ) use ( &$requests ) {
+			if ( \str_starts_with( $url, 'https://mention.example/' ) ) {
+				++$requests;
+			}
+
+			return $pre;
+		};
+		\add_filter( 'pre_http_request', $stub, 5, 3 );
+
+		$content = '<p class="ap-reply-mention"><a rel="mention ugc" href="https://mention.example/notes/1">@alice</a></p>';
+
+		$this->assertSame( array(), Mention::extract_mention_links( $content ) );
+		$this->assertSame( array(), Mention::extract_mentions( array(), $content ) );
+		$this->assertSame( 0, $requests );
+
+		\remove_filter( 'pre_http_request', $stub, 5 );
+	}
 }
