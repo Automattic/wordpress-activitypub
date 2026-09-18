@@ -107,6 +107,7 @@ class Signature {
 	 * @return array The key pair with 'private_key' and 'public_key'.
 	 */
 	public static function get_key_pair( $option_key, $legacy_callback = null ) {
+		$found    = false;
 		$key_pair = self::get_cached_key_pair( $option_key, $found );
 
 		if ( $found ) {
@@ -159,6 +160,7 @@ class Signature {
 	 * @return array|false The key pair, or false when none is stored.
 	 */
 	public static function get_stored_key_pair( $option_key, $legacy_callback = null ) {
+		$found    = false;
 		$key_pair = self::get_cached_key_pair( $option_key, $found, self::CACHE_KEY_STORED_SUFFIX );
 
 		if ( $found ) {
@@ -204,7 +206,7 @@ class Signature {
 		foreach ( \array_keys( self::$cache_keys ) as $tracked_key ) {
 			// The tracked value carries the site the entry was cached on, so delete under that site.
 			list( $blog_id, $cache_key ) = \explode( ':', $tracked_key, 2 );
-			$switched                     = \get_current_blog_id() !== (int) $blog_id;
+			$switched                    = \get_current_blog_id() !== (int) $blog_id;
 
 			if ( $switched ) {
 				\switch_to_blog( (int) $blog_id );

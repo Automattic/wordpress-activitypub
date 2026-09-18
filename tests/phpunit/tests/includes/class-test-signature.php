@@ -1921,13 +1921,28 @@ class Test_Signature extends \WP_UnitTestCase {
 		$first_key  = 'activitypub_test_keypair_keyed_a';
 		$second_key = 'activitypub_test_keypair_keyed_b';
 
-		\update_option( $first_key, array( 'private_key' => 'a', 'public_key' => 'a' ) );
-		\update_option( $second_key, array( 'private_key' => 'b', 'public_key' => 'b' ) );
+		\update_option(
+			$first_key,
+			array(
+				'private_key' => 'a',
+				'public_key'  => 'a',
+			)
+		);
+		\update_option(
+			$second_key,
+			array(
+				'private_key' => 'b',
+				'public_key'  => 'b',
+			)
+		);
 
 		Signature::get_key_pair( $first_key );
 
 		$this->assertSame(
-			array( 'private_key' => 'b', 'public_key' => 'b' ),
+			array(
+				'private_key' => 'b',
+				'public_key'  => 'b',
+			),
 			Signature::get_key_pair( $second_key ),
 			'Each option key should keep its own memo entry.'
 		);

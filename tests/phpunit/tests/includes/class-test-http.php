@@ -105,7 +105,7 @@ class Test_Http extends \WP_UnitTestCase {
 	 * @covers ::get
 	 */
 	public function test_get_does_not_create_application_keypair() {
-		$url = 'https://social.example.com/actor';
+		$url  = 'https://social.example.com/actor';
 		$mock = static function () {
 			return array(
 				'response' => array( 'code' => 200 ),
