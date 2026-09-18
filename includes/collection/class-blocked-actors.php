@@ -33,11 +33,11 @@ class Blocked_Actors {
 			/**
 			 * Fired when an actor is blocked.
 			 *
-			 * @param string $value   The blocked actor URI.
+			 * @param string $value   The blocked actor's canonical ID, whatever identifier the block named.
 			 * @param string $type    The block type (actor, domain, keyword).
 			 * @param int    $user_id The user ID.
 			 */
-			\do_action( 'activitypub_add_user_block', $value, Moderation::TYPE_ACTOR, $user_id );
+			\do_action( 'activitypub_add_user_block', $actor_post->guid, Moderation::TYPE_ACTOR, $user_id );
 
 			$result = (bool) \add_post_meta( $actor_post->ID, Moderation::BLOCKED_ACTORS_META_KEY, (string) $user_id );
 			\clean_post_cache( $actor_post->ID );
@@ -58,27 +58,26 @@ class Blocked_Actors {
 	public static function remove( $user_id, $value ) {
 		// Handle both post ID and URI formats.
 		if ( \is_numeric( $value ) ) {
-			$post_id = (int) $value;
+			$actor_post = \get_post( (int) $value );
 		} else {
-			// Otherwise, find the actor post by actor ID.
 			$actor_post = Remote_Actors::fetch_by_uri( $value );
-			if ( \is_wp_error( $actor_post ) ) {
-				return false;
-			}
-			$post_id = $actor_post->ID;
+		}
+
+		if ( ! $actor_post instanceof \WP_Post ) {
+			return false;
 		}
 
 		/**
 		 * Fired when an actor is unblocked.
 		 *
-		 * @param string $value   The unblocked actor URI.
-		 * @param string $type    The block type (actor, domain, keyword).
-		 * @param int    $user_id The user ID.
+		 * @param string $actor_id The ActivityPub ID of the unblocked actor.
+		 * @param string $type     The block type (actor, domain, keyword).
+		 * @param int    $user_id  The user ID.
 		 */
-		\do_action( 'activitypub_remove_user_block', $value, Moderation::TYPE_ACTOR, $user_id );
+		\do_action( 'activitypub_remove_user_block', $actor_post->guid, Moderation::TYPE_ACTOR, $user_id );
 
-		$result = \delete_post_meta( $post_id, Moderation::BLOCKED_ACTORS_META_KEY, $user_id );
-		\clean_post_cache( $post_id );
+		$result = \delete_post_meta( $actor_post->ID, Moderation::BLOCKED_ACTORS_META_KEY, $user_id );
+		\clean_post_cache( $actor_post->ID );
 
 		return $result;
 	}
