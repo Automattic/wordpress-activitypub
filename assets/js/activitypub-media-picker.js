@@ -95,6 +95,20 @@
 	}
 
 	/**
+	 * Resolves a CSS selector to a jQuery object.
+	 *
+	 * Uses querySelector instead of jQuery, so the selector is never parsed as HTML.
+	 *
+	 * @param {string} selector The CSS selector taken from the button data attribute.
+	 * @return {jQuery} The matched elements, or an empty jQuery object.
+	 */
+	function resolveElement( selector ) {
+		var element = selector ? document.querySelector( selector ) : null;
+
+		return $( element || [] );
+	}
+
+	/**
 	 * Initializes a single media picker, driven by the data attributes of its button.
 	 *
 	 * Every picker keeps its own state, so multiple pickers can run on the same page.
@@ -102,10 +116,10 @@
 	 * @param {jQuery} $chooseButton The button that opens the media frame.
 	 */
 	function initPicker( $chooseButton ) {
-		var $preview = $( $chooseButton.attr( 'data-preview' ) ),
-			$previewWrapper = $( $chooseButton.attr( 'data-preview-wrapper' ) ),
-			$hiddenDataField = $( $chooseButton.attr( 'data-input' ) ),
-			$removeButton = $( $chooseButton.attr( 'data-remove' ) ),
+		var $preview = resolveElement( $chooseButton.attr( 'data-preview' ) ),
+			$previewWrapper = resolveElement( $chooseButton.attr( 'data-preview-wrapper' ) ),
+			$hiddenDataField = resolveElement( $chooseButton.attr( 'data-input' ) ),
+			$removeButton = resolveElement( $chooseButton.attr( 'data-remove' ) ),
 			targetWidth = parseInt( $chooseButton.attr( 'data-width' ), 10 ),
 			targetHeight = parseInt( $chooseButton.attr( 'data-height' ), 10 ),
 			context = $chooseButton.attr( 'data-context' ),
