@@ -11,44 +11,41 @@
 $args = wp_parse_args(
 	$args ?? array(),
 	array(
-		'type'         => 'posts',
-		'items'        => array(),
-		'send_back'    => '',
-		'checked'      => true,
-		'cancel_label' => __( 'Cancel', 'activitypub' ),
+		'type'      => 'posts',
+		'items'     => array(),
+		'send_back' => '',
 	)
 );
 
-$item_type    = $args['type'];
-$item_ids     = $args['items'];
-$send_back    = $args['send_back'];
-$checked      = $args['checked'];
-$cancel_label = $args['cancel_label'];
+$item_type  = $args['type'];
+$item_ids   = $args['items'];
+$send_back  = $args['send_back'];
+$notice_url = add_query_arg( 'users' === $item_type ? 'activitypub_no_users' : 'activitypub_no_posts', '1', $send_back );
 
-// Validate items - redirect back with notice if empty.
+// An empty include would list every user, so bail before querying.
 if ( empty( $item_ids ) ) {
-	$notice_param = 'users' === $item_type ? 'activitypub_no_users' : 'activitypub_no_posts';
-	wp_safe_redirect( add_query_arg( $notice_param, '1', $send_back ) );
+	wp_safe_redirect( $notice_url );
 	exit;
 }
 
-// Get items based on type.
 $items = array();
 if ( 'users' === $item_type ) {
 	$items = get_users( array( 'include' => $item_ids ) );
 } else {
+	_prime_post_caches( $item_ids, false, false );
+
 	foreach ( $item_ids as $item_id ) {
 		$item = get_post( $item_id );
 		if ( $item && current_user_can( 'edit_post', $item_id ) ) {
 			$items[] = $item;
 		}
 	}
+
+	cache_users( array_unique( wp_list_pluck( $items, 'post_author' ) ) );
 }
 
-// If no valid items, redirect back with notice.
 if ( empty( $items ) ) {
-	$notice_param = 'users' === $item_type ? 'activitypub_no_users' : 'activitypub_no_posts';
-	wp_safe_redirect( add_query_arg( $notice_param, '1', $send_back ) );
+	wp_safe_redirect( $notice_url );
 	exit;
 }
 
@@ -65,6 +62,8 @@ if ( 'users' === $item_type ) {
 	$form_action  = 'delete_actor_confirmed';
 	$input_name   = 'remove_from_fediverse[]';
 	$hidden_name  = 'selected_users[]';
+	$checked      = false;
+	$cancel_label = __( 'Skip', 'activitypub' );
 	$columns      = array(
 		'name' => __( 'Name', 'activitypub' ),
 	);
@@ -80,6 +79,8 @@ if ( 'users' === $item_type ) {
 	$form_action  = 'activitypub_delete_posts_confirmed';
 	$input_name   = 'selected_posts[]';
 	$hidden_name  = '';
+	$checked      = true;
+	$cancel_label = __( 'Cancel', 'activitypub' );
 	$columns      = array(
 		'title'  => __( 'Title', 'activitypub' ),
 		'author' => __( 'Author', 'activitypub' ),
