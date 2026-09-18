@@ -301,6 +301,7 @@ class Test_Move extends \WP_UnitTestCase {
 
 		$filter = function () use ( $from ) {
 			return array(
+				'id'          => '',
 				'type'        => 'Person',
 				'alsoKnownAs' => array( $from ),
 			);

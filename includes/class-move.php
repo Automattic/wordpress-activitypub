@@ -99,7 +99,7 @@ class Move {
 		 */
 		$target_id     = $target_actor->get_id();
 		$also_known_as = (array) $target_actor->get_also_known_as();
-		if ( ! is_actor( $response ) || ! \is_string( $target_id ) || $target_id === $user->get_id() || ! \in_array( $user->get_id(), $also_known_as, true ) ) {
+		if ( ! is_actor( $response ) || ! \is_string( $target_id ) || '' === $target_id || $target_id === $user->get_id() || ! \in_array( $user->get_id(), $also_known_as, true ) ) {
 			return new \WP_Error( 'invalid_target', \__( 'Invalid target', 'activitypub' ) );
 		}
 
