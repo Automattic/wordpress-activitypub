@@ -103,7 +103,15 @@
 	 * @return {jQuery} The matched elements, or an empty jQuery object.
 	 */
 	function resolveElement( selector ) {
-		var element = selector ? document.querySelector( selector ) : null;
+		var element = null;
+
+		if ( selector ) {
+			try {
+				element = document.querySelector( selector );
+			} catch ( error ) {
+				element = null;
+			}
+		}
 
 		return $( element || [] );
 	}
