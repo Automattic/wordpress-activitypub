@@ -29,7 +29,12 @@ class Test_Move extends \WP_UnitTestCase {
 	 * Create fake data before tests run.
 	 */
 	public static function set_up_before_class() {
-		self::$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		self::$user_id = self::factory()->user->create(
+			array(
+				'role'       => 'author',
+				'user_login' => 'mover',
+			)
+		);
 	}
 
 	/**
@@ -56,6 +61,34 @@ class Test_Move extends \WP_UnitTestCase {
 		$this->assertEquals( $to, $moved_to );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+	}
+
+	/**
+	 * The source may be given as any local URL of the actor; the target only needs to list the canonical id.
+	 *
+	 * @covers ::externally
+	 */
+	public function test_account_verifies_the_canonical_source_id() {
+		$canonical = Actors::get_by_id( self::$user_id )->get_id();
+		$to        = 'https://newsite.com/user/1';
+
+		$filter = function () use ( $canonical, $to ) {
+			return array(
+				'id'          => $to,
+				'type'        => 'Person',
+				'alsoKnownAs' => array( $canonical ),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$outbox_id = Move::externally( \home_url( '/@mover' ), $to );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertIsInt( $outbox_id );
+
+		$activity = \json_decode( \get_post_field( 'post_content', $outbox_id ) );
+		$this->assertEquals( $canonical, $activity->object, 'The federated object must be the id the target links back to.' );
 	}
 
 	/**
@@ -123,6 +156,9 @@ class Test_Move extends \WP_UnitTestCase {
 		$updates = $this->get_federated_updates();
 
 		$this->assertCount( 1, $updates, 'A move should federate exactly one profile Update.' );
+
+		$update = \json_decode( $updates[0]->post_content );
+		$this->assertEquals( $to, $update->object->movedTo, 'The Update must carry the new movedTo.' );
 	}
 
 	/**
@@ -407,6 +443,37 @@ class Test_Move extends \WP_UnitTestCase {
 
 		// The target links back to the source via alsoKnownAs, so receiving servers accept the move.
 		$this->assertContains( $from, Actors::get_by_id( $target_id )->get_also_known_as() );
+
+		// Both actors federate a profile Update carrying the new links.
+		$source_updates = $this->get_federated_updates();
+		$target_updates = $this->get_federated_updates( $target_id );
+
+		$this->assertCount( 1, $source_updates );
+		$this->assertCount( 1, $target_updates );
+		$this->assertEquals( $to, \json_decode( $source_updates[0]->post_content )->object->movedTo );
+		$this->assertContains( $from, \json_decode( $target_updates[0]->post_content )->object->alsoKnownAs );
+	}
+
+	/**
+	 * A numeric source is aliased on the target as the actor id, which is what receivers verify.
+	 *
+	 * @covers ::internally
+	 */
+	public function test_internally_aliases_a_numeric_source_as_the_actor_id() {
+		$target_id = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		$actor_id = Actors::get_by_id( self::$user_id )->get_id();
+		$to       = Actors::get_by_id( $target_id )->get_id();
+
+		$outbox_id = Move::internally( (string) self::$user_id, $to );
+
+		\wp_cache_delete( $target_id, 'users' );
+
+		$this->assertIsInt( $outbox_id );
+
+		$also_known_as = Actors::get_by_id( $target_id )->get_also_known_as();
+		$this->assertContains( $actor_id, $also_known_as );
+		$this->assertNotContains( (string) self::$user_id, $also_known_as );
 	}
 
 	/**
@@ -530,16 +597,18 @@ class Test_Move extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * The profile Updates federated for the test user.
+	 * The profile Updates federated for an actor.
+	 *
+	 * @param int $user_id The user ID, defaults to the test user.
 	 *
 	 * @return \WP_Post[] Outbox items of type Update.
 	 */
-	private function get_federated_updates() {
+	private function get_federated_updates( $user_id = null ) {
 		return \get_posts(
 			array(
 				'post_type'   => Outbox::POST_TYPE,
 				'post_status' => 'any',
-				'author'      => self::$user_id,
+				'author'      => $user_id ?? self::$user_id,
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 				'meta_query'  => array(
 					array(

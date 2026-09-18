@@ -190,13 +190,13 @@ class Move {
 			}
 
 			/*
-			 * The old account URL goes into the target's `alsoKnownAs`, since receivers accept the Move
+			 * The old actor id goes into the target's `alsoKnownAs`, since receivers accept the Move
 			 * only when the new actor links back. For a domain change both resolve to the same actor.
 			 */
 			if ( $target_id > 0 ) {
-				self::update_user_also_known_as( $target_id, $from );
+				self::update_user_also_known_as( $target_id, $actor );
 			} else {
-				self::update_blog_also_known_as( $from );
+				self::update_blog_also_known_as( $actor );
 			}
 
 			Actor_Scheduler::schedule_profile_update( $user->get__id() );
