@@ -256,7 +256,7 @@ abstract class File {
 		$file_name     = \basename( $file_path );
 
 		// Allow cache types to remove stale files without deleting this write.
-		static::after_cache( $url, $entity_id, $file_path, $file_name, $options );
+		static::after_cache( $url, $entity_id, $file_name );
 
 		$local_url = $paths['baseurl'] . '/' . $file_name;
 
@@ -285,11 +285,9 @@ abstract class File {
 	 *
 	 * @param string     $url       The remote URL.
 	 * @param string|int $entity_id The entity identifier.
-	 * @param string     $file_path The written file path.
 	 * @param string     $file_name The written file basename.
-	 * @param array      $options   Cache options.
 	 */
-	protected static function after_cache( $url, $entity_id, $file_path, $file_name, $options ) {
+	protected static function after_cache( $url, $entity_id, $file_name ) {
 		// Cache types with multiple files need no cleanup.
 	}
 
