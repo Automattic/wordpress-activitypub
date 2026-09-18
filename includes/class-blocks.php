@@ -1079,9 +1079,9 @@ class Blocks {
 			return '';
 		}
 
-		// Generate HTML @ link.
+		// The link targets the replied-to post, so it carries the reply microformat, not the mention one.
 		return \sprintf(
-			'<p class="ap-reply-mention"><a rel="mention ugc" href="%1$s" title="%2$s">%3$s</a></p>',
+			'<p class="ap-reply-mention"><a rel="in-reply-to ugc" class="u-in-reply-to" href="%1$s" title="%2$s">%3$s</a></p>',
 			\esc_url( $url ),
 			\esc_attr( $webfinger ),
 			\esc_html( '@' . \strtok( $webfinger, '@' ) )
