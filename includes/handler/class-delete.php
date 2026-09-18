@@ -14,6 +14,7 @@ use Activitypub\Collection\Remote_Posts;
 use Activitypub\Proxy;
 use Activitypub\Tombstone;
 
+use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 
 /**
@@ -50,7 +51,10 @@ class Delete {
 			return;
 		}
 
-		Proxy::delete( $activity['object'] ?? null );
+		// Only an actor on the object's host may retire the cached copy.
+		if ( is_same_host( $activity['actor'] ?? '', object_to_uri( $activity['object'] ?? null ) ) ) {
+			Proxy::delete( $activity['object'] );
+		}
 
 		$object_type = $activity['object']['type'] ?? '';
 

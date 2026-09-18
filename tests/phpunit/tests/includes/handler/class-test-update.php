@@ -669,4 +669,34 @@ class Test_Update extends \WP_UnitTestCase {
 			),
 		);
 	}
+
+	/**
+	 * An Update from an actor on another host than the object does not touch the cache.
+	 *
+	 * @covers ::handle_update
+	 */
+	public function test_handle_update_from_a_foreign_actor_keeps_the_cached_object() {
+		$this->stub_remote_requests();
+		$id                     = 'https://example.com/notes/1';
+		$this->responses[ $id ] = array(
+			'id'   => $id,
+			'type' => 'Note',
+		);
+
+		Proxy::get( $id );
+		Update::handle_update(
+			array(
+				'type'   => 'Update',
+				'actor'  => 'https://example.org/users/mallory',
+				'object' => $id,
+			),
+			array( 1 ),
+			null
+		);
+		$before = $this->requests;
+		Proxy::get( $id );
+		$this->unstub_remote_requests();
+
+		$this->assertSame( $before, $this->requests, 'The object is still served from the cache.' );
+	}
 }

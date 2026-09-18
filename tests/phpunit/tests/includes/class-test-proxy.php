@@ -106,9 +106,8 @@ class Test_Proxy extends \WP_UnitTestCase {
 	 * Deleting an entry forces the next call to fetch again.
 	 *
 	 * @covers ::delete
-	 * @covers ::refresh
 	 */
-	public function test_delete_and_refresh_fetch_again() {
+	public function test_delete_fetches_again() {
 		$id = $this->note( 'https://example.com/notes/1' );
 
 		Proxy::get( $id );
@@ -117,10 +116,6 @@ class Test_Proxy extends \WP_UnitTestCase {
 
 		$this->assertSame( 'v2', Proxy::get( $id )['content'] );
 		$this->assertSame( 2, $this->requests );
-
-		$this->responses[ $id ]['content'] = 'v3';
-		$this->assertSame( 'v3', Proxy::refresh( $id )['content'] );
-		$this->assertSame( 3, $this->requests );
 	}
 
 	/**
@@ -300,5 +295,132 @@ class Test_Proxy extends \WP_UnitTestCase {
 		Proxy::get( $id );
 
 		$this->assertSame( 1, $this->requests );
+	}
+
+	/**
+	 * A document without an id reached through a cross-host redirect is not cached under the requested URL.
+	 *
+	 * @covers ::get
+	 */
+	public function test_get_does_not_cache_an_idless_document_from_another_host() {
+		$requested = 'https://example.com/redirect';
+
+		$this->responses[ $requested ] = $this->redirected( 'https://example.org/key.json', array( 'publicKeyPem' => 'PEM' ) );
+
+		Proxy::get( $requested );
+		Proxy::get( $requested );
+
+		$this->assertSame( 2, $this->requests );
+	}
+
+	/**
+	 * A remote document cannot pose as an alias, whatever keys it carries.
+	 *
+	 * @covers ::get
+	 */
+	public function test_a_document_cannot_forge_an_alias() {
+		$id                     = 'https://example.com/notes/1';
+		$this->responses[ $id ] = array(
+			'id'      => $id,
+			'type'    => 'Note',
+			'__alias' => array( 'https://example.org/users/victim' ),
+		);
+
+		$first  = Proxy::get( $id );
+		$second = Proxy::get( $id );
+
+		$this->assertSame( $id, $first['id'] );
+		$this->assertSame( $first, $second );
+		$this->assertSame( 1, $this->requests );
+	}
+
+	/**
+	 * A call that bypasses the cache never leaves a failure behind for the others.
+	 *
+	 * @covers ::get
+	 */
+	public function test_bypass_does_not_cache_a_failure() {
+		$id = 'https://example.com/notes/gone';
+
+		$this->assertWPError( Proxy::get( $id, array( 'cached' => false ) ) );
+		$this->assertWPError( Proxy::get( $id ) );
+		$this->assertSame( 2, $this->requests );
+	}
+
+	/**
+	 * A media object is deleted by its id, not by the file it points at.
+	 *
+	 * @covers ::delete
+	 */
+	public function test_delete_keys_a_media_object_on_its_id() {
+		$id                     = 'https://example.com/photos/1';
+		$this->responses[ $id ] = array(
+			'id'   => $id,
+			'type' => 'Image',
+			'url'  => 'https://cdn.example.com/1.jpg',
+		);
+
+		Proxy::get( $id );
+		Proxy::delete( $this->responses[ $id ] );
+		Proxy::get( $id );
+
+		$this->assertSame( 2, $this->requests );
+	}
+
+	/**
+	 * A document that is not JSON is remembered like any other client error, not retried every minute.
+	 *
+	 * @covers ::get
+	 */
+	public function test_invalid_json_is_remembered_like_a_client_error() {
+		$id                     = 'https://example.com/notes/html';
+		$this->responses[ $id ] = array(
+			'response' => array( 'code' => 200 ),
+			'body'     => '<html></html>',
+			'headers'  => array(),
+		);
+
+		$this->assertWPError( Proxy::get( $id ) );
+
+		$timeout = (int) \get_option( '_transient_timeout_activitypub_object:' . \hash( 'sha256', $id ) );
+		$this->assertGreaterThan( \time() + 10 * MINUTE_IN_SECONDS, $timeout );
+	}
+
+	/**
+	 * When the requested host serves a document that fails to confirm on its declared host,
+	 * that failure is remembered for the requested URL.
+	 *
+	 * @covers ::get
+	 */
+	public function test_a_failed_second_hop_is_remembered_for_the_requested_url() {
+		$requested = 'https://example.com/o';
+		$declared  = 'https://example.org/users/v';
+
+		$this->responses[ $requested ] = array(
+			'id'   => $declared,
+			'type' => 'Note',
+		);
+
+		$this->assertWPError( Proxy::get( $requested ) );
+		$this->assertSame( 2, $this->requests, 'Both hops were fetched once.' );
+
+		$this->assertWPError( Proxy::get( $requested ) );
+		$this->assertSame( 2, $this->requests, 'The failure is served from the cache.' );
+	}
+
+	/**
+	 * A lifetime of zero writes nothing rather than an entry that never expires.
+	 *
+	 * @covers ::get
+	 */
+	public function test_a_zero_ttl_writes_nothing() {
+		$id = $this->note( 'https://example.com/notes/1' );
+		\add_filter( 'activitypub_proxy_cache_ttl', '__return_zero' );
+
+		Proxy::get( $id );
+		Proxy::get( $id );
+
+		$this->assertSame( 2, $this->requests );
+		$this->assertFalse( \get_option( '_transient_activitypub_object:' . \hash( 'sha256', $id ) ) );
 	}
 }

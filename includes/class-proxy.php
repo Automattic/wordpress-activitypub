@@ -14,10 +14,14 @@ namespace Activitypub;
  * object with a signed request, checks that it is served under its own id, and stores it.
  * The REST `proxyUrl` endpoint and the older fetch helpers go through here. The cache
  * behind it is the object cache, or transients where the site has no persistent one,
- * so a host swaps the backend with its object cache drop-in and nothing else.
+ * so a host swaps the backend with its object cache drop-in and nothing else. It uses
+ * its own cache group rather than plain transients so that a kind of entry can be
+ * invalidated on its own later.
  *
  * An object is stored once, under its declared id. Any other URL it was requested by
- * gets an alias entry pointing at that id, so dropping the id drops every spelling.
+ * gets an alias, a bare string holding that id, so dropping the id drops every spelling.
+ * A remote document is always an array and an error always an object, so a string can
+ * never be mistaken for either.
  *
  * @since unreleased
  */
@@ -108,8 +112,10 @@ class Proxy {
 		$same_host = is_same_host( $url, $final_url );
 
 		if ( \is_wp_error( $object ) ) {
-			if ( $same_host ) {
-				self::cache_set( self::CACHE_NAMESPACE, $url, $object, Http::failure_cache_duration( (int) $object->get_error_code() ) );
+			// A call that bypassed the cache must not leave a failure behind for the others.
+			if ( $same_host && $args['cached'] ) {
+				$status = (int) ( $object->get_error_data()['status'] ?? 0 );
+				self::cache_set( self::CACHE_NAMESPACE, $url, $object, Http::failure_cache_duration( $status ) );
 			}
 
 			return $object;
@@ -125,11 +131,15 @@ class Proxy {
 		$ttl = (int) \apply_filters( 'activitypub_proxy_cache_ttl', (int) $args['ttl'], $url, $object );
 
 		// The declared id confirmed itself, so it is the canonical entry.
-		$canonical = ! empty( $object['id'] ) && \is_string( $object['id'] ) ? $object['id'] : $url;
-		self::cache_set( self::CACHE_NAMESPACE, $canonical, $object, $ttl );
+		$canonical = ! empty( $object['id'] ) && \is_string( $object['id'] ) ? $object['id'] : '';
+
+		if ( '' !== $canonical ) {
+			self::cache_set( self::CACHE_NAMESPACE, $canonical, $object, $ttl );
+		}
 
 		if ( $same_host && $canonical !== $url ) {
-			self::cache_set( self::CACHE_NAMESPACE, $url, array( '__alias' => $canonical ), $ttl );
+			// Without an id, the requested URL is the only name the document has.
+			self::cache_set( self::CACHE_NAMESPACE, $url, '' !== $canonical ? $canonical : $object, $ttl );
 		}
 
 		return $object;
@@ -147,24 +157,13 @@ class Proxy {
 	 * @return bool Whether an entry was removed.
 	 */
 	public static function delete( $id ) {
+		if ( \is_array( $id ) ) {
+			$id = $id['id'] ?? null;
+		}
+
 		$url = object_to_uri( $id );
 
 		return $url ? self::cache_delete( self::CACHE_NAMESPACE, \strip_fragment_from_url( $url ) ) : false;
-	}
-
-	/**
-	 * Fetch a remote object again, replacing the cached one.
-	 *
-	 * @since unreleased
-	 *
-	 * @param string|array $id The ActivityPub id, or an object with an id.
-	 *
-	 * @return array|\WP_Error The object, or an error.
-	 */
-	public static function refresh( $id ) {
-		self::delete( $id );
-
-		return self::get( $id );
 	}
 
 	/**
@@ -189,7 +188,7 @@ class Proxy {
 	 *
 	 * @param string $kind         The kind of thing, for example `object`.
 	 * @param string $id           The ActivityPub id.
-	 * @param bool   $follow_alias Whether an alias entry is resolved. Default true.
+	 * @param bool   $follow_alias Whether an alias is resolved. Default true.
 	 *
 	 * @return array|\WP_Error|null The entry, or null when there is none.
 	 */
@@ -206,9 +205,9 @@ class Proxy {
 			return null;
 		}
 
-		if ( \is_array( $value ) && isset( $value['__alias'] ) ) {
+		if ( \is_string( $value ) ) {
 			// A dangling alias, or an alias of an alias, is a miss.
-			return $follow_alias ? self::cache_get( $kind, $value['__alias'], false ) : null;
+			return $follow_alias ? self::cache_get( $kind, $value, false ) : null;
 		}
 
 		return $value;
@@ -220,12 +219,16 @@ class Proxy {
 	 * Always with a lifetime: a persistent object cache evicts entries anyway, and a
 	 * transient without one becomes an autoloaded option.
 	 *
-	 * @param string          $kind  The kind of thing, for example `object`.
-	 * @param string          $id    The ActivityPub id.
-	 * @param array|\WP_Error $value The entry.
-	 * @param int             $ttl   Seconds to keep it.
+	 * @param string                 $kind  The kind of thing, for example `object`.
+	 * @param string                 $id    The ActivityPub id.
+	 * @param array|\WP_Error|string $value The entry, or the id it is an alias of.
+	 * @param int                    $ttl   Seconds to keep it. Nothing is written for zero.
 	 */
 	private static function cache_set( $kind, $id, $value, $ttl ) {
+		if ( $ttl <= 0 ) {
+			return;
+		}
+
 		$key = self::cache_key( $kind, $id );
 
 		if ( \wp_using_ext_object_cache() ) {
@@ -260,7 +263,8 @@ class Proxy {
 	 * it declares, which has to confirm it. One hop only.
 	 *
 	 * @param string $url       The URL to fetch.
-	 * @param string $final_url Set to the URL the object, or the failure, was served from.
+	 * @param string $final_url Set to the URL the object was served from. For a failure, the URL
+	 *                          that served the document which failed to confirm.
 	 *
 	 * @return array|\WP_Error The object, or an error.
 	 */
@@ -282,13 +286,18 @@ class Proxy {
 			return $object;
 		}
 
-		$object = self::fetch( $declared_id, $final_url );
+		$first_hop = $final_url;
+		$object    = self::fetch( $declared_id, $final_url );
 
 		if ( \is_wp_error( $object ) ) {
+			$final_url = $first_hop;
+
 			return $object;
 		}
 
 		if ( ! id_matches_url( $object, $final_url ) ) {
+			$final_url = $first_hop;
+
 			return new \WP_Error(
 				'activitypub_object_id_mismatch',
 				\__( 'The object id does not match the URL it was served from', 'activitypub' ),
