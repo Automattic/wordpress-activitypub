@@ -389,9 +389,8 @@ class Remote_Posts {
 		$items = $activity_object['attachment'] ?? array();
 
 		/*
-		 * Long-form senders put the representative picture in `image` rather than in `attachment`,
-		 * where FEP-b2b8 only wants media that is part of the text. Read it as an attachment so it
-		 * still reaches the post, the way `Embed::render()` already falls back for previews.
+		 * Some senders only carry the representative picture in `image`. Read it as an attachment
+		 * so it still reaches the post, the way `Embed::render()` already falls back for previews.
 		 */
 		if ( empty( $items ) && ! empty( $activity_object['image'] ) ) {
 			$items = $activity_object['image'];

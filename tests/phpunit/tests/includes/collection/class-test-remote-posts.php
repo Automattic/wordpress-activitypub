@@ -456,10 +456,10 @@ class Test_Remote_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * A long-form sender's representative `image` still reaches the post.
+	 * A sender's representative `image` still reaches the post.
 	 *
-	 * FEP-b2b8 puts that picture in `image` rather than `attachment`, so reading only
-	 * `attachment` would drop it for every Article we cache.
+	 * Some implementations only carry that picture in `image`, so reading only `attachment`
+	 * would drop it for every Article we cache from them.
 	 *
 	 * @covers ::activity_to_post
 	 * @covers ::extract_attachments

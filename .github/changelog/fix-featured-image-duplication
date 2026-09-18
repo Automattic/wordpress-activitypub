@@ -1,4 +1,0 @@
-Significance: patch
-Type: fixed
-
-The featured image is no longer sent twice, so apps that show both a header image and attachments no longer display it two times.
