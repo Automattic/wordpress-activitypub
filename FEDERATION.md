@@ -7,10 +7,12 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 - [ActivityPub](https://www.w3.org/TR/activitypub/) (Server-to-Server)
 - [ActivityPub API: Basic Profile](https://swicg.github.io/activitypub-api/basicprofile) (Client-to-Server, partial; see [OAuth 2.0 for Client-to-Server](#oauth-20-for-client-to-server))
 - [ActivityPub API: Server-Sent Events](https://swicg.github.io/activitypub-api/sse) (partial, see below)
+- [ActivityPub API: Actor Autocomplete](https://swicg.github.io/activitypub-api/autocomplete) (typeahead search over local and cached remote actors; requires the ActivityPub API to be enabled)
 - [WebFinger](https://www.w3.org/community/reports/socialcg/CG-FINAL-apwf-20240608/)
 - [HTTP Signatures](https://swicg.github.io/activitypub-http-signature/)
 - [NodeInfo](https://nodeinfo.diaspora.software/)
-- [Interaction Policy](https://docs.gotosocial.org/en/latest/federation/interaction_policy/)
+- [Interaction Policy/Interaction Controls](https://docs.gotosocial.org/en/latest/federation/interaction_controls/)
+- [ActivityPub Miscellaneous Terms](https://swicg.github.io/miscellany/) (`Hashtag`, `manuallyApprovesFollowers`, `movedTo`, `sensitive`)
 
 ## Supported FEPs
 
@@ -131,6 +133,13 @@ For compatibility with Mastodon, the plugin supports several extensions from the
 
 ### Other Extensions
 
+**[ActivityPub Miscellaneous Terms](https://swicg.github.io/miscellany/)**
+
+The context is included as `https://purl.archive.org/miscellany`.
+
+- `Actor` - `manuallyApprovesFollowers`, `movedTo`
+- `Object` - `sensitive`, `Hashtag` tags
+
 **[Dublin Core](http://purl.org/dc/terms/)**
 
 - `dcterms:subject` - Content warnings (see FEP-b2b8)
@@ -228,7 +237,7 @@ When the ActivityPub API option is enabled, the plugin exposes OAuth 2.0 endpoin
 
 **Supported standards:**
 
-- [SWICG ActivityPub API: Basic Profile](https://swicg.github.io/activitypub-api/basicprofile) - C2S baseline. The token response includes `activitypub_actor_id` alongside the IndieAuth `me` URI, and `scopes_supported` advertises the canonical aliases `activitypub:read:all` and `activitypub:write:all`. Any `activitypub:read:*` or `activitypub:write:*` scope is accepted and collapsed to the plugin's coarse `read` / `write` scope — there is no per-activity-type access control yet.
+- [SWICG ActivityPub API: Basic Profile](https://swicg.github.io/activitypub-api/basicprofile) - C2S baseline. The token response includes `activitypub_actor_id` alongside the IndieAuth `me` URI. Two generations of Basic Profile scope identifiers are accepted and advertised in `scopes_supported`: the `activitypub:read:*` / `activitypub:write:*` aliases the draft used before 2026-08-04, and the `https://swicg.github.io/activitypub-api/scopes#…` identifiers that replaced them. Each is mapped to the scope the plugin grants, so the per-collection read identifiers resolve to `read` and the per-action write identifiers to `write`. There is no per-activity access control, so `follow` and `updateprofile` resolve to `write` like every other write identifier. Seven identifiers are not offered: `readown` and `reactown` describe data on the client's own server, `uploadfiles` needs a MediaUpload endpoint the plugin does not implement, and the four `address*` identifiers restrict who an activity may be addressed to rather than granting anything.
 - [RFC 8252](https://datatracker.ietf.org/doc/html/rfc8252) - OAuth 2.0 for Native Apps. Loopback redirect URIs (`http://127.0.0.1:{port}` and `http://[::1]:{port}`) are accepted with port flexibility per §7.3/§8.3. `localhost` is also accepted for compatibility; §8.3 marks this "NOT RECOMMENDED" but it remains common practice.
 - [RFC 7591](https://datatracker.ietf.org/doc/html/rfc7591) - Dynamic Client Registration.
 - [RFC 7636](https://datatracker.ietf.org/doc/html/rfc7636) - PKCE. Required by default for public clients; only `S256` is accepted.

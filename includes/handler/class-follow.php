@@ -8,11 +8,14 @@
 namespace Activitypub\Handler;
 
 use Activitypub\Activity\Activity;
+use Activitypub\Application;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Http;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\object_to_uri;
 
 /**
  * Handle Follow requests.
@@ -24,6 +27,9 @@ class Follow {
 	public static function init() {
 		\add_action( 'activitypub_inbox_follow', array( self::class, 'handle_follow' ), 10, 2 );
 		\add_action( 'activitypub_handled_follow', array( self::class, 'queue_accept' ), 10, 4 );
+
+		// The Application actor cannot be followed; explicitly reject such Follows so they don't sit "pending" on the remote instance forever.
+		\add_action( 'activitypub_inbox_shared_follow', array( self::class, 'reject_application_follow' ), 10, 2 );
 	}
 
 	/**
@@ -35,11 +41,6 @@ class Follow {
 	public static function handle_follow( $activity, $user_ids ) {
 		// Extract the user ID (follow requests are always for a single user).
 		$user_id = \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids;
-
-		if ( Actors::APPLICATION_USER_ID === $user_id ) {
-			self::queue_reject( $activity, $user_id );
-			return;
-		}
 
 		// Check if the actor already follows the user.
 		$already_following = false;
@@ -103,7 +104,7 @@ class Follow {
 		$actor = $activity_object['actor'];
 
 		// Only send minimal data.
-		$activity_object = array_intersect_key(
+		$activity_object = \array_intersect_key(
 			$activity_object,
 			array(
 				'id'     => 1,
@@ -123,14 +124,43 @@ class Follow {
 	}
 
 	/**
-	 * Send Reject response.
+	 * Reject Follow requests aimed at the Application actor.
 	 *
-	 * @param array $activity The Activity array.
-	 * @param int   $user_id  The ID of the WordPress User.
+	 * The Application advertises `manuallyApprovesFollowers` but is not followable,
+	 * so an explicit Reject is the only way a remote follow request gets resolved.
+	 * The Reject is sent directly instead of through the Outbox, which only
+	 * dispatches for real actors, and is signed with the Application key.
+	 *
+	 * @since 9.1.0
+	 *
+	 * @param array $activity The Follow activity data.
+	 * @param int[] $user_ids The local recipient IDs the inbox resolved.
 	 */
-	public static function queue_reject( $activity, $user_id ) {
+	public static function reject_application_follow( $activity, $user_ids ) {
+		// A resolved recipient means the Follow targets a real actor, not the Application.
+		if ( ! empty( $user_ids ) ) {
+			return;
+		}
+
+		if ( empty( $activity['object'] ) || ! Application::is_application_resource( object_to_uri( $activity['object'] ) ) ) {
+			return;
+		}
+
+		$actor        = object_to_uri( $activity['actor'] );
+		$remote_actor = Remote_Actors::fetch_by_uri( $actor );
+
+		if ( \is_wp_error( $remote_actor ) ) {
+			return;
+		}
+
+		$inbox = \get_post_meta( $remote_actor->ID, '_activitypub_inbox', true );
+
+		if ( ! $inbox ) {
+			return;
+		}
+
 		// Only send minimal data.
-		$origin_activity = array_intersect_key(
+		$origin_activity = \array_intersect_key(
 			$activity,
 			array(
 				'id'     => 1,
@@ -140,12 +170,13 @@ class Follow {
 			)
 		);
 
-		$activity = new Activity();
-		$activity->set_type( 'Reject' );
-		$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
-		$activity->set_object( $origin_activity );
-		$activity->set_to( array( $origin_activity['actor'] ) );
+		$reject = new Activity();
+		$reject->set_type( 'Reject' );
+		$reject->set_id( Application::get_id() . '#reject-' . \md5( \wp_json_encode( $origin_activity ) ) );
+		$reject->set_actor( Application::get_id() );
+		$reject->set_object( $origin_activity );
+		$reject->set_to( array( $actor ) );
 
-		add_to_outbox( $activity, null, $user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
+		Http::post( $inbox, $reject->to_json(), null );
 	}
 }

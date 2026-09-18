@@ -27,7 +27,7 @@ class Menu {
 	 */
 	public static function admin_menu() {
 		$settings_page = \add_options_page(
-			\_x( 'Welcome', 'page title', 'activitypub' ),
+			\_x( 'ActivityPub', 'page title', 'activitypub' ),
 			'ActivityPub',
 			'manage_options',
 			'activitypub',

@@ -13,6 +13,9 @@ namespace Activitypub\Signature;
 
 use Activitypub\Collection\Remote_Actors;
 
+use function Activitypub\fold_authority;
+use function Activitypub\home_host;
+
 /**
  * Class Http_Signature_Draft.
  *
@@ -50,25 +53,25 @@ class Http_Signature_Draft implements Http_Signature {
 		$date        = $args['headers']['Date'];
 
 		$signed_parts = array(
-			sprintf( '(request-target): %s %s', $http_method, $path ),
-			sprintf( 'host: %s', $host ),
-			sprintf( 'date: %s', $date ),
+			\sprintf( '(request-target): %s %s', $http_method, $path ),
+			\sprintf( 'host: %s', $host ),
+			\sprintf( 'date: %s', $date ),
 		);
 		$headers_list = array( '(request-target)', 'host', 'date' );
 
 		if ( isset( $args['body'] ) ) {
 			$args['headers']['Digest'] = $this->generate_digest( $args['body'] );
-			$signed_parts[]            = sprintf( 'digest: %s', $args['headers']['Digest'] );
+			$signed_parts[]            = \sprintf( 'digest: %s', $args['headers']['Digest'] );
 			$headers_list[]            = 'digest';
 		}
 
 		if ( isset( $args['headers']['Collection-Synchronization'] ) ) {
-			$signed_parts[] = sprintf( 'collection-synchronization: %s', $args['headers']['Collection-Synchronization'] );
+			$signed_parts[] = \sprintf( 'collection-synchronization: %s', $args['headers']['Collection-Synchronization'] );
 			$headers_list[] = 'collection-synchronization';
 		}
 
-		$signed_string = implode( "\n", $signed_parts );
-		$headers_list  = implode( ' ', $headers_list );
+		$signed_string = \implode( "\n", $signed_parts );
+		$headers_list  = \implode( ' ', $headers_list );
 
 		$signature = null;
 		\openssl_sign( $signed_string, $signature, $args['private_key'], \OPENSSL_ALGO_SHA256 );
@@ -241,19 +244,19 @@ class Http_Signature_Draft implements Http_Signature {
 		$matches       = array();
 
 		if ( \preg_match( '/keyId="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['keyId'] = trim( $matches[1] );
+			$parsed_header['keyId'] = \trim( $matches[1] );
 		}
 		if ( \preg_match( '/created=["|\']*([0-9]*)["|\']*/im', $signature, $matches ) ) {
-			$parsed_header['(created)'] = trim( $matches[1] );
+			$parsed_header['(created)'] = \trim( $matches[1] );
 		}
 		if ( \preg_match( '/expires=["|\']*([0-9]*)["|\']*/im', $signature, $matches ) ) {
-			$parsed_header['(expires)'] = trim( $matches[1] );
+			$parsed_header['(expires)'] = \trim( $matches[1] );
 		}
 		if ( \preg_match( '/algorithm="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['algorithm'] = trim( $matches[1] );
+			$parsed_header['algorithm'] = \trim( $matches[1] );
 		}
 		if ( \preg_match( '/headers="(.*?)"/ism', $signature, $matches ) ) {
-			$parsed_header['headers'] = \explode( ' ', trim( $matches[1] ) );
+			$parsed_header['headers'] = \explode( ' ', \trim( $matches[1] ) );
 		}
 		if ( \preg_match( '/signature="(.*?)"/ism', $signature, $matches ) ) {
 			$parsed_header['signature'] = \base64_decode( \preg_replace( '/\s+/', '', \trim( $matches[1] ) ) );
@@ -285,8 +288,52 @@ class Http_Signature_Draft implements Http_Signature {
 
 		// This also verifies time-based values by returning false if any of these are out of range.
 		foreach ( $signed_headers as $header ) {
-			if ( 'host' === $header ) {
-				if ( isset( $headers['x_original_host'] ) ) {
+			if ( 'host' === $header && isset( $headers['x_original_host'][0] ) ) {
+				/*
+				 * A proxy that rewrites `Host` leaves the value the peer signed only in this
+				 * header, so it has to be readable. It is also client-supplied, and `host` is
+				 * the one component tying a draft signature to this server: `(request-target)`
+				 * carries the method and path but no scheme or host. Taking any value on trust
+				 * lets a signature made out to another server verify here when it is replayed
+				 * to the same path, so only a host this site answers on is honoured. Anything
+				 * else falls through to the `Host` the request actually arrived with.
+				 */
+				$original = fold_authority( $headers['x_original_host'][0] );
+
+				/**
+				 * Filters the hosts a signature may legitimately have been made out to.
+				 *
+				 * Sites whose proxy terminates on a name that is neither `home_url()` nor
+				 * `site_url()` add it here. Write them the way they appear in a URL; they are
+				 * folded before they are compared.
+				 *
+				 * @since 9.3.1
+				 *
+				 * @param string[] $hosts Hosts this site answers on.
+				 */
+				$hosts = \apply_filters(
+					'activitypub_signature_original_hosts',
+					array(
+						home_host(),
+						\wp_parse_url( \site_url(), \PHP_URL_HOST ),
+					)
+				);
+
+				/*
+				 * Folded after the filter, not before, so a callback can return a host written
+				 * any way a URL might spell it. Cast because a callback returning one host
+				 * outside an array would otherwise be a fatal rather than a non-match. Empty
+				 * results are dropped, or an unparseable entry would match an empty header.
+				 */
+				$allowed = array();
+				foreach ( (array) $hosts as $host ) {
+					$folded = fold_authority( $host );
+					if ( '' !== $folded ) {
+						$allowed[] = $folded;
+					}
+				}
+
+				if ( '' !== $original && \in_array( $original, $allowed, true ) ) {
 					$signed_data .= $header . ': ' . $headers['x_original_host'][0] . "\n";
 					continue;
 				}

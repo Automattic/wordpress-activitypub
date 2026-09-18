@@ -23,9 +23,15 @@ use function Activitypub\is_user_type_disabled;
 class Opengraph {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * Registered on `init`, so the setting is read once the site context is settled.
 	 */
 	public static function init() {
-		if ( ! function_exists( 'opengraph_metadata' ) ) {
+		if ( '1' !== \get_option( 'activitypub_use_opengraph', '1' ) ) {
+			return;
+		}
+
+		if ( ! \function_exists( 'opengraph_metadata' ) ) {
 			\add_action( 'wp_head', array( self::class, 'add_meta_tags' ) );
 		}
 
@@ -94,7 +100,7 @@ class Opengraph {
 	 * Output Open Graph <meta> tags in the page header.
 	 */
 	public static function add_meta_tags() {
-		$metadata = apply_filters( 'opengraph_metadata', array() );
+		$metadata = \apply_filters( 'opengraph_metadata', array() );
 		foreach ( $metadata as $key => $value ) {
 			if ( empty( $key ) || empty( $value ) ) {
 				continue;
@@ -102,10 +108,10 @@ class Opengraph {
 			$value = (array) $value;
 
 			foreach ( $value as $v ) {
-				printf(
+				\printf(
 					'<meta property="%1$s" name="%1$s" content="%2$s" />' . PHP_EOL,
-					esc_attr( $key ),
-					esc_attr( $v )
+					\esc_attr( $key ),
+					\esc_attr( $v )
 				);
 			}
 		}

@@ -122,6 +122,9 @@ class Test_Interaction_Policy extends \WP_UnitTestCase {
 	 * policy means no consent per FEP-7aa9).
 	 */
 	public function test_application_actor_emits_no_interaction_policy() {
+		// Model\Application is deprecated in favor of \Activitypub\Application; the constructor emits the notice.
+		$this->setExpectedDeprecated( 'Activitypub\Model\Application' );
+
 		\update_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
 
 		$application = new \Activitypub\Model\Application();

@@ -38,7 +38,7 @@ class Nodeinfo {
 	 * @return array The extended array.
 	 */
 	public static function add_nodeinfo_data( $nodeinfo, $version ) {
-		$nodeinfo = wp_parse_args(
+		$nodeinfo = \wp_parse_args(
 			$nodeinfo,
 			array(
 				'version'   => $version,
@@ -66,11 +66,11 @@ class Nodeinfo {
 
 		$nodeinfo['protocols'][] = 'activitypub';
 
-		$nodeinfo['services']['inbound']  = array_merge(
+		$nodeinfo['services']['inbound']  = \array_merge(
 			$nodeinfo['services']['inbound'],
 			array( 'gnusocial' )
 		);
-		$nodeinfo['services']['outbound'] = array_merge(
+		$nodeinfo['services']['outbound'] = \array_merge(
 			$nodeinfo['services']['outbound'],
 			array( 'friendica', 'gnusocial', 'mediagoblin', 'wordpress' )
 		);
@@ -129,7 +129,7 @@ class Nodeinfo {
 	 */
 	private static function get_staff() {
 		// Get all admin users with the cap activitypub.
-		$admins = get_users(
+		$admins = \get_users(
 			array(
 				'role'    => 'administrator',
 				'orderby' => 'ID',
@@ -138,8 +138,8 @@ class Nodeinfo {
 				'fields'  => 'ID',
 			)
 		);
-		$admins = array_map( array( Webfinger::class, 'get_user_resource' ), $admins );
+		$admins = \array_map( array( Webfinger::class, 'get_user_resource' ), $admins );
 
-		return array_values( array_filter( $admins ) );
+		return \array_values( \array_filter( $admins ) );
 	}
 }

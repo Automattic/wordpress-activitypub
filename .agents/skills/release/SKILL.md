@@ -63,10 +63,10 @@ git cherry-pick -m 1 <commit-hash>
 # 3. Update changelog and versions.
 composer changelog:write
 
-# Manually update versions in:
-# - activitypub.php
+# Manually update versions in (see Version File Locations above):
+# - activitypub.php (Version header AND ACTIVITYPUB_PLUGIN_VERSION constant)
 # - readme.txt
-# - package.json
+# - includes/class-migration.php
 
 # 4. Push branch and create GitHub release.
 git push -u origin tags/5.3.1

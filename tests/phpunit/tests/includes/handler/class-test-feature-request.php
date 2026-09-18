@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Handler;
 
+use Activitypub\Application;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
@@ -69,6 +70,23 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 	public function test_validate_object_fails_for_missing_instrument() {
 		$activity = $this->create_feature_request_activity();
 		unset( $activity['instrument'] );
+
+		$request = new \WP_REST_Request( 'POST', '/inbox' );
+		$request->set_body( wp_json_encode( $activity ) );
+		$request->set_header( 'Content-Type', 'application/json' );
+
+		$valid = Feature_Request::validate_object( true, 'object', $request );
+		$this->assertFalse( $valid );
+	}
+
+	/**
+	 * Test that validate_object rejects an instrument hosted off the actor's domain.
+	 *
+	 * @covers ::validate_object
+	 */
+	public function test_validate_object_fails_for_cross_host_instrument() {
+		$activity               = $this->create_feature_request_activity();
+		$activity['instrument'] = 'https://victim.example/users/alice/featured/1';
 
 		$request = new \WP_REST_Request( 'POST', '/inbox' );
 		$request->set_body( wp_json_encode( $activity ) );
@@ -477,9 +495,8 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 	public function test_handle_feature_request_rejects_application_actor() {
 		update_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
 
-		$application        = Actors::get_by_id( Actors::APPLICATION_USER_ID );
 		$activity           = $this->create_feature_request_activity();
-		$activity['object'] = $application->get_id();
+		$activity['object'] = Application::get_id();
 
 		Feature_Request::handle_feature_request( $activity, self::$user_id );
 

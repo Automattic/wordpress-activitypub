@@ -53,7 +53,7 @@ class Interaction_Controller extends \WP_REST_Controller {
 						'intent' => array(
 							'description' => 'The intent of the interaction, e.g., follow, reply, import.',
 							'type'        => 'string',
-							'enum'        => array_map( 'Activitypub\camel_to_snake_case', Activity::TYPES ),
+							'enum'        => \array_map( 'Activitypub\camel_to_snake_case', Activity::TYPES ),
 						),
 					),
 				),
@@ -70,14 +70,14 @@ class Interaction_Controller extends \WP_REST_Controller {
 	 */
 	public function sanitize_uri( $uri ) {
 		// Remove "acct:" prefix if present.
-		if ( str_starts_with( $uri, 'acct:' ) ) {
+		if ( \str_starts_with( $uri, 'acct:' ) ) {
 			$uri = \substr( $uri, 5 );
 		}
 
 		// Remove "@" prefix if present.
 		$uri = \ltrim( $uri, '@' );
 
-		if ( is_email( $uri ) ) {
+		if ( \is_email( $uri ) ) {
 			return \sanitize_text_field( $uri );
 		}
 
@@ -100,7 +100,7 @@ class Interaction_Controller extends \WP_REST_Controller {
 		if ( \is_wp_error( $object ) || ! isset( $object['type'] ) ) {
 			// Use wp_die as this can be called from the front-end. See https://github.com/Automattic/wordpress-activitypub/pull/1149/files#r1915297109.
 			\wp_die(
-				esc_html__( 'The URL is not supported!', 'activitypub' ),
+				\esc_html__( 'The URL is not supported!', 'activitypub' ),
 				'',
 				array(
 					'response'  => 400,
@@ -110,7 +110,7 @@ class Interaction_Controller extends \WP_REST_Controller {
 		}
 
 		if ( ! empty( $object['id'] ) ) {
-			$uri = \esc_url( $object['id'] );
+			$uri = \esc_url_raw( $object['id'] );
 		}
 
 		// Prepare URL parameter.
@@ -191,7 +191,7 @@ class Interaction_Controller extends \WP_REST_Controller {
 		if ( ! $redirect_url ) {
 			// Use wp_die as this can be called from the front-end. See https://github.com/Automattic/wordpress-activitypub/pull/1149/files#r1915297109.
 			\wp_die(
-				esc_html__( 'This Interaction type is not supported yet!', 'activitypub' ),
+				\esc_html__( 'This Interaction type is not supported yet!', 'activitypub' ),
 				'',
 				array(
 					'response'  => 400,

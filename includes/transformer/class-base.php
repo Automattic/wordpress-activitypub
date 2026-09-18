@@ -22,7 +22,7 @@ use function Activitypub\object_to_uri;
  * Object-Types or Activities.
  *
  * @method string|null get_content() Returns the content for the transformed item.
- * @method string|array|null get_icon() Returns an icon for the transformed item.
+ * @method string|array|null get_media_icon() Returns a poster image for a media attachment.
  * @method string|null get_id()      Returns the ID for the transformed item.
  * @method string|null get_name()    Returns the name for the transformed item.
  * @method string|null get_summary() Returns the summary for the transformed item.
@@ -185,7 +185,7 @@ abstract class Base {
 			$followers = $actor->get_followers();
 		}
 
-		$mentions = array_values( $this->get_mentions() );
+		$mentions = \array_values( $this->get_mentions() );
 
 		if ( $this->get_in_reply_to() ) {
 			$object = Http::get_remote_object( $this->get_in_reply_to() );
@@ -278,7 +278,7 @@ abstract class Base {
 		 *
 		 * @return string The filtered locale of the post.
 		 */
-		return apply_filters( 'activitypub_locale', $lang, $this->item );
+		return \apply_filters( 'activitypub_locale', $lang, $this->item );
 	}
 
 	/**
@@ -347,7 +347,7 @@ abstract class Base {
 		foreach ( $mentions as $mention => $url ) {
 			$tags[] = array(
 				'type' => 'Mention',
-				'href' => \esc_url( $url ),
+				'href' => \esc_url_raw( $url ),
 				'name' => \esc_html( $mention ),
 			);
 		}
@@ -372,11 +372,11 @@ abstract class Base {
 	protected function get_mentions() {
 		$content = '';
 
-		if ( method_exists( $this, 'get_content' ) ) {
+		if ( \method_exists( $this, 'get_content' ) ) {
 			$content = $content . ' ' . $this->get_content();
 		}
 
-		if ( method_exists( $this, 'get_summary' ) ) {
+		if ( \method_exists( $this, 'get_summary' ) ) {
 			$content = $content . ' ' . $this->get_summary();
 		}
 
@@ -389,7 +389,7 @@ abstract class Base {
 		 *
 		 * @return array The filtered mentions.
 		 */
-		return apply_filters(
+		return \apply_filters(
 			'activitypub_extract_mentions',
 			array(),
 			$content,
@@ -528,16 +528,16 @@ abstract class Base {
 				if ( $thumbnail ) {
 					$image = array(
 						'type'      => 'Image',
-						'url'       => \esc_url( $thumbnail[0] ),
+						'url'       => \esc_url_raw( $thumbnail[0] ),
 						'mediaType' => \esc_attr( $mime_type ),
 					);
 
 					if ( ! empty( $media['alt'] ) ) {
-						$image['name'] = \html_entity_decode( \wp_strip_all_tags( $media['alt'] ), ENT_QUOTES, 'UTF-8' );
+						$image['name'] = \wp_strip_all_tags( $media['alt'] );
 					} else {
 						$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
 						if ( $alt ) {
-							$image['name'] = \html_entity_decode( \wp_strip_all_tags( $alt ), ENT_QUOTES, 'UTF-8' );
+							$image['name'] = \wp_strip_all_tags( \html_entity_decode( $alt, ENT_QUOTES, 'UTF-8' ) );
 						}
 					}
 
@@ -557,7 +557,7 @@ abstract class Base {
 				$attachment = array(
 					'type'      => \ucfirst( $media_type ),
 					'mediaType' => \esc_attr( $mime_type ),
-					'url'       => \esc_url( \wp_get_attachment_url( $id ) ),
+					'url'       => \esc_url_raw( \wp_get_attachment_url( $id ) ),
 					'name'      => \esc_attr( \get_the_title( $id ) ),
 				);
 
@@ -570,8 +570,12 @@ abstract class Base {
 				// Use poster image from the block, or fall back to the transformer icon.
 				if ( ! empty( $media['icon'] ) ) {
 					$attachment['icon'] = \esc_url_raw( $media['icon'] );
-				} elseif ( \method_exists( $this, 'get_icon' ) && $this->get_icon() ) {
-					$attachment['icon'] = object_to_uri( $this->get_icon() );
+				} elseif ( \method_exists( $this, 'get_media_icon' ) ) {
+					$icon = $this->get_media_icon();
+
+					if ( $icon ) {
+						$attachment['icon'] = object_to_uri( $icon );
+					}
 				}
 				break;
 		}
@@ -713,7 +717,12 @@ abstract class Base {
 	/**
 	 * Filter attachments to ensure uniqueness based on their ID.
 	 *
-	 * @param array $attachments Array of attachments with 'id' field.
+	 * Media without an ID is passed through: there is nothing to compare it against, and whether
+	 * it belongs here at all was decided by whichever method added it. An enclosure names a file
+	 * the author declared belongs to the post and carries no ID when it is not in the media
+	 * library, which is the normal case for podcast audio.
+	 *
+	 * @param array $attachments Array of attachments, each optionally carrying an 'id'.
 	 *
 	 * @return array Array with duplicate attachments removed.
 	 */
@@ -723,11 +732,17 @@ abstract class Base {
 		return \array_filter(
 			$attachments,
 			static function ( $attachment ) use ( &$seen_ids ) {
-				if ( isset( $attachment['id'] ) && ! in_array( $attachment['id'], $seen_ids, true ) ) {
-					$seen_ids[] = $attachment['id'];
+				if ( ! isset( $attachment['id'] ) ) {
 					return true;
 				}
-				return false;
+
+				if ( \in_array( $attachment['id'], $seen_ids, true ) ) {
+					return false;
+				}
+
+				$seen_ids[] = $attachment['id'];
+
+				return true;
 			}
 		);
 	}

@@ -136,8 +136,8 @@ class Screen_Options {
 		}
 
 		$screen_options = array(
-			'activitypub_show_welcome_tab'  => __( 'Welcome Page', 'activitypub' ),
-			'activitypub_show_advanced_tab' => __( 'Advanced Settings', 'activitypub' ),
+			'activitypub_show_welcome_tab'  => \__( 'Welcome Page', 'activitypub' ),
+			'activitypub_show_advanced_tab' => \__( 'Advanced Settings', 'activitypub' ),
 		);
 
 		/**
@@ -157,7 +157,7 @@ class Screen_Options {
 			}
 		}
 
-		ob_start();
+		\ob_start();
 		?>
 		<fieldset>
 			<legend class="screen-layout"><?php \esc_html_e( 'Settings Pages', 'activitypub' ); ?></legend>
@@ -173,7 +173,7 @@ class Screen_Options {
 		</fieldset>
 		<?php
 
-		return ob_get_clean();
+		return \ob_get_clean();
 	}
 
 	/**

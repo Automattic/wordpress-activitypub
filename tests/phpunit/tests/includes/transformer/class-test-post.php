@@ -665,6 +665,56 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An enclosure hosted off-site is federated.
+	 *
+	 * Podcast plugins declare episode audio as a standard WordPress enclosure, and the file
+	 * almost always lives on the podcast host rather than in the media library. It therefore has
+	 * no attachment ID, which is exactly the case the deduplication used to discard.
+	 *
+	 * The URL is on the test site's own host only so that `wp_http_validate_url()` inside
+	 * `get_enclosures()` does not need DNS. What this exercises is the missing attachment ID.
+	 *
+	 * @covers ::get_attachment
+	 */
+	public function test_federates_an_enclosure_hosted_off_site() {
+		$post_id = self::factory()->post->create( array( 'post_title' => 'Episode 566' ) );
+
+		// Verbatim from a PowerPress episode: url, length, mime, then its own serialised extras.
+		\add_post_meta(
+			$post_id,
+			'enclosure',
+			"https://example.org/uploads/E566.mp3\n11657768\naudio/mpeg\na:1:{s:8:\"duration\";s:7:\"0:22:46\";}"
+		);
+
+		$attachments = ( new Post( \get_post( $post_id ) ) )->to_object()->get_attachment();
+
+		$this->assertCount( 1, $attachments, 'The episode audio has to survive deduplication.' );
+		$this->assertSame( 'https://example.org/uploads/E566.mp3', $attachments[0]['url'] );
+		$this->assertSame( 'audio/mpeg', $attachments[0]['mediaType'] );
+		$this->assertSame( 'Audio', $attachments[0]['type'] );
+	}
+
+	/**
+	 * The same off-site enclosure declared twice is federated once.
+	 *
+	 * Deduplication is the whole point of the filter these attachments now pass through, so it
+	 * has to keep working for media that has no ID to be keyed on.
+	 *
+	 * @covers ::get_attachment
+	 */
+	public function test_deduplicates_an_off_site_enclosure_by_url() {
+		$post_id   = self::factory()->post->create( array( 'post_title' => 'Episode 566' ) );
+		$enclosure = "https://example.org/uploads/E566.mp3\n11657768\naudio/mpeg";
+
+		\add_post_meta( $post_id, 'enclosure', $enclosure );
+		\add_post_meta( $post_id, 'enclosure', $enclosure );
+
+		$attachments = ( new Post( \get_post( $post_id ) ) )->to_object()->get_attachment();
+
+		$this->assertCount( 1, $attachments );
+	}
+
+	/**
 	 * Test get_attachments with zero max_media_attachments.
 	 *
 	 * @covers ::get_attachment
@@ -944,11 +994,50 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test get_icon method.
+	 * A post with a Featured Image must not also carry it as an icon.
 	 *
-	 * @covers ::get_icon
+	 * The image is already federated at `large`. Mapping the same picture onto `icon` at
+	 * `thumbnail` sent it again, and implementations that render `icon` on a `Note` showed the
+	 * second copy as a low-resolution extra image under the post.
+	 *
+	 * @covers ::to_object
 	 */
-	public function test_get_icon() {
+	public function test_featured_image_is_not_repeated_as_an_icon() {
+		$post_id       = self::factory()->post->create( array( 'post_title' => 'Test Post' ) );
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		set_post_thumbnail( $post_id, $attachment_id );
+
+		$object = ( new Post( get_post( $post_id ) ) )->to_object();
+
+		$this->assertNull( $object->get_icon(), 'A post must not carry an icon.' );
+		$this->assertNotEmpty( $object->get_image(), 'The Featured Image still has to be federated as the image.' );
+	}
+
+	/**
+	 * A post without a Featured Image must not fall back to the site icon.
+	 *
+	 * @covers ::to_object
+	 */
+	public function test_site_icon_is_not_used_as_a_post_icon() {
+		$post_id       = self::factory()->post->create( array( 'post_title' => 'Test Post' ) );
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		update_option( 'site_icon', $attachment_id );
+
+		$object = ( new Post( get_post( $post_id ) ) )->to_object();
+
+		delete_option( 'site_icon' );
+
+		$this->assertNull( $object->get_icon(), 'The site icon must not be attached to a post.' );
+	}
+
+	/**
+	 * Test get_media_icon method.
+	 *
+	 * @covers ::get_media_icon
+	 */
+	public function test_get_media_icon() {
 		$post_id = self::factory()->post->create(
 			array(
 				'post_title'   => 'Test Post',
@@ -962,7 +1051,7 @@ class Test_Post extends \WP_UnitTestCase {
 
 		// Set up reflection method.
 		$reflection = new \ReflectionClass( Post::class );
-		$method     = $reflection->getMethod( 'get_icon' );
+		$method     = $reflection->getMethod( 'get_media_icon' );
 		if ( \PHP_VERSION_ID < 80100 ) {
 			$method->setAccessible( true );
 		}
@@ -1191,7 +1280,7 @@ class Test_Post extends \WP_UnitTestCase {
 
 		// Assert that the reply block was transformed into a mention link.
 		// Note: clean_html() strips class from <p> and the mention link doesn't include u-in-reply-to class.
-		$this->assertStringContainsString( '<p><a rel="mention ugc" href="https://example.com/posts/123" title="@author@example.com">@author</a></p>', $object->get_content() );
+		$this->assertStringContainsString( '<p><a rel="in-reply-to ugc" class="u-in-reply-to" href="https://example.com/posts/123" title="@author@example.com">@author</a></p>', $object->get_content() );
 
 		// Clean up.
 		remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );
@@ -1279,7 +1368,7 @@ class Test_Post extends \WP_UnitTestCase {
 
 		// Assert that the first reply block was transformed into a mention link.
 		// Note: clean_html() strips class from <p> and the mention link doesn't include u-in-reply-to class.
-		$this->assertStringContainsString( '<p><a rel="mention ugc" href="https://example.com/posts/123" title="@author1@example.com">@author1</a></p>', $content );
+		$this->assertStringContainsString( '<p><a rel="in-reply-to ugc" class="u-in-reply-to" href="https://example.com/posts/123" title="@author1@example.com">@author1</a></p>', $content );
 
 		// Assert that the second reply block was NOT transformed into a mention link (should remain as regular reply block).
 		// Note: clean_html() strips target and non-allowed attributes per FEP-b2b8.

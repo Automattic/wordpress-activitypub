@@ -27,6 +27,81 @@ class Signature {
 	}
 
 	/**
+	 * Generate a new RSA key pair for signing HTTP requests.
+	 *
+	 * Does not persist anything — callers are responsible for storing the keys.
+	 *
+	 * @since 9.1.0
+	 *
+	 * @return array The key pair with 'private_key' and 'public_key', both null on failure.
+	 */
+	public static function generate_key_pair() {
+		$config = array(
+			'digest_alg'       => 'sha512',
+			'private_key_bits' => 2048,
+			'private_key_type' => \OPENSSL_KEYTYPE_RSA,
+		);
+
+		$key         = \openssl_pkey_new( $config );
+		$private_key = null;
+		$detail      = array();
+		if ( $key ) {
+			\openssl_pkey_export( $key, $private_key );
+			$detail = \openssl_pkey_get_details( $key );
+		}
+
+		// Check if keys are valid.
+		if (
+			empty( $private_key ) || ! \is_string( $private_key ) ||
+			! isset( $detail['key'] ) || ! \is_string( $detail['key'] )
+		) {
+			return array(
+				'private_key' => null,
+				'public_key'  => null,
+			);
+		}
+
+		return array(
+			'private_key' => $private_key,
+			'public_key'  => $detail['key'],
+		);
+	}
+
+	/**
+	 * Get the key pair stored in an option, migrating a legacy pair or generating a new one on first use.
+	 *
+	 * @since 9.1.0
+	 *
+	 * @param string        $option_key      The option name the key pair is stored in.
+	 * @param callable|null $legacy_callback Optional. Callback that returns a legacy key pair to migrate, or false. Default null.
+	 *
+	 * @return array The key pair with 'private_key' and 'public_key'.
+	 */
+	public static function get_key_pair( $option_key, $legacy_callback = null ) {
+		$key_pair = \get_option( $option_key );
+
+		if ( $key_pair ) {
+			return $key_pair;
+		}
+
+		$key_pair = $legacy_callback ? $legacy_callback() : false;
+
+		if ( ! $key_pair ) {
+			$key_pair = self::generate_key_pair();
+
+			// Only persist valid keys.
+			if ( empty( $key_pair['private_key'] ) ) {
+				return $key_pair;
+			}
+		}
+
+		// `update_option()` also overwrites a corrupted-but-present row, which `add_option()` would silently skip.
+		\update_option( $option_key, $key_pair );
+
+		return $key_pair;
+	}
+
+	/**
 	 * Sign an HTTP Request.
 	 *
 	 * @param array  $args An array of HTTP request arguments.
@@ -40,7 +115,7 @@ class Signature {
 			return $args;
 		}
 
-		if ( '1' === \get_option( 'activitypub_rfc9421_signature' ) && self::could_support_rfc9421( $url ) ) {
+		if ( '1' === \get_option( 'activitypub_rfc9421_signature', '1' ) && self::could_support_rfc9421( $url ) ) {
 			$signature = new Http_Message_Signature();
 		} else {
 			$signature = new Http_Signature_Draft();
@@ -63,13 +138,13 @@ class Signature {
 	 * @return string|\WP_Error The verified keyId on success, WP_Error on failure.
 	 */
 	public static function verify_http_signature( $request ) {
-		if ( is_object( $request ) ) { // REST Request object.
+		if ( \is_object( $request ) ) { // REST Request object.
 			$body                           = $request->get_body();
 			$headers                        = $request->get_headers();
-			$headers['(request-target)'][0] = strtolower( $request->get_method() ) . ' ' . self::get_route( $request );
+			$headers['(request-target)'][0] = \strtolower( $request->get_method() ) . ' ' . self::get_route( $request );
 		} else {
 			$headers                        = self::format_server_request( $request );
-			$headers['(request-target)'][0] = strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
+			$headers['(request-target)'][0] = \strtolower( $headers['request_method'][0] ) . ' ' . $headers['request_uri'][0];
 		}
 
 		$signature = isset( $headers['signature_input'] ) ? new Http_Message_Signature() : new Http_Signature_Draft();
@@ -183,17 +258,17 @@ class Signature {
 	 */
 	private static function get_route( $request ) {
 		// Check if the route starts with "index.php".
-		if ( str_starts_with( $request->get_route(), '/index.php' ) || ! rest_get_url_prefix() ) {
+		if ( \str_starts_with( $request->get_route(), '/index.php' ) || ! \rest_get_url_prefix() ) {
 			$route = $request->get_route();
 		} else {
-			$route = '/' . rest_get_url_prefix() . '/' . ltrim( $request->get_route(), '/' );
+			$route = '/' . \rest_get_url_prefix() . '/' . \ltrim( $request->get_route(), '/' );
 		}
 
 		// Fix route for subdirectory installations.
 		$path = \wp_parse_url( \get_home_url(), PHP_URL_PATH );
 
 		if ( \is_string( $path ) ) {
-			$path = trim( $path, '/' );
+			$path = \trim( $path, '/' );
 		}
 
 		if ( $path ) {
@@ -267,16 +342,16 @@ class Signature {
 	 * @return string|false The hex-encoded digest, or false if no followers.
 	 */
 	public static function get_collection_digest( $collection ) {
-		if ( empty( $collection ) || ! is_array( $collection ) ) {
+		if ( empty( $collection ) || ! \is_array( $collection ) ) {
 			return false;
 		}
 
 		// Initialize with zeros (64 hex chars = 32 bytes = 256 bits).
-		$digest = str_repeat( '0', 64 );
+		$digest = \str_repeat( '0', 64 );
 
 		foreach ( $collection as $item ) {
 			// Compute SHA256 hash of the follower ID.
-			$hash = hash( 'sha256', $item );
+			$hash = \hash( 'sha256', $item );
 
 			// XOR the hash with the running digest.
 			$digest = self::xor_hex_strings( $digest, $hash );

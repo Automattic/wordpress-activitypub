@@ -110,7 +110,7 @@ class Test_Create extends \WP_UnitTestCase {
 	 */
 	public function create_test_object( $id = 'https://example.com/123' ) {
 		return array(
-			'actor'  => $this->user_url,
+			'actor'  => 'https://example.com/users/test',
 			'type'   => 'Create',
 			'id'     => 'https://example.com/id/' . microtime( true ),
 			'to'     => array( $this->user_url ),

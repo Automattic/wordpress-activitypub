@@ -48,7 +48,6 @@ export interface Actor {
 	title: { rendered: string };
 	content: { rendered: string; protected: boolean };
 	meta: {
-		_activitypub_following: string[];
 		[ key: string ]: any;
 	};
 	actor_info?: ActorInfo;

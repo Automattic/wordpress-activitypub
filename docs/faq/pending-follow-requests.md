@@ -10,6 +10,7 @@ The plugin **always accepts follow requests automatically** — there is no manu
 
 If step 1 is blocked, your site never learns about the follow. If step 2 or 3 fails, your site knows about the follower but the remote server never hears back. The first thing to check tells you which half is broken:
 
+> [!TIP]
 > **Does the follower appear in WordPress?** Check **Users → Followers** (or **Settings → ActivityPub → Followers** for the blog profile).
 >
 > - **No** → the follow request never reached your site. Work through [Inbound checks](#inbound-checks).
@@ -31,7 +32,8 @@ These block the follow request before your site ever sees it. Your server's acce
 
 ### 1. Host firewall (mod_security)
 
-**The most common cause on shared hosting.** Many hosts (HostGator, Bluehost, OVH, Strato, and other cPanel-based hosts are recurring examples) run mod_security rules that block `POST` requests with the `application/activity+json` content type.
+> [!IMPORTANT]
+> **The most common cause on shared hosting.** Many hosts (HostGator, Bluehost, OVH, Strato, and other cPanel-based hosts are recurring examples) run mod_security rules that block `POST` requests with the `application/activity+json` content type.
 
 There is nothing the plugin can do about this — only your host can fix it. Contact their support with something like:
 
@@ -114,5 +116,7 @@ If outbound requests fail, contact your host.
 ## Still stuck?
 
 Update the plugin first — several historic causes (subdirectory signatures, the 4.0.0 inbox regression, Pixelfed follows without addressing) were plugin bugs that are long fixed.
+
+To pinpoint which half of the round-trip broke, the [Inspect Internal Storage snippet](../../snippets/inspect-internal-storage) exposes the plugin's Inbox and Outbox in the WordPress admin: a missing `Follow` in the Inbox points to the [Inbound checks](#inbound-checks), while a stuck `Accept` in the Outbox points to the [Outbound checks](#outbound-checks).
 
 If none of this helps, open a thread in the [support forum](https://wordpress.org/support/plugin/activitypub/) and include: your hosting provider, active security/caching/antispam plugins, whether the follower appears in WordPress, and the status code your server log shows for inbox POSTs.

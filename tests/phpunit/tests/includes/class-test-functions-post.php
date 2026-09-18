@@ -346,6 +346,39 @@ class Test_Functions_Post extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A scheduled post is queryable during a preview request for a user who
+	 * can edit it, so the Fediverse Preview works — and stays hidden otherwise.
+	 *
+	 * @covers \Activitypub\is_post_publicly_queryable
+	 */
+	public function test_is_post_publicly_queryable_scheduled_preview() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'future',
+				'post_date'   => gmdate( 'Y-m-d H:i:s', strtotime( '+1 day' ) ),
+				'post_author' => $user_id,
+			)
+		);
+
+		// Without the preview query var, a scheduled post is not queryable.
+		\wp_set_current_user( $user_id );
+		$this->assertFalse( \Activitypub\is_post_publicly_queryable( $post_id ), 'Scheduled posts should not be queryable without preview.' );
+
+		// With preview, the author gets the Fediverse Preview.
+		\set_query_var( 'preview', true );
+		$this->assertTrue( \Activitypub\is_post_publicly_queryable( $post_id ), 'Scheduled posts should be queryable during preview for authorized user.' );
+
+		// Users without edit capability stay locked out even during preview.
+		$subscriber_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		\wp_set_current_user( $subscriber_id );
+		$this->assertFalse( \Activitypub\is_post_publicly_queryable( $post_id ), 'Scheduled posts should not be queryable during preview for unauthorized user.' );
+
+		// Clean up.
+		\set_query_var( 'preview', false );
+	}
+
+	/**
 	 * Non-public statuses, password-protected posts, and local/private visibility
 	 * must not be queryable. Unlike is_post_disabled(), there is no lifecycle
 	 * override — a previously federated post that is now non-public is still

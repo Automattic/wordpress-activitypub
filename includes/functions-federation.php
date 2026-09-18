@@ -94,7 +94,7 @@ function is_self_ping( $id ) {
 
 	if (
 		is_same_domain( $id ) &&
-		in_array( 'c', array_keys( $query ), true )
+		\in_array( 'c', \array_keys( $query ), true )
 	) {
 		return true;
 	}
@@ -141,7 +141,7 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 
 	$transformer = Transformer_Factory::get_transformer( $data );
 
-	if ( ! $transformer || is_wp_error( $transformer ) ) {
+	if ( ! $transformer || \is_wp_error( $transformer ) ) {
 		return false;
 	}
 

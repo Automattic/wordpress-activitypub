@@ -255,6 +255,12 @@ class User_Settings_Fields {
 			</p>
 			<p>
 				<label>
+					<input type="checkbox" name="activitypub_mailer_new_reaction" id="activitypub_mailer_new_reaction" value="1" <?php \checked( 1, \get_user_option( 'activitypub_mailer_new_reaction' ) ); ?> />
+					<?php \esc_html_e( 'Likes, Reposts and Quotes', 'activitypub' ); ?>
+				</label>
+			</p>
+			<p>
+				<label>
 					<input type="checkbox" name="activitypub_mailer_annual_report" id="activitypub_mailer_annual_report" value="1" <?php \checked( 1, \get_user_option( 'activitypub_mailer_annual_report' ) ); ?> />
 					<?php \esc_html_e( 'Annual Report', 'activitypub' ); ?>
 				</label>
@@ -317,7 +323,7 @@ class User_Settings_Fields {
 			name="activitypub_also_known_as"
 			id="activitypub_also_known_as"
 			rows="5"
-		><?php echo \esc_textarea( implode( PHP_EOL, (array) $also_known_as ) ); ?></textarea>
+		><?php echo \esc_textarea( \implode( PHP_EOL, (array) $also_known_as ) ); ?></textarea>
 		<p class="description">
 			<?php \esc_html_e( 'If you&#8217;re moving from another account to this one, you&#8217;ll need to create an alias here first before transferring your followers. This step is safe, reversible, and doesn&#8217;t affect anything on its own. The migration itself is initiated from your old account.', 'activitypub' ); ?>
 		</p>
@@ -565,7 +571,7 @@ class User_Settings_Fields {
 			<?php \esc_html_e( 'Hide Followers and Following on Profile', 'activitypub' ); ?>
 		</label>
 		<p class="description">
-			<?php esc_html_e( 'People you follow will still see that you follow them.', 'activitypub' ); ?>
+			<?php \esc_html_e( 'People you follow will still see that you follow them.', 'activitypub' ); ?>
 		</p>
 		<?php
 	}

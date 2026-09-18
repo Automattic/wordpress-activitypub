@@ -19,6 +19,7 @@ use function Activitypub\generate_post_summary;
 use function Activitypub\get_content_visibility;
 use function Activitypub\get_content_warning;
 use function Activitypub\get_enclosures;
+use function Activitypub\get_max_attachments;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\is_post_publicly_queryable;
 use function Activitypub\is_single_user;
@@ -200,7 +201,7 @@ class Post extends Base {
 
 		$user = Actors::get_by_id( $this->item->post_author );
 
-		if ( $user && ! is_wp_error( $user ) ) {
+		if ( $user && ! \is_wp_error( $user ) ) {
 			$this->actor_object = $user;
 			return $user;
 		}
@@ -264,7 +265,7 @@ class Post extends Base {
 				break;
 		}
 
-		return \esc_url( $permalink );
+		return \esc_url_raw( $permalink );
 	}
 
 	/**
@@ -304,7 +305,7 @@ class Post extends Base {
 		 * @param int         $id         The attachment ID.
 		 * @param string      $image_size The image size to retrieve. Set to 'large' by default.
 		 */
-		$thumbnail = apply_filters(
+		$thumbnail = \apply_filters(
 			'activitypub_get_image',
 			$this->get_attachment_image_src( $id, $image_size ),
 			$id,
@@ -319,24 +320,36 @@ class Post extends Base {
 
 		$image = array(
 			'type'      => 'Image',
-			'url'       => \esc_url( $thumbnail[0] ),
+			'url'       => \esc_url_raw( $thumbnail[0] ),
 			'mediaType' => \esc_attr( $mime_type ),
 		);
 
 		$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
 		if ( $alt ) {
-			$image['name'] = \html_entity_decode( \wp_strip_all_tags( $alt ), ENT_QUOTES, 'UTF-8' );
+			$image['name'] = \wp_strip_all_tags( \html_entity_decode( $alt, ENT_QUOTES, 'UTF-8' ) );
 		}
 
 		return $image;
 	}
 
 	/**
-	 * Returns an Icon, based on the Featured Image with a fallback to the site-icon.
+	 * Returns a poster image for a media attachment, based on the Featured Image with a
+	 * fallback to the site-icon.
 	 *
-	 * @return array|null The Icon or null if no icon is available.
+	 * Stays `protected` rather than `private`: the podcast integrations extend this class and
+	 * call it, and {@see Base::transform_attachment()} calls it from the parent.
+	 *
+	 * Deliberately not called `get_icon()`: {@see Base::transform_object_properties()} maps each
+	 * getter onto the property of the same name, and FEP-b2b8 reserves `icon` for the author's
+	 * avatar.
+	 *
+	 * @since unreleased Renamed from `get_icon()`, so it no longer maps onto the object.
+	 *
+	 * @see https://fediverse.codeberg.page/fep/fep/b2b8/
+	 *
+	 * @return array|null The poster image or null if none is available.
 	 */
-	protected function get_icon() {
+	protected function get_media_icon() {
 		$post_id = $this->item->ID;
 
 		// List post thumbnail first if this post has one.
@@ -344,7 +357,7 @@ class Post extends Base {
 			$id = \get_post_thumbnail_id( $post_id );
 		} else {
 			// Try site_logo, falling back to site_icon, first.
-			$id = get_option( 'site_icon' );
+			$id = \get_option( 'site_icon' );
 		}
 
 		if ( ! $id ) {
@@ -360,7 +373,7 @@ class Post extends Base {
 		 * @param int         $id         The attachment ID.
 		 * @param string      $image_size The image size to retrieve. Set to 'large' by default.
 		 */
-		$thumbnail = apply_filters(
+		$thumbnail = \apply_filters(
 			'activitypub_get_image',
 			$this->get_attachment_image_src( $id, $image_size ),
 			$id,
@@ -375,13 +388,13 @@ class Post extends Base {
 
 		$image = array(
 			'type'      => 'Image',
-			'url'       => \esc_url( $thumbnail[0] ),
+			'url'       => \esc_url_raw( $thumbnail[0] ),
 			'mediaType' => \esc_attr( $mime_type ),
 		);
 
 		$alt = \get_post_meta( $id, '_wp_attachment_image_alt', true );
 		if ( $alt ) {
-			$image['name'] = \html_entity_decode( \wp_strip_all_tags( $alt ), ENT_QUOTES, 'UTF-8' );
+			$image['name'] = \wp_strip_all_tags( \html_entity_decode( $alt, ENT_QUOTES, 'UTF-8' ) );
 		}
 
 		return $image;
@@ -397,22 +410,7 @@ class Post extends Base {
 			return $this->attachment;
 		}
 
-		$max_media = \get_post_meta( $this->item->ID, 'activitypub_max_image_attachments', true );
-
-		if ( ! is_numeric( $max_media ) ) {
-			$max_media = \get_option( 'activitypub_max_image_attachments', ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS );
-		}
-
-		/**
-		 * Filters the maximum number of media attachments allowed in a post.
-		 *
-		 * Despite the name suggesting only images, this filter controls the maximum number
-		 * of all media attachments (images, audio, and video) that can be included in an
-		 * ActivityPub post. The name is maintained for backwards compatibility.
-		 *
-		 * @param int $max_media Maximum number of media attachments. Default ACTIVITYPUB_MAX_IMAGE_ATTACHMENTS.
-		 */
-		$max_media = (int) \apply_filters( 'activitypub_max_image_attachments', $max_media );
+		$max_media = get_max_attachments( $this->item->ID );
 
 		if ( 0 === $max_media ) {
 			$this->attachment = array();
@@ -552,7 +550,7 @@ class Post extends Base {
 
 				$tags[] = array(
 					'type' => 'Hashtag',
-					'href' => \esc_url( \get_tag_link( $post_tag->term_id ) ),
+					'href' => \esc_url_raw( \get_tag_link( $post_tag->term_id ) ),
 					'name' => esc_hashtag( $post_tag->name ),
 				);
 			}
@@ -639,7 +637,7 @@ class Post extends Base {
 		\do_action( 'activitypub_before_get_content', $post );
 
 		// It seems that shortcodes are only applied to published posts.
-		if ( is_preview() ) {
+		if ( \is_preview() ) {
 			$post->post_status = 'publish';
 		}
 
@@ -700,7 +698,7 @@ class Post extends Base {
 			return $this->in_reply_to;
 		}
 
-		if ( 1 === count( $reply_urls ) ) {
+		if ( 1 === \count( $reply_urls ) ) {
 			$this->in_reply_to = \current( $reply_urls );
 
 			return $this->in_reply_to;
@@ -759,8 +757,8 @@ class Post extends Base {
 
 		// Both latitude and longitude are required for a valid location.
 		// Use is_numeric() instead of empty() since 0 is a valid coordinate (Equator/Prime Meridian).
-		$has_latitude  = isset( $meta['geo_latitude'][0] ) && is_numeric( $meta['geo_latitude'][0] );
-		$has_longitude = isset( $meta['geo_longitude'][0] ) && is_numeric( $meta['geo_longitude'][0] );
+		$has_latitude  = isset( $meta['geo_latitude'][0] ) && \is_numeric( $meta['geo_latitude'][0] );
+		$has_longitude = isset( $meta['geo_longitude'][0] ) && \is_numeric( $meta['geo_longitude'][0] );
 
 		if ( ! $has_latitude || ! $has_longitude ) {
 			return null;
@@ -808,7 +806,7 @@ class Post extends Base {
 		 *
 		 * @return array The filtered mentions.
 		 */
-		$this->mentions = apply_filters(
+		$this->mentions = \apply_filters(
 			'activitypub_extract_mentions',
 			array(),
 			$this->item->post_content . ' ' . $this->item->post_excerpt,
@@ -833,8 +831,9 @@ class Post extends Base {
 	 * covers non-public status, password protection, the `local`/`private`
 	 * content-visibility meta, and a post type that no longer supports
 	 * ActivityPub. The Fediverse Preview keeps working because
-	 * `is_post_publicly_queryable()` itself treats a draft/pending post as
-	 * queryable during a `?preview=true` request from a user who can edit it.
+	 * `is_post_publicly_queryable()` itself treats a draft/pending/scheduled
+	 * post as queryable during a `?preview=true` request from a user who can
+	 * edit it.
 	 *
 	 * Note: we deliberately rely on `is_post_publicly_queryable()` rather than
 	 * `post_password_required()`. Federation output is per-instance, never
@@ -1023,9 +1022,9 @@ class Post extends Base {
 				case 'jetpack/slideshow':
 				case 'jetpack/tiled-gallery':
 					if ( ! empty( $block['attrs']['ids'] ) ) {
-						$media['image'] = array_merge(
+						$media['image'] = \array_merge(
 							$media['image'],
-							array_map(
+							\array_map(
 								static function ( $id ) {
 									return array( 'id' => $id );
 								},
@@ -1072,7 +1071,7 @@ class Post extends Base {
 			return $media[ $type ];
 		}
 
-		return array_filter( array_merge( ...array_values( $media ) ) );
+		return \array_filter( \array_merge( ...\array_values( $media ) ) );
 	}
 
 	/**
@@ -1083,7 +1082,7 @@ class Post extends Base {
 	 * @return string The context of the post.
 	 */
 	protected function get_context() {
-		return get_rest_url_by_path( sprintf( 'posts/%d/context', $this->item->ID ) );
+		return get_rest_url_by_path( \sprintf( 'posts/%d/context', $this->item->ID ) );
 	}
 
 	/**
@@ -1130,7 +1129,7 @@ class Post extends Base {
 		 * @param \WP_Post $item The WordPress post object being transformed.
 		 * @param string   $type ActivityStreams 2.0 Object-Type for the post.
 		 */
-		return apply_filters( 'activitypub_object_content_template', $template, $this->item, $type );
+		return \apply_filters( 'activitypub_object_content_template', $template, $this->item, $type );
 	}
 
 	/**
@@ -1149,7 +1148,7 @@ class Post extends Base {
 	 */
 	public function get_likes() {
 		return array(
-			'id'         => get_rest_url_by_path( sprintf( 'posts/%d/likes', $this->item->ID ) ),
+			'id'         => get_rest_url_by_path( \sprintf( 'posts/%d/likes', $this->item->ID ) ),
 			'type'       => 'Collection',
 			'totalItems' => Interactions::count_by_type( $this->item->ID, 'like' ),
 		);
@@ -1162,7 +1161,7 @@ class Post extends Base {
 	 */
 	public function get_shares() {
 		return array(
-			'id'         => get_rest_url_by_path( sprintf( 'posts/%d/shares', $this->item->ID ) ),
+			'id'         => get_rest_url_by_path( \sprintf( 'posts/%d/shares', $this->item->ID ) ),
 			'type'       => 'Collection',
 			'totalItems' => Interactions::count_by_type( $this->item->ID, 'repost' ) + Interactions::count_by_type( $this->item->ID, 'quote' ),
 		);
@@ -1199,7 +1198,7 @@ class Post extends Base {
 
 		switch ( $policy ) {
 			case ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS:
-				return array( 'automaticApproval' => get_rest_url_by_path( sprintf( 'actors/%d/followers', $this->item->post_author ) ) );
+				return array( 'automaticApproval' => get_rest_url_by_path( \sprintf( 'actors/%d/followers', $this->item->post_author ) ) );
 
 			case ACTIVITYPUB_INTERACTION_POLICY_ME:
 				return array( 'automaticApproval' => $this->get_self_interaction_policy() );

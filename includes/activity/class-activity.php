@@ -191,9 +191,9 @@ class Activity extends Base_Object {
 		$object = $data;
 
 		// Convert array to appropriate object type.
-		if ( is_array( $data ) ) {
-			if ( array_is_list( $data ) ) {
-				$object = array_map( array( $this, 'maybe_convert_to_object' ), $data );
+		if ( \is_array( $data ) ) {
+			if ( \array_is_list( $data ) ) {
+				$object = \array_map( array( $this, 'maybe_convert_to_object' ), $data );
 			} else {
 				$object = $this->maybe_convert_to_object( $data );
 			}
@@ -210,14 +210,14 @@ class Activity extends Base_Object {
 		$object = $this->get_object();
 
 		// Check if `$object` is a URL and use it to generate an ID then.
-		if ( is_string( $object ) && filter_var( $object, FILTER_VALIDATE_URL ) && ! $this->get_id() ) {
-			$this->set( 'id', $object . '#activity-' . strtolower( $this->get_type() ) . '-' . time() );
+		if ( \is_string( $object ) && \filter_var( $object, FILTER_VALIDATE_URL ) && ! $this->get_id() ) {
+			$this->set( 'id', $object . '#activity-' . \strtolower( $this->get_type() ) . '-' . \time() );
 
 			return;
 		}
 
 		// Check if `$object` is an object and copy some properties otherwise do nothing.
-		if ( ! is_object( $object ) ) {
+		if ( ! \is_object( $object ) ) {
 			return;
 		}
 
@@ -249,15 +249,15 @@ class Activity extends Base_Object {
 		}
 
 		if ( $object->get_id() && ! $this->get_id() ) {
-			$id = strtok( $object->get_id(), '#' );
+			$id = \strtok( $object->get_id(), '#' );
 			if ( $object->get_updated() ) {
 				$updated = $object->get_updated();
 			} elseif ( $object->get_published() ) {
 				$updated = $object->get_published();
 			} else {
-				$updated = time();
+				$updated = \time();
 			}
-			$this->set( 'id', $id . '#activity-' . strtolower( $this->get_type() ) . '-' . $updated );
+			$this->set( 'id', $id . '#activity-' . \strtolower( $this->get_type() ) . '-' . $updated );
 		}
 	}
 
@@ -268,7 +268,7 @@ class Activity extends Base_Object {
 	 */
 	public function get_json_ld_context() {
 		if ( \is_object( $this->object ) ) {
-			$class = get_class( $this->object );
+			$class = \get_class( $this->object );
 			if ( $class && $class::JSON_LD_CONTEXT ) {
 				// Without php 5.6 support this could be just: 'return  $this->object::JSON_LD_CONTEXT;'.
 				return $class::JSON_LD_CONTEXT;
@@ -286,17 +286,17 @@ class Activity extends Base_Object {
 	 * @return Activity|Actor|Base_Object|Generic_Object|string|\WP_Error|null The converted object or original data.
 	 */
 	private function maybe_convert_to_object( $data ) {
-		if ( ! is_array( $data ) ) {
+		if ( ! \is_array( $data ) ) {
 			return $data;
 		}
 
 		$type = $data['type'] ?? null;
 
-		if ( in_array( $type, self::TYPES, true ) ) {
+		if ( \in_array( $type, self::TYPES, true ) ) {
 			$object = self::init_from_array( $data );
-		} elseif ( in_array( $type, Actor::TYPES, true ) ) {
+		} elseif ( \in_array( $type, Actor::TYPES, true ) ) {
 			$object = Actor::init_from_array( $data );
-		} elseif ( in_array( $type, Base_Object::TYPES, true ) ) {
+		} elseif ( \in_array( $type, Base_Object::TYPES, true ) ) {
 			switch ( $type ) {
 				case 'Event':
 					$object = Event::init_from_array( $data );

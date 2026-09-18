@@ -13,9 +13,9 @@ namespace Activitypub\WP_Admin\Import;
 function load() {
 	require_once ABSPATH . 'wp-admin/includes/import.php';
 
-	if ( ! class_exists( 'WP_Importer' ) ) {
+	if ( ! \class_exists( 'WP_Importer' ) ) {
 		$class_wp_importer = ABSPATH . 'wp-admin/includes/class-wp-importer.php';
-		if ( file_exists( $class_wp_importer ) ) {
+		if ( \file_exists( $class_wp_importer ) ) {
 			require_once $class_wp_importer;
 		}
 	}

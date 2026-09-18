@@ -390,6 +390,28 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Test validate_object rejects an instrument hosted off the actor's domain.
+	 *
+	 * @covers ::validate_object
+	 */
+	public function test_validate_object_fails_for_cross_host_instrument() {
+		$request_data = array(
+			'type'       => 'QuoteRequest',
+			'actor'      => 'https://remote.example.com/users/remote_user',
+			'object'     => get_permalink( self::$post_id ),
+			'instrument' => 'https://victim.example/posts/456',
+		);
+
+		$request = new \WP_REST_Request();
+		$request->set_body( \wp_json_encode( $request_data ) );
+		$request->set_header( 'content-type', 'application/json' );
+
+		$result = Quote_Request::validate_object( true, 'object', $request );
+
+		$this->assertFalse( $result, 'QuoteRequest with a cross-host instrument should fail validation' );
+	}
+
+	/**
 	 * Test validate_object with missing required attributes.
 	 *
 	 * @covers ::validate_object

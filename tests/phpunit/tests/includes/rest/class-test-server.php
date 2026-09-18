@@ -7,7 +7,9 @@
 
 namespace Activitypub\Tests\Rest;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Rest\Server;
+use Activitypub\Signature;
 
 /**
  * Test class for Server.
@@ -37,6 +39,7 @@ class Test_Server extends \WP_Test_REST_TestCase {
 		$this->assertEquals( 10, \has_filter( 'rest_post_dispatch', array( Server::class, 'add_cors_headers' ) ) );
 		$this->assertEquals( 10, \has_filter( 'rest_allowed_cors_headers', array( Server::class, 'allow_cors_headers' ) ) );
 		$this->assertEquals( 10, \has_filter( 'rest_pre_dispatch', array( Server::class, 'maybe_add_actor_from_signature' ) ) );
+		$this->assertEquals( 1, \has_filter( 'rest_pre_dispatch', array( Server::class, 'normalize_route' ) ), 'The route has to be normalized before any other callback reads it.' );
 	}
 
 	/**
@@ -600,5 +603,417 @@ class Test_Server extends \WP_Test_REST_TestCase {
 		$headers = $result->get_headers();
 
 		$this->assertArrayNotHasKey( 'Access-Control-Allow-Origin', $headers );
+	}
+
+	/**
+	 * With Authorized Fetch off the response is the same for every caller, so it varies only by
+	 * Authorization (the ActivityPub API token). Varying on the per-request signature headers would
+	 * mint a unique cache variant for every signed Mastodon fetch and defeat shared caching.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_sets_vary() {
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		$this->assertSame( 'Authorization', $headers['Vary'] );
+		$this->assertArrayNotHasKey( 'Cache-Control', $headers );
+	}
+
+	/**
+	 * A public route (permission_callback __return_true) returns the same response for every caller,
+	 * so even under Authorized Fetch with a signed request it must stay cacheable: no no-store, and no
+	 * caller-varying Vary. This keeps public thread-resolution reads (replies, context) edge-cacheable.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_leaves_public_routes_cacheable_under_authorized_fetch() {
+		\add_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/posts/1/replies' );
+		$request->set_attributes( array( 'permission_callback' => '__return_true' ) );
+		$request->set_header( 'Signature', 'keyId="https://remote.example/users/alice#main-key"' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		\remove_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$this->assertArrayNotHasKey( 'Cache-Control', $headers );
+		$this->assertArrayNotHasKey( 'Vary', $headers );
+	}
+
+	/**
+	 * With Authorized Fetch on the response depends on the signing key, so the signature headers
+	 * join the Vary list.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_varies_on_signature_with_authorized_fetch() {
+		\add_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		\remove_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$this->assertSame( 'Authorization, Signature, Signature-Input', $headers['Vary'] );
+	}
+
+	/**
+	 * Test that a Vary header already on the response is kept.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_preserves_existing_vary() {
+		$response = new \WP_REST_Response( array(), 200 );
+		$response->header( 'Vary', 'Accept' );
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		$this->assertSame( 'Accept, Authorization', $headers['Vary'] );
+	}
+
+	/**
+	 * Test that a response built for a credentialed caller is marked private.
+	 *
+	 * @dataProvider credential_header_provider
+	 * @covers ::add_cache_headers
+	 *
+	 * @param string $header The credential header name.
+	 * @param string $value  The credential header value.
+	 */
+	public function test_add_cache_headers_marks_credentialed_responses_private( $header, $value ) {
+		\add_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1/inbox' );
+		$request->set_header( $header, $value );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		\remove_filter( 'activitypub_use_authorized_fetch', '__return_true' );
+
+		$this->assertSame( 'private, no-store, max-age=0', $headers['Cache-Control'] );
+	}
+
+	/**
+	 * With Authorized Fetch off, a signed request gets the same public response as everyone else,
+	 * so it must not be marked no-store, or it would needlessly drop from every CDN.
+	 *
+	 * @dataProvider credential_header_provider
+	 * @covers ::add_cache_headers
+	 *
+	 * @param string $header The credential header name.
+	 * @param string $value  The credential header value.
+	 */
+	public function test_add_cache_headers_keeps_credentialed_responses_cacheable_without_authorized_fetch( $header, $value ) {
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/1/followers' );
+		$request->set_header( $header, $value );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		$this->assertArrayNotHasKey( 'Cache-Control', $headers );
+	}
+
+	/**
+	 * An owner authenticated by WP session (verify_owner) can receive private items in an otherwise
+	 * public collection, and the session cookie is not in Vary, so a logged-in response must never be
+	 * shared, whatever the Authorized Fetch setting.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_marks_session_authenticated_responses_private() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\wp_set_current_user( $user_id );
+
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/followers' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		\wp_set_current_user( 0 );
+
+		$this->assertSame( 'private, no-store, max-age=0', $headers['Cache-Control'] );
+	}
+
+	/**
+	 * A route whose permission callback is __return_true can still be personalized for a logged-in
+	 * user (e.g. /interactions redirects by the current user), so a logged-in request must be marked
+	 * private even there. The session check has to run before the public shortcut.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_marks_logged_in_public_route_private() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\wp_set_current_user( $user_id );
+
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
+		$request->set_attributes( array( 'permission_callback' => '__return_true' ) );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		\wp_set_current_user( 0 );
+
+		$this->assertSame( 'private, no-store, max-age=0', $headers['Cache-Control'] );
+	}
+
+	/**
+	 * Data provider for credential headers.
+	 *
+	 * @return array[] Test parameters.
+	 */
+	public function credential_header_provider() {
+		return array(
+			'bearer token'   => array( 'Authorization', 'Bearer abc123' ),
+			'draft envelope' => array( 'Signature', 'keyId="https://remote.example/users/alice#main-key"' ),
+			'rfc 9421'       => array( 'Signature-Input', 'sig1=("@method");keyid="https://remote.example/users/alice#main-key"' ),
+		);
+	}
+
+	/**
+	 * Test that non-ActivityPub routes are left alone.
+	 *
+	 * @covers ::add_cache_headers
+	 */
+	public function test_add_cache_headers_skips_other_namespaces() {
+		$response = new \WP_REST_Response( array(), 200 );
+		$request  = new \WP_REST_Request( 'GET', '/wp/v2/posts' );
+		$request->set_header( 'Authorization', 'Bearer abc123' );
+
+		$headers = Server::add_cache_headers( $response, new \WP_REST_Server(), $request )->get_headers();
+
+		$this->assertArrayNotHasKey( 'Vary', $headers );
+		$this->assertArrayNotHasKey( 'Cache-Control', $headers );
+	}
+
+	/*
+	 * WordPress dispatches REST routes with a case-insensitive pattern and leaves
+	 * `WP_REST_Request::get_route()` spelled the way the caller sent it, so `/ActivityPub/1.0/inbox`
+	 * reaches the same handler as `/activitypub/1.0/inbox`. The route is normalized once before
+	 * dispatch so that every route check downstream engages on both spellings.
+	 */
+
+	/**
+	 * Run the pre-dispatch filters over a request, the way the REST server does before matching it.
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 * @return \WP_REST_Request The same request, after the pre-dispatch filters have seen it.
+	 */
+	private function pre_dispatch( $request ) {
+		Server::init();
+		\apply_filters( 'rest_pre_dispatch', null, \rest_get_server(), $request );
+
+		return $request;
+	}
+
+	/**
+	 * A case-varied ActivityPub route is normalized before it is matched to a handler.
+	 *
+	 * @covers ::normalize_route
+	 */
+	public function test_normalize_route_lowercases_activitypub_routes() {
+		$request = $this->pre_dispatch( new \WP_REST_Request( 'GET', '/' . \strtoupper( ACTIVITYPUB_REST_NAMESPACE ) . '/Inbox' ) );
+
+		$this->assertSame( '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox', $request->get_route() );
+	}
+
+	/**
+	 * Routes outside the ActivityPub namespace belong to other endpoints, which may well treat their
+	 * own path segments as case-sensitive, so they are left exactly as they arrived.
+	 *
+	 * @covers ::normalize_route
+	 */
+	public function test_normalize_route_leaves_other_namespaces_alone() {
+		$request = $this->pre_dispatch( new \WP_REST_Request( 'GET', '/wp/v2/Posts' ) );
+
+		$this->assertSame( '/wp/v2/Posts', $request->get_route() );
+	}
+
+	/**
+	 * An earlier callback that hijacked the request keeps its result, and the route is left alone.
+	 *
+	 * @covers ::normalize_route
+	 */
+	public function test_normalize_route_respects_short_circuit() {
+		$request  = new \WP_REST_Request( 'GET', '/' . \strtoupper( ACTIVITYPUB_REST_NAMESPACE ) . '/inbox' );
+		$response = new \WP_REST_Response( array( 'hijacked' => true ), 200 );
+
+		$result = Server::normalize_route( $response, new \WP_REST_Server(), $request );
+
+		$this->assertSame( $response, $result );
+		$this->assertSame( '/' . \strtoupper( ACTIVITYPUB_REST_NAMESPACE ) . '/inbox', $request->get_route() );
+	}
+
+	/**
+	 * The filter only normalizes; it must never stand in for the response.
+	 *
+	 * @covers ::normalize_route
+	 */
+	public function test_normalize_route_does_not_hijack_the_request() {
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+
+		$this->assertNull( Server::normalize_route( null, new \WP_REST_Server(), $request ) );
+	}
+
+	/**
+	 * A case-varied authorize route is the same interactive endpoint, so the CORS exclusion applies.
+	 *
+	 * @covers ::normalize_route
+	 * @covers ::add_cors_headers
+	 */
+	public function test_case_varied_oauth_authorize_gets_no_cors() {
+		$request  = $this->pre_dispatch( new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/Authorize' ) );
+		$response = new \WP_REST_Response( array(), 200 );
+
+		$headers = Server::add_cors_headers( $response, \rest_get_server(), $request )->get_headers();
+
+		$this->assertArrayNotHasKey( 'Access-Control-Allow-Origin', $headers );
+		$this->assertSame( array( 'Authorization' ), Server::allow_cors_headers( array( 'Authorization' ), $request ) );
+	}
+
+	/**
+	 * A case-varied namespace still reaches an ActivityPub handler, so it still gets CORS.
+	 *
+	 * @covers ::normalize_route
+	 * @covers ::add_cors_headers
+	 */
+	public function test_case_varied_namespace_gets_cors() {
+		$request  = $this->pre_dispatch( new \WP_REST_Request( 'GET', '/' . \strtoupper( ACTIVITYPUB_REST_NAMESPACE ) . '/inbox' ) );
+		$response = new \WP_REST_Response( array(), 200 );
+
+		$headers = Server::add_cors_headers( $response, \rest_get_server(), $request )->get_headers();
+
+		$this->assertSame( '*', $headers['Access-Control-Allow-Origin'] );
+		$this->assertContains( 'Accept', Server::allow_cors_headers( array( 'Authorization' ), $request ) );
+	}
+
+	/**
+	 * A token-gated response served under a case-varied namespace must still be marked as varying by
+	 * Authorization, or a shared cache could hand one caller's response to the next.
+	 *
+	 * @covers ::normalize_route
+	 * @covers ::add_cache_headers
+	 */
+	public function test_case_varied_namespace_still_varies_on_authorization() {
+		$request  = $this->pre_dispatch( new \WP_REST_Request( 'GET', '/' . \strtoupper( ACTIVITYPUB_REST_NAMESPACE ) . '/actors/1' ) );
+		$response = new \WP_REST_Response( array(), 200 );
+
+		$headers = Server::add_cache_headers( $response, \rest_get_server(), $request )->get_headers();
+
+		$this->assertSame( 'Authorization', $headers['Vary'] );
+	}
+
+	/**
+	 * Inbox POSTs must read their JSON body first whatever the spelling of the route, because
+	 * `application/activity+json` is not in core's default parameter order.
+	 *
+	 * @covers ::normalize_route
+	 * @covers ::request_parameter_order
+	 */
+	public function test_case_varied_namespace_keeps_json_parameter_order() {
+		$request = $this->pre_dispatch( new \WP_REST_Request( 'POST', '/' . \strtoupper( ACTIVITYPUB_REST_NAMESPACE ) . '/inbox' ) );
+		$result  = Server::request_parameter_order( array( 'URL', 'JSON', 'POST', 'defaults' ), $request );
+
+		$this->assertSame( array( 'JSON', 'POST', 'URL', 'defaults' ), $result );
+	}
+
+	/**
+	 * Errors from a case-varied ActivityPub route still get the FEP-c180 error shape, and case-varied
+	 * OAuth routes still keep the RFC 6749 one.
+	 *
+	 * @covers ::normalize_route
+	 * @covers ::filter_output
+	 */
+	public function test_case_varied_namespace_keeps_error_formats() {
+		$activitypub = $this->pre_dispatch( new \WP_REST_Request( 'POST', '/' . \strtoupper( ACTIVITYPUB_REST_NAMESPACE ) . '/inbox' ) );
+		$oauth       = $this->pre_dispatch( new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/OAuth/token' ) );
+
+		$formatted = Server::filter_output( new \WP_REST_Response( array( 'code' => 'test_error' ), 400 ), \rest_get_server(), $activitypub );
+		$untouched = Server::filter_output( new \WP_REST_Response( array( 'error' => 'invalid_grant' ), 400 ), \rest_get_server(), $oauth );
+
+		$this->assertSame( 'about:blank', $formatted->get_data()['type'] );
+		$this->assertSame( array( 'error' => 'invalid_grant' ), $untouched->get_data() );
+	}
+
+	/**
+	 * The actor backfill keys off an `/inbox` suffix, which is just as case-varied as the namespace.
+	 *
+	 * @covers ::normalize_route
+	 * @covers ::maybe_add_actor_from_signature
+	 */
+	public function test_case_varied_route_still_backfills_actor() {
+		$request = $this->pre_dispatch(
+			$this->build_signed_inbox_request(
+				array( 'type' => 'FeatureRequest' ),
+				'https://remote.example.com/users/curator#main-key',
+				'/' . \strtoupper( ACTIVITYPUB_REST_NAMESPACE ) . '/Inbox'
+			)
+		);
+
+		$this->assertSame( 'https://remote.example.com/users/curator', $request->get_json_params()['actor'] );
+	}
+
+	/**
+	 * Draft Cavage rebuilds its `(request-target)` from the route, so a request signed over a
+	 * case-varied path no longer verifies once the route is normalized. That is the trade-off of
+	 * normalizing in one place: peers sign the lowercase paths we publish, and RFC 9421 signatures
+	 * take their components from `REQUEST_URI`, so they are not affected either way.
+	 *
+	 * @covers ::normalize_route
+	 */
+	public function test_normalize_route_rejects_draft_signature_over_case_varied_path() {
+		\update_option( 'activitypub_rfc9421_signature', '0' );
+
+		$keys              = Actors::get_keypair( 1 );
+		$mock_remote_actor = function () use ( $keys ) {
+			return array(
+				'name'      => 'Admin',
+				'url'       => 'https://example.org/author/admin',
+				'publicKey' => array(
+					'id'           => 'https://example.org/author/admin#main-key',
+					'owner'        => 'https://example.org/author/admin',
+					'publicKeyPem' => $keys['public_key'],
+				),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_actor );
+
+		$route = '/' . \strtoupper( ACTIVITYPUB_REST_NAMESPACE ) . '/Inbox';
+		$args  = \apply_filters(
+			'http_request_args',
+			array(
+				'method'      => 'POST',
+				'body'        => '{"type":"Follow","actor":"https://example.org/author/admin"}',
+				'key_id'      => 'https://example.org/author/admin#main-key',
+				'private_key' => Actors::get_private_key( 1 ),
+				'user_id'     => 1,
+				'headers'     => array(
+					'Content-Type' => 'application/activity+json',
+					'Date'         => \gmdate( 'D, d M Y H:i:s T' ),
+					'Host'         => 'example.org',
+				),
+			),
+			'https://example.org/wp-json' . $route
+		);
+
+		$request = new \WP_REST_Request( 'POST', $route );
+		$request->set_body( $args['body'] );
+		$request->set_headers( $args['headers'] );
+
+		$this->assertNotWPError( Signature::verify_http_signature( $request ), 'A signature over the path as it was sent verifies.' );
+
+		Server::normalize_route( null, \rest_get_server(), $request );
+
+		$this->assertWPError( Signature::verify_http_signature( $request ), 'Once the route is normalized, the rebuilt request-target no longer matches what was signed.' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock_remote_actor );
 	}
 }

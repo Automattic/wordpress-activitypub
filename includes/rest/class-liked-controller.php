@@ -89,15 +89,15 @@ class Liked_Controller extends Actors_Controller {
 
 		// Paginate the results.
 		$offset        = ( null !== $page ) ? ( $page - 1 ) * $per_page : 0;
-		$ordered_items = array_slice( $liked_objects, $offset, $per_page );
+		$ordered_items = \array_slice( $liked_objects, $offset, $per_page );
 
 		$response = array(
 			'@context'     => Base_Object::JSON_LD_CONTEXT,
-			'id'           => get_rest_url_by_path( sprintf( 'actors/%d/liked', $user_id ) ),
+			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/liked', $user_id ) ),
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'actor'        => Actors::get_by_id( $user_id )->get_id(),
 			'type'         => 'OrderedCollection',
-			'totalItems'   => count( $liked_objects ),
+			'totalItems'   => \count( $liked_objects ),
 			'orderedItems' => $ordered_items,
 		);
 

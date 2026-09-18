@@ -56,14 +56,24 @@ class Reject {
 	 * @param int|int[] $user_ids The user ID(s).
 	 */
 	private static function reject_follow( $reject, $user_ids ) {
-		$actor_uri  = $reject['object']['actor'] ?? '';
-		$actor_post = Remote_Actors::get_by_uri( object_to_uri( $actor_uri ) );
+		/*
+		 * For a Follow Reject, the sender must be the actor that was followed.
+		 * Without this, a signed Reject from one actor could cancel a Follow that
+		 * targeted another actor by referencing that pending Follow's outbox GUID.
+		 */
+		$reject_actor   = object_to_uri( $reject['actor'] ?? '' );
+		$followed_actor = object_to_uri( $reject['object']['object'] ?? '' );
+		if ( ! $reject_actor || ! $followed_actor || $reject_actor !== $followed_actor ) {
+			return;
+		}
+
+		$actor_post = Remote_Actors::get_by_uri( $followed_actor );
 
 		if ( \is_wp_error( $actor_post ) ) {
 			return;
 		}
 
-		$user_id = is_array( $user_ids ) ? reset( $user_ids ) : $user_ids;
+		$user_id = \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids;
 		$result  = Following::reject( $actor_post, $user_id );
 		$success = ! \is_wp_error( $result );
 
@@ -99,6 +109,14 @@ class Reject {
 		}
 
 		if ( ! isset( $activity['actor'], $activity['object'] ) ) {
+			return false;
+		}
+
+		if ( ! \is_array( $activity['object'] ) ) {
+			return false;
+		}
+
+		if ( ! isset( $activity['object']['id'], $activity['object']['type'], $activity['object']['actor'], $activity['object']['object'] ) ) {
 			return false;
 		}
 

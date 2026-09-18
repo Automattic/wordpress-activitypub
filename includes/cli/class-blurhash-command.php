@@ -231,7 +231,7 @@ class Blurhash_Command extends \WP_CLI_Command {
 		}
 
 		$encoded_label = $dry_run ? 'would encode' : 'encoded';
-		$summary       = sprintf(
+		$summary       = \sprintf(
 			'%s %d, skipped %d (non-raster, unsupported, or out of encode policy), failed %d.',
 			$encoded_label,
 			$encoded,

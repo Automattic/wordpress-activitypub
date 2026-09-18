@@ -68,7 +68,6 @@
 	color: colors.$gray-900;
 	max-width: 100%;
 	overflow-wrap: break-word;
-	word-wrap: break-word;
 
 	// Remove extra margins from nested elements
 	> * {
@@ -84,7 +83,6 @@
 	margin-top: var(--wpds-spacing-15, 6px);
 	max-width: 100%;
 	overflow-wrap: break-word;
-	word-wrap: break-word;
 }
 
 // Prominent headline in list view only
@@ -271,7 +269,6 @@
 	a {
 		color: var(--wp-admin-theme-color, #135e96);
 		text-decoration: none;
-		word-wrap: break-word;
 		overflow-wrap: break-word;
 
 		&:hover {

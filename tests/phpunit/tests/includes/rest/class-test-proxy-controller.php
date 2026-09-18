@@ -7,7 +7,10 @@
 
 namespace Activitypub\Tests\Rest;
 
+use Activitypub\Collection\Remote_Actors;
+use Activitypub\OAuth\Scope;
 use Activitypub\Rest\Proxy_Controller;
+use Activitypub\Tests\OAuth_Token_Stub;
 
 /**
  * Test class for Proxy_Controller.
@@ -15,6 +18,8 @@ use Activitypub\Rest\Proxy_Controller;
  * @coversDefaultClass \Activitypub\Rest\Proxy_Controller
  */
 class Test_Proxy_Controller extends \WP_UnitTestCase {
+	use OAuth_Token_Stub;
+
 
 	/**
 	 * REST Server instance.
@@ -168,6 +173,66 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 		$data = $response->get_data();
 		$this->assertEquals( 'Person', $data['type'] );
 		$this->assertEquals( 'https://example.com/users/test', $data['id'] );
+
+		// The canonical actor was cached under its own id.
+		$this->assertInstanceOf( 'WP_Post', Remote_Actors::get_by_uri( 'https://example.com/users/test' ) );
+
+		$this->unmock_oauth_auth();
+	}
+
+	/**
+	 * A proxied actor whose declared id is not the fetched URL must not be cached
+	 * under that id, even though the object is still returned to the caller.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_proxy_does_not_cache_cross_host_actor_id() {
+		$this->mock_oauth_auth();
+
+		$fetched_url   = 'https://example.com/proxy-me';
+		$mismatched_id = 'https://example.org/users/alice';
+
+		$documents = array(
+			// Served at $fetched_url, claims the canonical actor's id on another host.
+			$fetched_url   => array(
+				'@context'          => 'https://www.w3.org/ns/activitystreams',
+				'type'              => 'Person',
+				'id'                => $mismatched_id,
+				'inbox'             => 'https://example.com/inbox',
+				'preferredUsername' => 'alice',
+			),
+			// The other host's real server does not confirm the mismatched id.
+			$mismatched_id => array(
+				'@context' => 'https://www.w3.org/ns/activitystreams',
+				'type'     => 'Person',
+				'id'       => 'https://example.net/someone-else',
+				'inbox'    => 'https://example.net/someone-else/inbox',
+			),
+		);
+
+		$filter = function ( $pre, $args, $url ) use ( $documents ) {
+			if ( ! \array_key_exists( $url, $documents ) ) {
+				return $pre;
+			}
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode( $documents[ $url ] ),
+				'headers'  => array( 'content-type' => 'application/activity+json' ),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => $fetched_url ) );
+
+		$response = $this->server->dispatch( $request );
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		// A document served under a mismatched cross-host id is rejected, not proxied...
+		$this->assertEquals( 502, $response->get_status() );
+		// ...and the mismatched id must NOT have been written to the actor cache.
+		$this->assertWPError( Remote_Actors::get_by_uri( $mismatched_id ), 'A cross-host proxied actor id must not be cached.' );
 
 		$this->unmock_oauth_auth();
 	}
@@ -443,9 +508,93 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that the remote status reaches the client.
+	 *
+	 * A missing object and an unreachable host used to be indistinguishable, so a client could
+	 * not tell whether to drop the request or replay it later.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_remote_status_is_passed_on() {
+		$this->mock_oauth_auth();
+
+		$respond = function () {
+			return array(
+				'response' => array( 'code' => 404 ),
+				'body'     => '',
+				'headers'  => array(),
+			);
+		};
+		\add_filter( 'pre_http_request', $respond );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => 'https://example.com/gone-forever' ) );
+
+		$this->assertEquals( 404, $this->server->dispatch( $request )->get_status() );
+
+		\remove_filter( 'pre_http_request', $respond );
+		$this->unmock_oauth_auth();
+	}
+
+	/**
+	 * Test that a failure with no response at all is still a gateway error.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_unreachable_host_is_a_gateway_error() {
+		$this->mock_oauth_auth();
+
+		$respond = function () {
+			return new \WP_Error( 'http_request_failed', 'Connection timed out' );
+		};
+		\add_filter( 'pre_http_request', $respond );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => 'https://example.com/unreachable' ) );
+
+		$this->assertEquals( 502, $this->server->dispatch( $request )->get_status() );
+
+		\remove_filter( 'pre_http_request', $respond );
+		$this->unmock_oauth_auth();
+	}
+
+	/**
 	 * Remove OAuth mock.
 	 */
 	private function unmock_oauth_auth() {
 		\remove_filter( 'activitypub_oauth_check_permission', '__return_true' );
+	}
+
+	/**
+	 * Test that the proxy is authorized as a read, not as a write.
+	 *
+	 * The endpoint is a POST because the target URL travels in the body, but it only fetches a
+	 * remote object. Requiring `write` would mean a read-only client could not use it, and would
+	 * make a client that only wants to read ask for permission to post.
+	 *
+	 * @covers ::register_routes
+	 */
+	public function test_proxy_requires_the_read_scope() {
+		$respond = function () {
+			return array(
+				'response' => array( 'code' => 404 ),
+				'body'     => '',
+				'headers'  => array(),
+			);
+		};
+		\add_filter( 'pre_http_request', $respond );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => 'https://example.com/gone-forever' ) );
+
+		// A read-scoped token reaches the handler, which forwards the remote 404.
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::READ ), self::$user_id ) );
+		$this->assertEquals( 404, $this->server->dispatch( $request )->get_status(), 'A read token may use the proxy.' );
+
+		// A token without read does not, even though the request is a POST.
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::WRITE ), self::$user_id ) );
+		$this->assertEquals( 403, $this->server->dispatch( $request )->get_status(), 'Write is not the authority to read a remote object.' );
+
+		\remove_filter( 'pre_http_request', $respond );
 	}
 }

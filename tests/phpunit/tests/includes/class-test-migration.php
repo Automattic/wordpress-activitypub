@@ -8,8 +8,7 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Activity\Actor;
-use Activitypub\Collection\Actors;
-use Activitypub\Collection\Extra_Fields;
+use Activitypub\Application;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
@@ -633,80 +632,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		);
 	}
 
-	/**
-	 * Test add_default_extra_field.
-	 */
-	public function test_add_default_extra_field() {
-		// Create a test user with ActivityPub permission.
-		$user_id = self::factory()->user->create();
-		$user    = get_user_by( 'id', $user_id );
-		$user->add_cap( 'activitypub' );
 
-		// Run the private method over Reflection.
-		$reflection = new \ReflectionClass( Migration::class );
-		$method     = $reflection->getMethod( 'add_default_extra_field' );
-		if ( \PHP_VERSION_ID < 80100 ) {
-			$method->setAccessible( true );
-		}
-		$method->invoke( null );
-
-		// Check the extra field for the user.
-		$user_fields = get_posts(
-			array(
-				'post_type'      => Extra_Fields::USER_POST_TYPE,
-				'author'         => $user_id,
-				'posts_per_page' => -1,
-			)
-		);
-
-		$this->assertCount( 1, $user_fields, 'There should be one extra field for the user' );
-		$this->assertEquals( 'Powered by', $user_fields[0]->post_title, 'The title should be "Powered by"' );
-		$this->assertEquals( 'WordPress', $user_fields[0]->post_content, 'The content should be "WordPress"' );
-
-		// Check the extra field for the blog user.
-		$blog_fields = get_posts(
-			array(
-				'post_type'      => Extra_Fields::BLOG_POST_TYPE,
-				'author'         => 0,
-				'posts_per_page' => -1,
-			)
-		);
-
-		$this->assertCount( 1, $blog_fields, 'There should be one extra field for the blog user' );
-		$this->assertEquals( 'Powered by', $blog_fields[0]->post_title, 'The title should be "Powered by"' );
-		$this->assertEquals( 'WordPress', $blog_fields[0]->post_content, 'The content should be "WordPress"' );
-
-		_delete_all_data();
-	}
-
-	/**
-	 * Test add_default_extra_field with multiple users.
-	 */
-	public function test_add_default_extra_field_multiple_users() {
-		// Create a user without ActivityPub permission.
-		$non_ap_user_id = self::factory()->user->create();
-
-		// Run the private method over Reflection.
-		$reflection = new \ReflectionClass( Migration::class );
-		$method     = $reflection->getMethod( 'add_default_extra_field' );
-		if ( \PHP_VERSION_ID < 80100 ) {
-			$method->setAccessible( true );
-		}
-		$method->invoke( null );
-
-		// Check that the user without ActivityPub permission has no extra field.
-		$non_ap_user_fields = get_posts(
-			array(
-				'post_type'      => Extra_Fields::USER_POST_TYPE,
-				'author'         => $non_ap_user_id,
-				'posts_per_page' => -1,
-			)
-		);
-
-		$this->assertCount( 0, $non_ap_user_fields, 'User without ActivityPub permission should not have an extra field' );
-
-		_delete_all_data();
-	}
 
 	/**
 	 * Test update_notification_options.
@@ -919,22 +845,22 @@ class Test_Migration extends \WP_UnitTestCase {
 		$post3 = self::factory()->post->create();
 
 		// Add _activitypub_following meta with APPLICATION_USER_ID value.
-		\add_post_meta( $post1, '_activitypub_following', Actors::APPLICATION_USER_ID );
-		\add_post_meta( $post2, '_activitypub_following', Actors::APPLICATION_USER_ID );
+		\add_post_meta( $post1, '_activitypub_following', -1 );
+		\add_post_meta( $post2, '_activitypub_following', -1 );
 
 		// Add _activitypub_following meta with different values (should not be removed).
 		\add_post_meta( $post3, '_activitypub_following', '123' );
 		\add_post_meta( $post1, '_activitypub_following', '456' );
 
 		// Add other meta keys (should not be affected).
-		\add_post_meta( $post1, '_activitypub_other_meta', Actors::APPLICATION_USER_ID );
-		\add_post_meta( $post2, 'some_other_meta', Actors::APPLICATION_USER_ID );
+		\add_post_meta( $post1, '_activitypub_other_meta', -1 );
+		\add_post_meta( $post2, 'some_other_meta', -1 );
 
 		// Verify initial state.
 		$initial_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value = %s",
-				Actors::APPLICATION_USER_ID
+				-1
 			)
 		);
 		$this->assertEquals( 2, $initial_count, 'Should have 2 _activitypub_following entries with APPLICATION_USER_ID' );
@@ -942,7 +868,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		$other_following_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value != %s",
-				Actors::APPLICATION_USER_ID
+				-1
 			)
 		);
 		$this->assertEquals( 2, $other_following_count, 'Should have 2 _activitypub_following entries with other values' );
@@ -954,7 +880,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		$remaining_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value = %s",
-				Actors::APPLICATION_USER_ID
+				-1
 			)
 		);
 		$this->assertEquals( 0, $remaining_count, 'All _activitypub_following entries with APPLICATION_USER_ID should be removed' );
@@ -963,14 +889,14 @@ class Test_Migration extends \WP_UnitTestCase {
 		$remaining_other_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value != %s",
-				Actors::APPLICATION_USER_ID
+				-1
 			)
 		);
 		$this->assertEquals( 2, $remaining_other_count, 'Other _activitypub_following entries should remain' );
 
 		// Verify other meta keys are unaffected.
-		$this->assertEquals( Actors::APPLICATION_USER_ID, \get_post_meta( $post1, '_activitypub_other_meta', true ), 'Other meta keys should not be affected' );
-		$this->assertEquals( Actors::APPLICATION_USER_ID, \get_post_meta( $post2, 'some_other_meta', true ), 'Other meta keys should not be affected' );
+		$this->assertEquals( -1, \get_post_meta( $post1, '_activitypub_other_meta', true ), 'Other meta keys should not be affected' );
+		$this->assertEquals( -1, \get_post_meta( $post2, 'some_other_meta', true ), 'Other meta keys should not be affected' );
 	}
 
 	/**
@@ -990,8 +916,8 @@ class Test_Migration extends \WP_UnitTestCase {
 		\add_post_meta( $post2, '_activitypub_following', '456' );
 
 		// Add other meta keys with APPLICATION_USER_ID.
-		\add_post_meta( $post1, '_activitypub_other_meta', Actors::APPLICATION_USER_ID );
-		\add_post_meta( $post2, 'different_meta', Actors::APPLICATION_USER_ID );
+		\add_post_meta( $post1, '_activitypub_other_meta', -1 );
+		\add_post_meta( $post2, 'different_meta', -1 );
 
 		// Get initial counts.
 		$initial_following_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
@@ -1018,8 +944,40 @@ class Test_Migration extends \WP_UnitTestCase {
 		// Verify specific entries remain.
 		$this->assertEquals( '123', \get_post_meta( $post1, '_activitypub_following', true ), '_activitypub_following with different value should remain' );
 		$this->assertEquals( '456', \get_post_meta( $post2, '_activitypub_following', true ), '_activitypub_following with different value should remain' );
-		$this->assertEquals( Actors::APPLICATION_USER_ID, \get_post_meta( $post1, '_activitypub_other_meta', true ), 'Other meta keys should not be affected' );
-		$this->assertEquals( Actors::APPLICATION_USER_ID, \get_post_meta( $post2, 'different_meta', true ), 'Other meta keys should not be affected' );
+		$this->assertEquals( -1, \get_post_meta( $post1, '_activitypub_other_meta', true ), 'Other meta keys should not be affected' );
+		$this->assertEquals( -1, \get_post_meta( $post2, 'different_meta', true ), 'Other meta keys should not be affected' );
+	}
+
+	/**
+	 * Test that legacy Application outbox items are deleted, leaving other actors' items intact.
+	 *
+	 * @covers ::delete_application_outbox_items
+	 */
+	public function test_delete_application_outbox_items() {
+		$application_item = self::factory()->post->create(
+			array(
+				'post_type'  => Outbox::POST_TYPE,
+				'meta_input' => array( '_activitypub_activity_actor' => 'application' ),
+			)
+		);
+		$blog_item        = self::factory()->post->create(
+			array(
+				'post_type'  => Outbox::POST_TYPE,
+				'meta_input' => array( '_activitypub_activity_actor' => 'blog' ),
+			)
+		);
+		$user_item        = self::factory()->post->create(
+			array(
+				'post_type'  => Outbox::POST_TYPE,
+				'meta_input' => array( '_activitypub_activity_actor' => 'user' ),
+			)
+		);
+
+		Migration::delete_application_outbox_items();
+
+		$this->assertNull( \get_post( $application_item ), 'The Application outbox item should be deleted.' );
+		$this->assertInstanceOf( \WP_Post::class, \get_post( $blog_item ), 'The Blog outbox item should remain.' );
+		$this->assertInstanceOf( \WP_Post::class, \get_post( $user_item ), 'The User outbox item should remain.' );
 	}
 
 	/**
@@ -1034,9 +992,9 @@ class Test_Migration extends \WP_UnitTestCase {
 		$post_id = self::factory()->post->create();
 
 		// Add multiple _activitypub_following meta entries with APPLICATION_USER_ID.
-		\add_post_meta( $post_id, '_activitypub_following', Actors::APPLICATION_USER_ID );
-		\add_post_meta( $post_id, '_activitypub_following', Actors::APPLICATION_USER_ID );
-		\add_post_meta( $post_id, '_activitypub_following', Actors::APPLICATION_USER_ID );
+		\add_post_meta( $post_id, '_activitypub_following', -1 );
+		\add_post_meta( $post_id, '_activitypub_following', -1 );
+		\add_post_meta( $post_id, '_activitypub_following', -1 );
 
 		// Add one with different value.
 		\add_post_meta( $post_id, '_activitypub_following', '789' );
@@ -1045,7 +1003,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		$initial_app_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value = %s",
-				Actors::APPLICATION_USER_ID
+				-1
 			)
 		);
 		$this->assertEquals( 3, $initial_app_count, 'Should have 3 APPLICATION_USER_ID entries' );
@@ -1057,7 +1015,7 @@ class Test_Migration extends \WP_UnitTestCase {
 		$remaining_app_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_activitypub_following' AND meta_value = %s",
-				Actors::APPLICATION_USER_ID
+				-1
 			)
 		);
 		$this->assertEquals( 0, $remaining_app_count, 'All APPLICATION_USER_ID entries should be removed' );
@@ -1483,6 +1441,85 @@ class Test_Migration extends \WP_UnitTestCase {
 			$emoji_meta = \get_post_meta( $actor_id, '_activitypub_emoji', true );
 			$this->assertNotEmpty( $emoji_meta, "Actor {$actor_id} should have emoji meta" );
 		}
+	}
+
+	/**
+	 * Test migrate_application_keypair_option renames the old option.
+	 *
+	 * @covers ::migrate_application_keypair_option
+	 */
+	public function test_migrate_application_keypair_option() {
+		$key_pair = array(
+			'public_key'  => 'test-public-key',
+			'private_key' => 'test-private-key',
+		);
+
+		// Set up the old option name.
+		\delete_option( Application::KEYPAIR_OPTION_KEY );
+		\delete_option( 'activitypub_keypair_for_-1' );
+		\add_option( 'activitypub_keypair_for_-1', $key_pair );
+
+		// Verify old option exists.
+		$this->assertEquals( $key_pair, \get_option( 'activitypub_keypair_for_-1' ) );
+		$this->assertFalse( \get_option( Application::KEYPAIR_OPTION_KEY ) );
+
+		// Run the migration.
+		Migration::migrate_application_keypair_option();
+
+		// Verify option was renamed.
+		$this->assertFalse( \get_option( 'activitypub_keypair_for_-1' ) );
+		$this->assertEquals( $key_pair, \get_option( Application::KEYPAIR_OPTION_KEY ) );
+
+		// Verify Application class can read the keys.
+		$this->assertEquals( 'test-public-key', Application::get_public_key() );
+		$this->assertEquals( 'test-private-key', Application::get_private_key() );
+
+		// Clean up.
+		\delete_option( Application::KEYPAIR_OPTION_KEY );
+	}
+
+	/**
+	 * Test migrate_application_keypair_option when old option doesn't exist.
+	 *
+	 * @covers ::migrate_application_keypair_option
+	 */
+	public function test_migrate_application_keypair_option_no_old_option() {
+		// Ensure neither option exists.
+		\delete_option( 'activitypub_keypair_for_-1' );
+		\delete_option( Application::KEYPAIR_OPTION_KEY );
+
+		// Run the migration — should not error.
+		Migration::migrate_application_keypair_option();
+
+		// Both should still not exist.
+		$this->assertFalse( \get_option( 'activitypub_keypair_for_-1' ) );
+		$this->assertFalse( \get_option( Application::KEYPAIR_OPTION_KEY ) );
+	}
+
+	/**
+	 * Test migrate_application_keypair_option when new option already exists.
+	 *
+	 * @covers ::migrate_application_keypair_option
+	 */
+	public function test_migrate_application_keypair_option_already_migrated() {
+		$new_key_pair = array(
+			'public_key'  => 'new-public-key',
+			'private_key' => 'new-private-key',
+		);
+
+		// Set up the new option (already migrated).
+		\delete_option( 'activitypub_keypair_for_-1' );
+		\delete_option( Application::KEYPAIR_OPTION_KEY );
+		\add_option( Application::KEYPAIR_OPTION_KEY, $new_key_pair );
+
+		// Run the migration.
+		Migration::migrate_application_keypair_option();
+
+		// New option should be unchanged.
+		$this->assertEquals( $new_key_pair, \get_option( Application::KEYPAIR_OPTION_KEY ) );
+
+		// Clean up.
+		\delete_option( Application::KEYPAIR_OPTION_KEY );
 	}
 
 	/**
