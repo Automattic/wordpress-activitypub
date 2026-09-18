@@ -14,6 +14,8 @@ use Activitypub\Model\Blog;
 use Activitypub\Model\User;
 use Activitypub\Scheduler\Actor as Actor_Scheduler;
 
+use function Activitypub\is_actor;
+
 /**
  * ActivityPub (Account) Move Class
  *
@@ -82,7 +84,7 @@ class Move {
 			return $user;
 		}
 
-		$response = Http::get_remote_object( $to );
+		$response = Http::get_remote_object( $to, false );
 
 		if ( \is_wp_error( $response ) ) {
 			return $response;
@@ -91,31 +93,14 @@ class Move {
 		$target_actor = new Actor();
 		$target_actor->from_array( $response );
 
-		// The canonical id is both federated and advertised, so a target that declares none cannot be moved to.
-		$target_id = $target_actor->get_id();
-		if ( ! $target_id ) {
-			return new \WP_Error( 'invalid_target', \__( 'Invalid target', 'activitypub' ) );
-		}
-
 		/*
-		 * The move is only valid if the target links back. Receiving servers accept it only when the
-		 * id we send as the Move's `object` is listed in the target's `alsoKnownAs`, so verify that
-		 * exact id, not the (possibly non-canonical) input URL.
+		 * Receivers accept the Move only when the id sent as its `object` is listed in the target's
+		 * `alsoKnownAs`, and only an actor with a canonical id can be federated.
 		 */
-		$also_known_as = $target_actor->get_also_known_as() ?? array();
-		if ( ! \in_array( $user->get_id(), $also_known_as, true ) ) {
+		$target_id     = $target_actor->get_id();
+		$also_known_as = (array) $target_actor->get_also_known_as();
+		if ( ! is_actor( $response ) || ! \is_string( $target_id ) || '' === $target_id || ! \in_array( $user->get_id(), $also_known_as, true ) ) {
 			return new \WP_Error( 'invalid_target', \__( 'Invalid target', 'activitypub' ) );
-		}
-
-		/*
-		 * Advertise the move only after the target is verified, so a failed attempt never leaves the
-		 * actor pointing at an unverified target. Store the canonical id, not the input URL: receivers
-		 * match the advertised `movedTo` against the Move's `target` and skip the move when they differ.
-		 */
-		if ( $user->get__id() > 0 ) {
-			\update_user_option( $user->get__id(), 'activitypub_moved_to', $target_id );
-		} else {
-			\update_option( 'activitypub_blog_user_moved_to', $target_id );
 		}
 
 		$activity = new Activity();
@@ -127,15 +112,17 @@ class Move {
 
 		$outbox_id = add_to_outbox( $activity, null, $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
 
-		if ( ! $outbox_id || \is_wp_error( $outbox_id ) ) {
-			return $outbox_id;
-		}
+		// The move takes effect only once the Move is queued; the profile Update then carries the new `movedTo`.
+		if ( $outbox_id && ! \is_wp_error( $outbox_id ) ) {
+			// Store the canonical id: receivers compare the advertised `movedTo` against the Move's `target`.
+			if ( $user->get__id() > 0 ) {
+				\update_user_option( $user->get__id(), 'activitypub_moved_to', $target_id );
+			} else {
+				\update_option( 'activitypub_blog_user_moved_to', $target_id );
+			}
 
-		/*
-		 * Notify followers of the new movedTo by federating a profile Update (FEP-7628). Queue it
-		 * after the Move so a follower that reacts to `movedTo` still processes the migration first.
-		 */
-		Actor_Scheduler::schedule_profile_update( $user->get__id() );
+			Actor_Scheduler::schedule_profile_update( $user->get__id() );
+		}
 
 		return $outbox_id;
 	}
@@ -165,26 +152,17 @@ class Move {
 			return $user;
 		}
 
-		// Point the old actor at the new one.
-		if ( $user->get__id() > 0 ) {
-			\update_user_option( $user->get__id(), 'activitypub_moved_to', $to );
-		} else {
-			\update_option( 'activitypub_blog_user_moved_to', $to );
+		// Resolving through the model rejects a user without the ActivityPub capability.
+		$target = Actors::get_by_various( $to );
+
+		if ( \is_wp_error( $target ) ) {
+			return $target;
 		}
 
-		/*
-		 * The old account URL belongs in the *target's* alsoKnownAs, not the source's: receiving
-		 * servers accept the Move only when the new actor links back to the old one. For a domain
-		 * change the source and target resolve to the same actor, so it is still recorded there.
-		 */
-		$target = Actors::get_by_various( $to );
-		if ( ! \is_wp_error( $target ) ) {
-			if ( $target->get__id() > 0 ) {
-				self::update_user_also_known_as( $target->get__id(), $from );
-			} else {
-				self::update_blog_also_known_as( $from );
-			}
-		}
+		$target_id = $target->get__id();
+
+		// Advertise and federate the target's canonical id, whatever form the move was requested with.
+		$to = $target->get_id();
 
 		// check if `$from` is a URL or an ID.
 		if ( \filter_var( $from, FILTER_VALIDATE_URL ) ) {
@@ -202,17 +180,30 @@ class Move {
 
 		$outbox_id = add_to_outbox( $activity, null, $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC );
 
-		if ( ! $outbox_id || \is_wp_error( $outbox_id ) ) {
-			return $outbox_id;
-		}
+		// The move takes effect only once the Move is queued; the profile Updates then carry the new links.
+		if ( $outbox_id && ! \is_wp_error( $outbox_id ) ) {
+			// Point the old actor at the new one.
+			if ( $user->get__id() > 0 ) {
+				\update_user_option( $user->get__id(), 'activitypub_moved_to', $to );
+			} else {
+				\update_option( 'activitypub_blog_user_moved_to', $to );
+			}
 
-		/*
-		 * Notify followers of the changed profile on both actors by federating an Update (FEP-7628).
-		 * Queued after the Move so a follower that reacts to `movedTo` still processes the migration first.
-		 */
-		Actor_Scheduler::schedule_profile_update( $user->get__id() );
-		if ( ! \is_wp_error( $target ) && $target->get__id() !== $user->get__id() ) {
-			Actor_Scheduler::schedule_profile_update( $target->get__id() );
+			/*
+			 * The old account URL goes into the target's `alsoKnownAs`, since receivers accept the Move
+			 * only when the new actor links back. For a domain change both resolve to the same actor.
+			 */
+			if ( $target_id > 0 ) {
+				self::update_user_also_known_as( $target_id, $from );
+			} else {
+				self::update_blog_also_known_as( $from );
+			}
+
+			Actor_Scheduler::schedule_profile_update( $user->get__id() );
+
+			if ( $target_id !== $user->get__id() ) {
+				Actor_Scheduler::schedule_profile_update( $target_id );
+			}
 		}
 
 		return $outbox_id;
@@ -225,7 +216,12 @@ class Move {
 	 * @param string $from    The current account URL.
 	 */
 	private static function update_user_also_known_as( $user_id, $from ) {
-		$also_known_as   = \get_user_option( 'activitypub_also_known_as', $user_id ) ?: array();
+		$also_known_as = \get_user_option( 'activitypub_also_known_as', $user_id ) ?: array();
+
+		if ( \in_array( $from, $also_known_as, true ) ) {
+			return;
+		}
+
 		$also_known_as[] = $from;
 
 		\update_user_option( $user_id, 'activitypub_also_known_as', $also_known_as );
@@ -237,7 +233,12 @@ class Move {
 	 * @param string $from The current account URL.
 	 */
 	private static function update_blog_also_known_as( $from ) {
-		$also_known_as   = \get_option( 'activitypub_blog_user_also_known_as', array() );
+		$also_known_as = \get_option( 'activitypub_blog_user_also_known_as', array() );
+
+		if ( \in_array( $from, $also_known_as, true ) ) {
+			return;
+		}
+
 		$also_known_as[] = $from;
 
 		\update_option( 'activitypub_blog_user_also_known_as', $also_known_as );
