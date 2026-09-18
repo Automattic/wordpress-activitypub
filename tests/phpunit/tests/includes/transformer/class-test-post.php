@@ -1280,7 +1280,7 @@ class Test_Post extends \WP_UnitTestCase {
 
 		// Assert that the reply block was transformed into a mention link.
 		// Note: clean_html() strips class from <p> and the mention link doesn't include u-in-reply-to class.
-		$this->assertStringContainsString( '<p><a rel="mention ugc" href="https://example.com/posts/123" title="@author@example.com">@author</a></p>', $object->get_content() );
+		$this->assertStringContainsString( '<p><a rel="in-reply-to ugc" class="u-in-reply-to" href="https://example.com/posts/123" title="@author@example.com">@author</a></p>', $object->get_content() );
 
 		// Clean up.
 		remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );
@@ -1368,7 +1368,7 @@ class Test_Post extends \WP_UnitTestCase {
 
 		// Assert that the first reply block was transformed into a mention link.
 		// Note: clean_html() strips class from <p> and the mention link doesn't include u-in-reply-to class.
-		$this->assertStringContainsString( '<p><a rel="mention ugc" href="https://example.com/posts/123" title="@author1@example.com">@author1</a></p>', $content );
+		$this->assertStringContainsString( '<p><a rel="in-reply-to ugc" class="u-in-reply-to" href="https://example.com/posts/123" title="@author1@example.com">@author1</a></p>', $content );
 
 		// Assert that the second reply block was NOT transformed into a mention link (should remain as regular reply block).
 		// Note: clean_html() strips target and non-allowed attributes per FEP-b2b8.
