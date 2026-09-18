@@ -480,7 +480,8 @@ class User extends Actor {
 
 		$also_known_as = \array_merge( $also_known_as, \get_user_option( 'activitypub_also_known_as', $this->_id ) ?: array() );
 
-		return \array_unique( $also_known_as );
+		// Re-index, otherwise a duplicate alias turns the JSON list into an object.
+		return \array_values( \array_unique( $also_known_as ) );
 	}
 
 	/**

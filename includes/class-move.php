@@ -12,6 +12,9 @@ use Activitypub\Activity\Actor;
 use Activitypub\Collection\Actors;
 use Activitypub\Model\Blog;
 use Activitypub\Model\User;
+use Activitypub\Scheduler\Actor as Actor_Scheduler;
+
+use function Activitypub\is_actor;
 
 /**
  * ActivityPub (Account) Move Class
@@ -81,14 +84,7 @@ class Move {
 			return $user;
 		}
 
-		// Update the movedTo property.
-		if ( $user->get__id() > 0 ) {
-			\update_user_option( $user->get__id(), 'activitypub_moved_to', $to );
-		} else {
-			\update_option( 'activitypub_blog_user_moved_to', $to );
-		}
-
-		$response = Http::get_remote_object( $to );
+		$response = Http::get_remote_object( $to, false );
 
 		if ( \is_wp_error( $response ) ) {
 			return $response;
@@ -97,9 +93,13 @@ class Move {
 		$target_actor = new Actor();
 		$target_actor->from_array( $response );
 
-		// Check if the `Move` Activity is valid.
-		$also_known_as = $target_actor->get_also_known_as() ?? array();
-		if ( ! \in_array( $from, $also_known_as, true ) ) {
+		/*
+		 * Receivers accept the Move only when the id sent as its `object` is listed in the target's
+		 * `alsoKnownAs`, and only an actor with a canonical id can be federated.
+		 */
+		$target_id     = $target_actor->get_id();
+		$also_known_as = (array) $target_actor->get_also_known_as();
+		if ( ! is_actor( $response ) || ! \is_string( $target_id ) || '' === $target_id || $target_id === $user->get_id() || ! \in_array( $user->get_id(), $also_known_as, true ) ) {
 			return new \WP_Error( 'invalid_target', \__( 'Invalid target', 'activitypub' ) );
 		}
 
@@ -108,10 +108,25 @@ class Move {
 		$activity->set_actor( $user->get_id() );
 		$activity->set_origin( $user->get_id() );
 		$activity->set_object( $user->get_id() );
-		$activity->set_target( $target_actor->get_id() );
+		$activity->set_target( $target_id );
+		// The Move goes to the old actor's followers (FEP-7628); the transformer only adds the public audience.
+		$activity->set_cc( array( $user->get_followers() ) );
 
-		// Add to outbox.
-		return add_to_outbox( $activity, null, $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
+		$outbox_id = add_to_outbox( $activity, null, $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
+
+		// The move takes effect only once the Move is queued; the profile Update then carries the new `movedTo`.
+		if ( $outbox_id && ! \is_wp_error( $outbox_id ) ) {
+			// Store the canonical id: receivers compare the advertised `movedTo` against the Move's `target`.
+			if ( $user->get__id() > 0 ) {
+				\update_user_option( $user->get__id(), 'activitypub_moved_to', $target_id );
+			} else {
+				\update_option( 'activitypub_blog_user_moved_to', $target_id );
+			}
+
+			Actor_Scheduler::schedule_profile_update( $user->get__id() );
+		}
+
+		return $outbox_id;
 	}
 
 	/**
@@ -139,14 +154,17 @@ class Move {
 			return $user;
 		}
 
-		// Add the old account URL to alsoKnownAs.
-		if ( $user->get__id() > 0 ) {
-			self::update_user_also_known_as( $user->get__id(), $from );
-			\update_user_option( $user->get__id(), 'activitypub_moved_to', $to );
-		} else {
-			self::update_blog_also_known_as( $from );
-			\update_option( 'activitypub_blog_user_moved_to', $to );
+		// Resolving through the model rejects a user without the ActivityPub capability.
+		$target = Actors::get_by_various( $to );
+
+		if ( \is_wp_error( $target ) ) {
+			return $target;
 		}
+
+		$target_id = $target->get__id();
+
+		// Advertise and federate the target's canonical id, whatever form the move was requested with.
+		$to = $target->get_id();
 
 		// check if `$from` is a URL or an ID.
 		if ( \filter_var( $from, FILTER_VALIDATE_URL ) ) {
@@ -161,8 +179,38 @@ class Move {
 		$activity->set_origin( $actor );
 		$activity->set_object( $actor );
 		$activity->set_target( $to );
+		// The Move goes to the old actor's followers (FEP-7628); the transformer only adds the public audience.
+		$activity->set_to( array( $user->get_followers() ) );
 
-		return add_to_outbox( $activity, null, $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC );
+		$outbox_id = add_to_outbox( $activity, null, $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC );
+
+		// The move takes effect only once the Move is queued; the profile Updates then carry the new links.
+		if ( $outbox_id && ! \is_wp_error( $outbox_id ) ) {
+			// Point the old actor at the new one.
+			if ( $user->get__id() > 0 ) {
+				\update_user_option( $user->get__id(), 'activitypub_moved_to', $to );
+			} else {
+				\update_option( 'activitypub_blog_user_moved_to', $to );
+			}
+
+			/*
+			 * The old actor id goes into the target's `alsoKnownAs`, since receivers accept the Move
+			 * only when the new actor links back. For a domain change both resolve to the same actor.
+			 */
+			if ( $target_id > 0 ) {
+				self::update_user_also_known_as( $target_id, $actor );
+			} else {
+				self::update_blog_also_known_as( $actor );
+			}
+
+			Actor_Scheduler::schedule_profile_update( $user->get__id() );
+
+			if ( $target_id !== $user->get__id() ) {
+				Actor_Scheduler::schedule_profile_update( $target_id );
+			}
+		}
+
+		return $outbox_id;
 	}
 
 	/**
@@ -172,7 +220,12 @@ class Move {
 	 * @param string $from    The current account URL.
 	 */
 	private static function update_user_also_known_as( $user_id, $from ) {
-		$also_known_as   = \get_user_option( 'activitypub_also_known_as', $user_id ) ?: array();
+		$also_known_as = \get_user_option( 'activitypub_also_known_as', $user_id ) ?: array();
+
+		if ( \in_array( $from, $also_known_as, true ) ) {
+			return;
+		}
+
 		$also_known_as[] = $from;
 
 		\update_user_option( $user_id, 'activitypub_also_known_as', $also_known_as );
@@ -184,7 +237,12 @@ class Move {
 	 * @param string $from The current account URL.
 	 */
 	private static function update_blog_also_known_as( $from ) {
-		$also_known_as   = \get_option( 'activitypub_blog_user_also_known_as', array() );
+		$also_known_as = \get_option( 'activitypub_blog_user_also_known_as', array() );
+
+		if ( \in_array( $from, $also_known_as, true ) ) {
+			return;
+		}
+
 		$also_known_as[] = $from;
 
 		\update_option( 'activitypub_blog_user_also_known_as', $also_known_as );
