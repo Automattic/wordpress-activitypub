@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Webfinger;
 
 /**
  * ActivityPub Mention Class.
@@ -145,6 +146,53 @@ class Mention {
 				$mentions[ $match ] = $link;
 			}
 		}
+
+		/*
+		 * Clients and Mastodon write a mention as a link to the actor with a short label,
+		 * `<a class="u-url mention" href="…">@user</a>`, so the handle is not in the text.
+		 */
+		foreach ( self::extract_mention_links( $post_content ) as $href ) {
+			if ( \in_array( $href, $mentions, true ) ) {
+				continue;
+			}
+
+			$acct = Webfinger::uri_to_acct( $href );
+			if ( ! \is_wp_error( $acct ) ) {
+				$mentions[ \str_replace( 'acct:', '@', $acct ) ] = $href;
+			}
+		}
+
 		return \array_unique( $mentions );
+	}
+
+	/**
+	 * The links a piece of content marks as mentions.
+	 *
+	 * A mention link marks itself with the `mention` class, the microformats convention Mastodon
+	 * and the plugin share, or with `rel="mention"`.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $content The content.
+	 *
+	 * @return string[] The hrefs, in order of appearance, without duplicates.
+	 */
+	public static function extract_mention_links( $content ) {
+		$links     = array();
+		$processor = new \WP_HTML_Tag_Processor( $content );
+
+		while ( $processor->next_tag( 'A' ) ) {
+			$rel = (string) $processor->get_attribute( 'rel' );
+			if ( ! $processor->has_class( 'mention' ) && ! \in_array( 'mention', \preg_split( '/\s+/', $rel ), true ) ) {
+				continue;
+			}
+
+			$href = $processor->get_attribute( 'href' );
+			if ( \is_string( $href ) && '' !== $href ) {
+				$links[] = $href;
+			}
+		}
+
+		return \array_values( \array_unique( $links ) );
 	}
 }

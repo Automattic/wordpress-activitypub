@@ -314,6 +314,28 @@ class Blocks {
 				),
 			)
 		);
+
+		// Tells the editor whether the post endpoints will answer for this post, so the Reactions block only asks when they do.
+		\register_rest_field(
+			\get_post_types_by_support( 'activitypub' ),
+			'activitypub_publicly_queryable',
+			array(
+				/**
+				 * Whether the post is publicly queryable via ActivityPub.
+				 *
+				 * @param array $response Prepared response array.
+				 * @return bool True if the post is publicly queryable.
+				 */
+				'get_callback' => static function ( $response ) {
+					return is_post_publicly_queryable( $response['id'] );
+				},
+				'schema'       => array(
+					'description' => 'Whether the post is publicly queryable via ActivityPub',
+					'type'        => 'boolean',
+					'context'     => array( 'edit' ),
+				),
+			)
+		);
 	}
 
 	/**
@@ -1057,9 +1079,9 @@ class Blocks {
 			return '';
 		}
 
-		// Generate HTML @ link.
+		// The link targets the replied-to post, so it carries the reply microformat, not the mention one.
 		return \sprintf(
-			'<p class="ap-reply-mention"><a rel="mention ugc" href="%1$s" title="%2$s">%3$s</a></p>',
+			'<p class="ap-reply-mention"><a rel="in-reply-to ugc" class="u-in-reply-to" href="%1$s" title="%2$s">%3$s</a></p>',
 			\esc_url( $url ),
 			\esc_attr( $webfinger ),
 			\esc_html( '@' . \strtok( $webfinger, '@' ) )
