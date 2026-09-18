@@ -100,7 +100,7 @@ class Test_Comment extends \WP_UnitTestCase {
 		$content = $object->get_content();
 
 		// Test that reply context is added.
-		$this->assertSame( '<p><a rel="mention" class="u-url mention" href="https://example.net/@remote" title="@remote@example.net">@remote</a> <a rel="mention" class="u-url mention" href="https://remote.example/@author" title="@author@remote.example">@author</a> This is a comment</p>', $content );
+		$this->assertSame( '<p><span class="h-card"><a href="https://example.net/@remote" class="u-url mention" rel="mention">@<span>remote</span></a></span> <span class="h-card"><a href="https://remote.example/@author" class="u-url mention" rel="mention">@<span>author</span></a></span> This is a comment</p>', $content );
 	}
 
 	/**
@@ -226,7 +226,7 @@ class Test_Comment extends \WP_UnitTestCase {
 			),
 			'no mention'          => array(
 				'thanks',
-				'<p><a rel="mention" class="u-url mention" href="https://remote.example/@author" title="@author@remote.example">@author</a> thanks</p>',
+				'<p><span class="h-card"><a href="https://remote.example/@author" class="u-url mention" rel="mention">@<span>author</span></a></span> thanks</p>',
 			),
 		);
 	}

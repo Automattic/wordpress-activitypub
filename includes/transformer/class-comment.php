@@ -133,11 +133,11 @@ class Comment extends Base {
 				continue;
 			}
 
+			// The same markup Mastodon writes for a mention.
 			$mentions .= \sprintf(
-				'<a rel="mention" class="u-url mention" href="%1$s" title="%2$s">%3$s</a> ',
+				'<span class="h-card"><a href="%1$s" class="u-url mention" rel="mention">@<span>%2$s</span></a></span> ',
 				\esc_url( $url ),
-				\esc_attr( $acct ),
-				\esc_html( '@' . \strtok( $acct, '@' ) )
+				\esc_html( \strtok( $acct, '@' ) )
 			);
 		}
 		$content = $mentions . $content;

@@ -224,29 +224,41 @@ ENDPRE;
 	}
 
 	/**
-	 * Only a link marked with the `mention` class counts: the plugin's own reply block links to
-	 * the replied-to post with `rel="mention ugc"` and must not be looked up.
+	 * The plugin's own reply block links to the replied-to post, not to an actor: the post URL
+	 * is not a mention link and must not be looked up.
 	 *
 	 * @covers ::extract_mentions
 	 * @covers ::extract_mention_links
 	 */
-	public function test_extract_mentions_ignores_links_without_the_mention_class() {
-		$requests = 0;
-		$stub     = function ( $pre, $args, $url ) use ( &$requests ) {
-			if ( \str_starts_with( $url, 'https://mention.example/' ) ) {
-				++$requests;
+	public function test_extract_mentions_ignores_the_reply_block() {
+		$lookups = 0;
+		$stub    = function ( $pre, $args, $url ) use ( &$lookups ) {
+			if ( false !== \strpos( \rawurldecode( $url ), 'https://mention.example/notes/1' ) ) {
+				++$lookups;
 			}
 
 			return $pre;
 		};
 		\add_filter( 'pre_http_request', $stub, 5, 3 );
 
-		$content = '<p class="ap-reply-mention"><a rel="mention ugc" href="https://mention.example/notes/1">@alice</a></p>';
-
-		$this->assertSame( array(), Mention::extract_mention_links( $content ) );
-		$this->assertSame( array(), Mention::extract_mentions( array(), $content ) );
-		$this->assertSame( 0, $requests );
+		$content  = '<p class="ap-reply-mention"><a rel="in-reply-to ugc" class="u-in-reply-to" href="https://mention.example/notes/1" title="@alice@mention.example">@alice</a></p>';
+		$mentions = Mention::extract_mentions( array(), $content );
 
 		\remove_filter( 'pre_http_request', $stub, 5 );
+
+		$this->assertSame( array(), Mention::extract_mention_links( $content ) );
+		$this->assertNotContains( 'https://mention.example/notes/1', $mentions );
+		$this->assertSame( 0, $lookups );
+	}
+
+	/**
+	 * A link marked with `rel="mention"` counts like one with the `mention` class.
+	 *
+	 * @covers ::extract_mention_links
+	 */
+	public function test_extract_mention_links_accepts_rel_mention() {
+		$content = '<a rel="mention" href="https://mention.example/@alice">@alice</a> <a href="https://mention.example/some/page">a page</a>';
+
+		$this->assertSame( array( 'https://mention.example/@alice' ), Mention::extract_mention_links( $content ) );
 	}
 }

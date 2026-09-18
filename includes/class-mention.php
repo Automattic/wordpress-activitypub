@@ -168,9 +168,8 @@ class Mention {
 	/**
 	 * The links a piece of content marks as mentions.
 	 *
-	 * A mention link carries the `mention` class, the microformats convention the plugin,
-	 * Mastodon and the ActivityPub clients share. `rel` is not enough: the plugin's own reply
-	 * block links to the replied-to post with `rel="mention ugc"`.
+	 * A mention link marks itself with the `mention` class, the microformats convention Mastodon
+	 * and the plugin share, or with `rel="mention"`.
 	 *
 	 * @since unreleased
 	 *
@@ -183,7 +182,8 @@ class Mention {
 		$processor = new \WP_HTML_Tag_Processor( $content );
 
 		while ( $processor->next_tag( 'A' ) ) {
-			if ( ! $processor->has_class( 'mention' ) ) {
+			$rel = (string) $processor->get_attribute( 'rel' );
+			if ( ! $processor->has_class( 'mention' ) && ! \in_array( 'mention', \preg_split( '/\s+/', $rel ), true ) ) {
 				continue;
 			}
 
