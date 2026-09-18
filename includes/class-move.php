@@ -99,7 +99,7 @@ class Move {
 		 */
 		$target_id     = $target_actor->get_id();
 		$also_known_as = (array) $target_actor->get_also_known_as();
-		if ( ! is_actor( $response ) || ! \is_string( $target_id ) || '' === $target_id || ! \in_array( $user->get_id(), $also_known_as, true ) ) {
+		if ( ! is_actor( $response ) || ! \is_string( $target_id ) || $target_id === $user->get_id() || ! \in_array( $user->get_id(), $also_known_as, true ) ) {
 			return new \WP_Error( 'invalid_target', \__( 'Invalid target', 'activitypub' ) );
 		}
 
@@ -109,6 +109,8 @@ class Move {
 		$activity->set_origin( $user->get_id() );
 		$activity->set_object( $user->get_id() );
 		$activity->set_target( $target_id );
+		// The Move goes to the old actor's followers (FEP-7628); the transformer only adds the public audience.
+		$activity->set_cc( array( $user->get_followers() ) );
 
 		$outbox_id = add_to_outbox( $activity, null, $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC );
 
@@ -177,6 +179,8 @@ class Move {
 		$activity->set_origin( $actor );
 		$activity->set_object( $actor );
 		$activity->set_target( $to );
+		// The Move goes to the old actor's followers (FEP-7628); the transformer only adds the public audience.
+		$activity->set_to( array( $user->get_followers() ) );
 
 		$outbox_id = add_to_outbox( $activity, null, $user->get__id(), ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC );
 

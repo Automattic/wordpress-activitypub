@@ -257,6 +257,37 @@ class Test_Move extends \WP_UnitTestCase {
 
 		$activity = \json_decode( \get_post_field( 'post_content', $outbox_id ) );
 		$this->assertEquals( $canonical, $activity->target, 'The federated target must match the advertised movedTo.' );
+
+		// The Move is public and addressed to the old actor's followers (FEP-7628).
+		$this->assertContains( 'https://www.w3.org/ns/activitystreams#Public', (array) $activity->to );
+		$this->assertContains( Actors::get_by_id( self::$user_id )->get_followers(), (array) $activity->cc );
+	}
+
+	/**
+	 * A target that resolves to the moving actor itself is not a move.
+	 *
+	 * @covers ::externally
+	 */
+	public function test_account_rejects_a_move_to_itself() {
+		$from = Actors::get_by_id( self::$user_id )->get_id();
+
+		// The actor's own document lists its own aliases, so it would pass the link-back check.
+		$filter = function () use ( $from ) {
+			return array(
+				'id'          => $from,
+				'type'        => 'Person',
+				'alsoKnownAs' => array( $from ),
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$result = Move::externally( $from, $from );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'invalid_target', $result->get_error_code() );
+		$this->assertEmpty( $this->get_federated_updates() );
 	}
 
 	/**
@@ -556,6 +587,10 @@ class Test_Move extends \WP_UnitTestCase {
 		$this->assertEquals( $from, $activity->actor );
 		$this->assertEquals( $from, $activity->origin );
 		$this->assertEquals( $to, $activity->target );
+
+		// The Move is addressed to the old actor's followers and public (FEP-7628).
+		$this->assertContains( Actors::get_by_id( self::$user_id )->get_followers(), (array) $activity->to );
+		$this->assertContains( 'https://www.w3.org/ns/activitystreams#Public', (array) $activity->cc );
 	}
 
 	/**
