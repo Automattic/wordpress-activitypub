@@ -243,6 +243,25 @@ class Test_Admin extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The media library lists attachments on the upload screen, which has its own bulk-action hooks.
+	 *
+	 * @covers ::register_post_bulk_actions
+	 */
+	public function test_register_post_bulk_actions_uses_the_upload_screen_for_attachments() {
+		\add_post_type_support( 'attachment', 'activitypub' );
+		\remove_all_filters( 'bulk_actions-upload' );
+		\remove_all_filters( 'bulk_actions-edit-attachment' );
+
+		Admin::register_post_bulk_actions();
+
+		\remove_post_type_support( 'attachment', 'activitypub' );
+
+		$this->assertNotFalse( \has_filter( 'bulk_actions-upload', array( Admin::class, 'post_bulk_options' ) ) );
+		$this->assertNotFalse( \has_filter( 'handle_bulk_actions-upload', array( Admin::class, 'handle_post_bulk_request' ) ) );
+		$this->assertFalse( \has_filter( 'bulk_actions-edit-attachment', array( Admin::class, 'post_bulk_options' ) ) );
+	}
+
+	/**
 	 * Test row_actions returns unchanged for users without edit capability.
 	 *
 	 * @covers ::row_actions
@@ -740,6 +759,80 @@ class Test_Admin extends \WP_UnitTestCase {
 			'The post must be marked local-only.'
 		);
 		$this->assertStringContainsString( 'activitypub_deleted=1', $captured );
+	}
+
+	/**
+	 * Submitting the confirmation with nothing selected reports it instead of redirecting silently.
+	 *
+	 * @covers ::handle_bulk_post_delete_confirmation
+	 */
+	public function test_handle_bulk_post_delete_confirmation_reports_empty_selection() {
+		$_POST['_wpnonce']       = \wp_create_nonce( 'activitypub-bulk-post-delete' );
+		$_POST['selected_posts'] = array();
+		$_POST['send_back']      = \admin_url( 'edit.php' );
+
+		$captured = null;
+		$redirect = static function ( $location ) use ( &$captured ) {
+			$captured = $location;
+			throw new \Exception( 'redirect' );
+		};
+		\add_filter( 'wp_redirect', $redirect );
+
+		try {
+			Admin::handle_bulk_post_delete_confirmation();
+		} catch ( \Exception $e ) {
+			$this->assertSame( 'redirect', $e->getMessage() );
+		} finally {
+			\remove_filter( 'wp_redirect', $redirect );
+			unset( $_POST['_wpnonce'], $_POST['selected_posts'], $_POST['send_back'] );
+		}
+
+		$this->assertStringContainsString( 'activitypub_no_posts=1', $captured );
+	}
+
+	/**
+	 * When no Delete could be queued, the user sees the failure notice, not a success count of zero.
+	 *
+	 * @covers ::handle_bulk_post_delete_confirmation
+	 */
+	public function test_handle_bulk_post_delete_confirmation_reports_when_nothing_was_deleted() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => self::$user_id,
+				'post_status' => 'publish',
+			)
+		);
+		\update_post_meta( $post_id, 'activitypub_status', ACTIVITYPUB_OBJECT_STATE_FEDERATED );
+
+		// Fail every outbox insert.
+		$fail_outbox = static function ( $maybe_empty, $postarr ) {
+			return 'ap_outbox' === ( $postarr['post_type'] ?? '' ) ? true : $maybe_empty;
+		};
+		\add_filter( 'wp_insert_post_empty_content', $fail_outbox, 10, 2 );
+
+		$_POST['_wpnonce']       = \wp_create_nonce( 'activitypub-bulk-post-delete' );
+		$_POST['selected_posts'] = array( $post_id );
+		$_POST['send_back']      = \admin_url( 'edit.php' );
+
+		$captured = null;
+		$redirect = static function ( $location ) use ( &$captured ) {
+			$captured = $location;
+			throw new \Exception( 'redirect' );
+		};
+		\add_filter( 'wp_redirect', $redirect );
+
+		try {
+			Admin::handle_bulk_post_delete_confirmation();
+		} catch ( \Exception $e ) {
+			$this->assertSame( 'redirect', $e->getMessage() );
+		} finally {
+			\remove_filter( 'wp_redirect', $redirect );
+			\remove_filter( 'wp_insert_post_empty_content', $fail_outbox, 10 );
+			unset( $_POST['_wpnonce'], $_POST['selected_posts'], $_POST['send_back'] );
+		}
+
+		$this->assertStringContainsString( 'activitypub_delete_failed=1', $captured );
+		$this->assertStringNotContainsString( 'activitypub_deleted=0', $captured );
 	}
 
 	/**
