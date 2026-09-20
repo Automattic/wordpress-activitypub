@@ -48,8 +48,7 @@ export default function ActorSwitcher(): ReactNode {
 			actorMode:
 				(
 					select( coreStore ).getEntityRecord( 'root', 'site' ) as
-						| { activitypub_actor_mode?: string }
-						| undefined
+						{ activitypub_actor_mode?: string } | undefined
 				 )?.activitypub_actor_mode ?? ACTOR_AND_BLOG_MODE,
 			// Check if user has the activitypub capability (can create user extra fields).
 			hasUserCap: select( coreStore ).canUser( 'create', {

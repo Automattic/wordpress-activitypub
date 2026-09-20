@@ -994,11 +994,50 @@ class Test_Post extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test get_icon method.
+	 * A post with a Featured Image must not also carry it as an icon.
 	 *
-	 * @covers ::get_icon
+	 * The image is already federated at `large`. Mapping the same picture onto `icon` at
+	 * `thumbnail` sent it again, and implementations that render `icon` on a `Note` showed the
+	 * second copy as a low-resolution extra image under the post.
+	 *
+	 * @covers ::to_object
 	 */
-	public function test_get_icon() {
+	public function test_featured_image_is_not_repeated_as_an_icon() {
+		$post_id       = self::factory()->post->create( array( 'post_title' => 'Test Post' ) );
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		set_post_thumbnail( $post_id, $attachment_id );
+
+		$object = ( new Post( get_post( $post_id ) ) )->to_object();
+
+		$this->assertNull( $object->get_icon(), 'A post must not carry an icon.' );
+		$this->assertNotEmpty( $object->get_image(), 'The Featured Image still has to be federated as the image.' );
+	}
+
+	/**
+	 * A post without a Featured Image must not fall back to the site icon.
+	 *
+	 * @covers ::to_object
+	 */
+	public function test_site_icon_is_not_used_as_a_post_icon() {
+		$post_id       = self::factory()->post->create( array( 'post_title' => 'Test Post' ) );
+		$attachment_id = $this->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		update_option( 'site_icon', $attachment_id );
+
+		$object = ( new Post( get_post( $post_id ) ) )->to_object();
+
+		delete_option( 'site_icon' );
+
+		$this->assertNull( $object->get_icon(), 'The site icon must not be attached to a post.' );
+	}
+
+	/**
+	 * Test get_media_icon method.
+	 *
+	 * @covers ::get_media_icon
+	 */
+	public function test_get_media_icon() {
 		$post_id = self::factory()->post->create(
 			array(
 				'post_title'   => 'Test Post',
@@ -1012,7 +1051,7 @@ class Test_Post extends \WP_UnitTestCase {
 
 		// Set up reflection method.
 		$reflection = new \ReflectionClass( Post::class );
-		$method     = $reflection->getMethod( 'get_icon' );
+		$method     = $reflection->getMethod( 'get_media_icon' );
 		if ( \PHP_VERSION_ID < 80100 ) {
 			$method->setAccessible( true );
 		}
@@ -1241,7 +1280,7 @@ class Test_Post extends \WP_UnitTestCase {
 
 		// Assert that the reply block was transformed into a mention link.
 		// Note: clean_html() strips class from <p> and the mention link doesn't include u-in-reply-to class.
-		$this->assertStringContainsString( '<p><a rel="mention ugc" href="https://example.com/posts/123" title="@author@example.com">@author</a></p>', $object->get_content() );
+		$this->assertStringContainsString( '<p><a rel="in-reply-to ugc" class="u-in-reply-to" href="https://example.com/posts/123" title="@author@example.com">@author</a></p>', $object->get_content() );
 
 		// Clean up.
 		remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );
@@ -1329,7 +1368,7 @@ class Test_Post extends \WP_UnitTestCase {
 
 		// Assert that the first reply block was transformed into a mention link.
 		// Note: clean_html() strips class from <p> and the mention link doesn't include u-in-reply-to class.
-		$this->assertStringContainsString( '<p><a rel="mention ugc" href="https://example.com/posts/123" title="@author1@example.com">@author1</a></p>', $content );
+		$this->assertStringContainsString( '<p><a rel="in-reply-to ugc" class="u-in-reply-to" href="https://example.com/posts/123" title="@author1@example.com">@author1</a></p>', $content );
 
 		// Assert that the second reply block was NOT transformed into a mention link (should remain as regular reply block).
 		// Note: clean_html() strips target and non-allowed attributes per FEP-b2b8.
