@@ -438,6 +438,9 @@ class Server {
 			\wp_login_url()
 		);
 
+		// Build the logout URL with the authorization request as the redirect target.
+		$logout_url = \wp_logout_url( $form_url ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
+
 		// Include the template.
 		include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-authorize.php'; // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- $authorize_params used in template.
 	}

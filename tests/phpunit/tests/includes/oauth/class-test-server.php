@@ -13,6 +13,8 @@ use Activitypub\OAuth\Server;
 use Activitypub\OAuth\Token;
 use Activitypub\Post_Types;
 
+require_once AP_TESTS_DIR . '/includes/functions-login-page-stubs.php';
+
 /**
  * Test class for OAuth Server.
  *
@@ -292,5 +294,42 @@ class Test_Server extends \WP_UnitTestCase {
 		$this->assertWPError( $result );
 		$this->assertSame( 'activitypub_oauth_not_allowed', $result->get_error_code() );
 		$this->assertSame( 403, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * The authorization form provides a logout URL that keeps the OAuth request.
+	 *
+	 * @covers ::render_authorize_form
+	 */
+	public function test_authorize_form_logout_url_preserves_request() {
+		\wp_set_current_user( $this->user_id );
+
+		$original_get = $_GET;
+		$get_params   = array(
+			'client_id'             => $this->client_id,
+			'redirect_uri'          => 'https://example.com/callback',
+			'scope'                 => 'read',
+			'state'                 => 'test-state',
+			'code_challenge'        => 'challenge',
+			'code_challenge_method' => 'S256',
+		);
+		$_GET         = $get_params;
+
+		$method = new \ReflectionMethod( Server::class, 'render_authorize_form' );
+		$method->setAccessible( true );
+
+		ob_start();
+		$method->invoke( null );
+		$output = ob_get_clean();
+		$_GET   = $original_get;
+
+		$form_url = \add_query_arg(
+			array_merge( array( 'action' => 'activitypub_authorize' ), $get_params ),
+			\wp_login_url()
+		);
+
+		$this->assertStringContainsString( 'Log in as a different user', $output );
+		$this->assertStringContainsString( 'href="' . esc_url( \wp_logout_url( $form_url ) ) . '"', $output );
+		$this->assertStringContainsString( 'redirect_uri=https://example.com/callback', \rawurldecode( \wp_logout_url( $form_url ) ) );
 	}
 }
