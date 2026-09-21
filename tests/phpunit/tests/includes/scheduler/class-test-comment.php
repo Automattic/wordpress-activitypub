@@ -175,11 +175,13 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	 * @covers ::schedule_comment_activity
 	 */
 	public function test_filter_adds_comment_type() {
-		$add_type = function ( $allowed_types ) {
-			$allowed_types[] = 'vote';
+		$add_type = function ( $allowed_types, $comment ) {
+			if ( 'vote' === $comment->comment_type ) {
+				$allowed_types[] = 'vote';
+			}
 			return $allowed_types;
 		};
-		\add_filter( 'activitypub_allowed_comment_types', $add_type );
+		\add_filter( 'activitypub_allowed_comment_types', $add_type, 10, 2 );
 
 		$comment_id    = self::factory()->comment->create(
 			array(
@@ -218,6 +220,39 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		);
 
 		\remove_filter( 'activitypub_allowed_comment_types', $remove_type );
+	}
+
+	/**
+	 * Test that a Delete is sent for an already federated comment even if its type is no longer allowed.
+	 *
+	 * @covers ::schedule_comment_activity
+	 */
+	public function test_filter_does_not_block_delete_of_sent_comment() {
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => self::$comment_post_ID,
+				'user_id'          => self::$user_id,
+				'comment_approved' => 1,
+				'comment_meta'     => array(
+					'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_FEDERATED,
+				),
+			)
+		);
+
+		$activitpub_id = Comment::generate_id( $comment_id );
+
+		$remove_type = function ( $allowed_types ) {
+			return \array_diff( $allowed_types, array( 'comment' ) );
+		};
+		\add_filter( 'activitypub_allowed_comment_types', $remove_type );
+
+		\wp_delete_comment( $comment_id, true );
+
+		\remove_filter( 'activitypub_allowed_comment_types', $remove_type );
+
+		$post = $this->get_latest_outbox_item();
+		$this->assertSame( $activitpub_id, \get_post_meta( $post->ID, '_activitypub_object_id', true ) );
+		$this->assertSame( 'Delete', \get_post_meta( $post->ID, '_activitypub_activity_type', true ) );
 	}
 
 	/**

@@ -76,8 +76,8 @@ class Comment {
 		 */
 		$allowed_types = \apply_filters( 'activitypub_allowed_comment_types', $allowed_types, $comment );
 
-		// Check if comment type is in allowed list.
-		if ( ! \in_array( $comment_type, $allowed_types, true ) ) {
+		// Comments that were already sent pass regardless of type, so their Update and Delete activities can still federate.
+		if ( ! Comment_Utils::was_sent( $comment ) && ! \in_array( $comment_type, $allowed_types, true ) ) {
 			return;
 		}
 
