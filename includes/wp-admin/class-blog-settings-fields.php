@@ -180,7 +180,16 @@ class Blog_Settings_Fields {
 		<input type="hidden" name="activitypub_blog_icon" id="activitypub_blog_icon" value="<?php echo \esc_attr( $custom_icon ); ?>">
 		<?php if ( ! (int) $custom_icon ) : ?>
 			<p class="description">
-				<?php \esc_html_e( 'By default the ActivityPub plugin uses the WordPress Site Icon as the avatar for the blog profile.', 'activitypub' ); ?>
+				<?php
+				echo \wp_kses(
+					\sprintf(
+						// translators: %s is a URL.
+						\__( 'By default the ActivityPub plugin uses the WordPress Site Icon as the avatar for the blog profile. You can change the Site Icon in the <a href="%s">General Settings</a>.', 'activitypub' ),
+						\esc_url( \admin_url( 'options-general.php' ) )
+					),
+					'default'
+				);
+				?>
 			</p>
 		<?php endif; ?>
 		<?php
