@@ -2574,6 +2574,7 @@ class Test_Post extends \WP_UnitTestCase {
 				'post_status'  => 'publish',
 			)
 		);
+		\update_post_meta( $post_id, '_activitypub_quote_request', 'https://remote.example/notes/1' );
 		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
 
 		$array = Post::transform( \get_post( $post_id ) )->to_object()->to_array();
@@ -2594,6 +2595,7 @@ class Test_Post extends \WP_UnitTestCase {
 			)
 		);
 		\update_post_meta( $post_id, '_activitypub_quote_rejected', '1' );
+		\update_post_meta( $post_id, '_activitypub_quote_request', 'https://remote.example/notes/1' );
 		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
 
 		$array = Post::transform( \get_post( $post_id ) )->to_object()->to_array();
@@ -2602,6 +2604,47 @@ class Test_Post extends \WP_UnitTestCase {
 		$this->assertArrayNotHasKey( 'quoteUri', $array );
 		$this->assertArrayNotHasKey( '_misskey_quote', $array );
 		$this->assertArrayNotHasKey( 'quoteAuthorization', $array );
+	}
+
+	/**
+	 * A stamp bound to a different URL than the current quote block is not emitted.
+	 *
+	 * @covers ::get_quote_authorization
+	 */
+	public function test_quote_authorization_not_emitted_for_other_url() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:activitypub/quote {"url":"https://remote.example/notes/2"} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+		\update_post_meta( $post_id, '_activitypub_quote_request', 'https://remote.example/notes/1' );
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+
+		$array = Post::transform( \get_post( $post_id ) )->to_object()->to_array();
+
+		$this->assertSame( 'https://remote.example/notes/2', $array['quote'] );
+		$this->assertArrayNotHasKey( 'quoteAuthorization', $array );
+	}
+
+	/**
+	 * A rejection bound to a different URL than the current quote block does not apply.
+	 *
+	 * @covers ::get_quote
+	 */
+	public function test_rejection_does_not_apply_to_new_url() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:activitypub/quote {"url":"https://remote.example/notes/2"} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+		\update_post_meta( $post_id, '_activitypub_quote_rejected', '1' );
+		\update_post_meta( $post_id, '_activitypub_quote_request', 'https://remote.example/notes/1' );
+
+		$array = Post::transform( \get_post( $post_id ) )->to_object()->to_array();
+
+		$this->assertSame( 'https://remote.example/notes/2', $array['quote'] );
 	}
 
 	/**

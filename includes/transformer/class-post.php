@@ -733,7 +733,7 @@ class Post extends Base {
 
 		$this->quote = null;
 
-		if ( ! site_supports_blocks() || \get_post_meta( $this->item->ID, '_activitypub_quote_rejected', true ) ) {
+		if ( ! site_supports_blocks() ) {
 			return $this->quote;
 		}
 
@@ -743,6 +743,11 @@ class Post extends Base {
 				$this->quote = $block['attrs']['url'];
 				break;
 			}
+		}
+
+		// A rejection only covers the URL it was answered for; a new URL starts a new handshake.
+		if ( $this->quote && \get_post_meta( $this->item->ID, '_activitypub_quote_rejected', true ) && \get_post_meta( $this->item->ID, '_activitypub_quote_request', true ) === $this->quote ) {
+			$this->quote = null;
 		}
 
 		return $this->quote;
@@ -778,7 +783,10 @@ class Post extends Base {
 	 * @return string|null The stamp URI or null.
 	 */
 	protected function get_quote_authorization() {
-		if ( ! $this->get_quote() ) {
+		$quote = $this->get_quote();
+
+		// The stamp authorizes exactly one quoted object; after a URL change it no longer applies.
+		if ( ! $quote || \get_post_meta( $this->item->ID, '_activitypub_quote_request', true ) !== $quote ) {
 			return null;
 		}
 
