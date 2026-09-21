@@ -430,6 +430,7 @@ class Test_Quote extends \WP_UnitTestCase {
 	public function test_stamp_delete_from_wrong_actor_ignored() {
 		$post_id = $this->create_quote_post();
 		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+		$before = $this->count_updates( $post_id );
 
 		Delete::handle_delete(
 			array(
@@ -441,5 +442,54 @@ class Test_Quote extends \WP_UnitTestCase {
 		);
 
 		$this->assertSame( 'https://remote.example/stamps/1', \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertSame( $before, $this->count_updates( $post_id ) );
+	}
+
+	/**
+	 * With the request item gone, the stamp is still revoked when the quoted author sends the Delete.
+	 *
+	 * @covers ::handle_stamp_delete
+	 */
+	public function test_stamp_delete_without_request_item_clears_authorization() {
+		$post_id = $this->create_quote_post();
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+		\update_post_meta( $post_id, '_activitypub_quote_request', 'https://example.org/outbox/gone' );
+		$before = $this->count_updates( $post_id );
+
+		Delete::handle_delete(
+			array(
+				'type'   => 'Delete',
+				'actor'  => 'https://remote.example/users/alice',
+				'object' => 'https://remote.example/stamps/1',
+			),
+			self::$user_id
+		);
+
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertSame( $before + 1, $this->count_updates( $post_id ) );
+	}
+
+	/**
+	 * With the request item gone, a Delete from the wrong actor still changes nothing.
+	 *
+	 * @covers ::handle_stamp_delete
+	 */
+	public function test_stamp_delete_without_request_item_from_wrong_actor_ignored() {
+		$post_id = $this->create_quote_post();
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+		\update_post_meta( $post_id, '_activitypub_quote_request', 'https://example.org/outbox/gone' );
+		$before = $this->count_updates( $post_id );
+
+		Delete::handle_delete(
+			array(
+				'type'   => 'Delete',
+				'actor'  => 'https://remote.example/users/mallory',
+				'object' => 'https://remote.example/stamps/1',
+			),
+			self::$user_id
+		);
+
+		$this->assertSame( 'https://remote.example/stamps/1', \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertSame( $before, $this->count_updates( $post_id ) );
 	}
 }
