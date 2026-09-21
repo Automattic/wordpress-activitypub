@@ -51,16 +51,18 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		// breaking the test whenever the JSON-LD context changes.
 		$actual = json_decode( $post->post_content, true );
 
-		// Assert the context is correct and structurally matches Base_Object's context.
-		// For fixtures without @context, the actual output should have Base_Object's context.
-		// For fixtures with @context, the test data itself defines which context to expect.
+		// Assert the context is correct. For fixtures without @context, the actual output should
+		// have Base_Object's context. For fixtures with @context, assert it matches exactly.
 		if ( ! isset( $expected['@context'] ) ) {
 			$this->assertSame( Base_Object::JSON_LD_CONTEXT, $actual['@context'] );
+		} else {
+			$this->assertSame( $expected['@context'], $actual['@context'] );
 		}
 
-		// Remove context from both arrays and compare the rest.
+		// Remove context from both arrays and compare the rest with order-sensitive comparison
+		// (assertEquals maintains array key order, unlike assertEqualsCanonicalizing).
 		unset( $expected['@context'], $actual['@context'] );
-		$this->assertEqualsCanonicalizing( $expected, $actual );
+		$this->assertEquals( $expected, $actual );
 
 		$activity = json_decode( $post->post_content );
 
