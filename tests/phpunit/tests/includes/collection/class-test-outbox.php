@@ -816,6 +816,56 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * A pending QuoteRequest must survive purging, since a later Accept or Reject looks it up by its outbox GUID.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_preserves_quote_request_activities() {
+		// Create old QuoteRequest activity (should be preserved).
+		$quote_request_post_id = self::factory()->post->create(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
+			)
+		);
+		\update_post_meta( $quote_request_post_id, '_activitypub_activity_type', 'QuoteRequest' );
+
+		// Create old Create activity (should be deleted).
+		$create_post_id = self::factory()->post->create(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
+			)
+		);
+		\update_post_meta( $create_post_id, '_activitypub_activity_type', 'Create' );
+
+		// Mock the count to exceed the 20-post threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Outbox::POST_TYPE === $type ) {
+				$counts->publish = 25;
+			}
+			return $counts;
+		};
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		$deleted = Outbox::purge( 180 );
+		\wp_cache_delete( \_count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
+
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		// Assert only 1 post was deleted (Create, not QuoteRequest).
+		$this->assertEquals( 1, $deleted );
+
+		// QuoteRequest activity should still exist.
+		$this->assertNotNull( \get_post( $quote_request_post_id ) );
+
+		// Create activity should be deleted.
+		$this->assertNull( \get_post( $create_post_id ) );
+	}
+
+	/**
 	 * Test purge method with different retention days.
 	 *
 	 * @covers ::purge

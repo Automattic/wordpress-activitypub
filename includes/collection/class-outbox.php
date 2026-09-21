@@ -556,8 +556,9 @@ class Outbox {
 	/**
 	 * Purge old outbox items.
 	 *
-	 * Deletes outbox items older than the specified number of days,
-	 * except for Follow activities which are always preserved.
+	 * Deletes outbox items older than the specified number of days, except for Follow and
+	 * QuoteRequest activities, which are always preserved because a later Accept or Reject
+	 * looks them up by their original outbox GUID.
 	 * Also enforces a hard cap on total items via MAX_ITEMS.
 	 *
 	 * @param int $days Number of days to keep items. Items older than this will be deleted.
@@ -602,8 +603,8 @@ class Outbox {
 			'meta_query'  => array(
 				array(
 					'key'     => '_activitypub_activity_type',
-					'value'   => 'Follow',
-					'compare' => '!=',
+					'value'   => array( 'Follow', 'QuoteRequest' ),
+					'compare' => 'NOT IN',
 				),
 			),
 		);
