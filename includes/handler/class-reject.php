@@ -36,7 +36,7 @@ class Reject {
 	 */
 	public static function handle_reject( $reject, $user_ids ) {
 		// Validate that there is a preceding Activity.
-		$outbox_post = Outbox::get_by_guid( $reject['object']['id'] );
+		$outbox_post = Outbox::get_by_guid( $reject['object']['id'] ?? '' );
 
 		if ( \is_wp_error( $outbox_post ) ) {
 			return;
