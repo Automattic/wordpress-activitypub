@@ -86,6 +86,15 @@ class Post extends Base {
 	private $in_reply_to = false;
 
 	/**
+	 * The quoted object URI, or null once resolved to "not a quote".
+	 *
+	 * @since unreleased
+	 *
+	 * @var string|null|false
+	 */
+	private $quote = false;
+
+	/**
 	 * Transforms the WP_Post object to an ActivityPub Object
 	 *
 	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
@@ -707,6 +716,73 @@ class Post extends Base {
 		$this->in_reply_to = \array_values( \array_unique( $reply_urls ) );
 
 		return $this->in_reply_to;
+	}
+
+	/**
+	 * Returns the URI quoted by the first valid Quote block.
+	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md
+	 * @since unreleased
+	 *
+	 * @return string|null The quoted object URI, or null if there is none or the quote was rejected.
+	 */
+	public function get_quote() {
+		if ( false !== $this->quote ) {
+			return $this->quote;
+		}
+
+		$this->quote = null;
+
+		if ( ! site_supports_blocks() || \get_post_meta( $this->item->ID, '_activitypub_quote_rejected', true ) ) {
+			return $this->quote;
+		}
+
+		foreach ( \parse_blocks( $this->item->post_content ) as $block ) {
+			// Blocks whose URL failed the editor's ActivityPub check are not federated as quotes.
+			if ( 'activitypub/quote' === $block['blockName'] && ! empty( $block['attrs']['url'] ) && ( $block['attrs']['isValidActivityPub'] ?? true ) ) {
+				$this->quote = $block['attrs']['url'];
+				break;
+			}
+		}
+
+		return $this->quote;
+	}
+
+	/**
+	 * Returns the Fedibird alias of the quote property.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string|null The quoted object URI.
+	 */
+	protected function get_quote_uri() {
+		return $this->get_quote();
+	}
+
+	/**
+	 * Returns the Misskey alias of the quote property.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string|null The quoted object URI.
+	 */
+	protected function get__misskey_quote() {
+		return $this->get_quote();
+	}
+
+	/**
+	 * Returns the QuoteAuthorization stamp URI once the quoted author accepted.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string|null The stamp URI or null.
+	 */
+	protected function get_quote_authorization() {
+		if ( ! $this->get_quote() ) {
+			return null;
+		}
+
+		return \get_post_meta( $this->item->ID, '_activitypub_quote_authorization', true ) ?: null;
 	}
 
 	/**

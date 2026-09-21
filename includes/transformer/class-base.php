@@ -178,7 +178,7 @@ abstract class Base {
 	protected function set_audience( $activity_object ) {
 		$public     = 'https://www.w3.org/ns/activitystreams#Public';
 		$followers  = null;
-		$replied_to = null;
+		$replied_to = array();
 
 		$actor = Actors::get_by_resource( $this->get_attributed_to() );
 		if ( ! \is_wp_error( $actor ) ) {
@@ -187,12 +187,17 @@ abstract class Base {
 
 		$mentions = \array_values( $this->get_mentions() );
 
-		if ( $this->get_in_reply_to() ) {
-			$object = Http::get_remote_object( $this->get_in_reply_to() );
+		// The authors of the replied-to and the quoted object are addressed like mentions.
+		$referenced   = (array) $this->get_in_reply_to();
+		$referenced[] = $this->get_quote();
+
+		foreach ( \array_filter( $referenced ) as $uri ) {
+			$object = Http::get_remote_object( $uri );
 			if ( $object && ! \is_wp_error( $object ) && isset( $object['attributedTo'] ) ) {
-				$replied_to = array( object_to_uri( $object['attributedTo'] ) );
+				$replied_to[] = object_to_uri( $object['attributedTo'] );
 			}
 		}
+		$replied_to = $replied_to ? \array_values( \array_unique( $replied_to ) ) : null;
 
 		switch ( $this->get_content_visibility() ) {
 			case ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC:
@@ -403,6 +408,17 @@ abstract class Base {
 	 * @return string|array|null The in reply to.
 	 */
 	protected function get_in_reply_to() {
+		return null;
+	}
+
+	/**
+	 * Returns the URI of the quoted object.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string|null The quoted object URI or null if the item is not a quote post.
+	 */
+	public function get_quote() {
 		return null;
 	}
 
