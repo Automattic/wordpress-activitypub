@@ -134,7 +134,7 @@ class Test_Base_Object extends \WP_UnitTestCase {
 	/**
 	 * Quote properties serialize with their FEP-044f / Mastodon wire names and context terms.
 	 *
-	 * @covers ::to_array
+	 * @covers \Activitypub\Activity\Generic_Object::to_array
 	 */
 	public function test_quote_properties_serialize_with_context() {
 		$object = new Base_Object();
