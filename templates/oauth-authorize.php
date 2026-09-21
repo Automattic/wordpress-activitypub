@@ -79,6 +79,9 @@ login_header(
 		);
 		?>
 		</p>
+		<p>
+			<a href="<?php echo esc_url( wp_logout_url( $form_url ) ); ?>"><?php esc_html_e( 'Not you? Log in as a different user.', 'activitypub' ); ?></a>
+		</p>
 	</div>
 
 	<?php if ( ! empty( $scopes ) ) : ?>

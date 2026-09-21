@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Added a "Not you?" link to the app authorization screen, so you can log in as a different user without losing the app's request.
