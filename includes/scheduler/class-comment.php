@@ -64,6 +64,18 @@ class Comment {
 		$allowed_types   = Comment_Utils::get_comment_type_slugs();
 		$allowed_types[] = 'comment'; // Add core WordPress comment types.
 
+		/**
+		 * Filters the comment types that are federated.
+		 *
+		 * Remove a type to keep it local, add a custom type to federate it.
+		 *
+		 * @since unreleased
+		 *
+		 * @param string[]    $allowed_types Comment type slugs that are federated.
+		 * @param \WP_Comment $comment       The comment being processed.
+		 */
+		$allowed_types = \apply_filters( 'activitypub_allowed_comment_types', $allowed_types, $comment );
+
 		// Check if comment type is in allowed list.
 		if ( ! \in_array( $comment_type, $allowed_types, true ) ) {
 			return;

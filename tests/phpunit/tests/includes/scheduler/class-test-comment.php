@@ -170,6 +170,57 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * Test that a custom comment type added via filter is federated.
+	 *
+	 * @covers ::schedule_comment_activity
+	 */
+	public function test_filter_adds_comment_type() {
+		$add_type = function ( $allowed_types ) {
+			$allowed_types[] = 'vote';
+			return $allowed_types;
+		};
+		\add_filter( 'activitypub_allowed_comment_types', $add_type );
+
+		$comment_id    = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => self::$comment_post_ID,
+				'user_id'          => self::$user_id,
+				'comment_approved' => 1,
+				'comment_type'     => 'vote',
+			)
+		);
+		$activitpub_id = Comment::generate_id( $comment_id );
+
+		\remove_filter( 'activitypub_allowed_comment_types', $add_type );
+
+		$post = $this->get_latest_outbox_item( $activitpub_id );
+		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
+		$this->assertSame( $activitpub_id, $id );
+	}
+
+	/**
+	 * Test that a comment type removed via filter is not federated.
+	 *
+	 * @covers ::schedule_comment_activity
+	 */
+	public function test_filter_removes_comment_type() {
+		$remove_type = function ( $allowed_types ) {
+			return \array_diff( $allowed_types, array( 'comment' ) );
+		};
+		\add_filter( 'activitypub_allowed_comment_types', $remove_type );
+
+		$this->test_no_activity_scheduled(
+			array(
+				'comment_post_ID'  => self::$comment_post_ID,
+				'user_id'          => self::$user_id,
+				'comment_approved' => 1,
+			)
+		);
+
+		\remove_filter( 'activitypub_allowed_comment_types', $remove_type );
+	}
+
+	/**
 	 * Test scheduling Delete activity when comment is permanently deleted.
 	 *
 	 * @covers ::schedule_comment_delete_activity
