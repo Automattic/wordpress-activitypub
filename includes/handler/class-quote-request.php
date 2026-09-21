@@ -13,6 +13,7 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Http;
+use Activitypub\Tombstone;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\get_object_id;
@@ -461,6 +462,14 @@ class Quote_Request {
 		}
 
 		if ( ! self::verify_sender( $activity, \get_post_meta( $post->ID, '_activitypub_quote_request', true ) ) ) {
+			return false;
+		}
+
+		/*
+		 * Signature verification is deferred for Deletes, so the body is untrusted: the
+		 * revocation is honoured only if the stamp really no longer resolves.
+		 */
+		if ( ! Tombstone::exists( $stamp_uri ) ) {
 			return false;
 		}
 

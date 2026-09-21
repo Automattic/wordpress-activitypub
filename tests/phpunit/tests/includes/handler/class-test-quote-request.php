@@ -1147,6 +1147,33 @@ class Test_Quote_Request extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * An unsigned Delete is not trusted while the stamp still resolves.
+	 *
+	 * @covers ::revoke
+	 */
+	public function test_stamp_delete_ignored_while_stamp_still_resolves() {
+		$post_id = $this->create_quote_post();
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+		$before = $this->count_updates( $post_id );
+
+		$stamp  = array(
+			'id'                => 'https://remote.example/stamps/1',
+			'type'              => 'QuoteAuthorization',
+			'attributedTo'      => 'https://remote.example/users/alice',
+			'interactingObject' => \get_permalink( $post_id ),
+			'interactionTarget' => 'https://remote.example/notes/1',
+		);
+		$filter = $this->mock_stamp( $post_id );
+		$alive  = $this->mock_stamp_response( 200, \wp_json_encode( $stamp ) );
+		Delete::handle_delete( $this->build_stamp_delete(), self::$user_id );
+		\remove_filter( 'pre_http_request', $alive );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertSame( 'https://remote.example/stamps/1', \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertSame( $before, $this->count_updates( $post_id ) );
+	}
+
+	/**
 	 * A Delete whose actor lives on another host than the stamp changes nothing.
 	 *
 	 * @covers ::revoke
