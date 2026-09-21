@@ -11,6 +11,7 @@ use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
+use Activitypub\Quote;
 use Activitypub\Tombstone;
 
 use function Activitypub\object_to_uri;
@@ -95,6 +96,11 @@ class Delete {
 			 * @see https://www.w3.org/TR/activitystreams-core/#example-1
 			 */
 			default:
+				// A bare URI may be a QuoteAuthorization stamp the quoted author revoked.
+				if ( Quote::handle_stamp_delete( $activity ) ) {
+					break;
+				}
+
 				// Check if Object is an Actor.
 				if ( object_to_uri( $activity['object'] ) === $activity['actor'] ) {
 					self::delete_remote_actor( $activity, $user_ids );

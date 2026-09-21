@@ -296,4 +296,50 @@ class Quote {
 
 		return is_same_actor( $activity['actor'] ?? '', $quoted['attributedTo'] );
 	}
+
+	/**
+	 * Revoke a stamp the quoted author deleted.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $activity The Delete activity.
+	 *
+	 * @return bool True if a stamp on a local quote post was revoked.
+	 */
+	public static function handle_stamp_delete( $activity ) {
+		$stamp_uri = object_to_uri( $activity['object'] ?? '' );
+
+		if ( ! $stamp_uri ) {
+			return false;
+		}
+
+		$posts = \get_posts(
+			array(
+				'post_type'   => \get_post_types_by_support( 'activitypub' ),
+				'post_status' => 'any',
+				'numberposts' => 1,
+				'meta_key'    => '_activitypub_quote_authorization', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_value'  => $stamp_uri, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+			)
+		);
+
+		if ( ! $posts ) {
+			return false;
+		}
+
+		$post         = $posts[0];
+		$request_item = Outbox::get_by_guid( \get_post_meta( $post->ID, '_activitypub_quote_request', true ) );
+		// The request item may be gone by now; fall back to the quote URL still stored on the post.
+		$quoted_uri = \is_wp_error( $request_item ) ? Post::transform( $post )->get_quote() : self::get_request_object( $request_item );
+
+		if ( ! self::verify_sender( $activity, $quoted_uri ) ) {
+			return false;
+		}
+
+		\delete_post_meta( $post->ID, '_activitypub_quote_authorization' );
+
+		add_to_outbox( $post, 'Update', $post->post_author );
+
+		return true;
+	}
 }

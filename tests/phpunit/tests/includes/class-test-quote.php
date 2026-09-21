@@ -9,6 +9,7 @@ namespace Activitypub\Tests;
 
 use Activitypub\Collection\Outbox;
 use Activitypub\Handler\Accept;
+use Activitypub\Handler\Delete;
 use Activitypub\Handler\Reject;
 use Activitypub\Quote;
 use Activitypub\Transformer\Post;
@@ -396,5 +397,49 @@ class Test_Quote extends \WP_UnitTestCase {
 		Reject::handle_reject( $reject, self::$user_id );
 
 		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_rejected', true ) );
+	}
+
+	/**
+	 * Deleting the stamp clears it on our post and queues an Update.
+	 *
+	 * @covers ::handle_stamp_delete
+	 */
+	public function test_stamp_delete_clears_authorization() {
+		$post_id = $this->create_quote_post();
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+		$before = $this->count_updates( $post_id );
+
+		Delete::handle_delete(
+			array(
+				'type'   => 'Delete',
+				'actor'  => 'https://remote.example/users/alice',
+				'object' => 'https://remote.example/stamps/1',
+			),
+			self::$user_id
+		);
+
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertSame( $before + 1, $this->count_updates( $post_id ) );
+	}
+
+	/**
+	 * A Delete for a stamp from the wrong actor changes nothing.
+	 *
+	 * @covers ::handle_stamp_delete
+	 */
+	public function test_stamp_delete_from_wrong_actor_ignored() {
+		$post_id = $this->create_quote_post();
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+
+		Delete::handle_delete(
+			array(
+				'type'   => 'Delete',
+				'actor'  => 'https://remote.example/users/mallory',
+				'object' => 'https://remote.example/stamps/1',
+			),
+			self::$user_id
+		);
+
+		$this->assertSame( 'https://remote.example/stamps/1', \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
 	}
 }
