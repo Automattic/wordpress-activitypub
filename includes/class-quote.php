@@ -10,6 +10,7 @@ namespace Activitypub;
 use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
+use Activitypub\Transformer\Post;
 
 /**
  * Outgoing side of FEP-044f quote posts.
@@ -153,5 +154,146 @@ class Quote {
 		$activity = \json_decode( $request_item->post_content, true );
 
 		return isset( $activity['object'] ) ? object_to_uri( $activity['object'] ) : '';
+	}
+
+	/**
+	 * Record the quoted author's Accept: verify and store the QuoteAuthorization stamp.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array    $accept       The Accept activity.
+	 * @param \WP_Post $request_item Our QuoteRequest outbox item.
+	 */
+	public static function handle_accept( $accept, $request_item ) {
+		$post = self::get_post_from_request_item( $request_item );
+
+		if ( ! $post || \get_post_meta( $post->ID, '_activitypub_quote_request', true ) !== $request_item->guid ) {
+			return;
+		}
+
+		$quoted_uri = self::get_request_object( $request_item );
+
+		if ( ! self::verify_sender( $accept, $quoted_uri ) ) {
+			return;
+		}
+
+		$stamp_uri = isset( $accept['result'] ) ? object_to_uri( $accept['result'] ) : '';
+
+		if ( ! $stamp_uri ) {
+			return;
+		}
+
+		// Uncached: a stamp is fetched once, right when it is presented, never served stale.
+		$stamp    = Http::get_remote_object( $stamp_uri, false );
+		$post_uri = self::get_object_id( $post );
+
+		/*
+		 * The stamp must bind exactly this quote post to exactly this quoted object and be
+		 * issued by the quoted author. Anything else is not an authorization for us.
+		 */
+		if (
+			\is_wp_error( $stamp ) ||
+			'QuoteAuthorization' !== ( $stamp['type'] ?? '' ) ||
+			object_to_uri( $stamp['interactingObject'] ?? '' ) !== $post_uri ||
+			object_to_uri( $stamp['interactionTarget'] ?? '' ) !== $quoted_uri ||
+			! is_same_actor( $stamp['attributedTo'] ?? '', $accept['actor'] ?? '' )
+		) {
+			/**
+			 * Fires when an Accept carried a stamp that does not authorize this quote post.
+			 *
+			 * @since unreleased
+			 *
+			 * @param int    $post_id   The quoting post ID.
+			 * @param string $stamp_uri The stamp URI from the Accept.
+			 * @param array  $accept    The Accept activity.
+			 */
+			\do_action( 'activitypub_quote_authorization_invalid', $post->ID, $stamp_uri, $accept );
+			return;
+		}
+
+		\update_post_meta( $post->ID, '_activitypub_quote_authorization', $stamp_uri );
+		\delete_post_meta( $post->ID, '_activitypub_quote_rejected' );
+
+		add_to_outbox( $post, 'Update', $post->post_author );
+	}
+
+	/**
+	 * The ActivityPub ID of a local post.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_Post $post The post.
+	 *
+	 * @return string The ID.
+	 */
+	private static function get_object_id( $post ) {
+		return Post::transform( $post )->to_id();
+	}
+
+	/**
+	 * Record the quoted author's Reject: the quote part is dropped from the post.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array    $reject       The Reject activity.
+	 * @param \WP_Post $request_item Our QuoteRequest outbox item.
+	 */
+	public static function handle_reject( $reject, $request_item ) {
+		$post = self::get_post_from_request_item( $request_item );
+
+		if ( ! $post || \get_post_meta( $post->ID, '_activitypub_quote_request', true ) !== $request_item->guid ) {
+			return;
+		}
+
+		if ( ! self::verify_sender( $reject, self::get_request_object( $request_item ) ) ) {
+			return;
+		}
+
+		\update_post_meta( $post->ID, '_activitypub_quote_rejected', '1' );
+		\delete_post_meta( $post->ID, '_activitypub_quote_authorization' );
+
+		add_to_outbox( $post, 'Update', $post->post_author );
+	}
+
+	/**
+	 * Resolve the local quote post a stored QuoteRequest was sent for.
+	 *
+	 * The outbox stores the quoted URI as the item's object id; our post is the `instrument`.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_Post $request_item The QuoteRequest outbox item.
+	 *
+	 * @return \WP_Post|null The quoting post or null.
+	 */
+	private static function get_post_from_request_item( $request_item ) {
+		$activity = \json_decode( $request_item->post_content, true );
+		$post_id  = isset( $activity['instrument'] ) ? \url_to_postid( object_to_uri( $activity['instrument'] ) ) : 0;
+
+		return $post_id ? \get_post( $post_id ) : null;
+	}
+
+	/**
+	 * Only the quoted object's author may answer our QuoteRequest.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array  $activity   The Accept or Reject.
+	 * @param string $quoted_uri The quoted object URI.
+	 *
+	 * @return bool True if the sender is the quoted author.
+	 */
+	private static function verify_sender( $activity, $quoted_uri ) {
+		if ( ! $quoted_uri ) {
+			return false;
+		}
+
+		$quoted = Http::get_remote_object( $quoted_uri );
+
+		if ( \is_wp_error( $quoted ) || empty( $quoted['attributedTo'] ) ) {
+			return false;
+		}
+
+		return is_same_actor( $activity['actor'] ?? '', $quoted['attributedTo'] );
 	}
 }

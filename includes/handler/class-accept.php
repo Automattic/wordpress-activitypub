@@ -10,6 +10,7 @@ namespace Activitypub\Handler;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Quote;
 
 use function Activitypub\is_same_actor;
 use function Activitypub\object_to_uri;
@@ -33,14 +34,21 @@ class Accept {
 	 * @param int|int[] $user_ids The id of the local blog-user.
 	 */
 	public static function handle_accept( $accept, $user_ids ) {
-		// Validate that there is a Follow Activity.
-		$outbox_post = Outbox::get_by_guid( $accept['object']['id'] );
+		// Validate that there is a preceding Activity of ours.
+		$outbox_post = Outbox::get_by_guid( $accept['object']['id'] ?? '' );
 
-		if (
-			\is_wp_error( $outbox_post ) ||
-			'Follow' !== \get_post_meta( $outbox_post->ID, '_activitypub_activity_type', true )
-		) {
+		if ( \is_wp_error( $outbox_post ) ) {
 			return;
+		}
+
+		switch ( \get_post_meta( $outbox_post->ID, '_activitypub_activity_type', true ) ) {
+			case 'QuoteRequest':
+				Quote::handle_accept( $accept, $outbox_post );
+				return;
+			case 'Follow':
+				break;
+			default:
+				return;
 		}
 
 		/*

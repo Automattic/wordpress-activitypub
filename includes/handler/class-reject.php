@@ -10,6 +10,7 @@ namespace Activitypub\Handler;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Quote;
 
 use function Activitypub\object_to_uri;
 
@@ -39,10 +40,12 @@ class Reject {
 			return;
 		}
 
-		// We currently only support reject for Follow activities. But we will support more in the future.
 		switch ( \get_post_meta( $outbox_post->ID, '_activitypub_activity_type', true ) ) {
 			case 'Follow':
 				self::reject_follow( $reject, $user_ids );
+				break;
+			case 'QuoteRequest':
+				Quote::handle_reject( $reject, $outbox_post );
 				break;
 			default:
 				break;
