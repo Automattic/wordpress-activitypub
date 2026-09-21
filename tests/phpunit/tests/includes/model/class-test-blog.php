@@ -43,6 +43,7 @@ class Test_Blog extends \WP_UnitTestCase {
 	public function tear_down() {
 		\delete_option( 'activitypub_blog_name' );
 		\delete_option( 'activitypub_blog_icon' );
+		\delete_option( 'activitypub_header_image' );
 
 		parent::tear_down();
 	}
@@ -184,5 +185,18 @@ class Test_Blog extends \WP_UnitTestCase {
 		$this->assertSame( $attachment_id, (int) \get_option( 'activitypub_blog_icon' ) );
 		$this->assertNotSame( $attachment_id, (int) \get_option( 'site_icon' ) );
 		$this->assertSame( \wp_get_attachment_url( $attachment_id ), $blog->get_icon()['url'] );
+	}
+
+	/**
+	 * Test get_image ignores a stored non-image attachment id.
+	 *
+	 * @covers ::get_image
+	 */
+	public function test_get_image_ignores_non_image_attachment() {
+		$attachment_id = self::factory()->attachment->create( array( 'post_mime_type' => 'text/plain' ) );
+
+		\update_option( 'activitypub_header_image', $attachment_id );
+
+		$this->assertNull( ( new Blog() )->get_image() );
 	}
 }

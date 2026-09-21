@@ -478,7 +478,7 @@ class Options {
 				'description'       => 'The Attachment-ID of the Blog-User Avatar',
 				'show_in_rest'      => true,
 				'default'           => 0,
-				'sanitize_callback' => 'absint',
+				'sanitize_callback' => array( Sanitize::class, 'attachment_id' ),
 			)
 		);
 
@@ -486,9 +486,11 @@ class Options {
 			'activitypub_blog',
 			'activitypub_header_image',
 			array(
-				'type'        => 'integer',
-				'description' => 'The Attachment-ID of the Sites Header-Image',
-				'default'     => null,
+				'type'              => 'integer',
+				'description'       => 'The Attachment-ID of the Sites Header-Image',
+				'show_in_rest'      => true,
+				'default'           => 0,
+				'sanitize_callback' => array( Sanitize::class, 'attachment_id' ),
 			)
 		);
 

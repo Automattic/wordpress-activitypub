@@ -247,7 +247,7 @@ class Blog extends Actor {
 		$header_image = \get_option( 'activitypub_header_image' );
 		$image_url    = null;
 
-		if ( $header_image ) {
+		if ( $header_image && \wp_attachment_is_image( $header_image ) ) {
 			$image_url = \wp_get_attachment_url( $header_image );
 		}
 

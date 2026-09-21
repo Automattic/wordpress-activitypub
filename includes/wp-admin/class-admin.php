@@ -14,6 +14,7 @@ use Activitypub\Comment;
 use Activitypub\Moderation;
 use Activitypub\OAuth\Client;
 use Activitypub\OAuth\Token;
+use Activitypub\Sanitize;
 use Activitypub\Scheduler\Actor;
 use Activitypub\Tombstone;
 
@@ -242,17 +243,13 @@ class Admin {
 			}
 		}
 
-		// User options that should be processed with `sanitize_text_field()`.
-		$text_field_user_options = array(
-			'activitypub_header_image',
-		);
+		// The header image must be an attachment ID that points to an image.
+		$header_image = isset( $_POST['activitypub_header_image'] ) ? Sanitize::attachment_id( \wp_unslash( $_POST['activitypub_header_image'] ) ) : 0; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized via Sanitize::attachment_id().
 
-		foreach ( $text_field_user_options as $option ) {
-			if ( ! empty( $_POST[ $option ] ) ) {
-				\update_user_option( $user_id, $option, \sanitize_text_field( \wp_unslash( $_POST[ $option ] ) ) );
-			} else {
-				\delete_user_option( $user_id, $option );
-			}
+		if ( $header_image ) {
+			\update_user_option( $user_id, 'activitypub_header_image', $header_image );
+		} else {
+			\delete_user_option( $user_id, 'activitypub_header_image' );
 		}
 
 		// User options that have a default value and therefore can't be empty (Empty triggers the default value).
