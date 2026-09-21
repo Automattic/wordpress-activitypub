@@ -697,28 +697,4 @@ class Base_Object extends Generic_Object {
 
 		return parent::add( $key, $value );
 	}
-
-	/**
-	 * Convert Object to an array, including underscore-prefixed wire terms.
-	 *
-	 * The parent class skips all underscore-prefixed properties as internal (e.g., `$_id` in
-	 * Actor models), but `_misskey_quote` is a wire term that must be emitted.
-	 *
-	 * @since unreleased
-	 *
-	 * @param bool $include_json_ld_context Whether to include the JSON-LD context. Default true.
-	 * @param bool $include_blind_audience  Whether to keep `bto` and `bcc` in the output. Default false.
-	 *
-	 * @return array An array built from the Object.
-	 */
-	public function to_array( $include_json_ld_context = true, $include_blind_audience = false ) {
-		$array = parent::to_array( $include_json_ld_context, $include_blind_audience );
-
-		// Include quote-related underscore-prefixed properties.
-		if ( isset( $this->_misskey_quote ) ) {
-			$array['_misskey_quote'] = $this->_misskey_quote;
-		}
-
-		return $array;
-	}
 }
