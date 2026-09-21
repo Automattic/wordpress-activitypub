@@ -373,6 +373,14 @@ class Outbox {
 		$activity_object = \json_decode( $outbox_item->post_content, true );
 		$type            = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
 
+		if ( ! \is_array( $activity_object ) ) {
+			return new \WP_Error(
+				'activitypub_outbox_item_invalid',
+				\__( 'Outbox item has no valid activity.', 'activitypub' ),
+				array( 'status' => 500 )
+			);
+		}
+
 		if ( $activity_object['type'] === $type ) {
 			$activity = Activity::init_from_array( $activity_object );
 			if ( ! $activity->get_actor() ) {

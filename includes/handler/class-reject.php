@@ -10,7 +10,6 @@ namespace Activitypub\Handler;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
-use Activitypub\Quote;
 
 use function Activitypub\object_to_uri;
 
@@ -45,7 +44,7 @@ class Reject {
 				self::reject_follow( $reject, $user_ids );
 				break;
 			case 'QuoteRequest':
-				Quote::handle_reject( $reject, $outbox_post );
+				Quote_Request::reject( $reject, Outbox::get_activity( $outbox_post ) );
 				break;
 			default:
 				break;

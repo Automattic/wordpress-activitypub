@@ -36,7 +36,6 @@ class Handler {
 		Handler\Reject::init();
 		Handler\Undo::init();
 		Handler\Update::init();
-		Quote::init();
 
 		/**
 		 * Register additional handlers.

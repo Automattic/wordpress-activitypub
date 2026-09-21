@@ -10,7 +10,6 @@ namespace Activitypub\Handler;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
-use Activitypub\Quote;
 
 use function Activitypub\is_same_actor;
 use function Activitypub\object_to_uri;
@@ -43,7 +42,7 @@ class Accept {
 
 		switch ( \get_post_meta( $outbox_post->ID, '_activitypub_activity_type', true ) ) {
 			case 'QuoteRequest':
-				Quote::handle_accept( $accept, $outbox_post );
+				Quote_Request::accept( $accept, Outbox::get_activity( $outbox_post ) );
 				return;
 			case 'Follow':
 				break;

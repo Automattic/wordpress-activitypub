@@ -11,7 +11,6 @@ use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
-use Activitypub\Quote;
 use Activitypub\Tombstone;
 
 use function Activitypub\object_to_uri;
@@ -97,7 +96,7 @@ class Delete {
 			 */
 			default:
 				// A bare URI may be a QuoteAuthorization stamp the quoted author revoked.
-				if ( Quote::handle_stamp_delete( $activity ) ) {
+				if ( Quote_Request::revoke( $activity ) ) {
 					break;
 				}
 
