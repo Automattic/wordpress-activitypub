@@ -82,7 +82,7 @@ login_header(
 		</p>
 		<p>
 			<a href="<?php echo esc_url( $logout_url ); ?>">
-				<?php esc_html_e( 'Log in as a different user', 'activitypub' ); ?>
+				<?php esc_html_e( 'Not you? Log in as a different user.', 'activitypub' ); ?>
 			</a>
 		</p>
 	</div>

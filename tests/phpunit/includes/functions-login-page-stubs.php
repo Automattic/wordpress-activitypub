@@ -19,7 +19,7 @@ if ( ! \function_exists( 'login_header' ) ) {
 	 * @param bool     $deprecated    Deprecated argument. Unused.
 	 * @param string   $deprecated_2  Deprecated argument. Unused.
 	 */
-	function login_header( $title = 'Log In', $message = '', $wp_error = null, $deprecated = '', $deprecated_2 = '' ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Signature must match wp-login.php.
+	function login_header( $title = 'Log In', $message = '', $wp_error = null, $deprecated = '', $deprecated_2 = '' ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Signature must match wp-login.php.
 		echo '<div id="login">';
 		if ( $title ) {
 			echo '<h1>' . \esc_html( $title ) . '</h1>';
@@ -33,7 +33,7 @@ if ( ! \function_exists( 'login_footer' ) ) {
 	 *
 	 * @param string $deprecated Deprecated argument. Unused.
 	 */
-	function login_footer( $deprecated = '' ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Signature must match wp-login.php.
+	function login_footer( $deprecated = '' ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Signature must match wp-login.php.
 		echo '</div>';
 	}
 }
