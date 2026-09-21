@@ -904,8 +904,7 @@ class Admin {
 		// Get the pending user IDs from the transient referenced by the token.
 		$users = self::consume_bulk_delete_ids( \sanitize_key( \wp_unslash( $_GET['token'] ?? '' ) ) );
 
-		// phpcs:ignore WordPress.Security.NonceVerification
-		$send_back = \urldecode( \sanitize_text_field( \wp_unslash( $_GET['send_back'] ?? '' ) ) );
+		$send_back = \esc_url_raw( \wp_unslash( $_GET['send_back'] ?? '' ) );
 
 		// Validate send_back URL.
 		if ( empty( $send_back ) ) {
@@ -1089,8 +1088,7 @@ class Admin {
 
 		$posts = self::consume_bulk_delete_ids( \sanitize_key( \wp_unslash( $_GET['token'] ?? '' ) ) );
 
-		// phpcs:ignore WordPress.Security.NonceVerification
-		$send_back = \urldecode( \sanitize_text_field( \wp_unslash( $_GET['send_back'] ?? '' ) ) );
+		$send_back = \esc_url_raw( \wp_unslash( $_GET['send_back'] ?? '' ) );
 
 		if ( empty( $send_back ) ) {
 			$send_back  = \admin_url( 'edit.php' );

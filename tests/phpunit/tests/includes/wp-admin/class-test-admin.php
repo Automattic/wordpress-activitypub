@@ -412,6 +412,59 @@ class Test_Admin extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A token another user stored resolves to nothing for the current user and stays untouched.
+	 *
+	 * @covers ::handle_bulk_post_delete_page
+	 */
+	public function test_handle_bulk_post_delete_page_ignores_a_foreign_token() {
+		$token = \wp_generate_uuid4();
+		$key   = 'activitypub_bulk_delete_' . ( self::$user_id + 1 ) . '_' . $token;
+		\set_transient( $key, array( 999999 ), MINUTE_IN_SECONDS );
+
+		$_GET['_wpnonce'] = \wp_create_nonce( 'activitypub-confirm-post-removal' );
+		$_GET['token']    = $token;
+
+		$captured = $this->capture_redirect( array( Admin::class, 'handle_bulk_post_delete_page' ) );
+
+		$this->assertStringContainsString( 'activitypub_no_posts=1', $captured );
+		$this->assertSame( array( 999999 ), \get_transient( $key ), 'The other user\'s token must not be consumed.' );
+	}
+
+	/**
+	 * A token is deleted once it has been consumed.
+	 *
+	 * @covers ::handle_bulk_post_delete_page
+	 */
+	public function test_handle_bulk_post_delete_page_consumes_the_token() {
+		$token = \wp_generate_uuid4();
+		$key   = 'activitypub_bulk_delete_' . \get_current_user_id() . '_' . $token;
+		\set_transient( $key, array( 999999 ), MINUTE_IN_SECONDS );
+
+		$_GET['_wpnonce'] = \wp_create_nonce( 'activitypub-confirm-post-removal' );
+		$_GET['token']    = $token;
+
+		$this->capture_redirect( array( Admin::class, 'handle_bulk_post_delete_page' ) );
+
+		$this->assertFalse( \get_transient( $key ), 'The token must be consumed by the first request.' );
+	}
+
+	/**
+	 * A list URL with an encoded search term survives the round trip to the confirmation page.
+	 *
+	 * @covers ::handle_bulk_post_delete_page
+	 */
+	public function test_handle_bulk_post_delete_page_keeps_encoded_send_back() {
+		$_GET['_wpnonce'] = \wp_create_nonce( 'activitypub-confirm-post-removal' );
+		$_GET['token']    = 'unknown';
+		// What PHP hands us after decoding the rawurlencoded value once.
+		$_GET['send_back'] = \admin_url( 'edit.php?s=caf%C3%A9' );
+
+		$captured = $this->capture_redirect( array( Admin::class, 'handle_bulk_post_delete_page' ) );
+
+		$this->assertStringContainsString( 's=caf%C3%A9', $captured );
+	}
+
+	/**
 	 * Test the bulk confirmation sends a Delete and marks posts local-only.
 	 *
 	 * @covers ::handle_bulk_post_delete_confirmation
