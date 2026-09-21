@@ -2664,4 +2664,43 @@ class Test_Post extends \WP_UnitTestCase {
 
 		$this->assertSame( 'https://remote.example/notes/1', Post::transform( \get_post( $post_id ) )->get_quote() );
 	}
+
+	/**
+	 * A content warning is emitted as the FEP-b2b8 dcterms:subject term next to summary/sensitive.
+	 *
+	 * @covers ::to_object
+	 */
+	public function test_content_warning_emits_dcterms_subject() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:paragraph --><p>Spoilers inside.</p><!-- /wp:paragraph -->',
+				'post_status'  => 'publish',
+			)
+		);
+		\update_post_meta( $post_id, 'activitypub_content_warning', 'Spoilers' );
+
+		$object = Post::transform( \get_post( $post_id ) )->to_object();
+		$array  = $object->to_array();
+
+		$this->assertTrue( $array['sensitive'] );
+		$this->assertSame( 'Spoilers', $array['summary'] );
+		$this->assertSame( 'Spoilers', $array['dcterms:subject'] );
+		$this->assertArrayNotHasKey( 'dcterms', $array );
+
+		$this->assertStringContainsString( '"dcterms:subject":"Spoilers"', $object->to_json() );
+	}
+
+	/**
+	 * Without a content warning no dcterms term is emitted.
+	 *
+	 * @covers ::to_object
+	 */
+	public function test_no_dcterms_without_content_warning() {
+		$post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+
+		$array = Post::transform( \get_post( $post_id ) )->to_object()->to_array();
+
+		$this->assertArrayNotHasKey( 'dcterms:subject', $array );
+		$this->assertArrayNotHasKey( 'dcterms', $array );
+	}
 }

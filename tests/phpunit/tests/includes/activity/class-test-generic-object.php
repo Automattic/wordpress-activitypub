@@ -425,4 +425,42 @@ class Test_Generic_Object extends WP_UnitTestCase {
 		$this->assertSame( 'https://remote.example/notes/1', $array['_misskey_quote'] );
 		$this->assertArrayNotHasKey( 'misskeyQuote', $array );
 	}
+
+	/**
+	 * Namespaced array properties are emitted as prefix:term keys (FEP-b2b8 dcterms:subject).
+	 *
+	 * @covers Activitypub\Activity\Generic_Object::to_array
+	 */
+	public function test_namespaced_array_property_expands_to_prefixed_keys() {
+		$object = new Base_Object();
+		$object->set_type( 'Note' );
+		$object->set_dcterms( array( 'subject' => 'Content warning' ) );
+
+		$array = $object->to_array();
+
+		$this->assertSame( 'Content warning', $array['dcterms:subject'] );
+		$this->assertArrayNotHasKey( 'dcterms', $array );
+	}
+
+	/**
+	 * Every sub-key of a namespaced array property gets its own prefixed key.
+	 *
+	 * @covers Activitypub\Activity\Generic_Object::to_array
+	 */
+	public function test_namespaced_array_property_expands_all_sub_keys() {
+		$object = new Base_Object();
+		$object->set_type( 'Note' );
+		$object->set_dcterms(
+			array(
+				'subject' => 'A',
+				'rights'  => 'B',
+			)
+		);
+
+		$array = $object->to_array();
+
+		$this->assertSame( 'A', $array['dcterms:subject'] );
+		$this->assertSame( 'B', $array['dcterms:rights'] );
+		$this->assertArrayNotHasKey( 'dcterms', $array );
+	}
 }
