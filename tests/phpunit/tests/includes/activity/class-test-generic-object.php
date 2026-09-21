@@ -307,8 +307,8 @@ class Test_Generic_Object extends WP_UnitTestCase {
 	/**
 	 * Underscore properties are emitted only when the context declares them.
 	 *
-	 * @covers ::to_array
-	 * @covers ::is_context_term
+	 * @covers Activitypub\Activity\Generic_Object::to_array
+	 * @covers Activitypub\Activity\Generic_Object::is_context_term
 	 */
 	public function test_underscore_properties_follow_context() {
 		$object = new class() extends Generic_Object {
@@ -343,7 +343,7 @@ class Test_Generic_Object extends WP_UnitTestCase {
 	/**
 	 * Without a context declaration every underscore property stays internal.
 	 *
-	 * @covers ::to_array
+	 * @covers Activitypub\Activity\Generic_Object::to_array
 	 */
 	public function test_underscore_properties_hidden_without_context() {
 		$object = new class() extends Generic_Object {
@@ -361,7 +361,7 @@ class Test_Generic_Object extends WP_UnitTestCase {
 	/**
 	 * The actor models' internal `_id` never reaches the wire.
 	 *
-	 * @covers ::to_array
+	 * @covers Activitypub\Activity\Generic_Object::to_array
 	 */
 	public function test_actor_internal_id_stays_hidden() {
 		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
@@ -383,7 +383,7 @@ class Test_Generic_Object extends WP_UnitTestCase {
 	/**
 	 * Regular snake_case properties are still camelCased on the wire.
 	 *
-	 * @covers ::to_array
+	 * @covers Activitypub\Activity\Generic_Object::to_array
 	 */
 	public function test_regular_properties_still_camel_cased() {
 		$object = new Base_Object();
@@ -407,7 +407,7 @@ class Test_Generic_Object extends WP_UnitTestCase {
 	/**
 	 * Quote terms survive a from_array to to_array round trip with their wire names.
 	 *
-	 * @covers ::to_array
+	 * @covers Activitypub\Activity\Generic_Object::to_array
 	 */
 	public function test_quote_terms_round_trip() {
 		$input = array(
