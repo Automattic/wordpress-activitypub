@@ -9,6 +9,7 @@ namespace Activitypub\Tests\Handler;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
+use Activitypub\Collection\Outbox;
 use Activitypub\Handler\Delete;
 use Activitypub\Tombstone;
 
@@ -26,12 +27,20 @@ class Test_Delete extends \WP_UnitTestCase {
 	protected static $user_id;
 
 	/**
+	 * Remote object mock for the quoted object and its author.
+	 *
+	 * @var callable
+	 */
+	protected $remote_object_filter;
+
+	/**
 	 * Create fake data before tests run.
 	 */
 	public static function set_up_before_class() {
 		parent::set_up_before_class();
 
 		self::$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_user_by( 'id', self::$user_id )->add_cap( 'activitypub' );
 
 		// Initialize Delete handler for all tests.
 		Delete::init();
@@ -44,6 +53,26 @@ class Test_Delete extends \WP_UnitTestCase {
 		parent::set_up();
 
 		\add_filter( 'pre_get_remote_metadata_by_actor', array( self::class, 'get_remote_metadata_by_actor' ), 0, 2 );
+
+		// The object our own quote posts quote, and its author.
+		$this->remote_object_filter = function ( $pre, $url ) {
+			if ( 'https://remote.example/notes/1' === $url ) {
+				return array(
+					'id'           => 'https://remote.example/notes/1',
+					'type'         => 'Note',
+					'attributedTo' => 'https://remote.example/users/alice',
+				);
+			}
+			if ( 'https://remote.example/users/alice' === $url ) {
+				return array(
+					'id'    => 'https://remote.example/users/alice',
+					'type'  => 'Person',
+					'inbox' => 'https://remote.example/users/alice/inbox',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $this->remote_object_filter, 10, 2 );
 	}
 
 	/**
@@ -51,6 +80,7 @@ class Test_Delete extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		\remove_filter( 'pre_get_remote_metadata_by_actor', array( self::class, 'get_remote_metadata_by_actor' ) );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $this->remote_object_filter );
 
 		parent::tear_down();
 	}
@@ -677,5 +707,206 @@ class Test_Delete extends \WP_UnitTestCase {
 		$this->assertFalse( Delete::defer_signature_verification( false, $request, false ) );
 		$this->assertTrue( Delete::defer_signature_verification( true, $request, false ) );
 		$this->assertFalse( Delete::defer_signature_verification( false, $request, true ) );
+	}
+
+	/*
+	 * ------------------------------------------------------------------
+	 * Deletes of QuoteAuthorization stamps on our own quote posts (FEP-044f).
+	 * ------------------------------------------------------------------
+	 */
+
+	/**
+	 * Create a published quote post and return its ID.
+	 *
+	 * @param string $url The quoted URL.
+	 *
+	 * @return int Post ID.
+	 */
+	private function create_quote_post( $url = 'https://remote.example/notes/1' ) {
+		return self::factory()->post->create(
+			array(
+				'post_author'  => self::$user_id,
+				'post_status'  => 'publish',
+				'post_content' => '<!-- wp:activitypub/quote {"url":"' . $url . '"} /-->',
+			)
+		);
+	}
+
+	/**
+	 * Build the Delete for a stamp.
+	 *
+	 * @param string $actor Sender.
+	 * @param string $stamp Stamp URI.
+	 *
+	 * @return array Delete activity.
+	 */
+	private function build_stamp_delete( $actor = 'https://remote.example/users/alice', $stamp = 'https://remote.example/stamps/1' ) {
+		return array(
+			'type'   => 'Delete',
+			'actor'  => $actor,
+			'object' => $stamp,
+		);
+	}
+
+	/**
+	 * Mock a QuoteAuthorization stamp for the given post.
+	 *
+	 * @param int   $post_id   Post ID.
+	 * @param array $overrides Fields to override.
+	 *
+	 * @return callable The filter, to remove later.
+	 */
+	private function mock_stamp( $post_id, $overrides = array() ) {
+		$stamp  = \array_merge(
+			array(
+				'id'                => 'https://remote.example/stamps/1',
+				'type'              => 'QuoteAuthorization',
+				'attributedTo'      => 'https://remote.example/users/alice',
+				'interactingObject' => \get_permalink( $post_id ),
+				'interactionTarget' => 'https://remote.example/notes/1',
+			),
+			$overrides
+		);
+		$filter = function ( $pre, $url ) use ( $stamp ) {
+			return 'https://remote.example/stamps/1' === $url ? $stamp : $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
+
+		return $filter;
+	}
+
+	/**
+	 * Mock the HTTP response the stamp URL gives when fetched directly (tombstone check).
+	 *
+	 * @param int    $code Response code.
+	 * @param string $body Response body.
+	 *
+	 * @return callable The filter, to remove later.
+	 */
+	private function mock_stamp_response( $code, $body = '' ) {
+		$filter = function ( $pre, $args, $url ) use ( $code, $body ) {
+			if ( 'https://remote.example/stamps/1' !== $url ) {
+				return $pre;
+			}
+
+			return array(
+				'response' => array( 'code' => $code ),
+				'headers'  => array( 'content-type' => 'application/activity+json' ),
+				'body'     => $body,
+			);
+		};
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		return $filter;
+	}
+
+	/**
+	 * Count Update outbox items for a post.
+	 *
+	 * @param int $post_id Post ID.
+	 *
+	 * @return int Count.
+	 */
+	private function count_updates( $post_id ) {
+		return \count(
+			\get_posts(
+				array(
+					'post_type'   => Outbox::POST_TYPE,
+					'post_status' => 'any',
+					'numberposts' => -1,
+					'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						array(
+							'key'   => '_activitypub_activity_type',
+							'value' => 'Update',
+						),
+						array(
+							'key'   => '_activitypub_object_id',
+							'value' => \get_permalink( $post_id ),
+						),
+					),
+				)
+			)
+		);
+	}
+
+	/**
+	 * Deleting the stamp clears it on our post and queues an Update once the stamp is gone.
+	 *
+	 * @covers ::revoke_quote_authorization
+	 */
+	public function test_stamp_delete_clears_authorization() {
+		$post_id = $this->create_quote_post();
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+		$before = $this->count_updates( $post_id );
+
+		$gone = $this->mock_stamp_response( 404 );
+		Delete::handle_delete( $this->build_stamp_delete(), self::$user_id );
+		\remove_filter( 'pre_http_request', $gone );
+
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertSame( $before + 1, $this->count_updates( $post_id ) );
+	}
+
+	/**
+	 * A Delete for a stamp from the wrong actor changes nothing.
+	 *
+	 * @covers ::revoke_quote_authorization
+	 */
+	public function test_stamp_delete_from_wrong_actor_ignored() {
+		$post_id = $this->create_quote_post();
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+		$before = $this->count_updates( $post_id );
+
+		$gone = $this->mock_stamp_response( 404 );
+		Delete::handle_delete( $this->build_stamp_delete( 'https://remote.example/users/mallory' ), self::$user_id );
+		\remove_filter( 'pre_http_request', $gone );
+
+		$this->assertSame( 'https://remote.example/stamps/1', \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertSame( $before, $this->count_updates( $post_id ) );
+	}
+
+	/**
+	 * An unsigned Delete is not trusted while the stamp still resolves.
+	 *
+	 * @covers ::revoke_quote_authorization
+	 */
+	public function test_stamp_delete_ignored_while_stamp_still_resolves() {
+		$post_id = $this->create_quote_post();
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+		$before = $this->count_updates( $post_id );
+
+		$stamp  = array(
+			'id'                => 'https://remote.example/stamps/1',
+			'type'              => 'QuoteAuthorization',
+			'attributedTo'      => 'https://remote.example/users/alice',
+			'interactingObject' => \get_permalink( $post_id ),
+			'interactionTarget' => 'https://remote.example/notes/1',
+		);
+		$filter = $this->mock_stamp( $post_id );
+		$alive  = $this->mock_stamp_response( 200, \wp_json_encode( $stamp ) );
+		Delete::handle_delete( $this->build_stamp_delete(), self::$user_id );
+		\remove_filter( 'pre_http_request', $alive );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertSame( 'https://remote.example/stamps/1', \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertSame( $before, $this->count_updates( $post_id ) );
+	}
+
+	/**
+	 * A Delete whose actor lives on another host than the stamp changes nothing.
+	 *
+	 * @covers ::revoke_quote_authorization
+	 */
+	public function test_stamp_delete_cross_host_actor_ignored() {
+		$post_id = $this->create_quote_post();
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+		$before = $this->count_updates( $post_id );
+
+		$gone = $this->mock_stamp_response( 404 );
+		Delete::handle_delete( $this->build_stamp_delete( 'https://other.example/users/alice' ), self::$user_id );
+		\remove_filter( 'pre_http_request', $gone );
+
+		$this->assertSame( 'https://remote.example/stamps/1', \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertSame( $before, $this->count_updates( $post_id ) );
 	}
 }

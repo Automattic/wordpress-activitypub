@@ -11,8 +11,12 @@ use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
+use Activitypub\Http;
 use Activitypub\Tombstone;
 
+use function Activitypub\add_to_outbox;
+use function Activitypub\is_same_actor;
+use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 
 /**
@@ -96,7 +100,7 @@ class Delete {
 			 */
 			default:
 				// A bare URI may be a QuoteAuthorization stamp the quoted author revoked.
-				if ( Quote_Request::revoke( $activity ) ) {
+				if ( self::revoke_quote_authorization( $activity ) ) {
 					break;
 				}
 
@@ -109,6 +113,69 @@ class Delete {
 				// Maybe handle Delete Activity for other Object Types.
 				break;
 		}
+	}
+
+	/**
+	 * Revoke a QuoteAuthorization stamp the quoted author deleted.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $activity The Activity object.
+	 *
+	 * @return bool True if a stamp on a local quote post was revoked.
+	 */
+	private static function revoke_quote_authorization( $activity ) {
+		$stamp_uri = object_to_uri( $activity['object'] ?? '' );
+
+		if ( ! $stamp_uri ) {
+			return false;
+		}
+
+		$posts = \get_posts(
+			array(
+				'post_type'   => \get_post_types_by_support( 'activitypub' ),
+				'post_status' => 'any',
+				'numberposts' => 1,
+				'meta_key'    => '_activitypub_quote_authorization', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_value'  => $stamp_uri, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+			)
+		);
+
+		if ( ! $posts ) {
+			return false;
+		}
+
+		$post = $posts[0];
+
+		if ( ! is_same_host( $stamp_uri, $activity['actor'] ?? '' ) ) {
+			return false;
+		}
+
+		// Only the quoted object's author may revoke the stamp.
+		$quoted_uri = \get_post_meta( $post->ID, '_activitypub_quote_request', true );
+		$quoted     = $quoted_uri ? Http::get_remote_object( $quoted_uri ) : null;
+
+		if ( ! $quoted || \is_wp_error( $quoted ) || empty( $quoted['attributedTo'] ) ) {
+			return false;
+		}
+
+		if ( ! is_same_actor( $activity['actor'] ?? '', $quoted['attributedTo'] ) ) {
+			return false;
+		}
+
+		/*
+		 * Signature verification is deferred for Deletes, so the body is untrusted: the
+		 * revocation is honoured only if the stamp really no longer resolves.
+		 */
+		if ( ! Tombstone::exists( $stamp_uri ) ) {
+			return false;
+		}
+
+		\delete_post_meta( $post->ID, '_activitypub_quote_authorization' );
+
+		add_to_outbox( $post, 'Update', $post->post_author );
+
+		return true;
 	}
 
 	/**

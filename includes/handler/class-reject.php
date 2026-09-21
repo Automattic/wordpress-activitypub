@@ -10,7 +10,10 @@ namespace Activitypub\Handler;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\Http;
 
+use function Activitypub\add_to_outbox;
+use function Activitypub\is_same_actor;
 use function Activitypub\object_to_uri;
 
 /**
@@ -44,7 +47,7 @@ class Reject {
 				self::reject_follow( $reject, $user_ids );
 				break;
 			case 'QuoteRequest':
-				Quote_Request::reject( $reject, Outbox::get_activity( $outbox_post ) );
+				self::reject_quote_request( $reject, $outbox_post );
 				break;
 			default:
 				break;
@@ -88,6 +91,70 @@ class Reject {
 		 * @param \WP_Post|\WP_Error $result   Actor post on success, WP_Error on failure.
 		 */
 		\do_action( 'activitypub_handled_reject', $reject, (array) $user_ids, $success, $result );
+	}
+
+	/**
+	 * Reject a "QuoteRequest" of ours: the quote part is dropped from the post.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array    $reject      The activity-object.
+	 * @param \WP_Post $outbox_post Our QuoteRequest outbox item.
+	 */
+	private static function reject_quote_request( $reject, $outbox_post ) {
+		$request = Outbox::get_activity( $outbox_post );
+
+		if ( \is_wp_error( $request ) || ! $request->get_instrument() ) {
+			return;
+		}
+
+		// The request's `object` is the quoted URI; our post is its `instrument`.
+		$post_id = \url_to_postid( object_to_uri( $request->get_instrument() ) );
+		$post    = $post_id ? \get_post( $post_id ) : null;
+
+		if ( ! $post ) {
+			return;
+		}
+
+		$quoted_uri = object_to_uri( $request->get_object() );
+
+		// A Reject for a request the post has since superseded with another quoted URL is ignored.
+		if ( \get_post_meta( $post->ID, '_activitypub_quote_request', true ) !== $quoted_uri ) {
+			return;
+		}
+
+		if ( ! self::quoted_author_matches( $reject, $quoted_uri ) ) {
+			return;
+		}
+
+		\update_post_meta( $post->ID, '_activitypub_quote_rejected', '1' );
+		\delete_post_meta( $post->ID, '_activitypub_quote_authorization' );
+
+		add_to_outbox( $post, 'Update', $post->post_author );
+	}
+
+	/**
+	 * Only the quoted object's author may answer our QuoteRequest.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array  $reject     The activity-object.
+	 * @param string $quoted_uri The quoted object URI.
+	 *
+	 * @return bool True if the sender is the quoted author.
+	 */
+	private static function quoted_author_matches( $reject, $quoted_uri ) {
+		if ( ! $quoted_uri ) {
+			return false;
+		}
+
+		$quoted = Http::get_remote_object( $quoted_uri );
+
+		if ( \is_wp_error( $quoted ) || empty( $quoted['attributedTo'] ) ) {
+			return false;
+		}
+
+		return is_same_actor( $reject['actor'] ?? '', $quoted['attributedTo'] );
 	}
 
 	/**

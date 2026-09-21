@@ -11,6 +11,7 @@ use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Reject;
+use Activitypub\Transformer\Post;
 
 /**
  * Class Test_Reject
@@ -27,6 +28,13 @@ class Test_Reject extends \WP_UnitTestCase {
 	protected static $user_id;
 
 	/**
+	 * Remote object mock for the quoted object and its author.
+	 *
+	 * @var callable
+	 */
+	protected $remote_object_filter;
+
+	/**
 	 * Create fake data before tests run.
 	 *
 	 * @param \WP_UnitTest_Factory $factory Helper that creates fake data.
@@ -37,6 +45,42 @@ class Test_Reject extends \WP_UnitTestCase {
 				'role' => 'author',
 			)
 		);
+		\get_user_by( 'id', self::$user_id )->add_cap( 'activitypub' );
+	}
+
+	/**
+	 * Mock the remote objects the quote tests fetch.
+	 */
+	public function set_up() {
+		parent::set_up();
+
+		// The object our own quote posts quote, and its author.
+		$this->remote_object_filter = function ( $pre, $url ) {
+			if ( 'https://remote.example/notes/1' === $url ) {
+				return array(
+					'id'           => 'https://remote.example/notes/1',
+					'type'         => 'Note',
+					'attributedTo' => 'https://remote.example/users/alice',
+				);
+			}
+			if ( 'https://remote.example/users/alice' === $url ) {
+				return array(
+					'id'    => 'https://remote.example/users/alice',
+					'type'  => 'Person',
+					'inbox' => 'https://remote.example/users/alice/inbox',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $this->remote_object_filter, 10, 2 );
+	}
+
+	/**
+	 * Remove the remote object mock.
+	 */
+	public function tear_down() {
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $this->remote_object_filter );
+		parent::tear_down();
 	}
 
 	/**
@@ -228,5 +272,144 @@ class Test_Reject extends \WP_UnitTestCase {
 		// Assert: the follow relationship is untouched.
 		$following = \get_post_meta( $post_id, Following::FOLLOWING_META_KEY, false );
 		$this->assertContains( (string) $user_id, $following );
+	}
+
+	/*
+	 * ------------------------------------------------------------------
+	 * Rejects of our own QuoteRequests (FEP-044f).
+	 * ------------------------------------------------------------------
+	 */
+
+	/**
+	 * Create a published quote post and return its ID.
+	 *
+	 * @param string $url The quoted URL.
+	 *
+	 * @return int Post ID.
+	 */
+	private function create_quote_post( $url = 'https://remote.example/notes/1' ) {
+		return self::factory()->post->create(
+			array(
+				'post_author'  => self::$user_id,
+				'post_status'  => 'publish',
+				'post_content' => '<!-- wp:activitypub/quote {"url":"' . $url . '"} /-->',
+			)
+		);
+	}
+
+	/**
+	 * Return the QuoteRequest outbox items for a post.
+	 *
+	 * @param int $post_id Post ID.
+	 *
+	 * @return \WP_Post[] Outbox items.
+	 */
+	private function get_quote_requests( $post_id ) {
+		$items = \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'any',
+				'numberposts' => -1,
+				'meta_key'    => '_activitypub_activity_type', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_value'  => 'QuoteRequest', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+			)
+		);
+
+		// The outbox stores the quoted URI as object id; our post is the request's instrument.
+		return \array_values(
+			\array_filter(
+				$items,
+				function ( $item ) use ( $post_id ) {
+					$activity = \json_decode( $item->post_content, true );
+					return \get_permalink( $post_id ) === ( $activity['instrument'] ?? '' );
+				}
+			)
+		);
+	}
+
+	/**
+	 * Build the Reject the quoted author's server would send for our request.
+	 *
+	 * @param int    $post_id Post ID.
+	 * @param string $actor   Sender.
+	 *
+	 * @return array Reject activity.
+	 */
+	private function build_reject( $post_id, $actor = 'https://remote.example/users/alice' ) {
+		$requests = $this->get_quote_requests( $post_id );
+
+		return array(
+			'type'   => 'Reject',
+			'actor'  => $actor,
+			'object' => array(
+				'id'         => $requests ? $requests[0]->guid : '',
+				'type'       => 'QuoteRequest',
+				'actor'      => \get_author_posts_url( self::$user_id ),
+				'object'     => 'https://remote.example/notes/1',
+				'instrument' => \get_permalink( $post_id ),
+			),
+		);
+	}
+
+	/**
+	 * Count Update outbox items for a post.
+	 *
+	 * @param int $post_id Post ID.
+	 *
+	 * @return int Count.
+	 */
+	private function count_updates( $post_id ) {
+		return \count(
+			\get_posts(
+				array(
+					'post_type'   => Outbox::POST_TYPE,
+					'post_status' => 'any',
+					'numberposts' => -1,
+					'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						array(
+							'key'   => '_activitypub_activity_type',
+							'value' => 'Update',
+						),
+						array(
+							'key'   => '_activitypub_object_id',
+							'value' => \get_permalink( $post_id ),
+						),
+					),
+				)
+			)
+		);
+	}
+
+	/**
+	 * A Reject marks the quote declined, drops any stamp and queues an Update.
+	 *
+	 * @covers ::reject_quote_request
+	 */
+	public function test_reject_marks_declined_and_updates() {
+		$post_id = $this->create_quote_post();
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+		$before = $this->count_updates( $post_id );
+
+		Reject::handle_reject( $this->build_reject( $post_id ), self::$user_id );
+
+		$this->assertSame( '1', \get_post_meta( $post_id, '_activitypub_quote_rejected', true ) );
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertSame( $before + 1, $this->count_updates( $post_id ) );
+
+		$array = Post::transform( \get_post( $post_id ) )->to_object()->to_array();
+		$this->assertArrayNotHasKey( 'quote', $array );
+	}
+
+	/**
+	 * A Reject from someone other than the quoted author is ignored.
+	 *
+	 * @covers ::reject_quote_request
+	 */
+	public function test_reject_from_wrong_actor_ignored() {
+		$post_id = $this->create_quote_post();
+
+		Reject::handle_reject( $this->build_reject( $post_id, 'https://remote.example/users/mallory' ), self::$user_id );
+
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_rejected', true ) );
 	}
 }
