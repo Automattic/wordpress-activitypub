@@ -8,6 +8,7 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Options;
+use Activitypub\Sanitize;
 use Activitypub\Scheduler;
 
 /**
@@ -51,6 +52,7 @@ class Test_Options extends \WP_UnitTestCase {
 		// Clean up blog profile options.
 		\delete_option( 'activitypub_blog_name' );
 		\delete_option( 'activitypub_blog_icon' );
+		\delete_option( 'activitypub_header_image' );
 
 		parent::tear_down();
 	}
@@ -533,5 +535,32 @@ class Test_Options extends \WP_UnitTestCase {
 
 		$this->assertTrue( $registered['activitypub_blog_name']['show_in_rest'] );
 		$this->assertTrue( $registered['activitypub_blog_icon']['show_in_rest'] );
+	}
+
+	/**
+	 * Test the blog icon and header image share the attachment_id sanitize callback.
+	 *
+	 * @covers \Activitypub\Options::register_settings
+	 */
+	public function test_attachment_id_options_share_sanitize_callback() {
+		Options::register_settings();
+
+		$registered = \get_registered_settings();
+
+		$this->assertSame( array( Sanitize::class, 'attachment_id' ), $registered['activitypub_blog_icon']['sanitize_callback'] );
+		$this->assertSame( array( Sanitize::class, 'attachment_id' ), $registered['activitypub_header_image']['sanitize_callback'] );
+	}
+
+	/**
+	 * Test a non-image attachment ID is sanitized to 0 for the header image option.
+	 *
+	 * @covers \Activitypub\Options::register_settings
+	 */
+	public function test_header_image_option_rejects_non_image() {
+		Options::register_settings();
+
+		$attachment_id = self::factory()->attachment->create( array( 'post_mime_type' => 'text/plain' ) );
+
+		$this->assertSame( 0, \sanitize_option( 'activitypub_header_image', $attachment_id ) );
 	}
 }

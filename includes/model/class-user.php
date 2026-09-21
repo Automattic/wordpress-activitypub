@@ -221,7 +221,7 @@ class User extends Actor {
 			$image_url = \get_header_image();
 		}
 
-		if ( $header_image ) {
+		if ( $header_image && \wp_attachment_is_image( $header_image ) ) {
 			$image_url = \wp_get_attachment_url( $header_image );
 		}
 

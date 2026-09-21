@@ -203,4 +203,18 @@ class Test_User extends \WP_UnitTestCase {
 
 		$this->assertSame( 'normaluser', $user3->get_preferred_username() );
 	}
+
+	/**
+	 * Test get_image ignores a stored non-image attachment id.
+	 *
+	 * @covers ::get_image
+	 */
+	public function test_get_image_ignores_non_image_attachment() {
+		$user_id       = self::factory()->user->create( array( 'role' => 'author' ) );
+		$attachment_id = self::factory()->attachment->create( array( 'post_mime_type' => 'text/plain' ) );
+
+		\update_user_option( $user_id, 'activitypub_header_image', $attachment_id );
+
+		$this->assertNull( User::from_wp_user( $user_id )->get_image() );
+	}
 }
