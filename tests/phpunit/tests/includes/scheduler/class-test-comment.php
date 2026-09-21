@@ -9,6 +9,7 @@ namespace Activitypub\Tests\Scheduler;
 
 use Activitypub\Collection\Outbox;
 use Activitypub\Comment;
+use Activitypub\Scheduler\Comment as Scheduler;
 
 /**
  * Test Comment scheduler class.
@@ -167,6 +168,140 @@ class Test_Comment extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		);
 
 		$this->assertEmpty( $outbox_posts, 'No outbox item should be created for this comment' );
+	}
+
+	/**
+	 * Test that a custom comment type added via filter is federated.
+	 *
+	 * @covers ::schedule_comment_activity
+	 */
+	public function test_filter_adds_comment_type() {
+		$add_type = function ( $allowed_types, $comment ) {
+			if ( 'vote' === $comment->comment_type ) {
+				$allowed_types[] = 'vote';
+			}
+			return $allowed_types;
+		};
+		\add_filter( 'activitypub_allowed_comment_types', $add_type, 10, 2 );
+
+		$comment_id    = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => self::$comment_post_ID,
+				'user_id'          => self::$user_id,
+				'comment_approved' => 1,
+				'comment_type'     => 'vote',
+			)
+		);
+		$activitpub_id = Comment::generate_id( $comment_id );
+
+		\remove_filter( 'activitypub_allowed_comment_types', $add_type );
+
+		$post = $this->get_latest_outbox_item( $activitpub_id );
+		$id   = \get_post_meta( $post->ID, '_activitypub_object_id', true );
+		$this->assertSame( $activitpub_id, $id );
+	}
+
+	/**
+	 * Test that a comment type removed via filter is not federated.
+	 *
+	 * @covers ::schedule_comment_activity
+	 */
+	public function test_filter_removes_comment_type() {
+		$remove_type = function ( $allowed_types ) {
+			return \array_diff( $allowed_types, array( 'comment' ) );
+		};
+		\add_filter( 'activitypub_allowed_comment_types', $remove_type );
+
+		$this->test_no_activity_scheduled(
+			array(
+				'comment_post_ID'  => self::$comment_post_ID,
+				'user_id'          => self::$user_id,
+				'comment_approved' => 1,
+			)
+		);
+
+		\remove_filter( 'activitypub_allowed_comment_types', $remove_type );
+	}
+
+	/**
+	 * Test that an Update is sent for an already federated comment even if its type is no longer allowed.
+	 *
+	 * @covers ::schedule_comment_activity
+	 */
+	public function test_filter_does_not_block_update_of_sent_comment() {
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => self::$comment_post_ID,
+				'user_id'          => self::$user_id,
+				'comment_approved' => 1,
+				'comment_meta'     => array(
+					'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_FEDERATED,
+				),
+			)
+		);
+
+		$remove_type = function ( $allowed_types ) {
+			return \array_diff( $allowed_types, array( 'comment' ) );
+		};
+		\add_filter( 'activitypub_allowed_comment_types', $remove_type );
+
+		// Core only fires transition_comment_status on a status change, so call the scheduler directly for the Update path.
+		Scheduler::schedule_comment_activity( 'approved', 'approved', \get_comment( $comment_id ) );
+
+		\remove_filter( 'activitypub_allowed_comment_types', $remove_type );
+
+		$outbox_posts = \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				'numberposts' => -1,
+				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => Comment::generate_id( $comment_id ),
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Update',
+					),
+				),
+			)
+		);
+
+		$this->assertCount( 1, $outbox_posts, 'An Update activity should be created for an already sent comment' );
+	}
+
+	/**
+	 * Test that a Delete is sent for an already federated comment even if its type is no longer allowed.
+	 *
+	 * @covers ::schedule_comment_activity
+	 */
+	public function test_filter_does_not_block_delete_of_sent_comment() {
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => self::$comment_post_ID,
+				'user_id'          => self::$user_id,
+				'comment_approved' => 1,
+				'comment_meta'     => array(
+					'activitypub_status' => ACTIVITYPUB_OBJECT_STATE_FEDERATED,
+				),
+			)
+		);
+
+		$activitpub_id = Comment::generate_id( $comment_id );
+
+		$remove_type = function ( $allowed_types ) {
+			return \array_diff( $allowed_types, array( 'comment' ) );
+		};
+		\add_filter( 'activitypub_allowed_comment_types', $remove_type );
+
+		\wp_delete_comment( $comment_id, true );
+
+		\remove_filter( 'activitypub_allowed_comment_types', $remove_type );
+
+		$post = $this->get_latest_outbox_item();
+		$this->assertSame( $activitpub_id, \get_post_meta( $post->ID, '_activitypub_object_id', true ) );
+		$this->assertSame( 'Delete', \get_post_meta( $post->ID, '_activitypub_activity_type', true ) );
 	}
 
 	/**
