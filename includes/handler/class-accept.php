@@ -115,10 +115,6 @@ class Accept {
 			return;
 		}
 
-		if ( ! self::quoted_author_matches( $accept, $quoted_uri ) ) {
-			return;
-		}
-
 		$stamp_uri = object_to_uri( $accept['result'] ?? '' );
 
 		if ( ! $stamp_uri ) {
@@ -127,6 +123,11 @@ class Accept {
 
 		// The stamp is issued by the quoted author, so it must live on the sender's host.
 		if ( ! is_same_host( $stamp_uri, $accept['actor'] ?? '' ) ) {
+			return;
+		}
+
+		// Fetches the quoted object, so it runs after the free checks above.
+		if ( ! self::quoted_author_matches( $accept, $quoted_uri ) ) {
 			return;
 		}
 
