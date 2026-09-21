@@ -13,6 +13,8 @@ use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Reject;
 use Activitypub\Transformer\Post;
 
+use function Activitypub\get_object_id;
+
 /**
  * Class Test_Reject
  *
@@ -321,7 +323,7 @@ class Test_Reject extends \WP_UnitTestCase {
 				$items,
 				function ( $item ) use ( $post_id ) {
 					$activity = \json_decode( $item->post_content, true );
-					return \get_permalink( $post_id ) === ( $activity['instrument'] ?? '' );
+					return get_object_id( \get_post( $post_id ) ) === ( $activity['instrument'] ?? '' );
 				}
 			)
 		);
@@ -346,7 +348,7 @@ class Test_Reject extends \WP_UnitTestCase {
 				'type'       => 'QuoteRequest',
 				'actor'      => \get_author_posts_url( self::$user_id ),
 				'object'     => 'https://remote.example/notes/1',
-				'instrument' => \get_permalink( $post_id ),
+				'instrument' => get_object_id( \get_post( $post_id ) ),
 			),
 		);
 	}
@@ -372,7 +374,7 @@ class Test_Reject extends \WP_UnitTestCase {
 						),
 						array(
 							'key'   => '_activitypub_object_id',
-							'value' => \get_permalink( $post_id ),
+							'value' => get_object_id( \get_post( $post_id ) ),
 						),
 					),
 				)
@@ -398,6 +400,24 @@ class Test_Reject extends \WP_UnitTestCase {
 
 		$array = Post::transform( \get_post( $post_id ) )->to_object()->to_array();
 		$this->assertArrayNotHasKey( 'quote', $array );
+	}
+
+	/**
+	 * A Reject for a request the post has since superseded is ignored.
+	 *
+	 * @covers ::reject_quote_request
+	 */
+	public function test_reject_for_superseded_url_ignored() {
+		$post_id = $this->create_quote_post();
+		$reject  = $this->build_reject( $post_id );
+		\update_post_meta( $post_id, '_activitypub_quote_request', 'https://remote.example/notes/2' );
+		$before = $this->count_updates( $post_id );
+
+		Reject::handle_reject( $reject, self::$user_id );
+
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_rejected', true ) );
+		$this->assertSame( 'https://remote.example/notes/2', \get_post_meta( $post_id, '_activitypub_quote_request', true ) );
+		$this->assertSame( $before, $this->count_updates( $post_id ) );
 	}
 
 	/**

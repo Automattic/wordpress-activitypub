@@ -13,6 +13,8 @@ use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Accept;
 use Activitypub\Handler\Reject;
 
+use function Activitypub\get_object_id;
+
 /**
  * Class Test_Accept
  *
@@ -365,7 +367,7 @@ class Test_Accept extends \WP_UnitTestCase {
 				$items,
 				function ( $item ) use ( $post_id ) {
 					$activity = \json_decode( $item->post_content, true );
-					return \get_permalink( $post_id ) === ( $activity['instrument'] ?? '' );
+					return get_object_id( \get_post( $post_id ) ) === ( $activity['instrument'] ?? '' );
 				}
 			)
 		);
@@ -391,7 +393,7 @@ class Test_Accept extends \WP_UnitTestCase {
 				'type'       => 'QuoteRequest',
 				'actor'      => \get_author_posts_url( self::$user_id ),
 				'object'     => 'https://remote.example/notes/1',
-				'instrument' => \get_permalink( $post_id ),
+				'instrument' => get_object_id( \get_post( $post_id ) ),
 			),
 			'result' => $result,
 		);
@@ -427,7 +429,7 @@ class Test_Accept extends \WP_UnitTestCase {
 				'id'                => 'https://remote.example/stamps/1',
 				'type'              => 'QuoteAuthorization',
 				'attributedTo'      => 'https://remote.example/users/alice',
-				'interactingObject' => \get_permalink( $post_id ),
+				'interactingObject' => get_object_id( \get_post( $post_id ) ),
 				'interactionTarget' => 'https://remote.example/notes/1',
 			),
 			$overrides
@@ -461,7 +463,7 @@ class Test_Accept extends \WP_UnitTestCase {
 						),
 						array(
 							'key'   => '_activitypub_object_id',
-							'value' => \get_permalink( $post_id ),
+							'value' => get_object_id( \get_post( $post_id ) ),
 						),
 					),
 				)
@@ -496,27 +498,42 @@ class Test_Accept extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Accepts from the wrong actor, with a stamp for another object, or with a foreign stamp host are ignored.
+	 * Accepts from the wrong actor, with a stamp that does not bind this post, or with a foreign stamp host are ignored.
 	 *
 	 * @covers ::accept_quote_request
 	 */
 	public function test_accept_ignored_when_sender_or_stamp_invalid() {
 		$post_id = $this->create_quote_post();
 
+		$invalid = 0;
+		$track   = function () use ( &$invalid ) {
+			++$invalid;
+		};
+		\add_action( 'activitypub_quote_authorization_invalid', $track );
+
+		// A sender who is not the quoted author is refused before the stamp is even looked at.
 		$filter = $this->mock_stamp( $post_id );
 		Accept::handle_accept( $this->build_accept( $post_id, 'https://remote.example/stamps/1', 'https://remote.example/users/mallory' ), self::$user_id );
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertSame( 0, $invalid );
 
-		$filter = $this->mock_stamp( $post_id, array( 'interactingObject' => 'https://elsewhere.example/other' ) );
-		Accept::handle_accept( $this->build_accept( $post_id ), self::$user_id );
-		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
-		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$bad_stamps = array(
+			array( 'interactingObject' => 'https://elsewhere.example/other' ),
+			array( 'interactionTarget' => 'https://remote.example/notes/2' ),
+			array( 'attributedTo' => 'https://remote.example/users/mallory' ),
+			array( 'type' => 'Note' ),
+		);
 
-		$filter = $this->mock_stamp( $post_id, array( 'type' => 'Note' ) );
-		Accept::handle_accept( $this->build_accept( $post_id ), self::$user_id );
-		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
-		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		foreach ( $bad_stamps as $i => $overrides ) {
+			$filter = $this->mock_stamp( $post_id, $overrides );
+			Accept::handle_accept( $this->build_accept( $post_id ), self::$user_id );
+			\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+			$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_authorization', true ), \key( $overrides ) );
+			$this->assertSame( $i + 1, $invalid, \key( $overrides ) );
+		}
+
+		\remove_action( 'activitypub_quote_authorization_invalid', $track );
 
 		// A stamp on another host than the sender is never fetched.
 		$fetched_urls = array();

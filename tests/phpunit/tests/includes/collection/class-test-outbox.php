@@ -926,4 +926,27 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		$this->assertInstanceOf( Activity::class, $result );
 	}
+
+	/**
+	 * Test that get_activity() returns an error for an item without a decodable activity.
+	 *
+	 * @covers ::get_activity
+	 */
+	public function test_get_activity_returns_error_for_invalid_content() {
+		$outbox_id = self::factory()->post->create(
+			array(
+				'post_type'    => Outbox::POST_TYPE,
+				'post_status'  => 'pending',
+				'post_content' => 'not json',
+				'meta_input'   => array(
+					'_activitypub_activity_type' => 'Create',
+				),
+			)
+		);
+
+		$activity = Outbox::get_activity( $outbox_id );
+
+		$this->assertWPError( $activity );
+		$this->assertSame( 'activitypub_outbox_item_invalid', $activity->get_error_code() );
+	}
 }

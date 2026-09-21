@@ -7,7 +7,10 @@
 
 namespace Activitypub\Tests\Scheduler;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
+
+use function Activitypub\get_object_id;
 
 /**
  * Test class for Activitypub\Scheduler\Quote_Request.
@@ -98,7 +101,7 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 				$items,
 				function ( $item ) use ( $post_id ) {
 					$activity = \json_decode( $item->post_content, true );
-					return \get_permalink( $post_id ) === ( $activity['instrument'] ?? '' );
+					return get_object_id( \get_post( $post_id ) ) === ( $activity['instrument'] ?? '' );
 				}
 			)
 		);
@@ -127,7 +130,7 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 					),
 					array(
 						'key'   => '_activitypub_object_id',
-						'value' => \get_permalink( $post_id ),
+						'value' => get_object_id( \get_post( $post_id ) ),
 					),
 				),
 			)
@@ -150,7 +153,7 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 		$activity = \json_decode( $requests[0]->post_content, true );
 		$this->assertSame( 'QuoteRequest', $activity['type'] );
 		$this->assertSame( 'https://remote.example/notes/1', $activity['object'] );
-		$this->assertSame( \get_permalink( $post_id ), $activity['instrument'] );
+		$this->assertSame( get_object_id( \get_post( $post_id ) ), $activity['instrument'] );
 		$this->assertSame( array( 'https://remote.example/users/alice' ), $activity['to'] );
 		$this->assertSame( \ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, \get_post_meta( $requests[0]->ID, 'activitypub_content_visibility', true ) );
 		$this->assertSame( 'https://remote.example/notes/1', \get_post_meta( $post_id, '_activitypub_quote_request', true ) );
@@ -233,6 +236,52 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 			)
 		);
 		$this->assertCount( 0, $this->get_quote_requests( $plain ) );
+	}
+
+	/**
+	 * Quoting our own object needs no consent, so no request is sent.
+	 *
+	 * @covers ::maybe_send_request
+	 */
+	public function test_self_quote_sends_no_request() {
+		$own    = Actors::get_by_id( self::$user_id )->get_id();
+		$filter = function ( $pre, $url ) use ( $own ) {
+			if ( 'https://remote.example/notes/mine' === $url ) {
+				return array(
+					'id'           => 'https://remote.example/notes/mine',
+					'type'         => 'Note',
+					'attributedTo' => $own,
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
+
+		$post_id = $this->create_quote_post( 'https://remote.example/notes/mine' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertCount( 0, $this->get_quote_requests( $post_id ) );
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_request', true ) );
+	}
+
+	/**
+	 * An unreachable quoted object sends no request and records nothing.
+	 *
+	 * @covers ::maybe_send_request
+	 */
+	public function test_unreachable_quoted_object_sends_no_request() {
+		$filter = function ( $pre, $url ) {
+			return 'https://remote.example/notes/gone' === $url ? new \WP_Error( 'http_request_failed', 'nope' ) : $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
+
+		$post_id = $this->create_quote_post( 'https://remote.example/notes/gone' );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertCount( 0, $this->get_quote_requests( $post_id ) );
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_request', true ) );
 	}
 
 	/**

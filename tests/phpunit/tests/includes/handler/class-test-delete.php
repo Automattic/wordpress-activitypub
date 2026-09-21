@@ -13,6 +13,8 @@ use Activitypub\Collection\Outbox;
 use Activitypub\Handler\Delete;
 use Activitypub\Tombstone;
 
+use function Activitypub\get_object_id;
+
 /**
  * Test class for Delete handler.
  *
@@ -762,7 +764,7 @@ class Test_Delete extends \WP_UnitTestCase {
 				'id'                => 'https://remote.example/stamps/1',
 				'type'              => 'QuoteAuthorization',
 				'attributedTo'      => 'https://remote.example/users/alice',
-				'interactingObject' => \get_permalink( $post_id ),
+				'interactingObject' => get_object_id( \get_post( $post_id ) ),
 				'interactionTarget' => 'https://remote.example/notes/1',
 			),
 			$overrides
@@ -821,7 +823,7 @@ class Test_Delete extends \WP_UnitTestCase {
 						),
 						array(
 							'key'   => '_activitypub_object_id',
-							'value' => \get_permalink( $post_id ),
+							'value' => get_object_id( \get_post( $post_id ) ),
 						),
 					),
 				)
@@ -879,7 +881,7 @@ class Test_Delete extends \WP_UnitTestCase {
 			'id'                => 'https://remote.example/stamps/1',
 			'type'              => 'QuoteAuthorization',
 			'attributedTo'      => 'https://remote.example/users/alice',
-			'interactingObject' => \get_permalink( $post_id ),
+			'interactingObject' => get_object_id( \get_post( $post_id ) ),
 			'interactionTarget' => 'https://remote.example/notes/1',
 		);
 		$filter = $this->mock_stamp( $post_id );

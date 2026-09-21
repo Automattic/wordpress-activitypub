@@ -126,8 +126,10 @@ class Delete {
 	 */
 	private static function revoke_quote_authorization( $activity ) {
 		$stamp_uri = object_to_uri( $activity['object'] ?? '' );
+		$actor     = object_to_uri( $activity['actor'] ?? '' );
 
-		if ( ! $stamp_uri ) {
+		// An actor deleting itself is never a stamp, and a stamp always lives on its issuer's host.
+		if ( ! $stamp_uri || $stamp_uri === $actor || ! is_same_host( $stamp_uri, $actor ) ) {
 			return false;
 		}
 
@@ -147,10 +149,6 @@ class Delete {
 
 		$post = $posts[0];
 
-		if ( ! is_same_host( $stamp_uri, $activity['actor'] ?? '' ) ) {
-			return false;
-		}
-
 		// Only the quoted object's author may revoke the stamp.
 		$quoted_uri = \get_post_meta( $post->ID, '_activitypub_quote_request', true );
 		$quoted     = $quoted_uri ? Http::get_remote_object( $quoted_uri ) : null;
@@ -159,7 +157,7 @@ class Delete {
 			return false;
 		}
 
-		if ( ! is_same_actor( $activity['actor'] ?? '', $quoted['attributedTo'] ) ) {
+		if ( ! is_same_actor( $actor, $quoted['attributedTo'] ) ) {
 			return false;
 		}
 
