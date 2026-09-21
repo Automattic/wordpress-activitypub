@@ -9,6 +9,7 @@ namespace Activitypub\Tests\Scheduler;
 
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
+use Activitypub\Tests\Quote_Post_Fixtures;
 
 use function Activitypub\get_object_id;
 
@@ -18,13 +19,9 @@ use function Activitypub\get_object_id;
  * @coversDefaultClass \Activitypub\Scheduler\Quote_Request
  */
 class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
+	use Quote_Post_Fixtures;
 
-	/**
-	 * Remote object mock.
-	 *
-	 * @var callable
-	 */
-	protected $remote_object_filter;
+
 
 	/**
 	 * Mock the quoted objects and their author.
@@ -32,79 +29,15 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 	public function set_up() {
 		parent::set_up();
 
-		$this->remote_object_filter = function ( $pre, $url ) {
-			if ( \in_array( $url, array( 'https://remote.example/notes/1', 'https://remote.example/notes/2' ), true ) ) {
-				return array(
-					'id'           => $url,
-					'type'         => 'Note',
-					'attributedTo' => 'https://remote.example/users/alice',
-				);
-			}
-			if ( 'https://remote.example/users/alice' === $url ) {
-				return array(
-					'id'    => 'https://remote.example/users/alice',
-					'type'  => 'Person',
-					'inbox' => 'https://remote.example/users/alice/inbox',
-				);
-			}
-			return $pre;
-		};
-		\add_filter( 'activitypub_pre_http_get_remote_object', $this->remote_object_filter, 10, 2 );
+		$this->add_quoted_object_mock();
 	}
 
 	/**
 	 * Remove the mock.
 	 */
 	public function tear_down() {
-		\remove_filter( 'activitypub_pre_http_get_remote_object', $this->remote_object_filter );
+		$this->remove_quoted_object_mock();
 		parent::tear_down();
-	}
-
-	/**
-	 * Create a published quote post and return its ID.
-	 *
-	 * @param string $url The quoted URL.
-	 *
-	 * @return int Post ID.
-	 */
-	private function create_quote_post( $url = 'https://remote.example/notes/1' ) {
-		return self::factory()->post->create(
-			array(
-				'post_author'  => self::$user_id,
-				'post_status'  => 'publish',
-				'post_content' => '<!-- wp:activitypub/quote {"url":"' . $url . '"} /-->',
-			)
-		);
-	}
-
-	/**
-	 * Return the QuoteRequest outbox items for a post.
-	 *
-	 * @param int $post_id Post ID.
-	 *
-	 * @return \WP_Post[] Outbox items.
-	 */
-	private function get_quote_requests( $post_id ) {
-		$items = \get_posts(
-			array(
-				'post_type'   => Outbox::POST_TYPE,
-				'post_status' => 'any',
-				'numberposts' => -1,
-				'meta_key'    => '_activitypub_activity_type', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'meta_value'  => 'QuoteRequest', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-			)
-		);
-
-		// The outbox stores the quoted URI as object id; our post is the request's instrument.
-		return \array_values(
-			\array_filter(
-				$items,
-				function ( $item ) use ( $post_id ) {
-					$activity = \json_decode( $item->post_content, true );
-					return get_object_id( \get_post( $post_id ) ) === ( $activity['instrument'] ?? '' );
-				}
-			)
-		);
 	}
 
 	/**
