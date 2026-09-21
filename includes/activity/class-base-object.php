@@ -699,10 +699,12 @@ class Base_Object extends Generic_Object {
 	}
 
 	/**
-	 * Convert Object to an array, including quote-related underscore properties.
+	 * Convert Object to an array, including underscore-prefixed wire terms.
 	 *
-	 * Extends the parent class to include `_misskey_quote` which is needed
-	 * for Misskey quote compatibility.
+	 * The parent class skips all underscore-prefixed properties as internal (e.g., `$_id` in
+	 * Actor models), but `_misskey_quote` is a wire term that must be emitted.
+	 *
+	 * @since unreleased
 	 *
 	 * @param bool $include_json_ld_context Whether to include the JSON-LD context. Default true.
 	 * @param bool $include_blind_audience  Whether to keep `bto` and `bcc` in the output. Default false.
