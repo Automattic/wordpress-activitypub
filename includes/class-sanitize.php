@@ -369,6 +369,13 @@ class Sanitize {
 			$allowed_tags = \wp_kses_allowed_html( 'pre_comment_content' );
 		}
 
+		/*
+		 * WordPress 7.1 allows `span` in comments for its own mention markup. Mastodon wraps
+		 * shortened link text in `span`s, which `make_clickable()` then autolinks inside the
+		 * existing anchor. Drop the tag and keep the text, as every earlier WordPress did.
+		 */
+		unset( $allowed_tags['span'] );
+
 		// Add `p` and `br` to the list of allowed tags.
 		if ( ! \array_key_exists( 'br', $allowed_tags ) ) {
 			$allowed_tags['br'] = array();

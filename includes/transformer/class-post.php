@@ -86,6 +86,15 @@ class Post extends Base {
 	private $in_reply_to = false;
 
 	/**
+	 * The quoted object URI, or null once resolved to "not a quote".
+	 *
+	 * @since unreleased
+	 *
+	 * @var string|null|false
+	 */
+	private $quote = false;
+
+	/**
 	 * Transforms the WP_Post object to an ActivityPub Object
 	 *
 	 * @return \Activitypub\Activity\Base_Object The ActivityPub Object
@@ -333,11 +342,23 @@ class Post extends Base {
 	}
 
 	/**
-	 * Returns an Icon, based on the Featured Image with a fallback to the site-icon.
+	 * Returns a poster image for a media attachment, based on the Featured Image with a
+	 * fallback to the site-icon.
 	 *
-	 * @return array|null The Icon or null if no icon is available.
+	 * Stays `protected` rather than `private`: the podcast integrations extend this class and
+	 * call it, and {@see Base::transform_attachment()} calls it from the parent.
+	 *
+	 * Deliberately not called `get_icon()`: {@see Base::transform_object_properties()} maps each
+	 * getter onto the property of the same name, and FEP-b2b8 reserves `icon` for the author's
+	 * avatar.
+	 *
+	 * @since unreleased Renamed from `get_icon()`, so it no longer maps onto the object.
+	 *
+	 * @see https://fediverse.codeberg.page/fep/fep/b2b8/
+	 *
+	 * @return array|null The poster image or null if none is available.
 	 */
-	protected function get_icon() {
+	protected function get_media_icon() {
 		$post_id = $this->item->ID;
 
 		// List post thumbnail first if this post has one.
@@ -695,6 +716,81 @@ class Post extends Base {
 		$this->in_reply_to = \array_values( \array_unique( $reply_urls ) );
 
 		return $this->in_reply_to;
+	}
+
+	/**
+	 * Returns the URI quoted by the first valid Quote block.
+	 *
+	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md
+	 * @since unreleased
+	 *
+	 * @return string|null The quoted object URI, or null if there is none or the quote was rejected.
+	 */
+	public function get_quote() {
+		if ( false !== $this->quote ) {
+			return $this->quote;
+		}
+
+		$this->quote = null;
+
+		if ( ! site_supports_blocks() ) {
+			return $this->quote;
+		}
+
+		foreach ( \parse_blocks( $this->item->post_content ) as $block ) {
+			// Blocks whose URL failed the editor's ActivityPub check are not federated as quotes.
+			if ( 'activitypub/quote' === $block['blockName'] && ! empty( $block['attrs']['url'] ) && ( $block['attrs']['isValidActivityPub'] ?? true ) ) {
+				$this->quote = $block['attrs']['url'];
+				break;
+			}
+		}
+
+		// A rejection only covers the URL it was answered for; a new URL starts a new handshake.
+		if ( $this->quote && \get_post_meta( $this->item->ID, '_activitypub_quote_rejected', true ) && \get_post_meta( $this->item->ID, '_activitypub_quote_request', true ) === $this->quote ) {
+			$this->quote = null;
+		}
+
+		return $this->quote;
+	}
+
+	/**
+	 * Returns the Fedibird alias of the quote property.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string|null The quoted object URI.
+	 */
+	protected function get_quote_uri() {
+		return $this->get_quote();
+	}
+
+	/**
+	 * Returns the Misskey alias of the quote property.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string|null The quoted object URI.
+	 */
+	protected function get__misskey_quote() {
+		return $this->get_quote();
+	}
+
+	/**
+	 * Returns the QuoteAuthorization stamp URI once the quoted author accepted.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string|null The stamp URI or null.
+	 */
+	protected function get_quote_authorization() {
+		$quote = $this->get_quote();
+
+		// The stamp authorizes exactly one quoted object; after a URL change it no longer applies.
+		if ( ! $quote || \get_post_meta( $this->item->ID, '_activitypub_quote_request', true ) !== $quote ) {
+			return null;
+		}
+
+		return \get_post_meta( $this->item->ID, '_activitypub_quote_authorization', true ) ?: null;
 	}
 
 	/**

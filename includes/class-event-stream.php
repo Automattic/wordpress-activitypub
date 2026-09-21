@@ -24,8 +24,14 @@ namespace Activitypub;
 class Event_Stream {
 	/**
 	 * Initialize the event stream signals.
+	 *
+	 * Registered on `init`, so the setting is read once the site context is settled.
 	 */
 	public static function init() {
+		if ( ! \get_option( 'activitypub_api', false ) ) {
+			return;
+		}
+
 		\add_action( 'post_activitypub_add_to_outbox', array( self::class, 'signal_outbox' ), 10, 3 );
 		\add_action( 'activitypub_handled_inbox', array( self::class, 'signal_inbox' ), 10, 2 );
 	}

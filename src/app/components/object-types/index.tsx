@@ -60,7 +60,7 @@ export function ObjectTypes(): ReactNode {
 			? {
 					per_page: -1,
 					user_id: activeActorId,
-			  }
+				}
 			: undefined
 	);
 

@@ -95,9 +95,7 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Comment', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Dispatcher', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Embed', 'init' ) );
-	if ( \get_option( 'activitypub_api', false ) ) {
-		\add_action( 'init', array( __NAMESPACE__ . '\Event_Stream', 'init' ) );
-	}
+	\add_action( 'init', array( __NAMESPACE__ . '\Event_Stream', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Handler', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Hashtag', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Icons', 'init' ) );
@@ -113,18 +111,11 @@ function plugin_init() {
 	\add_action( 'init', array( __NAMESPACE__ . '\Scheduler', 'init' ), 0 );
 	\add_action( 'init', array( __NAMESPACE__ . '\Search', 'init' ) );
 	\add_action( 'init', array( __NAMESPACE__ . '\Signature', 'init' ) );
-	// Only load OAuth Server if the ActivityPub API is enabled.
-	if ( \get_option( 'activitypub_api', false ) ) {
-		\add_action( 'init', array( __NAMESPACE__ . '\OAuth\Server', 'init' ) );
-	}
+	\add_action( 'init', array( __NAMESPACE__ . '\OAuth\Server', 'init' ) );
+	\add_action( 'init', array( __NAMESPACE__ . '\Relay', 'init' ) );
 
 	if ( site_supports_blocks() ) {
 		\add_action( 'init', array( __NAMESPACE__ . '\Blocks', 'init' ) );
-	}
-
-	// Only load relay if relay mode is enabled.
-	if ( \get_option( 'activitypub_relay_mode', false ) ) {
-		\add_action( 'init', array( __NAMESPACE__ . '\Relay', 'init' ) );
 	}
 
 	// Load development tools.

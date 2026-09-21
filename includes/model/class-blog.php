@@ -593,7 +593,8 @@ class Blog extends Actor {
 
 		$also_known_as = \array_merge( $also_known_as, \get_option( 'activitypub_blog_user_also_known_as', array() ) );
 
-		return \array_unique( $also_known_as );
+		// Re-index, otherwise a duplicate alias turns the JSON list into an object.
+		return \array_values( \array_unique( $also_known_as ) );
 	}
 
 	/**
