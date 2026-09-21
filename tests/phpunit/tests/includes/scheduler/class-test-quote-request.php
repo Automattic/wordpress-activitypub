@@ -236,6 +236,24 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 	}
 
 	/**
+	 * Two posts quoting the same object each keep their own pending request.
+	 *
+	 * @covers ::maybe_send_request
+	 */
+	public function test_two_posts_quoting_same_url_both_get_requests() {
+		$first  = $this->create_quote_post();
+		$second = $this->create_quote_post();
+
+		$first_requests  = $this->get_quote_requests( $first );
+		$second_requests = $this->get_quote_requests( $second );
+
+		$this->assertCount( 1, $first_requests );
+		$this->assertCount( 1, $second_requests );
+		$this->assertSame( 'pending', $first_requests[0]->post_status );
+		$this->assertSame( 'pending', $second_requests[0]->post_status );
+	}
+
+	/**
 	 * The first Update after a URL change carries the new quote without the old stamp.
 	 *
 	 * @covers ::maybe_send_request
