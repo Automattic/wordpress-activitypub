@@ -132,6 +132,48 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 	}
 
 	/**
+	 * A URL change whose new object cannot be fetched clears the stale state for the old
+	 * URL, and only records the new one once a request for it actually goes out.
+	 *
+	 * @covers ::maybe_send_request
+	 */
+	public function test_changed_url_clears_request_meta_when_new_request_fails() {
+		$post_id = $this->create_quote_post();
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+
+		$filter = function ( $pre, $url ) {
+			return 'https://remote.example/notes/gone' === $url ? new \WP_Error( 'http_request_failed', 'nope' ) : $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
+
+		\wp_update_post(
+			array(
+				'ID'           => $post_id,
+				'post_content' => '<!-- wp:activitypub/quote {"url":"https://remote.example/notes/gone"} /-->',
+			)
+		);
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		// The fetch for the new URL failed: no new request went out, but the old URL's state is gone.
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_request', true ) );
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_rejected', true ) );
+		$this->assertCount( 1, $this->get_quote_requests( $post_id ) );
+
+		// A further edit that reaches the quoted object sends the request and records it.
+		\wp_update_post(
+			array(
+				'ID'           => $post_id,
+				'post_content' => '<!-- wp:activitypub/quote {"url":"https://remote.example/notes/2"} /-->',
+			)
+		);
+
+		$this->assertCount( 2, $this->get_quote_requests( $post_id ) );
+		$this->assertSame( 'https://remote.example/notes/2', \get_post_meta( $post_id, '_activitypub_quote_request', true ) );
+	}
+
+	/**
 	 * No request for stamped, rejected or non-quote posts.
 	 *
 	 * @covers ::maybe_send_request

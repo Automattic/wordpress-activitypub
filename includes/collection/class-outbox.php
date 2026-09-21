@@ -383,7 +383,7 @@ class Outbox {
 			);
 		}
 
-		if ( $activity_object['type'] === $type ) {
+		if ( ( $activity_object['type'] ?? null ) === $type ) {
 			$activity = Activity::init_from_array( $activity_object );
 			if ( ! $activity->get_actor() ) {
 				$actor = self::get_actor( $outbox_item );

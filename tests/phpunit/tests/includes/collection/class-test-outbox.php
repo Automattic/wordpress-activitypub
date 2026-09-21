@@ -999,4 +999,28 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$this->assertWPError( $activity );
 		$this->assertSame( 'activitypub_outbox_item_invalid', $activity->get_error_code() );
 	}
+
+	/**
+	 * Decoded content without a `type` key must not raise a PHP warning on the `type` comparison.
+	 *
+	 * @covers ::get_activity
+	 */
+	public function test_get_activity_handles_content_without_type() {
+		$outbox_id = self::factory()->post->create(
+			array(
+				'post_type'    => Outbox::POST_TYPE,
+				'post_status'  => 'pending',
+				'post_author'  => self::$user_id,
+				'post_content' => '{"foo":"bar"}',
+				'meta_input'   => array(
+					'_activitypub_activity_type' => 'Create',
+				),
+			)
+		);
+
+		$activity = Outbox::get_activity( $outbox_id );
+
+		$this->assertFalse( \is_wp_error( $activity ) );
+		$this->assertInstanceOf( Activity::class, $activity );
+	}
 }

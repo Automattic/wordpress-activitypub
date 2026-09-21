@@ -71,10 +71,11 @@ class Quote_Request {
 			return;
 		}
 
-		// The quoted URL changed: the old answer does not apply to the new object.
+		// The quoted URL changed: the old answer and the old request no longer apply.
 		if ( $sent_for ) {
 			\delete_post_meta( $post->ID, '_activitypub_quote_authorization' );
 			\delete_post_meta( $post->ID, '_activitypub_quote_rejected' );
+			\delete_post_meta( $post->ID, '_activitypub_quote_request' );
 		}
 
 		$quoted = Http::get_remote_object( $quoted_uri );
