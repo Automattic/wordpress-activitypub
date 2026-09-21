@@ -521,9 +521,9 @@ class Test_Options extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test the blog profile name and icon are both exposed to the REST settings API.
+	 * Test the blog profile name, icon, and header image are all exposed to the REST settings API.
 	 *
-	 * The blog name and avatar can be edited through a Mastodon client, so both
+	 * The blog name, avatar, and header image can be edited through a Mastodon client, so all
 	 * options must be registered consistently.
 	 *
 	 * @covers \Activitypub\Options::register_settings
@@ -535,6 +535,7 @@ class Test_Options extends \WP_UnitTestCase {
 
 		$this->assertTrue( $registered['activitypub_blog_name']['show_in_rest'] );
 		$this->assertTrue( $registered['activitypub_blog_icon']['show_in_rest'] );
+		$this->assertTrue( $registered['activitypub_header_image']['show_in_rest'] );
 	}
 
 	/**

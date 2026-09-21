@@ -217,4 +217,21 @@ class Test_User extends \WP_UnitTestCase {
 
 		$this->assertNull( User::from_wp_user( $user_id )->get_image() );
 	}
+
+	/**
+	 * Test get_image falls back to the theme header image for a stale non-image attachment id.
+	 *
+	 * @covers ::get_image
+	 */
+	public function test_get_image_falls_back_to_theme_header() {
+		$user_id       = self::factory()->user->create( array( 'role' => 'author' ) );
+		$attachment_id = self::factory()->attachment->create( array( 'post_mime_type' => 'text/plain' ) );
+
+		\update_user_option( $user_id, 'activitypub_header_image', $attachment_id );
+		\set_theme_mod( 'header_image', 'http://example.com/header.jpg' );
+
+		$this->assertSame( 'http://example.com/header.jpg', User::from_wp_user( $user_id )->get_image()['url'] );
+
+		\remove_theme_mod( 'header_image' );
+	}
 }

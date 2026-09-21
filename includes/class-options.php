@@ -488,6 +488,7 @@ class Options {
 			array(
 				'type'              => 'integer',
 				'description'       => 'The Attachment-ID of the Sites Header-Image',
+				'show_in_rest'      => true,
 				'default'           => 0,
 				'sanitize_callback' => array( Sanitize::class, 'attachment_id' ),
 			)
