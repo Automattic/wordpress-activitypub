@@ -13,6 +13,8 @@ use Activitypub\Handler\Accept;
 use Activitypub\Handler\Reject;
 use Activitypub\Tests\Quote_Post_Fixtures;
 
+use function Activitypub\get_object_id;
+
 /**
  * Class Test_Accept
  *
@@ -375,6 +377,65 @@ class Test_Accept extends \WP_UnitTestCase {
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetched, 9 );
 		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
 		$this->assertNotContains( 'https://other.example/stamps/1', $fetched_urls );
+	}
+
+	/**
+	 * The stored block URL may differ from the stamp's canonical interactionTarget.
+	 *
+	 * The Quote block stores whatever URL the author pasted in, which is often a web URL
+	 * rather than the canonical object id the QuoteAuthorization stamp names.
+	 *
+	 * @covers ::accept_quote_request
+	 */
+	public function test_accept_stores_stamp_when_block_url_is_not_canonical() {
+		$block_url  = 'https://remote.example/@alice/1';
+		$canonical  = 'https://remote.example/notes/1';
+		$quoted_map = function ( $pre, $url ) use ( $block_url, $canonical ) {
+			if ( $block_url === $url ) {
+				return array(
+					'id'           => $canonical,
+					'type'         => 'Note',
+					'attributedTo' => 'https://remote.example/users/alice',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $quoted_map, 10, 2 );
+
+		$post_id = $this->create_quote_post( $block_url );
+		$filter  = $this->mock_stamp( $post_id );
+		$before  = $this->count_updates( $post_id );
+
+		$authorized = array();
+		$track      = function ( $post_id, $stamp_uri ) use ( &$authorized ) {
+			$authorized[] = array( $post_id, $stamp_uri );
+		};
+		\add_action( 'activitypub_quote_authorized', $track, 10, 2 );
+
+		$requests = $this->get_quote_requests( $post_id );
+		$accept   = array(
+			'type'   => 'Accept',
+			'actor'  => 'https://remote.example/users/alice',
+			'object' => array(
+				'id'         => $requests ? $requests[0]->guid : '',
+				'type'       => 'QuoteRequest',
+				'actor'      => \get_author_posts_url( self::$user_id ),
+				'object'     => $block_url,
+				'instrument' => get_object_id( \get_post( $post_id ) ),
+			),
+			'result' => 'https://remote.example/stamps/1',
+		);
+
+		Accept::handle_accept( $accept, self::$user_id );
+
+		\remove_action( 'activitypub_quote_authorized', $track );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $quoted_map );
+
+		$this->assertSame( $block_url, \get_post_meta( $post_id, '_activitypub_quote_request', true ) );
+		$this->assertSame( 'https://remote.example/stamps/1', \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertSame( $before + 1, $this->count_updates( $post_id ) );
+		$this->assertSame( array( array( $post_id, 'https://remote.example/stamps/1' ) ), $authorized );
 	}
 
 	/**

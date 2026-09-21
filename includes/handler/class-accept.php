@@ -127,7 +127,14 @@ class Accept {
 		}
 
 		// Fetches the quoted object, so it runs after the free checks above.
-		if ( ! self::quoted_author_matches( $accept, $quoted_uri ) ) {
+		$quoted = Http::get_remote_object( $quoted_uri );
+
+		if ( \is_wp_error( $quoted ) || empty( $quoted['attributedTo'] ) ) {
+			return;
+		}
+
+		// Only the quoted object's author may answer our QuoteRequest.
+		if ( ! is_same_actor( $accept['actor'] ?? '', $quoted['attributedTo'] ) ) {
 			return;
 		}
 
@@ -142,7 +149,8 @@ class Accept {
 			\is_wp_error( $stamp ) ||
 			'QuoteAuthorization' !== ( $stamp['type'] ?? '' ) ||
 			object_to_uri( $stamp['interactingObject'] ?? '' ) !== get_object_id( $post ) ||
-			object_to_uri( $stamp['interactionTarget'] ?? '' ) !== $quoted_uri ||
+			// The stored URL is what the author pasted into the block; the stamp names the canonical object id.
+			! \in_array( object_to_uri( $stamp['interactionTarget'] ?? '' ), array( $quoted_uri, object_to_uri( $quoted['id'] ?? '' ) ), true ) ||
 			! is_same_actor( $stamp['attributedTo'] ?? '', $accept['actor'] ?? '' )
 		) {
 			/**
@@ -173,30 +181,6 @@ class Accept {
 		 * @param array  $accept    The Accept activity.
 		 */
 		\do_action( 'activitypub_quote_authorized', $post->ID, $stamp_uri, $accept );
-	}
-
-	/**
-	 * Only the quoted object's author may answer our QuoteRequest.
-	 *
-	 * @since unreleased
-	 *
-	 * @param array  $accept     The activity-object.
-	 * @param string $quoted_uri The quoted object URI.
-	 *
-	 * @return bool True if the sender is the quoted author.
-	 */
-	private static function quoted_author_matches( $accept, $quoted_uri ) {
-		if ( ! $quoted_uri ) {
-			return false;
-		}
-
-		$quoted = Http::get_remote_object( $quoted_uri );
-
-		if ( \is_wp_error( $quoted ) || empty( $quoted['attributedTo'] ) ) {
-			return false;
-		}
-
-		return is_same_actor( $accept['actor'] ?? '', $quoted['attributedTo'] );
 	}
 
 	/**
