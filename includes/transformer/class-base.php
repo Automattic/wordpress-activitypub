@@ -176,9 +176,9 @@ abstract class Base {
 	 * @return Base_Object The ActivityPub Object.
 	 */
 	protected function set_audience( $activity_object ) {
-		$public     = 'https://www.w3.org/ns/activitystreams#Public';
-		$followers  = null;
-		$replied_to = null;
+		$public             = 'https://www.w3.org/ns/activitystreams#Public';
+		$followers          = null;
+		$referenced_authors = array();
 
 		$actor = Actors::get_by_resource( $this->get_attributed_to() );
 		if ( ! \is_wp_error( $actor ) ) {
@@ -187,29 +187,34 @@ abstract class Base {
 
 		$mentions = \array_values( $this->get_mentions() );
 
-		if ( $this->get_in_reply_to() ) {
-			$object = Http::get_remote_object( $this->get_in_reply_to() );
+		$referenced   = (array) $this->get_in_reply_to();
+		$referenced[] = $this->get_quote();
+
+		// The authors of the replied-to and the quoted object are addressed like mentions.
+		foreach ( \array_filter( $referenced ) as $uri ) {
+			$object = Http::get_remote_object( $uri );
 			if ( $object && ! \is_wp_error( $object ) && isset( $object['attributedTo'] ) ) {
-				$replied_to = array( object_to_uri( $object['attributedTo'] ) );
+				$referenced_authors[] = object_to_uri( $object['attributedTo'] );
 			}
 		}
+		$referenced_authors = $referenced_authors ? \array_values( \array_unique( $referenced_authors ) ) : null;
 
 		switch ( $this->get_content_visibility() ) {
 			case ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC:
 				$activity_object->add_to( $public );
 				$activity_object->add_cc( $followers );
 				$activity_object->add_cc( $mentions );
-				$activity_object->add_cc( $replied_to );
+				$activity_object->add_cc( $referenced_authors );
 				break;
 			case ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC:
 				$activity_object->add_to( $followers );
 				$activity_object->add_to( $mentions );
-				$activity_object->add_to( $replied_to );
+				$activity_object->add_to( $referenced_authors );
 				$activity_object->add_cc( $public );
 				break;
 			case ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE:
 				$activity_object->add_to( $mentions );
-				$activity_object->add_to( $replied_to );
+				$activity_object->add_to( $referenced_authors );
 		}
 
 		return $activity_object;
@@ -403,6 +408,17 @@ abstract class Base {
 	 * @return string|array|null The in reply to.
 	 */
 	protected function get_in_reply_to() {
+		return null;
+	}
+
+	/**
+	 * Returns the URI of the quoted object.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string|null The quoted object URI or null if the item is not a quote post.
+	 */
+	public function get_quote() {
 		return null;
 	}
 
