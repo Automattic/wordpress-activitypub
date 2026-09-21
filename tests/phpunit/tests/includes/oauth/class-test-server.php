@@ -13,6 +13,8 @@ use Activitypub\OAuth\Server;
 use Activitypub\OAuth\Token;
 use Activitypub\Post_Types;
 
+require_once AP_TESTS_DIR . '/includes/functions-login-page-stubs.php';
+
 /**
  * Test class for OAuth Server.
  *
@@ -292,5 +294,59 @@ class Test_Server extends \WP_UnitTestCase {
 		$this->assertWPError( $result );
 		$this->assertSame( 'activitypub_oauth_not_allowed', $result->get_error_code() );
 		$this->assertSame( 403, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * The authorization form provides a logout URL that keeps the OAuth request.
+	 *
+	 * The request parameters must survive the logout round trip exactly, even
+	 * when they carry reserved characters.
+	 *
+	 * @covers ::render_authorize_form
+	 */
+	public function test_authorize_form_logout_url_preserves_request() {
+		\wp_set_current_user( $this->user_id );
+
+		$state = 'abc&def+ghi?jkl/xyz';
+
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Simulated authorization request.
+		$original_get = $_GET;
+		$get_params   = array(
+			'client_id'             => $this->client_id,
+			'redirect_uri'          => 'https://example.com/callback',
+			'scope'                 => 'read',
+			'state'                 => $state,
+			'code_challenge'        => 'challenge',
+			'code_challenge_method' => 'S256',
+		);
+		$_GET         = $get_params;
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+		$method = new \ReflectionMethod( Server::class, 'render_authorize_form' );
+		$method->setAccessible( true );
+
+		ob_start();
+		$method->invoke( null );
+		$output = ob_get_clean();
+		$_GET   = $original_get;
+
+		$form_url = \add_query_arg(
+			\array_merge( array( 'action' => 'activitypub_authorize' ), \array_map( 'rawurlencode', $get_params ) ),
+			\wp_login_url()
+		);
+
+		$this->assertStringContainsString( 'Not you? Log in as a different user.', $output );
+		$this->assertStringContainsString( 'href="' . \esc_url( \wp_logout_url( $form_url ) ) . '"', $output );
+
+		// Walk the logout link the way a browser does: read the target, then its query.
+		$this->assertSame( 1, \preg_match( '/<a href="([^"]+)">\s*Not you\?/', $output, $matches ) );
+
+		\parse_str( (string) \wp_parse_url( \html_entity_decode( $matches[1], \ENT_QUOTES ), \PHP_URL_QUERY ), $logout_query );
+		$this->assertArrayHasKey( 'redirect_to', $logout_query );
+
+		\parse_str( (string) \wp_parse_url( $logout_query['redirect_to'], \PHP_URL_QUERY ), $form_query );
+
+		$expected = \array_merge( array( 'action' => 'activitypub_authorize' ), $get_params );
+		$this->assertSame( $expected, $form_query, 'Every OAuth parameter must survive the logout round trip.' );
 	}
 }

@@ -780,4 +780,45 @@ class Test_Sanitize extends \WP_UnitTestCase {
 		$this->assertStringNotContainsString( '<span', $sanitized );
 		$this->assertStringContainsString( '>https://example.com/blog/what-exactly-is-a-permalink/</a>', $sanitized );
 	}
+
+	/**
+	 * Test attachment_id accepts an image attachment.
+	 *
+	 * @covers ::attachment_id
+	 */
+	public function test_attachment_id_accepts_image() {
+		$attachment_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		$this->assertSame( $attachment_id, Sanitize::attachment_id( $attachment_id ) );
+	}
+
+	/**
+	 * Test attachment_id rejects a non-image attachment.
+	 *
+	 * @covers ::attachment_id
+	 */
+	public function test_attachment_id_rejects_non_image() {
+		$attachment_id = self::factory()->attachment->create( array( 'post_mime_type' => 'text/plain' ) );
+
+		$this->assertSame( 0, Sanitize::attachment_id( $attachment_id ) );
+	}
+
+	/**
+	 * Test attachment_id rejects a non-existent attachment ID.
+	 *
+	 * @covers ::attachment_id
+	 */
+	public function test_attachment_id_rejects_non_existent_id() {
+		$this->assertSame( 0, Sanitize::attachment_id( 999999 ) );
+	}
+
+	/**
+	 * Test attachment_id rejects garbage strings.
+	 *
+	 * @covers ::attachment_id
+	 */
+	public function test_attachment_id_rejects_garbage_strings() {
+		$this->assertSame( 0, Sanitize::attachment_id( 'not-a-number' ) );
+		$this->assertSame( 0, Sanitize::attachment_id( '' ) );
+	}
 }
