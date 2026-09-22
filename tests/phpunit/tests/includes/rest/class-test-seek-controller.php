@@ -427,27 +427,36 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 	}
 
 	/**
-	 * A HEAD seek is challenged whether or not Authorized Fetch is on.
+	 * A HEAD seek is answered like the GET of the same URL.
 	 *
 	 * The HEAD short-circuit in verify_signature() lets caches probe public endpoints unsigned, but a
-	 * seek carries an `item` whose 307/Location leaks a per-actor membership and position. That leak
-	 * does not depend on the setting, so an anonymous HEAD seek is challenged (401) either way.
+	 * seek answers with a Location that a bare probe does not, so it takes the read path instead:
+	 * challenged under Authorized Fetch, and served anonymously without it, exactly as a GET is.
 	 *
 	 * @covers \Activitypub\Rest\Followers_Controller::verify_signature
 	 */
-	public function test_head_seek_is_always_challenged() {
-		foreach ( array( '1', '0' ) as $authorized_fetch ) {
-			\update_option( 'activitypub_authorized_fetch', $authorized_fetch );
+	public function test_head_seek_follows_the_read_rules() {
+		\update_option( 'activitypub_authorized_fetch', '1' );
 
-			$request = new \WP_REST_Request( 'HEAD', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
-			$request->set_param( 'item', 'https://example.org/actor/13' );
+		$request = new \WP_REST_Request( 'HEAD', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
+		$request->set_param( 'item', 'https://example.org/actor/13' );
 
-			$response = rest_get_server()->dispatch( $request );
+		$response = rest_get_server()->dispatch( $request );
 
-			\delete_option( 'activitypub_authorized_fetch' );
+		\delete_option( 'activitypub_authorized_fetch' );
 
-			$this->assertEquals( 401, $response->get_status(), "A HEAD seek must be challenged with authorized fetch set to $authorized_fetch." );
-		}
+		$this->assertEquals( 401, $response->get_status(), 'A HEAD seek must be challenged under Authorized Fetch.' );
+
+		// Without it, the GET of the same URL is public, so the HEAD must resolve to the same page.
+		$head = rest_get_server()->dispatch( $request );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
+		$request->set_param( 'item', 'https://example.org/actor/13' );
+
+		$get = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 307, $head->get_status() );
+		$this->assertSame( $get->get_headers()['Location'], $head->get_headers()['Location'] );
 	}
 
 	/**

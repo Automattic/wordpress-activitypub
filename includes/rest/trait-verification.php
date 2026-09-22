@@ -47,11 +47,9 @@ trait Verification {
 	public function verify_signature( $request, $force_signature = false ) {
 		/*
 		 * The HEAD short-circuit exists so caches and link-checkers can probe public endpoints
-		 * without a signature. A seek request carries an `item` and its 307/Location response leaks
-		 * a per-actor membership/position, so it must not ride the bypass. Falling through means a
-		 * signature is then required whatever Authorized Fetch is set to, because the check below
-		 * only exempts GET: for a HEAD seek that is deliberate, since the leak does not depend on
-		 * the setting.
+		 * without a signature. A seek request carries an `item` and answers with a Location that a
+		 * bare probe does not, so it must not ride the bypass; it is answered like the GET of the
+		 * same URL instead, which is where its Location comes from.
 		 */
 		if ( 'HEAD' === $request->get_method() && ! $force_signature && null === $request->get_param( 'item' ) ) {
 			return true;
@@ -88,8 +86,12 @@ trait Verification {
 			return true;
 		}
 
-		// POST-Requests always have to be signed, GET-Requests only require a signature in secure mode or when forced.
-		if ( 'GET' !== $request->get_method() || use_authorized_fetch() || $force_signature ) {
+		/*
+		 * POSTs always have to be signed. Reads only require a signature in secure mode or when
+		 * forced: a HEAD reaching this point is a seek, and its Location is the one a GET of the same
+		 * URL hands out, so the two must be answered alike.
+		 */
+		if ( ! \in_array( $request->get_method(), array( 'GET', 'HEAD' ), true ) || use_authorized_fetch() || $force_signature ) {
 			$verified_key_id = Signature::verify_http_signature( $request );
 			if ( \is_wp_error( $verified_key_id ) ) {
 				return new \WP_Error(

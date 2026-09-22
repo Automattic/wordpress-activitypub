@@ -181,7 +181,7 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	 * @covers ::verify_signature
 	 */
 	public function test_verify_signature_delete_body_does_not_defer_head_seek() {
-		\delete_option( 'activitypub_authorized_fetch' );
+		\update_option( 'activitypub_authorized_fetch', '1' );
 
 		$request = new \WP_REST_Request( 'HEAD', '/activitypub/1.0/actors/1/followers' );
 		$request->set_header( 'Content-Type', 'application/activity+json' );
@@ -190,8 +190,36 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 
 		$result = $this->instance->verify_signature( $request );
 
+		\delete_option( 'activitypub_authorized_fetch' );
+
 		$this->assertWPError( $result );
 		$this->assertEquals( 'activitypub_signature_verification', $result->get_error_code() );
+		$this->assertEquals( 401, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Test a HEAD seek is answered like the GET of the same URL.
+	 *
+	 * The HEAD bypass is for bare probes; a seek answers with a Location, so it takes the read path
+	 * instead. Without Authorized Fetch that Location is public, so no signature is required.
+	 *
+	 * @covers ::verify_signature
+	 */
+	public function test_verify_signature_head_seek_follows_the_read_rules() {
+		\delete_option( 'activitypub_authorized_fetch' );
+
+		$request = new \WP_REST_Request( 'HEAD', '/activitypub/1.0/actors/1/followers' );
+		$request->set_param( 'item', 'https://remote.example/users/alice' );
+
+		$this->assertTrue( $this->instance->verify_signature( $request ), 'A HEAD seek must be answered like a GET when Authorized Fetch is off.' );
+
+		\update_option( 'activitypub_authorized_fetch', '1' );
+
+		$result = $this->instance->verify_signature( $request );
+
+		\delete_option( 'activitypub_authorized_fetch' );
+
+		$this->assertWPError( $result, 'A HEAD seek must be challenged under Authorized Fetch.' );
 		$this->assertEquals( 401, $result->get_error_data()['status'] );
 	}
 
