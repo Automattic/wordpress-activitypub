@@ -61,6 +61,7 @@ class Liked_Controller extends Actors_Controller {
 							'minimum'     => 1,
 							'maximum'     => 100,
 						),
+						'item'     => $this->get_seek_item_arg(),
 					),
 				),
 				'schema' => array( $this, 'get_item_schema' ),
@@ -85,6 +86,13 @@ class Liked_Controller extends Actors_Controller {
 		$page     = $request->get_param( 'page' );
 		$per_page = $request->get_param( 'per_page' );
 
+		$collection_id = get_rest_url_by_path( \sprintf( 'actors/%d/liked', $user_id ) );
+
+		$seek = $this->maybe_seek_item( $request, $collection_id );
+		if ( null !== $seek ) {
+			return $seek;
+		}
+
 		$liked_objects = $this->get_liked_object_ids( $user_id );
 
 		// Paginate the results.
@@ -93,7 +101,7 @@ class Liked_Controller extends Actors_Controller {
 
 		$response = array(
 			'@context'     => Base_Object::JSON_LD_CONTEXT,
-			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/liked', $user_id ) ),
+			'id'           => $collection_id,
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'actor'        => Actors::get_by_id( $user_id )->get_id(),
 			'type'         => 'OrderedCollection',
@@ -111,6 +119,20 @@ class Liked_Controller extends Actors_Controller {
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 
 		return $response;
+	}
+
+	/**
+	 * Get the position of an object in the liked collection.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string           $item    The ActivityPub object ID of the liked object.
+	 * @param \WP_REST_Request $request Full details about the request.
+	 *
+	 * @return int|false Zero-based index of the item, false when not found.
+	 */
+	public function get_item_index( $item, $request ) {
+		return \array_search( $item, $this->get_liked_object_ids( $request->get_param( 'user_id' ) ), true );
 	}
 
 	/**
@@ -153,9 +175,11 @@ class Liked_Controller extends Actors_Controller {
 			$args['author'] = $user_id;
 		}
 
-		$posts = \get_posts( $args );
+		$args['fields'] = 'ids';
 
-		\update_postmeta_cache( \wp_list_pluck( $posts, 'ID' ) );
+		$post_ids = \get_posts( $args );
+
+		\update_postmeta_cache( $post_ids );
 
 		/*
 		 * Walk newest-first. For each unique object ID, the first
@@ -166,9 +190,9 @@ class Liked_Controller extends Actors_Controller {
 		$seen  = array();
 		$liked = array();
 
-		foreach ( $posts as $post ) {
-			$object_id     = \get_post_meta( $post->ID, '_activitypub_object_id', true );
-			$activity_type = \get_post_meta( $post->ID, '_activitypub_activity_type', true );
+		foreach ( $post_ids as $post_id ) {
+			$object_id     = \get_post_meta( $post_id, '_activitypub_object_id', true );
+			$activity_type = \get_post_meta( $post_id, '_activitypub_activity_type', true );
 
 			if ( ! $object_id || isset( $seen[ $object_id ] ) ) {
 				continue;

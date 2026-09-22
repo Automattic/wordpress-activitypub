@@ -45,7 +45,13 @@ trait Verification {
 	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
 	 */
 	public function verify_signature( $request, $force_signature = false ) {
-		if ( 'HEAD' === $request->get_method() && ! $force_signature ) {
+		/*
+		 * The HEAD short-circuit exists so caches and link-checkers can probe public endpoints
+		 * without a signature. A seek request carries an `item` and answers with a Location that a
+		 * bare probe does not, so it must not ride the bypass; it is answered like the GET of the
+		 * same URL instead, which is where its Location comes from.
+		 */
+		if ( 'HEAD' === $request->get_method() && ! $force_signature && null === $request->get_param( 'item' ) ) {
 			return true;
 		}
 
@@ -80,8 +86,12 @@ trait Verification {
 			return true;
 		}
 
-		// POST-Requests always have to be signed, GET-Requests only require a signature in secure mode or when forced.
-		if ( 'GET' !== $request->get_method() || use_authorized_fetch() || $force_signature ) {
+		/*
+		 * POSTs always have to be signed. Reads only require a signature in secure mode or when
+		 * forced: a HEAD reaching this point is a seek, and its Location is the one a GET of the same
+		 * URL hands out, so the two must be answered alike.
+		 */
+		if ( ! \in_array( $request->get_method(), array( 'GET', 'HEAD' ), true ) || use_authorized_fetch() || $force_signature ) {
 			$verified_key_id = Signature::verify_http_signature( $request );
 			if ( \is_wp_error( $verified_key_id ) ) {
 				return new \WP_Error(
@@ -318,7 +328,24 @@ trait Verification {
 			return true;
 		}
 
-		// Ownership answers who the caller is; the scope answers what the caller was allowed to do with that identity.
-		return true === $this->verify_owner( $request ) && OAuth_Server::permits_scope( Scope::READ );
+		return $this->owner_may_read( $request );
+	}
+
+	/**
+	 * Whether the request comes from the actor's owner with permission to read.
+	 *
+	 * Ownership answers who the caller is; the scope answers what the caller was allowed to do with
+	 * that identity. An OAuth caller's identity is established from any valid bearer whatever it was
+	 * consented to, so reading owner-only material additionally requires the `read` scope. A
+	 * WordPress session is not scope-limited.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 * @return bool True if the owner may read owner-only material.
+	 */
+	protected function owner_may_read( $request ) {
+		// Cheap guard first: verify_owner() resolves the actor before reaching its own login check.
+		return \is_user_logged_in() && true === $this->verify_owner( $request ) && OAuth_Server::permits_scope( Scope::READ );
 	}
 }

@@ -189,7 +189,13 @@ class Http {
 			if ( ! $code ) {
 				$code = 0;
 			}
-			$response = new \WP_Error( $code, \__( 'Failed HTTP Request', 'activitypub' ), array( 'status' => $code ) );
+
+			if ( \is_wp_error( $response ) ) {
+				// A transport failure (DNS, TLS, a timeout) names itself and has no response code, and a WP_Error built with 0 carries no code or message at all, so keep the one it came with.
+				$response->add_data( array( 'status' => $code ) );
+			} else {
+				$response = new \WP_Error( $code, \__( 'Failed HTTP Request', 'activitypub' ), array( 'status' => $code ) );
+			}
 
 			/*
 			 * Cache errors to prevent repeated timeout waits, but never one reached via a

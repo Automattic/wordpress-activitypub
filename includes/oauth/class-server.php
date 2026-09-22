@@ -432,11 +432,16 @@ class Server {
 		$scopes       = Scope::validate( Scope::parse( $authorize_params['scope'] ) ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 
 		// Build form action URL.
+		// The values must be encoded: add_query_arg() does not encode them, so raw
+		// reserved characters in the OAuth params would break the query string.
 		// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$form_url = \add_query_arg(
-			\array_merge( array( 'action' => 'activitypub_authorize' ), $authorize_params ),
+			\array_merge( array( 'action' => 'activitypub_authorize' ), \array_map( 'rawurlencode', $authorize_params ) ),
 			\wp_login_url()
 		);
+
+		// Build the logout URL with the authorization request as the redirect target.
+		$logout_url = \wp_logout_url( $form_url ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
 
 		// Include the template.
 		include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-authorize.php'; // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- $authorize_params used in template.

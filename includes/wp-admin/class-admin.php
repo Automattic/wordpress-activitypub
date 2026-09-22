@@ -14,12 +14,14 @@ use Activitypub\Comment;
 use Activitypub\Moderation;
 use Activitypub\OAuth\Client;
 use Activitypub\OAuth\Token;
+use Activitypub\Sanitize;
 use Activitypub\Scheduler\Actor;
 use Activitypub\Tombstone;
 
 use function Activitypub\count_followers;
 use function Activitypub\get_content_visibility;
 use function Activitypub\is_user_type_disabled;
+use function Activitypub\site_icon;
 use function Activitypub\site_supports_blocks;
 use function Activitypub\user_can_activitypub;
 use function Activitypub\was_comment_received;
@@ -201,7 +203,7 @@ class Admin {
 	 */
 	public static function add_profile() {
 		\wp_enqueue_media();
-		\wp_enqueue_script( 'activitypub-header-image' );
+		\wp_enqueue_script( 'activitypub-media-picker' );
 
 		\wp_nonce_field( 'activitypub-user-settings', '_apnonce' );
 		\do_settings_sections( 'activitypub_user_settings' );
@@ -241,17 +243,13 @@ class Admin {
 			}
 		}
 
-		// User options that should be processed with `sanitize_text_field()`.
-		$text_field_user_options = array(
-			'activitypub_header_image',
-		);
+		// The header image must be an attachment ID that points to an image.
+		$header_image = isset( $_POST['activitypub_header_image'] ) ? Sanitize::attachment_id( \wp_unslash( $_POST['activitypub_header_image'] ) ) : 0; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized via Sanitize::attachment_id().
 
-		foreach ( $text_field_user_options as $option ) {
-			if ( ! empty( $_POST[ $option ] ) ) {
-				\update_user_option( $user_id, $option, \sanitize_text_field( \wp_unslash( $_POST[ $option ] ) ) );
-			} else {
-				\delete_user_option( $user_id, $option );
-			}
+		if ( $header_image ) {
+			\update_user_option( $user_id, 'activitypub_header_image', $header_image );
+		} else {
+			\delete_user_option( $user_id, 'activitypub_header_image' );
 		}
 
 		// User options that have a default value and therefore can't be empty (Empty triggers the default value).
@@ -277,14 +275,35 @@ class Admin {
 	 */
 	public static function enqueue_scripts( $hook_suffix ) {
 		\wp_register_script(
-			'activitypub-header-image',
+			'activitypub-media-picker',
 			\plugins_url(
-				'assets/js/activitypub-header-image.js',
+				'assets/js/activitypub-media-picker.js',
 				ACTIVITYPUB_PLUGIN_FILE
 			),
-			array( 'jquery' ),
+			array( 'jquery', 'wp-i18n' ),
 			ACTIVITYPUB_PLUGIN_VERSION,
 			false
+		);
+
+		/*
+		 * The fallback image shown when a custom avatar is removed. It is passed
+		 * through localized data instead of a data attribute to avoid
+		 * reinterpreting DOM text as a URL.
+		 */
+		\wp_localize_script(
+			'activitypub-media-picker',
+			'activitypubMediaPicker',
+			array(
+				'fallbackUrls' => array(
+					'activitypub-blog-avatar' => \esc_url_raw( site_icon()['url'] ),
+				),
+			)
+		);
+
+		\wp_set_script_translations(
+			'activitypub-media-picker',
+			'activitypub',
+			ACTIVITYPUB_PLUGIN_DIR . 'languages'
 		);
 
 		// Register and enqueue command palette integration.

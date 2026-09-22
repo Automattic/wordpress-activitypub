@@ -297,7 +297,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		$reply_link = Blocks::generate_reply_link( '', array( 'attrs' => array( 'url' => 'https://devs.live/notice/AQ8N0Xl57y8bUQAb6e' ) ) );
 
-		$this->assertSame( '<p class="ap-reply-mention"><a rel="mention ugc" href="https://devs.live/notice/AQ8N0Xl57y8bUQAb6e" title="tester@devs.live">@tester</a></p>', $reply_link );
+		$this->assertSame( '<p class="ap-reply-mention"><a rel="in-reply-to ugc" class="u-in-reply-to" href="https://devs.live/notice/AQ8N0Xl57y8bUQAb6e" title="tester@devs.live">@tester</a></p>', $reply_link );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', array( $this, 'filter_pleroma_object' ) );
 	}

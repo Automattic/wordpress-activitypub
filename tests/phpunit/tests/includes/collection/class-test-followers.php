@@ -642,6 +642,16 @@ class Test_Followers extends \WP_UnitTestCase {
 		);
 		$this->assertCount( 3, $inboxes, 'Should include blog user followers in dual mode.' );
 		$this->assertContains( self::$actors['sally@example.org']['inbox'], $inboxes, 'Should contain blog user inbox.' );
+
+		// A Move reaches every known inbox, like a Delete, so every server holding a copy of the actor learns where it went.
+		$inboxes = Followers::get_inboxes_for_activity(
+			'{"type":"Move"}',
+			$actor_id,
+			50,
+			0
+		);
+		$this->assertCount( 3, $inboxes, 'A Move should reach every known inbox.' );
+		$this->assertContains( self::$actors['sally@example.org']['inbox'], $inboxes, 'Should contain a non-follower inbox.' );
 	}
 
 	/**
