@@ -92,7 +92,9 @@ class Following_Controller extends Actors_Controller {
 		 */
 		\do_action( 'activitypub_rest_following_pre' );
 
-		$seek = $this->maybe_seek_item( $request, get_rest_url_by_path( \sprintf( 'actors/%d/following', $user_id ) ) );
+		$collection_id = get_rest_url_by_path( \sprintf( 'actors/%d/following', $user_id ) );
+
+		$seek = $this->maybe_seek_item( $request, $collection_id );
 		if ( null !== $seek ) {
 			return $seek;
 		}
@@ -105,7 +107,7 @@ class Following_Controller extends Actors_Controller {
 		$data = Following::query( $user_id, $per_page, $page, array( 'order' => \ucwords( $order ) ) );
 
 		$response = array(
-			'id'         => get_rest_url_by_path( \sprintf( 'actors/%d/following', $user_id ) ),
+			'id'         => $collection_id,
 			'generator'  => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'type'       => 'OrderedCollection',
 			'totalItems' => $data['total'],
@@ -169,8 +171,6 @@ class Following_Controller extends Actors_Controller {
 	 * @return int|false|\WP_Error Zero-based index of the item, false or WP_Error when not found.
 	 */
 	public function get_item_index( $item, $request ) {
-		global $wpdb;
-
 		if ( ! $this->show_social_graph( $request ) ) {
 			return false;
 		}
@@ -183,26 +183,32 @@ class Following_Controller extends Actors_Controller {
 		$user_id = $request->get_param( 'user_id' );
 		$order   = $request->get_param( 'order' );
 		$args    = array(
-			'fields' => 'ids',
-			'order'  => \ucwords( $order ),
+			'fields'  => 'ids',
+			'order'   => \ucwords( $order ),
+			// Both queries below only count rows, so the collection's sort is pure overhead here.
+			'orderby' => 'none',
 		);
 
 		// Confirm membership through the collection's own query before computing the index.
-		$membership = Following::query( $user_id, 1, null, \array_merge( $args, array( 'post__in' => array( $actor->ID ) ) ) );
-		if ( ! $membership['total'] ) {
+		$membership = Following::query(
+			$user_id,
+			1,
+			null,
+			\array_merge(
+				$args,
+				array(
+					'post__in'      => array( $actor->ID ),
+					'no_found_rows' => true,
+				)
+			)
+		);
+		if ( ! $membership['following'] ) {
 			return false;
-		}
-
-		// Posts sorting before the item: lower IDs for ascending order, higher IDs for descending.
-		if ( 'asc' === $order ) {
-			$where = $wpdb->prepare( " AND {$wpdb->posts}.ID < %d", $actor->ID );
-		} else {
-			$where = $wpdb->prepare( " AND {$wpdb->posts}.ID > %d", $actor->ID );
 		}
 
 		// Count the followed actors that sort before the item; that count is the item's zero-based index.
 		$preceding = $this->with_posts_where(
-			$where,
+			$this->get_preceding_by_id_where( $actor->ID, $order ),
 			static function () use ( $user_id, $args ) {
 				return Following::query( $user_id, 1, null, $args );
 			}

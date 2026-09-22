@@ -336,7 +336,7 @@ class Delete {
 		$route = $request->get_route();
 
 		// The carve-out is for inbox deliveries only: both the shared inbox and the per-actor inboxes end in `/inbox`.
-		if ( ! \str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE ) || ! \str_ends_with( $route, '/inbox' ) ) {
+		if ( ! \str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE . '/' ) || ! \str_ends_with( $route, '/inbox' ) ) {
 			return $defer;
 		}
 

@@ -212,7 +212,6 @@ class Seek_Controller extends \WP_REST_Controller {
 		 * non-seekable collection, so no membership is leaked.
 		 */
 		$defer = static function ( $deferred, $inner_request, $force_signature ) {
-			// Decide deterministically: defer for the dispatch, except on forced-signature routes.
 			return ! $force_signature;
 		};
 		// Latest priority, so a global defer filter (e.g. a local-dev __return_true) cannot reopen a forced route.

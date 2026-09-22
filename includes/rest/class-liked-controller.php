@@ -86,7 +86,9 @@ class Liked_Controller extends Actors_Controller {
 		$page     = $request->get_param( 'page' );
 		$per_page = $request->get_param( 'per_page' );
 
-		$seek = $this->maybe_seek_item( $request, get_rest_url_by_path( \sprintf( 'actors/%d/liked', $user_id ) ) );
+		$collection_id = get_rest_url_by_path( \sprintf( 'actors/%d/liked', $user_id ) );
+
+		$seek = $this->maybe_seek_item( $request, $collection_id );
 		if ( null !== $seek ) {
 			return $seek;
 		}
@@ -99,7 +101,7 @@ class Liked_Controller extends Actors_Controller {
 
 		$response = array(
 			'@context'     => Base_Object::JSON_LD_CONTEXT,
-			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/liked', $user_id ) ),
+			'id'           => $collection_id,
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'actor'        => Actors::get_by_id( $user_id )->get_id(),
 			'type'         => 'OrderedCollection',
@@ -130,9 +132,7 @@ class Liked_Controller extends Actors_Controller {
 	 * @return int|false Zero-based index of the item, false when not found.
 	 */
 	public function get_item_index( $item, $request ) {
-		$index = \array_search( $item, $this->get_liked_object_ids( $request->get_param( 'user_id' ) ), true );
-
-		return false === $index ? false : (int) $index;
+		return \array_search( $item, $this->get_liked_object_ids( $request->get_param( 'user_id' ) ), true );
 	}
 
 	/**

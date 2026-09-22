@@ -39,7 +39,7 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 	 */
 	private function assert_location_page( $expected, $location ) {
 		$params = array();
-		\wp_parse_str( (string) \wp_parse_url( $location, PHP_URL_QUERY ), $params );
+		\parse_str( (string) \wp_parse_url( $location, PHP_URL_QUERY ), $params );
 		$this->assertArrayHasKey( 'page', $params, 'Location must carry a page argument.' );
 		$this->assertSame( (string) $expected, (string) $params['page'] );
 	}
@@ -455,7 +455,7 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 			),
 		);
 
-		$public_post = self::factory()->post->create( \array_merge( $create, array( 'guid' => $public_id ) ) );
+		self::factory()->post->create( \array_merge( $create, array( 'guid' => $public_id ) ) );
 
 		$hidden = $create;
 		$hidden['meta_input']['activitypub_content_visibility'] = ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
@@ -468,8 +468,6 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 			$response = rest_get_server()->dispatch( $request );
 			$this->assertEquals( 401, $response->get_status(), "Unauthenticated seek of {$item} must ask to authenticate with 401." );
 		}
-
-		\wp_delete_post( $public_post, true );
 	}
 
 	/**
@@ -493,7 +491,7 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 			),
 		);
 
-		$public_post = self::factory()->post->create( \array_merge( $create, array( 'guid' => $public_id ) ) );
+		self::factory()->post->create( \array_merge( $create, array( 'guid' => $public_id ) ) );
 
 		$hidden = $create;
 		$hidden['meta_input']['activitypub_content_visibility'] = ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
@@ -509,9 +507,6 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 			$response = rest_get_server()->dispatch( $request );
 			$this->assertEquals( 404, $response->get_status(), "Authenticated non-owner seek of {$item} must return the uniform 404." );
 		}
-
-		\wp_set_current_user( 0 );
-		\wp_delete_post( $public_post, true );
 	}
 
 	/**

@@ -177,10 +177,7 @@ trait Collection {
 			 * hidden by the collection's visibility rules — collapses to a single 404 so the presence
 			 * of a specific item can never be inferred, per the seekItem spec.
 			 */
-			$data   = $index->get_error_data();
-			$status = \is_array( $data ) && isset( $data['status'] ) ? (int) $data['status'] : 0;
-
-			if ( 401 === $status ) {
+			if ( 401 === \rest_convert_error_to_response( $index )->get_status() ) {
 				return $index;
 			}
 
@@ -244,6 +241,28 @@ trait Collection {
 		\remove_filter( 'posts_where', $filter );
 
 		return $result;
+	}
+
+	/**
+	 * Build a WHERE clause matching the posts that sort before a cursor in ID order.
+	 *
+	 * Mirrors an `orderby` of ID, so the count of matching posts is the cursor's zero-based index.
+	 * Shared by the ID-ordered collections (followers, following).
+	 *
+	 * @since unreleased
+	 *
+	 * @param int    $id    The cursor post's ID.
+	 * @param string $order The collection's sort order, `asc` or `desc`.
+	 *
+	 * @return string Prepared SQL to append to a WHERE clause.
+	 */
+	private function get_preceding_by_id_where( $id, $order ) {
+		global $wpdb;
+
+		// Lower IDs sort before the cursor in ascending order, higher IDs in descending order.
+		$comparison = 'asc' === $order ? '<' : '>';
+
+		return $wpdb->prepare( " AND {$wpdb->posts}.ID {$comparison} %d", $id ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	}
 
 	/**

@@ -189,7 +189,9 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		 */
 		\do_action( 'activitypub_rest_inbox_pre', $request );
 
-		$seek = $this->maybe_seek_item( $request, get_rest_url_by_path( \sprintf( 'actors/%d/inbox', $user_id ) ) );
+		$collection_id = get_rest_url_by_path( \sprintf( 'actors/%d/inbox', $user_id ) );
+
+		$seek = $this->maybe_seek_item( $request, $collection_id );
 		if ( null !== $seek ) {
 			return $seek;
 		}
@@ -201,7 +203,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 
 		$response = array(
 			'@context'     => Base_Object::JSON_LD_CONTEXT,
-			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/inbox', $user_id ) ),
+			'id'           => $collection_id,
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'actor'        => $user->get_id(),
 			'type'         => 'OrderedCollection',
@@ -297,10 +299,8 @@ class Actors_Inbox_Controller extends Actors_Controller {
 	/**
 	 * Get the position of an activity in the inbox, under the collection's own query rules.
 	 *
-	 * The inbox route requires authentication, so unlike the outbox this method needs no seek gate
-	 * of its own: a non-owner is already refused before it runs — unauthenticated with 401, and an
-	 * authenticated non-owner with a 403 that Seek_Controller collapses to the uniform 404 so the
-	 * seek discloses no membership. Any new seek surface must preserve that 403 → 404 collapse.
+	 * The inbox route's permission callback already refuses a non-owner, so unlike the outbox this
+	 * method needs no seek gate of its own.
 	 *
 	 * @since unreleased
 	 *
@@ -318,11 +318,20 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		$args                   = $this->get_query_args( $request );
 		$args['fields']         = 'ids';
 		$args['posts_per_page'] = 1;
+		$args['orderby']        = 'none'; // Both queries below only count rows, so the collection's sort is pure overhead.
 		unset( $args['paged'] );
 
 		// Confirm the item is part of this inbox before computing the index.
-		$membership = new \WP_Query( \array_merge( $args, array( 'post__in' => array( $inbox_item->ID ) ) ) );
-		if ( ! $membership->found_posts ) {
+		$membership = new \WP_Query(
+			\array_merge(
+				$args,
+				array(
+					'post__in'      => array( $inbox_item->ID ),
+					'no_found_rows' => true,
+				)
+			)
+		);
+		if ( ! $membership->posts ) {
 			return false;
 		}
 

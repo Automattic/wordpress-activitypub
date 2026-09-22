@@ -155,7 +155,9 @@ class Outbox_Controller extends \WP_REST_Controller {
 		 */
 		\do_action( 'activitypub_rest_outbox_pre', $request );
 
-		$seek = $this->maybe_seek_item( $request, get_rest_url_by_path( \sprintf( 'actors/%d/outbox', $user_id ) ) );
+		$collection_id = get_rest_url_by_path( \sprintf( 'actors/%d/outbox', $user_id ) );
+
+		$seek = $this->maybe_seek_item( $request, $collection_id );
 		if ( null !== $seek ) {
 			return $seek;
 		}
@@ -166,7 +168,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 
 		$response = array(
 			'@context'     => Base_Object::JSON_LD_CONTEXT,
-			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/outbox', $user_id ) ),
+			'id'           => $collection_id,
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'actor'        => $user->get_id(),
 			'type'         => 'OrderedCollection',
@@ -232,13 +234,11 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * Shared by get_items() and get_item_index(), so the seek index is computed under the
 	 * exact same visibility rules as the collection itself.
 	 *
-	 * @param \WP_REST_Request $request  Full details about the request.
-	 * @param bool|null        $is_owner Optional. Whether the requester owns the outbox, when the
-	 *                                   caller already knows. Default null, which re-derives it.
+	 * @param \WP_REST_Request $request Full details about the request.
 	 *
 	 * @return array The WP_Query arguments.
 	 */
-	private function get_query_args( $request, $is_owner = null ) {
+	private function get_query_args( $request ) {
 		$user_id = $request->get_param( 'user_id' );
 
 		/**
@@ -273,7 +273,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 		 * Owners see private and non-public activity types; unauthenticated, federation, and
 		 * non-owner requests are limited to the public subset by the visibility filter below.
 		 */
-		$is_outbox_owner = null === $is_owner ? $this->owner_may_read( $request ) : $is_owner;
+		$is_outbox_owner = $this->owner_may_read( $request );
 
 		if ( ! $is_outbox_owner ) {
 			$args['meta_query'][] = array(
@@ -342,15 +342,23 @@ class Outbox_Controller extends \WP_REST_Controller {
 			return $outbox_item;
 		}
 
-		// Ownership is already established above, so the shared query builder need not re-derive it.
-		$args                   = $this->get_query_args( $request, true );
+		$args                   = $this->get_query_args( $request );
 		$args['fields']         = 'ids';
 		$args['posts_per_page'] = 1;
+		$args['orderby']        = 'none'; // Both queries below only count rows, so the collection's sort is pure overhead.
 		unset( $args['paged'] );
 
 		// Confirm the item is visible through the collection's own query before computing the index.
-		$membership = new \WP_Query( \array_merge( $args, array( 'post__in' => array( $outbox_item->ID ) ) ) );
-		if ( ! $membership->found_posts ) {
+		$membership = new \WP_Query(
+			\array_merge(
+				$args,
+				array(
+					'post__in'      => array( $outbox_item->ID ),
+					'no_found_rows' => true,
+				)
+			)
+		);
+		if ( ! $membership->posts ) {
 			return false;
 		}
 
