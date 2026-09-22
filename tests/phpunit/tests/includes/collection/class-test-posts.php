@@ -312,6 +312,127 @@ class Test_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test a reply URL cannot break out of the Reply block comment.
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_reply_escapes_reply_url() {
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$activity = array(
+			'object' => array(
+				'type'      => 'Note',
+				'content'   => '<p>A reply.</p>',
+				'inReplyTo' => 'https://example.social/@alice/1234--><script>alert(1)</script>',
+			),
+		);
+
+		$post = Posts::create( $activity, $user_id );
+
+		$this->assertInstanceOf( '\WP_Post', $post );
+		$this->assertStringNotContainsString( '<script>', $post->post_content );
+
+		$blocks = \parse_blocks( $post->post_content );
+		$this->assertSame( 'activitypub/reply', $blocks[0]['blockName'] );
+		$this->assertSame( 'https://example.social/@alice/1234--scriptalert(1)/script', $blocks[0]['attrs']['url'] );
+	}
+
+	/**
+	 * Test updating a reply without inReplyTo keeps the stored Reply block.
+	 *
+	 * @covers ::update
+	 */
+	public function test_update_keeps_reply_block() {
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$activity = array(
+			'object' => array(
+				'type'      => 'Note',
+				'content'   => '<p>A reply.</p>',
+				'inReplyTo' => 'https://example.social/@alice/1234',
+			),
+		);
+
+		$post = Posts::create( $activity, $user_id );
+		$this->assertInstanceOf( '\WP_Post', $post );
+
+		$update_activity = array(
+			'object' => array(
+				'type'    => 'Note',
+				'content' => '<p>An edited reply.</p>',
+			),
+		);
+
+		$updated = Posts::update( $post, $update_activity );
+
+		$this->assertInstanceOf( '\WP_Post', $updated );
+		$this->assertStringStartsWith( '<!-- wp:activitypub/reply {"url":"https://example.social/@alice/1234"} /-->', $updated->post_content );
+		$this->assertStringContainsString( 'An edited reply.', $updated->post_content );
+	}
+
+	/**
+	 * Test updating with inReplyTo replaces the stored Reply block.
+	 *
+	 * @covers ::update
+	 */
+	public function test_update_replaces_reply_block() {
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$activity = array(
+			'object' => array(
+				'type'      => 'Note',
+				'content'   => '<p>A reply.</p>',
+				'inReplyTo' => 'https://example.social/@alice/1234',
+			),
+		);
+
+		$post = Posts::create( $activity, $user_id );
+		$this->assertInstanceOf( '\WP_Post', $post );
+
+		$update_activity = array(
+			'object' => array(
+				'type'      => 'Note',
+				'content'   => '<p>A reply to someone else.</p>',
+				'inReplyTo' => 'https://example.social/@bob/5678',
+			),
+		);
+
+		$updated = Posts::update( $post, $update_activity );
+
+		$this->assertInstanceOf( '\WP_Post', $updated );
+		$this->assertStringStartsWith( '<!-- wp:activitypub/reply {"url":"https://example.social/@bob/5678"} /-->', $updated->post_content );
+		$this->assertSame( 1, \substr_count( $updated->post_content, 'wp:activitypub/reply' ) );
+	}
+
+	/**
+	 * Test updating a non-reply post does not add a Reply block.
+	 *
+	 * @covers ::update
+	 */
+	public function test_update_without_reply_has_no_reply_block() {
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$activity = array(
+			'object' => array(
+				'type'    => 'Note',
+				'content' => '<p>Not a reply.</p>',
+			),
+		);
+
+		$post = Posts::create( $activity, $user_id );
+		$this->assertInstanceOf( '\WP_Post', $post );
+
+		$updated = Posts::update(
+			$post,
+			array(
+				'object' => array(
+					'type'    => 'Note',
+					'content' => '<p>Still not a reply.</p>',
+				),
+			)
+		);
+
+		$this->assertInstanceOf( '\WP_Post', $updated );
+		$this->assertStringNotContainsString( 'wp:activitypub/reply', $updated->post_content );
+	}
+
+	/**
 	 * Test creating a post with a content warning (sensitive=true + summary).
 	 *
 	 * @covers ::create

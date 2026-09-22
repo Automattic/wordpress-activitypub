@@ -79,7 +79,7 @@ class Posts {
 
 		// The Reply block is what makes Transformer\Post::get_in_reply_to() emit inReplyTo.
 		if ( ! empty( $object['inReplyTo'] ) ) {
-			$content = '<!-- wp:activitypub/reply ' . \wp_json_encode( array( 'url' => object_to_uri( $object['inReplyTo'] ) ), JSON_UNESCAPED_SLASHES ) . ' /-->' . "\n" . $content;
+			$content = self::reply_block( object_to_uri( $object['inReplyTo'] ) ) . $content;
 		}
 
 		// Use name as title for Articles, or generate from content for Notes.
@@ -153,6 +153,22 @@ class Posts {
 		// Process content: autop, autolink, hashtags, and convert to blocks.
 		$content = self::prepare_content( $content );
 
+		$in_reply_to = ! empty( $object['inReplyTo'] ) ? object_to_uri( $object['inReplyTo'] ) : '';
+
+		// The reply target only lives in the stored Reply block, so an Update without inReplyTo keeps it.
+		if ( ! $in_reply_to ) {
+			foreach ( \parse_blocks( $post->post_content ) as $block ) {
+				if ( 'activitypub/reply' === $block['blockName'] && ! empty( $block['attrs']['url'] ) ) {
+					$in_reply_to = $block['attrs']['url'];
+					break;
+				}
+			}
+		}
+
+		if ( $in_reply_to ) {
+			$content = self::reply_block( $in_reply_to ) . $content;
+		}
+
 		// Use name as title for Articles, or generate from content for Notes.
 		$title = $name;
 		if ( empty( $title ) && ! empty( $content ) ) {
@@ -195,6 +211,20 @@ class Posts {
 	 */
 	public static function delete( $post_id ) {
 		return \wp_trash_post( $post_id );
+	}
+
+	/**
+	 * Serialize a Reply block for the given URL.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $url The URL of the object being replied to.
+	 *
+	 * @return string The block markup, followed by a newline.
+	 */
+	private static function reply_block( $url ) {
+		// Stripping angle brackets keeps a URL containing `-->` from closing the block comment early.
+		return '<!-- wp:activitypub/reply ' . \wp_json_encode( array( 'url' => \esc_url_raw( $url ) ), JSON_UNESCAPED_SLASHES ) . ' /-->' . "\n";
 	}
 
 	/**

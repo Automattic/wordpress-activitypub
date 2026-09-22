@@ -1008,6 +1008,87 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 	}
 
 	/**
+	 * Test a C2S Update of a reply to a remote object still federates with inReplyTo.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_update_reply_to_remote_object_keeps_in_reply_to() {
+		$user = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+
+		$filter_remote_object = function ( $pre, $url ) {
+			if ( 'https://example.social/@alice/1234' === $url ) {
+				return array( 'attributedTo' => 'https://example.social/users/alice' );
+			} elseif ( 'https://example.social/users/alice' === $url ) {
+				return array(
+					'preferredUsername' => 'alice',
+					'url'               => 'https://example.social/users/alice',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object, 10, 2 );
+
+		\wp_set_current_user( self::$user_id );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'   => 'Create',
+					'actor'  => $user->get_id(),
+					'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+					'object' => array(
+						'type'      => 'Note',
+						'content'   => 'A reply to a remote post.',
+						'inReplyTo' => 'https://example.social/@alice/1234',
+					),
+				)
+			)
+		);
+
+		$response = \rest_get_server()->dispatch( $request );
+		$this->assertEquals( 201, $response->get_status() );
+
+		$object_id = $response->get_data()['object']['id'];
+
+		// The Update carries only the edited content, as clients do.
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'   => 'Update',
+					'actor'  => $user->get_id(),
+					'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+					'object' => array(
+						'id'      => $object_id,
+						'type'    => 'Note',
+						'content' => 'An edited reply to a remote post.',
+					),
+				)
+			)
+		);
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );
+
+		$this->assertEquals( 201, $response->get_status() );
+
+		$response_data = $response->get_data();
+		$this->assertEquals( $object_id, $response_data['object']['id'] );
+		$this->assertEquals( 'https://example.social/@alice/1234', $response_data['object']['inReplyTo'] );
+		$this->assertStringContainsString( 'An edited reply to a remote post.', $response_data['object']['content'] );
+
+		$outbox_item = Outbox::get_by_object_id( $object_id, 'Update' );
+		$this->assertInstanceOf( 'WP_Post', $outbox_item );
+
+		$stored_activity = Outbox::get_activity( $outbox_item )->to_array();
+		$this->assertEquals( 'https://example.social/@alice/1234', $stored_activity['object']['inReplyTo'] );
+	}
+
+	/**
 	 * Test C2S POST creates Note with 'status' post format.
 	 *
 	 * When a client submits a Note via C2S, the created WordPress post
