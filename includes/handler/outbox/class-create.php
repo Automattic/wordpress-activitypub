@@ -14,6 +14,7 @@ use function Activitypub\is_activity_public;
 use function Activitypub\is_activity_reply;
 use function Activitypub\is_quote_activity;
 use function Activitypub\object_to_uri;
+use function Activitypub\site_supports_blocks;
 use function Activitypub\url_to_commentid;
 
 /**
@@ -63,6 +64,15 @@ class Create {
 			// Replies to local posts and comments become comments; everything else becomes a post.
 			if ( \url_to_postid( $in_reply_to ) || url_to_commentid( $in_reply_to ) ) {
 				return self::create_comment( $activity, $user_id );
+			}
+
+			// Without block support the Reply block is never read, so the reply would federate without its target.
+			if ( ! site_supports_blocks() ) {
+				return new \WP_Error(
+					'activitypub_reply_requires_blocks',
+					\__( 'Replies to posts on other servers need the block editor.', 'activitypub' ),
+					array( 'status' => 400 )
+				);
 			}
 		} elseif ( is_quote_activity( $activity ) ) {
 			// TODO: Handle quotes differently.

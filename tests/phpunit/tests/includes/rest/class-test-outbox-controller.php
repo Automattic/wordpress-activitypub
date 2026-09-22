@@ -993,6 +993,8 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		$object_id = $response_data['object']['id'];
 		$this->assertStringContainsString( '?p=', $object_id, 'Object ID should be a post permalink' );
 		$this->assertEquals( 'https://example.social/@alice/1234', $response_data['object']['inReplyTo'] );
+		// Quiet-public (to: alice, cc: Public) must keep alice addressed on the created object.
+		$this->assertContains( 'https://example.social/users/alice', (array) $response_data['object']['to'] );
 
 		$outbox_item = Outbox::get_by_object_id( $object_id, 'Create' );
 		$this->assertInstanceOf( 'WP_Post', $outbox_item );

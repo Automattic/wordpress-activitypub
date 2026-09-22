@@ -164,6 +164,76 @@ class Test_Create extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test outgoing reply to a remote object errors when the site has no block support.
+	 *
+	 * Without block support the Reply block is never read back, so the reply
+	 * would federate without its `inReplyTo` target.
+	 *
+	 * @covers ::handle_create
+	 */
+	public function test_outgoing_reply_to_remote_url_requires_block_support() {
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$activity = array(
+			'type'   => 'Create',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'type'      => 'Note',
+				'content'   => 'A reply.',
+				'inReplyTo' => 'https://example.com/note/123',
+			),
+		);
+
+		$comment_count_before = \get_comments( array( 'count' => true ) );
+		$post_count_before    = \wp_count_posts()->publish;
+
+		\add_filter( 'activitypub_site_supports_blocks', '__return_false' );
+
+		$result = Create::handle_create( $activity, $user_id );
+
+		\remove_filter( 'activitypub_site_supports_blocks', '__return_false' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_reply_requires_blocks', $result->get_error_code() );
+		$this->assertEquals( $comment_count_before, \get_comments( array( 'count' => true ) ) );
+		$this->assertEquals( $post_count_before, \wp_count_posts()->publish );
+	}
+
+	/**
+	 * Test outgoing reply to a local post still becomes a comment without block support.
+	 *
+	 * The block-support requirement only applies to replies that need to
+	 * become posts; local replies are stored as comments regardless.
+	 *
+	 * @covers ::handle_create
+	 */
+	public function test_outgoing_reply_to_local_post_ignores_block_support_gate() {
+		\remove_action( 'wp_insert_comment', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity_on_insert' ) );
+
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$post_id  = self::factory()->post->create( array( 'post_author' => $user_id ) );
+		$activity = array(
+			'type'   => 'Create',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'type'      => 'Note',
+				'content'   => '<p>This is a reply.</p>',
+				'inReplyTo' => \get_permalink( $post_id ),
+			),
+		);
+
+		\add_filter( 'activitypub_site_supports_blocks', '__return_false' );
+
+		$result = Create::handle_create( $activity, $user_id );
+
+		\remove_filter( 'activitypub_site_supports_blocks', '__return_false' );
+
+		$this->assertInstanceOf( 'WP_Comment', $result );
+		$this->assertEquals( $post_id, (int) $result->comment_post_ID );
+
+		\add_action( 'wp_insert_comment', array( \Activitypub\Scheduler\Comment::class, 'schedule_comment_activity_on_insert' ), 10, 2 );
+	}
+
+	/**
 	 * Test outgoing invalid (non-array) object returns WP_Error.
 	 *
 	 * @covers ::handle_create
