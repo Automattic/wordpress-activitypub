@@ -10,6 +10,7 @@
  * @var Activitypub\OAuth\Client $client           The client object.
  * @var array                    $authorize_params OAuth request parameters (client_id, redirect_uri, scope, state, code_challenge, code_challenge_method).
  * @var string                   $form_url         The form action URL.
+ * @var string                   $logout_url       The logout URL.
  */
 
 // phpcs:disable VariableAnalysis.CodeAnalysis.VariableAnalysis.UndefinedVariable -- Variables passed via include.
@@ -78,6 +79,11 @@ login_header(
 			array( 'strong' => array() )
 		);
 		?>
+		</p>
+		<p>
+			<a href="<?php echo esc_url( $logout_url ); ?>">
+				<?php esc_html_e( 'Not you? Log in as a different user.', 'activitypub' ); ?>
+			</a>
 		</p>
 	</div>
 
