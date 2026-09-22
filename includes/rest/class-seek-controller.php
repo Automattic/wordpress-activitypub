@@ -15,9 +15,11 @@ use function Activitypub\is_same_domain;
  * ActivityPub Seek_Controller class.
  *
  * Implements the seekItem collection extension: resolves the collection page containing a
- * given item and redirects to it. The endpoint dispatches an internal REST request to the
- * collection itself with the `item` parameter set, so the page resolution lives with each
- * collection and every current and future collection is reachable through one endpoint.
+ * given item and redirects to it. Each collection resolves its own pages, so this endpoint
+ * exists for what a collection route cannot do on its own: it is one discovery URL that stays
+ * the same whatever filtering arguments a client varies, and it is the only place a collection's
+ * permission callback can be refused before the handler runs, which is what lets an
+ * authenticated-but-not-authorized request collapse into the uniform 404 the spec asks for.
  *
  * @see https://swicg.github.io/activitypub-api/seekitem
  *
@@ -237,7 +239,7 @@ class Seek_Controller extends \WP_REST_Controller {
 		 * client to authenticate. Everything else — an authenticated-but-not-authorized request, or
 		 * the collection's own item-not-found — collapses to a single 404, per the seekItem spec.
 		 */
-		if ( \in_array( $response->get_status(), array( 307, 308, 401 ), true ) ) {
+		if ( \in_array( $response->get_status(), array( 307, 401 ), true ) ) {
 			return $response;
 		}
 
