@@ -79,7 +79,7 @@ class Posts {
 
 		// The Reply block is what makes Transformer\Post::get_in_reply_to() emit inReplyTo.
 		if ( ! empty( $object['inReplyTo'] ) ) {
-			$content = '<!-- wp:activitypub/reply ' . \wp_json_encode( array( 'url' => object_to_uri( $object['inReplyTo'] ) ) ) . ' /-->' . "\n" . $content;
+			$content = '<!-- wp:activitypub/reply ' . \wp_json_encode( array( 'url' => object_to_uri( $object['inReplyTo'] ) ), JSON_UNESCAPED_SLASHES ) . ' /-->' . "\n" . $content;
 		}
 
 		// Use name as title for Articles, or generate from content for Notes.
@@ -106,15 +106,21 @@ class Posts {
 			),
 		);
 
+		$set_status_format = static function ( $post_id ) {
+			\set_post_format( $post_id, 'status' );
+		};
+
+		// The scheduler serializes the Create on this hook at priority 33; the format must be set before that.
+		if ( 'Note' === $object_type ) {
+			\add_action( 'wp_after_insert_post', $set_status_format, 10 );
+		}
+
 		$post_id = \wp_insert_post( $post_data, true );
+
+		\remove_action( 'wp_after_insert_post', $set_status_format, 10 );
 
 		if ( \is_wp_error( $post_id ) ) {
 			return $post_id;
-		}
-
-		// Set post format to 'status' for Notes so the transformer maps it back correctly.
-		if ( 'Note' === $object_type ) {
-			\set_post_format( $post_id, 'status' );
 		}
 
 		return \get_post( $post_id );

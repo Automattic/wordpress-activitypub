@@ -999,6 +999,10 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		$outbox_item = Outbox::get_by_object_id( $object_id, 'Create' );
 		$this->assertInstanceOf( 'WP_Post', $outbox_item );
 
+		// The format must be set before the scheduler serializes the Create, or it federates as an Article.
+		$stored_activity = Outbox::get_activity( $outbox_item )->to_array();
+		$this->assertSame( 'Note', $stored_activity['object']['type'] );
+
 		// No comment should have been created for a reply to a remote object.
 		$this->assertEquals( $comment_count_before, \get_comments( array( 'count' => true ) ) );
 	}
@@ -1043,6 +1047,12 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 			$post_id = \url_to_postid( $object['id'] );
 			$this->assertGreaterThan( 0, $post_id, 'Should find a post from the object ID.' );
 			$this->assertSame( 'status', \get_post_format( $post_id ), 'Note should have status post format.' );
+
+			// The format must be set before the scheduler serializes the Create, or it federates as an Article.
+			$outbox_item = Outbox::get_by_object_id( $object['id'], 'Create' );
+			$this->assertInstanceOf( 'WP_Post', $outbox_item );
+			$stored_activity = Outbox::get_activity( $outbox_item )->to_array();
+			$this->assertSame( 'Note', $stored_activity['object']['type'] );
 		}
 	}
 
