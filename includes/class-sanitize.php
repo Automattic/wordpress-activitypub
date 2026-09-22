@@ -259,6 +259,21 @@ class Sanitize {
 	}
 
 	/**
+	 * Sanitize an attachment ID that must point to an image. Returns 0 for anything else.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int|string $value The value to sanitize.
+	 *
+	 * @return int The sanitized attachment ID.
+	 */
+	public static function attachment_id( $value ) {
+		$id = \absint( $value );
+
+		return $id && \wp_attachment_is_image( $id ) ? $id : 0;
+	}
+
+	/**
 	 * Remove elements whose inner text is noise on its own.
 	 *
 	 * Used by {@see Sanitize::clean_html()}:
