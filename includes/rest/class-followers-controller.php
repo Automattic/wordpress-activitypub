@@ -73,6 +73,7 @@ class Followers_Controller extends Actors_Controller {
 							'default'     => 'simple',
 							'enum'        => array( 'simple', 'full' ),
 						),
+						'item'     => $this->get_seek_item_arg(),
 					),
 				),
 				'schema' => array( $this, 'get_item_schema' ),
@@ -187,6 +188,13 @@ class Followers_Controller extends Actors_Controller {
 		 */
 		\do_action( 'activitypub_rest_followers_pre' );
 
+		$collection_id = get_rest_url_by_path( \sprintf( 'actors/%d/followers', $user_id ) );
+
+		$seek = $this->maybe_seek_item( $request, $collection_id );
+		if ( null !== $seek ) {
+			return $seek;
+		}
+
 		$order    = $request->get_param( 'order' );
 		$per_page = $request->get_param( 'per_page' );
 		$page     = $request->get_param( 'page' ) ?? 1;
@@ -195,7 +203,7 @@ class Followers_Controller extends Actors_Controller {
 		$data = Followers::query( $user_id, $per_page, $page, array( 'order' => \ucwords( $order ) ) );
 
 		$response = array(
-			'id'         => get_rest_url_by_path( \sprintf( 'actors/%d/followers', $user_id ) ),
+			'id'         => $collection_id,
 			'generator'  => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'type'       => 'OrderedCollection',
 			'totalItems' => $data['total'],
@@ -233,6 +241,63 @@ class Followers_Controller extends Actors_Controller {
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 
 		return $response;
+	}
+
+	/**
+	 * Get the position of a follower in the collection, under the collection's own query rules.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string           $item    The ActivityPub actor ID of the follower.
+	 * @param \WP_REST_Request $request Full details about the request.
+	 *
+	 * @return int|false|\WP_Error Zero-based index of the item, false or WP_Error when not found.
+	 */
+	public function get_item_index( $item, $request ) {
+		if ( ! $this->show_social_graph( $request ) ) {
+			return false;
+		}
+
+		$actor = Remote_Actors::get_by_uri( $item );
+		if ( \is_wp_error( $actor ) ) {
+			return $actor;
+		}
+
+		$user_id = $request->get_param( 'user_id' );
+		$order   = $request->get_param( 'order' );
+		$args    = array(
+			'fields'  => 'ids',
+			'order'   => \ucwords( $order ),
+			// Both queries below only count rows, so the collection's sort is pure overhead here.
+			'orderby' => 'none',
+		);
+
+		// Confirm membership through the collection's own query before computing the index.
+		$membership = Followers::query(
+			$user_id,
+			1,
+			null,
+			\array_merge(
+				$args,
+				array(
+					'post__in'      => array( $actor->ID ),
+					'no_found_rows' => true,
+				)
+			)
+		);
+		if ( ! $membership['followers'] ) {
+			return false;
+		}
+
+		// Count the followers that sort before the item; that count is the item's zero-based index.
+		$preceding = $this->with_posts_where(
+			$this->get_preceding_by_id_where( $actor->ID, $order ),
+			static function () use ( $user_id, $args ) {
+				return Followers::query( $user_id, 1, null, $args );
+			}
+		);
+
+		return (int) $preceding['total'];
 	}
 
 	/**
