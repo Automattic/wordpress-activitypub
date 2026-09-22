@@ -222,6 +222,40 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 	}
 
 	/**
+	 * A collection with nothing to seek must not advertise the endpoint.
+	 *
+	 * @covers \Activitypub\Rest\Collection::prepare_collection_response
+	 */
+	public function test_empty_collection_does_not_advertise_seek() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		$response = rest_get_server()->dispatch( new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/followers' ) )->get_data();
+
+		$this->assertSame( 0, $response['totalItems'], 'This actor is expected to have no followers.' );
+		$this->assertArrayNotHasKey( 'seekItem', $response, 'A collection with no items has nothing to seek.' );
+	}
+
+	/**
+	 * The advertised collection must be the id the response itself carries, so a seek runs against
+	 * the collection the client is actually reading.
+	 *
+	 * @covers \Activitypub\Rest\Collection::prepare_collection_response
+	 */
+	public function test_advertised_collection_matches_the_response_id() {
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
+		$request->set_param( 'per_page', 5 );
+		$request->set_param( 'order', 'asc' );
+
+		$response = rest_get_server()->dispatch( $request )->get_data();
+
+		// parse_str() decodes the value, so this is the collection URL the seek endpoint will receive.
+		$params = array();
+		\parse_str( (string) \wp_parse_url( $response['seekItem'], PHP_URL_QUERY ), $params );
+
+		$this->assertSame( $response['id'], $params['collection'] );
+	}
+
+	/**
 	 * The seek endpoint declares its collection and item arguments.
 	 *
 	 * @covers ::register_routes

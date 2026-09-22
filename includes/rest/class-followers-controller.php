@@ -244,19 +244,6 @@ class Followers_Controller extends Actors_Controller {
 	}
 
 	/**
-	 * Whether the seek endpoint should be advertised on this collection.
-	 *
-	 * @since unreleased
-	 *
-	 * @param \WP_REST_Request $request The collection request.
-	 *
-	 * @return bool
-	 */
-	protected function can_advertise_seek( $request ) {
-		return $this->show_social_graph( $request );
-	}
-
-	/**
 	 * Get the position of a follower in the collection, under the collection's own query rules.
 	 *
 	 * @since unreleased

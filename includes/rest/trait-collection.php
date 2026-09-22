@@ -67,27 +67,6 @@ trait Collection {
 
 		$query_params = $this->get_collection_query_params( $request );
 
-		/*
-		 * Advertise the seek endpoint on the Collection when the request offered an `item` argument,
-		 * which is how a controller opts a route in. The seek endpoint receives the collection with
-		 * its filtering arguments (order, per_page, context) but without page, so it resolves the item
-		 * against the same ordering the client is traversing.
-		 */
-		$attributes = $request->get_attributes();
-		if ( null === $page && isset( $attributes['args']['item'] ) && $this->can_advertise_seek( $request ) ) {
-			// A Collection request never carries a page, so the query params already describe the base collection.
-			$collection_id = \add_query_arg( $query_params, $response['id'] );
-
-			// add_query_arg() does not encode values, so encode the nested collection URL to keep its query string intact.
-			$response['seekItem'] = \add_query_arg( 'collection', \rawurlencode( $collection_id ), get_rest_url_by_path( 'seek' ) );
-
-			$context = (array) $response['@context'];
-			if ( ! \in_array( $this->seek_item_context, $context, true ) ) {
-				$context[]            = $this->seek_item_context;
-				$response['@context'] = $context;
-			}
-		}
-
 		if ( empty( $response['items'] ) && empty( $response['orderedItems'] ) ) {
 			// Skip pagination metadata when items are intentionally hidden or collection is empty.
 			return $response;
@@ -96,6 +75,24 @@ trait Collection {
 		$response['id']    = \add_query_arg( $query_params, $response['id'] );
 		$response['first'] = \add_query_arg( 'page', 1, $response['id'] );
 		$response['last']  = \add_query_arg( 'page', $max_pages, $response['id'] );
+
+		/*
+		 * Advertise the seek endpoint on the Collection when the route offered an `item` argument,
+		 * which is how a controller opts in. It is advertised from here so the collection handed to
+		 * the seek endpoint is the id above, with the same filtering arguments and no page, and so a
+		 * collection with nothing to seek — empty, or with its items withheld — never offers it.
+		 */
+		$attributes = $request->get_attributes();
+		if ( null === $page && isset( $attributes['args']['item'] ) ) {
+			// add_query_arg() does not encode values, so encode the nested collection URL to keep its query string intact.
+			$response['seekItem'] = \add_query_arg( 'collection', \rawurlencode( $response['id'] ), get_rest_url_by_path( 'seek' ) );
+
+			$context = (array) $response['@context'];
+			if ( ! \in_array( $this->seek_item_context, $context, true ) ) {
+				$context[]            = $this->seek_item_context;
+				$response['@context'] = $context;
+			}
+		}
 
 		// If this is a Collection request, return early.
 		if ( null === $page ) {
@@ -221,21 +218,6 @@ trait Collection {
 		$response->header( 'Location', \add_query_arg( $query_params, $collection_id ) );
 
 		return $response;
-	}
-
-	/**
-	 * Whether the seekItem endpoint should be advertised to this request.
-	 *
-	 * Defaults to true for any route that opts in via an `item` argument. Collections whose seek is
-	 * restricted to a specific audience (e.g. the owner-only outbox) override this so the capability
-	 * is not advertised to clients that would only ever receive a 401 or 404 from it.
-	 *
-	 * @param \WP_REST_Request $request The collection request.
-	 *
-	 * @return bool True to advertise seekItem, false to omit it.
-	 */
-	protected function can_advertise_seek( $request ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found, VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		return true;
 	}
 
 	/**
