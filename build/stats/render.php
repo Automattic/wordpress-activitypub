@@ -65,13 +65,9 @@ $change_sign          = $followers_net_change >= 0 ? '+' : '';
 // Get actor webfinger for the card header.
 $actor = Actors::get_by_id( $user_id );
 
-if ( \is_wp_error( $actor ) ) {
-	// Fall back to direct model instantiation for blog/application actors.
-	if ( Actors::BLOG_USER_ID === $user_id ) {
-		$actor = new \Activitypub\Model\Blog();
-	} elseif ( Actors::APPLICATION_USER_ID === $user_id ) {
-		$actor = new \Activitypub\Model\Application();
-	}
+if ( \is_wp_error( $actor ) && Actors::BLOG_USER_ID === $user_id ) {
+	// Fall back to direct model instantiation for the blog actor.
+	$actor = new \Activitypub\Model\Blog();
 }
 
 $actor_webfinger = ! \is_wp_error( $actor ) ? $actor->get_webfinger() : '';

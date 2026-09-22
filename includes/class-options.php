@@ -323,7 +323,7 @@ class Options {
 			array(
 				'type'        => 'boolean',
 				'description' => 'Use RFC-9421 signature.',
-				'default'     => false,
+				'default'     => true,
 			)
 		);
 
@@ -437,6 +437,18 @@ class Options {
 		 */
 		\register_setting(
 			'activitypub_blog',
+			'activitypub_blog_name',
+			array(
+				'type'              => 'string',
+				'description'       => 'The Name of the Blog-User',
+				'show_in_rest'      => true,
+				'default'           => '',
+				'sanitize_callback' => 'sanitize_text_field',
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
 			'activitypub_blog_description',
 			array(
 				'type'         => 'string',
@@ -460,11 +472,25 @@ class Options {
 
 		\register_setting(
 			'activitypub_blog',
+			'activitypub_blog_icon',
+			array(
+				'type'              => 'integer',
+				'description'       => 'The Attachment-ID of the Blog-User Avatar',
+				'show_in_rest'      => true,
+				'default'           => 0,
+				'sanitize_callback' => array( Sanitize::class, 'attachment_id' ),
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
 			'activitypub_header_image',
 			array(
-				'type'        => 'integer',
-				'description' => 'The Attachment-ID of the Sites Header-Image',
-				'default'     => null,
+				'type'              => 'integer',
+				'description'       => 'The Attachment-ID of the Sites Header-Image',
+				'show_in_rest'      => true,
+				'default'           => 0,
+				'sanitize_callback' => array( Sanitize::class, 'attachment_id' ),
 			)
 		);
 
@@ -737,7 +763,7 @@ class Options {
 	/**
 	 * Pre-get option filter for the Distribution Mode.
 	 *
-	 * @since unreleased
+	 * @since 9.0.0
 	 *
 	 * @param string|false $pre The pre-get option value.
 	 *
@@ -756,7 +782,7 @@ class Options {
 	 * to `'default'` at runtime (see `resolve_distribution_mode()`) but the
 	 * UI stays visible so admins can spot the misconfiguration.
 	 *
-	 * @since unreleased
+	 * @since 9.0.0
 	 *
 	 * @return bool True when the constant pins the mode to a valid preset.
 	 */
@@ -780,7 +806,7 @@ class Options {
 	 * from the database, which would defeat the purpose of locking the
 	 * mode via wp-config.php.
 	 *
-	 * @since unreleased
+	 * @since 9.0.0
 	 *
 	 * @param string|false $pre            The pre-get option value.
 	 * @param mixed        $constant_value The value of `ACTIVITYPUB_DISTRIBUTION_MODE`.
@@ -805,7 +831,7 @@ class Options {
 				\esc_html__( 'ACTIVITYPUB_DISTRIBUTION_MODE value %s is not a valid preset; falling back to default.', 'activitypub' ),
 				\esc_html( (string) $constant_value )
 			),
-			'unreleased'
+			'9.0.0'
 		);
 
 		return 'default';
@@ -818,7 +844,7 @@ class Options {
 	 * (get_distribution_params, sanitize_distribution_mode, resolve_distribution_mode)
 	 * to avoid running translation calls just to check keys or numbers.
 	 *
-	 * @since unreleased
+	 * @since 9.0.0
 	 *
 	 * @return array Associative array of mode => { batch_size, pause }.
 	 */
@@ -845,7 +871,7 @@ class Options {
 	 * Decorates `get_distribution_preset_values()` with translated labels
 	 * and descriptions for use in the admin settings page.
 	 *
-	 * @since unreleased
+	 * @since 9.0.0
 	 *
 	 * @return array Associative array of mode => { batch_size, pause, label, description }.
 	 */
@@ -884,7 +910,7 @@ class Options {
 	 * `get_distribution_modes()`) or `'custom'`. Anything else
 	 * falls back to `'default'`.
 	 *
-	 * @since unreleased
+	 * @since 9.0.0
 	 *
 	 * @param string $value The submitted option value.
 	 *
@@ -899,7 +925,7 @@ class Options {
 	/**
 	 * Get distribution parameters for the current mode.
 	 *
-	 * @since unreleased
+	 * @since 9.0.0
 	 *
 	 * @return array { mode: string, batch_size: int, pause: int }
 	 */
@@ -942,7 +968,7 @@ class Options {
 	 * `ACTIVITYPUB_OUTBOX_PROCESSING_BATCH_SIZE` constant and other filters
 	 * still win; any explicit mode imposes its own batch size.
 	 *
-	 * @since unreleased
+	 * @since 9.0.0
 	 *
 	 * @param int $batch_size The default batch size.
 	 *
@@ -962,7 +988,7 @@ class Options {
 	 * is intentionally shorter than the generic async-batch baseline, so it does
 	 * not pass the upstream value through.
 	 *
-	 * @since unreleased
+	 * @since 9.0.0
 	 *
 	 * @param int               $pause The default pause in seconds.
 	 * @param string|false|null $hook The async batch hook being scheduled.

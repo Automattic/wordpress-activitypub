@@ -346,7 +346,7 @@ class Blocked_Actors extends \WP_List_Table {
 		}
 
 		$actions = array(
-			'unblock' => sprintf(
+			'unblock' => \sprintf(
 				'<a href="%s" aria-label="%s">%s</a>',
 				$this->get_action_url( 'delete', $item['id'] ),
 				/* translators: %s: username. */
@@ -366,7 +366,7 @@ class Blocked_Actors extends \WP_List_Table {
 		 *                          'Unblock'.
 		 * @param array    $item    The current blocked actor item.
 		 */
-		$actions = apply_filters( 'activitypub_blocked_actors_row_actions', $actions, $item );
+		$actions = \apply_filters( 'activitypub_blocked_actors_row_actions', $actions, $item );
 
 		return $this->row_actions( $actions );
 	}

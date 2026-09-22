@@ -420,6 +420,7 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 	public function add_follower( $pre, $actor ) {
 		return array(
 			'id'                => $actor,
+			'type'              => 'Person',
 			'url'               => $actor,
 			'inbox'             => $actor . '/inbox',
 			'name'              => 'username',

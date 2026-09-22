@@ -69,61 +69,56 @@ class Actor extends Base_Object {
 		'https://www.w3.org/ns/activitystreams',
 		'https://w3id.org/security/v1',
 		'https://purl.archive.org/socialweb/webfinger',
+		'https://purl.archive.org/miscellany',
 		array(
-			'schema'                    => 'http://schema.org#',
-			'toot'                      => 'http://joinmastodon.org/ns#',
-			'lemmy'                     => 'https://join-lemmy.org/ns#',
-			'litepub'                   => 'http://litepub.social/ns#',
-			'gts'                       => 'https://gotosocial.org/ns#',
-			'manuallyApprovesFollowers' => 'as:manuallyApprovesFollowers',
-			'PropertyValue'             => 'schema:PropertyValue',
-			'value'                     => 'schema:value',
-			'Hashtag'                   => 'as:Hashtag',
-			'featured'                  => array(
+			'schema'                  => 'http://schema.org#',
+			'toot'                    => 'http://joinmastodon.org/ns#',
+			'lemmy'                   => 'https://join-lemmy.org/ns#',
+			'litepub'                 => 'http://litepub.social/ns#',
+			'gts'                     => 'https://gotosocial.org/ns#',
+			'PropertyValue'           => 'schema:PropertyValue',
+			'value'                   => 'schema:value',
+			'featured'                => array(
 				'@id'   => 'toot:featured',
 				'@type' => '@id',
 			),
-			'featuredTags'              => array(
+			'featuredTags'            => array(
 				'@id'   => 'toot:featuredTags',
 				'@type' => '@id',
 			),
-			'moderators'                => array(
+			'moderators'              => array(
 				'@id'   => 'lemmy:moderators',
 				'@type' => '@id',
 			),
-			'alsoKnownAs'               => array(
+			'alsoKnownAs'             => array(
 				'@id'   => 'as:alsoKnownAs',
 				'@type' => '@id',
 			),
-			'movedTo'                   => array(
-				'@id'   => 'as:movedTo',
-				'@type' => '@id',
-			),
-			'attributionDomains'        => array(
+			'attributionDomains'      => array(
 				'@id'   => 'toot:attributionDomains',
 				'@type' => '@id',
 			),
-			'implements'                => array(
+			'implements'              => array(
 				'@id'        => 'https://w3id.org/fep/844e/implements',
 				'@type'      => '@id',
 				'@container' => '@list',
 			),
-			'interactionPolicy'         => array(
+			'interactionPolicy'       => array(
 				'@id'   => 'gts:interactionPolicy',
 				'@type' => '@id',
 			),
-			'canFeature'                => array(
+			'canFeature'              => array(
 				'@id'   => 'https://w3id.org/fep/7aa9#canFeature',
 				'@type' => '@id',
 			),
-			'automaticApproval'         => array(
+			'automaticApproval'       => array(
 				'@id'   => 'gts:automaticApproval',
 				'@type' => '@id',
 			),
-			'postingRestrictedToMods'   => 'lemmy:postingRestrictedToMods',
-			'discoverable'              => 'toot:discoverable',
-			'indexable'                 => 'toot:indexable',
-			'invisible'                 => 'litepub:invisible',
+			'postingRestrictedToMods' => 'lemmy:postingRestrictedToMods',
+			'discoverable'            => 'toot:discoverable',
+			'indexable'               => 'toot:indexable',
+			'invisible'               => 'litepub:invisible',
 		),
 	);
 
@@ -382,43 +377,4 @@ class Actor extends Base_Object {
 	 * @var boolean|null
 	 */
 	protected $invisible = null;
-
-	/**
-	 * Get the actor-level interaction policy.
-	 *
-	 * Overrides the magic property accessor on Base_Object so that we always
-	 * compute the policy from the current site setting rather than returning a
-	 * cached property value. Currently only emits `canFeature` (FEP-7aa9).
-	 * Driven by the site option `activitypub_default_feature_policy` and
-	 * defaults to denying all featured-collection requests, in line with
-	 * FEP-7aa9's "absence of policy = no consent" rule.
-	 *
-	 * @see https://w3id.org/fep/7aa9
-	 *
-	 * @since unreleased
-	 *
-	 * @return array
-	 */
-	public function get_interaction_policy() {
-		return array_merge( (array) parent::get_interaction_policy(), array( 'canFeature' => $this->build_can_feature_policy() ) );
-	}
-
-	/**
-	 * Build the `canFeature` policy array from the site option.
-	 *
-	 * @return array
-	 */
-	protected function build_can_feature_policy() {
-		$policy = \get_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_ME );
-
-		switch ( $policy ) {
-			case ACTIVITYPUB_INTERACTION_POLICY_ANYONE:
-				return array( 'automaticApproval' => array( 'https://www.w3.org/ns/activitystreams#Public' ) );
-			case ACTIVITYPUB_INTERACTION_POLICY_FOLLOWERS:
-				return array( 'automaticApproval' => array( $this->get_followers() ) );
-			case ACTIVITYPUB_INTERACTION_POLICY_ME:
-			default:
-				return array( 'automaticApproval' => array( $this->get_id() ) );
-		}
-	}
 }

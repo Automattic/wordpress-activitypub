@@ -117,17 +117,20 @@ class Inbox {
 
 		$inbox_item = array(
 			'post_type'    => self::POST_TYPE,
-			'post_title'   => sprintf(
+			'post_title'   => \sprintf(
 				/* translators: 1. Activity type, 2. Object Title or Excerpt */
 				\__( '[%1$s] %2$s', 'activitypub' ),
 				$activity->get_type(),
 				\wp_trim_words( $title, 5 )
 			),
 			// Persist the blind audience so we keep the full addressing the sender used.
-			'post_content' => wp_slash( $activity->to_json( true, true ) ),
+			'post_content' => \wp_slash( $activity->to_json( true, true ) ),
 			'post_author'  => 0, // No specific author, recipients stored in meta.
 			'post_status'  => 'publish',
-			'guid'         => $activity->get_id(),
+			// Store the GUID the way get_by_guid() looks it up, which is with esc_url(): an
+			// ampersand becomes `&#038;`. Passing it unescaped instead lets `pre_post_guid`
+			// store it as `&amp;`, and the two spellings never match.
+			'guid'         => \esc_url( $activity->get_id() ),
 			'meta_input'   => array(
 				'_activitypub_object_id'             => $object_id,
 				'_activitypub_activity_type'         => $activity->get_type(),
@@ -166,7 +169,7 @@ class Inbox {
 	 * @return string The title.
 	 */
 	private static function get_object_title( $activity_object ) {
-		if ( ! $activity_object || is_array( $activity_object ) ) {
+		if ( ! $activity_object || \is_array( $activity_object ) ) {
 			return '';
 		}
 
@@ -265,15 +268,17 @@ class Inbox {
 			return $activity;
 		}
 
-		$post_date_gmt     = empty( $inbox_item->post_date_gmt ) || '0000-00-00 00:00:00' === $inbox_item->post_date_gmt ? '' : $inbox_item->post_date_gmt;
-		$post_modified_gmt = empty( $inbox_item->post_modified_gmt ) || '0000-00-00 00:00:00' === $inbox_item->post_modified_gmt ? '' : $inbox_item->post_modified_gmt;
+		// get_post_datetime() answers false for the `0000-00-00 00:00:00` sentinel, so the local column is used instead.
+		$utc       = new \DateTimeZone( 'UTC' );
+		$published = \get_post_datetime( $inbox_item, 'date', 'gmt' ) ?: \get_post_datetime( $inbox_item, 'date' );
+		$updated   = \get_post_datetime( $inbox_item, 'modified', 'gmt' ) ?: \get_post_datetime( $inbox_item, 'modified' );
 
-		if ( ! $activity->get_published() && $post_date_gmt ) {
-			$activity->set_published( \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \strtotime( $post_date_gmt ) ) );
+		if ( ! $activity->get_published() && $published ) {
+			$activity->set_published( $published->setTimezone( $utc )->format( ACTIVITYPUB_DATE_TIME_RFC3339 ) );
 		}
 
-		if ( ! $activity->get_updated() && $post_modified_gmt && $post_modified_gmt > $post_date_gmt ) {
-			$activity->set_updated( \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \strtotime( $post_modified_gmt ) ) );
+		if ( ! $activity->get_updated() && $updated && $published && $updated > $published ) {
+			$activity->set_updated( $updated->setTimezone( $utc )->format( ACTIVITYPUB_DATE_TIME_RFC3339 ) );
 		}
 
 		return $activity;
@@ -340,7 +345,15 @@ class Inbox {
 					);
 				}
 
-				$result = Comment::object_id_to_comment( esc_url_raw( $inbox_item->guid ) );
+				/*
+				 * The comment stores the activity ID as it arrived, so undo the escaping applied
+				 * to the GUID before comparing the two. Only the sequences that escaping can
+				 * produce are reversed, plus the `&amp;` that rows written before it carry:
+				 * decoding the full entity set would also rewrite a `&lt;` or `&quot;` that an ID
+				 * happens to contain as literal text, which escaping never put there.
+				 */
+				$decoded = \str_replace( array( '&#038;', '&amp;', '&#039;' ), array( '&', '&', "'" ), $inbox_item->guid );
+				$result  = Comment::object_id_to_comment( \esc_url_raw( $decoded ) );
 
 				if ( empty( $result ) ) {
 					return new \WP_Error(
@@ -548,7 +561,7 @@ class Inbox {
 		}
 
 		// Keep the first (oldest) post as primary.
-		$primary_id = array_shift( $post_ids );
+		$primary_id = \array_shift( $post_ids );
 		$primary    = \get_post( $primary_id );
 
 		// Merge recipients from duplicates into primary and delete duplicates.

@@ -41,13 +41,13 @@ class Extra_Fields {
 		}
 
 		// Limit to 20 fields to prevent response size issues.
-		if ( ! is_admin() ) {
+		if ( ! \is_admin() ) {
 			/**
 			 * Filters the number of extra fields to retrieve for an ActivityPub actor.
 			 *
 			 * @param int $limit The number of extra fields to retrieve. Default 20.
 			 */
-			$args['posts_per_page'] = apply_filters( 'activitypub_actor_extra_fields_limit', 20 );
+			$args['posts_per_page'] = \apply_filters( 'activitypub_actor_extra_fields_limit', 20 );
 			$args['nopaging']       = false;
 		}
 
@@ -63,7 +63,7 @@ class Extra_Fields {
 		 * @param \WP_Post[] $fields   Array of WP_Post objects representing the extra fields.
 		 * @param int        $user_id  The ID of the user whose fields are being retrieved.
 		 */
-		return apply_filters( 'activitypub_get_actor_extra_fields', $fields, $user_id );
+		return \apply_filters( 'activitypub_get_actor_extra_fields', $fields, $user_id );
 	}
 
 	/**
@@ -132,7 +132,7 @@ class Extra_Fields {
 					$attachment = array(
 						'type' => 'Link',
 						'name' => $title,
-						'href' => \esc_url( $tags->get_attribute( 'href' ) ),
+						'href' => \esc_url_raw( $tags->get_attribute( 'href' ) ),
 					);
 
 					$rel = $tags->get_attribute( 'rel' );
@@ -238,27 +238,41 @@ class Extra_Fields {
 			}
 		}
 
+		/*
+		 * Seeded here rather than at install time. `Migration::add_default_extra_field()` used to
+		 * add this one on its own, which ran before `ap_extrafield` was registered and recorded
+		 * none of the flags below, so it duplicated whenever a migration replayed and came back
+		 * after somebody deleted it. Here it inherits the empty-list check, the flag, and the
+		 * timing the other defaults already had.
+		 */
+		$defaults[ \__( 'Powered by', 'activitypub' ) ] = 'WordPress';
+
 		$post_type  = $is_blog ? self::BLOG_POST_TYPE : self::USER_POST_TYPE;
 		$menu_order = 10;
 
-		foreach ( $defaults as $title => $url ) {
-			if ( ! $url ) {
+		foreach ( $defaults as $title => $value ) {
+			if ( ! $value ) {
 				continue;
 			}
+
+			// Every other default is a bare URL to linkify; "Powered by" is plain text.
+			$content = \filter_var( $value, FILTER_VALIDATE_URL )
+				? Link::the_content( $value )
+				: $value;
 
 			$extra_field = array(
 				'post_type'      => $post_type,
 				'post_title'     => $title,
 				'post_status'    => 'publish',
 				'post_author'    => $user_id,
-				'post_content'   => self::make_paragraph_block( Link::the_content( $url ) ),
+				'post_content'   => self::make_paragraph_block( $content ),
 				'comment_status' => 'closed',
 				'menu_order'     => $menu_order,
 			);
 
 			$menu_order    += 10;
-			$extra_field_id = wp_insert_post( $extra_field );
-			$extra_fields[] = get_post( $extra_field_id );
+			$extra_field_id = \wp_insert_post( $extra_field );
+			$extra_fields[] = \get_post( $extra_field_id );
 		}
 
 		$is_blog

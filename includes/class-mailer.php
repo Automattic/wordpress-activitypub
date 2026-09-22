@@ -8,6 +8,7 @@
 namespace Activitypub;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Comment;
 
 /**
  * Mailer Class.
@@ -22,10 +23,12 @@ class Mailer {
 
 		\add_action( 'activitypub_handled_follow', array( self::class, 'new_follower' ), 10, 3 );
 
-		\add_action( 'activitypub_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
-		\add_action( 'activitypub_inbox_create', array( self::class, 'mention' ), 20, 2 );  /** After @see \Activitypub\Handler\Create::handle_create() */
+		\add_action( 'activitypub_handled_inbox_create', array( self::class, 'direct_message' ), 10, 2 );
+		// Priority 20 keeps this after @see \Activitypub\Handler\Create::handle_create(), whose comment the reply check reads.
+		\add_action( 'activitypub_handled_inbox_create', array( self::class, 'mention' ), 20, 2 );
 
 		\add_filter( 'notify_post_author', array( self::class, 'maybe_prevent_comment_notification' ), 10, 2 );
+		\add_filter( 'notify_post_author', array( self::class, 'maybe_prevent_reaction_notification' ), 10, 2 );
 		\add_filter( 'notify_moderator', array( self::class, 'maybe_prevent_comment_notification' ), 10, 2 );
 	}
 
@@ -59,7 +62,7 @@ class Mailer {
 		$post = \get_post( $comment->comment_post_ID );
 
 		/* translators: 1: Blog name, 2: Like or Repost, 3: Post title */
-		return \sprintf( \esc_html__( '[%1$s] %2$s: %3$s', 'activitypub' ), \esc_html( get_option( 'blogname' ) ), \esc_html( $singular ), \esc_html( $post->post_title ) );
+		return \sprintf( \esc_html__( '[%1$s] %2$s: %3$s', 'activitypub' ), \esc_html( \get_option( 'blogname' ) ), \esc_html( $singular ), \esc_html( $post->post_title ) );
 	}
 
 	/**
@@ -101,7 +104,7 @@ class Mailer {
 		if ( 0 === (int) $comment->comment_parent ) {
 			$notify_message = \sprintf(
 				/* translators: 1: Comment type, 2: Post title */
-				\html_entity_decode( esc_html__( 'New %1$s on your post &#8220;%2$s&#8221;.', 'activitypub' ) ),
+				\html_entity_decode( \esc_html__( 'New %1$s on your post &#8220;%2$s&#8221;.', 'activitypub' ) ),
 				\esc_html( $comment_type['singular'] ),
 				\esc_html( $post->post_title )
 			) . PHP_EOL . PHP_EOL;
@@ -110,7 +113,7 @@ class Mailer {
 			$parent_comment = \get_comment( $comment->comment_parent );
 			$notify_message = \sprintf(
 				/* translators: 1: Comment type, 2: Post title, 3: Parent comment author */
-				\html_entity_decode( esc_html__( 'New %1$s on your post &#8220;%2$s&#8221; in reply to %3$s&#8217;s comment.', 'activitypub' ) ),
+				\html_entity_decode( \esc_html__( 'New %1$s on your post &#8220;%2$s&#8221; in reply to %3$s&#8217;s comment.', 'activitypub' ) ),
 				\esc_html( $comment_type['singular'] ),
 				\esc_html( $post->post_title ),
 				\esc_html( $parent_comment->comment_author )
@@ -156,11 +159,6 @@ class Mailer {
 		// Extract the user ID (follows are always for a single user).
 		$user_id = \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids;
 
-		// Do not send notifications to the Application user.
-		if ( Actors::APPLICATION_USER_ID === $user_id ) {
-			return;
-		}
-
 		if ( $user_id > Actors::BLOG_USER_ID ) {
 			if ( ! \get_user_option( 'activitypub_mailer_new_follower', $user_id ) ) {
 				return;
@@ -192,7 +190,7 @@ class Mailer {
 			$actor['summary'] = Emoji::replace_for_actor( $actor['summary'], $actor['url'] );
 		}
 
-		$template_args = array_merge(
+		$template_args = \array_merge(
 			$actor,
 			array(
 				'admin_url' => $admin_url,
@@ -317,7 +315,7 @@ class Mailer {
 			$alt_function = static function ( $mailer ) use ( $actor, $activity ) {
 				$content = \html_entity_decode(
 					\wp_strip_all_tags(
-						str_replace( '</p>', PHP_EOL . PHP_EOL, $activity['object']['content'] )
+						\str_replace( '</p>', PHP_EOL . PHP_EOL, $activity['object']['content'] )
 					),
 					ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML401
 				);
@@ -357,8 +355,8 @@ class Mailer {
 		}
 
 		$recipients = array();
-		$mentions   = wp_list_filter( (array) $activity['object']['tag'], array( 'type' => 'Mention' ) );
-		$mentions   = array_map( '\Activitypub\object_to_uri', $mentions );
+		$mentions   = \wp_list_filter( (array) $activity['object']['tag'], array( 'type' => 'Mention' ) );
+		$mentions   = \array_map( '\Activitypub\object_to_uri', $mentions );
 		foreach ( (array) $user_ids as $user_id ) {
 			$actor = Actors::get_by_id( $user_id );
 			if ( \is_wp_error( $actor ) ) {
@@ -417,7 +415,7 @@ class Mailer {
 			$alt_function = static function ( $mailer ) use ( $actor, $activity ) {
 				$content = \html_entity_decode(
 					\wp_strip_all_tags(
-						str_replace( '</p>', PHP_EOL . PHP_EOL, $activity['object']['content'] )
+						\str_replace( '</p>', PHP_EOL . PHP_EOL, $activity['object']['content'] )
 					),
 					ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML401
 				);
@@ -558,5 +556,39 @@ class Mailer {
 		}
 
 		return $maybe_notify;
+	}
+
+	/**
+	 * Let the post author mute email about reactions to their post.
+	 *
+	 * Likes, reposts, and quotes are stored as comments, so WordPress emails the post author about
+	 * them like any other comment. This is hooked on `notify_post_author` only, so it never affects
+	 * the moderator notification, and it targets the plugin's own reaction comment types so pingbacks,
+	 * trackbacks, and plain replies keep notifying as usual. The preference defaults to on.
+	 *
+	 * @since 9.3.0
+	 *
+	 * @param bool $maybe_notify Whether to send the notification.
+	 * @param int  $comment_id   The comment ID.
+	 *
+	 * @return bool Whether to send the notification.
+	 */
+	public static function maybe_prevent_reaction_notification( $maybe_notify, $comment_id ) {
+		// If already disabled, respect that.
+		if ( ! $maybe_notify ) {
+			return $maybe_notify;
+		}
+
+		$comment = \get_comment( $comment_id );
+		if ( ! $comment || ! \in_array( \get_comment_type( $comment ), Comment::get_comment_type_slugs(), true ) ) {
+			return $maybe_notify;
+		}
+
+		$post = \get_post( $comment->comment_post_ID );
+		if ( ! $post ) {
+			return $maybe_notify;
+		}
+
+		return (bool) \get_user_option( 'activitypub_mailer_new_reaction', $post->post_author );
 	}
 }

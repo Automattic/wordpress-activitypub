@@ -157,7 +157,7 @@ class Nodeinfo_Controller extends \WP_REST_Controller {
 				'name'    => 'wordpress',
 				'version' => get_masked_wp_version(),
 			),
-			'openRegistrations' => (bool) get_option( 'users_can_register' ),
+			'openRegistrations' => (bool) \get_option( 'users_can_register' ),
 			'usage'             => array(
 				'localPosts'    => (int) $posts->publish,
 				'localComments' => $comments->approved,

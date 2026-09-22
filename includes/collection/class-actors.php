@@ -8,9 +8,10 @@
 namespace Activitypub\Collection;
 
 use Activitypub\Activity\Actor;
-use Activitypub\Model\Application;
+use Activitypub\Application;
 use Activitypub\Model\Blog;
 use Activitypub\Model\User;
+use Activitypub\Signature;
 
 use function Activitypub\is_user_type_disabled;
 use function Activitypub\normalize_host;
@@ -33,7 +34,9 @@ class Actors {
 	const BLOG_USER_ID = 0;
 
 	/**
-	 * The ID of the Application User.
+	 * The ID of the former Application user.
+	 *
+	 * @deprecated 9.1.0 The Application is no longer a user-like actor, see {@see \Activitypub\Application}. Retained for backward compatibility and legacy data handling.
 	 *
 	 * @var int
 	 */
@@ -47,7 +50,7 @@ class Actors {
 	 * @return Actor|User|Blog|Application|\WP_Error Actor object or WP_Error if not found or not permitted.
 	 */
 	public static function get_by_id( $user_id ) {
-		if ( is_numeric( $user_id ) ) {
+		if ( \is_numeric( $user_id ) ) {
 			$user_id = (int) $user_id;
 		}
 
@@ -79,8 +82,6 @@ class Actors {
 		switch ( $user_id ) {
 			case self::BLOG_USER_ID:
 				return new Blog();
-			case self::APPLICATION_USER_ID:
-				return new Application();
 			default:
 				return User::from_wp_user( $user_id );
 		}
@@ -100,7 +101,7 @@ class Actors {
 		 * @param null   $pre      The pre-existing value.
 		 * @param string $username The username.
 		 */
-		$pre = apply_filters( 'activitypub_pre_get_by_username', null, $username );
+		$pre = \apply_filters( 'activitypub_pre_get_by_username', null, $username );
 		if ( null !== $pre ) {
 			return $pre;
 		}
@@ -137,9 +138,19 @@ class Actors {
 			return self::BLOG_USER_ID;
 		}
 
-		// Check for application user.
-		if ( 'application' === $username ) {
-			return self::APPLICATION_USER_ID;
+		/*
+		 * The 'application' identifier is reserved for the signing-only Application
+		 * actor, which is served only through the dedicated /application endpoint.
+		 * Never resolve it to a regular user, even on sites that happen to have a
+		 * user named "application". Compare lowercased: the user lookups below are
+		 * case-insensitive, so the reservation has to be too.
+		 */
+		if ( Application::USERNAME === \strtolower( $username ) ) {
+			return new \WP_Error(
+				'activitypub_user_not_found',
+				\__( 'Actor not found', 'activitypub' ),
+				array( 'status' => 404 )
+			);
 		}
 
 		// Check for 'activitypub_username' meta.
@@ -165,7 +176,7 @@ class Actors {
 			return \current( $user->get_results() );
 		}
 
-		$username = str_replace( array( '*', '%' ), '', $username );
+		$username = \str_replace( array( '*', '%' ), '', $username );
 
 		// Check for login or nicename.
 		$user = new \WP_User_Query(
@@ -227,7 +238,7 @@ class Actors {
 		$scheme = 'acct';
 		$match  = array();
 		// Try to extract the scheme and the host.
-		if ( preg_match( '/^([a-zA-Z^:]+):(.*)$/i', $uri, $match ) ) {
+		if ( \preg_match( '/^([a-zA-Z^:]+):(.*)$/i', $uri, $match ) ) {
 			// Extract the scheme.
 			$scheme = \esc_attr( $match[1] );
 		}
@@ -251,7 +262,7 @@ class Actors {
 
 					$resource_path = \trim( $resource_path, '/' );
 
-					if ( str_starts_with( $resource_path, '@' ) ) {
+					if ( \str_starts_with( $resource_path, '@' ) ) {
 						$identifier = \str_replace( '@', '', $resource_path );
 						$identifier = \trim( $identifier, '/' );
 
@@ -270,8 +281,8 @@ class Actors {
 				$normalized_uri = normalize_url( $uri );
 
 				if (
-					normalize_url( site_url() ) === $normalized_uri ||
-					normalize_url( home_url() ) === $normalized_uri
+					normalize_url( \site_url() ) === $normalized_uri ||
+					normalize_url( \home_url() ) === $normalized_uri
 				) {
 					return self::BLOG_USER_ID;
 				}
@@ -288,7 +299,7 @@ class Actors {
 				$host       = normalize_host( \substr( \strrchr( $uri, '@' ), 1 ) );
 				$blog_host  = normalize_host( \wp_parse_url( \home_url( '/' ), \PHP_URL_HOST ) );
 
-				if ( $blog_host !== $host && get_option( 'activitypub_old_host' ) !== $host ) {
+				if ( $blog_host !== $host && normalize_host( \get_option( 'activitypub_old_host' ) ) !== $host ) {
 					return new \WP_Error(
 						'activitypub_wrong_host',
 						\__( 'Resource host does not match blog host', 'activitypub' ),
@@ -297,7 +308,7 @@ class Actors {
 				}
 
 				// Prepare wildcards https://github.com/mastodon/mastodon/issues/22213.
-				if ( in_array( $identifier, array( '_', '*', '' ), true ) ) {
+				if ( \in_array( $identifier, array( '_', '*', '' ), true ) ) {
 					return self::BLOG_USER_ID;
 				}
 
@@ -335,15 +346,15 @@ class Actors {
 	 * @return int|\WP_Error Actor id or WP_Error if not found.
 	 */
 	public static function get_id_by_various( $id ) {
-		if ( is_numeric( $id ) ) {
+		if ( \is_numeric( $id ) ) {
 			$id = (int) $id;
 		} elseif (
 			// Is URL.
-			filter_var( $id, FILTER_VALIDATE_URL ) ||
+			\filter_var( $id, FILTER_VALIDATE_URL ) ||
 			// Is acct.
-			str_starts_with( $id, 'acct:' ) ||
+			\str_starts_with( $id, 'acct:' ) ||
 			// Is email.
-			filter_var( $id, FILTER_VALIDATE_EMAIL )
+			\filter_var( $id, FILTER_VALIDATE_EMAIL )
 		) {
 			$id = self::get_id_by_resource( $id );
 		} else {
@@ -385,6 +396,54 @@ class Actors {
 	}
 
 	/**
+	 * Search local actors by name or username.
+	 *
+	 * Backs the actor autocomplete endpoint. Matches the search term against the WordPress user's
+	 * login, nicename, and display name; the Blog actor is included when its name or identifier
+	 * matches. Disabled actor types are excluded, mirroring get_collection()/get_all().
+	 *
+	 * @since 9.1.0
+	 *
+	 * @param string $query  The search term.
+	 * @param int    $number Optional. Maximum number of actors to return. Default 10.
+	 *
+	 * @return Actor[] The matching local actor objects.
+	 */
+	public static function search( $query, $number = 10 ) {
+		$actors = array();
+
+		if ( ! is_user_type_disabled( 'blog' ) ) {
+			$blog = new Blog();
+			if ( false !== \stripos( $blog->get_name(), $query ) || false !== \stripos( (string) $blog->get_preferred_username(), $query ) ) {
+				$actors[] = $blog;
+			}
+		}
+
+		// Only query as many users as the Blog actor left room for, so a match is never fetched then trimmed.
+		$remaining = $number - \count( $actors );
+
+		if ( $remaining > 0 && ! is_user_type_disabled( 'user' ) ) {
+			$users = \get_users(
+				array(
+					'capability__in' => array( 'activitypub' ),
+					'search'         => '*' . $query . '*',
+					'search_columns' => array( 'user_login', 'user_nicename', 'display_name' ),
+					'number'         => $remaining,
+				)
+			);
+
+			foreach ( $users as $user ) {
+				$actor = User::from_wp_user( $user->ID );
+				if ( ! \is_wp_error( $actor ) ) {
+					$actors[] = $actor;
+				}
+			}
+		}
+
+		return $actors;
+	}
+
+	/**
 	 * Get all active actors, including the Blog actor if enabled.
 	 *
 	 * @return int[] Array of User and Blog actor IDs.
@@ -406,7 +465,7 @@ class Actors {
 			$user_ids[] = self::BLOG_USER_ID;
 		}
 
-		return array_map( 'intval', $user_ids );
+		return \array_map( 'intval', $user_ids );
 	}
 
 	/**
@@ -417,10 +476,10 @@ class Actors {
 	public static function get_all() {
 		$user_ids = self::get_all_ids();
 
-		$actors = array_map( array( self::class, 'get_by_id' ), $user_ids );
+		$actors = \array_map( array( self::class, 'get_by_id' ), $user_ids );
 
 		// Filter out any WP_Error instances.
-		return array_filter(
+		return \array_filter(
 			$actors,
 			static function ( $actor ) {
 				return ! \is_wp_error( $actor );
@@ -433,14 +492,10 @@ class Actors {
 	 *
 	 * @param int $user_id The user ID to check.
 	 *
-	 * @return string Actor type: 'user', 'blog', or 'application'.
+	 * @return string Actor type: 'user' or 'blog'.
 	 */
 	public static function get_type_by_id( $user_id ) {
 		$user_id = (int) $user_id;
-
-		if ( self::APPLICATION_USER_ID === $user_id ) {
-			return 'application';
-		}
 
 		if ( self::BLOG_USER_ID === $user_id ) {
 			return 'blog';
@@ -453,13 +508,13 @@ class Actors {
 	 * Return the public key for a given actor.
 	 *
 	 * @param int  $user_id The WordPress User ID.
-	 * @param bool $force   Optional. Force the generation of a new key pair. Default false.
+	 * @param bool $force   Deprecated. Keys are never rotated; new pairs are only generated when none is stored.
 	 *
 	 * @return string The public key.
 	 */
 	public static function get_public_key( $user_id, $force = false ) {
 		if ( $force ) {
-			self::generate_key_pair( $user_id );
+			\_deprecated_argument( __METHOD__, '9.1.0', \esc_html__( 'Keys are never rotated; new pairs are only generated when none is stored.', 'activitypub' ) );
 		}
 
 		$key_pair = self::get_keypair( $user_id );
@@ -471,13 +526,13 @@ class Actors {
 	 * Return the private key for a given actor.
 	 *
 	 * @param int  $user_id The WordPress User ID.
-	 * @param bool $force   Optional. Force the generation of a new key pair. Default false.
+	 * @param bool $force   Deprecated. Keys are never rotated; new pairs are only generated when none is stored.
 	 *
 	 * @return string The private key.
 	 */
 	public static function get_private_key( $user_id, $force = false ) {
 		if ( $force ) {
-			self::generate_key_pair( $user_id );
+			\_deprecated_argument( __METHOD__, '9.1.0', \esc_html__( 'Keys are never rotated; new pairs are only generated when none is stored.', 'activitypub' ) );
 		}
 
 		$key_pair = self::get_keypair( $user_id );
@@ -493,68 +548,12 @@ class Actors {
 	 * @return array The key pair.
 	 */
 	public static function get_keypair( $user_id ) {
-		$option_key = self::get_signature_options_key( $user_id );
-		$key_pair   = \get_option( $option_key );
-
-		if ( ! $key_pair ) {
-			$key_pair = self::generate_key_pair( $user_id );
-		}
-
-		return $key_pair;
-	}
-
-	/**
-	 * Generates the pair of keys.
-	 *
-	 * @param int $user_id The WordPress User ID.
-	 *
-	 * @return array The key pair.
-	 */
-	protected static function generate_key_pair( $user_id ) {
-		$option_key = self::get_signature_options_key( $user_id );
-		$key_pair   = self::check_legacy_key_pair( $user_id );
-
-		if ( $key_pair ) {
-			\add_option( $option_key, $key_pair );
-
-			return $key_pair;
-		}
-
-		$config = array(
-			'digest_alg'       => 'sha512',
-			'private_key_bits' => 2048,
-			'private_key_type' => \OPENSSL_KEYTYPE_RSA,
+		return Signature::get_key_pair(
+			self::get_signature_options_key( $user_id ),
+			function () use ( $user_id ) {
+				return self::check_legacy_key_pair( $user_id );
+			}
 		);
-
-		$key         = \openssl_pkey_new( $config );
-		$private_key = null;
-		$detail      = array();
-		if ( $key ) {
-			\openssl_pkey_export( $key, $private_key );
-
-			$detail = \openssl_pkey_get_details( $key );
-		}
-
-		// Check if keys are valid.
-		if (
-			empty( $private_key ) || ! is_string( $private_key ) ||
-			! isset( $detail['key'] ) || ! is_string( $detail['key'] )
-		) {
-			return array(
-				'private_key' => null,
-				'public_key'  => null,
-			);
-		}
-
-		$key_pair = array(
-			'private_key' => $private_key,
-			'public_key'  => $detail['key'],
-		);
-
-		// Persist keys.
-		\add_option( $option_key, $key_pair );
-
-		return $key_pair;
 	}
 
 	/**
@@ -587,17 +586,13 @@ class Actors {
 				$public_key  = \get_option( 'activitypub_blog_user_public_key' );
 				$private_key = \get_option( 'activitypub_blog_user_private_key' );
 				break;
-			case -1:
-				$public_key  = \get_option( 'activitypub_application_user_public_key' );
-				$private_key = \get_option( 'activitypub_application_user_private_key' );
-				break;
 			default:
 				$public_key  = \get_user_meta( $user_id, 'magic_sig_public_key', true );
 				$private_key = \get_user_meta( $user_id, 'magic_sig_private_key', true );
 				break;
 		}
 
-		if ( ! empty( $public_key ) && is_string( $public_key ) && ! empty( $private_key ) && is_string( $private_key ) ) {
+		if ( ! empty( $public_key ) && \is_string( $public_key ) && ! empty( $private_key ) && \is_string( $private_key ) ) {
 			return array(
 				'private_key' => $private_key,
 				'public_key'  => $public_key,
@@ -605,234 +600,6 @@ class Actors {
 		}
 
 		return false;
-	}
-
-	/**
-	 * Returns all Inboxes for all known remote Actors.
-	 *
-	 * @deprecated 7.4.0 Use {@see Remote_Actors::get_inboxes()}
-	 *
-	 * @return array The list of Inboxes.
-	 */
-	public static function get_inboxes() {
-		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::get_inboxes' );
-		return Remote_Actors::get_inboxes();
-	}
-
-	/**
-	 * Upsert (insert or update) a remote actor as a custom post type.
-	 *
-	 * @deprecated 7.4.0 Use {@see Remote_Actors::upsert()}
-	 *
-	 * @param array|Actor $actor ActivityPub actor object (array or actor, must include 'id').
-	 *
-	 * @return int|\WP_Error Post ID on success, WP_Error on failure.
-	 */
-	public static function upsert( $actor ) {
-		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::upsert' );
-		return Remote_Actors::upsert( $actor );
-	}
-
-	/**
-	 * Create a remote actor as a custom post type.
-	 *
-	 * @deprecated 7.4.0 Use {@see Remote_Actors::create()}
-	 *
-	 * @param array|Actor $actor ActivityPub actor object (array or Actor, must include 'id').
-	 *
-	 * @return int|\WP_Error Post ID on success, WP_Error on failure.
-	 */
-	public static function create( $actor ) {
-		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::create' );
-		return Remote_Actors::create( $actor );
-	}
-
-	/**
-	 * Update a remote Actor object by actor URL (guid).
-	 *
-	 * @deprecated 7.4.0 Use {@see Remote_Actors::update()}
-	 *
-	 * @param int|\WP_Post $post  The post ID or object.
-	 * @param array|Actor  $actor The ActivityPub actor object as associative array (must include 'id').
-	 *
-	 * @return int|\WP_Error The post ID or WP_Error.
-	 */
-	public static function update( $post, $actor ) {
-		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::update' );
-		return Remote_Actors::update( $post, $actor );
-	}
-
-	/**
-	 * Delete a remote actor object by actor URL (guid).
-	 *
-	 * @deprecated 7.4.0 Use {@see Remote_Actors::delete()}
-	 *
-	 * @param int $post_id The post ID.
-	 *
-	 * @return bool True on success, false on failure.
-	 */
-	public static function delete( $post_id ) {
-		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::delete' );
-		return Remote_Actors::delete( $post_id );
-	}
-
-	/**
-	 * Get a remote actor post by actor URI (guid).
-	 *
-	 * @deprecated 7.4.0 Use {@see Remote_Actors::get_by_uri()}
-	 *
-	 * @param string $actor_uri The actor URI.
-	 *
-	 * @return \WP_Post|\WP_Error Post object or WP_Error if not found.
-	 */
-	public static function get_remote_by_uri( $actor_uri ) {
-		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::get_by_uri' );
-		return Remote_Actors::get_by_uri( $actor_uri );
-	}
-
-	/**
-	 * Lookup a remote actor post by actor URI (guid), fetching from remote if not found locally.
-	 *
-	 * @deprecated 7.4.0 Use {@see Remote_Actors::fetch_by_uri()}
-	 *
-	 * @param string $actor_uri The actor URI.
-	 *
-	 * @return \WP_Post|\WP_Error Post object or WP_Error if not found.
-	 */
-	public static function fetch_remote_by_uri( $actor_uri ) {
-		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::fetch_by_uri' );
-		return Remote_Actors::fetch_by_uri( $actor_uri );
-	}
-
-	/**
-	 * Store an error that occurred when sending an ActivityPub message to a follower.
-	 *
-	 * The error will be stored in post meta.
-	 *
-	 * @deprecated 7.4.0 Use {@see Remote_Actors::add_error()}
-	 *
-	 * @param int              $post_id The ID of the WordPress Custom-Post-Type.
-	 * @param string|\WP_Error $error   The error message.
-	 *
-	 * @return int|false The meta ID on success, false on failure.
-	 */
-	public static function add_error( $post_id, $error ) {
-		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::add_error' );
-		return Remote_Actors::add_error( $post_id, $error );
-	}
-
-	/**
-	 * Count the errors for an actor.
-	 *
-	 * @deprecated 7.4.0 Use {@see Remote_Actors::count_errors()}
-	 *
-	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
-	 *
-	 * @return int The number of errors.
-	 */
-	public static function count_errors( $post_id ) {
-		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::count_errors' );
-		return Remote_Actors::count_errors( $post_id );
-	}
-
-	/**
-	 * Get all error messages for an actor.
-	 *
-	 * @deprecated 7.4.0 Use {@see Remote_Actors::get_errors()}
-	 *
-	 * @param int $post_id The post ID.
-	 *
-	 * @return string[] Array of error messages.
-	 */
-	public static function get_errors( $post_id ) {
-		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::get_errors' );
-		return Remote_Actors::get_errors( $post_id );
-	}
-
-	/**
-	 * Clear all errors for an actor.
-	 *
-	 * @deprecated 7.4.0 Use {@see Remote_Actors::clear_errors()}
-	 *
-	 * @param int $post_id The ID of the WordPress Custom-Post-Type.
-	 *
-	 * @return bool True on success, false on failure.
-	 */
-	public static function clear_errors( $post_id ) {
-		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::clear_errors' );
-		return Remote_Actors::clear_errors( $post_id );
-	}
-
-	/**
-	 * Get all remote actors (Custom Post Type) that had errors.
-	 *
-	 * @deprecated 7.4.0 Use {@see Remote_Actors::get_faulty()}
-	 *
-	 * @param int $number Optional. Number of actors to return. Default 20.
-	 *
-	 * @return \WP_Post[] Array of faulty actor posts.
-	 */
-	public static function get_faulty( $number = 20 ) {
-		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::get_faulty' );
-		return Remote_Actors::get_faulty( $number );
-	}
-
-	/**
-	 * Get all remote actor posts not updated for a given time.
-	 *
-	 * @deprecated 7.4.0 Use {@see Remote_Actors::get_outdated()}
-	 *
-	 * @param int $number     Optional. Limits the result. Default 50.
-	 * @param int $older_than Optional. The time in seconds. Default DAY_IN_SECONDS.
-	 *
-	 * @return \WP_Post[] The list of actors.
-	 */
-	public static function get_outdated( $number = 50, $older_than = DAY_IN_SECONDS ) {
-		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::get_outdated' );
-		return Remote_Actors::get_outdated( $number, $older_than );
-	}
-
-	/**
-	 * Convert a custom post type input to an Activitypub\Activity\Actor.
-	 *
-	 * @deprecated 7.4.0 Use {@see Remote_Actors::get_actor()}
-	 *
-	 * @param int|\WP_Post $post The post ID or object.
-	 *
-	 * @return Actor|\WP_Error The actor object or WP_Error on failure.
-	 */
-	public static function get_actor( $post ) {
-		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::get_actor' );
-		return Remote_Actors::get_actor( $post );
-	}
-
-	/**
-	 * Get public key from key_id.
-	 *
-	 * @deprecated 7.4.0 Use {@see Remote_Actors::get_public_key()}
-	 *
-	 * @param string $key_id The URL to the public key.
-	 *
-	 * @return resource|\WP_Error The public key resource or WP_Error.
-	 */
-	public static function get_remote_key( $key_id ) {
-		_deprecated_function( __METHOD__, '7.4.0', 'Activitypub\Collection\Remote_Actors::get_public_key' );
-		return Remote_Actors::get_public_key( $key_id );
-	}
-
-	/**
-	 * Normalize actor identifier to a URI.
-	 *
-	 * Handles webfinger addresses, URLs without schemes, objects, and arrays.
-	 *
-	 * @deprecated 7.4.0 Use {@see Remote_Actors::normalize_identifier()}
-	 *
-	 * @param string|object|array $actor Actor URI, webfinger address, actor object, or array.
-	 * @return string|null Normalized actor URI or null if unable to resolve.
-	 */
-	public static function normalize_identifier( $actor ) {
-		_deprecated_function( __METHOD__, '7.4.0', 'Remote_Actors::normalize_identifier' );
-		return Remote_Actors::normalize_identifier( $actor );
 	}
 
 	/**

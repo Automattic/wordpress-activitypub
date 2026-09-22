@@ -40,11 +40,11 @@ class Comment {
 	 * @param \WP_Comment $comment    Comment object.
 	 */
 	public static function schedule_comment_activity( $new_status, $old_status, $comment ) {
-		if ( defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
 			return;
 		}
 
-		$comment = get_comment( $comment );
+		$comment = \get_comment( $comment );
 
 		// Federate only comments that are written by a registered user.
 		if ( ! $comment || ! $comment->user_id ) {
@@ -64,8 +64,20 @@ class Comment {
 		$allowed_types   = Comment_Utils::get_comment_type_slugs();
 		$allowed_types[] = 'comment'; // Add core WordPress comment types.
 
-		// Check if comment type is in allowed list.
-		if ( ! in_array( $comment_type, $allowed_types, true ) ) {
+		/**
+		 * Filters the comment types that are federated.
+		 *
+		 * Remove a type to keep it local, add a custom type to federate it.
+		 *
+		 * @since unreleased
+		 *
+		 * @param string[]    $allowed_types Comment type slugs that are federated.
+		 * @param \WP_Comment $comment       The comment being processed.
+		 */
+		$allowed_types = \apply_filters( 'activitypub_allowed_comment_types', $allowed_types, $comment );
+
+		// Comments that were already sent pass regardless of type, so their Update and Delete activities can still federate.
+		if ( ! Comment_Utils::was_sent( $comment ) && ! \in_array( $comment_type, $allowed_types, true ) ) {
 			return;
 		}
 
@@ -78,7 +90,7 @@ class Comment {
 			$type = 'Create';
 		} elseif ( 'approved' === $new_status ) {
 			$type = 'Update';
-			\update_comment_meta( $comment->comment_ID, 'activitypub_comment_modified', time(), true );
+			\update_comment_meta( $comment->comment_ID, 'activitypub_comment_modified', \time(), true );
 		} elseif (
 			'trash' === $new_status ||
 			( 'delete' === $new_status && '' === $old_status ) || // Went through schedule_comment_delete_activity().

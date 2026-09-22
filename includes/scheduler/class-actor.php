@@ -34,6 +34,10 @@ class Actor {
 			\add_action( 'update_option_activitypub_blog_identifier', array( self::class, 'blog_user_update' ) );
 			\add_action( 'add_option_activitypub_blog_description', array( self::class, 'blog_user_update' ) );
 			\add_action( 'update_option_activitypub_blog_description', array( self::class, 'blog_user_update' ) );
+			\add_action( 'add_option_activitypub_blog_name', array( self::class, 'blog_user_update' ) );
+			\add_action( 'update_option_activitypub_blog_name', array( self::class, 'blog_user_update' ) );
+			\add_action( 'add_option_activitypub_blog_icon', array( self::class, 'blog_user_update' ) );
+			\add_action( 'update_option_activitypub_blog_icon', array( self::class, 'blog_user_update' ) );
 			\add_filter( 'pre_set_theme_mod_custom_logo', array( self::class, 'blog_user_update' ) );
 			\add_filter( 'pre_set_theme_mod_header_image', array( self::class, 'blog_user_update' ) );
 		}
@@ -48,6 +52,10 @@ class Actor {
 
 		\add_action( 'add_option_activitypub_actor_mode', array( self::class, 'blog_user_update' ) );
 		\add_action( 'update_option_activitypub_actor_mode', array( self::class, 'blog_user_update' ) );
+
+		// The Starter Kit policy is part of every actor profile.
+		\add_action( 'add_option_activitypub_default_feature_policy', array( self::class, 'schedule_all_profile_updates' ) );
+		\add_action( 'update_option_activitypub_default_feature_policy', array( self::class, 'schedule_all_profile_updates' ) );
 
 		\add_action( 'transition_post_status', array( self::class, 'schedule_post_activity' ), 33, 3 );
 
@@ -84,7 +92,7 @@ class Actor {
 			'user_url',
 		);
 
-		if ( in_array( $meta_key, $fields, true ) ) {
+		if ( \in_array( $meta_key, $fields, true ) ) {
 			self::schedule_profile_update( $user_id );
 		}
 	}
@@ -133,12 +141,27 @@ class Actor {
 	}
 
 	/**
+	 * Send profile updates for all local actors.
+	 *
+	 * Used when a site-wide setting that is part of every actor profile
+	 * changes, like the Starter Kit policy (FEP-7aa9 `canFeature`), so
+	 * followers of the blog actor and of every author receive the change.
+	 *
+	 * @since 9.0.1
+	 */
+	public static function schedule_all_profile_updates() {
+		foreach ( Actors::get_all_ids() as $user_id ) {
+			self::schedule_profile_update( $user_id );
+		}
+	}
+
+	/**
 	 * Send a profile update to all followers. Gets hooked into all relevant options/meta etc.
 	 *
 	 * @param int $user_id  The user ID to update (Could be 0 for Blog-User).
 	 */
 	public static function schedule_profile_update( $user_id ) {
-		if ( defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
 			return;
 		}
 
@@ -148,7 +171,7 @@ class Actor {
 			return;
 		}
 
-		$actor->set_updated( gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, time() ) );
+		$actor->set_updated( \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \time() ) );
 
 		add_to_outbox( $actor, 'Update', $user_id );
 	}

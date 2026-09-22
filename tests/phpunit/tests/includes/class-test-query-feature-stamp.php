@@ -8,6 +8,8 @@
 namespace Activitypub\Tests;
 
 use Activitypub\Activity\Extended_Object\Feature_Authorization;
+use Activitypub\Collection\Actors;
+use Activitypub\Handler\Feature_Request;
 use Activitypub\Query;
 use Activitypub\Router;
 
@@ -104,6 +106,45 @@ class Test_Query_Feature_Stamp extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Numeric-looking but non-integer actor values must not alias an actor.
+	 *
+	 * Regression: `(int) 'alice'` casts to 0, and values like '0e1' or '1.5' pass
+	 * is_numeric() but cast to 0/1, so such actor values could resolve another
+	 * actor's stamp store. Only plain decimal integers may reach the resolver.
+	 *
+	 * @covers ::get_activitypub_object
+	 */
+	public function test_actor_stamp_rejects_non_integer_actor() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$stamp_id = Feature_Request::add_stamp( Actors::BLOG_USER_ID, 'https://other.example.com/users/curator/featured/guard' );
+
+		$reset = function () {
+			$instance_property = new \ReflectionProperty( Query::class, 'instance' );
+			$instance_property->setAccessible( true );
+			$instance_property->setValue( null, null );
+		};
+
+		// Control: the canonical integer actor resolves the stamp.
+		set_query_var( 'actor', '0' );
+		set_query_var( 'stamp', $stamp_id );
+		$this->assertInstanceOf( Feature_Authorization::class, Query::get_instance()->get_activitypub_object(), 'A decimal-integer actor should resolve the stamp.' );
+
+		// alice → 0, 0e1 → 0, 1.5 → 1: none may resolve a stamp.
+		foreach ( array( 'alice', '0e1', '1.5' ) as $bad_actor ) {
+			$reset();
+			set_query_var( 'actor', $bad_actor );
+			set_query_var( 'stamp', $stamp_id );
+
+			$this->assertNotInstanceOf(
+				Feature_Authorization::class,
+				Query::get_instance()->get_activitypub_object(),
+				"Actor '{$bad_actor}' must not resolve an actor stamp."
+			);
+		}
+	}
+
+	/**
 	 * End-to-end: a stamp URL goes through the same lifecycle as a real
 	 * request (go_to → template_redirect → Query) and produces a
 	 * FeatureAuthorization. This guards against the router reverting to
@@ -133,6 +174,82 @@ class Test_Query_Feature_Stamp extends \WP_UnitTestCase {
 		 * exception means the guard fired and let the request through to
 		 * content negotiation.
 		 */
+		Router::template_redirect();
+
+		$object = Query::get_instance()->get_activitypub_object();
+		$this->assertInstanceOf( Feature_Authorization::class, $object );
+		$this->assertSame( $instrument, $object->to_array()['interactingObject'] );
+	}
+
+	/**
+	 * A blog-actor stamp (actor=0) resolves to a FeatureAuthorization object.
+	 *
+	 * Regression test: `0` is falsy as a query var, so the blog actor was
+	 * previously never routed to the stamp resolver.
+	 *
+	 * @covers ::get_activitypub_object
+	 */
+	public function test_blog_actor_stamp_resolves_to_feature_authorization() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$instrument = 'https://other.example.com/users/curator/featured/88';
+		$stamp_id   = Feature_Request::add_stamp( Actors::BLOG_USER_ID, $instrument );
+
+		set_query_var( 'actor', '0' );
+		set_query_var( 'stamp', $stamp_id );
+
+		$object = Query::get_instance()->get_activitypub_object();
+
+		$this->assertInstanceOf( Feature_Authorization::class, $object );
+		$array = $object->to_array();
+		$this->assertSame( 'FeatureAuthorization', $array['type'] );
+		$this->assertSame( $instrument, $array['interactingObject'] );
+		$this->assertSame( Actors::get_by_id( Actors::BLOG_USER_ID )->get_id(), $array['attributedTo'] );
+	}
+
+	/**
+	 * Stamps do not leak across actor types: a user's stamp ID cannot be
+	 * resolved as the blog actor, and vice versa.
+	 *
+	 * @covers \Activitypub\Handler\Feature_Request::get_stamp
+	 */
+	public function test_stamps_do_not_leak_across_actor_types() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$umeta_id      = add_user_meta( self::$user_id, '_activitypub_featured_by', 'https://x/y/user' );
+		$blog_stamp_id = Feature_Request::add_stamp( Actors::BLOG_USER_ID, 'https://x/y/blog' );
+
+		// A user stamp can never be served from the blog store, and vice versa.
+		$this->assertNotSame( 'https://x/y/user', Feature_Request::get_stamp( Actors::BLOG_USER_ID, $umeta_id ), 'A user stamp must not resolve for the blog actor.' );
+		$this->assertNotSame( 'https://x/y/blog', Feature_Request::get_stamp( self::$user_id, $blog_stamp_id ), 'A blog stamp must not resolve for a user actor.' );
+
+		// Lookups stay scoped to the requested actor.
+		$this->assertSame( 'https://x/y/blog', Feature_Request::get_stamp( Actors::BLOG_USER_ID, $blog_stamp_id ) );
+		$this->assertSame( 'https://x/y/user', Feature_Request::get_stamp( self::$user_id, $umeta_id ) );
+	}
+
+	/**
+	 * End-to-end: a blog-actor stamp URL (?actor=0&stamp=N) goes through the
+	 * request lifecycle and produces a FeatureAuthorization.
+	 *
+	 * @covers ::get_activitypub_object
+	 * @covers \Activitypub\Router::template_redirect
+	 */
+	public function test_blog_stamp_url_routes_and_resolves_end_to_end() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$instrument = 'https://other.example.com/users/curator/featured/blog-integration';
+		$stamp_id   = Feature_Request::add_stamp( Actors::BLOG_USER_ID, $instrument );
+
+		$stamp_url = add_query_arg(
+			array(
+				'actor' => 0,
+				'stamp' => $stamp_id,
+			),
+			home_url( '/' )
+		);
+
+		$this->go_to( $stamp_url );
 		Router::template_redirect();
 
 		$object = Query::get_instance()->get_activitypub_object();

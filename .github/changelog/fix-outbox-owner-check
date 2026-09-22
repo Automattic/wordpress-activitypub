@@ -1,4 +1,0 @@
-Significance: patch
-Type: security
-
-Prevent logged-in users from viewing another user's private outbox activities.

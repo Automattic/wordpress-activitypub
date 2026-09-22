@@ -39,17 +39,17 @@ class Webfinger {
 	public static function add_user_discovery( $jrd, $uri, $user ) {
 		$user = Actors::get_by_id( $user->ID );
 
-		if ( ! $user || is_wp_error( $user ) ) {
+		if ( ! $user || \is_wp_error( $user ) ) {
 			return $jrd;
 		}
 
-		$jrd['subject'] = sprintf( 'acct:%s', $user->get_webfinger() );
+		$jrd['subject'] = \sprintf( 'acct:%s', $user->get_webfinger() );
 
 		$jrd['aliases'][] = $user->get_id();
 		$jrd['aliases'][] = $user->get_url();
 		$jrd['aliases'][] = $user->get_alternate_url();
-		$jrd['aliases']   = array_unique( $jrd['aliases'] );
-		$jrd['aliases']   = array_values( $jrd['aliases'] );
+		$jrd['aliases']   = \array_unique( $jrd['aliases'] );
+		$jrd['aliases']   = \array_values( $jrd['aliases'] );
 
 		$jrd['links'][] = array(
 			'rel'  => 'self',
@@ -81,11 +81,11 @@ class Webfinger {
 			$user->get_alternate_url(),
 		);
 
-		$aliases = array_unique( $aliases );
-		$aliases = array_values( $aliases );
+		$aliases = \array_unique( $aliases );
+		$aliases = \array_values( $aliases );
 
 		$profile = array(
-			'subject' => sprintf( 'acct:%s', $user->get_webfinger() ),
+			'subject' => \sprintf( 'acct:%s', $user->get_webfinger() ),
 			'aliases' => $aliases,
 			'links'   => array(
 				array(
@@ -120,7 +120,7 @@ class Webfinger {
 	 * @return array The jrd array.
 	 */
 	public static function add_interaction_links( $jrd ) {
-		if ( ! is_array( $jrd ) ) {
+		if ( ! \is_array( $jrd ) ) {
 			return $jrd;
 		}
 

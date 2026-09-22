@@ -89,5 +89,7 @@ Only if both checks pass will the server transfer followers from the old account
 
 - **Migration moves followers, not content.** Your posts, media, and other content stay on the original platform. Only the follower relationships are transferred.
 - **Not all servers support Move.** Most Mastodon-compatible servers do, but some smaller Fediverse platforms may not process `Move` activities.
-- **Migration is essentially one-way.** While you can technically migrate back, followers who already transferred may not automatically follow back to the original account.
 - **Add aliases before initiating the move.** The target account must have the origin listed in its aliases, or the move will be rejected.
+
+> [!CAUTION]
+> **Migration is essentially one-way.** While you can technically migrate back, followers who already transferred may not automatically follow back to the original account.

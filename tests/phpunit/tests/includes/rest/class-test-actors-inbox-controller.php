@@ -7,8 +7,11 @@
 
 namespace Activitypub\Tests\Rest;
 
+use Activitypub\Application;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Inbox as Inbox_Collection;
+use Activitypub\Collection\Outbox;
+use Activitypub\Handler\Feature_Request;
 use Activitypub\Rest\Server;
 
 /**
@@ -124,6 +127,69 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	}
 
 	/**
+	 * An inbox activity that omits `actor` but is signed (e.g. Mastodon's FeatureRequest,
+	 * FEP-7aa9) must be accepted: the actor is backfilled from the signature keyId, the
+	 * activity is stored, and the handler can respond.
+	 *
+	 * Without the backfill this 400s as a missing `actor` parameter and never reaches the
+	 * inbox or the handler, so no Accept is ever sent.
+	 */
+	public function test_actorless_signed_feature_request_is_stored_and_accepted() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\update_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
+		Feature_Request::init();
+
+		$object_uri = Actors::get_by_id( self::$user_id )->get_id();
+		$actor_uri  = 'https://remote.example/users/curator';
+		$json       = array(
+			'id'         => 'https://remote.example/activities/feat-1',
+			'type'       => 'FeatureRequest',
+			'object'     => $object_uri,
+			'instrument' => 'https://remote.example/users/curator/featured',
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/' . self::$user_id . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_header( 'Signature', \sprintf( 'keyId="%s#main-key",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="abc"', $actor_uri ) );
+		$request->set_body( \wp_json_encode( $json ) );
+
+		$response = \rest_do_request( $request );
+
+		$this->assertEquals( 202, $response->get_status(), 'Signed actor-less FeatureRequest should be accepted, not rejected as a missing parameter.' );
+
+		// The activity was stored with the signature-derived actor.
+		$inbox_item = Inbox_Collection::get_by_guid( 'https://remote.example/activities/feat-1' );
+		$this->assertInstanceOf( \WP_Post::class, $inbox_item );
+		$this->assertSame( $actor_uri, \get_post_meta( $inbox_item->ID, '_activitypub_activity_remote_actor', true ) );
+
+		// An Accept was queued, addressed to the keyId-derived curator.
+		$outbox = \get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				'author'      => self::$user_id,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Accept',
+					),
+				),
+			)
+		);
+		$this->assertNotEmpty( $outbox, 'An Accept should be queued for the FeatureRequest.' );
+
+		$payload = \json_decode( $outbox[0]->post_content, true );
+		$this->assertContains( $actor_uri, (array) $payload['to'], 'The Accept must be addressed to the requesting curator.' );
+
+		\delete_option( 'activitypub_default_feature_policy' );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\remove_action( 'activitypub_inbox_feature_request', array( Feature_Request::class, 'handle_feature_request' ) );
+		\remove_action( 'activitypub_rest_inbox_disallowed', array( Feature_Request::class, 'handle_blocked_request' ) );
+		\remove_filter( 'activitypub_validate_object', array( Feature_Request::class, 'validate_object' ) );
+	}
+
+	/**
 	 * Test follow request.
 	 */
 	public function test_follow_request() {
@@ -145,6 +211,69 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$this->assertEquals( 202, $response->get_status() );
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+	}
+
+	/**
+	 * Test that deliveries to the retired Application actor's inbox are handled by the shared inbox.
+	 *
+	 * Remote servers that cached the pre-extraction Application actor document still
+	 * deliver to /actors/-1/inbox; those requests must not 404.
+	 *
+	 * @covers ::create_item
+	 * @covers ::validate_inbox_user_id
+	 */
+	public function test_legacy_application_inbox_delegates_to_shared_inbox() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\add_filter( 'pre_http_request', array( $this, 'mock_remote_404' ) );
+
+		$shared_follows = \did_action( 'activitypub_inbox_shared_follow' );
+
+		$json = array(
+			'id'     => 'https://remote.example/activities/follow-app',
+			'type'   => 'Follow',
+			'actor'  => 'https://remote.example/users/alice',
+			'object' => Application::get_id(),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/-1/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $json ) );
+
+		$response = \rest_do_request( $request );
+
+		$this->assertEquals( 202, $response->get_status(), 'The retired Application inbox should still accept deliveries.' );
+		$this->assertSame( $shared_follows + 1, \did_action( 'activitypub_inbox_shared_follow' ), 'The delivery should be handled by the shared inbox, which rejects Follows aimed at the Application.' );
+
+		\remove_filter( 'pre_http_request', array( $this, 'mock_remote_404' ) );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+	}
+
+	/**
+	 * Short-circuit remote requests with a 404 response.
+	 *
+	 * @return array A mocked 404 response.
+	 */
+	public function mock_remote_404() {
+		return array(
+			'headers'  => array(),
+			'body'     => '',
+			'response' => array(
+				'code'    => 404,
+				'message' => 'Not Found',
+			),
+		);
+	}
+
+	/**
+	 * Test that the legacy Application inbox is write-only.
+	 *
+	 * @covers ::validate_inbox_user_id
+	 */
+	public function test_legacy_application_inbox_is_not_readable() {
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/-1/inbox' );
+		$response = \rest_do_request( $request );
+
+		$this->assertGreaterThanOrEqual( 400, $response->get_status(), 'The retired Application inbox should not be readable.' );
 	}
 
 	/**
@@ -624,6 +753,40 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	}
 
 	/**
+	 * One queued event hands the activity to the handlers exactly once.
+	 *
+	 * The controller used to register a second, near-identical dispatcher on the same event, so
+	 * every handler ran twice in any request where the REST routes had been registered.
+	 *
+	 * @covers \Activitypub\Scheduler::process_inbox_activity
+	 */
+	public function test_a_queued_event_dispatches_once() {
+		$activity_id = 'https://remote.example/@activity-dispatched-once';
+
+		$activity = \Activitypub\Activity\Activity::init_from_array(
+			array(
+				'id'     => $activity_id,
+				'type'   => 'Like',
+				'actor'  => 'https://remote.example/@test',
+				'object' => 'https://example.org/@user/post/1',
+			)
+		);
+		Inbox_Collection::add( $activity, array( self::$user_id ) );
+
+		$dispatches = 0;
+		$counter    = function () use ( &$dispatches ) {
+			++$dispatches;
+		};
+		\add_action( 'activitypub_handled_inbox_like', $counter );
+
+		\do_action( 'activitypub_inbox_create_item', $activity_id );
+
+		\remove_action( 'activitypub_handled_inbox_like', $counter );
+
+		$this->assertEquals( 1, $dispatches, 'The queued event must reach the handlers exactly once.' );
+	}
+
+	/**
 	 * Test inbox request schedules delayed processing.
 	 *
 	 * @covers \Activitypub\Rest\Actors_Inbox_Controller::create_item
@@ -698,5 +861,52 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
 		\remove_filter( 'activitypub_skip_inbox_storage', '__return_true' );
+	}
+
+	/**
+	 * One activity delivered to several per-actor inboxes must collect every recipient.
+	 *
+	 * Senders that do not use the shared inbox POST the same activity once per actor, so the
+	 * second and third delivery land on the entry the first one created.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_same_activity_delivered_to_each_actor_inbox_collects_recipients() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$activity_id = 'https://remote.example/activities/fanned-out';
+		$activity    = array(
+			'id'     => $activity_id,
+			'type'   => 'Create',
+			'actor'  => 'https://remote.example/users/alice',
+			'object' => array(
+				'id'      => 'https://remote.example/objects/fanned-out',
+				'type'    => 'Note',
+				'content' => 'Hello you three',
+			),
+		);
+
+		$recipients = array( 1, self::$user_id, self::$editor_id );
+
+		foreach ( $recipients as $user_id ) {
+			$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/' . $user_id . '/inbox' );
+			$request->set_header( 'Content-Type', 'application/activity+json' );
+			$request->set_body( \wp_json_encode( $activity ) );
+
+			$response = \rest_do_request( $request );
+
+			$this->assertSame( 202, $response->get_status() );
+		}
+
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$inbox_item = Inbox_Collection::get_by_guid( $activity_id );
+		$this->assertInstanceOf( 'WP_Post', $inbox_item );
+
+		$stored = Inbox_Collection::get_recipients( $inbox_item->ID );
+		$this->assertCount( 3, $stored, 'Every actor the sender delivered to must be a recipient.' );
+		foreach ( $recipients as $user_id ) {
+			$this->assertContains( $user_id, $stored );
+		}
 	}
 }

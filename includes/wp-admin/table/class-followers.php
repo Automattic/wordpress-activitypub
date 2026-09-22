@@ -45,7 +45,7 @@ class Followers extends \WP_List_Table {
 	 * Constructor.
 	 */
 	public function __construct() {
-		if ( get_current_screen()->id === 'settings_page_activitypub' ) {
+		if ( \get_current_screen()->id === 'settings_page_activitypub' ) {
 			$this->user_id    = Actors::BLOG_USER_ID;
 			$this->follow_url = \admin_url( 'options-general.php?page=activitypub&tab=following' );
 		} else {
@@ -63,7 +63,7 @@ class Followers extends \WP_List_Table {
 			)
 		);
 
-		\add_action( 'load-' . get_current_screen()->id, array( $this, 'process_action' ), 20 );
+		\add_action( 'load-' . \get_current_screen()->id, array( $this, 'process_action' ), 20 );
 	}
 
 	/**
@@ -199,7 +199,7 @@ class Followers extends \WP_List_Table {
 				break;
 		}
 
-		\set_transient( 'settings_errors', get_settings_errors(), 30 ); // 30 seconds.
+		\set_transient( 'settings_errors', \get_settings_errors(), 30 ); // 30 seconds.
 
 		\wp_safe_redirect( $redirect_to );
 		exit;
@@ -241,7 +241,7 @@ class Followers extends \WP_List_Table {
 		$this->set_pagination_args(
 			array(
 				'total_items' => $counter,
-				'total_pages' => ceil( $counter / $per_page ),
+				'total_pages' => \ceil( $counter / $per_page ),
 				'per_page'    => $per_page,
 			)
 		);
@@ -280,8 +280,8 @@ class Followers extends \WP_List_Table {
 
 		$links = array(
 			'all' => array(
-				'url'     => admin_url( $path ),
-				'label'   => sprintf(
+				'url'     => \admin_url( $path ),
+				'label'   => \sprintf(
 					/* translators: %s: Number of users. */
 					\_nx(
 						'All <span class="count">(%s)</span>',
@@ -290,7 +290,7 @@ class Followers extends \WP_List_Table {
 						'users',
 						'activitypub'
 					),
-					number_format_i18n( $count )
+					\number_format_i18n( $count )
 				),
 				'current' => true,
 			),
@@ -406,14 +406,14 @@ class Followers extends \WP_List_Table {
 		}
 
 		$actions = array(
-			'delete' => sprintf(
+			'delete' => \sprintf(
 				'<a href="%s" aria-label="%s">%s</a>',
 				$this->get_action_url( 'delete', $item['id'] ),
 				/* translators: %s: username. */
 				\esc_attr( \sprintf( \__( 'Delete %s', 'activitypub' ), $item['username'] ) ),
 				\esc_html__( 'Delete', 'activitypub' )
 			),
-			'block'  => sprintf(
+			'block'  => \sprintf(
 				'<a href="%s" aria-label="%s" class="activitypub-block-follower">%s</a>',
 				$this->get_action_url( 'block', $item['id'] ),
 				/* translators: %s: username. */
@@ -446,7 +446,7 @@ class Followers extends \WP_List_Table {
 		 *                          'Delete', 'Block', and optionally 'Follow back'.
 		 * @param array    $item    The current follower item.
 		 */
-		$actions = apply_filters( 'activitypub_followers_row_actions', $actions, $item );
+		$actions = \apply_filters( 'activitypub_followers_row_actions', $actions, $item );
 
 		return $this->row_actions( $actions );
 	}
@@ -501,7 +501,7 @@ class Followers extends \WP_List_Table {
 	 * @return \WP_Post|false The actor post or false.
 	 */
 	private function is_followable( $search ) {
-		if ( '1' !== get_option( 'activitypub_following_ui', '0' ) ) {
+		if ( '1' !== \get_option( 'activitypub_following_ui', '0' ) ) {
 			return false;
 		}
 

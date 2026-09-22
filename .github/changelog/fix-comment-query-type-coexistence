@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Stop ActivityPub Likes, Reposts, and Quotes from leaking into the front-end comment list on sites that also use other comment-filtering plugins.

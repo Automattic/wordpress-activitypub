@@ -7,9 +7,11 @@
 
 namespace Activitypub\Tests\Handler;
 
+use Activitypub\Application;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
+use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Follow;
 
 /**
@@ -123,21 +125,14 @@ class Test_Follow extends \WP_UnitTestCase {
 	 */
 	public function handle_follow_provider() {
 		return array(
-			'application_user_follow' => array(
-				Actors::APPLICATION_USER_ID,
-				'https://example.com/actor',
-				'Reject',
-				false,
-				'Following application user should be rejected',
-			),
-			'regular_user_follow'     => array(
+			'regular_user_follow'    => array(
 				'test_user',
 				'https://example.com/regular-actor',
 				'Accept',
 				true,
 				'Following regular user should be accepted',
 			),
-			'subdomain_actor_follow'  => array(
+			'subdomain_actor_follow' => array(
 				'test_user',
 				'https://social.example.com/users/actor',
 				'Accept',
@@ -307,50 +302,133 @@ class Test_Follow extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test queue_reject method.
+	 * Test that a Follow aimed at the Application actor gets an explicit Reject.
 	 *
-	 * @covers ::queue_reject
+	 * @covers ::reject_application_follow
 	 */
-	public function test_queue_reject() {
-		$actor_url       = 'https://example.com/reject-actor';
-		$activity_object = array(
-			'id'     => $actor_url . '/activity/456',
-			'type'   => 'Follow',
-			'actor'  => $actor_url,
-			'object' => Actors::get_by_id( self::$user_id )->get_id(),
-		);
+	public function test_reject_application_follow_sends_signed_reject() {
+		$actor_url = 'https://remote.example/users/alice';
+		$inbox_url = 'https://remote.example/users/alice/inbox';
 
-		Follow::queue_reject( $activity_object, self::$user_id );
-
-		// Check that a Reject activity was queued.
-		$outbox_posts = \get_posts(
+		Remote_Actors::upsert(
 			array(
-				'post_type'   => Outbox::POST_TYPE,
-				'author'      => self::$user_id,
-				'post_status' => 'pending',
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query'  => array(
-					array(
-						'key'   => '_activitypub_activity_type',
-						'value' => 'Reject',
-					),
-				),
+				'id'                 => $actor_url,
+				'type'               => 'Person',
+				'inbox'              => $inbox_url,
+				'preferred_username' => 'alice',
 			)
 		);
 
-		$this->assertCount( 1, $outbox_posts, 'One Reject outbox entry should be created' );
+		$requests  = array();
+		$mock_http = function ( $preempt, $args, $url ) use ( &$requests ) {
+			$requests[] = array(
+				'url'  => $url,
+				'args' => $args,
+			);
 
-		$outbox_post   = $outbox_posts[0];
-		$activity_type = \get_post_meta( $outbox_post->ID, '_activitypub_activity_type', true );
-		$activity_json = \json_decode( $outbox_post->post_content, true );
-		$visibility    = \get_post_meta( $outbox_post->ID, 'activitypub_content_visibility', true );
+			return array(
+				'headers'  => array(),
+				'body'     => '',
+				'response' => array(
+					'code'    => 202,
+					'message' => 'Accepted',
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $mock_http, 10, 3 );
 
-		// Verify outbox entry.
-		$this->assertEquals( 'Reject', $activity_type );
-		$this->assertEquals( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE, $visibility );
-		$this->assertEquals( 'Follow', $activity_json['object']['type'] );
-		$this->assertEquals( array( $actor_url ), $activity_json['to'] );
-		$this->assertEquals( $actor_url, $activity_json['object']['actor'] );
+		$activity = array(
+			'id'     => $actor_url . '/activities/follow-1',
+			'type'   => 'Follow',
+			'actor'  => $actor_url,
+			'object' => Application::get_id(),
+		);
+
+		Follow::reject_application_follow( $activity, array() );
+
+		\remove_filter( 'pre_http_request', $mock_http );
+
+		$this->assertCount( 1, $requests, 'One Reject should be delivered' );
+		$this->assertSame( $inbox_url, $requests[0]['url'] );
+		$this->assertSame( Application::get_key_id(), $requests[0]['args']['key_id'], 'The Reject should be signed with the Application key' );
+
+		$reject = \json_decode( $requests[0]['args']['body'], true );
+
+		$this->assertSame( 'Reject', $reject['type'] );
+		$this->assertSame( Application::get_id(), $reject['actor'] );
+		$this->assertSame( array( $actor_url ), $reject['to'] );
+		$this->assertSame( $activity['id'], $reject['object']['id'] );
+		$this->assertSame( 'Follow', $reject['object']['type'] );
+	}
+
+	/**
+	 * Test that Follows with resolved local recipients are left alone.
+	 *
+	 * @covers ::reject_application_follow
+	 */
+	public function test_reject_application_follow_skips_resolved_recipients() {
+		$requests  = array();
+		$mock_http = function ( $preempt, $args, $url ) use ( &$requests ) {
+			$requests[] = $url;
+
+			return array(
+				'headers'  => array(),
+				'body'     => '',
+				'response' => array(
+					'code'    => 202,
+					'message' => 'Accepted',
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $mock_http, 10, 3 );
+
+		$activity = array(
+			'id'     => 'https://remote.example/activities/follow-2',
+			'type'   => 'Follow',
+			'actor'  => 'https://remote.example/users/alice',
+			'object' => Application::get_id(),
+		);
+
+		Follow::reject_application_follow( $activity, array( 1 ) );
+
+		\remove_filter( 'pre_http_request', $mock_http );
+
+		$this->assertCount( 0, $requests, 'A Follow with resolved recipients should not be rejected' );
+	}
+
+	/**
+	 * Test that Follows of other objects are left alone.
+	 *
+	 * @covers ::reject_application_follow
+	 */
+	public function test_reject_application_follow_skips_non_application_objects() {
+		$requests  = array();
+		$mock_http = function ( $preempt, $args, $url ) use ( &$requests ) {
+			$requests[] = $url;
+
+			return array(
+				'headers'  => array(),
+				'body'     => '',
+				'response' => array(
+					'code'    => 202,
+					'message' => 'Accepted',
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $mock_http, 10, 3 );
+
+		$activity = array(
+			'id'     => 'https://remote.example/activities/follow-3',
+			'type'   => 'Follow',
+			'actor'  => 'https://remote.example/users/alice',
+			'object' => 'https://remote.example/users/bob',
+		);
+
+		Follow::reject_application_follow( $activity, array() );
+
+		\remove_filter( 'pre_http_request', $mock_http );
+
+		$this->assertCount( 0, $requests, 'A Follow of another actor should not be rejected by the Application' );
 	}
 
 	/**

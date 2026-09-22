@@ -10,6 +10,7 @@ namespace Activitypub\Transformer;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Replies;
 use Activitypub\Comment as Comment_Utils;
+use Activitypub\Mention;
 use Activitypub\Model\Blog;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
@@ -122,12 +123,21 @@ class Comment extends Base {
 		$content  = $comment->comment_content;
 		$mentions = '';
 
+		// What the author already mentioned: handles keyed like the reply context, and link targets as they are.
+		$written      = \array_change_key_case( Mention::extract_mentions( array(), $content ), CASE_LOWER );
+		$written_urls = \array_map( 'untrailingslashit', \array_merge( \array_values( $written ), Mention::extract_mention_links( $content ) ) );
+
 		foreach ( $this->extract_reply_context() as $acct => $url ) {
-			$mentions .= sprintf(
-				'<a rel="mention" class="u-url mention" href="%1$s" title="%2$s">%3$s</a> ',
-				esc_url( $url ),
-				esc_attr( $acct ),
-				esc_html( '@' . strtok( $acct, '@' ) )
+			// Skip an actor the author already mentioned, so the mention is not federated twice.
+			if ( isset( $written[ \strtolower( $acct ) ] ) || \in_array( \untrailingslashit( $url ), $written_urls, true ) ) {
+				continue;
+			}
+
+			// The same markup Mastodon writes for a mention.
+			$mentions .= \sprintf(
+				'<span class="h-card"><a href="%1$s" class="u-url mention" rel="mention">@<span>%2$s</span></a></span> ',
+				\esc_url( $url ),
+				\esc_html( \strtok( $acct, '@' ) )
 			);
 		}
 		$content = $mentions . $content;
@@ -215,7 +225,7 @@ class Comment extends Base {
 
 		$user = Actors::get_by_id( $this->item->user_id );
 
-		if ( $user && ! is_wp_error( $user ) ) {
+		if ( $user && ! \is_wp_error( $user ) ) {
 			$this->actor_object = $user;
 			return $user;
 		}
@@ -240,7 +250,7 @@ class Comment extends Base {
 		 *
 		 * @return array The filtered list of mentions.
 		 */
-		return apply_filters( 'activitypub_extract_mentions', array(), $this->item->comment_content, $this->item );
+		return \apply_filters( 'activitypub_extract_mentions', array(), $this->item->comment_content, $this->item );
 	}
 
 	/**
@@ -252,7 +262,7 @@ class Comment extends Base {
 		$ancestors = get_comment_ancestors( $this->item );
 
 		// Now that we have the full tree of ancestors, only return the ones received from the fediverse.
-		return array_filter(
+		return \array_filter(
 			$ancestors,
 			static function ( $comment_id ) {
 				return \get_comment_meta( $comment_id, 'protocol', true ) === 'activitypub';
@@ -270,7 +280,7 @@ class Comment extends Base {
 	 */
 	public function extract_reply_context( $mentions = array() ) {
 		// Check if `$this->item` is a WP_Comment.
-		if ( 'WP_Comment' !== get_class( $this->item ) ) {
+		if ( 'WP_Comment' !== \get_class( $this->item ) ) {
 			return $mentions;
 		}
 
@@ -283,8 +293,8 @@ class Comment extends Base {
 			$comment = \get_comment( $comment_id );
 			if ( $comment && ! empty( $comment->comment_author_url ) ) {
 				$acct = Webfinger::uri_to_acct( $comment->comment_author_url );
-				if ( $acct && ! is_wp_error( $acct ) ) {
-					$acct              = str_replace( 'acct:', '@', $acct );
+				if ( $acct && ! \is_wp_error( $acct ) ) {
+					$acct              = \str_replace( 'acct:', '@', $acct );
 					$mentions[ $acct ] = $comment->comment_author_url;
 				}
 			}
@@ -345,7 +355,7 @@ class Comment extends Base {
 	 */
 	protected function get_context() {
 		if ( $this->item->comment_post_ID ) {
-			return get_rest_url_by_path( sprintf( 'posts/%d/context', $this->item->comment_post_ID ) );
+			return get_rest_url_by_path( \sprintf( 'posts/%d/context', $this->item->comment_post_ID ) );
 		}
 
 		return null;

@@ -66,7 +66,7 @@ class Collection_Sync {
 
 		// Check for followers collection.
 		$collection_type = null;
-		if ( preg_match( '#/followers(?:/sync)?(?:\?|$)#', $params['url'] ) ) {
+		if ( \preg_match( '#/followers(?:/sync)?(?:\?|$)#', $params['url'] ) ) {
 			$collection_type = 'followers';
 		}
 
@@ -89,10 +89,10 @@ class Collection_Sync {
 
 		// Extract the user ID for cache key (collection sync is always for a single user).
 		$user_id   = \is_array( $user_ids ) ? \reset( $user_ids ) : $user_ids;
-		$cache_key = 'activitypub_collection_sync_received_' . $user_id . '_' . md5( $actor_url );
+		$cache_key = 'activitypub_collection_sync_received_' . $user_id . '_' . \md5( $actor_url );
 		if ( false === \get_transient( $cache_key ) ) {
 			$frequency = self::get_frequency();
-			\set_transient( $cache_key, time(), $frequency );
+			\set_transient( $cache_key, \time(), $frequency );
 		} else {
 			return;
 		}
@@ -127,7 +127,7 @@ class Collection_Sync {
 			return $args;
 		}
 
-		if ( ! is_array( $args['body'] ) ) {
+		if ( ! \is_array( $args['body'] ) ) {
 			$body = \json_decode( $args['body'], true );
 			if ( null === $body ) {
 				return $args;
@@ -149,7 +149,7 @@ class Collection_Sync {
 		}
 
 		// Check if we've already sent a sync header to this authority today.
-		$transient_key = 'activitypub_collection_sync_sent_' . $user_id . '_' . md5( $inbox_authority );
+		$transient_key = 'activitypub_collection_sync_sent_' . $user_id . '_' . \md5( $inbox_authority );
 		if ( false !== \get_transient( $transient_key ) ) {
 			return $args;
 		}
@@ -159,7 +159,7 @@ class Collection_Sync {
 			$args['headers']['Collection-Synchronization'] = $sync_header;
 
 			$frequency = self::get_frequency();
-			\set_transient( $transient_key, time(), $frequency );
+			\set_transient( $transient_key, \time(), $frequency );
 		}
 
 		return $args;
@@ -196,7 +196,7 @@ class Collection_Sync {
 			return false;
 		}
 
-		if ( trailingslashit( $params['collectionId'] ) !== trailingslashit( $expected_collection ) ) {
+		if ( \trailingslashit( $params['collectionId'] ) !== \trailingslashit( $expected_collection ) ) {
 			return false;
 		}
 

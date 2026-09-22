@@ -9,6 +9,7 @@ namespace Activitypub\Collection;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
+use Activitypub\OAuth\Server;
 use Activitypub\Scheduler;
 use Activitypub\Webfinger;
 
@@ -101,14 +102,14 @@ class Outbox {
 
 		$outbox_item = array(
 			'post_type'    => self::POST_TYPE,
-			'post_title'   => sprintf(
+			'post_title'   => \sprintf(
 				/* translators: 1. Activity type, 2. Object Title or Excerpt */
-				__( '[%1$s] %2$s', 'activitypub' ),
+				\__( '[%1$s] %2$s', 'activitypub' ),
 				$activity->get_type(),
 				\wp_trim_words( $title, 5 )
 			),
 			// Persist the blind audience so later dispatch can compute recipients from `bto`/`bcc`.
-			'post_content' => wp_slash( $activity->to_json( true, true ) ),
+			'post_content' => \wp_slash( $activity->to_json( true, true ) ),
 			// ensure that user ID is not below 0.
 			'post_author'  => \max( $user_id, 0 ),
 			'post_status'  => 'pending',
@@ -185,7 +186,7 @@ class Outbox {
 		 * QuoteRequests) and must not cancel each other even when they share
 		 * the same object ID.
 		 */
-		if ( in_array( $activity_type, array( 'Follow', 'Announce', 'Accept', 'Reject' ), true ) ) {
+		if ( \in_array( $activity_type, array( 'Follow', 'Announce', 'Accept', 'Reject' ), true ) ) {
 			return;
 		}
 
@@ -227,7 +228,7 @@ class Outbox {
 		 */
 		$status_filter = 'Delete' === $activity_type ? 'any' : 'pending';
 
-		$existing_items = get_posts(
+		$existing_items = \get_posts(
 			array(
 				'post_type'   => self::POST_TYPE,
 				'post_status' => $status_filter,
@@ -340,12 +341,12 @@ class Outbox {
 	 * @return bool True if the activity was rescheduled, false otherwise.
 	 */
 	public static function reschedule( $outbox_item ) {
-		$outbox_item = get_post( $outbox_item );
+		$outbox_item = \get_post( $outbox_item );
 
 		$outbox_item->post_status = 'pending';
-		$outbox_item->post_date   = current_time( 'mysql' );
+		$outbox_item->post_date   = \current_time( 'mysql' );
 
-		wp_update_post( $outbox_item );
+		\wp_update_post( $outbox_item );
 
 		Scheduler::schedule_outbox_activity_for_federation( $outbox_item->ID );
 
@@ -396,44 +397,25 @@ class Outbox {
 		}
 
 		/*
-		 * Fall back to the outbox row's timestamps when the hydrated activity is
-		 * missing `published`/`updated`. The CPT row is the authoritative record
-		 * of when the activity was emitted, so dropping it on the floor here
-		 * means downstream consumers (federation, REST listings, audit tooling)
-		 * see a date-less activity even though we know exactly when it left.
+		 * Fall back to the row's own timestamps when the stored activity carries none, which is the
+		 * case for every row written before this fallback existed.
 		 *
-		 * `Outbox::add` inserts with `post_status = 'pending'`, which leaves the
-		 * `_gmt` columns as the `0000-00-00 00:00:00` sentinel while the local
-		 * columns are populated via `current_time( 'mysql' )`. The Dispatcher
-		 * reads the activity while the row is still pending, so the GMT columns
-		 * are derived from the local columns when the sentinel is present —
-		 * synthesizing `1970-01-01T00:00:00Z` would be worse than the field
-		 * being empty, and `Update` activities would lose `updated` on
-		 * federation if we relied on the GMT column alone.
+		 * Outbox::add() inserts with post_status `pending`, which leaves the `_gmt` columns at the
+		 * `0000-00-00 00:00:00` sentinel while the local columns are set, and the Dispatcher reads the
+		 * activity while the row is still pending. get_post_datetime() answers false for that
+		 * sentinel, so the local column is used instead and no 1970 date is ever synthesized.
 		 */
-		$post_date_gmt = $outbox_item->post_date_gmt;
-		if ( empty( $post_date_gmt ) || '0000-00-00 00:00:00' === $post_date_gmt ) {
-			$post_date_gmt = empty( $outbox_item->post_date ) || '0000-00-00 00:00:00' === $outbox_item->post_date
-				? ''
-				: \get_gmt_from_date( $outbox_item->post_date );
+		$utc       = new \DateTimeZone( 'UTC' );
+		$published = \get_post_datetime( $outbox_item, 'date', 'gmt' ) ?: \get_post_datetime( $outbox_item, 'date' );
+		$updated   = \get_post_datetime( $outbox_item, 'modified', 'gmt' ) ?: \get_post_datetime( $outbox_item, 'modified' );
+
+		if ( ! $activity->get_published() && $published ) {
+			$activity->set_published( $published->setTimezone( $utc )->format( ACTIVITYPUB_DATE_TIME_RFC3339 ) );
 		}
 
-		$post_modified_gmt = $outbox_item->post_modified_gmt;
-		if ( empty( $post_modified_gmt ) || '0000-00-00 00:00:00' === $post_modified_gmt ) {
-			$post_modified_gmt = empty( $outbox_item->post_modified ) || '0000-00-00 00:00:00' === $outbox_item->post_modified
-				? ''
-				: \get_gmt_from_date( $outbox_item->post_modified );
-		}
-
-		if ( ! $activity->get_published() && $post_date_gmt ) {
-			$activity->set_published( \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \strtotime( $post_date_gmt ) ) );
-		}
-
-		if ( ! $activity->get_updated() && $post_modified_gmt ) {
-			$needs_updated = ( 'Update' === $type ) || ( $post_modified_gmt > $post_date_gmt );
-			if ( $needs_updated ) {
-				$activity->set_updated( \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \strtotime( $post_modified_gmt ) ) );
-			}
+		// An Update always reports when it was modified; other types only once the row changed after it was added.
+		if ( ! $activity->get_updated() && $updated && ( 'Update' === $type || ( $published && $updated > $published ) ) ) {
+			$activity->set_updated( $updated->setTimezone( $utc )->format( ACTIVITYPUB_DATE_TIME_RFC3339 ) );
 		}
 
 		/**
@@ -442,7 +424,7 @@ class Outbox {
 		 * @param Activity $activity    The Activity object.
 		 * @param \WP_Post $outbox_item The outbox item post object.
 		 */
-		return apply_filters( 'activitypub_get_outbox_activity', $activity, $outbox_item );
+		return \apply_filters( 'activitypub_get_outbox_activity', $activity, $outbox_item );
 	}
 
 	/**
@@ -458,9 +440,6 @@ class Outbox {
 		switch ( $actor_type ) {
 			case 'blog':
 				$actor_id = Actors::BLOG_USER_ID;
-				break;
-			case 'application':
-				$actor_id = Actors::APPLICATION_USER_ID;
 				break;
 			case 'user':
 			default:
@@ -489,7 +468,7 @@ class Outbox {
 
 		// Authenticate via Bearer token for non-REST requests (e.g. permalink access).
 		if ( \get_option( 'activitypub_api', false ) && ! \is_user_logged_in() && ! \wp_is_serving_rest_request() ) {
-			\Activitypub\OAuth\Server::authenticate_oauth( null );
+			Server::authenticate_oauth( null );
 		}
 
 		/*
@@ -516,14 +495,14 @@ class Outbox {
 		// Check if Outbox Activity is public.
 		$visibility = \get_post_meta( $outbox_item->ID, 'activitypub_content_visibility', true );
 
-		if ( ! in_array( $visibility, array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC ), true ) ) {
+		if ( ! \in_array( $visibility, array( ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC, ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC ), true ) ) {
 			return new \WP_Error( 'private_outbox_item', 'Not a public Outbox item.' );
 		}
 
 		$activity_types = \apply_filters( 'rest_activitypub_outbox_activity_types', self::ACTIVITY_TYPES );
 		$activity_type  = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
 
-		if ( ! in_array( $activity_type, $activity_types, true ) ) {
+		if ( ! \in_array( $activity_type, $activity_types, true ) ) {
 			return new \WP_Error( 'private_outbox_item', 'Not public Outbox item type.' );
 		}
 
@@ -540,11 +519,11 @@ class Outbox {
 	private static function get_object_id( $data ) {
 		$object = $data->get_object();
 
-		if ( is_object( $object ) ) {
+		if ( \is_object( $object ) ) {
 			return self::get_object_id( $object );
 		}
 
-		if ( is_string( $object ) ) {
+		if ( \is_string( $object ) ) {
 			return $object;
 		}
 
@@ -567,10 +546,10 @@ class Outbox {
 			return '';
 		}
 
-		if ( is_string( $activity_object ) ) {
-			$post_id = url_to_postid( $activity_object );
+		if ( \is_string( $activity_object ) ) {
+			$post_id = \url_to_postid( $activity_object );
 
-			return $post_id ? get_the_title( $post_id ) : '';
+			return $post_id ? \get_the_title( $post_id ) : '';
 		}
 
 		$title = $activity_object->get_name() ?: $activity_object->get_content();

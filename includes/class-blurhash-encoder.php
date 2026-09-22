@@ -16,7 +16,7 @@ namespace Activitypub;
  * kornrunner/blurhash library; this replaces that runtime dependency so
  * the plugin ships Blurhash support out of the box.
  *
- * @since unreleased
+ * @since 9.0.0
  */
 class Blurhash_Encoder {
 

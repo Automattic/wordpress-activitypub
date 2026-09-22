@@ -8,7 +8,7 @@
  * External dependencies
  */
 import type { ReactNode } from 'react';
-import { UseNavigateResult } from '@tanstack/react-router';
+import type { UseNavigateResult } from '@wordpress/route';
 
 /**
  * WordPress dependencies
@@ -26,7 +26,7 @@ import { useSelect } from '@wordpress/data';
 import { useFeed } from '../../hooks/use-feed';
 import { titleField, dateField, metadataField, contentField, objectTypeField, tagField } from '../../components/fields';
 import EmptyState from '../../components/empty-state';
-import { normalizeFieldOrder } from './utils';
+import { getFeedViewUpdate, normalizeFieldOrder } from './utils';
 import { STORE_NAME } from '../../store';
 import type { AppSelectors } from '../../store';
 import type { FeedPost } from '../../types';
@@ -147,25 +147,9 @@ export default function FeedStage(): ReactNode {
 	// dataviews' infinite-scroll `startPosition` into our page-based loader.
 	const updateFeedView = useCallback(
 		( updatedView: ViewType ): void => {
-			const filtersChanged: boolean = JSON.stringify( view.filters ) !== JSON.stringify( updatedView.filters );
-			const perPage: number = updatedView.perPage || 20;
-			let page: number = updatedView.page ?? 1;
-
-			if ( filtersChanged ) {
-				page = 1;
-			} else if (
-				typeof updatedView.startPosition === 'number' &&
-				updatedView.startPosition !== view.startPosition
-			) {
-				// DataViews 14 advances startPosition as the user scrolls;
-				// map it to the next page we need to fetch.
-				const targetPage: number = Math.max( 1, Math.ceil( updatedView.startPosition / perPage ) );
-				page = Math.max( page, targetPage );
-			}
-
-			updateView( { ...updatedView, page } );
+			updateView( getFeedViewUpdate( view, updatedView ) );
 		},
-		[ view.filters, view.startPosition, updateView ]
+		[ view, updateView ]
 	);
 
 	// Reset view to default state when actor switches

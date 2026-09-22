@@ -279,9 +279,12 @@ class Authorization_Controller extends \WP_REST_Controller {
 		);
 
 		if ( \is_wp_error( $code ) ) {
+			// A refused scope is an OAuth error the client can act on; the rest are internal failures.
+			$error = 'invalid_scope' === $code->get_error_code() ? 'invalid_scope' : 'server_error';
+
 			return $this->redirect_with_error(
 				$redirect_uri,
-				'server_error',
+				$error,
 				$code->get_error_message(),
 				$state
 			);
@@ -399,7 +402,7 @@ class Authorization_Controller extends \WP_REST_Controller {
 	/**
 	 * Build a 429 rate-limit response with a Retry-After header.
 	 *
-	 * @since unreleased
+	 * @since 9.0.0
 	 *
 	 * @param string $message Translated human-readable error message.
 	 * @return \WP_REST_Response

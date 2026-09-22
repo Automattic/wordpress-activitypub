@@ -7,6 +7,7 @@
 
 namespace Activitypub\Tests\Handler;
 
+use Activitypub\Application;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Outbox;
@@ -69,6 +70,23 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 	public function test_validate_object_fails_for_missing_instrument() {
 		$activity = $this->create_feature_request_activity();
 		unset( $activity['instrument'] );
+
+		$request = new \WP_REST_Request( 'POST', '/inbox' );
+		$request->set_body( wp_json_encode( $activity ) );
+		$request->set_header( 'Content-Type', 'application/json' );
+
+		$valid = Feature_Request::validate_object( true, 'object', $request );
+		$this->assertFalse( $valid );
+	}
+
+	/**
+	 * Test that validate_object rejects an instrument hosted off the actor's domain.
+	 *
+	 * @covers ::validate_object
+	 */
+	public function test_validate_object_fails_for_cross_host_instrument() {
+		$activity               = $this->create_feature_request_activity();
+		$activity['instrument'] = 'https://victim.example/users/alice/featured/1';
 
 		$request = new \WP_REST_Request( 'POST', '/inbox' );
 		$request->set_body( wp_json_encode( $activity ) );
@@ -375,5 +393,146 @@ class Test_Feature_Request extends ActivityPub_Outbox_TestCase {
 			)
 		);
 		$this->assertNotEmpty( $outbox, 'Unresolvable target should still produce a Reject activity.' );
+	}
+
+	/**
+	 * Test that queue_accept stores a stamp for the blog actor in the option store.
+	 *
+	 * The blog actor has no users-table row, so its stamps cannot live in
+	 * user meta.
+	 *
+	 * @covers ::queue_accept
+	 * @covers ::add_stamp
+	 */
+	public function test_queue_accept_stores_stamp_for_blog_actor() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$blog_actor         = Actors::get_by_id( Actors::BLOG_USER_ID );
+		$activity           = $this->create_feature_request_activity();
+		$activity['object'] = $blog_actor->get_id();
+
+		Feature_Request::queue_accept( $activity, Actors::BLOG_USER_ID );
+
+		// The stamp is persisted and resolvable for the blog actor. Re-adding the
+		// same instrument is idempotent and returns its existing stamp ID.
+		$stamp_id = Feature_Request::add_stamp( Actors::BLOG_USER_ID, $activity['instrument'] );
+		$this->assertSame(
+			$activity['instrument'],
+			Feature_Request::get_stamp( Actors::BLOG_USER_ID, $stamp_id ),
+			'Instrument URL should be resolvable for the blog actor.'
+		);
+
+		// The Accept carries a resolvable stamp URL for actor 0.
+		$outbox = get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Accept',
+					),
+				),
+			)
+		);
+		$this->assertNotEmpty( $outbox, 'Accept activity should be queued for the blog actor.' );
+
+		$payload = json_decode( $outbox[0]->post_content, true );
+		$this->assertSame( $blog_actor->get_id(), $payload['actor'], 'The Accept should be sent by the blog actor.' );
+		$this->assertStringContainsString( 'actor=0', $payload['result'] );
+		$this->assertStringContainsString( 'stamp=' . $stamp_id, $payload['result'] );
+	}
+
+	/**
+	 * Test that blog-actor stamps are idempotent: a second FeatureRequest with the
+	 * same instrument reuses the existing stamp.
+	 *
+	 * @covers ::queue_accept
+	 * @covers ::add_stamp
+	 */
+	public function test_queue_accept_idempotent_for_blog_actor() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$activity           = $this->create_feature_request_activity();
+		$activity['object'] = Actors::get_by_id( Actors::BLOG_USER_ID )->get_id();
+
+		Feature_Request::queue_accept( $activity, Actors::BLOG_USER_ID );
+		Feature_Request::queue_accept( $activity, Actors::BLOG_USER_ID );
+
+		// The duplicate reuses the first slot and never allocates a second.
+		$this->assertSame( $activity['instrument'], Feature_Request::get_stamp( Actors::BLOG_USER_ID, 1 ), 'The first blog stamp slot holds the instrument.' );
+		$this->assertNull( Feature_Request::get_stamp( Actors::BLOG_USER_ID, 2 ), 'Duplicate FeatureRequests for the same instrument must not produce a second blog stamp.' );
+	}
+
+	/**
+	 * Test that distinct instruments get distinct, resolvable blog stamp IDs and
+	 * that re-adding an instrument is idempotent.
+	 *
+	 * @covers ::add_stamp
+	 * @covers ::get_stamp
+	 */
+	public function test_add_stamp_allocates_distinct_ids_for_blog_actor() {
+		$first  = Feature_Request::add_stamp( Actors::BLOG_USER_ID, 'https://remote.example.com/featured/1' );
+		$second = Feature_Request::add_stamp( Actors::BLOG_USER_ID, 'https://remote.example.com/featured/2' );
+
+		$this->assertNotSame( $first, $second, 'Distinct instruments must not reuse the same blog stamp ID.' );
+
+		// Each ID resolves back to its own instrument.
+		$this->assertSame( 'https://remote.example.com/featured/1', Feature_Request::get_stamp( Actors::BLOG_USER_ID, $first ) );
+		$this->assertSame( 'https://remote.example.com/featured/2', Feature_Request::get_stamp( Actors::BLOG_USER_ID, $second ) );
+
+		// Re-adding the first instrument reuses its slot.
+		$this->assertSame( $first, Feature_Request::add_stamp( Actors::BLOG_USER_ID, 'https://remote.example.com/featured/1' ), 'Re-adding an instrument must reuse its stamp ID.' );
+	}
+
+	/**
+	 * Test that FeatureRequests targeting the Application actor are rejected
+	 * and never accepted, regardless of the site policy.
+	 *
+	 * @covers ::handle_feature_request
+	 */
+	public function test_handle_feature_request_rejects_application_actor() {
+		update_option( 'activitypub_default_feature_policy', ACTIVITYPUB_INTERACTION_POLICY_ANYONE );
+
+		$activity           = $this->create_feature_request_activity();
+		$activity['object'] = Application::get_id();
+
+		Feature_Request::handle_feature_request( $activity, self::$user_id );
+
+		/*
+		 * The Application actor is not resolvable as a FeatureRequest target
+		 * (Actors::get_by_resource() has no branch for it), so the request
+		 * takes the unresolvable-target path and is rejected.
+		 */
+		$rejects = get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Reject',
+					),
+				),
+			)
+		);
+		$this->assertNotEmpty( $rejects, 'FeatureRequests targeting the Application actor should be rejected.' );
+
+		$accepts = get_posts(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'pending',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'meta_query'  => array(
+					array(
+						'key'   => '_activitypub_activity_type',
+						'value' => 'Accept',
+					),
+				),
+			)
+		);
+		$this->assertEmpty( $accepts, 'The Application actor must never accept FeatureRequests, regardless of policy.' );
 	}
 }

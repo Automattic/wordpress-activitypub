@@ -7,8 +7,9 @@
 
 namespace Activitypub\Tests\Rest;
 
-use Activitypub\OAuth\Server as OAuth_Server;
+use Activitypub\OAuth\Scope;
 use Activitypub\Rest\Verification;
+use Activitypub\Tests\OAuth_Token_Stub;
 
 /**
  * Test class for Verification Trait.
@@ -17,6 +18,8 @@ use Activitypub\Rest\Verification;
  * @coversDefaultClass \Activitypub\Rest\Verification
  */
 class Test_Trait_Verification extends \WP_UnitTestCase {
+	use OAuth_Token_Stub;
+
 
 	/**
 	 * The stub instance that uses the Verification trait.
@@ -40,6 +43,16 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 
 		$this->instance = new class() {
 			use Verification;
+
+			/**
+			 * Expose the protected social-graph gate.
+			 *
+			 * @param \WP_REST_Request $request The request object.
+			 * @return bool
+			 */
+			public function show_social_graph_public( $request ) {
+				return $this->show_social_graph( $request );
+			}
 		};
 		$this->user_id  = self::factory()->user->create(
 			array(
@@ -59,10 +72,7 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		\delete_option( 'activitypub_actor_mode' );
 
 		// Reset OAuth token state.
-		$reflection = new \ReflectionClass( OAuth_Server::class );
-		$property   = $reflection->getProperty( 'current_token' );
-		$property->setAccessible( true );
-		$property->setValue( null, null );
+		$this->set_oauth_current_token( null );
 
 		parent::tear_down();
 	}
@@ -135,6 +145,96 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
 
 		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/users/1/inbox' );
+
+		$this->assertTrue( $this->instance->verify_signature( $request ) );
+	}
+
+	/**
+	 * Test a `Delete` body cannot waive Authorized Fetch on a read request.
+	 *
+	 * The Delete carve-out is meant for inbox deliveries whose signing key may already
+	 * be gone. Its trigger is the caller-controlled `type` in the body, so on a read it
+	 * would hand anonymous callers the gated collections and the seek oracle.
+	 *
+	 * @covers ::verify_signature
+	 */
+	public function test_verify_signature_delete_body_does_not_defer_read() {
+		\update_option( 'activitypub_authorized_fetch', '1' );
+
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/actors/1/followers' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( array( 'type' => 'Delete' ) ) );
+		$request->set_param( 'item', 'https://remote.example/users/alice' );
+
+		$result = $this->instance->verify_signature( $request );
+
+		\delete_option( 'activitypub_authorized_fetch' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_signature_verification', $result->get_error_code() );
+		$this->assertEquals( 401, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Test a `Delete` body cannot put a seek request back on the HEAD bypass.
+	 *
+	 * @covers ::verify_signature
+	 */
+	public function test_verify_signature_delete_body_does_not_defer_head_seek() {
+		\update_option( 'activitypub_authorized_fetch', '1' );
+
+		$request = new \WP_REST_Request( 'HEAD', '/activitypub/1.0/actors/1/followers' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( array( 'type' => 'Delete' ) ) );
+		$request->set_param( 'item', 'https://remote.example/users/alice' );
+
+		$result = $this->instance->verify_signature( $request );
+
+		\delete_option( 'activitypub_authorized_fetch' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_signature_verification', $result->get_error_code() );
+		$this->assertEquals( 401, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Test a HEAD seek is answered like the GET of the same URL.
+	 *
+	 * The HEAD bypass is for bare probes; a seek answers with a Location, so it takes the read path
+	 * instead. Without Authorized Fetch that Location is public, so no signature is required.
+	 *
+	 * @covers ::verify_signature
+	 */
+	public function test_verify_signature_head_seek_follows_the_read_rules() {
+		\delete_option( 'activitypub_authorized_fetch' );
+
+		$request = new \WP_REST_Request( 'HEAD', '/activitypub/1.0/actors/1/followers' );
+		$request->set_param( 'item', 'https://remote.example/users/alice' );
+
+		$this->assertTrue( $this->instance->verify_signature( $request ), 'A HEAD seek must be answered like a GET when Authorized Fetch is off.' );
+
+		\update_option( 'activitypub_authorized_fetch', '1' );
+
+		$result = $this->instance->verify_signature( $request );
+
+		\delete_option( 'activitypub_authorized_fetch' );
+
+		$this->assertWPError( $result, 'A HEAD seek must be challenged under Authorized Fetch.' );
+		$this->assertEquals( 401, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Test a `Delete` delivered to the inbox still skips signature verification.
+	 *
+	 * A remote actor's deletion arrives after its keys are gone, so Mastodon's actor
+	 * deletion only federates as long as this path stays deferred.
+	 *
+	 * @covers ::verify_signature
+	 */
+	public function test_verify_signature_delete_delivery_to_inbox_defers() {
+		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/actors/1/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( array( 'type' => 'Delete' ) ) );
 
 		$this->assertTrue( $this->instance->verify_signature( $request ) );
 	}
@@ -231,7 +331,7 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		\wp_set_current_user( $this->user_id );
 
 		// Simulate an OAuth request by setting a current token via reflection.
-		$this->set_oauth_token( $this->create_mock_token( 0, false ) );
+		$this->set_oauth_current_token( $this->mock_oauth_token( array(), 0 ) );
 
 		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/users/1/outbox' );
 
@@ -351,7 +451,7 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	 * @covers ::verify_owner
 	 */
 	public function test_verify_owner_oauth_token_matches() {
-		$this->set_oauth_token( $this->create_mock_token( $this->user_id, true ) );
+		$this->set_oauth_current_token( $this->mock_oauth_token( Scope::ALL, $this->user_id ) );
 		// OAuth Server sets current user during authentication.
 		\wp_set_current_user( $this->user_id );
 
@@ -467,42 +567,68 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	/**
 	 * Data provider for verify_key_id tests.
 	 *
-	 * @return array[] Test cases: [ signature_header, actor, expected_pass ].
+	 * @return array[] Test cases: [ verified_key_id, actor, expected_pass ].
 	 */
 	public function data_verify_key_id() {
 		return array(
 			'matching hosts'          => array(
-				'keyId="https://remote.example/users/alice#main-key",algorithm="rsa-sha256",signature="abc"',
+				'https://remote.example/users/alice#main-key',
 				'https://remote.example/users/alice',
 				true,
 			),
 			'mismatched hosts'        => array(
-				'keyId="https://evil.example/users/alice#main-key",algorithm="rsa-sha256",signature="abc"',
+				'https://evil.example/users/alice#main-key',
 				'https://remote.example/users/alice',
 				false,
 			),
 			'no actor in body'        => array(
-				'keyId="https://remote.example/users/alice#main-key",algorithm="rsa-sha256",signature="abc"',
+				'https://remote.example/users/alice#main-key',
 				null,
 				true,
 			),
-			'no signature header'     => array(
+			// A missing keyId cannot be bound to the actor, so it must fail closed.
+			'no verified key id'      => array(
 				null,
 				'https://remote.example/users/alice',
-				true,
+				false,
+			),
+			// A non-URL `acct:` keyId resolves to a real key but yields no host: the bypass this guards.
+			'acct key id cannot bind' => array(
+				'acct:mallory@attacker.example',
+				'https://victim.example/users/alice',
+				false,
+			),
+			// An `acct:` actor likewise has no host and cannot be bound.
+			'acct actor cannot bind'  => array(
+				'https://remote.example/users/alice#main-key',
+				'acct:alice@remote.example',
+				false,
+			),
+			// The FeatureRequest fill sets actor = strip_fragment( keyId ); a hostless `acct:`
+			// keyId makes both sides hostless, which must still fail closed rather than self-match.
+			'acct key id and actor'   => array(
+				'acct:mallory@attacker.example',
+				'acct:mallory@attacker.example',
+				false,
+			),
+			// An empty keyId string has no host and cannot be bound.
+			'empty key id'            => array(
+				'',
+				'https://remote.example/users/alice',
+				false,
 			),
 			'actor as object with id' => array(
-				'keyId="https://remote.example/users/alice#main-key",algorithm="rsa-sha256",signature="abc"',
+				'https://remote.example/users/alice#main-key',
 				array( 'id' => 'https://remote.example/users/alice' ),
 				true,
 			),
 			'actor object mismatch'   => array(
-				'keyId="https://evil.example/users/alice#main-key",algorithm="rsa-sha256",signature="abc"',
+				'https://evil.example/users/alice#main-key',
 				array( 'id' => 'https://remote.example/users/alice' ),
 				false,
 			),
 			'case-insensitive hosts'  => array(
-				'keyId="https://Remote.Example/users/alice#main-key",algorithm="rsa-sha256",signature="abc"',
+				'https://Remote.Example/users/alice#main-key',
 				'https://remote.example/users/alice',
 				true,
 			),
@@ -510,21 +636,17 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that verify_key_id checks keyId host against actor host.
+	 * Test that verify_key_id checks the verified keyId's host against the actor host.
 	 *
 	 * @dataProvider data_verify_key_id
 	 * @covers ::verify_key_id
 	 *
-	 * @param string|null       $signature The Signature header value.
-	 * @param string|array|null $actor     The actor value in the JSON body.
+	 * @param string|null       $key_id      The keyId that verified the signature.
+	 * @param string|array|null $actor       The actor value in the JSON body.
 	 * @param bool              $should_pass Whether the check should pass.
 	 */
-	public function test_verify_key_id( $signature, $actor, $should_pass ) {
+	public function test_verify_key_id( $key_id, $actor, $should_pass ) {
 		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
-
-		if ( null !== $signature ) {
-			$request->set_header( 'Signature', $signature );
-		}
 
 		$body = array(
 			'type' => 'Like',
@@ -542,7 +664,7 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		 */
 		$method = new \ReflectionMethod( $this->instance, 'verify_key_id' );
 		$method->setAccessible( true );
-		$result = $method->invoke( $this->instance, $request );
+		$result = $method->invoke( $this->instance, $request, $key_id );
 
 		if ( $should_pass ) {
 			$this->assertTrue( $result );
@@ -553,71 +675,152 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 		}
 	}
 
+
+
 	/**
-	 * Create a mock OAuth token object.
+	 * Data provider for verify_activity_id tests.
 	 *
-	 * @param int  $user_id   The user ID the token belongs to.
-	 * @param bool $has_scope Whether the token has any scope.
-	 * @return object Mock token with get_user_id() and has_scope() methods.
+	 * @return array[] Test cases: [ activity_id, actor, expected_pass ].
 	 */
-	private function create_mock_token( $user_id, $has_scope ) {
-		return new class( $user_id, $has_scope ) {
-			/**
-			 * User ID.
-			 *
-			 * @var int
-			 */
-			private $user_id;
-
-			/**
-			 * Whether the token has scope.
-			 *
-			 * @var bool
-			 */
-			private $has_scope;
-
-			/**
-			 * Constructor.
-			 *
-			 * @param int  $user_id   User ID.
-			 * @param bool $has_scope Has scope.
-			 */
-			public function __construct( $user_id, $has_scope ) {
-				$this->user_id   = $user_id;
-				$this->has_scope = $has_scope;
-			}
-
-			/**
-			 * Get user ID.
-			 *
-			 * @return int
-			 */
-			public function get_user_id() {
-				return $this->user_id;
-			}
-
-			/**
-			 * Check scope.
-			 *
-			 * @param string $scope Scope to check.
-			 * @return bool
-			 */
-			public function has_scope( $scope ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-				return $this->has_scope;
-			}
-		};
+	public function data_verify_activity_id() {
+		return array(
+			'matching hosts'           => array(
+				'https://remote.example/activity/1',
+				'https://remote.example/users/alice',
+				true,
+			),
+			// The collision this guards: a valid signer filing an activity under another host's id.
+			'id on a foreign host'     => array(
+				'https://victim.example/activity/1',
+				'https://attacker.example/users/mallory',
+				false,
+			),
+			'case-insensitive hosts'   => array(
+				'https://Remote.Example/activity/1',
+				'https://remote.example/users/alice',
+				true,
+			),
+			// An id with no parsable host cannot be tied to the actor, so it must fail closed.
+			'hostless id'              => array(
+				'urn:uuid:8f5d1c2e',
+				'https://remote.example/users/alice',
+				false,
+			),
+			// Nothing to bind: argument validation rejects an id-less inbox delivery later.
+			'no id in body'            => array(
+				null,
+				'https://remote.example/users/alice',
+				true,
+			),
+			// An authorized-fetch GET carries neither field.
+			'no actor in body'         => array(
+				'https://remote.example/activity/1',
+				null,
+				true,
+			),
+			'id as object with nested' => array(
+				array( 'id' => 'https://remote.example/activity/1' ),
+				'https://remote.example/users/alice',
+				true,
+			),
+		);
 	}
 
 	/**
-	 * Set the OAuth Server's current token via reflection.
+	 * Test that verify_activity_id ties the activity id to the actor's host.
 	 *
-	 * @param object|null $token The token to set.
+	 * @dataProvider data_verify_activity_id
+	 * @covers ::verify_activity_id
+	 *
+	 * @param string|array|null $activity_id The id value in the JSON body.
+	 * @param string|null       $actor       The actor value in the JSON body.
+	 * @param bool              $should_pass Whether the check should pass.
 	 */
-	private function set_oauth_token( $token ) {
-		$reflection = new \ReflectionClass( OAuth_Server::class );
-		$property   = $reflection->getProperty( 'current_token' );
-		$property->setAccessible( true );
-		$property->setValue( null, $token );
+	public function test_verify_activity_id( $activity_id, $actor, $should_pass ) {
+		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
+
+		$body = array( 'type' => 'Create' );
+		if ( null !== $activity_id ) {
+			$body['id'] = $activity_id;
+		}
+		if ( null !== $actor ) {
+			$body['actor'] = $actor;
+		}
+		$request->set_header( 'Content-Type', 'application/json' );
+		$request->set_body( \wp_json_encode( $body ) );
+
+		/*
+		 * verify_activity_id is private, so call it via reflection.
+		 * This avoids coupling the test to the full verify_signature flow.
+		 */
+		$method = new \ReflectionMethod( $this->instance, 'verify_activity_id' );
+		$method->setAccessible( true );
+		$result = $method->invoke( $this->instance, $request );
+
+		if ( $should_pass ) {
+			$this->assertTrue( $result );
+		} else {
+			$this->assertWPError( $result );
+			$this->assertEquals( 'activitypub_activity_id_mismatch', $result->get_error_code() );
+			$this->assertEquals( 403, $result->get_error_data()['status'] );
+		}
+	}
+
+	/**
+	 * A deferred request must still be turned away when its id names another host.
+	 *
+	 * Deferring skips the signature, not the body checks. `Delete` is the type we defer, and it
+	 * reaches a tombstone lookup that fetches the named object, so the cheap check has to come
+	 * first or a made-up activity buys an outbound request.
+	 *
+	 * @covers ::verify_signature
+	 */
+	public function test_verify_signature_checks_activity_id_before_deferring() {
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'id'     => 'https://victim.example/activities/known-id',
+					'type'   => 'Delete',
+					'actor'  => 'https://attacker.example/users/mallory',
+					'object' => 'https://victim.example/objects/note',
+				)
+			)
+		);
+
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		$result = $this->instance->verify_signature( $request );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_activity_id_mismatch', $result->get_error_code() );
+	}
+
+	/**
+	 * Deferring must still work for a body whose id and actor agree.
+	 *
+	 * @covers ::verify_signature
+	 */
+	public function test_verify_signature_still_defers_for_a_consistent_body() {
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'id'     => 'https://remote.example/activities/1#delete',
+					'type'   => 'Delete',
+					'actor'  => 'https://remote.example/users/alice',
+					'object' => 'https://remote.example/objects/note',
+				)
+			)
+		);
+
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		$result = $this->instance->verify_signature( $request );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$this->assertTrue( $result );
 	}
 
 	/**
@@ -639,90 +842,72 @@ class Test_Trait_Verification extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Invoke the private verify_key_id() with a crafted Signature-Input header and actor.
+	 * Test that ownership is decided by identity alone, independent of OAuth scope.
 	 *
-	 * @param string $signature_input The Signature-Input header value.
-	 * @param string $actor           The activity actor URI.
-	 * @return true|\WP_Error
+	 * Scope is an authorization question and is checked separately by the callers that
+	 * expose owner-only data. Folding it in here would make an ownership predicate answer
+	 * "not the owner" when the truthful answer is "the owner, but not permitted".
+	 *
+	 * @covers ::verify_owner
 	 */
-	private function invoke_verify_key_id( $signature_input, $actor ) {
-		$request = new \WP_REST_Request( 'POST', '/activitypub/1.0/inbox' );
-		$request->set_header( 'signature-input', $signature_input );
-		$request->set_header( 'content-type', 'application/json' );
-		$request->set_body( \wp_json_encode( array( 'actor' => $actor ) ) );
+	public function test_verify_owner_is_not_scope_sensitive() {
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH ), $this->user_id ) );
+		\wp_set_current_user( $this->user_id );
 
-		$method = new \ReflectionMethod( $this->instance, 'verify_key_id' );
-		$method->setAccessible( true );
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . $this->user_id . '/outbox' );
+		$request->set_param( 'user_id', $this->user_id );
 
-		return $method->invoke( $this->instance, $request );
+		$this->assertTrue( $this->instance->verify_owner( $request ), 'verify_owner() answers identity only.' );
 	}
 
 	/**
-	 * Test that an unquoted RFC 9421 keyid on a different host is rejected.
+	 * Test that a hidden social graph stays hidden from a token without the read scope.
 	 *
-	 * Regression: the keyid binding previously matched quotes only, so an unquoted
-	 * keyid (which the RFC 9421 verifier accepts) skipped the host-equality check.
+	 * A client consented to `profile` is bound to the right WordPress user, so ownership
+	 * alone would hand it a following collection the owner chose to hide.
 	 *
-	 * @covers ::verify_key_id
+	 * @covers ::show_social_graph
 	 */
-	public function test_verify_key_id_unquoted_mismatched_host_is_rejected() {
-		$result = $this->invoke_verify_key_id(
-			'sig1=("@method");keyid=https://evil.example/actor#key;alg="rsa-v1_5-sha256"',
-			'https://victim.example/users/alice'
-		);
+	public function test_show_social_graph_requires_read_scope() {
+		\update_user_option( $this->user_id, 'activitypub_hide_social_graph', '1' );
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH ), $this->user_id ) );
+		\wp_set_current_user( $this->user_id );
 
-		$this->assertWPError( $result );
-		$this->assertEquals( 'activitypub_key_actor_mismatch', $result->get_error_code() );
-		$this->assertEquals( 403, $result->get_error_data()['status'] );
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . $this->user_id . '/following' );
+		$request->set_param( 'user_id', $this->user_id );
+
+		$this->assertFalse( $this->instance->show_social_graph_public( $request ), 'A token without the read scope must not reveal a hidden social graph.' );
 	}
 
 	/**
-	 * Test that an unquoted RFC 9421 keyid on the same host passes.
+	 * Test that a read-scoped token still sees the owner's hidden social graph.
 	 *
-	 * @covers ::verify_key_id
+	 * @covers ::show_social_graph
 	 */
-	public function test_verify_key_id_unquoted_same_host_passes() {
-		$result = $this->invoke_verify_key_id(
-			'sig1=("@method");keyid=https://example.org/actor#key;alg="rsa-v1_5-sha256"',
-			'https://example.org/users/bob'
-		);
+	public function test_show_social_graph_allows_read_scope() {
+		\update_user_option( $this->user_id, 'activitypub_hide_social_graph', '1' );
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::READ ), $this->user_id ) );
+		\wp_set_current_user( $this->user_id );
 
-		$this->assertTrue( $result );
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . $this->user_id . '/following' );
+		$request->set_param( 'user_id', $this->user_id );
+
+		$this->assertTrue( $this->instance->show_social_graph_public( $request ), 'A read-scoped token is the positive control.' );
 	}
 
 	/**
-	 * Test that a quoted RFC 9421 keyid on a different host is still rejected.
+	 * Test that a cookie session is not scope-limited.
 	 *
-	 * @covers ::verify_key_id
+	 * @covers ::show_social_graph
 	 */
-	public function test_verify_key_id_quoted_mismatched_host_is_rejected() {
-		$result = $this->invoke_verify_key_id(
-			'sig1=("@method");keyid="https://evil.example/actor#key";alg="rsa-v1_5-sha256"',
-			'https://victim.example/users/alice'
-		);
+	public function test_show_social_graph_cookie_session_is_not_scope_limited() {
+		\update_user_option( $this->user_id, 'activitypub_hide_social_graph', '1' );
+		$this->set_oauth_current_token( null );
+		\wp_set_current_user( $this->user_id );
 
-		$this->assertWPError( $result );
-		$this->assertEquals( 'activitypub_key_actor_mismatch', $result->get_error_code() );
-		$this->assertEquals( 403, $result->get_error_data()['status'] );
-	}
+		$request = new \WP_REST_Request( 'GET', '/activitypub/1.0/users/' . $this->user_id . '/following' );
+		$request->set_param( 'user_id', $this->user_id );
 
-	/**
-	 * Test that a keyid injected into another parameter's value does not fool the binding.
-	 *
-	 * The real `keyid` parameter (evil host) is what the RFC 9421 verifier uses; a
-	 * `keyid=<victim host>` string smuggled inside an earlier quoted parameter value must
-	 * not be picked up instead, which would make the host check pass against the wrong host.
-	 *
-	 * @covers ::verify_key_id
-	 */
-	public function test_verify_key_id_ignores_keyid_inside_other_param() {
-		$result = $this->invoke_verify_key_id(
-			'sig1=("@method");tag="keyid=https://victim.example/key";keyid=https://evil.example/key',
-			'https://victim.example/users/alice'
-		);
-
-		$this->assertWPError( $result );
-		$this->assertEquals( 'activitypub_key_actor_mismatch', $result->get_error_code() );
-		$this->assertEquals( 403, $result->get_error_data()['status'] );
+		$this->assertTrue( $this->instance->show_social_graph_public( $request ), 'A wp-admin session carries no token and is bounded by capabilities, not scope.' );
 	}
 }

@@ -68,7 +68,7 @@ class Scheduler {
 		 * @param int               $async_batch_pause The pause in seconds. Default 30.
 		 * @param string|false|null $hook The async batch hook being scheduled.
 		 */
-		return apply_filters( 'activitypub_scheduler_async_batch_pause', 30, $hook );
+		return \apply_filters( 'activitypub_scheduler_async_batch_pause', 30, $hook );
 	}
 
 	/**
@@ -169,7 +169,7 @@ class Scheduler {
 	public static function register_schedules() {
 		foreach ( self::SCHEDULES as $hook => $recurrence ) {
 			if ( ! \wp_next_scheduled( $hook ) ) {
-				\wp_schedule_event( time(), $recurrence, $hook );
+				\wp_schedule_event( \time(), $recurrence, $hook );
 			}
 		}
 
@@ -193,7 +193,7 @@ class Scheduler {
 	 * @return void
 	 */
 	public static function deregister_schedules() {
-		foreach ( array_keys( self::SCHEDULES ) as $hook ) {
+		foreach ( \array_keys( self::SCHEDULES ) as $hook ) {
 			\wp_unschedule_hook( $hook );
 		}
 
@@ -224,11 +224,11 @@ class Scheduler {
 		$year = (int) \gmdate( 'Y', $now );
 
 		// Get December 1st 3:00 AM for this year.
-		$this_year_dec_first = \strtotime( sprintf( '%d-12-01 03:00:00', $year ) );
+		$this_year_dec_first = \strtotime( \sprintf( '%d-12-01 03:00:00', $year ) );
 
 		// If we're already past this year's December 1st, schedule for next year.
 		if ( $now >= $this_year_dec_first ) {
-			return \strtotime( sprintf( '%d-12-01 03:00:00', $year + 1 ) );
+			return \strtotime( \sprintf( '%d-12-01 03:00:00', $year + 1 ) );
 		}
 
 		return $this_year_dec_first;
@@ -267,7 +267,7 @@ class Scheduler {
 	public static function update_remote_actors() {
 		$number = 5;
 
-		if ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) {
+		if ( \defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) {
 			$number = 50;
 		}
 
@@ -276,16 +276,54 @@ class Scheduler {
 		 *
 		 * @param int $number The number of remote Actors to update.
 		 */
-		$number = apply_filters( 'activitypub_update_remote_actors_number', $number );
+		$number = \apply_filters( 'activitypub_update_remote_actors_number', $number );
 		$actors = Remote_Actors::get_outdated( $number );
 
 		foreach ( $actors as $actor ) {
-			$meta = get_remote_metadata_by_actor( $actor->guid, false );
+			/*
+			 * Use Http::get_remote_object() directly here.
+			 * get_remote_metadata_by_actor() short-circuits to the locally
+			 * cached ap_actor CPT via Remote_Actors::fetch_by_uri() and never
+			 * makes an HTTP request when the actor is already cached, so the
+			 * upsert would just rewrite the same stale data and this refresh
+			 * would be a no-op. The Update handler documents the same trap.
+			 */
+			$meta = Http::get_remote_object( $actor->guid, false );
 
-			if ( empty( $meta ) || ! is_array( $meta ) || is_wp_error( $meta ) ) {
+			if ( empty( $meta ) || ! \is_array( $meta ) || \is_wp_error( $meta ) ) {
 				Remote_Actors::add_error( $actor->ID, 'Failed to fetch or parse metadata' );
 			} else {
-				$id = Remote_Actors::upsert( $meta );
+				/*
+				 * Only refresh when the remote still reports the same identity. A
+				 * different (or missing) id means a Move or a malformed response;
+				 * applying it would rewrite the cached guid in place and could
+				 * collide with another cached actor, so leave the record alone.
+				 * Updating by the known post ID otherwise refreshes it without the
+				 * redundant get_by_uri() lookup upsert() would do.
+				 */
+				$fetched_id = isset( $meta['id'] ) && \is_string( $meta['id'] ) ? \esc_url_raw( $meta['id'] ) : '';
+				if ( $fetched_id !== $actor->guid ) {
+					/*
+					 * Bump only the modified date, directly, so the skipped actor
+					 * drops out of the outdated queue and is not re-fetched every
+					 * run. A direct write avoids the save_post hooks wp_update_post()
+					 * fires (which would needlessly clear the cached avatar); the
+					 * record is intentionally left unchanged otherwise.
+					 */
+					global $wpdb;
+					$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+						$wpdb->posts,
+						array(
+							'post_modified'     => \current_time( 'mysql' ),
+							'post_modified_gmt' => \current_time( 'mysql', true ),
+						),
+						array( 'ID' => $actor->ID )
+					);
+					\clean_post_cache( $actor->ID );
+					continue;
+				}
+
+				$id = Remote_Actors::update( $actor->ID, $meta );
 				if ( \is_wp_error( $id ) ) {
 					continue;
 				}
@@ -300,7 +338,7 @@ class Scheduler {
 	public static function cleanup_remote_actors() {
 		$number = 5;
 
-		if ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) {
+		if ( \defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) {
 			$number = 50;
 		}
 
@@ -309,7 +347,7 @@ class Scheduler {
 		 *
 		 * @param int $number The number of remote Actors to clean up.
 		 */
-		$number = apply_filters( 'activitypub_cleanup_remote_actors_number', $number );
+		$number = \apply_filters( 'activitypub_cleanup_remote_actors_number', $number );
 		$actors = Remote_Actors::get_faulty( $number );
 
 		foreach ( $actors as $actor ) {
@@ -317,7 +355,7 @@ class Scheduler {
 
 			if ( Tombstone::exists( $meta ) ) {
 				\wp_delete_post( $actor->ID );
-			} elseif ( empty( $meta ) || ! is_array( $meta ) || \is_wp_error( $meta ) ) {
+			} elseif ( empty( $meta ) || ! \is_array( $meta ) || \is_wp_error( $meta ) ) {
 				if ( Remote_Actors::count_errors( $actor->ID ) >= 5 ) {
 					\wp_schedule_single_event( \time(), 'activitypub_delete_remote_actor_interactions', array( $actor->guid ) );
 					\wp_schedule_single_event( \time(), 'activitypub_delete_remote_actor_posts', array( $actor->guid ) );
@@ -346,7 +384,7 @@ class Scheduler {
 		$hook = 'activitypub_process_outbox';
 		$args = array( $id );
 
-		if ( false === wp_next_scheduled( $hook, $args ) ) {
+		if ( false === \wp_next_scheduled( $hook, $args ) ) {
 			\wp_schedule_single_event(
 				\time() + $offset,
 				$hook,
@@ -415,7 +453,7 @@ class Scheduler {
 	 * @since 8.3.0
 	 */
 	public static function purge_tombstones() {
-		\Activitypub\Tombstone::purge();
+		Tombstone::purge();
 	}
 
 	/**
@@ -435,7 +473,7 @@ class Scheduler {
 		$data = \json_decode( $inbox_item->post_content, true );
 		// Reconstruct activity from inbox post.
 		$activity = Activity::init_from_array( $data );
-		$type     = \Activitypub\camel_to_snake_case( $activity->get_type() );
+		$type     = camel_to_snake_case( $activity->get_type() );
 		$context  = Inbox::CONTEXT_INBOX;
 		$user_ids = Inbox::get_recipients( $inbox_item->ID );
 
@@ -689,12 +727,12 @@ class Scheduler {
 			return;
 		}
 
-		if ( ! is_object( $activity->get_object() ) ) {
+		if ( ! \is_object( $activity->get_object() ) ) {
 			return;
 		}
 
 		// Check if the object is an article, image, audio, video, event, or document and ignore profile updates and other activities.
-		if ( ! in_array( $activity->get_object()->get_type(), Base_Object::TYPES, true ) ) {
+		if ( ! \in_array( $activity->get_object()->get_type(), Base_Object::TYPES, true ) ) {
 			return;
 		}
 

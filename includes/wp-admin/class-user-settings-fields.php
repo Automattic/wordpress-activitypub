@@ -184,8 +184,8 @@ class User_Settings_Fields {
 	 */
 	public static function header_image_callback() {
 		$header_image              = \get_user_option( 'activitypub_header_image', \get_current_user_id() );
-		$classes_for_upload_button = 'button upload-button button-add-media button-add-header-image';
-		$classes_for_update_button = 'button';
+		$classes_for_upload_button = 'button upload-button button-add-media button-add-header-image activitypub-media-picker-button';
+		$classes_for_update_button = 'button activitypub-media-picker-button';
 		$classes_for_wrapper       = '';
 
 		if ( (int) $header_image ) {
@@ -211,6 +211,12 @@ class User_Settings_Fields {
 			data-update="<?php \esc_attr_e( 'Set as Header Image', 'activitypub' ); ?>"
 			data-width="1500"
 			data-height="500"
+			data-context="activitypub-header-image"
+			data-preview="#activitypub-header-image-preview"
+			data-preview-wrapper="#activitypub-header-image-preview-wrapper"
+			data-input="#activitypub_header_image"
+			data-remove="#activitypub-remove-header-image"
+			data-preview-label="<?php \esc_attr_e( 'Header Image', 'activitypub' ); ?>"
 			<?php
 			if ( ! \current_user_can( 'edit_others_posts' ) ) :
 				\printf( 'data-user-id="%s"', \esc_attr( \get_current_user_id() ) );
@@ -251,6 +257,12 @@ class User_Settings_Fields {
 				<label>
 					<input type="checkbox" name="activitypub_mailer_new_mention" id="activitypub_mailer_new_mention" value="1" <?php \checked( 1, \get_user_option( 'activitypub_mailer_new_mention' ) ); ?> />
 					<?php \esc_html_e( 'New Mentions', 'activitypub' ); ?>
+				</label>
+			</p>
+			<p>
+				<label>
+					<input type="checkbox" name="activitypub_mailer_new_reaction" id="activitypub_mailer_new_reaction" value="1" <?php \checked( 1, \get_user_option( 'activitypub_mailer_new_reaction' ) ); ?> />
+					<?php \esc_html_e( 'Likes, Reposts and Quotes', 'activitypub' ); ?>
 				</label>
 			</p>
 			<p>
@@ -317,7 +329,7 @@ class User_Settings_Fields {
 			name="activitypub_also_known_as"
 			id="activitypub_also_known_as"
 			rows="5"
-		><?php echo \esc_textarea( implode( PHP_EOL, (array) $also_known_as ) ); ?></textarea>
+		><?php echo \esc_textarea( \implode( PHP_EOL, (array) $also_known_as ) ); ?></textarea>
 		<p class="description">
 			<?php \esc_html_e( 'If you&#8217;re moving from another account to this one, you&#8217;ll need to create an alias here first before transferring your followers. This step is safe, reversible, and doesn&#8217;t affect anything on its own. The migration itself is initiated from your old account.', 'activitypub' ); ?>
 		</p>
@@ -565,7 +577,7 @@ class User_Settings_Fields {
 			<?php \esc_html_e( 'Hide Followers and Following on Profile', 'activitypub' ); ?>
 		</label>
 		<p class="description">
-			<?php esc_html_e( 'People you follow will still see that you follow them.', 'activitypub' ); ?>
+			<?php \esc_html_e( 'People you follow will still see that you follow them.', 'activitypub' ); ?>
 		</p>
 		<?php
 	}

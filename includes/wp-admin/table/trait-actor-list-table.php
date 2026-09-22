@@ -17,7 +17,7 @@ trait Actor_List_Table {
 	 * @return string
 	 */
 	protected static function actor_list_table_key() {
-		return strtolower( ( new \ReflectionClass( static::class ) )->getShortName() );
+		return \strtolower( ( new \ReflectionClass( static::class ) )->getShortName() );
 	}
 
 	/**

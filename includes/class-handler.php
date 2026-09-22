@@ -42,7 +42,7 @@ class Handler {
 		 *
 		 * @since 1.3.0
 		 */
-		do_action( 'activitypub_register_handlers' );
+		\do_action( 'activitypub_register_handlers' );
 	}
 
 	/**
@@ -66,6 +66,6 @@ class Handler {
 		 *
 		 * @since 8.1.0
 		 */
-		do_action( 'activitypub_register_outbox_handlers' );
+		\do_action( 'activitypub_register_outbox_handlers' );
 	}
 }
