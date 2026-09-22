@@ -166,7 +166,7 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 
 		$response = rest_get_server()->dispatch( $request );
 
-		$this->assertEquals( 404, $response->get_status() );
+		$this->assertErrorResponse( 'activitypub_item_not_found', $response, 404 );
 	}
 
 	/**
@@ -184,7 +184,7 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 
 		\delete_option( 'activitypub_hide_social_graph' );
 
-		$this->assertEquals( 404, $response->get_status() );
+		$this->assertErrorResponse( 'activitypub_item_not_found', $response, 404 );
 	}
 
 	/**
@@ -293,7 +293,10 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 			$request->set_param( 'collection', $collection );
 			$request->set_param( 'item', 'https://example.org/actor/13' );
 
-			$this->assertEquals( 404, rest_get_server()->dispatch( $request )->get_status(), "Seeking $description must not dispatch." );
+			$response = rest_get_server()->dispatch( $request );
+
+			$this->assertEquals( 404, $response->get_status(), "Seeking $description must not dispatch." );
+			$this->assertEquals( 'activitypub_item_not_found', $response->get_data()['code'], "Seeking $description must return the uniform 404." );
 		}
 	}
 
@@ -321,6 +324,7 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 			$response = rest_get_server()->dispatch( $request );
 
 			$this->assertEquals( 404, $response->get_status(), "A seek pointed at /{$variant} must not dispatch to the seek endpoint." );
+			$this->assertEquals( 'activitypub_item_not_found', $response->get_data()['code'], "A seek pointed at /{$variant} must return the uniform 404." );
 		}
 	}
 
@@ -336,7 +340,7 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 
 		$response = rest_get_server()->dispatch( $request );
 
-		$this->assertEquals( 404, $response->get_status() );
+		$this->assertErrorResponse( 'activitypub_item_not_found', $response, 404 );
 	}
 
 	/**
@@ -358,7 +362,7 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 
 		$response = rest_get_server()->dispatch( $request );
 
-		$this->assertEquals( 404, $response->get_status() );
+		$this->assertErrorResponse( 'activitypub_item_not_found', $response, 404 );
 	}
 
 	/**
@@ -383,7 +387,7 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true', 20 );
 
-		$this->assertEquals( 404, $response->get_status() );
+		$this->assertErrorResponse( 'activitypub_item_not_found', $response, 404 );
 	}
 
 	/**
@@ -435,6 +439,31 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 	}
 
 	/**
+	 * Create a public and a private-visibility outbox activity.
+	 *
+	 * @param string $public_id The ActivityPub ID of the public activity.
+	 * @param string $hidden_id The ActivityPub ID of the private-visibility activity.
+	 * @param int    $user_id   Optional. Author of the activities. Default 0, the blog actor.
+	 */
+	private function create_outbox_pair( $public_id, $hidden_id, $user_id = 0 ) {
+		$create = array(
+			'post_type'    => Outbox::POST_TYPE,
+			'post_status'  => 'publish',
+			'post_author'  => $user_id,
+			'post_content' => \wp_slash( \wp_json_encode( array( 'type' => 'Create' ) ) ),
+			'meta_input'   => array(
+				'_activitypub_activity_actor' => $user_id > 0 ? 'user' : 'blog',
+				'_activitypub_activity_type'  => 'Create',
+			),
+		);
+
+		self::factory()->post->create( \array_merge( $create, array( 'guid' => $public_id ) ) );
+
+		$create['meta_input']['activitypub_content_visibility'] = ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
+		self::factory()->post->create( \array_merge( $create, array( 'guid' => $hidden_id ) ) );
+	}
+
+	/**
 	 * Seeking the outbox is owner-only. An unauthenticated request is asked to authenticate (401),
 	 * identically for a public activity, a private one, and an unknown one — so the 401 discloses
 	 * nothing about the outbox.
@@ -445,21 +474,7 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 		$public_id = 'https://example.org/outbox/public-activity';
 		$hidden_id = 'https://example.org/outbox/hidden-activity';
 
-		$create = array(
-			'post_type'    => Outbox::POST_TYPE,
-			'post_status'  => 'publish',
-			'post_content' => \wp_slash( \wp_json_encode( array( 'type' => 'Create' ) ) ),
-			'meta_input'   => array(
-				'_activitypub_activity_actor' => 'blog',
-				'_activitypub_activity_type'  => 'Create',
-			),
-		);
-
-		self::factory()->post->create( \array_merge( $create, array( 'guid' => $public_id ) ) );
-
-		$hidden = $create;
-		$hidden['meta_input']['activitypub_content_visibility'] = ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
-		self::factory()->post->create( \array_merge( $hidden, array( 'guid' => $hidden_id ) ) );
+		$this->create_outbox_pair( $public_id, $hidden_id );
 
 		foreach ( array( $public_id, $hidden_id, 'https://example.org/outbox/does-not-exist' ) as $item ) {
 			$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
@@ -467,6 +482,7 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 
 			$response = rest_get_server()->dispatch( $request );
 			$this->assertEquals( 401, $response->get_status(), "Unauthenticated seek of {$item} must ask to authenticate with 401." );
+			$this->assertEquals( 'activitypub_unauthorized', $response->get_data()['code'], "Unauthenticated seek of {$item} must ask to authenticate." );
 		}
 	}
 
@@ -481,21 +497,7 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 		$public_id = 'https://example.org/outbox/other-public-activity';
 		$hidden_id = 'https://example.org/outbox/other-hidden-activity';
 
-		$create = array(
-			'post_type'    => Outbox::POST_TYPE,
-			'post_status'  => 'publish',
-			'post_content' => \wp_slash( \wp_json_encode( array( 'type' => 'Create' ) ) ),
-			'meta_input'   => array(
-				'_activitypub_activity_actor' => 'blog',
-				'_activitypub_activity_type'  => 'Create',
-			),
-		);
-
-		self::factory()->post->create( \array_merge( $create, array( 'guid' => $public_id ) ) );
-
-		$hidden = $create;
-		$hidden['meta_input']['activitypub_content_visibility'] = ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
-		self::factory()->post->create( \array_merge( $hidden, array( 'guid' => $hidden_id ) ) );
+		$this->create_outbox_pair( $public_id, $hidden_id );
 
 		// A regular author cannot act as the blog actor, so seeking the blog outbox makes them a non-owner.
 		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'author' ) ) );
@@ -506,6 +508,7 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 
 			$response = rest_get_server()->dispatch( $request );
 			$this->assertEquals( 404, $response->get_status(), "Authenticated non-owner seek of {$item} must return the uniform 404." );
+			$this->assertEquals( 'activitypub_item_not_found', $response->get_data()['code'], "Authenticated non-owner seek of {$item} must be indistinguishable from a missing item." );
 		}
 	}
 
@@ -520,22 +523,7 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 		$hidden_id = 'https://example.org/outbox/owner-hidden-activity';
 		$user_id   = self::factory()->user->create( array( 'role' => 'author' ) );
 
-		$create = array(
-			'post_type'    => Outbox::POST_TYPE,
-			'post_status'  => 'publish',
-			'post_author'  => $user_id,
-			'post_content' => \wp_slash( \wp_json_encode( array( 'type' => 'Create' ) ) ),
-			'meta_input'   => array(
-				'_activitypub_activity_actor' => 'user',
-				'_activitypub_activity_type'  => 'Create',
-			),
-		);
-
-		self::factory()->post->create( \array_merge( $create, array( 'guid' => $public_id ) ) );
-
-		$hidden = $create;
-		$hidden['meta_input']['activitypub_content_visibility'] = ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
-		self::factory()->post->create( \array_merge( $hidden, array( 'guid' => $hidden_id ) ) );
+		$this->create_outbox_pair( $public_id, $hidden_id, $user_id );
 
 		\wp_set_current_user( $user_id );
 
@@ -555,7 +543,7 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 
 		\wp_set_current_user( 0 );
 
-		$this->assertEquals( 404, $response->get_status() );
+		$this->assertErrorResponse( 'activitypub_item_not_found', $response, 404 );
 	}
 
 	/**
@@ -572,5 +560,6 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 		$response = rest_get_server()->dispatch( $request );
 
 		$this->assertEquals( 401, $response->get_status() );
+		$this->assertEquals( 'activitypub_oauth_required', $response->get_data()['code'] );
 	}
 }

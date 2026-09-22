@@ -333,9 +333,10 @@ class Delete {
 			return $defer;
 		}
 
-		$route = $request->get_route();
+		// Lowercased because routes match case-insensitively, so `/Inbox` reaches the same handler.
+		$route = \strtolower( $request->get_route() );
 
-		// The carve-out is for inbox deliveries only: both the shared inbox and the per-actor inboxes end in `/inbox`.
+		/* The carve-out is for inbox deliveries only: both the shared inbox and the per-actor inboxes end in `/inbox`. */
 		if ( ! \str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE . '/' ) || ! \str_ends_with( $route, '/inbox' ) ) {
 			return $defer;
 		}

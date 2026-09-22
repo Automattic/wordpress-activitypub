@@ -175,9 +175,11 @@ class Liked_Controller extends Actors_Controller {
 			$args['author'] = $user_id;
 		}
 
-		$posts = \get_posts( $args );
+		$args['fields'] = 'ids';
 
-		\update_postmeta_cache( \wp_list_pluck( $posts, 'ID' ) );
+		$post_ids = \get_posts( $args );
+
+		\update_postmeta_cache( $post_ids );
 
 		/*
 		 * Walk newest-first. For each unique object ID, the first
@@ -188,9 +190,9 @@ class Liked_Controller extends Actors_Controller {
 		$seen  = array();
 		$liked = array();
 
-		foreach ( $posts as $post ) {
-			$object_id     = \get_post_meta( $post->ID, '_activitypub_object_id', true );
-			$activity_type = \get_post_meta( $post->ID, '_activitypub_activity_type', true );
+		foreach ( $post_ids as $post_id ) {
+			$object_id     = \get_post_meta( $post_id, '_activitypub_object_id', true );
+			$activity_type = \get_post_meta( $post_id, '_activitypub_activity_type', true );
 
 			if ( ! $object_id || isset( $seen[ $object_id ] ) ) {
 				continue;
