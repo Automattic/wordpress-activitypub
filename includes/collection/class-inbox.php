@@ -229,62 +229,6 @@ class Inbox {
 	}
 
 	/**
-	 * Reconstruct the Activity stored in an inbox item.
-	 *
-	 * Hydrates the JSON from `post_content` into an Activity object and, when
-	 * the activity is missing `published`/`updated`, falls back to the inbox
-	 * row's `post_date_gmt`/`post_modified_gmt`. The CPT timestamps record when
-	 * we received the activity, which is the natural fallback when the remote
-	 * sender omitted those fields.
-	 *
-	 * @param int|\WP_Post $inbox_item The inbox post or post ID.
-	 *
-	 * @return Activity|\WP_Error The Activity object or WP_Error.
-	 */
-	public static function get_activity( $inbox_item ) {
-		$inbox_item = \get_post( $inbox_item );
-
-		if ( ! $inbox_item || self::POST_TYPE !== $inbox_item->post_type ) {
-			return new \WP_Error(
-				'activitypub_inbox_item_not_found',
-				\__( 'Inbox item not found.', 'activitypub' ),
-				array( 'status' => 404 )
-			);
-		}
-
-		$data = \json_decode( $inbox_item->post_content, true );
-
-		if ( ! \is_array( $data ) ) {
-			return new \WP_Error(
-				'activitypub_inbox_item_invalid',
-				\__( 'Inbox item is not a valid activity.', 'activitypub' ),
-				array( 'status' => 500 )
-			);
-		}
-
-		$activity = Activity::init_from_array( $data );
-
-		if ( \is_wp_error( $activity ) ) {
-			return $activity;
-		}
-
-		// get_post_datetime() answers false for the `0000-00-00 00:00:00` sentinel, so the local column is used instead.
-		$utc       = new \DateTimeZone( 'UTC' );
-		$published = \get_post_datetime( $inbox_item, 'date', 'gmt' ) ?: \get_post_datetime( $inbox_item, 'date' );
-		$updated   = \get_post_datetime( $inbox_item, 'modified', 'gmt' ) ?: \get_post_datetime( $inbox_item, 'modified' );
-
-		if ( ! $activity->get_published() && $published ) {
-			$activity->set_published( $published->setTimezone( $utc )->format( ACTIVITYPUB_DATE_TIME_RFC3339 ) );
-		}
-
-		if ( ! $activity->get_updated() && $updated && $published && $updated > $published ) {
-			$activity->set_updated( $updated->setTimezone( $utc )->format( ACTIVITYPUB_DATE_TIME_RFC3339 ) );
-		}
-
-		return $activity;
-	}
-
-	/**
 	 * Undo a received activity.
 	 *
 	 * @param string      $id    The ID of the inbox item to be removed.

@@ -370,30 +370,36 @@ class Outbox {
 			);
 		}
 
-		$activity_object = \json_decode( $outbox_item->post_content, true );
-		$type            = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
+		$activity = Activity::init_from_json( $outbox_item->post_content );
 
-		if ( $activity_object['type'] === $type ) {
-			$activity = Activity::init_from_array( $activity_object );
-			if ( ! $activity->get_actor() ) {
-				$actor = self::get_actor( $outbox_item );
-				if ( \is_wp_error( $actor ) ) {
-					return $actor;
-				}
-				$activity->set_actor( $actor->get_id() );
-			}
-		} else {
+		if ( \is_wp_error( $activity ) ) {
+			return $activity;
+		}
+
+		$type = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
+
+		if ( $activity->get_type() !== $type ) {
+			/*
+			 * Rows written before 5.6.0 hold the object instead of the activity, so the activity is
+			 * built around what is stored. Everything Outbox::add() has written since then is a
+			 * complete activity and takes the branch above.
+			 */
+			$object   = $activity->to_array( false, false );
+			$activity = new Activity();
+			$activity->set_type( $type );
+			$activity->set_id( $outbox_item->guid );
+			// Pre-fill the Activity with data (for example cc and to).
+			$activity->set_object( $object );
+		}
+
+		if ( ! $activity->get_actor() ) {
 			$actor = self::get_actor( $outbox_item );
+
 			if ( \is_wp_error( $actor ) ) {
 				return $actor;
 			}
 
-			$activity = new Activity();
-			$activity->set_type( $type );
-			$activity->set_id( $outbox_item->guid );
 			$activity->set_actor( $actor->get_id() );
-			// Pre-fill the Activity with data (for example cc and to).
-			$activity->set_object( $activity_object );
 		}
 
 		/*

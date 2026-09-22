@@ -368,12 +368,20 @@ class Actors_Inbox_Controller extends Actors_Controller {
 	 * @return array|\WP_Error Response object on success, or WP_Error object on failure.
 	 */
 	public function prepare_item_for_response( $item, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		$activity = Inbox::get_activity( $item->ID );
+		$activity = Activity::init_from_json( $item->post_content );
 
 		if ( \is_wp_error( $activity ) ) {
 			return $activity;
 		}
 
+		$received = \get_post_datetime( $item, 'date', 'gmt' );
+
+		// A sender may omit the date, so report when the activity arrived and clients can still order the collection.
+		if ( ! $activity->get_published() && $received ) {
+			$activity->set_published( $received->format( ACTIVITYPUB_DATE_TIME_RFC3339 ) );
+		}
+
+		// The collection carries the JSON-LD context, and `bto`/`bcc` are stored for addressing only.
 		return $activity->to_array( false );
 	}
 

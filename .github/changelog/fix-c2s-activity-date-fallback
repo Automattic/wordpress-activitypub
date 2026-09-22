@@ -1,4 +1,4 @@
 Significance: patch
 Type: fixed
 
-Activities read from the inbox and outbox C2S endpoints now use the local record date as a fallback when no publish date is set, so client apps show consistent timestamps.
+Activities read through the ActivityPub API now fall back to the date your site recorded when the activity itself carries none, so client apps show consistent timestamps.
