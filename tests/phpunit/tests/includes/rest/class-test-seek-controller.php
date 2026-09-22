@@ -8,6 +8,8 @@
 namespace Activitypub\Tests\Rest;
 
 use Activitypub\Collection\Followers;
+use Activitypub\Collection\Following;
+use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 
@@ -505,6 +507,115 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 	}
 
 	/**
+	 * An activity whose type is not part of the public outbox is invisible to a non-owner, so it must
+	 * answer like a missing one even though it exists.
+	 *
+	 * @covers \Activitypub\Rest\Outbox_Controller::get_item_index
+	 */
+	public function test_outbox_seek_hides_non_public_activity_types() {
+		$item = 'https://example.org/outbox/a-follow';
+
+		self::factory()->post->create(
+			array(
+				'post_type'    => Outbox::POST_TYPE,
+				'post_status'  => 'publish',
+				'guid'         => $item,
+				'post_content' => \wp_slash( \wp_json_encode( array( 'type' => 'Follow' ) ) ),
+				'meta_input'   => array(
+					'_activitypub_activity_actor' => 'blog',
+					'_activitypub_activity_type'  => 'Follow',
+				),
+			)
+		);
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
+		$request->set_param( 'item', $item );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 404, $response->get_status(), 'A Follow is not part of the public outbox and must not be seekable.' );
+		$this->assertEquals( 'activitypub_item_not_found', $response->get_data()['code'] );
+	}
+
+	/**
+	 * Every visibility that keeps an activity out of the public outbox must answer like a missing item.
+	 *
+	 * @dataProvider data_non_public_visibility
+	 * @covers \Activitypub\Rest\Outbox_Controller::get_item_index
+	 *
+	 * @param string $visibility The content visibility to store.
+	 */
+	public function test_outbox_seek_hides_non_public_visibility( $visibility ) {
+		$item = 'https://example.org/outbox/visibility-' . $visibility;
+
+		self::factory()->post->create(
+			array(
+				'post_type'    => Outbox::POST_TYPE,
+				'post_status'  => 'publish',
+				'guid'         => $item,
+				'post_content' => \wp_slash( \wp_json_encode( array( 'type' => 'Create' ) ) ),
+				'meta_input'   => array(
+					'_activitypub_activity_actor'    => 'blog',
+					'_activitypub_activity_type'     => 'Create',
+					'activitypub_content_visibility' => $visibility,
+				),
+			)
+		);
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
+		$request->set_param( 'item', $item );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 404, $response->get_status(), "A $visibility activity must not be seekable by a non-owner." );
+		$this->assertEquals( 'activitypub_item_not_found', $response->get_data()['code'] );
+	}
+
+	/**
+	 * Data provider for the visibilities that are not part of the public outbox.
+	 *
+	 * @return array[]
+	 */
+	public function data_non_public_visibility() {
+		return array(
+			'private'      => array( ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE ),
+			'quiet public' => array( ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC ),
+			'local'        => array( ACTIVITYPUB_CONTENT_VISIBILITY_LOCAL ),
+		);
+	}
+
+	/**
+	 * An activity that belongs to another actor must not be seekable through this actor's outbox,
+	 * even for a logged-in user and even when the activity itself is public.
+	 *
+	 * @covers \Activitypub\Rest\Outbox_Controller::get_item_index
+	 */
+	public function test_outbox_seek_does_not_cross_actors() {
+		$alice = self::factory()->user->create( array( 'role' => 'author' ) );
+		$bob   = self::factory()->user->create( array( 'role' => 'author' ) );
+		$item  = 'https://example.org/outbox/alice-activity';
+
+		$this->create_outbox_pair( $item, 'https://example.org/outbox/alice-hidden', $alice );
+
+		// Bob is authenticated, and the activity is public, but it is not in his outbox.
+		\wp_set_current_user( $bob );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $bob . '/outbox' );
+		$request->set_param( 'item', $item );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 404, $response->get_status(), "Another actor's activity must not be seekable here." );
+		$this->assertEquals( 'activitypub_item_not_found', $response->get_data()['code'] );
+
+		// The blog outbox must not hold it either.
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
+		$request->set_param( 'item', $item );
+
+		$this->assertEquals( 404, rest_get_server()->dispatch( $request )->get_status(), "A user's activity must not be seekable through the blog outbox." );
+	}
+
+	/**
 	 * A public activity in the outbox is seekable without credentials, because the same request can
 	 * already page through it. A private-visibility activity and one that does not exist answer with
 	 * the identical 404, so neither can be told from the other.
@@ -612,6 +723,206 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 		\wp_set_current_user( 0 );
 
 		$this->assertErrorResponse( 'activitypub_item_not_found', $response, 404 );
+	}
+
+	/**
+	 * Seeking the following collection resolves the page holding a followed actor.
+	 *
+	 * @covers \Activitypub\Rest\Following_Controller::get_item_index
+	 */
+	public function test_following_collection_seek_resolves_page() {
+		$actors = array();
+		for ( $i = 1; $i <= 5; $i++ ) {
+			$uri      = 'https://example.com/followed/' . $i;
+			$actors[] = $uri;
+
+			self::factory()->post->create(
+				array(
+					'post_type'    => Remote_Actors::POST_TYPE,
+					'guid'         => $uri,
+					'post_content' => \wp_slash(
+						\wp_json_encode(
+							array(
+								'id'   => $uri,
+								'type' => 'Person',
+							)
+						)
+					),
+					'meta_input'   => array( Following::FOLLOWING_META_KEY => '0' ),
+				)
+			);
+		}
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/following' );
+		$request->set_param( 'item', $actors[0] );
+		$request->set_param( 'per_page', 2 );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 307, $response->get_status() );
+		// Newest first by ID, so the actor created first is the last of five: index 4, page 3.
+		$this->assert_location_page( 3, $response->get_headers()['Location'] );
+
+		// An actor this collection does not follow answers like any missing item.
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/following' );
+		$request->set_param( 'item', 'https://example.com/followed/does-not-exist' );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 404, $response->get_status() );
+		$this->assertEquals( 'activitypub_item_not_found', $response->get_data()['code'] );
+	}
+
+	/**
+	 * A follower is not a followed actor, so seeking one through the following collection must answer
+	 * like a missing item even though the actor exists.
+	 *
+	 * @covers \Activitypub\Rest\Following_Controller::get_item_index
+	 */
+	public function test_following_collection_seek_does_not_find_followers() {
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/following' );
+		$request->set_param( 'item', 'https://example.org/actor/13' );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 404, $response->get_status(), 'A follower must not be seekable through the following collection.' );
+		$this->assertEquals( 'activitypub_item_not_found', $response->get_data()['code'] );
+	}
+
+	/**
+	 * Seeking the liked collection resolves the page holding a liked object.
+	 *
+	 * @covers \Activitypub\Rest\Liked_Controller::get_item_index
+	 */
+	public function test_liked_collection_seek_resolves_page() {
+		$objects = array();
+		for ( $i = 1; $i <= 3; $i++ ) {
+			$object    = 'https://example.com/liked/' . $i;
+			$objects[] = $object;
+
+			$this->create_like( 'https://example.org/outbox/like-' . $i, $object, 'Like', $i );
+		}
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/liked' );
+		$request->set_param( 'item', $objects[0] );
+		$request->set_param( 'per_page', 1 );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 307, $response->get_status() );
+		// Newest first, so the object liked first is third: index 2, page 3.
+		$this->assert_location_page( 3, $response->get_headers()['Location'] );
+
+		// An object that was never liked answers like any missing item.
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/liked' );
+		$request->set_param( 'item', 'https://example.com/liked/never' );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 404, $response->get_status() );
+		$this->assertEquals( 'activitypub_item_not_found', $response->get_data()['code'] );
+	}
+
+	/**
+	 * An undone like leaves the collection, so it must stop being seekable.
+	 *
+	 * @covers \Activitypub\Rest\Liked_Controller::get_item_index
+	 */
+	public function test_liked_collection_seek_skips_undone_likes() {
+		$object = 'https://example.com/liked/undone';
+
+		$this->create_like( 'https://example.org/outbox/undone-like', $object, 'Like', 1 );
+		$this->create_like( 'https://example.org/outbox/undone-undo', $object, 'Undo', 2 );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/liked' );
+		$request->set_param( 'item', $object );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 404, $response->get_status(), 'An undone like must not be seekable.' );
+		$this->assertEquals( 'activitypub_item_not_found', $response->get_data()['code'] );
+	}
+
+	/**
+	 * Create a Like or Undo activity in the blog outbox.
+	 *
+	 * @param string $guid      The activity ID.
+	 * @param string $object_id The ActivityPub ID of the liked object.
+	 * @param string $type      The activity type, `Like` or `Undo`.
+	 * @param int    $offset    Seconds to add to the fixture date, so the order is deterministic.
+	 */
+	private function create_like( $guid, $object_id, $type, $offset ) {
+		self::factory()->post->create(
+			array(
+				'post_type'    => Outbox::POST_TYPE,
+				'post_status'  => 'publish',
+				'guid'         => $guid,
+				'post_date'    => \gmdate( 'Y-m-d H:i:s', \strtotime( '2026-01-01 00:00:00' ) + $offset ),
+				'post_content' => \wp_slash( \wp_json_encode( array( 'type' => $type ) ) ),
+				'meta_input'   => array(
+					'_activitypub_activity_actor' => 'blog',
+					'_activitypub_activity_type'  => $type,
+					'_activitypub_object_id'      => $object_id,
+				),
+			)
+		);
+	}
+
+	/**
+	 * The inbox owner can seek their own inbox, and an activity delivered to another actor's inbox
+	 * answers like a missing one.
+	 *
+	 * @covers \Activitypub\Rest\Actors_Inbox_Controller::get_item_index
+	 */
+	public function test_inbox_seek_resolves_page_for_the_owner() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$other   = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		$activities = array();
+		for ( $i = 1; $i <= 3; $i++ ) {
+			$activity     = 'https://example.com/activity/' . $i;
+			$activities[] = $activity;
+
+			self::factory()->post->create(
+				array(
+					'post_type'   => Inbox::POST_TYPE,
+					'post_status' => 'publish',
+					'guid'        => $activity,
+					'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '2026-01-01 00:00:00' ) + $i ),
+					'meta_input'  => array( '_activitypub_user_id' => (string) $user_id ),
+				)
+			);
+		}
+
+		/*
+		 * The inbox route is OAuth-only, so stand in for a bearer token; the owner check that follows
+		 * it still runs against the current user.
+		 */
+		\add_filter( 'activitypub_oauth_check_permission', '__return_true' );
+		\wp_set_current_user( $user_id );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/inbox' );
+		$request->set_param( 'item', $activities[0] );
+		$request->set_param( 'per_page', 1 );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 307, $response->get_status() );
+		// Newest first, so the activity delivered first is third: index 2, page 3.
+		$this->assert_location_page( 3, $response->get_headers()['Location'] );
+
+		// The same activity is not in another actor's inbox.
+		\wp_set_current_user( $other );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $other . '/inbox' );
+		$request->set_param( 'item', $activities[0] );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		\remove_filter( 'activitypub_oauth_check_permission', '__return_true' );
+
+		$this->assertEquals( 404, $response->get_status(), "An activity in another actor's inbox must not be seekable." );
+		$this->assertEquals( 'activitypub_item_not_found', $response->get_data()['code'] );
 	}
 
 	/**
