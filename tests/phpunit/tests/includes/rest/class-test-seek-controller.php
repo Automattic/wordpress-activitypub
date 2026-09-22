@@ -482,12 +482,14 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 	 * @param string $public_id The ActivityPub ID of the public activity.
 	 * @param string $hidden_id The ActivityPub ID of the private-visibility activity.
 	 * @param int    $user_id   Optional. Author of the activities. Default 0, the blog actor.
+	 * @param string $date      Optional. Date of the public activity; the private one is a second newer.
 	 */
-	private function create_outbox_pair( $public_id, $hidden_id, $user_id = 0 ) {
+	private function create_outbox_pair( $public_id, $hidden_id, $user_id = 0, $date = '2026-01-01 00:00:00' ) {
 		$create = array(
 			'post_type'    => Outbox::POST_TYPE,
 			'post_status'  => 'publish',
 			'post_author'  => $user_id,
+			'post_date'    => $date,
 			'post_content' => \wp_slash( \wp_json_encode( array( 'type' => 'Create' ) ) ),
 			'meta_input'   => array(
 				'_activitypub_activity_actor' => $user_id > 0 ? 'user' : 'blog',
@@ -497,57 +499,85 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 
 		self::factory()->post->create( \array_merge( $create, array( 'guid' => $public_id ) ) );
 
+		$create['post_date']                                    = \gmdate( 'Y-m-d H:i:s', \strtotime( $date ) + 1 );
 		$create['meta_input']['activitypub_content_visibility'] = ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE;
 		self::factory()->post->create( \array_merge( $create, array( 'guid' => $hidden_id ) ) );
 	}
 
 	/**
-	 * Seeking the outbox is owner-only. An unauthenticated request is asked to authenticate (401),
-	 * identically for a public activity, a private one, and an unknown one — so the 401 discloses
-	 * nothing about the outbox.
+	 * A public activity in the outbox is seekable without credentials, because the same request can
+	 * already page through it. A private-visibility activity and one that does not exist answer with
+	 * the identical 404, so neither can be told from the other.
 	 *
 	 * @covers \Activitypub\Rest\Outbox_Controller::get_item_index
 	 */
-	public function test_outbox_seek_unauthenticated_returns_401() {
+	public function test_outbox_seek_unauthenticated_resolves_public_and_hides_the_rest() {
 		$public_id = 'https://example.org/outbox/public-activity';
 		$hidden_id = 'https://example.org/outbox/hidden-activity';
 
 		$this->create_outbox_pair( $public_id, $hidden_id );
 
-		foreach ( array( $public_id, $hidden_id, 'https://example.org/outbox/does-not-exist' ) as $item ) {
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
+		$request->set_param( 'item', $public_id );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 307, $response->get_status(), 'A public activity must be seekable without credentials.' );
+		$this->assert_location_page( 1, $response->get_headers()['Location'] );
+
+		$refusals = array();
+		foreach ( array( $hidden_id, 'https://example.org/outbox/does-not-exist' ) as $item ) {
 			$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
 			$request->set_param( 'item', $item );
 
-			$response = rest_get_server()->dispatch( $request );
-			$this->assertEquals( 401, $response->get_status(), "Unauthenticated seek of {$item} must ask to authenticate with 401." );
-			$this->assertEquals( 'activitypub_unauthorized', $response->get_data()['code'], "Unauthenticated seek of {$item} must ask to authenticate." );
+			$response   = rest_get_server()->dispatch( $request );
+			$refusals[] = array( $response->get_status(), $response->get_data() );
 		}
+
+		// A hidden activity and a missing one must be answered identically, down to the message.
+		$this->assertSame( 404, $refusals[0][0] );
+		$this->assertSame( $refusals[0], $refusals[1], 'A hidden activity must be indistinguishable from one that does not exist.' );
 	}
 
 	/**
-	 * An authenticated non-owner is refused with the uniform 404 — the same status as a missing
-	 * item — for a public activity, a private one, and an unknown one, so it can infer nothing about
-	 * another actor's outbox.
+	 * The page a non-owner is sent to counts only the activities they can see, so it cannot reveal
+	 * that a private activity sits between them.
 	 *
 	 * @covers \Activitypub\Rest\Outbox_Controller::get_item_index
 	 */
-	public function test_outbox_seek_authenticated_non_owner_returns_404() {
-		$public_id = 'https://example.org/outbox/other-public-activity';
-		$hidden_id = 'https://example.org/outbox/other-hidden-activity';
+	public function test_outbox_seek_index_does_not_count_hidden_activities() {
+		$newest_id = 'https://example.org/outbox/index-newest';
+		$hidden_id = 'https://example.org/outbox/index-hidden';
+		$oldest_id = 'https://example.org/outbox/index-oldest';
+		$user_id   = self::factory()->user->create( array( 'role' => 'author' ) );
 
-		$this->create_outbox_pair( $public_id, $hidden_id );
+		// Oldest first, so the newest-first collection holds: newest, hidden, oldest.
+		$this->create_outbox_pair( $oldest_id, $hidden_id, $user_id, '2026-01-01 00:00:00' );
+		$this->create_outbox_pair( $newest_id, 'https://example.org/outbox/index-hidden-2', $user_id, '2026-01-01 00:00:10' );
 
-		// A regular author cannot act as the blog actor, so seeking the blog outbox makes them a non-owner.
-		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'author' ) ) );
+		$route = '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox';
 
-		foreach ( array( $public_id, $hidden_id, 'https://example.org/outbox/does-not-exist' ) as $item ) {
-			$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
-			$request->set_param( 'item', $item );
+		$request = new \WP_REST_Request( 'GET', $route );
+		$request->set_param( 'item', $oldest_id );
+		$request->set_param( 'per_page', 1 );
 
-			$response = rest_get_server()->dispatch( $request );
-			$this->assertEquals( 404, $response->get_status(), "Authenticated non-owner seek of {$item} must return the uniform 404." );
-			$this->assertEquals( 'activitypub_item_not_found', $response->get_data()['code'], "Authenticated non-owner seek of {$item} must be indistinguishable from a missing item." );
-		}
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 307, $response->get_status() );
+		// Only the newest public activity precedes it, so page 2 — not page 3, which would expose the hidden one.
+		$this->assert_location_page( 2, $response->get_headers()['Location'] );
+
+		// The owner sees the hidden activities too, so for them the same item sits one page further.
+		\wp_set_current_user( $user_id );
+
+		$request = new \WP_REST_Request( 'GET', $route );
+		$request->set_param( 'item', $oldest_id );
+		$request->set_param( 'per_page', 1 );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 307, $response->get_status() );
+		$this->assert_location_page( 4, $response->get_headers()['Location'] );
 	}
 
 	/**

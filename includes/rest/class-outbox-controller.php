@@ -309,34 +309,20 @@ class Outbox_Controller extends \WP_REST_Controller {
 	/**
 	 * Get the position of an activity in the outbox.
 	 *
-	 * Seeking the outbox is owner-only. The collection mixes public and private activities, so
-	 * rather than rely on the per-item visibility filter, non-owners are refused before any item
-	 * is resolved. That way the seek discloses nothing about a specific activity, public or private.
-	 * A request without credentials is asked to authenticate (401); an authenticated non-owner is
-	 * refused with the same 404 as a missing item, so it can infer nothing about the outbox.
+	 * Both queries below run under get_query_args(), which narrows a non-owner to the public
+	 * activities the collection would page through anyway. An activity the requester cannot see is
+	 * therefore absent from the index and answered with the same 404 as one that does not exist, and
+	 * the position counts only the activities they can see, so it cannot reveal how many private
+	 * ones precede it.
 	 *
 	 * @since unreleased
 	 *
 	 * @param string           $item    The ActivityPub activity ID.
 	 * @param \WP_REST_Request $request Full details about the request.
 	 *
-	 * @return int|false|\WP_Error Zero-based index of the item, false when not found or a non-owner, or WP_Error when unauthenticated.
+	 * @return int|false|\WP_Error Zero-based index of the item, false when not found, or WP_Error on a failed lookup.
 	 */
 	public function get_item_index( $item, $request ) {
-		// Ask an unauthenticated request to authenticate; the seek is owner-only.
-		if ( ! \is_user_logged_in() ) {
-			return new \WP_Error(
-				'activitypub_unauthorized',
-				\__( 'You need to authenticate to seek this collection.', 'activitypub' ),
-				array( 'status' => 401 )
-			);
-		}
-
-		// An authenticated non-owner is refused with the uniform 404, disclosing no membership.
-		if ( ! $this->owner_may_read( $request ) ) {
-			return false;
-		}
-
 		$outbox_item = Outbox::get_by_guid( $item );
 		if ( \is_wp_error( $outbox_item ) ) {
 			return $outbox_item;
@@ -371,17 +357,6 @@ class Outbox_Controller extends \WP_REST_Controller {
 		);
 
 		return (int) $preceding->found_posts;
-	}
-
-	/**
-	 * The outbox seek is owner-only, so only advertise seekItem to the authenticated owner.
-	 *
-	 * @param \WP_REST_Request $request The collection request.
-	 *
-	 * @return bool
-	 */
-	protected function can_advertise_seek( $request ) {
-		return $this->owner_may_read( $request );
 	}
 
 	/**

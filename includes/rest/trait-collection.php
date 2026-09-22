@@ -177,10 +177,8 @@ trait Collection {
 	 * visibility rules of the collection, and the response is a temporary redirect whose
 	 * Location is the id of the CollectionPage containing the item. A temporary redirect is
 	 * used because the collections are ordered newest-first, so items drift across pages as
-	 * new items arrive. A missing-authentication failure is surfaced as 401, because it describes
-	 * the request rather than any item and discloses no membership. Everything else — unknown or
-	 * invisible items, and authenticated-but-not-authorized requests — collapses to the same 404,
-	 * so collection membership is not leaked.
+	 * new items arrive. An unknown item and one hidden by the collection's visibility rules answer
+	 * with the same 404, so collection membership is not leaked.
 	 *
 	 * @see https://swicg.github.io/activitypub-api/seekitem
 	 *
@@ -189,7 +187,7 @@ trait Collection {
 	 * @param \WP_REST_Request $request       The request object.
 	 * @param string           $collection_id The plain collection ID (URL without query arguments).
 	 *
-	 * @return \WP_REST_Response|\WP_Error|null Redirect response, 401/404 error, or null when this is not a seek request.
+	 * @return \WP_REST_Response|\WP_Error|null Redirect response, 404 error, or null when this is not a seek request.
 	 */
 	public function maybe_seek_item( $request, $collection_id ) {
 		$item = $request->get_param( 'item' );
@@ -199,22 +197,13 @@ trait Collection {
 
 		$index = $this->get_item_index( $item, $request );
 
-		if ( \is_wp_error( $index ) ) {
-			/*
-			 * Surface a missing-authentication failure (401) as is: it is a property of the request,
-			 * not the item, so it discloses no membership while telling the client to authenticate.
-			 * Everything else — an authenticated-but-not-authorized request, an absent item, or one
-			 * hidden by the collection's visibility rules — collapses to a single 404 so the presence
-			 * of a specific item can never be inferred, per the seekItem spec.
-			 */
-			if ( 401 === \rest_convert_error_to_response( $index )->get_status() ) {
-				return $index;
-			}
-
-			$index = false;
-		}
-
-		if ( false === $index ) {
+		/*
+		 * A failed lookup, an absent item and one hidden by the collection's visibility rules all
+		 * collapse to a single 404, so the presence of a specific item can never be inferred, per
+		 * the seekItem spec. A request that has to authenticate at all is refused by the route's
+		 * permission callback, before any item is resolved.
+		 */
+		if ( \is_wp_error( $index ) || false === $index ) {
 			return new \WP_Error(
 				'activitypub_item_not_found',
 				\__( 'The requested item could not be found in this collection.', 'activitypub' ),
