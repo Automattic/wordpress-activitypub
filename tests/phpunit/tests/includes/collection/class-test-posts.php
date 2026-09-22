@@ -271,6 +271,47 @@ class Test_Posts extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test creating a reply prepends the Reply block so it federates with inReplyTo.
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_reply_prepends_reply_block() {
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$activity = array(
+			'object' => array(
+				'type'      => 'Note',
+				'content'   => '<p>A reply.</p>',
+				'inReplyTo' => 'https://example.social/@alice/1234',
+			),
+		);
+
+		$post = Posts::create( $activity, $user_id );
+
+		$this->assertInstanceOf( '\WP_Post', $post );
+		$this->assertStringStartsWith( '<!-- wp:activitypub/reply {"url":"https://example.social/@alice/1234"} /-->', $post->post_content );
+	}
+
+	/**
+	 * Test creating a non-reply post does not add the Reply block.
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_without_reply_has_no_reply_block() {
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$activity = array(
+			'object' => array(
+				'type'    => 'Note',
+				'content' => '<p>Not a reply.</p>',
+			),
+		);
+
+		$post = Posts::create( $activity, $user_id );
+
+		$this->assertInstanceOf( '\WP_Post', $post );
+		$this->assertStringNotContainsString( 'wp:activitypub/reply', $post->post_content );
+	}
+
+	/**
 	 * Test creating a post with a content warning (sensitive=true + summary).
 	 *
 	 * @covers ::create

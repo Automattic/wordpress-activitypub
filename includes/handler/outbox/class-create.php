@@ -13,6 +13,8 @@ use Activitypub\Collection\Posts;
 use function Activitypub\is_activity_public;
 use function Activitypub\is_activity_reply;
 use function Activitypub\is_quote_activity;
+use function Activitypub\object_to_uri;
+use function Activitypub\url_to_commentid;
 
 /**
  * Handle outgoing Create activities (C2S).
@@ -56,11 +58,14 @@ class Create {
 		}
 
 		if ( is_activity_reply( $activity ) ) {
-			return self::create_comment( $activity, $user_id );
-		}
+			$in_reply_to = object_to_uri( $activity['object']['inReplyTo'] );
 
-		// TODO: Handle quotes differently.
-		if ( is_quote_activity( $activity ) ) {
+			// Replies to local posts and comments become comments; everything else becomes a post.
+			if ( \url_to_postid( $in_reply_to ) || url_to_commentid( $in_reply_to ) ) {
+				return self::create_comment( $activity, $user_id );
+			}
+		} elseif ( is_quote_activity( $activity ) ) {
+			// TODO: Handle quotes differently.
 			return false;
 		}
 

@@ -9,6 +9,7 @@ namespace Activitypub\Tests\Handler\Outbox;
 
 use Activitypub\Handler\Outbox\Create;
 use Activitypub\Scheduler\Post;
+use Activitypub\Transformer\Post as Post_Transformer;
 
 /**
  * Test class for Outbox Create Handler.
@@ -115,11 +116,14 @@ class Test_Create extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test outgoing reply to non-local URL is not handled.
+	 * Test outgoing reply to non-local URL becomes a post with the Reply block, not a comment.
 	 *
 	 * @covers ::handle_create
 	 */
 	public function test_outgoing_reply_to_remote_url() {
+		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
+
+		$user_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
 		$activity = array(
 			'type'   => 'Create',
 			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
@@ -130,10 +134,33 @@ class Test_Create extends \WP_UnitTestCase {
 			),
 		);
 
-		$result = Create::handle_create( $activity, 1 );
+		$comment_count_before = \get_comments( array( 'count' => true ) );
 
-		// Reply to non-local URL: no local post found, returns false.
-		$this->assertFalse( $result );
+		// Intercept HTTP requests for the replied-to object and its author.
+		$filter_remote_object = function ( $pre, $url ) {
+			if ( 'https://example.com/note/123' === $url ) {
+				return array( 'attributedTo' => 'https://example.com/users/author' );
+			} elseif ( 'https://example.com/users/author' === $url ) {
+				return array(
+					'preferredUsername' => 'author',
+					'url'               => 'https://example.com/users/author',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object, 10, 2 );
+
+		$result = Create::handle_create( $activity, $user_id );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );
+
+		// Reply to non-local URL: no local post/comment found, a WordPress post is created instead.
+		$this->assertInstanceOf( 'WP_Post', $result );
+		$this->assertStringStartsWith( '<!-- wp:activitypub/reply {"url":"https://example.com/note/123"} /-->', $result->post_content );
+		$this->assertEquals( 'https://example.com/note/123', Post_Transformer::transform( $result )->to_object()->get_in_reply_to() );
+		$this->assertEquals( $comment_count_before, \get_comments( array( 'count' => true ) ) );
+
+		\add_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33, 4 );
 	}
 
 	/**

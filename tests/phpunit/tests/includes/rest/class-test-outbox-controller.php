@@ -939,6 +939,69 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 	}
 
 	/**
+	 * Test C2S POST of a reply to a remote object is delivered as a post, not rejected.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_create_reply_to_remote_object_is_delivered() {
+		$user = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+
+		$comment_count_before = \get_comments( array( 'count' => true ) );
+
+		// Intercept HTTP requests for the replied-to object and its author.
+		$filter_remote_object = function ( $pre, $url ) {
+			if ( 'https://example.social/@alice/1234' === $url ) {
+				return array( 'attributedTo' => 'https://example.social/users/alice' );
+			} elseif ( 'https://example.social/users/alice' === $url ) {
+				return array(
+					'preferredUsername' => 'alice',
+					'url'               => 'https://example.social/users/alice',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object, 10, 2 );
+
+		$data = array(
+			'type'   => 'Create',
+			'actor'  => $user->get_id(),
+			'to'     => array( 'https://example.social/users/alice' ),
+			'cc'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'type'      => 'Note',
+				'content'   => 'A reply to a remote post.',
+				'inReplyTo' => 'https://example.social/@alice/1234',
+			),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );
+
+		$this->assertEquals( 201, $response->get_status() );
+
+		$response_data = $response->get_data();
+
+		// The object should have an ID that's a post permalink, like a regular Note.
+		$this->assertArrayHasKey( 'object', $response_data );
+		$object_id = $response_data['object']['id'];
+		$this->assertStringContainsString( '?p=', $object_id, 'Object ID should be a post permalink' );
+		$this->assertEquals( 'https://example.social/@alice/1234', $response_data['object']['inReplyTo'] );
+
+		$outbox_item = Outbox::get_by_object_id( $object_id, 'Create' );
+		$this->assertInstanceOf( 'WP_Post', $outbox_item );
+
+		// No comment should have been created for a reply to a remote object.
+		$this->assertEquals( $comment_count_before, \get_comments( array( 'count' => true ) ) );
+	}
+
+	/**
 	 * Test C2S POST creates Note with 'status' post format.
 	 *
 	 * When a client submits a Note via C2S, the created WordPress post

@@ -12,6 +12,7 @@ use Activitypub\Hashtag;
 use Activitypub\Link;
 
 use function Activitypub\get_content_visibility;
+use function Activitypub\object_to_uri;
 use function Activitypub\user_can_act_as_blog;
 
 /**
@@ -75,6 +76,11 @@ class Posts {
 
 		// Process content: autop, autolink, hashtags, and convert to blocks.
 		$content = self::prepare_content( $content );
+
+		// The Reply block is what makes Transformer\Post::get_in_reply_to() emit inReplyTo.
+		if ( ! empty( $object['inReplyTo'] ) ) {
+			$content = '<!-- wp:activitypub/reply ' . \wp_json_encode( array( 'url' => object_to_uri( $object['inReplyTo'] ) ) ) . ' /-->' . "\n" . $content;
+		}
 
 		// Use name as title for Articles, or generate from content for Notes.
 		$title = $name;
