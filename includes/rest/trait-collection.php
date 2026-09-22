@@ -65,9 +65,7 @@ trait Collection {
 			$response = array( '@context' => $this->json_ld_context ) + $response;
 		}
 
-		// The `item` seek parameter is handled before the collection is built and must not leak into navigation links.
-		$query_params = $request->get_query_params();
-		unset( $query_params['item'] );
+		$query_params = $this->get_collection_query_params( $request );
 
 		/*
 		 * Advertise the seek endpoint on the Collection when the request offered an `item` argument,
@@ -120,6 +118,38 @@ trait Collection {
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Collect the query arguments that belong in a collection's id and page links.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_REST_Request $request The collection request.
+	 *
+	 * @return array The request's item-selecting query arguments.
+	 */
+	private function get_collection_query_params( $request ) {
+		/*
+		 * Only the arguments that select which items a page holds belong in these links. Copying the
+		 * query string wholesale carries unregistered parameters along, and `rest_route` is a public
+		 * query var, so a link carrying one resolves to that route instead of to the collection page.
+		 * The seek `item` is absent by the same rule: it picks a page, it does not describe one.
+		 */
+		$allowed = array( 'page', 'per_page', 'order', 'context', 'type' );
+
+		/**
+		 * Filters the query arguments carried into a collection's id and page links.
+		 *
+		 * Arguments that are not listed are dropped, so a parameter the collection does not know
+		 * about cannot change where one of its links resolves.
+		 *
+		 * @param string[]         $allowed The query argument names to carry over.
+		 * @param \WP_REST_Request $request The collection request.
+		 */
+		$allowed = \apply_filters( 'activitypub_rest_collection_query_args', $allowed, $request );
+
+		return \array_intersect_key( $request->get_query_params(), \array_flip( $allowed ) );
 	}
 
 	/**
@@ -195,8 +225,7 @@ trait Collection {
 		$per_page = \max( 1, \absint( $request->get_param( 'per_page' ) ) );
 		$page     = (int) \floor( $index / $per_page ) + 1;
 
-		$query_params = $request->get_query_params();
-		unset( $query_params['item'] );
+		$query_params         = $this->get_collection_query_params( $request );
 		$query_params['page'] = $page;
 
 		$response = new \WP_REST_Response( null, 307 );

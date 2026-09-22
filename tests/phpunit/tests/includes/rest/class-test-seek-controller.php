@@ -439,6 +439,44 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 	}
 
 	/**
+	 * An unregistered query argument must not be copied into the seek redirect or the collection id.
+	 *
+	 * `rest_route` is a public query var, so a link carrying one resolves to that route instead of to
+	 * the collection page.
+	 *
+	 * @covers \Activitypub\Rest\Collection::maybe_seek_item
+	 * @covers \Activitypub\Rest\Collection::prepare_collection_response
+	 */
+	public function test_unregistered_query_args_are_not_carried_over() {
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
+		$request->set_param( 'item', 'https://example.org/actor/13' );
+		$request->set_param( 'per_page', 5 );
+		$request->set_param( 'rest_route', '/wp/v2/users' );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 307, $response->get_status() );
+
+		/*
+		 * On plain permalinks the collection URL is itself a `?rest_route=` link, so a carried-over
+		 * value would not be appended but replace the route the redirect points at.
+		 */
+		$location = $response->get_headers()['Location'];
+		$this->assertStringNotContainsString( 'wp%2Fv2%2Fusers', $location );
+		$this->assertStringNotContainsString( 'wp/v2/users', $location );
+		$this->assertStringContainsString( 'per_page=5', $location );
+
+		// The collection id and its page links are built from the same arguments.
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/followers' );
+		$request->set_param( 'rest_route', '/wp/v2/users' );
+
+		$response = rest_get_server()->dispatch( $request )->get_data();
+
+		$this->assertStringNotContainsString( 'wp%2Fv2%2Fusers', $response['id'] );
+		$this->assertStringNotContainsString( 'wp%2Fv2%2Fusers', $response['first'] );
+	}
+
+	/**
 	 * Create a public and a private-visibility outbox activity.
 	 *
 	 * @param string $public_id The ActivityPub ID of the public activity.
