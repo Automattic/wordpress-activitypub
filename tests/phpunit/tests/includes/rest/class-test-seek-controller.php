@@ -659,6 +659,97 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 	}
 
 	/**
+	 * A query filter that restricts the collection with `post__in` also restricts what can be sought,
+	 * or a seek would resolve an activity the collection itself excludes.
+	 *
+	 * @covers \Activitypub\Rest\Outbox_Controller::get_item_index
+	 */
+	public function test_outbox_seek_honours_a_post_in_filter() {
+		$wanted   = 'https://example.org/outbox/filtered-in';
+		$excluded = 'https://example.org/outbox/filtered-out';
+
+		$this->create_outbox_pair( $wanted, 'https://example.org/outbox/filtered-hidden' );
+		$this->create_outbox_pair( $excluded, 'https://example.org/outbox/filtered-hidden-2', 0, '2026-01-01 00:00:10' );
+
+		// Restrict the collection to the wanted activity, the way a site narrowing its outbox would.
+		$restrict = static function ( $args ) use ( $wanted ) {
+			$args['post__in'] = array( \url_to_postid( $wanted ) ?: \Activitypub\Collection\Outbox::get_by_guid( $wanted )->ID );
+
+			return $args;
+		};
+		\add_filter( 'activitypub_rest_outbox_query', $restrict );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
+		$request->set_param( 'item', $wanted );
+
+		$included = rest_get_server()->dispatch( $request );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/0/outbox' );
+		$request->set_param( 'item', $excluded );
+
+		$refused = rest_get_server()->dispatch( $request );
+
+		\remove_filter( 'activitypub_rest_outbox_query', $restrict );
+
+		$this->assertEquals( 307, $included->get_status(), 'An activity the filter keeps must still be seekable.' );
+		$this->assertEquals( 404, $refused->get_status(), 'An activity the filter excludes must not be seekable.' );
+		$this->assertEquals( 'activitypub_item_not_found', $refused->get_data()['code'] );
+	}
+
+	/**
+	 * A query filter that restricts the inbox with `post__in` also restricts what can be sought.
+	 *
+	 * @covers \Activitypub\Rest\Actors_Inbox_Controller::get_item_index
+	 */
+	public function test_inbox_seek_honours_a_post_in_filter() {
+		$user_id  = self::factory()->user->create( array( 'role' => 'author' ) );
+		$wanted   = 'https://example.com/activity/kept';
+		$excluded = 'https://example.com/activity/dropped';
+		$ids      = array();
+
+		foreach ( array( $wanted, $excluded ) as $offset => $activity ) {
+			$ids[ $activity ] = self::factory()->post->create(
+				array(
+					'post_type'   => Inbox::POST_TYPE,
+					'post_status' => 'publish',
+					'guid'        => $activity,
+					'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '2026-01-01 00:00:00' ) + $offset ),
+					'meta_input'  => array( '_activitypub_user_id' => (string) $user_id ),
+				)
+			);
+		}
+
+		$restrict = static function ( $args ) use ( $ids, $wanted ) {
+			$args['post__in'] = array( $ids[ $wanted ] );
+
+			return $args;
+		};
+
+		\add_filter( 'activitypub_oauth_check_permission', '__return_true' );
+		\add_filter( 'activitypub_rest_inbox_query', $restrict );
+		\wp_set_current_user( $user_id );
+
+		$route = '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/inbox';
+
+		$request = new \WP_REST_Request( 'GET', $route );
+		$request->set_param( 'item', $wanted );
+
+		$included = rest_get_server()->dispatch( $request );
+
+		$request = new \WP_REST_Request( 'GET', $route );
+		$request->set_param( 'item', $excluded );
+
+		$refused = rest_get_server()->dispatch( $request );
+
+		\remove_filter( 'activitypub_rest_inbox_query', $restrict );
+		\remove_filter( 'activitypub_oauth_check_permission', '__return_true' );
+
+		$this->assertEquals( 307, $included->get_status(), 'An activity the filter keeps must still be seekable.' );
+		$this->assertEquals( 404, $refused->get_status(), 'An activity the filter excludes must not be seekable.' );
+		$this->assertEquals( 'activitypub_item_not_found', $refused->get_data()['code'] );
+	}
+
+	/**
 	 * A public activity in the outbox is seekable without credentials, because the same request can
 	 * already page through it. A private-visibility activity and one that does not exist answer with
 	 * the identical 404, so neither can be told from the other.

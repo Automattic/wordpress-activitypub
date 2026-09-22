@@ -334,6 +334,14 @@ class Outbox_Controller extends \WP_REST_Controller {
 		$args['orderby']        = 'none'; // Both queries below only count rows, so the collection's sort is pure overhead.
 		unset( $args['paged'] );
 
+		/*
+		 * A query filter may restrict the collection with `post__in`, and WP_Query ignores an empty
+		 * one, so an item outside that restriction is refused here instead of being queried for.
+		 */
+		if ( isset( $args['post__in'] ) && ! \in_array( $outbox_item->ID, \array_map( 'absint', (array) $args['post__in'] ), true ) ) {
+			return false;
+		}
+
 		// Confirm the item is visible through the collection's own query before computing the index.
 		$membership = new \WP_Query(
 			\array_merge(
