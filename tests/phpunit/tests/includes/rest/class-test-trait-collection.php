@@ -281,6 +281,40 @@ class Test_Trait_Collection extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that the allowed query arguments can be extended through the filter.
+	 *
+	 * @covers ::prepare_collection_response
+	 */
+	public function test_prepare_collection_response_query_args_filter() {
+		$request = new \WP_REST_Request();
+		$request->set_param( 'per_page', 2 );
+		$request->set_param( 'custom', 'value' );
+
+		$response = array(
+			'type'       => 'OrderedCollection',
+			'id'         => 'https://example.org/collection',
+			'totalItems' => 5,
+			'items'      => array( 'item1', 'item2', 'item3', 'item4', 'item5' ),
+		);
+
+		$result = $this->instance->prepare_collection_response( $response, $request );
+		$this->assertStringNotContainsString( 'custom=value', $result['first'] );
+
+		$add_custom = static function ( $allowed ) {
+			$allowed[] = 'custom';
+
+			return $allowed;
+		};
+		\add_filter( 'activitypub_rest_collection_query_args', $add_custom );
+
+		$result = $this->instance->prepare_collection_response( $response, $request );
+
+		\remove_filter( 'activitypub_rest_collection_query_args', $add_custom );
+
+		$this->assertStringContainsString( 'custom=value', $result['first'] );
+	}
+
+	/**
 	 * Test that pagination links preserve query parameters for Collection (non-page) requests.
 	 *
 	 * @covers ::prepare_collection_response

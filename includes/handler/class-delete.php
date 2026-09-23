@@ -385,6 +385,7 @@ class Delete {
 	 * arrives.
 	 *
 	 * @since 8.2.0 The `$force_signature` parameter is now respected.
+	 * @since unreleased Limited to POST deliveries to an inbox route.
 	 *
 	 * @param bool             $defer           Whether to defer signature verification.
 	 * @param \WP_REST_Request $request         The request object.
@@ -394,6 +395,19 @@ class Delete {
 	 */
 	public static function defer_signature_verification( $defer, $request, $force_signature = false ) {
 		if ( $force_signature ) {
+			return $defer;
+		}
+
+		// Deliveries are POSTs; on any other method the body is not an activity we accept, so it must not waive verification.
+		if ( 'POST' !== $request->get_method() ) {
+			return $defer;
+		}
+
+		// Lowercased because routes match case-insensitively, so `/Inbox` reaches the same handler.
+		$route = \strtolower( $request->get_route() );
+
+		/* The carve-out is for inbox deliveries only: both the shared inbox and the per-actor inboxes end in `/inbox`. */
+		if ( ! \str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE . '/' ) || ! \str_ends_with( $route, '/inbox' ) ) {
 			return $defer;
 		}
 
