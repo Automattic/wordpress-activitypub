@@ -766,6 +766,71 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * A pending row must still carry a GMT publication date.
+	 *
+	 * WordPress only derives `post_date_gmt` for statuses that do not float, and wp_publish_post()
+	 * never repairs it, so without supplying it the row would report the sentinel for life and every
+	 * reader would compare a local date against a GMT one.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_populates_the_gmt_date_of_a_pending_row() {
+		\update_option( 'timezone_string', 'Europe/Berlin' );
+
+		$id = \Activitypub\add_to_outbox( $this->get_dummy_activity_object(), 'Create', 1 );
+		$this->assertNotFalse( $id );
+
+		$post = \get_post( $id );
+
+		// Convert while the site timezone is still set, or get_gmt_from_date() is a no-op.
+		$expected = \get_gmt_from_date( $post->post_date );
+
+		\delete_option( 'timezone_string' );
+
+		$this->assertSame( 'pending', $post->post_status );
+		$this->assertNotSame( '0000-00-00 00:00:00', $post->post_date_gmt );
+		$this->assertSame( $expected, $post->post_date_gmt, "The row's two clocks must agree." );
+	}
+
+	/**
+	 * Rescheduling moves the publication date, so both of its columns move together.
+	 *
+	 * @covers ::reschedule
+	 */
+	public function test_reschedule_moves_both_date_columns() {
+		\update_option( 'timezone_string', 'Europe/Berlin' );
+
+		$id = \Activitypub\add_to_outbox( $this->get_dummy_activity_object(), 'Create', 1 );
+		$this->assertNotFalse( $id );
+
+		// Backdate the row so the reschedule has to move it.
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update(
+			$wpdb->posts,
+			array(
+				'post_date'     => '2026-01-01 00:00:00',
+				'post_date_gmt' => '2025-12-31 23:00:00',
+			),
+			array( 'ID' => $id )
+		);
+		\clean_post_cache( $id );
+
+		Outbox::reschedule( $id );
+		\clean_post_cache( $id );
+
+		$post = \get_post( $id );
+
+		// Convert while the site timezone is still set, or get_gmt_from_date() is a no-op.
+		$expected = \get_gmt_from_date( $post->post_date );
+
+		\delete_option( 'timezone_string' );
+
+		$this->assertNotSame( '2026-01-01 00:00:00', $post->post_date, 'The reschedule must move the date.' );
+		$this->assertSame( $expected, $post->post_date_gmt, "The row's two clocks must agree." );
+	}
+
+	/**
 	 * Zero-sentinel `post_date_gmt` must not synthesize a 1970-01-01 published date.
 	 *
 	 * @covers ::get_activity

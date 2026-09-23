@@ -100,20 +100,30 @@ class Outbox {
 		// Save activity in the context of an activitypub request.
 		\add_filter( 'activitypub_is_activitypub_request', '__return_true' );
 
+		/*
+		 * A `pending` row would otherwise keep the `0000-00-00 00:00:00` sentinel in `post_date_gmt`,
+		 * because WordPress only derives it for statuses that do not float, and wp_publish_post() does
+		 * not repair it later. Supplying both keeps the row's two clocks in agreement, which is what
+		 * every reader of the activity's `published` and `updated` compares.
+		 */
+		$now = \current_time( 'mysql' );
+
 		$outbox_item = array(
-			'post_type'    => self::POST_TYPE,
-			'post_title'   => \sprintf(
+			'post_type'     => self::POST_TYPE,
+			'post_date'     => $now,
+			'post_date_gmt' => \get_gmt_from_date( $now ),
+			'post_title'    => \sprintf(
 				/* translators: 1. Activity type, 2. Object Title or Excerpt */
 				\__( '[%1$s] %2$s', 'activitypub' ),
 				$activity->get_type(),
 				\wp_trim_words( $title, 5 )
 			),
 			// Persist the blind audience so later dispatch can compute recipients from `bto`/`bcc`.
-			'post_content' => \wp_slash( $activity->to_json( true, true ) ),
+			'post_content'  => \wp_slash( $activity->to_json( true, true ) ),
 			// ensure that user ID is not below 0.
-			'post_author'  => \max( $user_id, 0 ),
-			'post_status'  => 'pending',
-			'meta_input'   => array(
+			'post_author'   => \max( $user_id, 0 ),
+			'post_status'   => 'pending',
+			'meta_input'    => array(
 				'_activitypub_object_id'         => $object_id,
 				'_activitypub_activity_type'     => $activity->get_type(),
 				'_activitypub_activity_actor'    => $actor_type,
@@ -343,8 +353,12 @@ class Outbox {
 	public static function reschedule( $outbox_item ) {
 		$outbox_item = \get_post( $outbox_item );
 
+		$now = \current_time( 'mysql' );
+
 		$outbox_item->post_status = 'pending';
-		$outbox_item->post_date   = \current_time( 'mysql' );
+		$outbox_item->post_date   = $now;
+		// Without the GMT column the row's two clocks disagree, and readers compare them to each other.
+		$outbox_item->post_date_gmt = \get_gmt_from_date( $now );
 
 		\wp_update_post( $outbox_item );
 
@@ -406,10 +420,10 @@ class Outbox {
 		 * Fall back to the row's own timestamps when the stored activity carries none, which is the
 		 * case for every row written before this fallback existed.
 		 *
-		 * Outbox::add() inserts with post_status `pending`, which leaves the `_gmt` columns at the
-		 * `0000-00-00 00:00:00` sentinel while the local columns are set, and the Dispatcher reads the
-		 * activity while the row is still pending. get_post_datetime() answers false for that
-		 * sentinel, so the local column is used instead and no 1970 date is ever synthesized.
+		 * add() supplies both date columns, so the GMT one answers for anything written since. Rows
+		 * written before that kept the `0000-00-00 00:00:00` sentinel a `pending` status leaves behind,
+		 * and get_post_datetime() answers false for it, so the local column answers for those instead
+		 * of a 1970 date being synthesized from the sentinel.
 		 */
 		$utc       = new \DateTimeZone( 'UTC' );
 		$published = \get_post_datetime( $outbox_item, 'date', 'gmt' ) ?: \get_post_datetime( $outbox_item, 'date' );
