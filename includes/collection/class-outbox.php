@@ -448,11 +448,13 @@ class Outbox {
 		}
 
 		/*
-		 * Only an Update reports a modification date. `post_modified` records when the row changed,
-		 * which happens for reasons that have nothing to do with the object being edited: add()
-		 * writes the activity id back after the insert, and reschedule() re-queues the row.
+		 * An Update always reports when the row was last written, and it overrides whatever the stored
+		 * activity carried: an Update queued for a reason other than an edit (a quote authorization
+		 * arriving, say) would otherwise repeat the date of the last content change, and a remote that
+		 * deduplicates edits by `updated` would ignore it. No other type reports one, because
+		 * `post_modified` tracks the row rather than the object.
 		 */
-		if ( ! $activity->get_updated() && $updated && 'Update' === $type ) {
+		if ( $updated && 'Update' === $type ) {
 			$activity->set_updated( $updated->setTimezone( $utc )->format( ACTIVITYPUB_DATE_TIME_RFC3339 ) );
 		}
 

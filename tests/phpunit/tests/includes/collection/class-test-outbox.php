@@ -909,6 +909,35 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * An Update reports the row's modification time even when the stored activity carries an older one.
+	 *
+	 * An Update queued for a reason other than a content edit, a quote authorization arriving for
+	 * instance, would otherwise repeat the date of the last edit, and a remote that deduplicates edits
+	 * by `updated` would ignore it.
+	 *
+	 * @covers ::get_activity
+	 */
+	public function test_get_activity_update_reports_the_latest_timestamp() {
+		$id = \Activitypub\add_to_outbox( $this->get_dummy_activity_object(), 'Update', 1 );
+		$this->assertNotFalse( $id );
+
+		// A stale `updated` in the stored activity, as a post edited long ago would carry.
+		$post           = \get_post( $id );
+		$raw            = \json_decode( $post->post_content, true );
+		$raw['updated'] = '2024-05-06T07:08:09Z';
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update( $wpdb->posts, array( 'post_content' => \wp_json_encode( $raw ) ), array( 'ID' => $id ) );
+		\clean_post_cache( $id );
+
+		$post     = \get_post( $id );
+		$expected = \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \strtotime( $post->post_modified_gmt . ' GMT' ) );
+
+		$this->assertSame( $expected, Outbox::get_activity( $id )->get_updated() );
+	}
+
+	/**
 	 * A row that stores the object rather than the activity is rebuilt around it.
 	 *
 	 * Rows written before 5.6.0 have that shape. The actor comes from the row, because that is what the
