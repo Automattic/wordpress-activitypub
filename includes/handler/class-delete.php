@@ -100,7 +100,7 @@ class Delete {
 			 */
 			default:
 				// A bare URI may be a QuoteAuthorization stamp the quoted author revoked.
-				if ( self::revoke_quote_authorization( $activity ) ) {
+				if ( self::revoke_quote_authorization( $activity, $user_ids ) ) {
 					break;
 				}
 
@@ -120,11 +120,12 @@ class Delete {
 	 *
 	 * @since unreleased
 	 *
-	 * @param array $activity The Activity object.
+	 * @param array     $activity The Activity object.
+	 * @param int[]|int $user_ids The local user IDs.
 	 *
 	 * @return bool True if a stamp on a local quote post was revoked.
 	 */
-	private static function revoke_quote_authorization( $activity ) {
+	private static function revoke_quote_authorization( $activity, $user_ids ) {
 		$stamp_uri = object_to_uri( $activity['object'] ?? '' );
 		$actor     = object_to_uri( $activity['actor'] ?? '' );
 
@@ -172,6 +173,9 @@ class Delete {
 		\delete_post_meta( $post->ID, '_activitypub_quote_authorization' );
 
 		add_to_outbox( $post, 'Update', $post->post_author );
+
+		/** This action is documented in includes/handler/class-delete.php */
+		\do_action( 'activitypub_handled_delete', $activity, (array) $user_ids, true, $post );
 
 		return true;
 	}

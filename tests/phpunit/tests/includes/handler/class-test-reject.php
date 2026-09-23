@@ -278,6 +278,27 @@ class Test_Reject extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A rejected quote reaches the handler's own action, the way every other Reject does.
+	 *
+	 * @covers ::reject_quote_request
+	 */
+	public function test_reject_quote_request_fires_the_handled_action() {
+		$post_id = $this->create_quote_post();
+
+		$handled = array();
+		$track   = function ( $reject, $user_ids, $success, $context ) use ( &$handled ) {
+			$handled[] = array( $success, $context instanceof \WP_Post ? $context->ID : null );
+		};
+		\add_action( 'activitypub_handled_reject', $track, 10, 4 );
+
+		Reject::handle_reject( $this->build_reject( $post_id ), self::$user_id );
+
+		\remove_action( 'activitypub_handled_reject', $track, 10 );
+
+		$this->assertSame( array( array( true, $post_id ) ), $handled );
+	}
+
+	/**
 	 * A Reject for a request the post has since superseded is ignored.
 	 *
 	 * @covers ::reject_quote_request

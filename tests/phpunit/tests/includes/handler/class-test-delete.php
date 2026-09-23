@@ -14,6 +14,7 @@ use Activitypub\Tests\Quote_Post_Fixtures;
 use Activitypub\Tombstone;
 
 use function Activitypub\get_object_id;
+use function Activitypub\object_to_uri;
 
 /**
  * Test class for Delete handler.
@@ -765,6 +766,30 @@ class Test_Delete extends \WP_UnitTestCase {
 
 		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
 		$this->assertSame( $before + 1, $this->count_updates( $post_id ) );
+	}
+
+	/**
+	 * A revoked stamp is reported through the handler's own action, with the stamp in the activity.
+	 *
+	 * @covers ::revoke_quote_authorization
+	 */
+	public function test_stamp_delete_fires_the_revoked_and_handled_actions() {
+		$post_id = $this->create_quote_post();
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+
+		$handled = array();
+		$track   = function ( $activity, $user_ids, $success, $context ) use ( &$handled ) {
+			$handled[] = array( $success, $context instanceof \WP_Post ? $context->ID : null, object_to_uri( $activity['object'] ?? '' ) );
+		};
+		\add_action( 'activitypub_handled_delete', $track, 10, 4 );
+
+		$gone = $this->mock_stamp_response( 404 );
+		Delete::handle_delete( $this->build_stamp_delete(), self::$user_id );
+		\remove_filter( 'pre_http_request', $gone );
+
+		\remove_action( 'activitypub_handled_delete', $track, 10 );
+
+		$this->assertSame( array( array( true, $post_id, 'https://remote.example/stamps/1' ) ), $handled );
 	}
 
 	/**

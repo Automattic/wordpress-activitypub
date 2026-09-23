@@ -47,7 +47,7 @@ class Reject {
 				self::reject_follow( $reject, $user_ids );
 				break;
 			case 'QuoteRequest':
-				self::reject_quote_request( $reject, $outbox_post );
+				self::reject_quote_request( $reject, $outbox_post, $user_ids );
 				break;
 			default:
 				break;
@@ -98,10 +98,11 @@ class Reject {
 	 *
 	 * @since unreleased
 	 *
-	 * @param array    $reject      The activity-object.
-	 * @param \WP_Post $outbox_post Our QuoteRequest outbox item.
+	 * @param array     $reject      The activity-object.
+	 * @param \WP_Post  $outbox_post Our QuoteRequest outbox item.
+	 * @param int[]|int $user_ids    The local user IDs.
 	 */
-	private static function reject_quote_request( $reject, $outbox_post ) {
+	private static function reject_quote_request( $reject, $outbox_post, $user_ids ) {
 		$request = Outbox::get_activity( $outbox_post );
 
 		if ( \is_wp_error( $request ) || ! $request->get_instrument() ) {
@@ -131,6 +132,9 @@ class Reject {
 		\delete_post_meta( $post->ID, '_activitypub_quote_authorization' );
 
 		add_to_outbox( $post, 'Update', $post->post_author );
+
+		/** This action is documented in includes/handler/class-reject.php */
+		\do_action( 'activitypub_handled_reject', $reject, (array) $user_ids, true, $post );
 	}
 
 	/**

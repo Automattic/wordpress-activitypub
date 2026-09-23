@@ -49,7 +49,7 @@ class Accept {
 				self::accept_follow( $accept, $user_ids );
 				break;
 			case 'QuoteRequest':
-				self::accept_quote_request( $accept, $outbox_post );
+				self::accept_quote_request( $accept, $outbox_post, $user_ids );
 				break;
 			default:
 				break;
@@ -99,10 +99,11 @@ class Accept {
 	 * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md#quoteauthorization
 	 * @since unreleased
 	 *
-	 * @param array    $accept      The activity-object.
-	 * @param \WP_Post $outbox_post Our QuoteRequest outbox item.
+	 * @param array     $accept      The activity-object.
+	 * @param \WP_Post  $outbox_post Our QuoteRequest outbox item.
+	 * @param int[]|int $user_ids    The local user IDs.
 	 */
-	private static function accept_quote_request( $accept, $outbox_post ) {
+	private static function accept_quote_request( $accept, $outbox_post, $user_ids ) {
 		$request = Outbox::get_activity( $outbox_post );
 
 		if ( \is_wp_error( $request ) || ! $request->get_instrument() ) {
@@ -162,16 +163,9 @@ class Accept {
 			! \in_array( object_to_uri( $stamp['interactionTarget'] ?? '' ), array( $quoted_uri, object_to_uri( $quoted['id'] ?? '' ) ), true ) ||
 			! is_same_actor( $stamp['attributedTo'] ?? '', $accept['actor'] ?? '' )
 		) {
-			/**
-			 * Fires when an Accept carried a stamp that does not authorize this quote post.
-			 *
-			 * @since unreleased
-			 *
-			 * @param int    $post_id   The quoting post ID.
-			 * @param string $stamp_uri The stamp URI from the Accept.
-			 * @param array  $accept    The Accept activity.
-			 */
-			\do_action( 'activitypub_quote_authorization_invalid', $post->ID, $stamp_uri, $accept );
+			/** This action is documented in includes/handler/class-accept.php */
+			\do_action( 'activitypub_handled_accept', $accept, (array) $user_ids, false, $post );
+
 			return;
 		}
 
@@ -180,16 +174,8 @@ class Accept {
 
 		add_to_outbox( $post, 'Update', $post->post_author );
 
-		/**
-		 * Fires after the quoted author's QuoteAuthorization stamp was stored on a local quote post.
-		 *
-		 * @since unreleased
-		 *
-		 * @param int    $post_id   The quoting post ID.
-		 * @param string $stamp_uri The stamp URI.
-		 * @param array  $accept    The Accept activity.
-		 */
-		\do_action( 'activitypub_quote_authorized', $post->ID, $stamp_uri, $accept );
+		/** This action is documented in includes/handler/class-accept.php */
+		\do_action( 'activitypub_handled_accept', $accept, (array) $user_ids, true, $post );
 	}
 
 	/**

@@ -14,6 +14,7 @@ use Activitypub\Handler\Reject;
 use Activitypub\Tests\Quote_Post_Fixtures;
 
 use function Activitypub\get_object_id;
+use function Activitypub\object_to_uri;
 
 /**
  * Class Test_Accept
@@ -313,19 +314,44 @@ class Test_Accept extends \WP_UnitTestCase {
 		$before  = $this->count_updates( $post_id );
 
 		$authorized = array();
-		$track      = function ( $post_id, $stamp_uri ) use ( &$authorized ) {
-			$authorized[] = array( $post_id, $stamp_uri );
+		$track      = function ( $accept, $user_ids, $success, $context ) use ( &$authorized ) {
+			if ( $success ) {
+				$authorized[] = array( $context->ID, object_to_uri( $accept['result'] ?? '' ) );
+			}
 		};
-		\add_action( 'activitypub_quote_authorized', $track, 10, 2 );
+		\add_action( 'activitypub_handled_accept', $track, 10, 4 );
 
 		Accept::handle_accept( $this->build_accept( $post_id ), self::$user_id );
 
-		\remove_action( 'activitypub_quote_authorized', $track );
+		\remove_action( 'activitypub_handled_accept', $track, 10 );
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 
 		$this->assertSame( 'https://remote.example/stamps/1', \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
 		$this->assertSame( $before + 1, $this->count_updates( $post_id ) );
 		$this->assertSame( array( array( $post_id, 'https://remote.example/stamps/1' ) ), $authorized );
+	}
+
+	/**
+	 * An authorized quote reaches the handler's own action, the way every other Accept does.
+	 *
+	 * @covers ::accept_quote_request
+	 */
+	public function test_accept_quote_request_fires_the_handled_action() {
+		$post_id = $this->create_quote_post();
+
+		$handled = array();
+		$track   = function ( $accept, $user_ids, $success, $context ) use ( &$handled ) {
+			$handled[] = array( $success, $context instanceof \WP_Post ? $context->ID : null );
+		};
+		\add_action( 'activitypub_handled_accept', $track, 10, 4 );
+
+		$filter = $this->mock_stamp( $post_id );
+		Accept::handle_accept( $this->build_accept( $post_id ), self::$user_id );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		\remove_action( 'activitypub_handled_accept', $track, 10 );
+
+		$this->assertSame( array( array( true, $post_id ) ), $handled );
 	}
 
 	/**
@@ -336,11 +362,14 @@ class Test_Accept extends \WP_UnitTestCase {
 	public function test_accept_ignored_when_sender_or_stamp_invalid() {
 		$post_id = $this->create_quote_post();
 
+		// A stamp that does not authorize the post is reported through the handler's own action.
 		$invalid = 0;
-		$track   = function () use ( &$invalid ) {
-			++$invalid;
+		$track   = function ( $accept, $user_ids, $success ) use ( &$invalid ) {
+			if ( ! $success ) {
+				++$invalid;
+			}
 		};
-		\add_action( 'activitypub_quote_authorization_invalid', $track );
+		\add_action( 'activitypub_handled_accept', $track, 10, 3 );
 
 		// A sender who is not the quoted author is refused before the stamp is even looked at.
 		$filter = $this->mock_stamp( $post_id );
@@ -364,7 +393,7 @@ class Test_Accept extends \WP_UnitTestCase {
 			$this->assertSame( $i + 1, $invalid, \key( $overrides ) );
 		}
 
-		\remove_action( 'activitypub_quote_authorization_invalid', $track );
+		\remove_action( 'activitypub_handled_accept', $track, 10 );
 
 		// A stamp on another host than the sender is never fetched.
 		$fetched_urls = array();
@@ -407,10 +436,12 @@ class Test_Accept extends \WP_UnitTestCase {
 		$before  = $this->count_updates( $post_id );
 
 		$authorized = array();
-		$track      = function ( $post_id, $stamp_uri ) use ( &$authorized ) {
-			$authorized[] = array( $post_id, $stamp_uri );
+		$track      = function ( $accept, $user_ids, $success, $context ) use ( &$authorized ) {
+			if ( $success ) {
+				$authorized[] = array( $context->ID, object_to_uri( $accept['result'] ?? '' ) );
+			}
 		};
-		\add_action( 'activitypub_quote_authorized', $track, 10, 2 );
+		\add_action( 'activitypub_handled_accept', $track, 10, 4 );
 
 		$requests = $this->get_quote_requests( $post_id );
 		$accept   = array(
@@ -428,7 +459,7 @@ class Test_Accept extends \WP_UnitTestCase {
 
 		Accept::handle_accept( $accept, self::$user_id );
 
-		\remove_action( 'activitypub_quote_authorized', $track );
+		\remove_action( 'activitypub_handled_accept', $track, 10 );
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $quoted_map );
 
@@ -437,6 +468,7 @@ class Test_Accept extends \WP_UnitTestCase {
 		$this->assertSame( $before + 1, $this->count_updates( $post_id ) );
 		$this->assertSame( array( array( $post_id, 'https://remote.example/stamps/1' ) ), $authorized );
 	}
+
 
 	/**
 	 * An Accept for a request the post has since superseded is ignored.
@@ -450,15 +482,17 @@ class Test_Accept extends \WP_UnitTestCase {
 		$before = $this->count_updates( $post_id );
 
 		$authorized = 0;
-		$track      = function () use ( &$authorized ) {
-			++$authorized;
+		$track      = function ( $accept, $user_ids, $success ) use ( &$authorized ) {
+			if ( $success ) {
+				++$authorized;
+			}
 		};
-		\add_action( 'activitypub_quote_authorized', $track );
+		\add_action( 'activitypub_handled_accept', $track, 10, 3 );
 
 		$filter = $this->mock_stamp( $post_id );
 		Accept::handle_accept( $accept, self::$user_id );
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
-		\remove_action( 'activitypub_quote_authorized', $track );
+		\remove_action( 'activitypub_handled_accept', $track, 10 );
 
 		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
 		$this->assertSame( 'https://remote.example/notes/2', \get_post_meta( $post_id, '_activitypub_quote_request', true ) );

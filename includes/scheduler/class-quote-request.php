@@ -110,16 +110,5 @@ class Quote_Request {
 		}
 
 		\update_post_meta( $post->ID, '_activitypub_quote_request', $quoted_uri );
-
-		/**
-		 * Fires after a QuoteRequest for a local quote post was added to the outbox.
-		 *
-		 * @since unreleased
-		 *
-		 * @param int    $post_id    The quoting post ID.
-		 * @param string $quoted_uri The quoted object URI.
-		 * @param int    $request_id The QuoteRequest outbox item ID.
-		 */
-		\do_action( 'activitypub_sent_quote_request', $post->ID, $quoted_uri, $request_id );
 	}
 }
