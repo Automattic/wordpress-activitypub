@@ -12,6 +12,7 @@
 
 namespace Activitypub\Rest;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
@@ -453,9 +454,14 @@ trait Event_Stream {
 			return $activity->to_array( false );
 		}
 
-		$data = \json_decode( $item->post_content, true );
+		$activity = Activity::init_from_json( $item->post_content );
 
-		return $data ? $data : null;
+		if ( \is_wp_error( $activity ) ) {
+			return null;
+		}
+
+		// The collection carries the JSON-LD context, and `bto`/`bcc` are stored for addressing only.
+		return $activity->to_array( false );
 	}
 
 	/**

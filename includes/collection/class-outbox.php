@@ -398,7 +398,8 @@ class Outbox {
 			 * built around what is stored. Everything Outbox::add() has written since then is a
 			 * complete activity and takes the branch above.
 			 */
-			$object   = $activity->to_array( false, false );
+			// The blind audience is kept: set_object() copies `bto`/`bcc` onto the activity for addressing.
+			$object   = $activity->to_array( false, true );
 			$activity = new Activity();
 			$activity->set_type( $type );
 			$activity->set_id( $outbox_item->guid );
