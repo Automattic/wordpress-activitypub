@@ -100,18 +100,16 @@ class Outbox {
 		// Save activity in the context of an activitypub request.
 		\add_filter( 'activitypub_is_activitypub_request', '__return_true' );
 
-		/*
-		 * A `pending` row would otherwise keep the `0000-00-00 00:00:00` sentinel in `post_date_gmt`,
-		 * because WordPress only derives it for statuses that do not float, and wp_publish_post() does
-		 * not repair it later. Supplying both keeps the row's two clocks in agreement, which is what
-		 * every reader of the activity's `published` and `updated` compares.
-		 */
-		$now = \current_time( 'mysql' );
-
 		$outbox_item = array(
 			'post_type'     => self::POST_TYPE,
-			'post_date'     => $now,
-			'post_date_gmt' => \get_gmt_from_date( $now ),
+			'post_date'     => \current_time( 'mysql' ),
+
+			/*
+			 * A `pending` row would otherwise keep the `0000-00-00 00:00:00` sentinel here, because
+			 * WordPress only derives this column for statuses that do not float and wp_publish_post()
+			 * never repairs it, leaving every reader to compare a local date against a GMT one.
+			 */
+			'post_date_gmt' => \current_time( 'mysql', true ),
 			'post_title'    => \sprintf(
 				/* translators: 1. Activity type, 2. Object Title or Excerpt */
 				\__( '[%1$s] %2$s', 'activitypub' ),
@@ -280,6 +278,13 @@ class Outbox {
 
 		$visibility = \get_post_meta( $outbox_item->ID, 'activitypub_content_visibility', true );
 
+		/*
+		 * The retraction is its own activity, and pre_fill_activity_from_object() copies dates from the
+		 * object it wraps, so the activity being retracted would otherwise lend it its publication date.
+		 */
+		$activity->set_published( null );
+		$activity->set_updated( null );
+
 		return add_to_outbox( $activity, $type, $outbox_item->post_author, $visibility );
 	}
 
@@ -353,12 +358,10 @@ class Outbox {
 	public static function reschedule( $outbox_item ) {
 		$outbox_item = \get_post( $outbox_item );
 
-		$now = \current_time( 'mysql' );
-
 		$outbox_item->post_status = 'pending';
-		$outbox_item->post_date   = $now;
+		$outbox_item->post_date   = \current_time( 'mysql' );
 		// Without the GMT column the row's two clocks disagree, and readers compare them to each other.
-		$outbox_item->post_date_gmt = \get_gmt_from_date( $now );
+		$outbox_item->post_date_gmt = \current_time( 'mysql', true );
 
 		\wp_update_post( $outbox_item );
 
@@ -399,15 +402,25 @@ class Outbox {
 			 * complete activity and takes the branch above.
 			 */
 			// The blind audience is kept: set_object() copies `bto`/`bcc` onto the activity for addressing.
-			$object   = $activity->to_array( false, true );
+			$object = $activity->to_array( false, true );
+			$actor  = self::get_actor( $outbox_item );
+
+			if ( \is_wp_error( $actor ) ) {
+				return $actor;
+			}
+
 			$activity = new Activity();
 			$activity->set_type( $type );
 			$activity->set_id( $outbox_item->guid );
+
+			/*
+			 * The actor is set from the row before the object is attached, because set_object() fills a
+			 * missing one from the object's `attributedTo`, and the row is what the Dispatcher signs as.
+			 */
+			$activity->set_actor( $actor->get_id() );
 			// Pre-fill the Activity with data (for example cc and to).
 			$activity->set_object( $object );
-		}
-
-		if ( ! $activity->get_actor() ) {
+		} elseif ( ! $activity->get_actor() ) {
 			$actor = self::get_actor( $outbox_item );
 
 			if ( \is_wp_error( $actor ) ) {
@@ -434,8 +447,12 @@ class Outbox {
 			$activity->set_published( $published->setTimezone( $utc )->format( ACTIVITYPUB_DATE_TIME_RFC3339 ) );
 		}
 
-		// An Update always reports when it was modified; other types only once the row changed after it was added.
-		if ( ! $activity->get_updated() && $updated && ( 'Update' === $type || ( $published && $updated > $published ) ) ) {
+		/*
+		 * Only an Update reports a modification date. `post_modified` records when the row changed,
+		 * which happens for reasons that have nothing to do with the object being edited: add()
+		 * writes the activity id back after the insert, and reschedule() re-queues the row.
+		 */
+		if ( ! $activity->get_updated() && $updated && 'Update' === $type ) {
 			$activity->set_updated( $updated->setTimezone( $utc )->format( ACTIVITYPUB_DATE_TIME_RFC3339 ) );
 		}
 

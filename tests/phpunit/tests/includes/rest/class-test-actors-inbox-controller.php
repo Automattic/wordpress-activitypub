@@ -917,6 +917,9 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	 * @covers ::prepare_item_for_response
 	 */
 	public function test_get_items_reports_the_received_date() {
+		// A UTC site cannot tell a converted date from an unconverted one.
+		\update_option( 'timezone_string', 'Europe/Berlin' );
+
 		$sent = '2026-01-02T03:04:05Z';
 
 		foreach ( array( null, $sent ) as $published ) {
@@ -957,9 +960,12 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 			if ( $published ) {
 				$this->assertSame( $published, $item['published'], 'A date the sender sent must be left alone.' );
 			} else {
-				$this->assertSame( \get_post_datetime( $id, 'date', 'gmt' )->format( ACTIVITYPUB_DATE_TIME_RFC3339 ), $item['published'], 'A missing date must be reported as the arrival date.' );
+				$expected = \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \strtotime( \get_post( $id )->post_date_gmt . ' GMT' ) );
+				$this->assertSame( $expected, $item['published'], 'A missing date must be reported as the arrival date, in UTC.' );
 			}
 		}
+
+		\delete_option( 'timezone_string' );
 	}
 
 	/**

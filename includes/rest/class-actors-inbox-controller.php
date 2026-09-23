@@ -378,7 +378,8 @@ class Actors_Inbox_Controller extends Actors_Controller {
 
 		// A sender may omit the date, so report when the activity arrived and clients can still order the collection.
 		if ( ! $activity->get_published() && $received ) {
-			$activity->set_published( $received->format( ACTIVITYPUB_DATE_TIME_RFC3339 ) );
+			// get_post_datetime() hands back the site timezone even for the GMT column, and the format ends in a literal `Z`.
+			$activity->set_published( $received->setTimezone( new \DateTimeZone( 'UTC' ) )->format( ACTIVITYPUB_DATE_TIME_RFC3339 ) );
 		}
 
 		// The collection carries the JSON-LD context, and `bto`/`bcc` are stored for addressing only.

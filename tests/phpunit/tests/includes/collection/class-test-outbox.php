@@ -909,29 +909,120 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
-	 * Non-Update activity whose outbox row was later modified picks up `updated` from `post_modified_gmt`.
+	 * A row that stores the object rather than the activity is rebuilt around it.
+	 *
+	 * Rows written before 5.6.0 have that shape. The actor comes from the row, because that is what the
+	 * Dispatcher signs as, and not from the object's `attributedTo`.
 	 *
 	 * @covers ::get_activity
 	 */
-	public function test_get_activity_fills_updated_when_row_modified() {
-		$object = $this->get_dummy_activity_object();
-		$id     = \Activitypub\add_to_outbox( $object, 'Create', 1 );
+	public function test_get_activity_rebuilds_a_legacy_row_from_its_object() {
+		$id = \Activitypub\add_to_outbox( $this->get_dummy_activity_object(), 'Create', 1 );
 		$this->assertNotFalse( $id );
 
-		global $wpdb;
-		$earlier = \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 hour' ) );
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$wpdb->update(
-			$wpdb->posts,
-			array(
-				'post_date'     => $earlier,
-				'post_date_gmt' => $earlier,
-			),
-			array( 'ID' => $id )
+		// Replace the stored activity with a bare object, attributed to somebody else entirely.
+		$object = array(
+			'id'           => 'https://example.org/notes/legacy',
+			'type'         => 'Note',
+			'content'      => 'Stored as an object.',
+			'attributedTo' => 'https://elsewhere.example/users/mallory',
+			'to'           => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'bcc'          => array( 'https://example.org/users/hidden' ),
 		);
 
-		// Bump post_modified_gmt to be strictly later than post_date_gmt.
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update( $wpdb->posts, array( 'post_content' => \wp_json_encode( $object ) ), array( 'ID' => $id ) );
+		\clean_post_cache( $id );
+
+		$activity = Outbox::get_activity( $id );
+
+		$this->assertSame( 'Create', $activity->get_type(), 'The type comes from the meta.' );
+		$this->assertSame( \get_post( $id )->guid, $activity->get_id() );
+		$this->assertStringNotContainsString( 'mallory', (string) $activity->get_actor(), "The object's author must not become the actor." );
+		$this->assertSame( array( 'https://www.w3.org/ns/activitystreams#Public' ), (array) $activity->get_to() );
+		$this->assertSame( array( 'https://example.org/users/hidden' ), (array) $activity->get_bcc(), 'The blind audience is needed for addressing.' );
+	}
+
+	/**
+	 * A retraction does not inherit the publication date of what it retracts.
+	 *
+	 * @covers ::undo
+	 */
+	public function test_undo_does_not_inherit_the_retracted_date() {
+		$id = \Activitypub\add_to_outbox( $this->get_dummy_activity_object(), 'Create', 1 );
+		$this->assertNotFalse( $id );
+
+		// A date from long before the retraction, the way a year-old Follow would carry one.
+		$post             = \get_post( $id );
+		$raw              = \json_decode( $post->post_content, true );
+		$raw['published'] = '2024-05-06T07:08:09Z';
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update( $wpdb->posts, array( 'post_content' => \wp_json_encode( $raw ) ), array( 'ID' => $id ) );
+		\clean_post_cache( $id );
+
+		$undo_id = Outbox::undo( $id );
+		$this->assertNotFalse( $undo_id );
+		$this->assertNotWPError( $undo_id );
+
+		$undo = Outbox::get_activity( $undo_id );
+
+		$this->assertNotSame( '2024-05-06T07:08:09Z', $undo->get_published(), 'The retraction must not claim the retracted activity\'s date.' );
+	}
+
+	/**
+	 * The dates an activity reports are UTC, whatever the site timezone is.
+	 *
+	 * The core date helper hands back the site timezone even when asked for the GMT column, and the
+	 * format ends in a literal `Z`, so a reader that formats without converting reports local wall
+	 * clock time as UTC. A UTC test site cannot tell the two apart.
+	 *
+	 * @covers ::get_activity
+	 */
+	public function test_get_activity_reports_utc_on_a_non_utc_site() {
+		\update_option( 'timezone_string', 'Europe/Berlin' );
+
+		$id = \Activitypub\add_to_outbox( $this->get_dummy_activity_object(), 'Update', 1 );
+		$this->assertNotFalse( $id );
+
+		// Strip the stored dates so the row's own columns are the only source.
+		$post = \get_post( $id );
+		$raw  = \json_decode( $post->post_content, true );
+		unset( $raw['published'], $raw['updated'], $raw['object']['published'], $raw['object']['updated'] );
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update( $wpdb->posts, array( 'post_content' => \wp_json_encode( $raw ) ), array( 'ID' => $id ) );
+		\clean_post_cache( $id );
+
+		$post     = \get_post( $id );
+		$expected = \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \strtotime( $post->post_date_gmt . ' GMT' ) );
+		$activity = Outbox::get_activity( $id );
+
+		\delete_option( 'timezone_string' );
+
+		$this->assertSame( $expected, $activity->get_published(), 'published must be the row date in UTC.' );
+		$this->assertSame( \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \strtotime( $post->post_modified_gmt . ' GMT' ) ), $activity->get_updated(), 'updated must be the row date in UTC.' );
+	}
+
+	/**
+	 * A non-Update activity never reports a modification date, however much later the row was touched.
+	 *
+	 * `post_modified` records when the row changed, not when the object was edited, and the row is
+	 * written again right after the insert to store the activity id. Deriving `updated` from it would
+	 * fabricate one for a brand-new activity whenever those two writes cross a second boundary.
+	 *
+	 * @covers ::get_activity
+	 */
+	public function test_get_activity_never_reports_updated_for_a_non_update() {
+		$id = \Activitypub\add_to_outbox( $this->get_dummy_activity_object(), 'Create', 1 );
+		$this->assertNotFalse( $id );
+
+		// A row modified an hour after it was queued, which is the strongest form of the race.
 		$later = \gmdate( 'Y-m-d H:i:s', \strtotime( '+1 hour' ) );
+		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$wpdb->update(
 			$wpdb->posts,
@@ -943,49 +1034,7 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		);
 		\clean_post_cache( $id );
 
-		$activity = Outbox::get_activity( $id );
-		$expected = \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $later ) );
-		$this->assertEquals( $expected, $activity->get_updated() );
-	}
-
-	/**
-	 * Non-Update activity that was never modified must not synthesize an `updated` field.
-	 *
-	 * @covers ::get_activity
-	 */
-	public function test_get_activity_leaves_updated_empty_when_not_modified() {
-		$object = $this->get_dummy_activity_object();
-		$id     = \Activitypub\add_to_outbox( $object, 'Create', 1 );
-		$this->assertNotFalse( $id );
-
-		global $wpdb;
-		$now = \gmdate( 'Y-m-d H:i:s' );
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$wpdb->update(
-			$wpdb->posts,
-			array(
-				'post_date'     => $now,
-				'post_date_gmt' => $now,
-			),
-			array( 'ID' => $id )
-		);
-		\clean_post_cache( $id );
-		$post = \get_post( $id );
-
-		// Force post_modified_gmt == post_date_gmt.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$wpdb->update(
-			$wpdb->posts,
-			array(
-				'post_modified'     => $post->post_date,
-				'post_modified_gmt' => $post->post_date_gmt,
-			),
-			array( 'ID' => $id )
-		);
-		\clean_post_cache( $id );
-
-		$activity = Outbox::get_activity( $id );
-		$this->assertEmpty( $activity->get_updated() );
+		$this->assertEmpty( Outbox::get_activity( $id )->get_updated() );
 	}
 
 	/**
