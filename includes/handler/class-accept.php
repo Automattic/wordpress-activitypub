@@ -45,19 +45,28 @@ class Accept {
 		}
 
 		switch ( \get_post_meta( $outbox_post->ID, '_activitypub_activity_type', true ) ) {
+			case 'Follow':
+				self::accept_follow( $accept, $user_ids );
+				break;
 			case 'QuoteRequest':
 				self::accept_quote_request( $accept, $outbox_post );
-				return;
-			case 'Follow':
 				break;
 			default:
-				return;
+				break;
 		}
+	}
 
+	/**
+	 * Accept a "Follow" of ours: confirm the relationship with the followed actor.
+	 *
+	 * @param array     $accept   The activity-object.
+	 * @param int[]|int $user_ids The local user IDs.
+	 */
+	private static function accept_follow( $accept, $user_ids ) {
 		/*
-		 * For a Follow Accept, the sender must be the actor that was followed.
-		 * Without this, a signed Accept from one actor could confirm a Follow that
-		 * targeted another actor by referencing that pending Follow's outbox GUID.
+		 * The sender must be the actor that was followed. Without this, a signed Accept
+		 * from one actor could confirm a Follow that targeted another actor by
+		 * referencing that pending Follow's outbox GUID.
 		 */
 		if ( ! is_same_actor( $accept['actor'] ?? '', $accept['object']['object'] ?? '' ) ) {
 			return;
