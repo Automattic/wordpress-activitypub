@@ -1276,7 +1276,7 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	 * A summary is sanitized before it is slashed for storage.
 	 *
 	 * Inside a tag, wp_kses() un-escapes the double quote of a slashed value, so the other order
-	 * leaves a stray backslash in the stored excerpt.
+	 * leaves the backslash of an escaped quote behind in the stored excerpt.
 	 *
 	 * @covers ::create
 	 */
@@ -1288,13 +1288,17 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 			'inbox'             => 'https://remote.example.com/actor/slashes/inbox',
 			'name'              => 'Slashes',
 			'preferredUsername' => 'slashes',
-			'summary'           => '<a href="https://example.com" title="say \\"hi\\"">x</a>',
+			// `href` is allowed in every context, so the assertion does not depend on the allowed attributes.
+			'summary'           => '<a href="https://example.com/?q=\"x\"">y</a>',
 		);
 
 		$post_id = Remote_Actors::create( $actor );
-
 		$this->assertIsInt( $post_id );
-		$this->assertSame( '<a href="https://example.com" title="say ">x</a>', \get_post( $post_id )->post_excerpt );
+
+		$excerpt = \get_post( $post_id )->post_excerpt;
+
+		$this->assertStringContainsString( 'https://example.com/?q=', $excerpt );
+		$this->assertStringNotContainsString( '\\', $excerpt );
 	}
 
 	/**
