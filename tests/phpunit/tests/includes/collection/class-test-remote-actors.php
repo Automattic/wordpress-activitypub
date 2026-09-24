@@ -1273,6 +1273,33 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
+	 * A summary is sanitized before it is slashed for storage.
+	 *
+	 * Inside a tag, wp_kses() un-escapes the double quote of a slashed value, so slashing first
+	 * stores something other than the sanitized summary. What wp_kses() makes of the markup differs
+	 * between WordPress versions, so the expectation is derived rather than written out.
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_actor_slashes_the_summary_after_sanitizing() {
+		$summary = '<a href="https://example.com/?q=\"x\"">y</a>';
+		$actor   = array(
+			'id'                => 'https://remote.example.com/actor/slashes',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/slashes',
+			'inbox'             => 'https://remote.example.com/actor/slashes/inbox',
+			'name'              => 'Slashes',
+			'preferredUsername' => 'slashes',
+			'summary'           => $summary,
+		);
+
+		$post_id = Remote_Actors::create( $actor );
+		$this->assertIsInt( $post_id );
+
+		$this->assertSame( \wp_kses( $summary, 'user_description' ), \get_post( $post_id )->post_excerpt );
+	}
+
+	/**
 	 * Test that saving a remote actor with a self-mention doesn't cause infinite recursion.
 	 *
 	 * @covers ::create
