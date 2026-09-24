@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Activities read through the ActivityPub API now fall back to the date your site recorded when the activity itself carries none, so client apps show consistent timestamps.

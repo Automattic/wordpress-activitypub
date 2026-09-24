@@ -61,7 +61,9 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 
 		// Remove context from both arrays and compare the rest with order-sensitive comparison
 		// (assertEquals maintains array key order, unlike assertEqualsCanonicalizing).
-		unset( $expected['@context'], $actual['@context'] );
+		$this->assertNotEmpty( $actual['published'] );
+
+		unset( $expected['@context'], $actual['@context'], $expected['published'], $actual['published'] );
 		$this->assertEquals( $expected, $actual );
 
 		$activity = json_decode( $post->post_content );
@@ -658,26 +660,211 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
-	 * Test that Update activities have the updated attribute set.
+	 * Stored activity that already has a `published` value is not overwritten.
 	 *
 	 * @covers ::get_activity
 	 */
-	public function test_update_activity_has_updated_attribute() {
+	public function test_get_activity_preserves_existing_published() {
 		$object = $this->get_dummy_activity_object();
-		$object->set_content( 'Original content' );
-
-		// Create an Update activity.
-		$id = \Activitypub\add_to_outbox( $object, 'Update', 1 );
+		$id     = \Activitypub\add_to_outbox( $object, 'Create', 1 );
 		$this->assertNotFalse( $id );
 
-		// Get the activity from the outbox.
-		$activity = Outbox::get_activity( $id );
-		$this->assertNotInstanceOf( \WP_Error::class, $activity );
-
-		// Verify the updated attribute is set and matches the post's modified date.
+		$frozen           = '2020-01-02T03:04:05Z';
 		$post             = \get_post( $id );
-		$expected_updated = \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_modified ) );
-		$this->assertEquals( $expected_updated, $activity->get_updated() );
+		$raw              = \json_decode( $post->post_content, true );
+		$raw['published'] = $frozen;
+		\wp_update_post(
+			array(
+				'ID'           => $id,
+				'post_content' => \wp_slash( \wp_json_encode( $raw ) ),
+			)
+		);
+
+		$activity = Outbox::get_activity( $id );
+		$this->assertEquals( $frozen, $activity->get_published() );
+	}
+
+	/**
+	 * Every activity is stamped with a publication date when it is queued, in UTC.
+	 *
+	 * The row describes itself from then on, so nothing has to derive a date when it is read.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_stamps_published() {
+		\update_option( 'timezone_string', 'Europe/Berlin' );
+
+		$before = \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339 );
+		$id     = \Activitypub\add_to_outbox( $this->get_dummy_activity_object(), 'Create', 1 );
+		$after  = \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339 );
+
+		\delete_option( 'timezone_string' );
+
+		$this->assertNotFalse( $id );
+
+		$stored = \json_decode( \get_post( $id )->post_content, true );
+
+		$this->assertNotEmpty( $stored['published'], 'The stored activity carries its own date.' );
+		$this->assertGreaterThanOrEqual( $before, $stored['published'], 'The date is UTC, not the site timezone.' );
+		$this->assertLessThanOrEqual( $after, $stored['published'] );
+	}
+
+	/**
+	 * An Update is stamped with the time it was queued, overriding an older date from the post.
+	 *
+	 * An Update sent for a reason other than an edit, a quote authorization arriving for instance,
+	 * would otherwise repeat the date of the last content change.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_stamps_updated_on_an_update() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => 1,
+				'post_status' => 'publish',
+				'post_date'   => '2026-01-01 10:00:00',
+			)
+		);
+
+		// An edit long in the past, which is what the transformer would report.
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update(
+			$wpdb->posts,
+			array(
+				'post_modified'     => '2026-01-01 12:00:00',
+				'post_modified_gmt' => '2026-01-01 12:00:00',
+			),
+			array( 'ID' => $post_id )
+		);
+		\clean_post_cache( $post_id );
+
+		$id = \Activitypub\add_to_outbox( \get_post( $post_id ), 'Update', 1 );
+		$this->assertNotFalse( $id );
+
+		$stored = \json_decode( \get_post( $id )->post_content, true );
+
+		$this->assertNotSame( '2026-01-01T12:00:00Z', $stored['updated'], 'The Update reports when it was queued.' );
+		$this->assertSame( '2026-01-01T12:00:00Z', $stored['object']['updated'], "The object keeps the post's own edit time." );
+	}
+
+	/**
+	 * Only what the row stores is reported, never anything derived from its date columns.
+	 *
+	 * @covers ::get_activity
+	 */
+	public function test_get_activity_derives_no_dates_from_the_row() {
+		$id = \Activitypub\add_to_outbox( $this->get_dummy_activity_object(), 'Create', 1 );
+		$this->assertNotFalse( $id );
+
+		$raw = \json_decode( \get_post( $id )->post_content, true );
+		unset( $raw['published'] );
+
+		\wp_update_post(
+			array(
+				'ID'           => $id,
+				'post_content' => \wp_slash( \wp_json_encode( $raw ) ),
+			)
+		);
+
+		$activity = Outbox::get_activity( $id );
+
+		$this->assertEmpty( $activity->get_published(), 'Nothing is read from post_date.' );
+		$this->assertEmpty( $activity->get_updated(), 'Nothing is read from post_modified.' );
+	}
+
+	/**
+	 * A pending row must still carry a GMT publication date.
+	 *
+	 * WordPress only derives `post_date_gmt` for statuses that do not float, and wp_publish_post()
+	 * never repairs it, so without supplying it the row would report the sentinel for life and every
+	 * reader would compare a local date against a GMT one.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_populates_the_gmt_date_of_a_pending_row() {
+		\update_option( 'timezone_string', 'Europe/Berlin' );
+
+		$id = \Activitypub\add_to_outbox( $this->get_dummy_activity_object(), 'Create', 1 );
+		$this->assertNotFalse( $id );
+
+		$post = \get_post( $id );
+
+		// Convert while the site timezone is still set, or get_gmt_from_date() is a no-op.
+		$expected = \get_gmt_from_date( $post->post_date );
+
+		\delete_option( 'timezone_string' );
+
+		$this->assertSame( 'pending', $post->post_status );
+		$this->assertNotSame( '0000-00-00 00:00:00', $post->post_date_gmt );
+		$this->assertSame( $expected, $post->post_date_gmt, "The row's two clocks must agree." );
+	}
+
+	/**
+	 * Rescheduling moves the publication date, so both of its columns move together.
+	 *
+	 * @covers ::reschedule
+	 */
+	public function test_reschedule_moves_both_date_columns() {
+		\update_option( 'timezone_string', 'Europe/Berlin' );
+
+		$id = \Activitypub\add_to_outbox( $this->get_dummy_activity_object(), 'Create', 1 );
+		$this->assertNotFalse( $id );
+
+		// Backdate the row, and leave the GMT column on the sentinel an upgraded site still carries.
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update(
+			$wpdb->posts,
+			array(
+				'post_date'     => '2026-01-01 00:00:00',
+				'post_date_gmt' => '0000-00-00 00:00:00',
+			),
+			array( 'ID' => $id )
+		);
+		\clean_post_cache( $id );
+
+		Outbox::reschedule( $id );
+		\clean_post_cache( $id );
+
+		$post = \get_post( $id );
+
+		// Convert while the site timezone is still set, or get_gmt_from_date() is a no-op.
+		$expected = \get_gmt_from_date( $post->post_date );
+
+		\delete_option( 'timezone_string' );
+
+		$this->assertNotSame( '2026-01-01 00:00:00', $post->post_date, 'The reschedule must move the date.' );
+		$this->assertNotSame( '0000-00-00 00:00:00', $post->post_date_gmt, 'The reschedule must repair the GMT column.' );
+		$this->assertSame( $expected, $post->post_date_gmt, "The row's two clocks must agree." );
+	}
+
+	/**
+	 * A retraction does not inherit the publication date of what it retracts.
+	 *
+	 * @covers ::undo
+	 */
+	public function test_undo_does_not_inherit_the_retracted_date() {
+		$id = \Activitypub\add_to_outbox( $this->get_dummy_activity_object(), 'Create', 1 );
+		$this->assertNotFalse( $id );
+
+		// A date from long before the retraction, the way a year-old Follow would carry one.
+		$post             = \get_post( $id );
+		$raw              = \json_decode( $post->post_content, true );
+		$raw['published'] = '2024-05-06T07:08:09Z';
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update( $wpdb->posts, array( 'post_content' => \wp_json_encode( $raw ) ), array( 'ID' => $id ) );
+		\clean_post_cache( $id );
+
+		$undo_id = Outbox::undo( $id );
+		$this->assertNotFalse( $undo_id );
+		$this->assertNotWPError( $undo_id );
+
+		$undo = Outbox::get_activity( $undo_id );
+
+		$this->assertNotSame( '2024-05-06T07:08:09Z', $undo->get_published(), 'The retraction must not claim the retracted activity\'s date.' );
 	}
 
 	/**
