@@ -1273,6 +1273,31 @@ tjUBdXrPxz998Ns/cu9jjg06d+XV3TcSU+AOldmGLJuB/AWV/+F9c9DlczqmnXqd
 	}
 
 	/**
+	 * A summary is sanitized before it is slashed for storage.
+	 *
+	 * Inside a tag, wp_kses() un-escapes the double quote of a slashed value, so the other order
+	 * leaves a stray backslash in the stored excerpt.
+	 *
+	 * @covers ::create
+	 */
+	public function test_create_actor_slashes_the_summary_after_sanitizing() {
+		$actor = array(
+			'id'                => 'https://remote.example.com/actor/slashes',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example.com/actor/slashes',
+			'inbox'             => 'https://remote.example.com/actor/slashes/inbox',
+			'name'              => 'Slashes',
+			'preferredUsername' => 'slashes',
+			'summary'           => '<a href="https://example.com" title="say \\"hi\\"">x</a>',
+		);
+
+		$post_id = Remote_Actors::create( $actor );
+
+		$this->assertIsInt( $post_id );
+		$this->assertSame( '<a href="https://example.com" title="say ">x</a>', \get_post( $post_id )->post_excerpt );
+	}
+
+	/**
 	 * Test that saving a remote actor with a self-mention doesn't cause infinite recursion.
 	 *
 	 * @covers ::create
