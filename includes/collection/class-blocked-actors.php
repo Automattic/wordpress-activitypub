@@ -58,7 +58,7 @@ class Blocked_Actors {
 	public static function remove( $user_id, $value ) {
 		// Handle both post ID and URI formats.
 		if ( \is_numeric( $value ) ) {
-			$actor_post = \get_post( (int) $value );
+			$actor_post = Remote_Actors::get( (int) $value );
 		} else {
 			$actor_post = Remote_Actors::fetch_by_uri( $value );
 		}

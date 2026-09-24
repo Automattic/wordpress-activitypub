@@ -362,7 +362,8 @@ class Followers {
 				AND inbox.meta_key = '_activitypub_inbox'
 				AND inbox.meta_value <> ''
 				AND follower.meta_key = %s
-				AND follower.meta_value = %s",
+				AND follower.meta_value = %s
+				ORDER BY inbox.meta_value",
 				Remote_Actors::POST_TYPE,
 				'publish',
 				self::FOLLOWER_META_KEY,

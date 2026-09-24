@@ -420,20 +420,6 @@ class Interactions {
 	}
 
 	/**
-	 * Do not require a name and email for a federated comment while persisting.
-	 *
-	 * A plugin-owned callback rather than `__return_false`: removing that one afterwards
-	 * would also remove a site's own registration of the same function on the filter.
-	 *
-	 * @since unreleased
-	 *
-	 * @return false
-	 */
-	public static function require_name_email_off() {
-		return false;
-	}
-
-	/**
 	 * Convert an Activity to a WP_Comment.
 	 *
 	 * When $user_id is provided, comment author data is built from the
@@ -600,18 +586,16 @@ class Interactions {
 			return false;
 		}
 
-		$is_insert         = self::INSERT === $action;
-		$flood_priority    = \has_action( 'check_comment_flood', 'check_comment_flood_db' );
-		$akismet_callback  = array( self::class, 'akismet_comment_nonce_inactive' );
-		$kses_callback     = array( self::class, 'allowed_comment_html' );
-		$required_callback = array( self::class, 'require_name_email_off' );
+		$is_insert        = self::INSERT === $action;
+		$flood_priority   = \has_action( 'check_comment_flood', 'check_comment_flood_db' );
+		$akismet_callback = array( self::class, 'akismet_comment_nonce_inactive' );
+		$kses_callback    = array( self::class, 'allowed_comment_html' );
 
 		// Disable flood control, restoring it at its original priority afterwards.
 		if ( false !== $flood_priority ) {
 			\remove_action( 'check_comment_flood', 'check_comment_flood_db', $flood_priority );
 		}
 
-		\add_filter( 'pre_option_require_name_email', $required_callback );
 		\add_filter( 'akismet_comment_nonce', $akismet_callback ); // No nonce possible for this submission route.
 		\add_filter( 'wp_kses_allowed_html', $kses_callback, 10, 2 );
 
@@ -623,7 +607,6 @@ class Interactions {
 
 		\remove_filter( 'wp_kses_allowed_html', $kses_callback );
 		\remove_filter( 'akismet_comment_nonce', $akismet_callback );
-		\remove_filter( 'pre_option_require_name_email', $required_callback );
 
 		if ( false !== $flood_priority ) {
 			\add_action( 'check_comment_flood', 'check_comment_flood_db', $flood_priority, 4 );

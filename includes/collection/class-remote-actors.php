@@ -58,7 +58,8 @@ class Remote_Actors {
 				WHERE actor.post_type = %s
 				AND actor.post_status = %s
 				AND inbox.meta_key = '_activitypub_inbox'
-				AND inbox.meta_value <> ''",
+				AND inbox.meta_value <> ''
+				ORDER BY inbox.meta_value",
 				self::POST_TYPE,
 				'publish'
 			)
@@ -237,12 +238,15 @@ class Remote_Actors {
 	 *
 	 * @param int[] $user_ids The local users whose follower inbox lists include the actor.
 	 */
-	public static function clear_inbox_caches( $user_ids ) {
-		\wp_cache_delete( self::CACHE_KEY_INBOXES, 'activitypub' );
+	private static function clear_inbox_caches( $user_ids ) {
+		$keys = array( self::CACHE_KEY_INBOXES );
 
 		foreach ( $user_ids as $user_id ) {
-			\wp_cache_delete( \sprintf( Followers::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
+			$keys[] = \sprintf( Followers::CACHE_KEY_INBOXES, $user_id );
 		}
+
+		// One round trip, however many followers the actor has, because a persistent cache charges per call.
+		\wp_cache_delete_multiple( $keys, 'activitypub' );
 	}
 
 	/**
