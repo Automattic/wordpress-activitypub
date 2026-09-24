@@ -445,6 +445,44 @@ class Test_Trait_Event_Stream extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test an inbox event does not disclose the blind audience the row stores for addressing.
+	 *
+	 * @covers ::get_event_data
+	 */
+	public function test_get_event_data_strips_the_blind_audience_of_an_inbox_item() {
+		$activity = array(
+			'@context' => 'https://www.w3.org/ns/activitystreams',
+			'id'       => 'https://example.com/activities/1',
+			'type'     => 'Create',
+			'actor'    => 'https://example.com/users/test',
+			'to'       => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'bto'      => array( 'https://example.com/users/hidden' ),
+			'bcc'      => array( 'https://example.com/users/also-hidden' ),
+			'object'   => array(
+				'id'      => 'https://example.com/objects/1',
+				'type'    => 'Note',
+				'content' => 'Hello',
+			),
+		);
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => \wp_json_encode( $activity ),
+				'post_type'    => 'ap_inbox',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$data = $this->instance->test_get_event_data( \get_post( $post_id ), 'inbox' );
+
+		$this->assertIsArray( $data );
+		$this->assertArrayNotHasKey( 'bto', $data, 'The blind audience must not reach the stream.' );
+		$this->assertArrayNotHasKey( 'bcc', $data, 'The blind audience must not reach the stream.' );
+		$this->assertArrayNotHasKey( '@context', $data, 'The stream carries the context, not each event.' );
+		$this->assertContains( 'https://www.w3.org/ns/activitystreams#Public', (array) $data['to'] );
+	}
+
+	/**
 	 * Test get_event_data returns null for inbox item with invalid JSON.
 	 *
 	 * @covers ::get_event_data

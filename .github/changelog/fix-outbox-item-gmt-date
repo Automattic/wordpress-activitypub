@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Queued activities now record their publication and edit times correctly on sites that are not set to UTC.

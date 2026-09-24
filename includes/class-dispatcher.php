@@ -131,6 +131,13 @@ class Dispatcher {
 
 		$activity = Outbox::get_activity( $outbox_item );
 
+		if ( \is_wp_error( $activity ) ) {
+			// Nothing can be sent from a row we cannot read, so publish it and do not try again.
+			\wp_publish_post( $outbox_item );
+
+			return;
+		}
+
 		// Send to mentioned and replied-to users. Everyone other than followers.
 		self::send_to_additional_inboxes( $activity, $outbox_item->post_author, $outbox_item );
 

@@ -218,7 +218,13 @@ class Actors_Inbox_Controller extends Actors_Controller {
 				continue;
 			}
 
-			$response['orderedItems'][] = $this->prepare_item_for_response( $inbox_item, $request );
+			$item = $this->prepare_item_for_response( $inbox_item, $request );
+
+			if ( \is_wp_error( $item ) ) {
+				continue;
+			}
+
+			$response['orderedItems'][] = $item;
 		}
 
 		$response = $this->prepare_collection_response( $response, $request );
@@ -359,12 +365,25 @@ class Actors_Inbox_Controller extends Actors_Controller {
 	 *
 	 * @param mixed            $item    WordPress representation of the item.
 	 * @param \WP_REST_Request $request Request object.
-	 * @return array Response object on success.
+	 * @return array|\WP_Error Response object on success, or WP_Error object on failure.
 	 */
 	public function prepare_item_for_response( $item, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		$activity = \json_decode( $item->post_content, true );
+		$activity = Activity::init_from_json( $item->post_content );
 
-		return $activity;
+		if ( \is_wp_error( $activity ) ) {
+			return $activity;
+		}
+
+		$received = \get_post_datetime( $item, 'date', 'gmt' );
+
+		// A sender may omit the date, so report when the activity arrived and clients can still order the collection.
+		if ( ! $activity->get_published() && $received ) {
+			// get_post_datetime() hands back the site timezone even for the GMT column, and the format ends in a literal `Z`.
+			$activity->set_published( $received->setTimezone( new \DateTimeZone( 'UTC' ) )->format( ACTIVITYPUB_DATE_TIME_RFC3339 ) );
+		}
+
+		// The collection carries the JSON-LD context, and `bto`/`bcc` are stored for addressing only.
+		return $activity->to_array( false );
 	}
 
 	/**

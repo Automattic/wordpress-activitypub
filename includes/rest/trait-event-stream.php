@@ -12,6 +12,7 @@
 
 namespace Activitypub\Rest;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
@@ -453,9 +454,22 @@ trait Event_Stream {
 			return $activity->to_array( false );
 		}
 
-		$data = \json_decode( $item->post_content, true );
+		$activity = Activity::init_from_json( $item->post_content );
 
-		return $data ? $data : null;
+		if ( \is_wp_error( $activity ) ) {
+			return null;
+		}
+
+		$received = \get_post_datetime( $item, 'date', 'gmt' );
+
+		// Reported the same way the listing reports it, so a client watching the stream and paging the collection agree.
+		if ( ! $activity->get_published() && $received ) {
+			// get_post_datetime() hands back the site timezone even for the GMT column, and the format ends in a literal `Z`.
+			$activity->set_published( $received->setTimezone( new \DateTimeZone( 'UTC' ) )->format( ACTIVITYPUB_DATE_TIME_RFC3339 ) );
+		}
+
+		// The collection carries the JSON-LD context, and `bto`/`bcc` are stored for addressing only.
+		return $activity->to_array( false );
 	}
 
 	/**

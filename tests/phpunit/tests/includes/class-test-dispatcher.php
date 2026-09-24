@@ -84,6 +84,31 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * An outbox row whose stored activity cannot be read must be retired, not dereferenced.
+	 *
+	 * The cron worker would otherwise call Activity getters on a WP_Error and take the whole run
+	 * down with it, so one unreadable row would stop every activity queued behind it.
+	 *
+	 * @covers ::process_outbox
+	 */
+	public function test_process_outbox_retires_an_unreadable_row() {
+		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+
+		// Corrupt the stored activity the way a truncated write would.
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update( $wpdb->posts, array( 'post_content' => '{not valid json' ), array( 'ID' => $outbox_item->ID ) );
+		\clean_post_cache( $outbox_item->ID );
+
+		$this->assertInstanceOf( 'WP_Error', Outbox::get_activity( $outbox_item->ID ) );
+
+		Dispatcher::process_outbox( $outbox_item->ID );
+
+		$this->assertEquals( 'publish', \get_post( $outbox_item->ID )->post_status, 'The row must not be retried.' );
+	}
+
+	/**
 	 * Data provider for test_send_to_inboxes.
 	 *
 	 * @return array
