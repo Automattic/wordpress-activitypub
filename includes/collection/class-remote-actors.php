@@ -721,7 +721,7 @@ class Remote_Actors {
 			'post_author'  => 0,
 			'post_type'    => self::POST_TYPE,
 			'post_content' => \wp_slash( $actor_json ),
-			'post_excerpt' => \wp_kses( \wp_slash( (string) $actor->get_summary() ), 'user_description' ),
+			'post_excerpt' => \wp_slash( \wp_kses( (string) $actor->get_summary(), 'user_description' ) ),
 			'post_status'  => 'publish',
 			'meta_input'   => $meta_input,
 		);
