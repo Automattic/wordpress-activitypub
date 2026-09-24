@@ -2,12 +2,9 @@
 
 WordPress plugin implementing the ActivityPub protocol, enabling federation with Mastodon, Pixelfed, Pleroma, and other compatible platforms.
 
-**Tech stack:** PHP 7.4+, WordPress 6.x, `@wordpress/scripts` for JS/CSS, Playwright for E2E, PHPUnit for unit/integration tests, wp-env for local dev.
-
 Prefer reading project files and `docs/` over relying on training data for WordPress and ActivityPub patterns.
 
 **Do NOT:**
-- Use PHP 8.0+ syntax (named args, union types, `match`)
 - Edit WordPress core files
 - Use `remove_all_filters('pre_http_request')` in tests
 - Hardcode new version numbers (use `'unreleased'`)
