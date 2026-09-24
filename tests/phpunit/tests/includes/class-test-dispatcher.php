@@ -103,9 +103,67 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 
 		$this->assertInstanceOf( 'WP_Error', Outbox::get_activity( $outbox_item->ID ) );
 
+		\update_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', 100 );
+
 		Dispatcher::process_outbox( $outbox_item->ID );
 
 		$this->assertEquals( 'publish', \get_post( $outbox_item->ID )->post_status, 'The row must not be retried.' );
+		$this->assertEmpty( \get_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', true ), 'The batch offset must not outlive the row.' );
+	}
+
+	/**
+	 * A row that becomes unreadable between batches must be retired there too.
+	 *
+	 * Every stage reads the row again, so a row that goes bad after the first one would otherwise stay
+	 * pending forever, with the offset of the batch it never finished.
+	 *
+	 * @covers ::send_to_followers
+	 */
+	public function test_send_to_followers_retires_an_unreadable_row() {
+		$outbox_item = $this->get_unreadable_outbox_item();
+
+		\update_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', 100 );
+
+		Dispatcher::send_to_followers( $outbox_item->ID );
+
+		$this->assertEquals( 'publish', \get_post( $outbox_item->ID )->post_status, 'The row must not be retried.' );
+		$this->assertEmpty( \get_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', true ), 'The batch offset must not outlive the row.' );
+	}
+
+	/**
+	 * A retry of a row that has become unreadable must retire it instead of resending it.
+	 *
+	 * @covers ::retry_send_to_followers
+	 */
+	public function test_retry_retires_an_unreadable_row() {
+		$outbox_item = $this->get_unreadable_outbox_item();
+
+		\update_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', 100 );
+
+		$transient_key = 'activitypub_retry_' . \wp_generate_password( 12, false );
+		\set_transient( $transient_key, array( 'https://example.com/inbox' ), WEEK_IN_SECONDS );
+
+		Dispatcher::retry_send_to_followers( $transient_key, $outbox_item->ID );
+
+		$this->assertEquals( 'publish', \get_post( $outbox_item->ID )->post_status, 'The row must not be retried.' );
+		$this->assertEmpty( \get_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', true ), 'The batch offset must not outlive the row.' );
+	}
+
+	/**
+	 * Queue an activity and corrupt its stored copy the way a truncated write would.
+	 *
+	 * @return \WP_Post The outbox item.
+	 */
+	private function get_unreadable_outbox_item() {
+		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update( $wpdb->posts, array( 'post_content' => '{not valid json' ), array( 'ID' => $outbox_item->ID ) );
+		\clean_post_cache( $outbox_item->ID );
+
+		return $outbox_item;
 	}
 
 	/**

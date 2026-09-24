@@ -134,6 +134,8 @@ class Dispatcher {
 		if ( \is_wp_error( $activity ) ) {
 			// Nothing can be sent from a row we cannot read, so publish it and do not try again.
 			\wp_publish_post( $outbox_item );
+			// A rescheduled row can still carry the offset of the batch it was in, and reschedule() does not clear it.
+			\delete_post_meta( $outbox_item->ID, '_activitypub_outbox_offset' );
 
 			return;
 		}
@@ -178,6 +180,10 @@ class Dispatcher {
 		$activity = Outbox::get_activity( $outbox_item_id );
 
 		if ( \is_wp_error( $activity ) ) {
+			// Nothing can be sent from a row we cannot read, so publish it and do not try again.
+			\wp_publish_post( $outbox_item );
+			\delete_post_meta( $outbox_item_id, '_activitypub_outbox_offset' );
+
 			return;
 		}
 
@@ -263,6 +269,10 @@ class Dispatcher {
 		$activity = Outbox::get_activity( $outbox_item_id );
 
 		if ( \is_wp_error( $activity ) ) {
+			// Nothing can be sent from a row we cannot read, so publish it and do not try again.
+			\wp_publish_post( $outbox_item );
+			\delete_post_meta( $outbox_item_id, '_activitypub_outbox_offset' );
+
 			return array();
 		}
 

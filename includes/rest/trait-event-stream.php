@@ -445,7 +445,7 @@ trait Event_Stream {
 	 */
 	protected function get_event_data( $item, $collection ) {
 		if ( 'outbox' === $collection ) {
-			$activity = Outbox::get_activity( $item->ID );
+			$activity = Outbox::get_activity( $item );
 
 			if ( \is_wp_error( $activity ) ) {
 				return null;

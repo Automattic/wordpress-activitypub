@@ -14,6 +14,7 @@ use Activitypub\Scheduler;
 use Activitypub\Webfinger;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\is_activity;
 use function Activitypub\object_to_uri;
 use function Activitypub\user_can_act_as_blog;
 
@@ -97,19 +98,31 @@ class Outbox {
 			return $object_id;
 		}
 
+		$now = \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339 );
+
+		if ( ! $activity->get_published() ) {
+			$activity->set_published( $now );
+		}
+
+		if ( 'Update' === $activity->get_type() ) {
+			// The queue time overrides what the transformer read off the post, which is its last content change.
+			$activity->set_updated( $now );
+		}
+
 		// Save activity in the context of an activitypub request.
 		\add_filter( 'activitypub_is_activitypub_request', '__return_true' );
 
+		$date        = \current_time( 'mysql' );
 		$outbox_item = array(
 			'post_type'     => self::POST_TYPE,
-			'post_date'     => \current_time( 'mysql' ),
+			'post_date'     => $date,
 
 			/*
 			 * A `pending` row would otherwise keep the `0000-00-00 00:00:00` sentinel here, because
 			 * WordPress only derives this column for statuses that do not float and wp_publish_post()
 			 * never repairs it, leaving every reader to compare a local date against a GMT one.
 			 */
-			'post_date_gmt' => \current_time( 'mysql', true ),
+			'post_date_gmt' => \get_gmt_from_date( $date ),
 			'post_title'    => \sprintf(
 				/* translators: 1. Activity type, 2. Object Title or Excerpt */
 				\__( '[%1$s] %2$s', 'activitypub' ),
@@ -357,13 +370,19 @@ class Outbox {
 	 */
 	public static function reschedule( $outbox_item ) {
 		$outbox_item = \get_post( $outbox_item );
+		$date        = \current_time( 'mysql' );
 
-		$outbox_item->post_status = 'pending';
-		$outbox_item->post_date   = \current_time( 'mysql' );
-		// Without the GMT column the row's two clocks disagree, and readers compare them to each other.
-		$outbox_item->post_date_gmt = \current_time( 'mysql', true );
-
-		\wp_update_post( $outbox_item );
+		\wp_update_post(
+			array(
+				'ID'            => $outbox_item->ID,
+				'post_status'   => 'pending',
+				'post_date'     => $date,
+				// Both columns move together, because readers take the date from whichever one they use.
+				'post_date_gmt' => \get_gmt_from_date( $date ),
+				// Without this, WordPress reads an undated edit of a `pending` row that still holds the `0000-00-00 00:00:00` sentinel as a request to keep floating, and drops the dates passed here.
+				'edit_date'     => true,
+			)
+		);
 
 		Scheduler::schedule_outbox_activity_for_federation( $outbox_item->ID );
 
@@ -393,73 +412,20 @@ class Outbox {
 			return $activity;
 		}
 
-		$type = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
-
-		if ( $activity->get_type() !== $type ) {
-			/*
-			 * Rows written before 5.6.0 hold the object instead of the activity, so the activity is
-			 * built around what is stored. Everything Outbox::add() has written since then is a
-			 * complete activity and takes the branch above.
-			 */
-			// The blind audience is kept: set_object() copies `bto`/`bcc` onto the activity for addressing.
-			$object = $activity->to_array( false, true );
-			$actor  = self::get_actor( $outbox_item );
-
-			if ( \is_wp_error( $actor ) ) {
-				return $actor;
-			}
-
-			$activity = new Activity();
-			$activity->set_type( $type );
-			$activity->set_id( $outbox_item->guid );
-
-			/*
-			 * The actor is set from the row before the object is attached, because set_object() fills a
-			 * missing one from the object's `attributedTo`, and the row is what the Dispatcher signs as.
-			 */
-			$activity->set_actor( $actor->get_id() );
-			// Pre-fill the Activity with data (for example cc and to).
-			$activity->set_object( $object );
-		} elseif ( ! $activity->get_actor() ) {
-			$actor = self::get_actor( $outbox_item );
-
-			if ( \is_wp_error( $actor ) ) {
-				return $actor;
-			}
-
-			$activity->set_actor( $actor->get_id() );
-		}
-
-		/*
-		 * Fall back to the row's own timestamps when the stored activity carries none, which is the
-		 * case for every row written before this fallback existed.
-		 *
-		 * add() supplies both date columns, so the GMT one answers for anything written since. Rows
-		 * written before that kept the `0000-00-00 00:00:00` sentinel a `pending` status leaves behind,
-		 * and get_post_datetime() answers false for it, so the local column answers for those instead
-		 * of a 1970 date being synthesized from the sentinel.
-		 */
-		$utc       = new \DateTimeZone( 'UTC' );
-		$published = \get_post_datetime( $outbox_item, 'date', 'gmt' ) ?: \get_post_datetime( $outbox_item, 'date' );
-		$updated   = \get_post_datetime( $outbox_item, 'modified', 'gmt' ) ?: \get_post_datetime( $outbox_item, 'modified' );
-
-		if ( ! $activity->get_published() && $published ) {
-			$activity->set_published( $published->setTimezone( $utc )->format( ACTIVITYPUB_DATE_TIME_RFC3339 ) );
-		}
-
-		/*
-		 * An Update always reports when the row was last written, and it overrides whatever the stored
-		 * activity carried: an Update queued for a reason other than an edit (a quote authorization
-		 * arriving, say) would otherwise repeat the date of the last content change, and a remote that
-		 * deduplicates edits by `updated` would ignore it. No other type reports one, because
-		 * `post_modified` tracks the row rather than the object.
-		 */
-		if ( $updated && 'Update' === $type ) {
-			$activity->set_updated( $updated->setTimezone( $utc )->format( ACTIVITYPUB_DATE_TIME_RFC3339 ) );
+		// A row written before 5.6.0 holds the object, so it hydrates with an object type. It cannot be dispatched as it stands, and rebuilding it on every read is not worth carrying.
+		if ( ! is_activity( $activity ) ) {
+			return new \WP_Error(
+				'activitypub_outbox_item_invalid',
+				\__( 'Outbox item does not hold an activity.', 'activitypub' ),
+				array( 'status' => 500 )
+			);
 		}
 
 		/**
 		 * Filters the Activity object before it is returned.
+		 *
+		 * The row deliberately keeps more than it sends, a Delete keeps its Tombstone and a hand-built
+		 * Like its object, and this is the last point before any consumer sees it.
 		 *
 		 * @param Activity $activity    The Activity object.
 		 * @param \WP_Post $outbox_item The outbox item post object.
