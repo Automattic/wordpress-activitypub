@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replies cached on posts in the blog profile's reader feed are no longer readable by logged-out visitors through the WordPress REST API. [#3717]
 - Signatures on incoming requests are now checked against the address the request was actually sent to. [#3719]
 
+### Fixed
+ - When preparing custom post types to udpate remote actors, the summary is slashed after sanitization. [#3812]
+
 ## [9.3.0] - 2026-09-02
 ### Security
 - Block markup in posts from remote accounts is now removed before the post is saved. [#3703]
