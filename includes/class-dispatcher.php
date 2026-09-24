@@ -264,13 +264,10 @@ class Dispatcher {
 	 * @return array The failed inboxes.
 	 */
 	private static function send_to_inboxes( $inboxes, $outbox_item_id ) {
-		$outbox_item = \get_post( $outbox_item_id );
-
 		$activity = Outbox::get_activity( $outbox_item_id );
 
 		if ( \is_wp_error( $activity ) ) {
 			// Nothing can be sent from a row we cannot read, so publish it and do not try again.
-			// The ID, because wp_publish_post() falls back to the global post when the row it is handed is gone.
 			\wp_publish_post( $outbox_item_id );
 			\delete_post_meta( $outbox_item_id, '_activitypub_outbox_offset' );
 
@@ -289,6 +286,8 @@ class Dispatcher {
 		 * @param int    $outbox_item_id The Outbox item ID.
 		 */
 		\do_action( 'activitypub_pre_send_to_inboxes', $json, $inboxes, $outbox_item_id );
+
+		$outbox_item = \get_post( $outbox_item_id );
 
 		foreach ( $inboxes as $inbox ) {
 			// Handle local inboxes via internal REST API, remote via HTTP.
