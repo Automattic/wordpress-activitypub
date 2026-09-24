@@ -167,6 +167,31 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * A retry for a row that has been deleted must not publish whatever post happens to be global.
+	 *
+	 * @covers ::retry_send_to_followers
+	 */
+	public function test_retry_does_not_publish_the_global_post() {
+		$draft_id = self::factory()->post->create( array( 'post_status' => 'draft' ) );
+
+		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+		\wp_delete_post( $outbox_item->ID, true );
+
+		$transient_key = 'activitypub_retry_' . \wp_generate_password( 12, false );
+		\set_transient( $transient_key, array( 'https://example.com/inbox' ), WEEK_IN_SECONDS );
+
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- the point of the test is what a stray global post does.
+		$GLOBALS['post'] = \get_post( $draft_id );
+
+		Dispatcher::retry_send_to_followers( $transient_key, $outbox_item->ID );
+
+		unset( $GLOBALS['post'] );
+
+		$this->assertEquals( 'draft', \get_post_status( $draft_id ), 'An unrelated post must not be published.' );
+	}
+
+	/**
 	 * Data provider for test_send_to_inboxes.
 	 *
 	 * @return array

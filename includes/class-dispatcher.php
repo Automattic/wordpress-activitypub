@@ -270,7 +270,8 @@ class Dispatcher {
 
 		if ( \is_wp_error( $activity ) ) {
 			// Nothing can be sent from a row we cannot read, so publish it and do not try again.
-			\wp_publish_post( $outbox_item );
+			// The ID, because wp_publish_post() falls back to the global post when the row it is handed is gone.
+			\wp_publish_post( $outbox_item_id );
 			\delete_post_meta( $outbox_item_id, '_activitypub_outbox_offset' );
 
 			return array();
