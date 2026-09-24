@@ -203,7 +203,7 @@ class Remote_Actors {
 		$user_ids = self::get_follower_ids( $post_id );
 		$result   = \wp_delete_post( $post_id );
 
-		// Clear after the row is gone, so a concurrent read cannot re-cache the deleted inbox.
+		// Clear after the row is gone, which narrows the window in which a concurrent read re-caches the deleted inbox.
 		self::clear_inbox_caches( $user_ids );
 
 		return $result;
