@@ -63,6 +63,8 @@ export function useEmbedUrl( { url, clientId, embedPost, setAttributes, onChecke
 
 			if ( ! urlToCheck ) {
 				setIsValidEmbed( false );
+				// A check for the old URL may still be running; its own reset is skipped as stale.
+				setIsCheckingEmbed( false );
 				onChecked?.( null, isStale );
 				return;
 			}
@@ -111,6 +113,14 @@ export function useEmbedUrl( { url, clientId, embedPost, setAttributes, onChecke
 	const debouncedCheckUrl = useDebounce( checkUrl, 250 );
 
 	useEffect( () => {
+		/*
+		 * What the last check found belongs to the URL it was made for. Retiring it here rather
+		 * than when the debounced check runs closes the window in which an answer for the old
+		 * URL could still arrive and be taken for the new one.
+		 */
+		checkedUrlRef.current = url;
+		setIsValidEmbed( false );
+
 		debouncedCheckUrl( url );
 	}, [ url, debouncedCheckUrl ] );
 
