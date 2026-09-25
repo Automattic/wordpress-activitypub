@@ -257,6 +257,44 @@ class Test_Update extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A user who owns the post but may no longer edit it is refused.
+	 *
+	 * A contributor cannot edit their own post once it is published, so ownership alone
+	 * must not be enough.
+	 *
+	 * @covers ::handle_update
+	 */
+	public function test_outgoing_update_requires_the_capability_on_an_own_post() {
+		$contributor = self::factory()->user->create( array( 'role' => 'contributor' ) );
+		\wp_set_current_user( $contributor );
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => $contributor,
+				'post_title'  => 'Own Published Post',
+				'post_status' => 'publish',
+			)
+		);
+
+		$data = array(
+			'type'   => 'Update',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'type'    => 'Note',
+				'id'      => \get_permalink( $post_id ),
+				'content' => 'Should not update',
+				'name'    => 'Hijacked',
+			),
+		);
+
+		$result = Update::handle_update( $data, $contributor );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_forbidden', $result->get_error_code() );
+		$this->assertEquals( 'Own Published Post', \get_post( $post_id )->post_title );
+	}
+
+	/**
 	 * Test that the blog actor can only update posts its user may edit.
 	 *
 	 * @covers ::handle_update

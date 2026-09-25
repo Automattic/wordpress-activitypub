@@ -189,6 +189,39 @@ class Test_Add extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A user who owns the post but may no longer edit it is refused.
+	 *
+	 * A contributor cannot edit their own post once it is published, so ownership alone
+	 * must not be enough.
+	 *
+	 * @covers ::handle_add
+	 */
+	public function test_handle_add_requires_the_capability_on_an_own_post() {
+		$contributor = self::factory()->user->create( array( 'role' => 'contributor' ) );
+		\wp_set_current_user( $contributor );
+		\get_user_by( 'id', $contributor )->add_cap( 'activitypub' );
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => $contributor,
+				'post_status' => 'publish',
+			)
+		);
+
+		$data = array(
+			'type'   => 'Add',
+			'object' => \get_permalink( $post_id ),
+			'target' => Actors::get_by_id( $contributor )->get_featured(),
+		);
+
+		$result = Add::handle_add( $data, $contributor );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_forbidden', $result->get_error_code() );
+		$this->assertFalse( \is_sticky( $post_id ) );
+	}
+
+	/**
 	 * Test that the blog actor can only feature posts its user may edit.
 	 *
 	 * @covers ::handle_add

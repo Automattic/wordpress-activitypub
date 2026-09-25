@@ -265,6 +265,35 @@ class Test_Delete extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A user who owns the post but may not delete it is refused.
+	 *
+	 * A contributor cannot delete their own post once it is published, so ownership alone
+	 * must not be enough.
+	 *
+	 * @covers ::handle_delete
+	 */
+	public function test_handle_delete_requires_the_capability_on_an_own_post() {
+		$contributor = self::factory()->user->create( array( 'role' => 'contributor' ) );
+		\wp_set_current_user( $contributor );
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => $contributor,
+				'post_status' => 'publish',
+			)
+		);
+
+		$data = array(
+			'type'   => 'Delete',
+			'object' => \get_permalink( $post_id ),
+		);
+
+		Delete::handle_delete( $data, $contributor );
+
+		$this->assertEquals( 'publish', \get_post( $post_id )->post_status );
+	}
+
+	/**
 	 * Test that the blog actor can only delete posts its user may delete.
 	 *
 	 * @covers ::handle_delete
