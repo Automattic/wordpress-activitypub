@@ -76,6 +76,7 @@ class Blocks {
 		\add_action( 'pre_get_posts', array( self::class, 'filter_query_loop_vars' ) );
 
 		\add_action( 'load-post-new.php', array( self::class, 'handle_in_reply_to_get_param' ) );
+		\add_action( 'load-post-new.php', array( self::class, 'handle_quotation_of_get_param' ) );
 		// Add editor plugin.
 		\add_action( 'enqueue_block_editor_assets', array( self::class, 'enqueue_editor_assets' ) );
 		\add_action( 'rest_api_init', array( self::class, 'register_rest_fields' ) );
@@ -142,6 +143,22 @@ class Blocks {
 	}
 
 	/**
+	 * Enqueue the quote intent script if the quotation_of GET param is set.
+	 *
+	 * @since unreleased
+	 */
+	public static function handle_quotation_of_get_param() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only, the script only prefills a block.
+		if ( ! isset( $_GET['quotation_of'] ) ) {
+			return;
+		}
+
+		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/quote-intent/plugin.asset.php';
+		$plugin_url = \plugins_url( 'build/quote-intent/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
+		\wp_enqueue_script( 'activitypub-quote-intent', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
+	}
+
+	/**
 	 * Register the blocks.
 	 */
 	public static function register_blocks() {
@@ -166,6 +183,13 @@ class Blocks {
 			ACTIVITYPUB_PLUGIN_DIR . '/build/reply',
 			array(
 				'render_callback' => array( self::class, 'render_reply_block' ),
+			)
+		);
+
+		\register_block_type_from_metadata(
+			ACTIVITYPUB_PLUGIN_DIR . '/build/quote',
+			array(
+				'render_callback' => array( self::class, 'render_quote_block' ),
 			)
 		);
 
@@ -332,6 +356,31 @@ class Blocks {
 				'schema'       => array(
 					'description' => 'Whether the post is publicly queryable via ActivityPub',
 					'type'        => 'boolean',
+					'context'     => array( 'edit' ),
+				),
+			)
+		);
+
+		// Lets the Quote block show whether the quoted author accepted or declined.
+		\register_rest_field(
+			\get_post_types_by_support( 'activitypub' ),
+			'activitypub_quote',
+			array(
+				/**
+				 * Quote handshake state for the editor.
+				 *
+				 * @param array $response Prepared response array.
+				 * @return array { authorization: string|null, rejected: bool }
+				 */
+				'get_callback' => static function ( $response ) {
+					return array(
+						'authorization' => \get_post_meta( $response['id'], '_activitypub_quote_authorization', true ) ?: null,
+						'rejected'      => (bool) \get_post_meta( $response['id'], '_activitypub_quote_rejected', true ),
+					);
+				},
+				'schema'       => array(
+					'description' => 'FEP-044f quote handshake state of the post',
+					'type'        => 'object',
 					'context'     => array( 'edit' ),
 				),
 			)
@@ -759,6 +808,63 @@ class Blocks {
 	}
 
 	/**
+	 * Render the Quote block.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array          $attrs   The block attributes.
+	 * @param string         $content The block inner content (unused).
+	 * @param \WP_Block|null $block   The block instance, used to resolve the post outside the loop.
+	 *
+	 * @return string|null The block HTML.
+	 */
+	public static function render_quote_block( $attrs, $content = '', $block = null ) {
+		if ( empty( $attrs['url'] ) ) {
+			return null;
+		}
+
+		$url      = $attrs['url'];
+		$post_id  = $block instanceof \WP_Block && ! empty( $block->context['postId'] ) ? (int) $block->context['postId'] : \get_the_ID();
+		$rejected = $post_id && \get_post_meta( $post_id, '_activitypub_quote_rejected', true );
+		// A declined quote, an invalid ActivityPub URL, or a post the block context couldn't resolve (the
+		// rejection meta is then unreadable) is shown as a plain link the site does not vouch for.
+		$is_quote = $post_id && ! $rejected && ( $attrs['isValidActivityPub'] ?? true );
+
+		$show_embed = $is_quote && ! empty( $attrs['embedPost'] ) && ! is_activitypub_request() && ! \is_feed();
+
+		$wrapper_attrs = \get_block_wrapper_attributes(
+			array(
+				'aria-label'        => \__( 'Quote', 'activitypub' ),
+				'class'             => 'activitypub-quote-block',
+				'data-quotation-of' => $url,
+			)
+		);
+
+		$embed = null;
+		if ( $show_embed ) {
+			$embed_width = ! empty( $GLOBALS['content_width'] ) ? $GLOBALS['content_width'] : 600;
+			$embed       = \wp_oembed_get( $url, array( 'width' => $embed_width ) );
+			if ( $embed ) {
+				\wp_enqueue_script( 'wp-embed' );
+			}
+		}
+
+		$link = \sprintf(
+			'<a class="u-url" href="%1$s" target="_blank">%2$s</a>',
+			\esc_url( $url ),
+			\esc_html( \str_replace( array( 'https://', 'http://' ), '', $url ) )
+		);
+
+		$inner = $embed ? $link . $embed : '<p>' . $link . '</p>';
+
+		if ( $is_quote ) {
+			$inner = '<cite class="u-quotation-of h-cite">' . $inner . '</cite>';
+		}
+
+		return '<div ' . $wrapper_attrs . '>' . $inner . '</div>';
+	}
+
+	/**
 	 * Renders a modal component that can be used by different blocks.
 	 *
 	 * @param array $args {
@@ -1006,6 +1112,7 @@ class Blocks {
 	public static function add_post_transformation_callbacks( $post ) {
 		\add_filter( 'render_block_core/embed', array( self::class, 'revert_embed_links' ), 10, 2 );
 		\add_filter( 'render_block_activitypub/stats', '__return_empty_string' );
+		\add_filter( 'render_block_activitypub/quote', array( self::class, 'generate_quote_link' ), 10, 2 );
 
 		// Only transform reply link if it's the first block in the post.
 		$blocks = \parse_blocks( $post->post_content );
@@ -1025,6 +1132,7 @@ class Blocks {
 		\remove_filter( 'render_block_core/embed', array( self::class, 'revert_embed_links' ) );
 		\remove_filter( 'render_block_activitypub/reply', array( self::class, 'generate_reply_link' ) );
 		\remove_filter( 'render_block_activitypub/stats', '__return_empty_string' );
+		\remove_filter( 'render_block_activitypub/quote', array( self::class, 'generate_quote_link' ) );
 
 		return $content;
 	}
@@ -1086,6 +1194,26 @@ class Blocks {
 			\esc_attr( $webfinger ),
 			\esc_html( '@' . \strtok( $webfinger, '@' ) )
 		);
+	}
+
+	/**
+	 * Replace the Quote block with a plain link in the ActivityPub content.
+	 *
+	 * Receivers render the quoted post from the `quote` property; inlining the embed would duplicate it.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $block_content The block content.
+	 * @param array  $block         The block data.
+	 *
+	 * @return string The link markup.
+	 */
+	public static function generate_quote_link( $block_content, $block ) {
+		if ( empty( $block['attrs']['url'] ) ) {
+			return '';
+		}
+
+		return \sprintf( '<p><a href="%1$s">%2$s</a></p>', \esc_url( $block['attrs']['url'] ), \esc_html( $block['attrs']['url'] ) );
 	}
 
 	/**
