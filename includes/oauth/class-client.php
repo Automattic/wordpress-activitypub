@@ -589,6 +589,8 @@ class Client {
 		$redirect_path = $redirect_parts['path'] ?? '/';
 
 		return $allowed_path === $redirect_path &&
+			( $allowed_parts['user'] ?? '' ) === ( $redirect_parts['user'] ?? '' ) &&
+			( $allowed_parts['pass'] ?? '' ) === ( $redirect_parts['pass'] ?? '' ) &&
 			( $allowed_parts['query'] ?? '' ) === ( $redirect_parts['query'] ?? '' ) &&
 			( $allowed_parts['fragment'] ?? '' ) === ( $redirect_parts['fragment'] ?? '' );
 	}

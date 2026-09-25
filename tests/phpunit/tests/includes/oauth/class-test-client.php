@@ -138,7 +138,7 @@ class Test_Client extends \WP_UnitTestCase {
 	 * @covers ::get_link_url
 	 */
 	public function test_get_link_url_only_returns_http_urls() {
-		$result = Client::register(
+		$result = $this->create_client(
 			array(
 				'name'          => 'Link Client',
 				'redirect_uris' => array( 'https://app.example/callback' ),
@@ -533,7 +533,7 @@ class Test_Client extends \WP_UnitTestCase {
 	 * @covers ::is_valid_redirect_uri
 	 */
 	public function test_is_valid_redirect_uri_loopback_only_ignores_port() {
-		$result = Client::register(
+		$result = $this->create_client(
 			array(
 				'name'          => 'Native App',
 				'redirect_uris' => array( 'http://127.0.0.1/callback' ),
@@ -545,6 +545,7 @@ class Test_Client extends \WP_UnitTestCase {
 		$this->assertFalse( $client->is_valid_redirect_uri( 'http://127.0.0.1:51234/callback?next=x' ), 'An extra query is refused.' );
 		$this->assertFalse( $client->is_valid_redirect_uri( 'http://127.0.0.1/callback#x' ), 'An extra fragment is refused.' );
 		$this->assertFalse( $client->is_valid_redirect_uri( 'http://127.0.0.1/other' ), 'Another path is refused.' );
+		$this->assertFalse( $client->is_valid_redirect_uri( 'http://user@127.0.0.1:51234/callback' ), 'A user name is refused.' );
 	}
 
 	/**
