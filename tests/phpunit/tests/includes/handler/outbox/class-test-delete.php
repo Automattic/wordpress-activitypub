@@ -109,9 +109,15 @@ class Test_Delete extends \WP_UnitTestCase {
 	/**
 	 * Test outgoing Delete skips posts not owned by user.
 	 *
+	 * The caller is an editor, who may delete other users' posts in WordPress, so only the
+	 * ownership check can refuse it.
+	 *
 	 * @covers ::handle_delete
 	 */
 	public function test_handle_delete_skips_unowned_post() {
+		$editor = self::factory()->user->create( array( 'role' => 'editor' ) );
+		\wp_set_current_user( $editor );
+
 		$other_user = self::factory()->user->create();
 		$post_id    = self::factory()->post->create(
 			array(
@@ -126,7 +132,7 @@ class Test_Delete extends \WP_UnitTestCase {
 			'object' => $permalink,
 		);
 
-		Delete::handle_delete( $data, $this->user_id );
+		Delete::handle_delete( $data, $editor );
 
 		$post = \get_post( $post_id );
 		$this->assertEquals( 'publish', $post->post_status, 'Post should not be trashed by non-owner.' );

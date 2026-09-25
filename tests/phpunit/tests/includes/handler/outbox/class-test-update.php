@@ -173,7 +173,7 @@ class Test_Update extends \WP_UnitTestCase {
 				'type'    => 'Note',
 				'id'      => $permalink,
 				'content' => 'Should not update',
-				'name'    => 'Hijacked',
+				'name'    => 'Changed',
 			),
 		);
 
@@ -283,7 +283,7 @@ class Test_Update extends \WP_UnitTestCase {
 				'type'    => 'Note',
 				'id'      => \get_permalink( $post_id ),
 				'content' => 'Should not update',
-				'name'    => 'Hijacked',
+				'name'    => 'Changed',
 			),
 		);
 
