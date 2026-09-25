@@ -131,15 +131,29 @@ class Blocks {
 	 * Enqueue the reply handle script if the in_reply_to GET param is set.
 	 */
 	public static function handle_in_reply_to_get_param() {
-		// Only load the script if the in_reply_to GET param is set, action happens there, not here.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( ! isset( $_GET['in_reply_to'] ) ) {
+		self::enqueue_intent_script( 'in_reply_to', 'reply-intent' );
+	}
+
+	/**
+	 * Enqueue an intent script when its URL parameter is present.
+	 *
+	 * The script reads the parameter itself and prefills the matching block, so nothing
+	 * is read here beyond the presence of the parameter.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $param  The URL parameter carrying the address.
+	 * @param string $script The build folder and script handle suffix.
+	 */
+	private static function enqueue_intent_script( $param, $script ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only, the script only prefills a block.
+		if ( ! isset( $_GET[ $param ] ) ) {
 			return;
 		}
 
-		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/reply-intent/plugin.asset.php';
-		$plugin_url = \plugins_url( 'build/reply-intent/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
-		\wp_enqueue_script( 'activitypub-reply-intent', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
+		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/' . $script . '/plugin.asset.php';
+		$plugin_url = \plugins_url( 'build/' . $script . '/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
+		\wp_enqueue_script( 'activitypub-' . $script, $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
 	}
 
 	/**
@@ -148,14 +162,7 @@ class Blocks {
 	 * @since unreleased
 	 */
 	public static function handle_quotation_of_get_param() {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only, the script only prefills a block.
-		if ( ! isset( $_GET['quotation_of'] ) ) {
-			return;
-		}
-
-		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/quote-intent/plugin.asset.php';
-		$plugin_url = \plugins_url( 'build/quote-intent/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
-		\wp_enqueue_script( 'activitypub-quote-intent', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
+		self::enqueue_intent_script( 'quotation_of', 'quote-intent' );
 	}
 
 	/**
