@@ -319,4 +319,32 @@ class Test_Delete extends \WP_UnitTestCase {
 		$this->assertInstanceOf( \WP_Comment::class, $result );
 		$this->assertEquals( 'trash', \get_comment( $comment_id )->comment_approved );
 	}
+
+	/**
+	 * Test that the blog actor can only delete comments its user may edit.
+	 *
+	 * @covers ::handle_delete
+	 */
+	public function test_handle_delete_comment_as_blog_actor_requires_capability() {
+		$other_user = self::factory()->user->create( array( 'role' => 'author' ) );
+		$post_id    = self::factory()->post->create( array( 'post_author' => $other_user ) );
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'user_id'         => $other_user,
+			)
+		);
+		$data       = array(
+			'type'   => 'Delete',
+			'object' => \add_query_arg( 'c', $comment_id, \trailingslashit( \home_url() ) ),
+		);
+
+		// An author acting as the blog can't delete a comment on someone else's post.
+		Delete::handle_delete( $data, 0 );
+		$this->assertEquals( '1', \get_comment( $comment_id )->comment_approved );
+
+		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		Delete::handle_delete( $data, 0 );
+		$this->assertEquals( 'trash', \get_comment( $comment_id )->comment_approved );
+	}
 }
