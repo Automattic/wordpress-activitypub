@@ -1552,6 +1552,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 		unset( $GLOBALS['post'] );
 
 		$rejected_post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		\update_post_meta( $rejected_post_id, '_activitypub_quote_request', 'https://remote.example/notes/1' );
 		\update_post_meta( $rejected_post_id, '_activitypub_quote_rejected', '1' );
 		$accepted_post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
 
@@ -1576,6 +1577,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 				'post_status'  => 'publish',
 			)
 		);
+		\update_post_meta( $post_id, '_activitypub_quote_request', 'https://remote.example/notes/1' );
 		\update_post_meta( $post_id, '_activitypub_quote_rejected', '1' );
 
 		$GLOBALS['post'] = \get_post( $post_id ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
@@ -1616,6 +1618,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 	public function test_quote_rest_field() {
 		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
 		$post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		\update_post_meta( $post_id, '_activitypub_quote_request', 'https://remote.example/notes/1' );
 		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
 
 		\do_action( 'rest_api_init' );
@@ -1625,6 +1628,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		$this->assertSame(
 			array(
+				'request'       => 'https://remote.example/notes/1',
 				'authorization' => 'https://remote.example/stamps/1',
 				'rejected'      => false,
 			),

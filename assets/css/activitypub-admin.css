@@ -433,8 +433,16 @@ body.tools-php .wrap {
 	columns: 520px;
 }
 
-body.tools-php .wrap > h1 {
+/*
+ * Only the boxes belong in the columns. Everything else the screen prints,
+ * its heading and the notices core's common.js moves in here, spans them,
+ * so a notice is not columnized or split down the middle.
+ */
+body.tools-php .wrap > :not(.card) {
 	column-span: all;
+}
+
+body.tools-php .wrap > h1 {
 	margin-bottom: 20px;
 }
 
@@ -454,4 +462,14 @@ body.tools-php .wrap > .card {
 	 * start 20px higher than the first box of the first one.
 	 */
 	margin: 0 0 20px;
+}
+
+.activitypub-bookmarklet-buttons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.activitypub-bookmarklet-buttons .activitypub-bookmarklet {
+	cursor: grab;
 }

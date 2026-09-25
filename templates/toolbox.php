@@ -5,22 +5,24 @@
  * @package Activitypub
  */
 
+$reply_intent_js = \Activitypub\get_reply_intent_js();
+$quote_intent_js = \Activitypub\get_quote_intent_js();
 ?>
 
 <div class="card activitypub" id="activitypub-bookmarklet">
 	<h2><?php esc_html_e( 'Fediverse Bookmarklet ⁂', 'activitypub' ); ?></h2>
 	<p>
-		<?php esc_html_e( 'This lightweight bookmarklet makes it simple to reply to content on any webpage that supports ActivityPub, enhancing your interaction on the fediverse.', 'activitypub' ); ?>
+		<?php esc_html_e( 'These lightweight bookmarklets make it simple to reply to or quote content on any webpage that supports ActivityPub, enhancing your interaction on the fediverse.', 'activitypub' ); ?>
 	</p>
 	<form>
 		<h3><?php esc_html_e( 'Install Bookmarklet', 'activitypub' ); ?></h3>
 		<p><?php esc_html_e( 'Drag one of these buttons to your browser’s bookmark bar. When you visit a post on another site, click it to reply to that post or to quote it from your blog.', 'activitypub' ); ?></p>
 		<p class="activitypub-bookmarklet-buttons">
-			<a class="activitypub-bookmarklet button" onclick="return false;" href="<?php echo esc_attr( \Activitypub\get_reply_intent_js() ); ?>">
+			<a class="activitypub-bookmarklet button" onclick="return false;" href="<?php echo esc_attr( $reply_intent_js ); ?>">
 				<?php // translators: The host (domain) of the Blog. ?>
 				<?php printf( esc_html__( 'Reply from %s', 'activitypub' ), esc_attr( \wp_parse_url( \home_url(), PHP_URL_HOST ) ) ); ?>
 			</a>
-			<a class="activitypub-bookmarklet button" onclick="return false;" href="<?php echo esc_attr( \Activitypub\get_quote_intent_js() ); ?>">
+			<a class="activitypub-bookmarklet button" onclick="return false;" href="<?php echo esc_attr( $quote_intent_js ); ?>">
 				<?php // translators: The host (domain) of the Blog. ?>
 				<?php printf( esc_html__( 'Quote from %s', 'activitypub' ), esc_attr( \wp_parse_url( \home_url(), PHP_URL_HOST ) ) ); ?>
 			</a>
@@ -32,12 +34,12 @@
 			<p>
 				<label for="activitypub-bookmarklet-select"><?php esc_html_e( 'Bookmarklet', 'activitypub' ); ?></label>
 				<select id="activitypub-bookmarklet-select" class="activitypub-bookmarklet-select">
-					<option value="reply" data-code="<?php echo esc_attr( \Activitypub\get_reply_intent_js() ); ?>"><?php esc_html_e( 'Reply', 'activitypub' ); ?></option>
-					<option value="quote" data-code="<?php echo esc_attr( \Activitypub\get_quote_intent_js() ); ?>"><?php esc_html_e( 'Quote', 'activitypub' ); ?></option>
+					<option value="reply" data-code="<?php echo esc_attr( $reply_intent_js ); ?>"><?php esc_html_e( 'Reply', 'activitypub' ); ?></option>
+					<option value="quote" data-code="<?php echo esc_attr( $quote_intent_js ); ?>"><?php esc_html_e( 'Quote', 'activitypub' ); ?></option>
 				</select>
 			</p>
 			<p>
-				<textarea id="activitypub-bookmarklet-code" class="large-text activitypub-bookmarklet-code" rows="6" readonly="readonly" aria-labelledby="activitypub-bookmarklet-code-desc"><?php echo esc_textarea( \Activitypub\get_reply_intent_js() ); ?></textarea>
+				<textarea id="activitypub-bookmarklet-code" class="large-text activitypub-bookmarklet-code" rows="6" readonly="readonly" aria-labelledby="activitypub-bookmarklet-code-desc"><?php echo esc_textarea( $reply_intent_js ); ?></textarea>
 			</p>
 			<p><span class="dashicons dashicons-clipboard"></span> <a href="javascript:;" class="activitypub-bookmarklet-copy" style="cursor: copy;"><?php esc_html_e( 'Copy to clipboard', 'activitypub' ); ?></a></p>
 		</div>

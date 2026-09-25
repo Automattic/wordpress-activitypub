@@ -27,7 +27,7 @@ const HandleQuoteIntent = () => {
 			}, 200 );
 		}
 		didHandleEmbed = true;
-	} );
+	}, [] );
 
 	return null;
 };

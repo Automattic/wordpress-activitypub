@@ -370,10 +370,12 @@ class Blocks {
 				 * Quote handshake state for the editor.
 				 *
 				 * @param array $response Prepared response array.
-				 * @return array { authorization: string|null, rejected: bool }
+				 * @return array { request: string|null, authorization: string|null, rejected: bool }
 				 */
 				'get_callback' => static function ( $response ) {
 					return array(
+						// The URL the answer was for: a stamp or a rejection says nothing about a URL the author never saw.
+						'request'       => \get_post_meta( $response['id'], '_activitypub_quote_request', true ) ?: null,
 						'authorization' => \get_post_meta( $response['id'], '_activitypub_quote_authorization', true ) ?: null,
 						'rejected'      => (bool) \get_post_meta( $response['id'], '_activitypub_quote_rejected', true ),
 					);
@@ -823,9 +825,12 @@ class Blocks {
 			return null;
 		}
 
-		$url      = $attrs['url'];
-		$post_id  = $block instanceof \WP_Block && ! empty( $block->context['postId'] ) ? (int) $block->context['postId'] : \get_the_ID();
-		$rejected = $post_id && \get_post_meta( $post_id, '_activitypub_quote_rejected', true );
+		$url     = $attrs['url'];
+		$post_id = $block instanceof \WP_Block && ! empty( $block->context['postId'] ) ? (int) $block->context['postId'] : \get_the_ID();
+		// A rejection only covers the URL it was answered for; a new URL starts a new handshake.
+		$rejected = $post_id
+			&& \get_post_meta( $post_id, '_activitypub_quote_rejected', true )
+			&& \get_post_meta( $post_id, '_activitypub_quote_request', true ) === $url;
 		// A declined quote, an invalid ActivityPub URL, or a post the block context couldn't resolve (the
 		// rejection meta is then unreadable) is shown as a plain link the site does not vouch for.
 		$is_quote = $post_id && ! $rejected && ( $attrs['isValidActivityPub'] ?? true );

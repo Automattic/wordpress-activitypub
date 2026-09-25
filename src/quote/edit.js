@@ -27,6 +27,38 @@ const HELP_TEXT = {
 };
 
 /**
+ * Whether the quoted author's interaction policy excludes everyone but themselves.
+ *
+ * Advisory only (FEP-044f): the policy must not be used for verification, it only
+ * tells the writer up front that the request is unlikely to be accepted.
+ *
+ * @param {string} url The quoted URL.
+ *
+ * @return {Promise<boolean>} Whether quotes are disallowed.
+ */
+async function quotesDisallowedFor( url ) {
+	try {
+		const object = await apiFetch( {
+			path: '/activitypub/1.0/proxy',
+			method: 'POST',
+			data: { id: url },
+		} );
+		const canQuote = object?.interactionPolicy?.canQuote;
+		if ( ! canQuote ) {
+			return false;
+		}
+
+		const author = [].concat( object?.attributedTo || [] ).map( ( a ) => a?.id ?? a );
+		const automatic = [].concat( canQuote.automaticApproval || [] );
+		const manual = [].concat( canQuote.manualApproval || [] );
+
+		return manual.length === 0 && automatic.every( ( a ) => author.includes( a?.id ?? a ) );
+	} catch ( error ) {
+		return false;
+	}
+}
+
+/**
  * Edit component for the ActivityPub Quote block.
  *
  * @param {Object}   props               Component props.
@@ -37,14 +69,16 @@ const HELP_TEXT = {
  */
 export default function Edit( { attributes, setAttributes, clientId, isSelected } ) {
 	const { url = '', embedPost = false } = attributes;
-	const [ helpText, setHelpText ] = useState( HELP_TEXT.default );
 	const [ isValidEmbed, setIsValidEmbed ] = useState( false );
 	const [ isCheckingEmbed, setIsCheckingEmbed ] = useState( false );
 	const [ quotesDisallowed, setQuotesDisallowed ] = useState( false );
-	const quoteState = useSelect(
-		( select ) => select( 'core/editor' ).getEditedPostAttribute( 'activitypub_quote' ),
-		[]
-	);
+	const quoteState = useSelect( ( select ) => {
+		// The block is insertable in editors that do not register `core/editor`, the widget screen for one.
+		const editorStore = select( 'core/editor' );
+
+		return editorStore?.getEditedPostAttribute?.( 'activitypub_quote' );
+	}, [] );
+	const answeredUrl = quoteState?.request && quoteState.request === url;
 	const urlInputRef = useRef();
 	const { insertAfterBlock, removeBlock, replaceInnerBlocks } = useDispatch( 'core/block-editor' );
 
@@ -71,18 +105,12 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 		}
 	}, [ url, showEmbed, clientId, replaceInnerBlocks ] );
 
-	// Update help text based on state changes.
-	useEffect( () => {
-		if ( ! url ) {
-			setHelpText( HELP_TEXT.default );
-		} else if ( isCheckingEmbed ) {
-			setHelpText( HELP_TEXT.checking() );
-		} else if ( isValidEmbed ) {
-			setHelpText( HELP_TEXT.valid );
-		} else {
-			setHelpText( HELP_TEXT.error );
-		}
-	}, [ url, isCheckingEmbed, isValidEmbed ] );
+	let helpText = HELP_TEXT.default;
+	if ( url && isCheckingEmbed ) {
+		helpText = HELP_TEXT.checking();
+	} else if ( url ) {
+		helpText = isValidEmbed ? HELP_TEXT.valid : HELP_TEXT.error;
+	}
 
 	const focusInput = () => {
 		setTimeout( () => urlInputRef.current?.focus(), 50 );
@@ -93,6 +121,7 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 		async ( urlToCheck ) => {
 			if ( ! urlToCheck ) {
 				setIsValidEmbed( false );
+				setQuotesDisallowed( false );
 				return;
 			}
 
@@ -126,24 +155,7 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 					if ( response && response.provider_name ) {
 						setAttributes( { embedPost: true, isValidActivityPub: true } ); // Auto-enable embedding when we get valid embed info.
 						setIsValidEmbed( true );
-
-						// Advisory only (FEP-044f): warn when the author's policy excludes everyone but themselves.
-						try {
-							const object = await apiFetch( {
-								path: '/activitypub/1.0/proxy',
-								method: 'POST',
-								data: { id: urlToCheck },
-							} );
-							const canQuote = object?.interactionPolicy?.canQuote || {};
-							const automatic = [].concat( canQuote.automaticApproval || [] );
-							const manual = [].concat( canQuote.manualApproval || [] );
-							const author = object?.attributedTo;
-							setQuotesDisallowed(
-								automatic.length > 0 && automatic.every( ( a ) => a === author ) && manual.length === 0
-							);
-						} catch ( error ) {
-							setQuotesDisallowed( false );
-						}
+						setQuotesDisallowed( await quotesDisallowedFor( urlToCheck ) );
 					} else {
 						setAttributes( { isValidActivityPub: false } );
 						setIsValidEmbed( false );
@@ -209,12 +221,12 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 						) }
 					</Notice>
 				) }
-				{ quoteState?.rejected && (
+				{ answeredUrl && quoteState?.rejected && (
 					<Notice status="error" isDismissible={ false }>
 						{ __( 'The author declined this quote. It is shown as a link only.', 'activitypub' ) }
 					</Notice>
 				) }
-				{ quoteState?.authorization && ! quoteState?.rejected && (
+				{ answeredUrl && quoteState?.authorization && ! quoteState?.rejected && (
 					<Notice status="success" isDismissible={ false }>
 						{ __( 'The author approved this quote.', 'activitypub' ) }
 					</Notice>
