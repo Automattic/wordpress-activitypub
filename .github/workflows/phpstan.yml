@@ -1,0 +1,40 @@
+name: PHPStan
+on:
+  push:
+    branches:
+      - trunk
+    paths:
+      - '**/*.php'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'phpstan.neon.dist'
+      - 'phpstan-baseline.neon'
+      - '.github/workflows/phpstan.yml'
+      - '!build/**/*.asset.php'
+  pull_request:
+    paths:
+      - '**/*.php'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'phpstan.neon.dist'
+      - 'phpstan-baseline.neon'
+      - '.github/workflows/phpstan.yml'
+      - '!build/**/*.asset.php'
+permissions:
+  contents: read
+jobs:
+  phpstan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer
+      - name: Install Composer dependencies for PHP
+        uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4
+      - name: Analyse
+        run: composer analyze -- --no-progress --error-format=github

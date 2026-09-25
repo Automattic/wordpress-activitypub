@@ -2,6 +2,7 @@
 
 ## Table of Contents
 - [PHP Code Standards](#php-code-standards)
+- [Static Analysis](#static-analysis)
 - [JavaScript Standards](#javascript-standards)
 - [CSS Standards](#css-standards)
 - [Pre-commit Automation](#pre-commit-automation)
@@ -53,6 +54,22 @@ For complete PHP coding standards including:
 See [PHP Coding Standards](php-coding-standards.md).
 
 **Important:** All DocBlock descriptions must end with proper punctuation (periods).
+
+## Static Analysis
+
+PHPStan checks the PHP code for type errors and for missing type declarations:
+
+```bash
+composer analyze
+```
+
+The configuration lives in `phpstan.neon.dist`. It runs at level 6, so every new or changed method needs parameter and return types. `phpstan-baseline.neon` lists the findings that existed before PHPStan was introduced, so only new findings fail the check. When you type an existing file, remove its entries from the baseline, or regenerate it:
+
+```bash
+composer analyze -- --generate-baseline phpstan-baseline.neon
+```
+
+Integrations reference classes of other plugins that are not installed here; those "class not found" findings are ignored for the `integration/` directory. WP-CLI is covered by the small stubs in `tests/phpstan/stubs/`.
 
 ## JavaScript Standards
 

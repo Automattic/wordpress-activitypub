@@ -1,0 +1,28 @@
+includes:
+	- vendor/szepeviktor/phpstan-wordpress/extension.neon
+	- phpstan-baseline.neon
+
+parameters:
+	level: 6
+	phpVersion: 70400
+	paths:
+		- includes
+		- integration
+		- activitypub.php
+	excludePaths:
+		# Extends a class from the Stream plugin, which PHPStan cannot analyse without it.
+		- integration/stream/class-connector.php
+	bootstrapFiles:
+		- tests/phpstan/bootstrap.php
+	scanFiles:
+		- tests/phpstan/stubs/wp-cli.php
+		- tests/phpstan/stubs/wp-cli-utils.php
+	treatPhpDocTypesAsCertain: false
+	ignoreErrors:
+		# Integrations talk to other plugins that are not installed here.
+		-
+			identifiers:
+				- class.notFound
+				- function.notFound
+			paths:
+				- integration/*
