@@ -77,14 +77,8 @@ class Undo {
 			return $data;
 		}
 
-		/*
-		 * Verify the user owns this outbox item. Blog and application items are both stored with
-		 * author 0, so the actor type tells them apart.
-		 */
-		if (
-			(int) $outbox_item->post_author !== $user_id ||
-			\get_post_meta( $outbox_item->ID, '_activitypub_activity_actor', true ) !== Actors::get_type_by_id( $user_id )
-		) {
+		// Verify the user owns this outbox item. Blog actor items are stored with author 0.
+		if ( (int) $outbox_item->post_author !== $user_id ) {
 			return new \WP_Error(
 				'activitypub_forbidden',
 				\__( 'You can only undo your own activities.', 'activitypub' ),
