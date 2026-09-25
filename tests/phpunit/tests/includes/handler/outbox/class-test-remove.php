@@ -32,6 +32,9 @@ class Test_Remove extends \WP_UnitTestCase {
 
 		$this->user_id = self::factory()->user->create( array( 'role' => 'author' ) );
 
+		// The REST layer only dispatches to a handler for the authenticated owner.
+		\wp_set_current_user( $this->user_id );
+
 		$user = \get_user_by( 'id', $this->user_id );
 		$user->add_cap( 'activitypub' );
 
@@ -189,5 +192,78 @@ class Test_Remove extends \WP_UnitTestCase {
 			\has_filter( 'activitypub_outbox_remove', array( Remove::class, 'handle_remove' ) ),
 			'Filter should be registered.'
 		);
+	}
+
+	/**
+	 * A user who owns the post but may no longer edit it is refused.
+	 *
+	 * A contributor cannot edit their own post once it is published, so ownership alone
+	 * must not be enough.
+	 *
+	 * @covers ::handle_remove
+	 */
+	public function test_handle_remove_requires_the_capability_on_an_own_post() {
+		$contributor = self::factory()->user->create( array( 'role' => 'contributor' ) );
+		\wp_set_current_user( $contributor );
+		\get_user_by( 'id', $contributor )->add_cap( 'activitypub' );
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => $contributor,
+				'post_status' => 'publish',
+			)
+		);
+
+		\stick_post( $post_id );
+
+		$data = array(
+			'type'   => 'Remove',
+			'object' => \get_permalink( $post_id ),
+			'target' => Actors::get_by_id( $contributor )->get_featured(),
+		);
+
+		$result = Remove::handle_remove( $data, $contributor );
+
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_forbidden', $result->get_error_code() );
+		$this->assertTrue( \is_sticky( $post_id ) );
+	}
+
+	/**
+	 * Test that the blog actor can only unfeature posts its user may edit.
+	 *
+	 * @covers ::handle_remove
+	 */
+	public function test_handle_remove_as_blog_actor_requires_capability() {
+		// The blog actor has to be enabled to have a featured collection.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$other_user = self::factory()->user->create( array( 'role' => 'author' ) );
+		$post_id    = self::factory()->post->create(
+			array(
+				'post_author' => $other_user,
+				'post_status' => 'publish',
+			)
+		);
+
+		\stick_post( $post_id );
+
+		$data = array(
+			'type'   => 'Remove',
+			'object' => \get_permalink( $post_id ),
+			'target' => Actors::get_by_id( Actors::BLOG_USER_ID )->get_featured(),
+		);
+
+		// An author acting as the blog can't unfeature someone else's post.
+		$result = Remove::handle_remove( $data, Actors::BLOG_USER_ID );
+		$this->assertWPError( $result );
+		$this->assertEquals( 'activitypub_forbidden', $result->get_error_code() );
+		$this->assertTrue( \is_sticky( $post_id ) );
+
+		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		Remove::handle_remove( $data, Actors::BLOG_USER_ID );
+		$this->assertFalse( \is_sticky( $post_id ) );
+
+		\delete_option( 'activitypub_actor_mode' );
 	}
 }

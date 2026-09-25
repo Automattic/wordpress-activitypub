@@ -84,6 +84,114 @@ class Test_Dispatcher extends ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * An outbox row whose stored activity cannot be read must be retired, not dereferenced.
+	 *
+	 * The cron worker would otherwise call Activity getters on a WP_Error and take the whole run
+	 * down with it, so one unreadable row would stop every activity queued behind it.
+	 *
+	 * @covers ::process_outbox
+	 */
+	public function test_process_outbox_retires_an_unreadable_row() {
+		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+
+		// Corrupt the stored activity the way a truncated write would.
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update( $wpdb->posts, array( 'post_content' => '{not valid json' ), array( 'ID' => $outbox_item->ID ) );
+		\clean_post_cache( $outbox_item->ID );
+
+		$this->assertInstanceOf( 'WP_Error', Outbox::get_activity( $outbox_item->ID ) );
+
+		\update_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', 100 );
+
+		Dispatcher::process_outbox( $outbox_item->ID );
+
+		$this->assertEquals( 'publish', \get_post( $outbox_item->ID )->post_status, 'The row must not be retried.' );
+		$this->assertEmpty( \get_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', true ), 'The batch offset must not outlive the row.' );
+	}
+
+	/**
+	 * A row that becomes unreadable between batches must be retired there too.
+	 *
+	 * Every stage reads the row again, so a row that goes bad after the first one would otherwise stay
+	 * pending forever, with the offset of the batch it never finished.
+	 *
+	 * @covers ::send_to_followers
+	 */
+	public function test_send_to_followers_retires_an_unreadable_row() {
+		$outbox_item = $this->get_unreadable_outbox_item();
+
+		\update_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', 100 );
+
+		Dispatcher::send_to_followers( $outbox_item->ID );
+
+		$this->assertEquals( 'publish', \get_post( $outbox_item->ID )->post_status, 'The row must not be retried.' );
+		$this->assertEmpty( \get_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', true ), 'The batch offset must not outlive the row.' );
+	}
+
+	/**
+	 * A retry of a row that has become unreadable must retire it instead of resending it.
+	 *
+	 * @covers ::retry_send_to_followers
+	 */
+	public function test_retry_retires_an_unreadable_row() {
+		$outbox_item = $this->get_unreadable_outbox_item();
+
+		\update_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', 100 );
+
+		$transient_key = 'activitypub_retry_' . \wp_generate_password( 12, false );
+		\set_transient( $transient_key, array( 'https://example.com/inbox' ), WEEK_IN_SECONDS );
+
+		Dispatcher::retry_send_to_followers( $transient_key, $outbox_item->ID );
+
+		$this->assertEquals( 'publish', \get_post( $outbox_item->ID )->post_status, 'The row must not be retried.' );
+		$this->assertEmpty( \get_post_meta( $outbox_item->ID, '_activitypub_outbox_offset', true ), 'The batch offset must not outlive the row.' );
+	}
+
+	/**
+	 * Queue an activity and corrupt its stored copy the way a truncated write would.
+	 *
+	 * @return \WP_Post The outbox item.
+	 */
+	private function get_unreadable_outbox_item() {
+		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update( $wpdb->posts, array( 'post_content' => '{not valid json' ), array( 'ID' => $outbox_item->ID ) );
+		\clean_post_cache( $outbox_item->ID );
+
+		return $outbox_item;
+	}
+
+	/**
+	 * A retry for a row that has been deleted must not publish whatever post happens to be global.
+	 *
+	 * @covers ::retry_send_to_followers
+	 */
+	public function test_retry_does_not_publish_the_global_post() {
+		$draft_id = self::factory()->post->create( array( 'post_status' => 'draft' ) );
+
+		$post_id     = self::factory()->post->create( array( 'post_author' => self::$user_id ) );
+		$outbox_item = $this->get_latest_outbox_item( \add_query_arg( 'p', $post_id, \home_url( '/' ) ) );
+		\wp_delete_post( $outbox_item->ID, true );
+
+		$transient_key = 'activitypub_retry_' . \wp_generate_password( 12, false );
+		\set_transient( $transient_key, array( 'https://example.com/inbox' ), WEEK_IN_SECONDS );
+
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- the point of the test is what a stray global post does.
+		$GLOBALS['post'] = \get_post( $draft_id );
+
+		Dispatcher::retry_send_to_followers( $transient_key, $outbox_item->ID );
+
+		unset( $GLOBALS['post'] );
+
+		$this->assertEquals( 'draft', \get_post_status( $draft_id ), 'An unrelated post must not be published.' );
+	}
+
+	/**
 	 * Data provider for test_send_to_inboxes.
 	 *
 	 * @return array

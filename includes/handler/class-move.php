@@ -88,7 +88,7 @@ class Move {
 			}
 
 			$success = true;
-			$result  = \wp_delete_post( $origin_object->ID );
+			$result  = Remote_Actors::delete( $origin_object->ID );
 		}
 
 		/**

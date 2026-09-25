@@ -375,7 +375,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * @return array Response object on success, or WP_Error object on failure.
 	 */
 	public function prepare_item_for_response( $item, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		$activity = Outbox::get_activity( $item->ID );
+		$activity = Outbox::get_activity( $item );
 
 		if ( \is_wp_error( $activity ) ) {
 			return $activity;

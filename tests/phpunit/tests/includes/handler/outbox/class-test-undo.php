@@ -44,6 +44,7 @@ class Test_Undo extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		\add_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33, 4 );
+		\delete_option( 'activitypub_actor_mode' );
 
 		parent::tear_down();
 	}
@@ -345,5 +346,65 @@ class Test_Undo extends \WP_UnitTestCase {
 			\has_filter( 'activitypub_outbox_undo', array( Undo::class, 'handle_undo' ) ),
 			'Filter should be registered.'
 		);
+	}
+
+	/**
+	 * Test that the blog actor can't undo another actor's activity.
+	 *
+	 * @covers ::handle_undo
+	 */
+	public function test_handle_undo_as_blog_actor_rejects_user_activity() {
+		$guid = $this->create_outbox_follow( 'https://example.com/users/someone' );
+
+		$result = Undo::handle_undo(
+			array(
+				'type'   => 'Undo',
+				'object' => $guid,
+			),
+			0
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'activitypub_forbidden', $result->get_error_code() );
+	}
+
+	/**
+	 * Test that the blog actor can undo its own activity.
+	 *
+	 * @covers ::handle_undo
+	 */
+	public function test_handle_undo_as_blog_actor_undoes_own_activity() {
+		// The blog actor has to be enabled for its Undo to be added to the outbox.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
+		$post_id = \wp_insert_post(
+			array(
+				'post_type'    => Outbox::POST_TYPE,
+				'post_title'   => '[Like] Test',
+				'post_content' => \wp_json_encode(
+					array(
+						'type'   => 'Like',
+						'object' => 'https://example.com/note/1',
+					)
+				),
+				'post_author'  => 0,
+				'post_status'  => 'publish',
+				'guid'         => 'http://example.org/outbox/like-blog',
+				'meta_input'   => array(
+					'_activitypub_activity_type'  => 'Like',
+					'_activitypub_activity_actor' => 'blog',
+				),
+			)
+		);
+
+		$result = Undo::handle_undo(
+			array(
+				'type'   => 'Undo',
+				'object' => \get_the_guid( $post_id ),
+			),
+			0
+		);
+
+		$this->assertIsInt( $result, 'The blog may undo its own activity.' );
 	}
 }

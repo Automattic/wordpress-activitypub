@@ -78,8 +78,8 @@ class Remove {
 			);
 		}
 
-		// Verify the user owns this post.
-		if ( $user_id > 0 && (int) $post->post_author !== $user_id ) {
+		// Verify the user owns this post and may edit it.
+		if ( ( $user_id > 0 && (int) $post->post_author !== $user_id ) || ! \current_user_can( 'edit_post', $post->ID ) ) {
 			return new \WP_Error(
 				'activitypub_forbidden',
 				\__( 'You can only unfeature your own posts.', 'activitypub' ),

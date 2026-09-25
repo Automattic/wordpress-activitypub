@@ -9,11 +9,13 @@ namespace Activitypub\Collection;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
+use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Server;
 use Activitypub\Scheduler;
 use Activitypub\Webfinger;
 
 use function Activitypub\add_to_outbox;
+use function Activitypub\is_activity;
 use function Activitypub\object_to_uri;
 use function Activitypub\user_can_act_as_blog;
 
@@ -97,23 +99,43 @@ class Outbox {
 			return $object_id;
 		}
 
+		$now = \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339 );
+
+		if ( ! $activity->get_published() ) {
+			$activity->set_published( $now );
+		}
+
+		if ( 'Update' === $activity->get_type() ) {
+			// The queue time overrides what the transformer read off the post, which is its last content change.
+			$activity->set_updated( $now );
+		}
+
 		// Save activity in the context of an activitypub request.
 		\add_filter( 'activitypub_is_activitypub_request', '__return_true' );
 
+		$date        = \current_time( 'mysql' );
 		$outbox_item = array(
-			'post_type'    => self::POST_TYPE,
-			'post_title'   => \sprintf(
+			'post_type'     => self::POST_TYPE,
+			'post_date'     => $date,
+
+			/*
+			 * A `pending` row would otherwise keep the `0000-00-00 00:00:00` sentinel here, because
+			 * WordPress only derives this column for statuses that do not float and wp_publish_post()
+			 * never repairs it, leaving every reader to compare a local date against a GMT one.
+			 */
+			'post_date_gmt' => \get_gmt_from_date( $date ),
+			'post_title'    => \sprintf(
 				/* translators: 1. Activity type, 2. Object Title or Excerpt */
 				\__( '[%1$s] %2$s', 'activitypub' ),
 				$activity->get_type(),
 				\wp_trim_words( $title, 5 )
 			),
 			// Persist the blind audience so later dispatch can compute recipients from `bto`/`bcc`.
-			'post_content' => \wp_slash( $activity->to_json( true, true ) ),
+			'post_content'  => \wp_slash( $activity->to_json( true, true ) ),
 			// ensure that user ID is not below 0.
-			'post_author'  => \max( $user_id, 0 ),
-			'post_status'  => 'pending',
-			'meta_input'   => array(
+			'post_author'   => \max( $user_id, 0 ),
+			'post_status'   => 'pending',
+			'meta_input'    => array(
 				'_activitypub_object_id'         => $object_id,
 				'_activitypub_activity_type'     => $activity->get_type(),
 				'_activitypub_activity_actor'    => $actor_type,
@@ -272,6 +294,13 @@ class Outbox {
 
 		$visibility = \get_post_meta( $outbox_item->ID, 'activitypub_content_visibility', true );
 
+		/*
+		 * The retraction is its own activity, and pre_fill_activity_from_object() copies dates from the
+		 * object it wraps, so the activity being retracted would otherwise lend it its publication date.
+		 */
+		$activity->set_published( null );
+		$activity->set_updated( null );
+
 		return add_to_outbox( $activity, $type, $outbox_item->post_author, $visibility );
 	}
 
@@ -344,11 +373,19 @@ class Outbox {
 	 */
 	public static function reschedule( $outbox_item ) {
 		$outbox_item = \get_post( $outbox_item );
+		$date        = \current_time( 'mysql' );
 
-		$outbox_item->post_status = 'pending';
-		$outbox_item->post_date   = \current_time( 'mysql' );
-
-		\wp_update_post( $outbox_item );
+		\wp_update_post(
+			array(
+				'ID'            => $outbox_item->ID,
+				'post_status'   => 'pending',
+				'post_date'     => $date,
+				// Both columns move together, because readers take the date from whichever one they use.
+				'post_date_gmt' => \get_gmt_from_date( $date ),
+				// Without this, WordPress reads an undated edit of a `pending` row that still holds the `0000-00-00 00:00:00` sentinel as a request to keep floating, and drops the dates passed here.
+				'edit_date'     => true,
+			)
+		);
 
 		Scheduler::schedule_outbox_activity_for_federation( $outbox_item->ID );
 
@@ -372,46 +409,26 @@ class Outbox {
 			);
 		}
 
-		$activity_object = \json_decode( $outbox_item->post_content, true );
-		$type            = \get_post_meta( $outbox_item->ID, '_activitypub_activity_type', true );
+		$activity = Activity::init_from_json( $outbox_item->post_content );
 
-		if ( ! \is_array( $activity_object ) ) {
+		if ( \is_wp_error( $activity ) ) {
+			return $activity;
+		}
+
+		// A row written before 5.6.0 holds the object, so it hydrates with an object type. It cannot be dispatched as it stands, and rebuilding it on every read is not worth carrying.
+		if ( ! is_activity( $activity ) ) {
 			return new \WP_Error(
 				'activitypub_outbox_item_invalid',
-				\__( 'Outbox item has no valid activity.', 'activitypub' ),
+				\__( 'Outbox item does not hold an activity.', 'activitypub' ),
 				array( 'status' => 500 )
 			);
 		}
 
-		if ( ( $activity_object['type'] ?? null ) === $type ) {
-			$activity = Activity::init_from_array( $activity_object );
-			if ( ! $activity->get_actor() ) {
-				$actor = self::get_actor( $outbox_item );
-				if ( \is_wp_error( $actor ) ) {
-					return $actor;
-				}
-				$activity->set_actor( $actor->get_id() );
-			}
-		} else {
-			$actor = self::get_actor( $outbox_item );
-			if ( \is_wp_error( $actor ) ) {
-				return $actor;
-			}
-
-			$activity = new Activity();
-			$activity->set_type( $type );
-			$activity->set_id( $outbox_item->guid );
-			$activity->set_actor( $actor->get_id() );
-			// Pre-fill the Activity with data (for example cc and to).
-			$activity->set_object( $activity_object );
-		}
-
-		if ( 'Update' === $type ) {
-			$activity->set_updated( \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \strtotime( $outbox_item->post_modified ) ) );
-		}
-
 		/**
 		 * Filters the Activity object before it is returned.
+		 *
+		 * The row deliberately keeps more than it sends, a Delete keeps its Tombstone and a hand-built
+		 * Like its object, and this is the last point before any consumer sees it.
 		 *
 		 * @param Activity $activity    The Activity object.
 		 * @param \WP_Post $outbox_item The outbox item post object.
@@ -471,8 +488,10 @@ class Outbox {
 		 *
 		 * Users authorized to act as the blog actor are treated as the author of
 		 * blog-actor items so they can read the same private outbox they can post to.
+		 *
+		 * An OAuth caller additionally needs `read`, the scope the paged outbox asks for.
 		 */
-		if ( \is_user_logged_in() ) {
+		if ( \is_user_logged_in() && Server::permits_scope( Scope::READ ) ) {
 			$author = (int) $outbox_item->post_author;
 
 			if ( \get_current_user_id() === $author ) {
@@ -534,7 +553,7 @@ class Outbox {
 	 * @return string The title.
 	 */
 	private static function get_object_title( $activity_object ) {
-		if ( ! $activity_object ) {
+		if ( ! $activity_object || \is_array( $activity_object ) ) {
 			return '';
 		}
 

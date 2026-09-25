@@ -24,7 +24,10 @@ class Scope {
 	const WRITE = 'write';
 
 	/**
-	 * Push access scope - subscribe to SSE streams.
+	 * Push access scope - receive live updates.
+	 *
+	 * Still accepted and granted, but no endpoint checks it on its own: the event streams deliver
+	 * the same data as the paged collections and therefore require `read`.
 	 */
 	const PUSH = 'push';
 
@@ -324,7 +327,7 @@ class Scope {
 		return array(
 			self::READ  => \__( 'Read actor profile, collections, and objects', 'activitypub' ),
 			self::WRITE => \__( 'Create activities via POST to outbox', 'activitypub' ),
-			self::PUSH  => \__( 'Subscribe to real-time event streams', 'activitypub' ),
+			self::PUSH  => \__( 'Receive live updates; which updates depends on the read permission', 'activitypub' ),
 		);
 	}
 

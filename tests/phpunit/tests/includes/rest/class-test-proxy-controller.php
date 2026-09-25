@@ -597,4 +597,41 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 
 		\remove_filter( 'pre_http_request', $respond );
 	}
+
+	/**
+	 * Test that the proxy stream needs the read scope.
+	 *
+	 * @covers ::get_stream_permissions_check
+	 */
+	public function test_proxy_stream_requires_the_read_scope() {
+		$respond = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'type' => 'Person',
+						'id'   => 'https://example.com/users/streamer',
+					)
+				),
+				'headers'  => array( 'content-type' => 'application/activity+json' ),
+			);
+		};
+		\add_filter( 'pre_http_request', $respond );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy/stream' );
+		$request->set_query_params( array( 'id' => 'https://example.com/users/streamer' ) );
+
+		// A token without read is refused by the gate.
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH ), self::$user_id ) );
+		$response = $this->server->dispatch( $request );
+		$this->assertEquals( 403, $response->get_status(), 'A push-only token must not open the proxy stream.' );
+		$this->assertEquals( 'activitypub_insufficient_scope', $response->get_data()['code'] );
+
+		// A read token passes the gate and reaches the handler, which finds no eventStream on the mocked actor.
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::READ ), self::$user_id ) );
+		$response = $this->server->dispatch( $request );
+		$this->assertEquals( 'activitypub_no_event_stream', $response->get_data()['code'], 'A read token opens the proxy stream.' );
+
+		\remove_filter( 'pre_http_request', $respond );
+	}
 }
