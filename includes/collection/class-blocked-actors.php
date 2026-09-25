@@ -33,7 +33,7 @@ class Blocked_Actors {
 			/**
 			 * Fired when an actor is blocked.
 			 *
-			 * @param string $value   The blocked actor's canonical ID, whatever identifier the block named.
+			 * @param string $value   The blocked actor's canonical ID, also when the block named the actor by another identifier.
 			 * @param string $type    The block type (actor, domain, keyword).
 			 * @param int    $user_id The user ID.
 			 */
