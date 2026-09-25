@@ -50,19 +50,29 @@ class Embed {
 	 */
 	public static function get_html_for_object( $activity_object, $inline_css = true ) {
 		// `attributedTo` may be a string, an embedded actor object, or a list of references. Normalize it to a URI string before use.
-		$author_url  = object_to_uri( $activity_object['attributedTo'] ?? '' ) ?? '';
-		$avatar_url  = object_to_uri( $activity_object['icon']['url'] ?? '' ) ?? '';
-		$author_name = $author_url;
+		$author_url = object_to_uri( $activity_object['attributedTo'] ?? '' ) ?? '';
+		$avatar_url = object_to_uri( $activity_object['icon']['url'] ?? '' ) ?? '';
+		$author     = array();
 
-		// If we don't have an avatar URL, but we have an author URL, try to fetch it.
-		if ( ! $avatar_url && $author_url ) {
+		/*
+		 * A post carries its author's address, rarely their name and almost never their avatar,
+		 * so the actor is asked for both. The lookup is cached, so a rendered post costs nothing
+		 * beyond the first one.
+		 */
+		if ( $author_url ) {
 			$author = Http::get_remote_object( $author_url );
+
 			if ( \is_wp_error( $author ) ) {
 				$author = array();
 			} else {
-				$avatar_url  = object_to_uri( $author['icon']['url'] ?? '' ) ?? '';
-				$author_name = empty( $author['name'] ) ? $author_name : $author['name'];
+				$avatar_url = $avatar_url ? $avatar_url : object_to_uri( $author['icon']['url'] ?? '' ) ?? '';
 			}
+		}
+
+		// The display name, the handle, and the address as the last resort.
+		$author_name = $author['name'] ?? '';
+		if ( '' === $author_name ) {
+			$author_name = $author['preferredUsername'] ?? $author_url;
 		}
 
 		// Create Webfinger where not found.
@@ -120,6 +130,16 @@ class Embed {
 			array(
 				'audio'       => $audio,
 				'author_name' => $author_name,
+				/**
+				 * Filters the microformat the embed claims about the post it sits in.
+				 *
+				 * A reply embed is the post it replies to, a quote embed the post it quotes.
+				 *
+				 * @since unreleased
+				 *
+				 * @param string $microformat The microformat class. Default `u-in-reply-to`.
+				 */
+				'microformat' => \apply_filters( 'activitypub_embed_microformat', 'u-in-reply-to' ),
 				'author_url'  => $author_url,
 				'avatar_url'  => $avatar_url,
 				'boosts'      => $boosts,

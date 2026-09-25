@@ -817,6 +817,17 @@ class Blocks {
 	}
 
 	/**
+	 * Report the quotation microformat for an embed rendered inside the Quote block.
+	 *
+	 * @since unreleased
+	 *
+	 * @return string The microformat class.
+	 */
+	public static function quotation_microformat() {
+		return 'u-quotation-of';
+	}
+
+	/**
 	 * Render the Quote block.
 	 *
 	 * @since unreleased
@@ -855,7 +866,12 @@ class Blocks {
 		$embed = null;
 		if ( $show_embed ) {
 			$embed_width = ! empty( $GLOBALS['content_width'] ) ? $GLOBALS['content_width'] : 600;
-			$embed       = \wp_oembed_get( $url, array( 'width' => $embed_width ) );
+
+			// The embedded post is quoted here, not replied to.
+			\add_filter( 'activitypub_embed_microformat', array( self::class, 'quotation_microformat' ) );
+			$embed = \wp_oembed_get( $url, array( 'width' => $embed_width ) );
+			\remove_filter( 'activitypub_embed_microformat', array( self::class, 'quotation_microformat' ) );
+
 			if ( $embed ) {
 				\wp_enqueue_script( 'wp-embed' );
 			}
@@ -867,7 +883,8 @@ class Blocks {
 			\esc_html( \str_replace( array( 'https://', 'http://' ), '', $url ) )
 		);
 
-		$inner = $embed ? $link . $embed : '<p>' . $link . '</p>';
+		// The embed carries the link, so it replaces it, the way the Reply block does it.
+		$inner = $embed ? $embed : '<p>' . $link . '</p>';
 
 		if ( $is_quote ) {
 			$inner = '<cite class="u-quotation-of h-cite">' . $inner . '</cite>';
