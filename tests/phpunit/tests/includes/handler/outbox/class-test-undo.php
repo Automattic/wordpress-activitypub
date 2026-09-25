@@ -44,6 +44,7 @@ class Test_Undo extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		\add_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33, 4 );
+		\delete_option( 'activitypub_actor_mode' );
 
 		parent::tear_down();
 	}
