@@ -1141,4 +1141,29 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::READ ), $admin_id ) );
 		$this->assertInstanceOf( Activity::class, Outbox::maybe_get_activity( $post ) );
 	}
+
+	/**
+	 * Test that an activity with a list of objects can be added.
+	 *
+	 * A list stays an array in the Activity, so the title lookup must not treat it as an object.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_with_list_of_objects() {
+		$activity = new Activity();
+		$activity->set_type( 'Add' );
+		$activity->set_id( 'https://example.com/activities/list-of-objects' );
+		$activity->set_object(
+			array(
+				'https://example.com/notes/1',
+				'https://example.com/notes/2',
+			)
+		);
+
+		$this->assertIsArray( $activity->get_object(), 'The object list stays an array.' );
+
+		$id = Outbox::add( $activity, self::$user_id );
+
+		$this->assertIsInt( $id );
+	}
 }
