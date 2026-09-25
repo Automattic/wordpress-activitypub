@@ -222,6 +222,14 @@ abstract class File {
 		$tmp_file = $result['file'];
 		$paths    = static::get_storage_paths( $entity_id );
 
+		/*
+		 * The image is optimized while it is still a temporary file, so the name it is published
+		 * under is the format it ends up in. Converting it afterwards would rename the file the
+		 * lookup has just been told about.
+		 */
+		$max_dimension = $options['max_dimension'] ?? static::get_max_dimension();
+		$tmp_file      = static::optimize_image( $tmp_file, $max_dimension );
+
 		// Create directory if it doesn't exist.
 		if ( ! \wp_mkdir_p( $paths['basedir'] ) ) {
 			\wp_delete_file( $tmp_file );
@@ -249,11 +257,6 @@ abstract class File {
 				return false;
 			}
 		}
-
-		// Optimize image if applicable.
-		$max_dimension = $options['max_dimension'] ?? static::get_max_dimension();
-		$file_path     = static::optimize_image( $file_path, $max_dimension );
-		$file_name     = \basename( $file_path );
 
 		$local_url = $paths['baseurl'] . '/' . $file_name;
 
@@ -642,14 +645,13 @@ abstract class File {
 		// Check if WebP is supported.
 		$can_webp = $editor->supports_mime_type( 'image/webp' );
 
-		/*
-		 * The converted file keeps the name the cache looks it up under, the hash of its URL, so
-		 * the new name is the same one with another extension: an empty suffix leaves out the
-		 * `-{width}x{height}` part core adds by default.
-		 */
+		// Determine output format and save.
+		$dir = \dirname( $file_path );
+
 		if ( $can_webp ) {
 			// Convert to WebP.
-			$result = $editor->save( $editor->generate_filename( '', null, 'webp' ), 'image/webp' );
+			$new_name = \wp_unique_filename( $dir, \preg_replace( '/\.[^.]+$/', '.webp', \basename( $file_path ) ) );
+			$result   = $editor->save( $dir . '/' . $new_name, 'image/webp' );
 		} elseif ( \in_array( $mime_type, array( 'image/png', 'image/webp' ), true ) ) {
 			// Keep original format for potentially transparent images when WebP not available.
 			if ( ! $needs_resize ) {
@@ -658,7 +660,8 @@ abstract class File {
 			$result = $editor->save( $file_path );
 		} else {
 			// Convert to JPEG when WebP not available.
-			$result = $editor->save( $editor->generate_filename( '', null, 'jpg' ), 'image/jpeg' );
+			$new_name = \wp_unique_filename( $dir, \preg_replace( '/\.[^.]+$/', '.jpg', \basename( $file_path ) ) );
+			$result   = $editor->save( $dir . '/' . $new_name, 'image/jpeg' );
 		}
 
 		if ( \is_wp_error( $result ) ) {
