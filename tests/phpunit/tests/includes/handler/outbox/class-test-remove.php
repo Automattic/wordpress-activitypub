@@ -32,6 +32,9 @@ class Test_Remove extends \WP_UnitTestCase {
 
 		$this->user_id = self::factory()->user->create( array( 'role' => 'author' ) );
 
+		// The REST layer only dispatches to a handler for the authenticated owner.
+		\wp_set_current_user( $this->user_id );
+
 		$user = \get_user_by( 'id', $this->user_id );
 		$user->add_cap( 'activitypub' );
 

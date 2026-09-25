@@ -34,6 +34,9 @@ class Test_Update extends \WP_UnitTestCase {
 		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
 
 		$this->user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+
+		// The REST layer only dispatches to a handler for the authenticated owner.
+		\wp_set_current_user( $this->user_id );
 	}
 
 	/**
@@ -251,5 +254,39 @@ class Test_Update extends \WP_UnitTestCase {
 		$this->assertTrue( $fired, 'activitypub_outbox_updated_post action should fire.' );
 
 		\remove_action( 'activitypub_outbox_updated_post', $callback );
+	}
+
+	/**
+	 * Test that the blog actor can only update posts its user may edit.
+	 *
+	 * @covers ::handle_update
+	 */
+	public function test_outgoing_update_as_blog_actor_requires_capability() {
+		$author  = self::factory()->user->create( array( 'role' => 'author' ) );
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author'  => $this->user_id,
+				'post_status'  => 'publish',
+				'post_content' => 'Original',
+			)
+		);
+
+		\wp_set_current_user( $author );
+
+		$result = Update::handle_update(
+			array(
+				'type'   => 'Update',
+				'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+				'object' => array(
+					'id'      => \get_permalink( $post_id ),
+					'type'    => 'Note',
+					'content' => 'Changed',
+				),
+			),
+			0
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'Original', \get_post_field( 'post_content', $post_id ) );
 	}
 }

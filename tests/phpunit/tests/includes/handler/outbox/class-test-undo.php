@@ -346,4 +346,24 @@ class Test_Undo extends \WP_UnitTestCase {
 			'Filter should be registered.'
 		);
 	}
+
+	/**
+	 * Test that the blog actor can't undo another actor's activity.
+	 *
+	 * @covers ::handle_undo
+	 */
+	public function test_handle_undo_as_blog_actor_rejects_user_activity() {
+		$guid = $this->create_outbox_follow( 'https://example.com/users/someone' );
+
+		$result = Undo::handle_undo(
+			array(
+				'type'   => 'Undo',
+				'object' => $guid,
+			),
+			0
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'activitypub_forbidden', $result->get_error_code() );
+	}
 }

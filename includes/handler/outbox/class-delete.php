@@ -87,6 +87,10 @@ class Delete {
 			return false;
 		}
 
+		if ( ! \current_user_can( 'edit_comment', $comment->comment_ID ) ) {
+			return false;
+		}
+
 		if ( \wp_trash_comment( $comment ) ) {
 			return $comment;
 		}
@@ -118,6 +122,10 @@ class Delete {
 
 		// Verify the user owns this post.
 		if ( (int) $post->post_author !== $user_id && $user_id > 0 ) {
+			return false;
+		}
+
+		if ( ! \current_user_can( 'delete_post', $post->ID ) ) {
 			return false;
 		}
 

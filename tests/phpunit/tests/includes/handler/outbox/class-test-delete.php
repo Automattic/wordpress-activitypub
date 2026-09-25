@@ -33,7 +33,10 @@ class Test_Delete extends \WP_UnitTestCase {
 		// Prevent wp_trash_post from triggering the full outbox chain.
 		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
 
-		$this->user_id = self::factory()->user->create();
+		$this->user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		// The REST layer only dispatches to a handler for the authenticated owner.
+		\wp_set_current_user( $this->user_id );
 	}
 
 	/**
@@ -259,5 +262,36 @@ class Test_Delete extends \WP_UnitTestCase {
 			\has_filter( 'activitypub_outbox_delete', array( Delete::class, 'handle_delete' ) ),
 			'Filter should be registered.'
 		);
+	}
+
+	/**
+	 * Test that the blog actor can only delete posts its user may delete.
+	 *
+	 * @covers ::handle_delete
+	 */
+	public function test_handle_delete_as_blog_actor_requires_capability() {
+		$other_user = self::factory()->user->create( array( 'role' => 'author' ) );
+		$post_id    = self::factory()->post->create(
+			array(
+				'post_author' => $other_user,
+				'post_status' => 'publish',
+			)
+		);
+		$data       = array(
+			'type'   => 'Delete',
+			'object' => \get_permalink( $post_id ),
+		);
+
+		// An author allowed to act as the blog still can't delete someone else's post.
+		\add_filter( 'activitypub_user_can_act_as_blog', '__return_true' );
+		Delete::handle_delete( $data, 0 );
+		\remove_filter( 'activitypub_user_can_act_as_blog', '__return_true' );
+
+		$this->assertEquals( 'publish', \get_post_status( $post_id ) );
+
+		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		Delete::handle_delete( $data, 0 );
+
+		$this->assertEquals( 'trash', \get_post_status( $post_id ) );
 	}
 }
