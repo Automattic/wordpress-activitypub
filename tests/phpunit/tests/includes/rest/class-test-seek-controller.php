@@ -12,6 +12,8 @@ use Activitypub\Collection\Following;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
+use Activitypub\OAuth\Scope;
+use Activitypub\Tests\OAuth_Token_Stub;
 
 use function Activitypub\get_rest_url_by_path;
 
@@ -22,6 +24,8 @@ use function Activitypub\get_rest_url_by_path;
  * @coversDefaultClass \Activitypub\Rest\Seek_Controller
  */
 class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {
+	use OAuth_Token_Stub;
+
 
 	/**
 	 * Follower post IDs, in creation order (actor/1 … actor/25).
@@ -1074,5 +1078,25 @@ class Test_Seek_Controller extends \Activitypub\Tests\Test_REST_Controller_Testc
 
 		$this->assertEquals( 401, $response->get_status() );
 		$this->assertEquals( 'activitypub_oauth_required', $response->get_data()['code'] );
+	}
+
+	/**
+	 * Test that a seek with a bearer token needs the read scope.
+	 *
+	 * @covers ::get_item_permissions_check
+	 */
+	public function test_seek_with_token_requires_read_scope() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\wp_set_current_user( $user_id );
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH ), $user_id ) );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/seek' );
+		$request->set_param( 'collection', get_rest_url_by_path( 'actors/' . $user_id . '/outbox' ) );
+		$request->set_param( 'item', 'https://example.org/item' );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertSame( 403, $response->get_status() );
+		$this->assertSame( 'activitypub_insufficient_scope', $response->get_data()['code'] );
 	}
 }

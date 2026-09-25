@@ -10,6 +10,7 @@ namespace Activitypub\OAuth;
 use Activitypub\Sanitize;
 
 use function Activitypub\get_client_ip;
+use function Activitypub\get_url_authority;
 use function Activitypub\resolve_public_host;
 
 /**
@@ -583,11 +584,17 @@ class Client {
 			return $allowed_uri === $redirect_uri;
 		}
 
-		// For loopback, compare path (ignore port).
-		$allowed_path  = $allowed_parts['path'] ?? '/';
-		$redirect_path = $redirect_parts['path'] ?? '/';
+		/*
+		 * For loopback, the URIs have to be equal as strings except for the port (RFC 6749
+		 * Section 3.1.2.3, RFC 8252 Section 7.3). Comparing strings rather than parsed parts also
+		 * tells an empty query, fragment or user name apart from a missing one.
+		 */
+		$without_port = static function ( $uri, $parts ) {
+			// The port directly follows the host, so it is the first `:PORT` before the path, query, fragment or end, with any leading zeros.
+			return isset( $parts['port'] ) ? \preg_replace( '/:0*' . (int) $parts['port'] . '(?=[\/?#]|$)/', '', $uri, 1 ) : $uri;
+		};
 
-		return $allowed_path === $redirect_path;
+		return $without_port( $allowed_uri, $allowed_parts ) === $without_port( $redirect_uri, $redirect_parts );
 	}
 
 	/**
@@ -772,29 +779,35 @@ class Client {
 	 * since the client_id URL typically serves a JSON document (CIMD)
 	 * not intended for end-users.
 	 *
+	 * Both sources are supplied by the client, so the result is limited to http(s) URLs with a
+	 * host and without a user name. The check runs on read to also cover values stored before it existed.
+	 *
 	 * @since 8.1.0
+	 * @since unreleased Only returns http(s) URLs with a host and no user name.
 	 *
 	 * @return string A URL for the client, or empty string if none available.
 	 */
 	public function get_link_url() {
-		$client_uri = $this->get_client_uri();
+		$url = $this->get_client_uri();
 
-		if ( $client_uri ) {
-			return $client_uri;
+		if ( ! $url ) {
+			$redirect_uris = $this->get_redirect_uris();
+			$authority     = ! empty( $redirect_uris ) ? get_url_authority( $redirect_uris[0] ) : false;
+			$url           = $authority ? \trailingslashit( $authority ) : '';
 		}
 
-		$redirect_uris = $this->get_redirect_uris();
-
-		if ( ! empty( $redirect_uris ) ) {
-			$scheme = \wp_parse_url( $redirect_uris[0], PHP_URL_SCHEME );
-			$host   = \wp_parse_url( $redirect_uris[0], PHP_URL_HOST );
-
-			if ( $scheme && $host ) {
-				return \trailingslashit( \sprintf( '%s://%s', $scheme, $host ) );
-			}
+		// The list is explicit: the `wp_allowed_protocols()` default is wider and filterable.
+		if ( ! get_url_authority( $url ) || \strtolower( \wp_kses_bad_protocol( $url, array( 'http', 'https' ) ) ) !== \strtolower( $url ) ) {
+			return '';
 		}
 
-		return '';
+		// A user name in front of the host would make the link read like another site.
+		$parts = \wp_parse_url( $url );
+		if ( isset( $parts['user'] ) || isset( $parts['pass'] ) ) {
+			return '';
+		}
+
+		return $url;
 	}
 
 	/**

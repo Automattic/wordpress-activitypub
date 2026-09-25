@@ -31,7 +31,9 @@ Prefer reading project files and `docs/` over relying on training data for WordP
 
 ## Testing Conventions
 
-See `tests/README.md` for test utilities, data factories, and detailed patterns.
+**MUST read `tests/README.md` and the `test` skill before writing or changing tests.** It covers test utilities, data factories, and detailed patterns.
+
+**One test file per source file.** Tests mirror the file they test: `includes/rest/class-seek-controller.php` → `tests/phpunit/tests/includes/rest/class-test-seek-controller.php`. Add tests to that file; never create a test file that spans several source files. The pre-commit hook enforces this.
 
 ## Documentation Index
 
@@ -42,7 +44,7 @@ docs/php-class-structure.md      — complete directory and class organization
 docs/code-linting.md             — linting configuration and rules
 docs/pull-request.md             — PR workflow details
 docs/release-process.md          — release workflow and versioning
-tests/README.md                  — test utilities, data factories, writing patterns
+tests/README.md                  — test file layout, utilities, data factories, writing patterns
 src/app/README.md                — admin React app: target architecture for new screens
 FEDERATION.md                    — implemented FEPs, supported standards, compatibility
 ```

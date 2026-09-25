@@ -1662,4 +1662,34 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 
 		return \wp_list_pluck( $data['orderedItems'], 'id' );
 	}
+
+	/**
+	 * Test that posting to the outbox needs the write scope.
+	 *
+	 * @covers ::register_routes
+	 */
+	public function test_create_item_requires_write_scope() {
+		// Drop the blanket bypass from set_up() so the real scope check runs.
+		\remove_filter( 'activitypub_oauth_check_permission', '__return_true' );
+		\wp_set_current_user( self::$user_id );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'   => 'Like',
+					'object' => 'https://example.org/note/1',
+				)
+			)
+		);
+
+		foreach ( array( Scope::READ, Scope::PUSH ) as $scope ) {
+			$this->set_oauth_current_token( $this->mock_oauth_token( array( $scope ), self::$user_id ) );
+			$response = \rest_get_server()->dispatch( $request );
+
+			$this->assertSame( 403, $response->get_status(), "A $scope token must not post to the outbox." );
+			$this->assertSame( 'activitypub_insufficient_scope', $response->get_data()['code'] );
+		}
+	}
 }

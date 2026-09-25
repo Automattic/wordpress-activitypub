@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Apps that post on behalf of the blog can now only change or delete content that the connected user is allowed to change or delete.
