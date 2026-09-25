@@ -1,7 +1,7 @@
 import { useBlockProps, InspectorControls } from '@wordpress/block-editor';
 import { TextControl, PanelBody, ToggleControl, Spinner, Notice } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { useCallback, useState } from '@wordpress/element';
+import { useCallback, useEffect, useState } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import apiFetch from '@wordpress/api-fetch';
 import { useEmbedUrl } from '../shared/use-embed-url';
@@ -77,6 +77,11 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 
 	// An answer belongs to the URL it was given for; editing the block to another one starts over.
 	const answeredUrl = quoteState?.request && quoteState.request === url;
+
+	// The warning belongs to the URL it was found for, and the next check sets it again.
+	useEffect( () => {
+		setQuotesDisallowed( false );
+	}, [ url ] );
 
 	// The policy is worth a look only once the URL is known to be an ActivityPub object.
 	const onChecked = useCallback( async ( checkedUrl, isStale ) => {
