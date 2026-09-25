@@ -4,6 +4,7 @@ import { __ } from '@wordpress/i18n';
 import { useCallback, useEffect, useState } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import apiFetch from '@wordpress/api-fetch';
+import { isSafeUrl } from '../shared/safe-url';
 import { useEmbedUrl } from '../shared/use-embed-url';
 
 /**
@@ -159,9 +160,14 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 						onClick={ focusInput }
 						style={ { cursor: 'pointer' } }
 					>
-						<a href={ url } className="u-quotation-of" target="_blank" rel="noreferrer">
-							{ '❝' + url.replace( /^https?:\/\//, '' ) }
-						</a>
+						{ /* The URL is whatever was typed, and React hands a `javascript:` href to the browser as it is. */ }
+						{ isSafeUrl( url ) ? (
+							<a href={ url } className="u-quotation-of" target="_blank" rel="noreferrer">
+								{ '❝' + url.replace( /^https?:\/\//, '' ) }
+							</a>
+						) : (
+							<span className="u-quotation-of">{ url }</span>
+						) }
 					</div>
 				) }
 			</div>
