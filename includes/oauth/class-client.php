@@ -584,15 +584,17 @@ class Client {
 			return $allowed_uri === $redirect_uri;
 		}
 
-		// For loopback, only the port may differ (RFC 8252 Section 7.3).
-		$allowed_path  = $allowed_parts['path'] ?? '/';
-		$redirect_path = $redirect_parts['path'] ?? '/';
+		/*
+		 * For loopback, the URIs have to be equal as strings except for the port (RFC 6749
+		 * Section 3.1.2.3, RFC 8252 Section 7.3). Comparing strings rather than parsed parts also
+		 * tells an empty query, fragment or user name apart from a missing one.
+		 */
+		$without_port = static function ( $uri, $parts ) {
+			// The port directly follows the host, so it is the first `:PORT` before the path, query, fragment or end.
+			return isset( $parts['port'] ) ? \preg_replace( '/:' . (int) $parts['port'] . '(?=[\/?#]|$)/', '', $uri, 1 ) : $uri;
+		};
 
-		return $allowed_path === $redirect_path &&
-			( $allowed_parts['user'] ?? '' ) === ( $redirect_parts['user'] ?? '' ) &&
-			( $allowed_parts['pass'] ?? '' ) === ( $redirect_parts['pass'] ?? '' ) &&
-			( $allowed_parts['query'] ?? '' ) === ( $redirect_parts['query'] ?? '' ) &&
-			( $allowed_parts['fragment'] ?? '' ) === ( $redirect_parts['fragment'] ?? '' );
+		return $without_port( $allowed_uri, $allowed_parts ) === $without_port( $redirect_uri, $redirect_parts );
 	}
 
 	/**

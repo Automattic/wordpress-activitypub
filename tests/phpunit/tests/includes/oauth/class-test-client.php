@@ -546,6 +546,23 @@ class Test_Client extends \WP_UnitTestCase {
 		$this->assertFalse( $client->is_valid_redirect_uri( 'http://127.0.0.1/callback#x' ), 'An extra fragment is refused.' );
 		$this->assertFalse( $client->is_valid_redirect_uri( 'http://127.0.0.1/other' ), 'Another path is refused.' );
 		$this->assertFalse( $client->is_valid_redirect_uri( 'http://user@127.0.0.1:51234/callback' ), 'A user name is refused.' );
+
+		// Only the port may differ, so empty components and a trailing slash count as a different URI.
+		$this->assertFalse( $client->is_valid_redirect_uri( 'http://@127.0.0.1:51234/callback' ), 'An empty user name is refused.' );
+		$this->assertFalse( $client->is_valid_redirect_uri( 'http://127.0.0.1:51234/callback?' ), 'An empty query is refused.' );
+		$this->assertFalse( $client->is_valid_redirect_uri( 'http://127.0.0.1:51234/callback#' ), 'An empty fragment is refused.' );
+		$this->assertFalse( $client->is_valid_redirect_uri( 'http://127.0.0.1:51234/callback/' ), 'A trailing slash is refused.' );
+
+		$result = $this->create_client(
+			array(
+				'name'          => 'Native App IPv6',
+				'redirect_uris' => array( 'http://[::1]/callback' ),
+			)
+		);
+		$client = Client::get( $result['client_id'] );
+
+		$this->assertTrue( $client->is_valid_redirect_uri( 'http://[::1]:51234/callback' ), 'The port may differ for IPv6 too.' );
+		$this->assertFalse( $client->is_valid_redirect_uri( 'http://[::1]:51234/callback?x' ), 'An extra query is refused for IPv6 too.' );
 	}
 
 	/**
