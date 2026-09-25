@@ -12,7 +12,9 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Inbox as Inbox_Collection;
 use Activitypub\Collection\Outbox;
 use Activitypub\Handler\Feature_Request;
+use Activitypub\OAuth\Scope;
 use Activitypub\Rest\Server;
+use Activitypub\Tests\OAuth_Token_Stub;
 
 /**
  * Test class for Actors_Inbox_Controller.
@@ -21,6 +23,8 @@ use Activitypub\Rest\Server;
  * @coversDefaultClass \Activitypub\Rest\Actors_Inbox_Controller
  */
 class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {
+	use OAuth_Token_Stub;
+
 	/**
 	 * Test user ID.
 	 *
@@ -73,6 +77,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	 * Tear down the test.
 	 */
 	public function tear_down() {
+		$this->set_oauth_current_token( null );
 		\delete_option( 'permalink_structure' );
 
 		parent::tear_down();
@@ -1015,5 +1020,27 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 			$this->assertArrayNotHasKey( 'bcc', $item, 'The blind audience must not be disclosed.' );
 			$this->assertArrayNotHasKey( '@context', $item, 'The collection carries the context, not each item.' );
 		}
+	}
+
+	/**
+	 * Test that the paged inbox needs the read scope.
+	 *
+	 * @covers ::register_routes
+	 */
+	public function test_get_items_requires_read_scope() {
+		\wp_set_current_user( self::$user_id );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/inbox' );
+
+		foreach ( array( Scope::PUSH, Scope::WRITE ) as $scope ) {
+			$this->set_oauth_current_token( $this->mock_oauth_token( array( $scope ), self::$user_id ) );
+			$response = \rest_get_server()->dispatch( $request );
+
+			$this->assertSame( 403, $response->get_status(), "A $scope token must not read the inbox." );
+			$this->assertSame( 'activitypub_insufficient_scope', $response->get_data()['code'] );
+		}
+
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::READ ), self::$user_id ) );
+		$this->assertSame( 200, \rest_get_server()->dispatch( $request )->get_status(), 'A read token reads the inbox.' );
 	}
 }
