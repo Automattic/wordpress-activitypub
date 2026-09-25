@@ -147,11 +147,13 @@ class Test_Client extends \WP_UnitTestCase {
 		$client = Client::get( $result['client_id'] );
 
 		$cases = array(
-			'https://app.example/about' => 'https://app.example/about',
-			'javascript:alert(1)'       => '',
-			'data:text/html,x'          => '',
-			'//app.example/'            => '',
-			'https:///path'             => '',
+			'https://app.example/about'        => 'https://app.example/about',
+			'javascript:alert(1)'              => '',
+			'data:text/html,x'                 => '',
+			'//app.example/'                   => '',
+			'https:///path'                    => '',
+			'https://example.com@app.example/' => '',
+			'https://user:pass@app.example/'   => '',
 		);
 
 		foreach ( $cases as $stored => $expected ) {

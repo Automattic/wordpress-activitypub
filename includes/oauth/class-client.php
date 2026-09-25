@@ -776,10 +776,10 @@ class Client {
 	 * not intended for end-users.
 	 *
 	 * Both sources are supplied by the client, so the result is limited to http(s) URLs with a
-	 * host. The check runs on read to also cover values stored before it existed.
+	 * host and without a user name. The check runs on read to also cover values stored before it existed.
 	 *
 	 * @since 8.1.0
-	 * @since unreleased Only returns http(s) URLs with a host.
+	 * @since unreleased Only returns http(s) URLs with a host and no user name.
 	 *
 	 * @return string A URL for the client, or empty string if none available.
 	 */
@@ -794,6 +794,12 @@ class Client {
 
 		// The list is explicit: the `wp_allowed_protocols()` default is wider and filterable.
 		if ( ! get_url_authority( $url ) || \strtolower( \wp_kses_bad_protocol( $url, array( 'http', 'https' ) ) ) !== \strtolower( $url ) ) {
+			return '';
+		}
+
+		// A user name in front of the host would make the link read like another site.
+		$parts = \wp_parse_url( $url );
+		if ( isset( $parts['user'] ) || isset( $parts['pass'] ) ) {
 			return '';
 		}
 
