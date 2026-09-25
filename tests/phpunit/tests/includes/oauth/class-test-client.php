@@ -133,6 +133,41 @@ class Test_Client extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that the client link only uses http(s) URLs with a host.
+	 *
+	 * @covers ::get_link_url
+	 */
+	public function test_get_link_url_only_returns_http_urls() {
+		$result = Client::register(
+			array(
+				'name'          => 'Link Client',
+				'redirect_uris' => array( 'https://app.example/callback' ),
+			)
+		);
+		$client = Client::get( $result['client_id'] );
+
+		$cases = array(
+			'https://app.example/about' => 'https://app.example/about',
+			'javascript:alert(1)'       => '',
+			'data:text/html,x'          => '',
+			'//app.example/'            => '',
+			'https:///path'             => '',
+		);
+
+		foreach ( $cases as $stored => $expected ) {
+			\update_post_meta( $client->get_post_id(), '_activitypub_client_uri', $stored );
+			$this->assertSame( $expected, $client->get_link_url(), $stored );
+		}
+
+		// Without a client URI, the link falls back to the redirect URI's origin, but not to a custom scheme.
+		\delete_post_meta( $client->get_post_id(), '_activitypub_client_uri' );
+		$this->assertSame( 'https://app.example/', $client->get_link_url() );
+
+		\update_post_meta( $client->get_post_id(), '_activitypub_redirect_uris', array( 'myapp://callback/path' ) );
+		$this->assertSame( '', $client->get_link_url() );
+	}
+
+	/**
 	 * Test register method requires name.
 	 *
 	 * @covers ::register
@@ -488,6 +523,26 @@ class Test_Client extends \WP_UnitTestCase {
 	 */
 	public function test_validate_nonexistent_client() {
 		$this->assertFalse( Client::validate( 'nonexistent-client-id' ) );
+	}
+
+	/**
+	 * Test that a loopback redirect URI may only differ in its port.
+	 *
+	 * @covers ::is_valid_redirect_uri
+	 */
+	public function test_is_valid_redirect_uri_loopback_only_ignores_port() {
+		$result = Client::register(
+			array(
+				'name'          => 'Native App',
+				'redirect_uris' => array( 'http://127.0.0.1/callback' ),
+			)
+		);
+		$client = Client::get( $result['client_id'] );
+
+		$this->assertTrue( $client->is_valid_redirect_uri( 'http://127.0.0.1:51234/callback' ), 'The port may differ.' );
+		$this->assertFalse( $client->is_valid_redirect_uri( 'http://127.0.0.1:51234/callback?next=x' ), 'An extra query is refused.' );
+		$this->assertFalse( $client->is_valid_redirect_uri( 'http://127.0.0.1/callback#x' ), 'An extra fragment is refused.' );
+		$this->assertFalse( $client->is_valid_redirect_uri( 'http://127.0.0.1/other' ), 'Another path is refused.' );
 	}
 
 	/**
