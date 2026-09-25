@@ -1512,7 +1512,7 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		$this->assertStringContainsString( 'activitypub-quote-block', $output );
 		$this->assertStringContainsString( 'data-quotation-of="https://remote.example/notes/1"', $output );
-		$this->assertStringContainsString( '<cite class="u-quotation-of h-cite">', $output );
+		$this->assertStringContainsString( 'activitypub-quote-block u-quotation-of h-cite', $output );
 		$this->assertStringContainsString( 'class="u-url"', $output );
 		$this->assertStringContainsString( 'href="https://remote.example/notes/1"', $output );
 	}
@@ -1535,11 +1535,16 @@ class Test_Blocks extends \WP_UnitTestCase {
 		\wp_reset_postdata();
 		unset( $GLOBALS['post'] );
 
-		$output = \do_blocks( '<!-- wp:activitypub/quote {"url":"https://remote.example/notes/1","embedPost":false} /-->' );
+		$stub = function () {
+			return '<div class="activitypub-embed">Quoted post</div>';
+		};
+		\add_filter( 'pre_oembed_result', $stub, 5 );
+		$output = \do_blocks( '<!-- wp:activitypub/quote {"url":"https://remote.example/notes/1","embedPost":true} /-->' );
+		\remove_filter( 'pre_oembed_result', $stub, 5 );
 
 		$this->assertStringContainsString( 'href="https://remote.example/notes/1"', $output );
 		$this->assertStringContainsString( 'activitypub-quote-block', $output );
-		$this->assertStringNotContainsString( 'u-quotation-of', $output );
+		$this->assertStringNotContainsString( 'activitypub-embed', $output );
 	}
 
 	/**
@@ -1556,24 +1561,29 @@ class Test_Blocks extends \WP_UnitTestCase {
 		\update_post_meta( $rejected_post_id, '_activitypub_quote_rejected', '1' );
 		$accepted_post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
 
-		$parsed_block = \parse_blocks( '<!-- wp:activitypub/quote {"url":"https://remote.example/notes/1","embedPost":false} /-->' )[0];
+		$parsed_block = \parse_blocks( '<!-- wp:activitypub/quote {"url":"https://remote.example/notes/1","embedPost":true} /-->' )[0];
 
+		$stub = function () {
+			return '<div class="activitypub-embed">Quoted post</div>';
+		};
+		\add_filter( 'pre_oembed_result', $stub, 5 );
 		$rejected_output = ( new \WP_Block( $parsed_block, array( 'postId' => $rejected_post_id ) ) )->render();
 		$accepted_output = ( new \WP_Block( $parsed_block, array( 'postId' => $accepted_post_id ) ) )->render();
+		\remove_filter( 'pre_oembed_result', $stub, 5 );
 
-		$this->assertStringNotContainsString( 'u-quotation-of', $rejected_output );
-		$this->assertStringContainsString( 'u-quotation-of', $accepted_output );
+		$this->assertStringNotContainsString( 'activitypub-embed', $rejected_output );
+		$this->assertStringContainsString( 'activitypub-embed', $accepted_output );
 	}
 
 	/**
-	 * A declined quote keeps the link but drops the quotation microformat.
+	 * A declined quote keeps the link, and the citation, but drops the card.
 	 *
 	 * @covers ::render_quote_block
 	 */
 	public function test_render_quote_block_rejected() {
 		$post_id = self::factory()->post->create(
 			array(
-				'post_content' => '<!-- wp:activitypub/quote {"url":"https://remote.example/notes/1","embedPost":false} /-->',
+				'post_content' => '<!-- wp:activitypub/quote {"url":"https://remote.example/notes/1","embedPost":true} /-->',
 				'post_status'  => 'publish',
 			)
 		);
@@ -1582,10 +1592,15 @@ class Test_Blocks extends \WP_UnitTestCase {
 
 		$GLOBALS['post'] = \get_post( $post_id ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		\setup_postdata( $GLOBALS['post'] );
+		$stub = function () {
+			return '<div class="activitypub-embed">Quoted post</div>';
+		};
+		\add_filter( 'pre_oembed_result', $stub, 5 );
 		$output = \do_blocks( \get_post( $post_id )->post_content );
+		\remove_filter( 'pre_oembed_result', $stub, 5 );
 		\wp_reset_postdata();
 
-		$this->assertStringNotContainsString( 'u-quotation-of', $output );
+		$this->assertStringNotContainsString( 'activitypub-embed', $output );
 		$this->assertStringContainsString( 'href="https://remote.example/notes/1"', $output );
 	}
 

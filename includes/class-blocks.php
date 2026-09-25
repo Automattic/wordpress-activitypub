@@ -747,6 +747,9 @@ class Blocks {
 	/**
 	 * Render the reply block.
 	 *
+	 * @see https://indieweb.org/in-reply-to
+	 * @see https://indieweb.org/reply-context
+	 *
 	 * @param array $attrs The block attributes.
 	 *
 	 * @return string The HTML to render.
@@ -786,40 +789,35 @@ class Blocks {
 			)
 		);
 
-		$html = '<div ' . $wrapper_attrs . '>';
-
-		// Try to get and append the embed if requested.
+		// Try to get the embed if requested.
 		$embed = null;
 		if ( $show_embed ) {
 			// Use the theme's content width or a reasonable default to avoid narrow embeds.
 			$embed_width = ! empty( $GLOBALS['content_width'] ) ? $GLOBALS['content_width'] : 600;
 			$embed       = \wp_oembed_get( $attrs['url'], array( 'width' => $embed_width ) );
 			if ( $embed ) {
-				$html .= $embed;
 				\wp_enqueue_script( 'wp-embed' );
 			}
 		}
 
 		// Show the link if embed is not requested or if embed failed.
-		if ( ! $show_embed || ! $embed ) {
-			$html .= \sprintf(
-				'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
-				\esc_url( $attrs['url'] ),
-				\esc_attr__( 'This post is a response to the referenced content.', 'activitypub' ),
-				// translators: %s is the URL of the post being replied to.
-				\sprintf( \__( '&#8620;%s', 'activitypub' ), \str_replace( array( 'https://', 'http://' ), '', \esc_url( $attrs['url'] ) ) )
-			);
-		}
+		$inner = $embed ? $embed : \sprintf(
+			'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
+			\esc_url( $attrs['url'] ),
+			\esc_attr__( 'This post is a response to the referenced content.', 'activitypub' ),
+			// translators: %s is the URL of the post being replied to.
+			\sprintf( \__( '&#8620;%s', 'activitypub' ), \str_replace( array( 'https://', 'http://' ), '', \esc_url( $attrs['url'] ) ) )
+		);
 
-		$html .= '</div>';
-
-		return $html;
+		return \sprintf( '<div %1$s>%2$s</div>', $wrapper_attrs, $inner );
 	}
 
 	/**
 	 * Render the Quote block.
 	 *
 	 * @since unreleased
+	 *
+	 * @see https://indieweb.org/quotation
 	 *
 	 * @param array          $attrs   The block attributes.
 	 * @param string         $content The block inner content (unused).
@@ -847,7 +845,7 @@ class Blocks {
 		$wrapper_attrs = \get_block_wrapper_attributes(
 			array(
 				'aria-label'        => \__( 'Quote', 'activitypub' ),
-				'class'             => 'activitypub-quote-block',
+				'class'             => 'activitypub-quote-block u-quotation-of h-cite',
 				'data-quotation-of' => $url,
 			)
 		);
@@ -862,20 +860,17 @@ class Blocks {
 			}
 		}
 
+		// The citation needs a link to the source at a minimum, and the card carries one already.
 		$link = \sprintf(
-			'<a class="u-url" href="%1$s" target="_blank">%2$s</a>',
+			'<p><a class="u-url" href="%1$s" target="_blank">%2$s</a></p>',
 			\esc_url( $url ),
 			\esc_html( \str_replace( array( 'https://', 'http://' ), '', $url ) )
 		);
 
 		// The embed carries the link, so it replaces it, the way the Reply block does it.
-		$inner = $embed ? $embed : '<p>' . $link . '</p>';
+		$inner = $embed ? $embed : $link;
 
-		if ( $is_quote ) {
-			$inner = '<cite class="u-quotation-of h-cite">' . $inner . '</cite>';
-		}
-
-		return '<div ' . $wrapper_attrs . '>' . $inner . '</div>';
+		return \sprintf( '<div %1$s>%2$s</div>', $wrapper_attrs, $inner );
 	}
 
 	/**
