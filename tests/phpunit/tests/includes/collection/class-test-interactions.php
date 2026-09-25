@@ -1745,4 +1745,24 @@ class Test_Interactions extends \WP_UnitTestCase {
 		}
 		$this->assertSame( 42, \has_action( 'check_comment_flood', 'check_comment_flood_db' ) );
 	}
+
+	/**
+	 * Persist must not turn comment flood protection back on when the site turned it off.
+	 *
+	 * @covers ::persist
+	 */
+	public function test_persist_keeps_disabled_flood_protection_off() {
+		$flood_priority = \has_action( 'check_comment_flood', 'check_comment_flood_db' );
+		if ( false !== $flood_priority ) {
+			\remove_action( 'check_comment_flood', 'check_comment_flood_db', $flood_priority );
+		}
+
+		Interactions::add_comment( $this->create_test_object( 'https://example.com/persist-flood-off' ) );
+
+		$this->assertFalse( \has_action( 'check_comment_flood', 'check_comment_flood_db' ) );
+
+		if ( false !== $flood_priority ) {
+			\add_action( 'check_comment_flood', 'check_comment_flood_db', $flood_priority, 4 );
+		}
+	}
 }
