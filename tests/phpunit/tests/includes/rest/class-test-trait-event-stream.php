@@ -8,7 +8,10 @@
 namespace Activitypub\Tests\Rest;
 
 use Activitypub\Collection\Outbox;
+use Activitypub\OAuth\Client;
 use Activitypub\OAuth\Scope;
+use Activitypub\OAuth\Server as OAuth_Server;
+use Activitypub\OAuth\Token;
 use Activitypub\Rest\Event_Stream;
 use Activitypub\Rest\Verification;
 use Activitypub\Tests\OAuth_Token_Stub;
@@ -521,6 +524,39 @@ class Test_Trait_Event_Stream extends \WP_UnitTestCase {
 		$this->assertEquals( $original_auth, $current_auth, 'Should not inject Authorization header for array access_token.' );
 
 		unset( $_GET['access_token'] );
+	}
+
+	/**
+	 * Test that the query-param login leaves the Authorization header as it found it.
+	 *
+	 * @covers ::get_stream_permissions_check
+	 */
+	public function test_query_param_restores_authorization_header() {
+		$client = Client::register(
+			array(
+				'name'          => 'Stream Client',
+				'redirect_uris' => array( 'https://app.example/callback' ),
+			)
+		);
+		$token  = Token::create( $this->user_id, $client['client_id'], array( Scope::READ ) );
+
+		$_GET['access_token'] = $token['access_token']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		\add_filter( 'activitypub_oauth_check_permission', '__return_true' );
+
+		// No header before: none after, but the token was accepted.
+		unset( $_SERVER['HTTP_AUTHORIZATION'] );
+		$this->instance->get_stream_permissions_check( new \WP_REST_Request() );
+		$this->assertArrayNotHasKey( 'HTTP_AUTHORIZATION', $_SERVER );
+		$this->assertTrue( OAuth_Server::is_oauth_request(), 'The query-param token authenticates.' );
+
+		// An existing header is put back.
+		$this->set_oauth_current_token( null );
+		$_SERVER['HTTP_AUTHORIZATION'] = 'Basic dXNlcjpwYXNz';
+		$this->instance->get_stream_permissions_check( new \WP_REST_Request() );
+		$this->assertSame( 'Basic dXNlcjpwYXNz', $_SERVER['HTTP_AUTHORIZATION'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+
+		\remove_filter( 'activitypub_oauth_check_permission', '__return_true' );
+		unset( $_GET['access_token'], $_SERVER['HTTP_AUTHORIZATION'] );
 	}
 
 	/**

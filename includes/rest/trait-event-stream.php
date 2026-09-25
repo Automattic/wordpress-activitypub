@@ -112,11 +112,18 @@ trait Event_Stream {
 			return;
 		}
 
-		// Inject as Authorization header so the OAuth server can find it.
+		// Inject as Authorization header so the OAuth server can find it, and put back whatever was there.
+		$previous                      = $_SERVER['HTTP_AUTHORIZATION'] ?? null; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- Only saved to be restored.
 		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $token_string;
 
-		// Re-run OAuth authentication.
+		// Re-run OAuth authentication. The validated token is kept by the OAuth server.
 		OAuth_Server::authenticate_oauth( null );
+
+		if ( null === $previous ) {
+			unset( $_SERVER['HTTP_AUTHORIZATION'] );
+		} else {
+			$_SERVER['HTTP_AUTHORIZATION'] = $previous;
+		}
 	}
 
 	/**
