@@ -1,12 +1,10 @@
-import { useBlockProps, InspectorControls, useInnerBlocksProps } from '@wordpress/block-editor';
+import { useBlockProps, InspectorControls } from '@wordpress/block-editor';
 import { TextControl, PanelBody, ToggleControl, Spinner, Notice } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { useCallback, useEffect, useState, useRef } from '@wordpress/element';
-import { useDebounce } from '@wordpress/compose';
-import { useDispatch, useSelect } from '@wordpress/data';
+import { useCallback, useState } from '@wordpress/element';
+import { useSelect } from '@wordpress/data';
 import apiFetch from '@wordpress/api-fetch';
-import { addQueryArgs } from '@wordpress/url';
-import { createBlock } from '@wordpress/blocks';
+import { useEmbedUrl } from '../shared/use-embed-url';
 
 /**
  * Help text messages for different quote states.
@@ -69,8 +67,6 @@ async function quotesDisallowedFor( url ) {
  */
 export default function Edit( { attributes, setAttributes, clientId, isSelected } ) {
 	const { url = '', embedPost = false } = attributes;
-	const [ isValidEmbed, setIsValidEmbed ] = useState( false );
-	const [ isCheckingEmbed, setIsCheckingEmbed ] = useState( false );
 	const [ quotesDisallowed, setQuotesDisallowed ] = useState( false );
 	const quoteState = useSelect( ( select ) => {
 		// The block is insertable in editors that do not register `core/editor`, the widget screen for one.
@@ -78,32 +74,17 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 
 		return editorStore?.getEditedPostAttribute?.( 'activitypub_quote' );
 	}, [] );
+
+	// An answer belongs to the URL it was given for; editing the block to another one starts over.
 	const answeredUrl = quoteState?.request && quoteState.request === url;
-	const urlInputRef = useRef();
-	const { insertAfterBlock, removeBlock, replaceInnerBlocks } = useDispatch( 'core/block-editor' );
 
-	// Show embed in both selected and non-selected states when embedPost is true.
-	const showEmbed = embedPost && ! isCheckingEmbed && isValidEmbed;
+	// The policy is worth a look only once the URL is known to be an ActivityPub object.
+	const onChecked = useCallback( async ( checkedUrl ) => {
+		setQuotesDisallowed( checkedUrl ? await quotesDisallowedFor( checkedUrl ) : false );
+	}, [] );
 
-	// Setup inner blocks.
-	const innerBlocksProps = useInnerBlocksProps(
-		{ className: 'activitypub-embed-container' },
-		{
-			allowedBlocks: [ 'core/embed' ],
-			template: url && showEmbed ? [ [ 'core/embed', { url } ] ] : [],
-			templateLock: 'all',
-		}
-	);
-
-	// Update inner blocks when URL, embedPost, or isValidEmbed changes.
-	useEffect( () => {
-		if ( url && showEmbed ) {
-			replaceInnerBlocks( clientId, [ createBlock( 'core/embed', { url } ) ] );
-		} else {
-			// Remove all inner blocks if embedding is disabled or URL is not embeddable.
-			replaceInnerBlocks( clientId, [] );
-		}
-	}, [ url, showEmbed, clientId, replaceInnerBlocks ] );
+	const { isValidEmbed, isCheckingEmbed, showEmbed, innerBlocksProps, urlInputRef, focusInput, onKeyDown } =
+		useEmbedUrl( { url, clientId, embedPost, setAttributes, onChecked } );
 
 	let helpText = HELP_TEXT.default;
 	if ( url && isCheckingEmbed ) {
@@ -111,91 +92,6 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 	} else if ( url ) {
 		helpText = isValidEmbed ? HELP_TEXT.valid : HELP_TEXT.error;
 	}
-
-	const focusInput = () => {
-		setTimeout( () => urlInputRef.current?.focus(), 50 );
-	};
-
-	// Check URL when it changes.
-	const checkUrl = useCallback(
-		async ( urlToCheck ) => {
-			if ( ! urlToCheck ) {
-				setIsValidEmbed( false );
-				setQuotesDisallowed( false );
-				return;
-			}
-
-			try {
-				setIsCheckingEmbed( true );
-
-				// Simple URL validation.
-				new URL( urlToCheck ); // Will throw if invalid.
-
-				try {
-					/**
-					 * Fetch the embed information using the WordPress oEmbed API.
-					 *
-					 * @typedef {Object} OEmbedResponse
-					 * @property {string} [provider_name] The name of the oEmbed provider.
-					 * @property {string} [html]          The HTML content to embed.
-					 * @property {string} [title]         The title of the embedded content.
-					 * @property {string} [author_name]   The author of the embedded content.
-					 * @property {string} [author_url]    The URL of the author.
-					 * @property {number} [width]         The width of the embedded content.
-					 * @property {number} [height]        The height of the embedded content.
-					 * @property {string} [type]          The type of the embedded content (rich, video, photo).
-					 */
-					const response = await apiFetch( {
-						path: addQueryArgs( '/oembed/1.0/proxy', {
-							url: urlToCheck,
-							activitypub: true,
-						} ),
-					} );
-
-					if ( response && response.provider_name ) {
-						setAttributes( { embedPost: true, isValidActivityPub: true } ); // Auto-enable embedding when we get valid embed info.
-						setIsValidEmbed( true );
-						setQuotesDisallowed( await quotesDisallowedFor( urlToCheck ) );
-					} else {
-						setAttributes( { isValidActivityPub: false } );
-						setIsValidEmbed( false );
-					}
-				} catch ( error ) {
-					// eslint-disable-next-line no-console -- Log error for debugging.
-					console.log( 'Could not fetch embed:', error );
-					setAttributes( { isValidActivityPub: false } );
-					setIsValidEmbed( false );
-					setQuotesDisallowed( false );
-				}
-			} catch ( error ) {
-				setAttributes( { isValidActivityPub: false } );
-				setIsValidEmbed( false );
-				setQuotesDisallowed( false );
-			} finally {
-				setIsCheckingEmbed( false );
-			}
-		},
-		[ setAttributes, setIsValidEmbed, setIsCheckingEmbed ]
-	);
-
-	// Debounce the URL check to avoid too many requests.
-	const debouncedCheckUrl = useDebounce( checkUrl, 250 );
-
-	// Check URL when it changes.
-	useEffect( () => {
-		if ( url ) {
-			debouncedCheckUrl( url );
-		}
-	}, [ url, debouncedCheckUrl ] );
-
-	const onKeyDown = ( event ) => {
-		if ( event.key === 'Enter' ) {
-			insertAfterBlock( clientId );
-		}
-		if ( ! url && [ 'Backspace', 'Delete' ].includes( event.key ) ) {
-			removeBlock( clientId );
-		}
-	};
 
 	return (
 		<>
