@@ -20,7 +20,9 @@ import { createBlock } from '@wordpress/blocks';
  * @param {Function} options.setAttributes Function to update block attributes.
  * @param {Function} [options.onChecked]   Called with the checked URL once it is known to be
  *                                         a valid ActivityPub object, and with no URL when it
- *                                         is not, so a block can add its own lookup.
+ *                                         is not, so a block can add its own lookup. Receives
+ *                                         an `isStale()` to check before it applies a result
+ *                                         of its own, since the URL may have changed since.
  *
  * @return {Object} The state and props the block needs.
  */
@@ -28,6 +30,8 @@ export function useEmbedUrl( { url, clientId, embedPost, setAttributes, onChecke
 	const [ isValidEmbed, setIsValidEmbed ] = useState( false );
 	const [ isCheckingEmbed, setIsCheckingEmbed ] = useState( false );
 	const urlInputRef = useRef();
+	// The URL the running check belongs to: a slower answer for an older one must not land.
+	const checkedUrlRef = useRef();
 	const { insertAfterBlock, removeBlock, replaceInnerBlocks } = useDispatch( 'core/block-editor' );
 
 	// Show the embed whether or not the block is selected.
@@ -53,9 +57,13 @@ export function useEmbedUrl( { url, clientId, embedPost, setAttributes, onChecke
 
 	const checkUrl = useCallback(
 		async ( urlToCheck ) => {
+			checkedUrlRef.current = urlToCheck;
+
+			const isStale = () => checkedUrlRef.current !== urlToCheck;
+
 			if ( ! urlToCheck ) {
 				setIsValidEmbed( false );
-				onChecked?.( null );
+				onChecked?.( null, isStale );
 				return;
 			}
 
@@ -68,22 +76,32 @@ export function useEmbedUrl( { url, clientId, embedPost, setAttributes, onChecke
 					path: addQueryArgs( '/oembed/1.0/proxy', { url: urlToCheck, activitypub: true } ),
 				} );
 
+				if ( isStale() ) {
+					return;
+				}
+
 				if ( response?.provider_name ) {
 					// Embedding is turned on for us, the URL answered as an ActivityPub object.
 					setAttributes( { embedPost: true, isValidActivityPub: true } );
 					setIsValidEmbed( true );
-					await onChecked?.( urlToCheck );
+					await onChecked?.( urlToCheck, isStale );
 				} else {
 					setAttributes( { isValidActivityPub: false } );
 					setIsValidEmbed( false );
-					onChecked?.( null );
+					onChecked?.( null, isStale );
 				}
 			} catch ( error ) {
+				if ( isStale() ) {
+					return;
+				}
+
 				setAttributes( { isValidActivityPub: false } );
 				setIsValidEmbed( false );
-				onChecked?.( null );
+				onChecked?.( null, isStale );
 			} finally {
-				setIsCheckingEmbed( false );
+				if ( ! isStale() ) {
+					setIsCheckingEmbed( false );
+				}
 			}
 		},
 		[ setAttributes, onChecked ]

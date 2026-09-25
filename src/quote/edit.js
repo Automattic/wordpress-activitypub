@@ -79,8 +79,13 @@ export default function Edit( { attributes, setAttributes, clientId, isSelected 
 	const answeredUrl = quoteState?.request && quoteState.request === url;
 
 	// The policy is worth a look only once the URL is known to be an ActivityPub object.
-	const onChecked = useCallback( async ( checkedUrl ) => {
-		setQuotesDisallowed( checkedUrl ? await quotesDisallowedFor( checkedUrl ) : false );
+	const onChecked = useCallback( async ( checkedUrl, isStale ) => {
+		const disallowed = checkedUrl ? await quotesDisallowedFor( checkedUrl ) : false;
+
+		// The policy lookup is slower than the check around it, so the URL may have moved on.
+		if ( ! isStale?.() ) {
+			setQuotesDisallowed( disallowed );
+		}
 	}, [] );
 
 	const { isValidEmbed, isCheckingEmbed, showEmbed, innerBlocksProps, urlInputRef, focusInput, onKeyDown } =
