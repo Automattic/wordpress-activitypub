@@ -24,14 +24,12 @@ class Embed {
 	/**
 	 * Get an ActivityPub embed HTML for a URL.
 	 *
-	 * @param string          $url        The URL to get the embed for.
-	 * @param boolean         $inline_css Optional. Whether to inline CSS. Default true.
-	 * @param string|string[] $css_class  Optional. Class names to add to the embed, on top of
-	 *                                    the ones every embed carries. Default empty.
+	 * @param string  $url        The URL to get the embed for.
+	 * @param boolean $inline_css Optional. Whether to inline CSS. Default true.
 	 *
 	 * @return string|false The embed HTML or false if not found.
 	 */
-	public static function get_html( $url, $inline_css = true, $css_class = '' ) {
+	public static function get_html( $url, $inline_css = true ) {
 		// Try to get ActivityPub representation.
 		$object = Http::get_remote_object( $url );
 
@@ -39,31 +37,34 @@ class Embed {
 			return false;
 		}
 
-		return self::get_html_for_object( $object, $inline_css, $css_class );
+		return self::get_html_for_object( $object, $inline_css );
 	}
 
 	/**
 	 * Get an ActivityPub embed HTML for an ActivityPub object.
 	 *
-	 * @param array           $activity_object The ActivityPub object to build the embed for.
-	 * @param boolean         $inline_css      Optional. Whether to inline CSS. Default true.
-	 * @param string|string[] $css_class       Optional. Class names to add to the embed, on top
-	 *                                         of the ones every embed carries. Default empty.
+	 * @param array   $activity_object The ActivityPub object to build the embed for.
+	 * @param boolean $inline_css      Optional. Whether to inline CSS. Default true.
 	 *
 	 * @return string The embed HTML.
 	 */
-	public static function get_html_for_object( $activity_object, $inline_css = true, $css_class = '' ) {
+	public static function get_html_for_object( $activity_object, $inline_css = true ) {
+		// An actor is its own author: the card is about them, not about something they wrote.
+		$is_actor = is_actor( $activity_object );
+
 		// `attributedTo` may be a string, an embedded actor object, or a list of references. Normalize it to a URI string before use.
-		$author_url = object_to_uri( $activity_object['attributedTo'] ?? '' ) ?? '';
+		$author_url = $is_actor
+			? object_to_uri( $activity_object['url'] ?? $activity_object['id'] ?? '' ) ?? ''
+			: object_to_uri( $activity_object['attributedTo'] ?? '' ) ?? '';
 		$avatar_url = object_to_uri( $activity_object['icon']['url'] ?? '' ) ?? '';
-		$author     = array();
+		$author     = $is_actor ? $activity_object : array();
 
 		/*
 		 * A post carries its author's address, rarely their name and almost never their avatar,
 		 * so the actor is asked for both. The lookup is cached, so a rendered post costs nothing
 		 * beyond the first one.
 		 */
-		if ( $author_url ) {
+		if ( ! $is_actor && $author_url ) {
 			$author = Http::get_remote_object( $author_url );
 
 			if ( \is_wp_error( $author ) ) {
@@ -91,8 +92,9 @@ class Embed {
 			}
 		}
 
-		$title     = $activity_object['name'] ?? '';
-		$content   = $activity_object['content'] ?? '';
+		$title = $is_actor ? '' : ( $activity_object['name'] ?? '' );
+		// An actor's bio is its `summary`, a post's text its `content`.
+		$content   = ( $is_actor ? $activity_object['summary'] ?? '' : $activity_object['content'] ?? '' );
 		$published = isset( $activity_object['published'] ) ? \gmdate( \get_option( 'date_format' ) . ', ' . \get_option( 'time_format' ), \strtotime( $activity_object['published'] ) ) : '';
 		$boosts    = isset( $activity_object['shares']['totalItems'] ) ? (int) $activity_object['shares']['totalItems'] : null;
 		$favorites = isset( $activity_object['likes']['totalItems'] ) ? (int) $activity_object['likes']['totalItems'] : null;
@@ -134,7 +136,6 @@ class Embed {
 			array(
 				'audio'       => $audio,
 				'author_name' => $author_name,
-				'class'       => $css_class,
 				'author_url'  => $author_url,
 				'avatar_url'  => $avatar_url,
 				'boosts'      => $boosts,
@@ -201,7 +202,7 @@ class Embed {
 		}
 
 		// No oEmbed found, try to get ActivityPub representation.
-		$html = get_embed_html( $url, true, $args['class'] ?? '' );
+		$html = get_embed_html( $url );
 
 		// If we couldn't get an ActivityPub embed either, return null to allow normal processing.
 		if ( ! $html ) {
