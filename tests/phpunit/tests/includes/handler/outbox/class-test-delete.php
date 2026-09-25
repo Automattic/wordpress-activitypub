@@ -282,10 +282,8 @@ class Test_Delete extends \WP_UnitTestCase {
 			'object' => \get_permalink( $post_id ),
 		);
 
-		// An author allowed to act as the blog still can't delete someone else's post.
-		\add_filter( 'activitypub_user_can_act_as_blog', '__return_true' );
+		// An author acting as the blog still can't delete someone else's post.
 		Delete::handle_delete( $data, 0 );
-		\remove_filter( 'activitypub_user_can_act_as_blog', '__return_true' );
 
 		$this->assertEquals( 'publish', \get_post_status( $post_id ) );
 
@@ -293,5 +291,32 @@ class Test_Delete extends \WP_UnitTestCase {
 		Delete::handle_delete( $data, 0 );
 
 		$this->assertEquals( 'trash', \get_post_status( $post_id ) );
+	}
+
+	/**
+	 * Test that a user can delete their own comment on someone else's post.
+	 *
+	 * @covers ::handle_delete
+	 */
+	public function test_handle_delete_trashes_own_comment_on_other_post() {
+		$other_user = self::factory()->user->create( array( 'role' => 'author' ) );
+		$post_id    = self::factory()->post->create( array( 'post_author' => $other_user ) );
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'user_id'         => $this->user_id,
+			)
+		);
+
+		$result = Delete::handle_delete(
+			array(
+				'type'   => 'Delete',
+				'object' => \add_query_arg( 'c', $comment_id, \trailingslashit( \home_url() ) ),
+			),
+			$this->user_id
+		);
+
+		$this->assertInstanceOf( \WP_Comment::class, $result );
+		$this->assertEquals( 'trash', \get_comment( $comment_id )->comment_approved );
 	}
 }

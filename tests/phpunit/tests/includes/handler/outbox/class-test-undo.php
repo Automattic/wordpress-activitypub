@@ -375,6 +375,9 @@ class Test_Undo extends \WP_UnitTestCase {
 	 * @covers ::handle_undo
 	 */
 	public function test_handle_undo_as_blog_actor_checks_actor_type() {
+		// The blog actor has to be enabled for its Undo to be added to the outbox.
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+
 		$guids = array();
 		foreach ( array( 'application', 'blog' ) as $actor_type ) {
 			$post_id = \wp_insert_post(
@@ -417,6 +420,6 @@ class Test_Undo extends \WP_UnitTestCase {
 			),
 			0
 		);
-		$this->assertFalse( \is_wp_error( $result ) && 'activitypub_forbidden' === $result->get_error_code(), 'The blog may undo its own activity.' );
+		$this->assertIsInt( $result, 'The blog may undo its own activity.' );
 	}
 }
