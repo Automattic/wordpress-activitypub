@@ -563,6 +563,16 @@ class Test_Client extends \WP_UnitTestCase {
 
 		$this->assertTrue( $client->is_valid_redirect_uri( 'http://[::1]:51234/callback' ), 'The port may differ for IPv6 too.' );
 		$this->assertFalse( $client->is_valid_redirect_uri( 'http://[::1]:51234/callback?x' ), 'An extra query is refused for IPv6 too.' );
+
+		$result = $this->create_client(
+			array(
+				'name'          => 'Native App With Port',
+				'redirect_uris' => array( 'http://127.0.0.1:080/callback' ),
+			)
+		);
+		$client = Client::get( $result['client_id'] );
+
+		$this->assertTrue( $client->is_valid_redirect_uri( 'http://127.0.0.1:51234/callback' ), 'A port with leading zeros is still only a port.' );
 	}
 
 	/**

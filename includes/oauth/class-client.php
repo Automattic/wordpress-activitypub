@@ -590,8 +590,8 @@ class Client {
 		 * tells an empty query, fragment or user name apart from a missing one.
 		 */
 		$without_port = static function ( $uri, $parts ) {
-			// The port directly follows the host, so it is the first `:PORT` before the path, query, fragment or end.
-			return isset( $parts['port'] ) ? \preg_replace( '/:' . (int) $parts['port'] . '(?=[\/?#]|$)/', '', $uri, 1 ) : $uri;
+			// The port directly follows the host, so it is the first `:PORT` before the path, query, fragment or end, with any leading zeros.
+			return isset( $parts['port'] ) ? \preg_replace( '/:0*' . (int) $parts['port'] . '(?=[\/?#]|$)/', '', $uri, 1 ) : $uri;
 		};
 
 		return $without_port( $allowed_uri, $allowed_parts ) === $without_port( $redirect_uri, $redirect_parts );
