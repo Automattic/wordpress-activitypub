@@ -366,4 +366,57 @@ class Test_Undo extends \WP_UnitTestCase {
 		$this->assertWPError( $result );
 		$this->assertSame( 'activitypub_forbidden', $result->get_error_code() );
 	}
+
+	/**
+	 * Test that the blog actor can undo its own items but not the application actor's.
+	 *
+	 * Both are stored with author 0, only the actor type differs.
+	 *
+	 * @covers ::handle_undo
+	 */
+	public function test_handle_undo_as_blog_actor_checks_actor_type() {
+		$guids = array();
+		foreach ( array( 'application', 'blog' ) as $actor_type ) {
+			$post_id = \wp_insert_post(
+				array(
+					'post_type'    => Outbox::POST_TYPE,
+					'post_title'   => '[Like] Test',
+					'post_content' => \wp_json_encode(
+						array(
+							'type'   => 'Like',
+							'object' => 'https://example.com/note/1',
+						)
+					),
+					'post_author'  => 0,
+					'post_status'  => 'publish',
+					'guid'         => 'http://example.org/outbox/like-' . $actor_type,
+					'meta_input'   => array(
+						'_activitypub_activity_type'  => 'Like',
+						'_activitypub_activity_actor' => $actor_type,
+					),
+				)
+			);
+
+			$guids[ $actor_type ] = \get_the_guid( $post_id );
+		}
+
+		$result = Undo::handle_undo(
+			array(
+				'type'   => 'Undo',
+				'object' => $guids['application'],
+			),
+			0
+		);
+		$this->assertWPError( $result );
+		$this->assertSame( 'activitypub_forbidden', $result->get_error_code(), 'The blog must not undo an application activity.' );
+
+		$result = Undo::handle_undo(
+			array(
+				'type'   => 'Undo',
+				'object' => $guids['blog'],
+			),
+			0
+		);
+		$this->assertFalse( \is_wp_error( $result ) && 'activitypub_forbidden' === $result->get_error_code(), 'The blog may undo its own activity.' );
+	}
 }
