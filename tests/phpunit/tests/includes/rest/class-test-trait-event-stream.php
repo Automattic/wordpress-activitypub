@@ -8,7 +8,10 @@
 namespace Activitypub\Tests\Rest;
 
 use Activitypub\Collection\Outbox;
+use Activitypub\OAuth\Client;
 use Activitypub\OAuth\Scope;
+use Activitypub\OAuth\Server as OAuth_Server;
+use Activitypub\OAuth\Token;
 use Activitypub\Rest\Event_Stream;
 use Activitypub\Rest\Verification;
 use Activitypub\Tests\OAuth_Token_Stub;
@@ -524,44 +527,59 @@ class Test_Trait_Event_Stream extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that the stream hides private activities from a token without the read scope.
+	 * Test that the query-param login leaves the Authorization header as it found it.
 	 *
-	 * The stream is gated on `push`, which lets a client watch the collection. Seeing the
-	 * owner's private activities is the authority the paged outbox requires `read` for, and
-	 * streaming must not be a way around that.
-	 *
-	 * @covers ::get_new_items
+	 * @covers ::get_stream_permissions_check
 	 */
-	public function test_get_new_items_hides_private_without_read_scope() {
-		$post_id = self::factory()->post->create(
+	public function test_query_param_restores_authorization_header() {
+		$client = Client::register(
 			array(
-				'post_author' => $this->user_id,
-				'post_status' => 'publish',
+				'name'          => 'Stream Client',
+				'redirect_uris' => array( 'https://app.example/callback' ),
 			)
 		);
+		$token  = Token::create( $this->user_id, $client['client_id'], array( Scope::READ ) );
 
-		$outbox_id = add_to_outbox( \get_post( $post_id ), 'Create', $this->user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
-		$this->assertIsInt( $outbox_id );
+		$_GET['access_token'] = $token['access_token']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		\add_filter( 'activitypub_oauth_check_permission', '__return_true' );
 
-		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH ) ) );
-		$this->assertEmpty(
-			$this->instance->test_get_new_items( $this->user_id, 'outbox', 0 ),
-			'A push-only token must not receive a private activity.'
-		);
+		// No header before: none after, but the token was accepted.
+		unset( $_SERVER['HTTP_AUTHORIZATION'] );
+		$this->instance->get_stream_permissions_check( new \WP_REST_Request() );
+		$this->assertArrayNotHasKey( 'HTTP_AUTHORIZATION', $_SERVER );
+		$this->assertTrue( OAuth_Server::is_oauth_request(), 'The query-param token authenticates.' );
 
-		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH, Scope::READ ) ) );
-		$this->assertNotEmpty(
-			$this->instance->test_get_new_items( $this->user_id, 'outbox', 0 ),
-			'A token that also holds read is the positive control.'
-		);
-
+		// An existing header is put back.
 		$this->set_oauth_current_token( null );
-		$this->assertNotEmpty(
-			$this->instance->test_get_new_items( $this->user_id, 'outbox', 0 ),
-			'A caller with no token is not scope-limited.'
-		);
+		$_SERVER['HTTP_AUTHORIZATION'] = 'Basic dXNlcjpwYXNz';
+		$this->instance->get_stream_permissions_check( new \WP_REST_Request() );
+		$this->assertSame( 'Basic dXNlcjpwYXNz', $_SERVER['HTTP_AUTHORIZATION'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+
+		\remove_filter( 'activitypub_oauth_check_permission', '__return_true' );
+		unset( $_GET['access_token'], $_SERVER['HTTP_AUTHORIZATION'] );
 	}
 
+	/**
+	 * Test that both collection streams require the read scope.
+	 *
+	 * @covers ::get_stream_permissions_check
+	 */
+	public function test_stream_requires_read_scope() {
+		\wp_set_current_user( $this->user_id );
+
+		foreach ( array( 'outbox', 'inbox' ) as $collection ) {
+			$request = new \WP_REST_Request( 'GET', sprintf( '/%s/actors/%d/%s/stream', ACTIVITYPUB_REST_NAMESPACE, $this->user_id, $collection ) );
+			$request->set_param( 'user_id', $this->user_id );
+
+			$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH ), $this->user_id ) );
+			$result = $this->instance->get_stream_permissions_check( $request );
+			$this->assertWPError( $result, "A push-only token must not open the $collection stream." );
+			$this->assertSame( 'activitypub_insufficient_scope', $result->get_error_code() );
+
+			$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::READ ), $this->user_id ) );
+			$this->assertTrue( $this->instance->get_stream_permissions_check( $request ), "A read token opens the $collection stream." );
+		}
+	}
 
 	/**
 	 * Clear any OAuth session this class established.
