@@ -642,13 +642,14 @@ abstract class File {
 		// Check if WebP is supported.
 		$can_webp = $editor->supports_mime_type( 'image/webp' );
 
-		// Determine output format and save.
-		$dir = \dirname( $file_path );
-
+		/*
+		 * The converted file keeps the name the cache looks it up under, the hash of its URL, so
+		 * the new name is the same one with another extension: an empty suffix leaves out the
+		 * `-{width}x{height}` part core adds by default.
+		 */
 		if ( $can_webp ) {
 			// Convert to WebP.
-			$new_name = \wp_unique_filename( $dir, \preg_replace( '/\.[^.]+$/', '.webp', \basename( $file_path ) ) );
-			$result   = $editor->save( $dir . '/' . $new_name, 'image/webp' );
+			$result = $editor->save( $editor->generate_filename( '', null, 'webp' ), 'image/webp' );
 		} elseif ( \in_array( $mime_type, array( 'image/png', 'image/webp' ), true ) ) {
 			// Keep original format for potentially transparent images when WebP not available.
 			if ( ! $needs_resize ) {
@@ -657,8 +658,7 @@ abstract class File {
 			$result = $editor->save( $file_path );
 		} else {
 			// Convert to JPEG when WebP not available.
-			$new_name = \wp_unique_filename( $dir, \preg_replace( '/\.[^.]+$/', '.jpg', \basename( $file_path ) ) );
-			$result   = $editor->save( $dir . '/' . $new_name, 'image/jpeg' );
+			$result = $editor->save( $editor->generate_filename( '', null, 'jpg' ), 'image/jpeg' );
 		}
 
 		if ( \is_wp_error( $result ) ) {

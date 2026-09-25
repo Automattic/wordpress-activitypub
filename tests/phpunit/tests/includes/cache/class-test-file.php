@@ -154,4 +154,55 @@ class Test_File extends WP_UnitTestCase {
 			\wp_delete_file( $tmp_file );
 		}
 	}
+
+	/**
+	 * A converted file keeps the name the cache looks it up under.
+	 *
+	 * A WebP source is already named after its hash, and sidestepping that name leaves a copy
+	 * behind on every request, because the lookup only finds the hash.
+	 *
+	 * @covers \Activitypub\Cache\File::optimize_image
+	 */
+	public function test_cache_keeps_the_hash_name_when_the_source_is_webp() {
+		$editor = \wp_get_image_editor( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		if ( \is_wp_error( $editor ) || ! $editor->supports_mime_type( 'image/webp' ) ) {
+			$this->markTestSkipped( 'The image editor cannot write WebP.' );
+		}
+
+		$post_id   = self::factory()->post->create();
+		$url       = 'https://example.com/avatar.webp';
+		$downloads = 0;
+
+		// The remote file is a WebP, so the cached file is named `<hash>.webp` before it is optimized.
+		$mock_download = function ( $result, $download_url ) use ( $url, $editor, &$downloads ) {
+			if ( $download_url !== $url ) {
+				return $result;
+			}
+
+			++$downloads;
+			$tmp_file = \preg_replace( '/\.tmp$/', '.webp', \wp_tempnam( 'test-avatar' ) );
+			$editor->save( $tmp_file, 'image/webp' );
+
+			return array(
+				'file'      => $tmp_file,
+				'mime_type' => 'image/webp',
+			);
+		};
+
+		\add_filter( 'activitypub_pre_download_url', $mock_download, 10, 2 );
+		$cached = Avatar::maybe_cache( $url, 'avatar', $post_id );
+		$again  = Avatar::maybe_cache( $url, 'avatar', $post_id );
+		\remove_filter( 'activitypub_pre_download_url', $mock_download );
+
+		$paths = Avatar::get_storage_paths( $post_id );
+		$files = \glob( $paths['basedir'] . '/*' );
+
+		$this->assertStringEndsWith( \md5( $url ) . '.webp', $cached, 'The cached file is named after the URL.' );
+		$this->assertSame( $cached, $again, 'The second request finds the cached file.' );
+		$this->assertSame( 1, $downloads, 'The file is downloaded once.' );
+		$this->assertCount( 1, $files, 'Only one copy of the file is kept.' );
+
+		Avatar::invalidate_entity( $post_id );
+	}
 }
