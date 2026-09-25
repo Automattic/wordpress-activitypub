@@ -781,8 +781,7 @@ class Blocks {
 		$wrapper_attrs = \get_block_wrapper_attributes(
 			array(
 				'aria-label'       => \__( 'Reply', 'activitypub' ),
-				// The relation belongs to the block, the embed inside it is a citation like any other.
-				'class'            => 'activitypub-reply-block u-in-reply-to',
+				'class'            => 'activitypub-reply-block',
 				'data-in-reply-to' => $attrs['url'],
 			)
 		);
@@ -794,7 +793,14 @@ class Blocks {
 		if ( $show_embed ) {
 			// Use the theme's content width or a reasonable default to avoid narrow embeds.
 			$embed_width = ! empty( $GLOBALS['content_width'] ) ? $GLOBALS['content_width'] : 600;
-			$embed       = \wp_oembed_get( $attrs['url'], array( 'width' => $embed_width ) );
+			$embed       = \wp_oembed_get(
+				$attrs['url'],
+				array(
+					'width' => $embed_width,
+					// The card cites the post this one replies to, with its author and its content.
+					'class' => 'u-in-reply-to h-cite',
+				)
+			);
 			if ( $embed ) {
 				$html .= $embed;
 				\wp_enqueue_script( 'wp-embed' );
@@ -804,11 +810,13 @@ class Blocks {
 		// Show the link if embed is not requested or if embed failed.
 		if ( ! $show_embed || ! $embed ) {
 			$html .= \sprintf(
-				'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
+				'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="%4$s" target="_blank">%3$s</a></p>',
 				\esc_url( $attrs['url'] ),
 				\esc_attr__( 'This post is a response to the referenced content.', 'activitypub' ),
 				// translators: %s is the URL of the post being replied to.
-				\sprintf( \__( '&#8620;%s', 'activitypub' ), \str_replace( array( 'https://', 'http://' ), '', \esc_url( $attrs['url'] ) ) )
+				\sprintf( \__( '&#8620;%s', 'activitypub' ), \str_replace( array( 'https://', 'http://' ), '', \esc_url( $attrs['url'] ) ) ),
+				// A bare link is the URL value of the property, not a citation with a name and an author.
+				\esc_attr( \implode( ' ', get_css_class( 'u-in-reply-to', 'reply' ) ) )
 			);
 		}
 
@@ -853,11 +861,19 @@ class Blocks {
 			)
 		);
 
+		// The citation is the embed or the link, and either way it is the quoted post.
+		$cite_class = 'u-quotation-of h-cite';
+
 		$embed = null;
 		if ( $show_embed ) {
 			$embed_width = ! empty( $GLOBALS['content_width'] ) ? $GLOBALS['content_width'] : 600;
-
-			$embed = \wp_oembed_get( $url, array( 'width' => $embed_width ) );
+			$embed       = \wp_oembed_get(
+				$url,
+				array(
+					'width' => $embed_width,
+					'class' => $cite_class,
+				)
+			);
 
 			if ( $embed ) {
 				\wp_enqueue_script( 'wp-embed' );
@@ -873,8 +889,13 @@ class Blocks {
 		// The embed carries the link, so it replaces it, the way the Reply block does it.
 		$inner = $embed ? $embed : '<p>' . $link . '</p>';
 
-		if ( $is_quote ) {
-			$inner = '<cite class="u-quotation-of h-cite">' . $inner . '</cite>';
+		// With an embed the card is the citation already, so only the bare link needs the element.
+		if ( $is_quote && ! $embed ) {
+			$inner = \sprintf(
+				'<cite class="%1$s">%2$s</cite>',
+				\esc_attr( \implode( ' ', get_css_class( $cite_class, 'quote' ) ) ),
+				$inner
+			);
 		}
 
 		return '<div ' . $wrapper_attrs . '>' . $inner . '</div>';

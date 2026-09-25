@@ -351,15 +351,63 @@ function enrich_content_data( $content, $regex, $regex_callback ) {
 }
 
 /**
+ * Retrieve the CSS classes for an element as an array.
+ *
+ * Nothing is added: the caller passes every class it wants, microformats included.
+ *
+ * @since unreleased
+ *
+ * @param string|string[] $css_class Optional. Space-separated string or array of class names. Default empty.
+ * @param string          $context   Optional. What the classes are for, so a filter can tell the call sites
+ *                                   apart, for example `embed`. Default empty.
+ *
+ * @return string[] Array of class names.
+ */
+function get_css_class( $css_class = '', $context = '' ) {
+	// A caller may pass a list, a single name, or a mix of both.
+	$css_class = \wp_parse_list( \implode( ' ', (array) $css_class ) );
+	$classes   = \array_map( 'sanitize_html_class', $css_class );
+
+	/**
+	 * Filters the CSS classes of an element.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string[] $classes   An array of class names.
+	 * @param string[] $css_class An array of the class names the caller asked for.
+	 * @param string   $context   What the classes are for, for example `embed`.
+	 */
+	$classes = \apply_filters( 'activitypub_css_class', $classes, $css_class, $context );
+
+	return \array_unique( $classes );
+}
+
+/**
+ * Display the class attribute of an element.
+ *
+ * @since unreleased
+ *
+ * @param string|string[] $css_class Optional. Space-separated string or array of class names. Default empty.
+ * @param string          $context   Optional. What the classes are for, so a filter can tell the call sites
+ *                                   apart, for example `embed`. Default empty.
+ */
+function css_class( $css_class = '', $context = '' ) {
+	// Separates class names with a single space, collates class names for the element.
+	echo 'class="' . \esc_attr( \implode( ' ', get_css_class( $css_class, $context ) ) ) . '"';
+}
+
+/**
  * Get an ActivityPub embed HTML for a URL.
  *
- * @param string  $url        The URL to get the embed for.
- * @param boolean $inline_css Whether to inline CSS. Default true.
+ * @param string          $url        The URL to get the embed for.
+ * @param boolean         $inline_css Optional. Whether to inline CSS. Default true.
+ * @param string|string[] $css_class  Optional. Class names for the embed, the microformats it
+ *                                    claims among them. Default empty.
  *
  * @return string|false The embed HTML or false if not found.
  */
-function get_embed_html( $url, $inline_css = true ) {
-	return Embed::get_html( $url, $inline_css );
+function get_embed_html( $url, $inline_css = true, $css_class = '' ) {
+	return Embed::get_html( $url, $inline_css, $css_class );
 }
 
 /**

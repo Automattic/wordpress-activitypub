@@ -24,12 +24,14 @@ class Embed {
 	/**
 	 * Get an ActivityPub embed HTML for a URL.
 	 *
-	 * @param string  $url        The URL to get the embed for.
-	 * @param boolean $inline_css Whether to inline CSS. Default true.
+	 * @param string          $url        The URL to get the embed for.
+	 * @param boolean         $inline_css Optional. Whether to inline CSS. Default true.
+	 * @param string|string[] $css_class  Optional. Class names to add to the embed, on top of
+	 *                                    the ones every embed carries. Default empty.
 	 *
 	 * @return string|false The embed HTML or false if not found.
 	 */
-	public static function get_html( $url, $inline_css = true ) {
+	public static function get_html( $url, $inline_css = true, $css_class = '' ) {
 		// Try to get ActivityPub representation.
 		$object = Http::get_remote_object( $url );
 
@@ -37,18 +39,20 @@ class Embed {
 			return false;
 		}
 
-		return self::get_html_for_object( $object, $inline_css );
+		return self::get_html_for_object( $object, $inline_css, $css_class );
 	}
 
 	/**
 	 * Get an ActivityPub embed HTML for an ActivityPub object.
 	 *
-	 * @param array   $activity_object The ActivityPub object to build the embed for.
-	 * @param boolean $inline_css      Whether to inline CSS. Default true.
+	 * @param array           $activity_object The ActivityPub object to build the embed for.
+	 * @param boolean         $inline_css      Optional. Whether to inline CSS. Default true.
+	 * @param string|string[] $css_class       Optional. Class names to add to the embed, on top
+	 *                                         of the ones every embed carries. Default empty.
 	 *
 	 * @return string The embed HTML.
 	 */
-	public static function get_html_for_object( $activity_object, $inline_css = true ) {
+	public static function get_html_for_object( $activity_object, $inline_css = true, $css_class = '' ) {
 		// `attributedTo` may be a string, an embedded actor object, or a list of references. Normalize it to a URI string before use.
 		$author_url = object_to_uri( $activity_object['attributedTo'] ?? '' ) ?? '';
 		$avatar_url = object_to_uri( $activity_object['icon']['url'] ?? '' ) ?? '';
@@ -130,6 +134,7 @@ class Embed {
 			array(
 				'audio'       => $audio,
 				'author_name' => $author_name,
+				'class'       => $css_class,
 				'author_url'  => $author_url,
 				'avatar_url'  => $avatar_url,
 				'boosts'      => $boosts,
@@ -196,7 +201,7 @@ class Embed {
 		}
 
 		// No oEmbed found, try to get ActivityPub representation.
-		$html = get_embed_html( $url );
+		$html = get_embed_html( $url, true, $args['class'] ?? '' );
 
 		// If we couldn't get an ActivityPub embed either, return null to allow normal processing.
 		if ( ! $html ) {

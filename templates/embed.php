@@ -17,6 +17,7 @@ $args = wp_parse_args(
 		'content'     => '',
 		'favorites'   => null,
 		'image'       => '',
+		'class'       => '',
 		'published'   => '',
 		'title'       => '',
 		'url'         => '',
@@ -28,7 +29,7 @@ $args = wp_parse_args(
 \wp_enqueue_style( 'activitypub-embed', ACTIVITYPUB_PLUGIN_URL . 'assets/css/activitypub-embed.css', array(), ACTIVITYPUB_PLUGIN_VERSION );
 ?>
 
-<div class="activitypub-embed h-cite">
+<div <?php \Activitypub\css_class( array( 'activitypub-embed', $args['class'] ), 'embed' ); ?>>
 	<div class="activitypub-embed-header p-author h-card">
 		<?php if ( $args['avatar_url'] ) : ?>
 			<img class="u-photo" src="<?php echo \esc_url( $args['avatar_url'] ); ?>" alt="" width="48" height="48" />
