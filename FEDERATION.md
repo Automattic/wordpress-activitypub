@@ -60,6 +60,7 @@ The plugin supports the following actor types:
 - `Update` - Editing posts and comments
 - `Delete` - Removing posts and comments
 - `Announce` - Sharing/boosting content
+- `QuoteRequest` - Asking a remote author for permission to quote their post (see FEP-044f)
 - `Like` - Liking content
 - `Follow` - Following remote actors
 - `Move` - Actor migration (see FEP-7628)
@@ -144,6 +145,13 @@ The context is included as `https://purl.archive.org/miscellany`.
 **[Dublin Core](http://purl.org/dc/terms/)**
 
 - `dcterms:subject` - Content warnings (see FEP-b2b8)
+
+**[FEP-044f](https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md)**
+
+- `Note` - `quote` and `quoteUri` for quote posts, `quoteAuthorization` once the quoted author accepted
+
+When a quoted author revokes a `QuoteAuthorization` by deleting the stamp, the plugin clears the stamp
+and sends an `Update` of the quote post, but does not forward the `Delete` to the post's audience.
 
 **[GoToSocial](https://gotosocial.org/ns)**
 

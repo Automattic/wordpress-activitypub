@@ -412,3 +412,46 @@ input.blog-user-identifier {
 		width: 100%;
 	}
 }
+
+/*
+ * The Tools screen puts every box on its own line, which leaves the rest of
+ * the width empty as soon as a plugin adds a second one. Flow them into
+ * columns as wide as a box is allowed to be: as many columns as fit, one on
+ * a narrow screen, and a short box is followed by the next one rather than
+ * leaving the hole that floating boxes of different heights leave behind.
+ */
+body.tools-php .wrap {
+
+	/*
+	 * A column container does not let a float overlap it, its width is reduced
+	 * beside one instead. Hello Dolly floats its lyric right on `admin_notices`,
+	 * so without this the columns would be as narrow as that lyric is long, and
+	 * change with every reload.
+	 */
+	clear: both;
+	column-gap: 20px;
+	columns: 520px;
+}
+
+body.tools-php .wrap > h1 {
+	column-span: all;
+	margin-bottom: 20px;
+}
+
+body.tools-php .wrap > .card {
+	break-inside: avoid;
+
+	/*
+	 * A box fills its column, the way a dashboard widget fills its
+	 * `.postbox-container`: core's 520px cap would leave the column's
+	 * leftover width between the boxes instead of a constant gap.
+	 */
+	max-width: none;
+
+	/*
+	 * The gap belongs below a box, not above it: a top margin is truncated
+	 * where a column breaks, so the first box of the second column would
+	 * start 20px higher than the first box of the first one.
+	 */
+	margin: 0 0 20px;
+}
