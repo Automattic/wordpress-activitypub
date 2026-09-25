@@ -190,8 +190,8 @@ class Outbox {
 	 * items for the same object regardless of type.
 	 *
 	 * Unschedules all federation events before deleting each item.
-	 * Skips Follow, Announce, Accept, and Reject activities, as those are
-	 * independent per-request responses that must not cancel each other.
+	 * Skips Follow, Announce, Accept, Reject, and QuoteRequest activities, as
+	 * those are independent per-request items that must not cancel each other.
 	 *
 	 * @param string $object_id     The ActivityPub object ID (URL).
 	 * @param string $activity_type The activity type (e.g. 'Create', 'Update', 'Delete').
@@ -201,14 +201,16 @@ class Outbox {
 	 */
 	private static function delete_superseded_items( $object_id, $activity_type, $exclude_id ) {
 		/*
-		 * Do not delete items for Follow, Announce, Accept, or Reject activities.
+		 * Do not delete items for Follow, Announce, Accept, Reject, or QuoteRequest activities.
 		 * Follow activities from different users share the same object ID but are
 		 * independent and must survive until their Accept is received.
 		 * Accept/Reject are per-request responses (e.g. to individual incoming
 		 * QuoteRequests) and must not cancel each other even when they share
 		 * the same object ID.
+		 * A QuoteRequest's object ID is the quoted URI, so two local posts quoting
+		 * the same object must not cancel each other's request.
 		 */
-		if ( \in_array( $activity_type, array( 'Follow', 'Announce', 'Accept', 'Reject' ), true ) ) {
+		if ( \in_array( $activity_type, array( 'Follow', 'Announce', 'Accept', 'Reject', 'QuoteRequest' ), true ) ) {
 			return;
 		}
 
@@ -573,8 +575,9 @@ class Outbox {
 	/**
 	 * Purge old outbox items.
 	 *
-	 * Deletes outbox items older than the specified number of days,
-	 * except for Follow activities which are always preserved.
+	 * Deletes outbox items older than the specified number of days, except for Follow and
+	 * QuoteRequest activities, which are always preserved because a later Accept or Reject
+	 * looks them up by their original outbox GUID.
 	 * Also enforces a hard cap on total items via MAX_ITEMS.
 	 *
 	 * @param int $days Number of days to keep items. Items older than this will be deleted.
@@ -619,8 +622,8 @@ class Outbox {
 			'meta_query'  => array(
 				array(
 					'key'     => '_activitypub_activity_type',
-					'value'   => 'Follow',
-					'compare' => '!=',
+					'value'   => array( 'Follow', 'QuoteRequest' ),
+					'compare' => 'NOT IN',
 				),
 			),
 		);

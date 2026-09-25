@@ -10,6 +10,11 @@ namespace Activitypub\Tests\Handler;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Accept;
+use Activitypub\Handler\Reject;
+use Activitypub\Tests\Quote_Post_Fixtures;
+
+use function Activitypub\get_object_id;
+use function Activitypub\object_to_uri;
 
 /**
  * Class Test_Accept
@@ -17,6 +22,7 @@ use Activitypub\Handler\Accept;
  * @coversDefaultClass \Activitypub\Handler\Accept
  */
 class Test_Accept extends \WP_UnitTestCase {
+	use Quote_Post_Fixtures;
 
 	/**
 	 * Test user ID.
@@ -36,6 +42,24 @@ class Test_Accept extends \WP_UnitTestCase {
 				'role' => 'author',
 			)
 		);
+		\get_user_by( 'id', self::$user_id )->add_cap( 'activitypub' );
+	}
+
+	/**
+	 * Mock the remote objects the quote tests fetch.
+	 */
+	public function set_up() {
+		parent::set_up();
+
+		$this->add_quoted_object_mock();
+	}
+
+	/**
+	 * Remove the remote object mock.
+	 */
+	public function tear_down() {
+		$this->remove_quoted_object_mock();
+		parent::tear_down();
 	}
 
 	/**
@@ -271,5 +295,227 @@ class Test_Accept extends \WP_UnitTestCase {
 		// A non-Follow Accept must not change the following state.
 		$this->assertEmpty( \get_post_meta( $post_id, Following::FOLLOWING_META_KEY, false ) );
 		$this->assertContains( (string) $user_id, \get_post_meta( $post_id, Following::PENDING_META_KEY, false ) );
+	}
+
+	/*
+	 * ------------------------------------------------------------------
+	 * Accepts of our own QuoteRequests (FEP-044f).
+	 * ------------------------------------------------------------------
+	 */
+
+	/**
+	 * A valid Accept stores the stamp and queues an Update.
+	 *
+	 * @covers ::accept_quote_request
+	 */
+	public function test_accept_stores_stamp_and_updates() {
+		$post_id = $this->create_quote_post();
+		$filter  = $this->mock_stamp( $post_id );
+		$before  = $this->count_updates( $post_id );
+
+		$authorized = array();
+		$track      = function ( $accept, $user_ids, $success, $context ) use ( &$authorized ) {
+			if ( $success ) {
+				$authorized[] = array( $context->ID, object_to_uri( $accept['result'] ?? '' ) );
+			}
+		};
+		\add_action( 'activitypub_handled_accept', $track, 10, 4 );
+
+		Accept::handle_accept( $this->build_accept( $post_id ), self::$user_id );
+
+		\remove_action( 'activitypub_handled_accept', $track, 10 );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertSame( 'https://remote.example/stamps/1', \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertSame( $before + 1, $this->count_updates( $post_id ) );
+		$this->assertSame( array( array( $post_id, 'https://remote.example/stamps/1' ) ), $authorized );
+	}
+
+	/**
+	 * An authorized quote reaches the handler's own action, the way every other Accept does.
+	 *
+	 * @covers ::accept_quote_request
+	 */
+	public function test_accept_quote_request_fires_the_handled_action() {
+		$post_id = $this->create_quote_post();
+
+		$handled = array();
+		$track   = function ( $accept, $user_ids, $success, $context ) use ( &$handled ) {
+			$handled[] = array( $success, $context instanceof \WP_Post ? $context->ID : null );
+		};
+		\add_action( 'activitypub_handled_accept', $track, 10, 4 );
+
+		$filter = $this->mock_stamp( $post_id );
+		Accept::handle_accept( $this->build_accept( $post_id ), self::$user_id );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		\remove_action( 'activitypub_handled_accept', $track, 10 );
+
+		$this->assertSame( array( array( true, $post_id ) ), $handled );
+	}
+
+	/**
+	 * Accepts from the wrong actor, with a stamp that does not bind this post, or with a foreign stamp host are ignored.
+	 *
+	 * @covers ::accept_quote_request
+	 */
+	public function test_accept_ignored_when_sender_or_stamp_invalid() {
+		$post_id = $this->create_quote_post();
+
+		// A stamp that does not authorize the post is reported through the handler's own action.
+		$invalid = 0;
+		$track   = function ( $accept, $user_ids, $success ) use ( &$invalid ) {
+			if ( ! $success ) {
+				++$invalid;
+			}
+		};
+		\add_action( 'activitypub_handled_accept', $track, 10, 3 );
+
+		// A sender who is not the quoted author is refused before the stamp is even looked at.
+		$filter = $this->mock_stamp( $post_id );
+		Accept::handle_accept( $this->build_accept( $post_id, 'https://remote.example/stamps/1', 'https://remote.example/users/mallory' ), self::$user_id );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertSame( 0, $invalid );
+
+		$bad_stamps = array(
+			array( 'interactingObject' => 'https://elsewhere.example/other' ),
+			array( 'interactionTarget' => 'https://remote.example/notes/2' ),
+			array( 'attributedTo' => 'https://remote.example/users/mallory' ),
+			array( 'type' => 'Note' ),
+		);
+
+		foreach ( $bad_stamps as $i => $overrides ) {
+			$filter = $this->mock_stamp( $post_id, $overrides );
+			Accept::handle_accept( $this->build_accept( $post_id ), self::$user_id );
+			\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+			$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_authorization', true ), \key( $overrides ) );
+			$this->assertSame( $i + 1, $invalid, \key( $overrides ) );
+		}
+
+		\remove_action( 'activitypub_handled_accept', $track, 10 );
+
+		// A stamp on another host than the sender is never fetched.
+		$fetched_urls = array();
+		$fetched      = function ( $pre, $url ) use ( &$fetched_urls ) {
+			$fetched_urls[] = $url;
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $fetched, 9, 2 );
+		Accept::handle_accept( $this->build_accept( $post_id, 'https://other.example/stamps/1' ), self::$user_id );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetched, 9 );
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertNotContains( 'https://other.example/stamps/1', $fetched_urls );
+	}
+
+	/**
+	 * The stored block URL may differ from the stamp's canonical interactionTarget.
+	 *
+	 * The Quote block stores whatever URL the author pasted in, which is often a web URL
+	 * rather than the canonical object id the QuoteAuthorization stamp names.
+	 *
+	 * @covers ::accept_quote_request
+	 */
+	public function test_accept_stores_stamp_when_block_url_is_not_canonical() {
+		$block_url  = 'https://remote.example/@alice/1';
+		$canonical  = 'https://remote.example/notes/1';
+		$quoted_map = function ( $pre, $url ) use ( $block_url, $canonical ) {
+			if ( $block_url === $url ) {
+				return array(
+					'id'           => $canonical,
+					'type'         => 'Note',
+					'attributedTo' => 'https://remote.example/users/alice',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $quoted_map, 10, 2 );
+
+		$post_id = $this->create_quote_post( $block_url );
+		$filter  = $this->mock_stamp( $post_id );
+		$before  = $this->count_updates( $post_id );
+
+		$authorized = array();
+		$track      = function ( $accept, $user_ids, $success, $context ) use ( &$authorized ) {
+			if ( $success ) {
+				$authorized[] = array( $context->ID, object_to_uri( $accept['result'] ?? '' ) );
+			}
+		};
+		\add_action( 'activitypub_handled_accept', $track, 10, 4 );
+
+		$requests = $this->get_quote_requests( $post_id );
+		$accept   = array(
+			'type'   => 'Accept',
+			'actor'  => 'https://remote.example/users/alice',
+			'object' => array(
+				'id'         => $requests ? $requests[0]->guid : '',
+				'type'       => 'QuoteRequest',
+				'actor'      => \get_author_posts_url( self::$user_id ),
+				'object'     => $block_url,
+				'instrument' => get_object_id( \get_post( $post_id ) ),
+			),
+			'result' => 'https://remote.example/stamps/1',
+		);
+
+		Accept::handle_accept( $accept, self::$user_id );
+
+		\remove_action( 'activitypub_handled_accept', $track, 10 );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $quoted_map );
+
+		$this->assertSame( $block_url, \get_post_meta( $post_id, '_activitypub_quote_request', true ) );
+		$this->assertSame( 'https://remote.example/stamps/1', \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertSame( $before + 1, $this->count_updates( $post_id ) );
+		$this->assertSame( array( array( $post_id, 'https://remote.example/stamps/1' ) ), $authorized );
+	}
+
+
+	/**
+	 * An Accept for a request the post has since superseded is ignored.
+	 *
+	 * @covers ::accept_quote_request
+	 */
+	public function test_accept_for_superseded_url_ignored() {
+		$post_id = $this->create_quote_post();
+		$accept  = $this->build_accept( $post_id );
+		\update_post_meta( $post_id, '_activitypub_quote_request', 'https://remote.example/notes/2' );
+		$before = $this->count_updates( $post_id );
+
+		$authorized = 0;
+		$track      = function ( $accept, $user_ids, $success ) use ( &$authorized ) {
+			if ( $success ) {
+				++$authorized;
+			}
+		};
+		\add_action( 'activitypub_handled_accept', $track, 10, 3 );
+
+		$filter = $this->mock_stamp( $post_id );
+		Accept::handle_accept( $accept, self::$user_id );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+		\remove_action( 'activitypub_handled_accept', $track, 10 );
+
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertSame( 'https://remote.example/notes/2', \get_post_meta( $post_id, '_activitypub_quote_request', true ) );
+		$this->assertSame( $before, $this->count_updates( $post_id ) );
+		$this->assertSame( 0, $authorized );
+	}
+
+	/**
+	 * An Accept after an earlier Reject clears the rejection.
+	 *
+	 * @covers ::accept_quote_request
+	 */
+	public function test_accept_after_reject_clears_rejected() {
+		$post_id = $this->create_quote_post();
+
+		Reject::handle_reject( $this->build_reject( $post_id ), self::$user_id );
+		$this->assertSame( '1', \get_post_meta( $post_id, '_activitypub_quote_rejected', true ) );
+
+		$filter = $this->mock_stamp( $post_id );
+		Accept::handle_accept( $this->build_accept( $post_id ), self::$user_id );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertSame( 'https://remote.example/stamps/1', \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_rejected', true ) );
 	}
 }
