@@ -181,7 +181,7 @@ The context is included as `https://purl.archive.org/miscellany`.
 
 ### Server-Sent Events (SSE)
 
-The plugin provides real-time streaming of collection changes via [Server-Sent Events](https://swicg.github.io/activitypub-api/sse). Requires OAuth authentication with the `push` scope.
+The plugin provides real-time streaming of collection changes via [Server-Sent Events](https://swicg.github.io/activitypub-api/sse). Requires OAuth authentication with the `read` scope.
 
 **Supported features:**
 

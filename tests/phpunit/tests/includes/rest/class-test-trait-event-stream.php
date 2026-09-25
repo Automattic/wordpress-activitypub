@@ -524,44 +524,26 @@ class Test_Trait_Event_Stream extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that the stream hides private activities from a token without the read scope.
+	 * Test that both collection streams require the read scope.
 	 *
-	 * The stream is gated on `push`, which lets a client watch the collection. Seeing the
-	 * owner's private activities is the authority the paged outbox requires `read` for, and
-	 * streaming must not be a way around that.
-	 *
-	 * @covers ::get_new_items
+	 * @covers ::get_stream_permissions_check
 	 */
-	public function test_get_new_items_hides_private_without_read_scope() {
-		$post_id = self::factory()->post->create(
-			array(
-				'post_author' => $this->user_id,
-				'post_status' => 'publish',
-			)
-		);
+	public function test_stream_requires_read_scope() {
+		\wp_set_current_user( $this->user_id );
 
-		$outbox_id = add_to_outbox( \get_post( $post_id ), 'Create', $this->user_id, ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE );
-		$this->assertIsInt( $outbox_id );
+		foreach ( array( 'outbox', 'inbox' ) as $collection ) {
+			$request = new \WP_REST_Request( 'GET', sprintf( '/%s/actors/%d/%s/stream', ACTIVITYPUB_REST_NAMESPACE, $this->user_id, $collection ) );
+			$request->set_param( 'user_id', $this->user_id );
 
-		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH ) ) );
-		$this->assertEmpty(
-			$this->instance->test_get_new_items( $this->user_id, 'outbox', 0 ),
-			'A push-only token must not receive a private activity.'
-		);
+			$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH ), $this->user_id ) );
+			$result = $this->instance->get_stream_permissions_check( $request );
+			$this->assertWPError( $result, "A push-only token must not open the $collection stream." );
+			$this->assertSame( 'activitypub_insufficient_scope', $result->get_error_code() );
 
-		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH, Scope::READ ) ) );
-		$this->assertNotEmpty(
-			$this->instance->test_get_new_items( $this->user_id, 'outbox', 0 ),
-			'A token that also holds read is the positive control.'
-		);
-
-		$this->set_oauth_current_token( null );
-		$this->assertNotEmpty(
-			$this->instance->test_get_new_items( $this->user_id, 'outbox', 0 ),
-			'A caller with no token is not scope-limited.'
-		);
+			$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::READ ), $this->user_id ) );
+			$this->assertTrue( $this->instance->get_stream_permissions_check( $request ), "A read token opens the $collection stream." );
+		}
 	}
-
 
 	/**
 	 * Clear any OAuth session this class established.

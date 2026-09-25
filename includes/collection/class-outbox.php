@@ -9,6 +9,7 @@ namespace Activitypub\Collection;
 
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
+use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Server;
 use Activitypub\Scheduler;
 use Activitypub\Webfinger;
@@ -485,8 +486,10 @@ class Outbox {
 		 *
 		 * Users authorized to act as the blog actor are treated as the author of
 		 * blog-actor items so they can read the same private outbox they can post to.
+		 *
+		 * An OAuth caller additionally needs `read`, the scope the paged outbox asks for.
 		 */
-		if ( \is_user_logged_in() ) {
+		if ( \is_user_logged_in() && Server::permits_scope( Scope::READ ) ) {
 			$author = (int) $outbox_item->post_author;
 
 			if ( \get_current_user_id() === $author ) {

@@ -11,6 +11,8 @@ use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Activity\Extended_Object\Event;
 use Activitypub\Collection\Outbox;
+use Activitypub\OAuth\Scope;
+use Activitypub\Tests\OAuth_Token_Stub;
 
 /**
  * Test class for Outbox collection.
@@ -18,6 +20,8 @@ use Activitypub\Collection\Outbox;
  * @coversDefaultClass \Activitypub\Collection\Outbox
  */
 class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
+	use OAuth_Token_Stub;
+
 	/**
 	 * Test add an item to the outbox.
 	 *
@@ -1112,5 +1116,29 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$result = Outbox::maybe_get_activity( $post );
 
 		$this->assertInstanceOf( Activity::class, $result );
+	}
+
+	/**
+	 * Test that an OAuth owner needs the read scope to fetch a private outbox item by permalink.
+	 *
+	 * @covers ::maybe_get_activity
+	 */
+	public function test_maybe_get_activity_oauth_owner_requires_read_scope() {
+		$post = $this->create_private_blog_actor_outbox_item();
+
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $admin_id );
+
+		foreach ( array( array( Scope::PUSH ), array( Scope::WRITE ) ) as $scopes ) {
+			$this->set_oauth_current_token( $this->mock_oauth_token( $scopes, $admin_id ) );
+
+			$result = Outbox::maybe_get_activity( $post );
+
+			$this->assertWPError( $result, \implode( ',', $scopes ) . ' must not read a private item.' );
+			$this->assertEquals( 'private_outbox_item', $result->get_error_code() );
+		}
+
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::READ ), $admin_id ) );
+		$this->assertInstanceOf( Activity::class, Outbox::maybe_get_activity( $post ) );
 	}
 }
