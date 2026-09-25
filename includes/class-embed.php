@@ -130,16 +130,6 @@ class Embed {
 			array(
 				'audio'       => $audio,
 				'author_name' => $author_name,
-				/**
-				 * Filters the microformat the embed claims about the post it sits in.
-				 *
-				 * A reply embed is the post it replies to, a quote embed the post it quotes.
-				 *
-				 * @since unreleased
-				 *
-				 * @param string $microformat The microformat class. Default `u-in-reply-to`.
-				 */
-				'microformat' => \apply_filters( 'activitypub_embed_microformat', 'u-in-reply-to' ),
 				'author_url'  => $author_url,
 				'avatar_url'  => $avatar_url,
 				'boosts'      => $boosts,

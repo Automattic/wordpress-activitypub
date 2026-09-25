@@ -781,7 +781,8 @@ class Blocks {
 		$wrapper_attrs = \get_block_wrapper_attributes(
 			array(
 				'aria-label'       => \__( 'Reply', 'activitypub' ),
-				'class'            => 'activitypub-reply-block',
+				// The relation belongs to the block, the embed inside it is a citation like any other.
+				'class'            => 'activitypub-reply-block u-in-reply-to',
 				'data-in-reply-to' => $attrs['url'],
 			)
 		);
@@ -814,17 +815,6 @@ class Blocks {
 		$html .= '</div>';
 
 		return $html;
-	}
-
-	/**
-	 * Report the quotation microformat for an embed rendered inside the Quote block.
-	 *
-	 * @since unreleased
-	 *
-	 * @return string The microformat class.
-	 */
-	public static function quotation_microformat() {
-		return 'u-quotation-of';
 	}
 
 	/**
@@ -867,10 +857,7 @@ class Blocks {
 		if ( $show_embed ) {
 			$embed_width = ! empty( $GLOBALS['content_width'] ) ? $GLOBALS['content_width'] : 600;
 
-			// The embedded post is quoted here, not replied to.
-			\add_filter( 'activitypub_embed_microformat', array( self::class, 'quotation_microformat' ) );
 			$embed = \wp_oembed_get( $url, array( 'width' => $embed_width ) );
-			\remove_filter( 'activitypub_embed_microformat', array( self::class, 'quotation_microformat' ) );
 
 			if ( $embed ) {
 				\wp_enqueue_script( 'wp-embed' );
