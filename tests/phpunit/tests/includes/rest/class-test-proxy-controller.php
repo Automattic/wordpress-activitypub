@@ -634,4 +634,32 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 
 		\remove_filter( 'pre_http_request', $respond );
 	}
+	/**
+	 * A logged-in user with the activitypub capability may use the proxy without OAuth.
+	 *
+	 * The block editor calls it with a cookie and a nonce rather than a token.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_logged_in_activitypub_user_allowed() {
+		\wp_set_current_user( self::$user_id );
+
+		$remote = function ( $pre, $url ) {
+			return 'https://example.com/notes/1' === $url ? array(
+				'id'   => $url,
+				'type' => 'Note',
+			) : $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote, 10, 2 );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => 'https://example.com/notes/1' ) );
+		$response = $this->server->dispatch( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote );
+		\wp_set_current_user( 0 );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'Note', $response->get_data()['type'] );
+	}
 }

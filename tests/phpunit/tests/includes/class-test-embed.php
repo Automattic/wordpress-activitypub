@@ -287,10 +287,10 @@ class Test_Embed extends \WP_UnitTestCase {
 
 		$result = Embed::get_html_for_object( $object );
 
-		// Should contain the existing avatar URL.
+		// The avatar the object carries wins over the actor's.
 		$this->assertStringContainsString( 'https://example.com/existing-avatar.png', $result );
-		// Author fetch should not have been called since avatar already exists.
-		$this->assertFalse( $fetch_called );
+		// The actor is still asked, because that is where the author's name comes from.
+		$this->assertTrue( $fetch_called );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 	}

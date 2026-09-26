@@ -1,0 +1,39 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "activitypub/quote",
+	"version": "9.3.1",
+	"title": "Federated Quote",
+	"category": "widgets",
+	"icon": "format-quote",
+	"description": "Quote a post from the Fediverse. The author is asked for permission and the quote is marked as verified once they agree.",
+	"keywords": [ "fediverse", "activitypub", "quote", "federation" ],
+	"usesContext": [ "postId" ],
+	"supports": {
+		"html": false,
+		"inserter": true,
+		"multiple": false,
+		"reusable": false,
+		"lock": false,
+		"innerBlocks": {
+			"allowedBlocks": [ "core/embed" ]
+		}
+	},
+	"textdomain": "activitypub",
+	"editorScript": "file:./index.js",
+	"editorStyle": "file:./style-index.css",
+	"style": "file:./index.css",
+	"attributes": {
+		"url": {
+			"type": "string"
+		},
+		"embedPost": {
+			"type": "boolean",
+			"default": null
+		},
+		"isValidActivityPub": {
+			"type": "boolean",
+			"default": true
+		}
+	}
+}

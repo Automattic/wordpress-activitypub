@@ -10,6 +10,7 @@ namespace Activitypub\Tests;
 use Activitypub\Blocks;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Interactions;
+use Activitypub\Transformer\Post;
 
 use function Activitypub\object_to_uri;
 
@@ -1489,5 +1490,164 @@ class Test_Blocks extends \WP_UnitTestCase {
 		$output = Blocks::revert_embed_links( '', $block );
 
 		$this->assertStringNotContainsString( '<script>', $output );
+	}
+
+	/**
+	 * The quote block renders the IndieWeb quotation markup, when a post context is available.
+	 *
+	 * @covers ::render_quote_block
+	 */
+	public function test_render_quote_block_markup() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:activitypub/quote {"url":"https://remote.example/notes/1","embedPost":false} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$GLOBALS['post'] = \get_post( $post_id ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		\setup_postdata( $GLOBALS['post'] );
+		$output = \do_blocks( \get_post( $post_id )->post_content );
+		\wp_reset_postdata();
+
+		$this->assertStringContainsString( 'activitypub-quote-block', $output );
+		$this->assertStringContainsString( 'data-quotation-of="https://remote.example/notes/1"', $output );
+		$this->assertStringContainsString( 'activitypub-quote-block u-quotation-of h-cite', $output );
+		$this->assertStringContainsString( 'class="u-url"', $output );
+		$this->assertStringContainsString( 'href="https://remote.example/notes/1"', $output );
+	}
+
+	/**
+	 * Without a URL the quote block renders nothing.
+	 *
+	 * @covers ::render_quote_block
+	 */
+	public function test_render_quote_block_without_url() {
+		$this->assertEmpty( \do_blocks( '<!-- wp:activitypub/quote /-->' ) );
+	}
+
+	/**
+	 * Without a resolvable post, the site can't check the rejection meta, so it fails closed to a plain link.
+	 *
+	 * @covers ::render_quote_block
+	 */
+	public function test_render_quote_block_without_post_context_is_link_only() {
+		\wp_reset_postdata();
+		unset( $GLOBALS['post'] );
+
+		$stub = function () {
+			return '<div class="activitypub-embed">Quoted post</div>';
+		};
+		\add_filter( 'pre_oembed_result', $stub, 5 );
+		$output = \do_blocks( '<!-- wp:activitypub/quote {"url":"https://remote.example/notes/1","embedPost":true} /-->' );
+		\remove_filter( 'pre_oembed_result', $stub, 5 );
+
+		$this->assertStringContainsString( 'href="https://remote.example/notes/1"', $output );
+		$this->assertStringContainsString( 'activitypub-quote-block', $output );
+		$this->assertStringNotContainsString( 'activitypub-embed', $output );
+	}
+
+	/**
+	 * The block context's postId resolves the post outside the loop, e.g. inside a Query Loop.
+	 *
+	 * @covers ::render_quote_block
+	 */
+	public function test_render_quote_block_uses_block_context() {
+		\wp_reset_postdata();
+		unset( $GLOBALS['post'] );
+
+		$rejected_post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		\update_post_meta( $rejected_post_id, '_activitypub_quote_request', 'https://remote.example/notes/1' );
+		\update_post_meta( $rejected_post_id, '_activitypub_quote_rejected', '1' );
+		$accepted_post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+
+		$parsed_block = \parse_blocks( '<!-- wp:activitypub/quote {"url":"https://remote.example/notes/1","embedPost":true} /-->' )[0];
+
+		$stub = function () {
+			return '<div class="activitypub-embed">Quoted post</div>';
+		};
+		\add_filter( 'pre_oembed_result', $stub, 5 );
+		$rejected_output = ( new \WP_Block( $parsed_block, array( 'postId' => $rejected_post_id ) ) )->render();
+		$accepted_output = ( new \WP_Block( $parsed_block, array( 'postId' => $accepted_post_id ) ) )->render();
+		\remove_filter( 'pre_oembed_result', $stub, 5 );
+
+		$this->assertStringNotContainsString( 'activitypub-embed', $rejected_output );
+		$this->assertStringContainsString( 'activitypub-embed', $accepted_output );
+	}
+
+	/**
+	 * A declined quote keeps the link, and the citation, but drops the card.
+	 *
+	 * @covers ::render_quote_block
+	 */
+	public function test_render_quote_block_rejected() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:activitypub/quote {"url":"https://remote.example/notes/1","embedPost":true} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+		\update_post_meta( $post_id, '_activitypub_quote_request', 'https://remote.example/notes/1' );
+		\update_post_meta( $post_id, '_activitypub_quote_rejected', '1' );
+
+		$GLOBALS['post'] = \get_post( $post_id ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		\setup_postdata( $GLOBALS['post'] );
+		$stub = function () {
+			return '<div class="activitypub-embed">Quoted post</div>';
+		};
+		\add_filter( 'pre_oembed_result', $stub, 5 );
+		$output = \do_blocks( \get_post( $post_id )->post_content );
+		\remove_filter( 'pre_oembed_result', $stub, 5 );
+		\wp_reset_postdata();
+
+		$this->assertStringNotContainsString( 'activitypub-embed', $output );
+		$this->assertStringContainsString( 'href="https://remote.example/notes/1"', $output );
+	}
+
+	/**
+	 * In the ActivityPub representation the quote block becomes a plain link.
+	 *
+	 * @covers ::generate_quote_link
+	 */
+	public function test_quote_block_becomes_link_in_activitypub_content() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:paragraph --><p>Take.</p><!-- /wp:paragraph -->' . PHP_EOL .
+									'<!-- wp:activitypub/quote {"url":"https://remote.example/notes/1","embedPost":true} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$content = Post::transform( \get_post( $post_id ) )->to_object()->get_content();
+
+		$this->assertStringContainsString( '<a href="https://remote.example/notes/1">', $content );
+		$this->assertStringNotContainsString( 'u-quotation-of', $content );
+		$this->assertStringNotContainsString( 'wp-embed', $content );
+	}
+
+	/**
+	 * The editor gets the quote handshake state through the REST field.
+	 *
+	 * @covers ::register_rest_fields
+	 */
+	public function test_quote_rest_field() {
+		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		\update_post_meta( $post_id, '_activitypub_quote_request', 'https://remote.example/notes/1' );
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+
+		\do_action( 'rest_api_init' );
+		$request = new \WP_REST_Request( 'GET', '/wp/v2/posts/' . $post_id );
+		$request->set_param( 'context', 'edit' );
+		$data = \rest_get_server()->dispatch( $request )->get_data();
+
+		$this->assertSame(
+			array(
+				'request'       => 'https://remote.example/notes/1',
+				'authorization' => 'https://remote.example/stamps/1',
+				'rejected'      => false,
+			),
+			$data['activitypub_quote']
+		);
 	}
 }
