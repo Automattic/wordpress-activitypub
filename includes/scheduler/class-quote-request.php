@@ -68,10 +68,10 @@ class Quote_Request {
 
 		/*
 		 * The quoted URL changed, or the quote is gone: the old answer and the old request no longer
-		 * apply. A declined quote is left out of the activity too, so whether the quote is gone is a
-		 * question for the post, not for the activity.
+		 * apply. A declined quote is left out of the activity too, so whether a quote is still there
+		 * is a question for the post, not for the activity.
 		 */
-		if ( $sent_for && ( $quoted_uri || ! \has_block( 'activitypub/quote', $post ) ) ) {
+		if ( $sent_for && ( $quoted_uri || ! self::has_quote( $post ) ) ) {
 			\delete_post_meta( $post->ID, '_activitypub_quote_authorization' );
 			\delete_post_meta( $post->ID, '_activitypub_quote_rejected' );
 			\delete_post_meta( $post->ID, '_activitypub_quote_request' );
@@ -113,5 +113,26 @@ class Quote_Request {
 		}
 
 		\update_post_meta( $post->ID, '_activitypub_quote_request', $quoted_uri );
+	}
+
+	/**
+	 * Whether the post still quotes something.
+	 *
+	 * A block whose URL was cleared quotes as little as a block that was deleted.
+	 *
+	 * @since unreleased
+	 *
+	 * @param \WP_Post $post The post.
+	 *
+	 * @return bool Whether the post has a Quote block with a URL.
+	 */
+	private static function has_quote( $post ) {
+		foreach ( \parse_blocks( $post->post_content ) as $block ) {
+			if ( 'activitypub/quote' === $block['blockName'] && ! empty( $block['attrs']['url'] ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }

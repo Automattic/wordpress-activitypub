@@ -206,6 +206,24 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 	}
 
 	/**
+	 * A block whose URL was cleared quotes as little as a deleted one, so it clears the state too.
+	 *
+	 * @covers ::maybe_send_request
+	 */
+	public function test_emptied_quote_url_clears_request_meta() {
+		$post_id = $this->create_quote_post();
+
+		\wp_update_post(
+			array(
+				'ID'           => $post_id,
+				'post_content' => '<!-- wp:activitypub/quote {"url":""} /-->',
+			)
+		);
+
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_request', true ) );
+	}
+
+	/**
 	 * No request for stamped, rejected or non-quote posts.
 	 *
 	 * @covers ::maybe_send_request
