@@ -222,6 +222,14 @@ abstract class File {
 		$tmp_file = $result['file'];
 		$paths    = static::get_storage_paths( $entity_id );
 
+		/*
+		 * The image is optimized while it is still a temporary file, so the name it is published
+		 * under is the format it ends up in. Converting it afterwards would rename the file the
+		 * lookup has just been told about.
+		 */
+		$max_dimension = $options['max_dimension'] ?? static::get_max_dimension();
+		$tmp_file      = static::optimize_image( $tmp_file, $max_dimension );
+
 		// Create directory if it doesn't exist.
 		if ( ! \wp_mkdir_p( $paths['basedir'] ) ) {
 			\wp_delete_file( $tmp_file );
@@ -249,11 +257,6 @@ abstract class File {
 				return false;
 			}
 		}
-
-		// Optimize image if applicable.
-		$max_dimension = $options['max_dimension'] ?? static::get_max_dimension();
-		$file_path     = static::optimize_image( $file_path, $max_dimension );
-		$file_name     = \basename( $file_path );
 
 		$local_url = $paths['baseurl'] . '/' . $file_name;
 
