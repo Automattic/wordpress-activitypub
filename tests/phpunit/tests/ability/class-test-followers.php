@@ -32,15 +32,34 @@ class Test_Followers extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * An invalid user ID is rejected.
+	 * A user ID without an actor is rejected.
 	 *
 	 * @covers ::get_followers
 	 */
 	public function test_get_followers_rejects_invalid_user_id() {
-		$result = Followers::get_followers( array( 'user_id' => 0 ) );
+		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$result = Followers::get_followers( array( 'user_id' => 99999 ) );
 
 		$this->assertWPError( $result );
 		$this->assertSame( 'activitypub_invalid_user_id', $result->get_error_code() );
+	}
+
+	/**
+	 * The Blog actor is user ID `0` and has followers like any other actor.
+	 *
+	 * @covers ::get_followers
+	 */
+	public function test_get_followers_accepts_the_blog_actor() {
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_ACTOR_AND_BLOG_MODE );
+		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$result = Followers::get_followers( array( 'user_id' => 0 ) );
+
+		\delete_option( 'activitypub_actor_mode' );
+
+		$this->assertNotWPError( $result );
+		$this->assertSame( array( 'followers', 'total' ), \array_keys( $result ) );
 	}
 
 	/**
@@ -66,10 +85,11 @@ class Test_Followers extends \WP_UnitTestCase {
 	 */
 	public function test_get_followers_allows_admin_for_other_user() {
 		$admin = self::factory()->user->create( array( 'role' => 'administrator' ) );
-		$other = self::factory()->user->create();
+		$other = self::factory()->user->create_and_get();
+		$other->add_cap( 'activitypub' );
 		\wp_set_current_user( $admin );
 
-		$result = Followers::get_followers( array( 'user_id' => $other ) );
+		$result = Followers::get_followers( array( 'user_id' => $other->ID ) );
 
 		$this->assertIsArray( $result );
 		$this->assertArrayHasKey( 'followers', $result );

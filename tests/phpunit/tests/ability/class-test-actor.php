@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Ability;
 
 use Activitypub\Ability\Actor;
+use Activitypub\Collection\Remote_Actors;
 
 /**
  * Test Actor abilities.
@@ -75,5 +76,58 @@ class Test_Actor extends \WP_UnitTestCase {
 		$this->assertArrayNotHasKey( 'summary', $array );
 		$this->assertArrayNotHasKey( 'inbox', $array );
 		$this->assertArrayNotHasKey( 'outbox', $array );
+	}
+
+	/**
+	 * The lookup caches the remote actor, and asking again does not fetch or store it twice.
+	 *
+	 * This is what `readonly: true` promises for this ability: the only write is the read-through
+	 * cache of the remote data, and it does not accumulate per call.
+	 *
+	 * @covers ::get_actor_info
+	 */
+	public function test_get_actor_info_caches_the_remote_actor() {
+		$user = self::factory()->user->create_and_get();
+		$user->add_cap( 'activitypub' );
+		\wp_set_current_user( $user->ID );
+
+		$uri     = 'https://remote.example/users/alice';
+		$fetches = 0;
+		$filter  = function ( $pre, $url ) use ( $uri, &$fetches ) {
+			if ( $uri !== $url ) {
+				return $pre;
+			}
+
+			++$fetches;
+
+			return array(
+				'id'                => $uri,
+				'type'              => 'Person',
+				'name'              => 'Alice',
+				'preferredUsername' => 'alice',
+				'inbox'             => $uri . '/inbox',
+				'outbox'            => $uri . '/outbox',
+			);
+		};
+
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter, 10, 2 );
+		$first  = Actor::get_actor_info( array( 'actor' => $uri ) );
+		$second = Actor::get_actor_info( array( 'actor' => $uri ) );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertNotWPError( $first );
+		$this->assertSame( $first['id'], $second['id'] );
+		$this->assertSame( 1, $fetches, 'The second call is served from the cache.' );
+		$this->assertCount(
+			1,
+			\get_posts(
+				array(
+					'post_type'      => Remote_Actors::POST_TYPE,
+					'post_status'    => 'any',
+					'posts_per_page' => -1,
+				)
+			),
+			'The actor is stored once, not once per call.'
+		);
 	}
 }

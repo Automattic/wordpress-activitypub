@@ -59,10 +59,13 @@ Every ability requires the current user to have the `activitypub` capability (`c
 
 | Rule | Applies to | Behavior |
 |------|-----------|----------|
-| **Ownership** | `get-followers`, `get-following`, `follow`, `unfollow` | Acting on another user's data requires `manage_options`, otherwise returns `403 activitypub_forbidden`. `user_id` defaults to the current user. |
+| **Ownership** | `get-followers`, `get-following`, `follow`, `unfollow` | Acting on another actor's data requires `manage_options`, otherwise returns `403 activitypub_forbidden`. `user_id` defaults to the current user. |
+| **Actor exists** | `get-followers`, `get-following`, `follow`, `unfollow` | `user_id` must belong to an actor the site has enabled, otherwise `400 activitypub_invalid_user_id`. `0` is the Blog actor and `-1` the Application actor, so the Blog actor's followers are read with `user_id: 0` (and, since it is not the current user, with `manage_options`). |
 | **Feature flag** | `follow`, `unfollow` | Requires the Following UI to be enabled (`activitypub_following_ui` option). Otherwise returns `403 activitypub_following_disabled`. |
 
 Each ability also declares behavioral annotations (`readonly`, `destructive`, `idempotent`) so clients can reason about side effects before running them.
+
+`readonly` here means the ability changes no site content. The discovery abilities do write to caches, because that is how the plugin stores remote data: `get-actor` keeps the fetched actor in the remote-actor store, and `resolve-handle` keeps the WebFinger response in a transient. Both are read-through caches, so a second call for the same actor is served locally and stores nothing new.
 
 ## Categories
 
@@ -97,7 +100,7 @@ Fetch profile information for a remote actor. *Readonly · idempotent.*
 
 | Input | Type | Required | Notes |
 |-------|------|----------|-------|
-| `actor` | string | yes | Actor URL or WebFinger handle. |
+| `actor` | string | yes | Actor URL or WebFinger handle. The result is cached in the remote-actor store. |
 
 **Returns:**
 

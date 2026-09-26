@@ -118,6 +118,7 @@ class Actor {
 	public static function get_actor_info( $input ) {
 		$actor_input = \sanitize_text_field( $input['actor'] );
 
+		// verify-ignore: readonly -- the actor store is a read-through cache of remote data, not site content.
 		$post = Remote_Actors::fetch_by_various( $actor_input );
 		if ( \is_wp_error( $post ) ) {
 			return $post;

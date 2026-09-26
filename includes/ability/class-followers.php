@@ -8,6 +8,7 @@
 
 namespace Activitypub\Ability;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Followers as Followers_Collection;
 use Activitypub\Collection\Remote_Actors;
 
@@ -30,7 +31,7 @@ class Followers {
 			'activitypub/get-followers',
 			array(
 				'label'               => \__( 'Get Followers', 'activitypub' ),
-				'description'         => \__( 'List followers for a local actor.', 'activitypub' ),
+				'description'         => \__( 'List followers for a local actor. Another actor\'s list needs the `manage_options` capability.', 'activitypub' ),
 				'category'            => 'activitypub-social',
 				'execute_callback'    => array( self::class, 'get_followers' ),
 				'permission_callback' => array( self::class, 'permission_callback' ),
@@ -39,15 +40,18 @@ class Followers {
 					'properties'           => array(
 						'user_id'  => array(
 							'type'        => 'integer',
-							'description' => \__( 'The local actor user ID.', 'activitypub' ),
+							'description' => \__( 'The local actor user ID. `0` is the Blog actor.', 'activitypub' ),
 						),
 						'page'     => array(
 							'type'        => 'integer',
 							'description' => \__( 'Page number for pagination.', 'activitypub' ),
+							'minimum'     => 1,
 						),
 						'per_page' => array(
 							'type'        => 'integer',
 							'description' => \__( 'Number of results per page.', 'activitypub' ),
+							'minimum'     => 1,
+							'maximum'     => 100,
 						),
 					),
 					'required'             => array( 'user_id' ),
@@ -97,11 +101,7 @@ class Followers {
 	 * @return array|\WP_Error
 	 */
 	public static function get_followers( $input ) {
-		$user_id = \absint( $input['user_id'] );
-
-		if ( ! $user_id ) {
-			return new \WP_Error( 'activitypub_invalid_user_id', \__( 'Invalid user ID.', 'activitypub' ), array( 'status' => 400 ) );
-		}
+		$user_id = (int) $input['user_id'];
 
 		if ( \get_current_user_id() !== $user_id && ! \current_user_can( 'manage_options' ) ) {
 			return new \WP_Error(
@@ -111,6 +111,15 @@ class Followers {
 			);
 		}
 
+		/*
+		 * The actor lookup, not `absint()`, decides whether the ID is usable: `0` is the Blog actor
+		 * and `-1` the Application actor, and `absint()` would read the latter as user 1. It runs
+		 * after the permission check, so the error cannot be used to enumerate enabled actors.
+		 */
+		if ( \is_wp_error( Actors::get_by_id( $user_id ) ) ) {
+			return new \WP_Error( 'activitypub_invalid_user_id', \__( 'Invalid user ID.', 'activitypub' ), array( 'status' => 400 ) );
+		}
+
 		$per_page = isset( $input['per_page'] ) ? \min( \absint( $input['per_page'] ), 100 ) : 20;
 		$page     = isset( $input['page'] ) ? \max( 1, \absint( $input['page'] ) ) : 1;
 
@@ -118,6 +127,7 @@ class Followers {
 
 		$followers = array();
 		foreach ( $data['followers'] as $post ) {
+			// verify-ignore: readonly -- `get_actor()` records a parse error on the actor it read, nothing else.
 			$actor = Remote_Actors::get_actor( $post );
 			if ( \is_wp_error( $actor ) ) {
 				continue;

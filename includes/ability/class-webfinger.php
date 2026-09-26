@@ -45,7 +45,37 @@ class Webfinger {
 					'additionalProperties' => false,
 				),
 				'output_schema'       => array(
-					'type' => 'object',
+					'type'       => 'object',
+					'properties' => array(
+						'subject' => array(
+							'type' => 'string',
+						),
+						'aliases' => array(
+							'type'  => 'array',
+							'items' => array(
+								'type'   => 'string',
+								'format' => 'uri',
+							),
+						),
+						'links'   => array(
+							'type'  => 'array',
+							'items' => array(
+								'type'       => 'object',
+								'properties' => array(
+									'rel'  => array(
+										'type' => 'string',
+									),
+									'type' => array(
+										'type' => 'string',
+									),
+									'href' => array(
+										'type'   => 'string',
+										'format' => 'uri',
+									),
+								),
+							),
+						),
+					),
 				),
 				'meta'                => array(
 					'annotations'  => array(
@@ -81,6 +111,7 @@ class Webfinger {
 	public static function resolve_handle( $input ) {
 		$handle = \sanitize_text_field( $input['handle'] );
 
+		// verify-ignore: readonly -- the lookup is cached in a transient, nothing else is written.
 		return Webfinger_Util::get_data( $handle );
 	}
 }

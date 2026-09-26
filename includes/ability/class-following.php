@@ -8,6 +8,7 @@
 
 namespace Activitypub\Ability;
 
+use Activitypub\Collection\Actors;
 use Activitypub\Collection\Following as Following_Collection;
 use Activitypub\Collection\Remote_Actors;
 
@@ -44,7 +45,7 @@ class Following {
 			'activitypub/get-following',
 			array(
 				'label'               => \__( 'Get Following', 'activitypub' ),
-				'description'         => \__( 'List accounts being followed by a local actor.', 'activitypub' ),
+				'description'         => \__( 'List accounts being followed by a local actor. Another actor\'s list needs the `manage_options` capability.', 'activitypub' ),
 				'category'            => 'activitypub-social',
 				'execute_callback'    => array( self::class, 'get_following' ),
 				'permission_callback' => array( self::class, 'permission_callback' ),
@@ -53,15 +54,18 @@ class Following {
 					'properties'           => array(
 						'user_id'  => array(
 							'type'        => 'integer',
-							'description' => \__( 'The local actor user ID.', 'activitypub' ),
+							'description' => \__( 'The local actor user ID. `0` is the Blog actor.', 'activitypub' ),
 						),
 						'page'     => array(
 							'type'        => 'integer',
 							'description' => \__( 'Page number for pagination.', 'activitypub' ),
+							'minimum'     => 1,
 						),
 						'per_page' => array(
 							'type'        => 'integer',
 							'description' => \__( 'Number of results per page.', 'activitypub' ),
+							'minimum'     => 1,
+							'maximum'     => 100,
 						),
 					),
 					'required'             => array( 'user_id' ),
@@ -101,7 +105,7 @@ class Following {
 			'activitypub/follow',
 			array(
 				'label'               => \__( 'Follow', 'activitypub' ),
-				'description'         => \__( 'Follow a remote actor.', 'activitypub' ),
+				'description'         => \__( 'Follow a remote actor. Needs the Following feature enabled, and `manage_options` to act as another actor.', 'activitypub' ),
 				'category'            => 'activitypub-social',
 				'execute_callback'    => array( self::class, 'follow' ),
 				'permission_callback' => array( self::class, 'permission_callback' ),
@@ -114,7 +118,7 @@ class Following {
 						),
 						'user_id' => array(
 							'type'        => 'integer',
-							'description' => \__( 'The local actor user ID. Defaults to the current user.', 'activitypub' ),
+							'description' => \__( 'The local actor user ID. `0` is the Blog actor. Defaults to the current user.', 'activitypub' ),
 						),
 					),
 					'required'             => array( 'actor' ),
@@ -153,7 +157,7 @@ class Following {
 			'activitypub/unfollow',
 			array(
 				'label'               => \__( 'Unfollow', 'activitypub' ),
-				'description'         => \__( 'Unfollow a remote actor.', 'activitypub' ),
+				'description'         => \__( 'Unfollow a remote actor. Needs the Following feature enabled, and `manage_options` to act as another actor.', 'activitypub' ),
 				'category'            => 'activitypub-social',
 				'execute_callback'    => array( self::class, 'unfollow' ),
 				'permission_callback' => array( self::class, 'permission_callback' ),
@@ -166,7 +170,7 @@ class Following {
 						),
 						'user_id' => array(
 							'type'        => 'integer',
-							'description' => \__( 'The local actor user ID. Defaults to the current user.', 'activitypub' ),
+							'description' => \__( 'The local actor user ID. `0` is the Blog actor. Defaults to the current user.', 'activitypub' ),
 						),
 					),
 					'required'             => array( 'actor' ),
@@ -212,11 +216,7 @@ class Following {
 	 * @return array|\WP_Error
 	 */
 	public static function get_following( $input ) {
-		$user_id = \absint( $input['user_id'] );
-
-		if ( ! $user_id ) {
-			return new \WP_Error( 'activitypub_invalid_user_id', \__( 'Invalid user ID.', 'activitypub' ), array( 'status' => 400 ) );
-		}
+		$user_id = (int) $input['user_id'];
 
 		if ( \get_current_user_id() !== $user_id && ! \current_user_can( 'manage_options' ) ) {
 			return new \WP_Error(
@@ -226,6 +226,15 @@ class Following {
 			);
 		}
 
+		/*
+		 * The actor lookup, not `absint()`, decides whether the ID is usable: `0` is the Blog actor
+		 * and `-1` the Application actor, and `absint()` would read the latter as user 1. It runs
+		 * after the permission check, so the error cannot be used to enumerate enabled actors.
+		 */
+		if ( \is_wp_error( Actors::get_by_id( $user_id ) ) ) {
+			return new \WP_Error( 'activitypub_invalid_user_id', \__( 'Invalid user ID.', 'activitypub' ), array( 'status' => 400 ) );
+		}
+
 		$per_page = isset( $input['per_page'] ) ? \min( \absint( $input['per_page'] ), 100 ) : 20;
 		$page     = isset( $input['page'] ) ? \max( 1, \absint( $input['page'] ) ) : 1;
 
@@ -233,6 +242,7 @@ class Following {
 
 		$following = array();
 		foreach ( $data['following'] as $post ) {
+			// verify-ignore: readonly -- `get_actor()` records a parse error on the actor it read, nothing else.
 			$actor = Remote_Actors::get_actor( $post );
 			if ( \is_wp_error( $actor ) ) {
 				continue;
@@ -264,7 +274,7 @@ class Following {
 		}
 
 		$actor   = \sanitize_text_field( $input['actor'] );
-		$user_id = isset( $input['user_id'] ) ? \absint( $input['user_id'] ) : \get_current_user_id();
+		$user_id = isset( $input['user_id'] ) ? (int) $input['user_id'] : \get_current_user_id();
 
 		if ( \get_current_user_id() !== $user_id && ! \current_user_can( 'manage_options' ) ) {
 			return new \WP_Error(
@@ -272,6 +282,15 @@ class Following {
 				\__( 'You are not allowed to act on behalf of another user.', 'activitypub' ),
 				array( 'status' => 403 )
 			);
+		}
+
+		/*
+		 * The actor lookup, not `absint()`, decides whether the ID is usable: `0` is the Blog actor
+		 * and `-1` the Application actor, and `absint()` would read the latter as user 1. It runs
+		 * after the permission check, so the error cannot be used to enumerate enabled actors.
+		 */
+		if ( \is_wp_error( Actors::get_by_id( $user_id ) ) ) {
+			return new \WP_Error( 'activitypub_invalid_user_id', \__( 'Invalid user ID.', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
 		$result = follow( $actor, $user_id );
@@ -304,7 +323,7 @@ class Following {
 		}
 
 		$actor   = \sanitize_text_field( $input['actor'] );
-		$user_id = isset( $input['user_id'] ) ? \absint( $input['user_id'] ) : \get_current_user_id();
+		$user_id = isset( $input['user_id'] ) ? (int) $input['user_id'] : \get_current_user_id();
 
 		if ( \get_current_user_id() !== $user_id && ! \current_user_can( 'manage_options' ) ) {
 			return new \WP_Error(
@@ -312,6 +331,15 @@ class Following {
 				\__( 'You are not allowed to act on behalf of another user.', 'activitypub' ),
 				array( 'status' => 403 )
 			);
+		}
+
+		/*
+		 * The actor lookup, not `absint()`, decides whether the ID is usable: `0` is the Blog actor
+		 * and `-1` the Application actor, and `absint()` would read the latter as user 1. It runs
+		 * after the permission check, so the error cannot be used to enumerate enabled actors.
+		 */
+		if ( \is_wp_error( Actors::get_by_id( $user_id ) ) ) {
+			return new \WP_Error( 'activitypub_invalid_user_id', \__( 'Invalid user ID.', 'activitypub' ), array( 'status' => 400 ) );
 		}
 
 		$result = unfollow( $actor, $user_id );
