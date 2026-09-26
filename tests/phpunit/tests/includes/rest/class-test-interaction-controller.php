@@ -213,4 +213,68 @@ class Test_Interaction_Controller extends Test_REST_Controller_Testcase {
 	public function follow_or_reply_url() {
 		return 'https://custom-follow-or-reply-url.com/?a=b&c=d';
 	}
+
+	/**
+	 * Intent=quote_request redirects to the editor with quotation_of.
+	 *
+	 * @covers ::get_item
+	 */
+	public function test_get_item_quote_request_intent() {
+		$remote_object_filter = function () {
+			return array(
+				'type' => 'Note',
+				'url'  => 'https://example.org/note',
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter, 10, 2 );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
+		$request->set_param( 'uri', 'https://example.org/note' );
+		$request->set_param( 'intent', 'quote_request' );
+		$response = \rest_get_server()->dispatch( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
+
+		$this->assertEquals( 302, $response->get_status() );
+		$this->assertSame( \admin_url( 'post-new.php?quotation_of=' . \rawurlencode( 'https://example.org/note' ) ), $response->get_headers()['Location'] );
+	}
+
+	/**
+	 * Intent=quote is a readable alias for quote_request and redirects the same way.
+	 *
+	 * @covers ::get_item
+	 */
+	public function test_get_item_quote_alias_intent() {
+		$remote_object_filter = function () {
+			return array(
+				'type' => 'Note',
+				'url'  => 'https://example.org/note',
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter, 10, 2 );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
+		$request->set_param( 'uri', 'https://example.org/note' );
+		$request->set_param( 'intent', 'quote' );
+		$response = \rest_get_server()->dispatch( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
+
+		$this->assertEquals( 302, $response->get_status() );
+		$this->assertSame( \admin_url( 'post-new.php?quotation_of=' . \rawurlencode( 'https://example.org/note' ) ), $response->get_headers()['Location'] );
+	}
+
+	/**
+	 * An intent value outside the enum is rejected before get_item() runs.
+	 *
+	 * @covers ::register_routes
+	 */
+	public function test_get_item_unknown_intent_rejected() {
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
+		$request->set_param( 'uri', 'https://example.org/note' );
+		$request->set_param( 'intent', 'boost' );
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 400, $response->get_status() );
+	}
 }

@@ -28,7 +28,7 @@ $args = wp_parse_args(
 \wp_enqueue_style( 'activitypub-embed', ACTIVITYPUB_PLUGIN_URL . 'assets/css/activitypub-embed.css', array(), ACTIVITYPUB_PLUGIN_VERSION );
 ?>
 
-<div class="activitypub-embed u-in-reply-to h-cite">
+<div class="activitypub-embed">
 	<div class="activitypub-embed-header p-author h-card">
 		<?php if ( $args['avatar_url'] ) : ?>
 			<img class="u-photo" src="<?php echo \esc_url( $args['avatar_url'] ); ?>" alt="" width="48" height="48" />
@@ -68,8 +68,11 @@ $args = wp_parse_args(
 	</div>
 
 	<div class="activitypub-embed-meta">
-		<?php if ( $args['published'] ) : ?>
-			<a href="<?php echo \esc_url( $args['url'] ); ?>" class="ap-stat ap-date dt-published u-in-reply-to"><?php echo \esc_html( $args['published'] ); ?></a>
+		<?php if ( $args['url'] ) : ?>
+			<?php // The citation needs its `u-url`, so the link is always there; the date is its label when there is one. ?>
+			<a href="<?php echo \esc_url( $args['url'] ); ?>" class="ap-stat ap-date u-url<?php echo $args['published'] ? ' dt-published' : ''; ?>">
+				<?php echo \esc_html( $args['published'] ? $args['published'] : \wp_parse_url( $args['url'], PHP_URL_HOST ) ); ?>
+			</a>
 		<?php endif; ?>
 
 		<?php if ( null !== $args['boosts'] ) : ?>
