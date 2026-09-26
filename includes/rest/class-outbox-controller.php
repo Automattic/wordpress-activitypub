@@ -86,6 +86,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 							'minimum'     => 1,
 							'maximum'     => 100,
 						),
+						'item'     => $this->get_seek_item_arg(),
 					),
 				),
 				array(
@@ -144,7 +145,6 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error object on failure.
 	 */
 	public function get_items( $request ) {
-		$page    = $request->get_param( 'page' ) ?? 1;
 		$user_id = $request->get_param( 'user_id' );
 		$user    = Actors::get_by_id( $user_id );
 
@@ -155,77 +155,20 @@ class Outbox_Controller extends \WP_REST_Controller {
 		 */
 		\do_action( 'activitypub_rest_outbox_pre', $request );
 
-		/**
-		 * Filters the activity types included in the outbox collection.
-		 *
-		 * @param string[] $activity_types The activity types.
-		 */
-		$activity_types = \apply_filters( 'activitypub_outbox_activity_types', self::PUBLIC_ACTIVITY_TYPES );
+		$collection_id = get_rest_url_by_path( \sprintf( 'actors/%d/outbox', $user_id ) );
 
-		$args = array(
-			'posts_per_page' => $request->get_param( 'per_page' ),
-			'author'         => $user_id > 0 ? $user_id : null,
-			'paged'          => $page,
-			'post_type'      => Outbox::POST_TYPE,
-			'post_status'    => 'any',
-
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query'     => array(
-				array(
-					'key'   => '_activitypub_activity_actor',
-					'value' => Actors::get_type_by_id( $user_id ),
-				),
-			),
-		);
-
-		/*
-		 * Whether the current user owns the outbox being queried. Owners see private and
-		 * non-public activity types; unauthenticated, federation, and non-owner requests are
-		 * limited to the public subset by the visibility filter below.
-		 *
-		 * Reuse the canonical ownership gate (the same check the OAuth C2S path applies via
-		 * maybe_verify_owner()) instead of re-deriving it here: it requires an authenticated
-		 * session, matches the requested user by identity, and handles the blog actor via
-		 * user_can_act_as_blog(). A global capability never stands in for ownership.
-		 */
-		$is_outbox_owner = true === $this->verify_owner( $request );
-
-		if ( ! $is_outbox_owner ) {
-			$args['meta_query'][] = array(
-				'key'     => '_activitypub_activity_type',
-				'value'   => $activity_types,
-				'compare' => 'IN',
-			);
-
-			$args['meta_query'][] = array(
-				'relation' => 'OR',
-				array(
-					'key'     => 'activitypub_content_visibility',
-					'compare' => 'NOT EXISTS',
-				),
-				array(
-					'key'   => 'activitypub_content_visibility',
-					'value' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
-				),
-			);
+		$seek = $this->maybe_seek_item( $request, $collection_id );
+		if ( null !== $seek ) {
+			return $seek;
 		}
 
-		/**
-		 * Filters WP_Query arguments when querying Outbox items via the REST API.
-		 *
-		 * Enables adding extra arguments or setting defaults for an outbox collection request.
-		 *
-		 * @param array            $args    Array of arguments for WP_Query.
-		 * @param \WP_REST_Request $request The REST API request.
-		 */
-		$args = \apply_filters( 'activitypub_rest_outbox_query', $args, $request );
-
+		$args         = $this->get_query_args( $request );
 		$outbox_query = new \WP_Query();
 		$query_result = $outbox_query->query( $args );
 
 		$response = array(
 			'@context'     => Base_Object::JSON_LD_CONTEXT,
-			'id'           => get_rest_url_by_path( sprintf( 'actors/%d/outbox', $user_id ) ),
+			'id'           => $collection_id,
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'actor'        => $user->get_id(),
 			'type'         => 'OrderedCollection',
@@ -286,6 +229,145 @@ class Outbox_Controller extends \WP_REST_Controller {
 	}
 
 	/**
+	 * Build the WP_Query arguments for the outbox collection.
+	 *
+	 * Shared by get_items() and get_item_index(), so the seek index is computed under the
+	 * exact same visibility rules as the collection itself.
+	 *
+	 * @param \WP_REST_Request $request Full details about the request.
+	 *
+	 * @return array The WP_Query arguments.
+	 */
+	private function get_query_args( $request ) {
+		$user_id = $request->get_param( 'user_id' );
+
+		/**
+		 * Filters the activity types included in the outbox collection.
+		 *
+		 * @param string[] $activity_types The activity types.
+		 */
+		$activity_types = \apply_filters( 'activitypub_outbox_activity_types', self::PUBLIC_ACTIVITY_TYPES );
+
+		$args = array(
+			'posts_per_page' => $request->get_param( 'per_page' ),
+			'author'         => $user_id > 0 ? $user_id : null,
+			'paged'          => $request->get_param( 'page' ) ?? 1,
+			'post_type'      => Outbox::POST_TYPE,
+			'post_status'    => 'any',
+			// Deterministic ordering: break post_date ties by ID, so pagination and seek agree.
+			'orderby'        => array(
+				'date' => 'DESC',
+				'ID'   => 'DESC',
+			),
+
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query'     => array(
+				array(
+					'key'   => '_activitypub_activity_actor',
+					'value' => Actors::get_type_by_id( $user_id ),
+				),
+			),
+		);
+
+		/*
+		 * Owners see private and non-public activity types; unauthenticated, federation, and
+		 * non-owner requests are limited to the public subset by the visibility filter below.
+		 */
+		$is_outbox_owner = $this->owner_may_read( $request );
+
+		if ( ! $is_outbox_owner ) {
+			$args['meta_query'][] = array(
+				'key'     => '_activitypub_activity_type',
+				'value'   => $activity_types,
+				'compare' => 'IN',
+			);
+
+			$args['meta_query'][] = array(
+				'relation' => 'OR',
+				array(
+					'key'     => 'activitypub_content_visibility',
+					'compare' => 'NOT EXISTS',
+				),
+				array(
+					'key'   => 'activitypub_content_visibility',
+					'value' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
+				),
+			);
+		}
+
+		/**
+		 * Filters WP_Query arguments when querying Outbox items via the REST API.
+		 *
+		 * Enables adding extra arguments or setting defaults for an outbox collection request.
+		 *
+		 * @param array            $args    Array of arguments for WP_Query.
+		 * @param \WP_REST_Request $request The REST API request.
+		 */
+		return \apply_filters( 'activitypub_rest_outbox_query', $args, $request );
+	}
+
+	/**
+	 * Get the position of an activity in the outbox.
+	 *
+	 * Both queries below run under get_query_args(), which narrows a non-owner to the public
+	 * activities the collection would page through anyway. An activity the requester cannot see is
+	 * therefore absent from the index and answered with the same 404 as one that does not exist, and
+	 * the position counts only the activities they can see, so it cannot reveal how many private
+	 * ones precede it.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string           $item    The ActivityPub activity ID.
+	 * @param \WP_REST_Request $request Full details about the request.
+	 *
+	 * @return int|false|\WP_Error Zero-based index of the item, false when not found, or WP_Error on a failed lookup.
+	 */
+	public function get_item_index( $item, $request ) {
+		$outbox_item = Outbox::get_by_guid( $item );
+		if ( \is_wp_error( $outbox_item ) ) {
+			return $outbox_item;
+		}
+
+		$args                   = $this->get_query_args( $request );
+		$args['fields']         = 'ids';
+		$args['posts_per_page'] = 1;
+		$args['orderby']        = 'none'; // Both queries below only count rows, so the collection's sort is pure overhead.
+		unset( $args['paged'] );
+
+		/*
+		 * A query filter may restrict the collection with `post__in`, and WP_Query ignores an empty
+		 * one, so an item outside that restriction is refused here instead of being queried for.
+		 */
+		if ( isset( $args['post__in'] ) && ! \in_array( $outbox_item->ID, \array_map( 'absint', (array) $args['post__in'] ), true ) ) {
+			return false;
+		}
+
+		// Confirm the item is visible through the collection's own query before computing the index.
+		$membership = new \WP_Query(
+			\array_merge(
+				$args,
+				array(
+					'post__in'      => array( $outbox_item->ID ),
+					'no_found_rows' => true,
+				)
+			)
+		);
+		if ( ! $membership->posts ) {
+			return false;
+		}
+
+		// Count the activities that sort before the item; that count is the item's zero-based index.
+		$preceding = $this->with_posts_where(
+			$this->get_preceding_by_date_where( $outbox_item->post_date, $outbox_item->ID ),
+			static function () use ( $args ) {
+				return new \WP_Query( $args );
+			}
+		);
+
+		return (int) $preceding->found_posts;
+	}
+
+	/**
 	 * Prepares the item for the REST response.
 	 *
 	 * @param mixed            $item    WordPress representation of the item.
@@ -293,7 +375,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 * @return array Response object on success, or WP_Error object on failure.
 	 */
 	public function prepare_item_for_response( $item, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		$activity = Outbox::get_activity( $item->ID );
+		$activity = Outbox::get_activity( $item );
 
 		if ( \is_wp_error( $activity ) ) {
 			return $activity;
@@ -429,7 +511,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 
 		// Determine if this is an Activity or a bare Object.
 		$type        = $data['type'] ?? '';
-		$is_activity = in_array( $type, Activity::TYPES, true );
+		$is_activity = \in_array( $type, Activity::TYPES, true );
 
 		// If it's a bare object, wrap it in a Create activity.
 		if ( ! $is_activity ) {
@@ -540,7 +622,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 			}
 		}
 
-		return array_merge(
+		return \array_merge(
 			array(
 				'@context' => Base_Object::JSON_LD_CONTEXT,
 				'type'     => 'Create',
@@ -585,7 +667,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 
 		// Check object.attributedTo if present.
 		$object = $data['object'] ?? $data;
-		if ( is_array( $object ) && ! empty( $object['attributedTo'] ) ) {
+		if ( \is_array( $object ) && ! empty( $object['attributedTo'] ) ) {
 			$attributed_to = object_to_uri( $object['attributedTo'] );
 			if ( $attributed_to && $attributed_to !== $user_actor_id ) {
 				return new \WP_Error(
@@ -636,12 +718,12 @@ class Outbox_Controller extends \WP_REST_Controller {
 		$cc     = (array) ( $activity['cc'] ?? array() );
 
 		// Check if public.
-		if ( in_array( $public, $to, true ) ) {
+		if ( \in_array( $public, $to, true ) ) {
 			return ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC;
 		}
 
 		// Check if unlisted (public in cc).
-		if ( in_array( $public, $cc, true ) ) {
+		if ( \in_array( $public, $cc, true ) ) {
 			return ACTIVITYPUB_CONTENT_VISIBILITY_QUIET_PUBLIC;
 		}
 
@@ -662,7 +744,7 @@ class Outbox_Controller extends \WP_REST_Controller {
 	 */
 	private function ensure_object_id( $data, $user ) {
 		// Check if there's an embedded object that needs fields.
-		if ( ! isset( $data['object'] ) || ! is_array( $data['object'] ) ) {
+		if ( ! isset( $data['object'] ) || ! \is_array( $data['object'] ) ) {
 			return $data;
 		}
 

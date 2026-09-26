@@ -1,0 +1,28 @@
+.activitypub-embed-container {
+	position: relative;
+	min-height: 100px;
+	pointer-events: none;
+	user-select: none;
+}
+
+.activitypub-embed-loading {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.activitypub-embed-container .wp-block-embed {
+	pointer-events: none !important;
+}
+
+.activitypub-embed-preview {
+	pointer-events: none;
+}
+
+.activitypub-embed-preview iframe {
+	pointer-events: none;
+}
+
+.activitypub-quote-block cite {
+	font-style: normal;
+}

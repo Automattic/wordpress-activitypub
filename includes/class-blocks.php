@@ -9,6 +9,9 @@ namespace Activitypub;
 
 use Activitypub\Cache\Stats_Image;
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Followers;
+use Activitypub\Collection\Following;
+use Activitypub\Collection\Remote_Actors;
 
 /**
  * Block class.
@@ -73,6 +76,7 @@ class Blocks {
 		\add_action( 'pre_get_posts', array( self::class, 'filter_query_loop_vars' ) );
 
 		\add_action( 'load-post-new.php', array( self::class, 'handle_in_reply_to_get_param' ) );
+		\add_action( 'load-post-new.php', array( self::class, 'handle_quotation_of_get_param' ) );
 		// Add editor plugin.
 		\add_action( 'enqueue_block_editor_assets', array( self::class, 'enqueue_editor_assets' ) );
 		\add_action( 'rest_api_init', array( self::class, 'register_rest_fields' ) );
@@ -105,37 +109,60 @@ class Blocks {
 			'noteLength'            => ACTIVITYPUB_NOTE_LENGTH,
 			'statsImageUrlEndpoint' => Stats_Image::is_available() ? \get_rest_url( null, ACTIVITYPUB_REST_NAMESPACE . '/stats/image-url/{user_id}/{year}' ) : '',
 		);
-		wp_localize_script( 'wp-editor', '_activityPubOptions', $data );
+		\wp_localize_script( 'wp-editor', '_activityPubOptions', $data );
 
 		// Check for our supported post types.
 		$current_screen = \get_current_screen();
 		$ap_post_types  = \get_post_types_by_support( 'activitypub' );
-		if ( ! $current_screen || ! in_array( $current_screen->post_type, $ap_post_types, true ) ) {
+		if ( ! $current_screen || ! \in_array( $current_screen->post_type, $ap_post_types, true ) ) {
 			return;
 		}
 
 		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/editor-plugin/plugin.asset.php';
-		$plugin_url = plugins_url( 'build/editor-plugin/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
-		wp_enqueue_script( 'activitypub-block-editor', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
+		$plugin_url = \plugins_url( 'build/editor-plugin/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
+		\wp_enqueue_script( 'activitypub-block-editor', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
 
 		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/pre-publish-panel/plugin.asset.php';
-		$plugin_url = plugins_url( 'build/pre-publish-panel/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
-		wp_enqueue_script( 'activitypub-pre-publish-panel', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
+		$plugin_url = \plugins_url( 'build/pre-publish-panel/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
+		\wp_enqueue_script( 'activitypub-pre-publish-panel', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
 	}
 
 	/**
 	 * Enqueue the reply handle script if the in_reply_to GET param is set.
 	 */
 	public static function handle_in_reply_to_get_param() {
-		// Only load the script if the in_reply_to GET param is set, action happens there, not here.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( ! isset( $_GET['in_reply_to'] ) ) {
+		self::enqueue_intent_script( 'in_reply_to', 'reply-intent' );
+	}
+
+	/**
+	 * Enqueue an intent script when its URL parameter is present.
+	 *
+	 * The script reads the parameter itself and prefills the matching block, so nothing
+	 * is read here beyond the presence of the parameter.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $param  The URL parameter carrying the address.
+	 * @param string $script The build folder and script handle suffix.
+	 */
+	private static function enqueue_intent_script( $param, $script ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only, the script only prefills a block.
+		if ( ! isset( $_GET[ $param ] ) ) {
 			return;
 		}
 
-		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/reply-intent/plugin.asset.php';
-		$plugin_url = plugins_url( 'build/reply-intent/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
-		wp_enqueue_script( 'activitypub-reply-intent', $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
+		$asset_data = include ACTIVITYPUB_PLUGIN_DIR . 'build/' . $script . '/plugin.asset.php';
+		$plugin_url = \plugins_url( 'build/' . $script . '/plugin.js', ACTIVITYPUB_PLUGIN_FILE );
+		\wp_enqueue_script( 'activitypub-' . $script, $plugin_url, $asset_data['dependencies'], $asset_data['version'], true );
+	}
+
+	/**
+	 * Enqueue the quote intent script if the quotation_of GET param is set.
+	 *
+	 * @since unreleased
+	 */
+	public static function handle_quotation_of_get_param() {
+		self::enqueue_intent_script( 'quotation_of', 'quote-intent' );
 	}
 
 	/**
@@ -163,6 +190,13 @@ class Blocks {
 			ACTIVITYPUB_PLUGIN_DIR . '/build/reply',
 			array(
 				'render_callback' => array( self::class, 'render_reply_block' ),
+			)
+		);
+
+		\register_block_type_from_metadata(
+			ACTIVITYPUB_PLUGIN_DIR . '/build/quote',
+			array(
+				'render_callback' => array( self::class, 'render_quote_block' ),
 			)
 		);
 
@@ -289,7 +323,7 @@ class Blocks {
 	 */
 	public static function register_rest_fields() {
 		// Register the post_count field for Follow Me block.
-		register_rest_field(
+		\register_rest_field(
 			'user',
 			'post_count',
 			array(
@@ -302,12 +336,61 @@ class Blocks {
 				 * @return int The number of published posts.
 				 */
 				'get_callback' => static function ( $response, $field_name, $request ) {
-					return (int) count_user_posts( $request->get_param( 'id' ), 'post', true );
+					return (int) \count_user_posts( $request->get_param( 'id' ), 'post', true );
 				},
 				'schema'       => array(
 					'description' => 'Number of published posts',
 					'type'        => 'integer',
 					'context'     => array( 'activitypub' ),
+				),
+			)
+		);
+
+		// Tells the editor whether the post endpoints will answer for this post, so the Reactions block only asks when they do.
+		\register_rest_field(
+			\get_post_types_by_support( 'activitypub' ),
+			'activitypub_publicly_queryable',
+			array(
+				/**
+				 * Whether the post is publicly queryable via ActivityPub.
+				 *
+				 * @param array $response Prepared response array.
+				 * @return bool True if the post is publicly queryable.
+				 */
+				'get_callback' => static function ( $response ) {
+					return is_post_publicly_queryable( $response['id'] );
+				},
+				'schema'       => array(
+					'description' => 'Whether the post is publicly queryable via ActivityPub',
+					'type'        => 'boolean',
+					'context'     => array( 'edit' ),
+				),
+			)
+		);
+
+		// Lets the Quote block show whether the quoted author accepted or declined.
+		\register_rest_field(
+			\get_post_types_by_support( 'activitypub' ),
+			'activitypub_quote',
+			array(
+				/**
+				 * Quote handshake state for the editor.
+				 *
+				 * @param array $response Prepared response array.
+				 * @return array { request: string|null, authorization: string|null, rejected: bool }
+				 */
+				'get_callback' => static function ( $response ) {
+					return array(
+						// The URL the answer was for: a stamp or a rejection says nothing about a URL the author never saw.
+						'request'       => \get_post_meta( $response['id'], '_activitypub_quote_request', true ) ?: null,
+						'authorization' => \get_post_meta( $response['id'], '_activitypub_quote_authorization', true ) ?: null,
+						'rejected'      => (bool) \get_post_meta( $response['id'], '_activitypub_quote_rejected', true ),
+					);
+				},
+				'schema'       => array(
+					'description' => 'FEP-044f quote handshake state of the post',
+					'type'        => 'object',
+					'context'     => array( 'edit' ),
 				),
 			)
 		);
@@ -320,8 +403,8 @@ class Blocks {
 	 * @return int|null The user ID, or null if the 'inherit' string is not supported in this context.
 	 */
 	public static function get_user_id( $user_string ) {
-		if ( is_numeric( $user_string ) ) {
-			return absint( $user_string );
+		if ( \is_numeric( $user_string ) ) {
+			return \absint( $user_string );
 		}
 
 		// If the user string is 'blog', return the Blog User ID.
@@ -335,30 +418,30 @@ class Blocks {
 		}
 
 		// For a homepage/front page, if the Blog User is active, use it.
-		if ( ( is_front_page() || is_home() ) && ! is_user_type_disabled( 'blog' ) ) {
+		if ( ( \is_front_page() || \is_home() ) && ! is_user_type_disabled( 'blog' ) ) {
 			return Actors::BLOG_USER_ID;
 		}
 
 		// If we're in a loop, use the post author.
-		$author_id = get_the_author_meta( 'ID' );
+		$author_id = \get_the_author_meta( 'ID' );
 		if ( $author_id ) {
 			return $author_id;
 		}
 
 		// For other pages, the queried object will clue us in.
-		$queried_object = get_queried_object();
+		$queried_object = \get_queried_object();
 		if ( ! $queried_object ) {
 			return null;
 		}
 
 		// If we're on a user archive page, use that user's ID.
-		if ( is_a( $queried_object, 'WP_User' ) ) {
+		if ( \is_a( $queried_object, 'WP_User' ) ) {
 			return $queried_object->ID;
 		}
 
 		// For a single post, use the post author's ID.
-		if ( is_a( $queried_object, 'WP_Post' ) ) {
-			return get_the_author_meta( 'ID' );
+		if ( \is_a( $queried_object, 'WP_Post' ) ) {
+			return \get_the_author_meta( 'ID' );
 		}
 
 		// We won't properly account for some conditions, like tag archives.
@@ -381,16 +464,20 @@ class Blocks {
 		}
 
 		$attributes = \wp_parse_args( $attributes );
-		$block_name = 'followers' === $endpoint ? __( 'Followers', 'activitypub' ) : __( 'Following', 'activitypub' );
+		$block_name = 'followers' === $endpoint ? \__( 'Followers', 'activitypub' ) : \__( 'Following', 'activitypub' );
 
 		if ( empty( $content ) ) {
 			// Fallback for v1.0.0 blocks.
 			/* translators: %s: Block type (Followers or Following) */
-			$_title  = $attributes['title'] ?? \sprintf( __( 'Fediverse %s', 'activitypub' ), $block_name );
+			$_title  = $attributes['title'] ?? \sprintf( \__( 'Fediverse %s', 'activitypub' ), $block_name );
 			$content = '<h3 class="wp-block-heading">' . \esc_html( $_title ) . '</h3>';
 			unset( $attributes['title'], $attributes['className'] );
 		} else {
 			$content = \implode( PHP_EOL, \wp_list_pluck( $block->parsed_block['innerBlocks'], 'innerHTML' ) );
+			// Hide empty headings.
+			if ( empty( \wp_strip_all_tags( $content ) ) ) {
+				$content = '';
+			}
 		}
 
 		$user_id = self::get_user_id( $attributes['selectedUser'] );
@@ -415,17 +502,17 @@ class Blocks {
 
 		// Query the appropriate collection.
 		if ( 'followers' === $endpoint ) {
-			$data  = \Activitypub\Collection\Followers::query( $user_id, $_per_page );
+			$data  = Followers::query( $user_id, $_per_page );
 			$items = $data['followers'];
 		} else {
-			$data  = \Activitypub\Collection\Following::query( $user_id, $_per_page );
+			$data  = Following::query( $user_id, $_per_page );
 			$items = $data['following'];
 		}
 
 		// Prepare items data for the Interactivity API context.
 		$prepared_items = \array_map(
 			static function ( $item ) {
-				$actor = \Activitypub\Collection\Remote_Actors::get_actor( $item );
+				$actor = Remote_Actors::get_actor( $item );
 
 				// Restrict URLs to http/https schemes to prevent XSS via javascript: URIs.
 				$url = object_to_uri( $actor->get_url() ) ?: $actor->get_id();
@@ -474,7 +561,7 @@ class Blocks {
 		);
 
 		/* translators: %s: Block type (Followers or Following) */
-		$nav_label = \sprintf( __( '%s navigation', 'activitypub' ), $block_name );
+		$nav_label = \sprintf( \__( '%s navigation', 'activitypub' ), $block_name );
 
 		\ob_start();
 		?>
@@ -512,8 +599,8 @@ class Blocks {
 		}
 
 		$url       = $attrs['url'];
-		$shortcode = trim( $content );
-		$name      = trim( $shortcode, ':' );
+		$shortcode = \trim( $content );
+		$name      = \trim( $shortcode, ':' );
 
 		/**
 		 * Filters a remote media URL for caching.
@@ -660,6 +747,9 @@ class Blocks {
 	/**
 	 * Render the reply block.
 	 *
+	 * @see https://indieweb.org/in-reply-to
+	 * @see https://indieweb.org/reply-context
+	 *
 	 * @param array $attrs The block attributes.
 	 *
 	 * @return string The HTML to render.
@@ -691,42 +781,96 @@ class Blocks {
 
 		$show_embed = isset( $attrs['embedPost'] ) && $attrs['embedPost'];
 
-		$wrapper_attrs = get_block_wrapper_attributes(
+		$wrapper_attrs = \get_block_wrapper_attributes(
 			array(
-				'aria-label'       => __( 'Reply', 'activitypub' ),
-				'class'            => 'activitypub-reply-block',
+				'aria-label'       => \__( 'Reply', 'activitypub' ),
+				'class'            => 'activitypub-reply-block u-in-reply-to h-cite',
 				'data-in-reply-to' => $attrs['url'],
 			)
 		);
 
-		$html = '<div ' . $wrapper_attrs . '>';
-
-		// Try to get and append the embed if requested.
+		// Try to get the embed if requested.
 		$embed = null;
 		if ( $show_embed ) {
 			// Use the theme's content width or a reasonable default to avoid narrow embeds.
 			$embed_width = ! empty( $GLOBALS['content_width'] ) ? $GLOBALS['content_width'] : 600;
-			$embed       = wp_oembed_get( $attrs['url'], array( 'width' => $embed_width ) );
+			$embed       = \wp_oembed_get( $attrs['url'], array( 'width' => $embed_width ) );
 			if ( $embed ) {
-				$html .= $embed;
 				\wp_enqueue_script( 'wp-embed' );
 			}
 		}
 
 		// Show the link if embed is not requested or if embed failed.
-		if ( ! $show_embed || ! $embed ) {
-			$html .= sprintf(
-				'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
-				esc_url( $attrs['url'] ),
-				esc_attr__( 'This post is a response to the referenced content.', 'activitypub' ),
-				// translators: %s is the URL of the post being replied to.
-				sprintf( __( '&#8620;%s', 'activitypub' ), \str_replace( array( 'https://', 'http://' ), '', esc_url( $attrs['url'] ) ) )
-			);
+		$inner = $embed ? $embed : \sprintf(
+			'<p><a title="%2$s" aria-label="%2$s" href="%1$s" class="u-in-reply-to" target="_blank">%3$s</a></p>',
+			\esc_url( $attrs['url'] ),
+			\esc_attr__( 'This post is a response to the referenced content.', 'activitypub' ),
+			// translators: %s is the URL of the post being replied to.
+			\sprintf( \__( '&#8620;%s', 'activitypub' ), \str_replace( array( 'https://', 'http://' ), '', \esc_url( $attrs['url'] ) ) )
+		);
+
+		return \sprintf( '<div %1$s>%2$s</div>', $wrapper_attrs, $inner );
+	}
+
+	/**
+	 * Render the Quote block.
+	 *
+	 * @since unreleased
+	 *
+	 * @see https://indieweb.org/quotation
+	 *
+	 * @param array          $attrs   The block attributes.
+	 * @param string         $content The block inner content (unused).
+	 * @param \WP_Block|null $block   The block instance, used to resolve the post outside the loop.
+	 *
+	 * @return string|null The block HTML.
+	 */
+	public static function render_quote_block( $attrs, $content = '', $block = null ) {
+		if ( empty( $attrs['url'] ) ) {
+			return null;
 		}
 
-		$html .= '</div>';
+		$url     = $attrs['url'];
+		$post_id = $block instanceof \WP_Block && ! empty( $block->context['postId'] ) ? (int) $block->context['postId'] : \get_the_ID();
+		// A rejection only covers the URL it was answered for; a new URL starts a new handshake.
+		$rejected = $post_id
+			&& \get_post_meta( $post_id, '_activitypub_quote_rejected', true )
+			&& \get_post_meta( $post_id, '_activitypub_quote_request', true ) === $url;
+		// A declined quote, an invalid ActivityPub URL, or a post the block context couldn't resolve (the
+		// rejection meta is then unreadable) is shown as a plain link the site does not vouch for.
+		$is_quote = $post_id && ! $rejected && ( $attrs['isValidActivityPub'] ?? true );
 
-		return $html;
+		$show_embed = $is_quote && ! empty( $attrs['embedPost'] ) && ! is_activitypub_request() && ! \is_feed();
+
+		$wrapper_attrs = \get_block_wrapper_attributes(
+			array(
+				'aria-label'        => \__( 'Quote', 'activitypub' ),
+				'class'             => 'activitypub-quote-block u-quotation-of h-cite',
+				'data-quotation-of' => $url,
+			)
+		);
+
+		$embed = null;
+		if ( $show_embed ) {
+			$embed_width = ! empty( $GLOBALS['content_width'] ) ? $GLOBALS['content_width'] : 600;
+			$embed       = \wp_oembed_get( $url, array( 'width' => $embed_width ) );
+
+			if ( $embed ) {
+				\wp_enqueue_script( 'wp-embed' );
+			}
+		}
+
+		// The citation needs a link to the source at a minimum, and the card carries one already.
+		$link = \sprintf(
+			'<p><a class="u-url" href="%1$s" target="_blank">%2$s</a></p>',
+			\esc_url( $url ),
+			\esc_html( \str_replace( array( 'https://', 'http://' ), '', $url ) )
+		);
+
+		// The embed carries the link, so it replaces it, the way the Reply block does it.
+		$inner = $embed ? $embed : $link;
+
+		return \sprintf( '<div %1$s>%2$s</div>', $wrapper_attrs, $inner );
 	}
 
 	/**
@@ -832,7 +976,7 @@ class Blocks {
 			'show_pagination' => true,
 			'total'           => 0,
 			'per_page'        => 10,
-			'nav_label'       => __( 'Actor navigation', 'activitypub' ),
+			'nav_label'       => \__( 'Actor navigation', 'activitypub' ),
 		);
 
 		$args = \wp_parse_args( $args, $defaults );
@@ -977,6 +1121,7 @@ class Blocks {
 	public static function add_post_transformation_callbacks( $post ) {
 		\add_filter( 'render_block_core/embed', array( self::class, 'revert_embed_links' ), 10, 2 );
 		\add_filter( 'render_block_activitypub/stats', '__return_empty_string' );
+		\add_filter( 'render_block_activitypub/quote', array( self::class, 'generate_quote_link' ), 10, 2 );
 
 		// Only transform reply link if it's the first block in the post.
 		$blocks = \parse_blocks( $post->post_content );
@@ -996,6 +1141,7 @@ class Blocks {
 		\remove_filter( 'render_block_core/embed', array( self::class, 'revert_embed_links' ) );
 		\remove_filter( 'render_block_activitypub/reply', array( self::class, 'generate_reply_link' ) );
 		\remove_filter( 'render_block_activitypub/stats', '__return_empty_string' );
+		\remove_filter( 'render_block_activitypub/quote', array( self::class, 'generate_quote_link' ) );
 
 		return $content;
 	}
@@ -1050,13 +1196,33 @@ class Blocks {
 			return '';
 		}
 
-		// Generate HTML @ link.
+		// The link targets the replied-to post, so it carries the reply microformat, not the mention one.
 		return \sprintf(
-			'<p class="ap-reply-mention"><a rel="mention ugc" href="%1$s" title="%2$s">%3$s</a></p>',
+			'<p class="ap-reply-mention"><a rel="in-reply-to ugc" class="u-in-reply-to" href="%1$s" title="%2$s">%3$s</a></p>',
 			\esc_url( $url ),
 			\esc_attr( $webfinger ),
-			\esc_html( '@' . strtok( $webfinger, '@' ) )
+			\esc_html( '@' . \strtok( $webfinger, '@' ) )
 		);
+	}
+
+	/**
+	 * Replace the Quote block with a plain link in the ActivityPub content.
+	 *
+	 * Receivers render the quoted post from the `quote` property; inlining the embed would duplicate it.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $block_content The block content.
+	 * @param array  $block         The block data.
+	 *
+	 * @return string The link markup.
+	 */
+	public static function generate_quote_link( $block_content, $block ) {
+		if ( empty( $block['attrs']['url'] ) ) {
+			return '';
+		}
+
+		return \sprintf( '<p><a href="%1$s">%2$s</a></p>', \esc_url( $block['attrs']['url'] ), \esc_html( $block['attrs']['url'] ) );
 	}
 
 	/**
@@ -1161,7 +1327,11 @@ class Blocks {
 		if ( ! isset( $block['attrs']['url'] ) ) {
 			return $block_content;
 		}
-		return '<p><a href="' . esc_url( $block['attrs']['url'] ) . '">' . $block['attrs']['url'] . '</a></p>';
+
+		// Escape once and reuse: the URL is also the visible link text, so it must be safe there too.
+		$url = \esc_url( $block['attrs']['url'] );
+
+		return '<p><a href="' . $url . '">' . $url . '</a></p>';
 	}
 
 	/**
@@ -1304,7 +1474,7 @@ class Blocks {
 		$query_post_type = $query->get( 'post_type' );
 		if ( ! empty( $query_post_type ) && 'any' !== $query_post_type ) {
 			$query_post_types = (array) $query_post_type;
-			if ( ! array_intersect( $query_post_types, \get_post_types_by_support( 'activitypub' ) ) ) {
+			if ( ! \array_intersect( $query_post_types, \get_post_types_by_support( 'activitypub' ) ) ) {
 				return;
 			}
 		}

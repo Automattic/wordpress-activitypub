@@ -52,7 +52,7 @@ class Webfinger {
 	 */
 	public static function get_user_resource( $user_id ) {
 		$user = Actors::get_by_id( $user_id );
-		if ( ! $user || is_wp_error( $user ) ) {
+		if ( ! $user || \is_wp_error( $user ) ) {
 			return '';
 		}
 
@@ -73,10 +73,10 @@ class Webfinger {
 			return $data;
 		}
 
-		if ( ! is_array( $data ) || empty( $data['links'] ) ) {
+		if ( ! \is_array( $data ) || empty( $data['links'] ) || ! \is_array( $data['links'] ) ) {
 			return new \WP_Error(
 				'webfinger_missing_links',
-				__( 'No valid Link elements found.', 'activitypub' ),
+				\__( 'No valid Link elements found.', 'activitypub' ),
 				array(
 					'status' => 400,
 					'data'   => $data,
@@ -86,8 +86,9 @@ class Webfinger {
 
 		foreach ( $data['links'] as $link ) {
 			if (
+				isset( $link['rel'], $link['href'], $link['type'] ) &&
 				'self' === $link['rel'] &&
-				isset( $link['type'] ) &&
+				\is_string( $link['href'] ) &&
 				(
 					'application/activity+json' === $link['type'] ||
 					'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' === $link['type']
@@ -99,7 +100,7 @@ class Webfinger {
 
 		return new \WP_Error(
 			'webfinger_url_no_activitypub',
-			__( 'The Site supports WebFinger but not ActivityPub', 'activitypub' ),
+			\__( 'The Site supports WebFinger but not ActivityPub', 'activitypub' ),
 			array(
 				'status' => 400,
 				'data'   => $data,
@@ -119,22 +120,23 @@ class Webfinger {
 	public static function uri_to_acct( $uri ) {
 		$data = self::get_data( $uri );
 
-		if ( is_wp_error( $data ) ) {
+		if ( \is_wp_error( $data ) ) {
 			return $data;
 		}
 
 		// Check if subject is an acct URI.
 		if (
 			isset( $data['subject'] ) &&
+			\is_string( $data['subject'] ) &&
 			\str_starts_with( $data['subject'], 'acct:' )
 		) {
 			return $data['subject'];
 		}
 
 		// Search for an acct URI in the aliases.
-		if ( isset( $data['aliases'] ) ) {
+		if ( isset( $data['aliases'] ) && \is_array( $data['aliases'] ) ) {
 			foreach ( $data['aliases'] as $alias ) {
-				if ( \str_starts_with( $alias, 'acct:' ) ) {
+				if ( \is_string( $alias ) && \str_starts_with( $alias, 'acct:' ) ) {
 					return $alias;
 				}
 			}
@@ -142,7 +144,7 @@ class Webfinger {
 
 		return new \WP_Error(
 			'webfinger_url_no_acct',
-			__( 'No acct URI found.', 'activitypub' ),
+			\__( 'No acct URI found.', 'activitypub' ),
 			array(
 				'status' => 400,
 				'data'   => $data,
@@ -162,7 +164,7 @@ class Webfinger {
 		if ( ! $url ) {
 			return new \WP_Error(
 				'webfinger_invalid_identifier',
-				__( 'Invalid Identifier', 'activitypub' ),
+				\__( 'Invalid Identifier', 'activitypub' ),
 				array(
 					'status' => 400,
 					'data'   => $url,
@@ -171,14 +173,26 @@ class Webfinger {
 		}
 
 		// Remove leading @.
-		$url = ltrim( $url, '@' );
+		$url = \ltrim( $url, '@' );
 
-		if ( ! preg_match( '/^([a-zA-Z+]+):/', $url, $match ) ) {
+		if ( \str_starts_with( $url, '//' ) ) {
+			/*
+			 * A scheme-relative URL is a URL reference, not a handle: treating it as one would
+			 * read the host off the first `@` in its path.
+			 */
+			$identifier = $url;
+			$scheme     = '';
+		} elseif (
+			// Scheme grammar per RFC 3986: a digit or hyphen in it must not read as a handle.
+			! \preg_match( '/^([a-zA-Z][a-zA-Z0-9+.\-]*):/', $url, $match )
+		) {
 			$identifier = 'acct:' . $url;
 			$scheme     = 'acct';
 		} else {
 			$identifier = $url;
-			$scheme     = $match[1];
+
+			// Schemes are case-insensitive, and the switch below compares them exactly.
+			$scheme = \strtolower( $match[1] );
 		}
 
 		$host = null;
@@ -187,19 +201,28 @@ class Webfinger {
 			case 'acct':
 			case 'mailto':
 			case 'xmpp':
-				if ( strpos( $identifier, '@' ) !== false ) {
-					$host = substr( $identifier, strpos( $identifier, '@' ) + 1 );
+				// Split on the last `@`: a local part may contain one, the host may not.
+				if ( \strrpos( $identifier, '@' ) !== false ) {
+					$host = \substr( $identifier, \strrpos( $identifier, '@' ) + 1 );
+
+					/*
+					 * Cut anything a query or fragment starts. `wp_parse_url()` does this for the
+					 * URL forms below, but this branch takes the host off the string itself, so
+					 * `acct:user@example.com#x` would otherwise carry `#x` into the host and miss
+					 * a domain block on `example.com`.
+					 */
+					$host = \substr( $host, 0, \strcspn( $host, '?#' ) );
 				}
 				break;
 			default:
-				$host = wp_parse_url( $identifier, PHP_URL_HOST );
+				$host = \wp_parse_url( $identifier, PHP_URL_HOST );
 				break;
 		}
 
 		if ( empty( $host ) ) {
 			return new \WP_Error(
 				'webfinger_invalid_identifier',
-				__( 'Invalid Identifier', 'activitypub' ),
+				\__( 'Invalid Identifier', 'activitypub' ),
 				array(
 					'status' => 400,
 					'data'   => $url,
@@ -207,7 +230,38 @@ class Webfinger {
 			);
 		}
 
-		return array( $identifier, $host );
+		return array( $identifier, \strtolower( $host ) );
+	}
+
+	/**
+	 * Get the host of an identifier.
+	 *
+	 * The host half of {@see self::get_identifier_and_host()}, for callers that only need that.
+	 * Prefer this over parsing a host out directly when you need an identifier's host: a handle
+	 * has none to parse, and a URI in a scheme other than `http` can carry an `@` in its path
+	 * that would be read as one.
+	 *
+	 * Not a drop-in for `is_same_host()`, which deliberately fails closed on an identifier with
+	 * no parsable host. Giving an `acct:` keyId a host there would re-admit what 9.2.1 rejected.
+	 *
+	 * @since 9.3.0
+	 *
+	 * @param string $uri The identifier, a URL or a handle.
+	 *
+	 * @return string The host, lowercased, or an empty string when there is none.
+	 */
+	public static function get_host( $uri ) {
+		$identifier_and_host = self::get_identifier_and_host( (string) $uri );
+
+		if ( \is_wp_error( $identifier_and_host ) ) {
+			return '';
+		}
+
+		/*
+		 * Folded here rather than in `get_identifier_and_host()`, whose host is also used to build
+		 * WebFinger and intent URLs: an IPv6 authority needs its brackets to stay a valid URL.
+		 */
+		return fold_host( $identifier_and_host[1] );
 	}
 
 	/**
@@ -215,18 +269,19 @@ class Webfinger {
 	 *
 	 * @param string $uri The Identifier: <identifier>@<host> or URI.
 	 *
-	 * @return \WP_Error|array Error reaction or array with identifier and host as values.
+	 * @return \WP_Error|mixed Error reaction, or the decoded document. The remote server picks the
+	 *                         body, so callers check the shape before indexing it.
 	 */
 	public static function get_data( $uri ) {
 		$identifier_and_host = self::get_identifier_and_host( $uri );
 
-		if ( is_wp_error( $identifier_and_host ) ) {
+		if ( \is_wp_error( $identifier_and_host ) ) {
 			return $identifier_and_host;
 		}
 
 		list( $identifier, $host ) = $identifier_and_host;
 
-		$webfinger_url = sprintf(
+		$webfinger_url = \sprintf(
 			'https://%s/.well-known/webfinger?resource=%s',
 			$host,
 			\rawurlencode( $identifier )
@@ -267,13 +322,13 @@ class Webfinger {
 	 * @return string The cache key.
 	 */
 	public static function generate_cache_key( $uri ) {
-		$uri = ltrim( $uri, '@' );
+		$uri = \ltrim( $uri, '@' );
 
-		if ( filter_var( $uri, FILTER_VALIDATE_EMAIL ) ) {
+		if ( \filter_var( $uri, FILTER_VALIDATE_EMAIL ) ) {
 			$uri = 'acct:' . $uri;
 		}
 
-		return 'webfinger_' . md5( $uri );
+		return 'webfinger_' . \md5( $uri );
 	}
 
 	/**
@@ -321,7 +376,7 @@ class Webfinger {
 			return $data;
 		}
 
-		if ( empty( $data['links'] ) ) {
+		if ( empty( $data['links'] ) || ! \is_array( $data['links'] ) ) {
 			return new \WP_Error(
 				'webfinger_missing_links',
 				\__( 'No valid Link elements found.', 'activitypub' ),
@@ -336,9 +391,31 @@ class Webfinger {
 		$links = array();
 
 		foreach ( $data['links'] as $link ) {
-			if ( isset( $link['rel'] ) && isset( $link['template'] ) ) {
-				$links[ \strtolower( $link['rel'] ) ] = $link['template'];
+			if ( ! isset( $link['rel'], $link['template'] ) || ! \is_string( $link['rel'] ) || ! \is_string( $link['template'] ) ) {
+				continue;
 			}
+
+			$template = \trim( $link['template'] );
+
+			/*
+			 * A scheme check alone would pass `//host`, `/path`, `https:///path` and the empty
+			 * string: with no colon there is nothing for `wp_kses_bad_protocol()` to strip, so the
+			 * comparison below always matches. An accepted junk template is also stored under its
+			 * rel, which stops the OStatus and FEP-3b86 fallbacks from ever being reached.
+			 */
+			if ( ! get_url_authority( $template ) ) {
+				continue;
+			}
+
+			// The list is explicit: the `wp_allowed_protocols()` default is wider and filterable.
+			$allowed = \wp_kses_bad_protocol( $template, array( 'http', 'https' ) );
+
+			// Lowercased both sides like `wp_http_validate_url()`, or `HTTPS://` reads as a rewrite.
+			if ( \strtolower( $allowed ) !== \strtolower( $template ) ) {
+				continue;
+			}
+
+			$links[ \strtolower( $link['rel'] ) ] = $template;
 		}
 
 		$intent = \sanitize_text_field( $intent );

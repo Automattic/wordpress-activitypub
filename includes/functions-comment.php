@@ -23,12 +23,15 @@ function get_comment_id( $id ) {
 /**
  * Get the comment from an ActivityPub Object ID.
  *
- * @param string $id ActivityPub object ID (usually a URL) to check.
+ * @since 9.1.0 Added the `$args` parameter.
+ *
+ * @param string $id   ActivityPub object ID (usually a URL) to check.
+ * @param array  $args Optional. Additional WP_Comment_Query arguments.
  *
  * @return \WP_Comment|boolean Comment, or false on failure.
  */
-function object_id_to_comment( $id ) {
-	return Comment::object_id_to_comment( $id );
+function object_id_to_comment( $id, $args = array() ) {
+	return Comment::object_id_to_comment( $id, $args );
 }
 
 /**
@@ -132,7 +135,7 @@ function get_comment_ancestors( $comment ) {
 		$parent_id = (int) $ancestor->comment_parent;
 
 		// Loop detection: If the ancestor has been seen before, break.
-		if ( empty( $parent_id ) || ( $parent_id === (int) $comment->comment_ID ) || in_array( $parent_id, $ancestors, true ) ) {
+		if ( empty( $parent_id ) || ( $parent_id === (int) $comment->comment_ID ) || \in_array( $parent_id, $ancestors, true ) ) {
 			break;
 		}
 
@@ -154,12 +157,12 @@ function get_comment_ancestors( $comment ) {
 function register_comment_type( $comment_type, $args = array() ) {
 	global $activitypub_comment_types;
 
-	if ( ! is_array( $activitypub_comment_types ) ) {
+	if ( ! \is_array( $activitypub_comment_types ) ) {
 		$activitypub_comment_types = array();
 	}
 
 	// Sanitize comment type name.
-	$comment_type = sanitize_key( $comment_type );
+	$comment_type = \sanitize_key( $comment_type );
 
 	$activitypub_comment_types[ $comment_type ] = $args;
 
@@ -169,7 +172,7 @@ function register_comment_type( $comment_type, $args = array() ) {
 	 * @param string $comment_type Comment type.
 	 * @param array  $args         Arguments used to register the comment type.
 	 */
-	do_action( 'activitypub_registered_comment_type', $comment_type, $args );
+	\do_action( 'activitypub_registered_comment_type', $comment_type, $args );
 
 	return $args;
 }
@@ -180,7 +183,7 @@ function register_comment_type( $comment_type, $args = array() ) {
  * @return string The reply intent URI.
  */
 function get_reply_intent_js() {
-	return sprintf(
+	return \sprintf(
 		'javascript:(()=>{window.open(\'%s\'+encodeURIComponent(window.location.href));})();',
 		get_reply_intent_url()
 	);
@@ -211,5 +214,32 @@ function get_reply_intent_url() {
 	 */
 	$url = \apply_filters( 'activitypub_reply_intent_url', $url );
 
-	return esc_url_raw( $url );
+	return \esc_url_raw( $url );
+}
+
+/**
+ * Get a reaction author's display name as readable plain text.
+ *
+ * Shared by the reactions REST route and the block's server render so both produce the
+ * same value for the same comment: they feed the same Interactivity template, and
+ * `view.js` swaps the rendered items for the fetched ones wholesale.
+ *
+ * This reads the raw column rather than `get_comment_author()`, so it does not pick up
+ * the emoji rendering that the comment list applies. That is deliberate for a
+ * plain-text field.
+ *
+ * `wp_insert_comment()` callers bypass core's `pre_comment_author_name` chain, so the
+ * column is not guaranteed tag-free, which is why this cleans rather than just reads.
+ *
+ * @since 9.3.0
+ *
+ * @param \WP_Comment $comment The comment.
+ *
+ * @return string The author name as plain text. May contain `&` as a character,
+ *                so it is safe for a text sink only, never for HTML.
+ */
+function get_reaction_author_name( $comment ) {
+	// Core stores this column entity-escaped, so decode for the text sinks; stripping after the
+	// decode is what keeps an encoded tag from coming back to life.
+	return \wp_strip_all_tags( \html_entity_decode( $comment->comment_author, ENT_QUOTES, 'UTF-8' ) );
 }

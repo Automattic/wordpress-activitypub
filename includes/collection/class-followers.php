@@ -12,6 +12,8 @@ use Activitypub\Tombstone;
 
 use function Activitypub\get_remote_metadata_by_actor;
 use function Activitypub\get_rest_url_by_path;
+use function Activitypub\is_same_host;
+use function Activitypub\object_to_uri;
 
 /**
  * ActivityPub Followers Collection.
@@ -50,7 +52,20 @@ class Followers {
 		}
 
 		if ( empty( $meta ) || ! \is_array( $meta ) || \is_wp_error( $meta ) ) {
-			return new \WP_Error( 'activitypub_invalid_follower', __( 'Invalid Follower', 'activitypub' ), array( 'status' => 400 ) );
+			return new \WP_Error( 'activitypub_invalid_follower', \__( 'Invalid Follower', 'activitypub' ), array( 'status' => 400 ) );
+		}
+
+		/*
+		 * The signed sender ($actor) must be the actor we actually resolved. A document that
+		 * declares an id on a different host than the one that sent the Follow would
+		 * otherwise record a third party, who never sent the Follow, as a follower.
+		 */
+		if ( ! is_same_host( $actor, object_to_uri( $meta ) ) ) {
+			return new \WP_Error(
+				'activitypub_follower_host_mismatch',
+				\__( 'The follower does not match the actor that sent the request.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
 		}
 
 		$post_id = Remote_Actors::upsert( $meta );
@@ -62,7 +77,6 @@ class Followers {
 		if ( \is_array( $post_meta ) && ! \in_array( (string) $user_id, $post_meta, true ) ) {
 			\add_post_meta( $post_id, self::FOLLOWER_META_KEY, $user_id );
 			\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
-			\wp_cache_delete( Remote_Actors::CACHE_KEY_INBOXES, 'activitypub' );
 		}
 
 		return $post_id;
@@ -100,7 +114,6 @@ class Followers {
 		}
 
 		\wp_cache_delete( \sprintf( self::CACHE_KEY_INBOXES, $user_id ), 'activitypub' );
-		\wp_cache_delete( Remote_Actors::CACHE_KEY_INBOXES, 'activitypub' );
 
 		/**
 		 * Fires before a Follower is removed.
@@ -130,10 +143,11 @@ class Followers {
 			$wpdb->prepare(
 				"SELECT DISTINCT p.ID FROM $wpdb->posts p INNER JOIN $wpdb->postmeta pm ON p.ID = pm.post_id WHERE p.post_type = %s AND pm.meta_key = %s AND pm.meta_value = %d AND p.guid = %s",
 				array(
-					\esc_sql( Remote_Actors::POST_TYPE ),
-					\esc_sql( self::FOLLOWER_META_KEY ),
-					\esc_sql( $user_id ),
-					\esc_sql( $actor ),
+					Remote_Actors::POST_TYPE,
+					self::FOLLOWER_META_KEY,
+					$user_id,
+					// Normalize the way the actor's GUID was stored; prepare() handles the escaping.
+					\esc_url_raw( $actor ),
 				)
 			)
 		);
@@ -160,7 +174,7 @@ class Followers {
 	 * @return \WP_Post|\WP_Error The Follower object or WP_Error on failure.
 	 */
 	public static function get_follower( $user_id, $actor ) {
-		_deprecated_function( __METHOD__, '7.6.0', 'Activitypub\Collection\Followers::get_by_uri' );
+		\_deprecated_function( __METHOD__, '7.6.0', 'Activitypub\Collection\Followers::get_by_uri' );
 		return self::get_by_uri( $user_id, $actor );
 	}
 
@@ -193,7 +207,7 @@ class Followers {
 	 * @return \WP_Post[] List of `Follower` objects.
 	 */
 	public static function get_followers( $user_id, $number = -1, $page = null, $args = array() ) {
-		_deprecated_function( __METHOD__, '7.6.0', 'Activitypub\Collection\Followers::get_many' );
+		\_deprecated_function( __METHOD__, '7.6.0', 'Activitypub\Collection\Followers::get_many' );
 		return self::get_many( $user_id, $number, $page, $args );
 	}
 
@@ -330,49 +344,30 @@ class Followers {
 		$cache_key = \sprintf( self::CACHE_KEY_INBOXES, $user_id );
 		$inboxes   = \wp_cache_get( $cache_key, 'activitypub' );
 
-		if ( $inboxes ) {
+		if ( false !== $inboxes ) {
 			return $inboxes;
 		}
 
-		// Get all Followers of an ID of the WordPress User.
-		$posts = new \WP_Query(
-			array(
-				'nopaging'   => true,
-				'post_type'  => Remote_Actors::POST_TYPE,
-				'fields'     => 'ids',
-				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-				'meta_query' => array(
-					'relation' => 'AND',
-					array(
-						'key'     => '_activitypub_inbox',
-						'compare' => 'EXISTS',
-					),
-					array(
-						'key'   => self::FOLLOWER_META_KEY,
-						'value' => $user_id,
-					),
-					array(
-						'key'     => '_activitypub_inbox',
-						'value'   => '',
-						'compare' => '!=',
-					),
-				),
-			)
-		);
-
-		if ( ! $posts->posts ) {
-			return array();
-		}
-
 		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$results = $wpdb->get_col(
 			$wpdb->prepare(
-				"SELECT DISTINCT meta_value FROM {$wpdb->postmeta}
-				WHERE post_id IN (" . \implode( ', ', \array_fill( 0, \absint( $posts->post_count ), '%d' ) ) . ")
-				AND meta_key = '_activitypub_inbox'
-				AND meta_value IS NOT NULL",
-				$posts->posts
+				"SELECT DISTINCT inbox.meta_value
+				FROM {$wpdb->postmeta} inbox
+				INNER JOIN {$wpdb->postmeta} follower ON follower.post_id = inbox.post_id
+				INNER JOIN {$wpdb->posts} actor ON actor.ID = inbox.post_id
+				WHERE actor.post_type = %s
+				AND actor.post_status = %s
+				AND inbox.meta_key = '_activitypub_inbox'
+				AND inbox.meta_value <> ''
+				AND follower.meta_key = %s
+				AND follower.meta_value = %s
+				ORDER BY inbox.meta_value",
+				Remote_Actors::POST_TYPE,
+				'publish',
+				self::FOLLOWER_META_KEY,
+				(string) $user_id
 			)
 		);
 
@@ -394,8 +389,8 @@ class Followers {
 	 */
 	public static function get_inboxes_for_activity( $json, $actor_id, $batch_size = 50, $offset = 0 ) {
 		$activity = \json_decode( $json, true );
-		// Only if this is a Delete. Create handles its own "Announce" in dual user mode.
-		if ( 'Delete' === ( $activity['type'] ?? null ) ) {
+		// A Delete or Move concerns every server holding a copy. Create handles its own "Announce" in dual user mode.
+		if ( \in_array( $activity['type'] ?? null, array( 'Delete', 'Move' ), true ) ) {
 			$inboxes = Remote_Actors::get_inboxes();
 		} else {
 			$inboxes = self::get_inboxes( $actor_id );
@@ -433,12 +428,12 @@ class Followers {
 			return;
 		}
 
-		$actor_id = Actors::get_id_by_various( $value );
-		if ( \is_wp_error( $actor_id ) ) {
+		$remote_actor = Remote_Actors::get_by_uri( $value );
+		if ( \is_wp_error( $remote_actor ) ) {
 			return;
 		}
 
-		self::remove( $actor_id, $user_id );
+		self::remove( $remote_actor, $user_id );
 	}
 
 	/**
@@ -525,19 +520,19 @@ class Followers {
 		}
 
 		// Build the collection ID (followers collection URL).
-		$collection_id = get_rest_url_by_path( sprintf( 'actors/%d/followers', $user_id ) );
+		$collection_id = get_rest_url_by_path( \sprintf( 'actors/%d/followers', $user_id ) );
 
 		// Build the partial followers URL.
 		$url = get_rest_url_by_path(
-			sprintf(
+			\sprintf(
 				'actors/%d/followers/sync?authority=%s',
 				$user_id,
-				rawurlencode( $authority )
+				\rawurlencode( $authority )
 			)
 		);
 
 		// Format as per FEP-8fcf (similar to HTTP Signatures format).
-		return sprintf(
+		return \sprintf(
 			'collectionId="%s", url="%s", digest="%s"',
 			$collection_id,
 			$url,

@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Sites that turned off comment flood protection no longer get it switched back on by an incoming comment from the Fediverse.

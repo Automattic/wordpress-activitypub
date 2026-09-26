@@ -11,6 +11,8 @@ use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Activity\Extended_Object\Event;
 use Activitypub\Collection\Outbox;
+use Activitypub\OAuth\Scope;
+use Activitypub\Tests\OAuth_Token_Stub;
 
 /**
  * Test class for Outbox collection.
@@ -18,6 +20,8 @@ use Activitypub\Collection\Outbox;
  * @coversDefaultClass \Activitypub\Collection\Outbox
  */
 class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
+	use OAuth_Token_Stub;
+
 	/**
 	 * Test add an item to the outbox.
 	 *
@@ -39,13 +43,32 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$post = \get_post( $id );
 
 		// Replace the post ID in the JSON with the actual post ID.
-		$json       = json_decode( $json, true );
-		$json['id'] = add_query_arg( 'p', $id, $json['id'] );
-		$json       = wp_json_encode( $json, JSON_UNESCAPED_SLASHES );
+		$expected = json_decode( $json, true );
+		if ( isset( $expected['id'] ) ) {
+			$expected['id'] = add_query_arg( 'p', $id, $expected['id'] );
+		}
 
 		$this->assertInstanceOf( 'WP_Post', $post );
 		$this->assertEquals( 'pending', $post->post_status );
-		$this->assertJsonStringEqualsJsonString( $json, $post->post_content );
+
+		// Decode the actual output and assert context separately to avoid
+		// breaking the test whenever the JSON-LD context changes.
+		$actual = json_decode( $post->post_content, true );
+
+		// Assert the context is correct. For fixtures without @context, the actual output should
+		// have Base_Object's context. For fixtures with @context, assert it matches exactly.
+		if ( ! isset( $expected['@context'] ) ) {
+			$this->assertSame( Base_Object::JSON_LD_CONTEXT, $actual['@context'] );
+		} else {
+			$this->assertSame( $expected['@context'], $actual['@context'] );
+		}
+
+		// Remove context from both arrays and compare the rest with order-sensitive comparison
+		// (assertEquals maintains array key order, unlike assertEqualsCanonicalizing).
+		$this->assertNotEmpty( $actual['published'] );
+
+		unset( $expected['@context'], $actual['@context'], $expected['published'], $actual['published'] );
+		$this->assertEquals( $expected, $actual );
 
 		$activity = json_decode( $post->post_content );
 
@@ -105,8 +128,8 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	public function activity_object_provider() {
 		$home_url = \addcslashes( \home_url(), '/' );
 
-		$note1_json = '{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive","dcterms":"http:\/\/purl.org\/dc\/terms\/","gts":"https:\/\/gotosocial.org\/ns#","schema":"http:\/\/schema.org\/","exifData":"schema:exifData","PropertyValue":"schema:PropertyValue","interactionPolicy":{"@id":"gts:interactionPolicy","@type":"@id"},"canQuote":{"@id":"gts:canQuote","@type":"@id"},"canReply":{"@id":"gts:canReply","@type":"@id"},"canLike":{"@id":"gts:canLike","@type":"@id"},"canAnnounce":{"@id":"gts:canAnnounce","@type":"@id"},"automaticApproval":{"@id":"gts:automaticApproval","@type":"@id"},"manualApproval":{"@id":"gts:manualApproval","@type":"@id"},"always":{"@id":"gts:always","@type":"@id"},"toot":"http:\/\/joinmastodon.org\/ns#","blurhash":"toot:blurhash"}],"actor":"http:\/\/example.org\/?author=1","id":"http:\/\/example.org\/?post_type=ap_outbox\u0026p=351","type":"Create","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"object":{"id":"https:\/\/example.com\/1","type":"Note","content":"\u003Cp\u003EThis is a note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is a note\u003C\/p\u003E"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html"}}';
-		$note2_json = '{"@context":["https:\/\/www.w3.org\/ns\/activitystreams",{"Hashtag":"as:Hashtag","sensitive":"as:sensitive","dcterms":"http:\/\/purl.org\/dc\/terms\/","gts":"https:\/\/gotosocial.org\/ns#","schema":"http:\/\/schema.org\/","exifData":"schema:exifData","PropertyValue":"schema:PropertyValue","interactionPolicy":{"@id":"gts:interactionPolicy","@type":"@id"},"canQuote":{"@id":"gts:canQuote","@type":"@id"},"canReply":{"@id":"gts:canReply","@type":"@id"},"canLike":{"@id":"gts:canLike","@type":"@id"},"canAnnounce":{"@id":"gts:canAnnounce","@type":"@id"},"automaticApproval":{"@id":"gts:automaticApproval","@type":"@id"},"manualApproval":{"@id":"gts:manualApproval","@type":"@id"},"always":{"@id":"gts:always","@type":"@id"},"toot":"http:\/\/joinmastodon.org\/ns#","blurhash":"toot:blurhash"}],"actor":"http:\/\/example.org\/?author=0","id":"http:\/\/example.org\/?post_type=ap_outbox\u0026p=352","type":"Create","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"object":{"id":"https:\/\/example.com\/2","type":"Note","content":"\u003Cp\u003EThis is another note\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EThis is another note\u003C\/p\u003E"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html"}}';
+		$note1_json = '{"actor":"http:\/\/example.org\/?author=1","id":"http:\/\/example.org\/?post_type=ap_outbox&p=351","type":"Create","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"object":{"id":"https:\/\/example.com\/1","type":"Note","content":"<p>This is a note<\/p>","contentMap":{"en":"<p>This is a note<\/p>"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html"}}';
+		$note2_json = '{"actor":"http:\/\/example.org\/?author=0","id":"http:\/\/example.org\/?post_type=ap_outbox&p=352","type":"Create","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"object":{"id":"https:\/\/example.com\/2","type":"Note","content":"<p>This is another note<\/p>","contentMap":{"en":"<p>This is another note<\/p>"},"tag":[],"to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html"}}';
 		$event_json = '{"@context":["https:\/\/schema.org\/","https:\/\/www.w3.org\/ns\/activitystreams",{"pt":"https:\/\/joinpeertube.org\/ns#","mz":"https:\/\/joinmobilizon.org\/ns#","status":"http:\/\/www.w3.org\/2002\/12\/cal\/ical#status","commentsEnabled":"pt:commentsEnabled","isOnline":"mz:isOnline","timezone":"mz:timezone","participantCount":"mz:participantCount","anonymousParticipationEnabled":"mz:anonymousParticipationEnabled","joinMode":{"@id":"mz:joinMode","@type":"mz:joinModeType"},"externalParticipationUrl":{"@id":"mz:externalParticipationUrl","@type":"schema:URL"},"repliesModerationOption":{"@id":"mz:repliesModerationOption","@type":"@vocab"},"contacts":{"@id":"mz:contacts","@type":"@id"}}],"actor":"http:\/\/example.org\/?author=1","id":"http:\/\/example.org\/?post_type=ap_outbox\u0026p=353","type":"Create","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"object":{"id":"https:\/\/example.com\/3","type":"Event","content":"\u003Cp\u003EYou should not miss this Event!\u003C\/p\u003E","contentMap":{"en":"\u003Cp\u003EYou should not miss this Event!\u003C\/p\u003E"},"name":"WP Test Event","nameMap":{"en":"WP Test Event"},"endTime":"2030-02-29T17:00:00+01:00","location":[{"id":"https:\/\/example.com\/place\/1","type":"Place","attributedTo":"https:\/\/wp-test.event-federation.eu\/@test","name":"Fediverse Place","address":{"type":"PostalAddress","addressCountry":"FediCountry","addressLocality":"FediTown","postalCode":"1337","streetAddress":"FediStreet"}},{"type":"VirtualLocation","url":"https:\/\/example.com\/VirtualMeetingRoom"}],"startTime":"2030-02-29T16:00:00+01:00","to":["https:\/\/www.w3.org\/ns\/activitystreams#Public"],"mediaType":"text\/html","tag":[],"timezone":"Europe\/Vienna","category":"MOVEMENTS_POLITICS","joinMode":"external"}}';
 		return array(
 			array(
@@ -641,26 +664,211 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
-	 * Test that Update activities have the updated attribute set.
+	 * Stored activity that already has a `published` value is not overwritten.
 	 *
 	 * @covers ::get_activity
 	 */
-	public function test_update_activity_has_updated_attribute() {
+	public function test_get_activity_preserves_existing_published() {
 		$object = $this->get_dummy_activity_object();
-		$object->set_content( 'Original content' );
-
-		// Create an Update activity.
-		$id = \Activitypub\add_to_outbox( $object, 'Update', 1 );
+		$id     = \Activitypub\add_to_outbox( $object, 'Create', 1 );
 		$this->assertNotFalse( $id );
 
-		// Get the activity from the outbox.
-		$activity = Outbox::get_activity( $id );
-		$this->assertNotInstanceOf( \WP_Error::class, $activity );
-
-		// Verify the updated attribute is set and matches the post's modified date.
+		$frozen           = '2020-01-02T03:04:05Z';
 		$post             = \get_post( $id );
-		$expected_updated = \gmdate( 'Y-m-d\TH:i:s\Z', \strtotime( $post->post_modified ) );
-		$this->assertEquals( $expected_updated, $activity->get_updated() );
+		$raw              = \json_decode( $post->post_content, true );
+		$raw['published'] = $frozen;
+		\wp_update_post(
+			array(
+				'ID'           => $id,
+				'post_content' => \wp_slash( \wp_json_encode( $raw ) ),
+			)
+		);
+
+		$activity = Outbox::get_activity( $id );
+		$this->assertEquals( $frozen, $activity->get_published() );
+	}
+
+	/**
+	 * Every activity is stamped with a publication date when it is queued, in UTC.
+	 *
+	 * The row describes itself from then on, so nothing has to derive a date when it is read.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_stamps_published() {
+		\update_option( 'timezone_string', 'Europe/Berlin' );
+
+		$before = \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339 );
+		$id     = \Activitypub\add_to_outbox( $this->get_dummy_activity_object(), 'Create', 1 );
+		$after  = \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339 );
+
+		\delete_option( 'timezone_string' );
+
+		$this->assertNotFalse( $id );
+
+		$stored = \json_decode( \get_post( $id )->post_content, true );
+
+		$this->assertNotEmpty( $stored['published'], 'The stored activity carries its own date.' );
+		$this->assertGreaterThanOrEqual( $before, $stored['published'], 'The date is UTC, not the site timezone.' );
+		$this->assertLessThanOrEqual( $after, $stored['published'] );
+	}
+
+	/**
+	 * An Update is stamped with the time it was queued, overriding an older date from the post.
+	 *
+	 * An Update sent for a reason other than an edit, a quote authorization arriving for instance,
+	 * would otherwise repeat the date of the last content change.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_stamps_updated_on_an_update() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => 1,
+				'post_status' => 'publish',
+				'post_date'   => '2026-01-01 10:00:00',
+			)
+		);
+
+		// An edit long in the past, which is what the transformer would report.
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update(
+			$wpdb->posts,
+			array(
+				'post_modified'     => '2026-01-01 12:00:00',
+				'post_modified_gmt' => '2026-01-01 12:00:00',
+			),
+			array( 'ID' => $post_id )
+		);
+		\clean_post_cache( $post_id );
+
+		$id = \Activitypub\add_to_outbox( \get_post( $post_id ), 'Update', 1 );
+		$this->assertNotFalse( $id );
+
+		$stored = \json_decode( \get_post( $id )->post_content, true );
+
+		$this->assertNotSame( '2026-01-01T12:00:00Z', $stored['updated'], 'The Update reports when it was queued.' );
+		$this->assertSame( '2026-01-01T12:00:00Z', $stored['object']['updated'], "The object keeps the post's own edit time." );
+	}
+
+	/**
+	 * Only what the row stores is reported, never anything derived from its date columns.
+	 *
+	 * @covers ::get_activity
+	 */
+	public function test_get_activity_derives_no_dates_from_the_row() {
+		$id = \Activitypub\add_to_outbox( $this->get_dummy_activity_object(), 'Create', 1 );
+		$this->assertNotFalse( $id );
+
+		$raw = \json_decode( \get_post( $id )->post_content, true );
+		unset( $raw['published'] );
+
+		\wp_update_post(
+			array(
+				'ID'           => $id,
+				'post_content' => \wp_slash( \wp_json_encode( $raw ) ),
+			)
+		);
+
+		$activity = Outbox::get_activity( $id );
+
+		$this->assertEmpty( $activity->get_published(), 'Nothing is read from post_date.' );
+		$this->assertEmpty( $activity->get_updated(), 'Nothing is read from post_modified.' );
+	}
+
+	/**
+	 * A pending row must still carry a GMT publication date.
+	 *
+	 * WordPress only derives `post_date_gmt` for statuses that do not float, and wp_publish_post()
+	 * never repairs it, so without supplying it the row would report the sentinel for life and every
+	 * reader would compare a local date against a GMT one.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_populates_the_gmt_date_of_a_pending_row() {
+		\update_option( 'timezone_string', 'Europe/Berlin' );
+
+		$id = \Activitypub\add_to_outbox( $this->get_dummy_activity_object(), 'Create', 1 );
+		$this->assertNotFalse( $id );
+
+		$post = \get_post( $id );
+
+		// Convert while the site timezone is still set, or get_gmt_from_date() is a no-op.
+		$expected = \get_gmt_from_date( $post->post_date );
+
+		\delete_option( 'timezone_string' );
+
+		$this->assertSame( 'pending', $post->post_status );
+		$this->assertNotSame( '0000-00-00 00:00:00', $post->post_date_gmt );
+		$this->assertSame( $expected, $post->post_date_gmt, "The row's two clocks must agree." );
+	}
+
+	/**
+	 * Rescheduling moves the publication date, so both of its columns move together.
+	 *
+	 * @covers ::reschedule
+	 */
+	public function test_reschedule_moves_both_date_columns() {
+		\update_option( 'timezone_string', 'Europe/Berlin' );
+
+		$id = \Activitypub\add_to_outbox( $this->get_dummy_activity_object(), 'Create', 1 );
+		$this->assertNotFalse( $id );
+
+		// Backdate the row, and leave the GMT column on the sentinel an upgraded site still carries.
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update(
+			$wpdb->posts,
+			array(
+				'post_date'     => '2026-01-01 00:00:00',
+				'post_date_gmt' => '0000-00-00 00:00:00',
+			),
+			array( 'ID' => $id )
+		);
+		\clean_post_cache( $id );
+
+		Outbox::reschedule( $id );
+		\clean_post_cache( $id );
+
+		$post = \get_post( $id );
+
+		// Convert while the site timezone is still set, or get_gmt_from_date() is a no-op.
+		$expected = \get_gmt_from_date( $post->post_date );
+
+		\delete_option( 'timezone_string' );
+
+		$this->assertNotSame( '2026-01-01 00:00:00', $post->post_date, 'The reschedule must move the date.' );
+		$this->assertNotSame( '0000-00-00 00:00:00', $post->post_date_gmt, 'The reschedule must repair the GMT column.' );
+		$this->assertSame( $expected, $post->post_date_gmt, "The row's two clocks must agree." );
+	}
+
+	/**
+	 * A retraction does not inherit the publication date of what it retracts.
+	 *
+	 * @covers ::undo
+	 */
+	public function test_undo_does_not_inherit_the_retracted_date() {
+		$id = \Activitypub\add_to_outbox( $this->get_dummy_activity_object(), 'Create', 1 );
+		$this->assertNotFalse( $id );
+
+		// A date from long before the retraction, the way a year-old Follow would carry one.
+		$post             = \get_post( $id );
+		$raw              = \json_decode( $post->post_content, true );
+		$raw['published'] = '2024-05-06T07:08:09Z';
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update( $wpdb->posts, array( 'post_content' => \wp_json_encode( $raw ) ), array( 'ID' => $id ) );
+		\clean_post_cache( $id );
+
+		$undo_id = Outbox::undo( $id );
+		$this->assertNotFalse( $undo_id );
+		$this->assertNotWPError( $undo_id );
+
+		$undo = Outbox::get_activity( $undo_id );
+
+		$this->assertNotSame( '2024-05-06T07:08:09Z', $undo->get_published(), 'The retraction must not claim the retracted activity\'s date.' );
 	}
 
 	/**
@@ -799,6 +1007,56 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 	}
 
 	/**
+	 * A pending QuoteRequest must survive purging, since a later Accept or Reject looks it up by its outbox GUID.
+	 *
+	 * @covers ::purge
+	 */
+	public function test_purge_preserves_quote_request_activities() {
+		// Create old QuoteRequest activity (should be preserved).
+		$quote_request_post_id = self::factory()->post->create(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
+			)
+		);
+		\update_post_meta( $quote_request_post_id, '_activitypub_activity_type', 'QuoteRequest' );
+
+		// Create old Create activity (should be deleted).
+		$create_post_id = self::factory()->post->create(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'publish',
+				'post_date'   => \gmdate( 'Y-m-d H:i:s', \strtotime( '-1 year' ) ),
+			)
+		);
+		\update_post_meta( $create_post_id, '_activitypub_activity_type', 'Create' );
+
+		// Mock the count to exceed the 20-post threshold.
+		$wp_count_posts_callback = function ( $counts, $type ) {
+			if ( Outbox::POST_TYPE === $type ) {
+				$counts->publish = 25;
+			}
+			return $counts;
+		};
+		\add_filter( 'wp_count_posts', $wp_count_posts_callback, 10, 2 );
+
+		$deleted = Outbox::purge( 180 );
+		\wp_cache_delete( \_count_posts_cache_key( Outbox::POST_TYPE ), 'counts' );
+
+		\remove_filter( 'wp_count_posts', $wp_count_posts_callback );
+
+		// Assert only 1 post was deleted (Create, not QuoteRequest).
+		$this->assertEquals( 1, $deleted );
+
+		// QuoteRequest activity should still exist.
+		$this->assertNotNull( \get_post( $quote_request_post_id ) );
+
+		// Create activity should be deleted.
+		$this->assertNull( \get_post( $create_post_id ) );
+	}
+
+	/**
 	 * Test purge method with different retention days.
 	 *
 	 * @covers ::purge
@@ -908,5 +1166,101 @@ class Test_Outbox extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		$result = Outbox::maybe_get_activity( $post );
 
 		$this->assertInstanceOf( Activity::class, $result );
+	}
+
+	/**
+	 * Test that an OAuth owner needs the read scope to fetch a private outbox item by permalink.
+	 *
+	 * @covers ::maybe_get_activity
+	 */
+	public function test_maybe_get_activity_oauth_owner_requires_read_scope() {
+		$post = $this->create_private_blog_actor_outbox_item();
+
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $admin_id );
+
+		foreach ( array( array( Scope::PUSH ), array( Scope::WRITE ) ) as $scopes ) {
+			$this->set_oauth_current_token( $this->mock_oauth_token( $scopes, $admin_id ) );
+
+			$result = Outbox::maybe_get_activity( $post );
+
+			$this->assertWPError( $result, \implode( ',', $scopes ) . ' must not read a private item.' );
+			$this->assertEquals( 'private_outbox_item', $result->get_error_code() );
+		}
+
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::READ ), $admin_id ) );
+		$this->assertInstanceOf( Activity::class, Outbox::maybe_get_activity( $post ) );
+	}
+
+	/**
+	 * Test that an activity with a list of objects can be added.
+	 *
+	 * A list stays an array in the Activity, so the title lookup must not treat it as an object.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_with_list_of_objects() {
+		$activity = new Activity();
+		$activity->set_type( 'Add' );
+		$activity->set_id( 'https://example.com/activities/list-of-objects' );
+		$activity->set_object(
+			array(
+				'https://example.com/notes/1',
+				'https://example.com/notes/2',
+			)
+		);
+
+		$this->assertIsArray( $activity->get_object(), 'The object list stays an array.' );
+
+		$id = Outbox::add( $activity, self::$user_id );
+
+		$this->assertIsInt( $id );
+	}
+
+	/**
+	 * Test that get_activity() returns an error for an item without a decodable activity.
+	 *
+	 * @covers ::get_activity
+	 */
+	public function test_get_activity_returns_error_for_invalid_content() {
+		$outbox_id = self::factory()->post->create(
+			array(
+				'post_type'    => Outbox::POST_TYPE,
+				'post_status'  => 'pending',
+				'post_content' => 'not json',
+				'meta_input'   => array(
+					'_activitypub_activity_type' => 'Create',
+				),
+			)
+		);
+
+		$activity = Outbox::get_activity( $outbox_id );
+
+		$this->assertWPError( $activity );
+		$this->assertSame( 'invalid_json', $activity->get_error_code() );
+	}
+
+	/**
+	 * A row whose content decodes but holds no activity is retired rather than dispatched.
+	 *
+	 * @covers ::get_activity
+	 */
+	public function test_get_activity_returns_error_for_content_without_type() {
+		$outbox_id = self::factory()->post->create(
+			array(
+				'post_type'    => Outbox::POST_TYPE,
+				'post_status'  => 'pending',
+				'post_author'  => self::$user_id,
+				'post_content' => '{"foo":"bar"}',
+				'meta_input'   => array(
+					'_activitypub_activity_type' => 'Create',
+				),
+			)
+		);
+
+		$activity = Outbox::get_activity( $outbox_id );
+
+		$this->assertWPError( $activity );
+		$this->assertSame( 'activitypub_outbox_item_invalid', $activity->get_error_code() );
 	}
 }

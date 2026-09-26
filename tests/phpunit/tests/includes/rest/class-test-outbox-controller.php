@@ -8,7 +8,9 @@
 namespace Activitypub\Tests\Rest;
 
 use Activitypub\Collection\Outbox;
+use Activitypub\OAuth\Scope;
 use Activitypub\Rest\Outbox_Controller;
+use Activitypub\Tests\OAuth_Token_Stub;
 use Activitypub\Tests\Test_REST_Controller_Testcase;
 
 /**
@@ -18,6 +20,8 @@ use Activitypub\Tests\Test_REST_Controller_Testcase;
  * @coversDefaultClass \Activitypub\Rest\Outbox_Controller
  */
 class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
+	use OAuth_Token_Stub;
+
 
 	/**
 	 * Test user ID.
@@ -935,6 +939,156 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 	}
 
 	/**
+	 * Test C2S POST of a reply to a remote object is delivered as a post, not rejected.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_create_reply_to_remote_object_is_delivered() {
+		$user = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+
+		$comment_count_before = \get_comments( array( 'count' => true ) );
+
+		// Intercept HTTP requests for the replied-to object and its author.
+		$filter_remote_object = function ( $pre, $url ) {
+			if ( 'https://example.social/@alice/1234' === $url ) {
+				return array( 'attributedTo' => 'https://example.social/users/alice' );
+			} elseif ( 'https://example.social/users/alice' === $url ) {
+				return array(
+					'preferredUsername' => 'alice',
+					'url'               => 'https://example.social/users/alice',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object, 10, 2 );
+
+		$data = array(
+			'type'   => 'Create',
+			'actor'  => $user->get_id(),
+			'to'     => array( 'https://example.social/users/alice' ),
+			'cc'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => array(
+				'type'      => 'Note',
+				'content'   => 'A reply to a remote post.',
+				'inReplyTo' => 'https://example.social/@alice/1234',
+			),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $data ) );
+
+		\wp_set_current_user( self::$user_id );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );
+
+		$this->assertEquals( 201, $response->get_status() );
+
+		$response_data = $response->get_data();
+
+		// The object should have an ID that's a post permalink, like a regular Note.
+		$this->assertArrayHasKey( 'object', $response_data );
+		$object_id = $response_data['object']['id'];
+		$this->assertStringContainsString( '?p=', $object_id, 'Object ID should be a post permalink' );
+		$this->assertEquals( 'https://example.social/@alice/1234', $response_data['object']['inReplyTo'] );
+		// Quiet-public (to: alice, cc: Public) must keep alice addressed on the created object.
+		$this->assertContains( 'https://example.social/users/alice', (array) $response_data['object']['to'] );
+
+		$outbox_item = Outbox::get_by_object_id( $object_id, 'Create' );
+		$this->assertInstanceOf( 'WP_Post', $outbox_item );
+
+		// The format must be set before the scheduler serializes the Create, or it federates as an Article.
+		$stored_activity = Outbox::get_activity( $outbox_item )->to_array();
+		$this->assertSame( 'Note', $stored_activity['object']['type'] );
+
+		// No comment should have been created for a reply to a remote object.
+		$this->assertEquals( $comment_count_before, \get_comments( array( 'count' => true ) ) );
+	}
+
+	/**
+	 * Test a C2S Update of a reply to a remote object still federates with inReplyTo.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_c2s_update_reply_to_remote_object_keeps_in_reply_to() {
+		$user = \Activitypub\Collection\Actors::get_by_id( self::$user_id );
+
+		$filter_remote_object = function ( $pre, $url ) {
+			if ( 'https://example.social/@alice/1234' === $url ) {
+				return array( 'attributedTo' => 'https://example.social/users/alice' );
+			} elseif ( 'https://example.social/users/alice' === $url ) {
+				return array(
+					'preferredUsername' => 'alice',
+					'url'               => 'https://example.social/users/alice',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object, 10, 2 );
+
+		\wp_set_current_user( self::$user_id );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'   => 'Create',
+					'actor'  => $user->get_id(),
+					'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+					'object' => array(
+						'type'      => 'Note',
+						'content'   => 'A reply to a remote post.',
+						'inReplyTo' => 'https://example.social/@alice/1234',
+					),
+				)
+			)
+		);
+
+		$response = \rest_get_server()->dispatch( $request );
+		$this->assertEquals( 201, $response->get_status() );
+
+		$object_id = $response->get_data()['object']['id'];
+
+		// The Update carries only the edited content, as clients do.
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'   => 'Update',
+					'actor'  => $user->get_id(),
+					'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+					'object' => array(
+						'id'      => $object_id,
+						'type'    => 'Note',
+						'content' => 'An edited reply to a remote post.',
+					),
+				)
+			)
+		);
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );
+
+		$this->assertEquals( 201, $response->get_status() );
+
+		$response_data = $response->get_data();
+		$this->assertEquals( $object_id, $response_data['object']['id'] );
+		$this->assertEquals( 'https://example.social/@alice/1234', $response_data['object']['inReplyTo'] );
+		$this->assertStringContainsString( 'An edited reply to a remote post.', $response_data['object']['content'] );
+
+		$outbox_item = Outbox::get_by_object_id( $object_id, 'Update' );
+		$this->assertInstanceOf( 'WP_Post', $outbox_item );
+
+		$stored_activity = Outbox::get_activity( $outbox_item )->to_array();
+		$this->assertEquals( 'https://example.social/@alice/1234', $stored_activity['object']['inReplyTo'] );
+	}
+
+	/**
 	 * Test C2S POST creates Note with 'status' post format.
 	 *
 	 * When a client submits a Note via C2S, the created WordPress post
@@ -974,6 +1128,12 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 			$post_id = \url_to_postid( $object['id'] );
 			$this->assertGreaterThan( 0, $post_id, 'Should find a post from the object ID.' );
 			$this->assertSame( 'status', \get_post_format( $post_id ), 'Note should have status post format.' );
+
+			// The format must be set before the scheduler serializes the Create, or it federates as an Article.
+			$outbox_item = Outbox::get_by_object_id( $object['id'], 'Create' );
+			$this->assertInstanceOf( 'WP_Post', $outbox_item );
+			$stored_activity = Outbox::get_activity( $outbox_item )->to_array();
+			$this->assertSame( 'Note', $stored_activity['object']['type'] );
 		}
 	}
 
@@ -1428,5 +1588,108 @@ class Test_Outbox_Controller extends Test_REST_Controller_Testcase {
 		$data2     = $response2->get_data();
 
 		$this->assertEquals( $count_before, $data2['totalItems'], 'Remote comment should not inflate totalItems.' );
+	}
+
+	/**
+	 * Test that private outbox items need the `read` scope, not just ownership.
+	 *
+	 * `Server::authenticate_oauth()` establishes the WordPress user for any valid bearer
+	 * whatever it was consented to, so ownership alone would hand a client granted only
+	 * `profile` the owner's private activities.
+	 *
+	 * @covers ::get_items
+	 */
+	public function test_get_items_private_requires_read_scope() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_user_by( 'ID', $user_id )->add_cap( 'activitypub' );
+
+		$canary = 'https://example.org/activity/private-canary';
+		self::factory()->post->create(
+			array(
+				'post_author'  => $user_id,
+				'post_type'    => Outbox::POST_TYPE,
+				'post_status'  => 'pending',
+				'post_title'   => $canary,
+				'post_content' => \wp_json_encode(
+					array(
+						'@context' => array( 'https://www.w3.org/ns/activitystreams' ),
+						'id'       => $canary,
+						'type'     => 'Create',
+						'actor'    => 'https://example.org/user/' . $user_id,
+						'object'   => array(
+							'id'   => $canary . '/object',
+							'type' => 'Note',
+						),
+					)
+				),
+				'meta_input'   => array(
+					'_activitypub_activity_type'     => 'Create',
+					'_activitypub_activity_actor'    => 'user',
+					'activitypub_content_visibility' => \ACTIVITYPUB_CONTENT_VISIBILITY_PRIVATE,
+				),
+			)
+		);
+
+		// The owner is signed in throughout; only the token's scope differs.
+		\wp_set_current_user( $user_id );
+
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH ), $user_id ) );
+		$this->assertNotContains( $canary, $this->outbox_activity_ids( $user_id ), 'A token without the read scope must not see a private activity.' );
+
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::READ ), $user_id ) );
+		$this->assertContains( $canary, $this->outbox_activity_ids( $user_id ), 'A read-scoped token is the positive control.' );
+
+		// A wp-admin session carries no token and is bounded by capabilities, not scope.
+		$this->set_oauth_current_token( null );
+		$this->assertContains( $canary, $this->outbox_activity_ids( $user_id ), 'A cookie session is not scope-limited.' );
+
+		\wp_set_current_user( 0 );
+		$this->assertNotContains( $canary, $this->outbox_activity_ids( $user_id ), 'An anonymous caller never sees a private activity.' );
+	}
+
+	/**
+	 * Return the activity IDs the outbox exposes for an actor.
+	 *
+	 * @param int $user_id The actor to query.
+	 * @return array Activity IDs.
+	 */
+	private function outbox_activity_ids( $user_id ) {
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $user_id . '/outbox' );
+		$request->set_param( 'page', 1 );
+		$request->set_param( 'per_page', 100 );
+
+		$data = \rest_get_server()->dispatch( $request )->get_data();
+
+		return \wp_list_pluck( $data['orderedItems'], 'id' );
+	}
+
+	/**
+	 * Test that posting to the outbox needs the write scope.
+	 *
+	 * @covers ::register_routes
+	 */
+	public function test_create_item_requires_write_scope() {
+		// Drop the blanket bypass from set_up() so the real scope check runs.
+		\remove_filter( 'activitypub_oauth_check_permission', '__return_true' );
+		\wp_set_current_user( self::$user_id );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/outbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body(
+			\wp_json_encode(
+				array(
+					'type'   => 'Like',
+					'object' => 'https://example.org/note/1',
+				)
+			)
+		);
+
+		foreach ( array( Scope::READ, Scope::PUSH ) as $scope ) {
+			$this->set_oauth_current_token( $this->mock_oauth_token( array( $scope ), self::$user_id ) );
+			$response = \rest_get_server()->dispatch( $request );
+
+			$this->assertSame( 403, $response->get_status(), "A $scope token must not post to the outbox." );
+			$this->assertSame( 'activitypub_insufficient_scope', $response->get_data()['code'] );
+		}
 	}
 }

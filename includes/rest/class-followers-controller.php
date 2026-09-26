@@ -12,9 +12,11 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Signature;
 
+use function Activitypub\fold_host;
 use function Activitypub\get_masked_wp_version;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\is_unsafe_ipv6_literal;
+use function Activitypub\maybe_set_no_store;
 
 /**
  * Followers_Controller class.
@@ -71,6 +73,7 @@ class Followers_Controller extends Actors_Controller {
 							'default'     => 'simple',
 							'enum'        => array( 'simple', 'full' ),
 						),
+						'item'     => $this->get_seek_item_arg(),
 					),
 				),
 				'schema' => array( $this, 'get_item_schema' ),
@@ -115,7 +118,7 @@ class Followers_Controller extends Actors_Controller {
 								 * downstream already enforces authority matching the verified
 								 * peer; this just keeps obviously-internal values from reaching
 								 * that code at all. Both places run the value through
-								 * self::normalize_host() so semantically equivalent hosts always
+								 * fold_host() so semantically equivalent hosts always
 								 * agree.
 								 *
 								 * Percent-decode the input first so encoded forms like
@@ -126,7 +129,7 @@ class Followers_Controller extends Actors_Controller {
 								 * would corrupt otherwise-valid reg-name hosts.
 								 */
 								$decoded = \rawurldecode( (string) $param );
-								$host    = self::normalize_host( (string) \wp_parse_url( $decoded, PHP_URL_HOST ) );
+								$host    = fold_host( (string) \wp_parse_url( $decoded, PHP_URL_HOST ) );
 								if ( '' === $host ) {
 									return false;
 								}
@@ -185,6 +188,13 @@ class Followers_Controller extends Actors_Controller {
 		 */
 		\do_action( 'activitypub_rest_followers_pre' );
 
+		$collection_id = get_rest_url_by_path( \sprintf( 'actors/%d/followers', $user_id ) );
+
+		$seek = $this->maybe_seek_item( $request, $collection_id );
+		if ( null !== $seek ) {
+			return $seek;
+		}
+
 		$order    = $request->get_param( 'order' );
 		$per_page = $request->get_param( 'per_page' );
 		$page     = $request->get_param( 'page' ) ?? 1;
@@ -193,7 +203,7 @@ class Followers_Controller extends Actors_Controller {
 		$data = Followers::query( $user_id, $per_page, $page, array( 'order' => \ucwords( $order ) ) );
 
 		$response = array(
-			'id'         => get_rest_url_by_path( \sprintf( 'actors/%d/followers', $user_id ) ),
+			'id'         => $collection_id,
 			'generator'  => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'type'       => 'OrderedCollection',
 			'totalItems' => $data['total'],
@@ -234,6 +244,63 @@ class Followers_Controller extends Actors_Controller {
 	}
 
 	/**
+	 * Get the position of a follower in the collection, under the collection's own query rules.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string           $item    The ActivityPub actor ID of the follower.
+	 * @param \WP_REST_Request $request Full details about the request.
+	 *
+	 * @return int|false|\WP_Error Zero-based index of the item, false or WP_Error when not found.
+	 */
+	public function get_item_index( $item, $request ) {
+		if ( ! $this->show_social_graph( $request ) ) {
+			return false;
+		}
+
+		$actor = Remote_Actors::get_by_uri( $item );
+		if ( \is_wp_error( $actor ) ) {
+			return $actor;
+		}
+
+		$user_id = $request->get_param( 'user_id' );
+		$order   = $request->get_param( 'order' );
+		$args    = array(
+			'fields'  => 'ids',
+			'order'   => \ucwords( $order ),
+			// Both queries below only count rows, so the collection's sort is pure overhead here.
+			'orderby' => 'none',
+		);
+
+		// Confirm membership through the collection's own query before computing the index.
+		$membership = Followers::query(
+			$user_id,
+			1,
+			null,
+			\array_merge(
+				$args,
+				array(
+					'post__in'      => array( $actor->ID ),
+					'no_found_rows' => true,
+				)
+			)
+		);
+		if ( ! $membership['followers'] ) {
+			return false;
+		}
+
+		// Count the followers that sort before the item; that count is the item's zero-based index.
+		$preceding = $this->with_posts_where(
+			$this->get_preceding_by_id_where( $actor->ID, $order ),
+			static function () use ( $user_id, $args ) {
+				return Followers::query( $user_id, 1, null, $args );
+			}
+		);
+
+		return (int) $preceding['total'];
+	}
+
+	/**
 	 * Retrieves partial followers list for FEP-8fcf synchronization.
 	 *
 	 * Returns only followers whose ID shares the specified URI authority.
@@ -270,8 +337,8 @@ class Followers_Controller extends Actors_Controller {
 		 * sign with their own key yet steer a naive parser at a third-party host.
 		 */
 		$key_id      = Signature::get_key_id( $request );
-		$signer_host = $key_id ? self::normalize_host( (string) \wp_parse_url( $key_id, \PHP_URL_HOST ) ) : '';
-		$asked_host  = self::normalize_host( (string) \wp_parse_url( $authority, \PHP_URL_HOST ) );
+		$signer_host = $key_id ? fold_host( (string) \wp_parse_url( $key_id, \PHP_URL_HOST ) ) : '';
+		$asked_host  = fold_host( (string) \wp_parse_url( $authority, \PHP_URL_HOST ) );
 
 		if ( ! $signer_host || ! $asked_host || $signer_host !== $asked_host ) {
 			return new \WP_Error(
@@ -289,11 +356,11 @@ class Followers_Controller extends Actors_Controller {
 				\sprintf(
 					'actors/%d/followers/sync?authority=%s',
 					$user_id,
-					rawurlencode( $authority )
+					\rawurlencode( $authority )
 				)
 			),
 			'type'         => 'OrderedCollection',
-			'totalItems'   => count( $followers ),
+			'totalItems'   => \count( $followers ),
 			'orderedItems' => $followers,
 		);
 
@@ -306,25 +373,15 @@ class Followers_Controller extends Actors_Controller {
 		$response = \rest_ensure_response( $response );
 		$response->header( 'Content-Type', 'application/activity+json; charset=' . \get_option( 'blog_charset' ) );
 
+		/*
+		 * This partial collection is disclosed only to the signing peer, whatever the global Authorized
+		 * Fetch setting, so it must never be stored by a shared cache and served to another caller.
+		 */
+		maybe_set_no_store( $response );
+
 		return $response;
 	}
 
-	/**
-	 * Normalize a host so comparisons are consistent.
-	 *
-	 * Lowercases, strips IPv6 brackets, and trims a single FQDN trailing
-	 * dot. Used by both the validate_callback for the `authority` arg and
-	 * the signer-host comparison in get_partial_followers() so semantically
-	 * equivalent host strings always match.
-	 *
-	 * @param string $host Raw host string.
-	 * @return string Normalized host.
-	 */
-	private static function normalize_host( $host ) {
-		$host = \strtolower( (string) $host );
-		$host = \trim( $host, '[]' );
-		return \rtrim( $host, '.' );
-	}
 
 	/**
 	 * Retrieves the followers schema, conforming to JSON Schema.

@@ -30,18 +30,18 @@ class Seriously_Simple_Podcasting extends Post {
 	public function get_attachment() {
 		$post       = $this->item;
 		$attachment = array(
-			'type' => \esc_attr( ucfirst( \get_post_meta( $post->ID, 'episode_type', true ) ?? 'Audio' ) ),
-			'url'  => \esc_url( \get_post_meta( $post->ID, 'audio_file', true ) ),
+			'type' => \esc_attr( \ucfirst( \get_post_meta( $post->ID, 'episode_type', true ) ?? 'Audio' ) ),
+			'url'  => \esc_url_raw( \get_post_meta( $post->ID, 'audio_file', true ) ),
 			'name' => \esc_attr( \get_the_title( $post->ID ) ?? '' ),
 		);
 
 		$icon = \get_post_meta( $post->ID, 'cover_image', true );
 		if ( ! $icon ) {
-			$icon = $this->get_icon();
+			$icon = $this->get_media_icon();
 		}
 
 		if ( $icon ) {
-			$attachment['icon'] = \esc_url( object_to_uri( $icon ) );
+			$attachment['icon'] = \esc_url_raw( object_to_uri( $icon ) );
 		}
 
 		return array( $attachment );

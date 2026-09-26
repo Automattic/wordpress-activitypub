@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Added a filter that lets plugins decide which comment types are shared with the Fediverse, so custom comment types can be kept local or sent out as replies.

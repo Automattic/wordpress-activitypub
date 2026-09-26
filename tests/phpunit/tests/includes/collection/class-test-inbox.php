@@ -28,6 +28,63 @@ class Test_Inbox extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An activity whose ID contains an ampersand must be found again by that ID.
+	 *
+	 * Every WordPress peer federates activity IDs of the form `?post_type=ap_outbox&p=123`,
+	 * so the round trip has to survive the escaping WordPress applies to the GUID column.
+	 * Without it, redelivered activities are stored twice and an Undo cannot find its target.
+	 *
+	 * @covers ::add
+	 * @covers ::get_by_guid
+	 */
+	public function test_get_by_guid_with_ampersand() {
+		$activity_id = 'https://remote.example.com/?post_type=ap_outbox&p=123';
+
+		$activity = new Activity();
+		$activity->set_id( $activity_id );
+		$activity->set_type( 'Like' );
+		$activity->set_actor( 'https://remote.example.com/users/testuser' );
+		$activity->set_object( 'https://remote.example.com/objects/456' );
+
+		$inbox_id = Inbox::add( $activity, 1 );
+		$this->assertIsInt( $inbox_id );
+
+		$found = Inbox::get_by_guid( $activity_id );
+
+		$this->assertInstanceOf( 'WP_Post', $found, 'An activity ID containing an ampersand must be found again.' );
+		$this->assertSame( $inbox_id, $found->ID );
+	}
+
+	/**
+	 * Undoing an interaction whose activity ID contains an ampersand must find its comment.
+	 *
+	 * The comment records the activity ID as sent over the wire, while the inbox item records it
+	 * as WordPress escapes a GUID, so the two only match once the stored value is decoded again.
+	 *
+	 * @covers ::undo
+	 */
+	public function test_undo_with_ampersand_in_activity_id() {
+		$activity_id = 'https://remote.example.com/?post_type=ap_outbox&p=555';
+		$actor       = 'https://remote.example.com/users/testuser';
+
+		$comment_id = self::factory()->comment->create( array( 'comment_post_ID' => self::factory()->post->create() ) );
+		\add_comment_meta( $comment_id, 'source_id', \esc_url_raw( $activity_id ) );
+
+		$activity = new Activity();
+		$activity->set_id( $activity_id );
+		$activity->set_type( 'Like' );
+		$activity->set_actor( $actor );
+		$activity->set_object( 'https://remote.example.com/objects/456' );
+
+		$this->assertIsInt( Inbox::add( $activity, 1 ) );
+
+		$result = Inbox::undo( $activity_id, $actor );
+
+		$this->assertNotWPError( $result, 'Undo must find the comment behind an activity ID containing an ampersand.' );
+		$this->assertNull( \get_comment( $comment_id ), 'The comment should be deleted.' );
+	}
+
+	/**
 	 * Test adding an activity to the inbox and verify post meta is set correctly.
 	 *
 	 * @covers ::add

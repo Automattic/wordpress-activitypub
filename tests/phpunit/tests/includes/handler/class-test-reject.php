@@ -11,6 +11,8 @@ use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Handler\Reject;
+use Activitypub\Tests\Quote_Post_Fixtures;
+use Activitypub\Transformer\Post;
 
 /**
  * Class Test_Reject
@@ -18,6 +20,7 @@ use Activitypub\Handler\Reject;
  * @coversDefaultClass \Activitypub\Handler\Reject
  */
 class Test_Reject extends \WP_UnitTestCase {
+	use Quote_Post_Fixtures;
 
 	/**
 	 * Test user ID.
@@ -37,6 +40,24 @@ class Test_Reject extends \WP_UnitTestCase {
 				'role' => 'author',
 			)
 		);
+		\get_user_by( 'id', self::$user_id )->add_cap( 'activitypub' );
+	}
+
+	/**
+	 * Mock the remote objects the quote tests fetch.
+	 */
+	public function set_up() {
+		parent::set_up();
+
+		$this->add_quoted_object_mock();
+	}
+
+	/**
+	 * Remove the remote object mock.
+	 */
+	public function tear_down() {
+		$this->remove_quoted_object_mock();
+		parent::tear_down();
 	}
 
 	/**
@@ -150,12 +171,13 @@ class Test_Reject extends \WP_UnitTestCase {
 		$this->assertContains( (string) $user_id, $pending );
 
 		// Prepare reject array as expected by handle_reject, using the real outbox guid.
+		// The sender (top-level actor) must be the actor that was followed.
 		$reject = array(
 			'type'   => 'Reject',
-			'actor'  => 'https://example.net/actor/123',
+			'actor'  => $object_guid,
 			'object' => array(
 				'id'     => $outbox_guid,
-				'actor'  => 'https://example.com/actor/123',
+				'actor'  => 'https://example.com/follower/123',
 				'type'   => 'Follow',
 				'object' => $object_guid,
 			),
@@ -173,5 +195,137 @@ class Test_Reject extends \WP_UnitTestCase {
 		// Assert: user_id is STILL in _activitypub_followed_by_pending.
 		$pending = \get_post_meta( $post_id, Following::PENDING_META_KEY, false );
 		$this->assertNotContains( (string) $user_id, $pending );
+	}
+
+	/**
+	 * A Reject whose sender is not the followed actor must be ignored.
+	 *
+	 * Guards against any peer cancelling a user's Follow of an unrelated actor
+	 * by referencing that pending Follow's outbox GUID.
+	 */
+	public function test_handle_reject_rejects_actor_object_mismatch() {
+		$user_id     = self::$user_id;
+		$object_guid = 'https://example.com/actor/123';
+		$outbox_guid = 'https://example.com/outbox/123';
+
+		$outbox_post_id = self::factory()->post->create(
+			array(
+				'post_type'   => Outbox::POST_TYPE,
+				'post_status' => 'publish',
+				'guid'        => $outbox_guid,
+			)
+		);
+
+		\add_post_meta( $outbox_post_id, '_activitypub_activity_type', 'Follow' );
+
+		// Create remote actor post the local user is following.
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'post_status' => 'publish',
+				'guid'        => $object_guid,
+			)
+		);
+
+		\add_post_meta( $post_id, Following::FOLLOWING_META_KEY, (string) $user_id );
+
+		// Reject signed by an unrelated actor, pointing at the victim's Follow GUID
+		// and naming the followed actor so it would be unfollowed if unguarded.
+		$reject = array(
+			'type'   => 'Reject',
+			'actor'  => 'https://evil.example/actor/999',
+			'object' => array(
+				'id'     => $outbox_guid,
+				'actor'  => $object_guid,
+				'type'   => 'Follow',
+				'object' => $object_guid,
+			),
+		);
+
+		Reject::handle_reject( $reject, $user_id );
+
+		\clean_post_cache( $post_id );
+
+		// Assert: the follow relationship is untouched.
+		$following = \get_post_meta( $post_id, Following::FOLLOWING_META_KEY, false );
+		$this->assertContains( (string) $user_id, $following );
+	}
+
+	/*
+	 * ------------------------------------------------------------------
+	 * Rejects of our own QuoteRequests (FEP-044f).
+	 * ------------------------------------------------------------------
+	 */
+
+	/**
+	 * A Reject marks the quote declined, drops any stamp and queues an Update.
+	 *
+	 * @covers ::reject_quote_request
+	 */
+	public function test_reject_marks_declined_and_updates() {
+		$post_id = $this->create_quote_post();
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+		$before = $this->count_updates( $post_id );
+
+		Reject::handle_reject( $this->build_reject( $post_id ), self::$user_id );
+
+		$this->assertSame( '1', \get_post_meta( $post_id, '_activitypub_quote_rejected', true ) );
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertSame( $before + 1, $this->count_updates( $post_id ) );
+
+		$array = Post::transform( \get_post( $post_id ) )->to_object()->to_array();
+		$this->assertArrayNotHasKey( 'quote', $array );
+	}
+
+	/**
+	 * A rejected quote reaches the handler's own action, the way every other Reject does.
+	 *
+	 * @covers ::reject_quote_request
+	 */
+	public function test_reject_quote_request_fires_the_handled_action() {
+		$post_id = $this->create_quote_post();
+
+		$handled = array();
+		$track   = function ( $reject, $user_ids, $success, $context ) use ( &$handled ) {
+			$handled[] = array( $success, $context instanceof \WP_Post ? $context->ID : null );
+		};
+		\add_action( 'activitypub_handled_reject', $track, 10, 4 );
+
+		Reject::handle_reject( $this->build_reject( $post_id ), self::$user_id );
+
+		\remove_action( 'activitypub_handled_reject', $track, 10 );
+
+		$this->assertSame( array( array( true, $post_id ) ), $handled );
+	}
+
+	/**
+	 * A Reject for a request the post has since superseded is ignored.
+	 *
+	 * @covers ::reject_quote_request
+	 */
+	public function test_reject_for_superseded_url_ignored() {
+		$post_id = $this->create_quote_post();
+		$reject  = $this->build_reject( $post_id );
+		\update_post_meta( $post_id, '_activitypub_quote_request', 'https://remote.example/notes/2' );
+		$before = $this->count_updates( $post_id );
+
+		Reject::handle_reject( $reject, self::$user_id );
+
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_rejected', true ) );
+		$this->assertSame( 'https://remote.example/notes/2', \get_post_meta( $post_id, '_activitypub_quote_request', true ) );
+		$this->assertSame( $before, $this->count_updates( $post_id ) );
+	}
+
+	/**
+	 * A Reject from someone other than the quoted author is ignored.
+	 *
+	 * @covers ::reject_quote_request
+	 */
+	public function test_reject_from_wrong_actor_ignored() {
+		$post_id = $this->create_quote_post();
+
+		Reject::handle_reject( $this->build_reject( $post_id, 'https://remote.example/users/mallory' ), self::$user_id );
+
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_rejected', true ) );
 	}
 }

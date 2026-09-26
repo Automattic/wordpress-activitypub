@@ -98,6 +98,8 @@ Poll every 30 seconds for a maximum of 30 minutes (60 attempts). If the run has 
 2. Apply the **code-style** and **test** skills to diagnose the issue.
 3. Fix the failing test(s), push, and repeat until CI is green.
 
+**Green local tests do NOT imply green CI.** Local wp-env runs PHP 8.x, but CI also tests PHP 7.4 — named arguments, union types, `match`, nullsafe `?->`, and constructor property promotion pass locally and fail there. CI also hits environment differences like empty `post_date_gmt` (`0000-00-00`). Check the PHP 7.4 job specifically.
+
 **Do NOT consider the task done until CI passes.** A draft PR with red CI is not a valid deliverable.
 
 ## Guidelines

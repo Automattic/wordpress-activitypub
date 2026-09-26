@@ -55,9 +55,9 @@ class Replies {
 	 */
 	private static function get_id( $wp_object ) {
 		if ( $wp_object instanceof \WP_Post ) {
-			return get_rest_url_by_path( sprintf( 'posts/%d/replies', $wp_object->ID ) );
+			return get_rest_url_by_path( \sprintf( 'posts/%d/replies', $wp_object->ID ) );
 		} elseif ( $wp_object instanceof \WP_Comment ) {
-			return get_rest_url_by_path( sprintf( 'comments/%d/replies', $wp_object->comment_ID ) );
+			return get_rest_url_by_path( \sprintf( 'comments/%d/replies', $wp_object->comment_ID ) );
 		} else {
 			return new \WP_Error( 'unsupported_object', 'The object is not a post or comment.' );
 		}
@@ -73,7 +73,7 @@ class Replies {
 	public static function get_collection( $wp_object ) {
 		$id = self::get_id( $wp_object );
 
-		if ( is_wp_error( $id ) ) {
+		if ( \is_wp_error( $id ) ) {
 			return \wp_is_serving_rest_request() ? $id : null;
 		}
 
@@ -101,7 +101,7 @@ class Replies {
 	public static function get_collection_page( $wp_object, $page, $part_of = null ) {
 		// Build initial arguments for fetching approved comments.
 		$args = self::build_args( $wp_object );
-		if ( is_wp_error( $args ) ) {
+		if ( \is_wp_error( $args ) ) {
 			return \wp_is_serving_rest_request() ? $args : null;
 		}
 
@@ -109,16 +109,16 @@ class Replies {
 		$part_of = $part_of ?? self::get_id( $wp_object );
 
 		// If the collection page does not exist.
-		if ( is_wp_error( $part_of ) ) {
+		if ( \is_wp_error( $part_of ) ) {
 			return \wp_is_serving_rest_request() ? $part_of : null;
 		}
 
 		// Get to total replies count.
-		$total_replies = \get_comments( array_merge( $args, array( 'count' => true ) ) );
+		$total_replies = \get_comments( \array_merge( $args, array( 'count' => true ) ) );
 
 		// If set to zero, we get errors below. You need at least one comment per page, here.
-		$args['number'] = max( (int) \get_option( 'comments_per_page' ), 1 );
-		$args['offset'] = intval( $page - 1 ) * $args['number'];
+		$args['number'] = \max( (int) \get_option( 'comments_per_page' ), 1 );
+		$args['offset'] = \intval( $page - 1 ) * $args['number'];
 
 		// Get the ActivityPub ID's of the comments, without local-only comments.
 		$comment_ids = self::get_reply_ids( \get_comments( $args ) );
@@ -170,7 +170,7 @@ class Replies {
 		\array_unshift( $ids, $post_uri );
 
 		$author = Actors::get_by_id( $post->post_author );
-		if ( is_wp_error( $author ) ) {
+		if ( \is_wp_error( $author ) ) {
 			if ( is_user_type_disabled( 'blog' ) ) {
 				return false;
 			}
@@ -182,7 +182,7 @@ class Replies {
 			'type'         => 'OrderedCollection',
 			'url'          => \get_permalink( $post_id ),
 			'attributedTo' => $author->get_id(),
-			'totalItems'   => count( $ids ),
+			'totalItems'   => \count( $ids ),
 			'items'        => $ids,
 		);
 	}

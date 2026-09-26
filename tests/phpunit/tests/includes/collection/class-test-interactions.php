@@ -91,7 +91,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 
 		self::$post_permalink = get_permalink( self::$post_id );
 
-		self::$user_url = get_author_posts_url( self::$user_id );
+		self::$user_url = 'https://example.com/users/test';
 	}
 
 	/**
@@ -215,6 +215,41 @@ class Test_Interactions extends \WP_UnitTestCase {
 		// Avatar URL is no longer stored in comment meta, but via remote actor reference.
 		// Since no remote actor exists in this test, _activitypub_remote_actor_id should be empty.
 		$this->assertEmpty( get_comment_meta( $basic_comment_id, '_activitypub_remote_actor_id', true ) );
+	}
+
+	/**
+	 * Test that remote comment content is sanitized independently of the current user.
+	 *
+	 * `wp_new_comment()` only applies kses when the request installed the
+	 * `pre_comment_content` filter, and `kses_init()` installs nothing for a user with
+	 * `unfiltered_html`. The inbox runs as user 0 and is safe by accident, but
+	 * `Search::enhance_public_search()` imports a searched URL as a comment while an
+	 * administrator is logged in, and force-approves the result.
+	 *
+	 * @covers ::add_comment
+	 */
+	public function test_add_comment_sanitizes_content_for_unfiltered_html_user() {
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+
+		/*
+		 * Model the Search path: without this the suite runs as user 0, kses is active,
+		 * and the test would pass whether or not add_comment() sanitizes anything.
+		 */
+		\wp_set_current_user( $admin_id );
+		\kses_init();
+
+		$activity                      = $this->create_test_object( 'https://example.com/hostile' );
+		$activity['object']['content'] = '<div style="position:fixed;top:0;left:0;z-index:99999;background-image:url(https://example.com/track)">Reply<script>alert(1)</script><iframe srcdoc="x"></iframe><img src=x onerror="alert(1)"></div>';
+
+		$comment_id = Interactions::add_comment( $activity );
+		$content    = get_comment( $comment_id )->comment_content;
+
+		$this->assertStringNotContainsString( '<script', $content, 'Script tags must not be stored.' );
+		$this->assertStringNotContainsString( '<iframe', $content, 'Iframes must not be stored.' );
+		$this->assertStringNotContainsString( 'onerror', $content, 'Event handlers must not be stored.' );
+		$this->assertStringNotContainsString( 'style=', $content, 'Inline styles must not be stored.' );
+		$this->assertStringNotContainsString( 'position:fixed', $content, 'CSS positioning must not survive.' );
+		$this->assertStringContainsString( 'Reply', $content, 'Legitimate content should survive.' );
 	}
 
 	/**
@@ -741,7 +776,7 @@ class Test_Interactions extends \WP_UnitTestCase {
 	 * @covers \Activitypub\Emoji::wrap_in_content
 	 */
 	public function test_activity_to_comment_with_emoji() {
-		$actor_uri = 'http://example.org/users/emoji-user';
+		$actor_uri = 'https://example.com/users/emoji-user';
 
 		// Create remote actor with emoji data.
 		$actor_data    = array(
@@ -1039,6 +1074,42 @@ class Test_Interactions extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a remote quote gets the comment allowlist, not the post one.
+	 *
+	 * @covers ::add_comment
+	 */
+	public function test_add_comment_quote_uses_the_comment_allowlist() {
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+
+		// Model an authenticated import, where core installs no kses filters.
+		\wp_set_current_user( $admin_id );
+		\kses_init();
+
+		$activity = array(
+			'type'   => 'Create',
+			'actor'  => 'https://example.com/users/testuser',
+			'object' => array(
+				'type'     => 'Note',
+				'id'       => 'https://example.com/note/789',
+				'content'  => '<p class="quote-inline">RE: <a href="' . self::$post_permalink . '">Post</a></p><div style="position:fixed;z-index:99999">Great post!<script>alert(1)</script></div>',
+				'quote'    => self::$post_permalink,
+				'quoteUri' => self::$post_permalink,
+			),
+		);
+
+		\add_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10, 2 );
+
+		$comment_id = Interactions::add_comment( $activity );
+		$content    = \get_comment( $comment_id )->comment_content;
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', array( $this, 'mock_actor_metadata' ), 10 );
+
+		$this->assertStringNotContainsString( 'style=', $content, 'Inline styles must not be stored.' );
+		$this->assertStringNotContainsString( '<script', $content, 'Script tags must not be stored.' );
+		$this->assertStringContainsString( 'Great post!', $content, 'Legitimate content should survive.' );
+	}
+
+	/**
 	 * Mock actor metadata for testing.
 	 *
 	 * @param bool   $response The value to return.
@@ -1222,7 +1293,8 @@ class Test_Interactions extends \WP_UnitTestCase {
 	 * @covers ::add_comment
 	 */
 	public function test_add_comment_returns_false_when_no_post_id() {
-		$activity = array(
+		$metadata_requests = 0;
+		$activity          = array(
 			'actor'  => 'https://example.com/users/someone',
 			'id'     => 'https://example.com/activities/orphan',
 			'object' => array(
@@ -1232,22 +1304,18 @@ class Test_Interactions extends \WP_UnitTestCase {
 			),
 		);
 
-		// Mock actor metadata.
-		$metadata_filter = static function () {
-			return array(
-				'name'              => 'Someone',
-				'preferredUsername' => 'someone',
-				'id'                => 'https://example.com/users/someone',
-				'url'               => 'https://example.com/@someone',
-			);
+		$metadata_filter = static function ( $pre ) use ( &$metadata_requests ) {
+			++$metadata_requests;
+			return $pre;
 		};
-		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+		\add_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter, 99 );
 
 		$result = Interactions::add_comment( $activity );
 
 		$this->assertFalse( $result, 'Should return false when inReplyTo does not resolve to a post or comment' );
+		$this->assertSame( 0, $metadata_requests, 'Unknown targets should be rejected before actor metadata is loaded.' );
 
-		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter );
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter, 99 );
 	}
 
 	/**
@@ -1548,5 +1616,153 @@ class Test_Interactions extends \WP_UnitTestCase {
 		$this->assertStringContainsString( 'Edited by owner', \get_comment( $comment_id )->comment_content, 'The author must be able to update their own comment.' );
 
 		\remove_filter( 'pre_get_remote_metadata_by_actor', $metadata_filter, 10 );
+	}
+
+	/**
+	 * Persisting a comment must not leave global comment filters attached.
+	 *
+	 * The Akismet nonce override and the other guards are only meant to apply to the
+	 * inbound activity being stored; if they linger they change how every later comment
+	 * in the request is handled.
+	 *
+	 * @covers ::persist
+	 */
+	public function test_persist_restores_global_filters() {
+		Interactions::add_comment( $this->create_test_object( 'https://example.com/persist-cleanup' ) );
+
+		$this->assertFalse( \has_filter( 'akismet_comment_nonce', array( Interactions::class, 'akismet_comment_nonce_inactive' ) ), 'The Akismet nonce override must be removed after persisting.' );
+		$this->assertFalse( \has_filter( 'wp_kses_allowed_html', array( Interactions::class, 'allowed_comment_html' ) ), 'The KSES override must be removed after persisting.' );
+		$this->assertNotFalse( \has_action( 'check_comment_flood', 'check_comment_flood_db' ), 'Flood control must be restored after persisting.' );
+	}
+
+	/**
+	 * Interaction counts should share one cached grouped query per post.
+	 *
+	 * @covers ::count_by_type
+	 * @covers ::get_counts
+	 */
+	public function test_interaction_counts_use_one_cached_query() {
+		$post_id = self::factory()->post->create();
+
+		foreach ( array( 'like', 'like', 'repost', 'quote' ) as $type ) {
+			\wp_insert_comment(
+				array(
+					'comment_post_ID'  => $post_id,
+					'comment_content'  => $type,
+					'comment_type'     => $type,
+					'comment_approved' => 1,
+				)
+			);
+		}
+
+		\wp_insert_comment(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_content'  => 'Pending like',
+				'comment_type'     => 'like',
+				'comment_approved' => 0,
+			)
+		);
+
+		global $wpdb;
+		$query_count = $wpdb->num_queries;
+
+		$this->assertSame( 2, Interactions::count_by_type( $post_id, 'like' ) );
+		$this->assertSame( 1, Interactions::count_by_type( $post_id, 'repost' ) );
+		$this->assertSame( 1, Interactions::count_by_type( $post_id, 'quote' ) );
+		$this->assertSame( 0, Interactions::count_by_type( $post_id, 'unknown' ) );
+		$this->assertSame( 1, $wpdb->num_queries - $query_count, 'All interaction types should be counted by one query.' );
+
+		\wp_insert_comment(
+			array(
+				'comment_post_ID'  => $post_id,
+				'comment_content'  => 'Another like',
+				'comment_type'     => 'like',
+				'comment_approved' => 1,
+			)
+		);
+
+		$query_count = $wpdb->num_queries;
+		$this->assertSame( 3, Interactions::count_by_type( $post_id, 'like' ) );
+		$this->assertSame( 1, $wpdb->num_queries - $query_count, 'Inserting a comment should invalidate the grouped count cache.' );
+	}
+
+	/**
+	 * Persist must distinguish insert IDs from update status values.
+	 *
+	 * @covers ::persist
+	 */
+	public function test_persist_returns_insert_id_and_updated_comment_data() {
+		$comment_data = array(
+			'comment_post_ID'      => self::$post_id,
+			'comment_author'       => 'Persistence Test',
+			'comment_author_email' => 'persist@example.com',
+			'comment_author_url'   => 'https://example.com/persist',
+			'comment_content'      => 'Initial content',
+			'comment_type'         => 'comment',
+		);
+
+		$comment_id = Interactions::persist( $comment_data );
+		$this->assertIsInt( $comment_id );
+
+		$updated_comment                    = \get_comment( $comment_id, ARRAY_A );
+		$updated_comment['comment_content'] = 'Updated content';
+		$result                             = Interactions::persist( $updated_comment, Interactions::UPDATE );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( $comment_id, (int) $result['comment_ID'] );
+	}
+
+	/**
+	 * Persist must not remove or relocate hooks registered by another component.
+	 *
+	 * @covers ::persist
+	 */
+	public function test_persist_preserves_existing_hook_state() {
+		$callbacks      = array(
+			array( 'akismet_comment_nonce', array( Interactions::class, 'akismet_comment_nonce_inactive' ), 1 ),
+			array( 'wp_kses_allowed_html', array( Interactions::class, 'allowed_comment_html' ), 2 ),
+		);
+		$flood_priority = \has_action( 'check_comment_flood', 'check_comment_flood_db' );
+
+		foreach ( $callbacks as $callback ) {
+			$priority = \has_filter( $callback[0], $callback[1] );
+			if ( false !== $priority ) {
+				\remove_filter( $callback[0], $callback[1], $priority );
+			}
+			\add_filter( $callback[0], $callback[1], 42, $callback[2] );
+		}
+
+		if ( false !== $flood_priority ) {
+			\remove_action( 'check_comment_flood', 'check_comment_flood_db', $flood_priority );
+		}
+		\add_action( 'check_comment_flood', 'check_comment_flood_db', 42, 4 );
+
+		Interactions::add_comment( $this->create_test_object( 'https://example.com/persist-existing-hooks' ) );
+
+		foreach ( $callbacks as $callback ) {
+			$this->assertSame( 42, \has_filter( $callback[0], $callback[1] ) );
+		}
+		$this->assertSame( 42, \has_action( 'check_comment_flood', 'check_comment_flood_db' ) );
+	}
+
+	/**
+	 * Persist must not turn comment flood protection back on when the site turned it off.
+	 *
+	 * @covers ::persist
+	 */
+	public function test_persist_keeps_disabled_flood_protection_off() {
+		$flood_priority = \has_action( 'check_comment_flood', 'check_comment_flood_db' );
+		if ( false !== $flood_priority ) {
+			\remove_action( 'check_comment_flood', 'check_comment_flood_db', $flood_priority );
+		}
+
+		Interactions::add_comment( $this->create_test_object( 'https://example.com/persist-flood-off' ) );
+
+		$this->assertFalse( \has_action( 'check_comment_flood', 'check_comment_flood_db' ) );
+
+		if ( false !== $flood_priority ) {
+			\add_action( 'check_comment_flood', 'check_comment_flood_db', $flood_priority, 4 );
+		}
 	}
 }

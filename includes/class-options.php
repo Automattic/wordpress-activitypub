@@ -323,7 +323,7 @@ class Options {
 			array(
 				'type'        => 'boolean',
 				'description' => 'Use RFC-9421 signature.',
-				'default'     => false,
+				'default'     => true,
 			)
 		);
 
@@ -437,6 +437,18 @@ class Options {
 		 */
 		\register_setting(
 			'activitypub_blog',
+			'activitypub_blog_name',
+			array(
+				'type'              => 'string',
+				'description'       => 'The Name of the Blog-User',
+				'show_in_rest'      => true,
+				'default'           => '',
+				'sanitize_callback' => 'sanitize_text_field',
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
 			'activitypub_blog_description',
 			array(
 				'type'         => 'string',
@@ -460,11 +472,25 @@ class Options {
 
 		\register_setting(
 			'activitypub_blog',
+			'activitypub_blog_icon',
+			array(
+				'type'              => 'integer',
+				'description'       => 'The Attachment-ID of the Blog-User Avatar',
+				'show_in_rest'      => true,
+				'default'           => 0,
+				'sanitize_callback' => array( Sanitize::class, 'attachment_id' ),
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
 			'activitypub_header_image',
 			array(
-				'type'        => 'integer',
-				'description' => 'The Attachment-ID of the Sites Header-Image',
-				'default'     => null,
+				'type'              => 'integer',
+				'description'       => 'The Attachment-ID of the Sites Header-Image',
+				'show_in_rest'      => true,
+				'default'           => 0,
+				'sanitize_callback' => array( Sanitize::class, 'attachment_id' ),
 			)
 		);
 

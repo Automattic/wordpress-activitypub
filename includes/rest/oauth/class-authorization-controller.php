@@ -279,9 +279,12 @@ class Authorization_Controller extends \WP_REST_Controller {
 		);
 
 		if ( \is_wp_error( $code ) ) {
+			// A refused scope is an OAuth error the client can act on; the rest are internal failures.
+			$error = 'invalid_scope' === $code->get_error_code() ? 'invalid_scope' : 'server_error';
+
 			return $this->redirect_with_error(
 				$redirect_uri,
-				'server_error',
+				$error,
 				$code->get_error_message(),
 				$state
 			);
@@ -318,9 +321,9 @@ class Authorization_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		// Verify nonce.
+		// Verify nonce. It is bound to the client, so a consent form for one app can't approve another.
 		$nonce = $request->get_param( '_wpnonce' );
-		if ( ! \wp_verify_nonce( $nonce, 'activitypub_oauth_authorize' ) ) {
+		if ( ! \wp_verify_nonce( $nonce, 'activitypub_oauth_authorize_' . $request->get_param( 'client_id' ) ) ) {
 			return new \WP_Error(
 				'activitypub_invalid_nonce',
 				\__( 'Invalid security token. Please try again.', 'activitypub' ),

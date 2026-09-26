@@ -14,6 +14,7 @@ use Activitypub\Http;
 
 use function Activitypub\is_activity;
 use function Activitypub\is_activity_public;
+use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 
 /**
@@ -75,7 +76,7 @@ class Announce {
 		$object = Http::get_remote_object( $object_url, false );
 		\remove_filter( 'http_request_args', $no_redirects, 10 );
 
-		if ( ! $object || is_wp_error( $object ) || ! is_array( $object ) ) {
+		if ( ! $object || \is_wp_error( $object ) || ! \is_array( $object ) ) {
 			return;
 		}
 
@@ -83,16 +84,30 @@ class Announce {
 			return;
 		}
 
-		$origin_host = \strtolower( (string) \wp_parse_url( (string) $object_url, \PHP_URL_HOST ) );
-		$actor_host  = \strtolower( (string) \wp_parse_url( (string) object_to_uri( $object['actor'] ?? '' ), \PHP_URL_HOST ) );
-
 		/*
 		 * Only an actor's own server may vouch for an activity attributed to it, so the
 		 * host it was fetched from must equal its actor's host — the same key-host ==
 		 * actor-host binding verify_key_id() enforces for signed requests, generalised
 		 * to every relayed activity type.
 		 */
-		if ( '' === $origin_host || '' === $actor_host || $origin_host !== $actor_host ) {
+		if ( ! is_same_host( $object_url, $object['actor'] ?? '' ) ) {
+			return;
+		}
+
+		/*
+		 * The requested URL is not always the host that answered: get_remote_object() re-fetches a
+		 * document from the id it declares when the two disagree, and returns the re-fetched copy.
+		 * Bind the actor to that id as well, which an authentic activity shares a host with.
+		 *
+		 * Only when the document declares one. The id is derived exactly as get_remote_object()
+		 * derives it, so the two cannot disagree about what counts as declared: whatever it treats
+		 * as id-less it returns as served, without re-fetching, and the origin check above is
+		 * already authoritative for those. Binding them here would drop relayed activities that
+		 * legitimately omit an id.
+		 */
+		$declared_id = isset( $object['id'] ) && \is_string( $object['id'] ) ? $object['id'] : '';
+
+		if ( '' !== $declared_id && ! is_same_host( $declared_id, $object['actor'] ?? '' ) ) {
 			return;
 		}
 
@@ -131,7 +146,8 @@ class Announce {
 			return;
 		}
 
-		$exists = Comment::object_id_to_comment( esc_url_raw( $url ) );
+		// Match any status, so a repost that was marked as spam or trashed still counts as seen.
+		$exists = Comment::object_id_to_comment( \esc_url_raw( $url ), array( 'status' => 'any' ) );
 		if ( $exists ) {
 			return;
 		}
@@ -144,9 +160,9 @@ class Announce {
 		$success = false;
 		$result  = Interactions::add_reaction( $activity );
 
-		if ( $result && ! is_wp_error( $result ) ) {
+		if ( $result && ! \is_wp_error( $result ) ) {
 			$success = true;
-			$result  = get_comment( $result );
+			$result  = \get_comment( $result );
 		}
 
 		/**

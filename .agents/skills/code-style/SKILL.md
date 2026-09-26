@@ -7,6 +7,8 @@ description: PHP coding standards and WordPress patterns for ActivityPub plugin.
 
 Plugin-specific conventions and architectural patterns for the ActivityPub plugin.
 
+**First rule: reuse before writing.** Prefer WordPress core functions, then existing plugin helpers (`includes/functions*.php`, `Sanitize`, `src/shared/`), over any new implementation — and never swap a core-function-based check for bespoke logic. See "Reuse Core Functionality First" in `docs/php-coding-standards.md`.
+
 ## Quick Reference
 
 ### File Naming
@@ -35,6 +37,26 @@ Always use `'activitypub'` for translations:
 
 ### WordPress Global Functions
 When in a namespace, always escape WordPress functions with backslash: `\get_option()`, `\add_action()`, etc.
+
+### Imports and Class References
+Two symmetric rules, both enforced in review:
+
+```php
+// Plugin classes: import with `use`, never reference inline.
+use Activitypub\Collection\Outbox;
+
+Outbox::add( $activity );          // ✅
+\Activitypub\Collection\Outbox::add( $activity ); // ❌ no inline namespaces
+
+// Global (WordPress/PHP) classes: reference inline with a backslash, never import.
+$query = new \WP_Query( $args );   // ✅
+class Command extends \WP_CLI_Command {} // ✅
+use WP_Query;                      // ❌ no `use` for global classes
+```
+
+### Comments
+- `/* */` for multi-line comments, `//` for single-line — not stacked `//` lines.
+- Place each comment at the line it documents, not as one block above a block of code. Detail is fine; split it per statement.
 
 ## Comprehensive Standards
 

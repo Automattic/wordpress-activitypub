@@ -7,6 +7,8 @@
 
 namespace Activitypub\WP_Admin\Import;
 
+use Activitypub\Http;
+
 use function Activitypub\follow;
 use function Activitypub\is_user_type_disabled;
 use function Activitypub\object_to_uri;
@@ -97,8 +99,8 @@ class Starter_Kit {
 				self::$import_id  = \absint( $_POST['import_id'] ?? 0 );
 				self::$author     = \absint( $_POST['author'] ?? \get_current_user_id() );
 				self::$actor_list = \array_values(
-					array_filter(
-						array_map(
+					\array_filter(
+						\array_map(
 							static function ( $actor ) {
 								$actor = \sanitize_text_field( $actor );
 								$actor = \wp_unslash( $actor );
@@ -171,7 +173,7 @@ class Starter_Kit {
 		self::$import_id = \wp_insert_attachment( $attachment, $upload['file'] );
 
 		// Schedule a cleanup for one day from now in case of failed import or missing wp_import_cleanup() call.
-		\wp_schedule_single_event( time() + DAY_IN_SECONDS, 'importer_scheduled_cleanup', array( self::$import_id ) );
+		\wp_schedule_single_event( \time() + DAY_IN_SECONDS, 'importer_scheduled_cleanup', array( self::$import_id ) );
 
 		return true;
 	}
@@ -196,31 +198,28 @@ class Starter_Kit {
 			return false;
 		}
 
-		// Fetch the URL content.
-		$response = \wp_safe_remote_get(
+		// Fetch the URL content. Http::get() sends signed requests with the ActivityPub
+		// headers, so starter kits hosted on servers that require Authorized Fetch work too.
+		$response = Http::get(
 			$url,
 			array(
-				'timeout'     => 30,
-				'redirection' => 5,
-				'headers'     => array(
-					'Accept' => 'application/activity+json',
-				),
+				'timeout'             => 30,
+				'redirection'         => 5,
+				// A curated starter-kit collection can exceed Http::get()'s default 1 MiB cap.
+				'limit_response_size' => 25 * MB_IN_BYTES,
 			)
 		);
 
 		if ( \is_wp_error( $response ) ) {
-			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html( $response->get_error_message() ) );
-			return false;
-		}
-
-		$response_code = \wp_remote_retrieve_response_code( $response );
-		if ( 200 !== $response_code ) {
-			\printf(
-				'<p><strong>%s</strong><br />%s</p>',
-				\esc_html( $error_message ),
+			// Http::get() reports a failed HTTP response as a WP_Error whose data carries the status code.
+			$status  = $response->get_error_data();
+			$status  = \is_array( $status ) && ! empty( $status['status'] ) ? (int) $status['status'] : 0;
+			$message = $status
 				/* translators: %d: HTTP response code */
-				\esc_html( \sprintf( \__( 'Failed to fetch URL. HTTP response code: %d', 'activitypub' ), $response_code ) )
-			);
+				? \sprintf( \__( 'Failed to fetch URL. HTTP response code: %d', 'activitypub' ), $status )
+				: $response->get_error_message();
+
+			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html( $message ) );
 			return false;
 		}
 
@@ -250,7 +249,7 @@ class Starter_Kit {
 
 		global $wp_filesystem;
 
-		if ( ! $wp_filesystem || ! is_a( $wp_filesystem, 'WP_Filesystem_Base' ) ) {
+		if ( ! $wp_filesystem || ! \is_a( $wp_filesystem, 'WP_Filesystem_Base' ) ) {
 			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html__( 'Failed to initialize the WordPress filesystem.', 'activitypub' ) );
 			return false;
 		}
@@ -355,7 +354,7 @@ class Starter_Kit {
 		?>
 		<form action="<?php echo \esc_url( \admin_url( 'admin.php?import=starter-kit&amp;step=3' ) ); ?>" method="post">
 			<?php \wp_nonce_field( 'import-starter-kit' ); ?>
-			<input type="hidden" name="import_id" value="<?php echo esc_attr( self::$import_id ); ?>" />
+			<input type="hidden" name="import_id" value="<?php echo \esc_attr( self::$import_id ); ?>" />
 
 			<?php self::render_starter_kit_info(); ?>
 			<?php self::render_author_selection(); ?>
@@ -520,7 +519,7 @@ class Starter_Kit {
 			$actor_id = object_to_uri( $actor_id );
 			$actor_id = \ltrim( $actor_id, '@' );
 
-			if ( ! filter_var( $actor_id, FILTER_VALIDATE_URL ) && ! filter_var( $actor_id, FILTER_VALIDATE_EMAIL ) ) {
+			if ( ! \filter_var( $actor_id, FILTER_VALIDATE_URL ) && ! \filter_var( $actor_id, FILTER_VALIDATE_EMAIL ) ) {
 				++$skipped;
 				continue;
 			}

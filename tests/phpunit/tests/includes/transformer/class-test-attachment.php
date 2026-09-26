@@ -116,6 +116,39 @@ class Test_Attachment extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that alt text with a bare `<` is truncated, the core strip_tags() behaviour.
+	 */
+	public function test_get_attachment_with_alt_truncates_at_bare_less_than() {
+		update_post_meta( self::$attachment_id, '_wp_attachment_image_alt', 'I <3 cats' );
+
+		$transformer = new Attachment( get_post( self::$attachment_id ) );
+		$reflection  = new \ReflectionMethod( Attachment::class, 'get_attachment' );
+		$reflection->setAccessible( true );
+		$result = $reflection->invoke( $transformer );
+
+		// strip_tags() reads the bare `<` as an unclosed tag, a known core limitation.
+		$this->assertEquals( 'I', $result['name'] );
+	}
+
+	/**
+	 * Test that an entity-encoded alt text is not revived into live markup on the way out.
+	 *
+	 * `name` is plain text in the JSON, and consumers treat it as such.
+	 */
+	public function test_get_attachment_alt_does_not_revive_encoded_markup() {
+		update_post_meta( self::$attachment_id, '_wp_attachment_image_alt', '&lt;img src=x onerror=alert(1)&gt;caption' );
+
+		$transformer = new Attachment( get_post( self::$attachment_id ) );
+		$reflection  = new \ReflectionMethod( Attachment::class, 'get_attachment' );
+		$reflection->setAccessible( true );
+		$result = $reflection->invoke( $transformer );
+
+		// Decode first, strip second: the revived tag is removed rather than federated.
+		$this->assertStringNotContainsString( '<img', $result['name'] );
+		$this->assertSame( 'caption', $result['name'] );
+	}
+
+	/**
 	 * Test to_object method.
 	 *
 	 * @covers ::to_object

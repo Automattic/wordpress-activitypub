@@ -29,13 +29,14 @@ class Comment {
 		\add_filter( 'comment_feed_where', array( static::class, 'comment_feed_where' ) );
 		\add_filter( 'get_comment_link', array( self::class, 'remote_comment_link' ), 11, 2 );
 		\add_action( 'pre_get_comments', array( static::class, 'comment_query' ) );
+		\add_filter( 'get_page_of_comment_query_args', array( static::class, 'get_page_of_comment_query_args' ) );
 		\add_filter( 'pre_comment_approved', array( static::class, 'pre_comment_approved' ), 11, 2 );
 		\add_filter( 'get_avatar_comment_types', array( static::class, 'get_avatar_comment_types' ), 99 );
 		\add_action( 'update_option_activitypub_allow_likes', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_action( 'update_option_activitypub_allow_reposts', array( self::class, 'maybe_update_comment_counts' ), 10, 2 );
 		\add_filter( 'pre_wp_update_comment_count_now', array( static::class, 'pre_wp_update_comment_count_now' ), 5, 3 );
 		\add_filter( 'get_comment_author', array( static::class, 'render_emoji' ), 10, 2 );
-		\add_filter( 'comment_author', array( static::class, 'unescape_emoji' ), 20 ); // After esc_html().
+		\add_filter( 'comment_author', array( static::class, 'unescape_emoji' ), 20, 2 ); // After esc_html().
 		\add_filter( 'rest_comment_query', array( static::class, 'rest_comment_query' ) );
 		\add_filter( 'comment_text', array( static::class, 'render_blocks' ), 5 ); // Before other filters.
 	}
@@ -113,7 +114,7 @@ class Comment {
 		if ( \is_user_logged_in() ) {
 			$author = \esc_html( $comment->comment_author );
 
-			$message = sprintf(
+			$message = \sprintf(
 				/* translators: %s: comment author name */
 				\__( '%s is on the Fediverse. To reply to them, ask your administrator to enable ActivityPub for your account.', 'activitypub' ),
 				$author
@@ -121,7 +122,7 @@ class Comment {
 
 			// Add link to users page if current user can edit users.
 			if ( \current_user_can( 'edit_users' ) ) {
-				$message = sprintf(
+				$message = \sprintf(
 					/* translators: 1: comment author name, 2: URL to the users management page */
 					\__( '%1$s is on the Fediverse. To reply to them, <a href="%2$s">enable ActivityPub for your account</a>.', 'activitypub' ),
 					$author,
@@ -129,7 +130,7 @@ class Comment {
 				);
 			}
 
-			$warning = sprintf(
+			$warning = \sprintf(
 				'<p class="activitypub-reply-warning"><em>%s</em></p>',
 				\wp_kses( $message, array( 'a' => array( 'href' => array() ) ) )
 			);
@@ -178,7 +179,7 @@ class Comment {
 			return true;
 		}
 
-		$current_user = get_current_user_id();
+		$current_user = \get_current_user_id();
 
 		if ( ! $current_user ) {
 			return false;
@@ -324,19 +325,30 @@ class Comment {
 	/**
 	 * Examine a comment ID and look up an existing comment it represents.
 	 *
-	 * @param string $id ActivityPub object ID (usually a URL) to check.
+	 * @since 9.1.0 Added the `$args` parameter.
+	 *
+	 * @param string $id   ActivityPub object ID (usually a URL) to check.
+	 * @param array  $args Optional. Additional WP_Comment_Query arguments. Pass `array( 'status' => 'any' )`
+	 *                     to also match comments in spam or trash, which the default status excludes.
 	 *
 	 * @return \WP_Comment|false Comment object, or false on failure.
 	 */
-	public static function object_id_to_comment( $id ) {
-		$comment_query = new \WP_Comment_Query(
+	public static function object_id_to_comment( $id, $args = array() ) {
+		$args = \wp_parse_args(
+			$args,
 			array(
-				'meta_key'   => 'source_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'meta_value' => $id,         // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-				'orderby'    => 'comment_date',
-				'order'      => 'DESC',
+				'number'  => 1,
+				'orderby' => 'comment_date',
+				'order'   => 'DESC',
 			)
 		);
+
+		// Force the lookup key and full comment objects, so callers cannot break the return contract.
+		$args['fields']     = 'all';
+		$args['meta_key']   = 'source_id'; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+		$args['meta_value'] = $id;         // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+
+		$comment_query = new \WP_Comment_Query( $args );
 
 		if ( ! $comment_query->comments ) {
 			return false;
@@ -393,7 +405,7 @@ class Comment {
 		$query    = new \WP_Comment_Query();
 		$comments = $query->query( $args );
 
-		if ( $comments && is_array( $comments ) ) {
+		if ( $comments && \is_array( $comments ) ) {
 			return $comments[0]->comment_ID;
 		}
 
@@ -411,7 +423,7 @@ class Comment {
 	 */
 	public static function comment_class( $classes, $css_class, $comment_id ) {
 		// Check if ActivityPub comment.
-		if ( 'activitypub' === get_comment_meta( $comment_id, 'protocol', true ) ) {
+		if ( 'activitypub' === \get_comment_meta( $comment_id, 'protocol', true ) ) {
 			$classes[] = 'activitypub-comment';
 		}
 
@@ -441,10 +453,9 @@ class Comment {
 		if ( \in_array( $comment_type, $comment_types, true ) ) {
 			$where .= $wpdb->prepare( ' AND comment_type = %s', $comment_type );
 		} else {
-			$comment_types = \array_map( 'esc_sql', $comment_types );
-			$placeholders  = implode( ', ', array_fill( 0, count( $comment_types ), '%s' ) );
+			$placeholders = \implode( ', ', \array_fill( 0, \count( $comment_types ), '%s' ) );
 			// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.NotPrepared
-			$where .= $wpdb->prepare( sprintf( ' AND comment_type NOT IN (%s)', $placeholders ), ...$comment_types );
+			$where .= $wpdb->prepare( \sprintf( ' AND comment_type NOT IN (%s)', $placeholders ), ...$comment_types );
 		}
 
 		return $where;
@@ -576,7 +587,7 @@ class Comment {
 		$comment_types = self::get_comment_types();
 
 		foreach ( $comment_types as $comment_type ) {
-			if ( in_array( $activity_type, $comment_type['activity_types'], true ) ) {
+			if ( \in_array( $activity_type, $comment_type['activity_types'], true ) ) {
 				return $comment_type;
 			}
 		}
@@ -617,13 +628,13 @@ class Comment {
 	 * @return array The registered custom comment type slugs.
 	 */
 	public static function get_comment_type_slugs() {
-		if ( ! did_action( 'init' ) ) {
-			_doing_it_wrong( __METHOD__, 'This function should not be called before the init action has run. Comment types are only available after init.', '7.5.0' );
+		if ( ! \did_action( 'init' ) ) {
+			\_doing_it_wrong( __METHOD__, 'This function should not be called before the init action has run. Comment types are only available after init.', '7.5.0' );
 
 			return array();
 		}
 
-		return array_keys( self::get_comment_types() );
+		return \array_keys( self::get_comment_types() );
 	}
 
 	/**
@@ -639,14 +650,14 @@ class Comment {
 	 * @return array The comment type.
 	 */
 	public static function get_comment_type( $type ) {
-		$type = strtolower( $type );
-		$type = sanitize_key( $type );
+		$type = \strtolower( $type );
+		$type = \sanitize_key( $type );
 
 		$comment_types = self::get_comment_types();
 		$type_array    = array();
 
 		// Check array keys.
-		if ( in_array( $type, array_keys( $comment_types ), true ) ) {
+		if ( \in_array( $type, \array_keys( $comment_types ), true ) ) {
 			$type_array = $comment_types[ $type ];
 		}
 
@@ -655,7 +666,7 @@ class Comment {
 		 *
 		 * @param array $type_array The comment type.
 		 */
-		return apply_filters( "activitypub_comment_type_{$type}", $type_array );
+		return \apply_filters( "activitypub_comment_type_{$type}", $type_array );
 	}
 
 	/**
@@ -681,7 +692,7 @@ class Comment {
 		 * @param mixed  $value The value of the attribute.
 		 * @param string $type  The comment type.
 		 */
-		return apply_filters( "activitypub_comment_type_{$attr}", $value, $type );
+		return \apply_filters( "activitypub_comment_type_{$attr}", $value, $type );
 	}
 
 	/**
@@ -691,57 +702,57 @@ class Comment {
 		register_comment_type(
 			'repost',
 			array(
-				'label'          => __( 'Reposts', 'activitypub' ),
-				'singular'       => __( 'Repost', 'activitypub' ),
+				'label'          => \__( 'Reposts', 'activitypub' ),
+				'singular'       => \__( 'Repost', 'activitypub' ),
 				'description'    => 'A repost (or Announce) is when a post appears in the timeline because someone else shared it, while still showing the original author as the source.',
 				'icon'           => '♻️',
 				'class'          => 'p-repost',
 				'type'           => 'repost',
 				'collection'     => 'reposts',
 				'activity_types' => array( 'announce' ),
-				'excerpt'        => html_entity_decode( \__( '&hellip; reposted this!', 'activitypub' ) ),
+				'excerpt'        => \html_entity_decode( \__( '&hellip; reposted this!', 'activitypub' ) ),
 				/* translators: %d: Number of reposts */
-				'count_single'   => _x( '%d repost', 'number of reposts', 'activitypub' ),
+				'count_single'   => \_x( '%d repost', 'number of reposts', 'activitypub' ),
 				/* translators: %d: Number of reposts */
-				'count_plural'   => _x( '%d reposts', 'number of reposts', 'activitypub' ),
+				'count_plural'   => \_x( '%d reposts', 'number of reposts', 'activitypub' ),
 			)
 		);
 
 		register_comment_type(
 			'like',
 			array(
-				'label'          => __( 'Likes', 'activitypub' ),
-				'singular'       => __( 'Like', 'activitypub' ),
+				'label'          => \__( 'Likes', 'activitypub' ),
+				'singular'       => \__( 'Like', 'activitypub' ),
 				'description'    => 'A like is a small positive reaction that shows appreciation for a post without sharing it further.',
 				'icon'           => '👍',
 				'class'          => 'p-like',
 				'type'           => 'like',
 				'collection'     => 'likes',
 				'activity_types' => array( 'like' ),
-				'excerpt'        => html_entity_decode( \__( '&hellip; liked this!', 'activitypub' ) ),
+				'excerpt'        => \html_entity_decode( \__( '&hellip; liked this!', 'activitypub' ) ),
 				/* translators: %d: Number of likes */
-				'count_single'   => _x( '%d like', 'number of likes', 'activitypub' ),
+				'count_single'   => \_x( '%d like', 'number of likes', 'activitypub' ),
 				/* translators: %d: Number of likes */
-				'count_plural'   => _x( '%d likes', 'number of likes', 'activitypub' ),
+				'count_plural'   => \_x( '%d likes', 'number of likes', 'activitypub' ),
 			)
 		);
 
 		register_comment_type(
 			'quote',
 			array(
-				'label'          => __( 'Quotes', 'activitypub' ),
-				'singular'       => __( 'Quote', 'activitypub' ),
+				'label'          => \__( 'Quotes', 'activitypub' ),
+				'singular'       => \__( 'Quote', 'activitypub' ),
 				'description'    => 'A quote is when a post is shared along with an added comment, so the original post appears together with the sharer&#8217;s own words.',
 				'icon'           => '❞',
 				'class'          => 'p-quote',
 				'type'           => 'quote',
 				'collection'     => 'quotes',
 				'activity_types' => array( 'quote' ),
-				'excerpt'        => html_entity_decode( \__( '&hellip; quoted this!', 'activitypub' ) ),
+				'excerpt'        => \html_entity_decode( \__( '&hellip; quoted this!', 'activitypub' ) ),
 				/* translators: %d: Number of quotes */
-				'count_single'   => _x( '%d quote', 'number of quotes', 'activitypub' ),
+				'count_single'   => \_x( '%d quote', 'number of quotes', 'activitypub' ),
 				/* translators: %d: Number of quotes */
-				'count_plural'   => _x( '%d quotes', 'number of quotes', 'activitypub' ),
+				'count_plural'   => \_x( '%d quotes', 'number of quotes', 'activitypub' ),
 			)
 		);
 	}
@@ -755,9 +766,9 @@ class Comment {
 	 */
 	public static function get_avatar_comment_types( $types ) {
 		$comment_types = self::get_comment_type_slugs();
-		$types         = array_merge( $types, $comment_types );
+		$types         = \array_merge( $types, $comment_types );
 
-		return array_unique( $types );
+		return \array_unique( $types );
 	}
 
 	/**
@@ -775,7 +786,7 @@ class Comment {
 		}
 
 		// Do not exclude likes and reposts on ActivityPub requests.
-		if ( defined( 'ACTIVITYPUB_REQUEST' ) && ACTIVITYPUB_REQUEST ) {
+		if ( \defined( 'ACTIVITYPUB_REQUEST' ) && ACTIVITYPUB_REQUEST ) {
 			return;
 		}
 
@@ -795,18 +806,72 @@ class Comment {
 			return;
 		}
 
-		// Do not exclude likes and reposts if the query is for specific types.
-		if ( ! empty( $query->query_vars['type__in'] ) || ! empty( $query->query_vars['type'] ) ) {
-			return;
+		$ap_types = self::get_comment_type_slugs();
+
+		/*
+		 * If the caller is explicitly asking for one of the ActivityPub
+		 * comment types (likes, reposts, …) — or for `'all'`, which WP
+		 * treats as a sentinel meaning "include everything, even types we
+		 * would normally exclude" — respect that. Otherwise we still merge
+		 * our slugs into `type__not_in`, so the AP exclusion composes with
+		 * whatever other plugins are filtering on. The previous version
+		 * bailed out as soon as any of `type__in`, `type` or `type__not_in`
+		 * was set — which let AP comments leak through on themes that use
+		 * plugins like GatherPress (which sets `type__in` for its own RSVP
+		 * filtering).
+		 */
+		foreach ( array( 'type__in', 'type' ) as $key ) {
+			if ( empty( $query->query_vars[ $key ] ) ) {
+				continue;
+			}
+
+			$requested = (array) $query->query_vars[ $key ];
+			if ( \in_array( 'all', $requested, true ) || \array_intersect( $requested, $ap_types ) ) {
+				return;
+			}
 		}
 
-		// Do not exclude likes and reposts if the query is already excluding other comment types.
-		if ( ! empty( $query->query_vars['type__not_in'] ) ) {
-			return;
+		$existing                          = (array) ( $query->query_vars['type__not_in'] ?? array() );
+		$query->query_vars['type__not_in'] = \array_values( \array_unique( \array_merge( $existing, $ap_types ) ) );
+	}
+
+	/**
+	 * Keeps comment page math in step with the rendered list.
+	 *
+	 * `get_page_of_comment()` counts the comments older than the given one with `type => 'all'`.
+	 * That is a non-empty type, so `comment_query()` leaves the count alone, and it is the one
+	 * value that makes core skip its own `note` exclusion too. `comments_template()` queries with
+	 * no type and gets both applied. Counting what the list does not show places the comment on
+	 * a later page than the one it renders on, so `get_comment_link()` emits a `cpage` the
+	 * comment is not on. Clearing the type puts the count on the same footing as the render.
+	 *
+	 * @param array $comment_args Arguments for the older-comments count.
+	 *
+	 * @return array Arguments with the plugin's comment types excluded.
+	 */
+	public static function get_page_of_comment_query_args( $comment_args ) {
+		// The rendered list shows everything on ActivityPub requests, so the count has to as well.
+		if ( \defined( 'ACTIVITYPUB_REQUEST' ) && ACTIVITYPUB_REQUEST ) {
+			return $comment_args;
 		}
 
-		// Exclude likes and reposts by the ActivityPub plugin.
-		$query->query_vars['type__not_in'] = self::get_comment_type_slugs();
+		// A caller asking for one type gets a page within that type; only the default is adjusted.
+		if ( empty( $comment_args['type'] ) || 'all' !== $comment_args['type'] || ! empty( $comment_args['type__in'] ) ) {
+			return $comment_args;
+		}
+
+		$excluded_types = self::get_comment_type_slugs();
+
+		// Merge rather than assign, so an exclusion another plugin set earlier survives.
+		if ( ! empty( $comment_args['type__not_in'] ) ) {
+			$existing       = (array) $comment_args['type__not_in'];
+			$excluded_types = \array_values( \array_unique( \array_merge( $existing, $excluded_types ) ) );
+		}
+
+		$comment_args['type']         = '';
+		$comment_args['type__not_in'] = $excluded_types;
+
+		return $comment_args;
 	}
 
 	/**
@@ -898,8 +963,9 @@ class Comment {
 
 		$author     = $comment_data['comment_author'];
 		$author_url = $comment_data['comment_author_url'];
+		// Only previously approved normal comments count, not approved likes or reposts.
 		// phpcs:ignore
-		$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author = %s AND comment_author_url = %s and comment_approved = '1' LIMIT 1", $author, $author_url ) );
+		$ok_to_comment = $wpdb->get_var( $wpdb->prepare( "SELECT comment_approved FROM $wpdb->comments WHERE comment_author = %s AND comment_author_url = %s AND comment_approved = '1' AND comment_type = 'comment' LIMIT 1", $author, $author_url ) );
 
 		if ( 1 === (int) $ok_to_comment ) {
 			return 1;
@@ -933,7 +999,7 @@ class Comment {
 	 */
 	public static function pre_wp_update_comment_count_now( $new_count, $old_count, $post_id ) {
 		if ( null === $new_count ) {
-			$excluded_types = array_filter( self::get_comment_type_slugs(), array( self::class, 'is_comment_type_enabled' ) );
+			$excluded_types = \array_filter( self::get_comment_type_slugs(), array( self::class, 'is_comment_type_enabled' ) );
 
 			if ( ! empty( $excluded_types ) ) {
 				/*
@@ -957,12 +1023,12 @@ class Comment {
 				 * @param int      $post_id        The post ID.
 				 */
 				$excluded_types = \apply_filters( 'activitypub_excluded_comment_types', $excluded_types, $post_id );
-				$excluded_types = array_unique( array_filter( $excluded_types ) );
+				$excluded_types = \array_unique( \array_filter( $excluded_types ) );
 
 				global $wpdb;
 
 				// phpcs:ignore WordPress.DB
-				$new_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $wpdb->comments WHERE comment_post_ID = %d AND comment_approved = '1' AND comment_type NOT IN ('" . implode( "','", $excluded_types ) . "')", $post_id ) );
+				$new_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $wpdb->comments WHERE comment_post_ID = %d AND comment_approved = '1' AND comment_type NOT IN ('" . \implode( "','", $excluded_types ) . "')", $post_id ) );
 			}
 		}
 
@@ -976,7 +1042,7 @@ class Comment {
 	 * @return bool True if the comment type is enabled.
 	 */
 	public static function is_comment_type_enabled( $comment_type ) {
-		return '1' === get_option( "activitypub_allow_{$comment_type}s", '1' );
+		return '1' === \get_option( "activitypub_allow_{$comment_type}s", '1' );
 	}
 
 	/**
@@ -1030,13 +1096,34 @@ class Comment {
 	 *
 	 * This runs at priority 20 after WordPress's esc_html() filter on comment_author.
 	 *
-	 * @param string $author The comment author name (already escaped by WordPress).
+	 * @since 9.3.0 Added the `$comment_id` parameter.
+	 *
+	 * @param string     $author     The comment author name (already escaped by WordPress).
+	 * @param int|string $comment_id Optional. The comment ID, as a numeric string from core. Default 0.
 	 *
 	 * @return string The comment author name with emoji images unescaped.
 	 */
-	public static function unescape_emoji( $author ) {
-		// Only attempt to unescape if there are emoji images present in the escaped string.
+	public static function unescape_emoji( $author, $comment_id = 0 ) {
+		/*
+		 * Core always passes the comment ID, but plugins and themes re-apply this filter
+		 * with the name alone. Fall back to the comment in scope so a one-argument caller
+		 * does not leave the emoji img sitting there as escaped text.
+		 */
+		if ( ! $comment_id ) {
+			$comment_id = \get_comment_ID();
+		}
+
+		/*
+		 * Only ActivityPub comments can carry emoji, since render_emoji() is what puts the
+		 * img tags there in the first place. Scope this the same way, so an author name
+		 * written by anything else is never decoded -- the substring check below is not a
+		 * reliable signal on its own, and this filter runs on every comment on the site.
+		 */
 		if ( false === \strpos( $author, 'class=&quot;emoji&quot;' ) ) {
+			return $author;
+		}
+
+		if ( ! \get_comment_meta( $comment_id, '_activitypub_remote_actor_id', true ) ) {
 			return $author;
 		}
 

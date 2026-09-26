@@ -10,6 +10,7 @@ namespace Activitypub\OAuth;
 use Activitypub\Sanitize;
 
 use function Activitypub\get_client_ip;
+use function Activitypub\get_url_authority;
 use function Activitypub\resolve_public_host;
 
 /**
@@ -107,7 +108,7 @@ class Client {
 				return new \WP_Error(
 					'activitypub_invalid_redirect_uri',
 					/* translators: %s: The invalid redirect URI */
-					sprintf( \__( 'Invalid redirect URI: %s', 'activitypub' ), $uri ),
+					\sprintf( \__( 'Invalid redirect URI: %s', 'activitypub' ), $uri ),
 					array( 'status' => 400 )
 				);
 			}
@@ -131,7 +132,7 @@ class Client {
 				'meta_input'   => array(
 					'_activitypub_client_id'          => $client_id,
 					'_activitypub_client_secret_hash' => $client_secret ? \wp_hash_password( $client_secret ) : '',
-					'_activitypub_redirect_uris'      => array_map( array( Sanitize::class, 'redirect_uri' ), $redirect_uris ),
+					'_activitypub_redirect_uris'      => \array_map( array( Sanitize::class, 'redirect_uri' ), $redirect_uris ),
 					'_activitypub_allowed_scopes'     => Scope::validate( $scopes ),
 					'_activitypub_is_public'          => (bool) $is_public,
 				),
@@ -281,7 +282,7 @@ class Client {
 
 		// Get redirect URIs from metadata or derive from client_id origin.
 		$redirect_uris = array();
-		if ( ! empty( $metadata['redirect_uris'] ) && is_array( $metadata['redirect_uris'] ) ) {
+		if ( ! empty( $metadata['redirect_uris'] ) && \is_array( $metadata['redirect_uris'] ) ) {
 			foreach ( $metadata['redirect_uris'] as $uri ) {
 				if ( ! self::validate_uri_format( $uri ) ) {
 					return new \WP_Error(
@@ -307,7 +308,7 @@ class Client {
 				'meta_input'   => array(
 					'_activitypub_client_id'          => $client_id,
 					'_activitypub_client_secret_hash' => '', // Public client.
-					'_activitypub_redirect_uris'      => array_map( array( Sanitize::class, 'redirect_uri' ), $redirect_uris ),
+					'_activitypub_redirect_uris'      => \array_map( array( Sanitize::class, 'redirect_uri' ), $redirect_uris ),
 					'_activitypub_allowed_scopes'     => Scope::ALL,
 					'_activitypub_is_public'          => true,
 					'_activitypub_discovered'         => true,
@@ -396,7 +397,7 @@ class Client {
 		$body = \wp_remote_retrieve_body( $response );
 		$data = \json_decode( $body, true );
 
-		if ( ! is_array( $data ) ) {
+		if ( ! \is_array( $data ) ) {
 			return new \WP_Error(
 				'activitypub_client_invalid_metadata',
 				\__( 'Invalid client metadata format.', 'activitypub' ),
@@ -465,19 +466,19 @@ class Client {
 			$metadata['redirect_uris'] = (array) $data['redirectURI'];
 		}
 		if ( empty( $metadata['logo_uri'] ) && ! empty( $data['icon'] ) ) {
-			if ( is_string( $data['icon'] ) ) {
+			if ( \is_string( $data['icon'] ) ) {
 				$metadata['logo_uri'] = $data['icon'];
-			} elseif ( is_array( $data['icon'] ) && ! empty( $data['icon']['url'] ) ) {
+			} elseif ( \is_array( $data['icon'] ) && ! empty( $data['icon']['url'] ) ) {
 				$metadata['logo_uri'] = $data['icon']['url'];
 			}
 		}
 		if ( empty( $metadata['client_uri'] ) && ! empty( $data['url'] ) ) {
-			$metadata['client_uri'] = is_array( $data['url'] ) ? $data['url'][0] : $data['url'];
+			$metadata['client_uri'] = \is_array( $data['url'] ) ? $data['url'][0] : $data['url'];
 		}
 
 		// Mark ActivityPub actor-typed clients for lenient redirect validation.
 		$actor_types = array( 'Application', 'Person', 'Service', 'Group', 'Organization' );
-		if ( ! empty( $data['type'] ) && in_array( $data['type'], $actor_types, true ) ) {
+		if ( ! empty( $data['type'] ) && \in_array( $data['type'], $actor_types, true ) ) {
 			$metadata['is_actor'] = true;
 		}
 
@@ -534,7 +535,7 @@ class Client {
 		}
 
 		// Exact match first.
-		if ( in_array( $redirect_uri, $allowed_uris, true ) ) {
+		if ( \in_array( $redirect_uri, $allowed_uris, true ) ) {
 			return true;
 		}
 
@@ -583,11 +584,17 @@ class Client {
 			return $allowed_uri === $redirect_uri;
 		}
 
-		// For loopback, compare path (ignore port).
-		$allowed_path  = $allowed_parts['path'] ?? '/';
-		$redirect_path = $redirect_parts['path'] ?? '/';
+		/*
+		 * For loopback, the URIs have to be equal as strings except for the port (RFC 6749
+		 * Section 3.1.2.3, RFC 8252 Section 7.3). Comparing strings rather than parsed parts also
+		 * tells an empty query, fragment or user name apart from a missing one.
+		 */
+		$without_port = static function ( $uri, $parts ) {
+			// The port directly follows the host, so it is the first `:PORT` before the path, query, fragment or end, with any leading zeros.
+			return isset( $parts['port'] ) ? \preg_replace( '/:0*' . (int) $parts['port'] . '(?=[\/?#]|$)/', '', $uri, 1 ) : $uri;
+		};
 
-		return $allowed_path === $redirect_path;
+		return $without_port( $allowed_uri, $allowed_parts ) === $without_port( $redirect_uri, $redirect_parts );
 	}
 
 	/**
@@ -668,7 +675,7 @@ class Client {
 		);
 		// phpcs:enable WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 
-		return array_map(
+		return \array_map(
 			function ( $post ) {
 				return new self( $post->ID );
 			},
@@ -734,7 +741,7 @@ class Client {
 	 */
 	public function get_redirect_uris() {
 		$uris = \get_post_meta( $this->post_id, '_activitypub_redirect_uris', true );
-		return is_array( $uris ) ? $uris : array();
+		return \is_array( $uris ) ? $uris : array();
 	}
 
 	/**
@@ -744,7 +751,7 @@ class Client {
 	 */
 	public function get_allowed_scopes() {
 		$scopes = \get_post_meta( $this->post_id, '_activitypub_allowed_scopes', true );
-		return is_array( $scopes ) ? $scopes : Scope::DEFAULT_SCOPES;
+		return \is_array( $scopes ) ? $scopes : Scope::DEFAULT_SCOPES;
 	}
 
 	/**
@@ -772,29 +779,35 @@ class Client {
 	 * since the client_id URL typically serves a JSON document (CIMD)
 	 * not intended for end-users.
 	 *
+	 * Both sources are supplied by the client, so the result is limited to http(s) URLs with a
+	 * host and without a user name. The check runs on read to also cover values stored before it existed.
+	 *
 	 * @since 8.1.0
+	 * @since unreleased Only returns http(s) URLs with a host and no user name.
 	 *
 	 * @return string A URL for the client, or empty string if none available.
 	 */
 	public function get_link_url() {
-		$client_uri = $this->get_client_uri();
+		$url = $this->get_client_uri();
 
-		if ( $client_uri ) {
-			return $client_uri;
+		if ( ! $url ) {
+			$redirect_uris = $this->get_redirect_uris();
+			$authority     = ! empty( $redirect_uris ) ? get_url_authority( $redirect_uris[0] ) : false;
+			$url           = $authority ? \trailingslashit( $authority ) : '';
 		}
 
-		$redirect_uris = $this->get_redirect_uris();
-
-		if ( ! empty( $redirect_uris ) ) {
-			$scheme = \wp_parse_url( $redirect_uris[0], PHP_URL_SCHEME );
-			$host   = \wp_parse_url( $redirect_uris[0], PHP_URL_HOST );
-
-			if ( $scheme && $host ) {
-				return \trailingslashit( sprintf( '%s://%s', $scheme, $host ) );
-			}
+		// The list is explicit: the `wp_allowed_protocols()` default is wider and filterable.
+		if ( ! get_url_authority( $url ) || \strtolower( \wp_kses_bad_protocol( $url, array( 'http', 'https' ) ) ) !== \strtolower( $url ) ) {
+			return '';
 		}
 
-		return '';
+		// A user name in front of the host would make the link read like another site.
+		$parts = \wp_parse_url( $url );
+		if ( isset( $parts['user'] ) || isset( $parts['pass'] ) ) {
+			return '';
+		}
+
+		return $url;
 	}
 
 	/**
@@ -823,7 +836,7 @@ class Client {
 	 */
 	public function filter_scopes( $requested_scopes ) {
 		$allowed = $this->get_allowed_scopes();
-		return array_values( array_intersect( $requested_scopes, $allowed ) );
+		return \array_values( \array_intersect( $requested_scopes, $allowed ) );
 	}
 
 	/**
@@ -833,11 +846,11 @@ class Client {
 	 */
 	public static function generate_client_id() {
 		// Generate UUID v4.
-		$data    = random_bytes( 16 );
-		$data[6] = chr( ord( $data[6] ) & 0x0f | 0x40 ); // Version 4.
-		$data[8] = chr( ord( $data[8] ) & 0x3f | 0x80 ); // Variant.
+		$data    = \random_bytes( 16 );
+		$data[6] = \chr( \ord( $data[6] ) & 0x0f | 0x40 ); // Version 4.
+		$data[8] = \chr( \ord( $data[8] ) & 0x3f | 0x80 ); // Variant.
 
-		return vsprintf( '%s%s-%s-%s-%s-%s%s%s', str_split( bin2hex( $data ), 4 ) );
+		return \vsprintf( '%s%s-%s-%s-%s-%s%s%s', \str_split( \bin2hex( $data ), 4 ) );
 	}
 
 	/**
@@ -869,7 +882,7 @@ class Client {
 		 * but double-slash forms ("myapp://host") are common in practice, so both
 		 * are accepted.
 		 */
-		if ( ! preg_match( '/^([a-zA-Z][a-zA-Z0-9+.\-]*):/', $uri, $matches ) ) {
+		if ( ! \preg_match( '/^([a-zA-Z][a-zA-Z0-9+.\-]*):/', $uri, $matches ) ) {
 			return false;
 		}
 
@@ -883,7 +896,7 @@ class Client {
 
 		// Block dangerous schemes (see OWASP XSS prevention).
 		$blocked_schemes = array( 'javascript', 'data', 'vbscript', 'blob', 'file', 'mhtml', 'cid', 'jar', 'view-source' );
-		if ( in_array( $scheme, $blocked_schemes, true ) ) {
+		if ( \in_array( $scheme, $blocked_schemes, true ) ) {
 			return false;
 		}
 
@@ -922,7 +935,7 @@ class Client {
 		 * Custom schemes must be at least 2 characters to avoid matching
 		 * Windows drive letters (e.g., "C:").
 		 */
-		return strlen( $scheme ) >= 2;
+		return \strlen( $scheme ) >= 2;
 	}
 
 	/**
@@ -949,7 +962,7 @@ class Client {
 		// Also revoke all tokens stored in user meta.
 		Token::revoke_all();
 
-		return count( $post_ids );
+		return \count( $post_ids );
 	}
 
 	/**

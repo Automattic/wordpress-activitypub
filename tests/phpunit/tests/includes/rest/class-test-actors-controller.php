@@ -218,6 +218,51 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	}
 
 	/**
+	 * Test that a template with a disallowed scheme is not returned by the endpoint.
+	 *
+	 * The gate itself is covered in `Test_Webfinger`; this pins that the controller returns what
+	 * the gate produced instead of re-deriving the URL from the response.
+	 *
+	 * @covers ::get_remote_follow_item
+	 */
+	public function test_get_remote_follow_item_rejects_javascript_template() {
+		$_SERVER['REMOTE_ADDR'] = '203.0.113.11';
+		\delete_transient( 'ap_remote_follow_' . \md5( '203.0.113.11' ) );
+
+		$http_mock = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => wp_json_encode(
+					array(
+						'subject' => 'acct:someone@remote.example',
+						'links'   => array(
+							array(
+								'rel'      => 'http://ostatus.org/schema/1.0/subscribe',
+								'template' => 'javascript:alert(1)//{uri}',
+							),
+						),
+					)
+				),
+			);
+		};
+		add_filter( 'pre_http_request', $http_mock );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/' . self::$user_id . '/remote-follow' );
+		$request->set_param( 'resource', 'https://remote.example/user' );
+
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		remove_filter( 'pre_http_request', $http_mock );
+		\delete_transient( 'ap_remote_follow_' . \md5( '203.0.113.11' ) );
+
+		// The unsafe template is dropped, so the safe last-resort URL is returned instead.
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'https://remote.example/authorize_interaction?uri={uri}', $data['template'] );
+		$this->assertStringStartsWith( 'https://remote.example/authorize_interaction?uri=', $data['url'] );
+	}
+
+	/**
 	 * Test schema.
 	 *
 	 * @covers ::get_item_schema

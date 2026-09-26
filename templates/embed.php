@@ -28,10 +28,10 @@ $args = wp_parse_args(
 \wp_enqueue_style( 'activitypub-embed', ACTIVITYPUB_PLUGIN_URL . 'assets/css/activitypub-embed.css', array(), ACTIVITYPUB_PLUGIN_VERSION );
 ?>
 
-<div class="activitypub-embed u-in-reply-to h-cite">
+<div class="activitypub-embed">
 	<div class="activitypub-embed-header p-author h-card">
 		<?php if ( $args['avatar_url'] ) : ?>
-			<img class="u-photo" src="<?php echo \esc_url( $args['avatar_url'] ); ?>" alt="" />
+			<img class="u-photo" src="<?php echo \esc_url( $args['avatar_url'] ); ?>" alt="" width="48" height="48" />
 		<?php endif; ?>
 		<div class="activitypub-embed-header-text">
 			<h2 class="p-name"><?php echo \esc_html( $args['author_name'] ); ?></h2>
@@ -47,13 +47,13 @@ $args = wp_parse_args(
 		<?php endif; ?>
 
 		<?php if ( $args['content'] ) : ?>
-			<div class="ap-subtitle p-summary e-content"><?php echo \wp_kses_post( $args['content'] ); ?></div>
+			<div class="ap-subtitle p-summary e-content"><?php echo \Activitypub\Sanitize::content( $args['content'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Sanitize::content() returns kses-sanitized HTML. ?></div>
 		<?php endif; ?>
 
 		<?php if ( $args['images'] ) : ?>
 			<div class="ap-preview <?php echo \esc_attr( 'layout-' . count( $args['images'] ) ); ?>">
 				<?php foreach ( $args['images'] as $image ) : ?>
-				<img class="u-photo u-featured" src="<?php echo \esc_url( $image['url'] ); ?>" alt="<?php echo \esc_attr( $image['name'] ?? '' ); ?>" />
+				<img class="u-photo u-featured" src="<?php echo \esc_url( $image['url'] ); ?>" alt="<?php echo \esc_attr( $image['name'] ?? '' ); ?>" width="600" />
 				<?php endforeach; ?>
 			</div>
 		<?php elseif ( $args['video'] ) : ?>
@@ -68,8 +68,11 @@ $args = wp_parse_args(
 	</div>
 
 	<div class="activitypub-embed-meta">
-		<?php if ( $args['published'] ) : ?>
-			<a href="<?php echo \esc_url( $args['url'] ); ?>" class="ap-stat ap-date dt-published u-in-reply-to"><?php echo \esc_html( $args['published'] ); ?></a>
+		<?php if ( $args['url'] ) : ?>
+			<?php // The citation needs its `u-url`, so the link is always there; the date is its label when there is one. ?>
+			<a href="<?php echo \esc_url( $args['url'] ); ?>" class="ap-stat ap-date u-url<?php echo $args['published'] ? ' dt-published' : ''; ?>">
+				<?php echo \esc_html( $args['published'] ? $args['published'] : \wp_parse_url( $args['url'], PHP_URL_HOST ) ); ?>
+			</a>
 		<?php endif; ?>
 
 		<?php if ( null !== $args['boosts'] ) : ?>

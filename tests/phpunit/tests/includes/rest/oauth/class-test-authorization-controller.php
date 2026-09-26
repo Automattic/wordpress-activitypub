@@ -275,13 +275,33 @@ class Test_Authorization_Controller extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a consent nonce for one client doesn't authorize another.
+	 *
+	 * @covers ::authorize_submit_permissions_check
+	 */
+	public function test_authorize_submit_rejects_nonce_of_other_client() {
+		\wp_set_current_user( $this->user_id );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/authorize' );
+		$request->set_param( 'response_type', 'code' );
+		$request->set_param( 'client_id', $this->client_id );
+		$request->set_param( 'redirect_uri', $this->redirect_uri );
+		$request->set_param( 'approve', true );
+		$request->set_param( '_wpnonce', \wp_create_nonce( 'activitypub_oauth_authorize_other-client' ) );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 403, $response->get_status() );
+	}
+
+	/**
 	 * Test that POST authorize with deny redirects with access_denied.
 	 *
 	 * @covers ::authorize_submit
 	 */
 	public function test_authorize_submit_denied() {
 		\wp_set_current_user( $this->user_id );
-		$nonce = \wp_create_nonce( 'activitypub_oauth_authorize' );
+		$nonce = \wp_create_nonce( 'activitypub_oauth_authorize_' . $this->client_id );
 
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/authorize' );
 		$request->set_param( 'response_type', 'code' );
@@ -309,7 +329,7 @@ class Test_Authorization_Controller extends \WP_UnitTestCase {
 	 */
 	public function test_authorize_submit_success() {
 		\wp_set_current_user( $this->user_id );
-		$nonce = \wp_create_nonce( 'activitypub_oauth_authorize' );
+		$nonce = \wp_create_nonce( 'activitypub_oauth_authorize_' . $this->client_id );
 
 		$verifier  = \bin2hex( \random_bytes( 32 ) );
 		$challenge = \Activitypub\OAuth\Authorization_Code::compute_code_challenge( $verifier );

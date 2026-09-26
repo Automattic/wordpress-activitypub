@@ -24,14 +24,20 @@ class Server {
 
 	/**
 	 * Initialize the OAuth server.
+	 *
+	 * Registered on `init`, so the setting is read once the site context is settled.
 	 */
 	public static function init() {
+		if ( ! \get_option( 'activitypub_api', false ) ) {
+			return;
+		}
+
 		// Hook into REST authentication - priority 20 to run after default auth.
 		\add_filter( 'rest_authentication_errors', array( self::class, 'authenticate_oauth' ), 20 );
 
 		// Schedule cleanup cron.
 		if ( ! \wp_next_scheduled( 'activitypub_oauth_cleanup' ) ) {
-			\wp_schedule_event( time(), 'daily', 'activitypub_oauth_cleanup' );
+			\wp_schedule_event( \time(), 'daily', 'activitypub_oauth_cleanup' );
 		}
 		\add_action( 'activitypub_oauth_cleanup', array( self::class, 'cleanup' ) );
 	}
@@ -56,6 +62,22 @@ class Server {
 			return $result;
 		}
 
+		/*
+		 * Only honor OAuth bearer tokens on the plugin's own REST API.
+		 *
+		 * These are scoped ActivityPub C2S grants. Honoring them on core routes
+		 * (e.g. POST /wp/v2/posts) would establish a full-capability session that
+		 * ignores the token's granted scope, since scope is only enforced where
+		 * the plugin opts in via check_oauth_permission() (CWE-863). Every C2S
+		 * endpoint lives under ACTIVITYPUB_REST_NAMESPACE, so restricting here
+		 * does not affect legitimate clients. Direct callers (outbox permalinks,
+		 * SSE query-param auth) invoke this method outside REST dispatch and are
+		 * trusted to have scoped the context themselves.
+		 */
+		if ( ! self::is_authenticatable_request() ) {
+			return $result;
+		}
+
 		$validated = Token::validate( $token );
 
 		if ( \is_wp_error( $validated ) ) {
@@ -66,6 +88,63 @@ class Server {
 		\wp_set_current_user( $validated->get_user_id() );
 
 		return true;
+	}
+
+	/**
+	 * Whether the current request may be authenticated with an OAuth bearer token.
+	 *
+	 * Bearer tokens are scoped ActivityPub C2S grants and must only authenticate
+	 * the plugin's own REST API. During REST dispatch we therefore require the
+	 * requested route to live under {@see ACTIVITYPUB_REST_NAMESPACE}; a token
+	 * presented to a core route such as `/wp/v2/posts` is ignored so its granted
+	 * scope cannot be bypassed. Outside REST dispatch (e.g. outbox permalinks
+	 * that authenticate explicitly) there is no route to scope against, so the
+	 * request is allowed through to the caller's own checks.
+	 *
+	 * @since 9.1.0
+	 *
+	 * @return bool True if the request may be OAuth-authenticated.
+	 */
+	private static function is_authenticatable_request() {
+		global $wp;
+
+		$route = isset( $wp->query_vars['rest_route'] ) ? (string) $wp->query_vars['rest_route'] : '';
+
+		if ( '' === $route ) {
+			// No REST route in context: only trust non-REST (direct/permalink) callers.
+			return ! \wp_is_serving_rest_request();
+		}
+
+		$route     = '/' . \ltrim( $route, '/' );
+		$namespace = '/' . \trim( ACTIVITYPUB_REST_NAMESPACE, '/' );
+
+		return $route === $namespace || 0 === \strpos( $route, $namespace . '/' );
+	}
+
+	/**
+	 * Reject requests that authenticated with an OAuth bearer token.
+	 *
+	 * OAuth bearer tokens are scoped ActivityPub C2S grants and must not reach
+	 * the plugin's admin and management endpoints, which authorize by WordPress
+	 * capability rather than by OAuth scope. Without this guard a token consented
+	 * to for a narrow scope (e.g. read) could drive privileged, capability-gated
+	 * actions such as moderation. Cookie-authenticated admin-UI requests do not
+	 * establish an OAuth session and are unaffected.
+	 *
+	 * @since 9.1.0
+	 *
+	 * @return \WP_Error|null WP_Error when the request is OAuth-authenticated, null otherwise.
+	 */
+	public static function deny_if_oauth() {
+		if ( ! self::is_oauth_request() ) {
+			return null;
+		}
+
+		return new \WP_Error(
+			'activitypub_oauth_not_allowed',
+			\__( 'OAuth authentication is not allowed for this endpoint.', 'activitypub' ),
+			array( 'status' => 403 )
+		);
 	}
 
 	/**
@@ -101,6 +180,24 @@ class Server {
 	}
 
 	/**
+	 * Whether the request is permitted to act for a scope.
+	 *
+	 * Only OAuth callers are limited by scope. A cookie-authenticated session carries no
+	 * token and is therefore not scope-limited; it is bounded by WordPress capabilities.
+	 *
+	 * Unlike {@see self::check_oauth_permission()}, this does not require the request to be
+	 * OAuth-authenticated, so it can be combined with checks that also accept a WP session.
+	 *
+	 * @since 9.3.0
+	 *
+	 * @param string $scope The scope to require of an OAuth caller.
+	 * @return bool True if the request may act for the scope.
+	 */
+	public static function permits_scope( $scope ) {
+		return ! self::is_oauth_request() || self::has_scope( $scope );
+	}
+
+	/**
 	 * Extract Bearer token from Authorization header.
 	 *
 	 * @return string|null The token string or null.
@@ -113,11 +210,11 @@ class Server {
 		}
 
 		// Check for Bearer token.
-		if ( 0 !== strpos( $auth_header, 'Bearer ' ) ) {
+		if ( 0 !== \strpos( $auth_header, 'Bearer ' ) ) {
 			return null;
 		}
 
-		return substr( $auth_header, 7 );
+		return \substr( $auth_header, 7 );
 	}
 
 	/**
@@ -142,14 +239,14 @@ class Server {
 		// phpcs:enable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
 		// Fallback: read from Apache's own header API (case-insensitive).
-		if ( ! function_exists( 'apache_request_headers' ) ) {
+		if ( ! \function_exists( 'apache_request_headers' ) ) {
 			return null;
 		}
 
-		$headers = apache_request_headers();
+		$headers = \apache_request_headers();
 
 		foreach ( $headers as $key => $value ) {
-			if ( 'authorization' === strtolower( $key ) ) {
+			if ( 'authorization' === \strtolower( $key ) ) {
 				return $value;
 			}
 		}
@@ -214,7 +311,7 @@ class Server {
 			return new \WP_Error(
 				'activitypub_insufficient_scope',
 				/* translators: %s: The required scope */
-				sprintf( \__( 'This action requires the "%s" scope.', 'activitypub' ), $scope ),
+				\sprintf( \__( 'This action requires the "%s" scope.', 'activitypub' ), $scope ),
 				array( 'status' => 403 )
 			);
 		}
@@ -335,11 +432,16 @@ class Server {
 		$scopes       = Scope::validate( Scope::parse( $authorize_params['scope'] ) ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 
 		// Build form action URL.
+		// The values must be encoded: add_query_arg() does not encode them, so raw
+		// reserved characters in the OAuth params would break the query string.
 		// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$form_url = \add_query_arg(
-			array_merge( array( 'action' => 'activitypub_authorize' ), $authorize_params ),
+			\array_merge( array( 'action' => 'activitypub_authorize' ), \array_map( 'rawurlencode', $authorize_params ) ),
 			\wp_login_url()
 		);
+
+		// Build the logout URL with the authorization request as the redirect target.
+		$logout_url = \wp_logout_url( $form_url ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
 
 		// Include the template.
 		include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-authorize.php'; // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- $authorize_params used in template.
@@ -349,15 +451,15 @@ class Server {
 	 * Process the OAuth authorization consent form submission.
 	 */
 	private static function process_authorize_form() {
-		// Verify nonce.
-		if ( ! isset( $_POST['_wpnonce'] ) || ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ) ), 'activitypub_oauth_authorize' ) ) {
+		// Verify nonce. It is bound to the client, so a consent form for one app can't approve another.
+		$client_id = isset( $_POST['client_id'] ) ? \sanitize_text_field( \wp_unslash( $_POST['client_id'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Part of the nonce action.
+		if ( ! isset( $_POST['_wpnonce'] ) || ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ) ), 'activitypub_oauth_authorize_' . $client_id ) ) {
 			$error_message = \__( 'Security check failed. Please try again.', 'activitypub' ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
 			include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-error.php';
 			exit;
 		}
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified above.
-		$client_id             = isset( $_POST['client_id'] ) ? \sanitize_text_field( \wp_unslash( $_POST['client_id'] ) ) : '';
 		$redirect_uri          = isset( $_POST['redirect_uri'] ) ? Sanitize::redirect_uri( \wp_unslash( $_POST['redirect_uri'] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized via Sanitize::redirect_uri().
 		$scope                 = isset( $_POST['scope'] ) ? \sanitize_text_field( \wp_unslash( $_POST['scope'] ) ) : '';
 		$state                 = isset( $_POST['state'] ) ? \wp_unslash( $_POST['state'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- OAuth state is opaque; must be round-tripped exactly.
@@ -414,10 +516,17 @@ class Server {
 		);
 
 		if ( \is_wp_error( $code ) ) {
+			/*
+			 * A refused scope is something the client can act on, so it travels as the OAuth
+			 * error RFC 6749 §4.1.2.1 names. Everything else here is an internal failure, and
+			 * those carry an `activitypub_` code the client has no use for.
+			 */
+			$error = 'invalid_scope' === $code->get_error_code() ? 'invalid_scope' : 'server_error';
+
 			self::redirect_to_client(
 				$redirect_uri,
 				array(
-					'error'             => 'server_error',
+					'error'             => $error,
 					'error_description' => $code->get_error_message(),
 					'state'             => $state,
 				)
@@ -448,7 +557,7 @@ class Server {
 		$url = Sanitize::redirect_uri( \add_query_arg( $params, $redirect_uri ) );
 
 		\nocache_headers();
-		header( 'Location: ' . $url, true, 303 );
+		\header( 'Location: ' . $url, true, 303 );
 		exit;
 	}
 }

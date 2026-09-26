@@ -1,6 +1,7 @@
 import { getContext, getElement, store, withScope, getConfig } from '@wordpress/interactivity';
 import './view-style.scss';
 import { createModalStore } from '../shared/modal';
+import { isSafeUrl } from '../shared/safe-url';
 
 createModalStore( 'activitypub/reactions' );
 
@@ -125,7 +126,7 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 				return;
 			}
 
-			if ( ! callbacks.isHandle( profileURL ) && ! callbacks.isUrl( profileURL ) ) {
+			if ( ! callbacks.isHandle( profileURL ) && ! isSafeUrl( profileURL ) ) {
 				context.isError = true;
 				context.errorMessage = i18n.invalidProfileError;
 				return;
@@ -146,7 +147,13 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 
 				context.isLoading = false;
 
-				// Open the remote intent URL in a new tab.
+				// The URL comes from a template the remote server advertised.
+				if ( ! isSafeUrl( response.url ) ) {
+					context.isError = true;
+					context.errorMessage = i18n.genericError;
+					return;
+				}
+
 				window.open( response.url, '_blank', 'noopener,noreferrer' );
 
 				// Close via shared modal.
@@ -348,22 +355,7 @@ const { actions, callbacks, state } = store( 'activitypub/reactions', {
 		isHandle( string ) {
 			const parts = string.replace( /^@/, '' ).split( '@' );
 
-			return parts.length === 2 && callbacks.isUrl( `https://${ parts[ 1 ] }` );
-		},
-
-		/**
-		 * Checks if a string is a valid URL.
-		 *
-		 * @param {string} string String to check.
-		 * @return {boolean} True if string is a valid URL.
-		 */
-		isUrl( string ) {
-			try {
-				new URL( string );
-				return true;
-			} catch ( _ ) {
-				return false;
-			}
+			return parts.length === 2 && isSafeUrl( `https://${ parts[ 1 ] }` );
 		},
 	},
 } );

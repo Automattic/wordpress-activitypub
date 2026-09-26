@@ -60,10 +60,10 @@ class Link {
 	 * @return string The final string.
 	 */
 	public static function replace_with_links( $result ) {
-		if ( 'www.' === substr( $result[0], 0, 4 ) ) {
+		if ( 'www.' === \substr( $result[0], 0, 4 ) ) {
 			$result[0] = 'https://' . $result[0];
 		}
-		$parsed_url = \wp_parse_url( html_entity_decode( $result[0] ) );
+		$parsed_url = \wp_parse_url( \html_entity_decode( $result[0] ) );
 		if ( ! $parsed_url || empty( $parsed_url['host'] ) ) {
 			return $result[0];
 		}
@@ -84,8 +84,8 @@ class Link {
 		}
 
 		$text_url = $parsed_url['host'];
-		if ( 'www.' === substr( $text_url, 0, 4 ) ) {
-			$text_url          = substr( $text_url, 4 );
+		if ( 'www.' === \substr( $text_url, 0, 4 ) ) {
+			$text_url          = \substr( $text_url, 4 );
 			$invisible_prefix .= 'www.';
 		}
 		if ( ! empty( $parsed_url['port'] ) ) {
@@ -114,16 +114,16 @@ class Link {
 		 *
 		 * @param string $rel The rel attribute string. Default 'nofollow noopener noreferrer'.
 		 */
-		$rel = apply_filters( 'activitypub_link_rel', 'nofollow noopener noreferrer' );
+		$rel = \apply_filters( 'activitypub_link_rel', 'nofollow noopener noreferrer' );
 
 		return \sprintf(
 			'<a href="%s" target="_blank" rel="%s" translate="no"><span class="invisible">%s</span><span class="%s">%s</span><span class="invisible">%s</span></a>',
-			esc_url( $result[0] ),
+			\esc_url( $result[0] ),
 			$rel,
-			esc_html( $invisible_prefix ),
+			\esc_html( $invisible_prefix ),
 			$display_class,
-			esc_html( $display ),
-			esc_html( $invisible_suffix )
+			\esc_html( $display ),
+			\esc_html( $invisible_suffix )
 		);
 	}
 }

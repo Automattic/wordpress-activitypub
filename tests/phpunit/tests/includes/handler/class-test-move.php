@@ -111,6 +111,76 @@ class Test_Move extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A Move whose target document is served under a mismatched cross-host id must not
+	 * cache anything under that id. The self-confirming fetch re-fetches the declared
+	 * id from its own host; when that does not confirm, the target cannot be resolved
+	 * and the move does not proceed.
+	 */
+	public function test_handle_move_does_not_cache_cross_host_target_id() {
+		$target_url    = 'https://example.org/target';
+		$origin        = 'https://example.org/origin';
+		$mismatched_id = 'https://example.com/users/alice';
+
+		$documents = array(
+			// The target document (served at $target_url) claims the canonical actor's id.
+			$target_url    => array(
+				'type'        => 'Person',
+				'id'          => $mismatched_id,
+				'url'         => $target_url,
+				'inbox'       => 'https://example.org/target/inbox',
+				'alsoKnownAs' => array( $origin ),
+			),
+			// The canonical actor's real server does not confirm the mismatched id (it serves another id).
+			$mismatched_id => array(
+				'type'  => 'Person',
+				'id'    => 'https://example.net/someone-else',
+				'inbox' => 'https://example.net/someone-else/inbox',
+			),
+		);
+
+		$origin_object        = array(
+			'type'    => 'Person',
+			'id'      => $origin,
+			'url'     => $origin,
+			'inbox'   => 'https://example.org/origin/inbox',
+			'movedTo' => $mismatched_id,
+		);
+		$documents[ $origin ] = $origin_object;
+
+		$id = Remote_Actors::upsert( $origin_object );
+		\add_post_meta( $id, Followers::FOLLOWER_META_KEY, $this->user_id );
+
+		$filter = function ( $pre, $args, $url ) use ( $documents ) {
+			if ( ! \array_key_exists( $url, $documents ) ) {
+				return $pre;
+			}
+			return array(
+				'headers'  => array(),
+				'body'     => \wp_json_encode( $documents[ $url ] ),
+				'response' => array(
+					'code'    => 200,
+					'message' => 'OK',
+				),
+				'cookies'  => array(),
+			);
+		};
+		\add_filter( 'pre_http_request', $filter, 10, 3 );
+
+		Move::handle_move(
+			array(
+				'type'   => 'Move',
+				'actor'  => $origin,
+				'object' => $target_url,
+			),
+			1
+		);
+
+		\remove_filter( 'pre_http_request', $filter );
+
+		$this->assertWPError( Remote_Actors::get_by_uri( $mismatched_id ), 'The mismatched target id must not be cached.' );
+	}
+
+	/**
 	 * Test the handle_move method with an invalid target.
 	 *
 	 * @covers ::verify_move
@@ -317,6 +387,10 @@ class Test_Move extends \WP_UnitTestCase {
 		\wp_cache_delete( $origin_id, 'posts' );
 		\wp_cache_delete( $target_id, 'posts' );
 
+		// Warm the inbox caches the Move has to invalidate.
+		$this->assertSame( array( 'https://example.com/old-profile/inbox' ), Followers::get_inboxes( $this->user_id_2 ) );
+		$this->assertContains( 'https://example.com/old-profile/inbox', Remote_Actors::get_inboxes() );
+
 		$filter = function ( $pre, $url_or_object ) use ( $target, $origin ) {
 			$url = object_to_uri( $url_or_object );
 
@@ -366,6 +440,10 @@ class Test_Move extends \WP_UnitTestCase {
 
 		// Check if the origin follower was deleted.
 		$this->assertWPError( Remote_Actors::get_by_uri( $origin ) );
+
+		// The moved follower's inbox list points at the target now, and the origin is gone everywhere.
+		$this->assertSame( array( 'https://example.com/new-profile/inbox' ), Followers::get_inboxes( $this->user_id_2 ) );
+		$this->assertNotContains( 'https://example.com/old-profile/inbox', Remote_Actors::get_inboxes() );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 	}

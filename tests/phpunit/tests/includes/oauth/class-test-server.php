@@ -1,0 +1,352 @@
+<?php
+/**
+ * Test file for OAuth Server class.
+ *
+ * @package Activitypub
+ */
+
+namespace Activitypub\Tests\OAuth;
+
+use Activitypub\OAuth\Client;
+use Activitypub\OAuth\Scope;
+use Activitypub\OAuth\Server;
+use Activitypub\OAuth\Token;
+use Activitypub\Post_Types;
+
+require_once AP_TESTS_DIR . '/includes/functions-login-page-stubs.php';
+
+/**
+ * Test class for OAuth Server.
+ *
+ * @coversDefaultClass \Activitypub\OAuth\Server
+ *
+ * @group activitypub
+ * @group oauth
+ */
+class Test_Server extends \WP_UnitTestCase {
+
+	/**
+	 * Test user ID.
+	 *
+	 * @var int
+	 */
+	protected $user_id;
+
+	/**
+	 * Test client ID.
+	 *
+	 * @var string
+	 */
+	protected $client_id;
+
+	/**
+	 * A valid access token string for the test user.
+	 *
+	 * @var string
+	 */
+	protected $access_token;
+
+	/**
+	 * Original `rest_route` query var, restored on tear down.
+	 *
+	 * @var mixed
+	 */
+	protected $original_rest_route;
+
+	/**
+	 * Set up the test.
+	 */
+	public function set_up() {
+		parent::set_up();
+
+		\update_option( 'activitypub_api', true );
+		Post_Types::register_oauth_post_types();
+
+		$this->user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		\get_user_by( 'id', $this->user_id )->add_cap( 'activitypub' );
+
+		$client          = Client::register(
+			array(
+				'name'          => 'Test Client',
+				'redirect_uris' => array( 'https://example.com/callback' ),
+			)
+		);
+		$this->client_id = $client['client_id'];
+
+		$token              = Token::create( $this->user_id, $this->client_id, array( Scope::READ ) );
+		$this->access_token = $token['access_token'];
+
+		global $wp;
+		$this->original_rest_route = $wp->query_vars['rest_route'] ?? null;
+	}
+
+	/**
+	 * Tear down the test.
+	 */
+	public function tear_down() {
+		unset( $_SERVER['HTTP_AUTHORIZATION'] );
+		\delete_option( 'activitypub_api' );
+
+		global $wp;
+		if ( null === $this->original_rest_route ) {
+			unset( $wp->query_vars['rest_route'] );
+		} else {
+			$wp->query_vars['rest_route'] = $this->original_rest_route;
+		}
+
+		// Reset the static OAuth session so it does not leak into later tests.
+		Server::authenticate_oauth( null );
+
+		\wp_set_current_user( 0 );
+
+		if ( $this->client_id ) {
+			Client::delete( $this->client_id );
+		}
+
+		parent::tear_down();
+	}
+
+	/**
+	 * Present the test user's bearer token on the request.
+	 */
+	private function set_bearer_header() {
+		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $this->access_token;
+	}
+
+	/**
+	 * Set the REST route the request is dispatching to.
+	 *
+	 * @param string|null $route The route, or null to clear it (non-REST context).
+	 */
+	private function set_rest_route( $route ) {
+		global $wp;
+		if ( null === $route ) {
+			unset( $wp->query_vars['rest_route'] );
+		} else {
+			$wp->query_vars['rest_route'] = $route;
+		}
+	}
+
+	/**
+	 * A valid bearer token must not authenticate core REST routes.
+	 *
+	 * Regression test: honoring the token on `/wp/v2/*` would grant a full,
+	 * unscoped session, letting a `read`-only client write content (CWE-863).
+	 *
+	 * @covers ::authenticate_oauth
+	 */
+	public function test_bearer_token_ignored_on_core_rest_route() {
+		$this->set_bearer_header();
+		$this->set_rest_route( '/wp/v2/posts' );
+
+		$result = Server::authenticate_oauth( null );
+
+		$this->assertNull( $result, 'OAuth must not authenticate core REST routes.' );
+		$this->assertFalse( Server::is_oauth_request(), 'No OAuth session should be established.' );
+		$this->assertSame( 0, \get_current_user_id(), 'The current user must not be set from the token.' );
+	}
+
+	/**
+	 * Nothing is hooked while the API is disabled, and the cleanup job is not scheduled.
+	 *
+	 * The `init` action is registered unconditionally at `plugins_loaded`; the setting is
+	 * read here, once the site context is settled.
+	 *
+	 * @covers ::init
+	 */
+	public function test_init_hooks_nothing_when_api_disabled() {
+		\delete_option( 'activitypub_api' );
+		\remove_filter( 'rest_authentication_errors', array( Server::class, 'authenticate_oauth' ), 20 );
+		\wp_clear_scheduled_hook( 'activitypub_oauth_cleanup' );
+
+		Server::init();
+
+		$this->assertFalse( \has_filter( 'rest_authentication_errors', array( Server::class, 'authenticate_oauth' ) ) );
+		$this->assertFalse( \wp_next_scheduled( 'activitypub_oauth_cleanup' ) );
+	}
+
+	/**
+	 * The authentication filter and the cleanup job are set up while the API is enabled.
+	 *
+	 * @covers ::init
+	 */
+	public function test_init_hooks_authentication_when_api_enabled() {
+		\remove_filter( 'rest_authentication_errors', array( Server::class, 'authenticate_oauth' ), 20 );
+		\wp_clear_scheduled_hook( 'activitypub_oauth_cleanup' );
+
+		Server::init();
+
+		$this->assertSame( 20, \has_filter( 'rest_authentication_errors', array( Server::class, 'authenticate_oauth' ) ) );
+		$this->assertNotFalse( \has_action( 'activitypub_oauth_cleanup', array( Server::class, 'cleanup' ) ) );
+		$this->assertNotFalse( \wp_next_scheduled( 'activitypub_oauth_cleanup' ) );
+
+		\remove_filter( 'rest_authentication_errors', array( Server::class, 'authenticate_oauth' ), 20 );
+		\remove_action( 'activitypub_oauth_cleanup', array( Server::class, 'cleanup' ) );
+		\wp_clear_scheduled_hook( 'activitypub_oauth_cleanup' );
+	}
+
+	/**
+	 * A prior authentication error on a core route must be preserved untouched.
+	 *
+	 * @covers ::authenticate_oauth
+	 */
+	public function test_bearer_token_preserves_prior_result_on_core_rest_route() {
+		$this->set_bearer_header();
+		$this->set_rest_route( '/wp/v2/users/me' );
+
+		$prior  = new \WP_Error( 'some_prior_error', 'Prior error.' );
+		$result = Server::authenticate_oauth( $prior );
+
+		$this->assertSame( $prior, $result, 'The incoming result must be returned unchanged.' );
+		$this->assertFalse( Server::is_oauth_request() );
+	}
+
+	/**
+	 * A valid bearer token authenticates the plugin's own REST namespace.
+	 *
+	 * @covers ::authenticate_oauth
+	 */
+	public function test_bearer_token_authenticates_activitypub_route() {
+		$this->set_bearer_header();
+		$this->set_rest_route( '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $this->user_id . '/outbox' );
+
+		$result = Server::authenticate_oauth( null );
+
+		$this->assertTrue( $result, 'OAuth must authenticate ActivityPub routes.' );
+		$this->assertTrue( Server::is_oauth_request() );
+		$this->assertSame( $this->user_id, \get_current_user_id() );
+	}
+
+	/**
+	 * A bearer token must not authenticate a user who is not enabled for ActivityPub.
+	 *
+	 * @covers ::authenticate_oauth
+	 */
+	public function test_bearer_token_rejected_for_user_without_activitypub_capability() {
+		\get_user_by( 'id', $this->user_id )->remove_cap( 'activitypub' );
+		$this->set_bearer_header();
+		$this->set_rest_route( '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+
+		$result = Server::authenticate_oauth( null );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'activitypub_user_not_enabled', $result->get_error_code() );
+		$this->assertSame( 403, $result->get_error_data()['status'] );
+		$this->assertFalse( Server::is_oauth_request() );
+		$this->assertSame( 0, \get_current_user_id() );
+	}
+
+	/**
+	 * A look-alike namespace prefix must not be treated as an ActivityPub route.
+	 *
+	 * @covers ::authenticate_oauth
+	 */
+	public function test_bearer_token_ignored_on_lookalike_namespace() {
+		$this->set_bearer_header();
+		$this->set_rest_route( '/' . ACTIVITYPUB_REST_NAMESPACE . 'evil/steal' );
+
+		$result = Server::authenticate_oauth( null );
+
+		$this->assertNull( $result );
+		$this->assertFalse( Server::is_oauth_request() );
+		$this->assertSame( 0, \get_current_user_id() );
+	}
+
+	/**
+	 * Outside REST dispatch (e.g. outbox permalinks) the token still authenticates.
+	 *
+	 * @covers ::authenticate_oauth
+	 */
+	public function test_bearer_token_authenticates_non_rest_request() {
+		$this->set_bearer_header();
+		$this->set_rest_route( null );
+
+		$result = Server::authenticate_oauth( null );
+
+		$this->assertTrue( $result, 'Direct (non-REST) callers must still authenticate.' );
+		$this->assertTrue( Server::is_oauth_request() );
+		$this->assertSame( $this->user_id, \get_current_user_id() );
+	}
+
+	/**
+	 * The guard lets non-OAuth requests through.
+	 *
+	 * @covers ::deny_if_oauth
+	 */
+	public function test_deny_if_oauth_allows_non_oauth_request() {
+		$this->assertNull( Server::deny_if_oauth() );
+	}
+
+	/**
+	 * The guard blocks requests authenticated with a bearer token.
+	 *
+	 * Protects the plugin's capability-gated admin endpoints from scoped C2S tokens.
+	 *
+	 * @covers ::deny_if_oauth
+	 */
+	public function test_deny_if_oauth_blocks_oauth_request() {
+		$this->set_bearer_header();
+		$this->set_rest_route( '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . $this->user_id . '/outbox' );
+		Server::authenticate_oauth( null );
+
+		$result = Server::deny_if_oauth();
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'activitypub_oauth_not_allowed', $result->get_error_code() );
+		$this->assertSame( 403, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * The authorization form provides a logout URL that keeps the OAuth request.
+	 *
+	 * The request parameters must survive the logout round trip exactly, even
+	 * when they carry reserved characters.
+	 *
+	 * @covers ::render_authorize_form
+	 */
+	public function test_authorize_form_logout_url_preserves_request() {
+		\wp_set_current_user( $this->user_id );
+
+		$state = 'abc&def+ghi?jkl/xyz';
+
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Simulated authorization request.
+		$original_get = $_GET;
+		$get_params   = array(
+			'client_id'             => $this->client_id,
+			'redirect_uri'          => 'https://example.com/callback',
+			'scope'                 => 'read',
+			'state'                 => $state,
+			'code_challenge'        => 'challenge',
+			'code_challenge_method' => 'S256',
+		);
+		$_GET         = $get_params;
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+		$method = new \ReflectionMethod( Server::class, 'render_authorize_form' );
+		$method->setAccessible( true );
+
+		ob_start();
+		$method->invoke( null );
+		$output = ob_get_clean();
+		$_GET   = $original_get;
+
+		$form_url = \add_query_arg(
+			\array_merge( array( 'action' => 'activitypub_authorize' ), \array_map( 'rawurlencode', $get_params ) ),
+			\wp_login_url()
+		);
+
+		$this->assertStringContainsString( 'Not you? Log in as a different user.', $output );
+		$this->assertStringContainsString( 'href="' . \esc_url( \wp_logout_url( $form_url ) ) . '"', $output );
+
+		// Walk the logout link the way a browser does: read the target, then its query.
+		$this->assertSame( 1, \preg_match( '/<a href="([^"]+)">\s*Not you\?/', $output, $matches ) );
+
+		\parse_str( (string) \wp_parse_url( \html_entity_decode( $matches[1], \ENT_QUOTES ), \PHP_URL_QUERY ), $logout_query );
+		$this->assertArrayHasKey( 'redirect_to', $logout_query );
+
+		\parse_str( (string) \wp_parse_url( $logout_query['redirect_to'], \PHP_URL_QUERY ), $form_query );
+
+		$expected = \array_merge( array( 'action' => 'activitypub_authorize' ), $get_params );
+		$this->assertSame( $expected, $form_query, 'Every OAuth parameter must survive the logout round trip.' );
+	}
+}

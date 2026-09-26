@@ -16,6 +16,7 @@ use function Activitypub\get_attribution_domains;
 use function Activitypub\get_rest_url_by_path;
 use function Activitypub\is_blog_public;
 use function Activitypub\is_single_user;
+use function Activitypub\site_icon;
 
 /**
  * Blog class.
@@ -93,7 +94,7 @@ class Blog extends Actor {
 		$permalink = \get_option( 'activitypub_use_permalink_as_id_for_blog', false );
 
 		if ( $permalink ) {
-			return \esc_url( \home_url( '/@' . $this->get_preferred_username() ) );
+			return \esc_url_raw( \home_url( '/@' . $this->get_preferred_username() ) );
 		}
 
 		return \add_query_arg( 'author', $this->_id, \home_url( '/' ) );
@@ -125,9 +126,15 @@ class Blog extends Actor {
 	 * @return string The Username.
 	 */
 	public function get_name() {
+		$name = \get_option( 'activitypub_blog_name' );
+
+		if ( ! $name ) {
+			$name = \get_bloginfo( 'name' );
+		}
+
 		return \wp_strip_all_tags(
 			\html_entity_decode(
-				\get_bloginfo( 'name' ),
+				$name,
 				\ENT_QUOTES,
 				'UTF-8'
 			)
@@ -169,7 +176,7 @@ class Blog extends Actor {
 	 * @return string The User-Url.
 	 */
 	public function get_alternate_url() {
-		return \esc_url( \trailingslashit( get_home_url() ) );
+		return \esc_url_raw( \trailingslashit( \get_home_url() ) );
 	}
 
 	/**
@@ -191,7 +198,7 @@ class Blog extends Actor {
 		 *
 		 * @param string $host The default username (site's host name).
 		 */
-		return apply_filters( 'activitypub_default_blog_username', $host );
+		return \apply_filters( 'activitypub_default_blog_username', $host );
 	}
 
 	/**
@@ -215,32 +222,20 @@ class Blog extends Actor {
 	 * @return string[] The User icon.
 	 */
 	public function get_icon() {
-		// Try site_logo, falling back to site_icon, first.
-		$icon_id = get_option( 'site_icon' );
+		$icon_id = \get_option( 'activitypub_blog_icon' );
 
-		// Try custom logo second.
-		if ( ! $icon_id ) {
-			$icon_id = get_theme_mod( 'custom_logo' );
-		}
+		if ( $icon_id && \wp_attachment_is_image( $icon_id ) ) {
+			$icon = \wp_get_attachment_image_src( $icon_id, 'full' );
 
-		$icon_url = false;
-
-		if ( $icon_id ) {
-			$icon = wp_get_attachment_image_src( $icon_id, 'full' );
 			if ( $icon ) {
-				$icon_url = $icon[0];
+				return array(
+					'type' => 'Image',
+					'url'  => \esc_url_raw( $icon[0] ),
+				);
 			}
 		}
 
-		if ( ! $icon_url ) {
-			// Fallback to default icon.
-			$icon_url = plugins_url( '/assets/img/wp-logo.png', ACTIVITYPUB_PLUGIN_FILE );
-		}
-
-		return array(
-			'type' => 'Image',
-			'url'  => esc_url( $icon_url ),
-		);
+		return site_icon();
 	}
 
 	/**
@@ -249,10 +244,10 @@ class Blog extends Actor {
 	 * @return string[]|null The User-Header-Image.
 	 */
 	public function get_image() {
-		$header_image = get_option( 'activitypub_header_image' );
+		$header_image = \get_option( 'activitypub_header_image' );
 		$image_url    = null;
 
-		if ( $header_image ) {
+		if ( $header_image && \wp_attachment_is_image( $header_image ) ) {
 			$image_url = \wp_get_attachment_url( $header_image );
 		}
 
@@ -263,7 +258,7 @@ class Blog extends Actor {
 		if ( $image_url ) {
 			return array(
 				'type' => 'Image',
-				'url'  => esc_url( $image_url ),
+				'url'  => \esc_url_raw( $image_url ),
 			);
 		}
 
@@ -383,7 +378,7 @@ class Blog extends Actor {
 	 * @return string The Inbox-Endpoint.
 	 */
 	public function get_inbox() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/inbox', $this->get__id() ) );
+		return get_rest_url_by_path( \sprintf( 'actors/%d/inbox', $this->get__id() ) );
 	}
 
 	/**
@@ -392,7 +387,7 @@ class Blog extends Actor {
 	 * @return string The Outbox-Endpoint.
 	 */
 	public function get_outbox() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/outbox', $this->get__id() ) );
+		return get_rest_url_by_path( \sprintf( 'actors/%d/outbox', $this->get__id() ) );
 	}
 
 	/**
@@ -401,7 +396,7 @@ class Blog extends Actor {
 	 * @return string The Followers-Endpoint.
 	 */
 	public function get_followers() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/followers', $this->get__id() ) );
+		return get_rest_url_by_path( \sprintf( 'actors/%d/followers', $this->get__id() ) );
 	}
 
 	/**
@@ -410,7 +405,7 @@ class Blog extends Actor {
 	 * @return string The Following-Endpoint.
 	 */
 	public function get_following() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/following', $this->get__id() ) );
+		return get_rest_url_by_path( \sprintf( 'actors/%d/following', $this->get__id() ) );
 	}
 
 	/**
@@ -419,7 +414,7 @@ class Blog extends Actor {
 	 * @return string[]|null The endpoints.
 	 */
 	public function get_endpoints() {
-		return array(
+		$endpoints = array(
 			'sharedInbox'                => get_rest_url_by_path( 'inbox' ),
 			'oauthAuthorizationEndpoint' => get_rest_url_by_path( 'oauth/authorize' ),
 			'oauthTokenEndpoint'         => get_rest_url_by_path( 'oauth/token' ),
@@ -427,6 +422,16 @@ class Blog extends Actor {
 			'proxyUrl'                   => get_rest_url_by_path( 'proxy' ),
 			'proxyEventStream'           => get_rest_url_by_path( 'proxy/stream' ),
 		);
+
+		if ( \get_option( 'activitypub_api', false ) ) {
+			/*
+			 * RFC 6570 template. add_query_arg() picks the ?/& separator (plain permalinks already
+			 * carry a query string) and does not encode values, so the {q} placeholder stays intact.
+			 */
+			$endpoints['actorAutocomplete'] = \add_query_arg( 'q', '{q}', get_rest_url_by_path( 'actors/autocomplete' ) );
+		}
+
+		return $endpoints;
 	}
 
 	/**
@@ -446,7 +451,7 @@ class Blog extends Actor {
 	 * @return string The Liked endpoint.
 	 */
 	public function get_liked() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/liked', $this->get__id() ) );
+		return get_rest_url_by_path( \sprintf( 'actors/%d/liked', $this->get__id() ) );
 	}
 
 	/**
@@ -455,7 +460,7 @@ class Blog extends Actor {
 	 * @return string The Featured-Endpoint.
 	 */
 	public function get_featured() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/collections/featured', $this->get__id() ) );
+		return get_rest_url_by_path( \sprintf( 'actors/%d/collections/featured', $this->get__id() ) );
 	}
 
 	/**
@@ -464,7 +469,7 @@ class Blog extends Actor {
 	 * @return string The Featured-Tags-Endpoint.
 	 */
 	public function get_featured_tags() {
-		return get_rest_url_by_path( sprintf( 'actors/%d/collections/tags', $this->get__id() ) );
+		return get_rest_url_by_path( \sprintf( 'actors/%d/collections/tags', $this->get__id() ) );
 	}
 
 	/**
@@ -487,7 +492,7 @@ class Blog extends Actor {
 	 * @return bool True if the attribute was updated, false otherwise.
 	 */
 	public function update_name( $value ) {
-		return \update_option( 'blogname', $value );
+		return \update_option( 'activitypub_blog_name', \sanitize_text_field( $value ) );
 	}
 
 	/**
@@ -507,10 +512,10 @@ class Blog extends Actor {
 	 * @return bool True if the attribute was updated, false otherwise.
 	 */
 	public function update_icon( $value ) {
-		if ( ! wp_attachment_is_image( $value ) ) {
+		if ( ! \wp_attachment_is_image( $value ) ) {
 			return false;
 		}
-		return \update_option( 'site_icon', $value );
+		return \update_option( 'activitypub_blog_icon', (int) $value );
 	}
 
 	/**
@@ -520,7 +525,7 @@ class Blog extends Actor {
 	 * @return bool True if the attribute was updated, false otherwise.
 	 */
 	public function update_header( $value ) {
-		if ( ! wp_attachment_is_image( $value ) ) {
+		if ( ! \wp_attachment_is_image( $value ) ) {
 			return false;
 		}
 		return \update_option( 'activitypub_header_image', $value );
@@ -542,7 +547,7 @@ class Blog extends Actor {
 			'number'  => 10,
 		);
 
-		$tags = get_tags( $args );
+		$tags = \get_tags( $args );
 
 		foreach ( $tags as $tag ) {
 			$hashtags[] = array(
@@ -586,9 +591,10 @@ class Blog extends Actor {
 			$this->get_alternate_url(),
 		);
 
-		$also_known_as = array_merge( $also_known_as, \get_option( 'activitypub_blog_user_also_known_as', array() ) );
+		$also_known_as = \array_merge( $also_known_as, \get_option( 'activitypub_blog_user_also_known_as', array() ) );
 
-		return array_unique( $also_known_as );
+		// Re-index, otherwise a duplicate alias turns the JSON list into an object.
+		return \array_values( \array_unique( $also_known_as ) );
 	}
 
 	/**

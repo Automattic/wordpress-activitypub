@@ -33,12 +33,9 @@ class Test_Actors extends \WP_UnitTestCase {
 		parent::tear_down();
 
 		\delete_option( 'activitypub_keypair_for_0' );
-		\delete_option( 'activitypub_keypair_for_-1' );
 		\delete_option( 'activitypub_keypair_for_admin' );
 		\delete_option( 'activitypub_blog_user_public_key' );
 		\delete_option( 'activitypub_blog_user_private_key' );
-		\delete_option( 'activitypub_application_user_public_key' );
-		\delete_option( 'activitypub_application_user_private_key' );
 		\delete_option( 'activitypub_actor_mode' );
 		\delete_user_meta( 1, 'magic_sig_public_key' );
 		\delete_user_meta( 1, 'magic_sig_private_key' );
@@ -55,6 +52,32 @@ class Test_Actors extends \WP_UnitTestCase {
 
 		$actor = Actors::get_by_id( $user_id );
 		$this->assertWPError( $actor );
+	}
+
+	/**
+	 * The former Application id (-1) is no longer an actor and must not resolve.
+	 *
+	 * @covers ::get_by_id
+	 */
+	public function test_get_by_id_application_id_is_not_resolved() {
+		$this->assertWPError( Actors::get_by_id( -1 ), 'The former Application id (-1) must not resolve to an actor.' );
+	}
+
+	/**
+	 * The 'application' reservation must hold regardless of casing.
+	 *
+	 * The user lookups in get_id_by_username are case-insensitive, so a cased
+	 * variant must not slip past the reservation and resolve to a real user.
+	 *
+	 * @covers ::get_id_by_username
+	 */
+	public function test_application_username_reservation_is_case_insensitive() {
+		$user_id = self::factory()->user->create( array( 'user_login' => 'application' ) );
+
+		$this->assertWPError( Actors::get_id_by_username( 'application' ) );
+		$this->assertWPError( Actors::get_id_by_username( 'Application' ), 'Cased variants must not resolve to a real user named "application".' );
+
+		\wp_delete_user( $user_id );
 	}
 
 	/**
@@ -103,8 +126,8 @@ class Test_Actors extends \WP_UnitTestCase {
 			array( 'acct:*@' . $home_host, 'Activitypub\Model\Blog' ),
 			array( 'acct:_@' . $home_host, 'Activitypub\Model\Blog' ),
 			array( 'acct:aksd@' . $home_host, 'WP_Error' ),
+			array( 'acct:application@' . $home_host, 'WP_Error' ),
 			array( 'admin@' . $home_host, 'Activitypub\Model\User' ),
-			array( 'acct:application@' . $home_host, 'Activitypub\Model\Application' ),
 			array( $home_url . '/@admin', 'Activitypub\Model\User' ),
 			array( $home_url . '/@blog', 'Activitypub\Model\Blog' ),
 			array( $https_home_url . '/@blog', 'Activitypub\Model\Blog' ),
@@ -128,7 +151,6 @@ class Test_Actors extends \WP_UnitTestCase {
 	 * @covers ::get_type_by_id
 	 */
 	public function test_get_type_by_id() {
-		$this->assertSame( 'application', Actors::get_type_by_id( Actors::APPLICATION_USER_ID ) );
 		$this->assertSame( 'blog', Actors::get_type_by_id( Actors::BLOG_USER_ID ) );
 		$this->assertSame( 'user', Actors::get_type_by_id( 1 ) );
 		$this->assertSame( 'user', Actors::get_type_by_id( 2 ) );
@@ -181,21 +203,6 @@ class Test_Actors extends \WP_UnitTestCase {
 		\update_user_meta( 1, 'magic_sig_private_key', $private_key );
 
 		$key_pair = Actors::get_keypair( 1 );
-
-		$this->assertNotEmpty( $key_pair );
-		$this->assertEquals( $key_pair['public_key'], $public_key );
-		$this->assertEquals( $key_pair['private_key'], $private_key );
-
-		// Check application user.
-		\delete_option( 'activitypub_keypair_for_-1' );
-
-		$public_key  = 'public key ' . Actors::APPLICATION_USER_ID;
-		$private_key = 'private key ' . Actors::APPLICATION_USER_ID;
-
-		\add_option( 'activitypub_application_user_public_key', $public_key );
-		\add_option( 'activitypub_application_user_private_key', $private_key );
-
-		$key_pair = Actors::get_keypair( Actors::APPLICATION_USER_ID );
 
 		$this->assertNotEmpty( $key_pair );
 		$this->assertEquals( $key_pair['public_key'], $public_key );

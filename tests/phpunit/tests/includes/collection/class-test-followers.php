@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Collection;
 
 use Activitypub\Collection\Actors;
+use Activitypub\Collection\Blocked_Actors;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
 
@@ -168,6 +169,39 @@ class Test_Followers extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A Follow whose actor URL resolves to a document on a different host must not
+	 * record that third party — who never sent the Follow — as a follower.
+	 *
+	 * @covers ::add
+	 */
+	public function test_add_rejects_cross_host_resolved_actor() {
+		$mismatched_url = 'https://other.example/mismatched';
+		$canonical      = 'https://canonical.example/users/alice';
+
+		$mock = function ( $pre, $actor ) use ( $mismatched_url, $canonical ) {
+			if ( $actor === $mismatched_url ) {
+				return array(
+					'id'                => $canonical,
+					'type'              => 'Person',
+					'inbox'             => 'https://other.example/inbox',
+					'preferredUsername' => 'alice',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'pre_get_remote_metadata_by_actor', $mock, 5, 2 );
+
+		$result = Followers::add( 1, $mismatched_url );
+
+		\remove_filter( 'pre_get_remote_metadata_by_actor', $mock, 5 );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'activitypub_follower_host_mismatch', $result->get_error_code() );
+		$this->assertWPError( Remote_Actors::get_by_uri( $canonical ), 'The mismatched follower must not be cached.' );
+		$this->assertEmpty( Followers::get_many( 1 ), 'No follower row must be created.' );
+	}
+
+	/**
 	 * Tests get_follower.
 	 *
 	 * @covers ::get_follower
@@ -273,6 +307,65 @@ class Test_Followers extends \WP_UnitTestCase {
 
 		$followers = Followers::get_many( 1 );
 		$this->assertEquals( 1, count( $followers ) );
+	}
+
+	/**
+	 * Blocking a remote actor removes it from the follower collection.
+	 *
+	 * @covers ::remove_blocked_actors
+	 */
+	public function test_remove_blocked_actor_removes_remote_follower() {
+		$actor_uri       = 'https://remote.example/@admin';
+		$remote_actor_id = Remote_Actors::upsert(
+			array(
+				'id'                => $actor_uri,
+				'type'              => 'Person',
+				'inbox'             => 'https://remote.example/inbox',
+				'name'              => 'Remote Admin',
+				'preferredUsername' => 'admin',
+			)
+		);
+
+		$this->assertIsInt( $remote_actor_id );
+		\add_post_meta( $remote_actor_id, Followers::FOLLOWER_META_KEY, 1 );
+		$this->assertTrue( Followers::follows( $remote_actor_id, 1 ) );
+
+		Followers::remove_blocked_actors( $actor_uri, 'actor', 1 );
+
+		$this->assertFalse( Followers::follows( $remote_actor_id, 1 ) );
+	}
+
+	/**
+	 * Blocking an actor by a URL other than its canonical ID still removes the follower.
+	 *
+	 * The block screen accepts profile URLs, but the actor post is stored under its `id`.
+	 *
+	 * @covers ::remove_blocked_actors
+	 */
+	public function test_blocking_by_profile_url_removes_remote_follower() {
+		$actor = array(
+			'id'                => 'https://remote.example/users/admin',
+			'type'              => 'Person',
+			'url'               => 'https://remote.example/@admin',
+			'inbox'             => 'https://remote.example/inbox',
+			'name'              => 'Remote Admin',
+			'preferredUsername' => 'admin',
+		);
+
+		$remote_actor_id = Remote_Actors::upsert( $actor );
+		$this->assertIsInt( $remote_actor_id );
+		\add_post_meta( $remote_actor_id, Followers::FOLLOWER_META_KEY, 1 );
+
+		$mock = function ( $pre, $url ) use ( $actor ) {
+			return $actor['url'] === $url ? $actor : $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $mock, 10, 2 );
+
+		Blocked_Actors::add( 1, $actor['url'] );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $mock );
+
+		$this->assertFalse( Followers::follows( $remote_actor_id, 1 ), 'A block by profile URL must remove the follower.' );
 	}
 
 	/**
@@ -390,6 +483,8 @@ class Test_Followers extends \WP_UnitTestCase {
 	 * @covers ::get_inboxes
 	 */
 	public function test_get_inboxes() {
+		\wp_cache_delete( \sprintf( Followers::CACHE_KEY_INBOXES, 1 ), 'activitypub' );
+
 		for ( $i = 0; $i < 30; $i++ ) {
 			$meta = array(
 				'id'                => 'https://example.org/users/' . $i,
@@ -407,8 +502,42 @@ class Test_Followers extends \WP_UnitTestCase {
 			\add_post_meta( $id, Followers::FOLLOWER_META_KEY, 1 );
 		}
 
-		$inboxes = Followers::get_inboxes( 1 );
+		$other_actor = Remote_Actors::upsert(
+			array(
+				'id'                => 'https://example.org/users/other',
+				'type'              => 'Person',
+				'inbox'             => 'https://example.org/users/other/inbox',
+				'name'              => 'other',
+				'preferredUsername' => 'other',
+			)
+		);
+		\add_post_meta( $other_actor, Followers::FOLLOWER_META_KEY, 2 );
 
+		$non_actor = \wp_insert_post(
+			array(
+				'post_type'   => 'post',
+				'post_status' => 'publish',
+				'post_title'  => 'Not an actor',
+			)
+		);
+		\add_post_meta( $non_actor, '_activitypub_inbox', 'https://example.org/not-an-actor/inbox' );
+		\add_post_meta( $non_actor, Followers::FOLLOWER_META_KEY, 1 );
+
+		$draft_actor = \wp_insert_post(
+			array(
+				'post_type'   => Remote_Actors::POST_TYPE,
+				'post_status' => 'draft',
+				'post_title'  => 'Draft actor',
+			)
+		);
+		\add_post_meta( $draft_actor, '_activitypub_inbox', 'https://example.org/draft/inbox' );
+		\add_post_meta( $draft_actor, Followers::FOLLOWER_META_KEY, 1 );
+
+		global $wpdb;
+		$query_count = $wpdb->num_queries;
+		$inboxes     = Followers::get_inboxes( 1 );
+
+		$this->assertSame( 1, $wpdb->num_queries - $query_count, 'Follower inboxes should be loaded with one query.' );
 		$this->assertCount( 30, $inboxes );
 
 		wp_cache_delete( sprintf( Followers::CACHE_KEY_INBOXES, 1 ), 'activitypub' );
@@ -435,6 +564,29 @@ class Test_Followers extends \WP_UnitTestCase {
 		$inboxes2 = Followers::get_inboxes( 1 );
 
 		$this->assertCount( 30, $inboxes2 );
+	}
+
+	/**
+	 * Empty follower inbox results are served from cache.
+	 *
+	 * @covers ::get_inboxes
+	 */
+	public function test_get_inboxes_caches_empty_results() {
+		$user_id   = 999;
+		$cache_key = \sprintf( Followers::CACHE_KEY_INBOXES, $user_id );
+
+		\wp_cache_delete( $cache_key, 'activitypub' );
+
+		global $wpdb;
+		$query_count = $wpdb->num_queries;
+
+		$this->assertSame( array(), Followers::get_inboxes( $user_id ) );
+		$this->assertSame( 1, $wpdb->num_queries - $query_count );
+
+		$query_count = $wpdb->num_queries;
+
+		$this->assertSame( array(), Followers::get_inboxes( $user_id ) );
+		$this->assertSame( 0, $wpdb->num_queries - $query_count );
 	}
 
 	/**
@@ -490,6 +642,16 @@ class Test_Followers extends \WP_UnitTestCase {
 		);
 		$this->assertCount( 3, $inboxes, 'Should include blog user followers in dual mode.' );
 		$this->assertContains( self::$actors['sally@example.org']['inbox'], $inboxes, 'Should contain blog user inbox.' );
+
+		// A Move reaches every known inbox, like a Delete, so every server holding a copy of the actor learns where it went.
+		$inboxes = Followers::get_inboxes_for_activity(
+			'{"type":"Move"}',
+			$actor_id,
+			50,
+			0
+		);
+		$this->assertCount( 3, $inboxes, 'A Move should reach every known inbox.' );
+		$this->assertContains( self::$actors['sally@example.org']['inbox'], $inboxes, 'Should contain a non-follower inbox.' );
 	}
 
 	/**

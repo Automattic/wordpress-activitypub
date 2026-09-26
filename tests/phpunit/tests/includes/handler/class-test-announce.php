@@ -192,6 +192,124 @@ class Test_Announce extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An announced activity that declares no id is still relayed.
+	 *
+	 * `Http::get_remote_object()` returns an id-less document as served, so it was never re-fetched
+	 * and the origin check already covers it. Requiring an id would drop legitimate relayed traffic.
+	 *
+	 * @covers ::handle_announce
+	 */
+	public function test_handle_announce_relays_activity_without_id() {
+		$activity_url = 'https://example.com/activities/idless-1';
+		$fetch        = function ( $pre, $url_or_object ) use ( $activity_url ) {
+			if ( $activity_url !== $url_or_object ) {
+				return $pre;
+			}
+
+			return array(
+				'type'   => 'Like',
+				'actor'  => 'https://example.com/user',
+				'object' => $this->post_permalink,
+			);
+		};
+		$this->assert_announced_activity_is_relayed( $activity_url, $fetch );
+	}
+
+	/**
+	 * An announced activity whose id is an empty string is still relayed.
+	 *
+	 * `Http::get_remote_object()` treats an empty id exactly like a missing one, so it is returned
+	 * as served and was never re-fetched.
+	 *
+	 * @covers ::handle_announce
+	 */
+	public function test_handle_announce_relays_activity_with_empty_id() {
+		$activity_url = 'https://example.com/activities/emptyid-1';
+		$fetch        = function ( $pre, $url_or_object ) use ( $activity_url ) {
+			if ( $activity_url !== $url_or_object ) {
+				return $pre;
+			}
+
+			return array(
+				'id'     => '',
+				'type'   => 'Like',
+				'actor'  => 'https://example.com/user',
+				'object' => $this->post_permalink,
+			);
+		};
+		$this->assert_announced_activity_is_relayed( $activity_url, $fetch );
+	}
+
+	/**
+	 * Announce the activity at the given URL and assert it reached the inbox handlers.
+	 *
+	 * @param string   $activity_url The URL the announced activity is served from.
+	 * @param callable $fetch        Filter callback returning the fetched document.
+	 */
+	private function assert_announced_activity_is_relayed( $activity_url, $fetch ) {
+		\add_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10, 2 );
+
+		$inbox = new \MockAction();
+		\add_action( 'activitypub_inbox', array( $inbox, 'action' ) );
+
+		$announce = array(
+			'actor'  => 'https://booster.example/user',
+			'type'   => 'Announce',
+			'id'     => 'https://booster.example/a/idless',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => $activity_url,
+		);
+		Announce::handle_announce( $announce, $this->user_id, Activity::init_from_array( $announce ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10 );
+
+		$this->assertSame( 1, $inbox->get_call_count(), 'An announced activity without an id must still be relayed.' );
+	}
+
+	/**
+	 * An announced activity whose own id is on a different host than the actor is not relayed.
+	 *
+	 * `Http::get_remote_object()` may return a document re-fetched from the id it declares, so the
+	 * URL that was requested is not always the host that served the answer. The document's own id
+	 * is, and an authentic activity always shares a host with its actor.
+	 *
+	 * @covers ::handle_announce
+	 */
+	public function test_handle_announce_rejects_activity_whose_id_host_differs_from_actor() {
+		$activity_url = 'https://example.com/activities/like-2';
+		$fetch        = function ( $pre, $url_or_object ) use ( $activity_url ) {
+			if ( $activity_url !== $url_or_object ) {
+				return $pre;
+			}
+
+			// Requested from example.com, but the document belongs to attacker.test.
+			return array(
+				'id'     => 'https://attacker.test/activities/like-2',
+				'type'   => 'Like',
+				'actor'  => 'https://example.com/user',
+				'object' => $this->post_permalink,
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10, 2 );
+
+		$inbox = new \MockAction();
+		\add_action( 'activitypub_inbox', array( $inbox, 'action' ) );
+
+		$announce = array(
+			'actor'  => 'https://booster.example/user',
+			'type'   => 'Announce',
+			'id'     => 'https://booster.example/a/2',
+			'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'object' => $activity_url,
+		);
+		Announce::handle_announce( $announce, $this->user_id, Activity::init_from_array( $announce ) );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $fetch, 10 );
+
+		$this->assertSame( 0, $inbox->get_call_count(), 'An activity whose id host differs from its actor must not be relayed.' );
+	}
+
+	/**
 	 * An announced activity whose actor is on a different host than the origin it
 	 * was fetched from is a forgery and must not be relayed, regardless of type.
 	 * This is the core fix for the nested Announce -> Undo/Delete authority bypass.

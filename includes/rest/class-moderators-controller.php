@@ -87,7 +87,7 @@ class Moderators_Controller extends \WP_REST_Controller {
 		 *
 		 * @param array $actors The list of moderators.
 		 */
-		$actors = apply_filters( 'activitypub_rest_moderators', $actors );
+		$actors = \apply_filters( 'activitypub_rest_moderators', $actors );
 
 		$response = array(
 			'id'           => get_rest_url_by_path( 'collections/moderators' ),

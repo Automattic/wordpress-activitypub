@@ -8,8 +8,13 @@
 namespace Activitypub\Tests\Rest;
 
 use Activitypub\Collection\Outbox;
+use Activitypub\OAuth\Client;
+use Activitypub\OAuth\Scope;
+use Activitypub\OAuth\Server as OAuth_Server;
+use Activitypub\OAuth\Token;
 use Activitypub\Rest\Event_Stream;
 use Activitypub\Rest\Verification;
+use Activitypub\Tests\OAuth_Token_Stub;
 
 use function Activitypub\add_to_outbox;
 
@@ -20,6 +25,8 @@ use function Activitypub\add_to_outbox;
  * @coversDefaultClass \Activitypub\Rest\Event_Stream
  */
 class Test_Trait_Event_Stream extends \WP_UnitTestCase {
+	use OAuth_Token_Stub;
+
 
 	/**
 	 * Test class instance that uses the trait.
@@ -441,6 +448,44 @@ class Test_Trait_Event_Stream extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test an inbox event does not disclose the blind audience the row stores for addressing.
+	 *
+	 * @covers ::get_event_data
+	 */
+	public function test_get_event_data_strips_the_blind_audience_of_an_inbox_item() {
+		$activity = array(
+			'@context' => 'https://www.w3.org/ns/activitystreams',
+			'id'       => 'https://example.com/activities/1',
+			'type'     => 'Create',
+			'actor'    => 'https://example.com/users/test',
+			'to'       => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+			'bto'      => array( 'https://example.com/users/hidden' ),
+			'bcc'      => array( 'https://example.com/users/also-hidden' ),
+			'object'   => array(
+				'id'      => 'https://example.com/objects/1',
+				'type'    => 'Note',
+				'content' => 'Hello',
+			),
+		);
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => \wp_json_encode( $activity ),
+				'post_type'    => 'ap_inbox',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$data = $this->instance->test_get_event_data( \get_post( $post_id ), 'inbox' );
+
+		$this->assertIsArray( $data );
+		$this->assertArrayNotHasKey( 'bto', $data, 'The blind audience must not reach the stream.' );
+		$this->assertArrayNotHasKey( 'bcc', $data, 'The blind audience must not reach the stream.' );
+		$this->assertArrayNotHasKey( '@context', $data, 'The stream carries the context, not each event.' );
+		$this->assertContains( 'https://www.w3.org/ns/activitystreams#Public', (array) $data['to'] );
+	}
+
+	/**
 	 * Test get_event_data returns null for inbox item with invalid JSON.
 	 *
 	 * @covers ::get_event_data
@@ -479,5 +524,69 @@ class Test_Trait_Event_Stream extends \WP_UnitTestCase {
 		$this->assertEquals( $original_auth, $current_auth, 'Should not inject Authorization header for array access_token.' );
 
 		unset( $_GET['access_token'] );
+	}
+
+	/**
+	 * Test that the query-param login leaves the Authorization header as it found it.
+	 *
+	 * @covers ::get_stream_permissions_check
+	 */
+	public function test_query_param_restores_authorization_header() {
+		$client = Client::register(
+			array(
+				'name'          => 'Stream Client',
+				'redirect_uris' => array( 'https://app.example/callback' ),
+			)
+		);
+		$token  = Token::create( $this->user_id, $client['client_id'], array( Scope::READ ) );
+
+		$_GET['access_token'] = $token['access_token']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		\add_filter( 'activitypub_oauth_check_permission', '__return_true' );
+
+		// No header before: none after, but the token was accepted.
+		unset( $_SERVER['HTTP_AUTHORIZATION'] );
+		$this->instance->get_stream_permissions_check( new \WP_REST_Request() );
+		$this->assertArrayNotHasKey( 'HTTP_AUTHORIZATION', $_SERVER );
+		$this->assertTrue( OAuth_Server::is_oauth_request(), 'The query-param token authenticates.' );
+
+		// An existing header is put back.
+		$this->set_oauth_current_token( null );
+		$_SERVER['HTTP_AUTHORIZATION'] = 'Basic dXNlcjpwYXNz';
+		$this->instance->get_stream_permissions_check( new \WP_REST_Request() );
+		$this->assertSame( 'Basic dXNlcjpwYXNz', $_SERVER['HTTP_AUTHORIZATION'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+
+		\remove_filter( 'activitypub_oauth_check_permission', '__return_true' );
+		unset( $_GET['access_token'], $_SERVER['HTTP_AUTHORIZATION'] );
+	}
+
+	/**
+	 * Test that both collection streams require the read scope.
+	 *
+	 * @covers ::get_stream_permissions_check
+	 */
+	public function test_stream_requires_read_scope() {
+		\wp_set_current_user( $this->user_id );
+
+		foreach ( array( 'outbox', 'inbox' ) as $collection ) {
+			$request = new \WP_REST_Request( 'GET', sprintf( '/%s/actors/%d/%s/stream', ACTIVITYPUB_REST_NAMESPACE, $this->user_id, $collection ) );
+			$request->set_param( 'user_id', $this->user_id );
+
+			$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH ), $this->user_id ) );
+			$result = $this->instance->get_stream_permissions_check( $request );
+			$this->assertWPError( $result, "A push-only token must not open the $collection stream." );
+			$this->assertSame( 'activitypub_insufficient_scope', $result->get_error_code() );
+
+			$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::READ ), $this->user_id ) );
+			$this->assertTrue( $this->instance->get_stream_permissions_check( $request ), "A read token opens the $collection stream." );
+		}
+	}
+
+	/**
+	 * Clear any OAuth session this class established.
+	 */
+	public function tear_down() {
+		$this->set_oauth_current_token( null );
+
+		parent::tear_down();
 	}
 }

@@ -110,6 +110,35 @@ class Test_User extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Ampersands in avatar URLs must survive actor-JSON serialization intact.
+	 *
+	 * The esc_url() function HTML-encodes `&` to `&#038;`, which corrupts
+	 * multi-parameter URLs (e.g. Photon/Gravatar) in the machine-readable actor
+	 * document. The non-display esc_url_raw() variant keeps the ampersand as-is.
+	 *
+	 * @ticket https://github.com/Automattic/wordpress-activitypub/issues/3566
+	 * @covers ::get_icon
+	 */
+	public function test_get_icon_preserves_ampersands() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$user    = User::from_wp_user( $user_id );
+
+		$avatar_url = 'https://i0.wp.com/example.com/avatar.jpg?resize=215&ssl=1';
+		$filter     = static function ( $args ) use ( $avatar_url ) {
+			$args['url'] = $avatar_url;
+			return $args;
+		};
+		\add_filter( 'get_avatar_data', $filter );
+
+		$icon = $user->get_icon();
+
+		\remove_filter( 'get_avatar_data', $filter );
+
+		$this->assertStringContainsString( 'resize=215&ssl=1', $icon['url'], 'The ampersand must survive as a real separator.' );
+		$this->assertStringNotContainsString( '&#0', $icon['url'], 'The ampersand must not be HTML-entity-encoded in JSON output.' );
+	}
+
+	/**
 	 * Tests the get_moved_to method.
 	 *
 	 * @covers ::get_moved_to
@@ -173,5 +202,36 @@ class Test_User extends \WP_UnitTestCase {
 		$user3    = User::from_wp_user( $user_id3 );
 
 		$this->assertSame( 'normaluser', $user3->get_preferred_username() );
+	}
+
+	/**
+	 * Test get_image ignores a stored non-image attachment id.
+	 *
+	 * @covers ::get_image
+	 */
+	public function test_get_image_ignores_non_image_attachment() {
+		$user_id       = self::factory()->user->create( array( 'role' => 'author' ) );
+		$attachment_id = self::factory()->attachment->create( array( 'post_mime_type' => 'text/plain' ) );
+
+		\update_user_option( $user_id, 'activitypub_header_image', $attachment_id );
+
+		$this->assertNull( User::from_wp_user( $user_id )->get_image() );
+	}
+
+	/**
+	 * Test get_image falls back to the theme header image for a stale non-image attachment id.
+	 *
+	 * @covers ::get_image
+	 */
+	public function test_get_image_falls_back_to_theme_header() {
+		$user_id       = self::factory()->user->create( array( 'role' => 'author' ) );
+		$attachment_id = self::factory()->attachment->create( array( 'post_mime_type' => 'text/plain' ) );
+
+		\update_user_option( $user_id, 'activitypub_header_image', $attachment_id );
+		\set_theme_mod( 'header_image', 'http://example.com/header.jpg' );
+
+		$this->assertSame( 'http://example.com/header.jpg', User::from_wp_user( $user_id )->get_image()['url'] );
+
+		\remove_theme_mod( 'header_image' );
 	}
 }

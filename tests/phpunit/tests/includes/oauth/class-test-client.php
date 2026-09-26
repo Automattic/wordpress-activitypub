@@ -133,6 +133,43 @@ class Test_Client extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that the client link only uses http(s) URLs with a host.
+	 *
+	 * @covers ::get_link_url
+	 */
+	public function test_get_link_url_only_returns_http_urls() {
+		$result = $this->create_client(
+			array(
+				'name'          => 'Link Client',
+				'redirect_uris' => array( 'https://app.example/callback' ),
+			)
+		);
+		$client = Client::get( $result['client_id'] );
+
+		$cases = array(
+			'https://app.example/about'        => 'https://app.example/about',
+			'javascript:alert(1)'              => '',
+			'data:text/html,x'                 => '',
+			'//app.example/'                   => '',
+			'https:///path'                    => '',
+			'https://example.com@app.example/' => '',
+			'https://user:pass@app.example/'   => '',
+		);
+
+		foreach ( $cases as $stored => $expected ) {
+			\update_post_meta( $client->get_post_id(), '_activitypub_client_uri', $stored );
+			$this->assertSame( $expected, $client->get_link_url(), $stored );
+		}
+
+		// Without a client URI, the link falls back to the redirect URI's origin, but not to a custom scheme.
+		\delete_post_meta( $client->get_post_id(), '_activitypub_client_uri' );
+		$this->assertSame( 'https://app.example/', $client->get_link_url() );
+
+		\update_post_meta( $client->get_post_id(), '_activitypub_redirect_uris', array( 'myapp://callback/path' ) );
+		$this->assertSame( '', $client->get_link_url() );
+	}
+
+	/**
 	 * Test register method requires name.
 	 *
 	 * @covers ::register
@@ -491,6 +528,54 @@ class Test_Client extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a loopback redirect URI may only differ in its port.
+	 *
+	 * @covers ::is_valid_redirect_uri
+	 */
+	public function test_is_valid_redirect_uri_loopback_only_ignores_port() {
+		$result = $this->create_client(
+			array(
+				'name'          => 'Native App',
+				'redirect_uris' => array( 'http://127.0.0.1/callback' ),
+			)
+		);
+		$client = Client::get( $result['client_id'] );
+
+		$this->assertTrue( $client->is_valid_redirect_uri( 'http://127.0.0.1:51234/callback' ), 'The port may differ.' );
+		$this->assertFalse( $client->is_valid_redirect_uri( 'http://127.0.0.1:51234/callback?next=x' ), 'An extra query is refused.' );
+		$this->assertFalse( $client->is_valid_redirect_uri( 'http://127.0.0.1/callback#x' ), 'An extra fragment is refused.' );
+		$this->assertFalse( $client->is_valid_redirect_uri( 'http://127.0.0.1/other' ), 'Another path is refused.' );
+		$this->assertFalse( $client->is_valid_redirect_uri( 'http://user@127.0.0.1:51234/callback' ), 'A user name is refused.' );
+
+		// Only the port may differ, so empty components and a trailing slash count as a different URI.
+		$this->assertFalse( $client->is_valid_redirect_uri( 'http://@127.0.0.1:51234/callback' ), 'An empty user name is refused.' );
+		$this->assertFalse( $client->is_valid_redirect_uri( 'http://127.0.0.1:51234/callback?' ), 'An empty query is refused.' );
+		$this->assertFalse( $client->is_valid_redirect_uri( 'http://127.0.0.1:51234/callback#' ), 'An empty fragment is refused.' );
+		$this->assertFalse( $client->is_valid_redirect_uri( 'http://127.0.0.1:51234/callback/' ), 'A trailing slash is refused.' );
+
+		$result = $this->create_client(
+			array(
+				'name'          => 'Native App IPv6',
+				'redirect_uris' => array( 'http://[::1]/callback' ),
+			)
+		);
+		$client = Client::get( $result['client_id'] );
+
+		$this->assertTrue( $client->is_valid_redirect_uri( 'http://[::1]:51234/callback' ), 'The port may differ for IPv6 too.' );
+		$this->assertFalse( $client->is_valid_redirect_uri( 'http://[::1]:51234/callback?x' ), 'An extra query is refused for IPv6 too.' );
+
+		$result = $this->create_client(
+			array(
+				'name'          => 'Native App With Port',
+				'redirect_uris' => array( 'http://127.0.0.1:080/callback' ),
+			)
+		);
+		$client = Client::get( $result['client_id'] );
+
+		$this->assertTrue( $client->is_valid_redirect_uri( 'http://127.0.0.1:51234/callback' ), 'A port with leading zeros is still only a port.' );
+	}
+
+	/**
 	 * Test is_valid_redirect_uri method.
 	 *
 	 * @covers ::is_valid_redirect_uri
@@ -619,10 +704,10 @@ class Test_Client extends \WP_UnitTestCase {
 
 		$client = Client::get( $result['client_id'] );
 
-		$filtered = $client->filter_scopes( array( Scope::READ, Scope::FOLLOW, Scope::WRITE ) );
+		$filtered = $client->filter_scopes( array( Scope::READ, Scope::PUSH, Scope::WRITE ) );
 		$this->assertEquals( array( Scope::READ, Scope::WRITE ), $filtered );
 
-		$filtered = $client->filter_scopes( array( Scope::FOLLOW, Scope::PUSH ) );
+		$filtered = $client->filter_scopes( array( Scope::PUSH ) );
 		$this->assertEquals( array(), $filtered );
 	}
 

@@ -34,6 +34,10 @@ class Actor {
 			\add_action( 'update_option_activitypub_blog_identifier', array( self::class, 'blog_user_update' ) );
 			\add_action( 'add_option_activitypub_blog_description', array( self::class, 'blog_user_update' ) );
 			\add_action( 'update_option_activitypub_blog_description', array( self::class, 'blog_user_update' ) );
+			\add_action( 'add_option_activitypub_blog_name', array( self::class, 'blog_user_update' ) );
+			\add_action( 'update_option_activitypub_blog_name', array( self::class, 'blog_user_update' ) );
+			\add_action( 'add_option_activitypub_blog_icon', array( self::class, 'blog_user_update' ) );
+			\add_action( 'update_option_activitypub_blog_icon', array( self::class, 'blog_user_update' ) );
 			\add_filter( 'pre_set_theme_mod_custom_logo', array( self::class, 'blog_user_update' ) );
 			\add_filter( 'pre_set_theme_mod_header_image', array( self::class, 'blog_user_update' ) );
 		}
@@ -88,7 +92,7 @@ class Actor {
 			'user_url',
 		);
 
-		if ( in_array( $meta_key, $fields, true ) ) {
+		if ( \in_array( $meta_key, $fields, true ) ) {
 			self::schedule_profile_update( $user_id );
 		}
 	}
@@ -157,7 +161,7 @@ class Actor {
 	 * @param int $user_id  The user ID to update (Could be 0 for Blog-User).
 	 */
 	public static function schedule_profile_update( $user_id ) {
-		if ( defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
+		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
 			return;
 		}
 
@@ -167,7 +171,7 @@ class Actor {
 			return;
 		}
 
-		$actor->set_updated( gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, time() ) );
+		$actor->set_updated( \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \time() ) );
 
 		add_to_outbox( $actor, 'Update', $user_id );
 	}

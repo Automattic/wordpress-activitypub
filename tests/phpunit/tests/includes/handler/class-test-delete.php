@@ -10,7 +10,11 @@ namespace Activitypub\Tests\Handler;
 use Activitypub\Activity\Activity;
 use Activitypub\Activity\Base_Object;
 use Activitypub\Handler\Delete;
+use Activitypub\Tests\Quote_Post_Fixtures;
 use Activitypub\Tombstone;
+
+use function Activitypub\get_object_id;
+use function Activitypub\object_to_uri;
 
 /**
  * Test class for Delete handler.
@@ -18,6 +22,8 @@ use Activitypub\Tombstone;
  * @coversDefaultClass \Activitypub\Handler\Delete
  */
 class Test_Delete extends \WP_UnitTestCase {
+	use Quote_Post_Fixtures;
+
 	/**
 	 * Test user ID.
 	 *
@@ -32,6 +38,7 @@ class Test_Delete extends \WP_UnitTestCase {
 		parent::set_up_before_class();
 
 		self::$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\get_user_by( 'id', self::$user_id )->add_cap( 'activitypub' );
 
 		// Initialize Delete handler for all tests.
 		Delete::init();
@@ -44,6 +51,8 @@ class Test_Delete extends \WP_UnitTestCase {
 		parent::set_up();
 
 		\add_filter( 'pre_get_remote_metadata_by_actor', array( self::class, 'get_remote_metadata_by_actor' ), 0, 2 );
+
+		$this->add_quoted_object_mock();
 	}
 
 	/**
@@ -51,6 +60,7 @@ class Test_Delete extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		\remove_filter( 'pre_get_remote_metadata_by_actor', array( self::class, 'get_remote_metadata_by_actor' ) );
+		$this->remove_quoted_object_mock();
 
 		parent::tear_down();
 	}
@@ -663,6 +673,45 @@ class Test_Delete extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Data provider for the inbox-only scoping of the Delete carve-out.
+	 *
+	 * @return array[] Test cases: [ method, route, expected ].
+	 */
+	public function data_defer_signature_verification_scope() {
+		return array(
+			'shared inbox delivery'   => array( 'POST', '/activitypub/1.0/inbox', true ),
+			'actor inbox delivery'    => array( 'POST', '/activitypub/1.0/actors/1/inbox', true ),
+			'legacy user inbox'       => array( 'POST', '/activitypub/1.0/users/1/inbox', true ),
+			'read of a collection'    => array( 'GET', '/activitypub/1.0/actors/1/followers', false ),
+			'seek in a collection'    => array( 'GET', '/activitypub/1.0/seek', false ),
+			'probe of a collection'   => array( 'HEAD', '/activitypub/1.0/actors/1/followers', false ),
+			'non-inbox delivery'      => array( 'POST', '/activitypub/1.0/actors/1/outbox', false ),
+			'inbox outside namespace' => array( 'POST', '/wp/v2/inbox', false ),
+			'inbox stream'            => array( 'POST', '/activitypub/1.0/actors/1/inbox/stream', false ),
+		);
+	}
+
+	/**
+	 * The `type` in the body is caller-controlled, so the carve-out must only apply
+	 * to POST deliveries to an inbox. Everywhere else — reads, seeks, HEAD probes,
+	 * other routes — signature verification has to stay in place.
+	 *
+	 * @dataProvider data_defer_signature_verification_scope
+	 * @covers ::defer_signature_verification
+	 *
+	 * @param string $method   The HTTP method of the request.
+	 * @param string $route    The route of the request.
+	 * @param bool   $expected Whether signature verification should be deferred.
+	 */
+	public function test_defer_signature_verification_scope( $method, $route, $expected ) {
+		$request = new \WP_REST_Request( $method, $route );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( array( 'type' => 'Delete' ) ) );
+
+		$this->assertSame( $expected, Delete::defer_signature_verification( false, $request, false ) );
+	}
+
+	/**
 	 * Non-Delete activities pass through the filter unchanged regardless
 	 * of force_signature, preserving whatever the incoming $defer value was.
 	 *
@@ -677,5 +726,132 @@ class Test_Delete extends \WP_UnitTestCase {
 		$this->assertFalse( Delete::defer_signature_verification( false, $request, false ) );
 		$this->assertTrue( Delete::defer_signature_verification( true, $request, false ) );
 		$this->assertFalse( Delete::defer_signature_verification( false, $request, true ) );
+	}
+
+	/*
+	 * ------------------------------------------------------------------
+	 * Deletes of QuoteAuthorization stamps on our own quote posts (FEP-044f).
+	 * ------------------------------------------------------------------
+	 */
+
+	/**
+	 * Build the Delete for a stamp.
+	 *
+	 * @param string $actor Sender.
+	 * @param string $stamp Stamp URI.
+	 *
+	 * @return array Delete activity.
+	 */
+	private function build_stamp_delete( $actor = 'https://remote.example/users/alice', $stamp = 'https://remote.example/stamps/1' ) {
+		return array(
+			'type'   => 'Delete',
+			'actor'  => $actor,
+			'object' => $stamp,
+		);
+	}
+
+	/**
+	 * Deleting the stamp clears it on our post and queues an Update once the stamp is gone.
+	 *
+	 * @covers ::revoke_quote_authorization
+	 */
+	public function test_stamp_delete_clears_authorization() {
+		$post_id = $this->create_quote_post();
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+		$before = $this->count_updates( $post_id );
+
+		$gone = $this->mock_stamp_response( 404 );
+		Delete::handle_delete( $this->build_stamp_delete(), self::$user_id );
+		\remove_filter( 'pre_http_request', $gone );
+
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertSame( $before + 1, $this->count_updates( $post_id ) );
+	}
+
+	/**
+	 * A revoked stamp is reported through the handler's own action, with the stamp in the activity.
+	 *
+	 * @covers ::revoke_quote_authorization
+	 */
+	public function test_stamp_delete_fires_the_revoked_and_handled_actions() {
+		$post_id = $this->create_quote_post();
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+
+		$handled = array();
+		$track   = function ( $activity, $user_ids, $success, $context ) use ( &$handled ) {
+			$handled[] = array( $success, $context instanceof \WP_Post ? $context->ID : null, object_to_uri( $activity['object'] ?? '' ) );
+		};
+		\add_action( 'activitypub_handled_delete', $track, 10, 4 );
+
+		$gone = $this->mock_stamp_response( 404 );
+		Delete::handle_delete( $this->build_stamp_delete(), self::$user_id );
+		\remove_filter( 'pre_http_request', $gone );
+
+		\remove_action( 'activitypub_handled_delete', $track, 10 );
+
+		$this->assertSame( array( array( true, $post_id, 'https://remote.example/stamps/1' ) ), $handled );
+	}
+
+	/**
+	 * A Delete for a stamp from the wrong actor changes nothing.
+	 *
+	 * @covers ::revoke_quote_authorization
+	 */
+	public function test_stamp_delete_from_wrong_actor_ignored() {
+		$post_id = $this->create_quote_post();
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+		$before = $this->count_updates( $post_id );
+
+		$gone = $this->mock_stamp_response( 404 );
+		Delete::handle_delete( $this->build_stamp_delete( 'https://remote.example/users/mallory' ), self::$user_id );
+		\remove_filter( 'pre_http_request', $gone );
+
+		$this->assertSame( 'https://remote.example/stamps/1', \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertSame( $before, $this->count_updates( $post_id ) );
+	}
+
+	/**
+	 * An unsigned Delete is not trusted while the stamp still resolves.
+	 *
+	 * @covers ::revoke_quote_authorization
+	 */
+	public function test_stamp_delete_ignored_while_stamp_still_resolves() {
+		$post_id = $this->create_quote_post();
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+		$before = $this->count_updates( $post_id );
+
+		$stamp  = array(
+			'id'                => 'https://remote.example/stamps/1',
+			'type'              => 'QuoteAuthorization',
+			'attributedTo'      => 'https://remote.example/users/alice',
+			'interactingObject' => get_object_id( \get_post( $post_id ) ),
+			'interactionTarget' => 'https://remote.example/notes/1',
+		);
+		$filter = $this->mock_stamp( $post_id );
+		$alive  = $this->mock_stamp_response( 200, \wp_json_encode( $stamp ) );
+		Delete::handle_delete( $this->build_stamp_delete(), self::$user_id );
+		\remove_filter( 'pre_http_request', $alive );
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
+
+		$this->assertSame( 'https://remote.example/stamps/1', \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertSame( $before, $this->count_updates( $post_id ) );
+	}
+
+	/**
+	 * A Delete whose actor lives on another host than the stamp changes nothing.
+	 *
+	 * @covers ::revoke_quote_authorization
+	 */
+	public function test_stamp_delete_cross_host_actor_ignored() {
+		$post_id = $this->create_quote_post();
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+		$before = $this->count_updates( $post_id );
+
+		$gone = $this->mock_stamp_response( 404 );
+		Delete::handle_delete( $this->build_stamp_delete( 'https://other.example/users/alice' ), self::$user_id );
+		\remove_filter( 'pre_http_request', $gone );
+
+		$this->assertSame( 'https://remote.example/stamps/1', \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
+		$this->assertSame( $before, $this->count_updates( $post_id ) );
 	}
 }

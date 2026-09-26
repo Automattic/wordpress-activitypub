@@ -25,7 +25,7 @@ class Embed {
 	 * Get an ActivityPub embed HTML for a URL.
 	 *
 	 * @param string  $url        The URL to get the embed for.
-	 * @param boolean $inline_css Whether to inline CSS. Default true.
+	 * @param boolean $inline_css Optional. Whether to inline CSS. Default true.
 	 *
 	 * @return string|false The embed HTML or false if not found.
 	 */
@@ -44,24 +44,40 @@ class Embed {
 	 * Get an ActivityPub embed HTML for an ActivityPub object.
 	 *
 	 * @param array   $activity_object The ActivityPub object to build the embed for.
-	 * @param boolean $inline_css      Whether to inline CSS. Default true.
+	 * @param boolean $inline_css      Optional. Whether to inline CSS. Default true.
 	 *
 	 * @return string The embed HTML.
 	 */
 	public static function get_html_for_object( $activity_object, $inline_css = true ) {
-		$author_name = $activity_object['attributedTo'] ?? '';
-		$avatar_url  = $activity_object['icon']['url'] ?? '';
-		$author_url  = $author_name;
+		// An actor is its own author: the card is about them, not about something they wrote.
+		$is_actor = is_actor( $activity_object );
 
-		// If we don't have an avatar URL, but we have an author URL, try to fetch it.
-		if ( ! $avatar_url && $author_url ) {
+		// `attributedTo` may be a string, an embedded actor object, or a list of references. Normalize it to a URI string before use.
+		$author_url = $is_actor
+			? object_to_uri( $activity_object['url'] ?? $activity_object['id'] ?? '' ) ?? ''
+			: object_to_uri( $activity_object['attributedTo'] ?? '' ) ?? '';
+		$avatar_url = object_to_uri( $activity_object['icon']['url'] ?? '' ) ?? '';
+		$author     = $is_actor ? $activity_object : array();
+
+		/*
+		 * A post carries its author's address, rarely their name and almost never their avatar,
+		 * so the actor is asked for both. The lookup is cached, so a rendered post costs nothing
+		 * beyond the first one.
+		 */
+		if ( ! $is_actor && $author_url ) {
 			$author = Http::get_remote_object( $author_url );
-			if ( is_wp_error( $author ) ) {
+
+			if ( \is_wp_error( $author ) ) {
 				$author = array();
 			} else {
-				$avatar_url  = $author['icon']['url'] ?? '';
-				$author_name = empty( $author['name'] ) ? $author_name : $author['name'];
+				$avatar_url = $avatar_url ? $avatar_url : object_to_uri( $author['icon']['url'] ?? '' ) ?? '';
 			}
+		}
+
+		// The display name, the handle, and the address as the last resort.
+		$author_name = $author['name'] ?? '';
+		if ( '' === $author_name ) {
+			$author_name = $author['preferredUsername'] ?? $author_url;
 		}
 
 		// Create Webfinger where not found.
@@ -76,9 +92,10 @@ class Embed {
 			}
 		}
 
-		$title     = $activity_object['name'] ?? '';
-		$content   = $activity_object['content'] ?? '';
-		$published = isset( $activity_object['published'] ) ? gmdate( get_option( 'date_format' ) . ', ' . get_option( 'time_format' ), strtotime( $activity_object['published'] ) ) : '';
+		$title = $is_actor ? '' : ( $activity_object['name'] ?? '' );
+		// An actor's bio is its `summary`, a post's text its `content`.
+		$content   = ( $is_actor ? $activity_object['summary'] ?? '' : $activity_object['content'] ?? '' );
+		$published = isset( $activity_object['published'] ) ? \gmdate( \get_option( 'date_format' ) . ', ' . \get_option( 'time_format' ), \strtotime( $activity_object['published'] ) ) : '';
 		$boosts    = isset( $activity_object['shares']['totalItems'] ) ? (int) $activity_object['shares']['totalItems'] : null;
 		$favorites = isset( $activity_object['likes']['totalItems'] ) ? (int) $activity_object['likes']['totalItems'] : null;
 
@@ -95,7 +112,7 @@ class Embed {
 			);
 		} elseif ( isset( $activity_object['attachment'] ) ) {
 			foreach ( $activity_object['attachment'] as $attachment ) {
-				$type = isset( $attachment['mediaType'] ) ? strtok( $attachment['mediaType'], '/' ) : strtolower( $attachment['type'] );
+				$type = isset( $attachment['mediaType'] ) ? \strtok( $attachment['mediaType'], '/' ) : \strtolower( $attachment['type'] );
 
 				switch ( $type ) {
 					case 'image':
@@ -112,8 +129,8 @@ class Embed {
 			$images = \array_slice( $images, 0, 4 );
 		}
 
-		ob_start();
-		load_template(
+		\ob_start();
+		\load_template(
 			ACTIVITYPUB_PLUGIN_DIR . 'templates/embed.php',
 			false,
 			array(
@@ -137,11 +154,11 @@ class Embed {
 			// Grab the CSS.
 			$css = \file_get_contents( ACTIVITYPUB_PLUGIN_DIR . 'assets/css/activitypub-embed.css' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 			// We embed CSS directly because this may be in an iframe.
-			printf( '<style>%s</style>', $css ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			\printf( '<style>%s</style>', $css ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		}
 
 		// A little light whitespace cleanup.
-		return preg_replace( '/\s+/', ' ', ob_get_clean() );
+		return \preg_replace( '/\s+/', ' ', \ob_get_clean() );
 	}
 
 	/**
@@ -261,7 +278,7 @@ class Embed {
 			return $response;
 		}
 
-		if ( ( is_wp_error( $response ) && 'oembed_invalid_url' === $response->get_error_code() ) || empty( $response->html ) ) {
+		if ( ( \is_wp_error( $response ) && 'oembed_invalid_url' === $response->get_error_code() ) || empty( $response->html ) ) {
 			$url  = $request->get_param( 'url' );
 			$html = self::get_html( $url );
 
@@ -274,12 +291,12 @@ class Embed {
 				);
 
 				/** This filter is documented in wp-includes/class-wp-oembed.php */
-				$data->html = apply_filters( 'oembed_result', $data->html, $url, $args );
+				$data->html = \apply_filters( 'oembed_result', $data->html, $url, $args );
 
 				/** This filter is documented in wp-includes/class-wp-oembed-controller.php */
-				$ttl = apply_filters( 'rest_oembed_ttl', DAY_IN_SECONDS, $url, $args );
+				$ttl = \apply_filters( 'rest_oembed_ttl', DAY_IN_SECONDS, $url, $args );
 
-				set_transient( 'oembed_' . md5( serialize( $args ) ), $data, $ttl ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
+				\set_transient( 'oembed_' . \md5( \serialize( $args ) ), $data, $ttl ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
 
 				$response = new \WP_REST_Response( $data );
 			}

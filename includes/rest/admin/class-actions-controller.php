@@ -13,6 +13,7 @@ use Activitypub\Collection\Followers;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Moderation;
+use Activitypub\OAuth\Server as OAuth_Server;
 
 use function Activitypub\user_can_activitypub;
 
@@ -118,7 +119,18 @@ class Actions_Controller extends \WP_REST_Controller {
 	 * @return bool|\WP_Error True if the request has permission, WP_Error object otherwise.
 	 */
 	public function check_permission() {
-		if ( ! user_can_activitypub( \get_current_user_id() ) ) {
+		// This is an admin endpoint; scoped OAuth C2S tokens must not drive it.
+		$denied = OAuth_Server::deny_if_oauth();
+		if ( null !== $denied ) {
+			return $denied;
+		}
+
+		/*
+		 * A logged-out request has user ID 0, which is also the blog actor's ID
+		 * (Actors::BLOG_USER_ID). Without the login check, user_can_activitypub( 0 ) reports the
+		 * enabled blog actor, so an anonymous caller would pass and act with the blog's rights.
+		 */
+		if ( ! \is_user_logged_in() || ! user_can_activitypub( \get_current_user_id() ) ) {
 			return new \WP_Error(
 				'rest_forbidden',
 				\__( 'Sorry, you are not allowed to perform this action.', 'activitypub' ),

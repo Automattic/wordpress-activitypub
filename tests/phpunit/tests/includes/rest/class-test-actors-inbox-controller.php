@@ -7,11 +7,14 @@
 
 namespace Activitypub\Tests\Rest;
 
+use Activitypub\Application;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Inbox as Inbox_Collection;
 use Activitypub\Collection\Outbox;
 use Activitypub\Handler\Feature_Request;
+use Activitypub\OAuth\Scope;
 use Activitypub\Rest\Server;
+use Activitypub\Tests\OAuth_Token_Stub;
 
 /**
  * Test class for Actors_Inbox_Controller.
@@ -20,6 +23,8 @@ use Activitypub\Rest\Server;
  * @coversDefaultClass \Activitypub\Rest\Actors_Inbox_Controller
  */
 class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {
+	use OAuth_Token_Stub;
+
 	/**
 	 * Test user ID.
 	 *
@@ -72,6 +77,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	 * Tear down the test.
 	 */
 	public function tear_down() {
+		$this->set_oauth_current_token( null );
 		\delete_option( 'permalink_structure' );
 
 		parent::tear_down();
@@ -210,6 +216,69 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		$this->assertEquals( 202, $response->get_status() );
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+	}
+
+	/**
+	 * Test that deliveries to the retired Application actor's inbox are handled by the shared inbox.
+	 *
+	 * Remote servers that cached the pre-extraction Application actor document still
+	 * deliver to /actors/-1/inbox; those requests must not 404.
+	 *
+	 * @covers ::create_item
+	 * @covers ::validate_inbox_user_id
+	 */
+	public function test_legacy_application_inbox_delegates_to_shared_inbox() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+		\add_filter( 'pre_http_request', array( $this, 'mock_remote_404' ) );
+
+		$shared_follows = \did_action( 'activitypub_inbox_shared_follow' );
+
+		$json = array(
+			'id'     => 'https://remote.example/activities/follow-app',
+			'type'   => 'Follow',
+			'actor'  => 'https://remote.example/users/alice',
+			'object' => Application::get_id(),
+		);
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/-1/inbox' );
+		$request->set_header( 'Content-Type', 'application/activity+json' );
+		$request->set_body( \wp_json_encode( $json ) );
+
+		$response = \rest_do_request( $request );
+
+		$this->assertEquals( 202, $response->get_status(), 'The retired Application inbox should still accept deliveries.' );
+		$this->assertSame( $shared_follows + 1, \did_action( 'activitypub_inbox_shared_follow' ), 'The delivery should be handled by the shared inbox, which rejects Follows aimed at the Application.' );
+
+		\remove_filter( 'pre_http_request', array( $this, 'mock_remote_404' ) );
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+	}
+
+	/**
+	 * Short-circuit remote requests with a 404 response.
+	 *
+	 * @return array A mocked 404 response.
+	 */
+	public function mock_remote_404() {
+		return array(
+			'headers'  => array(),
+			'body'     => '',
+			'response' => array(
+				'code'    => 404,
+				'message' => 'Not Found',
+			),
+		);
+	}
+
+	/**
+	 * Test that the legacy Application inbox is write-only.
+	 *
+	 * @covers ::validate_inbox_user_id
+	 */
+	public function test_legacy_application_inbox_is_not_readable() {
+		$request  = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/-1/inbox' );
+		$response = \rest_do_request( $request );
+
+		$this->assertGreaterThanOrEqual( 400, $response->get_status(), 'The retired Application inbox should not be readable.' );
 	}
 
 	/**
@@ -689,6 +758,40 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	}
 
 	/**
+	 * One queued event hands the activity to the handlers exactly once.
+	 *
+	 * The controller used to register a second, near-identical dispatcher on the same event, so
+	 * every handler ran twice in any request where the REST routes had been registered.
+	 *
+	 * @covers \Activitypub\Scheduler::process_inbox_activity
+	 */
+	public function test_a_queued_event_dispatches_once() {
+		$activity_id = 'https://remote.example/@activity-dispatched-once';
+
+		$activity = \Activitypub\Activity\Activity::init_from_array(
+			array(
+				'id'     => $activity_id,
+				'type'   => 'Like',
+				'actor'  => 'https://remote.example/@test',
+				'object' => 'https://example.org/@user/post/1',
+			)
+		);
+		Inbox_Collection::add( $activity, array( self::$user_id ) );
+
+		$dispatches = 0;
+		$counter    = function () use ( &$dispatches ) {
+			++$dispatches;
+		};
+		\add_action( 'activitypub_handled_inbox_like', $counter );
+
+		\do_action( 'activitypub_inbox_create_item', $activity_id );
+
+		\remove_action( 'activitypub_handled_inbox_like', $counter );
+
+		$this->assertEquals( 1, $dispatches, 'The queued event must reach the handlers exactly once.' );
+	}
+
+	/**
 	 * Test inbox request schedules delayed processing.
 	 *
 	 * @covers \Activitypub\Rest\Actors_Inbox_Controller::create_item
@@ -763,5 +866,181 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 
 		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
 		\remove_filter( 'activitypub_skip_inbox_storage', '__return_true' );
+	}
+
+	/**
+	 * One activity delivered to several per-actor inboxes must collect every recipient.
+	 *
+	 * Senders that do not use the shared inbox POST the same activity once per actor, so the
+	 * second and third delivery land on the entry the first one created.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_same_activity_delivered_to_each_actor_inbox_collects_recipients() {
+		\add_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$activity_id = 'https://remote.example/activities/fanned-out';
+		$activity    = array(
+			'id'     => $activity_id,
+			'type'   => 'Create',
+			'actor'  => 'https://remote.example/users/alice',
+			'object' => array(
+				'id'      => 'https://remote.example/objects/fanned-out',
+				'type'    => 'Note',
+				'content' => 'Hello you three',
+			),
+		);
+
+		$recipients = array( 1, self::$user_id, self::$editor_id );
+
+		foreach ( $recipients as $user_id ) {
+			$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/users/' . $user_id . '/inbox' );
+			$request->set_header( 'Content-Type', 'application/activity+json' );
+			$request->set_body( \wp_json_encode( $activity ) );
+
+			$response = \rest_do_request( $request );
+
+			$this->assertSame( 202, $response->get_status() );
+		}
+
+		\remove_filter( 'activitypub_defer_signature_verification', '__return_true' );
+
+		$inbox_item = Inbox_Collection::get_by_guid( $activity_id );
+		$this->assertInstanceOf( 'WP_Post', $inbox_item );
+
+		$stored = Inbox_Collection::get_recipients( $inbox_item->ID );
+		$this->assertCount( 3, $stored, 'Every actor the sender delivered to must be a recipient.' );
+		foreach ( $recipients as $user_id ) {
+			$this->assertContains( $user_id, $stored );
+		}
+	}
+
+	/**
+	 * A sender that omits the date must not leave the item date-less: the listing reports when the
+	 * activity arrived, and a date the sender did send is left alone.
+	 *
+	 * @covers ::prepare_item_for_response
+	 */
+	public function test_get_items_reports_the_received_date() {
+		// A UTC site cannot tell a converted date from an unconverted one.
+		\update_option( 'timezone_string', 'Europe/Berlin' );
+
+		$sent = '2026-01-02T03:04:05Z';
+
+		foreach ( array( null, $sent ) as $published ) {
+			$activity = array(
+				'id'     => 'https://remote.example.com/activities/' . \wp_generate_uuid4(),
+				'type'   => 'Create',
+				'actor'  => 'https://remote.example.com/users/testuser',
+				'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+				'object' => array(
+					'id'      => 'https://remote.example.com/objects/' . \wp_generate_uuid4(),
+					'type'    => 'Note',
+					'content' => 'Hello',
+				),
+			);
+
+			if ( $published ) {
+				$activity['published'] = $published;
+			}
+
+			$id = Inbox_Collection::add( \Activitypub\Activity\Activity::init_from_array( $activity ), self::$user_id );
+			$this->assertIsInt( $id );
+
+			\add_filter( 'activitypub_oauth_check_permission', '__return_true' );
+			\wp_set_current_user( self::$user_id );
+
+			$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/inbox' );
+			$request->set_param( 'page', 1 );
+
+			$response = \rest_do_request( $request );
+
+			\remove_filter( 'activitypub_oauth_check_permission', '__return_true' );
+
+			$items = \wp_list_filter( $response->get_data()['orderedItems'], array( 'id' => $activity['id'] ) );
+			$item  = \reset( $items );
+
+			$this->assertNotEmpty( $item, 'The stored activity must be listed.' );
+
+			if ( $published ) {
+				$this->assertSame( $published, $item['published'], 'A date the sender sent must be left alone.' );
+			} else {
+				$expected = \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \strtotime( \get_post( $id )->post_date_gmt . ' GMT' ) );
+				$this->assertSame( $expected, $item['published'], 'A missing date must be reported as the arrival date, in UTC.' );
+			}
+		}
+
+		\delete_option( 'timezone_string' );
+	}
+
+	/**
+	 * The inbox listing must not disclose the blind audience the row stores for addressing, and it
+	 * carries the JSON-LD context on the collection rather than on every item.
+	 *
+	 * @covers ::prepare_item_for_response
+	 */
+	public function test_get_items_strips_the_blind_audience() {
+		$activity = \Activitypub\Activity\Activity::init_from_array(
+			array(
+				'@context' => 'https://www.w3.org/ns/activitystreams',
+				'id'       => 'https://remote.example.com/activities/' . \wp_generate_uuid4(),
+				'type'     => 'Create',
+				'actor'    => 'https://remote.example.com/users/testuser',
+				'to'       => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+				'bto'      => array( 'https://remote.example.com/users/hidden' ),
+				'bcc'      => array( 'https://remote.example.com/users/also-hidden' ),
+				'object'   => array(
+					'id'      => 'https://remote.example.com/objects/' . \wp_generate_uuid4(),
+					'type'    => 'Note',
+					'content' => 'Hello',
+				),
+			)
+		);
+
+		$this->assertIsInt( Inbox_Collection::add( $activity, self::$user_id ) );
+
+		\add_filter( 'activitypub_oauth_check_permission', '__return_true' );
+		\wp_set_current_user( self::$user_id );
+
+		// A Collection request only returns links, so ask for the first page to get the items.
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/inbox' );
+		$request->set_param( 'page', 1 );
+
+		$response = \rest_do_request( $request );
+
+		\remove_filter( 'activitypub_oauth_check_permission', '__return_true' );
+
+		$this->assertSame( 200, $response->get_status() );
+
+		$items = $response->get_data()['orderedItems'];
+		$this->assertNotEmpty( $items );
+
+		foreach ( $items as $item ) {
+			$this->assertArrayNotHasKey( 'bto', $item, 'The blind audience must not be disclosed.' );
+			$this->assertArrayNotHasKey( 'bcc', $item, 'The blind audience must not be disclosed.' );
+			$this->assertArrayNotHasKey( '@context', $item, 'The collection carries the context, not each item.' );
+		}
+	}
+
+	/**
+	 * Test that the paged inbox needs the read scope.
+	 *
+	 * @covers ::register_routes
+	 */
+	public function test_get_items_requires_read_scope() {
+		\wp_set_current_user( self::$user_id );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/inbox' );
+
+		foreach ( array( Scope::PUSH, Scope::WRITE ) as $scope ) {
+			$this->set_oauth_current_token( $this->mock_oauth_token( array( $scope ), self::$user_id ) );
+			$response = \rest_get_server()->dispatch( $request );
+
+			$this->assertSame( 403, $response->get_status(), "A $scope token must not read the inbox." );
+			$this->assertSame( 'activitypub_insufficient_scope', $response->get_data()['code'] );
+		}
+
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::READ ), self::$user_id ) );
+		$this->assertSame( 200, \rest_get_server()->dispatch( $request )->get_status(), 'A read token reads the inbox.' );
 	}
 }

@@ -78,15 +78,15 @@ class Update {
 
 		/*
 		 * Verify the user owns this post.
-		 * The blog actor ($user_id === 0) can update any post since it
-		 * represents the site itself.
+		 * The blog actor ($user_id === 0) owns no posts, so for it only the
+		 * capability check below decides.
 		 */
 		if ( (int) $post->post_author !== $user_id && $user_id > 0 ) {
 			return false;
 		}
 
 		// Verify the user has permission to edit this post.
-		if ( $user_id > 0 && ! \user_can( $user_id, 'edit_post', $post->ID ) ) {
+		if ( ! \current_user_can( 'edit_post', $post->ID ) ) {
 			return new \WP_Error(
 				'activitypub_forbidden',
 				\__( 'You do not have permission to edit this post.', 'activitypub' ),

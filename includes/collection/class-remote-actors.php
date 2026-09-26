@@ -14,6 +14,7 @@ use Activitypub\Sanitize;
 use Activitypub\Webfinger;
 
 use function Activitypub\is_actor;
+use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 
 /**
@@ -42,16 +43,26 @@ class Remote_Actors {
 	public static function get_inboxes() {
 		$inboxes = \wp_cache_get( self::CACHE_KEY_INBOXES, 'activitypub' );
 
-		if ( $inboxes ) {
+		if ( false !== $inboxes ) {
 			return $inboxes;
 		}
 
 		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$results = $wpdb->get_col(
-			"SELECT DISTINCT meta_value FROM {$wpdb->postmeta}
-			WHERE meta_key = '_activitypub_inbox'
-			AND meta_value IS NOT NULL"
+			$wpdb->prepare(
+				"SELECT DISTINCT inbox.meta_value
+				FROM {$wpdb->postmeta} inbox
+				INNER JOIN {$wpdb->posts} actor ON actor.ID = inbox.post_id
+				WHERE actor.post_type = %s
+				AND actor.post_status = %s
+				AND inbox.meta_key = '_activitypub_inbox'
+				AND inbox.meta_value <> ''
+				ORDER BY inbox.meta_value",
+				self::POST_TYPE,
+				'publish'
+			)
 		);
 
 		$inboxes = \array_filter( $results );
@@ -80,6 +91,11 @@ class Remote_Actors {
 	/**
 	 * Upsert (insert or update) a remote actor as a custom post type.
 	 *
+	 * The actor is looked up and stored under its own `id`. Callers that obtain
+	 * the actor from an untrusted fetch MUST fetch it via {@see Http::get_remote_object()},
+	 * which self-confirms the document is served under its own id, so a document
+	 * claiming another actor's id can never reach this method.
+	 *
 	 * @param array|Actor $actor ActivityPub actor object (array or actor, must include 'id').
 	 *
 	 * @return int|\WP_Error Post ID on success, WP_Error on failure.
@@ -106,30 +122,13 @@ class Remote_Actors {
 	 * @return int|\WP_Error Post ID on success, WP_Error on failure.
 	 */
 	public static function create( $actor ) {
-		if ( \is_array( $actor ) ) {
-			$actor = Actor::init_from_array( $actor );
-		}
-
 		$args = self::prepare_custom_post_type( $actor );
 
 		if ( \is_wp_error( $args ) ) {
 			return $args;
 		}
 
-		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
-		if ( $has_kses ) {
-			// Prevent KSES from corrupting JSON in post_content.
-			\kses_remove_filters();
-		}
-
-		$post_id = \wp_insert_post( $args );
-
-		if ( $has_kses ) {
-			// Restore KSES filters.
-			\kses_init_filters();
-		}
-
-		return $post_id;
+		return self::persist( $args );
 	}
 
 	/**
@@ -141,10 +140,6 @@ class Remote_Actors {
 	 * @return int|\WP_Error The post ID or WP_Error.
 	 */
 	public static function update( $post, $actor ) {
-		if ( \is_array( $actor ) ) {
-			$actor = Actor::init_from_array( $actor );
-		}
-
 		$post = \get_post( $post, ARRAY_A );
 
 		if ( ! $post ) {
@@ -161,7 +156,20 @@ class Remote_Actors {
 			return $args;
 		}
 
-		$args = \wp_parse_args( $args, $post );
+		return self::persist( \wp_parse_args( $args, $post ) );
+	}
+
+	/**
+	 * Persist prepared remote actor post data.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $args Prepared post data. An ID indicates an update.
+	 *
+	 * @return int|\WP_Error Post ID on success, WP_Error on failure.
+	 */
+	private static function persist( $args ) {
+		$is_update = ! empty( $args['ID'] );
 
 		$has_kses = false !== \has_filter( 'content_save_pre', 'wp_filter_post_kses' );
 		if ( $has_kses ) {
@@ -169,11 +177,15 @@ class Remote_Actors {
 			\kses_remove_filters();
 		}
 
-		$post_id = \wp_update_post( $args );
+		$post_id = $is_update ? \wp_update_post( $args ) : \wp_insert_post( $args );
 
 		if ( $has_kses ) {
 			// Restore KSES filters.
 			\kses_init_filters();
+		}
+
+		if ( $post_id && ! \is_wp_error( $post_id ) ) {
+			self::clear_inbox_caches( self::get_follower_ids( $post_id ) );
 		}
 
 		return $post_id;
@@ -187,7 +199,54 @@ class Remote_Actors {
 	 * @return bool True on success, false on failure.
 	 */
 	public static function delete( $post_id ) {
-		return \wp_delete_post( $post_id );
+		// Read the followers before the delete takes the meta with it.
+		$user_ids = self::get_follower_ids( $post_id );
+		$result   = \wp_delete_post( $post_id );
+
+		// Clear after the row is gone, which narrows the window in which a concurrent read re-caches the deleted inbox.
+		self::clear_inbox_caches( $user_ids );
+
+		return $result;
+	}
+
+	/**
+	 * Get the IDs of the local users a remote actor follows.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $post_id The remote actor post ID.
+	 *
+	 * @return int[] The user IDs.
+	 */
+	private static function get_follower_ids( $post_id ) {
+		$user_ids = \get_post_meta( $post_id, Followers::FOLLOWER_META_KEY, false );
+
+		if ( ! \is_array( $user_ids ) ) {
+			return array();
+		}
+
+		return \array_unique( \array_map( 'intval', $user_ids ) );
+	}
+
+	/**
+	 * Clear cached inbox lists affected by a remote actor change.
+	 *
+	 * Every write to an actor post or its follower meta has to end up here; a bare
+	 * `wp_delete_post()` or `add_post_meta()` elsewhere leaves a stale inbox list behind.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int[] $user_ids The local users whose follower inbox lists include the actor.
+	 */
+	private static function clear_inbox_caches( $user_ids ) {
+		$keys = array( self::CACHE_KEY_INBOXES );
+
+		foreach ( $user_ids as $user_id ) {
+			$keys[] = \sprintf( Followers::CACHE_KEY_INBOXES, $user_id );
+		}
+
+		// One round trip, however many followers the actor has, because a persistent cache charges per call.
+		\wp_cache_delete_multiple( $keys, 'activitypub' );
 	}
 
 	/**
@@ -203,8 +262,9 @@ class Remote_Actors {
 		$post_id = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT ID FROM $wpdb->posts WHERE guid=%s AND post_type=%s",
-				esc_sql( $actor_uri ),
-				esc_sql( self::POST_TYPE )
+				// Normalize the way upsert() stores the GUID; prepare() handles the SQL escaping.
+				\esc_url_raw( $actor_uri ),
+				self::POST_TYPE
 			)
 		);
 
@@ -226,6 +286,57 @@ class Remote_Actors {
 		}
 
 		return $post;
+	}
+
+	/**
+	 * Search cached remote actors by name, handle, or actor URI.
+	 *
+	 * Backs the actor autocomplete endpoint. Matches the search term against the stored post title
+	 * (the actor's name or preferred username) and the webfinger handle (user@host), newest first.
+	 * The actor URI (guid) is matched only when the query itself looks like a URL: every URI shares
+	 * the same scheme and host shape, so matching it for a short term would return nearly every
+	 * cached actor.
+	 *
+	 * @since 9.1.0
+	 *
+	 * @param string $query  The search term.
+	 * @param int    $number Optional. Maximum number of actors to return. Default 10.
+	 *
+	 * @return \WP_Post[] The matching remote actor posts.
+	 */
+	public static function search( $query, $number = 10 ) {
+		global $wpdb;
+
+		$like       = '%' . $wpdb->esc_like( $query ) . '%';
+		$conditions = 'p.post_title LIKE %s OR acct.meta_value LIKE %s';
+		$params     = array( self::POST_TYPE, $like, $like );
+
+		// Match the actor URI only for URL-like queries, so short terms don't match every https:// guid.
+		if ( \str_contains( $query, '://' ) ) {
+			$conditions .= ' OR p.guid LIKE %s';
+			$params[]    = $like;
+		}
+
+		$params[] = $number;
+
+		/*
+		 * Select full rows so get_post() hydrates each in place instead of re-querying per ID. The
+		 * interpolated $conditions is built from the literal fragments above, not from user input,
+		 * and the placeholder count is dynamic because the guid clause is optional.
+		 */
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+		$posts = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT DISTINCT p.* FROM $wpdb->posts p
+				LEFT JOIN $wpdb->postmeta acct ON acct.post_id = p.ID AND acct.meta_key = '_activitypub_acct'
+				WHERE p.post_type = %s AND p.post_status = 'publish' AND ( $conditions )
+				ORDER BY p.ID DESC LIMIT %d",
+				$params
+			)
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+
+		return \array_map( '\get_post', $posts );
 	}
 
 	/**
@@ -308,6 +419,7 @@ class Remote_Actors {
 			return $post;
 		}
 
+		// get_remote_object() self-confirms the actor is served under its own id, so it is safe to cache.
 		$object = Http::get_remote_object( $actor_uri, false );
 
 		if ( \is_wp_error( $object ) ) {
@@ -551,11 +663,15 @@ class Remote_Actors {
 	/**
 	 * Prepare actor object for insert or update as a custom post type.
 	 *
-	 * @param Actor $actor The actor data.
+	 * @param array|Actor $actor The actor data.
 	 *
 	 * @return array|\WP_Error Array of post arguments or WP_Error on failure.
 	 */
 	private static function prepare_custom_post_type( $actor ) {
+		if ( \is_array( $actor ) ) {
+			$actor = Actor::init_from_array( $actor );
+		}
+
 		/*
 		 * Reject non-actor objects here, the single chokepoint every
 		 * create/update/upsert funnels through, so callers do not each have to
@@ -588,39 +704,7 @@ class Remote_Actors {
 			$webfinger = \is_wp_error( $webfinger ) ? Webfinger::guess( $actor ) : Sanitize::webfinger( $webfinger );
 		}
 
-		/*
-		 * Temporarily remove mention/hashtag/link filters to prevent infinite recursion when
-		 * storing remote actors with mentions/hashtags in their bios.
-		 *
-		 * PROBLEM: These filters are globally registered on 'init' for all to_json() calls,
-		 * but they're designed for OUTGOING content (federation). When processing mentions in
-		 * an actor's bio during storage, the Mention filter fetches the mentioned actor, which
-		 * then processes mentions in THEIR bio, creating infinite recursion.
-		 *
-		 * SHORTCOMINGS:
-		 * - Fragile: Easy to forget when adding new storage locations (e.g., Inbox storage).
-		 * - Scattered: Same pattern would need to be repeated anywhere we store remote content.
-		 * - Race conditions: If filters are re-added/removed elsewhere, this could break.
-		 * - Not semantic: We're working around a design issue rather than fixing it.
-		 *
-		 * BETTER LONG-TERM SOLUTION:
-		 * Distinguish between "incoming" (storage) and "outgoing" (federation) contexts:
-		 * - INCOMING: Store received ActivityPub data as-is, don't process mentions/hashtags.
-		 *   (Remote_Actors::prepare_custom_post_type, Inbox storage)
-		 * - OUTGOING: Process mentions/hashtags when serving our content to other servers.
-		 *   (Dispatcher, REST API controllers, Transformers)
-		 */
-		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Mention', 'filter_activity_object' ), 99 );
-		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Hashtag', 'filter_activity_object' ), 99 );
-		\remove_filter( 'activitypub_activity_object_array', array( 'Activitypub\Link', 'filter_activity_object' ), 99 );
-
-		$actor_json  = $actor->to_json();
-		$actor_array = $actor->to_array();
-
-		// Re-add the filters.
-		\add_filter( 'activitypub_activity_object_array', array( 'Activitypub\Mention', 'filter_activity_object' ), 99 );
-		\add_filter( 'activitypub_activity_object_array', array( 'Activitypub\Hashtag', 'filter_activity_object' ), 99 );
-		\add_filter( 'activitypub_activity_object_array', array( 'Activitypub\Link', 'filter_activity_object' ), 99 );
+		list( $actor_json, $actor_array ) = self::serialize_for_storage( $actor );
 
 		$meta_input = array(
 			'_activitypub_inbox' => $inbox,
@@ -629,18 +713,57 @@ class Remote_Actors {
 
 		// Add emoji meta if actor has emoji in tags.
 		$emoji_meta = Emoji::prepare_actor_meta( $actor_array );
-		$meta_input = array_merge( $meta_input, $emoji_meta );
+		$meta_input = \array_merge( $meta_input, $emoji_meta );
 
 		return array(
 			'guid'         => \esc_url_raw( $actor->get_id() ),
-			'post_title'   => \wp_strip_all_tags( \wp_slash( $actor->get_name() ?: $actor->get_preferred_username() ) ),
+			'post_title'   => \wp_slash( \wp_strip_all_tags( $actor->get_name() ?: $actor->get_preferred_username() ) ),
 			'post_author'  => 0,
 			'post_type'    => self::POST_TYPE,
 			'post_content' => \wp_slash( $actor_json ),
-			'post_excerpt' => \wp_kses( \wp_slash( (string) $actor->get_summary() ), 'user_description' ),
+			'post_excerpt' => \wp_slash( \wp_kses( (string) $actor->get_summary(), 'user_description' ) ),
 			'post_status'  => 'publish',
 			'meta_input'   => $meta_input,
 		);
+	}
+
+	/**
+	 * Serialize a remote actor without outbound content filters.
+	 *
+	 * Workaround: the Mention/Hashtag/Link filters process content for the *outgoing* (federation)
+	 * context and must not run when storing *incoming* remote data. Suspending them here is the
+	 * stopgap for a missing incoming/outgoing serialization-context split; until that exists, every
+	 * storage path (see also Inbox storage) needs the same treatment.
+	 *
+	 * @since unreleased
+	 *
+	 * @param Actor $actor The actor to serialize.
+	 *
+	 * @return array The actor JSON and array representations.
+	 */
+	private static function serialize_for_storage( $actor ) {
+		$callbacks  = array(
+			array( 'Activitypub\Mention', 'filter_activity_object' ),
+			array( 'Activitypub\Hashtag', 'filter_activity_object' ),
+			array( 'Activitypub\Link', 'filter_activity_object' ),
+		);
+		$registered = array();
+
+		foreach ( $callbacks as $callback ) {
+			$priority = \has_filter( 'activitypub_activity_object_array', $callback );
+			if ( false !== $priority ) {
+				$registered[] = array( $callback, $priority );
+				\remove_filter( 'activitypub_activity_object_array', $callback, $priority );
+			}
+		}
+
+		$serialized = array( $actor->to_json(), $actor->to_array() );
+
+		foreach ( $registered as $filter ) {
+			\add_filter( 'activitypub_activity_object_array', $filter[0], $filter[1] );
+		}
+
+		return $serialized;
 	}
 
 	/**
@@ -653,7 +776,7 @@ class Remote_Actors {
 	 */
 	public static function normalize_identifier( $actor ) {
 		$actor = object_to_uri( $actor );
-		if ( ! is_string( $actor ) ) {
+		if ( ! \is_string( $actor ) ) {
 			return null;
 		}
 
@@ -697,11 +820,8 @@ class Remote_Actors {
 
 			// If we fetched a standalone key object, follow the owner to get the actor.
 			if ( isset( $data['owner'] ) && ! isset( $data['publicKey'] ) ) {
-				// Verify the owner is on the same host as the key to prevent cross-origin spoofing.
-				$key_host   = \wp_parse_url( $key_id, \PHP_URL_HOST );
-				$owner_host = \wp_parse_url( $data['owner'], \PHP_URL_HOST );
-
-				if ( ! $key_host || ! $owner_host || $key_host !== $owner_host ) {
+				// Verify the owner is on the same host as the key, so a key on one host cannot be claimed for an actor on another.
+				if ( ! is_same_host( $key_id, $data['owner'] ) ) {
 					return $no_key_error;
 				}
 
@@ -755,11 +875,8 @@ class Remote_Actors {
 			return false;
 		}
 
-		$actor_host   = isset( $data['id'] ) ? \wp_parse_url( $data['id'], \PHP_URL_HOST ) : null;
-		$key_url_host = \wp_parse_url( $data['publicKey'], \PHP_URL_HOST );
-
 		// Verify the key URL is on the same host as the actor.
-		if ( ! $actor_host || ! $key_url_host || $actor_host !== $key_url_host ) {
+		if ( ! is_same_host( $data['id'] ?? '', $data['publicKey'] ) ) {
 			return false;
 		}
 

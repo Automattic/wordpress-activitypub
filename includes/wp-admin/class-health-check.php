@@ -7,6 +7,7 @@
 
 namespace Activitypub\WP_Admin;
 
+use Activitypub\Application;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Outbox;
 use Activitypub\Http;
@@ -65,7 +66,7 @@ class Health_Check {
 
 		foreach ( $tests['direct'] as $test ) {
 			// Run tests.
-			$result = call_user_func( $test['test'] );
+			$result = \call_user_func( $test['test'] );
 
 			if ( 'critical' === $result['status'] ) {
 				++$critical;
@@ -109,7 +110,7 @@ class Health_Check {
 		}
 
 		$tests['direct']['activitypub_test_webfinger'] = array(
-			'label' => __( 'WebFinger Test', 'activitypub' ),
+			'label' => \__( 'WebFinger Test', 'activitypub' ),
 			'test'  => array( self::class, 'test_webfinger' ),
 		);
 
@@ -266,14 +267,13 @@ class Health_Check {
 	 * @return boolean|\WP_Error
 	 */
 	public static function is_webfinger_endpoint_accessible() {
-		$user     = Actors::get_by_id( Actors::APPLICATION_USER_ID );
-		$resource = $user->get_webfinger();
+		$resource = Application::get_webfinger();
 
 		$url = Webfinger::resolve( $resource );
 		if ( \is_wp_error( $url ) ) {
 			$allowed = array( 'code' => array() );
 
-			$not_accessible = wp_kses(
+			$not_accessible = \wp_kses(
 				// translators: %s: Author URL.
 				\__(
 					'Your WebFinger endpoint <code>%s</code> is not accessible. Please check your WordPress setup or permalink structure.',
@@ -281,7 +281,7 @@ class Health_Check {
 				),
 				$allowed
 			);
-			$invalid_response = wp_kses(
+			$invalid_response = \wp_kses(
 				// translators: %s: Author URL.
 				\__(
 					'Your WebFinger endpoint <code>%s</code> does not return valid JSON for <code>application/jrd+json</code>.',
@@ -346,10 +346,10 @@ class Health_Check {
 
 		$actor = Actors::get_by_id( \get_current_user_id() );
 
-		if ( $actor && ! is_wp_error( $actor ) ) {
+		if ( $actor && ! \is_wp_error( $actor ) ) {
 			$info['activitypub']['fields']['webfinger'] = array(
 				'label'   => \__( 'WebFinger Resource', 'activitypub' ),
-				'value'   => Webfinger::get_user_resource( wp_get_current_user()->ID ),
+				'value'   => Webfinger::get_user_resource( \wp_get_current_user()->ID ),
 				'private' => false,
 			);
 
@@ -432,14 +432,14 @@ class Health_Check {
 			'private' => false,
 		);
 
-		$constants = get_defined_constants( true );
+		$constants = \get_defined_constants( true );
 
 		if ( ! isset( $constants['user'] ) ) {
 			return $info;
 		}
 
 		foreach ( $constants['user'] as $key => $value ) {
-			if ( ! str_starts_with( $key, 'ACTIVITYPUB_' ) ) {
+			if ( ! \str_starts_with( $key, 'ACTIVITYPUB_' ) ) {
 				continue;
 			}
 
@@ -474,7 +474,7 @@ class Health_Check {
 			'test'        => 'test_threaded_comments',
 		);
 
-		if ( '1' !== get_option( 'thread_comments', '0' ) ) {
+		if ( '1' !== \get_option( 'thread_comments', '0' ) ) {
 			$result['status']         = 'recommended';
 			$result['label']          = \__( 'Threaded (nested) comments are not enabled', 'activitypub' );
 			$result['badge']['color'] = 'orange';
@@ -482,12 +482,12 @@ class Health_Check {
 				'<p>%s</p>',
 				\__( 'This is particularly important for fediverse users, as they rely on the visual hierarchy to understand conversation threads across different platforms. Without threaded comments, it becomes much more difficult to follow discussions that span multiple platforms in the fediverse.', 'activitypub' )
 			);
-			$result['actions']        = sprintf(
+			$result['actions']        = \sprintf(
 				'<p>%s</p>',
-				sprintf(
+				\sprintf(
 					// translators: %s: Discussion settings URL.
 					\__( 'You can enable them in the <a href="%s">Discussion Settings</a>.', 'activitypub' ),
-					esc_url( admin_url( 'options-discussion.php' ) )
+					\esc_url( \admin_url( 'options-discussion.php' ) )
 				)
 			);
 		}
@@ -523,22 +523,22 @@ class Health_Check {
 			$result['badge']['color'] = 'red';
 			$result['description']    = \sprintf(
 				'<p>%s</p>',
-				sprintf(
+				\sprintf(
 					/* translators: %s: Permalink settings URL. */
 					\__( 'ActivityPub needs SEO-friendly URLs to work properly. Please <a href="%s">update your permalink structure</a> to an option other than Plain.', 'activitypub' ),
-					esc_url( admin_url( 'options-permalink.php' ) )
+					\esc_url( \admin_url( 'options-permalink.php' ) )
 				)
 			);
-		} elseif ( str_starts_with( $permalink_structure, '/index.php' ) ) {
+		} elseif ( \str_starts_with( $permalink_structure, '/index.php' ) ) {
 			$result['status']         = 'critical';
 			$result['label']          = \__( 'Your permalink structure needs to be updated for ActivityPub to work properly.', 'activitypub' );
 			$result['badge']['color'] = 'red';
 			$result['description']    = \sprintf(
 				'<p>%s</p>',
-				sprintf(
+				\sprintf(
 					/* translators: %s: Permalink settings URL. */
 					\__( 'Your current permalink structure includes <code>/index.php</code> which is not compatible with ActivityPub. Please <a href="%s">update your permalink settings</a> to use a standard format without <code>/index.php</code>.', 'activitypub' ),
-					esc_url( admin_url( 'options-permalink.php' ) )
+					\esc_url( \admin_url( 'options-permalink.php' ) )
 				)
 			);
 		}
@@ -570,10 +570,10 @@ class Health_Check {
 		$active_plugins = (array) \get_option( 'active_plugins', array() );
 
 		// search for the word 'captcha' in the list of active plugins.
-		$captcha_plugins = array_filter(
+		$captcha_plugins = \array_filter(
 			$active_plugins,
 			static function ( $plugin ) {
-				return \str_contains( strtolower( $plugin ), 'captcha' );
+				return \str_contains( \strtolower( $plugin ), 'captcha' );
 			}
 		);
 
@@ -583,7 +583,7 @@ class Health_Check {
 
 		// Get nice plugin names instead of file paths using WordPress built-in functions.
 		$all_plugins          = \get_plugins();
-		$captcha_plugin_names = array_map(
+		$captcha_plugin_names = \array_map(
 			static function ( $plugin_file ) use ( $all_plugins ) {
 				if ( isset( $all_plugins[ $plugin_file ]['Name'] ) ) {
 					return $all_plugins[ $plugin_file ]['Name'];
@@ -601,7 +601,7 @@ class Health_Check {
 			\sprintf(
 				/* translators: %s: List of captcha plugins. */
 				\esc_html__( 'The following Captcha plugins are active and may interfere with ActivityPub functionality: %s', 'activitypub' ),
-				implode( ', ', array_map( 'esc_html', array_filter( $captcha_plugin_names ) ) )
+				\implode( ', ', \array_map( 'esc_html', \array_filter( $captcha_plugin_names ) ) )
 			),
 			\__( 'Captcha plugins require verification for comment submissions, but some may not distinguish between regular comments and those sent via an API (such as from ActivityPub). As a result, federated comments might be blocked because they cannot provide a Captcha response. If you experience missing comments, try disabling the Captcha plugin to determine if it resolves the issue.', 'activitypub' )
 		);
@@ -610,7 +610,7 @@ class Health_Check {
 			\sprintf(
 				// translators: %s: Plugin page URL.
 				\__( 'They can be disabled from the <a href="%s">Plugin Page</a>.', 'activitypub' ),
-				esc_url( admin_url( 'plugins.php?s=captcha&plugin_status=all' ) )
+				\esc_url( \admin_url( 'plugins.php?s=captcha&plugin_status=all' ) )
 			)
 		);
 
@@ -638,7 +638,7 @@ class Health_Check {
 			'test'        => 'test_wp_cron',
 		);
 
-		if ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) {
+		if ( \defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) {
 			$result['status']         = 'recommended';
 			$result['label']          = \__( 'WP-Cron is disabled', 'activitypub' );
 			$result['badge']['color'] = 'orange';
@@ -964,9 +964,8 @@ class Health_Check {
 	 * @return bool|\WP_Error True if accessible, WP_Error otherwise.
 	 */
 	public static function is_rest_api_accessible() {
-		// Test the application actor's inbox endpoint (always available).
-		$actor = Actors::get_by_id( Actors::APPLICATION_USER_ID );
-		$url   = $actor->get_inbox();
+		// Test the Application endpoint (always available, publicly readable via GET).
+		$url = Application::get_id();
 
 		/*
 		 * Make an unauthenticated request. wp_safe_remote_get() guards against
