@@ -52,13 +52,8 @@ class Quote_Request {
 		}
 
 		$quoted_uri = $object->get_quote();
-
-		if ( ! $quoted_uri ) {
-			return;
-		}
-
-		$post_id = \url_to_postid( object_to_uri( $object->get_id() ) );
-		$post    = $post_id ? \get_post( $post_id ) : null;
+		$post_id    = \url_to_postid( object_to_uri( $object->get_id() ) );
+		$post       = $post_id ? \get_post( $post_id ) : null;
 
 		if ( ! $post ) {
 			return;
@@ -71,11 +66,19 @@ class Quote_Request {
 			return;
 		}
 
-		// The quoted URL changed: the old answer and the old request no longer apply.
-		if ( $sent_for ) {
+		/*
+		 * The quoted URL changed, or the quote is gone: the old answer and the old request no longer
+		 * apply. A declined quote is left out of the activity too, so whether the quote is gone is a
+		 * question for the post, not for the activity.
+		 */
+		if ( $sent_for && ( $quoted_uri || ! \has_block( 'activitypub/quote', $post ) ) ) {
 			\delete_post_meta( $post->ID, '_activitypub_quote_authorization' );
 			\delete_post_meta( $post->ID, '_activitypub_quote_rejected' );
 			\delete_post_meta( $post->ID, '_activitypub_quote_request' );
+		}
+
+		if ( ! $quoted_uri ) {
+			return;
 		}
 
 		$quoted = Http::get_remote_object( $quoted_uri );

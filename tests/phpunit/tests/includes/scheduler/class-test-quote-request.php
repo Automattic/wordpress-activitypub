@@ -174,6 +174,38 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 	}
 
 	/**
+	 * Removing the quote block clears the handshake state, so quoting the same URL again asks anew.
+	 *
+	 * @covers ::maybe_send_request
+	 */
+	public function test_removed_quote_clears_request_meta() {
+		$post_id = $this->create_quote_post();
+		\update_post_meta( $post_id, '_activitypub_quote_rejected', '1' );
+
+		\wp_update_post(
+			array(
+				'ID'           => $post_id,
+				'post_content' => '<!-- wp:paragraph --><p>Never mind.</p><!-- /wp:paragraph -->',
+			)
+		);
+
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_request', true ) );
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_rejected', true ) );
+		$this->assertCount( 1, $this->get_quote_requests( $post_id ), 'Removing the quote sends no request.' );
+
+		// The same URL is quoted again, and is asked for permission again.
+		\wp_update_post(
+			array(
+				'ID'           => $post_id,
+				'post_content' => '<!-- wp:activitypub/quote {"url":"https://remote.example/notes/1"} /-->',
+			)
+		);
+
+		$this->assertCount( 2, $this->get_quote_requests( $post_id ) );
+		$this->assertSame( 'https://remote.example/notes/1', \get_post_meta( $post_id, '_activitypub_quote_request', true ) );
+	}
+
+	/**
 	 * No request for stamped, rejected or non-quote posts.
 	 *
 	 * @covers ::maybe_send_request
