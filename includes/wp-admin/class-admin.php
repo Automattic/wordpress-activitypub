@@ -355,7 +355,8 @@ class Admin {
 			\wp_enqueue_script( 'updates' );
 		}
 
-		if ( 'index.php' === $hook_suffix ) {
+		// The tool box on the Tools screen needs the layout rules for its cards, and is only added with block support.
+		if ( ( 'tools.php' === $hook_suffix && site_supports_blocks() ) || 'index.php' === $hook_suffix ) {
 			\wp_enqueue_style(
 				'activitypub-admin-styles',
 				\plugins_url(

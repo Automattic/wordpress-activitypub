@@ -354,7 +354,7 @@ function enrich_content_data( $content, $regex, $regex_callback ) {
  * Get an ActivityPub embed HTML for a URL.
  *
  * @param string  $url        The URL to get the embed for.
- * @param boolean $inline_css Whether to inline CSS. Default true.
+ * @param boolean $inline_css Optional. Whether to inline CSS. Default true.
  *
  * @return string|false The embed HTML or false if not found.
  */

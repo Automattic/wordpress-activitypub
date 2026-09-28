@@ -23,6 +23,7 @@ use Activitypub\Webfinger;
  */
 class Proxy_Controller extends \WP_REST_Controller {
 	use Event_Stream;
+	use Reader_Permission;
 	use Verification;
 
 	/**
@@ -58,6 +59,11 @@ class Proxy_Controller extends \WP_REST_Controller {
 					 * not a write in the sense `write` grants.
 					 */
 					'permission_callback' => function ( $request ) {
+						// Editors use this from the block editor with a cookie + nonce; apps use OAuth.
+						if ( ! \is_wp_error( $this->check_reader_capability() ) ) {
+							return true;
+						}
+
 						return $this->verify_authentication( $request, Scope::READ );
 					},
 					'args'                => array(

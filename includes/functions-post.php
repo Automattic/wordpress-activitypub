@@ -471,3 +471,51 @@ function get_content_visibility( $post_id ) {
 	 */
 	return \apply_filters( 'activitypub_content_visibility', $_visibility, $post );
 }
+
+/**
+ * Get the quote intent URI as a JavaScript URI.
+ *
+ * @since unreleased
+ *
+ * @return string The quote intent URI.
+ */
+function get_quote_intent_js() {
+	return \sprintf(
+		'javascript:(()=>{window.open(\'%s\'+encodeURIComponent(window.location.href));})();',
+		get_quote_intent_url()
+	);
+}
+
+/**
+ * Get the quote intent URI.
+ *
+ * @since unreleased
+ *
+ * @return string The quote intent URI.
+ */
+function get_quote_intent_url() {
+	/**
+	 * Filters the quote intent parameters.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array $params The quote intent parameters.
+	 */
+	$params = \apply_filters( 'activitypub_quote_intent_params', array() );
+
+	$params += array( 'quotation_of' => '' );
+	$query   = \http_build_query( $params );
+	$path    = 'post-new.php?' . $query;
+	$url     = \admin_url( $path );
+
+	/**
+	 * Filters the quote intent URL.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $url The quote intent URL.
+	 */
+	$url = \apply_filters( 'activitypub_quote_intent_url', $url );
+
+	return \esc_url_raw( $url );
+}
