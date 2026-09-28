@@ -60,18 +60,45 @@ trait Remote_Request_Stub {
 		}
 
 		if ( \is_int( $answer ) ) {
-			return array(
-				'response' => array( 'code' => $answer ),
-				'body'     => '',
-				'headers'  => array(),
+			return $this->served_from(
+				$url,
+				array(
+					'response' => array( 'code' => $answer ),
+					'body'     => '',
+					'headers'  => array(),
+				)
 			);
 		}
 
-		return array(
-			'response' => array( 'code' => 200 ),
-			'body'     => \wp_json_encode( $answer ),
-			'headers'  => array( 'content-type' => 'application/activity+json' ),
+		return $this->served_from(
+			$url,
+			array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode( $answer ),
+				'headers'  => array( 'content-type' => 'application/activity+json' ),
+			)
 		);
+	}
+
+	/**
+	 * Name the URL a response was served from, the way the HTTP API does.
+	 *
+	 * A real response carries the `http_response` object `Http::effective_url()` reads, so the
+	 * stub carries it too: without it the proxy cannot tell where a document came from, and a
+	 * test would silently exercise that case instead of the ordinary one.
+	 *
+	 * @param string $url      The URL the response was served from.
+	 * @param array  $response The response.
+	 *
+	 * @return array The response, with its origin named.
+	 */
+	protected function served_from( $url, $response ) {
+		$requests_response      = new \WpOrg\Requests\Response();
+		$requests_response->url = $url;
+
+		$response['http_response'] = new \WP_HTTP_Requests_Response( $requests_response );
+
+		return $response;
 	}
 
 	/**
@@ -83,9 +110,6 @@ trait Remote_Request_Stub {
 	 * @return array The response.
 	 */
 	protected function redirected( $served_from, $answer ) {
-		$requests_response      = new \WpOrg\Requests\Response();
-		$requests_response->url = $served_from;
-
 		$response = \is_int( $answer )
 			? array(
 				'response' => array( 'code' => $answer ),
@@ -96,9 +120,8 @@ trait Remote_Request_Stub {
 				'body'     => \wp_json_encode( $answer ),
 			);
 
-		$response['headers']       = array();
-		$response['http_response'] = new \WP_HTTP_Requests_Response( $requests_response );
+		$response['headers'] = array();
 
-		return $response;
+		return $this->served_from( $served_from, $response );
 	}
 }

@@ -123,11 +123,20 @@ class Proxy {
 		$object    = self::fetch_verified( $url, $final_url );
 
 		/*
+		 * Nothing is cached unless the response named the URL it came from. `effective_url()`
+		 * cannot always tell, most often because another plugin answered `pre_http_request`,
+		 * and a document whose origin is unknown must not be filed under the id it claims: an
+		 * open redirect on the requested host would otherwise be enough to put a document, and
+		 * its public key, under a name belonging to someone else.
+		 */
+		$origin_known = '' !== $final_url;
+
+		/*
 		 * Never file under the requested URL what another host served: a one-off open
 		 * redirect on the requested host would otherwise let that host's key carry the
 		 * other host's document, or its outage, for the whole lifetime of the entry.
 		 */
-		$same_host = is_same_host( $url, $final_url );
+		$same_host = $origin_known && is_same_host( $url, $final_url );
 
 		if ( \is_wp_error( $object ) ) {
 			// A call that bypassed the cache must not leave a failure behind for the others.
@@ -151,7 +160,7 @@ class Proxy {
 		// The declared id confirmed itself, so it is the canonical entry.
 		$canonical = ! empty( $object['id'] ) && \is_string( $object['id'] ) ? $object['id'] : '';
 
-		if ( '' !== $canonical ) {
+		if ( $origin_known && '' !== $canonical ) {
 			self::cache_set( $canonical, $object, $ttl );
 		}
 
@@ -273,8 +282,9 @@ class Proxy {
 	 * it declares, which has to confirm it. One hop only.
 	 *
 	 * @param string $url       The URL to fetch.
-	 * @param string $final_url Set to the URL the object was served from. For a failure, the URL
-	 *                          that served the document which failed to confirm.
+	 * @param string $final_url Set to the URL the object was served from, empty when the response
+	 *                          does not name it. For a failure, the URL that served the document
+	 *                          which failed to confirm.
 	 *
 	 * @return array|\WP_Error The object, or an error.
 	 */
@@ -286,7 +296,7 @@ class Proxy {
 		}
 
 		// Trust the document when it is served under its own id (after redirects).
-		if ( id_matches_url( $object, $final_url ) ) {
+		if ( id_matches_url( $object, '' !== $final_url ? $final_url : $url ) ) {
 			return $object;
 		}
 
@@ -305,7 +315,7 @@ class Proxy {
 			return $object;
 		}
 
-		if ( ! id_matches_url( $object, $final_url ) ) {
+		if ( ! id_matches_url( $object, '' !== $final_url ? $final_url : $declared_id ) ) {
 			$final_url = $first_hop;
 
 			return new \WP_Error(
@@ -322,12 +332,13 @@ class Proxy {
 	 * Fetch a URL and decode the JSON it serves.
 	 *
 	 * @param string $url       The URL to fetch.
-	 * @param string $final_url Set to the URL the response was served from, after redirects.
+	 * @param string $final_url Set to the URL the response was served from, after redirects, and
+	 *                          left empty when the response does not name it.
 	 *
 	 * @return array|\WP_Error The decoded object, or an error.
 	 */
 	private static function fetch( $url, &$final_url ) {
-		$final_url = $url;
+		$final_url = '';
 
 		if ( ! \wp_http_validate_url( $url ) ) {
 			return new \WP_Error(

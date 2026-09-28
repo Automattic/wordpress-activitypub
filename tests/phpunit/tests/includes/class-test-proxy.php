@@ -285,6 +285,39 @@ class Test_Proxy extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A document whose origin the response does not name is returned but never cached.
+	 *
+	 * `Http::effective_url()` cannot always tell where a response came from, most often because
+	 * another plugin answered `pre_http_request`. Caching a document under the id it claims
+	 * would then rest on the requested URL alone, which a redirect may have left behind.
+	 *
+	 * @covers ::get
+	 */
+	public function test_a_document_of_unknown_origin_is_not_cached() {
+		$id = 'https://example.com/notes/1';
+
+		// A response without the `http_response` object the HTTP API normally carries.
+		$this->responses[ $id ] = array(
+			'response' => array( 'code' => 200 ),
+			'headers'  => array( 'content-type' => 'application/activity+json' ),
+			'body'     => \wp_json_encode(
+				array(
+					'id'   => $id,
+					'type' => 'Note',
+				)
+			),
+		);
+
+		$first  = Proxy::get( $id );
+		$before = $this->requests;
+		$second = Proxy::get( $id );
+
+		$this->assertSame( $id, $first['id'] ?? null, 'The document is still returned.' );
+		$this->assertSame( $first, $second );
+		$this->assertSame( $before + 1, $this->requests, 'Nothing was cached, so it is fetched again.' );
+	}
+
+	/**
 	 * The deprecated entry point goes through the proxy and its cache.
 	 *
 	 * @expectedDeprecated Activitypub\Http::get_remote_object
@@ -377,10 +410,13 @@ class Test_Proxy extends \WP_UnitTestCase {
 	 */
 	public function test_invalid_json_is_remembered_like_a_client_error() {
 		$id                     = 'https://example.com/notes/html';
-		$this->responses[ $id ] = array(
-			'response' => array( 'code' => 200 ),
-			'body'     => '<html></html>',
-			'headers'  => array(),
+		$this->responses[ $id ] = $this->served_from(
+			$id,
+			array(
+				'response' => array( 'code' => 200 ),
+				'body'     => '<html></html>',
+				'headers'  => array(),
+			)
 		);
 
 		$this->assertWPError( Proxy::get( $id ) );
