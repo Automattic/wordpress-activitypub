@@ -11,7 +11,9 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Model\Blog;
 use Activitypub\Model\User;
+use Activitypub\OAuth\Scope;
 use Activitypub\Rest\Actor_Autocomplete_Controller;
+use Activitypub\Tests\OAuth_Token_Stub;
 
 /**
  * Tests for the Actor Autocomplete REST endpoint.
@@ -20,6 +22,8 @@ use Activitypub\Rest\Actor_Autocomplete_Controller;
  * @coversDefaultClass \Activitypub\Rest\Actor_Autocomplete_Controller
  */
 class Test_Actor_Autocomplete_Controller extends \WP_UnitTestCase {
+	use OAuth_Token_Stub;
+
 
 	/**
 	 * Set up before each test: register the route and cache a remote actor.
@@ -48,6 +52,7 @@ class Test_Actor_Autocomplete_Controller extends \WP_UnitTestCase {
 	 * Tear down.
 	 */
 	public function tear_down() {
+		$this->set_oauth_current_token( null );
 		\delete_option( 'activitypub_api' );
 		\remove_filter( 'activitypub_oauth_check_permission', '__return_true' );
 
@@ -286,5 +291,24 @@ class Test_Actor_Autocomplete_Controller extends \WP_UnitTestCase {
 		\delete_option( 'activitypub_api' );
 
 		$this->assertArrayNotHasKey( 'actorAutocomplete', ( new Blog() )->get_endpoints() );
+	}
+
+	/**
+	 * Test that the autocomplete needs the read scope.
+	 *
+	 * @covers ::register_routes
+	 */
+	public function test_autocomplete_requires_read_scope() {
+		$user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		\wp_set_current_user( $user_id );
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::WRITE ), $user_id ) );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/autocomplete' );
+		$request->set_param( 'q', 'alice' );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertSame( 403, $response->get_status() );
+		$this->assertSame( 'activitypub_insufficient_scope', $response->get_data()['code'] );
 	}
 }

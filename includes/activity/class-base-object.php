@@ -49,6 +49,7 @@ use Activitypub\Activity\Extended_Object\Place;
  * @method string|null             get_preview()            Gets the entity that provides a preview of this object.
  * @method string|null             get_published()          Gets the date and time the object was published in ISO 8601 format.
  * @method string|null             get_quote()              Gets the quote property of the object (FEP-044f).
+ * @method string|null             get_quote_authorization() Gets the quoteAuthorization stamp URI of a quote post (FEP-044f).
  * @method string|null             get_quote_url()          Gets the quoteUrl property of the object.
  * @method string|null             get_quote_uri()          Gets the quoteUri property of the object.
  * @method string|null             get__misskey_quote()     Gets the _misskey_quote property of the object.
@@ -96,6 +97,7 @@ use Activitypub\Activity\Extended_Object\Place;
  * @method Base_Object set_preview( string $preview )                  Sets the entity that provides a preview of this object.
  * @method Base_Object set_published( string|null $published )         Sets the date and time the object was published in ISO 8601 format.
  * @method Base_Object set_quote( string $quote )                      Sets the quote property of the object (FEP-044f).
+ * @method Base_Object set_quote_authorization( string $quote_authorization ) Sets the quoteAuthorization stamp URI of a quote post (FEP-044f).
  * @method Base_Object set_quote_url( string $quote_url )              Sets the quoteUrl property of the object.
  * @method Base_Object set_quote_uri( string $quote_uri )              Sets the quoteUri property of the object.
  * @method Base_Object set__misskey_quote( mixed $misskey_quote )      Sets the _misskey_quote property of the object.
@@ -124,45 +126,56 @@ class Base_Object extends Generic_Object {
 		'https://www.w3.org/ns/activitystreams',
 		'https://purl.archive.org/miscellany',
 		array(
-			'dcterms'           => 'http://purl.org/dc/terms/',
-			'gts'               => 'https://gotosocial.org/ns#',
-			'schema'            => 'http://schema.org/',
-			'exifData'          => 'schema:exifData',
-			'PropertyValue'     => 'schema:PropertyValue',
-			'interactionPolicy' => array(
+			'dcterms'            => 'http://purl.org/dc/terms/',
+			'gts'                => 'https://gotosocial.org/ns#',
+			'schema'             => 'http://schema.org/',
+			'exifData'           => 'schema:exifData',
+			'PropertyValue'      => 'schema:PropertyValue',
+			'interactionPolicy'  => array(
 				'@id'   => 'gts:interactionPolicy',
 				'@type' => '@id',
 			),
-			'canQuote'          => array(
+			'canQuote'           => array(
 				'@id'   => 'gts:canQuote',
 				'@type' => '@id',
 			),
-			'canReply'          => array(
+			'canReply'           => array(
 				'@id'   => 'gts:canReply',
 				'@type' => '@id',
 			),
-			'canLike'           => array(
+			'canLike'            => array(
 				'@id'   => 'gts:canLike',
 				'@type' => '@id',
 			),
-			'canAnnounce'       => array(
+			'canAnnounce'        => array(
 				'@id'   => 'gts:canAnnounce',
 				'@type' => '@id',
 			),
-			'automaticApproval' => array(
+			'automaticApproval'  => array(
 				'@id'   => 'gts:automaticApproval',
 				'@type' => '@id',
 			),
-			'manualApproval'    => array(
+			'manualApproval'     => array(
 				'@id'   => 'gts:manualApproval',
 				'@type' => '@id',
 			),
-			'always'            => array(
+			'always'             => array(
 				'@id'   => 'gts:always',
 				'@type' => '@id',
 			),
-			'toot'              => 'http://joinmastodon.org/ns#',
-			'blurhash'          => 'toot:blurhash',
+			'toot'               => 'http://joinmastodon.org/ns#',
+			'blurhash'           => 'toot:blurhash',
+			'fep044f'            => 'https://w3id.org/fep/044f#',
+			'quote'              => array(
+				'@id'   => 'fep044f:quote',
+				'@type' => '@id',
+			),
+			'quoteAuthorization' => array(
+				'@id'   => 'fep044f:quoteAuthorization',
+				'@type' => '@id',
+			),
+			'quoteUri'           => 'http://fedibird.com/ns#quoteUri',
+			'_misskey_quote'     => 'https://misskey-hub.net/ns#_misskey_quote',
 		),
 	);
 
@@ -625,6 +638,18 @@ class Base_Object extends Generic_Object {
 	 * @var string|null
 	 */
 	protected $_misskey_quote; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore
+
+	/**
+	 * Fediverse Enhancement Proposal 044f: Quote Authorization stamp.
+	 *
+	 * URI of the QuoteAuthorization object issued by the quoted author.
+	 *
+	 * @see https://w3id.org/fep/044f#quoteAuthorization
+	 * @since unreleased
+	 *
+	 * @var string|null
+	 */
+	protected $quote_authorization;
 
 	/**
 	 * Generic getter.

@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Hidden recipients of a received activity are no longer included when an app reads or streams your inbox.

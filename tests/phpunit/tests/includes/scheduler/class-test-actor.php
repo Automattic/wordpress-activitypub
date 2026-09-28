@@ -199,6 +199,7 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 		return array(
 			array( 'image', 'activitypub_header_image' ),
 			array( 'icon', 'site_icon' ),
+			array( 'icon', 'activitypub_blog_icon' ),
 		);
 	}
 
@@ -242,6 +243,7 @@ class Test_Actor extends \Activitypub\Tests\ActivityPub_Outbox_TestCase {
 			array( 'preferredUsername', 'activitypub_blog_identifier', 'blog' ),
 			array( 'summary', 'activitypub_blog_description', 'blog description' ),
 			array( 'name', 'blogname', 'test site' ),
+			array( 'name', 'activitypub_blog_name', 'custom name' ),
 		);
 	}
 

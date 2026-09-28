@@ -11,9 +11,12 @@ use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
+use Activitypub\Http;
 use Activitypub\Proxy;
 use Activitypub\Tombstone;
 
+use function Activitypub\add_to_outbox;
+use function Activitypub\is_same_actor;
 use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 
@@ -102,6 +105,11 @@ class Delete {
 			 * @see https://www.w3.org/TR/activitystreams-core/#example-1
 			 */
 			default:
+				// A bare URI may be a QuoteAuthorization stamp the quoted author revoked.
+				if ( self::revoke_quote_authorization( $activity, $user_ids ) ) {
+					break;
+				}
+
 				// Check if Object is an Actor.
 				if ( object_to_uri( $activity['object'] ) === $activity['actor'] ) {
 					self::delete_remote_actor( $activity, $user_ids );
@@ -111,6 +119,71 @@ class Delete {
 				// Maybe handle Delete Activity for other Object Types.
 				break;
 		}
+	}
+
+	/**
+	 * Revoke a QuoteAuthorization stamp the quoted author deleted.
+	 *
+	 * @since unreleased
+	 *
+	 * @param array     $activity The Activity object.
+	 * @param int[]|int $user_ids The local user IDs.
+	 *
+	 * @return bool True if a stamp on a local quote post was revoked.
+	 */
+	private static function revoke_quote_authorization( $activity, $user_ids ) {
+		$stamp_uri = object_to_uri( $activity['object'] ?? '' );
+		$actor     = object_to_uri( $activity['actor'] ?? '' );
+
+		// An actor deleting itself is never a stamp, and a stamp always lives on its issuer's host.
+		if ( ! $stamp_uri || $stamp_uri === $actor || ! is_same_host( $stamp_uri, $actor ) ) {
+			return false;
+		}
+
+		$posts = \get_posts(
+			array(
+				'post_type'   => \get_post_types_by_support( 'activitypub' ),
+				'post_status' => 'any',
+				'numberposts' => 1,
+				'meta_key'    => '_activitypub_quote_authorization', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_value'  => $stamp_uri, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+			)
+		);
+
+		if ( ! $posts ) {
+			return false;
+		}
+
+		$post = $posts[0];
+
+		// Only the quoted object's author may revoke the stamp.
+		$quoted_uri = \get_post_meta( $post->ID, '_activitypub_quote_request', true );
+		$quoted     = $quoted_uri ? Http::get_remote_object( $quoted_uri ) : null;
+
+		if ( ! $quoted || \is_wp_error( $quoted ) || empty( $quoted['attributedTo'] ) ) {
+			return false;
+		}
+
+		if ( ! is_same_actor( $actor, $quoted['attributedTo'] ) ) {
+			return false;
+		}
+
+		/*
+		 * Signature verification is deferred for Deletes, so the body is untrusted: the
+		 * revocation is honoured only if the stamp really no longer resolves.
+		 */
+		if ( ! Tombstone::exists( $stamp_uri ) ) {
+			return false;
+		}
+
+		\delete_post_meta( $post->ID, '_activitypub_quote_authorization' );
+
+		add_to_outbox( $post, 'Update', $post->post_author );
+
+		/** This action is documented in includes/handler/class-delete.php */
+		\do_action( 'activitypub_handled_delete', $activity, (array) $user_ids, true, $post );
+
+		return true;
 	}
 
 	/**
@@ -322,6 +395,7 @@ class Delete {
 	 * arrives.
 	 *
 	 * @since 8.2.0 The `$force_signature` parameter is now respected.
+	 * @since unreleased Limited to POST deliveries to an inbox route.
 	 *
 	 * @param bool             $defer           Whether to defer signature verification.
 	 * @param \WP_REST_Request $request         The request object.
@@ -331,6 +405,19 @@ class Delete {
 	 */
 	public static function defer_signature_verification( $defer, $request, $force_signature = false ) {
 		if ( $force_signature ) {
+			return $defer;
+		}
+
+		// Deliveries are POSTs; on any other method the body is not an activity we accept, so it must not waive verification.
+		if ( 'POST' !== $request->get_method() ) {
+			return $defer;
+		}
+
+		// Lowercased because routes match case-insensitively, so `/Inbox` reaches the same handler.
+		$route = \strtolower( $request->get_route() );
+
+		/* The carve-out is for inbox deliveries only: both the shared inbox and the per-actor inboxes end in `/inbox`. */
+		if ( ! \str_starts_with( $route, '/' . ACTIVITYPUB_REST_NAMESPACE . '/' ) || ! \str_ends_with( $route, '/inbox' ) ) {
 			return $defer;
 		}
 

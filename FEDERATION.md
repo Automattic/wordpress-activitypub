@@ -5,9 +5,10 @@ The WordPress plugin largely follows ActivityPub's server-to-server specificatio
 ## Supported federation protocols and standards
 
 - [ActivityPub](https://www.w3.org/TR/activitypub/) (Server-to-Server)
-- [ActivityPub API: Basic Profile](https://swicg.github.io/activitypub-api/basicprofile) (Client-to-Server, partial; see [OAuth 2.0 for Client-to-Server](#oauth-20-for-client-to-server))
-- [ActivityPub API: Server-Sent Events](https://swicg.github.io/activitypub-api/sse) (partial, see below)
 - [ActivityPub API: Actor Autocomplete](https://swicg.github.io/activitypub-api/autocomplete) (typeahead search over local and cached remote actors; requires the ActivityPub API to be enabled)
+- [ActivityPub API: Basic Profile](https://swicg.github.io/activitypub-api/basicprofile) (Client-to-Server, partial; see [OAuth 2.0 for Client-to-Server](#oauth-20-for-client-to-server))
+- [ActivityPub API: Seek Item](https://swicg.github.io/activitypub-api/seekitem) (followers, following, outbox, inbox, and liked collections)
+- [ActivityPub API: Server-Sent Events](https://swicg.github.io/activitypub-api/sse) (partial, see below)
 - [WebFinger](https://www.w3.org/community/reports/socialcg/CG-FINAL-apwf-20240608/)
 - [HTTP Signatures](https://swicg.github.io/activitypub-http-signature/)
 - [NodeInfo](https://nodeinfo.diaspora.software/)
@@ -59,6 +60,7 @@ The plugin supports the following actor types:
 - `Update` - Editing posts and comments
 - `Delete` - Removing posts and comments
 - `Announce` - Sharing/boosting content
+- `QuoteRequest` - Asking a remote author for permission to quote their post (see FEP-044f)
 - `Like` - Liking content
 - `Follow` - Following remote actors
 - `Move` - Actor migration (see FEP-7628)
@@ -144,6 +146,13 @@ The context is included as `https://purl.archive.org/miscellany`.
 
 - `dcterms:subject` - Content warnings (see FEP-b2b8)
 
+**[FEP-044f](https://codeberg.org/fediverse/fep/src/branch/main/fep/044f/fep-044f.md)**
+
+- `Note` - `quote` and `quoteUri` for quote posts, `quoteAuthorization` once the quoted author accepted
+
+When a quoted author revokes a `QuoteAuthorization` by deleting the stamp, the plugin clears the stamp
+and sends an `Update` of the quote post, but does not forward the `Delete` to the post's audience.
+
 **[GoToSocial](https://gotosocial.org/ns)**
 
 - `gts:interactionPolicy` - Interaction policies for objects
@@ -180,7 +189,7 @@ The context is included as `https://purl.archive.org/miscellany`.
 
 ### Server-Sent Events (SSE)
 
-The plugin provides real-time streaming of collection changes via [Server-Sent Events](https://swicg.github.io/activitypub-api/sse). Requires OAuth authentication with the `push` scope.
+The plugin provides real-time streaming of collection changes via [Server-Sent Events](https://swicg.github.io/activitypub-api/sse). Requires OAuth authentication with the `read` scope.
 
 **Supported features:**
 

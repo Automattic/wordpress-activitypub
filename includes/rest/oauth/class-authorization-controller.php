@@ -321,9 +321,9 @@ class Authorization_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		// Verify nonce.
+		// Verify nonce. It is bound to the client, so a consent form for one app can't approve another.
 		$nonce = $request->get_param( '_wpnonce' );
-		if ( ! \wp_verify_nonce( $nonce, 'activitypub_oauth_authorize' ) ) {
+		if ( ! \wp_verify_nonce( $nonce, 'activitypub_oauth_authorize_' . $request->get_param( 'client_id' ) ) ) {
 			return new \WP_Error(
 				'activitypub_invalid_nonce',
 				\__( 'Invalid security token. Please try again.', 'activitypub' ),

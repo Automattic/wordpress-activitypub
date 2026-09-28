@@ -34,6 +34,10 @@ class Actor {
 			\add_action( 'update_option_activitypub_blog_identifier', array( self::class, 'blog_user_update' ) );
 			\add_action( 'add_option_activitypub_blog_description', array( self::class, 'blog_user_update' ) );
 			\add_action( 'update_option_activitypub_blog_description', array( self::class, 'blog_user_update' ) );
+			\add_action( 'add_option_activitypub_blog_name', array( self::class, 'blog_user_update' ) );
+			\add_action( 'update_option_activitypub_blog_name', array( self::class, 'blog_user_update' ) );
+			\add_action( 'add_option_activitypub_blog_icon', array( self::class, 'blog_user_update' ) );
+			\add_action( 'update_option_activitypub_blog_icon', array( self::class, 'blog_user_update' ) );
 			\add_filter( 'pre_set_theme_mod_custom_logo', array( self::class, 'blog_user_update' ) );
 			\add_filter( 'pre_set_theme_mod_header_image', array( self::class, 'blog_user_update' ) );
 		}

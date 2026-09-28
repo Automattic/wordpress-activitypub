@@ -184,8 +184,8 @@ class User_Settings_Fields {
 	 */
 	public static function header_image_callback() {
 		$header_image              = \get_user_option( 'activitypub_header_image', \get_current_user_id() );
-		$classes_for_upload_button = 'button upload-button button-add-media button-add-header-image';
-		$classes_for_update_button = 'button';
+		$classes_for_upload_button = 'button upload-button button-add-media button-add-header-image activitypub-media-picker-button';
+		$classes_for_update_button = 'button activitypub-media-picker-button';
 		$classes_for_wrapper       = '';
 
 		if ( (int) $header_image ) {
@@ -211,6 +211,12 @@ class User_Settings_Fields {
 			data-update="<?php \esc_attr_e( 'Set as Header Image', 'activitypub' ); ?>"
 			data-width="1500"
 			data-height="500"
+			data-context="activitypub-header-image"
+			data-preview="#activitypub-header-image-preview"
+			data-preview-wrapper="#activitypub-header-image-preview-wrapper"
+			data-input="#activitypub_header_image"
+			data-remove="#activitypub-remove-header-image"
+			data-preview-label="<?php \esc_attr_e( 'Header Image', 'activitypub' ); ?>"
 			<?php
 			if ( ! \current_user_can( 'edit_others_posts' ) ) :
 				\printf( 'data-user-id="%s"', \esc_attr( \get_current_user_id() ) );

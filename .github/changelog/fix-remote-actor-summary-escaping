@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Descriptions of remote accounts with quotes or links in them are no longer saved with stray backslashes.

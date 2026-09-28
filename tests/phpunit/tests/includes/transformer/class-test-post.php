@@ -2523,4 +2523,184 @@ class Test_Post extends \WP_UnitTestCase {
 		$this->assertSame( 'Tombstone', $array['type'] );
 		$this->assertSame( 'Article', $array['formerType'] );
 	}
+
+	/**
+	 * A Quote block sets the FEP-044f quote properties and cc's the quoted author.
+	 *
+	 * @covers ::get_quote
+	 * @covers ::to_object
+	 */
+	public function test_quote_block_sets_quote_properties_and_audience() {
+		$filter_remote_object = function ( $pre, $url ) {
+			if ( 'https://remote.example/notes/1' === $url ) {
+				return array(
+					'id'           => 'https://remote.example/notes/1',
+					'attributedTo' => 'https://remote.example/users/alice',
+				);
+			}
+			return $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object, 10, 2 );
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:paragraph --><p>My take.</p><!-- /wp:paragraph -->' . PHP_EOL .
+									'<!-- wp:activitypub/quote {"url":"https://remote.example/notes/1"} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$object = Post::transform( \get_post( $post_id ) )->to_object();
+		$array  = $object->to_array();
+
+		$this->assertSame( 'https://remote.example/notes/1', $array['quote'] );
+		$this->assertSame( 'https://remote.example/notes/1', $array['quoteUri'] );
+		$this->assertSame( 'https://remote.example/notes/1', $array['_misskey_quote'] );
+		$this->assertArrayNotHasKey( 'quoteAuthorization', $array );
+		$this->assertContains( 'https://remote.example/users/alice', $array['cc'] );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter_remote_object );
+	}
+
+	/**
+	 * The stamp URI from post meta is emitted as quoteAuthorization.
+	 *
+	 * @covers ::get_quote_authorization
+	 */
+	public function test_quote_authorization_from_meta() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:activitypub/quote {"url":"https://remote.example/notes/1"} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+		\update_post_meta( $post_id, '_activitypub_quote_request', 'https://remote.example/notes/1' );
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+
+		$array = Post::transform( \get_post( $post_id ) )->to_object()->to_array();
+
+		$this->assertSame( 'https://remote.example/stamps/1', $array['quoteAuthorization'] );
+	}
+
+	/**
+	 * A rejected quote emits no quote properties at all.
+	 *
+	 * @covers ::get_quote
+	 */
+	public function test_rejected_quote_emits_no_quote_properties() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:activitypub/quote {"url":"https://remote.example/notes/1"} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+		\update_post_meta( $post_id, '_activitypub_quote_rejected', '1' );
+		\update_post_meta( $post_id, '_activitypub_quote_request', 'https://remote.example/notes/1' );
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+
+		$array = Post::transform( \get_post( $post_id ) )->to_object()->to_array();
+
+		$this->assertArrayNotHasKey( 'quote', $array );
+		$this->assertArrayNotHasKey( 'quoteUri', $array );
+		$this->assertArrayNotHasKey( '_misskey_quote', $array );
+		$this->assertArrayNotHasKey( 'quoteAuthorization', $array );
+	}
+
+	/**
+	 * A stamp bound to a different URL than the current quote block is not emitted.
+	 *
+	 * @covers ::get_quote_authorization
+	 */
+	public function test_quote_authorization_not_emitted_for_other_url() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:activitypub/quote {"url":"https://remote.example/notes/2"} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+		\update_post_meta( $post_id, '_activitypub_quote_request', 'https://remote.example/notes/1' );
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
+
+		$array = Post::transform( \get_post( $post_id ) )->to_object()->to_array();
+
+		$this->assertSame( 'https://remote.example/notes/2', $array['quote'] );
+		$this->assertArrayNotHasKey( 'quoteAuthorization', $array );
+	}
+
+	/**
+	 * A rejection bound to a different URL than the current quote block does not apply.
+	 *
+	 * @covers ::get_quote
+	 */
+	public function test_rejection_does_not_apply_to_new_url() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:activitypub/quote {"url":"https://remote.example/notes/2"} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+		\update_post_meta( $post_id, '_activitypub_quote_rejected', '1' );
+		\update_post_meta( $post_id, '_activitypub_quote_request', 'https://remote.example/notes/1' );
+
+		$array = Post::transform( \get_post( $post_id ) )->to_object()->to_array();
+
+		$this->assertSame( 'https://remote.example/notes/2', $array['quote'] );
+	}
+
+	/**
+	 * Invalid or second quote blocks are ignored; only the first valid one counts.
+	 *
+	 * @covers ::get_quote
+	 */
+	public function test_quote_block_first_valid_wins() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:activitypub/quote {"url":"https://remote.example/notes/bad","isValidActivityPub":false} /-->' . PHP_EOL .
+									'<!-- wp:activitypub/quote {"url":"https://remote.example/notes/1"} /-->' . PHP_EOL .
+									'<!-- wp:activitypub/quote {"url":"https://remote.example/notes/2"} /-->',
+				'post_status'  => 'publish',
+			)
+		);
+
+		$this->assertSame( 'https://remote.example/notes/1', Post::transform( \get_post( $post_id ) )->get_quote() );
+	}
+
+	/**
+	 * A content warning is emitted as the FEP-b2b8 dcterms:subject term next to summary/sensitive.
+	 *
+	 * @covers ::to_object
+	 */
+	public function test_content_warning_emits_dcterms_subject() {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_content' => '<!-- wp:paragraph --><p>Spoilers inside.</p><!-- /wp:paragraph -->',
+				'post_status'  => 'publish',
+			)
+		);
+		\update_post_meta( $post_id, 'activitypub_content_warning', 'Spoilers' );
+
+		$object = Post::transform( \get_post( $post_id ) )->to_object();
+		$array  = $object->to_array();
+
+		$this->assertTrue( $array['sensitive'] );
+		$this->assertSame( 'Spoilers', $array['summary'] );
+		$this->assertSame( 'Spoilers', $array['dcterms:subject'] );
+		$this->assertArrayNotHasKey( 'dcterms', $array );
+
+		$this->assertStringContainsString( '"dcterms:subject":"Spoilers"', $object->to_json() );
+	}
+
+	/**
+	 * Without a content warning no dcterms term is emitted.
+	 *
+	 * @covers ::to_object
+	 */
+	public function test_no_dcterms_without_content_warning() {
+		$post_id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+
+		$array = Post::transform( \get_post( $post_id ) )->to_object()->to_array();
+
+		$this->assertArrayNotHasKey( 'dcterms:subject', $array );
+		$this->assertArrayNotHasKey( 'dcterms', $array );
+	}
 }

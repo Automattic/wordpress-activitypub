@@ -432,11 +432,16 @@ class Server {
 		$scopes       = Scope::validate( Scope::parse( $authorize_params['scope'] ) ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 
 		// Build form action URL.
+		// The values must be encoded: add_query_arg() does not encode them, so raw
+		// reserved characters in the OAuth params would break the query string.
 		// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$form_url = \add_query_arg(
-			\array_merge( array( 'action' => 'activitypub_authorize' ), $authorize_params ),
+			\array_merge( array( 'action' => 'activitypub_authorize' ), \array_map( 'rawurlencode', $authorize_params ) ),
 			\wp_login_url()
 		);
+
+		// Build the logout URL with the authorization request as the redirect target.
+		$logout_url = \wp_logout_url( $form_url ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
 
 		// Include the template.
 		include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-authorize.php'; // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- $authorize_params used in template.
@@ -446,15 +451,15 @@ class Server {
 	 * Process the OAuth authorization consent form submission.
 	 */
 	private static function process_authorize_form() {
-		// Verify nonce.
-		if ( ! isset( $_POST['_wpnonce'] ) || ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ) ), 'activitypub_oauth_authorize' ) ) {
+		// Verify nonce. It is bound to the client, so a consent form for one app can't approve another.
+		$client_id = isset( $_POST['client_id'] ) ? \sanitize_text_field( \wp_unslash( $_POST['client_id'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Part of the nonce action.
+		if ( ! isset( $_POST['_wpnonce'] ) || ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ) ), 'activitypub_oauth_authorize_' . $client_id ) ) {
 			$error_message = \__( 'Security check failed. Please try again.', 'activitypub' ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
 			include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-error.php';
 			exit;
 		}
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified above.
-		$client_id             = isset( $_POST['client_id'] ) ? \sanitize_text_field( \wp_unslash( $_POST['client_id'] ) ) : '';
 		$redirect_uri          = isset( $_POST['redirect_uri'] ) ? Sanitize::redirect_uri( \wp_unslash( $_POST['redirect_uri'] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized via Sanitize::redirect_uri().
 		$scope                 = isset( $_POST['scope'] ) ? \sanitize_text_field( \wp_unslash( $_POST['scope'] ) ) : '';
 		$state                 = isset( $_POST['state'] ) ? \wp_unslash( $_POST['state'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- OAuth state is opaque; must be round-tripped exactly.

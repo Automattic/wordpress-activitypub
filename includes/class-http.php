@@ -194,7 +194,13 @@ class Http {
 				// Lets callers that cache the failure apply the same cross-host guard as below.
 				$error_data['effective_url'] = $effective_url;
 			}
-			$response = new \WP_Error( $code, \__( 'Failed HTTP Request', 'activitypub' ), $error_data );
+
+			if ( \is_wp_error( $response ) ) {
+				// A transport failure (DNS, TLS, a timeout) names itself and has no response code, and a WP_Error built with 0 carries no code or message at all, so keep the one it came with.
+				$response->add_data( $error_data );
+			} else {
+				$response = new \WP_Error( $code, \__( 'Failed HTTP Request', 'activitypub' ), $error_data );
+			}
 
 			/*
 			 * Cache errors to prevent repeated timeout waits, but never one reached via a

@@ -12,7 +12,9 @@ use Activitypub\Collection\Actors;
 use Activitypub\Collection\Inbox as Inbox_Collection;
 use Activitypub\Collection\Outbox;
 use Activitypub\Handler\Feature_Request;
+use Activitypub\OAuth\Scope;
 use Activitypub\Rest\Server;
+use Activitypub\Tests\OAuth_Token_Stub;
 
 /**
  * Test class for Actors_Inbox_Controller.
@@ -21,6 +23,8 @@ use Activitypub\Rest\Server;
  * @coversDefaultClass \Activitypub\Rest\Actors_Inbox_Controller
  */
 class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controller_Testcase {
+	use OAuth_Token_Stub;
+
 	/**
 	 * Test user ID.
 	 *
@@ -73,6 +77,7 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 	 * Tear down the test.
 	 */
 	public function tear_down() {
+		$this->set_oauth_current_token( null );
 		\delete_option( 'permalink_structure' );
 
 		parent::tear_down();
@@ -908,5 +913,134 @@ class Test_Actors_Inbox_Controller extends \Activitypub\Tests\Test_REST_Controll
 		foreach ( $recipients as $user_id ) {
 			$this->assertContains( $user_id, $stored );
 		}
+	}
+
+	/**
+	 * A sender that omits the date must not leave the item date-less: the listing reports when the
+	 * activity arrived, and a date the sender did send is left alone.
+	 *
+	 * @covers ::prepare_item_for_response
+	 */
+	public function test_get_items_reports_the_received_date() {
+		// A UTC site cannot tell a converted date from an unconverted one.
+		\update_option( 'timezone_string', 'Europe/Berlin' );
+
+		$sent = '2026-01-02T03:04:05Z';
+
+		foreach ( array( null, $sent ) as $published ) {
+			$activity = array(
+				'id'     => 'https://remote.example.com/activities/' . \wp_generate_uuid4(),
+				'type'   => 'Create',
+				'actor'  => 'https://remote.example.com/users/testuser',
+				'to'     => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+				'object' => array(
+					'id'      => 'https://remote.example.com/objects/' . \wp_generate_uuid4(),
+					'type'    => 'Note',
+					'content' => 'Hello',
+				),
+			);
+
+			if ( $published ) {
+				$activity['published'] = $published;
+			}
+
+			$id = Inbox_Collection::add( \Activitypub\Activity\Activity::init_from_array( $activity ), self::$user_id );
+			$this->assertIsInt( $id );
+
+			\add_filter( 'activitypub_oauth_check_permission', '__return_true' );
+			\wp_set_current_user( self::$user_id );
+
+			$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/inbox' );
+			$request->set_param( 'page', 1 );
+
+			$response = \rest_do_request( $request );
+
+			\remove_filter( 'activitypub_oauth_check_permission', '__return_true' );
+
+			$items = \wp_list_filter( $response->get_data()['orderedItems'], array( 'id' => $activity['id'] ) );
+			$item  = \reset( $items );
+
+			$this->assertNotEmpty( $item, 'The stored activity must be listed.' );
+
+			if ( $published ) {
+				$this->assertSame( $published, $item['published'], 'A date the sender sent must be left alone.' );
+			} else {
+				$expected = \gmdate( ACTIVITYPUB_DATE_TIME_RFC3339, \strtotime( \get_post( $id )->post_date_gmt . ' GMT' ) );
+				$this->assertSame( $expected, $item['published'], 'A missing date must be reported as the arrival date, in UTC.' );
+			}
+		}
+
+		\delete_option( 'timezone_string' );
+	}
+
+	/**
+	 * The inbox listing must not disclose the blind audience the row stores for addressing, and it
+	 * carries the JSON-LD context on the collection rather than on every item.
+	 *
+	 * @covers ::prepare_item_for_response
+	 */
+	public function test_get_items_strips_the_blind_audience() {
+		$activity = \Activitypub\Activity\Activity::init_from_array(
+			array(
+				'@context' => 'https://www.w3.org/ns/activitystreams',
+				'id'       => 'https://remote.example.com/activities/' . \wp_generate_uuid4(),
+				'type'     => 'Create',
+				'actor'    => 'https://remote.example.com/users/testuser',
+				'to'       => array( 'https://www.w3.org/ns/activitystreams#Public' ),
+				'bto'      => array( 'https://remote.example.com/users/hidden' ),
+				'bcc'      => array( 'https://remote.example.com/users/also-hidden' ),
+				'object'   => array(
+					'id'      => 'https://remote.example.com/objects/' . \wp_generate_uuid4(),
+					'type'    => 'Note',
+					'content' => 'Hello',
+				),
+			)
+		);
+
+		$this->assertIsInt( Inbox_Collection::add( $activity, self::$user_id ) );
+
+		\add_filter( 'activitypub_oauth_check_permission', '__return_true' );
+		\wp_set_current_user( self::$user_id );
+
+		// A Collection request only returns links, so ask for the first page to get the items.
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/inbox' );
+		$request->set_param( 'page', 1 );
+
+		$response = \rest_do_request( $request );
+
+		\remove_filter( 'activitypub_oauth_check_permission', '__return_true' );
+
+		$this->assertSame( 200, $response->get_status() );
+
+		$items = $response->get_data()['orderedItems'];
+		$this->assertNotEmpty( $items );
+
+		foreach ( $items as $item ) {
+			$this->assertArrayNotHasKey( 'bto', $item, 'The blind audience must not be disclosed.' );
+			$this->assertArrayNotHasKey( 'bcc', $item, 'The blind audience must not be disclosed.' );
+			$this->assertArrayNotHasKey( '@context', $item, 'The collection carries the context, not each item.' );
+		}
+	}
+
+	/**
+	 * Test that the paged inbox needs the read scope.
+	 *
+	 * @covers ::register_routes
+	 */
+	public function test_get_items_requires_read_scope() {
+		\wp_set_current_user( self::$user_id );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors/' . self::$user_id . '/inbox' );
+
+		foreach ( array( Scope::PUSH, Scope::WRITE ) as $scope ) {
+			$this->set_oauth_current_token( $this->mock_oauth_token( array( $scope ), self::$user_id ) );
+			$response = \rest_get_server()->dispatch( $request );
+
+			$this->assertSame( 403, $response->get_status(), "A $scope token must not read the inbox." );
+			$this->assertSame( 'activitypub_insufficient_scope', $response->get_data()['code'] );
+		}
+
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::READ ), self::$user_id ) );
+		$this->assertSame( 200, \rest_get_server()->dispatch( $request )->get_status(), 'A read token reads the inbox.' );
 	}
 }

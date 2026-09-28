@@ -16,16 +16,29 @@ This file provides detailed testing patterns and examples. For basic test comman
 ```
 tests/phpunit/
 ├── bootstrap.php           # Test bootstrap file
-├── tests/
-│   ├── includes/           # Core functionality tests
-│   │   ├── class-test-*.php
-│   │   ├── handler/        # Handler tests
-│   │   ├── transformer/    # Transformer tests
-│   │   └── collection/     # Collection tests
-│   ├── integration/        # Integration tests
-│   └── rest/              # REST API tests
-└── fixtures/              # Test data files
+├── includes/               # Shared test helpers (base test cases, stubs, traits)
+├── data/                   # Fixtures, mocks and other test data
+└── tests/                  # The tests, mirroring the plugin's file structure
+    ├── includes/           # Tests for includes/, e.g. includes/rest/class-test-seek-controller.php
+    └── integration/        # Tests for integration/ (third-party plugin integrations)
 ```
+
+### One Test File per Source File
+
+Every test file mirrors the source file it tests: same path below `tests/phpunit/tests/`, file name prefixed with `class-test-`.
+
+| Source file | Test file |
+|---|---|
+| `includes/class-query.php` | `tests/phpunit/tests/includes/class-test-query.php` |
+| `includes/rest/class-seek-controller.php` | `tests/phpunit/tests/includes/rest/class-test-seek-controller.php` |
+| `includes/rest/trait-event-stream.php` | `tests/phpunit/tests/includes/rest/class-test-trait-event-stream.php` |
+| `integration/stream/class-connector.php` | `tests/phpunit/tests/integration/stream/class-test-connector.php` |
+
+- Add new tests to the existing test file of the source file they cover. Tests for a REST route go into the test file of the controller that registers it.
+- Do not create test files that span several source files. If a test needs a new kind of file, document the pattern here first.
+- Shared setup belongs in `tests/phpunit/includes/`, not in a test file.
+
+The pre-commit hook enforces this with `bin/precommit/check-test-file-location.js`. A few older test files predate the rule and are listed as exceptions there; do not add to that list.
 
 ### Test Groups
 

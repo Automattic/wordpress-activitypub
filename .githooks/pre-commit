@@ -53,6 +53,18 @@ if [ -n "$PHP_FILES" ]; then
     exit 1
   fi
 
+  # Check that test files mirror the source file they test.
+  MISPLACED_TESTS=0
+  for file in $PHP_FILES; do
+    if ! node bin/precommit/check-test-file-location.js "$file"; then
+      MISPLACED_TESTS=1
+    fi
+  done
+
+  if [ $MISPLACED_TESTS -eq 1 ]; then
+    exit 1
+  fi
+
   # Run PHP Code Sniffer on all changed PHP files at once.
   echo "$PHP_FILES" | xargs composer lint:fix > /dev/null 2>&1 || { echo "PHP formatting failed"; exit 1; }
 fi

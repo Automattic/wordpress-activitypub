@@ -251,8 +251,8 @@ class Generic_Object {
 				continue;
 			}
 
-			// Ignore all _prefixed keys.
-			if ( '_' === \substr( $key, 0, 1 ) ) {
+			// Underscore properties are internal unless the context declares them as wire terms.
+			if ( \str_starts_with( $key, '_' ) && ! $this->is_context_term( $key ) ) {
 				continue;
 			}
 
@@ -270,7 +270,8 @@ class Generic_Object {
 					$array[ snake_to_camel_case( $key ) . ':' . snake_to_camel_case( $sub_key ) ] = $sub_value;
 				}
 			} elseif ( isset( $value ) ) {
-				$array[ snake_to_camel_case( $key ) ] = $value;
+				// A property whose name is itself a declared context term is emitted verbatim; everything else is camelCased.
+				$array[ $this->is_context_term( $key ) ? $key : snake_to_camel_case( $key ) ] = $value;
 			}
 		}
 
@@ -358,6 +359,25 @@ class Generic_Object {
 	 */
 	public function get_json_ld_context() {
 		return static::JSON_LD_CONTEXT;
+	}
+
+	/**
+	 * Whether a property name is declared as a term in the JSON-LD context.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $key The property name as it appears on the wire.
+	 *
+	 * @return bool True if any associative part of the context declares the term.
+	 */
+	protected function is_context_term( $key ) {
+		foreach ( (array) static::JSON_LD_CONTEXT as $entry ) {
+			if ( \is_array( $entry ) && \array_key_exists( $key, $entry ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

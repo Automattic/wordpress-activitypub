@@ -93,4 +93,47 @@ class Test_Admin extends \WP_UnitTestCase {
 
 		$this->assertSame( '', Admin::get_comment_source_link( $comment_id ) );
 	}
+
+	/**
+	 * Saving the profile with a non-image header image id deletes the user option.
+	 *
+	 * @covers ::save_user_settings
+	 */
+	public function test_save_user_settings_rejects_non_image_header_image() {
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $user_id );
+
+		$attachment_id = self::factory()->attachment->create( array( 'post_mime_type' => 'text/plain' ) );
+		\update_user_option( $user_id, 'activitypub_header_image', 123 );
+
+		$_REQUEST['_apnonce']              = \wp_create_nonce( 'activitypub-user-settings' );
+		$_POST['activitypub_header_image'] = (string) $attachment_id;
+
+		Admin::save_user_settings( $user_id );
+
+		$this->assertFalse( \get_user_option( 'activitypub_header_image', $user_id ) );
+
+		unset( $_REQUEST['_apnonce'], $_POST['activitypub_header_image'] );
+	}
+
+	/**
+	 * Saving the profile with an image header image id stores the attachment id.
+	 *
+	 * @covers ::save_user_settings
+	 */
+	public function test_save_user_settings_stores_image_header_image() {
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		\wp_set_current_user( $user_id );
+
+		$attachment_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		$_REQUEST['_apnonce']              = \wp_create_nonce( 'activitypub-user-settings' );
+		$_POST['activitypub_header_image'] = (string) $attachment_id;
+
+		Admin::save_user_settings( $user_id );
+
+		$this->assertSame( $attachment_id, (int) \get_user_option( 'activitypub_header_image', $user_id ) );
+
+		unset( $_REQUEST['_apnonce'], $_POST['activitypub_header_image'] );
+	}
 }

@@ -137,7 +137,7 @@ class Settings {
 		switch ( $tab ) {
 			case 'blog-profile':
 				\wp_enqueue_media();
-				\wp_enqueue_script( 'activitypub-header-image' );
+				\wp_enqueue_script( 'activitypub-media-picker' );
 				break;
 			case 'settings':
 				\update_option( 'activitypub_checklist_settings_visited', '1' );

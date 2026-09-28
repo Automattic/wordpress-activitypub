@@ -185,6 +185,15 @@ class Router {
 				 */
 				$activitypub_template = \apply_filters( 'activitypub_preview_template', ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php' );
 			} else {
+				/*
+				 * A logged-in caller, by cookie or by bearer token, can be served owner-only
+				 * material such as a private outbox item. Neither credential is part of a shared
+				 * cache's key, so the response must not be stored.
+				 */
+				if ( \is_user_logged_in() && ! \headers_sent() ) {
+					\header( 'Cache-Control: private, no-store, max-age=0' );
+				}
+
 				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . 'templates/activitypub-json.php';
 			}
 		}

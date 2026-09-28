@@ -131,6 +131,15 @@ class Dispatcher {
 
 		$activity = Outbox::get_activity( $outbox_item );
 
+		if ( \is_wp_error( $activity ) ) {
+			// Nothing can be sent from a row we cannot read, so publish it and do not try again.
+			\wp_publish_post( $outbox_item );
+			// A rescheduled row can still carry the offset of the batch it was in, and reschedule() does not clear it.
+			\delete_post_meta( $outbox_item->ID, '_activitypub_outbox_offset' );
+
+			return;
+		}
+
 		// Send to mentioned and replied-to users. Everyone other than followers.
 		self::send_to_additional_inboxes( $activity, $outbox_item->post_author, $outbox_item );
 
@@ -171,6 +180,10 @@ class Dispatcher {
 		$activity = Outbox::get_activity( $outbox_item_id );
 
 		if ( \is_wp_error( $activity ) ) {
+			// Nothing can be sent from a row we cannot read, so publish it and do not try again.
+			\wp_publish_post( $outbox_item );
+			\delete_post_meta( $outbox_item_id, '_activitypub_outbox_offset' );
+
 			return;
 		}
 
@@ -251,11 +264,13 @@ class Dispatcher {
 	 * @return array The failed inboxes.
 	 */
 	private static function send_to_inboxes( $inboxes, $outbox_item_id ) {
-		$outbox_item = \get_post( $outbox_item_id );
-
 		$activity = Outbox::get_activity( $outbox_item_id );
 
 		if ( \is_wp_error( $activity ) ) {
+			// Nothing can be sent from a row we cannot read, so publish it and do not try again.
+			\wp_publish_post( $outbox_item_id );
+			\delete_post_meta( $outbox_item_id, '_activitypub_outbox_offset' );
+
 			return array();
 		}
 
@@ -271,6 +286,8 @@ class Dispatcher {
 		 * @param int    $outbox_item_id The Outbox item ID.
 		 */
 		\do_action( 'activitypub_pre_send_to_inboxes', $json, $inboxes, $outbox_item_id );
+
+		$outbox_item = \get_post( $outbox_item_id );
 
 		foreach ( $inboxes as $inbox ) {
 			// Handle local inboxes via internal REST API, remote via HTTP.
