@@ -285,6 +285,40 @@ class Test_Proxy extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A media-typed object cannot retire an entry on another host.
+	 *
+	 * `object_to_uri()` answers with `url` for an `Image` while the cache is keyed on `id`, so a
+	 * gate that compared one and evicted the other could be handed two different hosts. The check
+	 * and the eviction share one value for that reason.
+	 *
+	 * @covers ::delete
+	 */
+	public function test_delete_refuses_a_media_object_from_another_host() {
+		$id                     = 'https://example.com/notes/1';
+		$this->responses[ $id ] = array(
+			'id'   => $id,
+			'type' => 'Note',
+		);
+
+		Proxy::get( $id );
+		$before = $this->requests;
+
+		$refused = Proxy::delete(
+			array(
+				'type' => 'Image',
+				'id'   => $id,
+				'url'  => 'https://example.org/mallory.png',
+			),
+			'https://example.org/users/mallory'
+		);
+
+		Proxy::get( $id );
+
+		$this->assertFalse( $refused, 'The eviction is refused.' );
+		$this->assertSame( $before, $this->requests, "The victim's entry is still served from the cache." );
+	}
+
+	/**
 	 * An id that carries a fragment is stored under the name the lookups use.
 	 *
 	 * A key id like `…#main-key` dereferences to the actor document, so the entry has to be

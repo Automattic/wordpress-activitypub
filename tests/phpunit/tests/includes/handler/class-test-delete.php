@@ -732,11 +732,14 @@ class Test_Delete extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * A Delete whose object is a bare id drops the cached copy of that object.
+	 * A confirmed deletion drops the cached copy of the object.
 	 *
-	 * @covers ::handle_delete
+	 * The Delete is not signed on this path, so the cached copy is retired only once the object
+	 * is gone from its own host, the same confirmation the deletion itself waits for.
+	 *
+	 * @covers ::maybe_delete_post
 	 */
-	public function test_handle_delete_drops_the_cached_object() {
+	public function test_a_confirmed_delete_drops_the_cached_object() {
 		$this->stub_remote_requests();
 		$id                     = 'https://example.com/notes/1';
 		$this->responses[ $id ] = array(
@@ -745,64 +748,37 @@ class Test_Delete extends \WP_UnitTestCase {
 		);
 
 		Proxy::get( $id );
-		Delete::handle_delete(
+
+		// The object is gone now, which is what `Tombstone::exists()` asks the host.
+		$this->responses[ $id ] = 410;
+		Delete::maybe_delete_post(
 			array(
 				'type'   => 'Delete',
 				'actor'  => 'https://example.com/users/alice',
 				'object' => $id,
-			),
-			array( 1 )
+			)
 		);
-		$before = $this->requests;
-		Proxy::get( $id );
-		$this->unstub_remote_requests();
 
-		$this->assertSame( $before + 1, $this->requests, 'The object is fetched again after the Delete.' );
-	}
-
-	/**
-	 * A media-typed object cannot be used to retire an entry on another host.
-	 *
-	 * `object_to_uri()` answers with `url` for an `Image`, while the cache is keyed on `id`, so a
-	 * gate that compares one and evicts the other could be handed two different hosts. The check
-	 * lives inside `Proxy::delete()` for exactly that reason.
-	 *
-	 * @covers ::handle_delete
-	 */
-	public function test_handle_delete_cannot_evict_another_host_through_a_media_url() {
-		$this->stub_remote_requests();
-		$id                     = 'https://example.com/notes/1';
 		$this->responses[ $id ] = array(
 			'id'   => $id,
 			'type' => 'Note',
 		);
-
-		Proxy::get( $id );
-		Delete::handle_delete(
-			array(
-				'type'   => 'Delete',
-				'actor'  => 'https://example.org/users/mallory',
-				'object' => array(
-					'type' => 'Image',
-					'id'   => $id,
-					'url'  => 'https://example.org/mallory.png',
-				),
-			),
-			array( 1 )
-		);
-		$before = $this->requests;
+		$before                 = $this->requests;
 		Proxy::get( $id );
 		$this->unstub_remote_requests();
 
-		$this->assertSame( $before, $this->requests, "The victim's entry is still served from the cache." );
+		$this->assertSame( $before + 1, $this->requests, 'The object is fetched again after the deletion was confirmed.' );
 	}
 
 	/**
-	 * A Delete from an actor on another host than the object does not touch the cache.
+	 * An unconfirmed Delete does not touch the cache, whoever sent it.
+	 *
+	 * The object still answers, so the Delete is unproven and nothing is retired. This is the
+	 * protection that matters here, because the inbox waives signature verification for Deletes.
 	 *
 	 * @covers ::handle_delete
 	 */
-	public function test_handle_delete_from_a_foreign_actor_keeps_the_cached_object() {
+	public function test_an_unconfirmed_delete_keeps_the_cached_object() {
 		$this->stub_remote_requests();
 		$id                     = 'https://example.com/notes/1';
 		$this->responses[ $id ] = array(

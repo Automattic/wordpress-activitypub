@@ -53,9 +53,6 @@ class Delete {
 			return;
 		}
 
-		// The proxy only lets an actor on the object's own host retire the cached copy.
-		Proxy::delete( $activity['object'] ?? null, $activity['actor'] ?? '' );
-
 		$object_type = $activity['object']['type'] ?? '';
 
 		switch ( $object_type ) {
@@ -244,6 +241,9 @@ class Delete {
 
 		// Verify that Actor is deleted.
 		if ( ! \is_wp_error( $follower ) && Tombstone::exists( $activity['actor'] ) ) {
+			// The actor is gone from its own host, so the cached copy goes with it.
+			Proxy::delete( $activity['actor'] );
+
 			self::maybe_delete_interactions( $follower->ID );
 			self::maybe_delete_posts( $follower->ID );
 			$state = Remote_Actors::delete( $follower->ID );
@@ -337,6 +337,9 @@ class Delete {
 		$comments = Interactions::get_by_id( $id );
 
 		if ( $comments && Tombstone::exists( $id ) ) {
+			// The object is gone from its own host, so the cached copy goes with it.
+			Proxy::delete( $id );
+
 			foreach ( $comments as $comment ) {
 				// WordPress will automatically delete all comment meta including _activitypub_remote_actor_id.
 				\wp_delete_comment( $comment->comment_ID, true );
@@ -360,6 +363,9 @@ class Delete {
 
 		// Check if the object exists and is a tombstone.
 		if ( Tombstone::exists( $id ) ) {
+			// The object is gone from its own host, so the cached copy goes with it.
+			Proxy::delete( $id );
+
 			return Remote_Posts::delete_by_guid( $id );
 		}
 
