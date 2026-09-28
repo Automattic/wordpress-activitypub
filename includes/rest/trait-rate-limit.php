@@ -25,9 +25,9 @@ use function Activitypub\get_client_ip;
  */
 trait Rate_Limit {
 	/**
-	 * What each request was already told, so it is counted once, keyed by request.
+	 * The requests that were allowed, so one request is counted once, keyed by request.
 	 *
-	 * @var array<string, array{request: \WP_REST_Request, answer: true|\WP_Error}>
+	 * @var array<string, array{request: \WP_REST_Request, answer: true}>
 	 */
 	private static $counted = array();
 
@@ -54,16 +54,23 @@ trait Rate_Limit {
 			return self::$counted[ $memo ]['answer'];
 		}
 
-		/*
-		 * The request is kept beside the answer: `spl_object_id()` hands out the id of a freed
-		 * object again, so without a reference a later request could read this answer as its own.
-		 */
-		self::$counted[ $memo ] = array(
-			'request' => $request,
-			'answer'  => $this->count_request( $bucket, $limit, $request ),
-		);
+		$answer = $this->count_request( $bucket, $limit, $request );
 
-		return self::$counted[ $memo ]['answer'];
+		/*
+		 * Only an allowed request is remembered, and the request is kept beside the answer because
+		 * `spl_object_id()` hands out the id of a freed object again, so without a reference a later
+		 * request could read this answer as its own. A refusal is not remembered: repeating it costs
+		 * nothing, it writes no entry and lets nothing through, and a caller that keeps asking after a
+		 * 429 would otherwise have every one of its refused requests kept for the life of the process.
+		 */
+		if ( true === $answer ) {
+			self::$counted[ $memo ] = array(
+				'request' => $request,
+				'answer'  => $answer,
+			);
+		}
+
+		return $answer;
 	}
 
 	/**
