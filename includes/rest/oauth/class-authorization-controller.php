@@ -50,7 +50,7 @@ class Authorization_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'authorize' ),
-					// Anyone may start an authorization, so the only gate is how often one caller may.
+					// Anyone may start an authorization, so the only gate is how often one caller may start one.
 					'permission_callback' => function ( $request ) {
 						return $this->rate_limit( 'oauth_authorize', 20, $request );
 					},

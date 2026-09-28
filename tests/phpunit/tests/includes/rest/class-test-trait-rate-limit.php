@@ -37,14 +37,15 @@ class Test_Trait_Rate_Limit extends \WP_UnitTestCase {
 			/**
 			 * Count a request, from outside the class.
 			 *
-			 * @param string $bucket What is being limited.
-			 * @param int    $limit  The allowance.
+			 * @param string                $bucket  What is being limited.
+			 * @param int                   $limit   The allowance.
+			 * @param \WP_REST_Request|null $request The request to count, or null for a fresh one.
 			 *
 			 * @return true|\WP_Error
 			 */
-			public function count( $bucket, $limit ) {
-				// A fresh request object each time, because one request is only ever counted once.
-				return $this->rate_limit( $bucket, $limit, new \WP_REST_Request() );
+			public function count( $bucket, $limit, $request = null ) {
+				// A fresh request object by default, because one request is only ever counted once.
+				return $this->rate_limit( $bucket, $limit, $request ? $request : new \WP_REST_Request() );
 			}
 		};
 
@@ -118,6 +119,29 @@ class Test_Trait_Rate_Limit extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * One request's allowance stays off another request's answer.
+	 *
+	 * A process can dispatch more than one REST request, `rest_do_request()` being the common case,
+	 * so the headers have to follow the request that was counted.
+	 *
+	 * @covers ::rate_limit
+	 */
+	public function test_rate_limit_headers_stay_with_their_own_request() {
+		$counted = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
+		$other   = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/actors' );
+
+		$this->instance->count( 'test_bucket', 5, $counted );
+
+		$response = \apply_filters( 'rest_post_dispatch', new \WP_REST_Response( array(), 200 ), \rest_get_server(), $other );
+
+		$this->assertArrayNotHasKey( 'RateLimit-Limit', $response->get_headers(), 'A request that was not counted reports no allowance.' );
+
+		$own = \apply_filters( 'rest_post_dispatch', new \WP_REST_Response( array(), 200 ), \rest_get_server(), $counted );
+
+		$this->assertSame( '5', $own->get_headers()['RateLimit-Limit'], 'The counted request still gets its own.' );
+	}
+
+	/**
 	 * Every answer reports the allowance, and a refusal also says when to come back.
 	 *
 	 * @covers ::rate_limit
@@ -125,7 +149,7 @@ class Test_Trait_Rate_Limit extends \WP_UnitTestCase {
 	public function test_rate_limit_reports_the_allowance_in_the_headers() {
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
 
-		$this->instance->count( 'test_bucket', 2 );
+		$this->instance->count( 'test_bucket', 2, $request );
 		$allowed = \apply_filters( 'rest_post_dispatch', new \WP_REST_Response( array(), 200 ), \rest_get_server(), $request );
 		$headers = $allowed->get_headers();
 
@@ -135,8 +159,10 @@ class Test_Trait_Rate_Limit extends \WP_UnitTestCase {
 		$this->assertArrayNotHasKey( 'Retry-After', $headers, 'An allowed request needs no Retry-After.' );
 
 		$this->instance->count( 'test_bucket', 2 );
-		$this->instance->count( 'test_bucket', 2 );
-		$refused = \apply_filters( 'rest_post_dispatch', new \WP_REST_Response( array(), 429 ), \rest_get_server(), $request );
+
+		$refusal = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
+		$this->instance->count( 'test_bucket', 2, $refusal );
+		$refused = \apply_filters( 'rest_post_dispatch', new \WP_REST_Response( array(), 429 ), \rest_get_server(), $refusal );
 		$headers = $refused->get_headers();
 
 		$this->assertSame( '0', $headers['RateLimit-Remaining'], 'Nothing is left.' );

@@ -60,7 +60,7 @@ trait Rate_Limit {
 		 */
 		self::$counted[ $memo ] = array(
 			'request' => $request,
-			'answer'  => $this->count_request( $bucket, $limit ),
+			'answer'  => $this->count_request( $bucket, $limit, $request ),
 		);
 
 		return self::$counted[ $memo ]['answer'];
@@ -69,12 +69,13 @@ trait Rate_Limit {
 	/**
 	 * Count one request against its caller's allowance.
 	 *
-	 * @param string $bucket What is being limited.
-	 * @param int    $limit  How many requests a caller may make per minute.
+	 * @param string           $bucket  What is being limited.
+	 * @param int              $limit   How many requests a caller may make per minute.
+	 * @param \WP_REST_Request $request The request being counted.
 	 *
 	 * @return true|\WP_Error True when the request fits in the allowance, WP_Error otherwise.
 	 */
-	private function count_request( $bucket, $limit ) {
+	private function count_request( $bucket, $limit, $request ) {
 		/**
 		 * Filters how many requests a caller may make per minute.
 		 *
@@ -96,18 +97,18 @@ trait Rate_Limit {
 		$reset  = ( $window + 1 ) * MINUTE_IN_SECONDS;
 
 		if ( '' === $caller ) {
-			return $this->rate_limit_exceeded( $limit, $reset );
+			return $this->rate_limit_exceeded( $request, $limit, $reset );
 		}
 
 		$key   = \sprintf( 'activitypub_rate_%s_%s_%d', $bucket, \str_replace( ':', '-', $caller ), $window );
 		$count = (int) \get_transient( $key );
 
 		if ( $count >= $limit ) {
-			return $this->rate_limit_exceeded( $limit, $reset );
+			return $this->rate_limit_exceeded( $request, $limit, $reset );
 		}
 
 		\set_transient( $key, $count + 1, MINUTE_IN_SECONDS );
-		$this->send_rate_limit_headers( $limit, $limit - $count - 1, $reset );
+		$this->send_rate_limit_headers( $request, $limit, $limit - $count - 1, $reset );
 
 		return true;
 	}
@@ -115,13 +116,14 @@ trait Rate_Limit {
 	/**
 	 * Refuse a request and report the allowance it ran out of.
 	 *
-	 * @param int $limit The allowance.
-	 * @param int $reset When the allowance resets, as a Unix timestamp.
+	 * @param \WP_REST_Request $request The request being refused.
+	 * @param int              $limit   The allowance.
+	 * @param int              $reset   When the allowance resets, as a Unix timestamp.
 	 *
 	 * @return \WP_Error The refusal.
 	 */
-	private function rate_limit_exceeded( $limit, $reset ) {
-		$this->send_rate_limit_headers( $limit, 0, $reset );
+	private function rate_limit_exceeded( $request, $limit, $reset ) {
+		$this->send_rate_limit_headers( $request, $limit, 0, $reset );
 
 		return new \WP_Error(
 			'activitypub_rate_limited',
@@ -136,30 +138,36 @@ trait Rate_Limit {
 	 * The header names follow the IETF RateLimit header fields, which is what other Fediverse
 	 * servers read. `Retry-After` is added to a refusal as well, per RFC 9110 section 10.2.3.
 	 *
-	 * @param int $limit     The allowance.
-	 * @param int $remaining What is left of it after this request.
-	 * @param int $reset     When it resets, as a Unix timestamp.
+	 * The callback answers only the response to the request it counted, and takes itself off the hook
+	 * once it has: a process can dispatch more than one REST request, `rest_do_request()` being the
+	 * common case, and a callback left behind would stamp one request's allowance on another's answer.
+	 *
+	 * @param \WP_REST_Request $request   The request that was counted.
+	 * @param int              $limit     The allowance.
+	 * @param int              $remaining What is left of it after this request.
+	 * @param int              $reset     When it resets, as a Unix timestamp.
 	 */
-	private function send_rate_limit_headers( $limit, $remaining, $reset ) {
-		\add_filter(
-			'rest_post_dispatch',
-			static function ( $response ) use ( $limit, $remaining, $reset ) {
-				if ( ! $response instanceof \WP_HTTP_Response ) {
-					return $response;
-				}
-
-				$seconds = \max( 0, $reset - \time() );
-
-				$response->header( 'RateLimit-Limit', (string) $limit );
-				$response->header( 'RateLimit-Remaining', (string) $remaining );
-				$response->header( 'RateLimit-Reset', (string) $seconds );
-
-				if ( 429 === $response->get_status() ) {
-					$response->header( 'Retry-After', (string) \max( 1, $seconds ) );
-				}
-
+	private function send_rate_limit_headers( $request, $limit, $remaining, $reset ) {
+		$callback = static function ( $response, $server, $dispatched ) use ( &$callback, $request, $limit, $remaining, $reset ) {
+			if ( $dispatched !== $request || ! $response instanceof \WP_HTTP_Response ) {
 				return $response;
 			}
-		);
+
+			\remove_filter( 'rest_post_dispatch', $callback );
+
+			$seconds = \max( 0, $reset - \time() );
+
+			$response->header( 'RateLimit-Limit', (string) $limit );
+			$response->header( 'RateLimit-Remaining', (string) $remaining );
+			$response->header( 'RateLimit-Reset', (string) $seconds );
+
+			if ( 429 === $response->get_status() ) {
+				$response->header( 'Retry-After', (string) \max( 1, $seconds ) );
+			}
+
+			return $response;
+		};
+
+		\add_filter( 'rest_post_dispatch', $callback, 10, 3 );
 	}
 }

@@ -76,10 +76,7 @@ class Actors_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_remote_follow_item' ),
-					/*
-					 * Unauthenticated, and it makes a WebFinger request to a host the caller names,
-					 * so the only gate is how often one caller may ask.
-					 */
+					// Unauthenticated, and it WebFingers a host the caller names, so the only gate is how often one caller may ask.
 					'permission_callback' => function ( $request ) {
 						return $this->rate_limit( 'remote_follow', 10, $request );
 					},

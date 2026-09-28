@@ -413,6 +413,76 @@ class Test_Client extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that auto-discovery fails closed when no client IP can be determined.
+	 *
+	 * Discovery fetches a URL the caller names, so an unidentifiable caller must be refused rather
+	 * than share one bucket with every other unidentifiable caller.
+	 *
+	 * @covers ::get
+	 */
+	public function test_discovery_fails_closed_without_client_ip() {
+		$server_keys = array(
+			'REMOTE_ADDR',
+			'HTTP_CF_CONNECTING_IP',
+			'HTTP_CLIENT_IP',
+			'HTTP_X_FORWARDED_FOR',
+			'HTTP_X_FORWARDED',
+			'HTTP_X_CLUSTER_CLIENT_IP',
+			'HTTP_FORWARDED_FOR',
+			'HTTP_FORWARDED',
+		);
+		$snapshot    = array();
+		foreach ( $server_keys as $key ) {
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- Capturing existing test fixture values for restore.
+			$snapshot[ $key ] = \array_key_exists( $key, $_SERVER ) ? $_SERVER[ $key ] : null;
+		}
+
+		$window = (int) \floor( \time() / MINUTE_IN_SECONDS );
+		$key    = \sprintf( 'activitypub_rate_oauth_discovery_%s_%d', '', $window );
+
+		try {
+			foreach ( $server_keys as $server_key ) {
+				unset( $_SERVER[ $server_key ] );
+			}
+
+			// A URL-form client_id is what triggers discovery.
+			$result = Client::get( 'https://unidentifiable.example.com/cimd.json' );
+
+			$this->assertInstanceOf( \WP_Error::class, $result );
+			$this->assertEquals( 'activitypub_rate_limited', $result->get_error_code() );
+			$this->assertFalse( \get_transient( $key ), 'The fail-closed branch writes no shared bucket.' );
+		} finally {
+			foreach ( $snapshot as $server_key => $value ) {
+				if ( null === $value ) {
+					unset( $_SERVER[ $server_key ] );
+				} else {
+					$_SERVER[ $server_key ] = $value;
+				}
+			}
+		}
+	}
+
+	/**
+	 * Test that discovery is refused once the caller has used up its allowance.
+	 *
+	 * The consent page at `wp-login.php?action=activitypub_authorize` reaches discovery without
+	 * passing a REST route, so the count has to sit at the fetch to cover it.
+	 *
+	 * @covers ::get
+	 */
+	public function test_discovery_spends_an_allowance() {
+		$_SERVER['REMOTE_ADDR'] = '203.0.113.77';
+
+		\add_filter( 'activitypub_rate_limit', '__return_zero' );
+		$result = Client::get( 'https://throttled.example.com/cimd.json' );
+		\remove_filter( 'activitypub_rate_limit', '__return_zero' );
+
+		$this->assertInstanceOf( \WP_Error::class, $result );
+		$this->assertEquals( 'activitypub_rate_limited', $result->get_error_code() );
+		$this->assertEquals( 429, $result->get_error_data()['status'] );
+	}
+
+	/**
 	 * Test get method returns error for non-existent client.
 	 *
 	 * @covers ::get

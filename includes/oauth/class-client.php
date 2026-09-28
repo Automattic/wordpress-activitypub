@@ -9,6 +9,7 @@ namespace Activitypub\OAuth;
 
 use Activitypub\Sanitize;
 
+use function Activitypub\get_client_ip;
 use function Activitypub\get_url_authority;
 use function Activitypub\resolve_public_host;
 
@@ -226,13 +227,37 @@ class Client {
 	/**
 	 * Discover client metadata from URL and auto-register.
 	 *
-	 * Fetches the Client ID Metadata Document (CIMD) from the client_id URL.
-	 * Rate-limited via transients to prevent SSRF abuse.
+	 * Fetches the Client ID Metadata Document (CIMD) from the client_id URL, and counts how often one
+	 * caller may trigger that fetch, because the URL comes from the caller.
 	 *
 	 * @param string $client_id The client ID URL.
 	 * @return Client|\WP_Error The client or error.
 	 */
 	private static function discover_and_register( $client_id ) {
+		/*
+		 * Discovery fetches a URL the caller names, and the consent page at
+		 * `wp-login.php?action=activitypub_authorize` reaches it without passing a REST route, so the
+		 * count lives at the fetch rather than at an endpoint.
+		 */
+		$limit  = (int) \apply_filters( 'activitypub_rate_limit', 10, 'oauth_discovery' );
+		$caller = get_client_ip();
+
+		// The window is part of the key, so it ends by itself instead of being pushed forward by every request.
+		$window = (int) \floor( \time() / MINUTE_IN_SECONDS );
+		$key    = \sprintf( 'activitypub_rate_oauth_discovery_%s_%d', \str_replace( ':', '-', $caller ), $window );
+		$count  = (int) \get_transient( $key );
+
+		// Without a caller there is nothing to count, so discovery fails closed, the way the endpoints do.
+		if ( '' === $caller || $count >= $limit ) {
+			return new \WP_Error(
+				'activitypub_rate_limited',
+				\__( 'Too many client discovery requests. Please try again later.', 'activitypub' ),
+				array( 'status' => 429 )
+			);
+		}
+
+		\set_transient( $key, $count + 1, MINUTE_IN_SECONDS );
+
 		$metadata = self::fetch_client_metadata( $client_id );
 
 		if ( \is_wp_error( $metadata ) ) {

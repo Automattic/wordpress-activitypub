@@ -412,11 +412,6 @@ class Token_Controller extends \WP_REST_Controller {
 			'Pragma'        => 'no-cache',
 		);
 
-		// RFC 6585 §4: send Retry-After with rate-limit responses so clients can back off.
-		if ( 429 === $status ) {
-			$headers['Retry-After'] = (string) MINUTE_IN_SECONDS;
-		}
-
 		return new \WP_REST_Response(
 			array(
 				'error'             => $error,

@@ -21,7 +21,6 @@ use Activitypub\Webfinger;
  * Provides a bridge between C2S OAuth authentication and S2S HTTP Signature authentication.
  * Allows C2S clients to fetch remote ActivityPub objects through their home server.
  */
-
 class Proxy_Controller extends \WP_REST_Controller {
 	use Rate_Limit;
 	use Event_Stream;

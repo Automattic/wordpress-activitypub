@@ -41,9 +41,6 @@ class Test_Clients_Controller extends \WP_UnitTestCase {
 		global $wp_rest_server;
 		$wp_rest_server = null;
 
-		// Clean up rate-limit transient to avoid cross-test pollution.
-		$ip = \Activitypub\get_client_ip();
-
 		parent::tear_down();
 	}
 
