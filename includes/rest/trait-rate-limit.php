@@ -54,7 +54,7 @@ trait Rate_Limit {
 			return self::$counted[ $memo ]['answer'];
 		}
 
-		$answer = $this->count_request( $bucket, $limit, $request );
+		$answer = $this->count_request( $bucket, $limit, $request, $memo );
 
 		/*
 		 * Only an allowed request is remembered, and the request is kept beside the answer because
@@ -79,10 +79,11 @@ trait Rate_Limit {
 	 * @param string           $bucket  What is being limited.
 	 * @param int              $limit   How many requests a caller may make per minute.
 	 * @param \WP_REST_Request $request The request being counted.
+	 * @param string           $memo    Where this request's answer is remembered.
 	 *
 	 * @return true|\WP_Error True when the request fits in the allowance, WP_Error otherwise.
 	 */
-	private function count_request( $bucket, $limit, $request ) {
+	private function count_request( $bucket, $limit, $request, $memo ) {
 		/**
 		 * Filters how many requests a caller may make per minute.
 		 *
@@ -107,7 +108,7 @@ trait Rate_Limit {
 
 		// Without a caller there is nothing to count, so the request is refused rather than let through.
 		if ( '' === $caller || $count >= $limit ) {
-			$this->send_rate_limit_headers( $request, $limit, 0, $reset );
+			$this->send_rate_limit_headers( $request, $memo, $limit, 0, $reset );
 
 			return new \WP_Error(
 				'activitypub_rate_limited',
@@ -117,7 +118,7 @@ trait Rate_Limit {
 		}
 
 		\set_transient( $key, $count + 1, MINUTE_IN_SECONDS );
-		$this->send_rate_limit_headers( $request, $limit, $limit - $count - 1, $reset );
+		$this->send_rate_limit_headers( $request, $memo, $limit, $limit - $count - 1, $reset );
 
 		return true;
 	}
@@ -132,18 +133,24 @@ trait Rate_Limit {
 	 * once it has: a process can dispatch more than one REST request, `rest_do_request()` being the
 	 * common case, and a callback left behind would stamp one request's allowance on another's answer.
 	 *
+	 * The remembered answer goes with it. It is needed until here, because core asks the permission
+	 * callback again on this same hook to work out the `Allow` header, and not afterwards, so keeping it
+	 * any longer would only hold the request object for the rest of the process.
+	 *
 	 * @param \WP_REST_Request $request   The request that was counted.
+	 * @param string           $memo      Where this request's answer is remembered.
 	 * @param int              $limit     The allowance.
 	 * @param int              $remaining What is left of it after this request.
 	 * @param int              $reset     When it resets, as a Unix timestamp.
 	 */
-	private function send_rate_limit_headers( $request, $limit, $remaining, $reset ) {
-		$callback = static function ( $response, $server, $dispatched ) use ( &$callback, $request, $limit, $remaining, $reset ) {
+	private function send_rate_limit_headers( $request, $memo, $limit, $remaining, $reset ) {
+		$callback = static function ( $response, $server, $dispatched ) use ( &$callback, $request, $memo, $limit, $remaining, $reset ) {
 			if ( $dispatched !== $request || ! $response instanceof \WP_HTTP_Response ) {
 				return $response;
 			}
 
 			\remove_filter( 'rest_post_dispatch', $callback );
+			unset( self::$counted[ $memo ] );
 
 			$seconds = \max( 0, $reset - \time() );
 

@@ -123,6 +123,30 @@ class Test_Trait_Rate_Limit extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A request is forgotten once its response carries the allowance.
+	 *
+	 * The answer is kept only so core's second permission check cannot charge one request twice, so
+	 * holding it past the response would keep the request object for the rest of the process.
+	 *
+	 * @covers ::rate_limit
+	 */
+	public function test_rate_limit_forgets_a_request_once_its_response_is_stamped() {
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
+		$memo    = 'test_bucket:' . \spl_object_id( $request );
+
+		$this->instance->count( 'test_bucket', 5, $request );
+
+		$counted = new \ReflectionProperty( \get_class( $this->instance ), 'counted' );
+		$counted->setAccessible( true );
+
+		$this->assertArrayHasKey( $memo, $counted->getValue(), 'The answer is kept until the response is stamped.' );
+
+		\apply_filters( 'rest_post_dispatch', new \WP_REST_Response( array(), 200 ), \rest_get_server(), $request );
+
+		$this->assertArrayNotHasKey( $memo, $counted->getValue(), 'And dropped once it is.' );
+	}
+
+	/**
 	 * One request's allowance stays off another request's answer.
 	 *
 	 * A process can dispatch more than one REST request, `rest_do_request()` being the common case,
