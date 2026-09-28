@@ -42,6 +42,7 @@
 		"@types/react": "^18.3.31",
 		"@types/react-dom": "^18.3.7",
 		"@wordpress/api-fetch": "^7.54.0",
+		"@wordpress/babel-preset-default": "^8.55.0",
 		"@wordpress/block-editor": "^17.1.0",
 		"@wordpress/blocks": "^16.0.0",
 		"@wordpress/commands": "^1.54.0",
@@ -65,6 +66,7 @@
 		"@wordpress/icons": "^16.0.0",
 		"@wordpress/interactivity": "^6.51.0",
 		"@wordpress/interface": "^10.0.0",
+		"@wordpress/jest-preset-default": "^14.2.0",
 		"@wordpress/keyboard-shortcuts": "^5.50.0",
 		"@wordpress/keycodes": "^4.55.0",
 		"@wordpress/notices": "^5.54.0",
@@ -79,6 +81,8 @@
 		"@wordpress/views": "^1.19.0",
 		"classnames": "^2.5.1",
 		"clsx": "^2.1.1",
+		"jest": "^30.5.1",
+		"jest-environment-jsdom": "^30.5.2",
 		"prettier": "npm:wp-prettier@^3.0.3"
 	}
 }
