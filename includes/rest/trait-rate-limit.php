@@ -7,19 +7,19 @@
 
 namespace Activitypub\Rest;
 
-use function Activitypub\get_client_ip;
+use function Activitypub\spend_rate_limit;
 
 /**
  * How often one caller may ask.
  *
  * Controllers use this trait for permission callbacks: an endpoint states its allowance where its
- * route is registered, and the trait counts the caller and reports the allowance in the response
- * headers, whether the request fit in it or not. The headers are added here rather than by the
- * endpoint because a permission callback can return no more than a `WP_Error`, which carries none.
+ * route is registered, and the trait counts the caller through `spend_rate_limit()` and reports the
+ * allowance in the response headers, whether the request fit in it or not. The headers are added here
+ * rather than by the endpoint because a permission callback can return no more than a `WP_Error`,
+ * which carries none.
  *
- * A signed-in caller is counted per account and everyone else per IP address. A caller that cannot
- * be identified at all is refused: without a key there is nothing to count, so letting it through
- * would be the same as having no limit.
+ * The counting itself lives in `spend_rate_limit()`, because the OAuth consent page reaches client
+ * discovery without passing a route and has to be counted the same way.
  *
  * @since unreleased
  */
@@ -67,7 +67,7 @@ trait Rate_Limit {
 	}
 
 	/**
-	 * Count one request against its caller's allowance.
+	 * Count one request and report the allowance on the response it gets.
 	 *
 	 * @param string           $bucket  What is being limited.
 	 * @param int              $limit   How many requests a caller may make per minute.
@@ -76,60 +76,19 @@ trait Rate_Limit {
 	 * @return true|\WP_Error True when the request fits in the allowance, WP_Error otherwise.
 	 */
 	private function count_request( $bucket, $limit, $request ) {
-		/**
-		 * Filters how many requests a caller may make per minute.
-		 *
-		 * @since unreleased
-		 *
-		 * @param int    $limit  The allowance the endpoint asks for.
-		 * @param string $bucket What is being limited, for example `interactions`.
-		 */
-		$limit = (int) \apply_filters( 'activitypub_rate_limit', $limit, $bucket );
+		$allowance = spend_rate_limit( $bucket, $limit );
 
-		$user_id = \get_current_user_id();
-		$caller  = $user_id ? 'user-' . $user_id : get_client_ip();
+		if ( \is_wp_error( $allowance ) ) {
+			$data = $allowance->get_error_data();
 
-		/*
-		 * The window is part of the entry's name, so it ends by itself instead of being pushed
-		 * forward by every request, and only the first request of a window writes a new entry.
-		 */
-		$window = (int) \floor( \time() / MINUTE_IN_SECONDS );
-		$reset  = ( $window + 1 ) * MINUTE_IN_SECONDS;
+			$this->send_rate_limit_headers( $request, $data['limit'], 0, $data['reset'] );
 
-		if ( '' === $caller ) {
-			return $this->rate_limit_exceeded( $request, $limit, $reset );
+			return $allowance;
 		}
 
-		$key   = \sprintf( 'activitypub_rate_%s_%s_%d', $bucket, \str_replace( ':', '-', $caller ), $window );
-		$count = (int) \get_transient( $key );
-
-		if ( $count >= $limit ) {
-			return $this->rate_limit_exceeded( $request, $limit, $reset );
-		}
-
-		\set_transient( $key, $count + 1, MINUTE_IN_SECONDS );
-		$this->send_rate_limit_headers( $request, $limit, $limit - $count - 1, $reset );
+		$this->send_rate_limit_headers( $request, $allowance['limit'], $allowance['remaining'], $allowance['reset'] );
 
 		return true;
-	}
-
-	/**
-	 * Refuse a request and report the allowance it ran out of.
-	 *
-	 * @param \WP_REST_Request $request The request being refused.
-	 * @param int              $limit   The allowance.
-	 * @param int              $reset   When the allowance resets, as a Unix timestamp.
-	 *
-	 * @return \WP_Error The refusal.
-	 */
-	private function rate_limit_exceeded( $request, $limit, $reset ) {
-		$this->send_rate_limit_headers( $request, $limit, 0, $reset );
-
-		return new \WP_Error(
-			'activitypub_rate_limited',
-			\__( 'Too many requests. Please try again later.', 'activitypub' ),
-			array( 'status' => 429 )
-		);
 	}
 
 	/**

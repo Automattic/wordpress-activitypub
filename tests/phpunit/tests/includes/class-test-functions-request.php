@@ -621,4 +621,115 @@ class Test_Functions_Request extends ActivityPub_TestCase_Cache_HTTP {
 			$this->restore_client_ip_server();
 		}
 	}
+
+	/**
+	 * A caller may ask up to its allowance, and is refused after that.
+	 *
+	 * @covers \Activitypub\spend_rate_limit
+	 */
+	public function test_spend_rate_limit_counts_down_and_refuses() {
+		$this->snapshot_client_ip_server();
+		\wp_set_current_user( 0 );
+
+		try {
+			$_SERVER['REMOTE_ADDR'] = '203.0.113.20';
+
+			foreach ( array( 2, 1, 0 ) as $remaining ) {
+				$allowance = \Activitypub\spend_rate_limit( 'test_bucket', 3 );
+
+				$this->assertSame( 3, $allowance['limit'] );
+				$this->assertSame( $remaining, $allowance['remaining'] );
+				$this->assertGreaterThan( \time(), $allowance['reset'] );
+			}
+
+			$refused = \Activitypub\spend_rate_limit( 'test_bucket', 3 );
+
+			$this->assertWPError( $refused );
+			$this->assertSame( 'activitypub_rate_limited', $refused->get_error_code() );
+			$this->assertSame( 429, $refused->get_error_data()['status'] );
+			$this->assertSame( 3, $refused->get_error_data()['limit'], 'The refusal carries what the allowance was.' );
+		} finally {
+			$this->restore_client_ip_server();
+		}
+	}
+
+	/**
+	 * Allowances are separate per bucket, per address and per account.
+	 *
+	 * @covers \Activitypub\spend_rate_limit
+	 */
+	public function test_spend_rate_limit_counts_per_caller_and_bucket() {
+		$this->snapshot_client_ip_server();
+		\wp_set_current_user( 0 );
+
+		try {
+			$_SERVER['REMOTE_ADDR'] = '203.0.113.21';
+
+			$this->assertIsArray( \Activitypub\spend_rate_limit( 'test_bucket', 1 ) );
+			$this->assertWPError( \Activitypub\spend_rate_limit( 'test_bucket', 1 ), 'The bucket is spent.' );
+
+			$this->assertIsArray( \Activitypub\spend_rate_limit( 'other_bucket', 1 ), 'Another bucket has its own allowance.' );
+
+			$_SERVER['REMOTE_ADDR'] = '203.0.113.22';
+			$this->assertIsArray( \Activitypub\spend_rate_limit( 'test_bucket', 1 ), 'Another address has its own allowance.' );
+
+			\wp_set_current_user( self::factory()->user->create() );
+			$this->assertIsArray( \Activitypub\spend_rate_limit( 'test_bucket', 1 ), 'A signed-in caller is counted per account.' );
+		} finally {
+			\wp_set_current_user( 0 );
+			$this->restore_client_ip_server();
+		}
+	}
+
+	/**
+	 * A caller that cannot be identified is refused rather than let through unlimited.
+	 *
+	 * @covers \Activitypub\spend_rate_limit
+	 */
+	public function test_spend_rate_limit_refuses_an_unidentifiable_caller() {
+		$this->snapshot_client_ip_server();
+		\wp_set_current_user( 0 );
+
+		try {
+			foreach ( array( 'REMOTE_ADDR', 'HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR' ) as $key ) {
+				unset( $_SERVER[ $key ] );
+			}
+
+			$window = (int) \floor( \time() / MINUTE_IN_SECONDS );
+			$key    = \sprintf( 'activitypub_rate_%s_%s_%d', 'test_bucket', '', $window );
+
+			$refused = \Activitypub\spend_rate_limit( 'test_bucket', 10 );
+
+			$this->assertWPError( $refused );
+			$this->assertSame( 429, $refused->get_error_data()['status'] );
+			$this->assertFalse( \get_transient( $key ), 'Unidentifiable callers share no bucket.' );
+		} finally {
+			$this->restore_client_ip_server();
+		}
+	}
+
+	/**
+	 * The window ends by itself instead of being pushed forward by every request.
+	 *
+	 * @covers \Activitypub\spend_rate_limit
+	 */
+	public function test_spend_rate_limit_uses_a_fixed_window() {
+		$this->snapshot_client_ip_server();
+		\wp_set_current_user( 0 );
+
+		try {
+			$_SERVER['REMOTE_ADDR'] = '203.0.113.23';
+
+			\Activitypub\spend_rate_limit( 'test_bucket', 5 );
+
+			$window  = (int) \floor( \time() / MINUTE_IN_SECONDS );
+			$key     = \sprintf( 'activitypub_rate_%s_%s_%d', 'test_bucket', '203.0.113.23', $window );
+			$timeout = (int) \get_option( '_transient_timeout_' . $key );
+
+			$this->assertSame( 1, (int) \get_transient( $key ), 'The window holds the count.' );
+			$this->assertLessThanOrEqual( \time() + MINUTE_IN_SECONDS, $timeout, 'It expires within the window.' );
+		} finally {
+			$this->restore_client_ip_server();
+		}
+	}
 }

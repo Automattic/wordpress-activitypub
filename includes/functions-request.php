@@ -307,6 +307,69 @@ function get_client_ip() {
 	return \is_string( $ip ) && \filter_var( $ip, FILTER_VALIDATE_IP ) ? $ip : '';
 }
 
+
+/**
+ * Count one request against its caller's allowance.
+ *
+ * A signed-in caller is counted per account and everyone else per IP address. A caller that cannot be
+ * identified at all is refused: without a key there is nothing to count, so letting it through would be
+ * the same as having no limit.
+ *
+ * The window is part of the entry's name, so an allowance ends by itself instead of being pushed forward
+ * by every request, and only the first request of a window writes an entry.
+ *
+ * REST controllers reach this through the `Activitypub\Rest\Rate_Limit` trait, which declares the
+ * allowance at the route and reports it in the response headers. Code that is not a REST endpoint calls
+ * it directly, OAuth client discovery being the one case: the consent page reaches that without passing
+ * a route.
+ *
+ * @since unreleased
+ *
+ * @param string $bucket What is being limited, for example `interactions`.
+ * @param int    $limit  How many requests a caller may make per minute.
+ *
+ * @return array|\WP_Error What is left of the allowance as `limit`, `remaining` and `reset`, or a
+ *                         `WP_Error` with status 429 when the caller may not ask again yet.
+ */
+function spend_rate_limit( $bucket, $limit ) {
+	/**
+	 * Filters how many requests a caller may make per minute.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int    $limit  The allowance the caller asks for.
+	 * @param string $bucket What is being limited, for example `interactions`.
+	 */
+	$limit = (int) \apply_filters( 'activitypub_rate_limit', $limit, $bucket );
+
+	$user_id = \get_current_user_id();
+	$caller  = $user_id ? 'user-' . $user_id : get_client_ip();
+	$window  = (int) \floor( \time() / MINUTE_IN_SECONDS );
+	$reset   = ( $window + 1 ) * MINUTE_IN_SECONDS;
+	$key     = \sprintf( 'activitypub_rate_%s_%s_%d', $bucket, \str_replace( ':', '-', $caller ), $window );
+	$count   = (int) \get_transient( $key );
+
+	if ( '' === $caller || $count >= $limit ) {
+		return new \WP_Error(
+			'activitypub_rate_limited',
+			\__( 'Too many requests. Please try again later.', 'activitypub' ),
+			array(
+				'status' => 429,
+				'limit'  => $limit,
+				'reset'  => $reset,
+			)
+		);
+	}
+
+	\set_transient( $key, $count + 1, MINUTE_IN_SECONDS );
+
+	return array(
+		'limit'     => $limit,
+		'remaining' => $limit - $count - 1,
+		'reset'     => $reset,
+	);
+}
+
 /**
  * Resolve a hostname or IP literal to a public IP address.
  *

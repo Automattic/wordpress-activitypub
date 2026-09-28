@@ -71,54 +71,6 @@ class Test_Trait_Rate_Limit extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Allowances are separate per bucket, per address and per account.
-	 *
-	 * @covers ::rate_limit
-	 */
-	public function test_rate_limit_counts_per_caller_and_bucket() {
-		$this->assertTrue( $this->instance->count( 'test_bucket', 1 ) );
-		$this->assertWPError( $this->instance->count( 'test_bucket', 1 ), 'The bucket is spent.' );
-
-		$this->assertTrue( $this->instance->count( 'other_bucket', 1 ), 'Another bucket has its own allowance.' );
-
-		$_SERVER['REMOTE_ADDR'] = '203.0.113.61';
-		$this->assertTrue( $this->instance->count( 'test_bucket', 1 ), 'Another address has its own allowance.' );
-
-		\wp_set_current_user( self::factory()->user->create() );
-		$this->assertTrue( $this->instance->count( 'test_bucket', 1 ), 'A signed-in caller is counted per account.' );
-	}
-
-	/**
-	 * A caller that cannot be identified is refused rather than let through unlimited.
-	 *
-	 * @covers ::rate_limit
-	 */
-	public function test_rate_limit_refuses_an_unidentifiable_caller() {
-		$_SERVER['REMOTE_ADDR'] = '';
-
-		$refused = $this->instance->count( 'test_bucket', 10 );
-
-		$this->assertWPError( $refused );
-		$this->assertSame( 429, $refused->get_error_data()['status'] );
-	}
-
-	/**
-	 * The window ends by itself instead of being pushed forward by every request.
-	 *
-	 * @covers ::rate_limit
-	 */
-	public function test_rate_limit_uses_a_fixed_window() {
-		$this->instance->count( 'test_bucket', 5 );
-
-		$window  = (int) \floor( \time() / MINUTE_IN_SECONDS );
-		$key     = \sprintf( 'activitypub_rate_test_bucket_%s_%d', '203.0.113.60', $window );
-		$timeout = (int) \get_option( '_transient_timeout_' . $key );
-
-		$this->assertSame( 1, (int) \get_transient( $key ), 'The window holds the count.' );
-		$this->assertLessThanOrEqual( \time() + MINUTE_IN_SECONDS, $timeout, 'It expires within the window.' );
-	}
-
-	/**
 	 * One request's allowance stays off another request's answer.
 	 *
 	 * A process can dispatch more than one REST request, `rest_do_request()` being the common case,
