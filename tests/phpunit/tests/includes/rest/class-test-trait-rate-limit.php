@@ -71,6 +71,25 @@ class Test_Trait_Rate_Limit extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * One request spends one unit, however often it is asked about.
+	 *
+	 * Core asks a permission callback again after dispatch, in `rest_send_allow_header()`, so without
+	 * this the sixth request of an allowance of ten was refused.
+	 *
+	 * @covers ::rate_limit
+	 */
+	public function test_rate_limit_counts_one_request_once() {
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
+		$window  = (int) \floor( \time() / MINUTE_IN_SECONDS );
+		$key     = \sprintf( 'activitypub_rate_%s_%s_%d', 'test_bucket', '203.0.113.60', $window );
+
+		$this->assertTrue( $this->instance->count( 'test_bucket', 3, $request ) );
+		$this->assertTrue( $this->instance->count( 'test_bucket', 3, $request ), 'The same request is allowed again.' );
+
+		$this->assertSame( 1, (int) \get_transient( $key ), 'And it was only counted once.' );
+	}
+
+	/**
 	 * Allowances are separate per bucket, per address and per account.
 	 *
 	 * @covers ::rate_limit

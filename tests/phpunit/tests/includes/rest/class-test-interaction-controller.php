@@ -51,6 +51,13 @@ class Test_Interaction_Controller extends Test_REST_Controller_Testcase {
 		$this->assertSame( '0', $headers['RateLimit-Remaining'] );
 		$this->assertArrayHasKey( 'Retry-After', $headers, 'The refusal says when to come back.' );
 
+		/*
+		 * The route used to be public to `Server::add_cache_headers()`, which leaves a public answer
+		 * cacheable. Now that it answers per caller, the answer must not be stored by a shared cache
+		 * and handed to the next caller.
+		 */
+		$this->assertStringContainsString( 'no-store', $headers['Cache-Control'] ?? '' );
+
 		\remove_filter( 'activitypub_rate_limit', '__return_zero' );
 	}
 
