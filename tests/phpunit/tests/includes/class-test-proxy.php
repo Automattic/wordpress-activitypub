@@ -263,7 +263,7 @@ class Test_Proxy extends \WP_UnitTestCase {
 
 		Proxy::get( $id );
 
-		$this->assertNotFalse( \get_transient( 'activitypub_object:' . \hash( 'sha256', $id ) ) );
+		$this->assertNotFalse( \get_transient( 'activitypub_object_' . \hash( 'sha256', $id ) ) );
 	}
 
 	/**
@@ -278,9 +278,10 @@ class Test_Proxy extends \WP_UnitTestCase {
 		Proxy::get( $id );
 		Proxy::get( $id );
 
-		$this->assertSame( 1, $this->requests );
-		$this->assertNotFalse( \wp_cache_get( 'object:' . \hash( 'sha256', $id ), 'activitypub' ) );
-		$this->assertFalse( \get_option( '_transient_activitypub_object:' . \hash( 'sha256', $id ) ) );
+		$this->assertSame( 1, $this->requests, 'The second call is answered from the cache.' );
+
+		// With a persistent object cache, a transient lives there and not in the options table.
+		$this->assertFalse( \get_option( '_transient_activitypub_object_' . \hash( 'sha256', $id ) ) );
 	}
 
 	/**
@@ -384,7 +385,7 @@ class Test_Proxy extends \WP_UnitTestCase {
 
 		$this->assertWPError( Proxy::get( $id ) );
 
-		$timeout = (int) \get_option( '_transient_timeout_activitypub_object:' . \hash( 'sha256', $id ) );
+		$timeout = (int) \get_option( '_transient_timeout_activitypub_object_' . \hash( 'sha256', $id ) );
 		$this->assertGreaterThan( \time() + 10 * MINUTE_IN_SECONDS, $timeout );
 	}
 

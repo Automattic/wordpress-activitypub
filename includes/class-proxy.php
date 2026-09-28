@@ -12,11 +12,16 @@ namespace Activitypub;
  *
  * Resolves an acct through WebFinger, answers from the cache, and on a miss fetches the
  * object with a signed request, checks that it is served under its own id, and stores it.
- * The REST `proxyUrl` endpoint and the older fetch helpers go through here. The cache
- * behind it is the object cache, or transients where the site has no persistent one,
- * so a host swaps the backend with its object cache drop-in and nothing else. It uses
- * its own cache group rather than plain transients so that a kind of entry can be
- * invalidated on its own later.
+ * The REST `proxyUrl` endpoint and the older fetch helpers go through here.
+ *
+ * Entries are transients, so the backing store is the site's object cache where it has a
+ * persistent one and the options table where it has not. The point of that order is the
+ * database: a site with Redis or memcached keeps remote posts, profiles and keys entirely
+ * out of it, and a site without one gets rows that carry an expiry and are not autoloaded,
+ * so they are read only when the object is asked for and dropped when they go stale.
+ * `get_transient()` and `set_transient()` pick the store themselves, which is why nothing
+ * here asks `wp_using_ext_object_cache()`: a host changes the backend by dropping in an
+ * object cache, and this class does not change at all.
  *
  * An object is stored once, under its declared id. Any other URL it was requested by
  * gets an alias, a bare string holding that id, so dropping the id drops every spelling.
@@ -26,13 +31,6 @@ namespace Activitypub;
  * @since unreleased
  */
 class Proxy {
-	/**
-	 * The cache namespace for remote objects.
-	 *
-	 * @var string
-	 */
-	const CACHE_NAMESPACE = 'object';
-
 	/**
 	 * Get a remote object.
 	 *
@@ -95,7 +93,7 @@ class Proxy {
 		$url = \strip_fragment_from_url( $url );
 
 		if ( $args['cached'] ) {
-			$entry = self::cache_get( self::CACHE_NAMESPACE, $url );
+			$entry = self::cache_get( $url );
 			if ( null !== $entry ) {
 				return $entry;
 			}
@@ -115,7 +113,7 @@ class Proxy {
 			// A call that bypassed the cache must not leave a failure behind for the others.
 			if ( $same_host && $args['cached'] ) {
 				$status = (int) ( $object->get_error_data()['status'] ?? 0 );
-				self::cache_set( self::CACHE_NAMESPACE, $url, $object, Http::failure_cache_duration( $status ) );
+				self::cache_set( $url, $object, Http::failure_cache_duration( $status ) );
 			}
 
 			return $object;
@@ -134,12 +132,12 @@ class Proxy {
 		$canonical = ! empty( $object['id'] ) && \is_string( $object['id'] ) ? $object['id'] : '';
 
 		if ( '' !== $canonical ) {
-			self::cache_set( self::CACHE_NAMESPACE, $canonical, $object, $ttl );
+			self::cache_set( $canonical, $object, $ttl );
 		}
 
 		if ( $same_host && $canonical !== $url ) {
 			// Without an id, the requested URL is the only name the document has.
-			self::cache_set( self::CACHE_NAMESPACE, $url, '' !== $canonical ? $canonical : $object, $ttl );
+			self::cache_set( $url, '' !== $canonical ? $canonical : $object, $ttl );
 		}
 
 		return $object;
@@ -152,62 +150,69 @@ class Proxy {
 	 *
 	 * @since unreleased
 	 *
-	 * @param string|array|null $id The ActivityPub id, or an object with an id.
+	 * @param string|array|null $id    The ActivityPub id, or an object with an id.
+	 * @param string|null       $actor Optional. The actor that asks for it. Pass it for anything an
+	 *                                 activity triggers, and only an actor on the object's own host
+	 *                                 retires the entry. Null evicts unconditionally, for the site's
+	 *                                 own housekeeping. Default null.
 	 *
 	 * @return bool Whether an entry was removed.
 	 */
-	public static function delete( $id ) {
+	public static function delete( $id, $actor = null ) {
 		if ( \is_array( $id ) ) {
 			$id = $id['id'] ?? null;
 		}
 
 		$url = object_to_uri( $id );
 
-		return $url ? self::cache_delete( self::CACHE_NAMESPACE, \strip_fragment_from_url( $url ) ) : false;
+		if ( ! $url ) {
+			return false;
+		}
+
+		/*
+		 * The check lives here rather than in the handlers so that every activity-driven eviction
+		 * is gated the same way: a Delete or an Update from a third host would otherwise be able
+		 * to drop another host's cached copy and make the site fetch it again at will.
+		 */
+		if ( null !== $actor && ! is_same_host( $actor, $url ) ) {
+			return false;
+		}
+
+		return self::cache_delete( \strip_fragment_from_url( $url ) );
 	}
 
 	/**
-	 * Build the cache key for a kind of thing and an identifier.
+	 * Build the transient name for an identifier.
 	 *
-	 * The identifier is hashed: ActivityPub ids are URLs of any length, and memcached
-	 * limits keys to 250 characters.
+	 * The identifier is hashed: ActivityPub ids are URLs of any length, and a transient
+	 * name may not exceed 191 characters.
 	 *
-	 * @param string $kind The kind of thing, for example `object`.
-	 * @param string $id   The ActivityPub id.
+	 * @param string $id The ActivityPub id.
 	 *
-	 * @return string The key.
+	 * @return string The transient name.
 	 */
-	private static function cache_key( $kind, $id ) {
-		return $kind . ':' . \hash( 'sha256', $id );
+	private static function cache_key( $id ) {
+		return 'activitypub_object_' . \hash( 'sha256', $id );
 	}
 
 	/**
 	 * Get an entry from the cache, following one alias.
 	 *
-	 * The object cache when the site has a persistent one, a transient otherwise.
-	 *
-	 * @param string $kind         The kind of thing, for example `object`.
 	 * @param string $id           The ActivityPub id.
 	 * @param bool   $follow_alias Whether an alias is resolved. Default true.
 	 *
 	 * @return array|\WP_Error|null The entry, or null when there is none.
 	 */
-	private static function cache_get( $kind, $id, $follow_alias = true ) {
-		$key = self::cache_key( $kind, $id );
+	private static function cache_get( $id, $follow_alias = true ) {
+		$value = \get_transient( self::cache_key( $id ) );
 
-		if ( \wp_using_ext_object_cache() ) {
-			$value = \wp_cache_get( $key, 'activitypub' );
-		} else {
-			$value = \get_transient( 'activitypub_' . $key );
-		}
-
-		if ( false === $value || null === $value ) {
+		if ( false === $value ) {
 			return null;
 		}
 
 		if ( \is_string( $value ) ) {
 			// A dangling alias, or an alias of an alias, is a miss.
-			return $follow_alias ? self::cache_get( $kind, $value, false ) : null;
+			return $follow_alias ? self::cache_get( $value, false ) : null;
 		}
 
 		return $value;
@@ -216,44 +221,29 @@ class Proxy {
 	/**
 	 * Store an entry in the cache.
 	 *
-	 * Always with a lifetime: a persistent object cache evicts entries anyway, and a
-	 * transient without one becomes an autoloaded option.
+	 * Always with a lifetime: a transient without one becomes an autoloaded option.
 	 *
-	 * @param string                 $kind  The kind of thing, for example `object`.
 	 * @param string                 $id    The ActivityPub id.
 	 * @param array|\WP_Error|string $value The entry, or the id it is an alias of.
 	 * @param int                    $ttl   Seconds to keep it. Nothing is written for zero.
 	 */
-	private static function cache_set( $kind, $id, $value, $ttl ) {
+	private static function cache_set( $id, $value, $ttl ) {
 		if ( $ttl <= 0 ) {
 			return;
 		}
 
-		$key = self::cache_key( $kind, $id );
-
-		if ( \wp_using_ext_object_cache() ) {
-			\wp_cache_set( $key, $value, 'activitypub', $ttl );
-		} else {
-			\set_transient( 'activitypub_' . $key, $value, $ttl );
-		}
+		\set_transient( self::cache_key( $id ), $value, $ttl );
 	}
 
 	/**
 	 * Remove an entry from the cache.
 	 *
-	 * @param string $kind The kind of thing, for example `object`.
-	 * @param string $id   The ActivityPub id.
+	 * @param string $id The ActivityPub id.
 	 *
 	 * @return bool Whether an entry was removed.
 	 */
-	private static function cache_delete( $kind, $id ) {
-		$key = self::cache_key( $kind, $id );
-
-		if ( \wp_using_ext_object_cache() ) {
-			return (bool) \wp_cache_delete( $key, 'activitypub' );
-		}
-
-		return (bool) \delete_transient( 'activitypub_' . $key );
+	private static function cache_delete( $id ) {
+		return (bool) \delete_transient( self::cache_key( $id ) );
 	}
 
 	/**

@@ -13,7 +13,6 @@ use Activitypub\Collection\Remote_Posts;
 use Activitypub\Proxy;
 
 use function Activitypub\is_activity_reply;
-use function Activitypub\is_same_host;
 use function Activitypub\object_to_uri;
 
 /**
@@ -35,10 +34,8 @@ class Update {
 	 * @param \Activitypub\Activity\Activity $activity_object The activity object. Default null.
 	 */
 	public static function handle_update( $activity, $user_ids, $activity_object ) {
-		// Only an actor on the object's host may retire the cached copy.
-		if ( is_same_host( $activity['actor'] ?? '', object_to_uri( $activity['object'] ?? null ) ) ) {
-			Proxy::delete( $activity['object'] );
-		}
+		// The proxy only lets an actor on the object's own host retire the cached copy.
+		Proxy::delete( $activity['object'] ?? null, $activity['actor'] ?? '' );
 
 		$object_type = $activity['object']['type'] ?? '';
 

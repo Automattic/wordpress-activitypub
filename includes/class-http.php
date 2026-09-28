@@ -107,7 +107,9 @@ class Http {
 	 * @param bool|int $cached Optional. Whether to cache the response, or the cache duration in seconds for
 	 *                         successful responses. Failed responses use a fixed short backoff duration. Default false.
 	 *
-	 * @return array|\WP_Error The GET Response or a WP_Error.
+	 * @return array|\WP_Error The GET Response, or a WP_Error whose data carries the `status` and, when a
+	 *                         redirect took the request to another URL, the `effective_url` it ended at, so
+	 *                         a caller that caches the failure can tell whose failure it actually is.
 	 */
 	public static function get( $url, $args = array(), $cached = false ) {
 		// Backward compatibility: if $args is boolean/int, it's the old $cached parameter.
