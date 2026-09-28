@@ -123,6 +123,32 @@ class Test_Trait_Rate_Limit extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An answer that carries one caller's allowance is not stored by a shared cache.
+	 *
+	 * @covers ::rate_limit
+	 */
+	public function test_rate_limit_keeps_its_answer_out_of_shared_caches() {
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
+
+		$this->instance->count( 'test_bucket', 5, $request );
+
+		$response = \apply_filters( 'rest_post_dispatch', new \WP_REST_Response( array(), 200 ), \rest_get_server(), $request );
+		$headers  = $response->get_headers();
+
+		$this->assertStringContainsString( 'no-store', $headers['Cache-Control'] );
+
+		// An endpoint that already said how it may be cached keeps its own directive.
+		$own     = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/token' );
+		$carries = new \WP_REST_Response( array(), 429 );
+		$carries->header( 'Cache-Control', 'no-store' );
+
+		$this->instance->count( 'other_bucket', 5, $own );
+		$answer = \apply_filters( 'rest_post_dispatch', $carries, \rest_get_server(), $own );
+
+		$this->assertSame( 'no-store', $answer->get_headers()['Cache-Control'] );
+	}
+
+	/**
 	 * A request is forgotten once its response carries the allowance.
 	 *
 	 * The answer is kept only so core's second permission check cannot charge one request twice, so

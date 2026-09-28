@@ -8,6 +8,7 @@
 namespace Activitypub\Rest;
 
 use function Activitypub\get_client_ip;
+use function Activitypub\maybe_set_no_store;
 
 /**
  * How often one caller may ask.
@@ -127,7 +128,8 @@ trait Rate_Limit {
 	 * Report the allowance on the response this request gets.
 	 *
 	 * The header names follow the IETF RateLimit header fields, which is what other Fediverse
-	 * servers read. `Retry-After` is added to a refusal as well, per RFC 9110 section 10.2.3.
+	 * servers read. `Retry-After` is added to a refusal as well, per RFC 9110 section 10.2.3, and the
+	 * answer is kept out of shared caches, because the numbers describe one caller.
 	 *
 	 * The callback answers only the response to the request it counted, and takes itself off the hook
 	 * once it has: a process can dispatch more than one REST request, `rest_do_request()` being the
@@ -157,6 +159,18 @@ trait Rate_Limit {
 			$response->header( 'RateLimit-Limit', (string) $limit );
 			$response->header( 'RateLimit-Remaining', (string) $remaining );
 			$response->header( 'RateLimit-Reset', (string) $seconds );
+
+			/*
+			 * These numbers belong to one caller, so the answer must not be stored by a shared cache
+			 * and handed to the next one. An endpoint that already said how it may be cached keeps its
+			 * own directive: `Server::add_cache_headers()` runs first and the token endpoint sends the
+			 * one RFC 6749 section 5.1 asks for.
+			 */
+			$headers = $response->get_headers();
+
+			if ( empty( $headers['Cache-Control'] ) ) {
+				maybe_set_no_store( $response );
+			}
 
 			if ( 429 === $response->get_status() ) {
 				$response->header( 'Retry-After', (string) \max( 1, $seconds ) );
