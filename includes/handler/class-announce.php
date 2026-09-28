@@ -56,9 +56,16 @@ class Announce {
 
 		$object_url = object_to_uri( $announcement['object'] );
 
+		/*
+		 * The filter below recognizes the request by its URL, and `Proxy::get()` drops the
+		 * fragment before it fetches, so the comparison uses that form. The identifier itself
+		 * is passed on as it arrived, so the proxy still gets to refuse what it should refuse.
+		 */
+		$requested_url = \strip_fragment_from_url( $object_url );
+
 		// Force no redirects for this object's request only, so the requested host stays the authoritative origin.
-		$no_redirects = static function ( $args, $url ) use ( $object_url ) {
-			if ( $url === $object_url ) {
+		$no_redirects = static function ( $args, $url ) use ( $requested_url ) {
+			if ( $url === $requested_url ) {
 				$args['redirection'] = 0;
 			}
 			return $args;

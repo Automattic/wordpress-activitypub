@@ -36,6 +36,9 @@ class Proxy {
 	 *
 	 * @since unreleased
 	 *
+	 * An identifier that is not a string, or that hides its authority behind `user@host`, is
+	 * refused; see the checks in the body.
+	 *
 	 * @param string|array $id   The ActivityPub id, an acct identifier, or an object with an id.
 	 * @param array        $args {
 	 *     Optional. Arguments.
@@ -87,6 +90,23 @@ class Proxy {
 
 		if ( \is_wp_error( $url ) ) {
 			return $url;
+		}
+
+		/*
+		 * An id that hides its authority behind userinfo is refused rather than cleaned up:
+		 * RFC 9110 asks a recipient to treat `user@host` in an http(s) URI as an error, and
+		 * `wp_http_validate_url()` rejects it, which the normalization below would otherwise
+		 * hide by handing validation a URL the sender never sent.
+		 */
+		if ( ! \is_string( $url ) || null !== \wp_parse_url( $url, PHP_URL_USER ) || null !== \wp_parse_url( $url, PHP_URL_PASS ) ) {
+			return new \WP_Error(
+				'activitypub_no_valid_object_url',
+				\__( 'The "object" is/has no valid URL', 'activitypub' ),
+				array(
+					'status' => 400,
+					'object' => $url,
+				)
+			);
 		}
 
 		// A fragment never reaches the server, and a key id like `…#main-key` must share the actor's entry.
