@@ -761,6 +761,43 @@ class Test_Delete extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A media-typed object cannot be used to retire an entry on another host.
+	 *
+	 * `object_to_uri()` answers with `url` for an `Image`, while the cache is keyed on `id`, so a
+	 * gate that compares one and evicts the other could be handed two different hosts. The check
+	 * lives inside `Proxy::delete()` for exactly that reason.
+	 *
+	 * @covers ::handle_delete
+	 */
+	public function test_handle_delete_cannot_evict_another_host_through_a_media_url() {
+		$this->stub_remote_requests();
+		$id                     = 'https://example.com/notes/1';
+		$this->responses[ $id ] = array(
+			'id'   => $id,
+			'type' => 'Note',
+		);
+
+		Proxy::get( $id );
+		Delete::handle_delete(
+			array(
+				'type'   => 'Delete',
+				'actor'  => 'https://example.org/users/mallory',
+				'object' => array(
+					'type' => 'Image',
+					'id'   => $id,
+					'url'  => 'https://example.org/mallory.png',
+				),
+			),
+			array( 1 )
+		);
+		$before = $this->requests;
+		Proxy::get( $id );
+		$this->unstub_remote_requests();
+
+		$this->assertSame( $before, $this->requests, "The victim's entry is still served from the cache." );
+	}
+
+	/**
 	 * A Delete from an actor on another host than the object does not touch the cache.
 	 *
 	 * @covers ::handle_delete
