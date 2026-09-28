@@ -105,13 +105,13 @@ class Test_Proxy extends \WP_UnitTestCase {
 	/**
 	 * Deleting an entry forces the next call to fetch again.
 	 *
-	 * @covers ::delete
+	 * @covers ::purge
 	 */
-	public function test_delete_fetches_again() {
+	public function test_purge_fetches_again() {
 		$id = $this->note( 'https://example.com/notes/1' );
 
 		Proxy::get( $id );
-		Proxy::delete( $id );
+		Proxy::purge( $id );
 		$this->responses[ $id ]['content'] = 'v2';
 
 		$this->assertSame( 'v2', Proxy::get( $id )['content'] );
@@ -208,7 +208,7 @@ class Test_Proxy extends \WP_UnitTestCase {
 		Proxy::get( $requested );
 		$this->assertSame( 2, $this->requests, 'Both spellings are served from the cache.' );
 
-		Proxy::delete( $declared );
+		Proxy::purge( $declared );
 		Proxy::get( $requested );
 		$this->assertSame( 4, $this->requests, 'Dropping the id retires the alias.' );
 	}
@@ -347,7 +347,7 @@ class Test_Proxy extends \WP_UnitTestCase {
 		$this->assertSame( $before, $this->requests, 'The second call is answered from the cache.' );
 
 		// Retiring the actor retires the entry the key id shares with it.
-		Proxy::delete( $actor );
+		Proxy::purge( $actor );
 		Proxy::get( $key_id );
 		$this->assertSame( $before + 1, $this->requests, 'The entry is gone after the actor was retired.' );
 	}
@@ -454,9 +454,9 @@ class Test_Proxy extends \WP_UnitTestCase {
 	/**
 	 * A media object is deleted by its id, not by the file it points at.
 	 *
-	 * @covers ::delete
+	 * @covers ::purge
 	 */
-	public function test_delete_keys_a_media_object_on_its_id() {
+	public function test_purge_keys_a_media_object_on_its_id() {
 		$id                     = 'https://example.com/photos/1';
 		$this->responses[ $id ] = array(
 			'id'   => $id,
@@ -465,7 +465,7 @@ class Test_Proxy extends \WP_UnitTestCase {
 		);
 
 		Proxy::get( $id );
-		Proxy::delete( $this->responses[ $id ] );
+		Proxy::purge( $this->responses[ $id ] );
 		Proxy::get( $id );
 
 		$this->assertSame( 2, $this->requests );

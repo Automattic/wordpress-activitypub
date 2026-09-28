@@ -178,41 +178,69 @@ class Proxy {
 	}
 
 	/**
-	 * Remove a remote object from the cache.
+	 * Retire what an activity says is gone or has changed.
 	 *
-	 * Dropping an id also retires every alias that points at it.
+	 * The actor is required, and only an actor on the object's own host retires the entry: a
+	 * Delete or an Update from a third host would otherwise be able to drop another host's
+	 * cached copy and make the site fetch it again at will. The check and the eviction share
+	 * one identifier, so the two can never be handed different hosts. Dropping an id also
+	 * retires every alias that points at it.
+	 *
+	 * For evictions the site decides on itself, see {@see Proxy::purge()}.
 	 *
 	 * @since unreleased
 	 *
 	 * @param string|array|null $id    The ActivityPub id, or an object with an id.
-	 * @param string|null       $actor Optional. The actor that asks for it. Pass it for anything an
-	 *                                 activity triggers, and only an actor on the object's own host
-	 *                                 retires the entry. Null evicts unconditionally, for the site's
-	 *                                 own housekeeping. Default null.
+	 * @param string            $actor The actor the activity came from.
 	 *
 	 * @return bool Whether an entry was removed.
 	 */
-	public static function delete( $id, $actor = null ) {
+	public static function delete( $id, $actor ) {
+		$url = self::entry_url( $id );
+
+		if ( '' === $url || ! is_same_host( (string) $actor, $url ) ) {
+			return false;
+		}
+
+		return self::cache_delete( $url );
+	}
+
+	/**
+	 * Remove an entry because the site decided to.
+	 *
+	 * For a deletion the site has confirmed itself, or plain housekeeping. Everything an
+	 * activity asks for goes through {@see Proxy::delete()}, which requires an actor.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string|array|null $id The ActivityPub id, or an object with an id.
+	 *
+	 * @return bool Whether an entry was removed.
+	 */
+	public static function purge( $id ) {
+		$url = self::entry_url( $id );
+
+		return '' === $url ? false : self::cache_delete( $url );
+	}
+
+	/**
+	 * The name an entry is stored under, for an id, a URL, or an object carrying one.
+	 *
+	 * Shared by the two evictions so that an authorization check and the eviction it guards
+	 * can never derive the entry from different fields.
+	 *
+	 * @param string|array|null $id The ActivityPub id, or an object with an id.
+	 *
+	 * @return string The name, or an empty string when there is none.
+	 */
+	private static function entry_url( $id ) {
 		if ( \is_array( $id ) ) {
 			$id = $id['id'] ?? null;
 		}
 
 		$url = object_to_uri( $id );
 
-		if ( ! $url ) {
-			return false;
-		}
-
-		/*
-		 * The check lives here rather than in the handlers so that every activity-driven eviction
-		 * is gated the same way: a Delete or an Update from a third host would otherwise be able
-		 * to drop another host's cached copy and make the site fetch it again at will.
-		 */
-		if ( null !== $actor && ! is_same_host( $actor, $url ) ) {
-			return false;
-		}
-
-		return self::cache_delete( \strip_fragment_from_url( $url ) );
+		return \is_string( $url ) && '' !== $url ? \strip_fragment_from_url( $url ) : '';
 	}
 
 	/**

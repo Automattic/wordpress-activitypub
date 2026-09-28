@@ -242,7 +242,7 @@ class Delete {
 		// Verify that Actor is deleted.
 		if ( ! \is_wp_error( $follower ) && Tombstone::exists( $activity['actor'] ) ) {
 			// The actor is gone from its own host, so the cached copy goes with it.
-			Proxy::delete( $activity['actor'] );
+			Proxy::purge( $activity['actor'] );
 
 			self::maybe_delete_interactions( $follower->ID );
 			self::maybe_delete_posts( $follower->ID );
@@ -338,7 +338,7 @@ class Delete {
 
 		if ( $comments && Tombstone::exists( $id ) ) {
 			// The object is gone from its own host, so the cached copy goes with it.
-			Proxy::delete( $id );
+			Proxy::purge( $id );
 
 			foreach ( $comments as $comment ) {
 				// WordPress will automatically delete all comment meta including _activitypub_remote_actor_id.
@@ -364,7 +364,7 @@ class Delete {
 		// Check if the object exists and is a tombstone.
 		if ( Tombstone::exists( $id ) ) {
 			// The object is gone from its own host, so the cached copy goes with it.
-			Proxy::delete( $id );
+			Proxy::purge( $id );
 
 			return Remote_Posts::delete_by_guid( $id );
 		}
