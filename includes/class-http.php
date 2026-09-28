@@ -278,8 +278,8 @@ class Http {
 	/**
 	 * Get a remote object.
 	 *
-	 * Forwards to {@see Proxy::get()}, which owns the cache and the checks that an
-	 * object is served under its own id.
+	 * @deprecated unreleased Use {@see Proxy::get()}, which owns the cache and the checks that
+	 *                        an object is served under its own id.
 	 *
 	 * @param array|string $url_or_object The Object or the Object URL.
 	 * @param bool|int     $cached        Optional. Whether to use the cache; an int is a cache lifetime in seconds. Default true.
@@ -287,6 +287,8 @@ class Http {
 	 * @return array|\WP_Error The Object data as array or WP_Error on failure.
 	 */
 	public static function get_remote_object( $url_or_object, $cached = true ) {
+		\_deprecated_function( __METHOD__, 'unreleased', 'Activitypub\Proxy::get' );
+
 		$args = array( 'cached' => (bool) $cached );
 
 		if ( \is_int( $cached ) && $cached > 0 ) {

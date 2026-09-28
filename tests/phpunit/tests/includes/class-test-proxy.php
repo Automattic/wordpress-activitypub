@@ -284,7 +284,9 @@ class Test_Proxy extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * The old entry point goes through the proxy and its cache.
+	 * The deprecated entry point goes through the proxy and its cache.
+	 *
+	 * @expectedDeprecated Activitypub\Http::get_remote_object
 	 *
 	 * @covers \Activitypub\Http::get_remote_object
 	 */

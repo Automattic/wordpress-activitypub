@@ -11,7 +11,6 @@ use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Interactions;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Collection\Remote_Posts;
-use Activitypub\Http;
 use Activitypub\Proxy;
 use Activitypub\Tombstone;
 
@@ -158,7 +157,7 @@ class Delete {
 
 		// Only the quoted object's author may revoke the stamp.
 		$quoted_uri = \get_post_meta( $post->ID, '_activitypub_quote_request', true );
-		$quoted     = $quoted_uri ? Http::get_remote_object( $quoted_uri ) : null;
+		$quoted     = $quoted_uri ? Proxy::get( $quoted_uri ) : null;
 
 		if ( ! $quoted || \is_wp_error( $quoted ) || empty( $quoted['attributedTo'] ) ) {
 			return false;

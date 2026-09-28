@@ -10,7 +10,7 @@ namespace Activitypub\Handler;
 use Activitypub\Collection\Following;
 use Activitypub\Collection\Outbox;
 use Activitypub\Collection\Remote_Actors;
-use Activitypub\Http;
+use Activitypub\Proxy;
 
 use function Activitypub\add_to_outbox;
 use function Activitypub\is_same_actor;
@@ -152,7 +152,7 @@ class Reject {
 			return false;
 		}
 
-		$quoted = Http::get_remote_object( $quoted_uri );
+		$quoted = Proxy::get( $quoted_uri );
 
 		if ( \is_wp_error( $quoted ) || empty( $quoted['attributedTo'] ) ) {
 			return false;
