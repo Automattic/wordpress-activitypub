@@ -157,8 +157,13 @@ class Proxy {
 		 */
 		$ttl = (int) \apply_filters( 'activitypub_proxy_cache_ttl', (int) $args['ttl'], $url, $object );
 
-		// The declared id confirmed itself, so it is the canonical entry.
-		$canonical = ! empty( $object['id'] ) && \is_string( $object['id'] ) ? $object['id'] : '';
+		/*
+		 * The declared id confirmed itself, so it is the canonical entry. Its fragment goes the
+		 * way the requested URL's went: reads and `delete()` look the entry up without one, so an
+		 * id like `…#main-key` would otherwise be written under a name nothing asks for and left
+		 * behind when the actor is retired.
+		 */
+		$canonical = ! empty( $object['id'] ) && \is_string( $object['id'] ) ? \strip_fragment_from_url( $object['id'] ) : '';
 
 		if ( $origin_known && '' !== $canonical ) {
 			self::cache_set( $canonical, $object, $ttl );

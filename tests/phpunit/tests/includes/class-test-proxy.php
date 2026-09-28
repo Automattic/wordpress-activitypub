@@ -285,6 +285,40 @@ class Test_Proxy extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An id that carries a fragment is stored under the name the lookups use.
+	 *
+	 * A key id like `…#main-key` dereferences to the actor document, so the entry has to be
+	 * reachable, and retirable, under the actor's own name rather than under a second key that
+	 * only the fragment spelling would find.
+	 *
+	 * @covers ::get
+	 * @covers ::delete
+	 */
+	public function test_an_id_with_a_fragment_is_stored_under_one_name() {
+		$actor                     = 'https://example.com/actor';
+		$key_id                    = $actor . '#main-key';
+		$this->responses[ $actor ] = array(
+			'id'   => $key_id,
+			'type' => 'Person',
+		);
+
+		Proxy::get( $key_id );
+
+		global $wpdb;
+		$entries = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE '_transient_activitypub_object_%'" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$this->assertSame( 1, $entries, 'The document is stored once.' );
+
+		$before = $this->requests;
+		Proxy::get( $key_id );
+		$this->assertSame( $before, $this->requests, 'The second call is answered from the cache.' );
+
+		// Retiring the actor retires the entry the key id shares with it.
+		Proxy::delete( $actor );
+		Proxy::get( $key_id );
+		$this->assertSame( $before + 1, $this->requests, 'The entry is gone after the actor was retired.' );
+	}
+
+	/**
 	 * A document whose origin the response does not name is returned but never cached.
 	 *
 	 * `Http::effective_url()` cannot always tell where a response came from, most often because
