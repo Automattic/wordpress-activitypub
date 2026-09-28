@@ -19,6 +19,8 @@ use function Activitypub\user_can_activitypub;
  * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/3b86/fep-3b86.md
  */
 class Interaction_Controller extends \WP_REST_Controller {
+	use Rate_Limit;
+
 	/**
 	 * The namespace of this controller's route.
 	 *
@@ -56,7 +58,10 @@ class Interaction_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_item' ),
-					'permission_callback' => '__return_true',
+					// Public by design, it answers a click on another site, so the only gate is how often one caller may ask.
+					'permission_callback' => function ( $request ) {
+						return $this->rate_limit( 'interactions', 10, $request );
+					},
 					'args'                => array(
 						'uri'    => array(
 							'description'       => 'The URI or webfinger ID of the object to interact with.',

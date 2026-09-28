@@ -155,9 +155,6 @@ class Test_Authorization_Controller extends \WP_UnitTestCase {
 			$snapshot[ $key ] = \array_key_exists( $key, $_SERVER ) ? $_SERVER[ $key ] : null;
 		}
 
-		$empty_ip_transient = 'ap_oauth_auth_' . \md5( '' );
-		\delete_transient( $empty_ip_transient );
-
 		try {
 			foreach ( $server_keys as $key ) {
 				unset( $_SERVER[ $key ] );
@@ -168,14 +165,18 @@ class Test_Authorization_Controller extends \WP_UnitTestCase {
 			$request->set_param( 'client_id', $this->client_id );
 			$request->set_param( 'redirect_uri', $this->redirect_uri );
 
-			$response = \rest_get_server()->dispatch( $request );
+			/*
+			 * `rest_post_dispatch` runs in `serve_request()` rather than in `dispatch()`, so the
+			 * allowance headers are applied here the way a real request receives them.
+			 */
+			$response = \apply_filters( 'rest_post_dispatch', \rest_get_server()->dispatch( $request ), \rest_get_server(), $request );
 			$data     = $response->get_data();
 			$headers  = $response->get_headers();
 
 			$this->assertEquals( 429, $response->get_status() );
-			$this->assertEquals( 'activitypub_rate_limit', $data['code'] );
-			$this->assertSame( (string) MINUTE_IN_SECONDS, $headers['Retry-After'] ?? null, 'Rate-limit responses must include Retry-After per RFC 6585 §4.' );
-			$this->assertFalse( \get_transient( $empty_ip_transient ) );
+			$this->assertEquals( 'activitypub_rate_limited', $data['code'] );
+			$this->assertArrayHasKey( 'Retry-After', $headers, 'A refusal says when to come back.' );
+			$this->assertSame( '20', $headers['RateLimit-Limit'], 'And what the allowance was.' );
 		} finally {
 			foreach ( $snapshot as $key => $value ) {
 				if ( null === $value ) {

@@ -21,7 +21,9 @@ use Activitypub\Webfinger;
  * Provides a bridge between C2S OAuth authentication and S2S HTTP Signature authentication.
  * Allows C2S clients to fetch remote ActivityPub objects through their home server.
  */
+
 class Proxy_Controller extends \WP_REST_Controller {
+	use Rate_Limit;
 	use Event_Stream;
 	use Reader_Permission;
 	use Verification;
@@ -59,6 +61,12 @@ class Proxy_Controller extends \WP_REST_Controller {
 					 * not a write in the sense `write` grants.
 					 */
 					'permission_callback' => function ( $request ) {
+						$allowance = $this->rate_limit( 'proxy', 30, $request );
+
+						if ( \is_wp_error( $allowance ) ) {
+							return $allowance;
+						}
+
 						// Editors use this from the block editor with a cookie + nonce; apps use OAuth.
 						if ( ! \is_wp_error( $this->check_reader_capability() ) ) {
 							return true;
@@ -164,21 +172,6 @@ class Proxy_Controller extends \WP_REST_Controller {
 	 * @return \WP_REST_Response|\WP_Error Response object on success, WP_Error on failure.
 	 */
 	public function create_item( $request ) {
-		// Rate-limit proxy requests (max 30 per minute per user).
-		$user_id       = \get_current_user_id();
-		$transient_key = 'ap_proxy_' . $user_id;
-		$count         = (int) \get_transient( $transient_key );
-
-		if ( $count >= 30 ) {
-			return new \WP_Error(
-				'activitypub_rate_limit',
-				\__( 'Too many proxy requests. Please try again later.', 'activitypub' ),
-				array( 'status' => 429 )
-			);
-		}
-
-		\set_transient( $transient_key, $count + 1, MINUTE_IN_SECONDS );
-
 		$url = $request->get_param( 'id' );
 
 		// Try to fetch as an actor first using Remote_Actors which handles caching.

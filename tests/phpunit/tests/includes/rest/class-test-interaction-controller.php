@@ -28,6 +28,33 @@ class Test_Interaction_Controller extends Test_REST_Controller_Testcase {
 	}
 
 	/**
+	 * The route answers 429 with a Retry-After header once a caller has asked too often.
+	 *
+	 * @covers ::register_routes
+	 */
+	public function test_route_is_rate_limited() {
+		\wp_set_current_user( 0 );
+		$_SERVER['REMOTE_ADDR'] = '203.0.113.50';
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
+		$request->set_param( 'uri', 'https://example.org/note' );
+
+		\add_filter( 'activitypub_rate_limit', '__return_zero' );
+
+		// `rest_post_dispatch` is applied by `serve_request()`, not by `dispatch()`, so apply it here.
+		$response = \apply_filters( 'rest_post_dispatch', \rest_get_server()->dispatch( $request ), \rest_get_server(), $request );
+		$headers  = $response->get_headers();
+
+		$this->assertSame( 429, $response->get_status() );
+		$this->assertSame( 'activitypub_rate_limited', $response->get_data()['title'] );
+		$this->assertSame( '0', $headers['RateLimit-Limit'], 'The answer states the allowance it was measured against.' );
+		$this->assertSame( '0', $headers['RateLimit-Remaining'] );
+		$this->assertArrayHasKey( 'Retry-After', $headers, 'The refusal says when to come back.' );
+
+		\remove_filter( 'activitypub_rate_limit', '__return_zero' );
+	}
+
+	/**
 	 * Test get_item with invalid URI.
 	 *
 	 * @covers ::get_item

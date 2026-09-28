@@ -9,7 +9,6 @@ namespace Activitypub\OAuth;
 
 use Activitypub\Sanitize;
 
-use function Activitypub\get_client_ip;
 use function Activitypub\get_url_authority;
 use function Activitypub\resolve_public_host;
 
@@ -234,28 +233,6 @@ class Client {
 	 * @return Client|\WP_Error The client or error.
 	 */
 	private static function discover_and_register( $client_id ) {
-		// Rate-limit auto-discovery to prevent SSRF abuse (max 10 per minute per IP).
-		$ip = get_client_ip();
-		if ( '' === $ip ) {
-			return new \WP_Error(
-				'activitypub_rate_limited',
-				\__( 'Too many client discovery requests. Please try again later.', 'activitypub' ),
-				array( 'status' => 429 )
-			);
-		}
-		$transient_key = 'ap_oauth_disc_' . \md5( $ip );
-		$count         = (int) \get_transient( $transient_key );
-
-		if ( $count >= 10 ) {
-			return new \WP_Error(
-				'activitypub_rate_limited',
-				\__( 'Too many client discovery requests. Please try again later.', 'activitypub' ),
-				array( 'status' => 429 )
-			);
-		}
-
-		\set_transient( $transient_key, $count + 1, MINUTE_IN_SECONDS );
-
 		$metadata = self::fetch_client_metadata( $client_id );
 
 		if ( \is_wp_error( $metadata ) ) {

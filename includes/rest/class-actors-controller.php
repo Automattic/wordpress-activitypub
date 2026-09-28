@@ -10,7 +10,6 @@ namespace Activitypub\Rest;
 use Activitypub\Collection\Actors as Actor_Collection;
 use Activitypub\Webfinger;
 
-use function Activitypub\get_client_ip;
 
 /**
  * ActivityPub Actors REST-Class.
@@ -20,6 +19,7 @@ use function Activitypub\get_client_ip;
  * @see https://www.w3.org/TR/activitypub/#followers
  */
 class Actors_Controller extends \WP_REST_Controller {
+	use Rate_Limit;
 	use Verification;
 
 	/**
@@ -76,7 +76,13 @@ class Actors_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_remote_follow_item' ),
-					'permission_callback' => '__return_true',
+					/*
+					 * Unauthenticated, and it makes a WebFinger request to a host the caller names,
+					 * so the only gate is how often one caller may ask.
+					 */
+					'permission_callback' => function ( $request ) {
+						return $this->rate_limit( 'remote_follow', 10, $request );
+					},
 					'args'                => array(
 						'resource' => array(
 							'description' => 'The resource to follow.',
@@ -120,23 +126,6 @@ class Actors_Controller extends \WP_REST_Controller {
 	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error object on failure.
 	 */
 	public function get_remote_follow_item( $request ) {
-		/*
-		 * This endpoint is unauthenticated and triggers an outbound WebFinger request to a
-		 * user-supplied host, so throttle it per IP (max 10 per minute) to limit its use as
-		 * a blind SSRF / request-amplification vector. Fail closed when no IP is available.
-		 */
-		$ip = get_client_ip();
-		if ( '' === $ip ) {
-			return self::rate_limit_response();
-		}
-
-		$transient_key = 'ap_remote_follow_' . \md5( $ip );
-		$count         = (int) \get_transient( $transient_key );
-		if ( $count >= 10 ) {
-			return self::rate_limit_response();
-		}
-		\set_transient( $transient_key, $count + 1, MINUTE_IN_SECONDS );
-
 		$resource = $request->get_param( 'resource' );
 		$user_id  = $request->get_param( 'user_id' );
 		$user     = Actor_Collection::get_by_id( $user_id );
@@ -155,24 +144,6 @@ class Actors_Controller extends \WP_REST_Controller {
 				'url'      => $url,
 				'template' => $template,
 			)
-		);
-	}
-
-	/**
-	 * Build a 429 rate-limit response for the remote-follow endpoint.
-	 *
-	 * @return \WP_REST_Response The rate-limit response.
-	 */
-	private static function rate_limit_response() {
-		return new \WP_REST_Response(
-			array(
-				'code'    => 'activitypub_rate_limited',
-				'message' => \__( 'Too many requests. Please try again later.', 'activitypub' ),
-				'data'    => array( 'status' => 429 ),
-			),
-			429,
-			// RFC 6585 §4: send Retry-After so clients can back off.
-			array( 'Retry-After' => (string) MINUTE_IN_SECONDS )
 		);
 	}
 
