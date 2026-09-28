@@ -33,6 +33,7 @@
 	},
 	"homepage": "https://github.com/automattic/wordpress-activitypub#readme",
 	"devDependencies": {
+		"@babel/core": "^7.29.7",
 		"@base-ui/react": "^1.8.0",
 		"@playwright/test": "^1.63.0",
 		"@testing-library/jest-dom": "^7.0.1",
@@ -79,6 +80,7 @@
 		"@wordpress/url": "^4.51.0",
 		"@wordpress/viewport": "^6.55.0",
 		"@wordpress/views": "^1.19.0",
+		"babel-jest": "^30.5.1",
 		"classnames": "^2.5.1",
 		"clsx": "^2.1.1",
 		"jest": "^30.5.1",
