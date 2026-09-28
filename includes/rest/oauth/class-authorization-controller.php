@@ -12,7 +12,6 @@ use Activitypub\OAuth\Client;
 use Activitypub\OAuth\Scope;
 use Activitypub\Rest\Rate_Limit;
 
-
 /**
  * Authorization_Controller class for handling the OAuth 2.0 authorization endpoint.
  *
@@ -309,6 +308,19 @@ class Authorization_Controller extends \WP_REST_Controller {
 				'activitypub_not_logged_in',
 				\__( 'You must be logged in to authorize applications.', 'activitypub' ),
 				array( 'status' => 401 )
+			);
+		}
+
+		/*
+		 * An account without the ActivityPub capability has nothing to hand out. Read directly, not
+		 * through `user_can_activitypub()`, so a capable user keeps authorizing apps in blog-only and
+		 * single-user mode, as `Token::validate_user_access()` does.
+		 */
+		if ( ! \current_user_can( 'activitypub' ) ) {
+			return new \WP_Error(
+				'activitypub_user_not_enabled',
+				\__( 'Your account is not enabled for ActivityPub, so it cannot authorize apps.', 'activitypub' ),
+				array( 'status' => 403 )
 			);
 		}
 

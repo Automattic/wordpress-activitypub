@@ -11,7 +11,6 @@ use Activitypub\Sanitize;
 
 use function Activitypub\get_url_authority;
 use function Activitypub\resolve_public_host;
-use function Activitypub\spend_rate_limit;
 
 /**
  * Client class for managing OAuth 2.0 client registrations.
@@ -227,24 +226,13 @@ class Client {
 	/**
 	 * Discover client metadata from URL and auto-register.
 	 *
-	 * Fetches the Client ID Metadata Document (CIMD) from the client_id URL, and counts how often one
-	 * caller may trigger that fetch, because the URL comes from the caller.
+	 * Fetches the Client ID Metadata Document (CIMD) from the client_id URL. The URL comes from the
+	 * caller, so every entry point that reaches this counts the caller before it gets here.
 	 *
 	 * @param string $client_id The client ID URL.
 	 * @return Client|\WP_Error The client or error.
 	 */
 	private static function discover_and_register( $client_id ) {
-		/*
-		 * Discovery fetches a URL the caller names, and the consent page at
-		 * `wp-login.php?action=activitypub_authorize` reaches it without passing a REST route, so the
-		 * count sits at the fetch rather than at an endpoint. It is the same counter the endpoints use.
-		 */
-		$allowance = spend_rate_limit( 'oauth_discovery', 10 );
-
-		if ( \is_wp_error( $allowance ) ) {
-			return $allowance;
-		}
-
 		$metadata = self::fetch_client_metadata( $client_id );
 
 		if ( \is_wp_error( $metadata ) ) {

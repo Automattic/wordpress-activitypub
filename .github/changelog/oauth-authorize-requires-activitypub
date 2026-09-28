@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Only accounts that are enabled for ActivityPub can authorize apps to act for them.

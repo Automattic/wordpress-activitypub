@@ -7,19 +7,19 @@
 
 namespace Activitypub\Rest;
 
-use function Activitypub\spend_rate_limit;
+use function Activitypub\get_client_ip;
 
 /**
  * How often one caller may ask.
  *
  * Controllers use this trait for permission callbacks: an endpoint states its allowance where its
- * route is registered, and the trait counts the caller through `spend_rate_limit()` and reports the
- * allowance in the response headers, whether the request fit in it or not. The headers are added here
- * rather than by the endpoint because a permission callback can return no more than a `WP_Error`,
- * which carries none.
+ * route is registered, and the trait counts the caller and reports the allowance in the response
+ * headers, whether the request fit in it or not. The headers are added here rather than by the
+ * endpoint because a permission callback can return no more than a `WP_Error`, which carries none.
  *
- * The counting itself lives in `spend_rate_limit()`, because the OAuth consent page reaches client
- * discovery without passing a route and has to be counted the same way.
+ * A signed-in caller is counted per account and everyone else per IP address. A caller that cannot
+ * be identified at all is refused: without a key there is nothing to count, so letting it through
+ * would be the same as having no limit.
  *
  * @since unreleased
  */
@@ -76,17 +76,41 @@ trait Rate_Limit {
 	 * @return true|\WP_Error True when the request fits in the allowance, WP_Error otherwise.
 	 */
 	private function count_request( $bucket, $limit, $request ) {
-		$allowance = spend_rate_limit( $bucket, $limit );
+		/**
+		 * Filters how many requests a caller may make per minute.
+		 *
+		 * @since unreleased
+		 *
+		 * @param int    $limit  The allowance the endpoint asks for.
+		 * @param string $bucket What is being limited, for example `interactions`.
+		 */
+		$limit = (int) \apply_filters( 'activitypub_rate_limit', $limit, $bucket );
 
-		if ( \is_wp_error( $allowance ) ) {
-			$data = $allowance->get_error_data();
+		$user_id = \get_current_user_id();
+		$caller  = $user_id ? 'user-' . $user_id : get_client_ip();
 
-			$this->send_rate_limit_headers( $request, $data['limit'], 0, $data['reset'] );
+		/*
+		 * The window is part of the entry's name, so it ends by itself instead of being pushed
+		 * forward by every request, and only the first request of a window writes a new entry.
+		 */
+		$window = (int) \floor( \time() / MINUTE_IN_SECONDS );
+		$reset  = ( $window + 1 ) * MINUTE_IN_SECONDS;
+		$key    = \sprintf( 'activitypub_rate_%s_%s_%d', $bucket, \str_replace( ':', '-', $caller ), $window );
+		$count  = (int) \get_transient( $key );
 
-			return $allowance;
+		// Without a caller there is nothing to count, so the request is refused rather than let through.
+		if ( '' === $caller || $count >= $limit ) {
+			$this->send_rate_limit_headers( $request, $limit, 0, $reset );
+
+			return new \WP_Error(
+				'activitypub_rate_limited',
+				\__( 'Too many requests. Please try again later.', 'activitypub' ),
+				array( 'status' => 429 )
+			);
 		}
 
-		$this->send_rate_limit_headers( $request, $allowance['limit'], $allowance['remaining'], $allowance['reset'] );
+		\set_transient( $key, $count + 1, MINUTE_IN_SECONDS );
+		$this->send_rate_limit_headers( $request, $limit, $limit - $count - 1, $reset );
 
 		return true;
 	}
