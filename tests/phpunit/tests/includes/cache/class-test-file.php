@@ -181,8 +181,12 @@ class Test_File extends WP_UnitTestCase {
 			}
 
 			++$downloads;
-			$tmp_file = \preg_replace( '/\.tmp$/', '.webp', \wp_tempnam( 'test-avatar' ) );
+
+			// `wp_tempnam()` creates the file it names, and only its name is needed here.
+			$placeholder = \wp_tempnam( 'test-avatar' );
+			$tmp_file    = \preg_replace( '/\.tmp$/', '.webp', $placeholder );
 			$editor->save( $tmp_file, 'image/webp' );
+			\wp_delete_file( $placeholder );
 
 			return array(
 				'file'      => $tmp_file,
