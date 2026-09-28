@@ -180,6 +180,7 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 	 */
 	public function test_removed_quote_clears_request_meta() {
 		$post_id = $this->create_quote_post();
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
 		\update_post_meta( $post_id, '_activitypub_quote_rejected', '1' );
 
 		\wp_update_post(
@@ -190,6 +191,7 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 		);
 
 		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_request', true ) );
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
 		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_rejected', true ) );
 		$this->assertCount( 1, $this->get_quote_requests( $post_id ), 'Removing the quote sends no request.' );
 
@@ -212,6 +214,7 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 	 */
 	public function test_emptied_quote_url_clears_request_meta() {
 		$post_id = $this->create_quote_post();
+		\update_post_meta( $post_id, '_activitypub_quote_authorization', 'https://remote.example/stamps/1' );
 
 		\wp_update_post(
 			array(
@@ -221,6 +224,7 @@ class Test_Quote_Request extends \Activitypub\Tests\ActivityPub_Outbox_TestCase 
 		);
 
 		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_request', true ) );
+		$this->assertEmpty( \get_post_meta( $post_id, '_activitypub_quote_authorization', true ) );
 	}
 
 	/**
