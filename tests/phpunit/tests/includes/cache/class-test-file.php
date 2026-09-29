@@ -231,6 +231,7 @@ class Test_File extends WP_UnitTestCase {
 				'removed'  => 2,
 				'bytes'    => 10,
 				'promoted' => 0,
+				'failed'   => 0,
 			),
 			$result
 		);
@@ -339,6 +340,7 @@ class Test_File extends WP_UnitTestCase {
 				'removed'  => 0,
 				'bytes'    => 0,
 				'promoted' => 0,
+				'failed'   => 0,
 			),
 			Avatar::remove_duplicates( Avatar::get_storage_paths( 'nope' )['basedir'], true )
 		);

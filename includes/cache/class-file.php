@@ -345,7 +345,9 @@ abstract class File {
 	 * This finds those copies and removes them. Where the file under the canonical name is missing,
 	 * the newest copy is moved there instead, so the next lookup is a hit rather than a download.
 	 *
-	 * Nothing is touched unless `$delete` is true; the counts then say what would happen.
+	 * Nothing is touched unless `$delete` is true; the counts then say what would happen. A group whose
+	 * move fails is left as it is, copies included, so a later run finds it again, and the failure is
+	 * counted.
 	 *
 	 * @since unreleased
 	 *
@@ -358,6 +360,7 @@ abstract class File {
 	 *     @type int $removed  Copies removed.
 	 *     @type int $bytes    Their combined size.
 	 *     @type int $promoted Copies moved to the canonical name.
+	 *     @type int $failed   Files the filesystem refused to move or remove.
 	 * }
 	 */
 	public static function remove_duplicates( $directory, $delete = false ) {
@@ -365,6 +368,7 @@ abstract class File {
 			'removed'  => 0,
 			'bytes'    => 0,
 			'promoted' => 0,
+			'failed'   => 0,
 		);
 
 		if ( ! \is_dir( $directory ) ) {
@@ -396,20 +400,26 @@ abstract class File {
 			// With no canonical file to serve, the newest copy becomes it.
 			if ( ! \file_exists( $canonical ) ) {
 				$newest = \array_pop( $copies );
-				++$result['promoted'];
 
-				if ( $delete ) {
-					$filesystem->move( $newest, $canonical );
+				// If it cannot be moved, the group stays whole; removing the others would leave nothing to promote later.
+				if ( $delete && ! $filesystem->move( $newest, $canonical ) ) {
+					++$result['failed'];
+					continue;
 				}
+
+				++$result['promoted'];
 			}
 
 			foreach ( $copies as $copy ) {
-				++$result['removed'];
-				$result['bytes'] += (int) \filesize( $copy );
+				$size = (int) \filesize( $copy );
 
-				if ( $delete ) {
-					$filesystem->delete( $copy );
+				if ( $delete && ! $filesystem->delete( $copy ) ) {
+					++$result['failed'];
+					continue;
 				}
+
+				++$result['removed'];
+				$result['bytes'] += $size;
 			}
 		}
 

@@ -231,6 +231,7 @@ class Cache_Command extends \WP_CLI_Command {
 			'removed'  => 0,
 			'bytes'    => 0,
 			'promoted' => 0,
+			'failed'   => 0,
 		);
 
 		foreach ( $base_dirs as $cache_type => $base_dir ) {
@@ -251,6 +252,10 @@ class Cache_Command extends \WP_CLI_Command {
 			foreach ( $totals as $key => $value ) {
 				$totals[ $key ] = $value + $result[ $key ];
 			}
+		}
+
+		if ( $totals['failed'] > 0 ) {
+			\WP_CLI::warning( \sprintf( '%d file(s) could not be moved or removed and were left as they are; check the permissions and run again.', $totals['failed'] ) );
 		}
 
 		if ( $delete ) {

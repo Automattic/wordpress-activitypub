@@ -11,7 +11,7 @@ Commands that act for a specific account take the account from WP-CLI's global `
 | `wp activitypub version` | Print the plugin version. |
 | `wp activitypub post <delete\|update> <id>` | Send a Delete or Update for a post to the Fediverse. |
 | `wp activitypub comment <delete\|update> <id>` | Send a Delete or Update for a comment. |
-| `wp activitypub actor <delete\|update> <id>` | Send a Delete or Update for an actor (a user). |
+| `wp activitypub actor <delete\|update> <id>` | Send a Delete or Update for an actor: a user, or the blog actor as `0`. |
 | `wp activitypub outbox <undo\|reschedule> <id>` | Undo a sent activity, or send it again. |
 | `wp activitypub follow <remote_user>` | Follow a remote account. |
 | `wp activitypub move <from> <to>` | Move the blog to a new URL. |
@@ -32,7 +32,7 @@ wp activitypub actor delete <id>
 wp activitypub actor update <id>
 ```
 
-`delete` sends a `Delete` activity for the object, `update` sends an `Update` with its current state. For posts `<id>` is a post, page, custom post type or attachment ID; for actors it is the user ID. Deleting asks for confirmation; `--yes` skips that.
+`delete` sends a `Delete` activity for the object, `update` sends an `Update` with its current state. For posts `<id>` is a post, page, custom post type or attachment ID; for actors it is the user ID, or `0` for the blog actor. Deleting a post or a comment asks for confirmation, which `--yes` skips; deleting an actor runs straight away.
 
 ```
 $ wp activitypub post update 123
