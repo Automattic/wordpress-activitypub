@@ -37,19 +37,20 @@ import './style.scss';
 interface SearchParams {
 	page?: number;
 	search?: string;
+	postIds?: string[];
 }
 
 export default function FeedStage(): ReactNode {
 	const navigate: UseNavigateResult< string > = useNavigate();
 	const searchParams: SearchParams = useSearch( { strict: false } ) as SearchParams;
 
-	// Navigate to inspector by updating search params
-	const selectItem: ( id: number ) => void = useCallback(
-		( id: number ): void => {
+	// The selection lives in the URL; the inspector shows the first selected post.
+	const selectItems = useCallback(
+		( items: string[] ): void => {
 			void navigate( {
 				search: ( ( prev: Record< string, unknown > ): Record< string, unknown > => ( {
 					...prev,
-					postId: id,
+					postIds: items.length > 0 ? items : undefined,
 				} ) ) as never,
 			} );
 		},
@@ -119,25 +120,11 @@ export default function FeedStage(): ReactNode {
 	// Normalize view.fields to maintain the canonical order defined in fields array
 	const normalizedView: ViewType = useMemo( () => normalizeFieldOrder( view, fields ), [ view, fields ] );
 
-	const [ selection, setSelection ] = useState< string[] >( [] );
+	const selection: string[] = searchParams.postIds ?? [];
 
 	// State for infinite scroll
 	const [ allLoadedRecords, setAllLoadedRecords ] = useState< FeedPost[] >( [] );
 	const lastProcessedPage = useRef< number >( 0 );
-
-	const changeSelection = useCallback(
-		( nextSelection: string[] ): void => {
-			setSelection( nextSelection );
-
-			if ( nextSelection.length === 0 ) {
-				return;
-			}
-
-			// We already have the ID from the selection - no need to look up the item
-			selectItem( Number( nextSelection[ 0 ] ) );
-		},
-		[ selectItem ]
-	);
 
 	// Accumulate data across pages for infinite scroll
 	useEffect( (): void => {
@@ -191,11 +178,11 @@ export default function FeedStage(): ReactNode {
 			view={ normalizedView as DataViewsView }
 			onChangeView={ updateFeedView as ( view: DataViewsView ) => void }
 			isLoading={ isResolving }
-			onClickItem={ ( item: FeedPost ): void => selectItem( item.id ) }
+			onClickItem={ ( item: FeedPost ): void => selectItems( [ item.id.toString() ] ) }
 			isItemClickable={ (): true => true }
 			getItemId={ ( item: FeedPost ): string => item.id.toString() }
 			selection={ selection }
-			onChangeSelection={ changeSelection }
+			onChangeSelection={ selectItems }
 			empty={ <EmptyState /> }
 			paginationInfo={ {
 				totalItems,

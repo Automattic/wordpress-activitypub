@@ -54,9 +54,10 @@ export const route: RouteConfig = {
 	},
 
 	/**
-	 * Show inspector only when a post is selected (postId in search params)
+	 * Show inspector only when a post is selected (`postIds` in search params)
 	 * @param context        Route loader context.
 	 * @param context.search URL search parameters.
 	 */
-	inspector: ( { search }: RouteLoaderContext ): boolean => !! search.postId,
+	inspector: ( { search }: RouteLoaderContext ): boolean =>
+		Array.isArray( search.postIds ) && search.postIds.length > 0,
 };

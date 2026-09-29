@@ -50,19 +50,19 @@ const RenderHTML = ( { html }: RenderHTMLProps ): ReactNode => (
 );
 
 interface SearchParams {
-	postId?: number;
+	postIds?: string[];
 }
 
 export default function FeedInspector(): ReactNode {
 	const search: SearchParams = useSearch( { strict: false } ) as SearchParams;
 	const navigate: UseNavigateResult< string > = useNavigate();
-	const id: number | undefined = search.postId;
+	const id: number | undefined = search.postIds?.[ 0 ] ? Number( search.postIds[ 0 ] ) : undefined;
 
-	// Close inspector by removing postId from search params
+	// Close inspector by removing postIds from search params
 	const onClose: () => void = (): void => {
 		void navigate( {
 			search: ( ( prev: Record< string, unknown > ): Record< string, unknown > => {
-				const { postId: _, ...rest } = prev as SearchParams;
+				const { postIds: _, ...rest } = prev as SearchParams;
 				return rest;
 			} ) as never,
 		} );

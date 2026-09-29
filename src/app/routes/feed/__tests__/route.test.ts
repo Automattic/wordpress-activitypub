@@ -48,7 +48,8 @@ describe( 'feed route', () => {
 		const context = { params: {}, search: {} };
 
 		expect( route.inspector?.( context ) ).toBe( false );
-		expect( route.inspector?.( { ...context, search: { postId: 5 } } ) ).toBe( true );
+		expect( route.inspector?.( { ...context, search: { postIds: [] } } ) ).toBe( false );
+		expect( route.inspector?.( { ...context, search: { postIds: [ '5' ] } } ) ).toBe( true );
 	} );
 
 	it( 'warms the records the stage will ask for, from the view it will use', async () => {
