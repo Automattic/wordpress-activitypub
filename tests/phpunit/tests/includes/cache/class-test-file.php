@@ -213,7 +213,7 @@ class Test_File extends WP_UnitTestCase {
 	/**
 	 * Without `$delete`, the copies are only counted and nothing changes.
 	 *
-	 * @covers ::remove_duplicates
+	 * @covers \Activitypub\Cache\File::remove_duplicates
 	 */
 	public function test_remove_duplicates_counts_without_touching_anything() {
 		$dir  = Avatar::get_storage_paths( 'dedupe-count' )['basedir'];
@@ -243,7 +243,7 @@ class Test_File extends WP_UnitTestCase {
 	/**
 	 * With `$delete`, the copies go and the canonical file stays.
 	 *
-	 * @covers ::remove_duplicates
+	 * @covers \Activitypub\Cache\File::remove_duplicates
 	 */
 	public function test_remove_duplicates_removes_the_copies() {
 		$dir  = Avatar::get_storage_paths( 'dedupe-remove' )['basedir'];
@@ -268,7 +268,7 @@ class Test_File extends WP_UnitTestCase {
 	/**
 	 * With no canonical file, the newest copy takes its name and the rest go.
 	 *
-	 * @covers ::remove_duplicates
+	 * @covers \Activitypub\Cache\File::remove_duplicates
 	 */
 	public function test_remove_duplicates_promotes_the_newest_copy() {
 		$dir  = Avatar::get_storage_paths( 'dedupe-promote' )['basedir'];
@@ -295,7 +295,7 @@ class Test_File extends WP_UnitTestCase {
 	/**
 	 * Only the exact shape the old code produced is touched.
 	 *
-	 * @covers ::remove_duplicates
+	 * @covers \Activitypub\Cache\File::remove_duplicates
 	 */
 	public function test_remove_duplicates_leaves_other_files_alone() {
 		$dir  = Avatar::get_storage_paths( 'dedupe-others' )['basedir'];
@@ -331,7 +331,7 @@ class Test_File extends WP_UnitTestCase {
 	/**
 	 * A directory that does not exist is nothing to clean.
 	 *
-	 * @covers ::remove_duplicates
+	 * @covers \Activitypub\Cache\File::remove_duplicates
 	 */
 	public function test_remove_duplicates_handles_a_missing_directory() {
 		$this->assertSame(
