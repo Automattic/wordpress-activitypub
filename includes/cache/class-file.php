@@ -375,7 +375,10 @@ abstract class File {
 			return $result;
 		}
 
-		// The copies, grouped under the file each of them duplicates, keyed by their counter.
+		/*
+		 * The copies, grouped by directory and hash regardless of format: the lookup matches `<hash>.*`
+		 * and serves the first file it finds, so one hash may only ever end up with one file.
+		 */
 		$groups   = array();
 		$iterator = new \RecursiveIteratorIterator(
 			new \RecursiveDirectoryIterator( $directory, \RecursiveDirectoryIterator::SKIP_DOTS )
@@ -387,22 +390,29 @@ abstract class File {
 				continue;
 			}
 
-			$canonical = $file->getPath() . '/' . $match[1] . '.' . $match[3];
-
-			$groups[ $canonical ][ (int) $match[2] ] = $file->getPathname();
+			$groups[ $file->getPath() . '/' . $match[1] ][] = array(
+				'counter' => (int) $match[2],
+				'path'    => $file->getPathname(),
+			);
 		}
 
 		$filesystem = static::get_filesystem();
 
 		foreach ( $groups as $canonical => $copies ) {
-			\ksort( $copies );
+			\usort(
+				$copies,
+				static function ( $a, $b ) {
+					return $a['counter'] <=> $b['counter'];
+				}
+			);
 
-			// With no canonical file to serve, the newest copy becomes it.
-			if ( ! \file_exists( $canonical ) ) {
-				$newest = \array_pop( $copies );
+			// With no file to serve under the hash, in any format, the newest copy becomes it, in its own.
+			if ( ! \glob( static::escape_glob_pattern( $canonical ) . '.*' ) ) {
+				$newest = \array_pop( $copies )['path'];
+				$target = $canonical . '.' . \pathinfo( $newest, PATHINFO_EXTENSION );
 
 				// If it cannot be moved, the group stays whole; removing the others would leave nothing to promote later.
-				if ( $delete && ! $filesystem->move( $newest, $canonical ) ) {
+				if ( $delete && ! $filesystem->move( $newest, $target ) ) {
 					++$result['failed'];
 					continue;
 				}
@@ -411,6 +421,7 @@ abstract class File {
 			}
 
 			foreach ( $copies as $copy ) {
+				$copy = $copy['path'];
 				$size = (int) \filesize( $copy );
 
 				if ( $delete && ! $filesystem->delete( $copy ) ) {

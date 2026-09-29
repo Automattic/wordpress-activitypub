@@ -85,7 +85,7 @@ $ wp activitypub move https://example.com/ https://newsite.com/
 wp activitypub self-destruct [--status] [--yes]
 ```
 
-Sends `Delete` activities for the blog and its actors to all followers and removes the blog from the Fediverse. This cannot be undone. The process runs in the background; `--status` reports how far it has got. It asks for confirmation unless `--yes` is passed, which skips every safety check.
+Sends `Delete` activities for the blog and its actors to all followers and removes the blog from the Fediverse. This cannot be undone. The process runs in the background; `--status` reports how far it has got. It asks for confirmation unless `--yes` is passed, which skips only that prompt; a self-destruct that was already started is refused either way.
 
 ```
 $ wp activitypub self-destruct
