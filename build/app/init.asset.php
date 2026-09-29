@@ -2,6 +2,6 @@
 	'dependencies' => array(
 		'@wordpress/boot'
 	),
-	'version' => 'aa831398437727f526e1',
+	'version' => '1879942ab3a4ed11dc03',
 	'type' => 'module'
 );

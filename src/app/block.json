@@ -9,7 +9,7 @@
 	"textdomain": "activitypub",
 	"viewScriptModule": [
 		"file:./loader.ts",
-		"file:./init.tsx",
+		"file:./init.ts",
 		"file:./routes/feed/content.tsx",
 		"file:./routes/feed/route.ts"
 	]
