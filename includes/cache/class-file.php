@@ -342,12 +342,15 @@ abstract class File {
 	 * The image used to be optimized after it had been moved into the cache directory. Converting it
 	 * there renamed it to `<hash>-1.webp` (or `-1.jpg` where WebP is unavailable), a name the lookup
 	 * never matches, so the next request downloaded and converted it again and left one more copy.
-	 * This finds those copies and removes them. Where the file under the canonical name is missing,
-	 * the newest copy is moved there instead, so the next lookup is a hit rather than a download.
+	 * This finds those copies and removes them. Where no file serves the hash any more, the newest copy
+	 * is moved to the canonical name instead, so the next lookup is a hit rather than a download.
 	 *
 	 * Nothing is touched unless `$delete` is true; the counts then say what would happen. A group whose
 	 * move fails is left as it is, copies included, so a later run finds it again, and the failure is
 	 * counted.
+	 *
+	 * Directories are handled one at a time, subdirectories first, so a cache of any size is never held
+	 * in memory at once and what one directory freed stays freed even if the run dies in the next.
 	 *
 	 * @since unreleased
 	 *
@@ -371,30 +374,30 @@ abstract class File {
 			'failed'   => 0,
 		);
 
-		if ( ! \is_dir( $directory ) ) {
+		// A directory that is gone, or that cannot be read, has nothing to clean; a live cache removes entity directories at any time.
+		if ( ! \is_dir( $directory ) || ! \is_readable( $directory ) ) {
 			return $result;
 		}
 
+		foreach ( \glob( static::escape_glob_pattern( $directory ) . '/*', GLOB_ONLYDIR ) ?: array() as $subdirectory ) {
+			foreach ( static::remove_duplicates( $subdirectory, $delete ) as $key => $count ) {
+				$result[ $key ] += $count;
+			}
+		}
+
 		/*
-		 * The copies, grouped by directory and hash regardless of format: the lookup matches `<hash>.*`
-		 * and serves the first file it finds, so one hash may only ever end up with one file.
+		 * The copies in this directory, grouped by hash regardless of format: the lookup matches
+		 * `<hash>.*` and serves the first file it finds, so one hash may only ever end up with one file.
 		 */
 		$groups = array();
 
-		// A live cache may remove an entity's directory while this walks it; such a directory is skipped, not fatal.
-		$iterator = new \RecursiveIteratorIterator(
-			new \RecursiveDirectoryIterator( $directory, \RecursiveDirectoryIterator::SKIP_DOTS ),
-			\RecursiveIteratorIterator::LEAVES_ONLY,
-			\RecursiveIteratorIterator::CATCH_GET_CHILD
-		);
-
-		foreach ( $iterator as $file ) {
+		foreach ( new \DirectoryIterator( $directory ) as $file ) {
 			// Only the exact shape the old code produced: a full hash, a counter and a converted format.
 			if ( ! $file->isFile() || ! \preg_match( '/^([0-9a-f]{32})-([1-9][0-9]*)\.(webp|jpg)$/', $file->getFilename(), $match ) ) {
 				continue;
 			}
 
-			$groups[ $file->getPath() . '/' . $match[1] ][] = array(
+			$groups[ $directory . '/' . $match[1] ][] = array(
 				'time'    => $file->getMTime(),
 				'counter' => (int) $match[2],
 				'path'    => $file->getPathname(),
