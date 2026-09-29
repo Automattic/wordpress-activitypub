@@ -379,7 +379,18 @@ abstract class File {
 			return $result;
 		}
 
-		foreach ( \glob( static::escape_glob_pattern( $directory ) . '/*', GLOB_ONLYDIR ) ?: array() as $subdirectory ) {
+		/*
+		 * `glob()` answers an empty list for a directory that vanished a moment ago, where an iterator
+		 * would throw, which is what a live cache needs: entity directories come and go while this runs.
+		 */
+		$entries = \glob( static::escape_glob_pattern( $directory ) . '/*' ) ?: array();
+
+		foreach ( $entries as $subdirectory ) {
+			// The plugin never links directories into its cache; one that is linked leads out of it, or round in a circle.
+			if ( ! \is_dir( $subdirectory ) || \is_link( $subdirectory ) ) {
+				continue;
+			}
+
 			foreach ( static::remove_duplicates( $subdirectory, $delete ) as $key => $count ) {
 				$result[ $key ] += $count;
 			}
@@ -391,16 +402,16 @@ abstract class File {
 		 */
 		$groups = array();
 
-		foreach ( new \DirectoryIterator( $directory ) as $file ) {
+		foreach ( $entries as $file ) {
 			// Only the exact shape the old code produced: a full hash, a counter and a converted format.
-			if ( ! $file->isFile() || ! \preg_match( '/^([0-9a-f]{32})-([1-9][0-9]*)\.(webp|jpg)$/', $file->getFilename(), $match ) ) {
+			if ( ! \is_file( $file ) || ! \preg_match( '/^([0-9a-f]{32})-([1-9][0-9]*)\.(webp|jpg)$/', \basename( $file ), $match ) ) {
 				continue;
 			}
 
 			$groups[ $directory . '/' . $match[1] ][] = array(
-				'time'    => $file->getMTime(),
+				'time'    => (int) \filemtime( $file ),
 				'counter' => (int) $match[2],
-				'path'    => $file->getPathname(),
+				'path'    => $file,
 			);
 		}
 

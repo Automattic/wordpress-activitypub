@@ -375,6 +375,33 @@ class Test_File extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A linked directory is not followed, so the cleanup cannot leave the cache or run in circles.
+	 *
+	 * @covers \Activitypub\Cache\File::remove_duplicates
+	 */
+	public function test_remove_duplicates_does_not_follow_links() {
+		$dir     = Avatar::get_storage_paths( 'dedupe-links' )['basedir'];
+		$outside = \get_temp_dir() . 'activitypub-dedupe-outside-' . \wp_generate_password( 8, false );
+		$hash    = \md5( 'https://example.com/linked.webp' );
+		\wp_mkdir_p( $dir );
+		\wp_mkdir_p( $outside );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		\file_put_contents( "{$outside}/{$hash}-1.webp", 'not ours to remove' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_symlink -- The link is the thing under test.
+		\symlink( $outside, "{$dir}/elsewhere" );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_symlink -- A link back up must not recurse.
+		\symlink( $dir, "{$dir}/loop" );
+
+		$result = Avatar::remove_duplicates( $dir, true );
+
+		$this->assertSame( 0, $result['removed'] + $result['promoted'], 'Nothing behind a link is touched.' );
+		$this->assertFileExists( "{$outside}/{$hash}-1.webp" );
+
+		Avatar::delete_directory( $dir );
+		Avatar::delete_directory( $outside );
+	}
+
+	/**
 	 * A directory that does not exist is nothing to clean.
 	 *
 	 * @covers \Activitypub\Cache\File::remove_duplicates
