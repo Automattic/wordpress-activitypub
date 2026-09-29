@@ -45,7 +45,7 @@
 		"@wordpress/api-fetch": "^7.54.0",
 		"@wordpress/babel-preset-default": "^8.55.0",
 		"@wordpress/block-editor": "^17.1.0",
-		"@wordpress/blocks": "^16.0.0",
+		"@wordpress/blocks": "^16.1.0",
 		"@wordpress/commands": "^1.56.0",
 		"@wordpress/components": "^40.0.0",
 		"@wordpress/compose": "^8.1.0",
