@@ -18,6 +18,12 @@ wordpress-activitypub/
 │   ├── interface-*.php         # Interfaces
 │   ├── functions.php           # Global functions
 │   │
+│   ├── ability/                # WordPress Abilities API registrations
+│   │   ├── class-actor.php
+│   │   ├── class-followers.php
+│   │   ├── class-following.php
+│   │   └── class-webfinger.php
+│   │
 │   ├── activity/               # Activity type implementations
 │   │   ├── class-accept.php
 │   │   ├── class-create.php
@@ -376,6 +382,7 @@ Create a new subdirectory when you have:
 | Class Type | Location |
 |------------|----------|
 | Core functionality | `includes/` |
+| Abilities | `includes/ability/` |
 | Activity types | `includes/activity/` |
 | Incoming handlers | `includes/handler/` |
 | Data transformers | `includes/transformer/` |
