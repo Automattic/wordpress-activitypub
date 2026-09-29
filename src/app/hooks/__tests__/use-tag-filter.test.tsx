@@ -106,7 +106,7 @@ describe( 'useTagFilter', () => {
 			} );
 		} );
 
-		it( 'should close the inspector by removing postId from the URL', () => {
+		it( 'should close the inspector by removing postIds from the URL', () => {
 			const { result } = renderHook( () => useTagFilter() );
 
 			act( () => {
@@ -115,7 +115,7 @@ describe( 'useTagFilter', () => {
 
 			expect( mockNavigate ).toHaveBeenCalledTimes( 1 );
 			const searchFn = mockNavigate.mock.calls[ 0 ][ 0 ].search;
-			expect( searchFn( { postId: 1, foo: 'bar' } ) ).toEqual( { foo: 'bar' } );
+			expect( searchFn( { postIds: [ '1' ], foo: 'bar' } ) ).toEqual( { foo: 'bar' } );
 		} );
 
 		it( 'should call the onComplete callback when provided', () => {

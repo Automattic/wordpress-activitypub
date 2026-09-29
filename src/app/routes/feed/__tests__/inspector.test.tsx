@@ -10,7 +10,7 @@ import type { AppSettings, Comment, FeedPost } from '../../../types';
 
 // Mock router hooks
 const mockNavigate = jest.fn();
-let mockSearchParams: { postId?: number } = { postId: 1 };
+let mockSearchParams: { postIds?: string[] } = { postIds: [ '1' ] };
 
 jest.mock( '@wordpress/route', () => ( {
 	useSearch: () => mockSearchParams,
@@ -153,12 +153,12 @@ describe( 'FeedInspector', () => {
 	beforeEach( () => {
 		jest.clearAllMocks();
 		// Reset mock search params to default
-		mockSearchParams = { postId: 1 };
+		mockSearchParams = { postIds: [ '1' ] };
 	} );
 
 	const renderInspector = ( postId: number = 1 ) => {
-		// Set the postId in mock search params
-		mockSearchParams = { postId };
+		// Set the selected post in mock search params
+		mockSearchParams = { postIds: [ String( postId ) ] };
 		return render(
 			<SettingsProvider settings={ mockSettings }>
 				<FeedInspector />
@@ -518,7 +518,7 @@ describe( 'FeedInspector', () => {
 			expect( screen.getByText( 'Close' ) ).toBeInTheDocument();
 		} );
 
-		it( 'should navigate to remove postId when close button is clicked', () => {
+		it( 'should navigate to remove postIds when close button is clicked', () => {
 			renderInspector();
 
 			const closeButton = screen.getByText( 'Close' );
@@ -529,12 +529,12 @@ describe( 'FeedInspector', () => {
 				search: expect.any( Function ),
 			} );
 
-			// Verify the search function removes postId
+			// Verify the search function removes postIds
 			const navigateCall = mockNavigate.mock.calls[ 0 ][ 0 ];
 			const searchFn = navigateCall.search;
-			const result = searchFn( { postId: 1, otherParam: 'value' } );
+			const result = searchFn( { postIds: [ '1' ], otherParam: 'value' } );
 			expect( result ).toEqual( { otherParam: 'value' } );
-			expect( result.postId ).toBeUndefined();
+			expect( result.postIds ).toBeUndefined();
 		} );
 	} );
 } );
