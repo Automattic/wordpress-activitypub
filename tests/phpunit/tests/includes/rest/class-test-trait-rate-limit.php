@@ -54,6 +54,20 @@ class Test_Trait_Rate_Limit extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Tear down.
+	 *
+	 * The hook callbacks are restored by the WordPress test case; the trait's memo is a static and is
+	 * not, so it is emptied here to keep each test to its own requests.
+	 */
+	public function tear_down() {
+		$counted = new \ReflectionProperty( \get_class( $this->instance ), 'counted' );
+		$counted->setAccessible( true );
+		$counted->setValue( null, array() );
+
+		parent::tear_down();
+	}
+
+	/**
 	 * A caller may ask up to its allowance, and is refused after that.
 	 *
 	 * @covers ::rate_limit
@@ -81,7 +95,7 @@ class Test_Trait_Rate_Limit extends \WP_UnitTestCase {
 	public function test_rate_limit_counts_one_request_once() {
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
 		$window  = (int) \floor( \time() / MINUTE_IN_SECONDS );
-		$key     = \sprintf( 'activitypub_rate_%s_%s_%d', 'test_bucket', '203.0.113.60', $window );
+		$key     = \sprintf( 'activitypub_rate_%s_%s_%d', 'test_bucket', \md5( '203.0.113.60' ), $window );
 
 		$this->assertTrue( $this->instance->count( 'test_bucket', 3, $request ) );
 		$this->assertTrue( $this->instance->count( 'test_bucket', 3, $request ), 'The same request is allowed again.' );
@@ -116,7 +130,7 @@ class Test_Trait_Rate_Limit extends \WP_UnitTestCase {
 		$_SERVER['REMOTE_ADDR'] = '';
 
 		$window = (int) \floor( \time() / MINUTE_IN_SECONDS );
-		$key    = \sprintf( 'activitypub_rate_%s_%s_%d', 'test_bucket', '', $window );
+		$key    = \sprintf( 'activitypub_rate_%s_%s_%d', 'test_bucket', \md5( '' ), $window );
 
 		$refused = $this->instance->count( 'test_bucket', 10 );
 
@@ -134,7 +148,7 @@ class Test_Trait_Rate_Limit extends \WP_UnitTestCase {
 		$this->instance->count( 'test_bucket', 5 );
 
 		$window  = (int) \floor( \time() / MINUTE_IN_SECONDS );
-		$key     = \sprintf( 'activitypub_rate_%s_%s_%d', 'test_bucket', '203.0.113.60', $window );
+		$key     = \sprintf( 'activitypub_rate_%s_%s_%d', 'test_bucket', \md5( '203.0.113.60' ), $window );
 		$timeout = (int) \get_option( '_transient_timeout_' . $key );
 
 		$this->assertSame( 1, (int) \get_transient( $key ), 'The window holds the count.' );

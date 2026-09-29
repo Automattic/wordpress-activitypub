@@ -99,8 +99,10 @@ trait Rate_Limit {
 		 */
 		$window = (int) \floor( \time() / MINUTE_IN_SECONDS );
 		$reset  = ( $window + 1 ) * MINUTE_IN_SECONDS;
-		$key    = \sprintf( 'activitypub_rate_%s_%s_%d', $bucket, \str_replace( ':', '-', $caller ), $window );
-		$count  = (int) \get_transient( $key );
+
+		// The caller is hashed, so no IP address ends up in an option name, a backup or a debug dump.
+		$key   = \sprintf( 'activitypub_rate_%s_%s_%d', $bucket, \md5( $caller ), $window );
+		$count = (int) \get_transient( $key );
 
 		// Without a caller there is nothing to count, so the request is refused rather than let through.
 		if ( '' === $caller || $count >= $limit ) {
