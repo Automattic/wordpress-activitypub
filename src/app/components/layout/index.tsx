@@ -36,7 +36,6 @@ import { __ } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { Outlet } from '../../router';
 import Sidebar from '../sidebar';
 import { SiteHubMobile } from '../site-hub';
 import './style.scss';
@@ -49,7 +48,7 @@ export function Layout( { children }: LayoutProps ): ReactNode {
 	const isMobileViewport: boolean = useViewportMatch( 'medium', '<' );
 	const disableMotion: boolean = useReducedMotion();
 	const [ isMobileSidebarOpen, setIsMobileSidebarOpen ] = useState( false );
-	const content: ReactNode = children ?? <Outlet />;
+	const content: ReactNode = children;
 
 	// Snackbar notices dispatched by route actions (e.g. follow/block) render here.
 	const notices = useSelect( ( select ) => {

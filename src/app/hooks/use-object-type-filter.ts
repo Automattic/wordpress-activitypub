@@ -13,7 +13,7 @@ import { useView } from '@wordpress/views';
 /**
  * Internal dependencies
  */
-import { useNavigate } from '../router';
+import { useNavigate } from '@wordpress/route';
 
 interface UpdateObjectTypeFilterOptions {
 	onComplete?: () => void;

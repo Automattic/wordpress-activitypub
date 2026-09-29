@@ -30,7 +30,7 @@ import { getFeedViewUpdate, normalizeFieldOrder } from './utils';
 import { STORE_NAME } from '../../store';
 import type { AppSelectors } from '../../store';
 import type { FeedPost } from '../../types';
-import { useNavigate } from '../../router';
+import { useNavigate } from '@wordpress/route';
 import './style.scss';
 
 // Using ReturnType to get the View type from useView to avoid version conflicts between @wordpress/views and @wordpress/dataviews

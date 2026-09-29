@@ -12,7 +12,7 @@ jest.mock( '@wordpress/views', () => ( {
 	useView: () => ( { view: mockView, updateView: mockUpdateView } ),
 } ) );
 
-jest.mock( '../../router', () => ( {
+jest.mock( '@wordpress/route', () => ( {
 	useNavigate: () => mockNavigate,
 } ) );
 

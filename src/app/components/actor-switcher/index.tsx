@@ -26,7 +26,7 @@ import { addQueryArgs } from '@wordpress/url';
  */
 import { STORE_NAME } from '../../store';
 import type { AppSelectors, AppActions } from '../../store';
-import { useNavigate } from '../../router';
+import { useNavigate } from '@wordpress/route';
 import SiteIcon from '../site-icon';
 import { DEFAULT_AVATAR } from '../avatar';
 import './style.scss';
