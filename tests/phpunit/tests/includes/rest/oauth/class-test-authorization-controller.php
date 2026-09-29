@@ -155,9 +155,6 @@ class Test_Authorization_Controller extends \WP_UnitTestCase {
 			$snapshot[ $key ] = \array_key_exists( $key, $_SERVER ) ? $_SERVER[ $key ] : null;
 		}
 
-		$empty_ip_transient = 'ap_oauth_auth_' . \md5( '' );
-		\delete_transient( $empty_ip_transient );
-
 		try {
 			foreach ( $server_keys as $key ) {
 				unset( $_SERVER[ $key ] );
@@ -168,14 +165,18 @@ class Test_Authorization_Controller extends \WP_UnitTestCase {
 			$request->set_param( 'client_id', $this->client_id );
 			$request->set_param( 'redirect_uri', $this->redirect_uri );
 
-			$response = \rest_get_server()->dispatch( $request );
+			/*
+			 * `rest_post_dispatch` runs in `serve_request()` rather than in `dispatch()`, so the
+			 * allowance headers are applied here the way a real request receives them.
+			 */
+			$response = \apply_filters( 'rest_post_dispatch', \rest_get_server()->dispatch( $request ), \rest_get_server(), $request );
 			$data     = $response->get_data();
 			$headers  = $response->get_headers();
 
 			$this->assertEquals( 429, $response->get_status() );
-			$this->assertEquals( 'activitypub_rate_limit', $data['code'] );
-			$this->assertSame( (string) MINUTE_IN_SECONDS, $headers['Retry-After'] ?? null, 'Rate-limit responses must include Retry-After per RFC 6585 §4.' );
-			$this->assertFalse( \get_transient( $empty_ip_transient ) );
+			$this->assertEquals( 'activitypub_rate_limited', $data['code'] );
+			$this->assertArrayHasKey( 'Retry-After', $headers, 'A refusal says when to come back.' );
+			$this->assertSame( '20', $headers['RateLimit-Limit'], 'And what the allowance was.' );
 		} finally {
 			foreach ( $snapshot as $key => $value ) {
 				if ( null === $value ) {
@@ -252,6 +253,57 @@ class Test_Authorization_Controller extends \WP_UnitTestCase {
 		$response = \rest_get_server()->dispatch( $request );
 
 		$this->assertEquals( 401, $response->get_status() );
+	}
+
+	/**
+	 * Test that an account which cannot be an ActivityPub actor cannot authorize an app.
+	 *
+	 * A subscriber has no actor, so there is nothing for an app to act as, and a valid nonce does not
+	 * change that.
+	 *
+	 * @covers ::authorize_submit_permissions_check
+	 */
+	public function test_authorize_submit_requires_an_activitypub_account() {
+		$subscriber = $this->factory->user->create( array( 'role' => 'subscriber' ) );
+		\wp_set_current_user( $subscriber );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/authorize' );
+		$request->set_param( 'response_type', 'code' );
+		$request->set_param( 'client_id', $this->client_id );
+		$request->set_param( 'redirect_uri', $this->redirect_uri );
+		$request->set_param( 'approve', true );
+		$request->set_param( '_wpnonce', \wp_create_nonce( 'activitypub_oauth_authorize_' . $this->client_id ) );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 403, $response->get_status() );
+		$this->assertEquals( 'activitypub_user_not_enabled', $response->get_data()['code'] );
+	}
+
+	/**
+	 * A user who holds the activitypub capability can still authorize an app in blog-only mode, where
+	 * user_can_activitypub() would short-circuit to false but the capability is unchanged.
+	 *
+	 * @covers ::authorize_submit_permissions_check
+	 */
+	public function test_authorize_submit_allows_capable_user_in_blog_only_mode() {
+		\wp_set_current_user( $this->user_id );
+
+		$actor_mode = \get_option( 'activitypub_actor_mode' );
+		\update_option( 'activitypub_actor_mode', ACTIVITYPUB_BLOG_MODE );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/authorize' );
+		$request->set_param( 'response_type', 'code' );
+		$request->set_param( 'client_id', $this->client_id );
+		$request->set_param( 'redirect_uri', $this->redirect_uri );
+		$request->set_param( 'approve', true );
+		$request->set_param( '_wpnonce', \wp_create_nonce( 'activitypub_oauth_authorize_' . $this->client_id ) );
+
+		$response = \rest_get_server()->dispatch( $request );
+
+		\update_option( 'activitypub_actor_mode', $actor_mode );
+
+		$this->assertNotEquals( 403, $response->get_status(), 'The capability, not the actor mode, decides.' );
 	}
 
 	/**

@@ -297,6 +297,36 @@ class Test_Server extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The consent page refuses an account that is not enabled for ActivityPub.
+	 *
+	 * `login_form_authorize()` ends in `exit`, which a test cannot cross, so the refusal is read at the
+	 * `status_header` filter that the gate reaches before it renders anything.
+	 *
+	 * @covers ::login_form_authorize
+	 */
+	public function test_login_form_authorize_refuses_an_account_without_the_capability() {
+		$subscriber = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		\wp_set_current_user( $subscriber );
+
+		$stop = static function ( $header, $code ) {
+			throw new \Exception( \esc_html( 'status:' . $code ) );
+		};
+		\add_filter( 'status_header', $stop, 10, 2 );
+
+		$status = 'nothing';
+
+		try {
+			Server::login_form_authorize();
+		} catch ( \Exception $e ) {
+			$status = $e->getMessage();
+		}
+
+		\remove_filter( 'status_header', $stop, 10 );
+
+		$this->assertSame( 'status:403', $status, 'A subscriber never reaches the consent form.' );
+	}
+
+	/**
 	 * The authorization form provides a logout URL that keeps the OAuth request.
 	 *
 	 * The request parameters must survive the logout round trip exactly, even
