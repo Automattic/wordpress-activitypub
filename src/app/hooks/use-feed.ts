@@ -18,6 +18,8 @@ export interface FeedQuery extends Record< string, unknown > {
 	user_id?: number;
 	ap_object_type?: number[];
 	ap_tag?: number | number[] | string | string[];
+	before?: string;
+	after?: string;
 }
 
 interface UseFeedReturn {

@@ -88,6 +88,15 @@ export function viewToQuery( view: ViewType, userId: number | null | undefined )
 		query.ap_tag = tag.value;
 	}
 
+	const date = view.filters?.find( ( filter ) => filter.field === 'date' );
+	if ( date?.value ) {
+		if ( date.operator === 'before' ) {
+			query.before = date.value;
+		} else if ( date.operator === 'after' ) {
+			query.after = date.value;
+		}
+	}
+
 	return query;
 }
 

@@ -2,6 +2,6 @@
 	'dependencies' => array(
 		'@wordpress/route'
 	),
-	'version' => '966a411fee5f3f8f335f',
+	'version' => '6b03a3bc2357d2388880',
 	'type' => 'module'
 );

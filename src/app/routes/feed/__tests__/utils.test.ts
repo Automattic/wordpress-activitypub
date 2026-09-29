@@ -168,6 +168,32 @@ describe( 'viewToQuery', () => {
 		expect( viewToQuery( view as never, 1 ).ap_tag ).toEqual( [ 7 ] );
 	} );
 
+	it( 'should map a before date filter to the before query arg', () => {
+		const view = {
+			...DEFAULT_VIEW,
+			filters: [ { field: 'date', operator: 'before', value: '2026-09-01T00:00:00' } ],
+		};
+		const query = viewToQuery( view as never, 1 );
+		expect( query.before ).toBe( '2026-09-01T00:00:00' );
+		expect( query.after ).toBeUndefined();
+	} );
+
+	it( 'should map an after date filter to the after query arg', () => {
+		const view = {
+			...DEFAULT_VIEW,
+			filters: [ { field: 'date', operator: 'after', value: '2026-09-01T00:00:00' } ],
+		};
+		const query = viewToQuery( view as never, 1 );
+		expect( query.after ).toBe( '2026-09-01T00:00:00' );
+		expect( query.before ).toBeUndefined();
+	} );
+
+	it( 'should ignore a date filter without a value', () => {
+		const view = { ...DEFAULT_VIEW, filters: [ { field: 'date', operator: 'before', value: '' } ] };
+		const query = viewToQuery( view as never, 1 );
+		expect( query.before ).toBeUndefined();
+	} );
+
 	it( 'should not add filter args when the view has no filters', () => {
 		const query = viewToQuery( { ...DEFAULT_VIEW, filters: undefined } as never, 1 );
 		expect( query.ap_object_type ).toBeUndefined();
