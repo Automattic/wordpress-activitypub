@@ -231,7 +231,6 @@ class Test_Actors_Controller extends \Activitypub\Tests\Test_REST_Controller_Tes
 	 */
 	public function test_get_remote_follow_item_rejects_javascript_template() {
 		$_SERVER['REMOTE_ADDR'] = '203.0.113.11';
-		\delete_transient( 'ap_remote_follow_' . \md5( '203.0.113.11' ) );
 
 		$http_mock = function () {
 			return array(

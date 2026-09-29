@@ -34,6 +34,9 @@ class Test_Interaction_Controller extends Test_REST_Controller_Testcase {
 	 */
 	public function test_route_is_rate_limited() {
 		\wp_set_current_user( 0 );
+
+		// The address is process state that no test case restores, so it is put back afterwards.
+		$remote_addr            = $_SERVER['REMOTE_ADDR'] ?? null; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- Remembered only to be put back.
 		$_SERVER['REMOTE_ADDR'] = '203.0.113.50';
 
 		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
@@ -41,24 +44,32 @@ class Test_Interaction_Controller extends Test_REST_Controller_Testcase {
 
 		\add_filter( 'activitypub_rate_limit', '__return_zero' );
 
-		// `rest_post_dispatch` is applied by `serve_request()`, not by `dispatch()`, so apply it here.
-		$response = \apply_filters( 'rest_post_dispatch', \rest_get_server()->dispatch( $request ), \rest_get_server(), $request );
-		$headers  = $response->get_headers();
+		try {
+			// `rest_post_dispatch` is applied by `serve_request()`, not by `dispatch()`, so apply it here.
+			$response = \apply_filters( 'rest_post_dispatch', \rest_get_server()->dispatch( $request ), \rest_get_server(), $request );
+			$headers  = $response->get_headers();
 
-		$this->assertSame( 429, $response->get_status() );
-		$this->assertSame( 'activitypub_rate_limited', $response->get_data()['title'] );
-		$this->assertSame( '0', $headers['RateLimit-Limit'], 'The answer states the allowance it was measured against.' );
-		$this->assertSame( '0', $headers['RateLimit-Remaining'] );
-		$this->assertArrayHasKey( 'Retry-After', $headers, 'The refusal says when to come back.' );
+			$this->assertSame( 429, $response->get_status() );
+			$this->assertSame( 'activitypub_rate_limited', $response->get_data()['title'] );
+			$this->assertSame( '0', $headers['RateLimit-Limit'], 'The answer states the allowance it was measured against.' );
+			$this->assertSame( '0', $headers['RateLimit-Remaining'] );
+			$this->assertArrayHasKey( 'Retry-After', $headers, 'The refusal says when to come back.' );
 
-		/*
-		 * The route used to be public to `Server::add_cache_headers()`, which leaves a public answer
-		 * cacheable. Now that it answers per caller, the answer must not be stored by a shared cache
-		 * and handed to the next caller.
-		 */
-		$this->assertStringContainsString( 'no-store', $headers['Cache-Control'] ?? '' );
+			/*
+			 * The route used to be public to `Server::add_cache_headers()`, which leaves a public answer
+			 * cacheable. Now that it answers per caller, the answer must not be stored by a shared cache
+			 * and handed to the next caller.
+			 */
+			$this->assertStringContainsString( 'no-store', $headers['Cache-Control'] ?? '' );
+		} finally {
+			\remove_filter( 'activitypub_rate_limit', '__return_zero' );
 
-		\remove_filter( 'activitypub_rate_limit', '__return_zero' );
+			if ( null === $remote_addr ) {
+				unset( $_SERVER['REMOTE_ADDR'] );
+			} else {
+				$_SERVER['REMOTE_ADDR'] = $remote_addr;
+			}
+		}
 	}
 
 	/**

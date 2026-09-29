@@ -28,7 +28,11 @@ trait Rate_Limit {
 	/**
 	 * What each request was already told, so it is counted once, keyed by request.
 	 *
-	 * @var array<string, array{request: \WP_REST_Request, answer: true|\WP_Error}>
+	 * The request is kept beside the answer because `spl_object_id()` hands out the id of a freed
+	 * object again; without a reference a later request could read this answer as its own. The
+	 * numbers are kept so the response can carry them once it exists.
+	 *
+	 * @var array<string, array{request: \WP_REST_Request, answer: true|\WP_Error, limit: int, remaining: int, reset: int}>
 	 */
 	private static $counted = array();
 
@@ -38,7 +42,7 @@ trait Rate_Limit {
 	 * WordPress may ask a permission callback more than once for the same request: core's
 	 * `rest_send_allow_header()` calls it again after dispatch to work out the `Allow` header. The
 	 * answer is therefore remembered per request object, so one request spends one unit however
-	 * often it is asked.
+	 * often it is asked, and forgotten once its response has been stamped.
 	 *
 	 * @since unreleased
 	 *
@@ -56,30 +60,28 @@ trait Rate_Limit {
 		}
 
 		/*
-		 * The request is kept beside the answer: `spl_object_id()` hands out the id of a freed object
-		 * again, so without a reference a later request could read this answer as its own. The entry
-		 * lives until the response is stamped, so a refused caller who keeps asking does not pile up
-		 * entries either; each one goes with its own response.
+		 * One callback per class puts the numbers on the responses. It is added on first use, so a
+		 * process that never counts anything never runs it, and only once, so it never accumulates.
 		 */
-		self::$counted[ $memo ] = array(
-			'request' => $request,
-			'answer'  => $this->count_request( $bucket, $limit, $request, $memo ),
-		);
+		if ( ! \has_filter( 'rest_post_dispatch', array( self::class, 'send_rate_limit_headers' ) ) ) {
+			\add_filter( 'rest_post_dispatch', array( self::class, 'send_rate_limit_headers' ), 10, 3 );
+		}
+
+		self::$counted[ $memo ]            = $this->count_request( $bucket, $limit );
+		self::$counted[ $memo ]['request'] = $request;
 
 		return self::$counted[ $memo ]['answer'];
 	}
 
 	/**
-	 * Count one request and report the allowance on the response it gets.
+	 * Count one request against its caller's allowance.
 	 *
-	 * @param string           $bucket  What is being limited.
-	 * @param int              $limit   How many requests a caller may make per minute.
-	 * @param \WP_REST_Request $request The request being counted.
-	 * @param string           $memo    Where this request's answer is remembered.
+	 * @param string $bucket What is being limited.
+	 * @param int    $limit  How many requests a caller may make per minute.
 	 *
-	 * @return true|\WP_Error True when the request fits in the allowance, WP_Error otherwise.
+	 * @return array{answer: true|\WP_Error, limit: int, remaining: int, reset: int} The answer and the numbers behind it.
 	 */
-	private function count_request( $bucket, $limit, $request, $memo ) {
+	private function count_request( $bucket, $limit ) {
 		/**
 		 * Filters how many requests a caller may make per minute.
 		 *
@@ -104,78 +106,88 @@ trait Rate_Limit {
 		$key   = \sprintf( 'activitypub_rate_%s_%s_%d', $bucket, \md5( $caller ), $window );
 		$count = (int) \get_transient( $key );
 
+		$entry = array(
+			'answer'    => true,
+			'limit'     => $limit,
+			'remaining' => 0,
+			'reset'     => $reset,
+		);
+
 		// Without a caller there is nothing to count, so the request is refused rather than let through.
 		if ( '' === $caller || $count >= $limit ) {
-			$this->send_rate_limit_headers( $request, $memo, $limit, 0, $reset );
-
-			return new \WP_Error(
+			$entry['answer'] = new \WP_Error(
 				'activitypub_rate_limited',
 				\__( 'Too many requests. Please try again later.', 'activitypub' ),
 				array( 'status' => 429 )
 			);
+
+			return $entry;
 		}
 
 		\set_transient( $key, $count + 1, MINUTE_IN_SECONDS );
-		$this->send_rate_limit_headers( $request, $memo, $limit, $limit - $count - 1, $reset );
+		$entry['remaining'] = $limit - $count - 1;
 
-		return true;
+		return $entry;
 	}
 
 	/**
-	 * Report the allowance on the response this request gets.
+	 * Put the allowance on the response to a counted request, and forget the request.
 	 *
-	 * The header names follow the IETF RateLimit header fields, which is what other Fediverse
-	 * servers read. `Retry-After` is added to a refusal as well, per RFC 9110 section 10.2.3, and the
-	 * answer is kept out of shared caches, because the numbers describe one caller.
+	 * Runs on `rest_post_dispatch` for every response the process sends and acts only on the ones
+	 * whose request was counted. The header names follow the IETF RateLimit header fields, which is
+	 * what other Fediverse servers read. `Retry-After` is added to a refusal as well, per RFC 9110
+	 * section 10.2.3, and the answer is kept out of shared caches, because the numbers describe one
+	 * caller.
 	 *
-	 * The callback answers only the response to the request it counted, and takes itself off the hook
-	 * once it has: a process can dispatch more than one REST request, `rest_do_request()` being the
-	 * common case, and a callback left behind would stamp one request's allowance on another's answer.
+	 * The request is forgotten here and not earlier, because core asks the permission callback again
+	 * on this same hook to work out the `Allow` header, and not afterwards. A request dispatched
+	 * with `rest_do_request()` never reaches this hook and stays remembered; the plugin does not
+	 * dispatch a limited route that way.
 	 *
-	 * The remembered answer goes with it. It is needed until here, because core asks the permission
-	 * callback again on this same hook to work out the `Allow` header, and not afterwards, so keeping it
-	 * any longer would only hold the request object for the rest of the process.
+	 * Public because it is a hook callback, not part of the controller's API.
 	 *
-	 * @param \WP_REST_Request $request   The request that was counted.
-	 * @param string           $memo      Where this request's answer is remembered.
-	 * @param int              $limit     The allowance.
-	 * @param int              $remaining What is left of it after this request.
-	 * @param int              $reset     When it resets, as a Unix timestamp.
+	 * @param \WP_HTTP_Response|mixed $response   The response about to be sent.
+	 * @param \WP_REST_Server         $server     The server.
+	 * @param \WP_REST_Request        $dispatched The request it answers.
+	 *
+	 * @return \WP_HTTP_Response|mixed The response, with the allowance on it when it was counted.
 	 */
-	private function send_rate_limit_headers( $request, $memo, $limit, $remaining, $reset ) {
-		$callback = static function ( $response, $server, $dispatched ) use ( &$callback, $request, $memo, $limit, $remaining, $reset ) {
-			if ( $dispatched !== $request || ! $response instanceof \WP_HTTP_Response ) {
-				return $response;
+	public static function send_rate_limit_headers( $response, $server, $dispatched ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		$entry = null;
+
+		foreach ( self::$counted as $memo => $counted ) {
+			if ( $counted['request'] === $dispatched ) {
+				$entry = $counted;
+				unset( self::$counted[ $memo ] );
 			}
+		}
 
-			\remove_filter( 'rest_post_dispatch', $callback );
-			unset( self::$counted[ $memo ] );
-
-			$seconds = \max( 0, $reset - \time() );
-
-			$response->header( 'RateLimit-Limit', (string) $limit );
-			$response->header( 'RateLimit-Remaining', (string) $remaining );
-			$response->header( 'RateLimit-Reset', (string) $seconds );
-
-			/*
-			 * These numbers belong to one caller, so the answer must not be stored by a shared cache
-			 * and handed to the next one. An endpoint that already said how it may be cached keeps its
-			 * own directive: `Server::add_cache_headers()` runs first and the token endpoint sends the
-			 * one RFC 6749 section 5.1 asks for.
-			 */
-			$headers = $response->get_headers();
-
-			if ( empty( $headers['Cache-Control'] ) ) {
-				maybe_set_no_store( $response );
-			}
-
-			if ( 429 === $response->get_status() ) {
-				$response->header( 'Retry-After', (string) \max( 1, $seconds ) );
-			}
-
+		if ( null === $entry || ! $response instanceof \WP_HTTP_Response ) {
 			return $response;
-		};
+		}
 
-		\add_filter( 'rest_post_dispatch', $callback, 10, 3 );
+		$seconds = \max( 0, $entry['reset'] - \time() );
+
+		$response->header( 'RateLimit-Limit', (string) $entry['limit'] );
+		$response->header( 'RateLimit-Remaining', (string) $entry['remaining'] );
+		$response->header( 'RateLimit-Reset', (string) $seconds );
+
+		/*
+		 * These numbers belong to one caller, so the answer must not be stored by a shared cache
+		 * and handed to the next one. An endpoint that already said how it may be cached keeps its
+		 * own directive: `Server::add_cache_headers()` runs first and the token endpoint sends the
+		 * one RFC 6749 section 5.1 asks for.
+		 */
+		$headers = $response->get_headers();
+
+		if ( empty( $headers['Cache-Control'] ) ) {
+			maybe_set_no_store( $response );
+		}
+
+		if ( 429 === $response->get_status() ) {
+			$response->header( 'Retry-After', (string) \max( 1, $seconds ) );
+		}
+
+		return $response;
 	}
 }
