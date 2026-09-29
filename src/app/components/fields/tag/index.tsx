@@ -40,5 +40,7 @@ export const tagField: Field< FeedPost > = {
 	render: (): null => null,
 	filterBy: {
 		operators: [ 'isAny' ],
+		// Shown next to the search at all times, with its options and an "Any" default.
+		isPrimary: true,
 	},
 };

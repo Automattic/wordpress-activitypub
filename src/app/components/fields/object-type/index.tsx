@@ -41,5 +41,7 @@ export const objectTypeField: Field< FeedPost > = {
 	render: (): null => null,
 	filterBy: {
 		operators: [ 'is' ],
+		// Shown next to the search at all times, with its options and an "Any" default.
+		isPrimary: true,
 	},
 };
