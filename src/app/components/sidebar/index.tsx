@@ -73,7 +73,7 @@ export default function Sidebar(): ReactNode {
 		if ( path === '/' ) {
 			clearAllFilters();
 		}
-		void navigate( { to: path } );
+		void navigate( { to: path, viewTransition: false } );
 	};
 
 	const activeItem: MenuItemConfig = menuItems[ 0 ];

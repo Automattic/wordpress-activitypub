@@ -96,6 +96,7 @@ export function useTagFilter(): UseTagFilterReturn {
 					const { postIds: _, ...rest } = prev as { postIds?: string[] };
 					return rest;
 				} ) as never,
+				viewTransition: false,
 			} );
 
 			// Call completion callback if provided

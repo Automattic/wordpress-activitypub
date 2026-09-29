@@ -63,7 +63,7 @@
 		right: calc(var(--wpds-spacing-20, 8px) + var(--wpds-border-width-focus, 1px));
 		bottom: calc(var(--wpds-spacing-20, 8px) + var(--wpds-border-width-focus, 1px));
 		left: calc(var(--wpds-spacing-40, 16px) + var(--wpds-border-width-focus, 1px));
-		border-radius: var(--wpds-border-radius-large, 8px);
+		border-radius: var(--wpds-border-radius-lg, 8px);
 		box-shadow: none;
 
 		@media not (prefers-reduced-motion) {

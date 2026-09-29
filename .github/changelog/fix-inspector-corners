@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Opening a post in the Social Web screen no longer distorts the panel corners or folds the list.

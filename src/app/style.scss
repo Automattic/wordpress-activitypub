@@ -16,11 +16,12 @@
 	right: 0;
 	bottom: 0;
 
+	// Line boot's inspector column up with the stage card; the corner radius
+	// stays boot's, its view transitions are drawn with that radius.
 	.boot-layout__inspector {
 
 		@include mixins.break-medium() {
 			margin: var(--wpds-spacing-40, 16px) var(--wpds-spacing-40, 16px) var(--wpds-spacing-40, 16px) 0;
-			border-radius: var(--wpds-border-radius-large, 8px);
 		}
 	}
 }

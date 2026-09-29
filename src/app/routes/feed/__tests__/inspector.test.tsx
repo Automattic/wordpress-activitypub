@@ -527,6 +527,7 @@ describe( 'FeedInspector', () => {
 			expect( mockNavigate ).toHaveBeenCalledTimes( 1 );
 			expect( mockNavigate ).toHaveBeenCalledWith( {
 				search: expect.any( Function ),
+				viewTransition: false,
 			} );
 
 			// Verify the search function removes postIds
