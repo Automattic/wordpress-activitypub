@@ -175,6 +175,94 @@ class Cache_Command extends \WP_CLI_Command {
 	}
 
 	/**
+	 * Remove duplicate cached images left behind by earlier versions.
+	 *
+	 * Earlier versions could leave `<hash>-1.webp`, `<hash>-2.webp`, ... next to a
+	 * cached image, one more on every request. This finds those copies and, with
+	 * --delete, removes them. Where the original is missing, the newest copy is
+	 * kept under the original name. Without --delete nothing is changed and the
+	 * command only reports what it would do.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--type=<type>]
+	 * : The cache type to clean up. If omitted, cleans up all caches.
+	 * ---
+	 * options:
+	 *   - avatar
+	 *   - media
+	 *   - emoji
+	 *   - all
+	 * default: all
+	 * ---
+	 *
+	 * [--delete]
+	 * : Remove the duplicate files. Without it, only report them.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     # See what would be removed
+	 *     $ wp activitypub cache cleanup
+	 *
+	 *     # Remove duplicate avatars
+	 *     $ wp activitypub cache cleanup --type=avatar --delete
+	 *
+	 * @subcommand cleanup
+	 *
+	 * @param array $args       The positional arguments.
+	 * @param array $assoc_args The associative arguments.
+	 */
+	public function cleanup( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		$type   = $assoc_args['type'] ?? 'all';
+		$delete = \WP_CLI\Utils\get_flag_value( $assoc_args, 'delete', false );
+
+		$base_dirs = array(
+			'avatar' => Avatar::get_base_dir(),
+			'media'  => Media::get_base_dir(),
+			'emoji'  => Emoji::get_base_dir(),
+		);
+
+		if ( 'all' !== $type ) {
+			$base_dirs = \array_intersect_key( $base_dirs, array( $type => true ) );
+		}
+
+		$upload_dir = \wp_upload_dir();
+		$totals     = array(
+			'removed'  => 0,
+			'bytes'    => 0,
+			'promoted' => 0,
+		);
+
+		foreach ( $base_dirs as $cache_type => $base_dir ) {
+			$result = File::remove_duplicates( $upload_dir['basedir'] . $base_dir, $delete );
+
+			\WP_CLI::log(
+				\sprintf(
+					'%s: %s %d duplicate file(s), %s; %s %d file(s) to the original name.',
+					$cache_type,
+					$delete ? 'removed' : 'would remove',
+					$result['removed'],
+					\size_format( $result['bytes'] ),
+					$delete ? 'moved' : 'would move',
+					$result['promoted']
+				)
+			);
+
+			foreach ( $totals as $key => $value ) {
+				$totals[ $key ] = $value + $result[ $key ];
+			}
+		}
+
+		if ( $delete ) {
+			\WP_CLI::success( \sprintf( 'Removed %d duplicate file(s), %s.', $totals['removed'], \size_format( $totals['bytes'] ) ) );
+		} elseif ( $totals['removed'] + $totals['promoted'] > 0 ) {
+			\WP_CLI::log( 'Run again with --delete to remove them.' );
+		} else {
+			\WP_CLI::success( 'No duplicate files found.' );
+		}
+	}
+
+	/**
 	 * Clear a specific cache type.
 	 *
 	 * @param string $type The cache type (avatar, media, emoji).

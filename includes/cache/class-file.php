@@ -337,6 +337,86 @@ abstract class File {
 	}
 
 	/**
+	 * Remove the numbered copies an earlier version left next to cached images.
+	 *
+	 * The image used to be optimized after it had been moved into the cache directory. Converting it
+	 * there renamed it to `<hash>-1.webp` (or `-1.jpg` where WebP is unavailable), a name the lookup
+	 * never matches, so the next request downloaded and converted it again and left one more copy.
+	 * This finds those copies and removes them. Where the file under the canonical name is missing,
+	 * the newest copy is moved there instead, so the next lookup is a hit rather than a download.
+	 *
+	 * Nothing is touched unless `$delete` is true; the counts then say what would happen.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $directory The cache directory to walk, subdirectories included.
+	 * @param bool   $delete    Whether to remove and move the files. Default false, count only.
+	 *
+	 * @return array {
+	 *     What was done, or would be.
+	 *
+	 *     @type int $removed  Copies removed.
+	 *     @type int $bytes    Their combined size.
+	 *     @type int $promoted Copies moved to the canonical name.
+	 * }
+	 */
+	public static function remove_duplicates( $directory, $delete = false ) {
+		$result = array(
+			'removed'  => 0,
+			'bytes'    => 0,
+			'promoted' => 0,
+		);
+
+		if ( ! \is_dir( $directory ) ) {
+			return $result;
+		}
+
+		// The copies, grouped under the file each of them duplicates, keyed by their counter.
+		$groups   = array();
+		$iterator = new \RecursiveIteratorIterator(
+			new \RecursiveDirectoryIterator( $directory, \RecursiveDirectoryIterator::SKIP_DOTS )
+		);
+
+		foreach ( $iterator as $file ) {
+			// Only the exact shape the old code produced: a full hash, a counter and a converted format.
+			if ( ! $file->isFile() || ! \preg_match( '/^([0-9a-f]{32})-([1-9][0-9]*)\.(webp|jpg)$/', $file->getFilename(), $match ) ) {
+				continue;
+			}
+
+			$canonical = $file->getPath() . '/' . $match[1] . '.' . $match[3];
+
+			$groups[ $canonical ][ (int) $match[2] ] = $file->getPathname();
+		}
+
+		$filesystem = static::get_filesystem();
+
+		foreach ( $groups as $canonical => $copies ) {
+			\ksort( $copies );
+
+			// With no canonical file to serve, the newest copy becomes it.
+			if ( ! \file_exists( $canonical ) ) {
+				$newest = \array_pop( $copies );
+				++$result['promoted'];
+
+				if ( $delete ) {
+					$filesystem->move( $newest, $canonical );
+				}
+			}
+
+			foreach ( $copies as $copy ) {
+				++$result['removed'];
+				$result['bytes'] += (int) \filesize( $copy );
+
+				if ( $delete ) {
+					$filesystem->delete( $copy );
+				}
+			}
+		}
+
+		return $result;
+	}
+
+	/**
 	 * Generate a hash for a URL.
 	 *
 	 * Uses full MD5 hash (32 characters) for better collision resistance.

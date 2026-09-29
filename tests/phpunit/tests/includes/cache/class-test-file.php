@@ -209,4 +209,138 @@ class Test_File extends WP_UnitTestCase {
 
 		Avatar::invalidate_entity( $post_id );
 	}
+
+	/**
+	 * Without `$delete`, the copies are only counted and nothing changes.
+	 *
+	 * @covers ::remove_duplicates
+	 */
+	public function test_remove_duplicates_counts_without_touching_anything() {
+		$dir  = Avatar::get_storage_paths( 'dedupe-count' )['basedir'];
+		$hash = \md5( 'https://example.com/avatar.webp' );
+		wp_mkdir_p( $dir );
+		foreach ( array( "{$hash}.webp", "{$hash}-1.webp", "{$hash}-2.webp" ) as $name ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			file_put_contents( "{$dir}/{$name}", 'image' );
+		}
+
+		$result = Avatar::remove_duplicates( $dir );
+
+		$this->assertSame(
+			array(
+				'removed'  => 2,
+				'bytes'    => 10,
+				'promoted' => 0,
+			),
+			$result
+		);
+		$this->assertFileExists( "{$dir}/{$hash}-1.webp", 'A dry run leaves the copies in place.' );
+		$this->assertFileExists( "{$dir}/{$hash}-2.webp" );
+
+		Avatar::delete_directory( $dir );
+	}
+
+	/**
+	 * With `$delete`, the copies go and the canonical file stays.
+	 *
+	 * @covers ::remove_duplicates
+	 */
+	public function test_remove_duplicates_removes_the_copies() {
+		$dir  = Avatar::get_storage_paths( 'dedupe-remove' )['basedir'];
+		$hash = \md5( 'https://example.com/avatar.jpg' );
+		wp_mkdir_p( $dir );
+		foreach ( array( "{$hash}.jpg", "{$hash}-1.jpg", "{$hash}-3.jpg" ) as $name ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			file_put_contents( "{$dir}/{$name}", 'image' );
+		}
+
+		$result = Avatar::remove_duplicates( $dir, true );
+
+		$this->assertSame( 2, $result['removed'] );
+		$this->assertSame( 0, $result['promoted'] );
+		$this->assertFileExists( "{$dir}/{$hash}.jpg", 'The canonical file is kept.' );
+		$this->assertFileDoesNotExist( "{$dir}/{$hash}-1.jpg" );
+		$this->assertFileDoesNotExist( "{$dir}/{$hash}-3.jpg" );
+
+		Avatar::delete_directory( $dir );
+	}
+
+	/**
+	 * With no canonical file, the newest copy takes its name and the rest go.
+	 *
+	 * @covers ::remove_duplicates
+	 */
+	public function test_remove_duplicates_promotes_the_newest_copy() {
+		$dir  = Avatar::get_storage_paths( 'dedupe-promote' )['basedir'];
+		$hash = \md5( 'https://example.com/avatar.png' );
+		wp_mkdir_p( $dir );
+		foreach ( array( 1, 2, 10 ) as $n ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			file_put_contents( "{$dir}/{$hash}-{$n}.webp", "copy {$n}" );
+		}
+
+		$result = Avatar::remove_duplicates( $dir, true );
+
+		$this->assertSame( 2, $result['removed'] );
+		$this->assertSame( 1, $result['promoted'] );
+		$this->assertFileExists( "{$dir}/{$hash}.webp" );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		$this->assertSame( 'copy 10', file_get_contents( "{$dir}/{$hash}.webp" ), 'The highest counter, not the first one found, is kept.' );
+		$this->assertFileDoesNotExist( "{$dir}/{$hash}-10.webp" );
+		$this->assertFileDoesNotExist( "{$dir}/{$hash}-1.webp" );
+
+		Avatar::delete_directory( $dir );
+	}
+
+	/**
+	 * Only the exact shape the old code produced is touched.
+	 *
+	 * @covers ::remove_duplicates
+	 */
+	public function test_remove_duplicates_leaves_other_files_alone() {
+		$dir  = Avatar::get_storage_paths( 'dedupe-others' )['basedir'];
+		$hash = \md5( 'https://example.com/avatar.gif' );
+		wp_mkdir_p( $dir . '/nested' );
+		$others = array(
+			"{$hash}.webp",          // The canonical file itself.
+			'photo-1.webp',          // Not a hash.
+			"{$hash}-1.png",         // A format the conversion never produced.
+			"{$hash}-0.webp",        // Not a counter wp_unique_filename() hands out.
+			\substr( $hash, 0, 8 ) . '-1.webp', // Not a full hash.
+		);
+		foreach ( $others as $name ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			file_put_contents( "{$dir}/{$name}", 'image' );
+		}
+		// A copy in a subdirectory is still found.
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( "{$dir}/nested/{$hash}-1.webp", 'image' );
+
+		$result = Avatar::remove_duplicates( $dir, true );
+
+		$this->assertSame( 0, $result['removed'], 'Nothing to remove: the nested copy has no canonical file and is promoted.' );
+		$this->assertSame( 1, $result['promoted'] );
+		foreach ( $others as $name ) {
+			$this->assertFileExists( "{$dir}/{$name}", "{$name} is not a duplicate." );
+		}
+		$this->assertFileExists( "{$dir}/nested/{$hash}.webp" );
+
+		Avatar::delete_directory( $dir );
+	}
+
+	/**
+	 * A directory that does not exist is nothing to clean.
+	 *
+	 * @covers ::remove_duplicates
+	 */
+	public function test_remove_duplicates_handles_a_missing_directory() {
+		$this->assertSame(
+			array(
+				'removed'  => 0,
+				'bytes'    => 0,
+				'promoted' => 0,
+			),
+			Avatar::remove_duplicates( Avatar::get_storage_paths( 'nope' )['basedir'], true )
+		);
+	}
 }
