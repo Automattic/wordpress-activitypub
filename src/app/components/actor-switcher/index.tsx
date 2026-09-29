@@ -98,7 +98,7 @@ export default function ActorSwitcher(): ReactNode {
 			// Close inspector.
 			void navigate( {
 				search: ( ( prev: Record< string, unknown > ): Record< string, unknown > => {
-					const { postId: _, ...rest } = prev as { postId?: number };
+					const { postIds: _, ...rest } = prev as { postIds?: string[] };
 					return rest;
 				} ) as never,
 			} );
