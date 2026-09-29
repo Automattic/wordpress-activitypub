@@ -18,3 +18,12 @@
 #wpfooter {
 	display: none;
 }
+
+// WordPress up to 7.1 ships a `wp-components` whose `ItemGroup` fills every
+// `path` (`path { fill: currentColor }`), turning the stroke-based icons of
+// `@wordpress/icons` 17 in boot's menu into solid boxes. Components 40.1.0
+// dropped that rule (gutenberg#78808); remove this once the minimum WordPress
+// version ships it.
+.boot-navigation-item svg[style*="fill: none"] path {
+	fill: none;
+}
