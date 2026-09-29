@@ -397,6 +397,9 @@ class Test_File extends WP_UnitTestCase {
 		$this->assertSame( 0, $result['removed'] + $result['promoted'], 'Nothing behind a link is touched.' );
 		$this->assertFileExists( "{$outside}/{$hash}-1.webp" );
 
+		// The links go first: the recursive delete below follows links, into the outside directory and round the loop.
+		\wp_delete_file( "{$dir}/elsewhere" );
+		\wp_delete_file( "{$dir}/loop" );
 		Avatar::delete_directory( $dir );
 		Avatar::delete_directory( $outside );
 	}
