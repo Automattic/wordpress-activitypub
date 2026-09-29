@@ -45,6 +45,7 @@ export default function FeedStage(): ReactNode {
 	const searchParams: SearchParams = useSearch( { strict: false } ) as SearchParams;
 
 	// The selection lives in the URL; the inspector shows the first selected post.
+	// No view transition: boot would animate the stage resize as a pinned-corner crossfade.
 	const selectItems = useCallback(
 		( items: string[] ): void => {
 			void navigate( {
@@ -52,6 +53,7 @@ export default function FeedStage(): ReactNode {
 					...prev,
 					postIds: items.length > 0 ? items : undefined,
 				} ) ) as never,
+				viewTransition: false,
 			} );
 		},
 		[ navigate ]

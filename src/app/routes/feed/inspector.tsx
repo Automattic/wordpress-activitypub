@@ -65,6 +65,7 @@ export default function FeedInspector(): ReactNode {
 				const { postIds: _, ...rest } = prev as SearchParams;
 				return rest;
 			} ) as never,
+			viewTransition: false,
 		} );
 	};
 

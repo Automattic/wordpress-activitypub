@@ -27,10 +27,10 @@ export function stage(): ReactNode {
 	);
 }
 
+/*
+ * Boot's inspector column is already a surface (background, corner radius,
+ * scrolling), so the inspector renders straight into it.
+ */
 export function inspector(): ReactNode {
-	return (
-		<Panel className="panel--inspector">
-			<FeedInspector />
-		</Panel>
-	);
+	return <FeedInspector />;
 }

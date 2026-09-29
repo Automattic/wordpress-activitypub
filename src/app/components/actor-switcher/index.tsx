@@ -101,6 +101,7 @@ export default function ActorSwitcher(): ReactNode {
 					const { postIds: _, ...rest } = prev as { postIds?: string[] };
 					return rest;
 				} ) as never,
+				viewTransition: false,
 			} );
 		}
 	};
