@@ -316,17 +316,24 @@ class Test_File extends WP_UnitTestCase {
 		$this->assertSame( 0, $result['promoted'], 'A WebP already serves this hash; nothing is promoted beside it.' );
 		$this->assertSame( array( "{$dir}/{$hash}.webp" ), \glob( "{$dir}/{$hash}.*" ), 'Exactly one file is left for the hash.' );
 
-		// Without any canonical file, the newest copy wins whatever its format.
+		/*
+		 * Without any canonical file, the newest copy wins whatever its format. The counter started
+		 * over when the format changed, so the higher counter here is the older file.
+		 */
 		$other = \md5( 'https://example.com/other.svg' );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-		\file_put_contents( "{$dir}/{$other}-1.webp", 'older' );
+		\file_put_contents( "{$dir}/{$other}-9.webp", 'older' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_touch -- The old file has to be old.
+		\touch( "{$dir}/{$other}-9.webp", \time() - HOUR_IN_SECONDS );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-		\file_put_contents( "{$dir}/{$other}-4.jpg", 'newest' );
+		\file_put_contents( "{$dir}/{$other}-1.jpg", 'newest' );
 
 		$result = Avatar::remove_duplicates( $dir, true );
 
 		$this->assertSame( 1, $result['promoted'] );
-		$this->assertSame( array( "{$dir}/{$other}.jpg" ), \glob( "{$dir}/{$other}.*" ), 'The newest copy became the one file, in its own format.' );
+		$this->assertSame( array( "{$dir}/{$other}.jpg" ), \glob( "{$dir}/{$other}.*" ), 'The newest copy became the one file, in its own format, whatever its counter.' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		$this->assertSame( 'newest', \file_get_contents( "{$dir}/{$other}.jpg" ) );
 
 		Avatar::delete_directory( $dir );
 	}

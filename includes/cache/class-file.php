@@ -379,9 +379,13 @@ abstract class File {
 		 * The copies, grouped by directory and hash regardless of format: the lookup matches `<hash>.*`
 		 * and serves the first file it finds, so one hash may only ever end up with one file.
 		 */
-		$groups   = array();
+		$groups = array();
+
+		// A live cache may remove an entity's directory while this walks it; such a directory is skipped, not fatal.
 		$iterator = new \RecursiveIteratorIterator(
-			new \RecursiveDirectoryIterator( $directory, \RecursiveDirectoryIterator::SKIP_DOTS )
+			new \RecursiveDirectoryIterator( $directory, \RecursiveDirectoryIterator::SKIP_DOTS ),
+			\RecursiveIteratorIterator::LEAVES_ONLY,
+			\RecursiveIteratorIterator::CATCH_GET_CHILD
 		);
 
 		foreach ( $iterator as $file ) {
@@ -391,6 +395,7 @@ abstract class File {
 			}
 
 			$groups[ $file->getPath() . '/' . $match[1] ][] = array(
+				'time'    => $file->getMTime(),
 				'counter' => (int) $match[2],
 				'path'    => $file->getPathname(),
 			);
@@ -399,10 +404,14 @@ abstract class File {
 		$filesystem = static::get_filesystem();
 
 		foreach ( $groups as $canonical => $copies ) {
+			/*
+			 * Oldest first. The counter only orders copies of one format, since it started over when
+			 * the format changed, so the modification time decides and the counter breaks ties.
+			 */
 			\usort(
 				$copies,
 				static function ( $a, $b ) {
-					return $a['counter'] <=> $b['counter'];
+					return array( $a['time'], $a['counter'] ) <=> array( $b['time'], $b['counter'] );
 				}
 			);
 
