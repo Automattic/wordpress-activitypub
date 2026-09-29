@@ -26,9 +26,9 @@ use function Activitypub\maybe_set_no_store;
  */
 trait Rate_Limit {
 	/**
-	 * The requests that were allowed, so one request is counted once, keyed by request.
+	 * What each request was already told, so it is counted once, keyed by request.
 	 *
-	 * @var array<string, array{request: \WP_REST_Request, answer: true}>
+	 * @var array<string, array{request: \WP_REST_Request, answer: true|\WP_Error}>
 	 */
 	private static $counted = array();
 
@@ -55,23 +55,18 @@ trait Rate_Limit {
 			return self::$counted[ $memo ]['answer'];
 		}
 
-		$answer = $this->count_request( $bucket, $limit, $request, $memo );
-
 		/*
-		 * Only an allowed request is remembered, and the request is kept beside the answer because
-		 * `spl_object_id()` hands out the id of a freed object again, so without a reference a later
-		 * request could read this answer as its own. A refusal is not remembered: repeating it costs
-		 * nothing, it writes no entry and lets nothing through, and a caller that keeps asking after a
-		 * 429 would otherwise have every one of its refused requests kept for the life of the process.
+		 * The request is kept beside the answer: `spl_object_id()` hands out the id of a freed object
+		 * again, so without a reference a later request could read this answer as its own. The entry
+		 * lives until the response is stamped, so a refused caller who keeps asking does not pile up
+		 * entries either; each one goes with its own response.
 		 */
-		if ( true === $answer ) {
-			self::$counted[ $memo ] = array(
-				'request' => $request,
-				'answer'  => $answer,
-			);
-		}
+		self::$counted[ $memo ] = array(
+			'request' => $request,
+			'answer'  => $this->count_request( $bucket, $limit, $request, $memo ),
+		);
 
-		return $answer;
+		return self::$counted[ $memo ]['answer'];
 	}
 
 	/**

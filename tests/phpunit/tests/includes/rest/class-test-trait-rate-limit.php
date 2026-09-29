@@ -168,6 +168,35 @@ class Test_Trait_Rate_Limit extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A refused request asked twice leaves one callback on the hook, and is freed like any other.
+	 *
+	 * Core re-asks the permission callback for the `Allow` header, so without the memo a refusal
+	 * would register a second, identical callback that lingers until the next dispatch.
+	 *
+	 * @covers ::rate_limit
+	 */
+	public function test_rate_limit_asks_a_refused_request_once() {
+		global $wp_filter;
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
+		$memo    = 'test_bucket:' . \spl_object_id( $request );
+		$before  = \count( $wp_filter['rest_post_dispatch'][10] ?? array() );
+
+		$this->instance->count( 'test_bucket', 0, $request );
+		$this->instance->count( 'test_bucket', 0, $request );
+
+		$this->assertSame( $before + 1, \count( $wp_filter['rest_post_dispatch'][10] ), 'One callback for one request.' );
+
+		\apply_filters( 'rest_post_dispatch', new \WP_REST_Response( array(), 429 ), \rest_get_server(), $request );
+
+		$counted = new \ReflectionProperty( \get_class( $this->instance ), 'counted' );
+		$counted->setAccessible( true );
+
+		$this->assertSame( $before, \count( $wp_filter['rest_post_dispatch'][10] ?? array() ), 'And none once the response is stamped.' );
+		$this->assertArrayNotHasKey( $memo, $counted->getValue(), 'The refusal is freed with its response.' );
+	}
+
+	/**
 	 * A request is forgotten once its response carries the allowance.
 	 *
 	 * The answer is kept only so core's second permission check cannot charge one request twice, so
