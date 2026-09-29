@@ -1,16 +1,26 @@
 /**
  * WordPress dependencies
  */
-import { initSinglePage } from '@wordpress/boot';
+import { init } from '@wordpress/boot';
 
 /**
  * Internal dependencies
  */
 import type { Route } from './router/types';
 
+interface MenuItem {
+	id: string;
+	label: string;
+	to: string;
+	parent?: string;
+}
+
 interface LoaderData {
 	mountId?: string;
 	routes?: Route[];
+	menuItems?: MenuItem[];
+	dashboardLink?: string;
+	initModules?: string[];
 }
 
 const MODULE_DATA_ID = 'wp-script-module-data-@activitypub/app';
@@ -30,13 +40,14 @@ const getLoaderData = (): LoaderData => {
 };
 
 const bootApp = (): void => {
-	const { mountId, routes } = getLoaderData();
+	const { mountId, routes, menuItems, dashboardLink, initModules } = getLoaderData();
 
 	if ( ! mountId || ! Array.isArray( routes ) ) {
 		return;
 	}
 
-	initSinglePage( { mountId, routes } );
+	// Full-page mode: boot renders the sidebar from `menuItems` and the back button from `dashboardLink`.
+	void init( { mountId, routes, menuItems: menuItems ?? [], dashboardLink, initModules: initModules ?? [] } );
 };
 
 if ( document.readyState === 'loading' ) {
