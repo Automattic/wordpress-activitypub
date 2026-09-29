@@ -1,0 +1,4 @@
+Significance: patch
+Type: changed
+
+Endpoints that other sites and apps call now answer a limited number of requests per minute from the same caller, and say so in the `RateLimit-Limit`, `RateLimit-Remaining` and `RateLimit-Reset` response headers.

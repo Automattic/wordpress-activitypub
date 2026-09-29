@@ -368,6 +368,20 @@ class Server {
 			\auth_redirect();
 		}
 
+		/*
+		 * An account without the ActivityPub capability has nothing to hand out, so it never reaches the
+		 * consent form, the client lookup behind it, or the rows that a consent would write. The
+		 * capability is read directly rather than through `user_can_activitypub()`, which also answers
+		 * false in blog-only and single-user mode, where a capable user still authorizes apps, the same
+		 * distinction `Token::validate_user_access()` makes.
+		 */
+		if ( ! \current_user_can( 'activitypub' ) ) {
+			\status_header( 403 );
+			$error_message = \__( 'Your account is not enabled for ActivityPub, so it cannot authorize apps.', 'activitypub' ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
+			include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-error.php';
+			exit;
+		}
+
 		$request_method = isset( $_SERVER['REQUEST_METHOD'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '';
 
 		if ( 'GET' === $request_method ) {

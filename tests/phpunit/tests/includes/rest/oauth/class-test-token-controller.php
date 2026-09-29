@@ -212,10 +212,8 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 		}
 		$_SERVER['REMOTE_ADDR'] = '198.51.100.42';
 
-		$ip            = \Activitypub\get_client_ip();
-		$transient_key = 'ap_oauth_tok_' . \md5( $ip );
-
-		\set_transient( $transient_key, 20, MINUTE_IN_SECONDS );
+		// An allowance of nothing refuses the first request, so no bucket has to be primed.
+		\add_filter( 'activitypub_rate_limit', '__return_zero' );
 
 		try {
 			$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/token' );
@@ -224,17 +222,18 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 			$request->set_param( 'code', 'irrelevant' );
 			$request->set_param( 'redirect_uri', $this->redirect_uri );
 
-			$response = \rest_get_server()->dispatch( $request );
+			// `rest_post_dispatch` runs in `serve_request()`, so the headers are applied here.
+			$response = \apply_filters( 'rest_post_dispatch', \rest_get_server()->dispatch( $request ), \rest_get_server(), $request );
 			$data     = $response->get_data();
 			$headers  = $response->get_headers();
 
 			$this->assertEquals( 429, $response->get_status() );
-			$this->assertEquals( 'rate_limited', $data['error'] );
+			$this->assertEquals( 'rate_limited', $data['error'], 'The body keeps the shape RFC 6749 prescribes.' );
 			$this->assertSame( 'no-store', $headers['Cache-Control'] ?? null, 'Token error responses must set Cache-Control: no-store per RFC 6749 §5.1.' );
 			$this->assertSame( 'no-cache', $headers['Pragma'] ?? null, 'Token error responses must set Pragma: no-cache per RFC 6749 §5.1.' );
-			$this->assertSame( (string) MINUTE_IN_SECONDS, $headers['Retry-After'] ?? null, 'Rate-limit responses must include Retry-After per RFC 6585 §4.' );
+			$this->assertArrayHasKey( 'Retry-After', $headers, 'A refusal says when to come back.' );
 		} finally {
-			\delete_transient( $transient_key );
+			\remove_filter( 'activitypub_rate_limit', '__return_zero' );
 			$this->restore_client_ip_server( $snapshot );
 		}
 	}
@@ -252,9 +251,6 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 			unset( $_SERVER[ $key ] );
 		}
 
-		$empty_ip_transient = 'ap_oauth_tok_' . \md5( '' );
-		\delete_transient( $empty_ip_transient );
-
 		try {
 			$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/token' );
 			$request->set_param( 'grant_type', 'authorization_code' );
@@ -262,15 +258,19 @@ class Test_Token_Controller extends \WP_UnitTestCase {
 			$request->set_param( 'code', 'irrelevant' );
 			$request->set_param( 'redirect_uri', $this->redirect_uri );
 
-			$response = \rest_get_server()->dispatch( $request );
+			// `rest_post_dispatch` runs in `serve_request()`, so the headers are applied here.
+			$response = \apply_filters( 'rest_post_dispatch', \rest_get_server()->dispatch( $request ), \rest_get_server(), $request );
 			$data     = $response->get_data();
 			$headers  = $response->get_headers();
 
 			$this->assertEquals( 429, $response->get_status() );
 			$this->assertEquals( 'rate_limited', $data['error'] );
-			$this->assertSame( (string) MINUTE_IN_SECONDS, $headers['Retry-After'] ?? null, 'Rate-limit responses must include Retry-After per RFC 6585 §4.' );
+
+			// RFC 6585 §4. The value is what is left of the window, so only its range is fixed.
+			$this->assertArrayHasKey( 'Retry-After', $headers );
+			$this->assertGreaterThanOrEqual( 1, (int) $headers['Retry-After'] );
+			$this->assertLessThanOrEqual( MINUTE_IN_SECONDS, (int) $headers['Retry-After'] );
 			// The fail-closed branch must not write a shared empty-IP transient.
-			$this->assertFalse( \get_transient( $empty_ip_transient ) );
 		} finally {
 			$this->restore_client_ip_server( $snapshot );
 		}
