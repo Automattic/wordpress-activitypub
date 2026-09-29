@@ -27,7 +27,7 @@ import { close } from '@wordpress/icons';
 import Avatar from '../../components/avatar';
 import { getRelativeTime, safeUrl } from '../../utils';
 import { useTagFilter } from '../../hooks/use-tag-filter';
-import { useSearch, useNavigate } from '../../router';
+import { useSearch, useNavigate } from '@wordpress/route';
 import type { ActorInfo, Comment, FeedPost } from '../../types';
 
 interface RenderHTMLProps {

@@ -12,7 +12,7 @@ import type { AppSettings, Comment, FeedPost } from '../../../types';
 const mockNavigate = jest.fn();
 let mockSearchParams: { postId?: number } = { postId: 1 };
 
-jest.mock( '../../../router', () => ( {
+jest.mock( '@wordpress/route', () => ( {
 	useSearch: () => mockSearchParams,
 	useNavigate: () => mockNavigate,
 } ) );
@@ -394,29 +394,15 @@ describe( 'FeedInspector', () => {
 			expect( container.textContent ).toContain( 'Hello \\! world' );
 		} );
 
-		it( 'should display View Original Post button', () => {
-			renderInspector();
+		it( 'links the timestamp to the original post, opening in a new tab', () => {
+			const { container } = renderInspector();
 
-			// Button might render with different labels or as external link
-			const button =
-				screen.queryByText( 'View Original Post' ) ||
-				screen.queryByRole( 'button', { name: /view original post/i } ) ||
-				screen.queryByRole( 'link', { name: /view original post/i } );
+			const link = container.querySelector( 'a.activitypub-inspector-timestamp' );
 
-			// Component renders the button in some configurations
-			// If button exists, verify it has proper attributes
-			/* eslint-disable jest/no-conditional-expect -- component has multiple valid render paths */
-			if ( button ) {
-				expect( button ).toBeInTheDocument();
-				if ( button.hasAttribute( 'data-href' ) ) {
-					expect( button.getAttribute( 'data-href' ) ).toBe( mockPost.link );
-				}
-			} else {
-				// Button may not render in all configurations - that's okay
-				// The component shows the post link through other means
-				expect( true ).toBe( true );
-			}
-			/* eslint-enable jest/no-conditional-expect */
+			expect( link ).toBeInTheDocument();
+			expect( link ).toHaveAttribute( 'href', mockPost.link );
+			expect( link ).toHaveAttribute( 'target', '_blank' );
+			expect( link?.getAttribute( 'rel' ) ).toContain( 'noopener' );
 		} );
 	} );
 
