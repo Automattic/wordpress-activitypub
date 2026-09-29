@@ -7,9 +7,89 @@
  */
 import { useView } from '@wordpress/views';
 
+/**
+ * Internal dependencies
+ */
+import type { FeedQuery } from '../../hooks/use-feed';
+
 // Using ReturnType to get the View type from useView to avoid version conflicts
 // between @wordpress/views and @wordpress/dataviews
-type ViewType = ReturnType< typeof useView >[ 'view' ];
+export type ViewType = ReturnType< typeof useView >[ 'view' ];
+
+export const DEFAULT_VIEW: ViewType = {
+	type: 'list',
+	perPage: 20,
+	page: 1,
+	sort: {
+		field: 'date',
+		direction: 'desc',
+	},
+	search: '',
+	filters: [],
+	fields: [ 'metadata', 'title.rendered', 'content' ],
+	infiniteScrollEnabled: true,
+	startPosition: 1,
+};
+
+export const defaultLayouts = {
+	list: {
+		primaryField: 'metadata',
+		fields: [ 'metadata', 'title.rendered', 'content' ],
+		mediaField: undefined,
+	},
+};
+
+// The fields the list and the inspector read; everything else stays on the server.
+const FIELDS: string[] = [
+	'id',
+	'date',
+	'modified',
+	'title',
+	'excerpt',
+	'content',
+	'actor_info',
+	'status',
+	'link',
+	'ap_object_type',
+	'ap_tag',
+];
+
+/**
+ * Turns a view into the REST query the feed is fetched with.
+ *
+ * Shared by the stage and the route loader so both ask for the same records.
+ *
+ * @param view   The resolved view.
+ * @param userId The actor whose feed it is.
+ * @return The query for `getEntityRecords( 'postType', 'ap_post', … )`.
+ */
+export function viewToQuery( view: ViewType, userId: number | null | undefined ): FeedQuery {
+	const query: FeedQuery = {
+		per_page: view.perPage || 20,
+		page: view.page || 1,
+		orderby: view.sort?.field || 'date',
+		order: view.sort?.direction || 'desc',
+		search: view.search || '',
+		_fields: FIELDS,
+	};
+
+	if ( userId !== null && userId !== undefined ) {
+		query.user_id = userId;
+	}
+
+	const objectType = view.filters?.find( ( filter ) => filter.field === 'ap_object_type' );
+	if ( objectType?.value !== undefined ) {
+		// The REST API takes a list of object types.
+		query.ap_object_type = Array.isArray( objectType.value ) ? objectType.value : [ objectType.value ];
+	}
+
+	const tag = view.filters?.find( ( filter ) => filter.field === 'ap_tag' );
+	if ( tag?.value !== undefined ) {
+		query.ap_tag = tag.value;
+	}
+
+	return query;
+}
 
 /**
  * Gets the next feed view state after a DataViews update.

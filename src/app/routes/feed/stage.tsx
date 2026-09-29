@@ -17,50 +17,31 @@ import { useMemo, useCallback, useState, useEffect, useRef } from '@wordpress/el
 import { DataViews } from '@wordpress/dataviews/wp';
 import type { Field, View as DataViewsView } from '@wordpress/dataviews/wp';
 import { useView } from '@wordpress/views';
-import { addQueryArgs, getQueryArgs } from '@wordpress/url';
 import { useSelect } from '@wordpress/data';
+import { useNavigate, useSearch } from '@wordpress/route';
 
 /**
  * Internal dependencies
  */
 import { useFeed } from '../../hooks/use-feed';
+import type { FeedQuery } from '../../hooks/use-feed';
 import { titleField, dateField, metadataField, contentField, objectTypeField, tagField } from '../../components/fields';
 import EmptyState from '../../components/empty-state';
-import { getFeedViewUpdate, normalizeFieldOrder } from './utils';
+import { DEFAULT_VIEW, defaultLayouts, getFeedViewUpdate, normalizeFieldOrder, viewToQuery } from './utils';
+import type { ViewType } from './utils';
 import { STORE_NAME } from '../../store';
 import type { AppSelectors } from '../../store';
 import type { FeedPost } from '../../types';
-import { useNavigate } from '@wordpress/route';
 import './style.scss';
 
-// Using ReturnType to get the View type from useView to avoid version conflicts between @wordpress/views and @wordpress/dataviews
-type ViewType = ReturnType< typeof useView >[ 'view' ];
-
-const DEFAULT_VIEW: ViewType = {
-	type: 'list',
-	perPage: 20,
-	page: 1,
-	sort: {
-		field: 'date',
-		direction: 'desc',
-	},
-	search: '',
-	filters: [],
-	fields: [ 'metadata', 'title.rendered', 'content' ],
-	infiniteScrollEnabled: true,
-	startPosition: 1,
-};
-
-const defaultLayouts = {
-	list: {
-		primaryField: 'metadata',
-		fields: [ 'metadata', 'title.rendered', 'content' ],
-		mediaField: undefined,
-	},
-};
+interface SearchParams {
+	page?: number;
+	search?: string;
+}
 
 export default function FeedStage(): ReactNode {
 	const navigate: UseNavigateResult< string > = useNavigate();
+	const searchParams: SearchParams = useSearch( { strict: false } ) as SearchParams;
 
 	// Navigate to inspector by updating search params
 	const selectItem: ( id: number ) => void = useCallback(
@@ -80,58 +61,18 @@ export default function FeedStage(): ReactNode {
 		[]
 	);
 
-	// Track URL query parameters as state for reactivity
-	const [ urlQueryParams, setUrlQueryParams ] = useState( () => {
-		const args = getQueryArgs( window.location.href ) as {
-			// Using 'paged' instead of 'page' to avoid conflict with WP admin menu 'page' parameter.
-			paged?: string;
-			search?: string;
-		};
-
-		return {
-			page: args.paged ? Number( args.paged ) : undefined,
-			search: args.search || undefined,
-		};
-	} );
-
-	// Listen for URL changes (browser back/forward).
-	useEffect( () => {
-		const updateQueryParams = (): void => {
-			const args = getQueryArgs( window.location.href ) as {
-				paged?: string;
-				search?: string;
-			};
-			setUrlQueryParams( {
-				page: args.paged ? Number( args.paged ) : undefined,
-				search: args.search || undefined,
+	// Page and search live in the URL, so the view survives reloads and back/forward.
+	const handleChangeQueryParams = useCallback(
+		( params: SearchParams ): void => {
+			void navigate( {
+				search: ( ( prev: Record< string, unknown > ): Record< string, unknown > => ( {
+					...prev,
+					...params,
+				} ) ) as never,
 			} );
-		};
-
-		window.addEventListener( 'popstate', updateQueryParams );
-		window.addEventListener( 'hashchange', updateQueryParams );
-
-		return (): void => {
-			window.removeEventListener( 'popstate', updateQueryParams );
-			window.removeEventListener( 'hashchange', updateQueryParams );
-		};
-	}, [] );
-
-	// Memoize onChangeQueryParams to prevent updateView from changing on every render.
-	const handleChangeQueryParams = useCallback( ( params: { page?: number; search?: string } ): void => {
-		const currentUrl: string = window.location.href;
-		const currentArgs = getQueryArgs( currentUrl );
-		const newUrl: string = addQueryArgs( currentUrl, {
-			...currentArgs,
-			paged: params.page || undefined,
-			search: params.search || undefined,
-		} );
-		window.history.pushState( null, '', newUrl );
-
-		setUrlQueryParams( {
-			page: params.page,
-			search: params.search,
-		} );
-	}, [] );
+		},
+		[ navigate ]
+	);
 
 	// Use the views hook to persist user preferences
 	const { view, updateView } = useView( {
@@ -139,7 +80,8 @@ export default function FeedStage(): ReactNode {
 		name: 'ap_post',
 		slug: 'feed',
 		defaultView: DEFAULT_VIEW,
-		queryParams: urlQueryParams,
+		defaultLayouts,
+		queryParams: searchParams,
 		onChangeQueryParams: handleChangeQueryParams,
 	} );
 
@@ -166,15 +108,8 @@ export default function FeedStage(): ReactNode {
 		// eslint-disable-next-line react-hooks/exhaustive-deps -- updateView changes reference frequently; condition guards against repeated calls
 	}, [ activeActorId ] );
 
-	const { feed, isResolving, totalItems, totalPages } = useFeed( {
-		perPage: view.perPage || 20,
-		page: view.page || 1,
-		orderBy: view.sort?.field || 'date',
-		order: view.sort?.direction || 'desc',
-		search: view.search || '',
-		userId: activeActorId,
-		filters: view.filters || DEFAULT_VIEW.filters,
-	} );
+	const query: FeedQuery = useMemo( (): FeedQuery => viewToQuery( view, activeActorId ), [ view, activeActorId ] );
+	const { feed, isResolving, totalItems, totalPages } = useFeed( query );
 
 	const fields: Field< FeedPost >[] = useMemo(
 		(): Field< FeedPost >[] => [ metadataField, titleField, contentField, dateField, objectTypeField, tagField ],
