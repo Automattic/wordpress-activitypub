@@ -23,7 +23,7 @@ import { addQueryArgs } from '@wordpress/url';
  * Internal dependencies
  */
 import ActorSwitcher from '../actor-switcher';
-import FeedDescription from '../sidebar/feed-description';
+import FeedDescription from './feed-description';
 import './style.scss';
 
 export default function FeedHeader(): ReactNode {
