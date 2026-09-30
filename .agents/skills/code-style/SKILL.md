@@ -57,6 +57,13 @@ use WP_Query;                      // ❌ no `use` for global classes
 ### Comments
 - `/* */` for multi-line comments, `//` for single-line — not stacked `//` lines.
 - Place each comment at the line it documents, not as one block above a block of code. Detail is fine; split it per statement.
+- Explain the non-obvious mechanic that makes a line necessary, never the bug or ticket behind it. A line that speaks for itself gets no comment.
+
+### Plugin Idioms
+- No `try`/`catch` or `try`/`finally`. Hook a filter around a call as `add_filter` → call → `remove_filter`, and report failures through return values (`WP_Error`, `false`).
+- "C2S" stays out of identifiers, file names and code comments; the official name is "ActivityPub API", and "client" is fine for the consuming side.
+- Anything that leaves the server (REST responses, deliveries) is rendered with `$activity->to_array( false, false )`: no per-item `@context`, no `bto`/`bcc`. Storage keeps `to_array( true, true )` for the round trip.
+- A few duplicated lines at two call sites beat a new helper; a whole duplicated method body across sibling classes does not.
 
 ## Comprehensive Standards
 
