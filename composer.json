@@ -21,6 +21,12 @@
 		"phpstan/phpstan": "^2.1",
 		"szepeviktor/phpstan-wordpress": "^2.0"
 	},
+	"autoload-dev": {
+		"classmap": [
+			"tests/phpstan/class-magic-accessors-extension.php",
+			"tests/phpstan/class-magic-accessor.php"
+		]
+	},
 	"config": {
 		"allow-plugins": true
 	},

@@ -32,3 +32,10 @@ parameters:
 				- function.notFound
 			paths:
 				- integration/*
+
+services:
+	# `Generic_Object::__call()` answers get_*/set_*/add_* from the object's attributes.
+	-
+		class: Activitypub\PHPStan\Magic_Accessors_Extension
+		tags:
+			- phpstan.broker.methodsClassReflectionExtension

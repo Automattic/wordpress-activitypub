@@ -7,12 +7,6 @@ parameters:
 			path: includes/activity/class-activity.php
 
 		-
-			message: '#^Call to an undefined method Activitypub\\Activity\\Generic_Object\:\:get_id\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: includes/activity/class-generic-object.php
-
-		-
 			message: '#^Unable to resolve the template type TUrl in call to function wp_http_validate_url$#'
 			identifier: argument.templateType
 			count: 1
@@ -247,18 +241,6 @@ parameters:
 			path: includes/class-migration.php
 
 		-
-			message: '#^Call to an undefined method Activitypub\\Activity\\Base_Object\:\:get_preferred_username\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: includes/class-moderation.php
-
-		-
-			message: '#^Call to an undefined method Activitypub\\Activity\\Actor\:\:get__id\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: includes/class-move.php
-
-		-
 			message: '#^If condition is always false\.$#'
 			identifier: if.alwaysFalse
 			count: 1
@@ -355,12 +337,6 @@ parameters:
 			path: includes/class-query.php
 
 		-
-			message: '#^Parameter \#1 \$actor of method Activitypub\\Activity\\Activity\:\:set_actor\(\) expects array\|string, int given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/class-relay.php
-
-		-
 			message: '#^If condition is always false\.$#'
 			identifier: if.alwaysFalse
 			count: 1
@@ -439,12 +415,6 @@ parameters:
 			path: includes/collection/class-inbox.php
 
 		-
-			message: '#^Call to an undefined method Activitypub\\Activity\\Base_Object\:\:get_object\(\)\.$#'
-			identifier: method.notFound
-			count: 3
-			path: includes/collection/class-inbox.php
-
-		-
 			message: '#^Expression on left side of \?\? is not nullable\.$#'
 			identifier: nullCoalesce.expr
 			count: 1
@@ -471,30 +441,6 @@ parameters:
 		-
 			message: '#^Argument of an invalid type stdClass supplied for foreach, only iterables are supported\.$#'
 			identifier: foreach.nonIterable
-			count: 1
-			path: includes/collection/class-outbox.php
-
-		-
-			message: '#^Call to an undefined method Activitypub\\Activity\\Base_Object\:\:get_object\(\)\.$#'
-			identifier: method.notFound
-			count: 3
-			path: includes/collection/class-outbox.php
-
-		-
-			message: '#^Cannot call method get_actor\(\) on Activitypub\\Activity\\Base_Object\|string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: includes/collection/class-outbox.php
-
-		-
-			message: '#^Cannot call method get_object\(\) on Activitypub\\Activity\\Base_Object\|string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: includes/collection/class-outbox.php
-
-		-
-			message: '#^Parameter \#1 \$updated of method Activitypub\\Activity\\Base_Object\:\:set_updated\(\) expects string, null given\.$#'
-			identifier: argument.type
 			count: 1
 			path: includes/collection/class-outbox.php
 
@@ -709,22 +655,10 @@ parameters:
 			path: includes/rest/class-actors-controller.php
 
 		-
-			message: '#^Call to an undefined method Activitypub\\Rest\\Collections_Controller\:\:get_item_index\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: includes/rest/class-collections-controller.php
-
-		-
 			message: '#^Parameter \#1 \$response of function Activitypub\\maybe_set_no_store expects WP_REST_Response, WP_HTTP_Response given\.$#'
 			identifier: argument.type
 			count: 1
 			path: includes/rest/class-interaction-controller.php
-
-		-
-			message: '#^Call to an undefined method Activitypub\\Rest\\Moderators_Controller\:\:get_item_index\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: includes/rest/class-moderators-controller.php
 
 		-
 			message: '#^Call to function is_wp_error\(\) with array\{id\: mixed, type\: ''OrderedCollection'', totalItems\: int\<0, max\>, orderedItems\: mixed, ''@context''\: mixed\} will always evaluate to false\.$#'
@@ -752,18 +686,6 @@ parameters:
 
 		-
 			message: '#^Parameter \#1 \$wp_object of function Activitypub\\get_object_id expects WP_Comment\|WP_Post, array given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/rest/class-outbox-controller.php
-
-		-
-			message: '#^Parameter \#2 \$user of method Activitypub\\Rest\\Outbox_Controller\:\:ensure_object_id\(\) expects Activitypub\\Model\\User\|null, Activitypub\\Activity\\Actor\|Activitypub\\Application given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/rest/class-outbox-controller.php
-
-		-
-			message: '#^Parameter \#2 \$user of method Activitypub\\Rest\\Outbox_Controller\:\:validate_ownership\(\) expects Activitypub\\Model\\User\|null, Activitypub\\Activity\\Actor\|Activitypub\\Application given\.$#'
 			identifier: argument.type
 			count: 1
 			path: includes/rest/class-outbox-controller.php
@@ -1081,36 +1003,6 @@ parameters:
 			path: includes/wp-admin/table/class-following.php
 
 		-
-			message: '#^Call to an undefined method Activitypub\\Activity\\Actor\:\:get__id\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: integration/class-enable-mastodon-apps.php
-
-		-
-			message: '#^Call to an undefined method Activitypub\\Activity\\Actor\|Activitypub\\Application\:\:update_header\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: integration/class-enable-mastodon-apps.php
-
-		-
-			message: '#^Call to an undefined method Activitypub\\Activity\\Actor\|Activitypub\\Application\:\:update_icon\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: integration/class-enable-mastodon-apps.php
-
-		-
-			message: '#^Call to an undefined method Activitypub\\Activity\\Actor\|Activitypub\\Application\:\:update_name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: integration/class-enable-mastodon-apps.php
-
-		-
-			message: '#^Call to an undefined method Activitypub\\Activity\\Actor\|Activitypub\\Application\:\:update_summary\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: integration/class-enable-mastodon-apps.php
-
-		-
 			message: '#^Parameter \#1 \$post_id of static method Activitypub\\Integration\\Enable_Mastodon_Apps\:\:api_post_status\(\) expects int, string given\.$#'
 			identifier: argument.type
 			count: 1
@@ -1163,9 +1055,3 @@ parameters:
 			identifier: return.void
 			count: 1
 			path: integration/class-multisite-language-switcher.php
-
-		-
-			message: '#^Call to an undefined method Activitypub\\Activity\\Actor\|Activitypub\\Application\:\:get_alternate_url\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: integration/class-webfinger.php
