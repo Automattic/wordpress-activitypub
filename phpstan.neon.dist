@@ -18,7 +18,13 @@ parameters:
 		- tests/phpstan/stubs/wp-cli.php
 		- tests/phpstan/stubs/wp-cli-utils.php
 	treatPhpDocTypesAsCertain: false
+	# The baseline matches by message, path and count. Fixing one occurrence in an
+	# old file must not fail the run, so the baseline only ever shrinks.
+	reportUnmatchedIgnoredErrors: false
 	ignoreErrors:
+		# `array<string, mixed>` generics in every array docblock; WordPress code
+		# does not carry them, and on PHP 7.4 they could only live in docblocks.
+		- identifier: missingType.iterableValue
 		# Integrations talk to other plugins that are not installed here.
 		-
 			identifiers:

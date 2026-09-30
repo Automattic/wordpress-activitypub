@@ -53,6 +53,9 @@
 		"analyze": [
 			"phpstan analyse --memory-limit=-1"
 		],
+		"analyze:baseline": [
+			"phpstan analyse --memory-limit=-1 --generate-baseline phpstan-baseline.neon"
+		],
 		"lint": [
 			"vendor/bin/phpcs"
 		],
