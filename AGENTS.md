@@ -8,6 +8,8 @@ Prefer reading project files and `docs/` over relying on training data for WordP
 - Edit WordPress core files
 - Use `remove_all_filters('pre_http_request')` in tests
 - Hardcode new version numbers (use `'unreleased'`)
+- Remove an escaping, sanitizing or capability check, even when a tool reports it as redundant
+- Change the priority or signature of a registered hook (third-party code unhooks against the exact signature)
 
 ## Common Pitfalls
 
@@ -17,6 +19,8 @@ Prefer reading project files and `docs/` over relying on training data for WordP
 - **`remove_all_filters('pre_http_request')` is forbidden in tests.** The pre-commit hook blocks this. Use targeted filter removal.
 - **Changelog entries MUST be end-user friendly and end with punctuation.** Users see these in the WordPress update screen. Describe what changed from their perspective — no jargon, class names, or method names.
 - **`post_date_gmt` may be empty.** Check for `0000-00-00` or empty values.
+- **Cleanups change no behaviour.** A lint, static-analysis or refactor task changes docblocks and types, not what the code does. When the analyzer is wrong about a core function, fix its view (a stub), never the output line.
+- **A docblock is a claim, not evidence.** Read the call sites before changing code because of what a comment says, and never revert on a comment's authority either.
 - **Scheduled cron handlers must be idempotent if they have user-visible side effects** (emails, external API calls, push notifications). WP-Cron can re-enter the same callback via concurrent workers, plugin deactivate→reactivate (which re-runs `register_schedules()`), `wp cron event run`, and traffic spikes that fire overlapping loopback requests. Claim the unit of work atomically — `add_option( $key, $value, '', false )` only succeeds when the row doesn't yet exist, which makes it a race-safe sentinel — *before* the side effect runs, not after. See `Activitypub\Scheduler\Statistics::send_monthly_email()` for the canonical pattern.
 
 ## PHP Conventions

@@ -307,6 +307,14 @@ A fix that tightens verification or acceptance (signature algorithms, required h
 | "Stricter validation is always safer" | Stricter acceptance breaks federation with real servers. Name what relies on current behavior. |
 | "I traced enough of the path" | If you can't write the exploitation sketch, you haven't. Downgrade it. |
 
+## Fixing What You Find
+
+- **Fix who may reach a path before adding a limit.** When a path "has no rate limit" or "can be abused", first ask who should be able to reach it at all. If that is fewer people than today, the fix is a permission check. A counter is only for legitimate callers, and a refusal must never allocate state.
+- **Fix the class, not the instance.** State the invariant generally ("push is not read", "every inbound reference is bound to the actor"), then grep every read path of the same data and every branch of a shared code path (trait, collection switch, paged, stream, proxy, embedded) and add a test per branch. A fix in one branch of a shared path once came back as an external report for the branch seven lines below it.
+- **Prefer a shared predicate or registry over point fixes** for an invariant that must hold across many handlers, so a new type cannot be silently missed.
+- **Entries added to this file stay generic.** It is public. Record the detection pattern, the defensive rule and the helper to use, never payloads, repro steps or the exact still-vulnerable site.
+- **Disclosure.** HackerOne is the intake for external reports only. Every fix, internal or external, ships as a normal public PR with a neutral description that names neither the report nor the attack. HackerOne is the CNA; never request a CVE through GitHub.
+
 ## Output Format
 
 ```markdown
