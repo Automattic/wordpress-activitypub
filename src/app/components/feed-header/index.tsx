@@ -2,8 +2,8 @@
  * Feed Header
  *
  * Sits at the top of the stage in boot's full-page mode and carries what our
- * own sidebar used to: the feed description, the actor switcher and the
- * settings link. Navigation itself is boot's sidebar now.
+ * own sidebar used to: the feed description and the actor switcher.
+ * Navigation itself is boot's sidebar now.
  */
 
 /**
@@ -14,10 +14,7 @@ import type { ReactNode } from 'react';
 /**
  * WordPress dependencies
  */
-import { Button, __experimentalHStack as HStack } from '@wordpress/components';
-import { cog } from '@wordpress/icons';
-import { __ } from '@wordpress/i18n';
-import { addQueryArgs } from '@wordpress/url';
+import { __experimentalHStack as HStack } from '@wordpress/components';
 
 /**
  * Internal dependencies
@@ -32,17 +29,7 @@ export default function FeedHeader(): ReactNode {
 			<p className="feed-header__description">
 				<FeedDescription />
 			</p>
-			<HStack justify="flex-end" alignment="center" spacing={ 2 } expanded={ false }>
-				<ActorSwitcher />
-				<Button
-					icon={ cog }
-					iconSize={ 20 }
-					size="compact"
-					href={ addQueryArgs( 'admin.php', { page: 'activitypub' } ) }
-					target="_blank"
-					label={ __( 'Settings', 'activitypub' ) }
-				/>
-			</HStack>
+			<ActorSwitcher />
 		</HStack>
 	);
 }
