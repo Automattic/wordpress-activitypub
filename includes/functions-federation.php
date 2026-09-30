@@ -21,6 +21,8 @@ use Activitypub\Transformer\Factory as Transformer_Factory;
  *
  * @param \WP_Comment|\WP_Post $wp_object The WordPress object.
  * @param string               $state     The state of the object.
+ *
+ * @return void
  */
 function set_wp_object_state( $wp_object, $state ) {
 	if ( $wp_object instanceof \WP_Post ) {

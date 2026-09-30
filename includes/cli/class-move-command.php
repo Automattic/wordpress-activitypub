@@ -38,6 +38,8 @@ class Move_Command extends \WP_CLI_Command {
 	 *
 	 * @param array $args       The positional arguments.
 	 * @param array $assoc_args The associative arguments (unused).
+	 *
+	 * @return void
 	 */
 	public function __invoke( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$from = $args[0];

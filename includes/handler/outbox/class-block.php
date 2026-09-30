@@ -18,6 +18,8 @@ use function Activitypub\object_to_uri;
 class Block {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_outbox_block', array( self::class, 'handle_block' ), 10, 2 );

@@ -17,6 +17,8 @@ use Activitypub\Collection\Outbox;
 class Multisite_Language_Switcher {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'save_post', array( self::class, 'ignore_outbox_post' ), 9, 2 );
@@ -28,6 +30,8 @@ class Multisite_Language_Switcher {
 	 *
 	 * @param int      $post_id The post id.
 	 * @param \WP_Post $post The post object.
+	 *
+	 * @return void
 	 */
 	public static function ignore_outbox_post( $post_id, $post ) {
 		if ( Outbox::POST_TYPE === $post->post_type ) {
@@ -40,6 +44,8 @@ class Multisite_Language_Switcher {
 	 *
 	 * @param int      $post_id The post id.
 	 * @param \WP_Post $post The post object.
+	 *
+	 * @return void
 	 */
 	public static function unignore_outbox_post( $post_id, $post ) {
 		if ( Outbox::POST_TYPE === $post->post_type ) {

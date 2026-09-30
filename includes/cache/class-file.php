@@ -81,6 +81,8 @@ abstract class File {
 	 * Initialize the cache handler.
 	 *
 	 * Subclasses should override this to register filters and actions.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		// Subclasses implement specific initialization.

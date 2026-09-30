@@ -39,6 +39,8 @@ class Authorization_Controller extends \WP_REST_Controller {
 
 	/**
 	 * Register routes.
+	 *
+	 * @return void
 	 */
 	public function register_routes() {
 		// Authorization endpoint - GET displays consent form, POST handles approval.

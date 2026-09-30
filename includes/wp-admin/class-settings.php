@@ -17,6 +17,8 @@ use function Activitypub\user_can_activitypub;
 class Settings {
 	/**
 	 * Initialize the class, registering WordPress hooks,
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'admin_menu', array( self::class, 'add_settings_page' ) );
@@ -30,6 +32,8 @@ class Settings {
 	 * Set the page title to the tab that is being viewed.
 	 *
 	 * Runs on `load-settings_page_activitypub`, before core prints the `<title>` tag.
+	 *
+	 * @return void
 	 */
 	public static function set_page_title() {
 		$active_tab = \wp_filter_object_list( self::get_settings_tabs(), array( 'active' => true ) );
@@ -129,6 +133,8 @@ class Settings {
 
 	/**
 	 * Load settings page.
+	 *
+	 * @return void
 	 */
 	public static function settings_page() {
 		$settings_tabs = self::get_settings_tabs();
@@ -167,6 +173,8 @@ class Settings {
 
 	/**
 	 * Adds the ActivityPub settings to the Help tab.
+	 *
+	 * @return void
 	 */
 	public static function add_settings_help_tab() {
 		// Getting Started / Introduction to the Fediverse.
@@ -276,6 +284,8 @@ class Settings {
 
 	/**
 	 * Adds the ActivityPub help tab to the users page.
+	 *
+	 * @return void
 	 */
 	public static function add_following_help_tab() {
 		\get_current_screen()->add_help_tab(
@@ -297,6 +307,8 @@ class Settings {
 
 	/**
 	 * Adds the ActivityPub help tab to the users page.
+	 *
+	 * @return void
 	 */
 	public static function add_users_help_tab() {
 		\get_current_screen()->add_help_tab(
@@ -312,6 +324,8 @@ class Settings {
 
 	/**
 	 * Handle 'welcome' query arg.
+	 *
+	 * @return void
 	 */
 	public static function handle_welcome_query_arg() {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -328,6 +342,8 @@ class Settings {
 	 * Handle switching from legacy template mode to automatic object type.
 	 *
 	 * @since 8.0.0
+	 *
+	 * @return void
 	 */
 	public static function handle_switch_object_type() {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -349,6 +365,8 @@ class Settings {
 
 	/**
 	 * Returns an array of recommended plugins for ActivityPub.
+	 *
+	 * @return array The recommended plugins.
 	 */
 	public static function get_recommended_plugins() {
 		$plugins = array();
@@ -430,6 +448,8 @@ class Settings {
 
 	/**
 	 * Render recommended plugins as a beautiful, rich showcase for the help tab.
+	 *
+	 * @return string|false The rendered list, or false when output buffering is off.
 	 */
 	public static function render_recommended_plugins_list() {
 		$plugins = self::get_recommended_plugins();

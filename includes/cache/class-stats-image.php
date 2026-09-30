@@ -406,6 +406,8 @@ class Stats_Image extends File {
 	 * @param int|float    $size  Font size in points (TTF) or 1-5 (built-in).
 	 * @param int          $color The text color.
 	 * @param string|false $font  Path to TTF file, or false for built-in.
+	 *
+	 * @return void
 	 */
 	private static function draw_text( $image, $text, $x, $y, $size, $color, $font = false ) {
 		if ( $font && \function_exists( 'imagefttext' ) ) {

@@ -25,6 +25,8 @@ use function Activitypub\object_to_uri;
 class Delete {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_delete', array( self::class, 'handle_delete' ), 10, 4 );
@@ -45,6 +47,8 @@ class Delete {
 	 * @param int|int[]                           $user_ids        The local user ID(s).
 	 * @param \Activitypub\Activity\Activity|null $activity_object Optional. The activity object. Default null.
 	 * @param string|null                         $context         Optional. The inbox context. Default null.
+	 *
+	 * @return void
 	 */
 	public static function handle_delete( $activity, $user_ids, $activity_object = null, $context = null ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		// The shared inbox invokes this once per resolved recipient and once on the shared hook;
@@ -185,6 +189,8 @@ class Delete {
 	 *
 	 * @param array     $activity The Activity object.
 	 * @param int|int[] $user_ids The user ID(s).
+	 *
+	 * @return void
 	 */
 	public static function delete_object( $activity, $user_ids ) {
 		$result = self::maybe_delete_interaction( $activity );
@@ -211,6 +217,8 @@ class Delete {
 	 *
 	 * @param array     $activity The Activity object.
 	 * @param int|int[] $user_ids The user ID(s).
+	 *
+	 * @return bool True on success, false otherwise.
 	 */
 	public static function delete_remote_actor( $activity, $user_ids ) {
 		$result  = self::maybe_delete_follower( $activity );
@@ -253,6 +261,8 @@ class Delete {
 	 * Schedule Deletion of Interactions of a Remote Actor.
 	 *
 	 * @param int $id The remote actor ID.
+	 *
+	 * @return void
 	 */
 	public static function maybe_delete_interactions( $id ) {
 		\wp_schedule_single_event(
@@ -266,6 +276,8 @@ class Delete {
 	 * Schedule Deletion of Reader Items of a Remote Actor.
 	 *
 	 * @param int $id The remote actor ID.
+	 *
+	 * @return void
 	 */
 	public static function maybe_delete_posts( $id ) {
 		\wp_schedule_single_event(
@@ -444,6 +456,8 @@ class Delete {
 	 *
 	 * @param int                            $outbox_id The ID of the outbox activity.
 	 * @param \Activitypub\Activity\Activity $activity  The Activity object.
+	 *
+	 * @return void
 	 */
 	public static function maybe_bury( $outbox_id, $activity ) {
 		if ( 'Delete' !== $activity->get_type() ) {

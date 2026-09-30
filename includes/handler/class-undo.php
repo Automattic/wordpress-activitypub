@@ -17,6 +17,8 @@ use function Activitypub\object_to_uri;
 class Undo {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_undo', array( self::class, 'handle_undo' ), 10, 2 );
@@ -28,6 +30,8 @@ class Undo {
 	 *
 	 * @param array          $activity The JSON "Undo" Activity.
 	 * @param int|int[]|null $user_ids The user ID(s).
+	 *
+	 * @return void
 	 */
 	public static function handle_undo( $activity, $user_ids ) {
 		$success = false;

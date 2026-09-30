@@ -40,6 +40,8 @@ class Comment_Command extends \WP_CLI_Command {
 	 *
 	 * @param array $args       The positional arguments.
 	 * @param array $assoc_args The associative arguments.
+	 *
+	 * @return void
 	 */
 	public function delete( $args, $assoc_args ) {
 		$comment = \get_comment( $args[0] );
@@ -77,6 +79,8 @@ class Comment_Command extends \WP_CLI_Command {
 	 *
 	 * @param array $args       The positional arguments.
 	 * @param array $assoc_args The associative arguments (unused).
+	 *
+	 * @return void
 	 */
 	public function update( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$comment = \get_comment( $args[0] );

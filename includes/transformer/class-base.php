@@ -161,6 +161,8 @@ abstract class Base {
 	 * Set the content visibility.
 	 *
 	 * @param string $content_visibility The content visibility.
+	 *
+	 * @return static
 	 */
 	public function set_content_visibility( $content_visibility ) {
 		$this->content_visibility = $content_visibility;

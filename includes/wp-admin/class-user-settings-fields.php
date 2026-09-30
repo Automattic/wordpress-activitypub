@@ -20,6 +20,8 @@ use Activitypub\OAuth\Token;
 class User_Settings_Fields {
 	/**
 	 * Initialize the settings fields.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'load-profile.php', array( self::class, 'register_settings' ) );
@@ -27,6 +29,8 @@ class User_Settings_Fields {
 
 	/**
 	 * Register all settings fields.
+	 *
+	 * @return void
 	 */
 	public static function register_settings() {
 		// Mark checklist item as done.
@@ -133,6 +137,8 @@ class User_Settings_Fields {
 
 	/**
 	 * Section description callback.
+	 *
+	 * @return void
 	 */
 	public static function section_description() {
 		echo '<p>' . \esc_html__( 'Define what others can see on your public Fediverse profile and next to your posts. With a profile picture and a fully completed profile, you are more likely to gain interactions and followers.', 'activitypub' ) . '</p>';
@@ -141,6 +147,8 @@ class User_Settings_Fields {
 
 	/**
 	 * Profile URL field callback.
+	 *
+	 * @return void
 	 */
 	public static function profile_url_callback() {
 		$user = Actors::get_by_id( \get_current_user_id() );
@@ -169,6 +177,8 @@ class User_Settings_Fields {
 
 	/**
 	 * Description field callback.
+	 *
+	 * @return void
 	 */
 	public static function description_callback() {
 		$description = \get_user_option( 'activitypub_description', \get_current_user_id() );
@@ -181,6 +191,8 @@ class User_Settings_Fields {
 
 	/**
 	 * Header image field callback.
+	 *
+	 * @return void
 	 */
 	public static function header_image_callback() {
 		$header_image              = \get_user_option( 'activitypub_header_image', \get_current_user_id() );
@@ -237,6 +249,8 @@ class User_Settings_Fields {
 
 	/**
 	 * Notifications field callback.
+	 *
+	 * @return void
 	 */
 	public static function notifications_callback() {
 		?>
@@ -283,6 +297,8 @@ class User_Settings_Fields {
 
 	/**
 	 * Extra fields callback.
+	 *
+	 * @return void
 	 */
 	public static function extra_fields_callback() {
 		$extra_fields = Extra_Fields::get_actor_fields( \get_current_user_id() );
@@ -320,6 +336,8 @@ class User_Settings_Fields {
 
 	/**
 	 * Also Known As field callback.
+	 *
+	 * @return void
 	 */
 	public static function also_known_as_callback() {
 		$also_known_as = \get_user_option( 'activitypub_also_known_as', \get_current_user_id() );
@@ -341,6 +359,8 @@ class User_Settings_Fields {
 
 	/**
 	 * Moderation section description callback.
+	 *
+	 * @return void
 	 */
 	public static function moderation_section_description() {
 		echo '<p>' . \esc_html__( 'Configure personal blocks to filter ActivityPub content you don\'t want to see.', 'activitypub' ) . '</p>';
@@ -348,6 +368,8 @@ class User_Settings_Fields {
 
 	/**
 	 * Blocked domains field callback.
+	 *
+	 * @return void
 	 */
 	public static function blocked_domains_callback() {
 		$user_id         = \get_current_user_id();
@@ -383,6 +405,8 @@ class User_Settings_Fields {
 
 	/**
 	 * Blocked keywords field callback.
+	 *
+	 * @return void
 	 */
 	public static function blocked_keywords_callback() {
 		$user_id          = \get_current_user_id();
@@ -423,6 +447,8 @@ class User_Settings_Fields {
 	 * not through the Settings API.
 	 *
 	 * @since 8.1.0
+	 *
+	 * @return void
 	 */
 	public static function connected_apps_section() {
 		$tokens  = Token::get_all_for_user( \get_current_user_id() );
@@ -568,6 +594,8 @@ class User_Settings_Fields {
 
 	/**
 	 * Hide Social Graph field callback.
+	 *
+	 * @return void
 	 */
 	public static function hide_followers_callback() {
 		$hide_followers = \get_user_option( 'activitypub_hide_social_graph', \get_current_user_id() );

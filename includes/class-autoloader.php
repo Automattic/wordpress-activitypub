@@ -60,6 +60,8 @@ class Autoloader {
 	 *
 	 * @param string $prefix Namespace prefix all classes have in common.
 	 * @param string $path   Path to the files to be loaded.
+	 *
+	 * @return void
 	 */
 	public static function register_path( $prefix, $path ) {
 		$loader = new self( $prefix, $path );
@@ -70,6 +72,8 @@ class Autoloader {
 	 * Loads a class if its namespace starts with `$this->prefix`.
 	 *
 	 * @param string $class_name The class to be loaded.
+	 *
+	 * @return void
 	 */
 	public function load( $class_name ) {
 		if ( \strpos( $class_name, $this->prefix . self::NS_SEPARATOR ) !== 0 ) {

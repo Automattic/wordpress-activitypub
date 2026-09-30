@@ -26,6 +26,8 @@ use function Activitypub\user_can_activitypub;
 class Quote_Request {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_quote_request', array( self::class, 'handle_quote_request' ), 10, 2 );
@@ -40,6 +42,8 @@ class Quote_Request {
 	 *
 	 * @param array     $activity The activity object.
 	 * @param int|int[] $user_ids The user ID(s).
+	 *
+	 * @return void
 	 */
 	public static function handle_quote_request( $activity, $user_ids ) {
 		$state   = true;
@@ -98,6 +102,8 @@ class Quote_Request {
 	 * @param array          $activity The activity array.
 	 * @param int|int[]|null $user_ids The user ID(s).
 	 * @param string         $type     The type of the activity.
+	 *
+	 * @return void
 	 */
 	public static function handle_blocked_request( $activity, $user_ids, $type ) {
 		if ( ! \in_array( \strtolower( $type ), array( 'quoterequest', 'quote_request' ), true ) ) {
@@ -118,6 +124,8 @@ class Quote_Request {
 	 *
 	 * @param int              $comment_id The comment ID being deleted.
 	 * @param \WP_Comment|null $comment    The comment object, or null if not available.
+	 *
+	 * @return void
 	 */
 	public static function handle_quote_delete( $comment_id, $comment ) {
 		// Try to get comment if not provided.
@@ -203,6 +211,8 @@ class Quote_Request {
 	 * @param array $activity_object The activity object.
 	 * @param int   $user_id         The user ID.
 	 * @param int   $post_id         The post ID.
+	 *
+	 * @return void
 	 */
 	public static function queue_accept( $activity_object, $user_id, $post_id ) {
 		// Fall back to the blog actor if the user has ActivityPub disabled.
@@ -272,6 +282,8 @@ class Quote_Request {
 	 *
 	 * @param array $activity_object The activity object.
 	 * @param int   $user_id  The user ID.
+	 *
+	 * @return void
 	 */
 	public static function queue_reject( $activity_object, $user_id ) {
 		// Fall back to the blog actor if the user has ActivityPub disabled.

@@ -23,6 +23,8 @@ use function Activitypub\object_to_uri;
 class Move {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_move', array( self::class, 'handle_move' ), 10, 2 );
@@ -33,6 +35,8 @@ class Move {
 	 *
 	 * @param array     $activity The JSON "Move" Activity.
 	 * @param int|int[] $user_ids The user ID(s).
+	 *
+	 * @return void
 	 */
 	public static function handle_move( $activity, $user_ids ) {
 		$target_uri = self::extract_target( $activity );

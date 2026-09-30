@@ -26,6 +26,8 @@ use Activitypub\Cache\Media;
 class Cache {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		if ( ! self::is_enabled() ) {
@@ -73,6 +75,8 @@ class Cache {
 
 	/**
 	 * Register all cache handlers.
+	 *
+	 * @return void
 	 */
 	public static function register_caches() {
 		Avatar::init();

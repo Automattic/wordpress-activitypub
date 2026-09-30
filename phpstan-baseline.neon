@@ -1,42 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Function Activitypub\\activation_redirect\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: activitypub.php
-
-		-
-			message: '#^Function Activitypub\\plugin_admin_init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: activitypub.php
-
-		-
-			message: '#^Function Activitypub\\plugin_init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: activitypub.php
-
-		-
-			message: '#^Function Activitypub\\rest_init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: activitypub.php
-
-		-
-			message: '#^Method Activitypub\\Activity\\Activity\:\:pre_fill_activity_from_object\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/activity/class-activity.php
-
-		-
-			message: '#^Method Activitypub\\Activity\\Activity\:\:set_object\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/activity/class-activity.php
-
-		-
 			message: '#^Parameter \#2 \$value of method Activitypub\\Activity\\Base_Object\:\:set\(\) expects string, array given\.$#'
 			identifier: argument.type
 			count: 1
@@ -45,18 +9,6 @@ parameters:
 		-
 			message: '#^Call to an undefined method Activitypub\\Activity\\Generic_Object\:\:get_id\(\)\.$#'
 			identifier: method.notFound
-			count: 1
-			path: includes/activity/class-generic-object.php
-
-		-
-			message: '#^Method Activitypub\\Activity\\Generic_Object\:\:from_array\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/activity/class-generic-object.php
-
-		-
-			message: '#^Method Activitypub\\Activity\\Generic_Object\:\:from_json\(\) has no return type specified\.$#'
-			identifier: missingType.return
 			count: 1
 			path: includes/activity/class-generic-object.php
 
@@ -71,42 +23,6 @@ parameters:
 			identifier: new.static
 			count: 1
 			path: includes/activity/class-generic-object.php
-
-		-
-			message: '#^Method Activitypub\\Activity\\Extended_Object\\Place\:\:set_address\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/activity/extended-object/class-place.php
-
-		-
-			message: '#^Method Activitypub\\Cache\\Avatar\:\:clear_cached_avatar\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cache/class-avatar.php
-
-		-
-			message: '#^Method Activitypub\\Cache\\Avatar\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cache/class-avatar.php
-
-		-
-			message: '#^Method Activitypub\\Cache\\Avatar\:\:maybe_cleanup\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cache/class-avatar.php
-
-		-
-			message: '#^Method Activitypub\\Cache\\Emoji\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cache/class-emoji.php
-
-		-
-			message: '#^Method Activitypub\\Cache\\File\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cache/class-file.php
 
 		-
 			message: '#^Negated boolean expression is always false\.$#'
@@ -127,90 +43,6 @@ parameters:
 			path: includes/cache/class-file.php
 
 		-
-			message: '#^Method Activitypub\\Cache\\Media\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cache/class-media.php
-
-		-
-			message: '#^Method Activitypub\\Cache\\Media\:\:maybe_cleanup\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cache/class-media.php
-
-		-
-			message: '#^Method Activitypub\\Cache\\Stats_Image\:\:draw_text\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cache/class-stats-image.php
-
-		-
-			message: '#^Method Activitypub\\Activitypub\:\:activate\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-activitypub.php
-
-		-
-			message: '#^Method Activitypub\\Activitypub\:\:add_rewrite_rules\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-activitypub.php
-
-		-
-			message: '#^Method Activitypub\\Activitypub\:\:deactivate\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-activitypub.php
-
-		-
-			message: '#^Method Activitypub\\Activitypub\:\:flush_rewrite_rules\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-activitypub.php
-
-		-
-			message: '#^Method Activitypub\\Activitypub\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-activitypub.php
-
-		-
-			message: '#^Method Activitypub\\Activitypub\:\:register_user_meta\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-activitypub.php
-
-		-
-			message: '#^Method Activitypub\\Activitypub\:\:theme_compat\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-activitypub.php
-
-		-
-			message: '#^Method Activitypub\\Activitypub\:\:trash_post\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-activitypub.php
-
-		-
-			message: '#^Method Activitypub\\Activitypub\:\:uninstall\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-activitypub.php
-
-		-
-			message: '#^Method Activitypub\\Activitypub\:\:untrash_post\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-activitypub.php
-
-		-
-			message: '#^Method Activitypub\\Activitypub\:\:user_register\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-activitypub.php
-
-		-
 			message: '#^Parameter \#1 \$post of function get_permalink expects int\|WP_Post, string given\.$#'
 			identifier: argument.type
 			count: 1
@@ -229,30 +61,6 @@ parameters:
 			path: includes/class-activitypub.php
 
 		-
-			message: '#^Method Activitypub\\Application\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-application.php
-
-		-
-			message: '#^Method Activitypub\\Attachments\:\:append_files_to_content\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-attachments.php
-
-		-
-			message: '#^Method Activitypub\\Attachments\:\:append_media_to_post_content\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-attachments.php
-
-		-
-			message: '#^Method Activitypub\\Attachments\:\:update_object_content\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-attachments.php
-
-		-
 			message: '#^Parameter \#1 \$text of function esc_attr expects string, int given\.$#'
 			identifier: argument.type
 			count: 3
@@ -265,34 +73,10 @@ parameters:
 			path: includes/class-attachments.php
 
 		-
-			message: '#^Method Activitypub\\Autoloader\:\:load\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-autoloader.php
-
-		-
-			message: '#^Method Activitypub\\Autoloader\:\:register_path\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-autoloader.php
-
-		-
-			message: '#^Method Activitypub\\Avatars\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-avatars.php
-
-		-
 			message: '#^Property WP_Comment\:\:\$comment_type \(string\) in isset\(\) is not nullable\.$#'
 			identifier: isset.property
 			count: 1
 			path: includes/class-avatars.php
-
-		-
-			message: '#^Method Activitypub\\Blocklist_Subscriptions\:\:sync_all\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-blocklist-subscriptions.php
 
 		-
 			message: '#^Call to method get\(\) on an unknown class Activitypub\\WP_Query\.$#'
@@ -319,93 +103,9 @@ parameters:
 			path: includes/class-blocks.php
 
 		-
-			message: '#^Method Activitypub\\Blocks\:\:add_post_transformation_callbacks\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-blocks.php
-
-		-
-			message: '#^Method Activitypub\\Blocks\:\:enqueue_editor_assets\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-blocks.php
-
-		-
-			message: '#^Method Activitypub\\Blocks\:\:enqueue_intent_script\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-blocks.php
-
-		-
-			message: '#^Method Activitypub\\Blocks\:\:filter_query_loop_vars\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-blocks.php
-
-		-
 			message: '#^Method Activitypub\\Blocks\:\:get_user_id\(\) should return int\|null but returns string\.$#'
 			identifier: return.type
 			count: 2
-			path: includes/class-blocks.php
-
-		-
-			message: '#^Method Activitypub\\Blocks\:\:handle_in_reply_to_get_param\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-blocks.php
-
-		-
-			message: '#^Method Activitypub\\Blocks\:\:handle_quotation_of_get_param\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-blocks.php
-
-		-
-			message: '#^Method Activitypub\\Blocks\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-blocks.php
-
-		-
-			message: '#^Method Activitypub\\Blocks\:\:register_blocks\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-blocks.php
-
-		-
-			message: '#^Method Activitypub\\Blocks\:\:register_patterns\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-blocks.php
-
-		-
-			message: '#^Method Activitypub\\Blocks\:\:register_rest_fields\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-blocks.php
-
-		-
-			message: '#^Method Activitypub\\Blocks\:\:register_templates\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-blocks.php
-
-		-
-			message: '#^Method Activitypub\\Blocks\:\:render_actor_list\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-blocks.php
-
-		-
-			message: '#^Method Activitypub\\Blocks\:\:render_modal\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-blocks.php
-
-		-
-			message: '#^Method Activitypub\\Blocks\:\:render_modal_help\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
 			path: includes/class-blocks.php
 
 		-
@@ -457,48 +157,6 @@ parameters:
 			path: includes/class-blurhash.php
 
 		-
-			message: '#^Method Activitypub\\Cache\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-cache.php
-
-		-
-			message: '#^Method Activitypub\\Cache\:\:register_caches\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-cache.php
-
-		-
-			message: '#^Method Activitypub\\Cli\:\:register\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-cli.php
-
-		-
-			message: '#^Method Activitypub\\Comment\:\:comment_query\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-comment.php
-
-		-
-			message: '#^Method Activitypub\\Comment\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-comment.php
-
-		-
-			message: '#^Method Activitypub\\Comment\:\:maybe_update_comment_counts\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-comment.php
-
-		-
-			message: '#^Method Activitypub\\Comment\:\:register_comment_types\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-comment.php
-
-		-
 			message: '#^Parameter \#1 \$user of function user_can expects int\|WP_User, string given\.$#'
 			identifier: argument.type
 			count: 1
@@ -529,48 +187,6 @@ parameters:
 			path: includes/class-dispatcher.php
 
 		-
-			message: '#^Method Activitypub\\Dispatcher\:\:fire_outbox_handlers\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-dispatcher.php
-
-		-
-			message: '#^Method Activitypub\\Dispatcher\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-dispatcher.php
-
-		-
-			message: '#^Method Activitypub\\Dispatcher\:\:process_outbox\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-dispatcher.php
-
-		-
-			message: '#^Method Activitypub\\Dispatcher\:\:retry_send_to_followers\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-dispatcher.php
-
-		-
-			message: '#^Method Activitypub\\Dispatcher\:\:schedule_retry\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-dispatcher.php
-
-		-
-			message: '#^Method Activitypub\\Dispatcher\:\:send_immediate_accept\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-dispatcher.php
-
-		-
-			message: '#^Method Activitypub\\Dispatcher\:\:send_to_additional_inboxes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-dispatcher.php
-
-		-
 			message: '#^Parameter \#2 \$actor_id of static method Activitypub\\Collection\\Followers\:\:get_inboxes_for_activity\(\) expects int, string given\.$#'
 			identifier: argument.type
 			count: 2
@@ -587,102 +203,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: includes/class-dispatcher.php
-
-		-
-			message: '#^Method Activitypub\\Embed\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-embed.php
-
-		-
-			message: '#^Method Activitypub\\Event_Stream\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-event-stream.php
-
-		-
-			message: '#^Method Activitypub\\Event_Stream\:\:signal_inbox\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-event-stream.php
-
-		-
-			message: '#^Method Activitypub\\Event_Stream\:\:signal_outbox\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-event-stream.php
-
-		-
-			message: '#^Method Activitypub\\Handler\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-handler.php
-
-		-
-			message: '#^Method Activitypub\\Handler\:\:register_handlers\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-handler.php
-
-		-
-			message: '#^Method Activitypub\\Handler\:\:register_outbox_handlers\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-handler.php
-
-		-
-			message: '#^Method Activitypub\\Hashtag\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-hashtag.php
-
-		-
-			message: '#^Method Activitypub\\Hashtag\:\:insert_post\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-hashtag.php
-
-		-
-			message: '#^Method Activitypub\\Icons\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-icons.php
-
-		-
-			message: '#^Method Activitypub\\Icons\:\:register_icons\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-icons.php
-
-		-
-			message: '#^Method Activitypub\\Link\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-link.php
-
-		-
-			message: '#^Method Activitypub\\Mailer\:\:direct_message\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-mailer.php
-
-		-
-			message: '#^Method Activitypub\\Mailer\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-mailer.php
-
-		-
-			message: '#^Method Activitypub\\Mailer\:\:mention\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-mailer.php
-
-		-
-			message: '#^Method Activitypub\\Mailer\:\:new_follower\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-mailer.php
 
 		-
 			message: '#^Parameter \#1 \$post of function get_permalink expects int\|WP_Post, string given\.$#'
@@ -703,12 +223,6 @@ parameters:
 			path: includes/class-mailer.php
 
 		-
-			message: '#^Method Activitypub\\Mention\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-mention.php
-
-		-
 			message: '#^Parameter \#1 \$query of method WP_HTML_Tag_Processor\:\:next_tag\(\) expects array\{tag_name\?\: string\|null, match_offset\?\: int\|null, class_name\?\: string\|null, tag_closers\?\: string\|null\}\|null, ''A'' given\.$#'
 			identifier: argument.type
 			count: 1
@@ -717,174 +231,6 @@ parameters:
 		-
 			message: '#^Expected 1 @param tags, found 4\.$#'
 			identifier: paramTag.count
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:add_activitypub_capability\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:add_default_settings\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:add_to_outbox\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:clean_up_inbox\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:delete_application_outbox_items\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:delete_mastodon_api_orphaned_extra_fields\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:maybe_migrate\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:migrate_actor_mode\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:migrate_application_keypair_option\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:migrate_followers_to_ap_actor_cpt\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:migrate_from_0_16\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:migrate_from_0_17\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:migrate_from_1_2_0\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:migrate_from_2_0_0\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:migrate_from_2_2_0\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:migrate_from_2_6_0\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:migrate_to_4_0_0\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:migrate_to_4_1_0\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:migrate_to_4_7_1\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:migrate_to_4_7_2\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:remove_pending_application_user_follow_requests\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:sync_jetpack_following_meta\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:unlock\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:update_notification_options\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:update_options_key\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:update_postmeta_key\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Method Activitypub\\Migration\:\:update_usermeta_key\(\) has no return type specified\.$#'
-			identifier: missingType.return
 			count: 1
 			path: includes/class-migration.php
 
@@ -907,80 +253,14 @@ parameters:
 			path: includes/class-moderation.php
 
 		-
-			message: '#^Method Activitypub\\Moderation\:\:add_site_blocks\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-moderation.php
-
-		-
 			message: '#^Call to an undefined method Activitypub\\Activity\\Actor\:\:get__id\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: includes/class-move.php
 
 		-
-			message: '#^Method Activitypub\\Move\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-move.php
-
-		-
-			message: '#^Method Activitypub\\Move\:\:maybe_initiate_old_user\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-move.php
-
-		-
-			message: '#^Method Activitypub\\Move\:\:pre_send_to_inboxes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-move.php
-
-		-
-			message: '#^Method Activitypub\\Move\:\:update_blog_also_known_as\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-move.php
-
-		-
-			message: '#^Method Activitypub\\Move\:\:update_user_also_known_as\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-move.php
-
-		-
-			message: '#^Method Activitypub\\Notification\:\:send\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-notification.php
-
-		-
 			message: '#^If condition is always false\.$#'
 			identifier: if.alwaysFalse
-			count: 1
-			path: includes/class-options.php
-
-		-
-			message: '#^Method Activitypub\\Options\:\:delete\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-options.php
-
-		-
-			message: '#^Method Activitypub\\Options\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-options.php
-
-		-
-			message: '#^Method Activitypub\\Options\:\:register_settings\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-options.php
-
-		-
-			message: '#^Method Activitypub\\Options\:\:relay_mode_changed\(\) has no return type specified\.$#'
-			identifier: missingType.return
 			count: 1
 			path: includes/class-options.php
 
@@ -995,84 +275,6 @@ parameters:
 			identifier: deadCode.unreachable
 			count: 1
 			path: includes/class-options.php
-
-		-
-			message: '#^Method Activitypub\\Post_Types\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-post-types.php
-
-		-
-			message: '#^Method Activitypub\\Post_Types\:\:prevent_empty_post_meta\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-post-types.php
-
-		-
-			message: '#^Method Activitypub\\Post_Types\:\:register_activitypub_post_meta\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-post-types.php
-
-		-
-			message: '#^Method Activitypub\\Post_Types\:\:register_ap_actor_rest_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-post-types.php
-
-		-
-			message: '#^Method Activitypub\\Post_Types\:\:register_ap_post_actor_rest_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-post-types.php
-
-		-
-			message: '#^Method Activitypub\\Post_Types\:\:register_ap_post_rest_params\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-post-types.php
-
-		-
-			message: '#^Method Activitypub\\Post_Types\:\:register_extra_fields_post_types\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-post-types.php
-
-		-
-			message: '#^Method Activitypub\\Post_Types\:\:register_inbox_post_type\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-post-types.php
-
-		-
-			message: '#^Method Activitypub\\Post_Types\:\:register_oauth_post_types\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-post-types.php
-
-		-
-			message: '#^Method Activitypub\\Post_Types\:\:register_outbox_post_type\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-post-types.php
-
-		-
-			message: '#^Method Activitypub\\Post_Types\:\:register_post_post_type\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-post-types.php
-
-		-
-			message: '#^Method Activitypub\\Post_Types\:\:register_remote_actors_post_type\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-post-types.php
-
-		-
-			message: '#^Method Activitypub\\Post_Types\:\:register_tombstone_post_type\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-post-types.php
 
 		-
 			message: '#^Parameter \#2 \$args of function register_post_type expects array\{label\?\: string, labels\?\: array\<string\>, description\?\: string, public\?\: bool, hierarchical\?\: bool, exclude_from_search\?\: bool, publicly_queryable\?\: bool, show_ui\?\: bool, \.\.\.\}, array\{labels\: array\{name\: string, singular_name\: string\}, capabilities\: array\{create_posts\: false\}, map_meta_cap\: true, public\: false, show_in_rest\: false, rewrite\: false, query_var\: false, supports\: array\{''title'', ''editor'', ''author'', ''custom\-fields''\}, \.\.\.\} given\.$#'
@@ -1117,12 +319,6 @@ parameters:
 			path: includes/class-query.php
 
 		-
-			message: '#^Method Activitypub\\Query\:\:set_old_host_request\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-query.php
-
-		-
 			message: '#^Parameter \#1 \$id of function Activitypub\\get_user_id expects int, string\|null given\.$#'
 			identifier: argument.type
 			count: 1
@@ -1159,24 +355,6 @@ parameters:
 			path: includes/class-query.php
 
 		-
-			message: '#^Method Activitypub\\Relay\:\:handle_activity\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-relay.php
-
-		-
-			message: '#^Method Activitypub\\Relay\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-relay.php
-
-		-
-			message: '#^Method Activitypub\\Relay\:\:unhook_settings_fields\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-relay.php
-
-		-
 			message: '#^Parameter \#1 \$actor of method Activitypub\\Activity\\Activity\:\:set_actor\(\) expects array\|string, int given\.$#'
 			identifier: argument.type
 			count: 1
@@ -1185,30 +363,6 @@ parameters:
 		-
 			message: '#^If condition is always false\.$#'
 			identifier: if.alwaysFalse
-			count: 1
-			path: includes/class-router.php
-
-		-
-			message: '#^Method Activitypub\\Router\:\:add_headers\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-router.php
-
-		-
-			message: '#^Method Activitypub\\Router\:\:add_rewrite_rules\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-router.php
-
-		-
-			message: '#^Method Activitypub\\Router\:\:fix_is_home_check\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-router.php
-
-		-
-			message: '#^Method Activitypub\\Router\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
 			count: 1
 			path: includes/class-router.php
 
@@ -1237,144 +391,6 @@ parameters:
 			path: includes/class-scheduler.php
 
 		-
-			message: '#^Method Activitypub\\Scheduler\:\:async_batch\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-scheduler.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\:\:cleanup_remote_actors\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-scheduler.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-scheduler.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\:\:process_inbox_activity\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-scheduler.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\:\:purge_ap_posts\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-scheduler.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\:\:purge_inbox\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-scheduler.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\:\:purge_outbox\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-scheduler.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\:\:purge_tombstones\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-scheduler.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\:\:register_async_batch_callback\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-scheduler.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\:\:register_schedulers\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-scheduler.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\:\:register_schedules\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-scheduler.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\:\:reprocess_outbox\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-scheduler.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\:\:schedule_announce_activity\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-scheduler.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\:\:schedule_outbox_activity_for_federation\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-scheduler.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\:\:unlock\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-scheduler.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\:\:unschedule_events_for_item\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-scheduler.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\:\:unschedule_outbox_delivery_batches\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-scheduler.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\:\:update_ap_post_purge_schedule\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-scheduler.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\:\:update_inbox_purge_schedule\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-scheduler.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\:\:update_outbox_purge_schedule\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-scheduler.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\:\:update_remote_actors\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-scheduler.php
-
-		-
-			message: '#^Method Activitypub\\Search\:\:enhance_admin_comment_search\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-search.php
-
-		-
-			message: '#^Method Activitypub\\Search\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-search.php
-
-		-
 			message: '#^Method Activitypub\\Search\:\:try_import_activitypub_object\(\) should return int\|false but returns non\-falsy\-string\.$#'
 			identifier: return.type
 			count: 1
@@ -1387,196 +403,22 @@ parameters:
 			path: includes/class-search.php
 
 		-
-			message: '#^Method Activitypub\\Shortcodes\:\:register\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-shortcodes.php
-
-		-
-			message: '#^Method Activitypub\\Shortcodes\:\:unregister\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-shortcodes.php
-
-		-
 			message: '#^Parameter \#2 \$user_id of function get_the_author_meta expects int\|false, string given\.$#'
 			identifier: argument.type
 			count: 2
 			path: includes/class-shortcodes.php
 
 		-
-			message: '#^Method Activitypub\\Signature\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-signature.php
-
-		-
-			message: '#^Method Activitypub\\Signature\:\:rfc9421_add_unsupported_host\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-signature.php
-
-		-
-			message: '#^Method Activitypub\\Tombstone\:\:bury\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-tombstone.php
-
-		-
-			message: '#^Method Activitypub\\Tombstone\:\:remove\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/class-tombstone.php
-
-		-
-			message: '#^Method Activitypub\\Cli\\Actor_Command\:\:delete\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cli/class-actor-command.php
-
-		-
-			message: '#^Method Activitypub\\Cli\\Actor_Command\:\:update\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cli/class-actor-command.php
-
-		-
-			message: '#^Method Activitypub\\Cli\\Blurhash_Command\:\:backfill\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cli/class-blurhash-command.php
-
-		-
-			message: '#^Method Activitypub\\Cli\\Cache_Command\:\:clear\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cli/class-cache-command.php
-
-		-
-			message: '#^Method Activitypub\\Cli\\Cache_Command\:\:status\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cli/class-cache-command.php
-
-		-
-			message: '#^Method Activitypub\\Cli\\Command\:\:version\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cli/class-command.php
-
-		-
-			message: '#^Method Activitypub\\Cli\\Comment_Command\:\:delete\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cli/class-comment-command.php
-
-		-
-			message: '#^Method Activitypub\\Cli\\Comment_Command\:\:update\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cli/class-comment-command.php
-
-		-
 			message: '#^Parameter \#3 \$user_id of function Activitypub\\add_to_outbox expects int, string given\.$#'
 			identifier: argument.type
 			count: 2
 			path: includes/cli/class-comment-command.php
 
 		-
-			message: '#^Method Activitypub\\Cli\\Fetch_Command\:\:__invoke\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cli/class-fetch-command.php
-
-		-
-			message: '#^Method Activitypub\\Cli\\Follow_Command\:\:__invoke\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cli/class-follow-command.php
-
-		-
-			message: '#^Method Activitypub\\Cli\\Move_Command\:\:__invoke\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cli/class-move-command.php
-
-		-
-			message: '#^Method Activitypub\\Cli\\Outbox_Command\:\:reschedule\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cli/class-outbox-command.php
-
-		-
-			message: '#^Method Activitypub\\Cli\\Outbox_Command\:\:undo\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cli/class-outbox-command.php
-
-		-
-			message: '#^Method Activitypub\\Cli\\Post_Command\:\:delete\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cli/class-post-command.php
-
-		-
-			message: '#^Method Activitypub\\Cli\\Post_Command\:\:update\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cli/class-post-command.php
-
-		-
 			message: '#^Parameter \#3 \$user_id of function Activitypub\\add_to_outbox expects int, string given\.$#'
 			identifier: argument.type
 			count: 2
 			path: includes/cli/class-post-command.php
-
-		-
-			message: '#^Method Activitypub\\Cli\\Self_Destruct_Command\:\:__invoke\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cli/class-self-destruct-command.php
-
-		-
-			message: '#^Method Activitypub\\Cli\\Self_Destruct_Command\:\:display_completion_message\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cli/class-self-destruct-command.php
-
-		-
-			message: '#^Method Activitypub\\Cli\\Self_Destruct_Command\:\:display_self_destruct_warning\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cli/class-self-destruct-command.php
-
-		-
-			message: '#^Method Activitypub\\Cli\\Self_Destruct_Command\:\:execute_self_destruct\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cli/class-self-destruct-command.php
-
-		-
-			message: '#^Method Activitypub\\Cli\\Self_Destruct_Command\:\:show_self_destruct_status\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cli/class-self-destruct-command.php
-
-		-
-			message: '#^Method Activitypub\\Cli\\Stats_Command\:\:collect\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cli/class-stats-command.php
-
-		-
-			message: '#^Method Activitypub\\Cli\\Stats_Command\:\:compile\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cli/class-stats-command.php
-
-		-
-			message: '#^Method Activitypub\\Cli\\Stats_Command\:\:send\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/cli/class-stats-command.php
 
 		-
 			message: '#^Parameter \#1 \$query of method WP_HTML_Tag_Processor\:\:next_tag\(\) expects array\{tag_name\?\: string\|null, match_offset\?\: int\|null, class_name\?\: string\|null, tag_closers\?\: string\|null\}\|null, ''A'' given\.$#'
@@ -1589,18 +431,6 @@ parameters:
 			identifier: function.impossibleType
 			count: 1
 			path: includes/collection/class-followers.php
-
-		-
-			message: '#^Method Activitypub\\Collection\\Followers\:\:remove_blocked_actors\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/collection/class-followers.php
-
-		-
-			message: '#^Method Activitypub\\Collection\\Following\:\:remove_blocked_actors\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/collection/class-following.php
 
 		-
 			message: '#^Argument of an invalid type stdClass supplied for foreach, only iterables are supported\.$#'
@@ -1623,12 +453,6 @@ parameters:
 		-
 			message: '#^If condition is always false\.$#'
 			identifier: if.alwaysFalse
-			count: 1
-			path: includes/collection/class-inbox.php
-
-		-
-			message: '#^Method Activitypub\\Collection\\Inbox\:\:add_recipients\(\) has no return type specified\.$#'
-			identifier: missingType.return
 			count: 1
 			path: includes/collection/class-inbox.php
 
@@ -1687,12 +511,6 @@ parameters:
 			path: includes/collection/class-posts.php
 
 		-
-			message: '#^Method Activitypub\\Collection\\Remote_Actors\:\:clear_inbox_caches\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/collection/class-remote-actors.php
-
-		-
 			message: '#^Method Activitypub\\Collection\\Remote_Actors\:\:persist\(\) never returns WP_Error so it can be removed from the return type\.$#'
 			identifier: return.unusedType
 			count: 1
@@ -1705,28 +523,10 @@ parameters:
 			path: includes/collection/class-remote-posts.php
 
 		-
-			message: '#^Method Activitypub\\Collection\\Remote_Posts\:\:add_recipients\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/collection/class-remote-posts.php
-
-		-
-			message: '#^Method Activitypub\\Collection\\Remote_Posts\:\:add_taxonomies\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/collection/class-remote-posts.php
-
-		-
 			message: '#^Variable \$post_ids in empty\(\) always exists and is not falsy\.$#'
 			identifier: empty.variable
 			count: 1
 			path: includes/collection/class-remote-posts.php
-
-		-
-			message: '#^Method Activitypub\\Collection\\Replies\:\:build_args\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/collection/class-replies.php
 
 		-
 			message: '#^Parameter \#1 \$user_id of static method Activitypub\\Collection\\Actors\:\:get_by_id\(\) expects int, string given\.$#'
@@ -1753,12 +553,6 @@ parameters:
 			path: includes/functions-federation.php
 
 		-
-			message: '#^Function Activitypub\\set_wp_object_state\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/functions-federation.php
-
-		-
 			message: '#^Parameter \#1 \$activity of static method Activitypub\\Collection\\Outbox\:\:add\(\) expects Activitypub\\Activity\\Activity, Activitypub\\Activity\\Base_Object given\.$#'
 			identifier: argument.type
 			count: 1
@@ -1769,12 +563,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: includes/functions-media.php
-
-		-
-			message: '#^Function Activitypub\\maybe_set_no_store\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/functions-request.php
 
 		-
 			message: '#^Result of && is always false\.$#'
@@ -1789,52 +577,10 @@ parameters:
 			path: includes/functions.php
 
 		-
-			message: '#^Method Activitypub\\Handler\\Accept\:\:accept_follow\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-accept.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Accept\:\:accept_quote_request\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-accept.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Accept\:\:handle_accept\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-accept.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Accept\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-accept.php
-
-		-
 			message: '#^Parameter \#3 \$user_id of function Activitypub\\add_to_outbox expects int, string given\.$#'
 			identifier: argument.type
 			count: 1
 			path: includes/handler/class-accept.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Announce\:\:handle_announce\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-announce.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Announce\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-announce.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Announce\:\:maybe_save_announce\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-announce.php
 
 		-
 			message: '#^Expected 1 @param tags, found 3\.$#'
@@ -1843,81 +589,9 @@ parameters:
 			path: includes/handler/class-collection-sync.php
 
 		-
-			message: '#^Method Activitypub\\Handler\\Collection_Sync\:\:handle_collection_synchronization\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-collection-sync.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Collection_Sync\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-collection-sync.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Create\:\:handle_create\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-create.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Create\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-create.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Create\:\:maybe_unbury\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-create.php
-
-		-
 			message: '#^Action callback returns bool but should not return anything\.$#'
 			identifier: return.void
 			count: 2
-			path: includes/handler/class-delete.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Delete\:\:delete_object\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-delete.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Delete\:\:delete_remote_actor\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-delete.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Delete\:\:handle_delete\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-delete.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Delete\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-delete.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Delete\:\:maybe_bury\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-delete.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Delete\:\:maybe_delete_interactions\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-delete.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Delete\:\:maybe_delete_posts\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
 			path: includes/handler/class-delete.php
 
 		-
@@ -1925,84 +599,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: includes/handler/class-delete.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Feature_Request\:\:handle_blocked_request\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-feature-request.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Feature_Request\:\:handle_feature_request\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-feature-request.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Feature_Request\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-feature-request.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Feature_Request\:\:queue_accept\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-feature-request.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Feature_Request\:\:queue_reject\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-feature-request.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Follow\:\:handle_follow\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-follow.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Follow\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-follow.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Follow\:\:queue_accept\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-follow.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Follow\:\:reject_application_follow\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-follow.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Like\:\:handle_like\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-like.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Like\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-like.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Move\:\:handle_move\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-move.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Move\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-move.php
 
 		-
 			message: '#^Parameter \#1 \$key of function sanitize_key expects string, int\<0, max\> given\.$#'
@@ -2013,42 +609,6 @@ parameters:
 		-
 			message: '#^@param int \$post_id does not accept actual type of parameter\: non\-falsy\-string&numeric\-string\.$#'
 			identifier: parameter.phpDocType
-			count: 1
-			path: includes/handler/class-quote-request.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Quote_Request\:\:handle_blocked_request\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-quote-request.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Quote_Request\:\:handle_quote_delete\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-quote-request.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Quote_Request\:\:handle_quote_request\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-quote-request.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Quote_Request\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-quote-request.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Quote_Request\:\:queue_accept\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-quote-request.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Quote_Request\:\:queue_reject\(\) has no return type specified\.$#'
-			identifier: missingType.return
 			count: 1
 			path: includes/handler/class-quote-request.php
 
@@ -2071,30 +631,6 @@ parameters:
 			path: includes/handler/class-quote-request.php
 
 		-
-			message: '#^Method Activitypub\\Handler\\Reject\:\:handle_reject\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-reject.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Reject\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-reject.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Reject\:\:reject_follow\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-reject.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Reject\:\:reject_quote_request\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-reject.php
-
-		-
 			message: '#^Parameter \#3 \$user_id of function Activitypub\\add_to_outbox expects int, string given\.$#'
 			identifier: argument.type
 			count: 1
@@ -2113,136 +649,16 @@ parameters:
 			path: includes/handler/class-undo.php
 
 		-
-			message: '#^Method Activitypub\\Handler\\Undo\:\:handle_undo\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-undo.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Undo\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-undo.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Update\:\:handle_update\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-update.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Update\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-update.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Update\:\:update_actor\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-update.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Update\:\:update_object\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/class-update.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Outbox\\Add\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/outbox/class-add.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Outbox\\Announce\:\:handle_announce\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/outbox/class-announce.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Outbox\\Announce\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/outbox/class-announce.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Outbox\\Arrive\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/outbox/class-arrive.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Outbox\\Arrive\:\:save_location\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/outbox/class-arrive.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Outbox\\Block\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/outbox/class-block.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Outbox\\Create\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/outbox/class-create.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Outbox\\Delete\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/outbox/class-delete.php
-
-		-
 			message: '#^Method Activitypub\\Handler\\Outbox\\Follow\:\:handle_follow\(\) should return int\|WP_Error but returns array\.$#'
 			identifier: return.type
 			count: 1
 			path: includes/handler/outbox/class-follow.php
 
 		-
-			message: '#^Method Activitypub\\Handler\\Outbox\\Follow\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/outbox/class-follow.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Outbox\\Like\:\:handle_like\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/outbox/class-like.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Outbox\\Like\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/outbox/class-like.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Outbox\\Remove\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/outbox/class-remove.php
-
-		-
 			message: '#^Method Activitypub\\Handler\\Outbox\\Undo\:\:handle_undo\(\) should return int\|WP_Error but returns array\.$#'
 			identifier: return.type
 			count: 3
 			path: includes/handler/outbox/class-undo.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Outbox\\Undo\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/outbox/class-undo.php
-
-		-
-			message: '#^Method Activitypub\\Handler\\Outbox\\Update\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/handler/outbox/class-update.php
 
 		-
 			message: '#^@param tag must not be named \$this\. Choose a descriptive alias, for example \$instance\.$#'
@@ -2281,160 +697,16 @@ parameters:
 			path: includes/model/class-user.php
 
 		-
-			message: '#^Method Activitypub\\OAuth\\Server\:\:cleanup\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/oauth/class-server.php
-
-		-
-			message: '#^Method Activitypub\\OAuth\\Server\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/oauth/class-server.php
-
-		-
-			message: '#^Method Activitypub\\OAuth\\Server\:\:login_form_authorize\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/oauth/class-server.php
-
-		-
-			message: '#^Method Activitypub\\OAuth\\Server\:\:process_authorize_form\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/oauth/class-server.php
-
-		-
-			message: '#^Method Activitypub\\OAuth\\Server\:\:redirect_to_client\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/oauth/class-server.php
-
-		-
-			message: '#^Method Activitypub\\OAuth\\Server\:\:render_authorize_form\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/oauth/class-server.php
-
-		-
-			message: '#^Method Activitypub\\OAuth\\Token\:\:enforce_token_limit\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/oauth/class-token.php
-
-		-
-			message: '#^Method Activitypub\\OAuth\\Token\:\:maybe_untrack_user\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/oauth/class-token.php
-
-		-
-			message: '#^Method Activitypub\\OAuth\\Token\:\:track_user\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/oauth/class-token.php
-
-		-
-			message: '#^Method Activitypub\\OAuth\\Token\:\:untrack_all_users\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/oauth/class-token.php
-
-		-
-			message: '#^Method Activitypub\\OAuth\\Token\:\:untrack_user\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/oauth/class-token.php
-
-		-
 			message: '#^Property Activitypub\\OAuth\\Token\:\:\$token_key is never read, only written\.$#'
 			identifier: property.onlyWritten
 			count: 1
 			path: includes/oauth/class-token.php
 
 		-
-			message: '#^Method Activitypub\\Rest\\Admin\\Actions_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/admin/class-actions-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Admin\\Statistics_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/admin/class-statistics-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Actor_Autocomplete_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-actor-autocomplete-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Actors_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-actors-controller.php
-
-		-
 			message: '#^Parameter \#1 \$response of function Activitypub\\maybe_set_no_store expects WP_REST_Response, WP_HTTP_Response given\.$#'
 			identifier: argument.type
 			count: 1
 			path: includes/rest/class-actors-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Actors_Inbox_Controller\:\:authenticate_from_query_param\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-actors-inbox-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Actors_Inbox_Controller\:\:flush_output\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-actors-inbox-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Actors_Inbox_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-actors-inbox-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Actors_Inbox_Controller\:\:relay_remote_stream\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-actors-inbox-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Actors_Inbox_Controller\:\:send_sse_comment\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-actors-inbox-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Actors_Inbox_Controller\:\:send_sse_event\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-actors-inbox-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Actors_Inbox_Controller\:\:send_sse_headers\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-actors-inbox-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Actors_Inbox_Controller\:\:stream_collection\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-actors-inbox-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Application_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-application-controller.php
 
 		-
 			message: '#^Call to an undefined method Activitypub\\Rest\\Collections_Controller\:\:get_item_index\(\)\.$#'
@@ -2443,52 +715,10 @@ parameters:
 			path: includes/rest/class-collections-controller.php
 
 		-
-			message: '#^Method Activitypub\\Rest\\Collections_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-collections-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Comments_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-comments-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Followers_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-followers-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Following_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-following-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Inbox_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-inbox-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Interaction_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-interaction-controller.php
-
-		-
 			message: '#^Parameter \#1 \$response of function Activitypub\\maybe_set_no_store expects WP_REST_Response, WP_HTTP_Response given\.$#'
 			identifier: argument.type
 			count: 1
 			path: includes/rest/class-interaction-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Liked_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-liked-controller.php
 
 		-
 			message: '#^Call to an undefined method Activitypub\\Rest\\Moderators_Controller\:\:get_item_index\(\)\.$#'
@@ -2503,22 +733,10 @@ parameters:
 			path: includes/rest/class-moderators-controller.php
 
 		-
-			message: '#^Method Activitypub\\Rest\\Moderators_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-moderators-controller.php
-
-		-
 			message: '#^Offset ''@context'' on array\{id\: mixed, type\: ''OrderedCollection'', totalItems\: int\<0, max\>, orderedItems\: mixed\} in empty\(\) does not exist\.$#'
 			identifier: empty.offset
 			count: 1
 			path: includes/rest/class-moderators-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Nodeinfo_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-nodeinfo-controller.php
 
 		-
 			message: '#^Comparison operation "\>" between \*NEVER\* and 0 results in an error\.$#'
@@ -2527,56 +745,8 @@ parameters:
 			path: includes/rest/class-outbox-controller.php
 
 		-
-			message: '#^Method Activitypub\\Rest\\Outbox_Controller\:\:authenticate_from_query_param\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-outbox-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Outbox_Controller\:\:flush_output\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-outbox-controller.php
-
-		-
 			message: '#^Method Activitypub\\Rest\\Outbox_Controller\:\:prepare_item_for_response\(\) should return array but returns WP_Error\.$#'
 			identifier: return.type
-			count: 1
-			path: includes/rest/class-outbox-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Outbox_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-outbox-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Outbox_Controller\:\:relay_remote_stream\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-outbox-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Outbox_Controller\:\:send_sse_comment\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-outbox-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Outbox_Controller\:\:send_sse_event\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-outbox-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Outbox_Controller\:\:send_sse_headers\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-outbox-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Outbox_Controller\:\:stream_collection\(\) has no return type specified\.$#'
-			identifier: missingType.return
 			count: 1
 			path: includes/rest/class-outbox-controller.php
 
@@ -2605,76 +775,10 @@ parameters:
 			path: includes/rest/class-outbox-controller.php
 
 		-
-			message: '#^Method Activitypub\\Rest\\Post_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-post-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Proxy_Controller\:\:authenticate_from_query_param\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-proxy-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Proxy_Controller\:\:flush_output\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-proxy-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Proxy_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-proxy-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Proxy_Controller\:\:relay_remote_stream\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-proxy-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Proxy_Controller\:\:send_sse_comment\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-proxy-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Proxy_Controller\:\:send_sse_event\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-proxy-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Proxy_Controller\:\:send_sse_headers\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-proxy-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Proxy_Controller\:\:stream_collection\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-proxy-controller.php
-
-		-
 			message: '#^Parameter \#1 \$response of function Activitypub\\maybe_set_no_store expects WP_REST_Response, WP_HTTP_Response given\.$#'
 			identifier: argument.type
 			count: 1
 			path: includes/rest/class-proxy-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Replies_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-replies-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Seek_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-seek-controller.php
 
 		-
 			message: '#^Left side of && is always false\.$#'
@@ -2683,46 +787,10 @@ parameters:
 			path: includes/rest/class-server.php
 
 		-
-			message: '#^Method Activitypub\\Rest\\Server\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-server.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Server\:\:send_cors_headers\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-server.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Stats_Image_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-stats-image-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\Webfinger_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/class-webfinger-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\OAuth\\Authorization_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/oauth/class-authorization-controller.php
-
-		-
 			message: '#^Parameter \#1 \$response of function Activitypub\\maybe_set_no_store expects WP_REST_Response, WP_HTTP_Response given\.$#'
 			identifier: argument.type
 			count: 1
 			path: includes/rest/oauth/class-authorization-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\OAuth\\Clients_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/rest/oauth/class-clients-controller.php
 
 		-
 			message: '#^Parameter \#1 \$response of function Activitypub\\maybe_set_no_store expects WP_REST_Response, WP_HTTP_Response given\.$#'
@@ -2739,12 +807,6 @@ parameters:
 		-
 			message: '#^Method Activitypub\\Rest\\OAuth\\Token_Controller\:\:handle_refresh_token_grant\(\) never returns WP_Error so it can be removed from the return type\.$#'
 			identifier: return.unusedType
-			count: 1
-			path: includes/rest/oauth/class-token-controller.php
-
-		-
-			message: '#^Method Activitypub\\Rest\\OAuth\\Token_Controller\:\:register_routes\(\) has no return type specified\.$#'
-			identifier: missingType.return
 			count: 1
 			path: includes/rest/oauth/class-token-controller.php
 
@@ -2767,76 +829,10 @@ parameters:
 			path: includes/scheduler/class-actor.php
 
 		-
-			message: '#^Method Activitypub\\Scheduler\\Actor\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-actor.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Actor\:\:schedule_all_profile_updates\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-actor.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Actor\:\:schedule_post_activity\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-actor.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Actor\:\:schedule_profile_update\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-actor.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Actor\:\:schedule_user_delete\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-actor.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Actor\:\:sticky_post_update\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-actor.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Actor\:\:user_meta_update\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-actor.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Actor\:\:user_update\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-actor.php
-
-		-
 			message: '#^Parameter \#1 \$user_id of static method Activitypub\\Scheduler\\Actor\:\:schedule_profile_update\(\) expects int, string given\.$#'
 			identifier: argument.type
 			count: 2
 			path: includes/scheduler/class-actor.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Collection_Sync\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-collection-sync.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Collection_Sync\:\:reconcile_followers\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-collection-sync.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Collection_Sync\:\:schedule_reconciliation\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-collection-sync.php
 
 		-
 			message: '#^Parameter \#2 \$cached of static method Activitypub\\Http\:\:get_remote_object\(\) expects bool, int given\.$#'
@@ -2847,30 +843,6 @@ parameters:
 		-
 			message: '#^If condition is always false\.$#'
 			identifier: if.alwaysFalse
-			count: 1
-			path: includes/scheduler/class-comment.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Comment\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-comment.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Comment\:\:schedule_comment_activity\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-comment.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Comment\:\:schedule_comment_activity_on_insert\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-comment.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Comment\:\:schedule_comment_delete_activity\(\) has no return type specified\.$#'
-			identifier: missingType.return
 			count: 1
 			path: includes/scheduler/class-comment.php
 
@@ -2887,42 +859,6 @@ parameters:
 			path: includes/scheduler/class-comment.php
 
 		-
-			message: '#^Method Activitypub\\Scheduler\\Post\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-post.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Post\:\:schedule_featured_add\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-post.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Post\:\:schedule_featured_remove\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-post.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Post\:\:schedule_featured_update\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-post.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Post\:\:transition_attachment_status\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-post.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Post\:\:triage\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-post.php
-
-		-
 			message: '#^Parameter \#1 \$user_id of static method Activitypub\\Collection\\Actors\:\:get_by_id\(\) expects int, string given\.$#'
 			identifier: argument.type
 			count: 1
@@ -2933,48 +869,6 @@ parameters:
 			identifier: argument.type
 			count: 3
 			path: includes/scheduler/class-post.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Quote_Request\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-quote-request.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Quote_Request\:\:maybe_send_request\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-quote-request.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Statistics\:\:collect_all_monthly_stats\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-statistics.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Statistics\:\:compile_and_send_annual_stats\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-statistics.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Statistics\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-statistics.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Statistics\:\:send_annual_email\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-statistics.php
-
-		-
-			message: '#^Method Activitypub\\Scheduler\\Statistics\:\:send_monthly_email\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/scheduler/class-statistics.php
 
 		-
 			message: '#^Method Activitypub\\Signature\\Http_Signature_Draft\:\:get_signed_data\(\) should return string but returns false\.$#'
@@ -3009,12 +903,6 @@ parameters:
 		-
 			message: '#^Method Activitypub\\Transformer\\Base\:\:get_attributed_to\(\) should return string but returns null\.$#'
 			identifier: return.type
-			count: 1
-			path: includes/transformer/class-base.php
-
-		-
-			message: '#^Method Activitypub\\Transformer\\Base\:\:set_content_visibility\(\) has no return type specified\.$#'
-			identifier: missingType.return
 			count: 1
 			path: includes/transformer/class-base.php
 
@@ -3085,610 +973,16 @@ parameters:
 			path: includes/transformer/class-term.php
 
 		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:add_blocked_actors_list_table\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:add_followers_list_table\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:add_following_list_table\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:add_plugin_settings_link\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:add_profile\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:add_settings_list_tables\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:admin_notices\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:ajax_blocklist_subscription\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:ajax_delete_all_oauth_clients\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:ajax_delete_oauth_client\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:ajax_moderation_settings\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:ajax_register_oauth_client\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:ajax_revoke_all_oauth_tokens\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:ajax_revoke_oauth_token\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:blocked_actors_list_page\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:edit_comment\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:edit_post\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:enqueue_connected_apps_scripts\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:enqueue_moderation_scripts\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:enqueue_scripts\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:followers_list_page\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:following_list_page\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:handle_bulk_actor_delete_confirmation\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:handle_bulk_actor_delete_page\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:list_posts\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:manage_comments_custom_column\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:open_help_tab\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:plugin_update_message\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:save_user_settings\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Admin\:\:tool_box\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-admin.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Advanced_Settings_Fields\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-advanced-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Advanced_Settings_Fields\:\:register_advanced_fields\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-advanced-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Advanced_Settings_Fields\:\:render_advanced_settings_section\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-advanced-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Advanced_Settings_Fields\:\:render_api_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-advanced-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Advanced_Settings_Fields\:\:render_authorized_fetch_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-advanced-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Advanced_Settings_Fields\:\:render_content_negotiation_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-advanced-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Advanced_Settings_Fields\:\:render_distribution_mode_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-advanced-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Advanced_Settings_Fields\:\:render_following_ui_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-advanced-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Advanced_Settings_Fields\:\:render_object_type_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-advanced-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Advanced_Settings_Fields\:\:render_reader_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-advanced-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Advanced_Settings_Fields\:\:render_rfc9421_signature_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-advanced-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Advanced_Settings_Fields\:\:render_vary_header_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-advanced-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\App\:\:add_loader_data\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-app.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\App\:\:enqueue_app_styles\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-app.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\App\:\:enqueue_scripts\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-app.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\App\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-app.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\App\:\:preload_rest_data\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-app.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\App\:\:register_app_modules\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-app.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\App\:\:register_script_module\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-app.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\App\:\:remove_admin_notices\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-app.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\App\:\:render_page\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-app.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Blog_Settings_Fields\:\:also_known_as_callback\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-blog-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Blog_Settings_Fields\:\:avatar_callback\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-blog-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Blog_Settings_Fields\:\:description_callback\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-blog-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Blog_Settings_Fields\:\:extra_fields_callback\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-blog-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Blog_Settings_Fields\:\:header_image_callback\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-blog-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Blog_Settings_Fields\:\:hide_followers_callback\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-blog-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Blog_Settings_Fields\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-blog-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Blog_Settings_Fields\:\:name_callback\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-blog-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Blog_Settings_Fields\:\:notifications_callback\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-blog-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Blog_Settings_Fields\:\:profile_id_callback\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-blog-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Blog_Settings_Fields\:\:register_settings\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-blog-settings-fields.php
-
-		-
 			message: '#^Parameter \#1 \$text of function esc_attr expects string, int given\.$#'
 			identifier: argument.type
 			count: 1
 			path: includes/wp-admin/class-blog-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Dashboard\:\:add_dashboard_widgets\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-dashboard.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Dashboard\:\:enqueue_scripts\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-dashboard.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Dashboard\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-dashboard.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Dashboard\:\:render_author_profile_widget\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-dashboard.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Dashboard\:\:render_blog_profile_widget\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-dashboard.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Dashboard\:\:render_news_widget\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-dashboard.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Dashboard\:\:render_stats_widget\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-dashboard.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Health_Check\:\:ensure_schedules_registered\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-health-check.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Health_Check\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-health-check.php
 
 		-
 			message: '#^Parameter \#1 \$text of function esc_attr expects string, int given\.$#'
 			identifier: argument.type
 			count: 5
 			path: includes/wp-admin/class-health-check.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Heartbeat\:\:enqueue_scripts\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-heartbeat.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Heartbeat\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-heartbeat.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Menu\:\:admin_bar_menu\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-menu.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Menu\:\:admin_menu\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-menu.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Menu\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-menu.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Screen_Options\:\:add_blocked_actors_list_options\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-screen-options.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Screen_Options\:\:add_followers_list_options\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-screen-options.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Screen_Options\:\:add_following_list_options\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-screen-options.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Screen_Options\:\:add_settings_list_options\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-screen-options.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Screen_Options\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-screen-options.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings_Fields\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings_Fields\:\:register_settings_fields\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings_Fields\:\:render_actor_mode_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings_Fields\:\:render_allow_interactions_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings_Fields\:\:render_attribution_domains_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings_Fields\:\:render_blocklist_subscriptions_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings_Fields\:\:render_custom_post_content_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings_Fields\:\:render_default_feature_policy_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings_Fields\:\:render_default_quote_policy_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings_Fields\:\:render_max_image_attachments_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings_Fields\:\:render_moderation_section_description\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings_Fields\:\:render_relays_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings_Fields\:\:render_site_blocked_domains_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings_Fields\:\:render_site_blocked_keywords_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings_Fields\:\:render_support_post_types_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings_Fields\:\:render_use_hashtags_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings_Fields\:\:render_use_opengraph_field\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings-fields.php
 
 		-
 			message: '#^Parameter \#1 \$text of function esc_html expects string, int given\.$#'
@@ -3703,150 +997,6 @@ parameters:
 			path: includes/wp-admin/class-settings-fields.php
 
 		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings\:\:add_following_help_tab\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings\:\:add_settings_help_tab\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings\:\:add_users_help_tab\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings\:\:get_recommended_plugins\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings\:\:handle_switch_object_type\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings\:\:handle_welcome_query_arg\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings\:\:render_recommended_plugins_list\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings\:\:set_page_title\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Settings\:\:settings_page\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-settings.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\User_Settings_Fields\:\:also_known_as_callback\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-user-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\User_Settings_Fields\:\:blocked_domains_callback\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-user-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\User_Settings_Fields\:\:blocked_keywords_callback\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-user-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\User_Settings_Fields\:\:connected_apps_section\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-user-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\User_Settings_Fields\:\:description_callback\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-user-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\User_Settings_Fields\:\:extra_fields_callback\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-user-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\User_Settings_Fields\:\:header_image_callback\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-user-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\User_Settings_Fields\:\:hide_followers_callback\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-user-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\User_Settings_Fields\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-user-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\User_Settings_Fields\:\:moderation_section_description\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-user-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\User_Settings_Fields\:\:notifications_callback\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-user-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\User_Settings_Fields\:\:profile_url_callback\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-user-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\User_Settings_Fields\:\:register_settings\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-user-settings-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\User_Settings_Fields\:\:section_description\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-user-settings-fields.php
-
-		-
 			message: '#^Parameter \#1 \$text of function esc_attr expects string, int given\.$#'
 			identifier: argument.type
 			count: 1
@@ -3859,190 +1009,10 @@ parameters:
 			path: includes/wp-admin/class-user-settings-fields.php
 
 		-
-			message: '#^Method Activitypub\\WP_Admin\\Welcome_Fields\:\:get_completed_steps_count\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-welcome-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Welcome_Fields\:\:get_next_incomplete_step\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-welcome-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Welcome_Fields\:\:get_total_steps_count\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-welcome-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Welcome_Fields\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-welcome-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Welcome_Fields\:\:register_welcome_fields\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-welcome-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Welcome_Fields\:\:render_onboarding_steps_section\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-welcome-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Welcome_Fields\:\:render_step_features\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-welcome-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Welcome_Fields\:\:render_step_fediverse_intro\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-welcome-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Welcome_Fields\:\:render_step_plugin_installed\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-welcome-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Welcome_Fields\:\:render_step_profile_mode\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-welcome-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Welcome_Fields\:\:render_step_profile_setup\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-welcome-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Welcome_Fields\:\:render_step_site_health\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-welcome-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Welcome_Fields\:\:render_welcome_footer_section\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-welcome-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Welcome_Fields\:\:render_welcome_header_section\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-welcome-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Welcome_Fields\:\:resolve_checklist\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/class-welcome-fields.php
-
-		-
 			message: '#^Parameter \#1 \$text of function esc_attr expects string, float given\.$#'
 			identifier: argument.type
 			count: 1
 			path: includes/wp-admin/class-welcome-fields.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Blocklist\:\:dispatch\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-blocklist.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Blocklist\:\:footer\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-blocklist.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Blocklist\:\:greet\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-blocklist.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Blocklist\:\:handle_upload\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-blocklist.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Blocklist\:\:handle_url_import\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-blocklist.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Blocklist\:\:header\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-blocklist.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Blocklist\:\:import\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-blocklist.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Blocklist\:\:show_url_import_results\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-blocklist.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Mastodon\:\:dispatch\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-mastodon.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Mastodon\:\:footer\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-mastodon.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Mastodon\:\:greet\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-mastodon.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Mastodon\:\:header\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-mastodon.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Mastodon\:\:import\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-mastodon.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Mastodon\:\:import_options\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-mastodon.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Mastodon\:\:maybe_unwrap_archive\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-mastodon.php
 
 		-
 			message: '#^Parameter \#1 \$id of function wp_import_cleanup expects string, int given\.$#'
@@ -4055,102 +1025,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: includes/wp-admin/import/class-mastodon.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Starter_Kit\:\:cleanup_blog_user_filter\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-starter-kit.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Starter_Kit\:\:dispatch\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-starter-kit.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Starter_Kit\:\:footer\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-starter-kit.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Starter_Kit\:\:get_actor_list\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-starter-kit.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Starter_Kit\:\:greet\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-starter-kit.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Starter_Kit\:\:handle_upload\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-starter-kit.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Starter_Kit\:\:handle_url_import\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-starter-kit.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Starter_Kit\:\:header\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-starter-kit.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Starter_Kit\:\:import\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-starter-kit.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Starter_Kit\:\:import_options\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-starter-kit.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Starter_Kit\:\:render_actor_selection\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-starter-kit.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Starter_Kit\:\:render_author_selection\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-starter-kit.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Starter_Kit\:\:render_error\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-starter-kit.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Starter_Kit\:\:render_import_form\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-starter-kit.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Starter_Kit\:\:render_starter_kit_info\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-starter-kit.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Import\\Starter_Kit\:\:setup_blog_user_filter\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/class-starter-kit.php
 
 		-
 			message: '#^Parameter \#1 \$id of function wp_import_cleanup expects string, int given\.$#'
@@ -4183,42 +1057,6 @@ parameters:
 			path: includes/wp-admin/import/class-starter-kit.php
 
 		-
-			message: '#^Function Activitypub\\WP_Admin\\Import\\load\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/import/load.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Table\\Blocked_Actors\:\:no_items\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/table/class-blocked-actors.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Table\\Blocked_Actors\:\:prepare_items\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/table/class-blocked-actors.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Table\\Blocked_Actors\:\:process_action\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/table/class-blocked-actors.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Table\\Blocked_Actors\:\:process_admin_notices\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/table/class-blocked-actors.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Table\\Blocked_Actors\:\:single_row\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/table/class-blocked-actors.php
-
-		-
 			message: '#^Parameter \#1 \$args of method WP_List_Table\:\:set_pagination_args\(\) expects array\{total_items\?\: int, total_pages\?\: int, per_page\?\: int\}, array\{total_items\: mixed, total_pages\: float, per_page\: int\} given\.$#'
 			identifier: argument.type
 			count: 1
@@ -4231,26 +1069,8 @@ parameters:
 			path: includes/wp-admin/table/class-blocked-actors.php
 
 		-
-			message: '#^Method Activitypub\\WP_Admin\\Table\\Followers\:\:no_items\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/table/class-followers.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Table\\Followers\:\:prepare_items\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/table/class-followers.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Table\\Followers\:\:process_action\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/table/class-followers.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Table\\Followers\:\:process_admin_notices\(\) has no return type specified\.$#'
-			identifier: missingType.return
+			message: '#^Parameter \#1 \$args of method WP_List_Table\:\:set_pagination_args\(\) expects array\{total_items\?\: int, total_pages\?\: int, per_page\?\: int\}, array\{total_items\: mixed, total_pages\: float, per_page\: int\} given\.$#'
+			identifier: argument.type
 			count: 1
 			path: includes/wp-admin/table/class-followers.php
 
@@ -4258,79 +1078,7 @@ parameters:
 			message: '#^Parameter \#1 \$args of method WP_List_Table\:\:set_pagination_args\(\) expects array\{total_items\?\: int, total_pages\?\: int, per_page\?\: int\}, array\{total_items\: mixed, total_pages\: float, per_page\: int\} given\.$#'
 			identifier: argument.type
 			count: 1
-			path: includes/wp-admin/table/class-followers.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Table\\Following\:\:no_items\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
 			path: includes/wp-admin/table/class-following.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Table\\Following\:\:prepare_items\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/table/class-following.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Table\\Following\:\:process_action\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/table/class-following.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Table\\Following\:\:process_admin_notices\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/table/class-following.php
-
-		-
-			message: '#^Method Activitypub\\WP_Admin\\Table\\Following\:\:single_row\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: includes/wp-admin/table/class-following.php
-
-		-
-			message: '#^Parameter \#1 \$args of method WP_List_Table\:\:set_pagination_args\(\) expects array\{total_items\?\: int, total_pages\?\: int, per_page\?\: int\}, array\{total_items\: mixed, total_pages\: float, per_page\: int\} given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/wp-admin/table/class-following.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Akismet\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-akismet.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Buddypress\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-buddypress.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Classic_Editor\:\:add_meta_box\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-classic-editor.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Classic_Editor\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-classic-editor.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Classic_Editor\:\:render_meta_box\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-classic-editor.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Classic_Editor\:\:save_meta_data\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-classic-editor.php
 
 		-
 			message: '#^Call to an undefined method Activitypub\\Activity\\Actor\:\:get__id\(\)\.$#'
@@ -4359,18 +1107,6 @@ parameters:
 		-
 			message: '#^Call to an undefined method Activitypub\\Activity\\Actor\|Activitypub\\Application\:\:update_summary\(\)\.$#'
 			identifier: method.notFound
-			count: 1
-			path: integration/class-enable-mastodon-apps.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Enable_Mastodon_Apps\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-enable-mastodon-apps.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Enable_Mastodon_Apps\:\:set_extra_fields\(\) has no return type specified\.$#'
-			identifier: missingType.return
 			count: 1
 			path: integration/class-enable-mastodon-apps.php
 
@@ -4423,139 +1159,13 @@ parameters:
 			path: integration/class-jetpack.php
 
 		-
-			message: '#^Method Activitypub\\Integration\\Jetpack\:\:adapt_post_share\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-jetpack.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Jetpack\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-jetpack.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Litespeed_Cache\:\:add_htaccess_rules\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-litespeed-cache.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Litespeed_Cache\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-litespeed-cache.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Litespeed_Cache\:\:on_plugin_deleted\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-litespeed-cache.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Litespeed_Cache\:\:remove_htaccess_rules\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-litespeed-cache.php
-
-		-
 			message: '#^Action callback returns null but should not return anything\.$#'
 			identifier: return.void
 			count: 1
 			path: integration/class-multisite-language-switcher.php
 
 		-
-			message: '#^Method Activitypub\\Integration\\Multisite_Language_Switcher\:\:ignore_outbox_post\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-multisite-language-switcher.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Multisite_Language_Switcher\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-multisite-language-switcher.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Multisite_Language_Switcher\:\:unignore_outbox_post\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-multisite-language-switcher.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Nodeinfo\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-nodeinfo.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Opengraph\:\:add_meta_tags\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-opengraph.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Opengraph\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-opengraph.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Polylang\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-polylang.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Surge\:\:add_cache_config\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-surge.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Surge\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-surge.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Surge\:\:remove_cache_config\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-surge.php
-
-		-
 			message: '#^Call to an undefined method Activitypub\\Activity\\Actor\|Activitypub\\Application\:\:get_alternate_url\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: integration/class-webfinger.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Webfinger\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-webfinger.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\WPML\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-wpml.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Yoast_Seo\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/class-yoast-seo.php
-
-		-
-			message: '#^Function Activitypub\\Integration\\plugin_init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/load.php
-
-		-
-			message: '#^Method Activitypub\\Integration\\Stream\\Stream\:\:init\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: integration/stream/class-stream.php

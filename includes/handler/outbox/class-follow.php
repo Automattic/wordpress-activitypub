@@ -16,6 +16,8 @@ use function Activitypub\object_to_uri;
 class Follow {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_outbox_follow', array( self::class, 'handle_follow' ), 10, 2 );

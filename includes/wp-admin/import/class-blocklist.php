@@ -19,6 +19,8 @@ class Blocklist {
 
 	/**
 	 * Dispatch the importer based on current step.
+	 *
+	 * @return void
 	 */
 	public static function dispatch() {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -47,6 +49,8 @@ class Blocklist {
 
 	/**
 	 * Display the importer header.
+	 *
+	 * @return void
 	 */
 	private static function header() {
 		echo '<div class="wrap">';
@@ -55,6 +59,8 @@ class Blocklist {
 
 	/**
 	 * Display the importer footer.
+	 *
+	 * @return void
 	 */
 	private static function footer() {
 		echo '</div>';
@@ -62,6 +68,8 @@ class Blocklist {
 
 	/**
 	 * Display the greeting/intro screen.
+	 *
+	 * @return void
 	 */
 	private static function greet() {
 		echo '<div class="narrow">';
@@ -123,6 +131,8 @@ class Blocklist {
 
 	/**
 	 * Handle file upload and import.
+	 *
+	 * @return void
 	 */
 	private static function handle_upload() {
 		$error_message = \__( 'Sorry, there has been an error.', 'activitypub' );
@@ -178,6 +188,8 @@ class Blocklist {
 
 	/**
 	 * Handle URL import.
+	 *
+	 * @return void
 	 */
 	private static function handle_url_import() {
 		$error_message = \__( 'Sorry, there has been an error.', 'activitypub' );
@@ -215,6 +227,8 @@ class Blocklist {
 	 * Execute the import for file uploads.
 	 *
 	 * @param array $domains Array of domains to import.
+	 *
+	 * @return void
 	 */
 	private static function import( $domains ) {
 		\set_time_limit( 0 );
@@ -274,6 +288,8 @@ class Blocklist {
 	 *
 	 * @param int  $imported   Number of domains imported.
 	 * @param bool $subscribed Whether the URL was subscribed to.
+	 *
+	 * @return void
 	 */
 	private static function show_url_import_results( $imported, $subscribed ) {
 		echo '<h3>' . \esc_html__( 'Import Complete', 'activitypub' ) . '</h3>';

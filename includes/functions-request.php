@@ -171,6 +171,8 @@ function accept_prefers_activitypub( $accept ) {
  * the same raw way for the same reason. The raw header is skipped once the headers are already sent.
  *
  * @param \WP_REST_Response $response The response to mark.
+ *
+ * @return void
  */
 function maybe_set_no_store( $response ) {
 	$response->header( 'Cache-Control', 'private, no-store, max-age=0' );

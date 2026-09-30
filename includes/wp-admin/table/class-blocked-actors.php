@@ -58,6 +58,8 @@ class Blocked_Actors extends \WP_List_Table {
 
 	/**
 	 * Process action.
+	 *
+	 * @return void
 	 */
 	public function process_action() {
 		if ( ! \current_user_can( 'edit_user', $this->user_id ) ) {
@@ -154,6 +156,8 @@ class Blocked_Actors extends \WP_List_Table {
 
 	/**
 	 * Process admin notices based on query parameters.
+	 *
+	 * @return void
 	 */
 	public function process_admin_notices() {
 		\settings_errors( 'activitypub' );
@@ -161,6 +165,8 @@ class Blocked_Actors extends \WP_List_Table {
 
 	/**
 	 * Prepare items.
+	 *
+	 * @return void
 	 */
 	public function prepare_items() {
 		$page_num = $this->get_pagenum();
@@ -284,6 +290,8 @@ class Blocked_Actors extends \WP_List_Table {
 
 	/**
 	 * Message to be displayed when there are no blocked actors.
+	 *
+	 * @return void
 	 */
 	public function no_items() {
 		\esc_html_e( 'No blocked actors found.', 'activitypub' );
@@ -322,6 +330,8 @@ class Blocked_Actors extends \WP_List_Table {
 	 * Single row.
 	 *
 	 * @param array $item Item.
+	 *
+	 * @return void
 	 */
 	public function single_row( $item ) {
 		\printf(

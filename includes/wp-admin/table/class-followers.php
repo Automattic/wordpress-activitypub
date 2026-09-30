@@ -68,6 +68,8 @@ class Followers extends \WP_List_Table {
 
 	/**
 	 * Process action.
+	 *
+	 * @return void
 	 */
 	public function process_action() {
 		if ( ! \current_user_can( 'edit_user', $this->user_id ) ) {
@@ -207,6 +209,8 @@ class Followers extends \WP_List_Table {
 
 	/**
 	 * Process admin notices based on query parameters.
+	 *
+	 * @return void
 	 */
 	public function process_admin_notices() {
 		\settings_errors( 'activitypub' );
@@ -214,6 +218,8 @@ class Followers extends \WP_List_Table {
 
 	/**
 	 * Prepare items.
+	 *
+	 * @return void
 	 */
 	public function prepare_items() {
 		$page_num = $this->get_pagenum();
@@ -370,6 +376,8 @@ class Followers extends \WP_List_Table {
 
 	/**
 	 * Message to be displayed when there are no followers.
+	 *
+	 * @return void
 	 */
 	public function no_items() {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended

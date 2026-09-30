@@ -18,6 +18,8 @@ use function Activitypub\should_comment_be_federated;
 class Comment {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		if ( ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS ) {
@@ -38,6 +40,8 @@ class Comment {
 	 * @param string      $new_status New comment status.
 	 * @param string      $old_status Old comment status.
 	 * @param \WP_Comment $comment    Comment object.
+	 *
+	 * @return void
 	 */
 	public static function schedule_comment_activity( $new_status, $old_status, $comment ) {
 		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
@@ -116,6 +120,8 @@ class Comment {
 	 *
 	 * @param int         $comment_id Comment ID.
 	 * @param \WP_Comment $comment    Comment object.
+	 *
+	 * @return void
 	 */
 	public static function schedule_comment_activity_on_insert( $comment_id, $comment ) {
 		if ( 1 === (int) $comment->comment_approved ) {
@@ -128,6 +134,8 @@ class Comment {
 	 *
 	 * @param int         $comment_id Comment ID.
 	 * @param \WP_Comment $comment    Comment object.
+	 *
+	 * @return void
 	 */
 	public static function schedule_comment_delete_activity( $comment_id, $comment ) {
 		// Only send Delete activities for comments that were previously federated.

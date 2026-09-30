@@ -19,6 +19,8 @@ use Activitypub\Collection\Remote_Posts;
 class Comment {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		self::register_comment_types();
@@ -697,6 +699,8 @@ class Comment {
 
 	/**
 	 * Register the comment types used by the ActivityPub plugin.
+	 *
+	 * @return void
 	 */
 	public static function register_comment_types() {
 		register_comment_type(
@@ -779,6 +783,8 @@ class Comment {
 	 * @see https://github.com/janboddez/indieblocks/blob/a2d59de358031056a649ee47a1332ce9e39d4ce2/includes/functions.php#L423-L432
 	 *
 	 * @param \WP_Comment_Query $query Comment count.
+	 *
+	 * @return void
 	 */
 	public static function comment_query( $query ) {
 		if ( ! $query instanceof \WP_Comment_Query ) {
@@ -981,6 +987,8 @@ class Comment {
 	 *
 	 * @param mixed $old_value The old option value.
 	 * @param mixed $value     The new option value.
+	 *
+	 * @return void
 	 */
 	public static function maybe_update_comment_counts( $old_value, $value ) {
 		if ( '1' === $old_value && '1' !== $value ) {

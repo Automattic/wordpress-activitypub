@@ -18,6 +18,8 @@ use function Activitypub\object_to_uri;
 class Like {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_like', array( self::class, 'handle_like' ), 10, 2 );
@@ -29,6 +31,8 @@ class Like {
 	 *
 	 * @param array     $like     The Activity array.
 	 * @param int|int[] $user_ids The user ID(s).
+	 *
+	 * @return void
 	 */
 	public static function handle_like( $like, $user_ids ) {
 		if ( ! Comment::is_comment_type_enabled( 'like' ) ) {

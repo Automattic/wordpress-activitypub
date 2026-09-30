@@ -16,6 +16,8 @@ use Activitypub\Comment;
 class Mailer {
 	/**
 	 * Initialize the Mailer.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'comment_notification_subject', array( self::class, 'comment_notification_subject' ), 10, 2 );
@@ -149,6 +151,8 @@ class Mailer {
 	 * @param array     $activity The activity object.
 	 * @param int|int[] $user_ids The id(s) of the local blog-user(s).
 	 * @param bool      $success  True on success, false otherwise.
+	 *
+	 * @return void
 	 */
 	public static function new_follower( $activity, $user_ids, $success ) {
 		// Only send notification if the follow was successful.
@@ -245,6 +249,8 @@ class Mailer {
 	 *
 	 * @param array     $activity The activity object.
 	 * @param int|int[] $user_ids The id(s) of the local blog-user(s).
+	 *
+	 * @return void
 	 */
 	public static function direct_message( $activity, $user_ids ) {
 		// Early return if activity is public or has no recipients.
@@ -342,6 +348,8 @@ class Mailer {
 	 *
 	 * @param array     $activity The activity object.
 	 * @param int|int[] $user_ids The id(s) of the local blog-user(s).
+	 *
+	 * @return void
 	 */
 	public static function mention( $activity, $user_ids ) {
 		// Early return if activity has no mentions.

@@ -25,6 +25,8 @@ class Replies {
 	 * Build base arguments for fetching the comments of either a WordPress post or comment.
 	 *
 	 * @param \WP_Post|\WP_Comment|\WP_Error $wp_object The post or comment to fetch replies for on success.
+	 *
+	 * @return array|\WP_Error The query arguments, or WP_Error when the object is neither a post nor a comment.
 	 */
 	private static function build_args( $wp_object ) {
 		$args = array(

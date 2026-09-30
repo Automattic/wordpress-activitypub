@@ -40,6 +40,8 @@ class Enable_Mastodon_Apps {
 
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'mastodon_api_valid_user', array( self::class, 'is_ap_actor' ), 10, 2 );
@@ -175,6 +177,8 @@ class Enable_Mastodon_Apps {
 	 *
 	 * @param int   $user_id The user id to act on.
 	 * @param array $fields The fields to set. It is assumed to be the entire set of desired fields.
+	 *
+	 * @return void
 	 */
 	private static function set_extra_fields( $user_id, $fields ) {
 		// The Mastodon API submits a simple hash for every field.

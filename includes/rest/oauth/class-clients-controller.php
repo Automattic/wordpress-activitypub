@@ -41,6 +41,8 @@ class Clients_Controller extends \WP_REST_Controller {
 
 	/**
 	 * Register routes.
+	 *
+	 * @return void
 	 */
 	public function register_routes() {
 		// Dynamic client registration (RFC 7591).

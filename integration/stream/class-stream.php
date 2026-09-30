@@ -17,6 +17,8 @@ namespace Activitypub\Integration\Stream;
 class Stream {
 	/**
 	 * Initialize the Stream integration.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'wp_stream_connectors', array( self::class, 'register_connector' ) );

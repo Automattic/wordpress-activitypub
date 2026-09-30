@@ -57,6 +57,8 @@ class Cache_Command extends \WP_CLI_Command {
 	 *
 	 * @param array $args       The positional arguments.
 	 * @param array $assoc_args The associative arguments.
+	 *
+	 * @return void
 	 */
 	public function clear( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$type = $assoc_args['type'] ?? 'all';
@@ -113,6 +115,8 @@ class Cache_Command extends \WP_CLI_Command {
 	 *
 	 * @param array $args       The positional arguments.
 	 * @param array $assoc_args The associative arguments.
+	 *
+	 * @return void
 	 */
 	public function status( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$upload_dir = \wp_upload_dir();

@@ -22,6 +22,8 @@ use function Activitypub\is_post_publicly_queryable;
 class Post {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		// Post transitions.
@@ -53,6 +55,8 @@ class Post {
 	 * @param \WP_Post $post        Post object.
 	 * @param bool     $update      Whether this is an existing post being updated.
 	 * @param \WP_Post $post_before Post object before the update.
+	 *
+	 * @return void
 	 */
 	public static function triage( $post_id, $post, $update, $post_before ) {
 		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
@@ -162,6 +166,8 @@ class Post {
 	 * Schedules Activities for attachment transitions.
 	 *
 	 * @param int $post_id Attachment ID.
+	 *
+	 * @return void
 	 */
 	public static function transition_attachment_status( $post_id ) {
 		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
@@ -203,6 +209,8 @@ class Post {
 	 * Schedule an Add activity when a post is added to the featured collection.
 	 *
 	 * @param int $post_id The post ID.
+	 *
+	 * @return void
 	 */
 	public static function schedule_featured_add( $post_id ) {
 		self::schedule_featured_update( $post_id, 'Add' );
@@ -212,6 +220,8 @@ class Post {
 	 * Schedule a Remove activity when a post is removed from the featured collection.
 	 *
 	 * @param int $post_id The post ID.
+	 *
+	 * @return void
 	 */
 	public static function schedule_featured_remove( $post_id ) {
 		self::schedule_featured_update( $post_id, 'Remove' );
@@ -227,6 +237,8 @@ class Post {
 	 *
 	 * @param int    $post_id       The post ID.
 	 * @param string $activity_type The activity type ('Add' or 'Remove').
+	 *
+	 * @return void
 	 */
 	private static function schedule_featured_update( $post_id, $activity_type ) {
 		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {

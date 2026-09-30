@@ -37,6 +37,8 @@ class Actions_Controller extends \WP_REST_Controller {
 
 	/**
 	 * Register routes.
+	 *
+	 * @return void
 	 */
 	public function register_routes() {
 		// Delete follower relationship.

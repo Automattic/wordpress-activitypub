@@ -38,6 +38,8 @@ class Feature_Request {
 
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'activitypub_inbox_feature_request', array( self::class, 'handle_feature_request' ), 10, 2 );
@@ -51,6 +53,8 @@ class Feature_Request {
 	 *
 	 * @param array     $activity The activity object.
 	 * @param int|int[] $user_ids The user ID(s) targeted by the inbox dispatch.
+	 *
+	 * @return void
 	 */
 	public static function handle_feature_request( $activity, $user_ids ) {
 		$state      = true;
@@ -106,6 +110,8 @@ class Feature_Request {
 	 * @param array          $activity The activity array.
 	 * @param int|int[]|null $user_ids The user ID(s).
 	 * @param string         $type     The activity type.
+	 *
+	 * @return void
 	 */
 	public static function handle_blocked_request( $activity, $user_ids, $type ) {
 		if ( ! \in_array( \strtolower( $type ), array( 'featurerequest', 'feature_request' ), true ) ) {
@@ -124,6 +130,8 @@ class Feature_Request {
 	 *
 	 * @param array $activity_object The activity object.
 	 * @param int   $user_id         The local user ID being featured (0 for the blog actor).
+	 *
+	 * @return void
 	 */
 	public static function queue_accept( $activity_object, $user_id ) {
 		if ( ! user_can_activitypub( $user_id ) ) {
@@ -286,6 +294,8 @@ class Feature_Request {
 	 *
 	 * @param array $activity_object The activity object.
 	 * @param int   $user_id         The user ID.
+	 *
+	 * @return void
 	 */
 	public static function queue_reject( $activity_object, $user_id ) {
 		if ( ! user_can_activitypub( $user_id ) ) {

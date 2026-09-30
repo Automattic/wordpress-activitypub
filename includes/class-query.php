@@ -410,6 +410,8 @@ class Query {
 	 * Fake an old host request.
 	 *
 	 * @param bool $state Optional. The state to set. Default true.
+	 *
+	 * @return void
 	 */
 	public function set_old_host_request( $state = true ) {
 		$this->is_old_host_request = $state;

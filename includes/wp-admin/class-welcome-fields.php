@@ -15,6 +15,8 @@ use function Activitypub\user_can_activitypub;
 class Welcome_Fields {
 	/**
 	 * Initialize the welcome fields.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'load-settings_page_activitypub', array( self::class, 'register_welcome_fields' ) );
@@ -33,6 +35,8 @@ class Welcome_Fields {
 
 	/**
 	 * Register welcome fields.
+	 *
+	 * @return void
 	 */
 	public static function register_welcome_fields() {
 		\add_settings_section(
@@ -74,6 +78,8 @@ class Welcome_Fields {
 
 	/**
 	 * Render welcome header section.
+	 *
+	 * @return void
 	 */
 	public static function render_welcome_header_section() {
 		$completed_steps     = self::get_completed_steps_count();
@@ -84,7 +90,7 @@ class Welcome_Fields {
 		<div class="activitypub-welcome-header">
 			<div class="activitypub-progress-circle">
 				<div class="activitypub-progress-circle-content">
-					<span><?php echo \esc_html( $completed_steps ); ?>/<?php echo \esc_html( $total_steps ); ?></span>
+					<span><?php echo (int) $completed_steps; ?>/<?php echo (int) $total_steps; ?></span>
 				</div>
 				<svg class="activitypub-progress-ring" width="120" height="120">
 					<circle class="activitypub-progress-ring-bg" cx="60" cy="60" r="54" />
@@ -101,6 +107,8 @@ class Welcome_Fields {
 
 	/**
 	 * Get the count of completed steps.
+	 *
+	 * @return int Number of completed steps.
 	 */
 	private static function get_completed_steps_count() {
 		$count = 1; // Plugin is already installed.
@@ -132,6 +140,8 @@ class Welcome_Fields {
 
 	/**
 	 * Get the total number of steps.
+	 *
+	 * @return int Number of steps.
 	 */
 	private static function get_total_steps_count() {
 		global $wp_filter;
@@ -151,6 +161,8 @@ class Welcome_Fields {
 
 	/**
 	 * Get the next incomplete step.
+	 *
+	 * @return string The step key, or an empty string when all steps are done.
 	 */
 	private static function get_next_incomplete_step() {
 		if ( self::has_step( 'site_health' ) && '0' !== \get_option( 'activitypub_checklist_health_check_issues', (string) Health_Check::count_results( 'critical' ) ) ) {
@@ -188,6 +200,8 @@ class Welcome_Fields {
 
 	/**
 	 * Render onboarding steps section.
+	 *
+	 * @return void
 	 */
 	public static function render_onboarding_steps_section() {
 		?>
@@ -201,6 +215,8 @@ class Welcome_Fields {
 
 	/**
 	 * Render plugin installed step.
+	 *
+	 * @return void
 	 */
 	public static function render_step_plugin_installed() {
 		?>
@@ -219,6 +235,8 @@ class Welcome_Fields {
 
 	/**
 	 * Render site health step.
+	 *
+	 * @return void
 	 */
 	public static function render_step_site_health() {
 		$health_issues = Health_Check::count_results();
@@ -263,6 +281,8 @@ class Welcome_Fields {
 
 	/**
 	 * Render the Fediverse-Intro step.
+	 *
+	 * @return void
 	 */
 	public static function render_step_fediverse_intro() {
 		$checked      = '1' === \get_option( 'activitypub_checklist_fediverse_intro_visited', false );
@@ -295,6 +315,8 @@ class Welcome_Fields {
 
 	/**
 	 * Render the Profile Mode step.
+	 *
+	 * @return void
 	 */
 	public static function render_step_profile_mode() {
 		$checked      = '1' === \get_option( 'activitypub_checklist_settings_visited', false );
@@ -327,6 +349,8 @@ class Welcome_Fields {
 
 	/**
 	 * Render the Profile Setup step.
+	 *
+	 * @return void
 	 */
 	public static function render_step_profile_setup() {
 		$user_can_activitypub = user_can_activitypub( \get_current_user_id() );
@@ -370,6 +394,8 @@ class Welcome_Fields {
 
 	/**
 	 * Render the Features step.
+	 *
+	 * @return void
 	 */
 	public static function render_step_features() {
 		$checked      = '1' === \get_option( 'activitypub_checklist_blocks_visited', false );
@@ -402,6 +428,8 @@ class Welcome_Fields {
 
 	/**
 	 * Render welcome footer section.
+	 *
+	 * @return void
 	 */
 	public static function render_welcome_footer_section() {
 		?>
@@ -416,6 +444,8 @@ class Welcome_Fields {
 
 	/**
 	 * Resolve the welcome checklist.
+	 *
+	 * @return void
 	 */
 	public static function resolve_checklist() {
 		if ( self::get_total_steps_count() === self::get_completed_steps_count() ) {

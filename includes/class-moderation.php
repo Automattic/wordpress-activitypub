@@ -294,6 +294,8 @@ class Moderation {
 	 *
 	 * @param string $type   The block type (domain or keyword only).
 	 * @param array  $values Array of values to block.
+	 *
+	 * @return void
 	 */
 	public static function add_site_blocks( $type, $values ) {
 		if ( ! \in_array( $type, array( self::TYPE_DOMAIN, self::TYPE_KEYWORD ), true ) ) {

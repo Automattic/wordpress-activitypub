@@ -54,6 +54,8 @@ class Mastodon {
 
 	/**
 	 * Dispatch
+	 *
+	 * @return void
 	 */
 	public static function dispatch() {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -152,6 +154,8 @@ class Mastodon {
 
 	/**
 	 * Import options.
+	 *
+	 * @return void
 	 */
 	public static function import_options() {
 		$author = 0;
@@ -208,6 +212,8 @@ class Mastodon {
 
 	/**
 	 * Import.
+	 *
+	 * @return void
 	 */
 	public static function import() {
 		$error_message = \__( 'Sorry, there has been an error.', 'activitypub' );
@@ -629,6 +635,8 @@ class Mastodon {
 
 	/**
 	 * Header.
+	 *
+	 * @return void
 	 */
 	public static function header() {
 		echo '<div class="wrap">';
@@ -637,6 +645,8 @@ class Mastodon {
 
 	/**
 	 * Footer.
+	 *
+	 * @return void
 	 */
 	public static function footer() {
 		echo '</div>';
@@ -644,6 +654,8 @@ class Mastodon {
 
 	/**
 	 * Intro.
+	 *
+	 * @return void
 	 */
 	public static function greet() {
 		echo '<div class="narrow">';
@@ -693,6 +705,8 @@ class Mastodon {
 	 *
 	 * Some Mastodon exports wrap all files in a root folder. This method
 	 * detects this pattern and updates the archive path to point inside it.
+	 *
+	 * @return void
 	 */
 	private static function maybe_unwrap_archive() {
 		global $wp_filesystem;

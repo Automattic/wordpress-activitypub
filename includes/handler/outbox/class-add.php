@@ -20,6 +20,8 @@ use function Activitypub\object_to_uri;
 class Add {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_outbox_add', array( self::class, 'handle_add' ), 10, 2 );

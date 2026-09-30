@@ -30,6 +30,8 @@ class Dispatcher {
 
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'activitypub_process_outbox', array( self::class, 'process_outbox' ) );
@@ -112,6 +114,8 @@ class Dispatcher {
 	 * Process the outbox.
 	 *
 	 * @param int $id The outbox ID.
+	 *
+	 * @return void
 	 */
 	public static function process_outbox( $id ) {
 		$outbox_item = \get_post( $id );
@@ -238,6 +242,8 @@ class Dispatcher {
 	 * @param string $transient_key  The key to retrieve retry inboxes.
 	 * @param int    $outbox_item_id The Outbox item ID.
 	 * @param int    $attempt        The attempt number.
+	 *
+	 * @return void
 	 */
 	public static function retry_send_to_followers( $transient_key, $outbox_item_id, $attempt = 1 ) {
 		$inboxes = \get_transient( $transient_key );
@@ -357,6 +363,8 @@ class Dispatcher {
 	 * @param array $retries        The inboxes to retry.
 	 * @param int   $outbox_item_id The Outbox item ID.
 	 * @param int   $attempt        Optional. The attempt number. Default 1.
+	 *
+	 * @return void
 	 */
 	private static function schedule_retry( $retries, $outbox_item_id, $attempt = 1 ) {
 		$transient_key = 'activitypub_retry_' . \wp_generate_password( 12, false );
@@ -377,6 +385,8 @@ class Dispatcher {
 	 * @param Activity $activity    The ActivityPub Activity.
 	 * @param int      $actor_id    The actor ID.
 	 * @param \WP_Post $outbox_item The WordPress object.
+	 *
+	 * @return void
 	 */
 	private static function send_to_additional_inboxes( $activity, $actor_id, $outbox_item = null ) {
 		/**
@@ -551,6 +561,8 @@ class Dispatcher {
 	 *
 	 * @param int      $outbox_id The Outbox item ID.
 	 * @param Activity $activity  The Activity that was just added to the Outbox.
+	 *
+	 * @return void
 	 */
 	public static function fire_outbox_handlers( $outbox_id, $activity ) {
 		$outbox_item = \get_post( $outbox_id );
@@ -581,6 +593,8 @@ class Dispatcher {
 	 *
 	 * @param int      $outbox_id The Outbox item ID.
 	 * @param Activity $activity  The Activity that was just added to the Outbox.
+	 *
+	 * @return void
 	 */
 	public static function send_immediate_accept( $outbox_id, $activity ) {
 		$outbox_item = \get_post( $outbox_id );

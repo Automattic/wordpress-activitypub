@@ -24,6 +24,8 @@ use Activitypub\Transformer\Factory;
 class Migration {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		self::maybe_migrate();
@@ -67,6 +69,8 @@ class Migration {
 
 	/**
 	 * Unlocks the database migration process.
+	 *
+	 * @return void
 	 */
 	public static function unlock() {
 		\delete_option( 'activitypub_migration_lock' );
@@ -109,6 +113,8 @@ class Migration {
 
 	/**
 	 * Updates the database structure if necessary.
+	 *
+	 * @return void
 	 */
 	public static function maybe_migrate() {
 		if ( self::is_latest_version() ) {
@@ -263,6 +269,8 @@ class Migration {
 
 	/**
 	 * Updates the custom template to use shortcodes instead of the deprecated templates.
+	 *
+	 * @return void
 	 */
 	private static function migrate_from_0_16() {
 		// Get the custom template.
@@ -300,6 +308,8 @@ class Migration {
 
 	/**
 	 * Updates the DB-schema of the followers-list.
+	 *
+	 * @return void
 	 */
 	public static function migrate_from_0_17() {
 		// Migrate followers.
@@ -316,6 +326,8 @@ class Migration {
 
 	/**
 	 * Clear the cache after updating to 1.3.0.
+	 *
+	 * @return void
 	 */
 	private static function migrate_from_1_2_0() {
 		$user_ids = \get_users(
@@ -332,6 +344,8 @@ class Migration {
 
 	/**
 	 * Unschedule Hooks after updating to 2.0.0.
+	 *
+	 * @return void
 	 */
 	private static function migrate_from_2_0_0() {
 		\wp_clear_scheduled_hook( 'activitypub_send_post_activity' );
@@ -351,6 +365,8 @@ class Migration {
 	/**
 	 * Add the ActivityPub capability to all users that can publish posts
 	 * Delete old meta to store followers.
+	 *
+	 * @return void
 	 */
 	private static function migrate_from_2_2_0() {
 		// Add the ActivityPub capability to all users that can publish posts.
@@ -359,6 +375,8 @@ class Migration {
 
 	/**
 	 * Rename DB fields.
+	 *
+	 * @return void
 	 */
 	private static function migrate_from_2_6_0() {
 		\wp_cache_flush();
@@ -372,6 +390,8 @@ class Migration {
 	/**
 	 * * Update actor-mode settings.
 	 * * Get the ID of the latest blog post and save it to the options table.
+	 *
+	 * @return void
 	 */
 	private static function migrate_to_4_0_0() {
 		$latest_post_id = 0;
@@ -420,6 +440,8 @@ class Migration {
 	 * Update to 4.1.0
 	 *
 	 * * Migrate the `activitypub_post_content_type` to only use `activitypub_custom_post_content`.
+	 *
+	 * @return void
 	 */
 	public static function migrate_to_4_1_0() {
 		$content_type = \get_option( 'activitypub_post_content_type' );
@@ -462,6 +484,8 @@ class Migration {
 
 	/**
 	 * Updates post meta keys to be prefixed with an underscore.
+	 *
+	 * @return void
 	 */
 	public static function migrate_to_4_7_1() {
 		global $wpdb;
@@ -482,6 +506,8 @@ class Migration {
 
 	/**
 	 * Clears the post cache for Followers, we should have done this in 4.7.1 when we renamed those keys.
+	 *
+	 * @return void
 	 */
 	public static function migrate_to_4_7_2() {
 		global $wpdb;
@@ -715,6 +741,8 @@ class Migration {
 	 * Set the defaults needed for the plugin to work.
 	 *
 	 * Add the ActivityPub capability to all users that can publish posts.
+	 *
+	 * @return void
 	 */
 	public static function add_default_settings() {
 		self::add_activitypub_capability();
@@ -727,6 +755,8 @@ class Migration {
 	 * @param string               $activity_type The type of activity.
 	 * @param int                  $user_id       The user ID.
 	 * @param string               $visibility    Optional. The visibility of the content. Default 'public'.
+	 *
+	 * @return void
 	 */
 	private static function add_to_outbox( $comment, $activity_type, $user_id, $visibility = ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC ) {
 		$transformer = Factory::get_transformer( $comment );
@@ -756,6 +786,8 @@ class Migration {
 
 	/**
 	 * Add the ActivityPub capability to all users that can publish posts.
+	 *
+	 * @return void
 	 */
 	private static function add_activitypub_capability() {
 		// Get all WP_User objects that can publish posts.
@@ -776,6 +808,8 @@ class Migration {
 	 *
 	 * @param string $old_key The old comment meta key.
 	 * @param string $new_key The new comment meta key.
+	 *
+	 * @return void
 	 */
 	private static function update_usermeta_key( $old_key, $new_key ) {
 		global $wpdb;
@@ -794,6 +828,8 @@ class Migration {
 	 *
 	 * @param string $old_key The old post meta key.
 	 * @param string $new_key The new post meta key.
+	 *
+	 * @return void
 	 */
 	private static function update_postmeta_key( $old_key, $new_key ) {
 		global $wpdb;
@@ -812,6 +848,8 @@ class Migration {
 	 *
 	 * @param string $old_key The old option key.
 	 * @param string $new_key The new option key.
+	 *
+	 * @return void
 	 */
 	private static function update_options_key( $old_key, $new_key ) {
 		global $wpdb;
@@ -827,6 +865,8 @@ class Migration {
 
 	/**
 	 * Migrate the actor mode settings.
+	 *
+	 * @return void
 	 */
 	public static function migrate_actor_mode() {
 		$blog_profile    = \get_option( 'activitypub_enable_blog_user', '0' );
@@ -859,6 +899,8 @@ class Migration {
 	 * for non-existent users. The result is a number of user extra fields with no author.
 	 *
 	 * @ticket https://github.com/Automattic/wordpress-activitypub/pull/1554
+	 *
+	 * @return void
 	 */
 	public static function delete_mastodon_api_orphaned_extra_fields() {
 		global $wpdb;
@@ -875,6 +917,8 @@ class Migration {
 
 	/**
 	 * Update notification options.
+	 *
+	 * @return void
 	 */
 	public static function update_notification_options() {
 		$new_dm       = \get_option( 'activitypub_mailer_new_dm', '1' );
@@ -906,6 +950,8 @@ class Migration {
 
 	/**
 	 * Migrate followers to the new CPT.
+	 *
+	 * @return void
 	 */
 	public static function migrate_followers_to_ap_actor_cpt() {
 		global $wpdb;
@@ -988,6 +1034,8 @@ class Migration {
 
 	/**
 	 * Removes pending follow requests for the application user.
+	 *
+	 * @return void
 	 */
 	public static function remove_pending_application_user_follow_requests() {
 		global $wpdb;
@@ -1006,6 +1054,8 @@ class Migration {
 	 * Sync Jetpack meta for all followings.
 	 *
 	 * Replays the added_post_meta sync action for Jetpack with the Following::FOLLOWING_META_KEY meta key.
+	 *
+	 * @return void
 	 */
 	public static function sync_jetpack_following_meta() {
 		if ( ! \class_exists( 'Jetpack' ) || ! \Jetpack::is_connection_ready() ) {
@@ -1042,6 +1092,8 @@ class Migration {
 	 *
 	 * Deletes all existing inbox items to prepare for the new shared inbox structure
 	 * where activities are stored once with multiple recipients as metadata.
+	 *
+	 * @return void
 	 */
 	private static function clean_up_inbox() {
 		global $wpdb;
@@ -1307,6 +1359,8 @@ class Migration {
 	 * activitypub_application_user_private_key) are migrated lazily on first read.
 	 *
 	 * @since 9.1.0
+	 *
+	 * @return void
 	 */
 	public static function migrate_application_keypair_option() {
 		self::update_options_key( 'activitypub_keypair_for_-1', Application::KEYPAIR_OPTION_KEY );
@@ -1334,6 +1388,8 @@ class Migration {
 	 * undeliverable and are removed.
 	 *
 	 * @since 9.1.0
+	 *
+	 * @return void
 	 */
 	public static function delete_application_outbox_items() {
 		$items = \get_posts(

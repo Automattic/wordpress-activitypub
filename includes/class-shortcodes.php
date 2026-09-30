@@ -13,6 +13,8 @@ namespace Activitypub;
 class Shortcodes {
 	/**
 	 * Register the shortcodes.
+	 *
+	 * @return void
 	 */
 	public static function register() {
 		foreach ( \get_class_methods( self::class ) as $shortcode ) {
@@ -24,6 +26,8 @@ class Shortcodes {
 
 	/**
 	 * Unregister the shortcodes.
+	 *
+	 * @return void
 	 */
 	public static function unregister() {
 		foreach ( \get_class_methods( self::class ) as $shortcode ) {

@@ -57,6 +57,8 @@ class Stats_Command extends \WP_CLI_Command {
 	 *
 	 * @param array $args       The positional arguments (unused).
 	 * @param array $assoc_args The associative arguments.
+	 *
+	 * @return void
 	 */
 	public function collect( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$user_id       = isset( $assoc_args['user_id'] ) ? (int) $assoc_args['user_id'] : null;
@@ -136,6 +138,8 @@ class Stats_Command extends \WP_CLI_Command {
 	 *
 	 * @param array $args       The positional arguments (unused).
 	 * @param array $assoc_args The associative arguments.
+	 *
+	 * @return void
 	 */
 	public function compile( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$user_id = isset( $assoc_args['user_id'] ) ? (int) $assoc_args['user_id'] : null;
@@ -186,6 +190,8 @@ class Stats_Command extends \WP_CLI_Command {
 	 *
 	 * @param array $args       The positional arguments (unused).
 	 * @param array $assoc_args The associative arguments.
+	 *
+	 * @return void
 	 */
 	public function send( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$user_id    = isset( $assoc_args['user_id'] ) ? (int) $assoc_args['user_id'] : null;

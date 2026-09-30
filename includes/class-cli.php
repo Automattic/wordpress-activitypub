@@ -47,6 +47,8 @@ class Cli {
 	 * - wp activitypub stats <collect|compile|send>
 	 * - wp activitypub fetch <url>
 	 * - wp activitypub blurhash backfill [--dry-run] [--limit=<n>] [--force]
+	 *
+	 * @return void
 	 */
 	public static function register() {
 		// Register parent command with version subcommand.
