@@ -331,6 +331,12 @@ parameters:
 			path: includes/class-blocks.php
 
 		-
+			message: '#^Method Activitypub\\Blocks\:\:enqueue_intent_script\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: includes/class-blocks.php
+
+		-
 			message: '#^Method Activitypub\\Blocks\:\:filter_query_loop_vars\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
@@ -344,6 +350,12 @@ parameters:
 
 		-
 			message: '#^Method Activitypub\\Blocks\:\:handle_in_reply_to_get_param\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: includes/class-blocks.php
+
+		-
+			message: '#^Method Activitypub\\Blocks\:\:handle_quotation_of_get_param\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
 			path: includes/class-blocks.php
@@ -693,6 +705,12 @@ parameters:
 		-
 			message: '#^Method Activitypub\\Mention\:\:init\(\) has no return type specified\.$#'
 			identifier: missingType.return
+			count: 1
+			path: includes/class-mention.php
+
+		-
+			message: '#^Parameter \#1 \$query of method WP_HTML_Tag_Processor\:\:next_tag\(\) expects array\{tag_name\?\: string\|null, match_offset\?\: int\|null, class_name\?\: string\|null, tag_closers\?\: string\|null\}\|null, ''A'' given\.$#'
+			identifier: argument.type
 			count: 1
 			path: includes/class-mention.php
 
@@ -1621,6 +1639,12 @@ parameters:
 			path: includes/collection/class-interactions.php
 
 		-
+			message: '#^Parameter \#2 \$parent_comment_id of static method Activitypub\\Collection\\Interactions\:\:resolve_post_id\(\) expects int, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: includes/collection/class-interactions.php
+
+		-
 			message: '#^Argument of an invalid type stdClass supplied for foreach, only iterables are supported\.$#'
 			identifier: foreach.nonIterable
 			count: 1
@@ -1645,7 +1669,7 @@ parameters:
 			path: includes/collection/class-outbox.php
 
 		-
-			message: '#^Parameter \#1 \$postarr of function wp_update_post expects array\{ID\?\: int, post_author\?\: int, post_date\?\: string, post_date_gmt\?\: string, post_content\?\: string, post_content_filtered\?\: string, post_title\?\: string, post_excerpt\?\: string, \.\.\.\}, WP_Post\|null given\.$#'
+			message: '#^Parameter \#1 \$updated of method Activitypub\\Activity\\Base_Object\:\:set_updated\(\) expects string, null given\.$#'
 			identifier: argument.type
 			count: 1
 			path: includes/collection/class-outbox.php
@@ -1661,6 +1685,18 @@ parameters:
 			identifier: argument.type
 			count: 2
 			path: includes/collection/class-posts.php
+
+		-
+			message: '#^Method Activitypub\\Collection\\Remote_Actors\:\:clear_inbox_caches\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: includes/collection/class-remote-actors.php
+
+		-
+			message: '#^Method Activitypub\\Collection\\Remote_Actors\:\:persist\(\) never returns WP_Error so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: includes/collection/class-remote-actors.php
 
 		-
 			message: '#^Argument of an invalid type stdClass supplied for foreach, only iterables are supported\.$#'
@@ -1753,6 +1789,18 @@ parameters:
 			path: includes/functions.php
 
 		-
+			message: '#^Method Activitypub\\Handler\\Accept\:\:accept_follow\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: includes/handler/class-accept.php
+
+		-
+			message: '#^Method Activitypub\\Handler\\Accept\:\:accept_quote_request\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: includes/handler/class-accept.php
+
+		-
 			message: '#^Method Activitypub\\Handler\\Accept\:\:handle_accept\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
@@ -1761,6 +1809,12 @@ parameters:
 		-
 			message: '#^Method Activitypub\\Handler\\Accept\:\:init\(\) has no return type specified\.$#'
 			identifier: missingType.return
+			count: 1
+			path: includes/handler/class-accept.php
+
+		-
+			message: '#^Parameter \#3 \$user_id of function Activitypub\\add_to_outbox expects int, string given\.$#'
+			identifier: argument.type
 			count: 1
 			path: includes/handler/class-accept.php
 
@@ -1863,6 +1917,12 @@ parameters:
 		-
 			message: '#^Method Activitypub\\Handler\\Delete\:\:maybe_delete_posts\(\) has no return type specified\.$#'
 			identifier: missingType.return
+			count: 1
+			path: includes/handler/class-delete.php
+
+		-
+			message: '#^Parameter \#3 \$user_id of function Activitypub\\add_to_outbox expects int, string given\.$#'
+			identifier: argument.type
 			count: 1
 			path: includes/handler/class-delete.php
 
@@ -2025,6 +2085,18 @@ parameters:
 		-
 			message: '#^Method Activitypub\\Handler\\Reject\:\:reject_follow\(\) has no return type specified\.$#'
 			identifier: missingType.return
+			count: 1
+			path: includes/handler/class-reject.php
+
+		-
+			message: '#^Method Activitypub\\Handler\\Reject\:\:reject_quote_request\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: includes/handler/class-reject.php
+
+		-
+			message: '#^Parameter \#3 \$user_id of function Activitypub\\add_to_outbox expects int, string given\.$#'
+			identifier: argument.type
 			count: 1
 			path: includes/handler/class-reject.php
 
@@ -2305,6 +2377,12 @@ parameters:
 			path: includes/rest/class-actors-controller.php
 
 		-
+			message: '#^Parameter \#1 \$response of function Activitypub\\maybe_set_no_store expects WP_REST_Response, WP_HTTP_Response given\.$#'
+			identifier: argument.type
+			count: 1
+			path: includes/rest/class-actors-controller.php
+
+		-
 			message: '#^Method Activitypub\\Rest\\Actors_Inbox_Controller\:\:authenticate_from_query_param\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
@@ -2353,16 +2431,16 @@ parameters:
 			path: includes/rest/class-actors-inbox-controller.php
 
 		-
-			message: '#^Return type \(array\) of method Activitypub\\Rest\\Actors_Inbox_Controller\:\:prepare_item_for_response\(\) should be compatible with return type \(WP_Error\|WP_REST_Response\) of method WP_REST_Controller\:\:prepare_item_for_response\(\)$#'
-			identifier: method.childReturnType
-			count: 1
-			path: includes/rest/class-actors-inbox-controller.php
-
-		-
 			message: '#^Method Activitypub\\Rest\\Application_Controller\:\:register_routes\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
 			path: includes/rest/class-application-controller.php
+
+		-
+			message: '#^Call to an undefined method Activitypub\\Rest\\Collections_Controller\:\:get_item_index\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: includes/rest/class-collections-controller.php
 
 		-
 			message: '#^Method Activitypub\\Rest\\Collections_Controller\:\:register_routes\(\) has no return type specified\.$#'
@@ -2401,10 +2479,22 @@ parameters:
 			path: includes/rest/class-interaction-controller.php
 
 		-
+			message: '#^Parameter \#1 \$response of function Activitypub\\maybe_set_no_store expects WP_REST_Response, WP_HTTP_Response given\.$#'
+			identifier: argument.type
+			count: 1
+			path: includes/rest/class-interaction-controller.php
+
+		-
 			message: '#^Method Activitypub\\Rest\\Liked_Controller\:\:register_routes\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
 			path: includes/rest/class-liked-controller.php
+
+		-
+			message: '#^Call to an undefined method Activitypub\\Rest\\Moderators_Controller\:\:get_item_index\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: includes/rest/class-moderators-controller.php
 
 		-
 			message: '#^Call to function is_wp_error\(\) with array\{id\: mixed, type\: ''OrderedCollection'', totalItems\: int\<0, max\>, orderedItems\: mixed, ''@context''\: mixed\} will always evaluate to false\.$#'
@@ -2569,10 +2659,22 @@ parameters:
 			path: includes/rest/class-proxy-controller.php
 
 		-
+			message: '#^Parameter \#1 \$response of function Activitypub\\maybe_set_no_store expects WP_REST_Response, WP_HTTP_Response given\.$#'
+			identifier: argument.type
+			count: 1
+			path: includes/rest/class-proxy-controller.php
+
+		-
 			message: '#^Method Activitypub\\Rest\\Replies_Controller\:\:register_routes\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
 			path: includes/rest/class-replies-controller.php
+
+		-
+			message: '#^Method Activitypub\\Rest\\Seek_Controller\:\:register_routes\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: includes/rest/class-seek-controller.php
 
 		-
 			message: '#^Left side of && is always false\.$#'
@@ -2611,8 +2713,20 @@ parameters:
 			path: includes/rest/oauth/class-authorization-controller.php
 
 		-
+			message: '#^Parameter \#1 \$response of function Activitypub\\maybe_set_no_store expects WP_REST_Response, WP_HTTP_Response given\.$#'
+			identifier: argument.type
+			count: 1
+			path: includes/rest/oauth/class-authorization-controller.php
+
+		-
 			message: '#^Method Activitypub\\Rest\\OAuth\\Clients_Controller\:\:register_routes\(\) has no return type specified\.$#'
 			identifier: missingType.return
+			count: 1
+			path: includes/rest/oauth/class-clients-controller.php
+
+		-
+			message: '#^Parameter \#1 \$response of function Activitypub\\maybe_set_no_store expects WP_REST_Response, WP_HTTP_Response given\.$#'
+			identifier: argument.type
 			count: 1
 			path: includes/rest/oauth/class-clients-controller.php
 
@@ -2635,9 +2749,15 @@ parameters:
 			path: includes/rest/oauth/class-token-controller.php
 
 		-
+			message: '#^Parameter \#1 \$response of function Activitypub\\maybe_set_no_store expects WP_REST_Response, WP_HTTP_Response given\.$#'
+			identifier: argument.type
+			count: 1
+			path: includes/rest/oauth/class-token-controller.php
+
+		-
 			message: '#^Action callback returns mixed but should not return anything\.$#'
 			identifier: return.void
-			count: 11
+			count: 15
 			path: includes/scheduler/class-actor.php
 
 		-
@@ -2813,6 +2933,18 @@ parameters:
 			identifier: argument.type
 			count: 3
 			path: includes/scheduler/class-post.php
+
+		-
+			message: '#^Method Activitypub\\Scheduler\\Quote_Request\:\:init\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: includes/scheduler/class-quote-request.php
+
+		-
+			message: '#^Method Activitypub\\Scheduler\\Quote_Request\:\:maybe_send_request\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: includes/scheduler/class-quote-request.php
 
 		-
 			message: '#^Method Activitypub\\Scheduler\\Statistics\:\:collect_all_monthly_stats\(\) has no return type specified\.$#'
@@ -3302,6 +3434,12 @@ parameters:
 
 		-
 			message: '#^Method Activitypub\\WP_Admin\\Blog_Settings_Fields\:\:init\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: includes/wp-admin/class-blog-settings-fields.php
+
+		-
+			message: '#^Method Activitypub\\WP_Admin\\Blog_Settings_Fields\:\:name_callback\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
 			path: includes/wp-admin/class-blog-settings-fields.php
