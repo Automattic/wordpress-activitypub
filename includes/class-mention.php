@@ -183,7 +183,7 @@ class Mention {
 		$links     = array();
 		$processor = new \WP_HTML_Tag_Processor( $content );
 
-		while ( $processor->next_tag( 'A' ) ) {
+		while ( $processor->next_tag( array( 'tag_name' => 'A' ) ) ) {
 			$rel = (string) $processor->get_attribute( 'rel' );
 			if ( ! $processor->has_class( 'mention' ) && ! \in_array( 'mention', \preg_split( '/\s+/', $rel ), true ) ) {
 				continue;

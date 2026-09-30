@@ -67,7 +67,7 @@ class Move {
 			$wpdb->update(
 				$wpdb->posts,
 				array( 'guid' => \sanitize_url( $target_uri ) ),
-				array( 'ID' => \sanitize_key( $origin_object->ID ) )
+				array( 'ID' => (int) $origin_object->ID )
 			);
 
 			// Clear the cache.

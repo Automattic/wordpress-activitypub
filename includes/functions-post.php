@@ -437,7 +437,7 @@ function get_post_id( $id ) {
 /**
  * Get the visibility of a post.
  *
- * @param int $post_id The post ID.
+ * @param int|\WP_Post $post_id The post ID or object.
  *
  * @return string|false The visibility of the post or false if not found.
  */

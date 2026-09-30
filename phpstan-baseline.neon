@@ -1,12 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Parameter \#2 \$value of method Activitypub\\Activity\\Base_Object\:\:set\(\) expects string, array given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/activity/class-activity.php
-
-		-
 			message: '#^Unable to resolve the template type TUrl in call to function wp_http_validate_url$#'
 			identifier: argument.templateType
 			count: 1
@@ -35,30 +29,6 @@ parameters:
 			identifier: booleanOr.alwaysTrue
 			count: 1
 			path: includes/cache/class-file.php
-
-		-
-			message: '#^Parameter \#1 \$post of function get_permalink expects int\|WP_Post, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/class-activitypub.php
-
-		-
-			message: '#^Parameter \#1 \$post_id of function add_post_meta expects int, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/class-activitypub.php
-
-		-
-			message: '#^Parameter \#1 \$post_id of function delete_post_meta expects int, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/class-activitypub.php
-
-		-
-			message: '#^Parameter \#1 \$text of function esc_attr expects string, int given\.$#'
-			identifier: argument.type
-			count: 3
-			path: includes/class-attachments.php
 
 		-
 			message: '#^Unable to resolve the template type TUrl in call to function wp_http_validate_url$#'
@@ -115,12 +85,6 @@ parameters:
 			path: includes/class-blocks.php
 
 		-
-			message: '#^Parameter \#1 \$query of method WP_HTML_Tag_Processor\:\:next_tag\(\) expects array\{tag_name\?\: string\|null, match_offset\?\: int\|null, class_name\?\: string\|null, tag_closers\?\: string\|null\}\|null, array\<string\> given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/class-blocks.php
-
-		-
 			message: '#^Parameter \$query of method Activitypub\\Blocks\:\:filter_query_loop_vars\(\) has invalid type Activitypub\\WP_Query\.$#'
 			identifier: class.notFound
 			count: 1
@@ -151,18 +115,6 @@ parameters:
 			path: includes/class-blurhash.php
 
 		-
-			message: '#^Parameter \#1 \$user of function user_can expects int\|WP_User, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/class-comment.php
-
-		-
-			message: '#^Parameter \#1 \$wp_comment_id of static method Activitypub\\Comment\:\:get_source_id\(\) expects int, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/class-comment.php
-
-		-
 			message: '#^Static method Activitypub\\Comment\:\:post_has_remote_comments\(\) is unused\.$#'
 			identifier: method.unused
 			count: 1
@@ -181,57 +133,9 @@ parameters:
 			path: includes/class-dispatcher.php
 
 		-
-			message: '#^Parameter \#2 \$actor_id of static method Activitypub\\Collection\\Followers\:\:get_inboxes_for_activity\(\) expects int, string given\.$#'
-			identifier: argument.type
-			count: 2
-			path: includes/class-dispatcher.php
-
-		-
-			message: '#^Parameter \#2 \$actor_id of static method Activitypub\\Dispatcher\:\:send_to_additional_inboxes\(\) expects int, string given\.$#'
-			identifier: argument.type
-			count: 2
-			path: includes/class-dispatcher.php
-
-		-
-			message: '#^Parameter \#3 \$user_id of function Activitypub\\safe_remote_post expects int, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/class-dispatcher.php
-
-		-
-			message: '#^Parameter \#1 \$post of function get_permalink expects int\|WP_Post, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/class-mailer.php
-
-		-
-			message: '#^Parameter \#1 \$wp_comment_id of static method Activitypub\\Comment\:\:get_source_url\(\) expects int, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/class-mailer.php
-
-		-
-			message: '#^Parameter \#2 \$user of function get_user_option expects int, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/class-mailer.php
-
-		-
-			message: '#^Parameter \#1 \$query of method WP_HTML_Tag_Processor\:\:next_tag\(\) expects array\{tag_name\?\: string\|null, match_offset\?\: int\|null, class_name\?\: string\|null, tag_closers\?\: string\|null\}\|null, ''A'' given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/class-mention.php
-
-		-
 			message: '#^Expected 1 @param tags, found 4\.$#'
 			identifier: paramTag.count
 			count: 1
-			path: includes/class-migration.php
-
-		-
-			message: '#^Parameter \#3 \$user_id of static method Activitypub\\Migration\:\:add_to_outbox\(\) expects int, string given\.$#'
-			identifier: argument.type
-			count: 3
 			path: includes/class-migration.php
 
 		-
@@ -301,12 +205,6 @@ parameters:
 			path: includes/class-query.php
 
 		-
-			message: '#^Parameter \#1 \$id of function Activitypub\\get_user_id expects int, string\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/class-query.php
-
-		-
 			message: '#^Property Activitypub\\Query\:\:\$is_activitypub_request \(bool\) in isset\(\) is not nullable\.$#'
 			identifier: isset.property
 			count: 1
@@ -355,52 +253,16 @@ parameters:
 			path: includes/class-sanitize.php
 
 		-
-			message: '#^Parameter \#2 \$callback of function array_filter expects \(callable\(string\)\: bool\)\|null, ''strlen'' given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/class-sanitize.php
-
-		-
 			message: '#^Call to function is_wp_error\(\) with non\-empty\-array\<mixed, mixed\> will always evaluate to false\.$#'
 			identifier: function.impossibleType
 			count: 2
 			path: includes/class-scheduler.php
 
 		-
-			message: '#^Method Activitypub\\Search\:\:try_import_activitypub_object\(\) should return int\|false but returns non\-falsy\-string\.$#'
-			identifier: return.type
-			count: 1
-			path: includes/class-search.php
-
-		-
 			message: '#^Unable to resolve the template type TUrl in call to function wp_http_validate_url$#'
 			identifier: argument.templateType
 			count: 1
 			path: includes/class-search.php
-
-		-
-			message: '#^Parameter \#2 \$user_id of function get_the_author_meta expects int\|false, string given\.$#'
-			identifier: argument.type
-			count: 2
-			path: includes/class-shortcodes.php
-
-		-
-			message: '#^Parameter \#3 \$user_id of function Activitypub\\add_to_outbox expects int, string given\.$#'
-			identifier: argument.type
-			count: 2
-			path: includes/cli/class-comment-command.php
-
-		-
-			message: '#^Parameter \#3 \$user_id of function Activitypub\\add_to_outbox expects int, string given\.$#'
-			identifier: argument.type
-			count: 2
-			path: includes/cli/class-post-command.php
-
-		-
-			message: '#^Parameter \#1 \$query of method WP_HTML_Tag_Processor\:\:next_tag\(\) expects array\{tag_name\?\: string\|null, match_offset\?\: int\|null, class_name\?\: string\|null, tag_closers\?\: string\|null\}\|null, ''A'' given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/collection/class-extra-fields.php
 
 		-
 			message: '#^Call to function is_wp_error\(\) with non\-empty\-array\<mixed, mixed\> will always evaluate to false\.$#'
@@ -433,25 +295,13 @@ parameters:
 			path: includes/collection/class-interactions.php
 
 		-
-			message: '#^Parameter \#2 \$parent_comment_id of static method Activitypub\\Collection\\Interactions\:\:resolve_post_id\(\) expects int, string\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/collection/class-interactions.php
-
-		-
 			message: '#^Argument of an invalid type stdClass supplied for foreach, only iterables are supported\.$#'
 			identifier: foreach.nonIterable
 			count: 1
 			path: includes/collection/class-outbox.php
 
 		-
-			message: '#^Parameter \#3 \$user_id of function Activitypub\\add_to_outbox expects int, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/collection/class-outbox.php
-
-		-
-			message: '#^Parameter \#1 \$post_id of function Activitypub\\get_content_visibility expects int, array given\.$#'
+			message: '#^Parameter \#1 \$post_id of function Activitypub\\get_content_visibility expects int\|WP_Post, array given\.$#'
 			identifier: argument.type
 			count: 2
 			path: includes/collection/class-posts.php
@@ -475,40 +325,10 @@ parameters:
 			path: includes/collection/class-remote-posts.php
 
 		-
-			message: '#^Parameter \#1 \$user_id of static method Activitypub\\Collection\\Actors\:\:get_by_id\(\) expects int, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/collection/class-replies.php
-
-		-
-			message: '#^Parameter \#1 \$wp_comment_id of static method Activitypub\\Comment\:\:get_source_id\(\) expects int, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/collection/class-replies.php
-
-		-
-			message: '#^@param Activitypub\\Activity\\Activity \$activity does not accept actual type of parameter\: Activitypub\\Activity\\Base_Object\.$#'
-			identifier: parameter.phpDocType
-			count: 1
-			path: includes/functions-federation.php
-
-		-
 			message: '#^Function Activitypub\\add_to_outbox\(\) should return bool\|int but returns WP_Error\.$#'
 			identifier: return.type
 			count: 1
 			path: includes/functions-federation.php
-
-		-
-			message: '#^Parameter \#1 \$activity of static method Activitypub\\Collection\\Outbox\:\:add\(\) expects Activitypub\\Activity\\Activity, Activitypub\\Activity\\Base_Object given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/functions-federation.php
-
-		-
-			message: '#^Parameter \#1 \$query of method WP_HTML_Tag_Processor\:\:next_tag\(\) expects array\{tag_name\?\: string\|null, match_offset\?\: int\|null, class_name\?\: string\|null, tag_closers\?\: string\|null\}\|null, ''IMG'' given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/functions-media.php
 
 		-
 			message: '#^Result of && is always false\.$#'
@@ -523,12 +343,6 @@ parameters:
 			path: includes/functions.php
 
 		-
-			message: '#^Parameter \#3 \$user_id of function Activitypub\\add_to_outbox expects int, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/handler/class-accept.php
-
-		-
 			message: '#^Expected 1 @param tags, found 3\.$#'
 			identifier: paramTag.count
 			count: 1
@@ -539,48 +353,6 @@ parameters:
 			identifier: return.void
 			count: 2
 			path: includes/handler/class-delete.php
-
-		-
-			message: '#^Parameter \#3 \$user_id of function Activitypub\\add_to_outbox expects int, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/handler/class-delete.php
-
-		-
-			message: '#^Parameter \#1 \$key of function sanitize_key expects string, int\<0, max\> given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/handler/class-move.php
-
-		-
-			message: '#^@param int \$post_id does not accept actual type of parameter\: non\-falsy\-string&numeric\-string\.$#'
-			identifier: parameter.phpDocType
-			count: 1
-			path: includes/handler/class-quote-request.php
-
-		-
-			message: '#^Parameter \#1 \$post of function get_permalink expects int\|WP_Post, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/handler/class-quote-request.php
-
-		-
-			message: '#^Parameter \#1 \$post_id of function delete_post_meta expects int, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/handler/class-quote-request.php
-
-		-
-			message: '#^Parameter \#2 \$user_id of static method Activitypub\\Handler\\Quote_Request\:\:queue_reject\(\) expects int, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/handler/class-quote-request.php
-
-		-
-			message: '#^Parameter \#3 \$user_id of function Activitypub\\add_to_outbox expects int, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/handler/class-reject.php
 
 		-
 			message: '#^@param string\|WP_Comment \$result does not accept actual type of parameter\: bool\|WP_Error\.$#'
@@ -649,18 +421,6 @@ parameters:
 			path: includes/oauth/class-token.php
 
 		-
-			message: '#^Parameter \#1 \$response of function Activitypub\\maybe_set_no_store expects WP_REST_Response, WP_HTTP_Response given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/rest/class-actors-controller.php
-
-		-
-			message: '#^Parameter \#1 \$response of function Activitypub\\maybe_set_no_store expects WP_REST_Response, WP_HTTP_Response given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/rest/class-interaction-controller.php
-
-		-
 			message: '#^Call to function is_wp_error\(\) with array\{id\: mixed, type\: ''OrderedCollection'', totalItems\: int\<0, max\>, orderedItems\: mixed, ''@context''\: mixed\} will always evaluate to false\.$#'
 			identifier: function.impossibleType
 			count: 1
@@ -673,20 +433,8 @@ parameters:
 			path: includes/rest/class-moderators-controller.php
 
 		-
-			message: '#^Comparison operation "\>" between \*NEVER\* and 0 results in an error\.$#'
-			identifier: greater.invalid
-			count: 1
-			path: includes/rest/class-outbox-controller.php
-
-		-
 			message: '#^Method Activitypub\\Rest\\Outbox_Controller\:\:prepare_item_for_response\(\) should return array but returns WP_Error\.$#'
 			identifier: return.type
-			count: 1
-			path: includes/rest/class-outbox-controller.php
-
-		-
-			message: '#^Parameter \#1 \$wp_object of function Activitypub\\get_object_id expects WP_Comment\|WP_Post, array given\.$#'
-			identifier: argument.type
 			count: 1
 			path: includes/rest/class-outbox-controller.php
 
@@ -697,28 +445,10 @@ parameters:
 			path: includes/rest/class-outbox-controller.php
 
 		-
-			message: '#^Parameter \#1 \$response of function Activitypub\\maybe_set_no_store expects WP_REST_Response, WP_HTTP_Response given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/rest/class-proxy-controller.php
-
-		-
 			message: '#^Left side of && is always false\.$#'
 			identifier: booleanAnd.leftAlwaysFalse
 			count: 1
 			path: includes/rest/class-server.php
-
-		-
-			message: '#^Parameter \#1 \$response of function Activitypub\\maybe_set_no_store expects WP_REST_Response, WP_HTTP_Response given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/rest/oauth/class-authorization-controller.php
-
-		-
-			message: '#^Parameter \#1 \$response of function Activitypub\\maybe_set_no_store expects WP_REST_Response, WP_HTTP_Response given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/rest/oauth/class-clients-controller.php
 
 		-
 			message: '#^Method Activitypub\\Rest\\OAuth\\Token_Controller\:\:handle_authorization_code_grant\(\) never returns WP_Error so it can be removed from the return type\.$#'
@@ -729,12 +459,6 @@ parameters:
 		-
 			message: '#^Method Activitypub\\Rest\\OAuth\\Token_Controller\:\:handle_refresh_token_grant\(\) never returns WP_Error so it can be removed from the return type\.$#'
 			identifier: return.unusedType
-			count: 1
-			path: includes/rest/oauth/class-token-controller.php
-
-		-
-			message: '#^Parameter \#1 \$response of function Activitypub\\maybe_set_no_store expects WP_REST_Response, WP_HTTP_Response given\.$#'
-			identifier: argument.type
 			count: 1
 			path: includes/rest/oauth/class-token-controller.php
 
@@ -751,46 +475,10 @@ parameters:
 			path: includes/scheduler/class-actor.php
 
 		-
-			message: '#^Parameter \#1 \$user_id of static method Activitypub\\Scheduler\\Actor\:\:schedule_profile_update\(\) expects int, string given\.$#'
-			identifier: argument.type
-			count: 2
-			path: includes/scheduler/class-actor.php
-
-		-
-			message: '#^Parameter \#2 \$cached of static method Activitypub\\Http\:\:get_remote_object\(\) expects bool, int given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/scheduler/class-collection-sync.php
-
-		-
 			message: '#^If condition is always false\.$#'
 			identifier: if.alwaysFalse
 			count: 1
 			path: includes/scheduler/class-comment.php
-
-		-
-			message: '#^Parameter \#1 \$comment_id of function update_comment_meta expects int, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/scheduler/class-comment.php
-
-		-
-			message: '#^Parameter \#3 \$user_id of function Activitypub\\add_to_outbox expects int, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/scheduler/class-comment.php
-
-		-
-			message: '#^Parameter \#1 \$user_id of static method Activitypub\\Collection\\Actors\:\:get_by_id\(\) expects int, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/scheduler/class-post.php
-
-		-
-			message: '#^Parameter \#3 \$user_id of function Activitypub\\add_to_outbox expects int, string given\.$#'
-			identifier: argument.type
-			count: 3
-			path: includes/scheduler/class-post.php
 
 		-
 			message: '#^Method Activitypub\\Signature\\Http_Signature_Draft\:\:get_signed_data\(\) should return string but returns false\.$#'
@@ -835,18 +523,6 @@ parameters:
 			path: includes/transformer/class-base.php
 
 		-
-			message: '#^Parameter \#1 \$query of method WP_HTML_Tag_Processor\:\:next_tag\(\) expects array\{tag_name\?\: string\|null, match_offset\?\: int\|null, class_name\?\: string\|null, tag_closers\?\: string\|null\}\|null, ''img'' given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/transformer/class-base.php
-
-		-
-			message: '#^Parameter \#1 \$text of function esc_attr expects string, int\<1, max\> given\.$#'
-			identifier: argument.type
-			count: 2
-			path: includes/transformer/class-base.php
-
-		-
 			message: '#^Unsafe usage of new static\(\)\.$#'
 			identifier: new.static
 			count: 1
@@ -859,106 +535,16 @@ parameters:
 			path: includes/transformer/class-comment.php
 
 		-
-			message: '#^Parameter \#1 \$post of function get_permalink expects int\|WP_Post, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/transformer/class-comment.php
-
-		-
-			message: '#^Parameter \#1 \$user_id of static method Activitypub\\Collection\\Actors\:\:get_by_id\(\) expects int, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/transformer/class-comment.php
-
-		-
-			message: '#^Parameter \#1 \$wp_comment_id of static method Activitypub\\Comment\:\:get_source_id\(\) expects int, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/transformer/class-comment.php
-
-		-
-			message: '#^Parameter \#1 \$post_id of function Activitypub\\get_content_visibility expects int, Activitypub\\Activity\\Base_Object\|array\|string\|WP_Comment\|WP_Post\|WP_Term given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/transformer/class-post.php
-
-		-
-			message: '#^Parameter \#1 \$user_id of static method Activitypub\\Collection\\Actors\:\:get_by_id\(\) expects int, string\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/transformer/class-post.php
-
-		-
 			message: '#^Access to an undefined property Activitypub\\Activity\\Base_Object\:\:\$@context\.$#'
 			identifier: property.notFound
 			count: 1
 			path: includes/transformer/class-term.php
 
 		-
-			message: '#^Parameter \#1 \$text of function esc_attr expects string, int given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/wp-admin/class-blog-settings-fields.php
-
-		-
-			message: '#^Parameter \#1 \$text of function esc_attr expects string, int given\.$#'
-			identifier: argument.type
-			count: 5
-			path: includes/wp-admin/class-health-check.php
-
-		-
-			message: '#^Parameter \#1 \$text of function esc_html expects string, int given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/wp-admin/class-settings-fields.php
-
-		-
 			message: '#^Right side of && is always false\.$#'
 			identifier: booleanAnd.rightAlwaysFalse
 			count: 1
 			path: includes/wp-admin/class-settings-fields.php
-
-		-
-			message: '#^Parameter \#1 \$text of function esc_attr expects string, int given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/wp-admin/class-user-settings-fields.php
-
-		-
-			message: '#^Parameter \#1 \$text of function esc_attr expects string, int\<0, max\> given\.$#'
-			identifier: argument.type
-			count: 3
-			path: includes/wp-admin/class-user-settings-fields.php
-
-		-
-			message: '#^Parameter \#1 \$text of function esc_attr expects string, float given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/wp-admin/class-welcome-fields.php
-
-		-
-			message: '#^Parameter \#1 \$id of function wp_import_cleanup expects string, int given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/wp-admin/import/class-mastodon.php
-
-		-
-			message: '#^Parameter \#1 \$text of function esc_attr expects string, int given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/wp-admin/import/class-mastodon.php
-
-		-
-			message: '#^Parameter \#1 \$id of function wp_import_cleanup expects string, int given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/wp-admin/import/class-starter-kit.php
-
-		-
-			message: '#^Parameter \#1 \$text of function esc_attr expects string, int given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/wp-admin/import/class-starter-kit.php
 
 		-
 			message: '#^Static property Activitypub\\WP_Admin\\Import\\Starter_Kit\:\:\$blog_user_filter_callback \(callable\(\)\: mixed\) does not accept null\.$#'
@@ -977,42 +563,6 @@ parameters:
 			identifier: assign.propertyType
 			count: 1
 			path: includes/wp-admin/import/class-starter-kit.php
-
-		-
-			message: '#^Parameter \#1 \$args of method WP_List_Table\:\:set_pagination_args\(\) expects array\{total_items\?\: int, total_pages\?\: int, per_page\?\: int\}, array\{total_items\: mixed, total_pages\: float, per_page\: int\} given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/wp-admin/table/class-blocked-actors.php
-
-		-
-			message: '#^Parameter \#3 \$value of static method Activitypub\\Moderation\:\:remove_user_block\(\) expects string, int given\.$#'
-			identifier: argument.type
-			count: 2
-			path: includes/wp-admin/table/class-blocked-actors.php
-
-		-
-			message: '#^Parameter \#1 \$args of method WP_List_Table\:\:set_pagination_args\(\) expects array\{total_items\?\: int, total_pages\?\: int, per_page\?\: int\}, array\{total_items\: mixed, total_pages\: float, per_page\: int\} given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/wp-admin/table/class-followers.php
-
-		-
-			message: '#^Parameter \#1 \$args of method WP_List_Table\:\:set_pagination_args\(\) expects array\{total_items\?\: int, total_pages\?\: int, per_page\?\: int\}, array\{total_items\: mixed, total_pages\: float, per_page\: int\} given\.$#'
-			identifier: argument.type
-			count: 1
-			path: includes/wp-admin/table/class-following.php
-
-		-
-			message: '#^Parameter \#1 \$post_id of static method Activitypub\\Integration\\Enable_Mastodon_Apps\:\:api_post_status\(\) expects int, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: integration/class-enable-mastodon-apps.php
-
-		-
-			message: '#^Parameter \#1 \$user_data of static method Activitypub\\Integration\\Enable_Mastodon_Apps\:\:api_account_internal\(\) expects Enable_Mastodon_Apps\\Entity\\Account, null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: integration/class-enable-mastodon-apps.php
 
 		-
 			message: '#^Parameter \#1 \$user_id of static method Activitypub\\Collection\\Followers\:\:count\(\) expects int, string given\.$#'

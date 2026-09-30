@@ -129,7 +129,7 @@ class Mailer {
 
 		// For quotes, link to the quoting post itself so the author can review and respond.
 		if ( 'quote' === $comment->comment_type ) {
-			$quote_url = Comment::get_source_url( $comment->comment_ID );
+			$quote_url = Comment::get_source_url( (int) $comment->comment_ID );
 
 			if ( $quote_url ) {
 				/* translators: Quoting post URL. */
@@ -140,7 +140,7 @@ class Mailer {
 		$notify_message .= "\r\n";
 		/* translators: Comment type label */
 		$notify_message .= \sprintf( \esc_html__( 'You can see all %s on this post here:', 'activitypub' ), \esc_html( $comment_type['label'] ) ) . "\r\n";
-		$notify_message .= \get_permalink( $comment->comment_post_ID ) . '#' . \esc_attr( $comment_type['type'] ) . "\r\n\r\n";
+		$notify_message .= \get_permalink( (int) $comment->comment_post_ID ) . '#' . \esc_attr( $comment_type['type'] ) . "\r\n\r\n";
 
 		return $notify_message;
 	}
@@ -597,6 +597,6 @@ class Mailer {
 			return $maybe_notify;
 		}
 
-		return (bool) \get_user_option( 'activitypub_mailer_new_reaction', $post->post_author );
+		return (bool) \get_user_option( 'activitypub_mailer_new_reaction', (int) $post->post_author );
 	}
 }

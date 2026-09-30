@@ -40,7 +40,7 @@ function object_id_to_comment( $id, $args = array() ) {
  *
  * @param string $url The URL to check.
  *
- * @return string|null Comment ID or null if not found
+ * @return int|null Comment ID or null if not found
  */
 function url_to_commentid( $url ) {
 	return Comment::url_to_commentid( $url );

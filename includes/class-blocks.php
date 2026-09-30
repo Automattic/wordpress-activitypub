@@ -1114,9 +1114,9 @@ class Blocks {
 	/**
 	 * Add Interactivity directions to the specified element.
 	 *
-	 * @param string   $content    The block content.
-	 * @param string[] $selector   The selector for the element to add directions to.
-	 * @param string[] $attributes The attributes to add to the element.
+	 * @param string                                        $content    The block content.
+	 * @param array{tag_name?: string, class_name?: string} $selector   The tag processor query for the element to add directions to.
+	 * @param string[]                                      $attributes The attributes to add to the element.
 	 *
 	 * @return string The updated content.
 	 */

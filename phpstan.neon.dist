@@ -17,6 +17,9 @@ parameters:
 	scanFiles:
 		- tests/phpstan/stubs/wp-cli.php
 		- tests/phpstan/stubs/wp-cli-utils.php
+	stubFiles:
+		# Core documents the escaping functions as taking a string, but they convert any scalar.
+		- tests/phpstan/stubs/escaping.stub
 	treatPhpDocTypesAsCertain: false
 	# The baseline matches by message, path and count. Fixing one occurrence in an
 	# old file must not fail the run, so the baseline only ever shrinks.

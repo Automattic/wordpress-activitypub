@@ -157,6 +157,12 @@ function add_to_outbox( $data, $activity_type = null, $user_id = 0, $content_vis
 		$activity = $transformer->to_activity( $activity_type );
 		$activity->set_actor( Actors::get_by_id( $user_id )->get_id() );
 	} else {
+		/**
+		 * Without an Activity type, `$data` is already an Activity, and its transformer
+		 * hands it back as one.
+		 *
+		 * @var Activity $activity
+		 */
 		$activity = $transformer->to_object();
 	}
 

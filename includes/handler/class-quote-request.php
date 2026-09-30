@@ -139,7 +139,7 @@ class Quote_Request {
 		}
 
 		// Get the post being quoted.
-		$post_id = $comment->comment_post_ID;
+		$post_id = (int) $comment->comment_post_ID;
 		if ( ! $post_id ) {
 			return;
 		}
@@ -190,7 +190,7 @@ class Quote_Request {
 		\delete_post_meta( $post_id, '_activitypub_quoted_by', $instrument_url );
 
 		// Send Reject activity to revoke the quote permission.
-		self::queue_reject( $activity_object, $post->post_author );
+		self::queue_reject( $activity_object, (int) $post->post_author );
 
 		/**
 		 * Fires after a quote comment has been deleted and Reject activity sent.

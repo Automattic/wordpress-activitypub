@@ -94,7 +94,7 @@ class Comment {
 			$type = 'Create';
 		} elseif ( 'approved' === $new_status ) {
 			$type = 'Update';
-			\update_comment_meta( $comment->comment_ID, 'activitypub_comment_modified', \time(), true );
+			\update_comment_meta( (int) $comment->comment_ID, 'activitypub_comment_modified', \time(), true );
 		} elseif (
 			'trash' === $new_status ||
 			( 'delete' === $new_status && '' === $old_status ) || // Went through schedule_comment_delete_activity().
@@ -112,7 +112,7 @@ class Comment {
 			return;
 		}
 
-		add_to_outbox( $comment, $type, $comment->user_id );
+		add_to_outbox( $comment, $type, (int) $comment->user_id );
 	}
 
 	/**

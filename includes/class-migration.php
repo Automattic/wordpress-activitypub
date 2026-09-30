@@ -586,11 +586,11 @@ class Migration {
 		foreach ( $posts as $post ) {
 			$visibility = \get_post_meta( $post->ID, 'activitypub_content_visibility', true );
 
-			self::add_to_outbox( $post, 'Create', $post->post_author, $visibility );
+			self::add_to_outbox( $post, 'Create', (int) $post->post_author, $visibility );
 
 			// Add Update activity when the post has been modified.
 			if ( $post->post_modified !== $post->post_date ) {
-				self::add_to_outbox( $post, 'Update', $post->post_author, $visibility );
+				self::add_to_outbox( $post, 'Update', (int) $post->post_author, $visibility );
 			}
 		}
 
@@ -628,7 +628,7 @@ class Migration {
 		);
 
 		foreach ( $comments as $comment ) {
-			self::add_to_outbox( $comment, 'Create', $comment->user_id );
+			self::add_to_outbox( $comment, 'Create', (int) $comment->user_id );
 		}
 
 		if ( \count( $comments ) === $batch_size ) {

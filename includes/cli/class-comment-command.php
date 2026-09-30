@@ -55,7 +55,7 @@ class Comment_Command extends \WP_CLI_Command {
 		}
 
 		\WP_CLI::confirm( 'Do you really want to delete the Comment with the ID: ' . $args[0], $assoc_args );
-		add_to_outbox( $comment, 'Delete', $comment->user_id );
+		add_to_outbox( $comment, 'Delete', (int) $comment->user_id );
 		\WP_CLI::success( '"Delete" activity is queued.' );
 	}
 
@@ -93,7 +93,7 @@ class Comment_Command extends \WP_CLI_Command {
 			\WP_CLI::error( 'This comment was received via ActivityPub and cannot be deleted or updated.' );
 		}
 
-		$result = add_to_outbox( $comment, 'Update', $comment->user_id );
+		$result = add_to_outbox( $comment, 'Update', (int) $comment->user_id );
 
 		if ( \is_wp_error( $result ) ) {
 			\WP_CLI::error( $result->get_error_message() );

@@ -203,9 +203,9 @@ class Moderation {
 	/**
 	 * Remove a block for a user.
 	 *
-	 * @param int    $user_id The user ID.
-	 * @param string $type    The block type (actor, domain, keyword).
-	 * @param string $value   The value to unblock.
+	 * @param int        $user_id The user ID.
+	 * @param string     $type    The block type (actor, domain, keyword).
+	 * @param string|int $value   The value to unblock.
 	 * @return bool True on success, false on failure.
 	 */
 	public static function remove_user_block( $user_id, $type, $value ) {

@@ -176,7 +176,7 @@ class Delete {
 
 		\delete_post_meta( $post->ID, '_activitypub_quote_authorization' );
 
-		add_to_outbox( $post, 'Update', $post->post_author );
+		add_to_outbox( $post, 'Update', (int) $post->post_author );
 
 		/** This action is documented in includes/handler/class-delete.php */
 		\do_action( 'activitypub_handled_delete', $activity, (array) $user_ids, true, $post );

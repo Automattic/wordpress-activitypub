@@ -171,7 +171,7 @@ class Replies {
 		$post_uri = ( new Post_Transformer( $post ) )->to_id();
 		\array_unshift( $ids, $post_uri );
 
-		$author = Actors::get_by_id( $post->post_author );
+		$author = Actors::get_by_id( (int) $post->post_author );
 		if ( \is_wp_error( $author ) ) {
 			if ( is_user_type_disabled( 'blog' ) ) {
 				return false;
@@ -208,7 +208,7 @@ class Replies {
 				continue;
 			}
 
-			$public_comment_id = Comment::get_source_id( $comment->comment_ID );
+			$public_comment_id = Comment::get_source_id( (int) $comment->comment_ID );
 			if ( $public_comment_id ) {
 				$comment_ids[] = $public_comment_id;
 				continue;

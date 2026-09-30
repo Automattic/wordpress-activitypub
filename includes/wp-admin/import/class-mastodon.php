@@ -258,7 +258,7 @@ class Mastodon {
 		\wp_defer_comment_counting( false );
 
 		$wp_filesystem->delete( $import_folder, true );
-		\wp_import_cleanup( self::$import_id );
+		\wp_import_cleanup( (string) self::$import_id );
 
 		if ( \is_wp_error( $result ) ) {
 			echo '<p><strong>' . \esc_html( $error_message ) . '</strong><br />';

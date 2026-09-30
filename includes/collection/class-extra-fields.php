@@ -126,7 +126,7 @@ class Extra_Fields {
 				\class_exists( '\WP_HTML_Tag_Processor' )
 			) {
 				$tags = new \WP_HTML_Tag_Processor( $link_content );
-				$tags->next_tag( 'A' );
+				$tags->next_tag( array( 'tag_name' => 'A' ) );
 
 				if ( 'A' === $tags->get_tag() ) {
 					$attachment = array(

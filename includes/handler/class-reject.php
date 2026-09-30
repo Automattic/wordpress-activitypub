@@ -139,7 +139,7 @@ class Reject {
 		\update_post_meta( $post->ID, '_activitypub_quote_rejected', '1' );
 		\delete_post_meta( $post->ID, '_activitypub_quote_authorization' );
 
-		add_to_outbox( $post, 'Update', $post->post_author );
+		add_to_outbox( $post, 'Update', (int) $post->post_author );
 
 		/** This action is documented in includes/handler/class-reject.php */
 		\do_action( 'activitypub_handled_reject', $reject, (array) $user_ids, true, $post );

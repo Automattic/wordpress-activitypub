@@ -105,7 +105,7 @@ class Activitypub {
 	/**
 	 * Store permalink in meta, to send delete Activity.
 	 *
-	 * @param string $post_id The Post ID.
+	 * @param int $post_id The Post ID.
 	 *
 	 * @return void
 	 */
@@ -121,7 +121,7 @@ class Activitypub {
 	/**
 	 * Delete permalink from meta.
 	 *
-	 * @param string $post_id The Post ID.
+	 * @param int $post_id The Post ID.
 	 *
 	 * @return void
 	 */

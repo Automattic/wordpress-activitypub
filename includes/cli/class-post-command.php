@@ -50,7 +50,7 @@ class Post_Command extends \WP_CLI_Command {
 		}
 
 		\WP_CLI::confirm( 'Do you really want to delete the (Custom) Post with the ID: ' . $args[0], $assoc_args );
-		add_to_outbox( $post, 'Delete', $post->post_author );
+		add_to_outbox( $post, 'Delete', (int) $post->post_author );
 		\WP_CLI::success( '"Delete" activity is queued.' );
 	}
 
@@ -84,7 +84,7 @@ class Post_Command extends \WP_CLI_Command {
 			\WP_CLI::error( 'Post not found.' );
 		}
 
-		$result = add_to_outbox( $post, 'Update', $post->post_author );
+		$result = add_to_outbox( $post, 'Update', (int) $post->post_author );
 
 		if ( \is_wp_error( $result ) ) {
 			\WP_CLI::error( $result->get_error_message() );

@@ -232,8 +232,8 @@ class Interactions {
 	 *
 	 * @since unreleased
 	 *
-	 * @param string $url               The target URL.
-	 * @param int    $parent_comment_id Optional. The resolved parent comment ID.
+	 * @param string   $url               The target URL.
+	 * @param int|null $parent_comment_id Optional. The resolved parent comment ID.
 	 *
 	 * @return int The post ID, or 0 when the target is unknown.
 	 */

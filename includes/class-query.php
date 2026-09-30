@@ -444,7 +444,7 @@ class Query {
 			return false;
 		}
 
-		$user_uri = get_user_id( $post->post_author );
+		$user_uri = get_user_id( (int) $post->post_author );
 
 		if ( ! $user_uri ) {
 			return false;

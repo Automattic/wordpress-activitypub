@@ -453,7 +453,7 @@ abstract class Base {
 
 		// This linter warning is a false positive - we have to re-count each time here as we modify $images.
 		// phpcs:ignore Squiz.PHP.DisallowSizeFunctionsInLoops.Found
-		while ( $tags->next_tag( 'img' ) && ( \count( $images ) <= $max_images ) ) {
+		while ( $tags->next_tag( array( 'tag_name' => 'img' ) ) && ( \count( $images ) <= $max_images ) ) {
 			/**
 			 * Filter the image source URL.
 			 *

@@ -319,8 +319,8 @@ class Enable_Mastodon_Apps {
 	/**
 	 * Resolve internal accounts for Mastodon API
 	 *
-	 * @param Account $user_data The user data.
-	 * @param string  $user_id   The user id.
+	 * @param Account|null $user_data The user data.
+	 * @param string       $user_id   The user id.
 	 *
 	 * @return Account The filtered Account.
 	 */
@@ -1108,7 +1108,7 @@ class Enable_Mastodon_Apps {
 					continue;
 				}
 
-				$status = self::api_post_status( $comment->comment_post_ID );
+				$status = self::api_post_status( (int) $comment->comment_post_ID );
 				if ( ! $status ) {
 					continue;
 				}

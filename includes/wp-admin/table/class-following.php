@@ -230,8 +230,8 @@ class Following extends \WP_List_Table {
 		$this->items = array();
 		$this->set_pagination_args(
 			array(
-				'total_items' => $counter,
-				'total_pages' => \ceil( $counter / $per_page ),
+				'total_items' => (int) $counter,
+				'total_pages' => (int) \ceil( $counter / $per_page ),
 				'per_page'    => $per_page,
 			)
 		);

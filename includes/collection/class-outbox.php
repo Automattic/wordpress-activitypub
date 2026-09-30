@@ -301,7 +301,7 @@ class Outbox {
 		$activity->set_published( null );
 		$activity->set_updated( null );
 
-		return add_to_outbox( $activity, $type, $outbox_item->post_author, $visibility );
+		return add_to_outbox( $activity, $type, (int) $outbox_item->post_author, $visibility );
 	}
 
 	/**

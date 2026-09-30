@@ -514,7 +514,7 @@ class Starter_Kit {
 
 		\wp_suspend_cache_invalidation( false );
 
-		\wp_import_cleanup( self::$import_id );
+		\wp_import_cleanup( (string) self::$import_id );
 
 		if ( \is_wp_error( $result ) ) {
 			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html( $result->get_error_message() ) );

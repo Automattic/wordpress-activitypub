@@ -145,7 +145,7 @@ class Dispatcher {
 		}
 
 		// Send to mentioned and replied-to users. Everyone other than followers.
-		self::send_to_additional_inboxes( $activity, $outbox_item->post_author, $outbox_item );
+		self::send_to_additional_inboxes( $activity, (int) $outbox_item->post_author, $outbox_item );
 
 		if ( self::should_send_to_followers( $activity, $actor, $outbox_item ) ) {
 			\do_action(
@@ -192,7 +192,7 @@ class Dispatcher {
 		}
 
 		$json    = $activity->to_json();
-		$inboxes = Followers::get_inboxes_for_activity( $json, $outbox_item->post_author, $batch_size, $offset );
+		$inboxes = Followers::get_inboxes_for_activity( $json, (int) $outbox_item->post_author, $batch_size, $offset );
 		$retries = self::send_to_inboxes( $inboxes, $outbox_item_id );
 
 		// Retry failed inboxes.
@@ -300,7 +300,7 @@ class Dispatcher {
 			if ( is_same_domain( $inbox ) ) {
 				$result = self::send_to_local_inbox( $inbox, $json );
 			} else {
-				$result = safe_remote_post( $inbox, $json, $outbox_item->post_author );
+				$result = safe_remote_post( $inbox, $json, (int) $outbox_item->post_author );
 			}
 
 			if ( \is_wp_error( $result ) && \in_array( $result->get_error_code(), self::get_retry_error_codes(), true ) ) {
@@ -512,7 +512,7 @@ class Dispatcher {
 		);
 
 		if ( $send ) {
-			$followers = Followers::get_inboxes_for_activity( $activity->to_json(), $outbox_item->post_author );
+			$followers = Followers::get_inboxes_for_activity( $activity->to_json(), (int) $outbox_item->post_author );
 
 			// Only send if there are followers to send to.
 			$send = ! \is_countable( $followers ) || 0 < \count( $followers );
@@ -604,6 +604,6 @@ class Dispatcher {
 		}
 
 		// Send to mentioned and replied-to users. Everyone other than followers.
-		self::send_to_additional_inboxes( $activity, $outbox_item->post_author, $outbox_item );
+		self::send_to_additional_inboxes( $activity, (int) $outbox_item->post_author, $outbox_item );
 	}
 }

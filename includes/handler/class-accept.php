@@ -180,7 +180,7 @@ class Accept {
 		\update_post_meta( $post->ID, '_activitypub_quote_authorization', $stamp_uri );
 		\delete_post_meta( $post->ID, '_activitypub_quote_rejected' );
 
-		add_to_outbox( $post, 'Update', $post->post_author );
+		add_to_outbox( $post, 'Update', (int) $post->post_author );
 
 		/** This action is documented in includes/handler/class-accept.php */
 		\do_action( 'activitypub_handled_accept', $accept, (array) $user_ids, true, $post );

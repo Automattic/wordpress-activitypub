@@ -285,7 +285,7 @@ class Comment {
 		}
 
 		$comment = \get_comment( $comment );
-		$user_id = $comment->user_id;
+		$user_id = (int) $comment->user_id;
 
 		// Comments without user can't be federated.
 		if ( ! $user_id ) {
@@ -365,7 +365,7 @@ class Comment {
 	 *
 	 * @param string $url The URL to check.
 	 *
-	 * @return string|null Comment ID or null if not found.
+	 * @return int|null Comment ID or null if not found.
 	 */
 	public static function url_to_commentid( $url ) {
 		if ( ! $url || ! \filter_var( $url, \FILTER_VALIDATE_URL ) ) {
@@ -383,7 +383,7 @@ class Comment {
 					$comment = \get_comment( $params['c'] );
 
 					if ( $comment ) {
-						return $comment->comment_ID;
+						return (int) $comment->comment_ID;
 					}
 				}
 			}
@@ -408,7 +408,7 @@ class Comment {
 		$comments = $query->query( $args );
 
 		if ( $comments && \is_array( $comments ) ) {
-			return $comments[0]->comment_ID;
+			return (int) $comments[0]->comment_ID;
 		}
 
 		return null;
@@ -536,7 +536,7 @@ class Comment {
 		$comment = \get_comment( $comment );
 
 		// Show external comment ID if it exists.
-		$public_comment_link = self::get_source_id( $comment->comment_ID );
+		$public_comment_link = self::get_source_id( (int) $comment->comment_ID );
 
 		if ( $public_comment_link ) {
 			return $public_comment_link;

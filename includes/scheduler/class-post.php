@@ -159,7 +159,7 @@ class Post {
 			$type = 'Delete';
 		}
 
-		add_to_outbox( $post, $type, $post->post_author );
+		add_to_outbox( $post, $type, (int) $post->post_author );
 	}
 
 	/**
@@ -202,7 +202,7 @@ class Post {
 				return;
 		}
 
-		add_to_outbox( $post, $type, $post->post_author );
+		add_to_outbox( $post, $type, (int) $post->post_author );
 	}
 
 	/**
@@ -255,7 +255,7 @@ class Post {
 			return;
 		}
 
-		$actor = Actors::get_by_id( $post->post_author );
+		$actor = Actors::get_by_id( (int) $post->post_author );
 
 		if ( ! $actor || \is_wp_error( $actor ) ) {
 			return;
@@ -267,6 +267,6 @@ class Post {
 		$activity->set_object( get_post_id( $post->ID ) );
 		$activity->set_target( $actor->get_featured() );
 
-		add_to_outbox( $activity, null, $post->post_author );
+		add_to_outbox( $activity, null, (int) $post->post_author );
 	}
 }
