@@ -13,6 +13,20 @@ namespace Activitypub\Tests;
  * @coversDefaultClass \Activitypub
  */
 class Test_Functions_Media extends \WP_UnitTestCase {
+	/**
+	 * URLs read from HTML are decoded exactly once before becoming block attributes.
+	 *
+	 * @covers \Activitypub\process_remote_images
+	 */
+	public function test_process_remote_images_decodes_html_urls_once() {
+		foreach ( array( 'https://example.com/image.jpg?a=1&b=2', 'https://example.com/a&amp;b.jpg' ) as $url ) {
+			$html   = '<img src="' . \htmlspecialchars( $url, ENT_QUOTES, 'UTF-8', true ) . '" />';
+			$blocks = \parse_blocks( \Activitypub\process_remote_images( $html ) );
+			$this->assertTrue( $blocks[0]['attrs']['urlEncoded'] );
+			$this->assertSame( $url, \wp_specialchars_decode( $blocks[0]['attrs']['url'], ENT_QUOTES ) );
+		}
+	}
+
 
 	/**
 	 * Test process_remote_images wraps remote images.

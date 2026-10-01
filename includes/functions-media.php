@@ -57,8 +57,10 @@ function generate_image_block( $url, $img_html ) {
 	return \get_comment_delimited_block_content(
 		'activitypub/image',
 		array(
-			'url' => $url,
-			'alt' => $processor->get_attribute( 'alt' ) ?? '',
+			// Core runs block attribute strings through KSES when saving comments.
+			'url'        => \htmlspecialchars( $url, ENT_QUOTES, 'UTF-8', true ),
+			'urlEncoded' => true,
+			'alt'        => $processor->get_attribute( 'alt' ) ?? '',
 		),
 		$img_html
 	);
@@ -140,9 +142,12 @@ function process_remote_images( $content, $attachments = array() ) {
 				// Reconstruct img tag without the marker attribute.
 				$img_html = '<img ' . \trim( $matches[1] . $matches[2] ) . '>';
 
-				// Extract src URL from the img tag.
-				if ( \preg_match( '/src=["\']([^"\']+)["\']/', $img_html, $src_match ) ) {
-					return generate_image_block( $src_match[1], $img_html );
+				$processor = new \WP_HTML_Tag_Processor( $img_html );
+				if ( $processor->next_tag( array( 'tag_name' => 'IMG' ) ) ) {
+					$src = $processor->get_attribute( 'src' );
+					if ( \is_string( $src ) && $src ) {
+						return generate_image_block( $src, $img_html );
+					}
 				}
 
 				return $matches[0];
@@ -170,8 +175,8 @@ function process_remote_images( $content, $attachments = array() ) {
 
 			$alt     = ! empty( $attachment['alt'] ) ? \esc_attr( $attachment['alt'] ) : '';
 			$img_tag = $alt
-				? \sprintf( '<img src="%s" alt="%s" />', \esc_url( $url ), $alt )
-				: \sprintf( '<img src="%s" />', \esc_url( $url ) );
+				? \sprintf( '<img src="%s" alt="%s" />', \esc_url( \htmlspecialchars( $url, ENT_QUOTES, 'UTF-8', true ) ), $alt )
+				: \sprintf( '<img src="%s" />', \esc_url( \htmlspecialchars( $url, ENT_QUOTES, 'UTF-8', true ) ) );
 
 			$content          .= "\n\n" . generate_image_block( $url, $img_tag );
 			$seen_urls[ $url ] = true;

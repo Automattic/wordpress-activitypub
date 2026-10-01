@@ -228,8 +228,9 @@ class Blocks {
 			'activitypub/image',
 			array(
 				'attributes'      => array(
-					'url' => array( 'type' => 'string' ),
-					'alt' => array( 'type' => 'string' ),
+					'url'        => array( 'type' => 'string' ),
+					'urlEncoded' => array( 'type' => 'boolean' ),
+					'alt'        => array( 'type' => 'string' ),
 				),
 				'uses_context'    => array( 'postId' ),
 				'render_callback' => array( self::class, 'render_image_block' ),
@@ -657,11 +658,11 @@ class Blocks {
 			return $content;
 		}
 
-		$url       = \wp_specialchars_decode( $attrs['url'], ENT_QUOTES );
+		$url       = ! empty( $attrs['urlEncoded'] ) ? \wp_specialchars_decode( $attrs['url'], ENT_QUOTES ) : $attrs['url'];
 		$processor = new \WP_HTML_Tag_Processor( $content );
 		if ( isset( $attrs['alt'] ) && ( ! $processor->next_tag( array( 'tag_name' => 'IMG' ) ) || ! $processor->get_attribute( 'src' ) ) ) {
 			// Comment sanitization removes img attributes; retain them in the block instead.
-			$content = \sprintf( '<img src="%s" alt="%s" />', \esc_url( $url ), \esc_attr( $attrs['alt'] ) );
+			$content = \sprintf( '<img src="%s" alt="%s" />', \esc_url( \htmlspecialchars( $url, ENT_QUOTES, 'UTF-8', true ) ), \esc_attr( $attrs['alt'] ) );
 		}
 
 		// Get entity ID from context.
