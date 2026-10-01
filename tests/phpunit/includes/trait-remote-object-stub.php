@@ -7,6 +7,8 @@
 
 namespace Activitypub\Tests;
 
+use function Activitypub\object_to_uri;
+
 /**
  * Serves remote ActivityPub documents from an in-memory table.
  *
@@ -57,12 +59,13 @@ trait Remote_Object_Stub {
 	 * @return array|null The fixture, or the untouched response when there is none.
 	 */
 	public function serve_fixture( $response, $url_or_object ) {
-		if ( ! \is_string( $url_or_object ) ) {
+		$url = object_to_uri( $url_or_object );
+		if ( ! \is_string( $url ) ) {
 			return $response;
 		}
 
-		$this->requested[] = $url_or_object;
+		$this->requested[] = $url;
 
-		return $this->documents[ $url_or_object ] ?? $response;
+		return $this->documents[ $url ] ?? $response;
 	}
 }

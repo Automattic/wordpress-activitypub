@@ -19,8 +19,8 @@ use function Activitypub\is_collection;
  * context, to be iterated for backfill. That is the one shape which tells us what belongs to the
  * conversation, so a context resolving to anything else is not a source of objects here.
  *
- * When it is available this is the cheapest source by far: one collection for the whole
- * conversation, already in creation order, rather than a request per object.
+ * When it is available, one collection discovers the whole conversation without walking each
+ * object's ancestor or replies collection. The builder resolves its candidates separately.
  *
  * @since unreleased
  *
@@ -52,7 +52,10 @@ class Context implements Source {
 			return array();
 		}
 
-		$context = Http::get_remote_object( $activity_object['context'] );
+		$context = $activity_object['context'];
+		if ( ! \is_array( $context ) || ! is_collection( $context ) ) {
+			$context = Http::get_remote_object( $context );
+		}
 
 		if ( \is_wp_error( $context ) || ! \is_array( $context ) || ! is_collection( $context ) ) {
 			return array();

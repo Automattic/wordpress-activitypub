@@ -20,6 +20,43 @@ class Test_Context extends \WP_UnitTestCase {
 	use Remote_Object_Stub;
 
 	/**
+	 * An embedded collection is already available and need not be fetched again.
+	 *
+	 * @covers ::parse
+	 */
+	public function test_reads_an_embedded_context_collection() {
+		$object = array( 'id' => 'https://remote.example/notes/1' );
+		$items  = ( new Context() )->parse(
+			array(
+				'context' => array(
+					'id'    => 'https://remote.example/context/1',
+					'type'  => 'Collection',
+					'items' => array( $object ),
+				),
+			)
+		);
+		$this->assertSame( array( $object ), $items );
+		$this->assertSame( array(), $this->requested );
+	}
+
+	/**
+	 * A bare object reference still needs to be resolved.
+	 *
+	 * @covers ::parse
+	 */
+	public function test_resolves_a_context_object_reference() {
+		$uri                     = 'https://remote.example/context/1';
+		$this->documents[ $uri ] = array(
+			'id'    => $uri,
+			'type'  => 'Collection',
+			'items' => array( array( 'id' => 'https://remote.example/notes/1' ) ),
+		);
+		$items                   = ( new Context() )->parse( array( 'context' => array( 'id' => $uri ) ) );
+		$this->assertCount( 1, $items );
+		$this->assertSame( array( $uri ), $this->requested );
+	}
+
+	/**
 	 * An object with no context is not something this source can do anything with.
 	 *
 	 * @covers ::supports

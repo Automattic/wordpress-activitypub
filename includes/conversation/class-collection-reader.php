@@ -21,7 +21,7 @@ use Activitypub\Http;
 class Collection_Reader {
 
 	/**
-	 * How many documents one read may fetch.
+	 * How many documents one read may traverse, including embedded pages.
 	 *
 	 * Nothing obliges a remote server to end a collection, and a `next` pointing back at itself
 	 * is enough to make a reader fetch until the request dies. This is the reader's own floor;
@@ -49,26 +49,33 @@ class Collection_Reader {
 	 * @return array The items, in the order the collection listed them.
 	 */
 	public static function read( $collection ) {
-		$items = array();
-		$seen  = array();
-		$page  = self::fetch( $collection );
+		$items    = array();
+		$seen     = array();
+		$page     = self::fetch( $collection );
+		$requests = 1;
 
 		// Seeded whichever way the collection arrived, or a `next` naming the document we already
 		// hold is fetched once before the cycle guard notices. `Context` hands us a fetched array.
 		$id = \is_string( $collection ) ? $collection : ( $page['id'] ?? '' );
 
-		if ( $id ) {
+		if ( \is_string( $id ) && $id ) {
 			$seen[ $id ] = true;
 		}
 
 		while ( $page ) {
-			// Cast because JSON-LD compaction drops the array around a one-element list, so a
-			// conforming server may send a single item unwrapped.
-			$page_items = (array) ( $page['orderedItems'] ?? $page['items'] ?? array() );
-			$items      = \array_merge( $items, $page_items );
+			$page_items = $page['orderedItems'] ?? $page['items'] ?? array();
+			// JSON-LD may unwrap a single object or URI instead of returning a list.
+			if ( \is_string( $page_items ) || ( \is_array( $page_items ) && ! \array_is_list( $page_items ) ) ) {
+				$page_items = array( $page_items );
+			} elseif ( ! \is_array( $page_items ) ) {
+				$page_items = array();
+			}
 
-			if ( \count( $items ) >= self::MAX_ITEMS ) {
-				return \array_slice( $items, 0, self::MAX_ITEMS );
+			foreach ( $page_items as $item ) {
+				$items[] = $item;
+				if ( \count( $items ) >= self::MAX_ITEMS ) {
+					return $items;
+				}
 			}
 
 			/*
@@ -82,12 +89,19 @@ class Collection_Reader {
 			 * A repeat means a cycle. The request cap alone would stop it, but only after paying
 			 * for the whole budget, and it cannot tell a short loop from a long collection.
 			 */
-			if ( ! \is_string( $next ) || isset( $seen[ $next ] ) || \count( $seen ) >= self::MAX_REQUESTS ) {
+			if ( ( ! \is_string( $next ) && ! \is_array( $next ) ) || $requests >= self::MAX_REQUESTS ) {
 				break;
 			}
 
-			$seen[ $next ] = true;
-			$page          = self::fetch( $next );
+			$next_id = \is_string( $next ) ? $next : ( $next['id'] ?? '' );
+			if ( \is_string( $next_id ) && $next_id ) {
+				if ( isset( $seen[ $next_id ] ) ) {
+					break;
+				}
+				$seen[ $next_id ] = true;
+			}
+			$page = self::fetch( $next );
+			++$requests;
 		}
 
 		return $items;

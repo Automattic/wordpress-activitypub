@@ -20,6 +20,109 @@ class Test_Collection_Reader extends \WP_UnitTestCase {
 	use Remote_Object_Stub;
 
 	/**
+	 * JSON-LD can unwrap a single object as well as a single URI.
+	 *
+	 * @covers ::read
+	 */
+	public function test_reads_an_unwrapped_object() {
+		$object = array(
+			'id'   => 'https://remote.example/notes/1',
+			'type' => 'Note',
+		);
+		$this->assertSame(
+			array( $object ),
+			Collection_Reader::read(
+				array(
+					'type'  => 'Collection',
+					'items' => $object,
+				)
+			)
+		);
+	}
+
+	/**
+	 * Malformed scalar item values are ignored.
+	 *
+	 * @covers ::read
+	 */
+	public function test_ignores_invalid_scalar_items() {
+		$this->assertSame(
+			array(),
+			Collection_Reader::read(
+				array(
+					'type'  => 'Collection',
+					'items' => true,
+				)
+			)
+		);
+	}
+
+	/**
+	 * Reaching the item budget on a later page stops before fetching another page.
+	 *
+	 * @covers ::read
+	 */
+	public function test_stops_at_the_remaining_item_budget() {
+		$first  = \array_fill( 0, Collection_Reader::MAX_ITEMS - 1, 'https://remote.example/notes/1' );
+		$second = \array_fill( 0, Collection_Reader::MAX_ITEMS + 50, 'https://remote.example/notes/2' );
+		$this->documents['https://remote.example/page/2'] = array(
+			'type'  => 'CollectionPage',
+			'items' => $second,
+			'next'  => 'https://remote.example/page/3',
+		);
+		$items = Collection_Reader::read(
+			array(
+				'id'    => 'https://remote.example/page/1',
+				'type'  => 'CollectionPage',
+				'items' => $first,
+				'next'  => 'https://remote.example/page/2',
+			)
+		);
+		$this->assertCount( Collection_Reader::MAX_ITEMS, $items );
+		$this->assertSame( 'https://remote.example/notes/2', $items[ Collection_Reader::MAX_ITEMS - 1 ] );
+		$this->assertSame( array( 'https://remote.example/page/2' ), $this->requested );
+	}
+
+	/**
+	 * A collection can embed its first page instead of referring to it by URI.
+	 *
+	 * @covers ::read
+	 */
+	public function test_reads_an_embedded_first_page() {
+		$object = array( 'id' => 'https://remote.example/notes/1' );
+		$items  = Collection_Reader::read(
+			array(
+				'type'  => 'Collection',
+				'first' => array(
+					'type'  => 'CollectionPage',
+					'items' => array( $object ),
+				),
+			)
+		);
+		$this->assertSame( array( $object ), $items );
+		$this->assertSame( array(), $this->requested );
+	}
+
+	/**
+	 * Embedded pages without identifiers still count toward the traversal limit.
+	 *
+	 * @covers ::read
+	 */
+	public function test_bounds_anonymous_embedded_pages() {
+		$page = array();
+		for ( $i = 0; $i < Collection_Reader::MAX_REQUESTS + 2; ++$i ) {
+			$page = array(
+				'type'  => 'CollectionPage',
+				'items' => array( 'https://remote.example/notes/' . $i ),
+				'next'  => $page,
+			);
+		}
+
+		$this->assertCount( Collection_Reader::MAX_REQUESTS, Collection_Reader::read( $page ) );
+		$this->assertSame( array(), $this->requested );
+	}
+
+	/**
 	 * A single-page collection hands back its items.
 	 *
 	 * @covers ::read

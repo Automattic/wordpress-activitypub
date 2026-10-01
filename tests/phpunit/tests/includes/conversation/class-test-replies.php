@@ -20,6 +20,40 @@ class Test_Replies extends \WP_UnitTestCase {
 	use Remote_Object_Stub;
 
 	/**
+	 * URI items must be resolved to discover their own replies collections.
+	 *
+	 * @covers ::parse
+	 */
+	public function test_descends_into_uri_replies() {
+		$reply      = 'https://remote.example/notes/2';
+		$grandchild = 'https://remote.example/notes/3';
+		$this->documents['https://remote.example/notes/1/replies'] = array(
+			'type'  => 'Collection',
+			'first' => array(
+				'type'  => 'CollectionPage',
+				'items' => array( $reply ),
+			),
+		);
+		$this->documents[ $reply ]                                 = array(
+			'id'      => $reply,
+			'replies' => 'https://remote.example/notes/2/replies',
+		);
+		$this->documents['https://remote.example/notes/2/replies'] = array(
+			'type'  => 'Collection',
+			'items' => array( $grandchild ),
+		);
+		$this->documents[ $grandchild ]                            = array( 'id' => $grandchild );
+
+		$objects = ( new Replies() )->parse( array( 'replies' => 'https://remote.example/notes/1/replies' ) );
+
+		$this->assertSame( array( $reply, $grandchild ), \wp_list_pluck( $objects, 'id' ) );
+		$this->assertSame(
+			array( 'https://remote.example/notes/1/replies', $reply, 'https://remote.example/notes/2/replies', $grandchild ),
+			$this->requested
+		);
+	}
+
+	/**
 	 * An object with no replies collection is not something this source can use.
 	 *
 	 * @covers ::supports

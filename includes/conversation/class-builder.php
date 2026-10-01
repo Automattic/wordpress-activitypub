@@ -117,7 +117,13 @@ class Builder {
 					break;
 				}
 
-				$this->collect( $found, $collected );
+				$id = \is_array( $found ) ? ( $found['id'] ?? '' ) : $found;
+				if ( ! \is_string( $id ) || ! $id || isset( $collected[ $id ] ) ) {
+					continue;
+				}
+
+				// Collection membership is a claim; use the object served under its own id.
+				$this->collect( Http::get_remote_object( $id ), $collected );
 			}
 		}
 
@@ -129,6 +135,8 @@ class Builder {
 	 *
 	 * @param mixed $activity_object The object a source reported.
 	 * @param array $collected       The objects kept so far, keyed by id.
+	 *
+	 * @return void
 	 */
 	private function collect( $activity_object, &$collected ) {
 		if ( ! \is_array( $activity_object ) ) {
@@ -137,7 +145,7 @@ class Builder {
 
 		$id = $activity_object['id'] ?? '';
 
-		if ( ! $id || isset( $collected[ $id ] ) || ! $this->is_trustworthy( $activity_object ) ) {
+		if ( ! \is_string( $id ) || ! $id || isset( $collected[ $id ] ) || ! $this->is_trustworthy( $activity_object ) ) {
 			return;
 		}
 
@@ -205,7 +213,8 @@ class Builder {
 	 * @return int The Unix timestamp, or zero when there is no usable date.
 	 */
 	private static function published_at( $activity_object ) {
-		return (int) \strtotime( $activity_object['published'] ?? '' );
+		$published = $activity_object['published'] ?? '';
+		return \is_string( $published ) ? (int) \strtotime( $published ) : 0;
 	}
 
 	/**
@@ -215,6 +224,8 @@ class Builder {
 	 * @param array  $objects Every object in the conversation, keyed by id.
 	 * @param array  $ordered The objects placed so far.
 	 * @param array  $placed  Ids already placed, keyed by id.
+	 *
+	 * @return void
 	 */
 	private function place( $id, $objects, &$ordered, &$placed ) {
 		if ( ! isset( $objects[ $id ] ) || isset( $placed[ $id ] ) ) {

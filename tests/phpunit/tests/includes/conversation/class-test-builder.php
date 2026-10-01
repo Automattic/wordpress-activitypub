@@ -21,6 +21,50 @@ class Test_Builder extends \WP_UnitTestCase {
 	use Remote_Object_Stub;
 
 	/**
+	 * A malformed identifier must not become an array key.
+	 *
+	 * @covers ::build
+	 */
+	public function test_ignores_malformed_identifiers() {
+		$this->documents['https://remote.example/notes/1'] = array(
+			'id'           => 'https://remote.example/notes/1',
+			'attributedTo' => 'https://remote.example/users/alice',
+		);
+		$this->register_source(
+			array(
+				array(
+					'id'           => array( 'https://remote.example/notes/2' ),
+					'attributedTo' => 'https://remote.example/users/alice',
+				),
+			)
+		);
+		$this->assertCount( 1, ( new Builder( 'https://remote.example/notes/1' ) )->build() );
+	}
+
+	/**
+	 * A malformed date is treated as missing instead of passed to strtotime().
+	 *
+	 * @covers ::build
+	 */
+	public function test_ignores_malformed_publication_dates() {
+		$this->documents['https://remote.example/notes/1'] = array(
+			'id'           => 'https://remote.example/notes/1',
+			'attributedTo' => 'https://remote.example/users/alice',
+			'published'    => array( '2026-01-01T00:00:00Z' ),
+		);
+		$this->register_source(
+			array(
+				array(
+					'id'           => 'https://remote.example/notes/2',
+					'attributedTo' => 'https://remote.example/users/alice',
+					'published'    => '2026-02-01T00:00:00Z',
+				),
+			)
+		);
+		$this->assertCount( 2, ( new Builder( 'https://remote.example/notes/1' ) )->build() );
+	}
+
+	/**
 	 * Drop any source registered by a test before the next one runs.
 	 */
 	public function tear_down() {
@@ -37,6 +81,13 @@ class Test_Builder extends \WP_UnitTestCase {
 	 * @param string $name    Optional. The name to register it under. Default 'stub'.
 	 */
 	protected function register_source( $objects, $name = 'stub' ) {
+		foreach ( $objects as $object ) {
+			$id = \is_array( $object ) ? ( $object['id'] ?? null ) : null;
+			if ( \is_string( $id ) ) {
+				$this->documents[ $id ] = $object;
+			}
+		}
+
 		\add_filter(
 			'activitypub_conversation_sources',
 			function ( $sources ) use ( $objects, $name ) {
@@ -49,6 +100,64 @@ class Test_Builder extends \WP_UnitTestCase {
 				return $sources;
 			}
 		);
+	}
+
+	/**
+	 * Collections can list object URIs rather than embedded objects.
+	 *
+	 * @covers ::build
+	 */
+	public function test_resolves_uri_items_in_a_context_collection() {
+		$seed                      = 'https://remote.example/notes/1';
+		$reply                     = 'https://other.example/notes/2';
+		$this->documents[ $seed ]  = array(
+			'id'           => $seed,
+			'attributedTo' => 'https://remote.example/users/alice',
+			'context'      => array(
+				'type'  => 'Collection',
+				'items' => array( $reply ),
+			),
+		);
+		$this->documents[ $reply ] = array(
+			'id'           => $reply,
+			'attributedTo' => 'https://other.example/users/bob',
+			'inReplyTo'    => $seed,
+		);
+
+		$objects = ( new Builder( $seed ) )->build( array( 'context' ) );
+
+		$this->assertSame( array( $seed, $reply ), \wp_list_pluck( $objects, 'id' ) );
+		$this->assertSame( array( $seed, $reply ), $this->requested );
+	}
+
+	/**
+	 * A collection cannot substitute forged content for an object from another host.
+	 *
+	 * @covers ::build
+	 */
+	public function test_uses_the_canonical_object_instead_of_embedded_content() {
+		$seed                     = 'https://remote.example/notes/1';
+		$id                       = 'https://victim.example/notes/2';
+		$this->documents[ $seed ] = array(
+			'id'           => $seed,
+			'attributedTo' => 'https://remote.example/users/alice',
+		);
+		$this->register_source(
+			array(
+				array(
+					'id'           => $id,
+					'attributedTo' => 'https://victim.example/users/bob',
+					'content'      => 'Forged content.',
+				),
+			)
+		);
+		$this->documents[ $id ]['content'] = 'Canonical content.';
+
+		$objects = ( new Builder( $seed ) )->build();
+
+		$this->assertCount( 2, $objects );
+		$this->assertSame( 'Canonical content.', $objects[1]['content'] );
+		$this->assertSame( array( $seed, $id ), $this->requested );
 	}
 
 	/**

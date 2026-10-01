@@ -7,6 +7,8 @@
 
 namespace Activitypub\Conversation;
 
+use Activitypub\Http;
+
 use function Activitypub\object_to_uri;
 
 /**
@@ -96,6 +98,10 @@ class Replies implements Source {
 		$found        = array();
 
 		foreach ( Collection_Reader::read( $uri ) as $reply ) {
+			if ( \is_string( $reply ) ) {
+				$reply = Http::get_remote_object( $reply );
+			}
+
 			if ( ! \is_array( $reply ) ) {
 				continue;
 			}
