@@ -420,4 +420,85 @@ class Test_File extends WP_UnitTestCase {
 			Avatar::remove_duplicates( Avatar::get_storage_paths( 'nope' )['basedir'], true )
 		);
 	}
+
+	/**
+	 * A heavily duplicated hash uses bounded memory and keeps its newest copy.
+	 *
+	 * @covers \Activitypub\Cache\File::remove_duplicates
+	 */
+	public function test_remove_duplicates_bounds_memory_with_many_copies() {
+		require_once ABSPATH . 'wp-admin/includes/class-wp-filesystem-base.php';
+		require_once ABSPATH . 'wp-admin/includes/class-wp-filesystem-direct.php';
+
+		$cache              = new class() extends Avatar {
+			/**
+			 * Filesystem used to measure memory during cleanup.
+			 *
+			 * @var \WP_Filesystem_Direct
+			 */
+			public static $filesystem;
+
+			/**
+			 * Get the measuring filesystem.
+			 *
+			 * @return \WP_Filesystem_Direct The filesystem.
+			 */
+			protected static function get_filesystem() {
+				return self::$filesystem;
+			}
+		};
+		$cache::$filesystem = new class( null ) extends \WP_Filesystem_Direct {
+			/**
+			 * Memory usage when the survivor is promoted, before copies are removed.
+			 *
+			 * @var int
+			 */
+			public $memory = 0;
+
+			/**
+			 * Measure memory and move the survivor.
+			 *
+			 * @param string $source      Source path.
+			 * @param string $destination Destination path.
+			 * @param bool   $overwrite   Whether to overwrite. Default false.
+			 * @return bool Whether the move succeeded.
+			 */
+			public function move( $source, $destination, $overwrite = false ) {
+				$this->memory = \memory_get_usage();
+				return parent::move( $source, $destination, $overwrite );
+			}
+		};
+
+		$dir    = Avatar::get_storage_paths( 'dedupe-many' )['basedir'];
+		$hash   = \md5( 'https://example.com/many.webp' );
+		$copies = 10000;
+		\wp_mkdir_p( $dir );
+
+		try {
+			for ( $n = 1; $n <= $copies; ++$n ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+				\file_put_contents( "{$dir}/{$hash}-{$n}.webp", 'image' );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_touch -- Ensure counters break equal modification times.
+				\touch( "{$dir}/{$hash}-{$n}.webp", 1000000000 );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			\file_put_contents( "{$dir}/{$hash}-{$copies}.webp", 'newest' );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_touch -- Keep the tie deterministic.
+			\touch( "{$dir}/{$hash}-{$copies}.webp", 1000000000 );
+
+			$before = \memory_get_usage();
+			$result = $cache::remove_duplicates( $dir, true );
+
+			$this->assertLessThan( 2 * MB_IN_BYTES, $cache::$filesystem->memory - $before, 'Memory must not grow with the number of copies of one hash.' );
+			$this->assertSame( $copies - 1, $result['removed'] );
+			$this->assertSame( 5 * ( $copies - 1 ), $result['bytes'] );
+			$this->assertSame( 1, $result['promoted'] );
+			$this->assertSame( 0, $result['failed'] );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			$this->assertSame( 'newest', \file_get_contents( "{$dir}/{$hash}.webp" ) );
+			$this->assertCount( 1, \glob( "{$dir}/*" ) );
+		} finally {
+			Avatar::delete_directory( $dir );
+		}
+	}
 }

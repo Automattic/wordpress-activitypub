@@ -349,8 +349,8 @@ abstract class File {
 	 * move fails is left as it is, copies included, so a later run finds it again, and the failure is
 	 * counted.
 	 *
-	 * Directories are handled one at a time, subdirectories first, so a cache of any size is never held
-	 * in memory at once and what one directory freed stays freed even if the run dies in the next.
+	 * Each directory is scanned twice, retaining only the newest copy per hash rather than every
+	 * duplicate. Subdirectories are cleaned before this directory's files are removed.
 	 *
 	 * @since unreleased
 	 *
@@ -379,82 +379,95 @@ abstract class File {
 			return $result;
 		}
 
-		/*
-		 * `glob()` answers an empty list for a directory that vanished a moment ago, where an iterator
-		 * would throw, which is what a live cache needs: entity directories come and go while this runs.
-		 */
-		$entries = \glob( static::escape_glob_pattern( $directory ) . '/*' ) ?: array();
-
-		foreach ( $entries as $subdirectory ) {
-			// The plugin never links directories into its cache; one that is linked leads out of it, or round in a circle.
-			if ( ! \is_dir( $subdirectory ) || \is_link( $subdirectory ) ) {
-				continue;
-			}
-
-			foreach ( static::remove_duplicates( $subdirectory, $delete ) as $key => $count ) {
-				$result[ $key ] += $count;
-			}
+		try {
+			$entries = new \FilesystemIterator( $directory, \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::CURRENT_AS_PATHNAME );
+		} catch ( \UnexpectedValueException $exception ) {
+			// Entity directories can disappear between the readability check and opening the iterator.
+			return $result;
 		}
 
 		/*
-		 * The copies in this directory, grouped by hash regardless of format: the lookup matches
-		 * `<hash>.*` and serves the first file it finds, so one hash may only ever end up with one file.
+		 * Keep only one candidate per hash, regardless of the number or format of its copies. The lookup
+		 * matches `<hash>.*`, so copies of different formats still belong to the same asset.
 		 */
-		$groups = array();
+		$groups  = array();
+		$pattern = '/^([0-9a-f]{32})-([1-9][0-9]*)\.(webp|jpg)$/';
 
 		foreach ( $entries as $file ) {
-			// Only the exact shape the old code produced: a full hash, a counter and a converted format.
-			if ( ! \is_file( $file ) || ! \preg_match( '/^([0-9a-f]{32})-([1-9][0-9]*)\.(webp|jpg)$/', \basename( $file ), $match ) ) {
+			// Match the previous glob's exclusion of hidden entries.
+			if ( '.' === \basename( $file )[0] ) {
 				continue;
 			}
 
-			$groups[ $directory . '/' . $match[1] ][] = array(
+			if ( \is_dir( $file ) ) {
+				// Linked directories can lead out of the cache or back into it.
+				if ( ! \is_link( $file ) ) {
+					foreach ( static::remove_duplicates( $file, $delete ) as $key => $count ) {
+						$result[ $key ] += $count;
+					}
+				}
+				continue;
+			}
+
+			// Only the exact shape the old code produced: a full hash, a counter and a converted format.
+			if ( ! \is_file( $file ) || ! \preg_match( $pattern, \basename( $file ), $match ) ) {
+				continue;
+			}
+
+			$canonical = $directory . '/' . $match[1];
+			$copy      = array(
 				'time'    => (int) \filemtime( $file ),
 				'counter' => (int) $match[2],
 				'path'    => $file,
 			);
+
+			// Modification time decides, then the counter; the path makes exact ties deterministic.
+			if ( ! isset( $groups[ $canonical ] ) || $copy > $groups[ $canonical ] ) {
+				$groups[ $canonical ] = $copy;
+			}
 		}
 
 		$filesystem = static::get_filesystem();
 
-		foreach ( $groups as $canonical => $copies ) {
-			/*
-			 * Oldest first. The counter only orders copies of one format, since it started over when
-			 * the format changed, so the modification time decides and the counter breaks ties.
-			 */
-			\usort(
-				$copies,
-				static function ( $a, $b ) {
-					return array( $a['time'], $a['counter'] ) <=> array( $b['time'], $b['counter'] );
-				}
-			);
-
+		foreach ( $groups as $canonical => $newest ) {
 			// With no file to serve under the hash, in any format, the newest copy becomes it, in its own.
 			if ( ! \glob( static::escape_glob_pattern( $canonical ) . '.*' ) ) {
-				$newest = \array_pop( $copies )['path'];
-				$target = $canonical . '.' . \pathinfo( $newest, PATHINFO_EXTENSION );
+				$target = $canonical . '.' . \pathinfo( $newest['path'], PATHINFO_EXTENSION );
 
 				// If it cannot be moved, the group stays whole; removing the others would leave nothing to promote later.
-				if ( $delete && ! $filesystem->move( $newest, $target ) ) {
+				if ( $delete && ! $filesystem->move( $newest['path'], $target ) ) {
 					++$result['failed'];
+					unset( $groups[ $canonical ] );
 					continue;
 				}
 
 				++$result['promoted'];
+				$groups[ $canonical ] = $newest['path'];
+			} else {
+				// A canonical file already exists, so every numbered copy can be removed.
+				$groups[ $canonical ] = '';
+			}
+		}
+
+		// Rewind the streaming iterator to remove copies without retaining their paths in memory.
+		foreach ( $entries as $file ) {
+			if ( ! \is_file( $file ) || ! \preg_match( $pattern, \basename( $file ), $match ) ) {
+				continue;
 			}
 
-			foreach ( $copies as $copy ) {
-				$copy = $copy['path'];
-				$size = (int) \filesize( $copy );
-
-				if ( $delete && ! $filesystem->delete( $copy ) ) {
-					++$result['failed'];
-					continue;
-				}
-
-				++$result['removed'];
-				$result['bytes'] += $size;
+			$canonical = $directory . '/' . $match[1];
+			if ( ! isset( $groups[ $canonical ] ) || $file === $groups[ $canonical ] ) {
+				continue;
 			}
+
+			$size = (int) \filesize( $file );
+			if ( $delete && ! $filesystem->delete( $file ) ) {
+				++$result['failed'];
+				continue;
+			}
+
+			++$result['removed'];
+			$result['bytes'] += $size;
 		}
 
 		return $result;
