@@ -475,7 +475,10 @@ class Interactions {
 			// Same gate and slashing as the remote branch: one policy for the column, whatever wrote it.
 			'comment_content'      => \addslashes( Sanitize::comment_content( $activity['object']['content'] ?? '' ) ),
 			'comment_author_email' => $user->user_email,
-			'comment_meta'         => array(),
+			'comment_meta'         => array(
+				// The client authored the content and its mentions; the server adds no reply context.
+				'_activitypub_client_authored' => 1,
+			),
 			'user_id'              => $user_id,
 		);
 	}
