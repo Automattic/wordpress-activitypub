@@ -1,7 +1,7 @@
 @use "@wordpress/base-styles/colors";
 
 .activitypub-feed-content {
-	border-bottom: var(--wpds-border-width-control, 1px) solid colors.$gray-300;
+	border-bottom: var(--wpds-border-width-xs, 1px) solid colors.$gray-300;
 	min-width: 0;
 	max-width: 100%;
 

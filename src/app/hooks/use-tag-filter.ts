@@ -13,7 +13,7 @@ import { useView } from '@wordpress/views';
 /**
  * Internal dependencies
  */
-import { useNavigate } from '../router';
+import { useNavigate } from '@wordpress/route';
 
 interface UpdateTagFilterOptions {
 	onComplete?: () => void;
@@ -90,12 +90,13 @@ export function useTagFilter(): UseTagFilterReturn {
 				page: 1, // Reset to first page
 			} );
 
-			// Close inspector by removing postId from URL
+			// Close inspector by removing postIds from URL
 			void navigate( {
 				search: ( ( prev: Record< string, unknown > ): Record< string, unknown > => {
-					const { postId: _, ...rest } = prev as { postId?: number };
+					const { postIds: _, ...rest } = prev as { postIds?: string[] };
 					return rest;
 				} ) as never,
+				viewTransition: false,
 			} );
 
 			// Call completion callback if provided

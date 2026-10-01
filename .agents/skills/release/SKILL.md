@@ -118,6 +118,16 @@ Changelogs are managed automatically through the PR workflow:
 ❌ Refactor User class to use Actors collection.
 ```
 
+**Pick the significance by what breaks for a real install:**
+- `major` bumps the plugin to the next whole version, so it has to be worth that: a user who keeps doing what they did before gets a materially worse or destructive result on a surface real installs depend on. Removing a public constant or breaking an opt-in experiment is not `major`. Raising the minimum WordPress or PHP version always is.
+- Check that the break actually broke something before claiming it.
+
+**One entry per user-visible change.** Split unrelated fixes into separate files, but several fixes to the same visible thing are one entry, however many issues they close.
+
+**No entry for a bug that never shipped.** A fix for something introduced on the same unreleased branch is net zero for users.
+
+**Release PR bodies stay neutral.** Use the release script's plain text; never enumerate or spotlight security fixes in a release PR or its notes.
+
 **Never mention AI tools or coding assistants in changelog messages.**
 
 See [PR Workflow - Changelog](../pr/SKILL.md#changelog-management) for complete changelog requirements.

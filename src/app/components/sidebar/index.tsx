@@ -30,7 +30,7 @@ import { addQueryArgs } from '@wordpress/url';
  * Internal dependencies
  */
 import { useFeedFilters } from '../../hooks/use-feed-filters';
-import { useNavigate } from '../../router';
+import { useNavigate } from '@wordpress/route';
 import SiteHub from '../site-hub';
 import ActorSwitcher from '../actor-switcher';
 import { ObjectTypes } from '../object-types';
@@ -73,7 +73,7 @@ export default function Sidebar(): ReactNode {
 		if ( path === '/' ) {
 			clearAllFilters();
 		}
-		void navigate( { to: path } );
+		void navigate( { to: path, viewTransition: false } );
 	};
 
 	const activeItem: MenuItemConfig = menuItems[ 0 ];

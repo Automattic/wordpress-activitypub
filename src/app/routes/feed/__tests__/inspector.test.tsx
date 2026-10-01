@@ -10,9 +10,9 @@ import type { AppSettings, Comment, FeedPost } from '../../../types';
 
 // Mock router hooks
 const mockNavigate = jest.fn();
-let mockSearchParams: { postId?: number } = { postId: 1 };
+let mockSearchParams: { postIds?: string[] } = { postIds: [ '1' ] };
 
-jest.mock( '../../../router', () => ( {
+jest.mock( '@wordpress/route', () => ( {
 	useSearch: () => mockSearchParams,
 	useNavigate: () => mockNavigate,
 } ) );
@@ -153,12 +153,12 @@ describe( 'FeedInspector', () => {
 	beforeEach( () => {
 		jest.clearAllMocks();
 		// Reset mock search params to default
-		mockSearchParams = { postId: 1 };
+		mockSearchParams = { postIds: [ '1' ] };
 	} );
 
 	const renderInspector = ( postId: number = 1 ) => {
-		// Set the postId in mock search params
-		mockSearchParams = { postId };
+		// Set the selected post in mock search params
+		mockSearchParams = { postIds: [ String( postId ) ] };
 		return render(
 			<SettingsProvider settings={ mockSettings }>
 				<FeedInspector />
@@ -394,29 +394,15 @@ describe( 'FeedInspector', () => {
 			expect( container.textContent ).toContain( 'Hello \\! world' );
 		} );
 
-		it( 'should display View Original Post button', () => {
-			renderInspector();
+		it( 'links the timestamp to the original post, opening in a new tab', () => {
+			const { container } = renderInspector();
 
-			// Button might render with different labels or as external link
-			const button =
-				screen.queryByText( 'View Original Post' ) ||
-				screen.queryByRole( 'button', { name: /view original post/i } ) ||
-				screen.queryByRole( 'link', { name: /view original post/i } );
+			const link = container.querySelector( 'a.activitypub-inspector-timestamp' );
 
-			// Component renders the button in some configurations
-			// If button exists, verify it has proper attributes
-			/* eslint-disable jest/no-conditional-expect -- component has multiple valid render paths */
-			if ( button ) {
-				expect( button ).toBeInTheDocument();
-				if ( button.hasAttribute( 'data-href' ) ) {
-					expect( button.getAttribute( 'data-href' ) ).toBe( mockPost.link );
-				}
-			} else {
-				// Button may not render in all configurations - that's okay
-				// The component shows the post link through other means
-				expect( true ).toBe( true );
-			}
-			/* eslint-enable jest/no-conditional-expect */
+			expect( link ).toBeInTheDocument();
+			expect( link ).toHaveAttribute( 'href', mockPost.link );
+			expect( link ).toHaveAttribute( 'target', '_blank' );
+			expect( link?.getAttribute( 'rel' ) ).toContain( 'noopener' );
 		} );
 	} );
 
@@ -532,7 +518,7 @@ describe( 'FeedInspector', () => {
 			expect( screen.getByText( 'Close' ) ).toBeInTheDocument();
 		} );
 
-		it( 'should navigate to remove postId when close button is clicked', () => {
+		it( 'should navigate to remove postIds when close button is clicked', () => {
 			renderInspector();
 
 			const closeButton = screen.getByText( 'Close' );
@@ -541,14 +527,15 @@ describe( 'FeedInspector', () => {
 			expect( mockNavigate ).toHaveBeenCalledTimes( 1 );
 			expect( mockNavigate ).toHaveBeenCalledWith( {
 				search: expect.any( Function ),
+				viewTransition: false,
 			} );
 
-			// Verify the search function removes postId
+			// Verify the search function removes postIds
 			const navigateCall = mockNavigate.mock.calls[ 0 ][ 0 ];
 			const searchFn = navigateCall.search;
-			const result = searchFn( { postId: 1, otherParam: 'value' } );
+			const result = searchFn( { postIds: [ '1' ], otherParam: 'value' } );
 			expect( result ).toEqual( { otherParam: 'value' } );
-			expect( result.postId ).toBeUndefined();
+			expect( result.postIds ).toBeUndefined();
 		} );
 	} );
 } );

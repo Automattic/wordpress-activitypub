@@ -41,10 +41,6 @@ class Test_Clients_Controller extends \WP_UnitTestCase {
 		global $wp_rest_server;
 		$wp_rest_server = null;
 
-		// Clean up rate-limit transient to avoid cross-test pollution.
-		$ip = \Activitypub\get_client_ip();
-		\delete_transient( 'ap_oauth_reg_' . \md5( $ip ) );
-
 		parent::tear_down();
 	}
 
@@ -136,23 +132,24 @@ class Test_Clients_Controller extends \WP_UnitTestCase {
 	 * @covers ::register_client
 	 */
 	public function test_register_client_rate_limited() {
-		$ip            = \Activitypub\get_client_ip();
-		$transient_key = 'ap_oauth_reg_' . \md5( $ip );
-
-		// Simulate 10 previous registrations.
-		\set_transient( $transient_key, 10, MINUTE_IN_SECONDS );
+		// An allowance of nothing refuses the first request, so no bucket has to be primed.
+		\add_filter( 'activitypub_rate_limit', '__return_zero' );
 
 		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/clients' );
 		$request->set_param( 'client_name', 'Rate Limited App' );
 		$request->set_param( 'redirect_uris', array( 'https://limited.example.com/callback' ) );
 
-		$response = \rest_get_server()->dispatch( $request );
+		// `rest_post_dispatch` runs in `serve_request()`, so the headers are applied here.
+		$response = \apply_filters( 'rest_post_dispatch', \rest_get_server()->dispatch( $request ), \rest_get_server(), $request );
 		$data     = $response->get_data();
 		$headers  = $response->get_headers();
 
+		\remove_filter( 'activitypub_rate_limit', '__return_zero' );
+
 		$this->assertEquals( 429, $response->get_status() );
 		$this->assertEquals( 'activitypub_rate_limited', $data['code'] );
-		$this->assertSame( (string) MINUTE_IN_SECONDS, $headers['Retry-After'] ?? null, 'Rate-limit responses must include Retry-After per RFC 6585 §4.' );
+		$this->assertArrayHasKey( 'Retry-After', $headers, 'A refusal says when to come back.' );
+		$this->assertSame( '0', $headers['RateLimit-Remaining'] );
 	}
 
 	/**
@@ -182,9 +179,6 @@ class Test_Clients_Controller extends \WP_UnitTestCase {
 			$snapshot[ $key ] = \array_key_exists( $key, $_SERVER ) ? $_SERVER[ $key ] : null;
 		}
 
-		$empty_ip_transient = 'ap_oauth_reg_' . \md5( '' );
-		\delete_transient( $empty_ip_transient );
-
 		try {
 			foreach ( $server_keys as $key ) {
 				unset( $_SERVER[ $key ] );
@@ -194,16 +188,13 @@ class Test_Clients_Controller extends \WP_UnitTestCase {
 			$request->set_param( 'client_name', 'No-IP App' );
 			$request->set_param( 'redirect_uris', array( 'https://no-ip.example.com/callback' ) );
 
-			$response = \rest_get_server()->dispatch( $request );
+			$response = \apply_filters( 'rest_post_dispatch', \rest_get_server()->dispatch( $request ), \rest_get_server(), $request );
 			$data     = $response->get_data();
 			$headers  = $response->get_headers();
 
 			$this->assertEquals( 429, $response->get_status() );
 			$this->assertEquals( 'activitypub_rate_limited', $data['code'] );
-			$this->assertSame( (string) MINUTE_IN_SECONDS, $headers['Retry-After'] ?? null, 'Rate-limit responses must include Retry-After per RFC 6585 §4.' );
-
-			// Ensure the empty-IP path didn't write a shared transient.
-			$this->assertFalse( \get_transient( $empty_ip_transient ) );
+			$this->assertArrayHasKey( 'Retry-After', $headers, 'A refusal says when to come back.' );
 		} finally {
 			foreach ( $snapshot as $key => $value ) {
 				if ( null === $value ) {
@@ -220,21 +211,29 @@ class Test_Clients_Controller extends \WP_UnitTestCase {
 	 *
 	 * @covers ::register_client
 	 */
-	public function test_register_client_increments_rate_limit_counter() {
-		$ip            = \Activitypub\get_client_ip();
-		$transient_key = 'ap_oauth_reg_' . \md5( $ip );
+	public function test_register_client_spends_the_allowance() {
+		// An allowance of one: the first registration succeeds, the second is refused.
+		$allowance = function () {
+			return 1;
+		};
+		\add_filter( 'activitypub_rate_limit', $allowance );
 
-		// Ensure clean state.
-		\delete_transient( $transient_key );
+		$register = function ( $name ) {
+			$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/clients' );
+			$request->set_param( 'client_name', $name );
+			$request->set_param( 'redirect_uris', array( 'https://counter.example.com/callback' ) );
 
-		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/oauth/clients' );
-		$request->set_param( 'client_name', 'Counter App' );
-		$request->set_param( 'redirect_uris', array( 'https://counter.example.com/callback' ) );
+			return \apply_filters( 'rest_post_dispatch', \rest_get_server()->dispatch( $request ), \rest_get_server(), $request );
+		};
 
-		$response = \rest_get_server()->dispatch( $request );
+		$first  = $register( 'Counter App' );
+		$second = $register( 'Counter App Again' );
 
-		$this->assertEquals( 201, $response->get_status() );
-		$this->assertEquals( 1, (int) \get_transient( $transient_key ) );
+		\remove_filter( 'activitypub_rate_limit', $allowance );
+
+		$this->assertEquals( 201, $first->get_status() );
+		$this->assertSame( '0', $first->get_headers()['RateLimit-Remaining'], 'The first one spends the allowance.' );
+		$this->assertEquals( 429, $second->get_status(), 'The second one is refused.' );
 	}
 
 	/**

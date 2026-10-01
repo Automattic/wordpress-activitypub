@@ -18,8 +18,8 @@
 	// Mobile: no rounded corners (full-screen content)
 	border-radius: 0;
 
-	// Desktop: restore rounded corners
+	// Desktop: the same radius boot gives its stage and inspector surfaces.
 	@include mixins.break-medium() {
-		border-radius: var(--wpds-border-radius-large, 8px);
+		border-radius: var(--wpds-border-radius-xl, 12px);
 	}
 }
