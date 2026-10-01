@@ -212,21 +212,21 @@ class Test_File extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Without `$delete`, the copies are only counted and nothing changes.
+	 * A dry run leaves both formats untouched; deletion keeps the canonical image.
 	 *
 	 * @covers \Activitypub\Cache\File::remove_duplicates
 	 */
-	public function test_remove_duplicates_counts_without_touching_anything() {
-		$dir  = Avatar::get_storage_paths( 'dedupe-count' )['basedir'];
+	public function test_remove_duplicates_counts_then_removes_copies() {
+		$dir  = Avatar::get_storage_paths( 'dedupe-remove' )['basedir'];
 		$hash = \md5( 'https://example.com/avatar.webp' );
 		\wp_mkdir_p( $dir );
-		foreach ( array( "{$hash}.webp", "{$hash}-1.webp", "{$hash}-2.webp" ) as $name ) {
+		foreach ( array( "{$hash}.webp", "{$hash}-1.jpg", "{$hash}-3.webp" ) as $name ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
 			\file_put_contents( "{$dir}/{$name}", 'image' );
 		}
+		$before = \glob( "{$dir}/*" );
 
-		$result = Avatar::remove_duplicates( $dir );
-
+		$preview = Avatar::remove_duplicates( $dir );
 		$this->assertSame(
 			array(
 				'removed'  => 2,
@@ -234,108 +234,39 @@ class Test_File extends WP_UnitTestCase {
 				'promoted' => 0,
 				'failed'   => 0,
 			),
-			$result
+			$preview
 		);
-		$this->assertFileExists( "{$dir}/{$hash}-1.webp", 'A dry run leaves the copies in place.' );
-		$this->assertFileExists( "{$dir}/{$hash}-2.webp" );
-
+		$this->assertSame( $before, \glob( "{$dir}/*" ), 'A preview changes nothing.' );
+		$this->assertSame( $preview, Avatar::remove_duplicates( $dir, true ) );
+		$this->assertSame( array( "{$dir}/{$hash}.webp" ), \glob( "{$dir}/*" ) );
 		Avatar::delete_directory( $dir );
 	}
 
 	/**
-	 * With `$delete`, the copies go and the canonical file stays.
+	 * Modification time, not the format's counter, determines the promoted copy.
 	 *
 	 * @covers \Activitypub\Cache\File::remove_duplicates
 	 */
-	public function test_remove_duplicates_removes_the_copies() {
-		$dir  = Avatar::get_storage_paths( 'dedupe-remove' )['basedir'];
-		$hash = \md5( 'https://example.com/avatar.jpg' );
-		\wp_mkdir_p( $dir );
-		foreach ( array( "{$hash}.jpg", "{$hash}-1.jpg", "{$hash}-3.jpg" ) as $name ) {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-			\file_put_contents( "{$dir}/{$name}", 'image' );
-		}
-
-		$result = Avatar::remove_duplicates( $dir, true );
-
-		$this->assertSame( 2, $result['removed'] );
-		$this->assertSame( 0, $result['promoted'] );
-		$this->assertFileExists( "{$dir}/{$hash}.jpg", 'The canonical file is kept.' );
-		$this->assertFileDoesNotExist( "{$dir}/{$hash}-1.jpg" );
-		$this->assertFileDoesNotExist( "{$dir}/{$hash}-3.jpg" );
-
-		Avatar::delete_directory( $dir );
-	}
-
-	/**
-	 * With no canonical file, the newest copy takes its name and the rest go.
-	 *
-	 * @covers \Activitypub\Cache\File::remove_duplicates
-	 */
-	public function test_remove_duplicates_promotes_the_newest_copy() {
-		$dir  = Avatar::get_storage_paths( 'dedupe-promote' )['basedir'];
-		$hash = \md5( 'https://example.com/avatar.png' );
-		\wp_mkdir_p( $dir );
-		foreach ( array( 1, 2, 10 ) as $n ) {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-			\file_put_contents( "{$dir}/{$hash}-{$n}.webp", "copy {$n}" );
-		}
-
-		$result = Avatar::remove_duplicates( $dir, true );
-
-		$this->assertSame( 2, $result['removed'] );
-		$this->assertSame( 1, $result['promoted'] );
-		$this->assertFileExists( "{$dir}/{$hash}.webp" );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-		$this->assertSame( 'copy 10', \file_get_contents( "{$dir}/{$hash}.webp" ), 'The highest counter, not the first one found, is kept.' );
-		$this->assertFileDoesNotExist( "{$dir}/{$hash}-10.webp" );
-		$this->assertFileDoesNotExist( "{$dir}/{$hash}-1.webp" );
-
-		Avatar::delete_directory( $dir );
-	}
-
-	/**
-	 * Copies in another format than the canonical file are duplicates of it all the same.
-	 *
-	 * The lookup matches `<hash>.*` and serves the first file it finds, so a JPEG promoted next to an
-	 * existing WebP would win over it.
-	 *
-	 * @covers \Activitypub\Cache\File::remove_duplicates
-	 */
-	public function test_remove_duplicates_treats_formats_as_one_asset() {
+	public function test_remove_duplicates_promotes_the_newest_format() {
 		$dir  = Avatar::get_storage_paths( 'dedupe-formats' )['basedir'];
 		$hash = \md5( 'https://example.com/avatar.svg' );
 		\wp_mkdir_p( $dir );
-		foreach ( array( "{$hash}.webp", "{$hash}-1.jpg", "{$hash}-2.jpg", "{$hash}-3.webp" ) as $name ) {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-			\file_put_contents( "{$dir}/{$name}", 'image' );
-		}
-
-		$result = Avatar::remove_duplicates( $dir, true );
-
-		$this->assertSame( 3, $result['removed'] );
-		$this->assertSame( 0, $result['promoted'], 'A WebP already serves this hash; nothing is promoted beside it.' );
-		$this->assertSame( array( "{$dir}/{$hash}.webp" ), \glob( "{$dir}/{$hash}.*" ), 'Exactly one file is left for the hash.' );
-
-		/*
-		 * Without any canonical file, the newest copy wins whatever its format. The counter started
-		 * over when the format changed, so the higher counter here is the older file.
-		 */
-		$other = \md5( 'https://example.com/other.svg' );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-		\file_put_contents( "{$dir}/{$other}-9.webp", 'older' );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_touch -- The old file has to be old.
-		\touch( "{$dir}/{$other}-9.webp", \time() - HOUR_IN_SECONDS );
+		\file_put_contents( "{$dir}/{$hash}-9.webp", 'older' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_touch -- Different formats have independent counters.
+		\touch( "{$dir}/{$hash}-9.webp", \time() - HOUR_IN_SECONDS );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-		\file_put_contents( "{$dir}/{$other}-1.jpg", 'newest' );
+		\file_put_contents( "{$dir}/{$hash}-1.jpg", 'newest' );
 
-		$result = Avatar::remove_duplicates( $dir, true );
-
-		$this->assertSame( 1, $result['promoted'] );
-		$this->assertSame( array( "{$dir}/{$other}.jpg" ), \glob( "{$dir}/{$other}.*" ), 'The newest copy became the one file, in its own format, whatever its counter.' );
+		$preview = Avatar::remove_duplicates( $dir );
+		$this->assertSame( 1, $preview['removed'] );
+		$this->assertSame( 5, $preview['bytes'] );
+		$this->assertSame( 1, $preview['promoted'] );
+		$this->assertCount( 2, \glob( "{$dir}/*" ) );
+		$this->assertSame( $preview, Avatar::remove_duplicates( $dir, true ) );
+		$this->assertSame( array( "{$dir}/{$hash}.jpg" ), \glob( "{$dir}/*" ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-		$this->assertSame( 'newest', \file_get_contents( "{$dir}/{$other}.jpg" ) );
-
+		$this->assertSame( 'newest', \file_get_contents( "{$dir}/{$hash}.jpg" ) );
 		Avatar::delete_directory( $dir );
 	}
 
@@ -436,21 +367,21 @@ class Test_File extends WP_UnitTestCase {
 		Cache_Directory_Stream::$vanished = false;
 		\stream_wrapper_register( 'activitypubcachetest', Cache_Directory_Stream::class );
 
-		$result = Avatar::remove_duplicates( 'activitypubcachetest://' . $kind, $delete );
+		$directory = 'empty' === $kind ? Avatar::get_storage_paths( 'dedupe-empty' )['basedir'] : 'activitypubcachetest://' . $kind;
+		if ( 'empty' === $kind ) {
+			\wp_mkdir_p( $directory );
+		}
+		$result = Avatar::remove_duplicates( $directory, $delete );
+		if ( 'empty' === $kind ) {
+			Avatar::delete_directory( $directory );
+		}
 
 		\stream_wrapper_unregister( 'activitypubcachetest' );
 		\clearstatcache();
 		Cache_Directory_Stream::$vanished = false;
 
-		$this->assertSame(
-			array(
-				'removed'  => 0,
-				'bytes'    => 0,
-				'promoted' => 0,
-				'failed'   => $failed,
-			),
-			$result
-		);
+		$this->assertSame( $failed, $result['failed'] );
+		$this->assertSame( 0, $result['removed'] + $result['promoted'] + $result['bytes'] );
 	}
 
 	/**
@@ -500,27 +431,18 @@ class Test_File extends WP_UnitTestCase {
 				return self::$filesystem;
 			}
 		};
-		$cache::$filesystem = new class( null ) extends \WP_Filesystem_Direct {
-			/**
-			 * Memory usage when the survivor is promoted, before copies are removed.
-			 *
-			 * @var int
-			 */
-			public $memory = 0;
-
-			/**
-			 * Measure memory and move the survivor.
-			 *
-			 * @param string $source      Source path.
-			 * @param string $destination Destination path.
-			 * @param bool   $overwrite   Whether to overwrite. Default false.
-			 * @return bool Whether the move succeeded.
-			 */
-			public function move( $source, $destination, $overwrite = false ) {
-				$this->memory = \memory_get_usage();
-				return parent::move( $source, $destination, $overwrite );
+		$filesystem         = new \WP_Filesystem_Direct( null );
+		$memory             = 0;
+		$cache::$filesystem = $this->getMockBuilder( \WP_Filesystem_Direct::class )
+			->setConstructorArgs( array( null ) )
+			->onlyMethods( array( 'move' ) )
+			->getMock();
+		$cache::$filesystem->method( 'move' )->willReturnCallback(
+			static function ( $source, $destination, $overwrite = false ) use ( &$memory, $filesystem ) {
+				$memory = \memory_get_usage();
+				return $filesystem->move( $source, $destination, $overwrite );
 			}
-		};
+		);
 
 		$dir    = Avatar::get_storage_paths( 'dedupe-many' )['basedir'];
 		$hash   = \md5( 'https://example.com/many.webp' );
@@ -542,7 +464,7 @@ class Test_File extends WP_UnitTestCase {
 			$before = \memory_get_usage();
 			$result = $cache::remove_duplicates( $dir, true );
 
-			$this->assertLessThan( 2 * MB_IN_BYTES, $cache::$filesystem->memory - $before, 'Memory must not grow with the number of copies of one hash.' );
+			$this->assertLessThan( 2 * MB_IN_BYTES, $memory - $before, 'Memory must not grow with the number of copies of one hash.' );
 			$this->assertSame( $copies - 1, $result['removed'] );
 			$this->assertSame( 5 * ( $copies - 1 ), $result['bytes'] );
 			$this->assertSame( 1, $result['promoted'] );

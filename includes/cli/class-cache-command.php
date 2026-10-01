@@ -177,11 +177,9 @@ class Cache_Command extends \WP_CLI_Command {
 	/**
 	 * Remove duplicate cached images left behind by earlier versions.
 	 *
-	 * Earlier versions could leave `<hash>-1.webp`, `<hash>-2.webp`, ... next to a
-	 * cached image, one more on every request. This finds those copies and, with
-	 * --delete, removes them. Where the original is missing, the newest copy is
-	 * kept under the original name. Without --delete nothing is changed and the
-	 * command only reports what it would do.
+	 * Preview by default; --delete removes numbered copies, promoting the newest
+	 * if the original is missing. Unreadable directories or failed file operations
+	 * cause an error after all selected cache types have been processed.
 	 *
 	 * ## OPTIONS
 	 *

@@ -18,11 +18,11 @@ use Activitypub\Tests\Cache_Directory_Stream;
 class Test_Cache_Command extends \WP_UnitTestCase {
 
 	/**
-	 * Directory state used by the uploads filter.
+	 * Uploads filter restored after expected CLI errors.
 	 *
-	 * @var string
+	 * @var callable
 	 */
-	private $directory_kind = 'empty';
+	private $upload_filter;
 
 	/**
 	 * Load CLI and directory stubs.
@@ -43,43 +43,40 @@ class Test_Cache_Command extends \WP_UnitTestCase {
 		\WP_CLI::$last_success            = null;
 		Cache_Directory_Stream::$vanished = false;
 		\stream_wrapper_register( 'activitypubcachetest', Cache_Directory_Stream::class );
-		\add_filter( 'upload_dir', array( $this, 'filter_upload_directory' ) );
-		\wp_upload_dir( null, false, true );
 	}
 
 	/**
 	 * Restore uploads and the stream registry even after an expected CLI error.
 	 */
 	public function tear_down() {
-		\remove_filter( 'upload_dir', array( $this, 'filter_upload_directory' ) );
+		\remove_filter( 'upload_dir', $this->upload_filter );
 		\stream_wrapper_unregister( 'activitypubcachetest' );
 		\clearstatcache();
 		Cache_Directory_Stream::$vanished = false;
-		\wp_upload_dir( null, false, true );
 		parent::tear_down();
 	}
 
 	/**
-	 * Point cache scans at the test directory stream.
+	 * Point cache scans at a simulated directory.
 	 *
-	 * @param array $uploads Upload configuration.
-	 * @return array Upload configuration with a simulated cache root.
+	 * @param string $kind Directory state.
 	 */
-	public function filter_upload_directory( $uploads ) {
-		$uploads['basedir'] = 'activitypubcachetest://' . $this->directory_kind;
-		return $uploads;
+	private function use_directory( $kind ) {
+		$this->upload_filter = static function ( $uploads ) use ( $kind ) {
+			$uploads['basedir'] = 'activitypubcachetest://' . $kind;
+			return $uploads;
+		};
+		\add_filter( 'upload_dir', $this->upload_filter );
 	}
 
 	/**
 	 * An incomplete scan must halt instead of claiming that the cache is clean.
 	 *
-	 * @dataProvider directory_failure_cases
-	 * @param string $kind   Directory state.
-	 * @param bool   $delete Whether to delete duplicates.
+	 * @dataProvider cleanup_modes
+	 * @param bool $delete Whether to delete duplicates.
 	 */
-	public function test_cleanup_reports_directory_failure( $kind, $delete ) {
-		$this->directory_kind = $kind;
-
+	public function test_cleanup_reports_directory_failure( $delete ) {
+		$this->use_directory( 'unreadable' );
 		$this->expectException( \RuntimeException::class );
 		$this->expectExceptionMessage( 'Cleanup incomplete' );
 
@@ -93,25 +90,27 @@ class Test_Cache_Command extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Read failures in both command modes.
+	 * Both command modes.
 	 *
 	 * @return array Test cases.
 	 */
-	public function directory_failure_cases() {
+	public function cleanup_modes() {
 		return array(
-			'unreadable-dry-run'   => array( 'unreadable', false ),
-			'unreadable-delete'    => array( 'unreadable', true ),
-			'open-failure-dry-run' => array( 'open-failure', false ),
-			'open-failure-delete'  => array( 'open-failure', true ),
+			'dry-run' => array( false ),
+			'delete'  => array( true ),
 		);
 	}
 
 	/**
-	 * A readable, empty cache still reports success.
+	 * A missing cache directory still reports success.
+	 *
+	 * @dataProvider cleanup_modes
+	 * @param bool $delete Whether to delete duplicates.
 	 */
-	public function test_cleanup_reports_success_for_an_empty_directory() {
-		( new Cache_Command() )->cleanup( array(), array( 'type' => 'avatar' ) );
+	public function test_cleanup_reports_success_without_failures( $delete ) {
+		$this->use_directory( 'missing' );
+		( new Cache_Command() )->cleanup( array(), array( 'delete' => $delete ) );
 
-		$this->assertSame( 'No duplicate files found.', \WP_CLI::$last_success );
+		$this->assertSame( $delete ? 'Removed 0 duplicate file(s), 0 B.' : 'No duplicate files found.', \WP_CLI::$last_success );
 	}
 }

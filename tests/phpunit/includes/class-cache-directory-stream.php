@@ -8,7 +8,7 @@
 namespace Activitypub\Tests;
 
 /**
- * Simulate unreadable, unopenable, vanished, missing and empty directories.
+ * Simulate unreadable, unopenable, vanished and missing directories.
  *
  * Permission bits on real directories do not deny access to tests running as root.
  */
@@ -49,7 +49,7 @@ class Cache_Directory_Stream {
 	 *
 	 * @param string $path    Directory URL.
 	 * @param int    $options Directory options.
-	 * @return bool Whether opening succeeded.
+	 * @return false Opening fails.
 	 */
 	public function dir_opendir( $path, $options ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable,Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Required stream-wrapper signature.
 		$kind = \wp_parse_url( $path, PHP_URL_HOST );
@@ -57,33 +57,6 @@ class Cache_Directory_Stream {
 			self::$vanished = true;
 		}
 
-		return 'empty' === $kind;
-	}
-
-	/**
-	 * An opened directory contains no entries.
-	 *
-	 * @return false End of directory.
-	 */
-	public function dir_readdir() {
 		return false;
-	}
-
-	/**
-	 * Rewind the empty directory.
-	 *
-	 * @return bool Success.
-	 */
-	public function dir_rewinddir() {
-		return true;
-	}
-
-	/**
-	 * Close the directory.
-	 *
-	 * @return bool Success.
-	 */
-	public function dir_closedir() {
-		return true;
 	}
 }

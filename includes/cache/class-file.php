@@ -337,17 +337,10 @@ abstract class File {
 	}
 
 	/**
-	 * Remove the numbered copies an earlier version left next to cached images.
+	 * Remove legacy `<hash>-N.webp` and `<hash>-N.jpg` image copies.
 	 *
-	 * The image used to be optimized after it had been moved into the cache directory. Converting it
-	 * there renamed it to `<hash>-1.webp` (or `-1.jpg` where WebP is unavailable), a name the lookup
-	 * never matches, so the next request downloaded and converted it again and left one more copy.
-	 * This finds those copies and removes them. Where no file serves the hash any more, the newest copy
-	 * is moved to the canonical name instead, so the next lookup is a hit rather than a download.
-	 *
-	 * Nothing is touched unless `$delete` is true; the counts then say what would happen. A group whose
-	 * move fails is left as it is, copies included, so a later run finds it again, and the failure is
-	 * counted.
+	 * Keep an existing canonical image, or promote the newest copy when it is missing.
+	 * A failed promotion leaves the group intact. Without `$delete`, only count the changes.
 	 *
 	 * Each directory is scanned twice, retaining only the newest copy per hash rather than every
 	 * duplicate. Subdirectories are cleaned before this directory's files are removed.
@@ -396,8 +389,7 @@ abstract class File {
 		}
 
 		/*
-		 * Keep only one candidate per hash, regardless of the number or format of its copies. The lookup
-		 * matches `<hash>.*`, so copies of different formats still belong to the same asset.
+		 * The lookup matches `<hash>.*`: retain one candidate per hash, not per format or copy.
 		 */
 		$groups  = array();
 		$pattern = '/^([0-9a-f]{32})-([1-9][0-9]*)\.(webp|jpg)$/';
