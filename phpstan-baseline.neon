@@ -79,12 +79,6 @@ parameters:
 			path: includes/class-blocks.php
 
 		-
-			message: '#^Offset 0 on array\{list\<string\>\} on left side of \?\? always exists and is not nullable\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: includes/class-blocks.php
-
-		-
 			message: '#^Parameter \$query of method Activitypub\\Blocks\:\:filter_query_loop_vars\(\) has invalid type Activitypub\\WP_Query\.$#'
 			identifier: class.notFound
 			count: 1
