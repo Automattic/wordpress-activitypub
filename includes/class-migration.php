@@ -7,6 +7,10 @@
 
 namespace Activitypub;
 
+use Activitypub\Cache\Avatar;
+use Activitypub\Cache\Emoji as Emoji_Cache;
+use Activitypub\Cache\File;
+use Activitypub\Cache\Media;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Extra_Fields;
 use Activitypub\Collection\Followers;
@@ -36,6 +40,7 @@ class Migration {
 		Scheduler::register_async_batch_callback( 'activitypub_migrate_actor_emoji', array( self::class, 'migrate_actor_emoji' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_backfill_statistics', array( Statistics::class, 'backfill_historical_stats' ) );
 		Scheduler::register_async_batch_callback( 'activitypub_tombstone_migrate', array( self::class, 'migrate_tombstones_to_cpt' ) );
+		Scheduler::register_async_batch_callback( 'activitypub_remove_duplicate_cache_files', array( self::class, 'remove_duplicate_cache_files' ) );
 	}
 
 	/**
@@ -223,6 +228,10 @@ class Migration {
 		if ( \version_compare( $version_from_db, '9.1.0', '<' ) ) {
 			self::migrate_application_keypair_option();
 			self::delete_application_outbox_items();
+		}
+		if ( \version_compare( $version_from_db, 'unreleased', '<' ) && ! \wp_next_scheduled( 'activitypub_remove_duplicate_cache_files' ) ) {
+			// A filesystem walk, so off the upgrade request and onto cron.
+			\wp_schedule_single_event( \time() + MINUTE_IN_SECONDS, 'activitypub_remove_duplicate_cache_files' );
 		}
 
 		/*
@@ -1323,6 +1332,23 @@ class Migration {
 		 */
 		if ( false !== \get_option( Application::KEYPAIR_OPTION_KEY, false ) ) {
 			\delete_option( 'activitypub_keypair_for_-1' );
+		}
+	}
+
+	/**
+	 * Remove the numbered copies earlier versions left next to cached images.
+	 *
+	 * A cached image used to be re-downloaded on every request under some conditions, leaving a
+	 * `<hash>-N` copy each time; see {@see File::remove_duplicates()}. Running this twice is
+	 * harmless, the second pass finds nothing.
+	 *
+	 * @since unreleased
+	 */
+	public static function remove_duplicate_cache_files() {
+		$upload_dir = \wp_upload_dir();
+
+		foreach ( array( Avatar::class, Media::class, Emoji_Cache::class ) as $cache ) {
+			File::remove_duplicates( $upload_dir['basedir'] . $cache::get_base_dir(), true );
 		}
 	}
 
