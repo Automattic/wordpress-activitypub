@@ -225,11 +225,11 @@ export default function Edit( { attributes, setAttributes, context: { postType, 
 									{
 										a: <ExternalLink href={ settingsUrl } rel="external noreferrer noopener" />,
 									}
-							  )
+								)
 							: __(
 									'The selected user has their social graph hidden. This block will not display following on the frontend.',
 									'activitypub'
-							  ) }
+								) }
 					</Notice>
 				) }
 

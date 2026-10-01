@@ -37,7 +37,7 @@ class Seriously_Simple_Podcasting extends Post {
 
 		$icon = \get_post_meta( $post->ID, 'cover_image', true );
 		if ( ! $icon ) {
-			$icon = $this->get_icon();
+			$icon = $this->get_media_icon();
 		}
 
 		if ( $icon ) {

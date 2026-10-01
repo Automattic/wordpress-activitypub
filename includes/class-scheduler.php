@@ -18,6 +18,7 @@ use Activitypub\Scheduler\Actor;
 use Activitypub\Scheduler\Collection_Sync;
 use Activitypub\Scheduler\Comment;
 use Activitypub\Scheduler\Post;
+use Activitypub\Scheduler\Quote_Request;
 use Activitypub\Scheduler\Statistics;
 
 /**
@@ -73,6 +74,8 @@ class Scheduler {
 
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		self::register_schedulers();
@@ -104,12 +107,15 @@ class Scheduler {
 
 	/**
 	 * Register handlers.
+	 *
+	 * @return void
 	 */
 	public static function register_schedulers() {
 		Post::init();
 		Actor::init();
 		Collection_Sync::init();
 		Comment::init();
+		Quote_Request::init();
 		Statistics::init();
 
 		/**
@@ -146,6 +152,8 @@ class Scheduler {
 	 *
 	 * @param string   $hook     The cron event hook name.
 	 * @param callable $callback The callback to execute.
+	 *
+	 * @return void
 	 */
 	public static function register_async_batch_callback( $hook, $callback ) {
 		if ( \did_action( 'init' ) && ! \doing_action( 'init' ) ) {
@@ -165,6 +173,8 @@ class Scheduler {
 
 	/**
 	 * Schedule all ActivityPub schedules.
+	 *
+	 * @return void
 	 */
 	public static function register_schedules() {
 		foreach ( self::SCHEDULES as $hook => $recurrence ) {
@@ -238,6 +248,8 @@ class Scheduler {
 	 * Unschedule events for an outbox item.
 	 *
 	 * @param int $outbox_item_id The outbox item ID.
+	 *
+	 * @return void
 	 */
 	public static function unschedule_events_for_item( $outbox_item_id ) {
 		\delete_post_meta( $outbox_item_id, '_activitypub_outbox_offset' );
@@ -263,6 +275,8 @@ class Scheduler {
 
 	/**
 	 * Update remote Actors.
+	 *
+	 * @return void
 	 */
 	public static function update_remote_actors() {
 		$number = 5;
@@ -334,6 +348,8 @@ class Scheduler {
 
 	/**
 	 * Cleanup remote Actors.
+	 *
+	 * @return void
 	 */
 	public static function cleanup_remote_actors() {
 		$number = 5;
@@ -354,12 +370,12 @@ class Scheduler {
 			$meta = get_remote_metadata_by_actor( $actor->guid, false );
 
 			if ( Tombstone::exists( $meta ) ) {
-				\wp_delete_post( $actor->ID );
+				Remote_Actors::delete( $actor->ID );
 			} elseif ( empty( $meta ) || ! \is_array( $meta ) || \is_wp_error( $meta ) ) {
 				if ( Remote_Actors::count_errors( $actor->ID ) >= 5 ) {
 					\wp_schedule_single_event( \time(), 'activitypub_delete_remote_actor_interactions', array( $actor->guid ) );
 					\wp_schedule_single_event( \time(), 'activitypub_delete_remote_actor_posts', array( $actor->guid ) );
-					\wp_delete_post( $actor->ID );
+					Remote_Actors::delete( $actor->ID );
 				} else {
 					Remote_Actors::add_error( $actor->ID, $meta );
 				}
@@ -379,6 +395,8 @@ class Scheduler {
 	 *
 	 * @param int $id     The ID of the outbox item.
 	 * @param int $offset The offset to add to the scheduled time. Default 3 seconds.
+	 *
+	 * @return void
 	 */
 	public static function schedule_outbox_activity_for_federation( $id, $offset = 3 ) {
 		$hook = 'activitypub_process_outbox';
@@ -395,6 +413,8 @@ class Scheduler {
 
 	/**
 	 * Reprocess the outbox.
+	 *
+	 * @return void
 	 */
 	public static function reprocess_outbox() {
 		$ids = \get_posts(
@@ -425,6 +445,8 @@ class Scheduler {
 
 	/**
 	 * Purge outbox items based on a schedule.
+	 *
+	 * @return void
 	 */
 	public static function purge_outbox() {
 		Outbox::purge( \get_option( 'activitypub_outbox_purge_days', ACTIVITYPUB_OUTBOX_PURGE_DAYS ) );
@@ -432,6 +454,8 @@ class Scheduler {
 
 	/**
 	 * Purge inbox items based on a schedule.
+	 *
+	 * @return void
 	 */
 	public static function purge_inbox() {
 		Inbox::purge( \get_option( 'activitypub_inbox_purge_days', ACTIVITYPUB_INBOX_PURGE_DAYS ) );
@@ -439,6 +463,8 @@ class Scheduler {
 
 	/**
 	 * Purge remote posts based on a schedule.
+	 *
+	 * @return void
 	 */
 	public static function purge_ap_posts() {
 		Remote_Posts::purge( \get_option( 'activitypub_ap_post_purge_days', ACTIVITYPUB_AP_POST_PURGE_DAYS ) );
@@ -451,6 +477,8 @@ class Scheduler {
 	 * drain across multiple daily runs.
 	 *
 	 * @since 8.3.0
+	 *
+	 * @return void
 	 */
 	public static function purge_tombstones() {
 		Tombstone::purge();
@@ -462,6 +490,8 @@ class Scheduler {
 	 * Retrieves all collected user IDs for an activity and processes them together.
 	 *
 	 * @param string $activity_id The activity ID.
+	 *
+	 * @return void
 	 */
 	public static function process_inbox_activity( $activity_id ) {
 		// Deduplicate if multiple inbox items were created due to race condition.
@@ -508,6 +538,8 @@ class Scheduler {
 	 *
 	 * @param int $old_value The old value.
 	 * @param int $value     The new value.
+	 *
+	 * @return void
 	 */
 	public static function update_outbox_purge_schedule( $old_value, $value ) {
 		if ( 0 === (int) $value ) {
@@ -522,6 +554,8 @@ class Scheduler {
 	 *
 	 * @param int $old_value The old value.
 	 * @param int $value     The new value.
+	 *
+	 * @return void
 	 */
 	public static function update_inbox_purge_schedule( $old_value, $value ) {
 		if ( 0 === (int) $value ) {
@@ -536,6 +570,8 @@ class Scheduler {
 	 *
 	 * @param int $old_value The old value.
 	 * @param int $value     The new value.
+	 *
+	 * @return void
 	 */
 	public static function update_ap_post_purge_schedule( $old_value, $value ) {
 		if ( 0 === (int) $value ) {
@@ -552,6 +588,8 @@ class Scheduler {
 	 * Beyond that it's a helper to run a callback asynchronously with locking to prevent simultaneous processing.
 	 *
 	 * @params mixed ...$args Optional. Parameters that get passed to the callback.
+	 *
+	 * @return void
 	 */
 	public static function async_batch() {
 		$args     = \func_get_args(); // phpcs:ignore PHPCompatibility.FunctionUse.ArgumentFunctionsReportCurrentValue
@@ -600,6 +638,8 @@ class Scheduler {
 	 * Unschedule all pending delivery batches for an outbox item.
 	 *
 	 * @param int $outbox_item_id The outbox item ID.
+	 *
+	 * @return void
 	 */
 	private static function unschedule_outbox_delivery_batches( $outbox_item_id ) {
 		foreach ( self::get_scheduled_outbox_delivery_batches( $outbox_item_id ) as $event ) {
@@ -670,6 +710,8 @@ class Scheduler {
 	 * Unlocks processing for the async batch callback.
 	 *
 	 * @param string $key Serialized callback name.
+	 *
+	 * @return void
 	 */
 	public static function unlock( $key ) {
 		\delete_option( 'activitypub_async_batch_' . $key );
@@ -705,6 +747,8 @@ class Scheduler {
 	 * @param Activity $activity           The activity object.
 	 * @param int      $actor_id           The actor ID.
 	 * @param int      $content_visibility The content visibility.
+	 *
+	 * @return void
 	 */
 	public static function schedule_announce_activity( $outbox_activity_id, $activity, $actor_id, $content_visibility ) {
 		// Only if we're in both Blog and User modes.

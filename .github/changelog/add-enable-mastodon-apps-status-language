@@ -1,0 +1,4 @@
+Significance: minor
+Type: added
+
+Posts published from a Mastodon app are now federated with the language the app set, and on sites using Polylang or WPML that language is stored with the multilingual plugin.

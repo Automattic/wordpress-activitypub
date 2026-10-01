@@ -16,6 +16,8 @@ class Advanced_Settings_Fields {
 
 	/**
 	 * Initialize.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'load-settings_page_activitypub', array( self::class, 'register_advanced_fields' ) );
@@ -23,6 +25,8 @@ class Advanced_Settings_Fields {
 
 	/**
 	 * Register settings.
+	 *
+	 * @return void
 	 */
 	public static function register_advanced_fields() {
 		\add_settings_section(
@@ -136,6 +140,8 @@ class Advanced_Settings_Fields {
 
 	/**
 	 * Render Advanced Settings Section.
+	 *
+	 * @return void
 	 */
 	public static function render_advanced_settings_section() {
 		?>
@@ -155,6 +161,8 @@ class Advanced_Settings_Fields {
 
 	/**
 	 * Render vary header field.
+	 *
+	 * @return void
 	 */
 	public static function render_vary_header_field() {
 		$value = \get_option( 'activitypub_vary_header', '1' );
@@ -173,6 +181,8 @@ class Advanced_Settings_Fields {
 
 	/**
 	 * Render content negotiation field.
+	 *
+	 * @return void
 	 */
 	public static function render_content_negotiation_field() {
 		$value = \get_option( 'activitypub_content_negotiation', '1' );
@@ -191,6 +201,8 @@ class Advanced_Settings_Fields {
 
 	/**
 	 * Render use Authorized Fetch field.
+	 *
+	 * @return void
 	 */
 	public static function render_authorized_fetch_field() {
 		$value = \get_option( 'activitypub_authorized_fetch', '0' );
@@ -212,6 +224,8 @@ class Advanced_Settings_Fields {
 
 	/**
 	 * Render RFC-9421 signature field.
+	 *
+	 * @return void
 	 */
 	public static function render_rfc9421_signature_field() {
 		$value = \get_option( 'activitypub_rfc9421_signature', '1' );
@@ -230,6 +244,8 @@ class Advanced_Settings_Fields {
 
 	/**
 	 * Render show following UI field.
+	 *
+	 * @return void
 	 */
 	public static function render_following_ui_field() {
 		$value = \get_option( 'activitypub_following_ui', '0' );
@@ -251,6 +267,8 @@ class Advanced_Settings_Fields {
 
 	/**
 	 * Render reader field.
+	 *
+	 * @return void
 	 */
 	public static function render_reader_field() {
 		$value = \get_option( 'activitypub_reader_ui', '0' );
@@ -272,6 +290,8 @@ class Advanced_Settings_Fields {
 
 	/**
 	 * Render ActivityPub API field.
+	 *
+	 * @return void
 	 */
 	public static function render_api_field() {
 		$value = \get_option( 'activitypub_api', '0' );
@@ -298,6 +318,8 @@ class Advanced_Settings_Fields {
 
 	/**
 	 * Render object type field.
+	 *
+	 * @return void
 	 */
 	public static function render_object_type_field() {
 		$value = \get_option( 'activitypub_object_type', ACTIVITYPUB_DEFAULT_OBJECT_TYPE );
@@ -318,6 +340,8 @@ class Advanced_Settings_Fields {
 	 * Render distribution mode field.
 	 *
 	 * @since 9.0.0
+	 *
+	 * @return void
 	 */
 	public static function render_distribution_mode_field() {
 		$mode = \get_option( 'activitypub_distribution_mode', 'default' );

@@ -18,6 +18,8 @@ use function Activitypub\should_comment_be_federated;
 class Comment {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		if ( ACTIVITYPUB_DISABLE_OUTGOING_INTERACTIONS ) {
@@ -38,6 +40,8 @@ class Comment {
 	 * @param string      $new_status New comment status.
 	 * @param string      $old_status Old comment status.
 	 * @param \WP_Comment $comment    Comment object.
+	 *
+	 * @return void
 	 */
 	public static function schedule_comment_activity( $new_status, $old_status, $comment ) {
 		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
@@ -64,8 +68,20 @@ class Comment {
 		$allowed_types   = Comment_Utils::get_comment_type_slugs();
 		$allowed_types[] = 'comment'; // Add core WordPress comment types.
 
-		// Check if comment type is in allowed list.
-		if ( ! \in_array( $comment_type, $allowed_types, true ) ) {
+		/**
+		 * Filters the comment types that are federated.
+		 *
+		 * Remove a type to keep it local, add a custom type to federate it.
+		 *
+		 * @since unreleased
+		 *
+		 * @param string[]    $allowed_types Comment type slugs that are federated.
+		 * @param \WP_Comment $comment       The comment being processed.
+		 */
+		$allowed_types = \apply_filters( 'activitypub_allowed_comment_types', $allowed_types, $comment );
+
+		// Comments that were already sent pass regardless of type, so their Update and Delete activities can still federate.
+		if ( ! Comment_Utils::was_sent( $comment ) && ! \in_array( $comment_type, $allowed_types, true ) ) {
 			return;
 		}
 
@@ -78,7 +94,7 @@ class Comment {
 			$type = 'Create';
 		} elseif ( 'approved' === $new_status ) {
 			$type = 'Update';
-			\update_comment_meta( $comment->comment_ID, 'activitypub_comment_modified', \time(), true );
+			\update_comment_meta( (int) $comment->comment_ID, 'activitypub_comment_modified', \time(), true );
 		} elseif (
 			'trash' === $new_status ||
 			( 'delete' === $new_status && '' === $old_status ) || // Went through schedule_comment_delete_activity().
@@ -96,7 +112,7 @@ class Comment {
 			return;
 		}
 
-		add_to_outbox( $comment, $type, $comment->user_id );
+		add_to_outbox( $comment, $type, (int) $comment->user_id );
 	}
 
 	/**
@@ -104,6 +120,8 @@ class Comment {
 	 *
 	 * @param int         $comment_id Comment ID.
 	 * @param \WP_Comment $comment    Comment object.
+	 *
+	 * @return void
 	 */
 	public static function schedule_comment_activity_on_insert( $comment_id, $comment ) {
 		if ( 1 === (int) $comment->comment_approved ) {
@@ -116,6 +134,8 @@ class Comment {
 	 *
 	 * @param int         $comment_id Comment ID.
 	 * @param \WP_Comment $comment    Comment object.
+	 *
+	 * @return void
 	 */
 	public static function schedule_comment_delete_activity( $comment_id, $comment ) {
 		// Only send Delete activities for comments that were previously federated.

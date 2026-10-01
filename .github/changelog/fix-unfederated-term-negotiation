@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+Fixed the search page and the posts page redirecting to a category or tag, or being served as one, on sites that filter content by language, such as Polylang.

@@ -39,6 +39,8 @@ gh pr create --assignee @me --reviewer Automattic/fediverse
 
 **Use the exact template from `.github/PULL_REQUEST_TEMPLATE.md`** — do not create custom formatting.
 
+Write backticks bare in PR bodies and comments. A backslash-escaped backtick renders literally on GitHub, and a single-quoted heredoc needs no escaping anyway.
+
 ## Changelog
 
 **Write changelog messages for end users, not developers.** Users read these in the WordPress plugin update screen. Avoid internal jargon (OOM, batching, N+1), class names, or method names. Describe what the user experiences or what changed from their perspective.

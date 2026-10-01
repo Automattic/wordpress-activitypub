@@ -57,6 +57,8 @@ class Cache_Command extends \WP_CLI_Command {
 	 *
 	 * @param array $args       The positional arguments.
 	 * @param array $assoc_args The associative arguments.
+	 *
+	 * @return void
 	 */
 	public function clear( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$type = $assoc_args['type'] ?? 'all';
@@ -113,6 +115,8 @@ class Cache_Command extends \WP_CLI_Command {
 	 *
 	 * @param array $args       The positional arguments.
 	 * @param array $assoc_args The associative arguments.
+	 *
+	 * @return void
 	 */
 	public function status( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$upload_dir = \wp_upload_dir();
@@ -172,6 +176,100 @@ class Cache_Command extends \WP_CLI_Command {
 
 		$format = $assoc_args['format'] ?? 'table';
 		\WP_CLI\Utils\format_items( $format, $data, array( 'type', 'enabled', 'files', 'size', 'path' ) );
+	}
+
+	/**
+	 * Remove duplicate cached images left behind by earlier versions.
+	 *
+	 * Preview by default; --delete removes numbered copies, promoting the newest
+	 * if the original is missing. Unreadable directories or failed file operations
+	 * cause an error after all selected cache types have been processed.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--type=<type>]
+	 * : The cache type to clean up. If omitted, cleans up all caches.
+	 * ---
+	 * options:
+	 *   - avatar
+	 *   - media
+	 *   - emoji
+	 *   - all
+	 * default: all
+	 * ---
+	 *
+	 * [--delete]
+	 * : Remove the duplicate files. Without it, only report them.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     # See what would be removed
+	 *     $ wp activitypub cache cleanup
+	 *
+	 *     # Remove duplicate avatars
+	 *     $ wp activitypub cache cleanup --type=avatar --delete
+	 *
+	 * @subcommand cleanup
+	 *
+	 * @param array $args       The positional arguments.
+	 * @param array $assoc_args The associative arguments.
+	 *
+	 * @return void
+	 */
+	public function cleanup( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		$type   = $assoc_args['type'] ?? 'all';
+		$delete = \WP_CLI\Utils\get_flag_value( $assoc_args, 'delete', false );
+
+		$base_dirs = array(
+			'avatar' => Avatar::get_base_dir(),
+			'media'  => Media::get_base_dir(),
+			'emoji'  => Emoji::get_base_dir(),
+		);
+
+		if ( 'all' !== $type ) {
+			$base_dirs = \array_intersect_key( $base_dirs, array( $type => true ) );
+		}
+
+		$upload_dir = \wp_upload_dir();
+		$totals     = array(
+			'removed'  => 0,
+			'bytes'    => 0,
+			'promoted' => 0,
+			'failed'   => 0,
+		);
+
+		foreach ( $base_dirs as $cache_type => $base_dir ) {
+			$result = File::remove_duplicates( $upload_dir['basedir'] . $base_dir, $delete );
+
+			\WP_CLI::log(
+				\sprintf(
+					'%s: %s %d duplicate file(s), %s; %s %d file(s) to the original name.',
+					$cache_type,
+					$delete ? 'removed' : 'would remove',
+					$result['removed'],
+					\size_format( $result['bytes'] ),
+					$delete ? 'moved' : 'would move',
+					$result['promoted']
+				)
+			);
+
+			foreach ( $totals as $key => $value ) {
+				$totals[ $key ] = $value + $result[ $key ];
+			}
+		}
+
+		if ( $totals['failed'] > 0 ) {
+			\WP_CLI::error( \sprintf( 'Cleanup incomplete: %d file(s) or directory scan(s) could not be read, moved or removed; check the permissions and run again.', $totals['failed'] ) );
+			return;
+		}
+
+		if ( $delete ) {
+			\WP_CLI::success( \sprintf( 'Removed %d duplicate file(s), %s.', $totals['removed'], \size_format( $totals['bytes'] ) ) );
+		} elseif ( $totals['removed'] + $totals['promoted'] > 0 ) {
+			\WP_CLI::log( 'Run again with --delete to remove them.' );
+		} else {
+			\WP_CLI::success( 'No duplicate files found.' );
+		}
 	}
 
 	/**

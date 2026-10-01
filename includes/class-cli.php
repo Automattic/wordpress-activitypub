@@ -40,13 +40,15 @@ class Cli {
 	 * - wp activitypub comment <delete|update> <id>
 	 * - wp activitypub actor <delete|update> <id>
 	 * - wp activitypub outbox <undo|reschedule> <id>
-	 * - wp activitypub cache <clear|status> [--type=<type>]
+	 * - wp activitypub cache <clear|status|cleanup> [--type=<type>]
 	 * - wp activitypub self-destruct [--status] [--yes]
 	 * - wp activitypub move <from> <to>
 	 * - wp activitypub follow <remote_user>
 	 * - wp activitypub stats <collect|compile|send>
 	 * - wp activitypub fetch <url>
 	 * - wp activitypub blurhash backfill [--dry-run] [--limit=<n>] [--force]
+	 *
+	 * @return void
 	 */
 	public static function register() {
 		// Register parent command with version subcommand.
@@ -118,7 +120,7 @@ class Cli {
 			'activitypub cache',
 			Cache_Command::class,
 			array(
-				'shortdesc' => 'Manage remote media cache (clear or show status).',
+				'shortdesc' => 'Manage remote media cache (clear, show status, or clean up duplicates).',
 			)
 		);
 

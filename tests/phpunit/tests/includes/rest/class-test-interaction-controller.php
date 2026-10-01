@@ -28,6 +28,51 @@ class Test_Interaction_Controller extends Test_REST_Controller_Testcase {
 	}
 
 	/**
+	 * The route answers 429 with a Retry-After header once a caller has asked too often.
+	 *
+	 * @covers ::register_routes
+	 */
+	public function test_route_is_rate_limited() {
+		\wp_set_current_user( 0 );
+
+		// The address is process state that no test case restores, so it is put back afterwards.
+		$remote_addr            = $_SERVER['REMOTE_ADDR'] ?? null; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- Remembered only to be put back.
+		$_SERVER['REMOTE_ADDR'] = '203.0.113.50';
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
+		$request->set_param( 'uri', 'https://example.org/note' );
+
+		\add_filter( 'activitypub_rate_limit', '__return_zero' );
+
+		try {
+			// `rest_post_dispatch` is applied by `serve_request()`, not by `dispatch()`, so apply it here.
+			$response = \apply_filters( 'rest_post_dispatch', \rest_get_server()->dispatch( $request ), \rest_get_server(), $request );
+			$headers  = $response->get_headers();
+
+			$this->assertSame( 429, $response->get_status() );
+			$this->assertSame( 'activitypub_rate_limited', $response->get_data()['title'] );
+			$this->assertSame( '0', $headers['RateLimit-Limit'], 'The answer states the allowance it was measured against.' );
+			$this->assertSame( '0', $headers['RateLimit-Remaining'] );
+			$this->assertArrayHasKey( 'Retry-After', $headers, 'The refusal says when to come back.' );
+
+			/*
+			 * The route used to be public to `Server::add_cache_headers()`, which leaves a public answer
+			 * cacheable. Now that it answers per caller, the answer must not be stored by a shared cache
+			 * and handed to the next caller.
+			 */
+			$this->assertStringContainsString( 'no-store', $headers['Cache-Control'] ?? '' );
+		} finally {
+			\remove_filter( 'activitypub_rate_limit', '__return_zero' );
+
+			if ( null === $remote_addr ) {
+				unset( $_SERVER['REMOTE_ADDR'] );
+			} else {
+				$_SERVER['REMOTE_ADDR'] = $remote_addr;
+			}
+		}
+	}
+
+	/**
 	 * Test get_item with invalid URI.
 	 *
 	 * @covers ::get_item
@@ -212,5 +257,69 @@ class Test_Interaction_Controller extends Test_REST_Controller_Testcase {
 	 */
 	public function follow_or_reply_url() {
 		return 'https://custom-follow-or-reply-url.com/?a=b&c=d';
+	}
+
+	/**
+	 * Intent=quote_request redirects to the editor with quotation_of.
+	 *
+	 * @covers ::get_item
+	 */
+	public function test_get_item_quote_request_intent() {
+		$remote_object_filter = function () {
+			return array(
+				'type' => 'Note',
+				'url'  => 'https://example.org/note',
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter, 10, 2 );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
+		$request->set_param( 'uri', 'https://example.org/note' );
+		$request->set_param( 'intent', 'quote_request' );
+		$response = \rest_get_server()->dispatch( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
+
+		$this->assertEquals( 302, $response->get_status() );
+		$this->assertSame( \admin_url( 'post-new.php?quotation_of=' . \rawurlencode( 'https://example.org/note' ) ), $response->get_headers()['Location'] );
+	}
+
+	/**
+	 * Intent=quote is a readable alias for quote_request and redirects the same way.
+	 *
+	 * @covers ::get_item
+	 */
+	public function test_get_item_quote_alias_intent() {
+		$remote_object_filter = function () {
+			return array(
+				'type' => 'Note',
+				'url'  => 'https://example.org/note',
+			);
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter, 10, 2 );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
+		$request->set_param( 'uri', 'https://example.org/note' );
+		$request->set_param( 'intent', 'quote' );
+		$response = \rest_get_server()->dispatch( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote_object_filter );
+
+		$this->assertEquals( 302, $response->get_status() );
+		$this->assertSame( \admin_url( 'post-new.php?quotation_of=' . \rawurlencode( 'https://example.org/note' ) ), $response->get_headers()['Location'] );
+	}
+
+	/**
+	 * An intent value outside the enum is rejected before get_item() runs.
+	 *
+	 * @covers ::register_routes
+	 */
+	public function test_get_item_unknown_intent_rejected() {
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/interactions' );
+		$request->set_param( 'uri', 'https://example.org/note' );
+		$request->set_param( 'intent', 'boost' );
+		$response = \rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 400, $response->get_status() );
 	}
 }

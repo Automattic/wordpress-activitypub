@@ -21,6 +21,8 @@ use function Activitypub\is_user_type_disabled;
 class Actor {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		// Profile updates for blog options.
@@ -34,6 +36,10 @@ class Actor {
 			\add_action( 'update_option_activitypub_blog_identifier', array( self::class, 'blog_user_update' ) );
 			\add_action( 'add_option_activitypub_blog_description', array( self::class, 'blog_user_update' ) );
 			\add_action( 'update_option_activitypub_blog_description', array( self::class, 'blog_user_update' ) );
+			\add_action( 'add_option_activitypub_blog_name', array( self::class, 'blog_user_update' ) );
+			\add_action( 'update_option_activitypub_blog_name', array( self::class, 'blog_user_update' ) );
+			\add_action( 'add_option_activitypub_blog_icon', array( self::class, 'blog_user_update' ) );
+			\add_action( 'update_option_activitypub_blog_icon', array( self::class, 'blog_user_update' ) );
 			\add_filter( 'pre_set_theme_mod_custom_logo', array( self::class, 'blog_user_update' ) );
 			\add_filter( 'pre_set_theme_mod_header_image', array( self::class, 'blog_user_update' ) );
 		}
@@ -69,6 +75,8 @@ class Actor {
 	 * @param  int    $meta_id  Meta ID being updated.
 	 * @param  int    $user_id  User ID being updated.
 	 * @param  string $meta_key Meta key being updated.
+	 *
+	 * @return void
 	 */
 	public static function user_meta_update( $meta_id, $user_id, $meta_key ) {
 		// Don't bother if the user can't publish.
@@ -97,6 +105,8 @@ class Actor {
 	 * Send a profile update when a user is updated.
 	 *
 	 * @param int $user_id User ID being updated.
+	 *
+	 * @return void
 	 */
 	public static function user_update( $user_id ) {
 		// Don't bother if the user can't publish.
@@ -125,11 +135,13 @@ class Actor {
 	 * @param string   $new_status New post status.
 	 * @param string   $old_status Old post status.
 	 * @param \WP_Post $post       Post object.
+	 *
+	 * @return void
 	 */
 	public static function schedule_post_activity( $new_status, $old_status, $post ) {
 		if ( $post instanceof \WP_Post ) {
 			if ( Extra_Fields::USER_POST_TYPE === $post->post_type ) {
-				self::schedule_profile_update( $post->post_author );
+				self::schedule_profile_update( (int) $post->post_author );
 			} elseif ( Extra_Fields::BLOG_POST_TYPE === $post->post_type ) {
 				self::schedule_profile_update( Actors::BLOG_USER_ID );
 			}
@@ -144,6 +156,8 @@ class Actor {
 	 * followers of the blog actor and of every author receive the change.
 	 *
 	 * @since 9.0.1
+	 *
+	 * @return void
 	 */
 	public static function schedule_all_profile_updates() {
 		foreach ( Actors::get_all_ids() as $user_id ) {
@@ -155,6 +169,8 @@ class Actor {
 	 * Send a profile update to all followers. Gets hooked into all relevant options/meta etc.
 	 *
 	 * @param int $user_id  The user ID to update (Could be 0 for Blog-User).
+	 *
+	 * @return void
 	 */
 	public static function schedule_profile_update( $user_id ) {
 		if ( \defined( 'WP_IMPORTING' ) && WP_IMPORTING ) {
@@ -176,6 +192,8 @@ class Actor {
 	 * Send a profile update when a post's sticky status changes.
 	 *
 	 * @param int $post_id The post ID.
+	 *
+	 * @return void
 	 */
 	public static function sticky_post_update( $post_id ) {
 		$post = \get_post( $post_id );
@@ -184,13 +202,15 @@ class Actor {
 			return;
 		}
 
-		self::schedule_profile_update( $post->post_author );
+		self::schedule_profile_update( (int) $post->post_author );
 	}
 
 	/**
 	 * Schedule a Delete activity when a user is deleted.
 	 *
 	 * @param int $user_id The user ID being deleted.
+	 *
+	 * @return void
 	 */
 	public static function schedule_user_delete( $user_id ) {
 		// Get the actor before deletion to ensure we have the data.

@@ -20,6 +20,8 @@ use Activitypub\OAuth\Client;
 class Activitypub {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'init', array( self::class, 'theme_compat' ), 11 );
@@ -38,6 +40,8 @@ class Activitypub {
 	 * Activation Hook.
 	 *
 	 * @param bool $network_wide Whether to activate the plugin for all sites in the network or just the current site.
+	 *
+	 * @return void
 	 */
 	public static function activate( $network_wide ) {
 		self::flush_rewrite_rules();
@@ -60,6 +64,8 @@ class Activitypub {
 	 * Deactivation Hook.
 	 *
 	 * @param bool $network_wide Whether to deactivate the plugin for all sites in the network or just the current site.
+	 *
+	 * @return void
 	 */
 	public static function deactivate( $network_wide ) {
 		self::flush_rewrite_rules();
@@ -80,6 +86,8 @@ class Activitypub {
 
 	/**
 	 * Uninstall Hook.
+	 *
+	 * @return void
 	 */
 	public static function uninstall() {
 		Scheduler::deregister_schedules();
@@ -97,7 +105,9 @@ class Activitypub {
 	/**
 	 * Store permalink in meta, to send delete Activity.
 	 *
-	 * @param string $post_id The Post ID.
+	 * @param int $post_id The Post ID.
+	 *
+	 * @return void
 	 */
 	public static function trash_post( $post_id ) {
 		\add_post_meta(
@@ -111,7 +121,9 @@ class Activitypub {
 	/**
 	 * Delete permalink from meta.
 	 *
-	 * @param string $post_id The Post ID.
+	 * @param int $post_id The Post ID.
+	 *
+	 * @return void
 	 */
 	public static function untrash_post( $post_id ) {
 		\delete_post_meta( $post_id, '_activitypub_canonical_url' );
@@ -119,6 +131,8 @@ class Activitypub {
 
 	/**
 	 * Flush rewrite rules.
+	 *
+	 * @return void
 	 */
 	public static function flush_rewrite_rules() {
 		Router::add_rewrite_rules();
@@ -129,6 +143,8 @@ class Activitypub {
 	 * Add rewrite rules.
 	 *
 	 * @deprecated 7.5.0 Use {@see Router::add_rewrite_rules()}.
+	 *
+	 * @return void
 	 */
 	public static function add_rewrite_rules() {
 		\_deprecated_function( __FUNCTION__, '7.5.0', '\Activitypub\Router::add_rewrite_rules()' );
@@ -138,6 +154,8 @@ class Activitypub {
 
 	/**
 	 * Theme compatibility stuff.
+	 *
+	 * @return void
 	 */
 	public static function theme_compat() {
 		// We assume that you want to use Post-Formats when enabling the setting.
@@ -162,6 +180,8 @@ class Activitypub {
 	 * Add the 'activitypub' capability to users who can publish posts.
 	 *
 	 * @param int $user_id User ID.
+	 *
+	 * @return void
 	 */
 	public static function user_register( $user_id ) {
 		if ( \user_can( $user_id, 'publish_posts' ) ) {
@@ -172,6 +192,8 @@ class Activitypub {
 
 	/**
 	 * Register user meta.
+	 *
+	 * @return void
 	 */
 	public static function register_user_meta() {
 		$blog_prefix = $GLOBALS['wpdb']->get_blog_prefix();

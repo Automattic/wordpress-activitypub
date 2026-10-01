@@ -12,8 +12,8 @@ use Activitypub\OAuth\Client;
 use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Server as OAuth_Server;
 use Activitypub\OAuth\Token;
+use Activitypub\Rest\Rate_Limit;
 
-use function Activitypub\get_client_ip;
 
 /**
  * Token_Controller class for handling OAuth 2.0 token endpoints.
@@ -26,6 +26,8 @@ use function Activitypub\get_client_ip;
  * @since 8.1.0
  */
 class Token_Controller extends \WP_REST_Controller {
+	use Rate_Limit;
+
 	/**
 	 * The namespace of this controller's route.
 	 *
@@ -42,6 +44,8 @@ class Token_Controller extends \WP_REST_Controller {
 
 	/**
 	 * Register routes.
+	 *
+	 * @return void
 	 */
 	public function register_routes() {
 		// Token endpoint.
@@ -151,19 +155,14 @@ class Token_Controller extends \WP_REST_Controller {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function token( \WP_REST_Request $request ) {
-		// Rate-limit token requests to prevent brute-force attacks (max 20 per minute per IP).
-		$ip = get_client_ip();
-		if ( '' === $ip ) {
+		/*
+		 * Counted like every other limited endpoint, but answered here rather than in the
+		 * permission callback: RFC 6749 prescribes the error body for this endpoint, and only
+		 * `token_error()` speaks it.
+		 */
+		if ( \is_wp_error( $this->rate_limit( 'oauth_token', 20, $request ) ) ) {
 			return $this->token_error( 'rate_limited', 'Too many token requests. Please try again later.', 429 );
 		}
-		$transient_key = 'ap_oauth_tok_' . \md5( $ip );
-		$count         = (int) \get_transient( $transient_key );
-
-		if ( $count >= 20 ) {
-			return $this->token_error( 'rate_limited', 'Too many token requests. Please try again later.', 429 );
-		}
-
-		\set_transient( $transient_key, $count + 1, MINUTE_IN_SECONDS );
 
 		$grant_type = $request->get_param( 'grant_type' );
 
@@ -414,11 +413,6 @@ class Token_Controller extends \WP_REST_Controller {
 			'Cache-Control' => 'no-store',
 			'Pragma'        => 'no-cache',
 		);
-
-		// RFC 6585 §4: send Retry-After with rate-limit responses so clients can back off.
-		if ( 429 === $status ) {
-			$headers['Retry-After'] = (string) MINUTE_IN_SECONDS;
-		}
 
 		return new \WP_REST_Response(
 			array(

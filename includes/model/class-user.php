@@ -217,12 +217,12 @@ class User extends Actor {
 		$header_image = \get_user_option( 'activitypub_header_image', $this->_id );
 		$image_url    = null;
 
-		if ( ! $header_image && \has_header_image() ) {
-			$image_url = \get_header_image();
+		if ( $header_image && \wp_attachment_is_image( $header_image ) ) {
+			$image_url = \wp_get_attachment_url( $header_image );
 		}
 
-		if ( $header_image ) {
-			$image_url = \wp_get_attachment_url( $header_image );
+		if ( ! $image_url && \has_header_image() ) {
+			$image_url = \get_header_image();
 		}
 
 		if ( $image_url ) {
@@ -480,7 +480,8 @@ class User extends Actor {
 
 		$also_known_as = \array_merge( $also_known_as, \get_user_option( 'activitypub_also_known_as', $this->_id ) ?: array() );
 
-		return \array_unique( $also_known_as );
+		// Re-index, otherwise a duplicate alias turns the JSON list into an object.
+		return \array_values( \array_unique( $also_known_as ) );
 	}
 
 	/**

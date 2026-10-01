@@ -33,7 +33,10 @@ class Test_Delete extends \WP_UnitTestCase {
 		// Prevent wp_trash_post from triggering the full outbox chain.
 		\remove_action( 'wp_after_insert_post', array( Post::class, 'triage' ), 33 );
 
-		$this->user_id = self::factory()->user->create();
+		$this->user_id = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		// The REST layer only dispatches to a handler for the authenticated owner.
+		\wp_set_current_user( $this->user_id );
 	}
 
 	/**
@@ -106,9 +109,15 @@ class Test_Delete extends \WP_UnitTestCase {
 	/**
 	 * Test outgoing Delete skips posts not owned by user.
 	 *
+	 * The caller is an editor, who may delete other users' posts in WordPress, so only the
+	 * ownership check can refuse it.
+	 *
 	 * @covers ::handle_delete
 	 */
 	public function test_handle_delete_skips_unowned_post() {
+		$editor = self::factory()->user->create( array( 'role' => 'editor' ) );
+		\wp_set_current_user( $editor );
+
 		$other_user = self::factory()->user->create();
 		$post_id    = self::factory()->post->create(
 			array(
@@ -123,7 +132,7 @@ class Test_Delete extends \WP_UnitTestCase {
 			'object' => $permalink,
 		);
 
-		Delete::handle_delete( $data, $this->user_id );
+		Delete::handle_delete( $data, $editor );
 
 		$post = \get_post( $post_id );
 		$this->assertEquals( 'publish', $post->post_status, 'Post should not be trashed by non-owner.' );
@@ -259,5 +268,118 @@ class Test_Delete extends \WP_UnitTestCase {
 			\has_filter( 'activitypub_outbox_delete', array( Delete::class, 'handle_delete' ) ),
 			'Filter should be registered.'
 		);
+	}
+
+	/**
+	 * A user who owns the post but may not delete it is refused.
+	 *
+	 * A contributor cannot delete their own post once it is published, so ownership alone
+	 * must not be enough.
+	 *
+	 * @covers ::handle_delete
+	 */
+	public function test_handle_delete_requires_the_capability_on_an_own_post() {
+		$contributor = self::factory()->user->create( array( 'role' => 'contributor' ) );
+		\wp_set_current_user( $contributor );
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_author' => $contributor,
+				'post_status' => 'publish',
+			)
+		);
+
+		$data = array(
+			'type'   => 'Delete',
+			'object' => \get_permalink( $post_id ),
+		);
+
+		Delete::handle_delete( $data, $contributor );
+
+		$this->assertEquals( 'publish', \get_post( $post_id )->post_status );
+	}
+
+	/**
+	 * Test that the blog actor can only delete posts its user may delete.
+	 *
+	 * @covers ::handle_delete
+	 */
+	public function test_handle_delete_as_blog_actor_requires_capability() {
+		$other_user = self::factory()->user->create( array( 'role' => 'author' ) );
+		$post_id    = self::factory()->post->create(
+			array(
+				'post_author' => $other_user,
+				'post_status' => 'publish',
+			)
+		);
+		$data       = array(
+			'type'   => 'Delete',
+			'object' => \get_permalink( $post_id ),
+		);
+
+		// An author acting as the blog still can't delete someone else's post.
+		Delete::handle_delete( $data, 0 );
+
+		$this->assertEquals( 'publish', \get_post_status( $post_id ) );
+
+		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		Delete::handle_delete( $data, 0 );
+
+		$this->assertEquals( 'trash', \get_post_status( $post_id ) );
+	}
+
+	/**
+	 * Test that a user can delete their own comment on someone else's post.
+	 *
+	 * @covers ::handle_delete
+	 */
+	public function test_handle_delete_trashes_own_comment_on_other_post() {
+		$other_user = self::factory()->user->create( array( 'role' => 'author' ) );
+		$post_id    = self::factory()->post->create( array( 'post_author' => $other_user ) );
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'user_id'         => $this->user_id,
+			)
+		);
+
+		$result = Delete::handle_delete(
+			array(
+				'type'   => 'Delete',
+				'object' => \add_query_arg( 'c', $comment_id, \trailingslashit( \home_url() ) ),
+			),
+			$this->user_id
+		);
+
+		$this->assertInstanceOf( \WP_Comment::class, $result );
+		$this->assertEquals( 'trash', \get_comment( $comment_id )->comment_approved );
+	}
+
+	/**
+	 * Test that the blog actor can only delete comments its user may edit.
+	 *
+	 * @covers ::handle_delete
+	 */
+	public function test_handle_delete_comment_as_blog_actor_requires_capability() {
+		$other_user = self::factory()->user->create( array( 'role' => 'author' ) );
+		$post_id    = self::factory()->post->create( array( 'post_author' => $other_user ) );
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'user_id'         => $other_user,
+			)
+		);
+		$data       = array(
+			'type'   => 'Delete',
+			'object' => \add_query_arg( 'c', $comment_id, \trailingslashit( \home_url() ) ),
+		);
+
+		// An author acting as the blog can't delete a comment on someone else's post.
+		Delete::handle_delete( $data, 0 );
+		$this->assertEquals( '1', \get_comment( $comment_id )->comment_approved );
+
+		\wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		Delete::handle_delete( $data, 0 );
+		$this->assertEquals( 'trash', \get_comment( $comment_id )->comment_approved );
 	}
 }

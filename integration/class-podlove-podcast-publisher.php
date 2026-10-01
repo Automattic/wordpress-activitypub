@@ -166,7 +166,7 @@ class Podlove_Podcast_Publisher extends Post {
 		}
 
 		// Fall back to post thumbnail.
-		$icon = $this->get_icon();
+		$icon = $this->get_media_icon();
 		if ( $icon ) {
 			return object_to_uri( $icon );
 		}

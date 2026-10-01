@@ -112,7 +112,7 @@ function process_remote_images( $content, $attachments = array() ) {
 		$processor = new \WP_HTML_Tag_Processor( $content );
 
 		// Mark remote images for wrapping using a data attribute.
-		while ( $processor->next_tag( 'IMG' ) ) {
+		while ( $processor->next_tag( array( 'tag_name' => 'IMG' ) ) ) {
 			$src = $processor->get_attribute( 'src' );
 
 			if ( $src && is_remote_url( $src ) && ! isset( $seen_urls[ $src ] ) ) {

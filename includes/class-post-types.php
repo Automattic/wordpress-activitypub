@@ -28,6 +28,8 @@ use Activitypub\Rest\Remote_Posts_Controller;
 class Post_Types {
 	/**
 	 * Initialize the class, registering all custom post types and post meta.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'init', array( self::class, 'register_remote_actors_post_type' ), 11 );
@@ -62,6 +64,8 @@ class Post_Types {
 
 	/**
 	 * Register the Remote Actors post type and its meta.
+	 *
+	 * @return void
 	 */
 	public static function register_remote_actors_post_type() {
 		\register_post_type(
@@ -120,6 +124,8 @@ class Post_Types {
 
 	/**
 	 * Register the Inbox post type and its meta.
+	 *
+	 * @return void
 	 */
 	public static function register_inbox_post_type() {
 		\register_post_type(
@@ -229,6 +235,8 @@ class Post_Types {
 
 	/**
 	 * Register the Outbox post type and its meta.
+	 *
+	 * @return void
 	 */
 	public static function register_outbox_post_type() {
 		\register_post_type(
@@ -355,6 +363,8 @@ class Post_Types {
 
 	/**
 	 * Register the Post post type.
+	 *
+	 * @return void
 	 */
 	public static function register_post_post_type() {
 		\register_post_type(
@@ -428,6 +438,8 @@ class Post_Types {
 
 	/**
 	 * Register the Extra Fields post types.
+	 *
+	 * @return void
 	 */
 	public static function register_extra_fields_post_types() {
 		$extra_field_args = array(
@@ -477,6 +489,8 @@ class Post_Types {
 	 *
 	 * Registers post type for OAuth clients.
 	 * Note: Tokens are stored in user meta and authorization codes in transients.
+	 *
+	 * @return void
 	 */
 	public static function register_oauth_post_types() {
 		// OAuth Clients post type.
@@ -580,6 +594,8 @@ class Post_Types {
 	 * The post type is fully internal — never queried publicly, never shown in UI.
 	 *
 	 * @since 8.3.0
+	 *
+	 * @return void
 	 */
 	public static function register_tombstone_post_type() {
 		\register_post_type(
@@ -609,6 +625,8 @@ class Post_Types {
 
 	/**
 	 * Register post meta for ActivityPub supported post types.
+	 *
+	 * @return void
 	 */
 	public static function register_activitypub_post_meta() {
 		$ap_post_types = \get_post_types_by_support( 'activitypub' );
@@ -720,6 +738,8 @@ class Post_Types {
 
 	/**
 	 * Register REST field for ap_actor posts.
+	 *
+	 * @return void
 	 */
 	public static function register_ap_actor_rest_field() {
 		\register_rest_field(
@@ -830,6 +850,8 @@ class Post_Types {
 
 	/**
 	 * Register a REST field for the ap_post post type to embed remote actor data.
+	 *
+	 * @return void
 	 */
 	public static function register_ap_post_actor_rest_field() {
 		\register_rest_field(
@@ -870,6 +892,8 @@ class Post_Types {
 
 	/**
 	 * Register custom REST API parameters for ap_post endpoint.
+	 *
+	 * @return void
 	 */
 	public static function register_ap_post_rest_params() {
 		\add_filter(
@@ -1091,6 +1115,8 @@ class Post_Types {
 	 * @param int       $object_id  ID of the object metadata is for.
 	 * @param string    $meta_key   Metadata key.
 	 * @param mixed     $meta_value Metadata value. Must be serializable if non-scalar.
+	 *
+	 * @return null|bool Whether to allow updating metadata for the given type.
 	 */
 	public static function prevent_empty_post_meta( $check, $object_id, $meta_key, $meta_value ) {
 		$post_metas = array(

@@ -130,4 +130,44 @@ class Test_Base_Object extends \WP_UnitTestCase {
 		$this->assertArrayNotHasKey( 'Hashtag', $inline );
 		$this->assertArrayNotHasKey( 'sensitive', $inline );
 	}
+
+	/**
+	 * Quote properties serialize with their FEP-044f / Mastodon wire names and context terms.
+	 *
+	 * @covers \Activitypub\Activity\Generic_Object::to_array
+	 */
+	public function test_quote_properties_serialize_with_context() {
+		$object = new Base_Object();
+		$object->set_type( 'Note' );
+		$object->set_quote( 'https://remote.example/notes/1' );
+		$object->set_quote_uri( 'https://remote.example/notes/1' );
+		$object->set__misskey_quote( 'https://remote.example/notes/1' );
+		$object->set_quote_authorization( 'https://remote.example/stamps/1' );
+
+		$array = $object->to_array();
+
+		$this->assertSame( 'https://remote.example/notes/1', $array['quote'] );
+		$this->assertSame( 'https://remote.example/notes/1', $array['quoteUri'] );
+		$this->assertSame( 'https://remote.example/notes/1', $array['_misskey_quote'] );
+		$this->assertSame( 'https://remote.example/stamps/1', $array['quoteAuthorization'] );
+
+		$context = \end( $array['@context'] );
+		$this->assertSame( 'https://w3id.org/fep/044f#', $context['fep044f'] );
+		$this->assertSame(
+			array(
+				'@id'   => 'fep044f:quote',
+				'@type' => '@id',
+			),
+			$context['quote']
+		);
+		$this->assertSame(
+			array(
+				'@id'   => 'fep044f:quoteAuthorization',
+				'@type' => '@id',
+			),
+			$context['quoteAuthorization']
+		);
+		$this->assertSame( 'http://fedibird.com/ns#quoteUri', $context['quoteUri'] );
+		$this->assertSame( 'https://misskey-hub.net/ns#_misskey_quote', $context['_misskey_quote'] );
+	}
 }

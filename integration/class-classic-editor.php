@@ -16,6 +16,8 @@ class Classic_Editor {
 
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_attachments_media_markup', array( self::class, 'filter_attachments_media_markup' ), 10, 2 );
@@ -106,6 +108,8 @@ class Classic_Editor {
 	 *
 	 * @param string        $post_type The post type.
 	 * @param \WP_Post|null $post      The post being edited.
+	 *
+	 * @return void
 	 */
 	public static function add_meta_box( $post_type, $post = null ) {
 		// Only add for post types that support ActivityPub.
@@ -138,6 +142,8 @@ class Classic_Editor {
 	 * Render the ActivityPub meta box.
 	 *
 	 * @param \WP_Post $post The post object.
+	 *
+	 * @return void
 	 */
 	public static function render_meta_box( $post ) {
 		// Add nonce for security.
@@ -260,6 +266,8 @@ class Classic_Editor {
 	 * Save ActivityPub meta data.
 	 *
 	 * @param int $post_id The post ID.
+	 *
+	 * @return void
 	 */
 	public static function save_meta_data( $post_id ) {
 		// Check if this is an autosave.

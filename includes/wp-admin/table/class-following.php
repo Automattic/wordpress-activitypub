@@ -59,6 +59,8 @@ class Following extends \WP_List_Table {
 
 	/**
 	 * Process action.
+	 *
+	 * @return void
 	 */
 	public function process_action() {
 		if ( ! \current_user_can( 'edit_user', $this->user_id ) ) {
@@ -179,6 +181,8 @@ class Following extends \WP_List_Table {
 
 	/**
 	 * Process admin notices based on query parameters.
+	 *
+	 * @return void
 	 */
 	public function process_admin_notices() {
 		\settings_errors( 'activitypub' );
@@ -186,6 +190,8 @@ class Following extends \WP_List_Table {
 
 	/**
 	 * Prepare items.
+	 *
+	 * @return void
 	 */
 	public function prepare_items() {
 		$status   = Following_Collection::ALL;
@@ -224,8 +230,8 @@ class Following extends \WP_List_Table {
 		$this->items = array();
 		$this->set_pagination_args(
 			array(
-				'total_items' => $counter,
-				'total_pages' => \ceil( $counter / $per_page ),
+				'total_items' => (int) $counter,
+				'total_pages' => (int) \ceil( $counter / $per_page ),
 				'per_page'    => $per_page,
 			)
 		);
@@ -400,6 +406,8 @@ class Following extends \WP_List_Table {
 
 	/**
 	 * Message to be displayed when there are no followings.
+	 *
+	 * @return void
 	 */
 	public function no_items() {
 		\esc_html_e( 'No profiles found.', 'activitypub' );
@@ -438,6 +446,8 @@ class Following extends \WP_List_Table {
 	 * Single row.
 	 *
 	 * @param array $item Item.
+	 *
+	 * @return void
 	 */
 	public function single_row( $item ) {
 		\printf(

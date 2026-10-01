@@ -8,9 +8,9 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: var(--wpds-spacing-20, 8px);
-	margin-right: var(--wpds-spacing-30, 12px);
-	height: var(--wpds-spacing-160, 64px);
+	gap: var(--wpds-dimension-gap-sm, 8px);
+	margin-right: var(--wpds-dimension-gap-md, 12px);
+	height: 64px;
 }
 
 .site-hub__actions {
@@ -18,8 +18,8 @@
 }
 
 .site-hub__icon-container {
-	height: var(--wpds-spacing-160, 64px);
-	width: var(--wpds-spacing-160, 64px);
+	height: 64px;
+	width: 64px;
 	flex-shrink: 0;
 
 	&.has-transparent-background .site-hub__icon-container {
@@ -33,8 +33,8 @@
 	/* stylelint-enable  */
 	position: relative;
 	color: colors.$white;
-	height: var(--wpds-spacing-160, 64px);
-	width: var(--wpds-spacing-160, 64px);
+	height: 64px;
+	width: 64px;
 	overflow: hidden;
 	padding: 0;
 	display: flex;
@@ -59,11 +59,11 @@
 		content: "";
 		display: block;
 		position: absolute;
-		top: calc(var(--wpds-spacing-20, 8px) + var(--wpds-border-width-focus, 1px));
-		right: calc(var(--wpds-spacing-20, 8px) + var(--wpds-border-width-focus, 1px));
-		bottom: calc(var(--wpds-spacing-20, 8px) + var(--wpds-border-width-focus, 1px));
-		left: calc(var(--wpds-spacing-40, 16px) + var(--wpds-border-width-focus, 1px));
-		border-radius: var(--wpds-border-radius-large, 8px);
+		top: calc(var(--wpds-dimension-gap-sm, 8px) + var(--wpds-border-width-xs, 1px));
+		right: calc(var(--wpds-dimension-gap-sm, 8px) + var(--wpds-border-width-xs, 1px));
+		bottom: calc(var(--wpds-dimension-gap-sm, 8px) + var(--wpds-border-width-xs, 1px));
+		left: calc(var(--wpds-dimension-gap-lg, 16px) + var(--wpds-border-width-xs, 1px));
+		border-radius: var(--wpds-border-radius-lg, 8px);
 		box-shadow: none;
 
 		@media not (prefers-reduced-motion) {
@@ -72,8 +72,8 @@
 	}
 
 	.site-icon {
-		height: var(--wpds-spacing-160, 64px);
-		width: var(--wpds-spacing-160, 64px);
+		height: 64px;
+		width: 64px;
 	}
 
 	.site-icon__icon {
@@ -86,11 +86,11 @@
 	color: colors.$gray-200;
 	display: block;
 	flex-grow: 1;
-	font-size: var(--wpds-font-size-medium, 15px);
-	font-weight: var(--wpds-font-weight-medium, 500);
+	font-size: var(--wpds-typography-font-size-lg, 15px);
+	font-weight: 500;
 	overflow: hidden;
 	// Add space for the ↗ to render.
-	padding-right: var(--wpds-spacing-40, 16px);
+	padding-right: var(--wpds-dimension-padding-lg, 16px);
 	// Create 12px gap between site icon and site title
 	margin-left: -4px;
 	position: relative;
@@ -148,7 +148,7 @@
 	&:active {
 
 		svg {
-			fill: colors.$gray-100;
+			color: colors.$gray-100;
 		}
 	}
 }
@@ -164,7 +164,7 @@
 	align-items: center;
 	justify-content: space-between;
 	height: 56px;
-	padding: 0 var(--wpds-spacing-30, 12px);
+	padding: 0 var(--wpds-dimension-padding-md, 12px);
 	background: colors.$gray-900;
 	border-bottom: 1px solid rgba(colors.$white, 0.1);
 	flex-shrink: 0;
@@ -172,8 +172,8 @@
 
 .site-hub-mobile__title {
 	color: colors.$white;
-	font-size: var(--wpds-font-size-medium, 16px);
-	font-weight: var(--wpds-font-weight-medium, 500);
+	font-size: var(--wpds-typography-font-size-lg, 15px);
+	font-weight: 500;
 }
 
 // :focus-visible sets box-shadow, separate from color rules above

@@ -2,7 +2,8 @@ import clsx from 'clsx';
 import { useBlockProps, InnerBlocks, InspectorControls } from '@wordpress/block-editor';
 import { PanelBody, ToggleControl } from '@wordpress/components';
 import { __, _x, sprintf } from '@wordpress/i18n';
-import { select } from '@wordpress/data';
+import { select, useSelect } from '@wordpress/data';
+import { store as editorStore } from '@wordpress/editor';
 import { useEffect, useRef } from '@wordpress/element';
 import { Reactions } from './reactions';
 import { useOptions } from '../shared/use-options';
@@ -64,6 +65,16 @@ export default function Edit( { attributes, setAttributes } ) {
 	const { getCurrentPostId } = select( 'core/editor' );
 	const { showAvatars = true } = useOptions();
 	const hasInitialized = useRef( false );
+
+	/*
+	 * The post endpoints refuse a post that is not federated, so only ask for one they will
+	 * answer for. The saved post decides, not the edited one: the endpoints check the database,
+	 * and the field is refreshed from every save response.
+	 */
+	const isPubliclyQueryable = useSelect(
+		( selectFn ) => !! selectFn( editorStore ).getCurrentPost()?.activitypub_publicly_queryable,
+		[]
+	);
 
 	// On first render, set default style based on avatar setting.
 	useEffect( () => {
@@ -128,6 +139,7 @@ export default function Edit( { attributes, setAttributes } ) {
 				/>
 				<Reactions
 					postId={ getCurrentPostId() }
+					reactions={ isPubliclyQueryable ? null : DUMMY_REACTIONS }
 					fallbackReactions={ DUMMY_REACTIONS }
 					displayStyle={ displayStyle }
 					showActions={ showActions }

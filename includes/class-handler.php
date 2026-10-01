@@ -13,6 +13,8 @@ namespace Activitypub;
 class Handler {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		self::register_handlers();
@@ -21,6 +23,8 @@ class Handler {
 
 	/**
 	 * Register handlers.
+	 *
+	 * @return void
 	 */
 	public static function register_handlers() {
 		Handler\Accept::init();
@@ -47,6 +51,8 @@ class Handler {
 
 	/**
 	 * Register outbox handlers.
+	 *
+	 * @return void
 	 */
 	public static function register_outbox_handlers() {
 		Handler\Outbox\Add::init();

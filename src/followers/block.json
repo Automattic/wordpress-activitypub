@@ -11,7 +11,26 @@
 	"keywords": [ "fediverse", "activitypub", "followers", "mastodon" ],
 	"supports": {
 		"html": false,
-		"interactivity": true
+		"interactivity": true,
+		"color": {
+			"gradients": true,
+			"link": true,
+			"__experimentalDefaultControls": {
+				"background": true,
+				"text": true,
+				"link": true
+			}
+		},
+		"typography": {
+			"fontSize": true,
+			"__experimentalDefaultControls": {
+				"fontSize": true
+			}
+		},
+		"spacing": {
+			"margin": true,
+			"padding": true
+		}
 	},
 	"attributes": {
 		"selectedUser": {

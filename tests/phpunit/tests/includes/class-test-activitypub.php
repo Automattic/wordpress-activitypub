@@ -9,6 +9,10 @@ namespace Activitypub\Tests;
 
 use Activitypub\Activitypub;
 use Activitypub\Collection\Outbox;
+use Activitypub\Event_Stream;
+use Activitypub\Integration\Opengraph;
+use Activitypub\OAuth\Server;
+use Activitypub\Relay;
 
 /**
  * Test class for Activitypub.
@@ -21,6 +25,43 @@ class Test_Activitypub extends \WP_UnitTestCase {
 	 */
 	public function test_test_env() {
 		$this->assertEquals( 'production', \wp_get_environment_type() );
+	}
+
+	/**
+	 * Setting-dependent subsystems are registered on `init` whether or not their setting is on.
+	 *
+	 * The bootstrap ran `plugin_init()` with every feature setting at its default. A gate
+	 * on the option at `plugins_loaded` would have left these unregistered, and on a multisite
+	 * host that switches to the site afterwards there is no second chance to add them.
+	 *
+	 * @dataProvider setting_dependent_init_provider
+	 *
+	 * @param string      $subsystem The class whose `init()` has to be registered.
+	 * @param string|null $option    A setting that is off by default, to show the registration does not depend on it.
+	 */
+	public function test_setting_dependent_subsystems_are_registered_regardless_of_the_setting( $subsystem, $option = null ) {
+		if ( $option ) {
+			$this->assertFalse( \get_option( $option ), 'The setting must be off for this to prove anything.' );
+		}
+
+		$this->assertNotFalse( \has_action( 'init', array( $subsystem, 'init' ) ), "$subsystem::init() must be registered on init." );
+	}
+
+	/**
+	 * Data provider for the setting-dependent subsystems.
+	 *
+	 * OpenGraph is on by default, so its row only proves that the integration is deferred to
+	 * `init` at all instead of being initialized straight from `plugins_loaded`.
+	 *
+	 * @return array[]
+	 */
+	public function setting_dependent_init_provider() {
+		return array(
+			'event stream' => array( Event_Stream::class, 'activitypub_api' ),
+			'oauth server' => array( Server::class, 'activitypub_api' ),
+			'relay'        => array( Relay::class, 'activitypub_relay_mode' ),
+			'opengraph'    => array( Opengraph::class ),
+		);
 	}
 
 	/**

@@ -11,7 +11,8 @@
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-.activitypub-reply-block .activitypub-embed {
+.activitypub-reply-block .activitypub-embed,
+.activitypub-quote-block .activitypub-embed {
 	margin: 1em 0;
 }
 

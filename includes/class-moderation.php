@@ -203,9 +203,9 @@ class Moderation {
 	/**
 	 * Remove a block for a user.
 	 *
-	 * @param int    $user_id The user ID.
-	 * @param string $type    The block type (actor, domain, keyword).
-	 * @param string $value   The value to unblock.
+	 * @param int        $user_id The user ID.
+	 * @param string     $type    The block type (actor, domain, keyword).
+	 * @param string|int $value   The value to unblock.
 	 * @return bool True on success, false on failure.
 	 */
 	public static function remove_user_block( $user_id, $type, $value ) {
@@ -294,6 +294,8 @@ class Moderation {
 	 *
 	 * @param string $type   The block type (domain or keyword only).
 	 * @param array  $values Array of values to block.
+	 *
+	 * @return void
 	 */
 	public static function add_site_blocks( $type, $values ) {
 		if ( ! \in_array( $type, array( self::TYPE_DOMAIN, self::TYPE_KEYWORD ), true ) ) {

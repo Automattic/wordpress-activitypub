@@ -35,18 +35,18 @@
 .activitypub-feed-post-meta {
 	display: flex;
 	align-items: center;
-	gap: var(--wpds-spacing-20, 8px);
-	margin-bottom: var(--wpds-spacing-30, 12px);
-	font-size: var(--wpds-font-size-small, 13px);
+	gap: var(--wpds-dimension-gap-sm, 8px);
+	margin-bottom: var(--wpds-dimension-gap-md, 12px);
+	font-size: var(--wpds-typography-font-size-md, 13px);
 	color: colors.$gray-700;
 
 	.activitypub-avatar {
-		width: var(--wpds-spacing-50, 20px);
-		height: var(--wpds-spacing-50, 20px);
+		width: var(--wpds-dimension-size-xs, 20px);
+		height: var(--wpds-dimension-size-xs, 20px);
 	}
 
 	.author {
-		font-weight: var(--wpds-font-weight-medium, 500);
+		font-weight: 500;
 		color: colors.$gray-900;
 	}
 
@@ -61,14 +61,13 @@
 
 // Post title styling
 .activitypub-feed-post-title {
-	margin: 0 0 var(--wpds-spacing-30, 12px);
+	margin: 0 0 var(--wpds-dimension-gap-md, 12px);
 	font-size: inherit;
 	font-weight: 400;
 	line-height: 1.4;
 	color: colors.$gray-900;
 	max-width: 100%;
 	overflow-wrap: break-word;
-	word-wrap: break-word;
 
 	// Remove extra margins from nested elements
 	> * {
@@ -79,18 +78,17 @@
 // Post excerpt styling
 .activitypub-feed-excerpt {
 	color: colors.$gray-700;
-	font-size: var(--wpds-font-size-small, 13px);
+	font-size: var(--wpds-typography-font-size-md, 13px);
 	line-height: 1.6;
-	margin-top: var(--wpds-spacing-15, 6px);
+	margin-top: 6px;
 	max-width: 100%;
 	overflow-wrap: break-word;
-	word-wrap: break-word;
 }
 
 // Prominent headline in list view only
 .dataviews-view-list .activitypub-feed-post-title {
 	font-size: 1.3em;
-	font-weight: var(--wpds-font-weight-semibold, 600);
+	font-weight: var(--wpds-typography-font-weight-emphasis, 600);
 }
 
 // Inspector view styles - modern and flat
@@ -100,7 +98,7 @@
 }
 
 .activitypub-inspector-loading {
-	padding: var(--wpds-spacing-50, 20px);
+	padding: var(--wpds-dimension-padding-xl, 20px);
 	text-align: center;
 }
 
@@ -111,22 +109,22 @@
 	box-shadow: none !important;
 	background: transparent !important;
 	padding: 0 !important;
-	margin-bottom: var(--wpds-spacing-60, 24px) !important;
+	margin-bottom: var(--wpds-dimension-gap-xl, 24px) !important;
 
 	.components-card__header {
 		border: none !important;
 		border-radius: 0 !important;
-		padding: var(--wpds-spacing-60, 24px) var(--wpds-spacing-60, 24px) var(--wpds-spacing-40, 16px) !important;
-		border-bottom: var(--wpds-border-width-control, 1px) solid colors.$gray-300 !important;
+		padding: var(--wpds-dimension-padding-2xl, 24px) var(--wpds-dimension-padding-2xl, 24px) var(--wpds-dimension-padding-lg, 16px) !important;
+		border-bottom: var(--wpds-border-width-xs, 1px) solid colors.$gray-300 !important;
 	}
 
 	.components-card__body {
-		padding: var(--wpds-spacing-40, 16px) var(--wpds-spacing-60, 24px) 0 !important;
+		padding: var(--wpds-dimension-padding-lg, 16px) var(--wpds-dimension-padding-2xl, 24px) 0 !important;
 
 		h2 {
-			margin: 0 0 var(--wpds-spacing-40, 16px);
-			font-size: var(--wpds-font-size-large, 20px);
-			font-weight: var(--wpds-font-weight-semibold, 600);
+			margin: 0 0 var(--wpds-dimension-gap-lg, 16px);
+			font-size: var(--wpds-typography-font-size-xl, 20px);
+			font-weight: var(--wpds-typography-font-weight-emphasis, 600);
 			line-height: 1.4;
 			color: colors.$gray-900;
 		}
@@ -134,7 +132,7 @@
 		> div {
 			line-height: 1.6;
 			color: colors.$gray-900;
-			margin-bottom: var(--wpds-spacing-40, 16px);
+			margin-bottom: var(--wpds-dimension-gap-lg, 16px);
 
 			img {
 				max-width: 100%;
@@ -145,22 +143,22 @@
 }
 
 .activitypub-inspector-comments-card {
-	margin-top: var(--wpds-spacing-60, 24px) !important;
-	padding-top: var(--wpds-spacing-60, 24px) !important;
-	border-top: var(--wpds-border-width-control, 1px) solid colors.$gray-300 !important;
+	margin-top: var(--wpds-dimension-gap-xl, 24px) !important;
+	padding-top: var(--wpds-dimension-padding-2xl, 24px) !important;
+	border-top: var(--wpds-border-width-xs, 1px) solid colors.$gray-300 !important;
 
 	.components-card__header {
 		border-bottom: none !important;
-		padding-bottom: var(--wpds-spacing-30, 12px) !important;
-		font-size: var(--wpds-font-size-medium, 16px);
-		font-weight: var(--wpds-font-weight-semibold, 600);
+		padding-bottom: var(--wpds-dimension-padding-md, 12px) !important;
+		font-size: var(--wpds-typography-font-size-lg, 15px);
+		font-weight: var(--wpds-typography-font-weight-emphasis, 600);
 	}
 }
 
 .activitypub-inspector-header {
 	display: flex;
 	align-items: center;
-	gap: var(--wpds-spacing-30, 12px);
+	gap: var(--wpds-dimension-gap-md, 12px);
 	width: 100%;
 }
 
@@ -172,12 +170,12 @@
 .activitypub-inspector-author {
 	display: flex;
 	flex-direction: column;
-	gap: var(--wpds-spacing-10, 4px);
+	gap: var(--wpds-dimension-gap-xs, 4px);
 }
 
 .activitypub-inspector-author-name {
-	font-size: var(--wpds-font-size-small, 14px);
-	font-weight: var(--wpds-font-weight-semibold, 600);
+	font-size: var(--wpds-typography-font-size-md, 13px);
+	font-weight: var(--wpds-typography-font-weight-emphasis, 600);
 	color: colors.$gray-900;
 	text-decoration: none;
 
@@ -190,8 +188,8 @@
 .activitypub-inspector-meta {
 	display: flex;
 	align-items: center;
-	gap: var(--wpds-spacing-15, 6px);
-	font-size: var(--wpds-font-size-small, 13px);
+	gap: 6px;
+	font-size: var(--wpds-typography-font-size-md, 13px);
 }
 
 .activitypub-inspector-webfinger {
@@ -213,13 +211,13 @@
 }
 
 .activitypub-inspector-link {
-	margin-top: var(--wpds-spacing-40, 16px);
+	margin-top: var(--wpds-dimension-gap-lg, 16px);
 }
 
 .activitypub-inspector-comment {
-	margin-bottom: var(--wpds-spacing-50, 20px);
-	padding-bottom: var(--wpds-spacing-50, 20px);
-	border-bottom: var(--wpds-border-width-control, 1px) solid colors.$gray-100;
+	margin-bottom: 20px;
+	padding-bottom: var(--wpds-dimension-padding-xl, 20px);
+	border-bottom: var(--wpds-border-width-xs, 1px) solid colors.$gray-100;
 
 	&:last-child {
 		border-bottom: none;
@@ -229,17 +227,17 @@
 }
 
 .activitypub-inspector-comment-meta {
-	margin-bottom: var(--wpds-spacing-20, 8px);
+	margin-bottom: var(--wpds-dimension-gap-sm, 8px);
 
 	strong {
-		font-size: var(--wpds-font-size-small, 14px);
+		font-size: var(--wpds-typography-font-size-md, 13px);
 		color: colors.$gray-900;
 	}
 }
 
 .activitypub-inspector-comment-date {
-	margin-left: var(--wpds-spacing-20, 8px);
-	font-size: var(--wpds-font-size-small, 13px);
+	margin-left: var(--wpds-dimension-gap-sm, 8px);
+	font-size: var(--wpds-typography-font-size-md, 13px);
 	color: colors.$gray-700;
 }
 
@@ -247,16 +245,16 @@
 .activitypub-inspector-tags {
 	display: flex;
 	flex-wrap: wrap;
-	gap: var(--wpds-spacing-20, 8px);
-	margin-top: var(--wpds-spacing-40, 16px);
-	padding-top: var(--wpds-spacing-40, 16px);
-	border-top: var(--wpds-border-width-control, 1px) solid colors.$gray-300;
+	gap: var(--wpds-dimension-gap-sm, 8px);
+	margin-top: var(--wpds-dimension-gap-lg, 16px);
+	padding-top: var(--wpds-dimension-padding-lg, 16px);
+	border-top: var(--wpds-border-width-xs, 1px) solid colors.$gray-300;
 }
 
 .activitypub-inspector-tag {
-	font-size: var(--wpds-font-size-small, 13px);
+	font-size: var(--wpds-typography-font-size-md, 13px);
 	min-height: 0;
-	padding: var(--wpds-spacing-10, 4px) var(--wpds-spacing-20, 8px);
+	padding: var(--wpds-dimension-padding-xs, 4px) var(--wpds-dimension-padding-sm, 8px);
 
 	&:hover {
 		background-color: colors.$gray-100;
@@ -271,7 +269,6 @@
 	a {
 		color: var(--wp-admin-theme-color, #135e96);
 		text-decoration: none;
-		word-wrap: break-word;
 		overflow-wrap: break-word;
 
 		&:hover {

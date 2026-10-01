@@ -763,4 +763,62 @@ class Test_Sanitize extends \WP_UnitTestCase {
 	public function test_redirect_uri_no_scheme() {
 		$this->assertEquals( '', Sanitize::redirect_uri( 'no-scheme' ) );
 	}
+
+	/**
+	 * Mastodon wraps links in `span`s that shorten the visible URL. Stored as they are,
+	 * `make_clickable()` autolinks the text inside the first `span` and nests a second
+	 * anchor in the first. The `span`s go, the text stays.
+	 *
+	 * @covers ::comment_content
+	 * @covers ::get_allowed_comment_html
+	 */
+	public function test_comment_content_unwraps_spans_around_links() {
+		$content = '<p><a href="https://example.com/blog/what-exactly-is-a-permalink/" rel="nofollow"><span class="invisible">https://</span><span class="ellipsis">example.com/blog/what-exac</span><span class="invisible">tly-is-a-permalink/</span></a></p>';
+
+		$sanitized = Sanitize::comment_content( $content );
+
+		$this->assertStringNotContainsString( '<span', $sanitized );
+		$this->assertStringContainsString( '>https://example.com/blog/what-exactly-is-a-permalink/</a>', $sanitized );
+	}
+
+	/**
+	 * Test attachment_id accepts an image attachment.
+	 *
+	 * @covers ::attachment_id
+	 */
+	public function test_attachment_id_accepts_image() {
+		$attachment_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+
+		$this->assertSame( $attachment_id, Sanitize::attachment_id( $attachment_id ) );
+	}
+
+	/**
+	 * Test attachment_id rejects a non-image attachment.
+	 *
+	 * @covers ::attachment_id
+	 */
+	public function test_attachment_id_rejects_non_image() {
+		$attachment_id = self::factory()->attachment->create( array( 'post_mime_type' => 'text/plain' ) );
+
+		$this->assertSame( 0, Sanitize::attachment_id( $attachment_id ) );
+	}
+
+	/**
+	 * Test attachment_id rejects a non-existent attachment ID.
+	 *
+	 * @covers ::attachment_id
+	 */
+	public function test_attachment_id_rejects_non_existent_id() {
+		$this->assertSame( 0, Sanitize::attachment_id( 999999 ) );
+	}
+
+	/**
+	 * Test attachment_id rejects garbage strings.
+	 *
+	 * @covers ::attachment_id
+	 */
+	public function test_attachment_id_rejects_garbage_strings() {
+		$this->assertSame( 0, Sanitize::attachment_id( 'not-a-number' ) );
+		$this->assertSame( 0, Sanitize::attachment_id( '' ) );
+	}
 }

@@ -10,6 +10,8 @@ namespace Activitypub\Tests\Integration;
 use Activitypub\Collection\Followers;
 use Activitypub\Collection\Remote_Actors;
 use Activitypub\Integration\Enable_Mastodon_Apps;
+use Activitypub\Transformer\Comment;
+use Activitypub\Transformer\Post;
 use Enable_Mastodon_Apps\Entity\Status;
 
 /**
@@ -721,5 +723,59 @@ class Test_Enable_Mastodon_Apps extends \WP_UnitTestCase {
 			array( '@username@example.org' => 'https://example.org/users/username' ),
 			\apply_filters( 'activitypub_extract_mentions', array(), $submitted, null )
 		);
+	}
+
+	/**
+	 * A post is federated with the language a Mastodon app set when it was published.
+	 *
+	 * @covers ::get_post_locale
+	 */
+	public function test_post_federates_the_language_an_app_set() {
+		$post_id = self::factory()->post->create( array( 'post_content' => 'Hallo Welt' ) );
+		\update_post_meta( $post_id, 'ema_language', 'de' );
+
+		$object = Post::transform( \get_post( $post_id ) )->to_object();
+
+		$this->assertSame( array( 'de' ), \array_keys( $object->get_content_map() ) );
+	}
+
+	/**
+	 * A comment takes the language an app set for the post it belongs to.
+	 *
+	 * @covers ::get_post_locale
+	 */
+	public function test_comment_federates_the_language_of_its_post() {
+		$post_id    = self::factory()->post->create();
+		$comment_id = self::factory()->comment->create( array( 'comment_post_ID' => $post_id ) );
+		\update_post_meta( $post_id, 'ema_language', 'fr' );
+
+		$object = Comment::transform( \get_comment( $comment_id ) )->to_object();
+
+		$this->assertSame( array( 'fr' ), \array_keys( $object->get_content_map() ) );
+	}
+
+	/**
+	 * A multilingual plugin's language takes precedence over the language an app set.
+	 *
+	 * @covers ::get_post_locale
+	 */
+	public function test_multilingual_plugin_language_wins_over_the_app_language() {
+		$post_id = self::factory()->post->create();
+		\update_post_meta( $post_id, 'ema_language', 'de' );
+
+		\add_filter( 'activitypub_locale', array( self::class, 'return_fr' ) );
+		$object = Post::transform( \get_post( $post_id ) )->to_object();
+		\remove_filter( 'activitypub_locale', array( self::class, 'return_fr' ) );
+
+		$this->assertSame( array( 'fr' ), \array_keys( $object->get_content_map() ) );
+	}
+
+	/**
+	 * Stand-in for a multilingual plugin that knows the post's language.
+	 *
+	 * @return string
+	 */
+	public static function return_fr() {
+		return 'fr';
 	}
 }

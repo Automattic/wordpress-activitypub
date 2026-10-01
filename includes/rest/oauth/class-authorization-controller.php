@@ -10,8 +10,7 @@ namespace Activitypub\Rest\OAuth;
 use Activitypub\OAuth\Authorization_Code;
 use Activitypub\OAuth\Client;
 use Activitypub\OAuth\Scope;
-
-use function Activitypub\get_client_ip;
+use Activitypub\Rest\Rate_Limit;
 
 /**
  * Authorization_Controller class for handling the OAuth 2.0 authorization endpoint.
@@ -22,6 +21,8 @@ use function Activitypub\get_client_ip;
  * @since 8.1.0
  */
 class Authorization_Controller extends \WP_REST_Controller {
+	use Rate_Limit;
+
 	/**
 	 * The namespace of this controller's route.
 	 *
@@ -38,6 +39,8 @@ class Authorization_Controller extends \WP_REST_Controller {
 
 	/**
 	 * Register routes.
+	 *
+	 * @return void
 	 */
 	public function register_routes() {
 		// Authorization endpoint - GET displays consent form, POST handles approval.
@@ -48,7 +51,10 @@ class Authorization_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'authorize' ),
-					'permission_callback' => '__return_true',
+					// Anyone may start an authorization, so the only gate is how often one caller may start one.
+					'permission_callback' => function ( $request ) {
+						return $this->rate_limit( 'oauth_authorize', 20, $request );
+					},
 					'args'                => array(
 						'response_type'         => array(
 							'description' => 'OAuth response type (must be "code").',
@@ -150,20 +156,6 @@ class Authorization_Controller extends \WP_REST_Controller {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function authorize( \WP_REST_Request $request ) {
-		// Rate-limit authorization requests to prevent abuse (max 20 per minute per IP).
-		$ip = get_client_ip();
-		if ( '' === $ip ) {
-			return $this->rate_limit_response( \__( 'Too many authorization requests. Please try again later.', 'activitypub' ) );
-		}
-		$transient_key = 'ap_oauth_auth_' . \md5( $ip );
-		$count         = (int) \get_transient( $transient_key );
-
-		if ( $count >= 20 ) {
-			return $this->rate_limit_response( \__( 'Too many authorization requests. Please try again later.', 'activitypub' ) );
-		}
-
-		\set_transient( $transient_key, $count + 1, MINUTE_IN_SECONDS );
-
 		$client_id     = $request->get_param( 'client_id' );
 		$redirect_uri  = $request->get_param( 'redirect_uri' );
 		$response_type = $request->get_param( 'response_type' );
@@ -321,9 +313,22 @@ class Authorization_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		// Verify nonce.
+		/*
+		 * An account without the ActivityPub capability has nothing to hand out. Read directly, not
+		 * through `user_can_activitypub()`, so a capable user keeps authorizing apps in blog-only and
+		 * single-user mode, as `Token::validate_user_access()` does.
+		 */
+		if ( ! \current_user_can( 'activitypub' ) ) {
+			return new \WP_Error(
+				'activitypub_user_not_enabled',
+				\__( 'Your account is not enabled for ActivityPub, so it cannot authorize apps.', 'activitypub' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		// Verify nonce. It is bound to the client, so a consent form for one app can't approve another.
 		$nonce = $request->get_param( '_wpnonce' );
-		if ( ! \wp_verify_nonce( $nonce, 'activitypub_oauth_authorize' ) ) {
+		if ( ! \wp_verify_nonce( $nonce, 'activitypub_oauth_authorize_' . $request->get_param( 'client_id' ) ) ) {
 			return new \WP_Error(
 				'activitypub_invalid_nonce',
 				\__( 'Invalid security token. Please try again.', 'activitypub' ),
@@ -396,27 +401,6 @@ class Authorization_Controller extends \WP_REST_Controller {
 			null,
 			302,
 			array( 'Location' => $redirect_url )
-		);
-	}
-
-	/**
-	 * Build a 429 rate-limit response with a Retry-After header.
-	 *
-	 * @since 9.0.0
-	 *
-	 * @param string $message Translated human-readable error message.
-	 * @return \WP_REST_Response
-	 */
-	private function rate_limit_response( $message ) {
-		return new \WP_REST_Response(
-			array(
-				'code'    => 'activitypub_rate_limit',
-				'message' => $message,
-				'data'    => array( 'status' => 429 ),
-			),
-			429,
-			// RFC 6585 §4: send Retry-After so clients can back off.
-			array( 'Retry-After' => (string) MINUTE_IN_SECONDS )
 		);
 	}
 }

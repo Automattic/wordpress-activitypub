@@ -17,30 +17,52 @@ use function Activitypub\user_can_activitypub;
 class Settings {
 	/**
 	 * Initialize the class, registering WordPress hooks,
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'admin_menu', array( self::class, 'add_settings_page' ) );
 
 		\add_action( 'load-settings_page_activitypub', array( self::class, 'handle_welcome_query_arg' ) );
 		\add_action( 'load-settings_page_activitypub', array( self::class, 'handle_switch_object_type' ) );
+		\add_action( 'load-settings_page_activitypub', array( self::class, 'set_page_title' ) );
 	}
 
 	/**
-	 * Load settings page.
+	 * Set the page title to the tab that is being viewed.
+	 *
+	 * Runs on `load-settings_page_activitypub`, before core prints the `<title>` tag.
+	 *
+	 * @return void
 	 */
-	public static function settings_page() {
+	public static function set_page_title() {
+		$active_tab = \wp_filter_object_list( self::get_settings_tabs(), array( 'active' => true ) );
+		$active_tab = \reset( $active_tab );
+
+		/* translators: %s: The label of the settings tab. */
+		$GLOBALS['title'] = \sprintf( \__( 'ActivityPub - %s', 'activitypub' ), $active_tab['label'] ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+	}
+
+	/**
+	 * Get the settings tabs.
+	 *
+	 * @return array[] The tabs keyed by slug, each with a `label` and a `template`. The tab that is being viewed has `active` set.
+	 */
+	public static function get_settings_tabs() {
 		$show_welcome_tab  = \get_user_meta( \get_current_user_id(), 'activitypub_show_welcome_tab', true );
 		$show_advanced_tab = \get_user_meta( \get_current_user_id(), 'activitypub_show_advanced_tab', true );
 		$settings_tabs     = array();
 		$settings_tab      = array(
 			'label'    => \__( 'Settings', 'activitypub' ),
 			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/settings.php',
+			'active'   => false,
 		);
 
 		if ( $show_welcome_tab ) {
 			$settings_tabs['welcome'] = array(
 				'label'    => \__( 'Welcome', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/welcome.php',
+				'active'   => false,
 			);
 		}
 
@@ -51,6 +73,7 @@ class Settings {
 			$settings_tabs['advanced'] = array(
 				'label'    => \__( 'Advanced', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/advanced-settings.php',
+				'active'   => false,
 			);
 		}
 
@@ -58,22 +81,26 @@ class Settings {
 		$settings_tabs['blocked-actors'] = array(
 			'label'    => \__( 'Blocked Actors', 'activitypub' ),
 			'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blocked-actors-list.php',
+			'active'   => false,
 		);
 
 		if ( user_can_activitypub( Actors::BLOG_USER_ID ) ) {
 			$settings_tabs['blog-profile'] = array(
 				'label'    => \__( 'Blog Profile', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/blog-settings.php',
+				'active'   => false,
 			);
 			$settings_tabs['followers']    = array(
 				'label'    => \__( 'Followers', 'activitypub' ),
 				'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/followers-list.php',
+				'active'   => false,
 			);
 
 			if ( '1' === \get_option( 'activitypub_following_ui', '0' ) ) {
 				$settings_tabs['following'] = array(
 					'label'    => \__( 'Following', 'activitypub' ),
 					'template' => ACTIVITYPUB_PLUGIN_DIR . 'templates/following-list.php',
+					'active'   => false,
 				);
 			}
 		}
@@ -99,10 +126,24 @@ class Settings {
 			$tab = $default_tab;
 		}
 
+		$settings_tabs[ $tab ]['active'] = true;
+
+		return $settings_tabs;
+	}
+
+	/**
+	 * Load settings page.
+	 *
+	 * @return void
+	 */
+	public static function settings_page() {
+		$settings_tabs = self::get_settings_tabs();
+		$tab           = \key( \wp_filter_object_list( $settings_tabs, array( 'active' => true ) ) );
+
 		switch ( $tab ) {
 			case 'blog-profile':
 				\wp_enqueue_media();
-				\wp_enqueue_script( 'activitypub-header-image' );
+				\wp_enqueue_script( 'activitypub-media-picker' );
 				break;
 			case 'settings':
 				\update_option( 'activitypub_checklist_settings_visited', '1' );
@@ -132,6 +173,8 @@ class Settings {
 
 	/**
 	 * Adds the ActivityPub settings to the Help tab.
+	 *
+	 * @return void
 	 */
 	public static function add_settings_help_tab() {
 		// Getting Started / Introduction to the Fediverse.
@@ -241,6 +284,8 @@ class Settings {
 
 	/**
 	 * Adds the ActivityPub help tab to the users page.
+	 *
+	 * @return void
 	 */
 	public static function add_following_help_tab() {
 		\get_current_screen()->add_help_tab(
@@ -262,6 +307,8 @@ class Settings {
 
 	/**
 	 * Adds the ActivityPub help tab to the users page.
+	 *
+	 * @return void
 	 */
 	public static function add_users_help_tab() {
 		\get_current_screen()->add_help_tab(
@@ -277,6 +324,8 @@ class Settings {
 
 	/**
 	 * Handle 'welcome' query arg.
+	 *
+	 * @return void
 	 */
 	public static function handle_welcome_query_arg() {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -293,6 +342,8 @@ class Settings {
 	 * Handle switching from legacy template mode to automatic object type.
 	 *
 	 * @since 8.0.0
+	 *
+	 * @return void
 	 */
 	public static function handle_switch_object_type() {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -314,6 +365,8 @@ class Settings {
 
 	/**
 	 * Returns an array of recommended plugins for ActivityPub.
+	 *
+	 * @return array The recommended plugins.
 	 */
 	public static function get_recommended_plugins() {
 		$plugins = array();
@@ -395,6 +448,8 @@ class Settings {
 
 	/**
 	 * Render recommended plugins as a beautiful, rich showcase for the help tab.
+	 *
+	 * @return string|false The rendered list, or false when output buffering is off.
 	 */
 	public static function render_recommended_plugins_list() {
 		$plugins = self::get_recommended_plugins();

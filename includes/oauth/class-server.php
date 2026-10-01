@@ -24,8 +24,16 @@ class Server {
 
 	/**
 	 * Initialize the OAuth server.
+	 *
+	 * Registered on `init`, so the setting is read once the site context is settled.
+	 *
+	 * @return void
 	 */
 	public static function init() {
+		if ( ! \get_option( 'activitypub_api', false ) ) {
+			return;
+		}
+
 		// Hook into REST authentication - priority 20 to run after default auth.
 		\add_filter( 'rest_authentication_errors', array( self::class, 'authenticate_oauth' ), 20 );
 
@@ -315,6 +323,8 @@ class Server {
 
 	/**
 	 * Run cleanup tasks for OAuth data.
+	 *
+	 * @return void
 	 */
 	public static function cleanup() {
 		// Clean up expired tokens.
@@ -355,11 +365,27 @@ class Server {
 	 * Handle OAuth authorization consent page via wp-login.php.
 	 *
 	 * This is triggered by wp-login.php?action=activitypub_authorize
+	 *
+	 * @return void
 	 */
 	public static function login_form_authorize() {
 		// Require user to be logged in.
 		if ( ! \is_user_logged_in() ) {
 			\auth_redirect();
+		}
+
+		/*
+		 * An account without the ActivityPub capability has nothing to hand out, so it never reaches the
+		 * consent form, the client lookup behind it, or the rows that a consent would write. The
+		 * capability is read directly rather than through `user_can_activitypub()`, which also answers
+		 * false in blog-only and single-user mode, where a capable user still authorizes apps, the same
+		 * distinction `Token::validate_user_access()` makes.
+		 */
+		if ( ! \current_user_can( 'activitypub' ) ) {
+			\status_header( 403 );
+			$error_message = \__( 'Your account is not enabled for ActivityPub, so it cannot authorize apps.', 'activitypub' ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
+			include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-error.php';
+			exit;
 		}
 
 		$request_method = isset( $_SERVER['REQUEST_METHOD'] ) ? \sanitize_text_field( \wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '';
@@ -375,6 +401,8 @@ class Server {
 
 	/**
 	 * Render the OAuth authorization consent form.
+	 *
+	 * @return void
 	 */
 	private static function render_authorize_form() {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Initial form display, nonce checked on POST.
@@ -426,11 +454,16 @@ class Server {
 		$scopes       = Scope::validate( Scope::parse( $authorize_params['scope'] ) ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 
 		// Build form action URL.
+		// The values must be encoded: add_query_arg() does not encode them, so raw
+		// reserved characters in the OAuth params would break the query string.
 		// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$form_url = \add_query_arg(
-			\array_merge( array( 'action' => 'activitypub_authorize' ), $authorize_params ),
+			\array_merge( array( 'action' => 'activitypub_authorize' ), \array_map( 'rawurlencode', $authorize_params ) ),
 			\wp_login_url()
 		);
+
+		// Build the logout URL with the authorization request as the redirect target.
+		$logout_url = \wp_logout_url( $form_url ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
 
 		// Include the template.
 		include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-authorize.php'; // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- $authorize_params used in template.
@@ -438,17 +471,19 @@ class Server {
 
 	/**
 	 * Process the OAuth authorization consent form submission.
+	 *
+	 * @return void
 	 */
 	private static function process_authorize_form() {
-		// Verify nonce.
-		if ( ! isset( $_POST['_wpnonce'] ) || ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ) ), 'activitypub_oauth_authorize' ) ) {
+		// Verify nonce. It is bound to the client, so a consent form for one app can't approve another.
+		$client_id = isset( $_POST['client_id'] ) ? \sanitize_text_field( \wp_unslash( $_POST['client_id'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Part of the nonce action.
+		if ( ! isset( $_POST['_wpnonce'] ) || ! \wp_verify_nonce( \sanitize_text_field( \wp_unslash( $_POST['_wpnonce'] ) ), 'activitypub_oauth_authorize_' . $client_id ) ) {
 			$error_message = \__( 'Security check failed. Please try again.', 'activitypub' ); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- Used in template.
 			include ACTIVITYPUB_PLUGIN_DIR . 'templates/oauth-error.php';
 			exit;
 		}
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified above.
-		$client_id             = isset( $_POST['client_id'] ) ? \sanitize_text_field( \wp_unslash( $_POST['client_id'] ) ) : '';
 		$redirect_uri          = isset( $_POST['redirect_uri'] ) ? Sanitize::redirect_uri( \wp_unslash( $_POST['redirect_uri'] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized via Sanitize::redirect_uri().
 		$scope                 = isset( $_POST['scope'] ) ? \sanitize_text_field( \wp_unslash( $_POST['scope'] ) ) : '';
 		$state                 = isset( $_POST['state'] ) ? \wp_unslash( $_POST['state'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- OAuth state is opaque; must be round-tripped exactly.
@@ -541,6 +576,8 @@ class Server {
 	 *
 	 * @param string $redirect_uri The client's redirect URI.
 	 * @param array  $params       Query parameters to append.
+	 *
+	 * @return void
 	 */
 	private static function redirect_to_client( $redirect_uri, $params ) {
 		$url = Sanitize::redirect_uri( \add_query_arg( $params, $redirect_uri ) );

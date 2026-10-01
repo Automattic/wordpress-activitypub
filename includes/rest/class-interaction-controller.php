@@ -15,8 +15,12 @@ use function Activitypub\user_can_activitypub;
 
 /**
  * Interaction Controller.
+ *
+ * @see https://codeberg.org/fediverse/fep/src/branch/main/fep/3b86/fep-3b86.md
  */
 class Interaction_Controller extends \WP_REST_Controller {
+	use Rate_Limit;
+
 	/**
 	 * The namespace of this controller's route.
 	 *
@@ -32,7 +36,21 @@ class Interaction_Controller extends \WP_REST_Controller {
 	protected $rest_base = 'interactions';
 
 	/**
+	 * Readable intent aliases mapped to their FEP-3b86 activity-type intent.
+	 *
+	 * @since unreleased
+	 *
+	 * @var string[]
+	 */
+	const INTENT_ALIASES = array(
+		'reply' => 'create',
+		'quote' => 'quote_request',
+	);
+
+	/**
 	 * Register routes.
+	 *
+	 * @return void
 	 */
 	public function register_routes() {
 		\register_rest_route(
@@ -42,7 +60,10 @@ class Interaction_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_item' ),
-					'permission_callback' => '__return_true',
+					// Public by design, it answers a click on another site, so the only gate is how often one caller may ask.
+					'permission_callback' => function ( $request ) {
+						return $this->rate_limit( 'interactions', 10, $request );
+					},
 					'args'                => array(
 						'uri'    => array(
 							'description'       => 'The URI or webfinger ID of the object to interact with.',
@@ -51,9 +72,9 @@ class Interaction_Controller extends \WP_REST_Controller {
 							'sanitize_callback' => array( $this, 'sanitize_uri' ),
 						),
 						'intent' => array(
-							'description' => 'The intent of the interaction, e.g., follow, reply, import.',
+							'description' => 'The intent of the interaction as a snake-cased activity type (e.g. follow, create, quote_request) or one of the aliases reply, quote.',
 							'type'        => 'string',
-							'enum'        => \array_map( 'Activitypub\camel_to_snake_case', Activity::TYPES ),
+							'enum'        => \array_merge( \array_map( 'Activitypub\camel_to_snake_case', Activity::TYPES ), \array_keys( self::INTENT_ALIASES ) ),
 						),
 					),
 				),
@@ -92,8 +113,10 @@ class Interaction_Controller extends \WP_REST_Controller {
 	 * @return \WP_REST_Response Response object on success, dies on failure.
 	 */
 	public function get_item( $request ) {
-		$uri          = $request->get_param( 'uri' );
-		$intent       = $request->get_param( 'intent' );
+		$uri    = $request->get_param( 'uri' );
+		$intent = $request->get_param( 'intent' );
+		// Aliases resolve to their activity type before dispatch, so callers below only ever see the canonical intent.
+		$intent       = self::INTENT_ALIASES[ $intent ] ?? $intent;
 		$redirect_url = '';
 		$object       = Http::get_remote_object( $uri );
 
@@ -159,6 +182,23 @@ class Interaction_Controller extends \WP_REST_Controller {
 				$redirect_url = \apply_filters( 'activitypub_interactions_starter_kit_url', $redirect_url, $uri, $object, $intent );
 				break;
 			default:
+				if ( 'quote_request' === $intent ) {
+					$redirect_url = \admin_url( 'post-new.php?quotation_of=' . $url_param );
+
+					/**
+					 * Filters the URL used for quoting an ActivityPub object.
+					 *
+					 * @since unreleased
+					 *
+					 * @param string $redirect_url The URL to redirect to.
+					 * @param string $uri          The URI of the object to quote.
+					 * @param array  $object       The full object data being quoted.
+					 * @param string $intent       The intent of the interaction.
+					 */
+					$redirect_url = \apply_filters( 'activitypub_interactions_quote_url', $redirect_url, $uri, $object, $intent );
+					break;
+				}
+
 				$redirect_url = \admin_url( 'post-new.php?in_reply_to=' . $url_param );
 
 				/**

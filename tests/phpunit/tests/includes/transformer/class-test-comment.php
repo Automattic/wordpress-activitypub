@@ -29,16 +29,28 @@ class Test_Comment extends \WP_UnitTestCase {
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		self::$post_id = $factory->post->create();
-
-		// Mock the WebFinger wp_safe_remote_get.
-		add_filter( 'pre_http_request', array( self::class, 'pre_http_request' ), 10, 3 );
 	}
 
 	/**
-	 * Clean up after tests.
+	 * Set up before each test.
+	 *
+	 * The WebFinger mock is added per test rather than once for the class: WP_UnitTestCase
+	 * snapshots the hook table around every test, and a filter added in wpSetUpBeforeClass is
+	 * only as durable as whatever an earlier class left in that table.
 	 */
-	public static function wpTearDownAfterClass() {
-		remove_filter( 'pre_http_request', array( self::class, 'pre_http_request' ) );
+	public function set_up() {
+		parent::set_up();
+
+		\add_filter( 'pre_http_request', array( self::class, 'pre_http_request' ), 10, 3 );
+	}
+
+	/**
+	 * Tear down after each test.
+	 */
+	public function tear_down() {
+		\remove_filter( 'pre_http_request', array( self::class, 'pre_http_request' ) );
+
+		parent::tear_down();
 	}
 
 	/**
@@ -88,7 +100,135 @@ class Test_Comment extends \WP_UnitTestCase {
 		$content = $object->get_content();
 
 		// Test that reply context is added.
-		$this->assertSame( '<p><a rel="mention" class="u-url mention" href="https://example.net/@remote" title="@remote@example.net">@remote</a> <a rel="mention" class="u-url mention" href="https://remote.example/@author" title="@author@remote.example">@author</a> This is a comment</p>', $content );
+		$this->assertSame( '<p><span class="h-card"><a href="https://example.net/@remote" class="u-url mention" rel="mention">@<span>remote</span></a></span> <span class="h-card"><a href="https://remote.example/@author" class="u-url mention" rel="mention">@<span>author</span></a></span> This is a comment</p>', $content );
+	}
+
+	/**
+	 * Test that a mention the author already wrote is not prepended a second time.
+	 *
+	 * A reply composed through the ActivityPub API arrives with its own mention, as a link to
+	 * the actor the way Mastodon writes it, or as a bare handle. The reply context must not
+	 * repeat it.
+	 *
+	 * @dataProvider data_content_with_existing_mention
+	 *
+	 * @param string $content    The comment content as the author wrote it.
+	 * @param string $expected   The federated content.
+	 * @param string $author_url The parent author's stored URL.
+	 */
+	public function test_content_does_not_duplicate_an_existing_mention( $content, $expected, $author_url = 'https://remote.example/@author' ) {
+		$parent_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'    => self::$post_id,
+				'comment_author_url' => $author_url,
+				'comment_meta'       => array(
+					'protocol' => 'activitypub',
+				),
+			)
+		);
+
+		$test_comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'    => self::$post_id,
+				'comment_parent'     => $parent_comment_id,
+				'comment_author_url' => 'https://example.com/@test',
+				'comment_content'    => $content,
+			)
+		);
+
+		$object = ( new Comment( get_comment( $test_comment_id ) ) )->to_object();
+
+		$this->assertSame( $expected, $object->get_content() );
+		$this->assertCount( 1, $object->get_tag(), 'The actor is tagged exactly once.' );
+	}
+
+	/**
+	 * A mention link whose URL cannot be resolved still suppresses the prefix, by URL alone.
+	 *
+	 * @covers ::get_content
+	 */
+	public function test_content_does_not_duplicate_a_mention_link_that_does_not_resolve() {
+		// The stored author URL resolves, the authored link (no trailing slash) does not.
+		$stub = function ( $pre, $args, $url ) {
+			if ( ! \str_starts_with( $url, 'https://silent.example/' ) ) {
+				return $pre;
+			}
+			if ( false === \strpos( $url, 'resource=https%3A%2F%2Fsilent.example%2F%40author%2F' ) ) {
+				return array(
+					'response' => array( 'code' => 404 ),
+					'headers'  => array(),
+					'body'     => '',
+				);
+			}
+
+			return array(
+				'response' => array( 'code' => 200 ),
+				'headers'  => array(),
+				'body'     => \wp_json_encode(
+					array(
+						'subject' => 'acct:author@silent.example',
+						'links'   => array(
+							array(
+								'rel'  => 'self',
+								'type' => 'application/activity+json',
+								'href' => 'https://silent.example/@author/',
+							),
+						),
+					)
+				),
+			);
+		};
+		\add_filter( 'pre_http_request', $stub, 5, 3 );
+
+		$post_id   = self::factory()->post->create();
+		$parent_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'    => $post_id,
+				'comment_author_url' => 'https://silent.example/@author/',
+				'comment_meta'       => array( 'protocol' => 'activitypub' ),
+			)
+		);
+		$reply_id  = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+				'comment_parent'  => $parent_id,
+				'user_id'         => 1,
+				'comment_content' => '<a rel="mention" class="u-url mention" href="https://silent.example/@author">@author</a> thanks',
+			)
+		);
+
+		$content = Comment::transform( \get_comment( $reply_id ) )->to_object()->get_content();
+
+		\remove_filter( 'pre_http_request', $stub, 5 );
+
+		$this->assertSame( 1, \substr_count( $content, 'https://silent.example/@author' ), 'The author is linked once.' );
+	}
+
+	/**
+	 * Data provider for content that already mentions the reply target.
+	 *
+	 * @return array[] Test parameters.
+	 */
+	public function data_content_with_existing_mention() {
+		return array(
+			'mention as a link'   => array(
+				'<a rel="mention" class="u-url mention" href="https://remote.example/@author">@author</a> thanks',
+				'<p><a rel="mention" class="u-url mention" href="https://remote.example/@author">@author</a> thanks</p>',
+			),
+			'mention as a handle' => array(
+				'@author@remote.example thanks',
+				'<p>@author@remote.example thanks</p>',
+			),
+			'stored URL has a trailing slash, link does not' => array(
+				'<a rel="mention" class="u-url mention" href="https://remote.example/@author">@author</a> thanks',
+				'<p><a rel="mention" class="u-url mention" href="https://remote.example/@author">@author</a> thanks</p>',
+				'https://remote.example/@author/',
+			),
+			'no mention'          => array(
+				'thanks',
+				'<p><span class="h-card"><a href="https://remote.example/@author" class="u-url mention" rel="mention">@<span>author</span></a></span> thanks</p>',
+			),
+		);
 	}
 
 	/**
@@ -100,29 +240,37 @@ class Test_Comment extends \WP_UnitTestCase {
 	 * @return mixed The response data.
 	 */
 	public static function pre_http_request( $data, $parsed_args, $url ) {
-		if ( str_starts_with( $url, 'https://remote.example' ) ) {
+		if ( \str_starts_with( $url, 'https://remote.example' ) ) {
 			return self::dummy_response(
-				wp_json_encode(
+				\wp_json_encode(
 					array(
 						'subject' => 'acct:author@remote.example',
 						'links'   => array(
-							'self' => array( 'href' => 'https://remote.example/@author' ),
+							array(
+								'rel'  => 'self',
+								'type' => 'application/activity+json',
+								'href' => 'https://remote.example/@author',
+							),
 						),
 					)
 				)
 			);
 		}
 
-		if ( str_starts_with( $url, 'https://example.net/' ) ) {
+		if ( \str_starts_with( $url, 'https://example.net/' ) ) {
 			return self::dummy_response(
-				wp_json_encode(
+				\wp_json_encode(
 					array(
 						'subject' => 'https://example.net/@remote',
 						'aliases' => array(
 							'acct:remote@example.net',
 						),
 						'links'   => array(
-							'self' => array( 'href' => 'https://example.net/@remote' ),
+							array(
+								'rel'  => 'self',
+								'type' => 'application/activity+json',
+								'href' => 'https://example.net/@remote',
+							),
 						),
 					)
 				)

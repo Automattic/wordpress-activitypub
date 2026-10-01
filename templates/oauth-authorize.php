@@ -10,6 +10,7 @@
  * @var Activitypub\OAuth\Client $client           The client object.
  * @var array                    $authorize_params OAuth request parameters (client_id, redirect_uri, scope, state, code_challenge, code_challenge_method).
  * @var string                   $form_url         The form action URL.
+ * @var string                   $logout_url       The logout URL.
  */
 
 // phpcs:disable VariableAnalysis.CodeAnalysis.VariableAnalysis.UndefinedVariable -- Variables passed via include.
@@ -43,7 +44,7 @@ login_header(
 			$client_link_url = $client->get_link_url();
 			$client_display  = esc_html( $client->get_display_name() );
 			$client_label    = $client_link_url
-				? sprintf( '<a href="%s" target="_blank">%s</a>', esc_url( $client_link_url ), $client_display )
+				? sprintf( '<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>', esc_url( $client_link_url ), $client_display )
 				: $client_display;
 
 			echo wp_kses(
@@ -56,6 +57,7 @@ login_header(
 					'a' => array(
 						'href'   => array(),
 						'target' => array(),
+						'rel'    => array(),
 					),
 				)
 			);
@@ -78,6 +80,11 @@ login_header(
 			array( 'strong' => array() )
 		);
 		?>
+		</p>
+		<p>
+			<a href="<?php echo esc_url( $logout_url ); ?>">
+				<?php esc_html_e( 'Not you? Log in as a different user.', 'activitypub' ); ?>
+			</a>
 		</p>
 	</div>
 
@@ -113,7 +120,7 @@ login_header(
 		?>
 	</div>
 
-	<?php wp_nonce_field( 'activitypub_oauth_authorize' ); ?>
+	<?php wp_nonce_field( 'activitypub_oauth_authorize_' . $authorize_params['client_id'] ); ?>
 	<?php foreach ( $authorize_params as $param_name => $param_value ) : ?>
 		<input type="hidden" name="<?php echo esc_attr( $param_name ); ?>" value="<?php echo esc_attr( $param_value ); ?>" />
 	<?php endforeach; ?>

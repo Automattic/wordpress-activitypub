@@ -12,7 +12,7 @@ if ( \defined( 'JETPACK__VERSION' ) ) {
 }
 ```
 
-A few integrations are always initialized (`Nodeinfo`, `Webfinger`, `Surge`, `Litespeed_Cache`, `Stream`) because they either target an always-available surface or do their own detection inside `init()`.
+A few integrations are always initialized (`Nodeinfo`, `Opengraph`, `Webfinger`, `Surge`, `Litespeed_Cache`, `Stream`) because they either target an always-available surface or do their own detection inside `init()`. Nothing in `plugin_init()` reads an option: on a multisite host it can run before the request is switched to its site, so a setting-dependent integration (`Opengraph`) defers to the `init` action and checks the setting there.
 
 ## Two patterns
 
@@ -58,6 +58,7 @@ A few integrations are always initialized (`Nodeinfo`, `Webfinger`, `Surge`, `Li
 | Integration | What it does |
 |---|---|
 | **WPML** | Supplies the correct per-object locale for federated content under WPML. |
+| **Polylang** | Supplies the correct per-object locale for federated posts and their comments under Polylang. |
 | **Multisite Language Switcher** | Keeps ActivityPub data consistent across MSLS post translations. |
 
 ### Other

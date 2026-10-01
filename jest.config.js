@@ -1,7 +1,12 @@
-const defaultConfig = require( '@wordpress/scripts/config/jest-unit.config.js' );
+const presetConfig = require( '@wordpress/jest-preset-default' );
+
+const babelTransform = [
+	require.resolve( 'babel-jest' ),
+	{ presets: [ require.resolve( '@wordpress/babel-preset-default' ) ] },
+];
 
 module.exports = {
-	...defaultConfig,
+	...presetConfig,
 	testMatch: [ '**/tests/js/**/*.[jt]s?(x)', '**/?(*.)+(spec|test).[jt]s?(x)' ],
 	testPathIgnorePatterns: [
 		'/build/',
@@ -11,19 +16,21 @@ module.exports = {
 		'/tests/phpunit/',
 		'/vendor/',
 	],
-	setupFilesAfterEnv: [ '<rootDir>/jest.setup.js' ],
+	setupFilesAfterEnv: [ ...presetConfig.setupFilesAfterEnv, '<rootDir>/jest.setup.js' ],
 	moduleNameMapper: {
-		...defaultConfig.moduleNameMapper,
+		...presetConfig.moduleNameMapper,
 		'^@wordpress/interactivity$': '<rootDir>/tests/js/__mocks__/@wordpress/interactivity.js',
 	},
 	/*
-	 * The preset only transforms .js/.jsx/.ts/.tsx. `@wordpress/theme` (a new transitive dependency
-	 * of `@wordpress/components` 37) is ESM-only and ships as .mjs, so add a rule to run it through
-	 * the same Babel transform; without this the un-ignore below is not enough.
+	 * Babel is configured here rather than in a root config file, so the transform stays scoped to
+	 * the tests: a root Babel config would also apply to the webpack build.
+	 *
+	 * `@wordpress/theme` (a transitive dependency of `@wordpress/components` 37) is ESM-only and
+	 * ships as .mjs, so it needs the same transform as the .js/.ts sources.
 	 */
 	transform: {
-		...defaultConfig.transform,
-		'\\.mjs$': require.resolve( '@wordpress/scripts/config/babel-transform' ),
+		'\\.[jt]sx?$': babelTransform,
+		'\\.mjs$': babelTransform,
 	},
 	/*
 	 * Allow ESM/TypeScript-only packages to be transformed by Babel at any depth in node_modules.

@@ -2,15 +2,14 @@
 
 WordPress plugin implementing the ActivityPub protocol, enabling federation with Mastodon, Pixelfed, Pleroma, and other compatible platforms.
 
-**Tech stack:** PHP 7.4+, WordPress 6.x, `@wordpress/scripts` for JS/CSS, Playwright for E2E, PHPUnit for unit/integration tests, wp-env for local dev.
-
 Prefer reading project files and `docs/` over relying on training data for WordPress and ActivityPub patterns.
 
 **Do NOT:**
-- Use PHP 8.0+ syntax (named args, union types, `match`)
 - Edit WordPress core files
 - Use `remove_all_filters('pre_http_request')` in tests
 - Hardcode new version numbers (use `'unreleased'`)
+- Remove an escaping, sanitizing or capability check, even when a tool reports it as redundant
+- Change the priority or signature of a registered hook (third-party code unhooks against the exact signature)
 
 ## Common Pitfalls
 
@@ -20,6 +19,8 @@ Prefer reading project files and `docs/` over relying on training data for WordP
 - **`remove_all_filters('pre_http_request')` is forbidden in tests.** The pre-commit hook blocks this. Use targeted filter removal.
 - **Changelog entries MUST be end-user friendly and end with punctuation.** Users see these in the WordPress update screen. Describe what changed from their perspective — no jargon, class names, or method names.
 - **`post_date_gmt` may be empty.** Check for `0000-00-00` or empty values.
+- **Cleanups change no behaviour.** A lint, static-analysis or refactor task changes docblocks and types, not what the code does. When the analyzer is wrong about a core function, fix its view (a stub), never the output line.
+- **A docblock is a claim, not evidence.** Read the call sites before changing code because of what a comment says, and never revert on a comment's authority either.
 - **Scheduled cron handlers must be idempotent if they have user-visible side effects** (emails, external API calls, push notifications). WP-Cron can re-enter the same callback via concurrent workers, plugin deactivate→reactivate (which re-runs `register_schedules()`), `wp cron event run`, and traffic spikes that fire overlapping loopback requests. Claim the unit of work atomically — `add_option( $key, $value, '', false )` only succeeds when the row doesn't yet exist, which makes it a race-safe sentinel — *before* the side effect runs, not after. See `Activitypub\Scheduler\Statistics::send_monthly_email()` for the canonical pattern.
 
 ## PHP Conventions
@@ -34,7 +35,9 @@ Prefer reading project files and `docs/` over relying on training data for WordP
 
 ## Testing Conventions
 
-See `tests/README.md` for test utilities, data factories, and detailed patterns.
+**MUST read `tests/README.md` and the `test` skill before writing or changing tests.** It covers test utilities, data factories, and detailed patterns.
+
+**One test file per source file.** Tests mirror the file they test: `includes/rest/class-seek-controller.php` → `tests/phpunit/tests/includes/rest/class-test-seek-controller.php`. Add tests to that file; never create a test file that spans several source files. The pre-commit hook enforces this.
 
 ## Documentation Index
 
@@ -45,7 +48,7 @@ docs/php-class-structure.md      — complete directory and class organization
 docs/code-linting.md             — linting configuration and rules
 docs/pull-request.md             — PR workflow details
 docs/release-process.md          — release workflow and versioning
-tests/README.md                  — test utilities, data factories, writing patterns
+tests/README.md                  — test file layout, utilities, data factories, writing patterns
 src/app/README.md                — admin React app: target architecture for new screens
 FEDERATION.md                    — implemented FEPs, supported standards, compatibility
 ```

@@ -18,6 +18,8 @@ namespace Activitypub;
 class Icons {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		// The Icons API was introduced in WordPress 7.1.
@@ -32,6 +34,8 @@ class Icons {
 	 * Register the icon collection and icons.
 	 *
 	 * @since 9.3.0
+	 *
+	 * @return void
 	 */
 	public static function register_icons() {
 		\wp_register_icon_collection(

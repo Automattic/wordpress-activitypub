@@ -387,6 +387,10 @@ class Test_Move extends \WP_UnitTestCase {
 		\wp_cache_delete( $origin_id, 'posts' );
 		\wp_cache_delete( $target_id, 'posts' );
 
+		// Warm the inbox caches the Move has to invalidate.
+		$this->assertSame( array( 'https://example.com/old-profile/inbox' ), Followers::get_inboxes( $this->user_id_2 ) );
+		$this->assertContains( 'https://example.com/old-profile/inbox', Remote_Actors::get_inboxes() );
+
 		$filter = function ( $pre, $url_or_object ) use ( $target, $origin ) {
 			$url = object_to_uri( $url_or_object );
 
@@ -436,6 +440,10 @@ class Test_Move extends \WP_UnitTestCase {
 
 		// Check if the origin follower was deleted.
 		$this->assertWPError( Remote_Actors::get_by_uri( $origin ) );
+
+		// The moved follower's inbox list points at the target now, and the origin is gone everywhere.
+		$this->assertSame( array( 'https://example.com/new-profile/inbox' ), Followers::get_inboxes( $this->user_id_2 ) );
+		$this->assertNotContains( 'https://example.com/old-profile/inbox', Remote_Actors::get_inboxes() );
 
 		\remove_filter( 'activitypub_pre_http_get_remote_object', $filter );
 	}

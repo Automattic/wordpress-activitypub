@@ -14,12 +14,14 @@ use Activitypub\Comment;
 use Activitypub\Moderation;
 use Activitypub\OAuth\Client;
 use Activitypub\OAuth\Token;
+use Activitypub\Sanitize;
 use Activitypub\Scheduler\Actor;
 use Activitypub\Tombstone;
 
 use function Activitypub\count_followers;
 use function Activitypub\get_content_visibility;
 use function Activitypub\is_user_type_disabled;
+use function Activitypub\site_icon;
 use function Activitypub\site_supports_blocks;
 use function Activitypub\user_can_activitypub;
 use function Activitypub\was_comment_received;
@@ -32,6 +34,8 @@ use function Activitypub\was_comment_received;
 class Admin {
 	/**
 	 * Initialize the class, registering WordPress hooks,
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'load-comment.php', array( self::class, 'edit_comment' ) );
@@ -90,6 +94,8 @@ class Admin {
 
 	/**
 	 * Display admin menu notices about configuration problems or conflicts.
+	 *
+	 * @return void
 	 */
 	public static function admin_notices() {
 		$current_screen = \get_current_screen();
@@ -128,6 +134,8 @@ class Admin {
 
 	/**
 	 * Load user settings page.
+	 *
+	 * @return void
 	 */
 	public static function followers_list_page() {
 		// User has to be able to publish posts.
@@ -138,6 +146,8 @@ class Admin {
 
 	/**
 	 * Load user following list page.
+	 *
+	 * @return void
 	 */
 	public static function following_list_page() {
 		// User has to be able to publish posts.
@@ -148,6 +158,8 @@ class Admin {
 
 	/**
 	 * Load blocked actors page.
+	 *
+	 * @return void
 	 */
 	public static function blocked_actors_list_page() {
 		// User has to be able to publish posts.
@@ -158,6 +170,8 @@ class Admin {
 
 	/**
 	 * Creates the followers and following list tables in ActivityPub settings.
+	 *
+	 * @return void
 	 */
 	public static function add_settings_list_tables() {
 		$tab = \sanitize_text_field( \wp_unslash( $_GET['tab'] ?? 'welcome' ) ); // phpcs:ignore WordPress.Security.NonceVerification
@@ -177,6 +191,8 @@ class Admin {
 
 	/**
 	 * Creates the followers list table.
+	 *
+	 * @return void
 	 */
 	public static function add_followers_list_table() {
 		$GLOBALS['followers_list_table'] = new Table\Followers();
@@ -184,6 +200,8 @@ class Admin {
 
 	/**
 	 * Creates the following list table.
+	 *
+	 * @return void
 	 */
 	public static function add_following_list_table() {
 		$GLOBALS['following_list_table'] = new Table\Following();
@@ -191,6 +209,8 @@ class Admin {
 
 	/**
 	 * Creates the blocked actors list table.
+	 *
+	 * @return void
 	 */
 	public static function add_blocked_actors_list_table() {
 		$GLOBALS['blocked_actors_list_table'] = new Table\Blocked_Actors();
@@ -198,10 +218,12 @@ class Admin {
 
 	/**
 	 * Render user settings.
+	 *
+	 * @return void
 	 */
 	public static function add_profile() {
 		\wp_enqueue_media();
-		\wp_enqueue_script( 'activitypub-header-image' );
+		\wp_enqueue_script( 'activitypub-media-picker' );
 
 		\wp_nonce_field( 'activitypub-user-settings', '_apnonce' );
 		\do_settings_sections( 'activitypub_user_settings' );
@@ -213,6 +235,8 @@ class Admin {
 	 * Handles the saving of the ActivityPub settings.
 	 *
 	 * @param int $user_id The user ID.
+	 *
+	 * @return void
 	 */
 	public static function save_user_settings( $user_id ) {
 		if ( ! isset( $_REQUEST['_apnonce'] ) ) {
@@ -241,17 +265,13 @@ class Admin {
 			}
 		}
 
-		// User options that should be processed with `sanitize_text_field()`.
-		$text_field_user_options = array(
-			'activitypub_header_image',
-		);
+		// The header image must be an attachment ID that points to an image.
+		$header_image = isset( $_POST['activitypub_header_image'] ) ? Sanitize::attachment_id( \wp_unslash( $_POST['activitypub_header_image'] ) ) : 0; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized via Sanitize::attachment_id().
 
-		foreach ( $text_field_user_options as $option ) {
-			if ( ! empty( $_POST[ $option ] ) ) {
-				\update_user_option( $user_id, $option, \sanitize_text_field( \wp_unslash( $_POST[ $option ] ) ) );
-			} else {
-				\delete_user_option( $user_id, $option );
-			}
+		if ( $header_image ) {
+			\update_user_option( $user_id, 'activitypub_header_image', $header_image );
+		} else {
+			\delete_user_option( $user_id, 'activitypub_header_image' );
 		}
 
 		// User options that have a default value and therefore can't be empty (Empty triggers the default value).
@@ -274,17 +294,40 @@ class Admin {
 	 * Enqueue the admin scripts and styles.
 	 *
 	 * @param string $hook_suffix The current page.
+	 *
+	 * @return void
 	 */
 	public static function enqueue_scripts( $hook_suffix ) {
 		\wp_register_script(
-			'activitypub-header-image',
+			'activitypub-media-picker',
 			\plugins_url(
-				'assets/js/activitypub-header-image.js',
+				'assets/js/activitypub-media-picker.js',
 				ACTIVITYPUB_PLUGIN_FILE
 			),
-			array( 'jquery' ),
+			array( 'jquery', 'wp-i18n' ),
 			ACTIVITYPUB_PLUGIN_VERSION,
 			false
+		);
+
+		/*
+		 * The fallback image shown when a custom avatar is removed. It is passed
+		 * through localized data instead of a data attribute to avoid
+		 * reinterpreting DOM text as a URL.
+		 */
+		\wp_localize_script(
+			'activitypub-media-picker',
+			'activitypubMediaPicker',
+			array(
+				'fallbackUrls' => array(
+					'activitypub-blog-avatar' => \esc_url_raw( site_icon()['url'] ),
+				),
+			)
+		);
+
+		\wp_set_script_translations(
+			'activitypub-media-picker',
+			'activitypub',
+			ACTIVITYPUB_PLUGIN_DIR . 'languages'
 		);
 
 		// Register and enqueue command palette integration.
@@ -336,7 +379,8 @@ class Admin {
 			\wp_enqueue_script( 'updates' );
 		}
 
-		if ( 'index.php' === $hook_suffix ) {
+		// The tool box on the Tools screen needs the layout rules for its cards, and is only added with block support.
+		if ( ( 'tools.php' === $hook_suffix && site_supports_blocks() ) || 'index.php' === $hook_suffix ) {
 			\wp_enqueue_style(
 				'activitypub-admin-styles',
 				\plugins_url(
@@ -358,6 +402,8 @@ class Admin {
 
 	/**
 	 * Enqueue moderation admin scripts.
+	 *
+	 * @return void
 	 */
 	public static function enqueue_moderation_scripts() {
 		\wp_enqueue_script(
@@ -388,6 +434,8 @@ class Admin {
 	 * Enqueue connected apps admin scripts on the profile page.
 	 *
 	 * @since 8.1.0
+	 *
+	 * @return void
 	 */
 	public static function enqueue_connected_apps_scripts() {
 		\wp_enqueue_script(
@@ -428,6 +476,8 @@ class Admin {
 	 * Hook into the edit_comment functionality.
 	 *
 	 * Disables the edit_comment capability for federated comments.
+	 *
+	 * @return void
 	 */
 	public static function edit_comment() {
 		// phpcs:ignore WordPress.Security.NonceVerification
@@ -459,6 +509,8 @@ class Admin {
 	 * Hook into the edit_post functionality.
 	 *
 	 * Disables the edit_post capability for federated posts.
+	 *
+	 * @return void
 	 */
 	public static function edit_post() {
 		// Disable the edit_post capability for federated posts.
@@ -488,6 +540,8 @@ class Admin {
 
 	/**
 	 * Add ActivityPub specific actions/filters to the post list view.
+	 *
+	 * @return void
 	 */
 	public static function list_posts() {
 		// Remove all views for the extra fields.
@@ -540,7 +594,7 @@ class Admin {
 	}
 
 	/**
-	 * Add "comment-type" and "protocol" as column in WP-Admin.
+	 * Add "comment-type", "protocol" and "source" as column in WP-Admin.
 	 *
 	 * @param array $columns The list of column names.
 	 *
@@ -549,6 +603,7 @@ class Admin {
 	public static function manage_comment_columns( $columns ) {
 		$columns['comment_type']     = \esc_attr__( 'Comment-Type', 'activitypub' );
 		$columns['comment_protocol'] = \esc_attr__( 'Protocol', 'activitypub' );
+		$columns['comment_source']   = \esc_attr__( 'Source', 'activitypub' );
 
 		return $columns;
 	}
@@ -572,10 +627,12 @@ class Admin {
 	}
 
 	/**
-	 * Add "comment-type" and "protocol" as column in WP-Admin.
+	 * Add "comment-type", "protocol" and "source" as column in WP-Admin.
 	 *
 	 * @param array $column     The column to implement.
 	 * @param int   $comment_id The comment id.
+	 *
+	 * @return void
 	 */
 	public static function manage_comments_custom_column( $column, $comment_id ) {
 		if ( 'comment_type' === $column && ! \defined( 'WEBMENTION_PLUGIN_DIR' ) ) {
@@ -588,7 +645,41 @@ class Admin {
 			} else {
 				\esc_attr_e( 'Local', 'activitypub' );
 			}
+		} elseif ( 'comment_source' === $column ) {
+			echo self::get_comment_source_link( $comment_id ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in the method.
 		}
+	}
+
+	/**
+	 * Link to the remote post a received comment came from.
+	 *
+	 * Only the browsable `source_url` is linked, not the ActivityPub ID: reactions like Likes
+	 * and Announces store only that, and it is not always a page.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int $comment_id The comment id.
+	 *
+	 * @return string The link, or an empty string for a local comment or one without a usable URL.
+	 */
+	public static function get_comment_source_link( $comment_id ) {
+		if ( ! was_comment_received( $comment_id ) ) {
+			return '';
+		}
+
+		// Sanitize before the check, so a URL with a disallowed protocol does not become a link to nowhere.
+		$source_url = \esc_url( (string) Comment::get_source_url( $comment_id, false ) );
+
+		if ( ! $source_url ) {
+			return '';
+		}
+
+		return \sprintf(
+			'<a href="%1$s" title="%1$s" target="_blank" rel="noopener noreferrer">%2$s<span class="screen-reader-text"> %3$s</span><span class="dashicons dashicons-external" aria-hidden="true"></span></a>',
+			$source_url,
+			\esc_html( \wp_parse_url( $source_url, PHP_URL_HOST ) ),
+			\esc_html__( '(opens in a new tab)', 'activitypub' )
+		);
 	}
 
 	/**
@@ -734,6 +825,8 @@ class Admin {
 
 	/**
 	 * Handle the bulk capability removal page request directly.
+	 *
+	 * @return void
 	 */
 	public static function handle_bulk_actor_delete_page() {
 
@@ -772,6 +865,8 @@ class Admin {
 
 	/**
 	 * Handle the bulk capability removal confirmation form submission.
+	 *
+	 * @return void
 	 */
 	public static function handle_bulk_actor_delete_confirmation() {
 		// Verify nonce.
@@ -937,6 +1032,8 @@ class Admin {
 	 * Add plugin settings link.
 	 *
 	 * @param array $actions The current actions.
+	 *
+	 * @return array The action links.
 	 */
 	public static function add_plugin_settings_link( $actions ) {
 		$actions[] = \sprintf(
@@ -953,6 +1050,8 @@ class Admin {
 	 *
 	 * @param array  $data   The plugin data.
 	 * @param object $update The plugin update data.
+	 *
+	 * @return void
 	 */
 	public static function plugin_update_message( $data, $update ) {
 		if ( ! isset( $update->upgrade_notice ) ) {
@@ -964,6 +1063,8 @@ class Admin {
 
 	/**
 	 * Adds meta box on wp-admin/tools.php.
+	 *
+	 * @return void
 	 */
 	public static function tool_box() {
 		\load_template( ACTIVITYPUB_PLUGIN_DIR . 'templates/toolbox.php' );
@@ -974,6 +1075,8 @@ class Admin {
 	 *
 	 * This function is used to open the help tab,
 	 * it is triggered by the hash in the URL.
+	 *
+	 * @return void
 	 */
 	public static function open_help_tab() {
 		// get all tabs registered for the ActivityPub settings page.
@@ -1007,6 +1110,8 @@ class Admin {
 
 	/**
 	 * AJAX handler for moderation settings (add/remove blocks).
+	 *
+	 * @return void
 	 */
 	public static function ajax_moderation_settings() {
 		$context   = \sanitize_text_field( \wp_unslash( $_POST['context'] ?? '' ) );
@@ -1068,6 +1173,8 @@ class Admin {
 
 	/**
 	 * AJAX handler for blocklist subscriptions (add/remove).
+	 *
+	 * @return void
 	 */
 	public static function ajax_blocklist_subscription() {
 		$operation = \sanitize_text_field( \wp_unslash( $_POST['operation'] ?? '' ) );
@@ -1117,6 +1224,8 @@ class Admin {
 	 * AJAX handler for registering a new OAuth client from the user profile.
 	 *
 	 * @since 8.1.0
+	 *
+	 * @return void
 	 */
 	public static function ajax_register_oauth_client() {
 		// Verify nonce.
@@ -1167,6 +1276,8 @@ class Admin {
 	 * AJAX handler for deleting a registered OAuth client.
 	 *
 	 * @since 8.1.0
+	 *
+	 * @return void
 	 */
 	public static function ajax_delete_oauth_client() {
 		// Verify nonce.
@@ -1197,6 +1308,8 @@ class Admin {
 	 * AJAX handler for deleting all manually registered OAuth clients.
 	 *
 	 * @since 8.1.0
+	 *
+	 * @return void
 	 */
 	public static function ajax_delete_all_oauth_clients() {
 		// Verify nonce.
@@ -1223,6 +1336,8 @@ class Admin {
 	 * Follows the WordPress core Application Passwords pattern.
 	 *
 	 * @since 8.1.0
+	 *
+	 * @return void
 	 */
 	public static function ajax_revoke_oauth_token() {
 		// Verify nonce.
@@ -1264,6 +1379,8 @@ class Admin {
 	 * AJAX handler for revoking all OAuth tokens for the current user.
 	 *
 	 * @since 8.1.0
+	 *
+	 * @return void
 	 */
 	public static function ajax_revoke_all_oauth_tokens() {
 		// Verify nonce.

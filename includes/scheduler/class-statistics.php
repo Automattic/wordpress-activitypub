@@ -20,6 +20,8 @@ class Statistics {
 
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'activitypub_collect_monthly_stats', array( self::class, 'collect_all_monthly_stats' ) );
@@ -30,6 +32,8 @@ class Statistics {
 	 * Collect monthly statistics for all active users.
 	 *
 	 * This runs on the 1st of each month and collects stats for the previous month.
+	 *
+	 * @return void
 	 */
 	public static function collect_all_monthly_stats() {
 		$user_ids = Statistics_Collector::get_active_user_ids();
@@ -69,6 +73,8 @@ class Statistics {
 	 * @todo Create a shareable landing page instead of just sending an email.
 	 *       The email should link to a public page where stats can be viewed
 	 *       and shared. Consider adding a summary image generator.
+	 *
+	 * @return void
 	 */
 	public static function compile_and_send_annual_stats() {
 		$user_ids = Statistics_Collector::get_active_user_ids();
@@ -99,6 +105,8 @@ class Statistics {
 	 * @param int   $year    The year.
 	 * @param array $summary The annual summary data.
 	 * @param bool  $force   Whether to bypass user preference checks.
+	 *
+	 * @return void
 	 */
 	public static function send_annual_email( $user_id, $year, $summary, $force = false ) {
 		if ( ! $force && ! self::should_send_report( $user_id, $summary, 'activitypub_mailer_annual_report', '1' ) ) {
@@ -198,6 +206,8 @@ class Statistics {
 	 * @param int  $year    The year.
 	 * @param int  $month   The month (1-12).
 	 * @param bool $force   Whether to bypass user preference checks.
+	 *
+	 * @return void
 	 */
 	public static function send_monthly_email( $user_id, $year, $month, $force = false ) {
 		$option_name = Statistics_Collector::get_monthly_option_name( $user_id, $year, $month );

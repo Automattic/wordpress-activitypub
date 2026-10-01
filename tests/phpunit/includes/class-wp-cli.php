@@ -40,5 +40,13 @@ if ( ! class_exists( 'WP_CLI' ) ) {
 		public static function success( $message ) {
 			self::$last_success = $message;
 		}
+
+		/**
+		 * Ignore informational output from commands.
+		 *
+		 * @param string $message Informational message.
+		 */
+		public static function log( $message ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		}
 	}
 }

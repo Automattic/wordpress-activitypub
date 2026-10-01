@@ -7,7 +7,7 @@
 		"composer/installers": "^1.0 || ^2.0"
 	},
 	"require-dev": {
-		"automattic/jetpack-changelogger": "7.0.1",
+		"automattic/jetpack-changelogger": "7.0.4",
 		"phpunit/phpunit": "^9.6.33",
 		"phpcompatibility/php-compatibility": "*",
 		"phpcompatibility/phpcompatibility-wp": "*",
@@ -17,7 +17,15 @@
 		"dealerdirect/phpcodesniffer-composer-installer": "^1.0.0",
 		"sirbrillig/phpcs-variable-analysis": "^3.0",
 		"phpcsstandards/phpcsextra": "^1.1.0",
-		"dms/phpunit-arraysubset-asserts": "^0.5.0"
+		"dms/phpunit-arraysubset-asserts": "^0.5.0",
+		"phpstan/phpstan": "^2.1",
+		"szepeviktor/phpstan-wordpress": "^2.0"
+	},
+	"autoload-dev": {
+		"classmap": [
+			"tests/phpstan/class-magic-accessors-extension.php",
+			"tests/phpstan/class-magic-accessor.php"
+		]
 	},
 	"config": {
 		"allow-plugins": true
@@ -47,6 +55,15 @@
 		],
 		"test:wp-env": [
 			"wp-env run tests-cli --env-cwd=\"wp-content/plugins/activitypub\" vendor/bin/phpunit"
+		],
+		"analyze": [
+			"phpstan analyse --memory-limit=-1"
+		],
+		"analyze:baseline": [
+			"phpstan analyse --memory-limit=-1 --generate-baseline phpstan-baseline.neon"
+		],
+		"analyze:test": [
+			"phpunit --configuration tests/phpstan/phpunit.xml.dist"
 		],
 		"lint": [
 			"vendor/bin/phpcs"

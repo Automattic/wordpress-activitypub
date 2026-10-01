@@ -30,7 +30,7 @@ import { addQueryArgs } from '@wordpress/url';
  * Internal dependencies
  */
 import { useFeedFilters } from '../../hooks/use-feed-filters';
-import { useNavigate } from '../../router';
+import { useNavigate } from '@wordpress/route';
 import SiteHub from '../site-hub';
 import ActorSwitcher from '../actor-switcher';
 import { ObjectTypes } from '../object-types';
@@ -73,7 +73,7 @@ export default function Sidebar(): ReactNode {
 		if ( path === '/' ) {
 			clearAllFilters();
 		}
-		void navigate( { to: path } );
+		void navigate( { to: path, viewTransition: false } );
 	};
 
 	const activeItem: MenuItemConfig = menuItems[ 0 ];
@@ -100,19 +100,17 @@ export default function Sidebar(): ReactNode {
 					<MenuDescription menuItem={ activeItem } />
 
 					<MenuGroup>
-						{ menuItems.map(
-							( item: MenuItemConfig ): ReactNode => (
-								<MenuItem
-									key={ item.id }
-									isSelected={ item.path === '/' && isFeedFullySelected }
-									onClick={ () => handleMenuItemClick( item.path ) }
-									className="menu-item"
-								>
-									{ item.icon && <Icon icon={ item.icon } size={ 24 } /> }
-									<span>{ item.label }</span>
-								</MenuItem>
-							)
-						) }
+						{ menuItems.map( ( item: MenuItemConfig ): ReactNode => (
+							<MenuItem
+								key={ item.id }
+								isSelected={ item.path === '/' && isFeedFullySelected }
+								onClick={ () => handleMenuItemClick( item.path ) }
+								className="menu-item"
+							>
+								{ item.icon && <Icon icon={ item.icon } size={ 24 } /> }
+								<span>{ item.label }</span>
+							</MenuItem>
+						) ) }
 					</MenuGroup>
 				</NavigableMenu>
 

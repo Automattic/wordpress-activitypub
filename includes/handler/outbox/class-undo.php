@@ -20,6 +20,8 @@ use function Activitypub\unfollow;
 class Undo {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_outbox_undo', array( self::class, 'handle_undo' ), 10, 2 );
@@ -77,8 +79,8 @@ class Undo {
 			return $data;
 		}
 
-		// Verify the user owns this outbox item (blog actor user_id === 0 can undo any).
-		if ( $user_id > 0 && (int) $outbox_item->post_author !== $user_id ) {
+		// Verify the user owns this outbox item. Blog actor items are stored with author 0.
+		if ( (int) $outbox_item->post_author !== $user_id ) {
 			return new \WP_Error(
 				'activitypub_forbidden',
 				\__( 'You can only undo your own activities.', 'activitypub' ),

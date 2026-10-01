@@ -16,6 +16,8 @@ class Options {
 
 	/**
 	 * Initialize the options.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'admin_init', array( self::class, 'register_settings' ) );
@@ -48,6 +50,8 @@ class Options {
 
 	/**
 	 * Register ActivityPub settings.
+	 *
+	 * @return void
 	 */
 	public static function register_settings() {
 		/*
@@ -437,6 +441,18 @@ class Options {
 		 */
 		\register_setting(
 			'activitypub_blog',
+			'activitypub_blog_name',
+			array(
+				'type'              => 'string',
+				'description'       => 'The Name of the Blog-User',
+				'show_in_rest'      => true,
+				'default'           => '',
+				'sanitize_callback' => 'sanitize_text_field',
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
 			'activitypub_blog_description',
 			array(
 				'type'         => 'string',
@@ -460,11 +476,25 @@ class Options {
 
 		\register_setting(
 			'activitypub_blog',
+			'activitypub_blog_icon',
+			array(
+				'type'              => 'integer',
+				'description'       => 'The Attachment-ID of the Blog-User Avatar',
+				'show_in_rest'      => true,
+				'default'           => 0,
+				'sanitize_callback' => array( Sanitize::class, 'attachment_id' ),
+			)
+		);
+
+		\register_setting(
+			'activitypub_blog',
 			'activitypub_header_image',
 			array(
-				'type'        => 'integer',
-				'description' => 'The Attachment-ID of the Sites Header-Image',
-				'default'     => null,
+				'type'              => 'integer',
+				'description'       => 'The Attachment-ID of the Sites Header-Image',
+				'show_in_rest'      => true,
+				'default'           => 0,
+				'sanitize_callback' => array( Sanitize::class, 'attachment_id' ),
 			)
 		);
 
@@ -544,6 +574,8 @@ class Options {
 
 	/**
 	 * Delete all options.
+	 *
+	 * @return void
 	 */
 	public static function delete() {
 		global $wpdb;
@@ -1013,6 +1045,8 @@ class Options {
 	 *
 	 * @param mixed $old_value The old option value.
 	 * @param mixed $new_value The new option value.
+	 *
+	 * @return void
 	 */
 	public static function relay_mode_changed( $old_value, $new_value ) {
 		if ( $new_value && ! $old_value ) {

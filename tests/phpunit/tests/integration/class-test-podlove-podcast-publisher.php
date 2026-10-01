@@ -116,6 +116,45 @@ class Test_Podlove_Podcast_Publisher extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * An episode without cover art falls back to the post's featured image.
+	 *
+	 * This is the branch {@see \Activitypub\Transformer\Post::get_media_icon()} exists for.
+	 *
+	 * @covers ::get_episode_image
+	 */
+	public function test_get_episode_image_falls_back_to_the_featured_image() {
+		$post = \get_post(
+			\wp_insert_post(
+				array(
+					'post_author'  => 1,
+					'post_title'   => 'Episode title',
+					'post_content' => 'Episode content',
+					'post_status'  => 'publish',
+					'post_type'    => 'post',
+				)
+			)
+		);
+
+		$attachment_id = self::factory()->attachment->create_upload_object( AP_TESTS_DIR . '/data/assets/test.jpg' );
+		\set_post_thumbnail( $post->ID, $attachment_id );
+
+		// The stub's cover_art_with_fallback() returns null, so the fallback runs.
+		\Podlove\Model\Episode::$mock = new \Podlove\Model\Episode();
+
+		$method = new \ReflectionMethod( \Activitypub\Integration\Podlove_Podcast_Publisher::class, 'get_episode_image' );
+		if ( \PHP_VERSION_ID < 80100 ) {
+			$method->setAccessible( true );
+		}
+
+		$image = $method->invoke( new \Activitypub\Integration\Podlove_Podcast_Publisher( $post ) );
+
+		$this->assertSame( \wp_get_attachment_image_url( $attachment_id, 'thumbnail' ), $image );
+
+		\wp_delete_attachment( $attachment_id, true );
+		\wp_delete_post( $post->ID, true );
+	}
+
+	/**
 	 * Test that get_duration returns null when no episode.
 	 *
 	 * @covers ::get_duration

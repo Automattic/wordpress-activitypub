@@ -13,6 +13,8 @@ use Activitypub\OAuth\Server;
 use Activitypub\OAuth\Token;
 use Activitypub\Post_Types;
 
+require_once AP_TESTS_DIR . '/includes/functions-login-page-stubs.php';
+
 /**
  * Test class for OAuth Server.
  *
@@ -57,6 +59,7 @@ class Test_Server extends \WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
+		\update_option( 'activitypub_api', true );
 		Post_Types::register_oauth_post_types();
 
 		$this->user_id = self::factory()->user->create( array( 'role' => 'editor' ) );
@@ -82,6 +85,7 @@ class Test_Server extends \WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		unset( $_SERVER['HTTP_AUTHORIZATION'] );
+		\delete_option( 'activitypub_api' );
 
 		global $wp;
 		if ( null === $this->original_rest_route ) {
@@ -140,6 +144,45 @@ class Test_Server extends \WP_UnitTestCase {
 		$this->assertNull( $result, 'OAuth must not authenticate core REST routes.' );
 		$this->assertFalse( Server::is_oauth_request(), 'No OAuth session should be established.' );
 		$this->assertSame( 0, \get_current_user_id(), 'The current user must not be set from the token.' );
+	}
+
+	/**
+	 * Nothing is hooked while the API is disabled, and the cleanup job is not scheduled.
+	 *
+	 * The `init` action is registered unconditionally at `plugins_loaded`; the setting is
+	 * read here, once the site context is settled.
+	 *
+	 * @covers ::init
+	 */
+	public function test_init_hooks_nothing_when_api_disabled() {
+		\delete_option( 'activitypub_api' );
+		\remove_filter( 'rest_authentication_errors', array( Server::class, 'authenticate_oauth' ), 20 );
+		\wp_clear_scheduled_hook( 'activitypub_oauth_cleanup' );
+
+		Server::init();
+
+		$this->assertFalse( \has_filter( 'rest_authentication_errors', array( Server::class, 'authenticate_oauth' ) ) );
+		$this->assertFalse( \wp_next_scheduled( 'activitypub_oauth_cleanup' ) );
+	}
+
+	/**
+	 * The authentication filter and the cleanup job are set up while the API is enabled.
+	 *
+	 * @covers ::init
+	 */
+	public function test_init_hooks_authentication_when_api_enabled() {
+		\remove_filter( 'rest_authentication_errors', array( Server::class, 'authenticate_oauth' ), 20 );
+		\wp_clear_scheduled_hook( 'activitypub_oauth_cleanup' );
+
+		Server::init();
+
+		$this->assertSame( 20, \has_filter( 'rest_authentication_errors', array( Server::class, 'authenticate_oauth' ) ) );
+		$this->assertNotFalse( \has_action( 'activitypub_oauth_cleanup', array( Server::class, 'cleanup' ) ) );
+		$this->assertNotFalse( \wp_next_scheduled( 'activitypub_oauth_cleanup' ) );
+
+		\remove_filter( 'rest_authentication_errors', array( Server::class, 'authenticate_oauth' ), 20 );
+		\remove_action( 'activitypub_oauth_cleanup', array( Server::class, 'cleanup' ) );
+		\wp_clear_scheduled_hook( 'activitypub_oauth_cleanup' );
 	}
 
 	/**
@@ -251,5 +294,89 @@ class Test_Server extends \WP_UnitTestCase {
 		$this->assertWPError( $result );
 		$this->assertSame( 'activitypub_oauth_not_allowed', $result->get_error_code() );
 		$this->assertSame( 403, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * The consent page refuses an account that is not enabled for ActivityPub.
+	 *
+	 * `login_form_authorize()` ends in `exit`, which a test cannot cross, so the refusal is read at the
+	 * `status_header` filter that the gate reaches before it renders anything.
+	 *
+	 * @covers ::login_form_authorize
+	 */
+	public function test_login_form_authorize_refuses_an_account_without_the_capability() {
+		$subscriber = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		\wp_set_current_user( $subscriber );
+
+		$stop = static function ( $header, $code ) {
+			throw new \Exception( \esc_html( 'status:' . $code ) );
+		};
+		\add_filter( 'status_header', $stop, 10, 2 );
+
+		$status = 'nothing';
+
+		try {
+			Server::login_form_authorize();
+		} catch ( \Exception $e ) {
+			$status = $e->getMessage();
+		}
+
+		\remove_filter( 'status_header', $stop, 10 );
+
+		$this->assertSame( 'status:403', $status, 'A subscriber never reaches the consent form.' );
+	}
+
+	/**
+	 * The authorization form provides a logout URL that keeps the OAuth request.
+	 *
+	 * The request parameters must survive the logout round trip exactly, even
+	 * when they carry reserved characters.
+	 *
+	 * @covers ::render_authorize_form
+	 */
+	public function test_authorize_form_logout_url_preserves_request() {
+		\wp_set_current_user( $this->user_id );
+
+		$state = 'abc&def+ghi?jkl/xyz';
+
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Simulated authorization request.
+		$original_get = $_GET;
+		$get_params   = array(
+			'client_id'             => $this->client_id,
+			'redirect_uri'          => 'https://example.com/callback',
+			'scope'                 => 'read',
+			'state'                 => $state,
+			'code_challenge'        => 'challenge',
+			'code_challenge_method' => 'S256',
+		);
+		$_GET         = $get_params;
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+		$method = new \ReflectionMethod( Server::class, 'render_authorize_form' );
+		$method->setAccessible( true );
+
+		ob_start();
+		$method->invoke( null );
+		$output = ob_get_clean();
+		$_GET   = $original_get;
+
+		$form_url = \add_query_arg(
+			\array_merge( array( 'action' => 'activitypub_authorize' ), \array_map( 'rawurlencode', $get_params ) ),
+			\wp_login_url()
+		);
+
+		$this->assertStringContainsString( 'Not you? Log in as a different user.', $output );
+		$this->assertStringContainsString( 'href="' . \esc_url( \wp_logout_url( $form_url ) ) . '"', $output );
+
+		// Walk the logout link the way a browser does: read the target, then its query.
+		$this->assertSame( 1, \preg_match( '/<a href="([^"]+)">\s*Not you\?/', $output, $matches ) );
+
+		\parse_str( (string) \wp_parse_url( \html_entity_decode( $matches[1], \ENT_QUOTES ), \PHP_URL_QUERY ), $logout_query );
+		$this->assertArrayHasKey( 'redirect_to', $logout_query );
+
+		\parse_str( (string) \wp_parse_url( $logout_query['redirect_to'], \PHP_URL_QUERY ), $form_query );
+
+		$expected = \array_merge( array( 'action' => 'activitypub_authorize' ), $get_params );
+		$this->assertSame( $expected, $form_query, 'Every OAuth parameter must survive the logout round trip.' );
 	}
 }

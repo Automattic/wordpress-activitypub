@@ -179,7 +179,14 @@ class Sanitize {
 		$parts = \array_map( 'sanitize_title', $parts );
 
 		// A segment can sanitize away to nothing, and a leading, trailing or doubled dot is not a usable handle.
-		$sanitized = \implode( '.', \array_filter( $parts, 'strlen' ) );
+		$parts = \array_filter(
+			$parts,
+			static function ( $part ) {
+				return '' !== $part;
+			}
+		);
+
+		$sanitized = \implode( '.', $parts );
 
 		if ( empty( $sanitized ) ) {
 			return Blog::get_default_username();
@@ -256,6 +263,21 @@ class Sanitize {
 		$value = \trim( $value, '@' );
 
 		return $value;
+	}
+
+	/**
+	 * Sanitize an attachment ID that must point to an image. Returns 0 for anything else.
+	 *
+	 * @since unreleased
+	 *
+	 * @param int|string $value The value to sanitize.
+	 *
+	 * @return int The sanitized attachment ID.
+	 */
+	public static function attachment_id( $value ) {
+		$id = \absint( $value );
+
+		return $id && \wp_attachment_is_image( $id ) ? $id : 0;
 	}
 
 	/**
@@ -368,6 +390,13 @@ class Sanitize {
 		if ( null === $allowed_tags ) {
 			$allowed_tags = \wp_kses_allowed_html( 'pre_comment_content' );
 		}
+
+		/*
+		 * WordPress 7.1 allows `span` in comments for its own mention markup. Mastodon wraps
+		 * shortened link text in `span`s, which `make_clickable()` then autolinks inside the
+		 * existing anchor. Drop the tag and keep the text, as every earlier WordPress did.
+		 */
+		unset( $allowed_tags['span'] );
 
 		// Add `p` and `br` to the list of allowed tags.
 		if ( ! \array_key_exists( 'br', $allowed_tags ) ) {

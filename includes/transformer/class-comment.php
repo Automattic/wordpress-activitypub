@@ -10,6 +10,7 @@ namespace Activitypub\Transformer;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Replies;
 use Activitypub\Comment as Comment_Utils;
+use Activitypub\Mention;
 use Activitypub\Model\Blog;
 use Activitypub\Sanitize;
 use Activitypub\Webfinger;
@@ -122,12 +123,21 @@ class Comment extends Base {
 		$content  = $comment->comment_content;
 		$mentions = '';
 
+		// What the author already mentioned: handles keyed like the reply context, and link targets as they are.
+		$written      = \array_change_key_case( Mention::extract_mentions( array(), $content ), CASE_LOWER );
+		$written_urls = \array_map( 'untrailingslashit', \array_merge( \array_values( $written ), Mention::extract_mention_links( $content ) ) );
+
 		foreach ( $this->extract_reply_context() as $acct => $url ) {
+			// Skip an actor the author already mentioned, so the mention is not federated twice.
+			if ( isset( $written[ \strtolower( $acct ) ] ) || \in_array( \untrailingslashit( $url ), $written_urls, true ) ) {
+				continue;
+			}
+
+			// The same markup Mastodon writes for a mention.
 			$mentions .= \sprintf(
-				'<a rel="mention" class="u-url mention" href="%1$s" title="%2$s">%3$s</a> ',
+				'<span class="h-card"><a href="%1$s" class="u-url mention" rel="mention">@<span>%2$s</span></a></span> ',
 				\esc_url( $url ),
-				\esc_attr( $acct ),
-				\esc_html( '@' . \strtok( $acct, '@' ) )
+				\esc_html( \strtok( $acct, '@' ) )
 			);
 		}
 		$content = $mentions . $content;
@@ -170,12 +180,12 @@ class Comment extends Base {
 		}
 
 		if ( $parent_comment ) {
-			$in_reply_to = Comment_Utils::get_source_id( $parent_comment->comment_ID );
+			$in_reply_to = Comment_Utils::get_source_id( (int) $parent_comment->comment_ID );
 			if ( ! $in_reply_to && ! empty( $parent_comment->user_id ) ) {
 				$in_reply_to = Comment_Utils::generate_id( $parent_comment );
 			}
 		} else {
-			$in_reply_to = \get_permalink( $comment->comment_post_ID );
+			$in_reply_to = \get_permalink( (int) $comment->comment_post_ID );
 		}
 
 		return $in_reply_to;
@@ -213,7 +223,7 @@ class Comment extends Base {
 			return $blog_user;
 		}
 
-		$user = Actors::get_by_id( $this->item->user_id );
+		$user = Actors::get_by_id( (int) $this->item->user_id );
 
 		if ( $user && ! \is_wp_error( $user ) ) {
 			$this->actor_object = $user;

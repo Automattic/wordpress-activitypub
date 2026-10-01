@@ -597,4 +597,69 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 
 		\remove_filter( 'pre_http_request', $respond );
 	}
+
+	/**
+	 * Test that the proxy stream needs the read scope.
+	 *
+	 * @covers ::get_stream_permissions_check
+	 */
+	public function test_proxy_stream_requires_the_read_scope() {
+		$respond = function () {
+			return array(
+				'response' => array( 'code' => 200 ),
+				'body'     => \wp_json_encode(
+					array(
+						'type' => 'Person',
+						'id'   => 'https://example.com/users/streamer',
+					)
+				),
+				'headers'  => array( 'content-type' => 'application/activity+json' ),
+			);
+		};
+		\add_filter( 'pre_http_request', $respond );
+
+		$request = new \WP_REST_Request( 'GET', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy/stream' );
+		$request->set_query_params( array( 'id' => 'https://example.com/users/streamer' ) );
+
+		// A token without read is refused by the gate.
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::PUSH ), self::$user_id ) );
+		$response = $this->server->dispatch( $request );
+		$this->assertEquals( 403, $response->get_status(), 'A push-only token must not open the proxy stream.' );
+		$this->assertEquals( 'activitypub_insufficient_scope', $response->get_data()['code'] );
+
+		// A read token passes the gate and reaches the handler, which finds no eventStream on the mocked actor.
+		$this->set_oauth_current_token( $this->mock_oauth_token( array( Scope::READ ), self::$user_id ) );
+		$response = $this->server->dispatch( $request );
+		$this->assertEquals( 'activitypub_no_event_stream', $response->get_data()['code'], 'A read token opens the proxy stream.' );
+
+		\remove_filter( 'pre_http_request', $respond );
+	}
+	/**
+	 * A logged-in user with the activitypub capability may use the proxy without OAuth.
+	 *
+	 * The block editor calls it with a cookie and a nonce rather than a token.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_logged_in_activitypub_user_allowed() {
+		\wp_set_current_user( self::$user_id );
+
+		$remote = function ( $pre, $url ) {
+			return 'https://example.com/notes/1' === $url ? array(
+				'id'   => $url,
+				'type' => 'Note',
+			) : $pre;
+		};
+		\add_filter( 'activitypub_pre_http_get_remote_object', $remote, 10, 2 );
+
+		$request = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => 'https://example.com/notes/1' ) );
+		$response = $this->server->dispatch( $request );
+
+		\remove_filter( 'activitypub_pre_http_get_remote_object', $remote );
+		\wp_set_current_user( 0 );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'Note', $response->get_data()['type'] );
+	}
 }

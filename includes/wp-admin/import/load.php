@@ -9,6 +9,8 @@ namespace Activitypub\WP_Admin\Import;
 
 /**
  * Load importers.
+ *
+ * @return void
  */
 function load() {
 	require_once ABSPATH . 'wp-admin/includes/import.php';

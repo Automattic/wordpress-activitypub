@@ -14,7 +14,7 @@ namespace Activitypub;
  *
  * Returns the canonical ActivityPub URI for a WP_Post or WP_Comment.
  *
- * @param \WP_Post|\WP_Comment $wp_object The WordPress post or comment.
+ * @param mixed $wp_object The WordPress post or comment; anything else yields null.
  *
  * @return string|null The ActivityPub ID (a URL), or null if unsupported type.
  */
@@ -354,7 +354,7 @@ function enrich_content_data( $content, $regex, $regex_callback ) {
  * Get an ActivityPub embed HTML for a URL.
  *
  * @param string  $url        The URL to get the embed for.
- * @param boolean $inline_css Whether to inline CSS. Default true.
+ * @param boolean $inline_css Optional. Whether to inline CSS. Default true.
  *
  * @return string|false The embed HTML or false if not found.
  */
@@ -362,96 +362,27 @@ function get_embed_html( $url, $inline_css = true ) {
 	return Embed::get_html( $url, $inline_css );
 }
 
+
 /**
- * Get the client IP address for rate-limiting purposes.
+ * Check whether terms of a taxonomy are federated.
  *
- * Walks the ordered list of $_SERVER keys returned by the
- * `activitypub_client_ip_sources` filter (default: `['REMOTE_ADDR']`) and
- * returns the first value that parses as a valid IP literal, validated via
- * `filter_var( ..., FILTER_VALIDATE_IP )`. The result can be overridden
- * outright via the `activitypub_client_ip` filter; that filter's output is
- * also validated and replaced with `''` when it isn't a valid IP, so a
- * misbehaving filter can't collide all callers into the same rate-limit
- * bucket.
+ * @since unreleased
  *
- * Trusting any source other than `REMOTE_ADDR` is only safe behind a
- * reverse proxy that sets and overwrites the corresponding header — see
- * the `activitypub_client_ip_sources` filter docblock for guidance.
+ * @param string $taxonomy The taxonomy name.
  *
- * Callers using the return value as a rate-limit key should treat an
- * empty return as "client unidentifiable" and fail closed rather than
- * share a single bucket across every such request.
- *
- * @since 8.1.0
- *
- * @return string A valid IP address, or '' when no IP could be determined.
+ * @return bool True if terms of this taxonomy are federated as ActivityPub objects.
  */
-function get_client_ip() {
-	// phpcs:disable WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders
-	$ip = '';
-
+function is_supported_taxonomy( $taxonomy ) {
 	/**
-	 * Filter the ordered list of $_SERVER keys to consult as a source for the
-	 * client IP. The first key whose value parses as a valid IP wins.
+	 * Filters the taxonomies whose terms are federated.
 	 *
-	 * Default: array( 'REMOTE_ADDR' ) — the actual TCP peer, the only value
-	 * that an HTTP client cannot spoof. Trusting any other $_SERVER key is
-	 * only safe when a reverse proxy in front of the site sets that key and
-	 * overwrites any client-supplied version; otherwise an attacker can spoof
-	 * the value and bypass the per-IP rate limits that depend on it.
+	 * Decides both what a term URL redirects to and what content negotiation answers with.
 	 *
-	 * Common operator overrides:
-	 *   array( 'HTTP_CF_CONNECTING_IP' )                      on Cloudflare.
-	 *   array( 'HTTP_TRUE_CLIENT_IP', 'REMOTE_ADDR' )         Akamai with a fallback.
-	 *   array( 'HTTP_X_REAL_IP' )                             nginx that strips the client copy.
+	 * @since 7.8.3
 	 *
-	 * X-Forwarded-For pitfall: even with a trusted proxy, an attacker can
-	 * prepend their own value before the proxy appends the real client IP.
-	 * This helper takes the leftmost entry, which is correct only when the
-	 * trusted proxy fully overwrites the header. If you trust X-Forwarded-For
-	 * end-to-end, prefer to resolve from the right by your known proxy count
-	 * via the activitypub_client_ip filter.
-	 *
-	 * @since 8.2.0
-	 *
-	 * @param string[] $sources $_SERVER keys to consult, in priority order.
+	 * @param array $supported_taxonomies Array of taxonomy names. Default array( 'category', 'post_tag' ).
 	 */
-	$sources = \apply_filters( 'activitypub_client_ip_sources', array( 'REMOTE_ADDR' ) );
+	$supported_taxonomies = \apply_filters( 'activitypub_supported_taxonomies', array( 'category', 'post_tag' ) );
 
-	if ( ! \is_array( $sources ) ) {
-		$sources = array( 'REMOTE_ADDR' );
-	}
-
-	foreach ( $sources as $source ) {
-		if ( ! \is_string( $source ) || empty( $_SERVER[ $source ] ) ) {
-			continue;
-		}
-
-		// Some headers (e.g. X-Forwarded-For) may contain a comma-separated list; use the first IP.
-		$ip_list   = \sanitize_text_field( \wp_unslash( $_SERVER[ $source ] ) );
-		$candidate = \trim( \explode( ',', $ip_list )[0] );
-
-		if ( \filter_var( $candidate, FILTER_VALIDATE_IP ) ) {
-			$ip = $candidate;
-			break;
-		}
-	}
-	// phpcs:enable WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders
-
-	/**
-	 * Filter the client IP address used for rate limiting.
-	 *
-	 * @since 8.1.0
-	 *
-	 * @param string $ip The detected client IP address (empty when none could be determined).
-	 */
-	$ip = \apply_filters( 'activitypub_client_ip', $ip );
-
-	// Tolerate surrounding whitespace from filter callbacks; FILTER_VALIDATE_IP would otherwise reject it.
-	if ( \is_string( $ip ) ) {
-		$ip = \trim( $ip );
-	}
-
-	// Re-validate so a misbehaving filter can't return a sentinel string that would collapse all callers into one bucket.
-	return \is_string( $ip ) && \filter_var( $ip, FILTER_VALIDATE_IP ) ? $ip : '';
+	return \in_array( $taxonomy, $supported_taxonomies, true );
 }

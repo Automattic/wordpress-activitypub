@@ -15,6 +15,8 @@ Autoloader::register_path( __NAMESPACE__, __DIR__ );
 
 /**
  * Initialize the ActivityPub integrations.
+ *
+ * @return void
  */
 function plugin_init() {
 	/**
@@ -99,9 +101,7 @@ function plugin_init() {
 	 *
 	 * @see https://wordpress.org/plugins/opengraph/
 	 */
-	if ( '1' === \get_option( 'activitypub_use_opengraph', '1' ) ) {
-		Opengraph::init();
-	}
+	\add_action( 'init', array( Opengraph::class, 'init' ) );
 
 	/**
 	 * Adds Podlove Podcast Publisher support.
@@ -129,6 +129,17 @@ function plugin_init() {
 			10,
 			3
 		);
+	}
+
+	/**
+	 * Adds Polylang support.
+	 *
+	 * This class handles the compatibility with the Polylang plugin.
+	 *
+	 * @see https://wordpress.org/plugins/polylang/
+	 */
+	if ( \defined( 'POLYLANG_VERSION' ) ) {
+		Polylang::init();
 	}
 
 	/**

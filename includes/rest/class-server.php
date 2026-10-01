@@ -22,6 +22,8 @@ use function Activitypub\use_authorized_fetch;
 class Server {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'rest_pre_dispatch', array( self::class, 'normalize_route' ), 1, 3 );
@@ -420,6 +422,8 @@ class Server {
 	 * (e.g. SSE streams that call exit() instead of returning a WP_REST_Response).
 	 *
 	 * @since 8.1.0
+	 *
+	 * @return void
 	 */
 	public static function send_cors_headers() {
 		\header( 'Access-Control-Allow-Origin: *' );

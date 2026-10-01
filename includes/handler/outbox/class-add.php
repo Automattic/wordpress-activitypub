@@ -20,6 +20,8 @@ use function Activitypub\object_to_uri;
 class Add {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'activitypub_outbox_add', array( self::class, 'handle_add' ), 10, 2 );
@@ -78,8 +80,8 @@ class Add {
 			);
 		}
 
-		// Verify the user owns this post.
-		if ( $user_id > 0 && (int) $post->post_author !== $user_id ) {
+		// Verify the user owns this post and may edit it.
+		if ( ( $user_id > 0 && (int) $post->post_author !== $user_id ) || ! \current_user_can( 'edit_post', $post->ID ) ) {
 			return new \WP_Error(
 				'activitypub_forbidden',
 				\__( 'You can only feature your own posts.', 'activitypub' ),

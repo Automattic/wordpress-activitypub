@@ -12,6 +12,7 @@ use Activitypub\Hashtag;
 use Activitypub\Link;
 
 use function Activitypub\get_content_visibility;
+use function Activitypub\object_to_uri;
 use function Activitypub\user_can_act_as_blog;
 
 /**
@@ -76,6 +77,11 @@ class Posts {
 		// Process content: autop, autolink, hashtags, and convert to blocks.
 		$content = self::prepare_content( $content );
 
+		// The Reply block is what makes Transformer\Post::get_in_reply_to() emit inReplyTo.
+		if ( ! empty( $object['inReplyTo'] ) ) {
+			$content = self::reply_block( object_to_uri( $object['inReplyTo'] ) ) . $content;
+		}
+
 		// Use name as title for Articles, or generate from content for Notes.
 		$title = $name;
 		if ( empty( $title ) && ! empty( $content ) ) {
@@ -100,15 +106,21 @@ class Posts {
 			),
 		);
 
+		$set_status_format = static function ( $post_id ) {
+			\set_post_format( $post_id, 'status' );
+		};
+
+		// The scheduler serializes the Create on this hook at priority 33; the format must be set before that.
+		if ( 'Note' === $object_type ) {
+			\add_action( 'wp_after_insert_post', $set_status_format, 10 );
+		}
+
 		$post_id = \wp_insert_post( $post_data, true );
+
+		\remove_action( 'wp_after_insert_post', $set_status_format, 10 );
 
 		if ( \is_wp_error( $post_id ) ) {
 			return $post_id;
-		}
-
-		// Set post format to 'status' for Notes so the transformer maps it back correctly.
-		if ( 'Note' === $object_type ) {
-			\set_post_format( $post_id, 'status' );
 		}
 
 		return \get_post( $post_id );
@@ -140,6 +152,22 @@ class Posts {
 
 		// Process content: autop, autolink, hashtags, and convert to blocks.
 		$content = self::prepare_content( $content );
+
+		$in_reply_to = ! empty( $object['inReplyTo'] ) ? object_to_uri( $object['inReplyTo'] ) : '';
+
+		// The reply target only lives in the stored Reply block, so an Update without inReplyTo keeps it.
+		if ( ! $in_reply_to ) {
+			foreach ( \parse_blocks( $post->post_content ) as $block ) {
+				if ( 'activitypub/reply' === $block['blockName'] && ! empty( $block['attrs']['url'] ) ) {
+					$in_reply_to = $block['attrs']['url'];
+					break;
+				}
+			}
+		}
+
+		if ( $in_reply_to ) {
+			$content = self::reply_block( $in_reply_to ) . $content;
+		}
 
 		// Use name as title for Articles, or generate from content for Notes.
 		$title = $name;
@@ -183,6 +211,20 @@ class Posts {
 	 */
 	public static function delete( $post_id ) {
 		return \wp_trash_post( $post_id );
+	}
+
+	/**
+	 * Serialize a Reply block for the given URL.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string $url The URL of the object being replied to.
+	 *
+	 * @return string The block markup, followed by a newline.
+	 */
+	private static function reply_block( $url ) {
+		// Stripping angle brackets keeps a URL containing `-->` from closing the block comment early.
+		return '<!-- wp:activitypub/reply ' . \wp_json_encode( array( 'url' => \esc_url_raw( $url ) ), JSON_UNESCAPED_SLASHES ) . ' /-->' . "\n";
 	}
 
 	/**

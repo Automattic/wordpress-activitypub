@@ -10,8 +10,8 @@ namespace Activitypub\Rest\OAuth;
 use Activitypub\OAuth\Client;
 use Activitypub\OAuth\Scope;
 use Activitypub\OAuth\Server as OAuth_Server;
+use Activitypub\Rest\Rate_Limit;
 
-use function Activitypub\get_client_ip;
 
 /**
  * Clients_Controller class for handling OAuth 2.0 client and metadata endpoints.
@@ -23,6 +23,8 @@ use function Activitypub\get_client_ip;
  * @since 8.1.0
  */
 class Clients_Controller extends \WP_REST_Controller {
+	use Rate_Limit;
+
 	/**
 	 * The namespace of this controller's route.
 	 *
@@ -39,6 +41,8 @@ class Clients_Controller extends \WP_REST_Controller {
 
 	/**
 	 * Register routes.
+	 *
+	 * @return void
 	 */
 	public function register_routes() {
 		// Dynamic client registration (RFC 7591).
@@ -49,7 +53,10 @@ class Clients_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'register_client' ),
-					'permission_callback' => '__return_true',
+					// Registration is open by design, so the only gate is how often one caller may register.
+					'permission_callback' => function ( $request ) {
+						return $this->rate_limit( 'oauth_register', 10, $request );
+					},
 					'args'                => array(
 						'client_name'   => array(
 							'description' => 'Human-readable name of the client.',
@@ -115,20 +122,6 @@ class Clients_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		// Rate-limit registrations to prevent DB spam (max 10 per minute per IP).
-		$ip = get_client_ip();
-		if ( '' === $ip ) {
-			return $this->rate_limit_response( \__( 'Too many client registration requests. Please try again later.', 'activitypub' ) );
-		}
-		$transient_key = 'ap_oauth_reg_' . \md5( $ip );
-		$count         = (int) \get_transient( $transient_key );
-
-		if ( $count >= 10 ) {
-			return $this->rate_limit_response( \__( 'Too many client registration requests. Please try again later.', 'activitypub' ) );
-		}
-
-		\set_transient( $transient_key, $count + 1, MINUTE_IN_SECONDS );
-
 		$client_name   = $request->get_param( 'client_name' );
 		$redirect_uris = $request->get_param( 'redirect_uris' );
 		$client_uri    = $request->get_param( 'client_uri' );
@@ -173,27 +166,6 @@ class Clients_Controller extends \WP_REST_Controller {
 			OAuth_Server::get_metadata(),
 			200,
 			array( 'Content-Type' => 'application/json' )
-		);
-	}
-
-	/**
-	 * Build a 429 rate-limit response with a Retry-After header.
-	 *
-	 * @since 9.0.0
-	 *
-	 * @param string $message Translated human-readable error message.
-	 * @return \WP_REST_Response
-	 */
-	private function rate_limit_response( $message ) {
-		return new \WP_REST_Response(
-			array(
-				'code'    => 'activitypub_rate_limited',
-				'message' => $message,
-				'data'    => array( 'status' => 429 ),
-			),
-			429,
-			// RFC 6585 §4: send Retry-After so clients can back off.
-			array( 'Retry-After' => (string) MINUTE_IN_SECONDS )
 		);
 	}
 }

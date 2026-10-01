@@ -97,6 +97,8 @@ git commit -m "Description"
 # Hook may modify files - review and stage again if needed.
 ```
 
+When the admin app imports from a `@wordpress/*` package that the build externalizes to a `wp.*` global, check the export against what the plugin's minimum WordPress version ships (`wp-includes/js/dist/<package>.js`, or `typeof wp.<package>.<name>` in the browser), not against `node_modules`. Newer npm versions export names the shipped global does not have.
+
 ### Before Creating PR
 ```bash
 # Run full test suite.

@@ -71,6 +71,8 @@ class Avatar extends File {
 
 	/**
 	 * Initialize the cache handler.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		if ( ! self::is_enabled() ) {
@@ -93,6 +95,8 @@ class Avatar extends File {
 	 * Invalidates cached files so the avatar is re-downloaded on next access.
 	 *
 	 * @param int $post_id The actor post ID.
+	 *
+	 * @return void
 	 */
 	public static function clear_cached_avatar( $post_id ) {
 		// Invalidate cached files so next access re-downloads.
@@ -129,6 +133,8 @@ class Avatar extends File {
 	 * Maybe clean up cached avatar when actor is deleted.
 	 *
 	 * @param int $post_id The post ID being deleted.
+	 *
+	 * @return void
 	 */
 	public static function maybe_cleanup( $post_id ) {
 		if ( Remote_Actors::POST_TYPE !== \get_post_type( $post_id ) ) {

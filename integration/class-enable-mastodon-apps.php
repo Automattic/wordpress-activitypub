@@ -40,6 +40,8 @@ class Enable_Mastodon_Apps {
 
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'mastodon_api_valid_user', array( self::class, 'is_ap_actor' ), 10, 2 );
@@ -56,6 +58,33 @@ class Enable_Mastodon_Apps {
 		\add_filter( 'mastodon_api_update_credentials', array( self::class, 'api_update_credentials' ), 10, 2 );
 		\add_filter( 'mastodon_api_notifications_get', array( self::class, 'api_notifications_get' ), 10, 5 );
 		\add_filter( 'mastodon_api_tag_timeline', array( self::class, 'api_tag_timeline_tags_pub' ), 20, 2 );
+		\add_filter( 'activitypub_locale', array( self::class, 'get_post_locale' ), 9, 2 );
+	}
+
+	/**
+	 * Use the language a Mastodon app set for a post as the locale of the ActivityPub object.
+	 *
+	 * Enable Mastodon Apps stores the language an app submits with a status as post meta.
+	 * Runs before the multilingual integrations, so a language those know takes precedence.
+	 * A comment takes the language of the post it belongs to.
+	 *
+	 * @param string $lang The language code.
+	 * @param mixed  $item The transformed object.
+	 *
+	 * @return string The language code.
+	 */
+	public static function get_post_locale( $lang, $item ) {
+		if ( $item instanceof \WP_Comment ) {
+			$item = \get_post( $item->comment_post_ID );
+		}
+
+		if ( ! $item instanceof \WP_Post ) {
+			return $lang;
+		}
+
+		$app_lang = \get_post_meta( $item->ID, 'ema_language', true );
+
+		return $app_lang ? $app_lang : $lang;
 	}
 
 	/**
@@ -148,6 +177,8 @@ class Enable_Mastodon_Apps {
 	 *
 	 * @param int   $user_id The user id to act on.
 	 * @param array $fields The fields to set. It is assumed to be the entire set of desired fields.
+	 *
+	 * @return void
 	 */
 	private static function set_extra_fields( $user_id, $fields ) {
 		// The Mastodon API submits a simple hash for every field.
@@ -288,8 +319,8 @@ class Enable_Mastodon_Apps {
 	/**
 	 * Resolve internal accounts for Mastodon API
 	 *
-	 * @param Account $user_data The user data.
-	 * @param string  $user_id   The user id.
+	 * @param Account|null $user_data The user data.
+	 * @param string       $user_id   The user id.
 	 *
 	 * @return Account The filtered Account.
 	 */
@@ -1077,7 +1108,7 @@ class Enable_Mastodon_Apps {
 					continue;
 				}
 
-				$status = self::api_post_status( $comment->comment_post_ID );
+				$status = self::api_post_status( (int) $comment->comment_post_ID );
 				if ( ! $status ) {
 					continue;
 				}

@@ -1,0 +1,4 @@
+Significance: patch
+Type: fixed
+
+The Reactions block no longer requests reactions in the editor for drafts, pages, and other content that is not shared to the Fediverse, which caused failed requests on every editor load.

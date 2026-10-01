@@ -23,6 +23,8 @@ use function Activitypub\object_id_to_comment;
 class Create {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'activitypub_handled_inbox_create', array( self::class, 'handle_create' ), 10, 3 );
@@ -36,6 +38,8 @@ class Create {
 	 * @param array                          $activity        The activity-object.
 	 * @param int|int[]                      $user_ids        The id(s) of the local blog-user(s).
 	 * @param \Activitypub\Activity\Activity $activity_object Optional. The activity object. Default null.
+	 *
+	 * @return void
 	 */
 	public static function handle_create( $activity, $user_ids, $activity_object = null ) {
 		// Check for private and/or direct messages.
@@ -162,6 +166,8 @@ class Create {
 	 *
 	 * @param int                            $outbox_id The ID of the outbox activity.
 	 * @param \Activitypub\Activity\Activity $activity  The Activity object.
+	 *
+	 * @return void
 	 */
 	public static function maybe_unbury( $outbox_id, $activity ) {
 		if ( ! \in_array( $activity->get_type(), array( 'Create', 'Update' ), true ) ) {

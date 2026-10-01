@@ -13,6 +13,8 @@ namespace Activitypub\WP_Admin;
 class Screen_Options {
 	/**
 	 * Initialize the class.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_filter( 'set-screen-option', array( self::class, 'set_per_page_option' ), 10, 3 );
@@ -24,6 +26,8 @@ class Screen_Options {
 	 * Add settings list screen options.
 	 *
 	 * @see Menu::admin_menu()
+	 *
+	 * @return void
 	 */
 	public static function add_settings_list_options() {
 		$tab = \sanitize_text_field( \wp_unslash( $_GET['tab'] ?? 'welcome' ) ); // phpcs:ignore WordPress.Security.NonceVerification
@@ -45,6 +49,8 @@ class Screen_Options {
 	 * Add follower list screen options.
 	 *
 	 * @see Menu::admin_menu()
+	 *
+	 * @return void
 	 */
 	public static function add_followers_list_options() {
 		\add_screen_option(
@@ -61,6 +67,8 @@ class Screen_Options {
 	 * Add screen options for following list.
 	 *
 	 * @see Menu::admin_menu()
+	 *
+	 * @return void
 	 */
 	public static function add_following_list_options() {
 		\add_screen_option(
@@ -77,6 +85,8 @@ class Screen_Options {
 	 * Add screen options for blocked actors list.
 	 *
 	 * @see Menu::admin_menu()
+	 *
+	 * @return void
 	 */
 	public static function add_blocked_actors_list_options() {
 		\add_screen_option(

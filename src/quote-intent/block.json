@@ -1,0 +1,11 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "activitypub/quote-intent",
+	"title": "ActivityPub Quote Intent Handler",
+	"category": "widgets",
+	"description": "Handles quote intents in the block editor.",
+	"icon": "format-quote",
+	"textdomain": "activitypub",
+	"editorScript": "file:./plugin.js"
+}

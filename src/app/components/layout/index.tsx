@@ -18,25 +18,18 @@
  * External dependencies
  */
 import type { KeyboardEvent, ReactNode } from 'react';
+import clsx from 'clsx';
 
 /**
  * WordPress dependencies
  */
-import {
-	SnackbarList,
-	__unstableMotion as motion,
-	__unstableAnimatePresence as AnimatePresence,
-} from '@wordpress/components';
-import { useSelect, useDispatch } from '@wordpress/data';
 import { useState, useEffect } from '@wordpress/element';
-import { useViewportMatch, useReducedMotion } from '@wordpress/compose';
-import { store as noticesStore } from '@wordpress/notices';
+import { useViewportMatch } from '@wordpress/compose';
 import { __ } from '@wordpress/i18n';
 
 /**
  * Internal dependencies
  */
-import { Outlet } from '../../router';
 import Sidebar from '../sidebar';
 import { SiteHubMobile } from '../site-hub';
 import './style.scss';
@@ -47,16 +40,8 @@ interface LayoutProps {
 
 export function Layout( { children }: LayoutProps ): ReactNode {
 	const isMobileViewport: boolean = useViewportMatch( 'medium', '<' );
-	const disableMotion: boolean = useReducedMotion();
 	const [ isMobileSidebarOpen, setIsMobileSidebarOpen ] = useState( false );
-	const content: ReactNode = children ?? <Outlet />;
-
-	// Snackbar notices dispatched by route actions (e.g. follow/block) render here.
-	const notices = useSelect( ( select ) => {
-		const { getNotices } = select( noticesStore );
-		return getNotices().filter( ( notice ): boolean => notice.type === 'snackbar' );
-	}, [] ) as Array< { id: string; content: string } >;
-	const { removeNotice } = useDispatch( noticesStore );
+	const content: ReactNode = children;
 
 	// Auto-close sidebar on viewport change. Core boot owns route state.
 	useEffect( (): void => {
@@ -65,19 +50,11 @@ export function Layout( { children }: LayoutProps ): ReactNode {
 
 	return (
 		<div className="app-layout">
-			{ /* Mobile: Backdrop for sidebar drawer */ }
-			<AnimatePresence>
-				{ isMobileViewport && isMobileSidebarOpen && (
-					<motion.div
-						className="sidebar-backdrop"
-						initial={ { opacity: 0 } }
-						animate={ { opacity: 1 } }
-						exit={ { opacity: 0 } }
-						transition={ {
-							type: 'tween',
-							duration: disableMotion ? 0 : 0.2,
-							ease: 'easeOut',
-						} }
+			{ /* Mobile: backdrop and sidebar drawer, slid in and out with CSS transitions */ }
+			{ isMobileViewport && (
+				<>
+					<div
+						className={ clsx( 'sidebar-backdrop', { 'is-open': isMobileSidebarOpen } ) }
 						onClick={ (): void => setIsMobileSidebarOpen( false ) }
 						onKeyDown={ ( event: KeyboardEvent< HTMLDivElement > ): void => {
 							if ( event.key === 'Escape' ) {
@@ -88,27 +65,11 @@ export function Layout( { children }: LayoutProps ): ReactNode {
 						tabIndex={ -1 }
 						aria-label={ __( 'Close menu', 'activitypub' ) }
 					/>
-				) }
-			</AnimatePresence>
-
-			{ /* Mobile: Animated sidebar drawer */ }
-			<AnimatePresence>
-				{ isMobileViewport && isMobileSidebarOpen && (
-					<motion.div
-						className="sidebar-region is-mobile"
-						initial={ { x: '-100%' } }
-						animate={ { x: 0 } }
-						exit={ { x: '-100%' } }
-						transition={ {
-							type: 'tween',
-							duration: disableMotion ? 0 : 0.2,
-							ease: 'easeOut',
-						} }
-					>
+					<div className={ clsx( 'sidebar-region is-mobile', { 'is-open': isMobileSidebarOpen } ) }>
 						<Sidebar />
-					</motion.div>
-				) }
-			</AnimatePresence>
+					</div>
+				</>
+			) }
 
 			{ /* Desktop: Static sidebar + content */ }
 			{ ! isMobileViewport && (
@@ -130,8 +91,6 @@ export function Layout( { children }: LayoutProps ): ReactNode {
 					{ content }
 				</div>
 			) }
-
-			<SnackbarList notices={ notices } onRemove={ removeNotice } />
 		</div>
 	);
 }

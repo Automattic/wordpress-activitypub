@@ -16,6 +16,8 @@ use Activitypub\Collection\Outbox;
 class Router {
 	/**
 	 * Initialize the class, registering WordPress hooks.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'init', array( self::class, 'add_rewrite_rules' ), 11 );
@@ -32,6 +34,8 @@ class Router {
 
 	/**
 	 * Add rewrite rules.
+	 *
+	 * @return void
 	 */
 	public static function add_rewrite_rules() {
 		/*
@@ -185,6 +189,15 @@ class Router {
 				 */
 				$activitypub_template = \apply_filters( 'activitypub_preview_template', ACTIVITYPUB_PLUGIN_DIR . '/templates/post-preview.php' );
 			} else {
+				/*
+				 * A logged-in caller, by cookie or by bearer token, can be served owner-only
+				 * material such as a private outbox item. Neither credential is part of a shared
+				 * cache's key, so the response must not be stored.
+				 */
+				if ( \is_user_logged_in() && ! \headers_sent() ) {
+					\header( 'Cache-Control: private, no-store, max-age=0' );
+				}
+
 				$activitypub_template = ACTIVITYPUB_PLUGIN_DIR . 'templates/activitypub-json.php';
 			}
 		}
@@ -233,6 +246,8 @@ class Router {
 
 	/**
 	 * Add the 'self' link to the header.
+	 *
+	 * @return void
 	 */
 	public static function add_headers() {
 		$id = Query::get_instance()->get_activitypub_object_id();
@@ -380,7 +395,13 @@ class Router {
 			exit;
 		}
 
-		$term_id = \get_query_var( 'term_id', null );
+		/*
+		 * Read `term_id` off the parsed request, not the query vars. WP_Query derives its own
+		 * `term_id` from any tax query on another taxonomy, and takes the raw value regardless of
+		 * the query's `field`: Polylang filters by `term_taxonomy_id`, so that number can be the
+		 * term ID of an unrelated category or tag.
+		 */
+		$term_id = $wp_query->query['term_id'] ?? null;
 		if ( $term_id ) {
 			$term = \get_term( $term_id );
 
@@ -390,16 +411,7 @@ class Router {
 				return;
 			}
 
-			/**
-			 * Filters the taxonomies supported for term redirects.
-			 *
-			 * @since 7.8.3
-			 *
-			 * @param array $supported_taxonomies Array of taxonomy names. Default array( 'category', 'post_tag' ).
-			 */
-			$supported_taxonomies = \apply_filters( 'activitypub_supported_taxonomies', array( 'category', 'post_tag' ) );
-
-			if ( ! \in_array( $term->taxonomy, $supported_taxonomies, true ) ) {
+			if ( ! is_supported_taxonomy( $term->taxonomy ) ) {
 				return;
 			}
 
@@ -444,6 +456,8 @@ class Router {
 	 * since we only need to return the blog actor, not posts.
 	 *
 	 * @param \WP_Query $wp_query The WP_Query instance.
+	 *
+	 * @return void
 	 */
 	public static function fix_is_home_check( $wp_query ) {
 		if (

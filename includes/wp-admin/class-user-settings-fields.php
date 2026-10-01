@@ -20,6 +20,8 @@ use Activitypub\OAuth\Token;
 class User_Settings_Fields {
 	/**
 	 * Initialize the settings fields.
+	 *
+	 * @return void
 	 */
 	public static function init() {
 		\add_action( 'load-profile.php', array( self::class, 'register_settings' ) );
@@ -27,6 +29,8 @@ class User_Settings_Fields {
 
 	/**
 	 * Register all settings fields.
+	 *
+	 * @return void
 	 */
 	public static function register_settings() {
 		// Mark checklist item as done.
@@ -133,6 +137,8 @@ class User_Settings_Fields {
 
 	/**
 	 * Section description callback.
+	 *
+	 * @return void
 	 */
 	public static function section_description() {
 		echo '<p>' . \esc_html__( 'Define what others can see on your public Fediverse profile and next to your posts. With a profile picture and a fully completed profile, you are more likely to gain interactions and followers.', 'activitypub' ) . '</p>';
@@ -141,6 +147,8 @@ class User_Settings_Fields {
 
 	/**
 	 * Profile URL field callback.
+	 *
+	 * @return void
 	 */
 	public static function profile_url_callback() {
 		$user = Actors::get_by_id( \get_current_user_id() );
@@ -169,6 +177,8 @@ class User_Settings_Fields {
 
 	/**
 	 * Description field callback.
+	 *
+	 * @return void
 	 */
 	public static function description_callback() {
 		$description = \get_user_option( 'activitypub_description', \get_current_user_id() );
@@ -181,11 +191,13 @@ class User_Settings_Fields {
 
 	/**
 	 * Header image field callback.
+	 *
+	 * @return void
 	 */
 	public static function header_image_callback() {
 		$header_image              = \get_user_option( 'activitypub_header_image', \get_current_user_id() );
-		$classes_for_upload_button = 'button upload-button button-add-media button-add-header-image';
-		$classes_for_update_button = 'button';
+		$classes_for_upload_button = 'button upload-button button-add-media button-add-header-image activitypub-media-picker-button';
+		$classes_for_update_button = 'button activitypub-media-picker-button';
 		$classes_for_wrapper       = '';
 
 		if ( (int) $header_image ) {
@@ -211,6 +223,12 @@ class User_Settings_Fields {
 			data-update="<?php \esc_attr_e( 'Set as Header Image', 'activitypub' ); ?>"
 			data-width="1500"
 			data-height="500"
+			data-context="activitypub-header-image"
+			data-preview="#activitypub-header-image-preview"
+			data-preview-wrapper="#activitypub-header-image-preview-wrapper"
+			data-input="#activitypub_header_image"
+			data-remove="#activitypub-remove-header-image"
+			data-preview-label="<?php \esc_attr_e( 'Header Image', 'activitypub' ); ?>"
 			<?php
 			if ( ! \current_user_can( 'edit_others_posts' ) ) :
 				\printf( 'data-user-id="%s"', \esc_attr( \get_current_user_id() ) );
@@ -231,6 +249,8 @@ class User_Settings_Fields {
 
 	/**
 	 * Notifications field callback.
+	 *
+	 * @return void
 	 */
 	public static function notifications_callback() {
 		?>
@@ -277,6 +297,8 @@ class User_Settings_Fields {
 
 	/**
 	 * Extra fields callback.
+	 *
+	 * @return void
 	 */
 	public static function extra_fields_callback() {
 		$extra_fields = Extra_Fields::get_actor_fields( \get_current_user_id() );
@@ -314,6 +336,8 @@ class User_Settings_Fields {
 
 	/**
 	 * Also Known As field callback.
+	 *
+	 * @return void
 	 */
 	public static function also_known_as_callback() {
 		$also_known_as = \get_user_option( 'activitypub_also_known_as', \get_current_user_id() );
@@ -335,6 +359,8 @@ class User_Settings_Fields {
 
 	/**
 	 * Moderation section description callback.
+	 *
+	 * @return void
 	 */
 	public static function moderation_section_description() {
 		echo '<p>' . \esc_html__( 'Configure personal blocks to filter ActivityPub content you don\'t want to see.', 'activitypub' ) . '</p>';
@@ -342,6 +368,8 @@ class User_Settings_Fields {
 
 	/**
 	 * Blocked domains field callback.
+	 *
+	 * @return void
 	 */
 	public static function blocked_domains_callback() {
 		$user_id         = \get_current_user_id();
@@ -377,6 +405,8 @@ class User_Settings_Fields {
 
 	/**
 	 * Blocked keywords field callback.
+	 *
+	 * @return void
 	 */
 	public static function blocked_keywords_callback() {
 		$user_id          = \get_current_user_id();
@@ -417,6 +447,8 @@ class User_Settings_Fields {
 	 * not through the Settings API.
 	 *
 	 * @since 8.1.0
+	 *
+	 * @return void
 	 */
 	public static function connected_apps_section() {
 		$tokens  = Token::get_all_for_user( \get_current_user_id() );
@@ -562,6 +594,8 @@ class User_Settings_Fields {
 
 	/**
 	 * Hide Social Graph field callback.
+	 *
+	 * @return void
 	 */
 	public static function hide_followers_callback() {
 		$hide_followers = \get_user_option( 'activitypub_hide_social_graph', \get_current_user_id() );

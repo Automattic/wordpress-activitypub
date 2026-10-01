@@ -12,6 +12,7 @@
 
 namespace Activitypub\Rest;
 
+use Activitypub\Activity\Activity;
 use Activitypub\Collection\Actors;
 use Activitypub\Collection\Inbox;
 use Activitypub\Collection\Outbox;
@@ -52,7 +53,9 @@ trait Event_Stream {
 	/**
 	 * Check permissions for the stream endpoint.
 	 *
-	 * Requires OAuth authentication with the push scope.
+	 * Requires OAuth authentication with the read scope. The stream delivers the same
+	 * activities as the paged collection, only as they happen, so it asks for the same scope.
+	 *
 	 * Falls back to `access_token` query parameter for EventSource clients,
 	 * since the browser EventSource API cannot send custom headers.
 	 *
@@ -68,7 +71,7 @@ trait Event_Stream {
 			$this->authenticate_from_query_param();
 		}
 
-		$oauth_result = OAuth_Server::check_oauth_permission( $request, Scope::PUSH );
+		$oauth_result = OAuth_Server::check_oauth_permission( $request, Scope::READ );
 
 		if ( true !== $oauth_result ) {
 			return $oauth_result;
@@ -94,6 +97,8 @@ trait Event_Stream {
 	 * @since 8.1.0
 	 *
 	 * @see https://swicg.github.io/activitypub-api/sse
+	 *
+	 * @return void
 	 */
 	private function authenticate_from_query_param() {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Opaque auth token, must not be altered.
@@ -109,11 +114,18 @@ trait Event_Stream {
 			return;
 		}
 
-		// Inject as Authorization header so the OAuth server can find it.
+		// Inject as Authorization header so the OAuth server can find it, and put back whatever was there.
+		$previous                      = $_SERVER['HTTP_AUTHORIZATION'] ?? null; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- Only saved to be restored.
 		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $token_string;
 
-		// Re-run OAuth authentication.
+		// Re-run OAuth authentication. The validated token is kept by the OAuth server.
 		OAuth_Server::authenticate_oauth( null );
+
+		if ( null === $previous ) {
+			unset( $_SERVER['HTTP_AUTHORIZATION'] );
+		} else {
+			$_SERVER['HTTP_AUTHORIZATION'] = $previous;
+		}
 	}
 
 	/**
@@ -123,6 +135,8 @@ trait Event_Stream {
 	 *
 	 * @param int    $user_id    The actor ID.
 	 * @param string $collection The collection type ('outbox' or 'inbox').
+	 *
+	 * @return void
 	 */
 	protected function stream_collection( $user_id, $collection ) {
 		// Allow PHP to detect client disconnects instead of auto-terminating.
@@ -192,6 +206,8 @@ trait Event_Stream {
 	 * does not support streaming responses.
 	 *
 	 * @param string $stream_url The remote eventStream URL.
+	 *
+	 * @return void
 	 */
 	protected function relay_remote_stream( $stream_url ) {
 		\ignore_user_abort( true );
@@ -354,6 +370,8 @@ trait Event_Stream {
 
 	/**
 	 * Send SSE-specific HTTP headers.
+	 *
+	 * @return void
 	 */
 	protected function send_sse_headers() {
 		while ( \ob_get_level() > 0 ) {
@@ -375,6 +393,8 @@ trait Event_Stream {
 	 *
 	 * @param \WP_Post $item       The collection post item.
 	 * @param string   $collection The collection type ('outbox' or 'inbox').
+	 *
+	 * @return void
 	 */
 	protected function send_sse_event( $item, $collection ) {
 		$event_type = $this->get_event_type( $item, $collection );
@@ -395,6 +415,8 @@ trait Event_Stream {
 	 * Send an SSE comment line.
 	 *
 	 * @param string $comment The comment text.
+	 *
+	 * @return void
 	 */
 	protected function send_sse_comment( $comment ) {
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- SSE protocol requires raw output.
@@ -403,6 +425,8 @@ trait Event_Stream {
 
 	/**
 	 * Flush all output buffers.
+	 *
+	 * @return void
 	 */
 	protected function flush_output() {
 		if ( \ob_get_level() > 0 ) {
@@ -444,7 +468,7 @@ trait Event_Stream {
 	 */
 	protected function get_event_data( $item, $collection ) {
 		if ( 'outbox' === $collection ) {
-			$activity = Outbox::get_activity( $item->ID );
+			$activity = Outbox::get_activity( $item );
 
 			if ( \is_wp_error( $activity ) ) {
 				return null;
@@ -453,9 +477,22 @@ trait Event_Stream {
 			return $activity->to_array( false );
 		}
 
-		$data = \json_decode( $item->post_content, true );
+		$activity = Activity::init_from_json( $item->post_content );
 
-		return $data ? $data : null;
+		if ( \is_wp_error( $activity ) ) {
+			return null;
+		}
+
+		$received = \get_post_datetime( $item, 'date', 'gmt' );
+
+		// Reported the same way the listing reports it, so a client watching the stream and paging the collection agree.
+		if ( ! $activity->get_published() && $received ) {
+			// get_post_datetime() hands back the site timezone even for the GMT column, and the format ends in a literal `Z`.
+			$activity->set_published( $received->setTimezone( new \DateTimeZone( 'UTC' ) )->format( ACTIVITYPUB_DATE_TIME_RFC3339 ) );
+		}
+
+		// The collection carries the JSON-LD context, and `bto`/`bcc` are stored for addressing only.
+		return $activity->to_array( false );
 	}
 
 	/**
@@ -545,27 +582,6 @@ trait Event_Stream {
 					'value' => Actors::get_type_by_id( $user_id ),
 				),
 			);
-
-			/*
-			 * The stream is consented to as `push`, which says the client may watch the
-			 * collection, not that it may see everything in it. Reading the owner's private
-			 * activities is the same authority the paged outbox requires `read` for, so a
-			 * client without it watches the public subset, exactly what
-			 * Outbox_Controller::get_items() would serve it.
-			 */
-			if ( ! OAuth_Server::permits_scope( Scope::READ ) ) {
-				$args['meta_query'][] = array(
-					'relation' => 'OR',
-					array(
-						'key'     => 'activitypub_content_visibility',
-						'compare' => 'NOT EXISTS',
-					),
-					array(
-						'key'   => 'activitypub_content_visibility',
-						'value' => ACTIVITYPUB_CONTENT_VISIBILITY_PUBLIC,
-					),
-				);
-			}
 		} else {
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 			$args['meta_query'] = array(

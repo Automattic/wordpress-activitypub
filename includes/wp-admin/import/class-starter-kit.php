@@ -68,6 +68,8 @@ class Starter_Kit {
 
 	/**
 	 * Dispatch
+	 *
+	 * @return void
 	 */
 	public static function dispatch() {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -122,6 +124,8 @@ class Starter_Kit {
 
 	/**
 	 * Handle upload.
+	 *
+	 * @return bool Whether the upload was imported.
 	 */
 	public static function handle_upload() {
 		$error_message = \__( 'Sorry, there has been an error.', 'activitypub' );
@@ -180,6 +184,8 @@ class Starter_Kit {
 
 	/**
 	 * Handle URL import.
+	 *
+	 * @return bool Whether the import was started.
 	 */
 	public static function handle_url_import() {
 		$error_message = \__( 'Sorry, there has been an error.', 'activitypub' );
@@ -285,6 +291,8 @@ class Starter_Kit {
 
 	/**
 	 * Import options.
+	 *
+	 * @return void
 	 */
 	public static function import_options() {
 		self::setup_blog_user_filter();
@@ -301,6 +309,8 @@ class Starter_Kit {
 
 	/**
 	 * Setup blog user filter for dropdown.
+	 *
+	 * @return void
 	 */
 	private static function setup_blog_user_filter() {
 		if ( is_user_type_disabled( 'blog' ) ) {
@@ -322,6 +332,8 @@ class Starter_Kit {
 
 	/**
 	 * Cleanup blog user filter.
+	 *
+	 * @return void
 	 */
 	private static function cleanup_blog_user_filter() {
 		if ( self::$blog_user_filter_callback && self::$blog_user_filter_added ) {
@@ -336,6 +348,8 @@ class Starter_Kit {
 	 * Render error message.
 	 *
 	 * @param \WP_Error $error The error to render.
+	 *
+	 * @return void
 	 */
 	private static function render_error( $error ) {
 		\printf(
@@ -349,6 +363,8 @@ class Starter_Kit {
 	 * Render the import form.
 	 *
 	 * @param array $actors The actors to render.
+	 *
+	 * @return void
 	 */
 	private static function render_import_form( $actors ) {
 		?>
@@ -369,6 +385,8 @@ class Starter_Kit {
 
 	/**
 	 * Render starter kit information.
+	 *
+	 * @return void
 	 */
 	private static function render_starter_kit_info() {
 		$name = empty( self::$starter_kit['name'] )
@@ -405,6 +423,8 @@ class Starter_Kit {
 
 	/**
 	 * Render author selection.
+	 *
+	 * @return void
 	 */
 	private static function render_author_selection() {
 		?>
@@ -430,6 +450,8 @@ class Starter_Kit {
 	 * Render actor selection.
 	 *
 	 * @param array $actors The actors to render.
+	 *
+	 * @return void
 	 */
 	private static function render_actor_selection( $actors ) {
 		?>
@@ -475,6 +497,8 @@ class Starter_Kit {
 
 	/**
 	 * Import.
+	 *
+	 * @return void
 	 */
 	public static function import() {
 		$error_message = \__( 'Sorry, there has been an error.', 'activitypub' );
@@ -490,7 +514,7 @@ class Starter_Kit {
 
 		\wp_suspend_cache_invalidation( false );
 
-		\wp_import_cleanup( self::$import_id );
+		\wp_import_cleanup( (string) self::$import_id );
 
 		if ( \is_wp_error( $result ) ) {
 			\printf( '<p><strong>%s</strong><br />%s</p>', \esc_html( $error_message ), \esc_html( $result->get_error_message() ) );
@@ -549,6 +573,8 @@ class Starter_Kit {
 
 	/**
 	 * Intro.
+	 *
+	 * @return void
 	 */
 	public static function greet() {
 		echo '<div class="narrow">';
@@ -589,6 +615,8 @@ class Starter_Kit {
 
 	/**
 	 * Header.
+	 *
+	 * @return void
 	 */
 	public static function header() {
 		echo '<div class="wrap">';
@@ -597,6 +625,8 @@ class Starter_Kit {
 
 	/**
 	 * Footer.
+	 *
+	 * @return void
 	 */
 	public static function footer() {
 		echo '</div>';
@@ -604,6 +634,8 @@ class Starter_Kit {
 
 	/**
 	 * Get actor list.
+	 *
+	 * @return array|\WP_Error The actors, or WP_Error when the file cannot be used.
 	 */
 	private static function get_actor_list() {
 		$file = \get_attached_file( self::$import_id );

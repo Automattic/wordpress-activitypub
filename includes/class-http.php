@@ -189,7 +189,13 @@ class Http {
 			if ( ! $code ) {
 				$code = 0;
 			}
-			$response = new \WP_Error( $code, \__( 'Failed HTTP Request', 'activitypub' ), array( 'status' => $code ) );
+
+			if ( \is_wp_error( $response ) ) {
+				// A transport failure (DNS, TLS, a timeout) names itself and has no response code, and a WP_Error built with 0 carries no code or message at all, so keep the one it came with.
+				$response->add_data( array( 'status' => $code ) );
+			} else {
+				$response = new \WP_Error( $code, \__( 'Failed HTTP Request', 'activitypub' ), array( 'status' => $code ) );
+			}
 
 			/*
 			 * Cache errors to prevent repeated timeout waits, but never one reached via a
@@ -283,7 +289,7 @@ class Http {
 	 * caller having to re-check the origin itself.
 	 *
 	 * @param array|string $url_or_object The Object or the Object URL.
-	 * @param bool         $cached        Optional. Whether the result should be cached. Default true.
+	 * @param bool|int     $cached        Optional. Whether the result should be cached, or the cache duration in seconds. Default true.
 	 *
 	 * @return array|\WP_Error The Object data as array or WP_Error on failure.
 	 */
@@ -366,10 +372,10 @@ class Http {
 	/**
 	 * Fetch and JSON-decode a single remote document.
 	 *
-	 * @param string $url       The URL to fetch. Must already be resolved (not a WebFinger acct).
-	 * @param bool   $cached    Whether the result may be served from and written to cache.
-	 * @param string $final_url Filled by reference with the URL the document was served from,
-	 *                          after following any redirects.
+	 * @param string   $url       The URL to fetch. Must already be resolved (not a WebFinger acct).
+	 * @param bool|int $cached    Whether the result may be served from and written to cache, or the cache duration in seconds.
+	 * @param string   $final_url Filled by reference with the URL the document was served from,
+	 *                            after following any redirects.
 	 *
 	 * @return array|\WP_Error The decoded document, or WP_Error on failure.
 	 */

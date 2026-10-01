@@ -32,6 +32,8 @@ class Actors_Inbox_Controller extends Actors_Controller {
 
 	/**
 	 * Register routes.
+	 *
+	 * @return void
 	 */
 	public function register_routes() {
 		\register_rest_route(
@@ -64,6 +66,7 @@ class Actors_Inbox_Controller extends Actors_Controller {
 							'minimum'     => 1,
 							'maximum'     => 100,
 						),
+						'item'     => $this->get_seek_item_arg(),
 					),
 					'schema'              => array( $this, 'get_collection_schema' ),
 				),
@@ -174,7 +177,6 @@ class Actors_Inbox_Controller extends Actors_Controller {
 	 * @return \WP_REST_Response|\WP_Error Response object on success, or WP_Error object on failure.
 	 */
 	public function get_items( $request ) {
-		$page    = $request->get_param( 'page' ) ?? 1;
 		$user_id = $request->get_param( 'user_id' );
 		$user    = Actors::get_by_id( $user_id );
 
@@ -189,36 +191,21 @@ class Actors_Inbox_Controller extends Actors_Controller {
 		 */
 		\do_action( 'activitypub_rest_inbox_pre', $request );
 
-		$args = array(
-			'posts_per_page' => $request->get_param( 'per_page' ),
-			'paged'          => $page,
-			'post_type'      => Inbox::POST_TYPE,
-			'post_status'    => 'publish',
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query'     => array(
-				array(
-					'key'   => '_activitypub_user_id',
-					'value' => $user_id,
-				),
-			),
-		);
+		$collection_id = get_rest_url_by_path( \sprintf( 'actors/%d/inbox', $user_id ) );
 
-		/**
-		 * Filters WP_Query arguments when querying Inbox items via the REST API.
-		 *
-		 * Enables adding extra arguments or setting defaults for an inbox collection request.
-		 *
-		 * @param array            $args    Array of arguments for WP_Query.
-		 * @param \WP_REST_Request $request The REST API request.
-		 */
-		$args = \apply_filters( 'activitypub_rest_inbox_query', $args, $request );
+		$seek = $this->maybe_seek_item( $request, $collection_id );
+		if ( null !== $seek ) {
+			return $seek;
+		}
+
+		$args = $this->get_query_args( $request );
 
 		$inbox_query  = new \WP_Query();
 		$query_result = $inbox_query->query( $args );
 
 		$response = array(
 			'@context'     => Base_Object::JSON_LD_CONTEXT,
-			'id'           => get_rest_url_by_path( \sprintf( 'actors/%d/inbox', $user_id ) ),
+			'id'           => $collection_id,
 			'generator'    => 'https://wordpress.org/?v=' . get_masked_wp_version(),
 			'actor'        => $user->get_id(),
 			'type'         => 'OrderedCollection',
@@ -233,7 +220,13 @@ class Actors_Inbox_Controller extends Actors_Controller {
 				continue;
 			}
 
-			$response['orderedItems'][] = $this->prepare_item_for_response( $inbox_item, $request );
+			$item = $this->prepare_item_for_response( $inbox_item, $request );
+
+			if ( \is_wp_error( $item ) ) {
+				continue;
+			}
+
+			$response['orderedItems'][] = $item;
 		}
 
 		$response = $this->prepare_collection_response( $response, $request );
@@ -271,16 +264,128 @@ class Actors_Inbox_Controller extends Actors_Controller {
 	}
 
 	/**
+	 * Build the WP_Query arguments for the inbox collection.
+	 *
+	 * Shared by get_items() and get_item_index(), so the seek index is computed under the
+	 * exact same query rules as the collection itself.
+	 *
+	 * @param \WP_REST_Request $request Full details about the request.
+	 *
+	 * @return array The WP_Query arguments.
+	 */
+	private function get_query_args( $request ) {
+		$args = array(
+			'posts_per_page' => $request->get_param( 'per_page' ),
+			'paged'          => $request->get_param( 'page' ) ?? 1,
+			'post_type'      => Inbox::POST_TYPE,
+			'post_status'    => 'publish',
+			// Deterministic ordering: break post_date ties by ID, so pagination and seek agree.
+			'orderby'        => array(
+				'date' => 'DESC',
+				'ID'   => 'DESC',
+			),
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query'     => array(
+				array(
+					'key'   => '_activitypub_user_id',
+					'value' => $request->get_param( 'user_id' ),
+				),
+			),
+		);
+
+		/**
+		 * Filters WP_Query arguments when querying Inbox items via the REST API.
+		 *
+		 * Enables adding extra arguments or setting defaults for an inbox collection request.
+		 *
+		 * @param array            $args    Array of arguments for WP_Query.
+		 * @param \WP_REST_Request $request The REST API request.
+		 */
+		return \apply_filters( 'activitypub_rest_inbox_query', $args, $request );
+	}
+
+	/**
+	 * Get the position of an activity in the inbox, under the collection's own query rules.
+	 *
+	 * The inbox route's permission callback already refuses a non-owner, so unlike the outbox this
+	 * method needs no seek gate of its own.
+	 *
+	 * @since unreleased
+	 *
+	 * @param string           $item    The ActivityPub activity ID.
+	 * @param \WP_REST_Request $request Full details about the request.
+	 *
+	 * @return int|false|\WP_Error Zero-based index of the item, false or WP_Error when not found.
+	 */
+	public function get_item_index( $item, $request ) {
+		$inbox_item = Inbox::get_by_guid( $item );
+		if ( \is_wp_error( $inbox_item ) ) {
+			return $inbox_item;
+		}
+
+		$args                   = $this->get_query_args( $request );
+		$args['fields']         = 'ids';
+		$args['posts_per_page'] = 1;
+		$args['orderby']        = 'none'; // Both queries below only count rows, so the collection's sort is pure overhead.
+		unset( $args['paged'] );
+
+		/*
+		 * A query filter may restrict the collection with `post__in`, and WP_Query ignores an empty
+		 * one, so an item outside that restriction is refused here instead of being queried for.
+		 */
+		if ( isset( $args['post__in'] ) && ! \in_array( $inbox_item->ID, \array_map( 'absint', (array) $args['post__in'] ), true ) ) {
+			return false;
+		}
+
+		// Confirm the item is part of this inbox before computing the index.
+		$membership = new \WP_Query(
+			\array_merge(
+				$args,
+				array(
+					'post__in'      => array( $inbox_item->ID ),
+					'no_found_rows' => true,
+				)
+			)
+		);
+		if ( ! $membership->posts ) {
+			return false;
+		}
+
+		// Count the activities that sort before the item; that count is the item's zero-based index.
+		$preceding = $this->with_posts_where(
+			$this->get_preceding_by_date_where( $inbox_item->post_date, $inbox_item->ID ),
+			static function () use ( $args ) {
+				return new \WP_Query( $args );
+			}
+		);
+
+		return (int) $preceding->found_posts;
+	}
+
+	/**
 	 * Prepares the item for the REST response.
 	 *
 	 * @param mixed            $item    WordPress representation of the item.
 	 * @param \WP_REST_Request $request Request object.
-	 * @return array Response object on success.
+	 * @return array|\WP_Error Response object on success, or WP_Error object on failure.
 	 */
 	public function prepare_item_for_response( $item, $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		$activity = \json_decode( $item->post_content, true );
+		$activity = Activity::init_from_json( $item->post_content );
 
-		return $activity;
+		if ( \is_wp_error( $activity ) ) {
+			return $activity;
+		}
+
+		$received = \get_post_datetime( $item, 'date', 'gmt' );
+
+		// A sender may omit the date, so report when the activity arrived and clients can still order the collection.
+		if ( ! $activity->get_published() && $received ) {
+			// get_post_datetime() hands back the site timezone even for the GMT column, and the format ends in a literal `Z`.
+			$activity->set_published( $received->setTimezone( new \DateTimeZone( 'UTC' ) )->format( ACTIVITYPUB_DATE_TIME_RFC3339 ) );
+		}
+
+		// The collection carries the JSON-LD context, and `bto`/`bcc` are stored for addressing only.
+		return $activity->to_array( false );
 	}
 
 	/**
