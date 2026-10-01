@@ -363,7 +363,7 @@ abstract class File {
 	 *     @type int $removed  Copies removed.
 	 *     @type int $bytes    Their combined size.
 	 *     @type int $promoted Copies moved to the canonical name.
-	 *     @type int $failed   Files the filesystem refused to move or remove.
+	 *     @type int $failed   Files or directories that could not be read, moved or removed.
 	 * }
 	 */
 	public static function remove_duplicates( $directory, $delete = false ) {
@@ -374,8 +374,13 @@ abstract class File {
 			'failed'   => 0,
 		);
 
-		// A directory that is gone, or that cannot be read, has nothing to clean; a live cache removes entity directories at any time.
-		if ( ! \is_dir( $directory ) || ! \is_readable( $directory ) ) {
+		// A live cache can remove entity directories at any time.
+		if ( ! \is_dir( $directory ) ) {
+			return $result;
+		}
+
+		if ( ! \is_readable( $directory ) ) {
+			++$result['failed'];
 			return $result;
 		}
 
@@ -383,6 +388,10 @@ abstract class File {
 			$entries = new \FilesystemIterator( $directory, \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::CURRENT_AS_PATHNAME );
 		} catch ( \UnexpectedValueException $exception ) {
 			// Entity directories can disappear between the readability check and opening the iterator.
+			\clearstatcache( true, $directory );
+			if ( \is_dir( $directory ) ) {
+				++$result['failed'];
+			}
 			return $result;
 		}
 

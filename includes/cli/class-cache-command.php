@@ -255,7 +255,8 @@ class Cache_Command extends \WP_CLI_Command {
 		}
 
 		if ( $totals['failed'] > 0 ) {
-			\WP_CLI::warning( \sprintf( '%d file(s) could not be moved or removed and were left as they are; check the permissions and run again.', $totals['failed'] ) );
+			\WP_CLI::error( \sprintf( 'Cleanup incomplete: %d file(s) or directory scan(s) could not be read, moved or removed; check the permissions and run again.', $totals['failed'] ) );
+			return;
 		}
 
 		if ( $delete ) {

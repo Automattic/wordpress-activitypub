@@ -8,6 +8,7 @@
 namespace Activitypub\Tests\Cache;
 
 use Activitypub\Cache\Avatar;
+use Activitypub\Tests\Cache_Directory_Stream;
 use WP_UnitTestCase;
 
 /**
@@ -419,6 +420,58 @@ class Test_File extends WP_UnitTestCase {
 			),
 			Avatar::remove_duplicates( Avatar::get_storage_paths( 'nope' )['basedir'], true )
 		);
+	}
+
+	/**
+	 * Read failures are counted, but a vanished directory remains harmless.
+	 *
+	 * @dataProvider directory_read_cases
+	 * @covers \Activitypub\Cache\File::remove_duplicates
+	 * @param string $kind   Directory state.
+	 * @param int    $failed Expected failure count.
+	 * @param bool   $delete Whether to delete duplicates.
+	 */
+	public function test_remove_duplicates_reports_directory_read_failures( $kind, $failed, $delete ) {
+		require_once AP_TESTS_DIR . '/includes/class-cache-directory-stream.php';
+		Cache_Directory_Stream::$vanished = false;
+		\stream_wrapper_register( 'activitypubcachetest', Cache_Directory_Stream::class );
+
+		$result = Avatar::remove_duplicates( 'activitypubcachetest://' . $kind, $delete );
+
+		\stream_wrapper_unregister( 'activitypubcachetest' );
+		\clearstatcache();
+		Cache_Directory_Stream::$vanished = false;
+
+		$this->assertSame(
+			array(
+				'removed'  => 0,
+				'bytes'    => 0,
+				'promoted' => 0,
+				'failed'   => $failed,
+			),
+			$result
+		);
+	}
+
+	/**
+	 * Directory states in dry-run and deletion modes.
+	 *
+	 * @return array Test cases.
+	 */
+	public function directory_read_cases() {
+		$cases = array();
+		foreach ( array( false, true ) as $delete ) {
+			foreach ( array(
+				'unreadable'   => 1,
+				'open-failure' => 1,
+				'vanished'     => 0,
+				'missing'      => 0,
+				'empty'        => 0,
+			) as $kind => $failed ) {
+				$cases[ $kind . ( $delete ? '-delete' : '-dry-run' ) ] = array( $kind, $failed, $delete );
+			}
+		}
+		return $cases;
 	}
 
 	/**
