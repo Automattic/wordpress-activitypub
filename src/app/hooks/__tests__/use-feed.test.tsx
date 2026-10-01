@@ -10,6 +10,16 @@ jest.mock( '@wordpress/core-data', () => ( {
 
 import { renderHook } from '@testing-library/react';
 import { useFeed } from '../use-feed';
+import type { FeedQuery } from '../use-feed';
+
+const QUERY: FeedQuery = {
+	per_page: 20,
+	page: 1,
+	orderby: 'date',
+	order: 'desc',
+	search: '',
+	_fields: [ 'id' ],
+};
 
 /**
  * Returns the arguments the hook passed to `useEntityRecords` on its last call.
@@ -31,82 +41,27 @@ describe( 'useFeed', () => {
 		} );
 	} );
 
-	it( 'should query the ap_post post type', () => {
-		renderHook( () => useFeed( { userId: 1 } ) );
-		const { kind, name } = lastCall();
+	it( 'should query the ap_post post type with the given query', () => {
+		const query = { ...QUERY, user_id: 1 };
+		renderHook( () => useFeed( query ) );
+		const { kind, name, query: passed } = lastCall();
 		expect( kind ).toBe( 'postType' );
 		expect( name ).toBe( 'ap_post' );
+		expect( passed ).toBe( query );
 	} );
 
-	it( 'should be disabled and return empty data when userId is missing', () => {
-		const { result } = renderHook( () => useFeed() );
-		const { query, options } = lastCall();
+	it( 'should be disabled and return empty data when user_id is missing', () => {
+		const { result } = renderHook( () => useFeed( QUERY ) );
 
-		expect( options.enabled ).toBe( false );
-		expect( query.user_id ).toBeUndefined();
+		expect( lastCall().options.enabled ).toBe( false );
 		expect( result.current.feed ).toEqual( [] );
 		expect( result.current.totalItems ).toBeNull();
 		expect( result.current.totalPages ).toBeNull();
 	} );
 
-	it( 'should be enabled and pass user_id when userId is provided', () => {
-		renderHook( () => useFeed( { userId: 0 } ) );
-		const { query, options } = lastCall();
-		expect( options.enabled ).toBe( true );
-		expect( query.user_id ).toBe( 0 );
-	} );
-
-	it( 'should map pagination and ordering params to REST query args', () => {
-		renderHook( () =>
-			useFeed( { userId: 1, perPage: 5, page: 2, orderBy: 'title', order: 'asc', search: 'hello' } )
-		);
-		const { query } = lastCall();
-		expect( query.per_page ).toBe( 5 );
-		expect( query.page ).toBe( 2 );
-		expect( query.orderby ).toBe( 'title' );
-		expect( query.order ).toBe( 'asc' );
-		expect( query.search ).toBe( 'hello' );
-	} );
-
-	it( 'should wrap a single ap_object_type filter value in an array', () => {
-		renderHook( () =>
-			useFeed( { userId: 1, filters: [ { field: 'ap_object_type', operator: 'is', value: 4 } ] } )
-		);
-		expect( lastCall().query.ap_object_type ).toEqual( [ 4 ] );
-	} );
-
-	it( 'should pass an array ap_object_type filter value through unchanged', () => {
-		renderHook( () =>
-			useFeed( { userId: 1, filters: [ { field: 'ap_object_type', operator: 'isAny', value: [ 4, 5 ] } ] } )
-		);
-		expect( lastCall().query.ap_object_type ).toEqual( [ 4, 5 ] );
-	} );
-
-	it( 'should pass the ap_tag filter value through as-is', () => {
-		renderHook( () => useFeed( { userId: 1, filters: [ { field: 'ap_tag', operator: 'isAny', value: [ 7 ] } ] } ) );
-		expect( lastCall().query.ap_tag ).toEqual( [ 7 ] );
-	} );
-
-	it( 'should not add filter args when no filters are provided', () => {
-		renderHook( () => useFeed( { userId: 1 } ) );
-		const { query } = lastCall();
-		expect( query.ap_object_type ).toBeUndefined();
-		expect( query.ap_tag ).toBeUndefined();
-	} );
-
-	it( 'should request a limited set of _fields', () => {
-		renderHook( () => useFeed( { userId: 1 } ) );
-		const fields = lastCall().query._fields as string[];
-		expect( Array.isArray( fields ) ).toBe( true );
-		// A few representative fields the feed list and inspector rely on.
-		expect( fields ).toEqual(
-			expect.arrayContaining( [ 'id', 'title', 'actor_info', 'ap_object_type', 'ap_tag' ] )
-		);
-	} );
-
-	it( 'should pass custom fields through to the query', () => {
-		renderHook( () => useFeed( { userId: 1, fields: [ 'id', 'title' ] } ) );
-		expect( lastCall().query._fields ).toEqual( [ 'id', 'title' ] );
+	it( 'should be enabled when user_id is provided, even when it is 0', () => {
+		renderHook( () => useFeed( { ...QUERY, user_id: 0 } ) );
+		expect( lastCall().options.enabled ).toBe( true );
 	} );
 
 	it( 'should return the resolved records when enabled', () => {
@@ -119,7 +74,7 @@ describe( 'useFeed', () => {
 			totalPages: 1,
 		} );
 
-		const { result } = renderHook( () => useFeed( { userId: 1 } ) );
+		const { result } = renderHook( () => useFeed( { ...QUERY, user_id: 1 } ) );
 		expect( result.current.feed ).toBe( records );
 		expect( result.current.totalItems ).toBe( 2 );
 		expect( result.current.totalPages ).toBe( 1 );
@@ -134,7 +89,7 @@ describe( 'useFeed', () => {
 			totalPages: null,
 		} );
 
-		const { result } = renderHook( () => useFeed( { userId: 1 } ) );
+		const { result } = renderHook( () => useFeed( { ...QUERY, user_id: 1 } ) );
 		expect( result.current.feed ).toEqual( [] );
 	} );
 } );

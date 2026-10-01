@@ -26,7 +26,7 @@ import { addQueryArgs } from '@wordpress/url';
  */
 import { STORE_NAME } from '../../store';
 import type { AppSelectors, AppActions } from '../../store';
-import { useNavigate } from '../../router';
+import { useNavigate } from '@wordpress/route';
 import SiteIcon from '../site-icon';
 import { DEFAULT_AVATAR } from '../avatar';
 import './style.scss';
@@ -98,9 +98,10 @@ export default function ActorSwitcher(): ReactNode {
 			// Close inspector.
 			void navigate( {
 				search: ( ( prev: Record< string, unknown > ): Record< string, unknown > => {
-					const { postId: _, ...rest } = prev as { postId?: number };
+					const { postIds: _, ...rest } = prev as { postIds?: string[] };
 					return rest;
 				} ) as never,
+				viewTransition: false,
 			} );
 		}
 	};

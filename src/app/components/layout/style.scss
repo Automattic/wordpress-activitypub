@@ -16,13 +16,25 @@
 	isolation: isolate; // Create stacking context for z-index
 }
 
-// Backdrop for mobile sidebar drawer
+// Backdrop for mobile sidebar drawer. Fades in and out; `visibility` keeps
+// the closed backdrop out of the way without a transition delay on open.
 .sidebar-backdrop {
 	position: fixed;
 	inset: 0;
 	background-color: rgba(colors.$black, 0.5);
 	z-index: 100002;
 	cursor: pointer;
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity 0.2s ease-out, visibility 0s linear 0.2s;
+
+	@include mixins.reduce-motion("transition");
+
+	&.is-open {
+		opacity: 1;
+		visibility: visible;
+		transition-delay: 0s;
+	}
 }
 
 .app-content {
@@ -46,7 +58,8 @@
 	flex-direction: column;
 	height: 100%;
 
-	// Mobile drawer styles
+	// Mobile drawer styles. Slides in from the left; see `.sidebar-backdrop`
+	// for the `visibility` handling.
 	&.is-mobile {
 		position: fixed;
 		top: 0;
@@ -57,6 +70,17 @@
 		z-index: 100003;
 		box-shadow: 2px 0 8px rgba(colors.$black, 0.3);
 		background-color: colors.$gray-900;
+		transform: translateX(-100%);
+		visibility: hidden;
+		transition: transform 0.2s ease-out, visibility 0s linear 0.2s;
+
+		@include mixins.reduce-motion("transition");
+
+		&.is-open {
+			transform: none;
+			visibility: visible;
+			transition-delay: 0s;
+		}
 	}
 }
 

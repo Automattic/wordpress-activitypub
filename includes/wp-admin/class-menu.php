@@ -39,6 +39,7 @@ class Menu {
 		\add_action( 'load-' . $settings_page, array( Admin::class, 'add_settings_list_tables' ) );
 		\add_action( 'load-' . $settings_page, array( Screen_Options::class, 'add_settings_list_options' ) );
 
+		// The opt-in stays until the app is switched on by default; only the version gate was replaced by capability detection.
 		if ( \get_option( 'activitypub_reader_ui', '0' ) && App::is_supported() ) {
 			$app_hook = \add_dashboard_page(
 				\__( 'Social Web', 'activitypub' ),
@@ -54,6 +55,7 @@ class Menu {
 
 		// User has to be able to publish posts.
 		if ( user_can_activitypub( \get_current_user_id() ) ) {
+			// The ⁂ keeps the Users submenu short; it is not a title pattern for other screens.
 			$followers_list_page = \add_users_page(
 				\__( 'Followers ⁂', 'activitypub' ),
 				\__( 'Followers ⁂', 'activitypub' ),
