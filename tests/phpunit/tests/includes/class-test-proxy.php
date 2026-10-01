@@ -88,6 +88,112 @@ class Test_Proxy extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Transport failures back off briefly and are retried after expiry.
+	 *
+	 * @dataProvider transport_failure_provider
+	 * @covers ::get
+	 *
+	 * @param string $message The transport error message.
+	 */
+	public function test_get_caches_transport_failures( $message ) {
+		$id                     = 'https://example.com/notes/unreachable';
+		$this->responses[ $id ] = new \WP_Error( 'http_request_failed', $message );
+		$started                = \time();
+
+		$first  = Proxy::get( $id );
+		$second = Proxy::get( $id );
+
+		$this->assertWPError( $first );
+		$this->assertWPError( $second );
+		$this->assertSame( $message, $second->get_error_message() );
+		$this->assertSame( 1, $this->requests );
+
+		$key     = 'activitypub_object_' . \hash( 'sha256', $id );
+		$expires = (int) \get_option( '_transient_timeout_' . $key );
+		$this->assertGreaterThanOrEqual( $started + MINUTE_IN_SECONDS, $expires );
+		$this->assertLessThanOrEqual( \time() + MINUTE_IN_SECONDS, $expires );
+
+		\update_option( '_transient_timeout_' . $key, \time() - 1 );
+		$this->note( $id );
+
+		$this->assertSame( 'Hi', Proxy::get( $id )['content'] );
+		$this->assertSame( 2, $this->requests, 'An expired failure is retried.' );
+	}
+
+	/**
+	 * Transport failures exposed by the WordPress HTTP API.
+	 *
+	 * @return array The error messages.
+	 */
+	public function transport_failure_provider() {
+		return array(
+			'DNS'     => array( 'Could not resolve host.' ),
+			'TLS'     => array( 'SSL certificate problem.' ),
+			'timeout' => array( 'Connection timed out.' ),
+		);
+	}
+
+	/**
+	 * Bypassing the cache does not remember a transport failure.
+	 *
+	 * @covers ::get
+	 */
+	public function test_bypass_does_not_cache_a_transport_failure() {
+		$id                     = 'https://example.com/notes/unreachable';
+		$this->responses[ $id ] = new \WP_Error( 'http_request_failed', 'Connection timed out.' );
+
+		$this->assertWPError( Proxy::get( $id, array( 'cached' => false ) ) );
+		$this->note( $id );
+
+		$this->assertSame( 'Hi', Proxy::get( $id )['content'] );
+		$this->assertSame( 2, $this->requests );
+	}
+
+	/**
+	 * A transport failure after a redirect is remembered only on the same host.
+	 *
+	 * @dataProvider redirected_transport_failure_provider
+	 * @covers ::get
+	 *
+	 * @param string $target   The redirect target.
+	 * @param int    $requests The expected number of requests after two calls.
+	 */
+	public function test_get_tracks_redirected_transport_failures( $target, $requests ) {
+		$id                     = 'https://example.com/notes/redirect';
+		$this->responses[ $id ] = new \WP_Error( 'http_request_failed', 'Connection timed out.' );
+		$redirect               = static function ( $pre, $args, $url ) use ( $id, $target ) {
+			if ( $url === $id ) {
+				$response      = new \WpOrg\Requests\Response();
+				$response->url = $url;
+				\do_action( 'requests-requests.before_redirect', $target, array(), null, array(), $response ); // phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores -- WordPress bridges this Requests hook verbatim.
+			}
+			return $pre;
+		};
+		\add_filter( 'pre_http_request', $redirect, 11, 3 );
+
+		$first  = Proxy::get( $id );
+		$second = Proxy::get( $id );
+		\remove_filter( 'pre_http_request', $redirect, 11 );
+
+		$this->assertWPError( $first );
+		$this->assertWPError( $second );
+		$this->assertSame( $requests, $this->requests );
+		$this->assertFalse( \has_action( 'requests-requests.before_redirect' ), 'The request observer is removed after the fetch.' );
+	}
+
+	/**
+	 * Same-host and cross-host redirect targets.
+	 *
+	 * @return array The redirect targets and expected request counts.
+	 */
+	public function redirected_transport_failure_provider() {
+		return array(
+			'same host'  => array( 'https://example.com/notes/unreachable', 1 ),
+			'other host' => array( 'https://example.org/notes/unreachable', 2 ),
+		);
+	}
+
+	/**
 	 * Bypassing the cache fetches again, and the fresh copy is stored.
 	 *
 	 * @covers ::get

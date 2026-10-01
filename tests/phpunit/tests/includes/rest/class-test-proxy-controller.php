@@ -11,6 +11,7 @@ use Activitypub\Collection\Remote_Actors;
 use Activitypub\OAuth\Scope;
 use Activitypub\Rest\Proxy_Controller;
 use Activitypub\Tests\OAuth_Token_Stub;
+use Activitypub\Tests\Remote_Request_Stub;
 
 /**
  * Test class for Proxy_Controller.
@@ -19,6 +20,7 @@ use Activitypub\Tests\OAuth_Token_Stub;
  */
 class Test_Proxy_Controller extends \WP_UnitTestCase {
 	use OAuth_Token_Stub;
+	use Remote_Request_Stub;
 
 
 	/**
@@ -131,6 +133,109 @@ class Test_Proxy_Controller extends \WP_UnitTestCase {
 
 		// Should fail with 401 or similar since no OAuth token is provided.
 		$this->assertNotEquals( 200, $response->get_status() );
+	}
+
+	/**
+	 * Generic objects use the same cache as direct Proxy calls.
+	 *
+	 * @dataProvider cache_backend_provider
+	 * @covers ::create_item
+	 *
+	 * @param bool $persistent Whether a persistent object cache is active.
+	 */
+	public function test_generic_objects_are_fetched_once( $persistent ) {
+		$this->stub_remote_requests();
+		$this->mock_oauth_auth();
+		\wp_using_ext_object_cache( $persistent );
+		$id                     = 'https://example.com/notes/cached';
+		$this->responses[ $id ] = array(
+			'id'      => $id,
+			'type'    => 'Note',
+			'content' => 'Cached content.',
+		);
+		$request                = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => $id ) );
+
+		$first  = $this->server->dispatch( $request );
+		$second = $this->server->dispatch( $request );
+		$this->unstub_remote_requests();
+		$this->unmock_oauth_auth();
+		\wp_using_ext_object_cache( false );
+
+		$this->assertSame( 200, $first->get_status() );
+		$this->assertSame( 200, $second->get_status() );
+		$this->assertSame( 'Cached content.', $second->get_data()['content'] );
+		$this->assertSame( 1, $this->requests, 'An actor lookup must not force another fetch for a Note.' );
+	}
+
+	/**
+	 * WordPress cache backends supported by transients.
+	 *
+	 * @return array The cache backend modes.
+	 */
+	public function cache_backend_provider() {
+		return array(
+			'database'     => array( false ),
+			'object cache' => array( true ),
+		);
+	}
+
+	/**
+	 * Existing actor records do not bypass the Proxy's current profile.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_actor_records_do_not_override_the_proxy_response() {
+		$this->stub_remote_requests();
+		$this->mock_oauth_auth();
+		$id    = 'https://example.com/users/cached';
+		$actor = array(
+			'id'                => $id,
+			'type'              => 'Person',
+			'inbox'             => $id . '/inbox',
+			'preferredUsername' => 'cached',
+			'name'              => 'Old profile',
+		);
+		Remote_Actors::upsert( $actor );
+		$actor['name']          = 'Current profile';
+		$this->responses[ $id ] = $actor;
+		$before                 = $this->requests;
+		$request                = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => $id ) );
+
+		$first  = $this->server->dispatch( $request );
+		$second = $this->server->dispatch( $request );
+		$this->unstub_remote_requests();
+		$this->unmock_oauth_auth();
+
+		$this->assertSame( 200, $first->get_status() );
+		$this->assertSame( 200, $second->get_status() );
+		$this->assertSame( 'Current profile', $second->get_data()['name'] );
+		$this->assertSame( $before + 1, $this->requests );
+		$this->assertInstanceOf( 'WP_Post', Remote_Actors::get_by_uri( $id ), 'The persistent actor anchor remains available.' );
+	}
+
+	/**
+	 * An unreachable origin is retried after the backoff rather than on every endpoint call.
+	 *
+	 * @covers ::create_item
+	 */
+	public function test_transport_failures_are_cached_between_endpoint_calls() {
+		$this->stub_remote_requests();
+		$this->mock_oauth_auth();
+		$id                     = 'https://example.com/notes/unreachable';
+		$this->responses[ $id ] = new \WP_Error( 'http_request_failed', 'Connection timed out.' );
+		$request                = new \WP_REST_Request( 'POST', '/' . ACTIVITYPUB_REST_NAMESPACE . '/proxy' );
+		$request->set_body_params( array( 'id' => $id ) );
+
+		$first  = $this->server->dispatch( $request );
+		$second = $this->server->dispatch( $request );
+		$this->unstub_remote_requests();
+		$this->unmock_oauth_auth();
+
+		$this->assertSame( 502, $first->get_status() );
+		$this->assertSame( 502, $second->get_status() );
+		$this->assertSame( 1, $this->requests );
 	}
 
 	/**

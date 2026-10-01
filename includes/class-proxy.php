@@ -14,11 +14,11 @@ namespace Activitypub;
  * object with a signed request, checks that it is served under its own id, and stores it.
  * The REST `proxyUrl` endpoint and the older fetch helpers go through here.
  *
- * Entries are transients, so the backing store is the site's object cache where it has a
- * persistent one and the options table where it has not. The point of that order is the
- * database: a site with Redis or memcached keeps remote posts, profiles and keys entirely
- * out of it, and a site without one gets rows that carry an expiry and are not autoloaded,
- * so they are read only when the object is asked for and dropped when they go stale.
+ * Entries are transients, so the backing store is the site's persistent object cache where
+ * it has one and the options table where it has not. These cache writes stay out of the
+ * database on a site with Redis or memcached; existing actor and post storage is separate.
+ * The database fallback uses expiring rows that are not autoloaded. WordPress deletes expired
+ * rows on lookup and in its scheduled cleanup.
  * `get_transient()` and `set_transient()` pick the store themselves, which is why nothing
  * here asks `wp_using_ext_object_cache()`: a host changes the backend by dropping in an
  * object cache, and this class does not change at all.
@@ -317,7 +317,7 @@ class Proxy {
 	 * @param string $url       The URL to fetch.
 	 * @param string $final_url Set to the URL the object was served from, empty when the response
 	 *                          does not name it. For a failure, the URL that served the document
-	 *                          which failed to confirm.
+	 *                          which failed to confirm, or the last URL attempted on a transport error.
 	 *
 	 * @return array|\WP_Error The object, or an error.
 	 */
@@ -366,7 +366,8 @@ class Proxy {
 	 *
 	 * @param string $url       The URL to fetch.
 	 * @param string $final_url Set to the URL the response was served from, after redirects, and
-	 *                          left empty when the response does not name it.
+	 *                          left empty when the response does not name it. A transport error names
+	 *                          the last URL attempted, so a redirect's failure belongs to its target.
 	 *
 	 * @return array|\WP_Error The decoded object, or an error.
 	 */
@@ -384,13 +385,28 @@ class Proxy {
 			);
 		}
 
+		/*
+		 * Transport errors carry no response URL. Observe redirects so their failure can back off
+		 * on the requested host without mistaking a different host's outage for its own.
+		 */
+		$failure_url    = $url;
+		$track_redirect = static function ( $location, $headers, $data, $options, $redirect_response ) use ( &$failure_url ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- The redirect response is the fifth Requests argument.
+			if ( $failure_url === $redirect_response->url ) {
+				$failure_url = $location;
+			}
+		};
+		\add_action( 'requests-requests.before_redirect', $track_redirect, PHP_INT_MAX, 5 );
+
 		// The proxy owns the caching, so the transport must not cache on its own.
 		$response = Http::get( $url, array(), false );
+		\remove_action( 'requests-requests.before_redirect', $track_redirect, PHP_INT_MAX );
 
 		if ( \is_wp_error( $response ) ) {
 			$data = $response->get_error_data();
 			if ( ! empty( $data['effective_url'] ) ) {
 				$final_url = $data['effective_url'];
+			} elseif ( 0 === (int) ( $data['status'] ?? 0 ) ) {
+				$final_url = $failure_url;
 			}
 
 			return $response;

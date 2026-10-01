@@ -20,9 +20,9 @@ trait Remote_Request_Stub {
 
 	/**
 	 * What the stub answers, keyed by URL: an array served as JSON, an int status code,
-	 * or a prepared response array.
+	 * a transport error, or a prepared response array.
 	 *
-	 * @var array<string, array|int>
+	 * @var array<string, array|int|\WP_Error>
 	 */
 	protected $responses = array();
 
@@ -49,11 +49,15 @@ trait Remote_Request_Stub {
 	 * @param array       $args The request arguments.
 	 * @param string      $url  The URL.
 	 *
-	 * @return array The response.
+	 * @return array|\WP_Error The response.
 	 */
 	public function stub_remote_request( $pre, $args, $url ) {
 		++$this->requests;
 		$answer = $this->responses[ $url ] ?? 404;
+
+		if ( \is_wp_error( $answer ) ) {
+			return $answer;
+		}
 
 		if ( \is_array( $answer ) && isset( $answer['response'] ) ) {
 			return $answer;
